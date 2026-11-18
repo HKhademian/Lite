@@ -69,9 +69,16 @@ test('the migration ledger accounts for active and T00-retired regression tests'
   for (const item of ledger.tests) {
     assert.ok(Number.isInteger(item.originalAssertions) && item.originalAssertions >= 0, item.title);
     if (item.destination === 'retired-with-t00') { retired += 1; continue; }
-    assert.equal(item.destination, 'igniter/test.ts'); active += 1;
+    assert.ok(
+      item.destination === 'igniter/test.ts' || item.destination.endsWith('.test.lts'),
+      `${item.title}: unexpected destination ${item.destination}`,
+    );
+    active += 1;
     const content = readFileSync(new URL('../../' + item.destination, import.meta.url), 'utf8');
-    assert.ok(content.includes("test('" + item.title.replaceAll("'", "\\'") + "'"), `${item.title}: lost destination`);
+    const expectedMarker = item.destination.endsWith('.test.lts')
+      ? item.title
+      : "test('" + item.title.replaceAll("'", "\\'") + "'";
+    assert.ok(content.includes(expectedMarker), `${item.title}: lost destination`);
   }
   assert.equal(active, 81); assert.equal(retired, 159);
 });

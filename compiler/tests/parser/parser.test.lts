@@ -1,0 +1,105 @@
+/* Parser phase regression suite migrated from igniter/test.ts. */
+
+fs := import "core/file";
+path := import "core/path";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+sel := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + sel.error, sel.ok);
+
+contracts := compilerTest.readProcessContracts(root);
+parserDeclRel := "compiler/tests/parser/parser-decl-dump.lts";
+parserProgRel := "compiler/tests/parser/parser-program-dump.lts";
+parserTypesRel := "compiler/tests/parser/parser-dump.lts";
+checkerDriverRel := "compiler/tests/checker/checker-dump.lts";
+
+/* Lite parser parses declarations and expression forms */
+declDriver := compilerTest.prepareDriver(root, sel.path, parserDeclRel);
+declSrc := fs.readText(path.join(root, "compiler/tests/parser/declarations.lts"));
+declExp := fs.readText(path.join(root, "compiler/tests/parser/declarations.nodes"));
+test.check("read declarations fixture", declSrc.ok and declExp.ok);
+compilerTest.assertDriver(declDriver, "declarations", declSrc.text, 0, declExp.text, "");
+compilerTest.assertDriver(declDriver, "bad decl 1", "x := ;", 2, "", "1:6: expected an expression\n");
+compilerTest.assertDriver(declDriver, "bad decl 2", "x := a.;", 2, "", "1:8: expected a field name after .\n");
+compilerTest.disposeDriver(declDriver);
+
+/* Lite parser parses functions, loops and statements */
+progDriver := compilerTest.prepareDriver(root, sel.path, parserProgRel);
+progSrc := fs.readText(path.join(root, "compiler/tests/parser/program.lts"));
+progExp := fs.readText(path.join(root, "compiler/tests/parser/program.nodes"));
+test.check("read program fixture", progSrc.ok and progExp.ok);
+compilerTest.assertDriver(progDriver, "program", progSrc.text, 0, progExp.text, "");
+
+/* Lite parser rejects unsupported constructs by name */
+unsupSrc: List<String> = ["match x { _ => 1 }", "record Foo {}", "import x;", "finally { }"];
+unsupErr: List<String> = [
+"1:1: unsupported feature \"match\"\n",
+"1:1: unsupported feature \"record\"\n",
+"1:1: unsupported feature \"import\"\n",
+"1:1: unsupported feature \"finally\"\n",
+];
+var ui := 0;
+loop ui < 4 {
+    compilerTest.assertDriver(progDriver, "unsupported " + unsupSrc[ui], unsupSrc[ui], 2, "", unsupErr[ui]);
+    ui = ui + 1;
+}
+
+/* Lite parser parses type aliases and rejects malformed types */
+typesDriver := compilerTest.prepareDriver(root, sel.path, parserTypesRel);
+typesSrc := fs.readText(path.join(root, "compiler/tests/parser/types.lts"));
+typesExp := fs.readText(path.join(root, "compiler/tests/parser/types.nodes"));
+test.check("read types fixture", typesSrc.ok and typesExp.ok);
+compilerTest.assertDriver(typesDriver, "types fixture", typesSrc.text, 0, typesExp.text, "");
+badTypesSrc: List<String> = [
+"x := 1;",
+"Bad := type List<;",
+"Bad := type Maybe<Int>;",
+"Bad := type (a: );",
+];
+badTypesErr: List<String> = [
+"1:6: expected type after :=\n",
+"1:18: expected a type\n",
+"1:13: unsupported generic type Maybe\n",
+"1:17: expected a type\n",
+];
+var ti := 0;
+loop ti < 4 {
+    compilerTest.assertDriver(typesDriver, "bad type " + badTypesSrc[ti], badTypesSrc[ti], 2, "", badTypesErr[ti]);
+    ti = ti + 1;
+}
+compilerTest.disposeDriver(typesDriver);
+
+/* Lite power parser retains association and rejects concealed ungrouped negative bases */
+powerValid: List<String> = ["a := 2 ** 3 ** 2;", "a := (-2) ** 2; b := -(2 ** 2);", "a := +(-2) ** 2;"];
+powerInvalid: List<String> = ["a := -2 ** 2;", "base := 2; a := -base ** 2;", "a := +-2 ** 2;", "a := (-2 ** 2);"];
+loop powerValid as src {
+    compilerTest.assertDriverMatchesContract(root, contracts, parserProgRel, progDriver, "power valid parser: " + src, src, 0);
+}
+loop powerInvalid as src {
+    compilerTest.assertDriverMatchesContract(root, contracts, parserProgRel, progDriver, "power bad parser: " + src, src, 2);
+    out := compilerTest.runDriver(progDriver, src);
+    test.check("power bad message: " + src, text.containsText(out.stderr, "group a negative power base"));
+}
+compilerTest.disposeDriver(progDriver);
+
+checkerDriver := compilerTest.prepareDriver(root, sel.path, checkerDriverRel);
+powerCheckGood: List<String> = [
+"x: Float = 2 ** 3;",
+"f := fn(): Float { return -(2 ** 2); } x := f();",
+"f := fn(): Float { return 2 ** 3 ** 2; } x := f();",
+];
+powerCheckBad: List<String> = ["x: Int = 2 ** 3;", "f := fn(): Int { return 2 ** 3; }"];
+loop powerCheckGood as src {
+    compilerTest.assertDriverMatchesContract(root, contracts, checkerDriverRel, checkerDriver, "power check good: " + src, src, 0);
+}
+loop powerCheckBad as src {
+    compilerTest.assertDriverMatchesContract(root, contracts, checkerDriverRel, checkerDriver, "power check bad: " + src, src, 2);
+}
+compilerTest.disposeDriver(checkerDriver);

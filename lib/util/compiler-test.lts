@@ -1,0 +1,209 @@
+/** Shared compiler-testing harness utilities for native `.test.lts` suites. */
+
+crypto := import "core/crypto";
+fs := import "core/file";
+integer := import "core/int";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+unicode := import "core/unicode";
+cases := import "util/cases";
+json := import "util/json";
+
+/** Result of compiling or executing a Lite program or compiler phase driver. */
+pub RunOutput := type (status: Int, stdout: String, stderr: String);
+
+/** Prepared TS-compiled phase driver artifact and isolated Node runner inside `workDir`. */
+pub TestDriver := type (workDir: String, artifactPath: String, runnerPath: String);
+
+emptyEnv := fn(): List<String> {
+    res: List<String> = [];
+    res
+};
+
+emptyBytes := fn(): List<Int> {
+    res: List<Int> = [];
+    res
+};
+
+/** Compiles and strictly typechecks `relSourcePath` once under an isolated temporary directory. */
+pub prepareDriver := fn(rootDir: String, compilerPath: String, relSourcePath: String): TestDriver {
+    tmpRes := fs.makeTempDir("lite-driver-");
+    test.check("prepareDriver makeTempDir: " + tmpRes.error, tmpRes.ok);
+    workDir := tmpRes.path;
+
+    pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+    test.check("prepareDriver package.json", pkgRes.ok);
+
+    artifactPath := path.join(workDir, "driver.ts");
+    compErr := path.join(workDir, "compile.stderr");
+    comp := proc.runBytes(proc.execPath(), [compilerPath, relSourcePath], rootDir, emptyEnv(), 60000, emptyBytes(), artifactPath, compErr);
+    test.check("prepareDriver compiler error: " + comp.error, comp.error == "");
+    test.checkInt("prepareDriver compile " + relSourcePath, 0, comp.status);
+    test.checkText("prepareDriver stderr " + relSourcePath, "", fs.readText(compErr).text);
+
+    chk := cases.checkTsArtifactFileWithStatus(rootDir, artifactPath, path.join(workDir, "tsc"), 60000);
+    test.check("prepareDriver tsc " + relSourcePath + ": " + chk.error, chk.ok);
+
+    runnerPath := path.join(workDir, "runner.ts");
+    wr := cases.writeTsRunner(runnerPath);
+    test.check("prepareDriver runner.ts: " + wr.error, wr.ok);
+
+    (workDir = workDir, artifactPath = artifactPath, runnerPath = runnerPath)
+};
+
+/** Removes temporary files allocated for `driver`. */
+pub disposeDriver := fn(driver: TestDriver): Unit {
+    _rm := fs.remove(driver.workDir);
+};
+
+/** Runs `driver` in a fresh Node process with `stdinText`. */
+pub runDriver := fn(driver: TestDriver, stdinText: String): RunOutput {
+    outPath := path.join(driver.workDir, "run.stdout");
+    errPath := path.join(driver.workDir, "run.stderr");
+    ran := proc.runBytes(
+    proc.execPath(), [driver.runnerPath, driver.artifactPath], driver.workDir, emptyEnv(), 30000, unicode.utf8Encode(stdinText), outPath, errPath
+    );
+    test.check("runDriver process error: " + ran.error, ran.error == "");
+    outRes := fs.readText(outPath);
+    errRes := fs.readText(errPath);
+    test.check("runDriver stdout decode: " + outRes.error, outRes.ok);
+    test.check("runDriver stderr decode: " + errRes.error, errRes.ok);
+    (status = ran.status, stdout = outRes.text, stderr = errRes.text)
+};
+
+/** Runs `driver` on `stdinText` and asserts exact exit status, stdout, and stderr. */
+pub assertDriver := fn(driver: TestDriver, label: String, stdinText: String, expectedStatus: Int, expectedStdout: String, expectedStderr: String): Unit {
+    res := runDriver(driver, stdinText);
+    test.checkInt(label + " status", expectedStatus, res.status);
+    test.checkText(label + " stdout", expectedStdout, res.stdout);
+    test.checkText(label + " stderr", expectedStderr, res.stderr);
+};
+
+/** Compiles inline `source` using `compilerPath` via `--stdin`, capturing exit status, stdout, and stderr. */
+pub compileStdin := fn(rootDir: String, compilerPath: String, source: String, logicalName: String): RunOutput {
+    tmpRes := fs.makeTempDir("lite-comp-");
+    test.check("compileStdin makeTempDir: " + tmpRes.error, tmpRes.ok);
+    workDir := tmpRes.path;
+
+    rootTarget := if logicalName == "" { path.join(rootDir, "__lite_stdin__.lts") } else { path.join(rootDir, logicalName) };
+    args: List<String> = [compilerPath, "--stdin", "--name", logicalName, "--root", rootTarget];
+    outPath := path.join(workDir, "out");
+    errPath := path.join(workDir, "err");
+    res := proc.runBytes(proc.execPath(), args, rootDir, emptyEnv(), 60000, unicode.utf8Encode(source), outPath, errPath);
+    test.check("compileStdin error: " + res.error, res.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    _rm := fs.remove(workDir);
+    (status = res.status, stdout = outText, stderr = errText)
+};
+
+/** Compiles inline `source` to TS, strict-typechecks it, executes it, and returns `(status, stdout, stderr)`. */
+pub compileCheckRunTs := fn(rootDir: String, compilerPath: String, source: String, logicalName: String): RunOutput {
+    compiled := compileStdin(rootDir, compilerPath, source, logicalName);
+    test.check("compileCheckRunTs compile: " + compiled.stderr, compiled.status == 0 and compiled.stderr == "");
+
+    tmpRes := fs.makeTempDir("lite-run-ts-");
+    test.check("compileCheckRunTs makeTempDir: " + tmpRes.error, tmpRes.ok);
+    workDir := tmpRes.path;
+
+    pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+    test.check("compileCheckRunTs package.json", pkgRes.ok);
+
+    tsPath := path.join(workDir, "artifact.ts");
+    wTs := fs.writeText(tsPath, compiled.stdout);
+    test.check("compileCheckRunTs write artifact", wTs.ok);
+
+    chk := cases.checkTsArtifactFileWithStatus(rootDir, tsPath, path.join(workDir, "tsc"), 60000);
+    test.check("compileCheckRunTs tsc: " + chk.error, chk.ok);
+
+    runnerPath := path.join(workDir, "runner.ts");
+    wr := cases.writeTsRunner(runnerPath);
+    test.check("compileCheckRunTs runner.ts", wr.ok);
+
+    outPath := path.join(workDir, "run.stdout");
+    errPath := path.join(workDir, "run.stderr");
+    ran := proc.runBytes(proc.execPath(), [runnerPath, tsPath], workDir, emptyEnv(), 30000, emptyBytes(), outPath, errPath);
+    test.check("compileCheckRunTs run error: " + ran.error, ran.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    _rm := fs.remove(workDir);
+    (status = ran.status, stdout = outText, stderr = errText)
+};
+
+/** Reads `compiler/tests/contracts/process.json` for recorded phase-driver expectations. */
+pub readProcessContracts := fn(rootDir: String): String {
+    readRes := fs.readText(path.join(rootDir, "compiler/tests/contracts/process.json"));
+    test.check("read process.json: " + readRes.error, readRes.ok);
+    readRes.text
+};
+
+/** Checks that `compiler/tests/contracts/process.json` records exact `(status, stdout, stderr)` for `driverRelPath` + `stdinText` without running `driver`. */
+pub assertRecordedContract := fn(
+rootDir: String,
+contractsJson: String,
+driverRelPath: String,
+label: String,
+stdinText: String,
+expectedStatus: Int,
+expectedStdout: String,
+expectedStderr: String,
+checkStreams: Bool
+): (status: Int, stdout: String, stderr: String) {
+    srcRes := fs.readText(path.join(rootDir, driverRelPath));
+    test.check("read driver source " + driverRelPath, srcRes.ok);
+    srcHash := crypto.sha256Text(srcRes.text);
+    stdinB64 := crypto.base64Encode(unicode.utf8Encode(stdinText));
+
+    casesField := json.findObjectField(contractsJson, 0, "cases");
+    test.check("process.json cases field", casesField.found);
+    var found := false;
+    var expStatus := -1;
+    var expStdout := "";
+    var expStderr := "";
+
+    loop json.arrayElementOffsets(contractsJson, casesField.valuePos) as cPos {
+        sVal := json.readObjectString(contractsJson, cPos, "source");
+        if sVal.found and sVal.ok and sVal.value == srcHash {
+            inVal := json.readObjectString(contractsJson, cPos, "stdin");
+            nameField := json.findObjectField(contractsJson, cPos, "name");
+            argsField := json.findObjectField(contractsJson, cPos, "args");
+            isNullName := nameField.found and text.at(contractsJson, nameField.valuePos) == "n";
+            isEmptyArgs := argsField.found and list.listCountInt(json.arrayElementOffsets(contractsJson, argsField.valuePos)) == 0;
+            if inVal.found and inVal.ok and inVal.value == stdinB64 and isNullName and isEmptyArgs {
+                stVal := json.readObjectInt(contractsJson, cPos, "status");
+                outVal := json.readObjectString(contractsJson, cPos, "stdout");
+                errVal := json.readObjectString(contractsJson, cPos, "stderr");
+                expStatus = stVal.value;
+                expStdout = outVal.value;
+                expStderr = errVal.value;
+                found = true;
+                break;
+            }
+        }
+    }
+
+    test.check("recorded contract found for " + label, found);
+    test.checkInt(label + " contract status", expectedStatus, expStatus);
+    if checkStreams {
+        test.checkText(label + " contract stdout", expectedStdout, expStdout);
+        test.checkText(label + " contract stderr", expectedStderr, expStderr);
+    }
+    (status = expStatus, stdout = expStdout, stderr = expStderr)
+};
+
+/** Looks up the recorded `(status, stdout, stderr)` contract for `driverRelPath` + `stdinText` (with empty args, null name) and asserts `driver` matches it. */
+pub assertDriverMatchesContract := fn(
+rootDir: String,
+contractsJson: String,
+driverRelPath: String,
+driver: TestDriver,
+label: String,
+stdinText: String,
+expectedStatus: Int
+): Unit {
+    rec := assertRecordedContract(rootDir, contractsJson, driverRelPath, label, stdinText, expectedStatus, "", "", false);
+    assertDriver(driver, label, stdinText, rec.status, rec.stdout, rec.stderr);
+};
