@@ -276,6 +276,7 @@ function lite$processExecPath(): string { return process.execPath; }
 function lite$processEntryPath(): string { return process.argv[1] ?? ""; }
 function lite$processPlatform(): string { return process.platform; }
 function lite$processArch(): string { return process.arch; }
+function lite$processRuntimeVersion(): string { return process.version; }
 function lite$buildEnv(envOverrides: readonly string[]): { ok: true; env: Record<string, string | undefined> } | { ok: false; error: string } {
     const env: Record<string, string | undefined> = { ...process.env };
     for (const entry of envOverrides) {
@@ -608,7 +609,7 @@ function lite$listPopFront<T>(items: T[], at: number): T {
     return items.shift() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 90, 91, 123, 149, 179, 203, 231, 259, 290, 318, 348, 376, 410, 465, 519, 571, 623, 674, 675, 815, 862, 899, 936, 979, 1019, 1080, 1092, 1204, 1237, 1278, 1321, 1366, 1415, 1466, 1505, 1547, 1584, 1629, 1666, 1712, 1755, 1788, 1835, 1890, 1949, 2018, 2067, 2169, 2267, 2316, 2387, 2464, 2525, 2574, 2629, 2704, 2780, 2797, 2803, 2805, 2806, 2916, 2965, 3066, 3088, 3094, 3175, 3177, 3178, 3249, 3288, 3337, 3353, 3371, 3402, 3526, 3552, 3562, 3581, 3587, 3596, 3598, 3599, 3711, 3845, 3911, 3950, 3975, 4128, 4134, 4188, 4207, 4338, 4344, 4422, 4499, 4578, 4707, 4840, 4846, 4933, 4991, 5140, 5146, 5270, 5272, 5273, 5359, 5412, 5461, 5498, 5530, 5558, 5600, 5682, 5692, 5698, 5706, 5708, 5709, 5826, 5945, 5994, 6048, 6111, 6207, 6252, 6258, 6297, 6361, 6406, 6412, 6443, 6498, 6559, 6621, 6700, 6777, 6850, 6945, 7041, 7135, 7246, 7381, 7382, 7430, 7491, 7536, 7542, 7543, 7611, 7673, 7765, 7766, 7840, 7923, 7924, 7961, 7979, 8009, 8070, 8133, 8240, 8353, 8460, 8529, 8587, 8636, 8646, 8693, 8716, 8722, 8723, 8799, 8830, 8895, 8956, 9017, 9114, 9163, 9173, 9281, 9330, 9340, 9444, 9512, 9557, 9617, 9688, 9737, 9747, 9753, 9800, 9802, 9803, 9903, 9927, 10026, 10102, 10170, 10221, 10369, 10375, 10424, 10478, 10541, 10542, 10561, 10634, 10658, 10762, 10772, 10778, 10779, 10820, 10893, 10934, 10958, 11100, 11106, 11107, 11152, 11189, 11224, 11264, 11336, 11405, 11473, 11480, 11481, 11514, 11654, 11691, 11726, 11749, 11887, 11893, 11894, 11928, 11950, 12041, 12047, 12048, 12094, 12148, 12170, 12261, 12267, 12268, 12317, 12353, 12390, 12391, 12438, 12462, 12555, 12561, 12757, 12758, 12783, 12842, 12887, 12954, 13014, 13066, 13115, 13148, 13250, 13268, 13335, 13500, 13514, 13578, 13623, 13671, 13775, 13882, 13959, 14025, 14101, 14148, 14158, 14164, 14165, 14187, 14215, 14269, 14301, 14388, 14471, 14537, 14615, 14690, 14738, 14761, 14853, 14859, 14860, 14942, 14944, 14945, 15034, 15116, 15164, 15192, 15231, 15237, 15270, 15342, 15368, 15414, 15434, 15440, 15465, 15467, 15468, 15573, 15681, 15734, 15785, 15847, 15896, 15956, 16000, 16010, 16016, 16078, 16112, 16172, 16210, 16234, 16329, 16335, 16372, 16407, 16447, 16535, 16604, 16672, 16679, 16712, 16871, 16908, 16943, 16966, 17058, 17064, 17098, 17120, 17170, 17176, 17227, 17250, 17301, 17307, 17335, 17338, 17339, 17412, 17533, 17566, 17628, 17674, 17788, 17865, 17943, 17949, 17977, 17980, 17981, 18093, 18185, 18218, 18291, 18367, 18464, 18543, 18549, 18568, 18644, 18650, 18700, 18779, 18825, 18846, 18933, 18956, 19035, 19045, 19147, 19193, 19216, 19304, 19314, 19429, 19473, 19479, 19507, 19510, 19511, 19581, 19666, 19730, 19810, 19850, 19897, 19946, 20027, 20069, 20132, 20224, 20266, 20324, 20399, 20402, 20403, 20509, 20550, 20589, 20612, 20689, 20709, 20715, 20751, 20813, 20814, 20853, 20878, 20916, 20936, 20942, 20943, 20978, 21020, 21046, 21158, 21186, 21227, 21251, 21261, 21312, 21318, 21319, 21390, 21436, 21482, 21514, 21530, 21536, 21537, 21569, 21595, 21619, 21643, 21700, 21729, 21759, 21788, 21814, 21841, 21878, 21879, 21917, 21957, 21997, 22027, 22061, 22101, 22129, 22166, 22192, 22229, 22255, 22291, 22316, 22358, 22391, 22429, 22461, 22497, 22528, 22566, 22613, 22685, 22713, 22727, 22777, 22812, 22859, 22928, 22956, 22970, 23021, 23087, 23136, 23150, 23169, 23220, 23372, 23396, 23447, 23506, 23530, 23547, 23593, 23603, 23609, 23610, 23638, 23752, 23780, 23821, 23845, 23855, 23903, 23909, 23910, 23937, 24050, 24078, 24119, 24143, 24153, 24190, 24210, 24216, 24217, 24231, 24293, 24321, 24362, 24386, 24396, 24418, 24440, 24500, 24568, 24574, 24575, 24765, 24766, 24809, 24890, 24919, 24961, 24985, 24995, 25001, 25002, 25103, 25145, 25185, 25212, 25247, 25354, 25378, 25415, 25439, 25449, 25509, 25561, 25636, 25697, 25762, 25857, 25907, 25913, 25914, 25971, 26027, 26054, 26107, 26131, 26141, 26234, 26273, 26297, 26389, 26413, 26423, 26429, 26430, 26451, 26511, 26538, 26578, 26602, 26612, 26618, 26619, 26639, 26730, 26808, 26840, 26853, 26919, 27099, 27105, 27108, 27109, 27130];
+const lite$intLines: readonly number[] = [0, 90, 91, 123, 149, 179, 203, 231, 259, 290, 318, 348, 376, 410, 465, 519, 571, 623, 674, 675, 815, 862, 899, 936, 979, 1019, 1080, 1092, 1204, 1237, 1278, 1321, 1366, 1415, 1466, 1505, 1547, 1584, 1629, 1666, 1712, 1755, 1788, 1835, 1890, 1949, 2018, 2067, 2169, 2267, 2316, 2387, 2464, 2525, 2574, 2629, 2704, 2780, 2797, 2803, 2805, 2806, 2916, 2965, 3066, 3088, 3094, 3175, 3177, 3178, 3249, 3288, 3337, 3353, 3371, 3402, 3526, 3552, 3562, 3581, 3587, 3596, 3598, 3599, 3711, 3845, 3911, 3950, 3975, 4128, 4134, 4188, 4207, 4338, 4344, 4422, 4499, 4578, 4707, 4840, 4846, 4933, 4991, 5140, 5146, 5270, 5272, 5273, 5359, 5412, 5461, 5498, 5530, 5558, 5600, 5682, 5692, 5698, 5706, 5708, 5709, 5826, 5945, 5994, 6048, 6111, 6207, 6252, 6258, 6297, 6361, 6406, 6412, 6443, 6498, 6559, 6621, 6700, 6777, 6850, 6945, 7041, 7135, 7246, 7381, 7382, 7430, 7491, 7536, 7542, 7543, 7611, 7673, 7765, 7766, 7840, 7923, 7924, 7961, 7979, 8009, 8070, 8133, 8240, 8353, 8460, 8529, 8587, 8636, 8646, 8693, 8716, 8722, 8723, 8799, 8830, 8895, 8956, 9017, 9114, 9163, 9173, 9281, 9330, 9340, 9444, 9512, 9557, 9617, 9688, 9737, 9747, 9753, 9800, 9802, 9803, 9903, 9927, 10026, 10102, 10170, 10221, 10369, 10375, 10424, 10478, 10541, 10542, 10561, 10634, 10658, 10762, 10772, 10778, 10779, 10820, 10893, 10934, 10958, 11100, 11106, 11107, 11152, 11189, 11224, 11264, 11336, 11405, 11473, 11480, 11481, 11514, 11654, 11691, 11726, 11749, 11887, 11893, 11894, 11928, 11950, 12041, 12047, 12048, 12094, 12148, 12170, 12261, 12267, 12268, 12317, 12353, 12390, 12391, 12438, 12462, 12555, 12561, 12757, 12758, 12783, 12842, 12887, 12954, 13014, 13066, 13115, 13148, 13250, 13268, 13335, 13500, 13514, 13578, 13623, 13671, 13775, 13882, 13959, 14025, 14101, 14148, 14158, 14164, 14165, 14187, 14215, 14269, 14301, 14388, 14471, 14537, 14615, 14690, 14738, 14761, 14853, 14859, 14860, 14942, 14944, 14945, 15034, 15116, 15164, 15192, 15231, 15237, 15270, 15342, 15368, 15414, 15434, 15440, 15465, 15467, 15468, 15573, 15681, 15734, 15785, 15847, 15896, 15956, 16000, 16010, 16016, 16078, 16112, 16172, 16210, 16234, 16329, 16335, 16372, 16407, 16447, 16535, 16604, 16672, 16679, 16712, 16871, 16908, 16943, 16966, 17058, 17064, 17098, 17120, 17170, 17176, 17227, 17250, 17301, 17307, 17335, 17338, 17339, 17412, 17533, 17566, 17628, 17674, 17788, 17865, 17943, 17949, 17977, 17980, 17981, 18093, 18185, 18218, 18291, 18367, 18464, 18543, 18549, 18568, 18644, 18650, 18700, 18779, 18825, 18846, 18933, 18956, 19035, 19045, 19147, 19193, 19216, 19304, 19314, 19429, 19473, 19479, 19507, 19510, 19511, 19581, 19666, 19730, 19810, 19850, 19897, 19946, 20027, 20069, 20132, 20224, 20266, 20324, 20399, 20402, 20403, 20509, 20550, 20589, 20612, 20689, 20709, 20715, 20751, 20813, 20814, 20853, 20878, 20916, 20936, 20942, 20943, 20978, 21020, 21046, 21158, 21186, 21227, 21251, 21261, 21312, 21318, 21319, 21390, 21436, 21482, 21514, 21530, 21536, 21537, 21580, 21614, 21683, 21696, 21767, 21773, 21774, 21806, 21832, 21856, 21880, 21937, 21966, 21996, 22025, 22051, 22078, 22115, 22116, 22154, 22194, 22234, 22264, 22298, 22338, 22366, 22403, 22429, 22466, 22492, 22528, 22553, 22595, 22628, 22666, 22698, 22734, 22765, 22803, 22850, 22922, 22950, 22964, 23014, 23049, 23096, 23165, 23193, 23207, 23258, 23324, 23373, 23387, 23406, 23457, 23609, 23633, 23684, 23743, 23767, 23784, 23830, 23840, 23846, 23847, 23875, 23989, 24017, 24058, 24082, 24092, 24140, 24146, 24147, 24174, 24287, 24315, 24356, 24380, 24390, 24427, 24447, 24453, 24454, 24468, 24530, 24558, 24599, 24623, 24633, 24655, 24677, 24737, 24805, 24811, 24812, 25002, 25003, 25046, 25127, 25156, 25198, 25222, 25232, 25238, 25239, 25340, 25382, 25422, 25449, 25484, 25591, 25615, 25652, 25676, 25686, 25746, 25798, 25873, 25934, 25999, 26094, 26144, 26150, 26151, 26208, 26264, 26291, 26344, 26368, 26378, 26471, 26510, 26534, 26626, 26650, 26660, 26666, 26667, 26688, 26748, 26775, 26815, 26839, 26849, 26855, 26856, 26876, 26967, 27045, 27077, 27090, 27156, 27336, 27342, 27345, 27346, 27367];
 const lite$intSource = "tools/src/ignite.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -24272,7 +24273,7 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             lite_dir = lite_next;
-            lite_steps = lite$addInt(lite_steps, 1n, 776);
+            lite_steps = lite$addInt(lite_steps, 1n, 838);
         }
         return "";
     }
@@ -24286,6 +24287,252 @@ export function main(lite$write?: (text: string) => void): string {
         return liteFn$lib$util$project$findRepoRootFrom(lite$processCwd());
     }
     void liteFn$lib$util$project$findRepoRoot;
+    function liteFn$lib$util$project$readComponentVersionAt(lite_root: string, lite_component: string): string {
+        void lite_root;
+        void lite_component;
+        if (((lite_root) === (""))) {
+            return "unassigned";
+        }
+        const lite_versionsPath = liteFn$lib$core$path$resolve(lite_root, "config/versions.json");
+        void lite_versionsPath;
+        const lite_readRes = liteFn$lib$core$file$readText(lite_versionsPath);
+        void lite_readRes;
+        if ((!((lite_readRes).ok))) {
+            return "unassigned";
+        }
+        const lite_found = liteFn$lib$util$json$readObjectString((lite_readRes).text, 0n, lite_component);
+        void lite_found;
+        if ((((!((lite_found).found))) || ((!((lite_found).ok))))) {
+            return "unassigned";
+        }
+        return (lite_found).value;
+    }
+    void liteFn$lib$util$project$readComponentVersionAt;
+    function liteFn$lib$util$project$relativeToRoot(lite_root: string, lite_targetPath: string): string {
+        void lite_root;
+        void lite_targetPath;
+        if (((lite_targetPath) === (""))) {
+            return "";
+        }
+        const lite_rpTarget = lite$fileRealPath(lite_targetPath);
+        void lite_rpTarget;
+        const lite_canonTarget = (Boolean((lite_rpTarget).ok) ? (lite_rpTarget).path : liteFn$lib$core$path$normalize(lite_targetPath));
+        void lite_canonTarget;
+        if (((lite_root) === (""))) {
+            return lite_canonTarget;
+        }
+        const lite_rpRoot = lite$fileRealPath(lite_root);
+        void lite_rpRoot;
+        const lite_canonRoot = (Boolean((lite_rpRoot).ok) ? (lite_rpRoot).path : liteFn$lib$core$path$normalize(lite_root));
+        void lite_canonRoot;
+        const lite_prefix = (Boolean(liteFn$lib$core$text$endsWith(lite_canonRoot, "/")) ? lite_canonRoot : ((lite_canonRoot) + ("/")));
+        void lite_prefix;
+        if (liteFn$lib$core$text$startsWithAt(lite_canonTarget, 0n, lite_prefix)) {
+            return lite$textSlice(lite_canonTarget, lite$textLength(lite_prefix), lite$textLength(lite_canonTarget), 2563);
+        }
+        return lite_canonTarget;
+    }
+    void liteFn$lib$util$project$relativeToRoot;
+    function liteFn$lib$util$project$classifyArtifactKind(lite_relEntry: string): string {
+        void lite_relEntry;
+        if (liteFn$lib$core$text$startsWithAt(lite_relEntry, 0n, "dist/tools/")) {
+            return "ignited-ts";
+        }
+        if (((lite_relEntry) === ("compiler/bootstrap/igniter.ts"))) {
+            return "bootstrap-igniter-ts";
+        }
+        if (liteFn$lib$core$text$startsWithAt(lite_relEntry, 0n, "dist/bootstrap/")) {
+            return "bootstrap-compiler-ts";
+        }
+        if (liteFn$lib$core$text$startsWithAt(lite_relEntry, 0n, "dist/compiler-cache/")) {
+            return "cached-compiler-ts";
+        }
+        if (((liteFn$lib$core$text$endsWith(lite_relEntry, ".ts")) || (liteFn$lib$core$text$endsWith(lite_relEntry, ".js")))) {
+            return "ts-script";
+        }
+        if (((lite_relEntry) === (""))) {
+            return "unknown";
+        }
+        return "native";
+    }
+    void liteFn$lib$util$project$classifyArtifactKind;
+    function liteFn$lib$util$project$shortHash(lite_hex: string): string {
+        void lite_hex;
+        if (((lite_hex) === (""))) {
+            return "unknown";
+        }
+        if (((lite$textLength(lite_hex)) <= (12n))) {
+            return lite_hex;
+        }
+        return lite$textSlice(lite_hex, 0n, 12n, 3508);
+    }
+    void liteFn$lib$util$project$shortHash;
+    function liteFn$lib$util$project$readSeedMeta(lite_root: string): { target: string; recorded: string; igniterSha256: string; sourceSha256: string; artifactSha256: string } {
+        void lite_root;
+        if (((lite_root) === (""))) {
+            return { target: "", recorded: "", igniterSha256: "", sourceSha256: "", artifactSha256: "" };
+        }
+        const lite_seedRead = liteFn$lib$core$file$readText(liteFn$lib$core$path$resolve(lite_root, "compiler/bootstrap/seed.ts"));
+        void lite_seedRead;
+        if ((!((lite_seedRead).ok))) {
+            return { target: "", recorded: "", igniterSha256: "", sourceSha256: "", artifactSha256: "" };
+        }
+        const lite_brace = liteFn$lib$core$text$indexOfText((lite_seedRead).text, "{", 0n);
+        void lite_brace;
+        if (((lite_brace) < (0n))) {
+            return { target: "", recorded: "", igniterSha256: "", sourceSha256: "", artifactSha256: "" };
+        }
+        const lite_tgt = liteFn$lib$util$json$readObjectString((lite_seedRead).text, lite_brace, "target");
+        void lite_tgt;
+        const lite_rec = liteFn$lib$util$json$readObjectString((lite_seedRead).text, lite_brace, "recorded");
+        void lite_rec;
+        const lite_ign = liteFn$lib$util$json$readObjectString((lite_seedRead).text, lite_brace, "igniterSha256");
+        void lite_ign;
+        const lite_src = liteFn$lib$util$json$readObjectString((lite_seedRead).text, lite_brace, "sourceSha256");
+        void lite_src;
+        const lite_art = liteFn$lib$util$json$readObjectString((lite_seedRead).text, lite_brace, "artifactSha256");
+        void lite_art;
+        return { target: (Boolean((((lite_tgt).found) && ((lite_tgt).ok))) ? (lite_tgt).value : ""), recorded: (Boolean((((lite_rec).found) && ((lite_rec).ok))) ? (lite_rec).value : ""), igniterSha256: (Boolean((((lite_ign).found) && ((lite_ign).ok))) ? (lite_ign).value : ""), sourceSha256: (Boolean((((lite_src).found) && ((lite_src).ok))) ? (lite_src).value : ""), artifactSha256: (Boolean((((lite_art).found) && ((lite_art).ok))) ? (lite_art).value : "") };
+    }
+    void liteFn$lib$util$project$readSeedMeta;
+    function liteFn$lib$util$project$readToolProvenance(lite_root: string, lite_relEntry: string, lite_kind: string): { target: string; artifactSha256: string; compilerArtifactSha256: string; compilerSourceSha256: string; source: string; moduleCount: bigint } {
+        void lite_root;
+        void lite_relEntry;
+        void lite_kind;
+        if (((((((lite_root) === (""))) || (((lite_kind) !== ("ignited-ts"))))) || ((!(liteFn$lib$core$text$endsWith(lite_relEntry, ".ts")))))) {
+            return { target: "", artifactSha256: "", compilerArtifactSha256: "", compilerSourceSha256: "", source: "", moduleCount: 0n };
+        }
+        const lite_prefixLen = lite$textLength("dist/tools/");
+        void lite_prefixLen;
+        const lite_toolName = lite$textSlice(lite_relEntry, lite_prefixLen, lite$subtractInt(lite$textLength(lite_relEntry), 3n, 5627), 5573);
+        void lite_toolName;
+        const lite_provRead = liteFn$lib$core$file$readText(liteFn$lib$core$path$resolve(lite_root, (((("dist/tools/") + (lite_toolName))) + (".provenance.json"))));
+        void lite_provRead;
+        if ((((!((lite_provRead).ok))) || ((!((liteFn$lib$util$json$validate((lite_provRead).text)).ok))))) {
+            return { target: "", artifactSha256: "", compilerArtifactSha256: "", compilerSourceSha256: "", source: "", moduleCount: 0n };
+        }
+        const lite_provText = (lite_provRead).text;
+        void lite_provText;
+        const lite_tgt = liteFn$lib$util$json$readObjectString(lite_provText, 0n, "target");
+        void lite_tgt;
+        const lite_art = liteFn$lib$util$json$readObjectString(lite_provText, 0n, "artifactSha256");
+        void lite_art;
+        const lite_cArt = liteFn$lib$util$json$readObjectString(lite_provText, 0n, "compilerArtifactSha256");
+        void lite_cArt;
+        const lite_cSrc = liteFn$lib$util$json$readObjectString(lite_provText, 0n, "compilerSourceSha256");
+        void lite_cSrc;
+        let lite_srcPath = "";
+        void lite_srcPath;
+        let lite_depCount = 0n;
+        void lite_depCount;
+        const lite_depsField = liteFn$lib$util$json$findObjectField(lite_provText, 0n, "dependencies");
+        void lite_depsField;
+        if ((lite_depsField).found) {
+            const lite_offsets: bigint[] = [...(liteFn$lib$util$json$arrayElementOffsets(lite_provText, (lite_depsField).valuePos))];
+            void lite_offsets;
+            lite_depCount = liteFn$lib$core$list$listCountInt([...(lite_offsets)]);
+            if (((lite_depCount) > (0n))) {
+                const lite_firstPath = liteFn$lib$util$json$readObjectString(lite_provText, lite$listAt((lite_offsets), 0n, 6587), "path");
+                void lite_firstPath;
+                if ((((lite_firstPath).found) && ((lite_firstPath).ok))) {
+                    lite_srcPath = (lite_firstPath).value;
+                }
+            }
+        }
+        return { target: (Boolean((((lite_tgt).found) && ((lite_tgt).ok))) ? (lite_tgt).value : ""), artifactSha256: (Boolean((((lite_art).found) && ((lite_art).ok))) ? (lite_art).value : ""), compilerArtifactSha256: (Boolean((((lite_cArt).found) && ((lite_cArt).ok))) ? (lite_cArt).value : ""), compilerSourceSha256: (Boolean((((lite_cSrc).found) && ((lite_cSrc).ok))) ? (lite_cSrc).value : ""), source: lite_srcPath, moduleCount: lite_depCount };
+    }
+    void liteFn$lib$util$project$readToolProvenance;
+    function liteFn$lib$util$project$printVersionMeta(lite_label: string, lite_component: string, lite_asJson: boolean): void {
+        void lite_label;
+        void lite_component;
+        void lite_asJson;
+        const lite_root = liteFn$lib$util$project$findRepoRoot();
+        void lite_root;
+        const lite_version = liteFn$lib$util$project$readComponentVersionAt(lite_root, lite_component);
+        void lite_version;
+        const lite_compilerVersion = liteFn$lib$util$project$readComponentVersionAt(lite_root, "compiler");
+        void lite_compilerVersion;
+        const lite_runtimeVersion = liteFn$lib$util$project$readComponentVersionAt(lite_root, "runtime");
+        void lite_runtimeVersion;
+        const lite_entryPath = lite$processEntryPath();
+        void lite_entryPath;
+        const lite_relEntry = liteFn$lib$util$project$relativeToRoot(lite_root, lite_entryPath);
+        void lite_relEntry;
+        const lite_kind = liteFn$lib$util$project$classifyArtifactKind(lite_relEntry);
+        void lite_kind;
+        const lite_seed = liteFn$lib$util$project$readSeedMeta(lite_root);
+        void lite_seed;
+        const lite_prov = liteFn$lib$util$project$readToolProvenance(lite_root, lite_relEntry, lite_kind);
+        void lite_prov;
+        const lite_target = (Boolean((((lite_prov).target) !== (""))) ? (lite_prov).target : (Boolean((((lite_seed).target) !== (""))) ? (lite_seed).target : "ts"));
+        void lite_target;
+        let lite_artSha = (lite_prov).artifactSha256;
+        void lite_artSha;
+        if (((((lite_artSha) === (""))) && (((lite_entryPath) !== (""))))) {
+            const lite_hashed = liteFn$lib$core$crypto$sha256File(lite_entryPath);
+            void lite_hashed;
+            if ((lite_hashed).ok) {
+                lite_artSha = (lite_hashed).hex;
+            }
+        }
+        const lite_source = (Boolean((((lite_prov).source) !== (""))) ? (lite_prov).source : (Boolean(((lite_kind) === ("bootstrap-igniter-ts"))) ? "tools/src/ignite.lts" : ""));
+        void lite_source;
+        const lite_hostRuntime = (("node ") + (lite$processRuntimeVersion()));
+        void lite_hostRuntime;
+        if (lite_asJson) {
+            const lite_out = (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((("{\n  \"command\": ") + (liteFn$lib$util$json$quoteString(lite_label)))) + (",\n"))) + ("  \"component\": "))) + (liteFn$lib$util$json$quoteString(lite_component)))) + (",\n"))) + ("  \"version\": "))) + (liteFn$lib$util$json$quoteString(lite_version)))) + (",\n"))) + ("  \"kind\": "))) + (liteFn$lib$util$json$quoteString(lite_kind)))) + (",\n"))) + ("  \"target\": "))) + (liteFn$lib$util$json$quoteString(lite_target)))) + (",\n"))) + ("  \"compilerVersion\": "))) + (liteFn$lib$util$json$quoteString(lite_compilerVersion)))) + (",\n"))) + ("  \"runtimeVersion\": "))) + (liteFn$lib$util$json$quoteString(lite_runtimeVersion)))) + (",\n"))) + ("  \"artifact\": "))) + (liteFn$lib$util$json$quoteString(lite_relEntry)))) + (",\n"))) + ("  \"artifactSha256\": "))) + (liteFn$lib$util$json$quoteString(lite_artSha)))) + (",\n"))) + ("  \"source\": "))) + (liteFn$lib$util$json$quoteString(lite_source)))) + (",\n"))) + ("  \"modules\": "))) + (liteFn$lib$core$int$intText((lite_prov).moduleCount)))) + (",\n"))) + ("  \"compilerArtifactSha256\": "))) + (liteFn$lib$util$json$quoteString((lite_prov).compilerArtifactSha256)))) + (",\n"))) + ("  \"compilerSourceSha256\": "))) + (liteFn$lib$util$json$quoteString((lite_prov).compilerSourceSha256)))) + (",\n"))) + ("  \"seedArtifactSha256\": "))) + (liteFn$lib$util$json$quoteString((lite_seed).artifactSha256)))) + (",\n"))) + ("  \"seedSourceSha256\": "))) + (liteFn$lib$util$json$quoteString((lite_seed).sourceSha256)))) + (",\n"))) + ("  \"seedIgniterSha256\": "))) + (liteFn$lib$util$json$quoteString((lite_seed).igniterSha256)))) + (",\n"))) + ("  \"seedRecorded\": "))) + (liteFn$lib$util$json$quoteString((lite_seed).recorded)))) + (",\n"))) + ("  \"hostRuntime\": "))) + (liteFn$lib$util$json$quoteString(lite_hostRuntime)))) + (",\n"))) + ("  \"platform\": "))) + (liteFn$lib$util$json$quoteString(lite$processPlatform())))) + (",\n"))) + ("  \"arch\": "))) + (liteFn$lib$util$json$quoteString(lite$processArch())))) + ("\n"))) + ("}"));
+            void lite_out;
+            lite$emit(lite_out + "\n");
+            return;
+        }
+        lite$emit(((((lite_label) + (" "))) + (lite_version)) + "\n");
+        lite$emit((((((((("kind: ") + (lite_kind))) + (" (target: "))) + (lite_target))) + (")")) + "\n");
+        lite$emit((((((("component: ") + (lite_component))) + (" "))) + (lite_version)) + "\n");
+        const lite_compilerDetail = (Boolean((((lite_seed).artifactSha256) !== (""))) ? ((((((((" (seed: ") + (liteFn$lib$util$project$shortHash((lite_seed).artifactSha256)))) + (((Boolean((((lite_seed).igniterSha256) !== (""))) ? ((", igniter: ") + (liteFn$lib$util$project$shortHash((lite_seed).igniterSha256))) : ""))))) + (((Boolean((((lite_seed).recorded) !== (""))) ? ((", recorded: ") + ((lite_seed).recorded)) : ""))))) + (")")) : "");
+        void lite_compilerDetail;
+        lite$emit((((("compiler: ") + (lite_compilerVersion))) + (lite_compilerDetail)) + "\n");
+        lite$emit((("runtime: ") + (lite_runtimeVersion)) + "\n");
+        if (((lite_relEntry) !== (""))) {
+            const lite_artDetail = (Boolean(((lite_artSha) !== (""))) ? ((((" (sha256: ") + (liteFn$lib$util$project$shortHash(lite_artSha)))) + (")")) : "");
+            void lite_artDetail;
+            lite$emit((((("artifact: ") + (lite_relEntry))) + (lite_artDetail)) + "\n");
+        }
+        if (((lite_source) !== (""))) {
+            const lite_srcMeta: string[] = [...([])];
+            void lite_srcMeta;
+            if ((((lite_prov).moduleCount) > (0n))) {
+                lite_srcMeta.push(((liteFn$lib$core$int$intText((lite_prov).moduleCount)) + (" modules")));
+            }
+            if ((((lite_prov).compilerArtifactSha256) !== (""))) {
+                lite_srcMeta.push((("built-by: ") + (liteFn$lib$util$project$shortHash((lite_prov).compilerArtifactSha256))));
+            }
+            const lite_srcSuffix = (Boolean(((liteFn$lib$core$list$listCountText([...(lite_srcMeta)])) > (0n))) ? ((((" (") + (liteFn$lib$core$text$joinTexts([...(lite_srcMeta)], ", ")))) + (")")) : "");
+            void lite_srcSuffix;
+            lite$emit((((("source: ") + (lite_source))) + (lite_srcSuffix)) + "\n");
+        }
+        lite$emit((((((((((((("host: ") + (lite_hostRuntime))) + (" ("))) + (lite$processPlatform()))) + ("/"))) + (lite$processArch()))) + (")")) + "\n");
+    }
+    void liteFn$lib$util$project$printVersionMeta;
+    function liteFn$lib$util$project$handleNamedVersionFlag(lite_args: string[], lite_component: string, lite_label: string): void {
+        void lite_args;
+        void lite_component;
+        void lite_label;
+        const lite_argCount = liteFn$lib$core$list$listCountText([...(lite_args)]);
+        void lite_argCount;
+        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 11390)) === ("--version"))))) {
+            if (((lite_argCount) === (1n))) {
+                liteFn$lib$util$project$printVersionMeta(lite_label, lite_component, false);
+                lite$exit(0n);
+            }
+            if (((((lite_argCount) === (2n))) && (((lite$listAt((lite_args), 1n, 11560)) === ("--json"))))) {
+                liteFn$lib$util$project$printVersionMeta(lite_label, lite_component, true);
+                lite$exit(0n);
+            }
+            lite$reportError((((("Usage: ") + (lite_label))) + (" --version [--json]")));
+            lite$exit(2n);
+        }
+    }
+    void liteFn$lib$util$project$handleNamedVersionFlag;
     function liteFn$_p__p_$_p__p_$compiler$src$modules$moduleVisited(lite_graph: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[], lite_path: string): boolean {
         void lite_graph;
         void lite_path;
@@ -26168,6 +26415,13 @@ export function main(lite$write?: (text: string) => void): string {
             liteFn$_p__p_$_p__p_$compiler$src$driver__ts$run([...(lite_compArgs)]);
             return;
         }
+        const lite_baseEntry = liteFn$lib$core$path$baseName(lite_entryPath);
+        void lite_baseEntry;
+        if (((lite_baseEntry) === ("lite-wipe"))) {
+            liteFn$lib$util$project$handleNamedVersionFlag([...(lite_rawArgs)], "cli", "lite-wipe");
+        } else {
+            liteFn$lib$util$project$handleNamedVersionFlag([...(lite_rawArgs)], "cli", "lite-ignite");
+        }
         let lite_checkExplicit = false;
         void lite_checkExplicit;
         let lite_noCheck = false;
@@ -26193,7 +26447,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_args: string[] = [...(lite_rawArgs)];
         void lite_args;
         while (((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) {
-            const lite_arg = lite$listPopFront(lite_args, 21972);
+            const lite_arg = lite$listPopFront(lite_args, 22209);
             void lite_arg;
             if (((lite_arg) === ("--check"))) {
                 lite_checkExplicit = true;
@@ -26216,15 +26470,15 @@ export function main(lite$write?: (text: string) => void): string {
                     lite$reportError("ignite: missing tool name for --ensure");
                     lite$exit(2n);
                 }
-                lite_ensureName = lite$listPopFront(lite_args, 22752);
+                lite_ensureName = lite$listPopFront(lite_args, 22989);
             } else if (((lite_arg) === ("--run"))) {
                 if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
                     lite$reportError("ignite: missing tool name for --run");
                     lite$exit(2n);
                 }
-                lite_runToolName = lite$listPopFront(lite_args, 22996);
-                if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) && (((lite$listAt((lite_args), 0n, 23074)) === ("--"))))) {
-                    const lite__sep = lite$listPopFront(lite_args, 23111);
+                lite_runToolName = lite$listPopFront(lite_args, 23233);
+                if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) && (((lite$listAt((lite_args), 0n, 23311)) === ("--"))))) {
+                    const lite__sep = lite$listPopFront(lite_args, 23348);
                     void lite__sep;
                 }
                 break;
@@ -26298,7 +26552,7 @@ export function main(lite$write?: (text: string) => void): string {
                 lite$exit(1n);
             }
             if ((lite_res).rebuilt) {
-                lite_rebuiltCount = lite$addInt(lite_rebuiltCount, 1n, 25502);
+                lite_rebuiltCount = lite$addInt(lite_rebuiltCount, 1n, 25739);
             }
             lite_artifactPaths.push((lite_res).path);
             const lite_entryStr = (((((((((((((((("    {\n      \"name\": ") + (liteFn$lib$util$json$quoteString(lite_toolName)))) + (",\n      \"path\": "))) + (liteFn$lib$util$json$quoteString((lite_res).path)))) + (",\n      \"sha256\": "))) + (liteFn$lib$util$json$quoteString((lite_res).sha256)))) + (",\n      \"rebuilt\": "))) + (((Boolean((lite_res).rebuilt) ? "true" : "false"))))) + ("\n    }"));

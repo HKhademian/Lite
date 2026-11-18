@@ -1,7 +1,9 @@
 /** Shared repository discovery and component-version CLI helpers for Lite tools. */
 
+crypto := import "core/crypto";
 io := import "core/io";
 fs := import "core/file";
+integer := import "core/int";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
@@ -31,9 +33,8 @@ pub findRepoRoot := fn(): String {
     findRepoRootFrom(proc.cwd())
 }
 
-/** Reads the version string for `component` from `config/versions.json`, or `"unassigned"` when null or missing. */
-pub readComponentVersion := fn(component: String): String {
-    root := findRepoRoot();
+/** Reads the version string for `component` inside `root` from `config/versions.json`, or `"unassigned"`. */
+readComponentVersionAt := fn(root: String, component: String): String {
     if root == "" { return "unassigned"; }
     versionsPath := path.resolve(root, "config/versions.json");
     readRes := fs.readText(versionsPath);
@@ -41,20 +42,208 @@ pub readComponentVersion := fn(component: String): String {
     found := json.readObjectString(readRes.text, 0, component);
     if not found.found or not found.ok { return "unassigned"; }
     found.value
-}
+};
 
-/** Handles `lite <command> --version` cleanly when `--version` is the first CLI argument. */
-pub handleVersionFlag := fn(args: List<String>, component: String, command: String): Unit {
+/** Reads the version string for `component` from `config/versions.json`, or `"unassigned"` when null or missing. */
+pub readComponentVersion := fn(component: String): String {
+    readComponentVersionAt(findRepoRoot(), component)
+};
+
+/** Normalizes `targetPath` relative to `root` using forward slashes, or returns it unchanged when outside `root`. */
+relativeToRoot := fn(root: String, targetPath: String): String {
+    if targetPath == "" { return ""; }
+    rpTarget := fs.realPath(targetPath);
+    canonTarget := if rpTarget.ok { rpTarget.path } else { path.normalize(targetPath) };
+    if root == "" { return canonTarget; }
+    rpRoot := fs.realPath(root);
+    canonRoot := if rpRoot.ok { rpRoot.path } else { path.normalize(root) };
+    prefix := if text.endsWith(canonRoot, "/") { canonRoot } else { canonRoot + "/" };
+    if text.startsWithAt(canonTarget, 0, prefix) {
+        return text.slice(canonTarget, text.length(prefix), text.length(canonTarget));
+    }
+    canonTarget
+};
+
+/** Classifies the active execution artifact kind from its repo-relative entrypoint path. */
+classifyArtifactKind := fn(relEntry: String): String {
+    if text.startsWithAt(relEntry, 0, "dist/tools/") { return "ignited-ts"; }
+    if relEntry == "compiler/bootstrap/igniter.ts" { return "bootstrap-igniter-ts"; }
+    if text.startsWithAt(relEntry, 0, "dist/bootstrap/") { return "bootstrap-compiler-ts"; }
+    if text.startsWithAt(relEntry, 0, "dist/compiler-cache/") { return "cached-compiler-ts"; }
+    if text.endsWith(relEntry, ".ts") or text.endsWith(relEntry, ".js") { return "ts-script"; }
+    if relEntry == "" { return "unknown"; }
+    "native"
+};
+
+/** Abbreviates a hex digest for concise terminal display. */
+shortHash := fn(hex: String): String {
+    if hex == "" { return "unknown"; }
+    if text.length(hex) <= 12 { return hex; }
+    text.slice(hex, 0, 12)
+};
+
+/** Reads optional seed metadata from `compiler/bootstrap/seed.ts`. */
+readSeedMeta := fn(root: String): (target: String, recorded: String, igniterSha256: String, sourceSha256: String, artifactSha256: String) {
+    if root == "" {
+        return (target = "", recorded = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "");
+    }
+    seedRead := fs.readText(path.resolve(root, "compiler/bootstrap/seed.ts"));
+    if not seedRead.ok {
+        return (target = "", recorded = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "");
+    }
+    brace := text.indexOfText(seedRead.text, "{", 0);
+    if brace < 0 {
+        return (target = "", recorded = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "");
+    }
+    tgt := json.readObjectString(seedRead.text, brace, "target");
+    rec := json.readObjectString(seedRead.text, brace, "recorded");
+    ign := json.readObjectString(seedRead.text, brace, "igniterSha256");
+    src := json.readObjectString(seedRead.text, brace, "sourceSha256");
+    art := json.readObjectString(seedRead.text, brace, "artifactSha256");
+    (
+    target = if tgt.found and tgt.ok { tgt.value } else { "" },
+    recorded = if rec.found and rec.ok { rec.value } else { "" },
+    igniterSha256 = if ign.found and ign.ok { ign.value } else { "" },
+    sourceSha256 = if src.found and src.ok { src.value } else { "" },
+    artifactSha256 = if art.found and art.ok { art.value } else { "" }
+    )
+};
+
+/** Reads optional ignited-tool provenance from `dist/tools/<tool>.provenance.json`. */
+readToolProvenance := fn(root: String, relEntry: String, kind: String): (target: String, artifactSha256: String, compilerArtifactSha256: String, compilerSourceSha256: String, source: String, moduleCount: Int) {
+    if root == "" or kind =!= "ignited-ts" or not text.endsWith(relEntry, ".ts") {
+        return (target = "", artifactSha256 = "", compilerArtifactSha256 = "", compilerSourceSha256 = "", source = "", moduleCount = 0);
+    }
+    prefixLen := text.length("dist/tools/");
+    toolName := text.slice(relEntry, prefixLen, text.length(relEntry) - 3);
+    provRead := fs.readText(path.resolve(root, "dist/tools/" + toolName + ".provenance.json"));
+    if not provRead.ok or not json.validate(provRead.text).ok {
+        return (target = "", artifactSha256 = "", compilerArtifactSha256 = "", compilerSourceSha256 = "", source = "", moduleCount = 0);
+    }
+    provText := provRead.text;
+    tgt := json.readObjectString(provText, 0, "target");
+    art := json.readObjectString(provText, 0, "artifactSha256");
+    cArt := json.readObjectString(provText, 0, "compilerArtifactSha256");
+    cSrc := json.readObjectString(provText, 0, "compilerSourceSha256");
+    var srcPath := "";
+    var depCount := 0;
+    depsField := json.findObjectField(provText, 0, "dependencies");
+    if depsField.found {
+        offsets := json.arrayElementOffsets(provText, depsField.valuePos);
+        depCount = list.listCountInt(offsets);
+        if depCount > 0 {
+            firstPath := json.readObjectString(provText, offsets[0], "path");
+            if firstPath.found and firstPath.ok { srcPath = firstPath.value; }
+        }
+    }
+    (
+    target = if tgt.found and tgt.ok { tgt.value } else { "" },
+    artifactSha256 = if art.found and art.ok { art.value } else { "" },
+    compilerArtifactSha256 = if cArt.found and cArt.ok { cArt.value } else { "" },
+    compilerSourceSha256 = if cSrc.found and cSrc.ok { cSrc.value } else { "" },
+    source = srcPath,
+    moduleCount = depCount
+    )
+};
+
+/** Prints version and build metadata for `label` (`--json` emits structured JSON). */
+printVersionMeta := fn(label: String, component: String, asJson: Bool): Unit {
+    root := findRepoRoot();
+    version := readComponentVersionAt(root, component);
+    compilerVersion := readComponentVersionAt(root, "compiler");
+    runtimeVersion := readComponentVersionAt(root, "runtime");
+    entryPath := proc.entryPath();
+    relEntry := relativeToRoot(root, entryPath);
+    kind := classifyArtifactKind(relEntry);
+    seed := readSeedMeta(root);
+    prov := readToolProvenance(root, relEntry, kind);
+
+    target := if prov.target =!= "" { prov.target } else if seed.target =!= "" { seed.target } else { "ts" };
+    var artSha := prov.artifactSha256;
+    if artSha == "" and entryPath =!= "" {
+        hashed := crypto.sha256File(entryPath);
+        if hashed.ok { artSha = hashed.hex; }
+    }
+    source := if prov.source =!= "" { prov.source } else if kind == "bootstrap-igniter-ts" { "tools/src/ignite.lts" } else { "" };
+    hostRuntime := "node " + proc.runtimeVersion();
+
+    if asJson {
+        out := "{\n"
+        + "  \"command\": " + json.quoteString(label) + ",\n"
+        + "  \"component\": " + json.quoteString(component) + ",\n"
+        + "  \"version\": " + json.quoteString(version) + ",\n"
+        + "  \"kind\": " + json.quoteString(kind) + ",\n"
+        + "  \"target\": " + json.quoteString(target) + ",\n"
+        + "  \"compilerVersion\": " + json.quoteString(compilerVersion) + ",\n"
+        + "  \"runtimeVersion\": " + json.quoteString(runtimeVersion) + ",\n"
+        + "  \"artifact\": " + json.quoteString(relEntry) + ",\n"
+        + "  \"artifactSha256\": " + json.quoteString(artSha) + ",\n"
+        + "  \"source\": " + json.quoteString(source) + ",\n"
+        + "  \"modules\": " + integer.intText(prov.moduleCount) + ",\n"
+        + "  \"compilerArtifactSha256\": " + json.quoteString(prov.compilerArtifactSha256) + ",\n"
+        + "  \"compilerSourceSha256\": " + json.quoteString(prov.compilerSourceSha256) + ",\n"
+        + "  \"seedArtifactSha256\": " + json.quoteString(seed.artifactSha256) + ",\n"
+        + "  \"seedSourceSha256\": " + json.quoteString(seed.sourceSha256) + ",\n"
+        + "  \"seedIgniterSha256\": " + json.quoteString(seed.igniterSha256) + ",\n"
+        + "  \"seedRecorded\": " + json.quoteString(seed.recorded) + ",\n"
+        + "  \"hostRuntime\": " + json.quoteString(hostRuntime) + ",\n"
+        + "  \"platform\": " + json.quoteString(proc.platform()) + ",\n"
+        + "  \"arch\": " + json.quoteString(proc.arch()) + "\n"
+        + "}";
+        io.outputLine(out);
+        return;
+    }
+
+    io.outputLine(label + " " + version);
+    io.outputLine("kind: " + kind + " (target: " + target + ")");
+    io.outputLine("component: " + component + " " + version);
+    compilerDetail := if seed.artifactSha256 =!= "" {
+        " (seed: " + shortHash(seed.artifactSha256)
+        + (if seed.igniterSha256 =!= "" { ", igniter: " + shortHash(seed.igniterSha256) } else { "" })
+        + (if seed.recorded =!= "" { ", recorded: " + seed.recorded } else { "" })
+        + ")"
+    } else { "" };
+    io.outputLine("compiler: " + compilerVersion + compilerDetail);
+    io.outputLine("runtime: " + runtimeVersion);
+    if relEntry =!= "" {
+        artDetail := if artSha =!= "" { " (sha256: " + shortHash(artSha) + ")" } else { "" };
+        io.outputLine("artifact: " + relEntry + artDetail);
+    }
+    if source =!= "" {
+        srcMeta: mut List<String> = [];
+        if prov.moduleCount > 0 {
+            list.pushBack(mut srcMeta, integer.intText(prov.moduleCount) + " modules");
+        }
+        if prov.compilerArtifactSha256 =!= "" {
+            list.pushBack(mut srcMeta, "built-by: " + shortHash(prov.compilerArtifactSha256));
+        }
+        srcSuffix := if list.listCountText(srcMeta) > 0 { " (" + text.joinTexts(srcMeta, ", ") + ")" } else { "" };
+        io.outputLine("source: " + source + srcSuffix);
+    }
+    io.outputLine("host: " + hostRuntime + " (" + proc.platform() + "/" + proc.arch() + ")");
+};
+
+/** Handles `<label> --version [--json]` cleanly when `--version` is the first CLI argument. */
+pub handleNamedVersionFlag := fn(args: List<String>, component: String, label: String): Unit {
     argCount := list.listCountText(args);
     if argCount > 0 and args[0] == "--version" {
-        if argCount =!= 1 {
-            io.errorLine("Usage: lite " + command + " --version");
-            io.exit(2);
+        if argCount == 1 {
+            printVersionMeta(label, component, false);
+            io.exit(0);
         }
-        io.outputLine("lite " + command + " " + readComponentVersion(component));
-        io.exit(0);
+        if argCount == 2 and args[1] == "--json" {
+            printVersionMeta(label, component, true);
+            io.exit(0);
+        }
+        io.errorLine("Usage: " + label + " --version [--json]");
+        io.exit(2);
     }
-}
+};
+
+/** Handles `lite <command> --version [--json]` cleanly when `--version` is the first CLI argument. */
+pub handleVersionFlag := fn(args: List<String>, component: String, command: String): Unit {
+    handleNamedVersionFlag(args, component, "lite " + command);
+};
 
 /** Writes captured process `stderr` chunk without adding a duplicate trailing newline. */
 pub errorText := fn(chunk: String): Unit {

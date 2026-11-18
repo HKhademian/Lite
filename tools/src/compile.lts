@@ -14,10 +14,7 @@ usageExit := fn(): Unit {
 };
 
 run := fn(rawArgs: List<String>): Unit {
-    if list.listCountText(rawArgs) == 1 and rawArgs[0] == "--version" {
-        io.outputLine("lite-compile " + project.readComponentVersion("compiler"));
-        io.exit(0);
-    }
+    project.handleNamedVersionFlag(rawArgs, "compiler", "lite-compile");
 
     var target := TARGET_TS;
     args: mut List<String> = rawArgs;

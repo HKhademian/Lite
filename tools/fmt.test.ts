@@ -97,7 +97,8 @@ test('ignited fmt artifact in dist/tools matches tools/src/fmt.lts and passes st
 test('lite fmt CLI handles --version, --help, stdin -, missing args, and directory exclusions', () => {
   const versionRun = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--version'], { cwd: root, encoding: 'utf8' });
   assert.equal(versionRun.status, 0, versionRun.stderr);
-  assert.match(versionRun.stdout, /^lite fmt (?:unassigned|\d+\.\d+\.\d+.*)\n$/);
+  assert.match(versionRun.stdout, /^lite fmt (?:unassigned|\d+\.\d+\.\d+.*)\nkind: ignited-ts \(target: ts\)\n/);
+  assert.match(versionRun.stdout, /^artifact: dist\/tools\/fmt\.ts \(sha256: [0-9a-f]{12}\)$/m);
 
   const helpRun = spawnSync(process.execPath, [join(root, 'bin', 'lite'), 'fmt', '--help'], { cwd: root, encoding: 'utf8' });
   assert.equal(helpRun.status, 0, helpRun.stderr);

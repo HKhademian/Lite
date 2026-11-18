@@ -105,7 +105,24 @@ test('lite router help, version, and unknown command handling match exit and out
 
   const version = command('lite', ['--version']);
   assert.equal(version.status, 0);
-  assert.match(version.stdout, /^lite cli \S+\n$/);
+  assert.match(version.stdout, /^lite cli \S+\nkind: ignited-ts \(target: ts\)\n/);
+  assert.match(version.stdout, /^artifact: dist\/tools\/cli\.ts \(sha256: [0-9a-f]{12}\)$/m);
+  assert.match(version.stdout, /^source: tools\/src\/cli\.lts \(\d+ modules, built-by: [0-9a-f]{12}\)$/m);
+  assert.match(version.stdout, /^host: node v\S+ \([^/]+\/[^)]+\)$/m);
+
+  const versionJson = command('lite', ['--version', '--json']);
+  assert.equal(versionJson.status, 0, versionJson.stderr);
+  const meta = JSON.parse(versionJson.stdout) as { command: string; component: string; kind: string; artifact: string; source: string };
+  assert.equal(meta.command, 'lite cli');
+  assert.equal(meta.component, 'cli');
+  assert.equal(meta.kind, 'ignited-ts');
+  assert.equal(meta.artifact, 'dist/tools/cli.ts');
+  assert.equal(meta.source, 'tools/src/cli.lts');
+
+  const igniterVersion = command('lite-ignite', ['--version']);
+  assert.equal(igniterVersion.status, 0, igniterVersion.stderr);
+  assert.match(igniterVersion.stdout, /^lite-ignite \S+\nkind: bootstrap-igniter-ts \(target: ts\)\n/);
+  assert.match(igniterVersion.stdout, /^artifact: compiler\/bootstrap\/igniter\.ts \(sha256: [0-9a-f]{12}\)$/m);
 });
 
 test('munching routers, flag aliases, and direct generated entrypoints converge on identical output', () => {

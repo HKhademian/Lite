@@ -448,6 +448,13 @@ run := fn(rawArgs: List<String>): Unit {
         return;
     }
 
+    baseEntry := path.baseName(entryPath);
+    if baseEntry == "lite-wipe" {
+        project.handleNamedVersionFlag(rawArgs, "cli", "lite-wipe");
+    } else {
+        project.handleNamedVersionFlag(rawArgs, "cli", "lite-ignite");
+    }
+
     var checkExplicit := false;
     var noCheck := false;
     var force := false;

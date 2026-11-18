@@ -5,10 +5,7 @@ list := import "core/list";
 project := import "util/project";
 
 run := fn(rawArgs: List<String>): Unit {
-    if list.listCountText(rawArgs) == 1 and rawArgs[0] == "--version" {
-        io.outputLine("lite-compile-c " + project.readComponentVersion("compiler"));
-        io.exit(0);
-    }
+    project.handleNamedVersionFlag(rawArgs, "compiler", "lite-compile-c");
     io.errorLine("lite-compile-c: C output is deferred until after the TS compiler migration");
     io.exit(2);
 };
