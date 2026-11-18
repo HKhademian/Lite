@@ -861,7 +861,7 @@ arithmetic runtime faults. The schema
 and workflow are documented in [tests/README.md](tests/README.md). The suite
 loads all cases and does not keep separate inline source, input, and
 expected-output arrays. Invalid UTF-8 compiler input, source-name diagnostics,
-exact artifact shape, and `--check` remain targeted tests in [test.ts](test.ts).
+exact artifact shape, and `--check` are covered by [cli-contracts.test.lts](../compiler/tests/cli-contracts.test.lts).
 
 References checked for the toolchain: [Node release/downloads](https://nodejs.org/en/download),
 [Node TypeScript execution](https://nodejs.org/api/typescript.html),

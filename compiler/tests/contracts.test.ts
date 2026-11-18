@@ -70,7 +70,7 @@ test('the migration ledger accounts for active and T00-retired regression tests'
     assert.ok(Number.isInteger(item.originalAssertions) && item.originalAssertions >= 0, item.title);
     if (item.destination === 'retired-with-t00') { retired += 1; continue; }
     assert.ok(
-      item.destination === 'igniter/test.ts' || item.destination.endsWith('.test.lts'),
+      item.destination === 'compiler/tests/host.test.ts' || item.destination.endsWith('.test.lts'),
       `${item.title}: unexpected destination ${item.destination}`,
     );
     active += 1;

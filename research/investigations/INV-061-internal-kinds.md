@@ -11,7 +11,7 @@ derived types? Preserve readability, discriminated-union narrowing, exhaustivene
 serialized spellings, direct Node execution and generated bootstrap continuity.
 
 - [Semantic verification](../../lib/util/verify.lts) originally had literal unions for kinds/targets in `igniter/verify.ts` before migrating to Lite.
-- [Compiler fixtures](../../igniter/test-fixtures.ts) use typed program/rejected categories.
+- [Compiler fixtures](../../lib/util/corpus.lts) originally used typed program/rejected categories in `igniter/test-fixtures.ts` before migrating to Lite.
 - [Declarative cases](../../lib/util/cases.lts) originally used local named `as const` values in `tools/cases.ts` before migrating to Lite;
   that local use did not decide a project-wide refactor.
 - [The Lite lexer](../../compiler/src/lexer.lts) stores String kinds and uses

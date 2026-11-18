@@ -179,19 +179,20 @@ The corpus uses every source and stream form:
 ## Notes
 
 - Invalid UTF-8 compiler input, `--check`, source-name prefixes and exact
-  artifact-shape assertions remain targeted tests in [test.ts](../test.ts)
+  artifact-shape assertions are covered in [cli-contracts.test.lts](../../compiler/tests/cli-contracts.test.lts)
   because they need bytes, CLI arguments or artifact inspection rather than the
   program input/output stream model.
 - Strict TypeScript checking: `npm run check`.
 
 ### Regression ownership after T00 retirement
 
-The active generated compiler/phase/artifact regressions live in `igniter/test.ts`.
+The active generated compiler/phase/artifact regressions live in `.test.lts` unit
+suites (`./bin/lite test --unit`, shared helpers in [compiler-test.lts](../../lib/util/compiler-test.lts)).
 T00-only interpreter assertions were retired with the handwritten implementation;
 the [test migration ledger](../../compiler/tests/test-migration.json) records
 their original names and assertion counts.
 
-Both suites use the independent manifest loader in `igniter/test-fixtures.ts`.
+Compiler/corpus fixture loading and parity live in [corpus.lts](../../lib/util/corpus.lts).
 Generated regressions use [recorded process contracts](../../compiler/tests/contracts/README.md)
 instead of live T00 expectation lookups. Unknown source/input/argument/name
 combinations fail explicitly.

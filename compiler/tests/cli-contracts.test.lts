@@ -1,0 +1,406 @@
+/* CLI, launcher, source-name, doc-comment, reference adapter, and determinism suites migrated from igniter/test.ts. */
+
+crypto := import "core/crypto";
+fs := import "core/file";
+integer := import "core/int";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+unicode := import "core/unicode";
+cases := import "util/cases";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+heavyEnv := proc.envGet("LITE_SKIP_HEAVY");
+skipHeavy := heavyEnv.found and heavyEnv.value == "1";
+
+tsComp := compilerBuild.selectCompilerPath(root, "ts").path;
+cComp := compilerBuild.selectCompilerPath(root, "c").path;
+test.check("ts & c compiler paths resolved", tsComp =!= "" and cComp =!= "");
+
+runCmd := fn(exe: String, args: List<String>, cwd: String, envOver: List<String>, stdinStr: String): (status: Int, stdout: String, stderr: String) {
+    tmpRes := fs.makeTempDir("lite-cli-cmd-");
+    test.check("runCmd makeTempDir", tmpRes.ok);
+    outP := path.join(tmpRes.path, "out");
+    errP := path.join(tmpRes.path, "err");
+    res := proc.runBytes(exe, args, cwd, envOver, 180000, unicode.utf8Encode(stdinStr), outP, errP);
+    test.check("runCmd error: " + res.error, res.error == "");
+    outText := fs.readText(outP).text;
+    errText := fs.readText(errP).text;
+    _rm := fs.remove(tmpRes.path);
+    (status = res.status, stdout = outText, stderr = errText)
+};
+
+emptyEnv := fn(): List<String> {
+    res: List<String> = [];
+    res
+};
+
+/* compiler applications preserve optional logical source names in their own diagnostics only */
+comps: List<String> = [tsComp, cComp];
+labels: List<String> = ["", "a b.lts", "سلام🙂.lts", "quote\";\\\nname.lts"];
+loop comps as comp {
+    expectedOut := compilerTest.compileStdin(root, comp, "io := import \"core/io\"; io.outputLine(42);", "").stdout;
+    loop labels as label {
+        okRes := compilerTest.compileStdin(root, comp, "io := import \"core/io\"; io.outputLine(42);", label);
+        test.checkInt("label ok status " + label, 0, okRes.status);
+        test.checkText("label ok out " + label, expectedOut, okRes.stdout);
+        test.checkText("label ok err " + label, "", okRes.stderr);
+
+        pfx := if label == "" { "" } else { label + ":" };
+        badRes := compilerTest.compileStdin(root, comp, "io := import \"core/io\"; io.outputLine(1 +);", label);
+        test.checkInt("label bad status " + label, 2, badRes.status);
+        test.checkText("label bad out " + label, "", badRes.stdout);
+        test.checkText("label bad err " + label, pfx + "1:42: expected an Int, Float, String or Bool expression\n", badRes.stderr);
+    }
+    firstRes := compilerTest.compileStdin(root, comp, "x := 1 +;", "first.lts");
+    test.checkInt("first.lts status", 2, firstRes.status);
+    test.checkText("first.lts err", "first.lts:1:9: expected an Int, Float, String or Bool expression\n", firstRes.stderr);
+}
+
+/* lite and compiler commands route through the compiler and selected target */
+tmpCmdRes := fs.makeTempDir("litec-");
+test.check("tmpCmdRes ok", tmpCmdRes.ok);
+cmdDir := tmpCmdRes.path;
+samplePath := path.join(cmdDir, "sample.lts");
+_ws1 := fs.writeText(samplePath, "io := import \"core/io\"; io.outputLine(42);");
+ref42Ts := fs.readText(path.join(root, "compiler/tests/references/generated/report-42.ts")).text;
+
+rCompTs := runCmd(path.join(root, "bin/lite-compile"), ["--target", "ts", samplePath], root, emptyEnv(), "");
+test.checkInt("lite-compile ts", 0, rCompTs.status);
+test.checkText("lite-compile ts out", ref42Ts, rCompTs.stdout);
+test.checkText("lite-compile ts err", "", rCompTs.stderr);
+
+rCompC := runCmd(path.join(root, "bin/lite-compile"), ["--target", "c", samplePath], root, emptyEnv(), "");
+test.checkInt("lite-compile c", 2, rCompC.status);
+test.checkText("lite-compile c out", "", rCompC.stdout);
+test.check("lite-compile c deferred", text.containsText(rCompC.stderr, "C output is deferred"));
+
+rShort := runCmd(path.join(root, "bin/lite-compile-ts"), [samplePath], root, emptyEnv(), "");
+test.checkInt("lite-compile-ts", 0, rShort.status);
+test.checkText("lite-compile-ts out", rCompTs.stdout, rShort.stdout);
+
+rChkOk := runCmd(path.join(root, "bin/lite"), ["check", samplePath], root, emptyEnv(), "");
+test.checkInt("lite check ok", 0, rChkOk.status);
+test.checkText("lite check ok out", "", rChkOk.stdout);
+test.checkText("lite check ok err", "", rChkOk.stderr);
+
+badSamplePath := path.join(cmdDir, "bad.lts");
+_ws2 := fs.writeText(badSamplePath, "io := import \"core/io\"; io.outputLine(1 +);\n");
+rBadComp := runCmd(path.join(root, "bin/lite-compile-ts"), [badSamplePath], root, emptyEnv(), "");
+test.checkInt("bad compile status", 2, rBadComp.status);
+test.checkText("bad compile out", "", rBadComp.stdout);
+test.checkText("bad compile err", badSamplePath + ":1:42: expected an Int, Float, String or Bool expression\n", rBadComp.stderr);
+
+rBadChk := runCmd(path.join(root, "bin/lite"), ["check", badSamplePath], root, emptyEnv(), "");
+test.checkInt("bad check status", 1, rBadChk.status);
+test.checkText("bad check out", "", rBadChk.stdout);
+test.check("bad check err", text.containsText(rBadChk.stderr, "bad.lts:1:42: expected an Int, Float, String or Bool expression"));
+
+badArgLists: List<String> = ["[]", "[\"--target\",\"x\"," + path.join(cmdDir, "sample.lts") + "]", "[\"ts\"," + path.join(cmdDir, "missing.lts") + "]", "[\"ts\"," + path.join(cmdDir, "sample.txt") + "]"];
+bArgs0: List<String> = [];
+bArgs1: List<String> = ["--target", "x", samplePath];
+bArgs2: List<String> = ["ts", path.join(cmdDir, "missing.lts")];
+bArgs3: List<String> = ["ts", path.join(cmdDir, "sample.txt")];
+rBad0 := runCmd(path.join(root, "bin/lite-compile-ts"), bArgs0, root, emptyEnv(), "");
+rBad1 := runCmd(path.join(root, "bin/lite-compile-ts"), bArgs1, root, emptyEnv(), "");
+rBad2 := runCmd(path.join(root, "bin/lite-compile-ts"), bArgs2, root, emptyEnv(), "");
+rBad3 := runCmd(path.join(root, "bin/lite-compile-ts"), bArgs3, root, emptyEnv(), "");
+_unusedBA := badArgLists;
+test.checkInt("badArgs 0", 2, rBad0.status);
+test.checkText("badArgs 0 out", "", rBad0.stdout);
+test.checkInt("badArgs 1", 2, rBad1.status);
+test.checkText("badArgs 1 out", "", rBad1.stdout);
+test.checkInt("badArgs 2", 2, rBad2.status);
+test.checkText("badArgs 2 out", "", rBad2.stdout);
+test.checkInt("badArgs 3", 2, rBad3.status);
+test.checkText("badArgs 3 out", "", rBad3.stdout);
+_rmCmd := fs.remove(cmdDir);
+
+/* lite help and docs expose the command matrix and documentation roots */
+liteBin := path.join(root, "bin/lite");
+helpRes := runCmd(liteBin, ["help"], root, emptyEnv(), "");
+test.checkInt("help status", 0, helpRes.status);
+test.check("help usage", text.containsText(helpRes.stdout, "Usage: ./bin/lite <command>"));
+test.check("help compiler entries", text.containsText(helpRes.stdout, "Compiler entry points: ./bin/lite-compile, ./bin/lite compile"));
+test.check("help test flags", text.containsText(helpRes.stdout, "test [--smoke|--fast|--full]"));
+test.check("help test verbosity", text.containsText(helpRes.stdout, "[--verbose|--mute|--silence]"));
+test.checkText("help err", "", helpRes.stderr);
+
+docsRes := runCmd(liteBin, ["docs"], root, emptyEnv(), "");
+test.checkInt("docs status", 0, docsRes.status);
+test.check("docs compiler", text.containsText(docsRes.stdout, "compiler/README.md"));
+test.check("docs igniter tests", text.containsText(docsRes.stdout, "igniter/tests/README.md"));
+test.checkText("docs err", "", docsRes.stderr);
+
+noArgsRes := runCmd(liteBin, emptyEnv(), root, emptyEnv(), "");
+test.checkInt("noArgs status", 2, noArgsRes.status);
+test.checkText("noArgs out", "", noArgsRes.stdout);
+test.check("noArgs err", text.containsText(noArgsRes.stderr, "Usage:"));
+
+/* lite verify uses generated TS, reports migration gaps and rejects the retired reference flag */
+if not skipHeavy {
+    vTmp := fs.makeTempDir("lite-verify-test-").path;
+    vEnv: List<String> = ["LITE_VERIFY_CACHE=" + path.join(vTmp, "cache.json")];
+    verified := runCmd(liteBin, ["verify", "--all", "--no-cache"], root, vEnv, "");
+    test.checkInt("verify --all status: " + verified.stderr, 0, verified.status);
+    test.check("verify signed-arithmetic", text.containsText(verified.stdout, "PASS feature.numeric.integers.signed-arithmetic/precedence-and-division"));
+    test.check("verify double-sum", text.containsText(verified.stdout, "PASS example.foundations.io.double-sum/seven-and-five"));
+    test.check("verify ts", text.containsText(verified.stdout, "[ts]"));
+    test.check("verify no T00", not text.containsText(verified.stdout, "T00 reference"));
+    test.check("verify no c", not text.containsText(verified.stdout, "[c]"));
+    test.check("verify match", text.containsText(verified.stdout, "PASS feature.control.branching.subjectless-match/first-true-and-fallback [ts]"));
+    test.check("verify widths", text.containsText(verified.stdout, "PASS feature.numeric.widths.sized-promotion/widths [ts]"));
+    test.check("verify fn values", text.containsText(verified.stdout, "PASS feature.functions.callables.function-values/double-five [ts]"));
+    test.check("verify blocks", text.containsText(verified.stdout, "PASS feature.blocks.wiring.parallel-symbol-wiring/even-four [ts]"));
+    test.check("verify showcase", text.containsText(verified.stdout, "PASS showcase.foundations.bindings.bindings-and-mutability/bindings-and-mutability [ts]"));
+    test.check("verify counts", text.containsText(verified.stdout, "verification passed: 128 executed, 0 cached"));
+
+    covered := runCmd(liteBin, ["verify", "--coverage"], root, vEnv, "");
+    test.checkInt("verify --coverage status", 0, covered.status);
+    test.check("coverage features", text.containsText(covered.stdout, "features: 52 registered, 52 cases"));
+    test.check("coverage examples", text.containsText(covered.stdout, "examples: 26/26 manifests"));
+    test.check("coverage samples", text.containsText(covered.stdout, "samples: 22/22 manifests"));
+    test.check("coverage showcases", text.containsText(covered.stdout, "showcases: 18/18 manifests"));
+
+    firstV := runCmd(liteBin, ["verify", "--all", "--filter", "features/numeric/integers/signed-arithmetic.json"], root, vEnv, "");
+    test.checkInt("verify cache 1", 0, firstV.status);
+    test.check("verify cache 1 count", text.containsText(firstV.stdout, "0 cached"));
+    secondV := runCmd(liteBin, ["verify", "--all", "--filter", "features/numeric/integers/signed-arithmetic.json"], root, vEnv, "");
+    test.checkInt("verify cache 2", 0, secondV.status);
+    test.check("verify cache 2 count", text.containsText(secondV.stdout, "0 executed, "));
+    test.check("verify cache 2 label", text.containsText(secondV.stdout, "(cached)"));
+    shardedV := runCmd(liteBin, ["verify", "--all", "--filter", "features/numeric/integers/signed-arithmetic.json", "--shard", "2/2", "--no-cache"], root, vEnv, "");
+    test.checkInt("verify shard", 0, shardedV.status);
+    test.check("verify shard no cache", text.containsText(shardedV.stdout, "0 cached"));
+    _rmV := fs.remove(vTmp);
+}
+
+/* root launcher compiles artifacts and forwards their input, diagnostics and status from caller directories */
+lTmp := fs.makeTempDir("lite-launcher-").path;
+_wLPkg := fs.writeText(path.join(lTmp, "package.json"), "{\"type\":\"module\"}\n");
+lSource := path.join(lTmp, "program with spaces.lts");
+lArt := path.join(lTmp, "program.ts");
+lRunner := path.join(lTmp, "runner.ts");
+_wLR := cases.writeTsRunner(lRunner);
+lEnv: List<String> = ["CDPATH=" + lTmp];
+
+compEx := runCmd(liteBin, ["compile", "language/examples/foundations/io/double-sum.lts"], root, lEnv, "");
+test.checkInt("launcher example compile", 0, compEx.status);
+_wArt1 := fs.writeText(lArt, compEx.stdout);
+runEx := runCmd(proc.execPath(), [lRunner, lArt], lTmp, lEnv, "7\n5\n");
+test.checkInt("launcher example run", 0, runEx.status);
+test.checkText("launcher example out", "First integer: Second integer: 24\n", runEx.stdout);
+
+_wSrcExit := fs.writeText(lSource, "io := import \"core/io\"; io.outputLine(io.inputInt()); io.errorLine(\"done\"); io.exit(7);");
+compExit := runCmd(liteBin, ["compile", lSource], lTmp, lEnv, "");
+test.checkInt("launcher exit compile", 0, compExit.status);
+_wArt2 := fs.writeText(lArt, compExit.stdout);
+runExit := runCmd(proc.execPath(), [lRunner, lArt], lTmp, lEnv, "19\n");
+test.checkInt("launcher exit run", 7, runExit.status);
+test.checkText("launcher exit out", "19\n", runExit.stdout);
+test.checkText("launcher exit err", "done\n", runExit.stderr);
+
+_wSrcChk := fs.writeText(lSource, "io := import \"core/io\"; io.outputLine(io.inputInt());");
+chkL := runCmd(liteBin, ["check", lSource], lTmp, lEnv, "");
+test.checkInt("launcher check", 0, chkL.status);
+test.checkText("launcher check out", "", chkL.stdout);
+test.checkText("launcher check err", "", chkL.stderr);
+
+_wSrcArgs := fs.writeText(lSource, "io := import \"core/io\"; loop io.inputArgs() as arg { io.outputLine(arg); }");
+compArgs := runCmd(liteBin, ["compile", lSource], lTmp, lEnv, "");
+test.checkInt("launcher args compile", 0, compArgs.status);
+_wArt3 := fs.writeText(lArt, compArgs.stdout);
+runArgsRes := runCmd(proc.execPath(), [lRunner, lArt, "a b", "", "--check"], lTmp, lEnv, "");
+test.checkInt("launcher args run", 0, runArgsRes.status);
+test.checkText("launcher args out", "a b\n\n--check\n", runArgsRes.stdout);
+
+ranDirect := runCmd(liteBin, ["run", "program with spaces.lts", "--", "a b", "", "--check"], lTmp, lEnv, "");
+test.checkInt("launcher direct run", 0, ranDirect.status);
+test.checkText("launcher direct out", "a b\n\n--check\n", ranDirect.stdout);
+test.checkText("launcher direct err", "", ranDirect.stderr);
+
+_wSrcFault := fs.writeText(lSource, "io := import \"core/io\"; io.outputLine(1/0);");
+compFault := runCmd(liteBin, ["compile", lSource], lTmp, lEnv, "");
+_wArt4 := fs.writeText(lArt, compFault.stdout);
+runFault := runCmd(proc.execPath(), [lRunner, lArt], lTmp, lEnv, "");
+test.checkInt("launcher fault status", 1, runFault.status);
+test.checkText("launcher fault out", "", runFault.stdout);
+test.check("launcher fault err", text.containsText(runFault.stderr, "program with spaces.lts:1:40: ArithmeticPanic:"));
+
+u1 := runCmd(liteBin, emptyEnv(), lTmp, lEnv, "");
+u2 := runCmd(liteBin, ["unknown", lSource], lTmp, lEnv, "");
+u3 := runCmd(liteBin, ["run"], lTmp, lEnv, "");
+test.checkInt("launcher usage 1", 2, u1.status);
+test.check("launcher usage 1 msg", text.containsText(u1.stderr, "Usage: ./bin/lite <command>"));
+test.checkInt("launcher usage 2", 2, u2.status);
+test.check("launcher usage 2 msg", text.containsText(u2.stderr, "Usage: ./bin/lite <command>"));
+test.checkInt("launcher usage run", 2, u3.status);
+test.checkText("launcher usage run msg", "Usage: ./bin/lite run [--builtin-mode SPEC]... file.lts [-- argument ...]\n", u3.stderr);
+
+aliasDir := path.join(lTmp, "project with spaces");
+_sym := fs.symlink(root, aliasDir);
+_wSrcAlias := fs.writeText(lSource, "io := import \"core/io\"; io.outputLine(23);");
+compAlias := runCmd(path.join(aliasDir, "bin/lite"), ["compile", lSource], lTmp, lEnv, "");
+test.checkInt("launcher alias compile", 0, compAlias.status);
+_wArt5 := fs.writeText(lArt, compAlias.stdout);
+runAlias := runCmd(proc.execPath(), [lRunner, lArt], lTmp, lEnv, "");
+test.checkInt("launcher alias run", 0, runAlias.status);
+test.checkText("launcher alias out", "23\n", runAlias.stdout);
+_rmL := fs.remove(lTmp);
+
+/* compiler, L0 and lexer declarations carry doc comments */
+splitLines := fn(content: String): List<String> {
+    lines: mut List<String> = [];
+    size := text.length(content);
+    var start := 0;
+    var i := 0;
+    loop i <= size {
+        if i == size or text.at(content, i) == "\n" {
+            list.pushBack(mut lines, text.slice(content, start, i));
+            start = i + 1;
+        }
+        i = i + 1;
+    }
+    lines
+};
+isDocDeclLine := fn(line: String): Bool {
+    trimmed := text.trimStart(line);
+    if text.startsWithAt(line, 0, " ") or text.startsWithAt(line, 0, "\t") { return false; }
+    colEq := text.indexOfText(trimmed, " := fn", 0);
+    colEqT := text.indexOfText(trimmed, " := type", 0);
+    if colEq < 0 and colEqT < 0 { return false; }
+    text.indexOfText(trimmed, " ", 0) == colEq or text.indexOfText(trimmed, " ", 0) == colEqT
+};
+docDirs: List<String> = [path.join(root, "lib/core"), path.join(root, "compiler/src")];
+docFiles := path.collectFiles(root, docDirs, ".lts", [], false);
+loop docFiles as docFile {
+    content := fs.readText(docFile).text;
+    docLines := splitLines(content);
+    lineCnt := list.listCountText(docLines);
+    var dli := 0;
+    loop dli < lineCnt {
+        if isDocDeclLine(docLines[dli]) {
+            var prev := dli - 1;
+            loop prev >= 0 and text.trim(docLines[prev]) == "" {
+                prev = prev - 1;
+            }
+            var documented := false;
+            if prev >= 0 {
+                lastTrim := text.trim(docLines[prev]);
+                if text.startsWithAt(lastTrim, 0, "/**") and text.endsWith(lastTrim, "*/") {
+                    documented = true;
+                } else if text.endsWith(lastTrim, "*/") {
+                    var start := prev;
+                    loop start >= 0 {
+                        stTrim := text.trim(docLines[start]);
+                        if text.startsWithAt(stTrim, 0, "/**") {
+                            documented = true;
+                            break;
+                        }
+                        if text.startsWithAt(stTrim, 0, "/*") { break; }
+                        start = start - 1;
+                    }
+                }
+            }
+            test.check(docFile + ":" + integer.intText(dli + 1) + ": missing doc comment", documented);
+        }
+        dli = dli + 1;
+    }
+}
+
+/* real compiler CLI forwards source-name context without changing emitted bytes */
+lblDir := fs.makeTempDir("litec-label-").path;
+lblSrc := path.join(lblDir, "label with spaces.lts");
+_wLbl1 := fs.writeText(lblSrc, "io := import \"core/io\"; io.outputLine(42);");
+ref42C := fs.readText(path.join(root, "compiler/tests/references/generated/report-42.c")).text;
+
+lblTsOk := runCmd(path.join(root, "bin/lite-compile-ts"), [lblSrc], root, emptyEnv(), "");
+test.checkInt("lbl TS ok", 0, lblTsOk.status);
+test.checkText("lbl TS ok out", ref42Ts, lblTsOk.stdout);
+test.checkText("lbl TS ok err", "", lblTsOk.stderr);
+
+lblCOk := runCmd(proc.execPath(), [cComp, lblSrc], root, emptyEnv(), "");
+test.checkInt("lbl C ok", 0, lblCOk.status);
+test.checkText("lbl C ok out", ref42C, lblCOk.stdout);
+test.checkText("lbl C ok err", "", lblCOk.stderr);
+
+_wLbl2 := fs.writeText(lblSrc, "io := import \"core/io\"; io.outputLine(1 +);");
+lblTsBad := runCmd(path.join(root, "bin/lite-compile-ts"), [lblSrc], root, emptyEnv(), "");
+test.checkInt("lbl TS bad", 2, lblTsBad.status);
+test.checkText("lbl TS bad err", lblSrc + ":1:42: expected an Int, Float, String or Bool expression\n", lblTsBad.stderr);
+
+lblCBad := runCmd(proc.execPath(), [cComp, lblSrc], root, emptyEnv(), "");
+test.checkInt("lbl C bad", 2, lblCBad.status);
+test.checkText("lbl C bad err", lblSrc + ":1:42: expected an Int, Float, String or Bool expression\n", lblCBad.stderr);
+_rmLbl := fs.remove(lblDir);
+
+/* whole-source TS and C compilers reject later statements and decoding failures before artifact output */
+rejDir := fs.makeTempDir("litec-reject-").path;
+rejSrc := path.join(rejDir, "source.lts");
+rejBadInputs: List<String> = [" \n}", "io := import \"core/io\"; io.outputLine(42);\nunsupported();\n", "io := import \"core/io\"; io.outputLine(42);\nprocess.io.exit(7);\n"];
+var ti := 0;
+loop ti < 2 {
+    isTs := ti == 0;
+    _wRejE := fs.writeText(rejSrc, "");
+    emptyOut := if isTs { runCmd(path.join(root, "bin/lite-compile-ts"), [rejSrc], root, emptyEnv(), "") } else { runCmd(proc.execPath(), [cComp, rejSrc], root, emptyEnv(), "") };
+    test.checkInt("whole empty status", 0, emptyOut.status);
+    test.check("whole empty out", emptyOut.stdout =!= "");
+    test.checkText("whole empty err", "", emptyOut.stderr);
+
+    loop rejBadInputs as badIn {
+        _wRejB := fs.writeText(rejSrc, badIn);
+        badOut := if isTs { runCmd(path.join(root, "bin/lite-compile-ts"), [rejSrc], root, emptyEnv(), "") } else { runCmd(proc.execPath(), [cComp, rejSrc], root, emptyEnv(), "") };
+        test.checkInt("whole bad status", 2, badOut.status);
+        test.checkText("whole bad out", "", badOut.stdout);
+        test.check("whole bad err", badOut.stderr =!= "");
+    }
+
+    badUtf8: mut List<Int> = unicode.utf8Encode("io := import \"core/io\"; io.outputLine(42);\n");
+    list.pushBack(mut badUtf8, 255);
+    _wUtf := fs.writeBytes(rejSrc, badUtf8);
+    utfOut := if isTs { runCmd(path.join(root, "bin/lite-compile-ts"), [rejSrc], root, emptyEnv(), "") } else { runCmd(proc.execPath(), [cComp, rejSrc], root, emptyEnv(), "") };
+    test.checkInt("whole utf8 status", 1, utfOut.status);
+    test.checkText("whole utf8 out", "", utfOut.stdout);
+    test.check("whole utf8 err", text.containsText(utfOut.stderr, "InputFault: cannot read input"));
+    ti = ti + 1;
+}
+_rmRej := fs.remove(rejDir);
+
+/* checked-in TS output and explicit Node adapter typecheck and reproduce the reference bytes */
+chkTmp := fs.makeTempDir("lite-adapter-check-").path;
+runRepPath := path.join(root, "compiler/tests/references/generated/run-report.ts");
+repCfgPath := path.join(chkTmp, "tsconfig.json");
+repCfgBody := "{\"extends\":" + "\"" + path.join(root, "igniter/tsconfig.json") + "\",\"include\":[],\"files\":[\"" + runRepPath + "\"],\"compilerOptions\":{\"typeRoots\":[\"" + path.join(root, "igniter/node_modules/@types") + "\"]}}\n";
+_wRCfg := fs.writeText(repCfgPath, repCfgBody);
+repExeName := if proc.platform() == "win32" { "tsc.exe" } else { "tsc" };
+repNativeTsc := path.join(root, "igniter/node_modules/@typescript/typescript-" + proc.platform() + "-" + proc.arch() + "/lib/" + repExeName);
+chkRep := if fs.kind(repNativeTsc) == fs.FILE_KIND_FILE {
+    runCmd(repNativeTsc, ["-p", repCfgPath], root, emptyEnv(), "")
+} else {
+    runCmd(proc.execPath(), [path.join(root, "igniter/node_modules/typescript/bin/tsc"), "-p", repCfgPath], root, emptyEnv(), "")
+};
+test.checkInt("run-report.ts strict check: " + chkRep.stdout + chkRep.stderr, 0, chkRep.status);
+_rmChk := fs.remove(chkTmp);
+repRes := runCmd(proc.execPath(), [runRepPath], root, emptyEnv(), "");
+test.checkInt("run-report.ts exit", 0, repRes.status);
+test.checkText("run-report.ts out", "42\n", repRes.stdout);
+test.checkText("run-report.ts err", "", repRes.stderr);
+
+/* source graph artifacts are deterministic and leak no timestamps or host paths */
+detSrc := "io := import \"core/io\"; x := 1;\nio.outputLine(x + 1);\n";
+d1 := compilerTest.compileStdin(root, tsComp, detSrc, "");
+d2 := compilerTest.compileStdin(root, tsComp, detSrc, "");
+test.checkInt("det 1 status", 0, d1.status);
+test.checkText("det identical", crypto.sha256Text(d1.stdout), crypto.sha256Text(d2.stdout));
+test.checkText("det err", crypto.sha256Text(d1.stderr), crypto.sha256Text(d2.stderr));
+test.check("no root leaked", not text.containsText(d1.stdout, root));
+test.check("no cwd leaked", not text.containsText(d1.stdout, proc.cwd()));
+test.check("no tmp leaked", not text.containsText(d1.stdout, "/tmp"));
+test.check("no timestamp Z leaked", not text.containsText(d1.stdout, "T00:00:00"));

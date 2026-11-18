@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type CompilerTarget } from '../host.ts';
+import { buildCompiler, buildTsCompiler, compileTarget, compileTs, loadManifest, type CompilerTarget } from '../host.ts';
 import { seed } from '../bootstrap/seed.ts';
 import { expectedText } from './contracts.ts';
 import { prepareTsArtifacts, checkTsArtifact, runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun } from '../../igniter/artifacts.ts';
@@ -5712,6 +5712,80 @@ test('unified block Slice 2b eliminates side-effect-free dead code in blocks whi
   }
 });
 
+test('compiler manifests reject duplicate entries and invalid target or path shapes', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-bundle-fault-'));
+  try {
+    const manifestPath = join(directory, 'bundle.json');
+    writeFileSync(join(directory, 'a.lts'), 'a := 1;\n');
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a.lts', 'a.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /duplicate file/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['missing.lts'] }));
+    assert.equal(loadManifest(manifestPath).files[0], 'missing.lts');
+    writeFileSync(manifestPath, JSON.stringify({ target: 'x', files: ['a.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /target must be/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['/absolute.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /absolute path/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a\\b.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /"\/" separators/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a.lts'], extra: true }));
+    assert.throws(() => loadManifest(manifestPath), /unexpected manifest key/);
+    assert.throws(() => loadManifest(join(directory, 'missing.json')), /ENOENT/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('prepared TS artifacts run in fresh processes and retain typecheck failures', () => {
+  withTsArtifact('let calls = 0; export function main(): string { calls += 1; return String(calls); }', run => {
+    for (let invocation = 0; invocation < 2; invocation += 1) {
+      assert.deepEqual(run(), { phase: 'run', status: 0, signal: null,
+        stdout: Buffer.from('1'), stderr: Buffer.alloc(0) });
+    }
+  });
+  withTsArtifact('export function main(): string { return 42; }', run => {
+    const result = run();
+    assert.equal(result.phase, 'typecheck');
+    assert.notEqual(result.status, 0);
+    assert.match(result.stdout.toString(), /not assignable to type 'string'/);
+  });
+  const locationSource = 'export function main(): string { return (import.meta as { url: string }).url; }';
+  const locations = withTsArtifacts([
+    'let calls = 0; export function main(): string { calls += 1; return String(calls); }',
+    'declare const process: { argv: string[]; getBuiltinModule(name: string): { readFileSync(fd: number): Uint8Array } }; ' +
+      'export function main(): string { return JSON.stringify({ args: process.argv.slice(2), bytes: Array.from(process.getBuiltinModule("fs").readFileSync(0)) }); }',
+    locationSource, locationSource,
+  ], runs => {
+    assert.equal(runs.length, 4);
+    for (let invocation = 0; invocation < 2; invocation += 1) {
+      assert.deepEqual(runs[0]!(), { phase: 'run', status: 0, signal: null, stdout: Buffer.from('1'), stderr: Buffer.alloc(0) });
+    }
+    const args = ['a b', 'سلام🙂'], bytes = [255, 0, 128];
+    assert.deepEqual(runs[1]!({ args, stdin: Uint8Array.from(bytes) }), {
+      phase: 'run', status: 0, signal: null, stdout: Buffer.from(JSON.stringify({ args, bytes })), stderr: Buffer.alloc(0),
+    });
+    return [runs[2]!(), runs[3]!()].map(result => {
+      assert.equal(result.phase, 'run'); assert.equal(result.status, 0); assert.equal(result.stderr.length, 0);
+      return fileURLToPath(result.stdout.toString());
+    });
+  });
+  assert.notEqual(locations[0], locations[1]);
+  for (const location of locations) assert.equal(existsSync(location), false);
+  withTsArtifacts(['export function main(): string { throw new Error("EXECUTED"); }',
+    'export function main(): string { return 42; }'], runs => {
+    for (const run of runs) {
+      const result = run(); assert.equal(result.phase, 'typecheck'); assert.notEqual(result.status, 0);
+      assert.match(result.stdout.toString(), /not assignable to type 'string'/);
+      assert.doesNotMatch(result.stdout.toString() + result.stderr.toString(), /EXECUTED/);
+    }
+  });
+  let stoppedLocation = '';
+  assert.throws(() => withTsArtifacts([locationSource], runs => {
+    const result = runs[0]!(); assert.equal(result.phase, 'run'); assert.equal(result.status, 0);
+    stoppedLocation = fileURLToPath(result.stdout.toString());
+    throw new Error('callback stopped');
+  }), /callback stopped/);
+  assert.ok(stoppedLocation.length > 0); assert.equal(existsSync(stoppedLocation), false);
+  assert.equal(withTsArtifacts([], runs => runs.length), 0);
+});
+
 test('unified block Slice 3 supports lexical captures, inner-block symbol wiring, trace safety, and escaping checks on TS', () => {
   // 1. All 9 formerly-rejected surrounding captures + DCE on unused capture closures + mut List capture writes + per-iteration loop item captures
   {
@@ -5964,4 +6038,78 @@ test('unified block Slice 3 supports lexical captures, inner-block symbol wiring
     assert.equal(rejected.stdout.toString(), '', `rejected stdout should be empty: ${badSrc}`);
     assert.match(rejected.stderr.toString(), expectedRe, `stderr mismatch for: ${badSrc}`);
   }
+});
+
+test('compiler manifests reject duplicate entries and invalid target or path shapes', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-bundle-fault-'));
+  try {
+    const manifestPath = join(directory, 'bundle.json');
+    writeFileSync(join(directory, 'a.lts'), 'a := 1;\n');
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a.lts', 'a.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /duplicate file/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['missing.lts'] }));
+    assert.equal(loadManifest(manifestPath).files[0], 'missing.lts');
+    writeFileSync(manifestPath, JSON.stringify({ target: 'x', files: ['a.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /target must be/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['/absolute.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /absolute path/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a\\b.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /"\/" separators/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a.lts'], extra: true }));
+    assert.throws(() => loadManifest(manifestPath), /unexpected manifest key/);
+    assert.throws(() => loadManifest(join(directory, 'missing.json')), /ENOENT/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('prepared TS artifacts run in fresh processes and retain typecheck failures', () => {
+  withTsArtifact('let calls = 0; export function main(): string { calls += 1; return String(calls); }', run => {
+    for (let invocation = 0; invocation < 2; invocation += 1) {
+      assert.deepEqual(run(), { phase: 'run', status: 0, signal: null,
+        stdout: Buffer.from('1'), stderr: Buffer.alloc(0) });
+    }
+  });
+  withTsArtifact('export function main(): string { return 42; }', run => {
+    const result = run();
+    assert.equal(result.phase, 'typecheck');
+    assert.notEqual(result.status, 0);
+    assert.match(result.stdout.toString(), /not assignable to type 'string'/);
+  });
+  const locationSource = 'export function main(): string { return (import.meta as { url: string }).url; }';
+  const locations = withTsArtifacts([
+    'let calls = 0; export function main(): string { calls += 1; return String(calls); }',
+    'declare const process: { argv: string[]; getBuiltinModule(name: string): { readFileSync(fd: number): Uint8Array } }; ' +
+      'export function main(): string { return JSON.stringify({ args: process.argv.slice(2), bytes: Array.from(process.getBuiltinModule("fs").readFileSync(0)) }); }',
+    locationSource, locationSource,
+  ], runs => {
+    assert.equal(runs.length, 4);
+    for (let invocation = 0; invocation < 2; invocation += 1) {
+      assert.deepEqual(runs[0]!(), { phase: 'run', status: 0, signal: null, stdout: Buffer.from('1'), stderr: Buffer.alloc(0) });
+    }
+    const args = ['a b', 'سلام🙂'], bytes = [255, 0, 128];
+    assert.deepEqual(runs[1]!({ args, stdin: Uint8Array.from(bytes) }), {
+      phase: 'run', status: 0, signal: null, stdout: Buffer.from(JSON.stringify({ args, bytes })), stderr: Buffer.alloc(0),
+    });
+    return [runs[2]!(), runs[3]!()].map(result => {
+      assert.equal(result.phase, 'run'); assert.equal(result.status, 0); assert.equal(result.stderr.length, 0);
+      return fileURLToPath(result.stdout.toString());
+    });
+  });
+  assert.notEqual(locations[0], locations[1]);
+  for (const location of locations) assert.equal(existsSync(location), false);
+  withTsArtifacts(['export function main(): string { throw new Error("EXECUTED"); }',
+    'export function main(): string { return 42; }'], runs => {
+    for (const run of runs) {
+      const result = run(); assert.equal(result.phase, 'typecheck'); assert.notEqual(result.status, 0);
+      assert.match(result.stdout.toString(), /not assignable to type 'string'/);
+      assert.doesNotMatch(result.stdout.toString() + result.stderr.toString(), /EXECUTED/);
+    }
+  });
+  let stoppedLocation = '';
+  assert.throws(() => withTsArtifacts([locationSource], runs => {
+    const result = runs[0]!(); assert.equal(result.phase, 'run'); assert.equal(result.status, 0);
+    stoppedLocation = fileURLToPath(result.stdout.toString());
+    throw new Error('callback stopped');
+  }), /callback stopped/);
+  assert.ok(stoppedLocation.length > 0); assert.equal(existsSync(stoppedLocation), false);
+  assert.equal(withTsArtifacts([], runs => runs.length), 0);
 });

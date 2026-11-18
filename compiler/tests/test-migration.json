@@ -33,7 +33,7 @@
     },
     {
       "title": "compiler manifests reject duplicate entries and invalid target or path shapes",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/host.test.ts",
       "originalLine": 142,
       "dependencies": [],
       "originalAssertions": 6,
@@ -173,7 +173,7 @@
     },
     {
       "title": "compiler, L0 and lexer declarations carry doc comments",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/cli-contracts.test.lts",
       "originalLine": 446,
       "dependencies": [],
       "originalAssertions": 1,
@@ -181,7 +181,7 @@
     },
     {
       "title": "compiler applications preserve optional logical source names in their own diagnostics only",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/cli-contracts.test.lts",
       "originalLine": 476,
       "dependencies": [
         "runCompiler",
@@ -193,7 +193,7 @@
     },
     {
       "title": "real compiler CLI forwards source-name context without changing emitted bytes",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/cli-contracts.test.lts",
       "originalLine": 495,
       "dependencies": [
         "spawnSync"
@@ -203,7 +203,7 @@
     },
     {
       "title": "lite and compiler commands route through the compiler and selected target",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/cli-contracts.test.lts",
       "originalLine": 515,
       "dependencies": [
         "spawnSync"
@@ -213,7 +213,7 @@
     },
     {
       "title": "lite help and docs expose the command matrix and documentation roots",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/cli-contracts.test.lts",
       "originalLine": 550,
       "dependencies": [
         "spawnSync"
@@ -223,7 +223,7 @@
     },
     {
       "title": "lite verify uses generated TS, reports migration gaps and rejects the retired reference flag",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/cli-contracts.test.lts",
       "originalLine": 567,
       "dependencies": [
         "spawnSync"
@@ -403,7 +403,7 @@
     },
     {
       "title": "prepared TS artifacts run in fresh processes and retain typecheck failures",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/host.test.ts",
       "originalLine": 1037,
       "dependencies": [
         "run"
@@ -780,7 +780,7 @@
     },
     {
       "title": "source graph artifacts are deterministic and leak no timestamps or host paths",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/cli-contracts.test.lts",
       "originalLine": 2212,
       "dependencies": [
         "loadCompiler",
@@ -791,7 +791,7 @@
     },
     {
       "title": "whole-source TS and C compilers reject later statements and decoding failures before artifact output",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/cli-contracts.test.lts",
       "originalLine": 2232,
       "dependencies": [
         "spawnSync"
@@ -957,7 +957,7 @@
     },
     {
       "title": "checked-in TS output and explicit Node adapter typecheck and reproduce the reference bytes",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/cli-contracts.test.lts",
       "originalLine": 2636,
       "dependencies": [
         "spawnSync"
@@ -2125,7 +2125,7 @@
     },
     {
       "title": "root launcher compiles artifacts and forwards their input, diagnostics and status from caller directories",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/cli-contracts.test.lts",
       "originalLine": 3840,
       "dependencies": [
         "spawnSync",

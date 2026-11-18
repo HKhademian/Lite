@@ -81,7 +81,7 @@ not admitted yet; the compiler reports `expected )`.
 
 ## Verification fixtures
 
-The compiler corpus moved out of [test.ts](../../igniter/test.ts) into one JSON
+The compiler corpus moved out of historical `igniter/test.ts` into one JSON
 model plus a sibling `.lts` entry source per case under
 [igniter/tests/compiler](../../igniter/tests/compiler/). The schema and workflow are
 documented in [igniter/tests/README.md](../../igniter/tests/README.md).
