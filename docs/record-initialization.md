@@ -1,6 +1,6 @@
 # Record creation: zero initialization and declared defaults
 
-Status: **overview updated 2026-10-19; omitted typed initializers select zero initialization; an explicit zero-value expression is under design; = {} selects declared-default record construction; executable empty bodies still produce Unit**. Detailed field-default syntax, defaultability, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
+Status: **updated 2026-11-18: an omitted field uses its declared default, or zero of its type when no default is declared; omitted typed initializers select zero initialization; an explicit zero-value expression is under design; = {} selects declared-default record construction; executable empty bodies still produce Unit**. Detailed field-default syntax, defaultability, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
 
 The user's later [union-construction review](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) proposes A{0} as a compact expression that names a member and zeroes the entire A, bypassing defaults. The sole-zero marker remains proposed grammar; it is not a selected positional-field literal. Existing A{} and contextual = {} keep their declared-default meaning where record construction is valid.
 
@@ -28,13 +28,13 @@ There are two selected core initialization modes, with a semantic difference:
 
 ```text
 implicit: User;     /* implicit zero; ignore field defaults */
-zeroed: User;       /* zero initialization; ignore field defaults */
+zeroed: User = 0;   /* contextual zero; ignore field defaults */
 configured: User = {} /* apply declared defaults, then zero-fill other fields */
 ```
 
 The selected surface direction reserved: User = ?; requests storage without either initialization mode. It remains unavailable as an ordinary User until initialization completes; first-write operations, allocation policy, and complete state/cleanup rules remain open. The earlier reserve() spelling is not a selected synonym. See [reserved storage](reserved-storage.md).
 
-For zeroed, name and address.city are empty Strings, age and address.postalCode are 0, and active is false. For configured, active is true and address.city is "Unknown". Both values are fully initialized when their declarations complete. Every field type must map zero storage to a valid value; zero initialization never falls back to declared defaults.
+For zeroed, name and address.city are empty Strings, age and address.postalCode are 0, and active is false. For configured, active is true and address.city is empty: the address field declares no default and therefore uses zero of Address. Both values are fully initialized when their declarations complete. Every field type must map zero storage to a valid value; zero initialization never falls back to declared defaults.
 
 The empty contextual record initializer is selected: its established initializer position and expected record type give it record-construction meaning. Empty executable bodies still produce Unit. The full grammar must express these distinct roles without using trial type-checking to choose a parse.
 
@@ -49,16 +49,30 @@ Under the proposed default-resolution rule, this initializes every field:
 - name is the empty String.
 - age is 0.
 - active is true, from the User declaration.
-- address is a fully initialized Address, with city "Unknown" and postalCode 0.
+- address is a zero-initialized Address, with empty city and postalCode 0; address itself has no declared default.
 
-Default construction includes declared field defaults. It is not a request to overwrite active with false or city with an empty String, and is not an uninitialized allocation.
+Default construction uses each field's own declared default, or zero when the field has none. It is not an uninitialized allocation.
+
+### Nested default versus zero
+
+```text
+Address := record { city: String = "Unknown"; }
+User := record { address: Address; }
+Guess := record { address: Address = {}; }
+
+u: User = {};     /* u.address.city is empty: field default is zero */
+g: Guess = {};    /* g.address.city is "Unknown": field default is Address defaults */
+a: Address = 0;   /* a.city is empty: zero bypasses defaults */
+z: Guess = 0;     /* z.address.city is empty: zero bypasses defaults */
+```
+
+These are specification cases, not claims of compiler support. A field default of `{}` explicitly constructs the field type using that type's defaults; omitting a field default gives that field the zero value of its type. Actual default-expression evaluation and complete grammar remain separate.
 
 ### Per-field resolution
 
 1. Use the explicitly supplied field value, if present.
 2. Otherwise use the field's declared default, if present.
-3. Otherwise recursively apply defaults for a nested record, or use the leaf type's language-defined zero value.
-4. Otherwise reject construction with a diagnostic identifying the missing field.
+3. Otherwise use the all-zero value of that field's type, including when it is a nested record. Do not implicitly apply the nested record's declared field defaults. A field explicitly declared with `= {}` requests its record type's defaults.
 
 Explicit false, 0, or an empty String overrides a declared nonzero/nonempty default. Duplicate field initializers should be rejected rather than silently taking the last value. Unknown and inaccessible fields must not be accepted. These diagnostic policies are recommendations alongside the proposed default contract.
 
@@ -158,7 +172,7 @@ profile := Profile {
 }
 ```
 
-The field's colon already starts a type position, so the recommended shorthand omits a redundant record keyword before its type braces. This declares an unnamed field type, then uses its known field contract for construction. It is an inline type declaration, not a shared default object. Under the proposal, omitted stats in record-initializer mode would recursively initialize points to 0 and level to 1:
+The field's colon already starts a type position, so the recommended shorthand omits a redundant record keyword before its type braces. This declares an unnamed field type, then uses its known field contract for construction. It is an inline type declaration, not a shared default object. If the proposed inline type is admitted, omitted stats has no declared field default and therefore initializes to all-zero: points 0 and level 0:
 
 ```text
 profile: Profile = {}
