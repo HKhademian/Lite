@@ -613,7 +613,7 @@ resolveCompilerBuild := fn(rootDir: String): (ok: Bool, compilerPath: String, se
     (ok = true, compilerPath = built.path, seedArtifact = seedArtifact, metaJson = built.jsonText, error = "")
 };
 
-computeRuntimeHash := fn(rootDir: String, seedArtifact: String, compilerDeps: List<String>): (ok: Bool, hex: String, error: String) {
+computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool, hex: String, error: String) {
     parts: mut List<String> = [];
     staticFiles: List<String> = [
     "igniter/artifacts.ts",
@@ -628,8 +628,7 @@ computeRuntimeHash := fn(rootDir: String, seedArtifact: String, compilerDeps: Li
     "lib/util/compiler-build.lts",
     "compiler/host.ts",
     "compiler/bootstrap/igniter.ts",
-    "compiler/bootstrap/seed.ts",
-    "compiler/bootstrap/" + seedArtifact
+    "compiler/bootstrap/seed.ts"
     ];
     loop staticFiles as rel {
         full := path.join(rootDir, rel);
@@ -1056,7 +1055,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
         return 1;
     }
     compilerDeps := readStringArrayField(compBuild.metaJson, 0, "dependencies");
-    rtHash := computeRuntimeHash(rootDir, compBuild.seedArtifact, compilerDeps);
+    rtHash := computeRuntimeHash(rootDir, compilerDeps);
     if not rtHash.ok {
         io.errorLine("lite verify: " + rtHash.error);
         return 1;

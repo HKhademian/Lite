@@ -7,7 +7,6 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { compileTs } from '../compiler/host.ts';
-import { seed } from '../compiler/bootstrap/seed.ts';
 import { ensureTool, igniteAllTools } from './project.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -142,9 +141,9 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
       }
     };
     for (const rel of [
-      'package.json', 'config/versions.json', 'bin/lite', 'bin/lite-fmt',
-      'compiler/host.ts', 'compiler/package.json',
-      `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts',
+      'package.json', 'config/versions.json', 'bin/lite', 'bin/lite-fmt', 'bin/lite-ignite',
+      'compiler/host.ts', 'compiler/package.json', 'compiler/src', 'compiler/manifests',
+      'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts',
       'igniter/artifacts.ts', 'igniter/package.json', 'igniter/tsconfig.json',
       'tools/src/cli.lts', 'tools/src/fmt.lts', 'lib/core', 'lib/util',
     ]) {
@@ -152,6 +151,7 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
     }
     chmodSync(join(directory, 'bin/lite'), 0o755);
     chmodSync(join(directory, 'bin/lite-fmt'), 0o755);
+    chmodSync(join(directory, 'bin/lite-ignite'), 0o755);
 
     const first = spawnSync(process.execPath, [join(directory, 'compiler/bootstrap/igniter.ts'), '--json', 'cli', 'fmt'], {
       cwd: directory, encoding: 'utf8', timeout: 60_000,
@@ -185,6 +185,16 @@ test('ignition rebuilds missing, tampered, and dependency-changed tools into dis
     assert.equal(afterDep.status, 0, afterDep.stderr);
     const afterDepJson = JSON.parse(afterDep.stdout) as { tools: { name: string; rebuilt: boolean }[] };
     assert.deepEqual(afterDepJson.tools.map(t => [t.name, t.rebuilt]), [['cli', true], ['fmt', true]]);
+
+    // Calling bin/lite-ignite ignites both dist/bootstrap/compiler.ts and all tools in dist/tools/.
+    rmSync(join(directory, 'dist'), { recursive: true, force: true });
+    const ignitedAll = spawnSync(process.execPath, [join(directory, 'bin/lite-ignite'), '--json'], {
+      cwd: directory, encoding: 'utf8', timeout: 60_000,
+    });
+    assert.equal(ignitedAll.status, 0, ignitedAll.stderr);
+    assert.ok(existsSync(join(directory, 'dist/bootstrap/compiler.ts')));
+    assert.ok(existsSync(join(directory, 'dist/tools/cli.ts')));
+    assert.ok(existsSync(join(directory, 'dist/tools/fmt.ts')));
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

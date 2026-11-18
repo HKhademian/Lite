@@ -43,6 +43,7 @@ test('generated source graph build records three strictly checked fixed-point ge
       assert.equal(item.sourceSha256, selected.currentSourceSha256); assert.equal(item.path, join(directory, `generation-${i + 1}.ts`));
       assert.ok(existsSync(item.path));
     }
+    assert.equal(existsSync(join(directory, 'compiler.ts')), false);
     assert.equal(existsSync(join(directory, seed.artifact)), false);
     assert.equal(JSON.parse(readFileSync(join(directory, 'ladder.json'), 'utf8')).fixedPoint, true);
   } finally { rmSync(directory, { recursive: true, force: true }); }

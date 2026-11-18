@@ -92,6 +92,7 @@ failBuild := fn(message: String): CompilerBuildResult {
 readSeed := fn(rootDir: String): (
 ok: Bool,
 artifact: String,
+igniterSha256: String,
 sourceSha256: String,
 artifactSha256: String,
 seedPath: String,
@@ -100,24 +101,69 @@ error: String
     seedMetaPath := path.join(rootDir, "compiler/bootstrap/seed.ts");
     metaRead := fs.readText(seedMetaPath);
     if not metaRead.ok {
-        return (ok = false, artifact = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = metaRead.error);
+        return (ok = false, artifact = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = metaRead.error);
     }
     brace := text.indexOfText(metaRead.text, "{", 0);
     if brace < 0 {
-        return (ok = false, artifact = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "invalid compiler/bootstrap/seed.ts object");
+        return (ok = false, artifact = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "invalid compiler/bootstrap/seed.ts object");
     }
     artField := json.readObjectString(metaRead.text, brace, "artifact");
+    ignField := json.readObjectString(metaRead.text, brace, "igniterSha256");
     srcField := json.readObjectString(metaRead.text, brace, "sourceSha256");
     shaField := json.readObjectString(metaRead.text, brace, "artifactSha256");
-    if not artField.found or not artField.ok or not srcField.found or not srcField.ok or not shaField.found or not shaField.ok {
-        return (ok = false, artifact = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "incomplete compiler/bootstrap/seed.ts metadata");
+    if not artField.found or not artField.ok or not ignField.found or not ignField.ok or not srcField.found or not srcField.ok or not shaField.found or not shaField.ok {
+        return (ok = false, artifact = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "incomplete compiler/bootstrap/seed.ts metadata");
     }
     seedPath := path.join(rootDir, "compiler/bootstrap/" + artField.value);
     seedHash := crypto.sha256File(seedPath);
-    if not seedHash.ok or seedHash.hex =!= shaField.value {
-        return (ok = false, artifact = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "selected TS bootstrap seed hash mismatch");
+    if not seedHash.ok or seedHash.hex =!= ignField.value {
+        return (ok = false, artifact = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "selected TS bootstrap seed hash mismatch");
     }
-    (ok = true, artifact = artField.value, sourceSha256 = srcField.value, artifactSha256 = shaField.value, seedPath = seedPath, error = "")
+    (ok = true, artifact = artField.value, igniterSha256 = ignField.value, sourceSha256 = srcField.value, artifactSha256 = shaField.value, seedPath = seedPath, error = "")
+};
+
+ensureDistSeedCompiler := fn(rootDir: String, seedPath: String, sourcePath: String, sourceName: String, expectedSha: String): (ok: Bool, path: String, error: String) {
+    distBootDir := path.join(rootDir, "dist/bootstrap");
+    distCompilerPath := path.join(distBootDir, "compiler.ts");
+    if fs.kind(distCompilerPath) == fs.FILE_KIND_FILE {
+        h := crypto.sha256File(distCompilerPath);
+        if h.ok and h.hex == expectedSha {
+            return (ok = true, path = distCompilerPath, error = "");
+        }
+    }
+    tmpRes := fs.makeTempDir("lite-seed-comp-");
+    if not tmpRes.ok { return (ok = false, path = "", error = tmpRes.error); }
+    work := tmpRes.path;
+    outPath := path.join(work, "compiler.ts");
+    errPath := path.join(work, "compiler.stderr");
+    rootBytes := fs.readBytes(sourcePath);
+    compArgs: List<String> = [seedPath, "--compile", "--stdin", "--name", sourceName, "--root", sourcePath];
+    emptyEnv: List<String> = [];
+    runRes := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, rootBytes, outPath, errPath);
+    if runRes.error =!= "" {
+        _rm := fs.remove(work);
+        return (ok = false, path = "", error = runRes.error);
+    }
+    errRead := fs.readText(errPath);
+    errText := if errRead.ok { errRead.text } else { "" };
+    if runRes.status =!= 0 or errText =!= "" {
+        _rm := fs.remove(work);
+        return (ok = false, path = "", error = "bootstrap igniter cannot emit compiler source (" + text.trim(errText) + ")");
+    }
+    outHash := crypto.sha256File(outPath);
+    if not outHash.ok or outHash.hex =!= expectedSha {
+        _rm := fs.remove(work);
+        return (ok = false, path = "", error = "selected TS bootstrap seed does not reproduce its recorded source graph");
+    }
+    mk := fs.makeDir(distBootDir);
+    if not mk.ok {
+        _rm := fs.remove(work);
+        return (ok = false, path = "", error = mk.error);
+    }
+    cp := fs.copy(outPath, distCompilerPath);
+    _rm := fs.remove(work);
+    if not cp.ok { return (ok = false, path = "", error = cp.error); }
+    (ok = true, path = distCompilerPath, error = "")
 };
 
 readManifestSource := fn(rootDir: String, target: String): (
@@ -383,8 +429,12 @@ seedPath: String
     );
 
     if target == "ts" and sourceSha256 == seedSourceSha256 and iCacheKey.value == seedSha256 {
-        seedJson := formatBuildJson(target, seedPath, sourceSha256, seedSha256, seedSha256, depsQuoted, false);
-        return (hit = true, ok = true, path = seedPath, sourceSha256 = sourceSha256, artifactSha256 = seedSha256, builderSha256 = seedSha256, cached = false, jsonText = seedJson, error = "");
+        ensuredSeed := ensureDistSeedCompiler(rootDir, seedPath, path.resolve(rootDir, sourceName), sourceName, seedSha256);
+        if not ensuredSeed.ok {
+            return tryHitFail(ensuredSeed.error);
+        }
+        seedJson := formatBuildJson(target, ensuredSeed.path, sourceSha256, seedSha256, seedSha256, depsQuoted, false);
+        return (hit = true, ok = true, path = ensuredSeed.path, sourceSha256 = sourceSha256, artifactSha256 = seedSha256, builderSha256 = seedSha256, cached = false, jsonText = seedJson, error = "");
     }
 
     cached := normalizeCachedArtifact(
@@ -501,7 +551,7 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
     tracePath := path.join(work, "trace.json");
     outPath := path.join(work, "compiler.ts");
     errPath := path.join(work, "compiler.stderr");
-    compArgs: List<String> = [seedInfo.seedPath, "--stdin", "--name", sourceName, "--root", sourcePath, "--trace-json", tracePath];
+    compArgs: List<String> = [seedInfo.seedPath, "--compile", "--stdin", "--name", sourceName, "--root", sourcePath, "--trace-json", tracePath];
     emptyEnv: List<String> = [];
     runRes := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, rootBytes, outPath, errPath);
     if runRes.error =!= "" {
@@ -605,14 +655,24 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
     }
 
     if target == "ts" and sourceSha256 == seedInfo.sourceSha256 {
-        _rm := fs.remove(work);
         if artHash.hex =!= seedInfo.artifactSha256 {
+            _rm := fs.remove(work);
             return failBuild("selected TS bootstrap seed does not reproduce its recorded source graph");
         }
+        distBootDir := path.join(rootDir, "dist/bootstrap");
+        distCompilerPath := path.join(distBootDir, "compiler.ts");
+        mkBoot := fs.makeDir(distBootDir);
+        if not mkBoot.ok {
+            _rm := fs.remove(work);
+            return failBuild(mkBoot.error);
+        }
+        cpBoot := fs.copy(outPath, distCompilerPath);
+        _rm := fs.remove(work);
+        if not cpBoot.ok { return failBuild(cpBoot.error); }
         wrIdx := writeSelectionIndex(indexPath, target, sourceName, sourceRootSha256, seedInfo.artifactSha256, depsQuoted, dhPretty, edgesPretty);
         if not wrIdx.ok { return failBuild(wrIdx.error); }
-        seedJson := formatBuildJson(target, seedInfo.seedPath, sourceSha256, artHash.hex, seedInfo.artifactSha256, depsQuoted, false);
-        return (ok = true, path = seedInfo.seedPath, sourceSha256 = sourceSha256, artifactSha256 = artHash.hex, builderSha256 = seedInfo.artifactSha256, cached = false, jsonText = seedJson, error = "");
+        seedJson := formatBuildJson(target, distCompilerPath, sourceSha256, artHash.hex, seedInfo.artifactSha256, depsQuoted, false);
+        return (ok = true, path = distCompilerPath, sourceSha256 = sourceSha256, artifactSha256 = artHash.hex, builderSha256 = seedInfo.artifactSha256, cached = false, jsonText = seedJson, error = "");
     }
 
     key := sha256Text(target + ":" + seedInfo.artifactSha256 + ":" + sourceSha256 + ":" + expectedDepsCompact);
@@ -663,7 +723,7 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
 /** Resolves the verified compiler artifact path for `target` (`"ts"` or `"c"`) under `rootDir`. */
 pub selectCompilerPath := fn(rootDir: String, target: String): (ok: Bool, path: String, error: String) {
     if rootDir == "" {
-        return (ok = true, path = "compiler/bootstrap/compiler.ts", error = "");
+        return (ok = true, path = "dist/bootstrap/compiler.ts", error = "");
     }
     built := buildCompiler(rootDir, target);
     if not built.ok {

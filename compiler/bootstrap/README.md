@@ -1,8 +1,12 @@
-# Generated bootstrap compiler
+# Generated bootstrap igniter
 
-`compiler.ts` is the one selected generated TypeScript igniter. [seed.ts](seed.ts)
-records its source, artifact, builder and revision identities. Numbered compiler
-generations are historical records, not parallel active compiler sources.
+`igniter.ts` is the single checked-in generated TypeScript bootstrap igniter and
+compiler seed. [seed.ts](seed.ts) records the igniter hash alongside the
+compiled compiler source, artifact, and revision identities. Running
+`./bin/lite-ignite` (or invoking any `bin/lite*` symlink) materializes the
+standalone compiler (`dist/bootstrap/compiler.ts`) and all tools
+(`dist/tools/*.ts`) inside untracked `dist/`. Numbered compiler generations are
+historical records, not parallel active compiler sources.
 
 The TypeScript compiler and retained C emitter are both compiled from their
 Lite source roots by that same igniter. The C backend is still TS-hosted; it is

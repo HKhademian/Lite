@@ -11,6 +11,7 @@ text := import "core/text";
 cases := import "util/cases";
 json := import "util/json";
 project := import "util/project";
+driverTs := import "../../compiler/src/driver-ts.lts";
 frontend := import "../../compiler/src/frontend.lts";
 modules := import "../../compiler/src/modules.lts";
 emitter := import "../../compiler/src/emit-ts.lts";
@@ -24,6 +25,7 @@ toolForEntry := fn(rawEntry: String): String {
     parent := path.baseName(parentDir);
     grandparent := path.baseName(path.parentDir(parentDir));
     match {
+        base == "igniter.ts" or base == "lite-ignite" or base == "lite-bootstrap" { "" }
         base == "lite" { "cli" }
         base == "lite-bench" { "bench" }
         base == "lite-check" { "checker" }
@@ -79,27 +81,28 @@ isSha256Hex := fn(hex: String): Bool {
     true
 }
 
-/** Reads `compiler/bootstrap/seed.ts` hashes and verifies the tracked compiler seed digest. */
-readSeedInfo := fn(rootDir: String): (ok: Bool, sourceSha256: String, artifactSha256: String, error: String) {
+/** Reads `compiler/bootstrap/seed.ts` hashes and verifies the tracked single-file bootstrap igniter digest. */
+readSeedInfo := fn(rootDir: String): (ok: Bool, igniterSha256: String, sourceSha256: String, artifactSha256: String, error: String) {
     seedFile := path.join(rootDir, "compiler/bootstrap/seed.ts");
     seedRead := fs.readText(seedFile);
     if not seedRead.ok {
-        return (ok = false, sourceSha256 = "", artifactSha256 = "", error = "ignite: cannot read seed metadata: " + seedRead.error);
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", error = "ignite: cannot read seed metadata: " + seedRead.error);
     }
     brace := text.indexOfText(seedRead.text, "{", 0);
     if brace < 0 {
-        return (ok = false, sourceSha256 = "", artifactSha256 = "", error = "ignite: invalid seed.ts object");
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", error = "ignite: invalid seed.ts object");
     }
+    ignField := json.readObjectString(seedRead.text, brace, "igniterSha256");
     srcField := json.readObjectString(seedRead.text, brace, "sourceSha256");
     artField := json.readObjectString(seedRead.text, brace, "artifactSha256");
-    if not srcField.found or not srcField.ok or not artField.found or not artField.ok {
-        return (ok = false, sourceSha256 = "", artifactSha256 = "", error = "ignite: missing seed hash fields");
+    if not ignField.found or not ignField.ok or not srcField.found or not srcField.ok or not artField.found or not artField.ok {
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", error = "ignite: missing seed hash fields");
     }
-    compHash := crypto.sha256File(path.join(rootDir, "compiler/bootstrap/compiler.ts"));
-    if not compHash.ok or compHash.hex =!= artField.value {
-        return (ok = false, sourceSha256 = "", artifactSha256 = "", error = "ignite: selected TS bootstrap seed hash mismatch");
+    ignHash := crypto.sha256File(path.join(rootDir, "compiler/bootstrap/igniter.ts"));
+    if not ignHash.ok or ignHash.hex =!= ignField.value {
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", error = "ignite: selected TS bootstrap seed hash mismatch");
     }
-    (ok = true, sourceSha256 = srcField.value, artifactSha256 = artField.value, error = "")
+    (ok = true, igniterSha256 = ignField.value, sourceSha256 = srcField.value, artifactSha256 = artField.value, error = "")
 }
 
 /** Lists all `.lts` tool names under `tools/src/` sorted ASCII lexicographically. */
@@ -311,6 +314,48 @@ executeIgnitedTool := fn(artifactPath: String, forwardArgs: List<String>): Unit 
     io.exit(res.status);
 }
 
+/** Compiles `compiler/src/ts-root.lts` into `dist/bootstrap/compiler.ts` when absent or out of date. */
+ensureDistCompiler := fn(rootDir: String, expectedArtSha: String, force: Bool): (ok: Bool, error: String) {
+    bootDir := path.join(rootDir, "dist/bootstrap");
+    compPath := path.join(bootDir, "compiler.ts");
+    if not force and fs.kind(compPath) == fs.FILE_KIND_FILE {
+        prevHash := crypto.sha256File(compPath);
+        if prevHash.ok and prevHash.hex == expectedArtSha {
+            return (ok = true, error = "");
+        }
+    }
+    srcAbs := path.join(rootDir, "compiler/src/ts-root.lts");
+    rpSrc := fs.realPath(srcAbs);
+    canonSrc := if rpSrc.ok { rpSrc.path } else { srcAbs };
+    srcRead := fs.readText(canonSrc);
+    if not srcRead.ok {
+        return (ok = false, error = "ignite: cannot read " + canonSrc + ": " + srcRead.error);
+    }
+    emptyGraph: frontend.Items = [];
+    emptySpecs: List<String> = [];
+    graph := modules.visitSourceModule(
+    target = frontend.TARGET_TS, path = canonSrc, display = "compiler/src/ts-root.lts",
+    identity = "", source = srcRead.text, initialGraph = emptyGraph,
+    projectRoot = rootDir, cwd = rootDir, builtinSpecs = emptySpecs
+    );
+    writer := io.bufferWriter();
+    emitter.emitProgramTo(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = "compiler/src/ts-root.lts", builtinSpecs = emptySpecs);
+    outRes := io.writerText(writer);
+    _cl := io.closeWriter(writer);
+    if not outRes.ok {
+        return (ok = false, error = "ignite: failed to emit compiler.ts: " + outRes.error);
+    }
+    mkRes := fs.makeDir(bootDir);
+    if not mkRes.ok {
+        return (ok = false, error = mkRes.error);
+    }
+    wrComp := fs.writeText(compPath, outRes.text);
+    if not wrComp.ok {
+        return (ok = false, error = wrComp.error);
+    }
+    (ok = true, error = "")
+};
+
 /** Executes the unified Lite igniter entrypoint for symlinked tool commands or direct CLI management. */
 run := fn(rawArgs: List<String>): Unit {
     rawRoot := project.findRepoRoot();
@@ -335,6 +380,13 @@ run := fn(rawArgs: List<String>): Unit {
             io.exit(1);
         }
         executeIgnitedTool(ensured.path, rawArgs);
+    }
+
+    if list.listCountText(rawArgs) > 0 and rawArgs[0] == "--compile" {
+        compArgs: mut List<String> = rawArgs;
+        _flag := list.popFront(mut compArgs);
+        driverTs.run(compArgs);
+        return;
     }
 
     var check := false;
@@ -404,6 +456,15 @@ run := fn(rawArgs: List<String>): Unit {
 
     if clean {
         _rm := fs.remove(path.join(rootDir, "dist/tools"));
+        _rmBoot := fs.remove(path.join(rootDir, "dist/bootstrap"));
+    }
+
+    if list.listCountText(selected) == 0 {
+        distComp := ensureDistCompiler(rootDir, seedInfo.artifactSha256, force);
+        if not distComp.ok {
+            io.errorLine(distComp.error);
+            io.exit(1);
+        }
     }
 
     targetNames := if list.listCountText(selected) > 0 { selected } else { listToolNames(rootDir) };

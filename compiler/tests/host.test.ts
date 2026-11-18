@@ -54,7 +54,7 @@ test('TS artifact capture preserves large synchronous writes and the returned ta
 test('standalone generated compiler CLI performs strict-UTF-8 source reads directly via core/file', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-source-provider-'));
   try {
-    const compilerArtifact = join(root, `compiler/bootstrap/${seed.artifact}`);
+    const compilerArtifact = buildTsCompiler().path;
     const importer = join(directory, 'app.lts');
     const dependency = join(directory, 'dep.lts');
     writeFileSync(dependency, 'pub answer := 42;\n');
@@ -141,7 +141,7 @@ test('Lite import path resolution is independent of the caller working directory
     writeFileSync(join(elsewhere, 'nested', 'math.lts'), 'base := import "../base"; text := import "core/text.lts"; pub answer := fn(): Int { base.twice(text.length("hi")) };\n');
     const mainFile = join(elsewhere, 'nested', 'main.lts');
     writeFileSync(mainFile, 'math := import "./math"; io := import "core/io"; io.outputLine(math.answer());\n');
-    const compiled = spawnSync(process.execPath, [join(root, `compiler/bootstrap/${seed.artifact}`), mainFile], {
+    const compiled = spawnSync(process.execPath, [buildTsCompiler().path, mainFile], {
       cwd: outsideCwd, encoding: 'utf8', timeout: 10000,
     });
     assert.equal(compiled.status, 0, compiled.stderr);
@@ -847,7 +847,7 @@ function isolatedCheckout(): string {
     'compiler/release-streams.ts', 'config/versions.json',
     'tools/streams.ts',
     'compiler/scripts/release-streams.test.ts',
-    `compiler/bootstrap/${seed.artifact}`, 'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
+    'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/tsconfig.json',
     ...dependencies, ...toolSources, ...coreLibs, ...utilLibs,
   ]);
@@ -972,7 +972,7 @@ test('the unchanged selected TS source graph uses its verified seed without a lo
     assert.equal(existsSync(join(directory, 'igniter/node_modules/typescript/bin/tsc')), false);
     const selected = spawnSync(process.execPath, ['--input-type=module', '-e',
       'import {buildTsCompiler} from "./compiler/host.ts"; const first = buildTsCompiler(); const t0 = performance.now(); const second = buildTsCompiler(); process.stdout.write(JSON.stringify({ first, second, secondMs: performance.now() - t0 }));'],
-    { cwd: directory, env, encoding: 'utf8', timeout: 20000 });
+    { cwd: directory, env, encoding: 'utf8', timeout: 60000 });
     assert.equal(selected.error, undefined);
     assert.equal(selected.status, 0, selected.stderr);
     const result = JSON.parse(selected.stdout) as {
@@ -980,7 +980,7 @@ test('the unchanged selected TS source graph uses its verified seed without a lo
       second: { path: string; sourceSha256: string; artifactSha256: string; cached: boolean };
       secondMs: number;
     };
-    const expectedPath = realpathSync(join(directory, `compiler/bootstrap/${seed.artifact}`));
+    const expectedPath = realpathSync(join(directory, 'dist/bootstrap/compiler.ts'));
     for (const item of [result.first, result.second]) {
       assert.equal(item.path, expectedPath);
       assert.equal(item.sourceSha256, seed.sourceSha256);

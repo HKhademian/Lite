@@ -4,12 +4,12 @@ Status: active migration, updated 2026-11-17.
 
 Self-hosting remains a compiler requirement. LiteLang tools live in `tools/src/*.lts`
 and `lib/util/*.lts`, and are compiled into untracked `dist/tools/*.ts` artifacts
-during ignition (`node compiler/bootstrap/igniter.ts [--check]`, or automatically on demand via
-`ensureTool` / `runIgnitedTool` in `tools/project.ts`). No pre-generated tool
-artifacts are checked into source control; only the Lite-generated bootstrap compiler
-(`compiler/bootstrap/compiler.ts`, recorded in `compiler/bootstrap/seed.ts`) and
-the Lite-generated igniter (`compiler/bootstrap/igniter.ts`) are tracked
-and used to compile and run the Lite tooling.
+during ignition (`./bin/lite-ignite [--check]`, `node compiler/bootstrap/igniter.ts [--check]`,
+or automatically on demand when invoking any `bin/lite*` symlink). No pre-generated
+tool or compiler artifacts are checked into source control outside the single
+Lite-generated bootstrap igniter (`compiler/bootstrap/igniter.ts`, recorded in
+`compiler/bootstrap/seed.ts`), which compiles the compiler (`dist/bootstrap/compiler.ts`)
+and tools (`dist/tools/*.ts`) into untracked `dist/`.
 
 A tool moves when the generated compiler supports its actual inputs, outputs and
 dependencies; thin TypeScript entrypoints remain only where Node host glue or JS

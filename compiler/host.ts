@@ -81,8 +81,9 @@ class CompilerExit extends Error {
   }
 }
 
-const root = fileURLToPath(new URL('../', import.meta.url));
-const seedPath = fileURLToPath(new URL(`./bootstrap/${seed.artifact}`, import.meta.url));
+const root = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
+const seedPath = join(root, 'compiler/bootstrap', seed.artifact);
+const distSeedPath = resolve(root, 'dist/bootstrap/compiler.ts');
 const hostRequire = createRequire(import.meta.url);
 const loadedCompilers = new Map<string, LoadedCompiler>();
 const memoizedBuilds = new Map<CompilerTarget, MemoizedBuild>();
@@ -156,7 +157,9 @@ function recordBuildMemo(
   ]);
   if (build.path !== seedPath) {
     paths.add(build.path);
-    paths.add(join(dirname(build.path), 'provenance.json'));
+    if (build.cached) {
+      paths.add(join(dirname(build.path), 'provenance.json'));
+    }
   }
   const checks: StatStamp[] = [];
   for (const candidate of paths) {
@@ -180,7 +183,8 @@ function selectBuild(indexPath: string, indexDirectory: string, target: Compiler
 /** Spawns a standalone generated compiler directly in a fresh subprocess when in-process reuse is unavailable. */
 function invokeSubprocess(artifact: string, text: string, name?: string, cwd = process.cwd(), explicitRootPath?: string, options: readonly string[] = []): CompilerResult {
   const rootPath = explicitRootPath ?? (name === undefined || name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, name));
-  const result = spawnSync(process.execPath, [artifact, '--stdin', '--name', name ?? '', '--root', rootPath, ...options], {
+  const prefixArgs = resolve(artifact) === seedPath ? ['--compile'] : [];
+  const result = spawnSync(process.execPath, [artifact, ...prefixArgs, '--stdin', '--name', name ?? '', '--root', rootPath, ...options], {
     input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
   });
   if (result.error !== undefined) throw result.error;
@@ -286,7 +290,8 @@ function invokeInProcess(main: CompilerMain, resolvedArtifact: string, text: str
   let status = 0;
   try {
     const traceArgs = traceFile !== undefined ? ['--trace-json', traceFile] : [];
-    process.argv = [process.execPath, resolvedArtifact, '--stdin', '--name', name ?? '', '--root', rootPath, ...traceArgs, ...options];
+    const prefixArgs = resolvedArtifact === seedPath ? ['--compile'] : [];
+    process.argv = [process.execPath, resolvedArtifact, ...prefixArgs, '--stdin', '--name', name ?? '', '--root', rootPath, ...traceArgs, ...options];
     process.cwd = () => cwd;
     process.exit = ((code?: number | string | null): never => {
       const numeric = code === undefined || code === null ? 0 : Number(code);
@@ -383,7 +388,8 @@ function invokeGraph(artifact: string, text: string, name: string, cwd = process
   const traceDir = mkdtempSync(join(tmpdir(), 'lite-trace-'));
   try {
     const tracePath = join(traceDir, 'trace.json');
-    const processResult = spawnSync(process.execPath, [artifact, '--stdin', '--name', name, '--root', rootPath, '--trace-json', tracePath, ...options], {
+    const prefixArgs = resolve(artifact) === seedPath ? ['--compile'] : [];
+    const processResult = spawnSync(process.execPath, [artifact, ...prefixArgs, '--stdin', '--name', name, '--root', rootPath, '--trace-json', tracePath, ...options], {
       input: text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
     });
     if (processResult.error !== undefined) throw processResult.error;
@@ -443,6 +449,24 @@ function cachedBuild(directory: string, sourceSha256: string, target: CompilerTa
   return { target, path, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256, dependencies, cached: true };
 }
 
+function ensureDistSeedCompiler(text: string, sourceName: string): string {
+  if (existsSync(distSeedPath) && hash(readFileSync(distSeedPath)) === seed.artifactSha256) {
+    return distSeedPath;
+  }
+  const generated = invokeGraph(seedPath, text, sourceName, root).result;
+  if (generated.status !== 0 || generated.stderr.length !== 0) {
+    throw new Error(`${seed.artifact} cannot rebuild current compiler source (${generated.status}):\n${generated.stderr.toString('utf8')}`);
+  }
+  if (hash(generated.stdout) !== seed.artifactSha256) {
+    throw new Error('selected TS bootstrap seed does not reproduce its recorded source graph');
+  }
+  mkdirSync(dirname(distSeedPath), { recursive: true });
+  const tempPath = `${distSeedPath}.${process.pid}.tmp`;
+  writeFileSync(tempPath, generated.stdout);
+  renameSync(tempPath, distSeedPath);
+  return distSeedPath;
+}
+
 /**
  * Selects the verified seed for its original S, or rebuilds changed S with that
  * seed and strict-checks it before atomic cache publication. No T00 code runs.
@@ -451,7 +475,7 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
   const memo = memoizedBuilds.get(target);
   if (memo !== undefined && memoStillValid(memo.checks)) return memo.build;
   memoizedBuilds.delete(target);
-  if (hash(readFileSync(seedPath)) !== seed.artifactSha256) throw new Error('selected TS bootstrap seed hash mismatch');
+  if (hash(readFileSync(seedPath)) !== seed.igniterSha256) throw new Error('selected TS bootstrap seed hash mismatch');
   const manifestPath = resolve(root, 'compiler/manifests', `${target}.json`);
   const manifest = loadManifest(manifestPath);
   if (manifest.target !== target || manifest.files.length !== 1) throw new Error(`${manifestPath}: compiler source graph requires one ${target} root`);
@@ -500,7 +524,8 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
     if (valid && edgesValid) {
       const sourceSha256 = hash(JSON.stringify({ version: 5, sourceName, sourceBridgeSha256, dependencyHashes, edges }));
       if (target === 'ts' && sourceSha256 === seed.sourceSha256 && index.cacheKey === seed.artifactSha256) {
-        return recordBuildMemo(target, { target, path: seedPath, sourceSha256, artifactSha256: seed.artifactSha256,
+        const compilerPath = ensureDistSeedCompiler(input.text, sourceName);
+        return recordBuildMemo(target, { target, path: compilerPath, sourceSha256, artifactSha256: seed.artifactSha256,
           builderSha256: seed.artifactSha256, dependencies, cached: false }, manifestPath, sourcePath, indexPath, edges);
       }
       return recordBuildMemo(target, cachedBuild(join(cache, index.cacheKey), sourceSha256, target, dependencies, dependencyHashes, edges),
@@ -541,8 +566,12 @@ export function buildCompiler(target: CompilerTarget): CompilerBuild {
       if (artifactSha256 !== seed.artifactSha256) {
         throw new Error('selected TS bootstrap seed does not reproduce its recorded source graph');
       }
+      mkdirSync(dirname(distSeedPath), { recursive: true });
+      const tempPath = `${distSeedPath}.${process.pid}.tmp`;
+      writeFileSync(tempPath, generated.stdout);
+      renameSync(tempPath, distSeedPath);
       selectBuild(indexPath, indexDirectory, target, sourcePath, sourceRootSha256, seed.artifactSha256, dependencies, dependencyHashes, edges);
-      return recordBuildMemo(target, { target, path: seedPath, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256,
+      return recordBuildMemo(target, { target, path: distSeedPath, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256,
         dependencies, cached: false }, manifestPath, sourcePath, indexPath, edges);
     }
     const key = hash(`${target}:${seed.artifactSha256}:${sourceSha256}:${JSON.stringify(dependencies)}`);
@@ -605,7 +634,7 @@ export function compileSeedTsGraph(input: CompilerInput): Readonly<{
   dependencies: readonly GraphDependencyIdentity[];
   edges: readonly GraphSourceEdge[];
 }> {
-  if (hash(readFileSync(seedPath)) !== seed.artifactSha256) {
+  if (hash(readFileSync(seedPath)) !== seed.igniterSha256) {
     throw new Error('selected TS bootstrap seed hash mismatch');
   }
   const traced = invokeWithTrace(seedPath, input.text, input.name ?? '', input.cwd ?? process.cwd(), input.rootPath, input.options ?? []);
