@@ -1,0 +1,198 @@
+/* Builtins, runtime helper panics, I/O, and C backend rejection tests migrated from igniter/test.ts. */
+
+fs := import "core/file";
+integer := import "core/int";
+list := import "core/list";
+path := import "core/path";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* TS runtime helpers preserve checked Int64, text and list semantics */
+rtOkSrc :=
+"io := import \"core/io\";\n" +
+"list := import \"core/list\";\n" +
+"text := import \"core/text\";\n" +
+"integer := import \"core/int\";\n" +
+"negSeven := -7;\n" +
+"two := 2;\n" +
+"fortyTwo := 42;\n" +
+"io.outputLine(2 + 3, 2 - 3, -6 * 7, negSeven / two, negSeven % two, -fortyTwo, integer.intMin);\n" +
+"io.outputLine(text.length(\"a🙂\"), text.at(\"a🙂\", 1), text.slice(\"a🙂b\", 1, 2));\n" +
+"src: mut List<Int> = [1, 2];\n" +
+"copy: mut List<Int> = src;\n" +
+"list.pushBack(mut copy, 3);\n" +
+"io.outputLine(list.listCountInt(src), list.listCountInt(copy));\n";
+compilerTest.assertCompileRunTs(root, tsComp, "runtime helpers ok", rtOkSrc, "5 -1 -42 -3 -1 -42 -9223372036854775808\n2 🙂 🙂\n2 3\n");
+
+rtFaultSrc: List<String> = [
+"integer := import \"core/int\"; io := import \"core/io\"; x := integer.intMax; io.outputLine(x + 1);",
+"x := 0; io := import \"core/io\"; io.outputLine(1 / x);",
+"integer := import \"core/int\"; io := import \"core/io\"; x := integer.intMin; io.outputLine(-x);",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", 9));",
+];
+rtFaultPat: List<String> = ["ArithmeticPanic:", "ArithmeticPanic:", "ArithmeticPanic:", "BoundPanic:"];
+var rfi := 0;
+loop rfi < 4 {
+    rRes := compilerTest.compileCheckRunTs(root, tsComp, rtFaultSrc[rfi], "runtime-contract.lts");
+    test.checkInt("runtime fault status", 1, rRes.status);
+    test.check("runtime fault msg", text.containsText(rRes.stderr, rtFaultPat[rfi]));
+    rfi = rfi + 1;
+}
+
+/* restricted compiler compiles text builtins with code-point semantics and bounds faults */
+tbSrc := "text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"a🙂é\"), text.at(\"a🙂é\", 1), text.slice(\"a🙂é\", 1, 3));\n";
+compilerTest.assertCompileRunTs(root, tsComp, "text builtins", tbSrc, "3 🙂 🙂é\n");
+
+tbBadSrc: List<String> = [
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", 9));\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", -1));\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 2, 1));\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 4));\n",
+];
+tbBadPat: List<String> = [
+"BoundPanic: textAt index outside text",
+"BoundPanic: textAt index outside text",
+"BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)",
+"BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)",
+];
+var tbi := 0;
+loop tbi < 4 {
+    tRes := compilerTest.compileCheckRunTs(root, tsComp, tbBadSrc[tbi], "");
+    test.check("text fault nonzero", tRes.status =!= 0);
+    test.check("text fault msg", text.containsText(tRes.stderr, tbBadPat[tbi]));
+    tbi = tbi + 1;
+}
+
+/* generated text helpers preserve Unicode values after many distinct cached inputs */
+uOriginal := "A🙂éسلام";
+probeLines: mut List<String> = ["text := import \"core/text\"; io := import \"core/io\";", "original := \"" + uOriginal + "\";", "io.outputLine(text.length(original), text.at(original, 1), text.slice(original, 2, 4));"];
+expLines: mut List<String> = ["8 🙂 é"];
+var ui := 0;
+loop ui < 32 {
+    idxStr := integer.intText(ui);
+    list.pushBack(mut probeLines, "io.outputLine(text.length(\"text-" + idxStr + "🙂\"));");
+    list.pushBack(mut expLines, integer.intText(6 + text.length(idxStr)));
+    ui = ui + 1;
+}
+list.pushBack(mut probeLines, "io.outputLine(text.length(original), text.at(original, 1), text.slice(original, 2, 4));");
+list.pushBack(mut expLines, "8 🙂 é");
+uSrc := text.joinTexts(probeLines, "\n");
+uExp := text.joinTexts(expLines, "\n") + "\n";
+compilerTest.assertCompileRunTs(root, tsComp, "unicode cache pressure", uSrc, uExp);
+
+/* restricted compiler compiles input, diagnostic and exit builtins in value and statement positions */
+argsSource :=
+"text := import \"core/text\"; io := import \"core/io\";\n" +
+"label := fn (n: Int): String { if n == 0 { \"zero\" } else { text.at(\"abc\", n) } }\n" +
+"names := io.inputArgs();\n" +
+"loop names as name { io.outputLine(text.length(name)); }\n" +
+"io.outputLine(if text.length(\"xy\") == 2 { \"two\" } else { \"other\" });\n" +
+"io.outputLine(label(1), label(0), names[1]);";
+argList: List<String> = ["ab", "c"];
+argsRes := compilerTest.compileCheckRunTsWithInput(root, tsComp, argsSource, "", "", argList);
+test.checkInt("args status", 0, argsRes.status);
+test.checkText("args stdout", "2\n1\ntwo\nb zero c\n", argsRes.stdout);
+test.checkText("args stderr", "", argsRes.stderr);
+
+wholeSrc := "io := import \"core/io\"; io.outputLine(io.inputAll());\n";
+emptyArgs: List<String> = [];
+w1 := compilerTest.compileCheckRunTsWithInput(root, tsComp, wholeSrc, "", "one\ntwo\n", emptyArgs);
+test.checkInt("whole 1 status", 0, w1.status);
+test.checkText("whole 1 stdout", "one\ntwo\n\n", w1.stdout);
+test.checkText("whole 1 stderr", "", w1.stderr);
+
+w2 := compilerTest.compileCheckRunTsWithInput(root, tsComp, wholeSrc, "", "", emptyArgs);
+test.checkInt("whole 2 status", 0, w2.status);
+test.checkText("whole 2 stdout", "\n", w2.stdout);
+test.checkText("whole 2 stderr", "", w2.stderr);
+
+diagRes := compilerTest.compileCheckRunTs(root, tsComp, "io := import \"core/io\"; io.outputLine(\"before\");\nio.errorLine(\"warn\");\nio.exit(3);\n", "");
+test.checkInt("diag exit status", 3, diagRes.status);
+test.checkText("diag stdout", "before\n", diagRes.stdout);
+test.checkText("diag stderr", "warn\n", diagRes.stderr);
+
+compilerTest.assertCompileRunTs(root, tsComp, "exit 0", "io := import \"core/io\"; io.outputLine(\"ok\");\nio.exit(0);\n", "ok\n");
+
+/* restricted compiler diagnoses I/O and text builtin arity and argument mismatches */
+ioBadSrc: List<String> = [
+"io := import \"core/io\"; io.outputLine(io.inputArgs(1));\n",
+"io := import \"core/io\"; io.outputLine(io.inputAll(1));\n",
+"io := import \"core/io\"; io.errorLine();\n",
+"io := import \"core/io\"; io.errorLine(1);\n",
+"io := import \"core/io\"; io.errorLine(\"x\", \"y\");\n",
+"io := import \"core/io\"; io.exit(1, 2);\n",
+"io := import \"core/io\"; io.exit(\"x\");\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length());\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(1));\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\"));\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", \"b\"));\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"a\", 0));\n",
+"io := import \"core/io\"; io.outputLine(io.inputArgs);\n",
+];
+ioBadErr: List<String> = [
+"1:39: function io.inputArgs expects 0 arguments, got more\n",
+"1:51: argument 1 of io.inputAll must be String, got Int\n",
+"1:25: function io.errorLine expects 1 argument, got 0\n",
+"1:38: argument 1 of io.errorLine must be String, got Int\n",
+"1:25: function io.errorLine expects 1 argument, got more\n",
+"1:25: function io.exit expects 1 argument, got more\n",
+"1:33: argument 1 of io.exit must be Int, got String\n",
+"1:67: function text.length expects 1 argument, got 0\n",
+"1:79: argument 1 of text.length must be String, got Int\n",
+"1:67: function text.at expects 2 arguments, got 1\n",
+"1:80: argument 2 of text.at must be Int, got String\n",
+"1:67: function text.slice expects 3 arguments, got 2\n",
+"1:39: function io.inputArgs must be called\n",
+];
+var ibi := 0;
+loop ibi < 13 {
+    compilerTest.assertCompileError(root, tsComp, "io/text bad " + ioBadSrc[ibi], ioBadSrc[ibi], ioBadErr[ibi]);
+    ibi = ibi + 1;
+}
+
+/* restricted C compiler rejects input, diagnostic and text builtins clearly */
+cRejSrc: List<String> = [
+"io := import \"core/io\"; io.outputLine(io.inputAll());\n",
+"io := import \"core/io\"; io.outputLine(io.inputArgs());\n",
+"io := import \"core/io\"; io.errorLine(\"x\");\n",
+"io := import \"core/io\"; io.exit(2);\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"abc\"));\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"abc\", 0));\n",
+"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 1));\n",
+];
+cRejErr: List<String> = [
+"C backend does not support input builtins yet\n",
+"C backend does not support input builtins yet\n",
+"C backend does not support reportError or exit yet\n",
+"C backend does not support reportError or exit yet\n",
+"C backend does not support text builtins yet\n",
+"C backend does not support text builtins yet\n",
+"C backend does not support text builtins yet\n",
+];
+var cri := 0;
+loop cri < 7 {
+    compilerTest.assertCompileError(root, cComp, "C reject " + cRejSrc[cri], cRejSrc[cri], cRejErr[cri]);
+    cri = cri + 1;
+}
+
+/* restricted C compiler preserves existing output and rejects function syntax clearly */
+ref42C := fs.readText(path.join(root, "compiler/tests/references/generated/report-42.c"));
+test.check("read report-42.c", ref42C.ok);
+c42 := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(42);", "");
+test.checkInt("c 42 status", 0, c42.status);
+test.checkText("c 42 output", ref42C.text, c42.stdout);
+test.checkText("c 42 stderr", "", c42.stderr);
+compilerTest.assertCompileError(root, cComp, "C top-level fn reject", "io := import \"core/io\"; f := fn (x: Int): Int { return x; }\nio.outputLine(f(42));\n", "C backend does not support top-level functions yet\n");

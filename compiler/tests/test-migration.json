@@ -413,7 +413,7 @@
     },
     {
       "title": "TS runtime helpers preserve checked Int64, text and list semantics",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/builtins-io.test.lts",
       "originalLine": 1090,
       "dependencies": [],
       "originalAssertions": 23,
@@ -707,7 +707,7 @@
     },
     {
       "title": "restricted compiler compiles text builtins with code-point semantics and bounds faults",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/builtins-io.test.lts",
       "originalLine": 2060,
       "dependencies": [
         "runCompiler"
@@ -717,7 +717,7 @@
     },
     {
       "title": "generated text helpers preserve Unicode values after many distinct cached inputs",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/builtins-io.test.lts",
       "originalLine": 2083,
       "dependencies": [
         "run",
@@ -728,7 +728,7 @@
     },
     {
       "title": "restricted compiler compiles input, diagnostic and exit builtins in value and statement positions",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/builtins-io.test.lts",
       "originalLine": 2101,
       "dependencies": [
         "runCompiler"
@@ -738,7 +738,7 @@
     },
     {
       "title": "restricted compiler diagnoses I/O and text builtin arity and argument mismatches",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/builtins-io.test.lts",
       "originalLine": 2142,
       "dependencies": [
         "runCompiler"
@@ -748,7 +748,7 @@
     },
     {
       "title": "restricted C compiler rejects input, diagnostic and text builtins clearly",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/builtins-io.test.lts",
       "originalLine": 2162,
       "dependencies": [
         "runCompiler"
@@ -758,7 +758,7 @@
     },
     {
       "title": "restricted C compiler preserves existing output and rejects function syntax clearly",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/builtins-io.test.lts",
       "originalLine": 2176,
       "dependencies": [
         "runCompiler"
@@ -768,7 +768,7 @@
     },
     {
       "title": "artifact runner typechecks emitted TS and compiles C with warnings as errors",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2185,
       "dependencies": [
         "loadCompiler",
@@ -801,7 +801,7 @@
     },
     {
       "title": "restricted C compiler emits the readable reference and sequences reports",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2257,
       "dependencies": [
         "runCompiler"
@@ -832,7 +832,7 @@
     },
     {
       "title": "Lite-written TS emitter produces a deterministic readable reference with no extra source",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2341,
       "dependencies": [
         "runCompiler"
@@ -842,7 +842,7 @@
     },
     {
       "title": "Lite-written TS and C compilers sequence multiple report statements deterministically",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2349,
       "dependencies": [
         "runCompiler"
@@ -852,7 +852,7 @@
     },
     {
       "title": "Lite-written TS and C compilers lower arithmetic expressions and immutable locals deterministically",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2365,
       "dependencies": [
         "runCompiler"
@@ -862,7 +862,7 @@
     },
     {
       "title": "restricted compiler lowers dynamic Int division and remainder with checked semantics",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2385,
       "dependencies": [
         "runCompiler"
@@ -872,7 +872,7 @@
     },
     {
       "title": "restricted compiler lowers dynamic Int division and remainder to runnable C",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2405,
       "dependencies": [
         "spawnSync",
@@ -884,7 +884,7 @@
     },
     {
       "title": "restricted compiler lowers dynamic String concatenation with left-to-right TS evaluation",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2450,
       "dependencies": [
         "runCompiler"
@@ -894,7 +894,7 @@
     },
     {
       "title": "restricted compiler lowers dynamic String concatenation to runnable C",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2484,
       "dependencies": [
         "spawnSync",
@@ -905,7 +905,7 @@
     },
     {
       "title": "restricted compiler division faults preserve zero divisor and minimum/-1 status and stderr",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2519,
       "dependencies": [
         "runCompiler",
@@ -916,7 +916,7 @@
     },
     {
       "title": "Lite-written TS and C compilers lower String values and multi-value reports deterministically",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2538,
       "dependencies": [
         "runCompiler"
@@ -936,7 +936,7 @@
     },
     {
       "title": "restricted TS compiler emits a deterministic report sequence",
-      "destination": "igniter/test.ts",
+      "destination": "compiler/tests/codegen/arith-strings-emit.test.lts",
       "originalLine": 2588,
       "dependencies": [
         "runCompiler"
