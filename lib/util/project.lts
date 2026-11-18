@@ -7,6 +7,7 @@ text := import "core/text";
 list := import "core/list";
 path := import "core/path";
 json := import "util/json";
+compilerBuild := import "util/compiler-build";
 
 findRepoRootFrom := fn(startPath: String): String {
     if startPath == "" { return ""; }
@@ -89,31 +90,16 @@ pub selectCompilerPath := fn(rootDir: String, target: String): (ok: Bool, path: 
     if rootDir == "" {
         return (ok = true, path = "compiler/bootstrap/compiler.ts", error = "");
     }
-    script := "import { buildCompiler } from './compiler/host.ts'; process.stdout.write(buildCompiler(process.argv[1]).path);";
-    args: List<String> = ["--input-type=module", "-e", script, target];
-    emptyEnv: List<String> = [];
-    res := proc.run(proc.execPath(), args, rootDir, emptyEnv, true, "");
-    if res.error =!= "" {
-        return (ok = false, path = "", error = res.error);
+    built := compilerBuild.buildCompiler(rootDir, target);
+    if not built.ok {
+        return (ok = false, path = "", error = built.error);
     }
-    if res.status =!= 0 {
-        msg := if text.trim(res.stderr) =!= "" { text.trim(res.stderr) } else { text.trim(res.stdout) };
-        return (ok = false, path = "", error = msg);
-    }
-    (ok = true, path = text.trim(res.stdout), error = "")
+    (ok = true, path = built.path, error = "")
 }
 
-/** Executes a generated TS compiler artifact (supporting modules without an `import.meta.main` tail) and forwards status. */
+/** Executes a standalone generated TS compiler artifact directly and forwards status. */
 pub runCompilerArtifact := fn(artifactPath: String, compilerArgs: List<String>): Int {
-    script :=
-    "import { writeSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; " +
-    "const a = process.argv[1]; const m = await import(pathToFileURL(a).href); " +
-    "process.argv = [process.execPath, a, ...process.argv.slice(2)]; " +
-    "const out = m.main((t) => writeSync(1, t)); " +
-    "if (out === undefined) process.exitCode = 2; " +
-    "else if (typeof out !== 'string') { process.stderr.write('invalid compiler main\\n'); process.exitCode = 1; } " +
-    "else if (out.length > 0) writeSync(1, out);";
-    nodeArgs: mut List<String> = ["--input-type=module", "-e", script, artifactPath];
+    nodeArgs: mut List<String> = [artifactPath];
     loop compilerArgs as arg {
         list.pushBack(mut nodeArgs, arg);
     }

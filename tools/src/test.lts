@@ -1,107 +1,11 @@
 /** Standalone declarative case test runner (`lite test --cases` / `lite verify FILE.json`). */
 
 io := import "core/io";
-fs := import "core/file";
-proc := import "core/process";
-text := import "core/text";
-list := import "core/list";
-integer := import "core/int";
-path := import "core/path";
 project := import "util/project";
 cases := import "util/cases";
 
-writeSummary := fn(count: Int, failures: Int, pending: Int): Unit {
-    summaryEnv := proc.envGet("LITE_TEST_SUMMARY_FILE");
-    if not summaryEnv.found or summaryEnv.value == "" { return; }
-    body := "{\"count\":" + integer.intText(count)
-    + ",\"failures\":" + integer.intText(failures)
-    + ",\"pending\":" + integer.intText(pending) + "}\n";
-    wrote := fs.writeText(summaryEnv.value, body);
-    if not wrote.ok {
-        io.errorLine(wrote.error);
-        io.exit(1);
-    }
-};
-
 run := fn(rawArgs: List<String>): Unit {
-    root := project.findRepoRoot();
-    if root == "" {
-        io.errorLine("could not locate LiteScript repository root");
-        io.exit(1);
-    }
-
-    args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--cases" {
-        _flag := list.popFront(mut args);
-    }
-    if list.listCountText(args) > 0 and args[0] == "--" {
-        _sep := list.popFront(mut args);
-    }
-    if list.listCountText(args) > 1 {
-        io.errorLine("usage: lite test --cases [FILTER|FILE.case.json]");
-        io.exit(1);
-    }
-
-    selection := if list.listCountText(args) == 1 { args[0] } else { "" };
-    fileMode := selection =!= "" and text.endsWith(selection, ".json");
-
-    var caseFiles: mut List<String> = [];
-    if fileMode {
-        absFile := path.resolve(proc.cwd(), selection);
-        checked := cases.validateCaseFile(root, absFile);
-        if not checked.ok {
-            io.errorLine(checked.error);
-            io.exit(1);
-        }
-        list.pushBack(mut caseFiles, absFile);
-    } else {
-        checkedSet := cases.validateCaseSet(root, selection);
-        if not checkedSet.ok {
-            io.errorLine(checkedSet.error);
-            io.exit(1);
-        }
-        caseFiles = cases.selectCaseFiles(root, selection);
-    }
-
-    var count := 0;
-    var failures := 0;
-    var pending := 0;
-
-    loop caseFiles as caseFile {
-        meta := cases.readCaseMeta(root, caseFile);
-        if not meta.ok {
-            io.errorLine(meta.error);
-            io.exit(1);
-        }
-        var idx := 0;
-        loop idx < meta.scenarioCount {
-            scenarioName := cases.readScenarioName(caseFile, idx);
-            if meta.hasPending {
-                pending = pending + 1;
-                io.outputLine("PENDING " + meta.id + "/" + scenarioName + ": " + meta.pending);
-            } else {
-                count = count + 1;
-                res := cases.verifyCaseScenario(root, caseFile, idx);
-                if res.ok {
-                    io.outputLine("PASS " + meta.id + "/" + scenarioName);
-                } else {
-                    failures = failures + 1;
-                    io.errorLine("FAIL " + meta.id + "/" + scenarioName + ": " + res.error);
-                }
-            }
-            idx = idx + 1;
-        }
-    }
-
-    io.outputLine(integer.intText(count - failures) + "/" + integer.intText(count) + " scenarios passed");
-    if pending > 0 {
-        io.outputLine(integer.intText(pending) + " scenarios pending");
-    }
-    writeSummary(count, failures, pending);
-
-    if failures > 0 or (pending > 0 and (fileMode or count == 0)) {
-        io.exit(1);
-    }
+    io.exit(cases.runCaseCli(project.findRepoRoot(), rawArgs));
 };
 
 run(io.inputArgs());

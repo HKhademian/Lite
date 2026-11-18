@@ -5,19 +5,20 @@ list := import "core/list";
 text := import "core/text";
 cli := import "util/cli";
 project := import "util/project";
+cases := import "util/cases";
 verify := import "util/verify";
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "verifier", "verify");
     args := cli.stripLeadingSeparator(rawArgs);
+    root := project.findRepoRoot();
+    if root == "" {
+        io.errorLine("lite verify: could not locate repository root");
+        io.exit(1);
+    }
     if list.listCountText(args) == 1 and text.endsWith(args[0], ".json") {
-        project.forwardNode("tools/test.ts", args);
+        io.exit(cases.runCaseCli(root, args));
     } else {
-        root := project.findRepoRoot();
-        if root == "" {
-            io.errorLine("lite verify: could not locate repository root");
-            io.exit(1);
-        }
         io.exit(verify.runVerification(root, args));
     }
 };

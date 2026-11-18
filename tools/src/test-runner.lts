@@ -6,6 +6,7 @@ proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
+cases := import "util/cases";
 project := import "util/project";
 
 smokeTestFiles := fn(): List<String> {
@@ -53,7 +54,7 @@ run := fn(rawArgs: List<String>): Unit {
     args: mut List<String> = rawArgs;
     if list.listCountText(args) > 0 and args[0] == "--cases" {
         _flag := list.popFront(mut args);
-        project.forwardNode("tools/test.ts", args);
+        io.exit(cases.runCaseCli(project.findRepoRoot(), args));
     }
 
     var mode := "";

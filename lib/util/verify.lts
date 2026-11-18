@@ -12,6 +12,7 @@ path := import "core/path";
 json := import "util/json";
 streams := import "util/streams";
 cases := import "util/cases";
+compilerBuild := import "util/compiler-build";
 
 KIND_FEATURE := "feature";
 KIND_EXAMPLE := "example";
@@ -601,20 +602,15 @@ resolveCompilerBuild := fn(rootDir: String): (ok: Bool, compilerPath: String, se
         artRes := json.readObjectString(seedRead.text, text.indexOfText(seedRead.text, "{", 0), "artifact");
         if artRes.found and artRes.ok { seedArtifact = artRes.value; }
     }
-    script := "import { buildCompiler } from './compiler/host.ts'; process.stdout.write(JSON.stringify(buildCompiler('ts')));";
-    args: List<String> = ["--input-type=module", "-e", script];
-    emptyEnv: List<String> = [];
-    res := proc.run(proc.execPath(), args, rootDir, emptyEnv, true, "");
-    if res.error =!= "" or res.status =!= 0 {
-        err := if res.error =!= "" { res.error } else { res.stderr + res.stdout };
-        return (ok = false, compilerPath = "", seedArtifact = seedArtifact, metaJson = "", error = err);
+    built := compilerBuild.buildCompiler(rootDir, "ts");
+    if not built.ok {
+        return (ok = false, compilerPath = "", seedArtifact = seedArtifact, metaJson = "", error = built.error);
     }
-    compPath := json.readObjectString(res.stdout, 0, "path");
-    depsCheck := checkStringArrayField(res.stdout, 0, "dependencies", "buildCompiler");
-    if not compPath.found or not compPath.ok or not depsCheck.ok {
+    depsCheck := checkStringArrayField(built.jsonText, 0, "dependencies", "buildCompiler");
+    if not depsCheck.ok {
         return (ok = false, compilerPath = "", seedArtifact = seedArtifact, metaJson = "", error = "invalid buildCompiler metadata");
     }
-    (ok = true, compilerPath = compPath.value, seedArtifact = seedArtifact, metaJson = res.stdout, error = "")
+    (ok = true, compilerPath = built.path, seedArtifact = seedArtifact, metaJson = built.jsonText, error = "")
 };
 
 computeRuntimeHash := fn(rootDir: String, seedArtifact: String, compilerDeps: List<String>): (ok: Bool, hex: String, error: String) {
@@ -629,7 +625,7 @@ computeRuntimeHash := fn(rootDir: String, seedArtifact: String, compilerDeps: Li
     "lib/util/cases.lts",
     "lib/util/streams.lts",
     "lib/util/json.lts",
-    "compiler/host.ts",
+    "lib/util/compiler-build.lts",
     "compiler/bootstrap/igniter.ts",
     "compiler/bootstrap/seed.ts",
     "compiler/bootstrap/" + seedArtifact
@@ -778,7 +774,7 @@ invalidatesVerification := fn(relPath: String): Bool {
     "igniter/package-lock.json",
     "language/verifications/features.json",
     "language/verifications/schema/verification.schema.json",
-    "compiler/host.ts",
+    "lib/util/compiler-build.lts",
     "tools/src/ignite.lts",
     "tools/src/verify.lts",
     "lib/util/verify.lts",
@@ -1360,4 +1356,3 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     }
     0
 };
-

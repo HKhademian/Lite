@@ -13,6 +13,7 @@ unicode := import "core/unicode";
 json := import "util/json";
 streams := import "util/streams";
 cases := import "util/cases";
+compilerBuild := import "util/compiler-build";
 
 isJsonSpace := fn(ch: String): Bool {
     ch == " " or ch == "\n" or ch == "\r" or ch == "\t"
@@ -129,26 +130,15 @@ pub repoRevision := fn(rootDir: String): (found: Bool, rev: String) {
     (found = true, rev = text.trim(headRes.stdout))
 };
 
-/** Invokes `compiler/host.ts` to build and return metadata for `target` (`"ts"` or `"c"`). */
+/** Builds or selects `target` (`"ts"` or `"c"`) compiler natively and returns its metadata. */
 pub readCompilerMeta := fn(rootDir: String, target: String): (
 ok: Bool, artifactPath: String, sourceSha256: String, artifactSha256: String, builderSha256: String, rawJson: String, error: String
 ) {
-    script := "import { buildCompiler } from './compiler/host.ts'; process.stdout.write(JSON.stringify(buildCompiler(" + json.quoteString(target) + "), null, 2));";
-    args: List<String> = ["--input-type=module", "-e", script];
-    emptyEnv: List<String> = [];
-    res := proc.run(proc.execPath(), args, rootDir, emptyEnv, true, "");
-    if res.error =!= "" or res.status =!= 0 {
-        err := if res.error =!= "" { res.error } else { text.trim(res.stderr + res.stdout) };
-        return (ok = false, artifactPath = "", sourceSha256 = "", artifactSha256 = "", builderSha256 = "", rawJson = "", error = err);
+    built := compilerBuild.buildCompiler(rootDir, target);
+    if not built.ok {
+        return (ok = false, artifactPath = "", sourceSha256 = "", artifactSha256 = "", builderSha256 = "", rawJson = "", error = built.error);
     }
-    pRes := json.readObjectString(res.stdout, 0, "path");
-    srcRes := json.readObjectString(res.stdout, 0, "sourceSha256");
-    artRes := json.readObjectString(res.stdout, 0, "artifactSha256");
-    bldRes := json.readObjectString(res.stdout, 0, "builderSha256");
-    if not pRes.found or not srcRes.found or not artRes.found or not bldRes.found {
-        return (ok = false, artifactPath = "", sourceSha256 = "", artifactSha256 = "", builderSha256 = "", rawJson = "", error = "invalid buildCompiler metadata");
-    }
-    (ok = true, artifactPath = pRes.value, sourceSha256 = srcRes.value, artifactSha256 = artRes.value, builderSha256 = bldRes.value, rawJson = res.stdout, error = "")
+    (ok = true, artifactPath = built.path, sourceSha256 = built.sourceSha256, artifactSha256 = built.artifactSha256, builderSha256 = built.builderSha256, rawJson = built.jsonText, error = "")
 };
 
 /** Formats SHA-256 identity metadata for `relPaths` under `rootDir`. */
@@ -224,22 +214,33 @@ pub sourceModuleIdentity := fn(rootDir: String, sourceBytes: List<Int>): String 
     ""
 };
 
-/** Executes `compiler/scripts/build.ts` cleanly and prints `{ ts, c }` JSON metadata. */
+indentTwoSpaces := fn(raw: String): String {
+    lines: mut List<String> = [];
+    var pos := 0;
+    size := text.length(raw);
+    loop pos <= size {
+        nl := text.indexOfText(raw, "\n", pos);
+        end := if nl < 0 { size } else { nl };
+        list.pushBack(mut lines, text.slice(raw, pos, end));
+        if nl < 0 { break; }
+        pos = nl + 1;
+    }
+    text.joinTexts(lines, "\n  ")
+};
+
+/** Executes `compiler/scripts/build.ts` natively and prints `{ ts, c }` JSON metadata. */
 pub runCompilerBuildCommand := fn(rootDir: String): Int {
-    script := "import { buildCompiler } from './compiler/host.ts'; process.stdout.write(JSON.stringify({ ts: buildCompiler('ts'), c: buildCompiler('c') }, null, 2) + '\\n');";
-    args: List<String> = ["--input-type=module", "-e", script];
-    emptyEnv: List<String> = [];
-    res := proc.run(proc.execPath(), args, rootDir, emptyEnv, true, "");
-    if res.error =!= "" {
-        io.errorLine("compiler build: " + res.error);
+    tsRes := compilerBuild.buildCompiler(rootDir, "ts");
+    if not tsRes.ok {
+        io.errorLine("compiler build: " + tsRes.error);
         return 1;
     }
-    if res.status =!= 0 {
-        msg := text.trim(res.stderr + res.stdout);
-        io.errorLine("compiler build: " + msg);
+    cRes := compilerBuild.buildCompiler(rootDir, "c");
+    if not cRes.ok {
+        io.errorLine("compiler build: " + cRes.error);
         return 1;
     }
-    io.output(res.stdout);
+    io.outputLine("{\n  \"ts\": " + indentTwoSpaces(tsRes.jsonText) + ",\n  \"c\": " + indentTwoSpaces(cRes.jsonText) + "\n}");
     0
 };
 
@@ -398,7 +399,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
     }
 
     toolPaths: List<String> = [
-    "compiler/scripts/self-host.ts", "tools/src/self-host.lts", "lib/util/corpus.lts", "compiler/host.ts", "igniter/artifacts.ts"
+    "compiler/scripts/self-host.ts", "tools/src/self-host.lts", "lib/util/corpus.lts", "lib/util/compiler-build.lts", "igniter/artifacts.ts"
     ];
     toolsJsonRes := toolIdentitiesJson(rootDir, toolPaths);
     if not toolsJsonRes.ok {
@@ -781,7 +782,7 @@ pub runCorpusParityCommand := fn(rootDir: String, args: List<String>): Int {
     }
 
     toolPaths: List<String> = [
-    "compiler/scripts/corpus-parity.ts", "tools/src/corpus-parity.lts", "lib/util/corpus.lts", "compiler/host.ts", "igniter/artifacts.ts"
+    "compiler/scripts/corpus-parity.ts", "tools/src/corpus-parity.lts", "lib/util/corpus.lts", "lib/util/compiler-build.lts", "igniter/artifacts.ts"
     ];
     toolsJsonRes := toolIdentitiesJson(rootDir, toolPaths);
     if not toolsJsonRes.ok {

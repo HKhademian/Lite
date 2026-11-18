@@ -1,0 +1,629 @@
+/** Native Lite compiler selector and cache builder sharing `dist/compiler-cache/` with `compiler/host.ts`. */
+
+fs := import "core/file";
+proc := import "core/process";
+crypto := import "core/crypto";
+text := import "core/text";
+list := import "core/list";
+path := import "core/path";
+unicode := import "core/unicode";
+json := import "util/json";
+cases := import "util/cases";
+
+/** Result returned by `buildCompiler`. */
+pub CompilerBuildResult := type (
+ok: Bool,
+path: String,
+sourceSha256: String,
+artifactSha256: String,
+builderSha256: String,
+cached: Bool,
+jsonText: String,
+error: String
+);
+
+sha256Text := fn(value: String): String {
+    crypto.sha256Bytes(unicode.utf8Encode(value))
+};
+
+isLowerHex64 := fn(value: String): Bool {
+    if text.length(value) =!= 64 { return false; }
+    var i := 0;
+    loop i < 64 {
+        if text.indexOfText("0123456789abcdef", text.at(value, i), 0) < 0 {
+            return false;
+        }
+        i = i + 1;
+    }
+    true
+};
+
+isSafeRelPath := fn(relPath: String): Bool {
+    if relPath == "" or text.startsWithAt(relPath, 0, "/") or text.startsWithAt(relPath, 0, "../") {
+        return false;
+    }
+    if text.indexOfText(relPath, "\\", 0) >= 0 or text.indexOfText(relPath, "/../", 0) >= 0 {
+        return false;
+    }
+    not text.endsWith(relPath, "/..")
+};
+
+resolveEdgeImportPath := fn(rootDir: String, importerAbs: String, spec: String): String {
+    sourceSpec := if text.endsWith(spec, ".lts") { spec } else { spec + ".lts" };
+    if text.startsWithAt(sourceSpec, 0, "/") {
+        return path.normalize(sourceSpec);
+    }
+    if text.startsWithAt(sourceSpec, 0, "./") or text.startsWithAt(sourceSpec, 0, "../") {
+        return path.resolve(path.parentDir(importerAbs), sourceSpec);
+    }
+    path.resolve(rootDir, "lib/" + sourceSpec)
+};
+
+sameRealPath := fn(leftPath: String, rightPath: String): Bool {
+    lp := fs.realPath(leftPath);
+    rp := fs.realPath(rightPath);
+    if not lp.ok or not rp.ok { return false; }
+    lp.path == rp.path
+};
+
+formatBuildJson := fn(
+target: String,
+artifactPath: String,
+sourceSha256: String,
+artifactSha256: String,
+builderSha256: String,
+depsCompact: List<String>,
+cached: Bool
+): String {
+    "{\n"
+    + "  \"target\": " + json.quoteString(target) + ",\n"
+    + "  \"path\": " + json.quoteString(artifactPath) + ",\n"
+    + "  \"sourceSha256\": " + json.quoteString(sourceSha256) + ",\n"
+    + "  \"artifactSha256\": " + json.quoteString(artifactSha256) + ",\n"
+    + "  \"builderSha256\": " + json.quoteString(builderSha256) + ",\n"
+    + "  \"dependencies\": [" + text.joinTexts(depsCompact, ", ") + "],\n"
+    + "  \"cached\": " + (if cached { "true" } else { "false" }) + "\n"
+    + "}"
+};
+
+failBuild := fn(message: String): CompilerBuildResult {
+    (ok = false, path = "", sourceSha256 = "", artifactSha256 = "", builderSha256 = "", cached = false, jsonText = "", error = message)
+};
+
+readSeed := fn(rootDir: String): (
+ok: Bool,
+artifact: String,
+sourceSha256: String,
+artifactSha256: String,
+seedPath: String,
+error: String
+) {
+    seedMetaPath := path.join(rootDir, "compiler/bootstrap/seed.ts");
+    metaRead := fs.readText(seedMetaPath);
+    if not metaRead.ok {
+        return (ok = false, artifact = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = metaRead.error);
+    }
+    brace := text.indexOfText(metaRead.text, "{", 0);
+    if brace < 0 {
+        return (ok = false, artifact = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "invalid compiler/bootstrap/seed.ts object");
+    }
+    artField := json.readObjectString(metaRead.text, brace, "artifact");
+    srcField := json.readObjectString(metaRead.text, brace, "sourceSha256");
+    shaField := json.readObjectString(metaRead.text, brace, "artifactSha256");
+    if not artField.found or not artField.ok or not srcField.found or not srcField.ok or not shaField.found or not shaField.ok {
+        return (ok = false, artifact = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "incomplete compiler/bootstrap/seed.ts metadata");
+    }
+    seedPath := path.join(rootDir, "compiler/bootstrap/" + artField.value);
+    seedHash := crypto.sha256File(seedPath);
+    if not seedHash.ok or seedHash.hex =!= shaField.value {
+        return (ok = false, artifact = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "selected TS bootstrap seed hash mismatch");
+    }
+    (ok = true, artifact = artField.value, sourceSha256 = srcField.value, artifactSha256 = shaField.value, seedPath = seedPath, error = "")
+};
+
+readManifestSource := fn(rootDir: String, target: String): (
+ok: Bool,
+sourcePath: String,
+sourceName: String,
+error: String
+) {
+    manifestPath := path.join(rootDir, "compiler/manifests/" + target + ".json");
+    mRead := fs.readText(manifestPath);
+    if not mRead.ok {
+        return (ok = false, sourcePath = "", sourceName = "", error = mRead.error);
+    }
+    mSpan := json.valueSpan(mRead.text, 0);
+    if not mSpan.ok or not text.startsWithAt(mRead.text, mSpan.start, "{") {
+        return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": invalid manifest JSON");
+    }
+    mTarget := json.readObjectString(mRead.text, mSpan.start, "target");
+    filesField := json.findObjectField(mRead.text, mSpan.start, "files");
+    if not mTarget.found or not mTarget.ok or mTarget.value =!= target or not filesField.found {
+        return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": invalid compiler manifest target");
+    }
+    offsets := json.arrayElementOffsets(mRead.text, filesField.valuePos);
+    if list.listCountInt(offsets) =!= 1 {
+        return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": compiler source graph requires one " + target + " root");
+    }
+    firstFile := json.readStringAt(mRead.text, offsets[0]);
+    if not firstFile.ok or firstFile.value == "" or text.startsWithAt(firstFile.value, 0, "/") {
+        return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": invalid manifest file path");
+    }
+    resolved := path.resolve(path.parentDir(manifestPath), firstFile.value);
+    rp := fs.realPath(resolved);
+    if not rp.ok {
+        return (ok = false, sourcePath = "", sourceName = "", error = rp.error);
+    }
+    (ok = true, sourcePath = rp.path, sourceName = path.relative(rootDir, rp.path), error = "")
+};
+
+normalizeCachedArtifact := fn(
+rootDir: String,
+cacheDir: String,
+target: String,
+builderSha256: String,
+sourceSha256: String,
+expectedDepsCompact: String,
+expectedDepHashesCompact: String,
+expectedEdgesCompact: String,
+depsQuoted: List<String>
+): CompilerBuildResult {
+    provPath := path.join(cacheDir, "provenance.json");
+    artPath := path.join(cacheDir, "compiler.ts");
+    provRead := fs.readText(provPath);
+    if not provRead.ok {
+        return failBuild("compiler cache integrity mismatch: " + cacheDir);
+    }
+    artHash := crypto.sha256File(artPath);
+    if not artHash.ok {
+        return failBuild("compiler cache integrity mismatch: " + cacheDir);
+    }
+    pText := provRead.text;
+    pTarget := json.readObjectString(pText, 0, "target");
+    pSourceSha := json.readObjectString(pText, 0, "sourceSha256");
+    pBuilderSha := json.readObjectString(pText, 0, "builderSha256");
+    pArtSha := json.readObjectString(pText, 0, "artifactSha256");
+    if not pTarget.found or pTarget.value =!= target
+    or not pSourceSha.found or pSourceSha.value =!= sourceSha256
+    or not pBuilderSha.found or pBuilderSha.value =!= builderSha256
+    or not pArtSha.found or pArtSha.value =!= artHash.hex {
+        return failBuild("compiler cache integrity mismatch: " + cacheDir);
+    }
+
+    pDepsField := json.findObjectField(pText, 0, "dependencies");
+    pDepHashesField := json.findObjectField(pText, 0, "dependencyHashes");
+    pEdgesField := json.findObjectField(pText, 0, "edges");
+    if not pDepsField.found or not pDepHashesField.found or not pEdgesField.found {
+        return failBuild("compiler cache integrity mismatch: " + cacheDir);
+    }
+
+    pDepsParts: mut List<String> = [];
+    loop json.arrayElementOffsets(pText, pDepsField.valuePos) as pos {
+        d := json.readStringAt(pText, pos);
+        if not d.ok { return failBuild("compiler cache integrity mismatch: " + cacheDir); }
+        list.pushBack(mut pDepsParts, json.quoteString(d.value));
+    }
+    if "[" + text.joinTexts(pDepsParts, ",") + "]" =!= expectedDepsCompact {
+        return failBuild("compiler cache integrity mismatch: " + cacheDir);
+    }
+
+    pDhParts: mut List<String> = [];
+    loop json.arrayElementOffsets(pText, pDepHashesField.valuePos) as pos {
+        p := json.readObjectString(pText, pos, "path");
+        s := json.readObjectString(pText, pos, "sha256");
+        if not p.found or not s.found { return failBuild("compiler cache integrity mismatch: " + cacheDir); }
+        diskHash := crypto.sha256File(path.resolve(rootDir, p.value));
+        if not diskHash.ok or diskHash.hex =!= s.value {
+            return failBuild("compiler dependency changed during cache selection: " + p.value);
+        }
+        list.pushBack(mut pDhParts, "{\"path\":" + json.quoteString(p.value) + ",\"sha256\":" + json.quoteString(s.value) + "}");
+    }
+    if "[" + text.joinTexts(pDhParts, ",") + "]" =!= expectedDepHashesCompact {
+        return failBuild("compiler cache integrity mismatch: " + cacheDir);
+    }
+
+    pEdgeParts: mut List<String> = [];
+    loop json.arrayElementOffsets(pText, pEdgesField.valuePos) as pos {
+        imp := json.readObjectString(pText, pos, "importer");
+        sp := json.readObjectString(pText, pos, "spec");
+        tp := json.readObjectString(pText, pos, "path");
+        if not imp.found or not sp.found or not tp.found {
+            return failBuild("compiler cache integrity mismatch: " + cacheDir);
+        }
+        if not sameRealPath(resolveEdgeImportPath(rootDir, path.resolve(rootDir, imp.value), sp.value), path.resolve(rootDir, tp.value)) {
+            return failBuild("compiler import edge changed during cache selection: " + imp.value + ": " + sp.value);
+        }
+        list.pushBack(mut pEdgeParts, "{\"importer\":" + json.quoteString(imp.value) + ",\"spec\":" + json.quoteString(sp.value) + ",\"path\":" + json.quoteString(tp.value) + "}");
+    }
+    if "[" + text.joinTexts(pEdgeParts, ",") + "]" =!= expectedEdgesCompact {
+        return failBuild("compiler cache integrity mismatch: " + cacheDir);
+    }
+
+    outJson := formatBuildJson(target, artPath, sourceSha256, artHash.hex, builderSha256, depsQuoted, true);
+    (ok = true, path = artPath, sourceSha256 = sourceSha256, artifactSha256 = artHash.hex, builderSha256 = builderSha256, cached = true, jsonText = outJson, error = "")
+};
+
+/** Flat return type used by `trySelectionCache` since nested tuples are not supported in Subset L. */
+SelectionTryResult := type (
+hit: Bool,
+ok: Bool,
+path: String,
+sourceSha256: String,
+artifactSha256: String,
+builderSha256: String,
+cached: Bool,
+jsonText: String,
+error: String
+);
+
+tryMiss := fn(): SelectionTryResult {
+    (hit = false, ok = false, path = "", sourceSha256 = "", artifactSha256 = "", builderSha256 = "", cached = false, jsonText = "", error = "")
+};
+
+tryHitFail := fn(message: String): SelectionTryResult {
+    (hit = true, ok = false, path = "", sourceSha256 = "", artifactSha256 = "", builderSha256 = "", cached = false, jsonText = "", error = message)
+};
+
+trySelectionCache := fn(
+rootDir: String,
+cacheRoot: String,
+indexPath: String,
+target: String,
+sourceName: String,
+sourceRootSha256: String,
+sourceBridgeSha256: String,
+seedSha256: String,
+seedSourceSha256: String,
+seedPath: String
+): SelectionTryResult {
+    if fs.kind(indexPath) =!= fs.FILE_KIND_FILE {
+        return tryMiss();
+    }
+    idxRead := fs.readText(indexPath);
+    if not idxRead.ok { return tryMiss(); }
+    idxText := idxRead.text;
+    idxSpan := json.valueSpan(idxText, 0);
+    if not idxSpan.ok or not text.startsWithAt(idxText, idxSpan.start, "{") {
+        return tryHitFail("compiler source dependency index is invalid: " + indexPath);
+    }
+
+    iTarget := json.readObjectString(idxText, 0, "target");
+    iRoot := json.readObjectString(idxText, 0, "root");
+    iRootSha := json.readObjectString(idxText, 0, "rootSha256");
+    iCacheKey := json.readObjectString(idxText, 0, "cacheKey");
+    depsField := json.findObjectField(idxText, 0, "dependencies");
+    dhField := json.findObjectField(idxText, 0, "dependencyHashes");
+    edgesField := json.findObjectField(idxText, 0, "edges");
+
+    if not iTarget.found or iTarget.value =!= target
+    or not iRoot.found or iRoot.value =!= sourceName
+    or not iRootSha.found or iRootSha.value =!= sourceRootSha256
+    or not iCacheKey.found or not isLowerHex64(iCacheKey.value)
+    or not depsField.found or not dhField.found or not edgesField.found {
+        return tryHitFail("compiler source dependency index is invalid: " + indexPath);
+    }
+
+    depPaths: mut List<String> = [];
+    depsQuoted: mut List<String> = [];
+    loop json.arrayElementOffsets(idxText, depsField.valuePos) as pos {
+        d := json.readStringAt(idxText, pos);
+        if not d.ok { return tryHitFail("compiler source dependency index is invalid: " + indexPath); }
+        list.pushBack(mut depPaths, d.value);
+        list.pushBack(mut depsQuoted, json.quoteString(d.value));
+    }
+
+    dhPaths: mut List<String> = [];
+    dhCompact: mut List<String> = [];
+    var allHashesOk := true;
+    loop json.arrayElementOffsets(idxText, dhField.valuePos) as pos {
+        p := json.readObjectString(idxText, pos, "path");
+        s := json.readObjectString(idxText, pos, "sha256");
+        if not p.found or not s.found or not isLowerHex64(s.value) {
+            return tryHitFail("compiler source dependency index is invalid: " + indexPath);
+        }
+        list.pushBack(mut dhPaths, p.value);
+        list.pushBack(mut dhCompact, "{\"path\":" + json.quoteString(p.value) + ",\"sha256\":" + json.quoteString(s.value) + "}");
+        if allHashesOk {
+            if not isSafeRelPath(p.value) {
+                allHashesOk = false;
+            } else {
+                h := crypto.sha256File(path.resolve(rootDir, p.value));
+                if not h.ok or h.hex =!= s.value { allHashesOk = false; }
+            }
+        }
+    }
+
+    edgesCompact: mut List<String> = [];
+    var edgesValid := true;
+    loop json.arrayElementOffsets(idxText, edgesField.valuePos) as pos {
+        imp := json.readObjectString(idxText, pos, "importer");
+        sp := json.readObjectString(idxText, pos, "spec");
+        tp := json.readObjectString(idxText, pos, "path");
+        if not imp.found or not sp.found or not tp.found {
+            return tryHitFail("compiler source dependency index is invalid: " + indexPath);
+        }
+        list.pushBack(mut edgesCompact, "{\"importer\":" + json.quoteString(imp.value) + ",\"spec\":" + json.quoteString(sp.value) + ",\"path\":" + json.quoteString(tp.value) + "}");
+        if edgesValid {
+            if not list.listContainsText(depPaths, imp.value) or not list.listContainsText(depPaths, tp.value) {
+                edgesValid = false;
+            } else if not sameRealPath(resolveEdgeImportPath(rootDir, path.resolve(rootDir, imp.value), sp.value), path.resolve(rootDir, tp.value)) {
+                edgesValid = false;
+            }
+        }
+    }
+
+    if not allHashesOk or not edgesValid {
+        return tryMiss();
+    }
+    if list.listCountText(dhPaths) == 0 or dhPaths[0] =!= sourceName {
+        return tryMiss();
+    }
+    rootEntrySha := json.readObjectString(idxText, json.arrayElementOffsets(idxText, dhField.valuePos)[0], "sha256");
+    if not rootEntrySha.found or rootEntrySha.value =!= sourceRootSha256 {
+        return tryMiss();
+    }
+    if list.listCountText(depPaths) =!= list.listCountText(dhPaths) {
+        return tryMiss();
+    }
+    var di := 0;
+    loop di < list.listCountText(depPaths) {
+        if depPaths[di] =!= dhPaths[di] {
+            return tryMiss();
+        }
+        di = di + 1;
+    }
+
+    expectedDepsCompact := "[" + text.joinTexts(depsQuoted, ",") + "]";
+    expectedDhCompact := "[" + text.joinTexts(dhCompact, ",") + "]";
+    expectedEdgesCompact := "[" + text.joinTexts(edgesCompact, ",") + "]";
+    sourceSha256 := sha256Text(
+    "{\"version\":5,\"sourceName\":" + json.quoteString(sourceName)
+    + ",\"sourceBridgeSha256\":" + json.quoteString(sourceBridgeSha256)
+    + ",\"dependencyHashes\":" + expectedDhCompact
+    + ",\"edges\":" + expectedEdgesCompact + "}"
+    );
+
+    if target == "ts" and sourceSha256 == seedSourceSha256 and iCacheKey.value == seedSha256 {
+        seedJson := formatBuildJson(target, seedPath, sourceSha256, seedSha256, seedSha256, depsQuoted, false);
+        return (hit = true, ok = true, path = seedPath, sourceSha256 = sourceSha256, artifactSha256 = seedSha256, builderSha256 = seedSha256, cached = false, jsonText = seedJson, error = "");
+    }
+
+    cached := normalizeCachedArtifact(
+    rootDir, path.join(cacheRoot, iCacheKey.value), target, seedSha256, sourceSha256,
+    expectedDepsCompact, expectedDhCompact, expectedEdgesCompact, depsQuoted
+    );
+    (hit = true, ok = cached.ok, path = cached.path, sourceSha256 = cached.sourceSha256, artifactSha256 = cached.artifactSha256, builderSha256 = cached.builderSha256, cached = cached.cached, jsonText = cached.jsonText, error = cached.error)
+};
+
+writeSelectionIndex := fn(
+indexPath: String,
+target: String,
+sourceName: String,
+sourceRootSha256: String,
+cacheKey: String,
+depsQuoted: List<String>,
+dhPretty: List<String>,
+edgesPretty: List<String>
+): (ok: Bool, error: String) {
+    mk := fs.makeDir(path.parentDir(indexPath));
+    if not mk.ok { return mk; }
+    body := "{\n"
+    + "  \"target\": " + json.quoteString(target) + ",\n"
+    + "  \"root\": " + json.quoteString(sourceName) + ",\n"
+    + "  \"rootSha256\": " + json.quoteString(sourceRootSha256) + ",\n"
+    + "  \"cacheKey\": " + json.quoteString(cacheKey) + ",\n"
+    + "  \"dependencies\": [" + (if list.listCountText(depsQuoted) > 0 { "\n    " + text.joinTexts(depsQuoted, ",\n    ") + "\n  " } else { "" }) + "],\n"
+    + "  \"dependencyHashes\": [" + (if list.listCountText(dhPretty) > 0 { "\n    " + text.joinTexts(dhPretty, ",\n    ") + "\n  " } else { "" }) + "],\n"
+    + "  \"edges\": [" + (if list.listCountText(edgesPretty) > 0 { "\n    " + text.joinTexts(edgesPretty, ",\n    ") + "\n  " } else { "" }) + "]\n"
+    + "}\n";
+    fs.writeText(indexPath, body)
+};
+
+/** Selects the verified TS bootstrap seed for its original source graph, or rebuilds and caches the target compiler artifact. */
+pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult {
+    if target =!= "ts" and target =!= "c" {
+        return failBuild("unsupported compiler target: " + target);
+    }
+    rpRoot := fs.realPath(rootDirRaw);
+    rootDir := if rpRoot.ok { rpRoot.path } else { rootDirRaw };
+
+    seedInfo := readSeed(rootDir);
+    if not seedInfo.ok {
+        return failBuild(seedInfo.error);
+    }
+    manifest := readManifestSource(rootDir, target);
+    if not manifest.ok {
+        return failBuild(manifest.error);
+    }
+
+    sourcePath := manifest.sourcePath;
+    sourceName := manifest.sourceName;
+    rootRead := fs.readText(sourcePath);
+    if not rootRead.ok {
+        return failBuild(sourcePath + ": " + rootRead.error);
+    }
+    rootBytes := fs.readBytes(sourcePath);
+    sourceRootSha256 := crypto.sha256Bytes(rootBytes);
+    sourceBridgeSha256 := sha256Text("standalone-v1");
+    indexKey := sha256Text("trace-v5:" + target + ":" + seedInfo.artifactSha256 + ":" + sourceName + ":" + sourceRootSha256 + ":" + sourceBridgeSha256);
+
+    cacheRoot := path.join(rootDir, "dist/compiler-cache");
+    indexPath := path.join(cacheRoot, "selection/" + indexKey + ".json");
+    selAttempt := trySelectionCache(
+    rootDir, cacheRoot, indexPath, target, sourceName, sourceRootSha256, sourceBridgeSha256,
+    seedInfo.artifactSha256, seedInfo.sourceSha256, seedInfo.seedPath
+    );
+    if selAttempt.hit {
+        return (
+        ok = selAttempt.ok, path = selAttempt.path, sourceSha256 = selAttempt.sourceSha256,
+        artifactSha256 = selAttempt.artifactSha256, builderSha256 = selAttempt.builderSha256,
+        cached = selAttempt.cached, jsonText = selAttempt.jsonText, error = selAttempt.error
+        );
+    }
+
+    tmpRes := fs.makeTempDir("lite-comp-build-");
+    if not tmpRes.ok {
+        return failBuild(tmpRes.error);
+    }
+    work := tmpRes.path;
+    tracePath := path.join(work, "trace.json");
+    outPath := path.join(work, "compiler.ts");
+    errPath := path.join(work, "compiler.stderr");
+    compArgs: List<String> = [seedInfo.seedPath, "--stdin", "--name", sourceName, "--root", sourcePath, "--trace-json", tracePath];
+    emptyEnv: List<String> = [];
+    runRes := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, rootBytes, outPath, errPath);
+    if runRes.error =!= "" {
+        _rm := fs.remove(work);
+        return failBuild(runRes.error);
+    }
+    errRead := fs.readText(errPath);
+    errText := if errRead.ok { errRead.text } else { "" };
+    if runRes.status =!= 0 or errText =!= "" {
+        _rm := fs.remove(work);
+        return failBuild(seedInfo.artifact + " cannot rebuild current compiler source (" + text.trim(errText) + ")");
+    }
+
+    traceRead := fs.readText(tracePath);
+    if not traceRead.ok {
+        _rm := fs.remove(work);
+        return failBuild("generated compiler returned invalid source dependency trace");
+    }
+    traceSpan := json.valueSpan(traceRead.text, 0);
+    if not traceSpan.ok {
+        _rm := fs.remove(work);
+        return failBuild("generated compiler returned invalid source dependency trace");
+    }
+    filesField := json.findObjectField(traceRead.text, 0, "files");
+    edgesField := json.findObjectField(traceRead.text, 0, "edges");
+    if not filesField.found or not edgesField.found {
+        _rm := fs.remove(work);
+        return failBuild("generated compiler returned invalid source dependency list");
+    }
+
+    seenAbsPaths: mut List<String> = [sourcePath];
+    seenSha256s: mut List<String> = [sourceRootSha256];
+    loop json.arrayElementOffsets(traceRead.text, filesField.valuePos) as fPos {
+        fp := json.readObjectString(traceRead.text, fPos, "path");
+        fsHash := json.readObjectString(traceRead.text, fPos, "sha256");
+        if not fp.found or not fp.ok or not fsHash.found or not fsHash.ok {
+            _rm := fs.remove(work);
+            return failBuild("generated compiler returned invalid source dependency list");
+        }
+        existingIdx := list.listIndexOfText(seenAbsPaths, fp.value);
+        if existingIdx >= 0 {
+            if seenSha256s[existingIdx] =!= fsHash.value {
+                _rm := fs.remove(work);
+                return failBuild("compiler source bytes changed during build: " + fp.value);
+            }
+        } else {
+            list.pushBack(mut seenAbsPaths, fp.value);
+            list.pushBack(mut seenSha256s, fsHash.value);
+        }
+    }
+
+    depsQuoted: mut List<String> = [];
+    dhCompact: mut List<String> = [];
+    dhPretty: mut List<String> = [];
+    var idx := 0;
+    loop idx < list.listCountText(seenAbsPaths) {
+        absFile := seenAbsPaths[idx];
+        expectedHash := seenSha256s[idx];
+        diskHash := crypto.sha256File(absFile);
+        if not diskHash.ok or diskHash.hex =!= expectedHash {
+            _rm := fs.remove(work);
+            return failBuild("compiler source changed while building: " + absFile);
+        }
+        relFile := path.relative(rootDir, absFile);
+        list.pushBack(mut depsQuoted, json.quoteString(relFile));
+        list.pushBack(mut dhCompact, "{\"path\":" + json.quoteString(relFile) + ",\"sha256\":" + json.quoteString(expectedHash) + "}");
+        list.pushBack(mut dhPretty, "{\n      \"path\": " + json.quoteString(relFile) + ",\n      \"sha256\": " + json.quoteString(expectedHash) + "\n    }");
+        idx = idx + 1;
+    }
+
+    edgesCompact: mut List<String> = [];
+    edgesPretty: mut List<String> = [];
+    loop json.arrayElementOffsets(traceRead.text, edgesField.valuePos) as ePos {
+        eImp := json.readObjectString(traceRead.text, ePos, "importer");
+        eSpec := json.readObjectString(traceRead.text, ePos, "spec");
+        ePath := json.readObjectString(traceRead.text, ePos, "path");
+        if not eImp.found or not eSpec.found or not ePath.found {
+            _rm := fs.remove(work);
+            return failBuild("generated compiler returned invalid source dependency list");
+        }
+        relImp := path.relative(rootDir, eImp.value);
+        relTarget := path.relative(rootDir, ePath.value);
+        list.pushBack(mut edgesCompact, "{\"importer\":" + json.quoteString(relImp) + ",\"spec\":" + json.quoteString(eSpec.value) + ",\"path\":" + json.quoteString(relTarget) + "}");
+        list.pushBack(mut edgesPretty, "{\n      \"importer\": " + json.quoteString(relImp) + ",\n      \"spec\": " + json.quoteString(eSpec.value) + ",\n      \"path\": " + json.quoteString(relTarget) + "\n    }");
+    }
+
+    expectedDepsCompact := "[" + text.joinTexts(depsQuoted, ",") + "]";
+    expectedDhCompact := "[" + text.joinTexts(dhCompact, ",") + "]";
+    expectedEdgesCompact := "[" + text.joinTexts(edgesCompact, ",") + "]";
+    sourceSha256 := sha256Text(
+    "{\"version\":5,\"sourceName\":" + json.quoteString(sourceName)
+    + ",\"sourceBridgeSha256\":" + json.quoteString(sourceBridgeSha256)
+    + ",\"dependencyHashes\":" + expectedDhCompact
+    + ",\"edges\":" + expectedEdgesCompact + "}"
+    );
+
+    artHash := crypto.sha256File(outPath);
+    if not artHash.ok {
+        _rm := fs.remove(work);
+        return failBuild(artHash.error);
+    }
+
+    if target == "ts" and sourceSha256 == seedInfo.sourceSha256 {
+        _rm := fs.remove(work);
+        if artHash.hex =!= seedInfo.artifactSha256 {
+            return failBuild("selected TS bootstrap seed does not reproduce its recorded source graph");
+        }
+        wrIdx := writeSelectionIndex(indexPath, target, sourceName, sourceRootSha256, seedInfo.artifactSha256, depsQuoted, dhPretty, edgesPretty);
+        if not wrIdx.ok { return failBuild(wrIdx.error); }
+        seedJson := formatBuildJson(target, seedInfo.seedPath, sourceSha256, artHash.hex, seedInfo.artifactSha256, depsQuoted, false);
+        return (ok = true, path = seedInfo.seedPath, sourceSha256 = sourceSha256, artifactSha256 = artHash.hex, builderSha256 = seedInfo.artifactSha256, cached = false, jsonText = seedJson, error = "");
+    }
+
+    key := sha256Text(target + ":" + seedInfo.artifactSha256 + ":" + sourceSha256 + ":" + expectedDepsCompact);
+    destDir := path.join(cacheRoot, key);
+    if fs.kind(path.join(destDir, "provenance.json")) == fs.FILE_KIND_MISSING {
+        chk := cases.checkTsArtifactFileWithStatus(rootDir, outPath, path.join(work, "tsc"), 0);
+        if not chk.ok {
+            _rm := fs.remove(work);
+            return failBuild("rebuilt compiler failed strict TypeScript checking:\n" + chk.error);
+        }
+        mkDest := fs.makeDir(destDir);
+        if not mkDest.ok {
+            _rm := fs.remove(work);
+            return failBuild(mkDest.error);
+        }
+        cpArt := fs.copy(outPath, path.join(destDir, "compiler.ts"));
+        if not cpArt.ok {
+            _rm := fs.remove(work);
+            return failBuild(cpArt.error);
+        }
+        provBody := "{\n"
+        + "  \"target\": " + json.quoteString(target) + ",\n"
+        + "  \"sourceSha256\": " + json.quoteString(sourceSha256) + ",\n"
+        + "  \"builderSha256\": " + json.quoteString(seedInfo.artifactSha256) + ",\n"
+        + "  \"artifactSha256\": " + json.quoteString(artHash.hex) + ",\n"
+        + "  \"dependencies\": [" + (if list.listCountText(depsQuoted) > 0 { "\n    " + text.joinTexts(depsQuoted, ",\n    ") + "\n  " } else { "" }) + "],\n"
+        + "  \"dependencyHashes\": [" + (if list.listCountText(dhPretty) > 0 { "\n    " + text.joinTexts(dhPretty, ",\n    ") + "\n  " } else { "" }) + "],\n"
+        + "  \"edges\": [" + (if list.listCountText(edgesPretty) > 0 { "\n    " + text.joinTexts(edgesPretty, ",\n    ") + "\n  " } else { "" }) + "]\n"
+        + "}\n";
+        wProv := fs.writeText(path.join(destDir, "provenance.json"), provBody);
+        if not wProv.ok {
+            _rm := fs.remove(work);
+            return failBuild(wProv.error);
+        }
+    }
+    _rm := fs.remove(work);
+
+    cached := normalizeCachedArtifact(
+    rootDir, destDir, target, seedInfo.artifactSha256, sourceSha256,
+    expectedDepsCompact, expectedDhCompact, expectedEdgesCompact, depsQuoted
+    );
+    if not cached.ok { return cached; }
+    wrIdx := writeSelectionIndex(indexPath, target, sourceName, sourceRootSha256, key, depsQuoted, dhPretty, edgesPretty);
+    if not wrIdx.ok { return failBuild(wrIdx.error); }
+    cached
+};
