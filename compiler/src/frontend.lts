@@ -1447,6 +1447,14 @@ externalHostFunction := fn(moduleIdentity: String, name: String, params: String,
         result == VALUE_KIND_INT {
             "lite$extBenchMeasureCompiler"
         } else { "" }
+    } else if moduleIdentity == "lite.external.pool.v1" {
+        if name == "cpuCount" and params == "" and result == VALUE_KIND_INT {
+            "lite$extPoolCpuCount"
+        } else if name == "runPoolJson" and
+        params == "commands=List<String>|argListsJson=List<String>|cwd=String|maxJobs=Int" and
+        result == VALUE_KIND_STRING {
+            "lite$extPoolRunJson"
+        } else { "" }
     } else {
         ""
     }

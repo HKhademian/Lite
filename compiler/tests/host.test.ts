@@ -2395,7 +2395,7 @@ test('default test startup and generated baseline run in a source archive withou
   if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const directory = isolatedCheckout();
   try {
-    for (const path of ['igniter', 'tools', 'bin', 'config', 'compiler/tests', 'compiler/tests/references/generated', 'compiler/runtime', 'lib',
+    for (const path of ['igniter', 'tools', 'bin', 'config', 'compiler/tests', 'compiler/tests/references/generated', 'lib',
       'language/verifications', 'language/examples', 'language/samples', 'language/cases', 'docs', 'benchmark/challenges/tools', '.agents/rules']) {
       cpSync(join(root, path), join(directory, path), { recursive: true, verbatimSymlinks: true,
         filter: candidate => !/(?:\/node_modules|\/lite\.ts|\/bootstrap\.ts|\/bundle-cli\.ts|\/cli\.ts)$/.test(candidate) });
@@ -4366,6 +4366,10 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     const badExtAbi = compileTs({ text: 'pub stripTypes := fn(source: String): String;', name: 'lib/external/ts.lts' });
     assert.equal(badExtAbi.status, 2);
     assert.match(badExtAbi.stderr.toString(), /bodyless function declaration has no matching core host binding/);
+
+    const badPoolAbi = compileTs({ text: 'pub cpuCount := fn(): String;', name: 'lib/external/pool.lts' });
+    assert.equal(badPoolAbi.status, 2);
+    assert.match(badPoolAbi.stderr.toString(), /bodyless function declaration has no matching core host binding/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 
   const extTsCompile = compileTs({
@@ -4377,10 +4381,29 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
   assert.equal(extTsRun.status, 0, extTsRun.stderr.toString());
   assert.equal(extTsRun.stdout.toString('utf8'), 'true const x         = 42;\n');
 
+  const extPoolCompile = compileTs({
+    text: 'io := import "core/io"; pool := import "external/pool"; procs := pool.cpuCount(); empty := pool.runPoolJson([], [], "", 2); out := pool.runPoolJson(["node", "node"], ["[\\"-e\\",\\"process.stdout.write(\\\\\\"one\\\\\\")\\"]", "[\\"-e\\",\\"process.stdout.write(\\\\\\"two\\\\\\");process.exit(3)\\"]"], "", 2); io.outputLine(procs >= 1, empty, out);',
+    name: fixtureName,
+  });
+  assert.equal(extPoolCompile.status, 0, extPoolCompile.stderr.toString());
+  const extPoolChecked = checkTsArtifact(extPoolCompile.stdout.toString('utf8'));
+  assert.equal(extPoolChecked.status, 0, `${extPoolChecked.stdout}\n${extPoolChecked.stderr}`);
+  const extPoolRun = runTsArtifact(extPoolCompile.stdout.toString('utf8'));
+  assert.equal(extPoolRun.status, 0, extPoolRun.stderr.toString());
+  const extPoolLines = extPoolRun.stdout.toString('utf8').trimEnd().split('\n');
+  assert.equal(extPoolLines.length, 1);
+  assert.ok(extPoolLines[0]!.startsWith('true [] ['), extPoolRun.stdout.toString('utf8'));
+  const poolResults = JSON.parse(extPoolLines[0]!.slice('true [] '.length)) as Array<{ status: number; stdout: string; stderr: string; error: string }>;
+  assert.deepEqual(poolResults, [
+    { status: 0, stdout: 'one', stderr: '', error: '' },
+    { status: 3, stdout: 'two', stderr: '', error: '' },
+  ]);
+
   for (const probe of [
     'extHttp := import "external/http"; res := extHttp.fetchToFile("http://127.0.0.1:1/", "", 50, []); if res.ok { _ := res.status; }',
     'extHttp := import "external/http"; if false { _ := extHttp.serveStatic(".", "", "127.0.0.1", 0); }',
     'extBench := import "external/bench"; if false { _ := extBench.measureCompilerArtifact("T11", "a", "b", "c", "d"); }',
+    'pool := import "external/pool"; if false { _a := pool.cpuCount(); _b := pool.runPoolJson([], [], "", 0); }',
   ]) {
     const builtProbe = compileTs({ text: probe, name: fixtureName });
     assert.equal(builtProbe.status, 0, builtProbe.stderr.toString());
@@ -4415,6 +4438,8 @@ test('core os/fs/process/crypto/time host bindings, standalone CLI execution, an
     ['extTs := import "external/ts"; x := extTs.stripTypes("const a: number = 1;");', /C backend does not support (external host builtins|tuple values) yet/],
     ['extHttp := import "external/http"; x := extHttp.serveStatic(".", "", "127.0.0.1", 0);', /C backend does not support (external host builtins|top-level functions) yet/],
     ['extBench := import "external/bench"; x := extBench.measureCompilerArtifact("T11", "a", "b", "c", "d");', /C backend does not support (external host builtins|top-level functions) yet/],
+    ['pool := import "external/pool"; x := pool.cpuCount();', /C backend does not support (external host builtins|top-level functions) yet/],
+    ['pool := import "external/pool"; x := pool.runPoolJson([], [], "", 0);', /C backend does not support (external host builtins|list values|top-level functions) yet/],
     ['textLib := import "core/text"; x := textLib.indexOf("ab", "b", 0);', /C backend does not support (text builtins|top-level functions) yet/],
     ['u := import "core/unicode"; x := u.utf8Encode("ab");', /C backend does not support (unicode builtins|list values|top-level functions) yet/],
     ['u := import "core/unicode"; x := u.utf16Length("ab");', /C backend does not support (unicode builtins|list values|top-level functions) yet/],

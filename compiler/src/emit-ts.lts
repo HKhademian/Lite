@@ -206,7 +206,8 @@ usesUnicode := fn(calls: String): Bool {
 /** True when any emitted item calls an external host binding declared under `lib/external/`. */
 usesExternal := fn(calls: String): Bool {
     usesBuiltin(calls, "extTsStripTypes") or usesBuiltin(calls, "extHttpFetchToFile") or
-    usesBuiltin(calls, "extHttpServeStatic") or usesBuiltin(calls, "extBenchMeasureCompiler")
+    usesBuiltin(calls, "extHttpServeStatic") or usesBuiltin(calls, "extBenchMeasureCompiler") or
+    usesBuiltin(calls, "extPoolCpuCount") or usesBuiltin(calls, "extPoolRunJson")
 }
 
 /** True when any emitted item calls any OS/host tool builtin beyond basic I/O and text. */
@@ -454,7 +455,7 @@ emitProcessDecl := fn(calls: String): Unit {
             outLine("    arch: string;");
             outLine("    version: string;");
             outLine("    env: Record<string, string | undefined>;");
-        } else if usesBuiltin(calls, "extHttpFetchToFile") or usesBuiltin(calls, "extBenchMeasureCompiler") {
+        } else if usesBuiltin(calls, "extHttpFetchToFile") or usesBuiltin(calls, "extBenchMeasureCompiler") or usesBuiltin(calls, "extPoolRunJson") {
             outLine("    execPath: string;");
         }
         if usesBuiltin(calls, "extBenchMeasureCompiler") {
@@ -506,8 +507,15 @@ emitProcessDecl := fn(calls: String): Unit {
             }
             outLine("    };");
         }
-        if usesBuiltin(calls, "fileMakeTempDir") {
-            outLine("    getBuiltinModule(name: \"node:os\"): { tmpdir(): string };");
+        if usesBuiltin(calls, "fileMakeTempDir") or usesBuiltin(calls, "extPoolCpuCount") or usesBuiltin(calls, "extPoolRunJson") {
+            outLine("    getBuiltinModule(name: \"node:os\"): {");
+            if usesBuiltin(calls, "fileMakeTempDir") {
+                outLine("        tmpdir(): string;");
+            }
+            if usesBuiltin(calls, "extPoolCpuCount") or usesBuiltin(calls, "extPoolRunJson") {
+                outLine("        availableParallelism(): number;");
+            }
+            outLine("    };");
         }
         if usesBuiltin(calls, "extHttpServeStatic") {
             outLine("    getBuiltinModule(name: \"node:http\"): {");
@@ -520,9 +528,9 @@ emitProcessDecl := fn(calls: String): Unit {
         if usesBuiltin(calls, "extBenchMeasureCompiler") {
             outLine("    getBuiltinModule(name: \"node:url\"): { pathToFileURL(path: string): { href: string } };");
         }
-        if usesBuiltin(calls, "processRun") or usesBuiltin(calls, "processRunBytes") or usesBuiltin(calls, "extHttpFetchToFile") {
+        if usesBuiltin(calls, "processRun") or usesBuiltin(calls, "processRunBytes") or usesBuiltin(calls, "extHttpFetchToFile") or usesBuiltin(calls, "extPoolRunJson") {
             outLine("    getBuiltinModule(name: \"node:child_process\"): {");
-            if usesBuiltin(calls, "processRun") or usesBuiltin(calls, "extHttpFetchToFile") {
+            if usesBuiltin(calls, "processRun") or usesBuiltin(calls, "extHttpFetchToFile") or usesBuiltin(calls, "extPoolRunJson") {
                 outLine("        spawnSync(command: string, args: readonly string[], options: { cwd?: string; env?: Record<string, string | undefined>; encoding?: \"utf8\"; input?: string; stdio: \"inherit\" | readonly [\"pipe\", \"pipe\", \"pipe\"]; timeout?: number; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };");
             }
             if usesBuiltin(calls, "processRunBytes") {
@@ -1459,6 +1467,63 @@ emitExternalHelpers := fn(calls: String): Unit {
         outLine("        process.exitCode = 1;");
         outLine("    });");
         outLine("    return 0n;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "extPoolCpuCount") {
+        outLine("function lite$extPoolCpuCount(): bigint {");
+        outLine("    return BigInt(Math.max(1, process.getBuiltinModule(\"node:os\").availableParallelism()));");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "extPoolRunJson") {
+        outLine("function lite$extPoolRunJson(commands: readonly string[], argListsJson: readonly string[], cwd: string, maxJobs: bigint): string {");
+        outLine("    if (commands.length !== argListsJson.length) throw new Error(\"runPoolJson requires commands and argListsJson to have equal length\");");
+        outLine("    if (commands.length === 0) return \"[]\";");
+        outLine("    const argLists = argListsJson.map((raw) => JSON.parse(raw) as unknown);");
+        outLine("    const limit = maxJobs > 0n ? Number(maxJobs) : Math.max(1, process.getBuiltinModule(\"node:os\").availableParallelism());");
+        outLine("    const worker = [");
+        outLine("        \"const fs = process.getBuiltinModule('node:fs');\",");
+        outLine("        \"const cp = process.getBuiltinModule('node:child_process');\",");
+        outLine("        \"const req = JSON.parse(fs.readFileSync(0, 'utf8'));\",");
+        outLine("        \"const total = req.commands.length;\",");
+        outLine("        \"const results = new Array(total);\",");
+        outLine("        \"let next = 0;\",");
+        outLine("        \"let active = 0;\",");
+        outLine("        \"let done = 0;\",");
+        outLine("        \"const pump = () => {\",");
+        outLine("        \"  while (active < req.limit && next < total) {\",");
+        outLine("        \"    const idx = next++;\",");
+        outLine("        \"    active++;\",");
+        outLine("        \"    const child = cp.spawn(req.commands[idx], req.argLists[idx], { cwd: req.cwd === '' ? undefined : req.cwd, stdio: ['ignore', 'pipe', 'pipe'] });\",");
+        outLine("        \"    const out = [];\",");
+        outLine("        \"    const err = [];\",");
+        outLine("        \"    let settled = false;\",");
+        outLine("        \"    const finish = (status, error) => {\",");
+        outLine("        \"      if (settled) return;\",");
+        outLine("        \"      settled = true;\",");
+        outLine("        \"      results[idx] = { status, stdout: Buffer.concat(out).toString('utf8'), stderr: Buffer.concat(err).toString('utf8'), error };\",");
+        outLine("        \"      active--;\",");
+        outLine("        \"      done++;\",");
+        outLine("        \"      if (done === total) { process.stdout.write(JSON.stringify(results)); }\",");
+        outLine("        \"      else { pump(); }\",");
+        outLine("        \"    };\",");
+        outLine("        \"    child.stdout.on('data', (chunk) => out.push(chunk));\",");
+        outLine("        \"    child.stderr.on('data', (chunk) => err.push(chunk));\",");
+        outLine("        \"    child.on('error', (e) => finish(-1, e instanceof Error ? e.message : String(e)));\",");
+        outLine("        \"    child.on('close', (code, signal) => finish(code ?? -1, signal !== null ? 'terminated by signal ' + signal : ''));\",");
+        outLine("        \"  }\",");
+        outLine("        \"};\",");
+        outLine("        \"pump();\",");
+        outLine("    ].join(\"\\n\");");
+        outLine("    const res = process.getBuiltinModule(\"node:child_process\").spawnSync(process.execPath, [\"--input-type=module\", \"-e\", worker], {");
+        outLine("        encoding: \"utf8\",");
+        outLine("        input: JSON.stringify({ commands, argLists, cwd, limit }),");
+        outLine("        stdio: [\"pipe\", \"pipe\", \"pipe\"],");
+        outLine("        maxBuffer: 64 * 1024 * 1024,");
+        outLine("    });");
+        outLine("    if (res.error !== undefined) throw res.error;");
+        outLine("    if (res.signal !== null) throw new Error(\"pool coordinator terminated by signal \" + res.signal);");
+        outLine("    if (res.status !== 0) throw new Error(\"pool coordinator exited with status \" + String(res.status) + \": \" + (res.stderr ?? \"\"));");
+        outLine("    return res.stdout ?? \"[]\";");
         outLine("}");
     }
     outLine("");

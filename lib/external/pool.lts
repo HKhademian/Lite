@@ -1,0 +1,7 @@
+/* Provisional external bounded worker-pool host bindings. */
+
+/** Returns the host logical CPU count (at least 1). */
+pub cpuCount := fn(): Int;
+
+/** Runs `commands[i]` with JSON-encoded string-array `argListsJson[i]` in `cwd` up to `maxJobs` workers (`<= 0` uses CPU count), returning JSON `[{status,stdout,stderr,error}]`. */
+pub runPoolJson := fn(commands: List<String>, argListsJson: List<String>, cwd: String, maxJobs: Int): String;
