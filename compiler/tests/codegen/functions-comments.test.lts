@@ -159,6 +159,15 @@ valIf1 := compilerTest.compileStdin(root, tsComp, valIfSrc, "");
 valIf2 := compilerTest.compileStdin(root, tsComp, valIfSrc, "");
 test.checkText("value if deterministic", valIf2.stdout, valIf1.stdout);
 compilerTest.assertCompileRunTs(root, tsComp, "value if", valIfSrc, "41 2 7 10 20\nyes no true false\nnegative zero positive\n1 2 3\n1 2 true\n");
+valIfC := compilerTest.compileStdin(root, cComp, valIfSrc, "");
+test.checkInt("value if C status", 0, valIfC.status);
+test.checkText("value if C stderr", "", valIfC.stderr);
+ccIfProbe := compilerTest.probeCc();
+if ccIfProbe.available {
+    valIfCRun := compilerTest.compileAndRunC(valIfC.stdout, ccIfProbe.cc, "");
+    test.checkInt("value if C run status", 0, valIfCRun.status);
+    test.checkText("value if C run stdout", "41 2 7 10 20\nyes no true false\nnegative zero positive\n1 2 3\n1 2 true\n", valIfCRun.stdout);
+}
 
 /* restricted compiler completes statement-shaped if branches as function results */
 stmtIfSrc :=
@@ -204,9 +213,16 @@ valIfBadErr: List<String> = [
 var vi := 0;
 loop vi < 4 {
     compilerTest.assertCompileError(root, tsComp, "value if bad " + valIfBadSrc[vi], valIfBadSrc[vi], valIfBadErr[vi]);
+    compilerTest.assertCompileError(root, cComp, "value if bad C " + valIfBadSrc[vi], valIfBadSrc[vi], valIfBadErr[vi]);
     vi = vi + 1;
 }
-compilerTest.assertCompileError(root, cComp, "value if C reject", "io := import \"core/io\"; x := if true { 1 } else { 2 };\nio.outputLine(x);\n", "C backend does not support value if expressions yet\n");
+shortCircuitIfC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; var z := 0; x := if true { 42 } else { 1 / z }; io.outputLine(x);\n", "");
+test.checkInt("value if short-circuit C status", 0, shortCircuitIfC.status);
+if ccIfProbe.available {
+    shortRun := compilerTest.compileAndRunC(shortCircuitIfC.stdout, ccIfProbe.cc, "");
+    test.checkInt("value if short-circuit C run status", 0, shortRun.status);
+    test.checkText("value if short-circuit C run stdout", "42\n", shortRun.stdout);
+}
 actionIfC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; if true { io.outputLine(1); } else { io.outputLine(2); }\n", "");
 test.checkInt("action if C status", 0, actionIfC.status);
 expectedActionIfC :=

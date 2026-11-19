@@ -136,12 +136,12 @@ if not skipHeavy {
         "io := import \"core/io\"; loop { io.outputLine(7); break }",
         "io := import \"core/io\"; /* before */ io.outputLine(0 < 1 < 2) /* after */",
         "noop := fn(): Unit { return } noop()",
-        "io := import \"core/io\"; f := fn(): Int { return 7 } io.outputLine(f())"
-    ];
-    sepTsOnly: List<String> = [
+        "io := import \"core/io\"; f := fn(): Int { return 7 } io.outputLine(f())",
         "io := import \"core/io\"; x := if true { 7 } else { 9 } /* boundary */ io.outputLine(x)",
         "io := import \"core/io\"; var x := 0; x = if true { 7 } else { 9 } io.outputLine(x)",
-        "io := import \"core/io\"; f := fn(): Int { return if true { 7 } else { 9 } } io.outputLine(f())",
+        "io := import \"core/io\"; f := fn(): Int { return if true { 7 } else { 9 } } io.outputLine(f())"
+    ];
+    sepTsOnly: List<String> = [
         "list := import \"core/list\"; values: mut List<Int> = [1]; list.popBack(mut values)",
         "io := import \"core/io\"; io.inputLine(\"Prompt: \")",
         "io := import \"core/io\"; f := fn(): Unit { io.outputLine(7) } f()"
@@ -360,7 +360,8 @@ if not skipHeavy {
         "io := import \"core/io\"; effect := fn(): Unit { io.outputLine(\"effect\"); } f := fn(): Unit { effect();; } f();",
         "io := import \"core/io\"; f := fn(): Int { if true { 1;; } else { 2;; };; } io.outputLine(f());",
         "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { io.outputLine(\"yes\"); 1;; } else { io.outputLine(\"no\"); 2;; };; } io.outputLine(f(false), f(true));",
-        "io := import \"core/io\"; f := fn(): Unit { if true { io.outputLine(\"yes\"); Unit;; } else { io.outputLine(\"no\"); Unit;; };; } f();"
+        "io := import \"core/io\"; f := fn(): Unit { if true { io.outputLine(\"yes\"); Unit;; } else { io.outputLine(\"no\"); Unit;; };; } f();",
+        "f := fn(): Unit { if true { Unit } else { Unit };; } f();"
     ];
     exprTsOnly: List<String> = [
         "[1, 2]; (n = 1, label = \"quiet\");",
@@ -369,7 +370,6 @@ if not skipHeavy {
         "io := import \"core/io\"; f := fn(): (n: Int) { (n = 2);; } io.outputLine(f());",
         "list := import \"core/list\"; io := import \"core/io\"; var values: mut List<Int> = [1, 2]; list.popBack(mut values); io.outputLine(values);",
         "list := import \"core/list\"; io := import \"core/io\"; f := fn(): Int { values: mut List<Int> = [1, 2]; list.popBack(mut values);; } io.outputLine(f());",
-        "f := fn(): Unit { if true { Unit } else { Unit };; } f();",
         "list := import \"core/list\"; f := fn(): Unit { values: mut List<Int> = [1]; list.pushBack(mut values, 2);; } f();"
     ];
     loop exprBoth as src { checkTsAndC("expr-both", src, "", "", 0); }

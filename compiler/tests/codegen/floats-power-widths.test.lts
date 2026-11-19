@@ -203,11 +203,11 @@ if not skipHeavy {
         "io := import \"core/io\"; io.output(\"before\", 0.1); io.outputLine(1e21, -5e-324, 0.000001);",
         "io := import \"core/io\"; f := fn(n: Float): Float { n } io.outputLine(f(0.1), f(-0.0));",
         "io := import \"core/io\"; f := fn(n: Float): Float { if n < 0.0 { return -n; } n } io.outputLine(f(-1.5));",
-        "io := import \"core/io\"; echo := fn(n: Float): Float { io.outputLine(\"call\", n); n } io.outputLine(echo(1.5) < echo(2.5) < echo(3.5), echo(3.5) < echo(2.5) < echo(1.5));"
+        "io := import \"core/io\"; echo := fn(n: Float): Float { io.outputLine(\"call\", n); n } io.outputLine(echo(1.5) < echo(2.5) < echo(3.5), echo(3.5) < echo(2.5) < echo(1.5));",
+        "io := import \"core/io\"; f := fn(flag: Bool): Float { if flag { 0.1 } else { 2.5 } } io.outputLine(f(true), f(false));"
     ];
     floatTsOnly: List<String> = [
-        "io := import \"core/io\"; p := (n = 0.1, label = \"value\"); values: List<Float> = [0.1, 1e21]; io.outputLine(p, values);",
-        "io := import \"core/io\"; f := fn(flag: Bool): Float { if flag { 0.1 } else { 2.5 } } io.outputLine(f(true), f(false));"
+        "io := import \"core/io\"; p := (n = 0.1, label = \"value\"); values: List<Float> = [0.1, 1e21]; io.outputLine(p, values);"
     ];
     loop floatBoth as src { checkTsAndCContract("float-both", src, "", "", 0); }
     loop floatTsOnly as src { checkTsOnlyContract("float-ts", src, "", "", 0, true); }
@@ -506,19 +506,19 @@ if not skipHeavy {
         "io := import \"core/io\"; f := fn(n: Float): Float { n } io.outputLine(f(2), f(-3), f((4)));",
         "io := import \"core/io\"; f := fn(): Float { 2 } g := fn(): Double { ((-3)) } io.outputLine(f(), g());",
         "io := import \"core/io\"; f := fn(flag: Bool): Float { if flag { return 2; } return 3; } io.outputLine(f(true), f(false));",
-        "io := import \"core/io\"; f := fn(): Float { 9007199254740993; 2 } io.outputLine(f());"
+        "io := import \"core/io\"; f := fn(): Float { 9007199254740993; 2 } io.outputLine(f());",
+        "io := import \"core/io\"; var flag := true; f: Float = if flag{2}else{3.5}; io.outputLine(f);",
+        "io := import \"core/io\"; var flag := false; f: Float = (if (if flag{true}else{false}) {2}else if false{3}else{4.5}); io.outputLine(f);",
+        "io := import \"core/io\"; f := fn(n: Float): Float { n } io.outputLine(f(if true{2}else{3.5}));",
+        "io := import \"core/io\"; f: Float = (if true{9007199254740993}else{2}) + 0.5; io.outputLine(f);",
+        "io := import \"core/io\"; f: Float = if true{2}else{3} + 0.5; io.outputLine(f);",
+        "io := import \"core/io\"; io.outputLine(if true{12}else{34}); x := if true {1}else {2} +3; io.outputLine(x);"
     ];
     ctxTsOnly: List<String> = [
         "io := import \"core/io\"; xs: List<Float> = [1, -2, 9007199254740994]; io.outputLine(xs);",
         "io := import \"core/io\"; p: (n: Float, m: Double) = (n = 2, m = -3); io.outputLine(p);",
         "io := import \"core/io\"; Pair := type (n: Float); f := fn(): Pair { (n = 2) } io.outputLine(f());",
-        "io := import \"core/io\"; var flag := true; f: Float = if flag{2}else{3.5}; io.outputLine(f);",
-        "io := import \"core/io\"; var flag := false; f: Float = (if (if flag{true}else{false}) {2}else if false{3}else{4.5}); io.outputLine(f);",
-        "io := import \"core/io\"; xs: List<(n: Float)> = [(n = 2), (n = -3)]; io.outputLine(xs);",
-        "io := import \"core/io\"; f := fn(n: Float): Float { n } io.outputLine(f(if true{2}else{3.5}));",
-        "io := import \"core/io\"; f: Float = (if true{9007199254740993}else{2}) + 0.5; io.outputLine(f);",
-        "io := import \"core/io\"; f: Float = if true{2}else{3} + 0.5; io.outputLine(f);",
-        "io := import \"core/io\"; io.outputLine(if true{12}else{34}); x := if true {1}else {2} +3; io.outputLine(x);"
+        "io := import \"core/io\"; xs: List<(n: Float)> = [(n = 2), (n = -3)]; io.outputLine(xs);"
     ];
     loop ctxBoth as src { checkTsAndCContract("float-ctx-both", src, "", "", 0); }
     loop ctxTsOnly as src { checkTsOnlyContract("float-ctx-ts", src, "", "", 0, true); }

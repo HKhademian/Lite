@@ -495,13 +495,28 @@ pub findParamSlot := fn(params: List<String>, first: Int, count: Int, label: Str
     -1
 };
 
+/** Normalizes a conditional ternary branch for TS or C (promoting Unit/Never cleanly for C11 `?:`). */
+ternaryBranchCode := fn(target: String, resultKind: String, branchKind: String, branchCode: String): String {
+    if target == ir.TARGET_TS {
+        return assignValueCode(target, resultKind, branchKind, branchCode);
+    }
+    if resultKind == ir.VALUE_KIND_UNIT {
+        if branchCode == "0" { "0" } else { ir.targetUnitEvaluationCode(target, branchCode) }
+    } else if branchKind == ir.VALUE_KIND_NEVER {
+        "(" + branchCode + ", " + zeroParsed(target, resultKind, 0).code + ")"
+    } else {
+        assignValueCode(target, resultKind, branchKind, branchCode)
+    }
+};
+
 /** Builds a nested conditional expression while converting any branch that widens to `resultKind`. */
 pub ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: List<String>, branchCodes: List<String>, branchKinds: List<String>, branchCount: Int): String {
-    var code := assignValueCode(target, resultKind, branchKinds[branchCount - 1], branchCodes[branchCount - 1]);
+    var code := ternaryBranchCode(target, resultKind, branchKinds[branchCount - 1], branchCodes[branchCount - 1]);
     var index := branchCount - 2;
     loop index >= 0 {
-        branchCode := assignValueCode(target, resultKind, branchKinds[index], branchCodes[index]);
-        code = "(Boolean(" + conditionCodes[index] + ") ? " + branchCode + " : " + code + ")";
+        branchCode := ternaryBranchCode(target, resultKind, branchKinds[index], branchCodes[index]);
+        condExpr := if target == ir.TARGET_TS { "Boolean(" + conditionCodes[index] + ")" } else { "(" + conditionCodes[index] + ")" };
+        code = "(" + condExpr + " ? " + branchCode + " : " + code + ")";
         index = index - 1;
     }
     code

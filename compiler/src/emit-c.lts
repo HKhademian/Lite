@@ -675,9 +675,6 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
         if frontend.codeUsesListIndex(item.code) or frontend.codeUsesListPop(item.code) or frontend.codeUsesListCopy(item.code) {
             diagLib.fail("", "C backend does not support list values yet");
         }
-        if frontend.codeUsesValueIf(item.code) {
-            diagLib.fail("", "C backend does not support value if expressions yet");
-        }
     }
     io.outputLine("#include <stdio.h>");
     if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable { io.outputLine("#include <stdlib.h>"); }
