@@ -496,7 +496,6 @@ cRejCases: List<(src: String, sub: String)> = [
     (src = "extBench := import \"external/bench\"; x := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\");", sub = "external host builtins"),
     (src = "pool := import \"external/pool\"; x := pool.cpuCount();", sub = "external host builtins"),
     (src = "pool := import \"external/pool\"; x := pool.runPoolJson([], [], \"\", 0);", sub = "external host builtins"),
-    (src = "textLib := import \"core/text\"; x := textLib.indexOf(\"ab\", \"b\", 0);", sub = "text builtins"),
     (src = "u := import \"core/unicode\"; x := u.utf8Encode(\"ab\");", sub = "unicode builtins"),
     (src = "u := import \"core/unicode\"; x := u.utf16Length(\"ab\");", sub = "unicode builtins"),
     (src = "u := import \"core/unicode\"; x := u.codePointAt(\"ab\", 0);", sub = "unicode builtins")

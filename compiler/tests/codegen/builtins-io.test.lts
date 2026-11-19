@@ -163,25 +163,46 @@ loop ibi < 13 {
     ibi = ibi + 1;
 }
 
-/* restricted C compiler rejects input and text builtins clearly */
+/* restricted C compiler rejects input builtins clearly */
 cRejSrc: List<String> = [
 "io := import \"core/io\"; io.outputLine(io.inputAll());\n",
 "io := import \"core/io\"; io.outputLine(io.inputArgs());\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"abc\"));\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"abc\", 0));\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 1));\n",
 ];
 cRejErr: List<String> = [
 "C backend does not support input builtins yet\n",
 "C backend does not support input builtins yet\n",
-"C backend does not support text builtins yet\n",
-"C backend does not support text builtins yet\n",
-"C backend does not support text builtins yet\n",
 ];
 var cri := 0;
-loop cri < 5 {
+loop cri < 2 {
     compilerTest.assertCompileError(root, cComp, "C reject " + cRejSrc[cri], cRejSrc[cri], cRejErr[cri]);
     cri = cri + 1;
+}
+
+/* C compiler executes core/text UTF-8 primitives, pure helpers, and core/format natively */
+ccTextInfo := compilerTest.probeCc();
+cTextParitySrc := "t := import \"core/text\"; f := import \"core/format\"; io := import \"core/io\"; s := \"سلام🙂ab\"; io.outputLine(t.length(s), t.at(s, 0), t.at(s, 4), t.slice(s, 1, 5), t.indexOf(s, \"🙂\", 0), f.padLeftInt(42, 4));\n";
+tsTextRes := compilerTest.compileCheckRunTs(root, tsComp, cTextParitySrc, "");
+test.checkInt("ts-text status", 0, tsTextRes.status);
+test.checkText("ts-text stdout", "7 س 🙂 لام🙂 4   42\n", tsTextRes.stdout);
+if ccTextInfo.available {
+    cTextRes := compilerTest.compileCheckRunC(root, cComp, ccTextInfo.cc, cTextParitySrc, "", "");
+    test.checkInt("c-text status", 0, cTextRes.status);
+    test.checkText("c-text stdout", tsTextRes.stdout, cTextRes.stdout);
+    test.checkText("c-text stderr", "", cTextRes.stderr);
+
+    atPanicSrc := "t := import \"core/text\"; io := import \"core/io\"; io.outputLine(t.at(\"ab\", 2));\n";
+    tsTextAtPanic := compilerTest.compileCheckRunTs(root, tsComp, atPanicSrc, "");
+    cTextAtPanic := compilerTest.compileCheckRunC(root, cComp, ccTextInfo.cc, atPanicSrc, "", "");
+    test.checkInt("c-text-at panic status", 1, cTextAtPanic.status);
+    test.checkText("c-text-at panic stderr parity", tsTextAtPanic.stderr, cTextAtPanic.stderr);
+    test.check("c-text-at panic msg: " + cTextAtPanic.stderr, text.containsText(cTextAtPanic.stderr, "BoundPanic: textAt index outside text"));
+
+    slicePanicSrc := "t := import \"core/text\"; io := import \"core/io\"; io.outputLine(t.slice(\"ab\", 1, 0));\n";
+    tsTextSlicePanic := compilerTest.compileCheckRunTs(root, tsComp, slicePanicSrc, "");
+    cTextSlicePanic := compilerTest.compileCheckRunC(root, cComp, ccTextInfo.cc, slicePanicSrc, "", "");
+    test.checkInt("c-text-slice panic status", 1, cTextSlicePanic.status);
+    test.checkText("c-text-slice panic stderr parity", tsTextSlicePanic.stderr, cTextSlicePanic.stderr);
+    test.check("c-text-slice panic msg: " + cTextSlicePanic.stderr, text.containsText(cTextSlicePanic.stderr, "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)"));
 }
 
 /* C compiler executes io.errorLine, io.exit (flushing stdout), and core/diag.fail natively */
