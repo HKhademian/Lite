@@ -163,12 +163,10 @@ loop ibi < 13 {
     ibi = ibi + 1;
 }
 
-/* restricted C compiler rejects input, diagnostic and text builtins clearly */
+/* restricted C compiler rejects input and text builtins clearly */
 cRejSrc: List<String> = [
 "io := import \"core/io\"; io.outputLine(io.inputAll());\n",
 "io := import \"core/io\"; io.outputLine(io.inputArgs());\n",
-"io := import \"core/io\"; io.errorLine(\"x\");\n",
-"io := import \"core/io\"; io.exit(2);\n",
 "text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"abc\"));\n",
 "text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"abc\", 0));\n",
 "text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 1));\n",
@@ -176,16 +174,58 @@ cRejSrc: List<String> = [
 cRejErr: List<String> = [
 "C backend does not support input builtins yet\n",
 "C backend does not support input builtins yet\n",
-"C backend does not support reportError or exit yet\n",
-"C backend does not support reportError or exit yet\n",
 "C backend does not support text builtins yet\n",
 "C backend does not support text builtins yet\n",
 "C backend does not support text builtins yet\n",
 ];
 var cri := 0;
-loop cri < 7 {
+loop cri < 5 {
     compilerTest.assertCompileError(root, cComp, "C reject " + cRejSrc[cri], cRejSrc[cri], cRejErr[cri]);
     cri = cri + 1;
+}
+
+/* C compiler executes io.errorLine, io.exit (flushing stdout), and core/diag.fail natively */
+ccInfo := compilerTest.probeCc();
+diagExitCases: List<(label: String, src: String, expectedStatus: Int, expectedOut: String, expectedErr: String)> = [
+    (
+        label = "C io.errorLine",
+        src = "io := import \"core/io\"; io.output(\"ok\"); io.errorLine(\"x\");\n",
+        expectedStatus = 0,
+        expectedOut = "ok",
+        expectedErr = "x\n"
+    ),
+    (
+        label = "C io.exit flushes stdout",
+        src = "io := import \"core/io\"; io.output(\"before\"); io.exit(7);\n",
+        expectedStatus = 7,
+        expectedOut = "before",
+        expectedErr = ""
+    ),
+    (
+        label = "C io.exit in fn return and value if",
+        src = "io := import \"core/io\"; pick := fn(flag: Bool): Int { if flag { io.exit(3); } return 42; }; x := if false { io.exit(9) } else { pick(false) }; io.outputLine(x);\n",
+        expectedStatus = 0,
+        expectedOut = "42\n",
+        expectedErr = ""
+    ),
+    (
+        label = "C core/diag.fail",
+        src = "d := import \"core/diag\"; d.fail(\"p\", \"boom\");\n",
+        expectedStatus = 2,
+        expectedOut = "",
+        expectedErr = "p:boom\n"
+    )
+];
+loop diagExitCases as dc {
+    cCompiled := compilerTest.compileStdin(root, cComp, dc.src, "");
+    test.checkInt(dc.label + " compile status", 0, cCompiled.status);
+    test.checkText(dc.label + " compile stderr", "", cCompiled.stderr);
+    if ccInfo.available {
+        cRan := compilerTest.compileAndRunC(cCompiled.stdout, ccInfo.cc, "");
+        test.checkInt(dc.label + " run status", dc.expectedStatus, cRan.status);
+        test.checkText(dc.label + " run stdout", dc.expectedOut, cRan.stdout);
+        test.checkText(dc.label + " run stderr", dc.expectedErr, cRan.stderr);
+    }
 }
 
 /* C compiler preserves report-42 baseline output and executes scalar functions */
@@ -195,7 +235,6 @@ c42 := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outp
 test.checkInt("c 42 status", 0, c42.status);
 test.checkText("c 42 output", ref42C.text, c42.stdout);
 test.checkText("c 42 stderr", "", c42.stderr);
-ccInfo := compilerTest.probeCc();
 cIdSrc := "io := import \"core/io\"; f := fn (x: Int): Int { return x; }\nio.outputLine(f(42));\n";
 if ccInfo.available {
     cIdRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, cIdSrc, "", "");

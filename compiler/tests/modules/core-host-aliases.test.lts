@@ -64,7 +64,9 @@ compilerTest.assertCompileErrorContainsNamed(root, tsComp, "mismatched host abi"
 compilerTest.assertCompileErrorContainsNamed(root, tsComp, "ordinary variadic rejected", "values := fn(...values): Unit { };", fixtureName, "variadic parameters are reserved for registered core host declarations");
 compilerTest.assertCompileErrorContainsNamed(root, tsComp, "output as value rejected", "io := import \"core/io\"; value := io.output(1);", fixtureName, "host output functions are standalone statements");
 compilerTest.assertCompileErrorContainsNamed(root, tsComp, "errorLine type rejected", "io := import \"core/io\"; io.errorLine(1);", fixtureName, "argument 1 of io.errorLine must be String, got Int");
-compilerTest.assertCompileErrorContainsNamed(root, cComp, "errorLine C rejected", "io := import \"core/io\"; io.errorLine(\"x\");", fixtureName, "C backend does not support reportError or exit yet");
+errLineC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.errorLine(\"x\");", fixtureName);
+test.checkInt("errorLine C status", 0, errLineC.status);
+test.checkText("errorLine C stderr", "", errLineC.stderr);
 compilerTest.assertCompileErrorContainsNamed(root, cComp, "list output C rejected", "io := import \"core/io\"; io.outputLine([1, 2]);", fixtureName, "C backend does not support");
 
 supportedC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(1, \"x\", true);", fixtureName);
