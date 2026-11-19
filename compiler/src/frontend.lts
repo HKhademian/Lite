@@ -12,6 +12,7 @@ types := import "./frontend-types.lts";
 trace := import "./trace-safety.lts";
 reach := import "./reachability.lts";
 infer := import "./frontend-inference.lts";
+ctx := import "./frontend-context.lts";
 io := import "core/io";
 textLib := import "core/text";
 
@@ -388,55 +389,25 @@ paramKindOf := fn(entry: String): String { types.paramKindOf(entry) };
 fnCanonicalKind := fn(params: List<String>, first: Int, count: Int, resultKind: String): String { types.fnCanonicalKind(params, first, count, resultKind) };
 
 /** Builds an integer parsed value with explicit scalar kind `kind`; `textValue` is empty. */
-typedIntParsed := fn(kind: String, code: String, value: Int, constant: Bool, next: Int): Parsed {
-    (kind = kind, code = code, intValue = value, textValue = "", constant = constant, next = next)
-}
+typedIntParsed := fn(kind: String, code: String, value: Int, constant: Bool, next: Int): Parsed { ctx.typedIntParsed(kind, code, value, constant, next) };
 
 /** Builds an Int parsed value; `textValue` is empty. */
-intParsed := fn(code: String, value: Int, constant: Bool, next: Int): Parsed {
-    typedIntParsed(VALUE_KIND_INT, code, value, constant, next)
-}
+intParsed := fn(code: String, value: Int, constant: Bool, next: Int): Parsed { ctx.intParsed(code, value, constant, next) };
 
 /** Builds a String parsed value; `intValue` is zero. */
-textParsed := fn(code: String, value: String, constant: Bool, next: Int): Parsed {
-    (kind = VALUE_KIND_STRING, code = code, intValue = 0, textValue = value, constant = constant, next = next)
-}
+textParsed := fn(code: String, value: String, constant: Bool, next: Int): Parsed { ctx.textParsed(code, value, constant, next) };
 
 /** Builds a Bool parsed value; `intValue` is 1 for true and 0 for false. */
-boolParsed := fn(code: String, value: Bool, constant: Bool, next: Int): Parsed {
-    (kind = VALUE_KIND_BOOL, code = code, intValue = if value { 1 } else { 0 }, textValue = "", constant = constant, next = next)
-}
+boolParsed := fn(code: String, value: Bool, constant: Bool, next: Int): Parsed { ctx.boolParsed(code, value, constant, next) };
 
 /** Tries a constant integer operation without raising a compile-time runtime fault. */
-tryFoldInteger := fn(operator: String, left: Int, right: Int): (value: Int, ok: Bool) {
-    if operator == "+" { return integer.intAdd(left, right); }
-    if operator == "-" { return integer.intSubtract(left, right); }
-    if operator == "*" { return integer.intMultiply(left, right); }
-    if operator == "/" { return integer.intDivide(left, right); }
-    if operator == "%" { return integer.intRemainder(left, right); }
-    if operator == ":/" { return integer.intFloorDivide(left, right); }
-    integer.intFloorModulo(left, right)
-}
+tryFoldInteger := fn(operator: String, left: Int, right: Int): (value: Int, ok: Bool) { ctx.tryFoldInteger(operator, left, right) };
 
 /** Lowers a checked integer operation whose result is not a safe constant, preserving evaluation and fault timing. */
-runtimeIntegerCode := fn(target: String, operator: String, left: String, right: String, position: Int): String {
-    if operator == "+" { return ir.targetIntAddCode(target, left, right, position); }
-    if operator == "-" { return ir.targetIntSubtractCode(target, left, right, position); }
-    if operator == "*" { return ir.targetIntMultiplyCode(target, left, right, position); }
-    if operator == "/" { return ir.targetIntDivideCode(target, left, right, position); }
-    if operator == "%" { return ir.targetIntRemainderCode(target, left, right, position); }
-    if operator == ":/" { return ir.targetIntFloorDivideCode(target, left, right, position); }
-    ir.targetIntFloorModuloCode(target, left, right, position)
-}
+runtimeIntegerCode := fn(target: String, operator: String, left: String, right: String, position: Int): String { ctx.runtimeIntegerCode(target, operator, left, right, position) };
 
 /** Lowers a checked integer operation at `kind`, adding a runtime range guard for narrow integer widths outside remainders. */
-runtimeTypedIntegerCode := fn(target: String, kind: String, operator: String, left: String, right: String, position: Int): String {
-    raw := runtimeIntegerCode(target, operator, left, right, position);
-    if numeric.isNarrowIntKind(kind) and operator =!= "%" and operator =!= ":%" {
-        return ir.targetCheckedNarrowIntCode(target, kind, raw, position);
-    }
-    raw
-}
+runtimeTypedIntegerCode := fn(target: String, kind: String, operator: String, left: String, right: String, position: Int): String { ctx.runtimeTypedIntegerCode(target, kind, operator, left, right, position) };
 
 /** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
 localIndex := fn(locals: List<Local>, name: String): Int { ir.localIndex(locals, name) };
@@ -490,72 +461,16 @@ binaryFollows := fn(source: String, next: Int, prefix: String, minimum: Int): Bo
 comparisonOperatorAt := fn(source: String, position: Int): Operator { syntax.comparisonOperatorAt(source, position) };
 
 /** Folds one of the ten Int comparisons to a Bool. */
-compareIntegers := fn(operator: String, left: Int, right: Int): Bool {
-    if operator == "==" { left == right }
-    else if operator == "=!=" { left =!= right }
-    else if operator == "<" { left < right }
-    else if operator == "<!" { left >= right }
-    else if operator == "<=" { left <= right }
-    else if operator == "<!=" { left > right }
-    else if operator == ">" { left > right }
-    else if operator == ">!" { left <= right }
-    else if operator == ">=" { left >= right }
-    else { left < right }
-}
+compareIntegers := fn(operator: String, left: Int, right: Int): Bool { ctx.compareIntegers(operator, left, right) };
 
 /** Folds String equality or inequality. */
-compareTexts := fn(operator: String, left: String, right: String): Bool {
-    if operator == "==" { left == right } else { left =!= right }
-}
+compareTexts := fn(operator: String, left: String, right: String): Bool { ctx.compareTexts(operator, left, right) };
 
 /** Folds Bool equality or inequality. */
-compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
-    if operator == "==" { left == right } else { left =!= right }
-}
+compareBools := fn(operator: String, left: Bool, right: Bool): Bool { ctx.compareBools(operator, left, right) };
 
 /** Checks and folds or lowers one comparison expression at operator offset `at`, then returns its Bool parsed value. */
-compareParsed := fn(target: String, source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
-    if numeric.isIntKind(left.kind) and numeric.isIntKind(right.kind) {
-        if left.constant and right.constant {
-            value := compareIntegers(operator, left.intValue, right.intValue);
-            return boolParsed(ir.targetBoolLiteralCode(target, value), value, true, right.next);
-        }
-        return boolParsed(ir.targetComparisonCode(target, operator, VALUE_KIND_INT, left.code, right.code), false, false, right.next);
-    }
-    if numeric.isNumericKind(left.kind) and numeric.isNumericKind(right.kind) {
-        codes: List<String> = [left.code, right.code];
-        kinds: List<String> = [left.kind, right.kind];
-        operators: List<String> = [operator];
-        return boolParsed(ir.targetComparisonChainCode(target, codes, kinds, operators, 1, at), false, false, right.next);
-    }
-    if left.kind =!= right.kind {
-        failAt(source, at, prefix, "cannot compare " + displayKind(left.kind) + " and " + displayKind(right.kind));
-    }
-    if left.kind == VALUE_KIND_NEVER {
-        failAt(source, at, prefix, "cannot compare Never values");
-    }
-    if isTupleKind(left.kind) {
-        failAt(source, at, prefix, "cannot compare tuple values");
-    }
-    if isListKind(left.kind) {
-        failAt(source, at, prefix, "cannot compare list values");
-    }
-    if isFnKind(left.kind) {
-        failAt(source, at, prefix, "cannot compare function values");
-    }
-    if operator =!= "==" and operator =!= "=!=" {
-        failAt(source, at, prefix, "operator " + operator + " requires Int operands");
-    }
-    if left.constant and right.constant {
-        value := if left.kind == VALUE_KIND_STRING {
-            compareTexts(operator, left.textValue, right.textValue)
-        } else {
-            compareBools(operator, left.intValue =!= 0, right.intValue =!= 0)
-        };
-        return boolParsed(ir.targetBoolLiteralCode(target, value), value, true, right.next);
-    }
-    boolParsed(ir.targetComparisonCode(target, operator, left.kind, left.code, right.code), false, false, right.next)
-}
+compareParsed := fn(target: String, source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed { ctx.compareParsed(target, source, at, operator, left, right, prefix) };
 
 /** Admits an integer literal into a narrow Int or exact Float/Float32 storage context only when not followed by a binary operator at `minimum`. */
 /** Parses signed decimal numeric literals in one scan, applying contextual narrow/Float width checks when the atom completes the expression. */
@@ -610,78 +525,22 @@ isSingleEquals := fn(source: String, position: Int): Bool { syntax.isSingleEqual
 looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool { syntax.looksLikeTupleEntry(source, position, prefix) };
 
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; `Never` and other kinds are unchanged. */
-copiedValueCode := fn(target: String, kind: String, code: String): String {
-    if kind == VALUE_KIND_NEVER { code }
-    else if isListKind(kind) or isArrayKind(kind) { ir.targetListCopyCode(target, code) }
-    else { code }
-}
+copiedValueCode := fn(target: String, kind: String, code: String): String { ctx.copiedValueCode(target, kind, code) };
 
 /** Converts compatible tuples or widening integer-to-float values on assignment/call/return, or copies lists when needed; `Never` passes through unchanged. */
-assignValueCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
-    if actualKind == VALUE_KIND_NEVER {
-        actualCode
-    } else if expectedKind == VALUE_KIND_FLOAT32 and numeric.isIntKind(actualKind) {
-        ir.targetFloat32OperandCode(target, actualKind, actualCode)
-    } else if expectedKind == VALUE_KIND_FLOAT and numeric.isIntKind(actualKind) {
-        ir.targetFloatOperandCode(target, actualKind, actualCode)
-    } else if expectedKind =!= actualKind and tupleShapeMatches(expectedKind, actualKind) {
-        convertTupleValue(expectedKind, actualKind, actualCode)
-    } else {
-        copiedValueCode(target, expectedKind, actualCode)
-    }
-}
+assignValueCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String { ctx.assignValueCode(target, expectedKind, actualKind, actualCode) };
 
 /** Rejects declarations inferred as non-storable `Unit` or `Never`. */
-rejectNonValueBinding := fn(source: String, at: Int, prefix: String, kind: String, name: String): Unit {
-    if kind == VALUE_KIND_UNIT or kind == VALUE_KIND_NEVER {
-        failAt(source, at, prefix, "cannot declare a " + displayKind(kind) + " local " + name);
-    }
-}
+rejectNonValueBinding := fn(source: String, at: Int, prefix: String, kind: String, name: String): Unit { ctx.rejectNonValueBinding(source, at, prefix, kind, name); };
 
 /** Chooses the emitted statement item kind, ensuring diverging items terminate non-Unit functions/main for strict TS control flow. */
-expressionStatementKind := fn(valueKind: String, returned: Bool, defaultKind: String, currentResult: String): String {
-    if valueKind == VALUE_KIND_NEVER {
-        if currentResult =!= VALUE_KIND_UNIT { ITEM_KIND_RETURN } else { ITEM_KIND_CALL }
-    } else if returned {
-        ITEM_KIND_RETURN
-    } else {
-        defaultKind
-    }
-}
+expressionStatementKind := fn(valueKind: String, returned: Bool, defaultKind: String, currentResult: String): String { ctx.expressionStatementKind(valueKind, returned, defaultKind, currentResult) };
 
 /** Closes a call after at least one parsed argument, consuming at most one trailing comma and its trivia. */
-expectNonemptyCallClose := fn(source: String, position: Int, prefix: String): Int {
-    var cursor := skipTrivia(source, position, prefix);
-    if cursor < textLib.length(source) and textLib.at(source, cursor) == "," { cursor = skipTrivia(source, cursor + 1, prefix); }
-    expectSymbol(source, cursor, ")", prefix)
-}
+expectNonemptyCallClose := fn(source: String, position: Int, prefix: String): Int { ctx.expectNonemptyCallClose(source, position, prefix) };
 
 /** Parses the `mut name` grant after one list end-operation opener, rejecting a missing grant, a non-list target and a binding without writable held data. */
-parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
-    var cursor := skipTrivia(source, open + 1, prefix);
-    if not textLib.wordAt(source, cursor, "mut") {
-        failAt(source, cursor, prefix, operation + " requires mut list argument");
-    }
-    cursor = skipTrivia(source, cursor + 3, prefix);
-    if cursor >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, cursor)) {
-        failAt(source, cursor, prefix, "expected a list name after mut");
-    }
-    nameEnd := textLib.skipName(source, cursor);
-    listName := textLib.slice(source, cursor, nameEnd);
-    index := localIndex(locals, listName);
-    if index < 0 {
-        failAt(source, cursor, prefix, "unknown value " + listName);
-        return (runtime = "", kind = "", next = nameEnd);
-    }
-    entry := locals[index];
-    if not isListKind(entry.kind) {
-        failAt(source, cursor, prefix, operation + " requires a List value, got " + displayKind(entry.kind));
-    }
-    if not entry.writable {
-        failAt(source, cursor, prefix, "cannot mutate list " + listName + " without mut");
-    }
-    (runtime = entry.runtime, kind = entry.kind, next = nameEnd)
-}
+parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) { ctx.parseListGrant(source, open, prefix, locals, operation) };
 
 /** Finds the end of a grouped atom without interpreting its values; strings and comments cannot close the group. */
 scanParenEnd := fn(source: String, open: Int, prefix: String): Int { syntax.scanParenEnd(source, open, prefix) };
@@ -696,250 +555,28 @@ isReservedInitMarker := fn(source: String, position: Int, prefix: String): Int {
 compoundAssignOp := fn(source: String, position: Int): (op: String, baseOp: String, width: Int) { syntax.compoundAssignOp(source, position) };
 
 /** Lowers a compound assignment RHS computation for Int*, Float*, or String (`+=`). */
-compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix: String, entryKind: String, lhsCode: String, baseOp: String, rhs: Parsed): String {
-    if numeric.isIntKind(entryKind) and numeric.isIntKind(rhs.kind) and numeric.numericWidens(entryKind, rhs.kind) {
-        return runtimeTypedIntegerCode(target, entryKind, baseOp, lhsCode, rhs.code, opPos);
-    }
-    if entryKind == VALUE_KIND_STRING and rhs.kind == VALUE_KIND_STRING and baseOp == "+" {
-        return ir.targetConcatCode(target, lhsCode, rhs.code);
-    }
-    if entryKind == VALUE_KIND_FLOAT32 and (numeric.isIntKind(rhs.kind) or rhs.kind == VALUE_KIND_FLOAT32) and
-    (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
-        return ir.targetFloat32BinaryCode(target, baseOp, lhsCode, ir.targetFloat32OperandCode(target, rhs.kind, rhs.code), opPos);
-    }
-    if entryKind == VALUE_KIND_FLOAT and numeric.isNumericKind(rhs.kind) and
-    (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
-        return ir.targetFloatBinaryCode(target, baseOp, lhsCode, ir.targetFloatOperandCode(target, rhs.kind, rhs.code), opPos);
-    }
-    failAt(source, opPos, prefix, "cannot apply " + baseOp + "= to " + displayKind(entryKind) + " and " + displayKind(rhs.kind));
-    ""
-}
+compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix: String, entryKind: String, lhsCode: String, baseOp: String, rhs: Parsed): String { ctx.compoundAssignCode(target, source, opPos, prefix, entryKind, lhsCode, baseOp, rhs) };
 
 /** Counts entries in `locals`. */
-localsCount := fn(locals: List<Local>): Int {
-    var count := 0;
-    loop locals { count += 1; }
-    count
-}
+localsCount := fn(locals: List<Local>): Int { ctx.localsCount(locals) };
 
 /** Returns the prefix of `locals` up to `targetLen` entries. */
-truncateLocals := fn(locals: List<Local>, targetLen: Int): List<Local> {
-    kept: mut List<Local> = [];
-    var idx := 0;
-    loop locals as local {
-        if idx < targetLen { listLib.pushBack(mut kept, local); }
-        idx = idx + 1;
-    }
-    kept
-}
+truncateLocals := fn(locals: List<Local>, targetLen: Int): List<Local> { ctx.truncateLocals(locals, targetLen) };
 
 /** Returns outer-local initialization and callable-dependency updates from `locals[preLen..)` appended to `updates` for `branchDepth`. */
-recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, branchDepth: Int, updates: List<BranchUpdate>): List<BranchUpdate> {
-    nextUpdates: mut List<BranchUpdate> = [];
-    loop updates as existing { listLib.pushBack(mut nextUpdates, existing); }
-    var idx := 0;
-    branchRuntimes: mut List<String> = [];
-    branchStates: mut List<String> = [];
-    branchCodes: mut List<String> = [];
-    loop locals as local {
-        if idx >= preLen and local.depth >= 0 and local.depth <= maxDepth {
-            listLib.pushBack(mut branchRuntimes, local.runtime);
-            listLib.pushBack(mut branchStates, local.initState);
-            listLib.pushBack(mut branchCodes, local.code);
-        }
-        idx = idx + 1;
-    }
-    emitted: mut List<String> = [];
-    var rev := 0;
-    loop branchRuntimes { rev += 1; }
-    loop rev > 0 {
-        rev = rev - 1;
-        rt := branchRuntimes[rev];
-        if not listLib.listContainsText(emitted, rt) {
-            listLib.pushBack(mut emitted, rt);
-            listLib.pushBack(mut nextUpdates, (depth = branchDepth, runtime = rt, initState = branchStates[rev], code = branchCodes[rev]));
-        }
-    }
-    nextUpdates
-}
+recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, branchDepth: Int, updates: List<BranchUpdate>): List<BranchUpdate> { ctx.recordBranchUpdates(locals, preLen, maxDepth, branchDepth, updates) };
 
 /** Joins `branchUpdates` for `blockDepth` into `locals`, returning updated `locals`. */
-joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasElse: Bool, liveBranchCount: Int, updates: List<BranchUpdate>): List<Local> {
-    here: mut List<BranchUpdate> = [];
-    loop updates as u {
-        if u.depth == blockDepth { listLib.pushBack(mut here, u); }
-    }
-    nextLocals: mut List<Local> = [];
-    loop locals as l { listLib.pushBack(mut nextLocals, l); }
-    if hasElse and liveBranchCount == 0 { return nextLocals; }
-    seenRuntimes: mut List<String> = [];
-    loop here as u {
-        if not listLib.listContainsText(seenRuntimes, u.runtime) {
-            listLib.pushBack(mut seenRuntimes, u.runtime);
-        }
-    }
-    loop seenRuntimes as rt {
-        var preEntryIdx := -1;
-        var i := 0;
-        loop locals as l {
-            if i < preLen and l.runtime == rt { preEntryIdx = i; }
-            i = i + 1;
-        }
-        if preEntryIdx >= 0 {
-            pre := locals[preEntryIdx];
-            trackFn := containsFnKind(pre.kind) or pre.name == "$tuple";
-            var mergedCode := if trackFn { pre.code } else { "" };
-            if trackFn {
-                loop here as u {
-                    if u.runtime == rt and u.code =!= "" {
-                        mergedCode = mergeCallableLocalDeps(mergedCode, u.code);
-                    }
-                }
-            }
-            var joined := pre.initState;
-            if pre.initState =!= INIT_STATE_INIT {
-                joined = INIT_STATE_MAYBE;
-                if hasElse {
-                    var initCount := 0;
-                    loop here as u {
-                        if u.runtime == rt and u.initState == INIT_STATE_INIT { initCount = initCount + 1; }
-                    }
-                    if initCount == liveBranchCount { joined = INIT_STATE_INIT; }
-                }
-                if pre.mutable and pre.initState == INIT_STATE_UNINIT_ASSIGNED and joined == INIT_STATE_MAYBE {
-                    joined = INIT_STATE_UNINIT_ASSIGNED;
-                }
-            }
-            if joined =!= pre.initState or (trackFn and mergedCode =!= pre.code) {
-                listLib.pushBack(mut nextLocals, (name = pre.name, runtime = pre.runtime, kind = pre.kind,
-                mutable = pre.mutable, writable = pre.writable, depth = pre.depth, constant = false,
-                code = if trackFn { mergedCode } else { pre.code }, intValue = 0, textValue = "", initState = joined));
-            }
-        }
-    }
-    nextLocals
-}
+joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasElse: Bool, liveBranchCount: Int, updates: List<BranchUpdate>): List<Local> { ctx.joinBranchLocals(locals, preLen, blockDepth, hasElse, liveBranchCount, updates) };
 
 /** Removes `branchUpdates` entries at `blockDepth`. */
-popBranchUpdates := fn(updates: List<BranchUpdate>, blockDepth: Int): List<BranchUpdate> {
-    kept: mut List<BranchUpdate> = [];
-    loop updates as u {
-        if u.depth =!= blockDepth { listLib.pushBack(mut kept, u); }
-    }
-    kept
-}
+popBranchUpdates := fn(updates: List<BranchUpdate>, blockDepth: Int): List<BranchUpdate> { ctx.popBranchUpdates(updates, blockDepth) };
 
 /** Transitions any outer uninit locals modified inside a loop and propagates callable-dependency updates after the loop. */
-joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List<Local> {
-    updatedRuntimes: mut List<String> = [];
-    var idx := 0;
-    loop locals as l {
-        if idx >= preLen and l.depth >= 0 and l.depth <= maxDepth {
-            if not listLib.listContainsText(updatedRuntimes, l.runtime) {
-                listLib.pushBack(mut updatedRuntimes, l.runtime);
-            }
-        }
-        idx = idx + 1;
-    }
-    nextLocals: mut List<Local> = [];
-    var k := 0;
-    loop locals as l {
-        if k < preLen { listLib.pushBack(mut nextLocals, l); }
-        k = k + 1;
-    }
-    loop updatedRuntimes as rt {
-        var preIdx := -1;
-        var i := 0;
-        loop nextLocals as l {
-            if l.runtime == rt { preIdx = i; }
-            i = i + 1;
-        }
-        if preIdx >= 0 {
-            pre := nextLocals[preIdx];
-            trackFn := containsFnKind(pre.kind) or pre.name == "$tuple";
-            var mergedCode := if trackFn { pre.code } else { "" };
-            if trackFn {
-                var li := preLen;
-                var totalLocals := 0;
-                loop locals { totalLocals = totalLocals + 1; }
-                loop li < totalLocals {
-                    cand := locals[li];
-                    if cand.runtime == rt and cand.depth >= 0 and cand.depth <= maxDepth and cand.code =!= "" {
-                        mergedCode = mergeCallableLocalDeps(mergedCode, cand.code);
-                    }
-                    li = li + 1;
-                }
-            }
-            nextInit := if pre.initState == INIT_STATE_UNINIT or (pre.initState == INIT_STATE_UNINIT_ASSIGNED and not pre.mutable) {
-                INIT_STATE_MAYBE
-            } else {
-                pre.initState
-            };
-            if nextInit =!= pre.initState or (trackFn and mergedCode =!= pre.code) {
-                listLib.pushBack(mut nextLocals, (name = pre.name, runtime = pre.runtime, kind = pre.kind,
-                mutable = pre.mutable, writable = pre.writable, depth = pre.depth, constant = false,
-                code = if trackFn { mergedCode } else { pre.code }, intValue = 0, textValue = "", initState = nextInit));
-            }
-        }
-    }
-    nextLocals
-}
+joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List<Local> { ctx.joinLoopUpdates(locals, preLen, maxDepth) };
 
 /** Builds the zero value for one supported local type, including a fresh flat named-tuple object, fixed array, callable stub, and an empty list. */
-zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
-    if isTupleKind(kind) {
-        count := tupleComponentCount(kind);
-        var code := "{ ";
-        var index := 0;
-        loop index < count {
-            comp := tupleComponent(kind, index);
-            if index > 0 { code = code + ", "; }
-            code = code + tupleObjectKey(comp.label, index) + ": " + self(target, comp.kind, next).code;
-            index = index + 1;
-        }
-        (kind = kind, code = code + " }", intValue = 0, textValue = "", constant = false, next = next)
-    }
-    else if isListKind(kind) { (kind = kind, code = "[]", intValue = 0, textValue = "", constant = false, next = next) }
-    else if isArrayKind(kind) {
-        elemKind := arrayElementKind(kind);
-        extent := arrayExtent(kind);
-        elemZero := self(target, elemKind, next).code;
-        items: mut List<String> = [];
-        var i := 0;
-        loop i < extent {
-            listLib.pushBack(mut items, elemZero);
-            i = i + 1;
-        }
-        (kind = kind, code = "[" + textLib.joinTexts(items, ", ") + "]", intValue = 0, textValue = "", constant = false, next = next)
-    }
-    else if isFnKind(kind) {
-        paramCount := fnParamCount(kind);
-        var paramsCode := "";
-        var voidStmts := "";
-        var idx := 0;
-        loop idx < paramCount {
-            comp := fnParamComponent(kind, idx);
-            pName := "lite_" + integer.intText(idx);
-            if idx > 0 { paramsCode = paramsCode + ", "; }
-            paramsCode = paramsCode + pName + ": " + tsFunctionType(comp.kind);
-            voidStmts = voidStmts + "void " + pName + "; ";
-            idx = idx + 1;
-        }
-        retKind := fnResultKind(kind);
-        retTs := tsFunctionType(retKind);
-        bodyCode := if retKind == VALUE_KIND_UNIT {
-            "{ " + voidStmts + "}"
-        } else {
-            "{ " + voidStmts + "return " + self(target, retKind, next).code + "; }"
-        };
-        (kind = kind, code = "((" + paramsCode + "): " + retTs + " => " + bodyCode + ")", intValue = 0, textValue = kind, constant = false, next = next)
-    }
-    else if numeric.isIntKind(kind) { typedIntParsed(kind, ir.targetIntLiteralCode(target, 0, false, "0"), 0, true, next) }
-    else if numeric.isFloatKind(kind) { (kind = kind, code = "0", intValue = 0, textValue = "", constant = false, next = next) }
-    else if kind == VALUE_KIND_STRING { textParsed(ir.targetTextLiteralCode(target, ""), "", true, next) }
-    else if kind == VALUE_KIND_UNIT { (kind = VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = next) }
-    else { boolParsed(ir.targetBoolLiteralCode(target, false), false, true, next) }
-}
+zeroParsed := fn(target: String, kind: String, next: Int): Parsed { ctx.zeroParsed(target, kind, next) };
 
 /** Parses one local type annotation: an optional `mut` list grant, then a scalar, a transparent alias or a flat named tuple; Unit has no local zero value. */
 parseLocalType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): (kind: String, writable: Bool, next: Int) { types.parseLocalType(source, position, prefix, aliases) };
@@ -948,36 +585,13 @@ parseLocalType := fn(source: String, position: Int, prefix: String, aliases: Lis
 skipItemSeparators := fn(source: String, position: Int, prefix: String): Int { syntax.skipItemSeparators(source, position, prefix) };
 
 /** Returns a copy of `values` with element `index` replaced by `value`. */
-setIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> {
-    updated: mut List<Int> = [];
-    var i := 0;
-    loop values as item {
-        listLib.pushBack(mut updated, if i == index { value } else { item });
-        i = i + 1;
-    }
-    updated
-}
+setIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> { ctx.setIntAt(values, index, value) };
 
 /** Returns a copy of `values` with element `index` replaced by `value`. */
-setBoolAt := fn(values: List<Bool>, index: Int, value: Bool): List<Bool> {
-    updated: mut List<Bool> = [];
-    var i := 0;
-    loop values as item {
-        listLib.pushBack(mut updated, if i == index { value } else { item });
-        i = i + 1;
-    }
-    updated
-}
+setBoolAt := fn(values: List<Bool>, index: Int, value: Bool): List<Bool> { ctx.setBoolAt(values, index, value) };
 
 /** Returns the 0-based parameter slot index matching `label` in `[first, first + count)`, or -1 when absent. */
-findParamSlot := fn(params: List<String>, first: Int, count: Int, label: String): Int {
-    var i := 0;
-    loop i < count {
-        if paramNameOf(params[first + i]) == label { return i; }
-        i = i + 1;
-    }
-    -1
-}
+findParamSlot := fn(params: List<String>, first: Int, count: Int, label: String): Int { ctx.findParamSlot(params, first, count, label) };
 
 /** Scans from `position` to the next top-level `,` or `)` at paren/bracket/brace depth 0. */
 skipBalancedArgument := fn(source: String, position: Int, prefix: String): Int { syntax.skipBalancedArgument(source, position, prefix) };
@@ -1001,148 +615,49 @@ loopValMarkerId := fn(kind: String): Int { types.loopValMarkerId(kind) };
 joinBranchKind := fn(current: String, nextKind: String): String { types.joinBranchKind(current, nextKind) };
 
 /** Builds a nested conditional expression while converting any branch that widens to `resultKind`. */
-ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: List<String>, branchCodes: List<String>, branchKinds: List<String>, branchCount: Int): String {
-    var code := assignValueCode(target, resultKind, branchKinds[branchCount - 1], branchCodes[branchCount - 1]);
-    var index := branchCount - 2;
-    loop index >= 0 {
-        branchCode := assignValueCode(target, resultKind, branchKinds[index], branchCodes[index]);
-        code = "(Boolean(" + conditionCodes[index] + ") ? " + branchCode + " : " + code + ")";
-        index = index - 1;
-    }
-    code
-}
+ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: List<String>, branchCodes: List<String>, branchKinds: List<String>, branchCount: Int): String { ctx.ternaryChainCode(target, resultKind, conditionCodes, branchCodes, branchKinds, branchCount) };
 
 /** Formats one conditional branch statement for a lowered IIFE conditional (`if`, `else if`, `else`, or `match` arm). */
-condBranchStmtCode := fn(target: String, valKind: String, valVar: String, branchKind: String, branchCode: String): String {
-    if valKind == VALUE_KIND_NEVER {
-        "return (" + branchCode + ");"
-    } else if branchKind == VALUE_KIND_NEVER {
-        "(" + branchCode + ");"
-    } else if valKind == VALUE_KIND_UNIT {
-        if branchCode == ir.targetUnitLiteralCode(target) { "" } else { "void (" + branchCode + ");" }
-    } else {
-        valVar + " = " + assignValueCode(target, valKind, branchKind, branchCode) + ";"
-    }
-}
+condBranchStmtCode := fn(target: String, valKind: String, valVar: String, branchKind: String, branchCode: String): String { ctx.condBranchStmtCode(target, valKind, valVar, branchKind, branchCode) };
 
 /** Returns the number of entries in `ctxs`. */
-ctxCount := fn(ctxs: List<ConstructCtx>): Int {
-    var count := 0;
-    loop ctxs { count += 1; }
-    count
-}
+ctxCount := fn(ctxs: List<ConstructCtx>): Int { ctx.ctxCount(ctxs) };
 
 /** Returns a copy of `ctxs` with `entry` appended at the end. */
-appendCtx := fn(ctxs: List<ConstructCtx>, entry: ConstructCtx): List<ConstructCtx> {
-    copy: mut List<ConstructCtx> = [];
-    loop ctxs as existing { listLib.pushBack(mut copy, existing); }
-    listLib.pushBack(mut copy, entry);
-    copy
-}
+appendCtx := fn(ctxs: List<ConstructCtx>, entry: ConstructCtx): List<ConstructCtx> { ctx.appendCtx(ctxs, entry) };
 
 /** Returns one fresh positive construct identifier higher than any active id in `ctxs`. */
-nextCtxId := fn(ctxs: List<ConstructCtx>): Int {
-    var highest := 0;
-    loop ctxs as existing {
-        if existing.id > highest { highest = existing.id; }
-    }
-    highest + 1
-}
+nextCtxId := fn(ctxs: List<ConstructCtx>): Int { ctx.nextCtxId(ctxs) };
 
 /** Finds the innermost context in `ctxs` matching `tag`, or -1 when absent. */
-findTaggedCtxIndex := fn(ctxs: List<ConstructCtx>, tag: String): Int {
-    var index := ctxCount(ctxs) - 1;
-    loop index >= 0 {
-        if ctxs[index].tag == tag { return index; }
-        index = index - 1;
-    }
-    -1
-}
+findTaggedCtxIndex := fn(ctxs: List<ConstructCtx>, tag: String): Int { ctx.findTaggedCtxIndex(ctxs, tag) };
 
 /** Finds the innermost context in `ctxs` matching `kind`, or -1 when absent. */
-findCtxByKindIndex := fn(ctxs: List<ConstructCtx>, kind: String): Int {
-    var index := ctxCount(ctxs) - 1;
-    loop index >= 0 {
-        if ctxs[index].kind == kind { return index; }
-        index = index - 1;
-    }
-    -1
-}
+findCtxByKindIndex := fn(ctxs: List<ConstructCtx>, kind: String): Int { ctx.findCtxByKindIndex(ctxs, kind) };
 
 /** Returns the entries of `locals` declared below `depth` (including pre-scanned future placeholders below `depth`), preserving order. */
-visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> {
-    kept: mut List<Local> = [];
-    loop locals as entry {
-        if (entry.depth >= -1 and entry.depth < depth) or
-        (entry.depth <= -2 and (0 - 2 - entry.depth) < depth) {
-            listLib.pushBack(mut kept, entry);
-        }
-    }
-    kept
-}
+visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> { ctx.visibleLocals(locals, depth) };
 
 /** True when `name` is already declared directly inside the block at `depth`. */
 hasBlockDecl := fn(decls: List<BlockDecl>, depth: Int, name: String): Bool { ir.hasBlockDecl(decls, depth, name) };
 
 /** Drops current-block declaration records at or above `depth`, keeping enclosing blocks intact. */
-popBlockDecls := fn(decls: List<BlockDecl>, depth: Int): List<BlockDecl> {
-    kept: mut List<BlockDecl> = [];
-    loop decls as entry {
-        if entry.depth < depth {
-            listLib.pushBack(mut kept, entry);
-        }
-    }
-    kept
-}
+popBlockDecls := fn(decls: List<BlockDecl>, depth: Int): List<BlockDecl> { ctx.popBlockDecls(decls, depth) };
 
 /** Rejects redeclaring `name` within the same file-root (`depth == 0`) or inner block. */
-rejectDuplicateBlockDecl := fn(source: String, at: Int, prefix: String, decls: List<BlockDecl>, depth: Int, name: String): Unit {
-    if hasBlockDecl(decls, depth, name) {
-        if depth == 0 {
-            failAt(source, at, prefix, "duplicate top-level value " + name);
-        }
-        failAt(source, at, prefix, "duplicate declaration " + name + " in block");
-    }
-}
+rejectDuplicateBlockDecl := fn(source: String, at: Int, prefix: String, decls: List<BlockDecl>, depth: Int, name: String): Unit { ctx.rejectDuplicateBlockDecl(source, at, prefix, decls, depth, name); };
 
 /** Rejects redeclaring `name` inside the current `parseBinaryCtx` `{ ... }` block. */
-rejectDuplicateInBlockNames := fn(source: String, at: Int, prefix: String, names: List<String>, name: String): Unit {
-    if listLib.listContainsText(names, name) {
-        failAt(source, at, prefix, "duplicate declaration " + name + " in block");
-    }
-}
+rejectDuplicateInBlockNames := fn(source: String, at: Int, prefix: String, names: List<String>, name: String): Unit { ctx.rejectDuplicateInBlockNames(source, at, prefix, names, name); };
 
 /** Extracts header-bound symbol names (parameters or loop items) owned by the opening `{ ... }` block. */
-seedBlockDeclaredNames := fn(bodySink: String): List<String> {
-    seeded: mut List<String> = [];
-    colonPos := textLib.indexOfText(bodySink, ":", 0);
-    if colonPos < 0 { return seeded; }
-    namesLen := textLib.length(bodySink);
-    var cursor := colonPos + 1;
-    loop cursor < namesLen {
-        var endPos := cursor;
-        loop endPos < namesLen and textLib.at(bodySink, endPos) =!= "," {
-            endPos = endPos + 1;
-        }
-        if endPos > cursor {
-            listLib.pushBack(mut seeded, textLib.slice(bodySink, cursor, endPos));
-        }
-        cursor = endPos + 1;
-    }
-    seeded
-}
+seedBlockDeclaredNames := fn(bodySink: String): List<String> { ctx.seedBlockDeclaredNames(bodySink) };
 
 /** Joins a block's definite completion: scopes preserve it, loops require a true header, and conditionals require every arm plus a final else. */
-blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool, hasElse: Bool, loopForever: Bool): Bool {
-    if kind == BLOCK_KIND_SCOPE or kind == BLOCK_KIND_MATCH_SINGLE or kind == BLOCK_KIND_MATCH_SINGLE_VALUE { completed }
-    else if kind == BLOCK_KIND_LOOP { loopForever and completed }
-    else { hasElse and branchesComplete and completed }
-}
+blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool, hasElse: Bool, loopForever: Bool): Bool { ctx.blockCompletion(kind, completed, branchesComplete, hasElse, loopForever) };
 
 /** True when emitted target code contains a raw `lite$throwTransfer(` substring worth quote-aware inspection. */
-codeHasRawTransfer := fn(code: String): Bool {
-    code =!= "" and textLib.indexOfText(code, "lite$throwTransfer(", 0) >= 0
-}
+codeHasRawTransfer := fn(code: String): Bool { ctx.codeHasRawTransfer(code) };
 
 /** Parses one `@tag` token starting at `atPos`. */
 parseTagAt := fn(source: String, atPos: Int, prefix: String): (tag: String, next: Int, at: Int) { syntax.parseTagAt(source, atPos, prefix) };
@@ -1154,139 +669,25 @@ rejectMisplacedTag := fn(source: String, position: Int, prefix: String, message:
 rejectHeaderBlockTag := fn(source: String, position: Int, prefix: String, constructName: String): Unit { syntax.rejectHeaderBlockTag(source, position, prefix, constructName); };
 
 /** True when `parsed` encodes Pass 1 exit markers in `textValue`. */
-hasMarkerPrefix := fn(parsed: Parsed): Bool {
-    not parsed.constant and textLib.startsWithAt(parsed.textValue, 0, "__m:")
-}
+hasMarkerPrefix := fn(parsed: Parsed): Bool { ctx.hasMarkerPrefix(parsed) };
 
 /** Appends Pass 1 exit markers encoded on `parsed` onto `current`. */
-collectParsedMarkers := fn(current: String, parsed: Parsed): String {
-    if hasMarkerPrefix(parsed) {
-        return current + textLib.slice(parsed.textValue, 4, textLib.length(parsed.textValue));
-    }
-    current
-}
+collectParsedMarkers := fn(current: String, parsed: Parsed): String { ctx.collectParsedMarkers(current, parsed) };
 
 /** Encodes raw marker lines for `Parsed.textValue`, or returns empty when none exist. */
-wrapMarkers := fn(raw: String): String {
-    if raw == "" { "" } else { "__m:" + raw }
-}
+wrapMarkers := fn(raw: String): String { ctx.wrapMarkers(raw) };
 
 /** Attaches raw Pass 1 exit markers onto `parsed` when non-empty. */
-withMarkers := fn(parsed: Parsed, raw: String): Parsed {
-    if raw == "" { return parsed; }
-    (kind = parsed.kind, code = parsed.code, intValue = parsed.intValue,
-    textValue = "__m:" + raw, constant = false, next = parsed.next)
-}
+withMarkers := fn(parsed: Parsed, raw: String): Parsed { ctx.withMarkers(parsed, raw) };
 
 /** Retains all marker lines in `raw` whose target id is not `excludeId`. */
-filterOtherMarkers := fn(raw: String, excludeId: Int): String {
-    excludeKey := integer.intText(excludeId);
-    size := textLib.length(raw);
-    var cursor := 0;
-    var kept := "";
-    loop cursor < size {
-        eqPos := textLib.indexOfText(raw, "=", cursor);
-        if eqPos < 0 { break; }
-        nlPos := textLib.indexOfText(raw, "\n", eqPos + 1);
-        endPos := if nlPos < 0 { size } else { nlPos };
-        entryId := textLib.slice(raw, cursor, eqPos);
-        if entryId =!= excludeKey {
-            kept = kept + textLib.slice(raw, cursor, endPos) + "\n";
-        }
-        cursor = endPos + 1;
-    }
-    kept
-}
+filterOtherMarkers := fn(raw: String, excludeId: Int): String { ctx.filterOtherMarkers(raw, excludeId) };
 
 /** Unifies all inferred exit kinds recorded for `targetId` in `raw` markers, failing on incompatible exit types. */
-inferKindFromMarkers := fn(raw: String, targetId: Int, targetTag: String, source: String, at: Int, prefix: String, blockStopped: Bool): String {
-    idKey := integer.intText(targetId);
-    size := textLib.length(raw);
-    var cursor := 0;
-    var result := "";
-    loop cursor < size {
-        eqPos := textLib.indexOfText(raw, "=", cursor);
-        if eqPos < 0 { break; }
-        nlPos := textLib.indexOfText(raw, "\n", eqPos + 1);
-        endPos := if nlPos < 0 { size } else { nlPos };
-        entryId := textLib.slice(raw, cursor, eqPos);
-        entryKind := textLib.slice(raw, eqPos + 1, endPos);
-        if entryId == idKey {
-            if result == "" {
-                result = entryKind;
-            } else {
-                joined := joinBranchKind(result, entryKind);
-                if joined == "" {
-                    failAt(source, at, prefix, "block @" + targetTag + " cannot return both " +
-                    displayKind(result) + " and " + displayKind(entryKind));
-                }
-                result = joined;
-            }
-        }
-        cursor = endPos + 1;
-    }
-    if result == "" {
-        if blockStopped { VALUE_KIND_NEVER } else { VALUE_KIND_UNIT }
-    } else {
-        result
-    }
-}
+inferKindFromMarkers := fn(raw: String, targetId: Int, targetTag: String, source: String, at: Int, prefix: String, blockStopped: Bool): String { ctx.inferKindFromMarkers(raw, targetId, targetTag, source, at, prefix, blockStopped) };
 
 /** Returns true when a call argument list reorders or mismatches slots relative to the callee's declaration order. */
-callReordersArgs := fn(source: String, openParen: Int, prefix: String, params: List<String>, firstParam: Int, paramCount: Int): Bool {
-    size := textLib.length(source);
-    var cursor := skipTrivia(source, openParen + 1, prefix);
-    if cursor >= size or textLib.at(source, cursor) == ")" { return false; }
-    var entryIdx := 0;
-    var atArgStart := true;
-    var depth := 0;
-    loop cursor < size {
-        if atArgStart and depth == 0 {
-            if textLib.at(source, cursor) == ")" { break; }
-            var label := "";
-            if isSingleEquals(source, cursor) {
-                nameStart := skipTrivia(source, cursor + 1, prefix);
-                if nameStart < size and textLib.isNameStart(textLib.at(source, nameStart)) {
-                    label = textLib.slice(source, nameStart, textLib.skipName(source, nameStart));
-                }
-            } else if textLib.isNameStart(textLib.at(source, cursor)) {
-                nameEnd := textLib.skipName(source, cursor);
-                afterName := skipTrivia(source, nameEnd, prefix);
-                if isSingleEquals(source, afterName) {
-                    label = textLib.slice(source, cursor, nameEnd);
-                }
-            }
-            if label =!= "" and findParamSlot(params, firstParam, paramCount, label) =!= entryIdx {
-                return true;
-            }
-            atArgStart = false;
-        }
-        ch := textLib.at(source, cursor);
-        if ch == "\"" {
-            cursor = skipAliasString(source, cursor);
-        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
-            cursor = skipComment(source, cursor, prefix);
-        } else if ch == "(" or ch == "[" or ch == "{" {
-            depth = depth + 1;
-            cursor = cursor + 1;
-        } else if ch == ")" or ch == "]" or ch == "}" {
-            if depth == 0 and ch == ")" {
-                entryIdx = entryIdx + 1;
-                break;
-            }
-            if depth > 0 { depth = depth - 1; }
-            cursor = cursor + 1;
-        } else if depth == 0 and ch == "," {
-            entryIdx = entryIdx + 1;
-            cursor = skipTrivia(source, cursor + 1, prefix);
-            if cursor < size and textLib.at(source, cursor) == ")" { break; }
-            atArgStart = true;
-        } else {
-            cursor = cursor + 1;
-        }
-    }
-    entryIdx =!= paramCount
-}
+callReordersArgs := fn(source: String, openParen: Int, prefix: String, params: List<String>, firstParam: Int, paramCount: Int): Bool { ctx.callReordersArgs(source, openParen, prefix, params, firstParam, paramCount) };
 
 /** Scans from `start` with initial brace `depthStart`, skipping strings and comments; returns the end position or -1 when unclosed. */
 scanBracedRange := fn(source: String, start: Int, depthStart: Int, prefix: String): Int { syntax.scanBracedRange(source, start, depthStart, prefix) };
@@ -1313,40 +714,13 @@ scanRawMatchEnd := fn(source: String, position: Int, prefix: String): Int { synt
 scanValueMatchEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int { syntax.scanValueMatchEnd(source, position, prefix, requireValueBranches) };
 
 /** Finds the innermost loop context for leading-dot metadata, stopping on conditional, cleanup, or function barriers (-2 conditional, -3 finally, -1 outside). */
-findLeadingDotLoopIdx := fn(ctxs: List<ConstructCtx>): Int {
-    var index := ctxCount(ctxs) - 1;
-    loop index >= 0 {
-        kind := ctxs[index].kind;
-        if kind == CTX_KIND_LOOP { return index; }
-        if kind == CTX_KIND_IF or kind == CTX_KIND_MATCH { return DOT_LOOP_IN_CONDITIONAL; }
-        if kind == CTX_KIND_FINALLY { return DOT_LOOP_IN_FINALLY; }
-        if kind == CTX_KIND_FN { return DOT_LOOP_OUTSIDE; }
-        index = index - 1;
-    }
-    DOT_LOOP_OUTSIDE
-}
+findLeadingDotLoopIdx := fn(ctxs: List<ConstructCtx>): Int { ctx.findLeadingDotLoopIdx(ctxs) };
 
 /** Finds the innermost active enclosing loop context, skipping loops whose body already completed (`then` or `finally`) and stopping at `fn`. */
-findActiveLoopCtxIndex := fn(ctxs: List<ConstructCtx>): Int {
-    var index := ctxCount(ctxs) - 1;
-    loop index >= 0 {
-        entry := ctxs[index];
-        if entry.kind == CTX_KIND_FN { return -1; }
-        if entry.kind == CTX_KIND_LOOP and entry.phase =!= CTX_PHASE_THEN and entry.phase =!= CTX_PHASE_FINALLY { return index; }
-        index = index - 1;
-    }
-    -1
-}
+findActiveLoopCtxIndex := fn(ctxs: List<ConstructCtx>): Int { ctx.findActiveLoopCtxIndex(ctxs) };
 
 /** True when a cleanup `finally` barrier sits strictly above `targetIdx` on `ctxs`. */
-hasFinallyAbove := fn(ctxs: List<ConstructCtx>, targetIdx: Int): Bool {
-    var index := ctxCount(ctxs) - 1;
-    loop index > targetIdx {
-        if ctxs[index].kind == CTX_KIND_FINALLY { return true; }
-        index = index - 1;
-    }
-    false
-}
+hasFinallyAbove := fn(ctxs: List<ConstructCtx>, targetIdx: Int): Bool { ctx.hasFinallyAbove(ctxs, targetIdx) };
 
 /** Scans a raw `[@tag] loop [header] { body }` up to the end of its body `}`, before any `then` or `finally`; returns -1 on mismatch. */
 scanRawLoopEnd := fn(source: String, position: Int, prefix: String): Int { syntax.scanRawLoopEnd(source, position, prefix) };
@@ -1355,51 +729,7 @@ scanRawLoopEnd := fn(source: String, position: Int, prefix: String): Int { synta
 loopNeedsExprLowering := fn(source: String, position: Int, prefix: String): Bool { syntax.loopNeedsExprLowering(source, position, prefix) };
 
 /** Resolves `.count`, `.value`, `.item`, or `.index` against one active loop context, handling Pass 1 inference markers cleanly. */
-resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String, expected: String, source: String, fieldStart: Int, fieldEnd: Int, prefix: String): Parsed {
-    if fieldName == "count" {
-        return intParsed(ctx.countVar, 0, false, fieldEnd);
-    }
-    if fieldName == "value" {
-        if ctx.valKind == VAL_KIND_INFER {
-            if expected =!= "" and expected =!= VALUE_KIND_UNIT and expected =!= VALUE_KIND_NEVER and
-            not textLib.startsWithAt(expected, 0, "TailList<") and not textLib.startsWithAt(expected, 0, "__loopVal:") {
-                return withMarkers((kind = expected, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-                integer.intText(ctx.id) + "=" + expected + "\n");
-            }
-            return withMarkers((kind = "__loopVal:" + integer.intText(ctx.id), code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-            if ctx.phase =!= CTX_PHASE_THEN { integer.intText(ctx.id) + "=@read\n" } else { "" });
-        }
-        if textLib.startsWithAt(ctx.valKind, 0, (VAL_KIND_INFER + ":")) {
-            hint := textLib.slice(ctx.valKind, 10, textLib.length(ctx.valKind));
-            return withMarkers((kind = hint, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-            integer.intText(ctx.id) + "=" + hint + "\n");
-        }
-        if ctx.valKind == VALUE_KIND_UNIT {
-            return (kind = VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
-        }
-        return (kind = ctx.valKind, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
-    }
-    if fieldName == "item" {
-        if ctx.phase == CTX_PHASE_HEADER {
-            failAt(source, fieldStart, prefix, ".item is not available in loop header");
-        }
-        if ctx.itemKind == "" or ctx.itemKind == VALUE_KIND_UNIT {
-            return (kind = VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
-        }
-        return (kind = ctx.itemKind, code = ctx.itemVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
-    }
-    if fieldName == "index" {
-        if ctx.phase == CTX_PHASE_HEADER {
-            failAt(source, fieldStart, prefix, ".index is not available in loop header");
-        }
-        if not ctx.hasIndex {
-            failAt(source, fieldStart, prefix, "loop does not expose .index without a sequence source");
-        }
-        return intParsed(ctx.indexVar, 0, false, fieldEnd);
-    }
-    failAt(source, fieldStart, prefix, "unknown loop metadata field ." + fieldName);
-    intParsed("", 0, false, fieldEnd)
-}
+resolveLoopField := fn(target: String, c: ConstructCtx, fieldName: String, expected: String, source: String, fieldStart: Int, fieldEnd: Int, prefix: String): Parsed { ctx.resolveLoopField(target, c, fieldName, expected, source, fieldStart, fieldEnd, prefix) };
 
 /** Scans Pass 1 marker lines for `loopId`, reporting whether any marker or concrete type marker exists. */
 scanLoopMarkers := fn(raw: String, loopId: Int): (hasAny: Bool, hasConcrete: Bool) { infer.scanLoopMarkers(raw, loopId) };
@@ -5390,26 +4720,13 @@ pub parseBuiltinModeSpecs := fn(prefix: String, specs: List<String>): Items { bu
 pub resolveBuiltinMode := fn(rules: Items, moduleName: String, fnName: String): String { builtinsAbi.resolveBuiltinMode(rules, moduleName, fnName) };
 
 /** Collapses a numeric scalar, tuple or list kind to its canonical item suffix (`Int`, `Float`, `Tuple`, `List`) while leaving other scalar kinds unchanged. */
-storageKind := fn(kind: String): String {
-    match {
-        isListKind(kind) or isArrayKind(kind) { "List" }
-        isTupleKind(kind) { "Tuple" }
-        isFnKind(kind) { "Fn" }
-        numeric.isIntKind(kind) { VALUE_KIND_INT }
-        numeric.isFloatKind(kind) { VALUE_KIND_FLOAT }
-        _ { kind }
-    }
-}
+storageKind := fn(kind: String): String { ctx.storageKind(kind) };
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
-storageTextPayload := fn(kind: String, fallback: String): String {
-    if isListKind(kind) or isArrayKind(kind) or isFnKind(kind) { kind } else { fallback }
-}
+storageTextPayload := fn(kind: String, fallback: String): String { ctx.storageTextPayload(kind, fallback) };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */
-itemTextPayload := fn(parsed: Parsed): String {
-    storageTextPayload(parsed.kind, parsed.textValue)
-}
+itemTextPayload := fn(parsed: Parsed): String { ctx.itemTextPayload(parsed) };
 
 /** Parses a direct or parenthesized partial if assignment into guarded Assign items; returns empty when total or not an if. */
 parsePartialAssignIf := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, targetAt: Int, targetKind: String, targetName: String, targetRuntime: String, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Items {
@@ -5517,19 +4834,10 @@ parseInitializerExpression := fn(target: String, source: String, position: Int, 
  * True when the innermost block expects a value tail: a function body or one of
  * the value-if branches that complete one.
  */
-atValueTail := fn(blocks: List<String>, blockCount: Int): Bool {
-    if blockCount <= 0 { return false; }
-    kind := blocks[blockCount - 1];
-    kind == BLOCK_KIND_FUNCTION or kind == BLOCK_KIND_IF_VALUE or kind == BLOCK_KIND_MATCH_VALUE or kind == BLOCK_KIND_MATCH_ELSE_VALUE or kind == BLOCK_KIND_MATCH_SINGLE_VALUE
-}
+atValueTail := fn(blocks: List<String>, blockCount: Int): Bool { ctx.atValueTail(blocks, blockCount) };
 
 /** True when `blocks` contains an enclosing loop body, so a bare break or continue has a nearest loop to target. */
-insideLoop := fn(blocks: List<String>): Bool {
-    loop blocks as kind {
-        if kind == BLOCK_KIND_LOOP { return true; }
-    }
-    false
-}
+insideLoop := fn(blocks: List<String>): Bool { ctx.insideLoop(blocks) };
 
 /** Parses an expression item once, retaining its evaluation and checking a function's final result across trailing separators. */
 parseExpressionItem := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, currentResult: String, valueTail: Bool, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): (next: Int, returned: Bool, code: String, valueKind: String) {
