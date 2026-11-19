@@ -739,6 +739,101 @@ pub scanInnerBlockAssignedBag := fn(target: String, source: String, openBracePos
     bag
 };
 
+/** Runs up to 4 fixed-point passes over `decls` to resolve forward scalar and destructured declarations into `FutureValue` records. */
+pub resolveFutureDecls := fn(target: String, source: String, prefix: String, moduleKey: String, useModuleRuntime: Bool, decls: Items, assignedBag: String, scopedAliases: List<AliasDecl>, functions: List<FunctionInfo>, functionParams: List<String>, locals: List<Local>): List<FutureValue> {
+    futureValues: mut List<FutureValue> = [];
+    var resolvedBag := "";
+    var futurePass := 0;
+    loop futurePass < 4 {
+        var progressed := false;
+        var declIdx := 0;
+        loop decls as decl {
+            keyText := integer.intText(declIdx);
+            if not trace.tokenInPipeBag(resolvedBag, keyText) {
+                if decl.kind == ir.DECL_KIND_FUTURE_DECL {
+                    sep := textLib.indexOfText(decl.textValue, "|", 0);
+                    declTag := textLib.slice(decl.textValue, 0, sep);
+                    posVal := syntax.parseDigits(decl.textValue, sep + 1, textLib.length(decl.textValue));
+                    declRuntime := if useModuleRuntime { decl.runtime } else { "" };
+                    if declTag == ir.DECL_TAG_ANN or declTag == ir.DECL_TAG_VAR_ANN {
+                        declMutable := declTag == ir.DECL_TAG_VAR_ANN;
+                        if types.canPreResolveLocalType(source, posVal, prefix, scopedAliases) {
+                            typed := types.parseLocalType(source, posVal, prefix, scopedAliases);
+                            if not (declMutable and typed.writable) {
+                                afterType := syntax.skipTrivia(source, typed.next, prefix);
+                                var futInit := ir.INIT_STATE_INIT;
+                                if syntax.isSingleEquals(source, afterType) {
+                                    rhsStart := syntax.skipTrivia(source, afterType + 1, prefix);
+                                    if syntax.isReservedInitMarker(source, rhsStart, prefix) >= 0 and not types.isListKind(typed.kind) {
+                                        futInit = if trace.tokenInPipeBag(assignedBag, decl.name) { ir.INIT_STATE_INIT }
+                                        else if declMutable { ir.INIT_STATE_UNINIT }
+                                        else { ir.INIT_STATE_MAYBE };
+                                    }
+                                }
+                                listLib.pushBack(mut futureValues, (name = decl.name, runtime = declRuntime, kind = typed.kind,
+                                at = decl.intValue, mutable = declMutable, writable = typed.writable, initState = futInit));
+                                resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
+                                progressed = true;
+                            }
+                        }
+                    } else {
+                        declMutable := declTag == ir.DECL_TAG_VAR_VAL or declTag == ir.DECL_TAG_VAR_MUT;
+                        declWritable := declTag == ir.DECL_TAG_VAR_MUT or declTag == ir.DECL_TAG_MUT_VAL;
+                        inferred := tryInferRootExprKind(source, posVal, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
+                        if inferred.kind =!= "" and inferred.kind =!= ir.VALUE_KIND_UNIT and (not declWritable or types.isListKind(inferred.kind)) {
+                            listLib.pushBack(mut futureValues, (name = decl.name, runtime = declRuntime, kind = inferred.kind,
+                            at = decl.intValue, mutable = declMutable, writable = declWritable, initState = ir.INIT_STATE_INIT));
+                            resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
+                            progressed = true;
+                        }
+                    }
+                } else if decl.kind == ir.DECL_KIND_FUTURE_DESTR {
+                    openPos := syntax.parseDigits(decl.code, 0, textLib.length(decl.code));
+                    rhsPos := syntax.parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
+                    destr := tryParseDestructureNames(source, openPos, prefix);
+                    if destr.ok and destr.count > 0 {
+                        destrMutable := decl.runtime == ir.DECL_BIND_VAR;
+                        inferred := tryInferRootExprKind(source, rhsPos, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
+                        if destr.grouped {
+                            if inferred.kind =!= "" and inferred.kind =!= ir.VALUE_KIND_UNIT {
+                                bindName := destr.namesText;
+                                bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bindName) } else { "" };
+                                listLib.pushBack(mut futureValues, (name = bindName, runtime = bindRt,
+                                kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
+                                resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
+                                progressed = true;
+                            }
+                        } else if types.isTupleKind(inferred.kind) and types.tupleComponentCount(inferred.kind) == destr.count {
+                            var bindCursor := 0;
+                            var bindIndex := 0;
+                            namesLen := textLib.length(destr.namesText);
+                            loop bindIndex < destr.count {
+                                var bindEnd := bindCursor;
+                                loop bindEnd < namesLen and textLib.at(destr.namesText, bindEnd) =!= "," {
+                                    bindEnd = bindEnd + 1;
+                                }
+                                bindName := textLib.slice(destr.namesText, bindCursor, bindEnd);
+                                bindCursor = bindEnd + 1;
+                                comp := types.tupleComponent(inferred.kind, bindIndex);
+                                bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bindName) } else { "" };
+                                listLib.pushBack(mut futureValues, (name = bindName, runtime = bindRt,
+                                kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
+                                bindIndex = bindIndex + 1;
+                            }
+                            resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
+                            progressed = true;
+                        }
+                    }
+                }
+            }
+            declIdx = declIdx + 1;
+        }
+        if not progressed { break; }
+        futurePass = futurePass + 1;
+    }
+    futureValues
+};
+
 /** Pre-scans declarations in `{ ... }` (`openBracePos .. closeBracePos - 1`) and appends unreached `depth = 0 - 2 - blockLexDepth` placeholders to `locals`. */
 pub appendBlockFutureLocals := fn(target: String, source: String, openBracePos: Int, prefix: String, blockLexDepth: Int,
 seedBag: String, assignedBag: String, aliases: List<AliasDecl>, functions: List<FunctionInfo>,
@@ -898,93 +993,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
     if declCount == 0 { return locals; }
 
     scopedAliases := types.aliasesUpToDepth(aliases, blockLexDepth);
-    futureValues: mut List<FutureValue> = [];
-    var resolvedBag := "";
-    var futurePass := 0;
-    loop futurePass < 4 {
-        var progressed := false;
-        var declIdx := 0;
-        loop decls as decl {
-            keyText := integer.intText(declIdx);
-            if not trace.tokenInPipeBag(resolvedBag, keyText) {
-                if decl.kind == ir.DECL_KIND_FUTURE_DECL {
-                    sep := textLib.indexOfText(decl.textValue, "|", 0);
-                    declTag := textLib.slice(decl.textValue, 0, sep);
-                    posVal := syntax.parseDigits(decl.textValue, sep + 1, textLib.length(decl.textValue));
-                    if declTag == ir.DECL_TAG_ANN or declTag == ir.DECL_TAG_VAR_ANN {
-                        declMutable := declTag == ir.DECL_TAG_VAR_ANN;
-                        if types.canPreResolveLocalType(source, posVal, prefix, scopedAliases) {
-                            typed := types.parseLocalType(source, posVal, prefix, scopedAliases);
-                            if not (declMutable and typed.writable) {
-                                afterType := syntax.skipTrivia(source, typed.next, prefix);
-                                var futInit := ir.INIT_STATE_INIT;
-                                if syntax.isSingleEquals(source, afterType) {
-                                    rhsStart := syntax.skipTrivia(source, afterType + 1, prefix);
-                                    if syntax.isReservedInitMarker(source, rhsStart, prefix) >= 0 and not types.isListKind(typed.kind) {
-                                        futInit = if trace.tokenInPipeBag(assignedBag, decl.name) { ir.INIT_STATE_INIT }
-                                        else if declMutable { ir.INIT_STATE_UNINIT }
-                                        else { ir.INIT_STATE_MAYBE };
-                                    }
-                                }
-                                listLib.pushBack(mut futureValues, (name = decl.name, runtime = "", kind = typed.kind,
-                                at = decl.intValue, mutable = declMutable, writable = typed.writable, initState = futInit));
-                                resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
-                                progressed = true;
-                            }
-                        }
-                    } else {
-                        declMutable := declTag == ir.DECL_TAG_VAR_VAL or declTag == ir.DECL_TAG_VAR_MUT;
-                        declWritable := declTag == ir.DECL_TAG_VAR_MUT or declTag == ir.DECL_TAG_MUT_VAL;
-                        inferred := tryInferRootExprKind(source, posVal, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
-                        if inferred.kind =!= "" and inferred.kind =!= ir.VALUE_KIND_UNIT and (not declWritable or types.isListKind(inferred.kind)) {
-                            listLib.pushBack(mut futureValues, (name = decl.name, runtime = "", kind = inferred.kind,
-                            at = decl.intValue, mutable = declMutable, writable = declWritable, initState = ir.INIT_STATE_INIT));
-                            resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
-                            progressed = true;
-                        }
-                    }
-                } else if decl.kind == ir.DECL_KIND_FUTURE_DESTR {
-                    openPos := syntax.parseDigits(decl.code, 0, textLib.length(decl.code));
-                    rhsPos := syntax.parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
-                    destr := tryParseDestructureNames(source, openPos, prefix);
-                    if destr.ok and destr.count > 0 {
-                        destrMutable := decl.runtime == ir.DECL_BIND_VAR;
-                        inferred := tryInferRootExprKind(source, rhsPos, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
-                        if destr.grouped {
-                            if inferred.kind =!= "" and inferred.kind =!= ir.VALUE_KIND_UNIT {
-                                bindName := destr.namesText;
-                                listLib.pushBack(mut futureValues, (name = bindName, runtime = "",
-                                kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
-                                resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
-                                progressed = true;
-                            }
-                        } else if types.isTupleKind(inferred.kind) and types.tupleComponentCount(inferred.kind) == destr.count {
-                            var bindCursor := 0;
-                            var bindIndex := 0;
-                            namesLen := textLib.length(destr.namesText);
-                            loop bindIndex < destr.count {
-                                var bindEnd := bindCursor;
-                                loop bindEnd < namesLen and textLib.at(destr.namesText, bindEnd) =!= "," {
-                                    bindEnd = bindEnd + 1;
-                                }
-                                bindName := textLib.slice(destr.namesText, bindCursor, bindEnd);
-                                bindCursor = bindEnd + 1;
-                                comp := types.tupleComponent(inferred.kind, bindIndex);
-                                listLib.pushBack(mut futureValues, (name = bindName, runtime = "",
-                                kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
-                                bindIndex = bindIndex + 1;
-                            }
-                            resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
-                            progressed = true;
-                        }
-                    }
-                }
-            }
-            declIdx = declIdx + 1;
-        }
-        if not progressed { break; }
-        futurePass = futurePass + 1;
-    }
+    futureValues := resolveFutureDecls(target, source, prefix, "", false, decls, assignedBag, scopedAliases, functions, functionParams, locals);
 
     nextLocals: mut List<Local> = [];
     loop locals as entry { listLib.pushBack(mut nextLocals, entry); }

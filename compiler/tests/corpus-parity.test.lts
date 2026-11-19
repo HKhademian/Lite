@@ -49,6 +49,21 @@ test.checkText("ts root dep", "compiler/src/ts-root.lts", tsDeps[0]);
 test.checkText("c root dep", "compiler/src/c-root.lts", cDeps[0]);
 test.check("ts deps include frontend", list.listContainsText(tsDeps, "compiler/src/frontend.lts"));
 test.check("c deps include frontend", list.listContainsText(cDeps, "compiler/src/frontend.lts"));
+frontendModules: List<String> = [
+    "compiler/src/frontend-ir.lts",
+    "compiler/src/builtins-abi.lts",
+    "compiler/src/frontend-syntax.lts",
+    "compiler/src/frontend-types.lts",
+    "compiler/src/trace-safety.lts",
+    "compiler/src/reachability.lts",
+    "compiler/src/frontend-inference.lts",
+    "compiler/src/frontend-context.lts",
+    "compiler/src/frontend-expr.lts",
+];
+loop frontendModules as modPath {
+    test.check("ts deps include " + modPath, list.listContainsText(tsDeps, modPath));
+    test.check("c deps include " + modPath, list.listContainsText(cDeps, modPath));
+}
 
 /* compiler verification cases are well-formed and cover both categories */
 /* restricted compiler corpus keeps 69 program and 25 rejection cases */

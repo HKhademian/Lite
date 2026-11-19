@@ -937,6 +937,95 @@ live: Bool, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Items {
 /** Advances past one `{ ... }` function body while respecting strings and comments. */
 skipBraceBlock := fn(source: String, afterOpen: Int, prefix: String): Int { syntax.skipBraceBlock(source, afterOpen, prefix) };
 
+/** Splits up to `count` pipe-delimited substrings out of `encoded`. */
+splitPipeEntries := fn(encoded: String, count: Int): List<String> {
+    out: mut List<String> = [];
+    var startPos := 0;
+    var index := 0;
+    loop index < count {
+        sep := textLib.indexOfText(encoded, "|", startPos);
+        endPos := if sep >= 0 { sep } else { textLib.length(encoded) };
+        listLib.pushBack(mut out, textLib.slice(encoded, startPos, endPos));
+        startPos = endPos + 1;
+        index = index + 1;
+    }
+    out
+};
+
+/** Checks TS trace initialization safety, escaping callable safety (when `checkEscape`), and propagates outer callable updates. */
+checkStatementTrace := fn(target: String, source: String, stmtAt: Int, prefix: String, exprCode: String,
+checkEscape: Bool, escapeKind: String, currentName: String, maxFutureAt: Int,
+locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureValue>, items: Items, active: Bool): List<Local> {
+    if target =!= TARGET_TS or not active { return locals; }
+    checkTraceSafety(source, stmtAt, prefix, exprCode, currentName, maxFutureAt, locals, functions, futureValues, items);
+    if checkEscape and containsFnKind(escapeKind) {
+        checkEscapingFnSafety(source, stmtAt, prefix, exprCode, 1, locals);
+    }
+    mergeOuterCallableUpdatesFromCode(locals, exprCode)
+};
+
+/** Upgrades uninitialized root bindings and appends forward root `futureValues` visible inside a top-level function body. */
+upgradeRootUninitLocalsForFn := fn(locals: List<Local>, rootAssignedNames: List<String>, futureValues: List<FutureValue>, functions: List<FunctionInfo>, fnDeclAt: Int): List<Local> {
+    nextLocals: mut List<Local> = [];
+    preLen := localsCount(locals);
+    loop locals as l { listLib.pushBack(mut nextLocals, l); }
+    var upgradedRootBag := "";
+    var rootIdx := 0;
+    loop rootIdx < preLen {
+        rootEntry := locals[rootIdx];
+        if rootEntry.depth == 0 and rootEntry.initState =!= INIT_STATE_INIT and
+        not tokenInPipeBag(upgradedRootBag, rootEntry.name) and localIndex(locals, rootEntry.name) == rootIdx {
+            if rootEntry.initState == INIT_STATE_UNINIT_ASSIGNED or listLib.listContainsText(rootAssignedNames, rootEntry.name) {
+                upgradedRootBag = appendPipeBag(upgradedRootBag, rootEntry.name);
+                listLib.pushBack(mut nextLocals, (name = rootEntry.name, runtime = rootEntry.runtime, kind = rootEntry.kind,
+                mutable = rootEntry.mutable, writable = rootEntry.writable, depth = -1, constant = false, code = rootEntry.code,
+                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+            } else if rootEntry.initState == INIT_STATE_UNINIT and not rootEntry.mutable {
+                upgradedRootBag = appendPipeBag(upgradedRootBag, rootEntry.name);
+                listLib.pushBack(mut nextLocals, (name = rootEntry.name, runtime = rootEntry.runtime, kind = rootEntry.kind,
+                mutable = rootEntry.mutable, writable = rootEntry.writable, depth = -1, constant = false, code = rootEntry.code,
+                intValue = 0, textValue = "", initState = INIT_STATE_MAYBE));
+            }
+        }
+        rootIdx = rootIdx + 1;
+    }
+    var pushedFutureBag := "";
+    loop futureValues as future {
+        if future.at > fnDeclAt and not tokenInPipeBag(pushedFutureBag, future.name) {
+            existingLocalIdx := localIndex(locals, future.name);
+            isShadowedLocal := existingLocalIdx >= 0 and locals[existingLocalIdx].depth >= 0;
+            existingFnIdx := findFunction(functions, future.name);
+            isShadowedFn := existingFnIdx >= 0 and functions[existingFnIdx].declAt < fnDeclAt;
+            if not isShadowedLocal and not isShadowedFn {
+                pushedFutureBag = appendPipeBag(pushedFutureBag, future.name);
+                listLib.pushBack(mut nextLocals, (name = future.name, runtime = future.runtime, kind = future.kind,
+                mutable = future.mutable, writable = future.writable, depth = -1, constant = false, code = "",
+                intValue = 0, textValue = "", initState = future.initState));
+            }
+        }
+    }
+    nextLocals
+};
+
+/** Parses and validates a Bool branch condition followed by `{` for `if`, `else if`, or `match` arms. */
+parseBranchCondExpr := fn(target: String, source: String, condStart: Int, prefix: String, errMsg: String,
+beforeOpenErr: String, ctxs: List<ConstructCtx>, locals: List<Local>, functions: List<FunctionInfo>,
+functionParams: List<String>, currentName: String, aliases: List<AliasDecl>): (code: String, rawCode: String, openPos: Int) {
+    condition := parseExpressionCtx(target, source, condStart, prefix, locals, functions, functionParams, currentName, ctxs, aliases);
+    if condition.kind =!= VALUE_KIND_BOOL {
+        failAt(source, condStart, prefix, errMsg);
+    }
+    conditionCode := if condition.constant {
+        ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
+    } else {
+        condition.code
+    };
+    beforeOpen := skipTrivia(source, condition.next, prefix);
+    rejectMisplacedTag(source, beforeOpen, prefix, beforeOpenErr);
+    openPos := expectSymbol(source, beforeOpen, "{", prefix);
+    (code = conditionCode, rawCode = condition.code, openPos = openPos)
+};
+
 /** Parses complete source with selective function-body compilation and explicit `--builtin-mode` specs. */
 pub parseProgramWithModuleSelectiveSpecs := fn(target: String, source: String, prefix: String, exports: Items, moduleKey: String,
 moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs: List<String>): Items {
@@ -958,7 +1047,6 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     publishedFunctions: mut List<String> = [];
     publishedValues: mut List<String> = [];
     publishedTypes: mut List<String> = [];
-    futureValues: mut List<FutureValue> = [];
     var hasInnerAlias := false;
     rootAssignedNames: mut List<String> = [];
     loop decls as decl {
@@ -1001,16 +1089,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
             }
             first := parameterTotal;
-            var entryStart := 0;
-            var entryIndex := 0;
-            loop entryIndex < exported.intValue {
-                separator := textLib.indexOfText(exported.textValue, "|", entryStart);
-                var entryEnd := textLib.length(exported.textValue);
-                if separator >= 0 { entryEnd = separator; }
-                listLib.pushBack(mut functionParams, textLib.slice(exported.textValue, entryStart, entryEnd));
+            loop splitPipeEntries(exported.textValue, exported.intValue) as expParam {
+                listLib.pushBack(mut functionParams, expParam);
                 parameterTotal = parameterTotal + 1;
-                entryStart = entryEnd + 1;
-                entryIndex = entryIndex + 1;
             }
             listLib.pushBack(mut functions, (name = exported.name, runtime = exported.runtime, result = exported.code,
             first = first, count = exported.intValue, declAt = -1));
@@ -1061,32 +1142,18 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                             if listLib.listContainsText(publishedFunctions, fnName) and hostRuntime =!= "" {
                                 listLib.pushBack(mut functions, (name = fnName, runtime = hostRuntime, result = header.result,
                                 first = parameterTotal, count = header.count, declAt = fnAt));
-                                var hStart := 0;
-                                var hIdx := 0;
-                                loop hIdx < header.count {
-                                    sep := textLib.indexOfText(header.params, "|", hStart);
-                                    var hEnd := textLib.length(header.params);
-                                    if sep >= 0 { hEnd = sep; }
-                                    listLib.pushBack(mut functionParams, textLib.slice(header.params, hStart, hEnd));
+                                loop splitPipeEntries(header.params, header.count) as hp {
+                                    listLib.pushBack(mut functionParams, hp);
                                     parameterTotal = parameterTotal + 1;
-                                    hStart = hEnd + 1;
-                                    hIdx = hIdx + 1;
                                 }
                             }
                         } else if header.count >= 0 and header.genericType == "" and afterHdr < size and textLib.at(source, afterHdr) == "{" {
                             fnRuntime := moduleFunctionRuntime(target, moduleKey, fnName);
                             listLib.pushBack(mut functions, (name = fnName, runtime = fnRuntime, result = header.result,
                             first = parameterTotal, count = header.count, declAt = fnAt));
-                            var pStart := 0;
-                            var pIdx := 0;
-                            loop pIdx < header.count {
-                                sep := textLib.indexOfText(header.params, "|", pStart);
-                                var pEnd := textLib.length(header.params);
-                                if sep >= 0 { pEnd = sep; }
-                                listLib.pushBack(mut functionParams, textLib.slice(header.params, pStart, pEnd));
+                            loop splitPipeEntries(header.params, header.count) as hp {
+                                listLib.pushBack(mut functionParams, hp);
                                 parameterTotal = parameterTotal + 1;
-                                pStart = pEnd + 1;
-                                pIdx = pIdx + 1;
                             }
                         }
                     }
@@ -1094,92 +1161,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             }
         }
     }
-    var resolvedDeclBag := "";
-    var futurePass := 0;
-    loop futurePass < 4 {
-        var progressed := false;
-        var declIdx := 0;
-        loop decls as decl {
-            keyText := integer.intText(declIdx);
-            if not tokenInPipeBag(resolvedDeclBag, keyText) {
-                if decl.kind == DECL_KIND_FUTURE_DECL {
-                    sep := textLib.indexOfText(decl.textValue, "|", 0);
-                    declTag := textLib.slice(decl.textValue, 0, sep);
-                    posVal := parseDigits(decl.textValue, sep + 1, textLib.length(decl.textValue));
-                    if declTag == DECL_TAG_ANN or declTag == DECL_TAG_VAR_ANN {
-                        declMutable := declTag == DECL_TAG_VAR_ANN;
-                        if canPreResolveLocalType(source, posVal, prefix, aliases) {
-                            typed := parseLocalType(source, posVal, prefix, aliases);
-                            if not (declMutable and typed.writable) {
-                                afterType := skipTrivia(source, typed.next, prefix);
-                                var futInit := INIT_STATE_INIT;
-                                if isSingleEquals(source, afterType) {
-                                    rhsStart := skipTrivia(source, afterType + 1, prefix);
-                                    if isReservedInitMarker(source, rhsStart, prefix) >= 0 and not isListKind(typed.kind) {
-                                        futInit = if listLib.listContainsText(rootAssignedNames, decl.name) { INIT_STATE_INIT }
-                                        else if declMutable { INIT_STATE_UNINIT }
-                                        else { INIT_STATE_MAYBE };
-                                    }
-                                }
-                                listLib.pushBack(mut futureValues, (name = decl.name, runtime = decl.runtime, kind = typed.kind,
-                                at = decl.intValue, mutable = declMutable, writable = typed.writable, initState = futInit));
-                                resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
-                                progressed = true;
-                            }
-                        }
-                    } else {
-                        declMutable := declTag == DECL_TAG_VAR_VAL or declTag == DECL_TAG_VAR_MUT;
-                        declWritable := declTag == DECL_TAG_VAR_MUT or declTag == DECL_TAG_MUT_VAL;
-                        inferred := tryInferRootExprKind(source, posVal, prefix, aliases, functions, functionParams, locals, futureValues, "", 0, 24);
-                        if inferred.kind =!= "" and inferred.kind =!= VALUE_KIND_UNIT and (not declWritable or isListKind(inferred.kind)) {
-                            listLib.pushBack(mut futureValues, (name = decl.name, runtime = decl.runtime, kind = inferred.kind,
-                            at = decl.intValue, mutable = declMutable, writable = declWritable, initState = INIT_STATE_INIT));
-                            resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
-                            progressed = true;
-                        }
-                    }
-                } else if decl.kind == DECL_KIND_FUTURE_DESTR {
-                    openPos := parseDigits(decl.code, 0, textLib.length(decl.code));
-                    rhsPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
-                    destr := tryParseDestructureNames(source, openPos, prefix);
-                    if destr.ok and destr.count > 0 {
-                        destrMutable := decl.runtime == DECL_BIND_VAR;
-                        inferred := tryInferRootExprKind(source, rhsPos, prefix, aliases, functions, functionParams, locals, futureValues, "", 0, 24);
-                        if destr.grouped {
-                            if inferred.kind =!= "" and inferred.kind =!= VALUE_KIND_UNIT {
-                                bindName := destr.namesText;
-                                listLib.pushBack(mut futureValues, (name = bindName, runtime = moduleValueRuntime(target, moduleKey, bindName),
-                                kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = INIT_STATE_INIT));
-                                resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
-                                progressed = true;
-                            }
-                        } else if isTupleKind(inferred.kind) and tupleComponentCount(inferred.kind) == destr.count {
-                            var bindCursor := 0;
-                            var bindIndex := 0;
-                            namesLen := textLib.length(destr.namesText);
-                            loop bindIndex < destr.count {
-                                var bindEnd := bindCursor;
-                                loop bindEnd < namesLen and textLib.at(destr.namesText, bindEnd) =!= "," {
-                                    bindEnd = bindEnd + 1;
-                                }
-                                bindName := textLib.slice(destr.namesText, bindCursor, bindEnd);
-                                bindCursor = bindEnd + 1;
-                                comp := tupleComponent(inferred.kind, bindIndex);
-                                listLib.pushBack(mut futureValues, (name = bindName, runtime = moduleValueRuntime(target, moduleKey, bindName),
-                                kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = INIT_STATE_INIT));
-                                bindIndex = bindIndex + 1;
-                            }
-                            resolvedDeclBag = appendPipeBag(resolvedDeclBag, keyText);
-                            progressed = true;
-                        }
-                    }
-                }
-            }
-            declIdx = declIdx + 1;
-        }
-        if not progressed { break; }
-        futurePass = futurePass + 1;
+    var rootAssignedBag := "|";
+    loop rootAssignedNames as rootAssigned {
+        rootAssignedBag = appendPipeBag(rootAssignedBag, rootAssigned);
     }
+    futureValues := infer.resolveFutureDecls(target, source, prefix, moduleKey, true, decls, rootAssignedBag, aliases, functions, functionParams, locals);
     var placeholderNamesBag := "";
     loop futureValues as future {
         if localIndex(locals, future.name) < 0 and findFunction(functions, future.name) < 0 and
@@ -1270,22 +1256,12 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 if textLib.wordAt(source, afterElse, "if") {
                     conditionStart := skipTrivia(source, afterElse + 2, prefix);
                     rejectHeaderBlockTag(source, conditionStart, prefix, "else if");
-                    condition := parseExpressionCtx(target, source, conditionStart, prefix, locals, functions, functionParams, currentName, stmtCtxs, aliases);
-                    if condition.kind =!= VALUE_KIND_BOOL {
-                        failAt(source, conditionStart, prefix, "else if condition must be Bool");
-                    }
-                    if target == TARGET_TS and currentLive {
-                        checkTraceSafety(source, conditionStart, prefix, condition.code, currentName, maxFutureAt, locals, functions, futureValues, items);
-                        locals = mergeOuterCallableUpdatesFromCode(locals, condition.code);
-                    }
-                    conditionCode := if condition.constant {
-                        ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
-                    } else {
-                        condition.code
-                    };
-                    beforeOpen := skipTrivia(source, condition.next, prefix);
-                    rejectMisplacedTag(source, beforeOpen, prefix, "block tag cannot appear before { in else if");
-                    position = expectSymbol(source, beforeOpen, "{", prefix);
+                    parsedCond := parseBranchCondExpr(target, source, conditionStart, prefix, "else if condition must be Bool",
+                    "block tag cannot appear before { in else if", stmtCtxs, locals, functions, functionParams, currentName, aliases);
+                    locals = checkStatementTrace(target, source, conditionStart, prefix, parsedCond.rawCode, false, "",
+                    currentName, maxFutureAt, locals, functions, futureValues, items, currentLive);
+                    conditionCode := parsedCond.code;
+                    position = parsedCond.openPos;
                     elseArmOpen = position - 1;
                     if currentLive {
                         listLib.pushBack(mut items, (kind = ITEM_KIND_ELSE_IF, name = "", runtime = "", code = conditionCode,
@@ -1547,13 +1523,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "finally") {
                 expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                if target == TARGET_TS and currentLive and not currentStopped {
-                    checkTraceSafety(source, position, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
-                    if expression.returned and containsFnKind(currentResult) {
-                        checkEscapingFnSafety(source, position, prefix, expression.code, 1, locals);
-                    }
-                    locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
-                }
+                locals = checkStatementTrace(target, source, position, prefix, expression.code, expression.returned, currentResult,
+                currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                     runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -1730,13 +1701,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
         (ch == "f" and textLib.wordAt(source, position, "false")) {
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-            if target == TARGET_TS and currentLive and not currentStopped {
-                checkTraceSafety(source, position, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
-                if expression.returned and containsFnKind(currentResult) {
-                    checkEscapingFnSafety(source, position, prefix, expression.code, 1, locals);
-                }
-                locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
-            }
+            locals = checkStatementTrace(target, source, position, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                 runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -1762,13 +1727,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             }
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-            if target == TARGET_TS and currentLive and not currentStopped {
-                checkTraceSafety(source, position, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
-                if expression.returned and containsFnKind(currentResult) {
-                    checkEscapingFnSafety(source, position, prefix, expression.code, 1, locals);
-                }
-                locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
-            }
+            locals = checkStatementTrace(target, source, position, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                 runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -2028,13 +1987,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             position < size and textLib.at(source, position) == "(" {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                if target == TARGET_TS and currentLive and not currentStopped {
-                    checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
-                    if expression.returned and containsFnKind(currentResult) {
-                        checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
-                    }
-                    locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
-                }
+                locals = checkStatementTrace(target, source, nameStart, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_CALL, currentResult), name = callName, runtime = "",
                     code = expression.code, intValue = 0, textValue = ""));
@@ -2057,13 +2010,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if afterRawIf >= 0 and (textLib.wordAt(source, afterRawIf, "then") or textLib.wordAt(source, afterRawIf, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                if target == TARGET_TS and currentLive and not currentStopped {
-                    checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
-                    if expression.returned and containsFnKind(currentResult) {
-                        checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
-                    }
-                    locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
-                }
+                locals = checkStatementTrace(target, source, nameStart, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                     runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -2181,13 +2128,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if afterRawMatch >= 0 and (textLib.wordAt(source, afterRawMatch, "then") or textLib.wordAt(source, afterRawMatch, "finally")) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                if target == TARGET_TS and currentLive and not currentStopped {
-                    checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
-                    if expression.returned and containsFnKind(currentResult) {
-                        checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
-                    }
-                    locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
-                }
+                locals = checkStatementTrace(target, source, nameStart, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
                     runtime = "", code = expression.code, intValue = 0, textValue = ""));
@@ -2706,16 +2647,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     if not wasPreRegistered {
                         listLib.pushBack(mut functions, (name = name, runtime = hostRuntime, result = header.result,
                         first = parameterTotal, count = header.count, declAt = nameStart));
-                        var hostEntryStart := 0;
-                        var hostEntryIndex := 0;
-                        loop hostEntryIndex < header.count {
-                            separator := textLib.indexOfText(header.params, "|", hostEntryStart);
-                            var entryEnd := textLib.length(header.params);
-                            if separator >= 0 { entryEnd = separator; }
-                            listLib.pushBack(mut functionParams, textLib.slice(header.params, hostEntryStart, entryEnd));
+                        loop splitPipeEntries(header.params, header.count) as hp {
+                            listLib.pushBack(mut functionParams, hp);
                             parameterTotal = parameterTotal + 1;
-                            hostEntryStart = entryEnd + 1;
-                            hostEntryIndex = hostEntryIndex + 1;
                         }
                     }
                     if currentLive {
@@ -2751,16 +2685,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 skipAsUnneeded := neededFns =!= "*" and not skipAsSoft and not hasHelperToken(neededFns, functionRuntime + "(");
                 if skipAsSoft or skipAsUnneeded {
                     if not wasPreRegistered {
-                        var skipEntryStart := 0;
-                        var skipEntryIndex := 0;
-                        loop skipEntryIndex < header.count {
-                            separator := textLib.indexOfText(header.params, "|", skipEntryStart);
-                            var entryEnd := textLib.length(header.params);
-                            if separator >= 0 { entryEnd = separator; }
-                            listLib.pushBack(mut functionParams, textLib.slice(header.params, skipEntryStart, entryEnd));
+                        loop splitPipeEntries(header.params, header.count) as sp {
+                            listLib.pushBack(mut functionParams, sp);
                             parameterTotal = parameterTotal + 1;
-                            skipEntryStart = entryEnd + 1;
-                            skipEntryIndex = skipEntryIndex + 1;
                         }
                     }
                     position = skipBraceBlock(source, position, prefix);
@@ -2795,52 +2722,13 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 iifeDepth = 0, valKind = header.result, valVar = "", label = "",
                 iterLabel = "1", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
                 fnPreLocalsLen := localsCount(locals);
-                var upgradedRootBag := "";
-                var rootIdx := 0;
-                loop rootIdx < fnPreLocalsLen {
-                    rootEntry := locals[rootIdx];
-                    if rootEntry.depth == 0 and rootEntry.initState =!= INIT_STATE_INIT and
-                    not tokenInPipeBag(upgradedRootBag, rootEntry.name) {
-                        newestIdx := localIndex(locals, rootEntry.name);
-                        if newestIdx == rootIdx {
-                            if rootEntry.initState == INIT_STATE_UNINIT_ASSIGNED or listLib.listContainsText(rootAssignedNames, rootEntry.name) {
-                                upgradedRootBag = appendPipeBag(upgradedRootBag, rootEntry.name);
-                                listLib.pushBack(mut locals, (name = rootEntry.name, runtime = rootEntry.runtime, kind = rootEntry.kind,
-                                mutable = rootEntry.mutable, writable = rootEntry.writable, depth = -1, constant = false, code = rootEntry.code,
-                                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
-                            } else if rootEntry.initState == INIT_STATE_UNINIT and not rootEntry.mutable {
-                                upgradedRootBag = appendPipeBag(upgradedRootBag, rootEntry.name);
-                                listLib.pushBack(mut locals, (name = rootEntry.name, runtime = rootEntry.runtime, kind = rootEntry.kind,
-                                mutable = rootEntry.mutable, writable = rootEntry.writable, depth = -1, constant = false, code = rootEntry.code,
-                                intValue = 0, textValue = "", initState = INIT_STATE_MAYBE));
-                            }
-                        }
-                    }
-                    rootIdx = rootIdx + 1;
-                }
-                var entryStart := 0;
-                var entryIndex := 0;
-                var pushedFutureBag := "";
-                loop futureValues as future {
-                    if future.at > nameStart and not tokenInPipeBag(pushedFutureBag, future.name) {
-                        existingLocalIdx := localIndex(locals, future.name);
-                        isShadowedLocal := existingLocalIdx >= 0 and locals[existingLocalIdx].depth >= 0;
-                        existingFnIdx2 := findFunction(functions, future.name);
-                        isShadowedFn := existingFnIdx2 >= 0 and functions[existingFnIdx2].declAt < nameStart;
-                        if not isShadowedLocal and not isShadowedFn {
-                            pushedFutureBag = appendPipeBag(pushedFutureBag, future.name);
-                            listLib.pushBack(mut locals, (name = future.name, runtime = future.runtime, kind = future.kind,
-                            mutable = future.mutable, writable = future.writable, depth = -1, constant = false, code = "",
-                            intValue = 0, textValue = "", initState = future.initState));
-                        }
-                    }
+                upgradedFnLocals := upgradeRootUninitLocalsForFn(locals, rootAssignedNames, futureValues, functions, nameStart);
+                locals = [];
+                loop upgradedFnLocals as upg {
+                    listLib.pushBack(mut locals, upg);
                 }
                 var fnParamSeedBag := "";
-                loop entryIndex < header.count {
-                    separator := textLib.indexOfText(header.params, "|", entryStart);
-                    var entryEnd := textLib.length(header.params);
-                    if separator >= 0 { entryEnd = separator; }
-                    entry := textLib.slice(header.params, entryStart, entryEnd);
+                loop splitPipeEntries(header.params, header.count) as entry {
                     parameterName := paramNameOf(entry);
                     parameterKind := paramKindOf(entry);
                     runtime := "lite_" + parameterName;
@@ -2853,8 +2741,6 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         listLib.pushBack(mut functionParams, entry);
                         parameterTotal = parameterTotal + 1;
                     }
-                    entryStart = entryEnd + 1;
-                    entryIndex = entryIndex + 1;
                 }
                 currentName = name;
                 currentResult = header.result;
@@ -3101,13 +2987,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
         }
         expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
         currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-        if target == TARGET_TS and currentLive and not currentStopped {
-            checkTraceSafety(source, nameStart, prefix, expression.code, currentName, maxFutureAt, locals, functions, futureValues, items);
-            if expression.returned and containsFnKind(currentResult) {
-                checkEscapingFnSafety(source, nameStart, prefix, expression.code, 1, locals);
-            }
-            locals = mergeOuterCallableUpdatesFromCode(locals, expression.code);
-        }
+        locals = checkStatementTrace(target, source, nameStart, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
         if currentLive and not currentStopped {
             listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
             runtime = "", code = expression.code, intValue = 0, textValue = ""));
