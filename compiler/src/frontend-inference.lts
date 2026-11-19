@@ -452,6 +452,17 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                 if qLocIdx >= 0 {
                     leftKind = locals[qLocIdx].kind;
                     leftNext = memEnd;
+                } else {
+                    afterMem := syntax.skipTrivia(source, memEnd, prefix);
+                    if afterMem < size and textLib.at(source, afterMem) == "{" and types.findAlias(aliases, qualified) >= 0 {
+                        emptySeenMod: List<String> = [];
+                        modRec := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeenMod, 32);
+                        braceEnd := syntax.scanBraceEnd(source, afterMem, prefix);
+                        if modRec.ok and types.isRecordKind(modRec.kind) and braceEnd >= 0 {
+                            leftKind = modRec.kind;
+                            leftNext = braceEnd;
+                        }
+                    }
                 }
             }
         } else {
@@ -480,12 +491,24 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                     curFnIdx = fnIdx;
                     leftKind = "$fn";
                     leftNext = afterName;
+                } else {
+                    afterRecName := syntax.skipTrivia(source, afterName, prefix);
+                    if afterRecName < size and textLib.at(source, afterRecName) == "{" and types.findAlias(aliases, name) >= 0 {
+                        emptySeenRec: List<String> = [];
+                        recRes := types.canResolveTypeAt(source, start, prefix, aliases, "", emptySeenRec, 32);
+                        braceEnd := syntax.scanBraceEnd(source, afterRecName, prefix);
+                        if recRes.ok and types.isRecordKind(recRes.kind) and braceEnd >= 0 {
+                            leftKind = recRes.kind;
+                            leftNext = braceEnd;
+                        }
+                    }
                 }
             }
         }
     }
     if leftKind == "" { return (kind = "", next = start); }
     loop true {
+        if leftNext > 0 and textLib.at(source, leftNext - 1) == "}" { break; }
         postPos := syntax.skipTrivia(source, leftNext, prefix);
         if curFnIdx >= 0 and (postPos >= size or textLib.at(source, postPos) =!= "(") {
             fnEntry := functions[curFnIdx];
@@ -549,6 +572,11 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                 fName := textLib.slice(source, fStart, fEnd);
                 if types.isTupleKind(leftKind) {
                     fKind := types.tupleFieldKind(leftKind, fName);
+                    if fKind == "" { return (kind = "", next = start); }
+                    leftKind = fKind;
+                    leftNext = fEnd;
+                } else if types.isRecordKind(leftKind) {
+                    fKind := types.recordFieldKind(leftKind, fName);
                     if fKind == "" { return (kind = "", next = start); }
                     leftKind = fKind;
                     leftNext = fEnd;
@@ -652,7 +680,7 @@ skipFnExprSpan := fn(source: String, headerPos: Int, limit: Int, prefix: String,
             bodyEnd := syntax.scanBraceEnd(source, cursor, prefix);
             if bodyEnd >= 0 {
                 if checkInnerAlias {
-                    typeHit := textLib.indexOfText(source, "type", cursor + 1);
+                    typeHit := types.nextAliasOrRecordHit(source, cursor + 1);
                     if typeHit >= 0 and typeHit < bodyEnd { hasInnerAlias = true; }
                 }
                 cursor = bodyEnd;
@@ -790,38 +818,92 @@ pub resolveFutureDecls := fn(target: String, source: String, prefix: String, mod
                 } else if decl.kind == ir.DECL_KIND_FUTURE_DESTR {
                     openPos := syntax.parseDigits(decl.code, 0, textLib.length(decl.code));
                     rhsPos := syntax.parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
-                    destr := tryParseDestructureNames(source, openPos, prefix);
-                    if destr.ok and destr.count > 0 {
-                        destrMutable := decl.runtime == ir.DECL_BIND_VAR;
-                        inferred := tryInferRootExprKind(source, rhsPos, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
-                        if destr.grouped {
-                            if inferred.kind =!= "" and inferred.kind =!= ir.VALUE_KIND_UNIT {
-                                bindName := destr.namesText;
-                                bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bindName) } else { "" };
-                                listLib.pushBack(mut futureValues, (name = bindName, runtime = bindRt,
-                                kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
+                    destrMutable := decl.runtime == ir.DECL_BIND_VAR;
+                    inferred := tryInferRootExprKind(source, rhsPos, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
+                    if openPos < textLib.length(source) and textLib.at(source, openPos) == "{" {
+                        if types.isRecordKind(inferred.kind) {
+                            var recCursor := syntax.skipTrivia(source, openPos + 1, prefix);
+                            recLimit := textLib.length(source);
+                            var recOk := true;
+                            loop recCursor < recLimit and textLib.at(source, recCursor) =!= "}" {
+                                if not textLib.isNameStart(textLib.at(source, recCursor)) { recOk = false; break; }
+                                bStart := recCursor;
+                                bEnd := textLib.skipName(source, bStart);
+                                bName := textLib.slice(source, bStart, bEnd);
+                                afterBind := syntax.skipTrivia(source, bEnd, prefix);
+                                var eqPos := afterBind;
+                                var fKind := "";
+                                if afterBind < recLimit and textLib.at(source, afterBind) == ":" {
+                                    emptySeenPat: List<String> = [];
+                                    tRes := types.canResolveTypeAt(source, afterBind + 1, prefix, scopedAliases, "", emptySeenPat, 16);
+                                    if not tRes.ok { recOk = false; break; }
+                                    fKind = tRes.kind;
+                                    eqPos = syntax.skipTrivia(source, tRes.next, prefix);
+                                }
+                                var cEnd := eqPos;
+                                var srcField := bName;
+                                if syntax.isSingleEquals(source, eqPos) {
+                                    fStart := syntax.skipTrivia(source, eqPos + 1, prefix);
+                                    if fStart >= recLimit or not textLib.isNameStart(textLib.at(source, fStart)) { recOk = false; break; }
+                                    fEnd := textLib.skipName(source, fStart);
+                                    srcField = textLib.slice(source, fStart, fEnd);
+                                    cEnd = syntax.skipTrivia(source, fEnd, prefix);
+                                } else if fKind == "" {
+                                    recOk = false;
+                                    break;
+                                }
+                                recFKind := types.recordFieldKind(inferred.kind, srcField);
+                                if recFKind == "" { recOk = false; break; }
+                                if bName =!= "_" {
+                                    outKind := if fKind =!= "" { fKind } else { recFKind };
+                                    bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bName) } else { "" };
+                                    listLib.pushBack(mut futureValues, (name = bName, runtime = bindRt,
+                                    kind = outKind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
+                                }
+                                if cEnd < recLimit and textLib.at(source, cEnd) == "," {
+                                    recCursor = syntax.skipTrivia(source, cEnd + 1, prefix);
+                                } else {
+                                    recCursor = cEnd;
+                                    break;
+                                }
+                            }
+                            if recOk {
                                 resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
                                 progressed = true;
                             }
-                        } else if types.isTupleKind(inferred.kind) and types.tupleComponentCount(inferred.kind) == destr.count {
-                            var bindCursor := 0;
-                            var bindIndex := 0;
-                            namesLen := textLib.length(destr.namesText);
-                            loop bindIndex < destr.count {
-                                var bindEnd := bindCursor;
-                                loop bindEnd < namesLen and textLib.at(destr.namesText, bindEnd) =!= "," {
-                                    bindEnd = bindEnd + 1;
+                        }
+                    } else {
+                        destr := tryParseDestructureNames(source, openPos, prefix);
+                        if destr.ok and destr.count > 0 {
+                            if destr.grouped {
+                                if inferred.kind =!= "" and inferred.kind =!= ir.VALUE_KIND_UNIT {
+                                    bindName := destr.namesText;
+                                    bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bindName) } else { "" };
+                                    listLib.pushBack(mut futureValues, (name = bindName, runtime = bindRt,
+                                    kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
+                                    resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
+                                    progressed = true;
                                 }
-                                bindName := textLib.slice(destr.namesText, bindCursor, bindEnd);
-                                bindCursor = bindEnd + 1;
-                                comp := types.tupleComponent(inferred.kind, bindIndex);
-                                bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bindName) } else { "" };
-                                listLib.pushBack(mut futureValues, (name = bindName, runtime = bindRt,
-                                kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
-                                bindIndex = bindIndex + 1;
+                            } else if types.isTupleKind(inferred.kind) and types.tupleComponentCount(inferred.kind) == destr.count {
+                                var bindCursor := 0;
+                                var bindIndex := 0;
+                                namesLen := textLib.length(destr.namesText);
+                                loop bindIndex < destr.count {
+                                    var bindEnd := bindCursor;
+                                    loop bindEnd < namesLen and textLib.at(destr.namesText, bindEnd) =!= "," {
+                                        bindEnd = bindEnd + 1;
+                                    }
+                                    bindName := textLib.slice(destr.namesText, bindCursor, bindEnd);
+                                    bindCursor = bindEnd + 1;
+                                    comp := types.tupleComponent(inferred.kind, bindIndex);
+                                    bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bindName) } else { "" };
+                                    listLib.pushBack(mut futureValues, (name = bindName, runtime = bindRt,
+                                    kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
+                                    bindIndex = bindIndex + 1;
+                                }
+                                resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
+                                progressed = true;
                             }
-                            resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
-                            progressed = true;
                         }
                     }
                 }
@@ -854,7 +936,13 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
             position = syntax.skipAliasString(source, position);
         } else if ch == "{" {
             nestedEnd := syntax.scanBraceEnd(source, position, prefix);
-            if nestedEnd >= 0 { position = nestedEnd; } else { position = position + 1; }
+            afterNested := if parenDepth == 0 and nestedEnd >= 0 { syntax.skipTrivia(source, nestedEnd, prefix) } else { -1 };
+            if afterNested >= 0 and afterNested < limit and textLib.startsWithAt(source, afterNested, ":=") {
+                rhsPos := syntax.skipTrivia(source, afterNested + 2, prefix);
+                listLib.pushBack(mut decls, (kind = ir.DECL_KIND_FUTURE_DESTR, name = "", runtime = ir.DECL_BIND_VAL, code = integer.intText(position),
+                intValue = position, textValue = integer.intText(rhsPos)));
+                position = rhsPos;
+            } else if nestedEnd >= 0 { position = nestedEnd; } else { position = position + 1; }
         } else if ch == "}" {
             break;
         } else if ch == "(" or ch == "[" {
@@ -880,9 +968,9 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
             name := textLib.slice(source, nameStart, afterName);
             if name == "var" {
                 afterVar := syntax.skipTrivia(source, afterName, prefix);
-                if afterVar < limit and textLib.at(source, afterVar) == "(" {
-                    parenEnd := syntax.scanParenEnd(source, afterVar, prefix);
-                    afterParen := if parenEnd >= 0 { syntax.skipTrivia(source, parenEnd, prefix) } else { -1 };
+                if afterVar < limit and (textLib.at(source, afterVar) == "(" or textLib.at(source, afterVar) == "{") {
+                    patEnd := if textLib.at(source, afterVar) == "(" { syntax.scanParenEnd(source, afterVar, prefix) } else { syntax.scanBraceEnd(source, afterVar, prefix) };
+                    afterParen := if patEnd >= 0 { syntax.skipTrivia(source, patEnd, prefix) } else { -1 };
                     if afterParen >= 0 and afterParen < limit and textLib.startsWithAt(source, afterParen, ":=") {
                         rhsPos := syntax.skipTrivia(source, afterParen + 2, prefix);
                         listLib.pushBack(mut decls, (kind = ir.DECL_KIND_FUTURE_DESTR, name = "", runtime = ir.DECL_BIND_VAR, code = integer.intText(afterVar),
@@ -959,6 +1047,12 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                     targetStart := syntax.skipTrivia(source, valueStart + 4, prefix);
                     aliasTarget := types.collectTypeTarget(source, targetStart, prefix);
                     position = if aliasTarget.next > valueStart { aliasTarget.next } else { valueStart + 4 };
+                    continue;
+                }
+                if textLib.wordAt(source, valueStart, "record") {
+                    bracePos := syntax.skipTrivia(source, valueStart + 6, prefix);
+                    recTarget := types.collectRecordTarget(source, bracePos, prefix, "", nameStart, name);
+                    position = if recTarget.next > valueStart { recTarget.next } else { valueStart + 6 };
                     continue;
                 }
                 if not textLib.wordAt(source, valueStart, "import") and not trace.tokenInPipeBag(seenDeclBag, name) {
@@ -1044,8 +1138,16 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
             if depth == 0 {
                 blockEnd := syntax.scanBraceEnd(source, position, prefix);
                 if blockEnd >= 0 {
+                    afterBrace := if parenDepth == 0 { syntax.skipTrivia(source, blockEnd, prefix) } else { -1 };
+                    if afterBrace >= 0 and textLib.startsWithAt(source, afterBrace, ":=") {
+                        rhsPos := syntax.skipTrivia(source, afterBrace + 2, prefix);
+                        listLib.pushBack(mut decls, (kind = ir.DECL_KIND_FUTURE_DESTR, name = "", runtime = ir.DECL_BIND_VAL, code = integer.intText(position),
+                        intValue = position, textValue = integer.intText(rhsPos)));
+                        position = rhsPos;
+                        continue;
+                    }
                     if not hasInnerAlias {
-                        typeHit := textLib.indexOfText(source, "type", position + 1);
+                        typeHit := types.nextAliasOrRecordHit(source, position + 1);
                         if typeHit >= 0 and typeHit < blockEnd {
                             hasInnerAlias = true;
                             listLib.pushBack(mut decls, (kind = ir.DECL_KIND_HAS_INNER_ALIAS, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
@@ -1091,7 +1193,7 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                         declName := textLib.slice(source, declStart, declEnd);
                         if textLib.wordAt(source, valStart, "fn") {
                             listLib.pushBack(mut decls, (kind = ir.DECL_KIND_PUB_FN, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
-                        } else if textLib.wordAt(source, valStart, "type") {
+                        } else if textLib.wordAt(source, valStart, "type") or textLib.wordAt(source, valStart, "record") {
                             listLib.pushBack(mut decls, (kind = ir.DECL_KIND_PUB_TYPE, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
                         } else {
                             listLib.pushBack(mut decls, (kind = ir.DECL_KIND_PUB_VAL, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
@@ -1103,9 +1205,9 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
             }
             if name == "var" {
                 afterVar := syntax.skipTrivia(source, afterName, prefix);
-                if afterVar < size and textLib.at(source, afterVar) == "(" {
-                    parenEnd := syntax.scanParenEnd(source, afterVar, prefix);
-                    afterParen := if parenEnd >= 0 { syntax.skipTrivia(source, parenEnd, prefix) } else { -1 };
+                if afterVar < size and (textLib.at(source, afterVar) == "(" or textLib.at(source, afterVar) == "{") {
+                    patEnd := if textLib.at(source, afterVar) == "(" { syntax.scanParenEnd(source, afterVar, prefix) } else { syntax.scanBraceEnd(source, afterVar, prefix) };
+                    afterParen := if patEnd >= 0 { syntax.skipTrivia(source, patEnd, prefix) } else { -1 };
                     if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
                         rhsPos := syntax.skipTrivia(source, afterParen + 2, prefix);
                         listLib.pushBack(mut decls, (kind = ir.DECL_KIND_FUTURE_DESTR, name = "", runtime = ir.DECL_BIND_VAR, code = integer.intText(afterVar),
@@ -1175,6 +1277,14 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                     listLib.pushBack(mut decls, (kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = aliasTarget.text,
                     intValue = nameStart, textValue = integer.intText(aliasTarget.next)));
                     position = aliasTarget.next;
+                    continue;
+                }
+                if textLib.wordAt(source, valueStart, "record") {
+                    bracePos := syntax.skipTrivia(source, valueStart + 6, prefix);
+                    recTarget := types.collectRecordTarget(source, bracePos, prefix, moduleKey, nameStart, name);
+                    listLib.pushBack(mut decls, (kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = recTarget.text,
+                    intValue = nameStart, textValue = integer.intText(recTarget.next)));
+                    position = recTarget.next;
                     continue;
                 }
                 if textLib.wordAt(source, valueStart, "fn") {

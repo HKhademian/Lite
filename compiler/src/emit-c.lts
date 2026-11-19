@@ -31,6 +31,7 @@ cDeclType := fn(kind: String): String {
 /** Fails cleanly when a reachable scalar/function signature references an unsupported C type. */
 checkUnsupportedCType := fn(kind: String): Unit {
     if frontend.isTupleKind(kind) { diagLib.fail("", "C backend does not support tuple values yet"); }
+    if frontend.isRecordKind(kind) { diagLib.fail("", "C backend does not support record values yet"); }
     if frontend.isListKind(kind) { diagLib.fail("", "C backend does not support list values yet"); }
     if frontend.isArrayKind(kind) { diagLib.fail("", "C backend does not support array values yet"); }
     if frontend.containsFnKind(kind) { diagLib.fail("", "C backend does not support function values yet"); }
@@ -809,6 +810,9 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
         }
         if frontend.isTupleKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isTupleKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_TUPLE or item.kind == frontend.ITEM_KIND_VAR_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE {
             diagLib.fail("", "C backend does not support tuple values yet");
+        }
+        if frontend.isRecordKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isRecordKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD {
+            diagLib.fail("", "C backend does not support record values yet");
         }
         if frontend.isListKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isListKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST {
             diagLib.fail("", "C backend does not support list values yet");

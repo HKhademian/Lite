@@ -123,6 +123,9 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
     if types.isTupleKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare tuple values");
     }
+    if types.isRecordKind(left.kind) {
+        syntax.failAt(source, at, prefix, "cannot compare record values");
+    }
     if types.isListKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare list values");
     }
@@ -415,6 +418,19 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         var index := 0;
         loop index < count {
             comp := types.tupleComponent(kind, index);
+            if index > 0 { code = code + ", "; }
+            code = code + types.tupleObjectKey(comp.label, index) + ": " + self(target, comp.kind, next).code;
+            index = index + 1;
+        }
+        (kind = kind, code = code + " }", intValue = 0, textValue = "", constant = false, next = next)
+    }
+    else if types.isRecordKind(kind) {
+        count := types.recordComponentCount(kind);
+        if count == 0 { return (kind = kind, code = "{}", intValue = 0, textValue = "", constant = false, next = next); }
+        var code := "{ ";
+        var index := 0;
+        loop index < count {
+            comp := types.recordComponent(kind, index);
             if index > 0 { code = code + ", "; }
             code = code + types.tupleObjectKey(comp.label, index) + ": " + self(target, comp.kind, next).code;
             index = index + 1;
@@ -874,6 +890,7 @@ pub storageKind := fn(kind: String): String {
     match {
         types.isListKind(kind) or types.isArrayKind(kind) { "List" }
         types.isTupleKind(kind) { "Tuple" }
+        types.isRecordKind(kind) { "Record" }
         types.isFnKind(kind) { "Fn" }
         numeric.isIntKind(kind) { ir.VALUE_KIND_INT }
         numeric.isFloatKind(kind) { ir.VALUE_KIND_FLOAT }
@@ -883,7 +900,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

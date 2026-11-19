@@ -161,6 +161,7 @@ pub ITEM_KIND_MAIN_STOP := ir.ITEM_KIND_MAIN_STOP;
 pub ITEM_KIND_IMPORT := ir.ITEM_KIND_IMPORT;
 pub ITEM_KIND_NOOP := ir.ITEM_KIND_NOOP;
 pub ITEM_KIND_LOCAL_TUPLE := ir.ITEM_KIND_LOCAL_TUPLE;
+pub ITEM_KIND_LOCAL_RECORD := ir.ITEM_KIND_LOCAL_RECORD;
 pub ITEM_KIND_LOCAL_LIST := ir.ITEM_KIND_LOCAL_LIST;
 pub ITEM_KIND_LOCAL_FN := ir.ITEM_KIND_LOCAL_FN;
 pub ITEM_KIND_LOCAL_INT := ir.ITEM_KIND_LOCAL_INT;
@@ -168,6 +169,7 @@ pub ITEM_KIND_LOCAL_STRING := ir.ITEM_KIND_LOCAL_STRING;
 pub ITEM_KIND_LOCAL_BOOL := ir.ITEM_KIND_LOCAL_BOOL;
 pub ITEM_KIND_LOCAL_FLOAT := ir.ITEM_KIND_LOCAL_FLOAT;
 pub ITEM_KIND_VAR_TUPLE := ir.ITEM_KIND_VAR_TUPLE;
+pub ITEM_KIND_VAR_RECORD := ir.ITEM_KIND_VAR_RECORD;
 pub ITEM_KIND_VAR_LIST := ir.ITEM_KIND_VAR_LIST;
 pub ITEM_KIND_VAR_FN := ir.ITEM_KIND_VAR_FN;
 pub ITEM_KIND_VAR_INT := ir.ITEM_KIND_VAR_INT;
@@ -175,6 +177,7 @@ pub ITEM_KIND_VAR_STRING := ir.ITEM_KIND_VAR_STRING;
 pub ITEM_KIND_VAR_BOOL := ir.ITEM_KIND_VAR_BOOL;
 pub ITEM_KIND_VAR_FLOAT := ir.ITEM_KIND_VAR_FLOAT;
 pub ITEM_KIND_ASSIGN_TUPLE := ir.ITEM_KIND_ASSIGN_TUPLE;
+pub ITEM_KIND_ASSIGN_RECORD := ir.ITEM_KIND_ASSIGN_RECORD;
 pub ITEM_KIND_ASSIGN_LIST := ir.ITEM_KIND_ASSIGN_LIST;
 pub ITEM_KIND_ASSIGN_FN := ir.ITEM_KIND_ASSIGN_FN;
 pub ITEM_KIND_ASSIGN_INT := ir.ITEM_KIND_ASSIGN_INT;
@@ -259,6 +262,9 @@ aliasesUpToDepth := fn(aliases: List<AliasDecl>, maxDepth: Int): List<AliasDecl>
 
 /** True when `kind` is this compiler's canonical flat tuple kind, written `(label:Kind,:Kind)`. */
 pub isTupleKind := fn(kind: String): Bool { types.isTupleKind(kind) };
+
+/** True when `kind` is this compiler's canonical nominal record kind `Record<id#at#DisplayName;f1:K1,...>`. */
+pub isRecordKind := fn(kind: String): Bool { types.isRecordKind(kind) };
 
 /** Returns the runtime JS property name for a tuple field (`_0` when unnamed, otherwise the field label). */
 pub tupleRuntimeProp := fn(label: String, index: Int): String { types.tupleRuntimeProp(label, index) };
@@ -1042,6 +1048,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     loop exports as exported {
         if exported.kind == ITEM_KIND_PUBLIC_TYPE {
             listLib.pushBack(mut aliases, (name = exported.name, target = exported.code, at = -1, end = 0, depth = 0));
+            if exported.textValue =!= "" {
+                aliases = types.appendEncodedRecordDefaults(aliases, exported.code, exported.textValue, 0);
+            }
         }
     }
     decls := collectModuleDecls(target, source, prefix, moduleKey);
@@ -1403,7 +1412,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if blockKind == BLOCK_KIND_FUNCTION {
                 locals = withoutFutureValues(locals);
                 if currentResult =!= VALUE_KIND_UNIT and not currentReturned {
-                    failAt(source, position, prefix, "function " + currentName + " must return " + currentResult);
+                    failAt(source, position, prefix, "function " + currentName + " must return " + displayKind(currentResult));
                 }
                 droppedFnCtx := listLib.popBack(mut stmtCtxs);
                 if fnTryKey =!= "" {
@@ -1515,54 +1524,61 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
         if ch == "{" {
             rawBraceEnd := scanBraceEnd(source, position, prefix);
             afterRawBrace := if rawBraceEnd >= 0 { skipTrivia(source, rawBraceEnd, prefix) } else { -1 };
-            if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "then") {
-                failAt(source, afterRawBrace, prefix, "then requires an if, match, or loop");
-            }
-            if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "finally") {
-                expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
-                currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                locals = checkStatementTrace(target, source, position, prefix, expression.code, expression.returned, currentResult,
-                currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
-                if currentLive and not currentStopped {
-                    listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
-                    runtime = "", code = expression.code, intValue = 0, textValue = ""));
-                    if codeHasRawTransfer(expression.code) {
-                        listLib.pushBack(mut transferCodes, expression.code);
-                        transferCount = transferCount + 1;
+            if afterRawBrace >= 0 and textLib.startsWithAt(source, afterRawBrace, ":=") {
+                /* Fall through to unified record destructuring below (`recDestructureOpen`). */
+            } else {
+                    if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "then") {
+                    failAt(source, afterRawBrace, prefix, "then requires an if, match, or loop");
+                }
+                if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "finally") {
+                    expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
+                    currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+                    locals = checkStatementTrace(target, source, position, prefix, expression.code, expression.returned, currentResult,
+                    currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+                    if currentLive and not currentStopped {
+                        listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
+                        runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                        if codeHasRawTransfer(expression.code) {
+                            listLib.pushBack(mut transferCodes, expression.code);
+                            transferCount = transferCount + 1;
+                        }
                     }
+                    if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
+                        if not currentStopped { currentReturned = true; }
+                        currentStopped = true;
+                    }
+                    position = expression.next;
+                    continue;
                 }
-                if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
-                    if not currentStopped { currentReturned = true; }
-                    currentStopped = true;
-                }
-                position = expression.next;
+                if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = ITEM_KIND_SCOPE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
+                branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
+                preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
+                liveBranchCount = 0;
+                currentLive = currentLive and not currentStopped;
+                currentReturned = false;
+                currentStopped = false;
+                branchesReturned = true;
+                branchesStopped = true;
+                hasElse = false;
+                loopForever = false;
+                listLib.pushBack(mut blocks, BLOCK_KIND_SCOPE);
+                blockCount = blockCount + 1;
+                depth = depth + 1;
+                if hasInnerAlias { aliases = collectBlockTypeAliases(source, position, prefix, depth, aliases); }
+                scopeAssignedBag := scanInnerBlockAssignedBag(target, source, position, prefix, "");
+                blockAssignedDecls = appendAssignedBagDecls(scopeAssignedBag, blockAssignedDecls, depth);
+                locals = appendBlockFutureLocals(target, source, position, prefix, depth, "", scopeAssignedBag, aliases, functions, functionParams, locals);
+                position = skipTrivia(source, position + 1, prefix);
                 continue;
             }
-            if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = ITEM_KIND_SCOPE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
-            listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
-            branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
-            preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
-            liveBranchCount = 0;
-            currentLive = currentLive and not currentStopped;
-            currentReturned = false;
-            currentStopped = false;
-            branchesReturned = true;
-            branchesStopped = true;
-            hasElse = false;
-            loopForever = false;
-            listLib.pushBack(mut blocks, BLOCK_KIND_SCOPE);
-            blockCount = blockCount + 1;
-            depth = depth + 1;
-            if hasInnerAlias { aliases = collectBlockTypeAliases(source, position, prefix, depth, aliases); }
-            scopeAssignedBag := scanInnerBlockAssignedBag(target, source, position, prefix, "");
-            blockAssignedDecls = appendAssignedBagDecls(scopeAssignedBag, blockAssignedDecls, depth);
-            locals = appendBlockFutureLocals(target, source, position, prefix, depth, "", scopeAssignedBag, aliases, functions, functionParams, locals);
-            position = skipTrivia(source, position + 1, prefix);
-            continue;
         }
         var destructureOpen := -1;
+        var recDestructureOpen := -1;
         var destructureMutable := false;
-        if ch == "(" {
+        if ch == "{" {
+            recDestructureOpen = position;
+        } else if ch == "(" {
             parenEnd := scanParenEnd(source, position, prefix);
             afterParen := if parenEnd >= 0 { skipTrivia(source, parenEnd, prefix) } else { -1 };
             if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
@@ -1573,7 +1589,98 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if afterVar < size and textLib.at(source, afterVar) == "(" {
                 destructureOpen = afterVar;
                 destructureMutable = true;
+            } else if afterVar < size and textLib.at(source, afterVar) == "{" {
+                recDestructureOpen = afterVar;
+                destructureMutable = true;
+            } else if afterVar < size and textLib.isNameStart(textLib.at(source, afterVar)) {
+                varPatEnd := skipTrivia(source, textLib.skipName(source, afterVar), prefix);
+                if varPatEnd < size and textLib.at(source, varPatEnd) == "{" {
+                    patBraceEnd := scanBraceEnd(source, varPatEnd, prefix);
+                    afterPatBrace := if patBraceEnd >= 0 { skipTrivia(source, patBraceEnd, prefix) } else { -1 };
+                    if afterPatBrace >= 0 and textLib.startsWithAt(source, afterPatBrace, ":=") {
+                        failAt(source, afterVar, prefix, "construction-shaped record pattern is not allowed; omit the type name");
+                    }
+                }
             }
+        }
+        if recDestructureOpen >= 0 {
+            recPattern := expr.parseRecordDestructurePattern(source, recDestructureOpen, prefix, aliases);
+            afterRecTarget := skipTrivia(source, recPattern.next, prefix);
+            if not textLib.startsWithAt(source, afterRecTarget, ":=") {
+                failAt(source, afterRecTarget, prefix, "expected := after record destructuring target");
+            }
+            rhs := parseInitializerExpression(target, source, skipTrivia(source, afterRecTarget + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+            if target == TARGET_TS and currentLive and not currentStopped {
+                checkTraceSafety(source, recDestructureOpen, prefix, rhs.code, currentName, maxFutureAt, locals, functions, futureValues, items);
+                locals = mergeOuterCallableUpdatesFromCode(locals, rhs.code);
+            }
+            if not isRecordKind(rhs.kind) {
+                failAt(source, recDestructureOpen, prefix, "record destructuring requires a record value, got " + displayKind(rhs.kind));
+            }
+            statementNext := consumeStatementEnd(source, rhs.next, prefix);
+            if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after record destructuring"); }
+            tempRuntime := freshScopeTemp(locals, "lite$rec");
+            recCode := if target == TARGET_TS and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
+            listLib.pushBack(mut locals, (name = "$rec", runtime = tempRuntime, kind = VALUE_KIND_UNIT,
+            mutable = false, writable = false, depth = depth, constant = false, code = recCode,
+            intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+            if currentLive and not currentStopped {
+                listLib.pushBack(mut items, (kind = ITEM_KIND_LOCAL_RECORD, name = "", runtime = tempRuntime,
+                code = rhs.code, intValue = 0, textValue = storageTextPayload(rhs.kind, "")));
+                if codeHasRawTransfer(rhs.code) {
+                    listLib.pushBack(mut transferCodes, rhs.code);
+                    transferCount = transferCount + 1;
+                }
+            }
+            pendingRecNames: mut List<String> = [];
+            var clCursor := 0;
+            var clIndex := 0;
+            loop clIndex < recPattern.count {
+                bindPart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, clCursor);
+                fieldPart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, bindPart.next);
+                typePart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, fieldPart.next);
+                clCursor = typePart.next;
+                bindName := bindPart.text;
+                sourceField := fieldPart.text;
+                expectedFieldKind := typePart.text;
+                sourceFieldKind := types.recordFieldKind(rhs.kind, sourceField);
+                if sourceFieldKind == "" {
+                    failAt(source, recDestructureOpen, prefix, "record " + types.recordDisplayName(rhs.kind) + " has no field " + sourceField);
+                }
+                var bindKind := sourceFieldKind;
+                if expectedFieldKind =!= "" {
+                    if not isCompatibleKind(expectedFieldKind, sourceFieldKind) {
+                        failAt(source, recDestructureOpen, prefix, "cannot bind " + displayKind(sourceFieldKind) + " field " + sourceField + " as " + displayKind(expectedFieldKind));
+                    }
+                    bindKind = expectedFieldKind;
+                }
+                if bindName =!= "_" {
+                    rejectDuplicateBlockDecl(source, recDestructureOpen, prefix, blockDecls, depth, bindName);
+                    if depth == 0 {
+                        listLib.pushBack(mut blockDecls, (name = bindName, depth = depth));
+                    } else if not listLib.listContainsText(pendingRecNames, bindName) {
+                        listLib.pushBack(mut pendingRecNames, bindName);
+                    }
+                    bindRuntime := claimOrMakeLocalRuntime(target, locals, bindName, moduleKey, depth);
+                    fieldProp := types.recordComponentProp(rhs.kind, sourceField);
+                    fieldCode := assignValueCode(target, bindKind, sourceFieldKind, tempRuntime + "." + fieldProp);
+                    fieldLocalCode := if target == TARGET_TS and containsFnKind(bindKind) { computeCallableRhsDeps(fieldCode) } else { fieldCode };
+                    listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = bindKind,
+                    mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldLocalCode,
+                    intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+                    if currentLive and not currentStopped {
+                        itemPrefix := if destructureMutable { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
+                        listLib.pushBack(mut items, (kind = itemPrefix + storageKind(bindKind), name = bindName, runtime = bindRuntime,
+                        code = fieldCode, intValue = 0, textValue = storageTextPayload(bindKind, "")));
+                    }
+                }
+                clIndex = clIndex + 1;
+            }
+            loop pendingRecNames as recBindName {
+                listLib.pushBack(mut blockDecls, (name = recBindName, depth = depth));
+            }
+            position = statementNext;
+            continue;
         }
         if destructureOpen >= 0 {
             destructure := parseTupleDestructureTarget(source, destructureOpen, prefix);
@@ -1770,6 +1877,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             continue;
         }
         position = skipTrivia(source, position, prefix);
+        if position < size and textLib.at(source, position) == "{" and
+        textLib.startsWithAt(source, skipTrivia(source, scanBraceEnd(source, position, prefix), prefix), ":=") {
+            failAt(source, nameStart, prefix, "construction-shaped record pattern is not allowed; omit the type name");
+        }
         if textLib.startsWithAt(source, position, ":=") {
             afterImport := skipTrivia(source, position + 2, prefix);
             if textLib.wordAt(source, afterImport, "import") {
@@ -1793,7 +1904,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             afterDefinition = skipTrivia(source, position + 2, prefix);
         }
         definition := blockCount == 0 and textLib.startsWithAt(source, position, ":=") and
-        (textLib.wordAt(source, afterDefinition, "fn") or textLib.wordAt(source, afterDefinition, "type"));
+        (textLib.wordAt(source, afterDefinition, "fn") or textLib.wordAt(source, afterDefinition, "type") or textLib.wordAt(source, afterDefinition, "record"));
         if name == "return" {
             var targetTagPos := position;
             var targetTagName := "";
@@ -1819,7 +1930,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             valueStart := position;
             if valueStart >= size or textLib.at(source, valueStart) == ";" or textLib.at(source, valueStart) == "}" {
                 if currentResult =!= VALUE_KIND_UNIT {
-                    failAt(source, nameStart, prefix, "function " + currentName + " must return " + currentResult);
+                    failAt(source, nameStart, prefix, "function " + currentName + " must return " + displayKind(currentResult));
                 }
                 position = consumeStatementEnd(source, valueStart, prefix);
                 if currentLive and not currentStopped { listLib.pushBack(mut items, (kind = ITEM_KIND_RETURN, name = "", runtime = "", code = "",
@@ -2561,13 +2672,58 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             }
             seenAliases: mut List<String> = [];
             resolvedType := resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenAliases);
+            var exportedDefaults := "";
+            if types.isRecordKind(resolvedType) {
+                exportedDefaults = types.encodeRecordDefaultsFromAliases(aliases, resolvedType);
+            }
             if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedTypes, name) {
                 listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = resolvedType,
-                intValue = 0, textValue = ""));
+                intValue = 0, textValue = exportedDefaults));
             }
             afterTarget := consumeStatementEnd(source, aliasEntry.end, prefix);
             if afterTarget < 0 { unsupportedAliasTarget(source, aliasEntry.at, prefix, "target"); }
             position = afterTarget;
+            continue;
+        }
+        if textLib.startsWithAt(source, position, ":=") and textLib.wordAt(source, afterDefinition, "record") {
+            var earlierAlias := false;
+            loop aliases as alias {
+                if alias.name == name and alias.depth == depth and alias.at < nameStart { earlierAlias = true; }
+            }
+            if earlierAlias {
+                failAt(source, nameStart, prefix, "duplicate type alias " + name);
+            }
+            rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
+            listLib.pushBack(mut blockDecls, (name = name, depth = depth));
+            recPos := skipTrivia(source, position + 2, prefix);
+            parsedRec := expr.parseRecordDecl(target, source, recPos, nameStart, name, depth, prefix, locals, functions, functionParams, currentName, stmtCtxs, 0, false, aliases);
+            if target == TARGET_TS and currentLive and not currentStopped and parsedRec.encodedDefaults =!= "" {
+                enc := parsedRec.encodedDefaults;
+                encLen := textLib.length(enc);
+                var encSemi := 0;
+                loop encSemi < encLen and textLib.isDigit(textLib.at(enc, encSemi)) {
+                    encSemi = encSemi + 1;
+                }
+                if encSemi > 0 and encSemi < encLen and textLib.at(enc, encSemi) == ";" {
+                    defCount := parseDigits(enc, 0, encSemi);
+                    var defCur := encSemi + 1;
+                    var defIdx := 0;
+                    loop defIdx < defCount {
+                        fNamePart := types.decodeLengthPrefixedAt(enc, defCur);
+                        fCodePart := types.decodeLengthPrefixedAt(enc, fNamePart.next);
+                        if fNamePart.next < 0 or fCodePart.next < 0 { break; }
+                        locals = checkStatementTrace(target, source, nameStart, prefix, fCodePart.text, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, true);
+                        defCur = fCodePart.next;
+                        defIdx = defIdx + 1;
+                    }
+                }
+            }
+            aliases = types.appendEncodedRecordDefaults(aliases, parsedRec.kind, parsedRec.encodedDefaults, depth);
+            if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedTypes, name) {
+                listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = parsedRec.kind,
+                intValue = 0, textValue = parsedRec.encodedDefaults));
+            }
+            position = parsedRec.next;
             continue;
         }
         if textLib.startsWithAt(source, position, ":=") {

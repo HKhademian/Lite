@@ -528,6 +528,198 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     if inferMode { ctx.collectParsedMarkers("", fnBody) } else { "" })
 };
 
+/** Ensures `$recpop:<recordKind>` and `$recdef:...` entries exist in `aliases`, lazily resolving forward-declared local records when needed. */
+ensureRecordDefaults := fn(target: String, source: String, recordKind: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): List<AliasDecl> {
+    if types.findAlias(aliases, "$recpop:" + recordKind) >= 0 { return aliases; }
+    declAt := types.recordDeclAt(recordKind);
+    if declAt < 0 { return aliases; }
+    aliasIdx := types.aliasIndexAt(aliases, declAt);
+    if aliasIdx < 0 { return aliases; }
+    aliasEntry := aliases[aliasIdx];
+    if aliasEntry.at < 0 or not textLib.startsWithAt(aliasEntry.target, 0, "@recraw:") { return aliases; }
+    afterName := textLib.skipName(source, aliasEntry.at);
+    opPos := syntax.skipTrivia(source, afterName, prefix);
+    if not textLib.startsWithAt(source, opPos, ":=") { return aliases; }
+    recPos := syntax.skipTrivia(source, opPos + 2, prefix);
+    if not textLib.wordAt(source, recPos, "record") { return aliases; }
+    seeded := types.appendEncodedRecordDefaults(aliases, recordKind, "", aliasEntry.depth);
+    parsedRec := parseRecordDecl(target, source, recPos, aliasEntry.at, aliasEntry.name, aliasEntry.depth, prefix, locals, functions, params, currentName, ctxs, iifeDepth, false, seeded);
+    types.appendEncodedRecordDefaults(aliases, parsedRec.kind, parsedRec.encodedDefaults, aliasEntry.depth)
+};
+
+/** Parses `{ field = expr, ... }` or `{}` for an explicit or contextual nominal `recordKind`, resolving omitted fields from defaults then zero. */
+parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, recordKind: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    size := textLib.length(source);
+    recAliases := ensureRecordDefaults(target, source, recordKind, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+    recName := types.recordDisplayName(recordKind);
+    suppliedKeys: mut List<String> = [];
+    suppliedCodes: mut List<String> = [];
+    var recMarkers := "";
+    var cursor := syntax.skipTrivia(source, braceStart + 1, prefix);
+    loop true {
+        if cursor >= size {
+            syntax.failAt(source, braceStart, prefix, "expected } in record construction");
+        }
+        if textLib.at(source, cursor) == "}" {
+            cursor = cursor + 1;
+            break;
+        }
+        if not textLib.isNameStart(textLib.at(source, cursor)) {
+            syntax.failAt(source, cursor, prefix, "expected field name in record construction");
+        }
+        labelStart := cursor;
+        labelEnd := textLib.skipName(source, labelStart);
+        label := textLib.slice(source, labelStart, labelEnd);
+        if syntax.isReservedWord(label) { syntax.unsupportedFeature(source, labelStart, label, prefix); }
+        afterLabel := syntax.skipTrivia(source, labelEnd, prefix);
+        if not syntax.isSingleEquals(source, afterLabel) {
+            syntax.failAt(source, afterLabel, prefix, "expected = after record field " + label);
+        }
+        fieldKind := types.recordFieldKind(recordKind, label);
+        if fieldKind == "" {
+            syntax.failAt(source, labelStart, prefix, "record " + recName + " has no field " + label);
+        }
+        if listLib.listContainsText(suppliedKeys, label) {
+            syntax.failAt(source, labelStart, prefix, "duplicate record field " + label);
+        }
+        valStart := syntax.skipTrivia(source, afterLabel + 1, prefix);
+        zeroEnd := syntax.isZeroInitLiteral(source, valStart, prefix);
+        var valNext := valStart;
+        var valCode := "";
+        var checkZero := false;
+        if zeroEnd >= 0 and not numeric.isNumericKind(fieldKind) {
+            afterZero := syntax.skipTrivia(source, zeroEnd, prefix);
+            if afterZero < size and (textLib.at(source, afterZero) == "," or textLib.at(source, afterZero) == "}") {
+                checkZero = true;
+            }
+        }
+        if checkZero {
+            z := ctx.zeroParsed(target, fieldKind, zeroEnd);
+            valCode = z.code;
+            valNext = z.next;
+        } else {
+            valParsed := parseBinaryCtx(target, source, valStart, prefix, locals, functions, params, currentName, fieldKind, 0, ctxs, iifeDepth, inferMode, "", recAliases);
+            if inferMode { recMarkers = ctx.collectParsedMarkers(recMarkers, valParsed); }
+            if not types.isCompatibleKind(fieldKind, valParsed.kind) {
+                syntax.failAt(source, valStart, prefix, "cannot initialize " + types.displayKind(fieldKind) + " field " + label + " with " + types.displayKind(valParsed.kind));
+            }
+            valCode = ctx.assignValueCode(target, fieldKind, valParsed.kind, valParsed.code);
+            valNext = valParsed.next;
+        }
+        listLib.pushBack(mut suppliedKeys, label);
+        listLib.pushBack(mut suppliedCodes, valCode);
+        afterVal := syntax.skipTrivia(source, valNext, prefix);
+        if afterVal < size and textLib.at(source, afterVal) == "," {
+            cursor = syntax.skipTrivia(source, afterVal + 1, prefix);
+        } else if afterVal < size and textLib.at(source, afterVal) == "}" {
+            cursor = afterVal + 1;
+            break;
+        } else {
+            syntax.failAt(source, afterVal, prefix, "expected , or } after record field " + label);
+        }
+    }
+    compCount := types.recordComponentCount(recordKind);
+    if compCount == 0 {
+        return ctx.withMarkers((kind = recordKind, code = "{}", intValue = 0, textValue = "", constant = false, next = cursor), recMarkers);
+    }
+    encodedSupplied := types.encodeRecordPairs(suppliedKeys, suppliedCodes);
+    fieldExprs: mut List<String> = [];
+    var compIdx := 0;
+    loop compIdx < compCount {
+        comp := types.recordComponent(recordKind, compIdx);
+        var chosen := "";
+        var supIdx := 0;
+        var supFound := false;
+        loop suppliedKeys as sKey {
+            if sKey == comp.label {
+                chosen = suppliedCodes[supIdx];
+                supFound = true;
+                break;
+            }
+            supIdx = supIdx + 1;
+        }
+        if not supFound {
+            defCode := types.findRecordDefaultCode(recAliases, recordKind, comp.label);
+            if defCode =!= "" {
+                chosen = defCode;
+            } else {
+                chosen = ctx.zeroParsed(target, comp.kind, cursor).code;
+            }
+        }
+        listLib.pushBack(mut fieldExprs, types.tupleObjectKey(comp.label, compIdx) + ": " + chosen);
+        compIdx = compIdx + 1;
+    }
+    _unused := encodedSupplied;
+    ctx.withMarkers((kind = recordKind, code = "{ " + textLib.joinTexts(fieldExprs, ", ") + " }", intValue = 0, textValue = "", constant = false, next = cursor), recMarkers)
+};
+
+/** Parses `{ bindName[: Type] = sourceField, fieldName: Type, ... }` for named record destructuring into `(count, encodedClauses, next)`. */
+pub parseRecordDestructurePattern := fn(source: String, openPos: Int, prefix: String, aliases: List<AliasDecl>): (count: Int, encodedClauses: String, next: Int) {
+    size := textLib.length(source);
+    var cursor := syntax.skipTrivia(source, openPos + 1, prefix);
+    seenBinds: mut List<String> = [];
+    var encoded := "";
+    var count := 0;
+    loop cursor < size and textLib.at(source, cursor) =!= "}" {
+        if not textLib.isNameStart(textLib.at(source, cursor)) {
+            syntax.failAt(source, cursor, prefix, "expected binding name in record pattern");
+        }
+        bindStart := cursor;
+        bindEnd := textLib.skipName(source, bindStart);
+        bindName := textLib.slice(source, bindStart, bindEnd);
+        if syntax.isReservedWord(bindName) { syntax.unsupportedFeature(source, bindStart, bindName, prefix); }
+        if bindName =!= "_" and listLib.listContainsText(seenBinds, bindName) {
+            syntax.failAt(source, bindStart, prefix, "duplicate record pattern binding " + bindName);
+        }
+        var expectedKind := "";
+        afterBind := syntax.skipTrivia(source, bindEnd, prefix);
+        var checkEqPos := afterBind;
+        if afterBind < size and textLib.at(source, afterBind) == ":" {
+            typed := types.parseLocalType(source, afterBind + 1, prefix, aliases);
+            if typed.writable {
+                syntax.failAt(source, afterBind, prefix, "mut is not supported in record pattern type constraints");
+            }
+            expectedKind = typed.kind;
+            checkEqPos = syntax.skipTrivia(source, typed.next, prefix);
+        }
+        var sourceField := "";
+        var clauseEnd := checkEqPos;
+        if syntax.isSingleEquals(source, checkEqPos) {
+            fieldStart := syntax.skipTrivia(source, checkEqPos + 1, prefix);
+            if fieldStart >= size or not textLib.isNameStart(textLib.at(source, fieldStart)) {
+                syntax.failAt(source, fieldStart, prefix, "expected source field name after =");
+            }
+            fieldEnd := textLib.skipName(source, fieldStart);
+            sourceField = textLib.slice(source, fieldStart, fieldEnd);
+            if syntax.isReservedWord(sourceField) { syntax.unsupportedFeature(source, fieldStart, sourceField, prefix); }
+            clauseEnd = syntax.skipTrivia(source, fieldEnd, prefix);
+        } else if expectedKind =!= "" {
+            if bindName == "_" {
+                syntax.failAt(source, bindStart, prefix, "expected = sourceField after _");
+            }
+            sourceField = bindName;
+        } else {
+            syntax.failAt(source, checkEqPos, prefix, "expected = sourceField or : Type in record pattern clause " + bindName);
+        }
+        if bindName =!= "_" { listLib.pushBack(mut seenBinds, bindName); }
+        encoded = encoded + types.encodeLengthPrefixedText(bindName) + types.encodeLengthPrefixedText(sourceField) + types.encodeLengthPrefixedText(expectedKind);
+        count = count + 1;
+        cursor = clauseEnd;
+        if cursor < size and textLib.at(source, cursor) == "," {
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+        } else {
+            break;
+        }
+    }
+    if cursor >= size or textLib.at(source, cursor) =!= "}" {
+        syntax.failAt(source, cursor, prefix, "expected } after record pattern");
+    }
+    if count == 0 {
+        syntax.failAt(source, openPos, prefix, "record destructuring needs at least one field clause");
+    }
+    (count = count, encodedClauses = encoded, next = cursor + 1)
+};
+
 /** Parses name-headed primaries: `Unit`, `true`/`false`, `not`, `if`/`match`/`loop`, `fn`, `self`, locals, module functions, and list intrinsics. */
 parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     nameStart := start;
@@ -611,6 +803,24 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         }
         return (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
     }
+    if afterName < textLib.length(source) and textLib.at(source, afterName) == "{" and types.findAlias(aliases, name) >= 0 {
+        var resolvedRec := "";
+        if inferMode {
+            emptySeen: List<String> = [];
+            canRes := types.canResolveTypeAt(source, nameStart, prefix, aliases, "", emptySeen, 32);
+            if not canRes.ok or not types.isRecordKind(canRes.kind) {
+                return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
+            }
+            resolvedRec = canRes.kind;
+        } else {
+            emptySeen: List<String> = [];
+            resolvedRec = types.resolveAliasKind(source, nameStart, prefix, aliases, name, emptySeen);
+            if not types.isRecordKind(resolvedRec) {
+                syntax.failAt(source, nameStart, prefix, "record construction requires a record type, got " + types.displayKind(resolvedRec));
+            }
+        }
+        return parseRecordLiteral(target, source, afterName, prefix, locals, functions, params, currentName, resolvedRec, ctxs, iifeDepth, inferMode, aliases);
+    }
     syntax.failAt(source, nameStart, prefix, "unknown value " + name);
     ctx.intParsed("", 0, true, start)
 };
@@ -657,7 +867,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     emptyFuturesHere: List<FutureValue> = [];
     emptyItemsHere: List<Item> = [];
     nextAliasDepth := types.maxAliasDepth(aliases) + 1;
-    blockAliases := types.collectBlockTypeAliases(source, start, prefix, nextAliasDepth, aliases);
+    var blockAliases := types.collectBlockTypeAliases(source, start, prefix, nextAliasDepth, aliases);
     declaredInBlock: mut List<String> = [];
     var seedBag := "";
     loop ctx.seedBlockDeclaredNames(bodySink) as seededName {
@@ -709,6 +919,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         lastPartialIfDiverges = false;
         var isStatement := false;
         var destructureOpen := -1;
+        var recDestructureOpen := -1;
         var destructureMutable := false;
         chAtCursor := textLib.at(source, cursor);
         if chAtCursor == "(" {
@@ -717,14 +928,118 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
                 destructureOpen = cursor;
             }
+        } else if chAtCursor == "{" {
+            braceEnd := syntax.scanBraceEnd(source, cursor, prefix);
+            afterBrace := if braceEnd >= 0 { syntax.skipTrivia(source, braceEnd, prefix) } else { -1 };
+            if afterBrace >= 0 and textLib.startsWithAt(source, afterBrace, ":=") {
+                recDestructureOpen = cursor;
+            }
         } else if chAtCursor == "v" and textLib.wordAt(source, cursor, "var") {
             afterVar := syntax.skipTrivia(source, cursor + 3, prefix);
             if afterVar < blockSourceSize and textLib.at(source, afterVar) == "(" {
                 destructureOpen = afterVar;
                 destructureMutable = true;
+            } else if afterVar < blockSourceSize and textLib.at(source, afterVar) == "{" {
+                recDestructureOpen = afterVar;
+                destructureMutable = true;
+            } else if afterVar < blockSourceSize and textLib.isNameStart(textLib.at(source, afterVar)) {
+                varPatEnd := syntax.skipTrivia(source, textLib.skipName(source, afterVar), prefix);
+                if varPatEnd < blockSourceSize and textLib.at(source, varPatEnd) == "{" {
+                    patBraceEnd := syntax.scanBraceEnd(source, varPatEnd, prefix);
+                    afterPatBrace := if patBraceEnd >= 0 { syntax.skipTrivia(source, patBraceEnd, prefix) } else { -1 };
+                    if afterPatBrace >= 0 and textLib.startsWithAt(source, afterPatBrace, ":=") {
+                        syntax.failAt(source, afterVar, prefix, "construction-shaped record pattern is not allowed; omit the type name");
+                    }
+                }
             }
         }
-        if destructureOpen >= 0 {
+        if recDestructureOpen >= 0 {
+            isStatement = true;
+            recPattern := parseRecordDestructurePattern(source, recDestructureOpen, prefix, blockAliases);
+            afterRecTarget := syntax.skipTrivia(source, recPattern.next, prefix);
+            if not textLib.startsWithAt(source, afterRecTarget, ":=") {
+                syntax.failAt(source, afterRecTarget, prefix, "expected := after record destructuring target");
+            }
+            rhs := parseBinaryCtx(target, source, syntax.skipTrivia(source, afterRecTarget + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+            if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, rhs); }
+            if target == ir.TARGET_TS and not inferMode and not blockExits {
+                trace.checkTraceSafety(source, recDestructureOpen, prefix, rhs.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
+            }
+            if not types.isRecordKind(rhs.kind) {
+                syntax.failAt(source, recDestructureOpen, prefix, "record destructuring requires a record value, got " + types.displayKind(rhs.kind));
+            }
+            statementNext := syntax.consumeStatementEnd(source, rhs.next, prefix);
+            if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, rhs.next, prefix), prefix, "expected ; after record destructuring"); }
+            if target == ir.TARGET_TS and not inferMode and not blockExits {
+                blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, rhs.code);
+            }
+            tempRuntime := ir.freshScopeTemp(blockLocals, "lite$rec");
+            recFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(rhs.kind) { trace.computeCallableRhsDeps(rhs.code) } else { "" };
+            listLib.pushBack(mut blockLocals, (name = "$rec", runtime = tempRuntime, kind = ir.VALUE_KIND_UNIT,
+            mutable = false, writable = false, depth = blockLexDepth, constant = false, code = recFnDeps,
+            intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+            if not blockExits {
+                listLib.pushBack(mut statements, "const " + tempRuntime + " = " + rhs.code + "; void " + tempRuntime + ";");
+                listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, rhs.kind, rhs.code) { tempRuntime } else { "" });
+                listLib.pushBack(mut stmtDeps, rhs.code);
+                trackedStmtCount = trackedStmtCount + 1;
+            }
+            pendingRecNames: mut List<String> = [];
+            var clCursor := 0;
+            var clIndex := 0;
+            loop clIndex < recPattern.count {
+                bindPart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, clCursor);
+                fieldPart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, bindPart.next);
+                typePart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, fieldPart.next);
+                clCursor = typePart.next;
+                bindName := bindPart.text;
+                sourceField := fieldPart.text;
+                expectedFieldKind := typePart.text;
+                sourceFieldKind := types.recordFieldKind(rhs.kind, sourceField);
+                if sourceFieldKind == "" {
+                    syntax.failAt(source, recDestructureOpen, prefix, "record " + types.recordDisplayName(rhs.kind) + " has no field " + sourceField);
+                }
+                var bindKind := sourceFieldKind;
+                if expectedFieldKind =!= "" {
+                    if not types.isCompatibleKind(expectedFieldKind, sourceFieldKind) {
+                        syntax.failAt(source, recDestructureOpen, prefix, "cannot bind " + types.displayKind(sourceFieldKind) + " field " + sourceField + " as " + types.displayKind(expectedFieldKind));
+                    }
+                    bindKind = expectedFieldKind;
+                }
+                if bindName =!= "_" {
+                    ctx.rejectDuplicateInBlockNames(source, recDestructureOpen, prefix, declaredInBlock, bindName);
+                    if not listLib.listContainsText(pendingRecNames, bindName) {
+                        listLib.pushBack(mut pendingRecNames, bindName);
+                    }
+                    bindRuntime := trace.claimOrMakeLocalRuntime(target, blockLocals, bindName, "", blockLexDepth);
+                    fieldProp := types.recordComponentProp(rhs.kind, sourceField);
+                    fieldCode := ctx.assignValueCode(target, bindKind, sourceFieldKind, tempRuntime + "." + fieldProp);
+                    fieldFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(bindKind) {
+                        "|" + tempRuntime + "|\n|" + tempRuntime + "|"
+                    } else {
+                        ""
+                    };
+                    listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = bindKind,
+                    mutable = destructureMutable, writable = false, depth = blockLexDepth, constant = false, code = fieldFnDeps,
+                    intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+                    if not blockExits {
+                        declKw := if destructureMutable { "let " } else { "const " };
+                        tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(bindKind) { ": " + types.tsFunctionType(bindKind) } else { "" };
+                        listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + fieldCode + "; void " + bindRuntime + ";");
+                        listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, bindKind, fieldCode) { bindRuntime } else { "" });
+                        listLib.pushBack(mut stmtDeps, fieldCode);
+                        trackedStmtCount = trackedStmtCount + 1;
+                    }
+                }
+                clIndex = clIndex + 1;
+            }
+            loop pendingRecNames as recBindName {
+                listLib.pushBack(mut declaredInBlock, recBindName);
+            }
+            if not blockExits { statementCount = statementCount + 1; }
+            blockConstant = false;
+            cursor = statementNext;
+        } else if destructureOpen >= 0 {
             isStatement = true;
             destructure := syntax.parseTupleDestructureTarget(source, destructureOpen, prefix);
             afterTarget := syntax.skipTrivia(source, destructure.next, prefix);
@@ -787,7 +1102,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 intValue = rhs.intValue, textValue = rhs.textValue, initState = ir.INIT_STATE_INIT));
                 if not blockExits {
                     declKw := if destructureMutable { "let " } else { "const " };
-                    tsTypeAnn := if target == ir.TARGET_TS and (types.isListKind(rhs.kind) or types.isArrayKind(rhs.kind) or types.containsFnKind(rhs.kind)) { ": " + types.tsFunctionType(rhs.kind) } else { "" };
+                    tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(rhs.kind) { ": " + types.tsFunctionType(rhs.kind) } else { "" };
                     groupedCode := ctx.copiedValueCode(target, rhs.kind, rhs.code);
                     listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + groupedCode + "; void " + bindRuntime + ";");
                     listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, rhs.kind, groupedCode) { bindRuntime } else { "" });
@@ -849,7 +1164,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
                     if not blockExits {
                         declKw := if destructureMutable { "let " } else { "const " };
-                        tsTypeAnn := if target == ir.TARGET_TS and (types.isListKind(comp.kind) or types.isArrayKind(comp.kind) or types.containsFnKind(comp.kind)) { ": " + types.tsFunctionType(comp.kind) } else { "" };
+                        tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(comp.kind) { ": " + types.tsFunctionType(comp.kind) } else { "" };
                         listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + fieldCode + "; void " + bindRuntime + ";");
                         listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, comp.kind, fieldCode) { bindRuntime } else { "" });
                         listLib.pushBack(mut stmtDeps, fieldCode);
@@ -1107,7 +1422,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     fnResult := fnCtx.valKind;
                     if retValStart >= blockSourceSize or textLib.at(source, retValStart) == ";" or textLib.at(source, retValStart) == "}" {
                         if fnResult =!= ir.VALUE_KIND_UNIT {
-                            syntax.failAt(source, itemStart, prefix, "function " + currentName + " must return " + fnResult);
+                            syntax.failAt(source, itemStart, prefix, "function " + currentName + " must return " + types.displayKind(fnResult));
                         }
                         stmtNext := syntax.consumeStatementEnd(source, retValStart, prefix);
                         if stmtNext < 0 { syntax.failAt(source, retValStart, prefix, "expected ; after return"); }
@@ -1592,6 +1907,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     stmtNext := syntax.consumeStatementEnd(source, loopBody.next, prefix);
                     cursor = if stmtNext >= 0 { stmtNext } else { loopBody.next };
                 }
+            } else if afterItemName < textLib.length(source) and textLib.at(source, afterItemName) == "{" and
+            textLib.startsWithAt(source, syntax.skipTrivia(source, syntax.scanBraceEnd(source, afterItemName, prefix), prefix), ":=") {
+                syntax.failAt(source, itemStart, prefix, "construction-shaped record pattern is not allowed; omit the type name");
             } else if itemName == "pub" {
                 syntax.failAt(source, itemStart, prefix, "pub is only allowed on top-level declarations");
             } else if itemName == "import" {
@@ -1629,6 +1947,26 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 afterAliasTarget := syntax.consumeStatementEnd(source, aliasEntry.end, prefix);
                 if afterAliasTarget < 0 { types.unsupportedAliasTarget(source, aliasEntry.at, prefix, "target"); }
                 cursor = afterAliasTarget;
+            } else if textLib.startsWithAt(source, afterItemName, ":=") and
+            textLib.wordAt(source, syntax.skipTrivia(source, afterItemName + 2, prefix), "record") {
+                isStatement = true;
+                if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
+                var earlierInnerAlias := false;
+                loop blockAliases as alias {
+                    if alias.name == itemName and alias.depth == nextAliasDepth and alias.at < itemStart {
+                        earlierInnerAlias = true;
+                    }
+                }
+                if earlierInnerAlias {
+                    syntax.failAt(source, itemStart, prefix, "duplicate type alias " + itemName);
+                }
+                ctx.rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
+                listLib.pushBack(mut declaredInBlock, itemName);
+                recPos := syntax.skipTrivia(source, afterItemName + 2, prefix);
+                parsedRec := parseRecordDecl(target, source, recPos, itemStart, itemName, nextAliasDepth, prefix, blockLocals, functions, params, currentName, ctxs, bodyDepth, inferMode, blockAliases);
+                if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, (kind = parsedRec.kind, code = "", intValue = 0, textValue = parsedRec.markers, constant = false, next = parsedRec.next)); }
+                blockAliases = types.appendEncodedRecordDefaults(blockAliases, parsedRec.kind, parsedRec.encodedDefaults, nextAliasDepth);
+                cursor = parsedRec.next;
             } else if itemName == "var" {
                 isStatement = true;
                 var localStart := syntax.skipTrivia(source, itemEnd, prefix);
@@ -1709,7 +2047,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         blockExits = true;
                     } else {
                         varInitCode := ctx.assignValueCode(target, declParsed.kind, declParsed.kind, declParsed.code);
-                        tsTypeAnn := if target == ir.TARGET_TS and (types.isListKind(declParsed.kind) or types.isArrayKind(declParsed.kind) or types.containsFnKind(declParsed.kind)) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
+                        tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
                         listLib.pushBack(mut statements, "let " + runtime + tsTypeAnn + " = " + varInitCode + "; void " + runtime + ";");
                         listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, declParsed.kind, varInitCode) { runtime } else { "" });
                         listLib.pushBack(mut stmtDeps, varInitCode);
@@ -1754,7 +2092,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 intValue = declParsed.intValue, textValue = declParsed.textValue, initState = ir.INIT_STATE_INIT));
                 if not blockExits {
                     mutInitCode := ctx.copiedValueCode(target, declParsed.kind, declParsed.code);
-                    tsTypeAnn := if target == ir.TARGET_TS and (types.isListKind(declParsed.kind) or types.isArrayKind(declParsed.kind) or types.containsFnKind(declParsed.kind)) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
+                    tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
                     listLib.pushBack(mut statements, "const " + runtime + tsTypeAnn + " = " + mutInitCode + "; void " + runtime + ";");
                     listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, declParsed.kind, mutInitCode) { runtime } else { "" });
                     listLib.pushBack(mut stmtDeps, mutInitCode);
@@ -1765,6 +2103,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 cursor = statementNext;
             } else if textLib.startsWithAt(source, afterItemName, ":=") and
             not textLib.wordAt(source, syntax.skipTrivia(source, afterItemName + 2, prefix), "type") and
+            not textLib.wordAt(source, syntax.skipTrivia(source, afterItemName + 2, prefix), "record") and
             not textLib.wordAt(source, syntax.skipTrivia(source, afterItemName + 2, prefix), "import") {
                 isStatement = true;
                 if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
@@ -1788,7 +2127,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 intValue = declParsed.intValue, textValue = declParsed.textValue, initState = ir.INIT_STATE_INIT));
                 if not blockExits {
                     valInitCode := ctx.copiedValueCode(target, declParsed.kind, declParsed.code);
-                    tsTypeAnn := if target == ir.TARGET_TS and (types.isListKind(declParsed.kind) or types.isArrayKind(declParsed.kind) or types.containsFnKind(declParsed.kind)) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
+                    tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
                     listLib.pushBack(mut statements, "const " + runtime + tsTypeAnn + " = " + valInitCode + "; void " + runtime + ";");
                     listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, declParsed.kind, valInitCode) { runtime } else { "" });
                     listLib.pushBack(mut stmtDeps, valInitCode);
@@ -1844,7 +2183,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         blockExits = true;
                     } else {
                         declKw := if declInitState == ir.INIT_STATE_INIT { "const " } else { "let " };
-                        tsTypeAnn := if target == ir.TARGET_TS and (types.isListKind(typed.kind) or types.isArrayKind(typed.kind) or types.containsFnKind(typed.kind)) { ": " + types.tsFunctionType(typed.kind) } else { "" };
+                        tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(typed.kind) { ": " + types.tsFunctionType(typed.kind) } else { "" };
                         listLib.pushBack(mut statements, declKw + runtime + tsTypeAnn + " = " + declCode + "; void " + runtime + ";");
                         listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, typed.kind, declCode) { runtime } else { "" });
                         listLib.pushBack(mut stmtDeps, declCode);
@@ -3404,6 +3743,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     left = ctx.withMarkers((kind = types.arrayElementKind(left.kind), code = "(" + left.code + ")[" + integer.intText(fieldIndex) + "]!",
                     intValue = 0, textValue = "", constant = false, next = end),
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                } else if types.isRecordKind(left.kind) {
+                    syntax.failAt(source, postPosition, prefix, "record values do not support positional field access ." + textLib.slice(source, labelStart, end));
                 } else if not types.isTupleKind(left.kind) {
                     syntax.failAt(source, postPosition, prefix, "field access requires a tuple or module value");
                 } else {
@@ -3427,17 +3768,46 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         left = (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = integer.intText(exprStart), intValue = functionIndex, textValue = qualified,
                         constant = false, next = labelEnd);
                     } else {
-                        memberIndex := ir.localIndex(locals, qualified);
-                        if memberIndex < 0 {
-                            syntax.failAt(source, labelStart, prefix, "unknown module member " + qualified);
+                        afterMemberLabel := syntax.skipTrivia(source, labelEnd, prefix);
+                        if afterMemberLabel < textLib.length(source) and textLib.at(source, afterMemberLabel) == "{" and types.findAlias(aliases, qualified) >= 0 {
+                            var modRecKind := "";
+                            if inferMode {
+                                emptySeen: List<String> = [];
+                                canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
+                                if not canRes.ok or not types.isRecordKind(canRes.kind) {
+                                    return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                                }
+                                modRecKind = canRes.kind;
+                            } else {
+                                emptySeen: List<String> = [];
+                                modRecKind = types.resolveAliasKind(source, labelStart, prefix, aliases, qualified, emptySeen);
+                                if not types.isRecordKind(modRecKind) {
+                                    syntax.failAt(source, labelStart, prefix, "record construction requires a record type, got " + types.displayKind(modRecKind));
+                                }
+                            }
+                            left = parseRecordLiteral(target, source, afterMemberLabel, prefix, locals, functions, params, currentName, modRecKind, ctxs, iifeDepth, inferMode, aliases);
+                        } else {
+                            memberIndex := ir.localIndex(locals, qualified);
+                            if memberIndex < 0 {
+                                syntax.failAt(source, labelStart, prefix, "unknown module member " + qualified);
+                            }
+                            if syntax.isSingleEquals(source, syntax.skipTrivia(source, labelEnd, prefix)) {
+                                syntax.failAt(source, labelStart, prefix, "module members are immutable");
+                            }
+                            member := locals[memberIndex];
+                            left = (kind = member.kind, code = member.runtime, intValue = member.intValue,
+                            textValue = member.textValue, constant = member.constant, next = labelEnd);
                         }
-                        if syntax.isSingleEquals(source, syntax.skipTrivia(source, labelEnd, prefix)) {
-                            syntax.failAt(source, labelStart, prefix, "module members are immutable");
-                        }
-                        member := locals[memberIndex];
-                        left = (kind = member.kind, code = member.runtime, intValue = member.intValue,
-                        textValue = member.textValue, constant = member.constant, next = labelEnd);
                     }
+                } else if types.isRecordKind(left.kind) {
+                    fieldKind := types.recordFieldKind(left.kind, label);
+                    if fieldKind == "" {
+                        syntax.failAt(source, labelStart, prefix, "record " + types.recordDisplayName(left.kind) + " has no field " + label);
+                    }
+                    prop := types.recordComponentProp(left.kind, label);
+                    left = ctx.withMarkers((kind = fieldKind, code = "(" + left.code + ")." + prop,
+                    intValue = 0, textValue = "", constant = false, next = labelEnd),
+                    if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                 } else {
                     if not types.isTupleKind(left.kind) {
                         syntax.failAt(source, postPosition, prefix, "field access requires a tuple or module value");
@@ -3824,7 +4194,11 @@ pub parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: 
     } else if ch == "@" {
         left = parseTagPrefixExpr(target, source, start, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, aliases);
     } else if ch == "{" {
-        left = parseBlockExpr(target, source, start, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, bodySink, aliases);
+        if bodySink == "" and types.isRecordKind(expected) {
+            left = parseRecordLiteral(target, source, start, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
+        } else {
+            left = parseBlockExpr(target, source, start, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, bodySink, aliases);
+        }
     } else if textLib.isNameStart(ch) {
         left = parseNamedPrimaryExpr(target, source, start, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, aliases);
     } else if ch == "." {
@@ -3999,4 +4373,87 @@ pub parseExpressionItem := fn(target: String, source: String, position: Int, pre
         " returning " + types.displayKind(currentResult));
     }
     (next = next, returned = returned, code = if returned { if parsed.kind == ir.VALUE_KIND_UNIT { ir.targetUnitEvaluationCode(target, parsed.code) } else { ctx.assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
+};
+
+/** Parses `Name := record { field: Type [= default]; ... }`, validating field names, types, defaults, and returning the canonical kind and encoded defaults. */
+pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart: Int, recName: String, aliasDepth: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): (kind: String, encodedDefaults: String, markers: String, next: Int) {
+    size := textLib.length(source);
+    bracePos := syntax.skipTrivia(source, recPos + 6, prefix);
+    if bracePos >= size or textLib.at(source, bracePos) =!= "{" {
+        syntax.failAt(source, bracePos, prefix, "expected { after record");
+    }
+    scopedAliases := types.aliasesUpToDepth(aliases, aliasDepth);
+    seenRec: mut List<String> = [integer.intText(aliasDepth) + ":" + recName];
+    fieldNames: mut List<String> = [];
+    defaultKeys: mut List<String> = [];
+    defaultCodes: mut List<String> = [];
+    var markers := "";
+    var cursor := bracePos + 1;
+    loop true {
+        cursor = syntax.skipItemSeparators(source, cursor, prefix);
+        if cursor >= size {
+            syntax.failAt(source, bracePos, prefix, "expected } after record fields");
+        }
+        if textLib.at(source, cursor) == "}" {
+            cursor = cursor + 1;
+            break;
+        }
+        if not textLib.isNameStart(textLib.at(source, cursor)) {
+            syntax.failAt(source, cursor, prefix, "expected a record field name");
+        }
+        fStart := cursor;
+        fEnd := textLib.skipName(source, fStart);
+        fName := textLib.slice(source, fStart, fEnd);
+        if syntax.isReservedWord(fName) {
+            syntax.unsupportedFeature(source, fStart, fName, prefix);
+        }
+        if listLib.listContainsText(fieldNames, fName) {
+            syntax.failAt(source, fStart, prefix, "duplicate record field " + fName);
+        }
+        listLib.pushBack(mut fieldNames, fName);
+        afterField := syntax.skipTrivia(source, fEnd, prefix);
+        if afterField >= size or textLib.at(source, afterField) =!= ":" {
+            syntax.failAt(source, afterField, prefix, "expected : after record field " + fName);
+        }
+        typeStart := syntax.skipTrivia(source, afterField + 1, prefix);
+        fieldType := types.parseTypeWithSeen(source, fStart, true, source, typeStart, prefix, scopedAliases, "record field", "", seenRec);
+        if fieldType.kind == ir.VALUE_KIND_UNIT {
+            syntax.failAt(source, fStart, prefix, "unsupported record field type Unit");
+        }
+        afterType := syntax.skipTrivia(source, fieldType.next, prefix);
+        var nextCursor := afterType;
+        var lastTokenPos := fieldType.next;
+        if syntax.isSingleEquals(source, afterType) {
+            defStart := syntax.skipTrivia(source, afterType + 1, prefix);
+            defParsed := parseBinaryCtx(target, source, defStart, prefix, locals, functions, params, currentName, fieldType.kind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, defParsed); }
+            if not types.isCompatibleKind(fieldType.kind, defParsed.kind) {
+                syntax.failAt(source, defStart, prefix, "cannot initialize " + types.displayKind(fieldType.kind) + " field " + fName + " with " + types.displayKind(defParsed.kind));
+            }
+            if defParsed.kind == ir.VALUE_KIND_NEVER {
+                syntax.failAt(source, defStart, prefix, "record field default " + fName + " cannot diverge");
+            }
+            converted := ctx.assignValueCode(target, fieldType.kind, defParsed.kind, defParsed.code);
+            listLib.pushBack(mut defaultKeys, fName);
+            listLib.pushBack(mut defaultCodes, converted);
+            lastTokenPos = defParsed.next;
+            nextCursor = syntax.skipTrivia(source, defParsed.next, prefix);
+        }
+        if nextCursor < size and textLib.at(source, nextCursor) == ";" {
+            cursor = nextCursor + 1;
+        } else if nextCursor < size and textLib.at(source, nextCursor) == "}" {
+            cursor = nextCursor;
+        } else if lastTokenPos > 0 and textLib.at(source, lastTokenPos - 1) == "}" {
+            cursor = nextCursor;
+        } else {
+            syntax.failAt(source, nextCursor, prefix, "expected ; or } after record field " + fName);
+        }
+    }
+    afterDecl := syntax.consumeStatementEnd(source, cursor, prefix);
+    if afterDecl < 0 {
+        syntax.failAt(source, syntax.skipTrivia(source, cursor, prefix), prefix, "expected ; after record declaration " + recName);
+    }
+    emptySeen: List<String> = [];
+    canonicalKind := types.resolveAliasKind(source, nameStart, prefix, aliases, recName, emptySeen);
+    (kind = canonicalKind, encodedDefaults = types.encodeRecordPairs(defaultKeys, defaultCodes), markers = markers, next = afterDecl)
 };

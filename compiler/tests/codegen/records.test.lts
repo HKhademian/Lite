@@ -1,0 +1,201 @@
+/* Nominal record declaration, initialization, defaults, field access, destructuring, and C rejection tests. */
+
+fs := import "core/file";
+path := import "core/path";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* Explicit, contextual, empty, zeroed, and declared-default record initialization */
+basicRecordsSrc := "io := import \"core/io\";\n" +
+"Empty := record {}\n" +
+"Address := record {\n" +
+"    city: String = \"Unknown\";\n" +
+"    postalCode: Int;\n" +
+"}\n" +
+"User := record {\n" +
+"    name: String;\n" +
+"    age: Int;\n" +
+"    active: Bool = true;\n" +
+"    address: Address;\n" +
+"}\n" +
+"Guess := record { address: Address = {} }\n" +
+"Office := record {\n" +
+"    address: Address = { city = \"Munich\", postalCode = 80331, }\n" +
+"}\n" +
+"e0 := Empty {}\n" +
+"e1: Empty = {}\n" +
+"io.outputLine(e0, e1);\n" +
+"student := User { name = \"Ali\", age = 12, }\n" +
+"ctxStudent: User = { name = \"Sam\", age = 10, }\n" +
+"io.outputLine(student, ctxStudent);\n" +
+"implicit: User;\n" +
+"zeroed: User = 0;\n" +
+"configured: User = {}\n" +
+"io.outputLine(implicit.active, \"|\" + implicit.address.city + \"|\", implicit.address.postalCode);\n" +
+"io.outputLine(zeroed.active, \"|\" + zeroed.address.city + \"|\", zeroed.address.postalCode);\n" +
+"io.outputLine(configured.active, \"|\" + configured.address.city + \"|\", configured.address.postalCode);\n" +
+"g: Guess = {};\n" +
+"z: Guess = 0;\n" +
+"io.outputLine(g.address.city, \"|\" + z.address.city + \"|\");\n" +
+"first := Office {}\n" +
+"second := Office { address = { postalCode = 1000, }, }\n" +
+"io.outputLine(first.address.city, first.address.postalCode, second.address.city, second.address.postalCode);\n" +
+"var u: User = 0;\n" +
+"u = { name = \"Mina\", address = { city = \"Shiraz\" }, };\n" +
+"io.outputLine(u.name, u.age, u.active, u.address.city, u.address.postalCode);\n" +
+"overridden := User { name = \"\", active = false, age = 0 }\n" +
+"io.outputLine(\"|\" + overridden.name + \"|\", overridden.age, overridden.active);\n" +
+"inlineName := (User { name = \"Nora\", }).name;\n" +
+"io.outputLine(inlineName);\n";
+
+compilerTest.assertCompileRunTs(root, tsComp, "records basics defaults zero-init", basicRecordsSrc,
+"Empty {} Empty {}\n" +
+"User { name = Ali, age = 12, active = true, address = Address { city = , postalCode = 0 } } User { name = Sam, age = 10, active = true, address = Address { city = , postalCode = 0 } }\n" +
+"false || 0\n" +
+"false || 0\n" +
+"true || 0\n" +
+"Unknown ||\n" +
+"Munich 80331 Unknown 1000\n" +
+"Mina 0 true Shiraz 0\n" +
+"|| 0 false\n" +
+"Nora\n");
+
+/* Forward-declared records, transparent aliases, block-local records, functions, collections, and destructuring */
+advancedRecordsSrc := "io := import \"core/io\";\n" +
+"intLib := import \"core/int\";\n" +
+"makeDefaultUser := fn(): User { User {} }\n" +
+"User := record {\n" +
+"    name: String = \"Anon\";\n" +
+"    age: Int = 18;\n" +
+"}\n" +
+"Member := type User;\n" +
+"Student := record {\n" +
+"    name: String = \"Anon\";\n" +
+"    age: Int = 18;\n" +
+"}\n" +
+"showMember := fn(m: Member): String {\n" +
+"    { memberName = name, age: Int, } := m;\n" +
+"    memberName + \":\" + intLib.intText(age)\n" +
+"}\n" +
+"u := makeDefaultUser();\n" +
+"m: Member = u;\n" +
+"m2 := Member { name = \"Zara\" };\n" +
+"io.outputLine(showMember(m), showMember(m2));\n" +
+"explicitConv: Student = { name = u.name, age = u.age, };\n" +
+"{ studentName: String = name, _ = age, } := explicitConv;\n" +
+"var { mutAge = age, _ = name } := Student { name = \"Lee\", age = 21 };\n" +
+"mutAge = mutAge + 1;\n" +
+"io.outputLine(studentName, mutAge);\n" +
+"users: List<User> = [User { name = \"A\" }, { name = \"B\", age = 22 }];\n" +
+"fixed: [User; 2] = [User {}, { name = \"C\" }];\n" +
+"paired := (label = \"first\", item = u);\n" +
+"io.outputLine(users[1].name, users[1].age, fixed[1].name, paired.item.age);\n" +
+"innerResult := {\n" +
+"    LocalRec := record { x: Int = 7; y: Int; }\n" +
+"    lr := LocalRec { y = 3 };\n" +
+"    { a = x, b = y } := lr;\n" +
+"    a + b\n" +
+"};\n" +
+"io.outputLine(innerResult);\n";
+
+compilerTest.assertCompileRunTs(root, tsComp, "records aliases forward fn destructuring composites", advancedRecordsSrc,
+"Anon:18 Zara:18\n" +
+"Anon 22\n" +
+"B 22 C 18\n" +
+"10\n");
+
+/* Empty executable bodies keep Unit semantics even when a User is expected in non-initializer control flow */
+unitBodySrc := "io := import \"core/io\";\n" +
+"User := record { active: Bool = true; }\n" +
+"doNothing := fn(): Unit {}\n" +
+"doNothing();\n" +
+"io.outputLine(\"ok\");\n";
+compilerTest.assertCompileRunTs(root, tsComp, "empty fn body still Unit", unitBodySrc, "ok\n");
+
+/* Cross-module pub record and field defaults */
+tmpRes := fs.makeTempDir("lite-rec-mod-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+modDir := tmpRes.path;
+modA := "pub Address := record {\n" +
+"    city: String = \"Tehran\";\n" +
+"    code: Int = 99;\n" +
+"}\n" +
+"pub Config := record {\n" +
+"    host: String = \"localhost\";\n" +
+"    addr: Address = {};\n" +
+"}\n" +
+"pub makeWithHost := fn(host: String): Config {\n" +
+"    Config { host = host, }\n" +
+"}\n";
+modMain := "io := import \"core/io\";\n" +
+"cfgMod := import \"./cfg.lts\";\n" +
+"c0 := cfgMod.Config {}\n" +
+"c1: cfgMod.Config = { addr = { code = 123 } }\n" +
+"c2 := cfgMod.makeWithHost(\"prod\");\n" +
+"{ h = host, a = addr } := c2;\n" +
+"io.outputLine(c0.host, c0.addr.city, c0.addr.code, c1.addr.city, c1.addr.code, h, a.code);\n";
+_w1 := fs.writeText(path.join(modDir, "cfg.lts"), modA);
+_w2 := fs.writeText(path.join(modDir, "main.lts"), modMain);
+modCompile := compilerTest.compileFile(tsComp, modDir, [path.join(modDir, "main.lts")]);
+test.checkInt("cross-module record compile status", 0, modCompile.status);
+test.checkText("cross-module record compile stderr", "", modCompile.stderr);
+modRun := compilerTest.checkAndRunTs(root, modCompile.stdout);
+test.checkInt("cross-module record run status", 0, modRun.status);
+test.checkText("cross-module record run stdout", "localhost Tehran 99 Tehran 123 prod 99\n", modRun.stdout);
+_rm := fs.remove(modDir);
+
+/* C backend rejects record values cleanly */
+cRecordSrc := "User := record { x: Int; }\nu := User { x = 1 };\n";
+cRes := compilerTest.compileStdin(root, cComp, cRecordSrc, "c_record.lts");
+test.checkInt("C record rejected", 2, cRes.status);
+test.check("C record message: " + cRes.stderr, text.containsText(cRes.stderr, "C backend does not support record values yet"));
+
+/* Negative diagnostics */
+badRecSrc: List<String> = [
+"User := record { name: String; age: Int; }\nStudent := record { name: String; age: Int; }\nu := User { name = \"Ali\", age = 10, }\ns: Student = u;\n",
+"User := record { name: String; age: Int; }\nu := User { \"Ali\", 10, };\n",
+"User := record { name: String; age: Int; }\nu := User { name = \"Ali\", age = 10, }\nx := u.0;\n",
+"User := record { name: String; age: Int; }\nu := User { name = \"Ali\", age = 10, }\n(a, b) := u;\n",
+"Student := record { name: String; grade: Int; }\nstudent := Student { name = \"Ali\", grade = 12, }\nStudent { studentName = name, studentGrade = grade, } := student;\n",
+"User := record { name: String; age: Int; }\nu := User { name = \"Ali\", name = \"Sam\" }\n",
+"User := record { name: String; age: Int; }\nu := User { unknown = 1 }\n",
+"User := record { name: String; }\nu := User { name = \"A\" }\n{ name } := u;\n",
+"Node := record { next: Node; }\nx: Node;\n",
+"A := record { b: B; }\nB := record { a: A; }\nx: A;\n",
+"User := record { x: Int; }\nf := fn(): User { {} }\n",
+"User := record { x: Int; }\na := User { x = 1 }\nb := User { x = 1 }\nc := a == b;\n",
+];
+badRecErr: List<String> = [
+"cannot initialize Student with User",
+"expected field name in record construction",
+"record values do not support positional field access .0",
+"tuple destructuring requires a tuple value, got User",
+"construction-shaped record pattern is not allowed",
+"duplicate record field name",
+"record User has no field unknown",
+"expected = sourceField or : Type in record pattern clause name",
+"recursive type alias Node",
+"recursive type alias A",
+"function f must return User",
+"cannot compare record values",
+];
+var bi := 0;
+loop bi < 12 {
+    compilerTest.assertCompileErrorContains(root, tsComp, "bad record " + badRecSrc[bi], badRecSrc[bi], badRecErr[bi]);
+    bi = bi + 1;
+}
+
+test.done("records");

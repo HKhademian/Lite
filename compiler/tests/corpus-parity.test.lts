@@ -238,9 +238,9 @@ if ccInfo.available and not skipHeavy {
 }
 
 /* compiler applications reject fixture sources with exact diagnostics, positions and docs before artifact output */
-recErr := "1:6: unsupported feature \"record\": see docs/types-and-inference.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n";
-compilerTest.assertCompileError(root, tsComp, "record TS", "x := record { };", recErr);
-compilerTest.assertCompileError(root, cComp, "record C", "x := record { };", recErr);
+recErr := "1:1: unsupported feature \"record\": see docs/types-and-inference.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n";
+compilerTest.assertCompileError(root, tsComp, "record TS", "record Foo { };", recErr);
+compilerTest.assertCompileError(root, cComp, "record C", "record Foo { };", recErr);
 missErr := "2:6: expected an Int, Float, String or Bool expression\n";
 compilerTest.assertCompileError(root, tsComp, "missing TS", "x := 1;\ny := ;\n", missErr);
 compilerTest.assertCompileError(root, cComp, "missing C", "x := 1;\ny := ;\n", missErr);

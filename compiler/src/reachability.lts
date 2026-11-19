@@ -324,23 +324,24 @@ pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuc
 /** True when `kind` represents a top-level value or mutable variable declaration item. */
 isTopDeclKind := fn(kind: String): Bool {
     kind == ir.ITEM_KIND_LOCAL_INT or kind == ir.ITEM_KIND_LOCAL_STRING or kind == ir.ITEM_KIND_LOCAL_BOOL or kind == ir.ITEM_KIND_LOCAL_FLOAT or
-    kind == ir.ITEM_KIND_LOCAL_TUPLE or kind == ir.ITEM_KIND_LOCAL_LIST or kind == ir.ITEM_KIND_LOCAL_FN or kind == ir.ITEM_KIND_LOCAL_UNIT or
+    kind == ir.ITEM_KIND_LOCAL_TUPLE or kind == ir.ITEM_KIND_LOCAL_RECORD or kind == ir.ITEM_KIND_LOCAL_LIST or kind == ir.ITEM_KIND_LOCAL_FN or kind == ir.ITEM_KIND_LOCAL_UNIT or
     kind == ir.ITEM_KIND_VAR_INT or kind == ir.ITEM_KIND_VAR_STRING or kind == ir.ITEM_KIND_VAR_BOOL or kind == ir.ITEM_KIND_VAR_FLOAT or
-    kind == ir.ITEM_KIND_VAR_TUPLE or kind == ir.ITEM_KIND_VAR_LIST or kind == ir.ITEM_KIND_VAR_FN or kind == ir.ITEM_KIND_VAR_UNIT
+    kind == ir.ITEM_KIND_VAR_TUPLE or kind == ir.ITEM_KIND_VAR_RECORD or kind == ir.ITEM_KIND_VAR_LIST or kind == ir.ITEM_KIND_VAR_FN or kind == ir.ITEM_KIND_VAR_UNIT
 };
 
 /** True when `kind` and `code` only use scalar/unit features valid for scalar C dead-code pruning, preserving unsupported-type checks. */
 pub isCSupportedKindAndCode := fn(kind: String, code: String): Bool {
-    not types.isTupleKind(kind) and not types.isListKind(kind) and not types.isArrayKind(kind) and not types.containsFnKind(kind) and
+    not types.isTupleKind(kind) and not types.isRecordKind(kind) and not types.isListKind(kind) and not types.isArrayKind(kind) and not types.containsFnKind(kind) and
     not codeUsesValueIf(code) and not codeUsesListCopy(code) and not codeUsesListIndex(code) and not codeUsesListPop(code)
 };
 
 /** True when `item` uses a C-unsupported construct that must stay visible to `emitProgram` diagnostics. */
 isCUnsupportedItem := fn(item: Item): Bool {
     item.kind == ir.ITEM_KIND_LOCAL_TUPLE or item.kind == ir.ITEM_KIND_VAR_TUPLE or item.kind == ir.ITEM_KIND_ASSIGN_TUPLE or
+    item.kind == ir.ITEM_KIND_LOCAL_RECORD or item.kind == ir.ITEM_KIND_VAR_RECORD or item.kind == ir.ITEM_KIND_ASSIGN_RECORD or
     item.kind == ir.ITEM_KIND_LOCAL_LIST or item.kind == ir.ITEM_KIND_VAR_LIST or item.kind == ir.ITEM_KIND_ASSIGN_LIST or
     item.kind == ir.ITEM_KIND_LOCAL_FN or item.kind == ir.ITEM_KIND_VAR_FN or item.kind == ir.ITEM_KIND_ASSIGN_FN or
-    (item.kind == ir.ITEM_KIND_DISCARD and (types.isTupleKind(item.name) or types.isListKind(item.name) or
+    (item.kind == ir.ITEM_KIND_DISCARD and (types.isTupleKind(item.name) or types.isRecordKind(item.name) or types.isListKind(item.name) or
     types.isArrayKind(item.name) or types.containsFnKind(item.name))) or
     codeUsesValueIf(item.code) or codeUsesListCopy(item.code) or codeUsesListIndex(item.code) or codeUsesListPop(item.code)
 };

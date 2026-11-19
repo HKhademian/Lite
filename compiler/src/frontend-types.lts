@@ -391,6 +391,223 @@ pub arrayExtent := fn(kind: String): Int {
     syntax.parseDigits(kind, semi + 1, textLib.length(kind) - 1)
 };
 
+/** True when `kind` is this compiler's canonical nominal record kind `Record<id#at#DisplayName;f1:K1,...>`. */
+pub isRecordKind := fn(kind: String): Bool {
+    size := textLib.length(kind);
+    size > 8 and textLib.startsWithAt(kind, 0, "Record<") and textLib.at(kind, size - 1) == ">"
+};
+
+/** Finds the top-level `;` separating header metadata from fields in `Record<id#at#Name;...>`, or -1 when malformed. */
+recordHeaderSemi := fn(kind: String): Int {
+    if not isRecordKind(kind) { return -1; }
+    textLib.indexOfText(kind, ";", 7)
+};
+
+/** Returns the source declaration display name from canonical `Record<id#at#DisplayName;...>`. */
+pub recordDisplayName := fn(kind: String): String {
+    semi := recordHeaderSemi(kind);
+    if semi <= 7 { return kind; }
+    var pos := semi - 1;
+    loop pos >= 7 and textLib.at(kind, pos) =!= "#" {
+        pos = pos - 1;
+    }
+    if pos < 7 { return textLib.slice(kind, 7, semi); }
+    textLib.slice(kind, pos + 1, semi)
+};
+
+/** Returns the source declaration character offset encoded inside `Record<id#at#DisplayName;...>`, or -1 when absent. */
+pub recordDeclAt := fn(kind: String): Int {
+    semi := recordHeaderSemi(kind);
+    if semi <= 7 { return -1; }
+    var secondHash := semi - 1;
+    loop secondHash >= 7 and textLib.at(kind, secondHash) =!= "#" {
+        secondHash = secondHash - 1;
+    }
+    if secondHash <= 7 { return -1; }
+    var firstHash := secondHash - 1;
+    loop firstHash >= 7 and textLib.at(kind, firstHash) =!= "#" {
+        firstHash = firstHash - 1;
+    }
+    if firstHash < 7 or firstHash + 1 >= secondHash { return -1; }
+    syntax.parseDigits(kind, firstHash + 1, secondHash)
+};
+
+/** Returns the runtime JS property name for field `label` inside nominal record `kind`, or `""` when absent. */
+pub recordComponentProp := fn(kind: String, label: String): String {
+    semi := recordHeaderSemi(kind);
+    if semi < 0 or label == "" { return ""; }
+    end := textLib.length(kind) - 1;
+    var cursor := semi + 1;
+    var index := 0;
+    loop cursor < end {
+        nameStart := cursor;
+        cursor = textLib.skipName(kind, cursor);
+        fieldLabel := textLib.slice(kind, nameStart, cursor);
+        if cursor < end and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        cursor = skipKindToken(kind, cursor);
+        if fieldLabel == label {
+            return tupleRuntimeProp(fieldLabel, index);
+        }
+        index = index + 1;
+        if cursor < end and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    ""
+};
+
+/** Returns the number of declared fields in canonical record kind `kind`. */
+pub recordComponentCount := fn(kind: String): Int {
+    semi := recordHeaderSemi(kind);
+    if semi < 0 { return 0; }
+    end := textLib.length(kind) - 1;
+    var cursor := semi + 1;
+    var count := 0;
+    loop cursor < end {
+        if textLib.at(kind, cursor) =!= ":" { cursor = textLib.skipName(kind, cursor); }
+        if cursor < end and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        cursor = skipKindToken(kind, cursor);
+        count = count + 1;
+        if cursor < end and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    count
+};
+
+/** Returns `(label, kind, prop)` for field `targetIndex` in canonical record kind `kind`. */
+pub recordComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String, prop: String) {
+    semi := recordHeaderSemi(kind);
+    if semi < 0 { return (label = "", kind = "", prop = ""); }
+    end := textLib.length(kind) - 1;
+    var cursor := semi + 1;
+    var index := 0;
+    loop cursor < end {
+        nameStart := cursor;
+        cursor = textLib.skipName(kind, cursor);
+        label := textLib.slice(kind, nameStart, cursor);
+        if cursor < end and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        typeStart := cursor;
+        cursor = skipKindToken(kind, cursor);
+        fieldKind := textLib.slice(kind, typeStart, cursor);
+        if index == targetIndex {
+            return (label = label, kind = fieldKind, prop = tupleRuntimeProp(label, index));
+        }
+        index = index + 1;
+        if cursor < end and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    (label = "", kind = "", prop = "")
+};
+
+/** Returns the canonical field kind for `label` inside nominal record `kind`, or `""` when absent. */
+pub recordFieldKind := fn(kind: String, label: String): String {
+    semi := recordHeaderSemi(kind);
+    if semi < 0 or label == "" { return ""; }
+    end := textLib.length(kind) - 1;
+    var cursor := semi + 1;
+    loop cursor < end {
+        nameStart := cursor;
+        cursor = textLib.skipName(kind, cursor);
+        fieldLabel := textLib.slice(kind, nameStart, cursor);
+        if cursor < end and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        typeStart := cursor;
+        cursor = skipKindToken(kind, cursor);
+        if fieldLabel == label {
+            return textLib.slice(kind, typeStart, cursor);
+        }
+        if cursor < end and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    ""
+};
+
+/** Encodes `text` using `<length>:<text>` so serialized record defaults and raw types never collide with delimiters. */
+pub encodeLengthPrefixedText := fn(text: String): String {
+    integer.intText(textLib.length(text)) + ":" + text
+};
+
+/** Reads one `<length>:<text>` chunk starting at `start` inside `encoded`. */
+pub decodeLengthPrefixedAt := fn(encoded: String, start: Int): (text: String, next: Int) {
+    size := textLib.length(encoded);
+    var cursor := start;
+    loop cursor < size and textLib.isDigit(textLib.at(encoded, cursor)) {
+        cursor = cursor + 1;
+    }
+    if cursor == start or cursor >= size or textLib.at(encoded, cursor) =!= ":" {
+        return (text = "", next = -1);
+    }
+    textLen := syntax.parseDigits(encoded, start, cursor);
+    textStart := cursor + 1;
+    textEnd := textStart + textLen;
+    if textEnd > size { return (text = "", next = -1); }
+    (text = textLib.slice(encoded, textStart, textEnd), next = textEnd)
+};
+
+/** Encodes parallel field names and values into `<count>;<len:k><len:v>...`. */
+pub encodeRecordPairs := fn(keys: List<String>, values: List<String>): String {
+    var count := 0;
+    loop keys { count = count + 1; }
+    if count == 0 { return ""; }
+    var out := integer.intText(count) + ";";
+    var idx := 0;
+    loop idx < count {
+        out = out + encodeLengthPrefixedText(keys[idx]) + encodeLengthPrefixedText(values[idx]);
+        idx = idx + 1;
+    }
+    out
+};
+
+/** Looks up resolved declared default code for `field` of canonical `recordKind` inside `aliases`, or `""` when absent. */
+pub findRecordDefaultCode := fn(aliases: List<AliasDecl>, recordKind: String, field: String): String {
+    idx := findAlias(aliases, "$recdef:" + recordKind + "#" + field);
+    if idx < 0 { "" } else { aliases[idx].target }
+};
+
+/** Appends `$recpop:<recordKind>` and decoded `$recdef:<recordKind>#<field>` entries from serialized `encoded` defaults onto `aliases`. */
+pub appendEncodedRecordDefaults := fn(aliases: List<AliasDecl>, recordKind: String, encoded: String, depth: Int): List<AliasDecl> {
+    out: mut List<AliasDecl> = [];
+    loop aliases as entry { listLib.pushBack(mut out, entry); }
+    listLib.pushBack(mut out, (name = "$recpop:" + recordKind, target = "1", at = -1, end = 0, depth = depth));
+    if encoded == "" { return out; }
+    size := textLib.length(encoded);
+    var semi := 0;
+    loop semi < size and textLib.isDigit(textLib.at(encoded, semi)) {
+        semi = semi + 1;
+    }
+    if semi == 0 or semi >= size or textLib.at(encoded, semi) =!= ";" { return out; }
+    count := syntax.parseDigits(encoded, 0, semi);
+    var cur := semi + 1;
+    var idx := 0;
+    loop idx < count {
+        fName := decodeLengthPrefixedAt(encoded, cur);
+        fCode := decodeLengthPrefixedAt(encoded, fName.next);
+        if fName.next < 0 or fCode.next < 0 { break; }
+        listLib.pushBack(mut out, (name = "$recdef:" + recordKind + "#" + fName.text, target = fCode.text, at = -1, end = 0, depth = depth));
+        cur = fCode.next;
+        idx = idx + 1;
+    }
+    out
+};
+
+/** Collects serialized `$recdef:<recordKind>#<field>` defaults currently in `aliases` for re-export via `pub Alias := type Rec`. */
+pub encodeRecordDefaultsFromAliases := fn(aliases: List<AliasDecl>, recordKind: String): String {
+    if not isRecordKind(recordKind) { return ""; }
+    count := recordComponentCount(recordKind);
+    keys: mut List<String> = [];
+    values: mut List<String> = [];
+    var idx := 0;
+    loop idx < count {
+        comp := recordComponent(recordKind, idx);
+        defCode := findRecordDefaultCode(aliases, recordKind, comp.label);
+        if defCode =!= "" {
+            listLib.pushBack(mut keys, comp.label);
+            listLib.pushBack(mut values, defCode);
+        }
+        idx = idx + 1;
+    }
+    encodeRecordPairs(keys, values)
+};
+
+/** True when TS local/var declarations of `kind` require an explicit type annotation (empty lists, arrays, records, or callables). */
+pub needsTsTypeAnnotation := fn(kind: String): Bool {
+    isListKind(kind) or isArrayKind(kind) or isRecordKind(kind) or containsFnKind(kind)
+};
+
 /** True when `expectedKind` and `actualKind` represent structurally identical kinds modulo callable/tuple parameter labels. */
 exactShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
     if expectedKind == actualKind { return true; }
@@ -441,6 +658,14 @@ pub containsFnKind := fn(kind: String): Bool {
         var idx := 0;
         loop idx < count {
             if self(tupleComponent(kind, idx).kind) { return true; }
+            idx = idx + 1;
+        }
+    }
+    if isRecordKind(kind) {
+        count := recordComponentCount(kind);
+        var idx := 0;
+        loop idx < count {
+            if self(recordComponent(kind, idx).kind) { return true; }
             idx = idx + 1;
         }
     }
@@ -502,6 +727,19 @@ pub tsFunctionType := fn(kind: String): String {
         }
         result + " }"
     }
+    else if isRecordKind(kind) {
+        count := recordComponentCount(kind);
+        if count == 0 { return "{}"; }
+        var result := "{ ";
+        var index := 0;
+        loop index < count {
+            comp := recordComponent(kind, index);
+            if index > 0 { result = result + "; "; }
+            result = result + tupleObjectKey(comp.label, index) + ": " + self(comp.kind);
+            index = index + 1;
+        }
+        result + " }"
+    }
     else if isFnKind(kind) {
         count := fnParamCount(kind);
         var paramsText := "";
@@ -531,6 +769,22 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
     if isListKind(kind) or isArrayKind(kind) {
         element := if isListKind(kind) { listElementKind(kind) } else { arrayElementKind(kind) };
         return "(\"[\" + (" + code + ").map((value: " + tsFunctionType(element) + ") => " + self(element, "value") + ").join(\", \") + \"]\")";
+    }
+    if isRecordKind(kind) {
+        recName := recordDisplayName(kind);
+        count := recordComponentCount(kind);
+        if count == 0 {
+            return "((value: {}): string => { void value; return " + tsLiteral.textLiteralCode(recName + " {}") + "; })(" + code + ")";
+        }
+        var result := tsLiteral.textLiteralCode(recName + " { ");
+        var index := 0;
+        loop index < count {
+            comp := recordComponent(kind, index);
+            separator := if index == 0 { "" } else { ", " };
+            result = result + " + " + tsLiteral.textLiteralCode(separator + comp.label + " = ") + " + " + self(comp.kind, "value." + comp.prop);
+            index = index + 1;
+        }
+        return "((value: " + tsFunctionType(kind) + "): string => " + result + " + " + tsLiteral.textLiteralCode(" }") + ")(" + code + ")";
     }
     if isTupleKind(kind) {
         var result := tsLiteral.textLiteralCode("(");
@@ -574,6 +828,7 @@ pub tupleFieldKind := fn(kind: String, label: String): String {
 
 /** Renders one canonical kind for diagnostics, adding spaces inside flat tuples, lists, and callable signatures. */
 pub displayKind := fn(kind: String): String {
+    if isRecordKind(kind) { return recordDisplayName(kind); }
     if isListKind(kind) { return "List<" + self(listElementKind(kind)) + ">"; }
     if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + integer.intText(arrayExtent(kind)) + "]"; }
     if isFnKind(kind) {
@@ -614,6 +869,39 @@ pub displayKind := fn(kind: String): String {
 pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
     size := textLib.length(source);
     start := syntax.skipTrivia(source, position, prefix);
+    if not useLocalErr and start < size and textLib.startsWithAt(source, start, "@recraw:") {
+        hdr := decodeLengthPrefixedAt(source, start + 8);
+        var cur := hdr.next;
+        var countEnd := cur;
+        loop countEnd < size and textLib.isDigit(textLib.at(source, countEnd)) {
+            countEnd = countEnd + 1;
+        }
+        fieldCount := if countEnd > cur { syntax.parseDigits(source, cur, countEnd) } else { 0 };
+        cur = if countEnd < size and textLib.at(source, countEnd) == ";" { countEnd + 1 } else { countEnd };
+        parts: mut List<String> = [];
+        var idx := 0;
+        loop idx < fieldCount {
+            fName := decodeLengthPrefixedAt(source, cur);
+            fType := decodeLengthPrefixedAt(source, fName.next);
+            cur = fType.next;
+            resolvedField := self(errSource, errPos, false, fType.text, 0, prefix, aliases, "record field", "", seen);
+            if syntax.skipTrivia(fType.text, resolvedField.next, prefix) < textLib.length(fType.text) {
+                syntax.failAt(errSource, errPos, prefix, "unexpected text after type");
+            }
+            if resolvedField.kind == ir.VALUE_KIND_UNIT {
+                syntax.failAt(errSource, errPos, prefix, "unsupported record field type Unit");
+            }
+            listLib.pushBack(mut parts, fName.text + ":" + resolvedField.kind);
+            idx = idx + 1;
+        }
+        return (kind = "Record<" + hdr.text + ";" + textLib.joinTexts(parts, ",") + ">", next = cur);
+    }
+    if not useLocalErr and start < size and textLib.startsWithAt(source, start, "Record<") {
+        end := skipKindToken(source, start);
+        if end > start + 8 and textLib.at(source, end - 1) == ">" and textLib.indexOfText(source, ";", start) > start {
+            return (kind = textLib.slice(source, start, end), next = end);
+        }
+    }
     if start < size and textLib.at(source, start) == "(" {
         var cursor := syntax.skipTrivia(source, start + 1, prefix);
         labels: mut List<String> = [];
@@ -1118,13 +1406,142 @@ pub collectTypeTarget := fn(source: String, position: Int, prefix: String): (tex
     }
 };
 
-/** Pre-collects shallow `Name := type Target` aliases inside the `{ ... }` block opening at `openBracePos`, skipping nested `{ ... }` blocks. */
+/** Skips one `= defaultExpr` inside `record { field: Type = defaultExpr; ... }`, honoring nested braces and omitted semicolons after closing `}`. */
+skipRecordFieldDefault := fn(source: String, start: Int, limit: Int, prefix: String): Int {
+    var cur := start;
+    var braceDepth := 0;
+    var parenDepth := 0;
+    var bracketDepth := 0;
+    loop cur < limit {
+        ch := textLib.at(source, cur);
+        if ch == "\"" {
+            cur = syntax.skipAliasString(source, cur);
+        } else if ch == "/" and textLib.startsWithAt(source, cur, "/*") {
+            cur = syntax.skipComment(source, cur, prefix);
+        } else if ch == "{" {
+            braceDepth = braceDepth + 1;
+            cur = cur + 1;
+        } else if ch == "}" {
+            if braceDepth > 0 {
+                braceDepth = braceDepth - 1;
+                cur = cur + 1;
+                if braceDepth == 0 and parenDepth == 0 and bracketDepth == 0 {
+                    afterClose := syntax.skipTrivia(source, cur, prefix);
+                    if afterClose < limit and textLib.at(source, afterClose) == ";" {
+                        return afterClose + 1;
+                    }
+                    if afterClose >= limit { return cur; }
+                    if not textLib.wordAt(source, afterClose, "else") and not textLib.wordAt(source, afterClose, "then") and
+                    not textLib.wordAt(source, afterClose, "finally") and textLib.at(source, afterClose) =!= "+" and
+                    textLib.at(source, afterClose) =!= "-" and textLib.at(source, afterClose) =!= "*" and
+                    textLib.at(source, afterClose) =!= "/" and textLib.at(source, afterClose) =!= "." and
+                    textLib.at(source, afterClose) =!= "[" and textLib.at(source, afterClose) =!= "(" {
+                        return cur;
+                    }
+                }
+            } else {
+                return cur;
+            }
+        } else if ch == "(" {
+            parenDepth = parenDepth + 1;
+            cur = cur + 1;
+        } else if ch == ")" {
+            if parenDepth > 0 { parenDepth = parenDepth - 1; }
+            cur = cur + 1;
+        } else if ch == "[" {
+            bracketDepth = bracketDepth + 1;
+            cur = cur + 1;
+        } else if ch == "]" {
+            if bracketDepth > 0 { bracketDepth = bracketDepth - 1; }
+            cur = cur + 1;
+        } else if ch == ";" and braceDepth == 0 and parenDepth == 0 and bracketDepth == 0 {
+            return cur + 1;
+        } else {
+            cur = cur + 1;
+        }
+    }
+    cur
+};
+
+/** Pre-scans `Name := record { field: Type [= default]; ... }` into an encoded `@recraw:` target and end offset. */
+pub collectRecordTarget := fn(source: String, bracePos: Int, prefix: String, moduleIdentity: String, declAt: Int, recName: String): (text: String, next: Int) {
+    size := textLib.length(source);
+    start := syntax.skipTrivia(source, bracePos, prefix);
+    if start >= size or textLib.at(source, start) =!= "{" {
+        return (text = "", next = start);
+    }
+    closeEnd := syntax.scanBraceEnd(source, start, prefix);
+    if closeEnd < 0 {
+        return (text = "", next = size);
+    }
+    bodyLimit := closeEnd - 1;
+    var cursor := start + 1;
+    names: mut List<String> = [];
+    typesList: mut List<String> = [];
+    var count := 0;
+    loop cursor < bodyLimit {
+        cursor = syntax.skipItemSeparators(source, cursor, prefix);
+        if cursor >= bodyLimit { break; }
+        if not textLib.isNameStart(textLib.at(source, cursor)) {
+            return (text = "", next = closeEnd);
+        }
+        fStart := cursor;
+        fEnd := textLib.skipName(source, fStart);
+        fName := textLib.slice(source, fStart, fEnd);
+        if syntax.isReservedWord(fName) or listLib.listContainsText(names, fName) {
+            return (text = "", next = closeEnd);
+        }
+        afterField := syntax.skipTrivia(source, fEnd, prefix);
+        if afterField >= bodyLimit or textLib.at(source, afterField) =!= ":" {
+            return (text = "", next = closeEnd);
+        }
+        typeStart := syntax.skipTrivia(source, afterField + 1, prefix);
+        rawType := collectTypeTarget(source, typeStart, prefix);
+        if rawType.text == "" {
+            return (text = "", next = closeEnd);
+        }
+        listLib.pushBack(mut names, fName);
+        listLib.pushBack(mut typesList, rawType.text);
+        count = count + 1;
+        cursor = syntax.skipTrivia(source, rawType.next, prefix);
+        if syntax.isSingleEquals(source, cursor) {
+            defStart := syntax.skipTrivia(source, cursor + 1, prefix);
+            cursor = skipRecordFieldDefault(source, defStart, bodyLimit, prefix);
+        } else if cursor < bodyLimit and textLib.at(source, cursor) == ";" {
+            cursor = cursor + 1;
+        } else if cursor < bodyLimit {
+            afterSep := syntax.skipTrivia(source, cursor, prefix);
+            if afterSep < bodyLimit and rawType.next > 0 and textLib.at(source, rawType.next - 1) =!= "}" {
+                /* Wait for explicit separator only if needed; check if next item could follow */
+            }
+        }
+    }
+    var pairs := "";
+    var idx := 0;
+    loop idx < count {
+        pairs = pairs + encodeLengthPrefixedText(names[idx]) + encodeLengthPrefixedText(typesList[idx]);
+        idx = idx + 1;
+    }
+    recHeader := moduleIdentity + "#" + integer.intText(declAt) + "#" + recName;
+    (text = "@recraw:" + encodeLengthPrefixedText(recHeader) + integer.intText(count) + ";" + pairs, next = closeEnd)
+};
+
+/** Finds the nearest `"type"` or `"record"` keyword offset at or after `cursor`, or -1 when neither exists. */
+pub nextAliasOrRecordHit := fn(source: String, cursor: Int): Int {
+    tHit := textLib.indexOfText(source, "type", cursor);
+    rHit := textLib.indexOfText(source, "record", cursor);
+    if tHit < 0 { return rHit; }
+    if rHit < 0 { return tHit; }
+    if tHit < rHit { tHit } else { rHit }
+};
+
+/** Pre-collects shallow `Name := type Target` and `Name := record { ... }` declarations inside the `{ ... }` block opening at `openBracePos`. */
 pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: String, blockDepth: Int, baseAliases: List<AliasDecl>): List<AliasDecl> {
     size := textLib.length(source);
     if openBracePos < 0 or openBracePos >= size or textLib.at(source, openBracePos) =!= "{" {
         return baseAliases;
     }
-    var nextTypeHit := textLib.indexOfText(source, "type", openBracePos + 1);
+    var nextTypeHit := nextAliasOrRecordHit(source, openBracePos + 1);
     if nextTypeHit < 0 { return baseAliases; }
     found: mut List<AliasDecl> = [];
     var hasFound := false;
@@ -1134,7 +1551,7 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
         cursor = syntax.skipTrivia(source, cursor, prefix);
         if cursor >= size { break; }
         if cursor > nextTypeHit {
-            nextTypeHit = textLib.indexOfText(source, "type", cursor);
+            nextTypeHit = nextAliasOrRecordHit(source, cursor);
             if nextTypeHit < 0 { break; }
         }
         ch := textLib.at(source, cursor);
@@ -1168,6 +1585,13 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
                     hasFound = true;
                     cursor = if aliasTarget.next > typePos + 4 { aliasTarget.next } else { typePos + 4 };
                     continue;
+                } else if textLib.wordAt(source, typePos, "record") {
+                    braceStart := syntax.skipTrivia(source, typePos + 6, prefix);
+                    recTarget := collectRecordTarget(source, braceStart, prefix, "b" + integer.intText(blockDepth), nameStart, name);
+                    listLib.pushBack(mut found, (name = name, target = recTarget.text, at = nameStart, end = recTarget.next, depth = blockDepth));
+                    hasFound = true;
+                    cursor = if recTarget.next > typePos + 6 { recTarget.next } else { typePos + 6 };
+                    continue;
                 }
             }
             cursor = opPos;
@@ -1188,6 +1612,39 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
     size := textLib.length(source);
     start := syntax.skipTrivia(source, position, prefix);
     if start >= size { return (ok = false, kind = "", next = start); }
+    if textLib.startsWithAt(source, start, "@recraw:") {
+        hdr := decodeLengthPrefixedAt(source, start + 8);
+        if hdr.next < 0 { return (ok = false, kind = "", next = start); }
+        var cur := hdr.next;
+        var countEnd := cur;
+        loop countEnd < size and textLib.isDigit(textLib.at(source, countEnd)) {
+            countEnd = countEnd + 1;
+        }
+        fieldCount := if countEnd > cur { syntax.parseDigits(source, cur, countEnd) } else { 0 };
+        cur = if countEnd < size and textLib.at(source, countEnd) == ";" { countEnd + 1 } else { countEnd };
+        parts: mut List<String> = [];
+        var idx := 0;
+        loop idx < fieldCount {
+            fName := decodeLengthPrefixedAt(source, cur);
+            fType := decodeLengthPrefixedAt(source, fName.next);
+            if fName.next < 0 or fType.next < 0 { return (ok = false, kind = "", next = start); }
+            cur = fType.next;
+            resolvedField := self(fType.text, 0, prefix, aliases, "", seen, depthLeft - 1);
+            if not resolvedField.ok or resolvedField.kind == ir.VALUE_KIND_UNIT or
+            syntax.skipTrivia(fType.text, resolvedField.next, prefix) < textLib.length(fType.text) {
+                return (ok = false, kind = "", next = start);
+            }
+            listLib.pushBack(mut parts, fName.text + ":" + resolvedField.kind);
+            idx = idx + 1;
+        }
+        return (ok = true, kind = "Record<" + hdr.text + ";" + textLib.joinTexts(parts, ",") + ">", next = cur);
+    }
+    if textLib.startsWithAt(source, start, "Record<") and textLib.indexOfText(source, ";", start) > start {
+        end := skipKindToken(source, start);
+        if end > start + 8 and textLib.at(source, end - 1) == ">" {
+            return (ok = true, kind = textLib.slice(source, start, end), next = end);
+        }
+    }
     ch := textLib.at(source, start);
     if ch == "(" {
         var cursor := syntax.skipTrivia(source, start + 1, prefix);

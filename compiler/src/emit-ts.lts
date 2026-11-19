@@ -2191,18 +2191,18 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
         } else if item.kind == frontend.ITEM_KIND_LOCAL_INT or item.kind == frontend.ITEM_KIND_LOCAL_STRING or item.kind == frontend.ITEM_KIND_LOCAL_BOOL or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_LOCAL_TUPLE {
             outLine(indent + "const " + item.runtime + " = " + item.code + ";");
             outLine(indent + "void " + item.runtime + ";");
-        } else if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_LOCAL_FN {
+        } else if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_LOCAL_RECORD {
             outLine(indent + "const " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
             outLine(indent + "void " + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_VAR_INT or item.kind == frontend.ITEM_KIND_VAR_STRING or item.kind == frontend.ITEM_KIND_VAR_BOOL or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_VAR_TUPLE {
             outLine(indent + "let " + item.runtime + " = " + item.code + ";");
             outLine(indent + "void " + item.runtime + ";");
-        } else if item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_VAR_FN {
+        } else if item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_VAR_RECORD {
             outLine(indent + "let " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
             outLine(indent + "void " + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE {
             outLine(indent + item.runtime + " = " + item.code + ";");
-        } else if item.kind == frontend.ITEM_KIND_ASSIGN_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
+        } else if item.kind == frontend.ITEM_KIND_ASSIGN_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_FN or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD {
             outLine(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == frontend.ITEM_KIND_SCOPE {
             outLine(indent + "{");

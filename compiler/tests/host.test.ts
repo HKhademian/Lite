@@ -140,7 +140,7 @@ test('default verification and expectation updates use TS artifacts without T00'
     const updated = invoke('--filter', 'features/numeric/integers/signed-arithmetic.json', '--update');
     assert.equal(updated.status, 0, updated.stdout + updated.stderr); assert.match(updated.stdout, /updated/);
     assert.deepEqual(JSON.parse(readFileSync(manifest, 'utf8')), JSON.parse(expected.toString()));
-    writeFileSync(join(directory, 'language/verifications/features/numeric/integers/signed-arithmetic.lts'), 'x := record { };\n', 'utf8');
+    writeFileSync(join(directory, 'language/verifications/features/numeric/integers/signed-arithmetic.lts'), 'record Foo { };\n', 'utf8');
     const before = readFileSync(manifest);
     const failed = invoke('--filter', 'features/numeric/integers/signed-arithmetic.json', '--update');
     assert.equal(failed.status, 1); assert.match(failed.stdout, /unsupported feature "record"/);
