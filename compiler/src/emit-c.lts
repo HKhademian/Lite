@@ -98,6 +98,26 @@ isCLocalDeclKind := fn(kind: String): Bool {
     kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL
 };
 
+/** Detects leaked JS tuple or array literal syntax inside a scalar-typed expression on C, skipping quoted strings. */
+unsupportedAggregateCode := fn(code: String): String {
+    if textLib.indexOfText(code, "{", 0) < 0 and textLib.indexOfText(code, "[", 0) < 0 { return ""; }
+    size := textLib.length(code);
+    var cursor := 0;
+    loop cursor < size {
+        ch := textLib.at(code, cursor);
+        if ch == "\"" {
+            cursor = frontend.skipAliasString(code, cursor);
+        } else if ch == "{" {
+            return "C backend does not support tuple values yet";
+        } else if ch == "[" {
+            return "C backend does not support array values yet";
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    ""
+};
+
 /** Rewrites registered `lite$...(` builtin calls outside quoted strings to portable ISO C11 helper names. */
 normalizeCBuiltinCalls := fn(code: String): String {
     if textLib.indexOfText(code, "lite$", 0) < 0 { return code; }
@@ -705,6 +725,10 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
         }
         if frontend.codeUsesListIndex(item.code) or frontend.codeUsesListPop(item.code) or frontend.codeUsesListCopy(item.code) {
             diagLib.fail("", "C backend does not support list values yet");
+        }
+        aggErr := unsupportedAggregateCode(item.code);
+        if aggErr =!= "" {
+            diagLib.fail("", aggErr);
         }
     }
     hasReportError := usesIntHelper(calls, "lite$reportError(");

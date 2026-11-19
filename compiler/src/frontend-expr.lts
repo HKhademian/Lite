@@ -2604,11 +2604,8 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
     if hasActualFinally and target =!= ir.TARGET_TS {
         syntax.failAt(source, afterOptThenTrivia, prefix, "C backend does not support finally blocks yet");
     }
-    if condParseKind == ir.CTX_KIND_MATCH and target =!= ir.TARGET_TS {
-        syntax.failAt(source, condParseStart, prefix, "C backend does not support value match expressions yet");
-    }
     useIifeCond := condParseTag =!= "" or hasActualThen or hasActualFinally;
-    if useIifeCond and condParseKind == ir.CTX_KIND_IF and target =!= ir.TARGET_TS {
+    if useIifeCond and target =!= ir.TARGET_TS {
         if condParseTag =!= "" {
             syntax.failAt(source, condParseTagAt, prefix, "C backend does not support tagged conditionals yet");
         }
