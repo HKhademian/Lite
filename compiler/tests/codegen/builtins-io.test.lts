@@ -188,11 +188,21 @@ loop cri < 7 {
     cri = cri + 1;
 }
 
-/* restricted C compiler preserves existing output and rejects function syntax clearly */
+/* C compiler preserves report-42 baseline output and executes scalar functions */
 ref42C := fs.readText(path.join(root, "compiler/tests/references/generated/report-42.c"));
 test.check("read report-42.c", ref42C.ok);
 c42 := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(42);", "");
 test.checkInt("c 42 status", 0, c42.status);
 test.checkText("c 42 output", ref42C.text, c42.stdout);
 test.checkText("c 42 stderr", "", c42.stderr);
-compilerTest.assertCompileError(root, cComp, "C top-level fn reject", "io := import \"core/io\"; f := fn (x: Int): Int { return x; }\nio.outputLine(f(42));\n", "C backend does not support top-level functions yet\n");
+ccInfo := compilerTest.probeCc();
+cIdSrc := "io := import \"core/io\"; f := fn (x: Int): Int { return x; }\nio.outputLine(f(42));\n";
+if ccInfo.available {
+    cIdRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, cIdSrc, "", "");
+    test.checkInt("C top-level fn run status", 0, cIdRun.status);
+    test.checkText("C top-level fn run stdout", "42\n", cIdRun.stdout);
+} else {
+    cIdOnly := compilerTest.compileStdin(root, cComp, cIdSrc, "");
+    test.checkInt("C top-level fn status", 0, cIdOnly.status);
+}
+compilerTest.assertCompileError(root, cComp, "C fn List reject", "io := import \"core/io\"; f := fn (): List<Int> { return [1]; }\nio.outputLine(f());\n", "C backend does not support list values yet\n");

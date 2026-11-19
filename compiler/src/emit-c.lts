@@ -1,6 +1,7 @@
 frontend := import "./frontend.lts";
 cLiteral := import "./c-literals.lts";
 integer := import "core/int";
+listLib := import "core/list";
 diagLib := import "core/diag";
 io := import "core/io";
 textLib := import "core/text";
@@ -10,10 +11,99 @@ dedent := fn(indent: String): String {
     textLib.slice(indent, 0, textLib.length(indent) - 4)
 }
 
+/** Maps a restricted Lite scalar or Unit/Never kind to its C11 type. */
+cScalarType := fn(kind: String): String {
+    if kind == frontend.VALUE_KIND_UNIT or kind == frontend.VALUE_KIND_NEVER { "void" }
+    else if frontend.isIntScalarKind(kind) { "int64_t" }
+    else if kind == frontend.VALUE_KIND_BOOL { "bool" }
+    else if frontend.isFloatScalarKind(kind) { "double" }
+    else { "const char *" }
+};
+
+/** Maps a local or mutable variable item kind to its C11 declaration type prefix. */
+cDeclType := fn(kind: String): String {
+    if kind == frontend.ITEM_KIND_LOCAL_INT or kind == frontend.ITEM_KIND_VAR_INT { "int64_t " }
+    else if kind == frontend.ITEM_KIND_LOCAL_FLOAT or kind == frontend.ITEM_KIND_VAR_FLOAT { "double " }
+    else if kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL { "bool " }
+    else { "const char *" }
+};
+
+/** Fails cleanly when a reachable scalar/function signature references an unsupported C type. */
+checkUnsupportedCType := fn(kind: String): Unit {
+    if frontend.isTupleKind(kind) { diagLib.fail("", "C backend does not support tuple values yet"); }
+    if frontend.isListKind(kind) { diagLib.fail("", "C backend does not support list values yet"); }
+    if frontend.isArrayKind(kind) { diagLib.fail("", "C backend does not support array values yet"); }
+    if frontend.containsFnKind(kind) { diagLib.fail("", "C backend does not support function values yet"); }
+};
+
+/** Checks parameter and return types of a reachable top-level or module function for C11 emission. */
+checkCFunctionSignature := fn(item: frontend.Item): Unit {
+    checkUnsupportedCType(item.code);
+    encoded := item.textValue;
+    if encoded == "" { return; }
+    var start := 0;
+    loop true {
+        sep := textLib.indexOfText(encoded, "|", start);
+        end := if sep >= 0 { sep } else { textLib.length(encoded) };
+        entry := textLib.slice(encoded, start, end);
+        eq := textLib.indexOfText(entry, "=", 0);
+        if eq >= 0 {
+            checkUnsupportedCType(textLib.slice(entry, eq + 1, textLib.length(entry)));
+        }
+        if sep < 0 { break; }
+        start = sep + 1;
+    }
+};
+
+/** Formats a pipe-separated parameter list as C11 typed parameters or `void`. */
+cParameterList := fn(encoded: String): String {
+    if encoded == "" { return "void"; }
+    var result := "";
+    var start := 0;
+    loop true {
+        sep := textLib.indexOfText(encoded, "|", start);
+        end := if sep >= 0 { sep } else { textLib.length(encoded) };
+        entry := textLib.slice(encoded, start, end);
+        eq := textLib.indexOfText(entry, "=", 0);
+        paramName := textLib.slice(entry, 0, eq);
+        paramKind := textLib.slice(entry, eq + 1, textLib.length(entry));
+        if textLib.length(result) > 0 { result = result + ", "; }
+        result = result + cScalarType(paramKind) + " lite_" + paramName;
+        if sep < 0 { break; }
+        start = sep + 1;
+    }
+    result
+};
+
+/** Emits `(void)lite_param;` silencing reads for strict C11 warning checks. */
+emitCParameterReads := fn(encoded: String): Unit {
+    if encoded == "" { return; }
+    var start := 0;
+    loop true {
+        sep := textLib.indexOfText(encoded, "|", start);
+        end := if sep >= 0 { sep } else { textLib.length(encoded) };
+        entry := textLib.slice(encoded, start, end);
+        eq := textLib.indexOfText(entry, "=", 0);
+        io.outputLine("    (void)lite_" + textLib.slice(entry, 0, eq) + ";");
+        if sep < 0 { break; }
+        start = sep + 1;
+    }
+};
+
+/** True when `item.kind` starts a local/mutable variable declaration. */
+isCLocalDeclKind := fn(kind: String): Bool {
+    kind == frontend.ITEM_KIND_LOCAL_INT or kind == frontend.ITEM_KIND_VAR_INT or
+    kind == frontend.ITEM_KIND_LOCAL_STRING or kind == frontend.ITEM_KIND_VAR_STRING or
+    kind == frontend.ITEM_KIND_LOCAL_FLOAT or kind == frontend.ITEM_KIND_VAR_FLOAT or
+    kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL
+};
+
 /** Builds one checked printf call for an Int*, Float*, String or Bool report value without a trailing newline. */
 cCall := fn(kind: String, code: String): String {
     match {
-        kind == frontend.VALUE_KIND_UNIT { "printf(\"Unit\")" }
+        kind == frontend.VALUE_KIND_UNIT {
+            if code == "0" { "printf(\"Unit\")" } else { "((void)(" + code + "), printf(\"Unit\"))" }
+        }
         frontend.isFloatScalarKind(kind) { "lt_print_float((double)(" + code + "))" }
         frontend.isIntScalarKind(kind) { "printf(\"%\" PRId64, (int64_t)(" + code + "))" }
         kind == frontend.VALUE_KIND_BOOL { "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))" }
@@ -67,7 +157,10 @@ unsupportedBuiltinCode := fn(calls: String): String {
         usesIntHelper(calls, "lite$processRunBytes(") {
             "C backend does not support process builtins yet"
         }
-        usesIntHelper(calls, "lite$cryptoRandomBytes(") {
+        usesIntHelper(calls, "lite$cryptoRandomBytes(") or usesIntHelper(calls, "lite$cryptoDigestBytes(") or
+        usesIntHelper(calls, "lite$cryptoDigestText(") or usesIntHelper(calls, "lite$cryptoDigestFile(") or
+        usesIntHelper(calls, "lite$cryptoHmacSha256Bytes(") or usesIntHelper(calls, "lite$cryptoEncodeBytes(") or
+        usesIntHelper(calls, "lite$cryptoDecodeBytes(") {
             "C backend does not support crypto builtins yet"
         }
         usesIntHelper(calls, "lite$timeMonotonicNs(") or usesIntHelper(calls, "lite$timeEpochNs(") or
@@ -377,9 +470,12 @@ emitStringConcatHelper := fn(): Unit {
     io.outputLine("");
 }
 
-/** Evaluates one multi-value output argument into a hygienic scalar temporary. Unit has no stored payload or supported C-side effect. */
+/** Evaluates one multi-value output argument into a hygienic scalar temporary, preserving non-trivial Unit side effects. */
 emitOutputArgument := fn(kind: String, code: String, name: String, indent: String): Unit {
-    if kind == frontend.VALUE_KIND_UNIT { return; }
+    if kind == frontend.VALUE_KIND_UNIT {
+        if code =!= "0" { io.outputLine(indent + "(void)(" + code + ");"); }
+        return;
+    }
     typeCode := if frontend.isIntScalarKind(kind) { "int64_t " }
     else if kind == frontend.VALUE_KIND_BOOL { "bool " }
     else if frontend.isFloatScalarKind(kind) { "double " }
@@ -388,9 +484,136 @@ emitOutputArgument := fn(kind: String, code: String, name: String, indent: Strin
 }
 
 /** Formats one output write after every argument has evaluated successfully. */
-outputWriteCode := fn(kind: String, code: String, indent: String): String {
-    indent + "if (" + cCall(kind, code) + " < 0) { status = 1; }\n"
+outputWriteCode := fn(kind: String, code: String, indent: String, failAction: String): String {
+    indent + "if (" + cCall(kind, code) + " < 0) { " + failAction + " }\n"
 }
+
+/** Emits statements for one C function body (`fnResult != ""`) or `main` (`fnResult == ""`). */
+emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuckets, fnResult: String, failAction: String): Unit {
+    var indent := "    ";
+    var blockDepth := 0;
+    var count := 0;
+    var tempIndex := 0;
+    var firstKind := "";
+    var firstCode := "";
+    var firstTemp := "";
+    var writes := "";
+    loop stream as item {
+        if isCLocalDeclKind(item.kind) {
+            if fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime) {
+                io.outputLine(indent + item.runtime + " = " + item.code + ";");
+            } else {
+                io.outputLine(indent + cDeclType(item.kind) + item.runtime + " = " + item.code + ";");
+            }
+            io.outputLine(indent + "(void)" + item.runtime + ";");
+        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT {
+            io.outputLine(indent + item.runtime + " = " + item.code + ";");
+        } else if item.kind == frontend.ITEM_KIND_RETURN {
+            if fnResult == frontend.VALUE_KIND_UNIT {
+                if item.code =!= "" { io.outputLine(indent + "(void)(" + item.code + ");"); }
+                io.outputLine(indent + "return;");
+            } else if item.code == "" {
+                io.outputLine(indent + "return;");
+            } else {
+                io.outputLine(indent + "return " + item.code + ";");
+            }
+        } else if item.kind == frontend.ITEM_KIND_CALL or item.kind == frontend.ITEM_KIND_DISCARD {
+            io.outputLine(indent + "(void)(" + item.code + ");");
+        } else if item.kind == frontend.ITEM_KIND_UNREACHABLE {
+            io.outputLine(indent + "fprintf(stderr, \"unreachable loop completion\\n\");");
+            io.outputLine(indent + "exit(1);");
+        } else if item.kind == frontend.ITEM_KIND_BREAK {
+            io.outputLine(indent + "break;");
+        } else if item.kind == frontend.ITEM_KIND_CONTINUE {
+            io.outputLine(indent + "continue;");
+        } else if item.kind == frontend.ITEM_KIND_SCOPE {
+            io.outputLine(indent + "{");
+            indent = indent + "    ";
+            blockDepth = blockDepth + 1;
+        } else if item.kind == frontend.ITEM_KIND_IF {
+            io.outputLine(indent + "if (" + item.code + ") {");
+            indent = indent + "    ";
+            blockDepth = blockDepth + 1;
+        } else if item.kind == frontend.ITEM_KIND_ELSE {
+            indent = dedent(indent);
+            io.outputLine(indent + "} else {");
+            indent = indent + "    ";
+        } else if item.kind == frontend.ITEM_KIND_ELSE_IF {
+            indent = dedent(indent);
+            io.outputLine(indent + "} else if (" + item.code + ") {");
+            indent = indent + "    ";
+        } else if item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_SCOPE {
+            indent = dedent(indent);
+            io.outputLine(indent + "}");
+            if blockDepth > 0 { blockDepth = blockDepth - 1; }
+        } else if item.kind == frontend.ITEM_KIND_LOOP {
+            condition := if item.code == "" { "true" } else { item.code };
+            io.outputLine(indent + "while (" + condition + ") {");
+            indent = indent + "    ";
+            blockDepth = blockDepth + 1;
+        } else if item.kind == frontend.ITEM_KIND_END_LOOP {
+            indent = dedent(indent);
+            io.outputLine(indent + "}");
+            if blockDepth > 0 { blockDepth = blockDepth - 1; }
+        } else if item.kind == frontend.ITEM_KIND_END or item.kind == frontend.ITEM_KIND_END_OUTPUT {
+            if count == 1 { io.output(outputWriteCode(firstKind, firstCode, indent, failAction)); }
+            else if count > 1 { io.output(writes); }
+            if item.kind == frontend.ITEM_KIND_END { io.outputLine(indent + "if (printf(\"\\n\") < 0) { " + failAction + " }"); }
+            count = 0;
+            writes = "";
+        } else if item.kind == frontend.ITEM_KIND_MAIN_STOP or item.kind == frontend.ITEM_KIND_IMPORT or
+        item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or
+        item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_PURE_GLOBAL or
+        item.kind == frontend.ITEM_KIND_SOFT_BUILTIN or item.kind == frontend.ITEM_KIND_NOOP {
+        } else {
+            if count == 0 {
+                firstKind = item.kind;
+                firstCode = item.code;
+            } else {
+                if count == 1 {
+                    firstTemp = "lt_output_" + integer.intText(tempIndex);
+                    tempIndex = tempIndex + 1;
+                    emitOutputArgument(firstKind, firstCode, firstTemp, indent);
+                    writes = outputWriteCode(firstKind, if firstKind == frontend.VALUE_KIND_UNIT { "0" } else { firstTemp }, indent, failAction);
+                }
+                temp := "lt_output_" + integer.intText(tempIndex);
+                tempIndex = tempIndex + 1;
+                emitOutputArgument(item.kind, item.code, temp, indent);
+                writes = writes + indent + "if (printf(\" \") < 0) { " + failAction + " }\n" +
+                outputWriteCode(item.kind, if item.kind == frontend.VALUE_KIND_UNIT { "0" } else { temp }, indent, failAction);
+            }
+            count = count + 1;
+        }
+    }
+};
+
+/** Emits one C11 function definition starting at `FUNCTION_START` index `startIndex` and returns the index after `FUNCTION_END`. */
+emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, hoistedGlobals: frontend.TokenBuckets): Int {
+    fnItem := reachable[startIndex];
+    fnItems: mut frontend.Items = [];
+    var idx := startIndex + 1;
+    var depth := 1;
+    loop idx < total {
+        item := reachable[idx];
+        if item.kind == frontend.ITEM_KIND_FUNCTION_START { depth = depth + 1; }
+        else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
+            depth = depth - 1;
+            if depth == 0 {
+                idx = idx + 1;
+                break;
+            }
+        }
+        listLib.pushBack(mut fnItems, item);
+        idx = idx + 1;
+    }
+    io.outputLine("static " + cScalarType(fnItem.code) + " " + fnItem.runtime + "(" + cParameterList(fnItem.textValue) + ") {");
+    emitCParameterReads(fnItem.textValue);
+    emitArithmeticTemporaries(fnItems);
+    emitCItemStream(fnItems, hoistedGlobals, fnItem.code, "lt_io_status = 1;");
+    io.outputLine("}");
+    io.outputLine("");
+    idx
+};
 
 /** Emits the C program from the flat item stream with explicit `--builtin-mode` specifications. */
 pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
@@ -398,17 +621,37 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
     reachable := frontend.filterReachableItemsForTarget(items, frontend.TARGET_C);
     calls := frontend.targetHelperCalls(reachable);
     var floatOutput := false;
+    var hasFunctions := false;
+    var hasFnOutput := false;
+    var hasUnreachable := false;
     floatLiterals := usesIntHelper(calls, "lt_float_literal(");
     float32Literals := usesIntHelper(calls, "lt_float32_literal(");
     var float32Values := float32Literals or usesIntHelper(calls, "lt_float32_op(");
     var floatValues := floatLiterals or float32Values or usesFloatArithmetic(calls);
+    var fnRefTokens := frontend.emptyTokenBuckets();
+    var fnDepth := 0;
     loop reachable as item {
         if frontend.isFloatScalarKind(item.kind) { floatOutput = true; }
         if frontend.isFloatScalarKind(item.kind) or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isFloatScalarKind(item.name)) { floatValues = true; }
         if item.kind == frontend.VALUE_KIND_FLOAT32 or (item.kind == frontend.ITEM_KIND_DISCARD and item.name == frontend.VALUE_KIND_FLOAT32) { float32Values = true; }
+        if item.kind == frontend.ITEM_KIND_UNREACHABLE { hasUnreachable = true; }
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
-            diagLib.fail("", "C backend does not support top-level functions yet");
+            hasFunctions = true;
+            fnDepth = fnDepth + 1;
+            checkCFunctionSignature(item);
+            if frontend.isFloatScalarKind(item.code) { floatValues = true; }
+            if item.code == frontend.VALUE_KIND_FLOAT32 { float32Values = true; }
+            if textLib.indexOfText(item.textValue, "=Float", 0) >= 0 { floatValues = true; }
+            if textLib.indexOfText(item.textValue, "=Float32", 0) >= 0 { float32Values = true; }
+        } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
+            if fnDepth > 0 { fnDepth = fnDepth - 1; }
+        } else if fnDepth > 0 {
+            if item.kind == frontend.ITEM_KIND_END or item.kind == frontend.ITEM_KIND_END_OUTPUT { hasFnOutput = true; }
+            fnRefTokens = frontend.codeReachableTokensSet(item.code, fnRefTokens);
+            if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
+                fnRefTokens = frontend.tokenBucketAdd(fnRefTokens, item.runtime);
+            }
         }
         unsupported := unsupportedBuiltinCode(frontend.targetCodeCalls(item.code, "|"));
         if unsupported =!= "" {
@@ -437,7 +680,7 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
         }
     }
     io.outputLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues { io.outputLine("#include <stdlib.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable { io.outputLine("#include <stdlib.h>"); }
     io.outputLine("#include <inttypes.h>");
     io.outputLine("#include <stdbool.h>");
     io.outputLine("#include <string.h>");
@@ -456,88 +699,65 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
     if usesStringConcat(calls) { emitStringConcatHelper(); }
-    io.outputLine("int main(void) {");
-    io.outputLine("    int status = 0;");
-    emitArithmeticTemporaries(reachable);
-    var indent := "    ";
-    var count := 0;
-    var tempIndex := 0;
-    var firstKind := "";
-    var firstCode := "";
-    var firstTemp := "";
-    var writes := "";
-    loop reachable as item {
-        if item.kind == frontend.ITEM_KIND_LOCAL_INT or item.kind == frontend.ITEM_KIND_VAR_INT {
-            io.outputLine(indent + "int64_t " + item.runtime + " = " + item.code + ";");
-            io.outputLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == frontend.ITEM_KIND_LOCAL_STRING or item.kind == frontend.ITEM_KIND_VAR_STRING {
-            io.outputLine(indent + "const char *" + item.runtime + " = " + item.code + ";");
-            io.outputLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_VAR_FLOAT {
-            io.outputLine(indent + "double " + item.runtime + " = " + item.code + ";");
-            io.outputLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == frontend.ITEM_KIND_LOCAL_BOOL or item.kind == frontend.ITEM_KIND_VAR_BOOL {
-            io.outputLine(indent + "bool " + item.runtime + " = " + item.code + ";");
-            io.outputLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT {
-            io.outputLine(indent + item.runtime + " = " + item.code + ";");
-        } else if item.kind == frontend.ITEM_KIND_DISCARD {
-            io.outputLine(indent + "(void)(" + item.code + ");");
-        } else if item.kind == frontend.ITEM_KIND_BREAK {
-            io.outputLine(indent + "break;");
-        } else if item.kind == frontend.ITEM_KIND_CONTINUE {
-            io.outputLine(indent + "continue;");
-        } else if item.kind == frontend.ITEM_KIND_SCOPE {
-            io.outputLine(indent + "{");
-            indent = indent + "    ";
-        } else if item.kind == frontend.ITEM_KIND_IF {
-            io.outputLine(indent + "if (" + item.code + ") {");
-            indent = indent + "    ";
-        } else if item.kind == frontend.ITEM_KIND_ELSE {
-            indent = dedent(indent);
-            io.outputLine(indent + "} else {");
-            indent = indent + "    ";
-        } else if item.kind == frontend.ITEM_KIND_ELSE_IF {
-            indent = dedent(indent);
-            io.outputLine(indent + "} else if (" + item.code + ") {");
-            indent = indent + "    ";
-        } else if item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_SCOPE {
-            indent = dedent(indent);
-            io.outputLine(indent + "}");
-        } else if item.kind == frontend.ITEM_KIND_LOOP {
-            condition := if item.code == "" { "true" } else { item.code };
-            io.outputLine(indent + "while (" + condition + ") {");
-            indent = indent + "    ";
-        } else if item.kind == frontend.ITEM_KIND_END_LOOP {
-            indent = dedent(indent);
-            io.outputLine(indent + "}");
-        } else if item.kind == frontend.ITEM_KIND_END or item.kind == frontend.ITEM_KIND_END_OUTPUT {
-            if count == 1 { io.output(outputWriteCode(firstKind, firstCode, indent)); }
-            else if count > 1 { io.output(writes); }
-            if item.kind == frontend.ITEM_KIND_END { io.outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
-            count = 0;
-            writes = "";
-        } else if item.kind == frontend.ITEM_KIND_MAIN_STOP or item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
-        } else {
-            if count == 0 {
-                firstKind = item.kind;
-                firstCode = item.code;
-            } else {
-                if count == 1 {
-                    firstTemp = "lt_output_" + integer.intText(tempIndex);
-                    tempIndex = tempIndex + 1;
-                    emitOutputArgument(firstKind, firstCode, firstTemp, indent);
-                    writes = outputWriteCode(firstKind, firstTemp, indent);
+    var hoistedGlobals := frontend.emptyTokenBuckets();
+    if hasFunctions {
+        if hasFnOutput { io.outputLine("static int lt_io_status = 0;"); }
+        var scanDepth := 0;
+        var scanBlocks := 0;
+        loop reachable as item {
+            if item.kind == frontend.ITEM_KIND_FUNCTION_START {
+                scanDepth = scanDepth + 1;
+            } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
+                if scanDepth > 0 { scanDepth = scanDepth - 1; }
+            } else if scanDepth == 0 {
+                if item.kind == frontend.ITEM_KIND_SCOPE or item.kind == frontend.ITEM_KIND_IF or item.kind == frontend.ITEM_KIND_LOOP {
+                    scanBlocks = scanBlocks + 1;
+                } else if item.kind == frontend.ITEM_KIND_END_SCOPE or item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_LOOP {
+                    if scanBlocks > 0 { scanBlocks = scanBlocks - 1; }
+                } else if scanBlocks == 0 and isCLocalDeclKind(item.kind) and frontend.tokenBucketHas(fnRefTokens, item.runtime) and
+                not frontend.tokenBucketHas(hoistedGlobals, item.runtime) {
+                    hoistedGlobals = frontend.tokenBucketAdd(hoistedGlobals, item.runtime);
+                    io.outputLine("static " + cDeclType(item.kind) + item.runtime + ";");
                 }
-                temp := "lt_output_" + integer.intText(tempIndex);
-                tempIndex = tempIndex + 1;
-                emitOutputArgument(item.kind, item.code, temp, indent);
-                writes = writes + indent + "if (printf(\" \") < 0) { status = 1; }\n" + outputWriteCode(item.kind, temp, indent);
             }
-            count = count + 1;
+        }
+        loop reachable as item {
+            if item.kind == frontend.ITEM_KIND_FUNCTION_START {
+                io.outputLine("static " + cScalarType(item.code) + " " + item.runtime + "(" + cParameterList(item.textValue) + ");");
+            }
+        }
+        io.outputLine("");
+        var totalItems := 0;
+        loop reachable { totalItems = totalItems + 1; }
+        var fnIdx := 0;
+        loop fnIdx < totalItems {
+            if reachable[fnIdx].kind == frontend.ITEM_KIND_FUNCTION_START {
+                fnIdx = emitOneCFunction(reachable, fnIdx, totalItems, hoistedGlobals);
+            } else {
+                fnIdx = fnIdx + 1;
+            }
         }
     }
-    io.outputLine("    return status;");
+    mainItems: mut frontend.Items = [];
+    if hasFunctions {
+        var mDepth := 0;
+        loop reachable as item {
+            if item.kind == frontend.ITEM_KIND_FUNCTION_START { mDepth = mDepth + 1; }
+            else if item.kind == frontend.ITEM_KIND_FUNCTION_END { if mDepth > 0 { mDepth = mDepth - 1; } }
+            else if mDepth == 0 { listLib.pushBack(mut mainItems, item); }
+        }
+    } else {
+        loop reachable as item { listLib.pushBack(mut mainItems, item); }
+    }
+    io.outputLine("int main(void) {");
+    io.outputLine("    int status = 0;");
+    emitArithmeticTemporaries(mainItems);
+    emitCItemStream(mainItems, hoistedGlobals, "", "status = 1;");
+    if hasFnOutput {
+        io.outputLine("    return status ? status : lt_io_status;");
+    } else {
+        io.outputLine("    return status;");
+    }
     io.outputLine("}");
 }
 

@@ -413,13 +413,69 @@ loop extProbes as probe {
     test.check("ext-probe tsc", compilerTest.checkTsCode(root, pComp.stdout).ok);
 }
 
-/* C backend dead-fn DCE and target rejections */
+/* C backend top-level/module functions parity and dead-fn DCE */
 reachableCComp := compilerTest.compileStdin(root, cComp, "unused := fn(): List<Int> { xs: List<Int> = [1, 2]; xs }; io := import \"core/io\"; io.outputLine(42);", fixtureName);
 test.checkInt("reachable-c status", 0, reachableCComp.status);
 test.check("reachable-c emits 42", text.containsText(reachableCComp.stdout, "42"));
 
+ccInfo := compilerTest.probeCc();
+cFnParityCases: List<(label: String, src: String, expectedOut: String)> = [
+    (
+        label = "basic scalar fn",
+        src = "unused := fn(): Int { 1 }; used := fn(a: Int, b: Int): Int { a + b * 2 }; io := import \"core/io\"; io.outputLine(used(10, 5));",
+        expectedOut = "20\n"
+    ),
+    (
+        label = "mutual recursion and forward call",
+        src = "isEven := fn(n: Int): Bool { if n == 0 { return true; } isOdd(n - 1) }; isOdd := fn(n: Int): Bool { if n == 0 { return false; } isEven(n - 1) }; fact := fn(n: Int): Int { if n <= 1 { return 1; } n * fact(n - 1) }; io := import \"core/io\"; io.outputLine(isEven(6), isOdd(6), fact(5));",
+        expectedOut = "true false 120\n"
+    ),
+    (
+        label = "unit fn output and mixed scalars",
+        src = "io := import \"core/io\"; say := fn(tag: String): Unit { io.outputLine(\"say\", tag); }; greet := fn(name: String, n: Int, f: Float, b: Bool): String { if b { return name + \":ok\"; } name + \":no\" }; io.outputLine(say(\"first\"), greet(\"x\", 1, 1.5, true), 42);",
+        expectedOut = "say first\nUnit x:ok 42\n"
+    ),
+    (
+        label = "captured globals and future init",
+        src = "base := 10; var acc := 1; addFuture := fn(x: Int): Int { x + base + later }; bump := fn(d: Int): Int { acc = acc + d; acc }; later := 5; io := import \"core/io\"; io.outputLine(addFuture(2), bump(4), acc);",
+        expectedOut = "17 5 5\n"
+    )
+];
+loop cFnParityCases as cfn {
+    tsFnRun := compilerTest.compileCheckRunTs(root, tsComp, cfn.src, fixtureName);
+    test.checkInt("ts-fn status " + cfn.label, 0, tsFnRun.status);
+    test.checkText("ts-fn stdout " + cfn.label, cfn.expectedOut, tsFnRun.stdout);
+    if ccInfo.available {
+        cFnRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, cfn.src, fixtureName, "");
+        test.checkInt("c-fn status " + cfn.label, 0, cFnRun.status);
+        test.checkText("c-fn stdout " + cfn.label, cfn.expectedOut, cFnRun.stdout);
+        test.checkText("c-fn stderr " + cfn.label, "", cFnRun.stderr);
+    } else {
+        cFnOnly := compilerTest.compileStdin(root, cComp, cfn.src, fixtureName);
+        test.checkInt("c-fn compile " + cfn.label, 0, cFnOnly.status);
+    }
+}
+modTmp := fs.makeTempDir("lite-c-mod-fn-");
+test.check("makeTempDir c-mod-fn", modTmp.ok);
+_wm1 := fs.writeText(path.join(modTmp.path, "helper.lts"), "pub factor := 3;\npub triplePlus := fn(x: Int): Int { x * factor + 1 };\n");
+modMain := path.join(modTmp.path, "main.lts");
+_wm2 := fs.writeText(modMain, "h := import \"./helper.lts\"; io := import \"core/io\"; io.outputLine(h.triplePlus(4), h.factor);\n");
+cModCompile := compilerTest.compileFile(cComp, modTmp.path, ["--root", modTmp.path, modMain]);
+test.checkInt("c-mod-fn status", 0, cModCompile.status);
+test.checkText("c-mod-fn stderr", "", cModCompile.stderr);
+if ccInfo.available {
+    cModRun := compilerTest.compileAndRunC(cModCompile.stdout, ccInfo.cc, "");
+    test.checkInt("c-mod-fn run status", 0, cModRun.status);
+    test.checkText("c-mod-fn run stdout", "13 3\n", cModRun.stdout);
+}
+_rmMod := fs.remove(modTmp.path);
+
+/* C backend trace safety and signature rejections */
+compilerTest.assertCompileErrorContainsNamed(root, cComp, "c trace pre-init", "f := fn(): Int { late }; early := f(); late := 1;", fixtureName, "cannot call before late is initialized");
+
 cRejCases: List<(src: String, sub: String)> = [
-    (src = "unused := fn(): Int { 1 }; used := fn(): Int { 2 }; io := import \"core/io\"; io.outputLine(used());", sub = "C backend does not support top-level functions yet"),
+    (src = "f := fn(xs: List<Int>): Int { 1 }; io := import \"core/io\"; io.outputLine(f([1]));", sub = "list values"),
+    (src = "f := fn(): (a: Int) { (a = 1) }; io := import \"core/io\"; _ := f();", sub = "tuple values"),
     (src = "fs := import \"core/file\"; x := fs.kind(\".\");", sub = "C backend does not support filesystem builtins yet"),
     (src = "fs := import \"core/file\"; x := fs.readBytes(\".\");", sub = "filesystem builtins"),
     (src = "fs := import \"core/file\"; x := fs.writeBytes(\".\", []);", sub = "filesystem builtins"),
@@ -448,7 +504,7 @@ cRejCases: List<(src: String, sub: String)> = [
 loop cRejCases as cr {
     cR := compilerTest.compileStdin(root, cComp, cr.src, fixtureName);
     test.checkInt("c-reject status: " + cr.src, 2, cR.status);
-    test.check("c-reject msg: " + cr.src + " -> " + cR.stderr, text.containsText(cR.stderr, cr.sub) or text.containsText(cR.stderr, "list values") or text.containsText(cR.stderr, "tuple values") or text.containsText(cR.stderr, "top-level functions"));
+    test.check("c-reject msg: " + cr.src + " -> " + cR.stderr, text.containsText(cR.stderr, cr.sub) or text.containsText(cR.stderr, "list values") or text.containsText(cR.stderr, "tuple values") or text.containsText(cR.stderr, "text builtins"));
 }
 
 test.done("core-host-bindings");

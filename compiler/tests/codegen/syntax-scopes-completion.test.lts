@@ -134,11 +134,11 @@ if not skipHeavy {
         "io := import \"core/io\"; if true { x := 7 } io.outputLine(8)",
         "io := import \"core/io\"; var n := 0; loop n < 3 { n = n + 1; continue } io.outputLine(n)",
         "io := import \"core/io\"; loop { io.outputLine(7); break }",
-        "io := import \"core/io\"; /* before */ io.outputLine(0 < 1 < 2) /* after */"
+        "io := import \"core/io\"; /* before */ io.outputLine(0 < 1 < 2) /* after */",
+        "noop := fn(): Unit { return } noop()",
+        "io := import \"core/io\"; f := fn(): Int { return 7 } io.outputLine(f())"
     ];
     sepTsOnly: List<String> = [
-        "noop := fn(): Unit { return } noop()",
-        "io := import \"core/io\"; f := fn(): Int { return 7 } io.outputLine(f())",
         "io := import \"core/io\"; x := if true { 7 } else { 9 } /* boundary */ io.outputLine(x)",
         "io := import \"core/io\"; var x := 0; x = if true { 7 } else { 9 } io.outputLine(x)",
         "io := import \"core/io\"; f := fn(): Int { return if true { 7 } else { 9 } } io.outputLine(f())",
@@ -350,10 +350,7 @@ if not skipHeavy {
         "io := import \"core/io\"; var x := 2; x < 3 < 4; \"a\" + \"b\"; io.outputLine(\"done\");",
         "io := import \"core/io\"; io.outputLine(\"before\"); 9223372036854775807 - 1;",
         "io := import \"core/io\"; Unit;; io.outputLine(\"after\");",
-        "and true and false; or false or true;"
-    ];
-    exprTsOnly: List<String> = [
-        "[1, 2]; (n = 1, label = \"quiet\");",
+        "and true and false; or false or true;",
         "io := import \"core/io\"; f := fn(): Int { io.outputLine(\"effect\"); 7; } f() + 1; io.outputLine(\"after\");",
         "io := import \"core/io\"; f := fn(): Int { 1; 2;; } io.outputLine(f());",
         "io := import \"core/io\"; f := fn(): Bool { false; true;; } io.outputLine(f());",
@@ -363,14 +360,17 @@ if not skipHeavy {
         "io := import \"core/io\"; effect := fn(): Unit { io.outputLine(\"effect\"); } f := fn(): Unit { effect();; } f();",
         "io := import \"core/io\"; f := fn(): Int { if true { 1;; } else { 2;; };; } io.outputLine(f());",
         "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { io.outputLine(\"yes\"); 1;; } else { io.outputLine(\"no\"); 2;; };; } io.outputLine(f(false), f(true));",
+        "io := import \"core/io\"; f := fn(): Unit { if true { io.outputLine(\"yes\"); Unit;; } else { io.outputLine(\"no\"); Unit;; };; } f();"
+    ];
+    exprTsOnly: List<String> = [
+        "[1, 2]; (n = 1, label = \"quiet\");",
         "io := import \"core/io\"; f := fn(): List<Int> { values: List<Int> = [1, 2]; values;; } io.outputLine(f());",
         "io := import \"core/io\"; f := fn(): List<Int> { values: List<Int> = []; values;; } io.outputLine(f());",
         "io := import \"core/io\"; f := fn(): (n: Int) { (n = 2);; } io.outputLine(f());",
         "list := import \"core/list\"; io := import \"core/io\"; var values: mut List<Int> = [1, 2]; list.popBack(mut values); io.outputLine(values);",
         "list := import \"core/list\"; io := import \"core/io\"; f := fn(): Int { values: mut List<Int> = [1, 2]; list.popBack(mut values);; } io.outputLine(f());",
         "f := fn(): Unit { if true { Unit } else { Unit };; } f();",
-        "list := import \"core/list\"; f := fn(): Unit { values: mut List<Int> = [1]; list.pushBack(mut values, 2);; } f();",
-        "io := import \"core/io\"; f := fn(): Unit { if true { io.outputLine(\"yes\"); Unit;; } else { io.outputLine(\"no\"); Unit;; };; } f();"
+        "list := import \"core/list\"; f := fn(): Unit { values: mut List<Int> = [1]; list.pushBack(mut values, 2);; } f();"
     ];
     loop exprBoth as src { checkTsAndC("expr-both", src, "", "", 0); }
     loop exprTsOnly as src { checkTsOnly("expr-ts", src, "", "", 0, true); }
@@ -402,7 +402,7 @@ if not skipHeavy {
     loop exprFaults as src { checkTsAndC("expr-fault", src, "items سلام.lts", "", 1); }
 
     /* function completion joins every conditional arm and preserves earlier definite returns */
-    fnCompSources: List<String> = [
+    fnCompBoth: List<String> = [
         "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } else { return 2; } } io.outputLine(f(true), f(false));",
         "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } 2; } io.outputLine(f(true), f(false));",
         "io := import \"core/io\"; f := fn(a: Bool, b: Bool): Int { if a { if b { return 1; } else { return 2; } } else { return 3; } } io.outputLine(f(true, true), f(true, false), f(false, true));",
@@ -418,13 +418,16 @@ if not skipHeavy {
         "io := import \"core/io\"; f := fn(flag: Bool): Unit { if flag { return; } io.outputLine(\"body\"); } f(true); f(false);",
         "io := import \"core/io\"; f := fn(flag: Bool): String { if flag { return \"a\"; } else { return \"b\"; } Unit; } io.outputLine(f(false));",
         "io := import \"core/io\"; f := fn(flag: Bool): Bool { if flag { x := true; x; } else { x := false; x; } } io.outputLine(f(true), f(false));",
-        "io := import \"core/io\"; f := fn(flag: Bool): (n: Int) { if flag { p := (n = 1); p; } else { return (n = 2); } } io.outputLine(f(true), f(false));",
-        "io := import \"core/io\"; f := fn(flag: Bool): List<Int> { if flag { values: List<Int> = [1]; values; } else { values: List<Int> = [2]; return values; } } io.outputLine(f(true), f(false));",
         "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } else { { return 2; } } } io.outputLine(f(false));",
         "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } else { return 2; } if false { \"ignored\"; } Unit; } io.outputLine(f(true));",
         "io := import \"core/io\"; f := fn(flag: Bool): Unit { if flag { return; } else { return; } 1; } f(false); io.outputLine(\"after\");"
     ];
-    loop fnCompSources as src { checkTsOnly("fn-comp-ts", src, "", "", 0, true); }
+    fnCompTsOnly: List<String> = [
+        "io := import \"core/io\"; f := fn(flag: Bool): (n: Int) { if flag { p := (n = 1); p; } else { return (n = 2); } } io.outputLine(f(true), f(false));",
+        "io := import \"core/io\"; f := fn(flag: Bool): List<Int> { if flag { values: List<Int> = [1]; values; } else { values: List<Int> = [2]; return values; } } io.outputLine(f(true), f(false));"
+    ];
+    loop fnCompBoth as src { checkTsAndC("fn-comp-both", src, "", "", 0); }
+    loop fnCompTsOnly as src { checkTsOnly("fn-comp-ts", src, "", "", 0, true); }
 
     scalarControl: List<String> = [
         "io := import \"core/io\"; loop { io.outputLine(\"live\"); break; 1 / 0; } io.outputLine(\"after\");",
@@ -471,7 +474,7 @@ if not skipHeavy {
         "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } else { var max := 9223372036854775807; max + 1; } } io.outputLine(f(false));"
     ];
     loop fnCompFaults as src {
-        checkTsOnly("fn-comp-fault", src, "branch سلام.lts", "", 1, false);
+        checkTsAndC("fn-comp-fault", src, "branch سلام.lts", "", 1);
     }
 }
 

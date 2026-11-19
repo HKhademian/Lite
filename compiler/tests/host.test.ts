@@ -328,8 +328,15 @@ test('the graph-built TS-hosted C emitter preserves source names and subset reje
   assert.deepEqual(compileTarget('c', { text: 'io := import "core/io"; io.outputLine(1 +);', name: 'a b.lts' }), {
     status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('a b.lts:1:42: expected an Int, Float, String or Bool expression\n'),
   });
-  assert.deepEqual(compileTarget('c', { text: 'io := import "core/io"; f := fn(): Int { 1 } io.outputLine(f());' }), {
-    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('C backend does not support top-level functions yet\n'),
+  const fnC = compileTarget('c', { text: 'io := import "core/io"; f := fn(): Int { 1 } io.outputLine(f());' });
+  assert.equal(fnC.status, 0);
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+    const fnNative = runCArtifact(fnC.stdout.toString());
+    assert.equal(fnNative.phase, 'run'); assert.equal(fnNative.status, 0, fnNative.stderr.toString());
+    assert.equal(fnNative.stdout.toString(), '1\n'); assert.equal(fnNative.stderr.length, 0);
+  }
+  assert.deepEqual(compileTarget('c', { text: 'io := import "core/io"; xs: List<Int> = [1]; io.outputLine(xs[0]);' }), {
+    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('C backend does not support list values yet\n'),
   });
   const directory = isolatedCheckout();
   try {
