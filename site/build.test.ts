@@ -23,7 +23,7 @@ import {
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
 import { LiteAcademyGraph, parseLiteUri, relativeWebHref, rewriteLiteUriHtml } from './lite-uri.ts';
-import { mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
+import { createPlayStage, createWorkerClient, mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
 import { renderCodeEditorBlock, renderCodeModeBar, renderSplitHandle } from './ui-blocks.ts';
@@ -385,10 +385,14 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(editorClientJs.includes('highlight(editor.value)'));
   assert(editorClientJs.includes("event.key === 'Tab'"));
   assert(playground.includes('id="pg-c"'));
+  assert(playground.includes('id="pg-share"'));
+  assert(playground.includes('id="pg-editor-gutter"'));
+  assert(playground.includes('id="pg-canvas-fullscreen"'));
   assert(playground.includes('id="mode-program"'));
   assert(playground.includes('id="mode-portable"'));
   assert(playground.includes('id="mode-full"'));
-  assert(playground.includes('new Worker("./worker.js"'));
+  assert(playground.includes('createWorkerClient("./worker.js"'));
+  assert(readFileSync(join(out, 'playground', 'play-stage.js'), 'utf8').includes("new ctor(workerUrl, { type: 'module' })"));
   assert(existsSync(join(out, 'playground', 'code-view.js')));
   assert(existsSync(join(out, 'playground', 'editor-client.js')));
   assert(existsSync(join(out, 'runtime', 'editor-client.js')));
@@ -1000,7 +1004,8 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   const scriptBody = (scriptMatch[1] ?? '')
     .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/code-view\.js";\s*/m, '')
     .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/editor-client\.js";\s*/m, '')
-    .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/highlight\.js";\s*/m, '');
+    .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/highlight\.js";\s*/m, '')
+    .replace(/^\s*import\s+\{[^}]+\}\s+from\s+"\.\/play-stage\.js";\s*/m, '');
 
   const makeEl = (id = '') => {
     const attrs = new Map<string, string>();
@@ -1024,6 +1029,12 @@ test('playground inline module initializes without TDZ or ReferenceError', async
       classList: {
         add(c: string) { classes.add(c); },
         remove(c: string) { classes.delete(c); },
+        contains(c: string) { return classes.has(c); },
+        toggle(c: string, force?: boolean) {
+          const next = force ?? !classes.has(c);
+          if (next) classes.add(c); else classes.delete(c);
+          return next;
+        },
       },
       setAttribute(k: string, v: string) { attrs.set(k, String(v)); },
       getAttribute(k: string) { return attrs.get(k) ?? null; },
@@ -1036,6 +1047,9 @@ test('playground inline module initializes without TDZ or ReferenceError', async
         for (const fn of listeners.get(type) ?? []) fn(ev);
       },
       focus() {},
+      closest() { return makeEl('closest'); },
+      querySelector() { return makeEl('qs'); },
+      querySelectorAll() { return []; },
       getBoundingClientRect() { return { left: 0, top: 0, width: 640, height: 400 }; },
       getContext() {
         return {
@@ -1059,6 +1073,8 @@ test('playground inline module initializes without TDZ or ReferenceError', async
       if (!el) { el = makeEl(id); els.set(id, el); }
       return el;
     },
+    addEventListener() {},
+    querySelector() { return makeEl('doc-qs'); },
     querySelectorAll(sel: string) {
       if (sel === '.pg-tab') return ['output', 'ts', 'c', 'canvas'].map(tab => {
         const el = makeEl(`tab-${tab}`);
@@ -1079,7 +1095,7 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   const replacedUrls: string[] = [];
   const storedSnips: Array<{ id: string; title: string; code: string; stdin: string; args: string; origin: string }> = [];
   const mockWin = {
-    location: { href: `https://example.test/playground/?sample=${firstSampleId}`, search: `?sample=${firstSampleId}` },
+    location: { href: `https://example.test/playground/?sample=${firstSampleId}`, search: `?sample=${firstSampleId}`, hash: '' },
     history: {
       replaceState(_state: unknown, _title: string, url: URL | string) {
         replacedUrls.push(String(url));
@@ -1123,6 +1139,11 @@ test('playground inline module initializes without TDZ or ReferenceError', async
   const sandbox = {
     bindCodeModeButtons,
     bindLiteEditor,
+    bindSplitPane,
+    encodeSharePayload,
+    decodeSharePayload,
+    createPlayStage,
+    createWorkerClient,
     formatCodeView,
     highlightLite,
     highlightTs,
@@ -1144,6 +1165,7 @@ test('playground inline module initializes without TDZ or ReferenceError', async
     Error,
     BigInt,
     Uint8ClampedArray,
+    Uint32Array,
     performance: { now: () => 0 },
     requestAnimationFrame: mockWin.requestAnimationFrame,
     cancelAnimationFrame: mockWin.cancelAnimationFrame,
@@ -1181,6 +1203,8 @@ test('playground inline module initializes without TDZ or ReferenceError', async
     replacedUrls.at(-1)?.includes('?snip=019335a1-0000-7000-8000-000000000001'),
     `expected URL to switch to saved UUIDv7 snip, got ${replacedUrls.at(-1)}`,
   );
+  els.get('pg-share')?.trigger('click');
+  assert(replacedUrls.at(-1)?.includes('#code='), `expected share button to encode #code= URL, got ${replacedUrls.at(-1)}`);
 });
 
 test('shared UI blocks and editor client bind highlighting, scroll sync, Tab indentation, and mode buttons', () => {

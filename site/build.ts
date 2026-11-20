@@ -515,6 +515,7 @@ function renderPlaygroundPage(
           </svg>
         </button>
         <button id="pg-reset" class="btn" type="button" hidden title="Discard unsaved changes and reset">Reset</button>
+        <button id="pg-share" class="btn" type="button" title="Encode sketch into shareable #code= URL and copy link">Share</button>
         <button id="pg-compile" class="btn" type="button">Compile</button>
         <button id="pg-play" class="btn btn-primary" type="button" title="Run (Ctrl/Cmd + Enter)">&#9654; Play</button>
       </div>
@@ -523,10 +524,12 @@ function renderPlaygroundPage(
       textareaId: 'pg-editor',
       ariaLabel: 'Lite source editor',
       preCodeId: 'pg-source',
+      gutterId: 'pg-editor-gutter',
     })}
     <div class="pg-io-strip">
       <label class="pg-io-field">args <input id="pg-args" type="text" placeholder="optional args"></label>
       <label class="pg-io-field">stdin <input id="pg-stdin" type="text" placeholder="optional stdin"></label>
+      <span id="pg-cursor" class="ed-cursor-meta">Ln 1, Col 1</span>
       <span id="pg-file" class="pg-status"></span>
     </div>
   </section>
@@ -573,7 +576,7 @@ function renderPlaygroundPage(
     </div>
 
     <div id="panel-canvas" class="pg-panel" role="tabpanel" hidden>
-      <div class="pg-canvas-wrap">
+      <div id="pg-canvas-wrap" class="pg-canvas-wrap">
         <div class="pg-canvas-bar">
           <span id="pg-canvas-title" class="pg-canvas-title">Canvas Stage</span>
           <div class="pg-canvas-tools">
@@ -589,6 +592,7 @@ function renderPlaygroundPage(
                 <line class="pg-sound-slash" x1="3.5" y1="3.5" x2="20.5" y2="20.5" stroke-width="2.2"/>
               </svg>
             </button>
+            <button id="pg-canvas-fullscreen" class="pg-copy-btn" type="button" aria-pressed="false" title="Toggle fullscreen stage">Fullscreen</button>
           </div>
         </div>
         <div class="pg-canvas-stage">
@@ -609,6 +613,13 @@ function renderPlaygroundPage(
         <button id="pg-sketches-close" class="btn" type="button" aria-label="Close load explorer">Close</button>
       </div>
     </div>
+    <div class="snips-cat-tabs" role="group" aria-label="Starter templates">
+      <span class="code-card-meta" style="align-self:center;margin-right:0.25rem;">Templates:</span>
+      <button class="snips-cat-tab" type="button" data-template="hello">Hello Lite</button>
+      <button class="snips-cat-tab" type="button" data-template="stdin">Input &amp; Loops</button>
+      <button class="snips-cat-tab" type="button" data-template="canvas">Canvas Scene</button>
+      <button class="snips-cat-tab" type="button" data-template="play">Play Loop</button>
+    </div>
     <div id="pg-sketches-cat-tabs" class="snips-cat-tabs" role="group" aria-label="Code categories">
       <button class="snips-cat-tab" type="button" data-cat="all" aria-pressed="true">All</button>
       <button class="snips-cat-tab" type="button" data-cat="saved" aria-pressed="false">Saved</button>
@@ -627,14 +638,16 @@ function renderPlaygroundPage(
 
 <script type="module">
   import { formatCodeView } from "./code-view.js";
-  import { bindCodeModeButtons, bindLiteEditor } from "./editor-client.js";
+  import { bindCodeModeButtons, bindLiteEditor, bindSplitPane, decodeSharePayload, encodeSharePayload } from "./editor-client.js";
   import { highlightLite, highlightTs, highlightC } from "./highlight.js";
+  import { createPlayStage, createWorkerClient } from "./play-stage.js";
   const samples = ${serialized};
   const byId = new Map(samples.map(s => [s.id, s]));
   const cache = new Map();
   const workbenchEl = document.getElementById("pg-workbench");
   const splitEl = document.getElementById("pg-split");
   const resetBtn = document.getElementById("pg-reset");
+  const shareBtn = document.getElementById("pg-share");
   const compileBtn = document.getElementById("pg-compile");
   const playBtn = document.getElementById("pg-play");
   const pauseBtn = document.getElementById("pg-pause");
@@ -643,6 +656,8 @@ function renderPlaygroundPage(
   const statusEl = document.getElementById("pg-status");
   const fileEl = document.getElementById("pg-file");
   const editorEl = document.getElementById("pg-editor");
+  const gutterEl = document.getElementById("pg-editor-gutter");
+  const cursorEl = document.getElementById("pg-cursor");
   const sourceEl = document.getElementById("pg-source");
   const argsEl = document.getElementById("pg-args");
   const stdinEl = document.getElementById("pg-stdin");
@@ -652,11 +667,12 @@ function renderPlaygroundPage(
   const codeModesBar = document.getElementById("pg-code-modes");
   const modeButtons = Array.from(document.querySelectorAll(".code-mode-btn"));
   const tabCanvas = document.getElementById("tab-canvas");
+  const canvasWrap = document.getElementById("pg-canvas-wrap");
   const canvas = document.getElementById("pg-canvas");
-  const ctx = canvas.getContext("2d");
   const canvasTitleEl = document.getElementById("pg-canvas-title");
   const canvasSizeEl = document.getElementById("pg-canvas-size");
   const muteBtn = document.getElementById("pg-mute");
+  const fullscreenBtn = document.getElementById("pg-canvas-fullscreen");
   const fpsEl = document.getElementById("pg-fps");
   const tabs = Array.from(document.querySelectorAll(".pg-tab"));
   const panels = {
@@ -673,24 +689,6 @@ function renderPlaygroundPage(
   let cMessage = "";
   let currentSample = null;
   let lastCSource = null;
-  let animFrame = 0;
-  let lastFrameAt = 0;
-  let playInFlight = false;
-  let activePlay = false;
-  let activeCanvas = false;
-  let playableCanvas = false;
-  let canvasPaused = false;
-  let playExitStatus = 0;
-  let audioMuted = false;
-  let audioContext = null;
-  let stageImage = null;
-  let stageWidth = 0;
-  let stageHeight = 0;
-  let hasPlayLoop = false;
-  let lastPointerMoveAt = 0;
-  let worker = null;
-  let nextReqId = 1;
-  const pending = new Map();
   const snipsApi = typeof window !== "undefined" && window.LiteSnips ? window.LiteSnips : null;
   const saveSnipBtn = document.getElementById("pg-save-snip");
   const titleEl = document.getElementById("pg-current-title");
@@ -737,60 +735,40 @@ function renderPlaygroundPage(
     return libraryPromise;
   }
 
-  const SPLIT_KEY = "lite.pg.split";
-  let splitPct = 50;
-  function applySplit(pct, save) {
-    const clamped = Math.max(20, Math.min(80, Math.round(pct * 10) / 10));
-    splitPct = clamped;
-    workbenchEl.style.setProperty("--pg-split", clamped + "%");
-    splitEl.setAttribute("aria-valuenow", String(Math.round(clamped)));
-    if (save) {
-      try { window.localStorage.setItem(SPLIT_KEY, String(clamped)); } catch {}
-    }
+  if (splitEl && workbenchEl) {
+    bindSplitPane({
+      splitEl,
+      containerEl: workbenchEl,
+      cssVar: "--pg-split",
+      storageKey: "lite.pg.split",
+      defaultPct: 50,
+      minPct: 20,
+      maxPct: 80,
+    });
   }
-  try {
-    const savedSplit = Number(window.localStorage.getItem(SPLIT_KEY));
-    if (Number.isFinite(savedSplit) && savedSplit >= 20 && savedSplit <= 80) {
-      applySplit(savedSplit, false);
-    }
-  } catch {}
 
-  let dragSplitId = null;
-  splitEl.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0 && event.pointerType === "mouse") return;
-    event.preventDefault();
-    dragSplitId = event.pointerId;
-    splitEl.setPointerCapture(event.pointerId);
-    splitEl.classList.add("dragging");
-    document.body.classList.add("pg-resizing");
+  const workerClient = createWorkerClient("./worker.js");
+  const stage = createPlayStage({
+    canvas,
+    workerClient,
+    sizeEl: canvasSizeEl,
+    titleEl: canvasTitleEl,
+    fpsEl,
+    pauseBtn,
+    pauseLabelEl,
+    muteBtn,
+    isCanvasVisible: () => activeTab === "canvas",
+    onStatus: (s) => {
+      statusEl.textContent = s;
+      statusEl.hidden = activeTab === "canvas" && stage.isPlayable() && s !== "Modified";
+    },
+    onError: (stderr) => {
+      statusEl.textContent = "Play error";
+      outputEl.textContent = stderr || "Canvas update failed.";
+      showTab("output");
+    },
   });
-  splitEl.addEventListener("pointermove", (event) => {
-    if (dragSplitId !== event.pointerId) return;
-    const rect = workbenchEl.getBoundingClientRect();
-    if (!rect.width) return;
-    applySplit(((event.clientX - rect.left) / rect.width) * 100, false);
-  });
-  function stopSplitDrag(event) {
-    if (dragSplitId !== event.pointerId) return;
-    dragSplitId = null;
-    if (splitEl.hasPointerCapture(event.pointerId)) {
-      splitEl.releasePointerCapture(event.pointerId);
-    }
-    splitEl.classList.remove("dragging");
-    document.body.classList.remove("pg-resizing");
-    applySplit(splitPct, true);
-  }
-  splitEl.addEventListener("pointerup", stopSplitDrag);
-  splitEl.addEventListener("pointercancel", stopSplitDrag);
-  splitEl.addEventListener("dblclick", () => { applySplit(50, true); });
-  splitEl.addEventListener("keydown", (event) => {
-    const step = event.shiftKey ? 5 : 2;
-    if (event.key === "ArrowLeft") { event.preventDefault(); applySplit(splitPct - step, true); }
-    else if (event.key === "ArrowRight") { event.preventDefault(); applySplit(splitPct + step, true); }
-    else if (event.key === "Home") { event.preventDefault(); applySplit(20, true); }
-    else if (event.key === "End") { event.preventDefault(); applySplit(80, true); }
-    else if (event.key === "0") { event.preventDefault(); applySplit(50, true); }
-  });
+  stage.syncPauseUi(false, false);
 
   function renderCodeViews() {
     tsEl.innerHTML = rawTs ? highlightTs(formatCodeView(rawTs, "ts", codeMode)) : "";
@@ -813,13 +791,13 @@ function renderPlaygroundPage(
     for (const [key, panel] of Object.entries(panels)) {
       panel.hidden = key !== name;
     }
-    const showPause = name === "canvas" && playableCanvas;
+    const showPause = name === "canvas" && stage.isPlayable();
     codeModesBar.hidden = name !== "ts" && name !== "c";
     copyBtn.hidden = name === "canvas";
     pauseBtn.hidden = !showPause;
     statusEl.hidden = showPause && statusEl.textContent !== "Modified";
-    if (name === "canvas") resumeCanvasLoop();
-    else pauseCanvasLoop();
+    if (name === "canvas") stage.resumeLoop();
+    else stage.pauseLoop();
     if (name === "c") void compileCForEditor();
   }
 
@@ -830,19 +808,22 @@ function renderPlaygroundPage(
     });
   }
 
-  bindLiteEditor({
+  const editorCtrl = bindLiteEditor({
     editor: editorEl,
     preCode: sourceEl,
     highlight: highlightLite,
     indent: "  ",
+    gutter: gutterEl,
+    cursorEl,
+    autoIndent: true,
     onInput: (_src, fromTab) => {
-      if (!fromTab) pauseCanvasLoop();
+      if (!fromTab) stage.pauseLoop();
       const dirty = updateDirtyState();
       statusEl.textContent = dirty ? "Modified — click Save" : (fromTab ? "Modified" : "Ready");
       statusEl.hidden = false;
     },
     onRun: () => {
-      unlockAudio();
+      stage.unlockAudio();
       void runAction("play");
     },
   });
@@ -863,8 +844,17 @@ function renderPlaygroundPage(
     for (const k of ["sample", "snip", "draft", "item", "example", "case", "piece"]) {
       nextUrl.searchParams.delete(k);
     }
+    if (String(nextUrl.hash || "").startsWith("#code=")) nextUrl.hash = "";
     if (key && value) nextUrl.searchParams.set(key, value);
     window.history.replaceState({}, "", nextUrl);
+  }
+
+  function stopPlay(hideTab) {
+    stage.stop();
+    if (hideTab) {
+      tabCanvas.hidden = true;
+      if (activeTab === "canvas") showTab("output");
+    }
   }
 
   async function loadSample(id, mode) {
@@ -875,6 +865,7 @@ function renderPlaygroundPage(
     currentExtraModules = null;
     currentEnvironment = "universal";
     stopPlay(true);
+    editorCtrl.clearErrors();
     if (titleEl) titleEl.textContent = meta.title;
     fileEl.textContent = meta.file;
     statusEl.textContent = "Loading " + meta.file + "...";
@@ -883,14 +874,7 @@ function renderPlaygroundPage(
 
     const sample = await fetchSample(meta.id);
     currentSample = sample;
-    editorEl.value = sample.source;
-    sourceEl.innerHTML = sample.sourceHtml + "\\n";
-    editorEl.scrollTop = 0;
-    editorEl.scrollLeft = 0;
-    if (sourceEl.parentElement) {
-      sourceEl.parentElement.scrollTop = 0;
-      sourceEl.parentElement.scrollLeft = 0;
-    }
+    editorCtrl.setValue(sample.source);
     rawTs = sample.ts ?? "";
     rawC = "";
     cMessage = "/* Press Compile or open Generated C to emit C. */";
@@ -932,43 +916,6 @@ function renderPlaygroundPage(
     return raw ? raw.split(/\\s+/) : [];
   }
 
-  function getWorker() {
-    if (!worker) {
-      worker = new Worker("./worker.js", { type: "module" });
-      worker.addEventListener("message", (event) => {
-        const msg = event.data;
-        const entry = pending.get(msg.id);
-        if (!entry) return;
-        pending.delete(msg.id);
-        entry.resolve(msg);
-      });
-      worker.addEventListener("error", (err) => {
-        for (const entry of pending.values()) {
-          entry.reject(new Error(err.message || "Worker error"));
-        }
-        pending.clear();
-        worker = null;
-      });
-    }
-    return worker;
-  }
-
-  function runInWorker(action, source, stdin, args, extra) {
-    return new Promise((resolve, reject) => {
-      const id = nextReqId++;
-      pending.set(id, { resolve, reject });
-      getWorker().postMessage({
-        id,
-        action,
-        source,
-        stdin,
-        args,
-        ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
-        ...(extra || {}),
-      });
-    });
-  }
-
   function formatCOutput(c, cError) {
     if (c) return c;
     const msg = (cError || "C backend does not support this program yet.").trim();
@@ -982,11 +929,16 @@ function renderPlaygroundPage(
     cMessage = "/* Compiling C in browser... */";
     renderCodeViews();
     try {
-      const res = await runInWorker("compile-c", source, "", []);
+      const res = await workerClient.call("compile-c", {
+        source,
+        stdin: "",
+        args: [],
+        ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
+      });
       if (editorEl.value !== source) return;
       lastCSource = source;
       if (res.c) {
-        rawC = res.c;
+        rawC = String(res.c);
         cMessage = "";
       } else {
         rawC = "";
@@ -1002,6 +954,7 @@ function renderPlaygroundPage(
 
   async function runAction(action) {
     stopPlay(false);
+    editorCtrl.clearErrors();
     const source = editorEl.value;
     const stdin = parseStdin();
     const args = parseArgs();
@@ -1011,12 +964,17 @@ function renderPlaygroundPage(
       outputEl.textContent = "";
     }
     try {
-      const res = await runInWorker(action, source, stdin, args);
-      if (res.ts) rawTs = res.ts;
+      const res = await workerClient.call(action, {
+        source,
+        stdin,
+        args,
+        ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
+      });
+      if (res.ts) rawTs = String(res.ts);
       if (action === "compile" && (res.c !== undefined || res.cError !== undefined)) {
         lastCSource = source;
         if (res.c) {
-          rawC = res.c;
+          rawC = String(res.c);
           cMessage = "";
         } else {
           rawC = "";
@@ -1025,6 +983,7 @@ function renderPlaygroundPage(
       }
       renderCodeViews();
       if (!res.ok) {
+        editorCtrl.setErrorFromStderr(res.stderr || "");
         tabCanvas.hidden = true;
         showTab("output");
         const isCliFailure =
@@ -1044,34 +1003,20 @@ function renderPlaygroundPage(
       }
 
       outputEl.textContent = res.stdout + (res.stderr ? (res.stdout ? "\\n" : "") + res.stderr : "");
-      if (Array.isArray(res.tones) && res.tones.length > 0) playToneEvents(res.tones);
+      if (Array.isArray(res.tones) && res.tones.length > 0) stage.playTones(res.tones);
 
       const frame = res.play || res.canvas;
       if (frame && frame.width > 0 && frame.height > 0) {
-        applyPlayFrame(frame);
         tabCanvas.hidden = false;
-        activeCanvas = true;
-        canvasPaused = false;
+        stage.startSession(frame, Boolean(res.play));
         if (res.play) {
-          hasPlayLoop = Boolean(res.play.hasUpdate);
-          playExitStatus = Number(res.play.status ?? 0);
-          activePlay = hasPlayLoop && playExitStatus === 0;
-          playableCanvas = true;
           showTab("canvas");
-          syncPauseUi(true);
-          canvas.focus({ preventScroll: true });
+          stage.syncPauseUi(true, true);
         } else {
-          hasPlayLoop = false;
-          playExitStatus = 0;
-          activePlay = false;
-          playableCanvas = false;
-          syncPauseUi(false);
           statusEl.textContent = "Rendered canvas (in browser)";
           showTab("canvas");
         }
       } else {
-        playableCanvas = false;
-        syncPauseUi(false);
         tabCanvas.hidden = true;
         showTab("output");
         statusEl.textContent = "Exited 0 (in browser)";
@@ -1085,65 +1030,52 @@ function renderPlaygroundPage(
   }
 
   resetBtn.addEventListener("click", () => {
-    unlockAudio();
+    stage.unlockAudio();
     if (activeSnipId && loadSnip(activeSnipId)) return;
     if (activeLibraryItem) { loadLibraryItem(activeLibraryItem); return; }
     void loadSample((currentSample && currentSample.id) || "${escapeHtml(playgroundDefaultSample.id)}", "load");
   });
   compileBtn.addEventListener("click", () => { void runAction("compile"); });
-  playBtn.addEventListener("click", () => { unlockAudio(); void runAction("play"); });
+  playBtn.addEventListener("click", () => { stage.unlockAudio(); void runAction("play"); });
 
-  function playReadyStatus() {
-    if (activePlay) return "Playing";
-    if (hasPlayLoop && playExitStatus !== 0) return "Stopped (" + playExitStatus + ")";
-    return "Interactive";
+  if (shareBtn) {
+    shareBtn.addEventListener("click", () => {
+      const encoded = encodeSharePayload({
+        title: titleEl ? titleEl.textContent || "Shared Sketch" : "Shared Sketch",
+        code: editorEl.value,
+        stdin: parseStdin(),
+        args: argsEl.value,
+      });
+      const shareUrl = new URL(window.location.href);
+      shareUrl.search = "";
+      shareUrl.hash = "#code=" + encoded;
+      window.history.replaceState({}, "", shareUrl);
+      statusEl.hidden = false;
+      statusEl.textContent = "Share link encoded in URL";
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(String(shareUrl)).then(() => {
+          statusEl.textContent = "Share link copied to clipboard";
+        }, () => {});
+      }
+    });
   }
 
-  function syncPauseUi(updateStatus) {
-    const showPause = activeTab === "canvas" && playableCanvas;
-    pauseBtn.hidden = !showPause;
-    pauseBtn.setAttribute("aria-pressed", canvasPaused ? "true" : "false");
-    const stateText = canvasPaused ? "Paused" : playReadyStatus();
-    pauseLabelEl.textContent = stateText;
-    const tip = canvasPaused
-      ? "Paused — click to resume canvas events"
-      : stateText + " — click to pause canvas events";
-    pauseBtn.title = tip;
-    pauseBtn.setAttribute("aria-label", tip);
-    if (updateStatus && playableCanvas) {
-      statusEl.textContent = canvasPaused ? "Paused" : (stateText === "Interactive" ? "Interactive ready" : stateText);
+  if (fullscreenBtn && canvasWrap) {
+    function setCanvasFullscreen(next) {
+      canvasWrap.classList.toggle("is-fullscreen", next);
+      fullscreenBtn.setAttribute("aria-pressed", next ? "true" : "false");
+      fullscreenBtn.textContent = next ? "Exit Fullscreen" : "Fullscreen";
     }
-    statusEl.hidden = showPause && statusEl.textContent !== "Modified";
+    fullscreenBtn.addEventListener("click", () => {
+      setCanvasFullscreen(!canvasWrap.classList.contains("is-fullscreen"));
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") {
+        if (canvasWrap.classList.contains("is-fullscreen")) setCanvasFullscreen(false);
+        if (sketchesModal && !sketchesModal.hidden) sketchesModal.hidden = true;
+      }
+    });
   }
-  syncPauseUi(false);
-
-  pauseBtn.addEventListener("click", () => {
-    if (!activeCanvas || !playableCanvas) return;
-    canvasPaused = !canvasPaused;
-    if (canvasPaused) {
-      pauseCanvasLoop();
-      fpsEl.textContent = "0.0 fps · 0.0 ms";
-    } else if (activeTab === "canvas") {
-      unlockAudio();
-      resumeCanvasLoop();
-      canvas.focus({ preventScroll: true });
-    }
-    syncPauseUi(true);
-  });
-
-  function syncMuteUi() {
-    muteBtn.setAttribute("aria-pressed", audioMuted ? "true" : "false");
-    const label = audioMuted ? "Sound off — click to turn sound on" : "Sound on — click to mute";
-    muteBtn.title = label;
-    muteBtn.setAttribute("aria-label", label);
-  }
-  syncMuteUi();
-
-  muteBtn.addEventListener("click", () => {
-    audioMuted = !audioMuted;
-    syncMuteUi();
-    if (!audioMuted) unlockAudio();
-  });
 
   let copyTimer = 0;
   copyBtn.addEventListener("click", () => {
@@ -1164,305 +1096,18 @@ function renderPlaygroundPage(
     }
   });
 
-  function unlockAudio() {
-    if (audioMuted) return;
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    if (!audioContext) audioContext = new AudioCtx();
-    if (audioContext.state === "suspended") {
-      const resumed = audioContext.resume();
-      if (resumed && resumed.catch) resumed.catch(() => {});
-    }
-  }
-
-  function playToneEvents(values) {
-    if (audioMuted || !Array.isArray(values) || values.length < 3) return;
-    unlockAudio();
-    if (!audioContext || audioContext.state !== "running") return;
-    let index = 0;
-    while (index + 2 < values.length) {
-      const frequency = Number(values[index]);
-      const durationMs = Number(values[index + 1]);
-      const volumePercent = Number(values[index + 2]);
-      index += 3;
-      if (!Number.isFinite(frequency) || frequency < 20 || frequency > 20000
-        || !Number.isFinite(durationMs) || durationMs <= 0 || durationMs > 3000
-        || !Number.isFinite(volumePercent) || volumePercent <= 0 || volumePercent > 100) {
-        continue;
-      }
-      const duration = durationMs / 1000;
-      const volume = (volumePercent / 100) * 0.45;
-      const oscillator = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      const startAt = audioContext.currentTime;
-      const ramp = Math.min(duration / 4, 0.01);
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(frequency, startAt);
-      gain.gain.setValueAtTime(0, startAt);
-      gain.gain.linearRampToValueAtTime(volume, startAt + ramp);
-      gain.gain.setValueAtTime(volume, Math.max(startAt + ramp, startAt + duration - ramp));
-      gain.gain.linearRampToValueAtTime(0, startAt + duration);
-      oscillator.connect(gain);
-      gain.connect(audioContext.destination);
-      oscillator.start(startAt);
-      oscillator.stop(startAt + duration);
-    }
-  }
-
-  function setStagePixel(idx, r, g, b, a) {
-    const data = stageImage.data;
-    const off = idx * 4;
-    if (a >= 255) {
-      data[off] = r;
-      data[off + 1] = g;
-      data[off + 2] = b;
-      data[off + 3] = 255;
-      return;
-    }
-    if (a <= 0) return;
-    const inv = 255 - a;
-    const dstA = data[off + 3];
-    if (dstA === 0) {
-      data[off] = r;
-      data[off + 1] = g;
-      data[off + 2] = b;
-      data[off + 3] = a;
-    } else {
-      data[off] = Math.round((r * a + data[off] * inv) / 255);
-      data[off + 1] = Math.round((g * a + data[off + 1] * inv) / 255);
-      data[off + 2] = Math.round((b * a + data[off + 2] * inv) / 255);
-      data[off + 3] = Math.min(255, dstA + Math.round((a * inv) / 255));
-    }
-  }
-
-  function applyPlayFrame(frame) {
-    if (!frame || frame.width < 1 || frame.height < 1) return;
-    if (stageWidth !== frame.width || stageHeight !== frame.height || !stageImage) {
-      stageWidth = frame.width;
-      stageHeight = frame.height;
-      canvas.width = stageWidth;
-      canvas.height = stageHeight;
-      stageImage = ctx.createImageData(stageWidth, stageHeight);
-    }
-    canvasSizeEl.textContent = "(" + stageWidth + "x" + stageHeight + ")";
-    if (typeof frame.title === "string") {
-      canvasTitleEl.textContent = frame.title || "Canvas Stage";
-      canvas.title = frame.title || "Canvas Stage";
-    }
-    if (Array.isArray(frame.pixels)) {
-      const data = stageImage.data;
-      if (frame.pixels.length === 0) {
-        data.fill(0);
-      } else {
-        const count = Math.min(frame.pixels.length, stageWidth * stageHeight);
-        for (let i = 0; i < count; i += 1) {
-          const c = Number(frame.pixels[i]) >>> 0;
-          const off = i * 4;
-          data[off] = (c >>> 16) & 255;
-          data[off + 1] = (c >>> 8) & 255;
-          data[off + 2] = c & 255;
-          data[off + 3] = (c >>> 24) & 255;
-        }
-      }
-    }
-    const ops = frame.ops;
-    if (Array.isArray(ops) && ops.length > 0) {
-      let idx = 0;
-      while (idx < ops.length) {
-        const op = Number(ops[idx++]);
-        if (op === 1 && idx < ops.length) {
-          const c = Number(ops[idx++]) >>> 0;
-          const a = (c >>> 24) & 255;
-          const r = (c >>> 16) & 255;
-          const g = (c >>> 8) & 255;
-          const b = c & 255;
-          const data = stageImage.data;
-          for (let off = 0; off < data.length; off += 4) {
-            data[off] = r;
-            data[off + 1] = g;
-            data[off + 2] = b;
-            data[off + 3] = a;
-          }
-        } else if (op === 2 && idx + 4 < ops.length) {
-          const rx = Number(ops[idx++]);
-          const ry = Number(ops[idx++]);
-          const rw = Number(ops[idx++]);
-          const rh = Number(ops[idx++]);
-          const c = Number(ops[idx++]) >>> 0;
-          const a = (c >>> 24) & 255;
-          const r = (c >>> 16) & 255;
-          const g = (c >>> 8) & 255;
-          const b = c & 255;
-          const x0 = Math.max(0, Math.trunc(rx));
-          const y0 = Math.max(0, Math.trunc(ry));
-          const x1 = Math.min(stageWidth, Math.trunc(rx + rw));
-          const y1 = Math.min(stageHeight, Math.trunc(ry + rh));
-          for (let py = y0; py < y1; py += 1) {
-            const rowOff = py * stageWidth;
-            for (let px = x0; px < x1; px += 1) {
-              setStagePixel(rowOff + px, r, g, b, a);
-            }
-          }
-        } else {
-          break;
-        }
-      }
-    }
-    ctx.putImageData(stageImage, 0, 0);
-  }
-
-  function pauseCanvasLoop() {
-    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = 0; }
-    playInFlight = false;
-    lastFrameAt = 0;
-  }
-
-  function resumeCanvasLoop() {
-    if (activePlay && hasPlayLoop && !canvasPaused && !animFrame) {
-      lastFrameAt = 0;
-      animFrame = requestAnimationFrame(stepCanvasFrame);
-    }
-  }
-
-  function stopPlay(hideTab) {
-    pauseCanvasLoop();
-    activePlay = false;
-    activeCanvas = false;
-    hasPlayLoop = false;
-    playableCanvas = false;
-    canvasPaused = false;
-    playExitStatus = 0;
-    fpsEl.textContent = "0.0 fps · 0.0 ms";
-    syncPauseUi(false);
-    if (worker) worker.postMessage({ action: "stop" });
-    if (hideTab) {
-      tabCanvas.hidden = true;
-      if (activeTab === "canvas") showTab("output");
-    }
-  }
-
-  async function sendPlayInteraction(action, payload) {
-    if (!activeCanvas || canvasPaused) return;
-    try {
-      const res = await new Promise((resolve, reject) => {
-        const id = nextReqId++;
-        pending.set(id, { resolve, reject });
-        getWorker().postMessage({ id, action, ...payload });
-      });
-      if (!activeCanvas || canvasPaused) return;
-      if (Array.isArray(res.tones) && res.tones.length > 0) playToneEvents(res.tones);
-      if (res.frame) applyPlayFrame(res.frame);
-    } catch {
-      // Ignore superseded interaction replies
-    }
-  }
-
-  async function stepCanvasFrame(now) {
-    animFrame = 0;
-    if (!activePlay || canvasPaused || activeTab !== "canvas") return;
-    if (playInFlight) {
-      animFrame = requestAnimationFrame(stepCanvasFrame);
-      return;
-    }
-    const dtMs = lastFrameAt === 0 ? 16.667 : Math.max(now - lastFrameAt, 1);
-    const dtSec = Math.min(dtMs / 1000, 0.1);
-    if (lastFrameAt !== 0) {
-      fpsEl.textContent = (1000 / dtMs).toFixed(1) + " fps · " + dtMs.toFixed(1) + " ms";
-    }
-    lastFrameAt = now;
-    playInFlight = true;
-    try {
-      const res = await runInWorker("step", "", "", [], { dt: dtSec });
-      playInFlight = false;
-      if (!activePlay || canvasPaused) return;
-      if (Array.isArray(res.tones) && res.tones.length > 0) playToneEvents(res.tones);
-      if (res.frame) applyPlayFrame(res.frame);
-      if (!res.ok) {
-        activePlay = false;
-        statusEl.textContent = "Play error";
-        outputEl.textContent = res.stderr || "Canvas update failed.";
-        showTab("output");
-        return;
-      }
-      if (res.status === 0) {
-        if (activeTab === "canvas") animFrame = requestAnimationFrame(stepCanvasFrame);
-      } else {
-        activePlay = false;
-        playExitStatus = res.status;
-        syncPauseUi(true);
-      }
-    } catch {
-      playInFlight = false;
-      activePlay = false;
-    }
-  }
-
-  function getCanvasCell(event) {
-    const bounds = canvas.getBoundingClientRect();
-    const cw = stageWidth || canvas.width;
-    const ch = stageHeight || canvas.height;
-    if (!bounds.width || !bounds.height || !cw || !ch) return { x: 0, y: 0 };
-    const scale = Math.min(bounds.width / cw, bounds.height / ch);
-    const drawW = cw * scale;
-    const drawH = ch * scale;
-    const left = bounds.left + (bounds.width - drawW) / 2;
-    const top = bounds.top + (bounds.height - drawH) / 2;
-    const x = Math.max(0, Math.min(cw - 1, Math.floor((event.clientX - left) / scale)));
-    const y = Math.max(0, Math.min(ch - 1, Math.floor((event.clientY - top) / scale)));
-    return { x, y };
-  }
-
-  canvas.addEventListener("keydown", (event) => {
-    if (!activeCanvas || canvasPaused) return;
-    unlockAudio();
-    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(event.key)) {
-      event.preventDefault();
-    }
-    void sendPlayInteraction("keydown", { key: event.key });
-  });
-
-  canvas.addEventListener("keyup", (event) => {
-    if (!activeCanvas || canvasPaused) return;
-    void sendPlayInteraction("keyup", { key: event.key });
-  });
-
-  canvas.addEventListener("pointermove", (event) => {
-    if (!activeCanvas || canvasPaused) return;
-    const now = performance.now();
-    if (now - lastPointerMoveAt < 16) return;
-    lastPointerMoveAt = now;
-    const cell = getCanvasCell(event);
-    void sendPlayInteraction("pointermove", cell);
-  });
-
-  canvas.addEventListener("pointerdown", (event) => {
-    if (!activeCanvas || canvasPaused) return;
-    unlockAudio();
-    canvas.focus({ preventScroll: true });
-    const cell = getCanvasCell(event);
-    void sendPlayInteraction("pointerdown", { ...cell, button: event.button });
-  });
-
-  canvas.addEventListener("pointerup", (event) => {
-    if (!activeCanvas || canvasPaused) return;
-    const cell = getCanvasCell(event);
-    void sendPlayInteraction("pointerup", { ...cell, button: event.button });
-  });
-
   function loadSnip(id) {
     if (!snipsApi) return false;
     const snip = snipsApi.get(id);
     if (!snip) return false;
     stopPlay(true);
+    editorCtrl.clearErrors();
     activeSnipId = snip.id;
     activeLibraryItem = null;
     currentSample = null;
     currentExtraModules = snip.extraModules || null;
     currentEnvironment = snip.environment || "universal";
-    editorEl.value = snip.code;
-    sourceEl.innerHTML = highlightLite(snip.code) + "\\n";
-    editorEl.scrollTop = 0;
-    editorEl.scrollLeft = 0;
+    editorCtrl.setValue(snip.code);
     stdinEl.value = String(snip.stdin || "").replaceAll("\\n", "\\\\n");
     argsEl.value = String(snip.args || "");
     if (titleEl) titleEl.textContent = snip.title;
@@ -1492,15 +1137,13 @@ function renderPlaygroundPage(
       return;
     }
     stopPlay(true);
+    editorCtrl.clearErrors();
     activeSnipId = null;
     activeLibraryItem = item;
     currentSample = null;
     currentExtraModules = item.extraModules || null;
     currentEnvironment = item.environment || "universal";
-    editorEl.value = item.source;
-    sourceEl.innerHTML = highlightLite(item.source) + "\\n";
-    editorEl.scrollTop = 0;
-    editorEl.scrollLeft = 0;
+    editorCtrl.setValue(item.source);
     stdinEl.value = String(item.stdin || "").replaceAll("\\n", "\\\\n");
     argsEl.value = Array.isArray(item.args) ? item.args.join(" ") : "";
     if (titleEl) titleEl.textContent = item.title;
@@ -1873,6 +1516,63 @@ function renderPlaygroundPage(
       });
     }
   }
+
+  const STARTER_TEMPLATES = {
+    hello: {
+      title: "Hello Lite",
+      code: 'io := import "core/io";\\n\\nio.outputLine("Hello from Lite Play Studio!");\\n',
+      stdin: "",
+      args: "",
+    },
+    stdin: {
+      title: "Input & Loops",
+      code: 'io := import "core/io";\\nformat := import "core/format";\\n\\nlines := io.inputLines();\\nvar i := 0;\\nloop i < 5 and i < format.listCountText(lines) {\\n  io.outputLine(format.intText(i + 1) + ": " + lines[i]);\\n  i = i + 1;\\n}\\n',
+      stdin: "alpha\\nbeta\\ngamma",
+      args: "",
+    },
+    canvas: {
+      title: "Canvas Scene",
+      code: 'canvas := import "extra/canvas";\\n\\ncanvas.open(160, 100, "Lite Canvas");\\ncanvas.clear(0xFF0B0C0E);\\ncanvas.fillRect(20, 20, 120, 60, 0xFFC97B14);\\ncanvas.fillRect(36, 36, 88, 28, 0xFFF0B45A);\\ncanvas.present();\\n',
+      stdin: "",
+      args: "",
+    },
+    play: {
+      title: "Play Loop",
+      code: 'canvas := import "extra/canvas";\\n\\nvar x := 10;\\ncanvas.open(160, 96, "Moving Block");\\nonCanvasUpdate := fn(dt: Float): Bool {\\n  x = (x + 2) % 140;\\n  canvas.clear(0xFF141210);\\n  canvas.fillRect(x, 36, 20, 20, 0xFFF0B45A);\\n  canvas.present();\\n  true\\n};\\ncanvas.present();\\n',
+      stdin: "",
+      args: "",
+    },
+  };
+  for (const tplBtn of document.querySelectorAll("[data-template]")) {
+    tplBtn.addEventListener("click", () => {
+      const key = tplBtn.getAttribute("data-template");
+      const tpl = key ? STARTER_TEMPLATES[key] : null;
+      if (!tpl) return;
+      if (snipsApi) {
+        const created = snipsApi.saveNew({
+          title: tpl.title,
+          code: tpl.code,
+          stdin: tpl.stdin,
+          args: tpl.args,
+          origin: "template:" + key,
+        });
+        if (created) {
+          loadSnip(created.id);
+          if (sketchesModal) sketchesModal.hidden = true;
+          return;
+        }
+      }
+      stopPlay(true);
+      editorCtrl.clearErrors();
+      editorCtrl.setValue(tpl.code);
+      stdinEl.value = tpl.stdin.replaceAll("\\n", "\\\\n");
+      argsEl.value = tpl.args;
+      if (titleEl) titleEl.textContent = tpl.title;
+      setBaseline();
+      if (sketchesModal) sketchesModal.hidden = true;
+    });
+  }
+
   if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
     window.addEventListener("lite:snips-changed", syncSnipsBadge);
   }
@@ -1885,7 +1585,34 @@ function renderPlaygroundPage(
   const caseParam = urlParams.get("case");
   const pieceParam = urlParams.get("piece");
   const itemParam = urlParams.get("item");
-  let loadedDraft = Boolean(snipIdParam && loadSnip(snipIdParam));
+  const rawHash = typeof window !== "undefined" && window.location && window.location.hash ? String(window.location.hash) : "";
+  let loadedDraft = false;
+  if (rawHash.startsWith("#code=")) {
+    const shared = decodeSharePayload(rawHash.slice(6));
+    if (shared && typeof shared.code === "string") {
+      loadedDraft = true;
+      activeSnipId = null;
+      activeLibraryItem = null;
+      currentSample = null;
+      editorCtrl.clearErrors();
+      editorCtrl.setValue(shared.code);
+      stdinEl.value = String(shared.stdin || "").replaceAll("\\n", "\\\\n");
+      argsEl.value = String(shared.args || "");
+      if (titleEl) titleEl.textContent = shared.title || "Shared Sketch";
+      fileEl.textContent = "shared#code";
+      rawTs = "";
+      rawC = "";
+      cMessage = "/* Press Compile or open Generated C to emit C. */";
+      lastCSource = null;
+      renderCodeViews();
+      setBaseline();
+      outputEl.textContent = "(Loaded shared sketch — press Play)";
+      statusEl.textContent = "Loaded shared sketch from URL";
+    }
+  }
+  if (!loadedDraft && snipIdParam && loadSnip(snipIdParam)) {
+    loadedDraft = true;
+  }
   if (!loadedDraft && (exampleParam || caseParam || pieceParam || itemParam)) {
     loadedDraft = true;
     void loadLibraryCatalog().then((items) => {
@@ -1904,8 +1631,7 @@ function renderPlaygroundPage(
       if (rawDraft) {
         const draft = JSON.parse(rawDraft);
         if (draft && typeof draft.source === "string") {
-          editorEl.value = draft.source;
-          sourceEl.innerHTML = highlightLite(draft.source) + "\\n";
+          editorCtrl.setValue(draft.source);
           stdinEl.value = String(draft.stdin || "").replaceAll("\\n", "\\\\n");
           argsEl.value = "";
           fileEl.textContent = (draft.title || "gym") + ".lts";
