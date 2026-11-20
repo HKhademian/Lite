@@ -77,15 +77,14 @@ the others still lack their current layer.
 
 ## Current position and parked work
 
-- **Active pass:** fourth layer, concrete syntax and semantics.
-- **Current topic:** 7. Collections. The review has reached string comparison
-  and hashing. Resume with the remaining collection questions before topic 8.
-  Keep comparable depth across the ten areas.
-- **Joint layer completion:** the ten first-layer outlines, second-layer
-  connection summaries, and third-layer main rules and tradeoffs were discussed
-  through topic 10. These breadth passes do
-  not imply detailed design acceptance, complete investigation, or implementation
-  support. The preliminary assessments remain starting material for deeper passes.
+- **Checkpoint, 2026-11-20:** the fourth layer reached topic 10, including
+  generic type and value parameters and effects during compile-time execution.
+  Each of the ten topics has now been discussed at this layer.
+- **Open work:** check the recorded directions against their owning contracts
+  as each topic comes up again. In particular, partial initialization,
+  loop results, and writable callable parameters have directions that differ
+  from earlier documents. Treat syntax sketches as proposals and check compiler
+  support independently. Keep comparable depth across all ten areas.
 - **Recent direction to preserve:** the user sees UserID as equally distinct
   from String and from another distinct type such as TeacherID. Fresh
   string-like literals and established typed values have different treatment;

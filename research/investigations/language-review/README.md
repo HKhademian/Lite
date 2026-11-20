@@ -1,14 +1,14 @@
 # Language review: ten foundational areas
 
-Status: **first three layers discussed; fourth layer at collections and text**. This is a non-normative
+Status: **fourth layer discussed through topic 10**. This is a non-normative
 investigation for the joint, one-at-a-time review. Current selections remain the
 baseline until explicitly revised; initial judgments are starting hypotheses,
 not approval, implementation evidence, or a substitute for concrete decisions.
 The latest source and owning pages must be rechecked when each discussion starts.
 
 The agreed [onion review method](review-method.md) works through all ten areas
-at one level of depth before returning for a deeper layer. The current position
-is the fourth layer, currently at collections and text. Each review keeps five stable subtopics,
+at one level of depth before returning for a deeper layer. The [review checkpoint](review-method.md#current-position-and-parked-work)
+records the completed breadth pass and open questions. Each review keeps five stable subtopics,
 records baseline evidence, concrete probes, tradeoffs, open questions, and links
 to related areas. When a discussion exposes a cross-topic issue, record it at the
 owning topic and return to the active question; bring a prerequisite forward only
