@@ -30,6 +30,10 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Baseline:** Postfix `!` forwards retained failures; selected cleanup applies on relevant exits.
 
+**Joint review:** Read `config := readConfig(path)!` as taking the successful value or catching the returned error and immediately raising it. The sketch `readConfig(path) else/catch err { raise err; }` expresses that control flow for an outcome with one error. `else/catch err` is illustrative notation. Like untagged `return`, untagged `raise` targets the innermost enclosing function, even from inside a nested block. The function's error contract must admit the forwarded error.
+
+For outcomes with multiple retained failures, postfix `!` forwards the entire group and preserves its channels, order, payloads, and origins. A handler that binds and raises only one occurrence does not reproduce that behavior. Verify normal extraction, one-error forwarding from inside a nested block, and forwarding of a retained group through applicable cleanup separately. [Extraction and forwarding](../../../docs/failure-capture-and-unwrapping.md) · [Directed raise](../../../docs/manual-failures-and-inference.md#directed-raise-boundaries)
+
 **Initial assessment and probes:** Trace a fallible call followed by a side effect: on failure, the later effect does not run and applicable cleanup still does. Separate error forwarding from panic handling.
 
 ## 8.4 Handling and recovery
