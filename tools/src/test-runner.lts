@@ -13,7 +13,6 @@ unitTests := import "util/unit-tests";
 smokeTestFiles := fn(): List<String> {
     files: List<String> = [
     "../tools/cli.test.ts",
-    "../tools/run.test.ts",
     "../tools/docs.test.ts",
     "../tools/release.test.ts",
     "../site/features.test.ts",
@@ -25,7 +24,8 @@ smokeTestFiles := fn(): List<String> {
 smokeUnitTestFiles := fn(): List<String> {
     files: List<String> = [
     "compiler/scripts/release-streams.test.lts",
-    "igniter/source-files.test.lts"
+    "igniter/source-files.test.lts",
+    "tools/run.test.lts"
     ];
     files
 };

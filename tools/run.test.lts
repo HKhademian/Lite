@@ -1,0 +1,62 @@
+/** The run adapter executes from a real temporary artifact and removes it afterwards. */
+
+fs := import "core/file";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+runNode := fn(args: List<String>, envOver: List<String>): (status: Int, stdout: String, stderr: String) {
+    tmpRes := fs.makeTempDir("lite-run-test-");
+    test.check("runNode makeTempDir: " + tmpRes.error, tmpRes.ok);
+    outPath := path.join(tmpRes.path, "out");
+    errPath := path.join(tmpRes.path, "err");
+    emptyBytes: List<Int> = [];
+    res := proc.runBytes(proc.execPath(), args, root, envOver, 60000, emptyBytes, outPath, errPath);
+    test.check("runNode process error: " + res.error, res.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    _rm := fs.remove(tmpRes.path);
+    (status = res.status, stdout = outText, stderr = errText)
+};
+
+emptyEnv: List<String> = [];
+
+/* 1. lite run executes a script from a temporary artifact and removes the directory */
+scratchRes := fs.makeTempDir("lite-run-probe-");
+test.check("makeTempDir scratch: " + scratchRes.error, scratchRes.ok);
+scratch := scratchRes.path;
+run1 := runNode(
+[path.join(root, "bin/lite-run"), "language/examples/io/process/script-arguments.lts", "hello"],
+["TMPDIR=" + scratch]
+);
+test.checkInt("lite-run status: " + run1.stderr, 0, run1.status);
+test.checkText("lite-run stdout", "hello\n", run1.stdout);
+remaining := fs.listDir(scratch);
+test.checkInt("temporary run directory was not removed", 0, list.listCountText(remaining));
+_rmScratch := fs.remove(scratch);
+
+/* 2. lite compile, check and run resolve top-level Lite source imports */
+dirRes := fs.makeTempDir("lite-import-command-");
+test.check("makeTempDir import dir: " + dirRes.error, dirRes.ok);
+dir := dirRes.path;
+mainPath := path.join(dir, "main.lts");
+test.check("write main.lts", fs.writeText(mainPath, "lib := import \"./lib.lts\";\nio := import \"core/io\";\nio.outputLine(lib.answer);\n").ok);
+test.check("write lib.lts", fs.writeText(path.join(dir, "lib.lts"), "pub answer := 42;\n").ok);
+
+comp := runNode([path.join(root, "bin/lite-compile-ts"), mainPath], emptyEnv);
+test.checkInt("lite-compile-ts status: " + comp.stderr, 0, comp.status);
+test.checkText("lite-compile-ts stderr", "", comp.stderr);
+
+chk := runNode([path.join(root, "bin/lite-check"), mainPath], emptyEnv);
+test.checkInt("lite-check status: " + chk.stderr, 0, chk.status);
+
+ran := runNode([path.join(root, "bin/lite-run"), mainPath], emptyEnv);
+test.checkInt("lite-run import status: " + ran.stderr, 0, ran.status);
+test.checkText("lite-run import stdout", "42\n", ran.stdout);
+
+_rmDir := fs.remove(dir);

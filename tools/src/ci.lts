@@ -10,6 +10,7 @@ path := import "core/path";
 json := import "util/json";
 project := import "util/project";
 rel := import "util/release";
+unitTests := import "util/unit-tests";
 
 failCi := fn(message: String): Unit {
     io.errorLine(message);
@@ -260,13 +261,19 @@ runTask := fn(root: String, task: String): Unit {
     if task == "release-unit" {
         unitArgs: List<String> = [
         "--test",
-        "tools/docs.test.ts", "tools/cases.test.ts", "tools/cli.test.ts",
-        "tools/fmt.test.ts", "tools/run.test.ts", "tools/release.test.ts",
+        "tools/docs.test.ts", "tools/cli.test.ts",
+        "tools/fmt.test.ts", "tools/release.test.ts",
         "site/features.test.ts", "site/build.test.ts"
         ];
         invokeNode(unitArgs, root);
-        releaseUnitArgs: List<String> = ["test", "--unit", "release-streams.test.lts"];
-        invokeLite(root, releaseUnitArgs);
+        releaseUnitFiles: List<String> = [
+        "compiler/scripts/release-streams.test.lts",
+        "tools/cases.test.lts",
+        "tools/run.test.lts"
+        ];
+        if unitTests.runUnitTestFiles(root, releaseUnitFiles, 0, "") =!= 0 {
+            io.exit(1);
+        }
         return;
     }
     if task == "release-regressions" {
