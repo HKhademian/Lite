@@ -116,28 +116,10 @@ pub runUnitWorker := fn(taskJson: String): Int {
     0
 };
 
-/** Discovers `.test.lts` files matching `filter` and runs them in parallel using `external/pool`. */
-pub runUnitTests := fn(rootDir: String, filter: String, maxJobs: Int, outputMode: String): Int {
-    ignored: List<String> = ["node_modules", "dist", "tmp", "build"];
-    targets: List<String> = [rootDir];
-    absFiles := path.collectFiles(rootDir, targets, ".test.lts", ignored, true);
-
-    selectedRel: mut List<String> = [];
-    loop absFiles as absFile {
-        rel := path.relative(rootDir, absFile);
-        if cases.matchesCaseFilter(rel, filter) {
-            list.pushBack(mut selectedRel, rel);
-        }
-    }
-
+/** Runs an explicit list of repository-relative `.test.lts` files in parallel using `external/pool`. */
+pub runUnitTestFiles := fn(rootDir: String, selectedRel: List<String>, maxJobs: Int, outputMode: String): Int {
     count := list.listCountText(selectedRel);
     if count == 0 {
-        if filter =!= "" {
-            if outputMode =!= "--silence" {
-                io.errorLine("No unit test files matched \"" + filter + "\".");
-            }
-            return 1;
-        }
         if outputMode =!= "--silence" and outputMode =!= "--mute" {
             io.outputLine("Unit tests: 0 passed, 0 failed.");
         }
@@ -222,6 +204,30 @@ pub runUnitTests := fn(rootDir: String, filter: String, maxJobs: Int, outputMode
         }
     }
     0
+};
+
+/** Discovers `.test.lts` files matching `filter` and runs them in parallel using `external/pool`. */
+pub runUnitTests := fn(rootDir: String, filter: String, maxJobs: Int, outputMode: String): Int {
+    ignored: List<String> = ["node_modules", "dist", "tmp", "build"];
+    targets: List<String> = [rootDir];
+    absFiles := path.collectFiles(rootDir, targets, ".test.lts", ignored, true);
+
+    selectedRel: mut List<String> = [];
+    loop absFiles as absFile {
+        rel := path.relative(rootDir, absFile);
+        if cases.matchesCaseFilter(rel, filter) {
+            list.pushBack(mut selectedRel, rel);
+        }
+    }
+
+    count := list.listCountText(selectedRel);
+    if count == 0 and filter =!= "" {
+        if outputMode =!= "--silence" {
+            io.errorLine("No unit test files matched \"" + filter + "\".");
+        }
+        return 1;
+    }
+    runUnitTestFiles(rootDir, selectedRel, maxJobs, outputMode)
 };
 
 /** Parses CLI flags for `lite test --unit` and dispatches execution. */

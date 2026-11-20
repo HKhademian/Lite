@@ -262,9 +262,11 @@ runTask := fn(root: String, task: String): Unit {
         "--test",
         "tools/docs.test.ts", "tools/cases.test.ts", "tools/cli.test.ts",
         "tools/fmt.test.ts", "tools/run.test.ts", "tools/release.test.ts",
-        "compiler/scripts/release-streams.test.ts", "site/features.test.ts", "site/build.test.ts"
+        "site/features.test.ts", "site/build.test.ts"
         ];
         invokeNode(unitArgs, root);
+        releaseUnitArgs: List<String> = ["test", "--unit", "release-streams.test.lts"];
+        invokeLite(root, releaseUnitArgs);
         return;
     }
     if task == "release-regressions" {

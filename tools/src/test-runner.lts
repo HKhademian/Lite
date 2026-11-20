@@ -16,10 +16,16 @@ smokeTestFiles := fn(): List<String> {
     "../tools/run.test.ts",
     "../tools/docs.test.ts",
     "../tools/release.test.ts",
-    "../compiler/scripts/release-streams.test.ts",
     "../site/features.test.ts",
     "../site/build.test.ts",
     "source-files.test.ts"
+    ];
+    files
+};
+
+smokeUnitTestFiles := fn(): List<String> {
+    files: List<String> = [
+    "compiler/scripts/release-streams.test.lts"
     ];
     files
 };
@@ -131,7 +137,12 @@ run := fn(rawArgs: List<String>): Unit {
     if res.status =!= 0 {
         io.exit(res.status);
     }
-    if mode =!= "--smoke" {
+    if mode == "--smoke" {
+        smokeUnitExit := unitTests.runUnitTestFiles(root, smokeUnitTestFiles(), 0, outputMode);
+        if smokeUnitExit =!= 0 {
+            io.exit(smokeUnitExit);
+        }
+    } else {
         unitExit := unitTests.runUnitTests(root, "", 0, outputMode);
         if unitExit =!= 0 {
             io.exit(unitExit);

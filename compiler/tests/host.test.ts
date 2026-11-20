@@ -163,7 +163,6 @@ function isolatedCheckout(): string {
     'compiler/package.json',
     'igniter/test-suites.ts', 'igniter/artifacts.ts', 'igniter/package.json',
     'config/versions.json',
-    'compiler/scripts/release-streams.test.ts',
     'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/tsconfig.json',
     ...dependencies, ...toolSources, ...coreLibs, ...externalLibs, ...utilLibs,
