@@ -23,7 +23,7 @@ import {
 } from './editor-client.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
-import { LiteAcademyGraph, parseLiteUri, relativeWebHref, rewriteLiteUriHtml, validateBuiltSiteReferences } from './lite-uri.ts';
+import { extractLiteUrisFromMarkdown, LiteAcademyGraph, parseLiteUri, relativeWebHref, rewriteLiteUriHtml, validateBuiltSiteReferences } from './lite-uri.ts';
 import { createPlayStage, createWorkerClient, mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
@@ -1745,6 +1745,34 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   assert(rewritten.includes('href="../../docs/handbook/tuples-arrays-lists-and-aliases.html#nominal-record-types--name-shorthand" data-lite-kind="handbook"'));
   assert(rewritten.includes('href="../../modules/core/list.html#pushBack" data-lite-kind="module"'));
   assert.equal(g.getBacklinks('lite://module/core/list').length, 1);
+
+  assert.deepEqual(
+    extractLiteUrisFromMarkdown([
+      '```markdown',
+      '[ignored-fence](lite://bogus/fence)',
+      '```',
+      '',
+      'Inline `[ignored](lite://bogus/inline)` and [`./bin/lite check`](lite://tool/check).',
+      'Angle <<lite://doc/overview>> wait no: [Doc](<lite://doc/overview#frag> "Title") and [Play](lite:/play/double-sum).',
+    ].join('\n')),
+    ['lite://tool/check', 'lite://doc/overview#frag', 'lite:/play/double-sum'],
+  );
+
+  g.registerNode({ uri: 'lite://learn/hello-lite', kind: 'learn', title: 'Hello', outPath: 'learn/getting-started/hello-lite.html' });
+  g.recordLiteUrisFromMarkdown(
+    'lite://learn/hello-lite',
+    'Try [`double-sum`](lite://play/double-sum) and [`fmt`](lite://tool/fmt) then [`pushBack`](lite://module/core/list#pushBack).',
+    'learn/getting-started/hello-lite.html',
+  );
+  assert.equal(g.getBacklinks('lite://tool/fmt').length, 1);
+  assert.equal(g.getBacklinks('lite://module/core/list').length, 2);
+  rewriteLiteUriHtml({
+    html: '<a href="lite://tool/fmt" data-lite-uri="lite://tool/fmt">fmt</a>',
+    outPath: 'learn/getting-started/hello-lite.html',
+    graph: g,
+    fromUri: 'lite://learn/hello-lite',
+  });
+  assert.equal(g.getBacklinks('lite://tool/fmt').length, 1);
 
   assert.throws(() => g.resolveUri('lite://bogus/x', 'docs/index.html'), /Invalid lite URI/);
   assert.throws(() => g.resolveUri('lite://learn/missing', 'docs/index.html'), /Unresolved lite URI target/);

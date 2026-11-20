@@ -358,6 +358,35 @@ export class LiteAcademyGraph {
     }
   }
 
+  /** Extracts Markdown `lite://` / `lite:/` links and records validated graph edges before HTML rendering. */
+  recordLiteUrisFromMarkdown(fromUri: string, markdown: string, fromOutPath: string): void {
+    if (!this.#nodes.has(fromUri)) return;
+    for (const rawUri of extractLiteUrisFromMarkdown(markdown)) {
+      const resolved = this.resolveUri(rawUri, fromOutPath);
+      this.recordEdge({
+        from: fromUri,
+        to: resolved.canonicalUri,
+        kind: 'lite-uri',
+        ...(resolved.fragment ? { fragment: resolved.fragment } : {}),
+      });
+    }
+  }
+
+  /** Pre-scans every node's Markdown source so bidirectional `lite-uri` backlinks are complete prior to section builds. */
+  preScanMarkdownLiteUris(rootDir: string): void {
+    for (const node of this.#nodes.values()) {
+      if (!node.sourcePath || !node.sourcePath.endsWith('.md')) continue;
+      const full = join(rootDir, node.sourcePath);
+      if (!existsSync(full)) continue;
+      try {
+        this.recordLiteUrisFromMarkdown(node.uri, readFileSync(full, 'utf8'), node.outPath);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`${node.sourcePath}: ${msg}`);
+      }
+    }
+  }
+
   getOutgoing(uri: string): readonly LiteGraphEdge[] {
     const canon = this.#aliases.get(uri) ?? uri;
     return this.#outgoing.get(canon) ?? [];
@@ -451,6 +480,89 @@ function escapeAttrEntities(raw: string): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function stripInlineCodeSpans(input: string): string {
+  let out = '';
+  let i = 0;
+  while (i < input.length) {
+    const ch = input[i]!;
+    if (ch === '\\' && i + 1 < input.length) {
+      out += ch + input[i + 1]!;
+      i += 2;
+      continue;
+    }
+    if (ch === '`') {
+      let run = 1;
+      while (i + run < input.length && input[i + run] === '`') run += 1;
+      let closePos = -1;
+      let scan = i + run;
+      while (scan < input.length) {
+        if (input[scan] === '\n' && input[scan + 1] === '\n') break;
+        if (input[scan] === '`') {
+          let cRun = 1;
+          while (scan + cRun < input.length && input[scan + cRun] === '`') cRun += 1;
+          if (cRun === run) {
+            closePos = scan + cRun;
+            break;
+          }
+          scan += cRun;
+          continue;
+        }
+        scan += 1;
+      }
+      if (closePos >= 0) {
+        i = closePos;
+        continue;
+      }
+      out += input.slice(i, i + run);
+      i += run;
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
+/** Extracts `lite://` and `lite:/` Markdown link destinations outside fenced blocks and inline code spans. */
+export function extractLiteUrisFromMarkdown(markdown: string): string[] {
+  const lines = markdown.split(/\r?\n/);
+  const keptLines: string[] = [];
+  let fenceChar = '';
+  let fenceLen = 0;
+
+  for (const line of lines) {
+    if (fenceLen === 0) {
+      const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+      if (m) {
+        const marker = m[1]!;
+        const rest = m[2] ?? '';
+        const ch = marker[0]!;
+        if (ch === '~' || !rest.includes('`')) {
+          fenceChar = ch;
+          fenceLen = marker.length;
+          continue;
+        }
+      }
+      keptLines.push(line);
+    } else {
+      const closeMatch = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line);
+      if (closeMatch && closeMatch[1]![0] === fenceChar && closeMatch[1]!.length >= fenceLen) {
+        fenceChar = '';
+        fenceLen = 0;
+      }
+    }
+  }
+
+  const prose = stripInlineCodeSpans(keptLines.join('\n'));
+  const re = /\]\(\s*<?(lite:\/[^)\s>]+)>?(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/g;
+  const uris: string[] = [];
+  for (let m = re.exec(prose); m !== null; m = re.exec(prose)) {
+    const uri = m[1];
+    if (uri) uris.push(uri);
+  }
+  return uris;
 }
 
 /** Rewrites `<a href="..." data-lite-uri="...">` links to relative web targets and records bidirectional graph edges. */
@@ -755,6 +867,8 @@ export function buildLiteAcademyGraph(options: Readonly<{
       }
     }
   }
+
+  graph.preScanMarkdownLiteUris(rootDir);
 
   return graph;
 }
