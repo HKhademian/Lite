@@ -1,0 +1,24 @@
+{
+  "id": "example.types.records.nominal-records",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/types/records/nominal-records.lts",
+    "hash": "sha256:1d7788ab383c154dbc7be4bd2b4c766ac4958ce4b10f7f9475b9312a0afa1af8"
+  },
+  "features": [
+    "feature.types.records.nominal-records",
+    "feature.types.patterns.aggregate-destructuring",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Nominal record declarations, defaults, zero-init, contextual construction, =name shorthand, and destructuring.",
+  "cases": [
+    {
+      "name": "nominal-records",
+      "stdout": {
+        "text": "Ada maintainer 95\nLin member 40\nSam member 10\n|| || 0\n",
+        "hash": "sha256:3839eb67cd4a49a40abde689f41985ab7d29122bc7faa457008005bc5445953b"
+      },
+      "exitCode": 0
+    }
+  ]
+}

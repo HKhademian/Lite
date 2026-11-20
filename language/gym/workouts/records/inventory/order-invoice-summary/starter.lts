@@ -1,0 +1,10 @@
+io := import "core/io";
+
+LineItem := record {
+    qty: Int;
+    unitPrice: Int;
+    discountPct: Int = 0;
+};
+
+_n := io.inputInt();
+io.outputLine(0, 0, 0);

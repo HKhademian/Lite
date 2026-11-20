@@ -1,0 +1,29 @@
+io := import "core/io";
+
+Address := record {
+    city: String = "Berlin";
+    postal: Int;
+};
+
+User := record {
+    name: String;
+    role: String = "member";
+    score: Int = 10;
+    note: String = "ok";
+    address: Address = {};
+};
+
+name := "Ada";
+first := User { = name, score = 42, note = "top" };
+second: User = { name = "Lin", address = { postal = 10115 } };
+implicit: User;
+zeroed: User = 0;
+
+{ alias = name, = role, = score: Int, _ = note } := first;
+var { mutRole = role, mutScore = score } := second;
+mutRole = "admin";
+mutScore += 5;
+
+io.outputLine(alias, role, score, first.address.city, first.address.postal);
+io.outputLine(second.name, mutRole, mutScore, second.address.city, second.address.postal);
+io.outputLine("|" + implicit.role + "|", implicit.score, "|" + zeroed.role + "|", zeroed.score);

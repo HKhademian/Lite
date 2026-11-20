@@ -1,0 +1,25 @@
+{
+  "id": "case.types.records.run-nominal-record-shorthand",
+  "kind": "feature",
+  "source": "nominal-record-shorthand.lts",
+  "features": [
+    "feature.types.records.nominal-records",
+    "feature.types.patterns.aggregate-destructuring",
+    "feature.io.reporting.report-values"
+  ],
+  "cases": [
+    {
+      "name": "record-shorthand-and-defaults",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "12 34 origin 5\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

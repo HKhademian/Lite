@@ -485,6 +485,29 @@
       "docs": [
         "docs/tooling-and-learning.md"
       ]
+    },
+    {
+      "id": "feature.types.records.nominal-records",
+      "summary": "Nominal record declarations, defaults, zero initialization, contextual construction, and =name shorthand.",
+      "case": "features/types/records/nominal-records.json",
+      "status": "verified",
+      "docs": [
+        "docs/records.md",
+        "docs/record-initialization.md",
+        "docs/aggregate-patterns.md"
+      ]
+    },
+    {
+      "id": "feature.types.patterns.aggregate-destructuring",
+      "summary": "Uniform aggregate destructuring across rec {}, named/mixed/shorthand tuple (), and fixed array [].",
+      "case": "features/types/patterns/aggregate-destructuring.json",
+      "status": "verified",
+      "docs": [
+        "docs/records.md",
+        "docs/aggregate-patterns.md",
+        "docs/tuples-and-patterns.md",
+        "docs/sequence-patterns.md"
+      ]
     }
   ]
 }

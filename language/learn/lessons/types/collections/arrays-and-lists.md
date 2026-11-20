@@ -10,7 +10,7 @@ Distinguish fixed-extent arrays from dynamically resizable `List<T>` storage and
 4. `var mut bag := seed;` permits *both* mutating elements (`list.pushBack(mut bag, 6)`) and replacing `bag = replacement;`.
 
 > [!TIP]
-> Notice `push_back(mut queue, 4)` marks `mut` at the call site too so mutations are always visible to readers.
+> Notice `push_back(mut queue, 4)` marks `mut` at the call site too so mutations are always visible to readers. Fixed `[T; N]` arrays also support exact-length destructuring such as `[a, b, c] := fixed;`, whereas runtime-sized `List<T>` requires indexing or `loop` traversal (see [Records & Aggregate Destructuring](../records/records-and-patterns.md)).
 
 ## Try Modifying This
 

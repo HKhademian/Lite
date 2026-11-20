@@ -1,0 +1,22 @@
+{
+  "id": "feature.types.patterns.aggregate-destructuring",
+  "kind": "feature",
+  "source": {
+    "file": "aggregate-destructuring.lts",
+    "hash": "sha256:2efc754e461258d8cbdbb40962033cef7720b4817ec652342c66fbfef5167de5"
+  },
+  "features": [
+    "feature.types.patterns.aggregate-destructuring"
+  ],
+  "guideline": "Checks uniform =name shorthand and aggregate destructuring across rec {}, tuple (), and fixed array [].",
+  "cases": [
+    {
+      "name": "aggregate-patterns",
+      "stdout": {
+        "text": "crate 9 25\npear 40 30\nhead ok 99 3\n11 22 13\n",
+        "hash": "sha256:c7096d8cebff7d3e3635f05aceae935a42f84f81e9405ed3b6743ad0baeaabed"
+      },
+      "exitCode": 0
+    }
+  ]
+}

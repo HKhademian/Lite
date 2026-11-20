@@ -1,0 +1,57 @@
+io := import "core/io";
+
+LineItem := record {
+    qty: Int;
+    unitPrice: Int;
+    discountPct: Int = 0;
+};
+
+lineNet := fn(item: LineItem): Int {
+    { = qty, price = unitPrice, disc = discountPct } := item;
+    gross := qty * price;
+    gross - ((gross * disc) / 100)
+};
+
+updateBounds := fn(lo: Int, hi: Int, net: Int): [Int; 2] {
+    nextLo := if net < lo { net } else { lo };
+    nextHi := if net > hi { net } else { hi };
+    [nextLo, nextHi]
+};
+
+summarize := fn(n: Int): (total: Int, minLine: Int, maxLine: Int) {
+    if n <= 0 {
+        return (total = 0, minLine = 0, maxLine = 0);
+    }
+    var sum := 0;
+    var lo := 0;
+    var hi := 0;
+    var i := 0;
+    loop i < n {
+        qty := io.inputInt();
+        unitPrice := io.inputInt();
+        discountPct := io.inputInt();
+        item := if discountPct <= 0 {
+            LineItem { = qty, = unitPrice }
+        } else {
+            LineItem { = qty, = unitPrice, = discountPct }
+        };
+        net := lineNet(item);
+        sum += net;
+        if i == 0 {
+            bounds: [Int; 2] = [net, net];
+            [firstLo, firstHi] := bounds;
+            lo = firstLo;
+            hi = firstHi;
+        } else {
+            [nextLo, nextHi] := updateBounds(lo, hi, net);
+            lo = nextLo;
+            hi = nextHi;
+        }
+        i += 1;
+    }
+    (total = sum, minLine = lo, maxLine = hi)
+};
+
+count := io.inputInt();
+(= total, lo = minLine, hi = maxLine) := summarize(count);
+io.outputLine(total, lo, hi);

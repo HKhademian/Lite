@@ -87,7 +87,7 @@ match student {
 
 All fields are shown here to avoid selecting partial-field omission through an example. Positional constructor-family examples below remain schema proposals, not a requirement to write a type head on the selected named form. Omission, field/position mixing, duplicate source-field selection, and complete grammar remain open.
 
-The proposed same-name shorthand `{ name, age } := user` would expand to `{ name = name, age = age } := user`. It does not require a type name and does not turn bare entries into value tests. Its grammar, field omission, and `_` field-entry behavior remain proposals; see [record shorthand](records.md#proposed-same-name-field-shorthand).
+The explicit `= name` shorthand (`{ = name } := rec`, `(= name) := tup`) is selected and implemented for same-name binding across records and tuples; see [record shorthand](records.md#proposed-same-name-field-shorthand). The separate proposed bare shorthand `{ name, age } := user` would omit `=` and turn entries directly into bindings rather than value tests, and its grammar, field omission, and `_` field-entry behavior remain proposals.
 
 ## Optional leading separators in nested patterns
 

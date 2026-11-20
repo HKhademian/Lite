@@ -1,0 +1,30 @@
+io := import "core/io";
+
+Box := record {
+    label: String;
+    other: Int = 7;
+    age: Int = 18;
+};
+
+rec := Box { label = "crate", other = 9, age = 25 };
+{ a = label, = other, = age: Int } := rec;
+io.outputLine(a, other, age);
+
+{
+    tup := (fruit = 30, label = "pear", other = 40);
+    (picked = label, = other, _ = fruit) := tup;
+    (= fruit) := (fruit = 30);
+    io.outputLine(picked, other, fruit);
+}
+
+mixed := ("head", kind = "ok", right = 99);
+(head, = right, tag: String = kind) := mixed;
+var (= count) := (count = 1);
+count += 2;
+io.outputLine(head, tag, right, count);
+
+pair: [Int; 2] = [11, 22];
+[x, y] := pair;
+var [first: Int, _] := [10, 20];
+first += 3;
+io.outputLine(x, y, first);

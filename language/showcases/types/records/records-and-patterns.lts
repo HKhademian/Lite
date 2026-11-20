@@ -1,0 +1,32 @@
+/* Showcase 03.04 — Nominal records, defaults/zero-init, contextual literals, =name shorthand, and aggregate destructuring. */
+
+io := import "core/io";
+
+Config := record {
+    host: String = "localhost";
+    port: Int = 8080;
+    tls: Bool;
+    env: String = "prod";
+};
+
+primary := {
+    port := 9090;
+    Config { host = "api.lite", = port, tls = true }
+};
+localDefault: Config = { tls = true };
+zeroed: Config = 0;
+
+/* Record destructuring: alias = field, = sameName, = typed: Type, _ = discard. */
+{ endpoint = host, = port: Int, = tls, _ = env } := primary;
+
+/* Named, mixed, and =name shorthand tuple destructuring. */
+status := ("ready", code = 200, region = "eu");
+(state, statusCode = code, = region) := status;
+
+/* Fixed-array [a, b] destructuring (runtime-sized List<T> is rejected). */
+limits: [Int; 3] = [10, 25, 100];
+var [soft, _, hard] := limits;
+soft += 5;
+
+io.outputLine("record:", endpoint, port, tls, "default:", localDefault.host, localDefault.port, "zero:", zeroed.port, zeroed.tls);
+io.outputLine("tuple:", state, statusCode, region, "array:", soft, hard);

@@ -1,0 +1,26 @@
+{
+  "id": "example.types.patterns.aggregate-destructuring",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/types/patterns/aggregate-destructuring.lts",
+    "hash": "sha256:fe7a520253799aa863dc9d1ef94f57ba3309cf4426462ba485ab050029621be6"
+  },
+  "features": [
+    "feature.types.patterns.aggregate-destructuring",
+    "feature.types.records.nominal-records",
+    "feature.types.composites.flat-tuples",
+    "feature.types.collections.fixed-arrays",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Uniform destructuring and =name shorthand across rec {}, named/mixed tuple (), and fixed array [].",
+  "cases": [
+    {
+      "name": "aggregate-destructuring",
+      "stdout": {
+        "text": "12 34 pin\ncpu 32 80\n15 30\n",
+        "hash": "sha256:4bbd5c5f391351c7b64f37c674aab733ab983855a70fa99745cd80194f4068bf"
+      },
+      "exitCode": 0
+    }
+  ]
+}

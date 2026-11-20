@@ -1,0 +1,26 @@
+{
+  "id": "sample.records.coordinates.box-destructuring",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/records/coordinates/box-destructuring.lts",
+    "hash": "sha256:729b4d0f0f4ea4460dbd4ad6bf39ae89ac5ec5678a0007dbe38970fca3441c7f"
+  },
+  "features": [
+    "feature.types.records.nominal-records",
+    "feature.types.patterns.aggregate-destructuring",
+    "feature.types.composites.flat-tuples",
+    "feature.types.collections.fixed-arrays"
+  ],
+  "description": "Combines record, named tuple, and fixed-array destructuring to compute a padded bounding box.",
+  "append": "io.outputLine(label); io.outputLine(right_edge, bottom_edge);",
+  "cases": [
+    {
+      "name": "padded-box",
+      "stdout": {
+        "text": "panel\n120 77\n",
+        "hash": "sha256:99ce51ab9340a244883d5aa96767898b26539f7f16505ab91167a5c233cad103"
+      },
+      "exitCode": 0
+    }
+  ]
+}

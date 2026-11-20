@@ -1,6 +1,6 @@
 # LiteLang Ability and Feature Showcase
 
-A progressive six-chapter, eighteen-topic verified curriculum teaching every core **LiteLang** language ability and `lib/core/` module. Run any topic directly from the repository root with:
+A progressive six-chapter, nineteen-topic verified curriculum teaching every core **LiteLang** language ability and `lib/core/` module. Run any topic directly from the repository root with:
 
 ```sh
 ./bin/lite run language/showcases/foundations/bindings/bindings-and-mutability.lts
@@ -25,6 +25,7 @@ Every topic is backed by a verified scenario manifest under [artifacts/showcases
 - [01 — Tuples, Shorthand Labels, Label Conversion, and Destructuring](types/tuples/tuples-and-destructuring.lts): positional/named/mixed/singleton tuples, `=name` shorthand, label conversion, and `var` destructuring. ([tuples](../../docs/tuples-and-patterns.md), [label conversions](../../docs/tuple-label-conversions.md))
 - [02 — Fixed `[T; N]` Arrays vs Mutable `List<T>` Snapshots](types/collections/arrays-and-lists.lts): fixed arrays vs growable `mut` and `var mut` lists, `push_front`/`push_back`/`pop_front`/`pop_back`, and snapshots. ([arrays](../../docs/arrays.md), [lists](../../docs/lists.md), [mutability](../../docs/mutability.md))
 - [03 — Transparent Type Aliases Across Root and Inner Blocks](types/aliases/type-aliases-and-scoping.lts): root and inner-block `type` aliases, forward inner alias chains, and outer alias preservation. ([type aliases](../../docs/type-aliases.md), [blocks](../../docs/blocks-and-results.md))
+- [04 — Nominal Records, =name Shorthand, and Aggregate Destructuring](types/records/records-and-patterns.lts): nominal `record` declarations, defaults and zero-init, `=name` construction/destructuring, named/mixed tuple patterns, and fixed-array destructuring. ([records](../../docs/records.md), [aggregate patterns](../../docs/aggregate-patterns.md))
 
 ## Chapter 4 — Unified Block Model & Execution Trace (`blocks/`)
 

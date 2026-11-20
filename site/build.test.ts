@@ -191,12 +191,13 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     }
   }
   const learnIndex = readFileSync(join(out, 'learn/index.html'), 'utf8');
-  assert(learnIndex.includes('0 / 23 completed'));
+  assert(learnIndex.includes('0 / 24 completed'));
   assert(learnIndex.includes('Track 0 — Getting Started'));
   assert(learnIndex.includes('Track 7 — Standalone Project Tutorials'));
   for (const learnRel of [
     'learn/getting-started/hello-lite.html',
     'learn/foundations/bindings-and-mutability.html',
+    'learn/types/records-and-patterns.html',
     'learn/modules/modules-and-visibility.html',
     'learn/tutorials/expression-evaluator.html',
     'learn/tutorials/text-manifest-digest.html',
@@ -212,13 +213,16 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(orbPage.includes('../../runtime/worker.js'));
 
   const gymIndex = readFileSync(join(out, 'gym/index.html'), 'utf8');
-  assert(gymIndex.includes('0 / 42 solved'));
-  assert(gymIndex.includes('Concept Drills (18)'));
-  assert(gymIndex.includes('Problem Workouts (24)'));
+  assert(gymIndex.includes('0 / 45 solved'));
+  assert(gymIndex.includes('Concept Drills (20)'));
+  assert(gymIndex.includes('Problem Workouts (25)'));
   assert(gymIndex.includes('Export JSON'));
   assert(gymIndex.includes('Import JSON'));
   for (const gymRel of [
     'gym/drills/immutable-vs-var.html',
+    'gym/drills/record-shorthand-destructure.html',
+    'gym/drills/named-tuple-and-array-destructure.html',
+    'gym/workouts/order-invoice-summary.html',
     'gym/workouts/expression-ast-eval.html',
     'gym/payloads/immutable-vs-var.json',
     'gym/payloads/expression-ast-eval.json',
@@ -257,9 +261,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     modules: number;
   };
   assert.equal(buildMeta.samples, showcaseSamples.length);
-  assert.equal(buildMeta.lessons, 20);
+  assert.equal(buildMeta.lessons, 21);
   assert.equal(buildMeta.tutorials, 3);
-  assert.equal(buildMeta.gymExercises, 42);
+  assert.equal(buildMeta.gymExercises, 45);
   assert.equal(buildMeta.modules, 17);
   assert(buildMeta.docsPages >= 200);
   assert(existsSync(join(out, 'docs/design/site-architecture.html')));

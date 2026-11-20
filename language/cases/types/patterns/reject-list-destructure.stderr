@@ -1,0 +1,1 @@
+language/cases/types/patterns/reject-list-destructure.lts:2:1: cannot destructure runtime-sized List<Int>; fixed array required

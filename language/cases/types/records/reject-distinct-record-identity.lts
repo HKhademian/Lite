@@ -1,0 +1,5 @@
+Meters := record { value: Int; };
+Seconds := record { value: Int; };
+distance := Meters { value = 10 };
+elapsed: Seconds = distance;
+_ := elapsed;

@@ -1,0 +1,23 @@
+{
+  "id": "case.types.patterns.reject-list-destructure",
+  "kind": "reject",
+  "source": "reject-list-destructure.lts",
+  "features": [
+    "feature.types.patterns.aggregate-destructuring"
+  ],
+  "cases": [
+    {
+      "name": "rejects-destructuring-runtime-list",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-list-destructure.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

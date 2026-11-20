@@ -1,0 +1,66 @@
+/* 360x240 translucent RGBA card mosaic driven by nominal records, =name shorthand, and aggregate destructuring. */
+
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+Tile := record {
+    x: Int;
+    y: Int;
+    w: Int = 148;
+    h: Int = 84;
+    fill: Int;
+    accent: Int = 0;
+};
+
+ctx := canvas.create(width = 360, height = 240, title = "Record Card Mosaic");
+
+palette: [Int; 3] = [
+    canvas.rgb(12, 16, 28),
+    canvas.rgba(255, 255, 255, 16),
+    canvas.rgba(240, 180, 90, 210),
+];
+[bg, gridTint, frameTint] := palette;
+
+frame := (padX = 24, padY = 24);
+(= padX, = padY) := frame;
+
+canvas.clear(bg);
+
+var gx := padX;
+loop gx < ctx.width {
+    canvas.fillRect(gx, 0, 1, ctx.height, gridTint);
+    gx += 24;
+}
+var gy := padY;
+loop gy < ctx.height {
+    canvas.fillRect(0, gy, ctx.width, 1, gridTint);
+    gy += 24;
+}
+
+cardHighlight := canvas.rgba(255, 255, 255, 36);
+amberAccent := canvas.rgba(240, 180, 90, 220);
+cyanAccent := canvas.rgba(110, 196, 216, 220);
+
+topLeftTile := {
+    fill := canvas.rgba(110, 196, 216, 150);
+    Tile { x = 24, y = 24, = fill, accent = amberAccent }
+};
+
+tiles: [Tile; 4] = [
+    topLeftTile,
+    Tile { x = 188, y = 24, fill = canvas.rgba(240, 180, 90, 155), accent = cyanAccent },
+    { x = 24, y = 132, fill = canvas.rgba(198, 154, 232, 145), accent = cyanAccent },
+    { x = 188, y = 132, w = 148, h = 84, fill = canvas.rgba(104, 214, 172, 145), accent = amberAccent },
+];
+
+loop tiles as tile {
+    { = x, = y, = w, = h, = fill, = accent } := tile;
+    canvas.fillRect(x, y, w, h, fill);
+    canvas.fillRect(x + 12, y + 14, 42, 4, accent);
+    canvas.fillRect(x + 12, y + 22, 26, 3, cardHighlight);
+    board.drawRect(x, y, w, h, cardHighlight);
+}
+
+board.drawRect(8, 8, ctx.width - 16, ctx.height - 16, frameTint);
+io.outputLine("Rendered:", ctx.title, ctx.width, "x", ctx.height);

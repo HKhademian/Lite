@@ -97,6 +97,15 @@ export const playSamples: readonly PlaySample[] = [
     args: [],
     stdin: '',
   },
+  {
+    id: 'play-record-mosaic',
+    group: 'play-art',
+    title: 'Record Card Mosaic',
+    note: 'Layered 2×2 translucent glass cards driven by nominal records, =name shorthand, and aggregate destructuring (360×240).',
+    file: 'samples/graphics/art/record-mosaic.lts',
+    args: [],
+    stdin: '',
+  },
 
   /* Animation */
   {

@@ -1,0 +1,26 @@
+{
+  "id": "showcase.types.records.records-and-patterns",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/types/records/records-and-patterns.lts",
+    "hash": "sha256:dbde7cd59fd0a971bb076566d893c96bf25e6b3193744bd35e1cd5dd0fe72d6f"
+  },
+  "features": [
+    "feature.types.records.nominal-records",
+    "feature.types.patterns.aggregate-destructuring",
+    "feature.types.composites.flat-tuples",
+    "feature.types.collections.fixed-arrays",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Nominal records, defaults, zero initialization, =name shorthand, and uniform aggregate destructuring.",
+  "cases": [
+    {
+      "name": "records-and-patterns",
+      "stdout": {
+        "text": "record: api.lite 9090 true default: localhost 8080 zero: 0 false\ntuple: ready 200 eu array: 15 100\n",
+        "hash": "sha256:f938bf5bddbc4079bca00614f05d26fbe2c0b7b981aec671cc12580eb6e979bd"
+      },
+      "exitCode": 0
+    }
+  ]
+}

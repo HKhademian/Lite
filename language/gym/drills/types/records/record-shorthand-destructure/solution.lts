@@ -1,0 +1,15 @@
+io := import "core/io";
+
+Score := record {
+    base: Int = 10;
+    bonus: Int = 0;
+};
+
+delta := io.inputInt();
+rawBonus := io.inputInt();
+entry := {
+    bonus := rawBonus;
+    Score { base = 10 + delta, = bonus }
+};
+{ = base, = bonus } := entry;
+io.outputLine(base + bonus);

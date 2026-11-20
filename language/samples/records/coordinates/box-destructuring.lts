@@ -1,0 +1,23 @@
+io := import "core/io";
+/* Combine a nominal record, a named origin tuple, and a fixed-array padding pair
+   to compute the padded right edge and bottom edge of a rectangle. */
+
+Box := record {
+    width: Int;
+    height: Int;
+    label: String = "panel";
+};
+
+origin := (x = 12, y = 20);
+(= x, = y) := origin;
+
+padding: [Int; 2] = [4, 6];
+[padX, padY] := padding;
+
+card: Box = { width = 100, height = 45 };
+{ w = width, h = height, = label } := card;
+
+right_edge := x + w + (padX * 2);
+bottom_edge := y + h + (padY * 2);
+
+/* right_edge is 120, bottom_edge is 77, and label is "panel". */

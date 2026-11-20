@@ -1,0 +1,17 @@
+io := import "core/io";
+/* Pair an integer cent amount with a currency code using a nominal record.
+   A wallet defaults to "EUR" when the currency is omitted, and =cents reuses the local name. */
+
+Money := record {
+    cents: Int;
+    currency: String = "EUR";
+};
+
+wallet_a := Money { cents = 1250 };
+fee := 350;
+wallet_b := Money { cents = wallet_a.cents + fee };
+cents := wallet_b.cents - 100;
+total := Money { = cents };
+{ total_cents = cents, code = currency } := total;
+
+/* Now total_cents holds 1500 and code is "EUR". */

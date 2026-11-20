@@ -1,0 +1,23 @@
+{
+  "id": "case.types.records.reject-distinct-record-identity",
+  "kind": "reject",
+  "source": "reject-distinct-record-identity.lts",
+  "features": [
+    "feature.types.records.nominal-records"
+  ],
+  "cases": [
+    {
+      "name": "rejects-assignment-between-distinct-records",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-distinct-record-identity.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

@@ -159,7 +159,7 @@
       "id": "types",
       "order": 3,
       "title": "Track 3 — Data Shapes, Collections & Aliases",
-      "summary": "Positional/named/mixed tuples, =name shorthand, fixed [T; N] arrays, mut List<T> snapshots, and type aliases.",
+      "summary": "Positional/named/mixed tuples, nominal records, =name shorthand, fixed [T; N] arrays, mut List<T> snapshots, aggregate destructuring, and type aliases.",
       "lessons": [
         {
           "id": "learn.types.tuples.tuples-and-destructuring",
@@ -208,6 +208,22 @@
           "args": [],
           "teaches": ["type", "forward type aliases", "lexical shadowing"],
           "docs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/type-aliases.md"]
+        },
+        {
+          "id": "learn.types.records.records-and-patterns",
+          "slug": "records-and-patterns",
+          "title": "Nominal Records, =name Shorthand & Aggregate Destructuring",
+          "kind": "lesson",
+          "domain": "types",
+          "subGroup": "records",
+          "environment": "universal",
+          "guideFile": "language/learn/lessons/types/records/records-and-patterns.md",
+          "sourceFile": "language/showcases/types/records/records-and-patterns.lts",
+          "helperModules": [],
+          "stdin": "",
+          "args": [],
+          "teaches": ["record", "=name", "{ = field } := rec", "(a = label, = b) := tup", "[a, b] := arr"],
+          "docs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/records.md", "docs/aggregate-patterns.md"]
         }
       ]
     },

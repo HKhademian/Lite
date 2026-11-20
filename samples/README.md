@@ -4,7 +4,7 @@ Folder-grouped project samples showcasing algorithms, high-resolution RGBA canva
 
 For core language-specification examples (`001`–`024`), see [language/examples](../language/examples/README.md).
 
-## Programs (`programs/{math,search,text,parsing}/`)
+## Programs (`programs/{math,search,text,parsing,records}/`)
 
 - [fibonacci](programs/math/fibonacci.lts) — Iterative Fibonacci sequence and explicit formatting.
 - [primes-sieve](programs/math/primes-sieve.lts) — Prime generation up to 50 with `mut List<Int>`.
@@ -12,6 +12,7 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [caesar-cipher](programs/text/caesar-cipher.lts) — ASCII Caesar cipher round-trip over `core/text`.
 - [word-frequency](programs/text/word-frequency.lts) — Word frequency counter via `core/list`.
 - [rpn-evaluator](programs/parsing/rpn-evaluator.lts) — Stack-based Reverse Polish Notation evaluator.
+- [inventory-ledger](programs/records/inventory-ledger.lts) — Inventory summary combining nominal records, `=name` shorthand, named tuple returns, and fixed-array bounds.
 
 ## Canvas Art (`graphics/art/`)
 
@@ -19,6 +20,7 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [sunset-horizon](graphics/art/sunset-horizon.lts) — `360x220` dusk gradient, solar glow, and reflections.
 - [geometric-mandala](graphics/art/geometric-mandala.lts) — `320x240` radial lines, concentric rings, and petals.
 - [spectrum-bars](graphics/art/spectrum-bars.lts) — `340x200` stepped alpha palette and glaze ribbon.
+- [record-mosaic](graphics/art/record-mosaic.lts) — `360x240` card mosaic driven by nominal `Tile` records, `=name` shorthand, and aggregate destructuring.
 
 ## Animation (`graphics/animation/`)
 

@@ -1,0 +1,23 @@
+io := import "core/io";
+
+Profile := record {
+    name: String;
+    role: String = "member";
+    score: Int = 10;
+};
+
+makeGuest := fn(name: String): Profile {
+    Profile { = name }
+};
+
+name := "Ada";
+primary := Profile { = name, role = "maintainer", score = 95 };
+backup: Profile = { name = "Lin", score = 40 };
+guest := makeGuest("Sam");
+zeroed: Profile = 0;
+
+{ member = name, = role, = score: Int } := primary;
+io.outputLine(member, role, score);
+io.outputLine(backup.name, backup.role, backup.score);
+io.outputLine(guest.name, guest.role, guest.score);
+io.outputLine("|" + zeroed.name + "|", "|" + zeroed.role + "|", zeroed.score);

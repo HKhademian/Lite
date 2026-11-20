@@ -196,7 +196,7 @@
     {
       "id": "types",
       "title": "Data Shapes, Collections, and Type Aliases",
-      "summary": "Tuples, shorthand labels, fixed arrays vs mutable lists, transparent type aliases, and inner lexical type scopes.",
+      "summary": "Tuples, nominal records, =name shorthand, fixed arrays vs mutable lists, aggregate destructuring, and transparent type aliases.",
       "topics": [
         {
           "id": "showcase.types.tuples.tuples-and-destructuring",
@@ -276,6 +276,35 @@
             "docs/blocks-and-results.md"
           ],
           "order": 3
+        },
+        {
+          "id": "showcase.types.records.records-and-patterns",
+          "title": "Nominal Records, =name Shorthand, and Aggregate Destructuring",
+          "file": "language/showcases/types/records/records-and-patterns.lts",
+          "helperFiles": [],
+          "manifest": "language/verifications/artifacts/showcases/types/records/records-and-patterns.json",
+          "summary": "Covers nominal record defaults/zero-init, contextual construction, =name shorthand, named/mixed tuple destructuring, and fixed-array [a, b] destructuring.",
+          "teaches": [
+            "record",
+            "=name",
+            "{ = field } := rec",
+            "(a = label, = b) := tup",
+            "[a, b] := arr"
+          ],
+          "features": [
+            "feature.types.records.nominal-records",
+            "feature.types.patterns.aggregate-destructuring",
+            "feature.types.composites.flat-tuples",
+            "feature.types.collections.fixed-arrays",
+            "feature.io.reporting.report-values"
+          ],
+          "docs": [
+            "docs/records.md",
+            "docs/record-initialization.md",
+            "docs/aggregate-patterns.md",
+            "docs/sequence-patterns.md"
+          ],
+          "order": 4
         }
       ],
       "order": 3

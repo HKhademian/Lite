@@ -12,7 +12,7 @@ Run from the repository root with Node 26.13.0:
 node compiler/entry.ts /tmp/lite-example.ts
 ```
 
-`run` compiles to a temporary artifact and executes it. All twenty-six examples compile and run through the generated TS compiler; broader parity items live in [compiler gaps](../../compiler/gaps.md) and the [archived inventory](../../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
+`run` compiles to a temporary artifact and executes it. All twenty-eight examples compile and run through the generated TS compiler; broader parity items live in [compiler gaps](../../compiler/gaps.md) and the [archived inventory](../../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
 
 The interactive examples display explicit prompts. Integer prompts leave the
 cursor on the same line; the scanner prints a heading before reading its line.
@@ -117,6 +117,12 @@ examples. They live under [compiler/](../../compiler/README.md) and are run with
   module ([stats-module](modules/core/helpers/stats-module.lts)) exporting `pub` types,
   constants, and functions alongside `core/format` alignment and `core/crypto`
   SHA-256 hashing.
+- [029 — Nominal records](types/records/nominal-records.lts): declares nominal `record`
+  types with field defaults and zero initialization, constructs values via `Type { = name }`
+  and contextual `{ ... }`, and destructures named fields cleanly.
+- [030 — Aggregate destructuring](types/patterns/aggregate-destructuring.lts): demonstrates
+  uniform destructuring and `=name` shorthand across `rec {}`, named/mixed `tuple ()`,
+  and fixed `[T; N]` arrays (`[lo, _, hi] := bounds;`).
 
 For project showcases, graphics, audio, and mini-game demos, see [samples](../../samples/README.md).
 For the progressive chapter-by-chapter learning curriculum, see the [ability and feature showcase](../showcases/README.md).

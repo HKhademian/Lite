@@ -1,0 +1,21 @@
+io := import "core/io";
+
+Point := record {
+    x: Int = 0;
+    y: Int = 0;
+    tag: String = "pt";
+};
+
+coord := Point { x = 12, y = 34, tag = "pin" };
+{ px = x, = y, = tag: String } := coord;
+
+metric := ("cpu", total = 80, used = 32);
+(kind, = used, capacity = total) := metric;
+
+bounds: [Int; 3] = [10, 20, 30];
+var [lo: Int, _, hi] := bounds;
+lo += 5;
+
+io.outputLine(px, y, tag);
+io.outputLine(kind, used, capacity);
+io.outputLine(lo, hi);

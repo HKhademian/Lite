@@ -1,0 +1,22 @@
+{
+  "id": "feature.types.records.nominal-records",
+  "kind": "feature",
+  "source": {
+    "file": "nominal-records.lts",
+    "hash": "sha256:d43bdaed9eedc83d08cbf51ec0f8fd537ce6b48b42fbda484df5ca20ed4ba9de"
+  },
+  "features": [
+    "feature.types.records.nominal-records"
+  ],
+  "guideline": "Checks nominal record declarations, field defaults, zero-init, contextual construction, =name shorthand, field access, and named destructuring.",
+  "cases": [
+    {
+      "name": "nominal-records-and-shorthand",
+      "stdout": {
+        "text": "Ada member 42 Berlin 0\nLin admin 15 Berlin 10115\n|| 0 || 0\n",
+        "hash": "sha256:b953eaf6f68f6290dfabdd5c61077a4226e9a44f6c538e9f121fd7c7778322a7"
+      },
+      "exitCode": 0
+    }
+  ]
+}

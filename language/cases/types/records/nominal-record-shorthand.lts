@@ -1,0 +1,17 @@
+io := import "core/io";
+
+Point := record {
+    x: Int = 0;
+    y: Int = 0;
+    label: String = "origin";
+};
+
+p := {
+    x := 12;
+    y := 34;
+    Point { = x, = y }
+};
+{ = x: Int, py = y, = label } := p;
+var { mutX = x } := Point {};
+mutX += 5;
+io.outputLine(x, py, label, mutX);

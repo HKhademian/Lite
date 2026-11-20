@@ -1,0 +1,24 @@
+{
+  "id": "sample.records.money.money-record",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/records/money/money-record.lts",
+    "hash": "sha256:0dd8ff2b5c9723c9f1366bbf38a2a141f644c772b1f11400d959acd6b9077323"
+  },
+  "features": [
+    "feature.types.records.nominal-records",
+    "feature.types.patterns.aggregate-destructuring"
+  ],
+  "description": "Pairs integer minor units with a currency default in a nominal Money record using =name shorthand.",
+  "append": "io.outputLine(total_cents); io.outputLine(code);",
+  "cases": [
+    {
+      "name": "eur-total",
+      "stdout": {
+        "text": "1500\nEUR\n",
+        "hash": "sha256:fd156d2d936bdcaee893b9d443db3003c5717d67ff1088de39bf4ede38e7d912"
+      },
+      "exitCode": 0
+    }
+  ]
+}

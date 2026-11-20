@@ -10,7 +10,7 @@ Group structured data concisely with tuples supporting unnamed fields, `=name` s
 4. `var (p0, p1) := (3, 4);` unpacks fields directly into independent mutable bindings.
 
 > [!NOTE]
-> Tuples are value types whose labels are visible in `io.outputLine(...)` output (`(w = 640, h = 480, title = "canvas")`).
+> Tuples are value types whose labels are visible in `io.outputLine(...)` output (`(w = 640, h = 480, title = "canvas")`). Named and mixed tuples can also destructure by field name and `=name` shorthand, such as `(label = title, = w, = h) := renamed;` (covered further in the [Records & Aggregate Destructuring](../records/records-and-patterns.md) lesson).
 
 ## Try Modifying This
 

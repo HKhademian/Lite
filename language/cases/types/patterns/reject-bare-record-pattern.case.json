@@ -1,0 +1,23 @@
+{
+  "id": "case.types.patterns.reject-bare-record-pattern",
+  "kind": "reject",
+  "source": "reject-bare-record-pattern.lts",
+  "features": [
+    "feature.types.records.nominal-records"
+  ],
+  "cases": [
+    {
+      "name": "rejects-bare-record-clause-without-equals",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-bare-record-pattern.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

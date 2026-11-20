@@ -63,6 +63,7 @@ test('highlightLite highlights newer built-in types and operators', () => {
     assert(html.includes(`<span class="tok-type">${typeName}</span>`), `missing type highlight: ${typeName}`);
   }
   assert(html.includes('<span class="tok-keyword">match</span>'), 'missing keyword highlight: match');
+  assert(highlightLite('User := record { name: String; };').includes('<span class="tok-keyword">record</span>'), 'missing keyword highlight: record');
   const opHtml = highlightLite('a ** b += c :/= d :%= e <!= f >!= g <! h >! i');
   for (const op of ['**', '+=', ':/=', ':%=', '&lt;!=', '&gt;!=', '&lt;!', '&gt;!']) {
     assert(opHtml.includes(`<span class="tok-op">${op}</span>`), `missing operator highlight: ${op}`);
@@ -100,6 +101,8 @@ test('showcaseSamples includes examples covering named calls, tuples, arrays, an
     'mixed-tuples',
     'tuple-label-conversion',
     'growable-lists',
+    'nominal-records',
+    'aggregate-destructuring',
     'integer-calculator',
   ]) {
     assert(ids.has(expected), `missing showcase sample: ${expected}`);
@@ -152,12 +155,12 @@ test('stripLiteTs strips anonymous function parameter and return types', () => {
   assert.equal(fn(), 5n);
 });
 
-test('verifyGymCorpus compiles and executes all 42 Gym starters and solutions', () => {
+test('verifyGymCorpus compiles and executes all 45 Gym starters and solutions', () => {
   const result = verifyGymCorpus();
-  assert.equal(result.exerciseCount, 42);
-  assert.equal(result.drillCount, 18);
-  assert.equal(result.kataCount, 24);
-  assert(result.caseCount >= 168, `expected at least 168 test cases, got ${String(result.caseCount)}`);
+  assert.equal(result.exerciseCount, 45);
+  assert.equal(result.drillCount, 20);
+  assert.equal(result.kataCount, 25);
+  assert(result.caseCount >= 180, `expected at least 180 test cases, got ${String(result.caseCount)}`);
 });
 
 interface LearnHelperModule {

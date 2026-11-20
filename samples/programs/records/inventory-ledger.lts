@@ -1,0 +1,39 @@
+/* Warehouse inventory ledger using nominal records, =name shorthand, and uniform destructuring. */
+
+io := import "core/io";
+
+Item := record {
+    sku: String;
+    qty: Int = 0;
+    unitCents: Int;
+};
+
+summarize := fn(items: List<Item>): (totalUnits: Int, totalCents: Int, activeSkus: Int) {
+    var units := 0;
+    var cents := 0;
+    var active := 0;
+    loop items as entry {
+        { qty: Int, = unitCents, _ = sku } := entry;
+        if qty > 0 {
+            units += qty;
+            cents += qty * unitCents;
+            active += 1;
+        }
+    }
+    (totalUnits = units, totalCents = cents, activeSkus = active)
+};
+
+qty := 6;
+entries: List<Item> = [
+    Item { sku = "PEN-01", = qty, unitCents = 250 },
+    Item { sku = "PAD-02", unitCents = 480 },
+    Item { sku = "INK-03", qty = 3, unitCents = 900 },
+];
+
+thresholds: [Int; 2] = [5, 1000];
+[minUnits, minBudgetCents] := thresholds;
+
+(= totalUnits, = totalCents, stocked = activeSkus) := summarize(entries);
+meetsTarget := totalUnits >= minUnits and totalCents >= minBudgetCents;
+
+io.outputLine("active:", stocked, "units:", totalUnits, "cents:", totalCents, "target:", meetsTarget);

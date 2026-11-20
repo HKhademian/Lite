@@ -256,6 +256,62 @@
       ]
     },
     {
+      "id": "drills.types.records.record-shorthand-destructure",
+      "slug": "record-shorthand-destructure",
+      "title": "Record =name Shorthand & Destructuring",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "records",
+      "promptFile": "language/gym/drills/types/records/record-shorthand-destructure/README.md",
+      "starterFile": "language/gym/drills/types/records/record-shorthand-destructure/starter.lts",
+      "solutionFile": "language/gym/drills/types/records/record-shorthand-destructure/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "Record destructuring does not allow bare `{ base, bonus }` without `=`.",
+        "Change `{ base, bonus } := entry;` to `{ = base, = bonus } := entry;`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/records.md"],
+      "relatedLessons": ["learn.types.records.records-and-patterns"],
+      "visibleCases": [
+        { "name": "positive-bonus", "stdin": "5 3\n", "args": [], "expectedStdout": "18\n" },
+        { "name": "zero-inputs", "stdin": "0 0\n", "args": [], "expectedStdout": "10\n" }
+      ],
+      "hiddenCases": [
+        { "name": "negative-delta", "stdin": "-4 9\n", "args": [], "expectedStdout": "15\n" },
+        { "name": "both-negative", "stdin": "-3 -2\n", "args": [], "expectedStdout": "5\n" }
+      ]
+    },
+    {
+      "id": "drills.types.patterns.named-tuple-and-array-destructure",
+      "slug": "named-tuple-and-array-destructure",
+      "title": "Named Tuple & Fixed-Array Destructuring",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "patterns",
+      "promptFile": "language/gym/drills/types/patterns/named-tuple-and-array-destructure/README.md",
+      "starterFile": "language/gym/drills/types/patterns/named-tuple-and-array-destructure/starter.lts",
+      "solutionFile": "language/gym/drills/types/patterns/named-tuple-and-array-destructure/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "`pair` stores `right` before `left`, so positional `(l, right)` swaps the values.",
+        "Destructure by field name and shorthand: `(l = left, = right) := pair;`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/aggregate-patterns.md"],
+      "relatedLessons": ["learn.types.records.records-and-patterns", "learn.types.tuples.tuples-and-destructuring"],
+      "visibleCases": [
+        { "name": "asymmetric", "stdin": "3 7\n", "args": [], "expectedStdout": "3 7 37\n" },
+        { "name": "reversed", "stdin": "8 2\n", "args": [], "expectedStdout": "8 2 82\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero-first", "stdin": "0 5\n", "args": [], "expectedStdout": "0 5 5\n" },
+        { "name": "negative", "stdin": "-2 4\n", "args": [], "expectedStdout": "-2 4 -16\n" }
+      ]
+    },
+    {
       "id": "drills.blocks.evaluation.value-block-semicolon",
       "slug": "value-block-semicolon",
       "title": "Block Final-Item Value Rule",
@@ -1207,6 +1263,34 @@
         { "name": "infinite-loop", "stdin": "PUSH 1\nJNZ 0\n", "args": [], "expectedStdout": "ERR:LOOP\n" },
         { "name": "empty-halt", "stdin": "HALT\n", "args": [], "expectedStdout": "EMPTY\n" },
         { "name": "underflow", "stdin": "PUSH 5\nADD\n", "args": [], "expectedStdout": "ERR\n" }
+      ]
+    },
+    {
+      "id": "workouts.records.inventory.order-invoice-summary",
+      "slug": "order-invoice-summary",
+      "title": "Order Invoice Summary",
+      "mode": "kata",
+      "belt": "amber",
+      "domain": "records",
+      "subGroup": "inventory",
+      "promptFile": "language/gym/workouts/records/inventory/order-invoice-summary/README.md",
+      "starterFile": "language/gym/workouts/records/inventory/order-invoice-summary/starter.lts",
+      "solutionFile": "language/gym/workouts/records/inventory/order-invoice-summary/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Construct `LineItem { = qty, = unitPrice }` when `discountPct <= 0` so `discountPct` keeps its default `0`, and compute `gross - ((gross * disc) / 100)` inside a helper.",
+        "Track bounds in a fixed `[Int; 2]` array unpacked with `[nextLo, nextHi] := ...` and return `(total = sum, minLine = lo, maxLine = hi)`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/records.md"],
+      "relatedLessons": ["learn.types.records.records-and-patterns"],
+      "visibleCases": [
+        { "name": "two-lines", "stdin": "2\n4 100 10\n2 250 0\n", "args": [], "expectedStdout": "860 360 500\n" },
+        { "name": "single-discounted", "stdin": "1\n5 200 25\n", "args": [], "expectedStdout": "750 750 750\n" }
+      ],
+      "hiddenCases": [
+        { "name": "empty-order", "stdin": "0\n", "args": [], "expectedStdout": "0 0 0\n" },
+        { "name": "three-lines-mixed", "stdin": "3\n1 120 0\n3 80 50\n2 300 20\n", "args": [], "expectedStdout": "720 120 480\n" }
       ]
     }
   ]

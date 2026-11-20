@@ -1,0 +1,9 @@
+io := import "core/io";
+
+a := io.inputInt();
+b := io.inputInt();
+pair := (right = b, left = a);
+(l, right) := pair;
+trio: [Int; 3] = [l, right, (l * 10) + right];
+[first, second, combined] := trio;
+io.outputLine(first, second, combined);
