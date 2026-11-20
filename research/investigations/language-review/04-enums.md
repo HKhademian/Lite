@@ -67,3 +67,16 @@ An `Option<UserID>`, an enum of owning-list versus empty, and an enum with expli
 Types (1), patterns (6), and failure outcomes (8) interact with case identity and payloads. Record new decisions with their owning area; return to this review after the dependency is understood.
 
 Related preliminary notes: [1](01-core-types.md), [6](06-control-flow.md), [8](08-failure-cleanup.md).
+
+## Joint review: value and carrier enums
+
+All enums have unique option names. Value and carrier are two models. Combining them is deferred until there is a concrete use case that justifies it.
+
+- **Value enums:** bare-only cases choose the value model. An explicit backing value signals value-enum intent. The implicit backing type is `Int` when the declared values provide no evidence for another type. `Int` aliases `Int64`. An explicit backing type is possible, and a supplied value can inform inference through its X-Like category or established type. Backings may involve other compile-time value types, including unions. Automatic numeric assignment starts at zero and continues after the previous value, including an explicit value. Any backing without defined compile-time progression requires explicit values for every option. This leaves room for future nonnumeric progression. Overflow, exact eligibility, and inference across conflicting contributions need rules.
+- **Duplicate backing values:** distinct option names may denote the same backing value. In an ordered match, a repeated value arm is unreachable once an earlier arm handles it completely. An earlier guarded arm can leave a path to the later arm. Diagnostic policy for duplicate-value arms is open.
+- **Identity and casts:** an enum and its backing type have distinct identities in both directions. Explicit readable conversion can extract a backing value or construct an enum value from one, including an outlier. Cast syntax remains illustrative.
+- **Carrier enums:** cases are enum-scoped virtual types with their own nonzero type references. A payload-free case is a single-value type. A case with data has values determined by its payload contract. If parenthesized carrier declarations are chosen, even an empty `created()` signals carrier intent for the enum. Bare sibling cases then have no payload. Explicitly assigned backing values belong to the value model. Case grammar and payload syntax are open.
+
+An outlier is a backing value or Kind that selects no declared option. The union Kind can follow the value-enum model with each case explicitly valued at its member's type reference. This preserves the required mapping independently of source order. A carrier or union Kind of zero selects no type. A nonzero Kind outside the allowed set likewise selects no case. A value enum may have no possible outlier if its declared backing values cover its entire valid domain, for example both values of Bool. Zeroed storage then selects the declared zero-valued case.
+
+The later match discussion restated that ordinary `_` covers remaining declared alternatives. An unhandled outlier would reach an implicit panic guard. Explicit outlier-handler spelling remains open. A provably unreachable explicit handler should be permitted with a suppressible warning. These notes record the latest review direction. They do not select precise diagnostics, an ABI, or compiler support.
