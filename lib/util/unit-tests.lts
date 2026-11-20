@@ -102,7 +102,7 @@ pub runUnitWorker := fn(taskJson: String): Int {
     runOutPath := path.join(workDir, "run.stdout");
     runErrPath := path.join(workDir, "run.stderr");
     runArgs: List<String> = [runnerPath, outTsPath];
-    ran := proc.runBytes(proc.execPath(), runArgs, rootDir, emptyEnv, 180000, emptyBytes, runOutPath, runErrPath);
+    ran := proc.runBytes(proc.execPath(), runArgs, rootDir, emptyEnv, 600000, emptyBytes, runOutPath, runErrPath);
     if ran.error =!= "" or ran.status =!= 0 {
         msg := if ran.error =!= "" { ran.error } else { readWorkerFailureText(runErrPath, runOutPath, "unit test failed") };
         _rmRun := fs.remove(workDir);

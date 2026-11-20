@@ -27,6 +27,12 @@ test('TS artifact capture preserves large synchronous writes and the returned ta
   assert.ok(actual.stdout.equals(Buffer.from(chunk + chunk + 'tail\n')), 'complete raw output including returned tail');
 });
 
+test('prepareTsArtifacts rejects invalid execution timeouts', () => {
+  for (const timeoutMs of [-1, 1.5, Number.NaN]) {
+    assert.throws(() => prepareTsArtifacts([], { timeoutMs }), /invalid TS artifact execution timeout/);
+  }
+});
+
 test('TS artifact capture preserves repeated output, diagnostics and early exit across fresh runs', () => {
   const chunk = '🙂سلام\r\n'.repeat(128);
   const source = 'io := import "core/io"; mode := io.inputInt(); var n := 0; loop n < 512 { ' +

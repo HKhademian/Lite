@@ -1,0 +1,329 @@
+/** Real CLI contracts for generated compiler tools, independent of T00. */
+
+fs := import "core/file";
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+json := import "util/json";
+project := import "util/project";
+
+rawRoot := project.findRepoRoot();
+test.check("repo root found", rawRoot =!= "");
+root := fs.realPath(rawRoot).path;
+
+heavyEnv := proc.envGet("LITE_SKIP_HEAVY");
+if heavyEnv.found and heavyEnv.value == "1" {
+    io.exit(0);
+}
+
+/* Read seed.artifact and seed.artifactSha256 from compiler/bootstrap/seed.ts. */
+seedRead := fs.readText(path.join(root, "compiler/bootstrap/seed.ts"));
+test.check("read seed.ts", seedRead.ok);
+seedBrace := text.indexOfText(seedRead.text, "{", 0);
+test.check("seed.ts has object", seedBrace >= 0);
+seedArtifact := json.readObjectString(seedRead.text, seedBrace, "artifact").value;
+seedArtifactSha256 := json.readObjectString(seedRead.text, seedBrace, "artifactSha256").value;
+test.check("seed fields non-empty", seedArtifact =!= "" and seedArtifactSha256 =!= "");
+
+CmdResult := type (status: Int, stdout: String, stderr: String);
+
+invoke := fn(directory: String, commandRel: String, args: List<String>, timeoutMs: Int): CmdResult {
+    tmpRes := fs.makeTempDir("lite-tooling-cmd-");
+    test.check("invoke makeTempDir: " + tmpRes.error, tmpRes.ok);
+    outPath := path.join(tmpRes.path, "out");
+    errPath := path.join(tmpRes.path, "err");
+    cmdArgs: mut List<String> = [path.join(directory, commandRel)];
+    loop args as a {
+        list.pushBack(mut cmdArgs, a);
+    }
+    envOver: List<String> = ["=NODE_TEST_CONTEXT"];
+    emptyBytes: List<Int> = [];
+    res := proc.runBytes(proc.execPath(), cmdArgs, directory, envOver, timeoutMs, emptyBytes, outPath, errPath);
+    test.check("invoke process error (" + commandRel + "): " + res.error, res.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    _rm := fs.remove(tmpRes.path);
+    (status = res.status, stdout = outText, stderr = errText)
+};
+
+summary := fn(label: String, res: CmdResult): String {
+    test.checkInt(label + " status: " + res.stdout + res.stderr, 0, res.status);
+    res.stdout
+};
+
+shouldSkipArchivePath := fn(candidate: String): Bool {
+    if text.endsWith(candidate, "/compiler/cli.ts") { return false; }
+    text.endsWith(candidate, "/node_modules")
+    or text.endsWith(candidate, "/reports")
+    or text.endsWith(candidate, "/lite.ts")
+    or text.endsWith(candidate, "/bootstrap.ts")
+    or text.endsWith(candidate, "/bundle-cli.ts")
+    or text.endsWith(candidate, "/cli.ts")
+};
+
+/** Copies tool inputs with relative links intact and all T00 adapters absent. */
+copyToolArchive := fn(dstRoot: String): Unit {
+    topDirs: List<String> = ["compiler", "igniter", "lib", "benchmark", "tools", "config", "bin"];
+    loop topDirs as topDir {
+        stack: mut List<String> = [topDir];
+        loop list.listCountText(stack) > 0 {
+            rel := list.popBack(mut stack);
+            src := path.join(root, rel);
+            if shouldSkipArchivePath(src) { continue; }
+            dst := path.join(dstRoot, rel);
+            rp := fs.realPath(src);
+            if rp.ok and rp.path =!= src {
+                test.check("mkdir symlink parent " + rel, fs.makeDir(path.parentDir(dst)).ok);
+                relTarget := path.relative(path.parentDir(src), rp.path);
+                sl := fs.symlink(relTarget, dst);
+                test.check("symlink " + rel + ": " + sl.error, sl.ok);
+            } else if fs.kind(src) == fs.FILE_KIND_DIR {
+                test.check("mkdir dir " + rel, fs.makeDir(dst).ok);
+                entries := fs.listDir(src);
+                loop entries as entry {
+                    list.pushBack(mut stack, rel + "/" + entry);
+                }
+            } else {
+                test.check("mkdir file parent " + rel, fs.makeDir(path.parentDir(dst)).ok);
+                cp := fs.copy(src, dst);
+                test.check("copy " + rel + ": " + cp.error, cp.ok);
+            }
+        }
+    }
+    nmLink := fs.symlink(path.join(root, "igniter/node_modules"), path.join(dstRoot, "igniter/node_modules"));
+    test.check("symlink igniter/node_modules: " + nmLink.error, nmLink.ok);
+};
+
+replaceOnce := fn(source: String, target: String, replacement: String): String {
+    idx := text.indexOfText(source, target, 0);
+    test.check("replaceOnce anchor found", idx >= 0);
+    text.slice(source, 0, idx) + replacement + text.slice(source, idx + text.length(target), text.length(source))
+};
+
+/* 1. generated source graph build records three strictly checked fixed-point generations */
+dir1Res := fs.makeTempDir("lite tools ladder ");
+test.check("dir1 makeTempDir", dir1Res.ok);
+dir1 := dir1Res.path;
+out1 := summary("self-host ladder", invoke(root, "compiler/scripts/self-host.ts", ["--out", dir1], 180000));
+test.checkText("ladder phase", "generated-fixed-point", json.readObjectString(out1, 0, "phase").value);
+test.check("ladder fixedPoint", json.readObjectBool(out1, 0, "fixedPoint").value);
+test.check("ladder equalsSelectedBuilder", json.readObjectBool(out1, 0, "equalsSelectedBuilder").value);
+test.check("ladder matchesSelectedCompiler", json.readObjectBool(out1, 0, "matchesSelectedCompiler").value);
+
+selField1 := json.findObjectField(out1, 0, "selected");
+test.check("ladder selected found", selField1.found);
+selArtSha := json.readObjectString(out1, selField1.valuePos, "artifactSha256").value;
+selSrcSha := json.readObjectString(out1, selField1.valuePos, "currentSourceSha256").value;
+
+gensField1 := json.findObjectField(out1, 0, "generations");
+test.check("ladder generations found", gensField1.found);
+genOffs1 := json.arrayElementOffsets(out1, gensField1.valuePos);
+test.checkInt("ladder generation count", 3, list.listCountInt(genOffs1));
+var gIdx := 0;
+loop gIdx < 3 {
+    gPos := genOffs1[gIdx];
+    test.checkText("gen artifactSha256", selArtSha, json.readObjectString(out1, gPos, "artifactSha256").value);
+    test.checkText("gen builderSha256", selArtSha, json.readObjectString(out1, gPos, "builderSha256").value);
+    test.checkText("gen sourceSha256", selSrcSha, json.readObjectString(out1, gPos, "sourceSha256").value);
+    gPath := json.readObjectString(out1, gPos, "path").value;
+    test.checkText("gen path", path.join(dir1, "generation-" + integer.intText(gIdx + 1) + ".ts"), gPath);
+    test.check("gen file exists", fs.kind(gPath) == fs.FILE_KIND_FILE);
+    gIdx = gIdx + 1;
+}
+test.check("no compiler.ts in out dir", fs.kind(path.join(dir1, "compiler.ts")) == fs.FILE_KIND_MISSING);
+test.check("no seed artifact in out dir", fs.kind(path.join(dir1, seedArtifact)) == fs.FILE_KIND_MISSING);
+ladderJson1 := fs.readText(path.join(dir1, "ladder.json")).text;
+test.check("ladder.json fixedPoint", json.readObjectBool(ladderJson1, 0, "fixedPoint").value);
+_rm1 := fs.remove(dir1);
+
+/* 2. tooling separates option/type failures, fixed points and compiler conformance */
+dir2Res := fs.makeTempDir("lite-tools-invalid-");
+test.check("dir2 makeTempDir", dir2Res.ok);
+dir2 := dir2Res.path;
+broken := path.join(dir2, "broken artifact.ts");
+test.check("write broken artifact", fs.writeText(broken, "export function main(): string { return 42; }").ok);
+
+toolCmds: List<String> = [
+"compiler/scripts/self-host.ts",
+"compiler/scripts/corpus-parity.ts",
+"benchmark/compiler-performance.ts"
+];
+loop toolCmds as cmd {
+    rUnk := invoke(root, cmd, ["--unknown"], 180000);
+    test.check(cmd + " --unknown fails", rUnk.status =!= 0 and rUnk.stderr =!= "");
+    test.checkText(cmd + " --unknown stdout", "", rUnk.stdout);
+
+    rMissing := invoke(root, cmd, ["--artifact"], 180000);
+    test.check(cmd + " --artifact fails", rMissing.status =!= 0 and rMissing.stderr =!= "");
+    test.checkText(cmd + " --artifact stdout", "", rMissing.stdout);
+
+    rBroken := invoke(root, cmd, ["--artifact", broken], 180000);
+    test.check(cmd + " --artifact broken fails", rBroken.status =!= 0 and rBroken.stderr =!= "");
+    test.checkText(cmd + " --artifact broken stdout", "", rBroken.stdout);
+}
+
+rBench0 := invoke(root, "benchmark/compiler-performance.ts", ["--samples", "0"], 180000);
+test.check("bench --samples 0 fails", rBench0.status =!= 0);
+test.checkText("bench --samples 0 stdout", "", rBench0.stdout);
+
+rBenchW := invoke(root, "benchmark/compiler-performance.ts", ["--warmups", "-1"], 180000);
+test.check("bench --warmups -1 fails", rBenchW.status =!= 0);
+test.checkText("bench --warmups -1 stdout", "", rBenchW.stdout);
+
+rBenchDup := invoke(root, "benchmark/compiler-performance.ts", ["--samples", "1", "--samples", "2"], 180000);
+test.check("bench dup --samples fails", rBenchDup.status =!= 0);
+test.checkText("bench dup --samples stdout", "", rBenchDup.stdout);
+
+rTargetC := invoke(root, "compiler/scripts/corpus-parity.ts", ["--target", "c"], 180000);
+test.check("corpus --target c fails", rTargetC.status =!= 0);
+test.check("corpus --target c deferred", text.indexOfText(rTargetC.stderr, "deferred", 0) >= 0);
+
+quineTemplate := "declare const process: { getBuiltinModule(name: string): { readFileSync(fd: number): unknown } }; export function main(): string { process.getBuiltinModule(\"node:fs\").readFileSync(0); const template = TEMPLATE; return template.replace(\"TEMPLATE\", JSON.stringify(template)); }";
+quinePath := path.join(dir2, "unrelated-builder.ts");
+test.check("write quine", fs.writeText(quinePath, replaceOnce(quineTemplate, "TEMPLATE", json.quoteString(quineTemplate))).ok);
+
+unrelatedOut := path.join(dir2, "unrelated");
+unrelated := invoke(root, "compiler/scripts/self-host.ts", ["--artifact", quinePath, "--out", unrelatedOut], 180000);
+test.checkInt("unrelated self-host status: " + unrelated.stderr, 0, unrelated.status);
+test.check("unrelated self-host stdout non-empty", unrelated.stdout =!= "");
+test.check("unrelated fixedPoint", json.readObjectBool(unrelated.stdout, 0, "fixedPoint").value);
+test.check("unrelated matchesSelectedCompiler false", not json.readObjectBool(unrelated.stdout, 0, "matchesSelectedCompiler").value);
+
+conformance := invoke(root, "compiler/scripts/corpus-parity.ts", ["--artifact", path.join(unrelatedOut, "generation-3.ts")], 180000);
+test.checkInt("unrelated conformance status", 1, conformance.status);
+confMism := json.findObjectField(conformance.stdout, 0, "mismatches");
+test.check("unrelated mismatches found", confMism.found);
+test.checkInt("unrelated mismatches count", 94, list.listCountInt(json.arrayElementOffsets(conformance.stdout, confMism.valuePos)));
+
+failedOut := path.join(dir2, "failed");
+failedRes := invoke(root, "compiler/scripts/self-host.ts", ["--artifact", broken, "--out", failedOut], 180000);
+test.check("failed self-host non-zero", failedRes.status =!= 0);
+test.check("failed no ladder.json", fs.kind(path.join(failedOut, "ladder.json")) == fs.FILE_KIND_MISSING);
+test.check("failed no generation-1.ts", fs.kind(path.join(failedOut, "generation-1.ts")) == fs.FILE_KIND_MISSING);
+_rm2 := fs.remove(dir2);
+
+/* 3. corpus command checks exact artifacts, rejected streams and executed program contracts */
+corpusOut := summary("corpus-parity", invoke(root, "compiler/scripts/corpus-parity.ts", [], 180000));
+test.checkText("corpus phase", "recorded-contracts", json.readObjectString(corpusOut, 0, "phase").value);
+test.checkInt("corpus cases", 94, json.readObjectInt(corpusOut, 0, "cases").value);
+test.checkInt("corpus programs", 69, json.readObjectInt(corpusOut, 0, "programs").value);
+test.checkInt("corpus rejections", 25, json.readObjectInt(corpusOut, 0, "rejections").value);
+test.checkInt("corpus executions", 69, json.readObjectInt(corpusOut, 0, "executions").value);
+corpusMism := json.findObjectField(corpusOut, 0, "mismatches");
+test.checkInt("corpus mismatches empty", 0, list.listCountInt(json.arrayElementOffsets(corpusOut, corpusMism.valuePos)));
+test.checkText("corpus artifactSha256", seedArtifactSha256, json.readObjectString(corpusOut, 0, "artifactSha256").value);
+
+dir3Res := fs.makeTempDir("lite-tools-mismatch-");
+test.check("dir3 makeTempDir", dir3Res.ok);
+wrongArt := path.join(dir3Res.path, "wrong.ts");
+test.check("write wrong.ts", fs.writeText(wrongArt, "export function main(): string { return \"wrong compiler output\"; }").ok);
+wrongRes := invoke(root, "compiler/scripts/corpus-parity.ts", ["--artifact", wrongArt], 180000);
+test.checkInt("wrong artifact status", 1, wrongRes.status);
+wrongMism := json.findObjectField(wrongRes.stdout, 0, "mismatches");
+test.checkInt("wrong artifact mismatches", 94, list.listCountInt(json.arrayElementOffsets(wrongRes.stdout, wrongMism.valuePos)));
+test.checkInt("wrong artifact executions", 0, json.readObjectInt(wrongRes.stdout, 0, "executions").value);
+_rm3 := fs.remove(dir3Res.path);
+
+/* 4. everyday tooling and benchmark work in a source archive without T00 or Git metadata */
+dir4Res := fs.makeTempDir("lite-tools-no-t00-");
+test.check("dir4 makeTempDir", dir4Res.ok);
+dir4 := dir4Res.path;
+copyToolArchive(dir4);
+absentPaths: List<String> = [".git", "igniter/lite.ts", "igniter/bootstrap.ts", "igniter/bundle-cli.ts", "igniter/cli.ts"];
+loop absentPaths as ap {
+    test.check("archive excludes " + ap, fs.kind(path.join(dir4, ap)) == fs.FILE_KIND_MISSING);
+}
+out4 := path.join(dir4, ".cache/tooling");
+test.check("mkdir .cache", fs.makeDir(path.parentDir(out4)).ok);
+ladder4 := summary("archive self-host", invoke(dir4, "compiler/scripts/self-host.ts", ["--out", out4], 180000));
+test.check("archive ladder fixedPoint", json.readObjectBool(ladder4, 0, "fixedPoint").value);
+
+corpus4 := summary("archive corpus-parity", invoke(dir4, "compiler/scripts/corpus-parity.ts", [], 180000));
+test.checkInt("archive corpus cases", 94, json.readObjectInt(corpus4, 0, "cases").value);
+test.checkInt("archive corpus executions", 69, json.readObjectInt(corpus4, 0, "executions").value);
+corpus4Mism := json.findObjectField(corpus4, 0, "mismatches");
+test.checkInt("archive corpus mismatches", 0, list.listCountInt(json.arrayElementOffsets(corpus4, corpus4Mism.valuePos)));
+
+prefix4 := path.join(dir4, ".cache/benchmark");
+bench4 := summary("archive benchmark", invoke(dir4, "benchmark/compiler-performance.ts", ["--samples", "1", "--warmups", "0", "--out", prefix4], 300000));
+test.checkText("bench mode", "generated-only", json.readObjectString(bench4, 0, "mode").value);
+test.check("bench revision null", text.indexOfText(bench4, "\"revision\": null", 0) >= 0 or text.indexOfText(bench4, "\"revision\":null", 0) >= 0);
+
+methodField := json.findObjectField(bench4, 0, "method");
+test.check("bench method found", methodField.found);
+test.checkInt("bench method.samples", 1, json.readObjectInt(bench4, methodField.valuePos, "samples").value);
+
+runtimeField := json.findObjectField(bench4, 0, "runtime");
+test.check("bench runtime found", runtimeField.found);
+countsField := json.findObjectField(bench4, runtimeField.valuePos, "checkedSyntheticOutputCounts");
+test.check("bench checkedSyntheticOutputCounts found", countsField.found);
+countOffs := json.arrayElementOffsets(bench4, countsField.valuePos);
+test.checkInt("bench synthetic counts len", 3, list.listCountInt(countOffs));
+test.checkInt("bench synthetic count[0]", 1, json.readIntAt(bench4, countOffs[0]).value);
+test.checkInt("bench synthetic count[1]", 100, json.readIntAt(bench4, countOffs[1]).value);
+test.checkInt("bench synthetic count[2]", 1000, json.readIntAt(bench4, countOffs[2]).value);
+
+resultsField := json.findObjectField(bench4, 0, "results");
+test.checkInt("bench results count", 5, list.listCountInt(json.arrayElementOffsets(bench4, resultsField.valuePos)));
+
+sbvField := json.findObjectField(bench4, 0, "selfBuildValidation");
+sbvMism := json.findObjectField(bench4, sbvField.valuePos, "mismatches");
+test.checkInt("bench selfBuildValidation mismatches", 0, list.listCountInt(json.arrayElementOffsets(bench4, sbvMism.valuePos)));
+test.checkText("bench selfBuildArtifactSha256", seedArtifactSha256, json.readObjectString(bench4, 0, "selfBuildArtifactSha256").value);
+test.check("bench .md exists", fs.kind(prefix4 + ".md") == fs.FILE_KIND_FILE);
+
+persistedText := fs.readText(prefix4 + ".json").text;
+pValField := json.findObjectField(persistedText, 0, "validation");
+pValMism := json.findObjectField(persistedText, pValField.valuePos, "mismatches");
+test.checkInt("persisted validation mismatches", 0, list.listCountInt(json.arrayElementOffsets(persistedText, pValMism.valuePos)));
+pRtField := json.findObjectField(persistedText, 0, "runtime");
+pRtSamples := json.findObjectField(persistedText, pRtField.valuePos, "samples");
+test.checkInt("persisted runtime samples", 1, list.listCountInt(json.arrayElementOffsets(persistedText, pRtSamples.valuePos)));
+
+loop toolCmds as cmd {
+    legacy := invoke(dir4, cmd, ["--reference"], 180000);
+    test.check(cmd + " --reference fails", legacy.status =!= 0);
+    test.check(cmd + " --reference msg", text.indexOfText(legacy.stdout + legacy.stderr, "invalid or missing option: --reference", 0) >= 0);
+}
+_rm4 := fs.remove(dir4);
+
+/* 5. changed Lite emission can reach a new generated fixed point before seed selection */
+dir5Res := fs.makeTempDir("lite-tools-refresh-");
+test.check("dir5 makeTempDir", dir5Res.ok);
+dir5 := dir5Res.path;
+copyToolArchive(dir5);
+emitPath := path.join(dir5, "compiler/src/emit-ts.lts");
+emitSrc := fs.readText(emitPath).text;
+anchor := "    outLine(\"export function main(lite$write?: (text: string) => void): string {\");";
+test.check("emit-ts anchor found", text.indexOfText(emitSrc, anchor, 0) >= 0);
+test.check(
+"write modified emit-ts.lts",
+fs.writeText(emitPath, replaceOnce(emitSrc, anchor, "        io.outputLine(\"// generated refresh probe\");\n" + anchor)).ok
+);
+
+ladder5Out := path.join(dir5, ".cache/ladder");
+res5 := summary("refresh self-host", invoke(dir5, "compiler/scripts/self-host.ts", ["--out", ladder5Out], 180000));
+test.check("refresh fixedPoint", json.readObjectBool(res5, 0, "fixedPoint").value);
+test.check("refresh equalsSelectedBuilder false", not json.readObjectBool(res5, 0, "equalsSelectedBuilder").value);
+test.check("refresh matchesSelectedCompiler false", not json.readObjectBool(res5, 0, "matchesSelectedCompiler").value);
+
+gensField5 := json.findObjectField(res5, 0, "generations");
+genOffs5 := json.arrayElementOffsets(res5, gensField5.valuePos);
+test.checkInt("refresh generation count", 3, list.listCountInt(genOffs5));
+g0Art := json.readObjectString(res5, genOffs5[0], "artifactSha256").value;
+g1Art := json.readObjectString(res5, genOffs5[1], "artifactSha256").value;
+g2Art := json.readObjectString(res5, genOffs5[2], "artifactSha256").value;
+g0Bld := json.readObjectString(res5, genOffs5[0], "builderSha256").value;
+g1Bld := json.readObjectString(res5, genOffs5[1], "builderSha256").value;
+test.checkText("refresh g0 == g1 art", g0Art, g1Art);
+test.checkText("refresh g0 == g2 art", g0Art, g2Art);
+test.check("refresh g0 builder != art", g0Bld =!= g0Art);
+test.checkText("refresh g1 builder == g0 art", g0Art, g1Bld);
+
+gen3Text := fs.readText(path.join(ladder5Out, "generation-3.ts")).text;
+test.check("refresh probe in generation-3.ts", text.indexOfText(gen3Text, "// generated refresh probe\nexport function main(", 0) >= 0);
+_rm5 := fs.remove(dir5);
