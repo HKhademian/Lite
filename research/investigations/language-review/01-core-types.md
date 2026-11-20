@@ -176,6 +176,19 @@ union admission rules leave `UserID` as the one satisfying type for `v`.
 `TicketID` may be admitted by `logValue`, but it cannot satisfy `findUser`.
 The calls receiving unions admit the same established `UserID` value.
 
+The joint review also confirmed that narrowing can come entirely from union
+uses. Assuming each listed ID is a viable realization of `10`, a use accepting
+`UserID | TicketID` and another accepting `UserID | RoomID` together infer
+`UserID`. The decision rule is:
+
+- If applicable uses narrow the candidates to one satisfying type, infer it.
+- If narrowing leaves zero or multiple satisfying types, report a compile-time
+  inference error. Zero candidates indicate conflicting constraints. Multiple
+  candidates indicate ambiguity. Call order and the literal default cannot
+  pick a winner in either case.
+- If the uses supply no narrowing information, apply the X-Like default where
+  defined, such as Int-Like to `Int`.
+
 This direction is under investigation, not an implemented rule. Scope of
 “relevant uses,” compatible constraints, ambiguity, recursion, public APIs,
 diagnostics, unused bindings, and the precise commitment point remain to be
