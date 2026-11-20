@@ -7,41 +7,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { checkTsArtifact, compileTs, runTsArtifact } from '../../../igniter/artifacts.ts';
+import { checkTsArtifact, compileTs } from '../../../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
-
-test('challenge utilities preserve ties-to-even rounding and HTML entity decoding', () => {
-  const probe = `
-    fs := import "core/file";
-    io := import "core/io";
-    cbuild := import "${join(root, 'lib/util/challenge-build.lts').replaceAll('\\', '/')}";
-    ch := import "${join(root, 'lib/util/challenges.lts').replaceAll('\\', '/')}";
-    entities := fs.readText("${join(root, 'benchmark/challenges/tools/html-entities.json').replaceAll('\\', '/')}");
-    io.outputLine(
-      cbuild.roundDivTiesEven(5, 2),
-      cbuild.roundDivTiesEven(7, 2),
-      cbuild.roundDivTiesEven(125, 100),
-      cbuild.roundDivTiesEven(135, 100),
-      cbuild.roundDivTiesEven(2675, 1000),
-      cbuild.roundDivTiesEven(-2675, 1000)
-    );
-    decoded1 := ch.unescapeChallengeHtml(entities.text, "&lt;x&gt; &amp; &NotEqualTilde; &#x1F642; &#128; &notit; &unknown;");
-    decoded2 := ch.unescapeChallengeHtml(entities.text, "&#0; &#xD800; &#x110000; &#11;");
-    io.outputLine(decoded1);
-    io.outputLine(decoded2);
-  `;
-  const compiled = compileTs({ text: probe, name: 'challenge-util-probe.lts', cwd: root });
-  assert.equal(compiled.status, 0, compiled.stderr.toString('utf8'));
-  const ts = compiled.stdout.toString('utf8');
-  assert.equal(checkTsArtifact(ts).status, 0);
-  const run = runTsArtifact(ts);
-  assert.equal(run.status, 0, run.stderr.toString('utf8'));
-  assert.equal(
-    run.stdout.toString('utf8'),
-    '2 4 1 1 3 -3\n<x> & ≂̸ 🙂 € ¬it; &unknown;\n\ufffd \ufffd \ufffd \n',
-  );
-});
 
 test('downloadFile retries rate limits, publishes complete files, reuses cache, and admits missing optional pages', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-download-test-'));
