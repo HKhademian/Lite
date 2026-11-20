@@ -114,6 +114,22 @@ Selected on **2026-10-25**: for a record with a valid copy contract and inline I
 
 Selected on **2026-10-25**: the simple fixed temporary and ordinary-parameter value rule also uses the established shallow mapping for a record and reference fields with valid copy contracts. In tmp := profile, inline values are preserved and copied references keep their original targets and permitted access; replacing profile does not retarget tmp's fields. Referenced targets are shared, and observations of separately authorized changes remain subject to their eventual lifetime/alias rules. Read-only access is not upgraded and no graph clone is implied. The user explicitly defers reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resource handling; this mapping does not decide capability copyability or make the reference model implementation-ready. See [copyable reference-bearing record values](lite://doc/parameter-values-and-slots#copyable-reference-bearing-record-values-selected).
 
+## Inner declarations shadow across kinds
+
+Resolve a name to its innermost visible declaration before checking whether that declaration can be used in the current position. A declaration of a different kind still shadows an outer declaration. If the selected symbol cannot be used in that position, reject the use. Lookup does not continue outward for a symbol of a suitable kind.
+
+```text
+v := 10;
+findUser(v);
+
+{
+    v := record { x: Int }
+    findRoom(v); /* error: the inner v names a type, but a value is required */
+}
+```
+
+The inner and outer declarations have separate identities, as if written with different names. In this design example, only `findUser(v)` constrains the outer literal. Without the inner declaration, `findRoom(v)` would resolve to and constrain the outer binding.
+
 ## Var shadowing does not demand a deep copy
 
 Var x := x creates a new binding that can receive another compatible value. It does not itself request mutable payload access or a recursive clone of the data. The initializer follows the general copy default: the new binding receives the evaluated value, not an implicit reference, borrow, shared source location, or move. Type-specific copy eligibility and resource/reference safety remain deferred; see [the general copy default](lite://doc/parameter-values-and-slots#general-copy-default-selected). The new binding cannot assign into the caller's original binding merely because it shadows the name.

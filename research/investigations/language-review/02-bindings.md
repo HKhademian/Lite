@@ -76,3 +76,5 @@ The review confirmed that `var` is required to overwrite an initialized binding.
 Storage declared with `= ?` has no readable value until a first write. Every path reaching a read must establish initialization. Arbitrary bytes from reserved storage never become an initialized Lite value. An optimizer can remove an unobservable write while preserving evaluation effects, failure and cleanup.
 
 Nested scopes can shadow an outer name with a separate binding or assign to the existing outer binding under its permissions. Same-block redeclaration remains postponed. Scope governs where a name resolves. Lifetime governs where access to the underlying storage remains valid. After successful assignment, a known active union member can refine reads without narrowing what the declared slot accepts on later writes.
+
+The review confirmed that lexical lookup selects the innermost visible declaration even when its kind is unsuitable. Using an inner record type name in a value position is an error and cannot constrain a shadowed outer value. [Cross-kind shadowing](../../../docs/local-shadowing-and-copies.md#inner-declarations-shadow-across-kinds)
