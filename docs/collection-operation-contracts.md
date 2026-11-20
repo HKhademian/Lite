@@ -23,7 +23,7 @@ An inferred generic parameter can acquire its required contract from these opera
 ## Two distinct failures
 
 - Missing contract: the receiver cannot support the operation. Reject the definition or call at compilation when its static contract is insufficient.
-- Supported operation fails: an operation may use its declared Result channel or a specified typed fault channel. Result errors retain explicit else/! handling or outcome storage. The accepted positional sequence direction uses direct values with typed faults and requests the same else recovery surface; ! does not capture those faults. See [shared recovery](expression-recovery.md) for pending scope and receiver typing.
+- Supported operation fails: an operation may use its declared Result channel or a specified typed fault channel. Result errors retain explicit else/! handling or outcome storage. The accepted positional sequence direction uses direct values with typed faults and requests the same else recovery surface; ! does not capture those faults. See [shared recovery](lite://doc/expression-recovery) for pending scope and receiver typing.
 
 An unsupported operation does not automatically become a recoverable runtime error. A provider's declared failure type also must not be silently broadened by the sugar. An explicitly dynamic capability-test API could be considered separately.
 
@@ -61,4 +61,4 @@ Kotlin maps a[i] to get(i) and indexed assignment to set operations through oper
 
 Contract resolution explains what an operation requires. Function inputs must express required behavior; outputs must describe guaranteed behavior and preserve necessary type relationships. A generic constraint is not automatically a boxed runtime interface value, and a contract does not by itself choose a stored representation. This requires a separate signature/return contract before the shorthand [T] or generic punctuation can be finalized.
 
-Related: [inferred collection syntax](collection-inference.md), [capabilities](collection-capabilities.md), [interfaces](composition-and-interfaces.md), [checked operations](checked-collection-operations.md), and [generic performance](generic-collection-performance.md).
+Related: [inferred collection syntax](lite://doc/collection-inference), [capabilities](lite://doc/collection-capabilities), [interfaces](lite://doc/composition-and-interfaces), [checked operations](lite://doc/checked-collection-operations), and [generic performance](lite://doc/generic-collection-performance).

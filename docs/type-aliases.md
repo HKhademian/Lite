@@ -47,7 +47,7 @@ Value := type
     | Float;
 ```
 
-This denotes exactly String | Int | Float under the ordinary transparent-alias and union-normalization rules. A singleton Value := type | String denotes String. The same leading form is available in other established type contexts and explicitly grouped union chains. No empty member, Unit, new nominal wrapper, or changed fallible-type precedence is introduced. Empty, stacked, interior extra, and trailing separators are invalid. Leading & awaits intersection-type selection; it is not admitted merely by analogy. See [optional leading separators](leading-separators.md#plain-union-types), selected 2026-10-24.
+This denotes exactly String | Int | Float under the ordinary transparent-alias and union-normalization rules. A singleton Value := type | String denotes String. The same leading form is available in other established type contexts and explicitly grouped union chains. No empty member, Unit, new nominal wrapper, or changed fallible-type precedence is introduced. Empty, stacked, interior extra, and trailing separators are invalid. Leading & awaits intersection-type selection; it is not admitted merely by analogy. See [optional leading separators](lite://doc/leading-separators#plain-union-types), selected 2026-10-24.
 
 ## What changes as types become more complex
 
@@ -56,7 +56,7 @@ This denotes exactly String | Int | Float under the ordinary transparent-alias a
 - **Fallible type:** User! is the selected shorthand for User ! Error in type context, while outcome! extracts or propagates in value context. The explicit prefix establishes which grammar applies. The short form must resolve whether its operand denotes a type or an outcome value.
 - **Tuple type:** (:String, :Int) uses the selected unnamed typed component form. Bare entries such as (name, age) in tuple type context instead supply labels with inferred component types; they require a static inference source. In ordinary expression context, a tuple can contain ordinary values. The explicit type prefix establishes type context; this comparison does not introduce runtime type values or a second alias spelling.
 - **Generic application:** List<User> needs a type-application grammar; < and > cannot depend on whitespace or capitalized naming conventions to separate them from comparison expressions. An explicit type context helps reuse annotation grammar. The short form remains feasible with proper type-expression rules.
-- **Function type:** type fn(value: Int): String clearly asks for a callable type. Without the prefix, the grammar must distinguish that from a function literal requiring parameters and a body. Named parameter, access-qualifier, and fallible result forms are selected separately; complete recursive grammar, remaining callable compatibility beyond destination label adaptation, and capture representation remain open. Public labels through an alias follow its destination contract. Writing the alias as a receiving-declaration annotation can authorize label conversion; merely expecting that alias in an ordinary transfer does not bypass label checks; see [tuple/callable label conversion](tuple-label-conversions.md).
+- **Function type:** type fn(value: Int): String clearly asks for a callable type. Without the prefix, the grammar must distinguish that from a function literal requiring parameters and a body. Named parameter, access-qualifier, and fallible result forms are selected separately; complete recursive grammar, remaining callable compatibility beyond destination label adaptation, and capture representation remain open. Public labels through an alias follow its destination contract. Writing the alias as a receiving-declaration annotation can authorize label conversion; merely expecting that alias in an ordinary transfer does not bypass label checks; see [tuple/callable label conversion](lite://doc/tuple-label-conversions).
 
 These are readability and grammar-design tradeoffs, not claims that one spelling can be implemented and the other cannot. A compiler need not add runtime work for either alias form.
 
@@ -74,7 +74,7 @@ User and Member denote the same type. No structural conversion, reconstruction, 
 
 The alias preserves the target's fields, construction defaults, valid-zero contract, and access permissions. It cannot grant visibility or mutation capabilities. A : Member test denotes the same type test as : User; alias names must not become separate union cases merely because their spellings differ. General union canonicalization remains its own contract.
 
-The [selected union normalization rule](union-normalization.md) now ignores plain-union member order, flattens nested plain unions, and removes duplicates by resolved identity, including aliases. It retains distinct record declarations, enum cases, and Option/Result boundaries. Subtype absorption and broader assignability remain open.
+The [selected union normalization rule](lite://doc/union-normalization) now ignores plain-union member order, flattens nested plain unions, and removes duplicates by resolved identity, including aliases. It retains distinct record declarations, enum cases, and Option/Result boundaries. Subtype absorption and broader assignability remain open.
 
 Similarly:
 
@@ -105,7 +105,7 @@ An explicit prefix raises an additional boundary: should Name := type { ... } be
 ## Selected rule
 
 FVP follow-up, **2026-10-31**: the
-[INV-029 name-resolution review](../research/investigations/INV-029-fvp-alias-name-resolution.md)
+[INV-029 name-resolution review](lite://repo/research/investigations/INV-029-fvp-alias-name-resolution.md)
 selects one ordinary lexical namespace for source-introduced aliases and value
 bindings. A value binding shadows an earlier same-name alias; subsequent lookup
 in a type annotation finds the value and fails with a static type error stating
@@ -136,4 +136,4 @@ Remaining contracts: exact alias production and type boundaries; use in local/mo
 - TypeScript uses an explicit type declaration for simple aliases and unions, including type ID = number | string. Naming the union does not introduce a distinct version of the type. Source: [TypeScript aliases](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-aliases).
 - Kotlin uses typealias for existing, generic, function, and nested types; aliases do not introduce new types. This supports explicit intent for composite aliases without determining LiteScript's punctuation or scope rules. Source: [Kotlin aliases](https://kotlinlang.org/docs/type-aliases.html).
 
-Related: [record identity](record-type-identity.md), [fallible compositions](fallible-types-and-error-composition.md), [types and inference](types-and-inference.md), and [grammar sketch](grammar-sketch.md).
+Related: [record identity](lite://doc/record-type-identity), [fallible compositions](lite://doc/fallible-types-and-error-composition), [types and inference](lite://doc/types-and-inference), and [grammar sketch](lite://doc/grammar-sketch).

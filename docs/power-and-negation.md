@@ -69,7 +69,7 @@ The `^` token and alternate association are deferred; no implementation is selec
 - [Python power](https://docs.python.org/3/reference/expressions.html#the-power-operator) gives power priority on the left: `-2 ** 2` evaluates as `-(2 ** 2)`, giving -4.
 - [Lua 5.4 precedence](https://www.lua.org/manual/5.4/manual.html#3.4.8) similarly puts its ^ power operator above unary minus.
 - [ECMAScript's power grammar](https://tc39.es/ecma262/multipage/ecmascript-language-expressions.html#sec-exp-operator) rejects a bare unary-minus left operand of `**`, requiring explicit grouping for the two intentions.
-- Rust, Dart, Odin, and Zig do not provide a built-in numeric `**` operator in the references reviewed. Their named power operations do not establish a competing grouping rule for this spelling. The inspected V appendix lists numeric `**` but does not establish its unary-minus interaction; no V signed-power runtime result is claimed. See the [full comparison](arithmetic-operators-comparison.md).
+- Rust, Dart, Odin, and Zig do not provide a built-in numeric `**` operator in the references reviewed. Their named power operations do not establish a competing grouping rule for this spelling. The inspected V appendix lists numeric `**` but does not establish its unary-minus interaction; no V signed-power runtime result is claimed. See the [full comparison](lite://doc/arithmetic-operators-comparison).
 
 These languages have deterministic grammars, but their conventions do not give a portable reading of the source. The user selected rejection when the intent remains ambiguous. LiteScript therefore requires the visible choice instead of adopting either precedence interpretation for this spelling.
 
@@ -135,7 +135,7 @@ C uses the C math library's `pow`, linked with `-lm` where required. Both
 operands evaluate once, left to right. Non-finite results use the existing fault
 path; this does not select a universal cross-library rounding contract. The
 2026-11-02 positive-exponent checkpoint has been superseded by the rule above.
-The [power migration ledger](../compiler/parity.md#power-checkpoint) records
+The [power migration ledger](lite://doc/compiler/parity#power-checkpoint) records
 target validation and remaining limits.
 
 Lite also enforces the already selected rule against concealed ungrouped minus,
@@ -153,9 +153,9 @@ The examples' values describe ordinary mathematical powers for admitted operands
 
 ## Related documents
 
-- [Operators](operators.md)
-- [Grammar sketch](grammar-sketch.md)
-- [Numbers](numbers.md)
-- [Arithmetic comparison](arithmetic-operators-comparison.md)
-- [Evaluation order](evaluation-order.md)
-- [Decision ledger](decisions-and-open-questions.md)
+- [Operators](lite://doc/operators)
+- [Grammar sketch](lite://doc/grammar-sketch)
+- [Numbers](lite://doc/numbers)
+- [Arithmetic comparison](lite://doc/arithmetic-operators-comparison)
+- [Evaluation order](lite://doc/evaluation-order)
+- [Decision ledger](lite://doc/decisions-and-open-questions)

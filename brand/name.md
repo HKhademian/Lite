@@ -2,7 +2,7 @@
 
 ## Decision
 
-Follow [Naming and versioning](../docs/versioning-and-naming.md#1-canonical-names):
+Follow [Naming and versioning](lite://doc/versioning-and-naming#1-canonical-names):
 write **Lite** for the project, **LiteLang** for the language, and **LiteScript**
 for a program. Use `lite` in code for the CLI command, `.lts` for scripts, and
 `.lt` for module files.
@@ -19,9 +19,9 @@ contexts).
 
 | Surface | Form |
 | --- | --- |
-| Wordmark | Two-tone `ℓ` + `ite` in [lite-wordmark.svg](lite-wordmark.svg) (`R14-02`) |
-| Standalone mark | [lite-mark.svg](lite-mark.svg) (`R14-02`) or [lite-mark-minimal.svg](lite-mark-minimal.svg) (`R14-01`) |
-| Favicon | [lite-favicon.svg](lite-favicon.svg) (`R14-01` minimal optical cut) |
+| Wordmark | Two-tone `ℓ` + `ite` in [lite-wordmark.svg](lite://brand/lite-wordmark.svg) (`R14-02`) |
+| Standalone mark | [lite-mark.svg](lite://brand/lite-mark.svg) (`R14-02`) or [lite-mark-minimal.svg](lite://brand/lite-mark-minimal.svg) (`R14-01`) |
+| Favicon | [lite-favicon.svg](lite://brand/lite-favicon.svg) (`R14-01` minimal optical cut) |
 | Docs, Markdown | Plain **Lite** / **LiteLang** / **LiteScript**; the wordmark carries the accent |
 | CLI, editor UI | Plain `lite` / `Lite` |
 | Commands, files | `lite`, `.lt`, `.lts` |
@@ -33,7 +33,7 @@ prose it mismatches the surrounding font and breaks text selection and search.
 Use the wordmark for display surfaces: site headers, README banners, and social
 cards.
 
-In HTML/CSS, the wordmark classes in [lite-wordmark.svg](lite-wordmark.svg)
+In HTML/CSS, the wordmark classes in [lite-wordmark.svg](lite://brand/lite-wordmark.svg)
 support switching treatments cleanly:
 
 ```css

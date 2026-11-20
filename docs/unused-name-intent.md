@@ -39,13 +39,13 @@ on_event := fn(_event: Event): Unit {
 
 A field called _cache remains a real field and can be read or updated under its normal type, visibility, mutability, and ownership rules. The prefix alone does not make it private, remove it from a type, or exempt it from initialization requirements. Field declaration and representation grammar remain open independently.
 
-With a field alias, evaluate the introduced local name independently from the source field's name. Giving a source field an underscore prefix does not automatically grant an unprefixed local alias the same diagnostic intent, and naming a local alias _left does not rename the original field. The selected destination = sourceField alias punctuation is defined in [pattern aliases](pattern-aliases.md).
+With a field alias, evaluate the introduced local name independently from the source field's name. Giving a source field an underscore prefix does not automatically grant an unprefixed local alias the same diagnostic intent, and naming a local alias _left does not rename the original field. The selected destination = sourceField alias punctuation is defined in [pattern aliases](lite://doc/pattern-aliases).
 
 ## Normal semantics remain
 
 - `_user` has an ordinary inferred or declared static type and is a distinct identifier from user.
 - Binding reassignment requires var; held-data mutation requires mut and the usual access permissions.
-- Ordered shadowing applies to repeated names within a pattern, including `_user` and `_`. The last binding of a name is visible; repeated names do not assert equality. Ordinary block redeclarations retain their separate rules. See [pattern shadowing](pattern-shadowing.md).
+- Ordered shadowing applies to repeated names within a pattern, including `_user` and `_`. The last binding of a name is visible; repeated names do not assert equality. Ordinary block redeclarations retain their separate rules. See [pattern shadowing](lite://doc/pattern-shadowing).
 - Initializers and calls retain their normal evaluation and error behavior. A prefix does not suppress execution, drop a value early, or change a pattern's constraints.
 - Naming a stored Result _attempt does not inspect, unwrap, default, or propagate it. Any separate required-use/error-handling diagnostic remains independent; its complete policy is still open.
 - This suppresses unused-name diagnostics only. It does not suppress type/access errors, unreachable-code diagnostics, redundant-capability warnings, or other unrelated checks.
@@ -58,7 +58,7 @@ Rust's compiler documentation uses underscore-prefixed names to silence unused/d
 
 ## Related concepts
 
-- [Identifiers](identifiers.md)
-- [Underscore bindings and skips](wildcards-and-skips.md)
-- [Tooling and learning](tooling-and-learning.md)
-- [Declarations and assignment](declarations-and-assignment.md)
+- [Identifiers](lite://doc/identifiers)
+- [Underscore bindings and skips](lite://doc/wildcards-and-skips)
+- [Tooling and learning](lite://doc/tooling-and-learning)
+- [Declarations and assignment](lite://doc/declarations-and-assignment)

@@ -1,6 +1,6 @@
 # Recovery attached to a conditional
 
-Status: **external conditional recovery superseded by body-local ownership, 2026-10-19**. The user rejects error-catching else(failure) attached outside if/loop/match constructs and asks for recovery inside their bodies, like fn. The external handlers and grouping workarounds below are historical investigation, not current syntax recommendations. Operation-local handling inside branches remains valid. See [body-owned recovery](body-recovery.md) for the selected placement and pending body-wide form.
+Status: **external conditional recovery superseded by body-local ownership, 2026-10-19**. The user rejects error-catching else(failure) attached outside if/loop/match constructs and asks for recovery inside their bodies, like fn. The external handlers and grouping workarounds below are historical investigation, not current syntax recommendations. Operation-local handling inside branches remains valid. See [body-owned recovery](lite://doc/body-recovery) for the selected placement and pending body-wide form.
 
 ## Keep false selection distinct from failure
 
@@ -19,7 +19,7 @@ Proposed meaning:
 - If protected evaluation raises a supported typed panic, execute the recovery clause.
 - False and pattern mismatch are ordinary selection outcomes, not failures. They do not create a failure receiver or invoke recovery.
 
-Assume action/recover have Unit behavior in this action example. The recovery clause does not create a normal false branch. This historical draft assumed a missing false branch required Unit; the current [conditional rule](conditionals.md#no-final-else-guarded-update) instead makes the no-match path noncontributing: a declaration keeps its default, an assignment performs no write, and a loop contributes nothing. In this action example the surrounding action result remains Unit.
+Assume action/recover have Unit behavior in this action example. The recovery clause does not create a normal false branch. This historical draft assumed a missing false branch required Unit; the current [conditional rule](lite://doc/conditionals#no-final-else-guarded-update) instead makes the no-match path noncontributing: a declaration keeps its default, an assignment performs no write, and a loop contributes nothing. In this action example the surrounding action result remains Unit.
 
 ## Both false behavior and recovery
 
@@ -138,7 +138,7 @@ A similar nested region could appear in an else-if or false body. An ordinary ca
 
 A recovery body can contain ordinary operation-level recovery too. If its own operation failure is handled locally, it can continue; otherwise a panic travels farther outward. It never restarts the same recovery body automatically.
 
-The [full finally example](finally.md#historical-full-conditional-example) records operation, selected-branch, and whole-conditional cleanup. For a conditional with both result-processing `then` and cleanup `finally`, `then` completes first on normal completion; `finally` itself does not recover failures. When a typed panic matches a handler in the same scope, recovery runs first and that scope's `finally` runs once as it exits. An escaping panic runs applicable exited-scope `finally` blocks inner-to-outer before reaching an outer matching handler. Cleanup preserves the pending result/exit when it completes normally and has no pending-outcome receiver. Cleanup-failure precedence is selected; exact attachment syntax/scope and the `&` form's public value/operations remain open. The historical conditional handler does not protect its own handler or finally body.
+The [full finally example](lite://doc/finally#historical-full-conditional-example) records operation, selected-branch, and whole-conditional cleanup. For a conditional with both result-processing `then` and cleanup `finally`, `then` completes first on normal completion; `finally` itself does not recover failures. When a typed panic matches a handler in the same scope, recovery runs first and that scope's `finally` runs once as it exits. An escaping panic runs applicable exited-scope `finally` blocks inner-to-outer before reaching an outer matching handler. Cleanup preserves the pending result/exit when it completes normally and has no pending-outcome receiver. Cleanup-failure precedence is selected; exact attachment syntax/scope and the `&` form's public value/operations remain open. The historical conditional handler does not protect its own handler or finally body.
 
 ## Result errors remain explicit
 
@@ -179,8 +179,8 @@ conditional_core := "if" condition block
 conditional_recovery := "else" "(" receiver_pattern ")" block
 ```
 
-This proposal fragment records the retired external conditional-recovery placement; it is not current grammar. The selected construct-level order is `then` followed by cleanup-only `finally`, and cleanup-failure precedence is recorded in [the finally contract](finally.md#pending-outcomes). Exact attachment scope/grammar and the `&` form's public value/operations remain open. Typed receiver filtering is selected; mixed-channel receiver typing, precedence with condition-local recovery, and handler typing remain open. Filter syntax is no longer an open proposal.
+This proposal fragment records the retired external conditional-recovery placement; it is not current grammar. The selected construct-level order is `then` followed by cleanup-only `finally`, and cleanup-failure precedence is recorded in [the finally contract](lite://doc/finally#pending-outcomes). Exact attachment scope/grammar and the `&` form's public value/operations remain open. Typed receiver filtering is selected; mixed-channel receiver typing, precedence with condition-local recovery, and handler typing remain open. Filter syntax is no longer an open proposal.
 
 No newline, indentation, capitalization, or type-checking guess chooses between a false branch and a recovery clause. Parse else if, else followed by a body, and else followed by a receiver header as distinct forms. Existing mandatory braces retain unambiguous nesting.
 
-Related: [conditionals](conditionals.md), [shared expression recovery](expression-recovery.md), [receiver types](recovery-receiver-types.md), [boundary comparison](recovery-boundaries.md), [Result arguments](result-and-errors.md#results-passed-as-arguments), and [blocks](blocks-and-results.md).
+Related: [conditionals](lite://doc/conditionals), [shared expression recovery](lite://doc/expression-recovery), [receiver types](lite://doc/recovery-receiver-types), [boundary comparison](lite://doc/recovery-boundaries), [Result arguments](lite://doc/result-and-errors#results-passed-as-arguments), and [blocks](lite://doc/blocks-and-results).

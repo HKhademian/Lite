@@ -28,4 +28,4 @@ Ordinary T ! E functions do not implicitly add Panic, and T! remains T ! Error. 
 
 `r1` selects explicit operand capture, flat failure types, one-outward-layer normalization, broad Error/Panic/Failure selectors, stored ordered occurrences, and subsequent munching. It replaces the provisional Captured/FailureGroup public type idea and records the limited change to earlier singular Result descriptions. No compiler or runtime result is claimed.
 
-Normative owner: [failure capture and unwrapping](../failure-capture-and-unwrapping.md). Related: [Result](../result-and-errors.md), [recovery](../expression-recovery.md), [typed collectors](LP-0007-typed-recovery-collectors.md), and [extraction](LP-0010-outcome-extraction-and-exhaustion.md).
+Normative owner: [failure capture and unwrapping](lite://doc/failure-capture-and-unwrapping). Related: [Result](lite://doc/result-and-errors), [recovery](lite://doc/expression-recovery), [typed collectors](lite://doc/proposals/LP-0007-typed-recovery-collectors), and [extraction](lite://doc/proposals/LP-0010-outcome-extraction-and-exhaustion).

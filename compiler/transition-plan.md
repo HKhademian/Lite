@@ -107,11 +107,11 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
 
 - 2026-11-05: `./bin/lite run` returns as a compile-and-execute adapter over the generated compiler instead of the retired interpreter launcher. It compiles one `.lts` script into a temporary directory, executes the TS artifact through `compiler/entry.ts`, forwards program arguments after an optional `--`, inherited streams and exit status, and removes the temporary directory; rejected source keeps its exact diagnostics and status without executing effects. Seven declarative tool scenarios cover prompted input, forwarded arguments, propagated status, rejection, missing source, non-script source and the `--check` hint; a host test proves temporary-directory removal. The isolated public-command fixture copies `tools/run.ts`, and the launcher and public-command tests now assert the adapter contract instead of usage rejection. CLI help, start-here, examples, naming, specification, bootstrap and migration docs record the adapter while the interpreter launcher stays removed. Compiler source and seed are unchanged. Fast: 136 pass/12 skips (150.1 s); full: 139 pass/nine native skips, zero failures (149.6 s). Coverage: 41/41 features, 19/19 examples, 20/20 samples. The canonical TS audit is unchanged at 60/81 with the same 21 visible failures, and docs links/fragments/fences, strict checks and nine editor groups pass.
 
-- 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](reports/2026-11-03-generated-tooling.json), [tool guide](bootstrap/README.md) and [baseline](../benchmark/reports/2026-11-03-generated-compiler-performance.md).
+- 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](lite://repo/compiler/reports/2026-11-03-generated-tooling.json), [tool guide](lite://doc/compiler/bootstrap-readme) and [baseline](lite://repo/benchmark/reports/2026-11-03-generated-compiler-performance.md).
 
-- 2026-11-03: default tests now compile with generated Lite, strictly check TS and execute isolated artifacts; checked library/phase drivers are reused across inputs. All 93 compiler fixtures, eight library entries and 81 original generated tests remain covered. T00 checks require `./bin/lite test --reference` (162 pass). Ordinary and T00-free source-archive fast suites each pass 119 with 12 deferred skips; full suites each pass 122 with nine native skips and zero failures. Strict checks, nine editor groups and three identical self-builds pass; source/seed are unchanged. The default static graph has 18 modules and no T00 imports. CI now runs the full no-T00 suite. The canonical TS audit still reports 60/81 passing with 21 visible pending ports. See [the evidence](reports/2026-11-03-generated-tests.json). Routine tooling remains w3 work.
+- 2026-11-03: default tests now compile with generated Lite, strictly check TS and execute isolated artifacts; checked library/phase drivers are reused across inputs. All 93 compiler fixtures, eight library entries and 81 original generated tests remain covered. T00 checks require `./bin/lite test --reference` (162 pass). Ordinary and T00-free source-archive fast suites each pass 119 with 12 deferred skips; full suites each pass 122 with nine native skips and zero failures. Strict checks, nine editor groups and three identical self-builds pass; source/seed are unchanged. The default static graph has 18 modules and no T00 imports. CI now runs the full no-T00 suite. The canonical TS audit still reports 60/81 passing with 21 visible pending ports. See [the evidence](lite://repo/compiler/reports/2026-11-03-generated-tests.json). Routine tooling remains w3 work.
 
-- 2026-11-03: w1 test contracts are separated: all 240 original igniter tests retain destinations (81 generated/phase/artifact, 159 reference), and 776 exact process contracts replace live T00 expected-value lookups. Shared manifest loading retains all 93 compiler fixtures. Five contract/ownership checks, six copied-checkout no-T00 host groups, strict host/seed checks, three identical generated self-builds and nine editor groups pass. Fast: 278 pass/12 skips; full: 281 pass/9 native skips, zero failures. Compiler source/seed and the 60/81 canonical TS audit are unchanged. Default actual compiler/phase helpers and reference selection remain w2 work. See [the evidence](reports/2026-11-03-test-contracts.json) and [contract guide](tests/contracts/README.md).
+- 2026-11-03: w1 test contracts are separated: all 240 original igniter tests retain destinations (81 generated/phase/artifact, 159 reference), and 776 exact process contracts replace live T00 expected-value lookups. Shared manifest loading retains all 93 compiler fixtures. Five contract/ownership checks, six copied-checkout no-T00 host groups, strict host/seed checks, three identical generated self-builds and nine editor groups pass. Fast: 278 pass/12 skips; full: 281 pass/9 native skips, zero failures. Compiler source/seed and the 60/81 canonical TS audit are unchanged. Default actual compiler/phase helpers and reference selection remain w2 work. See [the evidence](lite://repo/compiler/reports/2026-11-03-test-contracts.json) and [contract guide](lite://repo/compiler/tests/contracts/README.md).
 
 - 2026-11-02: verification and expectation updates now use TS artifacts by
   default, independent of historical manifest target metadata. T00 loads only
@@ -143,7 +143,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   fixture pairs are unchanged. Inventory: 108/169 match, 61 remain, 52 original
   failures closed, none regress. A passing alias feature and newly retained
   failing Float integer-literal probe expand the denominator. See the
-  [ladder](reports/2026-11-02-numeric-aliases-ladder.json). The literal-context
+  [ladder](lite://repo/compiler/reports/2026-11-02-numeric-aliases-ladder.json). The literal-context
   port is the next core migration dependency; advanced width/rounding matrices
   remain deferred until after the default cutover.
 
@@ -155,7 +155,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   coverage, nine editor groups and six native sanitizer cases pass. Three
   generated generations match; all 69 prior TS/C fixture pairs are unchanged.
   Inventory: 105/167 match, 62 remaining, 50 original failures closed, none
-  regress. See the [ladder](reports/2026-11-02-power-ladder.json). Next: common
+  regress. See the [ladder](lite://repo/compiler/reports/2026-11-02-power-ladder.json). Next: common
   numeric annotations and ordinary data/call/control syntax before the early
   Lite default cutover. Final signed-exponent semantics and exhaustive math
   rounding remain outside this checkpoint.
@@ -167,7 +167,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   Inventory: 103/167 match, 64 remaining; 48 original failures closed, none
   regress. All 274 full tests, both corpora, strict checks, 121 verifier runs,
   coverage, nine editor groups and six native sanitizer cases pass. The
-  [ladder](reports/2026-11-02-float-arithmetic-ladder.json) records the generated
+  [ladder](lite://repo/compiler/reports/2026-11-02-float-arithmetic-ladder.json) records the generated
   fixed point; paired timings are mixed. Next: power and ordinary numeric
   annotations, followed by remaining core syntax and the early default cutover.
 
@@ -181,7 +181,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   rejection to runtime-fault programs: corpus 61 programs/32 rejections, still
   93 sources. TS/translated-JS fault runs are isolated without removing
   return-text coverage for pure successful cores. The
-  [ladder](reports/2026-11-02-deferred-faults-ladder.json) records three matching
+  [ladder](lite://repo/compiler/reports/2026-11-02-deferred-faults-ladder.json) records three matching
   generated generations, native sanitizer coverage and gates. Inventory is
   77/163 matching, 86 remaining, 26 original failures closed, no regressions.
   Next: comparison-chain lowering; Unicode column units remain separately pending.
@@ -192,7 +192,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   their behavior. Focused checks cover 12 TS programs, seven native C programs
   and ten rejection comparisons. The new bare-function-tail probe preserves
   the discovered failure in the inventory. Three generated generations match;
-  [the ladder](reports/2026-11-02-inequality-ladder.json) records identities and
+  [the ladder](lite://repo/compiler/reports/2026-11-02-inequality-ladder.json) records identities and
   gates. Current inventory: 75/163 matching, 88 remaining, 24 original failures
   closed without a regression. Deferred arithmetic faults precede comparison
   chains so skipped later operands do not fault during compilation.
@@ -203,7 +203,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   instead of rescanning source per access. Focused cases cover named/anonymous
   diagnostics, CRLF, BMP text, nested effects, negative/huge indices, empty
   reads/pops, valid bounds and loops. Three generated generations match; the
-  [ladder](reports/2026-11-02-bounds-ladder.json) records gates and identities.
+  [ladder](lite://repo/compiler/reports/2026-11-02-bounds-ladder.json) records gates and identities.
   Inventory: 73/162 matching, 89 remaining, 23 original failures closed and
   no original passing case regressing. The same-line supplementary-character
   column convention is separately pending an owner choice; earlier finite
@@ -214,7 +214,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   calls retain exact emitted C and avoid unused temporary names. Fourteen
   focused programs cover later/competing faults, output/outputLine, empty/Unit/
   mixed values, loops and name hygiene; six also pass native sanitizers. The
-  [C-only ladder](reports/2026-11-02-c-output-ladder.json) records an emitter
+  [C-only ladder](lite://repo/compiler/reports/2026-11-02-c-output-ladder.json) records an emitter
   rebuilt by unchanged T11, with TS source/seed/artifacts unchanged. All 256 full
   tests pass (zero skips, 48.5 s); fast 244 pass/12 expected skips, strict checks,
   both 93-case corpora, 95 verifier runs and nine editor groups pass. Paired C
@@ -224,23 +224,23 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
 - 2026-11-02: target helper requirements are collected once per program, skipping
   escaped quoted text and consuming whole identifiers. TS/C helper queries now
   read a distinct-name set instead of rescanning item code and copying the full
-  item list. The [paired benchmark](reports/2026-11-02-helper-scan-performance.json)
+  item list. The [paired benchmark](lite://repo/compiler/reports/2026-11-02-helper-scan-performance.json)
   records compiler-phase medians of 100.0 → 60.4 ms for 1,000 output statements
   and 899.0 → 649.8 ms for the same compiler source (five pairs; exact emitted
-  bytes). The [generated-only ladder](reports/2026-11-02-helper-scan-ladder.json)
+  bytes). The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-helper-scan-ladder.json)
   records three matching generations. This optimization changes no accepted
   language behavior or measured gap count; next is the discovered C output
   argument-fault ordering flaw.
 
-- 2026-11-02: the [division-family refresh](parity.md#positioned-integer-division-family)
+- 2026-11-02: the [division-family refresh](lite://doc/compiler/parity#positioned-integer-division-family)
   matches exact runtime fault positions, names, streams and status for dynamic
   `/`, `%`, `:/` and `:%`. MIN%-1 returns zero, including the shared core's
   constant folding; C guards undefined division/remainder before evaluating it.
   C helper calls sequence operands once from left to right. Three generated
-  generations match; the [ladder](reports/2026-11-02-division-ladder.json) records
+  generations match; the [ladder](lite://repo/compiler/reports/2026-11-02-division-ladder.json) records
   provenance and gate results, with 14 exact native sanitizer cases. Current
   inventory improves to 71/162 matching cases, 91 remaining, and 21 formerly
-  failing original cases closed without a regression. The [paired speed check](reports/2026-11-02-division-performance.json)
+  failing original cases closed without a regression. The [paired speed check](lite://repo/compiler/reports/2026-11-02-division-performance.json)
   records steady self-compilation and a 1,000-output scan cost; optimize helper
   discovery next, then continue bounds/comparison and the other live topics.
 
@@ -250,7 +250,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   prior output. C guards run before signed arithmetic, with source-offset
   temporaries preserving left-to-right nested faults. Boundary/sign matrices,
   eleven fault expressions, short-circuit/untaken branches and TS call effects
-  have differential coverage. The generated-only [seed ladder](reports/2026-11-02-int64-ladder.json)
+  have differential coverage. The generated-only [seed ladder](lite://repo/compiler/reports/2026-11-02-int64-ladder.json)
   records three identical generations and refreshed C emission. This closes
   these four dynamic Int64 operations; wider numeric/type/operator parity,
   run/check migration and the native compiler ladder remain pending.
@@ -259,7 +259,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   comparisons and all 95 verifier executions pass. Six native boundary/fault
   programs also pass undefined-behavior sanitizer checks with exact streams/status.
 
-- 2026-11-02: owner-selected [temporary I/O migration](../docs/tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+- 2026-11-02: owner-selected [temporary I/O migration](lite://doc/tooling-and-learning#temporary-input-and-output-helpers-selected-2026-11-02)
   replaces report with outputLine (no alias), adds output without a newline,
   allows zero output arguments, and adds array/list display on T00. Generated TS
   displays admitted scalar/Unit, named-tuple and List values and implements all
@@ -270,7 +270,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   Generated verification now uses strict child artifacts with stdin/arguments.
   Three generated compiler generations match, rebuilt from the previous seed
   through a reproducible call-spelling adapter, without T00 execution. The
-  [ladder](reports/2026-11-02-io-migration-ladder.json) records identities and
+  [ladder](lite://repo/compiler/reports/2026-11-02-io-migration-ladder.json) records identities and
   validation: strict checks, 251 full tests with zero skips (51.7 s), fast
   242 pass/nine expected skips (30.1 s), nine editor groups, both 93-case corpus
   comparisons (55 programs/38 rejections), and 95 canonical target executions.
@@ -283,7 +283,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   checked artifact across fresh input processes. An equivalent checker local
   Boolean avoids the known parenthesized-comparison gap, with no S/seed changes.
   A prepared-runner regression checks isolation and typecheck failure phases.
-  [Recorded full-gate timing](reports/2026-11-02-generated-sweeps.json) falls from
+  [Recorded full-gate timing](lite://repo/compiler/reports/2026-11-02-generated-sweeps.json) falls from
   580.6 s to 47.6 s (12.19×); all 248 tests pass with zero skips. Fast: 239 pass,
   nine existing skips, 26.7 s. Strict checking passes. Native C11, feature parity
   and run/check migration remain pending.
@@ -292,7 +292,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   evaluation order in the Lite emitter. Arguments evaluate once, left to right,
   before appending the outer line, retaining nested report effects. Six focused
   scenarios cover multiple arguments, recursion, mixed scalars, loops and exit.
-  The [refreshed seeds](parity.md#report-order-seed-refresh) reproduce themselves
+  The [refreshed seeds](lite://doc/compiler/parity#report-order-seed-refresh) reproduce themselves
   across three generations (`49ac81d6…`), both from a generated-only refresh and
   an independent T00 audit. The C source and emitted C programs are unchanged;
   its TS-hosted seed is refreshed with the new TS compiler. Current exact hashes
@@ -303,7 +303,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   Int64 arithmetic. Full feature parity, native C11 and T00 retirement remain
   pending.
 
-- 2026-11-02: owner-required [code-file policy](../docs/tooling-source-policy.md)
+- 2026-11-02: owner-required [code-file policy](lite://doc/tooling-source-policy)
   converts compiler/benchmark/challenge tooling and editor tests to strictly
   checked TS. Command aliases link to TS entries, the JSX report is removed,
   and only igniter/bootstrap tsconfigs remain. Compiler seeds and challenge data
@@ -313,7 +313,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   not advance the remaining language/native feature milestones.
 - 2026-11-02: generated text helpers share a bounded cache of eight immutable
   code-point views, eliminating repeated whole-source copies during scanning.
-  The [benchmark](../benchmark/reports/2026-11-02-text-cache.md) records 23.91×
+  The [benchmark](lite://repo/benchmark/reports/2026-11-02-text-cache.md) records 23.91×
   faster process time for 1,000 statements (3489 → 146 ms), exact emitted bytes
   and a 668 ms median self-build. New S (`17e53ce5…`) produces three byte-identical
   strictly checked TS generations (`56d99755…`); the TS-hosted C emitter is
@@ -336,7 +336,7 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
   specific caches. This is not the native C11 compiler. Strict host/both seed
   checks, all 6 host tests, full suite 240/240 with zero skips, both 92-case
   target comparisons (53 programs/39 rejections) and 91 verifier executions pass.
-- 2026-11-02: owner-requested neutral [T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md)
+- 2026-11-02: owner-requested neutral [T00/T11 support inventory](lite://repo/compiler/reports/2026-11-02-t00-t11-inventory.md)
   precedes further migration work. It audits all 36 feature manifests, 19 examples,
   20 implemented lessons, 78 additional boundary probes, all 8 library tests and
   accounts for all 207 tracked Lite source files. T00 matches every canonical
@@ -365,16 +365,16 @@ The source-expansion bridge and `importFlatAll` language fixtures are removed.
 
 ## Read first
 
-- [Live gap/progress tracker](gaps.md) and [current measured inventory](reports/current-t00-t11-inventory.md)
-- [Parity ledger](parity.md)
-- [Bootstrap plan](../docs/bootstrap-plan.md)
-- [Compiler launcher](../bin/lite-compile)
+- [Live gap/progress tracker](lite://doc/compiler/gaps) and [current measured inventory](lite://repo/compiler/reports/current-t00-t11-inventory.md)
+- [Parity ledger](lite://doc/compiler/parity)
+- [Bootstrap plan](lite://doc/bootstrap-plan)
+- [Compiler launcher](lite://repo/bin/lite-compile)
 - [Existing bundle CLI](https://github.com/repository owner/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bundle-cli.ts)
-- [Verifier](../lib/util/verify.lts)
-- [Artifact runner](../igniter/artifacts.ts)
-- [TS ladder](scripts/self-host.ts)
-- [Corpus parity](scripts/corpus-parity.ts)
-- [Measured T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md)
+- [Verifier](lite://repo/lib/util/verify.lts)
+- [Artifact runner](lite://repo/igniter/artifacts.ts)
+- [TS ladder](lite://repo/compiler/scripts/self-host.ts)
+- [Corpus parity](lite://repo/compiler/scripts/corpus-parity.ts)
+- [Measured T00/T11 support inventory](lite://repo/compiler/reports/2026-11-02-t00-t11-inventory.md)
 
 ## Implementation order
 
@@ -485,7 +485,7 @@ artifact hashes and the full native/cross-host ladder. These are later gates.
 - Preserve source names, invalid UTF-8 rejection, output streams and status.
 - Source/manifest changes must not silently use a stale generated compiler.
 - Current source/artifact hashes and byte counts belong in the
-  [single TS seed metadata](bootstrap/seed.ts), rather than duplicated
+  [single TS seed metadata](lite://repo/compiler/bootstrap/seed.ts), rather than duplicated
   checkpoint values here. Source/builder identities are
   recorded there;
   actual host Node v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.

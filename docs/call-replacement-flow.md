@@ -71,7 +71,7 @@ This example's execution writes String, but ordinary post-call inference still f
 
 ## Entry facts after argument evaluation selected
 
-Selected on **2026-10-24**: the readable type required by each var argument must be justified when the callee begins, after evaluation of all reached supplied arguments and applicable default expressions. The selected [default order](evaluation-order.md#default-argument-evaluation-selected) runs missing defaults after supplied entries and before invocation, so their effects also participate in the required entry proof. A fact established when an earlier argument location was selected is insufficient if a later argument can invalidate it:
+Selected on **2026-10-24**: the readable type required by each var argument must be justified when the callee begins, after evaluation of all reached supplied arguments and applicable default expressions. The selected [default order](lite://doc/evaluation-order#default-argument-evaluation-selected) runs missing defaults after supplied entries and before invocation, so their effects also participate in the required entry proof. A fact established when an earlier argument location was selected is insufficient if a later argument can invalidate it:
 
 ```text
 var x: String | Int = ?;
@@ -162,11 +162,11 @@ The callee still receives ordinary read/write Int access to initialized storage.
 
 ## Ordinary Int values alongside a var grant
 
-Selected on **2026-10-25**: a plain Int argument supplies its evaluated value while a var argument supplies its location grant. For count initially 10, read_original(var count, count) returns the supplied ordinary Int 10 even when the callee writes 20 through the var parameter. The user's tmp := count; saved := read_original(var count, tmp); expansion preserves that same value and leaves count at 20. The ordinary input adds no write grant or live source-location view. Keep callee-first/source-argument evaluation and input/access obligations; general aggregate transport remains open. See [ordinary Int evaluated values](parameter-values-and-slots.md#ordinary-int-evaluated-values-selected).
+Selected on **2026-10-25**: a plain Int argument supplies its evaluated value while a var argument supplies its location grant. For count initially 10, read_original(var count, count) returns the supplied ordinary Int 10 even when the callee writes 20 through the var parameter. The user's tmp := count; saved := read_original(var count, tmp); expansion preserves that same value and leaves count at 20. The ordinary input adds no write grant or live source-location view. Keep callee-first/source-argument evaluation and input/access obligations; general aggregate transport remains open. See [ordinary Int evaluated values](lite://doc/parameter-values-and-slots#ordinary-int-evaluated-values-selected).
 
 ## Copyable inline-Int record values alongside a var grant
 
-Selected on **2026-10-25**: an ordinary input for a copyable record with inline Int fields supplies its evaluated record value. In read_original(var counter, counter), initially Counter { value = 10 }, replacing counter through the var input with Counter { value = 20 } leaves the ordinary original input at value 10. The user's tmp := counter expansion captures the same old record value, so saved is 10 and counter.value is 20. The ordinary input adds no write grant or live source-location view. Backend indirect passing must preserve this behavior under the general copy default; type-specific eligibility and the reference/safety/ownership contracts remain deferred. See [ordinary record values](parameter-values-and-slots.md#copyable-records-with-inline-int-fields-selected).
+Selected on **2026-10-25**: an ordinary input for a copyable record with inline Int fields supplies its evaluated record value. In read_original(var counter, counter), initially Counter { value = 10 }, replacing counter through the var input with Counter { value = 20 } leaves the ordinary original input at value 10. The user's tmp := counter expansion captures the same old record value, so saved is 10 and counter.value is 20. The ordinary input adds no write grant or live source-location view. Backend indirect passing must preserve this behavior under the general copy default; type-specific eligibility and the reference/safety/ownership contracts remain deferred. See [ordinary record values](lite://doc/parameter-values-and-slots#copyable-records-with-inline-int-fields-selected).
 
 ## Later argument reads of a selected local allowed
 
@@ -448,7 +448,7 @@ Assume inner accepts read/write Int access and has a fallible Unit result covere
 
 Restoring authority does not restore old contents or old refinements. Earlier writes remain visible; there is no rollback, detached working copy, or implicit copy-back. In this Int-only example, the received contract still justifies Int reads. If a nested call may replace String | Int storage, recovery cannot assume the pre-call String-only fact merely because the call failed. Use only read facts justified after possible writes and cleanup; general failure-path effect inference remains open.
 
-A returned Result failure reaches caller recovery after the callee has returned and ended its access. For a typed panic crossing the call boundary, applicable exited-scope [finally blocks](finally.md) run before the caller's handler, with the grant restored after nested access and callee-side cleanup end. A handler inside inner that recovers while inner continues does not return the grant to outer early. In a deeper forwarding chain, restore each immediate suspended holder only as its child access ends; never reactivate several holders at once.
+A returned Result failure reaches caller recovery after the callee has returned and ended its access. For a typed panic crossing the call boundary, applicable exited-scope [finally blocks](lite://doc/finally) run before the caller's handler, with the grant restored after nested access and callee-side cleanup end. A handler inside inner that recovers while inner continues does not return the grant to outer early. In a deeper forwarding chain, restore each immediate suspended holder only as its child access ends; never reactivate several holders at once.
 
 This selects access at the caller recovery boundary, preserving ordinary recovery, cleanup, result typing, and control transfers. It does not define hard-abort recovery, callback/reentrancy access, exact activation during argument evaluation, general alias enforcement, or a complete unwind/cleanup access model. It creates no write-only mode or final-state guarantee.
 
@@ -514,7 +514,7 @@ A rejected call establishes no successful post-call read fact. In particular, th
 
 ## Ordinary return values copy the read value
 
-Selected on **2026-10-25**: an ordinary result read through a var parameter is copied as a value. Returning target as Counter after installing value 20 preserves that result when the caller later replaces its own Counter with value 30; the temporary grant ends under ordinary call/cleanup rules and is not exported inside the result. Explicit var/mut access remains separate from the general ordinary-value copy default. Copy eligibility and reference/safety/resource contracts remain deferred; see [ordinary result copies](parameter-values-and-slots.md#ordinary-return-values-are-copies-selected) and [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
+Selected on **2026-10-25**: an ordinary result read through a var parameter is copied as a value. Returning target as Counter after installing value 20 preserves that result when the caller later replaces its own Counter with value 30; the temporary grant ends under ordinary call/cleanup rules and is not exported inside the result. Explicit var/mut access remains separate from the general ordinary-value copy default. Copy eligibility and reference/safety/resource contracts remain deferred; see [ordinary result copies](lite://doc/parameter-values-and-slots#ordinary-return-values-are-copies-selected) and [the general copy default](lite://doc/parameter-values-and-slots#general-copy-default-selected).
 
 ## Return paths, stability, and identity
 
@@ -546,6 +546,6 @@ A future contract accepting an incoming Int while promising final String would n
 
 ## Related documents
 
-- [Assignment flow types](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected) and [var access](var-access-qualifier.md).
-- [Caller mutation grants](caller-mutation-grants.md), [caller-location parameters](slot-parameters.md), and [parameter permissions](parameter-permissions.md).
-- [Evaluation order](evaluation-order.md), [mutability](mutability.md), and [types and inference](types-and-inference.md).
+- [Assignment flow types](lite://doc/type-tests-and-narrowing#flow-types-after-direct-assignment-selected) and [var access](lite://doc/var-access-qualifier).
+- [Caller mutation grants](lite://doc/caller-mutation-grants), [caller-location parameters](lite://doc/slot-parameters), and [parameter permissions](lite://doc/parameter-permissions).
+- [Evaluation order](lite://doc/evaluation-order), [mutability](lite://doc/mutability), and [types and inference](lite://doc/types-and-inference).

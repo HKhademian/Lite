@@ -1,6 +1,6 @@
 # Naming and versioning
 
-Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30;  tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01; independent release streams selected 2026-11-02; target-aware compiler routing selected 2026-11-11**. The compiler router is `./bin/lite-compile`; it selects `./bin/lite-compile-ts` or `./bin/lite-compile-c`. `./bin/lite compile` routes through the same compiler command. The runner, checker, docs and help are available through `./bin/lite` and their dedicated `bin/` entries. [Igniter release automation](release-automation.md) packages exact component snapshots. Package-registry spelling remains open.
+Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30;  tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01; independent release streams selected 2026-11-02; target-aware compiler routing selected 2026-11-11**. The compiler router is `./bin/lite-compile`; it selects `./bin/lite-compile-ts` or `./bin/lite-compile-c`. `./bin/lite compile` routes through the same compiler command. The runner, checker, docs and help are available through `./bin/lite` and their dedicated `bin/` entries. [Igniter release automation](lite://doc/release-automation) packages exact component snapshots. Package-registry spelling remains open.
 
 ## 1. Canonical names
 
@@ -10,11 +10,11 @@ Status: **selected naming and version policy, 2026-10-25; distinct script/module
 
 Lightness, here, means three things at once.
 
-- **Speed and runtime weight.** Fast native execution, low memory use, small runtime support, and small final executables. See [lightweight native execution](memory-and-performance.md#lightweight-native-execution-priority).
-- **Low in code junk.** Little ceremony: few repeated annotations, no wrapper construction or defensive padding carried while solving the problem. See [the design goals](principles.md#design-goals).
-- **Easy to reason about, read, maintain, learn, teach, and distribute.** Local, predictable meanings, written contracts, and nothing clever that a reader must decode. See [continuity and analogical coherence](continuity-and-analogy.md) and [multilingual source and learning](multilingual-source-and-learning.md).
+- **Speed and runtime weight.** Fast native execution, low memory use, small runtime support, and small final executables. See [lightweight native execution](lite://doc/memory-and-performance#lightweight-native-execution-priority).
+- **Low in code junk.** Little ceremony: few repeated annotations, no wrapper construction or defensive padding carried while solving the problem. See [the design goals](lite://doc/principles#design-goals).
+- **Easy to reason about, read, maintain, learn, teach, and distribute.** Local, predictable meanings, written contracts, and nothing clever that a reader must decode. See [continuity and analogical coherence](lite://doc/continuity-and-analogy) and [multilingual source and learning](lite://doc/multilingual-source-and-learning).
 
-**Lite** names the project. **LiteLang** and **LiteScript** are parts of it, not alternative names for it: the language and its programs. The canonical names below remain the only official ones.
+**Lite** names the project. **LiteLang** and **LiteScript** are parts of it, not alternative names for it: the language and its programs. For wordmark lockups, typographic rules, and visual identity files, see [the Lite name](lite://brand/name) and [Lite brand assets](lite://brand). The canonical names below remain the only official ones.
 
 | Thing | Prose name | Machine name | Notes |
 |---|---|---|---|
@@ -66,7 +66,7 @@ Lightness, here, means three things at once.
 ### Source file kinds
 
 Selected 2026-10-30: .lts identifies scripts and .lt identifies module-based
-source. The [module/source-kind contract](modules-and-packages.md#distinct-script-and-module-files)
+source. The [module/source-kind contract](lite://doc/modules-and-packages#distinct-script-and-module-files)
 owns their different shapes and access policy. The former .lite suffix is
 superseded; the existing 20 lesson files and 520 catalog paths have been
 migrated to .lts without changing lesson source contents. Historical review
@@ -75,7 +75,7 @@ No implemented lexer/tool, legacy .lite acceptance, or automatic conversion
 between script and module semantics is implied. Naming changes do not themselves
 publish a release or bump a component version.
 
-Repository [Git attributes](../.gitattributes) declare both .lt and .lts with
+Repository [Git attributes](lite://repo/.gitattributes) declare both .lt and .lts with
 the user's chosen GitHub language label **Lite**. GitHub's Linguist registry
 checked 2026-10-30 does not yet list Lite: this declaration does not register a
 new language or by itself enable a Lite statistics/highlighting label. See
@@ -97,8 +97,8 @@ compatible compiler source revisions sufficient to build forward to the current
 Lite-written compiler after active development becomes self-hosted. Preserve
 the bootstrap path when source language requirements change. Exact required
 revisions, stage dependencies, preservation/rebuild verification, and distribution
-procedure remain open under [INV-061.06](../research/investigations/SUBTOPICS.md#inv-061-06).
-See [the owning self-hosting direction](tooling-and-learning.md#typescript-igniter-and-early-self-hosting).
+procedure remain open under [INV-061.06](lite://repo/research/investigations/SUBTOPICS.md#inv-061-06).
+See [the owning self-hosting direction](lite://doc/tooling-and-learning#typescript-igniter-and-early-self-hosting).
 Clarified **2026-10-31**: preserve a permanent shippable readable TypeScript
 igniter while moving compiler development into Lite. Keep igniter and
 self-hosted work overlapping until sufficient confidence; retirement of active
@@ -107,12 +107,12 @@ For generated compiler snapshots, preserve generating Lite sources, exact builde
 and source tags/commits, tool versions and commands. Verify reproducible emitted
 bytes and behavioral parity separately; readable source/tags alone do not prove
 the absence of hidden compiler behavior. C remains a maintained native/export
-path. See [the target/safety direction](../research/investigations/INV-061-first-compiler-output.md).
+path. See [the target/safety direction](lite://repo/research/investigations/INV-061-first-compiler-output.md).
 
 The preserved generated TypeScript igniter can rebuild its supported compiler
 source subset; native C self-hosting remains pending. The original handwritten
 reference is preserved alongside the generated igniter. See the
-[igniter guide](../igniter/README.md) and [generated seeds](../compiler/bootstrap/README.md).
+[igniter guide](lite://repo/igniter/README.md) and [generated seeds](lite://doc/compiler/bootstrap-readme).
 
 Reaffirmed **2026-10-30**: version control and stable version tags are required
 for bootstrap continuity. Tag the igniter and compiler milestones needed by the
@@ -127,7 +127,7 @@ the next stage, including required host tools. Preserve this compatibility map
 alongside the sources so users do not have to guess which historic revisions
 work together. Tags identify sources; successful end-to-end rebuilds must still
 verify the route. The igniter tag stream is `igniter-vX.Y.Z[-prerelease]`;
-see [release history](releases.md). The [release automation](release-automation.md)
+see [release history](lite://doc/releases). The [release automation](lite://doc/release-automation)
 preserves the component version combination, source/builder identities and
 rebuild instructions. The independent stream names below were selected by the
 owner on 2026-11-02. This policy does not itself create a tag.
@@ -167,7 +167,7 @@ A release that changes several components records each changed version. A
 component version can remain unchanged while the source snapshot advances;
 exact source and builder hashes identify the shipped bytes.
 
-[`config/versions.json`](../config/versions.json) records all streams except the igniter. The igniter keeps its
+[`config/versions.json`](lite://repo/config/versions.json) records all streams except the igniter. The igniter keeps its
 version in `igniter/package.json`. Unassigned entries are `null`; a release tag
 must match the selected stream's recorded version. Versions do not imply that
 planned tools are implemented or that provisional libraries have a stable API.

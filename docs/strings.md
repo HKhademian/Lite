@@ -18,7 +18,7 @@ message := "Hello, " "world";
 Implementation coverage, 2026-11-02: generated TS and C join admitted quoted
 literals across whitespace and nested/raw comments. Both parser paths retain
 the token boundary before checking expression and statement separators. The
-[compiler ledger](../compiler/parity.md#adjacent-string-literals) records
+[compiler ledger](lite://doc/compiler/parity#adjacent-string-literals) records
 generated execution, malformed-source checks and performance evidence.
 
 Adjacent string literal tokens concatenate without inserting whitespace:
@@ -57,14 +57,14 @@ The newline inside the quotes is data. The working direction preserves literal c
 
 ## Notes
 
-The next [focused FVP review](../research/investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31)
+The next [focused FVP review](lite://repo/research/investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31)
 records the explicit acceptance of textLength/textAt/textSlice as temporary
 positional code-point helpers with terminal bounds faults. This review does not settle ordinary String indexing, graphemes,
 normalization, native representation or the deferred complete text profile.
 
 String literal patterns test the whole string through its ordinary equality contract. Existing text uses == expectedText. Neither spelling implies regex, substring, case-folding, or normalization operations. Unicode equality details remain a String contract, not a special pattern conversion.
 
-The [pattern review](pattern-type-review.md#8-strings-and-characterbyte-views) recommends explicit byte/scalar/grapheme views before sequence matching. A proposed [list pattern](sequence-patterns.md) must not silently choose one text unit or treat every string as a list.
+The [pattern review](lite://doc/pattern-type-review#8-strings-and-characterbyte-views) recommends explicit byte/scalar/grapheme views before sequence matching. A proposed [list pattern](lite://doc/sequence-patterns) must not silently choose one text unit or treat every string as a list.
 
 Whitespace outside literals can move freely without changing executable structure. Whitespace inside literals is part of the value. These are separate rules, not an exception that makes indentation structural.
 
@@ -82,10 +82,10 @@ Whitespace outside literals can move freely without changing executable structur
 The user explicitly approves the exact temporary positional code-point helpers
 on 2026-10-31 after the consent correction and focused review. Acceptance comes
 from that reply, not the earlier implementation/tag. See
-[INV-016 approval and evidence](../research/investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+[INV-016 approval and evidence](lite://repo/research/investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
 
 Implementation increment, **2026-10-30**: the
-[igniter](../igniter/README.md#temporary-text-operations) now executes computed
+[igniter](lite://repo/igniter/README.md#temporary-text-operations) now executes computed
 String + String concatenation, plus temporary textLength/textAt/textSlice helpers
 for a small Lite-written arithmetic tokenizer. The helpers consistently use
 zero-based code-point positions and half-open slices, without normalization;
@@ -93,7 +93,7 @@ invalid bounds raise a terminal BoundPanic. Code points are materialized on each
 helper call, so these operations do not promise constant-time access or a native
 representation. This records disposable host behavior, not a language-wide
 String indexing/character/slicing policy. The detailed FVP text-profile proposal
-remains deferred; [INV-016 evidence](../research/investigations/INV-016-igniter-text-operations.md)
+remains deferred; [INV-016 evidence](lite://repo/research/investigations/INV-016-igniter-text-operations.md)
 records exact coverage and limitations.
 
 The restricted compiler's TS path now accepts the same three helpers as checked
@@ -118,8 +118,8 @@ open below.
 
 ## Related concepts and references
 
-- [Lexical structure](lexical-structure.md)
-- [Memory and performance](memory-and-performance.md)
+- [Lexical structure](lite://doc/lexical-structure)
+- [Memory and performance](lite://doc/memory-and-performance)
 - Adjacent literal joining was requested as a C-style convenience; no complete C string or encoding semantics are adopted by this note.
 
 ## Joint review: text semantics
@@ -140,4 +140,4 @@ A fresh quoted literal such as `"test"` is String-Like. In the absence of a cont
 
 Equality compares the exact scalar sequence. Normalization is explicit. Two valid native strings can compare byte lengths and byte contents. Cross-encoding algorithms can compare decoded scalars as they advance. Ordering is lexicographic by scalar value. The first differing scalar determines order. When one string is a prefix, it comes first. Embedded U+0000 is a real scalar and comparison can continue past it. Unsigned-byte comparison gives the same order for valid native UTF-8.
 
-Hashing must agree with equality. If a map or set accepts lookup through other encoding adapters under the same equality contract, it must hash equal scalar sequences consistently. It could feed the corresponding UTF-8 bytes incrementally. Cross-encoding lookup and hash API design remain open. See the [encoding comparison](../research/investigations/language-review/07-collections.md#prior-art-string-storage-and-indexing).
+Hashing must agree with equality. If a map or set accepts lookup through other encoding adapters under the same equality contract, it must hash equal scalar sequences consistently. It could feed the corresponding UTF-8 bytes incrementally. Cross-encoding lookup and hash API design remain open. See the [encoding comparison](lite://repo/research/investigations/language-review/07-collections.md#prior-art-string-storage-and-indexing).

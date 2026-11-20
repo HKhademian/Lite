@@ -1,6 +1,6 @@
 # Union membership and checked narrowing
 
-Status: **selected 2026-10-18: an existing member value is admitted to a plain union automatically; using an arbitrary union value as one particular member requires checked narrowing**. Exact-member union-to-union widening is also selected in [union widening](union-widening.md). Interface/subtype membership and runtime representation remain open.
+Status: **selected 2026-10-18: an existing member value is admitted to a plain union automatically; using an arbitrary union value as one particular member requires checked narrowing**. Exact-member union-to-union widening is also selected in [union widening](lite://doc/union-widening). Interface/subtype membership and runtime representation remain open.
 
 ## Selected example
 
@@ -16,7 +16,7 @@ The destination union must already be established. person := user infers User un
 
 Type compatibility alone does not settle copying, moving, borrowing, lifetime, allocation, or permissions. A union representation may require a tag and payload storage even though source code needs no wrapper syntax.
 
-The user subsequently clarified [metadata plus C-style overlapping payload](union-zero.md#current-storage-model). Metadata identifies the active member while the payload stores one alternative, supporting the checked narrowing selected here. Max-member size applies to payload capacity; the full value also accounts for metadata and alignment. Exact encoding, ABI, and zero-tag meaning remain open.
+The user subsequently clarified [metadata plus C-style overlapping payload](lite://doc/union-zero#current-storage-model). Metadata identifies the active member while the payload stores one alternative, supporting the checked narrowing selected here. Max-member size applies to payload capacity; the full value also accounts for metadata and alignment. Exact encoding, ABI, and zero-tag meaning remain open.
 
 ## Identity checks
 
@@ -73,7 +73,7 @@ if x: Int {
 }
 ```
 
-No manual extraction is required when an ordinary parameter expects the proven member type. The call follows the [ordinary value-copy rule](parameter-values-and-slots.md#general-copy-default-selected): supply the member value in the callee's required representation, not the whole union wrapper or an implicit reference to the caller's slot. The type test itself introduces no copy, storage shrink, freeze, or write permission. If the parameter expects a compatible union instead, supply a valid value in that union representation, preserving the active member.
+No manual extraction is required when an ordinary parameter expects the proven member type. The call follows the [ordinary value-copy rule](lite://doc/parameter-values-and-slots#general-copy-default-selected): supply the member value in the callee's required representation, not the whole union wrapper or an implicit reference to the caller's slot. The type test itself introduces no copy, storage shrink, freeze, or write permission. If the parameter expects a compatible union instead, supply a valid value in that union representation, preserving the active member.
 
 The following is abstract memory notation, not a byte layout or source grammar:
 
@@ -90,7 +90,7 @@ Refinement must remain valid at the point of use; replacement or other invalidat
 
 ## Payload writes versus whole-union replacement
 
-[Union write grants](call-replacement-flow.md#union-payload-grants-and-whole-union-grants) distinguish access to a proven member payload from replacing the tagged union. An Int-proven union may supply var Int access to its original payload; Int writes retain the Int tag. Reject a payload-only write with no valid member proof. A var (Int | String) parameter still may replace the whole union without such narrowing: p = "hello" establishes [String]["hello"], not merely the payload. Existing initialization, authority, accepted-write, and entry checks remain. No general reference syntax or raw payload reinterpretation follows.
+[Union write grants](lite://doc/call-replacement-flow#union-payload-grants-and-whole-union-grants) distinguish access to a proven member payload from replacing the tagged union. An Int-proven union may supply var Int access to its original payload; Int writes retain the Int tag. Reject a payload-only write with no valid member proof. A var (Int | String) parameter still may replace the whole union without such narrowing: p = "hello" establishes [String]["hello"], not merely the payload. Existing initialization, authority, accepted-write, and entry checks remain. No general reference syntax or raw payload reinterpretation follows.
 
 ## Preserve named case boundaries
 
@@ -100,10 +100,10 @@ Likewise, two named enum cases carrying User remain distinct cases. User | User 
 
 ## Remaining contracts
 
-- Exact-member union-to-union widening is selected separately: every normalized source alternative must be an exact target member. See [union widening](union-widening.md) for examples and boundaries.
+- Exact-member union-to-union widening is selected separately: every normalized source alternative must be an exact target member. See [union widening](lite://doc/union-widening) for examples and boundaries.
 - Interface/subtype overlap, numeric subtyping if introduced, and ambiguity between several compatible alternatives.
 - Capabilities, ownership, lifetime, generic constraints, and function argument/return integration.
-- [Common field reads](union-field-reads.md) and [all-target field writes](union-field-writes.md) are selected separately. Stable existing-binding refinement after early exits is selected in [type tests](type-tests-and-narrowing.md#narrowing-after-early-exits-selected). Method calls and broader negative flow remain open.
+- [Common field reads](lite://doc/union-field-reads) and [all-target field writes](lite://doc/union-field-writes) are selected separately. Stable existing-binding refinement after early exits is selected in [type tests](lite://doc/type-tests-and-narrowing#narrowing-after-early-exits-selected). Method calls and broader negative flow remain open.
 - Layout, tag representation, ABI, allocation choices, and optimization. Automatic source admission does not promise a representation-free operation.
 
-Related: [union-entry reference comparison](union-membership-comparison.md), [type-category comparison](type-categories-comparison.md), [normalization](union-normalization.md), [union patterns](union-patterns.md), [record identity](record-type-identity.md), and [type tests](type-tests-and-narrowing.md).
+Related: [union-entry reference comparison](lite://doc/union-membership-comparison), [type-category comparison](lite://doc/type-categories-comparison), [normalization](lite://doc/union-normalization), [union patterns](lite://doc/union-patterns), [record identity](lite://doc/record-type-identity), and [type tests](lite://doc/type-tests-and-narrowing).

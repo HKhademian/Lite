@@ -45,9 +45,9 @@ These are different possible operations:
 - Extract the first two yielded elements of one traversal, following its order.
 - Find two distinct members satisfying two constraints, potentially searching several assignments.
 
-The second is the unordered search problem described in [set patterns](set-patterns.md). The first can be defined without sorting or treating the set as a contiguous array. It still needs length/prefix semantics, explicit source-consumption and remainder rules, permitted mismatch behavior, and clarity about unspecified order.
+The second is the unordered search problem described in [set patterns](lite://doc/set-patterns). The first can be defined without sorting or treating the set as a contiguous array. It still needs length/prefix semantics, explicit source-consumption and remainder rules, permitted mismatch behavior, and clarity about unspecified order.
 
-The earlier bracket-pattern restriction is a conservative initial policy, not a claim that sets cannot have a traversal projection. Direct set extraction or an explicit traversal view remains a possible extension. It must not silently become unordered backtracking or promise stable positions. One-shot and hot producers retain the separate [source-contract restrictions](collection-source-contracts.md).
+The earlier bracket-pattern restriction is a conservative initial policy, not a claim that sets cannot have a traversal projection. Direct set extraction or an explicit traversal view remains a possible extension. It must not silently become unordered backtracking or promise stable positions. One-shot and hot producers retain the separate [source-contract restrictions](lite://doc/collection-source-contracts).
 
 ## Reference examples
 
@@ -105,4 +105,4 @@ This review supports `Iterable<Icon>` as a minimal read-only element-source cont
 
 Generic `Iterable` qualification syntax, inferred contracts, and stored abstract representation remain open. Do not use `[T]` for a traversal-only public signature; use the traversal-only contract. Do not require beginners to name every advanced guarantee in an ordinary loop.
 
-Related: [capabilities](collection-capabilities.md), [consumer abstractions](collection-abstractions.md), [collection inference](collection-inference.md), [sequence patterns](sequence-patterns.md), and [tuple spread](tuple-spread-and-rest.md).
+Related: [capabilities](lite://doc/collection-capabilities), [consumer abstractions](lite://doc/collection-abstractions), [collection inference](lite://doc/collection-inference), [sequence patterns](lite://doc/sequence-patterns), and [tuple spread](lite://doc/tuple-spread-and-rest).

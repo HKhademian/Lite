@@ -54,7 +54,7 @@ Kotlin's functions guide requires explicit parameter types. Its default may be a
 
 There is no universal rule across these languages. TypeScript and Odin support default-based parameter inference; Dart deliberately does not. V, Rust, and Zig do not directly answer the inference question because they lack native default value parameters. Kotlin demonstrates that type annotations and runtime default evaluation are independent choices.
 
-The user accepted this inference rule for ordinary value parameters after the comparison. The canonical [parameter-default inference](parameter-default-inference.md) records the selected rule with these boundaries:
+The user accepted this inference rule for ordinary value parameters after the comparison. The canonical [parameter-default inference](lite://doc/parameter-default-inference) records the selected rule with these boundaries:
 
 1. An explicit annotation or already established expected callable input contract constrains the parameter and its default. A default does not narrow that public contract or override it.
 2. Without that information, use ordinary declaration-style static inference on the default. Literal defaults use the language's normal inferred types, rather than inventing singleton-value restrictions.
@@ -74,13 +74,13 @@ make(count = 5);       /* valid: count is Int */
 make(count = "five");  /* rejected: String does not fit Int */
 ```
 
-Simple ordinary default receivers and their omitted-type inference are now selected. Ordinary [earlier-parameter defaults](parameter-default-inference.md#defaults-may-read-earlier-parameters) were subsequently selected too: earlier ordinary inputs are visible, while self/later references are rejected independently of call arguments. This does not complete default-header grammar, general lexical/helper lookup or captures, access-aware dependencies, or permission-bearing defaults. The subsequent [public omission contracts and implementation defaults](callable-default-contracts.md) decision exposes omission permission in the public contract and keeps compatible default expressions with implementations; the public n?: Int / ?:Int marker is subsequently selected for ordinary fixed named/unnamed inputs, superseding = ...; complete grammar remains open. See [public omission marker](callable-default-contracts.md#public-omission-marker).
+Simple ordinary default receivers and their omitted-type inference are now selected. Ordinary [earlier-parameter defaults](lite://doc/parameter-default-inference#defaults-may-read-earlier-parameters) were subsequently selected too: earlier ordinary inputs are visible, while self/later references are rejected independently of call arguments. This does not complete default-header grammar, general lexical/helper lookup or captures, access-aware dependencies, or permission-bearing defaults. The subsequent [public omission contracts and implementation defaults](lite://doc/callable-default-contracts) decision exposes omission permission in the public contract and keeps compatible default expressions with implementations; the public n?: Int / ?:Int marker is subsequently selected for ordinary fixed named/unnamed inputs, superseding = ...; complete grammar remains open. See [public omission marker](lite://doc/callable-default-contracts#public-omission-marker).
 
-Keep the [selected default evaluation order](evaluation-order.md#default-argument-evaluation-selected): evaluate the callee, supplied arguments in written order, then missing defaults in declaration order before invocation. Keep runtime-expression defaults such as `default_b()`; Odin/Dart's constant restriction is a comparison point, not a reason to change that choice. Reference syntax, ownership, memory safety, and resources remain deferred.
+Keep the [selected default evaluation order](lite://doc/evaluation-order#default-argument-evaluation-selected): evaluate the callee, supplied arguments in written order, then missing defaults in declaration order before invocation. Keep runtime-expression defaults such as `default_b()`; Odin/Dart's constant restriction is a comparison point, not a reason to change that choice. Reference syntax, ownership, memory safety, and resources remain deferred.
 
 ## Related documents
 
-- [Functions and omitted arguments](functions.md#omitted-value-arguments)
-- [Types and inference](types-and-inference.md)
-- [Named calls across reference languages](named-arguments-reference-comparison.md)
-- [Default omission and union types](union-parameter-defaults.md)
+- [Functions and omitted arguments](lite://doc/functions#omitted-value-arguments)
+- [Types and inference](lite://doc/types-and-inference)
+- [Named calls across reference languages](lite://doc/named-arguments-reference-comparison)
+- [Default omission and union types](lite://doc/union-parameter-defaults)

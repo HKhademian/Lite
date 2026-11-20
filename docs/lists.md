@@ -9,9 +9,9 @@ optimizations; explicit noncopying modes come later. Do not block ordinary FVP
 sequence copies on designing noncopyable owners. Concrete type/construction,
 capacity APIs and permanent allocation behavior remain unresolved. The next
 bounded construction/end-operation slice is now approved and implemented. See
-[INV-055 decision boundary](../research/investigations/INV-055-fvp-owner-boundary.md).
+[INV-055 decision boundary](lite://repo/research/investigations/INV-055-fvp-owner-boundary.md).
 
-`List<Int>` is selected for this builtin FVP family under the [narrow generic-notation exception](generic-notation.md); other families remain explanatory notation. An expected concrete List type or an explicit constructor requests growable storage. Fresh statically sized literals instead follow [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
+`List<Int>` is selected for this builtin FVP family under the [narrow generic-notation exception](lite://doc/generic-notation); other families remain explanatory notation. An expected concrete List type or an explicit constructor requests growable storage. Fresh statically sized literals instead follow [fixed-array inference](lite://doc/tuple-array-shapes#known-size-fresh-literals-infer-fixed-arrays).
 
 A list owns a contiguous allocation with a current initialized length and possibly larger capacity. Adding/removing elements changes length. A list is not a linked list in this proposal.
 
@@ -24,26 +24,26 @@ editable[0] = 99;
 push_back(mut editable, 40);
 ```
 
-The explicit expected List types above select growable construction; push_back is a [selected end-operation name](sequence-end-operations.md), and the complete indexing API still needs formalization. Without such an expected concrete type, [10, 20, 30] now infers [Int; 3], regardless of var/mut modifiers. A read-only List value retains its List contract; readable access alone does not turn an existing provider into a fixed array.
+The explicit expected List types above select growable construction; push_back is a [selected end-operation name](lite://doc/sequence-end-operations), and the complete indexing API still needs formalization. Without such an expected concrete type, [10, 20, 30] now infers [Int; 3], regardless of var/mut modifiers. A read-only List value retains its List contract; readable access alone does not turn an existing provider into a fixed array.
 
 The explicit mut argument follows selected caller grants. Mut grants supported mutation without changing a collection family or inventing growth. A fixed List binding can permit container mutation without permitting binding replacement. Fixed arrays permit writable elements without supporting growth. Known-type heterogeneous nonempty construction uses normalized-union element inference when no expected element contract selects another compatible type. Uncontextual [] constructs an empty fixed array; its exact default element type is deferred. Unresolved nonempty element types and runtime-length literal provider inference remain open.
 
 A var binding with an explicit List contract permits compatible whole-binding replacement; adding mut also permits supported held-data operations. Typed forms retain the selected placement, such as values: mut `List<Int>`. An unannotated var numbers := [1, 2, 3] instead remains a fixed [Int; 3] binding with replacement permission.
 
-The [end-operation review](sequence-end-operations.md) records the selected push_front/push_back/pop_front/pop_back names. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The user accepts direct indexing/pop with typed faults and requests shared else recovery. A separate Option-returning removal remains an alternative. Broader capture scope, permanent operation signatures and allocation failure policy remain open.
+The [end-operation review](lite://doc/sequence-end-operations) records the selected push_front/push_back/pop_front/pop_back names. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The user accepts direct indexing/pop with typed faults and requests shared else recovery. A separate Option-returning removal remains an alternative. Broader capture scope, permanent operation signatures and allocation failure policy remain open.
 
-The [FVP naming decision](../research/investigations/INV-055-fvp-list-operations.md)
+The [FVP naming decision](lite://repo/research/investigations/INV-055-fvp-list-operations.md)
 selects that existing front/back family without adopting generic grammar or a
 constructor. No helper implementation or public parameter labels are selected
 by the naming decision.
 
-The user approves the [bounded FVP slice](../research/investigations/INV-055-fvp-list-slice.md):
+The user approves the [bounded FVP slice](lite://repo/research/investigations/INV-055-fvp-list-slice.md):
 List<T> construction at fully initialized typed declarations (including typed
 empty lists), scalar/flat-tuple elements, readable indexing/traversal, ordinary
 sequence copies, and temporary positional end-operation bindings with explicit
 mut grants to named writable list bindings. Bounds/empty pops use terminal
 BoundPanic; catchable host resource failures retain terminal CLI handling.
-Strict checking and 120 interpreter groups pass, including [example 013](../language/examples/types/collections/growable-lists.lts).
+Strict checking and 120 interpreter groups pass, including [example 013](lite://play/example/growable-lists).
 Complex/simultaneous/reentrant grants, views, capacity, indexed writes, general
 user-function mut parameters, recovery and generic infrastructure remain outside
 this implementation. No native/performance claim follows.
@@ -51,7 +51,7 @@ this implementation. No native/performance claim follows.
 In the current self-hosted compiler, `core/list` exports `pushBack`, `popBack`,
 `pushFront`, and `popFront` for `mut List<T>` alongside indexed element writes
 (`items[i] = v`, `items[i] += v`), as used in
-[example 013](../language/examples/types/collections/growable-lists.lts).
+[example 013](lite://play/example/growable-lists).
 
 ## Length, capacity, and initialization
 
@@ -108,4 +108,4 @@ Prefer a valid empty list without a public null state or mandatory allocation fo
 
 The goal is specialized element storage and predictable allocation costs, without mandatory per-element boxing. No implementation, mandatory two/three-word ABI, growth factor, or measured performance is established.
 
-Related: [sequence families](sequence-types.md), [arrays](arrays.md), [slices](slices.md), [reserved storage](reserved-storage.md), and [mutability](mutability.md).
+Related: [sequence families](lite://doc/sequence-types), [arrays](lite://doc/arrays), [slices](lite://doc/slices), [reserved storage](lite://doc/reserved-storage), and [mutability](lite://doc/mutability).

@@ -48,7 +48,7 @@ max(...x);                /* two fixed inputs and three tail elements */
 
 In a signature, ...rest: T means zero or more additional inputs, each checked against T. The callee receives the collected tail as an array of T, including when there are no extra inputs. It is not a fixed tuple specialized to each call's argument count. The array length may be known at a particular call site or only at runtime; both call forms are valid in this model. No minimum tail length or automatic zero-valued T element is introduced.
 
-The selected [recovery collector](expression-recovery.md#typed-recovery-collectors-selected), `else ...errs: Error { ... }`, uses the same element-type/collection distinction and binds errs as [Error]. Recovery has its own matching gate: one error gives a singleton, while no matching failure skips the catch body. This analogy does not change structural tuple-pattern rest or select common storage/ownership for callable tails and recovery collections.
+The selected [recovery collector](lite://doc/expression-recovery#typed-recovery-collectors-selected), `else ...errs: Error { ... }`, uses the same element-type/collection distinction and binds errs as [Error]. Recovery has its own matching gate: one error gives a singleton, while no matching failure skips the catch body. This analogy does not change structural tuple-pattern rest or select common storage/ownership for callable tails and recovery collections.
 
 ```text
 extra := read_numbers();
@@ -98,7 +98,7 @@ pack := (...rest = fixed);
 written: (...rest: Int; 3) = (...rest = fixed);
 ```
 
-Known local counts, public extent guarantees, and storage remain distinct. A general ...rest: T contract does not promise a particular count merely because one caller supplies it. Fixed zero/Unit segments retain semantic grouping/count despite zero element bytes. Middle collectors remain future discussion: fixed extents can delimit a middle segment; multiple unspecified extents need a partition rule. Each declared segment now occupies one stored tuple position, with numeric and labeled access selecting the same array member. See [array-segment types and future middle collectors](tuple-array-segments.md).
+Known local counts, public extent guarantees, and storage remain distinct. A general ...rest: T contract does not promise a particular count merely because one caller supplies it. Fixed zero/Unit segments retain semantic grouping/count despite zero element bytes. Middle collectors remain future discussion: fixed extents can delimit a middle segment; multiple unspecified extents need a partition rule. Each declared segment now occupies one stored tuple position, with numeric and labeled access selecting the same array member. See [array-segment types and future middle collectors](lite://doc/tuple-array-segments).
 
 ## Rest access, storage, and retention
 
@@ -117,7 +117,7 @@ extra := read_numbers();
 inspect(1, ...extra);
 ```
 
-Both calls expose the same readable rest-array contract. Explicit extra arguments can populate temporary storage for the call. A compatible existing array may supply storage directly when the lifetime, access, and observable-value rules permit it. Multiple spreads may require gathering elements; no unconditional contiguous layout, zero-copy path, or allocation strategy is selected by these examples. Reusing source storage must preserve the general ordinary-value copy semantics and cannot introduce an implicit live source-location alias. Borrowed backing is a conditional representation option, not a reference-passing default or automatic ownership conversion. Type-specific eligibility and complete safety/lifetime rules remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
+Both calls expose the same readable rest-array contract. Explicit extra arguments can populate temporary storage for the call. A compatible existing array may supply storage directly when the lifetime, access, and observable-value rules permit it. Multiple spreads may require gathering elements; no unconditional contiguous layout, zero-copy path, or allocation strategy is selected by these examples. Reusing source storage must preserve the general ordinary-value copy semantics and cannot introduce an implicit live source-location alias. Borrowed backing is a conditional representation option, not a reference-passing default or automatic ownership conversion. Type-specific eligibility and complete safety/lifetime rules remain deferred; see [the general copy default](lite://doc/parameter-values-and-slots#general-copy-default-selected).
 
 The selected boundaries are:
 
@@ -127,7 +127,7 @@ The selected boundaries are:
 - A valid longer-lived borrow is not an independently owned array. The selection does not add a general escaping-reference feature or choose a lifetime-annotation syntax.
 - Writable rest access requires an explicit contract and caller permission. Ordinary ...source does not grant writes into source. Mutable-tail syntax, source overlap, and whether an admitted writable collector aliases or owns storage need separate rules; no detached-copy fallback may silently replace promised caller-data writes.
 
-An ordinary tuple containing a borrowed array tail must also preserve backing-storage validity. Its tail declaration does not establish owning versus borrowed construction. This decision settles variadic default access and explicit retention costs without choosing general parameter transport, ordinary array ownership, or tuple-tail normalization. See [ordinary parameter passing](parameter-values-and-slots.md) and [memory and performance](memory-and-performance.md).
+An ordinary tuple containing a borrowed array tail must also preserve backing-storage validity. Its tail declaration does not establish owning versus borrowed construction. This decision settles variadic default access and explicit retention costs without choosing general parameter transport, ordinary array ownership, or tuple-tail normalization. See [ordinary parameter passing](lite://doc/parameter-values-and-slots) and [memory and performance](lite://doc/memory-and-performance).
 
 ## Ordinary tuples may have the same array tail
 
@@ -259,11 +259,11 @@ packed: TailOnly = (...p);    /* collect the fixed prefix and tail */
 unpacked: Prefix = (...q);    /* requires proof of at least two inputs */
 ```
 
-Ordinary copy := p retains the source organization under normal copy/compatibility rules. Expression (...p) instead emits logical items: fixed components retain labels, and the declared tail emits its elements without its container label. The destination reconstructs them. In this example the known count gives three fixed Int components when no expected shape requests a tail; packed explicitly collects them into TailOnly. Prove every destination requirement and infer only omitted information. See [logical tuple unpacking](tuple-unpacking.md).
+Ordinary copy := p retains the source organization under normal copy/compatibility rules. Expression (...p) instead emits logical items: fixed components retain labels, and the declared tail emits its elements without its container label. The destination reconstructs them. In this example the known count gives three fixed Int components when no expected shape requests a tail; packed explicitly collects them into TailOnly. Prove every destination requirement and infer only omitted information. See [logical tuple unpacking](lite://doc/tuple-unpacking).
 
 Reconstructing Prefix from a rest-only source takes the first two supplied values for its fixed components and collects the remainder into its array tail. The compiler must prove coverage and compatible possible slot types/access. The TailOnly schema alone guarantees no minimum length; the unpacked line is admitted only when additional established static facts prove at least two elements. A runtime arity check or synthesized value does not replace that proof. Known-size local tail constructions retain their concrete extent as selected below; the complete policy for propagating those facts across effects and API boundaries remains open.
 
-The supported example has compatible unnamed fixed components and the same explicit tail label. Label-only conversion of a whole stored tuple at an explicit typed receiving declaration is selected separately, with ordinary transfers remaining label-sensitive; it does not repack a prefix/tail partition. See [labels under an explicit destination type](tuple-label-conversions.md). Preserve existing named-component routing, label-sensitive compatibility, written-order single evaluation, and permissions; this does not select arbitrary value permutation, mixed-label collision rules, multiple stored tails, unchecked casts, zero copying, shared storage identity, or a new allocation policy. Tuple-valued elements stay intact unless separately spread. Call sites retain their established whole-composition proof and tail-forwarding rules.
+The supported example has compatible unnamed fixed components and the same explicit tail label. Label-only conversion of a whole stored tuple at an explicit typed receiving declaration is selected separately, with ordinary transfers remaining label-sensitive; it does not repack a prefix/tail partition. See [labels under an explicit destination type](lite://doc/tuple-label-conversions). Preserve existing named-component routing, label-sensitive compatibility, written-order single evaluation, and permissions; this does not select arbitrary value permutation, mixed-label collision rules, multiple stored tails, unchecked casts, zero copying, shared storage identity, or a new allocation policy. Tuple-valued elements stay intact unless separately spread. Call sites retain their established whole-composition proof and tail-forwarding rules.
 
 ### Rest-only tuples need no fixed components
 
@@ -299,9 +299,9 @@ This is a collision of member declarations during inference, not an ordinary con
 
 ### Storage equality does not erase shape
 
-The selected [fixed-array layout](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage) equals the corresponding homogeneous unnamed fixed tuple, without an array-specific header, runtime length field, or indirection. This is a storage guarantee, not type identity, an ABI choice, or a promise of free repacking. Element representation and normal copy/access rules remain.
+The selected [fixed-array layout](lite://doc/memory-and-performance#fixed-arrays-share-homogeneous-tuple-storage) equals the corresponding homogeneous unnamed fixed tuple, without an array-specific header, runtime length field, or indirection. This is a storage guarantee, not type identity, an ABI choice, or a promise of free repacking. Element representation and normal copy/access rules remain.
 
-A Unit value is still one emitted item. [Unit; 5] has five static positions and zero element bytes, while (...rest: ()) can hold any count of Unit elements and (...rest: [Int; 0]) any count of empty-array elements. Those element types do not declare empty tails. Fixed counts belong to static types; runtime counts belong to their containers. See [zero storage and semantic shape](unit.md#zero-storage-does-not-erase-shape).
+A Unit value is still one emitted item. [Unit; 5] has five static positions and zero element bytes, while (...rest: ()) can hold any count of Unit elements and (...rest: [Int; 0]) any count of empty-array elements. Those element types do not declare empty tails. Fixed counts belong to static types; runtime counts belong to their containers. See [zero storage and semantic shape](lite://doc/unit#zero-storage-does-not-erase-shape).
 
 ### Zero and singleton fixed expansion versus declared tails
 
@@ -353,7 +353,7 @@ For d, [] is an empty array and the explicit entry creates a declared empty segm
 typed_empty: (...extra: Int) = (...extra = []);
 ```
 
-This supplies an Int tail contract when wanted without making it a prerequisite for d, selecting a global empty-literal default, or choosing an owning representation. See [empty-array clarification](tuple-remainder-gradual-reasoning.md#empty-means-empty-exact-element-defaults-can-wait). Known-type heterogeneous construction follows the union inference rule below.
+This supplies an Int tail contract when wanted without making it a prerequisite for d, selecting a global empty-literal default, or choosing an owning representation. See [empty-array clarification](lite://doc/tuple-remainder-gradual-reasoning#empty-means-empty-exact-element-defaults-can-wait). Known-type heterogeneous construction follows the union inference rule below.
 
 Both full and shorthand forms evaluate their source once and preserve existing access, lifetime, retention, and cleanup requirements; neither grants mutation nor promises allocation, cloning, or ownership transfer. Reserve ...identifier = at tuple-value entry level for this named-tail form, rather than using type/name lookup to decide whether it is an assignment expression to spread. This selection covers a single declared tail; general mixed named-entry composition, other collisions involving tail labels, multiple stored rest segments, and complete recursive grammar remain open. It does not select direct named variadic call supply or new pattern syntax; spreading a stored rest-bearing tuple into a call has the rule below.
 
@@ -375,7 +375,7 @@ packed: (...rest: Int) = (...pack);
 
 Spreading two supported rest-bearing source tuples therefore merges their emitted items, not their container labels. Same-named tails do not replace one another. Real fixed labels still follow ordinary replacement/routing. Unknown extents remain represented by an inferred array tail, while known counts may reconstruct fixed components. Tuple-valued elements and ordinary array-valued fixed fields remain intact unless separately spread. Unit items count as items despite zero payload size.
 
-Call spread and intrinsic .call use the same emitted sequence under the receiving contract. Keep static coverage/final-type/access proofs, source-once written evaluation, explicit destination precedence, and normal copy/effect rules. Type-level spread and pattern remainder capture retain their own roles. Anonymous ...= expression syntax, multiple stored rest declarations, and general runtime owner/ABI/lifetime details remain unselected. See [the full revised model and examples](tuple-unpacking.md).
+Call spread and intrinsic .call use the same emitted sequence under the receiving contract. Keep static coverage/final-type/access proofs, source-once written evaluation, explicit destination precedence, and normal copy/effect rules. Type-level spread and pattern remainder capture retain their own roles. Anonymous ...= expression syntax, multiple stored rest declarations, and general runtime owner/ABI/lifetime details remain unselected. See [the full revised model and examples](lite://doc/tuple-unpacking).
 
 ### A colon distinguishes inferred rest declarations from type spread
 
@@ -444,11 +444,11 @@ inspect := fn (first: Int, ...rest: Int) {
 }
 ```
 
-For callable input schemas, arguments.rest uses the declared input-tail name; an implementation-local collector name does not rename the schema member. A declared tail also occupies one stored numeric tuple position: arguments.rest and arguments at that numeric position select the same array member. Its element count does not add tuple positions. An expected schema automatically packs matching inputs into that member, while grouping examples must retain ...rest to distinguish its unpacking role from an ordinary array field. See [automatic packing and tuple positions](tuple-array-segments.md#automatic-packing-and-tuple-positions). This does not select named call routing into a variadic segment or bare-array normalization/equivalence. An empty declared tail remains distinct from Unit. Multiple declared rest segments remain a future discussion. Array indexing syntax and behavior are outside this tuple-access clarification.
+For callable input schemas, arguments.rest uses the declared input-tail name; an implementation-local collector name does not rename the schema member. A declared tail also occupies one stored numeric tuple position: arguments.rest and arguments at that numeric position select the same array member. Its element count does not add tuple positions. An expected schema automatically packs matching inputs into that member, while grouping examples must retain ...rest to distinguish its unpacking role from an ordinary array field. See [automatic packing and tuple positions](lite://doc/tuple-array-segments#automatic-packing-and-tuple-positions). This does not select named call routing into a variadic segment or bare-array normalization/equivalence. An empty declared tail remains distinct from Unit. Multiple declared rest segments remain a future discussion. Array indexing syntax and behavior are outside this tuple-access clarification.
 
 ### Pattern remainders preserve the tail
 
-Selected gradual-change outcome, 2026-10-25: [structural remainder capture](tuple-remainder-gradual-reasoning.md) preserves labels, individual types, stored order, and segment wrappers. A sole empty segment remains a segment-bearing tuple; only no remaining components gives Unit. The smaller examples were boundary probes rather than a demand to project a trailing array. No sole-segment projection or universal array capture is selected. The earlier [review](tuple-segment-pattern-review.md) records those alternatives.
+Selected gradual-change outcome, 2026-10-25: [structural remainder capture](lite://doc/tuple-remainder-gradual-reasoning) preserves labels, individual types, stored order, and segment wrappers. A sole empty segment remains a segment-bearing tuple; only no remaining components gives Unit. The smaller examples were boundary probes rather than a demand to project a trailing array. No sole-segment projection or universal array capture is selected. The earlier [review](lite://doc/tuple-segment-pattern-review) records those alternatives.
 
 A pattern rest capture preserves unselected fixed components and the existing tail in their order. It must not convert a remaining fixed field into an unrelated array element or manufacture tuple fields from the runtime tail's current length. In a callable implementation whose local header consumes all fixed inputs, its trailing collector receives the declared array tail, as myrest does above. General tail-only tuple normalization and whole-value/array identity are not selected merely by that collector behavior.
 
@@ -520,4 +520,4 @@ Here the known fixed input tuple is collected with the existing rest-only receiv
 
 Write a space after fn in LiteScript examples, including before a parenthesized header. Omit unnecessary semicolons after completed block items at every nesting depth; preserve necessary ordinary-item separators and enclosing expression punctuation. These presentation rules do not make whitespace significant.
 
-Related: [functions](functions.md), [callable input packs](callable-input-packs.md), [tuple spread/rest](tuple-spread-and-rest.md), [arrays](arrays.md), [lists](lists.md), [sequence families](sequence-types.md), and [ordinary parameter passing](parameter-values-and-slots.md).
+Related: [functions](lite://doc/functions), [callable input packs](lite://doc/callable-input-packs), [tuple spread/rest](lite://doc/tuple-spread-and-rest), [arrays](lite://doc/arrays), [lists](lite://doc/lists), [sequence families](lite://doc/sequence-types), and [ordinary parameter passing](lite://doc/parameter-values-and-slots).

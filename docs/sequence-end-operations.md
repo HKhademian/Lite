@@ -4,7 +4,7 @@ Status: **front/back operation names selected by the user, 2026-10-31; structura
 
 ## Proposed operations
 
-FVP review, **2026-10-31**: [INV-055](../research/investigations/INV-055-fvp-list-operations.md)
+FVP review, **2026-10-31**: [INV-055](lite://repo/research/investigations/INV-055-fvp-list-operations.md)
 records the user's acceptance of the existing front/back name family below. This
 does not adopt generic notation, a constructor, public argument labels or
 allocation failure handling by itself. The separately approved bounded FVP
@@ -46,7 +46,7 @@ first := pop_front(mut numbers) else {
 }
 ```
 
-This extends else beyond returned-Result inspection to a typed-fault recovery boundary. It does not make every ordinary call return Result. See [shared expression recovery](expression-recovery.md).
+This extends else beyond returned-Result inspection to a typed-fault recovery boundary. It does not make every ordinary call return Result. See [shared expression recovery](lite://doc/expression-recovery).
 
 ## Mutability and supported operations
 
@@ -74,7 +74,7 @@ A separate deliberately optional query/removal may return Option<T>. This expres
 
 This proposal unifies the choice of failure mode, not all error payloads or mutation contracts. A successful read returns an element under its read/access contract; a successful write returns Unit; a successful pop removes and returns an element. The removed value is not a borrowed view into the vacated slot, and its transfer/copy rules must follow the eventual ownership contract.
 
-An empty removal leaves the sequence unchanged. This is an operation-local guarantee, not rollback of earlier mutations or argument side effects. Explicit block recovery supplies the selected broad panic boundary; complete chain/attachment and cleanup-failure aggregation/inspection remain open; cleanup-failure precedence is selected in [finally](finally.md#pending-outcomes). Language-managed panic propagation runs applicable exited-scope `finally` blocks before an outer matching handler. See [bounds and checked fault policy](checked-fault-policy.md).
+An empty removal leaves the sequence unchanged. This is an operation-local guarantee, not rollback of earlier mutations or argument side effects. Explicit block recovery supplies the selected broad panic boundary; complete chain/attachment and cleanup-failure aggregation/inspection remain open; cleanup-failure precedence is selected in [finally](lite://doc/finally#pending-outcomes). Language-managed panic propagation runs applicable exited-scope `finally` blocks before an outer matching handler. See [bounds and checked fault policy](lite://doc/checked-fault-policy).
 
 ## Costs depend on storage
 
@@ -86,7 +86,7 @@ Consequently a generic end-operation contract must state its complexity guarante
 
 ## Remaining contracts
 
-The [INV-055 FVP slice](../research/investigations/INV-055-fvp-list-slice.md) proposes a
+The [INV-055 FVP slice](lite://repo/research/investigations/INV-055-fvp-list-slice.md) proposes a
 bounded construction/grant surface and temporary diagnostic policy for the
 runner. The user separately approves that bounded slice after name selection;
 the igniter implements it with explicit named-list mut grants and terminal
@@ -107,4 +107,4 @@ Kotlin ArrayDeque uses addFirst/addLast and removeFirst/removeLast. The ordinary
 
 Rust Vec documents amortized constant-time push, while insertion/removal at the front shifts elements. Its collections overview distinguishes the performance of Vec and VecDeque. Sources: [Vec operations](https://doc.rust-lang.org/std/vec/struct.Vec.html) and [collection costs](https://doc.rust-lang.org/std/collections/index.html#performance).
 
-Related: [indexed sequence](indexed-sequence-contract.md), [capabilities](collection-capabilities.md), [lists](lists.md), [slices](slices.md), [operation contracts](collection-operation-contracts.md), and [generic notation](generic-notation.md).
+Related: [indexed sequence](lite://doc/indexed-sequence-contract), [capabilities](lite://doc/collection-capabilities), [lists](lite://doc/lists), [slices](lite://doc/slices), [operation contracts](lite://doc/collection-operation-contracts), and [generic notation](lite://doc/generic-notation).

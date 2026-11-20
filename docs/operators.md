@@ -18,7 +18,7 @@ and  or  not
 
 Selected 2026-10-25: a complete additive-chain entry permits one optional leading +, including a singleton. total := + rent + groceries + transport has the same meaning as the form without the first +; the ordinary initializer can be written over several lines without parentheses. For an admitted operand, +A preserves A's value/type and evaluates that occurrence once. No implicit zero, extra addition/overload call, numeric conversion, promotion, or new effect/failure is introduced.
 
-This identity rule does not extend to minus: -A retains negation and cannot be ignored as redundant punctuation. Leading * or / is not selected; no implicit 1 seed, reciprocal, or other unary meaning follows. There is likewise no automatic leading :/, %, or :% rule. Preserve every actual interior operator and the original grouping/evaluation contracts. Require a real operand and no stacked/interior extra redundant leaders. Basic arithmetic grouping is selected below; complete unary integration and nonnumeric/custom arithmetic contracts remain open. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
+This identity rule does not extend to minus: -A retains negation and cannot be ignored as redundant punctuation. Leading * or / is not selected; no implicit 1 seed, reciprocal, or other unary meaning follows. There is likewise no automatic leading :/, %, or :% rule. Preserve every actual interior operator and the original grouping/evaluation contracts. Require a real operand and no stacked/interior extra redundant leaders. Basic arithmetic grouping is selected below; complete unary integration and nonnumeric/custom arithmetic contracts remain open. See [additive leading plus](lite://doc/leading-separators#additive-chains-with-leading-plus).
 
 ## Basic arithmetic grouping selected
 
@@ -37,29 +37,29 @@ Binary operators at each level associate left to right. Parentheses override gro
 -2 * 3;      /* (-2) * 3: -6 */
 ```
 
-An optional leading + at a complete additive-chain entry leaves this grouping unchanged. Binary associativity does not authorize regrouping or reordering actual operations; ordinary operands still evaluate left to right under the separate [evaluation contract](evaluation-order.md#operator-operands).
+An optional leading + at a complete additive-chain entry leaves this grouping unchanged. Binary associativity does not authorize regrouping or reordering actual operations; ordinary operands still evaluate left to right under the separate [evaluation contract](lite://doc/evaluation-order#operator-operands).
 
-This selects the basic ladder, not a completed expression grammar. The `**` power spelling, association, Float-default checkpoint and explicit grouping at the unary-minus/base boundary are covered separately below. Complete expression integration, power updates, bitwise operations and numeric conversions remain open. The [cross-language arithmetic comparison](arithmetic-operators-comparison.md) records primary sources and foreign-runtime probes without adopting their extra operators or numeric contracts.
+This selects the basic ladder, not a completed expression grammar. The `**` power spelling, association, Float-default checkpoint and explicit grouping at the unary-minus/base boundary are covered separately below. Complete expression integration, power updates, bitwise operations and numeric conversions remain open. The [cross-language arithmetic comparison](lite://doc/arithmetic-operators-comparison) records primary sources and foreign-runtime probes without adopting their extra operators or numeric contracts.
 
 ## Power and unary minus selected
 
 Selected 2026-10-25: use `**` for power and reject an unparenthesized unary-minus/power spelling such as -2 `**` 2 or -base `**` exponent. Require (-base) `**` exponent for a negative base, or -(base `**` exponent) to negate the completed power. The odd case -2 `**` 3 is also invalid even though its two mathematical interpretations both give -8. Outer grouping alone, (-2 `**` 2), does not clarify the inner boundary. This is a syntax restriction, independent of values, types, whitespace, comments, and constant folding.
 
-This selects the spelling and grouping requirement, not a complete power contract. Right association and Float-default result typing were selected on 2026-11-01. Zero exponents yield 1, and negative exponents produce reciprocal powers for nonzero bases; zero to a negative exponent panics, selected 2026-11-14. Exact overflow and other fault rules remain open. `**=` is not selected. See [power and negation](power-and-negation.md) for primary-source comparisons and the selected distinction from Python/Lua precedence.
+This selects the spelling and grouping requirement, not a complete power contract. Right association and Float-default result typing were selected on 2026-11-01. Zero exponents yield 1, and negative exponents produce reciprocal powers for nonzero bases; zero to a negative exponent panics, selected 2026-11-14. Exact overflow and other fault rules remain open. `**=` is not selected. See [power and negation](lite://doc/power-and-negation) for primary-source comparisons and the selected distinction from Python/Lua precedence.
 
-Implementation note: the Lite-generated TS/C targets parse right-associative `**` and return Float for admitted Int/Float operands. The earlier positive-exponent-only checkpoint is superseded by the selected zero/negative rule. `2 ** 3` evaluates to Float 8. Generated helpers retain left-to-right evaluation and positioned runtime faults. See [power and negation](power-and-negation.md) for the selected grouping rule and limits.
+Implementation note: the Lite-generated TS/C targets parse right-associative `**` and return Float for admitted Int/Float operands. The earlier positive-exponent-only checkpoint is superseded by the selected zero/negative rule. `2 ** 3` evaluates to Float 8. Generated helpers retain left-to-right evaluation and positioned runtime faults. See [power and negation](lite://doc/power-and-negation) for the selected grouping rule and limits.
 
 ## Division
 
-Selected 2026-10-25: floating operands supply floating division semantics, even for Int storage. For an Int destination, / truncates the quotient toward zero and :/ floors it: -7.5 / 2 stores -3, while -7.5 :/ 2 stores -4. Nonintegral literals and established floating values are admitted; operands retain their values, so 2 / 0.5 stores 4. Float/Double results keep / fractional, including 2 / 7. With no floating operand or fractional expected result, integer-only division retains its integer default. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
+Selected 2026-10-25: floating operands supply floating division semantics, even for Int storage. For an Int destination, / truncates the quotient toward zero and :/ floors it: -7.5 / 2 stores -3, while -7.5 :/ 2 stores -4. Nonintegral literals and established floating values are admitted; operands retain their values, so 2 / 0.5 stores 4. Float/Double results keep / fractional, including 2 / 7. With no floating operand or fractional expected result, integer-only division retains its integer default. See [calculation and storage](lite://doc/division#floating-calculation-and-integer-storage).
 
 Implementation note, 2026-10-31: the igniter currently implements Int `%`, `:/` and `:%`, plus compound `+= -= *= /= %= :/= :%=` updates. Float floor/remainder and compound lowering remain open; the restricted TS/C compiler lowers all four Int operations `/`, `%`, `:/` and `:%`, including dynamic operands.
 
 Integer % is truncating remainder and :% is floor modulo. A nonzero remainder follows the dividend; a nonzero modulo follows the divisor. With an Int quotient, the successful integer identities are a == b * (a / b) + (a % b) and a == b * (a :/ b) + (a :% b). The corresponding updates are /=, :/=, %=, and :%=.
 
-This supersedes always-fractional /, the subsequent operand-only rule, // floor division, and %% modulo. General conversions, mixed floating widths/precision, expected-type propagation through unresolved subexpressions/calls/returns, floating floor result types beyond Int storage, floating remainder/modulo, and fault rules remain open. No // line-comment rule is introduced. See [division](division.md) and [the selected family and open lexical boundary](arithmetic-methods-and-division-revision.md).
+This supersedes always-fractional /, the subsequent operand-only rule, // floor division, and %% modulo. General conversions, mixed floating widths/precision, expected-type propagation through unresolved subexpressions/calls/returns, floating floor result types beyond Int storage, floating remainder/modulo, and fault rules remain open. No // line-comment rule is introduced. See [division](lite://doc/division) and [the selected family and open lexical boundary](lite://doc/arithmetic-methods-and-division-revision).
 
-Preserve floating intermediates until the complete admitted expression reaches Int storage: a: Int = (7.5 / 2) * 2.0 stores 7. Parentheses group without truncating; half: Int = 7.5 / 2 first stores 3, so a later half * 2 gives 6. This does not postpone explicit floor or other rounding operations. See [storage boundaries](division.md#floating-intermediates-and-storage-boundaries).
+Preserve floating intermediates until the complete admitted expression reaches Int storage: a: Int = (7.5 / 2) * 2.0 stores 7. Parentheses group without truncating; half: Int = 7.5 / 2 first stores 3, so a later half * 2 gives 6. This does not postpone explicit floor or other rounding operations. See [storage boundaries](lite://doc/division#floating-intermediates-and-storage-boundaries).
 
 ## Equality and negation
 
@@ -77,7 +77,7 @@ if a =!= b {
 
 `not a == b` remains equivalent to `not (a == b)` for one comparison; `=!=` expresses inequality within one adjacent comparison of a longer chain. Earlier proposals for `?=` as equality and conventional `!=` as inequality remain superseded. Neither token gains an assigned meaning from the selected `=!=` spelling.
 
-The user selected the [negated-comparison family](negated-comparison-operators.md) on 2026-10-23: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. Each negative form invokes the corresponding positive comparison once on the evaluated operands and complements its normal Bool result, preserving failure and effect behavior. It does not negate an operand, independently overload a different relation, or unconditionally rewrite to the opposite ordering. Complete custom-comparison and Float contracts remain open.
+The user selected the [negated-comparison family](lite://doc/negated-comparison-operators) on 2026-10-23: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. Each negative form invokes the corresponding positive comparison once on the evaluated operands and complements its normal Bool result, preserving failure and effect behavior. It does not negate an operand, independently overload a different relation, or unconditionally rewrite to the opposite ordering. Complete custom-comparison and Float contracts remain open.
 
 All ten are expression comparison tokens. Recognize longer members before their prefixes in expression context; a trailing = belongs to the comparison token and does not introduce a compound update. Type-suffix attachment remains separately selected: T! requires ! to touch its type, with optional spacing around a following initializer =. If angle-bracket generics are adopted, grammatical type context must preserve > then attached ! then initializer =. This operator selection does not adopt a generic grammar. The user also selected the same ten operators as nonbinding comparison-pattern prefixes, with runtime right operands evaluated once when reached and ordinary comparison/failure semantics.
 
@@ -89,7 +89,7 @@ inside := 0 <= x < 10;
 
 Chains compare adjacent operands, evaluate each operand at most once from left to right, and stop at the first false comparison. Each adjacent pair must be statically comparable and produce `Bool`. All ten operators ==, =!=, >, >!, <, <!, >=, >!=, <=, and <!= share exactly one comparison precedence level. Mixed positive/negative operators and changes in direction use the same adjacent-pair rule, rather than comparing an intermediate Bool with the next operand.
 
-`not 0 <= x < 10` means `not (0 <= x < 10)`. Parentheses can instead make a comparison result an operand, as in `(a < b) == flag`. See [comparison chains](comparison-chains.md) for evaluation examples, ownership constraints, and the difference from a literal `and` rewrite.
+`not 0 <= x < 10` means `not (0 <= x < 10)`. Parentheses can instead make a comparison result an operand, as in `(a < b) == flag`. See [comparison chains](lite://doc/comparison-chains) for evaluation examples, ownership constraints, and the difference from a literal `and` rewrite.
 
 ## Logical precedence
 
@@ -125,7 +125,7 @@ The basic arithmetic levels and left association above are selected. The full gr
 
 A complete Boolean expression or condition may start with one optional `and` or `or`, selected 2026-10-24. For example, if and a and b is equivalent to if a and b, and if or a and b or c is equivalent to if (a and b) or c. An initializer such as ready := and a and b; and a Boolean loop source such as loop and a and b { body } need no extra parentheses. An explicitly grouped expression/condition also establishes its own entry. The leading token is presentation punctuation, not a unary operator or implicit Boolean operand. Normal not/and/or precedence, short-circuiting, effects/failures, bindings, and narrowing remain unchanged.
 
-Require at least one real operand and Bool typing for a prefixed ordinary value expression, even a singleton. Reject stacked leaders, an extra leader after an interior operator, and trailing operators. This selection covers ordinary Boolean expressions, Boolean loop sources, subjectless match Boolean headers, if/else-if conditions, and subject-based match guards. Ordinary value positions gain no condition-pattern bindings. Initial/nested pattern alternatives separately allow one leading or under their pattern grammar; this is not a new logical subpattern operator. Existing item/header delimiters apply independently of line layout. Leading | is selected separately in plain-union type context; leading & awaits intersection-type selection. See [optional leading separators](leading-separators.md) for examples and boundaries.
+Require at least one real operand and Bool typing for a prefixed ordinary value expression, even a singleton. Reject stacked leaders, an extra leader after an interior operator, and trailing operators. This selection covers ordinary Boolean expressions, Boolean loop sources, subjectless match Boolean headers, if/else-if conditions, and subject-based match guards. Ordinary value positions gain no condition-pattern bindings. Initial/nested pattern alternatives separately allow one leading or under their pattern grammar; this is not a new logical subpattern operator. Existing item/header delimiters apply independently of line layout. Leading | is selected separately in plain-union type context; leading & awaits intersection-type selection. See [optional leading separators](lite://doc/leading-separators) for examples and boundaries.
 
 ## Negation scope in conditions selected
 
@@ -155,9 +155,9 @@ if ((not blocked) or trusted) and ready {
 
 Use parentheses to extend negation over a compound condition, as in not (blocked or restricted). Ordinary single comparisons retain their selected spelling and meaning, including not actual == expected and not (actual == expected).
 
-Existing-name type tests permit the concise form if not value: String, equivalent to if not (value: String). For stable value: String | Int, if not value: String and value > 0 tests the comparison with value as Int. No name is introduced, and supported narrowing remains subject to stability. See [type tests](type-tests-and-narrowing.md#negation-and-condition-precedence-selected).
+Existing-name type tests permit the concise form if not value: String, equivalent to if not (value: String). For stable value: String | Int, if not value: String and value > 0 tests the comparison with value as Int. No name is introduced, and supported narrowing remains subject to stability. See [type tests](lite://doc/type-tests-and-narrowing#negation-and-condition-precedence-selected).
 
-Source-pattern conditions retain grouped negation: not (.Some(user) := source) and not (user: User = source). Ungrouped not pattern := source or not name: Type = source is rejected; this selection adds shorthand only for existing-name tests alongside ordinary Boolean negation. This grouped requirement also preserves the existing rule for source-patterns that introduce no names. All names introduced inside negation remain internal, including through double negation; see [negated matching conditions](condition-chains.md#negated-matching-conditions-selected).
+Source-pattern conditions retain grouped negation: not (.Some(user) := source) and not (user: User = source). Ungrouped not pattern := source or not name: Type = source is rejected; this selection adds shorthand only for existing-name tests alongside ordinary Boolean negation. This grouped requirement also preserves the existing rule for source-patterns that introduce no names. All names introduced inside negation remain internal, including through double negation; see [negated matching conditions](lite://doc/condition-chains#negated-matching-conditions-selected).
 
 Negation complements only a normal Boolean result. Preserve short-circuiting, effects, source evaluation, and failures/exits. Not remains usable in ordinary value expressions such as allowed := not blocked; no preceding if/and/or keyword is required. This selects condition scope and the illustrated type-test precedence, not a complete expression/type parser or new logical subpatterns.
 
@@ -169,11 +169,11 @@ Postfix `!` extracts one Result success payload or returns its declared recovera
 name := load_user(id)!.load_profile()!.name;
 ```
 
-`!.` is propagation followed by ordinary member access, not a nullable accessor. Each marked outcome is evaluated once; failure prevents later chain steps from running. The enclosing function must declare every error that can escape. This operator neither asserts success nor triggers or catches a panic. Prefix `try` and postfix `?` are not alternative propagation spellings. Option handling and the full expression-precedence grammar remain open. See [Result and errors](result-and-errors.md) and [propagation and call chaining](propagation-and-chaining.md).
+`!.` is propagation followed by ordinary member access, not a nullable accessor. Each marked outcome is evaluated once; failure prevents later chain steps from running. The enclosing function must declare every error that can escape. This operator neither asserts success nor triggers or catches a panic. Prefix `try` and postfix `?` are not alternative propagation spellings. Option handling and the full expression-precedence grammar remain open. See [Result and errors](lite://doc/result-and-errors) and [propagation and call chaining](lite://doc/propagation-and-chaining).
 
 ## Evaluation order
 
-Ordinary operator operands evaluate left to right after precedence establishes grouping. Function arguments also evaluate left to right, after evaluating the callee. Short-circuiting skips unneeded operands. See [evaluation order](evaluation-order.md), including target selection before right-hand-side evaluation for assignment and compound updates.
+Ordinary operator operands evaluate left to right after precedence establishes grouping. Function arguments also evaluate left to right, after evaluating the callee. Short-circuiting skips unneeded operands. See [evaluation order](lite://doc/evaluation-order), including target selection before right-hand-side evaluation for assignment and compound updates.
 
 ## Compound updates
 
@@ -202,12 +202,12 @@ enabled = not enabled;
 
 ## Notes and open decisions
 
-The user selects /, :/, %, and :% and requests named methods in addition, including a.plus(b), a.div(b), and a.floorDiv(b). Working div/rem/floorDiv/mod names follow the matching operations. Complete signatures/dispatch remain open; `a:/b` has exactly one reading, `a :/ b`, while the retired `a_/b` could be read as `a_ / b` or `a _/ b`. See [the selected family](arithmetic-methods-and-division-revision.md); future infix methods remain deferred.
+The user selects /, :/, %, and :% and requests named methods in addition, including a.plus(b), a.div(b), and a.floorDiv(b). Working div/rem/floorDiv/mod names follow the matching operations. Complete signatures/dispatch remain open; `a:/b` has exactly one reading, `a :/ b`, while the retired `a_/b` could be read as `a_ / b` or `a _/ b`. See [the selected family](lite://doc/arithmetic-methods-and-division-revision); future infix methods remain deferred.
 
-Ordering and equality support for user-defined types, reference identity, floating-point comparison details, exact arithmetic fault cases and payloads, noninteger remainder, bitwise operators, and short-circuit update forms remain open. Basic arithmetic faults use typed panics, not returned `Result` errors; target-level `else` with typed filters supports local recovery. `and` and `or` are intended to short-circuit, but their complete effect and overload rules need specification. See [arithmetic fault boundaries](arithmetic-faults.md).
+Ordering and equality support for user-defined types, reference identity, floating-point comparison details, exact arithmetic fault cases and payloads, noninteger remainder, bitwise operators, and short-circuit update forms remain open. Basic arithmetic faults use typed panics, not returned `Result` errors; target-level `else` with typed filters supports local recovery. `and` and `or` are intended to short-circuit, but their complete effect and overload rules need specification. See [arithmetic fault boundaries](lite://doc/arithmetic-faults).
 
 ## Related concepts and references
 
-- [Declarations and assignment](declarations-and-assignment.md)
-- [Conditionals](conditionals.md)
-- [References](references.md): language operator conventions are comparative, not normative for this operator set.
+- [Declarations and assignment](lite://doc/declarations-and-assignment)
+- [Conditionals](lite://doc/conditionals)
+- [References](lite://doc/references): language operator conventions are comparative, not normative for this operator set.

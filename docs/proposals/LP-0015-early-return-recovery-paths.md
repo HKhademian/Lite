@@ -38,7 +38,7 @@ Both perform ordinary function returns. The receiverless catch consumes all supp
 
 ## Contrast with handler-local failure completion
 
-With op outward T and err2 an Error value of type Err2, tmp1 := op()? has T ! Panic. `tmp2 := tmp1 else @bl2 { raise @bl2 err2 }` has T ! Err2: the catch-all consumes all original panics, then the directed raise completes only the handler block with Err2. It does not exit the function or re-enter the same catch. `tmp3 := tmp2!` supplies T on success, or forwards Err2 under the enclosing function's error contract without initializing tmp3. This is the existing LP-0014 local-target composition, not the abandonment behavior of plain function return. No original unmatched remainder is present on this catch-all path. See [the worked example](../manual-failures-and-inference.md#handler-local-raise-changes-the-stored-outcome).
+With op outward T and err2 an Error value of type Err2, tmp1 := op()? has T ! Panic. `tmp2 := tmp1 else @bl2 { raise @bl2 err2 }` has T ! Err2: the catch-all consumes all original panics, then the directed raise completes only the handler block with Err2. It does not exit the function or re-enter the same catch. `tmp3 := tmp2!` supplies T on success, or forwards Err2 under the enclosing function's error contract without initializing tmp3. This is the existing LP-0014 local-target composition, not the abandonment behavior of plain function return. No original unmatched remainder is present on this catch-all path. See [the worked example](lite://doc/manual-failures-and-inference#handler-local-raise-changes-the-stored-outcome).
 
 ## Cleanup and scope limits
 
@@ -50,4 +50,4 @@ This decision does not select what another unmatched remainder does during raise
 
 `r1` records plain early function-return precedence over unfinished captured recovery, continuing-path residual typing, unchanged function success typing and cleanup, and the distinction from handler-local completion. It rejects the earlier implicit-failure-conversion and remainder-based rejection recommendations for this case. No implementation, release, or runtime conformance result is supplied.
 
-Normative owner: [expression recovery](../expression-recovery.md#early-function-returns-and-continuing-path-types). Related: [control flow](../control-flow.md), [manual failures](../manual-failures-and-inference.md), [cleanup](../finally.md), and [remaining shortfalls](../failure-handling-shortfalls.md).
+Normative owner: [expression recovery](lite://doc/expression-recovery#early-function-returns-and-continuing-path-types). Related: [control flow](lite://doc/control-flow), [manual failures](lite://doc/manual-failures-and-inference), [cleanup](lite://doc/finally), and [remaining shortfalls](lite://doc/failure-handling-shortfalls).

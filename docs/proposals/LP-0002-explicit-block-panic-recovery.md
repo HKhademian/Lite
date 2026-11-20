@@ -5,7 +5,7 @@
 - Status: **accepted, 2026-10-26; unreleased design**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
-- Supersedes: none; complements [LP-0001 r1](LP-0001-operation-specific-panic-recovery.md).
+- Supersedes: none; complements [LP-0001 r1](lite://doc/proposals/LP-0001-operation-specific-panic-recovery).
 - Superseded by: none.
 
 ## Selected contract
@@ -41,4 +41,4 @@ Complete expression precedence, recovery-chain integration, indexed-write attach
 
 `r1` records the user's explicit block form and its broad panic scope. No implementation or measured performance claim is made.
 
-Normative owner: [expression recovery](../expression-recovery.md#explicit-whole-block-panic-boundary-selected). Supporting traces: [recovery boundaries](../recovery-boundaries.md).
+Normative owner: [expression recovery](lite://doc/expression-recovery#explicit-whole-block-panic-boundary-selected). Supporting traces: [recovery boundaries](lite://doc/recovery-boundaries).

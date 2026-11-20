@@ -32,5 +32,5 @@ These are workload requirements, not approvals of new builtins. Keep primitive
 host adapters small and reusable. The compiler's parser/checker/emitter remain in
 LiteLang regardless of which language hosts a development tool.
 
-Use [the workflow](development-workflow.md) for support/adoption gates and
-[the bootstrap guide](../compiler/bootstrap/README.md) for generated-only validation.
+Use [the workflow](lite://doc/development-workflow) for support/adoption gates and
+[the bootstrap guide](lite://doc/compiler/bootstrap-readme) for generated-only validation.

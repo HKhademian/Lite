@@ -10,7 +10,7 @@ Mutation should be practical and easy to express. Counters, accumulators, collec
 
 This is one language with useful defaults, not a pure subset that students must leave before writing stateful programs.
 
-Known collection shape is preserved independently of access permission. Under the [2026-10-24 literal rule](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays), [1, 2, 3] infers [Int; 3] with read-only access. Mut can permit element writes without adding growth; var can permit compatible binding replacement without changing the extent. Growable storage is explicitly requested through a concrete expected type or constructor. Read-only access to an existing/runtime-sized provider does not establish a compile-time size or freeze aliases.
+Known collection shape is preserved independently of access permission. Under the [2026-10-24 literal rule](lite://doc/tuple-array-shapes#known-size-fresh-literals-infer-fixed-arrays), [1, 2, 3] infers [Int; 3] with read-only access. Mut can permit element writes without adding growth; var can permit compatible binding replacement without changing the extent. Growable storage is explicitly requested through a concrete expected type or constructor. Read-only access to an existing/runtime-sized provider does not establish a compile-time size or freeze aliases.
 
 ## Binding and data permissions
 
@@ -29,7 +29,7 @@ mut user := make_user(); /* explicit writable access to held data */
 user.age += 1;
 ```
 
-Use inferred var mut user := expression when both binding replacement and held-data mutation are needed. Its annotated form is var user: mut User = expression. These capabilities remain independent, and the held value's type stays fixed under assignment. See the full [declaration forms](mutability.md).
+Use inferred var mut user := expression when both binding replacement and held-data mutation are needed. Its annotated form is var user: mut User = expression. These capabilities remain independent, and the held value's type stays fixed under assignment. See the full [declaration forms](lite://doc/mutability).
 
 Operation parameters and receivers require only read access by default. Qualify an affected typed parameter as user: mut User when its operation needs write access, without an additional function-level marker. Teach these capabilities as needed, while retaining inference for the value types.
 
@@ -37,9 +37,9 @@ Operation parameters and receivers require only read access by default. Qualify 
 
 Conceptually, writing adds an ability to the readable baseline. It also adds proof obligations: the caller must possess writable access, the target must permit the write, and the assigned value must satisfy its storage contract.
 
-This is capability addition, not automatic type widening or an ability to upgrade a borrowed read-only view. Restricting writable access to a read-only use must follow the eventual borrowing rules. Reversing that restriction cannot manufacture authority or exclusive access. An explicit mutable declaration from an existing copyable record instead creates a new shallow copy; it does not upgrade the original view. See [local shadowing and copies](local-shadowing-and-copies.md).
+This is capability addition, not automatic type widening or an ability to upgrade a borrowed read-only view. Restricting writable access to a read-only use must follow the eventual borrowing rules. Reversing that restriction cannot manufacture authority or exclusive access. An explicit mutable declaration from an existing copyable record instead creates a new shallow copy; it does not upgrade the original view. See [local shadowing and copies](lite://doc/local-shadowing-and-copies).
 
-For example, a projected union field may read C | D | E but permit writing only C. Adding mut does not widen that write contract to C | D | E. See [value types and access contracts](union-values-and-access.md).
+For example, a projected union field may read C | D | E but permit writing only C. Adding mut does not widen that write contract to C | D | E. See [value types and access contracts](lite://doc/union-values-and-access).
 
 ## Meaning of the default
 
@@ -58,9 +58,9 @@ These are design criteria, not selection of closure capture modes, transitive re
 
 ## Related concepts and references
 
-- [Principles](principles.md)
-- [Mutability and operation access](mutability.md)
-- [Declarations and assignment](declarations-and-assignment.md)
-- [Union field writes](union-field-writes.md)
-- [Tooling and learning](tooling-and-learning.md)
-- [Memory and performance](memory-and-performance.md)
+- [Principles](lite://doc/principles)
+- [Mutability and operation access](lite://doc/mutability)
+- [Declarations and assignment](lite://doc/declarations-and-assignment)
+- [Union field writes](lite://doc/union-field-writes)
+- [Tooling and learning](lite://doc/tooling-and-learning)
+- [Memory and performance](lite://doc/memory-and-performance)

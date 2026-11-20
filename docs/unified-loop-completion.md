@@ -2,7 +2,7 @@
 
 Status: **single receiverless then using the owning context, uniform source-less `Unit` item, zero-iteration placeholders, metadata-only state, and typed zero-initialized .value selected 2026-10-19; tagged return, explicit targeted break/continue, and then execution selected. Remaining open: full loop/result inference, cleanup ordering/attachment, and nonzero initialization**.
 
-Supporting synthesis: normative rules are owned by [loops](loops.md) for forms and metadata surface, [loop value](loop-value.md) for `.value`, [loop completion](loop-completion.md) for `then` and targeted exits, and [last item](loop-last-item.md) for completion-time item/index state. This page combines them for comparison; if wording conflicts, the owners win.
+Supporting synthesis: normative rules are owned by [loops](lite://doc/loops) for forms and metadata surface, [loop value](lite://doc/loop-value) for `.value`, [loop completion](lite://doc/loop-completion) for `then` and targeted exits, and [last item](lite://doc/loop-last-item) for completion-time item/index state. This page combines them for comparison; if wording conflicts, the owners win.
 
 ## Current syntax direction
 
@@ -24,9 +24,9 @@ One then block replaces the old then/empty-else/common-final combination for nor
 - .count: entered-iteration count, zero before entry and one-based during the body; final count remains available in then.
 - .value: the last committed body result, initialized to its statically determined type's valid all-zero value before iteration; final value remains available in then.
 
-If no body was entered, `.count == 0` distinguishes the zero `.item` and, for positional sources, `.index` placeholders from metadata for a real first iteration, whose index is also 0. A nonpositional source has no index placeholder. The source-less `.item` placeholder is `Unit`; an iterable placeholder is zero of the item type. The placeholders do not claim that an item was visited. See [zero-iteration placeholders](loop-last-item.md#zero-iteration-placeholders).
+If no body was entered, `.count == 0` distinguishes the zero `.item` and, for positional sources, `.index` placeholders from metadata for a real first iteration, whose index is also 0. A nonpositional source has no index placeholder. The source-less `.item` placeholder is `Unit`; an iterable placeholder is zero of the item type. The placeholders do not claim that an item was visited. See [zero-iteration placeholders](lite://doc/loop-last-item#zero-iteration-placeholders).
 
-A loop may name only its item with as name. Count/value receiver lists and completion receivers are retired. So are .acc, previous, automatic Option wrapping, and mandatory value_or extraction. See [loop value](loop-value.md) for typing, commits, and universal zero mappings.
+A loop may name only its item with as name. Count/value receiver lists and completion receivers are retired. So are .acc, previous, automatic Option wrapping, and mandatory value_or extraction. See [loop value](lite://doc/loop-value) for typing, commits, and universal zero mappings.
 
 ## Access through the owning loop tag
 
@@ -67,7 +67,7 @@ Assume score returns Int. Empty input and all-skipped input both leave value 0; 
 
 Then runs after exhaustion, a false condition, any `break` targeting this loop (bare, named without a payload, or with a value), or a tagged return to this loop. Plain `continue` and a payloadless break—bare or `break @loop`—preserve `.value`. `continue value` commits early; ordinary body completion commits its tail expression. `break value` and `break @loop value` commit their operand to `.value`, stop the selected loop, and still run `then`. A `return @loop value` commits T and runs this loop's `then`; a return targeting an outer construct skips this loop's `then`. Function returns, forwarded errors, and panics leave without supplying this loop's T.
 
-Construct-level `finally` is cleanup-only and runs after `then` on normal loop completion; applicable cleanup also runs when an exit skips `then`. Cleanup-failure precedence is selected: any already pending failure remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure cancels normal completion and becomes primary. Exact attachment scope and the `&` form's public value/operations remain open. Body-wide cleanup sections, defer, and scoped resources remain in the [deferred lifecycle review](deferred-cleanup-and-resources.md). Renaming a hook or adding metadata does not settle those remaining lifecycle rules.
+Construct-level `finally` is cleanup-only and runs after `then` on normal loop completion; applicable cleanup also runs when an exit skips `then`. Cleanup-failure precedence is selected: any already pending failure remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure cancels normal completion and becomes primary. Exact attachment scope and the `&` form's public value/operations remain open. Body-wide cleanup sections, defer, and scoped resources remain in the [deferred lifecycle review](lite://doc/deferred-cleanup-and-resources). Renaming a hook or adding metadata does not settle those remaining lifecycle rules.
 
 ## Open contracts
 
@@ -76,4 +76,4 @@ Construct-level `finally` is cleanup-only and runs after `then` on normal loop c
 - Ownership/lifetime mechanics for observed last-item state; unused fields require no completion retention.
 - Ownership, replacement cleanup, and representation/cost rules.
 
-Related: [full examples](loop-examples.md), [completion](loop-completion.md), [loop value](loop-value.md), [tags](tags-and-contexts.md), and [loops](loops.md).
+Related: [full examples](lite://doc/loop-examples), [completion](lite://doc/loop-completion), [loop value](lite://doc/loop-value), [tags](lite://doc/tags-and-contexts), and [loops](lite://doc/loops).

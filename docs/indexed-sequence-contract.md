@@ -37,7 +37,7 @@ show := fn(values: [Int]) {
 
 Both headers expose the same complete input requirement. This intentionally restricts show more than a traversal-only implementation needs; a general library version should use the separately named Iterable contract instead. The compiler must not silently weaken the annotated requirement merely because show does not index.
 
-The user accepts direct ordinary positional access: empty input faults safely instead of creating an undeclared Result. The later [shared recovery direction](expression-recovery.md) uses values[index] else { ... } for local typed-fault recovery. Full scope, fault typing, and transfer/cleanup still need specification.
+The user accepts direct ordinary positional access: empty input faults safely instead of creating an undeclared Result. The later [shared recovery direction](lite://doc/expression-recovery) uses values[index] else { ... } for local typed-fault recovery. Full scope, fault typing, and transfer/cleanup still need specification.
 
 ## Contract versus storage layout
 
@@ -45,7 +45,7 @@ User clarification, 2026-10-22: this collection type describes a promise/API, no
 
 A statically known provider retains its own layout under the proposed generic model. A future runtime-erased provider value would need its own explicit storage/dispatch contract; [T] does not silently select one. The contract declaration itself does not require a runtime object, container descriptor, or metadata dictionary.
 
-Keep three questions separate: the collection capability type, the concrete value/provider implementing it, and a bracket literal constructing that value. An empty value or zero-element payload does not assign a layout to the abstract contract. Bare [] as a complete element-less type spelling is not selected by this clarification; the existing [T] direction still specifies the element contract. See [memory and performance](memory-and-performance.md#collection-contracts-do-not-select-a-layout).
+Keep three questions separate: the collection capability type, the concrete value/provider implementing it, and a bracket literal constructing that value. An empty value or zero-element payload does not assign a layout to the abstract contract. Bare [] as a complete element-less type spelling is not selected by this clarification; the existing [T] direction still specifies the element contract. See [memory and performance](lite://doc/memory-and-performance#collection-contracts-do-not-select-a-layout).
 
 ## Writable refinement
 
@@ -64,7 +64,7 @@ The user identifies get_index, set_index, iterable, and count as the indexed-seq
 
 These names describe the intended hooks; complete interface declarations, associated types, receiver signatures, and implementation syntax remain deferred. Merely defining a similarly named method does not establish conformance. Immutable [T] does not expose a writable operation just because the provider has one.
 
-A setter must preserve the sequence's current length and positional structure. Push/pop are separate structural capabilities; see [end operations](sequence-end-operations.md). The count hook belongs to the [T] bundle and must not require enumeration.
+A setter must preserve the sequence's current length and positional structure. Push/pop are separate structural capabilities; see [end operations](lite://doc/sequence-end-operations). The count hook belongs to the [T] bundle and must not require enumeration.
 
 General Indexable can use nonpositional keys and need not be iterable or provide the [T] count guarantee. The common hook vocabulary does not grant it all [T] laws or require every lookup to return the same failure channel. Bounds behavior remains independently under review.
 
@@ -78,10 +78,10 @@ The [T;] candidate also needs a distinct semantic job before adoption. An omitte
 
 In the accepted direction, [T] in a generic input describes what the function requires. It must not automatically mean a heap-boxed interface object. The static provider can retain its own representation under the proposed generic model.
 
-Using the same contract in a record field, reassignable location, stored callback, or return still needs a representation rule. A capability set alone does not determine byte layout or justify copying an owner. The [function-signature review](collection-function-signatures.md) separates concrete, static-abstract, and explicit runtime-varying output models. Do not infer one of those representations merely from bracket appearance.
+Using the same contract in a record field, reassignable location, stored callback, or return still needs a representation rule. A capability set alone does not determine byte layout or justify copying an owner. The [function-signature review](lite://doc/collection-function-signatures) separates concrete, static-abstract, and explicit runtime-varying output models. Do not infer one of those representations merely from bracket appearance.
 
 ## Next decision
 
 The indexed bundle is accepted. Next review growth/removal capabilities, then choose whether [T; count] is an extent refinement or an owning inline array. Storage forms, complete hook signatures, and generic/interface grammar remain separate decisions.
 
-Related: [capabilities](collection-capabilities.md), [signature ergonomics](collection-signature-ergonomics.md), [sequence families](sequence-types.md), [arrays](arrays.md), [slices](slices.md), and [bounds policy](checked-fault-policy.md).
+Related: [capabilities](lite://doc/collection-capabilities), [signature ergonomics](lite://doc/collection-signature-ergonomics), [sequence families](lite://doc/sequence-types), [arrays](lite://doc/arrays), [slices](lite://doc/slices), and [bounds policy](lite://doc/checked-fault-policy).

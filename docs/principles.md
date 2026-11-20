@@ -2,7 +2,7 @@
 
 Status: **established goals; several implementation choices remain open**.
 
-The [LiteLang white paper](white-paper.md) is the foundational statement of the language's philosophy and design criteria. This page condenses those goals and their current consequences.
+The [LiteLang white paper](lite://doc/white-paper) is the foundational statement of the language's philosophy and design criteria. This page condenses those goals and their current consequences.
 
 ## Purpose
 
@@ -17,12 +17,12 @@ Let people and programming agents focus on problem solving through concise, read
   equal layout or bits do not alone establish equal type identity or meaning.
   Intent must be expressed through the language's defined source and type
   contracts, not guessed from a programmer's unstated thoughts. User direction,
-  2026-11-17; see [type categories](type-categories.md).
-- Draw selective inspiration from the [project reference languages](references.md#project-reference-languages). Each has useful parts; evaluate individual ideas against LiteLang's goals without adopting all of a language's features or design decisions.
+  2026-11-17; see [type categories](lite://doc/type-categories).
+- Draw selective inspiration from the [project reference languages](lite://doc/references#project-reference-languages). Each has useful parts; evaluate individual ideas against LiteLang's goals without adopting all of a language's features or design decisions.
 - Keep ceremony low and make programs easy to read, write, and reason about.
-- Make the first programming concepts approachable for learners who do not yet read English. Investigate [multilingual source and learning](multilingual-source-and-learning.md), retaining simple English as the shared reference presentation and one set of language semantics. Localized source remains a proposal; exact vocabularies and tooling are open.
+- Make the first programming concepts approachable for learners who do not yet read English. Investigate [multilingual source and learning](lite://doc/multilingual-source-and-learning), retaining simple English as the shared reference presentation and one set of language semantics. Localized source remains a proposal; exact vocabularies and tooling are open.
 - Make consequential behavior explicit through concise operations, including failure handling and caller mutation grants.
-- Output and execution tracing require explicit requests, including in demonstrators and playgrounds. Evaluating a value alone does not display it. See [explicit output and tracing](tooling-and-learning.md#explicit-output-and-tracing).
+- Output and execution tracing require explicit requests, including in demonstrators and playgrounds. Evaluating a value alone does not display it. See [explicit output and tracing](lite://doc/tooling-and-learning#explicit-output-and-tracing).
 - Evaluate convenience together with its semantic and runtime costs; ordinary abstractions should support efficient implementation with modest runtime machinery.
 - Static, strong typing with inference for ordinary code.
 - Functions, conditions, loops, modules, and packages.
@@ -30,17 +30,17 @@ Let people and programming agents focus on problem solving through concise, read
 - Optional data through `Option`; recoverable failure through `Result`.
 - Express ordinary source programs through values and explicit access permissions without requiring a raw pointer vocabulary; memory and foreign-interface contracts remain to be designed.
 - Declared typed recoverable errors, implicit success construction, postfix `!` propagation at each extracted Result step, and local `else` recovery with optional error receivers.
-- Operation-level `else` handles faults defined by its operation, excluding evaluated argument/operand panics. An explicit `{ ... } else { ... }` block selects broad recovery for supported typed panics from its executed contents and synchronous calls. See [recovery scopes](expression-recovery.md#operation-specific-panic-boundary-selected).
+- Operation-level `else` handles faults defined by its operation, excluding evaluated argument/operand panics. An explicit `{ ... } else { ... }` block selects broad recovery for supported typed panics from its executed contents and synchronous calls. See [recovery scopes](lite://doc/expression-recovery#operation-specific-panic-boundary-selected).
 - A separate typed panic path that unwinds exited scopes and runs applicable `finally` blocks before outer matching handlers; cleanup preserves any already pending failure as primary if cleanup also fails. Typed recovery filters consume matching aggregate members in declaration order. No-handler policy, hard aborts, aggregate representation/inspection, and duplicate-member handling remain open.
-- Immutability by default: fixed bindings and read-only access, with practical, explicit mutation capabilities through var and mut. See [the design goal](immutability-by-default.md).
+- Immutability by default: fixed bindings and read-only access, with practical, explicit mutation capabilities through var and mut. See [the design goal](lite://doc/immutability-by-default).
 - Minimal visibility and capability exposure by default.
-- Infer derived access type structure, keeping mathematical summaries such as A | var B | C out of routine code. Explicit type-side var in a function header declares caller replacement; local-only var belongs in the body. See [var access](var-access-qualifier.md) and [access ergonomics](slot-ergonomics.md).
+- Infer derived access type structure, keeping mathematical summaries such as A | var B | C out of routine code. Explicit type-side var in a function header declares caller replacement; local-only var belongs in the body. See [var access](lite://doc/var-access-qualifier) and [access ergonomics](lite://doc/slot-ergonomics).
 - Interfaces, modifiers, composition, and carefully scoped reuse instead of class inheritance as the primary model.
-- Collection consumers request the capabilities they need; standard and user implementations provide them. Shared element-typed APIs must not require primitive-wrapper collection families, conversion to one standard container, or a universal boxed-object representation. See [collection abstractions](collection-abstractions.md).
-- Treat fast native execution, low memory use, small runtime support, and small final executables as core design priorities. Ordinary native programs should not require a VM or tracing garbage collector; ownership, reclamation, backend, and linking mechanisms remain open. See [lightweight native execution](memory-and-performance.md#lightweight-native-execution-priority).
+- Collection consumers request the capabilities they need; standard and user implementations provide them. Shared element-typed APIs must not require primitive-wrapper collection families, conversion to one standard container, or a universal boxed-object representation. See [collection abstractions](lite://doc/collection-abstractions).
+- Treat fast native execution, low memory use, small runtime support, and small final executables as core design priorities. Ordinary native programs should not require a VM or tracing garbage collector; ownership, reclamation, backend, and linking mechanisms remain open. See [lightweight native execution](lite://doc/memory-and-performance#lightweight-native-execution-priority).
 - Syntax whose meaning does not depend on indentation, tabs, spaces, or line boundaries.
-- Optional redundancy may improve writing and visual consistency without changing meaning: selected [leading separators](leading-separators.md) let every Boolean-expression, condition, pattern-alternative, or union entry use the same shape while preserving compact forms and explicit operand boundaries.
-- A connected design gradient: small source changes should have local, predictable meaning; similar-looking constructs should share rules; any semantic jump needs a visible source/type/target boundary. See [continuity and analogical coherence](continuity-and-analogy.md).
+- Optional redundancy may improve writing and visual consistency without changing meaning: selected [leading separators](lite://doc/leading-separators) let every Boolean-expression, condition, pattern-alternative, or union entry use the same shape while preserving compact forms and explicit operand boundaries.
+- A connected design gradient: small source changes should have local, predictable meaning; similar-looking constructs should share rules; any semantic jump needs a visible source/type/target boundary. See [continuity and analogical coherence](lite://doc/continuity-and-analogy).
 - One conditional syntax for actions and values.
 - One `loop` keyword for the supported iteration modes.
 
@@ -60,18 +60,18 @@ require a module/import subsystem. Likewise, replaceable std, interface/provider
 layout, metaprogramming, and macro/preprocessing mechanisms are later questions.
 Supported features still follow their selected semantics, effects remain
 explicit, and unsupported features receive clear diagnostics. Selected
-2026-10-30: a [small interpreter](tooling-and-learning.md#fvp-interpreter) reads,
+2026-10-30: a [small interpreter](lite://doc/tooling-and-learning#fvp-interpreter) reads,
 parses/checks, and executes the supported subset for the FVP. Native compilation
-remains a later goal. The [first executable checkpoint](tooling-and-learning.md#first-executable-checkpoint)
+remains a later goal. The [first executable checkpoint](lite://doc/tooling-and-learning#first-executable-checkpoint)
 selects scalar values, bindings/replacement, basic arithmetic, and temporary
 helper calls; numeric/text details remain open. The TypeScript/Node igniter is selected below.
 
-The selected [temporary input/reporting helpers](tooling-and-learning.md#temporary-fvp-input-and-reporting)
+The selected [temporary input/reporting helpers](lite://doc/tooling-and-learning#temporary-fvp-input-and-reporting)
 provide a minimal FVP surface: inputInt, inputFloat, inputLine, inputWord,
 outputLine(...), and reportError(...). These provisional names do not require the
 future module/standard-library design; exact I/O contracts remain open.
 
-Selected 2026-10-30: TypeScript/Node is a minimal [bootstrap igniter](tooling-and-learning.md#typescript-igniter-and-early-self-hosting),
+Selected 2026-10-30: TypeScript/Node is a minimal [bootstrap igniter](lite://doc/tooling-and-learning#typescript-igniter-and-early-self-hosting),
 not a long-term compiler foundation. Switch compiler development to LiteLang as
 soon as it can support it; preserve a downloadable source-bootstrap path from
 the retired igniter through compatible compiler revisions to the current compiler.
@@ -84,12 +84,12 @@ Selected 2026-10-28: begin with a tiny working demonstrator for experimenting
 with LiteLang features, then grow toward a first useful milestone of practical
 scripts with command-line arguments, console input/output, and file processing.
 The exercise corpus supplies use cases. The
-[initial correctness batch](../language/samples/NOTES.md#initial-correctness-batch) is
+[initial correctness batch](lite://repo/language/samples/NOTES.md#initial-correctness-batch) is
 001–020, exercised incrementally; exact later milestone coverage remains open.
 Foreign calls, explicit memory placement, and concurrency remain later
 investigations outside that first useful milestone.
 
-The [source kinds](modules-and-packages.md#distinct-script-and-module-files)
+The [source kinds](lite://doc/modules-and-packages#distinct-script-and-module-files)
 are distinct: .lts scripts prioritize convenient execution; .lt module files
 require explicit module qualification or member introduction, with no implicit
 imports even for core type names. Standard module/file providers are intended
@@ -127,11 +127,11 @@ loop users as user {
 }
 ```
 
-The loop's optional item identifier uses the selected `as` separator; header destructuring and receiver lists are retired. See [loop receivers](loop-receivers.md).
+The loop's optional item identifier uses the selected `as` separator; header destructuring and receiver lists are retired. See [loop receivers](lite://doc/loop-receivers).
 
 ## Beginner-facing defaults
 
-The compiler infers types; it does not remove them. A mutable integer binding cannot later hold text. Braces always delimit bodies. The official formatter chooses presentation without changing behavior. Its selected [chain presentation](leading-separators.md#formatter-presentation-selected) keeps multi-entry chains compact without a leader or aligns multiline entries with leading separators; source layout remains semantically irrelevant. Early returns are encouraged when they make the main path flatter.
+The compiler infers types; it does not remove them. A mutable integer binding cannot later hold text. Braces always delimit bodies. The official formatter chooses presentation without changing behavior. Its selected [chain presentation](lite://doc/leading-separators#formatter-presentation-selected) keeps multi-entry chains compact without a leader or aligns multiline entries with leading separators; source layout remains semantically irrelevant. Early returns are encouraged when they make the main path flatter.
 
 Advanced facilities should be introduced as students need them. This is a teaching progression within one language, not a dynamically typed beginner dialect and a separate systems dialect.
 
@@ -139,14 +139,14 @@ Selected 2026-10-28: ordinary code should receive safe automatic storage and
 cleanup without routine manual memory or explicit ownership/lifetime bookkeeping.
 Advanced memory controls must remain available through an explicit step with
 little ceremony, such as a possible built-in memory-module import. The
-[memory-control boundary](memory-and-performance.md#ordinary-and-advanced-memory-control)
+[memory-control boundary](lite://doc/memory-and-performance#ordinary-and-advanced-memory-control)
 owns this goal; module/API syntax and the memory-management mechanism remain open.
 
 ## Performance expectations
 
 Selected priority, 2026-10-28: Lite must be light in deployed cost as well as source ceremony. Aim for performance near C on suitable workloads, low allocation and memory overhead, fast startup, small runtime support, and small final executables. Review feature costs against each measure; a speed improvement does not automatically justify greater code size or runtime complexity. Preserve selected safety and observable behavior.
 
-Measure execution time, cold/warm startup, compilation latency, executable and required support size, allocations, peak memory, and tail latency separately. Numeric budgets and representative workloads still need investigation. No universal C-speed, no-allocation, zero-runtime, or executable-size guarantee is established. See [measurement requirements](memory-and-performance.md#performance-evidence-and-size-accounting) and the [investigation focus](../research/investigations/lightweight-native-execution.md).
+Measure execution time, cold/warm startup, compilation latency, executable and required support size, allocations, peak memory, and tail latency separately. Numeric budgets and representative workloads still need investigation. No universal C-speed, no-allocation, zero-runtime, or executable-size guarantee is established. See [measurement requirements](lite://doc/memory-and-performance#performance-evidence-and-size-accounting) and the [investigation focus](lite://repo/research/investigations/lightweight-native-execution.md).
 
 ## Resolving competing goals
 
@@ -176,7 +176,7 @@ The memory model is not selected. Type-system scope, exact visibility syntax, mo
 
 ## Related concepts and references
 
-- [Types and inference](types-and-inference.md)
-- [Memory and performance](memory-and-performance.md)
-- [Tooling and learning](tooling-and-learning.md)
-- [References](references.md), especially the novice-syntax research.
+- [Types and inference](lite://doc/types-and-inference)
+- [Memory and performance](lite://doc/memory-and-performance)
+- [Tooling and learning](lite://doc/tooling-and-learning)
+- [References](lite://doc/references), especially the novice-syntax research.

@@ -12,7 +12,7 @@ Status: **explicitly deferred by the user, 2026-10-19**. The body-wide special-s
 
 ## Questions to revisit together
 
-- Body-wide recovery/finally sections: attachment, delimiters, activation scope, and values. Retain the [body-section examples](body-recovery.md#concrete-body-section-proposal) as candidates only, including their unselected semicolon rule.
+- Body-wide recovery/finally sections: attachment, delimiters, activation scope, and values. Retain the [body-section examples](lite://doc/body-recovery#concrete-body-section-proposal) as candidates only, including their unselected semicolon rule.
 - Deferred actions: registration order, when captured expressions are evaluated, and which exits execute them.
 - Scoped resources: acquisition, ownership, disposal, partial initialization, and invalidation after cleanup. Async disposal belongs to a future async design; it is not introduced here.
 - Interaction with function returns, tagged returns, break/continue, propagated errors, and panics at body-wide scope.
@@ -25,4 +25,4 @@ Review these as one lifecycle design before selecting syntax. Do not independent
 
 [TypeScript 5.2: using declarations and explicit resource management](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html) provides a reference for using/await using and scoped disposal. This is comparison material, not adopted LiteScript syntax.
 
-Related: [body-owned recovery](body-recovery.md), [finally](finally.md), [operation recovery](expression-recovery.md), and [decisions](decisions-and-open-questions.md).
+Related: [body-owned recovery](lite://doc/body-recovery), [finally](lite://doc/finally), [operation recovery](lite://doc/expression-recovery), and [decisions](lite://doc/decisions-and-open-questions).

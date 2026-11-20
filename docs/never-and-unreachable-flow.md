@@ -82,6 +82,6 @@ These are project review topics, not accepted source syntax or implemented compi
 
 ## Related documents
 
-- [Type tests and narrowing](type-tests-and-narrowing.md), [assignment flow types](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected), and [condition chains](condition-chains.md).
-- [Branch-result inference](branch-result-inference.md), [conditional fallbacks](conditional-union-fallback.md), and [Unit](unit.md).
-- [Union normalization](union-normalization.md), [common field reads](union-field-reads.md#missing-fields-are-not-bottom-types), and [types and inference](types-and-inference.md).
+- [Type tests and narrowing](lite://doc/type-tests-and-narrowing), [assignment flow types](lite://doc/type-tests-and-narrowing#flow-types-after-direct-assignment-selected), and [condition chains](lite://doc/condition-chains).
+- [Branch-result inference](lite://doc/branch-result-inference), [conditional fallbacks](lite://doc/conditional-union-fallback), and [Unit](lite://doc/unit).
+- [Union normalization](lite://doc/union-normalization), [common field reads](lite://doc/union-field-reads#missing-fields-are-not-bottom-types), and [types and inference](lite://doc/types-and-inference).

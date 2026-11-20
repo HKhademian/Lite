@@ -73,17 +73,17 @@ Destination bindings appear on the left and source fields on the right:
 
 The first binds the x field as leftX. The second constrains and binds it. The third type-tests and binds it as x; the fourth only type-tests it. The source record establishes the named fields, so the pattern needs no redundant record type head. General nested destination patterns follow the same direction.
 
-This supersedes both the earlier field as localName proposal and the reversed field = localName mapping. Loop `as` is independently selected for its one optional item identifier; destructuring uses a body declaration such as `(left, right) := pair`. See [aggregate clauses](aggregate-patterns.md#named-field-clauses) and [loop item naming](loop-receivers.md).
+This supersedes both the earlier field as localName proposal and the reversed field = localName mapping. Loop `as` is independently selected for its one optional item identifier; destructuring uses a body declaration such as `(left, right) := pair`. See [aggregate clauses](lite://doc/aggregate-patterns#named-field-clauses) and [loop item naming](lite://doc/loop-receivers).
 
 ## Selected duplicate-binding policy
 
-Repeated destination names within one pattern are permitted. Bind in recursive written order; the later binding shadows the earlier one. This includes `_`, which is an ordinary readable name with permission to be unused. `(x, x)` binds both components and exposes the second as x; it does not compare them. The earlier recommendation to reject duplicates is superseded. See [pattern binding and shadowing](pattern-shadowing.md).
+Repeated destination names within one pattern are permitted. Bind in recursive written order; the later binding shadows the earlier one. This includes `_`, which is an ordinary readable name with permission to be unused. `(x, x)` binds both components and exposes the second as x; it does not compare them. The earlier recommendation to reject duplicates is superseded. See [pattern binding and shadowing](lite://doc/pattern-shadowing).
 
 Aliases remain useful when both selected values must stay accessible. Selected localName = field binds only localName; it does not also introduce the source field's name. Its destination participates in the same ordering rule.
 
-Repeated names in distinct match arms remain independent. Successful bindings across conditional-chain and subject-based match-guard operands now shadow in order, with each source resolving before its new bindings. Use different names when both values must remain accessible; see [chain shadowing](condition-chains.md#ordered-shadowing-across-operands-selected). Complete schema rules, named versus positional mixing, field effects, and ownership remain open. Define duplicate source-field selection separately: selecting one source field twice must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.
+Repeated names in distinct match arms remain independent. Successful bindings across conditional-chain and subject-based match-guard operands now shadow in order, with each source resolving before its new bindings. Use different names when both values must remain accessible; see [chain shadowing](lite://doc/condition-chains#ordered-shadowing-across-operands-selected). Complete schema rules, named versus positional mixing, field effects, and ownership remain open. Define duplicate source-field selection separately: selecting one source field twice must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.
 
 ## Related concepts
 
-- [Pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first).
-- [Tuples and patterns](tuples-and-patterns.md), [identifiers](identifiers.md), and [pattern binding inference](pattern-binding-inference.md).
+- [Pattern context review](lite://doc/pattern-contexts#review-findings-and-decisions-to-settle-first).
+- [Tuples and patterns](lite://doc/tuples-and-patterns), [identifiers](lite://doc/identifiers), and [pattern binding inference](lite://doc/pattern-binding-inference).

@@ -4,7 +4,7 @@ Status: **selected 2026-10-25 for ordinary value parameters; language design, no
 
 ## Public contract and implementation responsibilities
 
-The public callable contract records whether an input may be omitted. The implementation owns default definitions and handling. Ordinary user implementations own the default expressions used to supply missing inputs; the zero implementation has the selected no-execution behavior below. The public contract does not prescribe the expression or freeze its resulting value. The user explicitly clarifies that no signature can provide or alter a default: it records omission permission, while the implementation owns that promise and handling. See [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise).
+The public callable contract records whether an input may be omitted. The implementation owns default definitions and handling. Ordinary user implementations own the default expressions used to supply missing inputs; the zero implementation has the selected no-execution behavior below. The public contract does not prescribe the expression or freeze its resulting value. The user explicitly clarifies that no signature can provide or alter a default: it records omission permission, while the implementation owns that promise and handling. See [implementation-owned default promises](lite://doc/callable-value-variance#omission-remains-an-implementation-promise).
 
 ```text
 one := fn(n: Int = 1): Int { n * 10 }
@@ -76,7 +76,7 @@ required(3);  /* 30 */
 required();   /* rejected: this public contract requires n */
 ```
 
-The shown fn(n: Int): Int spelling has a required input. The default behind the value does not enable omission through that view. This selects the omission dimension of compatibility; it does not complete all callable conversions. Supported ordinary [safe callable value adaptation](callable-value-variance.md) is selected separately; narrowed ordinary omission-capable views preserve implementation-owned default promises. Basic var T inputs are invariant under [var T callable invariance](callable-value-variance.md#var-parameters-keep-their-value-type); mut/other access adaptation, captures, and representation remain separate.
+The shown fn(n: Int): Int spelling has a required input. The default behind the value does not enable omission through that view. This selects the omission dimension of compatibility; it does not complete all callable conversions. Supported ordinary [safe callable value adaptation](lite://doc/callable-value-variance) is selected separately; narrowed ordinary omission-capable views preserve implementation-owned default promises. Basic var T inputs are invariant under [var T callable invariance](lite://doc/callable-value-variance#var-parameters-keep-their-value-type); mut/other access adaptation, captures, and representation remain separate.
 
 Likewise, in the existing contextual example:
 
@@ -97,7 +97,7 @@ For otherwise compatible ordinary input/result/access contracts:
 - An omission-capable public contract requires valid omission handling from its implementation. Ordinary user implementations supply a valid declared default for every omittable input; the zero implementation satisfies omission under the separate no-execution rule below without an expression definition.
 - An ordinary user implementation lacking such a default cannot satisfy the omission-capable contract merely because its input type has a zero value. Reject that assignment or replacement; do not silently create a default or wrapper.
 
-The same obligation applies when passing, returning, or replacing callable values. A value known only through a required-input contract does not acquire public omission capability from a hidden implementation default. Supported ordinary [safe callable value adaptation](callable-value-variance.md) is selected separately without a required manual wrapper; an omission-capable narrowed input view is now selected too, provided the source contract promises omission. The adapter preserves omission instead of constructing a value of the narrowed public type; see [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise).
+The same obligation applies when passing, returning, or replacing callable values. A value known only through a required-input contract does not acquire public omission capability from a hidden implementation default. Supported ordinary [safe callable value adaptation](lite://doc/callable-value-variance) is selected separately without a required manual wrapper; an omission-capable narrowed input view is now selected too, provided the source contract promises omission. The adapter preserves omission instead of constructing a value of the narrowed public type; see [implementation-owned default promises](lite://doc/callable-value-variance#omission-remains-an-implementation-promise).
 
 Different compatible implementation defaults can produce different values or perform different otherwise valid effects. Every default must still fit the implementation's own established input type, failure contract, and ordinary access/initialization obligations. A later narrower callable view constrains caller-supplied values and cannot replace, convert, or recheck that default against its narrower public input type. Changing a default from 1 to 2 preserves an inferred Int input; changing it to "two" can change an independently inferred input to String and therefore break compatibility with an Int contract. Implementation ownership does not authorize changing a fixed public type.
 
@@ -105,11 +105,11 @@ Different compatible implementation defaults can produce different values or per
 
 Omission permission is checked against the public contract, and compatibility ensures valid implementation handling. For an ordinary user implementation, its default expression comes from the callable selected when the callee is evaluated once. The selected zero implementation instead skips body/default execution as described below. Subsequent preparation does not reselect a different implementation merely because a caller variable holding a callable changes.
 
-For ordinary user implementations, keep [selected timing](evaluation-order.md#default-argument-evaluation-selected): evaluate the callee, supplied expressions in written order and finish routing, then only missing applicable defaults in declaration order, then invoke. Owning the expression does not move its evaluation into the user body, evaluate it at definition time, cache its first result, or make it a caller-owned expression.
+For ordinary user implementations, keep [selected timing](lite://doc/evaluation-order#default-argument-evaluation-selected): evaluate the callee, supplied expressions in written order and finish routing, then only missing applicable defaults in declaration order, then invoke. Owning the expression does not move its evaluation into the user body, evaluate it at definition time, cache its first result, or make it a caller-owned expression.
 
-Supplied final inputs skip their defaults. Permitted spread replacement, [earlier-parameter reads](parameter-default-inference.md#defaults-may-read-earlier-parameters), static default validation, ordinary copies, and entry-time permission/initialization checks retain their contracts. Both ordinary invocation and intrinsic .call use the same public omission checks and selected implementation's handling. No general implicit-zero argument fallback is added; zero-callable omission is the specific rule below.
+Supplied final inputs skip their defaults. Permitted spread replacement, [earlier-parameter reads](lite://doc/parameter-default-inference#defaults-may-read-earlier-parameters), static default validation, ordinary copies, and entry-time permission/initialization checks retain their contracts. Both ordinary invocation and intrinsic .call use the same public omission checks and selected implementation's handling. No general implicit-zero argument fallback is added; zero-callable omission is the specific rule below.
 
-A view may also expose a wider declared error/success output under [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes). This does not alter implementation defaults or authorize their code to escape errors outside the implementation's own declared error contract. The adapter preserves the outcome branch; caller handling remains explicit.
+A view may also expose a wider declared error/success output under [fallible callable outcome widening](lite://doc/callable-value-variance#fallible-callable-views-may-widen-outcomes). This does not alter implementation defaults or authorize their code to escape errors outside the implementation's own declared error contract. The adapter preserves the outcome branch; caller handling remains explicit.
 
 ## Zero-callable omission selected
 
@@ -147,9 +147,9 @@ Zero-callable omission is now selected above: no actual default definition or ex
 
 ## Related documents
 
-- [Parameter default inference](parameter-default-inference.md)
-- [Argument omission](union-parameter-defaults.md)
-- [Functions](functions.md#omitted-value-arguments)
-- [Callable input packs](callable-input-packs.md)
-- [Evaluation order](evaluation-order.md#default-argument-evaluation-selected)
-- [Zero-initialized functions](zero-initialization.md#zero-initialized-functions)
+- [Parameter default inference](lite://doc/parameter-default-inference)
+- [Argument omission](lite://doc/union-parameter-defaults)
+- [Functions](lite://doc/functions#omitted-value-arguments)
+- [Callable input packs](lite://doc/callable-input-packs)
+- [Evaluation order](lite://doc/evaluation-order#default-argument-evaluation-selected)
+- [Zero-initialized functions](lite://doc/zero-initialization#zero-initialized-functions)

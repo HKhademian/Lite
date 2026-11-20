@@ -45,4 +45,4 @@ Manual panic emission is distinct from explicit outward forwarding of a caught g
 
 `r1` selects custom failure capability, required-operand manual raise with category-based channels, and escaping-error inference within the existing eligible body-inference boundary. It retains explicit/expected contract checking and records unresolved declaration, forwarding, and recursive-inference boundaries. No release or execution result is created.
 
-Normative owner: [manual failures and inference](../manual-failures-and-inference.md). Related: [functions](../functions.md), [Result](../result-and-errors.md), [capture](../failure-capture-and-unwrapping.md), and [remaining shortfalls](../failure-handling-shortfalls.md).
+Normative owner: [manual failures and inference](lite://doc/manual-failures-and-inference). Related: [functions](lite://doc/functions), [Result](lite://doc/result-and-errors), [capture](lite://doc/failure-capture-and-unwrapping), and [remaining shortfalls](lite://doc/failure-handling-shortfalls).

@@ -1,8 +1,8 @@
 # Manual failures and escaping-error inference
 
-Status: **selected, 2026-10-27; unreleased design**, [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md) for custom failures/inference and [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md) for current raise targeting. Untagged raise targets the nearest function/closure for both Error and Panic; an explicit block tag selects a local boundary. LP-0014 supersedes LP-0012's earlier local interception of bare Panic raise. Category syntax/overlap, general recursive/public inference, and unmatched-remainder exit policy remain open.
+Status: **selected, 2026-10-27; unreleased design**, [LP-0012 r1](lite://doc/proposals/LP-0012-manual-failures-and-error-inference) for custom failures/inference and [LP-0014 r1](lite://doc/proposals/LP-0014-directed-failure-exits) for current raise targeting. Untagged raise targets the nearest function/closure for both Error and Panic; an explicit block tag selects a local boundary. LP-0014 supersedes LP-0012's earlier local interception of bare Panic raise. Category syntax/overlap, general recursive/public inference, and unmatched-remainder exit policy remain open.
 
-Normative for manual raise and the extension to ordinary [function result inference](functions.md#independent-lambda-result-inference). [Result and errors](result-and-errors.md) owns outcomes, [capture and unwrapping](failure-capture-and-unwrapping.md) owns ?/!, and [expression recovery](expression-recovery.md) owns ordered consumption. The [shortfalls list](failure-handling-shortfalls.md) separates selected behavior from unfinished decisions.
+Normative for manual raise and the extension to ordinary [function result inference](lite://doc/functions#independent-lambda-result-inference). [Result and errors](lite://doc/result-and-errors) owns outcomes, [capture and unwrapping](lite://doc/failure-capture-and-unwrapping) owns ?/!, and [expression recovery](lite://doc/expression-recovery) owns ordered consumption. The [shortfalls list](lite://doc/failure-handling-shortfalls) separates selected behavior from unfinished decisions.
 
 ## Custom categories and explicit raising
 
@@ -99,7 +99,7 @@ A DisabledUser error may not escape this declared contract unless explicitly map
 
 ## Directed raise boundaries
 
-Selected [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md): the same destination convention applies to normal values and failures:
+Selected [LP-0014 r1](lite://doc/proposals/LP-0014-directed-failure-exits): the same destination convention applies to normal values and failures:
 
 ```text
 return value;             /* nearest function/closure, normal completion */
@@ -140,7 +140,7 @@ tmp2 := tmp1 else :ErrA @handler {
 tmp3 := tmp2 else :ErrB { recover_b() }
 ```
 
-This trace already explains local handler completion and the retained ErrB remainder. A temporary binding itself does not unwrap anything. These are expression/outcome layers, not a general eager-statement lowering for live panics. LP-0015 now settles plain function return: it skips later layers and abandons the unfinished captured recovery, without forwarding its unmatched categories. The residual type describes only paths reaching the next declaration. Failure-directed raise/! and other nonlocal tagged exits retain the narrower [remainder question](failure-handling-shortfalls.md#1-exits-with-an-unmatched-remainder).
+This trace already explains local handler completion and the retained ErrB remainder. A temporary binding itself does not unwrap anything. These are expression/outcome layers, not a general eager-statement lowering for live panics. LP-0015 now settles plain function return: it skips later layers and abandons the unfinished captured recovery, without forwarding its unmatched categories. The residual type describes only paths reaching the next declaration. Failure-directed raise/! and other nonlocal tagged exits retain the narrower [remainder question](lite://doc/failure-handling-shortfalls#1-exits-with-an-unmatched-remainder).
 
 Local manual failure handling uses an explicit block target:
 
@@ -179,9 +179,9 @@ A later else on tmp2 may handle Err2. The shown ! instead extracts T on success 
 
 ## Raising and outward forwarding are different
 
-Raise forwards explicitly supplied failures, scalar or spread, to its chosen boundary. outcome! extracts one complete stored outcome's success or forwards all its retained failures to the nearest function/closure. Existing caught values and new Error/Panic values use the same raise target rules. A typed scalar catch exposes the first match and discards other matches under [LP-0013](proposals/LP-0013-scalar-recovery-selection.md); raising that one value cannot revive discarded matches. Use ...errs to retain and raise every match.
+Raise forwards explicitly supplied failures, scalar or spread, to its chosen boundary. outcome! extracts one complete stored outcome's success or forwards all its retained failures to the nearest function/closure. Existing caught values and new Error/Panic values use the same raise target rules. A typed scalar catch exposes the first match and discards other matches under [LP-0013](lite://doc/proposals/LP-0013-scalar-recovery-selection); raising that one value cannot revive discarded matches. Use ...errs to retain and raise every match.
 
-Supplying a group is now selected syntax, not a separate future forwarding operator. The remaining [LP-0011 r4](proposals/LP-0011-explicit-failure-raising.md) issue is other unmatched failures during failure-directed or other nonlocal tagged exits, plus provenance/transport details. LP-0015 separately settles plain return from captured recovery as abandonment, with no extra forwarding or rejection. Carrying those remainders alongside supplied failures is the reviewed recommendation; the alternative of rejecting an exit until its remainder is handled is not yet ruled out. No remainder may silently vanish. Custom classification of ambiguous/overlapping operands and concrete origin metadata remain open.
+Supplying a group is now selected syntax, not a separate future forwarding operator. The remaining [LP-0011 r4](lite://doc/proposals/LP-0011-explicit-failure-raising) issue is other unmatched failures during failure-directed or other nonlocal tagged exits, plus provenance/transport details. LP-0015 separately settles plain return from captured recovery as abandonment, with no extra forwarding or rejection. Carrying those remainders alongside supplied failures is the reviewed recommendation; the alternative of rejecting an exit until its remainder is handled is not yet ruled out. No remainder may silently vanish. Custom classification of ambiguous/overlapping operands and concrete origin metadata remain open.
 
 ## Runtime boundary
 
@@ -190,4 +190,4 @@ Function-directed Error raise can use typed outcome returns; tagged block raise 
 
 ## Implicit panics and literal outcome data
 
-[LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md) prohibits checked live-panic effect declarations or inferred exhaustive live-panic lists. Manual/generated supported panics retain their selected implicit channel and directed-raise scope rules without enumeration in every caller signature. A function deliberately returning a captured outcome instead returns literal T ! Panic data; ordinary calls preserve it. Recapture is legal under LP-0016. LP-0017 .err(e) exposes the first stored failure, while .err(...es) exposes all; raise e forwards only the scalar and raise ...es forwards the collected group. Category declaration/conformance syntax and source data ownership remain separate open questions. Documentary known-fault annotations are non-exhaustive and still under investigation.
+[LP-0018 r1](lite://doc/proposals/LP-0018-implicit-panics-without-effect-declarations) prohibits checked live-panic effect declarations or inferred exhaustive live-panic lists. Manual/generated supported panics retain their selected implicit channel and directed-raise scope rules without enumeration in every caller signature. A function deliberately returning a captured outcome instead returns literal T ! Panic data; ordinary calls preserve it. Recapture is legal under LP-0016. LP-0017 .err(e) exposes the first stored failure, while .err(...es) exposes all; raise e forwards only the scalar and raise ...es forwards the collected group. Category declaration/conformance syntax and source data ownership remain separate open questions. Documentary known-fault annotations are non-exhaustive and still under investigation.

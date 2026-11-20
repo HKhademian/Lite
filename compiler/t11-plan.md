@@ -1,7 +1,7 @@
 # T11/T12 atomic implementation plan
 
 Historical T11/T12 slice record, 2026-11-01. The later owner-approved
-[transition](transition-plan.md) and [I/O migration](parity.md#temporary-io-migration)
+[transition](lite://doc/compiler/transition-plan) and [I/O migration](lite://doc/compiler/parity#temporary-io-migration)
 own current names/counts; the checkpoint counts and scope below remain historical.
 Original target order was T00 → T11 → T12 only, with C/P7 waiting.
 

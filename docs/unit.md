@@ -35,9 +35,9 @@ Represent successful completion without useful payload data. `Unit` is not an ab
 
 ## Absent names in arm alternatives
 
-Initial match-arm alternatives may bind different names. The shared guard/body receives Unit for a name absent from the successful alternative: Email(email)/Sms(phone) patterns produce email: String | Unit and phone: PhoneNumber | Unit. Unit is an initialized ordinary value here, not a new absence tag or a replacement for an unhandled control-flow path. A genuine Unit payload and absent-name Unit cannot be distinguished through that binding alone. Complete condition/guard or alternatives now use the same rule, including Boolean-only alternatives: `if .Some(user) := find_user(id) or guest_allowed` gives user: User | Unit on success. Unit-filled new bindings shadow outer names; no names escape an all-false condition or a grouped negation. See [differently named arm bindings](match.md#differently-named-arm-bindings-selected).
+Initial match-arm alternatives may bind different names. The shared guard/body receives Unit for a name absent from the successful alternative: Email(email)/Sms(phone) patterns produce email: String | Unit and phone: PhoneNumber | Unit. Unit is an initialized ordinary value here, not a new absence tag or a replacement for an unhandled control-flow path. A genuine Unit payload and absent-name Unit cannot be distinguished through that binding alone. Complete condition/guard or alternatives now use the same rule, including Boolean-only alternatives: `if .Some(user) := find_user(id) or guest_allowed` gives user: User | Unit on success. Unit-filled new bindings shadow outer names; no names escape an all-false condition or a grouped negation. See [differently named arm bindings](lite://doc/match#differently-named-arm-bindings-selected).
 
-Unit has one real value. An exhausted type-test remainder has no possible values and uses the selected internal Never read type in an unreachable conditional branch; it does not produce Unit or widen a result union. See [Never and unreachable flow](never-and-unreachable-flow.md).
+Unit has one real value. An exhausted type-test remainder has no possible values and uses the selected internal Never read type in an unreachable conditional branch; it does not produce Unit or widen a result union. See [Never and unreachable flow](lite://doc/never-and-unreachable-flow).
 
 ## Unit versus None
 
@@ -64,7 +64,7 @@ done: Unit = ();
 also_done: () = Unit;
 ```
 
-The [cross-context review](tuple-entries-and-access.md#empty-and-singleton-review-across-contexts) retains the evaluated alternatives and remaining type/pattern questions. A singleton containing Unit remains distinct from Unit. Unit has no .0 component; f() passes zero arguments while f(()) explicitly passes one Unit argument. The existing zero mapping, Option/Result distinctions, and declared-default-only omission rule apply unchanged. Empty tuple identity does not select a new ABI or automatic conversion of nominal empty records.
+The [cross-context review](lite://doc/tuple-entries-and-access#empty-and-singleton-review-across-contexts) retains the evaluated alternatives and remaining type/pattern questions. A singleton containing Unit remains distinct from Unit. Unit has no .0 component; f() passes zero arguments while f(()) explicitly passes one Unit argument. The existing zero mapping, Option/Result distinctions, and declared-default-only omission rule apply unchanged. Empty tuple identity does not select a new ABI or automatic conversion of nominal empty records.
 
 ## Zero storage does not erase shape
 
@@ -107,17 +107,17 @@ done: Unit = ();
 
 [Unit; 5] has five semantic positions and one possible initialized element sequence. Its count five belongs to its static type; it needs neither element payload bytes nor a runtime count field. The literal [(), (), ()] similarly has three positions, not zero. [Int; 0] retains its array element type and indexing contract despite having no elements. Neither equal storage nor having one possible initialized value identifies these arrays with Unit or with each other.
 
-A runtime-sized array of Unit can have different observable lengths and traversal counts. Its runtime count must be available from the array/container; Unit does not gain hidden information. The same applies to a runtime-sized Unit tail accessed through value.rest. An established fixed [Unit; N] member can now be declared as (...rest: Unit; N); it retains N semantic elements without element payload or an array runtime count field. The general (...rest: ()) schema alone still states no exact N. A fixed ...rest: T; 0 remains a declared empty array member, not Unit. See [array-segment extents](tuple-array-segments.md). A length learned only at runtime does not become a compile-time extent.
+A runtime-sized array of Unit can have different observable lengths and traversal counts. Its runtime count must be available from the array/container; Unit does not gain hidden information. The same applies to a runtime-sized Unit tail accessed through value.rest. An established fixed [Unit; N] member can now be declared as (...rest: Unit; N); it retains N semantic elements without element payload or an array runtime count field. The general (...rest: ()) schema alone still states no exact N. A fixed ...rest: T; 0 remains a declared empty array member, not Unit. See [array-segment extents](lite://doc/tuple-array-segments). A length learned only at runtime does not become a compile-time extent.
 
 A union discriminator likewise belongs to the union representation, even when an alternative has no payload. Statically known type distinctions need no tag in each Unit value. Any future runtime-erased type facility must retain its own required information.
 
-Assuming print returns Unit, [print("A"), print("B")] still executes both calls once in written order and constructs a two-position Unit array. Zero-byte storage does not erase evaluation, failures, or required cleanup. See [fixed-array layout and runtime metadata](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage).
+Assuming print returns Unit, [print("A"), print("B")] still executes both calls once in written order and constructs a two-position Unit array. Zero-byte storage does not erase evaluation, failures, or required cleanup. See [fixed-array layout and runtime metadata](lite://doc/memory-and-performance#fixed-arrays-share-homogeneous-tuple-storage).
 
 ## Empty declared tails are distinct
 
-Unit has no components and no declared array tail. A tuple with an explicitly declared rest segment remains tail-bearing when that array is empty: b := (...rest = arr0), for arr0: [Int; 0], has a rest member and is not Unit. By contrast, inferred (...arr0) contributes zero fixed components and yields Unit. A one-element fixed-array spread yields a fixed singleton tuple, while an explicit one-element rest declaration remains a tail-bearing tuple. Call expansion can supply the same input sequence from these different shapes; that does not make the tuple values/types identical or broaden the Unit-only () pattern. See [zero/singleton expansion boundaries](tuple-array-shapes.md#zero-and-singleton-fixed-expansion-versus-declared-tails).
+Unit has no components and no declared array tail. A tuple with an explicitly declared rest segment remains tail-bearing when that array is empty: b := (...rest = arr0), for arr0: [Int; 0], has a rest member and is not Unit. By contrast, inferred (...arr0) contributes zero fixed components and yields Unit. A one-element fixed-array spread yields a fixed singleton tuple, while an explicit one-element rest declaration remains a tail-bearing tuple. Call expansion can supply the same input sequence from these different shapes; that does not make the tuple values/types identical or broaden the Unit-only () pattern. See [zero/singleton expansion boundaries](lite://doc/tuple-array-shapes#zero-and-singleton-fixed-expansion-versus-declared-tails).
 
-Explicit unpacking is a reconstruction boundary: a known empty declared tail emits no items and may reconstruct Unit, while a known one-element tail reconstructs a singleton. The original stored value and ordinary copies retain the tail. In contrast, a tail containing two Unit elements emits two Unit items, not zero; unpacking is not recursively applied to each emitted value. See [zero/singleton logical expansion](tuple-unpacking.md#zero-and-singleton-boundaries).
+Explicit unpacking is a reconstruction boundary: a known empty declared tail emits no items and may reconstruct Unit, while a known one-element tail reconstructs a singleton. The original stored value and ordinary copies retain the tail. In contrast, a tail containing two Unit elements emits two Unit items, not zero; unpacking is not recursively applied to each emitted value. See [zero/singleton logical expansion](lite://doc/tuple-unpacking#zero-and-singleton-boundaries).
 
 ## Empty segment capture stays a tuple
 
@@ -131,23 +131,23 @@ single := (10,);
 /* nothing = Unit */
 ```
 
-The empty array and its segment remain present in remaining. [] needs no element annotation merely to construct an empty array; its exact unknown-versus-Unit default element policy is deferred and does not identify the array or segment with Unit. Structural capture preserves a sole segment wrapper at every extent. See [gradual changes](tuple-remainder-gradual-reasoning.md).
+The empty array and its segment remain present in remaining. [] needs no element annotation merely to construct an empty array; its exact unknown-versus-Unit default element policy is deferred and does not identify the array or segment with Unit. Structural capture preserves a sole segment wrapper at every extent. See [gradual changes](lite://doc/tuple-remainder-gradual-reasoning).
 
 ## Empty tuple pattern selected
 
-The selected pattern () matches only Unit and binds no names. Thus () := operation() is valid when the operation has a Unit result contract; it still evaluates the operation once. An ordinary declaration cannot use this pattern on a scalar, a singleton containing Unit, or a source that may have another type/shape. Conditional and match patterns retain their existing mismatch behavior. This does not give bare Unit a special constant-pattern meaning: ordinary binding-name rules still apply. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected).
+The selected pattern () matches only Unit and binds no names. Thus () := operation() is valid when the operation has a Unit result contract; it still evaluates the operation once. An ordinary declaration cannot use this pattern on a scalar, a singleton containing Unit, or a source that may have another type/shape. Conditional and match patterns retain their existing mismatch behavior. This does not give bare Unit a special constant-pattern meaning: ordinary binding-name rules still apply. See [empty tuple patterns](lite://doc/tuple-entries-and-access#empty-tuple-pattern-selected).
 
 ## Singleton layout does not change type identity
 
-The user selected [empty and singleton tuple layout](memory-and-performance.md#empty-and-singleton-tuple-layout), 2026-10-22: Unit/() has zero payload bytes, and a singleton has the same size/alignment as its component at offset zero. A singleton containing Unit therefore has zero payload bytes too, while retaining its one-component shape. Layout identity alone does not merge types. The compiler distinguishes statically known types without a per-value tag; runtime code cannot distinguish identical erased payloads without type information. Actual union alternatives retain their existing discriminator contract. Exact ABI and Unit alignment remain separate.
+The user selected [empty and singleton tuple layout](lite://doc/memory-and-performance#empty-and-singleton-tuple-layout), 2026-10-22: Unit/() has zero payload bytes, and a singleton has the same size/alignment as its component at offset zero. A singleton containing Unit therefore has zero payload bytes too, while retaining its one-component shape. Layout identity alone does not merge types. The compiler distinguishes statically known types without a per-value tag; runtime code cannot distinguish identical erased payloads without type information. Actual union alternatives retain their existing discriminator contract. Exact ABI and Unit alignment remain separate.
 
 ## Loop interaction
 
-A body that normally completes with `Unit` contributes a valid `Unit` loop value. If no path contributes and nothing else constrains the body type, that type defaults to `Unit`; an expected type can override it. Plain `continue` and bare `break` remain noncontributing paths. A loop's body type and its `then` result type are separate, so a `Unit` body may still have a non-Unit whole-loop result. See [loop value](loop-value.md) and [loop inference](loop-type-inference.md).
+A body that normally completes with `Unit` contributes a valid `Unit` loop value. If no path contributes and nothing else constrains the body type, that type defaults to `Unit`; an expected type can override it. Plain `continue` and bare `break` remain noncontributing paths. A loop's body type and its `then` result type are separate, so a `Unit` body may still have a non-Unit whole-loop result. See [loop value](lite://doc/loop-value) and [loop inference](lite://doc/loop-type-inference).
 
 ## Related concepts and references
 
-- [Blocks and results](blocks-and-results.md)
-- [Option](option.md)
-- [Result and errors](result-and-errors.md)
+- [Blocks and results](lite://doc/blocks-and-results)
+- [Option](lite://doc/option)
+- [Result and errors](lite://doc/result-and-errors)
 - [Rust's unit type](https://doc.rust-lang.org/reference/types/tuple.html#unit) demonstrates the distinction between a unit value and optional absence. LiteScript accepts both `Unit` and `()` for its zero-component value/type.

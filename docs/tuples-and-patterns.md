@@ -3,24 +3,24 @@
 Status: **same-value binding/destructuring and union type-pattern narrowing established; variable-or-pattern collection selected 2026-10-23, with no combined whole-value/nested binding; complete recursive pattern syntax open**.
 
 The FVP implements flat scalar mixed tuples in written order; see
-[bounded implementation evidence](../research/investigations/INV-022-fvp-mixed-tuples.md).
+[bounded implementation evidence](lite://repo/research/investigations/INV-022-fvp-mixed-tuples.md).
 Broader nesting, pattern and contextual routing contracts remain separate.
 Stored-value explicit typed label conversion also has
-[bounded evidence](../research/investigations/INV-022-fvp-label-conversion.md).
+[bounded evidence](lite://repo/research/investigations/INV-022-fvp-label-conversion.md).
 
 ## Purpose
 
 Give names to an entire value or destructure that same value without making the binding pattern change what a producer supplies.
 
 Approved implementation coverage, **2026-10-31**: the experimental
-[igniter](../igniter/README.md#flat-fixed-tuples) supports flat scalar tuples,
+[igniter](lite://repo/igniter/README.md#flat-fixed-tuples) supports flat scalar tuples,
 unnamed, fully named or mixed, fixed-position/literal-field reads, ordinary positional
 declaration patterns, and
 explicit tuple function inputs/results. Empty/singleton/grouped patterns keep
 their selected meanings; repeated receiver names bind in written order. Named,
 nested, typed and rest patterns, conditional/match patterns, and the wider tuple
-model remain unimplemented. See [INV-022](../research/investigations/INV-022-fvp-fixed-tuples.md).
-The [named-field follow-up](../research/investigations/INV-022-fvp-named-tuples.md) records
+model remain unimplemented. See [INV-022](lite://repo/research/investigations/INV-022-fvp-fixed-tuples.md).
+The [named-field follow-up](lite://repo/research/investigations/INV-022-fvp-named-tuples.md) records
 shorthand construction and label-sensitive transfers; named patterns themselves
 remain outside this coverage.
 
@@ -40,11 +40,11 @@ loop pairs as pair {
 }
 ```
 
-The optional item name always denotes the current source element. Current headers allow only that one identifier; destructuring belongs in the body. Count/index/value come from metadata and are not injected into the tuple item. Former header tuple patterns and item/count/accumulator receiver lists are retired. See [item naming](loop-receivers.md).
+The optional item name always denotes the current source element. Current headers allow only that one identifier; destructuring belongs in the body. Count/index/value come from metadata and are not injected into the tuple item. Former header tuple patterns and item/count/accumulator receiver lists are retired. See [item naming](lite://doc/loop-receivers).
 
 ## Refutable and irrefutable patterns
 
-The [ordered-sequence review](sequence-patterns.md) proposes treating an ordinary pair as the two-element tuple shape. Positional tuple patterns now select exact arity without rest and one trailing rest capture preserving remainder types and order; zero remaining components produce Unit/(), and one remains a singleton tuple. It separates tuples from list/array patterns; the collector choice below keeps nested destructuring distinct from type annotations. The later singleton value selection distinguishes (value) grouping from (value,) tuple construction and permits named (= value) singletons. The empty tuple is now Unit, also spelled (). Singleton type spellings and binding/grouped patterns are selected; rest ownership remains separate.
+The [ordered-sequence review](lite://doc/sequence-patterns) proposes treating an ordinary pair as the two-element tuple shape. Positional tuple patterns now select exact arity without rest and one trailing rest capture preserving remainder types and order; zero remaining components produce Unit/(), and one remains a singleton tuple. It separates tuples from list/array patterns; the collector choice below keeps nested destructuring distinct from type annotations. The later singleton value selection distinguishes (value) grouping from (value,) tuple construction and permits named (= value) singletons. The empty tuple is now Unit, also spelled (). Singleton type spellings and binding/grouped patterns are selected; rest ownership remains separate.
 
 A declaration such as `(left, right) := pair` should use an irrefutable pattern for the known input type. Variant patterns such as `Some(value)` can fail and belong in a conditional or match construct unless a separate failure rule is introduced.
 
@@ -60,9 +60,9 @@ The bound user exists only in the successful branch.
 
 A union can be narrowed by matching its active alternative's type. The selected basic pattern spelling is `binding: Type`, for example `user: User` when examining `User | Guest`. The successful branch sees `user` as `User`; the other union alternative is not silently coerced or accessed through that binding.
 
-This capability applies equally to a successful Result payload, an error-union payload inside recovery, and a union formed by an `else` fallback. It does not erase an intact Result's outer success/failure distinction. Nested pattern grammar, type identity versus subtype matching, overlap, and binding ownership remain open; see [union type patterns](union-patterns.md).
+This capability applies equally to a successful Result payload, an error-union payload inside recovery, and a union formed by an `else` fallback. It does not erase an intact Result's outer success/failure distinction. Nested pattern grammar, type identity versus subtype matching, overlap, and binding ownership remain open; see [union type patterns](lite://doc/union-patterns).
 
-For an existing name, `if person: User` also tests and narrows without introducing a binding. See [type tests and narrowing](type-tests-and-narrowing.md) for the distinction from binding patterns and the remaining stability rules.
+For an existing name, `if person: User` also tests and narrows without introducing a binding. See [type tests and narrowing](lite://doc/type-tests-and-narrowing) for the distinction from binding patterns and the remaining stability rules.
 
 ## Type constraints during destructuring
 
@@ -74,11 +74,11 @@ if (x: Int, y: String) := pair {
 }
 ```
 
-The whole pattern must succeed before the branch executes. A mismatching component fails the pattern rather than requesting conversion, and no nested match is needed just to establish the component types. The same tuple pattern works directly in a match arm, and may appear inside a constructor payload pattern. New bindings remain local to the successful branch. See [typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule) for examples and remaining ownership rules.
+The whole pattern must succeed before the branch executes. A mismatching component fails the pattern rather than requesting conversion, and no nested match is needed just to establish the component types. The same tuple pattern works directly in a match arm, and may appear inside a constructor payload pattern. New bindings remain local to the successful branch. See [typed destructuring](lite://doc/match-patterns#typed-destructuring-selected-composition-rule) for examples and remaining ownership rules.
 
 ## Nested tuple patterns and rest selected
 
-The 2026-10-24 [array-tail extension](tuple-array-shapes.md#ordinary-tuples-may-have-the-same-array-tail) adds declared ...rest: T in ordinary tuple schemas and callable signatures. A remainder pattern preserves unselected fixed components plus that tail: `(a, b, ...xrest) := x` on `(q: Int, w: Int, e: Int, ...rest: Int)` leaves `(e: Int, ...rest: Int)`. A declared variadic segment collects an array; ordinary fixed-tuple pattern rest below keeps its tuple remainder. Tail-only normalization, ownership, and full recursive integration remain open.
+The 2026-10-24 [array-tail extension](lite://doc/tuple-array-shapes#ordinary-tuples-may-have-the-same-array-tail) adds declared ...rest: T in ordinary tuple schemas and callable signatures. A remainder pattern preserves unselected fixed components plus that tail: `(a, b, ...xrest) := x` on `(q: Int, w: Int, e: Int, ...rest: Int)` leaves `(e: Int, ...rest: Int)`. A declared variadic segment collects an array; ordinary fixed-tuple pattern rest below keeps its tuple remainder. Tail-only normalization, ownership, and full recursive integration remain open.
 
 Selected by the user, 2026-10-23: collect a supplied component either into a variable binding or into a nested pattern. A variable collector names the whole component; a pattern collector destructures or tests it. Do not combine both collectors for the same supplied component in one pattern.
 
@@ -99,15 +99,15 @@ Colon retains its type-annotation/type-test role. A typed variable binding such 
 
 The source is evaluated once before new names are introduced. Every nested component pattern must succeed before the enclosing pattern exposes bindings. Ordinary declarations require irrefutability; supported conditional/match contexts retain their mismatch behavior. Existing recursive written-order shadowing applies to the bindings the chosen collectors actually introduce. Ownership, copying, extraction effects, and complete recursive parsing remain separate contracts; this selection does not introduce loop/lambda header destructuring.
 
-Tuple component patterns also admit [nested or alternatives](match.md#nested-alternative-patterns-selected): `(.Email(address) or .Sms(address), received_at)` applies the choice to the first component and binds the second independently. Or alternatives stay inside that component's comma/parenthesis boundaries and share its supplied value; their binding types join with Unit for absent names. Whole-pattern success still gates all outer bindings. Later component failure does not retry an earlier successful local choice; outer alternatives retain their own mismatch behavior. This adds no rest-list changes, and/not subpatterns, or new headers.
+Tuple component patterns also admit [nested or alternatives](lite://doc/match#nested-alternative-patterns-selected): `(.Email(address) or .Sms(address), received_at)` applies the choice to the first component and binds the second independently. Or alternatives stay inside that component's comma/parenthesis boundaries and share its supplied value; their binding types join with Unit for absent names. Whole-pattern success still gates all outer bindings. Later component failure does not retry an earlier successful local choice; outer alternatives retain their own mismatch behavior. This adds no rest-list changes, and/not subpatterns, or new headers.
 
 ### Rest and inference retain their selected contracts
 
-Rest belongs to the destructuring pattern. One final ...rest captures unselected tuple components with their existing types, labels, and stored order; without rest, require complete coverage. For an ordinary fixed tuple, zero remaining components give Unit/(), while one stays a singleton tuple. Positional, named, mixed, and rest-only patterns retain their routing rules. On the selected array-tailed schemas, preserve any remaining fixed components followed by the original array tail; see [array-tailed tuples](tuple-array-shapes.md#ordinary-tuples-may-have-the-same-array-tail). List/sequence pattern rest and full recursive integration remain separate.
+Rest belongs to the destructuring pattern. One final ...rest captures unselected tuple components with their existing types, labels, and stored order; without rest, require complete coverage. For an ordinary fixed tuple, zero remaining components give Unit/(), while one stays a singleton tuple. Positional, named, mixed, and rest-only patterns retain their routing rules. On the selected array-tailed schemas, preserve any remaining fixed components followed by the original array tail; see [array-tailed tuples](lite://doc/tuple-array-shapes#ordinary-tuples-may-have-the-same-array-tail). List/sequence pattern rest and full recursive integration remain separate.
 
-Infer each unannotated variable binding from the input possibilities compatible with the whole pattern. Exclude impossible alternatives before projecting the corresponding component types. Preserve unions of complete shapes for composite collectors such as rest, rather than independently widening their components into combinations the input never supplied. See [pattern binding inference](pattern-binding-inference.md) for the nested example without a second whole-value binding.
+Infer each unannotated variable binding from the input possibilities compatible with the whole pattern. Exclude impossible alternatives before projecting the corresponding component types. Preserve unions of complete shapes for composite collectors such as rest, rather than independently widening their components into combinations the input never supplied. See [pattern binding inference](lite://doc/pattern-binding-inference) for the nested example without a second whole-value binding.
 
-Related: [construction spread and tuple rest](tuple-spread-and-rest.md), [mixed tuple patterns](tuple-spread-and-rest.md#mixed-positional-and-named-tuple-patterns-selected), and [typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule).
+Related: [construction spread and tuple rest](lite://doc/tuple-spread-and-rest), [mixed tuple patterns](lite://doc/tuple-spread-and-rest#mixed-positional-and-named-tuple-patterns-selected), and [typed destructuring](lite://doc/match-patterns#typed-destructuring-selected-composition-rule).
 
 ## Underscore bindings
 
@@ -117,17 +117,17 @@ Related: [construction spread and tuple rest](tuple-spread-and-rest.md), [mixed 
 (first, _, third, _) := tuple;
 ```
 
-The tuple must still have the required shape. The final `_` names the fourth component and may be read. `_: String` constrains and binds a component with type String. Nested tuple and constructor patterns use the same rule; Some(_) still requires Some and binds its payload. All names, not only underscores, use ordered shadowing. See [pattern binding and shadowing](pattern-shadowing.md).
+The tuple must still have the required shape. The final `_` names the fourth component and may be read. `_: String` constrains and binds a component with type String. Nested tuple and constructor patterns use the same rule; Some(_) still requires Some and binds its payload. All names, not only underscores, use ordered shadowing. See [pattern binding and shadowing](lite://doc/pattern-shadowing).
 
-Loop headers now take only one optional item name; body-local tuple patterns retain the ordered shadowing rules above. See [item naming](loop-receivers.md).
+Loop headers now take only one optional item name; body-local tuple patterns retain the ordered shadowing rules above. See [item naming](lite://doc/loop-receivers).
 
 ## Named tuples under review
 
-The [named arguments and named tuples review](named-arguments-and-tuples.md) compares positional tuples with optional access labels, tuples whose labels affect compatibility, and using existing records for named values. The user selected fresh named initializer reordering and explicit reconstruction for stored tuples with a different component order. Fresh constructors under known tuple destinations use the selected call-style routing: explicit-label uniqueness, next-unfilled positional slots, permitted named replacement, final-slot type/access checks, and complete coverage without implicit component defaults. The earlier four contextual construction forms and destination = sourceField named tuple patterns remain selected. Positional bindings follow stored order; named patterns without rest require exact coverage and reject unknown/duplicate source selectors. With one final ...rest, named selectors remove chosen fields and the remainder preserves source order, labels, and types. A whole-tuple annotation supplies a tuple type, as in (left, right): (l: Int, r: Int) = expr; := infers the source contract. Different stored tuple labels admit position-preserving conversion through an explicitly typed receiving declaration, while ordinary transfers check labels; actual value reordering still requires reconstruction. See [labels under an explicit destination type](tuple-label-conversions.md). Identical ordered labels and resolved component types, with matching ordinary/segment roles and extent contracts, describe the same structural tuple type wherever written. Explicit tuple call spread, same-name call shorthand, next-unfilled positional routing, and named replacement are now selected. Complete recursive grammar, other shape/type conversions, and superseded-value ownership remain open. See the [concrete routing catalogue](named-input-routing.md). Nominal record identity remains selected independently.
+The [named arguments and named tuples review](lite://doc/named-arguments-and-tuples) compares positional tuples with optional access labels, tuples whose labels affect compatibility, and using existing records for named values. The user selected fresh named initializer reordering and explicit reconstruction for stored tuples with a different component order. Fresh constructors under known tuple destinations use the selected call-style routing: explicit-label uniqueness, next-unfilled positional slots, permitted named replacement, final-slot type/access checks, and complete coverage without implicit component defaults. The earlier four contextual construction forms and destination = sourceField named tuple patterns remain selected. Positional bindings follow stored order; named patterns without rest require exact coverage and reject unknown/duplicate source selectors. With one final ...rest, named selectors remove chosen fields and the remainder preserves source order, labels, and types. A whole-tuple annotation supplies a tuple type, as in (left, right): (l: Int, r: Int) = expr; := infers the source contract. Different stored tuple labels admit position-preserving conversion through an explicitly typed receiving declaration, while ordinary transfers check labels; actual value reordering still requires reconstruction. See [labels under an explicit destination type](lite://doc/tuple-label-conversions). Identical ordered labels and resolved component types, with matching ordinary/segment roles and extent contracts, describe the same structural tuple type wherever written. Explicit tuple call spread, same-name call shorthand, next-unfilled positional routing, and named replacement are now selected. Complete recursive grammar, other shape/type conversions, and superseded-value ownership remain open. See the [concrete routing catalogue](lite://doc/named-input-routing). Nominal record identity remains selected independently.
 
 ## Selected value shorthand and positional access
 
-In tuple values, (cake, tea) supplies unnamed components without inferring labels from variable names. The selected (= cake, = tea) is shorthand for (cake = cake, tea = tea). Both named and unnamed tuples expose .0, .1, and subsequent zero-based fixed positions in stored order; reject invalid positions at compile time. Named patterns retain destination = sourceField; the separately selected = identifier pattern shorthand expands to identifier = identifier. Named selectors can reorder without positional guessing. Reject unknown/duplicate source selectors and require full coverage unless rest captures the remainder. See [same-name pattern shorthand](named-input-routing.md#same-name-tuple-pattern-shorthand-selected). Expected named tuple types still accept positional initializers. Standalone mixed tuple inference and the corresponding mixed type forms are selected: (42, = tea) infers (:Int, tea: String) when tea is String; .0/.1 cover both components and .tea accesses the named one. Mixed positional/named tuple patterns are now selected separately from mixed value construction; each source component may be selected once, without value replacement. See [tuple entries and access](tuple-entries-and-access.md).
+In tuple values, (cake, tea) supplies unnamed components without inferring labels from variable names. The selected (= cake, = tea) is shorthand for (cake = cake, tea = tea). Both named and unnamed tuples expose .0, .1, and subsequent zero-based fixed positions in stored order; reject invalid positions at compile time. Named patterns retain destination = sourceField; the separately selected = identifier pattern shorthand expands to identifier = identifier. Named selectors can reorder without positional guessing. Reject unknown/duplicate source selectors and require full coverage unless rest captures the remainder. See [same-name pattern shorthand](lite://doc/named-input-routing#same-name-tuple-pattern-shorthand-selected). Expected named tuple types still accept positional initializers. Standalone mixed tuple inference and the corresponding mixed type forms are selected: (42, = tea) infers (:Int, tea: String) when tea is String; .0/.1 cover both components and .tea accesses the named one. Mixed positional/named tuple patterns are now selected separately from mixed value construction; each source component may be selected once, without value replacement. See [tuple entries and access](lite://doc/tuple-entries-and-access).
 
 ## Singleton and grouped patterns selected
 
@@ -140,19 +140,19 @@ meal := (cake = 42);
 (local = cake) := meal; /* named component: Int */
 ```
 
-Parentheses group a pattern; they do not implicitly extract. A singleton positional tuple pattern requires its comma. A named clause already marks tuple extraction. The source is evaluated once before introducing bindings. Pattern grouping and tuple shape semantics apply consistently in supported pattern contexts, while the existing declaration/conditional/match mismatch contracts remain. The selected empty tuple pattern () matches only Unit and introduces no bindings. Ordinary declarations require an irrefutable match; conditional/match contexts retain their mismatch rules. Full parser integration and new header-pattern support remain separate. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected). See [complete singleton cases](tuple-entries-and-access.md#singleton-binding-patterns-selected).
+Parentheses group a pattern; they do not implicitly extract. A singleton positional tuple pattern requires its comma. A named clause already marks tuple extraction. The source is evaluated once before introducing bindings. Pattern grouping and tuple shape semantics apply consistently in supported pattern contexts, while the existing declaration/conditional/match mismatch contracts remain. The selected empty tuple pattern () matches only Unit and introduces no bindings. Ordinary declarations require an irrefutable match; conditional/match contexts retain their mismatch rules. Full parser integration and new header-pattern support remain separate. See [empty tuple patterns](lite://doc/tuple-entries-and-access#empty-tuple-pattern-selected). See [complete singleton cases](lite://doc/tuple-entries-and-access#singleton-binding-patterns-selected).
 
 ## Notes and open decisions
 
-Named tuple binding annotations may omit a component type by writing a bare label: (left, right): (l, r) = expr. Infer component types from the static source/expected contract and preserve l, r order. Use (:Int, :Int) for unnamed typed components; a written colon requires a following type, so (l:, r:) is removed. In value or pattern context, (l, r) retains its ordinary tuple-value or positional-binding meaning. See [component annotations](named-input-routing.md#selected-tuple-type-component-grammar).
+Named tuple binding annotations may omit a component type by writing a bare label: (left, right): (l, r) = expr. Infer component types from the static source/expected contract and preserve l, r order. Use (:Int, :Int) for unnamed typed components; a written colon requires a following type, so (l:, r:) is removed. In value or pattern context, (l, r) retains its ordinary tuple-value or positional-binding meaning. See [component annotations](lite://doc/named-input-routing#selected-tuple-type-component-grammar).
 
-For named fields, source names and destination bindings are distinct. Explicit aliases can keep both destination names accessible when ordered shadowing would hide one of them, without changing positional tuple patterns. See [pattern aliases and duplicate names](pattern-aliases.md) for the reference comparison and proposed as spelling.
+For named fields, source names and destination bindings are distinct. Explicit aliases can keep both destination names accessible when ordered shadowing would hide one of them, without changing positional tuple patterns. See [pattern aliases and duplicate names](lite://doc/pattern-aliases) for the reference comparison and proposed as spelling.
 
 Complete recursive tuple type syntax, numeric-suffix scanning, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Core named tuple fields and fixed numeric dot access are selected; runtime variable tuple indexing is rejected. Dot followed by an identifier selects the literal field name, not a variable index. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
 
 ## Related concepts and references
 
-- [Loop receivers](loop-receivers.md)
-- [Conditionals](conditionals.md)
-- [Receiver clauses](receiver-clauses.md)
+- [Loop receivers](lite://doc/loop-receivers)
+- [Conditionals](lite://doc/conditionals)
+- [Receiver clauses](lite://doc/receiver-clauses)
 - [Rust tuple types](https://doc.rust-lang.org/reference/types/tuple.html) are a comparison for tuple values and `Unit`, not a complete LiteScript tuple contract.

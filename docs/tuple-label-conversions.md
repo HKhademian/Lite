@@ -5,13 +5,13 @@ Status: **selected 2026-10-25: explicit typed label conversion is allowed, while
 ## Ordinary transfers check labels
 
 Bounded implementation evidence, **2026-10-31**: the
-[named-tuple igniter subset](../igniter/README.md#named-fixed-tuples) now checks
+[named-tuple igniter subset](lite://repo/igniter/README.md#named-fixed-tuples) now checks
 ordered labels/types on stored tuple copies, arguments, returns and replacement.
 The next increment implements explicit declaration-site conversion of stored flat
 scalar tuples with exact ordered shape/types, including mixed destinations.
 General contextual constructor routing, callable adaptation, aliases, widening
 and access grants remain unimplemented. See
-[conversion evidence](../research/investigations/INV-022-fvp-label-conversion.md).
+[conversion evidence](lite://repo/research/investigations/INV-022-fvp-label-conversion.md).
 
 Selected on **2026-10-25**, clarified by the user: ordinary tuple/callable compatibility remains label-sensitive. A known expected type alone does not authorize relabeling. Plain assignment to an existing binding, argument passing, and returning an already constructed value must satisfy the destination's label contract as well as its ordinary type/access/omission requirements.
 
@@ -51,7 +51,7 @@ This is a type-directed label conversion under a known destination, not byte-siz
 
 ## Component widening is a separate compatibility proof
 
-[Tuple value widening](types-and-inference.md#tuple-values-widen-component-by-component) applies ordinary value compatibility to corresponding components while preserving ordered shape. It may be combined with this explicit label-conversion bypass when each payload proof and the other contracts hold. Without the bypass, ordinary transfers still check labels. Label-only conversion with unchanged component types preserves the established layout; component widening may require compiler representation adaptation and carries no same-layout guarantee.
+[Tuple value widening](lite://doc/types-and-inference#tuple-values-widen-component-by-component) applies ordinary value compatibility to corresponding components while preserving ordered shape. It may be combined with this explicit label-conversion bypass when each payload proof and the other contracts hold. Without the bypass, ordinary transfers still check labels. Label-only conversion with unchanged component types preserves the established layout; component widening may require compiler representation adaptation and carries no same-layout guarantee.
 
 ## Label conversion does not reorder components
 
@@ -114,13 +114,13 @@ renamed_pair(first = 10);  /* (10, 11): end still reads implementation-local sta
 
 Names absent from the destination are unavailable to named callers; an unnamed destination input uses positional routing. This does not make an implementation-local name public.
 
-Only label adaptation is selected here. Shape, component types, access, result/error contracts, and omission handling must still satisfy their established checks. Required public views continue to require arguments; omission-capable views need valid implementation handling, including the selected zero-callable behavior. No default expression is copied into the public type, changed, or executed merely by relabeling. The separate [safe callable value adaptation](callable-value-variance.md) rule now permits supported safe input/result type differences without a manually written wrapper. Unlike label-only conversion, that adaptation may change argument/result representation and must preserve source behavior. Basic var T callable input types now remain invariant under [var T callable invariance](callable-value-variance.md#var-parameters-keep-their-value-type); the public-label conversion bypass does not change their read/write value type or granted access. Other variance, unrelated callable/result conversions, captures, lifetime/ownership, and calling convention remain separate.
+Only label adaptation is selected here. Shape, component types, access, result/error contracts, and omission handling must still satisfy their established checks. Required public views continue to require arguments; omission-capable views need valid implementation handling, including the selected zero-callable behavior. No default expression is copied into the public type, changed, or executed merely by relabeling. The separate [safe callable value adaptation](lite://doc/callable-value-variance) rule now permits supported safe input/result type differences without a manually written wrapper. Unlike label-only conversion, that adaptation may change argument/result representation and must preserve source behavior. Basic var T callable input types now remain invariant under [var T callable invariance](lite://doc/callable-value-variance#var-parameters-keep-their-value-type); the public-label conversion bypass does not change their read/write value type or granted access. Other variance, unrelated callable/result conversions, captures, lifetime/ownership, and calling convention remain separate.
 
 Intrinsic .call and ordinary named-call routing still use the visible callable's labels. A tuple-valued parameter is one payload whose labels must already match, or be explicitly converted before passing; that is distinct from applying a supplied-input pack whose components are routed as call arguments.
 
 ## Identity, inference, and remaining boundaries
 
-Labels still participate in structural tuple identity. For segment-bearing schemas, identity also retains each ordinary/segment role and its extent contract; identical externally accessed member types do not erase different unpacking behavior. Identical ordered labels, resolved types, roles, and extent contracts describe the same structural tuple type. See the [segment identity review](tuple-segment-pattern-review.md#segment-roles-and-extents-participate-in-identity). Differently labeled types can be distinct while permitting this selected conversion. Inference and union normalization do not erase or arbitrarily choose labels just because layouts match. Separately declared records remain nominal; this rule does not create structural record compatibility.
+Labels still participate in structural tuple identity. For segment-bearing schemas, identity also retains each ordinary/segment role and its extent contract; identical externally accessed member types do not erase different unpacking behavior. Identical ordered labels, resolved types, roles, and extent contracts describe the same structural tuple type. See the [segment identity review](lite://doc/tuple-segment-pattern-review#segment-roles-and-extents-participate-in-identity). Differently labeled types can be distinct while permitting this selected conversion. Inference and union normalization do not erase or arbitrarily choose labels just because layouts match. Separately declared records remain nominal; this rule does not create structural record compatibility.
 
 Reference syntax, memory safety, alias enforcement, resource/copy eligibility, new ownership modes, general generic/overload inference, full recursive grammar, and optional stored-tuple semantics remain open or deferred under their existing contracts.
 
@@ -139,8 +139,8 @@ The future discussion must define the cast spelling, what proves memory compatib
 
 ## Related documents
 
-- [Named routing and stored tuple order](named-input-routing.md#5-inference-and-stored-tuples-selected-order-boundary)
-- [Named calls and tuples](named-arguments-and-tuples.md)
-- [Tuple storage](memory-and-performance.md#tuple-labels-describe-positions-without-changing-storage)
-- [Callable input packs](callable-input-packs.md)
-- [Public omission and implementation defaults](callable-default-contracts.md)
+- [Named routing and stored tuple order](lite://doc/named-input-routing#5-inference-and-stored-tuples-selected-order-boundary)
+- [Named calls and tuples](lite://doc/named-arguments-and-tuples)
+- [Tuple storage](lite://doc/memory-and-performance#tuple-labels-describe-positions-without-changing-storage)
+- [Callable input packs](lite://doc/callable-input-packs)
+- [Public omission and implementation defaults](lite://doc/callable-default-contracts)

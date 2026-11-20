@@ -27,7 +27,7 @@ var attempts := 0;
 attempts += 1;
 ```
 
-Bindings are fixed and provide read-only access by default. `var` permits reassignment; `mut` permits held-data updates through the binding; `var mut` permits both. Writable receiver/parameter access requires `mut` on each affected binding, without an additional function-level mutation marker. Full method notation and ownership rules remain open. These capabilities do not make the value type dynamic, override field privacy, or promise global deep immutability. See [mutability, access, and operations](mutability.md).
+Bindings are fixed and provide read-only access by default. `var` permits reassignment; `mut` permits held-data updates through the binding; `var mut` permits both. Writable receiver/parameter access requires `mut` on each affected binding, without an additional function-level mutation marker. Full method notation and ownership rules remain open. These capabilities do not make the value type dynamic, override field privacy, or promise global deep immutability. See [mutability, access, and operations](lite://doc/mutability).
 
 ## Other candidate explicit capabilities
 
@@ -39,7 +39,7 @@ Export syntax, private field access, friend-like access, package visibility, re-
 
 ## Related concepts and references
 
-- [Declarations and assignment](declarations-and-assignment.md)
-- [Composition and interfaces](composition-and-interfaces.md)
-- [Modules and packages](modules-and-packages.md)
-- This document records the project's design principle. External language visibility systems in [references](references.md) are comparison material, not an adopted modifier set.
+- [Declarations and assignment](lite://doc/declarations-and-assignment)
+- [Composition and interfaces](lite://doc/composition-and-interfaces)
+- [Modules and packages](lite://doc/modules-and-packages)
+- This document records the project's design principle. External language visibility systems in [references](lite://doc/references) are comparison material, not an adopted modifier set.

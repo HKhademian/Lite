@@ -28,7 +28,7 @@ Digits may continue a name but do not begin one under this profile. Punctuation 
 ## Names versus localized source vocabulary
 
 Unicode names already allow student-authored names in familiar scripts. The
-[multilingual learning proposal](multilingual-source-and-learning.md) goes further:
+[multilingual learning proposal](lite://doc/multilingual-source-and-learning) goes further:
 localized keywords, predefined names/APIs, diagnostics, and lessons, with a possible
 bridge to simple English. That proposal does not change current keyword lookup,
 normalization, scope, or label compatibility. Translation of a user-defined name
@@ -38,41 +38,41 @@ tooling questions, not newly selected equivalences.
 
 ## Names and scope
 
-Identifier spelling determines which name is being referenced. Lexical scope determines which binding of that name is visible across a nested block hierarchy whose outermost level is the invisible-brace file block (with no parent block). As clarified on **2026-11-15**, **same-block shadowing through redeclarations is postponed completely**: two declarations of the same symbol inside one block — even of different kinds — are disallowed for now across both root file blocks and inner `{ ... }` blocks (nested inner `{ ... }` blocks and flow-sensitive type narrowing without redeclaration remain distinct; see [local shadowing and copies](local-shadowing-and-copies.md)).
+Identifier spelling determines which name is being referenced. Lexical scope determines which binding of that name is visible across a nested block hierarchy whose outermost level is the invisible-brace file block (with no parent block). As clarified on **2026-11-15**, **same-block shadowing through redeclarations is postponed completely**: two declarations of the same symbol inside one block — even of different kinds — are disallowed for now across both root file blocks and inner `{ ... }` blocks (nested inner `{ ... }` blocks and flow-sensitive type narrowing without redeclaration remain distinct; see [local shadowing and copies](lite://doc/local-shadowing-and-copies)).
 
-Pattern bindings may reuse the source value's name. A matching branch can shadow an outer union binding with a narrowed binding; the source expression is resolved before that new name becomes active. The shadow is limited to its matching branch and does not affect sibling branches or outer lookup. See [union type patterns](union-patterns.md) for examples using both same-name shadowing and a distinct pattern name.
+Pattern bindings may reuse the source value's name. A matching branch can shadow an outer union binding with a narrowed binding; the source expression is resolved before that new name becomes active. The shadow is limited to its matching branch and does not affect sibling branches or outer lookup. See [union type patterns](lite://doc/union-patterns) for examples using both same-name shadowing and a distinct pattern name.
 
-An unmarked bare identifier in a pattern binds, even if an outer constant or type uses that name. Capitalization does not turn it into a test. Use `.None` to select the absent Option case; bare None binds. Explicit constructor heads with payload parentheses, such as Some(value), keep their distinct constructor role. Use `: Type` for a type-only match and `== expected` for an existing-value match; see [pattern bindings and tests](pattern-bindings-and-tests.md).
+An unmarked bare identifier in a pattern binds, even if an outer constant or type uses that name. Capitalization does not turn it into a test. Use `.None` to select the absent Option case; bare None binds. Explicit constructor heads with payload parentheses, such as Some(value), keep their distinct constructor role. Use `: Type` for a type-only match and `== expected` for an existing-value match; see [pattern bindings and tests](lite://doc/pattern-bindings-and-tests).
 
 The name after `@` in a tag follows the same identifier character rules. Tags retain their own namespace and construct-specific capabilities.
 
 In every code block (the root file block and inner braced `{ ... }` blocks),
 symbol visibility is **parallel at compile time** ("circuit wiring") while
 values follow serial execution along the **execution trace**. The
-[deferred function-body rule](functions.md#deferred-body-lookup) permits
+[deferred function-body rule](lite://doc/functions#deferred-body-lookup) permits
 late reads, writes, type references, and calls across siblings and parent
 blocks under one uniform rule, rejecting only uninitialized accesses (such as
 reserved `x: Int = ?;` or reading a later binding before its initializer runs).
 When no enclosing same-name binding conflicts, the
-[direct self-reference case](functions.md#direct-self-reference-without-an-earlier-target)
+[direct self-reference case](lite://doc/functions#direct-self-reference-without-an-earlier-target)
 admits a function's own binding, and an
-[explicit self call](functions.md#explicit-current-function-self-calls) targets
+[explicit self call](lite://doc/functions#explicit-current-function-self-calls) targets
 the implementation currently executing instead of performing ordinary name lookup.
 Only `self(...)` is selected; standalone-value and self-named local/parameter
 collisions, mutual recursion, and nested-scope edge cases remain open. See
-[executable block items](evaluation-order.md#executable-block-items) and
-[module lookup](modules-and-packages.md#module-lookup-without-header-files).
+[executable block items](lite://doc/evaluation-order#executable-block-items) and
+[module lookup](lite://doc/modules-and-packages#module-lookup-without-header-files).
 
 ## Underscore-prefixed names, including standalone underscore
 
-`_`, `_user`, and `_left` are ordinary readable identifiers with explicit permission to be unused. Their type, var/mut capabilities, ownership, and scope rules remain ordinary. The prefix does not make declared fields private or skip initialization. See [explicit unused-name intent](unused-name-intent.md).
+`_`, `_user`, and `_left` are ordinary readable identifiers with explicit permission to be unused. Their type, var/mut capabilities, ownership, and scope rules remain ordinary. The prefix does not make declared fields private or skip initialization. See [explicit unused-name intent](lite://doc/unused-name-intent).
 
 ```text
 (first, _, third, _) := tuple;
 inspect(_);
 ```
 
-The second `_` shadows the first, so this read selects the fourth component. Every binding keeps its own inferred type. Repeated names follow ordered shadowing inside patterns, including nested patterns; the rule applies to all names, not only underscores. See [pattern binding and shadowing](pattern-shadowing.md).
+The second `_` shadows the first, so this read selects the fourth component. Every binding keeps its own inferred type. Repeated names follow ordered shadowing inside patterns, including nested patterns; the rule applies to all names, not only underscores. See [pattern binding and shadowing](lite://doc/pattern-shadowing).
 
 ```text
 loop items as _ {
@@ -80,7 +80,7 @@ loop items as _ {
 }
 ```
 
-Here _ is the one optional item name and may be read. Loop count/index/value use metadata rather than extra receiver slots. _ = value is ordinary assignment requiring an existing var binding and compatible value, not discard syntax. Initializer effects and required-use obligations remain intact; see [underscore bindings and skips](wildcards-and-skips.md).
+Here _ is the one optional item name and may be read. Loop count/index/value use metadata rather than extra receiver slots. _ = value is ordinary assignment requiring an existing var binding and compatible value, not discard syntax. Initializer effects and required-use obligations remain intact; see [underscore bindings and skips](lite://doc/wildcards-and-skips).
 
 ## Case and normalization
 
@@ -94,7 +94,7 @@ Identifier normalization must not silently establish a normalization rule for st
 
 ## Open decisions
 
-- The selected `:/`, `:%`, `:/=` and `:%=` arithmetic symbols retain the user's compact/spaced equivalence requirement. Because the spellings begin with a colon, `a:/b` has exactly one reading, `a` followed by `:/` and `b`; the retired `a_/b` could read as `a_ / b` or `a _/ b`. There is no conflict with `a_` or `_` identifiers and no mandatory-space rule. See [the lexical boundary](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
+- The selected `:/`, `:%`, `:/=` and `:%=` arithmetic symbols retain the user's compact/spaced equivalence requirement. Because the spellings begin with a colon, `a:/b` has exactly one reading, `a` followed by `:/` and `b`; the retired `a_/b` could read as `a_ / b` or `a _/ b`. There is no conflict with `a_` or `_` identifiers and no mandatory-space rule. See [the lexical boundary](lite://doc/arithmetic-methods-and-division-revision#compact-and-spaced-forms-must-agree).
 - Pin the Unicode version and complete the identifier profile.
 - Confirm case sensitivity and normalization behavior.
 - Define any restrictions on format-control characters and any identifier escaping syntax.
@@ -102,10 +102,10 @@ Identifier normalization must not silently establish a normalization rule for st
 
 ## Related concepts and references
 
-- [Lexical structure](lexical-structure.md)
-- [Declarations and assignment](declarations-and-assignment.md)
-- [Tuples and patterns](tuples-and-patterns.md)
-- [Loop receivers](loop-receivers.md)
-- [Tags and contexts](tags-and-contexts.md)
+- [Lexical structure](lite://doc/lexical-structure)
+- [Declarations and assignment](lite://doc/declarations-and-assignment)
+- [Tuples and patterns](lite://doc/tuples-and-patterns)
+- [Loop receivers](lite://doc/loop-receivers)
+- [Tags and contexts](lite://doc/tags-and-contexts)
 - [Unicode Standard Annex #31: Unicode Identifiers and Syntax](https://www.unicode.org/reports/tr31/)
 - [Unicode Standard Annex #15: Unicode Normalization Forms](https://www.unicode.org/reports/tr15/)

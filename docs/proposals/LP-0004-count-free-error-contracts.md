@@ -5,7 +5,7 @@
 - Status: **accepted, 2026-10-26; unreleased design clarification**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
-- Supersedes: none; constrains the open repeated-occurrence policy after [LP-0003 r1](LP-0003-pending-failure-munching.md).
+- Supersedes: none; constrains the open repeated-occurrence policy after [LP-0003 r1](lite://doc/proposals/LP-0003-pending-failure-munching).
 - Superseded by: none.
 
 ## Selected contract
@@ -35,4 +35,4 @@ Do not infer a loop over handler bodies, collection-valued receiver syntax, auto
 
 `r1` records the user's count-free declaration constraint and withdraws the assistant's unaccepted one-occurrence-per-clause recommendation. No compiler or runtime behavior is claimed verified.
 
-Normative owners: [expression recovery](../expression-recovery.md#error-contracts-do-not-declare-occurrence-counts) and [declared error coverage](../result-and-errors.md#declared-error-coverage).
+Normative owners: [expression recovery](lite://doc/expression-recovery#error-contracts-do-not-declare-occurrence-counts) and [declared error coverage](lite://doc/result-and-errors#declared-error-coverage).

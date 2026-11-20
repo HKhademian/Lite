@@ -50,4 +50,4 @@ Temporary outcome layers already explain handler-local completion: return @handl
 
 `r1` selects function/closure default boundaries, explicit block targets, single/group raising, bypass of intervening recovery, eligibility of recovery around the completed target, and retained cleanup/channel obligations. It leaves unmatched-remainder transport, complete typing/grammar integration, ownership, and implementation open. No release or runtime validation is implied.
 
-Normative owner: [manual failures and inference](../manual-failures-and-inference.md#directed-raise-boundaries). Related: [control flow](../control-flow.md), [tags](../tags-and-contexts.md), [scalar recovery](LP-0013-scalar-recovery-selection.md), and [remaining shortfalls](../failure-handling-shortfalls.md).
+Normative owner: [manual failures and inference](lite://doc/manual-failures-and-inference#directed-raise-boundaries). Related: [control flow](lite://doc/control-flow), [tags](lite://doc/tags-and-contexts), [scalar recovery](lite://doc/proposals/LP-0013-scalar-recovery-selection), and [remaining shortfalls](lite://doc/failure-handling-shortfalls).

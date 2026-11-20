@@ -37,7 +37,7 @@ The names and notation explain static access, not pointer layout, allocation, or
 
 ## Proposed visible distinction
 
-The selected [immutability-by-default goal](immutability-by-default.md) places readable access at the baseline and writable access behind an explicit capability. That direction is established; the public spelling of access contracts below remains a proposal.
+The selected [immutability-by-default goal](lite://doc/immutability-by-default) places readable access at the baseline and writable access behind an explicit capability. That direction is established; the public spelling of access contracts below remains a proposal.
 
 Keep a value type and an access contract as separately describable concepts:
 
@@ -77,12 +77,12 @@ Rust makes mutable references invariant in the referenced type, while shared ref
 
 ## Recommendation and remaining decisions
 
-The subsequent [qualified access-summary proposal](access-union-qualifiers.md) explores A | mut B | C as a compact readable/writable contract. It distinguishes the merge of complete access paths from ordinary union flattening and keeps payload mutation separate from replacement permissions. The notation remains unselected.
+The subsequent [qualified access-summary proposal](lite://doc/access-union-qualifiers) explores A | mut B | C as a compact readable/writable contract. It distinguishes the merge of complete access paths from ordinary union flattening and keeps payload mutation separate from replacement permissions. The notation remains unselected.
 
-The later [replacement qualifier and grouped distribution](slot-access-qualifier.md) use canonical var, replacing the intermediate slot spelling. A | var B | C accepts B; var (A | B) is equivalent to var A | var B within one complete contract. This marker describes accepted replacements and is not the abstract Slot<T> constructor used earlier to illustrate separate storage locations. A var binding of A | B accepts both replacements. Full contract declaration grammar and access-value permissions remain open; see [var access](var-access-qualifier.md).
+The later [replacement qualifier and grouped distribution](lite://doc/slot-access-qualifier) use canonical var, replacing the intermediate slot spelling. A | var B | C accepts B; var (A | B) is equivalent to var A | var B within one complete contract. This marker describes accepted replacements and is not the abstract Slot<T> constructor used earlier to illustrate separate storage locations. A var binding of A | B accepts both replacements. Full contract declaration grammar and access-value permissions remain open; see [var access](lite://doc/var-access-qualifier).
 
 Recommend one value-union operation plus separately visible access contracts. Start with precise diagnostics and inferred contracts; consider explicit API notation alongside references, properties, and parameter passing rather than selecting an isolated operator now.
 
 Decide whether users can name/pass these access views, how read/write contracts appear in signatures, which correlations the compiler tracks, and how access qualifiers compose with var, mut, ownership, and methods. These choices remain open.
 
-Related: [field reads](union-field-reads.md), [field writes](union-field-writes.md), [mutability](mutability.md), [record identity](record-type-identity.md), and [type inference](types-and-inference.md).
+Related: [field reads](lite://doc/union-field-reads), [field writes](lite://doc/union-field-writes), [mutability](lite://doc/mutability), [record identity](lite://doc/record-type-identity), and [type inference](lite://doc/types-and-inference).

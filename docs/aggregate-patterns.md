@@ -65,7 +65,7 @@ A literal on the left is a value test; true = verified compares rather than bind
 
 ### Inferred patterns and explicit type tests
 
-A named record pattern has no record type head in the selected grammar; TypeName { ... } is not an alternative deconstruction form. Matching uses the source's exposed fields and the compatible-input inference rule. It does not change nominal type identity, search every declared record for a matching field set, or grant runtime reflection. Use an explicit colon type test for nominal selection. Bare names in match still bind, so a name followed by an arm body is not a headed record pattern; see [record-pattern boundaries](records.md#no-construction-shaped-record-patterns).
+A named record pattern has no record type head in the selected grammar; TypeName { ... } is not an alternative deconstruction form. Matching uses the source's exposed fields and the compatible-input inference rule. It does not change nominal type identity, search every declared record for a matching field set, or grant runtime reflection. Use an explicit colon type test for nominal selection. Bare names in match still bind, so a name followed by an arm body is not a headed record pattern; see [record-pattern boundaries](lite://doc/records#no-construction-shaped-record-patterns).
 
 When distinguishing a particular nominal type is needed, use the existing explicit type test before destructuring:
 
@@ -87,11 +87,11 @@ match student {
 
 All fields are shown here to avoid selecting partial-field omission through an example. Positional constructor-family examples below remain schema proposals, not a requirement to write a type head on the selected named form. Omission, field/position mixing, duplicate source-field selection, and complete grammar remain open.
 
-The explicit `= name` shorthand (`{ = name } := rec`, `(= name) := tup`) is selected and implemented for same-name binding across records and tuples; see [record shorthand](records.md#proposed-same-name-field-shorthand). The separate proposed bare shorthand `{ name, age } := user` would omit `=` and turn entries directly into bindings rather than value tests, and its grammar, field omission, and `_` field-entry behavior remain proposals.
+The explicit `= name` shorthand (`{ = name } := rec`, `(= name) := tup`) is selected and implemented for same-name binding across records and tuples; see [record shorthand](lite://doc/records#proposed-same-name-field-shorthand). The separate proposed bare shorthand `{ name, age } := user` would omit `=` and turn entries directly into bindings rather than value tests, and its grammar, field omission, and `_` field-entry behavior remain proposals.
 
 ## Optional leading separators in nested patterns
 
-Already supported constructor-payload and tuple-component alternative lists may use one optional leading or, as in .Some(or .Email(address) or .Sms(address)) or (or .Email(address) or .Sms(address), received_at). Existing parentheses and commas delimit each nonempty list; the prefix supplies no component, binding, or Unit. Preserve the selected local choice and inference contracts. This is a presentation rule for existing nested alternatives, not an extension of record schemas or extraction/ownership rules. See [nested leading alternatives](leading-separators.md#nested-alternatives), selected 2026-10-24.
+Already supported constructor-payload and tuple-component alternative lists may use one optional leading or, as in .Some(or .Email(address) or .Sms(address)) or (or .Email(address) or .Sms(address), received_at). Existing parentheses and commas delimit each nonempty list; the prefix supplies no component, binding, or Unit. Preserve the selected local choice and inference contracts. This is a presentation rule for existing nested alternatives, not an extension of record schemas or extraction/ownership rules. See [nested leading alternatives](lite://doc/leading-separators#nested-alternatives), selected 2026-10-24.
 
 ## Positional value constraints
 
@@ -167,7 +167,7 @@ Recommendation: permit both only with explicit field/schema contracts. Keep posi
 ## Remaining decisions
 
 - Record/type patterns versus enum payload constructors, and how the matching schema is declared.
-- Schema rules for named patterns, preserving inferred braces, destination-first routing, and typed shorthand; the selected productions are in the [grammar sketch](grammar-sketch.md#record-declarations).
+- Schema rules for named patterns, preserving inferred braces, destination-first routing, and typed shorthand; the selected productions are in the [grammar sketch](lite://doc/grammar-sketch#record-declarations).
 - Whether named and positional forms may mix; no mixing rule is selected by these examples.
 - Omitted fields, exact positional arity, and rest capture; do not silently assume partial or exhaustive field extraction.
 - Duplicate source-field selection, unknown fields, visibility, extraction effects, ownership, and writable access.
@@ -176,7 +176,7 @@ The selected pattern binding order and branch scope still apply. Field selectors
 
 ## Related concepts
 
-- [Pattern primitives](pattern-bindings-and-tests.md)
-- [Field aliases and binding names](pattern-aliases.md)
-- [Tuples and patterns](tuples-and-patterns.md)
-- [Match capabilities](match-patterns.md) and [pattern context review](pattern-contexts.md)
+- [Pattern primitives](lite://doc/pattern-bindings-and-tests)
+- [Field aliases and binding names](lite://doc/pattern-aliases)
+- [Tuples and patterns](lite://doc/tuples-and-patterns)
+- [Match capabilities](lite://doc/match-patterns) and [pattern context review](lite://doc/pattern-contexts)

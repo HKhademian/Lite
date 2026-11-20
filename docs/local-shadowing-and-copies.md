@@ -20,8 +20,8 @@ file-root block or any inner `{ ... }` block, and across value, `var`, `mut`,
 are rejected at compile time. Nested `{ ... }` inner blocks still shadow outer
 bindings (including sibling `if`/`else` branches and `match` arms), and a
 single inner-block tuple destructuring statement such as `(a, a) := (1, 2);`
-retains its ordered per-component bindings (see [pattern-shadowing.md](pattern-shadowing.md)
-and the [compiler gap list](../compiler/gaps.md)).
+retains its ordered per-component bindings (see [pattern-shadowing.md](lite://doc/pattern-shadowing)
+and the [compiler gap list](lite://doc/compiler/gaps)).
 
 ```text
 /* Historical 2026-10-19 same-block shadow example (postponed 2026-11-15): */
@@ -38,16 +38,16 @@ retains its separate value-copy rule without upgrading the source binding.
 
 The typed equivalents place mut after the colon, as in x: mut User = source. The selected copy behavior concerns copying an existing record into the new mutable declaration, rather than upgrading a read-only access to the original object in place.
 
-The later [deferred function-body direction](functions.md#deferred-body-lookup)
+The later [deferred function-body direction](lite://doc/functions#deferred-body-lookup)
 permits references to lower declarations without executing the body or moving
 initialization. For permitted surrounding references, a body retains an
-[already-visible same-block binding across a later same-block shadow](functions.md#existing-bindings-survive-later-shadowing).
+[already-visible same-block binding across a later same-block shadow](lite://doc/functions#existing-bindings-survive-later-shadowing).
 When no earlier same-block binding exists, a [later defining-block symbol takes
-priority over an outer symbol](functions.md#nearer-forward-symbols-before-outer-symbols).
+priority over an outer symbol](lite://doc/functions#nearer-forward-symbols-before-outer-symbols).
 These lookup rules do not themselves grant implicit local capture. A
-[direct self-reference](functions.md#direct-self-reference-without-an-earlier-target)
+[direct self-reference](lite://doc/functions#direct-self-reference-without-an-earlier-target)
 may select the function's own binding when no earlier same-name binding exists.
-An [explicit self call](functions.md#explicit-current-function-self-calls) targets
+An [explicit self call](lite://doc/functions#explicit-current-function-self-calls) targets
 the implementation currently executing; ordinary named calls keep ordinary
 binding lookup. Mutual recursion and nested-scope search
 remain open; initial static enforcement has its own rule.
@@ -108,15 +108,15 @@ A type without a valid copy contract cannot gain a fabricated copy merely throug
 
 ## Fixed temporary values for copyable inline-Int records
 
-Selected on **2026-10-25**: for a record with a valid copy contract and inline Int fields, a simple tmp := counter binding preserves the evaluated record value when counter is replaced. Thus the temporary form of read_original(var counter, counter) keeps tmp.value at 10 while the var call installs a new counter with value 20. This fixed temporary and the ordinary record parameter have value semantics for the selected record class; no mut declaration is required to preserve its readable value. It grants neither caller replacement nor mutable access to tmp. Physical copies may be elided only when behavior is preserved. General reference-bearing/noncopyable record initializer and ownership rules remain open; see [ordinary record values](parameter-values-and-slots.md#copyable-records-with-inline-int-fields-selected).
+Selected on **2026-10-25**: for a record with a valid copy contract and inline Int fields, a simple tmp := counter binding preserves the evaluated record value when counter is replaced. Thus the temporary form of read_original(var counter, counter) keeps tmp.value at 10 while the var call installs a new counter with value 20. This fixed temporary and the ordinary record parameter have value semantics for the selected record class; no mut declaration is required to preserve its readable value. It grants neither caller replacement nor mutable access to tmp. Physical copies may be elided only when behavior is preserved. General reference-bearing/noncopyable record initializer and ownership rules remain open; see [ordinary record values](lite://doc/parameter-values-and-slots#copyable-records-with-inline-int-fields-selected).
 
 ## Fixed temporary values with already-copyable reference fields
 
-Selected on **2026-10-25**: the simple fixed temporary and ordinary-parameter value rule also uses the established shallow mapping for a record and reference fields with valid copy contracts. In tmp := profile, inline values are preserved and copied references keep their original targets and permitted access; replacing profile does not retarget tmp's fields. Referenced targets are shared, and observations of separately authorized changes remain subject to their eventual lifetime/alias rules. Read-only access is not upgraded and no graph clone is implied. The user explicitly defers reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resource handling; this mapping does not decide capability copyability or make the reference model implementation-ready. See [copyable reference-bearing record values](parameter-values-and-slots.md#copyable-reference-bearing-record-values-selected).
+Selected on **2026-10-25**: the simple fixed temporary and ordinary-parameter value rule also uses the established shallow mapping for a record and reference fields with valid copy contracts. In tmp := profile, inline values are preserved and copied references keep their original targets and permitted access; replacing profile does not retarget tmp's fields. Referenced targets are shared, and observations of separately authorized changes remain subject to their eventual lifetime/alias rules. Read-only access is not upgraded and no graph clone is implied. The user explicitly defers reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resource handling; this mapping does not decide capability copyability or make the reference model implementation-ready. See [copyable reference-bearing record values](lite://doc/parameter-values-and-slots#copyable-reference-bearing-record-values-selected).
 
 ## Var shadowing does not demand a deep copy
 
-Var x := x creates a new binding that can receive another compatible value. It does not itself request mutable payload access or a recursive clone of the data. The initializer follows the general copy default: the new binding receives the evaluated value, not an implicit reference, borrow, shared source location, or move. Type-specific copy eligibility and resource/reference safety remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected). The new binding cannot assign into the caller's original binding merely because it shadows the name.
+Var x := x creates a new binding that can receive another compatible value. It does not itself request mutable payload access or a recursive clone of the data. The initializer follows the general copy default: the new binding receives the evaluated value, not an implicit reference, borrow, shared source location, or move. Type-specific copy eligibility and resource/reference safety remain deferred; see [the general copy default](lite://doc/parameter-values-and-slots#general-copy-default-selected). The new binding cannot assign into the caller's original binding merely because it shadows the name.
 
 ## Local parameter work needs no var parameter mode
 
@@ -146,4 +146,4 @@ The mutable shallow copy is distinct from rename(mut userVar), which explicitly 
 
 Sequential local value declarations are not the same as duplicate entries in one parameter list, record field list, or public module namespace. This rule does not automatically permit those duplicates. Ordered repeated names within one pattern retain their already selected binding-order rules.
 
-Related: [declarations](declarations-and-assignment.md), [pattern shadowing](pattern-shadowing.md), [functions](functions.md), [mutability](mutability.md), and [memory and performance](memory-and-performance.md).
+Related: [declarations](lite://doc/declarations-and-assignment), [pattern shadowing](lite://doc/pattern-shadowing), [functions](lite://doc/functions), [mutability](lite://doc/mutability), and [memory and performance](lite://doc/memory-and-performance).

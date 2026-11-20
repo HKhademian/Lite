@@ -16,7 +16,7 @@ y := (...x);
 /* seven fixed components; y.3 is 4; y has no rest member */
 ```
 
-The example's concrete tail extent is statically known from construction. The selected ...rest: T; C syntax can now state an exact extent in the tuple type; a general ...rest: T schema still guarantees no exact count. See [array-segment types](tuple-array-segments.md). Ordinary copy keeps the source organization and follows the current copy/eligibility rules; an explicit destination conversion retains its separately selected compatibility rules. Copy does not mean a reference alias or a guaranteed physical copy instruction.
+The example's concrete tail extent is statically known from construction. The selected ...rest: T; C syntax can now state an exact extent in the tuple type; a general ...rest: T schema still guarantees no exact count. See [array-segment types](lite://doc/tuple-array-segments). Ordinary copy keeps the source organization and follows the current copy/eligibility rules; an explicit destination conversion retains its separately selected compatibility rules. Copy does not mean a reference alias or a guaranteed physical copy instruction.
 
 ## Stored grouping keeps the segment marker
 
@@ -33,7 +33,7 @@ kept := (...ordinary);
 /* (head = 10, rest = [20, 30, 40]) */
 ```
 
-Both stored values have two components, and both expose an array at position one. Only the declared segment emits its elements when the containing tuple is unpacked. Keep ...rest visible when illustrating that stored grouping; writing an ordinary rest field would describe different unpacking behavior. Automatic destination packing and member access do not erase the segment role. See [stored tuple positions](tuple-array-segments.md#automatic-packing-and-tuple-positions).
+Both stored values have two components, and both expose an array at position one. Only the declared segment emits its elements when the containing tuple is unpacked. Keep ...rest visible when illustrating that stored grouping; writing an ordinary rest field would describe different unpacking behavior. Automatic destination packing and member access do not erase the segment role. See [stored tuple positions](lite://doc/tuple-array-segments#automatic-packing-and-tuple-positions).
 
 ## What unpacking emits
 
@@ -41,7 +41,7 @@ Evaluate the operand once. Emit its ordinary fixed components in stored order, p
 
 This is one-level expansion. An ordinary array-valued fixed field remains one labeled item; a tuple-valued tail element remains one item with its own nested shape. A Unit element remains one Unit item. Unpacking does not recursively discard zero-sized values or expand nested arrays/tuples without another explicit spread.
 
-Type-level ...Params and pattern ...receiver keep their selected type-construction and remainder-capture roles. This revised item-emission rule applies to expression/call unpacking, not every syntactic use of ellipsis. The subsequent [gradual-change outcome](tuple-remainder-gradual-reasoning.md) keeps pattern capture structural, preserving segment wrappers at every extent, including zero. Expression emission is not automatically applied to pattern rest. The earlier [review](tuple-segment-pattern-review.md) records why sole-segment projection and universal array collection were not adopted.
+Type-level ...Params and pattern ...receiver keep their selected type-construction and remainder-capture roles. This revised item-emission rule applies to expression/call unpacking, not every syntactic use of ellipsis. The subsequent [gradual-change outcome](lite://doc/tuple-remainder-gradual-reasoning) keeps pattern capture structural, preserving segment wrappers at every extent, including zero. Expression emission is not automatically applied to pattern rest. The earlier [review](lite://doc/tuple-segment-pattern-review) records why sole-segment projection and universal array collection were not adopted.
 
 ## The destination defines the resulting shape
 
@@ -122,4 +122,4 @@ Even zero-item expansion evaluates its source once and preserves required effect
 
 The explored ...= expression anonymous-segment spelling and multiple stored rest declarations remain unselected. Earlier suggestions to append anonymous segments or replace same-named tail containers during tuple merging are superseded by logical item emission. Runtime-array owner spelling, general extent propagation through effects/API boundaries, copy eligibility, memory safety, and complete recursive grammar retain their separate status.
 
-Related: [tuple/array contracts](tuple-array-shapes.md), [spread and pattern rest](tuple-spread-and-rest.md), [array representation](arrays.md), [Unit](unit.md), and [memory and performance](memory-and-performance.md).
+Related: [tuple/array contracts](lite://doc/tuple-array-shapes), [spread and pattern rest](lite://doc/tuple-spread-and-rest), [array representation](lite://doc/arrays), [Unit](lite://doc/unit), and [memory and performance](lite://doc/memory-and-performance).

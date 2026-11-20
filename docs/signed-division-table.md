@@ -2,15 +2,15 @@
 
 Reviewed **2026-10-25**. Each column supplies the same signed values to the row's expression. Most operands are native signed integers; JavaScript/TypeScript Number and BigInt are separated, as are LiteScript Int and Float. The selected LiteScript contract is a design, not an implemented runtime.
 
-The selected [arithmetic family](arithmetic-methods-and-division-revision.md) is `/`, `:/`, `%`, and `:%`. LiteScript `/` rows fix an Int or Float result context explicitly: the Int result truncates and the Float result retains the fraction. Double results likewise retain the fraction. Calculation and storage are distinct: floating operands supply floating arithmetic, while Int storage accepts the quotient using / truncation or :/ floor. This includes nonintegral floating values; see [the selected storage rules](division.md#floating-calculation-and-integer-storage). Compact/spaced equivalence is required, with colon-prefixed operator scanning is unambiguous. R was also consulted for the spelling review and is not included in this 18-language matrix.
+The selected [arithmetic family](lite://doc/arithmetic-methods-and-division-revision) is `/`, `:/`, `%`, and `:%`. LiteScript `/` rows fix an Int or Float result context explicitly: the Int result truncates and the Float result retains the fraction. Double results likewise retain the fraction. Calculation and storage are distinct: floating operands supply floating arithmetic, while Int storage accepts the quotient using / truncation or :/ floor. This includes nonintegral floating values; see [the selected storage rules](lite://doc/division#floating-calculation-and-integer-storage). Compact/spaced equivalence is required, with colon-prefixed operator scanning is unambiguous. R was also consulted for the spelling review and is not included in this 18-language matrix.
 
 | Language | Operand type | Expression | Rule | pos:pos (7, 2) | pos:neg (7, -2) | neg:pos (-7, 2) | neg:neg (-7, -2) |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: |
-| [LiteScript](division.md) | Int | `result: Int = a / b` | Truncating quotient | 3 | -3 | -3 | 3 |
-| [LiteScript](division.md) | Int | `a :/ b` | Floor quotient | 3 | -4 | -4 | 3 |
-| [LiteScript](division.md) | Int | `a % b` | Remainder (dividend sign) | 1 | 1 | -1 | -1 |
-| [LiteScript](division.md) | Int | `a :% b` | Floor modulo (divisor sign) | 1 | -1 | 1 | -1 |
-| [LiteScript](division.md) | Float | `result: Float = a / b` | Fractional quotient | 3.5 | -3.5 | -3.5 | 3.5 |
+| [LiteScript](lite://doc/division) | Int | `result: Int = a / b` | Truncating quotient | 3 | -3 | -3 | 3 |
+| [LiteScript](lite://doc/division) | Int | `a :/ b` | Floor quotient | 3 | -4 | -4 | 3 |
+| [LiteScript](lite://doc/division) | Int | `a % b` | Remainder (dividend sign) | 1 | 1 | -1 | -1 |
+| [LiteScript](lite://doc/division) | Int | `a :% b` | Floor modulo (divisor sign) | 1 | -1 | 1 | -1 |
+| [LiteScript](lite://doc/division) | Float | `result: Float = a / b` | Fractional quotient | 3.5 | -3.5 | -3.5 | 3.5 |
 | [Odin](https://odin-lang.org/docs/overview/#operators) | int | `a / b` | Truncating quotient | 3 | -3 | -3 | 3 |
 | [Odin](https://odin-lang.org/docs/overview/#operators) | int | `a % b` | Remainder (dividend sign) | 1 | 1 | -1 | -1 |
 | [Odin](https://odin-lang.org/docs/overview/#operators) | int | `a %% b` | Floor modulo (divisor sign) | 1 | -1 | 1 | -1 |
@@ -63,7 +63,7 @@ The selected [arithmetic family](arithmetic-methods-and-division-revision.md) is
 | [TypeScript](https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html) | bigint | `a / b` | Truncating quotient | 3n | -3n | -3n | 3n |
 | [TypeScript](https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html) | bigint | `a % b` | Remainder (dividend sign) | 1n | 1n | -1n | -1n |
 
-Salam joined the [project reference set](references.md#project-reference-languages) on 2026-10-28. This review retains its stated language coverage; it does not yet contain a Salam comparison.
+Salam joined the [project reference set](lite://doc/references#project-reference-languages) on 2026-10-28. This review retains its stated language coverage; it does not yet contain a Salam comparison.
 
 ## Reading the differences
 
@@ -73,16 +73,16 @@ Salam joined the [project reference set](references.md#project-reference-languag
 - Euclidean modulo is nonnegative, including for negative divisors. Its quotient differs from floor division when the divisor is negative and the division is inexact.
 - With positive dividends and positive divisors, several rules agree. The additional neg:pos column exposes differences that pos:pos and neg:neg can hide.
 
-With an Int quotient, LiteScript's integer pairs are `/` with `%` and `:/` with `:%`: mathematically, `a == b * (a / b) + (a % b)` and `a == b * (a :/ b) + (a :% b)`. See [division, remainder, and modulo](division.md).
+With an Int quotient, LiteScript's integer pairs are `/` with `%` and `:/` with `:%`: mathematically, `a == b * (a / b) + (a % b)` and `a == b * (a :/ b) + (a :% b)`. See [division, remainder, and modulo](lite://doc/division).
 
 ## Scope and evidence
 
 The table covers all twelve established reference languages, the additional Java/C/C#/Go arithmetic references, JavaScript alongside TypeScript, and LiteScript: 18 language entries in total. It selects representative operators and named alternatives, rather than claiming every numeric library API has been enumerated. It compares small successful values, not zero divisors, overflow, unsigned types, overloaded custom types, or every floating-point remainder convention.
 
-Every language label links to its primary source. Values are calculated from the associated rounding/remainder definitions; a calculated cell is not a claim that its language was executed. Earlier [local foreign-runtime probes](research/arithmetic-operator-probes-2026-10-25.json) cover subsets in Python, Node, C, C++, Rust, Java, and Swift. TypeScript rows describe JavaScript runtime semantics, not an independently executed TypeScript compilation. Scala 3 rows are scoped to JVM Int operations and were not locally executed.
+Every language label links to its primary source. Values are calculated from the associated rounding/remainder definitions; a calculated cell is not a claim that its language was executed. Earlier [local foreign-runtime probes](lite://repo/docs/research/arithmetic-operator-probes-2026-10-25.json) cover subsets in Python, Node, C, C++, Rust, Java, and Swift. TypeScript rows describe JavaScript runtime semantics, not an independently executed TypeScript compilation. Scala 3 rows are scoped to JVM Int operations and were not locally executed.
 
-V's four signed cases were additionally run in the [official playground](https://play.vlang.io/), which reported V 0.5.0 345b29d. Its observed quotient/remainder pairs were (3, 1), (-3, 1), (-3, -1), and (3, -1), in column order. This is a remote playground observation, not a locally installed V compiler or a guarantee about every V version. The [captured source, output, and table data](research/signed-division-table-2026-10-25.json) and [verification image](research/v-signed-division-2026-10-25.png) preserve that evidence.
+V's four signed cases were additionally run in the [official playground](https://play.vlang.io/), which reported V 0.5.0 345b29d. Its observed quotient/remainder pairs were (3, 1), (-3, 1), (-3, -1), and (3, -1), in column order. This is a remote playground observation, not a locally installed V compiler or a guarantee about every V version. The [captured source, output, and table data](lite://repo/docs/research/signed-division-table-2026-10-25.json) and [verification image](lite://repo/docs/research/v-signed-division-2026-10-25.png) preserve that evidence.
 
 Zig rows use the explicitly versioned 0.15.2 builtin contracts. The ordinary signed / and % operator forms have compile-time-positive restrictions in that reference, so the table uses the named signed operations instead. No local Zig execution is claimed. Java Math.floorDiv/floorMod and Kotlin floorDiv/mod are library operations, not extra infix operators. No helper from another language becomes a LiteScript builtin through this comparison.
 
-The [arithmetic comparison](arithmetic-operators-comparison.md) discusses the wider language contracts and sources. Floating-point representation and exact LiteScript fault rules remain open.
+The [arithmetic comparison](lite://doc/arithmetic-operators-comparison) discusses the wider language contracts and sources. Floating-point representation and exact LiteScript fault rules remain open.

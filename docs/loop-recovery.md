@@ -1,8 +1,8 @@
 # Loop recovery and finally
 
-Status: **historical recovery/completion example; external construct-handler placement superseded, 2026-10-19**. The example's receiver lists, Option accumulator, `then(result)`, and external grouped-loop recovery are not current syntax. It is retained only to record the earlier discussion. The user now requires recovery inside fn/if/loop/match bodies. Current loop completion and value rules are in [loops](loops.md); body-wide scope and syntax are reviewed in [body-owned recovery](body-recovery.md). Construct-level `then`-before-`finally` order is selected; body-wide cleanup placement remains separate.
+Status: **historical recovery/completion example; external construct-handler placement superseded, 2026-10-19**. The example's receiver lists, Option accumulator, `then(result)`, and external grouped-loop recovery are not current syntax. It is retained only to record the earlier discussion. The user now requires recovery inside fn/if/loop/match bodies. Current loop completion and value rules are in [loops](lite://doc/loops); body-wide scope and syntax are reviewed in [body-owned recovery](lite://doc/body-recovery). Construct-level `then`-before-`finally` order is selected; body-wide cleanup placement remains separate.
 
-**Latest loop update, 2026-10-19:** header receiver lists/patterns, .acc, and automatic Option accumulator state shown below are historical. Current loops use one optional item name plus .item/.count/.value metadata, and .index for positional sources, with typed zero-initialized value. See [current loops](loops.md) and [loop value](loop-value.md).
+**Latest loop update, 2026-10-19:** header receiver lists/patterns, .acc, and automatic Option accumulator state shown below are historical. Current loops use one optional item name plus .item/.count/.value metadata, and .index for positional sources, with typed zero-initialized value. See [current loops](lite://doc/loops) and [loop value](lite://doc/loop-value).
 
 ## A collision the if proposal does not solve
 
@@ -10,7 +10,7 @@ Loops already explore both else { ... } and else(empty) { ... } for normal no-co
 
 The if proposal's bare-else versus receiving-else distinction cannot be copied here without retiring the requested optional empty-hook receiver. This review does not make that change. A typed receiver does not solve ownership until a shared dispatch/coverage model is explicitly designed.
 
-The example below used the `then(result)` receiver and Option accumulator proposed at that time. Both have since been superseded by receiverless `then` and typed zero-initialized `.value`. Its grouping only illustrates the old attempt to attach recovery outside a loop; external construct recovery is no longer recommended. See [current completion](loop-completion.md).
+The example below used the `then(result)` receiver and Option accumulator proposed at that time. Both have since been superseded by receiverless `then` and typed zero-initialized `.value`. Its grouping only illustrates the old attempt to attach recovery outside a loop; external construct recovery is no longer recommended. See [current completion](lite://doc/loop-completion).
 
 ## Full historical example
 
@@ -95,4 +95,4 @@ Using the same bare/receiving else for both empty completion and failure recover
 
 The external recovery/cleanup layering in this historical sketch is not current. Boolean sources are reevaluated before each entry and unconditional loops have no source; no post-condition mode is added. Conditions that return Result still need explicit handling before supplying Bool. The selected uniform `.item` value for active Boolean/unconditional bodies is Unit; no implicit ordinary item/count/acc names are introduced.
 
-Related: [loops](loops.md), [accumulator](loop-accumulator.md), [completion hooks](loop-completion.md), [finally](finally.md), [expression recovery](expression-recovery.md), [conditional recovery](conditional-recovery.md), and [exit rules](control-flow.md).
+Related: [loops](lite://doc/loops), [accumulator](lite://doc/loop-accumulator), [completion hooks](lite://doc/loop-completion), [finally](lite://doc/finally), [expression recovery](lite://doc/expression-recovery), [conditional recovery](lite://doc/conditional-recovery), and [exit rules](lite://doc/control-flow).

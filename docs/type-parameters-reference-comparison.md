@@ -48,7 +48,7 @@ an evidence gap, not a negative finding about its features.
   limited public official specification. This review did not verify an
   authoritative current declaration and call example, so its exact syntax,
   type-argument inference, and passing rules remain **unverified here**.
-  Creator demonstrations are a possible follow-up. See [the prior research](../research/investigations/INV-060-sequence-execution-and-surface-models.md).
+  Creator demonstrations are a possible follow-up. See [the prior research](lite://repo/research/investigations/INV-060-sequence-execution-and-surface-models.md).
 
 ## What this means for Lite
 
@@ -56,7 +56,7 @@ An explicit type parameter in a declaration and an explicit type argument at
 a call are independent choices. A separate parameter list can be inferred at
 the call; a type-valued ordinary parameter can be required at the call. The
 references also show shorthand inference and language-specific exceptions.
-The later [Lite direction](generic-notation.md#separate-function-type-parameters) selects a separate angle-bracket list for function type parameters; it does not adopt the other languages' full grammars.
+The later [Lite direction](lite://doc/generic-notation#separate-function-type-parameters) selects a separate angle-bracket list for function type parameters; it does not adopt the other languages' full grammars.
 
 Shapes considered in the comparison:
 
@@ -78,4 +78,4 @@ possible inferences, explicit type arguments that conflict with values,
 interactions with named arguments and defaults, and type inputs versus ordinary
 compile-time values such as array lengths. A public complete contract must
 remain visible and must not silently gain body-derived requirements. See
-[collection function signatures](collection-function-signatures.md).
+[collection function signatures](lite://doc/collection-function-signatures).

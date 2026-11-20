@@ -15,14 +15,14 @@ Student := record {
 }
 ```
 
-The record keyword and typed-field surface are selected; see [records](records.md). Constructor syntax, accessors, and field visibility grammar are not finalized.
+The record keyword and typed-field surface are selected; see [records](lite://doc/records). Constructor syntax, accessors, and field visibility grammar are not finalized.
 
 ## Intended rules
 
 - Prefer composed fields over superclass state.
 - Interfaces describe required behavior.
-- [Operation sugar](collection-operation-contracts.md) can resolve loops and bracket access through statically available contract implementations. The [function-signature proposal](collection-function-signatures.md) separately handles input requirements, output guarantees, generic type relationships, and runtime representation; a contract name alone does not select an interface object.
-- Collection consumers request minimal behavioral capabilities; standard/user collection types provide them without a required superclass representation, primitive-wrapper family, or conversion to one concrete container. Protocol names and complete conformance/dispatch rules remain open; see [collection abstractions](collection-abstractions.md).
+- [Operation sugar](lite://doc/collection-operation-contracts) can resolve loops and bracket access through statically available contract implementations. The [function-signature proposal](lite://doc/collection-function-signatures) separately handles input requirements, output guarantees, generic type relationships, and runtime representation; a contract name alone does not select an interface object.
+- Collection consumers request minimal behavioral capabilities; standard/user collection types provide them without a required superclass representation, primitive-wrapper family, or conversion to one concrete container. Protocol names and complete conformance/dispatch rules remain open; see [collection abstractions](lite://doc/collection-abstractions).
 - Implementation should be explicit.
 - Generic constraints should allow static dispatch where possible.
 - Dynamic interface dispatch should be an explicit capability or value representation.
@@ -35,7 +35,7 @@ Earlier sketches used `interface Named { ... }` and `impl Named for Student { ..
 
 An interface conceptually requires a name-producing function; a `Student` implementation satisfies it using its own data. Whether receiver syntax is `self`, a named parameter, or another form remains open.
 
-[Mutability](mutability.md) treats a read operation and a mutating operation as requiring different receiver capabilities. Read access is the default; mutation requires a mut-qualified type on affected typed receivers/parameters, without an additional function-level mutation marker. Full method notation and ownership rules remain open. Var stays before a binding name; mut goes after the colon in annotated declarations, while inferred declarations retain their mut/var mut prefixes. Interface requirements must preserve those contracts rather than allowing an implementation to demand more write access than its declared requirement supplies.
+[Mutability](lite://doc/mutability) treats a read operation and a mutating operation as requiring different receiver capabilities. Read access is the default; mutation requires a mut-qualified type on affected typed receivers/parameters, without an additional function-level mutation marker. Full method notation and ownership rules remain open. Var stays before a binding name; mut goes after the colon in annotated declarations, while inferred declarations retain their mut/var mut prefixes. Interface requirements must preserve those contracts rather than allowing an implementation to demand more write access than its declared requirement supplies.
 
 ## Reuse mechanisms
 
@@ -47,7 +47,7 @@ Modifiers may express visibility, mutation, effects, or dispatch, but their actu
 
 Uniform bindings could support `Name := class { ... }` if classes are introduced. This is not a decision to add inheritance or classes to the initial language. A class or identity-bearing reference type must justify semantics not already covered by records, interfaces, and explicit ownership.
 
-An ordinary interface does not define a closed set of implementers. A union of listed types, an enum's named cases, and a sealed subtype family have different closure and identity contracts. Likewise, generated data operations do not establish value copying, deep immutability, or reference identity. See [type categories](type-categories.md) and the [enum design proposal](enums-and-variants.md#design-direction-after-the-category-review).
+An ordinary interface does not define a closed set of implementers. A union of listed types, an enum's named cases, and a sealed subtype family have different closure and identity contracts. Likewise, generated data operations do not establish value copying, deep immutability, or reference identity. See [type categories](lite://doc/type-categories) and the [enum design proposal](lite://doc/enums-and-variants#design-direction-after-the-category-review).
 
 ## Open decisions
 
@@ -55,7 +55,7 @@ Nominal identity, structural conformance, interface coherence, orphan-style impl
 
 ## Related concepts and references
 
-- [Declarations and assignment](declarations-and-assignment.md)
-- [Types and inference](types-and-inference.md)
-- [Memory and performance](memory-and-performance.md)
+- [Declarations and assignment](lite://doc/declarations-and-assignment)
+- [Types and inference](lite://doc/types-and-inference)
+- [Memory and performance](lite://doc/memory-and-performance)
 - [Swift value and reference types](https://www.swift.org/documentation/articles/value-and-reference-types.html) is a useful comparison for local reasoning and composed values, not an adopted ARC or class model.

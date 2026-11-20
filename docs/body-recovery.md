@@ -4,7 +4,7 @@ Status: **body-local ownership selected; body-wide special sections explicitly d
 
 ## Deferred review
 
-The user supports the body-wide concept but asks to leave its design for later, together with future defer syntax and scoped resource management such as TypeScript's using/await using. See [deferred cleanup and resource review](deferred-cleanup-and-resources.md).
+The user supports the body-wide concept but asks to leave its design for later, together with future defer syntax and scoped resource management such as TypeScript's using/await using. See [deferred cleanup and resource review](lite://doc/deferred-cleanup-and-resources).
 
 The semicolon delimiter, internal else/finally sections, activation scope, and execution rules below are frozen proposals for that review. They introduce no current grammar or new meaning for separators. Operation-level recovery remains usable independently of this deferred feature.
 
@@ -110,7 +110,7 @@ These snippets illustrate the proposed distinction within their containing body.
 
 This delimiter proposal needs review before adoption. It does not make semicolon a value-discard operator. Body hooks would be attached clauses rather than ordinary final work items; the existing final-expression rule would apply to the completed work region, with recovery/value and cleanup transformations specified separately. The Unit examples avoid assuming a new normal-return type rule.
 
-That proposed semicolon serves as an explicit hook delimiter, not an ordinary trailing separator after a completed block. It is not selected grammar and must not be generalized into a block-ending requirement. Ordinary examples follow the [omit-when-unnecessary rule](lexical-structure.md#semicolon-style-after-closing-braces).
+That proposed semicolon serves as an explicit hook delimiter, not an ordinary trailing separator after a completed block. It is not selected grammar and must not be generalized into a block-ending requirement. Ordinary examples follow the [omit-when-unnecessary rule](lite://doc/lexical-structure#semicolon-style-after-closing-braces).
 
 Receiver omission could remain supported for a body-owned else because its explicit separator/brace owner already distinguishes it from a call handler or external false branch. That would need to be stated in the final grammar rather than inferred from this illustration.
 
@@ -135,4 +135,4 @@ A loop body-owned handler naturally raises a per-iteration versus whole-loop que
 
 The user correction names recovery placement. It does not independently move or retire `finally` hooks. Cleanup-only `finally` has no receiver, recovery behavior, or transformation; language-managed panic propagation runs applicable exited-scope `finally` blocks before outer recovery. Construct-level `then`-before-`finally` order and primary/secondary cleanup-failure precedence are selected. Body-wide placement, whether that precedence applies to body-wide sections, and Result-forwarding interactions remain separate decisions.
 
-Related: [operation recovery](expression-recovery.md), [boundary comparison](recovery-boundaries.md), [Result handling](result-and-errors.md), [conditionals](conditionals.md), [loops](loops.md), [match](match.md), and [finally](finally.md).
+Related: [operation recovery](lite://doc/expression-recovery), [boundary comparison](lite://doc/recovery-boundaries), [Result handling](lite://doc/result-and-errors), [conditionals](lite://doc/conditionals), [loops](lite://doc/loops), [match](lite://doc/match), and [finally](lite://doc/finally).

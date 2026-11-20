@@ -2,11 +2,11 @@
 
 Status: **historical design proposal, 2026-10-19; fallible-default indexing is superseded by direct positional access with typed faults and attached `else`, while the flat checked-binding extension remains a proposal and is not selected grammar**. The user wants individual collection accesses to support explicit recovery/propagation and successful destructuring bindings to remain at the surrounding scope.
 
-The later [fault-policy review](checked-fault-policy.md) compares this fallible-default indexing model with ordinary asserting access plus explicit typed checked operations. The later [shared-recovery direction](expression-recovery.md) selects direct ordinary positional access with typed faults and attached else recovery. Examples below preserve the older fallible-default interpretation for this alternative; users[index]! must not be read as panic capture. The flat destructuring extension remains a proposal.
+The later [fault-policy review](lite://doc/checked-fault-policy) compares this fallible-default indexing model with ordinary asserting access plus explicit typed checked operations. The later [shared-recovery direction](lite://doc/expression-recovery) selects direct ordinary positional access with typed faults and attached else recovery. Examples below preserve the older fallible-default interpretation for this alternative; users[index]! must not be read as panic capture. The flat destructuring extension remains a proposal.
 
 ## Checked indexing
 
-Scope: indexed collections, not tuples. The later selected [tuple access contract](tuple-entries-and-access.md#runtime-indexing-rejected) rejects runtime tuple indexing at compile time; supported tuple positions use fixed numeric dot access.
+Scope: indexed collections, not tuples. The later selected [tuple access contract](lite://doc/tuple-entries-and-access#runtime-indexing-rejected) rejects runtime tuple indexing at compile time; supported tuple positions use fixed numeric dot access.
 
 Proposed dynamic indexing returns a typed recoverable outcome, conceptually T ! BoundsError:
 
@@ -76,6 +76,6 @@ For a runtime shape, choose explicit selection or the proposed checked handler. 
 
 ## Source restrictions
 
-Initially limit bracket extraction to suitable ordered sequence contracts. Runtime-known size, repeatability, contiguity, and indexed access are independent properties. Future hot/cold producers and generators require explicit consumption and delivery rules; exact-length matching must not implicitly drain, subscribe, wait for completion, or materialize them. See [source contracts](collection-source-contracts.md).
+Initially limit bracket extraction to suitable ordered sequence contracts. Runtime-known size, repeatability, contiguity, and indexed access are independent properties. Future hot/cold producers and generators require explicit consumption and delivery rules; exact-length matching must not implicitly drain, subscribe, wait for completion, or materialize them. See [source contracts](lite://doc/collection-source-contracts).
 
-Related: [sequence patterns](sequence-patterns.md), [pattern contexts](pattern-contexts.md), [Result](result-and-errors.md), [fallbacks](recovery-and-fallbacks.md), and [capabilities](collection-capabilities.md).
+Related: [sequence patterns](lite://doc/sequence-patterns), [pattern contexts](lite://doc/pattern-contexts), [Result](lite://doc/result-and-errors), [fallbacks](lite://doc/recovery-and-fallbacks), and [capabilities](lite://doc/collection-capabilities).

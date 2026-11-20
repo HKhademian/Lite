@@ -15,7 +15,7 @@ Lite is a statically typed, small-runtime language and self-hosted compiler desi
 
 ## Prepare Your Checkout
 
-You can run `./bin/lite run` immediately with Node.js (version listed in [igniter/.node-version](../../../../igniter/.node-version)). To also run `./bin/lite check`, formatter tests, and editor checks, install the locked development packages from the repository root:
+You can run `./bin/lite run` immediately with Node.js (version listed in [igniter/.node-version](lite://repo/igniter/.node-version)). To also run `./bin/lite check`, formatter tests, and editor checks, install the locked development packages from the repository root:
 
 ```sh
 npm --prefix igniter ci

@@ -21,7 +21,7 @@ function's ordinary input is `items`. The same name relates its element type
 to the result. `[T]` is the previously selected full indexed-sequence contract,
 including count and traversal; it is stronger than the minimal indexed-read
 requirement that a local omitted-input function can infer. See [the indexed
-contract](indexed-sequence-contract.md) and [local input inference](collection-function-signatures.md#local-inferred-indexing-and-explicit-public-contracts).
+contract](lite://doc/indexed-sequence-contract) and [local input inference](lite://doc/collection-function-signatures#local-inferred-indexing-and-explicit-public-contracts).
 
 The `fn <T>(...)` example illustrates the selected separate-list direction; it
 does not complete the declaration grammar, callable-type spelling, or parsing
@@ -66,7 +66,7 @@ not selected calls. No implicit union should be inferred for differing inputs
 without a separately selected inference rule.
 
 FVP exception selected by the user, **2026-10-31**: adopt List<T> for this builtin
-family in the [bounded INV-055 slice](../research/investigations/INV-055-fvp-list-slice.md).
+family in the [bounded INV-055 slice](lite://repo/research/investigations/INV-055-fvp-list-slice.md).
 The igniter supports existing scalar/flat-tuple elements and explicit receiving
 construction. This does not adopt general generic declarations/application,
 other families, constraints or specialization infrastructure.
@@ -83,7 +83,7 @@ Result<User, LoadError>
 
 Except for the narrow List<T> approval above, read these as descriptions of type families and their inputs. The function-parameter direction above does not select type-family argument separators, declaration syntax, parameter kinds, or explicit application syntax.
 
-The user selected a conditional type-boundary contract on 2026-10-23: if angle brackets are adopted for generic type application, grammatical type context must separate a closing > from an attached fallible-type ! suffix and any following initializer =. Box<Int>! = load(), Box<Int>!= load(), and Box<Int>!=load() preserve that boundary in a typed declaration; Box<Int> != load() has a detached suffix and is invalid shorthand. The separate function-parameter direction does not itself select generic type application syntax, expression operators, or complete token-splitting implementation. See [fallible-type shorthand attachment](fallible-types-and-error-composition.md#fallible-type-shorthand-attachment-selected).
+The user selected a conditional type-boundary contract on 2026-10-23: if angle brackets are adopted for generic type application, grammatical type context must separate a closing > from an attached fallible-type ! suffix and any following initializer =. Box<Int>! = load(), Box<Int>!= load(), and Box<Int>!=load() preserve that boundary in a typed declaration; Box<Int> != load() has a detached suffix and is invalid shorthand. The separate function-parameter direction does not itself select generic type application syntax, expression operators, or complete token-splitting implementation. See [fallible-type shorthand attachment](lite://doc/fallible-types-and-error-composition#fallible-type-shorthand-attachment-selected).
 
 The same convention covers capability examples such as `Iterable<Icon>`. A capability written in a parameter sketch does not settle whether the final spelling is a generic constraint or a runtime interface value, and it does not mandate boxing or dynamic dispatch. The future generic/interface review must distinguish those mechanisms explicitly.
 
@@ -91,7 +91,7 @@ In the array proposal, Float describes an element type and 3 describes an intend
 
 ## Preserve concepts without freezing punctuation
 
-The 2026-10-24 rule makes a fresh [1, 2, 3] infer [Int; 3], superseding the earlier unconditional List default. This fixed-array notation does not select general angle-bracket generic declaration/application syntax. List<Int> now has the explicit builtin FVP exception above; other generic examples and runtime-array type spelling remain open. See [shape and inference decisions](tuple-array-shapes.md).
+The 2026-10-24 rule makes a fresh [1, 2, 3] infer [Int; 3], superseding the earlier unconditional List default. This fixed-array notation does not select general angle-bracket generic declaration/application syntax. List<Int> now has the explicit builtin FVP exception above; other generic examples and runtime-array type spelling remain open. See [shape and inference decisions](lite://doc/tuple-array-shapes).
 
 Likewise, future notation changes must preserve whichever array-length, slice-access, and type-identity contracts are selected. The current array/slice proposals do not themselves settle those contracts. Record syntax and already selected annotations remain separate decisions.
 
@@ -99,11 +99,11 @@ Likewise, future notation changes must preserve whichever array-length, slice-ac
 
 ## Selected compatibility criterion
 
-The selected [generic widening criterion](types-and-inference.md#generic-widening-requires-complete-compatibility) permits a value conversion only when the compiler can prove compatibility of the complete instantiated contracts. Int fitting Int | String does not automatically make an arbitrary G<Int> fit G<Int | String>; stored callbacks and other contracts can prevent it. This semantic criterion does not settle generic punctuation, variance declarations/inference, or the complete proof algorithm.
+The selected [generic widening criterion](lite://doc/types-and-inference#generic-widening-requires-complete-compatibility) permits a value conversion only when the compiler can prove compatibility of the complete instantiated contracts. Int fitting Int | String does not automatically make an arbitrary G<Int> fit G<Int | String>; stored callbacks and other contracts can prevent it. This semantic criterion does not settle generic punctuation, variance declarations/inference, or the complete proof algorithm.
 
 ## Deferred generic design
 
-The **2026-10-31** [INV-055 FVP proposal](../research/investigations/INV-055-fvp-list-slice.md)
+The **2026-10-31** [INV-055 FVP proposal](lite://repo/research/investigations/INV-055-fvp-list-slice.md)
 was explicitly approved for the builtin List<T> family after operation-name
 selection. That bounded exception does not adopt angle brackets for other
 families or settle their generic declaration/application design.
@@ -111,10 +111,10 @@ families or settle their generic declaration/application design.
 The future review should complete declaration and application syntax together, distinguish type inputs from compile-time value inputs, and define inference, defaults, constraints, specialization, and type identity. The separate function type-parameter direction above does not settle those topics.
 
 The user subsequently selected general [compile-time evaluation and known-input
-requirements](compile-time-evaluation.md). Compile-time-required inputs accept
+requirements](lite://doc/compile-time-evaluation). Compile-time-required inputs accept
 only values known during compilation; that direction does not yet decide
 whether compile-time value parameters belong in the generic angle-bracket list.
 
 For now, keep one consistent explanatory notation and link to this convention. Beyond the explicit builtin List exception, the function direction is not an implementation or a settled generic grammar. Migrate explanatory examples only as the relevant source contracts are selected.
 
-Related: [types and inference](types-and-inference.md), [arrays](arrays.md), [sequence families](sequence-types.md), [fallible types](fallible-types-and-error-composition.md), and [grammar sketch](grammar-sketch.md).
+Related: [types and inference](lite://doc/types-and-inference), [arrays](lite://doc/arrays), [sequence families](lite://doc/sequence-types), [fallible types](lite://doc/fallible-types-and-error-composition), and [grammar sketch](lite://doc/grammar-sketch).

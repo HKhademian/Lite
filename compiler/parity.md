@@ -3,16 +3,16 @@
 Status: **historical snapshot, 2026-11-02**. The commands and results below
 record the pre-import bootstrap path. They are audit evidence, not current build
 instructions; the active graph-based build is documented in
-[`README.md`](README.md) and [`bootstrap/README.md`](bootstrap/README.md).
+[`README.md`](lite://doc/compiler/overview) and [`bootstrap/README.md`](lite://doc/compiler/bootstrap-readme).
 
 Immediate scope: the bootstrap subset L, S, and the 67 program / 26 rejection
 cases. The owner approved starting full T00 replacement on 2026-11-02; existing
-features beyond L remain pending work in the [transition plan](transition-plan.md).
+features beyond L remain pending work in the [transition plan](lite://doc/compiler/transition-plan).
 
 ## Default compiler transition
 
 TS and C compilation and the verifier's compiler emission use the checked-in
-[generated seeds](bootstrap/README.md), with exact artifact/source identity checks.
+[generated seeds](lite://doc/compiler/bootstrap-readme), with exact artifact/source identity checks.
 Changed S is rebuilt by T11 into a strictly checked, source-keyed cache; there
 is no implicit T00 fallback. The historical T00 ladder remains an explicit
 audit through `igniter/bundle-cli.ts`, so its node labels remain accurate.
@@ -27,7 +27,7 @@ not complete feature parity or authorize deleting T00 before its replacements pa
 ## Terms
 
 - **TS igniter / stage 0** — the preserved TypeScript implementation in
-  [`../igniter/`](../igniter/README.md). It executes S.
+  [`../igniter/`](lite://repo/igniter/README.md). It executes S.
 - **S** — the Lite-written compiler source assembled from a manifest.
 - **T00** — the stage-0 TS igniter.
 - **C11** — the owner's requested first native compiler built through T11;
@@ -165,8 +165,8 @@ instead of rebuilding a whole-source array at every character read.
   this T11 produces the 233939-byte TS-hosted C seed, SHA-256 `57b3a3fe…`.
   This is not native C11 or a native fixed point.
 
-[Ladder identities](reports/2026-11-02-text-cache-ladder.json) preserve the full
-hashes and commands. [Seven-sample benchmark and raw data](../benchmark/reports/2026-11-02-text-cache.md)
+[Ladder identities](lite://repo/compiler/reports/2026-11-02-text-cache-ladder.json) preserve the full
+hashes and commands. [Seven-sample benchmark and raw data](lite://repo/benchmark/reports/2026-11-02-text-cache.md)
 record a 668 ms self-compilation median and a 23.91× process-time improvement
 for 1,000 report statements with exact emitted-output equality. Old self-build
 timeouts remain censored; no whole-source speedup ratio is inferred.
@@ -197,11 +197,11 @@ values in a loop, exit after a report, and exit inside an argument.
   91 verification executions pass. The fast suite passes 238 tests with nine
   expected skips; all nine editor groups pass. The full suite passes all 247
   tests with zero failures or skips (581 s, including the T00 sweeps).
-- [`tests/references/generated/current-artifacts.json`](tests/references/generated/current-artifacts.json) records
+- [`tests/references/generated/current-artifacts.json`](lite://repo/compiler/tests/references/generated/current-artifacts.json) records
   current hashes for all 53 program cases, checked without optional hash skips.
   Historical P0 hashes and the original support inventory remain unchanged.
 
-[Exact ladder identities and reproduction commands](reports/2026-11-02-report-order-ladder.json)
+[Exact ladder identities and reproduction commands](lite://repo/compiler/reports/2026-11-02-report-order-ladder.json)
 record both the generated-only refresh and the independent T00 audit. The
 text-cache timings above describe their earlier source snapshot, not a benchmark
 of this refresh. Fault-time output retention is a separate remaining gap.
@@ -225,7 +225,7 @@ The recorded full gate falls from 580556.73 ms to 47618.322917 ms (12.19×):
 248 passed, zero failures, zero skips. The same three sweeps fall from 547043 ms
 to 15809 ms combined. The fast gate passes 239 with its nine existing skips in
 26.7 s. These are single before/after runs on the same workspace, not a new
-compiler-throughput benchmark. [Raw timings and method](reports/2026-11-02-generated-sweeps.json).
+compiler-throughput benchmark. [Raw timings and method](lite://repo/compiler/reports/2026-11-02-generated-sweeps.json).
 This migrates three test consumers; full feature parity, native C11 and run/check
 replacement remain pending.
 
@@ -234,7 +234,7 @@ replacement remain pending.
 Owner selection, 2026-11-02: replace report with outputLine, add output without a
 newline, allow empty output calls, display ordinary values including arrays,
 and give inputAll/inputLine/inputInt/inputFloat an optional positional String
-prompt. A leading output String is a value. The [current helper contract](../docs/tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+prompt. A leading output String is a value. The [current helper contract](lite://doc/tooling-and-learning#temporary-input-and-output-helpers-selected-2026-11-02)
 supersedes earlier report signatures; there is no source-level report alias.
 All maintained Lite calls and live source snippets are migrated. Historical
 snapshots and published tags remain unchanged.
@@ -260,7 +260,7 @@ SHA-256 `fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf`. The 
 source call spellings for the previous seed and then compiles unchanged current
 S three times; this preserves the historical ladder node meanings. The current
 TS-hosted C emitter is 244073 bytes, SHA-256 `8928ddc79ac55f0d48990fa71ab163f4f6987e90bc19fba1a863c964de6446a4`.
-[Exact builder recipe and identities](reports/2026-11-02-io-migration-ladder.json).
+[Exact builder recipe and identities](lite://repo/compiler/reports/2026-11-02-io-migration-ladder.json).
 
 The compiler corpus now has 55 programs and 38 rejections: empty outputLine()
 moves to the program category, and a new output/no-newline case is added.
@@ -284,7 +284,7 @@ logical source names, Unicode code-point columns and CRLF positions match T00.
 Overflow preserves earlier streamed output, exact ArithmeticPanic stderr and
 status 1. Short-circuit logic and untaken branches avoid executing their faults.
 
-The [host differential tests](tests/host.test.ts) cover a 13-value signed boundary
+The [host differential tests](lite://repo/compiler/tests/host.test.ts) cover a 13-value signed boundary
 matrix, all representable pairwise results, eleven overflow expressions, nested
 fault order, helper-name hygiene and TS call effects. The existing canonical
 Int-limits case now also executes dynamic boundary operations on all three
@@ -303,7 +303,7 @@ source rewriting is used. The refreshed TS-hosted C emitter is 283282 bytes,
 SHA-256 `b6f54e8e809b89db75965781436ebbc8647ecaa66dee510d653c46e2d36fa4cc`,
 from C source SHA-256
 `e70525a549f47e2ca1fad710ab9bc14b581af90c1197c67be854f939d984c183`.
-The [ladder record](reports/2026-11-02-int64-ladder.json) preserves the recipe,
+The [ladder record](lite://repo/compiler/reports/2026-11-02-int64-ladder.json) preserves the recipe,
 identities and validation results.
 
 Strict host/seed checks pass. The full suite passes all 253 tests with zero
@@ -338,16 +338,16 @@ The TS-hosted C emitter is 281923 bytes, SHA-256
 `a0e02fcafc53fd24b22e9cd1272d278de6c12c54b6ccf0c522b65d93c6a01ccf`,
 from 157990 bytes of C source, SHA-256
 `3c42fcffb4d087e1083f640738ff015e209f1f615679f4699d975c27d5876bb6`.
-The [generated-only ladder](reports/2026-11-02-division-ladder.json) records
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-division-ladder.json) records
 builder identities, reproduction and validation.
 
-The [refreshed inventory](reports/current-t00-t11-inventory.md) has 71/162
+The [refreshed inventory](lite://repo/compiler/reports/current-t00-t11-inventory.md) has 71/162
 matching cases and 91 remaining; 21 original failures are now closed, with no
 original passing case regressing. Two accepted-source diagnostic differences
 remain, both bounds faults. Dead constant arithmetic/short-circuit folding and
 wider numeric semantics remain separate gaps.
 
-The [five-pair speed check](reports/2026-11-02-division-performance.json) uses
+The [five-pair speed check](lite://repo/compiler/reports/2026-11-02-division-performance.json) uses
 identical inputs and alternating fresh processes. Compiler-phase medians are
 922.5 → 922.8 ms for the same current S, and 95.6 → 102.4 ms for 1,000 output
 statements. Corrected generated code intentionally changes some artifacts; the
@@ -358,7 +358,7 @@ Strict host/seed checks pass. All 255 full tests pass with zero skips in 52.3 s;
 fast passes 244 with eleven expected skips. Both 93-case corpus comparisons,
 all 95 verifier executions and all nine editor groups pass. A combined-feature
 C probe found that a multi-value output call can print a prefix before a later
-argument faults; the reproducer is tracked separately in [the gap list](gaps.md).
+argument faults; the reproducer is tracked separately in [the gap list](lite://doc/compiler/gaps).
 
 ## Single-pass helper discovery
 
@@ -370,7 +370,7 @@ code once before testing required names. This is implemented in shared Lite
 source and both Lite emitters; it selects the same runtime helpers and changes
 no language contract.
 
-The [paired measurements](reports/2026-11-02-helper-scan-performance.json) record
+The [paired measurements](lite://repo/compiler/reports/2026-11-02-helper-scan-performance.json) record
 compiler-phase medians of 100.0 → 60.4 ms for 1,000 output statements and
 899.0 → 649.8 ms for identical current compiler source. Both emitted outputs
 are byte-identical across all five pairs. These are fresh processes with one
@@ -384,7 +384,7 @@ Exact previous/current generated-compiler comparisons cover 261 source inputs
 on each target: all 162 inventory cases, 93 compiler corpus cases and six extra
 quote/escape/shadow/nesting cases. All 522 comparisons match status/stdout/stderr,
 including explicit C rejections; artifacts are not normalized. The
-[raw comparison](reports/2026-11-02-helper-scan-exact.json) records input and
+[raw comparison](lite://repo/compiler/reports/2026-11-02-helper-scan-exact.json) records input and
 output identities. The 71/162 runtime inventory count is unchanged.
 
 Current TS S is 172660 bytes, SHA-256
@@ -395,7 +395,7 @@ The TS-hosted C emitter is 284104 bytes, SHA-256
 `eba31df8415d845789dc3a3e1dd6c97666d2381655486b7d260a35184d1f1692`,
 from C source SHA-256
 `450a6578c13a0f3a4803189edd63679505d6f116afe24fb7bf52755594b63eef`.
-The [generated-only ladder](reports/2026-11-02-helper-scan-ladder.json) records
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-helper-scan-ladder.json) records
 exact source/builder/artifact identities and reproduction.
 
 Strict host/seed checks, all 255 full tests (zero skips, 49.1 s), fast 244 pass
@@ -425,10 +425,10 @@ Only C S changes: 161052 bytes, SHA-256
 Unchanged T11 (`c25922d7…`) emits the strictly checked TS-hosted C compiler,
 286924 bytes, SHA-256
 `ec6d4b7b48f61101d8160c464409ccf846e8b0136890d58c54cf7c1198511928`.
-The [C-only refresh](reports/2026-11-02-c-output-ladder.json) records provenance
+The [C-only refresh](lite://repo/compiler/reports/2026-11-02-c-output-ladder.json) records provenance
 and reproduction. It does not reclassify this TS-hosted emitter as native C11.
 
-The [five-pair C-emitter measurements](reports/2026-11-02-c-output-performance.json)
+The [five-pair C-emitter measurements](lite://repo/compiler/reports/2026-11-02-c-output-performance.json)
 are steady within noise: 78.8 → 79.6 ms for 1,000 single-value outputs,
 185.7 → 181.7 ms for 200 multi-value outputs. Single-value artifacts match
 exactly; multi-value artifacts intentionally add argument temporaries.
@@ -437,7 +437,7 @@ Strict checks, all 256 full tests (zero skips, 48.5 s), fast 244 pass with twelv
 expected skips (27.2 s), both 93-case corpus comparisons, 95 verifier executions
 and nine editor groups pass. The TS inventory remains 71/162, with 91 failing
 cases. C output ordering is closed; positioned bounds diagnostics, comparison
-parsing and the other [live gaps](gaps.md) remain pending.
+parsing and the other [live gaps](lite://doc/compiler/gaps) remain pending.
 
 ## Positioned text and list bounds faults
 
@@ -467,13 +467,13 @@ The refreshed TS-hosted C emitter is 288864 bytes, SHA-256
 from C source SHA-256
 `550cd452f94d14887875c7a335a97d0cf0fffa57fee0a705b549c6e608e47b99`.
 Native C program bytes are unchanged. The
-[generated-only ladder](reports/2026-11-02-bounds-ladder.json) records provenance.
+[generated-only ladder](lite://repo/compiler/reports/2026-11-02-bounds-ladder.json) records provenance.
 
 The refreshed inventory has 73/162 matches, 89 rejections, and no observed
 runtime/diagnostic differences among accepted inputs; 23 original failures now
 match, with no original passing case regressing. These are finite observations;
 the supplementary-column discrepancy and wider gaps remain tracked separately.
-The [paired performance report](reports/2026-11-02-bounds-performance.json)
+The [paired performance report](lite://repo/compiler/reports/2026-11-02-bounds-performance.json)
 records the cost of positioned helpers without claiming a speedup.
 
 Strict checks, all 257 full tests (zero skips, 47.3 s), fast 245 pass with twelve
@@ -505,13 +505,13 @@ The TS-hosted C emitter is 288610 bytes, SHA-256
 `6f891dd9315276f07e75b28a71530953c9173927aef6b92dc41affdbd90de7b3`,
 from C source SHA-256
 `1b5adf7998d2e335d37be55a4f17d535fe03e10709a7bc967d77bb0c69907b1d`.
-The [generated-only ladder](reports/2026-11-02-inequality-ladder.json) records
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-inequality-ladder.json) records
 provenance; all existing corpus program artifact bytes remain unchanged.
 
 The inventory now has 75/163 matches and 88 rejections: one old failed probe
 is closed and the new function-tail probe also matches. Twenty-four original
 failures are closed, with no original matching case regressing. The
-[paired measurements](reports/2026-11-02-inequality-performance.json) are recorded
+[paired measurements](lite://repo/compiler/reports/2026-11-02-inequality-performance.json) are recorded
 without claiming a speedup. Deferred constant arithmetic faults are the next
 topic, before comparison chains; the supplementary-column decision stays separate.
 
@@ -556,14 +556,14 @@ The TS-hosted C emitter is 283560 bytes, SHA-256
 `6c04b9cee27e59a786c0348c5c03a222d8816dee831c04bbbdfce6782bbf77b0`,
 from C source SHA-256
 `e52694da6923f1f6b3cc85c94a69849eee558cb10825a41931eb0edad22674d9`.
-The [generated-only ladder](reports/2026-11-02-deferred-faults-ladder.json)
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-deferred-faults-ladder.json)
 records provenance and validation.
 
 All 259 full tests pass with zero skips in 53.4 s; fast is 247 pass/twelve
 expected skips (31.5 s). Strict checks, both 93-case compiler comparisons,
 95 canonical target executions and nine editor groups pass. Inventory is
 77/163 matching, 86 rejecting; 26 original failures are now closed, without an
-original passing case regressing. The [paired performance report](reports/2026-11-02-deferred-faults-performance.json)
+original passing case regressing. The [paired performance report](lite://repo/compiler/reports/2026-11-02-deferred-faults-performance.json)
 records steady throughput, including a new constant-arithmetic workload.
 Comparison chains are next. Supplementary-character column units, wider
 features, native C self-hosting and run/check replacement remain pending.
@@ -586,7 +586,7 @@ Do not widen S or L just to simplify parity.
 
 ## Feature gap
 
-The [measured support inventory](reports/2026-11-02-t00-t11-inventory.md) audits
+The [measured support inventory](lite://repo/compiler/reports/2026-11-02-t00-t11-inventory.md) audits
 all canonical features, examples and samples plus isolated boundary probes.
 Of 36 feature cases, 20 match and 16 reject; of 19 examples, 2 match and 17
 reject; of 20 implemented samples, 11 match and 9 reject. Isolated probes also
@@ -656,7 +656,7 @@ freeze prevents the target from growing while it is approached.
   features; any new capability is a Lite-first owner decision.
 - T00 exists. The refreshed T11, T12 and T13 are recorded and byte-identical for
   the bootstrap surface. The native C ladder remains pending.
-- [`tests/references/generated/current-artifacts.json`](tests/references/generated/current-artifacts.json) contains
+- [`tests/references/generated/current-artifacts.json`](lite://repo/compiler/tests/references/generated/current-artifacts.json) contains
   the current artifact hashes for all 53 program cases. The original 50-case P0
   hashes remain in `tests/references/generated/baseline-artifacts.json` as historical evidence.
 
@@ -665,7 +665,7 @@ Useful internal tools:
 - [`../igniter/bootstrap.ts`](https://github.com/repository owner/Lite/blob/d3bd6f7bcf06bbea6669c8d74bebe5e73f383114/igniter/bootstrap.ts): `RunResult`,
   `loadCompiler`, `runText`/`runFile`/`runBundle`, `hashBytes`,
   `nondeterminismReasons`.
-- [`../igniter/artifacts.ts`](../igniter/artifacts.ts): strict TS typecheck/run
+- [`../igniter/artifacts.ts`](lite://repo/igniter/artifacts.ts): strict TS typecheck/run
   and C build/run with `-std=c11 -Wall -Wextra -Werror`.
 
 ## Difference log
@@ -696,7 +696,7 @@ identical; both 93-case corpora and all 98 verifier executions pass.
 
 The full gate passes 260/260 tests, zero skips, in 49.4 s; fast passes 248
 with 12 expected skips in 28.3 s. Strict host/seeds,
-coverage and nine editor groups pass. The [generated-only ladder](reports/2026-11-02-comparison-chains-ladder.json)
+coverage and nine editor groups pass. The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-comparison-chains-ladder.json)
 records three identical TS generations and the TS-hosted C emitter. Native C
 compiler self-hosting remains pending.
 
@@ -706,7 +706,7 @@ path small. Five paired samples show TS medians 60.6 → 59.5 ms for 1,000 outpu
 constant expressions. C-emitter medians are 78.8 → 76.9, 166.5 → 163.2 and
 221.3 → 213.0 ms for outputs, dynamic divisions and constant expressions.
 These mixed changes are recorded without a general speedup claim; see the
-[raw performance report](reports/2026-11-02-comparison-chains-performance.json).
+[raw performance report](lite://repo/compiler/reports/2026-11-02-comparison-chains-performance.json).
 
 Inventory: 79/164 match, 85 remain, 27 original failures closed, no regressions,
 210 tracked Lite sources, no load errors. The decisions example still needs a
@@ -733,7 +733,7 @@ sources. The 61 earlier program artifact pairs are unchanged.
 
 The full gate passes all 261 tests with zero skips in 52.2 s; fast passes
 249 with 12 expected skips in 32.5 s.
-The [generated-only ladder](reports/2026-11-02-empty-scripts-ladder.json) records
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-empty-scripts-ladder.json) records
 three identical compiler generations and the TS-hosted C emitter. Strict host,
 seed and artifact checks, both 93-case corpora, 98 verifier executions, coverage
 and nine editor groups pass. Native C compiler self-hosting remains pending.
@@ -743,7 +743,7 @@ Five paired samples show steady nonempty compiler throughput: TS medians
 130.6 → 128.5 ms for 1,000 constant expressions. C-emitter medians are
 83.2 → 82.2, 170.9 → 168.5 and 216.5 → 217.0 ms for outputs, divisions and
 constant expressions. Mixed small changes do not establish a speedup; the
-[performance report](reports/2026-11-02-empty-scripts-performance.json) keeps raw
+[performance report](lite://repo/compiler/reports/2026-11-02-empty-scripts-performance.json) keeps raw
 samples and exact input/artifact identities. The source shrinks by 112 bytes
 and each generated compiler by 126 bytes.
 
@@ -777,7 +777,7 @@ The final-semicolon declaration fixture moves to 001-005 with unchanged source
 bytes. The corpus has 64 programs/29 rejections (93 sources); all 63 previous
 program artifact pairs remain identical. Both compiler corpora, 98 verifier
 executions, coverage, strict host/seeds and nine editor groups pass. The
-[generated-only ladder](reports/2026-11-02-statement-boundaries-ladder.json)
+[generated-only ladder](lite://repo/compiler/reports/2026-11-02-statement-boundaries-ladder.json)
 records three identical TS generations and the TS-hosted C emitter.
 
 All 262 full tests pass with zero skips in 63.4 s; fast passes 250 with
@@ -790,7 +790,7 @@ TS outputs 61.3 → 61.9 ms, identical S 676.2 → 669.4 ms, constant expression
 127.3 → 127.9 ms; C-emitter outputs 80.9 → 79.7 ms, divisions 169.4 → 171.8 ms,
 constant expressions 218.0 → 215.0 ms. All measured output bytes match exactly;
 these mixed changes do not establish a general speedup. See the
-[raw performance report](reports/2026-11-02-statement-boundaries-performance.json).
+[raw performance report](lite://repo/compiler/reports/2026-11-02-statement-boundaries-performance.json).
 
 ## Adjacent String literals
 
@@ -813,14 +813,14 @@ The original adjacent-literal fixture moves to 001-001 with unchanged source
 bytes. Corpus: 65 programs/28 rejections, still 93 sources. All 64 earlier program
 artifact pairs are unchanged. Both compiler corpora, 98 verifier executions,
 coverage, strict host/seeds and nine editor groups pass. The
-[generated-only ladder](reports/2026-11-02-adjacent-strings-ladder.json) records
+[generated-only ladder](lite://repo/compiler/reports/2026-11-02-adjacent-strings-ladder.json) records
 three identical TS generations and the TS-hosted C emitter.
 
 Five paired compiler-phase medians stay steady: TS outputs 63.8 → 63.5 ms,
 identical S 661.9 → 649.4 ms, constant expressions 126.5 → 129.0 ms;
 C-emitter outputs 80.3 → 80.5 ms, divisions 170.7 → 166.3 ms, constant
 expressions 211.6 → 215.8 ms. All measured output bytes match exactly. The
-[raw performance report](reports/2026-11-02-adjacent-strings-performance.json)
+[raw performance report](lite://repo/compiler/reports/2026-11-02-adjacent-strings-performance.json)
 preserves the mixed results without a general speedup claim.
 
 All 263 full tests pass with zero skips in 70.2 s; fast passes 251 with
@@ -853,7 +853,7 @@ The original trailing-comma fixture moves to 001-001 without changing source
 bytes. Corpus: 66 programs/27 rejections, still 93 sources. All 65 earlier program
 artifact pairs remain identical. Both compiler corpora, 98 verifier executions,
 coverage, strict host/seeds and nine editor groups pass. The
-[generated-only ladder](reports/2026-11-02-trailing-commas-ladder.json) records
+[generated-only ladder](lite://repo/compiler/reports/2026-11-02-trailing-commas-ladder.json) records
 three identical TS generations and the TS-hosted C emitter.
 
 Five paired compiler-phase medians remain steady: TS outputs 62.1 → 62.0 ms,
@@ -861,7 +861,7 @@ identical S 644.2 → 653.6 ms, constant expressions 128.5 → 127.6 ms;
 C-emitter outputs 79.3 → 79.8 ms, divisions 167.7 → 170.7 ms, constant
 expressions 210.7 → 214.5 ms. All measured output bytes match exactly.
 Mixed small timing changes are recorded without a general speedup claim in the
-[raw performance report](reports/2026-11-02-trailing-commas-performance.json).
+[raw performance report](lite://repo/compiler/reports/2026-11-02-trailing-commas-performance.json).
 
 All 264 full tests pass with zero skips in 78.9 s; fast passes 252 with
 12 expected skips in 58.5 s. Gate durations are validation observations; paired
@@ -887,7 +887,7 @@ Compile-time rejection assertions remain individual. Unit cases cover repeated
 fresh state, raw stdin/Unicode args, independent module locations, cleanup after
 success/throw, atomic checking failure and an empty batch.
 
-The [paired report](reports/2026-11-02-artifact-batches-performance.json) runs the
+The [paired report](lite://repo/compiler/reports/2026-11-02-artifact-batches-performance.json) runs the
 same 66 precompiled corpus programs through both runners. Five alternating
 paired fresh workers after a warm-up pair reduce median validation/execution
 from 5877.2 to 3215.8 ms (1.83×). Every status, signal and stdout/stderr byte
@@ -927,7 +927,7 @@ feature now executes on all three targets; verifier coverage rises to 100 target
 executions across the same 78 scenarios. Both 93-case corpora pass, and all 66
 older program artifact pairs remain identical.
 
-The [generated-only ladder](reports/2026-11-02-statement-scopes-ladder.json)
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-statement-scopes-ladder.json)
 starts with the previous seed and records three identical final TS generations.
 The transitional compiler differs from the final seed because its first output
 uses the older runtime naming rule. Every generation is strictly checked, and
@@ -939,7 +939,7 @@ identical S 690.9 → 692.6 ms, constant expressions 132.8 → 131.8 ms;
 C-emitter outputs 82.8 → 81.3 ms, divisions 173.0 → 173.3 ms, constant
 expressions 216.9 → 218.3 ms. Ordinary measured program bytes match. The
 self-source outputs intentionally differ by hygienic identifiers and match the
-strict transitional/final ladder hashes exactly. The [raw report](reports/2026-11-02-statement-scopes-performance.json)
+strict transitional/final ladder hashes exactly. The [raw report](lite://repo/compiler/reports/2026-11-02-statement-scopes-performance.json)
 records those distinctions without a general speedup claim.
 
 All 265 full tests pass with zero skips in 94.1 s; fast passes 253 with
@@ -976,7 +976,7 @@ The duplicate-local fixture becomes an accepted silent program: the corpus
 remains 93 cases, now 67 programs and 26 rejections. All 66 earlier program
 artifact pairs remain identical.
 
-The [generated-only ladder](reports/2026-11-02-value-shadowing-ladder.json)
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-value-shadowing-ladder.json)
 records three identical, strictly checked TS generations. Removing the repeated
 duplicate-admission guard and unused helper arguments shrinks each flat source
 by 295 bytes and each generated compiler artifact by 532 bytes. The C emitter
@@ -987,7 +987,7 @@ Five paired compiler-phase medians: TS outputs 62.4 → 64.6 ms, identical S
 81.2 → 80.4 ms, divisions 167.4 → 167.6 ms, constant expressions 213.0 →
 214.6 ms. All measured emitted bytes match, including identical compiler source.
 Timing changes are small and mixed; no general speedup is claimed. See the
-[raw performance report](reports/2026-11-02-value-shadowing-performance.json).
+[raw performance report](lite://repo/compiler/reports/2026-11-02-value-shadowing-performance.json).
 
 Inventory: 88/164 match, 76 remain; 36 original failures closed, no regressions,
 210 tracked Lite sources and no load errors. Expression statements and empty
@@ -1023,7 +1023,7 @@ pairs are unchanged. Four rejected-source models now identify the unknown name
 or unterminated String at its source location, instead of rejecting the whole
 expression statement form. Full consumer diagnostic parity stays queued.
 
-The [generated-only ladder](reports/2026-11-02-expression-items-ladder.json)
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-expression-items-ladder.json)
 records three identical, strictly checked final TS generations. Consolidating
 five expression/call tail paths removes repeated parsing/checking code. The TS
 source shrinks by 3518 bytes and artifact by 4604 bytes; the C source shrinks by
@@ -1036,7 +1036,7 @@ Five paired compiler-phase medians: TS outputs 60.2 → 62.7 ms, identical S
 Changes are mixed, including a small output-workload regression; no general
 speedup is claimed. Ordinary measured program bytes match. Self-source output
 changes by corrected Unit tail normalization and matches the strictly checked
-transitional/fixed-point hashes. See the [raw performance report](reports/2026-11-02-expression-items-performance.json).
+transitional/fixed-point hashes. See the [raw performance report](lite://repo/compiler/reports/2026-11-02-expression-items-performance.json).
 
 An additional type-admission flaw is retained in the fixed-array queue: T00
 rejects a bare fixed-array tail for a List-returning function, whereas the
@@ -1065,7 +1065,7 @@ control-transfer rules. A harmless ordinary tail after a definite return cannot
 change the returned type. Unknown names, malformed expressions, incompatible
 operators and explicit wrong-typed return payloads still reject, including on
 dead paths. The strict TS settings stay unchanged. Broader warning/public Never
-policies remain open in [the owning document](../docs/never-and-unreachable-flow.md).
+policies remain open in [the owning document](lite://doc/never-and-unreachable-flow).
 
 Both emitters receive only live instructions. Closing/else markers are retained
 for live openers, while parent liveness survives nested scopes and loop exits.
@@ -1091,7 +1091,7 @@ now compile, strictly check and run with exact reference observations. Inventory
 probes expand the denominator; they do not reduce the unchanged original-case
 remaining count. All 210 tracked Lite sources remain accounted for.
 
-The [generated-only ladder](reports/2026-11-02-branch-results-ladder.json)
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-branch-results-ladder.json)
 records three identical final TS generations, equal to the transitional output,
 with strict checks at every step. The compiler still uses the previously
 supported source subset. Per-block completion/liveness increases TS source by
@@ -1112,7 +1112,7 @@ size, not native runtime speed. TS compiler time is 53.3 → 50.9 ms and artifac
 size 92075 → 399 bytes; its older artifact fails the unchanged strict TS check,
 so that TS timing is not a prior working-program baseline. Full raw source,
 hashes, timings and separate strict/execution observations are in the
-[performance report](reports/2026-11-02-branch-results-performance.json).
+[performance report](lite://repo/compiler/reports/2026-11-02-branch-results-performance.json).
 
 All 268 full tests pass without skips in 127.3 s; fast passes 256 with
 12 expected skips in 89.3 s. Strict host/seeds, both 93-case target corpora,
@@ -1150,10 +1150,10 @@ older program artifact pairs remain identical. Diagnostics now name Float among
 admitted scalar expressions. The shared scanner caches source length, and a
 single-digit Int fast path avoids general scanner/range work.
 
-The [generated-only ladder](reports/2026-11-02-float-literals-ladder.json)
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-float-literals-ladder.json)
 records three identical, strictly checked generations. Compiler implementation
 source remains in the previously supported Int/String subset. The
-[performance report](reports/2026-11-02-float-literals-performance.json) records
+[performance report](lite://repo/compiler/reports/2026-11-02-float-literals-performance.json) records
 paired compiler measurements and exact emitted-output identities; mixed timing
 changes are not a general speedup claim. The independent regular-file TS
 capture fix and its three host groups remain intact.
@@ -1194,7 +1194,7 @@ above 2^53. TS expression scopes and typed C comma-expression temporaries evalua
 operands once, left to right, and retain lazy later chain operands. Float
 arithmetic reuses the existing source-position table and fault reporting.
 
-The canonical [num.float case](../language/verifications/features/numeric/floats/mixed-arithmetic.json) runs on
+The canonical [num.float case](lite://repo/language/verifications/features/numeric/floats/mixed-arithmetic.json) runs on
 T00 and both generated targets. Nine previously rejected lesson manifests now
 also select TS/C explicitly. Focused host coverage includes eleven TS/C programs,
 four TS function/aggregate programs, eleven fault sources on both targets, nine
@@ -1207,7 +1207,7 @@ C literal parsing now uses a discovered `lt_float_literal` wrapper, ensuring its
 stdlib dependency even when a Float appears only inside a Bool comparison. This
 keeps the existing helper scan's fast rejection path for integer-only code.
 Int comparisons likewise keep their ordinary path ahead of Float-specific work.
-The [generated-only ladder](reports/2026-11-02-float-arithmetic-ladder.json)
+The [generated-only ladder](lite://repo/compiler/reports/2026-11-02-float-arithmetic-ladder.json)
 records the source/builder identities, fixed point and validation results; the
 paired performance record retains measurements rather than assuming a speedup.
 
@@ -1217,7 +1217,7 @@ corpora, 121 verifier executions, 39-feature coverage and nine editor groups pas
 Inventory: 103/167 match, 64 remain; 48 original failures closed, no regressions.
 All 20 implemented lessons pass generated TS. All 69 existing TS fixture hashes
 and 67 C hashes stay unchanged; only two C Float-literal artifacts acquire the
-parser wrapper. The [paired performance report](reports/2026-11-02-float-arithmetic-performance.json)
+parser wrapper. The [paired performance report](lite://repo/compiler/reports/2026-11-02-float-arithmetic-performance.json)
 records mixed medians: TS outputs 67.2 → 70.1 ms, identical S 721.2 → 728.1 ms,
 constants 144.7 → 129.9 ms and dead-output input 46.5 → 44.2 ms; C-emitter
 outputs 87.9 → 89.6 ms, divisions 191.5 → 183.2 ms, constants 244.5 → 246.3 ms
@@ -1254,7 +1254,7 @@ admitted/two rejected types between reference and generated execution. Six nativ
 programs pass optimized address/undefined-behavior sanitizer checks.
 
 The canonical num.power manifest now selects T00, TS and C explicitly. The
-[generated-only ladder](reports/2026-11-02-power-ladder.json) records three
+[generated-only ladder](lite://repo/compiler/reports/2026-11-02-power-ladder.json) records three
 matching generations without using power operations in S. The operator reader
 recognizes `*`/`**` before comparison-token probes, preserving a short common
 path; paired measurements and unchanged-output checks are recorded separately.
@@ -1273,7 +1273,7 @@ Paired medians remain mixed: TS output 84.1 → 83.7 ms, identical S 805.5 →
 809.9 ms, constants 145.4 → 147.4 ms and dead-output input 54.1 → 48.3 ms;
 C-emitter output 85.0 → 85.3 ms, divisions 169.6 → 171.3 ms, constants
 215.7 → 213.5 ms and dead-output input 45.1 → 44.8 ms. All measured output
-streams match. The [performance record](reports/2026-11-02-power-performance.json)
+streams match. The [performance record](lite://repo/compiler/reports/2026-11-02-power-performance.json)
 contains raw pairs and identities; no general speedup is claimed.
 
 ## Numeric type synonyms
@@ -1287,7 +1287,7 @@ names. This adds no storage conversion, arithmetic width or runtime wrapper.
 A focused scalar program emits identical TS/C bytes using synonyms or canonical
 names; all earlier corpus artifacts likewise remain unchanged.
 
-The canonical [num.aliases case](../language/verifications/features/numeric/widths/canonical-aliases.json)
+The canonical [num.aliases case](lite://repo/language/verifications/features/numeric/widths/canonical-aliases.json)
 selects T00, TS and C. Focused coverage includes eight TS/C programs, five TS
 function/tuple/List programs, twelve type/range rejections, four exact positioned
 fault executions and a prompted input scenario. Parser/checker drivers each
@@ -1301,7 +1301,7 @@ The retained `numeric.float-integer-literal` probe shows T00 accepting
 increases the measured denominator rather than hiding the missing behavior.
 That literal-context port follows this name-normalization slice; narrow widths
 and exhaustive promotion/rounding matrices remain later work. The
-[generated-only ladder](reports/2026-11-02-numeric-aliases-ladder.json) records
+[generated-only ladder](lite://repo/compiler/reports/2026-11-02-numeric-aliases-ladder.json) records
 the fixed point without adopting these type spellings in S.
 
 All 278 full tests pass with zero skips (166.3 s); fast passes 266
@@ -1313,7 +1313,7 @@ matching, 61 remaining, 52 original failures closed, no observed regressions.
 The new alias feature adds one passing case, while the retained Float-literal
 context probe adds one failing case; both contribute to the new denominator.
 
-The [paired performance report](reports/2026-11-02-numeric-aliases-performance.json)
+The [paired performance report](lite://repo/compiler/reports/2026-11-02-numeric-aliases-performance.json)
 records close/mixed medians: TS output 63.9 → 64.9 ms, identical S 704.6 →
 704.1 ms, constants 128.6 → 127.7 ms and dead-output input 44.6 → 44.0 ms;
 C-emitter output 85.0 → 82.8 ms, divisions 163.5 → 167.8 ms, constants
@@ -1349,9 +1349,9 @@ function/aggregate/conditional programs, twenty rejected sources, six exact
 positioned fault executions and an explicit dead-statement completion case.
 The scalar checker compares five admitted/six rejected sources between reference
 and generated drivers. The canonical
-[num.float-context case](../language/verifications/features/numeric/floats/literal-context.json) and
+[num.float-context case](lite://repo/language/verifications/features/numeric/floats/literal-context.json) and
 two retained boundary probes supplement the previously failing literal probe.
-The [ladder](reports/2026-11-02-float-contexts-ladder.json) records pre-fix evidence,
+The [ladder](lite://repo/compiler/reports/2026-11-02-float-contexts-ladder.json) records pre-fix evidence,
 three matching generated self-builds and the exact validation scope.
 
 Owner update during this slice: migration is now TS-first and artifact-based;
@@ -1367,7 +1367,7 @@ and nine editor groups pass. Current inventory: 112/172 matching, 60 remaining,
 52 original failures closed and no observed regressions. The literal probe and
 new canonical/boundary cases account for the progress and denominator change.
 
-The [TS paired timing record](reports/2026-11-02-float-contexts-performance.json)
+The [TS paired timing record](lite://repo/compiler/reports/2026-11-02-float-contexts-performance.json)
 shows mixed medians: output 66.0 → 62.9 ms, identical S 745.8 → 767.4 ms,
 constants 131.6 → 135.5 ms and dead-output input 44.5 → 44.6 ms. Every measured
 output stream matches. C timing/output/native gates are deferred under the
@@ -1375,7 +1375,7 @@ latest owner direction; earlier C snapshot evidence is retained.
 
 ## Generated-only routine tooling
 
-- 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](reports/2026-11-03-generated-tooling.json), [tool guide](bootstrap/README.md) and [baseline](../benchmark/reports/2026-11-03-generated-compiler-performance.md).
+- 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](lite://repo/compiler/reports/2026-11-03-generated-tooling.json), [tool guide](lite://doc/compiler/bootstrap-readme) and [baseline](lite://repo/benchmark/reports/2026-11-03-generated-compiler-performance.md).
 
 The generated ladder names outputs generation-1 through generation-3 and keeps historical T11/T12 builder meanings in the preserved reference route. A fixed point is not a conformance oracle: supplied candidates and changed-source refreshes require the separate recorded-contract corpus gate before seed acceptance. Benchmark self-build output is independently validated on that corpus before timed hashes are compared. No generated seed or old measurement is rewritten.
 

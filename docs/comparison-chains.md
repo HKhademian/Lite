@@ -4,7 +4,7 @@ Status: **accepted; all ten positive/negated comparison operators share this pre
 
 ## Purpose and template
 
-Implementation coverage, 2026-10-30: the [igniter](../igniter/README.md#conditions-and-block-values)
+Implementation coverage, 2026-10-30: the [igniter](lite://repo/igniter/README.md#conditions-and-block-values)
 implements the ten operators with adjacent-pair, single-evaluation, and
 short-circuit tests. It checks matching scalar types, orders only Int/Float,
 and supports String/Bool/Unit equality. Mixed-type/custom comparisons and the
@@ -15,7 +15,7 @@ their admitted scalar types, including Int ordering and String/Bool/Unit equalit
 All adjacent pairs are checked before execution. Generated TS also covers
 effectful operands and input; C still rejects unsupported input/function forms.
 Float ordering and mixed numeric types remain separate gaps. See the
-[lowering ledger](../compiler/parity.md#comparison-chain-lowering).
+[lowering ledger](lite://doc/compiler/parity#comparison-chain-lowering).
 
 Express mathematical bounds and adjacent comparisons without repeating the middle expression.
 
@@ -45,7 +45,7 @@ a =!= b == c; /* not (a == b), then b == c */
 
 These comments describe logical conditions. Repeating a source expression in a literal `and` rewrite is not equivalent when that expression has effects.
 
-A negated operator complements only its adjacent positive comparison: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. If the resulting Bool is false, the chain stops. Prefix not instead negates the complete chain. For example, not a > b < c means not ((a > b) and (b < c)) under single-evaluation chain semantics; it is not the same rule as a >! b < c. See [negated comparisons](negated-comparison-operators.md).
+A negated operator complements only its adjacent positive comparison: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. If the resulting Bool is false, the chain stops. Prefix not instead negates the complete chain. For example, not a > b < c means not ((a > b) and (b < c)) under single-evaluation chain semantics; it is not the same rule as a >! b < c. See [negated comparisons](lite://doc/negated-comparison-operators).
 
 ## Evaluation and short-circuiting
 
@@ -76,7 +76,7 @@ inside := {
 
 This is an explanation of evaluation, not a literal source substitution. Compiler temporaries must not capture user names. An explicit exit during operand evaluation follows the normal exit rules and stops the chain.
 
-Chains follow the selected [left-to-right evaluation order](evaluation-order.md). Their single-evaluation and short-circuit rules additionally determine which later operands are skipped.
+Chains follow the selected [left-to-right evaluation order](lite://doc/evaluation-order). Their single-evaluation and short-circuit rules additionally determine which later operands are skipped.
 
 ## Types and grouping
 
@@ -108,7 +108,7 @@ Custom comparison interfaces, operand borrowing/consumption, comparison effects,
 
 ## Related concepts and references
 
-- [Operators](operators.md)
-- [Grammar sketch](grammar-sketch.md)
-- [Memory and performance](memory-and-performance.md)
+- [Operators](lite://doc/operators)
+- [Grammar sketch](lite://doc/grammar-sketch)
+- [Memory and performance](lite://doc/memory-and-performance)
 - [Python comparisons](https://docs.python.org/3/reference/expressions.html#comparisons): comparison material for adjacent-pair semantics, evaluation at most once, and short-circuiting. LiteScript requires `Bool` comparison results and does not adopt Python's operator set or dynamic comparison rules.

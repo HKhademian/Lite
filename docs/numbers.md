@@ -18,7 +18,7 @@ The examples assume the same inferred integer family as an explicit `Int`. Capit
 
 ## Identity leading plus
 
-Selected 2026-10-25: a complete additive-chain entry may start with one optional +. With compatible numeric inputs, total := + rent + groceries; denotes the same expression as total := rent + groceries;. A singleton + amount preserves the admitted operand's value and type, without numeric promotion/conversion or an implicit 0 + amount operation. The prefix has no separate overflow/failure or evaluation step. Minus retains negation; leading * and / are not redundant alternatives and gain no implicit initial operand. Complete numeric and unary-operator contracts remain open. See [leading plus](leading-separators.md#additive-chains-with-leading-plus).
+Selected 2026-10-25: a complete additive-chain entry may start with one optional +. With compatible numeric inputs, total := + rent + groceries; denotes the same expression as total := rent + groceries;. A singleton + amount preserves the admitted operand's value and type, without numeric promotion/conversion or an implicit 0 + amount operation. The prefix has no separate overflow/failure or evaluation step. Minus retains negation; leading * and / are not redundant alternatives and gain no implicit initial operand. Complete numeric and unary-operator contracts remain open. See [leading plus](lite://doc/leading-separators#additive-chains-with-leading-plus).
 
 ## Leading zero in fractional literals
 
@@ -40,7 +40,7 @@ Requiring a leading zero settles spelling only. Floating-point representation, d
 
 ## Representation proposal
 
-A signed 64-bit default `Int` was suggested, with explicit sized types and an optional arbitrary-precision library; the permanent language-wide representation is not selected. The bounded FVP profile below now selects temporary representations. When a basic arithmetic operation has a defined fault, it uses the typed panic channel rather than returning `Result`. Overflow must not silently wrap, become undefined, or change meaning between build modes. Recover a matching panic locally with target-level `else` and a typed filter; exact category names remain open. See [arithmetic fault boundaries](arithmetic-faults.md).
+A signed 64-bit default `Int` was suggested, with explicit sized types and an optional arbitrary-precision library; the permanent language-wide representation is not selected. The bounded FVP profile below now selects temporary representations. When a basic arithmetic operation has a defined fault, it uses the typed panic channel rather than returning `Result`. Overflow must not silently wrap, become undefined, or change meaning between build modes. Recover a matching panic locally with target-level `else` and a typed filter; exact category names remain open. See [arithmetic fault boundaries](lite://doc/arithmetic-faults).
 
 Implementation checkpoint, 2026-11-01: the igniter accepts the sized integer
 types `Int8`, `Int16`, `Int32`, `Int64` and the floating types `Float32`,
@@ -54,7 +54,7 @@ annotations, transparent aliases, aggregate/function contracts, contextual
 literal bounds, same-family and mixed promotion, lossless scalar widening,
 checked narrow integer overflow panics, and binary32 rounding (`Float32`).
 Established `Int64` values and `Int`-only binary results do not acquire storage
-widening. See the [numeric-synonym ledger](../compiler/parity.md#numeric-type-synonyms).
+widening. See the [numeric-synonym ledger](lite://doc/compiler/parity#numeric-type-synonyms).
 A literal constant may initialize a narrow annotated type only when it fits:
 integer literals must be inside that width's range (and exactly representable
 for a floating destination), while a fractional literal stored as `Float32`
@@ -84,7 +84,7 @@ fixed arrays, and minimal-width literal typing remain queued; fixed-width scalar
 promotion, lossless widening, checked narrow arithmetic, `Float32` rounding,
 mixed arithmetic/comparisons, width aliases, and power lowering are implemented.
 Permanent formatting and native ABI choices remain open. See the
-[literal/value ledger](../compiler/parity.md#float-literals-and-display).
+[literal/value ledger](lite://doc/compiler/parity#float-literals-and-display).
 
 ## Temporary FVP numeric profile
 
@@ -112,14 +112,14 @@ Exact floating rounding/underflow/subnormals, mixed promotions beyond selected
 division, numeric literal grammar and signed-boundary parsing, concrete fault
 categories/payloads, and formatting remain open. The profile is provisional FVP
 scaffolding, not a permanent numeric API, native layout, or measured performance
-result. The [igniter](../igniter/README.md) implements this bounded profile with documented
+result. The [igniter](lite://repo/igniter/README.md) implements this bounded profile with documented
 limits; it is not evidence for the complete numeric design. See
-[INV-014.01](../research/investigations/INV-014-01-fvp-numeric-profile.md#selected-bounded-profile)
-and the [decision ledger](decisions-and-open-questions.md#temporary-fvp-numeric-profile-2026-10-30).
+[INV-014.01](lite://repo/research/investigations/INV-014-01-fvp-numeric-profile.md#selected-bounded-profile)
+and the [decision ledger](lite://doc/decisions-and-open-questions#temporary-fvp-numeric-profile-2026-10-30).
 
 ## Arithmetic grouping
 
-Within the selected set, prefix negation binds above multiplicative * / :/ % :%, then binary + -. Binary operations at each of those levels associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Power uses `**`, associates right to left, returns Float by default, and requires explicit negative-base or outer-negation grouping: -2 `**` 2 and -2 `**` 3 are invalid. Zero exponents yield 1, including `0 ** 0`; negative exponents produce reciprocal powers for nonzero bases and panic for zero bases. See [power and negation](power-and-negation.md). [The language comparison](arithmetic-operators-comparison.md) records alternatives.
+Within the selected set, prefix negation binds above multiplicative * / :/ % :%, then binary + -. Binary operations at each of those levels associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](lite://doc/operators#basic-arithmetic-grouping-selected). Power uses `**`, associates right to left, returns Float by default, and requires explicit negative-base or outer-negation grouping: -2 `**` 2 and -2 `**` 3 are invalid. Zero exponents yield 1, including `0 ** 0`; negative exponents produce reciprocal powers for nonzero bases and panic for zero bases. See [power and negation](lite://doc/power-and-negation). [The language comparison](lite://doc/arithmetic-operators-comparison) records alternatives.
 
 ## Division
 
@@ -140,11 +140,11 @@ floored: Int = -7.5 :/ 2;  /* -4 */
 small: Int = 2 / 0.5;      /* 4: divisor stays 0.5 */
 ```
 
-Nonintegral floating literals and established floating operands are admitted for division into Int. Preserve operand values during the calculation, then round the quotient as the operator requires; do not truncate operands or compute integer zero and widen it for Float/Double. Concrete floating precision, mixed widths, representability/non-finite faults, general assignment conversions, and complete expected-type propagation through unresolved subexpressions/calls/returns remain open. Floating intermediates now stay untruncated until the full value reaches Int storage: (7.5 / 2) * 2.0 stores 7, while half: Int = 7.5 / 2 stores 3 before half * 2 produces 6. Parentheses alone introduce no storage boundary; see [the selected rule](division.md#floating-intermediates-and-storage-boundaries). See [calculation and storage](division.md#floating-calculation-and-integer-storage).
+Nonintegral floating literals and established floating operands are admitted for division into Int. Preserve operand values during the calculation, then round the quotient as the operator requires; do not truncate operands or compute integer zero and widen it for Float/Double. Concrete floating precision, mixed widths, representability/non-finite faults, general assignment conversions, and complete expected-type propagation through unresolved subexpressions/calls/returns remain open. Floating intermediates now stay untruncated until the full value reaches Int storage: (7.5 / 2) * 2.0 stores 7, while half: Int = 7.5 / 2 stores 3 before half * 2 produces 6. Parentheses alone introduce no storage boundary; see [the selected rule](lite://doc/division#floating-intermediates-and-storage-boundaries). See [calculation and storage](lite://doc/division#floating-calculation-and-integer-storage).
 
 Remainder % pairs with Int-result truncating / and follows the dividend when nonzero. Modulo :% pairs with floor :/ and follows the divisor when nonzero: -7 % 2 is -1, -7 :% 2 is 1, and 7 :% -2 is -1. The corresponding updates are /=, :/=, %=, and :%=.
 
-This replaces the operand-only division rule and the earlier // / %% floor spellings. The [selected family](arithmetic-methods-and-division-revision.md) records ordinary numeric-method direction and the colon-prefixed floor spellings; [division](division.md#contextual-division-selected) owns the contextual cases and their limits.
+This replaces the operand-only division rule and the earlier // / %% floor spellings. The [selected family](lite://doc/arithmetic-methods-and-division-revision) records ordinary numeric-method direction and the colon-prefixed floor spellings; [division](lite://doc/division#contextual-division-selected) owns the contextual cases and their limits.
 
 ## Ranges
 
@@ -160,7 +160,7 @@ The unstepped descending range `10..=1` visits `10, 9, 8, 7, 6, 5, 4, 3, 2, 1`. 
 
 Numeric literals and == expected use the shared value-match contract, without implicit numeric-string conversion or approximate Float matching. Float representation, NaN/signed-zero equality, and literal representability remain numeric contracts rather than a separate pattern-equality system.
 
-Matching a range object by equality differs from testing scalar membership. Comparison-chain guards already express an ascending interval; a strided descending range requires its own membership semantics. A bare range pattern or in-prefix pattern is not selected. See the [all-type pattern review](pattern-type-review.md#9-ranges-values-versus-membership) for examples and pending choices.
+Matching a range object by equality differs from testing scalar membership. Comparison-chain guards already express an ascending interval; a strided descending range requires its own membership semantics. A bare range pattern or in-prefix pattern is not selected. See the [all-type pattern review](lite://doc/pattern-type-review#9-ranges-values-versus-membership) for examples and pending choices.
 
 ## Counter versus range value
 
@@ -176,11 +176,11 @@ The proposed body counts are `1, 2, 3, 4`, independent of range values. Reverse 
 
 Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, noninteger remainder/modulo, combined quotient/remainder APIs, exact arithmetic fault triggers and payloads, wrapping operations, and range bounds all remain open.
 
-Arithmetic must support local recovery of an individual operation, including addition overflow, without requiring verbose named checked-arithmetic helpers as its ordinary interface. Basic arithmetic faults use typed panics, not returned `Result` errors. The selected local surface is target-level `else` with typed filters; exact fault cases remain open. See [arithmetic fault boundaries](arithmetic-faults.md).
+Arithmetic must support local recovery of an individual operation, including addition overflow, without requiring verbose named checked-arithmetic helpers as its ordinary interface. Basic arithmetic faults use typed panics, not returned `Result` errors. The selected local surface is target-level `else` with typed filters; exact fault cases remain open. See [arithmetic fault boundaries](lite://doc/arithmetic-faults).
 
 ## Related concepts and references
 
-- [Types and inference](types-and-inference.md)
-- [Operators](operators.md)
-- [Collections and iterators](collections-and-iterators.md)
+- [Types and inference](lite://doc/types-and-inference)
+- [Operators](lite://doc/operators)
+- [Collections and iterators](lite://doc/collections-and-iterators)
 - [Zig reference](https://ziglang.org/documentation/master/) is relevant comparison material for explicit numeric representations and safety policies; its build-mode semantics are not adopted.

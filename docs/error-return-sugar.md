@@ -1,6 +1,6 @@
 # Throw as an error return
 
-Status: **historical unselected throw shorthand; manual raise selected instead, 2026-10-27, LP-0012 r1**. The comparison below preserves earlier proposal reasoning. LP-0014 now makes both Error and Panic raise directed exits, with a function/closure default or explicit block target; their outgoing channels remain distinct. Eligible omitted outputs may infer escaping returned errors. See [manual failures and inference](manual-failures-and-inference.md).
+Status: **historical unselected throw shorthand; manual raise selected instead, 2026-10-27, LP-0012 r1**. The comparison below preserves earlier proposal reasoning. LP-0014 now makes both Error and Panic raise directed exits, with a function/closure default or explicit block target; their outgoing channels remain distinct. Eligible omitted outputs may infer escaping returned errors. See [manual failures and inference](lite://doc/manual-failures-and-inference).
 
 ## Core equivalence
 
@@ -38,7 +38,7 @@ Assume AgeError supplies the illustrated case. The final age supplies implicit s
 - Exit the nearest function or closure with its failure outcome. Ordinary nested blocks do not become error-return boundaries.
 - A plain T-returning function cannot use throw to escape with an undeclared recoverable error. An outer fallible function does not make a nested nonfallible closure fallible.
 - A throw does not complete locally with a value; it has the same control-flow status as an early return. It can therefore occupy an exiting branch without adding Unit or another alternative to that branch's normal result.
-- Run the same applicable structured cleanup as the equivalent return. Cleanup-failure precedence follows the selected [finally contract](finally.md#pending-outcomes); aggregate inspection and the extension to proposed cleanup mechanisms remain open.
+- Run the same applicable structured cleanup as the equivalent return. Cleanup-failure precedence follows the selected [finally contract](lite://doc/finally#pending-outcomes); aggregate inspection and the extension to proposed cleanup mechanisms remain open.
 - Require an operand initially. No bare rethrow, implicit current-error binding, or throw @tag form is proposed.
 
 When success and error payload types overlap, choose the outcome side explicitly through the operation: a plain compatible success value uses return; a failure uses throw or return .err. An error-like payload type alone must not make a plain return select failure.
@@ -67,7 +67,7 @@ For the separately proposed flat checked binding:
 use_pair(a, b);
 ```
 
-The new spelling makes the handler's early failure return shorter. The checked-binding grammar and its error contract remain proposals in [checked collection operations](checked-collection-operations.md).
+The new spelling makes the handler's early failure return shorter. The checked-binding grammar and its error contract remain proposals in [checked collection operations](lite://doc/checked-collection-operations).
 
 The expansion requires only the existing typed failure-return mechanism. It does not itself require dynamic stack-handler search, an exception object hierarchy, stack traces, or a panic. Cleanup and error-value construction can still have their own costs; no measured performance claim follows from the shorthand.
 
@@ -79,4 +79,4 @@ C# uses throw for exception handling with a search for a compatible catch along 
 
 Historical recommendation only: the earlier throw spelling was not selected. LP-0012 now selects raise expression with category-based behavior and eligible escaping-error inference. The old explicit-annotation-only restrictions below do not override that current contract.
 
-Related: [Result and errors](result-and-errors.md), [fallible types](fallible-types-and-error-composition.md), [control-flow exits](control-flow.md), and [panics](panics.md).
+Related: [Result and errors](lite://doc/result-and-errors), [fallible types](lite://doc/fallible-types-and-error-composition), [control-flow exits](lite://doc/control-flow), and [panics](lite://doc/panics).

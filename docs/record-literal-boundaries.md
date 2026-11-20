@@ -9,7 +9,7 @@ x: User = {}
 y := User {}
 ```
 
-Each complete record initializer closes its declaration item. Omit the optional trailing semicolon, both at top level and in nested declarations. Newlines are irrelevant: x: User = {} y := User {} is the same pair of declarations. An assignment or explicit exit ending in the same outer construction follows the same boundary rule. The grammar still permits an optional semicolon; see the [shared style and required exceptions](lexical-structure.md#semicolon-style-after-closing-braces).
+Each complete record initializer closes its declaration item. Omit the optional trailing semicolon, both at top level and in nested declarations. Newlines are irrelevant: x: User = {} y := User {} is the same pair of declarations. An assignment or explicit exit ending in the same outer construction follows the same boundary rule. The grammar still permits an optional semicolon; see the [shared style and required exceptions](lite://doc/lexical-structure#semicolon-style-after-closing-braces).
 
 This applies to field declarations with record defaults as well:
 
@@ -61,4 +61,4 @@ One possible syntactic rule is to require a comma to identify a standalone infer
 
 The block/result rule and construction/default rule therefore remain distinct, even though both complete forms can end an outer item at their closing brace.
 
-Related: [records](records.md), [initialization](record-initialization.md), [lexical structure](lexical-structure.md), [blocks and results](blocks-and-results.md), and [record identity](record-type-identity.md).
+Related: [records](lite://doc/records), [initialization](lite://doc/record-initialization), [lexical structure](lite://doc/lexical-structure), [blocks and results](lite://doc/blocks-and-results), and [record identity](lite://doc/record-type-identity).

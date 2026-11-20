@@ -2,13 +2,13 @@
 
 Status: **primary-documentation review dated 2026-10-18; comparison, not selected LiteScript semantics**.
 
-Salam joined the [project reference set](references.md#project-reference-languages) on 2026-10-28. This review retains its stated language coverage; it does not yet contain a Salam comparison.
+Salam joined the [project reference set](lite://doc/references#project-reference-languages) on 2026-10-28. This review retains its stated language coverage; it does not yet contain a Salam comparison.
 
 ## Scope and reading rule
 
 This review covers Rust, Zig, Odin, V, Swift, Kotlin, Dart, C++, TypeScript, Python, Lua, and Scala 3, which has also been used as a match-syntax reference. Sources include development documentation, especially Zig/V and evolving Scala pages; a documented feature is not a promise about every installed compiler release. No examples were compiled.
 
-Read each language along three independent axes: choice/enum model, product or data-record model, and distinct-wrapper/value semantics. See the [category vocabulary](type-categories.md) before equating different uses of the word value.
+Read each language along three independent axes: choice/enum model, product or data-record model, and distinct-wrapper/value semantics. See the [category vocabulary](lite://doc/type-categories) before equating different uses of the word value.
 
 ## Rust
 
@@ -84,6 +84,6 @@ Read each language along three independent axes: choice/enum model, product or d
 
 The reference languages do not establish a universal meaning for enum or value class. Useful independent concepts are products, named sums, explicit unions of existing types, domain wrappers, generated data operations, and identity/reference capabilities. Plain enum values, singleton objects, and per-instance payload cases are different ways of constructing values.
 
-The simplest candidate for LiteScript is to keep those distinctions explicit while sharing matching and uniform binding syntax. See [enums and variants](enums-and-variants.md). No recommendation here selects inheritance, generated equality, a GC, boxing, or an ABI by default.
+The simplest candidate for LiteScript is to keep those distinctions explicit while sharing matching and uniform binding syntax. See [enums and variants](lite://doc/enums-and-variants). No recommendation here selects inheritance, generated equality, a GC, boxing, or an ABI by default.
 
-The [focused union-entry comparison](union-membership-comparison.md) follows up on the now-selected rule that existing member values enter a plain union automatically and require checked narrowing to recover a particular member. It compares that specific behavior across these reference languages, including nil/default and case-wrapper differences.
+The [focused union-entry comparison](lite://doc/union-membership-comparison) follows up on the now-selected rule that existing member values enter a plain union automatically and require checked narrowing to recover a particular member. It compares that specific behavior across these reference languages, including nil/default and case-wrapper differences.

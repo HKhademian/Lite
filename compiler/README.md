@@ -2,7 +2,7 @@
 
 This directory contains the Lite-written compiler and its bootstrap host. TS
 compilation defaults to the one verified generated compiler in
-[`bootstrap/`](bootstrap/README.md). Public compile and check use generated TS;
+[`bootstrap/`](lite://doc/compiler/bootstrap-readme). Public compile and check use generated TS;
 check-only also strictly checks the artifact without executing it. Public
 `./bin/lite run` compiles to a temporary artifact and executes it through
 `entry.ts`; compiled programs also run as `node compiler/entry.ts program.ts`.
@@ -10,11 +10,11 @@ C emitter remains buildable internally through the same TS compiler host; public
 C output and a native C self-hosting compiler remain deferred. The handwritten
 T00 compiler, numbered generated compiler chain and separate C seed have been
 retired; one selected TS igniter drives both target emitters. See the
-[owner-approved transition](transition-plan.md).
+[owner-approved transition](lite://doc/compiler/transition-plan).
 The accepted language remains
 the restricted bootstrap subset, not the entire language design.
 
-The [temporary I/O contract](../docs/tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+The [temporary I/O contract](lite://doc/tooling-and-learning#temporary-input-and-output-helpers-selected-2026-11-02)
 now supplies optional String prompts on inputAll/inputLine/inputInt/inputFloat
 and replaces the report builtin with output and outputLine. The former adds no
 newline; the latter always adds one, including with zero arguments. Generated TS
@@ -26,22 +26,22 @@ indexed compound updates, `**`, `core/*` module imports, tuple `=name`
 shorthand, fixed-parameter named/`=name` call routing, `Never`-valued `io.exit`
 (with default `io.exit()`), unnamed `loop sequence { ... }` traversal,
 subjectless Boolean `match { ... }` (TS value and action forms; C action form),
-and empty/grouped/singleton tuple patterns (see [`gaps.md`](gaps.md) for remaining
+and empty/grouped/singleton tuple patterns (see [`gaps.md`](lite://doc/compiler/gaps) for remaining
 parity items). Process adapters stream output through an
 optional main callback, preserving earlier output across faults. Calling main()
-without that callback retains the return-text contract. The [I/O seed refresh](parity.md#temporary-io-migration)
+without that callback retains the return-text contract. The [I/O seed refresh](lite://doc/compiler/parity#temporary-io-migration)
 records that snapshot's compiler artifacts. The subsequent
-[helper-scan refresh](parity.md#single-pass-helper-discovery) collects target
+[helper-scan refresh](lite://doc/compiler/parity#single-pass-helper-discovery) collects target
 runtime requirements once per program and records about 30% less compiler time
 on paired output/self-source workloads, with exact emitted bytes preserved.
 
-The archived [T00/selected-compiler support inventory](reports/current-t00-t11-inventory.md) lists
+The archived [T00/selected-compiler support inventory](lite://repo/compiler/reports/current-t00-t11-inventory.md) lists
 measured missing forms, behavior/diagnostic differences, every maintained example
 and sample, and source-file coverage. It includes exact-source boundary probes
 and a reproducible audit script; it is an inventory, not a priority list or a new
 language decision.
 
-[`compiler-build.lts`](../lib/util/compiler-build.lts) checks the one seed's SHA-256 and reads only each manifest's
+[`compiler-build.lts`](lite://repo/lib/util/compiler-build.lts) checks the one seed's SHA-256 and reads only each manifest's
 root source. The generated Lite import visitor discovers and opens dependencies;
 its trace supplies source hashes and import edges for cache validation. Changed
 graphs are compiled by the selected seed and strictly typechecked before
@@ -49,21 +49,21 @@ publication under `dist/compiler-cache/`. Corrupt seeds/caches and rejected
 rebuilds fail explicitly; there is no silent fallback. `node
 compiler/scripts/build.ts` selects or rebuilds both target compilers and prints
 their provenance. The
-[text-cache optimization](../benchmark/reports/2026-11-02-text-cache.md) records
+[text-cache optimization](lite://repo/benchmark/reports/2026-11-02-text-cache.md) records
 a 668 ms median self-compilation for its source snapshot on the recorded machine,
-excluding strict checking. The [report-order refresh](parity.md#report-order-seed-refresh)
+excluding strict checking. The [report-order refresh](lite://doc/compiler/parity#report-order-seed-refresh)
 preserves nested report effects and records the current generated seeds.
 Language implementation belongs in `src/` and `lib/core/`, not in the generated
 seed or host glue.
 
 The staged path from this prototype to runnable TS/C bootstrap compilers is the
-[bootstrap and self-hosting plan](../docs/bootstrap-plan.md). It is an
+[bootstrap and self-hosting plan](lite://doc/bootstrap-plan). It is an
 implementation plan; it does not change the restricted compiler's current
 contract or select new language syntax.
 
 ## Bootstrap source subset
 
-Follow the [compiler development guidelines](../.agents/rules/compiler-development.md)
+Follow the [compiler development guidelines](lite://repo/.agents/rules/compiler-development.md)
 for all feature support, syntax changes, bug fixes and edge cases: implement in
 Lite, add multiple focused and combined-feature cases, and verify generated
 targets. New features may be used in compiler source after their contracts and
@@ -72,7 +72,7 @@ remain opt-in experiments, separate from accepted support.
 
 These Lite sources are also the bootstrap source **S**. S must remain inside the
 bootstrap subset **L** defined in the
-[bootstrap plan](../docs/bootstrap-plan.md#compiler-source-subset-l). Namespace
+[bootstrap plan](lite://doc/bootstrap-plan#compiler-source-subset-l). Namespace
 modules (`import "..."`, `pub`), tuple `=name` shorthand, named/`=name` call
 routing (including `self(...)`), scalar compound updates (`+=`, `-=`, `*=`, `/=`, `%=`, `:/=`, `:%=`), `**`,
 narrow fixed integer widths (`Int8`, `Int16`, `Int32`),
@@ -89,17 +89,17 @@ routes do not flatten source or depend on an ordered file list. The loader's
 flattening support remains for isolated legacy phase fixtures. Current module
 status and the manifest schema are recorded in:
 
-- [`manifests/README.md`](manifests/README.md) — source-root manifest contract.
-- [`baseline.md`](baseline.md) — P0 counts, source hashes, reference artifacts
+- [`manifests/README.md`](lite://doc/compiler/manifests-readme) — source-root manifest contract.
+- [`baseline.md`](lite://doc/compiler/baseline) — P0 counts, source hashes, reference artifacts
   and test evidence.
-- [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
+- [`parity.md`](lite://doc/compiler/parity) — stage-0 versus generated-compiler burndown; the
   current TS/C parity target and difference log.
-- [`tests/references/generated/current-artifacts.json`](tests/references/generated/current-artifacts.json) —
+- [`tests/references/generated/current-artifacts.json`](lite://repo/compiler/tests/references/generated/current-artifacts.json) —
   current emitted-artifact hashes for all 69 program cases; the P0 hashes remain
   in `tests/references/generated/baseline-artifacts.json`.
 
-`lite-compile-ts` selects the generated TS compiler via [`compiler-build.lts`](../lib/util/compiler-build.lts) and invokes it directly; Lite reads imported source units via `core/file` in [`src/host-fs.lts`](src/host-fs.lts). The handwritten interpreter, source bridge, and bundle CLI are retired. P2 adds the provisional
-L0 helpers under [`../lib/core/`](../lib/README.md): checked Int, text, source
+`lite-compile-ts` selects the generated TS compiler via [`compiler-build.lts`](lite://repo/lib/util/compiler-build.lts) and invokes it directly; Lite reads imported source units via `core/file` in [`src/host-fs.lts`](lite://repo/compiler/src/host-fs.lts). The handwritten interpreter, source bridge, and bundle CLI are retired. P2 adds the provisional
+L0 helpers under [`../lib/core/`](lite://repo/lib/README.md): checked Int, text, source
 positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
 P4 the parser under `src/`; `runtime/ts/` contains the P6 runtime support.
 
@@ -113,19 +113,19 @@ node compiler/scripts/self-host.ts --out /tmp/lite-ladder
 Stage 0 is feature-frozen during bootstrap (B8/B11). Do not add igniter-only
 features to make compiler work easier; new capability belongs in L/S and the
 compiler slice first. The remaining stage-0 versus generated gap is tracked in
-[`parity.md`](parity.md).
+[`parity.md`](lite://doc/compiler/parity).
 
 ## Historical implementation checkpoints
 
 The entries in this section retain their original coverage counts and limitations.
-Use the introduction, [bootstrap guide](bootstrap/README.md) and
-[transition](transition-plan.md) for current commands and support. In particular,
+Use the introduction, [bootstrap guide](lite://doc/compiler/bootstrap-readme) and
+[transition](lite://doc/compiler/transition-plan) for current commands and support. In particular,
 old run/check and native-first statements below do not describe the current CLI.
 
 Comparison chains now retain middle operands once and skip later operands on both
 generated targets over their admitted scalar types. All 260 full tests pass with
 zero skips (49.4 s); inventory is 79/164 matching cases, 85 remaining. The new
-canonical chain feature executes on all three targets. See the [chain ledger](parity.md#comparison-chain-lowering)
+canonical chain feature executes on all three targets. See the [chain ledger](lite://doc/compiler/parity#comparison-chain-lowering)
 for fixed-point, sanitizer and paired speed evidence. Broader types, Never-valued
 exit typing, native C and run/check migration remain pending.
 
@@ -134,70 +134,70 @@ Empty and comment-only scripts now compile silently on generated TS/C, with
 malformed comments still rejected before effects. The corpus is 63 programs and
 30 rejections; existing 61 artifact pairs are unchanged. The parser skips alias
 scanning and remaining state allocation for empty scripts. See the [empty-script
-ledger](parity.md#empty-script-support) for generated bootstrap and paired timing evidence.
+ledger](lite://doc/compiler/parity#empty-script-support) for generated bootstrap and paired timing evidence.
 
 
 Simple statement separators now follow EOF, closing scopes and directly closed
 block initializers on generated targets. Adjacent output calls still require a
 separator and reject before effects. The corpus is 64 programs/29 rejections;
-all 63 older artifact pairs stay identical. See the [statement-boundary ledger](parity.md#statement-boundaries)
+all 63 older artifact pairs stay identical. See the [statement-boundary ledger](lite://doc/compiler/parity#statement-boundaries)
 for coverage, generated bootstrap and paired timing evidence.
 
 
 Adjacent admitted String literals now join across whitespace/comments on generated
 TS/C and both standalone parser drivers, with malformed later tokens still
 rejected before effects. Corpus: 65 programs/28 rejections; all 64 earlier
-artifact pairs stay identical. See the [adjacent-literal ledger](parity.md#adjacent-string-literals)
+artifact pairs stay identical. See the [adjacent-literal ledger](lite://doc/compiler/parity#adjacent-string-literals)
 for focused coverage, generated bootstrap and paired timing evidence.
 
 
 Nonempty calls now admit one trailing comma on generated targets while empty
 comma-only lists, doubled commas and arity/type errors still reject before effects.
 Corpus: 66 programs/27 rejections; all 65 earlier artifact pairs stay identical.
-See the [trailing-comma ledger](parity.md#trailing-call-commas) for generated bootstrap,
+See the [trailing-comma ledger](lite://doc/compiler/parity#trailing-call-commas) for generated bootstrap,
 focused combinations and paired timing evidence.
 
 
 Generated TS/C now support statement scopes and preserve outer values while
 shadowed initializers run. The canonical scope feature executes on all three
 targets, yielding 100 verifier executions. All 66 earlier program artifact pairs
-remain identical. See the [scope ledger](parity.md#statement-scopes) for focused combinations,
+remain identical. See the [scope ledger](lite://doc/compiler/parity#statement-scopes) for focused combinations,
 generated fixed-point evidence, native sanitizer cases and paired timing data.
 
 
 Generated function completion now joins all conditional arms and validates dead
 source while omitting proved unreachable instructions. Strict target checks stay
-enabled. See the [completion assessment and evidence](parity.md#function-completion).
+enabled. See the [completion assessment and evidence](lite://doc/compiler/parity#function-completion).
 
 ## Layout
 
 | Path | Role |
 |---|---|
-| [`baseline.md`](baseline.md) | P0 baseline counts, source hashes, reference artifacts and test evidence |
-| [`parity.md`](parity.md) | Stage-0 versus generated-compiler burndown and difference log |
-| [`manifests/`](manifests/README.md) | Manifest schema, line-map contract and current TS/C manifests; P1 loader and driver implemented |
-| [`src/numeric-literals.lts`](src/numeric-literals.lts) | Shared Int/Float token scanning and finite Float literal checks |
-| [`src/frontend.lts`](src/frontend.lts) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
-| [`src/ts-literals.lts`](src/ts-literals.lts) | TypeScript literal encoding |
-| [`src/emit-ts.lts`](src/emit-ts.lts) | TypeScript report formatting and program emission |
-| [`src/driver-ts.lts`](src/driver-ts.lts) | TypeScript driver entry |
-| [`src/c-literals.lts`](src/c-literals.lts) | C literal encoding |
-| [`src/emit-c.lts`](src/emit-c.lts) | C `printf` report formatting and program emission |
-| [`src/driver-c.lts`](src/driver-c.lts) | C driver entry |
-| [`src/lexer.lts`](src/lexer.lts) | P3 Lite-written lexer |
-| [`src/parser.lts`](src/parser.lts) | P4 parser: types, declarations, expressions, statements and functions |
-| [`src/check.lts`](src/check.lts) | P5 checker: symbols, scopes, types, arity, conditions and mutation grants |
-| [`tests/lexer/`](tests/lexer/) | Focused lexer fixtures, dump driver and expected tokens |
-| [`tests/parser/`](tests/parser/) | Focused parser fixtures, dump drivers and expected nodes |
-| [`tests/checker/`](tests/checker/) | Checker fixtures, dump driver and expected symbols |
-| [`src/emit-ts.lts`](src/emit-ts.lts) | Self-contained TS emitter and inline Int64/text/list/host runtime helpers |
-| [`tests/references/generated/report-42.ts`](tests/references/generated/report-42.ts) | Checked-in TS reference for `outputLine(42);` |
-| [`tests/references/generated/report-42.c`](tests/references/generated/report-42.c) | Checked-in C reference for `outputLine(42);` |
-| [`tests/references/generated/run-report.ts`](tests/references/generated/run-report.ts) | Visible Node adapter for the TS reference |
-| [`tests/references/generated/baseline-artifacts.json`](tests/references/generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
-| [`scripts/run-ts-artifact.ts`](scripts/run-ts-artifact.ts) | Strict-typechecks and runs one emitted TS artifact with fixed stdin and no harness timeout |
-| [`scripts/self-host.ts`](scripts/self-host.ts) | Builds three strictly checked generated TS generations |
-| [`scripts/corpus-parity.ts`](scripts/corpus-parity.ts) | Checks compiler bytes, rejections and TS execution against recorded contracts |
+| [`baseline.md`](lite://doc/compiler/baseline) | P0 baseline counts, source hashes, reference artifacts and test evidence |
+| [`parity.md`](lite://doc/compiler/parity) | Stage-0 versus generated-compiler burndown and difference log |
+| [`manifests/`](lite://doc/compiler/manifests-readme) | Manifest schema, line-map contract and current TS/C manifests; P1 loader and driver implemented |
+| [`src/numeric-literals.lts`](lite://repo/compiler/src/numeric-literals.lts) | Shared Int/Float token scanning and finite Float literal checks |
+| [`src/frontend.lts`](lite://repo/compiler/src/frontend.lts) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
+| [`src/ts-literals.lts`](lite://repo/compiler/src/ts-literals.lts) | TypeScript literal encoding |
+| [`src/emit-ts.lts`](lite://repo/compiler/src/emit-ts.lts) | TypeScript report formatting and program emission |
+| [`src/driver-ts.lts`](lite://repo/compiler/src/driver-ts.lts) | TypeScript driver entry |
+| [`src/c-literals.lts`](lite://repo/compiler/src/c-literals.lts) | C literal encoding |
+| [`src/emit-c.lts`](lite://repo/compiler/src/emit-c.lts) | C `printf` report formatting and program emission |
+| [`src/driver-c.lts`](lite://repo/compiler/src/driver-c.lts) | C driver entry |
+| [`src/lexer.lts`](lite://repo/compiler/src/lexer.lts) | P3 Lite-written lexer |
+| [`src/parser.lts`](lite://repo/compiler/src/parser.lts) | P4 parser: types, declarations, expressions, statements and functions |
+| [`src/check.lts`](lite://repo/compiler/src/check.lts) | P5 checker: symbols, scopes, types, arity, conditions and mutation grants |
+| [`tests/lexer/`](lite://repo/compiler/tests/lexer) | Focused lexer fixtures, dump driver and expected tokens |
+| [`tests/parser/`](lite://repo/compiler/tests/parser) | Focused parser fixtures, dump drivers and expected nodes |
+| [`tests/checker/`](lite://repo/compiler/tests/checker) | Checker fixtures, dump driver and expected symbols |
+| [`src/emit-ts.lts`](lite://repo/compiler/src/emit-ts.lts) | Self-contained TS emitter and inline Int64/text/list/host runtime helpers |
+| [`tests/references/generated/report-42.ts`](lite://repo/compiler/tests/references/generated/report-42.ts) | Checked-in TS reference for `outputLine(42);` |
+| [`tests/references/generated/report-42.c`](lite://repo/compiler/tests/references/generated/report-42.c) | Checked-in C reference for `outputLine(42);` |
+| [`tests/references/generated/run-report.ts`](lite://repo/compiler/tests/references/generated/run-report.ts) | Visible Node adapter for the TS reference |
+| [`tests/references/generated/baseline-artifacts.json`](lite://repo/compiler/tests/references/generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
+| [`scripts/run-ts-artifact.ts`](lite://repo/compiler/scripts/run-ts-artifact.ts) | Strict-typechecks and runs one emitted TS artifact with fixed stdin and no harness timeout |
+| [`scripts/self-host.ts`](lite://repo/compiler/scripts/self-host.ts) | Builds three strictly checked generated TS generations |
+| [`scripts/corpus-parity.ts`](lite://repo/compiler/scripts/corpus-parity.ts) | Checks compiler bytes, rejections and TS execution against recorded contracts |
 
 Backend source is split by role and connected with Lite namespace aliases.
 
@@ -207,7 +207,7 @@ Every type alias and function in this directory carries a `/** ... */` doc
 comment describing its contract, checked-value meaning, and failure behavior
 (especially diagnostics/status 2). Comments explain intent and invariants; the
 executable contract remains the verification cases under
-[`../igniter/tests/compiler/`](../igniter/tests/compiler/).
+[`../igniter/tests/compiler/`](lite://repo/igniter/tests/compiler).
 
 ## Source graph
 
@@ -244,7 +244,7 @@ default. Public C requests fail explicitly until the post-migration C phase.
 Generated TS/C also lower the existing right-associative, Float-default `**`
 semantics with explicit negative-base grouping and zero and negative exponents. C power
 uses the math library; link emitted C with `-lm` where required. See the
-[power ledger](parity.md#power-checkpoint) for current validation and limits.
+[power ledger](lite://doc/compiler/parity#power-checkpoint) for current validation and limits.
 
 The compiler source is still restricted, but the accepted surface now includes
 Int/Float/String/Bool expressions, immutable and mutable locals (`:=`, `var`,
@@ -281,8 +281,8 @@ negation now check overflow in both targets and preserve exact positioned
 ArithmeticPanic diagnostics, prior output and status. Portable C11 guards reject
 overflow before evaluating signed arithmetic; operand temporaries preserve
 left-to-right nested faults. Constant folding and division-family behavior are
-unchanged by that [refresh](parity.md#checked-int64-arithmetic). The subsequent
-[division-family slice](parity.md#positioned-integer-division-family) matches
+unchanged by that [refresh](lite://doc/compiler/parity#checked-int64-arithmetic). The subsequent
+[division-family slice](lite://doc/compiler/parity#positioned-integer-division-family) matches
 positioned runtime faults and makes MIN%-1 a valid zero result. C checks both
 division overflow and zero before evaluating the operation; all integer helper
 operands evaluate once from left to right. C multi-value output also evaluates
@@ -300,7 +300,7 @@ features outside the subset are rejected by name with status 2.
 
 A shared equals-token check keeps parenthesized inequality and bare function
 tails distinct from assignment and named tuple fields. The
-[inequality ledger](parity.md#inequality-token-discrimination) records coverage
+[inequality ledger](lite://doc/compiler/parity#inequality-token-discrimination) records coverage
 and unchanged existing artifacts; comparison chains remain separate work.
 
 Diagnostics are source-positioned as `name:line:column: message` (or
@@ -308,7 +308,7 @@ Diagnostics are source-positioned as `name:line:column: message` (or
 1-based source characters, computed from immutable offsets. Generated TS text/list
 bounds faults now use shared location metadata and preserve prior output. The
 T00 UTF-16 versus Lite code-point column difference for same-line supplementary
-characters is separately tracked in [the gap list](gaps.md). Unsupported
+characters is separately tracked in [the gap list](lite://doc/compiler/gaps). Unsupported
 reserved features name the feature, point to its documentation, and repeat the
 accepted subset, for example:
 
@@ -320,29 +320,29 @@ The frontend still scans offsets directly; a separate reusable token stream is
 future lexer work, not part of this checkpoint.
 
 The current accepted surface is separate from the small language used to write
-the compiler itself; see the [bootstrap plan](../docs/bootstrap-plan.md). Range faults, division by zero and mixed-type operations are
+the compiler itself; see the [bootstrap plan](lite://doc/bootstrap-plan). Range faults, division by zero and mixed-type operations are
 compile-time rejections. Generated TS uses BigInt; generated C uses
 `int64_t`/`INT64_C` and `printf` with `PRId64`.
 
 Verification cases and expected streams live in
-[`../igniter/tests/compiler/`](../igniter/tests/compiler/); the schema is in
-[`../igniter/tests/README.md`](../igniter/tests/README.md). Run the suite with
+[`../igniter/tests/compiler/`](lite://repo/igniter/tests/compiler); the schema is in
+[`../igniter/tests/README.md`](lite://doc/compiler/igniter-tests). Run the suite with
 `./bin/lite test --fast` or `./bin/lite test --full` from the repository root.
 Recent generated-program groups batch strict TS module checking, then execute
 each program in a fresh process with exact stream/status assertions. See the
-[validation-harness ledger](parity.md#batched-ts-artifact-validation).
+[validation-harness ledger](lite://doc/compiler/parity#batched-ts-artifact-validation).
 
-See [INV-061](../research/investigations/INV-061-string-and-multi-value-reports.md) for
+See [INV-061](lite://repo/research/investigations/INV-061-string-and-multi-value-reports.md) for
 the current evidence and limits.
 
 Sequential ordinary value declarations now create fresh bindings on generated
 TS/C; initializers retain the previous value and later uses obey the new type
 and mutation permissions. Corpus: 67 programs/26 rejections; all 66 older
 artifact pairs remain identical. Inventory: 88/164 match, 76 remain, with no
-regressions. See the [shadowing evidence](parity.md#sequential-value-bindings).
+regressions. See the [shadowing evidence](lite://doc/compiler/parity#sequential-value-bindings).
 
 Generated expression items now evaluate silently, empty separators are accepted,
 and trailing separators retain checked function results. Unit tails preserve
 effects and reject incompatible results before artifact output. Inventory:
 89/164 match, 75 remain; all 67 program artifact pairs stay unchanged. See the
-[expression-item evidence](parity.md#ordinary-expression-items).
+[expression-item evidence](lite://doc/compiler/parity#ordinary-expression-items).

@@ -53,4 +53,4 @@ The contract must remain stable across inlining and helper extraction. This deci
 
 `r1` records the user's operation-specific selection and the concrete argument-fault traces. No implementation or performance result is claimed.
 
-Normative owner: [expression recovery](../expression-recovery.md#operation-specific-panic-boundary-selected). Supporting traces: [recovery boundaries](../recovery-boundaries.md).
+Normative owner: [expression recovery](lite://doc/expression-recovery#operation-specific-panic-boundary-selected). Supporting traces: [recovery boundaries](lite://doc/recovery-boundaries).

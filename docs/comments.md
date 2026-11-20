@@ -55,7 +55,7 @@ The opening fence takes the entire consecutive run of `#` characters. A closing 
 - Inside a raw comment, no opener starts another comment.
 - Comments separate tokens as whitespace does. `first/* note */second` does not become the identifier `firstsecond`.
 - Comments do not insert item separators. `first() /* note */ second()` still needs `;` between the calls.
-- Newlines have no terminating effect. There is no selected newline-terminated // comment form. The old // arithmetic spelling has been superseded by :/; retiring it does not automatically adopt line comments or spacing-dependent comment recognition. See [division](division.md).
+- Newlines have no terminating effect. There is no selected newline-terminated // comment form. The old // arithmetic spelling has been superseded by :/; retiring it does not automatically adopt line comments or spacing-dependent comment recognition. See [division](lite://doc/division).
 
 ## Neutrality in code and parsing
 
@@ -70,11 +70,11 @@ ready :=
 ;
 ```
 
-Only connected is an operand. The active leading and is still valid for that singleton Bool expression. Deleting the comment, or restoring the earlier real condition, requires no repair of the first remaining line's punctuation. Commenting out the final real operand would still leave an invalid empty initializer. See [Ali's editing sequence](leading-separators.md#ali-removes-the-first-condition).
+Only connected is an operand. The active leading and is still valid for that singleton Bool expression. Deleting the comment, or restoring the earlier real condition, requires no repair of the first remaining line's punctuation. Commenting out the final real operand would still leave an invalid empty initializer. See [Ali's editing sequence](lite://doc/leading-separators#ali-removes-the-first-condition).
 
 ## Comments and formatting
 
-Selected 2026-10-25 after the [formatter investigation](comment-formatting-research.md): ordinary/raw comments are opaque text to the formatter and remain neutral to executable parsing. Their contents and their attachment to nearby code are preserved; indentation at the comment's source position and surrounding line breaks may change.
+Selected 2026-10-25 after the [formatter investigation](lite://doc/comment-formatting-research): ordinary/raw comments are opaque text to the formatter and remain neutral to executable parsing. Their contents and their attachment to nearby code are preserved; indentation at the comment's source position and surrounding line breaks may change.
 
 ### Selected formatting contract
 
@@ -87,17 +87,17 @@ Ali's commented-out initializer remains valid, and its comment stays with that i
 
 This selects an observable formatter contract, not a parser/trivia data structure or an implementation. Documentation-comment markers/attachment and any explicit leave-this-region-unformatted mechanism require separate future decisions. No special directive syntax is selected by these ordinary comment rules.
 
-Comment layout and attachment must also satisfy the selected [formatter idempotence rule](tooling-and-learning.md#formatter-stability-and-idempotence): a second successful pass with the same version/settings leaves the complete output unchanged. Allowing surrounding line breaks or indentation to change on the first pass does not permit repeated movement on later passes. Future conformance fixtures must cover ordinary/raw comments without interpreting their opaque bodies as code.
+Comment layout and attachment must also satisfy the selected [formatter idempotence rule](lite://doc/tooling-and-learning#formatter-stability-and-idempotence): a second successful pass with the same version/settings leaves the complete output unchanged. Allowing surrounding line breaks or indentation to change on the first pass does not permit repeated movement on later passes. Future conformance fixtures must cover ordinary/raw comments without interpreting their opaque bodies as code.
 
-Under selected [verification before writing](tooling-and-learning.md#verification-before-writing), compare opaque comment contents and attachment separately from the reparsed executable structure before applying formatter output. A comparison that ignores comment data cannot establish this contract. Changes to indentation at the source position/surrounding breaks remain allowed; dropped, altered, or unrelatedly reattached comments reject the proposed output and leave the file/buffer unchanged. Exact attachment identities/checker internals remain open; comment bodies never become executable verification input.
+Under selected [verification before writing](lite://doc/tooling-and-learning#verification-before-writing), compare opaque comment contents and attachment separately from the reparsed executable structure before applying formatter output. A comparison that ignores comment data cannot establish this contract. Changes to indentation at the source position/surrounding breaks remain allowed; dropped, altered, or unrelatedly reattached comments reject the proposed output and leave the file/buffer unchanged. Exact attachment identities/checker internals remain open; comment bodies never become executable verification input.
 
-The selected [--check mode](tooling-and-learning.md#read-only-check-mode-for-ci) runs the same comment-preservation verification without writing files. A verification failure is an overall check failure even when the source already appears formatted; matching layout does not establish comment preservation by itself.
+The selected [--check mode](lite://doc/tooling-and-learning#read-only-check-mode-for-ci) runs the same comment-preservation verification without writing files. A verification failure is an overall check failure even when the source already appears formatted; matching layout does not establish comment preservation by itself.
 
 ## Missing delimiters
 
 An unterminated ordinary comment or raw fence is a compile-time error. The compiler reports the unmatched opener; it must not guess where executable code resumes.
 
-It is also a lexical failure for the formatter. Under the selected [incomplete-source rule](tooling-and-learning.md#incomplete-or-malformed-source), report the missing closer and leave the entire file/buffer unchanged. Do not guess an ending delimiter or rewrite apparently valid code around the unfinished comment. Other requested valid files can still be formatted, while the request reports failure.
+It is also a lexical failure for the formatter. Under the selected [incomplete-source rule](lite://doc/tooling-and-learning#incomplete-or-malformed-source), report the missing closer and leave the entire file/buffer unchanged. Do not guess an ending delimiter or rewrite apparently valid code around the unfinished comment. Other requested valid files can still be formatted, while the request reports failure.
 
 ## Open decisions
 
@@ -105,7 +105,7 @@ Documentation-comment markers and their tooling contract remain open. Neither or
 
 ## Related concepts and references
 
-- [Lexical structure](lexical-structure.md)
-- [Strings](strings.md): comment-looking text inside a string remains string data.
-- [Grammar sketch](grammar-sketch.md)
-- These comment forms are LiteScript design choices recorded in the [decision ledger](decisions-and-open-questions.md).
+- [Lexical structure](lite://doc/lexical-structure)
+- [Strings](lite://doc/strings): comment-looking text inside a string remains string data.
+- [Grammar sketch](lite://doc/grammar-sketch)
+- These comment forms are LiteScript design choices recorded in the [decision ledger](lite://doc/decisions-and-open-questions).

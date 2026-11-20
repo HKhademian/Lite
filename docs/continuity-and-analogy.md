@@ -214,4 +214,4 @@ If the answer to 2, 3, or 4 is weak, prefer redesign over a special case.
 
 This principle supports the existing goals of low ceremony, explicit consequential behavior, one conditional syntax, one loop keyword, and consistent leading separators. It is a method for choosing among otherwise plausible designs, not a replacement for type safety, ownership, or performance constraints.
 
-See [principles](principles.md), [optional leading separators](leading-separators.md), and the [decision ledger](decisions-and-open-questions.md).
+See [principles](lite://doc/principles), [optional leading separators](lite://doc/leading-separators), and the [decision ledger](lite://doc/decisions-and-open-questions).

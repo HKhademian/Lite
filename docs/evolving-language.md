@@ -63,7 +63,7 @@ bridge while the compiler learns separate source units. Once Lite can rebuild
 those units, migrate project source to the new form and remove the bridge from
 active build paths.
 
-See the [compiler development rules](../.agents/rules/compiler-development.md),
-[bootstrap guide](../compiler/bootstrap/README.md), and
-[module import stages](../compiler/module-import-stages.md) for current
+See the [compiler development rules](lite://repo/.agents/rules/compiler-development.md),
+[bootstrap guide](lite://doc/compiler/bootstrap-readme), and
+[module import stages](lite://doc/compiler/module-import-stages) for current
 implementation evidence and required checks.

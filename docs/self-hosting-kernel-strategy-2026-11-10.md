@@ -2,8 +2,8 @@
 
 > **Status:** Historical strategy captured 2026-11-10. This records a proposed
 > development path, not proof that Lite has reached any of its gates. Use the
-> current [bootstrap plan](bootstrap-plan.md) and
-> [compiler transition plan](../compiler/transition-plan.md) for measured
+> current [bootstrap plan](lite://doc/bootstrap-plan) and
+> [compiler transition plan](lite://doc/compiler/transition-plan) for measured
 > project status.
 
 ## Purpose
@@ -105,9 +105,9 @@ introduced them.
 ## Relationship to current plans
 
 This record preserves the TS0/LT0 strategy as understood on its date. The
-[bootstrap plan](bootstrap-plan.md) carries the current owner-facing gates and
+[bootstrap plan](lite://doc/bootstrap-plan) carries the current owner-facing gates and
 constraints, while the
-[self-hosting kernel handoff](../.agents/plans/self-hosting-kernel.md)
+[self-hosting kernel handoff](lite://repo/.agents/plans/self-hosting-kernel.md)
 tracks implementation work. Update those plans when a gate is measured;
 retain this document as a dated explanation of the strategy rather than an
 evergreen status report.

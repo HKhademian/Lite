@@ -1,12 +1,12 @@
 # Component releases
 
-Current workflow, 2026-11-03. The [version policy](versioning-and-naming.md) and
-[registry](../config/versions.json) define independent component streams.
+Current workflow, 2026-11-03. The [version policy](lite://doc/versioning-and-naming) and
+[registry](lite://repo/config/versions.json) define independent component streams.
 The igniter retains its existing version authority in igniter/package.json.
 
 ## Prepare a release
 
-Use a clean committed checkout and Node from [igniter/.node-version](../igniter/.node-version).
+Use a clean committed checkout and Node from [igniter/.node-version](lite://repo/igniter/.node-version).
 Install locked development dependencies, then run the affected cases and gates.
 
 ```sh
@@ -79,7 +79,7 @@ Routine CI does not collect timing reports, and release notes do not consume
 benchmark output; performance claims need a reviewed before/after measurement.
 
 Ordinary CI reports all accepted-language failures and compares them with the
-explicit [migration baseline](../config/ts-migration.json). A changed pass/failure
+explicit [migration baseline](lite://repo/config/ts-migration.json). A changed pass/failure
 set or diagnostic fails the baseline gate for review. This is a regression gate,
 not a full-conformance claim; bare `./bin/lite verify --all` still fails for the known
 ports. Completing a port requires removing its baseline failure after verification.
@@ -100,7 +100,7 @@ promised identical across archive toolchains.
 
 ## CI and publication
 
-[Test](../.github/workflows/test.yml) runs independent jobs concurrently:
+[Test](lite://repo/.github/workflows/test.yml) runs independent jobs concurrently:
 strict repository checks, Linux/macOS full regressions, editor grammar,
 verification coverage, the explicit TS migration audit,
 extracted-distribution checks, and the T00-free archive gate.
@@ -112,7 +112,7 @@ remain unchanged. Timeouts are failures, never successful samples or skipped cas
 The archive benchmark controller has a separate 300-second budget because it
 validates the corpus and measures five workloads; its program limits are unchanged.
 
-[Release](../.github/workflows/release.yml) responds to all registered component
+[Release](lite://repo/.github/workflows/release.yml) responds to all registered component
 tag streams. It validates the annotated tag and recorded version at the exact
 commit. Documentation/tooling, editor, full-regression, coverage, and migration
 baseline gates run as parallel jobs; compiler-family gates do no work on

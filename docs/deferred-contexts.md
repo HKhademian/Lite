@@ -42,4 +42,4 @@ Keep that distinction when returning, passing, or storing callables: captured fi
 
 Resume when explicitly requested, with the memory/resource model and callable representation as context. Start by distinguishing environment services from lexical capture and persistent private state. The existing function/lambda surface syntax, optional type annotations, and unnamed-input rule have their own decisions; this deferral does not reopen them.
 
-The detailed examples and reference-language comparisons remain in [closures](closures.md) as deferred review history. Current syntax is described in [functions](functions.md).
+The detailed examples and reference-language comparisons remain in [closures](lite://doc/closures) as deferred review history. Current syntax is described in [functions](lite://doc/functions).

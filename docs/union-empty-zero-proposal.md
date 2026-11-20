@@ -7,12 +7,12 @@ can represent no known type, so a zero-initialized union has an `UNKNOWN`
 active-type state. This reinforces the alternative discussed here, but does not
 by itself settle readability, matching, source-level zero construction, or the
 handling of unrecognized nonzero tags. The remaining operations require review; see
-[the current review](../research/investigations/language-review/01-core-types.md#user-question-union-kind-and-zero).
+[the current review](lite://repo/research/investigations/language-review/01-core-types.md#user-question-union-kind-and-zero).
 The user further clarifies that in the proposed library/file/type reference
 model type reference 0 cannot identify a type; it is not a separately reserved
 type entry. The three-section encoding itself remains under investigation.
 
-The subsequent [initialization-policy review](union-initialization-policy.md) considers preserving member-only readable values while making union locals explicitly or implicitly uninitialized before a first write. That is a separate alternative: an uninitialized type test is rejected, whereas this page's readable empty value makes both tests return false. The zero state and bare declaration are selected; the separate default-uninitialized alternative was not selected.
+The subsequent [initialization-policy review](lite://doc/union-initialization-policy) considers preserving member-only readable values while making union locals explicitly or implicitly uninitialized before a first write. That is a separate alternative: an uninitialized type test is rejected, whereas this page's readable empty value makes both tests return false. The zero state and bare declaration are selected; the separate default-uninitialized alternative was not selected.
 
 ## Proposed behavior
 

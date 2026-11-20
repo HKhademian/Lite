@@ -12,7 +12,7 @@ locals; List and function reservation remain unsupported.
 
 ## Plain-union construction restriction
 
-A bare typed declaration zero-initializes every type, including multi-member unions. Contextual `0` can also request all-zero storage, but it is rejected if another distinct interpretation remains viable, such as an active numeric member of a union. Union zero has Kind 0 and no known active member; see [union initialization](union-initialization-policy.md#bare-local-declarations). Conditional fallback remains a separate source rule to review.
+A bare typed declaration zero-initializes every type, including multi-member unions. Contextual `0` can also request all-zero storage, but it is rejected if another distinct interpretation remains viable, such as an active numeric member of a union. Union zero has Kind 0 and no known active member; see [union initialization](lite://doc/union-initialization-policy#bare-local-declarations). Conditional fallback remains a separate source rule to review.
 
 ## Core distinction
 
@@ -38,7 +38,7 @@ Selected forms:
 - A future explicit zero-value expression is intended for arbitrary types and expression contexts; `mem.zeros<Type>()` is illustrative, with syntax and inference still open.
 - value: Type = { ... } selects record construction with declared defaults for omitted fields.
 
-Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations. Function argument omission requires public omission permission. Ordinary user implementations need an applicable declared default; the selected zero implementation needs no actual default definition or execution, as described below. Required inputs remain required; a type merely supporting zero does not grant omission to an ordinary user implementation. See [omitted value arguments](functions.md#omitted-value-arguments).
+Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations. Function argument omission requires public omission permission. Ordinary user implementations need an applicable declared default; the selected zero implementation needs no actual default definition or execution, as described below. Required inputs remain required; a type merely supporting zero does not grant omission to an ordinary user implementation. See [omitted value arguments](lite://doc/functions#omitted-value-arguments).
 
 A typed declaration creates a slot sized and laid out for its type and initializes it to all-zero, regardless of type. Where and how storage is allocated remains to be discussed. A zero-initialized union is initialized even though it has no known active member; explicit `= ?` instead requests uninitialized storage.
 
@@ -78,19 +78,19 @@ Some mappings require further decisions:
 
 These are representation/semantic design tasks, not exceptions permitting types with no zero. A zero value is not necessarily an identity for every operator: for example, zero initialization alone does not make a product fold start at 1.
 
-The [plain-union zero review](union-zero.md) records the clarified metadata-plus-overlapping-payload model. Zero initialization clears both metadata and payload; total wrapper storage includes metadata and alignment beyond max-member payload capacity. Zero metadata identifies no known member; the zero-initialized union itself is a valid initialized value.
+The [plain-union zero review](lite://doc/union-zero) records the clarified metadata-plus-overlapping-payload model. Zero initialization clears both metadata and payload; total wrapper storage includes metadata and alignment beyond max-member payload capacity. Zero metadata identifies no known member; the zero-initialized union itself is a valid initialized value.
 
 ## Zero-initialized functions
 
 A zero-initialized function is callable. Its invocation performs no user-body work and returns `zero(R)`, where `R` is its declared result type. An `Int` result is `0`, a `String` result is empty, and a `Unit` result is `Unit`. If the declared result is `T ! E`, it returns `.ok(zero(T))` under the selected Result zero rule.
 
-Selected 2026-10-25: the zero implementation runs no default expressions and needs no actual default definition for an ordinary input the public contract permits omitting. Its no-body result is zero(R). Omitted TP inputs can be reasoned about as zero(TP), without materializing them or executing a synthetic default. The internal representation, including a possible special non-public unvalued state analogous to undefined, remains deferred; no public undefined value/type or argument hole is introduced. See [zero-callable omission](callable-default-contracts.md#zero-callable-omission-selected). This supersedes the earlier requirement to run applicable default expressions before zero invocation.
+Selected 2026-10-25: the zero implementation runs no default expressions and needs no actual default definition for an ordinary input the public contract permits omitting. Its no-body result is zero(R). Omitted TP inputs can be reasoned about as zero(TP), without materializing them or executing a synthetic default. The internal representation, including a possible special non-public unvalued state analogous to undefined, remains deferred; no public undefined value/type or argument hole is introduced. See [zero-callable omission](lite://doc/callable-default-contracts#zero-callable-omission-selected). This supersedes the earlier requirement to run applicable default expressions before zero invocation.
 
 Normal caller-side evaluation still applies: evaluate the callee, then each reached supplied argument expression from left to right, then invoke the zero callable. Ignoring the evaluated argument values does not skip their evaluation or effects. An exit during argument evaluation follows its ordinary rules and can prevent invocation. Required argument ownership and cleanup behavior still applies; ignoring a value does not exempt it from that contract.
 
 A zero callable still rejects missing required public inputs. Only ordinary omission-capable inputs have the selected zero-implementation handling; no permission-bearing default or caller grant is fabricated.
 
-The zero callable performs no updates through `mut` or `var` parameter grants. This does not make the entire call expression free of effects: argument evaluation and required cleanup can have observable behavior. Complete ownership/cleanup timing, callable type grammar, representation, and ABI remain open. See [function calls](functions.md#zero-initialized-callables) and [evaluation order](evaluation-order.md#function-calls).
+The zero callable performs no updates through `mut` or `var` parameter grants. This does not make the entire call expression free of effects: argument evaluation and required cleanup can have observable behavior. Complete ownership/cleanup timing, callable type grammar, representation, and ABI remain open. See [function calls](lite://doc/functions#zero-initialized-callables) and [evaluation order](lite://doc/evaluation-order#function-calls).
 
 ## Defaults versus partial zero initialization
 
@@ -104,7 +104,7 @@ Illustratively, name uses its declared default Guest; the proposed zero-value ex
 
 ## Separate explicit uninitialized storage
 
-Value: Type = ? requests storage without zeroing or default construction. It is a distinct state containing unspecified bytes, not the type's initialized zero value, and still needs the separate definite-initialization rules before value use. The igniter now enforces those rules for whole-value scalar/tuple/fixed-array locals; partial construction and ownership remain open. The old reserve() operation remains unselected. See [reserved storage](reserved-storage.md) and [first initialization](first-initialization.md).
+Value: Type = ? requests storage without zeroing or default construction. It is a distinct state containing unspecified bytes, not the type's initialized zero value, and still needs the separate definite-initialization rules before value use. The igniter now enforces those rules for whole-value scalar/tuple/fixed-array locals; partial construction and ownership remain open. The old reserve() operation remains unselected. See [reserved storage](lite://doc/reserved-storage) and [first initialization](lite://doc/first-initialization).
 
 ## Result and error boundaries
 
@@ -126,8 +126,8 @@ This mapping also applies where a declaration default or a loop's value context 
 - Zeroing initializes the type's own storage. It does not follow and clear objects referenced from fields or imply deep allocation.
 - Zero-filled references/functions must have language-defined mappings; the implementation must not import undefined behavior from a raw ABI accidentally.
 - No constructor/default initialization followed by clearing is required.
-- The optimizer may omit unobservable zero stores or storage entirely, preserving all defined reads, aliases, cleanup, and exits before replacement. See [initialization and physical writes](memory-and-performance.md#semantic-initialization-versus-physical-writes).
+- The optimizer may omit unobservable zero stores or storage entirely, preserving all defined reads, aliases, cleanup, and exits before replacement. See [initialization and physical writes](lite://doc/memory-and-performance#semantic-initialization-versus-physical-writes).
 - Empty executable bodies return Unit; established record-initializer positions give {} default-construction meaning.
 - Representation, FFI adaptation, layout, generic inference, ownership, and exact special-type zero behavior remain unimplemented design work.
 
-Related: [record initialization](record-initialization.md), [declarations](declarations-and-assignment.md), [loop value](loop-value.md), [types](types-and-inference.md), [Result](result-and-errors.md), and [memory/performance](memory-and-performance.md).
+Related: [record initialization](lite://doc/record-initialization), [declarations](lite://doc/declarations-and-assignment), [loop value](lite://doc/loop-value), [types](lite://doc/types-and-inference), [Result](lite://doc/result-and-errors), and [memory/performance](lite://doc/memory-and-performance).

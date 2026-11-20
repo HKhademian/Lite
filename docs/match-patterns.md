@@ -4,9 +4,9 @@ Status: **equality, plain enums, payload enums, destructuring, and type matching
 
 ## Purpose and template
 
-The [all-type finalization review](pattern-type-review.md) extends this capability checklist to records, lists/arrays/slices, sets, tuples/pairs, enums, strings, range values and membership, numbers, maps, Unit, and stored Results. Confirmed primitives are retained; new collection and named-record forms are explicitly marked as proposals.
+The [all-type finalization review](lite://doc/pattern-type-review) extends this capability checklist to records, lists/arrays/slices, sets, tuples/pairs, enums, strings, range values and membership, numbers, maps, Unit, and stored Results. Confirmed primitives are retained; new collection and named-record forms are explicitly marked as proposals.
 
-One match construct must cover ordinary value selection and structured pattern matching. A separate switch construct is unnecessary for these capabilities. The selected [subjectless form](match.md#subjectless-boolean-selection-selected) additionally handles Boolean expression headers with no pattern subject; the pattern capabilities below describe subject-based matching.
+One match construct must cover ordinary value selection and structured pattern matching. A separate switch construct is unnecessary for these capabilities. The selected [subjectless form](lite://doc/match#subjectless-boolean-selection-selected) additionally handles Boolean expression headers with no pattern subject; the pattern capabilities below describe subject-based matching.
 
 ```text
 match subject {
@@ -19,7 +19,7 @@ The five capabilities below are selected requirements. Where a spelling extends 
 
 ## 1. Equality
 
-Match by equality with a value: numbers, strings, Booleans, named constants, and compatible values computed or obtained at runtime. Equality is one specialization of the selected comparison-pattern family: all ten comparison operators may prefix a right operand, compare it with the supplied subject/component, and introduce no binding. Runtime bounds evaluate once when reached; false is mismatch and failures remain failures. See [comparison patterns](comparison-patterns.md). This is more than an integer-only jump-table switch.
+Match by equality with a value: numbers, strings, Booleans, named constants, and compatible values computed or obtained at runtime. Equality is one specialization of the selected comparison-pattern family: all ten comparison operators may prefix a right operand, compare it with the supplied subject/component, and introduce no binding. Runtime bounds evaluate once when reached; false is mismatch and failures remain failures. See [comparison patterns](lite://doc/comparison-patterns). This is more than an integer-only jump-table switch.
 
 Literal value-match arms:
 
@@ -32,7 +32,7 @@ match answer {
 
 Require compatible operand types and a defined equality contract; do not add implicit truthiness or unrelated coercions. Match an existing runtime value with `== expected { ... }`. The explicit value-match marker prevents silently creating a binding named expected. A literal such as 42 can be written directly as a concise value-match pattern.
 
-The selected base operations are bind (`name`), type match (`: Type`), and value match (`== expected`). Typed binding `name: Type` composes the first two. The [binding-versus-testing reference review](pattern-bindings-and-tests.md) explains their distinctions and remaining semantic contracts. Bare identifiers and `.None` keep their selected roles; no prelude constant or type name silently changes a bare binding into a test.
+The selected base operations are bind (`name`), type match (`: Type`), and value match (`== expected`). Typed binding `name: Type` composes the first two. The [binding-versus-testing reference review](lite://doc/pattern-bindings-and-tests) explains their distinctions and remaining semantic contracts. Bare identifiers and `.None` keep their selected roles; no prelude constant or type name silently changes a bare binding into a test.
 
 A computed comparison RHS evaluates once when its test is reached; skipped tests do not evaluate it. Prefixes use ordinary comparison meanings and preserve failures rather than converting them into mismatch. Complete generic/custom comparison applicability, extraction effects, and ownership commitment remain open. Custom equality must not silently swallow recoverable errors or force every structural pattern to call user-defined equality.
 
@@ -48,7 +48,7 @@ match status {
 }
 ```
 
-Assume these are the enum's complete cases and the called operations produce Unit. The subject supplies the enum owner for these contextual case names. Complete enum declarations, raw representations, conversion, aliases, and invalid foreign values require separate contracts. Plain enum support does not automatically adopt implicit C-style integer conversion. See [enums and variants](enums-and-variants.md).
+Assume these are the enum's complete cases and the called operations produce Unit. The subject supplies the enum owner for these contextual case names. Complete enum declarations, raw representations, conversion, aliases, and invalid foreign values require separate contracts. Plain enum support does not automatically adopt implicit C-style integer conversion. See [enums and variants](lite://doc/enums-and-variants).
 
 ## 3. Enums with payloads
 
@@ -78,9 +78,9 @@ match point {
 
 Assume point has a compatible two-element tuple type. This pattern receives the whole point and destructures that same value. It does not switch to unrelated metadata because a tuple pattern was written.
 
-Tuple, record/field, and nested patterns belong to this capability. Positional tuples and destination = sourceField named tuple/record patterns have selected forms. The selected recursive grammar is outlined in the [grammar sketch](grammar-sketch.md#match); sequence/rest extensions remain open. Ordinary record destructuring uses names, not tuple positions; see [records and labeled tuples](records.md#records-and-labeled-tuples). Literal or type constraints should compose with extraction, subject to the incomplete expression operand grammar. This does not imply heap allocation or automatic calls to arbitrary user getters.
+Tuple, record/field, and nested patterns belong to this capability. Positional tuples and destination = sourceField named tuple/record patterns have selected forms. The selected recursive grammar is outlined in the [grammar sketch](lite://doc/grammar-sketch#match); sequence/rest extensions remain open. Ordinary record destructuring uses names, not tuple positions; see [records and labeled tuples](lite://doc/records#records-and-labeled-tuples). Literal or type constraints should compose with extraction, subject to the incomplete expression operand grammar. This does not imply heap allocation or automatic calls to arbitrary user getters.
 
-Newly bound component names are branch-local and may shadow outer names. A name in a binding position inside a constructor pattern, such as `Event.Key(key)`, binds its payload; an outer variable with the same spelling must not silently change it into an equality test. Repeated binding names within a pattern shadow in recursive written order, without asserting equality. `_` follows the same rule as every other binding name and explicitly permits nonuse. Typed underscore bindings can constrain components and remain readable; see [pattern shadowing](pattern-shadowing.md) and [underscore bindings and skips](wildcards-and-skips.md).
+Newly bound component names are branch-local and may shadow outer names. A name in a binding position inside a constructor pattern, such as `Event.Key(key)`, binds its payload; an outer variable with the same spelling must not silently change it into an equality test. Repeated binding names within a pattern shadow in recursive written order, without asserting equality. `_` follows the same rule as every other binding name and explicitly permits nonuse. Typed underscore bindings can constrain components and remain readable; see [pattern shadowing](lite://doc/pattern-shadowing) and [underscore bindings and skips](lite://doc/wildcards-and-skips).
 
 ## 5. Type checking and matching
 
@@ -93,7 +93,7 @@ match person {
 }
 ```
 
-Assume person has type `User | Guest`. These explicit typed-binding arms are selected. Type-only patterns use `: User` without introducing a name, including in nested structures. They narrow a stable existing subject where its identity remains valid. Bare `User` is an ordinary binding under the selected bare-name rule, not a type-test alternative. See [type tests and narrowing](type-tests-and-narrowing.md).
+Assume person has type `User | Guest`. These explicit typed-binding arms are selected. Type-only patterns use `: User` without introducing a name, including in nested structures. They narrow a stable existing subject where its identity remains valid. Bare `User` is an ordinary binding under the selected bare-name rule, not a type-test alternative. See [type tests and narrowing](lite://doc/type-tests-and-narrowing).
 
 A type test is different from an enum-case test. `Event.Click` and `Event.Key` can share the same declared type Event; `event: Event` cannot distinguish them. Similarly, testing a payload type cannot distinguish an intact Result's success from failure when the two payload types overlap.
 
@@ -130,9 +130,9 @@ if (x: Int, y: String) := pair {
 
 The capability and typed tuple shape are selected. Complete tuple/record productions, generic/subtype tests, field visibility, evaluation effects, and ownership remain to formalize. A typed pattern whose component type is already statically known may need no runtime test; an impossible type constraint cannot be made valid by an implicit cast. In an ordinary declaration, the same destructuring must be irrefutable for its input type or use an explicitly defined failure contract.
 
-Unannotated components still receive precise inferred types. Apply the whole pattern's constraints to the possible input alternatives, then infer each binding as its corresponding concrete type or union across compatible portions. A constraint on b can therefore exclude an alternative from every other binding's inference too. Composite bindings preserve complete alternative shapes. See [pattern binding inference](pattern-binding-inference.md); this rule does not change how arm result expressions are checked.
+Unannotated components still receive precise inferred types. Apply the whole pattern's constraints to the possible input alternatives, then infer each binding as its corresponding concrete type or union across compatible portions. A constraint on b can therefore exclude an alternative from every other binding's inference too. Composite bindings preserve complete alternative shapes. See [pattern binding inference](lite://doc/pattern-binding-inference); this rule does not change how arm result expressions are checked.
 
-Nested tuple destructuring uses `(x, (a, b: str, c), ...rest)`, with str denoting a known type. The second outer component is collected by its nested pattern; it does not also introduce a whole-value name y. A variable binding in that position instead collects the whole component. This [collector choice](tuples-and-patterns.md#nested-tuple-patterns-and-rest-selected) is selected; complete recursive parsing and ownership remain separate.
+Nested tuple destructuring uses `(x, (a, b: str, c), ...rest)`, with str denoting a known type. The second outer component is collected by its nested pattern; it does not also introduce a whole-value name y. A variable binding in that position instead collects the whole component. This [collector choice](lite://doc/tuples-and-patterns#nested-tuple-patterns-and-rest-selected) is selected; complete recursive parsing and ownership remain separate.
 
 ## Sixth capability: arm condition chains
 
@@ -142,13 +142,13 @@ After a structural pattern succeeds, Boolean conditions and additional pattern b
 Event.Click(x, y) if x >= 0 and y >= 0 { handle_click(x, y) }
 ```
 
-If the complete guard fails, selection continues to later arms; a failed and chain first permits any remaining or alternative in that guard. Binding-producing or alternatives expose the union of introduced names with the first successful alternative's values and Unit for absent names, including success through a Boolean-only alternative. Earlier bindings are available to later operands and the successful body, with left-to-right short-circuiting. Nested destructuring can appear in these additional matches. Mutation, recursive extraction effects, and ownership commitment need further rules. A guarded arm does not establish full coverage of its structural pattern. See [match arm chains](match-guards.md).
+If the complete guard fails, selection continues to later arms; a failed and chain first permits any remaining or alternative in that guard. Binding-producing or alternatives expose the union of introduced names with the first successful alternative's values and Unit for absent names, including success through a Boolean-only alternative. Earlier bindings are available to later operands and the successful body, with left-to-right short-circuiting. Nested destructuring can appear in these additional matches. Mutation, recursive extraction effects, and ownership commitment need further rules. A guarded arm does not establish full coverage of its structural pattern. See [match arm chains](lite://doc/match-guards).
 
-Initial alternatives in one arm are now selected: `.Email(address) or .Sms(address)` binds address with the normalized union of the cases' payload types, with Unit contributed for any name absent from an initial alternative. Different names such as email/phone produce String | Unit and PhoneNumber | Unit; same-name address needs no Unit when every alternative binds it. See [alternative arm patterns](match.md#alternative-arm-patterns-selected). Initial alternatives short-circuit at first success before the shared if guard; complete guard failure tries the next arm without retrying initial alternatives. Any finite number of initial alternatives is permitted. Nested or alternatives in constructor payloads and tuple components are now selected with the same first-success and payload-or-Unit rules. The enclosing pattern must succeed before its bindings escape, and later failure never retries an earlier successful local choice. Logical and/not subpatterns remain open. Range patterns and a separate else fallback remain separate decisions rather than additional requirements inferred from the numbered list. Combined whole-value-plus-payload binding is rejected; choose a variable collector or a nested pattern for the supplied component.
+Initial alternatives in one arm are now selected: `.Email(address) or .Sms(address)` binds address with the normalized union of the cases' payload types, with Unit contributed for any name absent from an initial alternative. Different names such as email/phone produce String | Unit and PhoneNumber | Unit; same-name address needs no Unit when every alternative binds it. See [alternative arm patterns](lite://doc/match#alternative-arm-patterns-selected). Initial alternatives short-circuit at first success before the shared if guard; complete guard failure tries the next arm without retrying initial alternatives. Any finite number of initial alternatives is permitted. Nested or alternatives in constructor payloads and tuple components are now selected with the same first-success and payload-or-Unit rules. The enclosing pattern must succeed before its bindings escape, and later failure never retries an earlier successful local choice. Logical and/not subpatterns remain open. Range patterns and a separate else fallback remain separate decisions rather than additional requirements inferred from the numbered list. Combined whole-value-plus-payload binding is rejected; choose a variable collector or a nested pattern for the supplied component.
 
 ## Optional leading pattern separators
 
-Selected 2026-10-24: complete initial arm-pattern lists and supported nested constructor-payload/tuple-component alternative lists may begin with one optional or. Patterns with payload bindings and payload-free patterns can share one arm body; the optional if guard follows the entire initial list. Removing the leader preserves matching order, binding inference, payload-or-Unit joins, guard-once/no-retry behavior, and exhaustive checking. This does not add logical and/not subpatterns. See [leading pattern alternatives](leading-separators.md#pattern-alternatives-with-one-shared-body).
+Selected 2026-10-24: complete initial arm-pattern lists and supported nested constructor-payload/tuple-component alternative lists may begin with one optional or. Patterns with payload bindings and payload-free patterns can share one arm body; the optional if guard follows the entire initial list. Removing the leader preserves matching order, binding inference, payload-or-Unit joins, guard-once/no-retry behavior, and exhaustive checking. This does not add logical and/not subpatterns. See [leading pattern alternatives](lite://doc/leading-separators#pattern-alternatives-with-one-shared-body).
 
 ## Common contracts still to settle
 
@@ -165,9 +165,9 @@ Some fragments intentionally omit remaining arms to isolate a pattern category. 
 - [Rust patterns](https://doc.rust-lang.org/reference/patterns.html): literals, constant paths, variants, tuples, records, and name-resolution distinctions; its complete grammar and ownership rules are not adopted automatically.
 - [Dart pattern types](https://dart.dev/language/pattern-types): constant, variable, typed, object, and record patterns.
 - [Swift enumerations](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/Enumerations.md): payload-free and associated-value enum cases.
-- [Match](match.md), [tuples and patterns](tuples-and-patterns.md), and [reference comparison](pattern-syntax-comparison.md).
+- [Match](lite://doc/match), [tuples and patterns](lite://doc/tuples-and-patterns), and [reference comparison](lite://doc/pattern-syntax-comparison).
 
 
 ## Result failure occurrence inspection
 
-[LP-0017 r1](proposals/LP-0017-result-failure-occurrence-patterns.md) selects .err(e) for the first stored failure and .err(...es) for every occurrence in order. For T ! F, the bindings are F and [F]. Scalar subpatterns test the first occurrence without searching; a failed test does not change the source. Tag-only .err binds nothing, and .ok(value) preserves the complete successful T. This Result-specific collection does not flatten occurrence internals, mutate the stored outcome, or change structural tuple-rest/other constructor schemas. See [the normative examples](result-and-errors.md#failure-occurrence-patterns).
+[LP-0017 r1](lite://doc/proposals/LP-0017-result-failure-occurrence-patterns) selects .err(e) for the first stored failure and .err(...es) for every occurrence in order. For T ! F, the bindings are F and [F]. Scalar subpatterns test the first occurrence without searching; a failed test does not change the source. Tag-only .err binds nothing, and .ok(value) preserves the complete successful T. This Result-specific collection does not flatten occurrence internals, mutate the stored outcome, or change structural tuple-rest/other constructor schemas. See [the normative examples](lite://doc/result-and-errors#failure-occurrence-patterns).

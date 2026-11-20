@@ -5,7 +5,7 @@ Status: **one optional item identifier using `as` selected; `Unit` payload for B
 ## Template
 
 Bounded implementation, **2026-10-31**: the
-[fixed-array igniter subset](../igniter/README.md#fixed-arrays-and-traversal)
+[fixed-array igniter subset](lite://repo/igniter/README.md#fixed-arrays-and-traversal)
 supports the existing as item spelling for arrays. Its item is fixed, local to
 the body and initialized for each entry; positional destructuring belongs inside
 the body. Other iterable providers, metadata and named Boolean/unconditional
@@ -49,7 +49,7 @@ loop optional_users as candidate {
 }
 ```
 
-No mismatch filtering, early termination, implicit error, or unchecked unwrap comes from the header. The old filtering alternatives remain [deferred](loop-pattern-alternatives.md). General pattern shadowing remains supported inside ordinary destructuring; removing loop receiver lists does not remove that language feature.
+No mismatch filtering, early termination, implicit error, or unchecked unwrap comes from the header. The old filtering alternatives remain [deferred](lite://doc/loop-pattern-alternatives). General pattern shadowing remains supported inside ordinary destructuring; removing loop receiver lists does not remove that language feature.
 
 ## Other source modes
 
@@ -71,10 +71,10 @@ The following alternatives were considered and not selected:
 - **No `.item` in source-less modes:** directly reflects that no source element exists, but makes the metadata interface depend on source mode.
 - **The Boolean condition as `.item`:** exposes the `true` result that allowed entry, but gives Boolean and unconditional loops different item types and treats a guard as payload.
 
-After zero body entries, `then` still exposes a typed zero `.item` and, for positional sources, `.index`; `.count == 0` signals that no entry ran. For a Boolean/unconditional loop, the `.item` placeholder is `Unit`, and `.index` is zero. A unique set or other nonpositional iterable has no `.index`. No active item is available in source/condition evaluation or before a successful Boolean check / first unconditional body entry. See [zero-iteration placeholders](loop-last-item.md#zero-iteration-placeholders).
+After zero body entries, `then` still exposes a typed zero `.item` and, for positional sources, `.index`; `.count == 0` signals that no entry ran. For a Boolean/unconditional loop, the `.item` placeholder is `Unit`, and `.index` is zero. A unique set or other nonpositional iterable has no `.index`. No active item is available in source/condition evaluation or before a successful Boolean check / first unconditional body entry. See [zero-iteration placeholders](lite://doc/loop-last-item#zero-iteration-placeholders).
 
 ## Retired forms
 
 The old as item, count, previous and as _, _, acc lists, repeated receiver-slot shadowing, seeded receiver headers, and header tuple patterns are not current forms. As is the selected separator for the single optional name. The earlier colon separator is retired rather than accepted as a synonym.
 
-Related: [loop value](loop-value.md), [tags](tags-and-contexts.md), [loops](loops.md), [patterns](pattern-contexts.md), and [examples](loop-examples.md).
+Related: [loop value](lite://doc/loop-value), [tags](lite://doc/tags-and-contexts), [loops](lite://doc/loops), [patterns](lite://doc/pattern-contexts), and [examples](lite://doc/loop-examples).

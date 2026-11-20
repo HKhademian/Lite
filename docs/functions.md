@@ -2,10 +2,10 @@
 
 Status: **one callable model with typed input tuples, intrinsic pack application, and parenthesized lambdas with optional `fn`, clarified 2026-10-24. Context, annotations, or selected ordinary parameter defaults establish input types; known-input local result inference applies equally with or without the keyword. Complete parsing, captures, ownership, and callable representation remain open. Optional trailing semicolons, colon result types, tail results, and zero-result callable behavior are established**.
 
-The [callable input-pack model](callable-input-packs.md) records the selected syntax, inline callback probes, and remaining limitations. It supersedes the earlier retirement of contextual `fn` and the distinction between independently typed functions and contextual-only lambdas. This is language design, not compiler/runtime verification.
+The [callable input-pack model](lite://doc/callable-input-packs) records the selected syntax, inline callback probes, and remaining limitations. It supersedes the earlier retirement of contextual `fn` and the distinction between independently typed functions and contextual-only lambdas. This is language design, not compiler/runtime verification.
 
 Implementation coverage, **2026-10-30**: the experimental
-[igniter](../igniter/README.md#typed-user-functions) now executes explicitly
+[igniter](lite://repo/igniter/README.md#typed-user-functions) now executes explicitly
 annotated scalar fn literals, positional named-value calls, tail/explicit
 returns, direct no-earlier-target recursion, and self(...) calls. It preserves
 callee-before-arguments order and lexical/live helper binding reads, with
@@ -13,36 +13,36 @@ separate invocation environments. Surrounding scalar captures, surrounding
 writes, later helper references, inference, and the wider callable model remain
 unsupported. Admitting surrounding function-valued helper dependencies is a
 temporary implementation boundary, not a general capture-policy selection.
-See [INV-030 evidence](../research/investigations/INV-030-igniter-functions.md).
+See [INV-030 evidence](lite://repo/research/investigations/INV-030-igniter-functions.md).
 
-The approved **2026-10-31** [fixed-tuple increment](../igniter/README.md#flat-fixed-tuples)
+The approved **2026-10-31** [fixed-tuple increment](lite://repo/igniter/README.md#flat-fixed-tuples)
 extends explicit function inputs/results to flat unnamed tuples of scalar values,
 using existing annotations such as (:Int, :String) and (:Int,). A tuple remains
 one ordinary argument and preserves its evaluated component values. It does not
 implement intrinsic pack application, argument spread, callable-valued inputs/
 results, tuple data captures, or the wider callable model. See
-[INV-022 evidence](../research/investigations/INV-022-fvp-fixed-tuples.md).
+[INV-022 evidence](lite://repo/research/investigations/INV-022-fvp-fixed-tuples.md).
 
-The [named-field follow-up](../research/investigations/INV-022-fvp-named-tuples.md) extends
+The [named-field follow-up](lite://repo/research/investigations/INV-022-fvp-named-tuples.md) extends
 these explicit tuple inputs/results to fully named scalar shapes. Stored values
 must retain compatible ordered labels and component types. This does not add
 contextual field routing; valid fresh-constructor routing requests receive an unsupported diagnostic.
 
-The approved [fixed-array increment](../research/investigations/INV-054-fvp-fixed-arrays.md)
+The approved [fixed-array increment](lite://repo/research/investigations/INV-054-fvp-fixed-arrays.md)
 also admits explicit [T; N] inputs/results for the supported scalar or flat-tuple
 element T and literal extent N. Exact extents and element contracts are checked;
 ordinary arguments retain their evaluated values when the original variable
 changes. General [T] contracts, array views/access grants and nested arrays
 remain outside the interpreter subset.
 
-The subsequent [INV-031 increment](../research/investigations/INV-031-fvp-named-calls.md)
+The subsequent [INV-031 increment](lite://repo/research/investigations/INV-031-fvp-named-calls.md)
 implements existing named/positional user-function routing and =name shorthand,
 including named self calls. It preserves supplied evaluation order and validates
 only surviving contributions against destination slots. Stored tuple receiving
-label conversion is also [implemented narrowly](../research/investigations/INV-022-fvp-label-conversion.md).
+label conversion is also [implemented narrowly](lite://repo/research/investigations/INV-022-fvp-label-conversion.md).
 Defaults, spread and named builtin helper arguments remain unsupported.
 
-The approved [INV-055 slice](../research/investigations/INV-055-fvp-list-slice.md) adds
+The approved [INV-055 slice](lite://repo/research/investigations/INV-055-fvp-list-slice.md) adds
 ordinary List<T> inputs/results with exact element contracts and preserved
 sequence copies. Mut grants are limited to the four temporary list operations;
 general user-function mut parameters remain unsupported.
@@ -78,7 +78,7 @@ Use `:` for result annotations, matching other type annotations. The earlier `->
 
 ## Function types, literals, and reassignment
 
-The [tuple-type spread and array-tail extension](tuple-array-shapes.md) selects `fn (...Params, ...rest: T): Return`: type spreads construct fixed inputs, and a declared trailing segment accepts zero or more additional T values collected as an array. T may itself be a tuple. This tail is also valid in an ordinary tuple schema. Type-spread overrides replace labeled slots in place. Two-colon header candidates remain unselected. Write a space after fn in examples; whitespace still has no semantic role.
+The [tuple-type spread and array-tail extension](lite://doc/tuple-array-shapes) selects `fn (...Params, ...rest: T): Return`: type spreads construct fixed inputs, and a declared trailing segment accepts zero or more additional T values collected as an array. T may itself be a tuple. This tail is also valid in an ordinary tuple schema. Type-spread overrides replace labeled slots in place. Two-colon header candidates remain unselected. Write a space after fn in examples; whitespace still has no semantic role.
 
 An explicitly written function type uses a signature without a body: `fn (a: Int): Int!`. The type after the signature's result colon is the callable's result type; here `Int!` means `Int ! Error`. A function literal can use the corresponding named typed implementation header followed by its executable body. It is a value expression usable in an initializer or an assignment. Callable type headers describe types; implementation headers introduce local receivers, without using name lookup to choose between those syntactic roles.
 
@@ -99,13 +99,13 @@ The declaration immediately initializes `myfn` to the callable type's zero value
 
 The calls store their `Int ! Error` outcomes in the ordinary readable `_` binding. They do not implicitly extract success or discard errors; underscore unused-name intent has its separate diagnostic rules. Omitted arguments require an applicable explicitly declared default, as specified below.
 
-The explicit signature form and function-literal assignment are selected. Callable input signatures also admit unnamed positional types: `fn (Int): Int`, `fn (Int, String): Bool`, and `fn (): Unit`. Parentheses immediately after `fn` in a callable type delimit its input tuple, not grouping, so a one-input signature needs no trailing comma. Existing labeled forms such as `fn (a: Int): Int` remain available. Ordinary tuple type/value/pattern grouping and singleton commas are unchanged. Parameter-name identity in function types, remaining callable compatibility beyond selected [safe callable value adaptation](callable-value-variance.md), captures, ownership, and complete recursive type grammar remain to be specified.
+The explicit signature form and function-literal assignment are selected. Callable input signatures also admit unnamed positional types: `fn (Int): Int`, `fn (Int, String): Bool`, and `fn (): Unit`. Parentheses immediately after `fn` in a callable type delimit its input tuple, not grouping, so a one-input signature needs no trailing comma. Existing labeled forms such as `fn (a: Int): Int` remain available. Ordinary tuple type/value/pattern grouping and singleton commas are unchanged. Parameter-name identity in function types, remaining callable compatibility beyond selected [safe callable value adaptation](lite://doc/callable-value-variance), captures, ownership, and complete recursive type grammar remain to be specified.
 
 ## Safe value input and result adaptation
 
-Selected 2026-10-25: wide := fn(value: Int | String): Int { 0 } can be assigned directly as view: fn(value: Int): Int | String = wide. Every allowed public Int input fits the implementation, and its Int result fits the public union. Omission-capable narrowed views are also valid when the source contract promises omission; the signature cannot provide or alter defaults, and the adapter preserves omission for the implementation. See [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise). A manual wrapper is valid but not required; the compiler preserves necessary argument/result adaptation, copies, and effects. Reverse unsafe directions are rejected. Normal label checks and explicit relabeling remain independent; basic var T parameters remain invariant under [var T callable invariance](callable-value-variance.md#var-parameters-keep-their-value-type); mut/other access adaptation, other error/effect transformations, and broader callable grammar remain separate. See [safe callable value adaptation](callable-value-variance.md).
+Selected 2026-10-25: wide := fn(value: Int | String): Int { 0 } can be assigned directly as view: fn(value: Int): Int | String = wide. Every allowed public Int input fits the implementation, and its Int result fits the public union. Omission-capable narrowed views are also valid when the source contract promises omission; the signature cannot provide or alter defaults, and the adapter preserves omission for the implementation. See [implementation-owned default promises](lite://doc/callable-value-variance#omission-remains-an-implementation-promise). A manual wrapper is valid but not required; the compiler preserves necessary argument/result adaptation, copies, and effects. Reverse unsafe directions are rejected. Normal label checks and explicit relabeling remain independent; basic var T parameters remain invariant under [var T callable invariance](lite://doc/callable-value-variance#var-parameters-keep-their-value-type); mut/other access adaptation, other error/effect transformations, and broader callable grammar remain separate. See [safe callable value adaptation](lite://doc/callable-value-variance).
 
-For matching outer T ! E callable results, the source may now be viewed with a wider success type, a wider declared error type, or both, when each payload admission is valid. Use source directly; making a wider view does not change its original contract. A broader view cannot silently narrow errors, and outcomes still require ordinary caller handling. This is compiler-supported safe adaptation, not byte reinterpretation or a required manual wrapper; see [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes).
+For matching outer T ! E callable results, the source may now be viewed with a wider success type, a wider declared error type, or both, when each payload admission is valid. Use source directly; making a wider view does not change its original contract. A broader view cannot silently narrow errors, and outcomes still require ordinary caller handling. This is compiler-supported safe adaptation, not byte reinterpretation or a required manual wrapper; see [fallible callable outcome widening](lite://doc/callable-value-variance#fallible-callable-views-may-widen-outcomes).
 
 ## Whole input tuples and implicit arguments
 
@@ -118,7 +118,7 @@ operation : fn (Int): Int = (x) { x * 3 }
 
 These are alternative implementations of the same contract. `arguments` denotes the nearest callable's complete input tuple; a whole-pack header names that tuple, and a parenthesized header binds its components locally. Local binder names do not change expected public labels. Access to the pack alongside local components grants no extra copying, moves, mutation, or escaping caller-location permissions. Complete implicit-name collision/shadowing and ownership rules remain open.
 
-With an expected input contract, headerless `fn { ... }` retains all its inputs. Independently, a headerless `fn { ... }` or `fn : Ret { ... }` has Unit inputs. A named pack or component without an established type does not default to Unit. The selected contextual empty/prefix receiver rules below are preserved; simple trailing rest receivers are selected by the array-tail extension, while general exact/nested header patterns need a separate decision. See [input packs](callable-input-packs.md).
+With an expected input contract, headerless `fn { ... }` retains all its inputs. Independently, a headerless `fn { ... }` or `fn : Ret { ... }` has Unit inputs. A named pack or component without an established type does not default to Unit. The selected contextual empty/prefix receiver rules below are preserved; simple trailing rest receivers are selected by the array-tail extension, while general exact/nested header patterns need a separate decision. See [input packs](lite://doc/callable-input-packs).
 
 ## Intrinsic application and invocation sugar
 
@@ -139,25 +139,25 @@ operation(...pack);
 
 Intrinsic `.call` invokes using a tuple of supplied inputs, with Unit when no operand is written; it is not ordinary method-value lookup. `f(...)` is invocation sugar that constructs/routes supplied inputs. After `.call`, `(pack)` groups the operand and `(...pack)` constructs one through spread; whitespace does not distinguish them. Thus `f.call(pack)` applies pack's components, while `f(pack)` supplies one tuple-valued input and `f.call (pack,)` does the same. `f.call (4,)` supplies one Int; `f.call(4)` rejects a scalar operand. Zero inputs remain distinct from one Unit input.
 
-Both paths use existing named/positional routing, declared-default-only omission, source-order evaluation, permissions, and cleanup. An empty supplied pack does not create a missing required input. General operand precedence, chaining, reserved-member policy, and expression integration remain open; see [application boundaries](callable-input-packs.md#application-with-an-existing-pack).
+Both paths use existing named/positional routing, declared-default-only omission, source-order evaluation, permissions, and cleanup. An empty supplied pack does not create a missing required input. General operand precedence, chaining, reserved-member policy, and expression integration remain open; see [application boundaries](lite://doc/callable-input-packs#application-with-an-existing-pack).
 
 ## Omitted value arguments
 
-For ordinary value inputs, omission requires public permission and valid handling by the selected implementation: an applicable declared default in an ordinary user implementation, or the selected zero-callable no-execution rule. See [public omission contracts and implementation defaults](callable-default-contracts.md). Without such handling, omission is a compile-time error for every parameter type, including Int, Unit, records, and plain unions. A supplied argument takes precedence over the default. There is no automatic zero or declared-type default construction merely because a type supports it.
+For ordinary value inputs, omission requires public permission and valid handling by the selected implementation: an applicable declared default in an ordinary user implementation, or the selected zero-callable no-execution rule. See [public omission contracts and implementation defaults](lite://doc/callable-default-contracts). Without such handling, omission is a compile-time error for every parameter type, including Int, Unit, records, and plain unions. A supplied argument takes precedence over the default. There is no automatic zero or declared-type default construction merely because a type supports it.
 
 This supersedes the earlier default-or-zero argument rule. For fn (a: Int): Int! without a declared parameter default, myfn() is rejected; myfn(0) explicitly supplies zero. The rule applies before invoking either a user implementation or a zero-initialized callable, and inputs left unnamed by a lambda implementation still belong to its full callable contract. A genuinely zero-input function may of course be called with ().
 
-Default-expression timing for ordinary user implementations is selected on **2026-10-25**: evaluate the callee first, supplied arguments once in written order, then only missing declared defaults once in declared slot order before invocation. For the user's b, c, a, d header with d and c supplied, execute new_d(), new_c(), default_b(), default_a(); c/d defaults are skipped. See [default evaluation](evaluation-order.md#default-argument-evaluation-selected). Ordinary [parameter-default inference](parameter-default-inference.md) is now selected. Ordinary [earlier-parameter defaults](parameter-default-inference.md#defaults-may-read-earlier-parameters) may read final prepared earlier inputs; self/later references are rejected independently of supplied call arguments. Complete default-header grammar, general lexical lookup/captures, access-aware dependencies, complete public function-type/header integration, general callable compatibility beyond omission, and parameter-pattern integration remain separate. The public contract exposes omission permission using the selected [public omission marker](callable-default-contracts.md#public-omission-marker) n?: Int / ?:Int on ordinary fixed named or unnamed input slots; compatible implementations own and may change their default expressions. A required-input public contract hides omission even when its implementation has a default. Core named-call omission is selected: ordinary user implementations require applicable declared defaults for unfilled inputs. Zero-callable omission is now selected separately and needs no actual default definition/execution; see [zero-callable omission](callable-default-contracts.md#zero-callable-omission-selected). The public contract still rejects missing required inputs; this does not newly authorize defaults that bypass mut/var permission or caller-location requirements. See [argument omission and union defaults](union-parameter-defaults.md) and [evaluation order](evaluation-order.md#function-calls).
+Default-expression timing for ordinary user implementations is selected on **2026-10-25**: evaluate the callee first, supplied arguments once in written order, then only missing declared defaults once in declared slot order before invocation. For the user's b, c, a, d header with d and c supplied, execute new_d(), new_c(), default_b(), default_a(); c/d defaults are skipped. See [default evaluation](lite://doc/evaluation-order#default-argument-evaluation-selected). Ordinary [parameter-default inference](lite://doc/parameter-default-inference) is now selected. Ordinary [earlier-parameter defaults](lite://doc/parameter-default-inference#defaults-may-read-earlier-parameters) may read final prepared earlier inputs; self/later references are rejected independently of supplied call arguments. Complete default-header grammar, general lexical lookup/captures, access-aware dependencies, complete public function-type/header integration, general callable compatibility beyond omission, and parameter-pattern integration remain separate. The public contract exposes omission permission using the selected [public omission marker](lite://doc/callable-default-contracts#public-omission-marker) n?: Int / ?:Int on ordinary fixed named or unnamed input slots; compatible implementations own and may change their default expressions. A required-input public contract hides omission even when its implementation has a default. Core named-call omission is selected: ordinary user implementations require applicable declared defaults for unfilled inputs. Zero-callable omission is now selected separately and needs no actual default definition/execution; see [zero-callable omission](lite://doc/callable-default-contracts#zero-callable-omission-selected). The public contract still rejects missing required inputs; this does not newly authorize defaults that bypass mut/var permission or caller-location requirements. See [argument omission and union defaults](lite://doc/union-parameter-defaults) and [evaluation order](lite://doc/evaluation-order#function-calls).
 
 ## Named arguments under review
 
-The user selected positional calls, name = value at call sites, and a positional prefix followed by named inputs: op(1,2,3), op(a=1,b=2,c=3), and op(1,2,c=3). Simple identifier parameters need no additional named-parameter declaration marker. Supplied expressions retain written evaluation order; omitted inputs still need explicitly declared defaults. The 2026-10-23 extension selects interleaving, =name shorthand, and explicit tuple call spread. Unnamed inputs fill the next unfilled declared slot; named inputs select a declared slot and may replace an earlier supplied value. Spread preserves labels: labeled components route by name, and unnamed components route positionally. Explicit argument labels must be unique within the call after =name expansion; spread labels do not count as explicit labels of that call. Permitted spread collisions and named replacement of positional contributions retain their selected routing. The fixed signature constrains each final surviving input. Superseded expressions must still be valid and evaluate, but need not fit their eventual destination; op(...(a = "old",), a = 1) is therefore valid for a: Int. Replacement does not retype the parameter or permit a wrong-typed final input. Reject unknown/ambiguous labels, excess positional inputs, missing-without-default inputs, and incompatible types/access. Evaluate the callee and supplied expressions once in written order. Public input labels follow the visible callable contract. Explicit typed receiving declarations can adapt stored callable labels, but ordinary reassignment/arguments/returns still check labels; implementation receiver/default names remain local. See [labels under an explicit destination type](tuple-label-conversions.md). Other stored-callable compatibility, superseded-value cleanup, and complete recursive call grammar remain open. See [named arguments and named tuples](named-arguments-and-tuples.md).
+The user selected positional calls, name = value at call sites, and a positional prefix followed by named inputs: op(1,2,3), op(a=1,b=2,c=3), and op(1,2,c=3). Simple identifier parameters need no additional named-parameter declaration marker. Supplied expressions retain written evaluation order; omitted inputs still need explicitly declared defaults. The 2026-10-23 extension selects interleaving, =name shorthand, and explicit tuple call spread. Unnamed inputs fill the next unfilled declared slot; named inputs select a declared slot and may replace an earlier supplied value. Spread preserves labels: labeled components route by name, and unnamed components route positionally. Explicit argument labels must be unique within the call after =name expansion; spread labels do not count as explicit labels of that call. Permitted spread collisions and named replacement of positional contributions retain their selected routing. The fixed signature constrains each final surviving input. Superseded expressions must still be valid and evaluate, but need not fit their eventual destination; op(...(a = "old",), a = 1) is therefore valid for a: Int. Replacement does not retype the parameter or permit a wrong-typed final input. Reject unknown/ambiguous labels, excess positional inputs, missing-without-default inputs, and incompatible types/access. Evaluate the callee and supplied expressions once in written order. Public input labels follow the visible callable contract. Explicit typed receiving declarations can adapt stored callable labels, but ordinary reassignment/arguments/returns still check labels; implementation receiver/default names remain local. See [labels under an explicit destination type](lite://doc/tuple-label-conversions). Other stored-callable compatibility, superseded-value cleanup, and complete recursive call grammar remain open. See [named arguments and named tuples](lite://doc/named-arguments-and-tuples).
 
-The [concrete named routing review](named-input-routing.md) records named permutations, interleaving, named replacement subject to explicit-label uniqueness, shorthand, explicit tuple spread, and static routing checks, plus expected tuple-valued inputs and proposed composition with mut/var caller grants. Written argument evaluation order and declared-default-only omission are already selected; complete recursive call grammar and remaining callable compatibility beyond destination label adaptation remain open.
+The [concrete named routing review](lite://doc/named-input-routing) records named permutations, interleaving, named replacement subject to explicit-label uniqueness, shorthand, explicit tuple spread, and static routing checks, plus expected tuple-valued inputs and proposed composition with mut/var caller grants. Written argument evaluation order and declared-default-only omission are already selected; complete recursive call grammar and remaining callable compatibility beyond destination label adaptation remain open.
 
 ## Compact implementations under review
 
-Use one callable-literal model. `fn (parameters) { body }` and `(parameters) { body }` have identical meaning; the latter omits the keyword where the parenthesized header still identifies a function. Input shape/types come from annotations, an expected contract, or selected ordinary [parameter-default inference](parameter-default-inference.md). A nonrecursive local result may be inferred once inputs are established. No signature-only declaration is required. The selected local indexed-input inference direction is described in [collection function signatures](collection-function-signatures.md#local-inferred-indexing-and-explicit-public-contracts); general unknown-input and recursive result inference remain open.
+Use one callable-literal model. `fn (parameters) { body }` and `(parameters) { body }` have identical meaning; the latter omits the keyword where the parenthesized header still identifies a function. Input shape/types come from annotations, an expected contract, or selected ordinary [parameter-default inference](lite://doc/parameter-default-inference). A nonrecursive local result may be inferred once inputs are established. No signature-only declaration is required. The selected local indexed-input inference direction is described in [collection function signatures](lite://doc/collection-function-signatures#local-inferred-indexing-and-explicit-public-contracts); general unknown-input and recursive result inference remain open.
 
 ### Two scenarios: full definition and contextual implementation
 
@@ -181,7 +181,7 @@ x = (a) {
 
 Here the existing callable contract supplies the parameter type `Int` and result type `String`. The implementation names its local parameters and provides the body without repeating those types. Omitting annotations does not change the established contract; the replacement must satisfy it. The function body also ends this assignment's item, so its trailing semicolon is optional and allowed. The body above returns a string literal to keep the example focused on function syntax.
 
-The same contextual lambda can be used when a method signature or callback parameter supplies the expected callable type. A separate declaration such as `var x: fn (a: Int): String;` is another source of that contract, not a prerequisite for the normal definition above. See [item boundaries](blocks-and-results.md#item-boundaries).
+The same contextual lambda can be used when a method signature or callback parameter supplies the expected callable type. A separate declaration such as `var x: fn (a: Int): String;` is another source of that contract, not a prerequisite for the normal definition above. See [item boundaries](lite://doc/blocks-and-results#item-boundaries).
 
 For an imaginary map API expecting `fn (item: Int): Int`, the full and contextual forms are:
 
@@ -191,7 +191,7 @@ doubled := map(numbers, fn (n) { n * 2 });
 doubled := map(numbers, (n) { n * 2 });
 ```
 
-These are equivalent alternative implementations under the same expected callable contract, not declarations required together. Predicate examples are in the [inline callback probes](callable-input-packs.md#inline-callback-probes).
+These are equivalent alternative implementations under the same expected callable contract, not declarations required together. Predicate examples are in the [inline callback probes](lite://doc/callable-input-packs#inline-callback-probes).
 
 For the declared `var myfn: fn (a: Int): Int!;`, either keyword spelling gets the parameter's `Int` type and checks its body against `Int ! Error`. The comparison below retains earlier alternatives as review history; B and C now share the selected semantics. Arrows, pipes, and signature-inherited local names remain unselected alternatives.
 
@@ -281,7 +281,7 @@ lambda_parameter := identifier [":" type]
 
 This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under expected callable contracts, or independent inputs when annotations or ordinary defaults establish their types. The user selected the empty contextual header as no local input bindings, not a zero-arity declaration; its actual callable signature comes from the expected contract. A one-position receiver header needs no singleton comma because it is syntactically a header. Simple trailing rest receivers now follow the array-tail extension; complete nested patterns still need integration with the eventual grammar; ordinary tuple patterns are unchanged.
 
-Capture-header syntax and semantics are [pinned for later](deferred-contexts.md). Earlier `[offset]` and `[var offset]` examples remain in the deferred closure review; they are not part of the current lambda grammar outline.
+Capture-header syntax and semantics are [pinned for later](lite://doc/deferred-contexts). Earlier `[offset]` and `[var offset]` examples remain in the deferred closure review; they are not part of the current lambda grammar outline.
 
 #### Optional lambda signatures
 
@@ -295,7 +295,7 @@ map(numbers, (n): Int { n * 2 });
 map(numbers, (n: Int): Int { n * 2 });
 ```
 
-The expected callable contract supplies omitted types. Explicit annotations must satisfy that contract; they do not change an existing binding or callback parameter's declared type. Ordinary value [safe callable value adaptation](callable-value-variance.md) is now selected: implementation inputs may accept more values than a public view permits callers to supply, and implementation results may be narrower than the public result. Other variance/callable compatibility remains open. An explicit fallible result uses the same `T ! E` notation as a full `fn` definition.
+The expected callable contract supplies omitted types. Explicit annotations must satisfy that contract; they do not change an existing binding or callback parameter's declared type. Ordinary value [safe callable value adaptation](lite://doc/callable-value-variance) is now selected: implementation inputs may accept more values than a public view permits callers to supply, and implementation results may be narrower than the public result. Other variance/callable compatibility remains open. An explicit fallible result uses the same `T ! E` notation as a full `fn` definition.
 
 With all named input types and the result annotated, the lambda can provide its own signature without an expected callable type:
 
@@ -370,7 +370,7 @@ choose := (flag: Bool): (Int | String) {
 
 Genuine Unit completion payloads participate like other types. A no-`else` conditional is noncontributing; a declaration default uses zero(T) and does not add a Unit alternative. Paths that leave by failure or another exit without producing a lambda result do not add a result payload type. Eligible omitted outputs now infer escaping returned errors under LP-0012; explicit/expected outputs still constrain the body and exclude undeclared errors.
 
-Requiring an explicit or expected union for distinct local completion payloads was considered and not chosen. A changed completion payload can change the inferred local result; an annotation can pin the contract. This decision concerns lambda completion payloads. [Conditional and match results](branch-result-inference.md) now use the same selected normalized-union inference when no expected result contract supplies their type. Recursive inference, context/capture work, and union representation remain separate.
+Requiring an explicit or expected union for distinct local completion payloads was considered and not chosen. A changed completion payload can change the inferred local result; an annotation can pin the contract. This decision concerns lambda completion payloads. [Conditional and match results](lite://doc/branch-result-inference) now use the same selected normalized-union inference when no expected result contract supplies their type. Recursive inference, context/capture work, and union representation remain separate.
 
 Reference comparison, checked 2026-10-21: [Rust if expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html) must have one type across their outcomes; Rust does not form a plain Int | String union for mismatched branches. [TypeScript's inference documentation](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#return-type-annotations) describes inferred function results, and its [union examples](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types) include an inferred number[] | string result. LiteScript selects union formation for the local lambda completion case described above.
 
@@ -392,7 +392,7 @@ x = () {
 }
 ```
 
-In the contextual lambda, `(a)` binds the input as a local `Int` named `a`. `(_)` binds the input as the ordinary readable `Int` name `_`, explicitly permitting nonuse. It is not a discard pattern and does not remove the input from the callable contract; see [unused-name intent](unused-name-intent.md). Both bodies return `String`, and trailing item semicolons remain optional.
+In the contextual lambda, `(a)` binds the input as a local `Int` named `a`. `(_)` binds the input as the ordinary readable `Int` name `_`, explicitly permitting nonuse. It is not a discard pattern and does not remove the input from the callable contract; see [unused-name intent](lite://doc/unused-name-intent). Both bodies return `String`, and trailing item semicolons remain optional.
 
 With an expected callable type, the empty header `()` retains its entire signature and binds none of its inputs locally. For this `x`, the implementation remains `fn (a: Int): String`: the one `Int` input is accepted without a local parameter name, and the body must produce `String`. The original signature's name `a` is not implicitly introduced into the implementation body. A zero-parameter expected signature also admits the empty header. Without an expected callable type, the empty header declares zero inputs.
 
@@ -437,7 +437,7 @@ TypeScript permits callbacks with fewer declared parameters than the target sign
 
 - In an ordinary expression position, `(a) { ... }` is one lambda expression. `(a)` alone remains grouping; this proposal does not reinterpret every parenthesized expression as parameters. A grouped value followed by a separate executable block needs an item separator: `(a); { ... }`.
 - A construct's own header/body delimiters take precedence: `if (condition) { ... }` remains a conditional and `loop (source) { ... }` remains a loop. The eventual expression grammar must stop these header expressions before their owner's body instead of consuming that body as a lambda. This restriction needs explicit integration in other brace-owning headers as well.
-- Parsing must depend on tokens and syntactic position, not whitespace, expected types, or whether `a` resolves to a type. This reserves `(T) { ... }` for the lambda reading in an ordinary expression position too; it cannot also mean construction through a grouped record type. Existing `T { ... }` construction and grouping the entire construction, `(T { ... })`, retain their separate forms. See [record boundaries](record-literal-boundaries.md).
+- Parsing must depend on tokens and syntactic position, not whitespace, expected types, or whether `a` resolves to a type. This reserves `(T) { ... }` for the lambda reading in an ordinary expression position too; it cannot also mean construction through a grouped record type. Existing `T { ... }` construction and grouping the entire construction, `(T { ... })`, retain their separate forms. See [record boundaries](lite://doc/record-literal-boundaries).
 - Inside a call argument, the lambda body does not close the enclosing call item. Argument commas and ordinary call-item separators still apply. This proposal does not add trailing-block call arguments.
 
 An expected callable supplies omitted types; annotations can instead establish independent inputs, with local body-result inference. A nonempty header creates local parameter bindings. A lambda parsed in a noncallable destination is rejected, not reinterpreted as immediate work or record construction. The body is deferred until invocation and uses ordinary function result/return rules. Omitting `fn` does not choose capture representation, allocation, or a different calling convention. Complete the grammar boundaries above for this direction. Arrow and pipe alternatives remain unselected comparisons.
@@ -466,31 +466,31 @@ This follows the visible shape used by Rust and V, with Rust's ability to use it
 
 B and C are the keyword-present and keyword-omitted spellings of one selected callable-literal model. A, D, and E remain unselected comparisons. V-style implicit `it` can be evaluated separately if collection-specific shorthand is needed; the selected general implicit input name is the whole tuple `arguments`. The illustrative map/filter APIs provide expected callback contracts; their library and generic declarations are not selected by these examples.
 
-All candidates use ordinary function result and return rules. Lambda annotations may provide their own types, or an expected callable contract supplies omitted types. Callable/environment context design is [postponed](deferred-contexts.md); unknown-input inference, recursive result inference, and complete compact-expression grammar remain open.
+All candidates use ordinary function result and return rules. Lambda annotations may provide their own types, or an expected callable contract supplies omitted types. Callable/environment context design is [postponed](lite://doc/deferred-contexts); unknown-input inference, recursive result inference, and complete compact-expression grammar remain open.
 
 ## Call evaluation order
 
-Evaluate the callee expression first, then the supplied argument expressions from left to right in source order, then invoke the callable. A function argument is not evaluated before an earlier supplied argument merely because of parameter type, dispatch, or optimization. Ordinary value arguments follow the selected copy default, with no implicit references; type-specific eligibility, explicit access modes, and temporary lifetimes remain separate. See [evaluation order](evaluation-order.md).
+Evaluate the callee expression first, then the supplied argument expressions from left to right in source order, then invoke the callable. A function argument is not evaluated before an earlier supplied argument merely because of parameter type, dispatch, or optimization. Ordinary value arguments follow the selected copy default, with no implicit references; type-specific eligibility, explicit access modes, and temporary lifetimes remain separate. See [evaluation order](lite://doc/evaluation-order).
 
 ## Zero-initialized callables
 
-A zero-initialized function performs no user-body or default-expression work and returns zero of its declared result type. For ordinary inputs the public contract allows omitting, it needs no actual default definition; zero(TP) is a safe conceptual value, without mandated parameter materialization. A possible internal non-public unvalued state remains a future discussion, not public undefined semantics. See [zero-callable omission](callable-default-contracts.md#zero-callable-omission-selected). For example, a callable declared to return `Int` returns `0`; one returning `T ! E` returns `.ok(zero(T))`.
+A zero-initialized function performs no user-body or default-expression work and returns zero of its declared result type. For ordinary inputs the public contract allows omitting, it needs no actual default definition; zero(TP) is a safe conceptual value, without mandated parameter materialization. A possible internal non-public unvalued state remains a future discussion, not public undefined semantics. See [zero-callable omission](lite://doc/callable-default-contracts#zero-callable-omission-selected). For example, a callable declared to return `Int` returns `0`; one returning `T ! E` returns `.ok(zero(T))`.
 
 In `callback(make_value())`, if `callback` is zero-initialized, `make_value()` still evaluates before invocation. The ordinary callee/argument evaluation order and required ownership/cleanup rules apply. The zero callable itself makes no updates through granted `mut` or `var` parameters. Argument evaluation or required cleanup can still have effects or failures.
 
-This selects invocation semantics. Complete callable type grammar, ownership and cleanup details, representation, and ABI remain open; see [zero-initialized functions](zero-initialization.md#zero-initialized-functions).
+This selects invocation semantics. Complete callable type grammar, ownership and cleanup details, representation, and ABI remain open; see [zero-initialized functions](lite://doc/zero-initialization#zero-initialized-functions).
 
 ## Collection input requirements
 
-Simple collection functions should not require beginner authors to know protocol names. The [collection inference review](collection-inference.md) explores reusable requirements and contextual construction. A local indexed read now has a [selected inference direction](collection-function-signatures.md#local-inferred-indexing-and-explicit-public-contracts), pending implementation. Broader traversal inference, generalization mechanisms, and complete generic signature syntax remain open.
+Simple collection functions should not require beginner authors to know protocol names. The [collection inference review](lite://doc/collection-inference) explores reusable requirements and contextual construction. A local indexed read now has a [selected inference direction](lite://doc/collection-function-signatures#local-inferred-indexing-and-explicit-public-contracts), pending implementation. Broader traversal inference, generalization mechanisms, and complete generic signature syntax remain open.
 
-The [signature proposal](collection-function-signatures.md) separates required input behavior from guaranteed output behavior, inferred inputs from explicitly complete contracts, and static abstract returns from runtime-erased values. A common contract alone does not preserve concrete input/output identity or choose a stored representation. The [operation-contract model](collection-operation-contracts.md) resolves loop/bracket sugar statically and distinguishes unsupported operations from supported operations returning typed failures.
+The [signature proposal](lite://doc/collection-function-signatures) separates required input behavior from guaranteed output behavior, inferred inputs from explicitly complete contracts, and static abstract returns from runtime-erased values. A common contract alone does not preserve concrete input/output identity or choose a stored representation. The [operation-contract model](lite://doc/collection-operation-contracts) resolves loop/bracket sugar statically and distinguishes unsupported operations from supported operations returning typed failures.
 
-The user-selected direction is to constrain collection inputs by the operations required, not their provider type or compile-time size. Conceptually, fn (icons: `Iterable<Icon>`) can traverse compatible list, array, set, slice, or generated sources without requiring a List conversion. The angle-bracket/interface notation is provisional and does not mandate boxed runtime dispatch. Sized, repeatable, indexed, or contiguous requirements belong in a signature only when needed. Cursor consumption, yielded access, and retained-source lifetimes must remain explicit in their eventual contracts. See [collection abstractions](collection-abstractions.md) and [capabilities](collection-capabilities.md).
+The user-selected direction is to constrain collection inputs by the operations required, not their provider type or compile-time size. Conceptually, fn (icons: `Iterable<Icon>`) can traverse compatible list, array, set, slice, or generated sources without requiring a List conversion. The angle-bracket/interface notation is provisional and does not mandate boxed runtime dispatch. Sized, repeatable, indexed, or contiguous requirements belong in a signature only when needed. Cursor consumption, yielded access, and retained-source lifetimes must remain explicit in their eventual contracts. See [collection abstractions](lite://doc/collection-abstractions) and [capabilities](lite://doc/collection-capabilities).
 
 ## Parameter mutation contracts
 
-The selected [placement rule](mut-qualifier-placement.md) is user: mut User for typed parameters. It replaces the earlier name-prefix spelling while preserving the mutation contract.
+The selected [placement rule](lite://doc/mut-qualifier-placement) is user: mut User for typed parameters. It replaces the earlier name-prefix spelling while preserving the mutation contract.
 
 Parameters provide read access by default. Qualify the affected parameter's type with mut to request writable access:
 
@@ -502,27 +502,27 @@ rename := fn (user: mut User, name: String): Unit {
 
 The example assumes `name` is an accessible writable field in the implementation context. The operation requires writable access to `user`; it only reads the replacement `name` parameter. Each affected receiver or parameter needs its own `mut` marker. A read-only argument cannot satisfy a writable-access requirement.
 
-The same rule applies to a method's receiver binding. The complete method notation and whether it uses an explicit `self` parameter remain open. The Kotlin-inspired `List.push_front := fn(self, ...)` candidate and its many open questions are recorded in [method declaration syntax](../research/investigations/INV-030-method-declaration-syntax.md); neither that spelling nor `self` as a receiver is selected. There is no additional `mut fn` or other function-level mutation marker.
+The same rule applies to a method's receiver binding. The complete method notation and whether it uses an explicit `self` parameter remain open. The Kotlin-inspired `List.push_front := fn(self, ...)` candidate and its many open questions are recorded in [method declaration syntax](lite://repo/research/investigations/INV-030-method-declaration-syntax.md); neither that spelling nor `self` as a receiver is selected. There is no additional `mut fn` or other function-level mutation marker.
 
 The declaration `mut rename := fn (...) { ... }` would instead describe writable access to the held function value. It does not replace the mutation contracts on the function's parameters.
 
-Calling a mut-qualified parameter requires an explicit grant, as in rename(mut userVar, "Ali"). The caller must already provide mutable access. Updates affect that supplied data; the compiler must not silently mutate a detached copy or upgrade a read-only argument. This selects temporary writable caller-data access for mut parameters. General aggregate and other-type read-only input transfer, complete alias/lifetime rules, capture permissions, and purity remain open; see [caller grants](caller-mutation-grants.md).
+Calling a mut-qualified parameter requires an explicit grant, as in rename(mut userVar, "Ali"). The caller must already provide mutable access. Updates affect that supplied data; the compiler must not silently mutate a detached copy or upgrade a read-only argument. This selects temporary writable caller-data access for mut parameters. General aggregate and other-type read-only input transfer, complete alias/lifetime rules, capture permissions, and purity remain open; see [caller grants](lite://doc/caller-mutation-grants).
 
-[Var parameters](slot-parameters.md) provide temporary access to a caller-supplied location: assignment through the parameter replaces the supplied variable or field. The explicit call grant replace(var value) requires a compatible writable location; a whole-binding argument must be var. Var alone grants no payload mutation. General reference values, public pointers, and complete compatibility/alias rules remain open.
+[Var parameters](lite://doc/slot-parameters) provide temporary access to a caller-supplied location: assignment through the parameter replaces the supplied variable or field. The explicit call grant replace(var value) requires a compatible writable location; a whole-binding argument must be var. Var alone grants no payload mutation. General reference values, public pointers, and complete compatibility/alias rules remain open.
 
-The [ordinary parameter review](parameter-values-and-slots.md) selects a general rule: ordinary values are copied, including call inputs and ordinary explicit/implicit return results; no implicit references are introduced. Existing var and mut inputs explicitly grant caller-location or writable-payload access. Copy semantics preserve evaluated values, aggregate components, and active union/enum values; already-declared reference fields keep their shallow targets/permissions. See [the general copy default](parameter-values-and-slots.md#general-copy-default-selected) and [result copies](parameter-values-and-slots.md#ordinary-return-values-are-copies-selected). This imposes no physical-copy ABI: registers, indirect passing, direct result construction, or copy elimination must preserve observable value behavior and valid copy effects. Copyability/eligibility, future explicit reference-copy modes, reference syntax, memory safety, ownership/lifetimes, aliases, and resources remain deferred. The earlier type-specific examples illustrate the general rule rather than leaving other ordinary inputs open to implicit borrowing.
+The [ordinary parameter review](lite://doc/parameter-values-and-slots) selects a general rule: ordinary values are copied, including call inputs and ordinary explicit/implicit return results; no implicit references are introduced. Existing var and mut inputs explicitly grant caller-location or writable-payload access. Copy semantics preserve evaluated values, aggregate components, and active union/enum values; already-declared reference fields keep their shallow targets/permissions. See [the general copy default](lite://doc/parameter-values-and-slots#general-copy-default-selected) and [result copies](lite://doc/parameter-values-and-slots#ordinary-return-values-are-copies-selected). This imposes no physical-copy ABI: registers, indirect passing, direct result construction, or copy elimination must preserve observable value behavior and valid copy effects. Copyability/eligibility, future explicit reference-copy modes, reference syntax, memory safety, ownership/lifetimes, aliases, and resources remain deferred. The earlier type-specific examples illustrate the general rule rather than leaving other ordinary inputs open to implicit borrowing.
 
-For explicit var caller-location grants, validate current readable possibilities against the callee input and every permitted replacement against the caller's declared writes. Var String is read/write String, so it rejects a current Int; an accepted String-only call leaves String, while a wide replacement call can widen Int to String | Int. This is not output-only access or a required-write promise. Write-only access is deferred; see [call replacement flow](call-replacement-flow.md).
+For explicit var caller-location grants, validate current readable possibilities against the callee input and every permitted replacement against the caller's declared writes. Var String is read/write String, so it rejects a current Int; an accepted String-only call leaves String, while a wide replacement call can widen Int to String | Int. This is not output-only access or a required-write promise. Write-only access is deferred; see [call replacement flow](lite://doc/call-replacement-flow).
 
-A received var parameter may be forwarded to one nested call by explicit var argument syntax. This temporarily hands off the same source write grant: the outer holder is suspended during nested active access and regains the same location on normal return. Read/write compatibility and authority remain bounded by the outer received contract, with no extra local var, detached copy, duplicated grant, or escaping reference. See [nested forwarding](call-replacement-flow.md#nested-forwarding-of-a-write-grant-selected); activation/callback/reentrancy policy remains separate.
+A received var parameter may be forwarded to one nested call by explicit var argument syntax. This temporarily hands off the same source write grant: the outer holder is suspended during nested active access and regains the same location on normal return. Read/write compatibility and authority remain bounded by the outer received contract, with no extra local var, detached copy, duplicated grant, or escaping reference. See [nested forwarding](lite://doc/call-replacement-flow#nested-forwarding-of-a-write-grant-selected); activation/callback/reentrancy policy remains separate.
 
-The [access-ergonomics goal](slot-ergonomics.md) hides derived mathematical type structure. Use local declarations and shadowing for working values: fn (count: Int) { var count := count; count += 1; count }. Left-side local-only var headers are omitted; type-side var declares caller replacement. The shorthand fn (param: var) requires an inferable value type under the eventual inference rules. See [var access](var-access-qualifier.md) and [parameter permissions](parameter-permissions.md).
+The [access-ergonomics goal](lite://doc/slot-ergonomics) hides derived mathematical type structure. Use local declarations and shadowing for working values: fn (count: Int) { var count := count; count += 1; count }. Left-side local-only var headers are omitted; type-side var declares caller replacement. The shorthand fn (param: var) requires an inferable value type under the eventual inference rules. See [var access](lite://doc/var-access-qualifier) and [parameter permissions](lite://doc/parameter-permissions).
 
-Basic var T callable parameters are invariant in their resolved read/write value type; label renaming cannot bypass that rule. Individual caller-location admission still uses current readable facts and declared accepted writes, rather than requiring identical caller storage declarations. This selects no mut variance or future write-only mode. See [var T callable invariance](callable-value-variance.md#var-parameters-keep-their-value-type).
+Basic var T callable parameters are invariant in their resolved read/write value type; label renaming cannot bypass that rule. Individual caller-location admission still uses current readable facts and declared accepted writes, rather than requiring identical caller storage declarations. This selects no mut variance or future write-only mode. See [var T callable invariance](lite://doc/callable-value-variance#var-parameters-keep-their-value-type).
 
 ## Result rules
 
-The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. A completed function/lambda definition or assignment already ends at its closing body: omit the optional trailing semicolon, including inside another block. A callback body inside a call does not end the enclosing call item; retain that call's required separator. See [blocks and results](blocks-and-results.md) and the [shared semicolon rule](lexical-structure.md#semicolon-style-after-closing-braces).
+The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. A completed function/lambda definition or assignment already ends at its closing body: omit the optional trailing semicolon, including inside another block. A callback body inside a call does not end the enclosing call item; retain that call's required separator. See [blocks and results](lite://doc/blocks-and-results) and the [shared semicolon rule](lite://doc/lexical-structure#semicolon-style-after-closing-braces).
 
 ```text
 greet := fn (name: String): Unit {
@@ -550,13 +550,13 @@ Early returns are encouraged for guards and invalid cases. Explicit final `retur
 
 A fallible function exposes a statically typed recoverable error contract. A caller must explicitly handle/inspect the outcome, provide a default, or propagate the error before using the successful payload. Keeping the returned outcome as a `Result` for later handling does not unwrap it. Implicit success construction inside a fallible function does not grant automatic propagation at its callers.
 
-Postfix `operation()!` extracts success or forwards its recoverable error from the nearest function or closure. Member access and calls can continue directly, as in `load_user(id)!.load_profile()!.name`; see [propagation and call chaining](propagation-and-chaining.md). Use `operation() else(error) { ... }` for a local fallback or explicit exit. Without handling or extraction, the call retains its Result as ordinary data. Every escaping recoverable error must fit the established explicit, expected, or eligible inferred outward error contract. An explicit or expected output promising no recoverable failure cannot silently gain one through inference; an omitted output may infer its error side under LP-0012. One outer propagation marker must not silently extract all intermediate Results in a chain.
+Postfix `operation()!` extracts success or forwards its recoverable error from the nearest function or closure. Member access and calls can continue directly, as in `load_user(id)!.load_profile()!.name`; see [propagation and call chaining](lite://doc/propagation-and-chaining). Use `operation() else(error) { ... }` for a local fallback or explicit exit. Without handling or extraction, the call retains its Result as ordinary data. Every escaping recoverable error must fit the established explicit, expected, or eligible inferred outward error contract. An explicit or expected output promising no recoverable failure cannot silently gain one through inference; an omitted output may infer its error side under LP-0012. One outer propagation marker must not silently extract all intermediate Results in a chain.
 
 The recovery receiver may be omitted: `operation() else { fallback }`. Both recovery forms combine success type `T` and normal fallback type `D` as `T | D`. A fallback need not have the same type as the original success. Returning that union still needs to satisfy the enclosing function's declared return type.
 
 Fallible return annotations use `T ! E`; `T!` is shorthand for `T ! Error`. The general form declares broad recoverable failure, while the explicit error type can retain a refined contract. A return annotation `T` still declares no recoverable error channel. The exact general Error contract remains open.
 
-Local handling does not require a catch boundary around unrelated statements. Complete expression precedence, error conversion rules, and ignored-outcome diagnostics remain open; see [result and errors](result-and-errors.md). [Panics](panics.md) use a separate path. Existing arithmetic examples illustrate success paths and do not settle whether ordinary operators expose recoverable errors or another checked-fault policy.
+Local handling does not require a catch boundary around unrelated statements. Complete expression precedence, error conversion rules, and ignored-outcome diagnostics remain open; see [result and errors](lite://doc/result-and-errors). [Panics](lite://doc/panics) use a separate path. Existing arithmetic examples illustrate success paths and do not settle whether ordinary operators expose recoverable errors or another checked-fault policy.
 
 ## Closures
 
@@ -566,21 +566,21 @@ double := fn (x: Int) {
 }
 ```
 
-The same body-result rule applies to anonymous functions. A plain `return` inside a closure exits that closure, not the function that created it. Capture/context design is [postponed](deferred-contexts.md), with earlier capture-header ideas retained for later review.
+The same body-result rule applies to anonymous functions. A plain `return` inside a closure exits that closure, not the function that created it. Capture/context design is [postponed](lite://doc/deferred-contexts), with earlier capture-header ideas retained for later review.
 
 ## Implicit live panics are not callable effects
 
-Selected [LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md): ordinary array access, arithmetic, and helper calls do not force live panic alternatives into function signatures. Checked panic-effect declarations and exhaustive inferred live-panic lists are prohibited. A function annotated T returns T even though a supported live panic may propagate implicitly. A normal T ! E outcome exposes returned errors, not an exhaustive list of live panics.
+Selected [LP-0018 r1](lite://doc/proposals/LP-0018-implicit-panics-without-effect-declarations): ordinary array access, arithmetic, and helper calls do not force live panic alternatives into function signatures. Checked panic-effect declarations and exhaustive inferred live-panic lists are prohibited. A function annotated T returns T even though a supported live panic may propagate implicitly. A normal T ! E outcome exposes returned errors, not an exhaustive list of live panics.
 
-A function deliberately returning captured T ! Panic data literally returns that outcome; an ordinary call receives T ! Panic. No type-based rule strips Panic from a return annotation and silently supplies T. Explicit ? capture produces broad Panic for newly captured live occurrences and is legal again on stored outcomes under LP-0016. Known-fault documentary annotations may be investigated, but cannot alter callable compatibility or prove panic freedom. Specific panic category definitions/construction/matching remain available. See [panics](panics.md#no-checked-panic-effect-declarations) and [outcome returns](result-and-errors.md#implicit-live-panics-and-explicit-outcome-returns).
+A function deliberately returning captured T ! Panic data literally returns that outcome; an ordinary call receives T ! Panic. No type-based rule strips Panic from a return annotation and silently supplies T. Explicit ? capture produces broad Panic for newly captured live occurrences and is legal again on stored outcomes under LP-0016. Known-fault documentary annotations may be investigated, but cannot alter callable compatibility or prove panic freedom. Specific panic category definitions/construction/matching remain available. See [panics](lite://doc/panics#no-checked-panic-effect-declarations) and [outcome returns](lite://doc/result-and-errors#implicit-live-panics-and-explicit-outcome-returns).
 
 ## Manual failures and inferred errors
 
-LP-0012 selects custom failure capability and eligible omitted-output error inference. [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md) now makes raise failure / raise ...failures a nearest-function/closure failure exit for both Error and Panic; explicit @outer instead selects a named enclosing block. Error/Panic chooses the outgoing channel. Input-established nonrecursive bodies without explicit/expected outputs infer normal success and escaping returned errors from raises, .err returns, !, and outward fallible tails. A tagged Error raise recovered locally does not escape and adds no outward E. Implicit panics, handled/local stored errors, and nested uninvoked bodies remain excluded. Explicit/expected outputs remain constraints. See [manual failures and inference](manual-failures-and-inference.md).
+LP-0012 selects custom failure capability and eligible omitted-output error inference. [LP-0014 r1](lite://doc/proposals/LP-0014-directed-failure-exits) now makes raise failure / raise ...failures a nearest-function/closure failure exit for both Error and Panic; explicit @outer instead selects a named enclosing block. Error/Panic chooses the outgoing channel. Input-established nonrecursive bodies without explicit/expected outputs infer normal success and escaping returned errors from raises, .err returns, !, and outward fallible tails. A tagged Error raise recovered locally does not escape and adds no outward E. Implicit panics, handled/local stored errors, and nested uninvoked bodies remain excluded. Explicit/expected outputs remain constraints. See [manual failures and inference](lite://doc/manual-failures-and-inference).
 
 ## Early returns from recovery and result inference
 
-[LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md) selects ordinary early-return behavior inside captured recovery. A handler's return 1 contributes to the enclosing function's normal success contract, not the recovery expression's continuing success type. The recovery declaration is never initialized on that exiting path. Its residual failure type is computed on continuing paths only. Unmatched captured errors/panics in the abandoned expression are not implicitly forwarded and do not force an extra error declaration or rejection for that path. Explicit/expected function success contracts still check the returned 1; other paths may independently expose outward failures. Handler-local tagged completion, new live failures, and cleanup retain their own rules. See [the tmp1/tmp2 example](expression-recovery.md#early-function-returns-and-continuing-path-types).
+[LP-0015 r1](lite://doc/proposals/LP-0015-early-return-recovery-paths) selects ordinary early-return behavior inside captured recovery. A handler's return 1 contributes to the enclosing function's normal success contract, not the recovery expression's continuing success type. The recovery declaration is never initialized on that exiting path. Its residual failure type is computed on continuing paths only. Unmatched captured errors/panics in the abandoned expression are not implicitly forwarded and do not force an extra error declaration or rejection for that path. Explicit/expected function success contracts still check the returned 1; other paths may independently expose outward failures. Handler-local tagged completion, new live failures, and cleanup retain their own rules. See [the tmp1/tmp2 example](lite://doc/expression-recovery#early-function-returns-and-continuing-path-types).
 
 ## Deferred-body lookup
 
@@ -594,7 +594,7 @@ the separate lookup rules for different contexts.
 
 The selected independent analysis of deferred bodies against serial-block
 value state, and the first-stage rule for calls that read an uninitialized value, are
-recorded in [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#deferred-bodies-and-serial-block-value-state-2026-11-15).
+recorded in [INV-003.02](lite://repo/research/investigations/INV-003-02-declarations-and-lookup.md#deferred-bodies-and-serial-block-value-state-2026-11-15).
 
 Selected direction, 2026-10-28, clarified **2026-11-15**: symbol visibility in
 any code block `X` (either the invisible-brace root file block or an inner
@@ -632,7 +632,7 @@ Nested-scope forward lookup, self-name collisions and mutual recursion,
 initialization proofs through calls/callbacks, and inaccessible/cyclic future
 definitions remain open. Capture representation, ownership, and escaping
 lifetimes remain deferred; no public capture-parameter or checked panic-effect
-list is introduced. See [INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md).
+list is introduced. See [INV-003.02](lite://repo/research/investigations/INV-003-02-declarations-and-lookup.md).
 
 ### Independent deferred-body value state
 
@@ -718,7 +718,7 @@ This selects binding identity, not permission for implicit surrounding-local
 capture. The live-read rule below defines when an admitted reference reads the
 binding's value; deliberate value copies retain their ordinary behavior.
 The permitted surrounding-access surface is under reconsideration in
-[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
+[INV-003.02](lite://repo/research/investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
 Mutation, retention, and escaping lifetimes keep
 their separate contracts. When no earlier same-name binding exists in the
 defining block, the same-block rule below selects its first subsequent
@@ -947,7 +947,7 @@ case below also copies that state. This does not establish general deep cloning
 of external references or resources.
 No new snapshot/capture-header syntax is selected.
 
-Preserve [callee-before-arguments evaluation](evaluation-order.md#function-calls).
+Preserve [callee-before-arguments evaluation](lite://doc/evaluation-order#function-calls).
 Each call reads/selects its callee once before evaluating supplied arguments.
 If argument evaluation is permitted to replace the source binding, the already
 selected callable remains the callee for that invocation. A nested call can
@@ -1106,7 +1106,7 @@ retaining an enclosing stack frame (and root file-block storage has program-wide
 lifetime because the root file block has no parent activation), while inner
 escaping closures that retain mutable or block-scoped state depend on Slice 4b/4c
 storage, copying, and lifetime contracts under
-[INV-003.02](../research/investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
+[INV-003.02](lite://repo/research/investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
 
 ### Initial static enforcement
 
@@ -1154,7 +1154,7 @@ require implementing deeper compiler analysis now.
 
 ## Recursion and inference
 
-Destructured parameter forms need both surface grammar and a mismatch policy. The [pattern context review](pattern-contexts.md#5-function-and-closure-parameters) recommends patterns irrefutable under the declared parameter contract; no implicit runtime dispatch, skipped call, or new failure channel is selected by writing a parameter pattern.
+Destructured parameter forms need both surface grammar and a mismatch policy. The [pattern context review](lite://doc/pattern-contexts#5-function-and-closure-parameters) recommends patterns irrefutable under the declared parameter contract; no implicit runtime dispatch, skipped call, or new failure channel is selected by writing a parameter pattern.
 
 The [direct self-reference rule](#direct-self-reference-without-an-earlier-target) permits the shown no-earlier-binding recursive definition without a separate header. [Explicit self calls](#explicit-current-function-self-calls) distinguish current-implementation recursion from ordinary named binding lookup. Mutual recursion and full declaration-resolution rules remain open without making arbitrary initialization order implicit. Beyond the selected local indexed-input direction, unannotated parameter inference remains open. Whether every public signature must be explicit, generic constraints, and recursive result inference are also open.
 
@@ -1164,8 +1164,8 @@ The [direct self-reference rule](#direct-self-reference-without-an-earlier-targe
 
 ## Related concepts and references
 
-- [Blocks and results](blocks-and-results.md)
-- [Types and inference](types-and-inference.md)
-- [Result and errors](result-and-errors.md)
-- [Control-flow exits](control-flow.md)
+- [Blocks and results](lite://doc/blocks-and-results)
+- [Types and inference](lite://doc/types-and-inference)
+- [Result and errors](lite://doc/result-and-errors)
+- [Control-flow exits](lite://doc/control-flow)
 - [Rust blocks](https://doc.rust-lang.org/reference/expressions/block-expr.html) and [Kotlin functions](https://kotlinlang.org/docs/functions.html) provide comparisons. LiteScript's proposed rule is not a claim that all compared languages handle function bodies identically.

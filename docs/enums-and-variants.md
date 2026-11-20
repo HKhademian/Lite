@@ -83,7 +83,7 @@ The match subject supplies Progress to its case patterns. In the comparison, the
 
 The same contextual case form can select payload cases, such as `.Click(x, y)`, when the owning enum and payload schema are established. Type-directed resolution for other call/initialization contexts still needs complete inference rules; no arbitrary static-member feature is selected here. In patterns, unmarked bare identifiers bind; they do not become enum cases through ordinary name lookup. In particular, use `.None` to test the absent Option case. Explicit payload heads such as Some(value) retain their constructor-pattern role. Expression construction through prelude Some/None still uses ordinary name resolution; this does not make every bare expression name an inferred enum case.
 
-Option pattern examples use `.Some(value)` alongside `.None` for consistent presentation of this already selected shorthand. The earlier explicitly named Some(value) pattern remains an admitted constructor-head form; the examples do not create a new requirement that every constructor or aggregate head begin with a dot. A top-level `_` is instead an ordinary whole-subject binding, not a case selector; see [cases and bindings](pattern-bindings-and-tests.md#selected-constructor-distinction).
+Option pattern examples use `.Some(value)` alongside `.None` for consistent presentation of this already selected shorthand. The earlier explicitly named Some(value) pattern remains an admitted constructor-head form; the examples do not create a new requirement that every constructor or aggregate head begin with a dot. A top-level `_` is instead an ordinary whole-subject binding, not a case selector; see [cases and bindings](lite://doc/pattern-bindings-and-tests#selected-constructor-distinction).
 
 ### Interaction with current-context metadata: policy still open
 
@@ -117,7 +117,7 @@ match event {
 
 The case tag selects the active variant. Its pattern can then bind or constrain that variant's payload. This is not a function invocation. Payload-free and payload-bearing cases may coexist.
 
-Selected on **2026-10-25**: where valid value/payload copy contracts exist, ordinary enum arguments and their corresponding fixed temporaries preserve the evaluated active case identity and payload after the source is replaced. Copying Email(payload) does not become Sms when the source changes; Items(3) and Retries(3) remain different copied cases. Inactive alternatives are not constructed, and already-copyable reference payloads retain their target/permissions under the shallow rule. This selects no tag encoding, physical copy instruction, implicit unwrap, new constructor syntax, or universal copyability. Reference syntax, memory safety, resource eligibility, ownership/lifetimes, and aliases remain deferred; see [copyable union and enum values](parameter-values-and-slots.md#copyable-union-and-enum-values-selected).
+Selected on **2026-10-25**: where valid value/payload copy contracts exist, ordinary enum arguments and their corresponding fixed temporaries preserve the evaluated active case identity and payload after the source is replaced. Copying Email(payload) does not become Sms when the source changes; Items(3) and Retries(3) remain different copied cases. Inactive alternatives are not constructed, and already-copyable reference payloads retain their target/permissions under the shallow rule. This selects no tag encoding, physical copy instruction, implicit unwrap, new constructor syntax, or universal copyability. Reference syntax, memory safety, resource eligibility, ownership/lifetimes, and aliases remain deferred; see [copyable union and enum values](lite://doc/parameter-values-and-slots#copyable-union-and-enum-values-selected).
 
 All variants can belong to the same declared Event type. Matching the type Event alone does not determine which case is active. Variant cases and the separate union of existing types, such as `User | Guest`, are related selection capabilities but are not assumed to have identical type identity or declaration syntax.
 
@@ -153,7 +153,7 @@ Payload extraction follows normal visibility and mutation permissions. Private p
 
 Status: **working proposal dated 2026-10-18; the backing-type/assigned-value declaration surface above is selected, while full grammar, case-specific types, and representation remain open**.
 
-The [twelve-language comparison](type-categories-comparison.md) distinguishes several contracts that should not be bundled into one keyword. The [type-category vocabulary](type-categories.md) explains products, sums, domain types, generated operations, and storage independently.
+The [twelve-language comparison](lite://doc/type-categories-comparison) distinguishes several contracts that should not be bundled into one keyword. The [type-category vocabulary](lite://doc/type-categories) explains products, sums, domain types, generated operations, and storage independently.
 
 ### One enum family for plain and payload cases
 
@@ -182,7 +182,7 @@ Compact native representation is a goal. The enum concept should not mandate a h
 
 ### Keep related data features independent
 
-- **Products:** record combines fields, using the selected `Name := record { field: Type; }` surface. Construction and complete field contracts remain open; see [records](records.md).
+- **Products:** record combines fields, using the selected `Name := record { field: Type; }` surface. Construction and complete field contracts remain open; see [records](lite://doc/records).
 - **Domain wrappers:** a distinct UserId can reject accidental OrderId interchange while retaining an appropriate representation. Alias identity, wrapper syntax, conversions, and layout require separate contracts.
 - **Generated operations:** equality, hashing, formatting, copying, and destructuring can be requested or derived subject to field capabilities and visibility. A data-class keyword is not required merely to bundle convenient operations.
 - **Identity and access:** reference identity, ownership, allocation, and read/write access are separate choices. Existing var/mut permissions do not decide those semantics.
@@ -212,4 +212,4 @@ No representation is selected by writing these examples. Plain enums can have co
 - [Swift enumerations](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/Enumerations.md): distinguishes associated values and raw values; those mechanisms should not be conflated.
 - [V enums](https://docs.vlang.io/type-declarations.html#enums): an example of conventional enum matching.
 - [Rust enum patterns](https://doc.rust-lang.org/reference/patterns.html): tag selection and payload destructuring.
-- [Match pattern capabilities](match-patterns.md), [composition and interfaces](composition-and-interfaces.md), and [visibility](visibility.md).
+- [Match pattern capabilities](lite://doc/match-patterns), [composition and interfaces](lite://doc/composition-and-interfaces), and [visibility](lite://doc/visibility).

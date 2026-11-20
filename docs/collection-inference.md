@@ -12,7 +12,7 @@ loop numbers as number {
 }
 ```
 
-The known-size literal now infers [Int; 3], superseding the former unconditional List default. Neither example needs generic vocabulary. Expected types may supply element information or select a concrete constructor family; an abstract traversal requirement alone does not. Existing collection values retain their provider type. See [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
+The known-size literal now infers [Int; 3], superseding the former unconditional List default. Neither example needs generic vocabulary. Expected types may supply element information or select a concrete constructor family; an abstract traversal requirement alone does not. Existing collection values retain their provider type. See [fixed-array inference](lite://doc/tuple-array-shapes#known-size-fresh-literals-infer-fixed-arrays).
 
 ## Carry expected types through nested literals
 
@@ -64,7 +64,7 @@ render_icons := fn (icons) {
 
 Assume render is a known read-only operation accepting Icon and returning Unit. The body supplies a traversal requirement and an element constraint without spelling an interface name. Compatible lists, arrays, sets, slices, and custom sources should then be usable under the eventual traversal/access contract.
 
-For this to deliver provider independence, the inferred function must generalize the provider requirement. Merely inferring List from one call would lock the function to that implementation. The traversal-only example remains proposed; the later [indexed-input direction](collection-function-signatures.md#local-inferred-indexing-and-explicit-public-contracts) selects a reusable inferred requirement for a local indexed read, not a complete inference algorithm.
+For this to deliver provider independence, the inferred function must generalize the provider requirement. Merely inferring List from one call would lock the function to that implementation. The traversal-only example remains proposed; the later [indexed-input direction](lite://doc/collection-function-signatures#local-inferred-indexing-and-explicit-public-contracts) selects a reusable inferred requirement for a local indexed read, not a complete inference algorithm.
 
 Inference must respect explicit provider conformance, access, and lifetime rules. A field name alone must not cause a search for an arbitrary nominal record type. Calling a known typed operation, receiving an expected callable signature, or adding an annotation can resolve missing information. Difficult definitions may need annotations, especially recursion, overloads, captures, and functions returned or stored as values.
 
@@ -103,9 +103,9 @@ The earlier conversation's Indexed<Int> example expressed the semantic requireme
 
 This proposal does not silently strengthen an explicitly complete public traversal-only contract when its implementation adds indexing. Inferred generic functions, expected callable types, explicit complete constraints, and public-signature stability still require a generalization policy. The selected `[T]` meaning is the indexed sequence; a traversal-only contract uses `Iterable<T>`. This example requires no new indexable keyword or capability punctuation.
 
-The later [signature review](collection-function-signatures.md) recommends distinguishing inferred input requirements from complete published contracts and separating inferred concrete results, static abstract results, and explicit runtime-varying representations. It preserves input/output type and lifetime relationships rather than treating every contract as a boxed value type.
+The later [signature review](lite://doc/collection-function-signatures) recommends distinguishing inferred input requirements from complete published contracts and separating inferred concrete results, static abstract results, and explicit runtime-varying representations. It preserves input/output type and lifetime relationships rather than treating every contract as a boxed value type.
 
-The subsequent [source-visibility correction](collection-signature-ergonomics.md#revised-recommendation-complete-visible-annotations) requires a written library contract to reveal indexing requirements. Local indexed-read inference is now selected in the bounded direction above; silently supplementing a complete written contract is not allowed. The selected `[T]` meaning is the indexed sequence; `Iterable<T>` remains the traversal-only form for beginner ergonomics.
+The subsequent [source-visibility correction](lite://doc/collection-signature-ergonomics#revised-recommendation-complete-visible-annotations) requires a written library contract to reveal indexing requirements. Local indexed-read inference is now selected in the bounded direction above; silently supplementing a complete written contract is not allowed. The selected `[T]` meaning is the indexed sequence; `Iterable<T>` remains the traversal-only form for beginner ergonomics.
 
 ## Could a short collection annotation help?
 
@@ -152,7 +152,7 @@ For that consumer goal, use `Iterable<Icon>` as the concise read-only traversal 
 
 The `[T]` indexed meaning is selected; `[T;]` extent/storage still needs a decision. A final choice must also cover fields, results, stored abstract values, expected literal construction, and mutation. The provider-independent form must not become a contiguous slice solely because it appears in a parameter.
 
-The later [order and shared-traversal review](collection-order-and-traversal.md) clarifies that compatible ordinary sets can satisfy a minimal element-source input. Traversal yields values in the provider's order without promising stable positions, sorting, uniqueness for every provider, or indexed storage. The user's ordinary sequence examples preserve supplied positions and duplicates without requiring value comparison.
+The later [order and shared-traversal review](lite://doc/collection-order-and-traversal) clarifies that compatible ordinary sets can satisfy a minimal element-source input. Traversal yields values in the provider's order without promising stable positions, sorting, uniqueness for every provider, or indexed storage. The user's ordinary sequence examples preserve supplied positions and duplicates without requiring value comparison.
 
 ## Recommendation and teaching progression
 
@@ -164,8 +164,8 @@ The public-signature policy, inference/generalization boundary, and any bracket 
 
 ## References and related concepts
 
-- [Rust, Zig, and V comparison](collection-ergonomics-comparison.md).
-- [Consumer requirements](collection-abstractions.md) and [capability vocabulary](collection-capabilities.md).
-- [Inferred functions](types-and-inference.md#inferred-functions) and [functions](functions.md).
-- [Contextual record construction](records.md) and [temporary generic notation](generic-notation.md).
-- [Learning and tooling](tooling-and-learning.md) and [generic performance](generic-collection-performance.md).
+- [Rust, Zig, and V comparison](lite://doc/collection-ergonomics-comparison).
+- [Consumer requirements](lite://doc/collection-abstractions) and [capability vocabulary](lite://doc/collection-capabilities).
+- [Inferred functions](lite://doc/types-and-inference#inferred-functions) and [functions](lite://doc/functions).
+- [Contextual record construction](lite://doc/records) and [temporary generic notation](lite://doc/generic-notation).
+- [Learning and tooling](lite://doc/tooling-and-learning) and [generic performance](lite://doc/generic-collection-performance).

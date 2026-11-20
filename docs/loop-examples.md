@@ -2,7 +2,7 @@
 
 Status: **updated to the one-item-name, typed .value, and tagged-return completion rules, 2026-10-20; design examples, not compiler-verified execution**. As, continue value, bare/value break, explicitly targeted break/continue, tagged return, and normal result rules are selected; adapter names and full inference remain open. Print, format_total, parse_int, and other helpers stand for separately defined operations.
 
-Examples page: normative rules are owned by [loops](loops.md), [loop value](loop-value.md), [loop completion](loop-completion.md), and [loop type inference](loop-type-inference.md). Examples here illustrate those rules and do not add competing conditions.
+Examples page: normative rules are owned by [loops](lite://doc/loops), [loop value](lite://doc/loop-value), [loop completion](lite://doc/loop-completion), and [loop type inference](lite://doc/loop-type-inference). Examples here illustrate those rules and do not add competing conditions.
 
 ## Full worked loop
 
@@ -178,4 +178,4 @@ Local recovery skips a failed parse without committing a new value. Postfix ! fo
 
 Full .value type inference and zero representation, optional-search inference, nonzero initialization, ownership mechanics for used last-item state, and ownership/cleanup remain separate contracts. No seeded header, extra receivers, automatic Option wrapper, or whole-loop external recovery is selected.
 
-Related: [loops](loops.md), [item name](loop-receivers.md), [value](loop-value.md), [completion](loop-completion.md), [tags](tags-and-contexts.md), [exits](control-flow.md), and [deferred cleanup](deferred-cleanup-and-resources.md).
+Related: [loops](lite://doc/loops), [item name](lite://doc/loop-receivers), [value](lite://doc/loop-value), [completion](lite://doc/loop-completion), [tags](lite://doc/tags-and-contexts), [exits](lite://doc/control-flow), and [deferred cleanup](lite://doc/deferred-cleanup-and-resources).

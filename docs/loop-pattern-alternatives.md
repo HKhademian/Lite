@@ -2,7 +2,7 @@
 
 Status: **selection inside the loop body is selected for now; filtering headers and other receiver-mismatch behaviors are deferred**.
 
-**Latest loop update, 2026-10-19:** header receiver lists/patterns, .acc, and automatic Option accumulator state shown below are historical. Current loops use one optional item name plus .item/.count/.value metadata, and .index for positional sources, with typed zero-initialized value. See [current loops](loops.md) and [loop value](loop-value.md).
+**Latest loop update, 2026-10-19:** header receiver lists/patterns, .acc, and automatic Option accumulator state shown below are historical. Current loops use one optional item name plus .item/.count/.value metadata, and .index for positional sources, with typed zero-initialized value. See [current loops](lite://doc/loops) and [loop value](lite://doc/loop-value).
 
 ## Selected form
 
@@ -91,5 +91,5 @@ Treat mismatch as a programming fault under a separately requested assertion con
 
 ## Related concepts
 
-- [Loop receivers](loop-receivers.md), [pattern contexts](pattern-contexts.md#4-loop-receiver-slots), and [collections and iterators](collections-and-iterators.md).
-- [Loop accumulator](loop-accumulator.md), [completion](loop-completion.md), [control-flow exits](control-flow.md), and [panics](panics.md).
+- [Loop receivers](lite://doc/loop-receivers), [pattern contexts](lite://doc/pattern-contexts#4-loop-receiver-slots), and [collections and iterators](lite://doc/collections-and-iterators).
+- [Loop accumulator](lite://doc/loop-accumulator), [completion](lite://doc/loop-completion), [control-flow exits](lite://doc/control-flow), and [panics](lite://doc/panics).

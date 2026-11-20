@@ -17,7 +17,7 @@ Rust's Iterator separates size_hint from consuming operations such as count, ill
 
 Traversal, random indexing, contiguous storage, and repeatability are separate capabilities. An algorithm requesting one pass should admit a suitable unknown-size source; an operation needing random access must request that capability explicitly.
 
-Traversal order also needs a precise contract: list positions preserve the supplied occurrence order, insertion-preserving sets retain insertion policy, sorted providers use an ordering relation, and other traversals may leave order unspecified. These guarantees do not require the same storage. See [collection order](collection-order-and-traversal.md).
+Traversal order also needs a precise contract: list positions preserve the supplied occurrence order, insertion-preserving sets retain insertion policy, sorted providers use an ordering relation, and other traversals may leave order unspecified. These guarantees do not require the same storage. See [collection order](lite://doc/collection-order-and-traversal).
 
 Size facts must remain valid until the dependent access completes. A prior length check is insufficient if aliases, callbacks, or concurrent updates can invalidate it. The eventual access model must establish a stable read, borrow, snapshot, or another appropriate guarantee. Do not silently snapshot every source.
 
@@ -43,4 +43,4 @@ Generators and reactive sources may provide additional capabilities when their i
 
 Teach loops and values first. Explain a restriction at the operation: "This source supports traversal but has no random indexing" or "This read consumes input." Protocol names and a complete source taxonomy should not become mandatory annotations in early lessons.
 
-Related: [capabilities](collection-capabilities.md), [consumer requirements](collection-abstractions.md), [sequence patterns](sequence-patterns.md), and [collection inference](collection-inference.md).
+Related: [capabilities](lite://doc/collection-capabilities), [consumer requirements](lite://doc/collection-abstractions), [sequence patterns](lite://doc/sequence-patterns), and [collection inference](lite://doc/collection-inference).

@@ -5,7 +5,7 @@
 - Status: **draft, 2026-10-27; counterexample and alternatives under review**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
-- Supersedes: none; investigates the execution/binding questions left open by [LP-0004 r1](LP-0004-count-free-error-contracts.md).
+- Supersedes: none; investigates the execution/binding questions left open by [LP-0004 r1](lite://doc/proposals/LP-0004-count-free-error-contracts).
 - Superseded by: none.
 
 ## User counterexample
@@ -17,7 +17,7 @@
 
 The explicit block can expose several pending errors or supported typed panics. Automatically invoking the fallback once per occurrence can turn one failed cache attempt into several expensive database operations. The user raises this as a problem with the proposed per-occurrence execution rule and asks for more attention to exits from the handler's scope.
 
-Consuming matched failures and executing a recovery computation are distinct design decisions. The earlier assistant recommendation to repeat an ordinary handler automatically for each matching occurrence is withdrawn as a general default. This draft originally left execution count open. The later accepted [LP-0007 r1](LP-0007-typed-recovery-collectors.md) selects once-per-matching-clause execution and typed ellipsis collectors; this draft now tracks the remaining scalar binding and exit questions.
+Consuming matched failures and executing a recovery computation are distinct design decisions. The earlier assistant recommendation to repeat an ordinary handler automatically for each matching occurrence is withdrawn as a general default. This draft originally left execution count open. The later accepted [LP-0007 r1](lite://doc/proposals/LP-0007-typed-recovery-collectors) selects once-per-matching-clause execution and typed ellipsis collectors; this draft now tracks the remaining scalar binding and exit questions.
 
 ## Recovery action follow-up
 
@@ -40,9 +40,9 @@ Historical r2 spelling, superseded by the selected ellipsis collector in LP-0007
 
 The historical candidate captured all pending ErrA matches as a sequence and runs the catch body once; the written loop performs per-error work explicitly. For one ErrA occurrence, errs has one element. For several, it contains all of them. With no ErrA match, skip the clause rather than run it with an empty sequence. Other failure categories remain for later written clauses. This form does not require a multi-error aggregate to be useful.
 
-The user explicitly reaffirms in [LP-0006 r1](LP-0006-whole-match-failure-consumption.md) that simple receiverless and ordinary typed catches still consume all their matches. The sequence receiver exposes matched payloads; it does not create the all-match behavior or restrict ordinary forms to one occurrence. No automatic error count field or signature multiplicity is added.
+The user explicitly reaffirms in [LP-0006 r1](lite://doc/proposals/LP-0006-whole-match-failure-consumption) that simple receiverless and ordinary typed catches still consume all their matches. The sequence receiver exposes matched payloads; it does not create the all-match behavior or restrict ordinary forms to one occurrence. No automatic error count field or signature multiplicity is added.
 
-Using the existing [readable indexed-sequence contract](../indexed-sequence-contract.md#readable-t) would provide traversal, a cheap exact count, and positional reads with default read access. It does not itself choose List ownership, contiguous storage, allocation, copying, or escape lifetimes. Filtering a heterogeneous pending group may require storage/indexing adaptation to meet the complete [T] contract; do not promise a free materialized array or silently weaken [T] to traversal only. LP-0007 now selects stable occurrence order; provider/storage choices remain open.
+Using the existing [readable indexed-sequence contract](lite://doc/indexed-sequence-contract#readable-t) would provide traversal, a cheap exact count, and positional reads with default read access. It does not itself choose List ownership, contiguous storage, allocation, copying, or escape lifetimes. Filtering a heterogeneous pending group may require storage/indexing adaptation to meet the complete [T] contract; do not promise a free materialized array or silently weaken [T] to traversal only. LP-0007 now selects stable occurrence order; provider/storage choices remain open.
 
 LP-0007 resolves the group-capture spelling with `...errs: ErrA`, which binds errs as [ErrA]. The former `errs: [ErrA]` candidate is not selected as an alternative spelling. Complete element-filter parsing, union-valued group filters, channel-origin access, and ownership/retention remain open.
 
@@ -73,7 +73,7 @@ The existing rule puts a handler outside its own recovery boundary. A new failur
 
 ## Exiting with a remainder
 
-Plain function return is now settled in [LP-0015 r1](LP-0015-early-return-recovery-paths.md). In captured/stored recovery, `tmp2 := tmp1 else :ErrB { return 1 }` returns 1 from the nearest function/closure whenever ErrB matches. The declaration does not finish; its residual T ! (ErrA | Panic) type describes only continuing paths. Any unmatched captured ErrA/Panic occurrences are abandoned with that expression, not automatically forwarded or a basis for rejecting this early-return pattern. ErrB filtering did not consume them; the explicit control-flow exit abandoned their processing.
+Plain function return is now settled in [LP-0015 r1](lite://doc/proposals/LP-0015-early-return-recovery-paths). In captured/stored recovery, `tmp2 := tmp1 else :ErrB { return 1 }` returns 1 from the nearest function/closure whenever ErrB matches. The declaration does not finish; its residual T ! (ErrA | Panic) type describes only continuing paths. Any unmatched captured ErrA/Panic occurrences are abandoned with that expression, not automatically forwarded or a basis for rejecting this early-return pattern. ErrB filtering did not consume them; the explicit control-flow exit abandoned their processing.
 
 The earlier recommendations to convert this normal return into failure or reject it until the captured remainder was handled are withdrawn for ordinary function return. Catch-all early returns also retain their normal meaning, with every original match already consumed before the body runs. Required cleanup and any new failure during payload evaluation or cleanup keep their own obligations.
 
@@ -81,7 +81,7 @@ Other exits remain distinct: failure-directed raise/! or a nonlocal tagged/loop 
 
 ## Tagged handler follow-up
 
-[LP-0008 r1](LP-0008-recovery-block-tags-and-traces.md) resolves handler-local completion: a tag belongs to its explicit block, and `return @myblock` from a tagged catch body completes that body while retaining the unmatched remainder for later clauses. An @inner tag on the protected block alone does not enclose its handlers; returning around the entire chain requires an explicit wrapper. LP-0015 now resolves plain early function return. Other nonlocal tagged/failure-directed exits with a remainder remain the narrower unresolved question above. [LP-0011 r4](LP-0011-explicit-failure-raising.md) records explicit raise forwarding alternatives; LP-0010 extraction forwards its entire operand and does not independently settle a partial handler's implicit remainder. Temporary expression/outcome traces should precede decisions on confusing examples.
+[LP-0008 r1](lite://doc/proposals/LP-0008-recovery-block-tags-and-traces) resolves handler-local completion: a tag belongs to its explicit block, and `return @myblock` from a tagged catch body completes that body while retaining the unmatched remainder for later clauses. An @inner tag on the protected block alone does not enclose its handlers; returning around the entire chain requires an explicit wrapper. LP-0015 now resolves plain early function return. Other nonlocal tagged/failure-directed exits with a remainder remain the narrower unresolved question above. [LP-0011 r4](lite://doc/proposals/LP-0011-explicit-failure-raising) records explicit raise forwarding alternatives; LP-0010 extraction forwards its entire operand and does not independently settle a partial handler's implicit remainder. Temporary expression/outcome traces should precede decisions on confusing examples.
 
 ## Revision history
 
@@ -99,4 +99,4 @@ Other exits remain distinct: failure-directed raise/! or a nonlocal tagged/loop 
 
 `r7` records accepted LP-0015: plain early function return abandons unfinished captured recovery, continuing paths alone determine the residual type, and unmatched captured categories are not implicitly forwarded or cause rejection here. Other nonlocal exit policies, untyped binding, and transport remain draft.
 
-Current rules: [expression recovery](../expression-recovery.md). Supporting discussion: [handler execution review](../recovery-receiver-types.md#handler-execution-and-expensive-fallbacks) and [cleanup/exit review](../finally.md#failure-aggregation-review).
+Current rules: [expression recovery](lite://doc/expression-recovery). Supporting discussion: [handler execution review](lite://doc/recovery-receiver-types#handler-execution-and-expensive-fallbacks) and [cleanup/exit review](lite://doc/finally#failure-aggregation-review).

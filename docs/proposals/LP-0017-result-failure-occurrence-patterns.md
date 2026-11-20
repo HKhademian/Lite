@@ -32,4 +32,4 @@ The [F] collector must provide the existing readable indexed-sequence contract, 
 
 `r1` selects first-occurrence scalar inspection, ordered all-occurrence collection, nonmutating stored-value behavior, no hidden searching in scalar subpatterns, and no internal-payload flattening. No parser/runtime execution or zero-allocation guarantee is claimed.
 
-Normative owner: [Result failure occurrence patterns](../result-and-errors.md#failure-occurrence-patterns). Related: [typed recovery receivers](LP-0013-scalar-recovery-selection.md), [directed raise](LP-0014-directed-failure-exits.md), and [readable sequences](../indexed-sequence-contract.md#readable-t).
+Normative owner: [Result failure occurrence patterns](lite://doc/result-and-errors#failure-occurrence-patterns). Related: [typed recovery receivers](lite://doc/proposals/LP-0013-scalar-recovery-selection), [directed raise](lite://doc/proposals/LP-0014-directed-failure-exits), and [readable sequences](lite://doc/indexed-sequence-contract#readable-t).

@@ -55,7 +55,7 @@ fraction: Float = 7.5 / 2;     /* 3.75 */
 
 Truncation discards the fractional part toward zero; floor chooses the greatest integer no larger than the quotient. They agree for positive quotients but differ for negative inexact quotients. Never truncate 0.5 to a zero divisor or truncate 7.5 before division.
 
-The storage rule applies to these division expressions; it does not select an unrestricted Float-to-Int assignment cast or change a source binding's type/value. The floating-expression storage boundary is selected below; complete expected-type propagation and call/return conversion boundaries remain open. So do concrete Float/Double precision, mixed floating widths, representability, overflow, zero divisors, non-finite quotients, and floating remainder/modulo. The examples use small finite quotients and establish expected values, not a LiteScript runtime implementation. See [types and inference](types-and-inference.md), [arithmetic faults](arithmetic-faults.md), and [arithmetic methods](arithmetic-methods-and-division-revision.md).
+The storage rule applies to these division expressions; it does not select an unrestricted Float-to-Int assignment cast or change a source binding's type/value. The floating-expression storage boundary is selected below; complete expected-type propagation and call/return conversion boundaries remain open. So do concrete Float/Double precision, mixed floating widths, representability, overflow, zero divisors, non-finite quotients, and floating remainder/modulo. The examples use small finite quotients and establish expected values, not a LiteScript runtime implementation. See [types and inference](lite://doc/types-and-inference), [arithmetic faults](lite://doc/arithmetic-faults), and [arithmetic methods](lite://doc/arithmetic-methods-and-division-revision).
 
 ## Floating intermediates and storage boundaries
 
@@ -87,7 +87,7 @@ truncated: Int = -7 / 2;  /* -3: integer calculation */
 floored: Int = -7 :/ 2;   /* -4: integer floor calculation */
 ```
 
-The operators have different rounding for negative inexact quotients, so :/ cannot replace truncating /. A typed Int binding already supplies an explicit integer boundary before later calculations. A Float destination such as fraction: Float = 2 / 7 requests fractional division instead; a context-independent integer quotient inside a larger fractional expression is a separate API question. See [the proposed truncDiv method](arithmetic-methods-and-division-revision.md#explicit-truncating-division-proposal). No additional truncation symbol or method is selected by this storage-boundary decision.
+The operators have different rounding for negative inexact quotients, so :/ cannot replace truncating /. A typed Int binding already supplies an explicit integer boundary before later calculations. A Float destination such as fraction: Float = 2 / 7 requests fractional division instead; a context-independent integer quotient inside a larger fractional expression is a separate API question. See [the proposed truncDiv method](lite://doc/arithmetic-methods-and-division-revision#explicit-truncating-division-proposal). No additional truncation symbol or method is selected by this storage-boundary decision.
 
 ## Compound updates
 
@@ -153,7 +153,7 @@ The user requests explicit numeric methods in addition: a.plus(b), a.div(b), and
 
 The symbols `:/` and `:%` are selected. The user also requires compact/spaced operator equivalence, including `a:%b` and `a :% b`. Because the spellings begin with a colon, `a:/b` and `a:%b` tokenize as the name `a` followed by the operator; underscore remains admitted in identifiers without conflict. No mandatory-space rule, stolen trailing underscore, or context-sensitive scanner is selected. Examples above use explicit boundaries, but the compact forms are part of the selected contract.
 
-Once an operator boundary is established, longer update tokens :/= and :%= must be recognized before their shorter operator prefixes. Full recognition around identifiers remains pending. See [the compact-form requirement](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
+Once an operator boundary is established, longer update tokens :/= and :%= must be recognized before their shorter operator prefixes. Full recognition around identifiers remains pending. See [the compact-form requirement](lite://doc/arithmetic-methods-and-division-revision#compact-and-spaced-forms-must-agree).
 
 The former // and %% arithmetic spellings are superseded. This does not introduce a // line-comment form, spacing-dependent comments, or an alias for the old operators. Current block/raw comment rules remain selected; future line comments require a separate decision.
 
@@ -167,10 +167,10 @@ The former // and %% arithmetic spellings are superseded. This does not introduc
 
 ## Related concepts and references
 
-- [Signed division table across the reference languages](signed-division-table.md)
-- [Arithmetic methods and selected family](arithmetic-methods-and-division-revision.md)
-- [Operators](operators.md)
-- [Numbers](numbers.md)
-- [Evaluation order](evaluation-order.md)
-- [Comments](comments.md)
-- [Arithmetic fault boundaries](arithmetic-faults.md)
+- [Signed division table across the reference languages](lite://doc/signed-division-table)
+- [Arithmetic methods and selected family](lite://doc/arithmetic-methods-and-division-revision)
+- [Operators](lite://doc/operators)
+- [Numbers](lite://doc/numbers)
+- [Evaluation order](lite://doc/evaluation-order)
+- [Comments](lite://doc/comments)
+- [Arithmetic fault boundaries](lite://doc/arithmetic-faults)

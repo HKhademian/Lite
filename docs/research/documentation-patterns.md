@@ -41,4 +41,4 @@ Runnable showcases must link to reviewed cases and state the execution lane.
 Reference fragments may describe selected but unimplemented behavior. Expose that
 distinction throughout navigation instead of presenting the whole design as shipped.
 
-See [documentation maintenance](../documentation.md) and [the index](../README.md).
+See [documentation maintenance](lite://doc/documentation) and [the index](lite://doc/overview).

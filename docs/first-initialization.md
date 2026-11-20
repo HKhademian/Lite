@@ -13,7 +13,7 @@ a possible replacement. Conditional `else { ? }` reservation and its branch
 correlation, field/element construction and initialization through callees
 remain unimplemented.
 
-The selected [union-local declaration rule](union-initialization-policy.md#bare-local-declarations) zero-initializes bare typed declarations, including unions. Explicitly reserved union storage (`= ?`) remains uninitialized and reuses the no-read-before-initialization rules below.
+The selected [union-local declaration rule](lite://doc/union-initialization-policy#bare-local-declarations) zero-initializes bare typed declarations, including unions. Explicitly reserved union storage (`= ?`) remains uninitialized and reuses the no-read-before-initialization rules below.
 
 ## Reserved storage already exists
 
@@ -62,9 +62,9 @@ y = 2;   /* Valid replacement through var. */
 z2 := y; /* Valid read. */
 ```
 
-The marked rejected declaration illustrates a diagnostic; remove it for a valid sequence (using distinct names `z1`/`z2` reflects the 2026-11-15 postponement of same-block redeclaration shadowing; see [local shadowing and copies](local-shadowing-and-copies.md)). Var never makes an uninitialized payload readable, and first-initialization permission does not give fixed x ongoing replacement access. Both single-write and multi-write bindings become readable after a successful write; the multi-write binding also retains replacement permission. Ordinary var parameters still require initialized readable input.
+The marked rejected declaration illustrates a diagnostic; remove it for a valid sequence (using distinct names `z1`/`z2` reflects the 2026-11-15 postponement of same-block redeclaration shadowing; see [local shadowing and copies](lite://doc/local-shadowing-and-copies)). Var never makes an uninitialized payload readable, and first-initialization permission does not give fixed x ongoing replacement access. Both single-write and multi-write bindings become readable after a successful write; the multi-write binding also retains replacement permission. Ordinary var parameters still require initialized readable input.
 
-The same checks apply to unions alongside the selected [assignment flow rules](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected):
+The same checks apply to unions alongside the selected [assignment flow rules](lite://doc/type-tests-and-narrowing#flow-types-after-direct-assignment-selected):
 
 ```text
 var value: String | Int = ?;
@@ -75,7 +75,7 @@ value = "ready";
 /* Reads are String; later replacements may still be String or Int. */
 ```
 
-For fixed value: String | Int = ?, the first valid assignment likewise establishes the current member, but another whole-value assignment is rejected without var. Reservation adds neither Unit nor an unknown member to the union. Read-flow narrowing does not erase definite-initialization, branch-coverage, or access obligations; storage declared String | Int still rejects a Bool write. Write-only callee access remains [future work](call-replacement-flow.md#future-write-only-access).
+For fixed value: String | Int = ?, the first valid assignment likewise establishes the current member, but another whole-value assignment is rejected without var. Reservation adds neither Unit nor an unknown member to the union. Read-flow narrowing does not erase definite-initialization, branch-coverage, or access obligations; storage declared String | Int still rejects a Bool write. Write-only callee access remains [future work](lite://doc/call-replacement-flow#future-write-only-access).
 
 ## One initialization per execution path
 
@@ -161,13 +161,13 @@ Initialization establishes a value; later replacement may need cleanup of an old
 
 ## Caller access and partial construction
 
-An ordinary parameter requiring User, mut User, or var User assumes a valid incoming value. It is not automatically an output-only initialization parameter merely because its current implementation writes first. Receiving reserved storage through a callee requires a separately declared contract; no out keyword is selected here. The user requests future single-write-only and multi-write-only parameter contracts, motivated by users: [User; 100000] = ?. Their syntax, read permissions after writes, per-element versus whole-destination write allowance, completion guarantees, and partial-failure behavior remain open; see [future write-only access](call-replacement-flow.md#future-write-only-access).
+An ordinary parameter requiring User, mut User, or var User assumes a valid incoming value. It is not automatically an output-only initialization parameter merely because its current implementation writes first. Receiving reserved storage through a callee requires a separately declared contract; no out keyword is selected here. The user requests future single-write-only and multi-write-only parameter contracts, motivated by users: [User; 100000] = ?. Their syntax, read permissions after writes, per-element versus whole-destination write allowance, completion guarantees, and partial-failure behavior remain open; see [future write-only access](lite://doc/call-replacement-flow#future-write-only-access).
 
 This decision covers whole-value initialization only. It does not select x.field = ... or indexed writes as construction operations on uninitialized subobjects. Large-array initialization is the main motivating next step: track which elements are valid while the array's storage already exists, without reading untouched elements or requiring a preliminary zero fill.
 
 ### Initialization before a pending call begins
 
-Selected on **2026-10-25**: a var local reserved with = ? may have its location selected by an earlier var argument and then receive its first whole value in a later argument before invocation. Selection does not read the payload. For use_int requiring var Int and Int, use_int(var value, ({ value = 42; 0 })) is valid after var value: Int = ?, because the caller initializes value before the callee receives it. The scalar temporary form makes the same order explicit; see [initialization during preparation](call-replacement-flow.md#initialization-during-argument-preparation-selected).
+Selected on **2026-10-25**: a var local reserved with = ? may have its location selected by an earlier var argument and then receive its first whole value in a later argument before invocation. Selection does not read the payload. For use_int requiring var Int and Int, use_int(var value, ({ value = 42; 0 })) is valid after var value: Int = ?, because the caller initializes value before the callee receives it. The scalar temporary form makes the same order explicit; see [initialization during preparation](lite://doc/call-replacement-flow#initialization-during-argument-preparation-selected).
 
 Every path reaching invocation must establish initialization and input compatibility. No read before initialization is allowed. A plain call with the payload still uninitialized is rejected, and this does not let fixed storage supply ongoing var replacement authority. Construction performed by the receiving callee, partial field/element initialization, and future write-only parameters remain open; this case initializes the whole local in caller-side preparation.
 
@@ -181,4 +181,4 @@ Rust's MaybeUninit documents field/element construction and the distinction betw
 
 Zig provides explicit undefined initialization and documents debug filling as an implementation feature rather than a readable language value. That is a comparison point for unspecified bytes, not a selected LiteScript validity or diagnostic model. Source: [Zig undefined](https://ziglang.org/documentation/0.15.1/#undefined).
 
-Related: [reserved storage](reserved-storage.md), [declarations](declarations-and-assignment.md), [zero initialization](zero-initialization.md), [mutability](mutability.md), and [memory and performance](memory-and-performance.md).
+Related: [reserved storage](lite://doc/reserved-storage), [declarations](lite://doc/declarations-and-assignment), [zero initialization](lite://doc/zero-initialization), [mutability](lite://doc/mutability), and [memory and performance](lite://doc/memory-and-performance).

@@ -1,6 +1,6 @@
 # Var as a replacement qualifier
 
-Status: **replacement contracts selected 2026-10-18; canonical var marker selected 2026-10-19**. The former slot spelling is retired; see [the var qualifier](var-access-qualifier.md). Within one complete access contract, var (A | B) and var A | var B describe the same accepted replacements. A | var B | C reads A/B/C and accepts B. Full declaration grammar, whole-contract boundaries, and first-class access values remain open. Value-union normalization and declaration var/mut retain their established meanings.
+Status: **replacement contracts selected 2026-10-18; canonical var marker selected 2026-10-19**. The former slot spelling is retired; see [the var qualifier](lite://doc/var-access-qualifier). Within one complete access contract, var (A | B) and var A | var B describe the same accepted replacements. A | var B | C reads A/B/C and accepts B. Full declaration grammar, whole-contract boundaries, and first-class access values remain open. Value-union normalization and declaration var/mut retain their established meanings.
 
 ## Selected meaning and spelling
 
@@ -81,7 +81,7 @@ common access summary:
 access(A | var B | C)
 ```
 
-This summarizes operations available without narrowing; it is not unconditional equality with the full union of original access paths. The [earlier investigation](access-union-qualifiers.md) explains the read-union/write-intersection rule and preserved correlations.
+This summarizes operations available without narrowing; it is not unconditional equality with the full union of original access paths. The [earlier investigation](lite://doc/access-union-qualifiers) explains the read-union/write-intersection rule and preserved correlations.
 
 ## Selected scope and distribution
 
@@ -104,9 +104,9 @@ A transparent alias must retain its entire denoted type as the operand. If Pair 
 
 ## Remaining choices
 
-The [access-ergonomics goal](slot-ergonomics.md) hides derived mathematical summaries while retaining explicit caller-replacement contracts in function headers. Existing var declarations already derive full replacement contracts. Type-side var parameters now use this same replacement permission for caller storage; local-only header modifiers are omitted. Restricted mixed contracts and advanced annotation forms still need complete grammar.
+The [access-ergonomics goal](lite://doc/slot-ergonomics) hides derived mathematical summaries while retaining explicit caller-replacement contracts in function headers. Existing var declarations already derive full replacement contracts. Type-side var parameters now use this same replacement permission for caller storage; local-only header modifiers are omitted. Restricted mixed contracts and advanced annotation forms still need complete grammar.
 
-[Var parameters](slot-parameters.md) have selected temporary caller-location semantics: assignment through them replaces the supplied caller variable or field for the duration of the call. Explicit mut/var argument grants are selected; complete access compatibility, aliasing, and general lifetime rules remain open. Public pointers and general reference values are not selected.
+[Var parameters](lite://doc/slot-parameters) have selected temporary caller-location semantics: assignment through them replaces the supplied caller variable or field for the duration of the call. Explicit mut/var argument grants are selected; complete access compatibility, aliasing, and general lifetime rules remain open. Public pointers and general reference values are not selected.
 
 - Is this notation visible only in inferred diagnostics, or also legal in signatures and aliases?
 - What delimits a complete contract, including a read-only contract with no var member?
@@ -115,4 +115,4 @@ The [access-ergonomics goal](slot-ergonomics.md) hides derived mathematical summ
 
 The var marker replaces the former slot marker for replacement acceptance and composes with local var declarations. Mut retains its held-data role. The remaining grammar and access-model decisions stay open.
 
-Related: [value types and access contracts](union-values-and-access.md), [field writes](union-field-writes.md), [mutability](mutability.md), and [immutability by default](immutability-by-default.md).
+Related: [value types and access contracts](lite://doc/union-values-and-access), [field writes](lite://doc/union-field-writes), [mutability](lite://doc/mutability), and [immutability by default](lite://doc/immutability-by-default).

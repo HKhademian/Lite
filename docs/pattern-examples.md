@@ -262,7 +262,7 @@ if {
 }
 ```
 
-Registration already declares the Student and Contact field types, so their construction heads can be omitted as shown; explicitly naming them in construction is also allowed. Deconstruction uses no Registration, Student, or Contact prefix: nested patterns receive their shape from the source fields. TypeName { ... } is not an alternative record-pattern production. The nested source fields are selected on the right. true = verified is a literal test of that field, not a binding named true. The whole nested shape must match before the guard/body can use its bindings. Use an explicit colon type test when nominal selection is intended; see [record-pattern boundaries](records.md#no-construction-shaped-record-patterns).
+Registration already declares the Student and Contact field types, so their construction heads can be omitted as shown; explicitly naming them in construction is also allowed. Deconstruction uses no Registration, Student, or Contact prefix: nested patterns receive their shape from the source fields. TypeName { ... } is not an alternative record-pattern production. The nested source fields are selected on the right. true = verified is a literal test of that field, not a binding named true. The whole nested shape must match before the guard/body can use its bindings. Use an explicit colon type test when nominal selection is intended; see [record-pattern boundaries](lite://doc/records#no-construction-shaped-record-patterns).
 
 ## 12. Complex Result + Option + record + additional matching
 
@@ -323,7 +323,7 @@ description := match values {
 }
 ```
 
-Without rest, exact length is required by the proposal. One trailing rest receives the remainder; its static type and ownership/cost need a sequence contract. These patterns do not search a set, split a string, or consume a stream. See [sequence patterns](sequence-patterns.md).
+Without rest, exact length is required by the proposal. One trailing rest receives the remainder; its static type and ownership/cost need a sequence contract. These patterns do not search a set, split a string, or consume a stream. See [sequence patterns](lite://doc/sequence-patterns).
 
 ## 15. Strings, numbers/ranges, sets, and union types
 
@@ -362,15 +362,15 @@ match status {
 }
 ```
 
-The fallback explicitly handles every remaining case. _ is the ordinary unused-allowed binding; {} returns Unit, so an extra Unit expression is optional. This also applies to specific tag-only arms such as .err {}. A value match requiring String cannot use an empty Unit branch as a substitute for a String fallback. See [coverage and explicit ignoring](match-coverage.md).
+The fallback explicitly handles every remaining case. _ is the ordinary unused-allowed binding; {} returns Unit, so an extra Unit expression is optional. This also applies to specific tag-only arms such as .err {}. A value match requiring String cannot use an empty Unit branch as a substitute for a String fallback. See [coverage and explicit ignoring](lite://doc/match-coverage).
 
 ## Related concepts
 
-- [All-type review](pattern-type-review.md) and [field clauses](aggregate-patterns.md).
-- [Conditionals](conditionals.md), [match arm chains](match-guards.md), and [pattern scopes](pattern-contexts.md).
-- [Sets](set-patterns.md), [records](records.md), [Result](result-and-errors.md), and [loops](loops.md).
+- [All-type review](lite://doc/pattern-type-review) and [field clauses](lite://doc/aggregate-patterns).
+- [Conditionals](lite://doc/conditionals), [match arm chains](lite://doc/match-guards), and [pattern scopes](lite://doc/pattern-contexts).
+- [Sets](lite://doc/set-patterns), [records](lite://doc/records), [Result](lite://doc/result-and-errors), and [loops](lite://doc/loops).
 
 
 ## Result failure occurrence inspection
 
-[LP-0017 r1](proposals/LP-0017-result-failure-occurrence-patterns.md) selects .err(e) for the first stored failure and .err(...es) for every occurrence in order. For T ! F, the bindings are F and [F]. Scalar subpatterns test the first occurrence without searching; a failed test does not change the source. Tag-only .err binds nothing, and .ok(value) preserves the complete successful T. This Result-specific collection does not flatten occurrence internals, mutate the stored outcome, or change structural tuple-rest/other constructor schemas. See [the normative examples](result-and-errors.md#failure-occurrence-patterns).
+[LP-0017 r1](lite://doc/proposals/LP-0017-result-failure-occurrence-patterns) selects .err(e) for the first stored failure and .err(...es) for every occurrence in order. For T ! F, the bindings are F and [F]. Scalar subpatterns test the first occurrence without searching; a failed test does not change the source. Tag-only .err binds nothing, and .ok(value) preserves the complete successful T. This Result-specific collection does not flatten occurrence internals, mutate the stored outcome, or change structural tuple-rest/other constructor schemas. See [the normative examples](lite://doc/result-and-errors#failure-occurrence-patterns).

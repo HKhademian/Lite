@@ -35,7 +35,7 @@ An execution with an empty remainder is distinct from a static proof that all pa
 
 ## Preserved boundaries and remaining work
 
-Operation-specific and explicit block recovery retain [LP-0001](LP-0001-operation-specific-panic-recovery.md) and [LP-0002](LP-0002-explicit-block-panic-recovery.md) respectively. Returned Results and implicitly propagating panics retain their separate origins and propagation rules. Stored Results are not recursively searched or unwrapped.
+Operation-specific and explicit block recovery retain [LP-0001](lite://doc/proposals/LP-0001-operation-specific-panic-recovery) and [LP-0002](lite://doc/proposals/LP-0002-explicit-block-panic-recovery) respectively. Returned Results and implicitly propagating panics retain their separate origins and propagation rules. Stored Results are not recursively searched or unwrapped.
 
 This clarification does not select a primary-promotion algorithm. Matching uses the pending remainder; cleanup's existing primary/secondary provenance is separate. Diagnostic relabeling, same-type repeated-occurrence consumption, runtime storage/ownership, aggregate inspection, nonlocal handler exits with pending failures, and the occurrence ordering of newly joined failures remain open. Existing typed filters, co-occurrence patterns, and exact ordered tuple receivers retain their selected matching rules.
 
@@ -43,4 +43,4 @@ This clarification does not select a primary-promotion algorithm. Matching uses 
 
 `r1` records the user's singleton/aggregate/empty pending-failure clarification. No compiler, runtime, proof-system implementation, or performance result is claimed.
 
-Normative owner: [expression recovery](../expression-recovery.md#pending-occurrences-and-munching-selected). Cleanup interaction: [finally](../finally.md#failure-aggregation-review).
+Normative owner: [expression recovery](lite://doc/expression-recovery#pending-occurrences-and-munching-selected). Cleanup interaction: [finally](lite://doc/finally#failure-aggregation-review).

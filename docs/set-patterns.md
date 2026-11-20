@@ -4,7 +4,7 @@ Status: **whole-value equality and Boolean guards use existing primitives; unord
 
 ## Why sets differ from sequences
 
-A set describes distinct elements. Its membership contract alone does not establish stable positional order, but its traversal can preserve insertion order, use sorted order, or leave order unspecified. A particular traversal can yield first and second values without the set promising stable indexes. The mathematical set {10, 20, 30} is used below as explanatory notation, not selected LiteScript literal syntax. See [order and shared traversal](collection-order-and-traversal.md) for this distinction and the reference comparisons.
+A set describes distinct elements. Its membership contract alone does not establish stable positional order, but its traversal can preserve insertion order, use sorted order, or leave order unspecified. A particular traversal can yield first and second values without the set promising stable indexes. The mathematical set {10, 20, 30} is used below as explanatory notation, not selected LiteScript literal syntax. See [order and shared traversal](lite://doc/collection-order-and-traversal) for this distinction and the reference comparisons.
 
 ## 1. Equality: exactly the same elements
 
@@ -58,10 +58,10 @@ Defer unordered element-binding syntax until it has a deterministic assignment, 
 
 ## Maps are a separate review
 
-Maps have keys and payloads. A key can identify which value a subpattern receives without a permutation search. That does not make map matching positional or settle whether required keys are exact/partial. See [maps in the type review](pattern-type-review.md#10-mapsdictionaries).
+Maps have keys and payloads. A key can identify which value a subpattern receives without a permutation search. That does not make map matching positional or settle whether required keys are exact/partial. See [maps in the type review](lite://doc/pattern-type-review#10-mapsdictionaries).
 
 ## References and related concepts
 
 [Kotlin when](https://kotlinlang.org/docs/control-flow.html#when-expressions-and-statements) demonstrates explicit membership selection for ranges/collections. [Dart map/list patterns](https://dart.dev/language/pattern-types) and [Python mapping/sequence patterns](https://docs.python.org/3/reference/compound_stmts.html#patterns) help distinguish keyed and ordered extraction; neither analogy supplies a deterministic unordered element-binding rule for LiteScript.
 
-See [sequence patterns](sequence-patterns.md), [pattern primitives](pattern-bindings-and-tests.md), and [collections](collections-and-iterators.md).
+See [sequence patterns](lite://doc/sequence-patterns), [pattern primitives](lite://doc/pattern-bindings-and-tests), and [collections](lite://doc/collections-and-iterators).

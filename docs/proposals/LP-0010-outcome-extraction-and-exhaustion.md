@@ -24,4 +24,4 @@ This selects no public empty-failure type, no general coercion from arbitrary T 
 
 `r1` records generalized explicit extraction/forwarding, preserved failure origins and counts, nearest-function/closure transfer, and automatic ordinary-value typing after static failure exhaustion. Explicit raise syntax and unmatched-remainder exits remain separately under review in LP-0011/LP-0005. No parser/runtime behavior was executed.
 
-Normative owner: [failure capture and unwrapping](../failure-capture-and-unwrapping.md#explicit-extraction-and-propagation). Related: [Result](../result-and-errors.md), [propagation](../propagation-and-chaining.md), and [cleanup](../finally.md).
+Normative owner: [failure capture and unwrapping](lite://doc/failure-capture-and-unwrapping#explicit-extraction-and-propagation). Related: [Result](lite://doc/result-and-errors), [propagation](lite://doc/propagation-and-chaining), and [cleanup](lite://doc/finally).

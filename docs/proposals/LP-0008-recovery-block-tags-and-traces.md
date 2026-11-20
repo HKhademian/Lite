@@ -53,4 +53,4 @@ Then identify lexical targets, normal completion, pending remainders, and any ne
 
 `r1` records the explicit-wrapper requirement, handler-local block tags, local-return completion, and temporary-layer review method. Nonlocal exits with an unmatched remainder, transport, and complete expression parsing remain open. No compiler/runtime verification is claimed.
 
-Normative owner: [expression recovery](../expression-recovery.md#handler-block-tags-and-temporary-traces). Related: [tags](../tags-and-contexts.md), [control flow](../control-flow.md), and [pending exit review](LP-0005-handler-execution-and-exits.md).
+Normative owner: [expression recovery](lite://doc/expression-recovery#handler-block-tags-and-temporary-traces). Related: [tags](lite://doc/tags-and-contexts), [control flow](lite://doc/control-flow), and [pending exit review](lite://doc/proposals/LP-0005-handler-execution-and-exits).

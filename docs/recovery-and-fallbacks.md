@@ -2,7 +2,7 @@
 
 Status: **optional error receivers, lazy local recovery, and `T | D` result typing selected; reference-language comparisons do not change those rules**.
 
-Normative for receiver omission and fallback union typing (`T | D`). The recovery surface — target-level `else`, typed filters, `A & B`, and ordered tuples — is owned by [expression recovery](expression-recovery.md); the Result model is owned by [result and errors](result-and-errors.md).
+Normative for receiver omission and fallback union typing (`T | D`). The recovery surface — target-level `else`, typed filters, `A & B`, and ordered tuples — is owned by [expression recovery](lite://doc/expression-recovery); the Result model is owned by [result and errors](lite://doc/result-and-errors).
 
 ## Purpose
 
@@ -23,13 +23,13 @@ user := load_user(id) else {
 }
 ```
 
-These paragraphs describe returned-Result recovery. The later shared else direction also supports typed panic capture, with combined receiver typing under review in [recovery receiver types](recovery-receiver-types.md). An omitted receiver introduces no implicit error variable. The selected operation is evaluated once. A handler does not catch its own failure; that failure follows its appropriate outward channel.
+These paragraphs describe returned-Result recovery. The later shared else direction also supports typed panic capture, with combined receiver typing under review in [recovery receiver types](lite://doc/recovery-receiver-types). An omitted receiver introduces no implicit error variable. The selected operation is evaluated once. A handler does not catch its own failure; that failure follows its appropriate outward channel.
 
 ## Result typing and narrowing
 
 An operation with success type `T` and a normally completing fallback with type `D` produces `T | D`. Equal alternatives collapse. A fallback that explicitly exits adds no local value alternative.
 
-A fallible handler with outward outcome `R ! E2`, handling all of `E1` from `T1 ! E1`, produces `(T1 | R) ! E2`. If only part of the original error type is handled, the outgoing error types also include the unhandled remainder. A later recovery can handle `E2`; the handler cannot catch its own newly produced failure. See [fallible handler outcomes](expression-recovery.md#fallible-handler-outcomes) for the type derivation and the distinction from Results carried as successful payload data.
+A fallible handler with outward outcome `R ! E2`, handling all of `E1` from `T1 ! E1`, produces `(T1 | R) ! E2`. If only part of the original error type is handled, the outgoing error types also include the unhandled remainder. A later recovery can handle `E2`; the handler cannot catch its own newly produced failure. See [fallible handler outcomes](lite://doc/expression-recovery#fallible-handler-outcomes) for the type derivation and the distinction from Results carried as successful payload data.
 
 ```text
 value := load_user(id) else {
@@ -39,13 +39,13 @@ value := load_user(id) else {
 
 If the successful payload is `User`, `value` is `User | String`. It must be narrowed before an operation specific to `User`. Inferring the union does not make `.name` or another variant-specific member automatically accessible, invent a null state, or widen the value to an untyped container.
 
-Type-pattern matching is the selected narrowing capability for these union alternatives and for an error union received by the handler. Matching yields a branch-local value with the narrower static type. Nested pattern grammar and overlap rules remain open; see [union type patterns](union-patterns.md).
+Type-pattern matching is the selected narrowing capability for these union alternatives and for an error union received by the handler. Matching yields a branch-local value with the narrower static type. Nested pattern grammar and overlap rules remain open; see [union type patterns](lite://doc/union-patterns).
 
 A fallback returning `Unit` similarly produces `T | Unit`. A declared result type still constrains the expression: an annotation requiring `User` cannot erase a possible `String` or `Unit`. General union grammar, narrowing syntax, common-interface access, ownership, conversions, and representation remain open.
 
 ## Caller-location access during recovery
 
-Selected on **2026-10-24**: after a forwarded var call ends, its immediate caller regains the same-location grant before caller recovery begins, once nested access and applicable callee-side cleanup have ended. The handler may read and write through that grant. Restoring access does not undo earlier writes or restore invalidated refinements. Normal handler completion permits the following continuation; an outward failure or transfer does not. Recovery inside the still-active nested callee does not restore the outer holder early. See [recovery after a forwarded call](call-replacement-flow.md#recovery-after-a-forwarded-call-selected) for the example, Result/panic ordering, and remaining scope limits.
+Selected on **2026-10-24**: after a forwarded var call ends, its immediate caller regains the same-location grant before caller recovery begins, once nested access and applicable callee-side cleanup have ended. The handler may read and write through that grant. Restoring access does not undo earlier writes or restore invalidated refinements. Normal handler completion permits the following continuation; an outward failure or transfer does not. Recovery inside the still-active nested callee does not restore the outer holder early. See [recovery after a forwarded call](lite://doc/call-replacement-flow#recovery-after-a-forwarded-call-selected) for the example, Result/panic ordering, and remaining scope limits.
 
 ## Reference-language comparisons
 
@@ -89,8 +89,8 @@ Optional error naming is common. Preserving exactly `T | D` for an ordinary reco
 
 ## Related concepts
 
-- [Result and errors](result-and-errors.md)
-- [Propagation and call chaining](propagation-and-chaining.md)
-- [Types and inference](types-and-inference.md)
-- [Receiver clauses](receiver-clauses.md)
-- [Match and exhaustive selection](match.md)
+- [Result and errors](lite://doc/result-and-errors)
+- [Propagation and call chaining](lite://doc/propagation-and-chaining)
+- [Types and inference](lite://doc/types-and-inference)
+- [Receiver clauses](lite://doc/receiver-clauses)
+- [Match and exhaustive selection](lite://doc/match)

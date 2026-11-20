@@ -29,11 +29,11 @@ Semicolons separate ordinary items; a newline never decides whether an exit oper
 
 ## Target and payload boundaries
 
-The [experimental igniter](../igniter/README.md#action-loops) now supports bare
+The [experimental igniter](lite://repo/igniter/README.md#action-loops) now supports bare
 break/continue in loop bodies, targeting the nearest enclosing loop. It rejects
 payloads, tags, source/header transfers to an enclosing loop, and use outside a
 loop. This coverage does not implement the broader transfer forms below. The
-[restricted compiler prototype](../compiler/README.md) lowers the same bare
+[restricted compiler prototype](lite://doc/compiler/overview) lowers the same bare
 nearest-loop exits in Boolean and unconditional loops to TS and C, and in
 list-traversal loops to TS; payloads, tags and use outside a loop are rejected
 there.
@@ -42,18 +42,18 @@ An optional target is exactly one `@` identifier; the payload, when present, sta
 
 ## Return payloads copy values
 
-Selected on **2026-10-25**: ordinary return payloads copy their evaluated values, as do implicit function-tail results. Returning a value read through a var parameter does not return that parameter's temporary write grant. In the Counter example, returning value 20 leaves the result at 20 when the caller later replaces its location with value 30. Preserve result types, actual transfer targets, failures/exits, and cleanup; this selects no new reference-return syntax, resource-copy eligibility, or safety model. Backend copy elimination must preserve behavior. See [ordinary result copies](parameter-values-and-slots.md#ordinary-return-values-are-copies-selected) and [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
+Selected on **2026-10-25**: ordinary return payloads copy their evaluated values, as do implicit function-tail results. Returning a value read through a var parameter does not return that parameter's temporary write grant. In the Counter example, returning value 20 leaves the result at 20 when the caller later replaces its location with value 30. Preserve result types, actual transfer targets, failures/exits, and cleanup; this selects no new reference-return syntax, resource-copy eligibility, or safety model. Backend copy elimination must preserve behavior. See [ordinary result copies](lite://doc/parameter-values-and-slots#ordinary-return-values-are-copies-selected) and [the general copy default](lite://doc/parameter-values-and-slots#general-copy-default-selected).
 
 ## Plain return
 
 For explicit termination of the whole FVP program run, the selected temporary
-operation is [exit(errCode?)](tooling-and-learning.md#fvp-completion-and-explicit-exit).
+operation is [exit(errCode?)](lite://doc/tooling-and-learning#fvp-completion-and-explicit-exit).
 It is distinct from return's function/closure target. Its omitted-code default,
 cleanup and recovery interaction remain open; do not equate it with a raw abort.
 
-`return value` exits the nearest function or closure. `return;` returns `Unit`. Early returns are encouraged for guard cases. Ordinary blocks do not create an implicit plain-return boundary. [Early-exit narrowing](type-tests-and-narrowing.md#narrowing-after-early-exits-selected) retains supported type facts about stable existing bindings on all paths reaching a continuation. An exiting path contributes no normal continuation there; determine this from its actual target and completion behavior, not the exit keyword alone. This changes no binding scope or cleanup obligation. The selected built-in Int distinctness fact follows the same reaching-path rule: after if i == j { return; }, stable i and j may justify separate var element grants into the same initialized writable fixed array. An equal-index branch that continues cannot establish that fact; ordinary bounds checks and proof stability remain. See [element distinctness after an early exit](call-replacement-flow.md#element-distinctness-after-an-early-exit-selected).
+`return value` exits the nearest function or closure. `return;` returns `Unit`. Early returns are encouraged for guard cases. Ordinary blocks do not create an implicit plain-return boundary. [Early-exit narrowing](lite://doc/type-tests-and-narrowing#narrowing-after-early-exits-selected) retains supported type facts about stable existing bindings on all paths reaching a continuation. An exiting path contributes no normal continuation there; determine this from its actual target and completion behavior, not the exit keyword alone. This changes no binding scope or cleanup obligation. The selected built-in Int distinctness fact follows the same reaching-path rule: after if i == j { return; }, stable i and j may justify separate var element grants into the same initialized writable fixed array. An equal-index branch that continues cannot establish that fact; ordinary bounds checks and proof stability remain. See [element distinctness after an early exit](lite://doc/call-replacement-flow#element-distinctness-after-an-early-exit-selected).
 
-The [typed-function igniter increment](../igniter/README.md#typed-user-functions)
+The [typed-function igniter increment](lite://repo/igniter/README.md#typed-user-functions)
 implements untagged return and scalar payload checking, including returns through
 loops and branches. Each invoked function catches only its own return; program
 exit and faults propagate. A function body cannot break/continue a caller's loop.
@@ -61,13 +61,13 @@ Internal noncontinuing-path information covers return/exit statements and comple
 returning branches, but is conservative and does not implement general narrowing,
 tagged returns, cleanup, recovery, or value-producing loops.
 
-Selected [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md): raise failure / raise ...failures completes the nearest function/closure with failure for both Error and Panic. raise @outer failure / raise @outer ...failures selects a lexically enclosing executable block instead. Evaluate the operand once, then bypass intervening recovery/capture inside the chosen target while running applicable cleanup. Recovery surrounding the completed target may handle its outgoing failures. Error/Panic origin chooses the channel rather than a different default target. Required operand, preserved order/origins, and no cross-function jump remain selected; unmatched-remainder policy and custom category grammar remain open. This supersedes LP-0012's earlier local interception of bare Panic raise. See [directed raise examples](manual-failures-and-inference.md#directed-raise-boundaries).
+Selected [LP-0014 r1](lite://doc/proposals/LP-0014-directed-failure-exits): raise failure / raise ...failures completes the nearest function/closure with failure for both Error and Panic. raise @outer failure / raise @outer ...failures selects a lexically enclosing executable block instead. Evaluate the operand once, then bypass intervening recovery/capture inside the chosen target while running applicable cleanup. Recovery surrounding the completed target may handle its outgoing failures. Error/Panic origin chooses the channel rather than a different default target. Required operand, preserved order/origins, and no cross-function jump remain selected; unmatched-remainder policy and custom category grammar remain open. This supersedes LP-0012's earlier local interception of bare Panic raise. See [directed raise examples](lite://doc/manual-failures-and-inference#directed-raise-boundaries).
 
 ## Early return from captured recovery
 
-Selected [LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md): a plain return from a handler exits the nearest function/closure with its normal value, abandoning that unfinished captured recovery. For tmp1: T ! (ErrA | ErrB | Panic), `tmp2 := tmp1 else :ErrB { return 1 }` has residual type T ! (ErrA | Panic) only on paths that initialize tmp2. A match returns 1 before initialization, even when other captured categories coexist. Those unmatched captured failures are not consumed by the filter, implicitly forwarded, or grounds for an additional handling rejection here. The 1 belongs to the function success contract, not tmp2's value type.
+Selected [LP-0015 r1](lite://doc/proposals/LP-0015-early-return-recovery-paths): a plain return from a handler exits the nearest function/closure with its normal value, abandoning that unfinished captured recovery. For tmp1: T ! (ErrA | ErrB | Panic), `tmp2 := tmp1 else :ErrB { return 1 }` has residual type T ! (ErrA | Panic) only on paths that initialize tmp2. A match returns 1 before initialization, even when other captured categories coexist. Those unmatched captured failures are not consumed by the filter, implicitly forwarded, or grounds for an additional handling rejection here. The 1 belongs to the function success contract, not tmp2's value type.
 
-Handler-local return @handler still finishes only the handler and lets later layers process its remainder. Applicable cleanup and newly produced payload/cleanup failures retain their own rules. The plain-return decision does not settle other nonlocal tagged exits or failure-directed raise/! remainder transport. See [the temporary-layer trace](expression-recovery.md#early-function-returns-and-continuing-path-types).
+Handler-local return @handler still finishes only the handler and lets later layers process its remainder. Applicable cleanup and newly produced payload/cleanup failures retain their own rules. The plain-return decision does not settle other nonlocal tagged exits or failure-directed raise/! remainder transport. See [the temporary-layer trace](lite://doc/expression-recovery#early-function-returns-and-continuing-path-types).
 
 ## Targeted return
 
@@ -96,11 +96,11 @@ For a tagged `return`, the target's kind determines how its supplied `T` complet
 
 ## Captured outcomes and outward extraction
 
-Selected [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md): outcome! extracts a complete outcome's successful payload or forwards its retained failures from the nearest function/closure. LP-0014 adds explicit scalar/group raise operands and optional block targets under the same directed-exit model. Both skip intervening local recovery during transfer. Generated/live operand panics remain separate; ! establishes no capture boundary, and ? does not intercept these directed exits before their targets complete. Other pending categories owned by partial catches still need their [remainder policy](proposals/LP-0011-explicit-failure-raising.md).
+Selected [LP-0010 r1](lite://doc/proposals/LP-0010-outcome-extraction-and-exhaustion): outcome! extracts a complete outcome's successful payload or forwards its retained failures from the nearest function/closure. LP-0014 adds explicit scalar/group raise operands and optional block targets under the same directed-exit model. Both skip intervening local recovery during transfer. Generated/live operand panics remain separate; ! establishes no capture boundary, and ? does not intercept these directed exits before their targets complete. Other pending categories owned by partial catches still need their [remainder policy](lite://doc/proposals/LP-0011-explicit-failure-raising).
 
 ## Returns inside recovery handlers
 
-[LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-traces.md) selects handler-local tagged blocks. In `else ...errs: DiskFull @myblock { return @myblock value }`, the return completes that handler only; later recovery layers still receive its outcome and unmatched remainder. A tag on the original protected block does not enclose attached handlers. Returning to a block around the entire chain requires an explicit outer wrapper. Plain return remains a nearest-function/closure exit. LP-0015 resolves plain function returns as abandonment of unfinished captured recovery; other nonlocal tagged exits still need their separate remainder rule. See [recovery scope traces](expression-recovery.md#handler-block-tags-and-temporary-traces).
+[LP-0008 r1](lite://doc/proposals/LP-0008-recovery-block-tags-and-traces) selects handler-local tagged blocks. In `else ...errs: DiskFull @myblock { return @myblock value }`, the return completes that handler only; later recovery layers still receive its outcome and unmatched remainder. A tag on the original protected block does not enclose attached handlers. Returning to a block around the entire chain requires an explicit outer wrapper. Plain return remains a nearest-function/closure exit. LP-0015 resolves plain function returns as abandonment of unfinished captured recovery; other nonlocal tagged exits still need their separate remainder rule. See [recovery scope traces](lite://doc/expression-recovery#handler-block-tags-and-temporary-traces).
 
 ## Loop distinction
 
@@ -125,7 +125,7 @@ On a match, the tagged exit supplies `Some(user)` as the loop's `T`; since this 
 
 The tagged return reaches the named target's completion phase. Its payload has type T and becomes the target's pre-then value. If the target has an attached then, that target's then runs once to produce R. If the target has no then, T is the target's result. For a loop, the payload commits to .value; for a conditional, it becomes the conditional's tagged .value.
 
-Constructs exited between the return site and its named target do not run their own then blocks. Only the named target receives the payload and runs its completion hook. Returning to an outer block likewise skips any inner loop or conditional then; an ordinary block with no then simply receives its final value. Applicable `finally` cleanup still runs as each exited scope is left. When a construct has both hooks on normal completion, `then` runs before `finally`; cleanup itself does not recover failures. Exact attachment scope remains open. If any failure is already pending, it remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure becomes primary and cancels normal completion. Aggregate representation and inspection remain open; see [failure aggregation](finally.md#failure-aggregation-and-open-design).
+Constructs exited between the return site and its named target do not run their own then blocks. Only the named target receives the payload and runs its completion hook. Returning to an outer block likewise skips any inner loop or conditional then; an ordinary block with no then simply receives its final value. Applicable `finally` cleanup still runs as each exited scope is left. When a construct has both hooks on normal completion, `then` runs before `finally`; cleanup itself does not recover failures. Exact attachment scope remains open. If any failure is already pending, it remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure becomes primary and cancels normal completion. Aggregate representation and inspection remain open; see [failure aggregation](lite://doc/finally#failure-aggregation-and-open-design).
 
 ### The target's then runs
 
@@ -198,11 +198,11 @@ Assume format_total maps Int to String. A negative item commits Int zero, stops,
 
 ## Cleanup
 
-When an applicable `finally` runs and completes normally, it preserves the pending normal result, control-flow exit, propagated recoverable error, or typed panic; it has no receiver for that outcome and does not transform it. If a typed panic matches a handler in the same scope that owns `finally`, recovery runs first and that scope's `finally` runs once as it exits. During language-managed panic propagation, exited inner scopes run their applicable `finally` blocks before an outer matching handler. Which scopes attach `finally` and hard-abort behavior remain open. Cleanup failure follows the primary/secondary rule in [finally](finally.md#pending-outcomes); the aggregate's type and handling behavior remain open.
+When an applicable `finally` runs and completes normally, it preserves the pending normal result, control-flow exit, propagated recoverable error, or typed panic; it has no receiver for that outcome and does not transform it. If a typed panic matches a handler in the same scope that owns `finally`, recovery runs first and that scope's `finally` runs once as it exits. During language-managed panic propagation, exited inner scopes run their applicable `finally` blocks before an outer matching handler. Which scopes attach `finally` and hard-abort behavior remain open. Cleanup failure follows the primary/secondary rule in [finally](lite://doc/finally#pending-outcomes); the aggregate's type and handling behavior remain open.
 
-Postfix outcome! supplies one outcome layer's success or forwards retained failures from the nearest function/closure under LP-0010. Escaping returned errors must fit the declared E; captured panics resume their panic channel. This is a structured exit rather than local dynamic handler lookup. It cannot return across a closure to an outer function. See [capture and extraction](failure-capture-and-unwrapping.md#explicit-extraction-and-propagation).
+Postfix outcome! supplies one outcome layer's success or forwards retained failures from the nearest function/closure under LP-0010. Escaping returned errors must fit the declared E; captured panics resume their panic channel. This is a structured exit rather than local dynamic handler lookup. It cannot return across a closure to an outer function. See [capture and extraction](lite://doc/failure-capture-and-unwrapping#explicit-extraction-and-propagation).
 
-The [finally example](finally.md) records selected inner-to-outer cleanup during language-managed typed-panic propagation. The transfer implementation and hard-abort behavior remain open. Cleanup-failure precedence is selected, with aggregate representation and inspection still open. These rules do not require cleanup after a hard process abort.
+The [finally example](lite://doc/finally) records selected inner-to-outer cleanup during language-managed typed-panic propagation. The transfer implementation and hard-abort behavior remain open. Cleanup-failure precedence is selected, with aggregate representation and inspection still open. These rules do not require cleanup after a hard process abort.
 
 ## Notes
 
@@ -210,7 +210,7 @@ Exit payloads are checked against their target. An expression that exits does no
 
 ## Related concepts and references
 
-- [Tags and contexts](tags-and-contexts.md)
-- [Loop completion](loop-completion.md)
-- [Functions](functions.md)
+- [Tags and contexts](lite://doc/tags-and-contexts)
+- [Loop completion](lite://doc/loop-completion)
+- [Functions](lite://doc/functions)
 - [Rust loop exits](https://doc.rust-lang.org/reference/expressions/loop-expr.html) provide a comparison; LiteScript's generalized `return @tag` and value-preserving bare `break` are separate design choices.

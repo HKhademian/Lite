@@ -24,7 +24,7 @@ the first logic, value, condition, loop, or function lessons.
 Two meanings of reference language must stay distinct:
 
 - **Project reference languages** are programming languages used for comparisons.
-  [Salam joins that set](references.md#project-reference-languages).
+  [Salam joins that set](lite://doc/references#project-reference-languages).
 - **Reference human-language presentation** is the simple English used for Lite's
   shared design vocabulary, reference examples, and cross-language comparison.
   It is a common reference, not a different execution mode or a demand that every
@@ -52,7 +52,7 @@ The requested scope is broader than translating a few reserved words:
 - Lesson narratives, exercises, expected outputs, and teacher materials.
 - Text entry, numerals, punctuation, fonts, and mixed-direction editing/debugging.
 
-[Unicode identifiers](identifiers.md) are already accepted, but that alone does
+[Unicode identifiers](lite://doc/identifiers) are already accepted, but that alone does
 not localize keywords, libraries, diagnostics, or teaching. The precise identifier
 profile remains open. Full localization of arbitrary third-party APIs is not
 established by this proposal; define which vocabulary a supported lesson needs
@@ -136,7 +136,7 @@ or universally reversible natural-language translation is implemented or selecte
 Localization should primarily be source/tooling work. Investigate keeping unused
 vocabularies, translations, and teaching resources out of final native programs.
 Retain only required program data, explicitly used messages, and requested debug
-information. The [lightweight execution priorities](memory-and-performance.md#lightweight-native-execution-priority)
+information. The [lightweight execution priorities](lite://doc/memory-and-performance#lightweight-native-execution-priority)
 apply; no identical-code or zero-overhead result is claimed.
 
 Evaluate paired lessons with learners/teachers: understanding conditions/loops,
@@ -146,7 +146,7 @@ reading ability, keyboard/script familiarity, and programming understanding.
 Check translation binding/type/behavior parity, mixed-direction editing, source
 locations, unsupported vocabulary, and executable footprint independently.
 
-[Investigation points](../research/investigations/multilingual-source-and-learning.md)
-record bounded questions. [Salam and Unicode references](references.md#salam-and-multilingual-source-reviewed-2026-10-28)
+[Investigation points](lite://repo/research/investigations/multilingual-source-and-learning.md)
+record bounded questions. [Salam and Unicode references](lite://doc/references#salam-and-multilingual-source-reviewed-2026-10-28)
 provide starting evidence; no LiteLang compiler execution, educational study, or
 translation experiment was run to establish this proposal.

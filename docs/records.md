@@ -25,7 +25,7 @@ Student := record {
 }
 ```
 
-Student names the record type, name is a String field, and grade is an Int field. This replaces the earlier `Student := type { ... }` record sketch. Transparent type aliases are separate and selected as `Alias := type TypeExpression`; see [type aliases](type-aliases.md).
+Student names the record type, name is a String field, and grade is an Int field. This replaces the earlier `Student := type { ... }` record sketch. Transparent type aliases are separate and selected as `Alias := type TypeExpression`; see [type aliases](lite://doc/type-aliases).
 
 ## Field values and named patterns
 
@@ -36,7 +36,7 @@ student: Student = { name = "Ali", grade = 12, }
 other := Student { name = "Sam", grade = 10, }
 ```
 
-The complete record construction ends the declaration item without a semicolon. Omit the optional trailing semicolon at every nesting depth; this also applies to field declarations with block/record default initializers. Commas between supplied value fields remain required. The grammar still permits a trailing semicolon; see [record literal boundaries](record-literal-boundaries.md) and the [shared semicolon rule](lexical-structure.md#semicolon-style-after-closing-braces).
+The complete record construction ends the declaration item without a semicolon. Omit the optional trailing semicolon at every nesting depth; this also applies to field declarations with block/record default initializers. Commas between supplied value fields remain required. The grammar still permits a trailing semicolon; see [record literal boundaries](lite://doc/record-literal-boundaries) and the [shared semicolon rule](lite://doc/lexical-structure#semicolon-style-after-closing-braces).
 
 The same contextual rule applies to nested record fields. If Registration declares a Student-valued student field, `Registration { student = { ... }, ... }` need not repeat Student. Initialization does not require var merely because it uses =. No search through unrelated record types by field names is implied.
 
@@ -49,7 +49,7 @@ Deconstruction follows the same destination-from-source direction and needs no r
 
 The second pattern binds grade with an Int constraint. General clauses are destinationPattern = sourceField. Type-only testing uses { : Int = grade, }, equality can use { == expectedGrade = grade, } or the retained compact { grade == expectedGrade, }. A record-pattern clause is not an executable assignment statement, so `_ = grade` there introduces an unused-allowed binding rather than requiring an existing var _.
 
-Named pattern braces get their shape from the source contract; they do not instantiate a type or alter nominal identity. There is no type-name prefix in the selected named-record pattern grammar. To distinguish a particular nominal type, use an explicit type test before deconstruction. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
+Named pattern braces get their shape from the source contract; they do not instantiate a type or alter nominal identity. There is no type-name prefix in the selected named-record pattern grammar. To distinguish a particular nominal type, use an explicit type test before deconstruction. See [aggregate clauses](lite://doc/aggregate-patterns#named-field-clauses).
 
 ### No construction-shaped record patterns
 
@@ -79,7 +79,7 @@ The explicit `= name` same-name shorthand expands `= name` to `name = name` in b
 
 Removing record from the declaration is a separate proposal. `User := { name: String; age: Int; }` would make braces introduce a type as well as executable blocks and contextual data. Nonempty type-only field entries could potentially distinguish that form syntactically, but empty `{}` already means a Unit-valued block, and future field defaults can resemble ordinary typed declarations. Retain `User := record { ... }` until an explicit grammar settles those cases; do not choose by capitalization or whichever interpretation type-checks.
 
-An explicit type position is a narrower case: the proposed `stats: { points: Int; level: Int = 1; }` can omit record because colon already requires a type. This is an unnamed record type, unlike braces in a record-value initializer or executable body. Distinct identity per inline declaration is selected; its shorthand and full type grammar remain proposals. See [inline record types](record-initialization.md#6-unnamed-record-type-inside-a-record-proposal).
+An explicit type position is a narrower case: the proposed `stats: { points: Int; level: Int = 1; }` can omit record because colon already requires a type. This is an unnamed record type, unlike braces in a record-value initializer or executable body. Distinct identity per inline declaration is selected; its shorthand and full type grammar remain proposals. See [inline record types](lite://doc/record-initialization#6-unnamed-record-type-inside-a-record-proposal).
 
 ### Reference comparison and tradeoff
 
@@ -97,7 +97,7 @@ Function/if/loop/match bodies remain executable blocks even when their expected 
 
 ## Access and composition
 
-Separately declared record types are distinct even when their fields are identical, including unnamed inline types. Convert by explicitly reconstructing the destination through its exposed construction contract; equal fields alone do not permit assignment. Type-head omission in construction and deconstruction does not change that identity. See [record type identity](record-type-identity.md).
+Separately declared record types are distinct even when their fields are identical, including unnamed inline types. Convert by explicitly reconstructing the destination through its exposed construction contract; equal fields alone do not permit assignment. Type-head omission in construction and deconstruction does not change that identity. See [record type identity](lite://doc/record-type-identity).
 
 ### Records and labeled tuples
 
@@ -128,7 +128,7 @@ This is separate from record declarations and transparent aliases. Its syntax,
 conversions, inherited operations, and implementation remain to be reviewed;
 these examples do not settle those contracts.
 
-The [record creation and initialization overview](record-initialization.md) separates zero initialization, selected by an omitted simple typed initializer, from declared-default construction with = {}. A general explicit zero-value expression is under design. Zero initialization bypasses declared field defaults. Every type, including all record fields, must map all-zero storage to a valid language value; there is no zeroability eligibility restriction. Empty contextual record initialization is selected. Field-default resolution and inline-type grammar still need formalization; they do not silently complete this document's other initialization/type-system contracts.
+The [record creation and initialization overview](lite://doc/record-initialization) separates zero initialization, selected by an omitted simple typed initializer, from declared-default construction with = {}. A general explicit zero-value expression is under design. Zero initialization bypasses declared field defaults. Every type, including all record fields, must map all-zero storage to a valid language value; there is no zeroability eligibility restriction. Empty contextual record initialization is selected. Field-default resolution and inline-type grammar still need formalization; they do not silently complete this document's other initialization/type-system contracts.
 
 Records support the composition-first direction: fields can contain other data types, and interfaces describe behavior. Declaration and field visibility follow the minimal-exposure goal; their modifier syntax remains open. Binding reassignment and writable held-data access remain independent var/mut capabilities.
 
@@ -136,11 +136,11 @@ Records support the composition-first direction: fields can contain other data t
 
 An ordinary record-valued field contributes its value storage to the containing record. A named type such as User does not implicitly turn that field into a reference. If P has u: Int and Q has u: User, both u fields are copied as part of their containing record values; Q includes the entire inline User and all its nested inline record fields.
 
-Reference-valued fields instead copy their reference representation, retaining targets and existing permissions without cloning separately stored data. The selected mutable-copy declaration mut copy := original follows this shallow value-copy rule. ABI details, padding bytes, copy eligibility for resources, and general transfer/cleanup contracts remain open; see [local shadowing and copies](local-shadowing-and-copies.md).
+Reference-valued fields instead copy their reference representation, retaining targets and existing permissions without cloning separately stored data. The selected mutable-copy declaration mut copy := original follows this shallow value-copy rule. ABI details, padding bytes, copy eligibility for resources, and general transfer/cleanup contracts remain open; see [local shadowing and copies](lite://doc/local-shadowing-and-copies).
 
 ## Open decisions
 
-- [Record type identity](record-type-identity.md) records selected nominal identity for all record type declarations; alias scope/generics, inferred standalone literals, and additional conversion facilities remain open.
+- [Record type identity](lite://doc/record-type-identity) records selected nominal identity for all record type declarations; alias scope/generics, inferred standalone literals, and additional conversion facilities remain open.
 - Complete contextual construction grammar/inference, defaults, required fields, and initialization order.
 - Inferred standalone record literals and generic declarations/instantiation.
 - Field visibility/accessor syntax and any per-field mutation rules.
@@ -152,6 +152,6 @@ Selecting record does not independently choose those contracts.
 
 ## Related concepts and references
 
-- [Type categories](type-categories.md): product shape versus generated operations and storage semantics.
-- [Reference-language comparison](type-categories-comparison.md): structs, records, and data/case classes.
-- [Composition and interfaces](composition-and-interfaces.md), [mutability](mutability.md), and [aggregate patterns](aggregate-patterns.md).
+- [Type categories](lite://doc/type-categories): product shape versus generated operations and storage semantics.
+- [Reference-language comparison](lite://doc/type-categories-comparison): structs, records, and data/case classes.
+- [Composition and interfaces](lite://doc/composition-and-interfaces), [mutability](lite://doc/mutability), and [aggregate patterns](lite://doc/aggregate-patterns).

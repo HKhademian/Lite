@@ -65,7 +65,7 @@ files byte for byte.
 | `compiler/tests/references/generated/report-42.c` | `7b245669f9a1bc4a1d81c797e3a4a16268270bffcc67014cf13d18d5b452f101` |
 
 The full current compiler output baseline is
-[`tests/references/generated/baseline-artifacts.json`](tests/references/generated/baseline-artifacts.json): one
+[`tests/references/generated/baseline-artifacts.json`](lite://repo/compiler/tests/references/generated/baseline-artifacts.json): one
 SHA-256 per emitted TS and C artifact for all 50 program cases, produced by
 `./bin/lite-compile --target ts|c <fixture source>`. That file records 50 program cases and
 42 rejection cases. Rejection output is not duplicated here because each
@@ -103,4 +103,4 @@ is green.
   tuples/lists, `match`, runtime input and checked dynamic C overflow remain
   outside the accepted surface.
 - The manifest schema and line-map contract are recorded in
-  [`manifests/README.md`](manifests/README.md); the loader is P1 work.
+  [`manifests/README.md`](lite://doc/compiler/manifests-readme); the loader is P1 work.

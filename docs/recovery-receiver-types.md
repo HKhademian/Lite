@@ -1,6 +1,6 @@
 # Types received by recovery handlers
 
-Status: **typed filtering and ellipsis collectors selected; flat Error/Panic/Failure outcome categories selected 2026-10-27 in LP-0009**. The earlier receiver alternatives below are design history. Typed scalar first-match/discard is selected in LP-0013; untyped binding, origin-inspection syntax, and representation remain open; [capture and unwrapping](failure-capture-and-unwrapping.md) states the current contract.
+Status: **typed filtering and ellipsis collectors selected; flat Error/Panic/Failure outcome categories selected 2026-10-27 in LP-0009**. The earlier receiver alternatives below are design history. Typed scalar first-match/discard is selected in LP-0013; untyped binding, origin-inspection syntax, and representation remain open; [capture and unwrapping](lite://doc/failure-capture-and-unwrapping) states the current contract.
 
 ## The question
 
@@ -24,19 +24,19 @@ This supplies String on success or a String fallback, without introducing an imp
 
 ## Handler execution and expensive fallbacks
 
-Status: **open review, 2026-10-26; [LP-0005 r7](proposals/LP-0005-handler-execution-and-exits.md) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
+Status: **open review, 2026-10-26; [LP-0005 r7](lite://doc/proposals/LP-0005-handler-execution-and-exits) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
 
 The user points out that `{ read_cached() } else { fallback_heavy_db_read() }` must be reviewed before adopting automatic per-occurrence handler execution: several pending failures could otherwise repeat an expensive fallback. Consuming a group is distinct from running its recovery expression. The assistant withdraws automatic repetition as a general default recommendation.
 
 The revised candidate was selected in LP-0007: run each matching clause's body at most once per evaluation of its target and consume its matched group. A catch-all could then replace one failed cache computation with one database computation. Typed group binding still needs design; a scalar ErrA annotation exposes the first match and intentionally discards the other matching payloads under LP-0013. Running receiverless handlers once but named handlers per occurrence is a separate alternative with observable costs: adding a receiver name would change execution count. Those contrasting execution-count alternatives are unselected; the ellipsis collector below is selected.
 
-The user also explores optional count/details inside ErrA when meaningful to its domain, such as a batch failure count, while ordinary errors need no such field. This separates error-value information from the count-free function signature and handler execution count. It does not yet define how independently produced same-type values combine or change the selected retention of secondary failures; see [type-owned repetition information](proposals/LP-0005-handler-execution-and-exits.md#type-owned-repetition-information).
+The user also explores optional count/details inside ErrA when meaningful to its domain, such as a batch failure count, while ordinary errors need no such field. This separates error-value information from the count-free function signature and handler execution count. It does not yet define how independently produced same-type values combine or change the selected retention of secondary failures; see [type-owned repetition information](lite://doc/proposals/LP-0005-handler-execution-and-exits#type-owned-repetition-information).
 
-A handler's own new failure does not re-enter that handler under the existing selected rule. LP-0015 resolves plain function return from captured recovery. Other nonlocal tagged/failure-directed exits with an unmatched remainder retain a separate unresolved control-flow question; it cannot be assumed to run the next clause or consume its remaining failures. See [the draft's exit example](proposals/LP-0005-handler-execution-and-exits.md#exiting-with-a-remainder).
+A handler's own new failure does not re-enter that handler under the existing selected rule. LP-0015 resolves plain function return from captured recovery. Other nonlocal tagged/failure-directed exits with an unmatched remainder retain a separate unresolved control-flow question; it cannot be assumed to run the next clause or consume its remaining failures. See [the draft's exit example](lite://doc/proposals/LP-0005-handler-execution-and-exits#exiting-with-a-remainder).
 
 ## Typed collector capture selected
 
-Selected 2026-10-26 in [LP-0007 r1](proposals/LP-0007-typed-recovery-collectors.md):
+Selected 2026-10-26 in [LP-0007 r1](lite://doc/proposals/LP-0007-typed-recovery-collectors):
 
 ```text
 { read_cached() }
@@ -46,7 +46,7 @@ Selected 2026-10-26 in [LP-0007 r1](proposals/LP-0007-typed-recovery-collectors.
     }
 ```
 
-The ellipsis declares a collector; Error is its element/filter type. The binding errs has the readable [Error] indexed-sequence contract. The clause captures all matches, including one element for a singular error, and its body runs once. No match skips it. The explicit loop performs per-error work. Receiverless and ordinary typed catches retain [all-match consumption](expression-recovery.md#whole-match-consumption-selected), independently of whether the programmer asks to bind the collected values.
+The ellipsis declares a collector; Error is its element/filter type. The binding errs has the readable [Error] indexed-sequence contract. The clause captures all matches, including one element for a singular error, and its body runs once. No match skips it. The explicit loop performs per-error work. Receiverless and ordinary typed catches retain [all-match consumption](lite://doc/expression-recovery#whole-match-consumption-selected), independently of whether the programmer asks to bind the collected values.
 
 Each collector preserves occurrence order within its matched remainder. LP-0009 now selects ...errs: Error for returned errors, ...ps: Panic for panics, and ...fails: Failure for both, with [Error], [Panic], and [Failure] bindings. The earlier symbolOfAny placeholder is not source syntax. Several typed collectors preserve within-group order but process their groups in written else order.
 
@@ -54,7 +54,7 @@ The former `errs: [Error]` collector spelling is not selected. Ordinary sequence
 
 ## Typed scalar first-match binding
 
-[LP-0013 r1](proposals/LP-0013-scalar-recovery-selection.md) selects err: Error to expose the first matching Error occurrence in occurrence order, consume every matching Error, and discard the other matched payloads. Other categories remain untouched. ...errs: Error consumes the same matches and exposes all of them as [Error]. Both bodies run once, and no match skips the clause. Typed scalar filters for ErrA/Panic/Failure follow the same rule; exact tuple group receivers retain their tuple binding. LP-0017 now defines .err first-occurrence/all-occurrence views; untyped broad recovery binding remains open. See [current scalar recovery](expression-recovery.md#typed-scalar-receivers-selected).
+[LP-0013 r1](lite://doc/proposals/LP-0013-scalar-recovery-selection) selects err: Error to expose the first matching Error occurrence in occurrence order, consume every matching Error, and discard the other matched payloads. Other categories remain untouched. ...errs: Error consumes the same matches and exposes all of them as [Error]. Both bodies run once, and no match skips the clause. Typed scalar filters for ErrA/Panic/Failure follow the same rule; exact tuple group receivers retain their tuple binding. LP-0017 now defines .err first-occurrence/all-occurrence views; untyped broad recovery binding remains open. See [current scalar recovery](lite://doc/expression-recovery#typed-scalar-receivers-selected).
 
 ## Direct-union direction and scalar receiver history
 
@@ -140,9 +140,9 @@ target else (failure) { outputLine(failure); recover() }
 
 Receiverless `else` binds no failure. `_` is an ordinary readable binding, not a special nonbinding wildcard; it matches every supported failure and can be used or left unused without a warning. An untyped name also matches all and binds the broad failure value. If both channels are possible, its static receiver type and channel-origin representation remain open.
 
-This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. The filter handles only matching pending occurrences. Single, aggregated, and empty remainders follow [the munching model](expression-recovery.md#pending-occurrences-and-munching-selected); no pending occurrence means no failure match, and a nonmatch neither runs the body nor consumes anything. When typed filters chain on one target, they consume matching members in declaration order, and each later filter sees the remaining members. A live uncaptured panic propagates implicitly after the chain; a stored captured panic remains in its residual outcome until handled or explicitly forwarded. Unmatched returned errors do not: they must remain represented as a `Result`, be handled by another defined form, or be propagated explicitly. The bound aggregate's public type/operations and duplicate-member consumption rules remain open. See [member-wise handling](expression-recovery.md#match-all-failures-or-filter-by-type).
+This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. The filter handles only matching pending occurrences. Single, aggregated, and empty remainders follow [the munching model](lite://doc/expression-recovery#pending-occurrences-and-munching-selected); no pending occurrence means no failure match, and a nonmatch neither runs the body nor consumes anything. When typed filters chain on one target, they consume matching members in declaration order, and each later filter sees the remaining members. A live uncaptured panic propagates implicitly after the chain; a stored captured panic remains in its residual outcome until handled or explicitly forwarded. Unmatched returned errors do not: they must remain represented as a `Result`, be handled by another defined form, or be propagated explicitly. The bound aggregate's public type/operations and duplicate-member consumption rules remain open. See [member-wise handling](lite://doc/expression-recovery#match-all-failures-or-filter-by-type).
 
-Each later filter wraps the preceding recovery expression, including its handler body. A matching failure raised by an earlier handler can be caught by that later recovery; the earlier handler does not catch its own failure. See the [sequential recovery example](expression-recovery.md#match-all-failures-or-filter-by-type) for the distinction between nested active recovery and separate eager assignments.
+Each later filter wraps the preceding recovery expression, including its handler body. A matching failure raised by an earlier handler can be caught by that later recovery; the earlier handler does not catch its own failure. See the [sequential recovery example](lite://doc/expression-recovery#match-all-failures-or-filter-by-type) for the distinction between nested active recovery and separate eager assignments.
 
 The filter does not distinguish a returned payload from a panic solely because their payload types overlap. Preserve channel origin in the eventual carrier/context where required; see the following section.
 
@@ -165,9 +165,9 @@ A public receiver contract must remain stable across inlining and separate compi
 - The exact type relationships and coverage diagnostics for selected typed receiver patterns.
 - Operation fault attribution, complete block/chain attachment, transfer mechanism, cleanup-failure aggregate matching/access, and any explicit resume operation; cleanup-failure precedence is selected, and language-managed propagation already runs applicable exited-scope `finally` blocks before an outer matching handler.
 
-Related: [shared expression recovery](expression-recovery.md), [boundary comparison](recovery-boundaries.md), [typed panics](typed-panics.md), [Result errors](result-and-errors.md), [receiver clauses](receiver-clauses.md), and [union matching](union-patterns.md).
+Related: [shared expression recovery](lite://doc/expression-recovery), [boundary comparison](lite://doc/recovery-boundaries), [typed panics](lite://doc/typed-panics), [Result errors](lite://doc/result-and-errors), [receiver clauses](lite://doc/receiver-clauses), and [union matching](lite://doc/union-patterns).
 
 
 ## Early-return follow-up
 
-[LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md) resolves ordinary function return from a partial captured-outcome handler. A matching branch can return its written success value and abandon that unfinished recovery; other captured categories are not automatically forwarded or a reason for an extra handling rejection on this pattern. No recovery result is initialized on that path, so only continuing paths determine its residual type. Handler-local tagged return retains its separate continuation/remainder behavior. Other failure-directed/tagged exits and aggregate inspection remain open; cleanup and new failures retain their rules.
+[LP-0015 r1](lite://doc/proposals/LP-0015-early-return-recovery-paths) resolves ordinary function return from a partial captured-outcome handler. A matching branch can return its written success value and abandon that unfinished recovery; other captured categories are not automatically forwarded or a reason for an extra handling rejection on this pattern. No recovery result is initialized on that path, so only continuing paths determine its residual type. Handler-local tagged return retains its separate continuation/remainder behavior. Other failure-directed/tagged exits and aggregate inspection remain open; cleanup and new failures retain their rules.

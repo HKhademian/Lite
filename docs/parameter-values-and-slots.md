@@ -19,7 +19,7 @@ physical copying in the compiler or after compilation where behavior is preserve
 Explicit noncopying modes come later. Do not require a new clone/move/borrow
 surface before ordinary FVP sequence values can follow this copy model. This
 does not declare every resource copyable or select an optimization implementation.
-See [INV-055](../research/investigations/INV-055-fvp-owner-boundary.md).
+See [INV-055](lite://repo/research/investigations/INV-055-fvp-owner-boundary.md).
 
 ## Ordinary return values are copies selected
 
@@ -62,11 +62,11 @@ In particular, passing an immutable aggregate indirectly as an optimization does
 
 The observable copy semantics are selected; the compiler may optimize representation while preserving them. Copy eligibility, resource effects, and explicit reference/move contracts still need their own later review.
 
-The selected [variadic rest access and retention rules](tuple-array-shapes.md#rest-access-storage-and-retention), 2026-10-24, add a scoped boundary: rest arrays are readable by default, collecting them does not mandate heap allocation, and borrowed backing storage must remain valid. Retaining rest requires valid ownership or a proven lifetime; creating independent owned storage requires an explicit copy/ownership operation, without an automatic escape-repair copy. These rest contracts do not override the general ordinary-value copy rule or add an implicit live source alias; any backing-storage reuse must preserve that behavior. They select no general escaping-reference syntax or automatic ownership conversion. Writable rest still needs an explicit contract and caller grant; its full syntax and alias rules remain open.
+The selected [variadic rest access and retention rules](lite://doc/tuple-array-shapes#rest-access-storage-and-retention), 2026-10-24, add a scoped boundary: rest arrays are readable by default, collecting them does not mandate heap allocation, and borrowed backing storage must remain valid. Retaining rest requires valid ownership or a proven lifetime; creating independent owned storage requires an explicit copy/ownership operation, without an automatic escape-repair copy. These rest contracts do not override the general ordinary-value copy rule or add an implicit live source alias; any backing-storage reuse must preserve that behavior. They select no general escaping-reference syntax or automatic ownership conversion. Writable rest still needs an explicit contract and caller grant; its full syntax and alias rules remain open.
 
 ## Checked union-member arguments
 
-A valid [plain-union member refinement](union-membership.md#checked-payload-reads-and-ordinary-arguments) lets an ordinary member-typed parameter receive the active payload automatically. With x stored as [Int][7] and proven Int, use_int(x) supplies the Int value [7] under normal copy semantics and the callee's required representation. It does not pass the union wrapper as Int memory or grant caller-location access. A union-typed parameter instead receives its appropriate union representation. Explicit var/mut inputs retain their separate checks, and stale refinements cannot justify payload access.
+A valid [plain-union member refinement](lite://doc/union-membership#checked-payload-reads-and-ordinary-arguments) lets an ordinary member-typed parameter receive the active payload automatically. With x stored as [Int][7] and proven Int, use_int(x) supplies the Int value [7] under normal copy semantics and the callee's required representation. It does not pass the union wrapper as Int memory or grant caller-location access. A union-typed parameter instead receives its appropriate union representation. Explicit var/mut inputs retain their separate checks, and stale refinements cannot justify payload access.
 
 ## Ordinary Int evaluated values selected
 
@@ -261,7 +261,7 @@ A temporary writable var resembles the part of a mutable-reference feature that 
 
 LiteScript further distinguishes the accepted replacement set. A parameter described as A | var B | C may read A/B/C while accepting only B on writes. Mutating an existing payload's fields still follows mut permissions. Var now expresses replacement in both local declarations and received caller-storage contracts; mut remains separately meaningful for held-data updates.
 
-Complete access compatibility is proposed in [var parameters](slot-parameters.md): the callee must handle every possible read and must not write anything the source location rejects. A single source write grant cannot be duplicated: repeated explicit var arguments to the same local in one call are rejected; see [single source write grant](call-replacement-flow.md#single-source-write-grant-selected). Escaping aliases, general field/index/path overlap, reentrancy, activation timing, and exact mutation observability remain open.
+Complete access compatibility is proposed in [var parameters](lite://doc/slot-parameters): the callee must handle every possible read and must not write anything the source location rejects. A single source write grant cannot be duplicated: repeated explicit var arguments to the same local in one call are rejected; see [single source write grant](lite://doc/call-replacement-flow#single-source-write-grant-selected). Escaping aliases, general field/index/path overlap, reentrancy, activation timing, and exact mutation observability remain open.
 
 ## Reference-language comparison
 
@@ -277,6 +277,6 @@ The ordinary value default is settled: copy semantics and no implicit references
 
 No new ref keyword, pointer syntax, or general reference-value system is proposed for adoption in this review.
 
-The historical [caller-location keyword comparison](caller-location-keywords.md) evaluates ref, mut, slot, and mut ref. The later [var qualifier decision](var-access-qualifier.md) replaces slot without selecting a broader reference feature or a local-only header modifier.
+The historical [caller-location keyword comparison](lite://doc/caller-location-keywords) evaluates ref, mut, slot, and mut ref. The later [var qualifier decision](lite://doc/var-access-qualifier) replaces slot without selecting a broader reference feature or a local-only header modifier.
 
-Related: [immutability by default](immutability-by-default.md), [functions](functions.md), [mutability](mutability.md), [var qualifier](slot-access-qualifier.md), and [memory and performance](memory-and-performance.md).
+Related: [immutability by default](lite://doc/immutability-by-default), [functions](lite://doc/functions), [mutability](lite://doc/mutability), [var qualifier](lite://doc/slot-access-qualifier), and [memory and performance](lite://doc/memory-and-performance).

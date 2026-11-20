@@ -8,14 +8,14 @@ the owning rule, inspect its cases and discover related topics.
 
 ## Reading and navigation
 
-- Use [start here](start-here.md) for installation and the first working program.
-- Use [the language tour](tour.md) for short examples and links into the reference.
-- Use [the documentation index](README.md) for topic browsing and reading paths.
-- Use [the site architecture guide](site-architecture.md) for the static site pipeline, browser worker protocol, and portable Learn/Gym schemas.
-- Use [the normative map](normative-pages.md) to locate the owner of each rule.
-- Use [the current compiler guide](../compiler/README.md) and
-  [transition](../compiler/transition-plan.md) for implementation status.
-- Use [proposals](proposals/README.md) and [investigations](../research/investigations/README.md)
+- Use [start here](lite://doc/start-here) for installation and the first working program.
+- Use [the language tour](lite://doc/tour) for short examples and links into the reference.
+- Use [the documentation index](lite://doc/overview) for topic browsing and reading paths.
+- Use [the site architecture guide](lite://doc/site-architecture) for the static site pipeline, browser worker protocol, and portable Learn/Gym schemas.
+- Use [the normative map](lite://doc/normative-pages) to locate the owner of each rule.
+- Use [the current compiler guide](lite://doc/compiler/overview) and
+  [transition](lite://doc/compiler/transition-plan) for implementation status.
+- Use [proposals](lite://doc/proposals/README) and [investigations](lite://repo/research/investigations/README.md)
   for unfinished design. Keep historical alternatives clearly identified.
 
 Each new guide needs a descriptive title, purpose, status, prerequisites where
@@ -49,13 +49,16 @@ color alone. Keep source Markdown useful offline and readable on narrow screens.
 Avoid requiring JavaScript, hover, animation or a diagram to understand a rule.
 The generated static website retains keyboard navigation, visible focus, readable
 contrast, and a responsive layout across `/learn/`, `/gym/`, `/docs/`, `/modules/`,
-`/tools/`, `/gallery/`, and `/playground/`; see [site architecture](site-architecture.md).
+`/tools/`, `/gallery/`, and `/playground/`; see [site architecture](lite://doc/site-architecture).
 
 ## Checks
 
 Run `./bin/lite doctor --docs` for local Markdown links/fragments, fences and editor
 version consistency. `./bin/lite doctor` also runs both strict TS configurations.
-The [documentation configuration](../config/documentation.json) owns landing
+Cross-document links across branding, spec, design, proposals, compiler, and Academy
+use canonical `lite://` URIs validated by `./bin/lite docs --check` and post-build
+site verification (`validateBuiltSiteReferences`).
+The [documentation configuration](lite://repo/config/documentation.json) owns landing
 destinations and source-backed snippet registrations. Registered fences are
 compared with their separate source files, so entry-guide examples cannot drift
 silently. Register additional runnable snippets as their cases become available.
@@ -69,5 +72,5 @@ referenced by runnable documentation. Documentation-only changes need these
 checks, not an unrelated compiler rebuild. Keep failed accepted-language cases
 visible rather than excluding them from status reports.
 
-The [documentation research](research/documentation-patterns.md) records the
-external patterns behind these choices. Continue with the [workflow](development-workflow.md).
+The [documentation research](lite://doc/research/documentation-patterns) records the
+external patterns behind these choices. Continue with the [workflow](lite://doc/development-workflow).

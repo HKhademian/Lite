@@ -42,9 +42,9 @@ bad := fn (count: Int = "three") { count }
 /* rejected: the default does not fit the declared Int input */
 ```
 
-The [public omission contracts and implementation defaults](callable-default-contracts.md) rule now selects omission behavior for this expected-input example: the required fn (Int | String): Int contract hides omission, so handler() is rejected even though its implementation declares a default. The implementation still owns and validates that default. A public contract allowing omission needs a compatible implementation default; the public n?: Int / ?:Int omission marker is now selected, while complete grammar and general callable compatibility remain open. See [public omission marker](callable-default-contracts.md#public-omission-marker).
+The [public omission contracts and implementation defaults](lite://doc/callable-default-contracts) rule now selects omission behavior for this expected-input example: the required fn (Int | String): Int contract hides omission, so handler() is rejected even though its implementation declares a default. The implementation still owns and validates that default. A public contract allowing omission needs a compatible implementation default; the public n?: Int / ?:Int omission marker is now selected, while complete grammar and general callable compatibility remain open. See [public omission marker](lite://doc/callable-default-contracts#public-omission-marker).
 
-A later adaptation of an already established implementation does not re-run parameter inference against the view's narrower type or retype its default. For example, an Int | String implementation defaulting to "auto" can fit a public fn (value?: Int): Int view when its result and omission promise fit: the caller may supply Int or omit, and the implementation still handles omission with its own String default. An implementation actually declared to take Int still cannot default to "auto"; the wider implementation input is essential. No signature supplies or alters defaults. See [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise).
+A later adaptation of an already established implementation does not re-run parameter inference against the view's narrower type or retype its default. For example, an Int | String implementation defaulting to "auto" can fit a public fn (value?: Int): Int view when its result and omission promise fit: the caller may supply Int or omit, and the implementation still handles omission with its own String default. An implementation actually declared to take Int still cannot default to "auto"; the wider implementation input is essential. No signature supplies or alters defaults. See [implementation-owned default promises](lite://doc/callable-value-variance#omission-remains-an-implementation-promise).
 
 ## Static types do not require evaluating defaults
 
@@ -57,7 +57,7 @@ make_count := fn (count = default_count()) { count }
 
 The input type of count is Int | Float, from the helper's declared result contract. Its current implementation returning 3 does not specialize the caller's parameter to Int. This inference decision does not choose new numeric conversions or bypass ordinary value compatibility.
 
-Keep the [selected evaluation order](evaluation-order.md#default-argument-evaluation-selected). Each reached call evaluates the callee, supplied inputs once in written order, then only still-missing applicable defaults once in declared slot order, then invokes. Supplying a parameter skips its default's runtime effects, not its declaration's static validation. A wrong-typed default remains invalid even if all currently visible calls supply that parameter.
+Keep the [selected evaluation order](lite://doc/evaluation-order#default-argument-evaluation-selected). Each reached call evaluates the callee, supplied inputs once in written order, then only still-missing applicable defaults once in declared slot order, then invokes. Supplying a parameter skips its default's runtime effects, not its declaration's static validation. A wrong-typed default remains invalid even if all currently visible calls supply that parameter.
 
 Defaults may use otherwise valid runtime expressions such as default_count(); this rule adds no compile-time-constant restriction. Existing expression, failure, access, and initialization obligations still apply. Static type discovery adds no implicit unwrap or recoverable-error inference.
 
@@ -129,15 +129,15 @@ unresolved := fn (value) { value * 2 }
 /* body operations alone do not establish an arbitrary reusable input contract */
 ```
 
-This selects simple ordinary default receivers of the form name = expression or name: Type = expression in the existing parenthesized callable header. It does not complete recursive header parsing or add defaults to every receiver/type form. In particular, permission-bearing defaults, inferred omitted var/mut value types, variadic defaults, parameter-pattern defaults, general lexical/helper lookup and enclosing captures, access-aware var/mut dependencies, recursive/generic inference, complete public omission-marker grammar, and remaining stored-callable compatibility beyond omission remain separate. Public omission permission and implementation-owned defaults are selected in [public omission contracts and implementation defaults](callable-default-contracts.md). No absent argument is synthesized without an applicable explicitly declared default.
+This selects simple ordinary default receivers of the form name = expression or name: Type = expression in the existing parenthesized callable header. It does not complete recursive header parsing or add defaults to every receiver/type form. In particular, permission-bearing defaults, inferred omitted var/mut value types, variadic defaults, parameter-pattern defaults, general lexical/helper lookup and enclosing captures, access-aware var/mut dependencies, recursive/generic inference, complete public omission-marker grammar, and remaining stored-callable compatibility beyond omission remain separate. Public omission permission and implementation-owned defaults are selected in [public omission contracts and implementation defaults](lite://doc/callable-default-contracts). No absent argument is synthesized without an applicable explicitly declared default.
 
 Reference syntax, memory safety, ownership/lifetimes, aliases, and resource rules remain deferred. Ordinary value copies and explicit access grants keep their existing contracts.
 
 ## Related documents
 
-- [Functions](functions.md#omitted-value-arguments)
-- [Types and inference](types-and-inference.md#inferred-functions)
-- [Callable input packs](callable-input-packs.md)
-- [Provisional grammar](grammar-sketch.md#declarations)
-- [Modern-language comparison](default-parameter-inference-comparison.md)
-- [Argument omission](union-parameter-defaults.md)
+- [Functions](lite://doc/functions#omitted-value-arguments)
+- [Types and inference](lite://doc/types-and-inference#inferred-functions)
+- [Callable input packs](lite://doc/callable-input-packs)
+- [Provisional grammar](lite://doc/grammar-sketch#declarations)
+- [Modern-language comparison](lite://doc/default-parameter-inference-comparison)
+- [Argument omission](lite://doc/union-parameter-defaults)

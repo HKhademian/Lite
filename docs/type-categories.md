@@ -16,7 +16,7 @@ A record, tuple, or struct combines components. A Point has both x and y; it is 
 Point = { x: Int, y: Int }
 ```
 
-This is explanatory notation. LiteScript now selects the declaration surface `Point := record { x: Int; y: Int; }`; see [records](records.md). Constructor and positional matching-schema syntax remain open. A product can be nominal or structural, mutable or read-only, copied or moved, inline or reference-bearing. The shape alone does not decide those other contracts.
+This is explanatory notation. LiteScript now selects the declaration surface `Point := record { x: Int; y: Int; }`; see [records](lite://doc/records). Constructor and positional matching-schema syntax remain open. A product can be nominal or structural, mutable or read-only, copied or moved, inline or reference-bearing. The shape alone does not decide those other contracts.
 
 ## 2. Sum: one alternative at a time
 
@@ -121,6 +121,6 @@ A type test of an enum's payload cannot silently skip the enum's outer tag. A cl
 
 ## Review boundary
 
-This taxonomy explains the options. It selects no additional keywords, inheritance model, enum ABI, or default equality/copy policy. The [reference-language comparison](type-categories-comparison.md) grounds the distinctions; [enums and variants](enums-and-variants.md) tracks LiteScript's existing enum direction and open contracts.
+This taxonomy explains the options. It selects no additional keywords, inheritance model, enum ABI, or default equality/copy policy. The [reference-language comparison](lite://doc/type-categories-comparison) grounds the distinctions; [enums and variants](lite://doc/enums-and-variants) tracks LiteScript's existing enum direction and open contracts.
 
-Related: [types and inference](types-and-inference.md), [composition and interfaces](composition-and-interfaces.md), [mutability](mutability.md), and [memory and performance](memory-and-performance.md).
+Related: [types and inference](lite://doc/types-and-inference), [composition and interfaces](lite://doc/composition-and-interfaces), [mutability](lite://doc/mutability), and [memory and performance](lite://doc/memory-and-performance).

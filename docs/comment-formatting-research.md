@@ -44,7 +44,7 @@ This is a documentation reference, not an independently executed Prettier probe 
 
 ## Local probe inputs and outputs
 
-The [captured results](research/formatter-comment-probes-2026-10-25.json) contain all eight successful probes, their commands, inputs, outputs, and idempotence results. Four inputs were sent to each available formatter: a plain singleton initializer, one with a disabled entry in an own-line block comment, a binary expression with an intervening disabled entry, and an initializer with an own-line line comment. The foreign-language line comments are reference syntax, not a proposed LiteScript comment form.
+The [captured results](lite://repo/docs/research/formatter-comment-probes-2026-10-25.json) contain all eight successful probes, their commands, inputs, outputs, and idempotence results. Four inputs were sent to each available formatter: a plain singleton initializer, one with a disabled entry in an own-line block comment, a binary expression with an intervening disabled entry, and an initializer with an own-line line comment. The foreign-language line comments are reference syntax, not a proposed LiteScript comment form.
 
 Representative TypeScript input:
 
@@ -81,15 +81,15 @@ rustfmt --emit stdout --edition 2024 --config-path /path/to/isolated/rustfmt.tom
 
 The Rustfmt config contained max_width = 100. Every successful output was passed through the same command a second time; all eight second passes were unchanged. A rejected Deno attempt using --no-editorconfig is not counted as successful evidence. Version discovery confirmed the local Bun limitation above. No SDKs or dependencies were installed, and no project source was run through a foreign formatter.
 
-LiteScript subsequently selected [formatter idempotence](tooling-and-learning.md#formatter-stability-and-idempotence) as its own required future conformance check on 2026-10-25. The foreign-tool second passes here remain evidence only for these captured inputs and versions; they neither verify a LiteScript formatter nor prove universal idempotence for those external tools.
+LiteScript subsequently selected [formatter idempotence](lite://doc/tooling-and-learning#formatter-stability-and-idempotence) as its own required future conformance check on 2026-10-25. The foreign-tool second passes here remain evidence only for these captured inputs and versions; they neither verify a LiteScript formatter nor prove universal idempotence for those external tools.
 
 These languages do not support LiteScript's leading and spelling. The probes isolate comment/layout handling using analogous valid syntax; they cannot verify LiteScript syntax, semantics, or future formatter output.
 
 ## Consequences for LiteScript
 
-Selected: comments contribute no operand, including when their text resembles and authenticated. Ali may comment out or delete the first entry while the remaining and connected singleton remains valid. See [Ali's editing sequence](leading-separators.md#ali-removes-the-first-condition) and [comment neutrality](comments.md#neutrality-in-code-and-parsing).
+Selected: comments contribute no operand, including when their text resembles and authenticated. Ali may comment out or delete the first entry while the remaining and connected singleton remains valid. See [Ali's editing sequence](lite://doc/leading-separators#ali-removes-the-first-condition) and [comment neutrality](lite://doc/comments#neutrality-in-code-and-parsing).
 
-Subsequently selected on 2026-10-25: retain ordinary/raw comment contents as opaque text and preserve their attachment to the same nearby code, while allowing indentation at the source position and surrounding line breaks to change. Count only real chain entries. Comment text is neither a phantom entry nor an implicit formatting command and does not itself require a specific vertical layout. This is the [selected comment-formatting contract](comments.md#selected-formatting-contract), not an adoption of another formatter's exact output.
+Subsequently selected on 2026-10-25: retain ordinary/raw comment contents as opaque text and preserve their attachment to the same nearby code, while allowing indentation at the source position and surrounding line breaks to change. Count only real chain entries. Comment text is neither a phantom entry nor an implicit formatting command and does not itself require a specific vertical layout. This is the [selected comment-formatting contract](lite://doc/comments#selected-formatting-contract), not an adoption of another formatter's exact output.
 
 A formatter can retain comments separately from the executable syntax tree. This remains an implementation possibility inferred from the behavior above, not a selected internal representation. Ordinary comment bodies are not reflowed or formatted as code/prose under the selected opaque-content rule.
 

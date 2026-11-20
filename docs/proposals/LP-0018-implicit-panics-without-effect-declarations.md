@@ -41,4 +41,4 @@ No universal language-level Result return is introduced for every array access o
 
 `r1` selects implicit live panics, forbids checked panic-effect declarations, preserves literal first-class outcome returns and broad live-panic capture, and leaves documentary fault annotations for investigation. No language/component release or execution conformance is created.
 
-Normative owner: [panics](../panics.md#no-checked-panic-effect-declarations). Related: [capture](../failure-capture-and-unwrapping.md), [Result data](../result-and-errors.md), [manual failures](../manual-failures-and-inference.md), and [recapture](LP-0016-recapture-and-warning-policy.md).
+Normative owner: [panics](lite://doc/panics#no-checked-panic-effect-declarations). Related: [capture](lite://doc/failure-capture-and-unwrapping), [Result data](lite://doc/result-and-errors), [manual failures](lite://doc/manual-failures-and-inference), and [recapture](lite://doc/proposals/LP-0016-recapture-and-warning-policy).

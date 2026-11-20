@@ -26,7 +26,7 @@ Specification cases (not executed compiler tests):
 - **scalar-literal-zero:** `n: Int64 = 0;` creates an all-zero Int64 slot, interpreted as numeric zero.
 - **typed-member-zero:** `n: Int64 = 0; x: (Int64 | String) = n;` supplies the existing Int64 member value, rather than requesting an all-zero union slot.
 
-The no-known-member state can be checked and explicitly handled in a match; an unhandled match implicitly panics, while ordinary `_` covers known members. State naming and checker/pattern syntax remain open, as do access and unrecognized nonzero Kinds. See [union patterns](union-patterns.md#zero-initialized-union-state-in-checks-and-matches).
+The no-known-member state can be checked and explicitly handled in a match; an unhandled match implicitly panics, while ordinary `_` covers known members. State naming and checker/pattern syntax remain open, as do access and unrecognized nonzero Kinds. See [union patterns](lite://doc/union-patterns#zero-initialized-union-state-in-checks-and-matches).
 
 ## Historical declaration alternatives
 
@@ -34,7 +34,7 @@ The following discussion records older alternatives. Assertions based on the for
 
 ## Receiving an existing value
 
-For the member-only model, an ordinary parameter receives an already initialized A | B value. It preserves the supplied active member and payload; it does not choose the leftmost member of its own annotation. Selected on **2026-10-25**: with valid value/payload copy contracts, ordinary union inputs and fixed temporaries preserve that active value independently of later source replacement. In the explicit Int/String example, tmp keeps Int 42 after value becomes String "ready". Copying constructs no inactive member and selects no zero/default state, implicit unwrap, or new result-narrowing rule. Copyability eligibility and reference/resource safety remain deferred; see [copyable union and enum values](parameter-values-and-slots.md#copyable-union-and-enum-values-selected).
+For the member-only model, an ordinary parameter receives an already initialized A | B value. It preserves the supplied active member and payload; it does not choose the leftmost member of its own annotation. Selected on **2026-10-25**: with valid value/payload copy contracts, ordinary union inputs and fixed temporaries preserve that active value independently of later source replacement. In the explicit Int/String example, tmp keeps Int 42 after value becomes String "ready". Copying constructs no inactive member and selects no zero/default state, implicit unwrap, or new result-narrowing rule. Copyability eligibility and reference/resource safety remain deferred; see [copyable union and enum values](lite://doc/parameter-values-and-slots#copyable-union-and-enum-values-selected).
 
 ```text
 consume := fn(value: A | B): Unit {
@@ -46,7 +46,7 @@ consume := fn(value: A | B): Unit {
 
 Assume the input is a stable closed union with distinct A/B alternatives and no extra empty state. The final path is logically unreachable; exact diagnostic/flow analysis remains separate. The example is not a claim that this code has been implemented or executed. If the empty-zero alternative is adopted, A/B-only coverage instead needs a nonempty proof.
 
-Uninitialized storage cannot be passed to this ordinary parameter. Omitted arguments have a selected rule for all parameter types: require an applicable explicitly declared default, or reject the call. Such a default must supply a valid initialized value. See [argument omission](union-parameter-defaults.md); no automatic zero or uninitialized input is supplied. Explicit output-only construction would require its own contract.
+Uninitialized storage cannot be passed to this ordinary parameter. Omitted arguments have a selected rule for all parameter types: require an applicable explicitly declared default, or reject the call. Such a default must supply a valid initialized value. See [argument omission](lite://doc/union-parameter-defaults); no automatic zero or uninitialized input is supplied. Explicit output-only construction would require its own contract.
 
 ## Leftmost member as a construction rule
 
@@ -97,7 +97,7 @@ Relative to requiring = ?, this removes a marker but makes omitted initializatio
 
 ## What declaration policy does not settle
 
-Neither explicit reservation nor default-uninitialized locals supplies a valid zero(A | B). The newly rejected undirected union-zero initializer means the earlier universal-zero construction policy needs reconciliation for recursively zeroed aggregate fields, loop state, and zero callable results. Omitted arguments without declared defaults are now rejected for all parameter types rather than creating a union zero. Conditional results are separately reconciled by [requiring explicit union fallback](conditional-union-fallback.md) and constructing exhaustive chains from the chosen member. Each must either receive a member-selection mapping or be explicitly revised. Making those hidden uninitialized reads would contradict the proposed definite-initialization boundary.
+Neither explicit reservation nor default-uninitialized locals supplies a valid zero(A | B). The newly rejected undirected union-zero initializer means the earlier universal-zero construction policy needs reconciliation for recursively zeroed aggregate fields, loop state, and zero callable results. Omitted arguments without declared defaults are now rejected for all parameter types rather than creating a union zero. Conditional results are separately reconciled by [requiring explicit union fallback](lite://doc/conditional-union-fallback) and constructing exhaustive chains from the chosen member. Each must either receive a member-selection mapping or be explicitly revised. Making those hidden uninitialized reads would contradict the proposed definite-initialization boundary.
 
 The three readable-value designs remain separate: a listed zero member, source-directed construction of a listed member, or a deliberately valid empty union state. Uninitialized storage is not a fourth readable value. Undirected union literal-zero initialization and omitted initializers on multi-member union locals are rejected. Constructor grammar, implicit zero-result sites, and complete representation rules remain under review.
 

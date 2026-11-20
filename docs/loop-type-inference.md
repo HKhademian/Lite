@@ -2,7 +2,7 @@
 
 Status: **body type `T`, final result type `R`, destination-side expectations, and the no-contributor `Unit` default are selected; full numeric/operator and inference algorithms remain open**.
 
-Normative page for body `T` and final `R` inference. `.value` type/commits are in [loop value](loop-value.md); loop forms are in [loops](loops.md); completion is in [loop completion](loop-completion.md).
+Normative page for body `T` and final `R` inference. `.value` type/commits are in [loop value](lite://doc/loop-value); loop forms are in [loops](lite://doc/loops); completion is in [loop completion](lite://doc/loop-completion).
 
 ## Body and destination cooperate
 
@@ -70,7 +70,7 @@ The explicit destination types the loop result and `.value` as `Option<User>`. A
 
 This is a noncontributing path, not a zero-contribution. A prior committed value is preserved. A declaration such as `x := if cond { value }; x` is different: `x` is zero-initialized on no match, and the tail `x` contributes that zero. Put the conditional itself in tail position, or use `else { ? }`/`continue`, to skip the contribution. An explicit `else` can contribute a replacement value.
 
-A tagged return contributes its payload as the target's T. With no then, T is also the target's result type; with then, the target's then determines R from the committed T. The example in [control flow](control-flow.md#loop-distinction) shows a targeted search without then. Exact unannotated inference for targeted-result-only searches remains formalization work, especially when zero(T) and an independent then result are involved.
+A tagged return contributes its payload as the target's T. With no then, T is also the target's result type; with then, the target's then determines R from the committed T. The example in [control flow](lite://doc/control-flow#loop-distinction) shows a targeted search without then. Exact unannotated inference for targeted-result-only searches remains formalization work, especially when zero(T) and an independent then result are involved.
 
 ## Loops with no contributing path
 
@@ -97,4 +97,4 @@ In the example above, T is `Unit` and R is `String`. The same default applies wh
 - Conditional/match branches retain their ordinary type/union rules; inference cannot erase incompatible operations.
 - Types and zero representations are determined at compile time, before runtime source checks or body execution.
 
-Full overload resolution, literal polymorphism, numeric promotion, unions, ownership, and the inference algorithm for targeted-result-only searches remain separate formalization work. See [numbers](numbers.md), [loop value](loop-value.md), [completion](loop-completion.md), and [general inference](types-and-inference.md).
+Full overload resolution, literal polymorphism, numeric promotion, unions, ownership, and the inference algorithm for targeted-result-only searches remain separate formalization work. See [numbers](lite://doc/numbers), [loop value](lite://doc/loop-value), [completion](lite://doc/loop-completion), and [general inference](lite://doc/types-and-inference).

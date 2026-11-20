@@ -1,6 +1,6 @@
 # Collection contracts in function inputs and outputs
 
-Status: **inferred local indexed-input direction and explicit public contract direction selected 2026-11-14; other signature and return models remain proposals**. The [indexed-sequence decision](indexed-sequence-contract.md) selects [T] for indexed traversal. Full generic grammar, opaque return behavior, first-class function representation, and ownership remain open.
+Status: **inferred local indexed-input direction and explicit public contract direction selected 2026-11-14; other signature and return models remain proposals**. The [indexed-sequence decision](lite://doc/indexed-sequence-contract) selects [T] for indexed traversal. Full generic grammar, opaque return behavior, first-class function representation, and ownership remain open.
 
 ## Local inferred indexing and explicit public contracts
 
@@ -82,7 +82,7 @@ make_users := fn (): Iterable<User> {
 
 Assume User exposes the illustrated field and greet accepts User with read access. The input may be supplied by compatible arrays, lists, sets, slices, or user providers under their access/lifetime contracts. The output guarantees traversal; the fixed-array implementation inferred from the known-size literal does not automatically become part of the public contract.
 
-This is the proposed semantic interpretation, not finalized source syntax. A known-size fresh literal now supplies a fixed-array provider when the abstract expected contract does not choose a concrete collection family. An explicit expected concrete List can request growable construction. The rule does not manufacture an arbitrary caller-selected provider; see [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
+This is the proposed semantic interpretation, not finalized source syntax. A known-size fresh literal now supplies a fixed-array provider when the abstract expected contract does not choose a concrete collection family. An explicit expected concrete List can request growable construction. The rule does not manufacture an arbitrary caller-selected provider; see [fixed-array inference](lite://doc/tuple-array-shapes#known-size-fresh-literals-infer-fixed-arrays).
 
 ## Inferred versus explicitly complete inputs
 
@@ -102,7 +102,7 @@ An explicitly complete input contract must remain the boundary for body checking
 
 An alternative is to make some annotations partial and infer additional constraints. If adopted, that category needs a defined boundary rather than having the same complete annotation unpredictably acquire requirements. The current recommendation is omitted inputs for inference and deliberately complete explicit contracts for stable APIs. The exact public-signature requirement remains open.
 
-The later [ergonomics review](collection-signature-ergonomics.md) investigated partial annotations in response to the user's concern about strong shorthand spreading into library APIs. The user's subsequent source-visibility objection favors keeping written contracts complete; compiler/tool visibility alone is insufficient. The subsequent [indexed-sequence decision](indexed-sequence-contract.md) accepts [T] for the complete indexed bundle, distinct from traversal-only Iterable<T>. Examples above now use the latter notation to preserve their intended weaker requirement.
+The later [ergonomics review](lite://doc/collection-signature-ergonomics) investigated partial annotations in response to the user's concern about strong shorthand spreading into library APIs. The user's subsequent source-visibility objection favors keeping written contracts complete; compiler/tool visibility alone is insufficient. The subsequent [indexed-sequence decision](lite://doc/indexed-sequence-contract) accepts [T] for the complete indexed bundle, distinct from traversal-only Iterable<T>. Examples above now use the latter notation to preserve their intended weaker requirement.
 
 ## Preserve input/output relationships
 
@@ -150,4 +150,4 @@ Rust makes a useful distinction: impl Trait in a parameter describes an anonymou
 
 Recommend designing function types around these semantic boundaries first: inferred requirements for scripts; complete explicit requirements for stable APIs; preserved generic relationships; static abstract returns where appropriate; and explicit runtime-erased values when needed. Then choose beginner shorthand and full generic notation together.
 
-Related: [operation contracts](collection-operation-contracts.md), [inference](collection-inference.md), [functions](functions.md), [type aliases](type-aliases.md), [generic notation](generic-notation.md), and [performance](generic-collection-performance.md).
+Related: [operation contracts](lite://doc/collection-operation-contracts), [inference](lite://doc/collection-inference), [functions](lite://doc/functions), [type aliases](lite://doc/type-aliases), [generic notation](lite://doc/generic-notation), and [performance](lite://doc/generic-collection-performance).

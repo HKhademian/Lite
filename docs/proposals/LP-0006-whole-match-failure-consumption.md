@@ -5,7 +5,7 @@
 - Status: **accepted, 2026-10-26; unreleased design clarification**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
-- Supersedes: none; resolves ordinary type-filter consumption multiplicity left open by [LP-0004 r1](LP-0004-count-free-error-contracts.md).
+- Supersedes: none; resolves ordinary type-filter consumption multiplicity left open by [LP-0004 r1](lite://doc/proposals/LP-0004-count-free-error-contracts).
 - Superseded by: none.
 
 ## Selected contract
@@ -23,7 +23,7 @@ For schematic (ErrA1, ErrA2, ErrB), where both ErrA values match the same catego
 
 ## Collector follow-up
 
-During this clarification, the user explored `else errs: [ErrA] { ... }` to expose all matching values for explicit iteration, including a single match as a one-element sequence. The subsequent [LP-0007 r1](LP-0007-typed-recovery-collectors.md) selects `else ...errs: ErrA { ... }` instead, with errs typed [ErrA], once-per-clause execution, and stable occurrence order. The earlier bracket-only capture candidate is retained in LP-0005's revision history.
+During this clarification, the user explored `else errs: [ErrA] { ... }` to expose all matching values for explicit iteration, including a single match as a one-element sequence. The subsequent [LP-0007 r1](lite://doc/proposals/LP-0007-typed-recovery-collectors) selects `else ...errs: ErrA { ... }` instead, with errs typed [ErrA], once-per-clause execution, and stable occurrence order. The earlier bracket-only capture candidate is retained in LP-0005's revision history.
 
 Whole-match consumption does not depend on spelling an explicit sequence receiver. Ordinary typed and receiverless forms keep their complete matching coverage. Scalar receiver behavior with several payloads, ownership/retention, and nonlocal exits with unmatched failures remain open in LP-0005. Repeated entries inside combined/ordered receiver patterns also need their own matching rules.
 
@@ -31,4 +31,4 @@ Whole-match consumption does not depend on spelling an explicit sequence receive
 
 `r1` records the user's clarification that simple catches retain all-match consumption and sequence capture supports singleton capture. It links the subsequent collector-spelling selection in LP-0007, invents no implicit handler loop, and claims no parser/compiler/runtime validation.
 
-Normative owner: [expression recovery](../expression-recovery.md#whole-match-consumption-selected).
+Normative owner: [expression recovery](lite://doc/expression-recovery#whole-match-consumption-selected).

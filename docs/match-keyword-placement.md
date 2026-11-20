@@ -2,7 +2,7 @@
 
 Status: **comparison reviewed 2026-10-18; recommend retaining the current prefix form; subject-first syntax is an alternative under review, not a selected alias**.
 
-The subsequently selected [subjectless match](match.md#subjectless-boolean-selection-selected), `match { Boolean_condition { ... } _ { ... } }`, also keeps the prefix keyword. It is a distinct Boolean-selection form with no subject, not an alias for the subject-first pattern form compared below.
+The subsequently selected [subjectless match](lite://doc/match#subjectless-boolean-selection-selected), `match { Boolean_condition { ... } _ { ... } }`, also keeps the prefix keyword. It is a distinct Boolean-selection form with no subject, not an alias for the subject-first pattern form compared below.
 
 ## Two forms
 
@@ -80,4 +80,4 @@ Retain `match value { ... }` as the sole current form. It fits LiteScript's exis
 
 The alternative remains documented for review. No parser, benchmark, or beginner-usability result follows from this recommendation.
 
-Related: [match](match.md), [grammar sketch](grammar-sketch.md), [lexical block boundaries](lexical-structure.md), and [blocks and results](blocks-and-results.md).
+Related: [match](lite://doc/match), [grammar sketch](lite://doc/grammar-sketch), [lexical block boundaries](lite://doc/lexical-structure), and [blocks and results](lite://doc/blocks-and-results).

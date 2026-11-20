@@ -14,9 +14,9 @@ Binary operators at each level associate left to right. Parentheses override gro
 
 The optional leading `+` at a complete additive-chain entry is identity punctuation, including for one operand. It preserves value and type without promotion, conversion, an implicit zero, or an extra operator invocation. Minus retains negation. No redundant leading `*`, `/`, `:/`, `%`, `:%`, or power operator follows from that rule.
 
-Selected 2026-10-25: Floating operands supply floating division semantics, including nonintegral literals and established values. For Int storage, `/` truncates the quotient and `:/` floors it; an Int destination does not truncate or retype operands. Float/Double results keep `/` fractional, including 2 / 7. Without floating operands or a fractional expected result, integer-only division retains its integer default. See [calculation and storage](division.md#floating-calculation-and-integer-storage). `%` is remainder paired with Int-result truncating `/`, with the dividend's sign when nonzero; `:%` is modulo paired with floor `:/`, with the divisor's sign when nonzero. This supersedes always-fractional Int division, the subsequent operand-only rule, and the earlier `//` / `%%` spellings. Ordinary methods are requested in addition. Compact/spaced equivalence remains required, with colon-prefixed operator scanning is unambiguous. Numeric representation, mixed operands, conversions, exact faults, and complete parsing remain open. See [operators](operators.md), [division](division.md), [the selected family](arithmetic-methods-and-division-revision.md), and [evaluation order](evaluation-order.md).
+Selected 2026-10-25: Floating operands supply floating division semantics, including nonintegral literals and established values. For Int storage, `/` truncates the quotient and `:/` floors it; an Int destination does not truncate or retype operands. Float/Double results keep `/` fractional, including 2 / 7. Without floating operands or a fractional expected result, integer-only division retains its integer default. See [calculation and storage](lite://doc/division#floating-calculation-and-integer-storage). `%` is remainder paired with Int-result truncating `/`, with the dividend's sign when nonzero; `:%` is modulo paired with floor `:/`, with the divisor's sign when nonzero. This supersedes always-fractional Int division, the subsequent operand-only rule, and the earlier `//` / `%%` spellings. Ordinary methods are requested in addition. Compact/spaced equivalence remains required, with colon-prefixed operator scanning is unambiguous. Numeric representation, mixed operands, conversions, exact faults, and complete parsing remain open. See [operators](lite://doc/operators), [division](lite://doc/division), [the selected family](lite://doc/arithmetic-methods-and-division-revision), and [evaluation order](lite://doc/evaluation-order).
 
-Power uses `**` with explicit unary-minus/base grouping, selected after this comparison; see [power and negation](power-and-negation.md). Right association, Float-default results, and zero/negative exponent behavior are now selected; full grammar and remaining numeric contracts remain open. ^, power updates, bitwise operators, and wrapping/saturating arithmetic are not selected. A complete expression grammar still needs integration with calls, access, ranges, types, and recovery.
+Power uses `**` with explicit unary-minus/base grouping, selected after this comparison; see [power and negation](lite://doc/power-and-negation). Right association, Float-default results, and zero/negative exponent behavior are now selected; full grammar and remaining numeric contracts remain open. ^, power updates, bitwise operators, and wrapping/saturating arithmetic are not selected. A complete expression grammar still needs integration with calls, access, ranges, types, and recovery.
 
 ## Java, C, C++, C#, and Python
 
@@ -80,7 +80,7 @@ The versioned reference distinguishes ordinary, wrapping, and saturating arithme
 
 ### V
 
-The inspected operator appendix lists numeric `**` above `* / %`, then `+ -`, and shows a negative dividend producing a negative remainder. That appendix does not settle power associativity or unary-minus interaction, so this review makes no claim about those cases. Sources: [operator appendix](https://docs.vlang.io/appendix-ii-operators.html) and [current source documentation](https://raw.githubusercontent.com/vlang/v/master/doc/docs.md). The subsequent [signed table](signed-division-table.md) records four division/remainder cases executed in the official V playground, which reported V 0.5.0 345b29d. Power was not executed; neither the playground version nor development documentation establishes every released version's behavior.
+The inspected operator appendix lists numeric `**` above `* / %`, then `+ -`, and shows a negative dividend producing a negative remainder. That appendix does not settle power associativity or unary-minus interaction, so this review makes no claim about those cases. Sources: [operator appendix](https://docs.vlang.io/appendix-ii-operators.html) and [current source documentation](https://raw.githubusercontent.com/vlang/v/master/doc/docs.md). The subsequent [signed table](lite://doc/signed-division-table) records four division/remainder cases executed in the official V playground, which reported V 0.5.0 345b29d. Power was not executed; neither the playground version nor development documentation establishes every released version's behavior.
 
 ## Design consequences for LiteScript
 
@@ -102,7 +102,7 @@ Selected 2026-10-25 after the sign and spelling reviews: LiteScript uses `%` for
 - Odin: `%` uses truncating remainder, while `%%` uses `a - b * floor(a / b)`. Thus `-7 %% 2` is `1`, but `7 %% -2` is `-1`. These values are derived from the [documented formula](https://raw.githubusercontent.com/odin-lang/odin-lang.org/master/content/docs/overview.md), not an executed Odin program.
 - Dart: `%` is [Euclidean modulo](https://api.dart.dev/dart-core/num/operator_modulo.html); [remainder](https://api.dart.dev/dart-core/num/remainder.html) instead follows truncating division. The two coincide for many positive inputs but differ for negative dividends.
 - Zig 0.15.2: [@rem](https://ziglang.org/documentation/0.15.2/#rem) pairs with truncating division and [@mod](https://ziglang.org/documentation/0.15.2/#mod) with floor division. Their documented contracts give `@rem(-7, 2) == -1` and `@mod(-7, 2) == 1`; these are source-derived examples, with no local Zig execution.
-- V: the [operator appendix](https://docs.vlang.io/appendix-ii-operators.html) explicitly gives `-10 % 7 == -3`. The subsequent [signed table](signed-division-table.md) adds all four signed cases observed in the official V 0.5.0 playground, confirming truncating integer division and dividend-signed remainder for those values.
+- V: the [operator appendix](https://docs.vlang.io/appendix-ii-operators.html) explicitly gives `-10 % 7 == -3`. The subsequent [signed table](lite://doc/signed-division-table) adds all four signed cases observed in the official V 0.5.0 playground, confirming truncating integer division and dividend-signed remainder for those values.
 
 For LiteScript, `%` follows the dividend and `:%` follows the divisor when nonzero. Modulo `:%` is therefore not always nonnegative for negative divisors; preserve its selected floor identity with `:/`. Floating-point remainder, signed zero, zero divisors, and unrepresentable fixed-width cases need their own numeric/fault contracts.
 
@@ -114,7 +114,7 @@ Both the floor and Euclidean conventions are coherent. Floor modulo keeps a == b
 
 For positive divisors, floor modulo and Euclidean modulo agree. Keeping the selected floor form makes `:%` pair with LiteScript's `:/` for negative divisors too. A future nonnegative Euclidean operation would need its own clear contract; neither the word modulo nor a claim of mathematical correctness should silently switch conventions.
 
-Several C-family references use `//` for line comments. LiteScript has retired that arithmetic spelling, without selecting a line-comment replacement; its current block-comment rules remain in force. Selecting `:/` and `:%` leaves the compact operator/identifier boundary unresolved. Adjacent stars need equal care: C/C++ can parse multiplication followed by dereference; Zig 0.15.2 gives `**` an array meaning. Preserve the selected [comment token boundaries](comments.md) rather than importing another lexer.
+Several C-family references use `//` for line comments. LiteScript has retired that arithmetic spelling, without selecting a line-comment replacement; its current block-comment rules remain in force. Selecting `:/` and `:%` leaves the compact operator/identifier boundary unresolved. Adjacent stars need equal care: C/C++ can parse multiplication followed by dereference; Zig 0.15.2 gives `**` an array meaning. Preserve the selected [comment token boundaries](lite://doc/comments) rather than importing another lexer.
 
 ### Power spelling selected; remaining contracts open
 
@@ -154,18 +154,18 @@ Associativity describes the expression tree. It does not by itself specify which
 
 ## Verification and limits
 
-[Captured local probes](research/arithmetic-operator-probes-2026-10-25.json) include exact source, commands, versions, compiler diagnostics, expected output, and observed output. Seven toolchains completed the applicable probes: Python 3.15.1, Node 24.16.0, Apple Clang 21 in C17 and C++20 modes, Rust 1.97.1, Java 25.0.3, and Swift 6.4. A separate Rust compilation confirmed rejection of unary `+`. All recorded expectations matched.
+[Captured local probes](lite://repo/docs/research/arithmetic-operator-probes-2026-10-25.json) include exact source, commands, versions, compiler diagnostics, expected output, and observed output. Seven toolchains completed the applicable probes: Python 3.15.1, Node 24.16.0, Apple Clang 21 in C17 and C++20 modes, Rust 1.97.1, Java 25.0.3, and Swift 6.4. A separate Rust compilation confirmed rejection of unary `+`. All recorded expectations matched.
 
 The probes cover basic precedence/left association, signed division/remainder, selected unary-plus behavior, and Python/JavaScript power examples. They do not test every profile or every numeric type. Go, C#, Kotlin, Dart, Lua, Odin, Zig, and V were reviewed through primary sources without local execution. C17/C++20 probes do not execute every provision of the newer drafts cited above. No installs or LiteScript execution were performed.
 
-The same capture now includes three focused sign probes in Python, Node, and Rust. They check negative dividends/divisors, Rust Euclidean remainder, odd/even negative-base powers, Python/JavaScript negative exponents and domain outcomes, and Rust integer power. All captured expectations matched. Additional sign examples for Odin, Dart, and Zig remain primary-source findings rather than runtime verification. Four V 0.5.0 playground division/remainder cases are captured separately in the [signed table's data](research/signed-division-table-2026-10-25.json); no signed-power execution is claimed there.
+The same capture now includes three focused sign probes in Python, Node, and Rust. They check negative dividends/divisors, Rust Euclidean remainder, odd/even negative-base powers, Python/JavaScript negative exponents and domain outcomes, and Rust integer power. All captured expectations matched. Additional sign examples for Odin, Dart, and Zig remain primary-source findings rather than runtime verification. Four V 0.5.0 playground division/remainder cases are captured separately in the [signed table's data](lite://repo/docs/research/signed-division-table-2026-10-25.json); no signed-power execution is claimed there.
 
 ## Related documents
 
-- [Signed division, remainder, and modulo table](signed-division-table.md)
-- [Operators and selected arithmetic grouping](operators.md#basic-arithmetic-grouping-selected)
-- [Provisional grammar](grammar-sketch.md#basic-arithmetic-grouping-and-leading-plus)
-- [Numbers](numbers.md)
-- [Division](division.md)
-- [Decision ledger](decisions-and-open-questions.md)
-- [References](references.md)
+- [Signed division, remainder, and modulo table](lite://doc/signed-division-table)
+- [Operators and selected arithmetic grouping](lite://doc/operators#basic-arithmetic-grouping-selected)
+- [Provisional grammar](lite://doc/grammar-sketch#basic-arithmetic-grouping-and-leading-plus)
+- [Numbers](lite://doc/numbers)
+- [Division](lite://doc/division)
+- [Decision ledger](lite://doc/decisions-and-open-questions)
+- [References](lite://doc/references)

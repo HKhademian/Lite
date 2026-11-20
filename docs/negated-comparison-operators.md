@@ -77,7 +77,7 @@ The shorthand ! must be attached to the end of its type. Spaces around the follo
 
 Explicit T ! E retains ordinary token separation because it supplies an error operand. With no explicit error operand, attached T! expands to T ! Error; detached T ! is not valid shorthand. This does not change the separate expression-level postfix ! contract or adopt != as a comparison.
 
-Angle-bracket generics remain [temporary explanatory notation](generic-notation.md). The conditional boundary contract is selected; comparison spellings are now selected, while complete generic grammar, lexer/parser integration, and executable verification remain open. See [fallible-type shorthand attachment](fallible-types-and-error-composition.md#fallible-type-shorthand-attachment-selected).
+Angle-bracket generics remain [temporary explanatory notation](lite://doc/generic-notation). The conditional boundary contract is selected; comparison spellings are now selected, while complete generic grammar, lexer/parser integration, and executable verification remain open. See [fallible-type shorthand attachment](lite://doc/fallible-types-and-error-composition#fallible-type-shorthand-attachment-selected).
 
 ## Readability and alternatives considered
 
@@ -100,9 +100,9 @@ Readability assessments above are design judgments, not measured user results. e
 
 All ten operators ==, =!=, >, >!, <, <!, >=, >!=, <=, and <!= share one comparison precedence. A negated comparison complements one adjacent pair within a chain, retaining single evaluation, left-to-right execution, and short-circuiting. For example, a >! b < c would test not (a > b) and then b < c using the retained b. Existing prefix not a > b < c instead negates the entire chain. These are different expressions.
 
-All ten comparison-pattern prefixes are also selected. Each tests its supplied component with the ordinary operator meaning, introduces no binding, and evaluates its runtime right operand once when reached. False is mismatch; a failure remains a failure. This does not select logical and/not subpatterns, implicit-subject pattern chains, or a new coverage proof algorithm. Complete operand boundaries remain open; see [comparison patterns](comparison-patterns.md).
+All ten comparison-pattern prefixes are also selected. Each tests its supplied component with the ordinary operator meaning, introduces no binding, and evaluates its runtime right operand once when reached. False is mismatch; a failure remains a failure. This does not select logical and/not subpatterns, implicit-subject pattern chains, or a new coverage proof algorithm. Complete operand boundaries remain open; see [comparison patterns](lite://doc/comparison-patterns).
 
-Comparison operators never introduce bindings. This includes negative operators such as =!= in expressions and all ten comparison-pattern prefixes. In `v if v =!= expected`, the initial v pattern binds; the operator only reads operands and tests them. Grouped [matching-condition negation](condition-chains.md#negated-matching-conditions-selected) is selected separately: inner patterns may bind for inner tests, but none of those names escape the negation. This does not select logical not subpatterns.
+Comparison operators never introduce bindings. This includes negative operators such as =!= in expressions and all ten comparison-pattern prefixes. In `v if v =!= expected`, the initial v pattern binds; the operator only reads operands and tests them. Grouped [matching-condition negation](lite://doc/condition-chains#negated-matching-conditions-selected) is selected separately: inner patterns may bind for inner tests, but none of those names escape the negation. This does not select logical not subpatterns.
 
 ## Evidence and remaining work
 
@@ -110,4 +110,4 @@ The review inspected current operators, chains, lexical direction, fallible type
 
 Selected contract: use the user's ASCII family with literal Boolean complements and one shared comparison precedence, retaining adjacent-pair chains and explicit not as the whole-chain negation. Preserve the selected type-suffix attachment boundary during future lexer/parser integration. Readability measurements, complete custom-comparison/numeric contracts, and implementation verification remain open. Unicode source spellings are excluded by the user's typing constraint. No infix not phrase, general logical pattern, or implicit-subject pattern chain is selected; the ten nonbinding comparison-pattern prefixes are selected.
 
-Related: [operators](operators.md), [comparison chains](comparison-chains.md), [comparison patterns](comparison-patterns.md), [fallible types](fallible-types-and-error-composition.md), and [numbers](numbers.md).
+Related: [operators](lite://doc/operators), [comparison chains](lite://doc/comparison-chains), [comparison patterns](lite://doc/comparison-patterns), [fallible types](lite://doc/fallible-types-and-error-composition), and [numbers](lite://doc/numbers).

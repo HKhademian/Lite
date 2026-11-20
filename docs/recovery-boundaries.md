@@ -1,14 +1,14 @@
 # Whole-call and argument-level recovery
 
-Status: **operation-specific and explicit whole-block recovery selected 2026-10-26**. Panics propagate implicitly without ! or a Result declaration, and language-managed propagation unwinds exited scopes through applicable `finally` blocks before an outer matching handler. The current operation boundary is [selected in LP-0001 r1](proposals/LP-0001-operation-specific-panic-recovery.md): argument panics bypass the outer operation handler. Whole-evaluation recovery requires the explicit block selected in [LP-0002 r1](proposals/LP-0002-explicit-block-panic-recovery.md); the earlier unbraced broad-call alternative is retained as history. The user explicitly requires Result-producing arguments to have their own handling/extraction before being passed as ordinary values, and prefers the nested local-fallback example.
+Status: **operation-specific and explicit whole-block recovery selected 2026-10-26**. Panics propagate implicitly without ! or a Result declaration, and language-managed propagation unwinds exited scopes through applicable `finally` blocks before an outer matching handler. The current operation boundary is [selected in LP-0001 r1](lite://doc/proposals/LP-0001-operation-specific-panic-recovery): argument panics bypass the outer operation handler. Whole-evaluation recovery requires the explicit block selected in [LP-0002 r1](lite://doc/proposals/LP-0002-explicit-block-panic-recovery); the earlier unbraced broad-call alternative is retained as history. The user explicitly requires Result-producing arguments to have their own handling/extraction before being passed as ordinary values, and prefers the nested local-fallback example.
 
-Supporting analysis: current recovery rules are owned by [expression recovery](expression-recovery.md), [result and errors](result-and-errors.md), and [checked fault policy](checked-fault-policy.md). If this supporting analysis conflicts with those pages, they win.
+Supporting analysis: current recovery rules are owned by [expression recovery](lite://doc/expression-recovery), [result and errors](lite://doc/result-and-errors), and [checked fault policy](lite://doc/checked-fault-policy). If this supporting analysis conflicts with those pages, they win.
 
 ## Selected operation-specific outcomes
 
 For `multiply(values[0], values[1]) else { 0 }`, a missing position panics during argument evaluation and bypasses the multiply handler. With an empty sequence, the first access fails; the second access, multiply, and outer fallback never run. With only [5], the second access fails after the first succeeds; multiply and its fallback still never run. With [5, 7], ordinary successful multiplication produces 35. Only faults defined by multiply's operation contract are eligible for its attached handler.
 
-With the local argument fallbacks shown below, empty values instead supplies 2 and 3 and produces 6; [5] produces 15. These are distinct outcomes, preserving the user's local-fallback preference. A typed outer filter does not change argument coverage. Operation fault attribution, complete attachment, and recovery-chain integration remain open; see [the normative boundary](expression-recovery.md#operation-specific-panic-boundary-selected).
+With the local argument fallbacks shown below, empty values instead supplies 2 and 3 and produces 6; [5] produces 15. These are distinct outcomes, preserving the user's local-fallback preference. A typed outer filter does not change argument coverage. Operation fault attribution, complete attachment, and recovery-chain integration remain open; see [the normative boundary](lite://doc/expression-recovery#operation-specific-panic-boundary-selected).
 
 ## Selected explicit block outcomes
 
@@ -26,7 +26,7 @@ answer := {
 } else { 0 }
 ```
 
-An empty sequence produces 0 through the block handler. An eligible multiply fault handled by the inner clause produces 1. Normal successful multiplication supplies its result. Exact fault categories and operation attribution remain open. See [the normative block boundary](expression-recovery.md#explicit-whole-block-panic-boundary-selected).
+An empty sequence produces 0 through the block handler. An eligible multiply fault handled by the inner clause produces 1. Normal successful multiplication supplies its result. Exact fault categories and operation attribution remain open. See [the normative block boundary](lite://doc/expression-recovery#explicit-whole-block-panic-boundary-selected).
 
 ## Result arguments require their own handling
 
@@ -168,4 +168,4 @@ Kotlin's try expression evaluates its body and selects a matching catch when eva
 
 Rust catch_unwind establishes capture around an executed closure and returns the closure result or an unwinding-panic payload; aborting panics are outside that mechanism, and unwind safety matters. This demonstrates why a catch boundary needs a defined transfer/safety policy beyond its syntax. Source: [Rust catch_unwind](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html).
 
-Related: [shared expression recovery](expression-recovery.md), [panics](panics.md), [Result handling](result-and-errors.md), [evaluation order](evaluation-order.md), and [typed faults](typed-panics.md).
+Related: [shared expression recovery](lite://doc/expression-recovery), [panics](lite://doc/panics), [Result handling](lite://doc/result-and-errors), [evaluation order](lite://doc/evaluation-order), and [typed faults](lite://doc/typed-panics).

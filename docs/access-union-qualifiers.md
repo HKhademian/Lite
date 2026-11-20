@@ -2,7 +2,7 @@
 
 Status: **historical user-proposed notation explored 2026-10-18; not selected**. Existing value-union normalization, var/mut permissions, and all-target field-write safety remain established. Mut is held-data access and var is the replacement marker; the meaning of a per-alternative `A | mut B` access summary and access-summary boundaries remain unselected.
 
-The subsequent replacement qualifier used slot, then the [var qualifier decision](var-access-qualifier.md) selected canonical A | var B | C. These access summaries distinguish replacement acceptance from held-data mutability. The mut spellings below preserve the original investigation and are superseded for that role. Complete access grammar and boundaries remain open; see [replacement access summaries](slot-access-qualifier.md).
+The subsequent replacement qualifier used slot, then the [var qualifier decision](lite://doc/var-access-qualifier) selected canonical A | var B | C. These access summaries distinguish replacement acceptance from held-data mutability. The mut spellings below preserve the original investigation and are superseded for that role. Complete access grammar and boundaries remain open; see [replacement access summaries](lite://doc/slot-access-qualifier).
 
 ## Proposed compact outcome
 
@@ -120,4 +120,4 @@ The compact output A | mut B | C is useful as a proposed access summary and fits
 
 Recommend defining those semantics before selecting the rewrite or treating it as type equality. Keep ordinary value union normalization unchanged and preserve original access alternatives behind any common summary.
 
-Related: [union values and access contracts](union-values-and-access.md), [field reads](union-field-reads.md), [field writes](union-field-writes.md), [immutability by default](immutability-by-default.md), [mutability](mutability.md), and [normalization](union-normalization.md).
+Related: [union values and access contracts](lite://doc/union-values-and-access), [field reads](lite://doc/union-field-reads), [field writes](lite://doc/union-field-writes), [immutability by default](lite://doc/immutability-by-default), [mutability](lite://doc/mutability), and [normalization](lite://doc/union-normalization).

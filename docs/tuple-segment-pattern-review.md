@@ -1,6 +1,6 @@
 # Tuple array segments and pattern rest: re-evaluation
 
-Status: **review and subsequent gradual-change outcome documented at the user's request, 2026-10-25**. The accepted result preserves structural tuple remainders, including a sole empty segment, without automatic array projection or universal array capture. The user clarified that the examples were progressive edge probes. Empty [] is an empty array; its exact unknown-versus-Unit element default is deferred rather than a gate for these examples. There is no LiteScript parser/runtime verification. See [gradual reasoning](tuple-remainder-gradual-reasoning.md).
+Status: **review and subsequent gradual-change outcome documented at the user's request, 2026-10-25**. The accepted result preserves structural tuple remainders, including a sole empty segment, without automatic array projection or universal array capture. The user clarified that the examples were progressive edge probes. Empty [] is an empty array; its exact unknown-versus-Unit element default is deferred rather than a gate for these examples. There is no LiteScript parser/runtime verification. See [gradual reasoning](lite://doc/tuple-remainder-gradual-reasoning).
 
 ## Keep the four operations distinct
 
@@ -44,7 +44,7 @@ middle: (head: Int, ...parts: Int; 3, tail: Int) =
 /* captured = (tail = 50): named singleton tuple */
 ```
 
-This does not enable middle declarations or make a scalar suffix into an array. See [the full gradual sequence](tuple-remainder-gradual-reasoning.md#carve-down-the-source-one-property-at-a-time).
+This does not enable middle declarations or make a scalar suffix into an array. See [the full gradual sequence](lite://doc/tuple-remainder-gradual-reasoning#carve-down-the-source-one-property-at-a-time).
 
 ## Candidate capture rules and their costs
 
@@ -78,7 +78,7 @@ value := (10, ...rest = []);
 
 [] is an empty array, and its extent is zero. No element annotation is required merely to construct it or reason about the segment's presence. Its exact unknown-element versus Unit-element default remains deferred; do not invent a public Unknown/Any/Never type or reject the shape example pending that decision. An expected [Int; 0] may still supply Int when wanted.
 
-An empty declared segment is one remaining stored component. No remaining components gives Unit. Unknown or deferred element information never authorizes erasing the segment. The previous demand to retain Int as an annotation throughout the zero-length gradient is superseded. See [empty-array clarification](tuple-remainder-gradual-reasoning.md#empty-means-empty-exact-element-defaults-can-wait).
+An empty declared segment is one remaining stored component. No remaining components gives Unit. Unknown or deferred element information never authorizes erasing the segment. The previous demand to retain Int as an annotation throughout the zero-length gradient is superseded. See [empty-array clarification](lite://doc/tuple-remainder-gradual-reasoning#empty-means-empty-exact-element-defaults-can-wait).
 
 ## Segment roles and extents participate in identity
 
@@ -131,4 +131,4 @@ Keep the accepted storage/access/emission model and structural pattern capture. 
 
 The re-evaluation used nine external candidate-model reference cases: existing trailing segment, consumed/unconsumed middle segment, ordinary nested array field, heterogeneous named fields, no remaining type evidence, typed zero segment, five Unit elements, and a runtime contract whose current length is three. A separate enumeration found four partitions for the five-value/two-unspecified-segment example. These are expected-value/model checks, not LiteScript execution or parser/typechecker conformance. The reference calculation is not a compiler implementation; the later user-approved gradual reasoning records the structural outcome and supersedes the earlier reopened status. The empty literal itself remains valid while its exact default element-type policy waits.
 
-Related: [array segments](tuple-array-segments.md), [structural pattern rest](tuple-spread-and-rest.md), [logical unpacking](tuple-unpacking.md), [array-tail schemas](tuple-array-shapes.md), [label-only conversion](tuple-label-conversions.md), and [Unit/storage boundaries](unit.md).
+Related: [array segments](lite://doc/tuple-array-segments), [structural pattern rest](lite://doc/tuple-spread-and-rest), [logical unpacking](lite://doc/tuple-unpacking), [array-tail schemas](lite://doc/tuple-array-shapes), [label-only conversion](lite://doc/tuple-label-conversions), and [Unit/storage boundaries](lite://doc/unit).

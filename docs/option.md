@@ -45,11 +45,11 @@ if .Some := find_user(id) {
 }
 ```
 
-The corresponding match arm is `.Some { report_found() }`; it covers every Some payload. By comparison, .Some(_) binds the payload to readable unused-allowed _. This rule concerns patterns, not construction of Some without data; see [tag-only enum patterns](enums-and-variants.md#tag-only-patterns).
+The corresponding match arm is `.Some { report_found() }`; it covers every Some payload. By comparison, .Some(_) binds the payload to readable unused-allowed _. This rule concerns patterns, not construction of Some without data; see [tag-only enum patterns](lite://doc/enums-and-variants#tag-only-patterns).
 
 By contrast, `_ { ... }` is a catch-all binding arm: `_` receives the whole remaining Option value and may be read. It does not mean None, introduce implicit unwrapping, or discard the input. Its underscore prefix permits nonuse without an unused-name warning.
 
-In an expression, `None` still resolves normally as a prelude value unless shadowed. For example, `empty := None;` is value construction/use, not a pattern test; isolated Option payload inference remains open. This decision changes case-pattern spelling without adding nullability or implicit unwrapping. See [pattern bindings and tests](pattern-bindings-and-tests.md).
+In an expression, `None` still resolves normally as a prelude value unless shadowed. For example, `empty := None;` is value construction/use, not a pattern test; isolated Option payload inference remains open. This decision changes case-pattern spelling without adding nullability or implicit unwrapping. See [pattern bindings and tests](lite://doc/pattern-bindings-and-tests).
 
 ## Default extraction helper
 
@@ -79,7 +79,7 @@ This is not an implicit optional-completion rule and does not insert an Option a
 
 ## Explicit optional loop values
 
-Loops no longer insert an Option accumulator automatically. Their .value has a statically determined body-result type and is zero-initialized. If that type is explicitly Option<T>, its absent state is part of that Option type; there is no additional wrapper. See [loop value](loop-value.md). The earlier .acc/previous receiver model is superseded.
+Loops no longer insert an Option accumulator automatically. Their .value has a statically determined body-result type and is zero-initialized. If that type is explicitly Option<T>, its absent state is part of that Option type; there is no additional wrapper. See [loop value](lite://doc/loop-value). The earlier .acc/previous receiver model is superseded.
 
 ## Open decisions
 
@@ -87,7 +87,7 @@ Construction inference for an isolated `None`, extraction-helper names, ownershi
 
 ## Related concepts and references
 
-- [Unit](unit.md)
-- [Loop accumulator](loop-accumulator.md)
-- [Loop completion](loop-completion.md)
+- [Unit](lite://doc/unit)
+- [Loop accumulator](lite://doc/loop-accumulator)
+- [Loop completion](lite://doc/loop-completion)
 - [Rust Option documentation](https://doc.rust-lang.org/std/option/index.html) provides an established comparison. Some optional representations can be optimized, but no universal zero-size-overhead layout guarantee has been selected for LiteScript.

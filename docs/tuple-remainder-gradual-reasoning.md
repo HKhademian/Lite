@@ -118,4 +118,4 @@ A sole ordinary component remains an ordinary singleton tuple. A sole declared s
 
 External reference-model checks exercised field deletion, whole-source capture, static and runtime length changes, typed empty segments, Unit distinctions, ordinary-array roles, heterogeneous preservation, and required-source rejection. The model found the extra tuple-layer loss in sole-segment projection. The user's later empty-literal clarification removes element annotation as a gate for the shape reasoning. None of these calculations is LiteScript parser/runtime or performance verification.
 
-Related: [review and alternatives](tuple-segment-pattern-review.md), [pattern rest](tuple-spread-and-rest.md#positional-tuple-rest-selected), [array segments](tuple-array-segments.md), [logical unpacking](tuple-unpacking.md), and [Unit](unit.md).
+Related: [review and alternatives](lite://doc/tuple-segment-pattern-review), [pattern rest](lite://doc/tuple-spread-and-rest#positional-tuple-rest-selected), [array segments](lite://doc/tuple-array-segments), [logical unpacking](lite://doc/tuple-unpacking), and [Unit](lite://doc/unit).

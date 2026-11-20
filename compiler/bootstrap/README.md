@@ -1,7 +1,7 @@
 # Generated bootstrap igniter
 
 `igniter.ts` is the single checked-in generated TypeScript bootstrap igniter and
-compiler seed. [seed.ts](seed.ts) records the igniter hash alongside the
+compiler seed. [seed.ts](lite://repo/compiler/bootstrap/seed.ts) records the igniter hash alongside the
 compiled compiler source, artifact, and revision identities. Running
 `./bin/lite-ignite` (or invoking any `bin/lite*` symlink) materializes the
 standalone compiler (`dist/bootstrap/compiler.ts`) and all tools

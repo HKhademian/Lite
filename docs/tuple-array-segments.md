@@ -2,7 +2,7 @@
 
 Status: **array-segment model and optional static extent selected in the 2026-10-25 discussion; current declarations remain tail-only**. Middle collectors and multiple stored segments are future discussion. This is design documentation, not parser/runtime verification.
 
-The subsequent [gradual-change reasoning](tuple-remainder-gradual-reasoning.md) confirms structural pattern rest: remaining labels, types, and segment markers survive even when only an empty segment remains. No sole-segment projection or universal array-producing tuple capture is selected. The earlier [review](tuple-segment-pattern-review.md) retains the evaluated alternatives and their consequences.
+The subsequent [gradual-change reasoning](lite://doc/tuple-remainder-gradual-reasoning) confirms structural pattern rest: remaining labels, types, and segment markers survive even when only an empty segment remains. No sole-segment projection or universal array-producing tuple capture is selected. The earlier [review](lite://doc/tuple-segment-pattern-review) retains the evaluated alternatives and their consequences.
 
 ## Element type and extent
 
@@ -86,7 +86,7 @@ grouped_items := (...grouped);
 /* (head = 10, 20, 30, 40): four components */
 ```
 
-An ordinary array-valued component stays one item when its containing tuple is unpacked. A declared segment emits each element as an unnamed item and omits the container label. Copying the tuple retains its stored grouping. A fixed extent therefore serves a real purpose even though it contributes no variable arity: named array access plus logical element emission. See [logical unpacking](tuple-unpacking.md).
+An ordinary array-valued component stays one item when its containing tuple is unpacked. A declared segment emits each element as an unnamed item and omits the container label. Copying the tuple retains its stored grouping. A fixed extent therefore serves a real purpose even though it contributes no variable arity: named array access plus logical element emission. See [logical unpacking](lite://doc/tuple-unpacking).
 
 The syntax always types each element, including tuple/array-valued elements:
 
@@ -102,7 +102,7 @@ Neither form implicitly flattens the elements' nested arrays. Likewise, ...rest:
 
 ## Segment role belongs to structural identity
 
-An ordinary array-valued field and a declared segment can expose the same array member type and positions while unpacking differently. Structural identity therefore includes the ordinary/segment role and its extent contract, in addition to ordered labels and resolved types. Label-only conversion preserves these roles and extents; it cannot silently change unpacking behavior or repack a segment. The role needs no per-value runtime tag. Further role/extent adaptation and type-spread replacement details remain separate. See [identity and conversion review](tuple-segment-pattern-review.md#segment-roles-and-extents-participate-in-identity).
+An ordinary array-valued field and a declared segment can expose the same array member type and positions while unpacking differently. Structural identity therefore includes the ordinary/segment role and its extent contract, in addition to ordered labels and resolved types. Label-only conversion preserves these roles and extents; it cannot silently change unpacking behavior or repack a segment. The role needs no per-value runtime tag. Further role/extent adaptation and type-spread replacement details remain separate. See [identity and conversion review](lite://doc/tuple-segment-pattern-review#segment-roles-and-extents-participate-in-identity).
 
 ## Callable contracts expose the extent they guarantee
 
@@ -136,7 +136,7 @@ empty := (10, ...rest = []);
 /* empty_remaining = (...rest = []), not Unit */
 ```
 
-Pattern rest preserves the tuple wrapper and role; ordinary binding selects a member. Removing the segment declaration, leaving only the consumed prefix, makes the remainder Unit. [] is an empty array without a mandatory element annotation; the exact default element-type policy can wait. See [gradual remainder reasoning](tuple-remainder-gradual-reasoning.md).
+Pattern rest preserves the tuple wrapper and role; ordinary binding selects a member. Removing the segment declaration, leaving only the consumed prefix, makes the remainder Unit. [] is an empty array without a mandatory element annotation; the exact default element-type policy can wait. See [gradual remainder reasoning](lite://doc/tuple-remainder-gradual-reasoning).
 
 ## Storage and zero extents
 
@@ -147,7 +147,7 @@ empty: (...rest: Int; 0) = (...rest = []);
 five_units: (...rest: Unit; 5) = (...rest = [(), (), (), (), ()]);
 ```
 
-empty still has its declared rest member of type [Int; 0] and is not Unit. Explicit unpacking emits zero items. five_units has five semantic elements, zero element bytes, and a static count. Its explicit unpack emits five Unit items. By contrast, (...rest: Unit) accepts different counts whose runtime information belongs to the enclosing container. Zero size never erases grouping, count, evaluation, or required cleanup. See [Unit](unit.md#zero-storage-does-not-erase-shape) and [fixed-array layout](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage).
+empty still has its declared rest member of type [Int; 0] and is not Unit. Explicit unpacking emits zero items. five_units has five semantic elements, zero element bytes, and a static count. Its explicit unpack emits five Unit items. By contrast, (...rest: Unit) accepts different counts whose runtime information belongs to the enclosing container. Zero size never erases grouping, count, evaluation, or required cleanup. See [Unit](lite://doc/unit#zero-storage-does-not-erase-shape) and [fixed-array layout](lite://doc/memory-and-performance#fixed-arrays-share-homogeneous-tuple-storage).
 
 ## Future middle collectors
 

@@ -1,10 +1,10 @@
 # Reading fields through a plain union
 
-Status: **selected 2026-10-18: a field read is valid when every possible alternative exposes that readable field; its result type is the normalized union of those field types**. [All-target field writes](union-field-writes.md) are selected separately. Method calls, property/getter semantics, ownership, and explicit access notation remain open.
+Status: **selected 2026-10-18: a field read is valid when every possible alternative exposes that readable field; its result type is the normalized union of those field types**. [All-target field writes](lite://doc/union-field-writes) are selected separately. Method calls, property/getter semantics, ownership, and explicit access notation remain open.
 
 ## Rule and template
 
-For a receiver of type A | B, reading receiver.field requires a readable field on both A and B at that program location. First establish that every alternative supports the read. Only then combine the field types and apply ordinary [union normalization](union-normalization.md).
+For a receiver of type A | B, reading receiver.field requires a readable field on both A and B at that program location. First establish that every alternative supports the read. Only then combine the field types and apply ordinary [union normalization](lite://doc/union-normalization).
 
 ```text
 receiver: A | B = choose_value();
@@ -66,7 +66,7 @@ copied := if parent: P {
 }
 ```
 
-The complete if/else infers Int | String under the selected [branch-result rule](branch-result-inference.md). Each executed branch supplies its field value and constructs the destination's corresponding active member. The compiler knows the parent-to-result member mapping; it does not inspect naked payload bytes to guess their type. In abstract memory notation:
+The complete if/else infers Int | String under the selected [branch-result rule](lite://doc/branch-result-inference). Each executed branch supplies its field value and constructs the destination's corresponding active member. The compiler knows the parent-to-result member mapping; it does not inspect naked payload bytes to guess their type. In abstract memory notation:
 
 ```ini
 parent P case = [P][7]
@@ -80,7 +80,7 @@ The source parent tag and the produced field-result tag have different roles. Pr
 
 This expansion describes value/effect semantics, not mandatory extra intermediate copies or generated branches. Evaluate an arbitrary receiver expression once, dispatch on that evaluated receiver, and read only the selected field; do not repeat a call/getter or manufacture a snapshot to justify the expansion. If a valid proof already determines the active parent alternative, the dispatch/tag choice can be fixed. Physical copy/store counts, tag encodings, and ABI remain separate.
 
-In particular, a produced Int | String read does not justify passing the original Int-or-String field as var (Int | String). Such a whole-union grant could write a String tag/payload into an Int field. The existing [all-target write rules](union-field-writes.md) still apply; after a valid parent refinement, an appropriately authorized member-only grant follows its original field contract. This adds no general reference syntax or conversion between record identities.
+In particular, a produced Int | String read does not justify passing the original Int-or-String field as var (Int | String). Such a whole-union grant could write a String tag/payload into an Int field. The existing [all-target write rules](lite://doc/union-field-writes) still apply; after a valid parent refinement, an appropriately authorized member-only grant follows its original field contract. This adds no general reference syntax or conversion between record identities.
 
 ## A missing or inaccessible field rejects the read
 
@@ -96,7 +96,7 @@ if person: User {
 
 A field hidden by visibility or lacking read permission also makes the direct read invalid. The compiler must identify the alternatives that prevent access. It must not silently discard those alternatives, invent None/Unit, return a Result, or postpone a known missing field to a runtime failure.
 
-The check uses alternatives still possible under a valid existing refinement. It does not independently introduce new flow proofs or bypass the [refinement stability rules](type-tests-and-narrowing.md).
+The check uses alternatives still possible under a valid existing refinement. It does not independently introduce new flow proofs or bypass the [refinement stability rules](lite://doc/type-tests-and-narrowing).
 
 ## Missing fields are not bottom types
 
@@ -117,7 +117,7 @@ The original receiver still has its original nominal union type. Reading fields 
 
 ## Boundaries
 
-- Reading a common field does not grant write access. [Writes must fit every possible target field](union-field-writes.md); membership in the projected read union alone is insufficient. [Value types and access contracts](union-values-and-access.md) explain the distinction and investigate making it visible.
+- Reading a common field does not grant write access. [Writes must fit every possible target field](lite://doc/union-field-writes); membership in the projected read union alone is insufficient. [Value types and access contracts](lite://doc/union-values-and-access) explain the distinction and investigate making it visible.
 - A function-valued field can be read under this rule, but invocation compatibility and method dispatch need their own contracts.
 - No shared base class or interface is required for this field read. This does not select structural assignment for whole records.
 - No particular offset, layout, allocation strategy, or zero-cost dispatch is guaranteed. A compiler may need to select the appropriate offset and result representation for the active alternative.
@@ -131,4 +131,4 @@ Scala's detailed union specification uses members of the union's join. Its examp
 
 TypeScript uses never for a state with no remaining possibilities after narrowing. That is different from a live object lacking a requested field. Source: [TypeScript never and exhaustiveness](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#the-never-type).
 
-Related: [union membership](union-membership.md), [union widening](union-widening.md), [record identity](record-type-identity.md), [pattern inference](pattern-binding-inference.md), and [types and inference](types-and-inference.md).
+Related: [union membership](lite://doc/union-membership), [union widening](lite://doc/union-widening), [record identity](lite://doc/record-type-identity), [pattern inference](lite://doc/pattern-binding-inference), and [types and inference](lite://doc/types-and-inference).

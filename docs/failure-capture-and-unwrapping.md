@@ -1,8 +1,8 @@
 # Failure capture, flat outcomes, and unwrapping
 
-Status: **selected, 2026-10-27; unreleased design**, [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) and [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md). Manual raise and eligible escaping-error inference are selected in [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md). Directed scalar/group raise and explicit block targets are now selected in [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md). Its unmatched-remainder policy remains a [draft](proposals/LP-0011-explicit-failure-raising.md), especially exits with unmatched failures. No parser, runtime, storage layout, or benchmark is supplied.
+Status: **selected, 2026-10-27; unreleased design**, [LP-0009 r1](lite://doc/proposals/LP-0009-flat-failure-capture) and [LP-0010 r1](lite://doc/proposals/LP-0010-outcome-extraction-and-exhaustion). Manual raise and eligible escaping-error inference are selected in [LP-0012 r1](lite://doc/proposals/LP-0012-manual-failures-and-error-inference). Directed scalar/group raise and explicit block targets are now selected in [LP-0014 r1](lite://doc/proposals/LP-0014-directed-failure-exits). Its unmatched-remainder policy remains a [draft](lite://doc/proposals/LP-0011-explicit-failure-raising), especially exits with unmatched failures. No parser, runtime, storage layout, or benchmark is supplied.
 
-Normative for explicit capture and extraction; [Result and errors](result-and-errors.md) owns ordinary outcomes, [expression recovery](expression-recovery.md) owns matching and consumption, and [finally](finally.md) owns cleanup.
+Normative for explicit capture and extraction; [Result and errors](lite://doc/result-and-errors) owns ordinary outcomes, [expression recovery](lite://doc/expression-recovery) owns matching and consumption, and [finally](lite://doc/finally) owns cleanup.
 
 ## Ordinary calls keep their contracts
 
@@ -29,7 +29,7 @@ b := op2(make_key())?;
 
 In the last example, assume the appropriate op2 overload takes a key. A supported panic from make_key is captured and op2 is not invoked on that path. This broad operand boundary is explicit in `?`; it does not change the narrower operation-specific meaning of an unmarked `op2(make_key()) else { ... }`.
 
-Continue a complete braced construct through parentheses, following the existing [block continuation rule](blocks-and-results.md#item-boundaries): `({ ... })?`. Grouping itself adds no failure boundary.
+Continue a complete braced construct through parentheses, following the existing [block continuation rule](lite://doc/blocks-and-results#item-boundaries): `({ ... })?`. Grouping itself adds no failure boundary.
 
 ```text
 attempt := ({
@@ -51,7 +51,7 @@ The second statement cannot capture a panic that already escaped the first call.
 
 ## Recapture is allowed
 
-Selected [LP-0016 r1](proposals/LP-0016-recapture-and-warning-policy.md): capture of outward T ! Es produces T ! (Es | Panic). Existing union normalization removes duplicate type alternatives. If Es already contains broad Panic, Es | Panic equals Es, so recapture adds no public type or outcome layer.
+Selected [LP-0016 r1](lite://doc/proposals/LP-0016-recapture-and-warning-policy): capture of outward T ! Es produces T ! (Es | Panic). Existing union normalization removes duplicate type alternatives. If Es already contains broad Panic, Es | Panic equals Es, so recapture adds no public type or outcome layer.
 
 ```text
 tmp1 := operation()?;    /* T ! (ErrA | Panic) */
@@ -62,13 +62,13 @@ tmp4 := (operation()?)?; /* T ! (ErrA | Panic); operation runs once */
 
 With no new failure during operand evaluation, preserve the successful value or every stored occurrence with its payload, origin, multiplicity, and order. Do not re-raise stored panics merely to capture them again. Type deduplication never removes repeated actual failures. Keeping an explicit recapture boundary is legal and supports later code evolution.
 
-An unchanged type does not prove redundant capture. A function returning T ! (E | Panic) data may still produce a separate live panic during execution; capturing its call can be meaningful even though the resulting type stays the same. Only a provably redundant boundary may receive an optional suppressible warning. No diagnostic is justified solely by type equality. Every warning is suppressible; [syntax/configuration](tooling-and-learning.md#warning-suppression) remains open.
+An unchanged type does not prove redundant capture. A function returning T ! (E | Panic) data may still produce a separate live panic during execution; capturing its call can be meaningful even though the resulting type stays the same. Only a provably redundant boundary may receive an optional suppressible warning. No diagnostic is justified solely by type equality. Every warning is suppressible; [syntax/configuration](lite://doc/tooling-and-learning#warning-suppression) remains open.
 
 Capture still processes only one outward outcome layer. For an explicitly nested (T ! InnerError) ! OuterError, capture gives (T ! InnerError) ! (OuterError | Panic); the successful inner Result stays data. Capture does not scan unrelated stored outcomes or retroactively catch an earlier escaped panic.
 
 ## Live panic capture is broad
 
-[LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md) forbids semantic panic-effect declarations. An ordinary operation with result T may produce live panics implicitly; exp? exposes those newly captured occurrences through broad Panic. Their concrete categories remain available when a pattern matches, rather than being enumerated in the capture type. Known faults may be documented without an exhaustive type-level promise. Explicitly returned/stored outcome data retains its literal return type and follows the same recapture rule.
+[LP-0018 r1](lite://doc/proposals/LP-0018-implicit-panics-without-effect-declarations) forbids semantic panic-effect declarations. An ordinary operation with result T may produce live panics implicitly; exp? exposes those newly captured occurrences through broad Panic. Their concrete categories remain available when a pattern matches, rather than being enumerated in the capture type. Known faults may be documented without an exhaustive type-level promise. Explicitly returned/stored outcome data retains its literal return type and follows the same recapture rule.
 
 ## Flat type, retained occurrences
 
@@ -78,7 +78,7 @@ Failure is the broad error-or-panic selector, conceptually Error | Panic. Error 
 
 The failure side preserves one or several ordered occurrences, including repeated categories. There is no occurrence count in the type. A normalized E1 | E2 union describes permitted categories; it does not merge two E1 payloads or itself encode several values. An ordinary explicit .err(error) constructs a singular failure; failure aggregation and capture can preserve several under the same flat outcome contract. This extends the earlier one-error-only description of Result without changing ordinary success construction or the count-free declaration rule. A single active success-or-failure outcome is still distinct from simultaneous success and failure.
 
-The public type must suffice for inspection/recovery: storing, passing, widening, or returning an outcome must preserve its occurrences and origins without depending on visible capture provenance. LP-0017 now selects .err(e) first-occurrence inspection and .err(...es) all-occurrence collection without mutating the stored source; see [Result patterns](result-and-errors.md#failure-occurrence-patterns). Origin-inspection API, carrier construction, ownership, and ABI remain open.
+The public type must suffice for inspection/recovery: storing, passing, widening, or returning an outcome must preserve its occurrences and origins without depending on visible capture provenance. LP-0017 now selects .err(e) first-occurrence inspection and .err(...es) all-occurrence collection without mutating the stored source; see [Result patterns](lite://doc/result-and-errors#failure-occurrence-patterns). Origin-inspection API, carrier construction, ownership, and ABI remain open.
 
 ## Capture normalizes one outward outcome layer
 
@@ -145,9 +145,9 @@ If a handler returns U, successful recovery may produce T | U. A handler's new o
 
 ## Early return abandons the unfinished captured recovery
 
-Selected [LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md): for tmp1: T ! (ErrA | ErrB | Panic), `tmp2 := tmp1 else :ErrB { return 1 }` returns 1 from the nearest function/closure on an ErrB match. tmp2 is never initialized on that path. If the declaration completes instead, its type is T ! (ErrA | Panic). The 1 belongs to the function's successful return contract, not tmp2's success alternatives.
+Selected [LP-0015 r1](lite://doc/proposals/LP-0015-early-return-recovery-paths): for tmp1: T ! (ErrA | ErrB | Panic), `tmp2 := tmp1 else :ErrB { return 1 }` returns 1 from the nearest function/closure on an ErrB match. tmp2 is never initialized on that path. If the declaration completes instead, its type is T ! (ErrA | Panic). The 1 belongs to the function's successful return contract, not tmp2's success alternatives.
 
-Even when ErrA and a captured Panic coexist with ErrB, the explicit function return abandons that unfinished recovery; those unmatched captured failures are not automatically raised or grounds for an extra handling rejection here. Filtering did not consume them. Handler-local return @handler instead completes only that body and preserves the remainder for following recovery layers. Cleanup and new payload/cleanup failures keep their ordinary rules. See [the full temporary trace](expression-recovery.md#early-function-returns-and-continuing-path-types).
+Even when ErrA and a captured Panic coexist with ErrB, the explicit function return abandons that unfinished recovery; those unmatched captured failures are not automatically raised or grounds for an extra handling rejection here. Filtering did not consume them. Handler-local return @handler instead completes only that body and preserves the remainder for following recovery layers. Cleanup and new payload/cleanup failures keep their ordinary rules. See [the full temporary trace](lite://doc/expression-recovery#early-function-returns-and-continuing-path-types).
 
 ## Explicit extraction and propagation
 
@@ -185,7 +185,7 @@ Again assume each handler produces T without new failures. With no remaining fai
 
 ## Manual raise and remaining caught-group forwarding
 
-LP-0012 selects manual failure capability and eligible error inference; [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md) now makes raise failure / raise ...failures a directed failure exit to the nearest function/closure, or an explicit enclosing block with @outer. The transfer bypasses inner else/? boundaries after operand evaluation; surrounding recovery/capture of the completed target may handle its outgoing failures. Error/Panic origin determines the channel, not a different target. LP-0013 selects typed scalar first-match exposure and intentional discard of other matches; ellipsis exposes all matches. LP-0015 now settles plain early function return as abandonment of unfinished captured recovery. Failure-directed raise/! and other nonlocal tagged exits retain their [draft LP-0011 r4](proposals/LP-0011-explicit-failure-raising.md) remainder policy. See [boundary examples](manual-failures-and-inference.md#directed-raise-boundaries) and [the shortfalls list](failure-handling-shortfalls.md).
+LP-0012 selects manual failure capability and eligible error inference; [LP-0014 r1](lite://doc/proposals/LP-0014-directed-failure-exits) now makes raise failure / raise ...failures a directed failure exit to the nearest function/closure, or an explicit enclosing block with @outer. The transfer bypasses inner else/? boundaries after operand evaluation; surrounding recovery/capture of the completed target may handle its outgoing failures. Error/Panic origin determines the channel, not a different target. LP-0013 selects typed scalar first-match exposure and intentional discard of other matches; ellipsis exposes all matches. LP-0015 now settles plain early function return as abandonment of unfinished captured recovery. Failure-directed raise/! and other nonlocal tagged exits retain their [draft LP-0011 r4](lite://doc/proposals/LP-0011-explicit-failure-raising) remainder policy. See [boundary examples](lite://doc/manual-failures-and-inference#directed-raise-boundaries) and [the shortfalls list](lite://doc/failure-handling-shortfalls).
 
 ## Implementation and remaining decisions
 

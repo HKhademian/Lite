@@ -17,11 +17,11 @@ SuccessType!
 
 ### Flat captured failure types
 
-Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md): an explicit capture of outward T has type T ! Panic; capture of outward T ! E has type T ! (E | Panic). No public Captured or FailureGroup wrapper is required. Panic represents an open category, not a statically enumerated effect list. Failure selects errors and panics, conceptually Error | Panic. The flat failure side retains ordered occurrences without a count parameter; a plain union value remains a single active alternative. Ordinary functions do not implicitly include Panic, and T! still expands only to T ! Error. Static exhaustion of all failures yields the normal value type directly; ! explicitly extracts success or forwards retained failures with original channels. See [capture and unwrapping](failure-capture-and-unwrapping.md) for the full selected boundary and remaining representation/inspection gaps.
+Selected [LP-0009 r1](lite://doc/proposals/LP-0009-flat-failure-capture): an explicit capture of outward T has type T ! Panic; capture of outward T ! E has type T ! (E | Panic). No public Captured or FailureGroup wrapper is required. Panic represents an open category, not a statically enumerated effect list. Failure selects errors and panics, conceptually Error | Panic. The flat failure side retains ordered occurrences without a count parameter; a plain union value remains a single active alternative. Ordinary functions do not implicitly include Panic, and T! still expands only to T ! Error. Static exhaustion of all failures yields the normal value type directly; ! explicitly extracts success or forwards retained failures with original channels. See [capture and unwrapping](lite://doc/failure-capture-and-unwrapping) for the full selected boundary and remaining representation/inspection gaps.
 
 ### Outcome types are not checked panic-effect signatures
 
-[LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md) prohibits checked live-panic effects. Ordinary array/arithmetic/helper panics remain implicit without a transitive list in E. A literal fn(): T ! Panic output instead returns first-class captured outcome data, with ordinary call type T ! Panic; it is not an implicit-effect declaration with a plain T result. Broad Panic appears when live panics are explicitly captured, while concrete category identity remains retained for patterns. Documenting known faults has no type/exhaustiveness effect and its format is still under investigation. [LP-0016](proposals/LP-0016-recapture-and-warning-policy.md) permits recapture through ordinary duplicate-free union normalization.
+[LP-0018 r1](lite://doc/proposals/LP-0018-implicit-panics-without-effect-declarations) prohibits checked live-panic effects. Ordinary array/arithmetic/helper panics remain implicit without a transitive list in E. A literal fn(): T ! Panic output instead returns first-class captured outcome data, with ordinary call type T ! Panic; it is not an implicit-effect declaration with a plain T result. Broad Panic appears when live panics are explicitly captured, while concrete category identity remains retained for patterns. Documenting known faults has no type/exhaustiveness effect and its format is still under investigation. [LP-0016](lite://doc/proposals/LP-0016-recapture-and-warning-policy) permits recapture through ordinary duplicate-free union normalization.
 
 ### Fallible-type shorthand attachment selected
 
@@ -81,7 +81,7 @@ The error family and member notation follow existing explanatory examples; their
 
 ## Multiple error families proposal
 
-Unions on either side of `!` can be distinguished by type patterns: `(User | Guest) ! (ReadError | ParseError)` supports narrowing the successful payload or the error payload to its active alternative. That capability is selected; the composition and propagation-membership formalization below remains proposed. See [union type patterns](union-patterns.md).
+Unions on either side of `!` can be distinguished by type patterns: `(User | Guest) ! (ReadError | ParseError)` supports narrowing the successful payload or the error payload to its active alternative. That capability is selected; the composition and propagation-membership formalization below remains proposed. See [union type patterns](lite://doc/union-patterns).
 
 ```text
 load_age := fn(path: String): Int ! (ReadError | ParseError) {
@@ -104,7 +104,7 @@ LoadError := type ReadError | ParseError;
 
 This follows the selected uniform binding and explicit type-prefix rule. It names a composition without introducing another nominal wrapper or losing the original error identity. Detailed union composition and propagation membership remain separate contracts.
 
-The [alias syntax review](type-aliases.md) compared this explicit form with LoadError := ReadError | ParseError, along with simple, tuple, generic, and function aliases. One explicit type prefix is now selected for all named aliases. The keyword covers the full type expression, not just its first union member.
+The [alias syntax review](lite://doc/type-aliases) compared this explicit form with LoadError := ReadError | ParseError, along with simple, tuple, generic, and function aliases. One explicit type prefix is now selected for all named aliases. The keyword covers the full type expression, not just its first union member.
 
 The function can then declare:
 
@@ -127,7 +127,7 @@ An alias is a declaration of coverage, not automatic inference from the body. Ch
 
 For example, if `parse_age` changes its declared error type to `ParseError | EncodingError`, its propagation into `ReadError | ParseError` must fail to type-check until the caller handles, maps, or declares the additional `EncodingError` alternative.
 
-Plain-union exact-member admission and [exact-member union widening](union-widening.md) are selected as the value-level foundation. Matching-outer-outcome [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes) now integrates those payload-widening proofs for callable views, preserving .ok/.err and admitting success/error payloads separately. [Stored Result widening](result-and-errors.md#stored-result-values-widen-safely) also applies these proofs to ordinary outcomes and matching nested layers, preserving each branch and layer. Other Result conversions, full propagation compatibility, and a completed subtyping system remain separate; widening an error payload does not authorize arbitrary Result coercion or layer flattening.
+Plain-union exact-member admission and [exact-member union widening](lite://doc/union-widening) are selected as the value-level foundation. Matching-outer-outcome [fallible callable outcome widening](lite://doc/callable-value-variance#fallible-callable-views-may-widen-outcomes) now integrates those payload-widening proofs for callable views, preserving .ok/.err and admitting success/error payloads separately. [Stored Result widening](lite://doc/result-and-errors#stored-result-values-widen-safely) also applies these proofs to ordinary outcomes and matching nested layers, preserving each branch and layer. Other Result conversions, full propagation compatibility, and a completed subtyping system remain separate; widening an error payload does not authorize arbitrary Result coercion or layer flattening.
 
 ## Grouping
 
@@ -143,7 +143,7 @@ User ! (ReadError | ParseError)
 
 The ungrouped spelling is valid for users, developers, and all other code; grouping is a reference-documentation preference. The grouped spelling makes both sides immediately visible and distinguishes the outcome from `A | B | (C ! D) | E | F`, which is a different type: a union whose only fallible member is `C ! D`. A union of complete fallible types groups those operands, for example `(User ! LoadError) | (Guest ! GuestError)`.
 
-Each nonempty union operand may use its selected optional leading |, including inside explicit grouping: (| User | Guest) ! (| ReadError | ParseError) denotes the same outcome type as (User | Guest) ! (ReadError | ParseError). The leader adds no empty member or Unit and does not change this precedence. See [optional leading separators](leading-separators.md#plain-union-types).
+Each nonempty union operand may use its selected optional leading |, including inside explicit grouping: (| User | Guest) ! (| ReadError | ParseError) denotes the same outcome type as (User | Guest) ! (ReadError | ParseError). The leader adds no empty member or Unit and does not change this precedence. See [optional leading separators](lite://doc/leading-separators#plain-union-types).
 
 In type position, `!` joins success and error types. In value position, postfix `!` extracts an outcome or propagates its failure. The parser distinguishes those contexts without relying on spaces or newlines.
 
@@ -172,7 +172,7 @@ Type and expression contexts distinguish `T!` from `outcome!`: one declares an o
 
 - Define the general `Error` contract and its relationship to refined recoverable error types.
 - Complete the selected alias production's scope, generic parameters, cycles, and type-expression boundaries.
-- Plain-union normalization, exact-member admission, exact-member union widening, and checked member narrowing are selected. Stored Result widening is selected for matching layers with compatible success/error payloads. Other subtype relations, flow-refinement validity, and Result conversions remain open. See [union normalization](union-normalization.md) and [union widening](union-widening.md).
+- Plain-union normalization, exact-member admission, exact-member union widening, and checked member narrowing are selected. Stored Result widening is selected for matching layers with compatible success/error payloads. Other subtype relations, flow-refinement validity, and Result conversions remain open. See [union normalization](lite://doc/union-normalization) and [union widening](lite://doc/union-widening).
 - Define generic error-family parameters and explicit conversion/mapping notation.
 - Complete precedence with other type constructors and associativity for repeated fallible type operators; the relative precedence of `|` and binary `!` is selected above.
 - Preserve the distinction between transparent aliases and new nominal error types.
@@ -183,11 +183,11 @@ No runtime representation or allocation behavior is selected here. A typed union
 
 ## Related concepts
 
-- [Result and errors](result-and-errors.md)
-- [Propagation and call chaining](propagation-and-chaining.md)
-- [Recovery receivers and fallback types](recovery-and-fallbacks.md)
-- [Types and inference](types-and-inference.md)
-- [Declarations and assignment](declarations-and-assignment.md)
-- [Panics](panics.md)
+- [Result and errors](lite://doc/result-and-errors)
+- [Propagation and call chaining](lite://doc/propagation-and-chaining)
+- [Recovery receivers and fallback types](lite://doc/recovery-and-fallbacks)
+- [Types and inference](lite://doc/types-and-inference)
+- [Declarations and assignment](lite://doc/declarations-and-assignment)
+- [Panics](lite://doc/panics)
 
 The compact `T ! E` notation and `T!` expansion record user-selected LiteScript rules. The remaining proposals are identified above; reference-language syntax does not adopt them automatically.

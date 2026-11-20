@@ -109,7 +109,7 @@ The compiler supplies any required safe outcome representation adaptation; a man
 
 Callers still receive a fallible outcome under the view's declared contract and must inspect, recover, propagate, or retain it under existing rules. This adds no implicit success extraction, automatic returned-error propagation, or new panic handling. Ordinary input contravariance and var T invariance remain separate; a wider output contract does not permit callers to supply input values the implementation cannot accept.
 
-This selects callable adaptation between matching outer fallible outcomes using established payload admission, including normalized exact-member error-union widening. It does not choose a new nominal error hierarchy, arbitrary Result conversion, Result layer flattening/reassociation, general nonfallible-to-fallible callable conversion, error-co-occurrence composition, generic variance, or a panic/effect conversion policy. [Stored Result widening](result-and-errors.md#stored-result-values-widen-safely) now uses the same payload proofs, including matching nested layers; other Result conversions remain separate.
+This selects callable adaptation between matching outer fallible outcomes using established payload admission, including normalized exact-member error-union widening. It does not choose a new nominal error hierarchy, arbitrary Result conversion, Result layer flattening/reassociation, general nonfallible-to-fallible callable conversion, error-co-occurrence composition, generic variance, or a panic/effect conversion policy. [Stored Result widening](lite://doc/result-and-errors#stored-result-values-widen-safely) now uses the same payload proofs, including matching nested layers; other Result conversions remain separate.
 
 ## Omission remains an implementation promise
 
@@ -203,7 +203,7 @@ Rust likewise lists &'a mut T as invariant in T, providing a related read/write 
 
 ## Labels, defaults, and access remain separate
 
-Normal callable transfers still check public labels. An explicitly typed receiving declaration can bypass label mismatch under the selected [explicit label-conversion rule](tuple-label-conversions.md#ordinary-transfers-check-labels). That label permission may be composed with a valid safe value adaptation; it cannot reverse the input/result compatibility directions or justify byte reinterpretation. Implementation-local receiver names remain independent of caller-visible labels.
+Normal callable transfers still check public labels. An explicitly typed receiving declaration can bypass label mismatch under the selected [explicit label-conversion rule](lite://doc/tuple-label-conversions#ordinary-transfers-check-labels). That label permission may be composed with a valid safe value adaptation; it cannot reverse the input/result compatibility directions or justify byte reinterpretation. Implementation-local receiver names remain independent of caller-visible labels.
 
 Safe ordinary input adaptation now applies to required and omission-capable views under the implementation-promise rule above. Supplied inputs are checked contravariantly; allowed omission must be promised by the source contract and must reach its selected implementation unchanged. A narrower public input type does not revalidate an already established implementation default against that narrower type. Required views can still hide omission, and ordinary result widening retains its selected rule.
 
@@ -219,9 +219,9 @@ Zig also documents error-set subset-to-superset coercion as a related error-wide
 
 ## Related documents
 
-- [Functions](functions.md#function-types-literals-and-reassignment)
-- [Types and inference](types-and-inference.md)
-- [Callable input packs](callable-input-packs.md)
-- [Explicit label conversion](tuple-label-conversions.md)
-- [Public omission and implementation defaults](callable-default-contracts.md)
-- [Ordinary value copies](parameter-values-and-slots.md)
+- [Functions](lite://doc/functions#function-types-literals-and-reassignment)
+- [Types and inference](lite://doc/types-and-inference)
+- [Callable input packs](lite://doc/callable-input-packs)
+- [Explicit label conversion](lite://doc/tuple-label-conversions)
+- [Public omission and implementation defaults](lite://doc/callable-default-contracts)
+- [Ordinary value copies](lite://doc/parameter-values-and-slots)

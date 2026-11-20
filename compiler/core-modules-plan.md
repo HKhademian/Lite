@@ -24,9 +24,9 @@ Compiler-specific support remains in `compiler/`.
 | Node filesystem/process operations | TypeScript entry and compiler host adapters (`node:fs`, `process`, child processes) | Tool/compiler host plumbing. No general Lite filesystem module or filesystem operation set has been selected. |
 
 The exact source contracts for display and input live in
-[`docs/tooling-and-learning.md`](../docs/tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02).
+[`docs/tooling-and-learning.md`](lite://doc/tooling-and-learning#temporary-input-and-output-helpers-selected-2026-11-02).
 The module graph and `pub`/namespace behavior live in
-[`docs/modules-and-packages.md`](../docs/modules-and-packages.md#source-imports).
+[`docs/modules-and-packages.md`](lite://doc/modules-and-packages#source-imports).
 
 ## Implementation boundaries
 
@@ -77,6 +77,6 @@ new declaration form in the compiler source, first verify its parser, signature
 checking, visibility, positive and negative cases, runtime binding, supported
 target behavior, deterministic rebuild, seed fixed point and corpus parity.
 Run the full project gates required by
-[`compiler development`](../.agents/rules/compiler-development.md). Never
+[`compiler development`](lite://repo/.agents/rules/compiler-development.md). Never
 edit generated bootstrap seeds by hand. The source-location table is out of
 scope and must remain byte-for-byte unchanged.

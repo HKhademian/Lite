@@ -24,4 +24,4 @@ Never reject recapture or warn solely because Es already includes Panic or the r
 
 `r1` selects legal recapture, union-based type stability, preservation of stored occurrences, proof-based optional redundancy diagnostics, and suppressibility of every warning. No representation, allocation, parser/runtime implementation, or performance result is supplied.
 
-Normative owners: [capture and unwrapping](../failure-capture-and-unwrapping.md#recapture-is-allowed) and [warning suppression](../tooling-and-learning.md#warning-suppression). Related: [union normalization](../union-normalization.md) and [implicit panics](LP-0018-implicit-panics-without-effect-declarations.md).
+Normative owners: [capture and unwrapping](lite://doc/failure-capture-and-unwrapping#recapture-is-allowed) and [warning suppression](lite://doc/tooling-and-learning#warning-suppression). Related: [union normalization](lite://doc/union-normalization) and [implicit panics](lite://doc/proposals/LP-0018-implicit-panics-without-effect-declarations).

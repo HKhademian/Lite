@@ -30,7 +30,7 @@ This is the current measured support inventory, not acceptance of new language f
 
 - 51 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
 - 112/173 executed source cases match; 61 still fail. These are case counts, not distinct missing features or an overall completion percentage.
-- Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
+- Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](lite://doc/compiler/gaps).
 
 Closed original cases:
 
@@ -482,4 +482,4 @@ Closed original cases:
 node compiler/scripts/t00-t11-inventory.ts --large-sources
 ```
 
-Full observations and source probes: [raw JSON](current-t00-t11-inventory.json).
+Full observations and source probes: [raw JSON](lite://repo/compiler/reports/current-t00-t11-inventory.json).

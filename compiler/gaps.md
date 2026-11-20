@@ -17,7 +17,7 @@ T00/selected-compiler inventory as parity evidence, not a retirement
 prerequisite. Public `run` remains
 compile-and-execute over a TS artifact. C output/native self-hosting remains a
 later target. See the
-[transition order](transition-plan.md#implementation-order).
+[transition order](lite://doc/compiler/transition-plan#implementation-order).
 
 ## Immediate migration priorities
 
@@ -40,8 +40,8 @@ The current path is:
 
 ## Measured checkpoint
 
-The archived [T00/T12 inventory](reports/current-t00-t11-inventory.md) and
-[raw observations](reports/current-t00-t11-inventory.json) were refreshed on
+The archived [T00/T12 inventory](lite://repo/compiler/reports/current-t00-t11-inventory.md) and
+[raw observations](lite://repo/compiler/reports/current-t00-t11-inventory.json) were refreshed on
 2026-11-11 against selected generated seed `02e8e226…`, at base revision `10a1ab03`.
 The report covers 217 tracked Lite source files and records exact source and
 artifact hashes. Its generator required the retired T00 implementation, so this
@@ -268,7 +268,7 @@ executions, nine editor groups, strict host/seed checking and native overflow
 sanitizer probes. This inventory-only refresh changes no compiler code.
 
 Division-family slice: 71/162 cases now match; only the two bounds diagnostic
-probes differ among accepted programs. The [paired speed report](reports/2026-11-02-division-performance.json)
+probes differ among accepted programs. The [paired speed report](lite://repo/compiler/reports/2026-11-02-division-performance.json)
 records the same source at 922.5 → 922.8 ms median self-compilation, and the
 1,000-output workload at 95.6 → 102.4 ms (five paired samples, compiler phase).
 The extra scan cost is recorded for the next performance slice; no speedup is
@@ -278,7 +278,7 @@ The final stable-snapshot full gate passes all 255 tests, with zero skips, in
 52.3 s; fast is 244 pass/11 expected skips. Strict host/seeds, both 93-case
 corpus comparisons, 95 verifier executions and nine editor groups also pass.
 
-The subsequent [single-pass helper scan](reports/2026-11-02-helper-scan-performance.json)
+The subsequent [single-pass helper scan](lite://repo/compiler/reports/2026-11-02-helper-scan-performance.json)
 reduces compiler-phase medians from 100.0 to 60.4 ms for 1,000 output statements
 and from 899.0 to 649.8 ms for identical compiler source, with exact emitted
 bytes in all five paired samples. Current seed: `c25922d7…`; the preceding
@@ -329,7 +329,7 @@ unchanged. Final staged-path inventory: 209 Lite files, no load errors,
 77/163 matching cases, 86 rejecting, 26 original failures closed, no regressions.
 Source shrinks by 3029 bytes and the TS compiler by 5045 bytes after removing
 eight obsolete eager-failure wrappers. Paired throughput stays steady (see the
-[raw measurements](reports/2026-11-02-deferred-faults-performance.json)).
+[raw measurements](lite://repo/compiler/reports/2026-11-02-deferred-faults-performance.json)).
 Comparison chains are next; supplementary-character column units remain pending.
 
 Comparison chains close the adjacent-pair probe and add one canonical generated
@@ -338,7 +338,7 @@ All 260 full tests pass with zero skips in 49.4 s, both 93-case corpora, 98 veri
 executions, strict checks, coverage and nine editor groups pass. Nine native
 UBSan programs match exact status/streams. Existing 61 corpus artifact pairs
 are unchanged. Paired medians remain steady with mixed small timing changes;
-see the [chain performance report](reports/2026-11-02-comparison-chains-performance.json).
+see the [chain performance report](lite://repo/compiler/reports/2026-11-02-comparison-chains-performance.json).
 The decisions example next exposes a semicolon-free value-if declaration gap.
 Next topic: script/lexical forms, starting with empty scripts.
 
@@ -348,7 +348,7 @@ none regress. All 261 full tests pass without skips in 52.2 s; fast passes
 coverage, strict checks and nine editor groups pass. The corpus is now 63
 programs/30 rejections; 61 older artifact pairs are unchanged. Source and seed
 size shrink slightly, while paired throughput stays steady. See the
-[empty-script ledger](parity.md#empty-script-support).
+[empty-script ledger](lite://doc/compiler/parity#empty-script-support).
 
 Statement boundaries: 83/164 match, 81 remain; 31 original failures closed and
 none regress. The decisions example and final-semicolon probe now match. All
@@ -358,7 +358,7 @@ coverage and nine editor groups pass. Corpus: 64 programs/29 rejections; the
 63 earlier artifact pairs are unchanged. Shared boundary handling removes six
 duplicate trivia scans; paired compiler throughput stays steady with mixed small
 changes. The standalone parser's reference/generated drivers also cover nine
-valid and five rejected boundary sources. See the [boundary ledger](parity.md#statement-boundaries).
+valid and five rejected boundary sources. See the [boundary ledger](lite://doc/compiler/parity#statement-boundaries).
 Next: adjacent String literals, then trailing call commas and remaining scope forms.
 
 Adjacent String literals: 84/164 match, 80 remain; 32 original failures closed
@@ -367,7 +367,7 @@ and none regress. All 263 full tests pass with zero skips in 70.2 s; fast passes
 98 verifier executions, coverage and nine editor groups pass. Corpus: 65
 programs/28 rejections; all 64 earlier artifact pairs remain identical. Literal
 pieces are decoded in one scan and encoded once. Paired compiler throughput
-stays steady with mixed small changes; see the [literal ledger](parity.md#adjacent-string-literals).
+stays steady with mixed small changes; see the [literal ledger](lite://doc/compiler/parity#adjacent-string-literals).
 Next: trailing call commas, then remaining scope/statement forms.
 
 Trailing call commas: 85/164 match, 79 remain; 33 original failures closed and
@@ -375,7 +375,7 @@ none regress. All 264 full tests pass with zero skips in 78.9 s; fast passes
 252 with 12 expected skips in 58.5 s. Strict checks, both 93-case corpora,
 98 verifier executions, coverage and nine editor groups pass. Corpus: 66
 programs/27 rejections; all 65 earlier artifact pairs stay identical. Paired
-compiler throughput remains steady; see the [comma ledger](parity.md#trailing-call-commas).
+compiler throughput remains steady; see the [comma ledger](lite://doc/compiler/parity#trailing-call-commas).
 Default-argument exit() remains a separately verified builtin gap. Remaining
 scope/statement forms and broader type/control/native/consumer work stay queued.
 
@@ -386,7 +386,7 @@ The same 66 precompiled corpus programs validate/run in 5877.2 → 3215.8 ms med
 All 264 full tests pass without skips in 75.5 s; fast passes 252 with 12 expected
 skips in 51.0 s. Strict checks, both 93-case corpora, 98 verifier executions,
 coverage and nine editor groups pass. Compiler source/seed identities and the
-85/164 inventory are unchanged. See the [harness ledger](parity.md#batched-ts-artifact-validation).
+85/164 inventory are unchanged. See the [harness ledger](lite://doc/compiler/parity#batched-ts-artifact-validation).
 Next: remaining scope/statement forms and the verified default exit() gap.
 
 Statement scopes: 87/164 match, 77 remain; 35 original failures closed and none
@@ -396,7 +396,7 @@ executions, coverage and nine editor groups pass; six native sanitizer programs
 match exact streams/status. All 66 older program artifact pairs remain identical.
 The new canonical scope targets and hygiene repair close two original cases.
 Paired compiler throughput stays steady; self-source output changes by runtime
-identifier hygiene and matches the strict ladder hashes. See the [scope ledger](parity.md#statement-scopes).
+identifier hygiene and matches the strict ladder hashes. See the [scope ledger](lite://doc/compiler/parity#statement-scopes).
 Next: same-block value bindings and ordinary expression statements; static
 function/value lookup and broader type namespaces remain explicitly queued.
 
@@ -405,7 +405,7 @@ and none regress. The corpus now has 67 programs and 26 rejections; all 66 older
 program artifact pairs stay identical. Six native UBSan programs pass. Compiler
 source shrinks by 295 bytes and each generated artifact by 532 bytes; paired
 throughput has small mixed changes, with no general speedup claim. See the
-[shadowing ledger](parity.md#sequential-value-bindings). Next: ordinary expression
+[shadowing ledger](lite://doc/compiler/parity#sequential-value-bindings). Next: ordinary expression
 statements and empty item separators; callable/type shadowing remains separate.
 All 266 full tests pass with zero skips; fast passes 254 with 12 expected
 skips. Strict checks, both corpora, 100 verifier executions, coverage and nine
@@ -418,7 +418,7 @@ coverage, nine editor groups and six native sanitizer programs pass. All 67
 earlier artifact pairs stay identical. Consolidated item/tail handling shrinks
 source and generated artifacts; paired compiler medians have mixed small changes,
 recorded without a general speedup claim. See the
-[expression-item ledger](parity.md#ordinary-expression-items). Newly confirmed
+[expression-item ledger](lite://doc/compiler/parity#ordinary-expression-items). Newly confirmed
 array/List tail admission and incomplete declaration-branch results stay queued.
 Next: branch-result checking, then broader function admission and control/value
 forms; Unicode columns remain in the final diagnostic audit.
@@ -434,7 +434,7 @@ Both corpora, strict checks, 100 verifier executions, coverage, nine editor
 groups and six native sanitizer programs pass. All 67 earlier program artifact
 pairs remain unchanged. A matched native dead-output workload compiles in
 66.8 → 46.2 ms, with exact behavior and C size 123183 → 293 bytes; ordinary
-compiler timings are mixed. See the [completion ledger](parity.md#function-completion).
+compiler timings are mixed. See the [completion ledger](lite://doc/compiler/parity#function-completion).
 Broader value/loop-result, Never/callable/capture, native C and consumer gaps remain.
 
 Float literal/value migration: 92/166 cases match, 74 remain; 38 original
@@ -443,7 +443,7 @@ with 69 programs/24 rejections; all 67 older program artifact pairs remain
 identical. All 273 full tests pass without skips, along with strict checks,
 100 verifier executions, coverage, nine editor groups and six generated native
 sanitizer cases. Paired compiler timings are mixed and recorded without a
-general speedup claim. See the [literal/value ledger](parity.md#float-literals-and-display).
+general speedup claim. See the [literal/value ledger](lite://doc/compiler/parity#float-literals-and-display).
 Next: port existing mixed Float arithmetic used by the remaining sample
 programs, then continue the generated run/check and native migration dependencies.
 Independent issue cleanup stays outside the active path.
@@ -459,9 +459,9 @@ native sanitizer cases pass. Three generated generations match. All 69 TS
 fixture artifacts and 67 of 69 C artifacts remain unchanged; the two C Float
 literal fixtures acquire the discovered parser wrapper. Paired compiler timings
 are mixed, with no general speedup claimed. See the
-[mixed Float ledger](parity.md#mixed-float-arithmetic-and-comparisons),
-[ladder](reports/2026-11-02-float-arithmetic-ladder.json) and
-[performance record](reports/2026-11-02-float-arithmetic-performance.json).
+[mixed Float ledger](lite://doc/compiler/parity#mixed-float-arithmetic-and-comparisons),
+[ladder](lite://repo/compiler/reports/2026-11-02-float-arithmetic-ladder.json) and
+[performance record](lite://repo/compiler/reports/2026-11-02-float-arithmetic-performance.json).
 Next: power and common numeric annotations, then the ordinary syntax blockers
 for the eight remaining examples and generated default workflows. Advanced edge
 coverage and native self-hosting remain later gates.
@@ -476,9 +476,9 @@ corpora, 123 verifier executions, 39-feature coverage, nine editor groups and
 six optimized native sanitizer cases pass. Three generated generations match.
 Inventory: 105/167 matching, 62 remaining; 50 original failures closed, none
 regress. All 69 earlier TS/C fixture pairs remain byte-identical.
-The [power ledger](parity.md#power-checkpoint),
-[ladder](reports/2026-11-02-power-ladder.json) and
-[paired timing record](reports/2026-11-02-power-performance.json) retain evidence.
+The [power ledger](lite://doc/compiler/parity#power-checkpoint),
+[ladder](lite://repo/compiler/reports/2026-11-02-power-ladder.json) and
+[paired timing record](lite://repo/compiler/reports/2026-11-02-power-performance.json) retain evidence.
 Next: common numeric annotations, then remaining ordinary data/call/control
 syntax and the Lite-default workflow cutover. Advanced rounding/edge coverage
 remains deferred.
@@ -494,9 +494,9 @@ and all 69 earlier TS/C fixture pairs remain unchanged. Inventory: 108/169
 matching, 61 remaining, 52 original failures closed, no observed regressions.
 The new alias feature adds one passing case, while the retained Float-literal
 context probe adds one failing case; both contribute to the new denominator.
-See the [numeric-synonym ledger](parity.md#numeric-type-synonyms),
-[ladder](reports/2026-11-02-numeric-aliases-ladder.json) and
-[paired timing report](reports/2026-11-02-numeric-aliases-performance.json).
+See the [numeric-synonym ledger](lite://doc/compiler/parity#numeric-type-synonyms),
+[ladder](lite://repo/compiler/reports/2026-11-02-numeric-aliases-ladder.json) and
+[paired timing report](lite://repo/compiler/reports/2026-11-02-numeric-aliases-performance.json).
 Next: the retained Float integer-literal context, then remaining ordinary
 data/call/control syntax and the early Lite-default workflow cutover.
 
@@ -506,27 +506,27 @@ TS-focused full suite passes 271 tests with nine native-only skips (126.3 s);
 fast passes 268 with 12 expected skips (129.5 s). Strict checks, three matching
 self-builds, the 93-case TS corpus, 41-feature coverage and nine editor groups
 pass. All 69 earlier fixture artifact pairs remain unchanged. See the
-[Float-context ledger](parity.md#float-literal-contexts-and-braced-values),
-[ladder](reports/2026-11-02-float-contexts-ladder.json) and
-[TS timings](reports/2026-11-02-float-contexts-performance.json).
+[Float-context ledger](lite://doc/compiler/parity#float-literal-contexts-and-braced-values),
+[ladder](lite://repo/compiler/reports/2026-11-02-float-contexts-ladder.json) and
+[TS timings](lite://repo/compiler/reports/2026-11-02-float-contexts-performance.json).
 Owner update: remove public run, compile then execute TS artifacts, and defer
 C output/native gates until after TS migration. Next is the public workflow
 cutover and the remaining ordinary TS syntax; C is not a retirement blocker.
 
 ## Test-contract separation (2026-11-03)
 
-- 2026-11-03: w1 test contracts are separated: all 240 original igniter tests retain destinations (81 generated/phase/artifact, 159 reference), and 776 exact process contracts replace live T00 expected-value lookups. Shared manifest loading retains all 93 compiler fixtures. Five contract/ownership checks, six copied-checkout no-T00 host groups, strict host/seed checks, three identical generated self-builds and nine editor groups pass. Fast: 278 pass/12 skips; full: 281 pass/9 native skips, zero failures. Compiler source/seed and the 60/81 canonical TS audit are unchanged. Default actual compiler/phase helpers and reference selection remain w2 work. See [the evidence](reports/2026-11-03-test-contracts.json) and [contract guide](tests/contracts/README.md).
+- 2026-11-03: w1 test contracts are separated: all 240 original igniter tests retain destinations (81 generated/phase/artifact, 159 reference), and 776 exact process contracts replace live T00 expected-value lookups. Shared manifest loading retains all 93 compiler fixtures. Five contract/ownership checks, six copied-checkout no-T00 host groups, strict host/seed checks, three identical generated self-builds and nine editor groups pass. Fast: 278 pass/12 skips; full: 281 pass/9 native skips, zero failures. Compiler source/seed and the 60/81 canonical TS audit are unchanged. Default actual compiler/phase helpers and reference selection remain w2 work. See [the evidence](lite://repo/compiler/reports/2026-11-03-test-contracts.json) and [contract guide](lite://repo/compiler/tests/contracts/README.md).
 
 This is a harness prerequisite, not a language-port closure or completed default test cutover. The measured 112/173 source inventory is unchanged because compiler source and seed identities are unchanged.
 
 ## Generated default regressions (2026-11-03)
 
-- 2026-11-03: default tests now compile with generated Lite, strictly check TS and execute isolated artifacts; checked library/phase drivers are reused across inputs. All 93 compiler fixtures, eight library entries and 81 original generated tests remain covered. T00 checks require `./bin/lite test --reference` (162 pass). Ordinary and T00-free source-archive fast suites each pass 119 with 12 deferred skips; full suites each pass 122 with nine native skips and zero failures. Strict checks, nine editor groups and three identical self-builds pass; source/seed are unchanged. The default static graph has 18 modules and no T00 imports. CI now runs the full no-T00 suite. The canonical TS audit still reports 60/81 passing with 21 visible pending ports. See [the evidence](reports/2026-11-03-generated-tests.json). Routine tooling remains w3 work.
+- 2026-11-03: default tests now compile with generated Lite, strictly check TS and execute isolated artifacts; checked library/phase drivers are reused across inputs. All 93 compiler fixtures, eight library entries and 81 original generated tests remain covered. T00 checks require `./bin/lite test --reference` (162 pass). Ordinary and T00-free source-archive fast suites each pass 119 with 12 deferred skips; full suites each pass 122 with nine native skips and zero failures. Strict checks, nine editor groups and three identical self-builds pass; source/seed are unchanged. The default static graph has 18 modules and no T00 imports. CI now runs the full no-T00 suite. The canonical TS audit still reports 60/81 passing with 21 visible pending ports. See [the evidence](lite://repo/compiler/reports/2026-11-03-generated-tests.json). Routine tooling remains w3 work.
 
 This completes the default test execution cutover, not the remaining language ports or T00 retirement. The recorded 112/173 source inventory stays unchanged; source/seed identities match, while the canonical TS scenario audit above was freshly executed.
 
 ## Generated routine tooling (2026-11-03)
 
-- 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](reports/2026-11-03-generated-tooling.json), [tool guide](bootstrap/README.md) and [baseline](../benchmark/reports/2026-11-03-generated-compiler-performance.md).
+- 2026-11-03: w3 completes generated-only routine tooling. Self-build strictly checks three named generations and records real source/builder identities; corpus validation checks 93 compiler contracts and 69 TS runtime scenarios against recorded expectations. Benchmarking records generated process/load/compile/check/runtime phases with three samples and one excluded warmup. Old T00 audit programs are preserved byte-for-byte apart from routing comments and require --reference. Five CLI regression groups include absent T00/Git, malformed inputs, wrong compilers and a legitimate changed-source fixed point. Fast: 124 pass/12 skips; ordinary and no-T00 full: 127 pass/nine native skips, zero failures. Reference 162/162, nine editor groups, strict checks and both corpus routes pass. Source/seed remain unchanged; the canonical audit is still 60/81 with 21 visible pending ports. See [evidence](lite://repo/compiler/reports/2026-11-03-generated-tooling.json), [tool guide](lite://doc/compiler/bootstrap-readme) and [baseline](lite://repo/benchmark/reports/2026-11-03-generated-compiler-performance.md).
 
 Workflow cutover is complete. This adds no language support and does not close the 61 measured source-case failures. Next is the planned tuple/data/call migration; advanced audits and native C remain deferred.

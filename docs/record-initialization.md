@@ -2,7 +2,7 @@
 
 Status: **updated 2026-11-18: an omitted field uses its declared default, or zero of its type when no default is declared; omitted typed initializers select zero initialization; an explicit zero-value expression is under design; = {} selects declared-default record construction; executable empty bodies still produce Unit**. Detailed field-default syntax, defaultability, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
 
-The user's later [union-construction review](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) proposes A{0} as a compact expression that names a member and zeroes the entire A, bypassing defaults. The sole-zero marker remains proposed grammar; it is not a selected positional-field literal. Existing A{} and contextual = {} keep their declared-default meaning where record construction is valid.
+The user's later [union-construction review](lite://doc/union-initialization-policy#selected-rejection-and-explicit-member-choice) proposes A{0} as a compact expression that names a member and zeroes the entire A, bypassing defaults. The sole-zero marker remains proposed grammar; it is not a selected positional-field literal. Existing A{} and contextual = {} keep their declared-default meaning where record construction is valid.
 
 ## 1. Declare a record and its defaults
 
@@ -32,13 +32,13 @@ zeroed: User = 0;   /* contextual zero; ignore field defaults */
 configured: User = {} /* apply declared defaults, then zero-fill other fields */
 ```
 
-The selected surface direction reserved: User = ?; requests storage without either initialization mode. It remains unavailable as an ordinary User until initialization completes; first-write operations, allocation policy, and complete state/cleanup rules remain open. The earlier reserve() spelling is not a selected synonym. See [reserved storage](reserved-storage.md).
+The selected surface direction reserved: User = ?; requests storage without either initialization mode. It remains unavailable as an ordinary User until initialization completes; first-write operations, allocation policy, and complete state/cleanup rules remain open. The earlier reserve() spelling is not a selected synonym. See [reserved storage](lite://doc/reserved-storage).
 
 For zeroed, name and address.city are empty Strings, age and address.postalCode are 0, and active is false. For configured, active is true and address.city is empty: the address field declares no default and therefore uses zero of Address. Both values are fully initialized when their declarations complete. Every field type must map zero storage to a valid value; zero initialization never falls back to declared defaults.
 
 The empty contextual record initializer is selected: its established initializer position and expected record type give it record-construction meaning. Empty executable bodies still produce Unit. The full grammar must express these distinct roles without using trial type-checking to choose a parse.
 
-Omitting the initializer of a simple typed binding selects all-zero storage and bypasses declared field defaults. A contextual literal 0 can request a zeroed record when there is no distinct viable interpretation; an explicit zero-value expression also remains under design. Every type has a valid all-zero value; this does not implicitly cast an arbitrary integer to a record. See [zero initialization](zero-initialization.md).
+Omitting the initializer of a simple typed binding selects all-zero storage and bypasses declared field defaults. A contextual literal 0 can request a zeroed record when there is no distinct viable interpretation; an explicit zero-value expression also remains under design. Every type has a valid all-zero value; this does not implicitly cast an arbitrary integer to a record. See [zero initialization](lite://doc/zero-initialization).
 
 ```text
 user := User {}
@@ -153,7 +153,7 @@ make_user := fn(name: String): User {
 
 The explicit type head makes these ordinary construction expressions. The factory's outer braces are an executable body; its final User construction supplies its result. Omitting a construction head at arbitrary call arguments or function tail positions requires the broader expected-type/brace grammar, which is not selected merely by these examples.
 
-Nested initializer notation alone does not request a graph clone or a particular allocation/ABI. The selected record-value rule stores ordinary nested record fields inline in their containing value: a named User field is still copied with that value. Reference fields preserve their targets rather than cloning them. Exact physical representation must preserve these semantics; see [local shadowing and copies](local-shadowing-and-copies.md). Ownership, reference syntax, resource copy eligibility, and ABI details remain separate contracts.
+Nested initializer notation alone does not request a graph clone or a particular allocation/ABI. The selected record-value rule stores ordinary nested record fields inline in their containing value: a named User field is still copied with that value. Reference fields preserve their targets rather than cloning them. Exact physical representation must preserve these semantics; see [local shadowing and copies](lite://doc/local-shadowing-and-copies). Ownership, reference syntax, resource copy eligibility, and ABI details remain separate contracts.
 
 ## 6. Unnamed record type inside a record: proposal
 
@@ -182,7 +182,7 @@ This is distinct from a bare-brace top-level type declaration: Profile := still 
 
 Independently declared unnamed record types have distinct identity, even with identical fields. How such a type can be named later or appear in public signatures remains open. The inline shorthand's full grammar is still a syntax proposal; its declaration identity is now selected.
 
-The [inline identity rule](record-type-identity.md#selected-inline-rule-identity-per-declaration) selects distinct types per inline declaration, matching named records. Reuse one named Stats declaration when different outer records should share that field type.
+The [inline identity rule](lite://doc/record-type-identity#selected-inline-rule-identity-per-declaration) selects distinct types per inline declaration, matching named records. Reuse one named Stats declaration when different outer records should share that field type.
 
 ## 7. Standalone inferred record literal: requested direction, grammar pending
 
@@ -190,7 +190,7 @@ The [inline identity rule](record-type-identity.md#selected-inline-rule-identity
 point := { x = 1, y = 2, }
 ```
 
-The user requests this inline form without an expected record type. Completing it requires anonymous-record inference and a grammar distinct from executable blocks; see [record literal boundaries](record-literal-boundaries.md). The optional-semicolon boundary is selected independently of that grammar. It must not guess a named type by searching for matching field names. In particular, empty point := {} cannot simultaneously mean a new empty record and the existing Unit-valued empty block.
+The user requests this inline form without an expected record type. Completing it requires anonymous-record inference and a grammar distinct from executable blocks; see [record literal boundaries](lite://doc/record-literal-boundaries). The optional-semicolon boundary is selected independently of that grammar. It must not guess a named type by searching for matching field names. In particular, empty point := {} cannot simultaneously mean a new empty record and the existing Unit-valued empty block.
 
 Named and established expected-type constructions remain the fully established examples; the inferred form above records the requested direction rather than a complete parser rule. Same-name construction entries such as User { name, age } also need a separate decision; proposed deconstruction shorthand does not automatically select construction shorthand.
 
@@ -211,7 +211,7 @@ Omission is supported for simple typed bindings and uses the same universally va
 
 All-zero storage must represent a valid value of every type. This replaces the earlier zero-eligibility restriction. Numeric zero, false, empty String, Unit, recursively zeroed fields, and empty collection states require representations consistent with that rule. Option's zero is its explicit .None state.
 
-A zero-initialized function is callable and returns zero of its declared result type without user-body work. Ordinary argument evaluation and required cleanup still apply. References, enums, unions, resource wrappers, and constrained domains still require concrete zero mappings; no particular first enum/union alternative is silently chosen here. See [universal zero initialization](zero-initialization.md).
+A zero-initialized function is callable and returns zero of its declared result type without user-body work. Ordinary argument evaluation and required cleanup still apply. References, enums, unions, resource wrappers, and constrained domains still require concrete zero mappings; no particular first enum/union alternative is silently chosen here. See [universal zero initialization](lite://doc/zero-initialization).
 
 Declared-default construction is separate: = {} uses field defaults, whereas omitted initialization and = 0 bypass them. Required-field syntax, cross-field validation, and default evaluation remain separate contracts; they must respect the universal zero rule rather than introduce types with no zero representation.
 
@@ -222,7 +222,7 @@ Declared-default construction is separate: = {} uses field defaults, whereas omi
 - Each construction establishes its own logical default values. Do not introduce accidental shared writable collections through a declaration default. Ownership/copy rules must establish whether any noncopyable default can be reused.
 - `mut user := User {}` grants writable held-data access; `var user := User {}` permits replacing the binding; `var mut` permits both. Default initialization does not change those permissions.
 - No mandated preliminary zero-fill followed by overwrites is implied. A compiler may construct the final valid representation directly and remove redundant stores. This does not establish C-level performance before implementation and measurement.
-- In var x: User; x = make_user();, zero initialization remains the source meaning, but its physical stores may be omitted if they have no observable effect. Reads, aliases, callbacks, exits before replacement, and any required cleanup must retain that meaning. See [semantic initialization versus physical writes](memory-and-performance.md#semantic-initialization-versus-physical-writes).
+- In var x: User; x = make_user();, zero initialization remains the source meaning, but its physical stores may be omitted if they have no observable effect. Reads, aliases, callbacks, exits before replacement, and any required cleanup must retain that meaning. See [semantic initialization versus physical writes](lite://doc/memory-and-performance#semantic-initialization-versus-physical-writes).
 
 ## References
 
@@ -232,4 +232,4 @@ Odin explicitly initializes variables to zero by default. Zig supports declarati
 - [Zig default field values](https://ziglang.org/documentation/0.15.1/#Default-Field-Values) and [faulty defaults](https://ziglang.org/documentation/0.15.1/#Faulty-Default-Field-Values).
 - [Rust Default](https://doc.rust-lang.org/core/default/trait.Default.html).
 
-Related: [records](records.md), [construction and pattern examples](pattern-examples.md), [mutability](mutability.md), [types and inference](types-and-inference.md), and [memory/performance](memory-and-performance.md).
+Related: [records](lite://doc/records), [construction and pattern examples](lite://doc/pattern-examples), [mutability](lite://doc/mutability), [types and inference](lite://doc/types-and-inference), and [memory/performance](lite://doc/memory-and-performance).

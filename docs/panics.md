@@ -6,23 +6,23 @@ Status: **implicit live panics without checked effect declarations selected 2026
 
 Distinguish a declared recoverable outcome from a failure outside ordinary Result handling. A separate path does not imply that panics are automatically recoverable, use hardware exceptions, or require a stack-unwinding runtime.
 
-The user requests [strongly typed panics](typed-panics.md) in the future, including underlying null access, zero division, arithmetic overflow, and related faults. Typed categories and structured payloads are the intended direction; the later [shared expression recovery](expression-recovery.md) direction adds else as the recovery surface. An operation handler covers only its defined faults; evaluated argument/operand panics bypass it. An explicit `{ ... } else { ... }` block instead covers supported typed panics across its executed contents and synchronous calls. Fault-contract syntax, safe transport, complete chain/attachment rules, and exact triggers still need definition. Underlying null faults do not introduce public nullable values.
+The user requests [strongly typed panics](lite://doc/typed-panics) in the future, including underlying null access, zero division, arithmetic overflow, and related faults. Typed categories and structured payloads are the intended direction; the later [shared expression recovery](lite://doc/expression-recovery) direction adds else as the recovery surface. An operation handler covers only its defined faults; evaluated argument/operand panics bypass it. An explicit `{ ... } else { ... }` block instead covers supported typed panics across its executed contents and synchronous calls. Fault-contract syntax, safe transport, complete chain/attachment rules, and exact triggers still need definition. Underlying null faults do not introduce public nullable values.
 
 ## No checked panic-effect declarations
 
-The experimental [text-helper increment](../igniter/README.md#temporary-text-operations)
+The experimental [text-helper increment](lite://repo/igniter/README.md#temporary-text-operations)
 reports terminal BoundPanic diagnostics for invalid text positions. Arguments
 evaluate before helper bounds checks; an earlier argument fault prevents reaching
 the helper's check. This is a provisional interpreter diagnostic, not a first-class
 panic value or an implementation of capture, category matching, or recovery.
 
-The approved [fixed-array subset](../igniter/README.md#fixed-arrays-and-traversal)
+The approved [fixed-array subset](lite://repo/igniter/README.md#fixed-arrays-and-traversal)
 uses the same terminal BoundPanic diagnostic for invalid runtime bracket indices,
 after evaluating the receiver and index. Literal dot positions are checked
 statically. This adds no implicit Result or checked panic-effect signature;
 the interpreter still lacks capture/recovery and a complete public panic API.
 
-Selected [LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md): live panics remain implicit. Semantic panic-effect declarations are prohibited; functions do not declare or infer exhaustive lists of the bounds, overflow, division, helper, or other live panics that can escape. Ordinary indexing/arithmetic remains ordinary value-producing code, without forcing a train of transitive panic alternatives into every callable signature.
+Selected [LP-0018 r1](lite://doc/proposals/LP-0018-implicit-panics-without-effect-declarations): live panics remain implicit. Semantic panic-effect declarations are prohibited; functions do not declare or infer exhaustive lists of the bounds, overflow, division, helper, or other live panics that can escape. Ordinary indexing/arithmetic remains ordinary value-producing code, without forcing a train of transitive panic alternatives into every callable signature.
 
 ```text
 calculate := fn(values: [Int], i: Int): Int {
@@ -37,7 +37,7 @@ Specific categories such as BoundPanic remain typed runtime values that can be c
 
 Known faults may be documented non-exhaustively, but documentary annotation format/tooling remains under investigation. Such information cannot change callable typing, add returned errors, or prove that other live panics cannot occur. No annotation syntax is selected, and existing operation-specific else attribution is not replaced by a checked effect system.
 
-A literal fn(): T ! Panic return contract instead means explicitly returned outcome data: its ordinary call result is T ! Panic, not T with a silently projected panic effect. Functions may return, store, and pass captured data. The exploratory interpretation of fn(): T ! SpecialPanic1 as an implicit-effect signature whose ordinary call yields T is withdrawn. Banning effects does not ban user-defined Panic category types or first-class panic-bearing Result values. See [literal outcome returns](result-and-errors.md#implicit-live-panics-and-explicit-outcome-returns).
+A literal fn(): T ! Panic return contract instead means explicitly returned outcome data: its ordinary call result is T ! Panic, not T with a silently projected panic effect. Functions may return, store, and pass captured data. The exploratory interpretation of fn(): T ! SpecialPanic1 as an implicit-effect signature whose ordinary call yields T is withdrawn. Banning effects does not ban user-defined Panic category types or first-class panic-bearing Result values. See [literal outcome returns](lite://doc/result-and-errors#implicit-live-panics-and-explicit-outcome-returns).
 
 ## Recoverable failure template
 
@@ -66,25 +66,25 @@ This example explicitly returns a recoverable failure. The ordinary final intege
 
 ## Manual panics and error inference
 
-LP-0012 selects custom Panic capability. [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md) now makes untagged manual raise a nearest-function/closure failure exit for both Error and Panic, bypassing local handlers in that activation. Explicit raise @outer failure or raise @outer ...failures instead completes the named enclosing block, so surrounding recovery/capture can handle its outgoing failures. Generated/live operation panics still propagate implicitly toward ordinary eligible boundaries. Eligible error inference excludes implicit panics and includes only returned errors that actually escape. Category declaration/conformance syntax, overlap, and provenance representation remain open. See [directed boundaries](manual-failures-and-inference.md#directed-raise-boundaries).
+LP-0012 selects custom Panic capability. [LP-0014 r1](lite://doc/proposals/LP-0014-directed-failure-exits) now makes untagged manual raise a nearest-function/closure failure exit for both Error and Panic, bypassing local handlers in that activation. Explicit raise @outer failure or raise @outer ...failures instead completes the named enclosing block, so surrounding recovery/capture can handle its outgoing failures. Generated/live operation panics still propagate implicitly toward ordinary eligible boundaries. Eligible error inference excludes implicit panics and includes only returned errors that actually escape. Category declaration/conformance syntax, overlap, and provenance representation remain open. See [directed boundaries](lite://doc/manual-failures-and-inference#directed-raise-boundaries).
 
 ## Explicitly stored panics
 
-Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md): exp? stores supported failures from its entire operand evaluation. Outward T becomes T ! Panic; outward T ! E becomes T ! (E | Panic), with one outward layer normalized. No exhaustive compile-time panic list is required. Concrete category information and channel origin survive capture. Storing/passing the outcome does not resume panics. An unmatched captured panic remains in the residual outcome; ! explicitly resumes its outward panic channel under LP-0010. Catching all possible failures yields the normal value directly. See [capture and unwrapping](failure-capture-and-unwrapping.md).
+Selected [LP-0009 r1](lite://doc/proposals/LP-0009-flat-failure-capture): exp? stores supported failures from its entire operand evaluation. Outward T becomes T ! Panic; outward T ! E becomes T ! (E | Panic), with one outward layer normalized. No exhaustive compile-time panic list is required. Concrete category information and channel origin survive capture. Storing/passing the outcome does not resume panics. An unmatched captured panic remains in the residual outcome; ! explicitly resumes its outward panic channel under LP-0010. Catching all possible failures yields the normal value directly. See [capture and unwrapping](lite://doc/failure-capture-and-unwrapping).
 
 ## Arithmetic channel and typed recovery selected
 
-Basic arithmetic faults use typed panics, not returned `Result` errors. This includes arithmetic overflow and integer division faults when their operation contract defines them as faults. Exact triggers and payloads remain open; floating-point division may instead define non-finite results. See [arithmetic fault boundaries](arithmetic-faults.md).
+Basic arithmetic faults use typed panics, not returned `Result` errors. This includes arithmetic overflow and integer division faults when their operation contract defines them as faults. Exact triggers and payloads remain open; floating-point division may instead define non-finite results. See [arithmetic fault boundaries](lite://doc/arithmetic-faults).
 
-The user requires local recovery for each individual arithmetic operation, without a verbose named helper as the ordinary interface. Target-level `else` with a typed filter supplies that recovery; the category names and operation fault attribution remain open. Argument/operand panics bypass the operation handler under [the selected boundary](expression-recovery.md#operation-specific-panic-boundary-selected). No wrapping, undefined behavior, implicit `Result` conversion, or build-dependent semantics are selected here.
+The user requires local recovery for each individual arithmetic operation, without a verbose named helper as the ordinary interface. Target-level `else` with a typed filter supplies that recovery; the category names and operation fault attribution remain open. Argument/operand panics bypass the operation handler under [the selected boundary](lite://doc/expression-recovery#operation-specific-panic-boundary-selected). No wrapping, undefined behavior, implicit `Result` conversion, or build-dependent semantics are selected here.
 
-The [bounds/arithmetic policy review](checked-fault-policy.md) retains ordinary asserting operations plus explicit typed checked capture as history. Arithmetic uses typed panics, and local recovery of each operation remains required. Its operation handler covers the arithmetic operation's own defined faults, excluding panics from evaluated operands. Operation fault attribution and transfer remain open; this is distinct from deciding the arithmetic fault channel.
+The [bounds/arithmetic policy review](lite://doc/checked-fault-policy) retains ordinary asserting operations plus explicit typed checked capture as history. Arithmetic uses typed panics, and local recovery of each operation remains required. Its operation handler covers the arithmetic operation's own defined faults, excluding panics from evaluated operands. Operation fault attribution and transfer remain open; this is distinct from deciding the arithmetic fault channel.
 
 ## Cleanup and state
 
-Recovery uses the selected [pending-occurrence model](expression-recovery.md#pending-occurrences-and-munching-selected) for both single and aggregated failures. Schematic (ErrSingle,) contains one pending occurrence, while () contains none. A matching clause consumes its match; a nonmatch consumes nothing and runs no handler. No failure clause matches an empty remainder. A proof of complete exhaustion removes handling obligations for those failures; it does not merge panic and returned-error channels or discard new failures raised during recovery/cleanup.
+Recovery uses the selected [pending-occurrence model](lite://doc/expression-recovery#pending-occurrences-and-munching-selected) for both single and aggregated failures. Schematic (ErrSingle,) contains one pending occurrence, while () contains none. A matching clause consumes its match; a nonmatch consumes nothing and runs no handler. No failure clause matches an empty remainder. A proof of complete exhaustion removes handling obligations for those failures; it does not merge panic and returned-error channels or discard new failures raised during recovery/cleanup.
 
-The selected [typed collector](expression-recovery.md#typed-recovery-collectors-selected) runs once and preserves occurrence order. LP-0009 selects ...errs: Error for returned errors, ...ps: Panic for panics, and ...fails: Failure for both. Earlier consumers remove entries; later collectors see only the ordered remainder. Nonlocal exits with unmatched categories remain unresolved.
+The selected [typed collector](lite://doc/expression-recovery#typed-recovery-collectors-selected) runs once and preserves occurrence order. LP-0009 selects ...errs: Error for returned errors, ...ps: Panic for panics, and ...fails: Failure for both. Earlier consumers remove entries; later collectors see only the ordered remainder. Nonlocal exits with unmatched categories remain unresolved.
 
 Returned recoverable errors follow the language's structured-exit cleanup rules. When postfix `!` forwards a typed error, applicable construct-level `finally` blocks in exited scopes run from inner to outer before the error leaves the enclosing function or closure; body-wide cleanup remains deferred. When a language-managed typed panic propagates toward an outer matching handler, it unwinds exited scopes and runs each applicable `finally` from inner to outer before reaching that handler. The cleanup extent and outcome when no panic handler matches remain open. A hard process abort is outside this guarantee. If cleanup also fails, any already pending failure stays primary and cleanup failures are retained as secondary; the bound aggregate's public type/operations, inspection, and duplicate-member rules remain open.
 
@@ -100,13 +100,13 @@ Recoverable errors do not imply automatic rollback of earlier mutations. Transac
 
 ## Related concepts and references
 
-- [Result and errors](result-and-errors.md)
-- [Control-flow exits](control-flow.md)
-- [Numbers and ranges](numbers.md)
-- [Division](division.md)
-- [Memory and performance](memory-and-performance.md)
+- [Result and errors](lite://doc/result-and-errors)
+- [Control-flow exits](lite://doc/control-flow)
+- [Numbers and ranges](lite://doc/numbers)
+- [Division](lite://doc/division)
+- [Memory and performance](lite://doc/memory-and-performance)
 
-The source for the selected separation is the LiteScript design discussion. Comparisons in [Result and errors](result-and-errors.md#reference-language-distinction) do not adopt another language's panic implementation.
+The source for the selected separation is the LiteScript design discussion. Comparisons in [Result and errors](lite://doc/result-and-errors#reference-language-distinction) do not adopt another language's panic implementation.
 
 
-Captured panics are stored outcome data. [LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md) selects ordinary function return from a partial captured recovery handler even when another captured panic remains: that unfinished expression is abandoned, not automatically reactivated as panic propagation. New live panics during return-payload evaluation or cleanup retain their own rules. This does not define general suppression of an already propagating live panic, or settle remainder policy for other exit kinds.
+Captured panics are stored outcome data. [LP-0015 r1](lite://doc/proposals/LP-0015-early-return-recovery-paths) selects ordinary function return from a partial captured recovery handler even when another captured panic remains: that unfinished expression is abandoned, not automatically reactivated as panic propagation. New live panics during return-payload evaluation or cleanup retain their own rules. This does not define general suppression of an already propagating live panic, or settle remainder policy for other exit kinds.

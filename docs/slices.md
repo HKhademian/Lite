@@ -4,7 +4,7 @@ Status: **proposed view concept, 2026-10-19; direct positional access with typed
 
 ## A view, not another element allocation
 
-`Slice<T>` uses [temporary generic notation](generic-notation.md). The future generic review will determine its source spelling; this view proposal does not select angle-bracket application syntax.
+`Slice<T>` uses [temporary generic notation](lite://doc/generic-notation). The future generic review will determine its source spelling; this view proposal does not select angle-bracket application syntax.
 
 A slice describes a contiguous region of initialized elements owned elsewhere. The intended representation is an address plus an element count, with ownership/lifetime facts checked separately; exact ABI and alias enforcement are open. Creating or copying a permitted slice view does not copy its elements, allocate a new element buffer, or transfer the source's ownership.
 
@@ -18,7 +18,7 @@ This proposes zero-based indices for each view and a half-open range: include th
 
 Copying a view still refers to the same source region. An independent owning copy requires a separate copy/clone operation. A view's copied references retain their permissions; shallow-copying a read-only view cannot manufacture writable access to its source.
 
-The selected [variadic rest retention rules](tuple-array-shapes.md#rest-access-storage-and-retention) use the same ownership distinction without selecting Slice as the rest-array type. Rest can use valid borrowed backing storage; keeping it requires a proven lifetime or lasting ownership, and constructing independent owned storage is explicit. This does not finalize slice syntax or general borrow enforcement.
+The selected [variadic rest retention rules](lite://doc/tuple-array-shapes#rest-access-storage-and-retention) use the same ownership distinction without selecting Slice as the rest-array type. Rest can use valid borrowed backing storage; keeping it requires a proven lifetime or lasting ownership, and constructing independent owned storage is explicit. This does not finalize slice syntax or general borrow enforcement.
 
 ## Inputs that actually require contiguity
 
@@ -30,7 +30,7 @@ upload_pixels := fn (pixels: Contiguous<Pixel>) {
 
 This is conceptual capability notation; the helper and view-acquisition method are proposals. An algorithm needing one contiguous region can request a Contiguous capability and obtain a slice from any compatible provider. A boundary specifically requiring the slice representation may accept Slice itself. Read access is the default, and no element copy or new owner is inherently required.
 
-An operation such as summing or rendering that only traverses elements should request the broader Iterable capability. Requiring Slice would otherwise exclude sets, chunked collections, and generators unnecessarily. Exact constraints, view acquisition, conversions, and lifetime rules remain open. See [consumer abstractions](collection-abstractions.md) and [collection capabilities](collection-capabilities.md).
+An operation such as summing or rendering that only traverses elements should request the broader Iterable capability. Requiring Slice would otherwise exclude sets, chunked collections, and generators unnecessarily. Exact constraints, view acquisition, conversions, and lifetime rules remain open. See [consumer abstractions](lite://doc/collection-abstractions) and [collection capabilities](lite://doc/collection-capabilities).
 
 ## Mut and var describe different effects
 
@@ -59,7 +59,7 @@ Ordinary slices expose initialized elements only. Spare capacity in a list and r
 
 Empty slices should be valid values with length zero rather than public null states. Indexing or slicing checks logical bounds through the selected direct positional operations and typed faults; only the precise fault type and scope remain open. A length-zero view must not permit element reads.
 
-The [checked-operation page](checked-collection-operations.md) keeps fallible Result indexing as history. The selected direction is direct positional access with typed faults and attached `else` recovery; postfix `!` propagates returned errors, not these faults. Static validity proofs and slicing-range fault rules need their own precise contracts.
+The [checked-operation page](lite://doc/checked-collection-operations) keeps fallible Result indexing as history. The selected direction is direct positional access with typed faults and attached `else` recovery; postfix `!` propagates returned errors, not these faults. Static validity proofs and slicing-range fault rules need their own precise contracts.
 
 ## Keep the base view small
 
@@ -67,4 +67,4 @@ Recommend contiguous views only in the initial core. Reverse/step adapters may u
 
 Do not automatically treat String as `Slice<Byte>` or as grapheme-indexable by this decision. Element and string indexing have distinct contracts.
 
-Related: [sequence families](sequence-types.md), [arrays](arrays.md), [lists](lists.md), [caller grants](caller-mutation-grants.md), [reserved storage](reserved-storage.md), and [reference comparison](sequence-types-comparison.md).
+Related: [sequence families](lite://doc/sequence-types), [arrays](lite://doc/arrays), [lists](lite://doc/lists), [caller grants](lite://doc/caller-mutation-grants), [reserved storage](lite://doc/reserved-storage), and [reference comparison](lite://doc/sequence-types-comparison).

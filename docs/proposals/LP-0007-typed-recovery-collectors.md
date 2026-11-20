@@ -5,7 +5,7 @@
 - Status: **accepted, 2026-10-26; unreleased design**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
-- Supersedes: the unselected `errs: [Error]` group-capture spelling explored in LP-0005; complements [LP-0006 r1](LP-0006-whole-match-failure-consumption.md).
+- Supersedes: the unselected `errs: [Error]` group-capture spelling explored in LP-0005; complements [LP-0006 r1](lite://doc/proposals/LP-0006-whole-match-failure-consumption).
 - Superseded by: none.
 
 ## Selected collector and bound type
@@ -53,4 +53,4 @@ The former `errs: [Error]` group-capture candidate is not an alternative spellin
 
 `r1` records the selected ellipsis collector, [Error] binding type, one/many/no-match behavior, once-per-clause execution, stable filtered occurrence order, error-only versus all-failure selection, and open exit/storage details. No compiler, runtime, allocation, or performance result is claimed.
 
-Normative owner: [expression recovery](../expression-recovery.md#typed-recovery-collectors-selected). Related: [declared array collectors](../tuple-array-shapes.md#a-declared-variadic-tail-collects-an-array), [indexed sequence](../indexed-sequence-contract.md#readable-t), and [remaining exit review](LP-0005-handler-execution-and-exits.md).
+Normative owner: [expression recovery](lite://doc/expression-recovery#typed-recovery-collectors-selected). Related: [declared array collectors](lite://doc/tuple-array-shapes#a-declared-variadic-tail-collects-an-array), [indexed sequence](lite://doc/indexed-sequence-contract#readable-t), and [remaining exit review](lite://doc/proposals/LP-0005-handler-execution-and-exits).

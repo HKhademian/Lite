@@ -2,11 +2,11 @@
 
 Status: **API design direction selected by the user, 2026-10-19**. Consumers request the operations they need rather than a particular collection implementation or static size. Standard collections are providers of those contracts. Exact protocol names, generic/constraint syntax, yielded access modes, and dispatch remain open.
 
-Supporting rationale for the capability model. Normative operation and sequence contracts are owned by [collection operation contracts](collection-operation-contracts.md), [sequence types](sequence-types.md), and the [indexed sequence contract](indexed-sequence-contract.md).
+Supporting rationale for the capability model. Normative operation and sequence contracts are owned by [collection operation contracts](lite://doc/collection-operation-contracts), [sequence types](lite://doc/sequence-types), and the [indexed sequence contract](lite://doc/indexed-sequence-contract).
 
 ## The icons example
 
-Beginners should be able to create and use collections before naming traversal protocols. The [collection-inference proposal](collection-inference.md) explores contextual nested literals and simple fn(icons) definitions. The annotated example below explains the required behavior; it is not a required first-lesson spelling.
+Beginners should be able to create and use collections before naming traversal protocols. The [collection-inference proposal](lite://doc/collection-inference) explores contextual nested literals and simple fn(icons) definitions. The annotated example below explains the required behavior; it is not a required first-lesson spelling.
 
 ```text
 render_icons := fn(icons: Iterable<Icon>) {
@@ -56,8 +56,8 @@ An operation may still explicitly construct and return a standard List when that
 
 ## Direction versus unfinished mechanism
 
-The user-selected principle is capability-based APIs with unified element typing. The capability vocabulary, complexity laws, explicit conformance/coherence, static specialization versus erased runtime values, and exact generic syntax still need design. See [collection capabilities](collection-capabilities.md).
+The user-selected principle is capability-based APIs with unified element typing. The capability vocabulary, complexity laws, explicit conformance/coherence, static specialization versus erased runtime values, and exact generic syntax still need design. See [collection capabilities](lite://doc/collection-capabilities).
 
-Provider-neutral input alone does not settle the algorithm or output representation. The [algorithm proposal](collection-algorithms.md) covers lawful fast paths, lazy results, and caller-selected destinations. The [generic performance review](generic-collection-performance.md) separates compile-time constraints, runtime-erased providers, and heterogeneous element storage.
+Provider-neutral input alone does not settle the algorithm or output representation. The [algorithm proposal](lite://doc/collection-algorithms) covers lawful fast paths, lazy results, and caller-selected destinations. The [generic performance review](lite://doc/generic-collection-performance) separates compile-time constraints, runtime-erased providers, and heterogeneous element storage.
 
-Related: [interfaces](composition-and-interfaces.md), [sequence storage providers](sequence-types.md), [iteration](collections-and-iterators.md), [temporary generic notation](generic-notation.md), and [caller mutation grants](caller-mutation-grants.md).
+Related: [interfaces](lite://doc/composition-and-interfaces), [sequence storage providers](lite://doc/sequence-types), [iteration](lite://doc/collections-and-iterators), [temporary generic notation](lite://doc/generic-notation), and [caller mutation grants](lite://doc/caller-mutation-grants).

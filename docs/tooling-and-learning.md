@@ -48,7 +48,7 @@ and typed fixed arrays remain on the existing-feature parity track. C implements
 the admitted scalar output forms and clearly rejects unsupported input/aggregate
 forms; native C self-hosting remains pending.
 
-The [canonical I/O case](../language/verifications/features/io/reporting/prompt-and-output-helpers.lts) runs through
+The [canonical I/O case](lite://repo/language/verifications/features/io/reporting/prompt-and-output-helpers.lts) runs through
 both T00 and generated TS. Focused host tests cover EOF, numeric range/grammar,
 prompt order, mixed reads, zero arguments, aggregate display, Unicode buffer
 boundaries, exact real-CLI UTF-8 diagnostics and removal of the old builtin.
@@ -60,16 +60,16 @@ Students should spend their early effort understanding programs rather than choo
 ## Small VS Code highlighter
 
 Requested and implemented **2026-10-31**: a local declarative
-[Lite extension](../editors/vscode/README.md) recognizes .lt/.lts files and colors
+[Lite extension](lite://repo/editors/vscode/README.md) recognizes .lt/.lts files and colors
 existing lexical forms using the editor's theme. It includes nested/raw comments,
 multiline strings, basic numbers, keywords/operators, type names and ordinary calls.
 It has no extension runtime, formatter, runner or language server. Colorization is
 approximate and does not validate code, choose open grammar rules, or approve
-experimental builtins. See [INV-072 evidence](../research/investigations/INV-072-vscode-highlighter.md).
+experimental builtins. See [INV-072 evidence](lite://repo/research/investigations/INV-072-vscode-highlighter.md).
 
 ## FVP direction
 
-The [selected first working targets](principles.md#first-working-targets) call
+The [selected first working targets](lite://doc/principles#first-working-targets) call
 for a tiny executable demonstrator before practical scripting. A small interpreter
 is selected for the FVP, with TypeScript/Node as the minimal igniter and early LiteLang
 self-hosting selected below. The user-requested ./bin/lite run launcher is recorded below. Temporary input/reporting
@@ -81,13 +81,13 @@ helper names are selected below; their detailed contracts remain open.
 
 Requested and implemented **2026-10-31**: use
 `./bin/lite run language/examples/006-fixed-tuples.lts` from the project root. The executable
-[lite](../bin/lite) command now links to the Lite-generated
-[`compiler/bootstrap/igniter.ts`](../compiler/bootstrap/igniter.ts), which routes and runs tools through
+[lite](lite://repo/bin/lite) command now links to the Lite-generated
+[`compiler/bootstrap/igniter.ts`](lite://repo/compiler/bootstrap/igniter.ts), which routes and runs tools through
 node from PATH. It resolves the implementation from its own location, preserves
 caller-relative source paths, arguments, stdin, output and exit status, and also
 forwards the existing run --check form. No language syntax, builtin, compilation
 backend or installed-command mechanism is added. Strict checking and all 63
-interpreter test groups pass; see [INV-004 evidence](../research/investigations/INV-004-fvp-execution-path.md#root-shebang-launcher-2026-10-31).
+interpreter test groups pass; see [INV-004 evidence](lite://repo/research/investigations/INV-004-fvp-execution-path.md#root-shebang-launcher-2026-10-31).
 
 ### Interpreter direction
 
@@ -102,7 +102,7 @@ for this first runnable FVP. Do not require both interpreted and native paths,
 caching, a JIT/bytecode engine, a full debugger, or module/package machinery to
 deliver this slice. TypeScript/Node hosts the minimal igniter; TypeScript emission is now also selected for early self-hosting and maintained web output. Concrete
 internal structure, numeric/text details, and remaining helper contracts are open.
-The first narrow checkpoint is now implemented in [igniter/](../igniter/README.md);
+The first narrow checkpoint is now implemented in [igniter/](lite://repo/igniter/README.md);
 this is not a complete language implementation or a native performance result.
 
 ### First executable checkpoint
@@ -123,32 +123,32 @@ Add conditionals/Boolean expressions, loops, user-defined functions, tuples and
 destructuring, and richer types in subsequent increments; their relative order
 is open. The checkpoint is not the final FVP feature ceiling or a requirement
 to finish all 001–020 exercises first. Numeric/text details and helper contracts
-are documented provisionally in the implemented [igniter](../igniter/README.md).
+are documented provisionally in the implemented [igniter](lite://repo/igniter/README.md).
 The broad language contract remains a draft.
-See [INV-002.02](../research/investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice).
+See [INV-002.02](lite://repo/research/investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice).
 
 Implementation increment, 2026-10-30: the igniter now also supports Boolean
 values/logic, scalar comparison chains, basic conditionals, and scoped block
 values. Value branches currently need matching result types; partial conditionals
 are supported only as actions. Union results, guarded initializers/assignments,
 pattern conditions, completion/cleanup hooks, loops, and user functions remained
-unsupported at that checkpoint. See [implemented conditions](../igniter/README.md#conditions-and-block-values)
-and [INV-015 evidence](../research/investigations/INV-015-igniter-boolean-conditionals.md).
+unsupported at that checkpoint. See [implemented conditions](lite://repo/igniter/README.md#conditions-and-block-values)
+and [INV-015 evidence](lite://repo/research/investigations/INV-015-igniter-boolean-conditionals.md).
 
-The following increment adds [action loops](../igniter/README.md#action-loops):
+The following increment adds [action loops](lite://repo/igniter/README.md#action-loops):
 Boolean-condition and unconditional loop bodies, bare break/continue, and scoped
 locals reinitialized on each entry. It preserves header reevaluation and
 innermost targeting. Loop values/metadata, iterables, tagged/payload exits and
 then/finally remain unsupported. Strict checking and all 30 test groups pass;
-[INV-035](../research/investigations/INV-035-igniter-action-loops.md) records the evidence.
+[INV-035](lite://repo/research/investigations/INV-035-igniter-action-loops.md) records the evidence.
 
-The next increment implements [typed scalar functions](../igniter/README.md#typed-user-functions),
+The next increment implements [typed scalar functions](lite://repo/igniter/README.md#typed-user-functions),
 positional calls, tail/explicit returns, own-name and self(...) recursion, with
 separate call environments. Tests preserve callee/argument order, lexical/live
 helper reads, and return/loop boundaries. General captures, later helper lookup,
 inference, wider argument routing, and callable inputs/results remain unsupported.
 The factorial CLI reports 120 for 5; strict checking and all 43 test groups pass.
-See [INV-030](../research/investigations/INV-030-igniter-functions.md). This is another
+See [INV-030](lite://repo/research/investigations/INV-030-igniter-functions.md). This is another
 bounded step toward the Lite-written compiler, not a self-hosting result.
 
 The next implemented experiment adds computed String concatenation and temporary
@@ -156,43 +156,43 @@ textLength/textAt/textSlice helpers, demonstrated by a Lite-written arithmetic
 tokenizer. Its code-point positions, half-open intervals and terminal bounds
 faults are provisional host behavior; full Unicode/text policy remains open.
 Strict checking and all 52 test groups pass, including the real CLI and Unicode/
-empty/bounds cases. See [text-helper coverage](../igniter/README.md#temporary-text-operations)
-and [INV-016](../research/investigations/INV-016-igniter-text-operations.md). This is a
+empty/bounds cases. See [text-helper coverage](lite://repo/igniter/README.md#temporary-text-operations)
+and [INV-016](lite://repo/research/investigations/INV-016-igniter-text-operations.md). This is a
 scanning experiment, not the Lite lexer or a compiler bootstrap stage.
 The new helpers were initially introduced without explicit consent; the user
 subsequently approves their exact temporary FVP scope on 2026-10-31 after review.
 The alpha.15 retained-token example now uses these approved helpers and lists.
 Strict checking and 122 interpreter groups pass; broader text policy stays open.
-Follow the [explicit-consent rule](../research/investigations/README.md#explicit-consent-for-language-changes)
+Follow the [explicit-consent rule](lite://repo/research/investigations/README.md#explicit-consent-for-language-changes)
 before adding syntax/features, even for temporary scaffolding.
 
 The user-approved **2026-10-31** increment adds flat fixed tuples of existing
 scalars, literal positional reads, declaration destructuring and explicit tuple
 function inputs/results, using already selected syntax. The runnable example is
-[006-fixed-tuples.lts](../language/examples/types/tuples/fixed-tuples.lts). Strict checking and all
+[006-fixed-tuples.lts](lite://play/example/fixed-tuples). Strict checking and all
 62 interpreter test groups pass. Named/nested/rest tuples, mutation/access grants,
 tuple reporting and native layout remain unsupported. Text helpers were
-separately approved for their temporary FVP scope on 2026-10-31. See [INV-022](../research/investigations/INV-022-fvp-fixed-tuples.md)
-and [implemented tuple coverage](../igniter/README.md#flat-fixed-tuples).
+separately approved for their temporary FVP scope on 2026-10-31. See [INV-022](lite://repo/research/investigations/INV-022-fvp-fixed-tuples.md)
+and [implemented tuple coverage](lite://repo/igniter/README.md#flat-fixed-tuples).
 
 The following named-field increment implements existing flat fully named tuple
 values, =name shorthand, field reads, named function tuple annotations and
-label-sensitive stored transfers. The [008 example](../language/examples/types/tuples/named-tuples.lts)
+label-sensitive stored transfers. The [008 example](lite://play/example/named-tuples)
 runs with ./bin/lite run; strict checking and all 79 interpreter test groups pass.
 Broader tuple routing, named patterns, nested tuples and mutation
-remain unimplemented. See [INV-022](../research/investigations/INV-022-fvp-named-tuples.md)
-and [named-field coverage](../igniter/README.md#named-fixed-tuples).
+remain unimplemented. See [INV-022](lite://repo/research/investigations/INV-022-fvp-named-tuples.md)
+and [named-field coverage](lite://repo/igniter/README.md#named-fixed-tuples).
 
 The user-approved fixed-array increment adds nonempty homogeneous arrays of
 scalars/flat tuples, indexed reads, exact [T; N] function inputs/results and
-action traversal with optional as item. The [009 example](../language/examples/types/collections/fixed-arrays.lts)
+action traversal with optional as item. The [009 example](lite://play/example/fixed-arrays)
 runs through ./bin/lite run. Strict checking and all 93 interpreter test groups pass.
 Empty construction, mixed-type inference, nested arrays, mutation/growth, views,
 count helpers and native layout remain unimplemented; see
-[INV-054](../research/investigations/INV-054-fvp-fixed-arrays.md) and
-[array coverage](../igniter/README.md#fixed-arrays-and-traversal).
+[INV-054](lite://repo/research/investigations/INV-054-fvp-fixed-arrays.md) and
+[array coverage](lite://repo/igniter/README.md#fixed-arrays-and-traversal).
 
-The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
+The selected [temporary numeric profile](lite://doc/numbers#temporary-fvp-numeric-profile)
 uses checked signed 64-bit integers and one finite 64-bit binary floating family.
 Division by zero and non-finite arithmetic results fault. Exact rounding,
 promotions/literal details and text profile remain open. TypeScript/Node is the selected igniter.
@@ -200,7 +200,7 @@ promotions/literal details and text profile remain open. TypeScript/Node is the 
 **FVP scope correction, 2026-10-30:** basic quoted text and the temporary
 inputLine/inputWord/report helpers are enough to begin. Use a simple temporary
 implementation and define concrete behavior as examples require it. The detailed
-[text-profile proposal](../research/investigations/INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30)
+[text-profile proposal](lite://repo/research/investigations/INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30)
 is deferred and unselected; detailed encoding/Unicode, escape coverage, and
 mixed-input rules are not prerequisites for starting the interpreter. Existing
 input-fault and explicit-output selections still apply. Record supported
@@ -210,65 +210,65 @@ semantics.
 The next INV-022 increment implements already selected interleaved named/unnamed
 flat tuples, including mixed annotations, copies and array elements. Strict
 checking and all 97 interpreter groups pass; see
-[the evidence](../research/investigations/INV-022-fvp-mixed-tuples.md).
+[the evidence](lite://repo/research/investigations/INV-022-fvp-mixed-tuples.md).
 
 Explicit typed receiving declarations can now relabel stored flat scalar tuples
 by position with exact shape/types. Ordinary transfers remain label-sensitive;
 fresh-constructor routing stays unimplemented. Strict checking and 102 groups
-pass; see [INV-022 evidence](../research/investigations/INV-022-fvp-label-conversion.md).
+pass; see [INV-022 evidence](lite://repo/research/investigations/INV-022-fvp-label-conversion.md).
 
 The INV-031 increment implements existing fixed-slot named user-function calls,
 including shorthand and positional replacement, without defaults/spread or new
 builtin labels. Strict checking and 108 interpreter groups pass, including
 source-order effects and callee selection; see
-[bounded evidence](../research/investigations/INV-031-fvp-named-calls.md).
+[bounded evidence](lite://repo/research/investigations/INV-031-fvp-named-calls.md).
 
 The user-approved INV-055 slice adds builtin List<T> typed construction, ordinary
 sequence copies, readable indexing/traversal and four explicit mut end operations.
 Strict checking and 120 interpreter groups pass, including real launcher/check-only
 execution of 013; editor checks include List highlighting. General generics,
 capacity, views, user-function mutation grants and recovery remain outside the
-increment. See [bounded evidence](../research/investigations/INV-055-fvp-list-slice.md).
+increment. See [bounded evidence](lite://repo/research/investigations/INV-055-fvp-list-slice.md).
 
-The next application-only increment, [016](../language/examples/parsing/evaluators/integer-calculator.lts),
+The next application-only increment, [016](lite://play/example/integer-calculator),
 implements a recursive integer arithmetic parser/evaluator in Lite, using retained
 token lists and value/position tuple results. It runs on the preserved alpha.15
 interpreter without host feature changes. Strict checking and 125 groups pass;
-see [INV-061 evidence](../research/investigations/INV-061-lite-arithmetic-front-end.md).
+see [INV-061 evidence](lite://repo/research/investigations/INV-061-lite-arithmetic-front-end.md).
 This produces a calculated result, not a compiler artifact or self-hosted stage.
 
 The first emitted-code milestone (originally example 017) is now
-[the TS emitter](../compiler/ts-emitter.lts). It compiles one signed-decimal
+[the TS emitter](lite://repo/compiler/ts-emitter.lts). It compiles one signed-decimal
 report into readable TS. Nine admitted programs have
 raw stdout/stderr/status parity against the igniter and direct TS/translated JS
 execution. Strict checking and 130 interpreter groups pass; the Node-free core
 and visible adapter have separate checks. This is not compiler self-hosting or
-browser/Wasm execution. See [emission evidence](../research/investigations/INV-061-ts-emission-and-parity.md).
+browser/Wasm execution. See [emission evidence](lite://repo/research/investigations/INV-061-ts-emission-and-parity.md).
 
 The selected C target now has a matching restricted
-[C emitter](../compiler/c-emitter.lts).
+[C emitter](lite://repo/compiler/c-emitter.lts).
 Nine emitted native programs, their TS equivalents and the igniter have equal raw
 stdout/stderr/status. Strict checking and 132 groups pass; the native test ran
 with the local C compiler and skips explicitly if unavailable elsewhere. This is
 first native output for the restricted class, not library export or self-hosting.
-See [C evidence](../research/investigations/INV-061-c-emission-and-parity.md).
+See [C evidence](lite://repo/research/investigations/INV-061-c-emission-and-parity.md).
 
 The restricted TS/C emitters subsequently adopt approved inputAll() for complete
 source, with multi-line whitespace and rejection of later unsupported source
 before any artifact. Twelve admitted cases retain byte/status parity; strict
 checking and 139 interpreter groups pass. See
-[whole-source evidence](../research/investigations/INV-061-whole-source-emission.md).
+[whole-source evidence](lite://repo/research/investigations/INV-061-whole-source-emission.md).
 
 The compiler applications subsequently adopt inputArgs for an optional explicit
 logical source name. Exact names prefix their own rejection diagnostics, while
 valid artifact bytes stay unchanged and extra arguments fail before reads.
 Strict checking and 147 groups pass; generated runtime fault locations remain
-separate. See [context evidence](../research/investigations/INV-061-compiler-source-context.md).
+separate. See [context evidence](lite://repo/research/investigations/INV-061-compiler-source-context.md).
 
 Both compiler applications subsequently advance to sequence arbitrary `outputLine(integer);`
 statements across the whole input without language extensions. Emitted TS and native C
 preserve exact byte/status parity across 15 admitted programs. Strict checking and 148
-groups pass. See [statement sequencing evidence](../research/investigations/INV-061-statement-sequencing.md).
+groups pass. See [statement sequencing evidence](lite://repo/research/investigations/INV-061-statement-sequencing.md).
 
 They then admit left-associative `+ - * /`, parentheses, unary signs and immutable
 `x := <expression>;` locals. Expressions are checked in signed 64-bit at compile
@@ -278,7 +278,7 @@ formatting or `printf` with `PRId64`, and collision-prone local names receive a
 parity across emitted TS, translated JS, native C and the igniter; strict checking
 and 153 groups passed. Range faults and division by zero are compile-time
 rejections, not emitted runtime panic parity. See
-[arithmetic/local evidence](../research/investigations/INV-061-arithmetic-and-locals-emission.md).
+[arithmetic/local evidence](lite://repo/research/investigations/INV-061-arithmetic-and-locals-emission.md).
 
 They now also admit String literals/escapes, immutable String locals, String `+`
 concatenation and multi-value reports over Int/String values. Constant String
@@ -295,8 +295,8 @@ stream uses `text`/`bytes`/`file` plus `hash`). Filenames follow
 rejection cases pass exact diagnostics through both compilers. Strict checking
 and 234 groups pass. Text operations/indexing, NUL handling, runtime input and
 self-rebuild remain open. See
-[String/report evidence](../research/investigations/INV-061-string-and-multi-value-reports.md)
-and the [fixture schema](../igniter/tests/README.md).
+[String/report evidence](lite://repo/research/investigations/INV-061-string-and-multi-value-reports.md)
+and the [fixture schema](lite://doc/compiler/igniter-tests).
 
 Current CLI entry points are `./bin/lite check`, `./bin/lite compile`, `./bin/lite run`,
 `./bin/lite verify`, `./bin/lite test`, `./bin/lite docs` and `./bin/lite help`; compiler aliases
@@ -309,20 +309,20 @@ artifact path. Check-only uses the generated compiler and strict artifact
 checking without program effects. C output is deferred to a later native
 compiler phase. Earlier interpreter-run/C instructions on this page are historical
 checkpoints. Linker and formatter names are reserved but unimplemented. See
-[tool naming](versioning-and-naming.md#1-canonical-names).
+[tool naming](lite://doc/versioning-and-naming#1-canonical-names).
 
 Feature and artifact verification lives in `language/verifications/`. `./bin/lite verify`
 selects changed cases; `--all` selects everything. Verification compiles and
 executes TS artifacts against reviewed expected streams. The former 81-case T00
 comparison and its 60-pass/21-failure TS snapshot are historical; there is no
 live T00 lane. `--update`, `--coverage`, `--filter`, `--shard i/n`, `--no-cache`
-and `--quiet` remain available. See the [verification guide](../language/verifications/README.md).
+and `--quiet` remain available. See the [verification guide](lite://repo/language/verifications/README.md).
 
 The compiler implementation now lives in
-[`compiler/`](../compiler/README.md), not in runnable examples. Its source is
+[`compiler/`](lite://doc/compiler/overview), not in runnable examples. Its source is
 split under `compiler/src/` and assembled by ordered manifests: L0 libraries,
 target literal encoders, shared front-end, target emitter and target driver.
-`lite-compile-ts` selects the standalone compiler artifact via [`lib/util/compiler-build.lts`](../lib/util/compiler-build.lts) and invokes it directly: TS uses the
+`lite-compile-ts` selects the standalone compiler artifact via [`lib/util/compiler-build.lts`](lite://repo/lib/util/compiler-build.lts) and invokes it directly: TS uses the
 verified T13 seed/current Lite compiler, and C uses its Lite emitter compiled by
 T13 into a TS-hosted compiler. Top-level relative `.lts` imports define compiler
 source dependencies; package and namespace semantics remain unimplemented.
@@ -376,10 +376,10 @@ rebuilds to a fixed point; source imports record the compiler dependency graph.
 The readable generated TS seed is shipped with exact source/builder hashes.
 Native C fixed points and remaining language parity remain future work. The staged
 implementation route, agent gates and definition of done are in the
-[bootstrap and self-hosting plan](bootstrap-plan.md); it records implementation
+[bootstrap and self-hosting plan](lite://doc/bootstrap-plan); it records implementation
 defaults without selecting new language, module or std rules.
 
-The selected [bootstrap version-control rule](versioning-and-naming.md#bootstrap-source-continuity)
+The selected [bootstrap version-control rule](lite://doc/versioning-and-naming#bootstrap-source-continuity)
 requires stable milestone tags tied to exact commits and a recorded map of which
 builder/source revisions work together. Retain the igniter and required source
 history; verify the full build chain rather than treating tags alone as proof.
@@ -400,7 +400,7 @@ path. Do not equate interpreting Lite with already compiling itself. The seed's
 supported language subset, first compatible compiler revision, stage artifacts,
 host dependencies, source/version compatibility, preservation and verification
 of the chain, and rebuild reproducibility remain open under
-[INV-061.06](../research/investigations/SUBTOPICS.md#inv-061-06). A direct igniter-to-latest
+[INV-061.06](lite://repo/research/investigations/SUBTOPICS.md#inv-061-06). A direct igniter-to-latest
 route is not promised if later compiler source uses newer language features.
 
 This direction chooses Lite for compiler development, TS for the first emitted
@@ -410,15 +410,15 @@ AS compatibility or C library ABI. Keep the igniter minimal. Safety here means
 matching observable output bytes, status and effects for equivalent supported
 programs/inputs, with readable auditable TS and reproducible provenance. Tests
 provide bounded evidence, not a universal absence-of-Trojan proof. See
-[INV-061 target/safety clarification](../research/investigations/INV-061-first-compiler-output.md).
+[INV-061 target/safety clarification](lite://repo/research/investigations/INV-061-first-compiler-output.md).
 
 The implementation pins Node 26.13.0 and TypeScript 7.0.2, checked against stable
 releases on 2026-10-30. Execute the TS sources directly and run the separate strict
 typecheck before accepting changes; Node's type stripping does not typecheck.
-See the [igniter guide](../igniter/README.md) for commands, exact provisional
+See the [igniter guide](lite://repo/igniter/README.md) for commands, exact provisional
 helper behavior, test evidence, and the first tagged-checkpoint identity.
 
-An isolated [AS/Wasm probe](../research/investigations/INV-070-assemblyscript-report-probe.md)
+An isolated [AS/Wasm probe](lite://repo/research/investigations/INV-070-assemblyscript-report-probe.md)
 now compiles the unchanged emitted report core with AssemblyScript 0.28.20 and
 matches all 12 output/status cases through Wasm bindings. The compiler/tools are
 installed only in a temporary directory; no project dependency or permanent AS
@@ -427,7 +427,7 @@ general emitted-TS compatibility.
 
 ## Explicit output and tracing
 
-The user-approved [INV-067 increment](../research/investigations/INV-067-fvp-script-arguments.md)
+The user-approved [INV-067 increment](lite://repo/research/investigations/INV-067-fvp-script-arguments.md)
 adds inputArgs(): List<String> and the invocation
 ./bin/lite run [--check] file.lts [-- argument ...]. Preserve ordered host argument
 Strings after the separator, excluding runner metadata. The helper produces no
@@ -435,7 +435,7 @@ output/prompt, consumes no stdin and returns ordinary copied values. Strict
 checking and 145 interpreter groups plus 9 editor groups pass. Compiler use of
 source identity remains a separate application step; no file/process API is added.
 
-The approved compiler-input [INV-004 increment](../research/investigations/INV-004-fvp-whole-input.md)
+The approved compiler-input [INV-004 increment](lite://repo/research/investigations/INV-004-fvp-whole-input.md)
 adds inputAll() or inputAll(String prompt) for remaining stdin text through EOF,
 with empty text at immediate EOF. The optional prompt follows inputInt: stdout,
 no added newline, once before reading. Preserve lookahead, CR/LF and whitespace;
@@ -505,7 +505,7 @@ reported values, formatting/newlines and destinations. A successful reportError
 call is now selected to report only, as specified below. The word fake selects temporary
 scaffolding, not any particular mock-input values or transport. No stdout/stderr,
 prompt, exception, or panic policy is selected by these names alone.
-The [igniter guide](../igniter/README.md) records implemented helper behavior and
+The [igniter guide](lite://repo/igniter/README.md) records implemented helper behavior and
 its limitations; it does not freeze the permanent API.
 
 ### Optional integer-input prompt and multiple report values
@@ -537,10 +537,10 @@ unreportable, and reportError keeps its single ordinary-value contract. This is
 temporary FVP scaffolding, not a general variadic function implementation or a
 permanent standard-library API.
 
-The [007 example](../language/examples/foundations/io/prompts-and-report.lts) runs through ./bin/lite run.
+The [007 example](lite://play/example/prompts-and-report) runs through ./bin/lite run.
 Strict checking and all 170 interpreter test groups pass, including effect order,
 prompt/output failure, invalid input, pre-effect rejection and real CLI output.
-See [INV-004 evidence](../research/investigations/INV-004-fvp-prompt-and-report-values.md).
+See [INV-004 evidence](lite://repo/research/investigations/INV-004-fvp-prompt-and-report-values.md).
 
 ### Temporary input failures
 
@@ -587,7 +587,7 @@ and unwinding, buffering/flush behavior, argument-evaluation failures, embedded
 host behavior, and interception by recovery remain open. The exit selection
 does not choose hard-abort semantics or silently bypass selected cleanup rules.
 Neither exit(0) as a default nor any special syntax/ABI is implied by omission.
-Owner of the investigation: [INV-005](../research/investigations/INV-005-fvp-completion-and-reporting.md#report-only-and-explicit-exit-selection-2026-10-30).
+Owner of the investigation: [INV-005](lite://repo/research/investigations/INV-005-fvp-completion-and-reporting.md#report-only-and-explicit-exit-selection-2026-10-30).
 
 ## Optional teaching inspection
 
@@ -611,7 +611,7 @@ Flag/mark spelling, source versus external marks, snapshot timing, failures,
 value formatting, state retention and lifetime costs, and diagnostic destinations
 remain open. Observation must not reevaluate the program's earlier expressions.
 Keep inspection distinguishable from deliberate program reports; no particular
-output stream or UI is selected. Inventory: [INV-072.05](../research/investigations/SUBTOPICS.md#inv-072-05).
+output stream or UI is selected. Inventory: [INV-072.05](lite://repo/research/investigations/SUBTOPICS.md#inv-072-05).
 
 ## Formatter
 
@@ -623,7 +623,7 @@ An official formatter is an established requirement. The command lite fmt and it
 
 The formatter must not infer missing semicolons from line breaks, change final-expression results by adding separators, or modify literal string data. Repeated separators may be normalized because their count has no semantic role.
 
-Its selected presentation omits optional semicolons after complete block/record items at every nesting depth, including function/lambda definitions and declarations with braced initializers. Keep necessary ordinary-item separators and enclosing call/list/tuple punctuation. Recognize complete syntax rather than deleting every semicolon after a brace character; import-list braces and proposed special delimiters have different roles. See the [semicolon style rule](lexical-structure.md#semicolon-style-after-closing-braces). This is a formatter requirement, not an implemented tool claim.
+Its selected presentation omits optional semicolons after complete block/record items at every nesting depth, including function/lambda definitions and declarations with braced initializers. Keep necessary ordinary-item separators and enclosing call/list/tuple punctuation. Recognize complete syntax rather than deleting every semicolon after a brace character; import-list braces and proposed special delimiters have different roles. See the [semicolon style rule](lite://doc/lexical-structure#semicolon-style-after-closing-braces). This is a formatter requirement, not an implemented tool claim.
 
 ### Compact and multiline chains
 
@@ -631,15 +631,15 @@ Selected 2026-10-25: for chains with at least two real entries, the formatter om
 
 Use the outer chain's operator under existing grouping: multiline a and b or c uses leading or and still means (a and b) or c. Pattern alternatives use or and union members use |. Only admitted complete-chain/group boundaries can receive a leader; an interior operator is not another prefix position. Surrounding multiline bodies or multiline content inside one entry do not alone trigger an outer leader. A singleton receives no automatic leader; explicit-singleton normalization, exact wrap width, and comment-aware line breaking remain open.
 
-Preserve grouping, Bool requirements, evaluation/effects, binding flow, matching/guard behavior, type identity, comments, and required delimiters. Existing syntactic alternatives remain legal; malformed/type-invalid inputs must not be silently repaired by removing punctuation. See the [formatter presentation rule](leading-separators.md#formatter-presentation-selected) for examples and remaining boundaries. No formatter implementation is claimed.
+Preserve grouping, Bool requirements, evaluation/effects, binding flow, matching/guard behavior, type identity, comments, and required delimiters. Existing syntactic alternatives remain legal; malformed/type-invalid inputs must not be silently repaired by removing punctuation. See the [formatter presentation rule](lite://doc/leading-separators#formatter-presentation-selected) for examples and remaining boundaries. No formatter implementation is claimed.
 
 ## Comment neutrality and formatting selected
 
 Comments are neutral to code parsing, so a commented-out entry does not count toward a chain's arity or choose its operator. Ali's ready := /* and authenticated */ and connected; remains a valid singleton initializer, as does the form with the comment deleted. This establishes source validity; it does not automatically pin the initializer to a vertical formatter layout.
 
-Selected 2026-10-25: preserve ordinary/raw comment contents as opaque text and retain their attachment to the same nearby code. Indentation at a comment's source position and surrounding line breaks may change; do not parse or reflow the body as code or prose. Only real operands/patterns/members count when formatting chains. An apparent disabled condition is neither a phantom entry nor an implicit keep-multiline directive. See the [selected comment-formatting contract](comments.md#selected-formatting-contract).
+Selected 2026-10-25: preserve ordinary/raw comment contents as opaque text and retain their attachment to the same nearby code. Indentation at a comment's source position and surrounding line breaks may change; do not parse or reflow the body as code or prose. Only real operands/patterns/members count when formatting chains. An apparent disabled condition is neither a phantom entry nor an implicit keep-multiline directive. See the [selected comment-formatting contract](lite://doc/comments#selected-formatting-contract).
 
-The [formatter comparison](comment-formatting-research.md) covers Deno, Bun, Rustfmt, Dart/Flutter, and Prettier. Its versioned local probes and documentation findings remain comparison evidence, not an adoption of another tool's directives. Exact attachment/line-placement algorithms, explicit-singleton normalization, documentation-comment syntax, and any future formatting escape mechanism remain open. No LiteScript formatter implementation is claimed.
+The [formatter comparison](lite://doc/comment-formatting-research) covers Deno, Bun, Rustfmt, Dart/Flutter, and Prettier. Its versioned local probes and documentation findings remain comparison evidence, not an adoption of another tool's directives. Exact attachment/line-placement algorithms, explicit-singleton normalization, documentation-comment syntax, and any future formatting escape mechanism remain open. No LiteScript formatter implementation is claimed.
 
 ## Formatter stability and idempotence
 
@@ -659,7 +659,7 @@ Malformed input retains the separate unchanged-file/failure contract below; it i
 
 ## Native build and footprint investigations
 
-The selected [lightweight execution priorities](memory-and-performance.md#lightweight-native-execution-priority)
+The selected [lightweight execution priorities](lite://doc/memory-and-performance#lightweight-native-execution-priority)
 call for small runtime support and final executables alongside fast execution,
 startup, and low memory overhead. Investigate tooling that explains retained
 runtime facilities, dependency/section sizes, allocation sources, specialization,
@@ -670,7 +670,7 @@ cold compilation need separate timings.
 
 These are tooling investigation requirements, not selected command-line flags or
 implemented reports. C and LLVM backends should eventually share behavioral
-conformance cases if both are implemented. See [investigation points](../research/investigations/lightweight-native-execution.md).
+conformance cases if both are implemented. See [investigation points](lite://repo/research/investigations/lightweight-native-execution.md).
 
 ## Verification before writing
 
@@ -746,7 +746,7 @@ lite build lesson.lts
 One command should run a .lts script without requiring a package manifest.
 Native compilation/caching is a proposal, not an implemented path. .lt source
 retains its distinct module shape and explicit dependency names regardless of
-which tool loads it. See [source kinds](modules-and-packages.md#distinct-script-and-module-files).
+which tool loads it. See [source kinds](lite://doc/modules-and-packages#distinct-script-and-module-files).
 
 The user proposes a script-running mode such as lite run script.lts that could
 introduce selected short aliases for module-owned facilities, with warning/log
@@ -779,7 +779,7 @@ Diagnostics should point to declaration and use sites when relevant. Recovery sh
 
 ## Explicit unused-name intent
 
-Names such as _user and _left are ordinary readable names that opt out of unused-name warnings for that binding, parameter, receiver, or declared field. Later use is legal too; the convention means unused is allowed, not that use is prohibited. `_` alone is included: it binds normally, may be read, and permits nonuse. Repeated names within a pattern shadow in order, including repeated underscores. This naming intent does not suppress required-use/error-handling checks or unrelated diagnostics. Full warning severities and configuration remain open; see [explicitly allowed unused names](unused-name-intent.md).
+Names such as _user and _left are ordinary readable names that opt out of unused-name warnings for that binding, parameter, receiver, or declared field. Later use is legal too; the convention means unused is allowed, not that use is prohibited. `_` alone is included: it binds normally, may be read, and permits nonuse. Repeated names within a pattern shadow in order, including repeated underscores. This naming intent does not suppress required-use/error-handling checks or unrelated diagnostics. Full warning severities and configuration remain open; see [explicitly allowed unused names](lite://doc/unused-name-intent).
 
 ## Gradual learning
 
@@ -787,11 +787,11 @@ Begin with literals, inferred bindings, calls, braces, separators, conditions, a
 
 There should be one language rather than different semantics for a beginner mode. Full type and ownership contracts still need to work for advanced users.
 
-Creating, passing, and traversing collections should precede vocabulary such as Iterable and Collection. The [collection-inference proposal](collection-inference.md) explores contextual element construction and omitted parameter annotations for simple functions, while [the reference review](collection-ergonomics-comparison.md) distinguishes these mechanisms from explicit generic declarations. Tooling should explain the required operation and element type before presenting advanced protocol details.
+Creating, passing, and traversing collections should precede vocabulary such as Iterable and Collection. The [collection-inference proposal](lite://doc/collection-inference) explores contextual element construction and omitted parameter annotations for simple functions, while [the reference review](lite://doc/collection-ergonomics-comparison) distinguishes these mechanisms from explicit generic declarations. Tooling should explain the required operation and element type before presenting advanced protocol details.
 
-Indexed scripts should be equally direct: values[index] can establish the required operation for an inferred parameter, and local else recovery can avoid an escaping-error annotation. Report an unsupported argument as "This value does not support positional indexing" before explaining an advanced interface name. Inference must not hide materialization or caller mutation, or silently add undeclared escaping errors. See [inferred indexing](collection-inference.md#inferred-indexing-for-small-scripts).
+Indexed scripts should be equally direct: values[index] can establish the required operation for an inferred parameter, and local else recovery can avoid an escaping-error annotation. Report an unsupported argument as "This value does not support positional indexing" before explaining an advanced interface name. Inference must not hide materialization or caller mutation, or silently add undeclared escaping errors. See [inferred indexing](lite://doc/collection-inference#inferred-indexing-for-small-scripts).
 
-The [access-ergonomics goal](slot-ergonomics.md) keeps mathematical summaries inferred. Teach var as storage replacement: local var creates a reassignable binding, while type-side var receives writable caller storage through an explicit var call grant. Mut separately permits data updates through an explicit mut grant. Local-only rebinding belongs inside the body rather than in public function headers. Describe rejected writes in terms of the actual field and replacement types; advanced summaries need not become mandatory beginner annotations.
+The [access-ergonomics goal](lite://doc/slot-ergonomics) keeps mathematical summaries inferred. Teach var as storage replacement: local var creates a reassignable binding, while type-side var receives writable caller storage through an explicit var call grant. Mut separately permits data updates through an explicit mut grant. Local-only rebinding belongs inside the body rather than in public function headers. Describe rejected writes in terms of the actual field and replacement types; advanced summaries need not become mandatory beginner annotations.
 
 ## Explicit names versus editor convenience
 
@@ -799,7 +799,7 @@ The language should not silently inject `it`, `count`, or `acc`. An editor may s
 
 ## Familiar-language source and an English bridge
 
-The [multilingual source proposal](multilingual-source-and-learning.md) addresses
+The [multilingual source proposal](lite://doc/multilingual-source-and-learning) addresses
 learning programming without first understanding English vocabulary. Investigate
 localized lessons, names, teaching APIs, diagnostics, editor help/completions,
 and source presentation together. Simple English remains the shared reference;
@@ -812,12 +812,12 @@ named-label identities, and behavior checks. Preserve comments and string data
 unless separately requested; keyword mapping does not automatically translate
 student names or arbitrary text. Ordinary formatting preserves the chosen source
 vocabulary; conversion is a separate proposed operation and must preserve the
-selected [comment contract](comments.md#selected-formatting-contract).
+selected [comment contract](lite://doc/comments#selected-formatting-contract).
 
 Investigate mixed-direction selection, punctuation, debugger positions, fonts,
 normalization, and visible confusable/control-character handling without silently
 rejecting a whole script. Localization catalogs should remain in tooling unless
-program features require them at runtime. The [question map](../research/investigations/multilingual-source-and-learning.md)
+program features require them at runtime. The [question map](lite://repo/research/investigations/multilingual-source-and-learning.md)
 records lexical, tooling, conversion, learning, and footprint checks.
 
 ## Beginner validation
@@ -826,8 +826,8 @@ Braces were chosen as a promising consistent rule, not as an empirically proven 
 
 ## Related concepts and references
 
-- [Lexical structure](lexical-structure.md)
-- [Loop receivers](loop-receivers.md)
+- [Lexical structure](lite://doc/lexical-structure)
+- [Loop receivers](lite://doc/loop-receivers)
 - [2013 syntax experiments](https://www.vidarholen.net/~vidar/An_Empirical_Investigation_into_Programming_Language_Syntax.pdf)
 - [2023 syntax-intuitiveness replication](https://link.springer.com/article/10.1007/s11219-023-09631-7)
 
@@ -835,27 +835,27 @@ These studies motivate evaluating novice experience; they do not isolate LiteScr
 
 ## Warning suppression
 
-Selected [LP-0016 r1](proposals/LP-0016-recapture-and-warning-policy.md): every warning is suppressible. Suppression changes diagnostics, not source typing, evaluation, or failure behavior. Exact syntax/configuration/scope and warning defaults remain open. This does not make invalid code valid or downgrade required errors.
+Selected [LP-0016 r1](lite://doc/proposals/LP-0016-recapture-and-warning-policy): every warning is suppressible. Suppression changes diagnostics, not source typing, evaluation, or failure behavior. Exact syntax/configuration/scope and warning defaults remain open. This does not make invalid code valid or downgrade required errors.
 
 Recapture is legal. Do not warn solely because the output type is unchanged or its failure side already includes Panic. An optional redundancy warning requires proof that the boundary is redundant; a call returning stored T ! (E | Panic) can still produce a new live panic before returning. Intentional boundaries kept for code evolution must remain usable with suppression. There is no blanket warning or rejection for already-captured values.
 
 ## Capture and recovery presentation
 
-The selected [capture/extraction reference](failure-capture-and-unwrapping.md) distinguishes exp? (capture before operand evaluation), outcome! (one-layer extraction or outward forwarding), and else (ordered consumption and recovery). Teach ordinary stored Results before mixed panic capture, then show T ! Panic and T ! (E | Panic), ...fails: Failure with [Failure], and exhaustive recovery yielding T. Do not teach the provisional Captured/FailureGroup wrapper as source syntax. Keep handler-local tags on their explicit block, and untangle confusing chains into temporary outcome layers without promising retroactive panic recovery across eager statements. LP-0012 now selects raise expression and eligible omitted-output escaping-error inference; custom category grammar and unmatched-remainder/provenance policy remain open. LP-0013 selects typed scalar first-match/discard, and LP-0014 selects scalar/group raise plus explicit block targets.
+The selected [capture/extraction reference](lite://doc/failure-capture-and-unwrapping) distinguishes exp? (capture before operand evaluation), outcome! (one-layer extraction or outward forwarding), and else (ordered consumption and recovery). Teach ordinary stored Results before mixed panic capture, then show T ! Panic and T ! (E | Panic), ...fails: Failure with [Failure], and exhaustive recovery yielding T. Do not teach the provisional Captured/FailureGroup wrapper as source syntax. Keep handler-local tags on their explicit block, and untangle confusing chains into temporary outcome layers without promising retroactive panic recovery across eager statements. LP-0012 now selects raise expression and eligible omitted-output escaping-error inference; custom category grammar and unmatched-remainder/provenance policy remain open. LP-0013 selects typed scalar first-match/discard, and LP-0014 selects scalar/group raise plus explicit block targets.
 
 Future formatter/parser fixtures must distinguish postfix capture from the standalone ? storage initializer and the rejected ? propagation spelling, retain grouping in `({ work() })?`, and preserve written else order and block-tag targets. Existing semicolon rules apply: omit optional semicolons after complete braced items; retain separators for continued expressions such as parenthesized block capture. This is a documentation contract, not evidence of implemented parsing, formatting, or execution.
 
 
-For [manual failures](manual-failures-and-inference.md), teach assumed explicit Error/Panic category membership before raise expression. Show the inferred authenticateUser error union, then show a Panic raise excluded from E and included only by explicit capture. Distinguish omitted-output inference from checking explicit/expected contracts. Future fixtures should cover normal-return/error-raise/panic-raise paths, ! and outward-tail error contributions, handled/local stored errors, nested callable boundaries, and local panic capture. Custom category source syntax remains open. Directed raise fixtures should now include function defaults for both channels, scalar/group operands, explicit block targets, skipped inner recovery, eligible target-level recovery, and unchanged cleanup; true unmatched-remainder exits still need their policy. The [shortfalls queue](failure-handling-shortfalls.md) records the next decisions; this remains a design-only specification.
+For [manual failures](lite://doc/manual-failures-and-inference), teach assumed explicit Error/Panic category membership before raise expression. Show the inferred authenticateUser error union, then show a Panic raise excluded from E and included only by explicit capture. Distinguish omitted-output inference from checking explicit/expected contracts. Future fixtures should cover normal-return/error-raise/panic-raise paths, ! and outward-tail error contributions, handled/local stored errors, nested callable boundaries, and local panic capture. Custom category source syntax remains open. Directed raise fixtures should now include function defaults for both channels, scalar/group operands, explicit block targets, skipped inner recovery, eligible target-level recovery, and unchanged cleanup; true unmatched-remainder exits still need their policy. The [shortfalls queue](lite://doc/failure-handling-shortfalls) records the next decisions; this remains a design-only specification.
 
 
-For LP-0013, distinguish err: Error (first match exposed, other Error matches intentionally discarded) from ...errs: Error (all Error payloads exposed), with other categories untouched. For LP-0014, teach return/raise function defaults together, then tagged block completion and scalar/group operands. A bare manually raised Panic is now function-directed; local recovery requires an explicitly targeted block or caller-side capture. Future conformance fixtures should retain operand-evaluation order, skipped inner handlers, eligible recovery surrounding the completed target, cleanup obligations, and occurrence order. Untyped binding, aggregate .err inspection, and nonlocal exits with other pending categories remain in [the shortfalls list](failure-handling-shortfalls.md).
+For LP-0013, distinguish err: Error (first match exposed, other Error matches intentionally discarded) from ...errs: Error (all Error payloads exposed), with other categories untouched. For LP-0014, teach return/raise function defaults together, then tagged block completion and scalar/group operands. A bare manually raised Panic is now function-directed; local recovery requires an explicitly targeted block or caller-side capture. Future conformance fixtures should retain operand-evaluation order, skipped inner handlers, eligible recovery surrounding the completed target, cleanup obligations, and occurrence order. Untyped binding, aggregate .err inspection, and nonlocal exits with other pending categories remain in [the shortfalls list](lite://doc/failure-handling-shortfalls).
 
 
 LP-0015 teaching/conformance direction: contrast ordinary guard return, catch-all early return, partial typed catch returning from the function, and handler-local tagged return. The partial handler's return 1 does not add Int to the recovery expression type; it exits before the result binding is initialized, even if other captured Error/Panic categories coexist. Only continuing paths have the residual type. Reject a return value that violates an explicit function success contract, not merely because abandoned captured failures remain. New payload/cleanup failures retain their usual behavior. Broader exit policies and general ignored-result diagnostics are separate; documentation checks are not implemented language execution.
 
 
-Also contrast handler-local raise: tmp1 := op()? is T ! Panic; a receiverless else @bl2 { raise @bl2 err2 } consumes all original panics and gives tmp2: T ! Err2; tmp2! supplies T or forwards Err2. Keep this separate from an early function return that prevents its recovery binding from being initialized. See [the local-raise example](manual-failures-and-inference.md#handler-local-raise-changes-the-stored-outcome).
+Also contrast handler-local raise: tmp1 := op()? is T ! Panic; a receiverless else @bl2 { raise @bl2 err2 } consumes all original panics and gives tmp2: T ! Err2; tmp2! supplies T or forwards Err2. Keep this separate from an early function return that prevents its recovery binding from being initialized. See [the local-raise example](lite://doc/manual-failures-and-inference#handler-local-raise-changes-the-stored-outcome).
 
 
 ## Current captured-outcome teaching order

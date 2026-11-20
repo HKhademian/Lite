@@ -4,7 +4,7 @@ Status: **review dated 2026-10-18; confirmed primitives and enum/Result rules ar
 
 ## Scope
 
-The [example walkthrough](pattern-examples.md) combines the design into simple and complex examples. It uses selected inferred named-record patterns and contextual construction; list/rest syntax remains proposed; positional tuple rest shape, placement, and arity are selected.
+The [example walkthrough](lite://doc/pattern-examples) combines the design into simple and complex examples. It uses selected inferred named-record patterns and contextual construction; list/rest syntax remains proposed; positional tuple rest shape, placement, and arity are selected.
 
 Review records, lists, arrays, slices, sets, tuples/pairs, enums, strings, ranges, numbers, Booleans, Unit, Option, Result, maps, unions, and opaque/user-defined values as one pattern system. Supporting a type does not require automatic positional extraction or equality for every value of that type. A name can bind any admitted value; equality, type tests, and decomposition require their respective capabilities.
 
@@ -37,7 +37,7 @@ match find_value() {
 }
 ```
 
-Whole typed bindings use name: Type = source, never name: Type := source. Typed components inside a structural pattern remain valid. Loop headers now accept only an optional item name; destructuring and selection stay inside the body. Parameters and completion/recovery receivers still need their separate mismatch policies. See [pattern contexts](pattern-contexts.md).
+Whole typed bindings use name: Type = source, never name: Type := source. Typed components inside a structural pattern remain valid. Loop headers now accept only an optional item name; destructuring and selection stay inside the body. Parameters and completion/recovery receivers still need their separate mismatch policies. See [pattern contexts](lite://doc/pattern-contexts).
 
 ## 1. Numbers and Booleans
 
@@ -52,13 +52,13 @@ match code {
 }
 ```
 
-true and false can cover Bool. Ordered tests work in guards, including mathematical comparison chains. All ten direct [comparison-pattern prefixes](comparison-patterns.md) are also selected: test the supplied value without binding, evaluate a runtime RHS once when reached, and preserve ordinary comparison/failure meanings. Compound and cross-component conditions use if guards in match arms and later and operands in conditional chains.
+true and false can cover Bool. Ordered tests work in guards, including mathematical comparison chains. All ten direct [comparison-pattern prefixes](lite://doc/comparison-patterns) are also selected: test the supplied value without binding, evaluate a runtime RHS once when reached, and preserve ordinary comparison/failure meanings. Compound and cross-component conditions use if guards in match arms and later and operands in conditional chains.
 
-Float comparison patterns use the same contracts as ordinary Float comparisons, with no approximate matching; literal value patterns remain equality tests. If IEEE-style equality is selected, detecting NaN requires an explicit predicate and signed zeros follow that contract; matching must not quietly invent different behavior. Literal precision, numeric conversions, and floating representation remain [numeric decisions](numbers.md).
+Float comparison patterns use the same contracts as ordinary Float comparisons, with no approximate matching; literal value patterns remain equality tests. If IEEE-style equality is selected, detecting NaN requires an explicit predicate and signed zeros follow that contract; matching must not quietly invent different behavior. Literal precision, numeric conversions, and floating representation remain [numeric decisions](lite://doc/numbers).
 
 ## 2. Unit
 
-Use `== Unit` to test the singleton value, or `: Unit` to test its type. Bare Unit in a binding position binds under the ordinary name rule; it is not a special constant-pattern exception. Broader type/value name resolution remains open; the Unit-specific expression/type spellings are recorded in [Unit](unit.md).
+Use `== Unit` to test the singleton value, or `: Unit` to test its type. Bare Unit in a binding position binds under the ordinary name rule; it is not a special constant-pattern exception. Broader type/value name resolution remains open; the Unit-specific expression/type spellings are recorded in [Unit](lite://doc/unit).
 
 Unit is neither None nor an error. A missing match arm must not manufacture any of those values.
 
@@ -66,7 +66,7 @@ Unit is neither None nor an error. A missing match arm must not manufacture any 
 
 The selected two-element form is `(first, second)`, and typed/literal/value subpatterns compose in its positions. Recommend treating pair as the two-element tuple shape, without a second intrinsic pair-pattern syntax. A separately declared nominal Pair would instead use its exposed record/schema contract.
 
-Ordinary fixed-tuple positional binding follows stored order. Named tuple patterns use destination = sourceField, with exact coverage when rest is absent and no unknown/duplicate source selectors. Tuple type components use name: Type, inferred bare labels, or :Type; see [tuple routing](named-input-routing.md). Positional tuple patterns select one trailing ...rest capture preserving component types and order; an empty remainder is Unit/(), and a one-component remainder stays a singleton. Without rest, require exact arity; rest never fills missing required components. Rest preserves labels from named/mixed sources, with numeric positions restarting at zero. Named selectors with a final rest are selected: remove chosen fields and retain all unselected components in source order, with labels and types preserved. Mixed positional/named tuple selectors are now selected: process left to right, taking the next unselected source position for positional entries and selecting a field for named entries; reject selecting a component twice. Ownership remains separate. See [selected tuple rest](tuple-spread-and-rest.md#positional-tuple-rest-selected). Empty/singleton value and type spellings, grouped patterns, and singleton extraction are selected. Unit is the empty tuple; the pattern () matches only Unit and binds no names. In declarations it must be irrefutable; conditional/match contexts retain their existing mismatch rules. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected). Bare Unit in a binding position still follows the ordinary readable-name rule.
+Ordinary fixed-tuple positional binding follows stored order. Named tuple patterns use destination = sourceField, with exact coverage when rest is absent and no unknown/duplicate source selectors. Tuple type components use name: Type, inferred bare labels, or :Type; see [tuple routing](lite://doc/named-input-routing). Positional tuple patterns select one trailing ...rest capture preserving component types and order; an empty remainder is Unit/(), and a one-component remainder stays a singleton. Without rest, require exact arity; rest never fills missing required components. Rest preserves labels from named/mixed sources, with numeric positions restarting at zero. Named selectors with a final rest are selected: remove chosen fields and retain all unselected components in source order, with labels and types preserved. Mixed positional/named tuple selectors are now selected: process left to right, taking the next unselected source position for positional entries and selecting a field for named entries; reject selecting a component twice. Ownership remains separate. See [selected tuple rest](lite://doc/tuple-spread-and-rest#positional-tuple-rest-selected). Empty/singleton value and type spellings, grouped patterns, and singleton extraction are selected. Unit is the empty tuple; the pattern () matches only Unit and binds no names. In declarations it must be irrefutable; conditional/match contexts retain their existing mismatch rules. See [empty tuple patterns](lite://doc/tuple-entries-and-access#empty-tuple-pattern-selected). Bare Unit in a binding position still follows the ordinary readable-name rule.
 
 ## 4. Records
 
@@ -79,9 +79,9 @@ student: Student = { id = 7, name = "Ali", age = 18, }
 
 Construction may also explicitly name Student: student := Student { ... }. The type head may be omitted when a unique expected record type is known, including in an annotated binding or nested predefined record field. Unknown/ambiguous expected types need explicit information; do not search unrelated types by field names.
 
-Named patterns need no redundant type head. Their source establishes the exposed fields, and the general clause is destination pattern = sourceField. Compact field == expected compares without binding; field: Type type-tests and binds that same-named field. The type-only test is : Type = sourceField; it introduces no local name. This supersedes both field-colon routing and the reversed field = destinationPattern recommendation. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
+Named patterns need no redundant type head. Their source establishes the exposed fields, and the general clause is destination pattern = sourceField. Compact field == expected compares without binding; field: Type type-tests and binds that same-named field. The type-only test is : Type = sourceField; it introduces no local name. This supersedes both field-colon routing and the reversed field = destinationPattern recommendation. See [aggregate clauses](lite://doc/aggregate-patterns#named-field-clauses).
 
-Recommend partial named selection over exposed fields, with explicit stable schemas for positional matching. Omitted private fields remain private; a pattern does not invoke a constructor, expose hidden layout, or automatically call arbitrary getters. Exact omission, duplicate field selection, aliases, and construction syntax remain under review in [aggregate patterns](aggregate-patterns.md).
+Recommend partial named selection over exposed fields, with explicit stable schemas for positional matching. Omitted private fields remain private; a pattern does not invoke a constructor, expose hidden layout, or automatically call arbitrary getters. Exact omission, duplicate field selection, aliases, and construction syntax remain under review in [aggregate patterns](lite://doc/aggregate-patterns).
 
 ## 5. Lists, arrays, and slices
 
@@ -95,17 +95,17 @@ Propose an ordered sequence pattern with exact length by default:
 [.Some(user), == expected]
 ```
 
-One trailing rest capture matches zero or more remaining elements. Prefix elements retain the same binding/type/value/case primitives. A list pattern does not automatically consume a stream, iterate a set, or split a string. Remaining type, length, capability, and allocation questions are in [sequence patterns](sequence-patterns.md); these new bracket/rest rules are not selected yet.
+One trailing rest capture matches zero or more remaining elements. Prefix elements retain the same binding/type/value/case primitives. A list pattern does not automatically consume a stream, iterate a set, or split a string. Remaining type, length, capability, and allocation questions are in [sequence patterns](lite://doc/sequence-patterns); these new bracket/rest rules are not selected yet.
 
 ## 6. Sets
 
 Whole-set equality, membership/subset tests, and unordered extraction are different operations. Existing == expected applies when the set type supplies equality. Predicate guards can express membership without binding an arbitrarily chosen element.
 
-Unordered element-binding patterns require a rule for ambiguous assignments, distinct matched elements, backtracking, rest, and cost. They are not equivalent to list matching. The options and worked example are in [set patterns](set-patterns.md); no unordered extraction rule is selected.
+Unordered element-binding patterns require a rule for ambiguous assignments, distinct matched elements, backtracking, rest, and cost. They are not equivalent to list matching. The options and worked example are in [set patterns](lite://doc/set-patterns); no unordered extraction rule is selected.
 
 ## 7. Enums, Option, and Result
 
-Use selected .case tag selection, payload subpatterns, and tag-only omission. Raw enum codes do not make enum patterns operate on an arbitrary backing number. An enum case need not be an independently usable type. See [enums](enums-and-variants.md).
+Use selected .case tag selection, payload subpatterns, and tag-only omission. Raw enum codes do not make enum patterns operate on an arbitrary backing number. An enum case need not be an independently usable type. See [enums](lite://doc/enums-and-variants).
 
 Option retains .Some/.None. Stored Result cases now use the selected lowercase forms:
 
@@ -116,13 +116,13 @@ match attempt {
 }
 ```
 
-Payload patterns may narrow success or error unions after the outer side is selected. Tag-only .ok/.err inspect just that side. No implicit unwrap, propagation, nested-Result flattening, or panic recovery follows from matching. Successful returns remain implicit. See [Result](result-and-errors.md) and [union patterns](union-patterns.md).
+Payload patterns may narrow success or error unions after the outer side is selected. Tag-only .ok/.err inspect just that side. No implicit unwrap, propagation, nested-Result flattening, or panic recovery follows from matching. Successful returns remain implicit. See [Result](lite://doc/result-and-errors) and [union patterns](lite://doc/union-patterns).
 
 ## 8. Strings and character/byte views
 
 A string literal tests the entire string by its ordinary equality contract. == expectedText compares with existing text; adjacent literal concatenation retains its lexical meaning. No regex, substring, normalization, or case-folding operation is implied by a plain literal pattern.
 
-Recommend keeping strings out of list patterns initially. Byte, Unicode scalar, and grapheme views are distinct abstractions; conversion to an explicit view should precede any sequence matching. Their actual APIs, encoding, slicing, and allocation remain [string decisions](strings.md). Character/byte literal forms are not finalized.
+Recommend keeping strings out of list patterns initially. Byte, Unicode scalar, and grapheme views are distinct abstractions; conversion to an explicit view should precede any sequence matching. Their actual APIs, encoding, slicing, and allocation remain [string decisions](lite://doc/strings). Character/byte literal forms are not finalized.
 
 ## 9. Ranges: values versus membership
 
@@ -139,7 +139,7 @@ match age {
 
 This example tests an ascending inclusive interval, not arbitrary strided-range membership. A range such as `(10..=1).step(3)` is intended to visit 10, 7, 4, 1; bounds alone would also admit values it never yields.
 
-Recommend an explicit membership operation/guard before adding compact range patterns. Bare 1..=10 and an `in range` pattern prefix remain alternatives, not selected syntax. Define descending bounds, stride, end inclusion, Float behavior, and range-value equality first. Pattern membership must not secretly enumerate or consume a range/iterator. See [numbers and ranges](numbers.md).
+Recommend an explicit membership operation/guard before adding compact range patterns. Bare 1..=10 and an `in range` pattern prefix remain alternatives, not selected syntax. Define descending bounds, stride, end inclusion, Float behavior, and range-value equality first. Pattern membership must not secretly enumerate or consume a range/iterator. See [numbers and ranges](lite://doc/numbers).
 
 ## 10. Maps/dictionaries
 
@@ -163,7 +163,7 @@ Never/uninhabited values cannot supply a runtime subject. No universal null, uni
 
 Recommend checking shape/tag/length before accessing dependent components, then testing subpatterns in written recursive order with short-circuiting. Expected-value expressions should run once when reached. A failed pattern/guard does not roll back already performed side effects. Comparison fallibility must be explicit; a recoverable error is not ordinary mismatch. Those remaining evaluation rules are proposals alongside the already selected source-once and arm-order rules.
 
-Closed enum cases, Bool alternatives, and products with irrefutable components can support coverage checks. A proposed [] plus [head, ...rest] covers all finite admitted sequences when its components are unconstrained. Runtime equality values, arbitrary guards, unordered search, NaN, and open interfaces cannot be assumed to prove exhaustive coverage. Every match now requires completeness, including actions. Ordinary _ supplies a readable catch-all binding, and _ {} explicitly ignores remaining inputs because an empty block returns Unit. Result types must still fit; see [coverage](match-coverage.md).
+Closed enum cases, Bool alternatives, and products with irrefutable components can support coverage checks. A proposed [] plus [head, ...rest] covers all finite admitted sequences when its components are unconstrained. Runtime equality values, arbitrary guards, unordered search, NaN, and open interfaces cannot be assumed to prove exhaustive coverage. Every match now requires completeness, including actions. Ordinary _ supplies a readable catch-all binding, and _ {} explicitly ignores remaining inputs because an empty block returns Unit. Result types must still fit; see [coverage](lite://doc/match-coverage).
 
 ## Reference checks
 
@@ -173,4 +173,4 @@ Closed enum cases, Bool alternatives, and products with irrefutable components c
 - [Swift patterns](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/ReferenceManual/Patterns.md): expression-pattern matching uses ~=, including ranges and user overloads. LiteScript has not selected an implicit general matching operator.
 - [Kotlin when](https://kotlinlang.org/docs/control-flow.html#when-expressions-and-statements): distinguishes ordinary value cases, in range/collection tests, and type tests. This is useful evidence for separating membership from whole-value equality.
 
-Sources were consulted on 2026-10-18; some pages describe development versions. No examples were compiled. The [broader syntax comparison](pattern-syntax-comparison.md) and [type-category comparison](type-categories-comparison.md) retain the other reference-language discussions.
+Sources were consulted on 2026-10-18; some pages describe development versions. No examples were compiled. The [broader syntax comparison](lite://doc/pattern-syntax-comparison) and [type-category comparison](lite://doc/type-categories-comparison) retain the other reference-language discussions.

@@ -14,7 +14,7 @@ Let a programmer distinguish a union's active alternative by its type and use th
 
 The success payload is one `User` or `Guest`; the failure payload is one `ReadError` or `ParseError`. These are alternative values, not tuples containing every member. A pattern observes the active alternative without reconstructing it from a message or a field-name convention.
 
-Plain unions have selected order-independent normalization: flatten nested plain unions and remove duplicate resolved type identities, including transparent aliases. Distinct nominal record declarations remain different alternatives. This does not change match-arm order or flatten Option/Result/enum structure; see [union normalization](union-normalization.md).
+Plain unions have selected order-independent normalization: flatten nested plain unions and remove duplicate resolved type identities, including transparent aliases. Distinct nominal record declarations remain different alternatives. This does not change match-arm order or flatten Option/Result/enum structure; see [union normalization](lite://doc/union-normalization).
 
 ## Selected type-pattern spelling
 
@@ -24,29 +24,29 @@ binding: Type
 
 This reuses the language's colon type annotation. In a conditional, write `if binding: Type = expression { ... }`; in a match arm, write `binding: Type { ... }`. These surface forms are selected; the complete pattern grammar remains open.
 
-Type patterns also compose inside destructuring: `(x: Int, y: String)` tests and narrows both tuple components in one pattern. Constructor payload patterns may contain these typed component patterns too; no nested selection construct is required solely for component type tests. See [typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule).
+Type patterns also compose inside destructuring: `(x: Int, y: String)` tests and narrows both tuple components in one pattern. Constructor payload patterns may contain these typed component patterns too; no nested selection construct is required solely for component type tests. See [typed destructuring](lite://doc/match-patterns#typed-destructuring-selected-composition-rule).
 
-Annotations may constrain only selected components. The remaining bindings are inferred from compatible input possibilities as concrete types or unions; excluded alternatives cannot continue widening sibling bindings. Composite bindings retain whole alternatives. See [pattern binding inference](pattern-binding-inference.md).
+Annotations may constrain only selected components. The remaining bindings are inferred from compatible input possibilities as concrete types or unions; excluded alternatives cannot continue widening sibling bindings. Composite bindings retain whole alternatives. See [pattern binding inference](lite://doc/pattern-binding-inference).
 
 ## Union target types selected
 
 Selected on **2026-10-24**: the target Type may itself be a plain union in the existing supported type-test/pattern forms. For closed distinct members, compare normalized alternatives: success keeps shared input/target members and failure keeps the input remainder. With value: String | Float | Int, if value: (String | Float) gives String | Float in the body and Int in else; a String | Bool target instead permits only String and cannot inject Bool into the input.
 
-Type-only patterns such as : (String | Float) still introduce no name, while a typed binding uses its normal narrowed-binding contract. This adds no new pattern placement, source separator, or mismatch policy. Whole-member coverage removes only admitted target members; guarded/partial failures may retain them. Existing-name always-true/always-false tests follow their selected warning policy. See [union targets in type tests](type-tests-and-narrowing.md#union-targets-in-type-tests-selected) for normalization, stability, and open type-relation boundaries.
+Type-only patterns such as : (String | Float) still introduce no name, while a typed binding uses its normal narrowed-binding contract. This adds no new pattern placement, source separator, or mismatch policy. Whole-member coverage removes only admitted target members; guarded/partial failures may retain them. Existing-name always-true/always-false tests follow their selected warning policy. See [union targets in type tests](lite://doc/type-tests-and-narrowing#union-targets-in-type-tests-selected) for normalization, stability, and open type-relation boundaries.
 
 ## Narrowing without redeclaration
 
-For an existing union binding, use `if person: User { ... }` when no new name is needed. This is a type test of that name, not a pattern that creates a shadow binding. The existing value is usable as User while its refinement is valid. The explicit binding forms below remain useful and selected. Stability, mutation, and broader flow rules are tracked in [type tests and narrowing](type-tests-and-narrowing.md).
+For an existing union binding, use `if person: User { ... }` when no new name is needed. This is a type test of that name, not a pattern that creates a shadow binding. The existing value is usable as User while its refinement is valid. The explicit binding forms below remain useful and selected. Stability, mutation, and broader flow rules are tracked in [type tests and narrowing](lite://doc/type-tests-and-narrowing).
 
 ## Later match arms narrow the remainder
 
-For a stable initialized closed union value, an unguarded type arm removes its completely handled alternative from later match arms. After : String on String | Float | Int, the fallback _ binding and original stable subject name both have type Float | Int in that arm. No bindings from failed arms leak forward; the proof concerns which original subject values can reach the later arm. Guarded/partial tests may leave values of the same type and cannot remove it wholesale. Stable existing-binding refinement after early exits is selected separately in [type tests](type-tests-and-narrowing.md#narrowing-after-early-exits-selected); false-branch remainders through else/else if are selected in [false-branch narrowing](type-tests-and-narrowing.md#false-branches-and-else-if-chains-selected); broader predicate/overlap analysis remains open; see [remaining subject types](type-tests-and-narrowing.md#remaining-subject-types-across-match-arms-selected).
+For a stable initialized closed union value, an unguarded type arm removes its completely handled alternative from later match arms. After : String on String | Float | Int, the fallback _ binding and original stable subject name both have type Float | Int in that arm. No bindings from failed arms leak forward; the proof concerns which original subject values can reach the later arm. Guarded/partial tests may leave values of the same type and cannot remove it wholesale. Stable existing-binding refinement after early exits is selected separately in [type tests](lite://doc/type-tests-and-narrowing#narrowing-after-early-exits-selected); false-branch remainders through else/else if are selected in [false-branch narrowing](lite://doc/type-tests-and-narrowing#false-branches-and-else-if-chains-selected); broader predicate/overlap analysis remains open; see [remaining subject types](lite://doc/type-tests-and-narrowing#remaining-subject-types-across-match-arms-selected).
 
 ## Zero-initialized union state in checks and matches
 
 Selected 2026-11-17: a union with all-zero storage has Kind 0 and no known active member. It is a valid initialized state, which a program can check and explicitly handle in a match. If a match reaches this state without an explicit handler, it implicitly panics. An ordinary `_` arm covers remaining listed members and does not handle this state. This preserves the programmer's ability to reason about listed-member fallback bodies.
 
-The name `UNKNOWN` is descriptive only: the state name, checker and pattern syntax are not selected. The precise panic contract, handling of unrecognized nonzero Kinds, coverage interactions and any implementation remain open. See the [match investigation](../research/investigations/language-review/union-match-unknown-guard.md) for cases and earlier reasoning.
+The name `UNKNOWN` is descriptive only: the state name, checker and pattern syntax are not selected. The precise panic contract, handling of unrecognized nonzero Kinds, coverage interactions and any implementation remain open. See the [match investigation](lite://repo/research/investigations/language-review/union-match-unknown-guard.md) for cases and earlier reasoning.
 
 ## Narrowing a success union with explicit bindings
 
@@ -72,7 +72,7 @@ Conditional binding reuses declaration-shaped headers without adding a `let` key
 
 ## Narrowing an error union
 
-In this Result-only example, the receiver holds the declared error payload. A general call whose else also catches panics needs the separate [combined receiver contract](recovery-receiver-types.md); do not assume it still has only the declared E.
+In this Result-only example, the receiver holds the declared error payload. A general call whose else also catches panics needs the separate [combined receiver contract](lite://doc/recovery-receiver-types); do not assume it still has only the declared E.
 
 Inside a Result-only recovery receiver:
 
@@ -102,7 +102,7 @@ Explicit outcome-side matching uses the selected lowercase patterns `.ok(value)`
 
 ## Match expressions and coverage
 
-The same type patterns should work in general `match` arms. Every match over a closed union must cover every possible alternative or use an explicit catch-all, including actions. An empty fallback `_ {}` handles remaining alternatives with Unit. An action conditional that inspects one alternative still needs no replacement body for the others; a no-`else` value conditional is partial and noncontributing: a declaration keeps its default, an assignment performs no write, a loop contributes nothing, and a value-required context requires `else`. See [conditional result rules](conditionals.md#no-final-else-guarded-update).
+The same type patterns should work in general `match` arms. Every match over a closed union must cover every possible alternative or use an explicit catch-all, including actions. An empty fallback `_ {}` handles remaining alternatives with Unit. An action conditional that inspects one alternative still needs no replacement body for the others; a no-`else` value conditional is partial and noncontributing: a declaration keeps its default, an assignment performs no write, a loop contributes nothing, and a value-required context requires `else`. See [conditional result rules](lite://doc/conditionals#no-final-else-guarded-update).
 
 A narrowed binding exists only where its pattern matched. The producer is evaluated once; matching does not repeat a function call. Exact coverage for guarded patterns, overlapping type relationships, and open interfaces remains to be formalized. The general `Error` contract still needs its own definition; selecting union patterns does not finalize that contract as an open interface.
 
@@ -116,9 +116,9 @@ A narrowed binding exists only where its pattern matched. The producer is evalua
 
 ## Related concepts
 
-- [Match and exhaustive selection](match.md)
-- [Tuples and patterns](tuples-and-patterns.md)
-- [Conditionals](conditionals.md)
-- [Result and errors](result-and-errors.md)
-- [Recovery receivers and fallback types](recovery-and-fallbacks.md)
-- [Fallible types and error composition](fallible-types-and-error-composition.md)
+- [Match and exhaustive selection](lite://doc/match)
+- [Tuples and patterns](lite://doc/tuples-and-patterns)
+- [Conditionals](lite://doc/conditionals)
+- [Result and errors](lite://doc/result-and-errors)
+- [Recovery receivers and fallback types](lite://doc/recovery-and-fallbacks)
+- [Fallible types and error composition](lite://doc/fallible-types-and-error-composition)

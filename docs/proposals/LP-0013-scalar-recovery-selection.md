@@ -22,4 +22,4 @@ This is the user's explicit discard policy, not implicit repeated handler invoca
 
 `r1` records typed scalar first-match exposure, consumption and intentional discard of other matches, preservation of nonmatching categories, and the contrast with explicit all-match collection. No carrier ABI, allocation policy, parser, or runtime result is supplied.
 
-Normative owner: [expression recovery](../expression-recovery.md#typed-scalar-receivers-selected). Related: [typed collectors](LP-0007-typed-recovery-collectors.md), [directed raise](LP-0014-directed-failure-exits.md), and [remaining shortfalls](../failure-handling-shortfalls.md).
+Normative owner: [expression recovery](lite://doc/expression-recovery#typed-scalar-receivers-selected). Related: [typed collectors](lite://doc/proposals/LP-0007-typed-recovery-collectors), [directed raise](lite://doc/proposals/LP-0014-directed-failure-exits), and [remaining shortfalls](lite://doc/failure-handling-shortfalls).

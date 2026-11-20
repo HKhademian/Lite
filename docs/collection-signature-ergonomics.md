@@ -16,7 +16,7 @@ Short strong contracts can attract unnecessarily restrictive APIs. Long weak con
 
 Let [T] mean traversal over T values. Keep stronger contracts explicit, and infer them for omitted parameter annotations. A published complete traversal-only signature remains stable and cannot acquire indexing from its body.
 
-This is the earlier recommendation in [function signatures](collection-function-signatures.md). It admits broad providers but leaves explicit stronger annotations as an ergonomics problem. Readable aliases, editor-generated signatures, and standard-library examples can reduce that burden. They do not make the stronger contract disappear.
+This is the earlier recommendation in [function signatures](lite://doc/collection-function-signatures). It admits broad providers but leaves explicit stronger annotations as an ergonomics problem. Readable aliases, editor-generated signatures, and standard-library examples can reduce that burden. They do not make the stronger contract disappear.
 
 ## Candidate B: partial element/shape annotation
 
@@ -54,7 +54,7 @@ This keeps an everyday indexed type simple but does not eliminate the overconstr
 
 Keep written collection contracts complete. If an annotation promises traversal only, its implementation cannot silently add an indexing requirement. Omitted parameter annotations can still infer a generic contract; authors then deliberately choose inference rather than a misleadingly complete-looking header. Apply that distinction consistently instead of changing the meaning of an annotation when a declaration is exported.
 
-The user accepts candidate C's [short indexed-sequence direction](indexed-sequence-contract.md): [T] visibly means a readable positional sequence with its stated count, indexing, and traversal guarantees. It does not select an owning List, contiguous storage, uniqueness, or growth. Mut access can permit element replacement when supported. This supersedes the earlier minimal-source interpretation; full generic/protocol grammar and representations remain open.
+The user accepts candidate C's [short indexed-sequence direction](lite://doc/indexed-sequence-contract): [T] visibly means a readable positional sequence with its stated count, indexing, and traversal guarantees. It does not select an owning List, contiguous storage, uniqueness, or growth. Mut access can permit element replacement when supported. This supersedes the earlier minimal-source interpretation; full generic/protocol grammar and representations remain open.
 
 A traversal-only library would use a distinct minimal contract, currently described by temporary notation such as Iterable<T>. Readable aliases can reduce repetition, but the distinction itself must remain visible. Official standard-library APIs should demonstrate broad requirements where appropriate, and optional diagnostics can point out unnecessarily restrictive signatures. Such guidance cannot eliminate every restrictive library API or automatically rewrite a public contract.
 
@@ -62,4 +62,4 @@ The cost is explicit: some library authors must learn the difference between a s
 
 The complete indexed-contract direction is accepted after the visibility review. Generic relationships, complete type grammar, stored representation, and abstract return models still need their own decisions.
 
-Related: [function signatures](collection-function-signatures.md), [inference](collection-inference.md), [operation contracts](collection-operation-contracts.md), and [capabilities](collection-capabilities.md).
+Related: [function signatures](lite://doc/collection-function-signatures), [inference](lite://doc/collection-inference), [operation contracts](lite://doc/collection-operation-contracts), and [capabilities](lite://doc/collection-capabilities).

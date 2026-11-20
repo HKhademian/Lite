@@ -2,9 +2,9 @@
 
 Status: selected project process, 2026-11-03. This page selects no new language syntax.
 
-Start with the [contributor guide](../CONTRIBUTING.md). Follow the
-[atomic commit rules](../.agents/rules/atomic-commits.md) and
-[compiler development rules](../.agents/rules/compiler-development.md).
+Start with the [contributor guide](lite://doc/contributing). Follow the
+[atomic commit rules](lite://repo/.agents/rules/atomic-commits.md) and
+[compiler development rules](lite://repo/.agents/rules/compiler-development.md).
 
 ## Complete one increment
 
@@ -59,7 +59,7 @@ remain failures. Do not mark them pending to make a gate green.
 ## Open investigations
 
 Centralized token/value/stage constants and derived types need further investigation.
-The [bounded investigation](../research/investigations/INV-061-internal-kinds.md) records
+The [bounded investigation](lite://repo/research/investigations/INV-061-internal-kinds.md) records
 current source owners, local probes and remaining evidence.
 Node's default TypeScript execution requires erasable syntax; `const enum` is not
 an adopted solution. Preserve discriminated-union checks and the compiler-source
@@ -69,7 +69,7 @@ Move additional tools to LiteLang incrementally when the generated compiler can
 support their actual workload. Identify file I/O, arguments, filesystem traversal,
 JSON, subprocess and hashing needs first. Small host primitives may remain TS;
 they must not become a parallel compiler implementation. See
-[tool hosting](tool-hosting.md).
+[tool hosting](lite://doc/tool-hosting).
 
-Continue with [documentation maintenance](documentation.md) and
-[versioning](versioning-and-naming.md).
+Continue with [documentation maintenance](lite://doc/documentation) and
+[versioning](lite://doc/versioning-and-naming).

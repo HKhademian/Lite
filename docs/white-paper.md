@@ -94,7 +94,7 @@ text := read_text(path) else {
 
 The recovery block runs on a matching failure and supplies the chosen fallback. Typed filters and composed recovery expressions support more precise handling without requiring a helper function for every variation. A function's error contract remains explicit, and each extracted fallible step has a visible handling or propagation operation.
 
-Typed panics use a separate channel. Basic arithmetic faults follow that channel, so ordinary arithmetic does not acquire a Result wrapper at every operation. An attached typed `else` can provide local recovery. Operation recovery covers that operation's defined faults; an explicit `{ ... } else { ... }` block provides broad recovery across its contents and synchronous calls. Exact fault contracts, payloads, transport, and complete attachment remain under review; see [recovery scopes](expression-recovery.md#operation-specific-panic-boundary-selected).
+Typed panics use a separate channel. Basic arithmetic faults follow that channel, so ordinary arithmetic does not acquire a Result wrapper at every operation. An attached typed `else` can provide local recovery. Operation recovery covers that operation's defined faults; an explicit `{ ... } else { ... }` block provides broad recovery across its contents and synchronous calls. Exact fault contracts, payloads, transport, and complete attachment remain under review; see [recovery scopes](lite://doc/expression-recovery#operation-specific-panic-boundary-selected).
 
 Mutation follows the same philosophy. Fixed bindings and read-only access are the defaults. `var` permits replacement of a binding or caller location; `mut` permits updates to held data. Caller mutation grants are explicit at the call. These permissions should be practical to use and simple to inspect.
 
@@ -112,15 +112,15 @@ Safe defaults can coexist with optimization. A semantic zero initialization can 
 
 Selected priority, 2026-10-28: aim for useful performance near C on suitable workloads, low allocation and memory overhead, fast startup, small runtime support, and small final executables. Ordinary native programs should be deployable without a mandatory VM or tracing garbage collector. Include optional support only where the used features require it, and account for any required shared libraries alongside executable size. These are design targets, not measured results or a complete memory model.
 
-Speed and size can conflict: specialization and inlining may improve execution while increasing code size. Every substantial proposal should describe these tradeoffs and preserve selected safety, value-copy, and cleanup behavior. The memory-management model, ownership rules, compiler backend, ABI, linking strategy, and numeric budgets remain open. The [memory and performance reference](memory-and-performance.md#lightweight-native-execution-priority) owns the detailed priorities; [focused investigation points](../research/investigations/lightweight-native-execution.md) organize the unanswered questions.
+Speed and size can conflict: specialization and inlining may improve execution while increasing code size. Every substantial proposal should describe these tradeoffs and preserve selected safety, value-copy, and cleanup behavior. The memory-management model, ownership rules, compiler backend, ABI, linking strategy, and numeric budgets remain open. The [memory and performance reference](lite://doc/memory-and-performance#lightweight-native-execution-priority) owns the detailed priorities; [focused investigation points](lite://repo/research/investigations/lightweight-native-execution.md) organize the unanswered questions.
 
 ## 6. Support people and programming agents through the same clarity
 
 A person or agent reading a function should be able to identify its inputs, outputs, access permissions, and failure paths from a manageable amount of source. Predictable syntax and consistent rules make both writing and review easier.
 
-The design should favor visible contracts, consistent composition, explicit effects, and diagnostics that explain the cause of a problem and the action needed to fix it. Formatting should be consistent and preserve meaning. The selected [chain presentation](leading-separators.md#formatter-presentation-selected) keeps short chains compact and uses aligned leading separators for multiline chains, while both source forms retain the same meaning. Names and types should carry useful information without forcing a reader through layers of generated or implicit behavior.
+The design should favor visible contracts, consistent composition, explicit effects, and diagnostics that explain the cause of a problem and the action needed to fix it. Formatting should be consistent and preserve meaning. The selected [chain presentation](lite://doc/leading-separators#formatter-presentation-selected) keeps short chains compact and uses aligned leading separators for multiline chains, while both source forms retain the same meaning. Names and types should carry useful information without forcing a reader through layers of generated or implicit behavior.
 
-Conciseness can coexist with optional redundancy that makes code pleasant to write and edit. The selected [leading-separator rule](leading-separators.md) allows every Boolean-expression, condition, pattern-alternative, or union entry to start with its separator, including the first, while preserving exactly the compact form's meaning. Explicit tokens, rather than line layout, still establish the boundaries.
+Conciseness can coexist with optional redundancy that makes code pleasant to write and edit. The selected [leading-separator rule](lite://doc/leading-separators) allows every Boolean-expression, condition, pattern-alternative, or union entry to start with its separator, including the first, while preserving exactly the compact form's meaning. Explicit tokens, rather than line layout, still establish the boundaries.
 
 This also supports teaching. A beginner can start with values, inferred bindings, calls, conditions, and loops, then learn explicit mutation, absence, failures, and stronger library contracts as the problem requires them. More advanced use retains the same basic model.
 
@@ -134,8 +134,8 @@ diagnostics. Simple English remains the shared reference presentation. An option
 bridge could show the same program in both presentations and support a deliberate
 transition without changing the underlying language semantics.
 
-This [multilingual source proposal](multilingual-source-and-learning.md) is inspired
-by [Salam, now a project reference language](references.md#salam-and-multilingual-source-reviewed-2026-10-28).
+This [multilingual source proposal](lite://doc/multilingual-source-and-learning) is inspired
+by [Salam, now a project reference language](lite://doc/references#salam-and-multilingual-source-reviewed-2026-10-28).
 The educational benefit requires evaluation; no keyword mappings, source-selection
 syntax, translation tool, or implementation is selected. The existing Unicode-name
 direction alone does not provide a fully localized learning experience.
@@ -146,7 +146,7 @@ Some implicit behavior is useful and already selected: ordinary type inference, 
 
 Further convenience features must earn their place. A proposal that infers a type must still define its constraints. A proposal that hides copying, allocation, ownership transfer, or failure propagation must explain the resulting observable behavior and cost. Compiler optimization can change representation while preserving those contracts.
 
-The project evaluates mechanisms individually. Existing languages provide references for specific questions; LiteLang's priorities determine which ideas fit. The [reference catalog](references.md) links the focused comparisons and their sources.
+The project evaluates mechanisms individually. Existing languages provide references for specific questions; LiteLang's priorities determine which ideas fit. The [reference catalog](lite://doc/references) links the focused comparisons and their sources.
 
 ## 8. Criteria for future decisions
 
@@ -164,8 +164,8 @@ These criteria are the basis for design review. Brevity, familiarity, or a favor
 
 ## 9. From philosophy to a language contract
 
-This white paper states the project's philosophy and the criteria for future decisions. The [decision ledger](decisions-and-open-questions.md) records selected rules and unresolved contracts; detailed pages define their examples and boundaries. The [grammar sketch](grammar-sketch.md) remains provisional.
+This white paper states the project's philosophy and the criteria for future decisions. The [decision ledger](lite://doc/decisions-and-open-questions) records selected rules and unresolved contracts; detailed pages define their examples and boundaries. The [grammar sketch](lite://doc/grammar-sketch) remains provisional.
 
 Important work remains in type inference, generics, ownership and lifetimes, special-type zero mappings, failure transport, resource management, modules, and tooling. Those mechanisms must be developed under the same priorities: readable programs, little ceremony, explicit consequential behavior, strong contracts, and an implementation whose costs can be understood.
 
-Continue with [principles and goals](principles.md), [zero initialization](zero-initialization.md), [Result and errors](result-and-errors.md), [mutability and access](mutability.md), [memory and performance](memory-and-performance.md), and the [full reference index](README.md).
+Continue with [principles and goals](lite://doc/principles), [zero initialization](lite://doc/zero-initialization), [Result and errors](lite://doc/result-and-errors), [mutability and access](lite://doc/mutability), [memory and performance](lite://doc/memory-and-performance), and the [full reference index](lite://doc/overview).

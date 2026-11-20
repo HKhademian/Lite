@@ -67,11 +67,11 @@ label: String = match status {
 }
 ```
 
-An expected result contract must admit Unit to accept an empty result branch. Without an expected result contract, a genuine Unit arm participates in the normalized result union under selected [branch-result inference](branch-result-inference.md). A return/propagation exit provides no local continuation value and is checked against its exit target instead.
+An expected result contract must admit Unit to accept an empty result branch. Without an expected result contract, a genuine Unit arm participates in the normalized result union under selected [branch-result inference](lite://doc/branch-result-inference). A return/propagation exit provides no local continuation value and is checked against its exit target instead.
 
 ## Remaining subjects and coverage
 
-For a closed union of distinct members, an unguarded whole-type arm handles that member and later arms see the remainder. With a stable initialized String | Float | Int subject, : String followed by _ gives the fallback binding Float | Int; the original stable subject name is narrowed to the same remainder there. Failed bindings never enter that scope. A guarded type arm or payload/literal/comparison restriction does not remove the full type unless its entire region is proved handled. This selected negative information does not claim a complete arbitrary-pattern coverage algorithm; see [remaining subject narrowing](type-tests-and-narrowing.md#remaining-subject-types-across-match-arms-selected).
+For a closed union of distinct members, an unguarded whole-type arm handles that member and later arms see the remainder. With a stable initialized String | Float | Int subject, : String followed by _ gives the fallback binding Float | Int; the original stable subject name is narrowed to the same remainder there. Failed bindings never enter that scope. A guarded type arm or payload/literal/comparison restriction does not remove the full type unless its entire region is proved handled. This selected negative information does not claim a complete arbitrary-pattern coverage algorithm; see [remaining subject narrowing](lite://doc/type-tests-and-narrowing#remaining-subject-types-across-match-arms-selected).
 
 ## Coverage boundaries
 
@@ -86,5 +86,5 @@ Source-order first-success selection remains unchanged. A catch-all before a mor
 
 ## Related concepts
 
-- [Match](match.md), [guards](match-guards.md), [blocks and results](blocks-and-results.md), and [Unit](unit.md).
-- [Enum patterns](enums-and-variants.md), [Result](result-and-errors.md), and [pattern contexts](pattern-contexts.md).
+- [Match](lite://doc/match), [guards](lite://doc/match-guards), [blocks and results](lite://doc/blocks-and-results), and [Unit](lite://doc/unit).
+- [Enum patterns](lite://doc/enums-and-variants), [Result](lite://doc/result-and-errors), and [pattern contexts](lite://doc/pattern-contexts).

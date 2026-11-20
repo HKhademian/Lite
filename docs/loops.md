@@ -2,27 +2,27 @@
 
 Status: **one keyword, three source modes, one optional item name, and metadata-only state selected; optional leading and/or on unparenthesized Boolean sources selected 2026-10-24; full protocol/inference contracts open**.
 
-Normative page: loop forms, source modes, item naming, and the metadata surface. [Loop value](loop-value.md) owns `.value` type/initialization/commit rules; [loop completion](loop-completion.md) owns `then` and targeted exits; [loop type inference](loop-type-inference.md) owns body/result inference; [last item](loop-last-item.md) owns completion-time item state. See the [normative page map](normative-pages.md).
+Normative page: loop forms, source modes, item naming, and the metadata surface. [Loop value](lite://doc/loop-value) owns `.value` type/initialization/commit rules; [loop completion](lite://doc/loop-completion) owns `then` and targeted exits; [loop type inference](lite://doc/loop-type-inference) owns body/result inference; [last item](lite://doc/loop-last-item) owns completion-time item state. See the [normative page map](lite://doc/normative-pages).
 
-Implementation coverage, 2026-10-30: the [experimental igniter](../igniter/README.md#action-loops)
+Implementation coverage, 2026-10-30: the [experimental igniter](lite://repo/igniter/README.md#action-loops)
 now runs Boolean-condition and unconditional loops as actions, with bare nearest-
 loop break/continue. Bodies are scoped and condition reads are repeated before
 entry. Value-producing loops, metadata, iterables, tags, payload exits, header
 transfers and completion/cleanup hooks remain unsupported. This implements a
 bounded effect-only use of the rules below without changing their value contract.
-The [restricted compiler prototype](../compiler/README.md) lowers the same bare
+The [restricted compiler prototype](lite://doc/compiler/overview) lowers the same bare
 nearest-loop exits in Boolean and unconditional loops to TS and C, and in
 list-traversal loops to TS; payloads, tags and exits outside a loop are rejected
 there.
 
-The approved **2026-10-31** [fixed-array increment](../igniter/README.md#fixed-arrays-and-traversal)
+The approved **2026-10-31** [fixed-array increment](lite://repo/igniter/README.md#fixed-arrays-and-traversal)
 adds action traversal of the supported array values, with source-once evaluation,
 positional order and an optional fixed as item binding. Body/item scopes are
 fresh on each entry; bare continue advances and break stops the nearest loop.
 Whole-source variable replacement does not retarget that evaluated traversal.
 General iterables, metadata, named Boolean/unconditional receivers, loop values
 and completion/cleanup remain unimplemented; no new always-Unit loop contract
-is selected. See [INV-054](../research/investigations/INV-054-fvp-fixed-arrays.md).
+is selected. See [INV-054](lite://repo/research/investigations/INV-054-fvp-fixed-arrays.md).
 
 Implementation coverage, 2026-11-01: the igniter now implements typed loop
 `.value` and one receiverless `then`. `.value` starts at `zero(T)`; a normally
@@ -32,8 +32,8 @@ without `then` the loop result is the final `.value`. `then` receives the final
 remain Unit and commit nothing. Tags, `@name.value`, payload exits, targeted
 return/break, `.item`/`.index` in `then`, `.count` in bodies, and noncontributing
 partial-conditional tails remain unimplemented. A construct-level `finally`
-now runs after `then` and on exits from the loop; see [finally](finally.md).
-See [loop value](loop-value.md) and [loop completion](loop-completion.md).
+now runs after `then` and on exits from the loop; see [finally](lite://doc/finally).
+See [loop value](lite://doc/loop-value) and [loop completion](lite://doc/loop-completion).
 
 ## Template
 
@@ -43,7 +43,7 @@ See [loop value](loop-value.md) and [loop completion](loop-completion.md).
 } [then { completion_body }]
 ```
 
-Brackets are optional grammar notation, not literal characters. As is the selected spelling for one optional item identifier. There are no positional receiver lists or completion receivers. Destructure/select inside the body. See [item naming](loop-receivers.md).
+Brackets are optional grammar notation, not literal characters. As is the selected spelling for one optional item identifier. There are no positional receiver lists or completion receivers. Destructure/select inside the body. See [item naming](lite://doc/loop-receivers).
 
 ## Source modes
 
@@ -90,7 +90,7 @@ loop
 }
 ```
 
-Assume running is Bool, remaining is Int, and process_next returns Unit and may update the state read by the source. Removing the leading and gives exactly the same reevaluated, short-circuit Boolean source. The loop keyword and body-opening brace establish the header boundaries; line breaks do not. A bare leader is not an omitted source, and an iterable cannot be coerced into this Bool expression. No pattern bindings or additional metadata are introduced. See [leading Boolean loop sources](leading-separators.md#boolean-loop-sources), selected 2026-10-24.
+Assume running is Bool, remaining is Int, and process_next returns Unit and may update the state read by the source. Removing the leading and gives exactly the same reevaluated, short-circuit Boolean source. The loop keyword and body-opening brace establish the header boundaries; line breaks do not. A bare leader is not an omitted source, and an iterable cannot be coerced into this Bool expression. No pattern bindings or additional metadata are introduced. See [leading Boolean loop sources](lite://doc/leading-separators#boolean-loop-sources), selected 2026-10-24.
 
 ### Unconditional
 
@@ -110,9 +110,9 @@ An omitted source means unconditional iteration. There is no while keyword, requ
 - .count: number of entered iterations. It starts at zero before the first check, is one-based in the body, includes skipped entries, and remains readable in completion.
 - .value: last committed body result of static type T, initialized to T's language-defined all-zero value. A completed tail expression, continue value, or break value commits; plain continue and bare break preserve it.
 
-During an active iteration, `.item` and, for positional sources, `.index` describe that entry. In `then`, they describe the last entered iteration when one exists. If no body was entered, `then` exposes a type-directed zero placeholder for `.item`; for positional sources `.index` is `0`, while nonpositional sources have no `.index`. `.count == 0` distinguishes empty completion from an actual first entry. These fields are not available in source/condition evaluation before an entry. Count and value are available before the first condition, in the body, and in `then`. Retain last-item state only when completion observably uses it. See [empty-loop metadata](loop-last-item.md#zero-iteration-placeholders), [loop value](loop-value.md) for zero rules, and [continuity](continuity-and-analogy.md#similar-input-different-capabilities) for the capability boundary.
+During an active iteration, `.item` and, for positional sources, `.index` describe that entry. In `then`, they describe the last entered iteration when one exists. If no body was entered, `then` exposes a type-directed zero placeholder for `.item`; for positional sources `.index` is `0`, while nonpositional sources have no `.index`. `.count == 0` distinguishes empty completion from an actual first entry. These fields are not available in source/condition evaluation before an entry. Count and value are available before the first condition, in the body, and in `then`. Retain last-item state only when completion observably uses it. See [empty-loop metadata](lite://doc/loop-last-item#zero-iteration-placeholders), [loop value](lite://doc/loop-value) for zero rules, and [continuity](lite://doc/continuity-and-analogy#similar-input-different-capabilities) for the capability boundary.
 
-See [last-item/index access](loop-last-item.md) for zero/empty behavior and field-sensitive retention.
+See [last-item/index access](lite://doc/loop-last-item) for zero/empty behavior and field-sensitive retention.
 
 For loops, leading-dot access uses the loop context without searching outward; inside a conditional, use an explicit loop tag for loop metadata. A conditional's `.value` requires its own explicit tag and is readable only in its attached `then`; ambiguous leading-dot metadata reads are rejected. Named @tag access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
 
@@ -127,7 +127,7 @@ sum := loop numbers as number {
 }
 ```
 
-Then shares the owning loop context, tagged or untagged. Its tail expression produces the final result; then {} produces Unit. Without then, the selected normal result is final .value, including initialized zero for an empty/all-skipped loop. Complete inference remains open. See [completion](loop-completion.md).
+Then shares the owning loop context, tagged or untagged. Its tail expression produces the final result; then {} produces Unit. Without then, the selected normal result is final .value, including initialized zero for an empty/all-skipped loop. Complete inference remains open. See [completion](lite://doc/loop-completion).
 
 ## Direction and step
 
@@ -150,6 +150,6 @@ Index counts traversal position for positional sources; nonpositional sources do
 
 ## Recovery and cleanup
 
-Operation-local recovery remains available inside bodies. Returned Results still require explicit handling/propagation. External whole-loop error handlers are retired; body-wide recovery/cleanup, defer, and resource-management syntax remain [deferred](deferred-cleanup-and-resources.md). `then` is normal result processing, not cleanup; an attached construct-level `finally` runs afterward and does not replace the loop result.
+Operation-local recovery remains available inside bodies. Returned Results still require explicit handling/propagation. External whole-loop error handlers are retired; body-wide recovery/cleanup, defer, and resource-management syntax remain [deferred](lite://doc/deferred-cleanup-and-resources). `then` is normal result processing, not cleanup; an attached construct-level `finally` runs afterward and does not replace the loop result.
 
-Related: [full examples](loop-examples.md), [item naming](loop-receivers.md), [loop value](loop-value.md), [completion](loop-completion.md), [tags](tags-and-contexts.md), [exits](control-flow.md), and [historical accumulator](loop-accumulator.md).
+Related: [full examples](lite://doc/loop-examples), [item naming](lite://doc/loop-receivers), [loop value](lite://doc/loop-value), [completion](lite://doc/loop-completion), [tags](lite://doc/tags-and-contexts), [exits](lite://doc/control-flow), and [historical accumulator](lite://doc/loop-accumulator).

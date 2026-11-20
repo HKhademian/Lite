@@ -1,6 +1,6 @@
 # Bounds, arithmetic, and checked fault policy
 
-Status: **policy history with selected sequence and arithmetic directions, 2026-10-20**. Ordinary sequence access/removal uses typed faults with attached local recovery. Basic arithmetic faults use typed panics, not returned `Result` errors; target-level `else` filters support local recovery of matching types. The [shared recovery document](expression-recovery.md) records the recovery surface. Alternatives below preserve the earlier review rather than competing current meanings.
+Status: **policy history with selected sequence and arithmetic directions, 2026-10-20**. Ordinary sequence access/removal uses typed faults with attached local recovery. Basic arithmetic faults use typed panics, not returned `Result` errors; target-level `else` filters support local recovery of matching types. The [shared recovery document](lite://doc/expression-recovery) records the recovery surface. Alternatives below preserve the earlier review rather than competing current meanings.
 
 The joint review reaffirmed that ordinary indexing and arithmetic are direct value operations. A successful `items[i]` yields the element, and a successful arithmetic expression yields the numeric value. An out-of-bounds access or division by zero under the applicable division rules raises a typed `Panic`, which propagates implicitly unless caught. Ordinary access and arithmetic require no `Option` unwrap or explicit `Error` propagation. A separately requested lookup may expose expected absence as a value under its own contract.
 
@@ -17,7 +17,7 @@ value := users[index] else { fallback_user() }
 value := users[index]!;
 ```
 
-Here ordinary checked indexing produces User ! BoundsError. Handling, propagation, or retaining the Result is explicit. This follows the existing [checked-indexing proposal](checked-collection-operations.md).
+Here ordinary checked indexing produces User ! BoundsError. Handling, propagation, or retaining the Result is explicit. This follows the existing [checked-indexing proposal](lite://doc/checked-collection-operations).
 
 The model is uniform and works well when a bad index is an expected input condition. It also adds source-level handling wherever the operation's error cannot be discharged under a language-defined proof rule. Applying the same default to all checked arithmetic creates a larger annotation/propagation burden. Compiler optimization can remove checks but does not independently erase source-level Result contracts or declared errors.
 
@@ -71,13 +71,13 @@ swap_if_out_of_order := fn(values: mut [Int], i: Int, j: Int) {
 
 This is a sorting step, not a complete sorting algorithm. Reads and writes use ordinary syntax without a Result marker on every access. Its public input visibly requests writable indexed-sequence access; the final conditional's normally completing assignment produces Unit, and a no-match path performs no write while the statement still produces Unit. The [Int] indexed-sequence direction is now accepted, and mut [Int] needs an actual writable indexed refinement supplied by the provider, not a fabricated setter. It does not require growth, contiguous storage, or one concrete List type.
 
-Invalid i or j triggers the proposed safe bounds fault before invalid memory use. This is not a recoverable failure returned from this routine, so an ordinary successful Unit result needs no error annotation. A nonfallible result contract promises no escaping recoverable Result error; it is not a universal guarantee that the routine cannot fault. Language-managed typed panics unwind exited scopes and run applicable finally blocks before outer matching handlers; exact capture boundaries, hard aborts, and cleanup-failure aggregation/inspection remain open. Cleanup-failure precedence is selected in [finally](finally.md#pending-outcomes).
+Invalid i or j triggers the proposed safe bounds fault before invalid memory use. This is not a recoverable failure returned from this routine, so an ordinary successful Unit result needs no error annotation. A nonfallible result contract promises no escaping recoverable Result error; it is not a universal guarantee that the routine cannot fault. Language-managed typed panics unwind exited scopes and run applicable finally blocks before outer matching handlers; exact capture boundaries, hard aborts, and cleanup-failure aggregation/inspection remain open. Cleanup-failure precedence is selected in [finally](lite://doc/finally#pending-outcomes).
 
 Algorithm invariants and range-based traversal can make indexes valid; a compiler can eliminate checks when proved safe. The source does not gain or lose ! markers depending on optimization success. Expected invalid positions, such as user-supplied requests that a program intends to recover from, should use the separately explicit checked operation. The later shared-recovery direction chooses attached else for local recovery, with operation-specific recovery or an explicit block for broad recovery; operation attribution and transfer remain open. Result ! is unchanged.
 
 ## Consistency with removal
 
-The user points out that default Option-returning pop would require unpacking unlike the proposed direct indexed reads/writes. The revised [end-operation review](sequence-end-operations.md) recommends aligning ordinary pop with whichever ordinary index policy is selected: direct T or Unit with a safe fault under alternative B, or typed Result under alternative A. Empty removal and invalid position can have distinct typed failures while following the same handling mode.
+The user points out that default Option-returning pop would require unpacking unlike the proposed direct indexed reads/writes. The revised [end-operation review](lite://doc/sequence-end-operations) recommends aligning ordinary pop with whichever ordinary index policy is selected: direct T or Unit with a safe fault under alternative B, or typed Result under alternative A. Empty removal and invalid position can have distinct typed failures while following the same handling mode.
 
 The later user request accepts the direct sequence-operation direction and selects attached else recovery for typed faults. A separate capture-as-Result form and optional lookup/removal API remain open. The requested syntax does not by itself settle whether arbitrary argument/callee panics are included. Empty removal must not change the sequence, without implying rollback of earlier effects.
 
@@ -85,7 +85,7 @@ The later user request accepts the direct sequence-operation direction and selec
 
 If ordinary users[index] produces a plain User under alternative B, users[index]! cannot retain its earlier meaning without a distinct explicitly selected capture rule. Postfix ! is already Result extraction/propagation; it is not a general panic-capture operator.
 
-The later request selects users[index] else { fallback } as a language recovery form even when ordinary indexing produces a plain User. This revises the earlier syntax-open review. It is not ordinary inspection of User data: the compiler establishes a recovery boundary during evaluation. The selected operation boundary handles its own defined faults and excludes argument/operand panics. An explicit `{ ... } else { ... }` block instead covers supported panics across its contents and synchronous calls. See [shared expression recovery](expression-recovery.md).
+The later request selects users[index] else { fallback } as a language recovery form even when ordinary indexing produces a plain User. This revises the earlier syntax-open review. It is not ordinary inspection of User data: the compiler establishes a recovery boundary during evaluation. The selected operation boundary handles its own defined faults and excludes argument/operand panics. An explicit `{ ... } else { ... }` block instead covers supported panics across its contents and synchronous calls. See [shared expression recovery](lite://doc/expression-recovery).
 
 The current recoverable-failure throw proposal remains shorthand for return .err(error). It does not trigger or capture a panic. A checked outcome propagated with ! still requires its enclosing function's declared error contract.
 
@@ -105,4 +105,4 @@ The earlier recommendation was to evaluate ordinary safety-checked assertions fo
 
 Alternative A remains a coherent historical comparison but is superseded for basic arithmetic faults. Do not adopt both meanings for an undecorated operation or promise a universally capturable panic as a shortcut. The sequence decision selects direct access/removal plus attached else; arithmetic uses typed panics and target-level typed filters. Use the selected operation-specific scope for bare operations and explicit blocks for broad recovery; operation fault attribution and complete chain/attachment rules remain open.
 
-Related: [panics](panics.md), [Result](result-and-errors.md), [operation contracts](collection-operation-contracts.md), [division](division.md), and [signature ergonomics](collection-signature-ergonomics.md).
+Related: [panics](lite://doc/panics), [Result](lite://doc/result-and-errors), [operation contracts](lite://doc/collection-operation-contracts), [division](lite://doc/division), and [signature ergonomics](lite://doc/collection-signature-ergonomics).

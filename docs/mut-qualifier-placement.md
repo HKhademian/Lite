@@ -2,7 +2,7 @@
 
 Status: **name: mut T selected for annotated declarations and parameters, 2026-10-19**. Inferred declarations retain mut name := expression and var mut name := expression; var stays before the name in typed declarations. The earlier typed name-prefix form is superseded. Access permissions, argument passing, and caller-replacement semantics are unchanged by this migration.
 
-Subsequent naming decision: [type-side var](var-access-qualifier.md) replaces the slot keyword for caller-storage access. This does not change selected mut placement. Historical references to slot below explain the earlier placement discussion; canonical replacement signatures now use fn(target: var T), with local-only var declarations inside the body.
+Subsequent naming decision: [type-side var](lite://doc/var-access-qualifier) replaces the slot keyword for caller-storage access. This does not change selected mut placement. Historical references to slot below explain the earlier placement discussion; canonical replacement signatures now use fn(target: var T), with local-only var declarations inside the body.
 
 ## The two forms
 
@@ -100,4 +100,4 @@ Canonical typed examples, declaration templates, function/receiver parameter rul
 
 Additional qualified aliases, per-alternative union capabilities, and complete callable-type grammar still need separate contracts. This selection does not adopt ref, public pointers, or a borrowing model.
 
-Related: [mutability](mutability.md), [declarations](declarations-and-assignment.md), [functions](functions.md), [caller-location keywords](caller-location-keywords.md), [type aliases](type-aliases.md), and [slot qualifier](slot-access-qualifier.md).
+Related: [mutability](lite://doc/mutability), [declarations](lite://doc/declarations-and-assignment), [functions](lite://doc/functions), [caller-location keywords](lite://doc/caller-location-keywords), [type aliases](lite://doc/type-aliases), and [slot qualifier](lite://doc/slot-access-qualifier).

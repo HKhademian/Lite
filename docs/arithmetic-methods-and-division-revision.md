@@ -18,7 +18,7 @@ b :% c; /* modulo: 1 */
 
 With an Int quotient, the truncating pair is / and %; the floor pair is :/ and :%. Their integer identities are a == b * (a / b) + (a % b) and a == b * (a :/ b) + (a :% b), for successful admitted operations. Nonzero remainder follows the dividend; nonzero modulo follows the divisor. A floating operand supplies floating arithmetic; Int storage applies / truncation or :/ floor to the quotient. Nonintegral floating literals and established floating values are admitted in this rule. Expected Float/Double results retain fractional /, including integer-spelled literal division. Without a result context, floating operands give fractional /. Exact precision/width compatibility, general conversions, numeric representation, and faults remain separate.
 
-The old always-fractional Int division rule, the subsequent operand-only rule, // floor symbol, and %% modulo symbol are superseded. The new family is recorded in [division](division.md) and the updated [signed table](signed-division-table.md). Foreign-language spellings and observed probe results are unchanged.
+The old always-fractional Int division rule, the subsequent operand-only rule, // floor symbol, and %% modulo symbol are superseded. The new family is recorded in [division](lite://doc/division) and the updated [signed table](lite://doc/signed-division-table). Foreign-language spellings and observed probe results are unchanged.
 
 ## Ordinary named operations in addition
 
@@ -59,7 +59,7 @@ right := 2 / 7.0;          /* fractional without an integer destination */
 
 This clarifies the earlier result-directed wording: an Int destination accepts the appropriately rounded quotient of a floating calculation; it does not turn the floating operands into integers. The rule includes established floating values, not just whole-valued decimal literals. Without floating evidence or a fractional expected result, integer-only division retains its integer default. No mandatory floating intermediate follows for that integer-only case.
 
-The result contract does not settle general Float-to-Int assignment casts, mixed floating widths/precision, out-of-range or non-finite storage, or complete expected-type propagation through unresolved subexpressions/calls/returns. The user separately selected preservation of floating intermediates until the full value reaches Int storage; see [storage boundaries](division.md#floating-intermediates-and-storage-boundaries). Numeric methods remain an additional requested surface; exact signatures and context flow for div/floorDiv must preserve corresponding admitted arithmetic behavior and still need specification. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
+The result contract does not settle general Float-to-Int assignment casts, mixed floating widths/precision, out-of-range or non-finite storage, or complete expected-type propagation through unresolved subexpressions/calls/returns. The user separately selected preservation of floating intermediates until the full value reaches Int storage; see [storage boundaries](lite://doc/division#floating-intermediates-and-storage-boundaries). Numeric methods remain an additional requested surface; exact signatures and context flow for div/floorDiv must preserve corresponding admitted arithmetic behavior and still need specification. See [calculation and storage](lite://doc/division#floating-calculation-and-integer-storage).
 
 ## Explicit truncating division proposal
 
@@ -122,9 +122,9 @@ Retiring // as an arithmetic spelling does not itself adopt // line comments. Cu
 
 ## Related documents
 
-- [Division](division.md)
-- [Operators](operators.md)
-- [Identifiers](identifiers.md)
-- [Lexical structure](lexical-structure.md)
-- [Evaluation order](evaluation-order.md)
-- [Decision ledger](decisions-and-open-questions.md)
+- [Division](lite://doc/division)
+- [Operators](lite://doc/operators)
+- [Identifiers](lite://doc/identifiers)
+- [Lexical structure](lite://doc/lexical-structure)
+- [Evaluation order](lite://doc/evaluation-order)
+- [Decision ledger](lite://doc/decisions-and-open-questions)

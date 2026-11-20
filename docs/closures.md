@@ -1,6 +1,6 @@
 # Closures
 
-Status: **Generated TS lexical closures active as of 2026-11-16 (Unified Block Model Slice 3); explicit capture-header syntax and native C closure representation remain deferred design history.** On the TS target, local `fn(...) { ... }` expressions capture surrounding immutable values, mutable `var` storage, `mut List` values, parameters, `loop` item bindings, and sibling functions across nested and escaping frames, enforced by compile-time execution-trace and escaping-closure checks (see [deferred-body lookup](functions.md#deferred-body-lookup)); the C target continues rejecting `fn` values explicitly. The `[...]` capture-list proposals, environment-context notes, and reference comparisons below are retained as deferred design history (`LiteLang` / [pinned context ideas](deferred-contexts.md)), not active syntax commitments.
+Status: **Generated TS lexical closures active as of 2026-11-16 (Unified Block Model Slice 3); explicit capture-header syntax and native C closure representation remain deferred design history.** On the TS target, local `fn(...) { ... }` expressions capture surrounding immutable values, mutable `var` storage, `mut List` values, parameters, `loop` item bindings, and sibling functions across nested and escaping frames, enforced by compile-time execution-trace and escaping-closure checks (see [deferred-body lookup](lite://doc/functions#deferred-body-lookup)); the C target continues rejecting `fn` values explicitly. The `[...]` capture-list proposals, environment-context notes, and reference comparisons below are retained as deferred design history (`LiteLang` / [pinned context ideas](lite://doc/deferred-contexts)), not active syntax commitments.
 
 ## Purpose and template
 
@@ -12,7 +12,7 @@ transform := fn(x: Int): Int {
 }
 ```
 
-`fn(x) { ... }` and `(x) { ... }` are the same callable literal with an optional keyword before the parenthesized header. An expected binding/method/callback contract can supply omitted input/result types; annotations can establish independent inputs, and a known-input nonrecursive local body can infer its result. Thus `fn(x: Int) { x * 3 }` and `(x: Int) { x * 3 }` infer the same result. The 2026-10-24 clarification supersedes the earlier retirement of contextual `fn`. Headerless `fn { arguments.0 * 3 }` and whole-pack `fn pack { pack.0 * 3 }` retain their keyword. These forms do not select captures or their representation; see [input packs and lambda shorthand](callable-input-packs.md) and [functions](functions.md#compact-implementations-under-review).
+`fn(x) { ... }` and `(x) { ... }` are the same callable literal with an optional keyword before the parenthesized header. An expected binding/method/callback contract can supply omitted input/result types; annotations can establish independent inputs, and a known-input nonrecursive local body can infer its result. Thus `fn(x: Int) { x * 3 }` and `(x: Int) { x * 3 }` infer the same result. The 2026-10-24 clarification supersedes the earlier retirement of contextual `fn`. Headerless `fn { arguments.0 * 3 }` and whole-pack `fn pack { pack.0 * 3 }` retain their keyword. These forms do not select captures or their representation; see [input packs and lambda shorthand](lite://doc/callable-input-packs) and [functions](lite://doc/functions#compact-implementations-under-review).
 
 ## Result behavior
 
@@ -58,7 +58,7 @@ live := [var offset](n: Int): Unit {
 
 The capture list belongs to this implementation. Captured names and field layout can remain private; they do not automatically become caller-required context in the public call signature. For snapshot, that input/result shape is `fn(n: Int): Int`. The caller supplies n and receives the result without supplying offset. The compiler and eventual callable representation must still account for retained state, permissions, ownership, and lifetime restrictions internally.
 
-The capture-header direction and semantics above are pinned ideas, postponed for later review. Public context-requirement grammar, concrete closure types, callback compatibility, and full `fn` capture placement still need review. The earlier claim that capture fields must be exposed in every public signature is superseded by the [public/private distinction](deferred-contexts.md#public-signature-and-private-implementation). Matching call shapes do not settle storage or lifetime safety, and private state does not mandate a heap allocation or dynamic lookup.
+The capture-header direction and semantics above are pinned ideas, postponed for later review. Public context-requirement grammar, concrete closure types, callback compatibility, and full `fn` capture placement still need review. The earlier claim that capture fields must be exposed in every public signature is superseded by the [public/private distinction](lite://doc/deferred-contexts#public-signature-and-private-implementation). Matching call shapes do not settle storage or lifetime safety, and private state does not mandate a heap allocation or dynamic lookup.
 
 `var` capture introduces a relationship to source storage, not a freely escaping public pointer. Complete nonescape, aliasing, reentrancy, cleanup, and owned-escape rules remain open. Temporary caller grants must not silently become longer-lived handles. Context-bearing callable types must also receive a valid zero mapping under universal zero initialization; a dangling or null storage handle is not an acceptable default.
 
@@ -230,7 +230,7 @@ Context-bearing callable type grammar, payload-mutation and read-only live captu
 
 ## Related concepts and references
 
-- [Functions](functions.md)
-- [Control-flow exits](control-flow.md)
-- [Memory and performance](memory-and-performance.md)
+- [Functions](lite://doc/functions)
+- [Control-flow exits](lite://doc/control-flow)
+- [Memory and performance](lite://doc/memory-and-performance)
 - [Kotlin functions](https://kotlinlang.org/docs/functions.html) and [Rust blocks/async boundaries](https://doc.rust-lang.org/reference/expressions/block-expr.html) are comparisons; no automatic adoption of their capture rules is implied.

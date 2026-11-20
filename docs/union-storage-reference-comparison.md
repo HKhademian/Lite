@@ -1,6 +1,6 @@
 # Union storage: modern reference languages
 
-Status: **reference comparison checked 2026-10-21**. This records documented contracts, not measurements or compiled layout tests. LiteScript's selected conceptual direction is [metadata plus overlapping payload](union-zero.md#current-storage-model). Exact metadata encoding, ABI, and zero-tag meaning remain open.
+Status: **reference comparison checked 2026-10-21**. This records documented contracts, not measurements or compiled layout tests. LiteScript's selected conceptual direction is [metadata plus overlapping payload](lite://doc/union-zero#current-storage-model). Exact metadata encoding, ABI, and zero-tag meaning remain open.
 
 ## The user's model
 

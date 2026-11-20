@@ -1,6 +1,6 @@
 # Zero values of plain unions
 
-Status: **revised 2026-11-17:** all-zero storage for a multi-member plain union is a valid initialized union value with Kind 0 and no known active member (`UNKNOWN`). A bare typed declaration initializes this value. The older listed-member-only rule is superseded. Exact metadata format, alignment, ABI, matching and operations remain open. See [union initialization](union-initialization-policy.md#bare-local-declarations).
+Status: **revised 2026-11-17:** all-zero storage for a multi-member plain union is a valid initialized union value with Kind 0 and no known active member (`UNKNOWN`). A bare typed declaration initializes this value. The older listed-member-only rule is superseded. Exact metadata format, alignment, ABI, matching and operations remain open. See [union initialization](lite://doc/union-initialization-policy#bare-local-declarations).
 
 ## One Kind mapping for the same union type
 
@@ -55,15 +55,15 @@ The following earlier descriptions and alternatives are historical where they co
 
 ### Earlier selected construction restriction
 
-The user now requires [x: A | B = 0 to be rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) for a multi-member normalized union: it does not visibly choose a member. = ? reserves unreadable storage; = expr preserves an initialized source member. A{0}/B{0} are proposed compact member-zero constructors; A{}/B{} select declared-default record construction where valid. No canonical or leftmost member is silently selected. The older zero-member and empty-state discussions below are retained as history; bare multi-member union locals require an initializer or explicit = ?; implicit zero-result sites still need reconciliation with this source restriction.
+The user now requires [x: A | B = 0 to be rejected](lite://doc/union-initialization-policy#selected-rejection-and-explicit-member-choice) for a multi-member normalized union: it does not visibly choose a member. = ? reserves unreadable storage; = expr preserves an initialized source member. A{0}/B{0} are proposed compact member-zero constructors; A{}/B{} select declared-default record construction where valid. No canonical or leftmost member is silently selected. The older zero-member and empty-state discussions below are retained as history; bare multi-member union locals require an initializer or explicit = ?; implicit zero-result sites still need reconciliation with this source restriction.
 
 ## Latest initialization-policy alternatives
 
-The user now compares [leftmost-member construction, explicit initialization, and default-uninitialized union locals](union-initialization-policy.md). These remain open. An ordinary parameter can preserve a supplied active member. Leftmost source-directed construction can preserve order-independent type identity if separated from the complete all-zero representation; earlier claims that it must always change type identity were too broad. Default-uninitialized storage forbids even type tests until initialization; it is distinct from a readable tag-zero empty state. Declaration policy alone does not define universal union zero at other creation sites.
+The user now compares [leftmost-member construction, explicit initialization, and default-uninitialized union locals](lite://doc/union-initialization-policy). These remain open. An ordinary parameter can preserve a supplied active member. Leftmost source-directed construction can preserve order-independent type identity if separated from the complete all-zero representation; earlier claims that it must always change type identity were too broad. Default-uninitialized storage forbids even type tests until initialization; it is distinct from a readable tag-zero empty state. Declaration policy alone does not define universal union zero at other creation sites.
 
 ## Latest alternative under review
 
-The user now proposes [empty union zero](union-empty-zero-proposal.md): tag zero means no active member, and both A/B type tests fail. This would replace the selected member-only zero boundary and remove the need to rank members for union zero. It remains an exploratory alternative; compare coverage, direct operations, Unit/Option/Result distinctions, and single-member normalization before adopting it. The selected rule below is retained pending that decision.
+The user now proposes [empty union zero](lite://doc/union-empty-zero-proposal): tag zero means no active member, and both A/B type tests fail. This would replace the selected member-only zero boundary and remove the need to rank members for union zero. It remains an exploratory alternative; compare coverage, direct operations, Unit/Option/Result distinctions, and single-member normalization before adopting it. The selected rule below is retained pending that decision.
 
 On 2026-11-17, the user clarified the direction as Kind 0 identifying no known
 type, so zero-initialized union storage begins in an `UNKNOWN` active-type state.
@@ -162,7 +162,7 @@ zeroOf(B | A)  /* zero B */
 
 This is easy to explain and gives authors control through ordering. It resembles C++ variant default construction and Odin's no-nil union default, although their default contracts are not LiteScript's universal bytewise zero.
 
-As a type-defined complete all-zero mapping, this requires revisiting order-independent identity or defining an order-sensitive representation contract. As a source-directed construction/default rule, it can create different values of the same type if the compiler writes the chosen member tag; see the [construction-policy distinction](union-initialization-policy.md#leftmost-member-as-a-construction-rule). The same shared all-zero representation still cannot have different active-member meanings through reordered transparent aliases. Flattening nested unions, duplicates, and branch-result inference would need an ordered policy too; moving an arm could otherwise change a default. Do not quietly introduce declaration or compiler discovery order as a substitute.
+As a type-defined complete all-zero mapping, this requires revisiting order-independent identity or defining an order-sensitive representation contract. As a source-directed construction/default rule, it can create different values of the same type if the compiler writes the chosen member tag; see the [construction-policy distinction](lite://doc/union-initialization-policy#leftmost-member-as-a-construction-rule). The same shared all-zero representation still cannot have different active-member meanings through reordered transparent aliases. Flattening nested unions, duplicates, and branch-result inference would need an ordered policy too; moving an arm could otherwise change a default. Do not quietly introduce declaration or compiler discovery order as a substitute.
 
 ### 2. Canonical order of normalized type identities
 
@@ -259,7 +259,7 @@ Unit-first makes union zero use the explicitly admitted no-payload alternative, 
 
 The selected widening rule retains the active member and payload. Suppose a canonical rule selects A for A | B. Widening zero(B) into A | B must still produce a B value, even though the destination's own zero is A. The widened B may therefore have nonzero metadata. If the source is itself a union, its discriminant may need remapping during widening.
 
-Consequently, zero(source) widened to destination is not generally zero(destination). Demanding that equation for every source member would force both A and B to be the same active zero member, contradicting their preserved identities. This is not a new conversion exception: it follows from the already selected value-preserving membership/widening rules. See [union widening](union-widening.md).
+Consequently, zero(source) widened to destination is not generally zero(destination). Demanding that equation for every source member would force both A and B to be the same active zero member, contradicting their preserved identities. This is not a new conversion exception: it follows from the already selected value-preserving membership/widening rules. See [union widening](lite://doc/union-widening).
 
 ## Chosen review direction and boundaries
 
@@ -271,7 +271,7 @@ First-written-member and explicit designation remain comparison history rather t
 
 Every type has a valid all-zero value. Plain unions ignore order, flatten nested unions, and eliminate exact duplicates after alias resolution. Equivalent type identities must have one coherent zero mapping. Option and Result retain their own boundaries: zero(Option<T>) is .None, while zero(T ! E) is .ok(zero(T)). Neither mapping defines which member a plain A | B selects. This review does not change those decisions or introduce a nullable pointer feature.
 
-The expanded [modern-language storage comparison](union-storage-reference-comparison.md) covers Rust, Zig, Odin, V, and C++, including raw versus tagged constructs, layout guarantees, and zero/default differences.
+The expanded [modern-language storage comparison](lite://doc/union-storage-reference-comparison) covers Rust, Zig, Odin, V, and C++, including raw versus tagged constructs, layout guarantees, and zero/default differences.
 
 ## Modern reference languages
 
@@ -281,4 +281,4 @@ Checked 2026-10-21:
 - [Rust enum defaults](https://doc.rust-lang.org/stable/error_codes/E0665.html) require a designated unit variant for derived Default, or a manual implementation for a payload variant. Default is not a guarantee that arbitrary zero-filled storage is valid, and these nominal enums do not solve LiteScript's inferred order-independent unions directly.
 - [C++ variant default construction](https://eel.is/c++draft/variant.ctor) value-initializes its first alternative when that alternative permits default construction. Its ordered alternatives and default-construction eligibility differ from LiteScript's selected rules.
 
-Related: [universal zero](zero-initialization.md), [union normalization](union-normalization.md), and [branch-result inference](branch-result-inference.md).
+Related: [universal zero](lite://doc/zero-initialization), [union normalization](lite://doc/union-normalization), and [branch-result inference](lite://doc/branch-result-inference).

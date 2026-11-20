@@ -62,4 +62,4 @@ Keep beginner examples focused on values and operations. Introduce protocol name
 
 This is a design comparison, not evidence that any syntax has been empirically shown easier for beginners. It adds no generic grammar or automatic provider conversion.
 
-Related: [storage-family comparison](sequence-types-comparison.md), [consumer requirements](collection-abstractions.md), [types and inference](types-and-inference.md), and [learning](tooling-and-learning.md).
+Related: [storage-family comparison](lite://doc/sequence-types-comparison), [consumer requirements](lite://doc/collection-abstractions), [types and inference](lite://doc/types-and-inference), and [learning](lite://doc/tooling-and-learning).

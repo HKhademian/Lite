@@ -116,7 +116,7 @@ label := match person {
 
 The match example assumes `person: User | Guest` and String-producing display methods. These are selected surfaces, not a complete specification. Evaluation occurs once; newly bound pattern names exist only in their branch; an existing-name test introduces no shadow. For explicit bindings, the right-hand source resolves before the shadow is introduced. Ordinary declarations require irrefutable patterns, whereas conditional matching can fail.
 
-Existing-name stability and further logical/guard flow are tracked in [type tests and narrowing](type-tests-and-narrowing.md). This design combines declaration consistency with V-like arm boundaries. That is a design judgment, not evidence of beginner learning outcomes or generated-code speed. Choosing a syntax does not establish a runtime type registry or allocation requirement.
+Existing-name stability and further logical/guard flow are tracked in [type tests and narrowing](lite://doc/type-tests-and-narrowing). This design combines declaration consistency with V-like arm boundaries. That is a design judgment, not evidence of beginner learning outcomes or generated-code speed. Choosing a syntax does not establish a runtime type registry or allocation requirement.
 
 ## Match-specific comparison and recommendations
 
@@ -124,7 +124,7 @@ This section records selected match outcomes and remaining proposals.
 
 ### Required pattern families
 
-LiteScript now requires equality, plain enum selection, payload enum selection, destructuring, and type matching in the same construct. These capabilities and their illustrative forms are documented in [match pattern capabilities](match-patterns.md); plain versus payload cases are explained in [enums and variants](enums-and-variants.md).
+LiteScript now requires equality, plain enum selection, payload enum selection, destructuring, and type matching in the same construct. These capabilities and their illustrative forms are documented in [match pattern capabilities](lite://doc/match-patterns); plain versus payload cases are explained in [enums and variants](lite://doc/enums-and-variants).
 
 Rust separates constant patterns from new identifier bindings and restricts which values qualify as structural constants. Dart likewise distinguishes constant and variable patterns and supplies record/object destructuring. These are useful models, but neither makes an arbitrary runtime comparison expression interchangeable with a binding. Sources: [Rust patterns](https://doc.rust-lang.org/reference/patterns.html), [Dart pattern types](https://dart.dev/language/pattern-types).
 
@@ -132,7 +132,7 @@ Swift distinguishes associated payloads from raw enum values. That distinction h
 
 **Recommendation:** compose the five families in one pattern system, keep equality tests distinct from name capture, and specify enum tag selection independently of type tests. If-introduced guards with and-chained operands and additional matches are now the selected sixth capability; `== expected` value matching and `: Type` type matching are selected; constructor qualification details and record-pattern grammar remain open.
 
-Typed destructuring is now a selected composition requirement: `(x: Int, y: String)` checks component types while extracting them, in both match arms and conditional patterns. Dart provides a direct precedent with typed variable subpatterns such as `(int a, String b)`; failure of a component type test fails the pattern. LiteScript retains its colon annotations. Unlike Dart's nonbinding wildcard, LiteScript's `_` is now an ordinary readable binding with unused-name permission; repeated names shadow in written pattern order. See [pattern shadowing](pattern-shadowing.md). See [Dart typed patterns](https://dart.dev/language/pattern-types#variable) and [LiteScript typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule).
+Typed destructuring is now a selected composition requirement: `(x: Int, y: String)` checks component types while extracting them, in both match arms and conditional patterns. Dart provides a direct precedent with typed variable subpatterns such as `(int a, String b)`; failure of a component type test fails the pattern. LiteScript retains its colon annotations. Unlike Dart's nonbinding wildcard, LiteScript's `_` is now an ordinary readable binding with unused-name permission; repeated names shadow in written pattern order. See [pattern shadowing](lite://doc/pattern-shadowing). See [Dart typed patterns](https://dart.dev/language/pattern-types#variable) and [LiteScript typed destructuring](lite://doc/match-patterns#typed-destructuring-selected-composition-rule).
 
 ### Arm shape and type-only selection
 
@@ -145,7 +145,7 @@ Typed destructuring is now a selected composition requirement: `(x: Int, y: Stri
 - **Dart:** switch statements and switch expressions have different arm punctuation; LiteScript's one braced form avoids that distinction. [Dart branches](https://dart.dev/language/branches).
 - **Python:** `case pattern:` supplies class, sequence, and capture patterns, with explicit `if` guards; its dynamic name rules and indentation are not selected. [Python match](https://docs.python.org/3/reference/compound_stmts.html#the-match-statement).
 
-**Recommendation:** keep pattern-and-brace bodies, make rebinding optional for type tests, and retain explicit patterns for payload extraction. The selected bare-name rule now rules out bare `User` as a type test: it binds. Marked `: User` is the selected type-only form; `== expected` is the selected existing-value match. Explicit `.None` replaces bare None case patterns. The [focused name-role review](pattern-bindings-and-tests.md) compares these choices; uppercase spelling never establishes a type test.
+**Recommendation:** keep pattern-and-brace bodies, make rebinding optional for type tests, and retain explicit patterns for payload extraction. The selected bare-name rule now rules out bare `User` as a type test: it binds. Marked `: User` is the selected type-only form; `== expected` is the selected existing-value match. Explicit `.None` replaces bare None case patterns. The [focused name-role review](lite://doc/pattern-bindings-and-tests) compares these choices; uppercase spelling never establishes a type test.
 
 ### Exhaustiveness and fallthrough
 
@@ -159,16 +159,16 @@ Kotlin documents partial statement selection and requires exhaustive value selec
 
 Rust and Python use `if` after a pattern; Dart uses `when`; Swift uses `where`. Sources: [Rust guards](https://doc.rust-lang.org/reference/expressions/match-expr.html#match-guards), [Python guards](https://docs.python.org/3/reference/compound_stmts.html#guards), [Dart guards](https://dart.dev/language/branches#guard-clause), [Swift patterns](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/ReferenceManual/Patterns.md).
 
-**Selected LiteScript direction:** `pattern if condition { body }`, including additional explicit pattern bindings and and-chained operands inside the guard. Use the first fully successful arm in source order, with no implicit fallthrough. Pattern success precedes guard evaluation; a false result or additional mismatch continues selection. This supersedes the earlier pattern-and arm separator; see [match arm chains](match-guards.md). Do not assume a guarded variant covers all its values. Avoid adopting alternative-pattern guard behavior accidentally: Rust documents that a guard may run more than once when an arm has multiple alternatives. Ownership and side-effect rules must be specified before claiming guard execution is allocation-free or optimally compiled.
+**Selected LiteScript direction:** `pattern if condition { body }`, including additional explicit pattern bindings and and-chained operands inside the guard. Use the first fully successful arm in source order, with no implicit fallthrough. Pattern success precedes guard evaluation; a false result or additional mismatch continues selection. This supersedes the earlier pattern-and arm separator; see [match arm chains](lite://doc/match-guards). Do not assume a guarded variant covers all its values. Avoid adopting alternative-pattern guard behavior accidentally: Rust documents that a guard may run more than once when an arm has multiple alternatives. Ownership and side-effect rules must be specified before claiming guard execution is allocation-free or optimally compiled.
 
-The resulting LiteScript proposal, examples, and unresolved name-resolution rules are collected in [match](match.md#type-only-arms-and-remaining-coverage-proposals).
+The resulting LiteScript proposal, examples, and unresolved name-resolution rules are collected in [match](lite://doc/match#type-only-arms-and-remaining-coverage-proposals).
 
 ## Remaining decisions
 
-1. **Irrefutable conditions: selected.** Allow them and warn when the complete matching condition is provably always successful; an irrefutable prefix followed by a potentially false test does not itself trigger the warning. `Some(false)` still matches `Some(flag)`; matching does not test payload truthiness. Provably constant existing-name type tests are separately allowed with warnings; see [constant type tests](type-tests-and-narrowing.md#provably-constant-type-tests-selected). Exact diagnostic controls and broader impossible-pattern/unreachable analysis remain open; see [selected policy](conditionals.md#irrefutable-pattern-conditions-selected).
+1. **Irrefutable conditions: selected.** Allow them and warn when the complete matching condition is provably always successful; an irrefutable prefix followed by a potentially false test does not itself trigger the warning. `Some(false)` still matches `Some(flag)`; matching does not test payload truthiness. Provably constant existing-name type tests are separately allowed with warnings; see [constant type tests](lite://doc/type-tests-and-narrowing#provably-constant-type-tests-selected). Exact diagnostic controls and broader impossible-pattern/unreachable analysis remain open; see [selected policy](lite://doc/conditionals#irrefutable-pattern-conditions-selected).
 2. Decide whether a separate else fallback convenience remains alongside the ordinary `_` catch-all binding pattern.
 3. Complete guard effects/ownership, overlap, unreachable arms, and exhaustive coverage for closed unions versus open interfaces.
 4. Define nested patterns, exact-type versus subtype matching, and borrowing/moving/copying.
 5. Preserve the selected lowercase .ok(value)/.err(error) outcome patterns; their payload types can overlap without erasing the outer tag. Complete payload extraction and ownership contracts separately.
 
-See [conditionals](conditionals.md), [match](match.md), [union type patterns](union-patterns.md), and the [decision ledger](decisions-and-open-questions.md).
+See [conditionals](lite://doc/conditionals), [match](lite://doc/match), [union type patterns](lite://doc/union-patterns), and the [decision ledger](lite://doc/decisions-and-open-questions).

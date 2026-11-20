@@ -12,7 +12,7 @@ An untyped target handler catches every failure supported by its target. Receive
 
 This channel decision does not define which floating-point outcomes are faults. If an operation is defined to fault, that fault uses the panic channel; whether a floating-point edge case instead produces a valid non-finite value is a separate numeric rule.
 
-The selected [temporary FVP profile](numbers.md#temporary-fvp-numeric-profile)
+The selected [temporary FVP profile](lite://doc/numbers#temporary-fvp-numeric-profile)
 now defines a bounded case: checked signed 64-bit integer arithmetic, integer
 and floating zero-divisor faults, and faults for non-finite floating arithmetic
 results. Non-finite literal/input values are rejected. The full language's
@@ -36,7 +36,7 @@ quotient := dividend :/ divisor
 
 For a fixed-width signed type, the minimum value divided by `-1` is one such unrepresentable quotient. It must not wrap. Integer remainder % and modulo :% fault on a zero divisor. Their minimum % -1 and minimum :% -1 cases still need independent result rules: each mathematical result is representable as zero even though its associated quotient is not, so the quotient rule alone does not settle whether either operation faults.
 
-A division with floating operands retains floating arithmetic before its quotient is truncated by / or floored by :/ for Int storage. This admits nonintegral operands but leaves out-of-range, non-finite, and floating zero-divisor behavior to the numeric fault contract; it does not authorize wrapping or saturation on storage. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
+A division with floating operands retains floating arithmetic before its quotient is truncated by / or floored by :/ for Int storage. This admits nonintegral operands but leaves out-of-range, non-finite, and floating zero-divisor behavior to the numeric fault contract; it does not authorize wrapping or saturation on storage. See [calculation and storage](lite://doc/division#floating-calculation-and-integer-storage).
 
 The same rule applies to other basic math operators when their numeric contract defines a fault. It does not decide floating-point representation, non-finite results, mixed operands, or conversions.
 
@@ -52,7 +52,7 @@ sum := left + right else (p: OverflowPanic) {
 
 `OverflowPanic` is an illustrative category name, not a selected declaration. A matching typed handler runs; a nonmatching panic propagates implicitly. If the target can also return a `Result` error, that error remains explicit and can be forwarded with `!` after the typed handler. A larger surrounding function or unrelated computation need not be the only recovery boundary.
 
-The selected [operation-specific boundary](expression-recovery.md#operation-specific-panic-boundary-selected), 2026-10-26, handles faults defined by the arithmetic operation; panics while evaluating its operands bypass that handler. Operation fault attribution, the broad mixed-channel receiver type, fallback typing, and block/chain integration remain open. Language-managed panic propagation runs applicable `finally` blocks for exited scopes before an outer matching handler; operation fault contracts, hard aborts, and cleanup-failure aggregation/inspection remain open. Cleanup-failure precedence is selected in [finally](finally.md#pending-outcomes).
+The selected [operation-specific boundary](lite://doc/expression-recovery#operation-specific-panic-boundary-selected), 2026-10-26, handles faults defined by the arithmetic operation; panics while evaluating its operands bypass that handler. Operation fault attribution, the broad mixed-channel receiver type, fallback typing, and block/chain integration remain open. Language-managed panic propagation runs applicable `finally` blocks for exited scopes before an outer matching handler; operation fault contracts, hard aborts, and cleanup-failure aggregation/inspection remain open. Cleanup-failure precedence is selected in [finally](lite://doc/finally#pending-outcomes).
 
 ## Decisions still open
 
@@ -64,4 +64,4 @@ The selected [operation-specific boundary](expression-recovery.md#operation-spec
 - Operation fault attribution through helpers, transfer mechanism, block/chain integration, cleanup, and handling of a second panic.
 - Explicit wrapping/saturating operations and conversion behavior.
 
-Related: [numbers and ranges](numbers.md), [division](division.md), [panics](panics.md), [shared expression recovery](expression-recovery.md), [Result and errors](result-and-errors.md), and [bounds/arithmetic policy history](checked-fault-policy.md).
+Related: [numbers and ranges](lite://doc/numbers), [division](lite://doc/division), [panics](lite://doc/panics), [shared expression recovery](lite://doc/expression-recovery), [Result and errors](lite://doc/result-and-errors), and [bounds/arithmetic policy history](lite://doc/checked-fault-policy).

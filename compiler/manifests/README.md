@@ -39,4 +39,4 @@ or assembles a line map.
   `readSource`.
 
 The Lite import contract, visibility rules, cycle behavior and remaining module
-limitations are described in [module-import-stages.md](../module-import-stages.md).
+limitations are described in [module-import-stages.md](lite://doc/compiler/module-import-stages).

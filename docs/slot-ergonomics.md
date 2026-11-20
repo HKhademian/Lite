@@ -1,6 +1,6 @@
 # Keep derived var summaries implicit
 
-Status: **ergonomics goal retained; spelling updated 2026-10-19**. Hide derived type-structure summaries such as A | var B | C wherever possible. Explicit type-side var receivers replace the former slot spelling; see [the var qualifier](var-access-qualifier.md). This later naming decision supersedes the earlier rejection of changing receiver spelling merely to hide mathematical notation.
+Status: **ergonomics goal retained; spelling updated 2026-10-19**. Hide derived type-structure summaries such as A | var B | C wherever possible. Explicit type-side var receivers replace the former slot spelling; see [the var qualifier](lite://doc/var-access-qualifier). This later naming decision supersedes the earlier rejection of changing receiver spelling merely to hide mathematical notation.
 
 ## Goal
 
@@ -31,13 +31,13 @@ replace := fn(target: var (A | B)) {
 
 The function explicitly requests a caller location that accepts A or B. The compiler can derive this contract's detailed access summary without requiring another annotation at every use.
 
-Caller replacement requires an explicit grant such as replace(var value). The location must already permit replacement; see [caller grants](caller-mutation-grants.md).
+Caller replacement requires an explicit grant such as replace(var value). The location must already permit replacement; see [caller grants](lite://doc/caller-mutation-grants).
 
 ## Local implementation versus caller contract
 
 The earlier fn(var target: T) substitution was not selected. Local rebinding is an implementation detail: write var target := target inside the body instead. The subsequently selected fn(target: var T) describes caller replacement, which is observable and must remain in the signature. These two placements are not synonyms.
 
-The later local-only var parameter proposal is also retired. Use ordinary declarations and sequential shadowing in the body. The [parameter-permission review](parameter-permissions.md) separates local rebinding, held-data mutation, and caller-location replacement.
+The later local-only var parameter proposal is also retired. Use ordinary declarations and sequential shadowing in the body. The [parameter-permission review](lite://doc/parameter-permissions) separates local rebinding, held-data mutation, and caller-location replacement.
 
 ## Preserve restricted field writes
 
@@ -62,4 +62,4 @@ Hiding derived type-structure terminology must not hide observable mutation or c
 
 Keep explicit caller-location receivers and infer derived access summaries. Explicit mut/var call grants are selected; local-only var parameter headers are retired. Combined payload/replacement permissions, advanced partial-write annotations, complete compatibility, and alias/lifetime rules remain open.
 
-Related: [var parameters](slot-parameters.md), [var qualifier](slot-access-qualifier.md), [mut placement](mut-qualifier-placement.md), [mutability](mutability.md), [functions](functions.md), and [tooling](tooling-and-learning.md).
+Related: [var parameters](lite://doc/slot-parameters), [var qualifier](lite://doc/slot-access-qualifier), [mut placement](lite://doc/mut-qualifier-placement), [mutability](lite://doc/mutability), [functions](lite://doc/functions), and [tooling](lite://doc/tooling-and-learning).

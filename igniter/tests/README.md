@@ -55,7 +55,7 @@ Rejections (`002-*`):
 
 ## Model
 
-The JSON Schema is [schema/compiler-case.schema.json](schema/compiler-case.schema.json).
+The JSON Schema is [schema/compiler-case.schema.json](lite://repo/igniter/tests/schema/compiler-case.schema.json).
 
 ```json
 {
@@ -143,7 +143,7 @@ the current implementation.
 
 ## Adding a case
 
-Follow the [compiler development guidelines](../../.agents/rules/compiler-development.md):
+Follow the [compiler development guidelines](lite://repo/.agents/rules/compiler-development.md):
 each feature, syntax change or bug fix needs multiple focused cases plus multiple
 feature combinations. Use several named `cases` for different inputs to one
 source, and separate fixtures for distinct syntax or rejection paths. Include
@@ -179,7 +179,7 @@ The corpus uses every source and stream form:
 ## Notes
 
 - Invalid UTF-8 compiler input, `--check`, source-name prefixes and exact
-  artifact-shape assertions are covered in [cli-contracts.test.lts](../../compiler/tests/cli-contracts.test.lts)
+  artifact-shape assertions are covered in [cli-contracts.test.lts](lite://repo/compiler/tests/cli-contracts.test.lts)
   because they need bytes, CLI arguments or artifact inspection rather than the
   program input/output stream model.
 - Strict TypeScript checking: `npm run check`.
@@ -187,12 +187,12 @@ The corpus uses every source and stream form:
 ### Regression ownership after T00 retirement
 
 The active generated compiler/phase/artifact regressions live in `.test.lts` unit
-suites (`./bin/lite test --unit`, shared helpers in [compiler-test.lts](../../lib/util/compiler-test.lts)).
+suites (`./bin/lite test --unit`, shared helpers in [compiler-test.lts](lite://repo/lib/util/compiler-test.lts)).
 T00-only interpreter assertions were retired with the handwritten implementation;
-the [test migration ledger](../../compiler/tests/test-migration.json) records
+the [test migration ledger](lite://repo/compiler/tests/test-migration.json) records
 their original names and assertion counts.
 
-Compiler/corpus fixture loading and parity live in [corpus.lts](../../lib/util/corpus.lts).
-Generated regressions use [recorded process contracts](../../compiler/tests/contracts/README.md)
+Compiler/corpus fixture loading and parity live in [corpus.lts](lite://repo/lib/util/corpus.lts).
+Generated regressions use [recorded process contracts](lite://repo/compiler/tests/contracts/README.md)
 instead of live T00 expectation lookups. Unknown source/input/argument/name
 combinations fail explicitly.

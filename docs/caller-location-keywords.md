@@ -1,10 +1,10 @@
 # Naming caller-location parameters
 
-Status: **historical comparison, 2026-10-18; spelling recommendation superseded 2026-10-19**. The [var access decision](var-access-qualifier.md) now uses type-side var for caller replacement and retires slot as a source keyword. The examples and assessment below preserve the earlier alternatives; they are not current canonical spellings.
+Status: **historical comparison, 2026-10-18; spelling recommendation superseded 2026-10-19**. The [var access decision](lite://doc/var-access-qualifier) now uses type-side var for caller replacement and retires slot as a source keyword. The examples and assessment below preserve the earlier alternatives; they are not current canonical spellings.
 
-An intermediate clarification retained slot receivers while hiding derived mathematics. The later user decision uses fn(target: var T), with explicit var call grants. Local-only header modifiers are omitted; use body declarations instead. See [access ergonomics](slot-ergonomics.md) and [parameter permissions](parameter-permissions.md) for current contracts.
+An intermediate clarification retained slot receivers while hiding derived mathematics. The later user decision uses fn(target: var T), with explicit var call grants. Local-only header modifiers are omitted; use body declarations instead. See [access ergonomics](lite://doc/slot-ergonomics) and [parameter permissions](lite://doc/parameter-permissions) for current contracts.
 
-The later [mut qualifier placement decision](mut-qualifier-placement.md) selects fn(target: mut T), superseding the earlier typed name prefix. The examples below use the selected placement without changing capability distinctions or selecting a ref parameter mode.
+The later [mut qualifier placement decision](lite://doc/mut-qualifier-placement) selects fn(target: mut T), superseding the earlier typed name prefix. The examples below use the selected placement without changing capability distinctions or selecting a ref parameter mode.
 
 ## The naming concern
 
@@ -111,4 +111,4 @@ If the intended next feature is explicit borrowed views with independently speci
 
 Do not silently broaden mut or mut ref into full replacement authority. Do not retain multiple synonymous receiver spellings without a demonstrated need. Call-site markers remain a separate choice; none is selected by this comparison.
 
-Related: [slot parameters](slot-parameters.md), [ordinary parameters and slots](parameter-values-and-slots.md), [mutability](mutability.md), [slot qualifier](slot-access-qualifier.md), and [immutability by default](immutability-by-default.md).
+Related: [slot parameters](lite://doc/slot-parameters), [ordinary parameters and slots](lite://doc/parameter-values-and-slots), [mutability](lite://doc/mutability), [slot qualifier](lite://doc/slot-access-qualifier), and [immutability by default](lite://doc/immutability-by-default).

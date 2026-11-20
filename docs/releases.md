@@ -1,10 +1,10 @@
 # Release and tag history
 
-Current entry, 2026-11-03: use [component release instructions](release-automation.md)
-and [the registry](../config/versions.json). Tools, editor, docs and compiler
+Current entry, 2026-11-03: use [component release instructions](lite://doc/release-automation)
+and [the registry](lite://repo/config/versions.json). Tools, editor, docs and compiler
 milestones have independent streams. Native C packaging is deferred. The entries
 below preserve dated earlier checkpoints and their original counts; they are not
-the current test or support inventory. See [the transition](../compiler/transition-plan.md).
+the current test or support inventory. See [the transition](lite://doc/compiler/transition-plan).
 
 ## Independent component baseline, 2026-11-03
 
@@ -54,13 +54,13 @@ identical generated generations and all 93 compiler contracts/69 runtime cases.
 Those full runs used Node 26.12.1; CI pins Node 26.13.0. The documentation
 freshness increment additionally passes its two focused tests and CLI cases.
 The ordinary canonical verifier still reports 60/81 pass and 21 accepted-language
-failures. See [the explicit baseline](../config/ts-migration.json).
+failures. See [the explicit baseline](lite://repo/config/ts-migration.json).
 
 Annotated tags will identify this prepared revision; confirm hosted publication
-on the [release workflow](../.github/workflows/release.yml). Local packaging and
+on the [release workflow](lite://repo/.github/workflows/release.yml). Local packaging and
 successful tag pushes are distinct from completed hosted releases.
 
-Tagged pushes now have an [igniter release workflow](release-automation.md):
+Tagged pushes now have an [igniter release workflow](lite://doc/release-automation):
 Independent umbrella (`lite-v*`), language (`lang-v*`), scripting
 (`script-v*`), compiler (`compiler-v*`), igniter, CLI, formatter, runtime and
 library annotated tags run the full gates and package the
@@ -69,7 +69,7 @@ verified Linux/macOS x64/ARM64 program builds with source/builder hashes and
 checksums. Manual workflow runs build without publishing. The native C compiler
 ladder remains pending; native assets currently contain conformance programs.
 The release manifest names the released component and the complete independent
-version combination. [versions.json](../config/versions.json) records component
+version combination. [versions.json](lite://repo/config/versions.json) records component
 versions, with the igniter version kept in its package manifest. No version bump
 or tag is introduced by this automation change.
 
@@ -84,33 +84,33 @@ Constant integer arithmetic faults now execute only when reached. Dead branches,
 false loops, skipped Boolean operands and unused functions compile safely; invalid
 literals/types still reject before effects. Six fixtures now model runtime faults,
 so the compiler corpus is 61 programs/32 rejections (still 93 sources). All 259
-full tests pass with zero skips (53.4 s). See the [deferred-fault ledger](../compiler/parity.md#deferred-constant-arithmetic-faults).
+full tests pass with zero skips (53.4 s). See the [deferred-fault ledger](lite://doc/compiler/parity#deferred-constant-arithmetic-faults).
 
 Parenthesized inequality and bare String/Int/Bool function tails now stay
 comparisons, using a shared equals-token check. All 258 full tests pass with zero
 skips (47.3 s); the measured inventory is 75/163 matching cases, 88 remaining.
-Existing corpus artifacts are unchanged; see the [inequality ledger](../compiler/parity.md#inequality-token-discrimination).
+Existing corpus artifacts are unchanged; see the [inequality ledger](lite://doc/compiler/parity#inequality-token-discrimination).
 
 Generated TS text/list bounds faults now carry exact source locations and keep
 earlier output, using shared fault metadata. All 257 full tests pass with zero
 skips (47.3 s); the measured inventory is 73/162 matching cases with 89 remaining.
 The supplementary-character column convention is separately pending; see the
-[bounds-fault ledger](../compiler/parity.md#positioned-text-and-list-bounds-faults).
+[bounds-fault ledger](lite://doc/compiler/parity#positioned-text-and-list-bounds-faults).
 
 C multi-value output now evaluates every argument before any write, preserving
 left-to-right faults and earlier output. Single-value emitted C is unchanged.
-All 256 full tests pass with zero skips (48.5 s); the [C output-order ledger](../compiler/parity.md#c-output-argument-evaluation)
+All 256 full tests pass with zero skips (48.5 s); the [C output-order ledger](lite://doc/compiler/parity#c-output-argument-evaluation)
 records coverage, unchanged TS seeds and steady paired C-emitter timings.
 
 Single-pass target helper discovery now avoids repeated emitted-code scans.
 Paired compiler-phase measurements improve from 100.0 to 60.4 ms for 1,000 output
 statements and from 899.0 to 649.8 ms for identical compiler source, with exact
 emitted bytes. All 522 previous/current compiler comparisons match; see the
-[helper-scan ledger](../compiler/parity.md#single-pass-helper-discovery).
+[helper-scan ledger](lite://doc/compiler/parity#single-pass-helper-discovery).
 
 Dynamic integer division/remainder now match exact positioned faults in both
 generated targets, and MIN%-1 returns zero without undefined C arithmetic.
-The [division-family ledger](../compiler/parity.md#positioned-integer-division-family) records
+The [division-family ledger](lite://doc/compiler/parity#positioned-integer-division-family) records
 the seed refresh, differential coverage and paired speed measurements.
 
 Unreleased checked-arithmetic parity, 2026-11-02: generated TS and portable C11
@@ -118,7 +118,7 @@ now check dynamic Int64 addition, subtraction, multiplication and negation,
 matching T00 overflow diagnostics, status and prior output. Three generated
 compiler generations match; all 253 full tests pass with zero skips (54.6 s),
 both 93-case corpus comparisons and all 95 verifier executions pass. The
-[arithmetic ledger](../compiler/parity.md#checked-int64-arithmetic) records the
+[arithmetic ledger](lite://doc/compiler/parity#checked-int64-arithmetic) records the
 boundaries and remaining gates. No release tag is introduced.
 
 Unreleased I/O selection, 2026-11-02: outputLine replaces report with no alias;
@@ -126,19 +126,19 @@ output adds the same space-separated display without a newline. Empty calls are
 allowed; outputLine always adds its newline. All four input helpers accept an
 optional positional String prompt. Generated TS adds strict shared input,
 Float input values, aggregate display for admitted forms, and streaming process
-output. Maintained Lite calls and live fixtures are migrated. The [contract](tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
-and [generated-only seed refresh](../compiler/parity.md#temporary-io-migration)
+output. Maintained Lite calls and live fixtures are migrated. The [contract](lite://doc/tooling-and-learning#temporary-input-and-output-helpers-selected-2026-11-02)
+and [generated-only seed refresh](lite://doc/compiler/parity#temporary-io-migration)
 record the scope and remaining broader type/native gaps. This is not a release tag.
 
 The igniter tags are annotated and pinned to the source commit that produced
 each milestone. Do not move or delete a published tag; corrections get a new
 version. Detailed milestone prose remains in the
-[igniter bootstrap history](../igniter/README.md#bootstrap-milestone).
+[igniter bootstrap history](lite://repo/igniter/README.md#bootstrap-milestone).
 
 Unreleased, 2026-11-02: the owner-approved
-[T11 transition](../compiler/transition-plan.md) makes the verified generated T11
+[T11 transition](lite://doc/compiler/transition-plan) makes the verified generated T11
 seed the default TS compiler and TS verification emitter. The exact seed and
-source/builder hashes are [preserved](../compiler/bootstrap/README.md); source
+source/builder hashes are [preserved](lite://doc/compiler/bootstrap-readme); source
 changes rebuild with T11 rather than silently using an older artifact or T00.
 The C emitter is now also compiled by T11 and shipped as a TS-hosted compiler;
 both compile targets and compiler verification avoid T00. Interpreter run/check
@@ -146,15 +146,15 @@ remain on T00. This is a tooling migration,
 not a language release, new tag, full-feature parity or native self-hosting claim.
 Eight host migration/verification-selection/report-order tests join the 236 interpreter groups
 in `lite test`. A bounded cache in generated text helpers eliminates repeated
-whole-source code-point copies. The [benchmark](../benchmark/reports/2026-11-02-text-cache.md)
+whole-source code-point copies. The [benchmark](lite://repo/benchmark/reports/2026-11-02-text-cache.md)
 records 3.49 s → 146 ms for 1,000 statements, and 668 ms median self-compilation
 for the text-cache source snapshot. The refreshed TS seed has three byte-identical generations;
 this does not complete feature parity or native C self-hosting. The subsequent
-[report-order refresh](../compiler/parity.md#report-order-seed-refresh) fixes lost
+[report-order refresh](lite://doc/compiler/parity#report-order-seed-refresh) fixes lost
 output from reporting functions called inside `report(...)`, including multiple
 arguments, recursion and exit. The current corpus hashes are recorded separately
 from the preserved historical P0 baseline. Full-source lexer/parser/checker test
-consumers now use T11-generated drivers; the [recorded full gate](../compiler/parity.md#generated-full-source-test-consumers)
+consumers now use T11-generated drivers; the [recorded full gate](lite://doc/compiler/parity#generated-full-source-test-consumers)
 falls from 580.6 s to 47.6 s with all 248 tests passing and zero skips.
 
 | Tag | Date | Commit | Milestone |
@@ -201,7 +201,7 @@ falls from 580.6 s to 47.6 s with all 248 tests passing and zero skips.
 Comparison chains now retain middle operands once and skip later operands on both
 generated targets over their admitted scalar types. All 260 full tests pass with
 zero skips (49.4 s); inventory is 79/164 matching cases, 85 remaining. The new
-canonical chain feature executes on all three targets. See the [chain ledger](../compiler/parity.md#comparison-chain-lowering)
+canonical chain feature executes on all three targets. See the [chain ledger](lite://doc/compiler/parity#comparison-chain-lowering)
 for fixed-point, sanitizer and paired speed evidence. Broader types, Never-valued
 exit typing, native C and run/check migration remain pending.
 
@@ -210,34 +210,34 @@ Empty and comment-only scripts now compile silently on generated TS/C, with
 malformed comments still rejected before effects. The corpus is 63 programs and
 30 rejections; existing 61 artifact pairs are unchanged. The parser skips alias
 scanning and remaining state allocation for empty scripts. See the [empty-script
-ledger](../compiler/parity.md#empty-script-support) for generated bootstrap and paired timing evidence.
+ledger](lite://doc/compiler/parity#empty-script-support) for generated bootstrap and paired timing evidence.
 
 
 Simple statement separators now follow EOF, closing scopes and directly closed
 block initializers on generated targets. Adjacent output calls still require a
 separator and reject before effects. The corpus is 64 programs/29 rejections;
-all 63 older artifact pairs stay identical. See the [statement-boundary ledger](../compiler/parity.md#statement-boundaries)
+all 63 older artifact pairs stay identical. See the [statement-boundary ledger](lite://doc/compiler/parity#statement-boundaries)
 for coverage, generated bootstrap and paired timing evidence.
 
 
 Adjacent admitted String literals now join across whitespace/comments on generated
 TS/C and both standalone parser drivers, with malformed later tokens still
 rejected before effects. Corpus: 65 programs/28 rejections; all 64 earlier
-artifact pairs stay identical. See the [adjacent-literal ledger](../compiler/parity.md#adjacent-string-literals)
+artifact pairs stay identical. See the [adjacent-literal ledger](lite://doc/compiler/parity#adjacent-string-literals)
 for focused coverage, generated bootstrap and paired timing evidence.
 
 
 Nonempty calls now admit one trailing comma on generated targets while empty
 comma-only lists, doubled commas and arity/type errors still reject before effects.
 Corpus: 66 programs/27 rejections; all 65 earlier artifact pairs stay identical.
-See the [trailing-comma ledger](../compiler/parity.md#trailing-call-commas) for generated bootstrap,
+See the [trailing-comma ledger](lite://doc/compiler/parity#trailing-call-commas) for generated bootstrap,
 focused combinations and paired timing evidence.
 
 
 Generated TS/C now support statement scopes and preserve outer values while
 shadowed initializers run. The canonical scope feature executes on all three
 targets, yielding 100 verifier executions. All 66 earlier program artifact pairs
-remain identical. See the [scope ledger](../compiler/parity.md#statement-scopes) for focused combinations,
+remain identical. See the [scope ledger](lite://doc/compiler/parity#statement-scopes) for focused combinations,
 generated fixed-point evidence, native sanitizer cases and paired timing data.
 
 
@@ -247,17 +247,17 @@ generated fixed-point evidence, native sanitizer cases and paired timing data.
 - The release page records the igniter commit and component versions; the
   detailed notes stay with the component.
 - Project, language, compiler, runtime, CLI and standard-library tag streams
-  remain defined by [versioning and naming](versioning-and-naming.md); only the
+  remain defined by [versioning and naming](lite://doc/versioning-and-naming); only the
   igniter stream is currently published.
 
 Sequential ordinary value declarations now create fresh bindings on generated
 TS/C; initializers retain the previous value and later uses obey the new type
 and mutation permissions. Corpus: 67 programs/26 rejections; all 66 older
 artifact pairs remain identical. Inventory: 88/164 match, 76 remain, with no
-regressions. See the [shadowing evidence](../compiler/parity.md#sequential-value-bindings).
+regressions. See the [shadowing evidence](lite://doc/compiler/parity#sequential-value-bindings).
 
 Generated expression items now evaluate silently, empty separators are accepted,
 and trailing separators retain checked function results. Unit tails preserve
 effects and reject incompatible results before artifact output. Inventory:
 89/164 match, 75 remain; all 67 program artifact pairs stay unchanged. See the
-[expression-item evidence](../compiler/parity.md#ordinary-expression-items).
+[expression-item evidence](lite://doc/compiler/parity#ordinary-expression-items).

@@ -4,7 +4,7 @@ Status: **selected 2026-10-18: an assignment through a union receiver must be ac
 
 ## Read possibilities versus write requirements
 
-A [common field read](union-field-reads.md) combines every possible field result. This read type does not replace the storage contract of each parent record. To write without narrowing, the assigned value must satisfy every possible target's field type.
+A [common field read](lite://doc/union-field-reads) combines every possible field result. This read type does not replace the storage contract of each parent record. To write without narrowing, the assigned value must satisfy every possible target's field type.
 
 For exact plain unions, normalize the source value type and each target field type. Every possible source alternative must be admitted by every possible target field type. A missing or unwritable field rejects the assignment. Existing permissions, visibility, and ownership requirements still apply.
 
@@ -67,8 +67,8 @@ An eventual writable-reference or access-view feature must preserve these restri
 
 ## Conceptual distinction
 
-See [union values and access contracts](union-values-and-access.md): a slot containing a union and a union of possible slots have different write permissions. There is one ordinary value-union operation; an access contract records which values can be read and which can be written.
+See [union values and access contracts](lite://doc/union-values-and-access): a slot containing a union and a union of possible slots have different write permissions. There is one ordinary value-union operation; an access contract records which values can be read and which can be written.
 
 No intersection operator, public bottom type, implicit conversion, property setter, or runtime representation is selected here.
 
-Related: [mutability](mutability.md), [assignment](declarations-and-assignment.md), [evaluation order](evaluation-order.md), [union widening](union-widening.md), and [type tests](type-tests-and-narrowing.md).
+Related: [mutability](lite://doc/mutability), [assignment](lite://doc/declarations-and-assignment), [evaluation order](lite://doc/evaluation-order), [union widening](lite://doc/union-widening), and [type tests](lite://doc/type-tests-and-narrowing).

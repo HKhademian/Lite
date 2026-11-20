@@ -43,7 +43,7 @@ Duplicate type identities disappear, and nested plain unions flatten. Preserve n
 
 An expected result remains a constraint: `value: Int = if flag { 1 } else { "none" }` is rejected rather than widening the annotation. An expected Int | String accepts both alternatives. Exiting branches supply no local result; their payloads are checked against their actual targets. Match exhaustiveness remains required.
 
-A conditional branch proven unreachable by the supported type-test exhaustion rules contributes no normally produced result, even when its syntactic body contains Unit-producing statements. Its exhausted binding has an internal Never read type for supported ordinary value checking. This selects reachable-result collection, not public Never | T or Never & T algebra; see [Never and unreachable flow](never-and-unreachable-flow.md).
+A conditional branch proven unreachable by the supported type-test exhaustion rules contributes no normally produced result, even when its syntactic body contains Unit-producing statements. Its exhausted binding has an internal Never read type for supported ordinary value checking. This selects reachable-result collection, not public Never | T or Never & T algebra; see [Never and unreachable flow](lite://doc/never-and-unreachable-flow).
 
 ## Unit, no final else, and then
 
@@ -53,7 +53,7 @@ A multi-member union declaration still needs an explicit `else` or `?` branch be
 
 A conditional with `then` requires a final `else`; inference determines the pre-then value type `T` from the total chain. The then body still produces final type `R`. An expected `R` does not by itself force the branch type `T` to equal `R`.
 
-The selected [conditional union-fallback rule](conditional-union-fallback.md) remains for declaration initializers whose default `zero(T)` is a normalized multi-member plain union. Exhaustive chains construct the chosen member directly, without first requiring undirected zero(T). A wider destination alone does not force a union fallback.
+The selected [conditional union-fallback rule](lite://doc/conditional-union-fallback) remains for declaration initializers whose default `zero(T)` is a normalized multi-member plain union. Exhaustive chains construct the chosen member directly, without first requiring undirected zero(T). A wider destination alone does not force a union fallback.
 
 ## Alternatives and tradeoff
 

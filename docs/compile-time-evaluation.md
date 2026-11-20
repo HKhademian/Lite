@@ -86,10 +86,10 @@ known pure result remain open.
 
 The user's example `a := 4 * 4; b := square(a);` and the selected first-stage
 direction for module-level initial values are analyzed in the [implicit-known values and module
-initialization investigation](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md).
+initialization investigation](lite://repo/research/investigations/INV-062-implicit-known-values-and-module-initialization.md).
 That investigation records the selected pure-call direction and compares
 remaining alternatives.
-It also investigates an [explicit runtime counterpart](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md#possible-explicit-runtime-counterpart)
+It also investigates an [explicit runtime counterpart](lite://repo/research/investigations/INV-062-implicit-known-values-and-module-initialization.md#possible-explicit-runtime-counterpart)
 for expressing the opposite stage intent. Its syntax and exact guarantees are open.
 
 The staging boundary still matters for effects. Reading a line or fetching a URL
@@ -224,5 +224,5 @@ Compile-time execution, compile-time-required arguments, and optional compiler
 optimization are related but distinct. The selection does not imply that an
 optimizer may move arbitrary side effects to compile time, or that a function
 with an immutable result is necessarily compile-time evaluated. See
-[INV-062](../research/investigations/TOPICS.md#inv-062) and
-[generic notation](generic-notation.md).
+[INV-062](lite://repo/research/investigations/TOPICS.md#inv-062) and
+[generic notation](lite://doc/generic-notation).

@@ -2,7 +2,7 @@
 
 Status: **typed, universally zero-initialized .value replaces the optional accumulator, selected by the user 2026-10-19; complete inference and lifetime contracts open**.
 
-Normative page for `.value` type, initialization, and commit rules. Loop forms are in [loops](loops.md); completion is in [loop completion](loop-completion.md); inference is in [loop type inference](loop-type-inference.md).
+Normative page for `.value` type, initialization, and commit rules. Loop forms are in [loops](lite://doc/loops); completion is in [loop completion](lite://doc/loop-completion); inference is in [loop type inference](lite://doc/loop-type-inference).
 
 Implementation checkpoint, 2026-11-14: the TypeScript backend implements a typed,
 zero-initialized `.value` for value-producing loops and loops with `then`. A
@@ -33,7 +33,7 @@ sum := loop numbers as number {
 }
 ```
 
-For Int elements with no different expected type, addition constrains T to Int and its initial value is 0. A completed tail expression replaces .value; the next iteration sees that committed value. The selected normal-result rule without then is final .value, including its initialized zero when the loop produces nothing. Destination-side expected types also constrain T, as explicitly selected by the user; see [bidirectional loop inference](loop-type-inference.md).
+For Int elements with no different expected type, addition constrains T to Int and its initial value is 0. A completed tail expression replaces .value; the next iteration sees that committed value. The selected normal-result rule without then is final .value, including its initialized zero when the loop produces nothing. Destination-side expected types also constrain T, as explicitly selected by the user; see [bidirectional loop inference](lite://doc/loop-type-inference).
 
 ## Updates and exits
 
@@ -62,7 +62,7 @@ Count includes skipped entries. A skipped final entry does not erase an earlier 
 
 ## Zero is universal and typed
 
-The user explicitly requires [all-zero storage to be a valid value of every type](zero-initialization.md), including functions, references, enums, and unions. The earlier zeroability restriction is superseded. The implementation must define meaningful representations/operations for these zeros, not turn them into invalid values.
+The user explicitly requires [all-zero storage to be a valid value of every type](lite://doc/zero-initialization), including functions, references, enums, and unions. The earlier zeroability restriction is superseded. The implementation must define meaningful representations/operations for these zeros, not turn them into invalid values.
 
 For ordinary numeric T this gives 0, for String empty text, for Unit its unique `Unit` value, and for records recursively zeroed fields without declared defaults. Since Unit has one inhabitant, `zero(Unit) == Unit`; the user proposes that its physical representation has zero size, requiring no stored bytes. If T is Option, its zero is .None; there is no extra Option wrapper. Exact mappings for special types remain to design under the universal requirement. Explicit nonzero initialization is separate future work, not a requirement just to admit a type into a loop.
 
@@ -94,4 +94,4 @@ For an empty or all-skipped Int-valued loop, .value remains 0. A loop that actua
 - Ownership, replacement cleanup, moves, and borrowing of .value across iterations/completion.
 - Any future contribution-count or completion-reason metadata.
 
-Related: [loops](loops.md), [optional item name](loop-receivers.md), [completion](loop-completion.md), [tags](tags-and-contexts.md), and [examples](loop-examples.md).
+Related: [loops](lite://doc/loops), [optional item name](lite://doc/loop-receivers), [completion](lite://doc/loop-completion), [tags](lite://doc/tags-and-contexts), and [examples](lite://doc/loop-examples).

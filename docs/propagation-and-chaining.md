@@ -22,13 +22,13 @@ Allow a successful value to continue through ordinary calls and member access wi
 name := load_user(id)!.load_profile()!.name;
 ```
 
-Each ! supplies one successful payload or forwards its retained failures from the nearest function/closure. Returned errors must fit the declared error contract; explicitly captured panics resume their panic channel under [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md). On failure later chain steps do not run. This is a directed exit, not local handler search or a forced-success assertion.
+Each ! supplies one successful payload or forwards its retained failures from the nearest function/closure. Returned errors must fit the declared error contract; explicitly captured panics resume their panic channel under [LP-0010 r1](lite://doc/proposals/LP-0010-outcome-extraction-and-exhaustion). On failure later chain steps do not run. This is a directed exit, not local handler search or a forced-success assertion.
 
 `!.` consists of the propagation token `!` followed by the member-access token `.`. It is not a separate nullable-access operator; inserting token-separating whitespace changes no semantics. The marker forwards retained failures with their origins and establishes no capture boundary. It does not assert success or create a new panic.
 
 The visual similarity of Rust-style `?.` to JavaScript optional access was a reason to favor `!`. JavaScript's optional chain returns `undefined` for a nullish receiver; LiteScript's `!` instead explicitly forwards a declared recoverable error. See [ECMAScript optional chains](https://tc39.es/ecma262/multipage/ecmascript-language-expressions.html#sec-optional-chains).
 
-The selected compact error type notation is `T ! E`, with success first. In type position, `T!` means exactly `T ! Error`; `!T` is not an alternate spelling. In expression position, `outcome!` extracts or propagates one outcome. This does not make an ordinary `T` fallible or introduce automatic unwrapping. The general Error contract still needs a complete definition; see [fallible types and error composition](fallible-types-and-error-composition.md).
+The selected compact error type notation is `T ! E`, with success first. In type position, `T!` means exactly `T ! Error`; `!T` is not an alternate spelling. In expression position, `outcome!` extracts or propagates one outcome. This does not make an ordinary `T` fallible or introduce automatic unwrapping. The general Error contract still needs a complete definition; see [fallible types and error composition](lite://doc/fallible-types-and-error-composition).
 
 ## Reference-language comparisons
 
@@ -89,19 +89,19 @@ Ordinary access to `attempt` retains its Result value. No marker is needed to st
 
 ## Capture and complete recovery
 
-[LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) separately selects exp? for capture, not propagation. It establishes a whole-operand boundary before execution and stores supported failures as T ! (E | Panic). Existing block continuation uses `({ work() })?`. Recovery of a stored outcome preserves its unmatched failures as data. Exhaust all possible failures and the result is the normal T without another ! ([LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md)). A handler's new failures remain obligations; runtime success alone does not change a fallible static type. See [capture examples](failure-capture-and-unwrapping.md).
+[LP-0009 r1](lite://doc/proposals/LP-0009-flat-failure-capture) separately selects exp? for capture, not propagation. It establishes a whole-operand boundary before execution and stores supported failures as T ! (E | Panic). Existing block continuation uses `({ work() })?`. Recovery of a stored outcome preserves its unmatched failures as data. Exhaust all possible failures and the result is the normal T without another ! ([LP-0010 r1](lite://doc/proposals/LP-0010-outcome-extraction-and-exhaustion)). A handler's new failures remain obligations; runtime success alone does not change a fallible static type. See [capture examples](lite://doc/failure-capture-and-unwrapping).
 
-LP-0014 selects directed raise failure / raise ...failures, defaulting to the nearest function/closure, with an explicit @outer target for enclosing-block failure completion. It bypasses intervening local recovery; handlers surrounding the completed target remain eligible. This applies to Error and Panic alike while retaining channels. outcome! forwards its complete operand under the existing function-directed extraction rule. Other pending categories in a partial catch still need the [LP-0011 remainder policy](proposals/LP-0011-explicit-failure-raising.md).
+LP-0014 selects directed raise failure / raise ...failures, defaulting to the nearest function/closure, with an explicit @outer target for enclosing-block failure completion. It bypasses intervening local recovery; handlers surrounding the completed target remain eligible. This applies to Error and Panic alike while retaining channels. outcome! forwards its complete operand under the existing function-directed extraction rule. Other pending categories in a partial catch still need the [LP-0011 remainder policy](lite://doc/proposals/LP-0011-explicit-failure-raising).
 
 ## Recovery is a separate retained contract
 
-Both `operation() else(error) { fallback }` and `operation() else { fallback }` are selected. Naming the error is optional; value production is not conditional on that name. Success type `T` and normal fallback type `D` produce `T | D`. See [Result and errors](result-and-errors.md#recovery-result-type).
+Both `operation() else(error) { fallback }` and `operation() else { fallback }` are selected. Naming the error is optional; value production is not conditional on that name. Success type `T` and normal fallback type `D` produce `T | D`. See [Result and errors](lite://doc/result-and-errors#recovery-result-type).
 
 Continuing from the value of a complete recovery block follows the existing parenthesized block-value continuation rule until a more general rule is selected. Selecting postfix propagation does not silently change that grammar.
 
 ## Stored outcomes, recapture, and inspection
 
-[LP-0016](proposals/LP-0016-recapture-and-warning-policy.md) permits recapture without another outward layer. [LP-0017](proposals/LP-0017-result-failure-occurrence-patterns.md) distinguishes .err(e) first-occurrence binding from .err(...es) all-occurrence collection. Raising scalar e forwards only that occurrence; raise ...es or outcome! can forward the complete stored group. Inspection preserves the source outcome. [LP-0018](proposals/LP-0018-implicit-panics-without-effect-declarations.md) forbids checked live-panic signatures: a declared captured outcome return is literal data, never an effect silently removed by an ordinary call. Live panics remain implicit and explicit ? exposes broad Panic with retained concrete identity.
+[LP-0016](lite://doc/proposals/LP-0016-recapture-and-warning-policy) permits recapture without another outward layer. [LP-0017](lite://doc/proposals/LP-0017-result-failure-occurrence-patterns) distinguishes .err(e) first-occurrence binding from .err(...es) all-occurrence collection. Raising scalar e forwards only that occurrence; raise ...es or outcome! can forward the complete stored group. Inspection preserves the source outcome. [LP-0018](lite://doc/proposals/LP-0018-implicit-panics-without-effect-declarations) forbids checked live-panic signatures: a declared captured outcome return is literal data, never an effect silently removed by an ordinary call. Live panics remain implicit and explicit ? exposes broad Panic with retained concrete identity.
 
 ## Open decisions
 
@@ -112,8 +112,8 @@ Continuing from the value of a complete recovery block follows the existing pare
 
 ## Related concepts
 
-- [Result and errors](result-and-errors.md)
-- [Functions](functions.md)
-- [Blocks and results](blocks-and-results.md)
-- [Grammar sketch](grammar-sketch.md)
-- [Panics](panics.md)
+- [Result and errors](lite://doc/result-and-errors)
+- [Functions](lite://doc/functions)
+- [Blocks and results](lite://doc/blocks-and-results)
+- [Grammar sketch](lite://doc/grammar-sketch)
+- [Panics](lite://doc/panics)

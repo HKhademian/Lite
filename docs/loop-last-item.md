@@ -62,4 +62,4 @@ Here then never observes .item, so the language does not require retaining a lar
 
 The implementation must keep a used item valid under the eventual ownership/borrowing rules. Use-based retention does not require an unconditional snapshot, clone, heap allocation, or runtime metadata dictionary. Exact representation and lifetime analysis remain part of the shared ownership design, rather than a reason to retain unused fields.
 
-Related: [loop metadata](loops.md), [completion](loop-completion.md), [tags](tags-and-contexts.md), [loop value](loop-value.md), and [zero initialization](zero-initialization.md).
+Related: [loop metadata](lite://doc/loops), [completion](lite://doc/loop-completion), [tags](lite://doc/tags-and-contexts), [loop value](lite://doc/loop-value), and [zero initialization](lite://doc/zero-initialization).

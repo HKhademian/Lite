@@ -2,7 +2,7 @@
 
 Status: **one receiverless then block using loop metadata selected; .value typed and zero-initialized; tagged return, explicit targeted break/continue, and then execution selected, 2026-10-19. Remaining open: complete loop/result inference, cleanup ordering/attachment, and nonzero initialization**.
 
-Normative page for `then`, targeted exits, and the completion result. `.value` type/commits are in [loop value](loop-value.md); loop forms are in [loops](loops.md); inference is in [loop type inference](loop-type-inference.md).
+Normative page for `then`, targeted exits, and the completion result. `.value` type/commits are in [loop value](lite://doc/loop-value); loop forms are in [loops](lite://doc/loops); inference is in [loop type inference](lite://doc/loop-type-inference).
 
 Implementation checkpoint, 2026-11-14: the TypeScript backend implements one
 optional receiverless `then { ... }` after a loop or conditional body. `then`
@@ -31,7 +31,7 @@ sum := loop numbers as number {
 }
 ```
 
-Every loop has a context even without a named tag. Then is an attached phase of that same loop, with final .count and .value available directly. There is no done/result receiver and no .acc or automatic Option wrapper. See [loop value](loop-value.md).
+Every loop has a context even without a named tag. Then is an attached phase of that same loop, with final .count and .value available directly. There is no done/result receiver and no .acc or automatic Option wrapper. See [loop value](lite://doc/loop-value).
 
 ## Results
 
@@ -75,18 +75,18 @@ Assume score returns Int and format_score returns String. All-skipped nonempty i
 
 An explicit @name tag remains readable through then. Use a tag or captured local for outer metadata inside nested conditionals. Conditional `.value` requires an explicit conditional tag and is readable only in that conditional's attached `then`; ambiguous leading-dot metadata access is rejected rather than resolved by shadowing or outward search.
 
-The final .value stays alive while then computes its result. Count/value are also available before the first condition. Item is readable during active iterations and as the last entered iteration in then if one exists; index is readable there only for positional sources. The optional as item binding itself remains iteration-local. With zero entries, then receives a type-directed zero `.item`; for positional sources `.index == 0`, while nonpositional sources have no `.index`. `.count == 0` distinguishes placeholders from an actual first entry. See [zero-iteration placeholders](loop-last-item.md#zero-iteration-placeholders).
+The final .value stays alive while then computes its result. Count/value are also available before the first condition. Item is readable during active iterations and as the last entered iteration in then if one exists; index is readable there only for positional sources. The optional as item binding itself remains iteration-local. With zero entries, then receives a type-directed zero `.item`; for positional sources `.index == 0`, while nonpositional sources have no `.index`. `.count == 0` distinguishes placeholders from an actual first entry. See [zero-iteration placeholders](lite://doc/loop-last-item#zero-iteration-placeholders).
 
-[Last-item/index retention](loop-last-item.md) is driven by observable field use. If then does not read .item, no retention of the last item is required for completion. Reading only index (when available), count, or value does not retain the item; an explicit tag alone does not retain all fields. Used item storage must remain valid under the eventual ownership rules.
+[Last-item/index retention](lite://doc/loop-last-item) is driven by observable field use. If then does not read .item, no retention of the last item is required for completion. Reading only index (when available), count, or value does not retain the item; an explicit tag alone does not retain all fields. Used item storage must remain valid under the eventual ownership rules.
 
 ## Exits and cleanup
 
 Then runs after source exhaustion, a false condition, any `break` targeting this loop (bare, named without a payload, or with a value), or a tagged return to this loop. `continue` stays in iteration. A `return @loop result` commits T and runs this loop's `then` to produce R; if it targets an outer construct instead, this loop's `then` is skipped. Unqualified `return`, forwarded errors via `!`, and panics leave without supplying a loop T. A payloadless break—bare or `break @loop`—preserves the existing value; a break value, including `break @loop value`, commits T and then runs normal completion.
 
-Then is not an all-exit cleanup guarantee. When a loop has both `then` and construct-level `finally`, `then` runs first and `finally` cleans up as the loop exits; successful cleanup preserves the loop result and cleanup does not recover failures. Applicable cleanup still runs on exits that skip `then`. Exact attachment syntax/scope remains open. If any failure is already pending, it remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure becomes primary and cancels normal completion. The `&` form's public value/operations remain open. Body-wide recovery/cleanup sections, defer, and disposal remain [deferred](deferred-cleanup-and-resources.md). Operation-local recovery inside bodies remains available.
+Then is not an all-exit cleanup guarantee. When a loop has both `then` and construct-level `finally`, `then` runs first and `finally` cleans up as the loop exits; successful cleanup preserves the loop result and cleanup does not recover failures. Applicable cleanup still runs on exits that skip `then`. Exact attachment syntax/scope remains open. If any failure is already pending, it remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure becomes primary and cancels normal completion. The `&` form's public value/operations remain open. Body-wide recovery/cleanup sections, defer, and disposal remain [deferred](lite://doc/deferred-cleanup-and-resources). Operation-local recovery inside bodies remains available.
 
 ## Historical forms
 
 Separate loop empty-else and completion-receiver clauses, action-preservation modes, optional accumulators, and previous-value receiver slots are superseded. The selected `finally` is the cleanup-only hook described above; general Option/Result values and error receivers are unchanged.
 
-Related: [unified completion](unified-loop-completion.md), [loop value](loop-value.md), [item naming](loop-receivers.md), [examples](loop-examples.md), and [exits](control-flow.md).
+Related: [unified completion](lite://doc/unified-loop-completion), [loop value](lite://doc/loop-value), [item naming](lite://doc/loop-receivers), [examples](lite://doc/loop-examples), and [exits](lite://doc/control-flow).

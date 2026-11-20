@@ -6,11 +6,11 @@ The user’s unordered shortlist was R8-01, R8-02, R8-04, R9-01, R9-02 and R9-04
 
 | Ref | Mark | Development |
 | --- | --- | --- |
-| R10-01 | [Clear loop](01-clear-loop.svg) | Refines R8-01, R9-01 and R9-02; the letter stays the main idea. |
-| R10-02 | [Swept loop](02-swept-loop.svg) | Takes the livelier ending of R8-01 and keeps R9-01’s loop. |
-| R10-03 | [Open quill](03-open-quill.svg) | Develops R8-02; the open top gives the feather more space. |
-| R10-04 | [Ribbon lift](04-ribbon-lift.svg) | Refines R9-04 with a cleaner, separated accent. |
-| R10-05 | [Soft ray](05-soft-ray.svg) | A softer, narrower version of R8-04. |
-| R10-06 | [Curved ray](06-curved-ray.svg) | Connects R8-04’s simplicity with R8-02’s softer feather. |
+| R10-01 | [Clear loop](lite://repo/brand/investigation/rev-10-shortlist/01-clear-loop.svg) | Refines R8-01, R9-01 and R9-02; the letter stays the main idea. |
+| R10-02 | [Swept loop](lite://repo/brand/investigation/rev-10-shortlist/02-swept-loop.svg) | Takes the livelier ending of R8-01 and keeps R9-01’s loop. |
+| R10-03 | [Open quill](lite://repo/brand/investigation/rev-10-shortlist/03-open-quill.svg) | Develops R8-02; the open top gives the feather more space. |
+| R10-04 | [Ribbon lift](lite://repo/brand/investigation/rev-10-shortlist/04-ribbon-lift.svg) | Refines R9-04 with a cleaner, separated accent. |
+| R10-05 | [Soft ray](lite://repo/brand/investigation/rev-10-shortlist/05-soft-ray.svg) | A softer, narrower version of R8-04. |
+| R10-06 | [Curved ray](lite://repo/brand/investigation/rev-10-shortlist/06-curved-ray.svg) | Connects R8-04’s simplicity with R8-02’s softer feather. |
 
 The studio reuses each exact mark as the first letter in lite. Check the loop and feather details at 16 px, and compare the plain and expressive terminals in the full wordmark.

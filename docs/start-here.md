@@ -8,7 +8,7 @@ design. C output and native self-hosting are deferred during the TS migration.
 
 Compiling and running a script use the checked-in generated compiler and need no
 installed packages. Use the Node version in
-[igniter/.node-version](../igniter/.node-version).
+[igniter/.node-version](lite://repo/igniter/.node-version).
 
 `./bin/lite check`, the test tools and editor grammar checks use locked development
 dependencies. Install them from the repository root:
@@ -23,7 +23,7 @@ Public compilation uses the checked-in generated compiler, without a T00 fallbac
 
 ## Run a first program
 
-The [double-sum example](../language/examples/foundations/io/double-sum.lts) reads two integers and
+The [double-sum example](lite://play/double-sum) reads two integers and
 prints twice their sum:
 
 ```text
@@ -58,12 +58,12 @@ node compiler/entry.ts /tmp/lite-example.ts
 ```
 
 `check` compiles and strictly checks without executing the program.
-The [verification case](../language/verifications/artifacts/examples/foundations/io/double-sum.json)
+The [verification case](lite://repo/language/verifications/artifacts/examples/foundations/io/double-sum.json)
 records exact expected streams.
 
 ## Explore
 
-Continue with [the tour](tour.md), [examples](../language/examples/README.md) or
-[the reference index](README.md). Use [compiler status](../compiler/README.md)
-and [the transition](../compiler/transition-plan.md) before relying on a feature.
-Use [contributing](../CONTRIBUTING.md) to work on the project.
+Continue with [the tour](lite://doc/tour), [examples](lite://repo/language/examples/README.md) or
+[the reference index](lite://doc/overview). Use [compiler status](lite://doc/compiler/overview)
+and [the transition](lite://doc/compiler/transition-plan) before relying on a feature.
+Use [contributing](lite://doc/contributing) to work on the project.

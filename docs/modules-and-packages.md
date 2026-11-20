@@ -9,7 +9,7 @@ Support a single-file first lesson and a path to reusable, explicitly versioned 
 **FVP scope, clarified 2026-10-30:** the source-kind and module architecture below
 is later design context, not a gate for the tiny runnable first viable product.
 Do not require two source modes, imports, packages, or a script-importability
-decision before that FVP. See [the immediate focus](principles.md#immediate-focus-first-viable-product).
+decision before that FVP. See [the immediate focus](lite://doc/principles#immediate-focus-first-viable-product).
 
 ## Intended experience
 
@@ -22,7 +22,7 @@ The .lts script extension is selected. These commands describe the intended
 tool experience; no run/build tool exists in this workspace, and mode behavior
 and full command grammar remain under investigation.
 
-One file should run without a manifest or handwritten entry function. A package can add metadata, dependencies, exports, and an entry point as it grows. The executable body of a run file is defined in [blocks and results](blocks-and-results.md#source-file-body); this page governs packages, imports, and visibility.
+One file should run without a manifest or handwritten entry function. A package can add metadata, dependencies, exports, and an entry point as it grows. The executable body of a run file is defined in [blocks and results](lite://doc/blocks-and-results#source-file-body); this page governs packages, imports, and visibility.
 
 ## Distinct script and module files
 
@@ -69,7 +69,7 @@ support claims.
 Clarified **2026-11-15**: structurally, both `.lts` and `.lt` files are root
 code blocks with **invisible braces**, **no parent block**, and `pub` as their
 only distinction from inner braced `{ ... }` blocks (see
-[source file body](blocks-and-results.md#source-file-body)). Merging `.lt` and
+[source file body](lite://doc/blocks-and-results#source-file-body)). Merging `.lt` and
 `.lts` into one unified file form remains open for later discussion; for now,
 think of a `.lt` module file as having the same root-block structure and uniform
 lookup/access rules as `.lts`, except with **no top-level runtime evaluation**
@@ -98,8 +98,8 @@ replacing a standard provider does not silently settle numeric, initialization,
 type, or failure contracts. No standard library or provider resolver exists yet.
 
 Later investigations: [standard swapping, primitive boundaries, and interface/
-implementation locations](../research/investigations/SUBTOPICS.md#inv-071), plus
-[lean generated code](../research/investigations/SUBTOPICS.md#inv-063-05). These questions
+implementation locations](lite://repo/research/investigations/SUBTOPICS.md#inv-071), plus
+[lean generated code](lite://repo/research/investigations/SUBTOPICS.md#inv-063-05). These questions
 are not started and do not choose a replacement or interface layout.
 
 ## Module lookup without header files
@@ -113,7 +113,7 @@ Declaration dependency cycles, recursive inference, cross-file resolution,
 initialization scheduling, and exact admissibility/proof rules remain open.
 
 Every executed code block still follows
-[top-to-bottom evaluation along the execution trace](evaluation-order.md#executable-block-items),
+[top-to-bottom evaluation along the execution trace](lite://doc/evaluation-order#executable-block-items),
 while sibling declarations in the block (file-level or inner `{ ... }`) share
 **parallel compile-time symbol visibility** under one uniform rule. Resolving
 a later declaration is distinct from executing its initializer. Arbitrary
@@ -123,7 +123,7 @@ The user also requested a later investigation of whether .lt should prohibit
 top-level side-effect execution. Although ordinary standalone assignment is
 not a declaration or an allowed module-level item, declaration initializers
 may call effectful code, so that distinction alone does not ban such effects.
-[INV-003.05](../research/investigations/SUBTOPICS.md#inv-003-05)
+[INV-003.05](lite://repo/research/investigations/SUBTOPICS.md#inv-003-05)
 covers initializer effects, deferred function bodies, compile-time evaluation,
 transitive dependencies, and any explicit initialization entry. It is not started;
 no blanket ban or effect-checking mechanism is selected.
@@ -199,14 +199,14 @@ Pending cases, not executable passes:
 - `.lts` script execution retains its existing top-to-bottom semantics.
 
 The alternatives and open questions are recorded in [implicit-known values and
-module initialization](../research/investigations/INV-062-implicit-known-values-and-module-initialization.md).
+module initialization](lite://repo/research/investigations/INV-062-implicit-known-values-and-module-initialization.md).
 
 Compile-time evaluation is a selected direction, while metaprogramming remains
 under investigation; declaration-oriented modules do not prohibit them. A future compile-time block
 would still need defined execution order, while scheduling dependencies between
 declarations is a separate question. Syntax, capabilities, permitted effects,
 cycles, and reproducibility rules are open under
-[INV-062](../research/investigations/TOPICS.md#inv-062). No comptime or macro facility is
+[INV-062](lite://repo/research/investigations/TOPICS.md#inv-062). No comptime or macro facility is
 selected or implemented by this direction.
 
 The script/module distinction now uses .lts versus .lt. Growing a script into a
@@ -372,7 +372,7 @@ The former general-prelude proposal is now scoped by source kind. Module-based
 APIs. Language syntax and literal typing are distinct from namespace imports;
 the exact compiler-intrinsic versus module-definition boundary remains open.
 
-For the immediate FVP, [temporary input/reporting helpers](tooling-and-learning.md#temporary-fvp-input-and-reporting)
+For the immediate FVP, [temporary input/reporting helpers](lite://doc/tooling-and-learning#temporary-fvp-input-and-reporting)
 are selected as demonstrator scaffolding. They do not select the eventual
 script convenience set or require module/stdlib implementation first.
 
@@ -387,7 +387,7 @@ a file does not select a convenience policy, and imported .lt modules remain
 explicit. Output operations still need their own effect/failure contract and
 must be called deliberately; disclosure is distinct from automatic result echo.
 
-The selected [memory-control usability boundary](memory-and-performance.md#ordinary-and-advanced-memory-control)
+The selected [memory-control usability boundary](lite://doc/memory-and-performance#ordinary-and-advanced-memory-control)
 keeps advanced memory controls outside the default beginner surface while
 requiring a deliberate entry point with little ceremony. A built-in memory-module
 import is an example, not a selected module, API, or import grammar. Availability
@@ -420,7 +420,7 @@ The user's possible `.c`, `.h`, `.so`, `.a`, and `.lth` outputs illustrate a
 future separately compiled library workflow; `.lth` and the import/link format
 are not selected or implemented by this direction. Handling external data and
 incompatible interfaces, target ABI, versioning, validation, ownership and
-calling conventions remain open. See the [library compatibility investigation](../research/investigations/language-review/separate-library-value-compatibility.md).
+calling conventions remain open. See the [library compatibility investigation](lite://repo/research/investigations/language-review/separate-library-value-compatibility.md).
 
 ## Open decisions
 
@@ -428,7 +428,7 @@ Module path resolution; cycles; declaration resolution across files; initializat
 
 ## Related concepts and references
 
-- [Visibility](visibility.md)
-- [Functions](functions.md)
-- [Tooling and learning](tooling-and-learning.md)
-- Packaging is primarily a local design requirement. See [references](references.md) for the language comparisons already discussed; no external package manager is adopted by this file.
+- [Visibility](lite://doc/visibility)
+- [Functions](lite://doc/functions)
+- [Tooling and learning](lite://doc/tooling-and-learning)
+- Packaging is primarily a local design requirement. See [references](lite://doc/references) for the language comparisons already discussed; no external package manager is adopted by this file.

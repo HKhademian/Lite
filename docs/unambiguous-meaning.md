@@ -11,4 +11,4 @@ Specification cases, not executed compiler tests:
 - **numeric-member-typed:** `n: Int64 = 0; x: (Int64 | Int32) = n;` supplies the already typed Int64 member, subject to ordinary union admission.
 - **same-identity-alias:** alternative names for the same type identity do not alone create a conflict between distinct candidate types.
 
-Exact numeric literal compatibility, the complete catalog of resolution rules, and the information required in each diagnostic remain separate design work. See [union initialization](union-initialization-policy.md) and [types and inference](types-and-inference.md).
+Exact numeric literal compatibility, the complete catalog of resolution rules, and the information required in each diagnostic remain separate design work. See [union initialization](lite://doc/union-initialization-policy) and [types and inference](lite://doc/types-and-inference).

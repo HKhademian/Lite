@@ -2,7 +2,7 @@
 
 Status: **selected 2026-10-18: plain unions ignore member order, flatten nested plain unions, and remove duplicate type identities after transparent-alias resolution**. Distinct record declarations and enum cases retain identity. Automatic member admission and checked narrowing are selected separately. Subtype absorption, broader assignability, recursive alias legality, representation, and ABI remain separate contracts.
 
-Direct [union-target type tests](type-tests-and-narrowing.md#union-targets-in-type-tests-selected) use this normalization on input and target members. For closed distinct types, success keeps shared members and failure the input remainder; target-only members never widen the input.
+Direct [union-target type tests](lite://doc/type-tests-and-narrowing#union-targets-in-type-tests-selected) use this normalization on input and target members. For closed distinct types, success keeps shared members and failure the input remainder; target-only members never widen the input.
 
 ## One type despite spelling differences
 
@@ -21,7 +21,7 @@ First, Reordered, and Repeated denote the same union type. Flat and Nested also 
 
 ### Optional leading | selected
 
-Selected 2026-10-24: a nonempty plain-union chain in type context may start with one optional |. Thus Leading := type | A | B denotes the same type as First above, and Singleton := type | A denotes A. Grouped unions may also use their own leading |. This is a presentation rule applied before normalization, not another union member or permission for empty/stacked/interior extra/trailing separators. It adds no Unit, bottom type, or identity. Public intersection-type semantics and leading & remain unselected; illustrative failure aggregates are separate. See [optional leading separators](leading-separators.md#plain-union-types).
+Selected 2026-10-24: a nonempty plain-union chain in type context may start with one optional |. Thus Leading := type | A | B denotes the same type as First above, and Singleton := type | A denotes A. Grouped unions may also use their own leading |. This is a presentation rule applied before normalization, not another union member or permission for empty/stacked/interior extra/trailing separators. It adds no Unit, bottom type, or identity. Public intersection-type semantics and leading & remain unselected; illustrative failure aggregates are separate. See [optional leading separators](lite://doc/leading-separators#plain-union-types).
 
 ### Selected rules
 
@@ -72,7 +72,7 @@ Only adjacent plain union composition flattens. Do not discard or redistribute u
 - A Result's .ok/.err distinction remains, even when its success and failure payload types are identical. T ! T is not T.
 - A union of two Result types is not automatically rewritten into one Result with unioned success/error operands. Such a conversion could erase which source outcome contract applied.
 - Enum cases retain their distinct names/tags even when payload types coincide. A plain T | T cannot express two separately named cases; an enum can.
-- A union of complete tuple or record alternatives retains those alternatives. Do not replace correlated components with independent per-field unions. Tuple component forms and core construction/binding rules are selected separately; different stored tuple labels can be converted at an explicitly typed receiving declaration without changing positions; ordinary transfers check labels; see [labels under an explicit destination type](tuple-label-conversions.md). Identical ordered labels and resolved component types, with matching ordinary/segment roles and extent contracts, describe the same structural tuple type and are subject to the existing duplicate-removal rule. An ordinary array field and a declared segment are not duplicate types merely because member access returns the same array type; their unpacking behavior differs. Normalization still does not merge differently labeled tuple types merely because they have equal layouts. Label-only named/unnamed destination conversions are selected; complete recursive grammar and other conversions remain open. See [tuple component grammar](named-input-routing.md#selected-tuple-type-component-grammar).
+- A union of complete tuple or record alternatives retains those alternatives. Do not replace correlated components with independent per-field unions. Tuple component forms and core construction/binding rules are selected separately; different stored tuple labels can be converted at an explicitly typed receiving declaration without changing positions; ordinary transfers check labels; see [labels under an explicit destination type](lite://doc/tuple-label-conversions). Identical ordered labels and resolved component types, with matching ordinary/segment roles and extent contracts, describe the same structural tuple type and are subject to the existing duplicate-removal rule. An ordinary array field and a declared segment are not duplicate types merely because member access returns the same array type; their unpacking behavior differs. Normalization still does not merge differently labeled tuple types merely because they have equal layouts. Label-only named/unnamed destination conversions are selected; complete recursive grammar and other conversions remain open. See [tuple component grammar](lite://doc/named-input-routing#selected-tuple-type-component-grammar).
 - Unit remains a real alternative when combined with a distinct type. It is not absent data and must not be erased like a duplicate.
 
 These preserve already selected pattern inference and explicit Option/Result handling. Normalization introduces no None, null, automatic unwrap, or generated conversion.
@@ -85,22 +85,22 @@ Exhaustiveness is checked against normalized alternatives under the eventual cov
 
 There is no first union member to use as an implicit default. Contextual 0 cannot arbitrarily select one of several possible zeroable alternatives. Expected-type and literal rules must reject unresolved ambiguity or use an independently defined valid zero contract.
 
-The selected [union-zero membership rule](union-zero.md#selected-membership-of-union-zero) requires zero to hold the zero value of one listed member, with no hidden none/invalid state. Which listed member is chosen remains open. Source order cannot choose the zero member under the current identity rule.
+The selected [union-zero membership rule](lite://doc/union-zero#selected-membership-of-union-zero) requires zero to hold the zero value of one listed member, with no hidden none/invalid state. Which listed member is chosen remains open. Source order cannot choose the zero member under the current identity rule.
 
-The user clarifies [metadata plus overlapping payload](union-zero.md#current-storage-model): max-member size applies to payload capacity, while full storage includes metadata and alignment. This supports distinguishable active member identities. The zero metadata interpretation must remain coherent across order-independent equivalent union types; exact tag encoding and ABI remain open.
+The user clarifies [metadata plus overlapping payload](lite://doc/union-zero#current-storage-model): max-member size applies to payload capacity, while full storage includes metadata and alignment. This supports distinguishable active member identities. The zero metadata interpretation must remain coherent across order-independent equivalent union types; exact tag encoding and ABI remain open.
 
 Equivalent semantic types do not make source declaration order a stable runtime tag-number or ABI contract. The compiler's eventual representation and public compatibility rules remain separate.
 
 ## Boundaries still to settle
 
-- Member admission and [exact-member union widening](union-widening.md) are selected. Subtype membership and capability/ownership compatibility remain open.
+- Member admission and [exact-member union widening](lite://doc/union-widening) are selected. Subtype membership and capability/ownership compatibility remain open.
 - Subtyping/interface overlap and absorption. Exact identity duplicate removal is selected; a rule such as reducing Subtype | Interface to Interface needs the actual type-relation contract.
-- Precedence with other type constructors and associativity of repeated fallible type operators. Union `|` binds more tightly than binary type `!`; ungrouped code is valid, while official reference documentation prefers explicitly grouped union operands on both sides. See [type grouping](fallible-types-and-error-composition.md#grouping).
+- Precedence with other type constructors and associativity of repeated fallible type operators. Union `|` binds more tightly than binary type `!`; ungrouped code is valid, while official reference documentation prefers explicitly grouped union operands on both sides. See [type grouping](lite://doc/fallible-types-and-error-composition#grouping).
 - Generic normalization, recursive aliases, and legal recursive nominal boundaries.
-- Internal Never reads for exhausted conditional branches are selected in [unreachable flow](never-and-unreachable-flow.md). Public bottom/top types and their general algebra remain open. The user specifically requests future exploration of Never | T and Never & T; no public intersection syntax or general simplification law is selected here. Do not select public Never or Any by example.
-- [Common field reads](union-field-reads.md) use normalized unions after confirming availability on every alternative. [Field writes](union-field-writes.md) must fit every possible target's field type, rather than merely the projected read union. Methods, explicit access notation, ownership/capability combination, runtime layout, ABI, and complete diagnostics remain open.
+- Internal Never reads for exhausted conditional branches are selected in [unreachable flow](lite://doc/never-and-unreachable-flow). Public bottom/top types and their general algebra remain open. The user specifically requests future exploration of Never | T and Never & T; no public intersection syntax or general simplification law is selected here. Do not select public Never or Any by example.
+- [Common field reads](lite://doc/union-field-reads) use normalized unions after confirming availability on every alternative. [Field writes](lite://doc/union-field-writes) must fit every possible target's field type, rather than merely the projected read union. Methods, explicit access notation, ownership/capability combination, runtime layout, ABI, and complete diagnostics remain open.
 
-The value-level example person: Person = user for Person := type User | Guest is now selected. Automatic member inclusion avoids a cast, while recovering User from an arbitrary Person requires narrowing. See [union membership](union-membership.md).
+The value-level example person: Person = user for Person := type User | Guest is now selected. Automatic member inclusion avoids a cast, while recovering User from an arbitrary Person requires narrowing. See [union membership](lite://doc/union-membership).
 
 ## References
 
@@ -108,4 +108,4 @@ Scala 3 explicitly specifies that plain union | is commutative, so changing memb
 
 TypeScript describes unions of existing member types and transparent aliases for them. Its structural compatibility and broader simplification rules are not automatically LiteScript's nominal-record contract. Source: [TypeScript unions and aliases](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types).
 
-Related: [type aliases](type-aliases.md), [record identity](record-type-identity.md), [union patterns](union-patterns.md), [pattern inference](pattern-binding-inference.md), and [fallible composition](fallible-types-and-error-composition.md).
+Related: [type aliases](lite://doc/type-aliases), [record identity](lite://doc/record-type-identity), [union patterns](lite://doc/union-patterns), [pattern inference](lite://doc/pattern-binding-inference), and [fallible composition](lite://doc/fallible-types-and-error-composition).

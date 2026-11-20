@@ -30,7 +30,7 @@ Both approaches can be statically checked. Strong typing alone does not settle t
 
 Each separately declared named record creates a distinct type. Another name for the existing type is an alias, not a fresh record declaration. The selected spelling is Member := type User; general type-value binding rules remain open.
 
-The [alias comparison](type-aliases.md) evaluated Member := User versus Member := type User across unions and other composite types. The explicit prefix is now selected consistently for named aliases. It remains transparent and does not introduce a new record identity.
+The [alias comparison](lite://doc/type-aliases) evaluated Member := User versus Member := type User across unions and other composite types. The explicit prefix is now selected consistently for named aliases. It remains transparent and does not introduce a new record identity.
 
 ```text
 /* Rejected: no implicit User-to-Student conversion. */
@@ -135,4 +135,4 @@ The rejected structural alternative would reduce adaptation for temporary data b
 
 Record declaration identity is now selected for named and unnamed inline types. Next resolve aliases, inferred standalone literal types, and any additional explicit conversions. Do not infer one from generated equality, byte layout, default values, or the ability to destructure fields.
 
-Related: [records](records.md), [initialization](record-initialization.md), [pattern inference](pattern-binding-inference.md), [type tests](type-tests-and-narrowing.md), and [type categories](type-categories.md).
+Related: [records](lite://doc/records), [initialization](lite://doc/record-initialization), [pattern inference](lite://doc/pattern-binding-inference), [type tests](lite://doc/type-tests-and-narrowing), and [type categories](lite://doc/type-categories).

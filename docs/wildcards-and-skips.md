@@ -6,11 +6,11 @@ Status: **ordinary readable `_` binding selected on 2026-10-18; replaces the non
 
 `_` is an ordinary identifier beginning with underscore, just like `_user` or `_left`. It introduces a readable binding and explicitly permits that binding to be unused. There is no separate nonbinding underscore pattern.
 
-Repeated names within a pattern shadow in binding order. This applies to every name, including `_`; it is not a special exemption for underscores. See [pattern binding and shadowing](pattern-shadowing.md) for ordering, scope, and typing.
+Repeated names within a pattern shadow in binding order. This applies to every name, including `_`; it is not a special exemption for underscores. See [pattern binding and shadowing](lite://doc/pattern-shadowing) for ordering, scope, and typing.
 
 ## Subjectless match fallback is not a pattern
 
-The selected [subjectless match](match.md#subjectless-boolean-selection-selected) uses Boolean expression headers instead of patterns. In that form only, a header consisting solely of `_` is the unconditional fallback and introduces no binding because no subject is supplied. `_ready` and underscore names within ordinary expressions retain normal value lookup. `match value { _ { ... } }` still binds the whole subject to ordinary readable `_`; underscore pattern and unused-name rules are unchanged.
+The selected [subjectless match](lite://doc/match#subjectless-boolean-selection-selected) uses Boolean expression headers instead of patterns. In that form only, a header consisting solely of `_` is the unconditional fallback and introduces no binding because no subject is supplied. `_ready` and underscore names within ordinary expressions retain normal value lookup. `match value { _ { ... } }` still binds the whole subject to ordinary readable `_`; underscore pattern and unused-name rules are unchanged.
 
 ## Positional and nested destructuring
 
@@ -105,7 +105,7 @@ The intermediate design treated `_` as a nonbinding wildcard and forbade reading
 
 ## Related concepts
 
-- [Pattern binding and shadowing](pattern-shadowing.md)
-- [Explicitly allowed unused names](unused-name-intent.md)
-- [Identifiers](identifiers.md), [tuples and patterns](tuples-and-patterns.md), and [loop receivers](loop-receivers.md)
-- [Match arm chains](match-guards.md) and [pattern context review](pattern-contexts.md)
+- [Pattern binding and shadowing](lite://doc/pattern-shadowing)
+- [Explicitly allowed unused names](lite://doc/unused-name-intent)
+- [Identifiers](lite://doc/identifiers), [tuples and patterns](lite://doc/tuples-and-patterns), and [loop receivers](lite://doc/loop-receivers)
+- [Match arm chains](lite://doc/match-guards) and [pattern context review](lite://doc/pattern-contexts)

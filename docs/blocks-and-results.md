@@ -10,7 +10,7 @@ parallel forward symbol wiring across root and inner blocks, compile-time
 execution-trace safety, and side-effect-free dead-code elimination. Generated C
 supports statement scopes, inner `type` aliases, parallel non-`fn` type wiring,
 and scalar DCE while explicitly rejecting `fn` values. See the
-[transition queue](../compiler/gaps.md).
+[transition queue](lite://doc/compiler/gaps).
 
 An executable block groups items, introduces lexical scope, and produces its final item's result when execution reaches the end.
 
@@ -25,7 +25,7 @@ Bodies always use braces. Optional single-statement bodies and earlier `do/end` 
 
 ## Item boundaries
 
-A complete block construct ends its item without requiring `;`. Write it without a trailing semicolon, at top level and inside other blocks. This includes declarations initialized directly by blocks, functions/lambdas, conditionals, matches, loops, or record constructions. The grammar still allows an optional trailing semicolon. The entire construct includes its attached else/then/finally clauses; punctuation must not split those clauses from their owner. See the [semicolon style and required exceptions](lexical-structure.md#semicolon-style-after-closing-braces).
+A complete block construct ends its item without requiring `;`. Write it without a trailing semicolon, at top level and inside other blocks. This includes declarations initialized directly by blocks, functions/lambdas, conditionals, matches, loops, or record constructions. The grammar still allows an optional trailing semicolon. The entire construct includes its attached else/then/finally clauses; punctuation must not split those clauses from their owner. See the [semicolon style and required exceptions](lite://doc/lexical-structure#semicolon-style-after-closing-braces).
 
 ```text
 answer := {
@@ -42,7 +42,7 @@ answer := { 42 } use(answer);
 
 The closing body separates the declaration from use(answer), even on the same line. An optional semicolon would not change the block's value; omitting it is the documentation/formatter style, not a syntax ban.
 
-Record construction also ends an outer initializer item: `x: User = {}` and `x := User {}` need no trailing semicolon. Its braces construct data rather than execute a block; sharing a boundary rule does not give it block-result semantics. See [record literal boundaries](record-literal-boundaries.md) for the requested inferred form and remaining disambiguation.
+Record construction also ends an outer initializer item: `x: User = {}` and `x := User {}` need no trailing semicolon. Its braces construct data rather than execute a block; sharing a boundary rule does not give it block-result semantics. See [record literal boundaries](lite://doc/record-literal-boundaries) for the requested inferred form and remaining disambiguation.
 
 To continue a block's or record construction's value with an operator, call, member access, or indexing, parenthesize the construct:
 
@@ -52,11 +52,11 @@ result := (fn(x: Int): Int { x * 2 })(3);
 name := ({ make_user() }).name;
 ```
 
-These outer items are ordinary expressions or declarations and use ordinary separators. A closing brace inside a call argument or other enclosing expression does not terminate that enclosing item. See [lexical structure](lexical-structure.md) for the complete separator direction.
+These outer items are ordinary expressions or declarations and use ordinary separators. A closing brace inside a call argument or other enclosing expression does not terminate that enclosing item. See [lexical structure](lite://doc/lexical-structure) for the complete separator direction.
 
 ## Explicit failure capture
 
-Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md): `({ work() })?` captures supported failures during block execution into a flat outcome. The boundary is active before the first item and includes executed synchronous calls. A final outward T ! E becomes T ! (E | Panic); deliberately nested success payloads remain data. Postfix ? also applies to other expressions. Existing grouping for continuation after a complete braced construct remains required. Normal exits and function-targeted ! are not captured. See [failure capture and unwrapping](failure-capture-and-unwrapping.md).
+Selected [LP-0009 r1](lite://doc/proposals/LP-0009-flat-failure-capture): `({ work() })?` captures supported failures during block execution into a flat outcome. The boundary is active before the first item and includes executed synchronous calls. A final outward T ! E becomes T ! (E | Panic); deliberately nested success payloads remain data. Postfix ? also applies to other expressions. Existing grouping for continuation after a complete braced construct remains required. Normal exits and function-targeted ! are not captured. See [failure capture and unwrapping](lite://doc/failure-capture-and-unwrapping).
 
 ## Final-item rule
 
@@ -112,7 +112,7 @@ The whole-binding assignment examples assume an existing `var x` where needed. `
 
 The second block produces Unit because its final item is a declaration. calculate still runs and its value is bound to the readable name `_`, with permission to be unused. `_ = calculate()` would instead assign an existing var binding; it is not discard syntax.
 
-Exactly which unused results require explicit handling, particularly Result values, and whether a separate discard operation is needed remain open. Naming a value `_` must not silently exempt it from that future policy; see [underscore bindings and skips](wildcards-and-skips.md).
+Exactly which unused results require explicit handling, particularly Result values, and whether a separate discard operation is needed remain open. Naming a value `_` must not silently exempt it from that future policy; see [underscore bindings and skips](lite://doc/wildcards-and-skips).
 
 ## Block value versus return
 
@@ -157,7 +157,7 @@ runtime evaluation (admitting compile-time-known initial definitions such as
 initializers; merging `.lt` and `.lts` into one source unit remains open). A `.lt`
 file has explicit package/module access and no implicit imports; it does not
 become an executable script body merely because a script loads it. See
-[source kinds](modules-and-packages.md#distinct-script-and-module-files).
+[source kinds](lite://doc/modules-and-packages#distinct-script-and-module-files).
 
 In a `.lts` script body, items execute in written order under the ordinary block
 rules, including the final-item rule. The final item's result is computed and
@@ -170,7 +170,7 @@ Reaffirmed 2026-10-28: this discarded result is never an implicit request for
 output. Scripts, demonstrators, and playgrounds require an explicit output
 operation or deliberately enabled inspection/tracing facility to display it.
 Declarations and assignments likewise do not echo their values. See
-[explicit output and tracing](tooling-and-learning.md#explicit-output-and-tracing).
+[explicit output and tracing](lite://doc/tooling-and-learning#explicit-output-and-tracing).
 Discarding an ordinary result does not skip its evaluation or suppress its effects
 or failures.
 
@@ -179,15 +179,15 @@ evaluation and discard the result silently over each target's admitted forms.
 Empty separators are accepted; trailing separators preserve a function's final
 expression result and its type check. Generated C evaluates discarded scalar
 expressions explicitly; functions and aggregates remain in its transition queue.
-See the [expression-item evidence](../compiler/parity.md#ordinary-expression-items).
+See the [expression-item evidence](lite://doc/compiler/parity#ordinary-expression-items).
 
 Because there is no enclosing function, loop, or tagged block at this boundary, a
 top-level `return`, `break`, or `continue` has no valid target. Exact diagnostics
 and any future top-level exit spelling remain open.
 
 Ordinary eager lookup and shadowing in this executable body follow the selected
-[block-order rule](evaluation-order.md#executable-block-items), with the separate
-[deferred function-body exception](functions.md#deferred-body-lookup).
+[block-order rule](lite://doc/evaluation-order#executable-block-items), with the separate
+[deferred function-body exception](lite://doc/functions#deferred-body-lookup).
 
 This section selects the execution model only. Module-declaration uniqueness,
 imported-file behavior and module
@@ -196,7 +196,7 @@ exit status, and observable effects remain with their owning contracts. Contrast
 [declaration bodies](#declaration-bodies) below, which contain declarations and
 never supply an executable result.
 
-For the FVP, [host completion and explicit exit](tooling-and-learning.md#fvp-completion-and-explicit-exit)
+For the FVP, [host completion and explicit exit](lite://doc/tooling-and-learning#fvp-completion-and-explicit-exit)
 now select normal completion as status 0, rejected programs/unhandled fatal
 execution failures as nonzero, and exit(errCode?) for explicit program end.
 These do not change this block's Unit value or make top-level return valid;
@@ -213,10 +213,10 @@ parent block and shares the same core block rules:
 - Symbol visibility within a block is wired in parallel at compile time for
   types, functions, and inner declarations; deferred `fn` bodies resolve
   nearer same-block declarations (including forward ones) before outer blocks
-  (see [deferred-body lookup](functions.md#deferred-body-lookup)).
+  (see [deferred-body lookup](lite://doc/functions#deferred-body-lookup)).
 - Runtime values and initialization follow sequential execution-trace order,
   preventing early eager reads/calls before later declarations or `?`
-  reserved locals initialize (see [first initialization](first-initialization.md)).
+  reserved locals initialize (see [first initialization](lite://doc/first-initialization)).
 - Only the parentless file root admits `pub` exports and module `import`
   bindings.
 
@@ -247,7 +247,7 @@ The final expression is a syntactic final item, not simply the last value comput
 
 ## Related concepts and references
 
-- [Unit](unit.md)
-- [Functions](functions.md)
-- [Control-flow exits](control-flow.md)
+- [Unit](lite://doc/unit)
+- [Functions](lite://doc/functions)
+- [Control-flow exits](lite://doc/control-flow)
 - [Rust block expressions](https://doc.rust-lang.org/reference/expressions/block-expr.html) are a comparison. LiteScript deliberately does not copy Rust's trailing-semicolon result suppression.

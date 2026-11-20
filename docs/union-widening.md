@@ -2,7 +2,7 @@
 
 Status: **selected 2026-10-18: a source plain union widens automatically to a destination plain union when every normalized source alternative is an exact destination member**. Subtype/interface conversions, container variance, ownership, and representation remain separate contracts.
 
-This is one selected proof of [general safe widening](types-and-inference.md#safe-widening). [Stored Result widening](result-and-errors.md#stored-result-values-widen-safely) uses these payload proofs while preserving Result branches and layers. Neither rule establishes arbitrary container covariance.
+This is one selected proof of [general safe widening](lite://doc/types-and-inference#safe-widening). [Stored Result widening](lite://doc/result-and-errors#stored-result-values-widen-safely) uses these payload proofs while preserving Result branches and layers. Neither rule establishes arbitrary container covariance.
 
 ## Description and template
 
@@ -20,11 +20,11 @@ The destination type must be established by context. destination := source keeps
 
 ### Zero values under widening
 
-Widening a zero-valued member preserves that member, even when the destination union's own zero selects a different member. A source zero can therefore acquire nonzero destination metadata. Union-to-union widening may remap a discriminant. There is no general equation requiring widened zero(source) to equal zero(destination); see [zero-member selection](union-zero.md#widening-preserves-values-not-zero-encoding). The exact zero-member policy remains open.
+Widening a zero-valued member preserves that member, even when the destination union's own zero selects a different member. A source zero can therefore acquire nonzero destination metadata. Union-to-union widening may remap a discriminant. There is no general equation requiring widened zero(source) to equal zero(destination); see [zero-member selection](lite://doc/union-zero#widening-preserves-values-not-zero-encoding). The exact zero-member policy remains open.
 
 ## Exact membership after normalization
 
-Resolve transparent aliases, flatten nested plain unions, and remove duplicate identities before comparing the alternatives. Widening succeeds exactly when the normalized source alternatives are a subset of the destination alternatives. A single-member source follows the already selected [member admission rule](union-membership.md).
+Resolve transparent aliases, flatten nested plain unions, and remove duplicate identities before comparing the alternatives. Widening succeeds exactly when the normalized source alternatives are a subset of the destination alternatives. A single-member source follows the already selected [member admission rule](lite://doc/union-membership).
 
 ```text
 Member := type User;
@@ -40,7 +40,7 @@ Reordering or repeating an alias cannot make a missing type covered. A separatel
 
 ## Narrowing needs evidence
 
-Unchecked narrowing is rejected, not an open conversion option; see [the general rule](types-and-inference.md#unchecked-narrowing-is-rejected). An arbitrary Account cannot be assigned to Person because Admin remains possible. A narrower annotation alone does not prove otherwise. Use checked selection to handle every alternative, or establish the active member through the selected type-test syntax:
+Unchecked narrowing is rejected, not an open conversion option; see [the general rule](lite://doc/types-and-inference#unchecked-narrowing-is-rejected). An arbitrary Account cannot be assigned to Person because Admin remains possible. A narrower annotation alone does not prove otherwise. Use checked selection to handle every alternative, or establish the active member through the selected type-test syntax:
 
 ```text
 match account {
@@ -59,7 +59,7 @@ Every match remains exhaustive. A stable flow refinement may prove a narrower ac
 
 ## Preserve other type constructors
 
-This rule relates plain unions and does not by itself recursively grant conversions through other type constructors. [Stored Result widening](result-and-errors.md#stored-result-values-widen-safely) separately permits User ! E to (User | Guest) ! (E | F) when both payload proofs hold, preserving each Result layer. [Callable compatibility](callable-value-variance.md) has its own safe input/result directions. Neither rule merges a union of Results into one Result. Option, lists, mutable containers, and other constructors still need their own compatibility rules.
+This rule relates plain unions and does not by itself recursively grant conversions through other type constructors. [Stored Result widening](lite://doc/result-and-errors#stored-result-values-widen-safely) separately permits User ! E to (User | Guest) ! (E | F) when both payload proofs hold, preserving each Result layer. [Callable compatibility](lite://doc/callable-value-variance) has its own safe input/result directions. Neither rule merges a union of Results into one Result. Option, lists, mutable containers, and other constructors still need their own compatibility rules.
 
 Named enum alternatives retain their case identity. Neither widening nor normalization constructs or removes a case wrapper.
 
@@ -75,13 +75,13 @@ Scala specifies both member inclusion A <: A | B and the rule that if A and B ar
 
 TypeScript describes unions as values drawn from their member types, with operations requiring validity for every possible member. Its broader structural compatibility is a different contract from LiteScript's distinct record identities. Source: [TypeScript union types](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types).
 
-See the [reference-language comparison](union-membership-comparison.md) for the distinction between plain unions, named enum cases, discriminated sums, and sealed hierarchies.
+See the [reference-language comparison](lite://doc/union-membership-comparison) for the distinction between plain unions, named enum cases, discriminated sums, and sealed hierarchies.
 
 ## Remaining decisions
 
-- [Common field reads](union-field-reads.md) and [all-target field writes](union-field-writes.md) are selected separately. Method calls and other operations without narrowing remain open.
+- [Common field reads](lite://doc/union-field-reads) and [all-target field writes](lite://doc/union-field-writes) are selected separately. Method calls and other operations without narrowing remain open.
 - Interface overlap, subtype admission, and absorption if introduced.
 - Compatibility through generic constructors and containers, and callable/Result transformations beyond the selected widening rules.
 - Mutation, ownership, lifetime, ABI, and public type-evolution contracts.
 
-Related: [normalization](union-normalization.md), [membership](union-membership.md), [type tests](type-tests-and-narrowing.md), [record identity](record-type-identity.md), and [fallible composition](fallible-types-and-error-composition.md).
+Related: [normalization](lite://doc/union-normalization), [membership](lite://doc/union-membership), [type tests](lite://doc/type-tests-and-narrowing), [record identity](lite://doc/record-type-identity), and [fallible composition](lite://doc/fallible-types-and-error-composition).
