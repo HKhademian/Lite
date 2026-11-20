@@ -784,15 +784,16 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
     peeled
 };
 
-/** Simplifies statement-level `if` / `else if` / `else` chains with compile-time constant Bool conditions in a single O(n) pass. */
+/** Simplifies statement-level `if` / `else if` / `else` chains and `loop false` blocks with compile-time constant Bool conditions in a single O(n) pass. */
 pub simplifyConstantBranches := fn(items: Items, target: String): Items {
     trueLit := ir.targetBoolLiteralCode(target, true);
     falseLit := ir.targetBoolLiteralCode(target, false);
     var hasConstBranch := false;
     var hasCUnsupported := false;
     loop items as scanItem {
-        if (scanItem.kind == ir.ITEM_KIND_IF or scanItem.kind == ir.ITEM_KIND_ELSE_IF) and
-        (scanItem.code == trueLit or scanItem.code == falseLit) {
+        if ((scanItem.kind == ir.ITEM_KIND_IF or scanItem.kind == ir.ITEM_KIND_ELSE_IF) and
+        (scanItem.code == trueLit or scanItem.code == falseLit)) or
+        (scanItem.kind == ir.ITEM_KIND_LOOP and scanItem.code == falseLit) {
             hasConstBranch = true;
         }
         if target =!= ir.TARGET_TS and isCUnsupportedItem(scanItem) {
@@ -917,9 +918,15 @@ pub simplifyConstantBranches := fn(items: Items, target: String): Items {
                     }
                 }
             }
+        } else if item.kind == ir.ITEM_KIND_LOOP and item.code == falseLit {
+            listLib.pushBack(mut frameKinds, 0);
+            listLib.pushBack(mut frameModes, 0);
+            listLib.pushBack(mut frameTakens, false);
+            listLib.pushBack(mut frameSkips, true);
+            listLib.pushBack(mut frameParentSkips, true);
+            stackLen = stackLen + 1;
         } else if item.kind == ir.ITEM_KIND_SCOPE or item.kind == ir.ITEM_KIND_FUNCTION_START or
-        item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ or
-        item.kind == ir.ITEM_KIND_TRANSFER_TRY or item.kind == ir.ITEM_KIND_LOOP_TRANSFER_TRY {
+        item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ {
             if not currentlySkipping { listLib.pushBack(mut out, item); }
             listLib.pushBack(mut frameKinds, 0);
             listLib.pushBack(mut frameModes, 0);
@@ -928,8 +935,7 @@ pub simplifyConstantBranches := fn(items: Items, target: String): Items {
             listLib.pushBack(mut frameParentSkips, currentlySkipping);
             stackLen = stackLen + 1;
         } else if item.kind == ir.ITEM_KIND_END_SCOPE or item.kind == ir.ITEM_KIND_FUNCTION_END or
-        item.kind == ir.ITEM_KIND_END_LOOP or item.kind == ir.ITEM_KIND_TRANSFER_CATCH or
-        item.kind == ir.ITEM_KIND_LOOP_TRANSFER_CATCH {
+        item.kind == ir.ITEM_KIND_END_LOOP {
             if stackLen > 0 {
                 _kind := listLib.popBack(mut frameKinds);
                 _mode := listLib.popBack(mut frameModes);
@@ -971,7 +977,7 @@ unwrapSyntheticScopes := fn(items: Items): Items {
             listLib.pushBack(mut hasDecls, false);
             stackLen = stackLen + 1;
         } else if item.kind == ir.ITEM_KIND_IF or item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ or
-        item.kind == ir.ITEM_KIND_FUNCTION_START or item.kind == ir.ITEM_KIND_TRANSFER_TRY or item.kind == ir.ITEM_KIND_LOOP_TRANSFER_TRY {
+        item.kind == ir.ITEM_KIND_FUNCTION_START {
             listLib.pushBack(mut openIdxs, idx);
             listLib.pushBack(mut isSynths, false);
             listLib.pushBack(mut hasDecls, false);
@@ -989,8 +995,7 @@ unwrapSyntheticScopes := fn(items: Items): Items {
                 }
             }
         } else if item.kind == ir.ITEM_KIND_END_IF or item.kind == ir.ITEM_KIND_END_LOOP or
-        item.kind == ir.ITEM_KIND_FUNCTION_END or item.kind == ir.ITEM_KIND_TRANSFER_CATCH or
-        item.kind == ir.ITEM_KIND_LOOP_TRANSFER_CATCH {
+        item.kind == ir.ITEM_KIND_FUNCTION_END {
             if stackLen > 0 {
                 _openIdx := listLib.popBack(mut openIdxs);
                 _isSynth := listLib.popBack(mut isSynths);

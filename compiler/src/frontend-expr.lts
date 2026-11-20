@@ -3024,6 +3024,7 @@ patternTypeMatches := fn(actualKind: String, expectedKind: String): Bool {
 
 /** Combines two JS boolean pattern conditions with short-circuiting `&&`. */
 combinePatCond := fn(left: String, right: String): String {
+    if left == "false" or right == "false" { return "false"; }
     if left == "" or left == "true" { return right; }
     if right == "" or right == "true" { return left; }
     "(" + left + " && " + right + ")"
@@ -3246,7 +3247,7 @@ parenIsTuplePattern := fn(source: String, openPos: Int, prefix: String): Bool {
 };
 
 /** Parses one comparison-pattern RHS (arithmetic/postfix/grouped; stops before `or`/`and`/comparisons/`if`/`{`). */
-parseComparisonPatternRhs := fn(target: String, source: String, opPos: Int, opText: String, opWidth: Int, prefix: String, subjKind: String, subjCode: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): PatResult {
+parseComparisonPatternRhs := fn(target: String, source: String, opPos: Int, opText: String, opWidth: Int, prefix: String, subjKind: String, subjCode: String, subjConst: Parsed, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): PatResult {
     rhsStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
     size := textLib.length(source);
     if rhsStart >= size {
@@ -3263,14 +3264,14 @@ parseComparisonPatternRhs := fn(target: String, source: String, opPos: Int, opTe
     if syntax.isComparison(nextCmp.text) {
         syntax.failAt(source, afterRhs, prefix, "comparison pattern cannot be chained; bind the value and use an if guard");
     }
-    leftFake := (kind = subjKind, code = subjCode, intValue = 0, textValue = "", constant = false, next = opPos);
+    leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = opPos);
     cmp := ctx.compareParsed(target, source, opPos, opText, leftFake, rhs, prefix);
     markers := if inferMode { ctx.collectParsedMarkers("", rhs) } else { "" };
     (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, next = rhs.next, markers = markers)
 };
 
 /** Parses one atomic subject-match pattern (without top-level `or` alternatives). */
-parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: String, subjKind: String, subjCode: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>, armDepth: Int): PatResult {
+parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: String, subjKind: String, subjCode: String, subjConst: Parsed, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>, armDepth: Int): PatResult {
     pos := syntax.skipTrivia(source, start, prefix);
     size := textLib.length(source);
     if pos >= size {
@@ -3278,7 +3279,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
     }
     cmpOp := syntax.comparisonOperatorAt(source, pos);
     if syntax.isComparison(cmpOp.text) {
-        return parseComparisonPatternRhs(target, source, pos, cmpOp.text, cmpOp.width, prefix, subjKind, subjCode, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+        return parseComparisonPatternRhs(target, source, pos, cmpOp.text, cmpOp.width, prefix, subjKind, subjCode, subjConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     }
     ch := textLib.at(source, pos);
     if ch == ":" {
@@ -3290,7 +3291,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
     }
     if ch == "\"" {
         lit := syntax.parseText(target, source, pos, prefix);
-        leftFake := (kind = subjKind, code = subjCode, intValue = 0, textValue = "", constant = false, next = pos);
+        leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
         cmp := ctx.compareParsed(target, source, pos, "==", leftFake, lit, prefix);
         return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, next = lit.next, markers = "");
     }
@@ -3303,7 +3304,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
         } else {
             lit
         };
-        leftFake := (kind = subjKind, code = subjCode, intValue = 0, textValue = "", constant = false, next = pos);
+        leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
         cmp := ctx.compareParsed(target, source, pos, "==", leftFake, signedLit, prefix);
         return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, next = signedLit.next, markers = "");
     }
@@ -3359,7 +3360,8 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                         syntax.failAt(source, srcStart, prefix, "record " + types.recordDisplayName(subjKind) + " has no field " + srcField);
                     }
                     propExpr := "(" + subjCode + ")." + types.recordComponentProp(subjKind, srcField);
-                    sub := parseMatchPattern(target, source, cCursor, prefix, fieldKind, propExpr, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+                    subNonConst := (kind = fieldKind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
+                    sub := parseMatchPattern(target, source, cCursor, prefix, fieldKind, propExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
                     afterSub := syntax.skipTrivia(source, sub.next, prefix);
                     if afterSub =!= eqPos {
                         syntax.failAt(source, afterSub, prefix, "expected = before source field " + srcField + " in record pattern");
@@ -3383,7 +3385,8 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                             syntax.failAt(source, cCursor, prefix, "record " + types.recordDisplayName(subjKind) + " has no field " + fieldName);
                         }
                         propExpr := "(" + subjCode + ")." + types.recordComponentProp(subjKind, fieldName);
-                        sub := parseComparisonPatternRhs(target, source, afterName, fieldCmp.text, fieldCmp.width, prefix, fieldKind, propExpr, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                        subNonConst := (kind = fieldKind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
+                        sub := parseComparisonPatternRhs(target, source, afterName, fieldCmp.text, fieldCmp.width, prefix, fieldKind, propExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                         recCond = combinePatCond(recCond, sub.cond);
                         recIrref = false;
                         if inferMode { recMarkers = recMarkers + sub.markers; }
@@ -3422,7 +3425,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
             return (cond = "true", bindings = "", irrefutable = true, boolMask = 0, next = afterOpen + 1, markers = "");
         }
         if not types.isTupleKind(subjKind) or not parenIsTuplePattern(source, pos, prefix) {
-            inner := parseMatchPattern(target, source, afterOpen, prefix, subjKind, subjCode, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+            inner := parseMatchPattern(target, source, afterOpen, prefix, subjKind, subjCode, subjConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
             closePos := syntax.skipTrivia(source, inner.next, prefix);
             afterClose := syntax.expectSymbol(source, closePos, ")", prefix);
             return (cond = inner.cond, bindings = inner.bindings, irrefutable = inner.irrefutable, boolMask = inner.boolMask, next = afterClose, markers = inner.markers);
@@ -3538,7 +3541,8 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                     usedSlots = usedSlots + integer.intText(slotIdx) + "|";
                     comp := types.tupleComponent(subjKind, slotIdx);
                     propExpr := "(" + subjCode + ")." + comp.prop;
-                    sub := parseMatchPattern(target, source, tCursor, prefix, comp.kind, propExpr, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+                    subNonConst := (kind = comp.kind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
+                    sub := parseMatchPattern(target, source, tCursor, prefix, comp.kind, propExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
                     afterSub := syntax.skipTrivia(source, sub.next, prefix);
                     if afterSub =!= eqPos {
                         syntax.failAt(source, afterSub, prefix, "expected = before tuple field " + srcField);
@@ -3564,7 +3568,8 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                     usedSlots = usedSlots + integer.intText(slotIdx) + "|";
                     comp := types.tupleComponent(subjKind, slotIdx);
                     propExpr := "(" + subjCode + ")." + comp.prop;
-                    sub := parseMatchPattern(target, source, tCursor, prefix, comp.kind, propExpr, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+                    subNonConst := (kind = comp.kind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
+                    sub := parseMatchPattern(target, source, tCursor, prefix, comp.kind, propExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
                     tupCond = combinePatCond(tupCond, sub.cond);
                     tupBindings = mergePatBindings(tupBindings, sub.bindings, source, tCursor, prefix);
                     if not sub.irrefutable { tupIrref = false; }
@@ -3607,7 +3612,8 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                 return (cond = arrCond, bindings = arrBindings, irrefutable = arrIrref, boolMask = 0, next = aCursor + 1, markers = arrMarkers);
             }
             elemExpr := "(" + subjCode + ")[" + integer.intText(elemIdx) + "]!";
-            sub := parseMatchPattern(target, source, aCursor, prefix, elemKind, elemExpr, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+            subNonConst := (kind = elemKind, code = elemExpr, intValue = 0, textValue = "", constant = false, next = 0);
+            sub := parseMatchPattern(target, source, aCursor, prefix, elemKind, elemExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
             arrCond = combinePatCond(arrCond, sub.cond);
             arrBindings = mergePatBindings(arrBindings, sub.bindings, source, aCursor, prefix);
             if not sub.irrefutable { arrIrref = false; }
@@ -3627,7 +3633,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
         word := textLib.slice(source, pos, nameEnd);
         if word == "true" or word == "false" {
             lit := ctx.boolParsed(ir.targetBoolLiteralCode(target, word == "true"), word == "true", true, nameEnd);
-            leftFake := (kind = subjKind, code = subjCode, intValue = 0, textValue = "", constant = false, next = pos);
+            leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
             cmp := ctx.compareParsed(target, source, pos, "==", leftFake, lit, prefix);
             mask := if word == "true" { 1 } else { 2 };
             return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = mask, next = nameEnd, markers = "");
@@ -3651,7 +3657,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
 };
 
 /** Parses one match pattern with optional leading `or` and `or` alternatives (`[or] pat (or pat)*`). */
-parseMatchPattern := fn(target: String, source: String, start: Int, prefix: String, subjKind: String, subjCode: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>, armDepth: Int): PatResult {
+parseMatchPattern := fn(target: String, source: String, start: Int, prefix: String, subjKind: String, subjCode: String, subjConst: Parsed, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>, armDepth: Int): PatResult {
     var pos := syntax.skipTrivia(source, start, prefix);
     if textLib.wordAt(source, pos, "or") {
         pos = syntax.skipTrivia(source, pos + 2, prefix);
@@ -3659,7 +3665,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
             syntax.failAt(source, pos, prefix, "duplicate leading or in match pattern");
         }
     }
-    first := parseMatchPatternAtom(target, source, pos, prefix, subjKind, subjCode, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+    first := parseMatchPatternAtom(target, source, pos, prefix, subjKind, subjCode, subjConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
     var nextPos := syntax.skipTrivia(source, first.next, prefix);
     if not textLib.wordAt(source, nextPos, "or") {
         return first;
@@ -3673,7 +3679,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
     var lastEnd := first.next;
     loop textLib.wordAt(source, nextPos, "or") {
         altStart := syntax.skipTrivia(source, nextPos + 2, prefix);
-        alt := parseMatchPatternAtom(target, source, altStart, prefix, subjKind, subjCode, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+        alt := parseMatchPatternAtom(target, source, altStart, prefix, subjKind, subjCode, subjConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
         if not patBindingsCompatible(first.bindings, alt.bindings) {
             syntax.failAt(source, altStart, prefix, "or pattern alternatives must bind the same names with matching types");
         }
@@ -3691,10 +3697,16 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
         var i := 0;
         loop i < altCount {
             part := if altConds[i] == "" { "true" } else { altConds[i] };
-            orCond = if i == 0 { "(" + part + ")" } else { orCond + " || (" + part + ")" };
+            if part == "true" {
+                return (cond = "true", bindings = first.bindings, irrefutable = anyIrref, boolMask = combinedMask, next = lastEnd, markers = combinedMarkers);
+            }
+            if part =!= "false" {
+                orCond = if orCond == "" { "(" + part + ")" } else { orCond + " || (" + part + ")" };
+            }
             i = i + 1;
         }
-        return (cond = "(" + orCond + ")", bindings = first.bindings, irrefutable = anyIrref, boolMask = combinedMask, next = lastEnd, markers = combinedMarkers);
+        finalOrCond := if orCond == "" { "false" } else { "(" + orCond + ")" };
+        return (cond = finalOrCond, bindings = first.bindings, irrefutable = anyIrref, boolMask = combinedMask, next = lastEnd, markers = combinedMarkers);
     }
     /* Binding-producing `or` alternatives: emit a short-circuiting IIFE assigning the shared arm bindings on first match. */
     var iife := "(() => { ";
@@ -3724,7 +3736,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
 };
 
 /** Parses a subject-based `match <subject> { ... }` body for value, statement, or tagged/then/finally IIFE lowering. */
-parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, mode: String, condValVar: String, resolvedValKind: String, aliases: List<AliasDecl>): (code: String, kind: String, allNever: Bool, next: Int, markers: String) {
+parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, mode: String, condValVar: String, resolvedValKind: String, aliases: List<AliasDecl>): (code: String, kind: String, allNever: Bool, next: Int, markers: String, isDirect: Bool, constant: Bool, intValue: Int, textValue: String) {
     if target =!= ir.TARGET_TS {
         syntax.failAt(source, matchStart, prefix, "C backend does not support subject match yet");
     }
@@ -3757,6 +3769,17 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
     var sawIrrefutable := false;
     var boolMask := 0;
     var armCount := 0;
+    var emittedRuntimeArms := 0;
+    var staticallyMatched := false;
+    var hasDirectWin := false;
+    var winBranchCode := "";
+    var winBranchKind := "";
+    var winBranchConst := false;
+    var winBranchInt := 0;
+    var winBranchText := "";
+    var winDeclStmts := "";
+    var winAssignStmts := "";
+    var winVoidStmts := "";
     loop true {
         cursor = syntax.skipItemSeparators(source, cursor, prefix);
         if cursor >= size {
@@ -3774,7 +3797,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             syntax.failAt(source, cursor, prefix, "unreachable match arm after exhaustive arm");
         }
         armStart := cursor;
-        pat := parseMatchPattern(target, source, armStart, prefix, subj.kind, subjVar, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+        pat := parseMatchPattern(target, source, armStart, prefix, subj.kind, subjVar, subj, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
         if inferMode { matchMarkers = matchMarkers + pat.markers; }
         /* Build arm-local scope with pattern bindings. */
         armLocals: mut List<Local> = [];
@@ -3802,8 +3825,10 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                     assignStmts = assignStmts + bRt + " = " + bExpr + "; ";
                 }
                 voidStmts = voidStmts + "void " + bRt + "; ";
+                bindIsConst := subj.constant and bExpr == subjVar;
                 listLib.pushBack(mut armLocals, (name = bName, runtime = bRt, kind = bKind, mutable = false, writable = false,
-                depth = armDepth, constant = false, code = bRt, intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+                depth = armDepth, constant = bindIsConst, code = bRt, intValue = if bindIsConst { subj.intValue } else { 0 },
+                textValue = if bindIsConst { subj.textValue } else { "" }, initState = ir.INIT_STATE_INIT));
             }
             bPos = lineEnd + 1;
         }
@@ -3871,18 +3896,38 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             }
         }
         patCond := if pat.cond == "" { "true" } else { pat.cond };
-        var innerMatch := "";
-        if hasGuard {
-            innerMatch = assignStmts + voidStmts + "if (Boolean(" + guardCode + ")) { " + doneVar + " = true; " + bodyEmit + " }";
-        } else {
-            innerMatch = assignStmts + voidStmts + doneVar + " = true; " + bodyEmit;
+        armDead := staticallyMatched or patCond == "false" or (hasGuard and guardCode == "false");
+        armAlwaysMatches := not armDead and patCond == "true" and (not hasGuard or guardCode == "true");
+        if armAlwaysMatches {
+            staticallyMatched = true;
+            if emittedRuntimeArms == 0 {
+                hasDirectWin = true;
+                winBranchCode = branch.code;
+                winBranchKind = branch.kind;
+                winBranchConst = branch.constant;
+                winBranchInt = branch.intValue;
+                winBranchText = branch.textValue;
+                winDeclStmts = declStmts;
+                winAssignStmts = assignStmts;
+                winVoidStmts = voidStmts;
+            } else {
+                armsCode = armsCode + "if (!" + doneVar + ") { " + declStmts + assignStmts + voidStmts + doneVar + " = true; " + bodyEmit + " } ";
+            }
+        } else if not armDead {
+            var innerMatch := "";
+            if hasGuard and guardCode =!= "true" {
+                innerMatch = assignStmts + voidStmts + "if (Boolean(" + guardCode + ")) { " + doneVar + " = true; " + bodyEmit + " }";
+            } else {
+                innerMatch = assignStmts + voidStmts + doneVar + " = true; " + bodyEmit;
+            }
+            armCheck := if patCond == "true" {
+                innerMatch
+            } else {
+                "if (Boolean(" + patCond + ")) { " + innerMatch + " }"
+            };
+            armsCode = armsCode + "if (!" + doneVar + ") { " + declStmts + armCheck + " } ";
+            emittedRuntimeArms = emittedRuntimeArms + 1;
         }
-        armCheck := if patCond == "true" {
-            innerMatch
-        } else {
-            "if (Boolean(" + patCond + ")) { " + innerMatch + " }"
-        };
-        armsCode = armsCode + "if (!" + doneVar + ") { " + declStmts + armCheck + " } ";
         armCount = armCount + 1;
         cursor = branch.next;
     }
@@ -3891,7 +3936,39 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
     } else {
         resultKind
     };
-    (code = armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers)
+    if hasDirectWin {
+        if winDeclStmts == "" and subj.constant {
+            if mode == "value" {
+                directCode := ctx.assignValueCode(target, finalKind, winBranchKind, winBranchCode);
+                directConst := winBranchConst and (winBranchKind == finalKind or (numeric.isIntKind(finalKind) and numeric.isIntKind(winBranchKind)));
+                return (code = directCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
+                isDirect = true, constant = directConst, intValue = if directConst { winBranchInt } else { 0 },
+                textValue = if directConst { winBranchText } else { "" });
+            }
+            if mode == "stmt" {
+                return (code = winBranchCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
+                isDirect = true, constant = false, intValue = 0, textValue = "");
+            }
+            directStmt := ctx.condBranchStmtCode(target, resolvedValKind, condValVar, winBranchKind, winBranchCode);
+            return (code = directStmt, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
+            isDirect = true, constant = false, intValue = 0, textValue = "");
+        }
+        directBody := if mode == "stmt" {
+            winBranchCode
+        } else if mode == "iife" {
+            ctx.condBranchStmtCode(target, resolvedValKind, condValVar, winBranchKind, winBranchCode)
+        } else {
+            "return (" + ctx.assignValueCode(target, finalKind, winBranchKind, winBranchCode) + ");"
+        };
+        subjPrefix := if subj.constant and winDeclStmts == "" { "" } else { "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; " };
+        armsCode = subjPrefix + winDeclStmts + winAssignStmts + winVoidStmts + directBody + " ";
+        if mode == "value" {
+            retType := types.tsFunctionType(finalKind);
+            return (code = "(((): " + retType + " => { " + armsCode + "})())", kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
+            isDirect = true, constant = false, intValue = 0, textValue = "");
+        }
+    }
+    (code = armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers, isDirect = false, constant = false, intValue = 0, textValue = "")
 };
 
 /** Parses a statement-position subject-based `match <subject> { ... }` (used from `frontend.lts` and `parseBlockExpr`). */
@@ -3900,7 +3977,12 @@ pub parseSubjectMatchStmt := fn(target: String, source: String, matchStart: Int,
     iifeDepth = iifeDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
     countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
     res := parseSubjectMatchBody(target, source, matchStart, prefix, locals, functions, params, currentName, "", matchBarrierCtxs, iifeDepth, inferMode, "stmt", "", "", aliases);
-    ctx.withMarkers((kind = res.kind, code = "{ " + res.code + "}", intValue = 0, textValue = "", constant = false, next = res.next), res.markers)
+    stmtCode := if res.isDirect {
+        if res.code == "" { "" } else { "{ " + res.code + " }" }
+    } else {
+        "{ " + res.code + "}"
+    };
+    ctx.withMarkers((kind = res.kind, code = stmtCode, intValue = 0, textValue = "", constant = false, next = res.next), res.markers)
 };
 
 /** Parses `[@tag] if ... [else ...]` and `[@tag] match [subject] { ... }` value expressions with optional `then` and `finally`. */
@@ -4061,6 +4143,9 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         }
         if isSubjectMatch {
             subRes := parseSubjectMatchBody(target, source, condParseStart, prefix, locals, functions, params, currentName, expected, condBarrierCtxs, iifeDepth + 1, inferMode, "value", "", "", aliases);
+            if subRes.isDirect {
+                return ctx.withMarkers((kind = subRes.kind, code = subRes.code, intValue = subRes.intValue, textValue = subRes.textValue, constant = subRes.constant, next = subRes.next), subRes.markers);
+            }
             retType := types.tsFunctionType(subRes.kind);
             code := "(((): " + retType + " => { " + subRes.code + "throw new Error(\"unreachable\"); })())";
             return ctx.withMarkers((kind = subRes.kind, code = code, intValue = 0, textValue = "", constant = false, next = subRes.next), subRes.markers);
@@ -4295,7 +4380,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             passResultKind = subRes.kind;
             listLib.pushBack(mut passBranchKinds, subRes.kind);
             passBranchCount = 1;
-            passSubjectStmt = "{ " + subRes.code + "}";
+            passSubjectStmt = if subRes.isDirect { subRes.code } else { "{ " + subRes.code + "}" };
             cursor = subRes.next;
         } else {
             openMatchPos := syntax.skipTrivia(source, condParseStart + 5, prefix);

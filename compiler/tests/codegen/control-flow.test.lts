@@ -380,3 +380,26 @@ if ccInfo.available {
 compilerTest.assertCompileError(root, tsComp, "dead arm type mismatch TS",
 "io := import \"core/io\"; v := if false { 1 } else if true { \"ok\" } else { 2 }; io.outputLine(v);\n",
 "1:60: value if branches must have the same kind, got Int and String\n");
+
+/* constant loop false is eliminated in TS and C while preserving following statements */
+loopFalseSrc :=
+"io := import \"core/io\";\n" +
+"var n := 1;\n" +
+"loop false {\n" +
+"    n = 99;\n" +
+"    if n == 99 { break; }\n" +
+"    io.outputLine(\"dead-loop\");\n" +
+"}\n" +
+"io.outputLine(n);\n";
+loopFalseTs := compilerTest.compileStdin(root, tsComp, loopFalseSrc, "");
+test.checkInt("loop false TS compile", 0, loopFalseTs.status);
+test.check("loop false TS drops dead loop", not text.containsText(loopFalseTs.stdout, "while (Boolean(false))") and not text.containsText(loopFalseTs.stdout, "dead-loop"));
+compilerTest.assertCompileRunTs(root, tsComp, "loop false TS run", loopFalseSrc, "1\n");
+if ccInfo.available {
+    loopFalseC := compilerTest.compileStdin(root, cComp, loopFalseSrc, "");
+    test.checkInt("loop false C compile", 0, loopFalseC.status);
+    test.check("loop false C drops dead loop", not text.containsText(loopFalseC.stdout, "dead-loop"));
+    loopFalseCRun := compilerTest.compileAndRunC(loopFalseC.stdout, ccInfo.cc, "");
+    test.checkInt("loop false C run status", 0, loopFalseCRun.status);
+    test.checkText("loop false C stdout", "1\n", loopFalseCRun.stdout);
+}

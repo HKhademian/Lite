@@ -115,43 +115,86 @@ test.check("C subject match message: " + cMatchRes.stderr, text.containsText(cMa
 
 /* Negative diagnostics */
 badSrc: List<String> = [
-    "x := match 1 { 1 { 10 } };",
-    "x := match 1 { _ { 10 } 1 { 20 } };",
-    "x := match true { true { 1 } };",
-    "x := match 1 { _ => 2 };",
-    "x := match 1 { v if v { 1 } _ { 2 } };",
-    "x := match 1 { >= 0 < 10 { 1 } _ { 2 } };",
-    "x := match true { == not false { 1 } _ { 2 } };",
-    "x := match 1 { : String { 1 } _ { 2 } };",
-    "x := match (1, 2) { (a, a) { a } };",
-    "x := match (1, 2) { (1, a) or (2, b) { 1 } _ { 0 } };",
-    "xs: List<Int> = [1, 2]; x := match xs { [a, b] { a + b } _ { 0 } };",
-    "x := match [1, 2] { [a, b, c] { a } _ { 0 } };",
-    "User := record { name: String; }; u := User { name = \"A\" }; x := match u { { name } { 1 } _ { 0 } };",
-    "User := record { name: String; }; u := User { name = \"A\" }; x := match u { { = missing } { 1 } _ { 0 } };",
-    "x := match 1 { 1 { 10 } _ { \"str\" } };"
+"x := match 1 { 1 { 10 } };",
+"x := match 1 { _ { 10 } 1 { 20 } };",
+"x := match true { true { 1 } };",
+"x := match 1 { _ => 2 };",
+"x := match 1 { v if v { 1 } _ { 2 } };",
+"x := match 1 { >= 0 < 10 { 1 } _ { 2 } };",
+"x := match true { == not false { 1 } _ { 2 } };",
+"x := match 1 { : String { 1 } _ { 2 } };",
+"x := match (1, 2) { (a, a) { a } };",
+"x := match (1, 2) { (1, a) or (2, b) { 1 } _ { 0 } };",
+"xs: List<Int> = [1, 2]; x := match xs { [a, b] { a + b } _ { 0 } };",
+"x := match [1, 2] { [a, b, c] { a } _ { 0 } };",
+"User := record { name: String; }; u := User { name = \"A\" }; x := match u { { name } { 1 } _ { 0 } };",
+"User := record { name: String; }; u := User { name = \"A\" }; x := match u { { = missing } { 1 } _ { 0 } };",
+"x := match 1 { 1 { 10 } _ { \"str\" } };"
 ];
 badErr: List<String> = [
-    "match requires an exhaustive fallback arm",
-    "unreachable match arm after exhaustive arm",
-    "match requires an exhaustive fallback arm",
-    "expected { after match arm pattern",
-    "match guard must be Bool",
-    "comparison pattern cannot be chained",
-    "parenthesize complex right operand after comparison pattern operator ==",
-    "pattern type String does not match Int",
-    "duplicate pattern binding a",
-    "or pattern alternatives must bind the same names with matching types",
-    "cannot match runtime-sized List<Int> with fixed-array pattern; fixed array required",
-    "array pattern expected 3 elements, got 2",
-    "expected = sourceField or : Type in record pattern clause name",
-    "record User has no field missing",
-    "value match arms must have the same kind"
+"match requires an exhaustive fallback arm",
+"unreachable match arm after exhaustive arm",
+"match requires an exhaustive fallback arm",
+"expected { after match arm pattern",
+"match guard must be Bool",
+"comparison pattern cannot be chained",
+"parenthesize complex right operand after comparison pattern operator ==",
+"pattern type String does not match Int",
+"duplicate pattern binding a",
+"or pattern alternatives must bind the same names with matching types",
+"cannot match runtime-sized List<Int> with fixed-array pattern; fixed array required",
+"array pattern expected 3 elements, got 2",
+"expected = sourceField or : Type in record pattern clause name",
+"record User has no field missing",
+"value match arms must have the same kind"
 ];
 var bi := 0;
 loop bi < 15 {
     compilerTest.assertCompileErrorContains(root, tsComp, "bad subject match " + badSrc[bi], badSrc[bi], badErr[bi]);
     bi = bi + 1;
 }
+
+/* constant subject match folds directly without IIFE and drops dead arms */
+constMatchSrc :=
+"io := import \"core/io\";\n" +
+"score := 84;\n" +
+"grade := match score {\n" +
+"    >= 90 { \"A\" }\n" +
+"    >= 80 { \"B\" }\n" +
+"    >= 70 { \"C\" }\n" +
+"    _ { \"F\" }\n" +
+"};\n" +
+"band := match score {\n" +
+"    10 or 20 { \"low\" }\n" +
+"    84 or 85 { \"hit\" }\n" +
+"    _ { \"miss\" }\n" +
+"};\n" +
+"next := if grade == \"B\" { \"ok\" } else { \"bad\" };\n" +
+"var stmtOut := \"init\";\n" +
+"match score {\n" +
+"    < 50 { stmtOut = \"fail\"; }\n" +
+"    >= 80 { stmtOut = \"pass\"; }\n" +
+"    _ { stmtOut = \"other\"; }\n" +
+"}\n" +
+"io.outputLine(grade, band, next, stmtOut);\n";
+constMatchTs := compilerTest.compileStdin(root, tsComp, constMatchSrc, "");
+test.checkInt("const subject match TS compile", 0, constMatchTs.status);
+test.check("const subject match drops dead arms",
+not text.containsText(constMatchTs.stdout, "\"A\"") and
+not text.containsText(constMatchTs.stdout, "\"C\"") and
+not text.containsText(constMatchTs.stdout, "\"low\"") and
+not text.containsText(constMatchTs.stdout, "\"miss\"") and
+not text.containsText(constMatchTs.stdout, "\"bad\"") and
+not text.containsText(constMatchTs.stdout, "\"fail\""));
+test.check("const subject match avoids IIFE for direct fold", not text.containsText(constMatchTs.stdout, "lite$done"));
+compilerTest.assertCompileRunTs(root, tsComp, "const subject match TS run", constMatchSrc, "B hit ok pass\n");
+
+/* runtime subject with side effects is still evaluated even when fallback arm is irrefutable */
+sideEffectSubjSrc :=
+"io := import \"core/io\";\n" +
+"bump := fn(): Int { io.outputLine(\"side\"); 1 };\n" +
+"v := match bump() { _ { \"done\" } };\n" +
+"io.outputLine(v);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "side-effect subject match TS run", sideEffectSubjSrc, "side\ndone\n");
 
 test.done("subject-match");
