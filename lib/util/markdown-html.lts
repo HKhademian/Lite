@@ -65,6 +65,10 @@ isSchemeChar := fn(ch: String): Bool {
     text.isAsciiLetter(ch) or text.isDigit(ch) or ch == "+" or ch == "." or ch == "-"
 };
 
+isLiteUri := fn(target: String): Bool {
+    text.startsWithAt(target, 0, "lite://") or text.startsWithAt(target, 0, "lite:/")
+};
+
 isExternalHref := fn(target: String): Bool {
     if text.startsWithAt(target, 0, "//") { return true; }
     size := text.length(target);
@@ -221,15 +225,16 @@ findClosingEmph := fn(line: String, start: Int, doubleStar: Bool): Int {
     -1
 };
 
-/** Renders inline Markdown formatting (code spans, links, images, emphasis) into HTML. */
-pub renderInline := fn(line: String): String {
+/* mode 0 = full HTML, mode 1 = TOC HTML (no nested links), mode 2 = plain text */
+renderInlineWithMode := fn(line: String, mode: Int): String {
     size := text.length(line);
     var out := "";
     var pos := 0;
     loop pos < size {
         ch := text.at(line, pos);
         if ch == "\\" and pos + 1 < size and isEscapablePunct(text.at(line, pos + 1)) {
-            out = out + escapeHtml(text.at(line, pos + 1));
+            nextCh := text.at(line, pos + 1);
+            out = out + (if mode == 2 { nextCh } else { escapeHtml(nextCh) });
             pos += 2;
         } else if ch == "`" {
             ticks := countCharAt(line, pos, size, "`");
@@ -240,7 +245,11 @@ pub renderInline := fn(line: String): String {
                 if bodyLen >= 2 and text.at(body, 0) == " " and text.at(body, bodyLen - 1) == " " and text.trim(body) =!= "" {
                     body = text.slice(body, 1, bodyLen - 1);
                 }
-                out = out + "<code>" + escapeHtml(body) + "</code>";
+                if mode == 2 {
+                    out = out + body;
+                } else {
+                    out = out + "<code>" + escapeHtml(body) + "</code>";
+                }
                 pos = closeTicks + ticks;
             } else {
                 out = out + text.repeatText("`", ticks);
@@ -252,10 +261,14 @@ pub renderInline := fn(line: String): String {
                 dest := parseLinkDestination(line, altEnd + 1);
                 if dest.ok {
                     altText := text.slice(line, pos + 2, altEnd);
-                    srcAttr := escapeHtml(dest.href);
-                    dataAttr := if isExternalHref(dest.href) { "" } else { " data-md-src=\"" + srcAttr + "\"" };
-                    titleAttr := if dest.title == "" { "" } else { " title=\"" + escapeHtml(dest.title) + "\"" };
-                    out = out + "<img src=\"" + srcAttr + "\"" + dataAttr + " alt=\"" + escapeHtml(altText) + "\"" + titleAttr + " loading=\"lazy\">";
+                    if mode == 0 {
+                        srcAttr := escapeHtml(dest.href);
+                        dataAttr := if isExternalHref(dest.href) { "" } else { " data-md-src=\"" + srcAttr + "\"" };
+                        titleAttr := if dest.title == "" { "" } else { " title=\"" + escapeHtml(dest.title) + "\"" };
+                        out = out + "<img src=\"" + srcAttr + "\"" + dataAttr + " alt=\"" + escapeHtml(altText) + "\"" + titleAttr + " loading=\"lazy\">";
+                    } else {
+                        out = out + self(altText, mode);
+                    }
                     pos = dest.closeParen + 1;
                 } else {
                     out = out + "!";
@@ -271,17 +284,28 @@ pub renderInline := fn(line: String): String {
                 dest := parseLinkDestination(line, labelEnd + 1);
                 if dest.ok {
                     labelRaw := text.slice(line, pos + 1, labelEnd);
-                    hrefAttr := escapeHtml(dest.href);
-                    isExt := isExternalHref(dest.href);
-                    isHashOnly := text.startsWithAt(dest.href, 0, "#");
-                    relAttr := if isExt and (text.startsWithAt(dest.href, 0, "http://") or text.startsWithAt(dest.href, 0, "https://")) {
-                        " target=\"_blank\" rel=\"noopener\""
+                    if mode == 0 {
+                        hrefAttr := escapeHtml(dest.href);
+                        isLite := isLiteUri(dest.href);
+                        isExt := isExternalHref(dest.href);
+                        isHashOnly := text.startsWithAt(dest.href, 0, "#");
+                        relAttr := if not isLite and isExt and (text.startsWithAt(dest.href, 0, "http://") or text.startsWithAt(dest.href, 0, "https://")) {
+                            " target=\"_blank\" rel=\"noopener\""
+                        } else {
+                            ""
+                        };
+                        dataAttr := if isLite {
+                            " data-lite-uri=\"" + hrefAttr + "\""
+                        } else if not isExt and not isHashOnly {
+                            " data-md-href=\"" + hrefAttr + "\""
+                        } else {
+                            ""
+                        };
+                        titleAttr := if dest.title == "" { "" } else { " title=\"" + escapeHtml(dest.title) + "\"" };
+                        out = out + "<a href=\"" + hrefAttr + "\"" + dataAttr + relAttr + titleAttr + ">" + self(labelRaw, 0) + "</a>";
                     } else {
-                        ""
-                    };
-                    dataAttr := if not isExt and not isHashOnly { " data-md-href=\"" + hrefAttr + "\"" } else { "" };
-                    titleAttr := if dest.title == "" { "" } else { " title=\"" + escapeHtml(dest.title) + "\"" };
-                    out = out + "<a href=\"" + hrefAttr + "\"" + dataAttr + relAttr + titleAttr + ">" + self(labelRaw) + "</a>";
+                        out = out + self(labelRaw, mode);
+                    }
                     pos = dest.closeParen + 1;
                 } else {
                     out = out + "[";
@@ -297,7 +321,11 @@ pub renderInline := fn(line: String): String {
                     closeStrong := findClosingEmph(line, pos + 2, true);
                     if closeStrong > pos + 2 {
                         innerStrong := text.slice(line, pos + 2, closeStrong);
-                        out = out + "<strong>" + self(innerStrong) + "</strong>";
+                        if mode == 2 {
+                            out = out + self(innerStrong, 2);
+                        } else {
+                            out = out + "<strong>" + self(innerStrong, mode) + "</strong>";
+                        }
                         pos = closeStrong + 2;
                     } else {
                         out = out + "**";
@@ -311,7 +339,11 @@ pub renderInline := fn(line: String): String {
                 closeEm := findClosingEmph(line, pos + 1, false);
                 if closeEm > pos + 1 {
                     innerEm := text.slice(line, pos + 1, closeEm);
-                    out = out + "<em>" + self(innerEm) + "</em>";
+                    if mode == 2 {
+                        out = out + self(innerEm, 2);
+                    } else {
+                        out = out + "<em>" + self(innerEm, mode) + "</em>";
+                    }
                     pos = closeEm + 1;
                 } else {
                     out = out + "*";
@@ -322,15 +354,34 @@ pub renderInline := fn(line: String): String {
                 pos += 1;
             }
         } else {
-            if ch == "&" { out = out + "&amp;"; }
-            else if ch == "<" { out = out + "&lt;"; }
-            else if ch == ">" { out = out + "&gt;"; }
-            else if ch == "\"" { out = out + "&quot;"; }
-            else { out = out + ch; }
+            if mode == 2 {
+                out = out + ch;
+            } else {
+                if ch == "&" { out = out + "&amp;"; }
+                else if ch == "<" { out = out + "&lt;"; }
+                else if ch == ">" { out = out + "&gt;"; }
+                else if ch == "\"" { out = out + "&quot;"; }
+                else { out = out + ch; }
+            }
             pos += 1;
         }
     }
     out
+};
+
+/** Renders inline Markdown formatting (code spans, links, images, emphasis) into HTML. */
+pub renderInline := fn(line: String): String {
+    renderInlineWithMode(line, 0)
+};
+
+/** Renders inline Markdown suitable for TOC labels without nested `<a>` links. */
+pub renderTocInline := fn(line: String): String {
+    renderInlineWithMode(line, 1)
+};
+
+/** Strips inline Markdown formatting delimiters into plain text for page titles and search entries. */
+pub stripInlineMarkdown := fn(line: String): String {
+    renderInlineWithMode(line, 2)
 };
 
 /** Classifies a Markdown guide's design/implementation status from its header lines. */
@@ -615,8 +666,9 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
             } else {
                 heading := parseHeadingLine(line);
                 if heading.ok {
+                    plainHeading := stripInlineMarkdown(heading.headingText);
                     if docTitle == "" and heading.level == 1 {
-                        docTitle = heading.headingText;
+                        docTitle = plainHeading;
                     }
                     baseSlug := md.headingAnchor(heading.headingText);
                     var dupCount := 0;
@@ -626,12 +678,17 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                     list.pushBack(mut seenSlugs, baseSlug);
                     slug := if dupCount == 0 { baseSlug } else { baseSlug + "-" + integer.intText(dupCount) };
                     lvlStr := integer.intText(heading.level);
+                    anchorLink := if heading.level == 2 or heading.level == 3 {
+                        "<a class=\"md-heading-anchor\" href=\"#" + escapeHtml(slug) + "\" aria-label=\"Link to " + escapeHtml(plainHeading) + "\">#</a>"
+                    } else {
+                        ""
+                    };
                     list.pushBack(
                     mut blocks,
-                    "<h" + lvlStr + " id=\"" + escapeHtml(slug) + "\">" + renderInline(heading.headingText) + "</h" + lvlStr + ">",
+                    "<h" + lvlStr + " id=\"" + escapeHtml(slug) + "\">" + anchorLink + renderInline(heading.headingText) + "</h" + lvlStr + ">",
                     );
                     if collectToc and (heading.level == 2 or heading.level == 3) {
-                        tocEntry := "{\"level\":" + lvlStr + ",\"id\":" + json.quoteString(slug) + ",\"text\":" + json.quoteString(heading.headingText) + "}";
+                        tocEntry := "{\"level\":" + lvlStr + ",\"id\":" + json.quoteString(slug) + ",\"text\":" + json.quoteString(plainHeading) + ",\"labelHtml\":" + json.quoteString(renderTocInline(heading.headingText)) + "}";
                         list.pushBack(mut tocEntries, tocEntry);
                     }
                     i += 1;

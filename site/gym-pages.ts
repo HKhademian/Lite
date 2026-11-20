@@ -9,6 +9,7 @@ import type { ShowcaseSample } from './groups.ts';
 import { type GymBelt, type GymCatalog, type GymExerciseSpec, verifyGymCorpus } from './gym-verify.ts';
 import { escapeHtml, highlightLite } from './highlight.ts';
 import type { LearnCatalog } from './learn-pages.ts';
+import type { LiteAcademyGraph } from './lite-uri.ts';
 import type { PlaySample } from './play-samples.ts';
 import type { SearchEntry } from './search.ts';
 import { renderCodeEditorBlock, renderCodeModeBar } from './ui-blocks.ts';
@@ -907,8 +908,9 @@ export function buildGymSection(options: Readonly<{
   repoUrl: string;
   rev: SourceRevision;
   lightSwitchShine: boolean;
+  graph?: LiteAcademyGraph;
 }>): GymBuildOutput {
-  const { tsCompiler, modules, showcaseSamples, playSamples, repoUrl, rev, lightSwitchShine } = options;
+  const { tsCompiler, modules, showcaseSamples, playSamples, repoUrl, rev, lightSwitchShine, graph } = options;
   const verified = verifyGymCorpus(tsCompiler);
   const catalog = JSON.parse(readFileSync(join(rootDir, 'language', 'gym', 'catalog.json'), 'utf8')) as GymCatalog;
   const learnCatalog = JSON.parse(readFileSync(join(rootDir, 'language', 'learn', 'catalog.json'), 'utf8')) as LearnCatalog;
@@ -941,6 +943,7 @@ export function buildGymSection(options: Readonly<{
     if (rendered === undefined) {
       throw new Error(`missing rendered gym prompt ${ex.promptFile}`);
     }
+    const fromUri = `lite://gym/${ex.slug}`;
     const promptHtml = postprocessMarkdownHtml({
       rawHtml: rendered.html,
       sourcePath: ex.promptFile,
@@ -950,6 +953,7 @@ export function buildGymSection(options: Readonly<{
       snippets: new Map(),
       repoUrl,
       highlightUnmarkedAsLite: true,
+      ...(graph !== undefined ? { graph, fromUri } : {}),
     });
     const compiled = verified.compiledSolutions.get(ex.id);
     if (compiled === undefined) {

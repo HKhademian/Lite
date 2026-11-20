@@ -109,3 +109,63 @@ test('renderDocuments and extractModules return valid structured metadata via ge
   assert(fileMod !== undefined);
   assert.equal(fileMod.environment, 'cli');
 });
+
+test('docs --check validates lite:// and lite:/ internal URIs, fragments, and module symbols offline', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-docs-uri-'));
+  try {
+    mkdirSync(join(directory, 'docs'), { recursive: true });
+    mkdirSync(join(directory, 'lib/core'), { recursive: true });
+    mkdirSync(join(directory, 'language/learn/handbook/getting-started'), { recursive: true });
+    mkdirSync(join(directory, 'language/gym'), { recursive: true });
+    mkdirSync(join(directory, 'samples'), { recursive: true });
+    writeFileSync(join(directory, 'language/learn/handbook/getting-started/overview-and-setup.md'), '# Overview\n\n## First Steps\n');
+    writeFileSync(join(directory, 'docs/records.md'), '# Records\n\n## Defaults\n');
+    writeFileSync(join(directory, 'lib/core/io.lts'), 'pub outputLine := fn(x: String): Unit {};\n');
+    writeFileSync(
+      join(directory, 'language/learn/catalog.json'),
+      JSON.stringify({ tracks: [{ id: 'getting-started', lessons: [{ id: 'learn.gs.hello', slug: 'hello-lite' }] }] }),
+    );
+    writeFileSync(
+      join(directory, 'language/gym/catalog.json'),
+      JSON.stringify({ exercises: [{ id: 'drills.x', slug: 'immutable-vs-var', mode: 'drill' }] }),
+    );
+    writeFileSync(join(directory, 'samples/demo.lts'), 'io := import "core/io";\n');
+    writeFileSync(
+      join(directory, 'README.md'),
+      [
+        '# Hub',
+        '- [Hb](lite://handbook/overview-and-setup#first-steps)',
+        '- [Doc](lite:/doc/records#defaults)',
+        '- [Learn](lite://learn/hello-lite)',
+        '- [Gym](lite://gym/drill/immutable-vs-var)',
+        '- [Mod](lite://module/core/io#outputLine)',
+        '- [Play](lite://play/demo)',
+        '- [Tool](lite://tool/fmt)',
+      ].join('\n') + '\n',
+    );
+    assert.deepEqual(checkDocuments(directory), []);
+
+    writeFileSync(
+      join(directory, 'README.md'),
+      [
+        '# Bad',
+        '- [Ns](lite://bogus/x)',
+        '- [HbFrag](lite://handbook/overview-and-setup#missing)',
+        '- [LearnMissing](lite://learn/nope)',
+        '- [GymMode](lite://gym/workout/immutable-vs-var)',
+        '- [ModSym](lite://module/core/io#nonexistent)',
+        '- [ToolMissing](lite://tool/unknown-cmd)',
+      ].join('\n') + '\n',
+    );
+    const failures = checkDocuments(directory);
+    assert.equal(failures.length, 6, failures.join('\n'));
+    assert(failures.some(f => f.includes('unknown lite URI namespace')));
+    assert(failures.some(f => f.includes('missing fragment')));
+    assert(failures.some(f => f.includes('missing lite://learn')));
+    assert(failures.some(f => f.includes('missing lite://gym')));
+    assert(failures.some(f => f.includes('missing module symbol')));
+    assert(failures.some(f => f.includes('missing lite://tool')));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

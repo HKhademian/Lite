@@ -22,6 +22,7 @@ import {
 } from './editor-client.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
+import { LiteAcademyGraph, parseLiteUri, relativeWebHref, rewriteLiteUriHtml } from './lite-uri.ts';
 import { mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
@@ -76,6 +77,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     'style.css',
     'favicon.svg',
     'build.json',
+    'link-graph.json',
     'search-index.json',
     'runtime/compiler.js',
     'runtime/compiler-c.js',
@@ -186,9 +188,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     }
     return outFiles;
   };
-  for (const htmlFile of [...collectHtml(join(out, 'docs')), ...collectHtml(join(out, 'learn')), ...collectHtml(join(out, 'gym'))]) {
+  for (const htmlFile of [...collectHtml(join(out, 'docs')), ...collectHtml(join(out, 'learn')), ...collectHtml(join(out, 'gym')), ...collectHtml(join(out, 'modules'))]) {
     const content = readFileSync(htmlFile, 'utf8');
     assert(!content.includes(' data-md-href='), `unresolved data-md-href in ${htmlFile}`);
+    assert(!content.includes(' data-lite-uri='), `unresolved data-lite-uri in ${htmlFile}`);
     assert(!content.includes('playground?'), `missing trailing slash before ? in playground href in ${htmlFile}`);
     const hrefRe = /href="([^"]+)"/g;
     for (let m = hrefRe.exec(content); m !== null; m = hrefRe.exec(content)) {
@@ -1606,4 +1609,60 @@ test('academy-state runtime initializes window.LiteAcademy and aggregates progre
   assert.equal(lessonsStat.textContent, '1');
   assert.equal(gymStat.textContent, '2');
   assert.equal(hbStat.textContent, '1');
+});
+
+test('lite:// internal URI parser, resolver, broken-link rejection, and link-graph.json integrity', () => {
+  assert.deepEqual(parseLiteUri('lite://play/double-sum'), { raw: 'lite://play/double-sum', ns: 'play', target: 'double-sum', fragment: '' });
+  assert.deepEqual(parseLiteUri('lite:/doc/handbook/tuples-arrays-lists-and-aliases#tuples-labels--name-shorthand'), {
+    raw: 'lite:/doc/handbook/tuples-arrays-lists-and-aliases#tuples-labels--name-shorthand',
+    ns: 'handbook',
+    target: 'tuples-arrays-lists-and-aliases',
+    fragment: 'tuples-labels--name-shorthand',
+  });
+  assert.deepEqual(parseLiteUri('lite://modules/core/list#pushBack'), { raw: 'lite://modules/core/list#pushBack', ns: 'module', target: 'core/list', fragment: 'pushBack' });
+  assert.equal(parseLiteUri('lite://unknown/item'), null);
+
+  assert.equal(
+    relativeWebHref('docs/handbook/tuples-arrays-lists-and-aliases.html', 'playground/?sample=nominal-records'),
+    '../../playground/?sample=nominal-records',
+  );
+
+  const g = new LiteAcademyGraph();
+  g.registerNode({ uri: 'lite://handbook/tuples-arrays-lists-and-aliases', kind: 'handbook', title: 'Tuples', outPath: 'docs/handbook/tuples-arrays-lists-and-aliases.html' });
+  g.setDocAnchors('lite://handbook/tuples-arrays-lists-and-aliases', ['nominal-record-types--name-shorthand']);
+  g.registerNode({ uri: 'lite://learn/records-and-patterns', kind: 'learn', title: 'Records', outPath: 'learn/types/records-and-patterns.html' });
+  g.registerNode({ uri: 'lite://gym/record-shorthand-destructure', kind: 'gym', title: 'Drill', outPath: 'gym/drills/record-shorthand-destructure.html' });
+  g.registerNode({ uri: 'lite://play/double-sum', kind: 'play', title: 'Double', outPath: 'playground/?sample=double-sum' });
+  g.registerNode({ uri: 'lite://module/core/list', kind: 'module', title: 'core/list', outPath: 'modules/core/list.html' });
+  g.setModuleSymbols('lite://module/core/list', ['pushBack']);
+  g.registerNode({ uri: 'lite://tool/fmt', kind: 'tool', title: 'lite fmt', outPath: 'tools/#cmd-fmt' });
+
+  const rewritten = rewriteLiteUriHtml({
+    html: '<a href="lite://play/double-sum" data-lite-uri="lite://play/double-sum">Play</a> <a href="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand" data-lite-uri="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand">Hb</a> <a href="lite://module/core/list#pushBack" data-lite-uri="lite://module/core/list#pushBack">Mod</a>',
+    outPath: 'learn/types/records-and-patterns.html',
+    graph: g,
+    fromUri: 'lite://learn/records-and-patterns',
+  });
+  assert(rewritten.includes('href="../../playground/?sample=double-sum" data-lite-kind="play"'));
+  assert(rewritten.includes('href="../../docs/handbook/tuples-arrays-lists-and-aliases.html#nominal-record-types--name-shorthand" data-lite-kind="handbook"'));
+  assert(rewritten.includes('href="../../modules/core/list.html#pushBack" data-lite-kind="module"'));
+  assert.equal(g.getBacklinks('lite://module/core/list').length, 1);
+
+  assert.throws(() => g.resolveUri('lite://bogus/x', 'docs/index.html'), /Invalid lite URI/);
+  assert.throws(() => g.resolveUri('lite://learn/missing', 'docs/index.html'), /Unresolved lite URI target/);
+  assert.throws(() => g.resolveUri('lite://handbook/tuples-arrays-lists-and-aliases#nope', 'docs/index.html'), /Missing heading fragment/);
+  assert.throws(() => g.resolveUri('lite://module/core/list#missingFn', 'docs/index.html'), /Missing module symbol/);
+
+  const builtGraph = JSON.parse(readFileSync(join(root, 'dist', 'site', 'link-graph.json'), 'utf8')) as {
+    schemaVersion: number;
+    stats: { nodes: number; edges: number; byKind: Record<string, number> };
+    edges: Array<{ from: string; to: string; kind: string }>;
+  };
+  assert.equal(builtGraph.schemaVersion, 1);
+  for (const kind of ['handbook', 'doc', 'learn', 'gym', 'play', 'module', 'tool', 'gallery']) {
+    assert((builtGraph.stats.byKind[kind] ?? 0) >= 1, `expected nodes for ${kind} in link-graph.json`);
+  }
+  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'module-import'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://gym/record-shorthand-destructure' && e.to === 'lite://learn/records-and-patterns' && e.kind === 'catalog-ref'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://learn/records-and-patterns' && e.to === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.kind === 'catalog-ref'));
 });

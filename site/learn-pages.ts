@@ -10,6 +10,7 @@ import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import { buildDocOutMap, postprocessMarkdownHtml } from './docs-pages.ts';
 import type { ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite } from './highlight.ts';
+import type { LiteAcademyGraph } from './lite-uri.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import type { PlaySample } from './play-samples.ts';
 import type { SearchEntry } from './search.ts';
@@ -817,8 +818,9 @@ export function buildLearnSection(options: Readonly<{
   repoUrl: string;
   rev: SourceRevision;
   lightSwitchShine: boolean;
+  graph?: LiteAcademyGraph;
 }>): LearnBuildOutput {
-  const { tsCompiler, modules, showcaseSamples, playSamples, repoUrl, rev, lightSwitchShine } = options;
+  const { tsCompiler, modules, showcaseSamples, playSamples, repoUrl, rev, lightSwitchShine, graph } = options;
   const catalogPath = join(rootDir, 'language', 'learn', 'catalog.json');
   const catalog = JSON.parse(readFileSync(catalogPath, 'utf8')) as LearnCatalog;
 
@@ -847,6 +849,7 @@ export function buildLearnSection(options: Readonly<{
     if (rendered === undefined) {
       throw new Error(`missing rendered learn guide ${lesson.guideFile}`);
     }
+    const fromUri = `lite://learn/${lesson.slug}`;
     const guideHtml = postprocessMarkdownHtml({
       rawHtml: rendered.html,
       sourcePath: lesson.guideFile,
@@ -855,6 +858,7 @@ export function buildLearnSection(options: Readonly<{
       samplesByFile,
       snippets: new Map(),
       repoUrl,
+      ...(graph !== undefined ? { graph, fromUri } : {}),
     });
     const compiled = compileAndRunLessonSource(lesson, tsCompiler);
     compiledList.push({

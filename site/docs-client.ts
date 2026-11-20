@@ -8,6 +8,7 @@ export type RenderedTocItem = Readonly<{
   level: number;
   id: string;
   text: string;
+  labelHtml?: string;
 }>;
 
 export type RenderedDocument = Readonly<{

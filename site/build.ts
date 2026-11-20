@@ -16,11 +16,13 @@ import {
   type SourceRevision,
 } from './chrome.ts';
 import { captureCanvasPreview } from './canvas-preview.ts';
-import { buildDocsSection } from './docs-pages.ts';
+import { buildDocsSection, discoverDocsPayload } from './docs-pages.ts';
 import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
 import { buildGymSection } from './gym-pages.ts';
-import { buildLearnSection } from './learn-pages.ts';
+import type { GymCatalog } from './gym-verify.ts';
+import { buildLearnSection, type LearnCatalog } from './learn-pages.ts';
+import { buildLiteAcademyGraph, collectHtmlIds } from './lite-uri.ts';
 import { buildModulesSection } from './modules-pages.ts';
 import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
@@ -1995,20 +1997,58 @@ export function buildSite(options?: BuildSiteOptions): void {
   writeFileSync(join(outputDir, 'runtime', 'snips.js'), snipsClientJs);
 
   const extractedModules = extractModules(root);
-  const modulesOut = buildModulesSection({
+  const playgroundLibrary = collectPlaygroundLibrary({
+    rootDir: root,
+    samples: [...showcaseSamples, ...playSamples],
+  });
+  const discoveredDocs = discoverDocsPayload();
+  const renderedDocByPath = new Map(discoveredDocs.rendered.map((d) => [d.path, d]));
+  const learnCatalog = JSON.parse(readFileSync(join(root, 'language', 'learn', 'catalog.json'), 'utf8')) as LearnCatalog;
+  const gymCatalog = JSON.parse(readFileSync(join(root, 'language', 'gym', 'catalog.json'), 'utf8')) as GymCatalog;
+
+  const graph = buildLiteAcademyGraph({
+    rootDir: root,
+    docs: discoveredDocs.metas.map((m) => {
+      const ren = renderedDocByPath.get(m.sourcePath);
+      return {
+        ...m,
+        title: ren?.title ?? m.navLabel,
+        ...(ren ? { anchors: collectHtmlIds(ren.html) } : {}),
+      };
+    }),
     modules: extractedModules,
+    learnLessons: learnCatalog.tracks.flatMap((tr) =>
+      tr.lessons.map((l) => ({
+        id: l.id,
+        slug: l.slug,
+        title: l.title,
+        kind: l.kind,
+        trackId: tr.id,
+        trackTitle: tr.title,
+        environment: l.environment,
+        guideFile: l.guideFile,
+        sourceFile: l.sourceFile,
+        docs: l.docs,
+      })),
+    ),
+    gymExercises: gymCatalog.exercises.map((e) => ({
+      id: e.id,
+      slug: e.slug,
+      title: e.title,
+      mode: e.mode,
+      belt: e.belt,
+      domain: e.domain,
+      subGroup: e.subGroup,
+      promptFile: e.promptFile,
+      solutionFile: e.solutionFile,
+      relatedDocs: e.relatedDocs,
+      relatedLessons: e.relatedLessons,
+    })),
     showcaseSamples,
     playSamples,
     playGroups,
-    repoUrl,
-    rev,
-    lightSwitchShine,
+    playgroundLibrary,
   });
-  for (const [relPath, html] of modulesOut.files) {
-    const dest = join(outputDir, relPath);
-    mkdirSync(dirname(dest), { recursive: true });
-    writeFileSync(dest, html);
-  }
 
   const toolsOut = buildToolsSection({ repoUrl, rev, lightSwitchShine });
   mkdirSync(join(outputDir, 'tools'), { recursive: true });
@@ -2020,6 +2060,8 @@ export function buildSite(options?: BuildSiteOptions): void {
     repoUrl,
     rev,
     lightSwitchShine,
+    discovered: discoveredDocs,
+    graph,
   });
   for (const [relPath, html] of docsOut.files) {
     const dest = join(outputDir, relPath);
@@ -2035,6 +2077,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     repoUrl,
     rev,
     lightSwitchShine,
+    graph,
   });
   for (const [relPath, html] of learnOut.files) {
     const dest = join(outputDir, relPath);
@@ -2050,12 +2093,30 @@ export function buildSite(options?: BuildSiteOptions): void {
     repoUrl,
     rev,
     lightSwitchShine,
+    graph,
   });
   for (const [relPath, content] of gymOut.files) {
     const dest = join(outputDir, relPath);
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, content);
   }
+
+  const modulesOut = buildModulesSection({
+    modules: extractedModules,
+    showcaseSamples,
+    playSamples,
+    playGroups,
+    repoUrl,
+    rev,
+    lightSwitchShine,
+  });
+  for (const [relPath, html] of modulesOut.files) {
+    const dest = join(outputDir, relPath);
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, html);
+  }
+
+  writeFileSync(join(outputDir, 'link-graph.json'), graph.toJson());
 
   const searchEntries: SearchEntry[] = [
     { kind: 'learn', title: 'Learn Lite', subtitle: 'Guided ability course, Quickstart, and project tutorials', href: 'learn/', keywords: 'learn course tour tutorials' },
@@ -2098,10 +2159,6 @@ export function buildSite(options?: BuildSiteOptions): void {
       }),
     );
   }
-  const playgroundLibrary = collectPlaygroundLibrary({
-    rootDir: root,
-    samples: [...showcaseSamples, ...playSamples],
-  });
   writeFileSync(join(outputDir, 'playground', 'library.json'), JSON.stringify(playgroundLibrary));
 
   writeFileSync(

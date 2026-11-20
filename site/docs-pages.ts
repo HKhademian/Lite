@@ -7,12 +7,13 @@ import type { RenderedDocument } from './docs-client.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import type { ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
+import { rewriteLiteUriHtml, type LiteAcademyGraph } from './lite-uri.ts';
 import type { PlaySample } from './play-samples.ts';
 import type { SearchEntry } from './search.ts';
 
 export type DocLayer = 'handbook' | 'spec';
 
-type DocMeta = Readonly<{
+export type DocMeta = Readonly<{
   sourcePath: string;
   outPath: string;
   layer: DocLayer;
@@ -22,6 +23,18 @@ type DocMeta = Readonly<{
   chapterSlug?: string;
   verifiedInTs: boolean;
 }>;
+
+export type DiscoverPayload = Readonly<{
+  metas: readonly DocMeta[];
+  docOutMap: ReadonlyArray<{ sourcePath: string; outPath: string }>;
+  snippets: ReadonlyArray<{ key: string; sourcePath: string }>;
+  rendered: readonly RenderedDocument[];
+}>;
+
+/** Discovers docs metadata, source-to-output routes, snippets, and rendered HTML/TOC via `lite site-docs`. */
+export function discoverDocsPayload(): DiscoverPayload {
+  return JSON.parse(runSiteDocsTool(['--discover', rootDir])) as DiscoverPayload;
+}
 
 export type DocsBuildOutput = Readonly<{
   files: ReadonlyMap<string, string>;
@@ -56,13 +69,6 @@ function runSiteDocsTool(args: readonly string[], input?: string): string {
 export type DocOutMapOptions = Readonly<{
   docOutBySource: ReadonlyMap<string, string>;
   samplesByFile: ReadonlyMap<string, string>;
-}>;
-
-type DiscoverPayload = Readonly<{
-  metas: readonly DocMeta[];
-  docOutMap: ReadonlyArray<{ sourcePath: string; outPath: string }>;
-  snippets: ReadonlyArray<{ key: string; sourcePath: string }>;
-  rendered: readonly RenderedDocument[];
 }>;
 
 /** Builds the global source-path -> output-HTML map covering Handbook, Spec, and lib module docs. */
@@ -100,6 +106,8 @@ export function postprocessMarkdownHtml(options: Readonly<{
   snippets: ReadonlyMap<string, RegisteredSnippet>;
   repoUrl: string;
   highlightUnmarkedAsLite?: boolean;
+  graph?: LiteAcademyGraph;
+  fromUri?: string;
 }>): string {
   const {
     rawHtml,
@@ -110,6 +118,8 @@ export function postprocessMarkdownHtml(options: Readonly<{
     snippets,
     repoUrl,
     highlightUnmarkedAsLite = false,
+    graph,
+    fromUri,
   } = options;
 
   let html = rawHtml.replace(
@@ -120,8 +130,12 @@ export function postprocessMarkdownHtml(options: Readonly<{
       const snippet = snippets.get(`${sourcePath}#${fenceStr}`);
 
       let codeHtml: string;
-      if (lang === 'lite' || lang === 'lts' || (lang === 'text' && snippet !== undefined) || (lang === '' && highlightUnmarkedAsLite)) {
+      const isLiteSnippet = lang === 'lite' || lang === 'lts' || (lang === 'text' && snippet !== undefined) || (lang === '' && highlightUnmarkedAsLite);
+      if (isLiteSnippet) {
         codeHtml = highlightLite(rawCode);
+        if (graph && fromUri) {
+          graph.recordModuleImportsFromSource(fromUri, rawCode);
+        }
       } else if (lang === 'ts' || lang === 'typescript') {
         codeHtml = highlightTs(rawCode);
       } else if (lang === 'c') {
@@ -144,6 +158,15 @@ export function postprocessMarkdownHtml(options: Readonly<{
     },
   );
 
+  if (graph) {
+    html = rewriteLiteUriHtml({
+      html,
+      outPath,
+      graph,
+      ...(fromUri !== undefined ? { fromUri } : {}),
+    });
+  }
+
   html = html.replace(
     /<a href="([^"]*)" data-md-href="([^"]*)"([^>]*)>/g,
     (_full, _hrefAttr: string, rawTargetAttr: string, restAttrs: string) => {
@@ -157,6 +180,12 @@ export function postprocessMarkdownHtml(options: Readonly<{
 
       const mappedOut = docOutBySource.get(resolvedRepo);
       if (mappedOut !== undefined) {
+        if (graph && fromUri) {
+          const targetUri = graph.resolveSourcePathToUri(resolvedRepo);
+          if (targetUri) {
+            graph.recordEdge({ from: fromUri, to: targetUri, kind: 'markdown-link', ...(frag ? { fragment: frag } : {}) });
+          }
+        }
         const finalHref = mappedOut === outPath
           ? (frag ? `#${frag}` : posix.basename(outPath))
           : (frag ? `${relativeHref(outPath, mappedOut)}#${frag}` : relativeHref(outPath, mappedOut));
@@ -166,12 +195,21 @@ export function postprocessMarkdownHtml(options: Readonly<{
       const readmeCandidate = `${resolvedRepo.replace(/\/+$/, '')}/README.md`;
       const mappedDirReadme = docOutBySource.get(readmeCandidate);
       if (mappedDirReadme !== undefined) {
+        if (graph && fromUri) {
+          const targetUri = graph.resolveSourcePathToUri(readmeCandidate);
+          if (targetUri) {
+            graph.recordEdge({ from: fromUri, to: targetUri, kind: 'markdown-link', ...(frag ? { fragment: frag } : {}) });
+          }
+        }
         const finalHref = frag ? `${relativeHref(outPath, mappedDirReadme)}#${frag}` : relativeHref(outPath, mappedDirReadme);
         return `<a href="${escapeHtml(finalHref)}"${restAttrs}>`;
       }
 
       const playSampleId = samplesByFile.get(resolvedRepo);
       if (playSampleId !== undefined) {
+        if (graph && fromUri) {
+          graph.recordEdge({ from: fromUri, to: `lite://play/${playSampleId}`, kind: 'markdown-link' });
+        }
         const playHref = `${relativeHref(outPath, 'playground/')}?sample=${encodeURIComponent(playSampleId)}`;
         return `<a href="${escapeHtml(playHref)}"${restAttrs}>`;
       }
@@ -213,9 +251,11 @@ export function buildDocsSection(options: Readonly<{
   repoUrl: string;
   rev: SourceRevision;
   lightSwitchShine: boolean;
+  discovered?: DiscoverPayload;
+  graph?: LiteAcademyGraph;
 }>): DocsBuildOutput {
-  const { showcaseSamples, playSamples, repoUrl, rev, lightSwitchShine } = options;
-  const disc = JSON.parse(runSiteDocsTool(['--discover', rootDir])) as DiscoverPayload;
+  const { showcaseSamples, playSamples, repoUrl, rev, lightSwitchShine, discovered, graph } = options;
+  const disc = discovered ?? discoverDocsPayload();
 
   const samplesByFile = new Map<string, string>();
   for (const s of [...showcaseSamples, ...playSamples]) {
@@ -235,6 +275,7 @@ export function buildDocsSection(options: Readonly<{
     if (rendered === undefined) {
       throw new Error(`missing rendered markdown output for ${meta.sourcePath}`);
     }
+    const fromUri = graph?.resolveSourcePathToUri(meta.sourcePath);
     const processedHtml = postprocessMarkdownHtml({
       rawHtml: rendered.html,
       sourcePath: meta.sourcePath,
@@ -244,6 +285,8 @@ export function buildDocsSection(options: Readonly<{
       snippets,
       repoUrl,
       highlightUnmarkedAsLite: meta.layer === 'handbook',
+      ...(graph !== undefined ? { graph } : {}),
+      ...(fromUri !== undefined ? { fromUri } : {}),
     });
     return { meta, title: rendered.title, status: rendered.status, toc: rendered.toc, processedHtml };
   });

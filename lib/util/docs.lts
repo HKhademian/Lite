@@ -7,6 +7,7 @@ list := import "core/list";
 path := import "core/path";
 json := import "util/json";
 md := import "util/markdown";
+docgen := import "util/docgen";
 
 /** Default directory names excluded when discovering repository Markdown files. */
 pub defaultIgnoredDirs := fn(): List<String> {
@@ -117,6 +118,366 @@ packAnchors := fn(anchors: List<String>): String {
     "\n" + text.joinTexts(anchors, "\n") + "\n"
 }
 
+isLiteUri := fn(target: String): Bool {
+    text.startsWithAt(target, 0, "lite://") or text.startsWithAt(target, 0, "lite:/")
+};
+
+stripSuffix := fn(value: String, suffix: String): String {
+    if text.endsWith(value, suffix) {
+        text.slice(value, 0, text.length(value) - text.length(suffix))
+    } else {
+        value
+    }
+};
+
+trimSlashes := fn(raw: String): String {
+    var start := 0;
+    var end := text.length(raw);
+    loop start < end and text.at(raw, start) == "/" { start = start + 1; }
+    loop end > start and text.at(raw, end - 1) == "/" { end = end - 1; }
+    text.slice(raw, start, end)
+};
+
+parseLiteUri := fn(rawTarget: String): (ok: Bool, ns: String, target: String, fragment: String, error: String) {
+    rest0 := if text.startsWithAt(rawTarget, 0, "lite://") {
+        text.slice(rawTarget, 7, text.length(rawTarget))
+    } else {
+        text.slice(rawTarget, 6, text.length(rawTarget))
+    };
+    hashPos := text.indexOfText(rest0, "#", 0);
+    bodyRaw := if hashPos < 0 { rest0 } else { text.slice(rest0, 0, hashPos) };
+    fragment := if hashPos < 0 { "" } else { text.slice(rest0, hashPos + 1, text.length(rest0)) };
+    body := trimSlashes(bodyRaw);
+    if body == "" {
+        return (ok = false, ns = "", target = "", fragment = fragment, error = "empty lite URI " + rawTarget);
+    }
+    slashPos := text.indexOfText(body, "/", 0);
+    rawNs := text.toLowerAscii(if slashPos < 0 { body } else { text.slice(body, 0, slashPos) });
+    var target := if slashPos < 0 { "" } else { trimSlashes(text.slice(body, slashPos + 1, text.length(body))) };
+    var ns := "";
+    if rawNs == "handbook" {
+        ns = "handbook";
+    } else if rawNs == "doc" or rawNs == "docs" {
+        if target == "handbook" {
+            ns = "handbook";
+            target = "";
+        } else if text.startsWithAt(target, 0, "handbook/") {
+            ns = "handbook";
+            target = text.slice(target, 9, text.length(target));
+        } else {
+            ns = "doc";
+        }
+    } else if rawNs == "learn" {
+        ns = "learn";
+    } else if rawNs == "gym" {
+        ns = "gym";
+    } else if rawNs == "play" or rawNs == "playground" {
+        ns = "play";
+    } else if rawNs == "module" or rawNs == "modules" {
+        ns = "module";
+    } else if rawNs == "tool" or rawNs == "tools" {
+        ns = "tool";
+    } else if rawNs == "gallery" {
+        ns = "gallery";
+    } else {
+        return (ok = false, ns = "", target = "", fragment = fragment, error = "unknown lite URI namespace '" + rawNs + "' in " + rawTarget);
+    }
+    (ok = true, ns = ns, target = target, fragment = fragment, error = "")
+};
+
+checkFragmentInMd := fn(
+destination: String, fragment: String,
+cachePaths: List<String>, cachePacked: List<String>
+): Bool {
+    if fragment == "" { return true; }
+    cacheIdx := list.listIndexOfText(cachePaths, destination);
+    packed := if cacheIdx >= 0 {
+        cachePacked[cacheIdx]
+    } else {
+        targetRead := fs.readText(destination);
+        if targetRead.ok { packAnchors(md.collectAnchors(targetRead.text)) } else { "\n" }
+    };
+    text.containsText(packed, "\n" + fragment + "\n")
+};
+
+handbookSourceForSlug := fn(slug: String): String {
+    hbSlugs: List<String> = [
+    "overview-and-setup", "bindings-and-mutability", "numbers-operators-and-strings",
+    "conditionals-match-and-loops", "tuples-arrays-lists-and-aliases",
+    "blocks-wiring-and-closures", "imports-visibility-and-io"
+    ];
+    hbPaths: List<String> = [
+    "language/learn/handbook/getting-started/overview-and-setup.md",
+    "language/learn/handbook/foundations/bindings-and-mutability.md",
+    "language/learn/handbook/foundations/numbers-operators-and-strings.md",
+    "language/learn/handbook/control/conditionals-match-and-loops.md",
+    "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md",
+    "language/learn/handbook/execution/blocks-wiring-and-closures.md",
+    "language/learn/handbook/modules/imports-visibility-and-io.md"
+    ];
+    hit := list.listIndexOfText(hbSlugs, slug);
+    if hit >= 0 { hbPaths[hit] } else { "" }
+};
+
+resolveLiteDocSource := fn(directory: String, rawTarget: String): (found: Bool, isVirtualIndex: Bool, filePath: String) {
+    clean := stripSuffix(stripSuffix(rawTarget, ".html"), ".md");
+    if clean == "" or clean == "index" or clean == "spec" or clean == "spec/index" {
+        return (found = true, isVirtualIndex = true, filePath = "");
+    }
+    candidates: mut List<String> = [];
+    if clean == "overview" { list.pushBack(mut candidates, "docs/README.md"); }
+    else if clean == "spec-overview" { list.pushBack(mut candidates, "docs/spec/README.md"); }
+    else if clean == "contributing" or clean == "CONTRIBUTING" { list.pushBack(mut candidates, "CONTRIBUTING.md"); }
+    else if clean == "compiler/overview" { list.pushBack(mut candidates, "compiler/README.md"); }
+    else if clean == "compiler/bootstrap-readme" { list.pushBack(mut candidates, "compiler/bootstrap/README.md"); }
+    else if clean == "compiler/manifests-readme" { list.pushBack(mut candidates, "compiler/manifests/README.md"); }
+    else if clean == "compiler/igniter-tests" { list.pushBack(mut candidates, "igniter/tests/README.md"); }
+    else if text.startsWithAt(clean, 0, "spec/") { list.pushBack(mut candidates, "docs/spec/" + text.slice(clean, 5, text.length(clean)) + ".md"); }
+    else if text.startsWithAt(clean, 0, "spec-") { list.pushBack(mut candidates, "docs/spec/" + text.slice(clean, 5, text.length(clean)) + ".md"); }
+    else if text.startsWithAt(clean, 0, "research/") { list.pushBack(mut candidates, "docs/research/" + text.slice(clean, 9, text.length(clean)) + ".md"); }
+    else if text.startsWithAt(clean, 0, "research-") { list.pushBack(mut candidates, "docs/research/" + text.slice(clean, 9, text.length(clean)) + ".md"); }
+    else if text.startsWithAt(clean, 0, "proposals/") { list.pushBack(mut candidates, "docs/proposals/" + text.slice(clean, 10, text.length(clean)) + ".md"); }
+    else if text.startsWithAt(clean, 0, "compiler/") { list.pushBack(mut candidates, clean + ".md"); }
+    else if text.startsWithAt(clean, 0, "docs/") { list.pushBack(mut candidates, clean + ".md"); }
+    else {
+        list.pushBack(mut candidates, "docs/" + clean + ".md");
+        list.pushBack(mut candidates, "docs/spec/" + clean + ".md");
+        list.pushBack(mut candidates, "docs/research/" + clean + ".md");
+        list.pushBack(mut candidates, "docs/proposals/" + clean + ".md");
+        list.pushBack(mut candidates, "compiler/" + clean + ".md");
+    }
+    loop candidates as rel {
+        abs := path.resolve(directory, rel);
+        if fs.kind(abs) == fs.FILE_KIND_FILE {
+            return (found = true, isVirtualIndex = false, filePath = abs);
+        }
+    }
+    (found = false, isVirtualIndex = false, filePath = "")
+};
+
+catalogHasLearnTarget := fn(directory: String, rawTarget: String): Bool {
+    clean := stripSuffix(rawTarget, ".html");
+    if clean == "" or clean == "index" { return true; }
+    catPath := path.resolve(directory, "language/learn/catalog.json");
+    if fs.kind(catPath) =!= fs.FILE_KIND_FILE { return false; }
+    catRead := fs.readText(catPath);
+    if not catRead.ok { return false; }
+    catJson := catRead.text;
+    tracksF := json.findObjectField(catJson, 0, "tracks");
+    if not tracksF.found { return false; }
+    loop json.arrayElementOffsets(catJson, tracksF.valuePos) as tp {
+        trackIdR := json.readObjectString(catJson, tp, "id");
+        trackId := if trackIdR.found and trackIdR.ok { trackIdR.value } else { "" };
+        lessonsF := json.findObjectField(catJson, tp, "lessons");
+        if not lessonsF.found { continue; }
+        loop json.arrayElementOffsets(catJson, lessonsF.valuePos) as lp {
+            idR := json.readObjectString(catJson, lp, "id");
+            slugR := json.readObjectString(catJson, lp, "slug");
+            lId := if idR.found and idR.ok { idR.value } else { "" };
+            lSlug := if slugR.found and slugR.ok { slugR.value } else { "" };
+            if clean == lSlug or clean == lId or (trackId =!= "" and clean == trackId + "/" + lSlug) {
+                return true;
+            }
+        }
+    }
+    false
+};
+
+catalogHasGymTarget := fn(directory: String, rawTarget: String): Bool {
+    var clean := stripSuffix(rawTarget, ".html");
+    if clean == "" or clean == "index" { return true; }
+    var expectedMode := "";
+    if text.startsWithAt(clean, 0, "drills/") {
+        expectedMode = "drill";
+        clean = text.slice(clean, 7, text.length(clean));
+    } else if text.startsWithAt(clean, 0, "drill/") {
+        expectedMode = "drill";
+        clean = text.slice(clean, 6, text.length(clean));
+    } else if text.startsWithAt(clean, 0, "workouts/") {
+        expectedMode = "kata";
+        clean = text.slice(clean, 9, text.length(clean));
+    } else if text.startsWithAt(clean, 0, "workout/") {
+        expectedMode = "kata";
+        clean = text.slice(clean, 8, text.length(clean));
+    }
+    catPath := path.resolve(directory, "language/gym/catalog.json");
+    if fs.kind(catPath) =!= fs.FILE_KIND_FILE { return false; }
+    catRead := fs.readText(catPath);
+    if not catRead.ok { return false; }
+    catJson := catRead.text;
+    exF := json.findObjectField(catJson, 0, "exercises");
+    if not exF.found { return false; }
+    loop json.arrayElementOffsets(catJson, exF.valuePos) as ep {
+        modeR := json.readObjectString(catJson, ep, "mode");
+        idR := json.readObjectString(catJson, ep, "id");
+        slugR := json.readObjectString(catJson, ep, "slug");
+        eMode := if modeR.found and modeR.ok { modeR.value } else { "" };
+        eId := if idR.found and idR.ok { idR.value } else { "" };
+        eSlug := if slugR.found and slugR.ok { slugR.value } else { "" };
+        if (expectedMode == "" or eMode == expectedMode) and (clean == eSlug or clean == eId) {
+            return true;
+        }
+    }
+    false
+};
+
+siteSamplesContainId := fn(directory: String, targetId: String): Bool {
+    siteFiles: List<String> = ["site/groups.ts", "site/play-samples.ts"];
+    singlePat := "id: '" + targetId + "'";
+    doublePat := "id: \"" + targetId + "\"";
+    loop siteFiles as rel {
+        abs := path.resolve(directory, rel);
+        if fs.kind(abs) == fs.FILE_KIND_FILE {
+            r := fs.readText(abs);
+            if r.ok and (text.containsText(r.text, singlePat) or text.containsText(r.text, doublePat)) {
+                return true;
+            }
+        }
+    }
+    false
+};
+
+hasLtsSlugInDirs := fn(directory: String, dirs: List<String>, slug: String): Bool {
+    clean := stripSuffix(slug, ".lts");
+    loop dirs as relDir {
+        absDir := path.resolve(directory, relDir);
+        if fs.kind(absDir) == fs.FILE_KIND_DIR {
+            files := path.collectFiles(absDir, [absDir], ".lts", defaultIgnoredDirs(), false);
+            loop files as f {
+                stem := path.stem(f);
+                rel := stripSuffix(path.relative(absDir, f), ".lts");
+                if clean == stem or clean == rel {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+};
+
+checkPlayTarget := fn(directory: String, rawTarget: String): Bool {
+    if rawTarget == "" { return true; }
+    if text.startsWithAt(rawTarget, 0, "sample/") {
+        return siteSamplesContainId(directory, text.slice(rawTarget, 7, text.length(rawTarget)));
+    }
+    if text.startsWithAt(rawTarget, 0, "example/") {
+        return hasLtsSlugInDirs(directory, ["language/examples"], text.slice(rawTarget, 8, text.length(rawTarget)));
+    }
+    if text.startsWithAt(rawTarget, 0, "case/") {
+        return hasLtsSlugInDirs(directory, ["language/cases"], text.slice(rawTarget, 5, text.length(rawTarget)));
+    }
+    if text.startsWithAt(rawTarget, 0, "piece/") {
+        return hasLtsSlugInDirs(directory, ["language/showcases", "language/samples", "samples"], text.slice(rawTarget, 6, text.length(rawTarget)));
+    }
+    if siteSamplesContainId(directory, rawTarget) { return true; }
+    hasLtsSlugInDirs(directory, ["language/examples", "language/cases", "language/showcases", "language/samples", "samples"], rawTarget)
+};
+
+checkLiteUri := fn(
+directory: String, relPath: String, rawTarget: String,
+cachePaths: List<String>, cachePacked: List<String>
+): String {
+    parsed := parseLiteUri(rawTarget);
+    if not parsed.ok {
+        return relPath + ": " + parsed.error;
+    }
+    ns := parsed.ns;
+    target := parsed.target;
+    fragment := parsed.fragment;
+
+    if ns == "handbook" {
+        clean := stripSuffix(stripSuffix(target, ".html"), ".md");
+        if clean == "" or clean == "single-page" { return ""; }
+        hbRel := handbookSourceForSlug(clean);
+        if hbRel == "" {
+            return relPath + ": missing lite://handbook target " + rawTarget;
+        }
+        dest := path.resolve(directory, hbRel);
+        if fs.kind(dest) =!= fs.FILE_KIND_FILE {
+            return relPath + ": missing lite://handbook target " + rawTarget;
+        }
+        if fragment =!= "" and not checkFragmentInMd(dest, fragment, cachePaths, cachePacked) {
+            return relPath + ": missing fragment in " + rawTarget;
+        }
+        return "";
+    }
+    if ns == "doc" {
+        res := resolveLiteDocSource(directory, target);
+        if not res.found {
+            return relPath + ": missing lite://doc target " + rawTarget;
+        }
+        if not res.isVirtualIndex and fragment =!= "" and not checkFragmentInMd(res.filePath, fragment, cachePaths, cachePacked) {
+            return relPath + ": missing fragment in " + rawTarget;
+        }
+        return "";
+    }
+    if ns == "learn" {
+        if not catalogHasLearnTarget(directory, target) {
+            return relPath + ": missing lite://learn target " + rawTarget;
+        }
+        return "";
+    }
+    if ns == "gym" {
+        if not catalogHasGymTarget(directory, target) {
+            return relPath + ": missing lite://gym target " + rawTarget;
+        }
+        return "";
+    }
+    if ns == "module" {
+        cleanMod := stripSuffix(stripSuffix(target, ".html"), ".lts");
+        if cleanMod == "" or cleanMod == "index" { return ""; }
+        modFile := path.resolve(directory, "lib/" + cleanMod + ".lts");
+        if fs.kind(modFile) =!= fs.FILE_KIND_FILE {
+            return relPath + ": missing lite://module target " + rawTarget;
+        }
+        if fragment =!= "" {
+            modRead := fs.readText(modFile);
+            if not modRead.ok {
+                return relPath + ": cannot read module for " + rawTarget;
+            }
+            modJson := docgen.extractModuleJson(modRead.text, "", cleanMod, "");
+            if not text.containsText(modJson, "\"name\":" + json.quoteString(fragment)) {
+                return relPath + ": missing module symbol #" + fragment + " in " + rawTarget;
+            }
+        }
+        return "";
+    }
+    if ns == "tool" {
+        knownTools: List<String> = [
+        "", "overview", "cli", "vscode", "playground-host", "bootstrap",
+        "run", "compile", "check", "fmt", "test", "verify", "docs", "doctor", "bench-release",
+        "cmd-run", "cmd-compile", "cmd-check", "cmd-fmt", "cmd-test", "cmd-verify", "cmd-docs", "cmd-doctor", "cmd-bench-release"
+        ];
+        var toolKey := stripSuffix(target, ".html");
+        if toolKey == "" and fragment =!= "" { toolKey = fragment; }
+        if not list.listContainsText(knownTools, toolKey) {
+            return relPath + ": missing lite://tool target " + rawTarget;
+        }
+        return "";
+    }
+    if ns == "play" {
+        if not checkPlayTarget(directory, target) {
+            return relPath + ": missing lite://play target " + rawTarget;
+        }
+        return "";
+    }
+    if ns == "gallery" {
+        if target == "" { return ""; }
+        cleanGal := if text.startsWithAt(target, 0, "sample-") {
+            text.slice(target, 7, text.length(target))
+        } else if text.startsWithAt(target, 0, "group-") {
+            text.slice(target, 6, text.length(target))
+        } else {
+            target
+        };
+        if not siteSamplesContainId(directory, cleanGal) {
+            return relPath + ": missing lite://gallery target " + rawTarget;
+        }
+        return "";
+    }
+    ""
+};
+
 /** Verifies Markdown fences, links, heading fragments, and `config/documentation.json` entries under `directory`. */
 pub checkDocuments := fn(directory: String): List<String> {
     failures: mut List<String> = [];
@@ -136,7 +497,12 @@ pub checkDocuments := fn(directory: String): List<String> {
             }
             links := md.extractLinkTargets(md.stripCodeBlocks(docText));
             loop links as rawTarget {
-                if not isExternalUri(rawTarget) {
+                if isLiteUri(rawTarget) {
+                    uriErr := checkLiteUri(directory, relPath, rawTarget, cachePaths, cachePacked);
+                    if uriErr =!= "" {
+                        list.pushBack(mut failures, uriErr);
+                    }
+                } else if not isExternalUri(rawTarget) {
                     decodedRes := decodePercentUri(rawTarget);
                     if not decodedRes.ok {
                         list.pushBack(mut failures, relPath + ": invalid link " + rawTarget);
