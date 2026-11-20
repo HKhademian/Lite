@@ -1,0 +1,1 @@
+language/cases/control/branching/reject-chained-comparison-pattern.lts:2:10: comparison pattern cannot be chained; bind the value and use an if guard

@@ -1,0 +1,22 @@
+{
+  "id": "feature.control.branching.subject-match",
+  "kind": "feature",
+  "source": {
+    "file": "subject-match.lts",
+    "hash": "sha256:ff07d28cd61ad16093ffc9aadd10b900f6dfd63c99252d9c96a89c56bfdb7188"
+  },
+  "features": [
+    "feature.control.branching.subject-match"
+  ],
+  "guideline": "Checks subject-based match with literals, comparison patterns, or alternatives, if guards, Bool exhaustiveness, and record/tuple/array patterns.",
+  "cases": [
+    {
+      "name": "subject-match-patterns",
+      "stdout": {
+        "text": "zero neg-one small huge teens other 6\nyes no\na:off b:high c:mid d:low\n6 0 40 8\n",
+        "hash": "sha256:7302e8397ad20d09395eef2c9f61a22cdd124a972d0e5c53a42bf7e27a7212af"
+      },
+      "exitCode": 0
+    }
+  ]
+}

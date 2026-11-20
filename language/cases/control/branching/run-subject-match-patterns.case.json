@@ -1,0 +1,24 @@
+{
+  "id": "case.control.branching.run-subject-match-patterns",
+  "kind": "feature",
+  "source": "subject-match-patterns.lts",
+  "features": [
+    "feature.control.branching.subject-match",
+    "feature.io.reporting.report-values"
+  ],
+  "cases": [
+    {
+      "name": "scalar-patterns-and-guards",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "zero few mid many neg\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

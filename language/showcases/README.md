@@ -1,6 +1,6 @@
 # LiteLang Ability and Feature Showcase
 
-A progressive six-chapter, nineteen-topic verified curriculum teaching every core **LiteLang** language ability and `lib/core/` module. Run any topic directly from the repository root with:
+A progressive six-chapter, twenty-topic verified curriculum teaching every core **LiteLang** language ability and `lib/core/` module. Run any topic directly from the repository root with:
 
 ```sh
 ./bin/lite run language/showcases/foundations/bindings/bindings-and-mutability.lts
@@ -19,6 +19,7 @@ Every topic is backed by a verified scenario manifest under [artifacts/showcases
 - [01 — Value Conditionals, Chained Comparisons, and Subjectless Match](lite://play/example/showcase-conditionals-and-match): expression `if`/`else`, single-evaluation `a <= b < c` chains, partial statements, and subjectless Boolean `match`. ([conditionals](lite://doc/conditionals), [comparison chains](lite://doc/comparison-chains), [match](lite://doc/match))
 - [02 — Conditional & Sequence Loops, Metadata, Break Payloads, and Then](lite://play/example/showcase-loops-and-completion): conditional and `loop ... as` traversal, `.index`/`.count`/`.value`, `break value`, and `then`. ([loops](lite://doc/loops), [loop value](lite://doc/loop-value), [loop completion](lite://doc/loop-completion))
 - [03 — Labeled @tag Transfers and LIFO Finally Cleanup](lite://play/example/showcase-tagged-blocks-and-finally): `@tag` returns, multi-loop `continue @tag`, `@tag.value` forwarding, and LIFO `finally` cleanup. ([tags](lite://doc/tags-and-contexts), [finally](lite://doc/finally), [control flow](lite://doc/control-flow))
+- [04 — Subject-Based Match, Comparison Patterns, Or Alternatives & Guards](lite://play/example/showcase-subject-match-and-patterns): subject-based `match` with literals, comparison patterns, `or` alternatives, `if` guards, `Bool` exhaustiveness, and record/array patterns. ([match](lite://doc/match), [comparison patterns](lite://doc/comparison-patterns), [match guards](lite://doc/match-guards))
 
 ## Chapter 3 — Data & Types (`types/`)
 

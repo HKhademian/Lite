@@ -38,6 +38,26 @@ grade := match {
 io.outputLine(grade);
 ```
 
+## Subject-Based `match` & Patterns
+
+Supply a subject (`match value { ... }`) to evaluate it once and match arms with literals, all ten comparison patterns (`==`, `=!=`, `<`, `<=`, `>`, `>=`, `<!`, `<!=`, `>!`, `>!=`), `or` alternatives, `if` guards, and recursive record/tuple/fixed-array patterns:
+
+```lite
+io := import "core/io";
+
+User := record { name: String; age: Int = 18; };
+
+classify := fn(u: User): String {
+    match u {
+        { >= 65 = age, = name } { name + ":senior" }
+        { = name, = age } if 18 <= age < 65 { name + ":adult" }
+        { = name } { name + ":minor" }
+    }
+};
+
+io.outputLine(classify(User { name = "Ada", age = 30 }), classify(User { name = "Bob", age = 70 }));
+```
+
 ## Loops, Sequence Traversal & Completion (`then`)
 
 Lite uses a single `loop` keyword for all iteration forms:

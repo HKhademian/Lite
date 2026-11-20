@@ -1,0 +1,24 @@
+{
+  "id": "sample.control.branching.shipping-tier",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/control/branching/shipping-tier.lts",
+    "hash": "sha256:10e77543d6b4e2ef4aaa12be034f08747eb1f1a67a165e4fdda74e01be7eb8f9"
+  },
+  "features": [
+    "feature.control.branching.subject-match",
+    "feature.types.records.nominal-records"
+  ],
+  "description": "Classifies parcel records into shipping tiers using subject-based match patterns and guards.",
+  "append": "io.outputLine(tier);",
+  "cases": [
+    {
+      "name": "express-light-parcel",
+      "stdout": {
+        "text": "express-light\n",
+        "hash": "sha256:9412eb332edf827d4e6f9b50f185f560e630b100e536a89f70093fa4cac4ec09"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -94,6 +94,7 @@ test('showcaseSamples includes examples covering named calls, tuples, arrays, an
   for (const expected of [
     'numeric-widths',
     'subjectless-match',
+    'subject-match',
     'fixed-tuples',
     'named-arguments',
     'named-tuples',
@@ -155,12 +156,12 @@ test('stripLiteTs strips anonymous function parameter and return types', () => {
   assert.equal(fn(), 5n);
 });
 
-test('verifyGymCorpus compiles and executes all 45 Gym starters and solutions', () => {
+test('verifyGymCorpus compiles and executes all 47 Gym starters and solutions', () => {
   const result = verifyGymCorpus();
-  assert.equal(result.exerciseCount, 45);
-  assert.equal(result.drillCount, 20);
-  assert.equal(result.kataCount, 25);
-  assert(result.caseCount >= 180, `expected at least 180 test cases, got ${String(result.caseCount)}`);
+  assert.equal(result.exerciseCount, 47);
+  assert.equal(result.drillCount, 21);
+  assert.equal(result.kataCount, 26);
+  assert(result.caseCount >= 188, `expected at least 188 test cases, got ${String(result.caseCount)}`);
 });
 
 interface LearnHelperModule {

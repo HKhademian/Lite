@@ -1,0 +1,23 @@
+{
+  "id": "case.control.branching.reject-chained-comparison-pattern",
+  "kind": "reject",
+  "source": "reject-chained-comparison-pattern.lts",
+  "features": [
+    "feature.control.branching.subject-match"
+  ],
+  "cases": [
+    {
+      "name": "rejects-chained-comparison-pattern",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-chained-comparison-pattern.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

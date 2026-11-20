@@ -1,0 +1,56 @@
+/* Showcase 02.04 — Subject-based match: literals, comparison patterns, or alternatives, if guards, and aggregate patterns. */
+
+io := import "core/io";
+
+Event := record {
+    kind: String;
+    code: Int = 200;
+    urgent: Bool = false;
+};
+
+/* Scalar subject match with literals, or alternatives, comparison patterns, and if guard. */
+bucket := fn(n: Int): String {
+    match n {
+        0 { "zero" }
+        1 or 2 or 3 { "small" }
+        or >= 100 { "large" }
+        v if 10 <= v < 20 { "teens" }
+        _ { "mid" }
+    }
+};
+
+/* Bool exhaustiveness needs no _ fallback when both true and false are covered. */
+flagText := fn(ok: Bool): String {
+    match ok {
+        true { "ok" }
+        false { "fail" }
+    }
+};
+
+/* Record, tuple, and fixed-array patterns compose recursively with guards. */
+describeEvent := fn(ev: Event): String {
+    match ev {
+        { urgent == true, = kind } { "URGENT:" + kind }
+        { 500 or 503 = code, = kind } { "RETRY:" + kind }
+        { = kind, = code } if 200 <= code < 300 { "OK:" + kind }
+        { = kind } { "OTHER:" + kind }
+    }
+};
+
+classifyPair := fn(coords: [Int; 2]): String {
+    match coords {
+        [0, 0] { "origin" }
+        [0, _] or [_, 0] { "axis" }
+        [x, y] if x == y { "diagonal" }
+        _ { "plane" }
+    }
+};
+
+io.outputLine("buckets:", bucket(0), bucket(2), bucket(15), bucket(120), bucket(42), "flag:", flagText(true));
+io.outputLine(
+    "events:",
+    describeEvent(Event { kind = "db", code = 503 }),
+    describeEvent(Event { kind = "auth", code = 401, urgent = true }),
+    describeEvent(Event { kind = "api", code = 201 })
+);
+io.outputLine("coords:", classifyPair([0, 0]), classifyPair([0, 5]), classifyPair([4, 4]), classifyPair([2, 7]));

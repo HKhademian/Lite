@@ -1,0 +1,23 @@
+{
+  "id": "case.control.branching.reject-non-exhaustive-match",
+  "kind": "reject",
+  "source": "reject-non-exhaustive-match.lts",
+  "features": [
+    "feature.control.branching.subject-match"
+  ],
+  "cases": [
+    {
+      "name": "rejects-missing-fallback",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-non-exhaustive-match.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

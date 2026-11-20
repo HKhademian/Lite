@@ -1,0 +1,11 @@
+io := import "core/io";
+
+n := io.inputInt();
+label := match n {
+    0 { "zero" }
+    1 or 2 or 3 { "small" }
+    >= 10 < 20 { "teens" }
+    >= 20 { "high" }
+    _ { "other" }
+};
+io.outputLine(label);

@@ -4,7 +4,7 @@ Folder-grouped project samples showcasing algorithms, high-resolution RGBA canva
 
 For core language-specification examples (`001`–`024`), see [language/examples](lite://repo/language/examples/README.md).
 
-## Programs (`programs/{math,search,text,parsing,records}/`)
+## Programs (`programs/{math,search,text,parsing,records,control}/`)
 
 - [fibonacci](lite://play/fibonacci) — Iterative Fibonacci sequence and explicit formatting.
 - [primes-sieve](lite://play/primes-sieve) — Prime generation up to 50 with `mut List<Int>`.
@@ -13,6 +13,7 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [word-frequency](lite://play/word-frequency) — Word frequency counter via `core/list`.
 - [rpn-evaluator](lite://play/rpn-evaluator) — Stack-based Reverse Polish Notation evaluator.
 - [inventory-ledger](lite://play/inventory-ledger) — Inventory summary combining nominal records, `=name` shorthand, named tuple returns, and fixed-array bounds.
+- [packet-router](lite://play/packet-router) — Network packet classifier using subject-based `match` over records, `or` alternatives, `if` guards, and fixed-array summaries.
 
 ## Canvas Art (`graphics/art/`)
 
@@ -21,6 +22,7 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [geometric-mandala](lite://play/play-geometric-mandala) — `320x240` radial lines, concentric rings, and petals.
 - [spectrum-bars](lite://play/play-spectrum-bars) — `340x200` stepped alpha palette and glaze ribbon.
 - [record-mosaic](lite://play/play-record-mosaic) — `360x240` card mosaic driven by nominal `Tile` records, `=name` shorthand, and aggregate destructuring.
+- [match-signal-board](lite://play/play-match-signal-board) — `360x240` RGBA signal board styled via subject-based `match` over records, comparisons, and range guards.
 
 ## Animation (`graphics/animation/`)
 

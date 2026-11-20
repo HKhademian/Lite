@@ -1,0 +1,10 @@
+io := import "core/io";
+
+Ticket := record {
+    age: Int;
+    vip: Bool = false;
+    zone: Int = 1;
+};
+
+_n := io.inputInt();
+io.outputLine(0, 0);

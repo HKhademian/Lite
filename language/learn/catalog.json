@@ -152,6 +152,22 @@
           "args": [],
           "teaches": ["@tag", "return @tag", "continue @tag", "finally"],
           "docs": ["language/learn/handbook/control/conditionals-match-and-loops.md", "docs/finally.md"]
+        },
+        {
+          "id": "learn.control.branching.subject-match-and-patterns",
+          "slug": "subject-match-and-patterns",
+          "title": "Subject-Based Match, Comparison Patterns, Or Alternatives & Guards",
+          "kind": "lesson",
+          "domain": "control",
+          "subGroup": "branching",
+          "environment": "universal",
+          "guideFile": "language/learn/lessons/control/branching/subject-match-and-patterns.md",
+          "sourceFile": "language/showcases/control/branching/subject-match-and-patterns.lts",
+          "helperModules": [],
+          "stdin": "",
+          "args": [],
+          "teaches": ["match x { ... }", ">= / == patterns", "or alternatives", "if guards"],
+          "docs": ["language/learn/handbook/control/conditionals-match-and-loops.md", "docs/match.md", "docs/comparison-patterns.md"]
         }
       ]
     },

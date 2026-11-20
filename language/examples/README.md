@@ -12,7 +12,7 @@ Run from the repository root with Node 26.13.0:
 node compiler/entry.ts /tmp/lite-example.ts
 ```
 
-`run` compiles to a temporary artifact and executes it. All twenty-eight examples compile and run through the generated TS compiler; broader parity items live in [compiler gaps](lite://doc/compiler/gaps) and the [archived inventory](lite://repo/compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
+`run` compiles to a temporary artifact and executes it. All twenty-nine examples compile and run through the generated TS compiler; broader parity items live in [compiler gaps](lite://doc/compiler/gaps) and the [archived inventory](lite://repo/compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
 
 The interactive examples display explicit prompts. Integer prompts leave the
 cursor on the same line; the scanner prints a heading before reading its line.
@@ -123,6 +123,9 @@ examples. They live under [compiler/](lite://doc/compiler/overview) and are run 
 - [030 — Aggregate destructuring](lite://play/aggregate-destructuring): demonstrates
   uniform destructuring and `=name` shorthand across `rec {}`, named/mixed `tuple ()`,
   and fixed `[T; N]` arrays (`[lo, _, hi] := bounds;`).
+- [031 — Subject match](lite://play/subject-match): demonstrates subject-based `match`
+  over scalars, nominal records, and tuples with comparison patterns, `or` alternatives,
+  and `if` guards.
 
 For project showcases, graphics, audio, and mini-game demos, see [samples](lite://repo/samples/README.md).
 For the progressive chapter-by-chapter learning curriculum, see the [ability and feature showcase](lite://repo/language/showcases/README.md).

@@ -1,0 +1,48 @@
+/* Network packet classifier using subject-based match over records, tuples, and fixed-array flags. */
+
+io := import "core/io";
+
+Packet := record {
+    proto: String;
+    port: Int;
+    bytes: Int = 0;
+    trusted: Bool = false;
+};
+
+route := fn(pkt: Packet): String {
+    match pkt {
+        { trusted == false, 22 or 23 = port } { "block-admin" }
+        { "tcp" = proto, 80 or 443 = port, <= 4096 = bytes } { "allow-web" }
+        { "udp" = proto, = port } if 5000 <= port < 6000 { "allow-media" }
+        { trusted == true } { "allow-internal" }
+        _ { "drop" }
+    }
+};
+
+packets: List<Packet> = [
+    Packet { proto = "tcp", port = 443, bytes = 1200 },
+    Packet { proto = "tcp", port = 22, bytes = 64 },
+    Packet { proto = "udp", port = 5200, bytes = 512 },
+    Packet { proto = "tcp", port = 9000, bytes = 200, trusted = true },
+    Packet { proto = "icmp", port = 0, bytes = 32 },
+];
+
+var allowed := 0;
+var blocked := 0;
+loop packets as pkt {
+    decision := route(pkt);
+    match decision {
+        "allow-web" or "allow-media" or "allow-internal" { allowed += 1; }
+        _ { blocked += 1; }
+    }
+    io.outputLine(pkt.proto, pkt.port, "->", decision);
+}
+
+summary: [Int; 2] = [allowed, blocked];
+status := match summary {
+    [_, 0] { "all-clear" }
+    [0, _] { "all-blocked" }
+    [a, b] if a > b { "mostly-allowed" }
+    _ { "mixed" }
+};
+io.outputLine("summary:", allowed, "allowed,", blocked, "blocked ->", status);

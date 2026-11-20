@@ -1,0 +1,60 @@
+io := import "core/io";
+
+Item := record {
+    tag: String;
+    score: Int = 0;
+    active: Bool = true;
+};
+
+var evals := 0;
+readVal := fn(n: Int): Int {
+    evals += 1;
+    n
+};
+
+classify := fn(n: Int): String {
+    match readVal(n) {
+        0 { "zero" }
+        -1 { "neg-one" }
+        1 or 2 or 3 { "small" }
+        or >= 100 { "huge" }
+        v if 10 <= v < 20 { "teens" }
+        _ { "other" }
+    }
+};
+
+yn := fn(b: Bool): String {
+    match b {
+        true { "yes" }
+        false { "no" }
+    }
+};
+
+rate := fn(item: Item): String {
+    match item {
+        { active == false, = tag } { tag + ":off" }
+        { >= 80 = score, = tag } { tag + ":high" }
+        { = tag, = score } if score >= 50 { tag + ":mid" }
+        { = tag } { tag + ":low" }
+    }
+};
+
+pairVal := fn(p: (op: String, v: Int)): Int {
+    match p {
+        ("inc" = op, = v) or ("add" = op, = v) if v > 0 { v + 1 }
+        ("inc" or "add" = op, = v) { v }
+        _ { -1 }
+    }
+};
+
+arrVal := fn(a: [Int; 2]): Int {
+    match a {
+        [0, y] { y * 10 }
+        [x, y] { x + y }
+    }
+};
+
+io.outputLine(classify(0), classify(-1), classify(2), classify(120), classify(15), classify(50), evals);
+io.outputLine(yn(true), yn(false));
+io.outputLine(rate(Item { tag = "a", score = 90, active = false }), rate(Item { tag = "b", score = 85 }), rate(Item { tag = "c", score = 60 }), rate(Item { tag = "d", score = 10 }));
+io.outputLine(pairVal((op = "add", v = 5)), pairVal((op = "inc", v = 0)), arrVal([0, 4]), arrVal([3, 5]));

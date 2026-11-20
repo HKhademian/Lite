@@ -1,0 +1,1 @@
+language/cases/control/branching/reject-non-exhaustive-match.lts:3:1: match requires an exhaustive fallback arm

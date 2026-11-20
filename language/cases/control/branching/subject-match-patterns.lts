@@ -1,0 +1,13 @@
+io := import "core/io";
+
+label := fn(n: Int): String {
+    match n {
+        0 { "zero" }
+        1 or 2 { "few" }
+        >= 10 { "many" }
+        v if 3 <= v < 10 { "mid" }
+        _ { "neg" }
+    }
+};
+
+io.outputLine(label(0), label(2), label(5), label(12), label(-3));

@@ -106,6 +106,15 @@ export const playSamples: readonly PlaySample[] = [
     args: [],
     stdin: '',
   },
+  {
+    id: 'play-match-signal-board',
+    group: 'play-art',
+    title: 'Match Signal Board',
+    note: 'Six-tile telemetry board styled with subject-based match over records, comparison patterns, and range guards (360×240).',
+    file: 'samples/graphics/art/match-signal-board.lts',
+    args: [],
+    stdin: '',
+  },
 
   /* Animation */
   {

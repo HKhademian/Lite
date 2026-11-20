@@ -1,0 +1,63 @@
+/* 360x240 RGBA telemetry signal board styled via subject-based match over records, comparisons, and guards. */
+
+board := import "extra/board";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+Sensor := record {
+    col: Int;
+    row: Int;
+    level: Int = 0;
+    online: Bool = true;
+};
+
+ctx := canvas.create(width = 360, height = 240, title = "Match Signal Board");
+bg := canvas.rgb(10, 14, 24);
+gridTint := canvas.rgba(255, 255, 255, 14);
+borderTint := canvas.rgba(255, 255, 255, 42);
+
+canvas.clear(bg);
+
+var gx := 24;
+loop gx < ctx.width {
+    canvas.fillRect(gx, 0, 1, ctx.height, gridTint);
+    gx += 24;
+}
+var gy := 24;
+loop gy < ctx.height {
+    canvas.fillRect(0, gy, ctx.width, 1, gridTint);
+    gy += 24;
+}
+
+sensorColor := fn(s: Sensor): Int {
+    match s {
+        { online == false } { canvas.rgba(120, 130, 150, 120) }
+        { >= 85 = level } { canvas.rgba(238, 102, 118, 195) }
+        { = level } if 50 <= level < 85 { canvas.rgba(240, 184, 88, 185) }
+        { 0 = level } { canvas.rgba(96, 118, 148, 140) }
+        _ { canvas.rgba(96, 208, 168, 185) }
+    }
+};
+
+sensors: [Sensor; 6] = [
+    Sensor { col = 0, row = 0, level = 92 },
+    Sensor { col = 1, row = 0, level = 68 },
+    Sensor { col = 2, row = 0, level = 24 },
+    Sensor { col = 0, row = 1, level = 0 },
+    Sensor { col = 1, row = 1, level = 55, online = false },
+    Sensor { col = 2, row = 1, level = 88 },
+];
+
+loop sensors as s {
+    { = col, = row, = level } := s;
+    x := 28 + (col * 106);
+    y := 32 + (row * 96);
+    fill := sensorColor(s);
+    canvas.fillRect(x, y, 92, 78, fill);
+    barW := if level > 76 { 76 } else if level < 6 { 6 } else { level };
+    canvas.fillRect(x + 8, y + 58, barW, 8, canvas.rgba(255, 255, 255, 190));
+    board.drawRect(x, y, 92, 78, borderTint);
+}
+
+board.drawRect(8, 8, ctx.width - 16, ctx.height - 16, canvas.rgba(110, 196, 216, 180));
+io.outputLine("Rendered:", ctx.title, ctx.width, "x", ctx.height);

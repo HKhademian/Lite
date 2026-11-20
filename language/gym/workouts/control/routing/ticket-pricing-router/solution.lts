@@ -1,0 +1,34 @@
+io := import "core/io";
+
+Ticket := record {
+    age: Int;
+    vip: Bool = false;
+    zone: Int = 1;
+};
+
+ticketPrice := fn(t: Ticket): Int {
+    match t {
+        { < 12 = age } { 5 }
+        { vip == true, 1 or 2 = zone } { 30 }
+        { vip == true } { 40 }
+        { >= 65 = age } { 8 }
+        { = zone } if 1 <= zone <= 3 { 10 + (zone * 5) }
+        _ { 25 }
+    }
+};
+
+n := io.inputInt();
+var total := 0;
+var vipCount := 0;
+var i := 0;
+loop i < n {
+    age := io.inputInt();
+    vipFlag := io.inputInt();
+    zone := io.inputInt();
+    vip := vipFlag == 1;
+    t := Ticket { = age, = vip, = zone };
+    total += ticketPrice(t);
+    if vip { vipCount += 1; }
+    i += 1;
+}
+io.outputLine(total, vipCount);

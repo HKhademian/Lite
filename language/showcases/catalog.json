@@ -189,6 +189,33 @@
             "docs/control-flow.md"
           ],
           "order": 3
+        },
+        {
+          "id": "showcase.control.branching.subject-match-and-patterns",
+          "title": "Subject-Based Match, Comparison Patterns, Or Alternatives, and Guards",
+          "file": "language/showcases/control/branching/subject-match-and-patterns.lts",
+          "helperFiles": [],
+          "manifest": "language/verifications/artifacts/showcases/control/branching/subject-match-and-patterns.json",
+          "summary": "Matches a single-evaluated subject with literals, comparison patterns, or alternatives, if guards, Bool exhaustiveness, and record/array patterns.",
+          "teaches": [
+            "match x { ... }",
+            ">= / == patterns",
+            "or alternatives",
+            "if guards",
+            "record/array patterns"
+          ],
+          "features": [
+            "feature.control.branching.subject-match",
+            "feature.types.records.nominal-records",
+            "feature.types.patterns.aggregate-destructuring",
+            "feature.io.reporting.report-values"
+          ],
+          "docs": [
+            "docs/match.md",
+            "docs/comparison-patterns.md",
+            "docs/match-guards.md"
+          ],
+          "order": 4
         }
       ],
       "order": 2

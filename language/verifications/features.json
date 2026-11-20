@@ -508,6 +508,17 @@
         "docs/tuples-and-patterns.md",
         "docs/sequence-patterns.md"
       ]
+    },
+    {
+      "id": "feature.control.branching.subject-match",
+      "summary": "Subject-based match with literals, comparison patterns, or alternatives, if guards, and aggregate patterns.",
+      "case": "features/control/branching/subject-match.json",
+      "status": "verified",
+      "docs": [
+        "docs/match.md",
+        "docs/comparison-patterns.md",
+        "docs/match-guards.md"
+      ]
     }
   ]
 }

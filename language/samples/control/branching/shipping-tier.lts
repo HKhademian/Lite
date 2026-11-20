@@ -1,0 +1,19 @@
+io := import "core/io";
+/* Classify parcel weights (in grams) into shipping tiers using subject-based match
+   with comparison patterns, or alternatives, and a range if guard. */
+
+Parcel := record {
+    grams: Int;
+    express: Bool = false;
+};
+
+parcel := Parcel { grams = 750, express = true };
+
+tier := match parcel {
+    { express == true, <= 1000 = grams } { "express-light" }
+    { <= 250 = grams } { "letter" }
+    { = grams } if 250 < grams <= 1000 { "standard" }
+    _ { "heavy" }
+};
+
+/* tier is "express-light". */
