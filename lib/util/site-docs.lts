@@ -619,7 +619,7 @@ rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOuts: L
     withLinks: mut List<String> = [];
     sLen := text.length(step1);
     pos = 0;
-    needle := "<a href=\"";
+    needle := "href=\"";
     nLen := text.length(needle);
     loop pos < sLen {
         aPos := text.indexOfText(step1, needle, pos);
@@ -627,7 +627,13 @@ rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOuts: L
             list.pushBack(mut withLinks, text.slice(step1, pos, sLen));
             break;
         }
+        atBoundary := aPos == 0 or isBoundaryBeforeId(text.at(step1, aPos - 1));
         valStart := aPos + nLen;
+        if not atBoundary {
+            list.pushBack(mut withLinks, text.slice(step1, pos, valStart));
+            pos = valStart;
+            continue;
+        }
         qEnd := text.indexOfText(step1, "\"", valStart);
         if qEnd < 0 {
             list.pushBack(mut withLinks, text.slice(step1, pos, sLen));
@@ -643,7 +649,12 @@ rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOuts: L
             resolved := siteLib.posixJoinAndNormalize("docs/handbook", filePart);
             hit := list.listIndexOfText(hbOuts, resolved);
             if hit >= 0 {
-                list.pushBack(mut withLinks, escapeHtml("#" + hbChapterIds[hit]) + "\"");
+                if hashPos >= 0 and hashPos + 1 < text.length(rawVal) {
+                    fragPart := text.slice(rawVal, hashPos + 1, text.length(rawVal));
+                    list.pushBack(mut withLinks, "#h" + integer.intText(hit + 1) + "-" + fragPart + "\"");
+                } else {
+                    list.pushBack(mut withLinks, escapeHtml("#" + hbChapterIds[hit]) + "\"");
+                }
             } else {
                 list.pushBack(mut withLinks, rawVal + "\"");
             }

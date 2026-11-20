@@ -1,6 +1,6 @@
 /** Canonical `lite://` internal URI resolver, link verifier, and bidirectional Academy usage graph. */
-import { existsSync, readFileSync } from 'node:fs';
-import { join, posix } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, posix, relative, resolve } from 'node:path';
 import type { ModuleApiDoc } from './docs-client.ts';
 import type { ShowcaseSample } from './groups.ts';
 import { escapeHtml } from './highlight.ts';
@@ -835,4 +835,257 @@ export function renderAcademyCrosslinks(options: Readonly<{
     `    ${cards.join('\n    ')}\n` +
     `  </div>\n` +
     `</section>`;
+}
+
+export type SiteReferenceViolationReason =
+  | 'unresolved-md-href'
+  | 'unresolved-lite-uri'
+  | 'bad-playground-href'
+  | 'missing-file'
+  | 'missing-fragment'
+  | 'missing-graph-node'
+  | 'dangling-graph-edge'
+  | 'missing-graph-fragment';
+
+export type SiteReferenceViolation = Readonly<{
+  source: string;
+  target: string;
+  reason: SiteReferenceViolationReason;
+}>;
+
+export type SiteReferenceReport = Readonly<{
+  htmlFiles: number;
+  localLinksChecked: number;
+  fragmentsChecked: number;
+  searchEntriesChecked: number;
+  graphNodesChecked: number;
+  graphEdgesChecked: number;
+  violations: readonly SiteReferenceViolation[];
+}>;
+
+function collectSiteHtmlFiles(currentDir: string, out: string[]): void {
+  for (const entry of readdirSync(currentDir, { withFileTypes: true })) {
+    const full = join(currentDir, entry.name);
+    if (entry.isDirectory()) collectSiteHtmlFiles(full, out);
+    else if (entry.name.endsWith('.html')) out.push(full);
+  }
+}
+
+function stripScriptAndStyleBlocks(html: string): string {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+}
+
+function isExternalHref(href: string): boolean {
+  return (
+    href.startsWith('http://') ||
+    href.startsWith('https://') ||
+    href.startsWith('//') ||
+    href.startsWith('mailto:') ||
+    href.startsWith('tel:') ||
+    href.startsWith('javascript:') ||
+    href.startsWith('data:') ||
+    href.startsWith('blob:')
+  );
+}
+
+/** Verifies every built HTML link, `#fragment` target, `search-index.json`, and `link-graph.json` in `siteDir`. */
+export function validateBuiltSiteReferences(siteDir: string): SiteReferenceReport {
+  const absSiteDir = resolve(siteDir);
+  const siteRootAnchor = join(absSiteDir, 'index.html');
+  const htmlFiles: string[] = [];
+  if (existsSync(absSiteDir)) {
+    collectSiteHtmlFiles(absSiteDir, htmlFiles);
+  }
+  htmlFiles.sort();
+
+  const htmlCache = new Map<string, string>();
+  const idCache = new Map<string, Set<string>>();
+  const violations: SiteReferenceViolation[] = [];
+  let localLinksChecked = 0;
+  let fragmentsChecked = 0;
+  let searchEntriesChecked = 0;
+  let graphNodesChecked = 0;
+  let graphEdgesChecked = 0;
+
+  const getStrippedHtml = (absPath: string): string => {
+    const cached = htmlCache.get(absPath);
+    if (cached !== undefined) return cached;
+    const stripped = stripScriptAndStyleBlocks(readFileSync(absPath, 'utf8'));
+    htmlCache.set(absPath, stripped);
+    return stripped;
+  };
+
+  const getHtmlIds = (absPath: string): Set<string> => {
+    const cached = idCache.get(absPath);
+    if (cached !== undefined) return cached;
+    const ids = new Set(collectHtmlIds(getStrippedHtml(absPath)));
+    idCache.set(absPath, ids);
+    return ids;
+  };
+
+  const hasHtmlFragment = (absPath: string, rawFrag: string): boolean => {
+    const ids = getHtmlIds(absPath);
+    if (ids.has(rawFrag)) return true;
+    try {
+      const decoded = decodeURIComponent(rawFrag);
+      if (ids.has(decoded)) return true;
+    } catch {
+      /* Ignore malformed percent-encoding and report missing fragment. */
+    }
+    return false;
+  };
+
+  const checkLocalTarget = (options: Readonly<{
+    source: string;
+    rawTarget: string;
+    fromFileAbs: string;
+    missingFileReason: 'missing-file' | 'missing-graph-node';
+    missingFragReason: 'missing-fragment' | 'missing-graph-fragment';
+  }>): void => {
+    const { source, rawTarget, fromFileAbs, missingFileReason, missingFragReason } = options;
+    const decoded = unescapeAttrEntities(rawTarget.trim());
+    if (decoded === '' || isExternalHref(decoded)) return;
+
+    const hashIdx = decoded.indexOf('#');
+    const pathAndQuery = hashIdx >= 0 ? decoded.slice(0, hashIdx) : decoded;
+    const rawFrag = hashIdx >= 0 ? decoded.slice(hashIdx + 1) : '';
+    if (pathAndQuery.includes('playground?')) {
+      violations.push({ source, target: rawTarget, reason: 'bad-playground-href' });
+    }
+
+    const qIdx = pathAndQuery.indexOf('?');
+    const noQuery = qIdx >= 0 ? pathAndQuery.slice(0, qIdx) : pathAndQuery;
+    let targetFileAbs: string;
+    if (noQuery === '') {
+      targetFileAbs = fromFileAbs;
+    } else {
+      const baseResolved = noQuery.startsWith('/')
+        ? resolve(absSiteDir, noQuery.slice(1))
+        : resolve(dirname(fromFileAbs), noQuery);
+      targetFileAbs = noQuery === '.' || noQuery.endsWith('/') ? join(baseResolved, 'index.html') : baseResolved;
+    }
+
+    const relToSite = relative(absSiteDir, targetFileAbs);
+    if (relToSite.startsWith('..') || !existsSync(targetFileAbs)) {
+      violations.push({ source, target: rawTarget, reason: missingFileReason });
+      return;
+    }
+
+    if (rawFrag.length > 0 && targetFileAbs.endsWith('.html')) {
+      fragmentsChecked += 1;
+      if (!hasHtmlFragment(targetFileAbs, rawFrag)) {
+        violations.push({ source, target: rawTarget, reason: missingFragReason });
+      }
+    }
+  };
+
+  for (const htmlFile of htmlFiles) {
+    const relSource = relative(absSiteDir, htmlFile).replaceAll('\\', '/');
+    const stripped = getStrippedHtml(htmlFile);
+    if (stripped.includes(' data-md-href=')) {
+      violations.push({ source: relSource, target: 'data-md-href', reason: 'unresolved-md-href' });
+    }
+    if (stripped.includes(' data-lite-uri=')) {
+      violations.push({ source: relSource, target: 'data-lite-uri', reason: 'unresolved-lite-uri' });
+    }
+
+    const hrefRe = /(?:^|[\s<])href="([^"]*)"/g;
+    for (let m = hrefRe.exec(stripped); m !== null; m = hrefRe.exec(stripped)) {
+      const rawHref = m[1] ?? '';
+      const trimmed = rawHref.trim();
+      if (trimmed === '' || trimmed === '#' || isExternalHref(trimmed)) continue;
+      localLinksChecked += 1;
+      checkLocalTarget({
+        source: relSource,
+        rawTarget: rawHref,
+        fromFileAbs: htmlFile,
+        missingFileReason: 'missing-file',
+        missingFragReason: 'missing-fragment',
+      });
+    }
+  }
+
+  const searchPath = join(absSiteDir, 'search-index.json');
+  if (!existsSync(searchPath)) {
+    violations.push({ source: 'search-index.json', target: 'search-index.json', reason: 'missing-file' });
+  } else {
+    const entries = JSON.parse(readFileSync(searchPath, 'utf8')) as ReadonlyArray<Readonly<{ href?: string }>>;
+    for (const entry of entries) {
+      const href = entry.href ?? '';
+      if (href === '') continue;
+      searchEntriesChecked += 1;
+      checkLocalTarget({
+        source: 'search-index.json',
+        rawTarget: href,
+        fromFileAbs: siteRootAnchor,
+        missingFileReason: 'missing-file',
+        missingFragReason: 'missing-fragment',
+      });
+    }
+  }
+
+  const graphPath = join(absSiteDir, 'link-graph.json');
+  if (!existsSync(graphPath)) {
+    violations.push({ source: 'link-graph.json', target: 'link-graph.json', reason: 'missing-file' });
+  } else {
+    const graphJson = JSON.parse(readFileSync(graphPath, 'utf8')) as Readonly<{
+      nodes?: ReadonlyArray<Readonly<{ uri?: string; outPath?: string }>>;
+      edges?: ReadonlyArray<Readonly<{ from?: string; to?: string; fragment?: string }>>;
+    }>;
+    const nodeMap = new Map<string, Readonly<{ outPath?: string }>>();
+    for (const node of graphJson.nodes ?? []) {
+      const uri = node.uri ?? '';
+      const outPath = node.outPath ?? '';
+      graphNodesChecked += 1;
+      if (uri === '' || outPath === '') {
+        violations.push({ source: 'link-graph.json', target: uri || '(unnamed-node)', reason: 'missing-graph-node' });
+        continue;
+      }
+      nodeMap.set(uri, node);
+      checkLocalTarget({
+        source: `link-graph.json (${uri})`,
+        rawTarget: outPath,
+        fromFileAbs: siteRootAnchor,
+        missingFileReason: 'missing-graph-node',
+        missingFragReason: 'missing-graph-fragment',
+      });
+    }
+
+    for (const edge of graphJson.edges ?? []) {
+      graphEdgesChecked += 1;
+      const fromUri = edge.from ?? '';
+      const toUri = edge.to ?? '';
+      if (!nodeMap.has(fromUri)) {
+        violations.push({ source: 'link-graph.json', target: fromUri, reason: 'dangling-graph-edge' });
+      }
+      const toNode = nodeMap.get(toUri);
+      if (toNode === undefined) {
+        violations.push({ source: 'link-graph.json', target: toUri, reason: 'dangling-graph-edge' });
+        continue;
+      }
+      const frag = edge.fragment ?? '';
+      const baseOut = (toNode.outPath ?? '').split('#')[0] ?? '';
+      if (frag !== '' && baseOut !== '') {
+        checkLocalTarget({
+          source: `link-graph.json (${fromUri} -> ${toUri})`,
+          rawTarget: `${baseOut}#${frag}`,
+          fromFileAbs: siteRootAnchor,
+          missingFileReason: 'missing-graph-node',
+          missingFragReason: 'missing-graph-fragment',
+        });
+      }
+    }
+  }
+
+  return {
+    htmlFiles: htmlFiles.length,
+    localLinksChecked,
+    fragmentsChecked,
+    searchEntriesChecked,
+    graphNodesChecked,
+    graphEdgesChecked,
+    violations,
+  };
 }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
@@ -22,7 +23,7 @@ import {
 } from './editor-client.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
-import { LiteAcademyGraph, parseLiteUri, relativeWebHref, rewriteLiteUriHtml } from './lite-uri.ts';
+import { LiteAcademyGraph, parseLiteUri, relativeWebHref, rewriteLiteUriHtml, validateBuiltSiteReferences } from './lite-uri.ts';
 import { createPlayStage, createWorkerClient, mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
@@ -332,6 +333,14 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert.equal(buildMeta.modules, 17);
   assert(buildMeta.docsPages >= 200);
   assert(existsSync(join(out, 'docs/design/site-architecture.html')));
+  const refReport = validateBuiltSiteReferences(out);
+  assert.deepEqual(refReport.violations, []);
+  assert(refReport.htmlFiles >= 300);
+  assert(refReport.localLinksChecked >= 10000);
+  assert(refReport.fragmentsChecked >= 5000);
+  assert(refReport.searchEntriesChecked >= 2000);
+  assert(refReport.graphNodesChecked >= 500);
+  assert(refReport.graphEdgesChecked >= 3000);
   assert(index.includes('<meta name="description"'));
   assert(index.includes('Play &rarr;'));
   assert(!index.includes('Inspect generated TypeScript'));
@@ -1754,4 +1763,58 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'module-import'));
   assert(builtGraph.edges.some(e => e.from === 'lite://gym/record-shorthand-destructure' && e.to === 'lite://learn/records-and-patterns' && e.kind === 'catalog-ref'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/records-and-patterns' && e.to === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.kind === 'catalog-ref'));
+});
+
+test('validateBuiltSiteReferences catches broken files, missing fragments, unresolved attributes, search entries, and dangling graph edges', () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'lite-site-refs-'));
+  try {
+    mkdirSync(join(scratch, 'docs'), { recursive: true });
+    writeFileSync(
+      join(scratch, 'index.html'),
+      '<!doctype html><a href="docs/page.html#ok">Ok</a>',
+    );
+    writeFileSync(
+      join(scratch, 'docs', 'page.html'),
+      '<!doctype html><h2 id="ok">Ok</h2>' +
+        '<a href="missing.html">Missing file</a>' +
+        '<a href="#missing-id">Missing frag</a>' +
+        '<a href="page.html#ok" data-lite-uri="lite://learn/nope">Unresolved</a>',
+    );
+    writeFileSync(
+      join(scratch, 'search-index.json'),
+      JSON.stringify([
+        { kind: 'doc', title: 'Ok', subtitle: '', href: 'docs/page.html#ok', keywords: '' },
+        { kind: 'doc', title: 'Bad', subtitle: '', href: 'docs/page.html#nope', keywords: '' },
+      ]),
+    );
+    writeFileSync(
+      join(scratch, 'link-graph.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        nodes: [
+          { uri: 'lite://doc/page', kind: 'doc', title: 'Page', outPath: 'docs/page.html' },
+        ],
+        edges: [
+          { from: 'lite://doc/page', to: 'lite://doc/missing', kind: 'lite-uri' },
+          { from: 'lite://doc/page', to: 'lite://doc/page', kind: 'lite-uri', fragment: 'bad-edge-frag' },
+        ],
+      }),
+    );
+
+    const report = validateBuiltSiteReferences(scratch);
+    const reasons = report.violations.map(v => v.reason).sort();
+    assert.deepEqual(
+      reasons,
+      [
+        'dangling-graph-edge',
+        'missing-file',
+        'missing-fragment',
+        'missing-fragment',
+        'missing-graph-fragment',
+        'unresolved-lite-uri',
+      ],
+    );
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 });

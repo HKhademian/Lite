@@ -23,7 +23,7 @@ import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
 import { buildGymSection } from './gym-pages.ts';
 import type { GymCatalog } from './gym-verify.ts';
 import { buildLearnSection, type LearnCatalog } from './learn-pages.ts';
-import { buildLiteAcademyGraph, collectHtmlIds } from './lite-uri.ts';
+import { buildLiteAcademyGraph, collectHtmlIds, validateBuiltSiteReferences } from './lite-uri.ts';
 import { buildModulesSection } from './modules-pages.ts';
 import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
@@ -1939,7 +1939,20 @@ export function buildSite(options?: BuildSiteOptions): void {
     ) + '\n',
   );
 
-  console.log(`Built Lite site (${String(rendered.size)} verified samples) -> dist/site/`);
+  const refReport = validateBuiltSiteReferences(outputDir);
+  if (refReport.violations.length > 0) {
+    const sample = refReport.violations
+      .slice(0, 15)
+      .map(v => `- [${v.reason}] ${v.source} -> ${v.target}`)
+      .join('\n');
+    throw new Error(
+      `Built site reference validation failed (${String(refReport.violations.length)} violations across ${String(refReport.htmlFiles)} HTML files):\n${sample}`,
+    );
+  }
+
+  console.log(
+    `Built Lite site (${String(rendered.size)} verified samples, ${String(refReport.localLinksChecked)} local links, ${String(refReport.fragmentsChecked)} fragments verified) -> dist/site/`,
+  );
 }
 
 if (import.meta.main) {
