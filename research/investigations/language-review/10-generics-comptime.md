@@ -19,6 +19,8 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Baseline:** Fixed array extents are compile-time type information; a general const-parameter mechanism is still open.
 
+**Confirmed in joint review:** Generics can be parameterized by types, compile-time values, or both. In `[T; N]`, `T` is the element type and `N` is a compile-time value. With `T` fixed to `Int`, extents `3` and `4` still produce distinct array types. The syntax for declaring such parameters, which value domains are admissible, and how value arguments participate in inference and identity remain open. [Fixed arrays](../../../docs/arrays.md)
+
 **Initial assessment and probes:** Compare functions operating on `[Int; 3]` and `[Int; 4]` with one generic over N. Ask how N is checked, inferred, and represented in type identity.
 
 ## 10.3 Requirements and inference
