@@ -261,13 +261,13 @@ runTask := fn(root: String, task: String): Unit {
     if task == "release-unit" {
         unitArgs: List<String> = [
         "--test",
-        "tools/cli.test.ts",
         "site/features.test.ts", "site/build.test.ts"
         ];
         invokeNode(unitArgs, root);
         releaseUnitFiles: List<String> = [
         "compiler/scripts/release-streams.test.lts",
         "tools/cases.test.lts",
+        "tools/cli.test.lts",
         "tools/docs.test.lts",
         "tools/fmt.test.lts",
         "tools/release.test.lts",

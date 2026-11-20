@@ -1,0 +1,346 @@
+/** Routed aliases and direct operation commands must share behavior. */
+
+fs := import "core/file";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+json := import "util/json";
+project := import "util/project";
+
+rawRoot := project.findRepoRoot();
+test.check("repo root found", rawRoot =!= "");
+root := fs.realPath(rawRoot).path;
+
+CmdResult := type (status: Int, stdout: String, stderr: String);
+
+runIn := fn(exe: String, args: List<String>, cwd: String, timeoutMs: Int): CmdResult {
+    tmpRes := fs.makeTempDir("lite-cli-t-");
+    test.check("runIn makeTempDir: " + tmpRes.error, tmpRes.ok);
+    outPath := path.join(tmpRes.path, "out");
+    errPath := path.join(tmpRes.path, "err");
+    emptyEnv: List<String> = [];
+    emptyBytes: List<Int> = [];
+    res := proc.runBytes(exe, args, cwd, emptyEnv, timeoutMs, emptyBytes, outPath, errPath);
+    test.check("runIn process error: " + res.error, res.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    _rm := fs.remove(tmpRes.path);
+    (status = res.status, stdout = outText, stderr = errText)
+};
+
+command := fn(name: String, args: List<String>): CmdResult {
+    cmdArgs: mut List<String> = [path.join(path.join(root, "bin"), name)];
+    loop args as a {
+        list.pushBack(mut cmdArgs, a);
+    }
+    runIn(proc.execPath(), cmdArgs, root, 60000)
+};
+
+assertSameCmd := fn(label: String, expected: CmdResult, actual: CmdResult): Unit {
+    test.checkInt(label + " status", expected.status, actual.status);
+    test.checkText(label + " stdout", expected.stdout, actual.stdout);
+    test.checkText(label + " stderr", expected.stderr, actual.stderr);
+};
+
+isHex12 := fn(s: String): Bool {
+    if text.length(s) =!= 12 { return false; }
+    var i := 0;
+    loop i < 12 {
+        ch := text.at(s, i);
+        if text.indexOfText("0123456789abcdef", ch, 0) < 0 { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+stripShebang := fn(s: String): String {
+    if not text.startsWithAt(s, 0, "#!") { return s; }
+    nl := text.indexOfText(s, "\n", 0);
+    if nl < 0 { return ""; }
+    text.slice(s, nl + 1, text.length(s))
+};
+
+copyRepoTree := fn(dstRoot: String, relPath: String): Unit {
+    stack: mut List<String> = [relPath];
+    loop list.listCountText(stack) > 0 {
+        rel := list.popBack(mut stack);
+        src := path.join(root, rel);
+        dst := path.join(dstRoot, rel);
+        rp := fs.realPath(src);
+        if rp.ok and rp.path =!= src {
+            test.check("mkdir symlink parent " + rel, fs.makeDir(path.parentDir(dst)).ok);
+            relTarget := path.relative(path.parentDir(src), rp.path);
+            sl := fs.symlink(relTarget, dst);
+            test.check("symlink " + rel + ": " + sl.error, sl.ok);
+        } else if fs.kind(src) == fs.FILE_KIND_DIR {
+            test.check("mkdir dir " + rel, fs.makeDir(dst).ok);
+            entries := fs.listDir(src);
+            loop entries as entry {
+                list.pushBack(mut stack, rel + "/" + entry);
+            }
+        } else {
+            test.check("mkdir file parent " + rel, fs.makeDir(path.parentDir(dst)).ok);
+            cp := fs.copy(src, dst);
+            test.check("copy " + rel + ": " + cp.error, cp.ok);
+        }
+    }
+};
+
+/* 1. lite compile routes through the compiler router to its TypeScript target */
+sample := "language/examples/foundations/io/double-sum.lts";
+expectedTs := command("lite-compile-ts", [sample]);
+assertSameCmd("lite compile", expectedTs, command("lite", ["compile", sample]));
+assertSameCmd("lite --compile", expectedTs, command("lite", ["--compile", sample]));
+assertSameCmd("lite-compile", expectedTs, command("lite-compile", [sample]));
+assertSameCmd("lite-compile ts", expectedTs, command("lite-compile", ["ts", sample]));
+assertSameCmd("lite-compile --target ts", expectedTs, command("lite-compile", ["--target", "ts", sample]));
+assertSameCmd("lite-compile --target=ts", expectedTs, command("lite-compile", ["--target=ts", sample]));
+assertSameCmd("lite-compile-ts --target ts", expectedTs, command("lite-compile-ts", ["--target", "ts", sample]));
+assertSameCmd("lite-compile-ts --target=ts", expectedTs, command("lite-compile-ts", ["--target=ts", sample]));
+
+expectedC := command("lite-compile-c", [sample]);
+assertSameCmd("lite-compile --target c", expectedC, command("lite-compile", ["--target", "c", sample]));
+assertSameCmd("lite-compile --target=c", expectedC, command("lite-compile", ["--target=c", sample]));
+
+/* 2. lite verify routes case manifests to the verifier command */
+assertSameCmd(
+"lite verify",
+command("lite-verify", ["tools/cases/tooling/fixtures/proposal.fixture.json"]),
+command("lite", ["verify", "tools/cases/tooling/fixtures/proposal.fixture.json"])
+);
+
+/* 3. lite test routes case mode to the tester command */
+assertSameCmd(
+"lite test --cases",
+command("lite-test", ["--cases", "tools/cases/tooling/fixtures/proposal.fixture.json"]),
+command("lite", ["test", "--cases", "tools/cases/tooling/fixtures/proposal.fixture.json"])
+);
+
+/* 4. lite test --unit runs parallel .test.lts unit tests and validates flags */
+unitRes := command("lite", ["test", "--unit", "--jobs", "2", "--verbose", "compiler-smoke"]);
+test.checkInt("lite test --unit status: " + unitRes.stderr, 0, unitRes.status);
+test.check("lite test --unit PASS line", text.indexOfText(unitRes.stdout, "PASS compiler/tests/compiler-smoke.test.lts", 0) >= 0);
+test.check("lite test --unit summary", text.indexOfText(unitRes.stdout, "Unit tests: 1 passed, 0 failed.", 0) >= 0);
+assertSameCmd(
+"lite test --unit --mute",
+command("lite-test", ["--unit", "--mute", "compiler-smoke"]),
+command("lite", ["test", "--unit", "--mute", "compiler-smoke"])
+);
+badJobs := command("lite", ["test", "--unit", "--jobs", "0"]);
+test.checkInt("lite test --unit --jobs 0 status", 2, badJobs.status);
+test.check("lite test --unit --jobs 0 usage", text.startsWithAt(badJobs.stderr, 0, "Usage: ./bin/lite test --unit"));
+
+/* 5. lite doctor routes to the standalone repository checker */
+assertSameCmd("lite doctor --docs", command("lite-doctor", ["--docs"]), command("lite", ["doctor", "--docs"]));
+
+/* 6. component versions belong to their tool commands */
+assertSameCmd("verify --version", command("lite-verify", ["--version"]), command("lite", ["verify", "--version"]));
+assertSameCmd("doctor --version", command("lite-doctor", ["--version"]), command("lite", ["doctor", "--version"]));
+assertSameCmd("check --version", command("lite-check", ["--version"]), command("lite", ["check", "--version"]));
+assertSameCmd("docs --version", command("lite-docs", ["--version"]), command("lite", ["docs", "--version"]));
+assertSameCmd("bench --version", command("lite-bench", ["--version"]), command("lite", ["bench", "--version"]));
+
+/* 7. lite check routes through ./bin/lite to the standalone checker */
+checkExpected := command("lite-check", [sample]);
+assertSameCmd("lite check", checkExpected, command("lite", ["check", sample]));
+test.checkInt("lite-check status", 0, checkExpected.status);
+
+/* 8. ignited tool artifacts match their Lite sources and pass strict TS checking */
+ignitedAllRes := runIn(proc.execPath(), [path.join(root, "bin/lite-ignite"), "--check", "--json"], root, 180000);
+test.checkInt("lite-ignite --check --json status: " + ignitedAllRes.stderr, 0, ignitedAllRes.status);
+chkField := json.readObjectBool(ignitedAllRes.stdout, 0, "checked");
+test.check("igniteAllTools checked == true", chkField.found and chkField.ok and chkField.value);
+
+tsComp := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select ts compiler", tsComp.ok);
+toolNames: List<String> = [
+"cli", "compile", "compile-c", "compile-ts", "checker", "check", "run",
+"run-ts-artifact", "verify", "test-runner", "test", "bench", "ci", "release", "ignite"
+];
+loop toolNames as name {
+    srcRel := "tools/src/" + name + ".lts";
+    srcAbs := path.join(root, srcRel);
+    srcRead := fs.readText(srcAbs);
+    test.check("read " + srcRel, srcRead.ok);
+    compiled := compilerTest.compileStdinWithOpts(root, tsComp.path, root, srcRead.text, srcRel, srcAbs, []);
+    test.checkInt("compile " + srcRel + ": " + compiled.stderr, 0, compiled.status);
+    genRead := fs.readText(path.join(root, "dist/tools/" + name + ".ts"));
+    test.check("read dist/tools/" + name + ".ts", genRead.ok);
+    test.checkText(name + " artifact out of date", compiled.stdout, genRead.text);
+}
+trackedIgniter := stripShebang(fs.readText(path.join(root, "compiler/bootstrap/igniter.ts")).text);
+test.checkText("compiler/bootstrap/igniter.ts out of date", fs.readText(path.join(root, "dist/tools/ignite.ts")).text, trackedIgniter);
+
+/* 9. lite router help, version, and unknown command handling match exit and output contracts */
+help := command("lite", ["help"]);
+test.checkInt("lite help status", 0, help.status);
+test.check("lite help usage", text.startsWithAt(help.stdout, 0, "Usage: ./bin/lite <command> [options]"));
+assertSameCmd("lite --help", help, command("lite", ["--help"]));
+assertSameCmd("lite -h", help, command("lite", ["-h"]));
+
+missing := command("lite", []);
+test.checkInt("lite missing status", 2, missing.status);
+test.checkText("lite missing stdout", "", missing.stdout);
+test.checkText("lite missing stderr", help.stdout, missing.stderr);
+
+version := command("lite", ["--version"]);
+test.checkInt("lite --version status", 0, version.status);
+test.check("lite --version header", text.startsWithAt(version.stdout, 0, "lite cli "));
+test.check("lite --version kind", text.indexOfText(version.stdout, "\nkind: ignited-ts (target: ts)\n", 0) >= 0);
+vArtNeedle := "artifact: dist/tools/cli.ts (sha256: ";
+vArtIdx := text.indexOfText(version.stdout, vArtNeedle, 0);
+test.check("lite --version artifact", vArtIdx >= 0);
+test.check("lite --version sha12", isHex12(text.slice(version.stdout, vArtIdx + text.length(vArtNeedle), vArtIdx + text.length(vArtNeedle) + 12)));
+test.check("lite --version source", text.indexOfText(version.stdout, "source: tools/src/cli.lts (", 0) >= 0);
+test.check("lite --version built-by", text.indexOfText(version.stdout, " modules, built-by: ", 0) >= 0);
+test.check("lite --version host", text.indexOfText(version.stdout, "host: node v", 0) >= 0);
+
+versionJson := command("lite", ["--version", "--json"]);
+test.checkInt("lite --version --json status: " + versionJson.stderr, 0, versionJson.status);
+test.checkText("version json command", "lite cli", json.readObjectString(versionJson.stdout, 0, "command").value);
+test.checkText("version json component", "cli", json.readObjectString(versionJson.stdout, 0, "component").value);
+test.checkText("version json kind", "ignited-ts", json.readObjectString(versionJson.stdout, 0, "kind").value);
+test.checkText("version json artifact", "dist/tools/cli.ts", json.readObjectString(versionJson.stdout, 0, "artifact").value);
+test.checkText("version json source", "tools/src/cli.lts", json.readObjectString(versionJson.stdout, 0, "source").value);
+
+igniterVer := command("lite-ignite", ["--version"]);
+test.checkInt("lite-ignite --version status: " + igniterVer.stderr, 0, igniterVer.status);
+test.check("lite-ignite --version header", text.startsWithAt(igniterVer.stdout, 0, "lite-ignite "));
+test.check("lite-ignite --version kind", text.indexOfText(igniterVer.stdout, "\nkind: bootstrap-igniter-ts (target: ts)\n", 0) >= 0);
+iArtNeedle := "artifact: compiler/bootstrap/igniter.ts (sha256: ";
+iArtIdx := text.indexOfText(igniterVer.stdout, iArtNeedle, 0);
+test.check("lite-ignite --version artifact", iArtIdx >= 0);
+test.check("lite-ignite --version sha12", isHex12(text.slice(igniterVer.stdout, iArtIdx + text.length(iArtNeedle), iArtIdx + text.length(iArtNeedle) + 12)));
+
+/* 10. munching routers, flag aliases, and direct generated entrypoints converge on identical output */
+fmtTarget := "tools/src/fmt.lts";
+expectedFmt := command("lite-fmt", ["--check", fmtTarget]);
+test.checkInt("lite-fmt --check status", 0, expectedFmt.status);
+assertSameCmd("lite fmt --check", expectedFmt, command("lite", ["fmt", "--check", fmtTarget]));
+assertSameCmd("lite --fmt --check", expectedFmt, command("lite", ["--fmt", "--check", fmtTarget]));
+assertSameCmd("lite -- fmt --check", expectedFmt, command("lite", ["--", "fmt", "--check", fmtTarget]));
+directFmt := runIn(proc.execPath(), [path.join(root, "dist/tools/fmt.ts"), "--check", fmtTarget], root, 60000);
+assertSameCmd("direct dist/tools/fmt.ts", expectedFmt, directFmt);
+
+/* 11. ignition rebuilds missing, tampered, and dependency-changed tools into dist/tools */
+test.check("no tools/generated dir", fs.kind(path.join(root, "tools/generated")) == fs.FILE_KIND_MISSING);
+probeDirRes := fs.makeTempDir("lite-ignite-probe-");
+test.check("probeDir makeTempDir", probeDirRes.ok);
+probeDir := probeDirRes.path;
+probePaths: List<String> = [
+"package.json", "config/versions.json", "bin/lite", "bin/lite-fmt", "bin/lite-ignite",
+"compiler/package.json", "compiler/src", "compiler/manifests",
+"compiler/bootstrap/igniter.ts", "compiler/bootstrap/seed.ts",
+"igniter/artifacts.ts", "igniter/package.json", "igniter/tsconfig.json",
+"tools/src/cli.lts", "tools/src/fmt.lts", "lib/core", "lib/util"
+];
+loop probePaths as rel {
+    copyRepoTree(probeDir, rel);
+}
+
+checkToolsRebuilt := fn(label: String, jsonText: String, expCli: Bool, expFmt: Bool): Unit {
+    toolsField := json.findObjectField(jsonText, 0, "tools");
+    test.check(label + " has tools", toolsField.found);
+    offs := json.arrayElementOffsets(jsonText, toolsField.valuePos);
+    test.checkInt(label + " tool count", 2, list.listCountInt(offs));
+    test.checkText(label + " [0].name", "cli", json.readObjectString(jsonText, offs[0], "name").value);
+    test.check(label + " [0].rebuilt", json.readObjectBool(jsonText, offs[0], "rebuilt").value == expCli);
+    test.checkText(label + " [1].name", "fmt", json.readObjectString(jsonText, offs[1], "name").value);
+    test.check(label + " [1].rebuilt", json.readObjectBool(jsonText, offs[1], "rebuilt").value == expFmt);
+};
+
+firstIg := runIn(proc.execPath(), [path.join(probeDir, "compiler/bootstrap/igniter.ts"), "--json", "cli", "fmt"], probeDir, 60000);
+test.checkInt("first ignite: " + firstIg.stderr, 0, firstIg.status);
+checkToolsRebuilt("first ignite", firstIg.stdout, true, true);
+test.check("dist/tools/fmt.ts created", fs.kind(path.join(probeDir, "dist/tools/fmt.ts")) == fs.FILE_KIND_FILE);
+
+secondIg := runIn(proc.execPath(), [path.join(probeDir, "compiler/bootstrap/igniter.ts"), "--json", "cli", "fmt"], probeDir, 60000);
+test.checkInt("second ignite: " + secondIg.stderr, 0, secondIg.status);
+checkToolsRebuilt("second ignite", secondIg.stdout, false, false);
+
+test.check("tamper fmt.ts", fs.writeText(path.join(probeDir, "dist/tools/fmt.ts"), "// tampered\n").ok);
+repaired := runIn(proc.execPath(), [path.join(probeDir, "bin/lite"), "fmt", "--check", "tools/src/fmt.lts"], probeDir, 60000);
+test.checkInt("repaired fmt: " + repaired.stderr, 0, repaired.status);
+test.check("tamper removed", text.indexOfText(fs.readText(path.join(probeDir, "dist/tools/fmt.ts")).text, "// tampered", 0) < 0);
+
+cliLibPath := path.join(probeDir, "lib/util/cli.lts");
+test.check("touch cli.lts", fs.writeText(cliLibPath, fs.readText(cliLibPath).text + "\n").ok);
+afterDep := runIn(proc.execPath(), [path.join(probeDir, "compiler/bootstrap/igniter.ts"), "--json", "cli", "fmt"], probeDir, 60000);
+test.checkInt("afterDep ignite: " + afterDep.stderr, 0, afterDep.status);
+checkToolsRebuilt("afterDep ignite", afterDep.stdout, true, false);
+
+projLibPath := path.join(probeDir, "lib/util/project.lts");
+test.check("touch project.lts", fs.writeText(projLibPath, fs.readText(projLibPath).text + "\n").ok);
+afterShared := runIn(proc.execPath(), [path.join(probeDir, "compiler/bootstrap/igniter.ts"), "--json", "cli", "fmt"], probeDir, 60000);
+test.checkInt("afterShared ignite: " + afterShared.stderr, 0, afterShared.status);
+checkToolsRebuilt("afterShared ignite", afterShared.stdout, true, true);
+
+_rmDist := fs.remove(path.join(probeDir, "dist"));
+igAllProbe := runIn(proc.execPath(), [path.join(probeDir, "bin/lite-ignite"), "--json"], probeDir, 60000);
+test.checkInt("lite-ignite all: " + igAllProbe.stderr, 0, igAllProbe.status);
+test.check("dist/bootstrap/compiler.ts created", fs.kind(path.join(probeDir, "dist/bootstrap/compiler.ts")) == fs.FILE_KIND_FILE);
+test.check("dist/tools/cli.ts created", fs.kind(path.join(probeDir, "dist/tools/cli.ts")) == fs.FILE_KIND_FILE);
+test.check("dist/tools/fmt.ts created after rm", fs.kind(path.join(probeDir, "dist/tools/fmt.ts")) == fs.FILE_KIND_FILE);
+_rmProbe := fs.remove(probeDir);
+
+/* 12. lite-wipe removes untracked/ignored files in a Git checkout and re-ignites dist artifacts */
+wipeDirRes := fs.makeTempDir("lite-wipe-probe-");
+test.check("wipeDir makeTempDir", wipeDirRes.ok);
+wipeDir := wipeDirRes.path;
+wipePaths: List<String> = [
+".gitignore", "config", "compiler/manifests", "compiler/bootstrap", "compiler/src",
+"lib", "tools/src", "bin/lite", "bin/lite-ignite", "bin/lite-wipe"
+];
+loop wipePaths as rel {
+    copyRepoTree(wipeDir, rel);
+}
+
+test.check("write stray.txt", fs.writeText(path.join(wipeDir, "stray.txt"), "keep").ok);
+nonGit := runIn(proc.execPath(), [path.join(wipeDir, "bin/lite-wipe"), "--no-install"], wipeDir, 60000);
+test.check("nonGit wipe fails", nonGit.status =!= 0);
+test.check("nonGit wipe msg: " + nonGit.stderr, text.indexOfText(nonGit.stderr, "--wipe requires a Git checkout", 0) >= 0);
+test.check("stray.txt kept", fs.kind(path.join(wipeDir, "stray.txt")) == fs.FILE_KIND_FILE);
+
+_rmStray := fs.remove(path.join(wipeDir, "stray.txt"));
+test.checkInt("git init", 0, runIn("git", ["init"], wipeDir, 30000).status);
+test.checkInt("git email", 0, runIn("git", ["config", "user.email", "test@example.com"], wipeDir, 30000).status);
+test.checkInt("git name", 0, runIn("git", ["config", "user.name", "Test"], wipeDir, 30000).status);
+test.checkInt("git add", 0, runIn("git", ["add", "-A"], wipeDir, 30000).status);
+test.checkInt("git commit", 0, runIn("git", ["-c", "commit.gpgsign=false", "commit", "-m", "initial"], wipeDir, 30000).status);
+
+test.check("write untracked stray.txt", fs.writeText(path.join(wipeDir, "stray.txt"), "untracked").ok);
+test.check("mkdir .cache", fs.makeDir(path.join(wipeDir, ".cache")).ok);
+test.check("write .cache/old.txt", fs.writeText(path.join(wipeDir, ".cache/old.txt"), "stale").ok);
+test.check("mkdir dist/stale", fs.makeDir(path.join(wipeDir, "dist/stale")).ok);
+test.check("write dist/stale/old.txt", fs.writeText(path.join(wipeDir, "dist/stale/old.txt"), "stale").ok);
+test.check("mkdir tmp", fs.makeDir(path.join(wipeDir, "tmp")).ok);
+test.check("write tmp/scratch.txt", fs.writeText(path.join(wipeDir, "tmp/scratch.txt"), "stale").ok);
+test.check("mkdir igniter/node_modules/pkg", fs.makeDir(path.join(wipeDir, "igniter/node_modules/pkg")).ok);
+test.check("write igniter/node_modules/pkg/index.js", fs.writeText(path.join(wipeDir, "igniter/node_modules/pkg/index.js"), "stale").ok);
+
+wiped := runIn(proc.execPath(), [path.join(wipeDir, "bin/lite-wipe"), "--no-install", "--json"], wipeDir, 120000);
+test.checkInt("lite-wipe status: " + wiped.stderr, 0, wiped.status);
+test.check("stray.txt deleted", fs.kind(path.join(wipeDir, "stray.txt")) == fs.FILE_KIND_MISSING);
+test.check(".cache deleted", fs.kind(path.join(wipeDir, ".cache")) == fs.FILE_KIND_MISSING);
+test.check("dist/stale deleted", fs.kind(path.join(wipeDir, "dist/stale")) == fs.FILE_KIND_MISSING);
+test.check("tmp deleted", fs.kind(path.join(wipeDir, "tmp")) == fs.FILE_KIND_MISSING);
+test.check("igniter/node_modules deleted", fs.kind(path.join(wipeDir, "igniter/node_modules")) == fs.FILE_KIND_MISSING);
+test.check("wipe compiler.ts", fs.kind(path.join(wipeDir, "dist/bootstrap/compiler.ts")) == fs.FILE_KIND_FILE);
+test.check("wipe cli.ts", fs.kind(path.join(wipeDir, "dist/tools/cli.ts")) == fs.FILE_KIND_FILE);
+test.check("wipe ignite.ts", fs.kind(path.join(wipeDir, "dist/tools/ignite.ts")) == fs.FILE_KIND_FILE);
+
+wipeChecked := json.readObjectBool(wiped.stdout, 0, "checked");
+test.check("wipe checked == false", wipeChecked.found and wipeChecked.ok and not wipeChecked.value);
+wipeToolsField := json.findObjectField(wiped.stdout, 0, "tools");
+test.check("wipe has tools", wipeToolsField.found);
+wipeToolOffs := json.arrayElementOffsets(wiped.stdout, wipeToolsField.valuePos);
+test.check("wipe tools count > 0", list.listCountInt(wipeToolOffs) > 0);
+loop wipeToolOffs as tOff {
+    reb := json.readObjectBool(wiped.stdout, tOff, "rebuilt");
+    test.check("wipe tool rebuilt", reb.found and reb.ok and reb.value);
+}
+_rmWipe := fs.remove(wipeDir);
