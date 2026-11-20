@@ -180,12 +180,23 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const handbookSingle = readFileSync(join(out, 'docs/handbook/single-page.html'), 'utf8');
   assert(handbookSingle.includes('The Lite Handbook (Single-Page Edition)'));
   assert(handbookSingle.includes('id="chapter-bindings-and-mutability"'));
+  assert(handbookSingle.includes('#h5-nominal-record-types--name-shorthand'));
   const startHereHtml = readFileSync(join(out, 'docs/design/start-here.html'), 'utf8');
   assert(startHereHtml.includes('Open in Play &rarr;'));
   assert(startHereHtml.includes('Verified in TS'));
   const lpHtml = readFileSync(join(out, 'docs/proposals/LP-0001-operation-specific-panic-recovery.html'), 'utf8');
   assert(lpHtml.includes('Working Proposal'));
   const tuplesHbHtml = readFileSync(join(out, 'docs/handbook/tuples-arrays-lists-and-aliases.html'), 'utf8');
+  assert(tuplesHbHtml.includes('<body class="docs-page"'));
+  assert(tuplesHbHtml.includes('id="handbook-sidebar-filter"'));
+  assert(tuplesHbHtml.includes('id="hb-toggle-topics"'));
+  assert(tuplesHbHtml.includes('id="hb-progress-label"'));
+  assert(tuplesHbHtml.includes('conditionals-match-and-loops.html#subjectless-boolean-match'));
+  assert(tuplesHbHtml.includes('bindings-and-mutability.html#reserved-storage'));
+  assert(tuplesHbHtml.includes('class="hb-roadmap"'));
+  assert(tuplesHbHtml.includes('class="docs-pager-card'));
+  assert(tuplesHbHtml.includes('data-pager-prev'));
+  assert(tuplesHbHtml.includes('data-pager-next'));
   assert(tuplesHbHtml.includes('data-handbook-slug="tuples-arrays-lists-and-aliases"'));
   assert(tuplesHbHtml.includes('data-handbook-nav-slug="tuples-arrays-lists-and-aliases"'));
   assert(tuplesHbHtml.includes('data-runnable="true"'));
@@ -194,6 +205,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const tocMatch = tuplesHbHtml.match(/<aside class="portal-toc"[\s\S]*?<\/aside>/);
   assert(tocMatch && tocMatch[0].includes('<code>'), 'expected inline code rendering inside handbook TOC');
   assert(tocMatch && !tocMatch[0].includes('`'), 'unexpected raw backtick inside handbook TOC');
+  assert(tocMatch && !tocMatch[0].includes('Next Chapter'), 'redundant Next Chapter should be omitted from handbook TOC');
+  const hbTreeMatch = tuplesHbHtml.match(/<div id="hb-nav-tree"[\s\S]*?<div class="hb-sidebar-foot">/);
+  assert(hbTreeMatch && !hbTreeMatch[0].includes('Next Chapter'), 'redundant Next Chapter should be omitted from handbook sidebar topics');
   const designOverviewHtml = readFileSync(join(out, 'docs/design/overview.html'), 'utf8');
   assert(designOverviewHtml.includes('id="docs-sidebar-filter"'));
   assert(designOverviewHtml.includes('id="docs-sidebar-count"'));
@@ -1619,6 +1633,8 @@ test('academy-state runtime initializes window.LiteAcademy and aggregates progre
   const lessonsStat = { textContent: '' };
   const gymStat = { textContent: '' };
   const hbStat = { textContent: '' };
+  const hbProgLabel = { textContent: '' };
+  const hbProgFill = { style: { width: '' } };
   const snipsStat = { textContent: '' };
   const mockWin: Record<string, unknown> = {
     location: { href: 'https://example.test/docs/handbook/tuples-arrays-lists-and-aliases.html' },
@@ -1649,6 +1665,8 @@ test('academy-state runtime initializes window.LiteAcademy and aggregates progre
       if (id === 'academy-stat-lessons') return lessonsStat;
       if (id === 'academy-stat-gym') return gymStat;
       if (id === 'academy-stat-handbook') return hbStat;
+      if (id === 'hb-progress-label') return hbProgLabel;
+      if (id === 'hb-progress-fill') return hbProgFill;
       if (id === 'academy-stat-snips') return snipsStat;
       return null;
     },
@@ -1678,6 +1696,8 @@ test('academy-state runtime initializes window.LiteAcademy and aggregates progre
   assert.equal(lessonsStat.textContent, '1');
   assert.equal(gymStat.textContent, '2');
   assert.equal(hbStat.textContent, '1');
+  assert.equal(hbProgLabel.textContent, '1 / 7 chapters read');
+  assert.equal(hbProgFill.style.width, '14%');
 });
 
 test('lite:// internal URI parser, resolver, broken-link rejection, and link-graph.json integrity', () => {

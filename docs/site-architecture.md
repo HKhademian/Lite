@@ -17,7 +17,7 @@ Every top-level route uses the shared shell, unified progress/drawer helper, glo
 | `/` (`index.html`) | Overview, shell quickstart, resume progress bar, Academy pillar hub, featured samples | [build.ts](../site/build.ts) |
 | `/learn/` | Interactive ability curriculum (21 lessons + 3 tutorials) with filters, resizable workbench, and Play Canvas + Audio runner | [learn-pages.ts](../site/learn-pages.ts) |
 | `/gym/` | Browser-graded coding dojo (20 Litelings drills + 25 belt-ranked workouts) with line diffs, switcher drawer, and custom stdin sandbox | [gym-pages.ts](../site/gym-pages.ts) |
-| `/docs/` | Layer 1 runnable 7-chapter Shipped Handbook + Layer 2 design specs, proposals, and compiler docs with inline `▶ Run` & backlinks | [docs-pages.ts](../site/docs-pages.ts) |
+| `/docs/` | Layer 1 runnable 7-chapter Shipped Handbook (full-map topic tree, inline roadmap, prev/next cards) + Layer 2 design specs, proposals, and compiler docs | [docs-pages.ts](../site/docs-pages.ts) |
 | `/modules/` | Standard library & Play (`core/*`, `extra/*`) API reference extracted from `.lts` sources with Academy & showcase backlinks | [modules-pages.ts](../site/modules-pages.ts) |
 | `/tools/` | `./bin/lite` CLI subcommands, VS Code extension guide, Play host bridge, self-hosting ladder | [tools-page.ts](../site/tools-page.ts) |
 | `/gallery/` | Build-time verified language showcase programs, Canvas art, Audio synthesis, and Play games | [build.ts](../site/build.ts) |
@@ -32,7 +32,7 @@ Every top-level route uses the shared shell, unified progress/drawer helper, glo
 - **`runtime/worker.js` ([playground-worker.ts](../site/playground-worker.ts))**: Shared Web Worker across `/playground/`, `/learn/`, `/gym/`, and inline Docs blocks (`▶ Run`). Lazily loads `compiler.js`, `compiler-c.js`, and `stdlib.json` and supports `compile`, `compile-c`, `run`, `step`, `keydown`, `keyup`, `pointermove`, `pointerdown`, `pointerup`, `stop`, and `grade` (omitting `expectedStdout`/`actualStdout` when `hidden: true`).
 - **`runtime/play-stage.js` ([play-stage.ts](../site/play-stage.ts))**: Shared Canvas 2D pixel/op renderer, Web Audio (`extra/audio`) synthesizer, frame-step loop, and Worker RPC client shared across `/playground/`, `/learn/`, and `/gym/`.
 - **`runtime/editor-client.js` ([editor-client.ts](../site/editor-client.ts))**: Shared syntax-layered editor binding with line-number gutter, compile-error line highlighting, auto-indent, split-pane resizing, and `#code=` share payload codecs.
-- **`runtime/academy.js` ([academy-state.ts](../site/academy-state.ts)) & `runtime/snips.js` ([snips.ts](../site/snips.ts))**: Unified Academy resume/progress aggregation across Learn, Gym, Handbook read state, and UUIDv7 `localStorage` sketches, plus inline Docs `▶ Run` / `Copy` / `Save` / `Open in Play` controls, TOC scroll-spy, Spec sidebar filtering, and mobile drawers.
+- **`runtime/academy.js` ([academy-state.ts](../site/academy-state.ts)) & `runtime/snips.js` ([snips.ts](../site/snips.ts))**: Unified Academy resume/progress aggregation across Learn, Gym, Handbook read state, and UUIDv7 `localStorage` sketches, plus inline Docs `▶ Run` / `Copy` / `Save` / `Open in Play` controls, live Handbook & Spec sidebar filters, synced TOC scroll-spy, keyboard chapter navigation (`[` / `]`), and mobile drawers.
 
 ## Documentation, `lite://` URI Linkage & API Extraction
 
