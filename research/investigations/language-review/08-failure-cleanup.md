@@ -40,6 +40,8 @@ For outcomes with multiple retained failures, postfix `!` forwards the entire gr
 
 **Baseline:** An operation handler and an explicit block handler have selected distinct panic coverage.
 
+**Joint review: untangle the evaluation into temporaries.** In `readConfig(paths[i]) else { defaultConfig() }`, first introduce `tmp1 := paths[i]` and attach the handler to `readConfig(tmp1)`. This exposes that indexing runs before the call and outside the call's handler. For returned errors, the next step is `tmp2 := readConfig(tmp1)` followed by `config := tmp2 else { defaultConfig() }`. The returned outcome can be inspected after the call completes. A live panic eligible for the original attached handler needs that boundary in place during evaluation. Extracting the call into a standalone `tmp2` statement would move it outside that boundary. Keep the handler attached or use explicit capture when modeling live panics. [Recovery scope](../../../docs/expression-recovery.md)
+
 **Initial assessment and probes:** Compare `operation(argument()) else { ... }` with `{ operation(argument()) } else { ... }`: a fault in argument evaluation belongs to the block boundary, not the operation-only handler.
 
 ## 8.5 Cleanup
