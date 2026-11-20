@@ -1,0 +1,20 @@
+/** CLI entrypoint generating `/gym/` section pages, payloads, and search entries JSON (`site/gym-pages.ts`). */
+
+io := import "core/io";
+siteGym := import "../../site/src/gym.lts";
+
+run := fn(): Unit {
+    stdinRes := io.readAllText(io.stdinReader());
+    if not stdinRes.ok {
+        io.errorLine(stdinRes.error);
+        io.exit(1);
+    }
+    res := siteGym.buildGymPayloadJson(stdinRes.text);
+    if not res.ok {
+        io.errorLine(res.error);
+        io.exit(1);
+    }
+    io.output(res.jsonText);
+};
+
+run();

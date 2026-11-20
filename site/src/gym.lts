@@ -1,0 +1,1324 @@
+/** Generates `/gym/` index, drill/workout dojo page bodies, payloads, and search entries (`site/gym-pages.ts`). */
+
+integer := import "core/int";
+list := import "core/list";
+text := import "core/text";
+challenges := import "util/challenges";
+json := import "util/json";
+siteTools := import "./tools.lts";
+
+escapeHtml := siteTools.escapeSiteHtml;
+
+beltLabel := fn(belt: String): String {
+    if belt == "amber" { "Amber Belt" }
+    else if belt == "emerald" { "Emerald Belt" }
+    else if belt == "obsidian" { "Obsidian Belt" }
+    else { "White Belt" }
+};
+
+beltBadge := fn(belt: String): String {
+    if belt == "amber" { "Amber" }
+    else if belt == "emerald" { "Emerald" }
+    else if belt == "obsidian" { "Obsidian" }
+    else { "White" }
+};
+
+beltPillClass := fn(belt: String): String {
+    if belt == "amber" { "belt-pill belt-amber" }
+    else if belt == "emerald" { "belt-pill belt-emerald" }
+    else if belt == "obsidian" { "belt-pill belt-obsidian" }
+    else { "belt-pill belt-white" }
+};
+
+replaceAllText := fn(source: String, needle: String, replacement: String): String {
+    nLen := text.length(needle);
+    if nLen == 0 { return source; }
+    sLen := text.length(source);
+    out: mut List<String> = [];
+    var pos := 0;
+    loop pos < sLen {
+        found := text.indexOfText(source, needle, pos);
+        if found < 0 {
+            list.pushBack(mut out, text.slice(source, pos, sLen));
+            break;
+        }
+        if found > pos {
+            list.pushBack(mut out, text.slice(source, pos, found));
+        }
+        list.pushBack(mut out, replacement);
+        pos = found + nLen;
+    }
+    text.joinTexts(out, "")
+};
+
+safeJsonForScript := fn(rawJson: String): String {
+    replaceAllText(rawJson, "<", "\\u003c")
+};
+
+readOptStr := fn(src: String, objPos: Int, key: String): String {
+    res := json.readObjectString(src, objPos, key);
+    if res.found and res.ok { res.value } else { "" }
+};
+
+readStringList := fn(src: String, objPos: Int, key: String): List<String> {
+    out: mut List<String> = [];
+    fld := json.findObjectField(src, objPos, key);
+    if not fld.found { return out; }
+    offs := json.arrayElementOffsets(src, fld.valuePos);
+    loop offs as off {
+        r := json.readStringAt(src, off);
+        if r.ok {
+            list.pushBack(mut out, r.value);
+        }
+    }
+    out
+};
+
+readRawField := fn(src: String, objPos: Int, key: String, fallback: String): String {
+    fld := json.findObjectField(src, objPos, key);
+    if not fld.found { return fallback; }
+    sp := json.valueSpan(src, fld.valuePos);
+    if not sp.ok { return fallback; }
+    text.slice(src, sp.start, sp.end)
+};
+
+arrayCountField := fn(src: String, objPos: Int, key: String): Int {
+    fld := json.findObjectField(src, objPos, key);
+    if not fld.found { return 0; }
+    list.listCountInt(json.arrayElementOffsets(src, fld.valuePos))
+};
+
+inListText := fn(items: List<String>, needle: String): Bool {
+    loop items as it {
+        if it == needle { return true; }
+    }
+    false
+};
+
+/* Relative href from `gym/index.html` to `gym/<folder>/<slug>.html` is `<folder>/<slug>.html`. */
+indexHrefForOutPath := fn(outPath: String): String {
+    if text.startsWithAt(outPath, 0, "gym/") {
+        return text.slice(outPath, 4, text.length(outPath));
+    }
+    outPath
+};
+
+/* Relative href between two `gym/<folder>/<slug>.html` pages. */
+exerciseRelHref := fn(fromOutPath: String, toOutPath: String): String {
+    fromRel := indexHrefForOutPath(fromOutPath);
+    toRel := indexHrefForOutPath(toOutPath);
+    fromSlash := text.indexOfText(fromRel, "/", 0);
+    toSlash := text.indexOfText(toRel, "/", 0);
+    if fromSlash >= 0 and toSlash >= 0 {
+        fromDir := text.slice(fromRel, 0, fromSlash);
+        toDir := text.slice(toRel, 0, toSlash);
+        if fromDir == toDir {
+            return text.slice(toRel, toSlash + 1, text.length(toRel));
+        }
+        return "../" + toRel;
+    }
+    toRel
+};
+
+renderCardGrid := fn(src: String, subsetOffs: List<Int>): String {
+    cards: mut List<String> = [];
+    loop subsetOffs as iPos {
+        id := readOptStr(src, iPos, "id");
+        title := readOptStr(src, iPos, "title");
+        mode := readOptStr(src, iPos, "mode");
+        belt := readOptStr(src, iPos, "belt");
+        domain := readOptStr(src, iPos, "domain");
+        subGroup := readOptStr(src, iPos, "subGroup");
+        outPath := readOptStr(src, iPos, "outPath");
+        modeLabel := if mode == "drill" { "Drill" } else { "Workout" };
+        href := indexHrefForOutPath(outPath);
+        totalCases := arrayCountField(src, iPos, "visibleCases") + arrayCountField(src, iPos, "hiddenCases");
+        searchBlob := text.toLowerAscii(title + " " + domain + " " + subGroup + " " + belt + " " + mode);
+        cardLines: List<String> = [
+        "<article class=\"portal-card gym-index-card\" data-exercise-id=\"" + escapeHtml(id) + "\" data-mode=\"" + mode + "\" data-belt=\"" + belt + "\" data-domain=\"" + escapeHtml(domain) + "\" data-search=\"" + escapeHtml(searchBlob) + "\">",
+        "  <div class=\"portal-card-head\">",
+        "    <h3><a href=\"" + escapeHtml(href) + "\">" + escapeHtml(title) + "</a></h3>",
+        "    <span class=\"" + beltPillClass(belt) + "\">" + escapeHtml(beltBadge(belt)) + "</span>",
+        "  </div>",
+        "  <div class=\"gym-card-tags\">",
+        "    <span class=\"badge\">" + escapeHtml(modeLabel) + "</span>",
+        "    <code>" + escapeHtml(domain) + "/" + escapeHtml(subGroup) + "</code>",
+        "    <span class=\"code-card-meta\">" + integer.intText(totalCases) + " cases</span>",
+        "  </div>",
+        "  <div class=\"portal-card-foot\">",
+        "    <span class=\"gym-status-label code-card-meta\" data-status-for=\"" + escapeHtml(id) + "\">Not started</span>",
+        "    <a href=\"" + escapeHtml(href) + "\">Solve &rarr;</a>",
+        "  </div>",
+        "</article>"
+        ];
+        list.pushBack(mut cards, text.joinTexts(cardLines, "\n"));
+    }
+    text.joinTexts(cards, "\n")
+};
+
+renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>): String {
+    totalCount := list.listCountInt(itemOffs);
+    totalStr := integer.intText(totalCount);
+
+    drillOffs: mut List<Int> = [];
+    workoutOffs: mut List<Int> = [];
+    var whiteCount := 0;
+    var amberCount := 0;
+    var emeraldCount := 0;
+    var obsidianCount := 0;
+    rawDomains: mut List<String> = [];
+    orderedMetaObjs: mut List<String> = [];
+
+    loop itemOffs as iPos {
+        id := readOptStr(src, iPos, "id");
+        title := readOptStr(src, iPos, "title");
+        mode := readOptStr(src, iPos, "mode");
+        belt := readOptStr(src, iPos, "belt");
+        domain := readOptStr(src, iPos, "domain");
+        outPath := readOptStr(src, iPos, "outPath");
+
+        if mode == "drill" {
+            list.pushBack(mut drillOffs, iPos);
+        } else if mode == "kata" {
+            list.pushBack(mut workoutOffs, iPos);
+        }
+        if belt == "white" { whiteCount = whiteCount + 1; }
+        else if belt == "amber" { amberCount = amberCount + 1; }
+        else if belt == "emerald" { emeraldCount = emeraldCount + 1; }
+        else if belt == "obsidian" { obsidianCount = obsidianCount + 1; }
+
+        if not inListText(rawDomains, domain) {
+            list.pushBack(mut rawDomains, domain);
+        }
+
+        metaObj := "{\"id\":" + json.quoteString(id)
+        + ",\"belt\":" + json.quoteString(belt)
+        + ",\"mode\":" + json.quoteString(mode)
+        + ",\"title\":" + json.quoteString(title)
+        + ",\"href\":" + json.quoteString(indexHrefForOutPath(outPath)) + "}";
+        list.pushBack(mut orderedMetaObjs, metaObj);
+    }
+
+    beltNames: List<String> = ["white", "amber", "emerald", "obsidian"];
+    beltCounts: List<Int> = [whiteCount, amberCount, emeraldCount, obsidianCount];
+    beltCards: mut List<String> = [];
+    var bIdx := 0;
+    loop bIdx < 4 {
+        b := beltNames[bIdx];
+        bc := integer.intText(beltCounts[bIdx]);
+        bLines: List<String> = [
+        "<div class=\"gym-belt-stat\" data-belt=\"" + b + "\">",
+        "  <span class=\"" + beltPillClass(b) + "\">" + beltBadge(b) + "</span>",
+        "  <div style=\"display:flex;flex-direction:column;gap:0.2rem;\">",
+        "    <strong data-belt-progress=\"" + b + "\">0 / " + bc + "</strong>",
+        "    <div class=\"learn-bar-track\" style=\"height:5px;width:72px;\"><div class=\"learn-bar-fill\" data-belt-fill=\"" + b + "\" style=\"width:0%;\"></div></div>",
+        "  </div>",
+        "</div>"
+        ];
+        list.pushBack(mut beltCards, text.joinTexts(bLines, "\n"));
+        bIdx = bIdx + 1;
+    }
+
+    sortedDomains := challenges.sortTexts(rawDomains);
+    domBtnParts: mut List<String> = [];
+    loop sortedDomains as dom {
+        list.pushBack(mut domBtnParts, "<button class=\"gym-filter-btn\" type=\"button\" data-filter-domain=\"" + escapeHtml(dom) + "\" aria-pressed=\"false\">" + escapeHtml(dom) + "</button>");
+    }
+
+    firstHref := if totalCount > 0 {
+        indexHrefForOutPath(readOptStr(src, itemOffs[0], "outPath"))
+    } else {
+        "drills/immutable-vs-var.html"
+    };
+    drillCountStr := integer.intText(list.listCountInt(drillOffs));
+    workoutCountStr := integer.intText(list.listCountInt(workoutOffs));
+    orderedMetaJson := "[" + text.joinTexts(orderedMetaObjs, ",") + "]";
+
+    lines: List<String> = [
+    "<section class=\"page-hero\">",
+    "  <h1>Lite Gym</h1>",
+    "  <p class=\"hero-lead\">",
+    "    " + escapeHtml(description) + " Every exercise compiles and grades inside your browser using verified test suites.",
+    "  </p>",
+    "  <div class=\"learn-progress-banner\">",
+    "    <div class=\"learn-progress-stats\">",
+    "      <div class=\"gym-progress-headline\">",
+    "        <strong id=\"gym-progress-text\">0 / " + totalStr + " solved</strong>",
+    "        <span id=\"gym-io-status\" class=\"code-card-meta\" role=\"status\" aria-live=\"polite\"></span>",
+    "      </div>",
+    "      <div class=\"learn-bar-track\"><div id=\"gym-progress-fill\" class=\"learn-bar-fill\" style=\"width: 0%;\"></div></div>",
+    "      <div class=\"gym-belt-grid\">",
+    "        " + text.joinTexts(beltCards, "\n"),
+    "      </div>",
+    "    </div>",
+    "    <div class=\"hero-actions\" style=\"margin: 0;\">",
+    "      <a id=\"gym-continue-btn\" class=\"btn btn-primary\" href=\"" + escapeHtml(firstHref) + "\">Start First Drill &rarr;</a>",
+    "      <button id=\"gym-export-btn\" class=\"btn\" type=\"button\">Export JSON</button>",
+    "      <button id=\"gym-import-btn\" class=\"btn\" type=\"button\">Import JSON</button>",
+    "      <input id=\"gym-import-input\" type=\"file\" accept=\"application/json\" hidden>",
+    "    </div>",
+    "  </div>",
+    "</section>",
+    "",
+    "<section class=\"gym-filters\" aria-label=\"Filter Gym exercises\">",
+    "  <input id=\"gym-search\" class=\"filter-input\" type=\"search\" placeholder=\"Search exercises, topics, or domains...\" aria-label=\"Search Lite Gym exercises\">",
+    "  <div class=\"gym-filter-group\" role=\"group\" aria-label=\"Mode filter\">",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-filter-mode=\"all\" aria-pressed=\"true\">All (" + totalStr + ")</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-filter-mode=\"drill\" aria-pressed=\"false\">Concept Drills (" + drillCountStr + ")</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-filter-mode=\"kata\" aria-pressed=\"false\">Problem Workouts (" + workoutCountStr + ")</button>",
+    "  </div>",
+    "  <div class=\"gym-filter-group\" role=\"group\" aria-label=\"Belt filter\">",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-filter-belt=\"all\" aria-pressed=\"true\">All Belts</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-filter-belt=\"white\" aria-pressed=\"false\">White</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-filter-belt=\"amber\" aria-pressed=\"false\">Amber</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-filter-belt=\"emerald\" aria-pressed=\"false\">Emerald</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-filter-belt=\"obsidian\" aria-pressed=\"false\">Obsidian</button>",
+    "  </div>",
+    "  <div class=\"gym-filter-group\" role=\"group\" aria-label=\"Domain filter\">",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-filter-domain=\"all\" aria-pressed=\"true\">All Domains</button>",
+    "    " + text.joinTexts(domBtnParts, "\n    "),
+    "  </div>",
+    "  <div class=\"gym-filter-group\">",
+    "    <button id=\"gym-filter-unsolved\" class=\"gym-filter-btn\" type=\"button\" aria-pressed=\"false\">Unsolved Only</button>",
+    "    <span id=\"gym-visible-count\" class=\"code-card-meta\">Showing " + totalStr + " / " + totalStr + "</span>",
+    "  </div>",
+    "</section>",
+    "",
+    "<section class=\"section\" data-gym-section=\"drill\">",
+    "  <div class=\"section-head\">",
+    "    <h2>Part I — Litelings Concept Drills</h2>",
+    "    <span class=\"code-card-meta\">" + drillCountStr + " targeted diagnostics &amp; fixes</span>",
+    "  </div>",
+    "  <p class=\"section-note\">Short, focused programs across language domains. Fix a starter compile or semantics bug to earn a pass.</p>",
+    "  <div class=\"portal-grid\">",
+    "    " + renderCardGrid(src, drillOffs),
+    "  </div>",
+    "</section>",
+    "",
+    "<section class=\"section\" data-gym-section=\"kata\">",
+    "  <div class=\"section-head\">",
+    "    <h2>Part II — Multi-Test Problem Workouts</h2>",
+    "    <span class=\"code-card-meta\">" + workoutCountStr + " progressive belt challenges</span>",
+    "  </div>",
+    "  <p class=\"section-note\">Algorithmic, text, parsing, and numerical problems graded against both visible examples and hidden edge cases.</p>",
+    "  <div class=\"portal-grid\">",
+    "    " + renderCardGrid(src, workoutOffs),
+    "  </div>",
+    "</section>",
+    "",
+    "<script>",
+    "  (function () {",
+    "    var STORAGE_KEY = \"lite-gym-progress-v1\";",
+    "    var exercises = " + orderedMetaJson + ";",
+    "    var activeMode = \"all\";",
+    "    var activeBelt = \"all\";",
+    "    var activeDomain = \"all\";",
+    "    var unsolvedOnly = false;",
+    "    var searchInput = document.getElementById(\"gym-search\");",
+    "",
+    "    function loadState() {",
+    "      try {",
+    "        var raw = localStorage.getItem(STORAGE_KEY);",
+    "        if (raw) {",
+    "          var parsed = JSON.parse(raw);",
+    "          if (parsed && typeof parsed === \"object\") {",
+    "            return {",
+    "              solved: parsed.solved && typeof parsed.solved === \"object\" ? parsed.solved : {},",
+    "              drafts: parsed.drafts && typeof parsed.drafts === \"object\" ? parsed.drafts : {}",
+    "            };",
+    "          }",
+    "        }",
+    "      } catch (e) {}",
+    "      return { solved: {}, drafts: {} };",
+    "    }",
+    "",
+    "    function saveState(state) {",
+    "      try {",
+    "        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));",
+    "      } catch (e) {}",
+    "    }",
+    "",
+    "    function syncProgress() {",
+    "      var state = loadState();",
+    "      var solvedCount = 0;",
+    "      var firstUnsolved = null;",
+    "      var beltDone = { white: 0, amber: 0, emerald: 0, obsidian: 0 };",
+    "      var beltTotal = { white: 0, amber: 0, emerald: 0, obsidian: 0 };",
+    "",
+    "      for (var i = 0; i < exercises.length; i += 1) {",
+    "        var ex = exercises[i];",
+    "        beltTotal[ex.belt] = (beltTotal[ex.belt] || 0) + 1;",
+    "        var isSolved = Boolean(state.solved[ex.id]);",
+    "        var hasDraft = typeof state.drafts[ex.id] === \"string\" && state.drafts[ex.id].length > 0;",
+    "        if (isSolved) {",
+    "          solvedCount += 1;",
+    "          beltDone[ex.belt] = (beltDone[ex.belt] || 0) + 1;",
+    "        } else if (!firstUnsolved) {",
+    "          firstUnsolved = ex;",
+    "        }",
+    "        var label = document.querySelector('[data-status-for=\"' + ex.id + '\"]');",
+    "        if (label) {",
+    "          label.classList.toggle(\"gym-solved-label\", isSolved);",
+    "          label.textContent = isSolved ? \"Solved ✓\" : (hasDraft ? \"Draft saved\" : \"Not started\");",
+    "        }",
+    "      }",
+    "",
+    "      var txt = document.getElementById(\"gym-progress-text\");",
+    "      var fill = document.getElementById(\"gym-progress-fill\");",
+    "      var cont = document.getElementById(\"gym-continue-btn\");",
+    "      if (txt) txt.textContent = solvedCount + \" / \" + exercises.length + \" solved\";",
+    "      if (fill) fill.style.width = (exercises.length ? Math.round((solvedCount / exercises.length) * 100) : 0) + \"%\";",
+    "      var belts = [\"white\", \"amber\", \"emerald\", \"obsidian\"];",
+    "      for (var b = 0; b < belts.length; b += 1) {",
+    "        var name = belts[b];",
+    "        var doneB = beltDone[name] || 0;",
+    "        var totB = beltTotal[name] || 0;",
+    "        var el = document.querySelector('[data-belt-progress=\"' + name + '\"]');",
+    "        if (el) el.textContent = doneB + \" / \" + totB;",
+    "        var fillEl = document.querySelector('[data-belt-fill=\"' + name + '\"]');",
+    "        if (fillEl) fillEl.style.width = (totB ? Math.round((doneB / totB) * 100) : 0) + \"%\";",
+    "      }",
+    "      if (cont) {",
+    "        if (firstUnsolved && solvedCount > 0) {",
+    "          cont.href = firstUnsolved.href;",
+    "          cont.textContent = \"Next Unsolved: \" + firstUnsolved.title + \" →\";",
+    "        } else if (solvedCount === exercises.length && exercises.length > 0) {",
+    "          cont.href = \"../learn/\";",
+    "          cont.textContent = \"All \" + exercises.length + \" Solved! Review Learn Tracks →\";",
+    "        } else if (exercises[0]) {",
+    "          cont.href = exercises[0].href;",
+    "          cont.textContent = \"Start First Drill →\";",
+    "        }",
+    "      }",
+    "      applyFilters(state);",
+    "    }",
+    "",
+    "    function applyFilters(state) {",
+    "      var q = searchInput ? searchInput.value.trim().toLowerCase() : \"\";",
+    "      var cards = document.querySelectorAll(\".gym-index-card\");",
+    "      var shown = 0;",
+    "      for (var i = 0; i < cards.length; i += 1) {",
+    "        var card = cards[i];",
+    "        var id = card.getAttribute(\"data-exercise-id\") || \"\";",
+    "        var mode = card.getAttribute(\"data-mode\") || \"\";",
+    "        var belt = card.getAttribute(\"data-belt\") || \"\";",
+    "        var domain = card.getAttribute(\"data-domain\") || \"\";",
+    "        var blob = card.getAttribute(\"data-search\") || \"\";",
+    "        var isSolved = Boolean(state.solved[id]);",
+    "        var visible = (activeMode === \"all\" || mode === activeMode) &&",
+    "          (activeBelt === \"all\" || belt === activeBelt) &&",
+    "          (activeDomain === \"all\" || domain === activeDomain) &&",
+    "          (!unsolvedOnly || !isSolved) &&",
+    "          (!q || blob.indexOf(q) >= 0);",
+    "        card.hidden = !visible;",
+    "        if (visible) shown += 1;",
+    "      }",
+    "      var sections = document.querySelectorAll(\"[data-gym-section]\");",
+    "      for (var s = 0; s < sections.length; s += 1) {",
+    "        var sec = sections[s];",
+    "        var anyVisible = sec.querySelector(\".gym-index-card:not([hidden])\") !== null;",
+    "        sec.hidden = !anyVisible;",
+    "      }",
+    "      var countEl = document.getElementById(\"gym-visible-count\");",
+    "      if (countEl) countEl.textContent = \"Showing \" + shown + \" / \" + exercises.length;",
+    "    }",
+    "",
+    "    var modeBtns = document.querySelectorAll(\"[data-filter-mode]\");",
+    "    for (var i = 0; i < modeBtns.length; i += 1) {",
+    "      modeBtns[i].addEventListener(\"click\", function () {",
+    "        activeMode = this.getAttribute(\"data-filter-mode\") || \"all\";",
+    "        for (var j = 0; j < modeBtns.length; j += 1) {",
+    "          modeBtns[j].setAttribute(\"aria-pressed\", modeBtns[j] === this ? \"true\" : \"false\");",
+    "        }",
+    "        applyFilters(loadState());",
+    "      });",
+    "    }",
+    "",
+    "    var beltBtns = document.querySelectorAll(\"[data-filter-belt]\");",
+    "    for (var i = 0; i < beltBtns.length; i += 1) {",
+    "      beltBtns[i].addEventListener(\"click\", function () {",
+    "        activeBelt = this.getAttribute(\"data-filter-belt\") || \"all\";",
+    "        for (var j = 0; j < beltBtns.length; j += 1) {",
+    "          beltBtns[j].setAttribute(\"aria-pressed\", beltBtns[j] === this ? \"true\" : \"false\");",
+    "        }",
+    "        applyFilters(loadState());",
+    "      });",
+    "    }",
+    "",
+    "    var domBtns = document.querySelectorAll(\"[data-filter-domain]\");",
+    "    for (var d = 0; d < domBtns.length; d += 1) {",
+    "      domBtns[d].addEventListener(\"click\", function () {",
+    "        activeDomain = this.getAttribute(\"data-filter-domain\") || \"all\";",
+    "        for (var j = 0; j < domBtns.length; j += 1) {",
+    "          domBtns[j].setAttribute(\"aria-pressed\", domBtns[j] === this ? \"true\" : \"false\");",
+    "        }",
+    "        applyFilters(loadState());",
+    "      });",
+    "    }",
+    "",
+    "    var unsolvedBtn = document.getElementById(\"gym-filter-unsolved\");",
+    "    if (unsolvedBtn) {",
+    "      unsolvedBtn.addEventListener(\"click\", function () {",
+    "        unsolvedOnly = !unsolvedOnly;",
+    "        this.setAttribute(\"aria-pressed\", unsolvedOnly ? \"true\" : \"false\");",
+    "        applyFilters(loadState());",
+    "      });",
+    "    }",
+    "",
+    "    if (searchInput) {",
+    "      searchInput.addEventListener(\"input\", function () { applyFilters(loadState()); });",
+    "    }",
+    "",
+    "    var ioStatus = document.getElementById(\"gym-io-status\");",
+    "    var exportBtn = document.getElementById(\"gym-export-btn\");",
+    "    if (exportBtn) {",
+    "      exportBtn.addEventListener(\"click\", function () {",
+    "        var state = loadState();",
+    "        var blob = new Blob([JSON.stringify(state, null, 2) + \"\\n\"], { type: \"application/json\" });",
+    "        var url = URL.createObjectURL(blob);",
+    "        var a = document.createElement(\"a\");",
+    "        a.href = url;",
+    "        a.download = \"lite-gym-progress.json\";",
+    "        document.body.appendChild(a);",
+    "        a.click();",
+    "        document.body.removeChild(a);",
+    "        URL.revokeObjectURL(url);",
+    "        if (ioStatus) ioStatus.textContent = \"Exported progress JSON\";",
+    "      });",
+    "    }",
+    "",
+    "    var importBtn = document.getElementById(\"gym-import-btn\");",
+    "    var importInput = document.getElementById(\"gym-import-input\");",
+    "    if (importBtn && importInput) {",
+    "      importBtn.addEventListener(\"click\", function () { importInput.click(); });",
+    "      importInput.addEventListener(\"change\", function () {",
+    "        var file = importInput.files && importInput.files[0];",
+    "        if (!file) return;",
+    "        file.text().then(function (raw) {",
+    "          var parsed = JSON.parse(raw);",
+    "          if (!parsed || typeof parsed !== \"object\") throw new Error(\"Invalid JSON\");",
+    "          var nextState = {",
+    "            solved: parsed.solved && typeof parsed.solved === \"object\" ? parsed.solved : {},",
+    "            drafts: parsed.drafts && typeof parsed.drafts === \"object\" ? parsed.drafts : {}",
+    "          };",
+    "          saveState(nextState);",
+    "          syncProgress();",
+    "          if (ioStatus) ioStatus.textContent = \"Imported progress\";",
+    "        }).catch(function () {",
+    "          if (ioStatus) ioStatus.textContent = \"Import failed: invalid JSON\";",
+    "        }).finally(function () {",
+    "          importInput.value = \"\";",
+    "        });",
+    "      });",
+    "    }",
+    "",
+    "    syncProgress();",
+    "  })();",
+    "</script>"
+    ];
+    text.joinTexts(lines, "\n")
+};
+
+renderSwitcherGroup := fn(
+src: String,
+label: String,
+subsetOffs: List<Int>,
+curId: String,
+curOutPath: String
+): String {
+    var hasCur := false;
+    liParts: mut List<String> = [];
+    loop subsetOffs as oPos {
+        oId := readOptStr(src, oPos, "id");
+        oTitle := readOptStr(src, oPos, "title");
+        oOutPath := readOptStr(src, oPos, "outPath");
+        if oId == curId { hasCur = true; }
+        h := exerciseRelHref(curOutPath, oOutPath);
+        cls := if oId == curId { " class=\"active\"" } else { "" };
+        li := "<li><a href=\"" + escapeHtml(h) + "\"" + cls + " data-nav-gym=\"" + escapeHtml(oId) + "\"><span>" + escapeHtml(oTitle) + "</span><span class=\"learn-done-dot\" aria-hidden=\"true\"></span></a></li>";
+        list.pushBack(mut liParts, li);
+    }
+    openAttr := if hasCur { " open" } else { "" };
+    grpLines: List<String> = [
+    "<details class=\"portal-nav-group\"" + openAttr + ">",
+    "        <summary>" + escapeHtml(label) + " (" + integer.intText(list.listCountInt(subsetOffs)) + ")</summary>",
+    "        <ul class=\"portal-nav-list\">",
+    "          " + text.joinTexts(liParts, "\n          "),
+    "        </ul>",
+    "      </details>"
+    ];
+    text.joinTexts(grpLines, "\n")
+};
+
+renderGymExerciseBody := fn(
+src: String,
+idx: Int,
+itemOffs: List<Int>,
+drillOffs: List<Int>,
+workoutOffs: List<Int>
+): String {
+    totalItems := list.listCountInt(itemOffs);
+    iPos := itemOffs[idx];
+    exId := readOptStr(src, iPos, "id");
+    exSlug := readOptStr(src, iPos, "slug");
+    exTitle := readOptStr(src, iPos, "title");
+    exMode := readOptStr(src, iPos, "mode");
+    exBelt := readOptStr(src, iPos, "belt");
+    exDomain := readOptStr(src, iPos, "domain");
+    exSubGroup := readOptStr(src, iPos, "subGroup");
+    outPath := readOptStr(src, iPos, "outPath");
+    promptHtml := readOptStr(src, iPos, "promptHtml");
+    starterClean := readOptStr(src, iPos, "starterClean");
+    solutionHtml := readOptStr(src, iPos, "solutionHtml");
+    builtinPlayHref := readOptStr(src, iPos, "builtinPlayHref");
+    relatedHtml := readOptStr(src, iPos, "relatedHtml");
+    editorBlockHtml := readOptStr(src, iPos, "editorBlockHtml");
+    splitHandleHtml := readOptStr(src, iPos, "splitHandleHtml");
+    codeModeBarHtml := readOptStr(src, iPos, "codeModeBarHtml");
+    hintsRaw := readRawField(src, iPos, "hints", "[]");
+    hintsCount := arrayCountField(src, iPos, "hints");
+
+    modeLabel := if exMode == "drill" { "Concept Drill" } else { "Problem Workout" };
+
+    visField := json.findObjectField(src, iPos, "visibleCases");
+    visOffs := if visField.found {
+        json.arrayElementOffsets(src, visField.valuePos)
+    } else {
+        emptyV: List<Int> = [];
+        emptyV
+    };
+    visCount := list.listCountInt(visOffs);
+    hidCount := arrayCountField(src, iPos, "hiddenCases");
+    totalCases := visCount + hidCount;
+
+    visCards: mut List<String> = [];
+    loop visOffs as vcPos {
+        vcName := readOptStr(src, vcPos, "name");
+        vcStdin := readOptStr(src, vcPos, "stdin");
+        vcExpOut := readOptStr(src, vcPos, "expectedStdout");
+        vcArgs := readStringList(src, vcPos, "args");
+        argsNote := if list.listCountText(vcArgs) > 0 {
+            "<div class=\"gym-case-meta\">Args: <code>" + escapeHtml(text.joinTexts(vcArgs, " ")) + "</code></div>"
+        } else {
+            ""
+        };
+        stdinDisplay := if vcStdin == "" { "(empty)" } else { vcStdin };
+        cLines: List<String> = [
+        "<article class=\"gym-case-spec\">",
+        "  <div class=\"gym-case-spec-head\">",
+        "    <strong>" + escapeHtml(vcName) + "</strong>",
+        "    <span class=\"badge\">Visible</span>",
+        "  </div>",
+        "  " + argsNote,
+        "  <div class=\"gym-io-pair\">",
+        "    <div>",
+        "      <span class=\"gym-io-label\">stdin</span>",
+        "      <pre class=\"gym-io-pre\"><code>" + escapeHtml(stdinDisplay) + "</code></pre>",
+        "    </div>",
+        "    <div>",
+        "      <span class=\"gym-io-label\">expected stdout</span>",
+        "      <pre class=\"gym-io-pre\"><code>" + escapeHtml(vcExpOut) + "</code></pre>",
+        "    </div>",
+        "  </div>",
+        "</article>"
+        ];
+        list.pushBack(mut visCards, text.joinTexts(cLines, "\n"));
+    }
+
+    switcherGroups := renderSwitcherGroup(src, "Concept Drills", drillOffs, exId, outPath)
+    + "\n      "
+    + renderSwitcherGroup(src, "Problem Workouts", workoutOffs, exId, outPath);
+
+    prevHtml := if idx > 0 {
+        pPos := itemOffs[idx - 1];
+        pHref := exerciseRelHref(outPath, readOptStr(src, pPos, "outPath"));
+        "<a class=\"btn docs-nav-btn\" href=\"" + escapeHtml(pHref) + "\">&larr; " + escapeHtml(readOptStr(src, pPos, "title")) + "</a>"
+    } else {
+        "<span></span>"
+    };
+    nextHtml := if idx + 1 < totalItems {
+        nPos := itemOffs[idx + 1];
+        nHref := exerciseRelHref(outPath, readOptStr(src, nPos, "outPath"));
+        "<a class=\"btn docs-nav-btn\" href=\"" + escapeHtml(nHref) + "\">" + escapeHtml(readOptStr(src, nPos, "title")) + " &rarr;</a>"
+    } else {
+        "<span></span>"
+    };
+    pagerHtml := "<nav class=\"docs-pager\" aria-label=\"Exercise navigation\">\n  " + prevHtml + "\n  " + nextHtml + "\n</nav>";
+
+    hidSuffix := if hidCount == 1 { "" } else { "s" };
+    totalCasesStr := integer.intText(totalCases);
+
+    lines: List<String> = [
+    "<div id=\"gym-shell\" class=\"gym-shell\" data-academy-visit-path=\"" + escapeHtml(outPath) + "\" data-academy-visit-title=\"" + escapeHtml(exTitle) + "\" data-academy-visit-section=\"Gym\">",
+    "  <aside class=\"portal-sidebar gym-sidebar\" aria-label=\"Gym exercise switcher\">",
+    "    <p class=\"portal-sidebar-title\"><a href=\"../\">All Exercises (" + integer.intText(totalItems) + ")</a></p>",
+    "    " + switcherGroups,
+    "  </aside>",
+    "  <div class=\"gym-workspace\">",
+    "    <div class=\"portal-mobile-bar\">",
+    "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">All Exercises</button>",
+    "    </div>",
+    "    <div class=\"gym-topbar\">",
+    "      <div class=\"gym-breadcrumb\">",
+    "        <button id=\"gym-switcher-toggle\" class=\"btn\" type=\"button\" aria-pressed=\"false\" title=\"Toggle exercise switcher sidebar\">Exercises</button>",
+    "        <a href=\"../../\">Lite</a> <span aria-hidden=\"true\">/</span>",
+    "        <a href=\"../\">Gym</a> <span aria-hidden=\"true\">/</span>",
+    "        <span>" + escapeHtml(modeLabel) + "</span>",
+    "        <span class=\"" + beltPillClass(exBelt) + "\">" + escapeHtml(beltLabel(exBelt)) + "</span>",
+    "        <code>" + escapeHtml(exDomain) + "/" + escapeHtml(exSubGroup) + "</code>",
+    "        <span id=\"gym-solved-pill\" class=\"badge\">Not solved</span>",
+    "      </div>",
+    "      " + pagerHtml,
+    "    </div>",
+    "",
+    "    <div id=\"gym-dojo\" class=\"gym-dojo has-split\">",
+    "      <article class=\"gym-prompt-col\">",
+    "        <div class=\"md-prose doc-prose\">",
+    "          " + promptHtml,
+    "        </div>",
+    "",
+    "        <section class=\"gym-cases-section\">",
+    "          <div class=\"section-head\" style=\"margin-bottom: 0.65rem;\">",
+    "            <h2>Visible Test Cases</h2>",
+    "            <span class=\"code-card-meta\">+ " + integer.intText(hidCount) + " hidden case" + hidSuffix + " graded on submit</span>",
+    "          </div>",
+    "          <div class=\"gym-cases\">",
+    "            " + text.joinTexts(visCards, "\n"),
+    "          </div>",
+    "        </section>",
+    "",
+    "        <section class=\"gym-hints\">",
+    "          <div class=\"gym-hints-head\">",
+    "            <h2>Hints</h2>",
+    "            <button id=\"gym-hint-btn\" class=\"btn\" type=\"button\">Reveal Hint (0 / " + integer.intText(hintsCount) + ")</button>",
+    "          </div>",
+    "          <ol id=\"gym-hints-list\" class=\"gym-hints-list\" hidden></ol>",
+    "        </section>",
+    "",
+    "        <section class=\"gym-solution-panel\">",
+    "          <div class=\"gym-hints-head\">",
+    "            <h2>Reference Solution</h2>",
+    "            <div style=\"display: flex; gap: 0.45rem; flex-wrap: wrap;\">",
+    "              <button id=\"gym-reveal-sol-btn\" class=\"btn\" type=\"button\">Reveal Reference Solution</button>",
+    "              <button id=\"gym-load-sol-btn\" class=\"btn\" type=\"button\" hidden>Load into Editor</button>",
+    "            </div>",
+    "          </div>",
+    "          <div id=\"gym-solution-box\" hidden>",
+    "            <pre class=\"code-block\"><code>" + solutionHtml + "</code></pre>",
+    "          </div>",
+    "        </section>",
+    "",
+    "        " + relatedHtml,
+    "      </article>",
+    "",
+    "      " + splitHandleHtml,
+    "",
+    "      <section class=\"gym-editor-col learn-runner\" aria-label=\"Gym code editor and automated test judge\">",
+    "        <div class=\"pane\">",
+    "          <div class=\"pane-head\">",
+    "            <div class=\"sample-picker\">",
+    "              <span class=\"code-card-title\">" + escapeHtml(exSlug) + ".lts</span>",
+    "            </div>",
+    "            <div class=\"pg-actions\">",
+    "              <button id=\"gym-reset\" class=\"pg-copy-btn\" type=\"button\">Reset Starter</button>",
+    "              <a id=\"gym-open-play\" class=\"pg-copy-btn\" href=\"" + escapeHtml(builtinPlayHref) + "\">Open in Play &rarr;</a>",
+    "            </div>",
+    "          </div>",
+    "          " + editorBlockHtml,
+    "          <div class=\"pg-actions\" style=\"flex-wrap: wrap; border-top: 1px solid var(--border); padding: 0.55rem 0.85rem; background: var(--surface);\">",
+    "            <button id=\"gym-submit\" class=\"btn btn-primary\" type=\"button\">Submit &amp; Grade (" + totalCasesStr + ")</button>",
+    "            <button id=\"gym-run-visible\" class=\"btn\" type=\"button\">Run Visible (" + integer.intText(visCount) + ")</button>",
+    "            <span id=\"gym-cursor\" class=\"ed-cursor-meta\">Ln 1, Col 1</span>",
+    "            <span id=\"gym-status\" class=\"pg-status\" role=\"status\" aria-live=\"polite\">Ready (Cmd/Ctrl+Enter run visible · Cmd/Ctrl+Shift+Enter submit)</span>",
+    "          </div>",
+    "        </div>",
+    "",
+    "        <div class=\"pane\" style=\"margin-top: 0.9rem;\">",
+    "          <div class=\"pane-head\">",
+    "            <div class=\"pg-tabs\" role=\"tablist\" aria-label=\"Judge and compiler output\">",
+    "              <button id=\"gym-tab-results\" class=\"pg-tab\" type=\"button\" role=\"tab\" aria-selected=\"true\">Test Results</button>",
+    "              <button id=\"gym-tab-scratch\" class=\"pg-tab\" type=\"button\" role=\"tab\" aria-selected=\"false\">Custom Stdin</button>",
+    "              <button id=\"gym-tab-ts\" class=\"pg-tab\" type=\"button\" role=\"tab\" aria-selected=\"false\">Generated TS</button>",
+    "              <button id=\"gym-tab-c\" class=\"pg-tab\" type=\"button\" role=\"tab\" aria-selected=\"false\">Generated C</button>",
+    "            </div>",
+    "          </div>",
+    "          " + codeModeBarHtml,
+    "          <div id=\"gym-results\" class=\"pg-panel gym-results-panel\" style=\"min-height: 240px; max-height: 360px;\">",
+    "            <div class=\"gym-result-empty\">Run visible tests or submit all " + totalCasesStr + " tests to grade your solution in the browser.</div>",
+    "          </div>",
+    "          <div id=\"gym-scratch\" class=\"pg-panel\" hidden style=\"padding: 0.85rem;\">",
+    "            <div class=\"gym-diff\" style=\"margin-top: 0;\">",
+    "              <div>",
+    "                <label class=\"gym-io-label\" for=\"gym-scratch-stdin\">custom stdin</label>",
+    "                <textarea id=\"gym-scratch-stdin\" class=\"filter-input\" rows=\"3\" style=\"width:100%;font-family:var(--font-mono);resize:vertical;\" placeholder=\"Enter custom stdin lines...\"></textarea>",
+    "              </div>",
+    "              <div>",
+    "                <label class=\"gym-io-label\" for=\"gym-scratch-args\">program args (optional)</label>",
+    "                <div style=\"display:flex;gap:0.45rem;align-items:center;flex-wrap:wrap;\">",
+    "                  <input id=\"gym-scratch-args\" class=\"filter-input\" type=\"text\" style=\"flex:1 1 180px;font-family:var(--font-mono);\" placeholder=\"arg1 arg2\">",
+    "                  <button id=\"gym-scratch-run\" class=\"btn btn-primary\" type=\"button\">&#9654; Run Custom Stdin</button>",
+    "                </div>",
+    "              </div>",
+    "            </div>",
+    "            <div style=\"margin-top:0.75rem;\">",
+    "              <span class=\"gym-io-label\">output</span>",
+    "              <pre id=\"gym-scratch-out\" class=\"gym-diff-pre\" style=\"min-height:110px;\"><code>Press Run Custom Stdin to test your code with custom input.</code></pre>",
+    "            </div>",
+    "          </div>",
+    "          <pre id=\"gym-ts\" class=\"code-block pg-panel\" style=\"min-height: 240px; max-height: 360px;\" hidden><code></code></pre>",
+    "          <pre id=\"gym-c\" class=\"code-block pg-panel\" style=\"min-height: 240px; max-height: 360px;\" hidden><code></code></pre>",
+    "        </div>",
+    "      </section>",
+    "    </div>",
+    "  </div>",
+    "</div>",
+    "",
+    "<script type=\"module\">",
+    "  import { formatCodeView } from \"../../runtime/code-view.js\";",
+    "  import { bindCodeModeButtons, bindLiteEditor, bindSplitPane } from \"../../runtime/editor-client.js\";",
+    "  import { highlightC, highlightLite, highlightTs } from \"../../runtime/highlight.js\";",
+    "  import { createWorkerClient } from \"../../runtime/play-stage.js\";",
+    "",
+    "  const STORAGE_KEY = \"lite-gym-progress-v1\";",
+    "  const exerciseId = " + json.quoteString(exId) + ";",
+    "  const exerciseSlug = " + json.quoteString(exSlug) + ";",
+    "  const exerciseTitle = " + json.quoteString(exTitle) + ";",
+    "  const initialStarter = " + safeJsonForScript(json.quoteString(starterClean)) + ";",
+    "  const initialHints = " + hintsRaw + ";",
+    "",
+    "  const shellEl = document.getElementById(\"gym-shell\");",
+    "  const switcherToggleBtn = document.getElementById(\"gym-switcher-toggle\");",
+    "  const dojoEl = document.getElementById(\"gym-dojo\");",
+    "  const splitEl = document.getElementById(\"gym-split\");",
+    "  const editorEl = document.getElementById(\"gym-editor\");",
+    "  const editorGutterEl = document.getElementById(\"gym-editor-gutter\");",
+    "  const editorPreEl = document.getElementById(\"gym-editor-pre\").querySelector(\"code\");",
+    "  const cursorEl = document.getElementById(\"gym-cursor\");",
+    "  const solvedPill = document.getElementById(\"gym-solved-pill\");",
+    "  const statusEl = document.getElementById(\"gym-status\");",
+    "  const runVisibleBtn = document.getElementById(\"gym-run-visible\");",
+    "  const submitBtn = document.getElementById(\"gym-submit\");",
+    "  const resetBtn = document.getElementById(\"gym-reset\");",
+    "  const openPlayLink = document.getElementById(\"gym-open-play\");",
+    "  const hintBtn = document.getElementById(\"gym-hint-btn\");",
+    "  const hintsList = document.getElementById(\"gym-hints-list\");",
+    "  const revealSolBtn = document.getElementById(\"gym-reveal-sol-btn\");",
+    "  const loadSolBtn = document.getElementById(\"gym-load-sol-btn\");",
+    "  const solBox = document.getElementById(\"gym-solution-box\");",
+    "",
+    "  const resultsEl = document.getElementById(\"gym-results\");",
+    "  const scratchPanelEl = document.getElementById(\"gym-scratch\");",
+    "  const scratchStdinEl = document.getElementById(\"gym-scratch-stdin\");",
+    "  const scratchArgsEl = document.getElementById(\"gym-scratch-args\");",
+    "  const scratchRunBtn = document.getElementById(\"gym-scratch-run\");",
+    "  const scratchOutEl = document.getElementById(\"gym-scratch-out\").querySelector(\"code\");",
+    "  const tsEl = document.getElementById(\"gym-ts\").querySelector(\"code\");",
+    "  const cEl = document.getElementById(\"gym-c\").querySelector(\"code\");",
+    "  const tabResults = document.getElementById(\"gym-tab-results\");",
+    "  const tabScratch = document.getElementById(\"gym-tab-scratch\");",
+    "  const tabTs = document.getElementById(\"gym-tab-ts\");",
+    "  const tabC = document.getElementById(\"gym-tab-c\");",
+    "  const codeModesEl = document.getElementById(\"gym-code-modes\");",
+    "",
+    "  let payloadData = null;",
+    "  let codeMode = \"program\";",
+    "  let lastRawTs = \"\";",
+    "  let lastRawC = \"\";",
+    "  let revealedHints = 0;",
+    "  let solArmed = false;",
+    "",
+    "  const SIDEBAR_KEY = \"lite.gym.sidebar\";",
+    "  function applySwitcherOpen(open, save) {",
+    "    if (shellEl) shellEl.classList.toggle(\"is-sidebar-open\", open);",
+    "    if (switcherToggleBtn) switcherToggleBtn.setAttribute(\"aria-pressed\", open ? \"true\" : \"false\");",
+    "    if (save) {",
+    "      try { localStorage.setItem(SIDEBAR_KEY, open ? \"1\" : \"0\"); } catch {}",
+    "    }",
+    "  }",
+    "  try {",
+    "    if (localStorage.getItem(SIDEBAR_KEY) === \"1\") applySwitcherOpen(true, false);",
+    "  } catch {}",
+    "  if (switcherToggleBtn) {",
+    "    switcherToggleBtn.addEventListener(\"click\", () => {",
+    "      const next = !(shellEl && shellEl.classList.contains(\"is-sidebar-open\"));",
+    "      applySwitcherOpen(next, true);",
+    "    });",
+    "  }",
+    "",
+    "  if (splitEl && dojoEl) {",
+    "    bindSplitPane({",
+    "      splitEl,",
+    "      containerEl: dojoEl,",
+    "      cssVar: \"--gym-split\",",
+    "      storageKey: \"lite.gym.split\",",
+    "      defaultPct: 49,",
+    "      minPct: 26,",
+    "      maxPct: 72,",
+    "    });",
+    "  }",
+    "",
+    "  function loadState() {",
+    "    try {",
+    "      const raw = localStorage.getItem(STORAGE_KEY);",
+    "      if (raw) {",
+    "        const parsed = JSON.parse(raw);",
+    "        if (parsed && typeof parsed === \"object\") {",
+    "          return {",
+    "            solved: parsed.solved && typeof parsed.solved === \"object\" ? parsed.solved : {},",
+    "            drafts: parsed.drafts && typeof parsed.drafts === \"object\" ? parsed.drafts : {}",
+    "          };",
+    "        }",
+    "      }",
+    "    } catch {}",
+    "    return { solved: {}, drafts: {} };",
+    "  }",
+    "",
+    "  function saveState(state) {",
+    "    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}",
+    "  }",
+    "",
+    "  function syncSolvedPill() {",
+    "    const state = loadState();",
+    "    const solved = Boolean(state.solved[exerciseId]);",
+    "    solvedPill.textContent = solved ? \"Solved ✓\" : \"Not solved\";",
+    "    solvedPill.classList.toggle(\"gym-solved-pill\", solved);",
+    "    for (const el of document.querySelectorAll(\"[data-nav-gym]\")) {",
+    "      const id = el.getAttribute(\"data-nav-gym\");",
+    "      el.classList.toggle(\"is-completed\", Boolean(id && state.solved[id]));",
+    "    }",
+    "    if (window.LiteAcademy && typeof window.LiteAcademy.refresh === \"function\") {",
+    "      window.LiteAcademy.refresh();",
+    "    }",
+    "  }",
+    "  syncSolvedPill();",
+    "",
+    "  function saveDraft() {",
+    "    const state = loadState();",
+    "    if (payloadData && editorEl.value === payloadData.starterSource.trimEnd()) {",
+    "      delete state.drafts[exerciseId];",
+    "    } else {",
+    "      state.drafts[exerciseId] = editorEl.value;",
+    "    }",
+    "    saveState(state);",
+    "  }",
+    "",
+    "  const editorCtrl = bindLiteEditor({",
+    "    editor: editorEl,",
+    "    preCode: editorPreEl,",
+    "    highlight: highlightLite,",
+    "    indent: \"    \",",
+    "    gutter: editorGutterEl,",
+    "    cursorEl,",
+    "    autoIndent: true,",
+    "    onInput: () => {",
+    "      lastRawC = \"\";",
+    "      saveDraft();",
+    "    },",
+    "    onRun: () => void runJudge(false),",
+    "    onShiftRun: () => void runJudge(true),",
+    "  });",
+    "",
+    "  openPlayLink.addEventListener(\"click\", (event) => {",
+    "    if (editorEl.value.trimEnd() === initialStarter) return;",
+    "    const firstStdin = payloadData && payloadData.visibleCases && payloadData.visibleCases[0]",
+    "      ? String(payloadData.visibleCases[0].stdin || \"\")",
+    "      : \"\";",
+    "    if (window.LiteSnips && typeof window.LiteSnips.openInPlayground === \"function\") {",
+    "      event.preventDefault();",
+    "      window.LiteSnips.openInPlayground({",
+    "        title: exerciseTitle,",
+    "        code: editorEl.value,",
+    "        stdin: firstStdin,",
+    "        args: \"\",",
+    "        origin: \"gym:\" + exerciseId",
+    "      });",
+    "      return;",
+    "    }",
+    "    try {",
+    "      sessionStorage.setItem(\"lite-playground-draft-v1\", JSON.stringify({",
+    "        title: exerciseTitle,",
+    "        source: editorEl.value,",
+    "        stdin: firstStdin",
+    "      }));",
+    "    } catch {}",
+    "  });",
+    "",
+    "  if (hintBtn) {",
+    "    hintBtn.addEventListener(\"click\", () => {",
+    "      if (revealedHints >= initialHints.length) return;",
+    "      const li = document.createElement(\"li\");",
+    "      li.textContent = initialHints[revealedHints];",
+    "      hintsList.appendChild(li);",
+    "      hintsList.hidden = false;",
+    "      revealedHints += 1;",
+    "      hintBtn.textContent = revealedHints >= initialHints.length",
+    "        ? \"All Hints Shown (\" + revealedHints + \" / \" + initialHints.length + \")\"",
+    "        : \"Reveal Hint (\" + revealedHints + \" / \" + initialHints.length + \")\";",
+    "      if (revealedHints >= initialHints.length) hintBtn.disabled = true;",
+    "    });",
+    "    if (initialHints.length === 0) hintBtn.disabled = true;",
+    "  }",
+    "",
+    "  revealSolBtn.addEventListener(\"click\", () => {",
+    "    if (!solBox.hidden) {",
+    "      solBox.hidden = true;",
+    "      loadSolBtn.hidden = true;",
+    "      solArmed = false;",
+    "      revealSolBtn.textContent = \"Reveal Reference Solution\";",
+    "      return;",
+    "    }",
+    "    if (!solArmed) {",
+    "      solArmed = true;",
+    "      revealSolBtn.textContent = \"Confirm: Show Reference Solution\";",
+    "      return;",
+    "    }",
+    "    solBox.hidden = false;",
+    "    loadSolBtn.hidden = false;",
+    "    solArmed = false;",
+    "    revealSolBtn.textContent = \"Hide Reference Solution\";",
+    "  });",
+    "",
+    "  loadSolBtn.addEventListener(\"click\", () => {",
+    "    if (!payloadData) return;",
+    "    lastRawC = \"\";",
+    "    editorCtrl.clearErrors();",
+    "    editorCtrl.setValue(payloadData.solutionSource.trimEnd());",
+    "    saveDraft();",
+    "    statusEl.textContent = \"Loaded reference solution into editor\";",
+    "  });",
+    "",
+    "  function renderCodeTabs() {",
+    "    tsEl.innerHTML = lastRawTs ? highlightTs(formatCodeView(lastRawTs, \"ts\", codeMode)) : \"\";",
+    "    cEl.innerHTML = lastRawC ? highlightC(formatCodeView(lastRawC, \"c\", codeMode)) : \"\";",
+    "  }",
+    "",
+    "  function showTab(tab) {",
+    "    resultsEl.hidden = tab !== \"results\";",
+    "    if (scratchPanelEl) scratchPanelEl.hidden = tab !== \"scratch\";",
+    "    document.getElementById(\"gym-ts\").hidden = tab !== \"ts\";",
+    "    document.getElementById(\"gym-c\").hidden = tab !== \"c\";",
+    "    codeModesEl.hidden = tab !== \"ts\" && tab !== \"c\";",
+    "    tabResults.setAttribute(\"aria-selected\", tab === \"results\" ? \"true\" : \"false\");",
+    "    if (tabScratch) tabScratch.setAttribute(\"aria-selected\", tab === \"scratch\" ? \"true\" : \"false\");",
+    "    tabTs.setAttribute(\"aria-selected\", tab === \"ts\" ? \"true\" : \"false\");",
+    "    tabC.setAttribute(\"aria-selected\", tab === \"c\" ? \"true\" : \"false\");",
+    "    if (tab === \"ts\" || tab === \"c\") renderCodeTabs();",
+    "  }",
+    "  tabResults.addEventListener(\"click\", () => showTab(\"results\"));",
+    "  if (tabScratch) tabScratch.addEventListener(\"click\", () => showTab(\"scratch\"));",
+    "  tabTs.addEventListener(\"click\", () => showTab(\"ts\"));",
+    "  tabC.addEventListener(\"click\", () => {",
+    "    showTab(\"c\");",
+    "    if (!lastRawC) void requestCompileC();",
+    "  });",
+    "",
+    "  bindCodeModeButtons({",
+    "    buttons: document.querySelectorAll(\"#gym-code-modes .code-mode-btn\"),",
+    "    onChange: (mode) => {",
+    "      codeMode = mode;",
+    "      renderCodeTabs();",
+    "    },",
+    "  });",
+    "",
+    "  const workerClient = createWorkerClient(\"../../runtime/worker.js\");",
+    "",
+    "  async function requestCompileC() {",
+    "    const source = editorEl.value;",
+    "    cEl.textContent = \"Compiling to C in browser...\";",
+    "    const res = await workerClient.call(\"compile-c\", { source, stdin: \"\", args: [] });",
+    "    if (res.ok && res.c) {",
+    "      lastRawC = String(res.c);",
+    "    } else {",
+    "      lastRawC = \"/* \" + (res.stderr || \"C backend could not compile this code.\") + \" */\";",
+    "    }",
+    "    renderCodeTabs();",
+    "  }",
+    "",
+    "  function esc(text) {",
+    "    return String(text)",
+    "      .replaceAll(\"&\", \"&amp;\")",
+    "      .replaceAll(\"<\", \"&lt;\")",
+    "      .replaceAll(\">\", \"&gt;\");",
+    "  }",
+    "",
+    "  function renderLineDiffHtml(expectedText, actualText) {",
+    "    const expLines = String(expectedText || \"\").replace(/\\r\\n/g, \"\\n\").replace(/\\n$/, \"\").split(\"\\n\");",
+    "    const actLines = String(actualText || \"\").replace(/\\r\\n/g, \"\\n\").replace(/\\n$/, \"\").split(\"\\n\");",
+    "    const maxLen = Math.min(Math.max(expLines.length, actLines.length), 60);",
+    "    const rows = [];",
+    "    for (let i = 0; i < maxLen; i += 1) {",
+    "      const eLine = i < expLines.length ? expLines[i] : undefined;",
+    "      const aLine = i < actLines.length ? actLines[i] : undefined;",
+    "      if (eLine === aLine) {",
+    "        rows.push('<div class=\"gym-diff-line-ctx\">  ' + esc(eLine) + '</div>');",
+    "      } else {",
+    "        if (aLine !== undefined) rows.push('<div class=\"gym-diff-line-del\">- ' + esc(aLine) + '</div>');",
+    "        if (eLine !== undefined) rows.push('<div class=\"gym-diff-line-add\">+ ' + esc(eLine) + '</div>');",
+    "      }",
+    "    }",
+    "    if (Math.max(expLines.length, actLines.length) > maxLen) {",
+    "      rows.push('<div class=\"gym-diff-line-ctx\">... (truncated)</div>');",
+    "    }",
+    "    return '<div class=\"gym-diff-lines\">' + rows.join(\"\") + '</div>';",
+    "  }",
+    "",
+    "  function renderResults(res, includeHidden) {",
+    "    showTab(\"results\");",
+    "    if (!res.ok) {",
+    "      resultsEl.innerHTML = '<div class=\"gym-judge-banner gym-judge-fail\">Compile Error</div>' +",
+    "        '<pre class=\"gym-diag-pre\"><code>' + esc(res.stderr || \"Compilation failed.\") + '</code></pre>';",
+    "      return;",
+    "    }",
+    "    const items = Array.isArray(res.results) ? res.results : [];",
+    "    const passedCount = items.filter((r) => r.passed).length;",
+    "    const bannerClass = res.allPassed ? \"gym-judge-pass\" : \"gym-judge-fail\";",
+    "    const headline = res.allPassed",
+    "      ? (includeHidden",
+    "          ? \"Solved! All \" + passedCount + \" / \" + items.length + \" visible + hidden cases passed.\"",
+    "          : \"All \" + passedCount + \" / \" + items.length + \" visible cases passed. Submit to grade hidden cases!\")",
+    "      : (\"Passed \" + passedCount + \" / \" + items.length + \" cases.\");",
+    "",
+    "    const cardsHtml = items.map((r, idx) => {",
+    "      const cls = r.passed ? \"gym-case-card gym-case-pass\" : \"gym-case-card gym-case-fail\";",
+    "      const badge = r.passed ? \"PASS\" : \"FAIL\";",
+    "      if (r.hidden) {",
+    "        const errHtml = r.stderr ? '<pre class=\"gym-diff-pre\"><code>' + esc(r.stderr) + '</code></pre>' : '';",
+    "        return '<article class=\"' + cls + '\">' +",
+    "          '<div class=\"gym-case-spec-head\"><strong>Hidden case #' + (idx + 1) + ' (' + esc(r.name) + ')</strong><span class=\"badge\">' + badge + '</span></div>' +",
+    "          '<div class=\"gym-case-meta\">Exit code: ' + r.exitCode + (r.passed ? '' : ' — output or exit status did not match reference') + '</div>' +",
+    "          errHtml +",
+    "          '</article>';",
+    "      }",
+    "      const stderrHtml = r.stderr ? '<div class=\"gym-diff-block\"><span class=\"gym-io-label\">stderr</span><pre class=\"gym-diff-pre\"><code>' + esc(r.stderr) + '</code></pre></div>' : '';",
+    "      const diffHtml = r.passed ? '' : (",
+    "        '<div class=\"gym-diff\">' +",
+    "          '<div class=\"gym-diff-block\"><span class=\"gym-io-label\">expected</span><pre class=\"gym-diff-pre\"><code>' + esc(r.expectedStdout) + '</code></pre></div>' +",
+    "          '<div class=\"gym-diff-block\"><span class=\"gym-io-label\">actual (exit ' + r.exitCode + ')</span><pre class=\"gym-diff-pre\"><code>' + esc(r.actualStdout) + '</code></pre></div>' +",
+    "        '</div>' +",
+    "        '<div class=\"gym-diff-block\" style=\"margin-top:0.45rem;\"><span class=\"gym-io-label\">line diff (- actual / + expected)</span>' + renderLineDiffHtml(r.expectedStdout, r.actualStdout) + '</div>'",
+    "      );",
+    "      return '<article class=\"' + cls + '\">' +",
+    "        '<div class=\"gym-case-spec-head\"><strong>' + esc(r.name) + '</strong><span class=\"badge\">' + badge + '</span></div>' +",
+    "        diffHtml +",
+    "        stderrHtml +",
+    "        '</article>';",
+    "    }).join(\"\");",
+    "",
+    "    resultsEl.innerHTML = '<div class=\"gym-judge-banner ' + bannerClass + '\">' + esc(headline) + '</div>' +",
+    "      '<div class=\"gym-result-cards\">' + cardsHtml + '</div>';",
+    "  }",
+    "",
+    "  async function runJudge(includeHidden) {",
+    "    if (!payloadData) return;",
+    "    editorCtrl.clearErrors();",
+    "    runVisibleBtn.disabled = true;",
+    "    submitBtn.disabled = true;",
+    "    statusEl.textContent = includeHidden ? \"Compiling & grading all tests...\" : \"Running visible tests...\";",
+    "",
+    "    const visible = (payloadData.visibleCases || []).map((c) => ({ ...c, hidden: false }));",
+    "    const hidden = includeHidden ? (payloadData.hiddenCases || []).map((c) => ({ ...c, hidden: true })) : [];",
+    "    const cases = [...visible, ...hidden];",
+    "",
+    "    try {",
+    "      const res = await workerClient.call(\"grade\", { source: editorEl.value, cases });",
+    "      if (res.ts) {",
+    "        lastRawTs = String(res.ts);",
+    "        renderCodeTabs();",
+    "      }",
+    "      if (!res.ok) editorCtrl.setErrorFromStderr(res.stderr || \"\");",
+    "      renderResults(res, includeHidden);",
+    "      if (includeHidden && res.ok && res.allPassed) {",
+    "        const state = loadState();",
+    "        state.solved[exerciseId] = true;",
+    "        saveState(state);",
+    "        syncSolvedPill();",
+    "        statusEl.textContent = \"Solved! All \" + cases.length + \" cases passed\";",
+    "      } else if (!res.ok) {",
+    "        statusEl.textContent = \"Compile error\";",
+    "      } else {",
+    "        const passedCount = (res.results || []).filter((r) => r.passed).length;",
+    "        statusEl.textContent = passedCount + \" / \" + cases.length + \" cases passed\";",
+    "      }",
+    "    } catch (err) {",
+    "      statusEl.textContent = \"Worker error: \" + (err instanceof Error ? err.message : String(err));",
+    "    } finally {",
+    "      runVisibleBtn.disabled = false;",
+    "      submitBtn.disabled = false;",
+    "    }",
+    "  }",
+    "",
+    "  if (scratchRunBtn) {",
+    "    scratchRunBtn.addEventListener(\"click\", async () => {",
+    "      editorCtrl.clearErrors();",
+    "      scratchRunBtn.disabled = true;",
+    "      statusEl.textContent = \"Running custom stdin...\";",
+    "      try {",
+    "        const args = scratchArgsEl && scratchArgsEl.value.trim() ? scratchArgsEl.value.trim().split(/\\s+/) : [];",
+    "        const res = await workerClient.call(\"run\", {",
+    "          source: editorEl.value,",
+    "          stdin: scratchStdinEl ? scratchStdinEl.value : \"\",",
+    "          args,",
+    "        });",
+    "        if (res.ts) {",
+    "          lastRawTs = String(res.ts);",
+    "          renderCodeTabs();",
+    "        }",
+    "        if (!res.ok) {",
+    "          editorCtrl.setErrorFromStderr(res.stderr || \"\");",
+    "          if (scratchOutEl) scratchOutEl.textContent = res.stderr || \"Compilation or runtime error.\";",
+    "          statusEl.textContent = \"Custom run error\";",
+    "        } else {",
+    "          const outText = (res.stdout || \"(no stdout output)\") + (res.stderr ? \"\\n[stderr]\\n\" + res.stderr : \"\");",
+    "          if (scratchOutEl) scratchOutEl.textContent = outText;",
+    "          statusEl.textContent = \"Custom stdin run finished\";",
+    "        }",
+    "      } catch (err) {",
+    "        if (scratchOutEl) scratchOutEl.textContent = err instanceof Error ? err.message : String(err);",
+    "        statusEl.textContent = \"Worker error\";",
+    "      } finally {",
+    "        scratchRunBtn.disabled = false;",
+    "      }",
+    "    });",
+    "  }",
+    "",
+    "  runVisibleBtn.addEventListener(\"click\", () => void runJudge(false));",
+    "  submitBtn.addEventListener(\"click\", () => void runJudge(true));",
+    "",
+    "  resetBtn.addEventListener(\"click\", () => {",
+    "    if (!payloadData) return;",
+    "    lastRawC = \"\";",
+    "    editorCtrl.clearErrors();",
+    "    editorCtrl.setValue(payloadData.starterSource.trimEnd());",
+    "    const state = loadState();",
+    "    delete state.drafts[exerciseId];",
+    "    saveState(state);",
+    "    statusEl.textContent = \"Reset to starter code\";",
+    "  });",
+    "",
+    "  fetch(\"../payloads/\" + encodeURIComponent(exerciseSlug) + \".json\")",
+    "    .then((r) => r.json())",
+    "    .then((data) => {",
+    "      payloadData = data;",
+    "      if (scratchStdinEl && !scratchStdinEl.value && data.visibleCases && data.visibleCases[0]) {",
+    "        scratchStdinEl.value = String(data.visibleCases[0].stdin || \"\");",
+    "      }",
+    "      const state = loadState();",
+    "      if (typeof state.drafts[exerciseId] === \"string\" && state.drafts[exerciseId].length > 0) {",
+    "        editorCtrl.setValue(state.drafts[exerciseId]);",
+    "        statusEl.textContent = \"Restored saved draft\";",
+    "      }",
+    "    })",
+    "    .catch(() => {});",
+    "</script>"
+    ];
+    text.joinTexts(lines, "\n")
+};
+
+/** Builds `/gym/` index, exercise dojo pages, payloads, and search entries from stdin JSON. */
+pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, error: String) {
+    valid := json.validate(inputJson);
+    if not valid.ok {
+        return (ok = false, jsonText = "", error = "site-gym: invalid input JSON: " + valid.error);
+    }
+    description := readOptStr(inputJson, 0, "description");
+    itemsField := json.findObjectField(inputJson, 0, "items");
+    if not itemsField.found {
+        return (ok = false, jsonText = "", error = "site-gym: input JSON requires items");
+    }
+
+    itemOffs := json.arrayElementOffsets(inputJson, itemsField.valuePos);
+    totalCount := list.listCountInt(itemOffs);
+
+    drillOffs: mut List<Int> = [];
+    workoutOffs: mut List<Int> = [];
+    loop itemOffs as iPos {
+        m := readOptStr(inputJson, iPos, "mode");
+        if m == "drill" {
+            list.pushBack(mut drillOffs, iPos);
+        } else if m == "kata" {
+            list.pushBack(mut workoutOffs, iPos);
+        }
+    }
+
+    pagesJson: mut List<String> = [];
+    indexBody := renderGymIndexBody(inputJson, description, itemOffs);
+    indexPageObj := "{"
+    + "\"relPath\":\"gym/index.html\","
+    + "\"title\":\"Lite Gym — Interactive Coding Dojo\","
+    + "\"description\":" + json.quoteString(integer.intText(totalCount) + " browser-graded Lite drills and algorithmic workouts from White Belt to Obsidian Belt.") + ","
+    + "\"basePath\":\"../\","
+    + "\"mainClass\":\"\","
+    + "\"body\":" + json.quoteString(indexBody)
+    + "}";
+    list.pushBack(mut pagesJson, indexPageObj);
+
+    payloadsJson: mut List<String> = [];
+    searchEntriesJson: mut List<String> = [];
+    var idx := 0;
+    loop idx < totalCount {
+        iPos := itemOffs[idx];
+        exId := readOptStr(inputJson, iPos, "id");
+        exSlug := readOptStr(inputJson, iPos, "slug");
+        exTitle := readOptStr(inputJson, iPos, "title");
+        exMode := readOptStr(inputJson, iPos, "mode");
+        exBelt := readOptStr(inputJson, iPos, "belt");
+        exDomain := readOptStr(inputJson, iPos, "domain");
+        exSubGroup := readOptStr(inputJson, iPos, "subGroup");
+        outPath := readOptStr(inputJson, iPos, "outPath");
+        starterSource := readOptStr(inputJson, iPos, "starterSource");
+        solutionSource := readOptStr(inputJson, iPos, "solutionSource");
+        visibleCasesRaw := readRawField(inputJson, iPos, "visibleCases", "[]");
+        hiddenCasesRaw := readRawField(inputJson, iPos, "hiddenCases", "[]");
+
+        modeLong := if exMode == "drill" { "Concept Drill" } else { "Problem Workout" };
+        modeShort := if exMode == "drill" { "Drill" } else { "Workout" };
+
+        body := renderGymExerciseBody(inputJson, idx, itemOffs, drillOffs, workoutOffs);
+        pageObj := "{"
+        + "\"relPath\":" + json.quoteString(outPath) + ","
+        + "\"title\":" + json.quoteString(exTitle + " — Lite Gym") + ","
+        + "\"description\":" + json.quoteString(beltLabel(exBelt) + " " + modeLong + ": " + exTitle) + ","
+        + "\"basePath\":\"../../\","
+        + "\"mainClass\":\"learn-main\","
+        + "\"body\":" + json.quoteString(body)
+        + "}";
+        list.pushBack(mut pagesJson, pageObj);
+
+        payloadContent := "{"
+        + "\"id\":" + json.quoteString(exId) + ","
+        + "\"slug\":" + json.quoteString(exSlug) + ","
+        + "\"title\":" + json.quoteString(exTitle) + ","
+        + "\"mode\":" + json.quoteString(exMode) + ","
+        + "\"belt\":" + json.quoteString(exBelt) + ","
+        + "\"starterSource\":" + json.quoteString(starterSource) + ","
+        + "\"solutionSource\":" + json.quoteString(solutionSource) + ","
+        + "\"visibleCases\":" + visibleCasesRaw + ","
+        + "\"hiddenCases\":" + hiddenCasesRaw
+        + "}";
+        payloadObj := "{"
+        + "\"relPath\":" + json.quoteString("gym/payloads/" + exSlug + ".json") + ","
+        + "\"content\":" + json.quoteString(payloadContent)
+        + "}";
+        list.pushBack(mut payloadsJson, payloadObj);
+
+        bBadge := beltBadge(exBelt);
+        seObj := "{"
+        + "\"kind\":\"gym\","
+        + "\"title\":" + json.quoteString(exTitle) + ","
+        + "\"subtitle\":" + json.quoteString(bBadge + " " + modeShort + " · " + exDomain + "/" + exSubGroup) + ","
+        + "\"href\":" + json.quoteString(outPath) + ","
+        + "\"keywords\":" + json.quoteString(exSlug + " " + exBelt + " " + exMode + " " + exDomain + " " + exSubGroup) + ","
+        + "\"badge\":" + json.quoteString(bBadge)
+        + "}";
+        list.pushBack(mut searchEntriesJson, seObj);
+
+        idx = idx + 1;
+    }
+
+    outJson := "{"
+    + "\"pages\":[" + text.joinTexts(pagesJson, ",") + "],"
+    + "\"payloads\":[" + text.joinTexts(payloadsJson, ",") + "],"
+    + "\"searchEntries\":[" + text.joinTexts(searchEntriesJson, ",") + "]"
+    + "}";
+    (ok = true, jsonText = outJson, error = "")
+};
