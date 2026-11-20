@@ -1,0 +1,136 @@
+/** Keep project-owned executable source inside the owner's permitted file types. */
+
+fs := import "core/file";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+unicode := import "core/unicode";
+project := import "util/project";
+
+rawRoot := project.findRepoRoot();
+test.check("repo root found", rawRoot =!= "");
+rootRealRes := fs.realPath(rawRoot);
+test.check("repo root realPath: " + rootRealRes.error, rootRealRes.ok);
+root := rootRealRes.path;
+
+inList := fn(items: List<String>, needle: String): Bool {
+    loop items as item {
+        if item == needle { return true; }
+    }
+    false
+};
+
+splitNulBytes := fn(bytes: List<Int>): List<String> {
+    out: mut List<String> = [];
+    var cur: mut List<Int> = [];
+    loop bytes as b {
+        if b == 0 {
+            if list.listCountInt(cur) > 0 {
+                dec := unicode.utf8DecodeStrict(cur);
+                test.check("git ls-files utf8 decode", dec.ok);
+                list.pushBack(mut out, dec.text);
+                cur = [];
+            }
+        } else {
+            list.pushBack(mut cur, b);
+        }
+    }
+    if list.listCountInt(cur) > 0 {
+        dec := unicode.utf8DecodeStrict(cur);
+        test.check("git ls-files utf8 decode tail", dec.ok);
+        list.pushBack(mut out, dec.text);
+    }
+    out
+};
+
+collectArchiveFiles := fn(rootDir: String): List<String> {
+    out: mut List<String> = [];
+    stack: mut List<String> = [""];
+    skipAny: List<String> = [".git", ".cache", "node_modules"];
+    skipTop: List<String> = ["dist", "tmp", ".agent"];
+    loop list.listCountText(stack) > 0 {
+        relDir := list.popBack(mut stack);
+        absDir := if relDir == "" { rootDir } else { path.resolve(rootDir, relDir) };
+        entries := fs.listDir(absDir);
+        loop entries as entry {
+            if inList(skipAny, entry) { continue; }
+            if relDir == "" and inList(skipTop, entry) { continue; }
+            relPath := if relDir == "" { entry } else { relDir + "/" + entry };
+            absPath := path.resolve(rootDir, relPath);
+            if fs.kind(absPath) == fs.FILE_KIND_DIR {
+                list.pushBack(mut stack, relPath);
+            } else {
+                list.pushBack(mut out, relPath);
+            }
+        }
+    }
+    out
+};
+
+isTsConfigBase := fn(base: String): Bool {
+    if base == "tsconfig.json" { return true; }
+    text.startsWithAt(base, 0, "tsconfig.") and text.endsWith(base, ".json")
+};
+
+var files: List<String> = [];
+if fs.kind(path.resolve(root, ".git")) =!= fs.FILE_KIND_MISSING {
+    tmpRes := fs.makeTempDir("lite-src-files-");
+    test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+    outPath := path.join(tmpRes.path, "out");
+    errPath := path.join(tmpRes.path, "err");
+    emptyEnv: List<String> = [];
+    emptyBytes: List<Int> = [];
+    gitArgs: List<String> = ["ls-files", "--cached", "--others", "--exclude-standard", "-z"];
+    res := proc.runBytes("git", gitArgs, root, emptyEnv, 60000, emptyBytes, outPath, errPath);
+    test.check("git ls-files error: " + res.error, res.error == "");
+    errText := fs.readText(errPath).text;
+    test.checkInt("git ls-files status: " + errText, 0, res.status);
+    rawBytes := fs.readBytes(outPath);
+    _rm := fs.remove(tmpRes.path);
+    files = splitNulBytes(rawBytes);
+} else {
+    files = collectArchiveFiles(root);
+}
+
+dataExts: List<String> = [
+".md", ".jsonl", ".csv", ".txt", ".png", ".svg", ".yml", ".yaml",
+".tokens", ".nodes", ".symbols", ".stderr", ".stdin", ".stdout"
+];
+sourceExts: List<String> = [".lt", ".lts", ".lite", ".ts", ".json"];
+allowedTsConfigs: List<String> = ["igniter/tsconfig.json", "compiler/bootstrap/tsconfig.json"];
+
+violations: mut List<String> = [];
+rootPrefix := root + "/";
+
+loop files as name {
+    absPath := path.resolve(root, name);
+    if fs.kind(absPath) == fs.FILE_KIND_MISSING { continue; }
+    rp := fs.realPath(absPath);
+    if not rp.ok or rp.path =!= absPath {
+        if not rp.ok or not text.startsWithAt(rp.path, 0, rootPrefix) or path.extName(rp.path) =!= ".ts" {
+            list.pushBack(mut violations, name + ": command must link to project TypeScript");
+        }
+        continue;
+    }
+    ext := path.extName(absPath);
+    base := path.baseName(name);
+    if isTsConfigBase(base) and not inList(allowedTsConfigs, name) {
+        list.pushBack(mut violations, name + ": use the igniter or bootstrap TypeScript configuration");
+        continue;
+    }
+    if inList(sourceExts, ext) or inList(dataExts, ext) { continue; }
+    if ext == ".html" and text.startsWithAt(name, 0, "brand/investigation/") { continue; }
+    if ext == ".c" and (text.startsWithAt(name, 0, "compiler/tests/references/generated/") or text.startsWithAt(name, 0, "compiler/bootstrap/")) { continue; }
+    content := fs.readBytes(absPath);
+    hasShebang := list.listCountInt(content) >= 2 and content[0] == 35 and content[1] == 33;
+    if ext == "" and not hasShebang { continue; }
+    list.pushBack(mut violations, path.relative(root, absPath));
+}
+
+test.checkText(
+"Keep handwritten code in .lt/.lts/.lite/.ts files; generated C references belong under compiler/tests/references/generated or compiler/bootstrap.",
+"",
+text.joinTexts(violations, "\n")
+);

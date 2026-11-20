@@ -17,15 +17,15 @@ smokeTestFiles := fn(): List<String> {
     "../tools/docs.test.ts",
     "../tools/release.test.ts",
     "../site/features.test.ts",
-    "../site/build.test.ts",
-    "source-files.test.ts"
+    "../site/build.test.ts"
     ];
     files
 };
 
 smokeUnitTestFiles := fn(): List<String> {
     files: List<String> = [
-    "compiler/scripts/release-streams.test.lts"
+    "compiler/scripts/release-streams.test.lts",
+    "igniter/source-files.test.lts"
     ];
     files
 };

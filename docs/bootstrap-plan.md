@@ -438,7 +438,7 @@ requires the project owner's explicit selection and an update to this page and t
     shell or JSX source files. Keep only the igniter and bootstrap TypeScript
     configurations, and include maintained tooling in the shared strict check.
     Documentation, fixture data, workflow configuration and editor assets retain
-    their normal formats. `igniter/source-files.test.ts` enforces this policy.
+    their normal formats. `igniter/source-files.test.lts` enforces this policy.
 
 ## Phase map
 

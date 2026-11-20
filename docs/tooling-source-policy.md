@@ -33,7 +33,7 @@ formats. Historical measurements and compiler seed bytes were preserved.
 Run `./bin/lite test --fast` during development and `./bin/lite test --full` at the gate.
 Both include the source-file policy and challenge tooling boundary checks.
 CI's separate strict TypeScript check includes all maintained TS tooling.
-`igniter/source-files.test.ts` rejects other first-party code extensions, shell
+`igniter/source-files.test.lts` rejects other first-party code extensions, shell
 launchers and extra TypeScript configs. Generated C is confined to
 `compiler/tests/references/generated/` or `compiler/bootstrap/`.
 

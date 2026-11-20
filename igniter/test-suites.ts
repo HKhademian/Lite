@@ -1,7 +1,7 @@
 /** Active regressions and public tool contract suites. */
 export const generatedTestFiles = [
   '../compiler/tests/tooling.test.ts', '../compiler/tests/host.test.ts', '../compiler/tests/contracts.test.ts',
-  'source-files.test.ts', '../tools/fmt.test.ts',
+  '../tools/fmt.test.ts',
   '../tools/docs.test.ts',
   '../tools/cases.test.ts',
   '../tools/run.test.ts',
