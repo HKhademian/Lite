@@ -561,6 +561,13 @@ are comparative evidence and do not decide Lite's contract.
 
 ## Working judgment
 
+The joint review confirmed the default operator behavior for a distinct type
+with an equality-comparable underlying type. Given `UserID := distinct Int`,
+`a: UserID = 1`, `b: UserID = 2`, and `c: Int = 3`, `a == b` is valid by
+default and returns `false`. The other three expressions, `a + b`, `a + c`,
+and `a == c`, require an explicitly defined operation for those operand types.
+The syntax for defining such operations remains open. These are design cases.
+
 Treat type identity, conversion, operations, and physical representation as separate decisions. The user's direction distinguishes contextual fresh literals from established typed values; a typed declaration does not itself authorize converting an established String or another distinct value into `UserID`.
 
 ## Expanded assessment
