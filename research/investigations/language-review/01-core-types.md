@@ -189,6 +189,22 @@ uses. Assuming each listed ID is a viable realization of `10`, a use accepting
 - If the uses supply no narrowing information, apply the X-Like default where
   defined, such as Int-Like to `Int`.
 
+The joint review confirmed that constraints also pass through ordinary inferred
+copies. Each copy takes its type from its source. It does not realize the
+source literal independently:
+
+```text
+v := 10;
+v1 := v; findUser(v1);    /* expects UserID */
+v2 := v; findRoom(v2);    /* expects RoomID */
+v3 := v; findTicket(v3);  /* expects TicketID */
+```
+
+The calls constrain `v1`, `v2`, and `v3`, and each copy constrains `v` in turn.
+Since `v` must satisfy three distinct, incompatible ID types, Lite reports a
+compile-time inference conflict. A single copy with only the `findUser` use
+would instead allow the source and copy to infer `UserID`.
+
 This direction is under investigation, not an implemented rule. Scope of
 “relevant uses,” compatible constraints, ambiguity, recursion, public APIs,
 diagnostics, unused bindings, and the precise commitment point remain to be
