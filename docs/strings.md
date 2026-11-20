@@ -126,7 +126,11 @@ open below.
 
 The selected direction uses valid UTF-8 for native `String` storage and Unicode scalar values for `Char`. `String` length counts scalars and scalar indexing selects one whole `Char`. Its cost may include a scan. Exact API names, native layout and invalid-input failure policy remain open. A byte sequence has its own operations and can hold arbitrary bytes. Expose or convert encoded bytes explicitly. Grapheme traversal is a separate operation.
 
+A text operation uses `Char` positions. Indexing and slicing a byte sequence operate on bytes. A range selecting characters produces a `String` under the copy-by-default rule. A compiler can elide the physical copy when it preserves the observable behavior. With illustrative half-open range syntax, `"aé😀b"[1..3]` yields `"é😀"`. Slicing by scalars can separate a combining mark from its base scalar.
+
 Text tooling can consume a stream of `Char` values from UTF-8, UTF-16, UTF-32 or another decoder and emit via an encoding adapter. Contiguous output in a different encoding requires transcoding. A decoder can stream values without allocating a converted copy of the whole input.
+
+Encoding is part of the contract of an encoded buffer or adapter. An operation that returns encoded text in the same encoding preserves that encoding. Explicit transcoding selects a new encoding and preserves the scalar sequence for representable, valid input. For example, decoding UTF-16 into native `String` preserves the text. Code that needs the original UTF-16 bytes retains the encoded buffer. Exact adapter and conversion APIs remain open.
 
 Equality compares the exact scalar sequence. Normalization is explicit. Two valid native strings can compare byte lengths and byte contents. Cross-encoding algorithms can compare decoded scalars as they advance. Ordering is lexicographic by scalar value. The first differing scalar determines order. When one string is a prefix, it comes first. Embedded U+0000 is a real scalar and comparison can continue past it. Unsigned-byte comparison gives the same order for valid native UTF-8.
 
