@@ -1,0 +1,299 @@
+/** Markdown integrity boundaries that ordinary command fixtures cannot isolate. */
+
+fs := import "core/file";
+integer := import "core/int";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+unicode := import "core/unicode";
+cases := import "util/cases";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+json := import "util/json";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+docsBin := path.join(root, "bin/lite-docs");
+
+runDocs := fn(args: List<String>, directory: String, stdinInput: String): (status: Int, stdout: String, stderr: String) {
+    tmpRes := fs.makeTempDir("lite-docs-run-");
+    test.check("runDocs makeTempDir: " + tmpRes.error, tmpRes.ok);
+    outPath := path.join(tmpRes.path, "out");
+    errPath := path.join(tmpRes.path, "err");
+    cmdArgs: mut List<String> = [docsBin];
+    loop args as a {
+        list.pushBack(mut cmdArgs, a);
+    }
+    envOver: List<String> = ["LITE_DOCS_ROOT=" + directory];
+    res := proc.runBytes(proc.execPath(), cmdArgs, root, envOver, 60000, unicode.utf8Encode(stdinInput), outPath, errPath);
+    test.check("runDocs process error: " + res.error, res.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    _rm := fs.remove(tmpRes.path);
+    (status = res.status, stdout = outText, stderr = errText)
+};
+
+splitLines := fn(source: String): List<String> {
+    out: mut List<String> = [];
+    n := text.length(source);
+    var pos := 0;
+    loop pos <= n {
+        nl := text.indexOfText(source, "\n", pos);
+        if nl < 0 {
+            list.pushBack(mut out, text.slice(source, pos, n));
+            break;
+        }
+        list.pushBack(mut out, text.slice(source, pos, nl));
+        pos = nl + 1;
+    }
+    out
+};
+
+checkDocuments := fn(directory: String): List<String> {
+    res := runDocs(["--check"], directory, "");
+    if res.status == 0 {
+        empty: List<String> = [];
+        return empty;
+    }
+    trimmed := text.trimEnd(res.stderr);
+    if trimmed == "" {
+        fallback: List<String> = ["lite docs --check failed (" + integer.intText(res.status) + ")"];
+        return fallback;
+    }
+    splitLines(trimmed)
+};
+
+anyContains := fn(items: List<String>, needle: String): Bool {
+    loop items as item {
+        if text.indexOfText(item, needle, 0) >= 0 { return true; }
+    }
+    false
+};
+
+anyContainsBoth := fn(items: List<String>, a: String, b: String): Bool {
+    loop items as item {
+        if text.indexOfText(item, a, 0) >= 0 and text.indexOfText(item, b, 0) >= 0 { return true; }
+    }
+    false
+};
+
+/* 1. documentation checks anchors, duplicates, code and ignored dependencies */
+dir1Res := fs.makeTempDir("lite-docs-");
+test.check("dir1 makeTempDir", dir1Res.ok);
+dir1 := dir1Res.path;
+test.check("write topic.md", fs.writeText(path.join(dir1, "topic.md"), "# Topic\n\n## A `name`\n\n## A `name`\n").ok);
+test.check(
+"write README.md",
+fs.writeText(path.join(dir1, "README.md"), "# Index\n\n[one](topic.md#a-name) [two](topic.md#a-name-1)\n`[not a link](missing.md)`\n```text\n[fake](missing.md)\n```\n").ok
+);
+test.check("mkdir node_modules", fs.makeDir(path.join(dir1, "node_modules")).ok);
+test.check("write ignored.md", fs.writeText(path.join(dir1, "node_modules/ignored.md"), "[broken](absent.md)").ok);
+
+chk1Ok := checkDocuments(dir1);
+test.checkText("clean docs check", "", text.joinTexts(chk1Ok, "\n"));
+docsJson1 := runDocs(["--json"], dir1, "");
+test.checkInt("docs --json status", 0, docsJson1.status);
+docOffsets1 := json.arrayElementOffsets(docsJson1.stdout, 0);
+test.checkInt("docs --json count", 2, list.listCountInt(docOffsets1));
+
+test.check(
+"write broken README.md",
+fs.writeText(path.join(dir1, "README.md"), "# Index\n\n[bad](topic.md#missing)\n[absent](absent.md)\n```text\nunclosed\n").ok
+);
+failures1 := checkDocuments(dir1);
+test.checkInt("broken docs count", 3, list.listCountText(failures1));
+test.check("missing fragment reported", anyContains(failures1, "missing fragment"));
+test.check("missing link reported", anyContains(failures1, "missing link"));
+test.check("unclosed code fence reported", anyContains(failures1, "unclosed code fence"));
+_rm1 := fs.remove(dir1);
+
+/* 2. registered documentation snippets must match their separately maintained source */
+dir2Res := fs.makeTempDir("lite-doc-snippet-");
+test.check("dir2 makeTempDir", dir2Res.ok);
+dir2 := dir2Res.path;
+test.check("mkdir config", fs.makeDir(path.join(dir2, "config")).ok);
+test.check("write source.lts", fs.writeText(path.join(dir2, "source.lts"), "outputLine(24);\n").ok);
+test.check("write snippet README.md", fs.writeText(path.join(dir2, "README.md"), "# Example\n\n```text\noutputLine(24);\n```\n").ok);
+test.check(
+"write documentation.json",
+fs.writeText(
+path.join(dir2, "config/documentation.json"),
+"{\"navigation\":[{\"label\":\"Start\",\"path\":\"README.md\"}],\"snippets\":[{\"document\":\"README.md\",\"source\":\"source.lts\",\"fence\":0}]}"
+).ok
+);
+test.checkText("snippet matches", "", text.joinTexts(checkDocuments(dir2), "\n"));
+test.check("mutate source.lts", fs.writeText(path.join(dir2, "source.lts"), "outputLine(25);\n").ok);
+snippetFails := text.joinTexts(checkDocuments(dir2), "\n");
+test.check("snippet mismatch reported: " + snippetFails, text.indexOfText(snippetFails, "code fence 0 differs", 0) >= 0);
+_rm2 := fs.remove(dir2);
+
+/* 3. ignited docs artifact in dist/tools matches tools/src/docs.lts and passes strict TS checking */
+tsComp := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select ts compiler", tsComp.ok);
+docsSrcPath := path.join(root, "tools/src/docs.lts");
+docsSrc := fs.readText(docsSrcPath);
+test.check("read tools/src/docs.lts", docsSrc.ok);
+compiledDocs := compilerTest.compileStdinWithOpts(root, tsComp.path, root, docsSrc.text, "tools/src/docs.lts", docsSrcPath, []);
+test.checkInt("compile tools/src/docs.lts: " + compiledDocs.stderr, 0, compiledDocs.status);
+
+ignitedDocsPath := path.join(root, "dist/tools/docs.ts");
+ignitedDocs := fs.readText(ignitedDocsPath);
+test.check("read dist/tools/docs.ts", ignitedDocs.ok);
+test.checkText("ignited docs matches compiled tools/src/docs.lts", compiledDocs.stdout, ignitedDocs.text);
+
+tscDirRes := fs.makeTempDir("lite-docs-tsc-");
+test.check("tscDir makeTempDir", tscDirRes.ok);
+tscCheck := cases.checkTsArtifactFileWithStatus(root, ignitedDocsPath, path.join(tscDirRes.path, "tsc"), 60000);
+test.check("docs.ts strict tsc: " + tscCheck.error, tscCheck.ok);
+_rmTsc := fs.remove(tscDirRes.path);
+
+/* 4. renderDocuments and extractModules return valid structured metadata via generated Lite docs tool */
+renderRes := runDocs(["--render-json"], root, "docs/start-here.md\ndocs/tour.md\n");
+test.checkInt("docs --render-json status: " + renderRes.stderr, 0, renderRes.status);
+renderOffsets := json.arrayElementOffsets(renderRes.stdout, 0);
+test.checkInt("rendered count", 2, list.listCountInt(renderOffsets));
+r0 := renderOffsets[0];
+r1 := renderOffsets[1];
+test.checkText("rendered[0].path", "docs/start-here.md", json.readObjectString(renderRes.stdout, r0, "path").value);
+test.checkText("rendered[0].title", "Start with LiteLang", json.readObjectString(renderRes.stdout, r0, "title").value);
+test.checkText("rendered[0].status", "guide", json.readObjectString(renderRes.stdout, r0, "status").value);
+tocPos := json.findObjectField(renderRes.stdout, r0, "toc");
+test.check("rendered[0].toc found", tocPos.found);
+test.check("rendered[0].toc >= 3", list.listCountInt(json.arrayElementOffsets(renderRes.stdout, tocPos.valuePos)) >= 3);
+html0 := json.readObjectString(renderRes.stdout, r0, "html").value;
+test.check("rendered[0].html has h1", text.indexOfText(html0, "<h1 id=\"start-with-litelang\">Start with LiteLang</h1>", 0) >= 0);
+html1 := json.readObjectString(renderRes.stdout, r1, "html").value;
+test.check("rendered[1].html has data-fence", text.indexOfText(html1, "data-fence=\"0\"", 0) >= 0);
+
+modRes := runDocs(["--modules-json"], root, "");
+test.checkInt("docs --modules-json status: " + modRes.stderr, 0, modRes.status);
+modOffsets := json.arrayElementOffsets(modRes.stdout, 0);
+test.checkInt("modules count", 17, list.listCountInt(modOffsets));
+
+var foundIo := false;
+var foundCanvas := false;
+var foundFile := false;
+loop modOffsets as mPos {
+    id := json.readObjectString(modRes.stdout, mPos, "id").value;
+    env := json.readObjectString(modRes.stdout, mPos, "environment").value;
+    symsMem := json.findObjectField(modRes.stdout, mPos, "symbols");
+    test.check("module has symbols " + id, symsMem.found);
+    symOffsets := json.arrayElementOffsets(modRes.stdout, symsMem.valuePos);
+    if id == "core/io" {
+        foundIo = true;
+        test.checkText("core/io env", "universal", env);
+        var hasOutLine := false;
+        loop symOffsets as sPos {
+            sName := json.readObjectString(modRes.stdout, sPos, "name").value;
+            sHost := json.readObjectBool(modRes.stdout, sPos, "isHostDeclaration");
+            if sName == "outputLine" and sHost.found and sHost.ok and sHost.value {
+                hasOutLine = true;
+            }
+        }
+        test.check("core/io has host outputLine", hasOutLine);
+    } else if id == "extra/canvas" {
+        foundCanvas = true;
+        test.checkText("extra/canvas env", "play", env);
+        var hasColor := false;
+        loop symOffsets as sPos {
+            sKind := json.readObjectString(modRes.stdout, sPos, "kind").value;
+            sName := json.readObjectString(modRes.stdout, sPos, "name").value;
+            if sKind == "type" and sName == "Color" {
+                hasColor = true;
+            }
+        }
+        test.check("extra/canvas has type Color", hasColor);
+    } else if id == "core/file" {
+        foundFile = true;
+        test.checkText("core/file env", "cli", env);
+    }
+}
+test.check("core/io found", foundIo);
+test.check("extra/canvas found", foundCanvas);
+test.check("core/file found", foundFile);
+
+/* 5. docs --check validates lite:// and lite:/ internal URIs, fragments, and module symbols offline */
+dir5Res := fs.makeTempDir("lite-docs-uri-");
+test.check("dir5 makeTempDir", dir5Res.ok);
+dir5 := dir5Res.path;
+subDirs: List<String> = [
+"docs/spec", "docs/proposals", "brand/investigation", "compiler",
+"lib/core", "language/learn/handbook/getting-started", "language/gym",
+"samples", "igniter"
+];
+loop subDirs as sd {
+    test.check("mkdir " + sd, fs.makeDir(path.join(dir5, sd)).ok);
+}
+test.check("write overview", fs.writeText(path.join(dir5, "language/learn/handbook/getting-started/overview-and-setup.md"), "# Overview\n\n## First Steps\n").ok);
+test.check("write records", fs.writeText(path.join(dir5, "docs/records.md"), "# Records\n\n## Defaults\n").ok);
+test.check("write spec", fs.writeText(path.join(dir5, "docs/spec/README.md"), "# Spec\n\n## LS-001\n").ok);
+test.check("write proposal", fs.writeText(path.join(dir5, "docs/proposals/LP-0001.md"), "# LP-0001\n").ok);
+test.check("write parity", fs.writeText(path.join(dir5, "compiler/parity.md"), "# Parity\n").ok);
+test.check("write brand readme", fs.writeText(path.join(dir5, "brand/README.md"), "# Brand\n").ok);
+test.check("write brand name", fs.writeText(path.join(dir5, "brand/name.md"), "# Name\n\n## Decision\n").ok);
+test.check("write brand inv", fs.writeText(path.join(dir5, "brand/investigation/README.md"), "# Investigation\n").ok);
+test.check("write svg", fs.writeText(path.join(dir5, "brand/lite-wordmark.svg"), "<svg/>").ok);
+test.check("write node-version", fs.writeText(path.join(dir5, "igniter/.node-version"), "22.0.0\n").ok);
+test.check("write io.lts", fs.writeText(path.join(dir5, "lib/core/io.lts"), "pub outputLine := fn(x: String): Unit {};\n").ok);
+test.check(
+"write learn catalog",
+fs.writeText(path.join(dir5, "language/learn/catalog.json"), "{\"tracks\":[{\"id\":\"getting-started\",\"lessons\":[{\"id\":\"learn.gs.hello\",\"slug\":\"hello-lite\"}]}]}").ok
+);
+test.check(
+"write gym catalog",
+fs.writeText(path.join(dir5, "language/gym/catalog.json"), "{\"exercises\":[{\"id\":\"drills.x\",\"slug\":\"immutable-vs-var\",\"mode\":\"drill\"}]}").ok
+);
+test.check("write sample", fs.writeText(path.join(dir5, "samples/demo.lts"), "io := import \"core/io\";\n").ok);
+
+goodHubLines: List<String> = [
+"# Hub",
+"- [Hb](lite://handbook/overview-and-setup#first-steps)",
+"- [Doc](lite:/doc/records#defaults)",
+"- [Spec](lite://spec#ls-001)",
+"- [Proposal](lite://proposal/LP-0001)",
+"- [Compiler](lite://compiler/parity)",
+"- [Brand](lite://brand)",
+"- [BrandName](lite://brand/name#decision)",
+"- [BrandSvg](lite://brand/lite-wordmark.svg)",
+"- [RepoFile](lite://repo/igniter/.node-version)",
+"- [RepoMd](lite://repo/compiler/parity.md#parity)",
+"- [Learn](lite://learn/hello-lite)",
+"- [Gym](lite://gym/drill/immutable-vs-var)",
+"- [Mod](lite://module/core/io#outputLine)",
+"- [Play](lite://play/demo)",
+"- [Tool](lite://tool/fmt)"
+];
+test.check("write good README.md", fs.writeText(path.join(dir5, "README.md"), text.joinTexts(goodHubLines, "\n") + "\n").ok);
+test.checkText("valid lite:// URIs pass", "", text.joinTexts(checkDocuments(dir5), "\n"));
+
+badHubLines: List<String> = [
+"# Bad",
+"- [Ns](lite://bogus/x)",
+"- [HbFrag](lite://handbook/overview-and-setup#missing)",
+"- [BrandMissing](lite://brand/absent)",
+"- [RepoMissing](lite://repo/absent/file.txt)",
+"- [RepoTraversal](lite://repo/../secret.txt)",
+"- [RepoFrag](lite://repo/compiler/parity.md#nope)",
+"- [LearnMissing](lite://learn/nope)",
+"- [GymMode](lite://gym/workout/immutable-vs-var)",
+"- [ModSym](lite://module/core/io#nonexistent)",
+"- [ToolMissing](lite://tool/unknown-cmd)"
+];
+test.check("write bad README.md", fs.writeText(path.join(dir5, "README.md"), text.joinTexts(badHubLines, "\n") + "\n").ok);
+failures5 := checkDocuments(dir5);
+test.checkInt("bad lite:// URI failure count: " + text.joinTexts(failures5, "\n"), 10, list.listCountText(failures5));
+test.check("unknown lite URI namespace", anyContains(failures5, "unknown lite URI namespace"));
+test.check("handbook missing fragment", anyContainsBoth(failures5, "missing fragment", "overview-and-setup#missing"));
+test.check("missing lite://brand", anyContains(failures5, "missing lite://brand"));
+test.check("missing lite://repo", anyContains(failures5, "missing lite://repo"));
+test.check("invalid lite://repo", anyContains(failures5, "invalid lite://repo"));
+test.check("parity missing fragment", anyContainsBoth(failures5, "missing fragment", "parity.md#nope"));
+test.check("missing lite://learn", anyContains(failures5, "missing lite://learn"));
+test.check("missing lite://gym", anyContains(failures5, "missing lite://gym"));
+test.check("missing module symbol", anyContains(failures5, "missing module symbol"));
+test.check("missing lite://tool", anyContains(failures5, "missing lite://tool"));
+_rm5 := fs.remove(dir5);
