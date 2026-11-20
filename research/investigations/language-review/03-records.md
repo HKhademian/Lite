@@ -68,3 +68,11 @@ Review a `User` containing an owning list and `UserID`, a default whose expressi
 Types (1), bindings (2), patterns (6), and modules (9) own related boundaries. Record new decisions with their owning area; return to this review after the dependency is understood.
 
 Related preliminary notes: [1](01-core-types.md), [2](02-bindings.md), [6](06-control-flow.md), [9](09-modules.md).
+
+## Joint review: labels, evaluation order, and overrides
+
+Field labels route supplied values to their fields regardless of written order. Explicit expressions execute in written order. The same distinction applies to labeled arguments: evaluation follows the call, and the signature determines which parameter receives each result.
+
+Repeating a direct field label is rejected. The user wants explicit spread and deconstruction to allow intentional overriding in written order. A later supplied value can replace an earlier one in that setting. Exact spread syntax and the boundary between direct labels, overrides and deconstruction stay open. Test a spread before and after an explicit field, duplicate direct fields, and side effects on both sides of an override.
+
+An omitted field uses its own default, which is zero when none is declared. A nested field declared with `= {}` explicitly asks for the nested record's defaults. [Nested defaults and zero](../../../docs/record-initialization.md#nested-default-versus-zero)
