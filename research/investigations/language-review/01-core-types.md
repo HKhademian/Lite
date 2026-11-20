@@ -156,6 +156,26 @@ so Lite must report a compile-time inference conflict. Reordering the calls
 cannot change this outcome. The numeric default only supplies a type when
 context leaves the literal unconstrained. It cannot resolve a conflict.
 
+Confirmed compatible cases, using the standard spelling `Bool`:
+
+```text
+v := 10;
+findUser(v);   /* expects UserID */
+logValue(v);   /* expects UserID | String */
+saveValue(v);  /* expects UserID | Bool */
+```
+
+```text
+v := 10;
+findUser(v);   /* expects UserID */
+logValue(v);   /* expects UserID | TicketID */
+```
+
+In both cases, the exact `UserID` requirement and the other calls' ordinary
+union admission rules leave `UserID` as the one satisfying type for `v`.
+`TicketID` may be admitted by `logValue`, but it cannot satisfy `findUser`.
+The calls receiving unions admit the same established `UserID` value.
+
 This direction is under investigation, not an implemented rule. Scope of
 “relevant uses,” compatible constraints, ambiguity, recursion, public APIs,
 diagnostics, unused bindings, and the precise commitment point remain to be
