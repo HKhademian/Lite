@@ -1,0 +1,638 @@
+/** Verifies every built HTML link, `#fragment` target, `search-index.json`, and `link-graph.json` in `dist/site/`. */
+
+fs := import "core/file";
+integer := import "core/int";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+text := import "core/text";
+unicode := import "core/unicode";
+challenges := import "util/challenges";
+json := import "util/json";
+
+replaceAllText := fn(source: String, needle: String, replacement: String): String {
+    if text.indexOfText(source, needle, 0) < 0 { return source; }
+    nLen := text.length(needle);
+    if nLen == 0 { return source; }
+    sLen := text.length(source);
+    out: mut List<String> = [];
+    var pos := 0;
+    loop pos < sLen {
+        found := text.indexOfText(source, needle, pos);
+        if found < 0 {
+            list.pushBack(mut out, text.slice(source, pos, sLen));
+            break;
+        }
+        if found > pos {
+            list.pushBack(mut out, text.slice(source, pos, found));
+        }
+        list.pushBack(mut out, replacement);
+        pos = found + nLen;
+    }
+    text.joinTexts(out, "")
+};
+
+unescapeAttrEntities := fn(raw: String): String {
+    if text.indexOfText(raw, "&", 0) < 0 { return raw; }
+    var s := replaceAllText(raw, "&quot;", "\"");
+    s = replaceAllText(s, "&#39;", "'");
+    s = replaceAllText(s, "&gt;", ">");
+    s = replaceAllText(s, "&lt;", "<");
+    replaceAllText(s, "&amp;", "&")
+};
+
+hexVal := fn(ch: String): Int {
+    idx := text.indexOfText("0123456789abcdefABCDEF", ch, 0);
+    if idx < 0 { return -1; }
+    if idx < 16 { idx } else { idx - 6 }
+};
+
+decodePercent := fn(raw: String, plusAsSpace: Bool): (ok: Bool, value: String) {
+    if text.indexOfText(raw, "%", 0) < 0 and (not plusAsSpace or text.indexOfText(raw, "+", 0) < 0) {
+        return (ok = true, value = raw);
+    }
+    n := text.length(raw);
+    bytes: mut List<Int> = [];
+    var i := 0;
+    loop i < n {
+        ch := text.at(raw, i);
+        if ch == "%" {
+            if i + 2 >= n { return (ok = false, value = ""); }
+            hi := hexVal(text.at(raw, i + 1));
+            lo := hexVal(text.at(raw, i + 2));
+            if hi < 0 or lo < 0 { return (ok = false, value = ""); }
+            list.pushBack(mut bytes, hi * 16 + lo);
+            i = i + 3;
+        } else if plusAsSpace and ch == "+" {
+            list.pushBack(mut bytes, 32);
+            i = i + 1;
+        } else {
+            enc := unicode.utf8Encode(ch);
+            loop enc as b {
+                list.pushBack(mut bytes, b);
+            }
+            i = i + 1;
+        }
+    }
+    dec := unicode.utf8DecodeStrict(bytes);
+    if not dec.ok { return (ok = false, value = ""); }
+    (ok = true, value = dec.text)
+};
+
+isWordChar := fn(ch: String): Bool {
+    if ch == "_" { return true; }
+    text.isAsciiLetter(ch) or text.isDigit(ch)
+};
+
+isSpaceChar := fn(ch: String): Bool {
+    ch == " " or ch == "\t" or ch == "\n" or ch == "\r"
+};
+
+isExternalHref := fn(href: String): Bool {
+    text.startsWithAt(href, 0, "http://")
+    or text.startsWithAt(href, 0, "https://")
+    or text.startsWithAt(href, 0, "//")
+    or text.startsWithAt(href, 0, "mailto:")
+    or text.startsWithAt(href, 0, "tel:")
+    or text.startsWithAt(href, 0, "javascript:")
+    or text.startsWithAt(href, 0, "data:")
+    or text.startsWithAt(href, 0, "blob:")
+};
+
+/** Removes `<script ...>...</script>` and `<style ...>...</style>` blocks in O(n) without lowercasing clean HTML. */
+stripScriptAndStyleBlocks := fn(html: String): String {
+    hasUpper := text.indexOfText(html, "<S", 0) >= 0 or text.indexOfText(html, "</S", 0) >= 0;
+    scan := if hasUpper { text.toLowerAscii(html) } else { html };
+    if text.indexOfText(scan, "<script", 0) < 0 and text.indexOfText(scan, "<style", 0) < 0 {
+        return html;
+    }
+    n := text.length(html);
+    out: mut List<String> = [];
+    var pos := 0;
+    loop pos < n {
+        sIdx := text.indexOfText(scan, "<script", pos);
+        stIdx := text.indexOfText(scan, "<style", pos);
+        var nextIdx := -1;
+        var isScript := false;
+        if sIdx >= 0 and (stIdx < 0 or sIdx < stIdx) {
+            nextIdx = sIdx;
+            isScript = true;
+        } else if stIdx >= 0 {
+            nextIdx = stIdx;
+            isScript = false;
+        }
+        if nextIdx < 0 {
+            list.pushBack(mut out, text.slice(html, pos, n));
+            break;
+        }
+        tagLen := if isScript { 7 } else { 6 };
+        afterTagPos := nextIdx + tagLen;
+        /* Word boundary check: `<script\b` / `<style\b`. */
+        if afterTagPos < n and isWordChar(text.at(scan, afterTagPos)) {
+            list.pushBack(mut out, text.slice(html, pos, afterTagPos));
+            pos = afterTagPos;
+            continue;
+        }
+        openEnd := text.indexOfText(scan, ">", afterTagPos);
+        if openEnd < 0 {
+            list.pushBack(mut out, text.slice(html, pos, n));
+            break;
+        }
+        closeTag := if isScript { "</script>" } else { "</style>" };
+        closeIdx := text.indexOfText(scan, closeTag, openEnd + 1);
+        if closeIdx < 0 {
+            list.pushBack(mut out, text.slice(html, pos, afterTagPos));
+            pos = afterTagPos;
+            continue;
+        }
+        if nextIdx > pos {
+            list.pushBack(mut out, text.slice(html, pos, nextIdx));
+        }
+        pos = closeIdx + text.length(closeTag);
+    }
+    text.joinTexts(out, "")
+};
+
+/** Collects all `\bid="([^"]+)"` values in `html` into a `\n`-delimited lookup blob. */
+collectHtmlIdBlob := fn(html: String): String {
+    out: mut List<String> = [];
+    n := text.length(html);
+    var pos := 0;
+    loop pos < n {
+        idx := text.indexOfText(html, "id=\"", pos);
+        if idx < 0 { break; }
+        if idx == 0 or not isWordChar(text.at(html, idx - 1)) {
+            valStart := idx + 4;
+            valEnd := text.indexOfText(html, "\"", valStart);
+            if valEnd > valStart {
+                list.pushBack(mut out, text.slice(html, valStart, valEnd));
+                pos = valEnd + 1;
+                continue;
+            }
+        }
+        pos = idx + 4;
+    }
+    if list.listCountText(out) == 0 { return ""; }
+    "\n" + text.joinTexts(out, "\n") + "\n"
+};
+
+/** Fast relative POSIX path resolution within site root (returns `(escaped: Bool, relPath: String)`). */
+resolveRelInSite := fn(fromRelDir: String, noQuery: String): (escaped: Bool, relPath: String) {
+    raw := if text.startsWithAt(noQuery, 0, "/") {
+        text.slice(noQuery, 1, text.length(noQuery))
+    } else if fromRelDir == "" {
+        noQuery
+    } else {
+        fromRelDir + "/" + noQuery
+    };
+    rawWithIndex := if noQuery == "." or text.endsWith(noQuery, "/") {
+        if text.endsWith(raw, "/") { raw + "index.html" } else { raw + "/index.html" }
+    } else {
+        raw
+    };
+    /* Fast path: no `.` segments and no `//` */
+    if text.indexOfText(rawWithIndex, "..", 0) < 0 and text.indexOfText(rawWithIndex, "./", 0) < 0 and text.indexOfText(rawWithIndex, "//", 0) < 0 and not text.endsWith(rawWithIndex, "/.") and rawWithIndex =!= "." {
+        return (escaped = false, relPath = rawWithIndex);
+    }
+    segs: mut List<String> = [];
+    rLen := text.length(rawWithIndex);
+    var p := 0;
+    loop p <= rLen {
+        sl := text.indexOfText(rawWithIndex, "/", p);
+        segEnd := if sl < 0 { rLen } else { sl };
+        seg := text.slice(rawWithIndex, p, segEnd);
+        if seg == "" or seg == "." {
+            /* skip */
+        } else if seg == ".." {
+            if list.listCountText(segs) == 0 {
+                return (escaped = true, relPath = "");
+            }
+            _pop := list.popBack(mut segs);
+        } else {
+            list.pushBack(mut segs, seg);
+        }
+        if sl < 0 { break; }
+        p = sl + 1;
+    }
+    (escaped = false, relPath = text.joinTexts(segs, "/"))
+};
+
+parentRelDir := fn(relFile: String): String {
+    n := text.length(relFile);
+    var i := n - 1;
+    loop i >= 0 {
+        if text.at(relFile, i) == "/" {
+            return text.slice(relFile, 0, i);
+        }
+        i = i - 1;
+    }
+    ""
+};
+
+findSortedTextIndex := fn(sortedItems: List<String>, target: String): Int {
+    var lo := 0;
+    var hi := list.listCountText(sortedItems) - 1;
+    loop lo <= hi {
+        mid := lo + (hi - lo) :/ 2;
+        item := sortedItems[mid];
+        if item == target { return mid; }
+        if compareLex(item, target) < 0 { lo = mid + 1; } else { hi = mid - 1; }
+    }
+    -1
+};
+
+/** Extracts query parameter `key` (first occurrence) using URLSearchParams rules. */
+getQueryParam := fn(queryStr: String, key: String): (found: Bool, value: String) {
+    n := text.length(queryStr);
+    var pos := 0;
+    loop pos <= n {
+        amp := text.indexOfText(queryStr, "&", pos);
+        segEnd := if amp < 0 { n } else { amp };
+        if segEnd > pos {
+            seg := text.slice(queryStr, pos, segEnd);
+            eq := text.indexOfText(seg, "=", 0);
+            rawK := if eq < 0 { seg } else { text.slice(seg, 0, eq) };
+            rawV := if eq < 0 { "" } else { text.slice(seg, eq + 1, text.length(seg)) };
+            decK := decodePercent(rawK, true);
+            if decK.ok and decK.value == key {
+                decV := decodePercent(rawV, true);
+                if decV.ok {
+                    return (found = true, value = decV.value);
+                }
+                return (found = true, value = rawV);
+            }
+        }
+        if amp < 0 { break; }
+        pos = amp + 1;
+    }
+    (found = false, value = "")
+};
+
+/** Collects all files under `absSiteDir` (relative POSIX paths). */
+collectAllSiteFiles := fn(absSiteDir: String): List<String> {
+    out: mut List<String> = [];
+    if fs.kind(absSiteDir) =!= fs.FILE_KIND_DIR { return out; }
+    stack: mut List<String> = [""];
+    loop list.listCountText(stack) > 0 {
+        relDir := list.popBack(mut stack);
+        absDir := if relDir == "" { absSiteDir } else { path.join(absSiteDir, relDir) };
+        entries := fs.listDir(absDir);
+        loop entries as entry {
+            relPath := if relDir == "" { entry } else { relDir + "/" + entry };
+            absPath := path.join(absSiteDir, relPath);
+            if fs.kind(absPath) == fs.FILE_KIND_DIR {
+                list.pushBack(mut stack, relPath);
+            } else {
+                list.pushBack(mut out, relPath);
+            }
+        }
+    }
+    challenges.sortTexts(out)
+};
+
+readOptStr := fn(src: String, objPos: Int, key: String): String {
+    res := json.readObjectString(src, objPos, key);
+    if res.found and res.ok { res.value } else { "" }
+};
+
+compareLex := fn(a: String, b: String): Int {
+    la := text.length(a);
+    lb := text.length(b);
+    lim := if la < lb { la } else { lb };
+    var i := 0;
+    loop i < lim {
+        ca := text.at(a, i);
+        cb := text.at(b, i);
+        if ca =!= cb {
+            ba := unicode.utf8Encode(ca);
+            bb := unicode.utf8Encode(cb);
+            var k := 0;
+            blim := if list.listCountInt(ba) < list.listCountInt(bb) { list.listCountInt(ba) } else { list.listCountInt(bb) };
+            loop k < blim {
+                if ba[k] < bb[k] { return -1; }
+                if ba[k] > bb[k] { return 1; }
+                k = k + 1;
+            }
+            return if list.listCountInt(ba) < list.listCountInt(bb) { -1 } else { 1 };
+        }
+        i = i + 1;
+    }
+    if la < lb { -1 } else if la > lb { 1 } else { 0 }
+};
+
+findSortedKeyIndex := fn(keys: List<String>, order: List<Int>, target: String): Int {
+    var lo := 0;
+    var hi := list.listCountInt(order) - 1;
+    loop lo <= hi {
+        mid := lo + (hi - lo) :/ 2;
+        cmp := compareLex(keys[order[mid]], target);
+        if cmp == 0 { return order[mid]; }
+        if cmp < 0 { lo = mid + 1; } else { hi = mid - 1; }
+    }
+    -1
+};
+
+violationJson := fn(source: String, target: String, reason: String): String {
+    "{\"source\":" + json.quoteString(source)
+    + ",\"target\":" + json.quoteString(target)
+    + ",\"reason\":" + json.quoteString(reason) + "}"
+};
+
+/** Validates all built site references in `siteDirRaw` and returns a JSON `SiteReferenceReport`. */
+pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
+    absSiteDir := path.resolve(proc.cwd(), siteDirRaw);
+
+    sortedSiteFiles := collectAllSiteFiles(absSiteDir);
+    siteFilesBlob := if list.listCountText(sortedSiteFiles) == 0 {
+        ""
+    } else {
+        "\n" + text.joinTexts(sortedSiteFiles, "\n") + "\n"
+    };
+    htmlFiles: mut List<String> = [];
+    loop sortedSiteFiles as relFile {
+        if text.endsWith(relFile, ".html") {
+            list.pushBack(mut htmlFiles, relFile);
+        }
+    }
+
+    /* Pre-read and strip all HTML files once, and store one `\n`-delimited ID blob per HTML file. */
+    strippedHtmls: mut List<String> = [];
+    htmlIdBlobs: mut List<String> = [];
+    loop htmlFiles as relHtml {
+        readRes := fs.readText(path.join(absSiteDir, relHtml));
+        stripped := if readRes.ok { stripScriptAndStyleBlocks(readRes.text) } else { "" };
+        list.pushBack(mut strippedHtmls, stripped);
+        list.pushBack(mut htmlIdBlobs, collectHtmlIdBlob(stripped));
+    }
+
+    /* Load playground library targets if present. */
+    hasSampleFilesDir := fs.kind(path.join(absSiteDir, "playground/samples")) == fs.FILE_KIND_DIR;
+    hasPlayTargets := text.indexOfText(siteFilesBlob, "\nplayground/library.json\n", 0) >= 0;
+    rawAllIds: mut List<String> = [];
+    rawCatSample: mut List<String> = [];
+    rawCatExample: mut List<String> = [];
+    rawCatCase: mut List<String> = [];
+    rawCatPiece: mut List<String> = [];
+    if hasPlayTargets {
+        libRead := fs.readText(path.join(absSiteDir, "playground/library.json"));
+        if libRead.ok {
+            loop json.arrayElementOffsets(libRead.text, 0) as itemPos {
+                itId := readOptStr(libRead.text, itemPos, "id");
+                itSlug := readOptStr(libRead.text, itemPos, "slug");
+                itCat := readOptStr(libRead.text, itemPos, "category");
+                itSampleId := readOptStr(libRead.text, itemPos, "sampleId");
+                if itId =!= "" { list.pushBack(mut rawAllIds, itId); }
+                if itSlug =!= "" { list.pushBack(mut rawAllIds, itSlug); }
+                if itSampleId =!= "" { list.pushBack(mut rawCatSample, itSampleId); }
+                if itSlug =!= "" {
+                    if itCat == "sample" { list.pushBack(mut rawCatSample, itSlug); }
+                    else if itCat == "example" { list.pushBack(mut rawCatExample, itSlug); }
+                    else if itCat == "case" { list.pushBack(mut rawCatCase, itSlug); }
+                    else if itCat == "piece" { list.pushBack(mut rawCatPiece, itSlug); }
+                }
+            }
+        }
+    }
+    playAllIdsBlob := "\n" + text.joinTexts(rawAllIds, "\n") + "\n";
+    playCatSampleBlob := "\n" + text.joinTexts(rawCatSample, "\n") + "\n";
+    playCatExampleBlob := "\n" + text.joinTexts(rawCatExample, "\n") + "\n";
+    playCatCaseBlob := "\n" + text.joinTexts(rawCatCase, "\n") + "\n";
+    playCatPieceBlob := "\n" + text.joinTexts(rawCatPiece, "\n") + "\n";
+
+    violations: mut List<String> = [];
+    var localLinksChecked := 0;
+    var fragmentsChecked := 0;
+    var searchEntriesChecked := 0;
+    var graphNodesChecked := 0;
+    var graphEdgesChecked := 0;
+
+    hasHtmlFrag := fn(relHtml: String, rawFrag: String): Bool {
+        hPos := findSortedTextIndex(htmlFiles, relHtml);
+        if hPos < 0 { return false; }
+        blob := htmlIdBlobs[hPos];
+        if blob == "" { return false; }
+        if text.indexOfText(blob, "\n" + rawFrag + "\n", 0) >= 0 {
+            return true;
+        }
+        if text.indexOfText(rawFrag, "%", 0) >= 0 {
+            dec := decodePercent(rawFrag, false);
+            if dec.ok and text.indexOfText(blob, "\n" + dec.value + "\n", 0) >= 0 {
+                return true;
+            }
+        }
+        false
+    };
+
+    checkLocalTarget := fn(
+    source: String,
+    rawTarget: String,
+    fromRelFile: String,
+    fromRelDir: String,
+    missingFileReason: String,
+    missingFragReason: String
+    ): Unit {
+        decoded := unescapeAttrEntities(text.trim(rawTarget));
+        if decoded == "" or isExternalHref(decoded) { return; }
+
+        hashIdx := text.indexOfText(decoded, "#", 0);
+        pathAndQuery := if hashIdx >= 0 { text.slice(decoded, 0, hashIdx) } else { decoded };
+        rawFrag := if hashIdx >= 0 { text.slice(decoded, hashIdx + 1, text.length(decoded)) } else { "" };
+        if text.indexOfText(pathAndQuery, "playground?", 0) >= 0 {
+            list.pushBack(mut violations, violationJson(source, rawTarget, "bad-playground-href"));
+        }
+
+        qIdx := text.indexOfText(pathAndQuery, "?", 0);
+        noQuery := if qIdx >= 0 { text.slice(pathAndQuery, 0, qIdx) } else { pathAndQuery };
+        resolved := if noQuery == "" {
+            (escaped = false, relPath = fromRelFile)
+        } else {
+            resolveRelInSite(fromRelDir, noQuery)
+        };
+        relToSite := resolved.relPath;
+        exists := if resolved.escaped {
+            false
+        } else if text.indexOfText(siteFilesBlob, "\n" + relToSite + "\n", 0) >= 0 {
+            true
+        } else {
+            fs.kind(path.join(absSiteDir, relToSite)) =!= fs.FILE_KIND_MISSING
+        };
+        if not exists {
+            list.pushBack(mut violations, violationJson(source, rawTarget, missingFileReason));
+            return;
+        }
+
+        if rawFrag =!= "" and text.endsWith(relToSite, ".html") {
+            fragmentsChecked = fragmentsChecked + 1;
+            if not hasHtmlFrag(relToSite, rawFrag) {
+                list.pushBack(mut violations, violationJson(source, rawTarget, missingFragReason));
+            }
+        }
+
+        if relToSite == "playground/index.html" and qIdx >= 0 {
+            queryStr := text.slice(pathAndQuery, qIdx + 1, text.length(pathAndQuery));
+            sampleParam := getQueryParam(queryStr, "sample");
+            if sampleParam.found and sampleParam.value =!= "" {
+                sampleJsonOk := hasSampleFilesDir and text.indexOfText(siteFilesBlob, "\nplayground/samples/" + sampleParam.value + ".json\n", 0) >= 0;
+                libSampleOk := hasPlayTargets and text.indexOfText(playCatSampleBlob, "\n" + sampleParam.value + "\n", 0) >= 0;
+                if (hasSampleFilesDir or hasPlayTargets) and not sampleJsonOk and not libSampleOk {
+                    list.pushBack(mut violations, violationJson(source, rawTarget, "missing-play-target"));
+                }
+            }
+            if hasPlayTargets {
+                exParam := getQueryParam(queryStr, "example");
+                if exParam.found and exParam.value =!= "" and text.indexOfText(playCatExampleBlob, "\n" + exParam.value + "\n", 0) < 0 {
+                    list.pushBack(mut violations, violationJson(source, rawTarget, "missing-play-target"));
+                }
+                caseParam := getQueryParam(queryStr, "case");
+                if caseParam.found and caseParam.value =!= "" and text.indexOfText(playCatCaseBlob, "\n" + caseParam.value + "\n", 0) < 0 {
+                    list.pushBack(mut violations, violationJson(source, rawTarget, "missing-play-target"));
+                }
+                pieceParam := getQueryParam(queryStr, "piece");
+                if pieceParam.found and pieceParam.value =!= "" and text.indexOfText(playCatPieceBlob, "\n" + pieceParam.value + "\n", 0) < 0 {
+                    list.pushBack(mut violations, violationJson(source, rawTarget, "missing-play-target"));
+                }
+                itemParam := getQueryParam(queryStr, "item");
+                if itemParam.found and itemParam.value =!= "" and text.indexOfText(playAllIdsBlob, "\n" + itemParam.value + "\n", 0) < 0 {
+                    list.pushBack(mut violations, violationJson(source, rawTarget, "missing-play-target"));
+                }
+            }
+        }
+    };
+
+    /* 1. Scan all HTML files for unresolved attributes, href="...", and data-play-href="...". */
+    htmlCount := list.listCountText(htmlFiles);
+    var hIdx := 0;
+    loop hIdx < htmlCount {
+        relSource := htmlFiles[hIdx];
+        relDir := parentRelDir(relSource);
+        stripped := strippedHtmls[hIdx];
+
+        if text.indexOfText(stripped, " data-md-href=", 0) >= 0 {
+            list.pushBack(mut violations, violationJson(relSource, "data-md-href", "unresolved-md-href"));
+        }
+        if text.indexOfText(stripped, " data-lite-uri=", 0) >= 0 {
+            list.pushBack(mut violations, violationJson(relSource, "data-lite-uri", "unresolved-lite-uri"));
+        }
+
+        sLen := text.length(stripped);
+        var pos := 0;
+        loop pos < sLen {
+            idx := text.indexOfText(stripped, "href=\"", pos);
+            if idx < 0 { break; }
+            okPrev := if idx == 0 {
+                true
+            } else {
+                prevCh := text.at(stripped, idx - 1);
+                isSpaceChar(prevCh) or prevCh == "<"
+            };
+            valStart := idx + 6;
+            valEnd := text.indexOfText(stripped, "\"", valStart);
+            if valEnd < 0 { break; }
+            if okPrev {
+                rawHref := text.slice(stripped, valStart, valEnd);
+                trimmed := text.trim(rawHref);
+                if trimmed =!= "" and trimmed =!= "#" and not isExternalHref(trimmed) {
+                    localLinksChecked = localLinksChecked + 1;
+                    checkLocalTarget(relSource, rawHref, relSource, relDir, "missing-file", "missing-fragment");
+                }
+            }
+            pos = valEnd + 1;
+        }
+
+        var pPos := 0;
+        loop pPos < sLen {
+            idx := text.indexOfText(stripped, "data-play-href=\"", pPos);
+            if idx < 0 { break; }
+            valStart := idx + 16;
+            valEnd := text.indexOfText(stripped, "\"", valStart);
+            if valEnd < 0 { break; }
+            rawPlayHref := text.slice(stripped, valStart, valEnd);
+            trimmed := text.trim(rawPlayHref);
+            if trimmed =!= "" and not isExternalHref(trimmed) {
+                localLinksChecked = localLinksChecked + 1;
+                checkLocalTarget(relSource, rawPlayHref, relSource, relDir, "missing-file", "missing-fragment");
+            }
+            pPos = valEnd + 1;
+        }
+
+        hIdx = hIdx + 1;
+    }
+
+    /* 2. Check search-index.json. */
+    if text.indexOfText(siteFilesBlob, "\nsearch-index.json\n", 0) < 0 {
+        list.pushBack(mut violations, violationJson("search-index.json", "search-index.json", "missing-file"));
+    } else {
+        searchRead := fs.readText(path.join(absSiteDir, "search-index.json"));
+        if searchRead.ok {
+            loop json.arrayElementOffsets(searchRead.text, 0) as ePos {
+                href := readOptStr(searchRead.text, ePos, "href");
+                if href == "" { continue; }
+                searchEntriesChecked = searchEntriesChecked + 1;
+                checkLocalTarget("search-index.json", href, "index.html", "", "missing-file", "missing-fragment");
+            }
+        }
+    }
+
+    /* 3. Check link-graph.json. */
+    if text.indexOfText(siteFilesBlob, "\nlink-graph.json\n", 0) < 0 {
+        list.pushBack(mut violations, violationJson("link-graph.json", "link-graph.json", "missing-file"));
+    } else {
+        graphRead := fs.readText(path.join(absSiteDir, "link-graph.json"));
+        if graphRead.ok {
+            gText := graphRead.text;
+            nodeUris: mut List<String> = [];
+            nodeOutPaths: mut List<String> = [];
+            nodesField := json.findObjectField(gText, 0, "nodes");
+            if nodesField.found {
+                loop json.arrayElementOffsets(gText, nodesField.valuePos) as nPos {
+                    uri := readOptStr(gText, nPos, "uri");
+                    outPath := readOptStr(gText, nPos, "outPath");
+                    graphNodesChecked = graphNodesChecked + 1;
+                    if uri == "" or outPath == "" {
+                        tName := if uri =!= "" { uri } else { "(unnamed-node)" };
+                        list.pushBack(mut violations, violationJson("link-graph.json", tName, "missing-graph-node"));
+                        continue;
+                    }
+                    list.pushBack(mut nodeUris, uri);
+                    list.pushBack(mut nodeOutPaths, outPath);
+                    checkLocalTarget("link-graph.json (" + uri + ")", outPath, "index.html", "", "missing-graph-node", "missing-graph-fragment");
+                }
+            }
+            nodeOrder := challenges.sortIndexByKeys(nodeUris);
+
+            edgesField := json.findObjectField(gText, 0, "edges");
+            if edgesField.found {
+                loop json.arrayElementOffsets(gText, edgesField.valuePos) as ePos {
+                    graphEdgesChecked = graphEdgesChecked + 1;
+                    fromUri := readOptStr(gText, ePos, "from");
+                    toUri := readOptStr(gText, ePos, "to");
+                    if findSortedKeyIndex(nodeUris, nodeOrder, fromUri) < 0 {
+                        list.pushBack(mut violations, violationJson("link-graph.json", fromUri, "dangling-graph-edge"));
+                    }
+                    toIdx := findSortedKeyIndex(nodeUris, nodeOrder, toUri);
+                    if toIdx < 0 {
+                        list.pushBack(mut violations, violationJson("link-graph.json", toUri, "dangling-graph-edge"));
+                        continue;
+                    }
+                    frag := readOptStr(gText, ePos, "fragment");
+                    toOut := nodeOutPaths[toIdx];
+                    hPos := text.indexOfText(toOut, "#", 0);
+                    baseOut := if hPos >= 0 { text.slice(toOut, 0, hPos) } else { toOut };
+                    if frag =!= "" and baseOut =!= "" {
+                        checkLocalTarget("link-graph.json (" + fromUri + " -> " + toUri + ")", baseOut + "#" + frag, "index.html", "", "missing-graph-node", "missing-graph-fragment");
+                    }
+                }
+            }
+        }
+    }
+
+    "{"
+    + "\"htmlFiles\":" + integer.intText(htmlCount) + ","
+    + "\"localLinksChecked\":" + integer.intText(localLinksChecked) + ","
+    + "\"fragmentsChecked\":" + integer.intText(fragmentsChecked) + ","
+    + "\"searchEntriesChecked\":" + integer.intText(searchEntriesChecked) + ","
+    + "\"graphNodesChecked\":" + integer.intText(graphNodesChecked) + ","
+    + "\"graphEdgesChecked\":" + integer.intText(graphEdgesChecked) + ","
+    + "\"violations\":[" + text.joinTexts(violations, ",") + "]"
+    + "}"
+};
