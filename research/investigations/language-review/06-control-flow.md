@@ -69,3 +69,14 @@ Trace an empty loop, loop with failing iterator operation, nested targeted break
 Bindings (2), enums (4), collections (7), and cleanup (8) supply important interaction cases. Record new decisions with their owning area; return to this review after the dependency is understood.
 
 Related preliminary notes: [2](02-bindings.md), [4](04-enums.md), [7](07-collections.md), [8](08-failure-cleanup.md).
+
+## Joint review: noncontributing paths
+
+The later review direction gives omitted fallback branches and explicit empty branches the same behavior in conditionals and matches: the path contributes nothing and performs no destination write. This would revise the older declaration fallback to zero and the older Unit contribution from an empty selected branch.
+
+- In `a := if ready { 42 }`, contributing paths infer Int. When `ready` is false, `a` remains uninitialized. Reason about it as reserving `a: Int = ?` and initializing it only in the contributing branch.
+- A later read must be initialized on every reaching path. A second test of the same unchanged Bool, or an early exit that excludes the uninitialized path, can justify a read when the compiler proves the relationship. A bare typed declaration without an initializer has its separate all-zero behavior.
+- Assignment leaves the destination as it was on a noncontributing path. A required argument needs a value on every path reaching the call. Untangling an expression into a temporary at its evaluation point makes it possible to track type and definite initialization separately.
+- Contributing branches with different types can form a normalized union. Empty paths do not add Unit or manufacture the zeroed union state. Match coverage and an implicit panic for outliers are independent of what a normal noncontributing path writes.
+
+These decisions describe the reviewed behavior. Earlier normative and implementation descriptions still require reconciliation.
