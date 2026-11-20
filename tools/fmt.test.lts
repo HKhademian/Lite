@@ -1,0 +1,253 @@
+/** Unit and CLI tests for lite fmt. */
+
+fs := import "core/file";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+unicode := import "core/unicode";
+cases := import "util/cases";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+liteBin := path.join(root, "bin/lite");
+fmtBin := path.join(root, "bin/lite-fmt");
+
+runNode := fn(args: List<String>, stdinText: String): (status: Int, stdout: String, stderr: String) {
+    tmpRes := fs.makeTempDir("lite-fmt-run-");
+    test.check("runNode makeTempDir: " + tmpRes.error, tmpRes.ok);
+    outPath := path.join(tmpRes.path, "out");
+    errPath := path.join(tmpRes.path, "err");
+    emptyEnv: List<String> = [];
+    res := proc.runBytes(proc.execPath(), args, root, emptyEnv, 60000, unicode.utf8Encode(stdinText), outPath, errPath);
+    test.check("runNode process error: " + res.error, res.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    _rm := fs.remove(tmpRes.path);
+    (status = res.status, stdout = outText, stderr = errText)
+};
+
+formatLite := fn(source: String): String {
+    res := runNode([fmtBin, "-"], source);
+    test.checkInt("lite fmt - status: " + res.stderr, 0, res.status);
+    res.stdout
+};
+
+isHex12 := fn(s: String): Bool {
+    if text.length(s) =!= 12 { return false; }
+    var i := 0;
+    loop i < 12 {
+        ch := text.at(s, i);
+        if text.indexOfText("0123456789abcdef", ch, 0) < 0 { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+/* 1. formatLite normalizes indentation, brace spacing, blank lines, and EOF newline idempotently */
+input1Lines: List<String> = [
+"",
+"  io := import \"core/io\";  ",
+"",
+"",
+"if 1 < 2{",
+"io.outputLine(\"ok {not a brace}\");",
+"}else{",
+"  io.outputLine(\"no\");",
+"}",
+"",
+""
+];
+expected1Lines: List<String> = [
+"io := import \"core/io\";",
+"",
+"if 1 < 2 {",
+"    io.outputLine(\"ok {not a brace}\");",
+"} else {",
+"    io.outputLine(\"no\");",
+"}",
+""
+];
+expected1 := text.joinTexts(expected1Lines, "\n");
+once1 := formatLite(text.joinTexts(input1Lines, "\n"));
+test.checkText("formatLite once", expected1, once1);
+test.checkText("formatLite twice", expected1, formatLite(once1));
+
+/* 2. formatLite is idempotent across all language examples, samples, and library files */
+corpusTmpRes := fs.makeTempDir("lite-fmt-corpus-test-");
+test.check("corpus makeTempDir", corpusTmpRes.ok);
+corpusTmp := corpusTmpRes.path;
+corpusDirs: List<String> = [
+"language/examples", "language/showcases", "language/learn/tutorials",
+"language/gym", "samples", "lib/core", "lib/extra"
+];
+noIgnore: List<String> = [];
+copiedFiles: mut List<String> = [];
+loop corpusDirs as relDir {
+    absDir := path.join(root, relDir);
+    found := path.collectFiles(absDir, [absDir], ".lts", noIgnore, false);
+    loop found as full {
+        rel := path.relative(root, full);
+        dest := path.join(corpusTmp, rel);
+        test.check("mkdir parent " + rel, fs.makeDir(path.parentDir(dest)).ok);
+        srcRes := fs.readText(full);
+        test.check("read " + rel, srcRes.ok);
+        test.check("write " + rel, fs.writeText(dest, srcRes.text).ok);
+        list.pushBack(mut copiedFiles, dest);
+    }
+}
+test.check("copied corpus files > 0", list.listCountText(copiedFiles) > 0);
+firstFmt := runNode([liteBin, "fmt", corpusTmp], "");
+test.checkInt("first corpus fmt: " + firstFmt.stderr, 0, firstFmt.status);
+afterFirst: mut List<String> = [];
+loop copiedFiles as file {
+    list.pushBack(mut afterFirst, fs.readText(file).text);
+}
+checkCorpus := runNode([liteBin, "fmt", "--check", corpusTmp], "");
+test.checkInt("corpus fmt --check: " + checkCorpus.stdout + checkCorpus.stderr, 0, checkCorpus.status);
+secondFmt := runNode([liteBin, "fmt", corpusTmp], "");
+test.checkInt("second corpus fmt: " + secondFmt.stderr, 0, secondFmt.status);
+var cfIdx := 0;
+loop cfIdx < list.listCountText(copiedFiles) {
+    test.checkText("idempotent on " + copiedFiles[cfIdx], afterFirst[cfIdx], fs.readText(copiedFiles[cfIdx]).text);
+    cfIdx = cfIdx + 1;
+}
+_rmCorpus := fs.remove(corpusTmp);
+
+/* 3. ignited fmt artifact in dist/tools matches tools/src/fmt.lts and passes strict TS checking */
+tsComp := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select ts compiler", tsComp.ok);
+fmtSrcPath := path.join(root, "tools/src/fmt.lts");
+fmtSrc := fs.readText(fmtSrcPath);
+test.check("read tools/src/fmt.lts", fmtSrc.ok);
+compiledFmt := compilerTest.compileStdinWithOpts(root, tsComp.path, root, fmtSrc.text, "tools/src/fmt.lts", fmtSrcPath, []);
+test.checkInt("compile tools/src/fmt.lts: " + compiledFmt.stderr, 0, compiledFmt.status);
+
+ignitedFmtPath := path.join(root, "dist/tools/fmt.ts");
+ignitedFmt := fs.readText(ignitedFmtPath);
+test.check("read dist/tools/fmt.ts", ignitedFmt.ok);
+test.checkText("ignited fmt matches compiled tools/src/fmt.lts", compiledFmt.stdout, ignitedFmt.text);
+
+tscDirRes := fs.makeTempDir("lite-fmt-tsc-");
+test.check("tscDir makeTempDir", tscDirRes.ok);
+tscCheck := cases.checkTsArtifactFileWithStatus(root, ignitedFmtPath, path.join(tscDirRes.path, "tsc"), 60000);
+test.check("fmt.ts strict tsc: " + tscCheck.error, tscCheck.ok);
+_rmTsc := fs.remove(tscDirRes.path);
+
+/* 4. lite fmt CLI handles --version, --help, stdin -, missing args, and directory exclusions */
+versionRun := runNode([liteBin, "fmt", "--version"], "");
+test.checkInt("fmt --version status: " + versionRun.stderr, 0, versionRun.status);
+test.check("fmt --version header", text.startsWithAt(versionRun.stdout, 0, "lite fmt "));
+test.check("fmt --version kind", text.indexOfText(versionRun.stdout, "\nkind: ignited-ts (target: ts)\n", 0) >= 0);
+artNeedle := "artifact: dist/tools/fmt.ts (sha256: ";
+artIdx := text.indexOfText(versionRun.stdout, artNeedle, 0);
+test.check("fmt --version artifact line", artIdx >= 0);
+hashStart := artIdx + text.length(artNeedle);
+test.check("fmt --version sha256 hex12", isHex12(text.slice(versionRun.stdout, hashStart, hashStart + 12)));
+
+helpRun := runNode([liteBin, "fmt", "--help"], "");
+test.checkInt("fmt --help status: " + helpRun.stderr, 0, helpRun.status);
+test.check("fmt --help usage", text.indexOfText(helpRun.stdout, "Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]", 0) >= 0);
+
+missingArgs := runNode([liteBin, "fmt"], "");
+test.checkInt("fmt missing args status", 2, missingArgs.status);
+
+stdinDirty := runNode([liteBin, "fmt", "--check", "-"], "if 1<2{\n}\n\n");
+test.checkInt("fmt --check - dirty", 1, stdinDirty.status);
+
+stdinClean := runNode([liteBin, "fmt", "--check", "-"], "if 1<2 {\n}\n");
+test.checkInt("fmt --check - clean", 0, stdinClean.status);
+
+exclTmpRes := fs.makeTempDir("lite-fmt-exclude-test-");
+test.check("exclTmp makeTempDir", exclTmpRes.ok);
+exclTmp := exclTmpRes.path;
+ignoredDirs: List<String> = ["node_modules", "dist", ".hidden"];
+loop ignoredDirs as ig {
+    test.check("mkdir " + ig, fs.makeDir(path.join(exclTmp, ig)).ok);
+    test.check("write bad.lts in " + ig, fs.writeText(path.join(path.join(exclTmp, ig), "bad.lts"), "if 1<2{\n}\n\n").ok);
+}
+test.check("write clean.lts", fs.writeText(path.join(exclTmp, "clean.lts"), "x := 1;\n").ok);
+checkIgnored := runNode([liteBin, "fmt", "--check", exclTmp], "");
+test.checkInt("fmt --check ignores excluded dirs: " + checkIgnored.stdout + checkIgnored.stderr, 0, checkIgnored.status);
+_rmExcl := fs.remove(exclTmp);
+
+/* 5. lite fmt CLI routes through ./bin/lite and supports --check and file formatting */
+t5Res := fs.makeTempDir("lite-fmt-test-");
+test.check("t5 makeTempDir", t5Res.ok);
+sample5 := path.join(t5Res.path, "sample.lts");
+test.check("write sample5", fs.writeText(sample5, "if 1 < 2{\nio.outputLine(\"hi\");\n}\n\n").ok);
+test.checkInt("sample5 checkFail", 1, runNode([liteBin, "fmt", "--check", sample5], "").status);
+test.checkInt("sample5 writeOk", 0, runNode([liteBin, "fmt", sample5], "").status);
+test.checkInt("sample5 checkPass", 0, runNode([liteBin, "fmt", "--check", sample5], "").status);
+test.checkText("sample5 content", "if 1 < 2 {\n    io.outputLine(\"hi\");\n}\n", fs.readText(sample5).text);
+_rm5 := fs.remove(t5Res.path);
+
+/* 6. lite fmt formats subjectless match blocks consistently and passes --check */
+t6Res := fs.makeTempDir("lite-fmt-match-test-");
+test.check("t6 makeTempDir", t6Res.ok);
+sample6 := path.join(t6Res.path, "match.lts");
+test.check("write sample6", fs.writeText(sample6, "match{\ntier==3{\nnote=\"top tier\";\n}\n_{\nnote=\"other\";\n}\n}\n\n").ok);
+test.checkInt("sample6 fmt", 0, runNode([liteBin, "fmt", sample6], "").status);
+test.checkInt("sample6 check", 0, runNode([liteBin, "fmt", "--check", sample6], "").status);
+test.checkText("sample6 content", "match {\n    tier==3 {\n        note=\"top tier\";\n    }\n    _ {\n        note=\"other\";\n    }\n}\n", fs.readText(sample6).text);
+_rm6 := fs.remove(t6Res.path);
+
+/* 7. lite fmt formats narrow numeric width declarations and passes --check */
+t7Res := fs.makeTempDir("lite-fmt-widths-test-");
+test.check("t7 makeTempDir", t7Res.ok);
+sample7 := path.join(t7Res.path, "widths.lts");
+test.check("write sample7", fs.writeText(sample7, "a: Int8 = -128;\nf: Float32 = 0.5;\nxs: List<Int8> = [1, 2];\n\n").ok);
+test.checkInt("sample7 fmt", 0, runNode([liteBin, "fmt", sample7], "").status);
+test.checkInt("sample7 check", 0, runNode([liteBin, "fmt", "--check", sample7], "").status);
+test.checkText("sample7 content", "a: Int8 = -128;\nf: Float32 = 0.5;\nxs: List<Int8> = [1, 2];\n", fs.readText(sample7).text);
+_rm7 := fs.remove(t7Res.path);
+
+/* 8. lite fmt formats tagged loops with then clauses and metadata reads */
+t8Res := fs.makeTempDir("lite-fmt-loop-test-");
+test.check("t8 makeTempDir", t8Res.ok);
+sample8 := path.join(t8Res.path, "tagged_loop.lts");
+test.check("write sample8", fs.writeText(sample8, "@outer loop [1, 2, 3]{\nif .item==2{\nbreak .value+10;\n}\n}then{\n.count+.value\n}\n\n").ok);
+test.checkInt("sample8 fmt", 0, runNode([liteBin, "fmt", sample8], "").status);
+test.checkInt("sample8 check", 0, runNode([liteBin, "fmt", "--check", sample8], "").status);
+test.checkText("sample8 content", "@outer loop [1, 2, 3] {\n    if .item==2 {\n        break .value+10;\n    }\n} then {\n    .count+.value\n}\n", fs.readText(sample8).text);
+_rm8 := fs.remove(t8Res.path);
+
+/* 9. lite fmt formats construct-level then and finally clauses idempotently */
+t9Res := fs.makeTempDir("lite-fmt-finally-test-");
+test.check("t9 makeTempDir", t9Res.ok);
+sample9 := path.join(t9Res.path, "then_finally.lts");
+test.check(
+"write sample9",
+fs.writeText(
+sample9,
+"io := import \"core/io\";\n\n\n@outer loop [1, 2]{\nio.outputLine(.item);\n}then{\nio.outputLine(\"then\");\n}finally{\nio.outputLine(\"fin\");\n}\nx := if true{ 1 }else{ 2 }finally{ io.outputLine(\"cond\"); }\n\n"
+).ok
+);
+fmt9 := runNode([liteBin, "fmt", sample9], "");
+test.checkInt("sample9 fmt: " + fmt9.stderr, 0, fmt9.status);
+expected9Lines: List<String> = [
+"io := import \"core/io\";",
+"",
+"@outer loop [1, 2] {",
+"    io.outputLine(.item);",
+"} then {",
+"    io.outputLine(\"then\");",
+"} finally {",
+"    io.outputLine(\"fin\");",
+"}",
+"x := if true { 1 } else { 2 } finally { io.outputLine(\"cond\"); }",
+""
+];
+expected9 := text.joinTexts(expected9Lines, "\n");
+test.checkText("sample9 content", expected9, fs.readText(sample9).text);
+chk9 := runNode([liteBin, "fmt", "--check", sample9], "");
+test.checkInt("sample9 check: " + chk9.stderr, 0, chk9.status);
+fmt9b := runNode([liteBin, "fmt", sample9], "");
+test.checkInt("sample9 second fmt: " + fmt9b.stderr, 0, fmt9b.status);
+test.checkText("sample9 idempotent content", expected9, fs.readText(sample9).text);
+_rm9 := fs.remove(t9Res.path);

@@ -262,7 +262,7 @@ runTask := fn(root: String, task: String): Unit {
         unitArgs: List<String> = [
         "--test",
         "tools/cli.test.ts",
-        "tools/fmt.test.ts", "tools/release.test.ts",
+        "tools/release.test.ts",
         "site/features.test.ts", "site/build.test.ts"
         ];
         invokeNode(unitArgs, root);
@@ -270,6 +270,7 @@ runTask := fn(root: String, task: String): Unit {
         "compiler/scripts/release-streams.test.lts",
         "tools/cases.test.lts",
         "tools/docs.test.lts",
+        "tools/fmt.test.lts",
         "tools/run.test.lts"
         ];
         if unitTests.runUnitTestFiles(root, releaseUnitFiles, 0, "") =!= 0 {
