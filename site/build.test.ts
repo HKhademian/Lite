@@ -85,6 +85,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     'runtime/stdlib.json',
     'runtime/search.js',
     'runtime/snips.js',
+    'runtime/academy.js',
+    'runtime/play-stage.js',
+    'playground/play-stage.js',
     'runtime/highlight.js',
     'runtime/code-view.js',
     'runtime/strip-ts.js',
@@ -301,7 +304,17 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     assert(index.includes(`>${navLabel}</a>`), `missing nav link ${navLabel}`);
   }
   assert(index.includes('id="site-search-btn"'));
+  assert(index.includes('id="mobile-nav-toggle"'));
+  assert(index.includes('class="nav-academy-group"'));
+  assert(index.includes('id="academy-resume-bar"'));
+  assert(index.includes('class="academy-pillar-grid"'));
+  assert(index.includes('class="academy-ref-strip"'));
   assert(index.includes('runtime/search.js'));
+  assert(index.includes('runtime/academy.js'));
+  const searchJs = readFileSync(join(out, 'runtime', 'search.js'), 'utf8');
+  assert(searchJs.includes('data-search-kind'));
+  const academyJs = readFileSync(join(out, 'runtime', 'academy.js'), 'utf8');
+  assert(academyJs.includes('window.LiteAcademy'));
   const styleCss = readFileSync(join(out, 'style.css'), 'utf8');
   assert(styleCss.includes('.theme-toggle.theme-toggle-shine'));
   assert(styleCss.includes('.shell-line::before'));

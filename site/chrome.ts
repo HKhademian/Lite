@@ -55,19 +55,8 @@ export function renderHeader(
 ): string {
   const repoHref = repoUrl || '#';
   const toggleClass = lightSwitchShine ? 'theme-toggle theme-toggle-shine' : 'theme-toggle';
-  const navItems: readonly [ActiveNavSection, string, string][] = [
-    ['home', 'index.html', 'Overview'],
-    ['learn', 'learn/', 'Learn'],
-    ['gym', 'gym/', 'Gym'],
-    ['docs', 'docs/', 'Docs'],
-    ['modules', 'modules/', 'Modules'],
-    ['tools', 'tools/', 'Tools'],
-    ['gallery', 'gallery/', 'Gallery'],
-    ['playground', 'playground/', 'Play'],
-  ];
-  const linksHtml = navItems
-    .map(([key, relHref, label]) => `<a href="${basePath}${relHref}"${active === key ? ' class="active"' : ''}>${label}</a>`)
-    .join('\n      ');
+  const link = (key: ActiveNavSection, relHref: string, label: string) =>
+    `<a href="${basePath}${relHref}"${active === key ? ' class="active"' : ''}>${label}</a>`;
 
   return `<header class="site-header">
   <div class="container header-inner">
@@ -75,8 +64,22 @@ export function renderHeader(
       ${brandWordmark}
       <span class="brand-badge">Alpha</span>
     </a>
-    <nav class="site-nav" aria-label="Main navigation">
-      ${linksHtml}
+    <button id="mobile-nav-toggle" class="mobile-nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation menu">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <path d="M3 5h14M3 10h14M3 15h14"/>
+      </svg>
+    </button>
+    <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+      ${link('home', 'index.html', 'Overview')}
+      <div class="nav-academy-group" role="group" aria-label="Lite Academy">
+        ${link('learn', 'learn/', 'Learn')}
+        ${link('gym', 'gym/', 'Gym')}
+        ${link('docs', 'docs/', 'Docs')}
+        ${link('playground', 'playground/', 'Play')}
+      </div>
+      ${link('modules', 'modules/', 'Modules')}
+      ${link('tools', 'tools/', 'Tools')}
+      ${link('gallery', 'gallery/', 'Gallery')}
       <button id="site-search-btn" class="search-trigger" type="button" aria-label="Search docs, modules, learn, and gym (/)" title="Search (/ or Cmd/Ctrl+K)">
         <span>Search</span><kbd>/</kbd>
       </button>
@@ -201,6 +204,7 @@ export function renderPage(options: Readonly<{
   </script>
   <link rel="stylesheet" href="${options.basePath}style.css">
   <script defer src="${options.basePath}runtime/snips.js"></script>
+  <script defer src="${options.basePath}runtime/academy.js"></script>
 </head>
 <body${classAttr}${baseAttr}>
 ${renderHeader(options.basePath, options.active, options.repoUrl, lightSwitchShine)}

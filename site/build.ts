@@ -6,6 +6,7 @@ import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../igniter/artifacts.ts';
+import { academyClientJs } from './academy-state.ts';
 import { extractModules } from './docs-client.ts';
 import {
   brandWordmark,
@@ -255,16 +256,26 @@ function renderHomePage(
 <section class="section">
   <div class="section-head">
     <h2>Lite Academy</h2>
-    <span class="code-card-meta">Docs &middot; References &middot; Gym &middot; Play</span>
+    <span class="code-card-meta">Learn &middot; Gym &middot; Docs &middot; Play</span>
   </div>
-  <p class="section-note">One unified learning space bringing together Docs, References, Gym, and Play &mdash; no separate academic tracks.</p>
-  <div class="portal-grid">
+  <p class="section-note">One unified studio bringing together guided lessons, in-browser katas, live runnable docs, and a multi-backend playground.</p>
+  <div id="academy-resume-bar" class="academy-resume-bar" hidden>
+    <div class="academy-stats">
+      <strong id="academy-resume-title">Your Academy Progress</strong>
+      <span class="academy-stat-chip"><strong id="academy-stat-lessons">0</strong> Lessons</span>
+      <span class="academy-stat-chip"><strong id="academy-stat-gym">0</strong> Gym Solved</span>
+      <span class="academy-stat-chip"><strong id="academy-stat-handbook">0</strong> Handbook Read</span>
+      <span class="academy-stat-chip"><strong id="academy-stat-snips">0</strong> Sketches</span>
+    </div>
+    <a id="academy-resume-link" class="btn btn-primary" href="learn/">Resume Learning &rarr;</a>
+  </div>
+  <div class="academy-pillar-grid">
     <article class="portal-card">
       <div class="portal-card-head">
-        <h3><a href="learn/">Learn &amp; Academy</a></h3>
+        <h3><a href="learn/">Learn Studio</a></h3>
         <span class="badge">${String(counts.lessons)} lessons &middot; ${String(counts.tutorials)} tutorials</span>
       </div>
-      <p>Guided curriculum across core language abilities plus runnable browser &amp; Play tutorials.</p>
+      <p>Guided curriculum across core language abilities with split-pane live execution and interactive Play tutorials.</p>
       <div class="portal-card-foot">
         <a href="learn/">Start Learning &rarr;</a>
       </div>
@@ -274,32 +285,38 @@ function renderHomePage(
         <h3><a href="gym/">Lite Gym</a></h3>
         <span class="badge">${String(counts.drills)} drills &middot; ${String(counts.workouts)} workouts</span>
       </div>
-      <p>Litelings diagnostic drills and belt-ranked multi-test katas graded in-browser.</p>
+      <p>Litelings diagnostic drills and belt-ranked multi-test katas graded in-browser with custom stdin sandbox.</p>
       <div class="portal-card-foot">
         <a href="gym/">Enter Gym &rarr;</a>
       </div>
     </article>
     <article class="portal-card">
       <div class="portal-card-head">
-        <h3><a href="docs/">Docs &amp; Spec</a></h3>
+        <h3><a href="docs/">Docs &amp; Handbook</a></h3>
         <span class="badge">${String(counts.docsPages)} pages</span>
       </div>
-      <p>7-chapter runnable Shipped Handbook alongside status-badged design &amp; compiler docs.</p>
+      <p>Runnable 7-chapter Shipped Handbook alongside status-badged design, proposal, and compiler specifications.</p>
       <div class="portal-card-foot">
         <a href="docs/">Read Docs &rarr;</a>
       </div>
     </article>
     <article class="portal-card">
       <div class="portal-card-head">
-        <h3><a href="modules/">References &amp; Tools</a></h3>
-        <span class="badge">${String(counts.modules)} modules</span>
+        <h3><a href="playground/">Play Studio</a></h3>
+        <span class="badge">TS &middot; C &middot; Canvas</span>
       </div>
-      <p>Auto-generated <code>core/*</code> &amp; <code>extra/*</code> API reference, CLI guide, VS Code extension, and self-hosting ladder.</p>
+      <p>Write Lite in-browser with live TS/C codegen inspection, 60fps Canvas &amp; Audio stage, and shareable sketches.</p>
       <div class="portal-card-foot">
-        <a href="modules/">References &rarr;</a>
-        <a href="tools/">Tools &rarr;</a>
+        <a href="playground/">Play &rarr;</a>
       </div>
     </article>
+  </div>
+  <div class="academy-ref-strip">
+    <span><strong>References &amp; Tooling:</strong> Auto-generated API reference for all ${String(counts.modules)} shipped <code>core/*</code> &amp; <code>extra/*</code> modules, CLI workflows, and VS Code support.</span>
+    <div class="academy-ref-links">
+      <a href="modules/">References &rarr;</a>
+      <a href="tools/">Tools &rarr;</a>
+    </div>
   </div>
 </section>
 
@@ -1969,6 +1986,7 @@ export function buildSite(options?: BuildSiteOptions): void {
   const codeViewJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'code-view.ts'), 'utf8'), { mode: 'strip' });
   const editorClientJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'editor-client.ts'), 'utf8'), { mode: 'strip' });
   const highlightJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'highlight.ts'), 'utf8'), { mode: 'strip' });
+  const playStageJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'play-stage.ts'), 'utf8'), { mode: 'strip' });
 
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
   for (const ns of ['core', 'extra'] as const) {
@@ -1990,9 +2008,11 @@ export function buildSite(options?: BuildSiteOptions): void {
     writeFileSync(join(targetDir, 'code-view.js'), codeViewJs);
     writeFileSync(join(targetDir, 'editor-client.js'), editorClientJs);
     writeFileSync(join(targetDir, 'highlight.js'), highlightJs);
+    writeFileSync(join(targetDir, 'play-stage.js'), playStageJs);
     writeFileSync(join(targetDir, 'worker.js'), playgroundWorkerJs);
     writeFileSync(join(targetDir, 'stdlib.json'), stdlibJson);
   }
+  writeFileSync(join(outputDir, 'runtime', 'academy.js'), academyClientJs);
   writeFileSync(join(outputDir, 'runtime', 'search.js'), searchClientJs);
   writeFileSync(join(outputDir, 'runtime', 'snips.js'), snipsClientJs);
 

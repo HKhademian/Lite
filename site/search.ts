@@ -28,6 +28,7 @@ export const searchClientJs = `(function () {
   var input = null;
   var resultsEl = null;
   var countEl = null;
+  var activeKind = "all";
   var selectedIdx = 0;
   var visibleMatches = [];
 
@@ -74,13 +75,37 @@ export const searchClientJs = `(function () {
       '    <input id="lite-search-input" class="search-input" type="search" placeholder="Search docs, modules, symbols, learn, gym..." autocomplete="off" spellcheck="false" aria-label="Search query">' +
       '    <button class="search-close" type="button" data-close="true" aria-label="Close search">Esc</button>' +
       '  </div>' +
+      '  <div class="search-cats" role="group" aria-label="Filter search by category">' +
+      '    <button class="search-cat-btn" type="button" data-search-kind="all" aria-pressed="true">All</button>' +
+      '    <button class="search-cat-btn" type="button" data-search-kind="handbook" aria-pressed="false">Handbook</button>' +
+      '    <button class="search-cat-btn" type="button" data-search-kind="learn" aria-pressed="false">Learn</button>' +
+      '    <button class="search-cat-btn" type="button" data-search-kind="gym" aria-pressed="false">Gym</button>' +
+      '    <button class="search-cat-btn" type="button" data-search-kind="doc" aria-pressed="false">Spec</button>' +
+      '    <button class="search-cat-btn" type="button" data-search-kind="module" aria-pressed="false">Modules</button>' +
+      '    <button class="search-cat-btn" type="button" data-search-kind="tool" aria-pressed="false">Tools</button>' +
+      '    <button class="search-cat-btn" type="button" data-search-kind="gallery" aria-pressed="false">Gallery</button>' +
+      '  </div>' +
       '  <div id="lite-search-count" class="search-meta">Type to search...</div>' +
       '  <div id="lite-search-results" class="search-results" role="listbox"></div>' +
+      '  <div class="search-foot"><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> Navigate</span><span><kbd>&crarr;</kbd> Open</span><span><kbd>Esc</kbd> Close</span></div>' +
       '</div>';
     document.body.appendChild(modal);
     input = document.getElementById("lite-search-input");
     resultsEl = document.getElementById("lite-search-results");
     countEl = document.getElementById("lite-search-count");
+
+    var catBtns = modal.querySelectorAll("[data-search-kind]");
+    for (var c = 0; c < catBtns.length; c += 1) {
+      catBtns[c].addEventListener("click", function () {
+        activeKind = this.getAttribute("data-search-kind") || "all";
+        for (var j = 0; j < catBtns.length; j += 1) {
+          catBtns[j].setAttribute("aria-pressed", catBtns[j] === this ? "true" : "false");
+        }
+        selectedIdx = 0;
+        renderMatches(input.value);
+        if (input) input.focus();
+      });
+    }
 
     modal.addEventListener("click", function (event) {
       var target = event.target;
@@ -154,13 +179,19 @@ export const searchClientJs = `(function () {
     }
   }
 
+  function matchesKindFilter(entry) {
+    if (activeKind === "all") return true;
+    if (activeKind === "module") return entry.kind === "module" || entry.kind === "symbol";
+    return entry.kind === activeKind;
+  }
+
   function renderMatches(queryRaw) {
     if (!resultsEl || !countEl) return;
-    var list = indexCache || [];
+    var list = (indexCache || []).filter(matchesKindFilter);
     var q = (queryRaw || "").trim().toLowerCase();
     var matches = [];
     if (!q) {
-      matches = list.slice(0, 16);
+      matches = list.slice(0, 18);
       countEl.textContent = list.length + " indexed entries — showing top destinations";
     } else {
       var tokens = q.split(/\\s+/).filter(Boolean);
