@@ -19,6 +19,8 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Baseline (updated 2026-11-15):** An `import` is a **compile-time token** (not a runtime value) referring to `pub` symbols of sibling top-level file blocks through an explicit alias; maintained Lite sources use namespace aliases, and deeper block-local `import`s are prevented by the compiler for now even though any compile-time effects would be placement-independent.
 
+**Confirmed in joint review:** A block can declare a symbol name only once. Type aliases, distinct types, records, values, functions, and import aliases participate in the same duplicate-name check. For example, `Item := type Int; Item := 1;` is rejected in one block. Distinct import aliases can qualify identically named exports from separate modules. The rule applies to root file blocks and inner blocks. [Local shadowing](../../../docs/local-shadowing-and-copies.md)
+
 **Initial assessment and probes:** Two modules export `parse`; compare qualified access through different aliases with collision handling. Check import cycles and verify compile-time initialization order independently of where the `import` token appears in the importing file.
 
 ## 9.3 Visibility
