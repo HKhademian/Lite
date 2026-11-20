@@ -16,4 +16,4 @@ Closures in Lite capture surrounding mutable `var` bindings, shared `mut List<T>
 1. Create a third counter `makeCounter(50, -5)` and call it twice.
 2. Inspect **Generated TS** to see how closure captures and loop bindings compile cleanly.
 
-See [Handbook: Blocks, Wiring & Closures](../../../handbook/execution/blocks-wiring-and-closures.md) and [Closures](../../../../../docs/closures.md).
+See [Handbook: Blocks, Wiring & Closures](lite://handbook/blocks-wiring-and-closures) and [Closures](lite://doc/closures).

@@ -16,4 +16,4 @@ Split reusable logic into separate module files exposing only intentional `pub` 
 1. Try calling `stats.minOf(3, 5)` from the main script to verify private visibility enforcement.
 2. Add another value to `[4, 9, 2, 15, 7]` and check `report.sum` and `stats.span(report)`.
 
-See [Handbook: Imports, Visibility & I/O](../../../handbook/modules/imports-visibility-and-io.md) and [Visibility](../../../../../docs/visibility.md).
+See [Handbook: Imports, Visibility & I/O](lite://handbook/imports-visibility-and-io) and [Visibility](lite://doc/visibility).

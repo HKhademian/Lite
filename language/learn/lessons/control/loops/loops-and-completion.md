@@ -17,4 +17,4 @@ All iteration in Lite flows through `loop`—from `while`-style conditional loop
 1. Change `if item > 50 { break item; }` to `if item > 100` to see what `.value` and `.count` become when the loop finishes naturally.
 2. Compute a sum with `loop [1, 2, 3, 4] { .value + .item }` without a separate `var` accumulator.
 
-See [Handbook: Conditionals, Match & Loops](../../../handbook/control/conditionals-match-and-loops.md) and [Loops](../../../../../docs/loops.md).
+See [Handbook: Conditionals, Match & Loops](lite://handbook/conditionals-match-and-loops) and [Loops](lite://doc/loops).

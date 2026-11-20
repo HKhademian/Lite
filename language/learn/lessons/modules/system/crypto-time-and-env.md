@@ -12,4 +12,4 @@ Compute deterministic SHA-256 and HMAC-SHA256 digests (`core/crypto`), Hex/Base6
 > [!IMPORTANT]
 > Because `core/crypto`, `core/time`, and `core/process` use host OS & Node crypto builtins (`CLI / Host OS`), run this lesson locally via `./bin/lite run language/showcases/modules/system/crypto-time-and-env.lts` or click **Compile TS** in-browser to inspect generated code!
 
-See [core/crypto](../../../../../lib/core/crypto.lts), [core/time](../../../../../lib/core/time.lts), and [Handbook: Imports, Visibility & I/O](../../../handbook/modules/imports-visibility-and-io.md).
+See [core/crypto](lite://module/core/crypto), [core/time](lite://module/core/time), and [Handbook: Imports, Visibility & I/O](lite://handbook/imports-visibility-and-io).

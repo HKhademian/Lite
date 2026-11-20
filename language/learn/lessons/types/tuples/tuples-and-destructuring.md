@@ -10,11 +10,11 @@ Group structured data concisely with tuples supporting unnamed fields, `=name` s
 4. `var (p0, p1) := (3, 4);` unpacks fields directly into independent mutable bindings.
 
 > [!NOTE]
-> Tuples are value types whose labels are visible in `io.outputLine(...)` output (`(w = 640, h = 480, title = "canvas")`). Named and mixed tuples can also destructure by field name and `=name` shorthand, such as `(label = title, = w, = h) := renamed;` (covered further in the [Records & Aggregate Destructuring](../records/records-and-patterns.md) lesson).
+> Tuples are value types whose labels are visible in `io.outputLine(...)` output (`(w = 640, h = 480, title = "canvas")`). Named and mixed tuples can also destructure by field name and `=name` shorthand, such as `(label = title, = w, = h) := renamed;` (covered further in the [Records & Aggregate Destructuring](lite://learn/records-and-patterns) lesson).
 
 ## Try Modifying This
 
 1. Add a fourth field to `rect` and destructure it cleanly alongside `(width, height, ...)`.
 2. Change `mix.active` and inspect how `io.outputLine(mix)` displays mixed positional and labeled elements.
 
-See [Handbook: Tuples, Arrays, Lists & Aliases](../../../handbook/types/tuples-arrays-lists-and-aliases.md) and [Tuples & Patterns](../../../../../docs/tuples-and-patterns.md).
+See [Handbook: Tuples, Arrays, Lists & Aliases](lite://handbook/tuples-arrays-lists-and-aliases) and [Tuples & Patterns](lite://doc/tuples-and-patterns).

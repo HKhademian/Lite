@@ -59,7 +59,7 @@ head := list.popFront(mut queue);
 io.outputLine("ends:", first, third, "head:", head, "queue:", fmt.joinIntTexts(queue, ","), "saved:", fmt.joinIntTexts(saved, ","));
 ```
 
-Notice `saved: List<Int> = queue;` takes an independent value snapshot of `queue`—popping from `queue` afterward does not mutate `saved`. Both `push_front`/`push_back` builtins and `core/list` methods (`list.pushBack`, `list.popFront`, etc.) are supported.
+Notice `saved: List<Int> = queue;` takes an independent value snapshot of `queue`—popping from `queue` afterward does not mutate `saved`. Both `push_front`/`push_back` builtins and [core/list](lite://module/core/list) methods ([`list.pushBack`](lite://module/core/list#pushBack), [`list.popFront`](lite://module/core/list#popFront), etc.) are supported.
 
 ## Transparent `type` Aliases & Inner Type Scope
 
@@ -79,8 +79,8 @@ localLen := {
 io.outputLine(p, localLen);
 ```
 
-See [Tuples & Patterns](../../../../docs/tuples-and-patterns.md), [Records](../../../../docs/records.md), [Aggregate Patterns](../../../../docs/aggregate-patterns.md), [Arrays](../../../../docs/arrays.md), [Lists](../../../../docs/lists.md), and [Type Aliases](../../../../docs/type-aliases.md).
+See [Tuples & Patterns](lite://doc/tuples-and-patterns), [Records](lite://doc/records), [Aggregate Patterns](lite://doc/aggregate-patterns), [Arrays](lite://doc/arrays), [Lists](lite://doc/lists), and [Type Aliases](lite://doc/type-aliases).
 
 ## Next Chapter
 
-Continue to [Blocks, Wiring & Closures](../execution/blocks-wiring-and-closures.md).
+Continue to [Blocks, Wiring & Closures](lite://handbook/blocks-wiring-and-closures).

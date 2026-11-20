@@ -86,8 +86,8 @@ result := @outer {
 io.outputLine(result);
 ```
 
-See [Conditionals](../../../../docs/conditionals.md), [Match](../../../../docs/match.md), [Loops](../../../../docs/loops.md), and [Finally](../../../../docs/finally.md).
+See [Conditionals](lite://doc/conditionals), [Match](lite://doc/match), [Loops](lite://doc/loops), and [Finally](lite://doc/finally).
 
 ## Next Chapter
 
-Continue to [Tuples, Arrays, Lists & Aliases](../types/tuples-arrays-lists-and-aliases.md).
+Continue to [Tuples, Arrays, Lists & Aliases](lite://handbook/tuples-arrays-lists-and-aliases).

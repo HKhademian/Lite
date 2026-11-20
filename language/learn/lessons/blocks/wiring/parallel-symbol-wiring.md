@@ -17,4 +17,4 @@ Explore how root scripts and inner blocks wire function references in parallel w
 1. Swap the declaration order of `isEven` and `isOdd` to confirm parallel wiring is order-independent.
 2. Change `lateRoot` from `15` to `25` and re-run.
 
-See [Handbook: Blocks, Wiring & Closures](../../../handbook/execution/blocks-wiring-and-closures.md) and [Functions](../../../../../docs/functions.md).
+See [Handbook: Blocks, Wiring & Closures](lite://handbook/blocks-wiring-and-closures) and [Functions](lite://doc/functions).

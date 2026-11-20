@@ -75,8 +75,8 @@ For growable collections (`List<T>`), `mut` grants **in-place element/length mut
 
 Re-declaring the same name inside the **same** `{ ... }` block is rejected by the compiler. Inner blocks may shadow an outer name cleanly; an eager right-hand side (`x := x + 1;`) reads the **outer** binding before introducing the inner shadow.
 
-See [Declarations & Assignment](../../../../docs/declarations-and-assignment.md) and [Mutability](../../../../docs/mutability.md).
+See [Declarations & Assignment](lite://doc/declarations-and-assignment) and [Mutability](lite://doc/mutability).
 
 ## Next Chapter
 
-Continue to [Numbers, Operators & Strings](numbers-operators-and-strings.md).
+Continue to [Numbers, Operators & Strings](lite://handbook/numbers-operators-and-strings).

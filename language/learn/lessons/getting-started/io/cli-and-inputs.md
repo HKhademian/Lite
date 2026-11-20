@@ -16,4 +16,4 @@ Command-line tools in Lite read passed arguments via `io.inputArgs()` cleanly wi
 1. Edit the **Args** input to `alpha beta gamma delta` and click **Run**.
 2. Add a check using `list.listCountText(args) == 0` to print a custom usage message when no args are passed.
 
-See [Handbook: Imports, Visibility & I/O](../../../handbook/modules/imports-visibility-and-io.md) and [core/io](../../../../../lib/core/io.lts).
+See [Handbook: Imports, Visibility & I/O](lite://handbook/imports-visibility-and-io) and [core/io](lite://module/core/io).

@@ -16,4 +16,4 @@ Parallel wiring lets functions name later variables—and compile-time execution
 1. Move `early := readSlot();` above `rootSlot = 25;` and inspect the compiler's exact trace diagnostic.
 2. Add another deferred task to `tasks` that doubles `lateItem`.
 
-See [Handbook: Blocks, Wiring & Closures](../../../handbook/execution/blocks-wiring-and-closures.md) and [First Initialization](../../../../../docs/first-initialization.md).
+See [Handbook: Blocks, Wiring & Closures](lite://handbook/blocks-wiring-and-closures) and [First Initialization](lite://doc/first-initialization).

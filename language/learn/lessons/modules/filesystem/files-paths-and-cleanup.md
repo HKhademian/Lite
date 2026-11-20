@@ -11,4 +11,4 @@ Combine pure path math (`core/path`), aligned tables (`core/format`), and host f
 > [!IMPORTANT]
 > Because `core/file` operates on the host OS filesystem (`CLI / Host OS`), run it locally via `./bin/lite run language/showcases/modules/filesystem/files-paths-and-cleanup.lts`! In the browser you can edit and click **Compile TS** to inspect the emitted code.
 
-See [core/file](../../../../../lib/core/file.lts), [core/path](../../../../../lib/core/path.lts), and [Handbook: Imports, Visibility & I/O](../../../handbook/modules/imports-visibility-and-io.md).
+See [core/file](lite://module/core/file), [core/path](lite://module/core/path), and [Handbook: Imports, Visibility & I/O](lite://handbook/imports-visibility-and-io).

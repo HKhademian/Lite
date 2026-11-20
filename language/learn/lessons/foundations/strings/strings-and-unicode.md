@@ -16,4 +16,4 @@ Strings in Lite store valid Unicode text and separate scalar character indexing 
 1. Change `phrase` to another multi-byte greeting and inspect the UTF-8 byte sequence vs code point count.
 2. Append an exclamation mark conditionally using `if not text.endsWith(tag, "!")`.
 
-See [Handbook: Numbers, Operators & Strings](../../../handbook/foundations/numbers-operators-and-strings.md), [core/text](../../../../../lib/core/text.lts), and [core/unicode](../../../../../lib/core/unicode.lts).
+See [Handbook: Numbers, Operators & Strings](lite://handbook/numbers-operators-and-strings), [core/text](lite://module/core/text), and [core/unicode](lite://module/core/unicode).

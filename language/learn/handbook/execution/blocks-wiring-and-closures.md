@@ -65,8 +65,8 @@ c := makeCounter(10);
 io.outputLine(c(), c());
 ```
 
-See [Blocks & Results](../../../../docs/blocks-and-results.md), [Functions](../../../../docs/functions.md), and [Closures](../../../../docs/closures.md).
+See [Blocks & Results](lite://doc/blocks-and-results), [Functions](lite://doc/functions), and [Closures](lite://doc/closures).
 
 ## Next Chapter
 
-Continue to [Imports, Visibility & Core I/O](../modules/imports-visibility-and-io.md).
+Continue to [Imports, Visibility & Core I/O](lite://handbook/imports-visibility-and-io).

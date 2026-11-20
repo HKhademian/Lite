@@ -17,4 +17,4 @@ Start your first runnable Lite program. Every external capability—even stdin a
 1. Change **Stdin** in the runner to `12\n8\n` and click **Run** (expect `40`).
 2. Change `io.outputLine(total)` to `io.outputLine("doubled:", total);` to see multi-argument spacing.
 
-See [Handbook: Overview & Setup](../../../handbook/getting-started/overview-and-setup.md) and [Start Here](../../../../../docs/start-here.md).
+See [Handbook: Overview & Setup](lite://handbook/overview-and-setup) and [Start Here](lite://doc/start-here).

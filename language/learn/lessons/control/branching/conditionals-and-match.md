@@ -17,4 +17,4 @@ Combine value-returning conditionals, single-evaluation comparison chains, and o
 1. Change `score` to `95`, `84`, `72`, and `50` and re-run to trace both `if` and `match`.
 2. Try removing the `_` arm from `match` to see the exhaustiveness error.
 
-See [Handbook: Conditionals, Match & Loops](../../../handbook/control/conditionals-match-and-loops.md) and [Match](../../../../../docs/match.md).
+See [Handbook: Conditionals, Match & Loops](lite://handbook/conditionals-match-and-loops) and [Match](lite://doc/match).

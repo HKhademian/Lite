@@ -14,6 +14,6 @@ Route arguments cleanly by position, parameter label, or `=arg` shorthand, recur
 ## Try Modifying This
 
 1. Pass `5` in **Args** to verify integer argument parsing (`sumDown(5, 0) / 5`).
-2. Inspect `core/text.textToInt` in [core/text](../../../../../lib/core/text.lts).
+2. Inspect [`core/text.textToInt`](lite://module/core/text#textToInt) in [core/text](lite://module/core/text).
 
-See [Handbook: Blocks, Wiring & Closures](../../../handbook/execution/blocks-wiring-and-closures.md) and [Functions](../../../../../docs/functions.md).
+See [Handbook: Blocks, Wiring & Closures](lite://handbook/blocks-wiring-and-closures) and [Functions](lite://doc/functions).

@@ -17,4 +17,4 @@ Lite separates **identity**, **initial storage**, and **mutation**. Bindings are
 1. Try adding `lessonNumber = 2;` to observe the immutable-binding error in **Output**.
 2. Comment out `greeting = "Review";` in the `else` branch and watch execution-trace safety catch the uninitialized path.
 
-See [Handbook: Bindings & Mutability](../../../handbook/foundations/bindings-and-mutability.md) and [Declarations & Assignment](../../../../../docs/declarations-and-assignment.md).
+See [Handbook: Bindings & Mutability](lite://handbook/bindings-and-mutability) and [Declarations & Assignment](lite://doc/declarations-and-assignment).

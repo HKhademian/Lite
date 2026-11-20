@@ -35,7 +35,7 @@ Note that `.lts` extension scripts and `.lt` module files contain no hidden prel
 
 ## Browser-Safe Core Modules vs Host OS Modules
 
-All 17 modules documented in `/modules/` split into three clear environments:
+All 17 modules documented in [Modules](lite://module) split into three clear environments:
 
 | Environment | Examples | Where it runs |
 | --- | --- | --- |
@@ -45,13 +45,13 @@ All 17 modules documented in `/modules/` split into three clear environments:
 
 ## Reading Input, Arguments & Exiting Explicitly
 
-Inside `core/io`:
+Inside [core/io](lite://module/core/io):
 
 - `io.inputLine()`, `io.inputInt()`, `io.inputFloat()`, `io.inputAll()` accept an optional prompt `String` argument.
 - `io.output(...)` and `io.outputLine(...)` format scalars, tuples, fixed arrays, and `List<T>` values separated by single spaces.
 - `io.inputArgs()` returns script CLI arguments after `--`.
 - `io.exit(code)` terminates cleanly with exit status `code` (`Never` return type).
 
-On CLI hosts, combine `core/path` and `core/file` with `finally` cleanup for safe temporary-workspace automation, or `core/crypto` and `core/format` for deterministic SHA-256 / HMAC digests.
+On CLI hosts, combine [core/path](lite://module/core/path) and [core/file](lite://module/core/file) with `finally` cleanup for safe temporary-workspace automation, or [core/crypto](lite://module/core/crypto) and [core/format](lite://module/core/format) for deterministic SHA-256 / HMAC digests.
 
-See [Visibility](../../../../docs/visibility.md) and [Tooling & Learning](../../../../docs/tooling-and-learning.md).
+See [Visibility](lite://doc/visibility) and [Tooling & Learning](lite://doc/tooling-and-learning).

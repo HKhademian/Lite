@@ -13,4 +13,4 @@ Build a deterministic text table reporter combining UTF-8 encoding (`core/unicod
 - Skip comment lines starting with `#` using `text.startsWithAt`.
 - Add a column showing total whitespace count per line.
 
-See [Modules: core/unicode](../../../../../../lib/core/unicode.lts) and [Handbook: Imports, Visibility & I/O](../../../../handbook/modules/imports-visibility-and-io.md).
+See [Modules: core/unicode](lite://module/core/unicode) and [Handbook: Imports, Visibility & I/O](lite://handbook/imports-visibility-and-io).

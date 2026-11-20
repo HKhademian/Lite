@@ -16,4 +16,4 @@ Give domain names to tuple, list, or function shapes with `type` aliases—at fi
 1. Define a `Rect := type (origin: Point, size: Point);` alias and construct one value at root.
 2. Check how inner shadowing prevents type confusion once the block closes.
 
-See [Handbook: Tuples, Arrays, Lists & Aliases](../../../handbook/types/tuples-arrays-lists-and-aliases.md) and [Type Aliases](../../../../../docs/type-aliases.md).
+See [Handbook: Tuples, Arrays, Lists & Aliases](lite://handbook/tuples-arrays-lists-and-aliases) and [Type Aliases](lite://doc/type-aliases).

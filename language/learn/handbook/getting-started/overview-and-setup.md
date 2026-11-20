@@ -3,7 +3,7 @@
 Welcome to the **Shipped Lite Handbook**. Every feature, type, operator, and standard helper documented in these seven chapters compiles and runs today through Lite's verified TypeScript compiler toolchain.
 
 > [!NOTE]
-> For selected design rules still under implementation, working proposals (`LP-0001..LP-0010`), and compiler architecture notes, switch to the **Design Spec & Proposals** layer in the Docs portal or inspect [Language Documentation](../../../../docs/README.md).
+> For selected design rules still under implementation, working proposals (`LP-0001..LP-0010`), and compiler architecture notes, switch to the **Design Spec & Proposals** layer in the Docs portal or inspect [Language Documentation](lite://doc/overview).
 
 ## What is Lite?
 
@@ -24,7 +24,7 @@ npm --prefix editors/vscode ci
 
 ## Your First Program
 
-Save a script such as [double-sum.lts](../../../../language/examples/foundations/io/double-sum.lts):
+Save a script such as [double-sum.lts](lite://play/double-sum):
 
 ```lite
 io := import "core/io";
@@ -44,10 +44,10 @@ Run it directly from the repository root:
 
 Enter `7` and `5` at the prompts to print `24`. Other everyday commands:
 
-- `./bin/lite check file.lts` — parse, typecheck, and check execution-trace safety without running.
-- `./bin/lite compile file.lts` — print compiled TypeScript to stdout.
-- `./bin/lite fmt --check file.lts` — verify canonical Lite formatting.
-- `./bin/lite doctor` — validate repository consistency and docs links.
+- [`./bin/lite check`](lite://tool/check) `file.lts` — parse, typecheck, and check execution-trace safety without running.
+- [`./bin/lite compile`](lite://tool/compile) `file.lts` — print compiled TypeScript to stdout.
+- [`./bin/lite fmt`](lite://tool/fmt) `--check file.lts` — verify canonical Lite formatting.
+- [`./bin/lite doctor`](lite://tool/doctor) — validate repository consistency and docs links.
 
 ## File Kinds & Comments
 
@@ -61,8 +61,8 @@ Comments in Lite use **nestable** block syntax `/* ... */` (there are no `//` li
    still inside outer comment */
 ```
 
-See [Comments](../../../../docs/comments.md) and [Start Here](../../../../docs/start-here.md).
+See [Comments](lite://doc/comments) and [Start Here](lite://doc/start-here).
 
 ## Next Chapter
 
-Continue to [Bindings & Mutability](../foundations/bindings-and-mutability.md).
+Continue to [Bindings & Mutability](lite://handbook/bindings-and-mutability).

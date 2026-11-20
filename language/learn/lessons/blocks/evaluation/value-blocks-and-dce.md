@@ -17,4 +17,4 @@ Understand Lite's unified `{ ... }` block semantics: blocks ending in a declarat
 1. Replace `doubled + offset` with `res := doubled + offset;` in `computed` and read the compile-time error (`cannot declare a Unit local`).
 2. Add another effectful statement inside `simplified` and confirm it executes.
 
-See [Handbook: Blocks, Wiring & Closures](../../../handbook/execution/blocks-wiring-and-closures.md) and [Blocks & Results](../../../../../docs/blocks-and-results.md).
+See [Handbook: Blocks, Wiring & Closures](lite://handbook/blocks-wiring-and-closures) and [Blocks & Results](lite://doc/blocks-and-results).

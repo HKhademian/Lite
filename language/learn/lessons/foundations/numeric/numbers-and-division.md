@@ -17,4 +17,4 @@ Lite makes numeric widths and rounding directions explicit so negative remainder
 1. Change `-7 :/ 2` to `-7 :/ -2` and observe both `/` and `:/` results.
 2. Try initializing `tiny: Int8 = 200;` to observe checked narrow-range validation.
 
-See [Handbook: Numbers, Operators & Strings](../../../handbook/foundations/numbers-operators-and-strings.md) and [Division](../../../../../docs/division.md).
+See [Handbook: Numbers, Operators & Strings](lite://handbook/numbers-operators-and-strings) and [Division](lite://doc/division).

@@ -17,4 +17,4 @@ Target outer scopes or loops safely from deeply nested code using `@tag` transfe
 1. Change the `if row * col >= 12` threshold to `100` (unreachable) and inspect how `selected`, `summary`, and the cleanup trace behave.
 2. Inspect the **Generated TS** tab in **Program** view to see how `@tag` unwinding and `finally` translate cleanly.
 
-See [Handbook: Conditionals, Match & Loops](../../../handbook/control/conditionals-match-and-loops.md) and [Finally](../../../../../docs/finally.md).
+See [Handbook: Conditionals, Match & Loops](lite://handbook/conditionals-match-and-loops) and [Finally](lite://doc/finally).

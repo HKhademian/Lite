@@ -152,6 +152,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(coreListHtml.includes('Used Across Lite Academy'));
   assert(coreListHtml.includes('Used in Showcases &amp; Gallery'));
   assert(coreListHtml.includes('data-drawer-toggle="sidebar"'));
+  const coreUnicodeHtml = readFileSync(join(out, 'modules/core/unicode.html'), 'utf8');
+  assert(coreUnicodeHtml.includes('utf8-roundtrip-count'));
 
   const toolsHtml = readFileSync(join(out, 'tools/index.html'), 'utf8');
   assert(toolsHtml.includes('./bin/lite run'));
@@ -181,6 +183,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const handbookSingle = readFileSync(join(out, 'docs/handbook/single-page.html'), 'utf8');
   assert(handbookSingle.includes('The Lite Handbook (Single-Page Edition)'));
   assert(handbookSingle.includes('id="chapter-bindings-and-mutability"'));
+  assert(handbookSingle.includes('Continue to <a href="#chapter-bindings-and-mutability"'));
   assert(handbookSingle.includes('#h5-nominal-record-types--name-shorthand'));
   const startHereHtml = readFileSync(join(out, 'docs/design/start-here.html'), 'utf8');
   assert(startHereHtml.includes('Open in Play &rarr;'));
@@ -1782,12 +1785,20 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   const builtGraph = JSON.parse(readFileSync(join(root, 'dist', 'site', 'link-graph.json'), 'utf8')) as {
     schemaVersion: number;
     stats: { nodes: number; edges: number; byKind: Record<string, number> };
-    edges: Array<{ from: string; to: string; kind: string }>;
+    edges: Array<{ from: string; to: string; kind: string; fragment?: string }>;
   };
   assert.equal(builtGraph.schemaVersion, 1);
   for (const kind of ['handbook', 'doc', 'learn', 'gym', 'play', 'module', 'tool', 'gallery']) {
     assert((builtGraph.stats.byKind[kind] ?? 0) >= 1, `expected nodes for ${kind} in link-graph.json`);
   }
+  assert(builtGraph.edges.filter(e => e.kind === 'lite-uri').length >= 80);
+  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/overview-and-setup' && e.to === 'lite://play/double-sum' && e.kind === 'lite-uri'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/overview-and-setup' && e.to === 'lite://tool/check' && e.kind === 'lite-uri'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'lite-uri' && e.fragment === 'pushBack'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://learn/named-calls-and-recursion' && e.to === 'lite://module/core/text' && e.kind === 'lite-uri' && e.fragment === 'textToInt'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://learn/arrays-and-lists' && e.to === 'lite://learn/records-and-patterns' && e.kind === 'lite-uri'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://learn/orb-catcher-game' && e.to === 'lite://play/play-paddle-pong' && e.kind === 'lite-uri'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://gym/utf8-roundtrip-count' && e.to === 'lite://module/core/unicode' && e.kind === 'lite-uri' && e.fragment === 'utf8Encode'));
   assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'module-import'));
   assert(builtGraph.edges.some(e => e.from === 'lite://gym/record-shorthand-destructure' && e.to === 'lite://learn/records-and-patterns' && e.kind === 'catalog-ref'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/records-and-patterns' && e.to === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.kind === 'catalog-ref'));

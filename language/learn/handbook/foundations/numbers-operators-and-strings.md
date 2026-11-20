@@ -61,8 +61,8 @@ msg := text.trim("  Lite\t") + "!";
 io.outputLine(msg, text.length(msg), text.at(msg, 0));
 ```
 
-See [Numbers](../../../../docs/numbers.md), [Division](../../../../docs/division.md), [Comparison Chains](../../../../docs/comparison-chains.md), and [Strings](../../../../docs/strings.md).
+See [Numbers](lite://doc/numbers), [Division](lite://doc/division), [Comparison Chains](lite://doc/comparison-chains), and [Strings](lite://doc/strings).
 
 ## Next Chapter
 
-Continue to [Conditionals, Match & Loops](../control/conditionals-match-and-loops.md).
+Continue to [Conditionals, Match & Loops](lite://handbook/conditionals-match-and-loops).

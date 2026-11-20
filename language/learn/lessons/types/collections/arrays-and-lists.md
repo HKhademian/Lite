@@ -10,11 +10,11 @@ Distinguish fixed-extent arrays from dynamically resizable `List<T>` storage and
 4. `var mut bag := seed;` permits *both* mutating elements (`list.pushBack(mut bag, 6)`) and replacing `bag = replacement;`.
 
 > [!TIP]
-> Notice `push_back(mut queue, 4)` marks `mut` at the call site too so mutations are always visible to readers. Fixed `[T; N]` arrays also support exact-length destructuring such as `[a, b, c] := fixed;`, whereas runtime-sized `List<T>` requires indexing or `loop` traversal (see [Records & Aggregate Destructuring](../records/records-and-patterns.md)).
+> Notice `push_back(mut queue, 4)` marks `mut` at the call site too so mutations are always visible to readers. Fixed `[T; N]` arrays also support exact-length destructuring such as `[a, b, c] := fixed;`, whereas runtime-sized `List<T>` requires indexing or `loop` traversal (see [Records & Aggregate Destructuring](lite://learn/records-and-patterns)).
 
 ## Try Modifying This
 
 1. Try pushing another item onto `saved`—observe that `saved` lacks `mut` permission.
 2. Print `saved` before and after `pop_front(mut queue)` to confirm value-snapshot isolation.
 
-See [Handbook: Tuples, Arrays, Lists & Aliases](../../../handbook/types/tuples-arrays-lists-and-aliases.md) and [core/list](../../../../../lib/core/list.lts).
+See [Handbook: Tuples, Arrays, Lists & Aliases](lite://handbook/tuples-arrays-lists-and-aliases) and [core/list](lite://module/core/list).

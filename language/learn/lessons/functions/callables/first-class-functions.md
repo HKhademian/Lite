@@ -17,4 +17,4 @@ Treat functions as first-class values: pass lambdas without redundant annotation
 1. Add a fourth step `fn(x) { x :/ 2 }` inside `ops` and predict `piped`.
 2. Change `filterList` predicate to keep odd multiples of 3.
 
-See [Handbook: Blocks, Wiring & Closures](../../../handbook/execution/blocks-wiring-and-closures.md) and [Closures](../../../../../docs/closures.md).
+See [Handbook: Blocks, Wiring & Closures](lite://handbook/blocks-wiring-and-closures) and [Closures](lite://doc/closures).

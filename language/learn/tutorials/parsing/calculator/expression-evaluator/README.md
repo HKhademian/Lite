@@ -31,4 +31,4 @@ ERR: division by zero
 - Add floor division `:/` and floor modulo `:%` inside `parseTerm`.
 - Add right-associative `**` exponentiation between `parseTerm` and `parseFactor`.
 
-See [Functions](../../../../../../docs/functions.md) and [Handbook: Blocks & Wiring](../../../../handbook/execution/blocks-wiring-and-closures.md).
+See [Functions](lite://doc/functions) and [Handbook: Blocks & Wiring](lite://handbook/blocks-wiring-and-closures).
