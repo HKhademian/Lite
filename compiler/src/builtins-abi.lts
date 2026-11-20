@@ -96,6 +96,17 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, params: String,
         else if name == "pushFront" and params == "values=mut List<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$pushFront:v1" }
         else if name == "popFront" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popFront:v1" }
         else { "" }
+    } else if moduleIdentity == "lite.core.map.v1" {
+        if name == "set" and params == "entries=mut Map<K,V>|key=K|value=V" and result == ir.VALUE_KIND_UNIT { "lite$core$map$set:v1" }
+        else if name == "get" and params == "entries=Map<K,V>|key=K" and result == "(found:Bool,value:V)" { "lite$core$map$get:v1" }
+        else if name == "getOr" and params == "entries=Map<K,V>|key=K|fallback=V" and result == "V" { "lite$core$map$getOr:v1" }
+        else if name == "has" and params == "entries=Map<K,V>|key=K" and result == ir.VALUE_KIND_BOOL { "lite$core$map$has:v1" }
+        else if name == "remove" and params == "entries=mut Map<K,V>|key=K" and result == ir.VALUE_KIND_BOOL { "lite$core$map$remove:v1" }
+        else if name == "size" and params == "entries=Map<K,V>" and result == ir.VALUE_KIND_INT { "lite$core$map$size:v1" }
+        else if name == "clear" and params == "entries=mut Map<K,V>" and result == ir.VALUE_KIND_UNIT { "lite$core$map$clear:v1" }
+        else if name == "keys" and params == "entries=Map<K,V>" and result == "List<K>" { "lite$core$map$keys:v1" }
+        else if name == "values" and params == "entries=Map<K,V>" and result == "List<V>" { "lite$core$map$values:v1" }
+        else { "" }
     } else if moduleIdentity == "lite.core.file.v1" {
         if name == "kind" and params == "path=String" and result == ir.VALUE_KIND_STRING { "lite$fileKind" }
         else if name == "openReader" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenReader" }

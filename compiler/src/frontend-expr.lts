@@ -1949,8 +1949,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         }
                         afterHdr := syntax.skipTrivia(source, hdrParsed.next, prefix);
                         if textLib.wordAt(source, afterHdr, "as") {
-                            if not types.isListKind(hdrParsed.kind) and not types.isArrayKind(hdrParsed.kind) {
-                                syntax.failAt(source, loopHeaderPos, prefix, "loop sequence must be a List or Array, got " + types.displayKind(hdrParsed.kind));
+                            if not types.isListKind(hdrParsed.kind) and not types.isArrayKind(hdrParsed.kind) and not types.isMapKind(hdrParsed.kind) {
+                                syntax.failAt(source, loopHeaderPos, prefix, "loop sequence must be a List, Array, or Map, got " + types.displayKind(hdrParsed.kind));
                             }
                             asNameStart := syntax.skipTrivia(source, afterHdr + 2, prefix);
                             if asNameStart >= blockSourceSize or not textLib.isNameStart(textLib.at(source, asNameStart)) {
@@ -1959,13 +1959,23 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             asNameEnd := textLib.skipName(source, asNameStart);
                             loopItemName = textLib.slice(source, asNameStart, asNameEnd);
                             if syntax.isReservedWord(loopItemName) { syntax.unsupportedFeature(source, asNameStart, loopItemName, prefix); }
-                            loopItemKind = if types.isListKind(hdrParsed.kind) { types.listElementKind(hdrParsed.kind) } else { types.arrayElementKind(hdrParsed.kind) };
-                            loopSeqCode = hdrParsed.code;
+                            if types.isMapKind(hdrParsed.kind) {
+                                loopItemKind = "(key:" + types.mapKeyKind(hdrParsed.kind) + ",value:" + types.mapValueKind(hdrParsed.kind) + ")";
+                                loopSeqCode = "Array.from((" + hdrParsed.code + ").entries(), ([lite$mk, lite$mv]) => ({ key: lite$mk, value: lite$mv }))";
+                            } else {
+                                loopItemKind = if types.isListKind(hdrParsed.kind) { types.listElementKind(hdrParsed.kind) } else { types.arrayElementKind(hdrParsed.kind) };
+                                loopSeqCode = hdrParsed.code;
+                            }
                             loopHeaderPos = syntax.skipTrivia(source, asNameEnd, prefix);
                             syntax.rejectMisplacedTag(source, loopHeaderPos, prefix, "block tag cannot appear before { in loop");
-                        } else if types.isListKind(hdrParsed.kind) or types.isArrayKind(hdrParsed.kind) {
-                            loopItemKind = if types.isListKind(hdrParsed.kind) { types.listElementKind(hdrParsed.kind) } else { types.arrayElementKind(hdrParsed.kind) };
-                            loopSeqCode = hdrParsed.code;
+                        } else if types.isListKind(hdrParsed.kind) or types.isArrayKind(hdrParsed.kind) or types.isMapKind(hdrParsed.kind) {
+                            if types.isMapKind(hdrParsed.kind) {
+                                loopItemKind = "(key:" + types.mapKeyKind(hdrParsed.kind) + ",value:" + types.mapValueKind(hdrParsed.kind) + ")";
+                                loopSeqCode = "Array.from((" + hdrParsed.code + ").entries(), ([lite$mk, lite$mv]) => ({ key: lite$mk, value: lite$mv }))";
+                            } else {
+                                loopItemKind = if types.isListKind(hdrParsed.kind) { types.listElementKind(hdrParsed.kind) } else { types.arrayElementKind(hdrParsed.kind) };
+                                loopSeqCode = hdrParsed.code;
+                            }
                             loopHeaderPos = afterHdr;
                             syntax.rejectMisplacedTag(source, loopHeaderPos, prefix, "block tag cannot appear before { in loop");
                         } else {
@@ -2123,8 +2133,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         trace.checkTraceSafety(source, localStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                     }
                     ctx.rejectNonValueBinding(source, localStart, prefix, declParsed.kind, localName);
-                    if declWritable and not types.isListKind(declParsed.kind) {
-                        syntax.failAt(source, localStart, prefix, "mut requires a List value, got " + types.displayKind(declParsed.kind));
+                    if declWritable and not types.isListKind(declParsed.kind) and not types.isMapKind(declParsed.kind) {
+                        syntax.failAt(source, localStart, prefix, "mut requires a List or Map value, got " + types.displayKind(declParsed.kind));
                     }
                 } else if afterLocal < textLib.length(source) and textLib.at(source, afterLocal) == ":" {
                     if declWritable { syntax.failAt(source, localStart, prefix, "var mut cannot be combined with explicit type annotation"); }
@@ -2137,6 +2147,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         zeroEnd := syntax.isZeroInitLiteral(source, rhsStart, prefix);
                         if reservedEnd >= 0 {
                             if types.isListKind(typed.kind) { syntax.failAt(source, localStart, prefix, "reserved storage is not supported for List"); }
+                            if types.isMapKind(typed.kind) { syntax.failAt(source, localStart, prefix, "reserved storage is not supported for Map"); }
                             declInitState = if trace.tokenInPipeBag(blockAssignedBag, localName) { ir.INIT_STATE_UNINIT_ASSIGNED } else { ir.INIT_STATE_UNINIT };
                             declParsed = ctx.zeroParsed(target, typed.kind, reservedEnd);
                         } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
@@ -2206,8 +2217,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if target == ir.TARGET_TS and not inferMode and not blockExits {
                     trace.checkTraceSafety(source, localStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                 }
-                if not types.isListKind(declParsed.kind) {
-                    syntax.failAt(source, localStart, prefix, "mut requires a List value, got " + types.displayKind(declParsed.kind));
+                if not types.isListKind(declParsed.kind) and not types.isMapKind(declParsed.kind) {
+                    syntax.failAt(source, localStart, prefix, "mut requires a List or Map value, got " + types.displayKind(declParsed.kind));
                 }
                 statementNext := syntax.consumeStatementEnd(source, declParsed.next, prefix);
                 if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
@@ -2305,6 +2316,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     zeroEnd := syntax.isZeroInitLiteral(source, rhsStart, prefix);
                     if reservedEnd >= 0 {
                         if types.isListKind(typed.kind) { syntax.failAt(source, itemStart, prefix, "reserved storage is not supported for List"); }
+                        if types.isMapKind(typed.kind) { syntax.failAt(source, itemStart, prefix, "reserved storage is not supported for Map"); }
                         declInitState = if trace.tokenInPipeBag(blockAssignedBag, itemName) { ir.INIT_STATE_UNINIT_ASSIGNED } else { ir.INIT_STATE_UNINIT };
                         declParsed = ctx.zeroParsed(target, typed.kind, reservedEnd);
                     } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
@@ -2344,6 +2356,46 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         listLib.pushBack(mut stmtDeps, declCode);
                         trackedStmtCount = trackedStmtCount + 1;
                     }
+                    statementCount = statementCount + 1;
+                }
+                blockConstant = false;
+                cursor = statementNext;
+            } else if afterItemName < textLib.length(source) and textLib.at(source, afterItemName) == "[" and ir.localIndex(blockLocals, itemName) >= 0 and types.isMapKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind) and syntax.scanBracketEnd(source, afterItemName, prefix) >= 0 and syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) {
+                isStatement = true;
+                entry := blockLocals[ir.localIndex(blockLocals, itemName)];
+                if entry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
+                if not entry.writable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable map " + itemName); }
+                kKind := types.mapKeyKind(entry.kind);
+                vKind := types.mapValueKind(entry.kind);
+                kStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
+                keyParsed := parseBinaryCtx(target, source, kStart, prefix, blockLocals, functions, params, currentName, kKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, keyParsed); }
+                if not types.isCompatibleKind(kKind, keyParsed.kind) {
+                    syntax.failAt(source, kStart, prefix, "map key must be " + types.displayKind(kKind) + ", got " + types.displayKind(keyParsed.kind));
+                }
+                closePos := syntax.expectSymbol(source, syntax.skipTrivia(source, keyParsed.next, prefix), "]", prefix);
+                eqPos := syntax.skipTrivia(source, closePos, prefix);
+                vStart := syntax.skipTrivia(source, eqPos + 1, prefix);
+                valParsed := parseBinaryCtx(target, source, vStart, prefix, blockLocals, functions, params, currentName, vKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, valParsed); }
+                if not types.isCompatibleKind(vKind, valParsed.kind) {
+                    syntax.failAt(source, vStart, prefix, "map value must be " + types.displayKind(vKind) + ", got " + types.displayKind(valParsed.kind));
+                }
+                stmtCode := "(" + entry.runtime + ").set(" + ctx.assignValueCode(target, kKind, keyParsed.kind, keyParsed.code) + ", " +
+                ctx.assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")";
+                if target == ir.TARGET_TS and not inferMode and not blockExits {
+                    trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
+                }
+                statementNext := syntax.consumeStatementEnd(source, valParsed.next, prefix);
+                if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after map assignment"); }
+                if target == ir.TARGET_TS and not inferMode and not blockExits {
+                    blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
+                }
+                if not blockExits {
+                    listLib.pushBack(mut statements, stmtCode + ";");
+                    listLib.pushBack(mut stmtOwners, "");
+                    listLib.pushBack(mut stmtDeps, stmtCode);
+                    trackedStmtCount = trackedStmtCount + 1;
                     statementCount = statementCount + 1;
                 }
                 blockConstant = false;
@@ -2846,8 +2898,8 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, hdr); }
             afterHdr := syntax.skipTrivia(source, hdr.next, prefix);
             if textLib.wordAt(source, afterHdr, "as") {
-                if not types.isListKind(hdr.kind) and not types.isArrayKind(hdr.kind) {
-                    syntax.failAt(source, hdrStart, prefix, "loop sequence must be a List or Array, got " + types.displayKind(hdr.kind));
+                if not types.isListKind(hdr.kind) and not types.isArrayKind(hdr.kind) and not types.isMapKind(hdr.kind) {
+                    syntax.failAt(source, hdrStart, prefix, "loop sequence must be a List, Array, or Map, got " + types.displayKind(hdr.kind));
                 }
                 itemNameStart := syntax.skipTrivia(source, afterHdr + 2, prefix);
                 if itemNameStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, itemNameStart)) {
@@ -2857,13 +2909,23 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 seqItemName = textLib.slice(source, itemNameStart, itemNameEnd);
                 if syntax.isReservedWord(seqItemName) { syntax.unsupportedFeature(source, itemNameStart, seqItemName, prefix); }
                 isSeqLoop = true;
-                seqCode = hdr.code;
-                seqItemKind = if types.isListKind(hdr.kind) { types.listElementKind(hdr.kind) } else { types.arrayElementKind(hdr.kind) };
+                if types.isMapKind(hdr.kind) {
+                    seqItemKind = "(key:" + types.mapKeyKind(hdr.kind) + ",value:" + types.mapValueKind(hdr.kind) + ")";
+                    seqCode = "Array.from((" + hdr.code + ").entries(), ([lite$mk, lite$mv]) => ({ key: lite$mk, value: lite$mv }))";
+                } else {
+                    seqCode = hdr.code;
+                    seqItemKind = if types.isListKind(hdr.kind) { types.listElementKind(hdr.kind) } else { types.arrayElementKind(hdr.kind) };
+                }
                 beforeLoopOpen = syntax.skipTrivia(source, itemNameEnd, prefix);
-            } else if types.isListKind(hdr.kind) or types.isArrayKind(hdr.kind) {
+            } else if types.isListKind(hdr.kind) or types.isArrayKind(hdr.kind) or types.isMapKind(hdr.kind) {
                 isSeqLoop = true;
-                seqCode = hdr.code;
-                seqItemKind = if types.isListKind(hdr.kind) { types.listElementKind(hdr.kind) } else { types.arrayElementKind(hdr.kind) };
+                if types.isMapKind(hdr.kind) {
+                    seqItemKind = "(key:" + types.mapKeyKind(hdr.kind) + ",value:" + types.mapValueKind(hdr.kind) + ")";
+                    seqCode = "Array.from((" + hdr.code + ").entries(), ([lite$mk, lite$mv]) => ({ key: lite$mk, value: lite$mv }))";
+                } else {
+                    seqCode = hdr.code;
+                    seqItemKind = if types.isListKind(hdr.kind) { types.listElementKind(hdr.kind) } else { types.arrayElementKind(hdr.kind) };
+                }
                 beforeLoopOpen = afterHdr;
             } else {
                 if hdr.kind =!= ir.VALUE_KIND_BOOL {
@@ -4823,6 +4885,115 @@ parseListIntrinsicCall := fn(target: String, source: String, start: Int, argOpen
     intValue = 0, textValue = "", constant = false, next = close)
 };
 
+/** Parses and lowers a `core/map` generic intrinsic call (`set`, `get`, `getOr`, `has`, `remove`, `size`, `clear`, `keys`, `values`). */
+parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName: String, opDisplay: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    if opName == "set" or opName == "remove" or opName == "clear" {
+        grant := ctx.parseMapGrant(source, argOpen, prefix, locals, opDisplay);
+        kKind := types.mapKeyKind(grant.kind);
+        vKind := types.mapValueKind(grant.kind);
+        if opName == "clear" {
+            close := ctx.expectNonemptyCallClose(source, grant.next, prefix);
+            return (kind = ir.VALUE_KIND_UNIT, code = "((" + grant.runtime + ").clear(), undefined)",
+            intValue = 0, textValue = "", constant = false, next = close);
+        }
+        comma1 := syntax.skipTrivia(source, grant.next, prefix);
+        if comma1 >= textLib.length(source) or textLib.at(source, comma1) =!= "," {
+            syntax.failAt(source, comma1, prefix, opDisplay + " expects a key after the mut map");
+        }
+        keyStart := syntax.skipTrivia(source, comma1 + 1, prefix);
+        key := parseBinaryCtx(target, source, keyStart, prefix, locals, functions, params, currentName, kKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if not types.isCompatibleKind(kKind, key.kind) {
+            syntax.failAt(source, keyStart, prefix, opDisplay + " key must be " + types.displayKind(kKind) + ", got " + types.displayKind(key.kind));
+        }
+        keyCode := ctx.assignValueCode(target, kKind, key.kind, key.code);
+        if opName == "remove" {
+            close := ctx.expectNonemptyCallClose(source, key.next, prefix);
+            return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + grant.runtime + ").delete(" + keyCode + "))",
+            intValue = 0, textValue = "", constant = false, next = close),
+            if inferMode { ctx.collectParsedMarkers("", key) } else { "" });
+        }
+        comma2 := syntax.skipTrivia(source, key.next, prefix);
+        if comma2 >= textLib.length(source) or textLib.at(source, comma2) =!= "," {
+            syntax.failAt(source, comma2, prefix, opDisplay + " expects a value after the key");
+        }
+        valStart := syntax.skipTrivia(source, comma2 + 1, prefix);
+        val := parseBinaryCtx(target, source, valStart, prefix, locals, functions, params, currentName, vKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if not types.isCompatibleKind(vKind, val.kind) {
+            syntax.failAt(source, valStart, prefix, opDisplay + " value must be " + types.displayKind(vKind) + ", got " + types.displayKind(val.kind));
+        }
+        close := ctx.expectNonemptyCallClose(source, val.next, prefix);
+        valCode := ctx.assignValueCode(target, vKind, val.kind, val.code);
+        return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = "((" + grant.runtime + ").set(" + keyCode + ", " + valCode + "), undefined)",
+        intValue = 0, textValue = "", constant = false, next = close),
+        if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", key), val) } else { "" });
+    }
+    open := syntax.expectSymbol(source, argOpen, "(", prefix);
+    mapStart := syntax.skipTrivia(source, open, prefix);
+    m := parseBinaryCtx(target, source, mapStart, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+    if not types.isMapKind(m.kind) {
+        syntax.failAt(source, mapStart, prefix, opDisplay + " expects a Map, got " + types.displayKind(m.kind));
+    }
+    kKind := types.mapKeyKind(m.kind);
+    vKind := types.mapValueKind(m.kind);
+    var markers := if inferMode { ctx.collectParsedMarkers("", m) } else { "" };
+    if opName == "size" {
+        close := ctx.expectNonemptyCallClose(source, m.next, prefix);
+        return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "BigInt((" + m.code + ").size)",
+        intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    if opName == "keys" {
+        close := ctx.expectNonemptyCallClose(source, m.next, prefix);
+        return ctx.withMarkers((kind = "List<" + kKind + ">", code = "Array.from((" + m.code + ").keys())",
+        intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    if opName == "values" {
+        close := ctx.expectNonemptyCallClose(source, m.next, prefix);
+        return ctx.withMarkers((kind = "List<" + vKind + ">", code = "Array.from((" + m.code + ").values())",
+        intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    comma1 := syntax.skipTrivia(source, m.next, prefix);
+    if comma1 >= textLib.length(source) or textLib.at(source, comma1) =!= "," {
+        syntax.failAt(source, comma1, prefix, opDisplay + " expects a key after the map");
+    }
+    keyStart := syntax.skipTrivia(source, comma1 + 1, prefix);
+    key := parseBinaryCtx(target, source, keyStart, prefix, locals, functions, params, currentName, kKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+    if inferMode { markers = ctx.collectParsedMarkers(markers, key); }
+    if not types.isCompatibleKind(kKind, key.kind) {
+        syntax.failAt(source, keyStart, prefix, opDisplay + " key must be " + types.displayKind(kKind) + ", got " + types.displayKind(key.kind));
+    }
+    keyCode := ctx.assignValueCode(target, kKind, key.kind, key.code);
+    if opName == "has" {
+        close := ctx.expectNonemptyCallClose(source, key.next, prefix);
+        return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + m.code + ").has(" + keyCode + "))",
+        intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    tsK := types.tsFunctionType(kKind);
+    tsV := types.tsFunctionType(vKind);
+    if opName == "get" {
+        close := ctx.expectNonemptyCallClose(source, key.next, prefix);
+        zeroVal := ctx.zeroParsed(target, vKind, close).code;
+        gotCode := ctx.copiedValueCode(target, vKind, "lite$m.get(lite$k)!");
+        code := "((lite$m: Map<" + tsK + ", " + tsV + ">, lite$k: " + tsK + "): { found: boolean; value: " + tsV + " } => lite$m.has(lite$k) ? { found: true, value: " + gotCode + " } : { found: false, value: " + zeroVal + " })(" + m.code + ", " + keyCode + ")";
+        return ctx.withMarkers((kind = "(found:Bool,value:" + vKind + ")", code = code,
+        intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    comma2 := syntax.skipTrivia(source, key.next, prefix);
+    if comma2 >= textLib.length(source) or textLib.at(source, comma2) =!= "," {
+        syntax.failAt(source, comma2, prefix, opDisplay + " expects a fallback value after the key");
+    }
+    fbStart := syntax.skipTrivia(source, comma2 + 1, prefix);
+    fb := parseBinaryCtx(target, source, fbStart, prefix, locals, functions, params, currentName, vKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+    if inferMode { markers = ctx.collectParsedMarkers(markers, fb); }
+    if not types.isCompatibleKind(vKind, fb.kind) {
+        syntax.failAt(source, fbStart, prefix, opDisplay + " fallback must be " + types.displayKind(vKind) + ", got " + types.displayKind(fb.kind));
+    }
+    close := ctx.expectNonemptyCallClose(source, fb.next, prefix);
+    fbCode := ctx.assignValueCode(target, vKind, fb.kind, fb.code);
+    gotCode := ctx.copiedValueCode(target, vKind, "lite$m.get(lite$k)!");
+    code := "((lite$m: Map<" + tsK + ", " + tsV + ">, lite$k: " + tsK + ", lite$fb: " + tsV + "): " + tsV + " => lite$m.has(lite$k) ? " + gotCode + " : lite$fb)(" + m.code + ", " + keyCode + ", " + fbCode + ")";
+    ctx.withMarkers((kind = vKind, code = code, intValue = 0, textValue = "", constant = false, next = close), markers)
+};
+
 /** Parses user and indirect function calls with positional, named, and `=name` shorthand arguments. */
 parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     size := textLib.length(source);
@@ -5184,21 +5355,37 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 }
             }
         } else if postPosition < textLib.length(source) and textLib.at(source, postPosition) == "[" {
-            if not types.isListKind(left.kind) and not types.isArrayKind(left.kind) {
-                syntax.failAt(source, postPosition, prefix, "indexing requires a list value");
+            if types.isMapKind(left.kind) {
+                kKind := types.mapKeyKind(left.kind);
+                vKind := types.mapValueKind(left.kind);
+                indexStart := syntax.skipTrivia(source, postPosition + 1, prefix);
+                key := parseBinaryCtx(target, source, indexStart, prefix, locals, functions, params, currentName, kKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+                if not types.isCompatibleKind(kKind, key.kind) {
+                    syntax.failAt(source, indexStart, prefix, "map key must be " + types.displayKind(kKind) + ", got " + types.displayKind(key.kind));
+                }
+                close := syntax.skipTrivia(source, key.next, prefix);
+                next := syntax.expectSymbol(source, close, "]", prefix);
+                left = ctx.withMarkers((kind = vKind,
+                code = "lite$mapAt((" + left.code + "), " + ctx.assignValueCode(target, kKind, key.kind, key.code) + ", " + integer.intText(indexStart) + ")",
+                intValue = 0, textValue = "", constant = false, next = next),
+                if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), key) } else { "" });
+            } else {
+                if not types.isListKind(left.kind) and not types.isArrayKind(left.kind) {
+                    syntax.failAt(source, postPosition, prefix, "indexing requires a list or map value");
+                }
+                indexStart := syntax.skipTrivia(source, postPosition + 1, prefix);
+                index := parseBinaryCtx(target, source, indexStart, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+                if index.kind =!= ir.VALUE_KIND_INT {
+                    syntax.failAt(source, indexStart, prefix, "list index must be Int, got " + types.displayKind(index.kind));
+                }
+                close := syntax.skipTrivia(source, index.next, prefix);
+                next := syntax.expectSymbol(source, close, "]", prefix);
+                elemKind := if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
+                left = ctx.withMarkers((kind = elemKind,
+                code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
+                intValue = 0, textValue = "", constant = false, next = next),
+                if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), index) } else { "" });
             }
-            indexStart := syntax.skipTrivia(source, postPosition + 1, prefix);
-            index := parseBinaryCtx(target, source, indexStart, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
-            if index.kind =!= ir.VALUE_KIND_INT {
-                syntax.failAt(source, indexStart, prefix, "list index must be Int, got " + types.displayKind(index.kind));
-            }
-            close := syntax.skipTrivia(source, index.next, prefix);
-            next := syntax.expectSymbol(source, close, "]", prefix);
-            elemKind := if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
-            left = ctx.withMarkers((kind = elemKind,
-            code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
-            intValue = 0, textValue = "", constant = false, next = next),
-            if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), index) } else { "" });
         } else if left.kind == ir.VALUE_KIND_LIST_OP {
             left = parseListIntrinsicCall(target, source, exprStart, left.next, left.textValue, left.code, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
         } else if left.kind == ir.VALUE_KIND_MODULE_FUNCTION or (types.isFnKind(left.kind) and postPosition < textLib.length(source) and textLib.at(source, postPosition) == "(") {
@@ -5217,12 +5404,24 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 errPos = if left.code =!= "" { syntax.parseDigits(left.code, 0, textLib.length(left.code)) } else { exprStart };
                 var listOpName := "";
                 var listOpDisplay := "";
+                var mapOpName := "";
                 if info.runtime == "lite$core$list$pushBack:v1" { listOpName = "push_back"; listOpDisplay = "pushBack"; }
                 else if info.runtime == "lite$core$list$popBack:v1" { listOpName = "pop_back"; listOpDisplay = "popBack"; }
                 else if info.runtime == "lite$core$list$pushFront:v1" { listOpName = "push_front"; listOpDisplay = "pushFront"; }
                 else if info.runtime == "lite$core$list$popFront:v1" { listOpName = "pop_front"; listOpDisplay = "popFront"; }
+                else if info.runtime == "lite$core$map$set:v1" { mapOpName = "set"; }
+                else if info.runtime == "lite$core$map$get:v1" { mapOpName = "get"; }
+                else if info.runtime == "lite$core$map$getOr:v1" { mapOpName = "getOr"; }
+                else if info.runtime == "lite$core$map$has:v1" { mapOpName = "has"; }
+                else if info.runtime == "lite$core$map$remove:v1" { mapOpName = "remove"; }
+                else if info.runtime == "lite$core$map$size:v1" { mapOpName = "size"; }
+                else if info.runtime == "lite$core$map$clear:v1" { mapOpName = "clear"; }
+                else if info.runtime == "lite$core$map$keys:v1" { mapOpName = "keys"; }
+                else if info.runtime == "lite$core$map$values:v1" { mapOpName = "values"; }
                 if listOpName =!= "" {
                     left = parseListIntrinsicCall(target, source, exprStart, postPosition, listOpName, listOpDisplay, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                } else if mapOpName =!= "" {
+                    left = parseMapIntrinsicCall(target, source, postPosition, mapOpName, mapOpName, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else if info.count < 0 {
                     syntax.failAt(source, errPos, prefix, "host output functions are standalone statements");
                 } else if postPosition >= textLib.length(source) or textLib.at(source, postPosition) =!= "(" {
@@ -5383,6 +5582,7 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
                     if peerKind == ir.VALUE_KIND_NEVER { syntax.failAt(source, operatorPosition, prefix, "cannot compare Never values"); }
                     if types.isTupleKind(peerKind) { syntax.failAt(source, operatorPosition, prefix, "cannot compare tuple values"); }
                     if types.isListKind(peerKind) { syntax.failAt(source, operatorPosition, prefix, "cannot compare list values"); }
+                    if types.isMapKind(peerKind) { syntax.failAt(source, operatorPosition, prefix, "cannot compare map values"); }
                     if types.isFnKind(peerKind) { syntax.failAt(source, operatorPosition, prefix, "cannot compare function values"); }
                     if operator.text =!= "==" and operator.text =!= "=!=" and not numeric.isNumericKind(peerKind) {
                         syntax.failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
@@ -5416,6 +5616,8 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
                     left = (kind = peerKind, code = "", intValue = 0, textValue = "", constant = false, next = right.next);
                 } else if types.isListKind(peerKind) {
                     syntax.failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");
+                } else if types.isMapKind(peerKind) {
+                    syntax.failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for map values");
                 } else if operator.text == "+" {
                     syntax.failAt(source, operatorPosition, prefix, "cannot mix Int and String operands");
                 } else {
@@ -5513,6 +5715,8 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
             left = (kind = floatKind, code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if types.isListKind(left.kind) or types.isListKind(right.kind) {
             syntax.failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");
+        } else if types.isMapKind(left.kind) or types.isMapKind(right.kind) {
+            syntax.failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for map values");
         } else if operator.text == "+" {
             syntax.failAt(source, operatorPosition, prefix, "cannot mix Int and String operands");
         } else {

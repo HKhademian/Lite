@@ -96,6 +96,11 @@ usesBuiltin := fn(calls: String, name: String): Bool {
     textLib.indexOfText(calls, "|lite$" + name + "(|", 0) >= 0
 }
 
+/** True when any emitted item reads a map value through the checked helper. */
+usesMapIndex := fn(calls: String): Bool {
+    usesBuiltin(calls, "mapAt")
+}
+
 /** True when any emitted item reads a list element through the checked helper. */
 usesListIndex := fn(calls: String): Bool {
     usesBuiltin(calls, "listAt")
@@ -259,7 +264,7 @@ emitFloatArithmeticHelpers := fn(calls: String): Unit {
 
 /** True when positioned bounds faults may be raised by text or list helpers. */
 usesBounds := fn(calls: String): Bool {
-    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListIndex(calls) or usesListPop(calls) or usesListPopFront(calls)
+    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListIndex(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls)
 }
 
 /** True when runtime faults or input failures may require construct-level `finally` unwinding. */
@@ -1864,6 +1869,17 @@ emitBuiltinHelpers := fn(calls: String): Unit {
     return;
 }
 
+/** Emits the checked map-index helper used by generated programs that read map entries via `m[k]`. */
+emitMapIndexHelper := fn(): Unit {
+    outLine("function lite$mapAt<K, V>(entries: ReadonlyMap<K, V>, key: K, at: number): V {");
+    outLine("    if (!entries.has(key)) {");
+    outLine("        lite$fault(\"KeyPanic\", at, \"missing map key\");");
+    outLine("    }");
+    outLine("    return entries.get(key) as V;");
+    outLine("}");
+    outLine("");
+}
+
 /** Emits the checked list-index helper used by generated programs that read list elements. */
 emitListIndexHelper := fn(): Unit {
     outLine("function lite$listAt<T>(items: readonly T[], index: bigint, at: number): T {");
@@ -2108,6 +2124,7 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
     }
     emitBuiltinHelpers(calls);
     if usesListIndex(calls) { emitListIndexHelper(); }
+    if usesMapIndex(calls) { emitMapIndexHelper(); }
     if usesListPop(calls) { emitListPopHelper(); }
     if usesListPopFront(calls) { emitListPopFrontHelper(); }
     emitIntArithmeticHelpers(calls, source, prefix);

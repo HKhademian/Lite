@@ -1,0 +1,28 @@
+/* Provisional bootstrap map support. Not an official standard library. */
+
+/** Registered map mutation intrinsic; inserts or updates `key` with `value` in O(1). */
+pub set := fn<K, V>(entries: mut Map<K, V>, key: K, value: V): Unit;
+
+/** Registered map lookup intrinsic; returns `(found = true, value = v)` when present, or `(found = false, value = zero(V))` in O(1). */
+pub get := fn<K, V>(entries: Map<K, V>, key: K): (found: Bool, value: V);
+
+/** Registered map lookup intrinsic; returns the stored value for `key` or `fallback` when absent in O(1). */
+pub getOr := fn<K, V>(entries: Map<K, V>, key: K, fallback: V): V;
+
+/** Registered map membership intrinsic; true when `entries` contains `key` in O(1). */
+pub has := fn<K, V>(entries: Map<K, V>, key: K): Bool;
+
+/** Registered map mutation intrinsic; removes `key` and returns true when it was present in O(1). */
+pub remove := fn<K, V>(entries: mut Map<K, V>, key: K): Bool;
+
+/** Registered map size intrinsic; returns the number of entries in O(1). */
+pub size := fn<K, V>(entries: Map<K, V>): Int;
+
+/** Registered map mutation intrinsic; removes all entries in O(1). */
+pub clear := fn<K, V>(entries: mut Map<K, V>): Unit;
+
+/** Registered map keys intrinsic; returns all keys in insertion order in O(n). */
+pub keys := fn<K, V>(entries: Map<K, V>): List<K>;
+
+/** Registered map values intrinsic; returns all values in insertion order in O(n). */
+pub values := fn<K, V>(entries: Map<K, V>): List<V>;

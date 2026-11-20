@@ -413,6 +413,45 @@ pub arrayExtent := fn(kind: String): Int {
     syntax.parseDigits(kind, semi + 1, textLib.length(kind) - 1)
 };
 
+/** True when `kind` is this compiler's canonical map kind `Map<K,V>`. */
+pub isMapKind := fn(kind: String): Bool {
+    size := textLib.length(kind);
+    size > 6 and textLib.startsWithAt(kind, 0, "Map<") and textLib.at(kind, size - 1) == ">"
+};
+
+/** Finds the top-level comma separating `K` and `V` inside canonical `Map<K,V>`, or -1 when malformed. */
+mapCommaPos := fn(kind: String): Int {
+    if not isMapKind(kind) { return -1; }
+    end := textLib.length(kind) - 1;
+    keyEnd := skipKindToken(kind, 4);
+    if keyEnd < end and textLib.at(kind, keyEnd) == "," { keyEnd } else { -1 }
+};
+
+/** Returns the key kind `K` of canonical `Map<K,V>`. */
+pub mapKeyKind := fn(kind: String): String {
+    comma := mapCommaPos(kind);
+    if comma < 0 { "" } else { textLib.slice(kind, 4, comma) }
+};
+
+/** Returns the value kind `V` of canonical `Map<K,V>`. */
+pub mapValueKind := fn(kind: String): String {
+    comma := mapCommaPos(kind);
+    if comma < 0 { "" } else { textLib.slice(kind, comma + 1, textLib.length(kind) - 1) }
+};
+
+/** True when `kind` is a value-comparable scalar or nominal enum kind admissible as a `Map<K, V>` key. */
+pub isMapKeyKind := fn(kind: String): Bool {
+    numeric.isIntKind(kind) or numeric.isFloatKind(kind) or kind == ir.VALUE_KIND_STRING or
+    kind == ir.VALUE_KIND_BOOL or isEnumKind(kind)
+};
+
+/** True when `name` matches one of the active core intrinsic generic parameters (`"T"` or `"K,V"`). */
+isGenericParamName := fn(genericType: String, name: String): Bool {
+    if genericType == "" { return false; }
+    if name == genericType { return true; }
+    genericType == "K,V" and (name == "K" or name == "V")
+};
+
 /** True when `kind` is this compiler's canonical nominal enum kind `Enum<lp(id#at#Name)lp(Backing)count;...>`. */
 pub isEnumKind := fn(kind: String): Bool {
     size := textLib.length(kind);
@@ -742,9 +781,9 @@ pub encodeRecordDefaultsFromAliases := fn(aliases: List<AliasDecl>, recordKind: 
     encodeRecordPairs(keys, values)
 };
 
-/** True when TS local/var declarations of `kind` require an explicit type annotation (empty lists, arrays, records, enums, or callables). */
+/** True when TS local/var declarations of `kind` require an explicit type annotation (empty lists, maps, arrays, records, enums, or callables). */
 pub needsTsTypeAnnotation := fn(kind: String): Bool {
-    isListKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or containsFnKind(kind)
+    isListKind(kind) or isMapKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or containsFnKind(kind)
 };
 
 /** True when `expectedKind` and `actualKind` represent structurally identical kinds modulo callable/tuple parameter labels. */
@@ -764,6 +803,10 @@ exactShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
     }
     if isListKind(expectedKind) and isListKind(actualKind) {
         return self(listElementKind(expectedKind), listElementKind(actualKind));
+    }
+    if isMapKind(expectedKind) and isMapKind(actualKind) {
+        return self(mapKeyKind(expectedKind), mapKeyKind(actualKind)) and
+        self(mapValueKind(expectedKind), mapValueKind(actualKind));
     }
     if isArrayKind(expectedKind) and isArrayKind(actualKind) {
         return arrayExtent(expectedKind) == arrayExtent(actualKind) and
@@ -791,6 +834,7 @@ pub fnShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
 pub containsFnKind := fn(kind: String): Bool {
     if isFnKind(kind) { return true; }
     if isListKind(kind) { return self(listElementKind(kind)); }
+    if isMapKind(kind) { return self(mapKeyKind(kind)) or self(mapValueKind(kind)); }
     if isArrayKind(kind) { return self(arrayElementKind(kind)); }
     if isTupleKind(kind) {
         count := tupleComponentCount(kind);
@@ -853,6 +897,7 @@ pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
 /** Maps a restricted Lite scalar, flat named-tuple, fixed-array, List or callable kind to its TypeScript type. */
 pub tsFunctionType := fn(kind: String): String {
     if isListKind(kind) { self(listElementKind(kind)) + "[]" }
+    else if isMapKind(kind) { "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">" }
     else if isArrayKind(kind) { self(arrayElementKind(kind)) + "[]" }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
@@ -909,6 +954,12 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
     if isListKind(kind) or isArrayKind(kind) {
         element := if isListKind(kind) { listElementKind(kind) } else { arrayElementKind(kind) };
         return "(\"[\" + (" + code + ").map((value: " + tsFunctionType(element) + ") => " + self(element, "value") + ").join(\", \") + \"]\")";
+    }
+    if isMapKind(kind) {
+        keyKind := mapKeyKind(kind);
+        valKind := mapValueKind(kind);
+        return "(\"{\" + Array.from((" + code + ").entries()).map(([k, v]: [" + tsFunctionType(keyKind) + ", " + tsFunctionType(valKind) + "]) => " +
+        self(keyKind, "k") + " + \": \" + " + self(valKind, "v") + ").join(\", \") + \"}\")";
     }
     if isEnumKind(kind) {
         enumName := enumDisplayName(kind);
@@ -983,6 +1034,7 @@ pub displayKind := fn(kind: String): String {
     if isEnumKind(kind) { return enumDisplayName(kind); }
     if isRecordKind(kind) { return recordDisplayName(kind); }
     if isListKind(kind) { return "List<" + self(listElementKind(kind)) + ">"; }
+    if isMapKind(kind) { return "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">"; }
     if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + integer.intText(arrayExtent(kind)) + "]"; }
     if isFnKind(kind) {
         count := fnParamCount(kind);
@@ -1278,7 +1330,34 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         }
         return (kind = "List<" + inner.kind + ">", next = close + 1);
     }
-    if genericType =!= "" and name == genericType { return (kind = genericType, next = after); }
+    if name == "Map" and afterName < size and textLib.at(source, afterName) == "<" {
+        keyStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        if keyStart >= size or textLib.at(source, keyStart) == ">" {
+            syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "expected a map key type");
+        }
+        keyParsed := self(errSource, errPos, useLocalErr, source, keyStart, prefix, aliases, context, genericType, seen);
+        if not isGenericParamName(genericType, keyParsed.kind) and not isMapKeyKind(keyParsed.kind) {
+            syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "unsupported map key type " + displayKind(keyParsed.kind));
+        }
+        comma := syntax.skipTrivia(source, keyParsed.next, prefix);
+        if comma >= size or textLib.at(source, comma) =!= "," {
+            syntax.failAt(errSource, if useLocalErr { comma } else { errPos }, prefix, "expected , in map type");
+        }
+        valStart := syntax.skipTrivia(source, comma + 1, prefix);
+        if valStart >= size or textLib.at(source, valStart) == ">" {
+            syntax.failAt(errSource, if useLocalErr { valStart } else { errPos }, prefix, "expected a map value type");
+        }
+        valParsed := self(errSource, errPos, useLocalErr, source, valStart, prefix, aliases, context, genericType, seen);
+        if valParsed.kind == ir.VALUE_KIND_UNIT or valParsed.kind == ir.VALUE_KIND_NEVER {
+            syntax.failAt(errSource, if useLocalErr { valStart } else { errPos }, prefix, "unsupported map value type " + displayKind(valParsed.kind));
+        }
+        close := syntax.skipTrivia(source, valParsed.next, prefix);
+        if close >= size or textLib.at(source, close) =!= ">" {
+            syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in map type" });
+        }
+        return (kind = "Map<" + keyParsed.kind + "," + valParsed.kind + ">", next = close + 1);
+    }
+    if isGenericParamName(genericType, name) { return (kind = name, next = after); }
     if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT or numeric.isNarrowNumericKind(name) {
         return (kind = name, next = after);
     }
@@ -1359,9 +1438,18 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
         cursor = syntax.expectSymbol(source, cursor, "<", prefix);
         binderStart := syntax.skipTrivia(source, cursor, prefix);
         binder := typeNameAt(source, binderStart, prefix);
-        if binder.name =!= "T" { syntax.failAt(source, binderStart, prefix, "core list intrinsic type parameter must be T"); }
-        genericType = binder.name;
-        cursor = syntax.expectSymbol(source, binder.next, ">", prefix);
+        afterFirst := syntax.skipTrivia(source, binder.next, prefix);
+        if binder.name == "K" and afterFirst < size and textLib.at(source, afterFirst) == "," {
+            secondStart := syntax.skipTrivia(source, afterFirst + 1, prefix);
+            second := typeNameAt(source, secondStart, prefix);
+            if second.name =!= "V" { syntax.failAt(source, secondStart, prefix, "core map intrinsic type parameters must be <K, V>"); }
+            genericType = "K,V";
+            cursor = syntax.expectSymbol(source, second.next, ">", prefix);
+        } else {
+            if binder.name =!= "T" { syntax.failAt(source, binderStart, prefix, "core list intrinsic type parameter must be T"); }
+            genericType = binder.name;
+            cursor = syntax.expectSymbol(source, binder.next, ">", prefix);
+        }
         cursor = syntax.skipTrivia(source, cursor, prefix);
     }
     cursor = syntax.expectSymbol(source, cursor, "(", prefix);
@@ -1437,8 +1525,8 @@ pub parseLocalType := fn(source: String, position: Int, prefix: String, aliases:
         name := textLib.slice(source, cursor, textLib.skipName(source, cursor));
         syntax.failAt(source, cursor, prefix, "unsupported local type " + name);
     }
-    if writable and not isListKind(typed.kind) {
-        syntax.failAt(source, start, prefix, "mut requires a List type, got " + displayKind(typed.kind));
+    if writable and not isListKind(typed.kind) and not isMapKind(typed.kind) {
+        syntax.failAt(source, start, prefix, "mut requires a List or Map type, got " + displayKind(typed.kind));
     }
     (kind = typed.kind, writable = writable, next = typed.next)
 };
@@ -2231,6 +2319,29 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
         }
         return (ok = true, kind = "List<" + elem.kind + ">", next = close + 1);
     }
+    if name == "Map" {
+        afterMap := syntax.skipTrivia(source, afterName, prefix);
+        if afterMap >= size or textLib.at(source, afterMap) =!= "<" {
+            return (ok = false, kind = "", next = afterMap);
+        }
+        keyRes := self(source, afterMap + 1, prefix, aliases, genericType, seen, depthLeft - 1);
+        if not keyRes.ok or (not isGenericParamName(genericType, keyRes.kind) and not isMapKeyKind(keyRes.kind)) {
+            return (ok = false, kind = "", next = afterMap + 1);
+        }
+        comma := syntax.skipTrivia(source, keyRes.next, prefix);
+        if comma >= size or textLib.at(source, comma) =!= "," {
+            return (ok = false, kind = "", next = comma);
+        }
+        valRes := self(source, comma + 1, prefix, aliases, genericType, seen, depthLeft - 1);
+        if not valRes.ok or valRes.kind == ir.VALUE_KIND_UNIT or valRes.kind == ir.VALUE_KIND_NEVER {
+            return (ok = false, kind = "", next = comma + 1);
+        }
+        close := syntax.skipTrivia(source, valRes.next, prefix);
+        if close >= size or textLib.at(source, close) =!= ">" {
+            return (ok = false, kind = "", next = close);
+        }
+        return (ok = true, kind = "Map<" + keyRes.kind + "," + valRes.kind + ">", next = close + 1);
+    }
     if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT {
         return (ok = true, kind = name, next = afterName);
     }
@@ -2240,8 +2351,8 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
     if numeric.isNarrowNumericKind(name) {
         return (ok = true, kind = name, next = afterName);
     }
-    if genericType =!= "" and name == genericType {
-        return (ok = true, kind = genericType, next = afterName);
+    if isGenericParamName(genericType, name) {
+        return (ok = true, kind = name, next = afterName);
     }
     aliasIdx := findAlias(aliases, name);
     if aliasIdx < 0 { return (ok = false, kind = "", next = afterName); }
@@ -2283,11 +2394,22 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
         if binderStart >= size or not textLib.isNameStart(textLib.at(source, binderStart)) { return false; }
         binderEnd := textLib.skipName(source, binderStart);
         binder := textLib.slice(source, binderStart, binderEnd);
-        if binder =!= "T" { return false; }
         afterBinder := syntax.skipTrivia(source, binderEnd, prefix);
-        if afterBinder >= size or textLib.at(source, afterBinder) =!= ">" { return false; }
-        genericType = "T";
-        cursor = syntax.skipTrivia(source, afterBinder + 1, prefix);
+        if binder == "K" and afterBinder < size and textLib.at(source, afterBinder) == "," {
+            sStart := syntax.skipTrivia(source, afterBinder + 1, prefix);
+            if sStart >= size or not textLib.isNameStart(textLib.at(source, sStart)) { return false; }
+            sEnd := textLib.skipName(source, sStart);
+            if textLib.slice(source, sStart, sEnd) =!= "V" { return false; }
+            afterSecond := syntax.skipTrivia(source, sEnd, prefix);
+            if afterSecond >= size or textLib.at(source, afterSecond) =!= ">" { return false; }
+            genericType = "K,V";
+            cursor = syntax.skipTrivia(source, afterSecond + 1, prefix);
+        } else {
+            if binder =!= "T" { return false; }
+            if afterBinder >= size or textLib.at(source, afterBinder) =!= ">" { return false; }
+            genericType = "T";
+            cursor = syntax.skipTrivia(source, afterBinder + 1, prefix);
+        }
     }
     if cursor >= size or textLib.at(source, cursor) =!= "(" { return false; }
     cursor = syntax.skipTrivia(source, cursor + 1, prefix);

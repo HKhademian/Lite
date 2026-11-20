@@ -1,0 +1,145 @@
+/* Map<K, V>: typed key-value maps, indexing, core/map intrinsics, iteration, value semantics, and diagnostics. */
+
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* 1. Core Map<String, Int>, Map<Int, String>, and Map<Enum, String> operations */
+basicMapSrc :=
+"io := import \"core/io\";\n" +
+"map := import \"core/map\";\n" +
+"State := enum { Idle; Active; Done; }\n" +
+"scores: mut Map<String, Int>;\n" +
+"scores[\"alice\"] = 10;\n" +
+"map.set(mut scores, \"bob\", 20);\n" +
+"scores[\"alice\"] = 15;\n" +
+"io.outputLine(scores[\"alice\"]);\n" +
+"io.outputLine(scores[\"bob\"]);\n" +
+"io.outputLine(map.size(scores));\n" +
+"io.outputLine(map.has(scores, \"alice\"));\n" +
+"io.outputLine(map.has(scores, \"carol\"));\n" +
+"g1 := map.get(scores, \"bob\");\n" +
+"g2 := map.get(scores, \"carol\");\n" +
+"io.outputLine(g1.found);\n" +
+"io.outputLine(g1.value);\n" +
+"io.outputLine(g2.found);\n" +
+"io.outputLine(g2.value);\n" +
+"io.outputLine(map.getOr(scores, \"alice\", 99));\n" +
+"io.outputLine(map.getOr(scores, \"carol\", 99));\n" +
+"io.outputLine(scores);\n" +
+"loop scores as entry {\n" +
+"    io.outputLine(entry.key, entry.value);\n" +
+"}\n" +
+"ks := map.keys(scores);\n" +
+"vs := map.values(scores);\n" +
+"io.outputLine(ks);\n" +
+"io.outputLine(vs);\n" +
+"io.outputLine(map.remove(mut scores, \"alice\"));\n" +
+"io.outputLine(map.remove(mut scores, \"alice\"));\n" +
+"io.outputLine(map.size(scores));\n" +
+"map.clear(mut scores);\n" +
+"io.outputLine(map.size(scores));\n" +
+"labels: mut Map<State, String>;\n" +
+"labels[.Idle] = \"waiting\";\n" +
+"map.set(mut labels, .Active, \"running\");\n" +
+"io.outputLine(labels[.Idle]);\n" +
+"io.outputLine(map.getOr(labels, .Done, \"finished\"));\n" +
+"io.outputLine(map.has(labels, .Active));\n";
+
+basicExpected :=
+"15\n20\n2\ntrue\nfalse\ntrue\n20\nfalse\n0\n15\n99\n{alice: 15, bob: 20}\n" +
+"alice 15\nbob 20\n[alice, bob]\n[15, 20]\ntrue\nfalse\n1\n0\nwaiting\nfinished\ntrue\n";
+compilerTest.assertCompileRunTs(root, tsComp, "basic map operations TS", basicMapSrc, basicExpected);
+
+/* 2. Value-copy semantics, functions, block expressions, mut inference, and nested Map<String, List<Int>> */
+valueSemSrc :=
+"io := import \"core/io\";\n" +
+"map := import \"core/map\";\n" +
+"list := import \"core/list\";\n" +
+"makeCounts := fn(): Map<String, Int> {\n" +
+"    m: mut Map<String, Int>;\n" +
+"    m[\"a\"] = 1;\n" +
+"    m[\"b\"] = 2;\n" +
+"    m\n" +
+"};\n" +
+"sumValues := fn(m: Map<String, Int>): Int {\n" +
+"    var total := 0;\n" +
+"    loop m as e {\n" +
+"        total = total + e.value;\n" +
+"    }\n" +
+"    total\n" +
+"};\n" +
+"mut m1 := makeCounts();\n" +
+"copy := m1;\n" +
+"m1[\"a\"] = 100;\n" +
+"m1[\"c\"] = 3;\n" +
+"io.outputLine(copy[\"a\"]);\n" +
+"io.outputLine(map.size(copy));\n" +
+"io.outputLine(sumValues(copy));\n" +
+"io.outputLine(sumValues(m1));\n" +
+"var mut m2 := makeCounts();\n" +
+"m2[\"b\"] = 20;\n" +
+"io.outputLine(m2[\"b\"]);\n" +
+"nested: mut Map<String, List<Int>>;\n" +
+"xs: mut List<Int> = [1, 2];\n" +
+"nested[\"nums\"] = xs;\n" +
+"list.pushBack(mut xs, 3);\n" +
+"io.outputLine(nested[\"nums\"]);\n";
+
+compilerTest.assertCompileRunTs(root, tsComp, "value semantics and nested map TS", valueSemSrc, "1\n2\n3\n105\n20\n[1, 2]\n");
+
+/* 3. Missing key runtime fault on indexing */
+missingKeySrc :=
+"io := import \"core/io\";\n" +
+"m: mut Map<String, Int>;\n" +
+"m[\"a\"] = 1;\n" +
+"io.outputLine(m[\"missing\"]);\n";
+missingRun := compilerTest.compileCheckRunTs(root, tsComp, missingKeySrc, "");
+test.check("missing key index faults at runtime", missingRun.status =!= 0);
+test.check("missing key mentions KeyPanic: " + missingRun.stderr, text.containsText(missingRun.stderr, "KeyPanic"));
+
+/* 4. Compile-time rejections */
+badSrc: List<String> = [
+"m: Map<List<Int>, Int>;\n",
+"m: Map<String, Unit>;\n",
+"m: Map<String, Int>;\nm[\"a\"] = 1;\n",
+"map := import \"core/map\";\nm: Map<String, Int>;\nmap.set(mut m, \"a\", 1);\n",
+"map := import \"core/map\";\nm: mut Map<String, Int>;\nmap.set(m, \"a\", 1);\n",
+"m: mut Map<String, Int>;\nm[42] = 1;\n",
+"io := import \"core/io\";\na: Map<String, Int>;\nb: Map<String, Int>;\nio.outputLine(a == b);\n",
+"m: Map<String, Int> = ?;\n"
+];
+badErr: List<String> = [
+"unsupported map key type",
+"unsupported map value type",
+"cannot mutate immutable map",
+"cannot mutate immutable map",
+"requires mut",
+"map key must be String",
+"cannot compare map values",
+"reserved storage is not supported for Map"
+];
+var bi := 0;
+loop bi < 8 {
+    compilerTest.assertCompileErrorContains(root, tsComp, "bad map " + badSrc[bi], badSrc[bi], badErr[bi]);
+    bi = bi + 1;
+}
+
+/* 5. C backend rejection */
+compilerTest.assertCompileErrorContains(root, cComp, "map C backend rejection",
+"io := import \"core/io\";\nm: mut Map<String, Int>;\nm[\"a\"] = 1;\nio.outputLine(m[\"a\"]);\n",
+"C backend does not support map values yet");
+
+test.done("map");
