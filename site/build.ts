@@ -2074,21 +2074,6 @@ export function buildSite(options?: BuildSiteOptions): void {
   mkdirSync(join(outputDir, 'tools'), { recursive: true });
   writeFileSync(join(outputDir, 'tools', 'index.html'), toolsOut.html);
 
-  const docsOut = buildDocsSection({
-    showcaseSamples,
-    playSamples,
-    repoUrl,
-    rev,
-    lightSwitchShine,
-    discovered: discoveredDocs,
-    graph,
-  });
-  for (const [relPath, html] of docsOut.files) {
-    const dest = join(outputDir, relPath);
-    mkdirSync(dirname(dest), { recursive: true });
-    writeFileSync(dest, html);
-  }
-
   const learnOut = buildLearnSection({
     tsCompiler,
     modules: extractedModules,
@@ -2121,6 +2106,21 @@ export function buildSite(options?: BuildSiteOptions): void {
     writeFileSync(dest, content);
   }
 
+  const docsOut = buildDocsSection({
+    showcaseSamples,
+    playSamples,
+    repoUrl,
+    rev,
+    lightSwitchShine,
+    discovered: discoveredDocs,
+    graph,
+  });
+  for (const [relPath, html] of docsOut.files) {
+    const dest = join(outputDir, relPath);
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, html);
+  }
+
   const modulesOut = buildModulesSection({
     modules: extractedModules,
     showcaseSamples,
@@ -2129,6 +2129,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     repoUrl,
     rev,
     lightSwitchShine,
+    graph,
   });
   for (const [relPath, html] of modulesOut.files) {
     const dest = join(outputDir, relPath);

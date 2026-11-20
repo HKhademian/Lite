@@ -147,6 +147,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(extraCanvasHtml.includes('Lite Play'));
   assert(extraCanvasHtml.includes('id="fillRect"'));
   assert(extraCanvasHtml.includes('Used in Showcases &amp; Gallery'));
+  const coreListHtml = readFileSync(join(out, 'modules/core/list.html'), 'utf8');
+  assert(coreListHtml.includes('Used Across Lite Academy'));
+  assert(coreListHtml.includes('Used in Showcases &amp; Gallery'));
+  assert(coreListHtml.includes('data-drawer-toggle="sidebar"'));
 
   const toolsHtml = readFileSync(join(out, 'tools/index.html'), 'utf8');
   assert(toolsHtml.includes('./bin/lite run'));
@@ -181,6 +185,18 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(startHereHtml.includes('Verified in TS'));
   const lpHtml = readFileSync(join(out, 'docs/proposals/LP-0001-operation-specific-panic-recovery.html'), 'utf8');
   assert(lpHtml.includes('Working Proposal'));
+  const tuplesHbHtml = readFileSync(join(out, 'docs/handbook/tuples-arrays-lists-and-aliases.html'), 'utf8');
+  assert(tuplesHbHtml.includes('data-handbook-slug="tuples-arrays-lists-and-aliases"'));
+  assert(tuplesHbHtml.includes('data-handbook-nav-slug="tuples-arrays-lists-and-aliases"'));
+  assert(tuplesHbHtml.includes('data-runnable="true"'));
+  assert(tuplesHbHtml.includes('class="md-heading-anchor"'));
+  assert(tuplesHbHtml.includes('class="docs-crosslinks"'));
+  const tocMatch = tuplesHbHtml.match(/<aside class="portal-toc"[\s\S]*?<\/aside>/);
+  assert(tocMatch && tocMatch[0].includes('<code>'), 'expected inline code rendering inside handbook TOC');
+  assert(tocMatch && !tocMatch[0].includes('`'), 'unexpected raw backtick inside handbook TOC');
+  const designOverviewHtml = readFileSync(join(out, 'docs/design/overview.html'), 'utf8');
+  assert(designOverviewHtml.includes('id="docs-sidebar-filter"'));
+  assert(designOverviewHtml.includes('id="docs-sidebar-count"'));
 
   const collectHtml = (dir: string): string[] => {
     const outFiles: string[] = [];

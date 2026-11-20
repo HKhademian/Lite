@@ -7,7 +7,7 @@ import type { RenderedDocument } from './docs-client.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import type { ShowcaseSample } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
-import { rewriteLiteUriHtml, type LiteAcademyGraph } from './lite-uri.ts';
+import { renderAcademyCrosslinks, rewriteLiteUriHtml, type LiteAcademyGraph } from './lite-uri.ts';
 import type { PlaySample } from './play-samples.ts';
 import type { SearchEntry } from './search.ts';
 
@@ -145,7 +145,8 @@ export function postprocessMarkdownHtml(options: Readonly<{
       }
 
       const effectiveLang = lang || (highlightUnmarkedAsLite ? 'lite' : 'text');
-      const preBlock = `<pre class="code-block" data-lang="${escapeHtml(effectiveLang)}" data-fence="${fenceStr}"><code>${codeHtml}</code></pre>`;
+      const runnableAttr = isLiteSnippet ? ' data-runnable="true"' : '';
+      const preBlock = `<pre class="code-block" data-lang="${escapeHtml(effectiveLang)}" data-fence="${fenceStr}"${runnableAttr}><code>${codeHtml}</code></pre>`;
       if (snippet !== undefined) {
         if (snippet.sampleId !== undefined) {
           const playHref = `${relativeHref(outPath, 'playground/')}?sample=${encodeURIComponent(snippet.sampleId)}`;
@@ -270,7 +271,7 @@ export function buildDocsSection(options: Readonly<{
   );
   const renderedByPath = new Map<string, RenderedDocument>(disc.rendered.map((d) => [d.path, d]));
 
-  const entries = disc.metas.map((meta) => {
+  const pass1 = disc.metas.map((meta) => {
     const rendered = renderedByPath.get(meta.sourcePath);
     if (rendered === undefined) {
       throw new Error(`missing rendered markdown output for ${meta.sourcePath}`);
@@ -288,7 +289,28 @@ export function buildDocsSection(options: Readonly<{
       ...(graph !== undefined ? { graph } : {}),
       ...(fromUri !== undefined ? { fromUri } : {}),
     });
-    return { meta, title: rendered.title, status: rendered.status, toc: rendered.toc, processedHtml };
+    return { meta, fromUri, title: rendered.title, status: rendered.status, toc: rendered.toc, processedHtml };
+  });
+
+  const entries = pass1.map(({ meta, fromUri, title, status, toc, processedHtml }) => {
+    let relatedHtml = '';
+    if (graph && fromUri) {
+      relatedHtml = renderAcademyCrosslinks({
+        heading: 'Practice & References Across Lite Academy',
+        fromOutPath: meta.outPath,
+        buckets: graph.getRelatedBuckets(fromUri),
+        wrapperClass: 'docs-crosslinks',
+        sections: [
+          { kind: 'learn', label: 'Learn', badgeKind: 'lesson', limit: 6 },
+          { kind: 'gym', label: 'Lite Gym', badgeKind: 'gym', limit: 8 },
+          { kind: 'module', label: 'Module', limit: 8 },
+          { kind: 'play', label: 'Play', limit: 4 },
+          { kind: 'handbook', label: 'Handbook', limit: 4 },
+          { kind: 'doc', label: 'Design Spec', limit: 4 },
+        ],
+      });
+    }
+    return { meta, title, status, toc, processedHtml, relatedHtml };
   });
 
   const built = JSON.parse(runSiteDocsTool([], JSON.stringify({ repoUrl, entries }))) as {

@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import type { ModuleApiDoc } from './docs-client.ts';
 import type { ShowcaseSample } from './groups.ts';
+import { escapeHtml } from './highlight.ts';
 import type { PlayGroup, PlaySample } from './play-samples.ts';
 import type { PlaygroundLibraryItem } from './playground-library.ts';
 
@@ -23,6 +24,7 @@ export type LiteGraphNode = Readonly<{
   outPath: string;
   sourcePath?: string;
   badge?: string;
+  catalogId?: string;
 }>;
 
 export type LiteEdgeKind = 'lite-uri' | 'markdown-link' | 'catalog-ref' | 'module-import';
@@ -702,6 +704,7 @@ export function buildLiteAcademyGraph(options: Readonly<{
         outPath: `learn/${lesson.trackId}/${lesson.slug}.html`,
         sourcePath: lesson.guideFile,
         badge: lesson.kind === 'tutorial' ? 'Tutorial' : 'Lesson',
+        catalogId: lesson.id,
       },
       [`lite://learn/${lesson.trackId}/${lesson.slug}`, `lite://learn/${lesson.id}`],
     );
@@ -731,6 +734,7 @@ export function buildLiteAcademyGraph(options: Readonly<{
         outPath: `gym/${folder}/${ex.slug}.html`,
         sourcePath: ex.promptFile,
         badge: `${ex.belt} ${ex.mode === 'drill' ? 'Drill' : 'Workout'}`,
+        catalogId: ex.id,
       },
       [`lite://gym/${folder}/${ex.slug}`, `lite://gym/${modePrefix}/${ex.slug}`, `lite://gym/${ex.id}`],
     );
@@ -757,4 +761,78 @@ export function buildLiteAcademyGraph(options: Readonly<{
 
 function thisExists(graph: LiteAcademyGraph, uri: string): boolean {
   return graph.getNode(uri) !== undefined;
+}
+
+export type CrosslinkSectionSpec = Readonly<{
+  kind: LiteEntityKind;
+  label: string;
+  badgeKind?: 'lesson' | 'gym' | 'plain';
+  limit?: number;
+}>;
+
+const DEFAULT_CROSSLINK_SECTIONS: readonly CrosslinkSectionSpec[] = [
+  { kind: 'handbook', label: 'Handbook', limit: 6 },
+  { kind: 'learn', label: 'Learn', badgeKind: 'lesson', limit: 8 },
+  { kind: 'gym', label: 'Lite Gym', badgeKind: 'gym', limit: 8 },
+  { kind: 'module', label: 'Module', limit: 10 },
+  { kind: 'play', label: 'Play', limit: 6 },
+  { kind: 'doc', label: 'Design Spec', limit: 6 },
+];
+
+/** Renders a deduplicated bidirectional Academy cross-links grid from graph buckets. */
+export function renderAcademyCrosslinks(options: Readonly<{
+  heading: string;
+  fromOutPath: string;
+  buckets: RelatedBuckets;
+  sections?: readonly CrosslinkSectionSpec[];
+  sectionId?: string;
+  wrapperClass?: string;
+}>): string {
+  const {
+    heading,
+    fromOutPath,
+    buckets,
+    sections = DEFAULT_CROSSLINK_SECTIONS,
+    sectionId,
+    wrapperClass = 'docs-crosslinks',
+  } = options;
+  const cards: string[] = [];
+  const seenOut = new Set<string>();
+
+  for (const sec of sections) {
+    const items = buckets[sec.kind].slice(0, sec.limit ?? 8);
+    for (const node of items) {
+      if (seenOut.has(node.outPath)) continue;
+      seenOut.add(node.outPath);
+      const href = relativeWebHref(fromOutPath, node.outPath);
+      const defaultBadge = node.badge ?? sec.label;
+      let badgeHtml: string;
+      if (sec.badgeKind === 'lesson' && node.catalogId) {
+        badgeHtml = `<span class="badge academy-lesson-badge" data-lesson-id="${escapeHtml(node.catalogId)}" data-default-label="${escapeHtml(defaultBadge)}">${escapeHtml(defaultBadge)}</span>`;
+      } else if (sec.badgeKind === 'gym' && node.catalogId) {
+        badgeHtml = `<span class="badge academy-gym-badge" data-gym-id="${escapeHtml(node.catalogId)}" data-default-label="${escapeHtml(defaultBadge)}">${escapeHtml(defaultBadge)}</span>`;
+      } else {
+        badgeHtml = `<span class="badge">${escapeHtml(defaultBadge)}</span>`;
+      }
+      const subText = node.subtitle ? `${sec.label} · ${node.subtitle}` : sec.label;
+      cards.push(
+        `<article class="academy-crosslink-card">\n` +
+          `  <div class="academy-crosslink-card-head">\n` +
+          `    <a href="${escapeHtml(href)}"><strong>${escapeHtml(node.title)}</strong></a>\n` +
+          `    ${badgeHtml}\n` +
+          `  </div>\n` +
+          `  <span class="code-card-meta">${escapeHtml(subText)}</span>\n` +
+          `</article>`,
+      );
+    }
+  }
+
+  if (cards.length === 0) return '';
+  const idAttr = sectionId ? ` id="${escapeHtml(sectionId)}"` : '';
+  return `<section class="${escapeHtml(wrapperClass)}"${idAttr}>\n` +
+    `  <h2>${escapeHtml(heading)}</h2>\n` +
+    `  <div class="academy-crosslink-grid">\n` +
+    `    ${cards.join('\n    ')}\n` +
+    `  </div>\n` +
+    `</section>`;
 }

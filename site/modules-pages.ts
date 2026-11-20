@@ -5,6 +5,7 @@ import type { ModuleApiDoc } from './docs-client.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import type { ShowcaseSample } from './groups.ts';
 import { highlightLite } from './highlight.ts';
+import { renderAcademyCrosslinks, type LiteAcademyGraph } from './lite-uri.ts';
 import type { PlayGroup, PlaySample } from './play-samples.ts';
 import type { SearchEntry } from './search.ts';
 
@@ -28,21 +29,42 @@ export function buildModulesSection(options: Readonly<{
   repoUrl: string;
   rev: SourceRevision;
   lightSwitchShine: boolean;
+  graph?: LiteAcademyGraph;
 }>): ModulesBuildOutput {
-  const { modules, showcaseSamples, playSamples, playGroups, repoUrl, rev, lightSwitchShine } = options;
+  const { modules, showcaseSamples, playSamples, playGroups, repoUrl, rev, lightSwitchShine, graph } = options;
   const playBadgeMap = new Map(playGroups.map((group) => [group.id, group.badge]));
   const samples = [
     ...showcaseSamples.map((s) => ({ id: s.id, title: s.title, file: s.file, badge: 'showcase' })),
     ...playSamples.map((s) => ({ id: s.id, title: s.title, file: s.file, badge: playBadgeMap.get(s.group) ?? 'play' })),
   ];
-  const enrichedModules = modules.map((mod) => ({
-    ...mod,
-    importHtml: highlightLite(`${defaultAliasForModule(mod.name)} := import "${mod.id}";`),
-    symbols: mod.symbols.map((sym) => ({
-      ...sym,
-      signatureHtml: highlightLite(sym.signature),
-    })),
-  }));
+  const enrichedModules = modules.map((mod) => {
+    const outPath = `modules/${mod.namespace}/${mod.name}.html`;
+    const academyUsagesHtml = graph
+      ? renderAcademyCrosslinks({
+          heading: 'Used Across Lite Academy',
+          sectionId: 'used-in-academy',
+          wrapperClass: 'section',
+          fromOutPath: outPath,
+          buckets: graph.getRelatedBuckets(`lite://module/${mod.id}`),
+          sections: [
+            { kind: 'handbook', label: 'Handbook', limit: 6 },
+            { kind: 'learn', label: 'Learn', badgeKind: 'lesson', limit: 8 },
+            { kind: 'gym', label: 'Lite Gym', badgeKind: 'gym', limit: 8 },
+            { kind: 'doc', label: 'Design Spec', limit: 6 },
+            { kind: 'play', label: 'Play & Sketches', limit: 6 },
+          ],
+        })
+      : '';
+    return {
+      ...mod,
+      importHtml: highlightLite(`${defaultAliasForModule(mod.name)} := import "${mod.id}";`),
+      academyUsagesHtml,
+      symbols: mod.symbols.map((sym) => ({
+        ...sym,
+        signatureHtml: highlightLite(sym.signature),
+      })),
+    };
+  });
 
   const result = spawnSync(process.execPath, [ensureTool('site-modules')], {
     cwd: rootDir,
