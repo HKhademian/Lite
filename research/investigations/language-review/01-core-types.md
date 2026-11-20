@@ -205,6 +205,12 @@ Since `v` must satisfy three distinct, incompatible ID types, Lite reports a
 compile-time inference conflict. A single copy with only the `findUser` use
 would instead allow the source and copy to infer `UserID`.
 
+For `var v := 10` followed by `findUser(v)` requiring `UserID`, the joint
+review confirmed a compile-time conflict if a later `v = count` supplies an
+already typed `count: Int`. Whether a later `v = 20` can realize the fresh
+Int-Like literal as `UserID` remains undecided. This example does not settle
+the general inference rules for writes to mutable bindings.
+
 This direction is under investigation, not an implemented rule. Scope of
 “relevant uses,” compatible constraints, ambiguity, recursion, public APIs,
 diagnostics, unused bindings, and the precise commitment point remain to be
