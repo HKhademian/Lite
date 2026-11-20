@@ -39,6 +39,8 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Baseline:** The selected direction intends compile-time I/O, including files, input and network resources; permissions, dependencies, reproducibility and failure details remain open.
 
+**Confirmed in joint review:** Explicit compile-time execution can perform actions available in the build environment, including file and network operations and standard input and output. These effects occur during the build. A compiled artifact can contain the resulting value. Ordinary constant folding must preserve the original staging of effects. Host permissions, dependency recording, caching and reproducibility remain separate design questions. Review a compile-time diagnostic written to stdout, an answer read from stdin that shapes a generated definition, and an ordinary runtime call with equivalent effects. [Compile-time evaluation](../../../docs/compile-time-evaluation.md)
+
 **Initial assessment and probes:** A compile-time read of a configuration file can change output without source changes. Evaluate declared dependencies and controlled access against the selected effectful direction; check caching, offline builds and whether particular contexts need stricter limits. A general ban would revisit that direction.
 
 ## Working judgment
