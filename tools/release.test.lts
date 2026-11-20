@@ -1,0 +1,279 @@
+/** Release requirements distinguish usable tools, compiler previews and language conformance. */
+
+crypto := import "core/crypto";
+fs := import "core/file";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+unicode := import "core/unicode";
+challenges := import "util/challenges";
+json := import "util/json";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+releaseBin := path.join(root, "bin/lite-release");
+
+runCmd := fn(exe: String, args: List<String>, cwd: String, envOver: List<String>, stdinText: String): (status: Int, stdout: String, stderr: String) {
+    tmpRes := fs.makeTempDir("lite-rel-cmd-");
+    test.check("runCmd makeTempDir: " + tmpRes.error, tmpRes.ok);
+    outPath := path.join(tmpRes.path, "out");
+    errPath := path.join(tmpRes.path, "err");
+    res := proc.runBytes(exe, args, cwd, envOver, 180000, unicode.utf8Encode(stdinText), outPath, errPath);
+    test.check("runCmd process error: " + res.error, res.error == "");
+    outText := fs.readText(outPath).text;
+    errText := fs.readText(errPath).text;
+    _rm := fs.remove(tmpRes.path);
+    (status = res.status, stdout = outText, stderr = errText)
+};
+
+runCmdOk := fn(exe: String, args: List<String>, cwd: String): String {
+    emptyEnv: List<String> = [];
+    res := runCmd(exe, args, cwd, emptyEnv, "");
+    test.checkInt(exe + " status: " + res.stderr, 0, res.status);
+    res.stdout
+};
+
+runReleaseTool := fn(args: List<String>, directory: String, stdinText: String): String {
+    cmdArgs: mut List<String> = [releaseBin];
+    loop args as a {
+        list.pushBack(mut cmdArgs, a);
+    }
+    envOver: mut List<String> = ["LITE_RELEASE_INTERNAL=1"];
+    cwd := if directory =!= "" {
+        list.pushBack(mut envOver, "LITE_RELEASE_ROOT=" + directory);
+        directory
+    } else {
+        root
+    };
+    res := runCmd(proc.execPath(), cmdArgs, cwd, envOver, stdinText);
+    test.checkInt("lite-release status: " + res.stderr, 0, res.status);
+    res.stdout
+};
+
+releaseProfile := fn(component: String, version: String): String {
+    args := if component == "" {
+        a1: List<String> = ["--profile"];
+        a1
+    } else {
+        a2: List<String> = ["--profile", component, version];
+        a2
+    };
+    text.trim(runReleaseTool(args, "", ""))
+};
+
+formatReleaseNotes := fn(inputJson: String): String {
+    runReleaseTool(["--format-notes"], "", inputJson)
+};
+
+splitLines := fn(source: String): List<String> {
+    out: mut List<String> = [];
+    n := text.length(source);
+    var pos := 0;
+    loop pos <= n {
+        nl := text.indexOfText(source, "\n", pos);
+        if nl < 0 {
+            list.pushBack(mut out, text.slice(source, pos, n));
+            break;
+        }
+        list.pushBack(mut out, text.slice(source, pos, nl));
+        pos = nl + 1;
+    }
+    out
+};
+
+/* 1. component readiness does not couple tooling to deferred native or language ports */
+toolComponents: List<String> = ["cli", "checker", "tester", "verifier", "benchmark", "release", "doctor", "docs", "vscode"];
+loop toolComponents as comp {
+    test.checkText("tools profile " + comp, "tools", releaseProfile(comp, "0.1.0"));
+}
+test.checkText("null release profile", "tools", releaseProfile("", ""));
+test.checkText("compiler alpha profile", "compiler", releaseProfile("compiler", "0.1.0-alpha.1"));
+test.checkText("igniter alpha profile", "compiler", releaseProfile("igniter", "0.1.0-alpha.38"));
+langComponents: List<String> = ["project", "language", "scripting", "compiler"];
+loop langComponents as comp {
+    test.checkText("language profile " + comp, "language", releaseProfile(comp, "1.0.0"));
+}
+
+/* 2. formatReleaseNotes tailors profile summary, verification details, and artifact digests */
+commit := text.repeatText("a", 40);
+shortCommit := text.slice(commit, 0, 12);
+dig1 := text.repeatText("1", 64);
+dig2 := text.repeatText("2", 64);
+dig3 := text.repeatText("3", 64);
+dig4 := text.repeatText("4", 64);
+dig5 := text.repeatText("5", 64);
+dig6 := text.repeatText("6", 64);
+dig7 := text.repeatText("7", 64);
+dig8 := text.repeatText("8", 64);
+dig9 := text.repeatText("9", 64);
+
+snapshotJson := "{"
++ "\"label\":\"snapshot-" + shortCommit + "\","
++ "\"commit\":\"" + commit + "\","
++ "\"profile\":\"tools\","
++ "\"releasedComponent\":null,"
++ "\"archive\":\"lite-snapshot-" + shortCommit + ".tar.gz\","
++ "\"archiveSha256\":\"" + dig1 + "\","
++ "\"manifestSha256\":\"" + dig2 + "\","
++ "\"vsix\":null,"
++ "\"bootstrap\":null"
++ "}";
+snapshot := formatReleaseNotes(snapshotJson);
+test.check("snapshot released component", text.indexOfText(snapshot, "Released component**: unpublished snapshot", 0) >= 0);
+test.check("snapshot summary", text.indexOfText(snapshot, "Tool/source snapshot validated", 0) >= 0);
+test.check("snapshot archiveSha256", text.indexOfText(snapshot, "`" + dig1 + "`", 0) >= 0);
+test.check("snapshot manifestSha256", text.indexOfText(snapshot, "`" + dig2 + "`", 0) >= 0);
+test.check("snapshot no ladder", text.indexOfText(snapshot, "Self-hosting fixed-point ladder", 0) < 0);
+
+vscodeJson := "{"
++ "\"label\":\"vscode-v0.1.0\","
++ "\"commit\":\"" + commit + "\","
++ "\"profile\":\"tools\","
++ "\"releasedComponent\":{\"component\":\"vscode\",\"version\":\"0.1.0\"},"
++ "\"archive\":\"lite-vscode-v0.1.0.tar.gz\","
++ "\"archiveSha256\":\"" + dig3 + "\","
++ "\"manifestSha256\":\"" + dig4 + "\","
++ "\"vsix\":{\"file\":\"lite-0.1.0.vsix\",\"sha256\":\"" + dig5 + "\"},"
++ "\"bootstrap\":null"
++ "}";
+vscodeNotes := formatReleaseNotes(vscodeJson);
+test.check("vscode released component", text.indexOfText(vscodeNotes, "Released component**: vscode v0.1.0", 0) >= 0);
+test.check("vscode vsix file", text.indexOfText(vscodeNotes, "lite-0.1.0.vsix", 0) >= 0);
+test.check("vscode vsix sha", text.indexOfText(vscodeNotes, "`" + dig5 + "`", 0) >= 0);
+
+bootstrapJson := "{"
++ "\"ladder\":{\"fixedPoint\":true,\"generations\":[1,2,3]},"
++ "\"corpus\":{\"cases\":94,\"programs\":69,\"rejections\":25,\"executions\":69,\"mismatches\":[]},"
++ "\"support\":\"restricted generated-TS subset; consult migration inventory\""
++ "}";
+compilerJson := "{"
++ "\"label\":\"igniter-v0.1.0-alpha.38\","
++ "\"commit\":\"" + commit + "\","
++ "\"profile\":\"compiler\","
++ "\"releasedComponent\":{\"component\":\"igniter\",\"version\":\"0.1.0-alpha.38\"},"
++ "\"archive\":\"lite-igniter-v0.1.0-alpha.38.tar.gz\","
++ "\"archiveSha256\":\"" + dig6 + "\","
++ "\"manifestSha256\":\"" + dig7 + "\","
++ "\"vsix\":null,"
++ "\"bootstrap\":" + bootstrapJson
++ "}";
+compilerNotes := formatReleaseNotes(compilerJson);
+test.check("compiler preview verified", text.indexOfText(compilerNotes, "Compiler preview verified", 0) >= 0);
+test.check("compiler no snapshot text", text.indexOfText(compilerNotes, "Tool/source snapshot validated", 0) < 0);
+test.check("compiler ladder passed", text.indexOfText(compilerNotes, "Self-hosting fixed-point ladder: passed (3 generations)", 0) >= 0);
+test.check("compiler corpus stats", text.indexOfText(compilerNotes, "94 cases (69 programs, 25 rejections, 69 executions), mismatches=0", 0) >= 0);
+test.check("compiler no verify --all", text.indexOfText(compilerNotes, "lite verify --all --no-cache", 0) < 0);
+
+langBootstrapJson := "{"
++ "\"ladder\":{\"fixedPoint\":true,\"generations\":[1,2,3]},"
++ "\"corpus\":{\"cases\":94,\"programs\":69,\"rejections\":25,\"executions\":69,\"mismatches\":[]},"
++ "\"support\":\"current canonical contracts passed\""
++ "}";
+languageJson := "{"
++ "\"label\":\"language-v1.0.0\","
++ "\"commit\":\"" + commit + "\","
++ "\"profile\":\"language\","
++ "\"releasedComponent\":{\"component\":\"language\",\"version\":\"1.0.0\"},"
++ "\"archive\":\"lite-language-v1.0.0.tar.gz\","
++ "\"archiveSha256\":\"" + dig8 + "\","
++ "\"manifestSha256\":\"" + dig9 + "\","
++ "\"vsix\":null,"
++ "\"bootstrap\":" + langBootstrapJson
++ "}";
+languageNotes := formatReleaseNotes(languageJson);
+test.check("language release verified", text.indexOfText(languageNotes, "Language release verified", 0) >= 0);
+test.check("language verify --all", text.indexOfText(languageNotes, "lite verify --all --no-cache", 0) >= 0);
+
+/* 3. prepareRelease packages a clean checkout into a verified archive with matching manifest, notes, and SHA256SUMS */
+workRes := fs.makeTempDir("lite-release-test-");
+test.check("work makeTempDir", workRes.ok);
+work := workRes.path;
+repo := path.join(work, "repo");
+output := path.join(work, "out");
+extracted := path.join(work, "extracted");
+test.check("mkdir repo", fs.makeDir(repo).ok);
+test.check("mkdir extracted", fs.makeDir(extracted).ok);
+
+if fs.kind(path.join(root, ".git")) =!= fs.FILE_KIND_MISSING {
+    archivePath := path.join(work, "head.tar");
+    errPath := path.join(work, "archive.err");
+    emptyEnv: List<String> = [];
+    emptyBytes: List<Int> = [];
+    archRes := proc.runBytes("git", ["archive", "--format=tar", "HEAD"], root, emptyEnv, 180000, emptyBytes, archivePath, errPath);
+    test.check("git archive error: " + archRes.error, archRes.error == "");
+    test.checkInt("git archive status: " + fs.readText(errPath).text, 0, archRes.status);
+    _u := runCmdOk("tar", ["-xf", archivePath, "-C", repo], work);
+} else {
+    topSkip: List<String> = [".git", "node_modules", "dist", ".cache"];
+    nestedSkip: List<String> = ["node_modules"];
+    cpRes := path.copyFiltered(root, repo, topSkip, nestedSkip);
+    test.check("copyFiltered: " + cpRes.error, cpRes.ok);
+}
+
+_g1 := runCmdOk("git", ["init", "-q"], repo);
+_g2 := runCmdOk("git", ["config", "user.name", "Lite Release Test"], repo);
+_g3 := runCmdOk("git", ["config", "user.email", "release-test@example.invalid"], repo);
+_g4 := runCmdOk("git", ["add", "-A"], repo);
+_g5 := runCmdOk("git", ["-c", "commit.gpgsign=false", "commit", "-q", "-m", "snapshot"], repo);
+head := text.trim(runCmdOk("git", ["rev-parse", "HEAD"], repo));
+
+_prep := runReleaseTool([output], repo, "");
+manifestRead := fs.readText(path.join(output, "manifest.json"));
+test.check("read manifest.json", manifestRead.ok);
+manifestText := manifestRead.text;
+
+headShort := text.slice(head, 0, 12);
+archiveName := "lite-snapshot-" + headShort + ".tar.gz";
+test.checkText("manifest.commit", head, json.readObjectString(manifestText, 0, "commit").value);
+test.checkText("manifest.profile", "tools", json.readObjectString(manifestText, 0, "profile").value);
+test.check("manifest.releasedComponent null", text.indexOfText(manifestText, "\"releasedComponent\": null", 0) >= 0 or text.indexOfText(manifestText, "\"releasedComponent\":null", 0) >= 0);
+test.check("archive exists", fs.kind(path.join(output, archiveName)) == fs.FILE_KIND_FILE);
+
+notesText := fs.readText(path.join(output, "RELEASE-NOTES.md")).text;
+sumsText := fs.readText(path.join(output, "SHA256SUMS")).text;
+
+_ext := runCmdOk("tar", ["-xzf", path.join(output, archiveName), "-C", extracted], work);
+test.checkText("extracted RELEASE.json matches manifest.json", manifestText, fs.readText(path.join(extracted, "RELEASE.json")).text);
+
+outEntries := fs.listDir(output);
+rawExpected: mut List<String> = [];
+loop outEntries as name {
+    if name =!= "SHA256SUMS" {
+        list.pushBack(mut rawExpected, name);
+    }
+}
+expectedFiles := challenges.sortTexts(rawExpected);
+
+sumLines := splitLines(text.trimEnd(sumsText));
+test.checkInt("SHA256SUMS line count", list.listCountText(expectedFiles), list.listCountText(sumLines));
+var sIdx := 0;
+loop sIdx < list.listCountText(sumLines) {
+    line := sumLines[sIdx];
+    sepIdx := text.indexOfText(line, "  ", 0);
+    test.check("SHA256SUMS line has separator: " + line, sepIdx >= 0);
+    digest := text.slice(line, 0, sepIdx);
+    fileName := text.slice(line, sepIdx + 2, text.length(line));
+    test.checkText("SHA256SUMS file order", expectedFiles[sIdx], fileName);
+    actualDigest := crypto.sha256File(path.join(output, fileName));
+    test.check("sha256File ok " + fileName, actualDigest.ok);
+    test.checkText("SHA256SUMS digest " + fileName, actualDigest.hex, digest);
+    sIdx = sIdx + 1;
+}
+
+archDigestRes := crypto.sha256File(path.join(output, archiveName));
+test.check("archive sha256 ok", archDigestRes.ok);
+manifestDigest := crypto.sha256Text(manifestText);
+test.check("notes heading", text.indexOfText(notesText, "# snapshot-" + headShort, 0) >= 0);
+test.check("notes commit", text.indexOfText(notesText, head, 0) >= 0);
+test.check("notes archiveName", text.indexOfText(notesText, archiveName, 0) >= 0);
+test.check("notes archiveDigest", text.indexOfText(notesText, archDigestRes.hex, 0) >= 0);
+test.check("notes manifestDigest", text.indexOfText(notesText, manifestDigest, 0) >= 0);
+test.check("notes Verification", text.indexOfText(notesText, "## Verification", 0) >= 0);
+test.check("notes Artifacts", text.indexOfText(notesText, "## Artifacts", 0) >= 0);
+test.check("notes Verify and extract", text.indexOfText(notesText, "## Verify and extract", 0) >= 0);
+
+_rmWork := fs.remove(work);
