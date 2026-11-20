@@ -1804,10 +1804,16 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
     edges: Array<{ from: string; to: string; kind: string; fragment?: string }>;
   };
   assert.equal(builtGraph.schemaVersion, 1);
-  for (const kind of ['handbook', 'doc', 'learn', 'gym', 'play', 'module', 'tool', 'gallery']) {
+  for (const kind of ['handbook', 'doc', 'brand', 'learn', 'gym', 'play', 'module', 'tool', 'gallery']) {
     assert((builtGraph.stats.byKind[kind] ?? 0) >= 1, `expected nodes for ${kind} in link-graph.json`);
   }
-  assert(builtGraph.edges.filter(e => e.kind === 'lite-uri').length >= 80);
+  assert((builtGraph.stats.byKind['brand'] ?? 0) >= 3);
+  assert.equal(builtGraph.edges.filter(e => e.kind === 'markdown-link').length, 0);
+  assert(builtGraph.edges.filter(e => e.kind === 'lite-uri').length >= 3000);
+  assert(builtGraph.edges.some(e => e.from === 'lite://brand/name' && e.to === 'lite://doc/versioning-and-naming' && e.kind === 'lite-uri' && e.fragment === '1-canonical-names'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://doc/versioning-and-naming' && e.to === 'lite://brand/name' && e.kind === 'lite-uri'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://brand' && e.to === 'lite://brand/lite-wordmark.svg' && e.kind === 'lite-uri'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://doc/spec-overview' && e.to === 'lite://doc/unambiguous-meaning' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://handbook/overview-and-setup' && e.to === 'lite://play/double-sum' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://handbook/overview-and-setup' && e.to === 'lite://tool/check' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'lite-uri' && e.fragment === 'pushBack'));
@@ -1872,4 +1878,179 @@ test('validateBuiltSiteReferences catches broken files, missing fragments, unres
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
+});
+
+test('unified Markdown docs under brand, docs, compiler, language, and repo guides use zero raw relative file links', () => {
+  const skipDirs = new Set(['node_modules', 'dist', '.git']);
+  const collectMd = (dirAbs: string, out: string[] = []): string[] => {
+    for (const entry of readdirSync(dirAbs, { withFileTypes: true })) {
+      if (skipDirs.has(entry.name)) continue;
+      const full = join(dirAbs, entry.name);
+      if (entry.isDirectory()) collectMd(full, out);
+      else if (entry.name.endsWith('.md')) out.push(full);
+    }
+    return out;
+  };
+
+  const skipCodeSpan = (input: string, pos: number): number => {
+    let run = 1;
+    while (pos + run < input.length && input.charAt(pos + run) === '`') run += 1;
+    let scan = pos + run;
+    while (scan < input.length) {
+      if (input.charAt(scan) === '\n' && input.charAt(scan + 1) === '\n') return -1;
+      if (input.charAt(scan) === '`') {
+        let cRun = 1;
+        while (scan + cRun < input.length && input.charAt(scan + cRun) === '`') cRun += 1;
+        if (cRun === run) return scan + cRun;
+        scan += cRun;
+        continue;
+      }
+      scan += 1;
+    }
+    return -1;
+  };
+
+  const findBracketEnd = (input: string, openPos: number): number => {
+    let i = openPos + 1;
+    let depth = 1;
+    while (i < input.length) {
+      const ch = input.charAt(i);
+      if (ch === '\\' && i + 1 < input.length) { i += 2; continue; }
+      if (ch === '\n' && input.charAt(i + 1) === '\n') return -1;
+      if (ch === '`') {
+        const end = skipCodeSpan(input, i);
+        if (end >= 0) { i = end; continue; }
+        while (i < input.length && input.charAt(i) === '`') i += 1;
+        continue;
+      }
+      if (ch === '[') { depth += 1; i += 1; continue; }
+      if (ch === ']') {
+        depth -= 1;
+        if (depth === 0) return i;
+        i += 1;
+        continue;
+      }
+      i += 1;
+    }
+    return -1;
+  };
+
+  const extractRawRelativeLinks = (markdown: string): string[] => {
+    const lines = markdown.split(/\r?\n/);
+    const kept: string[] = [];
+    let fenceChar = '';
+    let fenceLen = 0;
+    for (const line of lines) {
+      if (fenceLen === 0) {
+        const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+        if (m) {
+          const marker = m[1] ?? '';
+          const rest = m[2] ?? '';
+          const ch = marker.charAt(0);
+          if (ch === '~' || !rest.includes('`')) {
+            fenceChar = ch;
+            fenceLen = marker.length;
+            continue;
+          }
+        }
+        kept.push(line);
+      } else {
+        const cm = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line);
+        if (cm && (cm[1] ?? '').charAt(0) === fenceChar && (cm[1] ?? '').length >= fenceLen) {
+          fenceChar = '';
+          fenceLen = 0;
+        }
+      }
+    }
+    const prose = kept.join('\n');
+    const rawRel: string[] = [];
+    let i = 0;
+    while (i < prose.length) {
+      const ch = prose.charAt(i);
+      if (ch === '\\' && i + 1 < prose.length) { i += 2; continue; }
+      if (ch === '`') {
+        const end = skipCodeSpan(prose, i);
+        if (end >= 0) { i = end; continue; }
+        while (i < prose.length && prose.charAt(i) === '`') i += 1;
+        continue;
+      }
+      if (ch === '!' && prose.charAt(i + 1) === '[') {
+        const imgEnd = findBracketEnd(prose, i + 1);
+        if (imgEnd >= 0 && prose.charAt(imgEnd + 1) === '(') {
+          i = imgEnd + 2;
+          continue;
+        }
+        i += 2;
+        continue;
+      }
+      if (ch === '[') {
+        const labelEnd = findBracketEnd(prose, i);
+        if (labelEnd >= 0 && prose.charAt(labelEnd + 1) === '(') {
+          let p = labelEnd + 2;
+          while (p < prose.length && (prose.charAt(p) === ' ' || prose.charAt(p) === '\t')) p += 1;
+          let dest = '';
+          if (prose.charAt(p) === '<') {
+            p += 1;
+            const start = p;
+            while (p < prose.length && prose.charAt(p) !== '>' && prose.charAt(p) !== '\n') p += 1;
+            dest = prose.slice(start, p);
+          } else {
+            const start = p;
+            let depth = 0;
+            while (p < prose.length) {
+              const c = prose.charAt(p);
+              if (c === '\\' && p + 1 < prose.length) { p += 2; continue; }
+              if (c === '(') { depth += 1; p += 1; continue; }
+              if (c === ')') {
+                if (depth === 0) break;
+                depth -= 1;
+                p += 1;
+                continue;
+              }
+              if (c === ' ' || c === '\t' || c === '\n' || c === '\r') break;
+              p += 1;
+            }
+            dest = prose.slice(start, p);
+          }
+          if (
+            dest !== '' &&
+            !dest.startsWith('#') &&
+            !dest.startsWith('lite://') &&
+            !dest.startsWith('lite:/') &&
+            !dest.startsWith('//') &&
+            !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(dest)
+          ) {
+            rawRel.push(dest);
+          }
+          i = labelEnd + 1;
+          continue;
+        }
+      }
+      i += 1;
+    }
+    return rawRel;
+  };
+
+  const mdFiles = [
+    ...collectMd(join(root, 'brand')),
+    ...collectMd(join(root, 'docs')),
+    ...collectMd(join(root, 'compiler')),
+    ...collectMd(join(root, 'language')),
+    ...collectMd(join(root, 'igniter')),
+    join(root, 'samples', 'README.md'),
+    join(root, 'lib', 'README.md'),
+    join(root, 'editors', 'vscode', 'README.md'),
+    join(root, 'CONTRIBUTING.md'),
+    join(root, 'TASKS.md'),
+    join(root, 'ISSUES-BY-TOPIC.md'),
+  ].sort();
+
+  const leftovers: string[] = [];
+  for (const fullPath of mdFiles) {
+    const rawRels = extractRawRelativeLinks(readFileSync(fullPath, 'utf8'));
+    for (const dest of rawRels) {
+      leftovers.push(`${fullPath.slice(root.length + 1)} -> ${dest}`);
+    }
+  }
+  assert.deepEqual(leftovers, [], `Found non-lite:// relative links:\n${leftovers.join('\n')}`);
 });

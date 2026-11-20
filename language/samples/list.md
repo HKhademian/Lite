@@ -1,20 +1,20 @@
 # LiteScript single-file problem catalog
 
-520 exercises, ordered from first expressions to small applications. Each entry names its `.lts` file and describes its problem. Exercises 001–020 have written solutions and verification manifests; 021–520 remain planned. See the [sample guide](README.md) for status, conventions, and exposed design gaps.
+520 exercises, ordered from first expressions to small applications. Each entry names its `.lts` file and describes its problem. Exercises 001–020 have written solutions and verification manifests; 021–520 remain planned. See the [sample guide](lite://repo/language/samples/README.md) for status, conventions, and exposed design gaps.
 
 Runnable implementation demonstrations are indexed separately in
-[examples](../examples/README.md), beside the learning samples. Their
+[examples](lite://repo/language/examples/README.md), beside the learning samples. Their
 local numbering does not replace or renumber these exercise IDs.
 
 ## Starting conditions
 
-The [selected initial correctness batch](NOTES.md#initial-correctness-batch) is
+The [selected initial correctness batch](lite://repo/language/samples/NOTES.md#initial-correctness-batch) is
 001–020, exercised incrementally as features become executable. All 520 entries
 remain a growth catalog rather than a completion gate for the tiny demonstrator.
 
-The repository has a limited [experimental interpreter](../../igniter/README.md);
+The repository has a limited [experimental interpreter](lite://repo/igniter/README.md);
 the wider language and standard library remain design work, with no native or
-self-hosted compiler. The [language reference](../../docs/README.md) includes open
+self-hosted compiler. The [language reference](lite://doc/overview) includes open
 proposals. This exercise catalog does not claim every program runs today.
 Check the interpreter's documented subset before relying on I/O, text operations,
 collection methods, math functions, filesystem APIs, or generic syntax.
@@ -43,7 +43,7 @@ Stage notes identify likely dependencies and design pressure. They are capabilit
 
 Needs: numeric values, bindings, expressions. Design pressure: inferred numeric types, division, rounding, and expression results. All inputs can be literals.
 
-Status: **implemented; all 20 files have verification manifests**. Each is a short worked example with a plain-language problem and expected answers. See the [reading guide](README.md) for a first introduction and [contributor notes](NOTES.md) for verification limits and design gaps.
+Status: **implemented; all 20 files have verification manifests**. Each is a short worked example with a plain-language problem and expected answers. See the [reading guide](lite://repo/language/samples/README.md) for a first introduction and [contributor notes](lite://repo/language/samples/NOTES.md) for verification limits and design gaps.
 
 1. `language/samples/arithmetic/operations/add-two-numbers.lts` — **Add two numbers:** Compute the sum of two supplied integers and check positive, negative, and zero inputs.
 2. `language/samples/arithmetic/operations/four-operations.lts` — **Four arithmetic operations:** Compute sum, difference, product, and truncating integer quotient for two whole numbers with a nonzero divisor.
@@ -695,6 +695,6 @@ Needs: coherent domain models, commands, validation, and reports. Keep the state
 
 Current state: **001–020 implemented and verified through `language/verifications/`; 021–520 planned**. Add a script only when working on its subject; do not create hundreds of empty placeholder files.
 
-When attempting a script, keep its problem statement short and put expected answers next to the solution. Track supported input bounds, extra verification cases, and current status in the [contributor notes](NOTES.md). Suggested statuses are **draft**, **blocked by design**, **blocked by library/host support**, **implemented but unverified**, and **verified**. Verification requires an actual available toolchain and observed results; documentation examples alone do not qualify.
+When attempting a script, keep its problem statement short and put expected answers next to the solution. Track supported input bounds, extra verification cases, and current status in the [contributor notes](lite://repo/language/samples/NOTES.md). Suggested statuses are **draft**, **blocked by design**, **blocked by library/host support**, **implemented but unverified**, and **verified**. Verification requires an actual available toolchain and observed results; documentation examples alone do not qualify.
 
 Keep a short gap note with the smallest reproducer and a link to the relevant design document when possible. A lesson may reveal several different needs: a language rule, a type-system rule, a diagnostic improvement, a library primitive, or a host capability. Record those separately so the catalog guides language growth without making every convenience a new language feature.

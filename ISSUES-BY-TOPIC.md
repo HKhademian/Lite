@@ -1,9 +1,9 @@
 # LiteScript remediation backlog — by topic
 
 **Snapshot:** `177893c` (2026-10-23). **Corpus:** 148 Markdown files, ~214.5k words, 20 `.lite` samples.
-**Scope:** consolidates the 59 items in [TASKS.md](TASKS.md), 15 project-level findings from the 2026-10-23 review, and 7 findings from the 2026-10-23 re-triage.
+**Scope:** consolidates the 59 items in [TASKS.md](lite://repo/TASKS.md), 15 project-level findings from the 2026-10-23 review, and 7 findings from the 2026-10-23 re-triage.
 
-This is the topic-oriented view. [TASKS.md](TASKS.md) remains the detailed evidence log. All 59 T items were re-triaged against this snapshot on 2026-10-23; each T entry now carries a verified status.
+This is the topic-oriented view. [TASKS.md](lite://repo/TASKS.md) remains the detailed evidence log. All 59 T items were re-triaged against this snapshot on 2026-10-23; each T entry now carries a verified status.
 
 **Totals:** 81 issues: 59 inherited (T-001–T-059), 15 project findings (R-001–R-015), and 7 re-triage findings (N-001–N-007). 8 are P0. The current state is a design corpus, not an implementation.
 
@@ -14,7 +14,7 @@ This is the topic-oriented view. [TASKS.md](TASKS.md) remains the detailed evide
 | T-001–T-059 | 3 | 6 | 50 |
 | R-001–R-015 | 2 | 1 | 12 |
 
-Fixed T items: T-001, T-041, T-049. Partial: T-002, T-034, T-043, T-047, T-050, T-054. Fixed R items: R-003 (this re-triage) and R-005 (history pushed); R-013 is partial. See each [TASKS.md](TASKS.md) entry for the evidence behind a status.
+Fixed T items: T-001, T-041, T-049. Partial: T-002, T-034, T-043, T-047, T-050, T-054. Fixed R items: R-003 (this re-triage) and R-005 (history pushed); R-013 is partial. See each [TASKS.md](lite://repo/TASKS.md) entry for the evidence behind a status.
 
 **Severity**
 
@@ -52,7 +52,7 @@ Scores describe current health, not effort: 10 means no remediation is needed. I
 
 ## 1. Vision and principles — 8/10
 
-The white paper and [principles](docs/principles.md) are coherent and usable.
+The white paper and [principles](lite://doc/principles) are coherent and usable.
 
 - **R-015 · P1 — No progressive-disclosure contract.** The project says beginners should start simply, but it does not define how the same program grows into progressively more advanced use without rewrites or a separate dialect. **Fix:** define a small feature ladder (values and inference → mutation → failures → collections → explicit contracts), require one evolving example per level, and test that each step compiles without rewriting earlier code.
 
@@ -62,10 +62,10 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 
 ## 2. Foundations and scope — 3/10
 
-- **R-002 · P1 — Foundation sequencing risk.** Memory/ownership, generics, modules, numeric representation, tooling, effects, concurrency, and FFI remain open ([principles](docs/principles.md)), while deep surface details are already selected. **Fix:** freeze new surface decisions; run a foundation review; mark dependent decisions provisional until their foundation is settled.
-- **R-007 · P2 — Sample scope mismatch.** There are 20 samples and a plan for 021–520 ([notes](language/samples/NOTES.md)), but no toolchain to verify any of them. **Fix:** cap sample expansion until the samples can be parsed and executed; gate new lessons behind a verified-toolchain milestone.
+- **R-002 · P1 — Foundation sequencing risk.** Memory/ownership, generics, modules, numeric representation, tooling, effects, concurrency, and FFI remain open ([principles](lite://doc/principles)), while deep surface details are already selected. **Fix:** freeze new surface decisions; run a foundation review; mark dependent decisions provisional until their foundation is settled.
+- **R-007 · P2 — Sample scope mismatch.** There are 20 samples and a plan for 021–520 ([notes](lite://repo/language/samples/NOTES.md)), but no toolchain to verify any of them. **Fix:** cap sample expansion until the samples can be parsed and executed; gate new lessons behind a verified-toolchain milestone.
 - **R-008 · P2 — No complexity budget.** 148 docs, ~214k words, 274 ledger bullets, and many context-sensitive surface rules. **Fix:** define a per-feature complexity budget, require a reference-language check and a beginner example, and consolidate rules that fail it.
-- **R-011 · P2 — No beginner usability validation.** The principles say simplicity must be evaluated with actual beginner tasks ([principles](docs/principles.md)), but no such evaluation exists. **Fix:** run small task-based studies and record results with the decisions they affect.
+- **R-011 · P2 — No beginner usability validation.** The principles say simplicity must be evaluated with actual beginner tasks ([principles](lite://doc/principles)), but no such evaluation exists. **Fix:** run small task-based studies and record results with the decisions they affect.
 
 ## 3. Documentation architecture, metadata, and navigation — 4/10
 
@@ -77,9 +77,9 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **T-056 · P3 — No complete current-language specification or decision IDs.** Selected rules, proposals, and history are mixed across 135+ docs. **Fix:** add `spec/` or one generated current-design page with stable IDs; keep investigation notes separate.
 - **T-057 · P3 — Loop/recovery/collection contracts are spread across many pages.** Every selection must be edited in several places. **Fix:** designate one normative page per area; reduce the others to examples and links.
 - **T-058 · P3 — Status vocabulary is not the four documented labels.** Status lines predominantly say “selected/open/established.” **Fix:** adopt the four labels as status prefixes or redefine the legend to match practice.
-- **R-004 · P1 — Date and metadata drift.** [README](README.md) and [docs index](docs/README.md) say 2026-10-20, while 24 docs contain 2026-10-21/22 selections. **Fix:** use one metadata source, remove hand-written snapshot dates, and add a CI check.
+- **R-004 · P1 — Date and metadata drift.** [README](lite://repo/README.md) and [docs index](lite://doc/overview) say 2026-10-20, while 24 docs contain 2026-10-21/22 selections. **Fix:** use one metadata source, remove hand-written snapshot dates, and add a CI check.
 - **R-006 · P2 — No automated documentation checks.** Links, anchors, duplicate index entries, status vocabulary, and stale dates are checked manually. **Fix:** add a documentation check script and run it in CI.
-- **N-005 · P1 — Index omits eight documents.** [docs/README.md](docs/README.md) has no entry for `branch-result-inference.md`, `conditional-union-fallback.md`, `union-empty-zero-proposal.md`, `union-initialization-policy.md`, `union-parameter-defaults.md`, `union-storage-reference-comparison.md`, `union-zero.md`, or the handoff. Several record selected 2026-10-21 rules. **Fix:** index them with accurate status blurbs.
+- **N-005 · P1 — Index omits eight documents.** [docs/README.md](lite://doc/overview) has no entry for `branch-result-inference.md`, `conditional-union-fallback.md`, `union-empty-zero-proposal.md`, `union-initialization-policy.md`, `union-parameter-defaults.md`, `union-storage-reference-comparison.md`, `union-zero.md`, or the handoff. Several record selected 2026-10-21 rules. **Fix:** index them with accurate status blurbs.
 
 ## 4. Grammar and syntax — 4/10
 
@@ -89,8 +89,8 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **T-017 · P2 — Grammar still lacks the selected type layer.** Record, enum, alias, union, and `A & B` forms are unreachable or absent. **Fix:** add a `type_item` production plus union and failure-aggregate placeholders.
 - **T-045 · P2 — Grammar still says receiver declarations follow the source.** No loop receiver declarations exist. **Fix:** delete the clause; count/value metadata is implicit.
 - **R-010 · P2 — Documented code examples are unverified.** T-016 proves at least two examples do not parse. **Fix:** extract fenced examples, parse them, and mark expected-error examples explicitly.
-- **N-002 · P1 — Grammar contradicts itself on bare multi-member union declarations.** [grammar-sketch.md](docs/grammar-sketch.md) requires an initializer or `= ?` for these declarations, while the no-initializer rule says omission supplies the type’s all-zero value. **Fix:** add the union exception to the no-initializer production.
-- **N-004 · P2 — Grammar still calls completion-receiver policy proposed.** [grammar-sketch.md](docs/grammar-sketch.md) lists “completion/recovery receiver mismatch policy” as proposed while saying there is no completion receiver and calling receiver forms superseded. **Fix:** scope the sentence to parameters and recovery.
+- **N-002 · P1 — Grammar contradicts itself on bare multi-member union declarations.** [grammar-sketch.md](lite://doc/grammar-sketch) requires an initializer or `= ?` for these declarations, while the no-initializer rule says omission supplies the type’s all-zero value. **Fix:** add the union exception to the no-initializer production.
+- **N-004 · P2 — Grammar still calls completion-receiver policy proposed.** [grammar-sketch.md](lite://doc/grammar-sketch) lists “completion/recovery receiver mismatch policy” as proposed while saying there is no completion receiver and calling receiver forms superseded. **Fix:** scope the sentence to parameters and recovery.
 
 ## 5. Types and inference — 5/10
 
@@ -107,7 +107,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **T-029 · P2 — `mutability.md` omits the first-initialization exception.** **Fix:** say “after initialization” and note the `= ?` first-write exception.
 - **T-031 · P2 — `option.md` omits its universal-zero mapping.** **Fix:** add “`zero(Option<T>)` is `.None`; extraction still has no implicit numeric fallback.”
 - **T-050 · P2 — Universal zero is selected before its mappings exist.** Enums, unions, references, resources, and functions still need mappings. **Fix:** mark dependent contracts conditional, or complete the mappings before relying on them further.
-- **N-006 · P2 — Ledger still calls callable zero a proposal.** [decisions-and-open-questions.md](docs/decisions-and-open-questions.md) says function zero mappings remain design work and a zero-result callable is “a proposal”, while [zero-initialization.md](docs/zero-initialization.md) selects zero-result callable behavior. **Fix:** mark callable zero selected and keep only invocation/ABI details open.
+- **N-006 · P2 — Ledger still calls callable zero a proposal.** [decisions-and-open-questions.md](lite://doc/decisions-and-open-questions) says function zero mappings remain design work and a zero-result callable is “a proposal”, while [zero-initialization.md](lite://doc/zero-initialization) selects zero-result callable behavior. **Fix:** mark callable zero selected and keep only invocation/ABI details open.
 
 ## 7. Functions, lambdas, and calls — 6/10
 
@@ -119,7 +119,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **T-007 · P0 — Conditional leading-dot rule contradicts itself.** “Does not shadow” and “does not fall through” imply opposite targets. **Fix:** inside a conditional, leading-dot metadata has no target; use `@loop.field` and `@tag.value` only in `then`.
 - **T-049 · P2 — Untagged conditional `then` cannot read its `T`; this is not stated.** **Fix:** state that an untagged `then` can ignore `T` but needs `@tag` to read it, or allow a local name.
 - **T-051 · P2 — Conditional zero fallback remains a beginner-facing footgun.** An unmatched `if` can overwrite accumulated state. **Fix:** confirm the rule is intentional, or require an explicit `else`/`continue` for value-position conditionals in loops.
-- **N-001 · P1 — Conditional zero initialization is described both as selected and superseded.** [conditionals.md](docs/conditionals.md) still says the result is “initialized to `zero(T)`” and [tags-and-contexts.md](docs/tags-and-contexts.md) says it exists before the first condition, while [conditionals.md](docs/conditionals.md) calls that model superseded and [conditional-union-fallback.md](docs/conditional-union-fallback.md) requires an explicit fallback for multi-member unions. **Fix:** remove the pre-selection-zero wording and define only the selected-branch/fallback construction.
+- **N-001 · P1 — Conditional zero initialization is described both as selected and superseded.** [conditionals.md](lite://doc/conditionals) still says the result is “initialized to `zero(T)`” and [tags-and-contexts.md](lite://doc/tags-and-contexts) says it exists before the first condition, while [conditionals.md](lite://doc/conditionals) calls that model superseded and [conditional-union-fallback.md](lite://doc/conditional-union-fallback) requires an explicit fallback for multi-member unions. **Fix:** remove the pre-selection-zero wording and define only the selected-branch/fallback construction.
 
 ## 9. Loops and completion — 4/10
 
@@ -129,7 +129,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **T-014 · P2 — `result-and-errors.md` cites the retired loop action-only receiver rule.** **Fix:** delete the sentence or replace it with the current `then` versus recovery distinction.
 - **T-042 · P2 — Historical accumulator omits `break value`.** **Fix:** add `break value` to the replacing list.
 - **T-043 · P2 — Loop-alternatives page uses retired `else`/“accumulator” terms.** **Fix:** use `then` and `.value`, or mark the page historical.
-- **N-003 · P2 — Retired accumulator terminology survives in new and updated pages.** [branch-result-inference.md](docs/branch-result-inference.md) and [conditional-union-fallback.md](docs/conditional-union-fallback.md) say “loop accumulator”; [references.md](docs/references.md) says “selected accumulator”; [tooling-and-learning.md](docs/tooling-and-learning.md) lists accumulators as current; [control-flow.md](docs/control-flow.md) says “accumulator-preserving bare `break`”. [loop-value.md](docs/loop-value.md) says `.value` replaces it. **Fix:** use `.value`/“loop value” except in explicit history.
+- **N-003 · P2 — Retired accumulator terminology survives in new and updated pages.** [branch-result-inference.md](lite://doc/branch-result-inference) and [conditional-union-fallback.md](lite://doc/conditional-union-fallback) say “loop accumulator”; [references.md](lite://doc/references) says “selected accumulator”; [tooling-and-learning.md](lite://doc/tooling-and-learning) lists accumulators as current; [control-flow.md](lite://doc/control-flow) says “accumulator-preserving bare `break`”. [loop-value.md](lite://doc/loop-value) says `.value` replaces it. **Fix:** use `.value`/“loop value” except in explicit history.
 
 ## 10. Pattern matching — 5/10
 
@@ -185,7 +185,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 ## 17. Tooling, implementation, and validation — 2/10
 
 - **T-035 · P2 — Formatter status/body disagree and the ledger lacks the requirement.** **Fix:** pick one status and add the formatter requirement to the ledger.
-- **R-001 · P0 — No executable validation loop.** There is no lexer, parser, type checker, interpreter, runtime, or test suite; all 20 samples are unverified ([notes](language/samples/NOTES.md)). **Fix:** implement a minimal toolchain that parses, checks, and runs the 20 samples; add CI; make implementation the next milestone.
+- **R-001 · P0 — No executable validation loop.** There is no lexer, parser, type checker, interpreter, runtime, or test suite; all 20 samples are unverified ([notes](lite://repo/language/samples/NOTES.md)). **Fix:** implement a minimal toolchain that parses, checks, and runs the 20 samples; add CI; make implementation the next milestone.
 - **R-009 · P2 — No per-decision acceptance cases.** Selected rules have no positive/negative conformance cases. **Fix:** require at least one accepting and one rejecting case per selected rule.
 - **R-013 · P2 — No roadmap or definition of done.** The repo is planning-only but has no milestone plan beyond the handoff. **Fix:** add a roadmap with exit criteria for spec, toolchain, and samples.
 
@@ -195,7 +195,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **R-003 · FIXED (2026-10-23) — Backlog was stale.** All 59 T items were re-triaged at `177893c`; counts, date, and per-item statuses are updated. **Fix:** keep counts generated and re-triage on each snapshot.
 - **R-005 · FIXED (2026-10-23) — Unpushed history.** `origin/main` matched the documentation HEAD `177893c` when verified (`git rev-list --left-right --count origin/main...main` = `0 0`); the re-triage commit is the only local commit. **Fix:** push after review and keep CI and a remote backup enabled.
 - **R-012 · P3 — No license or contribution metadata.** There is no `LICENSE` or `CONTRIBUTING` file. **Fix:** add a license and a short contribution note, or state that the repository is not accepting contributions.
-- **N-007 · P3 — Backlogs are not linked from either entry point.** [README.md](README.md) and [docs/README.md](docs/README.md) link neither [TASKS.md](TASKS.md) nor [ISSUES-BY-TOPIC.md](ISSUES-BY-TOPIC.md). **Fix:** link both from the docs index or a single status page.
+- **N-007 · P3 — Backlogs are not linked from either entry point.** [README.md](lite://repo/README.md) and [docs/README.md](lite://doc/overview) link neither [TASKS.md](lite://repo/TASKS.md) nor [ISSUES-BY-TOPIC.md](lite://repo/ISSUES-BY-TOPIC.md). **Fix:** link both from the docs index or a single status page.
 
 ---
 
@@ -249,5 +249,5 @@ A topic is closed only when:
 - **T-001–T-059:** all 59 appear exactly once in the primary sections above.
 - **R-001–R-015:** all 15 project findings appear.
 - **N-001–N-007:** all 7 re-triage findings appear in their primary topics.
-- **Re-verified 2026-10-23:** 3 T fixed, 6 T partial, 50 T open; 2 R fixed, 1 R partial, 12 R open. See [TASKS.md](TASKS.md) for per-item evidence.
+- **Re-verified 2026-10-23:** 3 T fixed, 6 T partial, 50 T open; 2 R fixed, 1 R partial, 12 R open. See [TASKS.md](lite://repo/TASKS.md) for per-item evidence.
 - **Not re-opened:** tagged-return wording, `continue @scan.value` as a selected form (except T-004), and record `= 0` remain non-issues. Internal links/anchors were checked at the snapshot; external URL liveness was last checked 2026-10-20 and has not been re-verified.

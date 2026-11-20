@@ -3,8 +3,8 @@
 Run `./bin/lite test --cases [FILTER]` or `./bin/lite verify PATH.case.json`.
 Filters match case IDs or repository-relative paths by substring or `*` glob
 (for example `./bin/lite test --cases 'case.blocks.*'` or `'tooling.cli.*'`).
-Definitions use [the case schema](../../config/case.schema.json); streams use
-[one shared schema](../../config/stream.schema.json) and byte resolver, also used
+Definitions use [the case schema](lite://repo/config/case.schema.json); streams use
+[one shared schema](lite://repo/config/stream.schema.json) and byte resolver, also used
 by the existing compiler fixtures and semantic verifier.
 
 Each `.case.json` lives in a domain subfolder (`<domain>/<subDomain>/<topic>.case.json`
@@ -40,7 +40,7 @@ Run `./bin/lite bench NEW_REPORT.json FILTER`. Every measured run verifies its
 expected behavior; timeouts and failures produce no successful report. Reports
 include raw samples, median, host details, component versions, source/compiler/tool
 identities and the measurement scope. Existing detailed compiler-phase benchmarks
-remain under [benchmark/](../../benchmark/README.md).
+remain under [benchmark/](lite://repo/benchmark/README.md).
 
-Use [the development workflow](../../docs/development-workflow.md) and
-[documentation guide](../../docs/documentation.md) when adding cases.
+Use [the development workflow](lite://doc/development-workflow) and
+[documentation guide](lite://doc/documentation) when adding cases.

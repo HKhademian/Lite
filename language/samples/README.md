@@ -1,9 +1,9 @@
 # Small problems, a few lines at a time
 
-Start with [adding two numbers](arithmetic/operations/add-two-numbers.lts), then follow exercises 001–020 in the [full list](list.md). Each file tells a small story, supplies the numbers, and calculates an answer. Comments beside the answers show what to expect.
+Start with [adding two numbers](lite://repo/language/samples/arithmetic/operations/add-two-numbers.lts), then follow exercises 001–020 in the [full list](lite://repo/language/samples/list.md). Each file tells a small story, supplies the numbers, and calculates an answer. Comments beside the answers show what to expect.
 
 For short programs you can run with the current interpreter, use the
-[indexed FVP examples](../examples/README.md) in the sibling examples directory.
+[indexed FVP examples](lite://repo/language/examples/README.md) in the sibling examples directory.
 Their local numbering is separate from the 520 exercise IDs.
 
 You do not need to know LiteScript to read the first example:
@@ -39,10 +39,10 @@ Try changing an input number and working out the new answer yourself. The answer
 
 Money examples count amounts in cents: 1999 cents means 19.99 euros. A few examples explain how to round when a calculation lands between cents. Other lessons explore measurements, temperatures, grades, and positions on a map.
 
-The current lessons use Lite’s simple-English reference spellings. [Multilingual learning](../../docs/multilingual-source-and-learning.md) is being explored so students could begin in a familiar language and compare the same ideas with English later; localized keywords and translated lessons are not implemented yet.
+The current lessons use Lite’s simple-English reference spellings. [Multilingual learning](lite://doc/multilingual-source-and-learning) is being explored so students could begin in a familiar language and compare the same ideas with English later; localized keywords and translated lessons are not implemented yet.
 
-**Can I run these?** The [experimental igniter](../../igniter/README.md) runs a small
+**Can I run these?** The [experimental igniter](lite://repo/igniter/README.md) runs a small
 subset now. All 20 lessons have checked outcomes through `language/verifications/` manifests; other
 lessons may use unsupported features. Lesson files themselves print nothing—add
-an explicit outputLine(value) call to see an answer. See the [contributor notes](NOTES.md)
+an explicit outputLine(value) call to see an answer. See the [contributor notes](lite://repo/language/samples/NOTES.md)
 for verification limits.

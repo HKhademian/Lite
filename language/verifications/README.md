@@ -86,14 +86,14 @@ compiler fixtures.
   - `args` — optional program argument values, passed directly to the artifact.
   - `exitCode` — required process status.
 
-The JSON Schema is [schema/verification.schema.json](schema/verification.schema.json).
+The JSON Schema is [schema/verification.schema.json](lite://repo/language/verifications/schema/verification.schema.json).
 The runner performs equivalent structural validation in
-[lib/util/verify.lts](../../lib/util/verify.lts).
+[lib/util/verify.lts](lite://repo/lib/util/verify.lts).
 
 ## Runner
 
 General command, compile/emission, rejection and isolated file cases use the
-[declarative case runner](../cases/README.md). Run one with
+[declarative case runner](lite://repo/language/cases/README.md). Run one with
 `./bin/lite verify PATH.case.json`; the existing feature/artifact verifier and its
 changed-case, cache, shard and explicit-reference modes remain available below.
 
@@ -121,8 +121,8 @@ Shards partition scenarios before execution.
 
 The former T00 comparison recorded 81 scenarios: 60 passed and 21 failed
 (13 feature contracts and eight examples still needed TS ports). That audit is
-archived; active verification uses recorded contracts. The [live gaps](../../compiler/gaps.md) and
-[current inventory](../../compiler/reports/current-t00-t11-inventory.md) track the
+archived; active verification uses recorded contracts. The [live gaps](lite://doc/compiler/gaps) and
+[current inventory](lite://repo/compiler/reports/current-t00-t11-inventory.md) track the
 remaining work. Coverage reports only manifest registration, not compiler support.
 
 ## Performance and scaling
@@ -171,7 +171,7 @@ sharded or curated, and caches make unchanged work nearly free.
 Coverage is now a blocking gate: `./bin/lite verify --coverage` exits nonzero if any
 feature, example or sample lacks a manifest. Showcases are allowed to remain
 empty until that artifact class is introduced. The GitHub Actions workflow
-[.github/workflows/test.yml](../../.github/workflows/test.yml) runs the strict
+[.github/workflows/test.yml](lite://repo/.github/workflows/test.yml) runs the strict
 TypeScript check, `./bin/lite test`, the coverage gate and the editor grammar tests.
 `./bin/lite verify --coverage` and `./bin/lite test` remain the local gates.
 
@@ -183,11 +183,11 @@ artifact clearer, but preserve an artifact whose purpose is to demonstrate the
 replaced construct. Update its manifest hashes/streams with `--update`, then run
 the coverage and full verification gates. Feature cases remain the contract;
 examples and samples are verified consumers. See the
-[artifact-refresh checklist](../../docs/tooling-and-learning.md#refreshing-artifacts-after-a-language-change).
+[artifact-refresh checklist](lite://doc/tooling-and-learning#refreshing-artifacts-after-a-language-change).
 
 ## Adding a case
 
-The [compiler development guidelines](../../.agents/rules/compiler-development.md) require
+The [compiler development guidelines](lite://repo/.agents/rules/compiler-development.md) require
 multiple focused cases and combined-feature cases for each feature, syntax/spec
 change, bug fix and edge-case correction. Use named scenarios for different
 inputs and separate sources for distinct forms. Include boundaries and invalid

@@ -2,49 +2,49 @@
 
 Folder-grouped project samples showcasing algorithms, high-resolution RGBA canvas drawing, animation, interactive controls, Web Audio synthesis, and mini-games.
 
-For core language-specification examples (`001`–`024`), see [language/examples](../language/examples/README.md).
+For core language-specification examples (`001`–`024`), see [language/examples](lite://repo/language/examples/README.md).
 
 ## Programs (`programs/{math,search,text,parsing,records}/`)
 
-- [fibonacci](programs/math/fibonacci.lts) — Iterative Fibonacci sequence and explicit formatting.
-- [primes-sieve](programs/math/primes-sieve.lts) — Prime generation up to 50 with `mut List<Int>`.
-- [binary-search](programs/search/binary-search.lts) — Binary search returning a named tuple result.
-- [caesar-cipher](programs/text/caesar-cipher.lts) — ASCII Caesar cipher round-trip over `core/text`.
-- [word-frequency](programs/text/word-frequency.lts) — Word frequency counter via `core/list`.
-- [rpn-evaluator](programs/parsing/rpn-evaluator.lts) — Stack-based Reverse Polish Notation evaluator.
-- [inventory-ledger](programs/records/inventory-ledger.lts) — Inventory summary combining nominal records, `=name` shorthand, named tuple returns, and fixed-array bounds.
+- [fibonacci](lite://play/fibonacci) — Iterative Fibonacci sequence and explicit formatting.
+- [primes-sieve](lite://play/primes-sieve) — Prime generation up to 50 with `mut List<Int>`.
+- [binary-search](lite://play/binary-search) — Binary search returning a named tuple result.
+- [caesar-cipher](lite://play/caesar-cipher) — ASCII Caesar cipher round-trip over `core/text`.
+- [word-frequency](lite://play/word-frequency) — Word frequency counter via `core/list`.
+- [rpn-evaluator](lite://play/rpn-evaluator) — Stack-based Reverse Polish Notation evaluator.
+- [inventory-ledger](lite://play/inventory-ledger) — Inventory summary combining nominal records, `=name` shorthand, named tuple returns, and fixed-array bounds.
 
 ## Canvas Art (`graphics/art/`)
 
-- [rgba-composition](graphics/art/rgba-composition.lts) — `360x240` layered RGBA composition.
-- [sunset-horizon](graphics/art/sunset-horizon.lts) — `360x220` dusk gradient, solar glow, and reflections.
-- [geometric-mandala](graphics/art/geometric-mandala.lts) — `320x240` radial lines, concentric rings, and petals.
-- [spectrum-bars](graphics/art/spectrum-bars.lts) — `340x200` stepped alpha palette and glaze ribbon.
-- [record-mosaic](graphics/art/record-mosaic.lts) — `360x240` card mosaic driven by nominal `Tile` records, `=name` shorthand, and aggregate destructuring.
+- [rgba-composition](lite://play/play-rgba-art) — `360x240` layered RGBA composition.
+- [sunset-horizon](lite://play/play-sunset-horizon) — `360x220` dusk gradient, solar glow, and reflections.
+- [geometric-mandala](lite://play/play-geometric-mandala) — `320x240` radial lines, concentric rings, and petals.
+- [spectrum-bars](lite://play/play-spectrum-bars) — `340x200` stepped alpha palette and glaze ribbon.
+- [record-mosaic](lite://play/play-record-mosaic) — `360x240` card mosaic driven by nominal `Tile` records, `=name` shorthand, and aggregate destructuring.
 
 ## Animation (`graphics/animation/`)
 
-- [bounce-emblem](graphics/animation/bounce-emblem.lts) — `320x200` bouncing `ℓite` emblem with chimes.
-- [neon-rain](graphics/animation/neon-rain.lts) — `320x200` falling neon streaks with alpha trails.
-- [solar-orbit](graphics/animation/solar-orbit.lts) — `320x220` multi-ring orbital motion.
-- [pulse-ripples](graphics/animation/pulse-ripples.lts) — `320x200` expanding concentric alpha ripples.
+- [bounce-emblem](lite://play/play-bounce) — `320x200` bouncing `ℓite` emblem with chimes.
+- [neon-rain](lite://play/play-neon-rain) — `320x200` falling neon streaks with alpha trails.
+- [solar-orbit](lite://play/play-solar-orbit) — `320x220` multi-ring orbital motion.
+- [pulse-ripples](lite://play/play-pulse-ripples) — `320x200` expanding concentric alpha ripples.
 
 ## Interactive (`graphics/interactive/`)
 
-- [cursor-paint](graphics/interactive/cursor-paint.lts) — `240x160` pointer brush with color swatches and tones.
-- [studio-lamp](graphics/interactive/studio-lamp.lts) — `280x180` clickable lamp toggle with Space/Enter support.
-- [color-mixer](graphics/interactive/color-mixer.lts) — `320x200` draggable RGBA channel sliders.
-- [pixel-maze](graphics/interactive/pixel-maze.lts) — `286x182` maze navigator with WASD/Arrows and chimes.
+- [cursor-paint](lite://play/play-cursor-paint) — `240x160` pointer brush with color swatches and tones.
+- [studio-lamp](lite://play/play-studio-lamp) — `280x180` clickable lamp toggle with Space/Enter support.
+- [color-mixer](lite://play/play-color-mixer) — `320x200` draggable RGBA channel sliders.
+- [pixel-maze](lite://play/play-pixel-maze) — `286x182` maze navigator with WASD/Arrows and chimes.
 
 ## Audio & Synth (`graphics/audio/`)
 
-- [synth-arpeggio](graphics/audio/synth-arpeggio.lts) — `320x180` four-pad sequencer using `audio.Note`.
-- [chord-pad](graphics/audio/chord-pad.lts) — `320x180` polyphonic triad chord pads (`1`–`4` or click).
-- [step-sequencer](graphics/audio/step-sequencer.lts) — `320x200` toggleable 4×4 grid step sequencer.
-- [tone-keyboard](graphics/audio/tone-keyboard.lts) — `320x180` clickable C-major octave keyboard (`1`–`8`).
+- [synth-arpeggio](lite://play/play-arpeggio) — `320x180` four-pad sequencer using `audio.Note`.
+- [chord-pad](lite://play/play-chord-pad) — `320x180` polyphonic triad chord pads (`1`–`4` or click).
+- [step-sequencer](lite://play/play-step-sequencer) — `320x200` toggleable 4×4 grid step sequencer.
+- [tone-keyboard](lite://play/play-tone-keyboard) — `320x180` clickable C-major octave keyboard (`1`–`8`).
 
 ## Games (`games/arcade/`)
 
-- [paddle-pong](games/arcade/paddle-pong.lts) — `320x200` two-paddle Pong with AI tracking and audio cues.
-- [brick-breaker](games/arcade/brick-breaker.lts) — `320x200` RGBA brick breaker with paddle controls and chimes.
-- [grid-snake](games/arcade/grid-snake.lts) — `320x192` snake game using `List<Cell>` queue ops.
+- [paddle-pong](lite://play/play-paddle-pong) — `320x200` two-paddle Pong with AI tracking and audio cues.
+- [brick-breaker](lite://play/play-brick-breaker) — `320x200` RGBA brick breaker with paddle controls and chimes.
+- [grid-snake](lite://play/play-grid-snake) — `320x192` snake game using `List<Cell>` queue ops.

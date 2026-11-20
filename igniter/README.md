@@ -4,80 +4,80 @@ This directory contains TypeScript build, verification and artifact adapters
 for the generated Lite compiler. The handwritten **T00** interpreter and its
 active CLI/test adapters have been retired. Public compile and check use the
 single selected Lite-written TS igniter in
-[`compiler/bootstrap/`](../compiler/bootstrap/README.md). Public `./bin/lite
+[`compiler/bootstrap/`](lite://doc/compiler/bootstrap-readme). Public `./bin/lite
 run` compiles a script to a temporary artifact and executes it; programs also
 execute from directly compiled TS artifacts. Native C self-hosting remains
 later work; public C compilation is currently deferred.
 Verification runs generated TS artifacts. See the
-[transition plan](../compiler/transition-plan.md).
+[transition plan](lite://doc/compiler/transition-plan).
 
 Ongoing language work follows the
-[compiler development guidelines](../.agents/rules/compiler-development.md): implement in
+[compiler development guidelines](lite://repo/.agents/rules/compiler-development.md): implement in
 Lite, verify multiple focused and combined-feature cases, and accept generated
 compiler support before using a new feature in compiler source. The generated
 compiler is the only maintained language implementation.
 
 The staged compiler-bootstrap path and agent gates are recorded in the
-[bootstrap and self-hosting plan](../docs/bootstrap-plan.md); it does not change
+[bootstrap and self-hosting plan](lite://doc/bootstrap-plan); it does not change
 this compiler's supported language. The selected Lite-written TS compiler
 rebuilds to a verified three-generation fixed point for the compiler-source
 subset; remaining recorded language contracts and native C self-hosting remain
-future work. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
+future work. The [text-cache benchmark](lite://repo/benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
 code-point copies. The current test suite has 237 interpreter groups, 32
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
 
 Generated TS now preserves nested report effects and left-to-right report
-argument evaluation; see the [report-order refresh](../compiler/parity.md#report-order-seed-refresh).
+argument evaluation; see the [report-order refresh](lite://doc/compiler/parity#report-order-seed-refresh).
 
-The [current temporary helper contract](../docs/tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+The [current temporary helper contract](lite://doc/tooling-and-learning#temporary-input-and-output-helpers-selected-2026-11-02)
 uses output/outputLine and optional input prompts. The report builtin is removed;
 maintained Lite calls use outputLine. T00 output now includes array/list display;
 generated TS implements the admitted forms and the four input helpers.
 
 Generated TS and portable C11 now check dynamic Int64 addition, subtraction,
 multiplication and negation with matching positioned overflow faults; see the
-[arithmetic refresh](../compiler/parity.md#checked-int64-arithmetic). Wider
+[arithmetic refresh](lite://doc/compiler/parity#checked-int64-arithmetic). Wider
 existing-feature parity, run/check migration and native self-hosting remain pending.
 
 Dynamic integer division/remainder now match exact positioned faults in both
 generated targets, and MIN%-1 returns zero without undefined C arithmetic.
-The [division-family ledger](../compiler/parity.md#positioned-integer-division-family) records
+The [division-family ledger](lite://doc/compiler/parity#positioned-integer-division-family) records
 the seed refresh, differential coverage and paired speed measurements.
 
 Single-pass target helper discovery now avoids repeated emitted-code scans.
 Paired compiler-phase measurements improve from 100.0 to 60.4 ms for 1,000 output
 statements and from 899.0 to 649.8 ms for identical compiler source, with exact
 emitted bytes. All 522 previous/current compiler comparisons match; see the
-[helper-scan ledger](../compiler/parity.md#single-pass-helper-discovery).
+[helper-scan ledger](lite://doc/compiler/parity#single-pass-helper-discovery).
 
 C multi-value output now evaluates every argument before any write, preserving
 left-to-right faults and earlier output. Single-value emitted C is unchanged.
-All 256 full tests pass with zero skips (48.5 s); the [C output-order ledger](../compiler/parity.md#c-output-argument-evaluation)
+All 256 full tests pass with zero skips (48.5 s); the [C output-order ledger](lite://doc/compiler/parity#c-output-argument-evaluation)
 records coverage, unchanged TS seeds and steady paired C-emitter timings.
 
 Generated TS text/list bounds faults now carry exact source locations and keep
 earlier output, using shared fault metadata. All 257 full tests pass with zero
 skips (47.3 s); the measured inventory is 73/162 matching cases with 89 remaining.
 The supplementary-character column convention is separately pending; see the
-[bounds-fault ledger](../compiler/parity.md#positioned-text-and-list-bounds-faults).
+[bounds-fault ledger](lite://doc/compiler/parity#positioned-text-and-list-bounds-faults).
 
 Parenthesized inequality and bare String/Int/Bool function tails now stay
 comparisons, using a shared equals-token check. All 258 full tests pass with zero
 skips (47.3 s); the measured inventory is 75/163 matching cases, 88 remaining.
-Existing corpus artifacts are unchanged; see the [inequality ledger](../compiler/parity.md#inequality-token-discrimination).
+Existing corpus artifacts are unchanged; see the [inequality ledger](lite://doc/compiler/parity#inequality-token-discrimination).
 
 Constant integer arithmetic faults now execute only when reached. Dead branches,
 false loops, skipped Boolean operands and unused functions compile safely; invalid
 literals/types still reject before effects. Six fixtures now model runtime faults,
 so the compiler corpus is 61 programs/32 rejections (still 93 sources). All 259
-full tests pass with zero skips (53.4 s). See the [deferred-fault ledger](../compiler/parity.md#deferred-constant-arithmetic-faults).
+full tests pass with zero skips (53.4 s). See the [deferred-fault ledger](lite://doc/compiler/parity#deferred-constant-arithmetic-faults).
 
 
 Comparison chains now retain middle operands once and skip later operands on both
 generated targets over their admitted scalar types. All 260 full tests pass with
 zero skips (49.4 s); inventory is 79/164 matching cases, 85 remaining. The new
-canonical chain feature executes on all three targets. See the [chain ledger](../compiler/parity.md#comparison-chain-lowering)
+canonical chain feature executes on all three targets. See the [chain ledger](lite://doc/compiler/parity#comparison-chain-lowering)
 for fixed-point, sanitizer and paired speed evidence. Broader types, Never-valued
 exit typing, native C and run/check migration remain pending.
 
@@ -86,39 +86,39 @@ Empty and comment-only scripts now compile silently on generated TS/C, with
 malformed comments still rejected before effects. The corpus is 63 programs and
 30 rejections; existing 61 artifact pairs are unchanged. The parser skips alias
 scanning and remaining state allocation for empty scripts. See the [empty-script
-ledger](../compiler/parity.md#empty-script-support) for generated bootstrap and paired timing evidence.
+ledger](lite://doc/compiler/parity#empty-script-support) for generated bootstrap and paired timing evidence.
 
 
 Simple statement separators now follow EOF, closing scopes and directly closed
 block initializers on generated targets. Adjacent output calls still require a
 separator and reject before effects. The corpus is 64 programs/29 rejections;
-all 63 older artifact pairs stay identical. See the [statement-boundary ledger](../compiler/parity.md#statement-boundaries)
+all 63 older artifact pairs stay identical. See the [statement-boundary ledger](lite://doc/compiler/parity#statement-boundaries)
 for coverage, generated bootstrap and paired timing evidence.
 
 
 Adjacent admitted String literals now join across whitespace/comments on generated
 TS/C and both standalone parser drivers, with malformed later tokens still
 rejected before effects. Corpus: 65 programs/28 rejections; all 64 earlier
-artifact pairs stay identical. See the [adjacent-literal ledger](../compiler/parity.md#adjacent-string-literals)
+artifact pairs stay identical. See the [adjacent-literal ledger](lite://doc/compiler/parity#adjacent-string-literals)
 for focused coverage, generated bootstrap and paired timing evidence.
 
 
 Nonempty calls now admit one trailing comma on generated targets while empty
 comma-only lists, doubled commas and arity/type errors still reject before effects.
 Corpus: 66 programs/27 rejections; all 65 earlier artifact pairs stay identical.
-See the [trailing-comma ledger](../compiler/parity.md#trailing-call-commas) for generated bootstrap,
+See the [trailing-comma ledger](lite://doc/compiler/parity#trailing-call-commas) for generated bootstrap,
 focused combinations and paired timing evidence.
 
 
 Generated TS/C now support statement scopes and preserve outer values while
 shadowed initializers run. The canonical scope feature executes on all three
 targets, yielding 100 verifier executions. All 66 earlier program artifact pairs
-remain identical. See the [scope ledger](../compiler/parity.md#statement-scopes) for focused combinations,
+remain identical. See the [scope ledger](lite://doc/compiler/parity#statement-scopes) for focused combinations,
 generated fixed-point evidence, native sanitizer cases and paired timing data.
 
 ## Run
 
-Use Node **26.13.0** (pinned in [.node-version](.node-version)); TypeScript
+Use Node **26.13.0** (pinned in [.node-version](lite://repo/igniter/.node-version)); TypeScript
 **7.0.2** and Node typings **26.6.6** are pinned in the lockfile for checking.
 These were the stable npm/Node releases checked on 2026-10-30. The runtime has
 no npm package dependencies and executes the `.ts` sources directly.
@@ -136,7 +136,7 @@ Compile other sources the same way. Arguments follow the artifact path directly,
 for example `node compiler/entry.ts /tmp/args.ts "a b" "" --check`.
 Check-only never executes program effects or reads program stdin. Unsupported
 source fails explicitly, without T00 fallback; the
-[current inventory](../compiler/reports/current-t00-t11-inventory.md) lists gaps.
+[current inventory](lite://repo/compiler/reports/current-t00-t11-inventory.md) lists gaps.
 The former `node igniter/cli.ts` T00 entry has been removed.
 
 Install and typecheck the igniter once:
@@ -161,8 +161,8 @@ across inputs. The generated compiler is required for all active paths. Native
 execution stays deferred. Known
 unsupported semantic contracts continue to fail visibly in `lite verify --all`.
 
-The root [lite launcher](../bin/lite) links directly to the Lite-generated
-igniter [`compiler/bootstrap/igniter.ts`](../compiler/bootstrap/igniter.ts). Compile/check locate their adapters relative to
+The root [lite launcher](lite://repo/bin/lite) links directly to the Lite-generated
+igniter [`compiler/bootstrap/igniter.ts`](lite://repo/compiler/bootstrap/igniter.ts). Compile/check locate their adapters relative to
 the launcher while source paths remain relative to the caller. Generated standalone
 TS programs execute directly via `node`, preserving program arguments,
 stdin, streamed output and exit status. No runtime npm dependencies are required;
@@ -184,7 +184,7 @@ cache invalidation. Build, CLI, self-host, release, verification, and phase-test
 paths all follow imports in Lite. TypeScript retains manifest metadata parsing,
 test harnesses, and platform adapters. This work does not claim native C
 self-hosting.
-[`artifacts.ts`](artifacts.ts)
+[`artifacts.ts`](lite://repo/igniter/artifacts.ts)
 strict-typechecks and runs emitted TS, and compiles/runs emitted C with
 `-std=c11 -Wall -Wextra -Werror` and the math library (`-lm`), capturing raw streams and status.
 TS runs capture stdout and stderr through fresh temporary regular files so
@@ -196,39 +196,39 @@ so it bounds memory capture rather than temporary disk usage. Files are truncate
 between runs and removed with the artifact directory. Host regressions cover
 large raw Unicode/NUL output, repeated reports, prompts, faults and early exit.
 
-The manifests are [compiler/manifests/ts.json](../compiler/manifests/ts.json) and
-[c.json](../compiler/manifests/c.json). Each names one Lite root. Imports in
+The manifests are [compiler/manifests/ts.json](lite://repo/compiler/manifests/ts.json) and
+[c.json](lite://repo/compiler/manifests/c.json). Each names one Lite root. Imports in
 `compiler/src/` and `lib/core/` use module aliases; the compiler visitor follows
 the graph and build provenance records the resolved dependency paths. The
-production route enters through [`tools/src/compile-ts.lts`](../tools/src/compile-ts.lts).
+production route enters through [`tools/src/compile-ts.lts`](lite://repo/tools/src/compile-ts.lts).
 
-P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](../compiler/src/lexer.lts)
+P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](lite://repo/compiler/src/lexer.lts)
 with a token-dump driver at
-[`../compiler/tests/lexer/lexer-dump.lts`](../compiler/tests/lexer/lexer-dump.lts). It tokenizes
+[`../compiler/tests/lexer/lexer-dump.lts`](lite://repo/compiler/tests/lexer/lexer-dump.lts). It tokenizes
 names, keywords, Int/String/Bool values, symbols and EOF; skips whitespace and
 nested/raw comments; decodes the selected string escapes; checks Int64 magnitude;
 and records offset plus line/column. Operators use longest-match over the
 selected spellings; incomplete `=!` and the unsupported `&&`/`||` spellings are
 rejected with guidance. Focused fixtures live under
-[`../compiler/tests/lexer/`](../compiler/tests/lexer/). Phase drivers import the
+[`../compiler/tests/lexer/`](lite://repo/compiler/tests/lexer). Phase drivers import the
 lexer, parser, and checker by module alias and compile through Lite's graph.
 Compiler host regressions cover imported file identities, source-hash
 invalidation and both output targets. See the [test-consumer
-migration](../compiler/parity.md#generated-full-source-test-consumers) and
-[artifact-validation ledger](../compiler/parity.md#batched-ts-artifact-validation).
+migration](lite://doc/compiler/parity#generated-full-source-test-consumers) and
+[artifact-validation ledger](lite://doc/compiler/parity#batched-ts-artifact-validation).
 
 P4 adds the parser core, type grammar, declarations, expressions, statements and
-functions in [`../compiler/src/parser.lts`](../compiler/src/parser.lts). It parses
+functions in [`../compiler/src/parser.lts`](lite://repo/compiler/src/parser.lts). It parses
 expanded S, L0, the lexer source and all program cases; value `if` branches are
 currently single-expression blocks. Compiler source imports now follow Lite
 module aliases; unsupported declarations are rejected by name. Fixtures live under
-[`../compiler/tests/parser/`](../compiler/tests/parser/).
+[`../compiler/tests/parser/`](lite://repo/compiler/tests/parser).
 
-P5 adds the Lite checker in [`../compiler/src/check.lts`](../compiler/src/check.lts).
+P5 adds the Lite checker in [`../compiler/src/check.lts`](lite://repo/compiler/src/check.lts).
 It collects symbols, validates type names and aliases, checks block scopes,
 local and assignment types, Bool conditions, arity/arguments/returns,
 tuple/list/field/index types, mutation grants and break/return placement.
-Fixtures live under [`../compiler/tests/checker/`](../compiler/tests/checker/).
+Fixtures live under [`../compiler/tests/checker/`](lite://repo/compiler/tests/checker).
 Expanded S checks, the restricted 42-case corpus keeps exact diagnostics, and
 invalid focused fixtures are rejected before emission.
 Token and parse-node kind tags are centralized as zero-argument accessors
@@ -389,8 +389,8 @@ Select the callee first, evaluate every supplied expression once in written orde
 An exit/fault stops later preparation and the body. self uses the same routing.
 Temporary builtin helpers remain positional; their public labels are unselected.
 Defaults, spread, callable views and access-qualified inputs remain unsupported.
-See [012](../language/examples/functions/calls/named-arguments.lts) and
-[INV-031 evidence](../research/investigations/INV-031-fvp-named-calls.md).
+See [012](lite://play/example/named-arguments) and
+[INV-031 evidence](lite://repo/research/investigations/INV-031-fvp-named-calls.md).
 
 ### Flat fixed tuples
 
@@ -476,8 +476,8 @@ Named and unnamed scalar fields may interleave in written order, for example
 (7, tea = "green", 2) with type (:Int, tea: String, :Int). Numeric access covers
 every position; field access covers labeled positions. Copies, function contracts
 and homogeneous arrays preserve each position's label or absence of a label.
-See [010](../language/examples/types/tuples/mixed-tuples.lts) and
-[INV-022 evidence](../research/investigations/INV-022-fvp-mixed-tuples.md).
+See [010](lite://play/example/mixed-tuples) and
+[INV-022 evidence](lite://repo/research/investigations/INV-022-fvp-mixed-tuples.md).
 
 ### Explicit tuple label conversion
 
@@ -489,8 +489,8 @@ receiving bindings work; later replacement still checks the destination labels.
 Fresh constructors with matching labels work, but contextual construction needing
 routing remains diagnosed as unimplemented. No numeric casts, callable label
 adaptation, aliases or uninitialized typed storage are implemented here. See
-[011](../language/examples/types/tuples/tuple-label-conversion.lts) and
-[INV-022 evidence](../research/investigations/INV-022-fvp-label-conversion.md).
+[011](lite://play/example/tuple-label-conversion) and
+[INV-022 evidence](lite://repo/research/investigations/INV-022-fvp-label-conversion.md).
 
 ### Growable lists
 
@@ -538,8 +538,8 @@ exhaustion is not promised recoverable. No allocation Result, capacity helper,
 optimizer, view, indexed write, alias framework or attached recovery is added.
 Each host update builds a fresh immutable sequence, preserving previous values;
 this intentionally simple implementation has no amortized growth or native
-layout/performance claim. See [013](../language/examples/types/collections/growable-lists.lts) and
-[INV-055 evidence](../research/investigations/INV-055-fvp-list-slice.md).
+layout/performance claim. See [013](lite://play/example/growable-lists) and
+[INV-055 evidence](lite://repo/research/investigations/INV-055-fvp-list-slice.md).
 
 ### Fixed arrays and traversal
 
@@ -608,7 +608,7 @@ runner flags, script path and separator are excluded. No path normalization,
 option parsing, glob expansion or conversion occurs inside Lite. Ordinary helper
 shadowing and before-effects signature checking apply. Check-only remains silent
 and does not execute inputArgs or read stdin. The embedding IO.args field is
-optional for existing callers. See [INV-067 evidence](../research/investigations/INV-067-fvp-script-arguments.md).
+optional for existing callers. See [INV-067 evidence](lite://repo/research/investigations/INV-067-fvp-script-arguments.md).
 
 ### Whole input with optional prompt
 
@@ -624,8 +624,8 @@ remain unsupported; ordinary shadowing works. Invalid signatures fail before
 program effects, read failures stay terminal and the other input helpers retain
 their EOF-fault rules. It reads all remaining text and may use proportional memory;
 no file API, rewind, streaming guarantee or normalization is added. See
-[019](../language/examples/io/streams/whole-input.lts) and
-[INV-004 evidence](../research/investigations/INV-004-fvp-whole-input.md).
+[019](lite://play/example/whole-input) and
+[INV-004 evidence](lite://repo/research/investigations/INV-004-fvp-whole-input.md).
 
 ### Temporary text operations
 
@@ -633,7 +633,7 @@ no file API, rewind, streaming guarantee or normalization is added. See
 code-point/half-open/terminal-bounds policy are selected as temporary FVP helpers.
 The earlier alpha.5 implementation was unapproved at the time; current acceptance
 comes from the user's explicit reply to the focused review. See
-[INV-016](../research/investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+[INV-016](lite://repo/research/investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
 
 Computed `String + String` concatenates without adding separators, interpreting
 escapes, or converting other types to text. Operands evaluate once, left to right.
@@ -667,7 +667,7 @@ unsupported or open. Helper parameter names above are explanatory; only
 positional arguments are supported. These helper names obey ordinary shadowing and are not
 first-class builtin values.
 
-The [arithmetic tokenizer](../language/examples/parsing/scanning/scan-arithmetic.lts) groups ASCII decimal
+The [arithmetic tokenizer](lite://play/example/scan-arithmetic) groups ASCII decimal
 digit runs, skips spaces/tabs, and reports individual `+ - * / ( )` symbols.
 It preserves digit text, including leading zeroes. An unsupported character
 explicitly reports an error and exits 2. An empty supplied line emits only the
@@ -847,40 +847,40 @@ remain unchanged. This is not proof of the full
 20-lesson or larger-language contract.
 
 Project-level feature and artifact verification is `./bin/lite verify`, backed by
-[lib/util/verify.lts](../lib/util/verify.lts) and [language/verifications/](../language/verifications/README.md). The
+[lib/util/verify.lts](lite://repo/lib/util/verify.lts) and [language/verifications/](lite://repo/language/verifications/README.md). The
 first slice has 36 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `dist/` directory.
 The default smoke suite is intended for quick local feedback. `--fast` runs the broad
 generated regression suite, and CI uses `--full` to include full-source phase sweeps.
 
 Compiler verification cases are one JSON model plus a sibling `.lts` entry
-source per case under [tests/compiler](tests/compiler/); filenames follow
+source per case under [tests/compiler](lite://repo/igniter/tests/compiler); filenames follow
 `NNN-MMM-title-subtitle.json` (category 001 accepted program, 002 compiler rejection).
 There are 69 programs and 25 rejections; accepted programs include six expected
 arithmetic runtime faults. The schema
-and workflow are documented in [tests/README.md](tests/README.md). The suite
+and workflow are documented in [tests/README.md](lite://doc/compiler/igniter-tests). The suite
 loads all cases and does not keep separate inline source, input, and
 expected-output arrays. Invalid UTF-8 compiler input, source-name diagnostics,
-exact artifact shape, and `--check` are covered by [cli-contracts.test.lts](../compiler/tests/cli-contracts.test.lts).
+exact artifact shape, and `--check` are covered by [cli-contracts.test.lts](lite://repo/compiler/tests/cli-contracts.test.lts).
 
 References checked for the toolchain: [Node release/downloads](https://nodejs.org/en/download),
 [Node TypeScript execution](https://nodejs.org/api/typescript.html),
 [TypeScript installation](https://www.typescriptlang.org/download/), and
 [compiler options](https://www.typescriptlang.org/tsconfig/).
 
-The [retained-token example 015](../language/examples/parsing/scanning/retained-tokens.lts) returns a
+The [retained-token example 015](lite://play/example/retained-tokens) returns a
 named-tuple list before traversal; invalid text exits without partial token output.
 
-The [integer calculator 016](../language/examples/parsing/evaluators/integer-calculator.lts) parses the
+The [integer calculator 016](lite://play/example/integer-calculator) parses the
 scanner's arithmetic input using ordinary Lite recursion and position/value
 pairs. It runs on the preserved alpha.15 interpreter too. This is application
 front-end evidence, not a Lite compiler, AST/IR choice, code generator or
-self-hosted build. See [INV-061 evidence](../research/investigations/INV-061-lite-arithmetic-front-end.md).
+self-hosted build. See [INV-061 evidence](lite://repo/research/investigations/INV-061-lite-arithmetic-front-end.md).
 
-The Lite-written compiler now lives in [compiler/](../compiler/README.md), not
+The Lite-written compiler now lives in [compiler/](lite://doc/compiler/overview), not
 in the runnable example list. It has one shared front-end and separate TS/C
 emitters connected with Lite namespace imports. Each manifest selects one root;
-the Lite import visitor traverses its graph and [compiler-build.lts](../lib/util/compiler-build.lts)
+the Lite import visitor traverses its graph and [compiler-build.lts](lite://repo/lib/util/compiler-build.lts)
 supplies selection and records the exact dependencies. Module namespaces are
 available to compiler source; package resolution remains open.
 
@@ -893,9 +893,9 @@ node compiler/entry.ts /tmp/program.ts
 ./bin/lite-compile ts program.lts
 ```
 
-Inspect the checked-in [TS reference](../compiler/tests/references/generated/report-42.ts),
-[explicit adapter](../compiler/tests/references/generated/run-report.ts), and
-[C reference](../compiler/tests/references/generated/report-42.c). Strictly check the TS
+Inspect the checked-in [TS reference](lite://repo/compiler/tests/references/generated/report-42.ts),
+[explicit adapter](lite://repo/compiler/tests/references/generated/run-report.ts), and
+[C reference](lite://repo/compiler/tests/references/generated/report-42.c). Strictly check the TS
 reference/adapter with the shared igniter check:
 `node igniter/node_modules/typescript/bin/tsc -p igniter/tsconfig.json`.
 
@@ -905,32 +905,32 @@ uses `int64_t`/`INT64_C`, `printf` with `PRId64`, and UTF-8 string literals with
 trigraph-safe `?`. Both check signed 64-bit ranges and Int/String mixing before
 producing source. The emitted core checks without Node/DOM types; no browser,
 AS/Wasm or compiler self-rebuild claim follows. See
-[String/report evidence](../research/investigations/INV-061-string-and-multi-value-reports.md).
+[String/report evidence](lite://repo/research/investigations/INV-061-string-and-multi-value-reports.md).
 
 Both backends use inputAll() without prompts, accepting multi-line
 spaces/tabs/CR/LF around admitted statements and rejecting later unsupported
 source before emission. Empty source is a compiler rejection (2), not an
 inputLine EOF fault. The shared corpus now has 53 program cases and 39
-rejection cases under [tests/compiler](tests/compiler/), with exact raw
+rejection cases under [tests/compiler](lite://repo/igniter/tests/compiler), with exact raw
 bytes/status across emitted TS, translated JS, native C and the igniter for the
 program cases. See
-[String/report evidence](../research/investigations/INV-061-string-and-multi-value-reports.md).
+[String/report evidence](lite://repo/research/investigations/INV-061-string-and-multi-value-reports.md).
 
 The two compiler applications accept zero or one logical source-name argument
 after --. One name is preserved exactly as a prefix on compiler rejection
 messages; omission keeps prior messages. Extra arguments fail before source
 reads. Valid artifact bytes remain unchanged, and names are not embedded as
 source code. This does not implement generated runtime source locations or
-fault parity; see [source-context evidence](../research/investigations/INV-061-compiler-source-context.md).
+fault parity; see [source-context evidence](lite://repo/research/investigations/INV-061-compiler-source-context.md).
 
 Sequential ordinary value declarations now create fresh bindings on generated
 TS/C; initializers retain the previous value and later uses obey the new type
 and mutation permissions. Corpus: 67 programs/26 rejections; all 66 older
 artifact pairs remain identical. Inventory: 88/164 match, 76 remain, with no
-regressions. See the [shadowing evidence](../compiler/parity.md#sequential-value-bindings).
+regressions. See the [shadowing evidence](lite://doc/compiler/parity#sequential-value-bindings).
 
 Generated expression items now evaluate silently, empty separators are accepted,
 and trailing separators retain checked function results. Unit tails preserve
 effects and reject incompatible results before artifact output. Inventory:
 89/164 match, 75 remain; all 67 program artifact pairs stay unchanged. See the
-[expression-item evidence](../compiler/parity.md#ordinary-expression-items).
+[expression-item evidence](lite://doc/compiler/parity#ordinary-expression-items).
