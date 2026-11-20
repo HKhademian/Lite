@@ -538,6 +538,60 @@ pub ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: L
     code
 };
 
+/** Reduces a conditional expression chain in O(k) by dropping constant-false arms and stopping at the first constant-true arm, propagating the winning branch's constant value when statically selected. */
+pub reduceTernaryResult := fn(
+target: String,
+resultKind: String,
+conditionCodes: List<String>,
+conditionStates: List<Int>,
+branchCodes: List<String>,
+branchKinds: List<String>,
+branchConsts: List<Bool>,
+branchIntValues: List<Int>,
+branchTextValues: List<String>,
+branchCount: Int,
+next: Int
+): Parsed {
+    keptCondCodes: mut List<String> = [];
+    keptBranchCodes: mut List<String> = [];
+    keptBranchKinds: mut List<String> = [];
+    var keptCondCount := 0;
+    var selectedIndex := -1;
+    var hitTrue := false;
+    var index := 0;
+    condCount := branchCount - 1;
+    loop index < condCount {
+        state := conditionStates[index];
+        if state == 1 {
+            listLib.pushBack(mut keptBranchCodes, branchCodes[index]);
+            listLib.pushBack(mut keptBranchKinds, branchKinds[index]);
+            if keptCondCount == 0 { selectedIndex = index; }
+            hitTrue = true;
+            break;
+        }
+        if state =!= 0 {
+            listLib.pushBack(mut keptCondCodes, conditionCodes[index]);
+            listLib.pushBack(mut keptBranchCodes, branchCodes[index]);
+            listLib.pushBack(mut keptBranchKinds, branchKinds[index]);
+            keptCondCount = keptCondCount + 1;
+        }
+        index = index + 1;
+    }
+    if not hitTrue {
+        lastIdx := branchCount - 1;
+        listLib.pushBack(mut keptBranchCodes, branchCodes[lastIdx]);
+        listLib.pushBack(mut keptBranchKinds, branchKinds[lastIdx]);
+        if keptCondCount == 0 { selectedIndex = lastIdx; }
+    }
+    code := ternaryChainCode(target, resultKind, keptCondCodes, keptBranchCodes, keptBranchKinds, keptCondCount + 1);
+    if selectedIndex >= 0 and branchConsts[selectedIndex] and
+    (branchKinds[selectedIndex] == resultKind or (numeric.isIntKind(resultKind) and numeric.isIntKind(branchKinds[selectedIndex]))) {
+        return (kind = resultKind, code = code, intValue = branchIntValues[selectedIndex],
+        textValue = branchTextValues[selectedIndex], constant = true, next = next);
+    }
+    (kind = resultKind, code = code, intValue = 0, textValue = "", constant = false, next = next)
+};
+
 /** Formats one conditional branch statement for a lowered IIFE conditional (`if`, `else if`, `else`, or `match` arm). */
 pub condBranchStmtCode := fn(target: String, valKind: String, valVar: String, branchKind: String, branchCode: String): String {
     if valKind == ir.VALUE_KIND_NEVER {

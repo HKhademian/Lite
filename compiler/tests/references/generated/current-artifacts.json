@@ -1,7 +1,7 @@
 {
   "note": "Unified Block Model Slice 3 (uniform lexical closures/captures, inner-block parallel compile-time symbol wiring, uniform execution-trace initialization safety, and escaping-closure checks on TS; C continues rejecting fn values explicitly). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-20",
-  "sourceSha256": "0ce2c42b7f0e8b9b2388d9642b73cdfed960e34b8958b736c7e40663d7c85e2d",
+  "sourceSha256": "90de92f10104f778023bad22144711870f6cac05609cf718f17c8001547c2db9",
   "compilerSha256": "97614fe3bd7524eaf569da979beba25485240096c3f002b469e21b9c8583945f",
   "programCases": 69,
   "rejectedCases": 25,
@@ -243,7 +243,7 @@
     {
       "name": "nested-shadow",
       "source": "001-005-nested-shadow.lts",
-      "ts": "sha256:9130c98281af3f3077d3a2938fa5b1197f2447bd465dade95a224a76ea3ebd33",
+      "ts": "sha256:23daa387d5a785ebf83408bf74a4922e6666ff361c804ea7a2e01d8e0523ef86",
       "c": "sha256:c0b233a8086a5dca26c253fd6abd87af1bec596ae218c3afdb228c5aa27357a4"
     },
     {
@@ -363,7 +363,7 @@
     {
       "name": "string-equality-if",
       "source": "001-007-string-equality-if.lts",
-      "ts": "sha256:87c7004dc6841588c1f0fea249d4e32dc0c711a47e5b9760a32def26efd3c2ff",
+      "ts": "sha256:5c6fac1b299f74c26ce6729076c00efce19502402f54106db7cdd9df26f7180a",
       "c": "sha256:1097dfcc008fd8949be11885a8d0faa53b2baaab3582a4c4711511e9ec6d0ca9"
     },
     {
@@ -421,5 +421,5 @@
       "c": "sha256:f39edfd607784fbc069b8635dd916d7e52ea0cb5573ddd48ea27d2fb58ea5cd3"
     }
   ],
-  "artifactSha256": "d6457798a6ae0c94ffc7579522f1f5df130d99d172b111f77de7b33f72abd88c"
+  "artifactSha256": "02fd659eb0a54b52eb550aa6f36cc65dee3d6d187dadeace6b943d53e2c680f9"
 }

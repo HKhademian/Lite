@@ -302,3 +302,81 @@ loop ei < 9 {
     compilerTest.assertCompileError(root, cComp, "else-if bad C " + elseIfBadSrc[ei], elseIfBadSrc[ei], elseIfBadErr[ei]);
     ei = ei + 1;
 }
+
+/* constant branch simplification eliminates dead arms and unwraps constant-true branches */
+constBranchSrc :=
+"io := import \"core/io\";\n" +
+"score := 84;\n" +
+"label := if score >= 90 { \"honors\" } else if score >= 60 { \"pass\" } else { \"retry\" };\n" +
+"var note := \"none\";\n" +
+"if score >= 80 {\n" +
+"    note = \"merit\";\n" +
+"}\n" +
+"io.outputLine(label, note);\n";
+constBranchTs := compilerTest.compileStdin(root, tsComp, constBranchSrc, "");
+test.checkInt("const branch TS compile", 0, constBranchTs.status);
+test.check("const branch TS drops ternary", not text.containsText(constBranchTs.stdout, "? \"honors\""));
+test.check("const branch TS drops dead honors", not text.containsText(constBranchTs.stdout, "\"honors\""));
+test.check("const branch TS drops dead retry", not text.containsText(constBranchTs.stdout, "\"retry\""));
+test.check("const branch TS drops if(true)", not text.containsText(constBranchTs.stdout, "if (Boolean(true))"));
+compilerTest.assertCompileRunTs(root, tsComp, "const branch TS run", constBranchSrc, "pass merit\n");
+
+/* constant expression if and subjectless match propagate folded constants */
+constPropSrc :=
+"io := import \"core/io\";\n" +
+"a := if 1 < 2 { 10 } else { 20 };\n" +
+"b := a + 5;\n" +
+"c := if b == 15 { \"folded\" } else { \"unfolded\" };\n" +
+"m := match {\n" +
+"    false { \"no\" }\n" +
+"    true { \"yes\" }\n" +
+"    _ { \"fallback\" }\n" +
+"};\n" +
+"io.outputLine(c, m);\n";
+constPropTs := compilerTest.compileStdin(root, tsComp, constPropSrc, "");
+test.checkInt("const prop TS compile", 0, constPropTs.status);
+test.check("const prop TS propagates folded if into next branch", not text.containsText(constPropTs.stdout, "\"unfolded\""));
+test.check("const prop TS drops dead match arms", not text.containsText(constPropTs.stdout, "\"no\"") and not text.containsText(constPropTs.stdout, "\"fallback\""));
+compilerTest.assertCompileRunTs(root, tsComp, "const prop TS run", constPropSrc, "folded yes\n");
+
+/* mixed runtime and constant arms keep runtime guards and prune dead arms */
+mixedBranchSrc :=
+"io := import \"core/io\";\n" +
+"var flag := false;\n" +
+"exprVal := if flag { \"a\" } else if false { \"dead1\" } else if true { \"b\" } else { \"dead2\" };\n" +
+"var stmtVal := \"init\";\n" +
+"if false {\n" +
+"    stmtVal = \"dead3\";\n" +
+"} else if flag {\n" +
+"    stmtVal = \"flag\";\n" +
+"} else if true {\n" +
+"    stmtVal = \"picked\";\n" +
+"} else {\n" +
+"    stmtVal = \"dead4\";\n" +
+"}\n" +
+"io.outputLine(exprVal, stmtVal);\n";
+mixedBranchTs := compilerTest.compileStdin(root, tsComp, mixedBranchSrc, "");
+test.checkInt("mixed branch TS compile", 0, mixedBranchTs.status);
+test.check("mixed branch TS drops dead1..4",
+not text.containsText(mixedBranchTs.stdout, "\"dead1\"") and
+not text.containsText(mixedBranchTs.stdout, "\"dead2\"") and
+not text.containsText(mixedBranchTs.stdout, "\"dead3\"") and
+not text.containsText(mixedBranchTs.stdout, "\"dead4\""));
+compilerTest.assertCompileRunTs(root, tsComp, "mixed branch TS run", mixedBranchSrc, "b picked\n");
+
+/* unwrapped constant-true branches preserve block scope when declaring locals */
+scopedConstIfSrc :=
+"io := import \"core/io\";\n" +
+"if true { var x := 1; x = x + 1; io.outputLine(x); }\n" +
+"if true { var x := 10; x = x + 2; io.outputLine(x); }\n";
+compilerTest.assertCompileRunTs(root, tsComp, "scoped const-if TS run", scopedConstIfSrc, "2\n12\n");
+if ccInfo.available {
+    scopedConstIfC := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, scopedConstIfSrc, "", "");
+    test.checkInt("scoped const-if C run status", 0, scopedConstIfC.status);
+    test.checkText("scoped const-if C stdout", "2\n12\n", scopedConstIfC.stdout);
+}
+
+/* dead arms in constant conditionals are still type-checked */
+compilerTest.assertCompileError(root, tsComp, "dead arm type mismatch TS",
+"io := import \"core/io\"; v := if false { 1 } else if true { \"ok\" } else { 2 }; io.outputLine(v);\n",
+"1:60: value if branches must have the same kind, got Int and String\n");

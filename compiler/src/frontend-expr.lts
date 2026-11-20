@@ -3954,6 +3954,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             } else {
                 condition.code
             };
+            conditionState := if condition.constant { if condition.intValue =!= 0 { 1 } else { 0 } } else { -1 };
             beforeFirstOpen := syntax.skipTrivia(source, condition.next, prefix);
             syntax.rejectMisplacedTag(source, beforeFirstOpen, prefix, "block tag cannot appear before { in if");
             cursor = syntax.expectSymbol(source, beforeFirstOpen, "{", prefix);
@@ -3961,11 +3962,19 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             if inferMode { ifMarkers = ctx.collectParsedMarkers(ifMarkers, first); }
             cursor = first.next;
             conditionCodes: mut List<String> = [];
+            conditionStates: mut List<Int> = [];
             branchCodes: mut List<String> = [];
             branchKinds: mut List<String> = [];
+            branchConsts: mut List<Bool> = [];
+            branchIntValues: mut List<Int> = [];
+            branchTextValues: mut List<String> = [];
             listLib.pushBack(mut conditionCodes, conditionCode);
+            listLib.pushBack(mut conditionStates, conditionState);
             listLib.pushBack(mut branchCodes, first.code);
             listLib.pushBack(mut branchKinds, first.kind);
+            listLib.pushBack(mut branchConsts, first.constant);
+            listLib.pushBack(mut branchIntValues, first.intValue);
+            listLib.pushBack(mut branchTextValues, first.textValue);
             var resultKind := first.kind;
             var branchCount := 1;
             loop true {
@@ -3983,6 +3992,9 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     fallback := ctx.zeroParsed(target, resultKind, cursor);
                     listLib.pushBack(mut branchCodes, fallback.code);
                     listLib.pushBack(mut branchKinds, resultKind);
+                    listLib.pushBack(mut branchConsts, fallback.constant);
+                    listLib.pushBack(mut branchIntValues, fallback.intValue);
+                    listLib.pushBack(mut branchTextValues, fallback.textValue);
                     branchCount = branchCount + 1;
                     break;
                 }
@@ -4001,6 +4013,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     } else {
                         elseCondition.code
                     };
+                    elseConditionState := if elseCondition.constant { if elseCondition.intValue =!= 0 { 1 } else { 0 } } else { -1 };
                     beforeElseIfOpen := syntax.skipTrivia(source, elseCondition.next, prefix);
                     syntax.rejectMisplacedTag(source, beforeElseIfOpen, prefix, "block tag cannot appear before { in else if");
                     open := syntax.expectSymbol(source, beforeElseIfOpen, "{", prefix);
@@ -4015,8 +4028,12 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     resultKind = joinedKind;
                     cursor = branch.next;
                     listLib.pushBack(mut conditionCodes, elseConditionCode);
+                    listLib.pushBack(mut conditionStates, elseConditionState);
                     listLib.pushBack(mut branchCodes, branch.code);
                     listLib.pushBack(mut branchKinds, branch.kind);
+                    listLib.pushBack(mut branchConsts, branch.constant);
+                    listLib.pushBack(mut branchIntValues, branch.intValue);
+                    listLib.pushBack(mut branchTextValues, branch.textValue);
                     branchCount = branchCount + 1;
                 } else {
                     open := syntax.expectSymbol(source, afterElse, "{", prefix);
@@ -4032,12 +4049,15 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     cursor = branch.next;
                     listLib.pushBack(mut branchCodes, branch.code);
                     listLib.pushBack(mut branchKinds, branch.kind);
+                    listLib.pushBack(mut branchConsts, branch.constant);
+                    listLib.pushBack(mut branchIntValues, branch.intValue);
+                    listLib.pushBack(mut branchTextValues, branch.textValue);
                     branchCount = branchCount + 1;
                     break;
                 }
             }
-            code := ctx.ternaryChainCode(target, resultKind, conditionCodes, branchCodes, branchKinds, branchCount);
-            return ctx.withMarkers((kind = resultKind, code = code, intValue = 0, textValue = "", constant = false, next = cursor), ifMarkers);
+            reduced := ctx.reduceTernaryResult(target, resultKind, conditionCodes, conditionStates, branchCodes, branchKinds, branchConsts, branchIntValues, branchTextValues, branchCount, cursor);
+            return ctx.withMarkers(reduced, ifMarkers);
         }
         if isSubjectMatch {
             subRes := parseSubjectMatchBody(target, source, condParseStart, prefix, locals, functions, params, currentName, expected, condBarrierCtxs, iifeDepth + 1, inferMode, "value", "", "", aliases);
@@ -4049,8 +4069,12 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         size := textLib.length(source);
         var cursor := syntax.skipItemSeparators(source, openMatchPos + 1, prefix);
         conditionCodes: mut List<String> = [];
+        conditionStates: mut List<Int> = [];
         branchCodes: mut List<String> = [];
         branchKinds: mut List<String> = [];
+        branchConsts: mut List<Bool> = [];
+        branchIntValues: mut List<Int> = [];
+        branchTextValues: mut List<String> = [];
         var matchMarkers := "";
         var resultKind := "";
         var branchCount := 0;
@@ -4108,7 +4132,9 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                 } else {
                     condition.code
                 };
+                conditionState := if condition.constant { if condition.intValue =!= 0 { 1 } else { 0 } } else { -1 };
                 listLib.pushBack(mut conditionCodes, conditionCode);
+                listLib.pushBack(mut conditionStates, conditionState);
             }
             armBodyStart := syntax.skipTrivia(source, armOpen + 1, prefix);
             branch := parseBinaryCtx(target, source, armOpen, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch", aliases);
@@ -4121,11 +4147,14 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             resultKind = joinedKind;
             listLib.pushBack(mut branchCodes, branch.code);
             listLib.pushBack(mut branchKinds, branch.kind);
+            listLib.pushBack(mut branchConsts, branch.constant);
+            listLib.pushBack(mut branchIntValues, branch.intValue);
+            listLib.pushBack(mut branchTextValues, branch.textValue);
             branchCount = branchCount + 1;
             cursor = branch.next;
         }
-        code := ctx.ternaryChainCode(target, resultKind, conditionCodes, branchCodes, branchKinds, branchCount);
-        return ctx.withMarkers((kind = resultKind, code = code, intValue = 0, textValue = "", constant = false, next = cursor), matchMarkers);
+        reduced := ctx.reduceTernaryResult(target, resultKind, conditionCodes, conditionStates, branchCodes, branchKinds, branchConsts, branchIntValues, branchTextValues, branchCount, cursor);
+        return ctx.withMarkers(reduced, matchMarkers);
     }
     condId := ctx.nextCtxId(ctxs);
     condValVar := "lite$val" + integer.intText(condId);
@@ -4161,6 +4190,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         };
         var passMarkers := "";
         passCondCodes: mut List<String> = [];
+        passCondStates: mut List<Int> = [];
         passBranchCodes: mut List<String> = [];
         passBranchKinds: mut List<String> = [];
         var passResultKind := "";
@@ -4183,6 +4213,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             } else {
                 cond0.code
             };
+            cond0State := if cond0.constant { if cond0.intValue =!= 0 { 1 } else { 0 } } else { -1 };
             beforeFirstOpen := syntax.skipTrivia(source, cond0.next, prefix);
             syntax.rejectMisplacedTag(source, beforeFirstOpen, prefix, "block tag cannot appear before { in if");
             cursor = syntax.expectSymbol(source, beforeFirstOpen, "{", prefix);
@@ -4190,6 +4221,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, first); }
             cursor = first.next;
             listLib.pushBack(mut passCondCodes, cond0Code);
+            listLib.pushBack(mut passCondStates, cond0State);
             listLib.pushBack(mut passBranchCodes, first.code);
             listLib.pushBack(mut passBranchKinds, first.kind);
             passResultKind = first.kind;
@@ -4218,6 +4250,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     } else {
                         elseCond.code
                     };
+                    elseCondState := if elseCond.constant { if elseCond.intValue =!= 0 { 1 } else { 0 } } else { -1 };
                     beforeElseIfOpen := syntax.skipTrivia(source, elseCond.next, prefix);
                     syntax.rejectMisplacedTag(source, beforeElseIfOpen, prefix, "block tag cannot appear before { in else if");
                     open := syntax.expectSymbol(source, beforeElseIfOpen, "{", prefix);
@@ -4232,6 +4265,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     passResultKind = joinedKind;
                     cursor = branch.next;
                     listLib.pushBack(mut passCondCodes, elseCondCode);
+                    listLib.pushBack(mut passCondStates, elseCondState);
                     listLib.pushBack(mut passBranchCodes, branch.code);
                     listLib.pushBack(mut passBranchKinds, branch.kind);
                     passBranchCount = passBranchCount + 1;
@@ -4322,7 +4356,9 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     } else {
                         condParsed.code
                     };
+                    condState := if condParsed.constant { if condParsed.intValue =!= 0 { 1 } else { 0 } } else { -1 };
                     listLib.pushBack(mut passCondCodes, condCode);
+                    listLib.pushBack(mut passCondStates, condState);
                 }
                 armBodyStart := syntax.skipTrivia(source, armOpen + 1, prefix);
                 branch := parseBinaryCtx(target, source, armOpen, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
@@ -4382,15 +4418,35 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             } else {
                 condCount := if passHasElse { passBranchCount - 1 } else { passBranchCount };
                 var cIdx := 0;
+                var emittedCondCount := 0;
+                var hitConstTrue := false;
                 loop cIdx < condCount {
-                    kwPrefix := if cIdx == 0 { "if (" } else { " else if (" };
-                    stmtPart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[cIdx], passBranchCodes[cIdx]);
-                    rawIfStmt = rawIfStmt + kwPrefix + "Boolean(" + passCondCodes[cIdx] + ")) { " + stmtPart + " }";
+                    cState := passCondStates[cIdx];
+                    if cState == 1 {
+                        stmtPart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[cIdx], passBranchCodes[cIdx]);
+                        if emittedCondCount == 0 {
+                            rawIfStmt = stmtPart;
+                        } else {
+                            rawIfStmt = rawIfStmt + " else { " + stmtPart + " }";
+                        }
+                        hitConstTrue = true;
+                        break;
+                    }
+                    if cState =!= 0 {
+                        kwPrefix := if emittedCondCount == 0 { "if (" } else { " else if (" };
+                        stmtPart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[cIdx], passBranchCodes[cIdx]);
+                        rawIfStmt = rawIfStmt + kwPrefix + "Boolean(" + passCondCodes[cIdx] + ")) { " + stmtPart + " }";
+                        emittedCondCount = emittedCondCount + 1;
+                    }
                     cIdx = cIdx + 1;
                 }
-                if passHasElse {
+                if not hitConstTrue and passHasElse {
                     elsePart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[passBranchCount - 1], passBranchCodes[passBranchCount - 1]);
-                    rawIfStmt = rawIfStmt + " else { " + elsePart + " }";
+                    if emittedCondCount == 0 {
+                        rawIfStmt = elsePart;
+                    } else {
+                        rawIfStmt = rawIfStmt + " else { " + elsePart + " }";
+                    }
                 }
             }
             needsCondTry := condParseTag =!= "" and reach.codeUsesTextCall(rawIfStmt, "lite$throwTransfer(" + integer.intText(condId) + ",");

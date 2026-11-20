@@ -227,11 +227,8 @@ actionIfC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; i
 test.checkInt("action if C status", 0, actionIfC.status);
 expectedActionIfC :=
 "#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\n" +
-"int main(void) {\n    int status = 0;\n    if (true) {\n" +
-"        if (printf(\"%\" PRId64, (int64_t)(INT64_C(1))) < 0) { status = 1; }\n" +
-"        if (printf(\"\\n\") < 0) { status = 1; }\n" +
-"    } else {\n" +
-"        if (printf(\"%\" PRId64, (int64_t)(INT64_C(2))) < 0) { status = 1; }\n" +
-"        if (printf(\"\\n\") < 0) { status = 1; }\n" +
-"    }\n    return status;\n}\n";
+"int main(void) {\n    int status = 0;\n" +
+"    if (printf(\"%\" PRId64, (int64_t)(INT64_C(1))) < 0) { status = 1; }\n" +
+"    if (printf(\"\\n\") < 0) { status = 1; }\n" +
+"    return status;\n}\n";
 test.checkText("action if C exact", expectedActionIfC, actionIfC.stdout);

@@ -784,9 +784,242 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
     peeled
 };
 
+/** Simplifies statement-level `if` / `else if` / `else` chains with compile-time constant Bool conditions in a single O(n) pass. */
+pub simplifyConstantBranches := fn(items: Items, target: String): Items {
+    trueLit := ir.targetBoolLiteralCode(target, true);
+    falseLit := ir.targetBoolLiteralCode(target, false);
+    var hasConstBranch := false;
+    var hasCUnsupported := false;
+    loop items as scanItem {
+        if (scanItem.kind == ir.ITEM_KIND_IF or scanItem.kind == ir.ITEM_KIND_ELSE_IF) and
+        (scanItem.code == trueLit or scanItem.code == falseLit) {
+            hasConstBranch = true;
+        }
+        if target =!= ir.TARGET_TS and isCUnsupportedItem(scanItem) {
+            hasCUnsupported = true;
+        }
+    }
+    if not hasConstBranch or hasCUnsupported { return items; }
+    frameKinds: mut List<Int> = [];
+    frameModes: mut List<Int> = [];
+    frameTakens: mut List<Bool> = [];
+    frameSkips: mut List<Bool> = [];
+    frameParentSkips: mut List<Bool> = [];
+    var stackLen := 0;
+    out: mut Items = [];
+    loop items as item {
+        currentlySkipping := if stackLen > 0 { frameSkips[stackLen - 1] } else { false };
+        if item.kind == ir.ITEM_KIND_IF {
+            if currentlySkipping {
+                listLib.pushBack(mut frameKinds, 0);
+                listLib.pushBack(mut frameModes, 0);
+                listLib.pushBack(mut frameTakens, false);
+                listLib.pushBack(mut frameSkips, true);
+                listLib.pushBack(mut frameParentSkips, true);
+                stackLen = stackLen + 1;
+            } else if item.code == falseLit {
+                listLib.pushBack(mut frameKinds, 1);
+                listLib.pushBack(mut frameModes, 0);
+                listLib.pushBack(mut frameTakens, false);
+                listLib.pushBack(mut frameSkips, true);
+                listLib.pushBack(mut frameParentSkips, false);
+                stackLen = stackLen + 1;
+            } else if item.code == trueLit {
+                listLib.pushBack(mut out, (kind = ir.ITEM_KIND_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
+                listLib.pushBack(mut frameKinds, 1);
+                listLib.pushBack(mut frameModes, 2);
+                listLib.pushBack(mut frameTakens, true);
+                listLib.pushBack(mut frameSkips, false);
+                listLib.pushBack(mut frameParentSkips, false);
+                stackLen = stackLen + 1;
+            } else {
+                listLib.pushBack(mut out, item);
+                listLib.pushBack(mut frameKinds, 1);
+                listLib.pushBack(mut frameModes, 1);
+                listLib.pushBack(mut frameTakens, false);
+                listLib.pushBack(mut frameSkips, false);
+                listLib.pushBack(mut frameParentSkips, false);
+                stackLen = stackLen + 1;
+            }
+        } else if item.kind == ir.ITEM_KIND_ELSE_IF {
+            if stackLen > 0 and not frameParentSkips[stackLen - 1] and frameKinds[stackLen - 1] == 1 {
+                mode := listLib.popBack(mut frameModes);
+                taken := listLib.popBack(mut frameTakens);
+                _prevSkip := listLib.popBack(mut frameSkips);
+                var newMode := mode;
+                var newTaken := taken;
+                var newSkip := true;
+                if taken {
+                    newSkip = true;
+                } else if item.code == falseLit {
+                    newSkip = true;
+                } else if item.code == trueLit {
+                    if mode == 0 {
+                        listLib.pushBack(mut out, (kind = ir.ITEM_KIND_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
+                        newMode = 2;
+                    } else {
+                        listLib.pushBack(mut out, (kind = ir.ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                        newMode = 1;
+                    }
+                    newTaken = true;
+                    newSkip = false;
+                } else {
+                    if mode == 0 {
+                        listLib.pushBack(mut out, (kind = ir.ITEM_KIND_IF, name = item.name, runtime = item.runtime, code = item.code, intValue = item.intValue, textValue = item.textValue));
+                        newMode = 1;
+                    } else {
+                        listLib.pushBack(mut out, item);
+                        newMode = 1;
+                    }
+                    newTaken = false;
+                    newSkip = false;
+                }
+                listLib.pushBack(mut frameModes, newMode);
+                listLib.pushBack(mut frameTakens, newTaken);
+                listLib.pushBack(mut frameSkips, newSkip);
+            }
+        } else if item.kind == ir.ITEM_KIND_ELSE {
+            if stackLen > 0 and not frameParentSkips[stackLen - 1] and frameKinds[stackLen - 1] == 1 {
+                mode := listLib.popBack(mut frameModes);
+                taken := listLib.popBack(mut frameTakens);
+                _prevSkip := listLib.popBack(mut frameSkips);
+                var newMode := mode;
+                var newTaken := true;
+                var newSkip := true;
+                if taken {
+                    newSkip = true;
+                } else if mode == 0 {
+                    listLib.pushBack(mut out, (kind = ir.ITEM_KIND_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
+                    newMode = 2;
+                    newSkip = false;
+                } else {
+                    listLib.pushBack(mut out, item);
+                    newMode = 1;
+                    newSkip = false;
+                }
+                listLib.pushBack(mut frameModes, newMode);
+                listLib.pushBack(mut frameTakens, newTaken);
+                listLib.pushBack(mut frameSkips, newSkip);
+            }
+        } else if item.kind == ir.ITEM_KIND_END_IF {
+            if stackLen > 0 {
+                kind := listLib.popBack(mut frameKinds);
+                mode := listLib.popBack(mut frameModes);
+                _taken := listLib.popBack(mut frameTakens);
+                _skip := listLib.popBack(mut frameSkips);
+                parentSkip := listLib.popBack(mut frameParentSkips);
+                stackLen = stackLen - 1;
+                if not parentSkip and kind == 1 {
+                    if mode == 1 {
+                        listLib.pushBack(mut out, item);
+                    } else if mode == 2 {
+                        listLib.pushBack(mut out, (kind = ir.ITEM_KIND_END_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
+                    }
+                }
+            }
+        } else if item.kind == ir.ITEM_KIND_SCOPE or item.kind == ir.ITEM_KIND_FUNCTION_START or
+        item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ or
+        item.kind == ir.ITEM_KIND_TRANSFER_TRY or item.kind == ir.ITEM_KIND_LOOP_TRANSFER_TRY {
+            if not currentlySkipping { listLib.pushBack(mut out, item); }
+            listLib.pushBack(mut frameKinds, 0);
+            listLib.pushBack(mut frameModes, 0);
+            listLib.pushBack(mut frameTakens, false);
+            listLib.pushBack(mut frameSkips, currentlySkipping);
+            listLib.pushBack(mut frameParentSkips, currentlySkipping);
+            stackLen = stackLen + 1;
+        } else if item.kind == ir.ITEM_KIND_END_SCOPE or item.kind == ir.ITEM_KIND_FUNCTION_END or
+        item.kind == ir.ITEM_KIND_END_LOOP or item.kind == ir.ITEM_KIND_TRANSFER_CATCH or
+        item.kind == ir.ITEM_KIND_LOOP_TRANSFER_CATCH {
+            if stackLen > 0 {
+                _kind := listLib.popBack(mut frameKinds);
+                _mode := listLib.popBack(mut frameModes);
+                _taken := listLib.popBack(mut frameTakens);
+                _skip := listLib.popBack(mut frameSkips);
+                parentSkip := listLib.popBack(mut frameParentSkips);
+                stackLen = stackLen - 1;
+                if not parentSkip { listLib.pushBack(mut out, item); }
+            } else {
+                listLib.pushBack(mut out, item);
+            }
+        } else {
+            if not currentlySkipping { listLib.pushBack(mut out, item); }
+        }
+    }
+    out
+};
+
+/** Unwraps synthetic scopes introduced by constant-branch simplification when they contain no direct local declarations, in O(n) time. */
+unwrapSyntheticScopes := fn(items: Items): Items {
+    var total := 0;
+    loop items { total = total + 1; }
+    if total == 0 { return items; }
+    openIdxs: mut List<Int> = [];
+    isSynths: mut List<Bool> = [];
+    hasDecls: mut List<Bool> = [];
+    var stackLen := 0;
+    var dropSet := emptyTokenBuckets();
+    var hasDrop := false;
+    var hasAnySynth := false;
+    var idx := 0;
+    loop idx < total {
+        item := items[idx];
+        if item.kind == ir.ITEM_KIND_SCOPE {
+            isSynth := item.name == "synthetic";
+            if isSynth { hasAnySynth = true; }
+            listLib.pushBack(mut openIdxs, idx);
+            listLib.pushBack(mut isSynths, isSynth);
+            listLib.pushBack(mut hasDecls, false);
+            stackLen = stackLen + 1;
+        } else if item.kind == ir.ITEM_KIND_IF or item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ or
+        item.kind == ir.ITEM_KIND_FUNCTION_START or item.kind == ir.ITEM_KIND_TRANSFER_TRY or item.kind == ir.ITEM_KIND_LOOP_TRANSFER_TRY {
+            listLib.pushBack(mut openIdxs, idx);
+            listLib.pushBack(mut isSynths, false);
+            listLib.pushBack(mut hasDecls, false);
+            stackLen = stackLen + 1;
+        } else if item.kind == ir.ITEM_KIND_END_SCOPE {
+            if stackLen > 0 {
+                openIdx := listLib.popBack(mut openIdxs);
+                isSynth := listLib.popBack(mut isSynths);
+                hasDecl := listLib.popBack(mut hasDecls);
+                stackLen = stackLen - 1;
+                if isSynth and not hasDecl {
+                    dropSet = tokenBucketAdd(dropSet, integer.intText(openIdx));
+                    dropSet = tokenBucketAdd(dropSet, integer.intText(idx));
+                    hasDrop = true;
+                }
+            }
+        } else if item.kind == ir.ITEM_KIND_END_IF or item.kind == ir.ITEM_KIND_END_LOOP or
+        item.kind == ir.ITEM_KIND_FUNCTION_END or item.kind == ir.ITEM_KIND_TRANSFER_CATCH or
+        item.kind == ir.ITEM_KIND_LOOP_TRANSFER_CATCH {
+            if stackLen > 0 {
+                _openIdx := listLib.popBack(mut openIdxs);
+                _isSynth := listLib.popBack(mut isSynths);
+                _hasDecl := listLib.popBack(mut hasDecls);
+                stackLen = stackLen - 1;
+            }
+        } else if stackLen > 0 and isSynths[stackLen - 1] and not hasDecls[stackLen - 1] and
+        (isTopDeclKind(item.kind) or item.kind == ir.ITEM_KIND_PURE_GLOBAL) {
+            _oldDecl := listLib.popBack(mut hasDecls);
+            listLib.pushBack(mut hasDecls, true);
+        }
+        idx = idx + 1;
+    }
+    if not hasAnySynth or not hasDrop { return items; }
+    out: mut Items = [];
+    var k := 0;
+    loop k < total {
+        if not tokenBucketHas(dropSet, integer.intText(k)) {
+            listLib.pushBack(mut out, items[k]);
+        }
+        k = k + 1;
+    }
+    out
+};
+
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
 pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
-    pruned := pruneBlockScopedItems(items, target);
+    simplified := simplifyConstantBranches(items, target);
+    pruned := unwrapSyntheticScopes(pruneBlockScopedItems(simplified, target));
     var hasPrunable := false;
     var seedTokens := emptyTokenBuckets();
     var fnDepth := 0;
