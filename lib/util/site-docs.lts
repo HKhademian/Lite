@@ -366,38 +366,176 @@ statusPillClass := fn(layer: String, group: String, rawStatus: String): String {
     else { "status-pill-selected" }
 };
 
+stripChapterNumPrefix := fn(nav: String): String {
+    dotPos := text.indexOfText(nav, ". ", 0);
+    if dotPos >= 1 and dotPos <= 3 {
+        text.slice(nav, dotPos + 2, text.length(nav))
+    } else {
+        nav
+    }
+};
+
+handbookPartName := fn(chIdx: Int): String {
+    if chIdx == 0 { "Start" }
+    else if chIdx <= 3 { "Core Language" }
+    else if chIdx <= 5 { "Data & Execution" }
+    else { "Modules & I/O" }
+};
+
+estimateReadMinutes := fn(html: String): Int {
+    n := text.length(html);
+    if n < 2600 { 2 }
+    else if n < 4600 { 3 }
+    else if n < 6800 { 4 }
+    else if n < 9000 { 5 }
+    else { 6 }
+};
+
+injectBeforeFirstH2 := fn(html: String, block: String): String {
+    if block == "" { return html; }
+    h2Pos := text.indexOfText(html, "<h2", 0);
+    if h2Pos < 0 { return html + "\n" + block; }
+    text.slice(html, 0, h2Pos) + block + "\n" + text.slice(html, h2Pos, text.length(html))
+};
+
+renderChapterRoadmap := fn(
+chIdx: Int, hbSubChIdx: List<Int>, hbSubIds: List<String>, hbSubLabels: List<String>
+): String {
+    items: mut List<String> = [];
+    var si := 0;
+    var num := 1;
+    totalSubs := list.listCountInt(hbSubChIdx);
+    loop si < totalSubs {
+        if hbSubChIdx[si] == chIdx {
+            list.pushBack(mut items,
+            "<li><a href=\"#" + escapeHtml(hbSubIds[si]) + "\">"
+            + "<span class=\"hb-roadmap-num\">" + integer.intText(num) + "</span>"
+            + "<span>" + hbSubLabels[si] + "</span>"
+            + "</a></li>");
+            num = num + 1;
+        }
+        si = si + 1;
+    }
+    if list.listCountText(items) == 0 { return ""; }
+    "<nav class=\"hb-roadmap\" aria-label=\"In this chapter\">\n"
+    + "      <div class=\"hb-roadmap-head\">\n"
+    + "        <span class=\"hb-roadmap-title\">In This Chapter</span>\n"
+    + "        <span class=\"code-card-meta\">" + integer.intText(list.listCountText(items)) + " sections</span>\n"
+    + "      </div>\n"
+    + "      <ol class=\"hb-roadmap-list\">\n"
+    + "        " + text.joinTexts(items, "\n        ") + "\n"
+    + "      </ol>\n"
+    + "    </nav>"
+};
+
 renderDocsSidebar := fn(
 layer: String, activeOutPath: String,
-hbOuts: List<String>, hbNavs: List<String>, hbSlugs: List<String>,
+hbOuts: List<String>, hbNavs: List<String>, hbSlugs: List<String>, hbSums: List<String>,
+hbSubChIdx: List<Int>, hbSubIds: List<String>, hbSubTexts: List<String>, hbSubLabels: List<String>,
 spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: List<String>, spVerified: List<Bool>
 ): String {
+    hbIndexHref := relativeHref(activeOutPath, "docs/handbook/overview-and-setup.html");
+    specHref := relativeHref(activeOutPath, "docs/spec/index.html");
+
     if layer == "handbook" {
-        items: mut List<String> = [];
+        isSinglePage := activeOutPath == "docs/handbook/single-page.html";
+        treeParts: mut List<String> = [];
+        totalSubs := list.listCountInt(hbSubChIdx);
         var hi := 0;
         loop hi < list.listCountText(hbOuts) {
+            if hi == 0 {
+                list.pushBack(mut treeParts, "<p class=\"hb-part-label\">Start</p>");
+            } else if hi == 1 {
+                list.pushBack(mut treeParts, "<p class=\"hb-part-label\">Core Language</p>");
+            } else if hi == 4 {
+                list.pushBack(mut treeParts, "<p class=\"hb-part-label\">Data &amp; Execution</p>");
+            } else if hi == 6 {
+                list.pushBack(mut treeParts, "<p class=\"hb-part-label\">Modules &amp; I/O</p>");
+            }
+
             tOut := hbOuts[hi];
-            href := if tOut == activeOutPath { siteLib.posixBasename(tOut, "") } else { relativeHref(activeOutPath, tOut) };
-            cls := if tOut == activeOutPath { " class=\"active\"" } else { "" };
             slug := if list.listCountText(hbSlugs) > hi and hbSlugs[hi] =!= "" { hbSlugs[hi] } else { siteLib.posixBasename(tOut, ".html") };
-            list.pushBack(mut items, "<li><a href=\"" + escapeHtml(href) + "\"" + cls + " data-handbook-nav-slug=\"" + escapeHtml(slug) + "\"><span>" + escapeHtml(hbNavs[hi]) + "</span><span class=\"learn-done-dot\" aria-hidden=\"true\"></span></a></li>");
+            sumTxt := if list.listCountText(hbSums) > hi { hbSums[hi] } else { "" };
+            isActive := tOut == activeOutPath;
+            chHref := if isSinglePage {
+                "#chapter-" + slug
+            } else if isActive {
+                siteLib.posixBasename(tOut, "")
+            } else {
+                relativeHref(activeOutPath, tOut)
+            };
+            cls := if isActive { "hb-chapter-link active" } else { "hb-chapter-link" };
+            itemCls := if isActive { "hb-chapter-item is-active" } else { "hb-chapter-item" };
+            cleanTitle := stripChapterNumPrefix(hbNavs[hi]);
+            subLis: mut List<String> = [];
+            var si := 0;
+            loop si < totalSubs {
+                if hbSubChIdx[si] == hi {
+                    subHref := if isSinglePage {
+                        "#h" + integer.intText(hi + 1) + "-" + hbSubIds[si]
+                    } else if isActive {
+                        "#" + hbSubIds[si]
+                    } else {
+                        relativeHref(activeOutPath, tOut) + "#" + hbSubIds[si]
+                    };
+                    list.pushBack(mut subLis,
+                    "<li data-hb-topic-search=\"" + escapeHtml(challenges.asciiLower(hbSubTexts[si])) + "\">"
+                    + "<a href=\"" + escapeHtml(subHref) + "\">" + hbSubLabels[si] + "</a>"
+                    + "</li>");
+                }
+                si = si + 1;
+            }
+            subListHtml := if list.listCountText(subLis) > 0 {
+                "\n          <ul class=\"hb-subtopics\">\n            " + text.joinTexts(subLis, "\n            ") + "\n          </ul>"
+            } else { "" };
+            searchBlob := challenges.asciiLower(hbNavs[hi] + " " + sumTxt);
+            list.pushBack(mut treeParts,
+            "<div class=\"" + itemCls + "\" data-hb-chapter=\"" + escapeHtml(slug) + "\" data-hb-search=\"" + escapeHtml(searchBlob) + "\">\n"
+            + "          <a class=\"" + cls + "\" href=\"" + escapeHtml(chHref) + "\" data-handbook-nav-slug=\"" + escapeHtml(slug) + "\">\n"
+            + "            <span class=\"hb-num\">" + integer.intText(hi + 1) + "</span>\n"
+            + "            <span class=\"hb-chapter-title\">" + escapeHtml(cleanTitle) + "</span>\n"
+            + "            <span class=\"learn-done-dot\" aria-hidden=\"true\"></span>\n"
+            + "          </a>" + subListHtml + "\n"
+            + "        </div>");
             hi = hi + 1;
         }
+
         singleOut := "docs/handbook/single-page.html";
-        singleHref := if singleOut == activeOutPath { "single-page.html" } else { relativeHref(activeOutPath, singleOut) };
-        singleCls := if activeOutPath == singleOut { " class=\"active\"" } else { "" };
-        specHref := relativeHref(activeOutPath, "docs/spec/index.html");
-        return "<aside class=\"portal-sidebar\" aria-label=\"Handbook navigation\">\n"
-        + "      <div class=\"docs-layer-switch\">\n"
-        + "        <span class=\"status-pill status-pill-shipped\">Shipped Handbook</span>\n"
-        + "        <a href=\"" + escapeHtml(specHref) + "\">Spec &rarr;</a>\n"
+        singleHref := if isSinglePage { "single-page.html" } else { relativeHref(activeOutPath, singleOut) };
+        singleCls := if isSinglePage { " class=\"active\"" } else { "" };
+        modulesHref := relativeHref(activeOutPath, "modules/");
+        learnHref := relativeHref(activeOutPath, "learn/");
+        gymHref := relativeHref(activeOutPath, "gym/");
+        playHref := relativeHref(activeOutPath, "playground/");
+
+        return "<aside class=\"portal-sidebar hb-sidebar\" aria-label=\"Handbook navigation\">\n"
+        + "      <div class=\"docs-layer-tabs\" role=\"tablist\" aria-label=\"Documentation layer\">\n"
+        + "        <span class=\"docs-layer-tab active\" aria-selected=\"true\">Handbook</span>\n"
+        + "        <a class=\"docs-layer-tab\" href=\"" + escapeHtml(specHref) + "\">Design Spec</a>\n"
         + "      </div>\n"
-        + "      <details class=\"portal-nav-group\" open>\n"
-        + "        <summary>Chapters (7)</summary>\n"
+        + "      <input id=\"handbook-sidebar-filter\" class=\"docs-sidebar-filter\" type=\"search\" placeholder=\"Filter topics (match, record, :=)...\" aria-label=\"Filter handbook chapters and topics\">\n"
+        + "      <button class=\"docs-quick-search-btn\" type=\"button\" data-open-search><span>Search all docs</span><kbd>&#8984;K</kbd></button>\n"
+        + "      <div class=\"hb-progress-strip\">\n"
+        + "        <div class=\"hb-progress-head\">\n"
+        + "          <span id=\"hb-progress-label\" class=\"code-card-meta\">0 / " + integer.intText(list.listCountText(hbOuts)) + " chapters read</span>\n"
+        + "          <button id=\"hb-toggle-topics\" class=\"hb-compact-btn\" type=\"button\" aria-pressed=\"false\" title=\"Collapse or expand topic trees\">Compact</button>\n"
+        + "        </div>\n"
+        + "        <div class=\"learn-bar-track\" style=\"height: 4px;\"><div id=\"hb-progress-fill\" class=\"learn-bar-fill\" style=\"width: 0%;\"></div></div>\n"
+        + "      </div>\n"
+        + "      <div id=\"hb-nav-tree\" class=\"hb-tree\">\n"
+        + "        " + text.joinTexts(treeParts, "\n        ") + "\n"
+        + "        <p id=\"hb-filter-empty\" class=\"code-card-meta hb-filter-empty\" hidden>No matching handbook topics. <button class=\"hb-inline-link\" type=\"button\" data-open-search>Search all docs &rarr;</button></p>\n"
+        + "      </div>\n"
+        + "      <div class=\"hb-sidebar-foot\">\n"
+        + "        <p class=\"portal-toc-title\" style=\"margin-bottom: 0.35rem;\">Academy &amp; Reference</p>\n"
         + "        <ul class=\"portal-nav-list\">\n"
-        + "          " + text.joinTexts(items, "\n          ") + "\n"
-        + "          <li><a href=\"" + escapeHtml(singleHref) + "\"" + singleCls + ">Single-Page View</a></li>\n"
+        + "          <li><a href=\"" + escapeHtml(singleHref) + "\"" + singleCls + ">Single-Page Edition</a></li>\n"
+        + "          <li><a href=\"" + escapeHtml(modulesHref) + "\">Standard Modules</a></li>\n"
+        + "          <li><a href=\"" + escapeHtml(learnHref) + "\">Interactive Learn</a></li>\n"
+        + "          <li><a href=\"" + escapeHtml(gymHref) + "\">Lite Gym</a></li>\n"
+        + "          <li><a href=\"" + escapeHtml(playHref) + "\">Play Studio</a></li>\n"
         + "        </ul>\n"
-        + "      </details>\n"
+        + "      </div>\n"
         + "    </aside>";
     }
 
@@ -436,13 +574,13 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
         gi = gi + 1;
     }
 
-    hbHref := relativeHref(activeOutPath, "docs/handbook/overview-and-setup.html");
     "<aside class=\"portal-sidebar\" aria-label=\"Specification navigation\">\n"
-    + "      <div class=\"docs-layer-switch\">\n"
-    + "        <a href=\"" + escapeHtml(hbHref) + "\">&larr; Handbook</a>\n"
-    + "        <span class=\"status-pill status-pill-selected\">Design Spec</span>\n"
+    + "      <div class=\"docs-layer-tabs\" role=\"tablist\" aria-label=\"Documentation layer\">\n"
+    + "        <a class=\"docs-layer-tab\" href=\"" + escapeHtml(hbIndexHref) + "\">Handbook</a>\n"
+    + "        <span class=\"docs-layer-tab active\" aria-selected=\"true\">Design Spec</span>\n"
     + "      </div>\n"
     + "      <input id=\"docs-sidebar-filter\" class=\"docs-sidebar-filter\" type=\"search\" placeholder=\"Filter spec docs...\" aria-label=\"Filter specification documents\">\n"
+    + "      <button class=\"docs-quick-search-btn\" type=\"button\" data-open-search><span>Search all docs</span><kbd>&#8984;K</kbd></button>\n"
     + "      <div class=\"docs-sidebar-head\">\n"
     + "        <label class=\"docs-verified-toggle\">\n"
     + "          <input id=\"docs-verified-only\" type=\"checkbox\">\n"
@@ -541,6 +679,10 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     hbRelated: mut List<String> = [];
     hbTocHtmls: mut List<String> = [];
     hbTocSearchJson: mut List<String> = [];
+    hbSubChIdx: mut List<Int> = [];
+    hbSubIds: mut List<String> = [];
+    hbSubTexts: mut List<String> = [];
+    hbSubLabels: mut List<String> = [];
 
     spSrcs: mut List<String> = [];
     spOuts: mut List<String> = [];
@@ -579,6 +721,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         relHtmlR := json.readObjectString(inputJson, ep, "relatedHtml");
         mRel := if relHtmlR.found and relHtmlR.ok { relHtmlR.value } else { "" };
 
+        curHbIdx := list.listCountText(hbOuts);
         tocItemsHtml: mut List<String> = [];
         tocL2Parts: mut List<String> = [];
         tocF := json.findObjectField(inputJson, ep, "toc");
@@ -589,10 +732,17 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
                 ttxt := json.readObjectString(inputJson, tp, "text").value;
                 labelHtmlR := json.readObjectString(inputJson, tp, "labelHtml");
                 tocLabel := if labelHtmlR.found and labelHtmlR.ok and labelHtmlR.value =!= "" { labelHtmlR.value } else { escapeHtml(ttxt) };
-                if lvl == 2 or lvl == 3 {
+                skipNextChapter := mLayer == "handbook" and ttxt == "Next Chapter";
+                if (lvl == 2 or lvl == 3) and not skipNextChapter {
                     list.pushBack(mut tocItemsHtml, "<li class=\"toc-l" + integer.intText(lvl) + "\"><a href=\"#" + escapeHtml(tid) + "\">" + tocLabel + "</a></li>");
                 }
-                if lvl == 2 {
+                if lvl == 2 and not skipNextChapter {
+                    if mLayer == "handbook" {
+                        list.pushBack(mut hbSubChIdx, curHbIdx);
+                        list.pushBack(mut hbSubIds, tid);
+                        list.pushBack(mut hbSubTexts, ttxt);
+                        list.pushBack(mut hbSubLabels, tocLabel);
+                    }
                     dispTitle := if dTitle =!= "" { dTitle } else { mNav };
                     list.pushBack(mut tocL2Parts,
                     "{\"kind\":" + json.quoteString(if mLayer == "handbook" { "handbook" } else { "doc" })
@@ -747,7 +897,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         si = si + 1;
     }
     specLandingBody := "<div class=\"portal-layout-2col\">\n"
-    + "  " + renderDocsSidebar("spec", "docs/spec/index.html", emptyStrs, emptyStrs, emptyStrs, spOuts, spGroups, spNavs, spTitles, spVerified) + "\n"
+    + "  " + renderDocsSidebar("spec", "docs/spec/index.html", emptyStrs, emptyStrs, emptyStrs, emptyStrs, hbSubChIdx, emptyStrs, emptyStrs, emptyStrs, spOuts, spGroups, spNavs, spTitles, spVerified) + "\n"
     + "  <article class=\"md-prose\">\n"
     + "    <div class=\"portal-mobile-bar\">\n"
     + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Spec Menu</button>\n"
@@ -791,16 +941,22 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         hi = hi + 1;
     }
     emptyBools: List<Bool> = [];
-    singleBody := "<div class=\"portal-layout\">\n"
-    + "  " + renderDocsSidebar("handbook", "docs/handbook/single-page.html", hbOuts, hbNavs, hbSlugs, emptyStrs, emptyStrs, emptyStrs, emptyStrs, emptyBools) + "\n"
+    singleBody := "<div class=\"portal-layout\" id=\"top\">\n"
+    + "  " + renderDocsSidebar("handbook", "docs/handbook/single-page.html", hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, emptyStrs, emptyStrs, emptyStrs, emptyStrs, emptyBools) + "\n"
     + "  <article class=\"md-prose\">\n"
     + "    <div class=\"portal-mobile-bar\">\n"
-    + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters</button>\n"
-    + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">On This Page</button>\n"
+    + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters &amp; Topics</button>\n"
+    + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">Chapters Jump</button>\n"
     + "    </div>\n"
-    + "    <div class=\"portal-card-head\" style=\"margin-bottom: 0.5rem;\">\n"
-    + "      <span class=\"code-card-meta\"><a href=\"../\">Docs</a> / Handbook / Single-Page View</span>\n"
-    + "      <span class=\"status-pill status-pill-shipped\">100% Runnable in TS</span>\n"
+    + "    <div class=\"hb-kicker-bar\">\n"
+    + "      <nav class=\"hb-breadcrumbs\" aria-label=\"Breadcrumb\">\n"
+    + "        <a href=\"../\">Docs</a>\n"
+    + "        <span aria-hidden=\"true\">&rsaquo;</span>\n"
+    + "        <a href=\"overview-and-setup.html\">Handbook</a>\n"
+    + "        <span aria-hidden=\"true\">&rsaquo;</span>\n"
+    + "        <span class=\"hb-kicker-chapter\">Single-Page View</span>\n"
+    + "      </nav>\n"
+    + "      <div class=\"docs-badge-row\"><span class=\"status-pill status-pill-shipped\">100% Runnable in TS</span></div>\n"
     + "    </div>\n"
     + "    <h1>The Lite Handbook (Single-Page Edition)</h1>\n"
     + "    <p class=\"hero-lead\">All seven Shipped Handbook chapters on one page for fast reading, search, or printing.</p>\n"
@@ -811,6 +967,10 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     + "    <ul>\n"
     + "      " + text.joinTexts(singleTocItems, "\n      ") + "\n"
     + "    </ul>\n"
+    + "    <div class=\"portal-toc-foot\">\n"
+    + "      <a href=\"overview-and-setup.html\">Chapter-by-chapter &rarr;</a>\n"
+    + "      <a href=\"#top\">&uarr; Back to top</a>\n"
+    + "    </div>\n"
     + "  </aside>\n"
     + "</div>";
     list.pushBack(mut pagesJson,
@@ -824,36 +984,69 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mSum := hbSums[hi];
         dTitle := hbTitles[hi];
         chSlug := if list.listCountText(hbSlugs) > hi and hbSlugs[hi] =!= "" { hbSlugs[hi] } else { siteLib.posixBasename(mOut, ".html") };
-        prevLink := if hi > 0 {
-            "<a class=\"btn\" href=\"" + escapeHtml(relativeHref(mOut, hbOuts[hi - 1])) + "\">&larr; " + escapeHtml(hbNavs[hi - 1]) + "</a>"
-        } else { "<span></span>" };
-        nextLink := if hi + 1 < hbCount {
-            "<a class=\"btn\" href=\"" + escapeHtml(relativeHref(mOut, hbOuts[hi + 1])) + "\">" + escapeHtml(hbNavs[hi + 1]) + " &rarr;</a>"
-        } else { "<span></span>" };
+        readMins := estimateReadMinutes(hbHtmls[hi]);
+        roadmapHtml := renderChapterRoadmap(hi, hbSubChIdx, hbSubIds, hbSubLabels);
+        chapterBodyHtml := injectBeforeFirstH2(hbHtmls[hi], roadmapHtml);
+        prevCard := if hi > 0 {
+            prevTitle := stripChapterNumPrefix(hbNavs[hi - 1]);
+            prevSum := if list.listCountText(hbSums) > hi - 1 { hbSums[hi - 1] } else { "" };
+            "<a class=\"docs-pager-card docs-pager-prev\" href=\"" + escapeHtml(relativeHref(mOut, hbOuts[hi - 1])) + "\" data-pager-prev>\n"
+            + "          <span class=\"docs-pager-kicker\">&larr; Previous &middot; Chapter " + integer.intText(hi) + "</span>\n"
+            + "          <strong>" + escapeHtml(prevTitle) + "</strong>\n"
+            + "          <span class=\"docs-pager-summary\">" + escapeHtml(prevSum) + "</span>\n"
+            + "        </a>"
+        } else { "<span class=\"docs-pager-spacer\"></span>" };
+        nextCard := if hi + 1 < hbCount {
+            nextTitle := stripChapterNumPrefix(hbNavs[hi + 1]);
+            nextSum := if list.listCountText(hbSums) > hi + 1 { hbSums[hi + 1] } else { "" };
+            "<a class=\"docs-pager-card docs-pager-next\" href=\"" + escapeHtml(relativeHref(mOut, hbOuts[hi + 1])) + "\" data-pager-next>\n"
+            + "          <span class=\"docs-pager-kicker\">Next &middot; Chapter " + integer.intText(hi + 2) + " &rarr;</span>\n"
+            + "          <strong>" + escapeHtml(nextTitle) + "</strong>\n"
+            + "          <span class=\"docs-pager-summary\">" + escapeHtml(nextSum) + "</span>\n"
+            + "        </a>"
+        } else {
+            "<a class=\"docs-pager-card docs-pager-next\" href=\"" + escapeHtml(relativeHref(mOut, "learn/")) + "\" data-pager-next>\n"
+            + "          <span class=\"docs-pager-kicker\">Continue Learning &rarr;</span>\n"
+            + "          <strong>Interactive Learn Studio</strong>\n"
+            + "          <span class=\"docs-pager-summary\">Practice all seven Handbook chapters in live browser exercises and tutorials.</span>\n"
+            + "        </a>"
+        };
         editLink := if repoUrl =!= "" {
             "<a href=\"" + escapeHtml(repoUrl + "/blob/main/" + mSrc) + "\">View source (<code>" + escapeHtml(mSrc) + "</code>) &rarr;</a>"
         } else {
             "<code>" + escapeHtml(mSrc) + "</code>"
         };
+        tocEditLink := if repoUrl =!= "" {
+            "\n      <a href=\"" + escapeHtml(repoUrl + "/blob/main/" + mSrc) + "\">View source</a>"
+        } else { "" };
         relBlock := if hbRelated[hi] =!= "" { "\n    " + hbRelated[hi] } else { "" };
         body := "<div class=\"portal-layout\" id=\"top\">\n"
-        + "  " + renderDocsSidebar("handbook", mOut, hbOuts, hbNavs, hbSlugs, spOuts, spGroups, spNavs, spTitles, spVerified) + "\n"
+        + "  " + renderDocsSidebar("handbook", mOut, hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, spOuts, spGroups, spNavs, spTitles, spVerified) + "\n"
         + "  <article class=\"md-prose\" data-handbook-slug=\"" + escapeHtml(chSlug) + "\">\n"
         + "    <div class=\"portal-mobile-bar\">\n"
-        + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters</button>\n"
+        + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters &amp; Topics</button>\n"
         + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">On This Page</button>\n"
         + "    </div>\n"
-        + "    <div class=\"portal-card-head\" style=\"margin-bottom: 0.65rem;\">\n"
-        + "      <span class=\"code-card-meta\"><a href=\"" + escapeHtml(relativeHref(mOut, "docs/index.html")) + "\">Docs</a> / Handbook</span>\n"
-        + "      <div class=\"docs-badge-row\"><span class=\"status-pill status-pill-shipped\">Verified in TS</span></div>\n"
+        + "    <div class=\"hb-kicker-bar\">\n"
+        + "      <nav class=\"hb-breadcrumbs\" aria-label=\"Breadcrumb\">\n"
+        + "        <a href=\"" + escapeHtml(relativeHref(mOut, "docs/index.html")) + "\">Docs</a>\n"
+        + "        <span aria-hidden=\"true\">&rsaquo;</span>\n"
+        + "        <a href=\"" + escapeHtml(relativeHref(mOut, "docs/handbook/overview-and-setup.html")) + "\">Handbook</a>\n"
+        + "        <span aria-hidden=\"true\">&rsaquo;</span>\n"
+        + "        <span class=\"hb-kicker-chapter\">Chapter " + integer.intText(hi + 1) + " of " + integer.intText(hbCount) + " &middot; " + escapeHtml(handbookPartName(hi)) + "</span>\n"
+        + "      </nav>\n"
+        + "      <div class=\"docs-badge-row\">\n"
+        + "        <span class=\"code-card-meta\">~" + integer.intText(readMins) + " min read</span>\n"
+        + "        <span class=\"status-pill status-pill-shipped\">Verified in TS</span>\n"
+        + "      </div>\n"
         + "    </div>\n"
-        + "    " + hbHtmls[hi]
+        + "    " + chapterBodyHtml
         + relBlock + "\n"
         + "    <footer class=\"docs-page-footer\">\n"
-        + "      <div class=\"docs-source-row\">" + editLink + "</div>\n"
-        + "      <nav class=\"docs-pager\" aria-label=\"Previous and next document\">\n"
-        + "        " + prevLink + "\n"
-        + "        " + nextLink + "\n"
+        + "      <div class=\"docs-source-row\">" + editLink + " <span class=\"code-card-meta\">&middot; Shortcuts: <kbd>[</kbd> Prev &middot; <kbd>]</kbd> Next &middot; <kbd>/</kbd> Search</span></div>\n"
+        + "      <nav class=\"docs-pager docs-pager-cards\" aria-label=\"Previous and next chapter\">\n"
+        + "        " + prevCard + "\n"
+        + "        " + nextCard + "\n"
         + "      </nav>\n"
         + "    </footer>\n"
         + "  </article>\n"
@@ -862,6 +1055,10 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         + "    <ul>\n"
         + "      " + hbTocHtmls[hi] + "\n"
         + "    </ul>\n"
+        + "    <div class=\"portal-toc-foot\">\n"
+        + "      <a href=\"single-page.html\">Single-page view</a>" + tocEditLink + "\n"
+        + "      <a href=\"#top\">&uarr; Back to top</a>\n"
+        + "    </div>\n"
         + "  </aside>\n"
         + "</div>";
         dispTitle := if dTitle =!= "" { dTitle } else { mNav };
@@ -886,10 +1083,10 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         cls := statusPillClass("spec", mGrp, spStatuses[si]);
         vBadge := if spVerified[si] { "<span class=\"status-pill status-pill-shipped\">Verified in TS</span>" } else { "" };
         prevLink := if si > 0 {
-            "<a class=\"btn\" href=\"" + escapeHtml(relativeHref(mOut, spOuts[si - 1])) + "\">&larr; " + escapeHtml(spNavs[si - 1]) + "</a>"
+            "<a class=\"btn\" href=\"" + escapeHtml(relativeHref(mOut, spOuts[si - 1])) + "\" data-pager-prev>&larr; " + escapeHtml(spNavs[si - 1]) + "</a>"
         } else { "<span></span>" };
         nextLink := if si + 1 < spCount {
-            "<a class=\"btn\" href=\"" + escapeHtml(relativeHref(mOut, spOuts[si + 1])) + "\">" + escapeHtml(spNavs[si + 1]) + " &rarr;</a>"
+            "<a class=\"btn\" href=\"" + escapeHtml(relativeHref(mOut, spOuts[si + 1])) + "\" data-pager-next>" + escapeHtml(spNavs[si + 1]) + " &rarr;</a>"
         } else { "<span></span>" };
         editLink := if repoUrl =!= "" {
             "<a href=\"" + escapeHtml(repoUrl + "/blob/main/" + mSrc) + "\">View source (<code>" + escapeHtml(mSrc) + "</code>) &rarr;</a>"
@@ -898,7 +1095,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         };
         relBlock := if spRelated[si] =!= "" { "\n    " + spRelated[si] } else { "" };
         body := "<div class=\"portal-layout\" id=\"top\">\n"
-        + "  " + renderDocsSidebar("spec", mOut, hbOuts, hbNavs, hbSlugs, spOuts, spGroups, spNavs, spTitles, spVerified) + "\n"
+        + "  " + renderDocsSidebar("spec", mOut, hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, spOuts, spGroups, spNavs, spTitles, spVerified) + "\n"
         + "  <article class=\"md-prose\">\n"
         + "    <div class=\"portal-mobile-bar\">\n"
         + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Spec Menu</button>\n"

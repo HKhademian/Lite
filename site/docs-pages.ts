@@ -330,6 +330,7 @@ export function buildDocsSection(options: Readonly<{
         description: page.description,
         basePath: page.basePath,
         active: 'docs',
+        bodyClass: 'docs-page',
         repoUrl,
         rev,
         body: page.body,
