@@ -96,42 +96,6 @@ pub inferLoopValueKind := fn(raw: String, loopId: Int, tagDisplay: String, sourc
     ir.VALUE_KIND_UNIT
 };
 
-/** Non-failing counterpart to `parseTupleDestructureTarget` for root pre-collection. */
-pub tryParseDestructureNames := fn(source: String, open: Int, prefix: String): (ok: Bool, namesText: String, count: Int, grouped: Bool) {
-    size := textLib.length(source);
-    if open < 0 or open >= size or textLib.at(source, open) =!= "(" {
-        return (ok = false, namesText = "", count = 0, grouped = false);
-    }
-    var cursor := syntax.skipTrivia(source, open + 1, prefix);
-    names: mut List<String> = [];
-    var count := 0;
-    var hadComma := false;
-    loop cursor < size and textLib.at(source, cursor) =!= ")" {
-        if not textLib.isNameStart(textLib.at(source, cursor)) {
-            return (ok = false, namesText = "", count = 0, grouped = false);
-        }
-        nameStart := cursor;
-        nameEnd := textLib.skipName(source, nameStart);
-        bindName := textLib.slice(source, nameStart, nameEnd);
-        if syntax.isReservedWord(bindName) {
-            return (ok = false, namesText = "", count = 0, grouped = false);
-        }
-        listLib.pushBack(mut names, bindName);
-        count = count + 1;
-        cursor = syntax.skipTrivia(source, nameEnd, prefix);
-        if cursor < size and textLib.at(source, cursor) == "," {
-            hadComma = true;
-            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-        } else {
-            break;
-        }
-    }
-    if cursor >= size or textLib.at(source, cursor) =!= ")" {
-        return (ok = false, namesText = "", count = 0, grouped = false);
-    }
-    (ok = true, namesText = textLib.joinTexts(names, ","), count = count, grouped = count == 1 and not hadComma)
-};
-
 /** Finds the start position of the final expression inside `{ ... }` from `openBracePos` to `closeBracePos`, or -1 when empty. */
 pub tryInferBlockTailStart := fn(source: String, openBracePos: Int, closeBracePos: Int, prefix: String): Int {
     limit := closeBracePos - 1;
@@ -820,90 +784,143 @@ pub resolveFutureDecls := fn(target: String, source: String, prefix: String, mod
                     rhsPos := syntax.parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
                     destrMutable := decl.runtime == ir.DECL_BIND_VAR;
                     inferred := tryInferRootExprKind(source, rhsPos, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
-                    if openPos < textLib.length(source) and textLib.at(source, openPos) == "{" {
-                        if types.isRecordKind(inferred.kind) {
-                            var recCursor := syntax.skipTrivia(source, openPos + 1, prefix);
-                            recLimit := textLib.length(source);
-                            var recOk := true;
-                            loop recCursor < recLimit and textLib.at(source, recCursor) =!= "}" {
-                                if not textLib.isNameStart(textLib.at(source, recCursor)) { recOk = false; break; }
-                                bStart := recCursor;
-                                bEnd := textLib.skipName(source, bStart);
-                                bName := textLib.slice(source, bStart, bEnd);
-                                afterBind := syntax.skipTrivia(source, bEnd, prefix);
-                                var eqPos := afterBind;
-                                var fKind := "";
-                                if afterBind < recLimit and textLib.at(source, afterBind) == ":" {
-                                    emptySeenPat: List<String> = [];
-                                    tRes := types.canResolveTypeAt(source, afterBind + 1, prefix, scopedAliases, "", emptySeenPat, 16);
-                                    if not tRes.ok { recOk = false; break; }
-                                    fKind = tRes.kind;
-                                    eqPos = syntax.skipTrivia(source, tRes.next, prefix);
+                    srcLen := textLib.length(source);
+                    openDelim := if openPos < srcLen { textLib.at(source, openPos) } else { "" };
+                    closeDelim := if openDelim == "{" { "}" } else if openDelim == "(" { ")" } else { "]" };
+                    shape := if openDelim == "{" { "record" } else if openDelim == "(" { "tuple" } else { "array" };
+                    if openDelim =!= "" {
+                        var patCur := syntax.skipTrivia(source, openPos + 1, prefix);
+                        var patOk := true;
+                        var hadComma := false;
+                        var count := 0;
+                        var claimedBag := "";
+                        bNames: mut List<String> = [];
+                        bKinds: mut List<String> = [];
+                        var lastPositional := true;
+                        var singleExpected := "";
+                        loop patCur < srcLen and textLib.at(source, patCur) =!= closeDelim {
+                            var bName := "";
+                            var srcField := "";
+                            var expKind := "";
+                            var isNamed := false;
+                            var cEnd := patCur;
+                            if syntax.isSingleEquals(source, patCur) {
+                                shStart := syntax.skipTrivia(source, patCur + 1, prefix);
+                                if shStart >= srcLen or not textLib.isNameStart(textLib.at(source, shStart)) { patOk = false; break; }
+                                shEnd := textLib.skipName(source, shStart);
+                                bName = textLib.slice(source, shStart, shEnd);
+                                srcField = bName;
+                                isNamed = true;
+                                afterSh := syntax.skipTrivia(source, shEnd, prefix);
+                                cEnd = afterSh;
+                                if afterSh < srcLen and textLib.at(source, afterSh) == ":" {
+                                    emptySeenP: List<String> = [];
+                                    tR := types.canResolveTypeAt(source, afterSh + 1, prefix, scopedAliases, "", emptySeenP, 16);
+                                    if not tR.ok { patOk = false; break; }
+                                    expKind = tR.kind;
+                                    cEnd = syntax.skipTrivia(source, tR.next, prefix);
                                 }
-                                var cEnd := eqPos;
-                                var srcField := bName;
+                            } else {
+                                if not textLib.isNameStart(textLib.at(source, patCur)) { patOk = false; break; }
+                                bStart := patCur;
+                                bEnd := textLib.skipName(source, bStart);
+                                bName = textLib.slice(source, bStart, bEnd);
+                                afterB := syntax.skipTrivia(source, bEnd, prefix);
+                                var eqPos := afterB;
+                                if afterB < srcLen and textLib.at(source, afterB) == ":" {
+                                    emptySeenP: List<String> = [];
+                                    tR := types.canResolveTypeAt(source, afterB + 1, prefix, scopedAliases, "", emptySeenP, 16);
+                                    if not tR.ok { patOk = false; break; }
+                                    expKind = tR.kind;
+                                    eqPos = syntax.skipTrivia(source, tR.next, prefix);
+                                }
+                                cEnd = eqPos;
                                 if syntax.isSingleEquals(source, eqPos) {
                                     fStart := syntax.skipTrivia(source, eqPos + 1, prefix);
-                                    if fStart >= recLimit or not textLib.isNameStart(textLib.at(source, fStart)) { recOk = false; break; }
+                                    if fStart >= srcLen or not textLib.isNameStart(textLib.at(source, fStart)) { patOk = false; break; }
                                     fEnd := textLib.skipName(source, fStart);
                                     srcField = textLib.slice(source, fStart, fEnd);
+                                    isNamed = true;
                                     cEnd = syntax.skipTrivia(source, fEnd, prefix);
-                                } else if fKind == "" {
-                                    recOk = false;
-                                    break;
-                                }
-                                recFKind := types.recordFieldKind(inferred.kind, srcField);
-                                if recFKind == "" { recOk = false; break; }
-                                if bName =!= "_" {
-                                    outKind := if fKind =!= "" { fKind } else { recFKind };
-                                    bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bName) } else { "" };
-                                    listLib.pushBack(mut futureValues, (name = bName, runtime = bindRt,
-                                    kind = outKind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
-                                }
-                                if cEnd < recLimit and textLib.at(source, cEnd) == "," {
-                                    recCursor = syntax.skipTrivia(source, cEnd + 1, prefix);
-                                } else {
-                                    recCursor = cEnd;
-                                    break;
+                                } else if shape == "record" {
+                                    if expKind == "" { patOk = false; break; }
+                                    srcField = bName;
+                                    isNamed = true;
                                 }
                             }
-                            if recOk {
-                                resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
-                                progressed = true;
+                            lastPositional = not isNamed;
+                            singleExpected = expKind;
+                            var resolvedKind := expKind;
+                            if shape == "record" {
+                                if not types.isRecordKind(inferred.kind) { patOk = false; break; }
+                                rf := types.recordFieldKind(inferred.kind, srcField);
+                                if rf == "" { patOk = false; break; }
+                                if resolvedKind == "" { resolvedKind = rf; }
+                            } else if shape == "array" {
+                                if not types.isArrayKind(inferred.kind) { patOk = false; break; }
+                                if resolvedKind == "" { resolvedKind = types.arrayElementKind(inferred.kind); }
+                            } else if types.isTupleKind(inferred.kind) {
+                                if isNamed {
+                                    ti := types.tupleComponentIndexByLabel(inferred.kind, srcField);
+                                    if ti < 0 or trace.tokenInPipeBag(claimedBag, integer.intText(ti)) { patOk = false; break; }
+                                    claimedBag = trace.appendPipeBag(claimedBag, integer.intText(ti));
+                                    if resolvedKind == "" { resolvedKind = types.tupleComponent(inferred.kind, ti).kind; }
+                                } else {
+                                    tCnt := types.tupleComponentCount(inferred.kind);
+                                    var pIdx := 0;
+                                    var foundSlot := -1;
+                                    loop pIdx < tCnt {
+                                        if not trace.tokenInPipeBag(claimedBag, integer.intText(pIdx)) {
+                                            foundSlot = pIdx;
+                                            claimedBag = trace.appendPipeBag(claimedBag, integer.intText(pIdx));
+                                            break;
+                                        }
+                                        pIdx = pIdx + 1;
+                                    }
+                                    if foundSlot >= 0 and resolvedKind == "" {
+                                        resolvedKind = types.tupleComponent(inferred.kind, foundSlot).kind;
+                                    }
+                                }
+                            }
+                            listLib.pushBack(mut bNames, bName);
+                            listLib.pushBack(mut bKinds, resolvedKind);
+                            count = count + 1;
+                            if cEnd < srcLen and textLib.at(source, cEnd) == "," {
+                                hadComma = true;
+                                patCur = syntax.skipTrivia(source, cEnd + 1, prefix);
+                            } else {
+                                patCur = cEnd;
+                                break;
                             }
                         }
-                    } else {
-                        destr := tryParseDestructureNames(source, openPos, prefix);
-                        if destr.ok and destr.count > 0 {
-                            if destr.grouped {
-                                if inferred.kind =!= "" and inferred.kind =!= ir.VALUE_KIND_UNIT {
-                                    bindName := destr.namesText;
-                                    bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bindName) } else { "" };
-                                    listLib.pushBack(mut futureValues, (name = bindName, runtime = bindRt,
-                                    kind = inferred.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
-                                    resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
-                                    progressed = true;
-                                }
-                            } else if types.isTupleKind(inferred.kind) and types.tupleComponentCount(inferred.kind) == destr.count {
-                                var bindCursor := 0;
-                                var bindIndex := 0;
-                                namesLen := textLib.length(destr.namesText);
-                                loop bindIndex < destr.count {
-                                    var bindEnd := bindCursor;
-                                    loop bindEnd < namesLen and textLib.at(destr.namesText, bindEnd) =!= "," {
-                                        bindEnd = bindEnd + 1;
+                        isGrouped := shape == "tuple" and count == 1 and not hadComma and lastPositional;
+                        shapeMatches := if not patOk or count == 0 { false }
+                        else if shape == "record" { types.isRecordKind(inferred.kind) }
+                        else if shape == "array" { types.isArrayKind(inferred.kind) and types.arrayExtent(inferred.kind) == count }
+                        else if isGrouped { inferred.kind =!= "" and inferred.kind =!= ir.VALUE_KIND_UNIT }
+                        else { types.isTupleKind(inferred.kind) and types.tupleComponentCount(inferred.kind) == count };
+                        if shapeMatches {
+                            if isGrouped {
+                                gName := bNames[0];
+                                gKind := if singleExpected =!= "" { singleExpected } else { inferred.kind };
+                                bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, gName) } else { "" };
+                                listLib.pushBack(mut futureValues, (name = gName, runtime = bindRt,
+                                kind = gKind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
+                            } else {
+                                var bi := 0;
+                                loop bi < count {
+                                    bn := bNames[bi];
+                                    bk := bKinds[bi];
+                                    if bk =!= "" and not (shape == "record" and bn == "_") {
+                                        bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bn) } else { "" };
+                                        listLib.pushBack(mut futureValues, (name = bn, runtime = bindRt,
+                                        kind = bk, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
                                     }
-                                    bindName := textLib.slice(destr.namesText, bindCursor, bindEnd);
-                                    bindCursor = bindEnd + 1;
-                                    comp := types.tupleComponent(inferred.kind, bindIndex);
-                                    bindRt := if useModuleRuntime { ir.moduleValueRuntime(target, moduleKey, bindName) } else { "" };
-                                    listLib.pushBack(mut futureValues, (name = bindName, runtime = bindRt,
-                                    kind = comp.kind, at = decl.intValue, mutable = destrMutable, writable = false, initState = ir.INIT_STATE_INIT));
-                                    bindIndex = bindIndex + 1;
+                                    bi = bi + 1;
                                 }
-                                resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
-                                progressed = true;
                             }
+                            resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
+                            progressed = true;
                         }
                     }
                 }
@@ -946,11 +963,11 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
         } else if ch == "}" {
             break;
         } else if ch == "(" or ch == "[" {
-            if ch == "(" and parenDepth == 0 {
-                parenEnd := syntax.scanParenEnd(source, position, prefix);
-                afterParen := if parenEnd >= 0 { syntax.skipTrivia(source, parenEnd, prefix) } else { -1 };
-                if afterParen >= 0 and afterParen < limit and textLib.startsWithAt(source, afterParen, ":=") {
-                    rhsPos := syntax.skipTrivia(source, afterParen + 2, prefix);
+            if parenDepth == 0 {
+                patEnd := if ch == "(" { syntax.scanParenEnd(source, position, prefix) } else { syntax.scanBracketEnd(source, position, prefix) };
+                afterPat := if patEnd >= 0 { syntax.skipTrivia(source, patEnd, prefix) } else { -1 };
+                if afterPat >= 0 and afterPat < limit and textLib.startsWithAt(source, afterPat, ":=") {
+                    rhsPos := syntax.skipTrivia(source, afterPat + 2, prefix);
                     listLib.pushBack(mut decls, (kind = ir.DECL_KIND_FUTURE_DESTR, name = "", runtime = ir.DECL_BIND_VAL, code = integer.intText(position),
                     intValue = position, textValue = integer.intText(rhsPos)));
                     position = rhsPos;
@@ -968,8 +985,9 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
             name := textLib.slice(source, nameStart, afterName);
             if name == "var" {
                 afterVar := syntax.skipTrivia(source, afterName, prefix);
-                if afterVar < limit and (textLib.at(source, afterVar) == "(" or textLib.at(source, afterVar) == "{") {
-                    patEnd := if textLib.at(source, afterVar) == "(" { syntax.scanParenEnd(source, afterVar, prefix) } else { syntax.scanBraceEnd(source, afterVar, prefix) };
+                if afterVar < limit and (textLib.at(source, afterVar) == "(" or textLib.at(source, afterVar) == "{" or textLib.at(source, afterVar) == "[") {
+                    vCh := textLib.at(source, afterVar);
+                    patEnd := if vCh == "(" { syntax.scanParenEnd(source, afterVar, prefix) } else if vCh == "{" { syntax.scanBraceEnd(source, afterVar, prefix) } else { syntax.scanBracketEnd(source, afterVar, prefix) };
                     afterParen := if patEnd >= 0 { syntax.skipTrivia(source, patEnd, prefix) } else { -1 };
                     if afterParen >= 0 and afterParen < limit and textLib.startsWithAt(source, afterParen, ":=") {
                         rhsPos := syntax.skipTrivia(source, afterParen + 2, prefix);
@@ -1163,11 +1181,11 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
             if depth > 0 { depth = depth - 1; }
             position = position + 1;
         } else if ch == "(" or ch == "[" {
-            if ch == "(" and depth == 0 and parenDepth == 0 {
-                parenEnd := syntax.scanParenEnd(source, position, prefix);
-                afterParen := if parenEnd >= 0 { syntax.skipTrivia(source, parenEnd, prefix) } else { -1 };
-                if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
-                    rhsPos := syntax.skipTrivia(source, afterParen + 2, prefix);
+            if depth == 0 and parenDepth == 0 {
+                patEnd := if ch == "(" { syntax.scanParenEnd(source, position, prefix) } else { syntax.scanBracketEnd(source, position, prefix) };
+                afterPat := if patEnd >= 0 { syntax.skipTrivia(source, patEnd, prefix) } else { -1 };
+                if afterPat >= 0 and textLib.startsWithAt(source, afterPat, ":=") {
+                    rhsPos := syntax.skipTrivia(source, afterPat + 2, prefix);
                     listLib.pushBack(mut decls, (kind = ir.DECL_KIND_FUTURE_DESTR, name = "", runtime = ir.DECL_BIND_VAL, code = integer.intText(position),
                     intValue = position, textValue = integer.intText(rhsPos)));
                     position = rhsPos;
@@ -1205,8 +1223,9 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
             }
             if name == "var" {
                 afterVar := syntax.skipTrivia(source, afterName, prefix);
-                if afterVar < size and (textLib.at(source, afterVar) == "(" or textLib.at(source, afterVar) == "{") {
-                    patEnd := if textLib.at(source, afterVar) == "(" { syntax.scanParenEnd(source, afterVar, prefix) } else { syntax.scanBraceEnd(source, afterVar, prefix) };
+                if afterVar < size and (textLib.at(source, afterVar) == "(" or textLib.at(source, afterVar) == "{" or textLib.at(source, afterVar) == "[") {
+                    vCh := textLib.at(source, afterVar);
+                    patEnd := if vCh == "(" { syntax.scanParenEnd(source, afterVar, prefix) } else if vCh == "{" { syntax.scanBraceEnd(source, afterVar, prefix) } else { syntax.scanBracketEnd(source, afterVar, prefix) };
                     afterParen := if patEnd >= 0 { syntax.skipTrivia(source, patEnd, prefix) } else { -1 };
                     if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
                         rhsPos := syntax.skipTrivia(source, afterParen + 2, prefix);

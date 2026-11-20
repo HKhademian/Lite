@@ -282,6 +282,47 @@ destrRej: List<(bad: String, m1: String, m2: String)> = [
 ];
 assertRejectsAny("tuple-destructuring", destrRej);
 
+/* named/mixed/shorthand/typed tuple destructuring and fixed-array [a, b] := arr destructuring */
+namedArrDestrSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "readForward := fn(): Int { fwdA + fwdB };",
+    "stored := (r = 20, l = 10);",
+    "(left = l, right = r) := stored;",
+    "(= l: Int, = r) := stored;",
+    "(= fruit) := (fruit = 30);",
+    "mixed := (1, mid = \"m\", last = true);",
+    "(head, = last, m: String = mid) := mixed;",
+    "arr: [Int; 3] = [100, 200, 300];",
+    "[a0, a1: Int, _] := arr;",
+    "var [fwdA, fwdB] := [4, 5];",
+    "fwdB += 1;",
+    "innerArr := {",
+    "    var (= r) := (r = 7);",
+    "    r += 2;",
+    "    [x, x] := [11, 22];",
+    "    r + x",
+    "};",
+    "io.outputLine(left, right, l, r, fruit, head, m, last, a0, a1, readForward(), innerArr);"
+], "\n");
+compilerTest.assertCompileRunTs(root, tsComp, "named-tuple-and-array-destructuring", namedArrDestrSrc, "10 20 10 20 30 1 m true 100 200 10 31\n");
+namedArrDestrRej: List<(bad: String, m1: String, m2: String)> = [
+    (bad = "(= a) := (b = 1);", m1 = "tuple has no field a", m2 = ""),
+    (bad = "(x = a, = a) := (a = 1, b = 2);", m1 = "duplicate selection of tuple field a", m2 = ""),
+    (bad = "(x, y = first) := (first = 1, second = 2);", m1 = "duplicate selection of tuple field first", m2 = ""),
+    (bad = "(= a: String) := (a = 1);", m1 = "cannot bind Int to String", m2 = ""),
+    (bad = "[] := [1];", m1 = "array destructuring needs at least one binding", m2 = ""),
+    (bad = "[a, b] := [1];", m1 = "array destructuring expected 2 elements, got 1", m2 = ""),
+    (bad = "xs: List<Int> = [1, 2]; [a, b] := xs;", m1 = "cannot destructure runtime-sized List<Int>; fixed array required", m2 = ""),
+    (bad = "[a, b] := 42;", m1 = "array destructuring requires an array value, got Int", m2 = ""),
+    (bad = "[a: String, b] := [1, 2];", m1 = "cannot bind Int to String", m2 = ""),
+    (bad = "[a = b] := [1];", m1 = "array destructuring patterns do not use =", m2 = ""),
+    (bad = "[= a] := [1];", m1 = "array destructuring does not support = selector", m2 = "")
+];
+assertRejectsAny("named-tuple-and-array-destructuring", namedArrDestrRej);
+arrDestrCRes := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; [a, b] := [1, 2]; io.outputLine(a, b);\n", "c_arr_destr.lts");
+test.checkInt("C arr destructuring rejected", 2, arrDestrCRes.status);
+test.check("C arr destructuring message: " + arrDestrCRes.stderr, text.containsText(arrDestrCRes.stderr, "C backend does not support list values yet"));
+
 /* scope-local counters avoid source-offset churn in functions, destructuring, loops, and C shadows */
 workBody := text.joinTexts([
     "io := import \"core/io\";",

@@ -75,9 +75,7 @@ This restriction concerns record-pattern productions. It cannot ban every identi
 
 ### Proposed same-name field shorthand
 
-The proposed `{ name, age } := user` is coherent: each bare field entry expands to `name = name` or `age = age` within a record pattern. The left occurrence binds and the right occurrence selects the source field, independently of outer variables with those names. The whole right-hand source is resolved before the new bindings. Types follow the source contract; no type-name prefix is needed.
-
-This shorthand is not yet added to the selected grammar. It needs field-presence and omission rules, the same visibility/ownership rules as explicit clauses, and a decision about bare `_`: an ordinary field entry would select a field actually named _, rather than skip an arbitrary source field. Explicit `_ = age` already binds age under the unused-allowed name.
+The explicit `= name` same-name shorthand expands `= name` to `name = name` in both record construction (`User { = name, = age }`) and named record destructuring (`{ a = label, = other } := rec;`, `{ = age: Int } := rec;`), matching tuple/call `= name` shorthand. Bare `{ name, age } := user` without `=` remains a separate proposal because it would need distinct omission and bare-`_` rules. Explicit `_ = age` binds age under the unused-allowed name.
 
 Removing record from the declaration is a separate proposal. `User := { name: String; age: Int; }` would make braces introduce a type as well as executable blocks and contextual data. Nonempty type-only field entries could potentially distinguish that form syntactically, but empty `{}` already means a Unit-valued block, and future field defaults can resemble ordinary typed declarations. Retain `User := record { ... }` until an explicit grammar settles those cases; do not choose by capitalization or whichever interpretation type-checks.
 

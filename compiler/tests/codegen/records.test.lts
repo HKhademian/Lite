@@ -117,6 +117,26 @@ compilerTest.assertCompileRunTs(root, tsComp, "records aliases forward fn destru
 "B 22 C 18\n" +
 "10\n");
 
+/* Record =field shorthand in both construction and destructuring */
+recShorthandSrc := "io := import \"core/io\";\n" +
+"User := record { label: String; other: Int; active: Bool = true; }\n" +
+"makeUser := fn(label: String, other: Int): User { User { = label, = other } }\n" +
+"makeCtx := fn(label: String, other: Int): User {\n" +
+"    u: User = { = label, = other, active = false };\n" +
+"    u\n" +
+"}\n" +
+"u1 := makeUser(\"Sara\", 25);\n" +
+"u2 := makeCtx(\"Ali\", 9);\n" +
+"{ a = label, = other: Int, = active } := u1;\n" +
+"var { = label: String, isAct = active } := u2;\n" +
+"label = label + \"!\";\n" +
+"inner := {\n" +
+"    var { = other } := u2;\n" +
+"    other + 1\n" +
+"};\n" +
+"io.outputLine(a, other, active, isAct, label, u2.other, inner);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "records =field shorthand", recShorthandSrc, "Sara 25 true false Ali! 9 10\n");
+
 /* Empty executable bodies keep Unit semantics even when a User is expected in non-initializer control flow */
 unitBodySrc := "io := import \"core/io\";\n" +
 "User := record { active: Bool = true; }\n" +
@@ -177,6 +197,7 @@ badRecSrc: List<String> = [
 "A := record { b: B; }\nB := record { a: A; }\nx: A;\n",
 "User := record { x: Int; }\nf := fn(): User { {} }\n",
 "User := record { x: Int; }\na := User { x = 1 }\nb := User { x = 1 }\nc := a == b;\n",
+"User := record { x: Int; }\nu := User { x = 1 }\n{ = _ } := u;\n",
 ];
 badRecErr: List<String> = [
 "cannot initialize Student with User",
@@ -191,9 +212,10 @@ badRecErr: List<String> = [
 "recursive type alias A",
 "function f must return User",
 "cannot compare record values",
+"use _ = sourceField to discard a field",
 ];
 var bi := 0;
-loop bi < 12 {
+loop bi < 13 {
     compilerTest.assertCompileErrorContains(root, tsComp, "bad record " + badRecSrc[bi], badRecSrc[bi], badRecErr[bi]);
     bi = bi + 1;
 }

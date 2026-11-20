@@ -606,9 +606,6 @@ skipBalancedArgument := fn(source: String, position: Int, prefix: String): Int {
 /** Collects explicit `name = ...` and `=name` parameter labels present in a call argument list starting at `openParen`. */
 collectExplicitCallLabels := fn(source: String, openParen: Int, prefix: String): List<String> { syntax.collectExplicitCallLabels(source, openParen, prefix) };
 
-/** Parses `()`, `(name)` or `(name1, name2, ...)` for tuple destructuring declarations, allowing empty or nested-scope rebinding. */
-parseTupleDestructureTarget := fn(source: String, open: Int, prefix: String): (namesText: String, count: Int, grouped: Bool, next: Int) { syntax.parseTupleDestructureTarget(source, open, prefix) };
-
 /** Returns the position of the `{` that opens the branch after the condition starting at `start`, or -1 when absent. */
 scanConditionOpen := fn(source: String, start: Int, prefix: String): Int { syntax.scanConditionOpen(source, start, prefix) };
 
@@ -755,9 +752,6 @@ canPreResolveLocalType := fn(source: String, position: Int, prefix: String, alia
 
 /** Non-failing guard checking whether `parseFunctionHeader` can succeed at `position` without triggering diagnostics. */
 canPreParseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, listIntrinsic: Bool): Bool { types.canPreParseFunctionHeader(source, position, prefix, aliases, listIntrinsic) };
-
-/** Non-failing counterpart to `parseTupleDestructureTarget` for root pre-collection. */
-tryParseDestructureNames := fn(source: String, open: Int, prefix: String): (ok: Bool, namesText: String, count: Int, grouped: Bool) { infer.tryParseDestructureNames(source, open, prefix) };
 
 /** Finds the start position of the final expression inside `{ ... }` from `openBracePos` to `closeBracePos`, or -1 when empty. */
 tryInferBlockTailStart := fn(source: String, openBracePos: Int, closeBracePos: Int, prefix: String): Int { infer.tryInferBlockTailStart(source, openBracePos, closeBracePos, prefix) };
@@ -1573,127 +1567,21 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 continue;
             }
         }
-        var destructureOpen := -1;
-        var recDestructureOpen := -1;
-        var destructureMutable := false;
-        if ch == "{" {
-            recDestructureOpen = position;
-        } else if ch == "(" {
-            parenEnd := scanParenEnd(source, position, prefix);
-            afterParen := if parenEnd >= 0 { skipTrivia(source, parenEnd, prefix) } else { -1 };
-            if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
-                destructureOpen = position;
-            }
-        } else if ch == "v" and textLib.wordAt(source, position, "var") {
-            afterVar := skipTrivia(source, position + 3, prefix);
-            if afterVar < size and textLib.at(source, afterVar) == "(" {
-                destructureOpen = afterVar;
-                destructureMutable = true;
-            } else if afterVar < size and textLib.at(source, afterVar) == "{" {
-                recDestructureOpen = afterVar;
-                destructureMutable = true;
-            } else if afterVar < size and textLib.isNameStart(textLib.at(source, afterVar)) {
-                varPatEnd := skipTrivia(source, textLib.skipName(source, afterVar), prefix);
-                if varPatEnd < size and textLib.at(source, varPatEnd) == "{" {
-                    patBraceEnd := scanBraceEnd(source, varPatEnd, prefix);
-                    afterPatBrace := if patBraceEnd >= 0 { skipTrivia(source, patBraceEnd, prefix) } else { -1 };
-                    if afterPatBrace >= 0 and textLib.startsWithAt(source, afterPatBrace, ":=") {
-                        failAt(source, afterVar, prefix, "construction-shaped record pattern is not allowed; omit the type name");
-                    }
-                }
-            }
-        }
-        if recDestructureOpen >= 0 {
-            recPattern := expr.parseRecordDestructurePattern(source, recDestructureOpen, prefix, aliases);
-            afterRecTarget := skipTrivia(source, recPattern.next, prefix);
-            if not textLib.startsWithAt(source, afterRecTarget, ":=") {
-                failAt(source, afterRecTarget, prefix, "expected := after record destructuring target");
-            }
-            rhs := parseInitializerExpression(target, source, skipTrivia(source, afterRecTarget + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
-            if target == TARGET_TS and currentLive and not currentStopped {
-                checkTraceSafety(source, recDestructureOpen, prefix, rhs.code, currentName, maxFutureAt, locals, functions, futureValues, items);
-                locals = mergeOuterCallableUpdatesFromCode(locals, rhs.code);
-            }
-            if not isRecordKind(rhs.kind) {
-                failAt(source, recDestructureOpen, prefix, "record destructuring requires a record value, got " + displayKind(rhs.kind));
-            }
-            statementNext := consumeStatementEnd(source, rhs.next, prefix);
-            if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after record destructuring"); }
-            tempRuntime := freshScopeTemp(locals, "lite$rec");
-            recCode := if target == TARGET_TS and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
-            listLib.pushBack(mut locals, (name = "$rec", runtime = tempRuntime, kind = VALUE_KIND_UNIT,
-            mutable = false, writable = false, depth = depth, constant = false, code = recCode,
-            intValue = 0, textValue = "", initState = INIT_STATE_INIT));
-            if currentLive and not currentStopped {
-                listLib.pushBack(mut items, (kind = ITEM_KIND_LOCAL_RECORD, name = "", runtime = tempRuntime,
-                code = rhs.code, intValue = 0, textValue = storageTextPayload(rhs.kind, "")));
-                if codeHasRawTransfer(rhs.code) {
-                    listLib.pushBack(mut transferCodes, rhs.code);
-                    transferCount = transferCount + 1;
-                }
-            }
-            pendingRecNames: mut List<String> = [];
-            var clCursor := 0;
-            var clIndex := 0;
-            loop clIndex < recPattern.count {
-                bindPart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, clCursor);
-                fieldPart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, bindPart.next);
-                typePart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, fieldPart.next);
-                clCursor = typePart.next;
-                bindName := bindPart.text;
-                sourceField := fieldPart.text;
-                expectedFieldKind := typePart.text;
-                sourceFieldKind := types.recordFieldKind(rhs.kind, sourceField);
-                if sourceFieldKind == "" {
-                    failAt(source, recDestructureOpen, prefix, "record " + types.recordDisplayName(rhs.kind) + " has no field " + sourceField);
-                }
-                var bindKind := sourceFieldKind;
-                if expectedFieldKind =!= "" {
-                    if not isCompatibleKind(expectedFieldKind, sourceFieldKind) {
-                        failAt(source, recDestructureOpen, prefix, "cannot bind " + displayKind(sourceFieldKind) + " field " + sourceField + " as " + displayKind(expectedFieldKind));
-                    }
-                    bindKind = expectedFieldKind;
-                }
-                if bindName =!= "_" {
-                    rejectDuplicateBlockDecl(source, recDestructureOpen, prefix, blockDecls, depth, bindName);
-                    if depth == 0 {
-                        listLib.pushBack(mut blockDecls, (name = bindName, depth = depth));
-                    } else if not listLib.listContainsText(pendingRecNames, bindName) {
-                        listLib.pushBack(mut pendingRecNames, bindName);
-                    }
-                    bindRuntime := claimOrMakeLocalRuntime(target, locals, bindName, moduleKey, depth);
-                    fieldProp := types.recordComponentProp(rhs.kind, sourceField);
-                    fieldCode := assignValueCode(target, bindKind, sourceFieldKind, tempRuntime + "." + fieldProp);
-                    fieldLocalCode := if target == TARGET_TS and containsFnKind(bindKind) { computeCallableRhsDeps(fieldCode) } else { fieldCode };
-                    listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = bindKind,
-                    mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldLocalCode,
-                    intValue = 0, textValue = "", initState = INIT_STATE_INIT));
-                    if currentLive and not currentStopped {
-                        itemPrefix := if destructureMutable { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
-                        listLib.pushBack(mut items, (kind = itemPrefix + storageKind(bindKind), name = bindName, runtime = bindRuntime,
-                        code = fieldCode, intValue = 0, textValue = storageTextPayload(bindKind, "")));
-                    }
-                }
-                clIndex = clIndex + 1;
-            }
-            loop pendingRecNames as recBindName {
-                listLib.pushBack(mut blockDecls, (name = recBindName, depth = depth));
-            }
-            position = statementNext;
-            continue;
-        }
+        scanDestr := expr.scanDestructureStart(source, position, size, prefix);
+        destructureOpen := scanDestr.openPos;
+        destructureMutable := scanDestr.isMutable;
         if destructureOpen >= 0 {
-            destructure := parseTupleDestructureTarget(source, destructureOpen, prefix);
+            destructure := expr.parseAggregatePattern(source, destructureOpen, prefix, aliases);
             afterTarget := skipTrivia(source, destructure.next, prefix);
             if not textLib.startsWithAt(source, afterTarget, ":=") {
-                failAt(source, afterTarget, prefix, "expected := after tuple destructuring target");
+                failAt(source, afterTarget, prefix, "expected := after " + destructure.shape + " destructuring target");
             }
             rhs := parseInitializerExpression(target, source, skipTrivia(source, afterTarget + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
             if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, destructureOpen, prefix, rhs.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 locals = mergeOuterCallableUpdatesFromCode(locals, rhs.code);
             }
-            if destructure.count == 0 {
+            if destructure.shape == "tuple" and destructure.count == 0 {
                 if destructureMutable {
                     failAt(source, destructureOpen, prefix, "var tuple destructuring needs at least one binding");
                 }
@@ -1717,23 +1605,31 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 continue;
             }
             if destructure.grouped {
-                bindName := destructure.namesText;
+                bindPart := types.decodeLengthPrefixedAt(destructure.encodedClauses, 0);
+                bindName := bindPart.text;
                 rejectNonValueBinding(source, destructureOpen, prefix, rhs.kind, bindName);
+                var groupedBindKind := rhs.kind;
+                if destructure.groupedType =!= "" {
+                    if not isCompatibleKind(destructure.groupedType, rhs.kind) {
+                        failAt(source, destructureOpen, prefix, "cannot bind " + displayKind(rhs.kind) + " to " + displayKind(destructure.groupedType));
+                    }
+                    groupedBindKind = destructure.groupedType;
+                }
                 statementNext := consumeStatementEnd(source, rhs.next, prefix);
                 if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
                 position = statementNext;
                 rejectDuplicateBlockDecl(source, destructureOpen, prefix, blockDecls, depth, bindName);
                 listLib.pushBack(mut blockDecls, (name = bindName, depth = depth));
                 bindRuntime := claimOrMakeLocalRuntime(target, locals, bindName, moduleKey, depth);
-                bindFnCode := if target == TARGET_TS and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { rhs.code };
-                listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
+                bindFnCode := if target == TARGET_TS and containsFnKind(groupedBindKind) { computeCallableRhsDeps(rhs.code) } else { rhs.code };
+                listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = groupedBindKind,
                 mutable = destructureMutable, writable = false, depth = depth, constant = false, code = bindFnCode,
                 intValue = rhs.intValue, textValue = rhs.textValue, initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
                     itemPrefix := if destructureMutable { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
-                    destrCode := copiedValueCode(target, rhs.kind, rhs.code);
-                    listLib.pushBack(mut items, (kind = itemPrefix + storageKind(rhs.kind), name = bindName, runtime = bindRuntime,
-                    code = destrCode, intValue = rhs.intValue, textValue = itemTextPayload(rhs)));
+                    destrCode := assignValueCode(target, groupedBindKind, rhs.kind, rhs.code);
+                    listLib.pushBack(mut items, (kind = itemPrefix + storageKind(groupedBindKind), name = bindName, runtime = bindRuntime,
+                    code = destrCode, intValue = rhs.intValue, textValue = storageTextPayload(groupedBindKind, rhs.textValue)));
                     if codeHasRawTransfer(destrCode) {
                         listLib.pushBack(mut transferCodes, destrCode);
                         transferCount = transferCount + 1;
@@ -1741,62 +1637,62 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 }
                 continue;
             }
-            if not isTupleKind(rhs.kind) {
-                failAt(source, destructureOpen, prefix, "tuple destructuring requires a tuple value, got " + displayKind(rhs.kind));
-            }
-            if tupleComponentCount(rhs.kind) =!= destructure.count {
-                failAt(source, destructureOpen, prefix, "tuple destructuring expected " + integer.intText(destructure.count) +
-                " fields, got " + integer.intText(tupleComponentCount(rhs.kind)));
-            }
+            tempPrefix := if destructure.shape == "record" { "lite$rec" } else if destructure.shape == "array" { "lite$arr" } else { "lite$tuple" };
+            tempSlot := if destructure.shape == "record" { "$rec" } else if destructure.shape == "array" { "$arr" } else { "$tuple" };
+            tempItemKind := if destructure.shape == "record" { ITEM_KIND_LOCAL_RECORD } else if destructure.shape == "array" { ITEM_KIND_LOCAL_LIST } else { ITEM_KIND_LOCAL_TUPLE };
+            tempRuntime := freshScopeTemp(locals, tempPrefix);
+            resolvedBindings := expr.resolveAggregateBindings(destructure.shape, destructure.count, destructure.encodedClauses, rhs.kind, tempRuntime, source, destructureOpen, prefix);
             statementNext := consumeStatementEnd(source, rhs.next, prefix);
-            if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
+            if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after " + destructure.shape + " destructuring"); }
             position = statementNext;
-            tempRuntime := freshScopeTemp(locals, "lite$tuple");
-            tupleCode := if target == TARGET_TS and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
-            listLib.pushBack(mut locals, (name = "$tuple", runtime = tempRuntime, kind = VALUE_KIND_UNIT,
-            mutable = false, writable = false, depth = depth, constant = false, code = tupleCode,
+            aggCode := if target == TARGET_TS and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
+            listLib.pushBack(mut locals, (name = tempSlot, runtime = tempRuntime, kind = VALUE_KIND_UNIT,
+            mutable = false, writable = false, depth = depth, constant = false, code = aggCode,
             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
-                listLib.pushBack(mut items, (kind = ITEM_KIND_LOCAL_TUPLE, name = "", runtime = tempRuntime,
-                code = rhs.code, intValue = 0, textValue = ""));
+                listLib.pushBack(mut items, (kind = tempItemKind, name = "", runtime = tempRuntime,
+                code = rhs.code, intValue = 0, textValue = if destructure.shape == "tuple" { "" } else { storageTextPayload(rhs.kind, "") }));
                 if codeHasRawTransfer(rhs.code) {
                     listLib.pushBack(mut transferCodes, rhs.code);
                     transferCount = transferCount + 1;
                 }
             }
-            pendingTupleNames: mut List<String> = [];
-            var bindCursor := 0;
-            var bindIndex := 0;
-            namesLen := textLib.length(destructure.namesText);
-            loop bindIndex < destructure.count {
-                var bindEnd := bindCursor;
-                loop bindEnd < namesLen and textLib.at(destructure.namesText, bindEnd) =!= "," {
-                    bindEnd = bindEnd + 1;
+            pendingDestrNames: mut List<String> = [];
+            var bCursor := 0;
+            var bIndex := 0;
+            loop bIndex < destructure.count {
+                bindPart := types.decodeLengthPrefixedAt(resolvedBindings, bCursor);
+                propPart := types.decodeLengthPrefixedAt(resolvedBindings, bindPart.next);
+                srcPart := types.decodeLengthPrefixedAt(resolvedBindings, propPart.next);
+                tgtPart := types.decodeLengthPrefixedAt(resolvedBindings, srcPart.next);
+                bCursor = tgtPart.next;
+                bindName := bindPart.text;
+                propExpr := propPart.text;
+                srcKind := srcPart.text;
+                bindKind := tgtPart.text;
+                if not (destructure.shape == "record" and bindName == "_") {
+                    rejectDuplicateBlockDecl(source, destructureOpen, prefix, blockDecls, depth, bindName);
+                    if depth == 0 {
+                        listLib.pushBack(mut blockDecls, (name = bindName, depth = depth));
+                    } else if not listLib.listContainsText(pendingDestrNames, bindName) {
+                        listLib.pushBack(mut pendingDestrNames, bindName);
+                    }
+                    bindRuntime := claimOrMakeLocalRuntime(target, locals, bindName, moduleKey, depth);
+                    fieldCode := assignValueCode(target, bindKind, srcKind, propExpr);
+                    fieldLocalCode := if target == TARGET_TS and containsFnKind(bindKind) { computeCallableRhsDeps(fieldCode) } else { fieldCode };
+                    listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = bindKind,
+                    mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldLocalCode,
+                    intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+                    if currentLive and not currentStopped {
+                        itemPrefix := if destructureMutable { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
+                        listLib.pushBack(mut items, (kind = itemPrefix + storageKind(bindKind), name = bindName, runtime = bindRuntime,
+                        code = fieldCode, intValue = 0, textValue = storageTextPayload(bindKind, "")));
+                    }
                 }
-                bindName := textLib.slice(destructure.namesText, bindCursor, bindEnd);
-                bindCursor = bindEnd + 1;
-                rejectDuplicateBlockDecl(source, destructureOpen, prefix, blockDecls, depth, bindName);
-                if depth == 0 {
-                    listLib.pushBack(mut blockDecls, (name = bindName, depth = depth));
-                } else if not listLib.listContainsText(pendingTupleNames, bindName) {
-                    listLib.pushBack(mut pendingTupleNames, bindName);
-                }
-                comp := tupleComponent(rhs.kind, bindIndex);
-                bindRuntime := claimOrMakeLocalRuntime(target, locals, bindName, moduleKey, depth);
-                fieldCode := tempRuntime + "." + comp.prop;
-                fieldLocalCode := if target == TARGET_TS and containsFnKind(comp.kind) { computeCallableRhsDeps(fieldCode) } else { fieldCode };
-                listLib.pushBack(mut locals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
-                mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldLocalCode,
-                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
-                if currentLive and not currentStopped {
-                    itemPrefix := if destructureMutable { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
-                    listLib.pushBack(mut items, (kind = itemPrefix + storageKind(comp.kind), name = bindName, runtime = bindRuntime,
-                    code = fieldCode, intValue = 0, textValue = storageTextPayload(comp.kind, "")));
-                }
-                bindIndex = bindIndex + 1;
+                bIndex = bIndex + 1;
             }
-            loop pendingTupleNames as tupleName {
-                listLib.pushBack(mut blockDecls, (name = tupleName, depth = depth));
+            loop pendingDestrNames as destrName {
+                listLib.pushBack(mut blockDecls, (name = destrName, depth = depth));
             }
             continue;
         }

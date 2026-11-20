@@ -564,17 +564,33 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
             cursor = cursor + 1;
             break;
         }
-        if not textLib.isNameStart(textLib.at(source, cursor)) {
-            syntax.failAt(source, cursor, prefix, "expected field name in record construction");
+        var labelStart := cursor;
+        var label := "";
+        var valStart := cursor;
+        var valMin := 0;
+        if syntax.isSingleEquals(source, cursor) {
+            shStart := syntax.skipTrivia(source, cursor + 1, prefix);
+            if shStart >= size or not textLib.isNameStart(textLib.at(source, shStart)) {
+                syntax.failAt(source, shStart, prefix, "expected field name after = in record construction");
+            }
+            shEnd := textLib.skipName(source, shStart);
+            labelStart = shStart;
+            label = textLib.slice(source, shStart, shEnd);
+            valStart = shStart;
+            valMin = 30;
+        } else {
+            if not textLib.isNameStart(textLib.at(source, cursor)) {
+                syntax.failAt(source, cursor, prefix, "expected field name in record construction");
+            }
+            labelEnd := textLib.skipName(source, labelStart);
+            label = textLib.slice(source, labelStart, labelEnd);
+            afterLabel := syntax.skipTrivia(source, labelEnd, prefix);
+            if not syntax.isSingleEquals(source, afterLabel) {
+                syntax.failAt(source, afterLabel, prefix, "expected = after record field " + label);
+            }
+            valStart = syntax.skipTrivia(source, afterLabel + 1, prefix);
         }
-        labelStart := cursor;
-        labelEnd := textLib.skipName(source, labelStart);
-        label := textLib.slice(source, labelStart, labelEnd);
         if syntax.isReservedWord(label) { syntax.unsupportedFeature(source, labelStart, label, prefix); }
-        afterLabel := syntax.skipTrivia(source, labelEnd, prefix);
-        if not syntax.isSingleEquals(source, afterLabel) {
-            syntax.failAt(source, afterLabel, prefix, "expected = after record field " + label);
-        }
         fieldKind := types.recordFieldKind(recordKind, label);
         if fieldKind == "" {
             syntax.failAt(source, labelStart, prefix, "record " + recName + " has no field " + label);
@@ -582,12 +598,11 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
         if listLib.listContainsText(suppliedKeys, label) {
             syntax.failAt(source, labelStart, prefix, "duplicate record field " + label);
         }
-        valStart := syntax.skipTrivia(source, afterLabel + 1, prefix);
         zeroEnd := syntax.isZeroInitLiteral(source, valStart, prefix);
         var valNext := valStart;
         var valCode := "";
         var checkZero := false;
-        if zeroEnd >= 0 and not numeric.isNumericKind(fieldKind) {
+        if valMin == 0 and zeroEnd >= 0 and not numeric.isNumericKind(fieldKind) {
             afterZero := syntax.skipTrivia(source, zeroEnd, prefix);
             if afterZero < size and (textLib.at(source, afterZero) == "," or textLib.at(source, afterZero) == "}") {
                 checkZero = true;
@@ -598,7 +613,7 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
             valCode = z.code;
             valNext = z.next;
         } else {
-            valParsed := parseBinaryCtx(target, source, valStart, prefix, locals, functions, params, currentName, fieldKind, 0, ctxs, iifeDepth, inferMode, "", recAliases);
+            valParsed := parseBinaryCtx(target, source, valStart, prefix, locals, functions, params, currentName, fieldKind, valMin, ctxs, iifeDepth, inferMode, "", recAliases);
             if inferMode { recMarkers = ctx.collectParsedMarkers(recMarkers, valParsed); }
             if not types.isCompatibleKind(fieldKind, valParsed.kind) {
                 syntax.failAt(source, valStart, prefix, "cannot initialize " + types.displayKind(fieldKind) + " field " + label + " with " + types.displayKind(valParsed.kind));
@@ -653,71 +668,246 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
     ctx.withMarkers((kind = recordKind, code = "{ " + textLib.joinTexts(fieldExprs, ", ") + " }", intValue = 0, textValue = "", constant = false, next = cursor), recMarkers)
 };
 
-/** Parses `{ bindName[: Type] = sourceField, fieldName: Type, ... }` for named record destructuring into `(count, encodedClauses, next)`. */
-pub parseRecordDestructurePattern := fn(source: String, openPos: Int, prefix: String, aliases: List<AliasDecl>): (count: Int, encodedClauses: String, next: Int) {
+/** Detects a leading `(...) :=`, `{...} :=`, `[...] :=` (or `var ...`) destructuring pattern, rejecting construction-shaped `Name {...} :=` headers. */
+pub scanDestructureStart := fn(source: String, cursor: Int, limit: Int, prefix: String): (openPos: Int, isMutable: Bool) {
+    if cursor >= limit { return (openPos = -1, isMutable = false); }
+    ch := textLib.at(source, cursor);
+    if ch == "(" or ch == "{" or ch == "[" {
+        endPos := if ch == "(" { syntax.scanParenEnd(source, cursor, prefix) } else if ch == "{" { syntax.scanBraceEnd(source, cursor, prefix) } else { syntax.scanBracketEnd(source, cursor, prefix) };
+        afterEnd := if endPos >= 0 { syntax.skipTrivia(source, endPos, prefix) } else { -1 };
+        if afterEnd >= 0 and afterEnd < limit and textLib.startsWithAt(source, afterEnd, ":=") {
+            return (openPos = cursor, isMutable = false);
+        }
+        return (openPos = -1, isMutable = false);
+    }
+    if ch == "v" and textLib.wordAt(source, cursor, "var") {
+        afterVar := syntax.skipTrivia(source, cursor + 3, prefix);
+        if afterVar < limit {
+            vCh := textLib.at(source, afterVar);
+            if vCh == "(" or vCh == "{" or vCh == "[" {
+                return (openPos = afterVar, isMutable = true);
+            }
+            if textLib.isNameStart(vCh) {
+                varPatEnd := syntax.skipTrivia(source, textLib.skipName(source, afterVar), prefix);
+                if varPatEnd < limit and textLib.at(source, varPatEnd) == "{" {
+                    patBraceEnd := syntax.scanBraceEnd(source, varPatEnd, prefix);
+                    afterPatBrace := if patBraceEnd >= 0 { syntax.skipTrivia(source, patBraceEnd, prefix) } else { -1 };
+                    if afterPatBrace >= 0 and textLib.startsWithAt(source, afterPatBrace, ":=") {
+                        syntax.failAt(source, afterVar, prefix, "construction-shaped record pattern is not allowed; omit the type name");
+                    }
+                }
+            }
+        }
+    }
+    (openPos = -1, isMutable = false)
+};
+
+/** Parses `{ ... }`, `( ... )`, or `[ ... ]` destructuring clauses uniformly, including `= name` shorthand, `bind = field`, `: Type`, and `_`. */
+pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, aliases: List<AliasDecl>): (shape: String, count: Int, grouped: Bool, groupedType: String, encodedClauses: String, next: Int) {
     size := textLib.length(source);
+    openDelim := textLib.at(source, openPos);
+    shape := if openDelim == "{" { "record" } else if openDelim == "(" { "tuple" } else { "array" };
+    closeDelim := if openDelim == "{" { "}" } else if openDelim == "(" { ")" } else { "]" };
     var cursor := syntax.skipTrivia(source, openPos + 1, prefix);
-    seenBinds: mut List<String> = [];
+    seenRecBinds: mut List<String> = [];
     var encoded := "";
     var count := 0;
-    loop cursor < size and textLib.at(source, cursor) =!= "}" {
-        if not textLib.isNameStart(textLib.at(source, cursor)) {
-            syntax.failAt(source, cursor, prefix, "expected binding name in record pattern");
-        }
-        bindStart := cursor;
-        bindEnd := textLib.skipName(source, bindStart);
-        bindName := textLib.slice(source, bindStart, bindEnd);
-        if syntax.isReservedWord(bindName) { syntax.unsupportedFeature(source, bindStart, bindName, prefix); }
-        if bindName =!= "_" and listLib.listContainsText(seenBinds, bindName) {
-            syntax.failAt(source, bindStart, prefix, "duplicate record pattern binding " + bindName);
-        }
-        var expectedKind := "";
-        afterBind := syntax.skipTrivia(source, bindEnd, prefix);
-        var checkEqPos := afterBind;
-        if afterBind < size and textLib.at(source, afterBind) == ":" {
-            typed := types.parseLocalType(source, afterBind + 1, prefix, aliases);
-            if typed.writable {
-                syntax.failAt(source, afterBind, prefix, "mut is not supported in record pattern type constraints");
-            }
-            expectedKind = typed.kind;
-            checkEqPos = syntax.skipTrivia(source, typed.next, prefix);
-        }
+    var hadComma := false;
+    var lastMode := "pos";
+    var lastExpected := "";
+    loop cursor < size and textLib.at(source, cursor) =!= closeDelim {
+        var bindName := "";
         var sourceField := "";
-        var clauseEnd := checkEqPos;
-        if syntax.isSingleEquals(source, checkEqPos) {
-            fieldStart := syntax.skipTrivia(source, checkEqPos + 1, prefix);
-            if fieldStart >= size or not textLib.isNameStart(textLib.at(source, fieldStart)) {
-                syntax.failAt(source, fieldStart, prefix, "expected source field name after =");
+        var expectedKind := "";
+        var clauseMode := "pos";
+        var clauseEnd := cursor;
+        if syntax.isSingleEquals(source, cursor) {
+            if shape == "array" {
+                syntax.failAt(source, cursor, prefix, "array destructuring does not support = selector");
             }
-            fieldEnd := textLib.skipName(source, fieldStart);
-            sourceField = textLib.slice(source, fieldStart, fieldEnd);
-            if syntax.isReservedWord(sourceField) { syntax.unsupportedFeature(source, fieldStart, sourceField, prefix); }
-            clauseEnd = syntax.skipTrivia(source, fieldEnd, prefix);
-        } else if expectedKind =!= "" {
-            if bindName == "_" {
-                syntax.failAt(source, bindStart, prefix, "expected = sourceField after _");
+            shStart := syntax.skipTrivia(source, cursor + 1, prefix);
+            if shStart >= size or not textLib.isNameStart(textLib.at(source, shStart)) {
+                syntax.failAt(source, shStart, prefix, "expected field name after = in " + shape + " destructuring");
             }
-            sourceField = bindName;
+            shEnd := textLib.skipName(source, shStart);
+            shName := textLib.slice(source, shStart, shEnd);
+            if syntax.isReservedWord(shName) { syntax.unsupportedFeature(source, shStart, shName, prefix); }
+            if shName == "_" {
+                syntax.failAt(source, shStart, prefix, "use _ = sourceField to discard a field");
+            }
+            if shape == "record" and listLib.listContainsText(seenRecBinds, shName) {
+                syntax.failAt(source, shStart, prefix, "duplicate record pattern binding " + shName);
+            }
+            bindName = shName;
+            sourceField = shName;
+            clauseMode = "named";
+            afterSh := syntax.skipTrivia(source, shEnd, prefix);
+            clauseEnd = afterSh;
+            if afterSh < size and textLib.at(source, afterSh) == ":" {
+                typed := types.parseLocalType(source, afterSh + 1, prefix, aliases);
+                if typed.writable { syntax.failAt(source, afterSh, prefix, "mut is not supported in pattern type constraints"); }
+                expectedKind = typed.kind;
+                clauseEnd = syntax.skipTrivia(source, typed.next, prefix);
+            }
         } else {
-            syntax.failAt(source, checkEqPos, prefix, "expected = sourceField or : Type in record pattern clause " + bindName);
+            if not textLib.isNameStart(textLib.at(source, cursor)) {
+                syntax.failAt(source, cursor, prefix, if shape == "record" { "expected binding name in record pattern" } else { "expected a binding name in " + shape + " destructuring" });
+            }
+            bindStart := cursor;
+            bindEnd := textLib.skipName(source, bindStart);
+            bindName = textLib.slice(source, bindStart, bindEnd);
+            if syntax.isReservedWord(bindName) { syntax.unsupportedFeature(source, bindStart, bindName, prefix); }
+            if shape == "record" and bindName =!= "_" and listLib.listContainsText(seenRecBinds, bindName) {
+                syntax.failAt(source, bindStart, prefix, "duplicate record pattern binding " + bindName);
+            }
+            afterBind := syntax.skipTrivia(source, bindEnd, prefix);
+            var checkEqPos := afterBind;
+            if afterBind < size and textLib.at(source, afterBind) == ":" {
+                typed := types.parseLocalType(source, afterBind + 1, prefix, aliases);
+                if typed.writable { syntax.failAt(source, afterBind, prefix, "mut is not supported in pattern type constraints"); }
+                expectedKind = typed.kind;
+                checkEqPos = syntax.skipTrivia(source, typed.next, prefix);
+            }
+            clauseEnd = checkEqPos;
+            if syntax.isSingleEquals(source, checkEqPos) {
+                if shape == "array" {
+                    syntax.failAt(source, checkEqPos, prefix, "array destructuring patterns do not use =");
+                }
+                fieldStart := syntax.skipTrivia(source, checkEqPos + 1, prefix);
+                if fieldStart >= size or not textLib.isNameStart(textLib.at(source, fieldStart)) {
+                    syntax.failAt(source, fieldStart, prefix, "expected source field name after =");
+                }
+                fieldEnd := textLib.skipName(source, fieldStart);
+                sourceField = textLib.slice(source, fieldStart, fieldEnd);
+                if syntax.isReservedWord(sourceField) { syntax.unsupportedFeature(source, fieldStart, sourceField, prefix); }
+                clauseMode = "named";
+                clauseEnd = syntax.skipTrivia(source, fieldEnd, prefix);
+            } else if shape == "record" {
+                if expectedKind =!= "" {
+                    if bindName == "_" { syntax.failAt(source, bindStart, prefix, "expected = sourceField after _"); }
+                    sourceField = bindName;
+                    clauseMode = "named";
+                } else {
+                    syntax.failAt(source, checkEqPos, prefix, "expected = sourceField or : Type in record pattern clause " + bindName);
+                }
+            }
         }
-        if bindName =!= "_" { listLib.pushBack(mut seenBinds, bindName); }
-        encoded = encoded + types.encodeLengthPrefixedText(bindName) + types.encodeLengthPrefixedText(sourceField) + types.encodeLengthPrefixedText(expectedKind);
+        if shape == "record" and bindName =!= "_" { listLib.pushBack(mut seenRecBinds, bindName); }
+        encoded = encoded + types.encodeLengthPrefixedText(bindName) + types.encodeLengthPrefixedText(sourceField) +
+        types.encodeLengthPrefixedText(expectedKind) + types.encodeLengthPrefixedText(clauseMode);
+        lastMode = clauseMode;
+        lastExpected = expectedKind;
         count = count + 1;
         cursor = clauseEnd;
         if cursor < size and textLib.at(source, cursor) == "," {
+            hadComma = true;
             cursor = syntax.skipTrivia(source, cursor + 1, prefix);
         } else {
             break;
         }
     }
-    if cursor >= size or textLib.at(source, cursor) =!= "}" {
-        syntax.failAt(source, cursor, prefix, "expected } after record pattern");
-    }
-    if count == 0 {
+    next := syntax.expectSymbol(source, cursor, closeDelim, prefix);
+    if count == 0 and shape == "record" {
         syntax.failAt(source, openPos, prefix, "record destructuring needs at least one field clause");
     }
-    (count = count, encodedClauses = encoded, next = cursor + 1)
+    if count == 0 and shape == "array" {
+        syntax.failAt(source, openPos, prefix, "array destructuring needs at least one binding");
+    }
+    grouped := shape == "tuple" and count == 1 and not hadComma and lastMode == "pos";
+    (shape = shape, count = count, grouped = grouped, groupedType = if grouped { lastExpected } else { "" }, encodedClauses = encoded, next = next)
+};
+
+/** Validates `rhsKind` against a parsed aggregate destructuring pattern and resolves each clause to `(bindName, propExpr, srcKind, targetKind)`. */
+pub resolveAggregateBindings := fn(shape: String, count: Int, encodedClauses: String, rhsKind: String, tempRuntime: String, source: String, openPos: Int, prefix: String): String {
+    if shape == "record" and not types.isRecordKind(rhsKind) {
+        syntax.failAt(source, openPos, prefix, "record destructuring requires a record value, got " + types.displayKind(rhsKind));
+    }
+    if shape == "tuple" {
+        if not types.isTupleKind(rhsKind) {
+            syntax.failAt(source, openPos, prefix, "tuple destructuring requires a tuple value, got " + types.displayKind(rhsKind));
+        }
+        if types.tupleComponentCount(rhsKind) =!= count {
+            syntax.failAt(source, openPos, prefix, "tuple destructuring expected " + integer.intText(count) +
+            " fields, got " + integer.intText(types.tupleComponentCount(rhsKind)));
+        }
+    }
+    if shape == "array" {
+        if types.isListKind(rhsKind) {
+            syntax.failAt(source, openPos, prefix, "cannot destructure runtime-sized List<" + types.displayKind(types.listElementKind(rhsKind)) + ">; fixed array required");
+        }
+        if not types.isArrayKind(rhsKind) {
+            syntax.failAt(source, openPos, prefix, "array destructuring requires an array value, got " + types.displayKind(rhsKind));
+        }
+        if types.arrayExtent(rhsKind) =!= count {
+            syntax.failAt(source, openPos, prefix, "array destructuring expected " + integer.intText(count) +
+            " elements, got " + integer.intText(types.arrayExtent(rhsKind)));
+        }
+    }
+    var claimedBag := "";
+    var out := "";
+    var clCursor := 0;
+    var clIndex := 0;
+    loop clIndex < count {
+        bindPart := types.decodeLengthPrefixedAt(encodedClauses, clCursor);
+        fieldPart := types.decodeLengthPrefixedAt(encodedClauses, bindPart.next);
+        typePart := types.decodeLengthPrefixedAt(encodedClauses, fieldPart.next);
+        modePart := types.decodeLengthPrefixedAt(encodedClauses, typePart.next);
+        clCursor = modePart.next;
+        bindName := bindPart.text;
+        sourceField := fieldPart.text;
+        expectedKind := typePart.text;
+        clauseMode := modePart.text;
+        var srcKind := "";
+        var propExpr := "";
+        if shape == "record" {
+            srcKind = types.recordFieldKind(rhsKind, sourceField);
+            if srcKind == "" {
+                syntax.failAt(source, openPos, prefix, "record " + types.recordDisplayName(rhsKind) + " has no field " + sourceField);
+            }
+            propExpr = tempRuntime + "." + types.recordComponentProp(rhsKind, sourceField);
+        } else if shape == "tuple" {
+            var compIdx := -1;
+            if clauseMode == "named" {
+                compIdx = types.tupleComponentIndexByLabel(rhsKind, sourceField);
+                if compIdx < 0 {
+                    syntax.failAt(source, openPos, prefix, "tuple has no field " + sourceField);
+                }
+                idxTok := integer.intText(compIdx);
+                if trace.tokenInPipeBag(claimedBag, idxTok) {
+                    syntax.failAt(source, openPos, prefix, "duplicate selection of tuple field " + sourceField);
+                }
+                claimedBag = trace.appendPipeBag(claimedBag, idxTok);
+            } else {
+                var probe := 0;
+                loop probe < count {
+                    idxTok := integer.intText(probe);
+                    if not trace.tokenInPipeBag(claimedBag, idxTok) {
+                        compIdx = probe;
+                        claimedBag = trace.appendPipeBag(claimedBag, idxTok);
+                        break;
+                    }
+                    probe = probe + 1;
+                }
+            }
+            comp := types.tupleComponent(rhsKind, compIdx);
+            srcKind = comp.kind;
+            propExpr = tempRuntime + "." + comp.prop;
+        } else {
+            srcKind = types.arrayElementKind(rhsKind);
+            propExpr = tempRuntime + "[" + integer.intText(clIndex) + "]!";
+        }
+        var targetKind := srcKind;
+        if expectedKind =!= "" {
+            if not types.isCompatibleKind(expectedKind, srcKind) {
+                syntax.failAt(source, openPos, prefix, "cannot bind " + types.displayKind(srcKind) + " to " + types.displayKind(expectedKind));
+            }
+            targetKind = expectedKind;
+        }
+        out = out + types.encodeLengthPrefixedText(bindName) + types.encodeLengthPrefixedText(propExpr) +
+        types.encodeLengthPrefixedText(srcKind) + types.encodeLengthPrefixedText(targetKind);
+        clIndex = clIndex + 1;
+    }
+    out
 };
 
 /** Parses name-headed primaries: `Unit`, `true`/`false`, `not`, `if`/`match`/`loop`, `fn`, `self`, locals, module functions, and list intrinsics. */
@@ -918,140 +1108,23 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         }
         lastPartialIfDiverges = false;
         var isStatement := false;
-        var destructureOpen := -1;
-        var recDestructureOpen := -1;
-        var destructureMutable := false;
         chAtCursor := textLib.at(source, cursor);
-        if chAtCursor == "(" {
-            parenEnd := syntax.scanParenEnd(source, cursor, prefix);
-            afterParen := if parenEnd >= 0 { syntax.skipTrivia(source, parenEnd, prefix) } else { -1 };
-            if afterParen >= 0 and textLib.startsWithAt(source, afterParen, ":=") {
-                destructureOpen = cursor;
-            }
-        } else if chAtCursor == "{" {
-            braceEnd := syntax.scanBraceEnd(source, cursor, prefix);
-            afterBrace := if braceEnd >= 0 { syntax.skipTrivia(source, braceEnd, prefix) } else { -1 };
-            if afterBrace >= 0 and textLib.startsWithAt(source, afterBrace, ":=") {
-                recDestructureOpen = cursor;
-            }
-        } else if chAtCursor == "v" and textLib.wordAt(source, cursor, "var") {
-            afterVar := syntax.skipTrivia(source, cursor + 3, prefix);
-            if afterVar < blockSourceSize and textLib.at(source, afterVar) == "(" {
-                destructureOpen = afterVar;
-                destructureMutable = true;
-            } else if afterVar < blockSourceSize and textLib.at(source, afterVar) == "{" {
-                recDestructureOpen = afterVar;
-                destructureMutable = true;
-            } else if afterVar < blockSourceSize and textLib.isNameStart(textLib.at(source, afterVar)) {
-                varPatEnd := syntax.skipTrivia(source, textLib.skipName(source, afterVar), prefix);
-                if varPatEnd < blockSourceSize and textLib.at(source, varPatEnd) == "{" {
-                    patBraceEnd := syntax.scanBraceEnd(source, varPatEnd, prefix);
-                    afterPatBrace := if patBraceEnd >= 0 { syntax.skipTrivia(source, patBraceEnd, prefix) } else { -1 };
-                    if afterPatBrace >= 0 and textLib.startsWithAt(source, afterPatBrace, ":=") {
-                        syntax.failAt(source, afterVar, prefix, "construction-shaped record pattern is not allowed; omit the type name");
-                    }
-                }
-            }
-        }
-        if recDestructureOpen >= 0 {
+        scanDestr := scanDestructureStart(source, cursor, blockSourceSize, prefix);
+        destructureOpen := scanDestr.openPos;
+        destructureMutable := scanDestr.isMutable;
+        if destructureOpen >= 0 {
             isStatement = true;
-            recPattern := parseRecordDestructurePattern(source, recDestructureOpen, prefix, blockAliases);
-            afterRecTarget := syntax.skipTrivia(source, recPattern.next, prefix);
-            if not textLib.startsWithAt(source, afterRecTarget, ":=") {
-                syntax.failAt(source, afterRecTarget, prefix, "expected := after record destructuring target");
-            }
-            rhs := parseBinaryCtx(target, source, syntax.skipTrivia(source, afterRecTarget + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
-            if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, rhs); }
-            if target == ir.TARGET_TS and not inferMode and not blockExits {
-                trace.checkTraceSafety(source, recDestructureOpen, prefix, rhs.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
-            }
-            if not types.isRecordKind(rhs.kind) {
-                syntax.failAt(source, recDestructureOpen, prefix, "record destructuring requires a record value, got " + types.displayKind(rhs.kind));
-            }
-            statementNext := syntax.consumeStatementEnd(source, rhs.next, prefix);
-            if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, rhs.next, prefix), prefix, "expected ; after record destructuring"); }
-            if target == ir.TARGET_TS and not inferMode and not blockExits {
-                blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, rhs.code);
-            }
-            tempRuntime := ir.freshScopeTemp(blockLocals, "lite$rec");
-            recFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(rhs.kind) { trace.computeCallableRhsDeps(rhs.code) } else { "" };
-            listLib.pushBack(mut blockLocals, (name = "$rec", runtime = tempRuntime, kind = ir.VALUE_KIND_UNIT,
-            mutable = false, writable = false, depth = blockLexDepth, constant = false, code = recFnDeps,
-            intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
-            if not blockExits {
-                listLib.pushBack(mut statements, "const " + tempRuntime + " = " + rhs.code + "; void " + tempRuntime + ";");
-                listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, rhs.kind, rhs.code) { tempRuntime } else { "" });
-                listLib.pushBack(mut stmtDeps, rhs.code);
-                trackedStmtCount = trackedStmtCount + 1;
-            }
-            pendingRecNames: mut List<String> = [];
-            var clCursor := 0;
-            var clIndex := 0;
-            loop clIndex < recPattern.count {
-                bindPart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, clCursor);
-                fieldPart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, bindPart.next);
-                typePart := types.decodeLengthPrefixedAt(recPattern.encodedClauses, fieldPart.next);
-                clCursor = typePart.next;
-                bindName := bindPart.text;
-                sourceField := fieldPart.text;
-                expectedFieldKind := typePart.text;
-                sourceFieldKind := types.recordFieldKind(rhs.kind, sourceField);
-                if sourceFieldKind == "" {
-                    syntax.failAt(source, recDestructureOpen, prefix, "record " + types.recordDisplayName(rhs.kind) + " has no field " + sourceField);
-                }
-                var bindKind := sourceFieldKind;
-                if expectedFieldKind =!= "" {
-                    if not types.isCompatibleKind(expectedFieldKind, sourceFieldKind) {
-                        syntax.failAt(source, recDestructureOpen, prefix, "cannot bind " + types.displayKind(sourceFieldKind) + " field " + sourceField + " as " + types.displayKind(expectedFieldKind));
-                    }
-                    bindKind = expectedFieldKind;
-                }
-                if bindName =!= "_" {
-                    ctx.rejectDuplicateInBlockNames(source, recDestructureOpen, prefix, declaredInBlock, bindName);
-                    if not listLib.listContainsText(pendingRecNames, bindName) {
-                        listLib.pushBack(mut pendingRecNames, bindName);
-                    }
-                    bindRuntime := trace.claimOrMakeLocalRuntime(target, blockLocals, bindName, "", blockLexDepth);
-                    fieldProp := types.recordComponentProp(rhs.kind, sourceField);
-                    fieldCode := ctx.assignValueCode(target, bindKind, sourceFieldKind, tempRuntime + "." + fieldProp);
-                    fieldFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(bindKind) {
-                        "|" + tempRuntime + "|\n|" + tempRuntime + "|"
-                    } else {
-                        ""
-                    };
-                    listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = bindKind,
-                    mutable = destructureMutable, writable = false, depth = blockLexDepth, constant = false, code = fieldFnDeps,
-                    intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
-                    if not blockExits {
-                        declKw := if destructureMutable { "let " } else { "const " };
-                        tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(bindKind) { ": " + types.tsFunctionType(bindKind) } else { "" };
-                        listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + fieldCode + "; void " + bindRuntime + ";");
-                        listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, bindKind, fieldCode) { bindRuntime } else { "" });
-                        listLib.pushBack(mut stmtDeps, fieldCode);
-                        trackedStmtCount = trackedStmtCount + 1;
-                    }
-                }
-                clIndex = clIndex + 1;
-            }
-            loop pendingRecNames as recBindName {
-                listLib.pushBack(mut declaredInBlock, recBindName);
-            }
-            if not blockExits { statementCount = statementCount + 1; }
-            blockConstant = false;
-            cursor = statementNext;
-        } else if destructureOpen >= 0 {
-            isStatement = true;
-            destructure := syntax.parseTupleDestructureTarget(source, destructureOpen, prefix);
+            destructure := parseAggregatePattern(source, destructureOpen, prefix, blockAliases);
             afterTarget := syntax.skipTrivia(source, destructure.next, prefix);
             if not textLib.startsWithAt(source, afterTarget, ":=") {
-                syntax.failAt(source, afterTarget, prefix, "expected := after tuple destructuring target");
+                syntax.failAt(source, afterTarget, prefix, "expected := after " + destructure.shape + " destructuring target");
             }
             rhs := parseBinaryCtx(target, source, syntax.skipTrivia(source, afterTarget + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, rhs); }
             if target == ir.TARGET_TS and not inferMode and not blockExits {
                 trace.checkTraceSafety(source, destructureOpen, prefix, rhs.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
             }
-            if destructure.count == 0 {
+            if destructure.shape == "tuple" and destructure.count == 0 {
                 if destructureMutable {
                     syntax.failAt(source, destructureOpen, prefix, "var tuple destructuring needs at least one binding");
                 }
@@ -1086,26 +1159,34 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 blockConstant = false;
                 cursor = statementNext;
             } else if destructure.grouped {
-                bindName := destructure.namesText;
+                bindPart := types.decodeLengthPrefixedAt(destructure.encodedClauses, 0);
+                bindName := bindPart.text;
                 ctx.rejectNonValueBinding(source, destructureOpen, prefix, rhs.kind, bindName);
                 ctx.rejectDuplicateInBlockNames(source, destructureOpen, prefix, declaredInBlock, bindName);
+                var groupedBindKind := rhs.kind;
+                if destructure.groupedType =!= "" {
+                    if not types.isCompatibleKind(destructure.groupedType, rhs.kind) {
+                        syntax.failAt(source, destructureOpen, prefix, "cannot bind " + types.displayKind(rhs.kind) + " to " + types.displayKind(destructure.groupedType));
+                    }
+                    groupedBindKind = destructure.groupedType;
+                }
                 statementNext := syntax.consumeStatementEnd(source, rhs.next, prefix);
                 if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
                 if target == ir.TARGET_TS and not inferMode and not blockExits {
                     blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, rhs.code);
                 }
                 bindRuntime := trace.claimOrMakeLocalRuntime(target, blockLocals, bindName, "", blockLexDepth);
-                bindFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(rhs.kind) { trace.computeCallableRhsDeps(rhs.code) } else { "" };
+                bindFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(groupedBindKind) { trace.computeCallableRhsDeps(rhs.code) } else { "" };
                 listLib.pushBack(mut declaredInBlock, bindName);
-                listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = rhs.kind,
+                listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = groupedBindKind,
                 mutable = destructureMutable, writable = false, depth = blockLexDepth, constant = false, code = bindFnDeps,
                 intValue = rhs.intValue, textValue = rhs.textValue, initState = ir.INIT_STATE_INIT));
                 if not blockExits {
                     declKw := if destructureMutable { "let " } else { "const " };
-                    tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(rhs.kind) { ": " + types.tsFunctionType(rhs.kind) } else { "" };
-                    groupedCode := ctx.copiedValueCode(target, rhs.kind, rhs.code);
+                    tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(groupedBindKind) { ": " + types.tsFunctionType(groupedBindKind) } else { "" };
+                    groupedCode := ctx.assignValueCode(target, groupedBindKind, rhs.kind, rhs.code);
                     listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + groupedCode + "; void " + bindRuntime + ";");
-                    listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, rhs.kind, groupedCode) { bindRuntime } else { "" });
+                    listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, groupedBindKind, groupedCode) { bindRuntime } else { "" });
                     listLib.pushBack(mut stmtDeps, groupedCode);
                     trackedStmtCount = trackedStmtCount + 1;
                     statementCount = statementCount + 1;
@@ -1113,22 +1194,18 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 blockConstant = false;
                 cursor = statementNext;
             } else {
-                if not types.isTupleKind(rhs.kind) {
-                    syntax.failAt(source, destructureOpen, prefix, "tuple destructuring requires a tuple value, got " + types.displayKind(rhs.kind));
-                }
-                if types.tupleComponentCount(rhs.kind) =!= destructure.count {
-                    syntax.failAt(source, destructureOpen, prefix, "tuple destructuring expected " + integer.intText(destructure.count) +
-                    " fields, got " + integer.intText(types.tupleComponentCount(rhs.kind)));
-                }
+                tempPrefix := if destructure.shape == "record" { "lite$rec" } else if destructure.shape == "array" { "lite$arr" } else { "lite$tuple" };
+                tempSlot := if destructure.shape == "record" { "$rec" } else if destructure.shape == "array" { "$arr" } else { "$tuple" };
+                tempRuntime := ir.freshScopeTemp(blockLocals, tempPrefix);
+                resolvedBindings := resolveAggregateBindings(destructure.shape, destructure.count, destructure.encodedClauses, rhs.kind, tempRuntime, source, destructureOpen, prefix);
                 statementNext := syntax.consumeStatementEnd(source, rhs.next, prefix);
-                if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
+                if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, rhs.next, prefix), prefix, "expected ; after " + destructure.shape + " destructuring"); }
                 if target == ir.TARGET_TS and not inferMode and not blockExits {
                     blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, rhs.code);
                 }
-                tempRuntime := ir.freshScopeTemp(blockLocals, "lite$tuple");
-                tupleFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(rhs.kind) { trace.computeCallableRhsDeps(rhs.code) } else { "" };
-                listLib.pushBack(mut blockLocals, (name = "$tuple", runtime = tempRuntime, kind = ir.VALUE_KIND_UNIT,
-                mutable = false, writable = false, depth = blockLexDepth, constant = false, code = tupleFnDeps,
+                aggFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(rhs.kind) { trace.computeCallableRhsDeps(rhs.code) } else { "" };
+                listLib.pushBack(mut blockLocals, (name = tempSlot, runtime = tempRuntime, kind = ir.VALUE_KIND_UNIT,
+                mutable = false, writable = false, depth = blockLexDepth, constant = false, code = aggFnDeps,
                 intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
                 if not blockExits {
                     listLib.pushBack(mut statements, "const " + tempRuntime + " = " + rhs.code + "; void " + tempRuntime + ";");
@@ -1136,44 +1213,47 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     listLib.pushBack(mut stmtDeps, rhs.code);
                     trackedStmtCount = trackedStmtCount + 1;
                 }
-                pendingTupleNames: mut List<String> = [];
-                var bindCursor := 0;
-                var bindIndex := 0;
-                namesLen := textLib.length(destructure.namesText);
-                loop bindIndex < destructure.count {
-                    var bindEnd := bindCursor;
-                    loop bindEnd < namesLen and textLib.at(destructure.namesText, bindEnd) =!= "," {
-                        bindEnd = bindEnd + 1;
+                pendingDestrNames: mut List<String> = [];
+                var bCursor := 0;
+                var bIndex := 0;
+                loop bIndex < destructure.count {
+                    bindPart := types.decodeLengthPrefixedAt(resolvedBindings, bCursor);
+                    propPart := types.decodeLengthPrefixedAt(resolvedBindings, bindPart.next);
+                    srcPart := types.decodeLengthPrefixedAt(resolvedBindings, propPart.next);
+                    tgtPart := types.decodeLengthPrefixedAt(resolvedBindings, srcPart.next);
+                    bCursor = tgtPart.next;
+                    bindName := bindPart.text;
+                    propExpr := propPart.text;
+                    srcKind := srcPart.text;
+                    bindKind := tgtPart.text;
+                    if not (destructure.shape == "record" and bindName == "_") {
+                        ctx.rejectDuplicateInBlockNames(source, destructureOpen, prefix, declaredInBlock, bindName);
+                        if not listLib.listContainsText(pendingDestrNames, bindName) {
+                            listLib.pushBack(mut pendingDestrNames, bindName);
+                        }
+                        bindRuntime := trace.claimOrMakeLocalRuntime(target, blockLocals, bindName, "", blockLexDepth);
+                        fieldCode := ctx.assignValueCode(target, bindKind, srcKind, propExpr);
+                        fieldFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(bindKind) {
+                            "|" + tempRuntime + "|\n|" + tempRuntime + "|"
+                        } else {
+                            ""
+                        };
+                        listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = bindKind,
+                        mutable = destructureMutable, writable = false, depth = blockLexDepth, constant = false, code = fieldFnDeps,
+                        intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+                        if not blockExits {
+                            declKw := if destructureMutable { "let " } else { "const " };
+                            tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(bindKind) { ": " + types.tsFunctionType(bindKind) } else { "" };
+                            listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + fieldCode + "; void " + bindRuntime + ";");
+                            listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, bindKind, fieldCode) { bindRuntime } else { "" });
+                            listLib.pushBack(mut stmtDeps, fieldCode);
+                            trackedStmtCount = trackedStmtCount + 1;
+                        }
                     }
-                    bindName := textLib.slice(destructure.namesText, bindCursor, bindEnd);
-                    bindCursor = bindEnd + 1;
-                    ctx.rejectDuplicateInBlockNames(source, destructureOpen, prefix, declaredInBlock, bindName);
-                    if not listLib.listContainsText(pendingTupleNames, bindName) {
-                        listLib.pushBack(mut pendingTupleNames, bindName);
-                    }
-                    comp := types.tupleComponent(rhs.kind, bindIndex);
-                    bindRuntime := trace.claimOrMakeLocalRuntime(target, blockLocals, bindName, "", blockLexDepth);
-                    fieldCode := tempRuntime + "." + comp.prop;
-                    fieldFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(comp.kind) {
-                        "|" + tempRuntime + "|\n|" + tempRuntime + "|"
-                    } else {
-                        ""
-                    };
-                    listLib.pushBack(mut blockLocals, (name = bindName, runtime = bindRuntime, kind = comp.kind,
-                    mutable = destructureMutable, writable = false, depth = blockLexDepth, constant = false, code = fieldFnDeps,
-                    intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
-                    if not blockExits {
-                        declKw := if destructureMutable { "let " } else { "const " };
-                        tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(comp.kind) { ": " + types.tsFunctionType(comp.kind) } else { "" };
-                        listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + fieldCode + "; void " + bindRuntime + ";");
-                        listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, comp.kind, fieldCode) { bindRuntime } else { "" });
-                        listLib.pushBack(mut stmtDeps, fieldCode);
-                        trackedStmtCount = trackedStmtCount + 1;
-                    }
-                    bindIndex = bindIndex + 1;
+                    bIndex = bIndex + 1;
                 }
-                loop pendingTupleNames as tupleName {
-                    listLib.pushBack(mut declaredInBlock, tupleName);
+                loop pendingDestrNames as destrName {
+                    listLib.pushBack(mut declaredInBlock, destrName);
                 }
                 if not blockExits { statementCount = statementCount + 1; }
                 blockConstant = false;

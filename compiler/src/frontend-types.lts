@@ -330,6 +330,28 @@ pub tupleComponent := fn(kind: String, targetIndex: Int): (label: String, kind: 
     (label = "", kind = "", prop = "")
 };
 
+/** Returns the 0-based index of the component with `label` inside canonical flat tuple `kind`, or -1 when absent. */
+pub tupleComponentIndexByLabel := fn(kind: String, label: String): Int {
+    if label == "" or not isTupleKind(kind) { return -1; }
+    size := textLib.length(kind);
+    var cursor := 1;
+    var index := 0;
+    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
+        var fieldLabel := "";
+        if textLib.at(kind, cursor) =!= ":" {
+            nameStart := cursor;
+            cursor = textLib.skipName(kind, cursor);
+            fieldLabel = textLib.slice(kind, nameStart, cursor);
+        }
+        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+        cursor = skipKindToken(kind, cursor);
+        if fieldLabel == label { return index; }
+        index = index + 1;
+        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    }
+    -1
+};
+
 /** Converts one tuple expression to `expectedKind` by copying positional components into the receiving labels. */
 pub convertTupleValue := fn(expectedKind: String, actualKind: String, actualCode: String): String {
     count := tupleComponentCount(expectedKind);
