@@ -4,13 +4,19 @@ Status: **subject-based pattern matching and subjectless Boolean selection selec
 
 Branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints.
 
-Implementation checkpoint: subjectless Boolean `match { ... }` is implemented
-across the TS backend (both value expressions and action/tail statements) and as
-action/tail statements in C. Arms evaluate in order, the first true condition
-wins, and a final `_` fallback is required. Subject-based patterns (`match x { ... }`),
-C value `match` expressions, guards, alternatives, nested patterns, and branch-result
-unions remain deferred. Value `match` arms must share one result kind (allowing
-`Never` arms such as `io.exit` to unify with the peer result kind).
+Implementation checkpoint: both subjectless Boolean `match { ... }` and
+subject-based `match subject { ... }` are implemented on the TS backend (value
+expressions, action/tail statements, `@tag`, `then`, and `finally`), while the C
+backend supports action/tail subjectless `match` and rejects subject-based
+`match`. Subject-based arms evaluate the subject once, support literal equality,
+all ten comparison patterns (`==`, `=!=`, `<`, `<=`, `>`, `>=`, `<!`, `<!=`,
+`>!`, `>!=`), typed bindings (`name: Type`, `: Type`), `or` alternatives
+(including optional leading `or` and nested tuple/array/record alternatives),
+`if` guards with fallthrough, and recursive record/tuple/fixed-array
+destructuring patterns. Enum/variant patterns, differently named `or` bindings
+requiring unions, and branch-result unions remain deferred. Value `match` arms
+must share one result kind (allowing `Never` arms such as `io.exit` to unify
+with the peer result kind).
 
 ## Purpose and template
 

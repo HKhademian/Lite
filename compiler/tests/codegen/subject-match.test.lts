@@ -1,0 +1,157 @@
+/* Subject-based match tests: literals, all 10 comparison patterns, or alternatives, if guards, aggregate patterns, exhaustiveness, and C rejection. */
+
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* Literals, all 10 comparison patterns, single subject evaluation, or alternatives, leading or, and if guards */
+scalarsSrc := "io := import \"core/io\";\n" +
+"var evals := 0;\n" +
+"probe := fn(n: Int): Int { evals += 1; n };\n" +
+"classify := fn(n: Int): String {\n" +
+"    match probe(n) {\n" +
+"        0 { \"zero\" }\n" +
+"        -1 { \"neg-one\" }\n" +
+"        1 or 2 or 3 { \"small\" }\n" +
+"        or >= 100 { \"huge\" }\n" +
+"        v if 10 <= v < 20 { \"teens\" }\n" +
+"        _ { \"other\" }\n" +
+"    }\n" +
+"};\n" +
+"io.outputLine(classify(0), classify(-1), classify(2), classify(150), classify(15), classify(50), \"evals:\", evals);\n" +
+"/* All 10 comparison operators in pattern position */\n" +
+"cmpTest := fn(n: Int, limit: Int): String {\n" +
+"    a := match n { == limit { \"eq\" } =!= limit { \"ne\" } _ { \"?\" } };\n" +
+"    b := match n { < limit { \"lt\" } <= limit { \"le\" } > limit { \"gt\" } _ { \"?\" } };\n" +
+"    c := match n { <! limit { \"nlt\" } _ { \"lt\" } };\n" +
+"    d := match n { <!= limit { \"nle\" } _ { \"le\" } };\n" +
+"    e := match n { >! limit { \"ngt\" } _ { \"gt\" } };\n" +
+"    f := match n { >!= limit { \"nge\" } _ { \"ge\" } };\n" +
+"    a + \":\" + b + \":\" + c + \":\" + d + \":\" + e + \":\" + f\n" +
+"};\n" +
+"io.outputLine(cmpTest(5, 5), cmpTest(3, 5), cmpTest(8, 5));\n" +
+"/* Bool and Unit exhaustiveness without _ */\n" +
+"yn := fn(b: Bool): String { match b { true { \"yes\" } false { \"no\" } } };\n" +
+"unitMsg := match () { () { \"unit-ok\" } };\n" +
+"/* Grouped comparison RHS and readable _ */\n" +
+"flag := true; ready := false; retry := true;\n" +
+"grp := match flag { == (ready or retry) { \"matched-bool\" } _ { \"no\" } };\n" +
+"echoed := match 41 { _ { _ + 1 } };\n" +
+"io.outputLine(yn(true), yn(false), unitMsg, grp, echoed);\n";
+
+compilerTest.assertCompileRunTs(root, tsComp, "subject match scalars comparisons exhaustiveness", scalarsSrc,
+"zero neg-one small huge teens other evals: 6\n" +
+"eq:le:nlt:le:ngt:ge ne:lt:lt:le:ngt:nge ne:gt:nlt:nle:gt:ge\n" +
+"yes no unit-ok matched-bool 42\n");
+
+/* Record, tuple, and fixed-array patterns, binding-producing or, nested or, statement return/break, @tag/then/finally */
+aggregatesSrc := "io := import \"core/io\";\n" +
+"User := record { name: String; age: Int = 18; active: Bool = true; };\n" +
+"describeUser := fn(u: User): String {\n" +
+"    match u {\n" +
+"        { active == false, = name } { name + \":inactive\" }\n" +
+"        { >= 65 = age, n = name } { n + \":senior\" }\n" +
+"        { = name, = age: Int } if age >= 18 { name + \":adult\" }\n" +
+"        { = name } { name + \":minor\" }\n" +
+"    }\n" +
+"};\n" +
+"io.outputLine(describeUser(User { name = \"Ada\", age = 30, active = false }), describeUser(User { name = \"Bob\", age = 70 }), describeUser(User { name = \"Lin\", age = 22 }), describeUser(User { name = \"Sam\", age = 12 }));\n" +
+"pickPair := fn(p: (kind: String, val: Int)): Int {\n" +
+"    match p {\n" +
+"        (\"add\" = kind, = val) or (\"inc\" = kind, = val) if val > 0 { val + 1 }\n" +
+"        (\"add\" or \"inc\" = kind, = val) { val }\n" +
+"        (_ = kind, >= 10 = val) { 99 }\n" +
+"        _ { -1 }\n" +
+"    }\n" +
+"};\n" +
+"io.outputLine(pickPair((kind = \"add\", val = 5)), pickPair((kind = \"inc\", val = 0)), pickPair((kind = \"mul\", val = 12)), pickPair((kind = \"mul\", val = 3)));\n" +
+"sumOrPick := fn(a: [Int; 3]): Int {\n" +
+"    match a {\n" +
+"        [0, x, y] { x + y }\n" +
+"        [>= 10, _, last] { last * 10 }\n" +
+"        [x, y, z] { x + y + z }\n" +
+"    }\n" +
+"};\n" +
+"io.outputLine(sumOrPick([0, 4, 5]), sumOrPick([15, 2, 7]), sumOrPick([1, 2, 3]));\n" +
+"var finLog := \"\";\n" +
+"findFirst := fn(xs: List<Int>): Int {\n" +
+"    var out := -1;\n" +
+"    loop xs as item {\n" +
+"        match item {\n" +
+"            >= 50 { out = item; break; }\n" +
+"            _ {}\n" +
+"        }\n" +
+"    }\n" +
+"    out\n" +
+"};\n" +
+"tagged := @m match 7 {\n" +
+"    7 { return @m 70; }\n" +
+"    _ { 0 }\n" +
+"} then { @m.value + 1 } finally { finLog = \"ran\"; };\n" +
+"io.outputLine(\"found:\", findFirst([10, 60, 80]), \"tagged:\", tagged, \"fin:\", finLog);\n";
+
+compilerTest.assertCompileRunTs(root, tsComp, "subject match aggregates guards and tagged", aggregatesSrc,
+"Ada:inactive Bob:senior Lin:adult Sam:minor\n" +
+"6 0 99 -1\n" +
+"9 70 6\n" +
+"found: 60 tagged: 71 fin: ran\n");
+
+/* C backend rejects subject-based match cleanly */
+cMatchRes := compilerTest.compileStdin(root, cComp, "x := match 1 { 1 { 2 } _ { 3 } };", "c_subj_match.lts");
+test.checkInt("C subject match rejected", 2, cMatchRes.status);
+test.check("C subject match message: " + cMatchRes.stderr, text.containsText(cMatchRes.stderr, "C backend does not support subject match yet"));
+
+/* Negative diagnostics */
+badSrc: List<String> = [
+    "x := match 1 { 1 { 10 } };",
+    "x := match 1 { _ { 10 } 1 { 20 } };",
+    "x := match true { true { 1 } };",
+    "x := match 1 { _ => 2 };",
+    "x := match 1 { v if v { 1 } _ { 2 } };",
+    "x := match 1 { >= 0 < 10 { 1 } _ { 2 } };",
+    "x := match true { == not false { 1 } _ { 2 } };",
+    "x := match 1 { : String { 1 } _ { 2 } };",
+    "x := match (1, 2) { (a, a) { a } };",
+    "x := match (1, 2) { (1, a) or (2, b) { 1 } _ { 0 } };",
+    "xs: List<Int> = [1, 2]; x := match xs { [a, b] { a + b } _ { 0 } };",
+    "x := match [1, 2] { [a, b, c] { a } _ { 0 } };",
+    "User := record { name: String; }; u := User { name = \"A\" }; x := match u { { name } { 1 } _ { 0 } };",
+    "User := record { name: String; }; u := User { name = \"A\" }; x := match u { { = missing } { 1 } _ { 0 } };",
+    "x := match 1 { 1 { 10 } _ { \"str\" } };"
+];
+badErr: List<String> = [
+    "match requires an exhaustive fallback arm",
+    "unreachable match arm after exhaustive arm",
+    "match requires an exhaustive fallback arm",
+    "expected { after match arm pattern",
+    "match guard must be Bool",
+    "comparison pattern cannot be chained",
+    "parenthesize complex right operand after comparison pattern operator ==",
+    "pattern type String does not match Int",
+    "duplicate pattern binding a",
+    "or pattern alternatives must bind the same names with matching types",
+    "cannot match runtime-sized List<Int> with fixed-array pattern; fixed array required",
+    "array pattern expected 3 elements, got 2",
+    "expected = sourceField or : Type in record pattern clause name",
+    "record User has no field missing",
+    "value match arms must have the same kind"
+];
+var bi := 0;
+loop bi < 15 {
+    compilerTest.assertCompileErrorContains(root, tsComp, "bad subject match " + badSrc[bi], badSrc[bi], badErr[bi]);
+    bi = bi + 1;
+}
+
+test.done("subject-match");

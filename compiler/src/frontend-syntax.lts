@@ -843,14 +843,106 @@ pub scanValueIfEnd := fn(source: String, position: Int, prefix: String, requireV
     scanIfChainEnd(source, position, prefix, requireValueBranches, false)
 };
 
-/** Scans the raw `[@tag] match { ... }` ending before any `then` clause; returns -1 on mismatch. */
+/** Scans from a `match` keyword to its opening `{`, reporting whether a subject expression precedes `{`. */
+pub scanMatchOpen := fn(source: String, matchPos: Int, prefix: String): (openPos: Int, isSubject: Bool) {
+    size := textLib.length(source);
+    afterKw := skipTrivia(source, matchPos + 5, prefix);
+    if afterKw < size and textLib.at(source, afterKw) == "{" {
+        return (openPos = afterKw, isSubject = false);
+    }
+    open := scanConditionOpen(source, afterKw, prefix);
+    if open < 0 or open == afterKw {
+        return (openPos = -1, isSubject = true);
+    }
+    (openPos = open, isSubject = true)
+};
+
+/** Scans a subject-based match arm header (`[or] pat (or pat)* [if guard]`) to its body opening `{`. */
+pub scanMatchArmBodyOpen := fn(source: String, armStart: Int, prefix: String): Int {
+    size := textLib.length(source);
+    var cursor := armStart;
+    var expectPattern := true;
+    var inGuard := false;
+    loop cursor < size {
+        cursor = skipTrivia(source, cursor, prefix);
+        if cursor >= size { return -1; }
+        ch := textLib.at(source, cursor);
+        if ch == "}" { return -1; }
+        if ch == "{" {
+            if inGuard or not expectPattern { return cursor; }
+            end := scanBraceEnd(source, cursor, prefix);
+            if end < 0 { return -1; }
+            cursor = end;
+            expectPattern = false;
+            continue;
+        }
+        if ch == "(" {
+            end := scanParenEnd(source, cursor, prefix);
+            if end < 0 { return -1; }
+            cursor = end;
+            if not inGuard { expectPattern = false; }
+            continue;
+        }
+        if ch == "[" {
+            end := scanBracketEnd(source, cursor, prefix);
+            if end < 0 { return -1; }
+            cursor = end;
+            if not inGuard { expectPattern = false; }
+            continue;
+        }
+        if ch == "\"" {
+            end := skipAliasString(source, cursor);
+            if end <= cursor { return -1; }
+            cursor = end;
+            if not inGuard { expectPattern = false; }
+            continue;
+        }
+        if not inGuard and textLib.wordAt(source, cursor, "or") {
+            cursor = cursor + 2;
+            expectPattern = true;
+            continue;
+        }
+        if not inGuard and textLib.wordAt(source, cursor, "if") {
+            cursor = cursor + 2;
+            inGuard = true;
+            expectPattern = false;
+            continue;
+        }
+        if textLib.isNameStart(ch) {
+            cursor = textLib.skipName(source, cursor);
+            if not inGuard { expectPattern = false; }
+            continue;
+        }
+        cursor = cursor + 1;
+        if not inGuard { expectPattern = false; }
+    }
+    -1
+};
+
+/** Scans the raw `[@tag] match [subject] { ... }` ending before any `then` clause; returns -1 on mismatch. */
 pub scanRawMatchEnd := fn(source: String, position: Int, prefix: String): Int {
     size := textLib.length(source);
     var cursor := skipOptionalScanTag(source, position, prefix, "match");
     if cursor < 0 or not textLib.wordAt(source, cursor, "match") { return -1; }
-    openMatch := skipTrivia(source, cursor + 5, prefix);
-    if openMatch >= size or textLib.at(source, openMatch) =!= "{" { return -1; }
-    var armCursor := skipItemSeparators(source, openMatch + 1, prefix);
+    hdr := scanMatchOpen(source, cursor, prefix);
+    if hdr.openPos < 0 { return -1; }
+    if hdr.isSubject {
+        var armCursor := skipItemSeparators(source, hdr.openPos + 1, prefix);
+        var armCount := 0;
+        loop armCursor < size {
+            if textLib.at(source, armCursor) == "}" {
+                return if armCount > 0 { armCursor + 1 } else { -1 };
+            }
+            armOpen := scanMatchArmBodyOpen(source, armCursor, prefix);
+            if armOpen < 0 or armOpen == armCursor { return -1; }
+            armEnd := scanBraceEnd(source, armOpen, prefix);
+            if armEnd < 0 { return -1; }
+            armCount = armCount + 1;
+            armCursor = skipItemSeparators(source, armEnd, prefix);
+        }
+        return -1;
+    }
+    var armCursor := skipItemSeparators(source, hdr.openPos + 1, prefix);
     loop armCursor < size {
         if textLib.at(source, armCursor) == "}" { return -1; }
         afterUnderscore := skipTrivia(source, armCursor + 1, prefix);
@@ -873,15 +965,41 @@ pub scanRawMatchEnd := fn(source: String, position: Int, prefix: String): Int {
     -1
 };
 
-/** Scans a subjectless Boolean `[@tag] match` ending with a final `_` fallback arm and optional `then { ... }`. */
+/** Scans a `[@tag] match [subject] { ... }` with optional `then { ... }` and `finally { ... }`. */
 pub scanValueMatchEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int {
     size := textLib.length(source);
     var cursor := skipOptionalScanTag(source, position, prefix, "match");
     if cursor < 0 or not textLib.wordAt(source, cursor, "match") { return -1; }
-    openMatch := skipTrivia(source, cursor + 5, prefix);
-    if openMatch >= size or textLib.at(source, openMatch) =!= "{" { return -1; }
+    hdr := scanMatchOpen(source, cursor, prefix);
+    if hdr.openPos < 0 { return -1; }
     var allArmsValue := true;
-    var armCursor := skipItemSeparators(source, openMatch + 1, prefix);
+    if hdr.isSubject {
+        var armCursor := skipItemSeparators(source, hdr.openPos + 1, prefix);
+        var armCount := 0;
+        loop armCursor < size {
+            if textLib.at(source, armCursor) == "}" {
+                if armCount == 0 { return -1; }
+                thenEnd := scanTrailingThenEnd(source, armCursor + 1, prefix, requireValueBranches);
+                if thenEnd == -1 { return -1; }
+                baseEnd := if thenEnd == ir.SCAN_NO_THEN {
+                    if requireValueBranches and not allArmsValue { -1 } else { armCursor + 1 }
+                } else {
+                    thenEnd
+                };
+                if baseEnd < 0 { return -1; }
+                return scanTrailingFinallyEnd(source, baseEnd, prefix);
+            }
+            armOpen := scanMatchArmBodyOpen(source, armCursor, prefix);
+            if armOpen < 0 or armOpen == armCursor { return -1; }
+            armEnd := scanBraceEnd(source, armOpen, prefix);
+            if armEnd < 0 { return -1; }
+            if requireValueBranches and not valueIfBranchAt(source, armOpen, armEnd - 1, prefix) { allArmsValue = false; }
+            armCount = armCount + 1;
+            armCursor = skipItemSeparators(source, armEnd, prefix);
+        }
+        return -1;
+    }
+    var armCursor := skipItemSeparators(source, hdr.openPos + 1, prefix);
     loop armCursor < size {
         if textLib.at(source, armCursor) == "}" { return -1; }
         afterUnderscore := skipTrivia(source, armCursor + 1, prefix);

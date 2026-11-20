@@ -1765,8 +1765,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
             } else if itemName == "match" {
                 syntax.rejectMisplacedTag(source, afterItemName, prefix, "block tag cannot appear before { in match");
-                if afterItemName >= blockSourceSize or textLib.at(source, afterItemName) =!= "{" {
-                    syntax.unsupportedFeature(source, itemStart, "match", prefix);
+                isSubjectStmtMatch := afterItemName < blockSourceSize and textLib.at(source, afterItemName) =!= "{";
+                if isSubjectStmtMatch and target =!= ir.TARGET_TS {
+                    syntax.failAt(source, itemStart, prefix, "C backend does not support subject match yet");
                 }
                 rawStmtMatchEnd := syntax.scanRawMatchEnd(source, itemStart, prefix);
                 afterRawStmtMatch := if rawStmtMatchEnd >= 0 { syntax.skipTrivia(source, rawStmtMatchEnd, prefix) } else { -1 };
@@ -1781,7 +1782,15 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         }
                     }
                 }
-                if not useValueMatch {
+                if not useValueMatch and isSubjectStmtMatch {
+                    isStatement = true;
+                    subStmt := parseSubjectMatchStmt(target, source, itemStart, prefix, blockLocals, functions, params, currentName, ctxs, bodyDepth, inferMode, blockAliases);
+                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, subStmt); }
+                    listLib.pushBack(mut statements, subStmt.code);
+                    statementCount = statementCount + 1;
+                    if subStmt.kind == ir.VALUE_KIND_NEVER { blockExits = true; }
+                    cursor = subStmt.next;
+                } else if not useValueMatch {
                     isStatement = true;
                     var matchCursor := syntax.skipItemSeparators(source, afterItemName + 1, prefix);
                     var matchParts := "";
@@ -3003,16 +3012,912 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
     left
 };
 
-/** Parses `[@tag] if ... [else ...]` and `[@tag] match { ... }` value expressions with optional `then` and `finally`. */
+/** One parsed subject-match pattern result (condition, tab-delimited bindings, irrefutability, Bool coverage mask, next offset, markers). */
+PatResult := type (cond: String, bindings: String, irrefutable: Bool, boolMask: Int, next: Int, markers: String);
+
+/** Checks whether a pattern type annotation matches a subject or component type kind. */
+patternTypeMatches := fn(actualKind: String, expectedKind: String): Bool {
+    actualKind == expectedKind or
+    (types.isTupleKind(expectedKind) and types.tupleShapeMatches(expectedKind, actualKind)) or
+    (types.isFnKind(expectedKind) and types.fnShapeMatches(expectedKind, actualKind))
+};
+
+/** Combines two JS boolean pattern conditions with short-circuiting `&&`. */
+combinePatCond := fn(left: String, right: String): String {
+    if left == "" or left == "true" { return right; }
+    if right == "" or right == "true" { return left; }
+    "(" + left + " && " + right + ")"
+};
+
+/** Combines two 2-bit Bool exhaustiveness masks (1 = true, 2 = false, 3 = both). */
+combineBoolMask := fn(left: Int, right: Int): Int {
+    if left == 3 or right == 3 or (left == 1 and right == 2) or (left == 2 and right == 1) { 3 }
+    else if left > 0 { left }
+    else { right }
+};
+
+/** Finds the type kind of `name` in tab-delimited pattern bindings (`name\tkind\texpr\n`), or `""` if absent. */
+patBindingKindOf := fn(bindings: String, name: String): String {
+    size := textLib.length(bindings);
+    var pos := 0;
+    loop pos < size {
+        nl := textLib.indexOfText(bindings, "\n", pos);
+        lineEnd := if nl < 0 { size } else { nl };
+        t1 := textLib.indexOfText(bindings, "\t", pos);
+        if t1 > pos and t1 < lineEnd {
+            entryName := textLib.slice(bindings, pos, t1);
+            if entryName == name {
+                t2 := textLib.indexOfText(bindings, "\t", t1 + 1);
+                if t2 > t1 and t2 < lineEnd {
+                    return textLib.slice(bindings, t1 + 1, t2);
+                }
+            }
+        }
+        pos = lineEnd + 1;
+    }
+    ""
+};
+
+/** Appends `added` bindings to `base`, rejecting duplicate non-`_` names within one pattern. */
+mergePatBindings := fn(base: String, added: String, source: String, errPos: Int, prefix: String): String {
+    var result := base;
+    size := textLib.length(added);
+    var pos := 0;
+    loop pos < size {
+        nl := textLib.indexOfText(added, "\n", pos);
+        lineEnd := if nl < 0 { size } else { nl };
+        t1 := textLib.indexOfText(added, "\t", pos);
+        if t1 > pos and t1 < lineEnd {
+            entryName := textLib.slice(added, pos, t1);
+            if entryName == "_" {
+                if patBindingKindOf(result, "_") == "" {
+                    result = result + textLib.slice(added, pos, lineEnd) + "\n";
+                }
+            } else {
+                if patBindingKindOf(result, entryName) =!= "" {
+                    syntax.failAt(source, errPos, prefix, "duplicate pattern binding " + entryName);
+                }
+                result = result + textLib.slice(added, pos, lineEnd) + "\n";
+            }
+        }
+        pos = lineEnd + 1;
+    }
+    result
+};
+
+/** Checks whether two `or` alternatives bind the exact same non-`_` names with matching types. */
+patBindingsCompatible := fn(left: String, right: String): Bool {
+    leftSize := textLib.length(left);
+    var lPos := 0;
+    loop lPos < leftSize {
+        nl := textLib.indexOfText(left, "\n", lPos);
+        lineEnd := if nl < 0 { leftSize } else { nl };
+        t1 := textLib.indexOfText(left, "\t", lPos);
+        t2 := if t1 >= 0 { textLib.indexOfText(left, "\t", t1 + 1) } else { -1 };
+        if t1 > lPos and t2 > t1 and t2 < lineEnd {
+            name := textLib.slice(left, lPos, t1);
+            if name =!= "_" {
+                lKind := textLib.slice(left, t1 + 1, t2);
+                rKind := patBindingKindOf(right, name);
+                if rKind =!= lKind { return false; }
+            }
+        }
+        lPos = lineEnd + 1;
+    }
+    rightSize := textLib.length(right);
+    var rPos := 0;
+    loop rPos < rightSize {
+        nl := textLib.indexOfText(right, "\n", rPos);
+        lineEnd := if nl < 0 { rightSize } else { nl };
+        t1 := textLib.indexOfText(right, "\t", rPos);
+        if t1 > rPos and t1 < lineEnd {
+            name := textLib.slice(right, rPos, t1);
+            if name =!= "_" and patBindingKindOf(left, name) == "" { return false; }
+        }
+        rPos = lineEnd + 1;
+    }
+    true
+};
+
+/** Checks whether `bindings` contains any non-`_` binding name. */
+patHasNamedBindings := fn(bindings: String): Bool {
+    size := textLib.length(bindings);
+    var pos := 0;
+    loop pos < size {
+        nl := textLib.indexOfText(bindings, "\n", pos);
+        lineEnd := if nl < 0 { size } else { nl };
+        t1 := textLib.indexOfText(bindings, "\t", pos);
+        if t1 > pos and t1 < lineEnd {
+            if textLib.slice(bindings, pos, t1) =!= "_" { return true; }
+        }
+        pos = lineEnd + 1;
+    }
+    false
+};
+
+/** Emits JS assignment statements for all bindings in `bindings` using deterministic arm runtime names. */
+emitPatAssignments := fn(target: String, baseLocals: List<Local>, armDepth: Int, bindings: String): String {
+    var out := "";
+    size := textLib.length(bindings);
+    var pos := 0;
+    loop pos < size {
+        nl := textLib.indexOfText(bindings, "\n", pos);
+        lineEnd := if nl < 0 { size } else { nl };
+        t1 := textLib.indexOfText(bindings, "\t", pos);
+        t2 := if t1 >= 0 { textLib.indexOfText(bindings, "\t", t1 + 1) } else { -1 };
+        if t1 > pos and t2 > t1 and t2 < lineEnd {
+            name := textLib.slice(bindings, pos, t1);
+            exprCode := textLib.slice(bindings, t2 + 1, lineEnd);
+            rt := ir.localRuntimeName(target, baseLocals, name, "", armDepth);
+            out = out + rt + " = " + exprCode + "; ";
+        }
+        pos = lineEnd + 1;
+    }
+    out
+};
+
+/** Scans inside a record pattern clause for a top-level single `=` before `,` or `}`, returning its index or -1. */
+scanRecordClauseEquals := fn(source: String, start: Int, prefix: String): Int {
+    size := textLib.length(source);
+    var cursor := start;
+    loop cursor < size {
+        cursor = syntax.skipTrivia(source, cursor, prefix);
+        if cursor >= size { return -1; }
+        ch := textLib.at(source, cursor);
+        if ch == "," or ch == "}" { return -1; }
+        if ch == "(" {
+            end := syntax.scanParenEnd(source, cursor, prefix);
+            if end < 0 { return -1; }
+            cursor = end;
+            continue;
+        }
+        if ch == "[" {
+            end := syntax.scanBracketEnd(source, cursor, prefix);
+            if end < 0 { return -1; }
+            cursor = end;
+            continue;
+        }
+        if ch == "{" {
+            end := syntax.scanBraceEnd(source, cursor, prefix);
+            if end < 0 { return -1; }
+            cursor = end;
+            continue;
+        }
+        if ch == "\"" {
+            end := syntax.skipAliasString(source, cursor);
+            if end <= cursor { return -1; }
+            cursor = end;
+            continue;
+        }
+        if syntax.isSingleEquals(source, cursor) { return cursor; }
+        cmp := syntax.comparisonOperatorAt(source, cursor);
+        if cmp.width > 0 {
+            cursor = cursor + cmp.width;
+            continue;
+        }
+        cursor = cursor + 1;
+    }
+    -1
+};
+
+/** Scans inside `(...)` to decide whether it is a tuple pattern (has top-level `,` or single `=`) vs a grouped pattern. */
+parenIsTuplePattern := fn(source: String, openPos: Int, prefix: String): Bool {
+    size := textLib.length(source);
+    var cursor := openPos + 1;
+    loop cursor < size {
+        cursor = syntax.skipTrivia(source, cursor, prefix);
+        if cursor >= size { return false; }
+        ch := textLib.at(source, cursor);
+        if ch == ")" { return false; }
+        if ch == "," { return true; }
+        if ch == "(" {
+            end := syntax.scanParenEnd(source, cursor, prefix);
+            if end < 0 { return false; }
+            cursor = end;
+            continue;
+        }
+        if ch == "[" {
+            end := syntax.scanBracketEnd(source, cursor, prefix);
+            if end < 0 { return false; }
+            cursor = end;
+            continue;
+        }
+        if ch == "{" {
+            end := syntax.scanBraceEnd(source, cursor, prefix);
+            if end < 0 { return false; }
+            cursor = end;
+            continue;
+        }
+        if ch == "\"" {
+            end := syntax.skipAliasString(source, cursor);
+            if end <= cursor { return false; }
+            cursor = end;
+            continue;
+        }
+        if syntax.isSingleEquals(source, cursor) { return true; }
+        cmp := syntax.comparisonOperatorAt(source, cursor);
+        if cmp.width > 0 {
+            cursor = cursor + cmp.width;
+            continue;
+        }
+        cursor = cursor + 1;
+    }
+    false
+};
+
+/** Parses one comparison-pattern RHS (arithmetic/postfix/grouped; stops before `or`/`and`/comparisons/`if`/`{`). */
+parseComparisonPatternRhs := fn(target: String, source: String, opPos: Int, opText: String, opWidth: Int, prefix: String, subjKind: String, subjCode: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): PatResult {
+    rhsStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
+    size := textLib.length(source);
+    if rhsStart >= size {
+        syntax.failAt(source, rhsStart, prefix, "expected expression after comparison pattern operator " + opText);
+    }
+    rhsCh := textLib.at(source, rhsStart);
+    if rhsCh == "{" or textLib.wordAt(source, rhsStart, "if") or textLib.wordAt(source, rhsStart, "match") or
+    textLib.wordAt(source, rhsStart, "loop") or textLib.wordAt(source, rhsStart, "not") {
+        syntax.failAt(source, rhsStart, prefix, "parenthesize complex right operand after comparison pattern operator " + opText);
+    }
+    rhs := parseBinaryCtx(target, source, rhsStart, prefix, locals, functions, params, currentName, subjKind, 10, ctxs, iifeDepth, inferMode, "", aliases);
+    afterRhs := syntax.skipTrivia(source, rhs.next, prefix);
+    nextCmp := syntax.comparisonOperatorAt(source, afterRhs);
+    if syntax.isComparison(nextCmp.text) {
+        syntax.failAt(source, afterRhs, prefix, "comparison pattern cannot be chained; bind the value and use an if guard");
+    }
+    leftFake := (kind = subjKind, code = subjCode, intValue = 0, textValue = "", constant = false, next = opPos);
+    cmp := ctx.compareParsed(target, source, opPos, opText, leftFake, rhs, prefix);
+    markers := if inferMode { ctx.collectParsedMarkers("", rhs) } else { "" };
+    (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, next = rhs.next, markers = markers)
+};
+
+/** Parses one atomic subject-match pattern (without top-level `or` alternatives). */
+parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: String, subjKind: String, subjCode: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>, armDepth: Int): PatResult {
+    pos := syntax.skipTrivia(source, start, prefix);
+    size := textLib.length(source);
+    if pos >= size {
+        syntax.failAt(source, pos, prefix, "expected match pattern");
+    }
+    cmpOp := syntax.comparisonOperatorAt(source, pos);
+    if syntax.isComparison(cmpOp.text) {
+        return parseComparisonPatternRhs(target, source, pos, cmpOp.text, cmpOp.width, prefix, subjKind, subjCode, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+    }
+    ch := textLib.at(source, pos);
+    if ch == ":" {
+        ty := types.parseTypeAt(source, pos + 1, prefix, aliases, "pattern type", "");
+        if not patternTypeMatches(subjKind, ty.kind) {
+            syntax.failAt(source, pos, prefix, "pattern type " + types.displayKind(ty.kind) + " does not match " + types.displayKind(subjKind));
+        }
+        return (cond = "true", bindings = "", irrefutable = true, boolMask = 0, next = ty.next, markers = "");
+    }
+    if ch == "\"" {
+        lit := syntax.parseText(target, source, pos, prefix);
+        leftFake := (kind = subjKind, code = subjCode, intValue = 0, textValue = "", constant = false, next = pos);
+        cmp := ctx.compareParsed(target, source, pos, "==", leftFake, lit, prefix);
+        return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, next = lit.next, markers = "");
+    }
+    if textLib.isDigit(ch) or ((ch == "-" or ch == "+") and pos + 1 < size and textLib.isDigit(textLib.at(source, syntax.skipTrivia(source, pos + 1, prefix)))) {
+        isNeg := ch == "-";
+        numPos := if ch == "-" or ch == "+" { syntax.skipTrivia(source, pos + 1, prefix) } else { pos };
+        lit := syntax.parseNumber(target, source, numPos, prefix, subjKind, 10);
+        signedLit := if isNeg {
+            (kind = lit.kind, code = "(-(" + lit.code + "))", intValue = 0 - lit.intValue, textValue = lit.textValue, constant = lit.constant, next = lit.next)
+        } else {
+            lit
+        };
+        leftFake := (kind = subjKind, code = subjCode, intValue = 0, textValue = "", constant = false, next = pos);
+        cmp := ctx.compareParsed(target, source, pos, "==", leftFake, signedLit, prefix);
+        return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, next = signedLit.next, markers = "");
+    }
+    if ch == "{" {
+        if not types.isRecordKind(subjKind) {
+            syntax.failAt(source, pos, prefix, "record pattern requires a record value, got " + types.displayKind(subjKind));
+        }
+        var cCursor := syntax.skipTrivia(source, pos + 1, prefix);
+        var recCond := "true";
+        var recBindings := "";
+        var recIrref := true;
+        var recMarkers := "";
+        loop true {
+            cCursor = syntax.skipTrivia(source, cCursor, prefix);
+            if cCursor >= size { syntax.failAt(source, pos, prefix, "expected } to close record pattern"); }
+            if textLib.at(source, cCursor) == "}" {
+                return (cond = recCond, bindings = recBindings, irrefutable = recIrref, boolMask = 0, next = cCursor + 1, markers = recMarkers);
+            }
+            if syntax.isSingleEquals(source, cCursor) {
+                fStart := syntax.skipTrivia(source, cCursor + 1, prefix);
+                if fStart >= size or not textLib.isNameStart(textLib.at(source, fStart)) {
+                    syntax.failAt(source, fStart, prefix, "expected field name after = in record pattern");
+                }
+                fEnd := textLib.skipName(source, fStart);
+                fieldName := textLib.slice(source, fStart, fEnd);
+                if fieldName == "_" { syntax.failAt(source, fStart, prefix, "use _ = sourceField to discard a field"); }
+                fieldKind := types.recordFieldKind(subjKind, fieldName);
+                if fieldKind == "" {
+                    syntax.failAt(source, fStart, prefix, "record " + types.recordDisplayName(subjKind) + " has no field " + fieldName);
+                }
+                var afterField := syntax.skipTrivia(source, fEnd, prefix);
+                if afterField < size and textLib.at(source, afterField) == ":" {
+                    ty := types.parseTypeAt(source, afterField + 1, prefix, aliases, "record pattern field", "");
+                    if not patternTypeMatches(fieldKind, ty.kind) {
+                        syntax.failAt(source, fStart, prefix, "record field " + fieldName + " has type " + types.displayKind(fieldKind) + ", expected " + types.displayKind(ty.kind));
+                    }
+                    afterField = syntax.skipTrivia(source, ty.next, prefix);
+                }
+                propExpr := "(" + subjCode + ")." + types.recordComponentProp(subjKind, fieldName);
+                recBindings = mergePatBindings(recBindings, fieldName + "\t" + fieldKind + "\t" + propExpr + "\n", source, fStart, prefix);
+                cCursor = afterField;
+            } else {
+                eqPos := scanRecordClauseEquals(source, cCursor, prefix);
+                if eqPos >= 0 {
+                    srcStart := syntax.skipTrivia(source, eqPos + 1, prefix);
+                    if srcStart >= size or not textLib.isNameStart(textLib.at(source, srcStart)) {
+                        syntax.failAt(source, srcStart, prefix, "expected source field name after = in record pattern");
+                    }
+                    srcEnd := textLib.skipName(source, srcStart);
+                    srcField := textLib.slice(source, srcStart, srcEnd);
+                    fieldKind := types.recordFieldKind(subjKind, srcField);
+                    if fieldKind == "" {
+                        syntax.failAt(source, srcStart, prefix, "record " + types.recordDisplayName(subjKind) + " has no field " + srcField);
+                    }
+                    propExpr := "(" + subjCode + ")." + types.recordComponentProp(subjKind, srcField);
+                    sub := parseMatchPattern(target, source, cCursor, prefix, fieldKind, propExpr, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+                    afterSub := syntax.skipTrivia(source, sub.next, prefix);
+                    if afterSub =!= eqPos {
+                        syntax.failAt(source, afterSub, prefix, "expected = before source field " + srcField + " in record pattern");
+                    }
+                    recCond = combinePatCond(recCond, sub.cond);
+                    recBindings = mergePatBindings(recBindings, sub.bindings, source, cCursor, prefix);
+                    if not sub.irrefutable { recIrref = false; }
+                    if inferMode { recMarkers = recMarkers + sub.markers; }
+                    cCursor = syntax.skipTrivia(source, srcEnd, prefix);
+                } else {
+                    if not textLib.isNameStart(textLib.at(source, cCursor)) {
+                        syntax.failAt(source, cCursor, prefix, "expected record pattern clause");
+                    }
+                    nEnd := textLib.skipName(source, cCursor);
+                    fieldName := textLib.slice(source, cCursor, nEnd);
+                    afterName := syntax.skipTrivia(source, nEnd, prefix);
+                    fieldCmp := syntax.comparisonOperatorAt(source, afterName);
+                    if syntax.isComparison(fieldCmp.text) {
+                        fieldKind := types.recordFieldKind(subjKind, fieldName);
+                        if fieldKind == "" {
+                            syntax.failAt(source, cCursor, prefix, "record " + types.recordDisplayName(subjKind) + " has no field " + fieldName);
+                        }
+                        propExpr := "(" + subjCode + ")." + types.recordComponentProp(subjKind, fieldName);
+                        sub := parseComparisonPatternRhs(target, source, afterName, fieldCmp.text, fieldCmp.width, prefix, fieldKind, propExpr, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                        recCond = combinePatCond(recCond, sub.cond);
+                        recIrref = false;
+                        if inferMode { recMarkers = recMarkers + sub.markers; }
+                        cCursor = syntax.skipTrivia(source, sub.next, prefix);
+                    } else if afterName < size and textLib.at(source, afterName) == ":" {
+                        fieldKind := types.recordFieldKind(subjKind, fieldName);
+                        if fieldKind == "" {
+                            syntax.failAt(source, cCursor, prefix, "record " + types.recordDisplayName(subjKind) + " has no field " + fieldName);
+                        }
+                        ty := types.parseTypeAt(source, afterName + 1, prefix, aliases, "record pattern field", "");
+                        if not patternTypeMatches(fieldKind, ty.kind) {
+                            syntax.failAt(source, cCursor, prefix, "record field " + fieldName + " has type " + types.displayKind(fieldKind) + ", expected " + types.displayKind(ty.kind));
+                        }
+                        propExpr := "(" + subjCode + ")." + types.recordComponentProp(subjKind, fieldName);
+                        recBindings = mergePatBindings(recBindings, fieldName + "\t" + fieldKind + "\t" + propExpr + "\n", source, cCursor, prefix);
+                        cCursor = syntax.skipTrivia(source, ty.next, prefix);
+                    } else {
+                        syntax.failAt(source, afterName, prefix, "expected = sourceField or : Type in record pattern clause " + fieldName);
+                    }
+                }
+            }
+            if cCursor < size and textLib.at(source, cCursor) == "," {
+                cCursor = cCursor + 1;
+                continue;
+            }
+            if cCursor < size and textLib.at(source, cCursor) == "}" { continue; }
+            syntax.failAt(source, cCursor, prefix, "expected , or } in record pattern");
+        }
+    }
+    if ch == "(" {
+        afterOpen := syntax.skipTrivia(source, pos + 1, prefix);
+        if afterOpen < size and textLib.at(source, afterOpen) == ")" {
+            if subjKind =!= ir.VALUE_KIND_UNIT {
+                syntax.failAt(source, pos, prefix, "unit pattern () requires Unit, got " + types.displayKind(subjKind));
+            }
+            return (cond = "true", bindings = "", irrefutable = true, boolMask = 0, next = afterOpen + 1, markers = "");
+        }
+        if not types.isTupleKind(subjKind) or not parenIsTuplePattern(source, pos, prefix) {
+            inner := parseMatchPattern(target, source, afterOpen, prefix, subjKind, subjCode, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+            closePos := syntax.skipTrivia(source, inner.next, prefix);
+            afterClose := syntax.expectSymbol(source, closePos, ")", prefix);
+            return (cond = inner.cond, bindings = inner.bindings, irrefutable = inner.irrefutable, boolMask = inner.boolMask, next = afterClose, markers = inner.markers);
+        }
+        tupleCount := types.tupleComponentCount(subjKind);
+        var tCursor := afterOpen;
+        var tupCond := "true";
+        var tupBindings := "";
+        var tupIrref := true;
+        var tupMarkers := "";
+        var usedSlots := "|";
+        var itemCount := 0;
+        loop true {
+            tCursor = syntax.skipTrivia(source, tCursor, prefix);
+            if tCursor >= size { syntax.failAt(source, pos, prefix, "expected ) to close tuple pattern"); }
+            if textLib.at(source, tCursor) == ")" {
+                if itemCount =!= tupleCount {
+                    syntax.failAt(source, pos, prefix, "tuple pattern expected " + integer.intText(itemCount) + " fields, got " + integer.intText(tupleCount));
+                }
+                return (cond = tupCond, bindings = tupBindings, irrefutable = tupIrref, boolMask = 0, next = tCursor + 1, markers = tupMarkers);
+            }
+            if syntax.isSingleEquals(source, tCursor) {
+                fStart := syntax.skipTrivia(source, tCursor + 1, prefix);
+                if fStart >= size or not textLib.isNameStart(textLib.at(source, fStart)) {
+                    syntax.failAt(source, fStart, prefix, "expected field name after = in tuple pattern");
+                }
+                fEnd := textLib.skipName(source, fStart);
+                fieldName := textLib.slice(source, fStart, fEnd);
+                if fieldName == "_" { syntax.failAt(source, fStart, prefix, "use _ = sourceField to discard a field"); }
+                slotIdx := types.tupleComponentIndexByLabel(subjKind, fieldName);
+                if slotIdx < 0 {
+                    syntax.failAt(source, fStart, prefix, "tuple has no field " + fieldName);
+                }
+                slotTag := "|" + integer.intText(slotIdx) + "|";
+                if textLib.indexOfText(usedSlots, slotTag, 0) >= 0 {
+                    syntax.failAt(source, fStart, prefix, "duplicate selection of tuple field " + fieldName);
+                }
+                usedSlots = usedSlots + integer.intText(slotIdx) + "|";
+                comp := types.tupleComponent(subjKind, slotIdx);
+                var afterField := syntax.skipTrivia(source, fEnd, prefix);
+                if afterField < size and textLib.at(source, afterField) == ":" {
+                    ty := types.parseTypeAt(source, afterField + 1, prefix, aliases, "tuple pattern field", "");
+                    if not patternTypeMatches(comp.kind, ty.kind) {
+                        syntax.failAt(source, fStart, prefix, "tuple field " + fieldName + " has type " + types.displayKind(comp.kind) + ", expected " + types.displayKind(ty.kind));
+                    }
+                    afterField = syntax.skipTrivia(source, ty.next, prefix);
+                }
+                propExpr := "(" + subjCode + ")." + comp.prop;
+                tupBindings = mergePatBindings(tupBindings, fieldName + "\t" + comp.kind + "\t" + propExpr + "\n", source, fStart, prefix);
+                itemCount = itemCount + 1;
+                tCursor = afterField;
+            } else {
+                /* Scan for top-level single `=` before `,` or `)` for named clause `pat = field`. */
+                var scanPos := tCursor;
+                var eqPos := -1;
+                loop scanPos < size {
+                    scanPos = syntax.skipTrivia(source, scanPos, prefix);
+                    if scanPos >= size { break; }
+                    sc := textLib.at(source, scanPos);
+                    if sc == "," or sc == ")" { break; }
+                    if sc == "(" {
+                        end := syntax.scanParenEnd(source, scanPos, prefix);
+                        if end < 0 { break; }
+                        scanPos = end;
+                        continue;
+                    }
+                    if sc == "[" {
+                        end := syntax.scanBracketEnd(source, scanPos, prefix);
+                        if end < 0 { break; }
+                        scanPos = end;
+                        continue;
+                    }
+                    if sc == "{" {
+                        end := syntax.scanBraceEnd(source, scanPos, prefix);
+                        if end < 0 { break; }
+                        scanPos = end;
+                        continue;
+                    }
+                    if sc == "\"" {
+                        end := syntax.skipAliasString(source, scanPos);
+                        if end <= scanPos { break; }
+                        scanPos = end;
+                        continue;
+                    }
+                    if syntax.isSingleEquals(source, scanPos) {
+                        eqPos = scanPos;
+                        break;
+                    }
+                    cmpScan := syntax.comparisonOperatorAt(source, scanPos);
+                    if cmpScan.width > 0 {
+                        scanPos = scanPos + cmpScan.width;
+                        continue;
+                    }
+                    scanPos = scanPos + 1;
+                }
+                var slotIdx := -1;
+                var afterClause := tCursor;
+                if eqPos >= 0 {
+                    srcStart := syntax.skipTrivia(source, eqPos + 1, prefix);
+                    if srcStart >= size or not textLib.isNameStart(textLib.at(source, srcStart)) {
+                        syntax.failAt(source, srcStart, prefix, "expected field name after = in tuple pattern");
+                    }
+                    srcEnd := textLib.skipName(source, srcStart);
+                    srcField := textLib.slice(source, srcStart, srcEnd);
+                    slotIdx = types.tupleComponentIndexByLabel(subjKind, srcField);
+                    if slotIdx < 0 {
+                        syntax.failAt(source, srcStart, prefix, "tuple has no field " + srcField);
+                    }
+                    slotTag := "|" + integer.intText(slotIdx) + "|";
+                    if textLib.indexOfText(usedSlots, slotTag, 0) >= 0 {
+                        syntax.failAt(source, srcStart, prefix, "duplicate selection of tuple field " + srcField);
+                    }
+                    usedSlots = usedSlots + integer.intText(slotIdx) + "|";
+                    comp := types.tupleComponent(subjKind, slotIdx);
+                    propExpr := "(" + subjCode + ")." + comp.prop;
+                    sub := parseMatchPattern(target, source, tCursor, prefix, comp.kind, propExpr, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+                    afterSub := syntax.skipTrivia(source, sub.next, prefix);
+                    if afterSub =!= eqPos {
+                        syntax.failAt(source, afterSub, prefix, "expected = before tuple field " + srcField);
+                    }
+                    tupCond = combinePatCond(tupCond, sub.cond);
+                    tupBindings = mergePatBindings(tupBindings, sub.bindings, source, tCursor, prefix);
+                    if not sub.irrefutable { tupIrref = false; }
+                    if inferMode { tupMarkers = tupMarkers + sub.markers; }
+                    afterClause = syntax.skipTrivia(source, srcEnd, prefix);
+                } else {
+                    var findIdx := 0;
+                    loop findIdx < tupleCount {
+                        tag := "|" + integer.intText(findIdx) + "|";
+                        if textLib.indexOfText(usedSlots, tag, 0) < 0 {
+                            slotIdx = findIdx;
+                            break;
+                        }
+                        findIdx = findIdx + 1;
+                    }
+                    if slotIdx < 0 {
+                        syntax.failAt(source, tCursor, prefix, "tuple pattern has too many fields for " + types.displayKind(subjKind));
+                    }
+                    usedSlots = usedSlots + integer.intText(slotIdx) + "|";
+                    comp := types.tupleComponent(subjKind, slotIdx);
+                    propExpr := "(" + subjCode + ")." + comp.prop;
+                    sub := parseMatchPattern(target, source, tCursor, prefix, comp.kind, propExpr, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+                    tupCond = combinePatCond(tupCond, sub.cond);
+                    tupBindings = mergePatBindings(tupBindings, sub.bindings, source, tCursor, prefix);
+                    if not sub.irrefutable { tupIrref = false; }
+                    if inferMode { tupMarkers = tupMarkers + sub.markers; }
+                    afterClause = syntax.skipTrivia(source, sub.next, prefix);
+                }
+                itemCount = itemCount + 1;
+                tCursor = afterClause;
+            }
+            if tCursor < size and textLib.at(source, tCursor) == "," {
+                tCursor = tCursor + 1;
+                continue;
+            }
+            if tCursor < size and textLib.at(source, tCursor) == ")" { continue; }
+            syntax.failAt(source, tCursor, prefix, "expected , or ) in tuple pattern");
+        }
+    }
+    if ch == "[" {
+        if types.isListKind(subjKind) {
+            syntax.failAt(source, pos, prefix, "cannot match runtime-sized " + types.displayKind(subjKind) + " with fixed-array pattern; fixed array required");
+        }
+        if not types.isArrayKind(subjKind) {
+            syntax.failAt(source, pos, prefix, "array pattern requires a fixed array, got " + types.displayKind(subjKind));
+        }
+        elemKind := types.arrayElementKind(subjKind);
+        expectedLen := types.arrayExtent(subjKind);
+        var aCursor := syntax.skipTrivia(source, pos + 1, prefix);
+        var arrCond := "true";
+        var arrBindings := "";
+        var arrIrref := true;
+        var arrMarkers := "";
+        var elemIdx := 0;
+        loop true {
+            aCursor = syntax.skipTrivia(source, aCursor, prefix);
+            if aCursor >= size { syntax.failAt(source, pos, prefix, "expected ] to close array pattern"); }
+            if textLib.at(source, aCursor) == "]" {
+                if elemIdx =!= expectedLen {
+                    syntax.failAt(source, pos, prefix, "array pattern expected " + integer.intText(elemIdx) + " elements, got " + integer.intText(expectedLen));
+                }
+                return (cond = arrCond, bindings = arrBindings, irrefutable = arrIrref, boolMask = 0, next = aCursor + 1, markers = arrMarkers);
+            }
+            elemExpr := "(" + subjCode + ")[" + integer.intText(elemIdx) + "]!";
+            sub := parseMatchPattern(target, source, aCursor, prefix, elemKind, elemExpr, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+            arrCond = combinePatCond(arrCond, sub.cond);
+            arrBindings = mergePatBindings(arrBindings, sub.bindings, source, aCursor, prefix);
+            if not sub.irrefutable { arrIrref = false; }
+            if inferMode { arrMarkers = arrMarkers + sub.markers; }
+            elemIdx = elemIdx + 1;
+            aCursor = syntax.skipTrivia(source, sub.next, prefix);
+            if aCursor < size and textLib.at(source, aCursor) == "," {
+                aCursor = aCursor + 1;
+                continue;
+            }
+            if aCursor < size and textLib.at(source, aCursor) == "]" { continue; }
+            syntax.failAt(source, aCursor, prefix, "expected , or ] in array pattern");
+        }
+    }
+    if textLib.isNameStart(ch) {
+        nameEnd := textLib.skipName(source, pos);
+        word := textLib.slice(source, pos, nameEnd);
+        if word == "true" or word == "false" {
+            lit := ctx.boolParsed(ir.targetBoolLiteralCode(target, word == "true"), word == "true", true, nameEnd);
+            leftFake := (kind = subjKind, code = subjCode, intValue = 0, textValue = "", constant = false, next = pos);
+            cmp := ctx.compareParsed(target, source, pos, "==", leftFake, lit, prefix);
+            mask := if word == "true" { 1 } else { 2 };
+            return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = mask, next = nameEnd, markers = "");
+        }
+        if word =!= "_" and syntax.isReservedWord(word) {
+            syntax.failAt(source, pos, prefix, "unexpected keyword " + word + " in match pattern");
+        }
+        var endPos := nameEnd;
+        afterWord := syntax.skipTrivia(source, nameEnd, prefix);
+        if afterWord < size and textLib.at(source, afterWord) == ":" {
+            ty := types.parseTypeAt(source, afterWord + 1, prefix, aliases, "pattern type", "");
+            if not patternTypeMatches(subjKind, ty.kind) {
+                syntax.failAt(source, pos, prefix, "pattern type " + types.displayKind(ty.kind) + " does not match " + types.displayKind(subjKind));
+            }
+            endPos = ty.next;
+        }
+        return (cond = "true", bindings = word + "\t" + subjKind + "\t" + subjCode + "\n", irrefutable = true, boolMask = 0, next = endPos, markers = "");
+    }
+    syntax.failAt(source, pos, prefix, "expected match pattern");
+    (cond = "false", bindings = "", irrefutable = false, boolMask = 0, next = pos + 1, markers = "")
+};
+
+/** Parses one match pattern with optional leading `or` and `or` alternatives (`[or] pat (or pat)*`). */
+parseMatchPattern := fn(target: String, source: String, start: Int, prefix: String, subjKind: String, subjCode: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>, armDepth: Int): PatResult {
+    var pos := syntax.skipTrivia(source, start, prefix);
+    if textLib.wordAt(source, pos, "or") {
+        pos = syntax.skipTrivia(source, pos + 2, prefix);
+        if textLib.wordAt(source, pos, "or") {
+            syntax.failAt(source, pos, prefix, "duplicate leading or in match pattern");
+        }
+    }
+    first := parseMatchPatternAtom(target, source, pos, prefix, subjKind, subjCode, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+    var nextPos := syntax.skipTrivia(source, first.next, prefix);
+    if not textLib.wordAt(source, nextPos, "or") {
+        return first;
+    }
+    altConds: mut List<String> = [first.cond];
+    altBindings: mut List<String> = [first.bindings];
+    var altCount := 1;
+    var anyIrref := first.irrefutable;
+    var combinedMask := first.boolMask;
+    var combinedMarkers := first.markers;
+    var lastEnd := first.next;
+    loop textLib.wordAt(source, nextPos, "or") {
+        altStart := syntax.skipTrivia(source, nextPos + 2, prefix);
+        alt := parseMatchPatternAtom(target, source, altStart, prefix, subjKind, subjCode, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+        if not patBindingsCompatible(first.bindings, alt.bindings) {
+            syntax.failAt(source, altStart, prefix, "or pattern alternatives must bind the same names with matching types");
+        }
+        listLib.pushBack(mut altConds, alt.cond);
+        listLib.pushBack(mut altBindings, alt.bindings);
+        altCount = altCount + 1;
+        if alt.irrefutable { anyIrref = true; }
+        combinedMask = combineBoolMask(combinedMask, alt.boolMask);
+        if inferMode { combinedMarkers = combinedMarkers + alt.markers; }
+        lastEnd = alt.next;
+        nextPos = syntax.skipTrivia(source, lastEnd, prefix);
+    }
+    if not patHasNamedBindings(first.bindings) {
+        var orCond := "";
+        var i := 0;
+        loop i < altCount {
+            part := if altConds[i] == "" { "true" } else { altConds[i] };
+            orCond = if i == 0 { "(" + part + ")" } else { orCond + " || (" + part + ")" };
+            i = i + 1;
+        }
+        return (cond = "(" + orCond + ")", bindings = first.bindings, irrefutable = anyIrref, boolMask = combinedMask, next = lastEnd, markers = combinedMarkers);
+    }
+    /* Binding-producing `or` alternatives: emit a short-circuiting IIFE assigning the shared arm bindings on first match. */
+    var iife := "(() => { ";
+    var i := 0;
+    loop i < altCount {
+        c := if altConds[i] == "" { "true" } else { altConds[i] };
+        assigns := emitPatAssignments(target, locals, armDepth, altBindings[i]);
+        iife = iife + "if (" + c + ") { " + assigns + "return true; } ";
+        i = i + 1;
+    }
+    iife = iife + "return false; })()";
+    /* Preserve binding declarations (names + kinds) with empty per-binding expr sentinel so arm header emits `let rt!: T;` once. */
+    var declBindings := "";
+    bSize := textLib.length(first.bindings);
+    var bPos := 0;
+    loop bPos < bSize {
+        nl := textLib.indexOfText(first.bindings, "\n", bPos);
+        lineEnd := if nl < 0 { bSize } else { nl };
+        t1 := textLib.indexOfText(first.bindings, "\t", bPos);
+        t2 := if t1 >= 0 { textLib.indexOfText(first.bindings, "\t", t1 + 1) } else { -1 };
+        if t1 > bPos and t2 > t1 and t2 < lineEnd {
+            declBindings = declBindings + textLib.slice(first.bindings, bPos, t2) + "\t\n";
+        }
+        bPos = lineEnd + 1;
+    }
+    (cond = iife, bindings = declBindings, irrefutable = anyIrref, boolMask = combinedMask, next = lastEnd, markers = combinedMarkers)
+};
+
+/** Parses a subject-based `match <subject> { ... }` body for value, statement, or tagged/then/finally IIFE lowering. */
+parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, mode: String, condValVar: String, resolvedValKind: String, aliases: List<AliasDecl>): (code: String, kind: String, allNever: Bool, next: Int, markers: String) {
+    if target =!= ir.TARGET_TS {
+        syntax.failAt(source, matchStart, prefix, "C backend does not support subject match yet");
+    }
+    size := textLib.length(source);
+    subjStart := syntax.skipTrivia(source, matchStart + 5, prefix);
+    syntax.rejectHeaderBlockTag(source, subjStart, prefix, "match");
+    subjOpen := syntax.scanConditionOpen(source, subjStart, prefix);
+    if subjOpen < 0 or subjOpen == subjStart {
+        syntax.failAt(source, subjStart, prefix, "expected { after match subject");
+    }
+    subj := parseBinaryCtx(target, source, subjStart, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+    afterSubj := syntax.skipTrivia(source, subj.next, prefix);
+    syntax.rejectMisplacedTag(source, afterSubj, prefix, "block tag cannot appear before { in match");
+    if afterSubj > subjOpen {
+        syntax.failAt(source, subjOpen, prefix, "ungrouped { in match subject starts the arm list; parenthesize block or conditional expressions");
+    }
+    if afterSubj =!= subjOpen {
+        _ := syntax.expectSymbol(source, afterSubj, "{", prefix);
+    }
+    matchId := ctx.nextCtxId(ctxs) + matchStart;
+    subjVar := "lite$subj" + integer.intText(matchId);
+    doneVar := "lite$done" + integer.intText(matchId);
+    subjTsType := if types.needsTsTypeAnnotation(subj.kind) { ": " + types.tsFunctionType(subj.kind) } else { "" };
+    armDepth := ir.maxLocalLexDepth(locals) + 1;
+    var matchMarkers := if inferMode { ctx.collectParsedMarkers("", subj) } else { "" };
+    var armsCode := "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; let " + doneVar + ": boolean = false; ";
+    var cursor := syntax.skipItemSeparators(source, subjOpen + 1, prefix);
+    var resultKind := if mode == "stmt" { ir.VALUE_KIND_UNIT } else { "" };
+    var allNever := true;
+    var sawIrrefutable := false;
+    var boolMask := 0;
+    var armCount := 0;
+    loop true {
+        cursor = syntax.skipItemSeparators(source, cursor, prefix);
+        if cursor >= size {
+            syntax.failAt(source, subjOpen, prefix, "expected } to close match");
+        }
+        if textLib.at(source, cursor) == "}" {
+            isExhaustive := sawIrrefutable or (subj.kind == ir.VALUE_KIND_BOOL and boolMask == 3);
+            if not isExhaustive {
+                syntax.failAt(source, cursor, prefix, "match requires an exhaustive fallback arm");
+            }
+            cursor = cursor + 1;
+            break;
+        }
+        if sawIrrefutable or (subj.kind == ir.VALUE_KIND_BOOL and boolMask == 3) {
+            syntax.failAt(source, cursor, prefix, "unreachable match arm after exhaustive arm");
+        }
+        armStart := cursor;
+        pat := parseMatchPattern(target, source, armStart, prefix, subj.kind, subjVar, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+        if inferMode { matchMarkers = matchMarkers + pat.markers; }
+        /* Build arm-local scope with pattern bindings. */
+        armLocals: mut List<Local> = [];
+        loop locals as entry { listLib.pushBack(mut armLocals, entry); }
+        var declStmts := "";
+        var assignStmts := "";
+        var voidStmts := "";
+        bSize := textLib.length(pat.bindings);
+        var bPos := 0;
+        loop bPos < bSize {
+            nl := textLib.indexOfText(pat.bindings, "\n", bPos);
+            lineEnd := if nl < 0 { bSize } else { nl };
+            t1 := textLib.indexOfText(pat.bindings, "\t", bPos);
+            t2 := if t1 >= 0 { textLib.indexOfText(pat.bindings, "\t", t1 + 1) } else { -1 };
+            if t1 > bPos and t2 > t1 and t2 < lineEnd {
+                bName := textLib.slice(pat.bindings, bPos, t1);
+                bKind := textLib.slice(pat.bindings, t1 + 1, t2);
+                bExpr := textLib.slice(pat.bindings, t2 + 1, lineEnd);
+                bRt := ir.localRuntimeName(target, locals, bName, "", armDepth);
+                bTsType := types.tsFunctionType(bKind);
+                if bExpr == "" {
+                    declStmts = declStmts + "let " + bRt + "!: " + bTsType + "; ";
+                } else {
+                    declStmts = declStmts + "let " + bRt + "!: " + bTsType + "; ";
+                    assignStmts = assignStmts + bRt + " = " + bExpr + "; ";
+                }
+                voidStmts = voidStmts + "void " + bRt + "; ";
+                listLib.pushBack(mut armLocals, (name = bName, runtime = bRt, kind = bKind, mutable = false, writable = false,
+                depth = armDepth, constant = false, code = bRt, intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+            }
+            bPos = lineEnd + 1;
+        }
+        afterPat := syntax.skipTrivia(source, pat.next, prefix);
+        var hasGuard := false;
+        var guardCode := "";
+        var armOpen := -1;
+        if textLib.wordAt(source, afterPat, "if") {
+            hasGuard = true;
+            guardStart := syntax.skipTrivia(source, afterPat + 2, prefix);
+            syntax.rejectHeaderBlockTag(source, guardStart, prefix, "match guard");
+            armOpen = syntax.scanConditionOpen(source, guardStart, prefix);
+            if armOpen < 0 or armOpen == guardStart {
+                syntax.failAt(source, guardStart, prefix, "expected { after match guard");
+            }
+            guardParsed := parseBinaryCtx(target, source, guardStart, prefix, armLocals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { matchMarkers = ctx.collectParsedMarkers(matchMarkers, guardParsed); }
+            if guardParsed.kind =!= ir.VALUE_KIND_BOOL {
+                syntax.failAt(source, guardStart, prefix, "match guard must be Bool");
+            }
+            afterGuard := syntax.skipTrivia(source, guardParsed.next, prefix);
+            syntax.rejectMisplacedTag(source, afterGuard, prefix, "block tag cannot appear before { in match arm");
+            if afterGuard > armOpen {
+                syntax.failAt(source, armOpen, prefix, "ungrouped { in match guard starts the arm body; parenthesize block or conditional expressions");
+            }
+            if afterGuard =!= armOpen {
+                _ := syntax.expectSymbol(source, afterGuard, "{", prefix);
+            }
+            guardCode = if guardParsed.constant { ir.targetBoolLiteralCode(target, guardParsed.intValue =!= 0) } else { guardParsed.code };
+        } else {
+            syntax.rejectMisplacedTag(source, afterPat, prefix, "block tag cannot appear before { in match arm");
+            if afterPat >= size or textLib.at(source, afterPat) =!= "{" {
+                syntax.failAt(source, afterPat, prefix, "expected { after match arm pattern");
+            }
+            armOpen = afterPat;
+        }
+        if not hasGuard {
+            if pat.irrefutable { sawIrrefutable = true; }
+            boolMask = combineBoolMask(boolMask, pat.boolMask);
+        }
+        armBodyStart := syntax.skipTrivia(source, armOpen + 1, prefix);
+        bodySink := if mode == "stmt" { "stmt" } else { "branch" };
+        armExpected := if mode == "stmt" { "" } else { expected };
+        branch := parseBinaryCtx(target, source, armOpen, prefix, armLocals, functions, params, currentName, armExpected, 0, ctxs, iifeDepth, inferMode, bodySink, aliases);
+        if inferMode { matchMarkers = ctx.collectParsedMarkers(matchMarkers, branch); }
+        if branch.kind =!= ir.VALUE_KIND_NEVER { allNever = false; }
+        if mode =!= "stmt" {
+            joinedKind := types.joinBranchKind(resultKind, branch.kind);
+            if joinedKind == "" {
+                syntax.failAt(source, armBodyStart, prefix, "value match arms must have the same kind, got " +
+                types.displayKind(resultKind) + " and " + types.displayKind(branch.kind));
+            }
+            resultKind = joinedKind;
+        }
+        var bodyEmit := "";
+        if mode == "stmt" {
+            bodyEmit = branch.code;
+        } else if mode == "iife" {
+            bodyEmit = ctx.condBranchStmtCode(target, resolvedValKind, condValVar, branch.kind, branch.code);
+        } else {
+            if branch.kind == ir.VALUE_KIND_NEVER {
+                bodyEmit = "void (" + branch.code + ");";
+            } else {
+                bodyEmit = "return (" + branch.code + ");";
+            }
+        }
+        patCond := if pat.cond == "" { "true" } else { pat.cond };
+        var innerMatch := "";
+        if hasGuard {
+            innerMatch = assignStmts + voidStmts + "if (Boolean(" + guardCode + ")) { " + doneVar + " = true; " + bodyEmit + " }";
+        } else {
+            innerMatch = assignStmts + voidStmts + doneVar + " = true; " + bodyEmit;
+        }
+        armCheck := if patCond == "true" {
+            innerMatch
+        } else {
+            "if (Boolean(" + patCond + ")) { " + innerMatch + " }"
+        };
+        armsCode = armsCode + "if (!" + doneVar + ") { " + declStmts + armCheck + " } ";
+        armCount = armCount + 1;
+        cursor = branch.next;
+    }
+    finalKind := if mode == "stmt" {
+        if allNever { ir.VALUE_KIND_NEVER } else { ir.VALUE_KIND_UNIT }
+    } else {
+        resultKind
+    };
+    (code = armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers)
+};
+
+/** Parses a statement-position subject-based `match <subject> { ... }` (used from `frontend.lts` and `parseBlockExpr`). */
+pub parseSubjectMatchStmt := fn(target: String, source: String, matchStart: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    matchBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = ir.CTX_KIND_MATCH, phase = ir.CTX_PHASE_BODY,
+    iifeDepth = iifeDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
+    countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+    res := parseSubjectMatchBody(target, source, matchStart, prefix, locals, functions, params, currentName, "", matchBarrierCtxs, iifeDepth, inferMode, "stmt", "", "", aliases);
+    ctx.withMarkers((kind = res.kind, code = "{ " + res.code + "}", intValue = 0, textValue = "", constant = false, next = res.next), res.markers)
+};
+
+/** Parses `[@tag] if ... [else ...]` and `[@tag] match [subject] { ... }` value expressions with optional `then` and `finally`. */
 parseCondExpr := fn(target: String, source: String, condParseKind: String, condParseStart: Int, condParseTag: String, condParseTagAt: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    isSubjectMatch := if condParseKind == ir.CTX_KIND_MATCH {
+        openMatchCheck := syntax.skipTrivia(source, condParseStart + 5, prefix);
+        syntax.rejectMisplacedTag(source, openMatchCheck, prefix, "block tag cannot appear before { in match");
+        openMatchCheck < textLib.length(source) and textLib.at(source, openMatchCheck) =!= "{"
+    } else {
+        false
+    };
+    if isSubjectMatch and target =!= ir.TARGET_TS {
+        syntax.failAt(source, condParseStart, prefix, "C backend does not support subject match yet");
+    }
     rawCondEnd := if condParseKind == ir.CTX_KIND_IF {
         syntax.scanRawIfChainEnd(source, condParseStart, prefix, true)
     } else {
-        openMatchCheck := syntax.skipTrivia(source, condParseStart + 5, prefix);
-        syntax.rejectMisplacedTag(source, openMatchCheck, prefix, "block tag cannot appear before { in match");
-        if openMatchCheck >= textLib.length(source) or textLib.at(source, openMatchCheck) =!= "{" {
-            syntax.unsupportedFeature(source, condParseStart, "match", prefix);
-        }
         syntax.scanRawMatchEnd(source, condParseStart, prefix)
     };
     afterRawCond := if rawCondEnd >= 0 { syntax.skipTrivia(source, rawCondEnd, prefix) } else { -1 };
@@ -3133,6 +4038,12 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             }
             code := ctx.ternaryChainCode(target, resultKind, conditionCodes, branchCodes, branchKinds, branchCount);
             return ctx.withMarkers((kind = resultKind, code = code, intValue = 0, textValue = "", constant = false, next = cursor), ifMarkers);
+        }
+        if isSubjectMatch {
+            subRes := parseSubjectMatchBody(target, source, condParseStart, prefix, locals, functions, params, currentName, expected, condBarrierCtxs, iifeDepth + 1, inferMode, "value", "", "", aliases);
+            retType := types.tsFunctionType(subRes.kind);
+            code := "(((): " + retType + " => { " + subRes.code + "throw new Error(\"unreachable\"); })())";
+            return ctx.withMarkers((kind = subRes.kind, code = code, intValue = 0, textValue = "", constant = false, next = subRes.next), subRes.markers);
         }
         openMatchPos := syntax.skipTrivia(source, condParseStart + 5, prefix);
         size := textLib.length(source);
@@ -3256,6 +4167,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         var passBranchCount := 0;
         var passHasElse := false;
         var passPartialNoElseAt := -1;
+        var passSubjectStmt := "";
         var cursor := 0;
         if condParseKind == ir.CTX_KIND_IF {
             cursor = syntax.skipTrivia(source, condParseStart + 2, prefix);
@@ -3342,6 +4254,15 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     break;
                 }
             }
+        } else if isSubjectMatch {
+            subRes := parseSubjectMatchBody(target, source, condParseStart, prefix, locals, functions, params, currentName, passBranchExpected, condPassCtxs, condDepth, passInfer, "iife", condValVar, resolvedPreThenKind, aliases);
+            if passInfer { passMarkers = passMarkers + subRes.markers; }
+            passHasElse = true;
+            passResultKind = subRes.kind;
+            listLib.pushBack(mut passBranchKinds, subRes.kind);
+            passBranchCount = 1;
+            passSubjectStmt = "{ " + subRes.code + "}";
+            cursor = subRes.next;
         } else {
             openMatchPos := syntax.skipTrivia(source, condParseStart + 5, prefix);
             size := textLib.length(source);
@@ -3454,7 +4375,9 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             condEndCursor = cursor;
         } else {
             var rawIfStmt := "";
-            if condParseKind == ir.CTX_KIND_MATCH and passBranchCount == 1 and passHasElse {
+            if isSubjectMatch {
+                rawIfStmt = passSubjectStmt;
+            } else if condParseKind == ir.CTX_KIND_MATCH and passBranchCount == 1 and passHasElse {
                 rawIfStmt = ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[0], passBranchCodes[0]);
             } else {
                 condCount := if passHasElse { passBranchCount - 1 } else { passBranchCount };

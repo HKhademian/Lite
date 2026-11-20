@@ -2101,8 +2101,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
         }
         if name == "match" {
             rejectMisplacedTag(source, position, prefix, "block tag cannot appear before { in match");
-            if position >= size or textLib.at(source, position) =!= "{" {
-                unsupportedFeature(source, nameStart, "match", prefix);
+            isSubjectRootMatch := position < size and textLib.at(source, position) =!= "{";
+            if isSubjectRootMatch and target =!= TARGET_TS {
+                failAt(source, nameStart, prefix, "C backend does not support subject match yet");
             }
             rawMatchEnd := scanRawMatchEnd(source, nameStart, prefix);
             afterRawMatch := if rawMatchEnd >= 0 { skipTrivia(source, rawMatchEnd, prefix) } else { -1 };
@@ -2157,6 +2158,24 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         valueTailBranch = true;
                     }
                 }
+            }
+            if isSubjectRootMatch {
+                subStmt := expr.parseSubjectMatchStmt(target, source, nameStart, prefix, locals, functions, functionParams, currentName, stmtCtxs, 0, false, aliases);
+                locals = checkStatementTrace(target, source, nameStart, prefix, subStmt.code, subStmt.kind == VALUE_KIND_NEVER, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+                if currentLive and not currentStopped {
+                    listLib.pushBack(mut items, (kind = ITEM_KIND_CALL, name = "", runtime = "", code = subStmt.code,
+                    intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(subStmt.code) {
+                        listLib.pushBack(mut transferCodes, subStmt.code);
+                        transferCount = transferCount + 1;
+                    }
+                }
+                if subStmt.kind == VALUE_KIND_NEVER {
+                    if not currentStopped { currentReturned = true; }
+                    currentStopped = true;
+                }
+                position = skipItemSeparators(source, subStmt.next, prefix);
+                continue;
             }
             firstArmStart := skipItemSeparators(source, position + 1, prefix);
             if firstArmStart >= size {
