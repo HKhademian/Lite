@@ -14,6 +14,8 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Baseline:** Recoverable returned errors and panics have distinct channels; explicitly captured failures preserve their origin on forwarding.
 
+**Confirmed in joint review:** A `Panic` propagates implicitly through enclosing calls until a matching catcher handles it. An `Error` belongs to a visible returned-error contract (`T ! E`). The caller explicitly handles it or explicitly propagates it. Keep these two paths as the baseline for subsequent review. [Result and errors](../../../docs/result-and-errors.md) · [Panics](../../../docs/panics.md)
+
 **Initial assessment and probes:** Compare a missing file reported as a returned error with an indexing fault. Decide recovery requirements from the operation contract rather than assuming all failures are interchangeable.
 
 ## 8.2 Function contracts
