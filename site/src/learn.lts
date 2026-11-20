@@ -4,7 +4,7 @@ integer := import "core/int";
 list := import "core/list";
 text := import "core/text";
 json := import "util/json";
-siteTools := import "util/site-tools";
+siteTools := import "./tools.lts";
 
 escapeHtml := siteTools.escapeSiteHtml;
 

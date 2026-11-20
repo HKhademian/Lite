@@ -164,6 +164,7 @@ function isolatedCheckout(): string {
   const coreLibs = readdirSync(join(root, 'lib/core')).filter(f => f.endsWith('.lts')).map(f => `lib/core/${f}`);
   const externalLibs = readdirSync(join(root, 'lib/external')).filter(f => f.endsWith('.lts')).map(f => `lib/external/${f}`);
   const utilLibs = readdirSync(join(root, 'lib/util')).filter(f => f.endsWith('.lts')).map(f => `lib/util/${f}`);
+  const siteLibs = readdirSync(join(root, 'site/src')).filter(f => f.endsWith('.lts')).map(f => `site/src/${f}`);
   const paths = new Set([
     'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
     'compiler/package.json',
@@ -171,7 +172,7 @@ function isolatedCheckout(): string {
     'config/versions.json',
     'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/tsconfig.json',
-    ...dependencies, ...toolSources, ...coreLibs, ...externalLibs, ...utilLibs,
+    ...dependencies, ...toolSources, ...coreLibs, ...externalLibs, ...utilLibs, ...siteLibs,
   ]);
   for (const path of paths) {
     const destination = join(directory, path);

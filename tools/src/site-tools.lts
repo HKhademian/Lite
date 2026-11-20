@@ -3,7 +3,7 @@
 cli := import "util/cli";
 io := import "core/io";
 list := import "core/list";
-siteTools := import "util/site-tools";
+siteTools := import "../../site/src/tools.lts";
 
 run := fn(rawArgs: List<String>): Unit {
     args := cli.stripLeadingSeparator(rawArgs);

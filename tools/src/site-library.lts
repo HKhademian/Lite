@@ -4,7 +4,7 @@ cli := import "util/cli";
 io := import "core/io";
 list := import "core/list";
 project := import "util/project";
-siteLib := import "util/site-library";
+siteLib := import "../../site/src/library.lts";
 
 run := fn(rawArgs: List<String>): Unit {
     args := cli.stripLeadingSeparator(rawArgs);

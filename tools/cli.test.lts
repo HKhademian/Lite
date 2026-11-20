@@ -293,7 +293,7 @@ test.check("wipeDir makeTempDir", wipeDirRes.ok);
 wipeDir := wipeDirRes.path;
 wipePaths: List<String> = [
 ".gitignore", "config", "compiler/manifests", "compiler/bootstrap", "compiler/src",
-"lib", "tools/src", "bin/lite", "bin/lite-ignite", "bin/lite-wipe"
+"lib", "site/src", "tools/src", "bin/lite", "bin/lite-ignite", "bin/lite-wipe"
 ];
 loop wipePaths as rel {
     copyRepoTree(wipeDir, rel);

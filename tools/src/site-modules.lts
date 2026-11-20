@@ -1,7 +1,7 @@
 /** CLI entrypoint generating `/modules/` section pages & search entries JSON (`site/modules-pages.ts`). */
 
 io := import "core/io";
-siteMods := import "util/site-modules";
+siteMods := import "../../site/src/modules.lts";
 
 run := fn(): Unit {
     stdinRes := io.readAllText(io.stdinReader());

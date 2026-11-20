@@ -1,4 +1,4 @@
-siteLib := import "util/site-library";
+siteLib := import "../../site/src/library.lts";
 fs := import "core/file";
 json := import "util/json";
 path := import "core/path";

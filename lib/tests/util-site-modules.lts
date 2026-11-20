@@ -1,4 +1,4 @@
-siteMods := import "util/site-modules";
+siteMods := import "../../site/src/modules.lts";
 fs := import "core/file";
 json := import "util/json";
 path := import "core/path";
