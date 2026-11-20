@@ -264,6 +264,7 @@ aliasesUpToDepth := fn(aliases: List<AliasDecl>, maxDepth: Int): List<AliasDecl>
 pub isTupleKind := fn(kind: String): Bool { types.isTupleKind(kind) };
 
 /** True when `kind` is this compiler's canonical nominal record kind `Record<id#at#DisplayName;f1:K1,...>`. */
+pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
 pub isRecordKind := fn(kind: String): Bool { types.isRecordKind(kind) };
 
 /** Returns the runtime JS property name for a tuple field (`_0` when unnamed, otherwise the field label). */
@@ -1521,7 +1522,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if afterRawBrace >= 0 and textLib.startsWithAt(source, afterRawBrace, ":=") {
                 /* Fall through to unified record destructuring below (`recDestructureOpen`). */
             } else {
-                    if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "then") {
+                if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "then") {
                     failAt(source, afterRawBrace, prefix, "then requires an if, match, or loop");
                 }
                 if afterRawBrace >= 0 and textLib.wordAt(source, afterRawBrace, "finally") {
@@ -1800,7 +1801,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             afterDefinition = skipTrivia(source, position + 2, prefix);
         }
         definition := blockCount == 0 and textLib.startsWithAt(source, position, ":=") and
-        (textLib.wordAt(source, afterDefinition, "fn") or textLib.wordAt(source, afterDefinition, "type") or textLib.wordAt(source, afterDefinition, "record"));
+        (textLib.wordAt(source, afterDefinition, "fn") or textLib.wordAt(source, afterDefinition, "type") or
+        textLib.wordAt(source, afterDefinition, "record") or textLib.wordAt(source, afterDefinition, "enum"));
         if name == "return" {
             var targetTagPos := position;
             var targetTagName := "";
@@ -2639,6 +2641,37 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 intValue = 0, textValue = parsedRec.encodedDefaults));
             }
             position = parsedRec.next;
+            continue;
+        }
+        if textLib.startsWithAt(source, position, ":=") and textLib.wordAt(source, afterDefinition, "enum") {
+            if target =!= TARGET_TS {
+                failAt(source, afterDefinition, prefix, "C backend does not support enum values yet");
+            }
+            var earlierAlias := false;
+            loop aliases as alias {
+                if alias.name == name and alias.depth == depth and alias.at < nameStart { earlierAlias = true; }
+            }
+            if earlierAlias {
+                failAt(source, nameStart, prefix, "duplicate type alias " + name);
+            }
+            rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
+            listLib.pushBack(mut blockDecls, (name = name, depth = depth));
+            aliasIdx := aliasIndexAt(aliases, nameStart);
+            if aliasIdx < 0 {
+                failAt(source, nameStart, prefix, "malformed enum declaration " + name);
+            }
+            aliasEntry := aliases[aliasIdx];
+            if aliasEntry.target == "" {
+                failAt(source, afterDefinition, prefix, "malformed enum declaration " + name);
+            }
+            emptySeen: List<String> = [];
+            resolvedEnum := resolveTypeText(source, afterDefinition, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, emptySeen);
+            if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedTypes, name) {
+                listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = resolvedEnum,
+                intValue = 0, textValue = ""));
+            }
+            afterEnumEnd := consumeStatementEnd(source, aliasEntry.end, prefix);
+            position = if afterEnumEnd >= 0 { afterEnumEnd } else { aliasEntry.end };
             continue;
         }
         if textLib.startsWithAt(source, position, ":=") {

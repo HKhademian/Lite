@@ -138,6 +138,8 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
     if left.constant and right.constant {
         value := if left.kind == ir.VALUE_KIND_STRING {
             compareTexts(operator, left.textValue, right.textValue)
+        } else if types.isEnumKind(left.kind) {
+            compareIntegers(operator, left.intValue, right.intValue)
         } else {
             compareBools(operator, left.intValue =!= 0, right.intValue =!= 0)
         };
@@ -423,6 +425,9 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             index = index + 1;
         }
         (kind = kind, code = code + " }", intValue = 0, textValue = "", constant = false, next = next)
+    }
+    else if types.isEnumKind(kind) {
+        (kind = kind, code = "0", intValue = 0, textValue = "", constant = true, next = next)
     }
     else if types.isRecordKind(kind) {
         count := types.recordComponentCount(kind);
@@ -944,7 +949,7 @@ pub storageKind := fn(kind: String): String {
     match {
         types.isListKind(kind) or types.isArrayKind(kind) { "List" }
         types.isTupleKind(kind) { "Tuple" }
-        types.isRecordKind(kind) { "Record" }
+        types.isRecordKind(kind) or types.isEnumKind(kind) { "Record" }
         types.isFnKind(kind) { "Fn" }
         numeric.isIntKind(kind) { ir.VALUE_KIND_INT }
         numeric.isFloatKind(kind) { ir.VALUE_KIND_FLOAT }
@@ -954,7 +959,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isEnumKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

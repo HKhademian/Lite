@@ -993,6 +993,34 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         }
         return (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
     }
+    if afterName < textLib.length(source) and textLib.at(source, afterName) == "." and types.findAlias(aliases, name) >= 0 {
+        var resolvedEnum := "";
+        if inferMode {
+            emptySeen: List<String> = [];
+            canRes := types.canResolveTypeAt(source, nameStart, prefix, aliases, "", emptySeen, 32);
+            if not canRes.ok or not types.isEnumKind(canRes.kind) {
+                return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
+            }
+            resolvedEnum = canRes.kind;
+        } else {
+            emptySeen: List<String> = [];
+            resolvedEnum = types.resolveAliasKind(source, nameStart, prefix, aliases, name, emptySeen);
+            if not types.isEnumKind(resolvedEnum) {
+                syntax.failAt(source, nameStart, prefix, "enum case access requires an enum type, got " + types.displayKind(resolvedEnum));
+            }
+        }
+        caseStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        if caseStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, caseStart)) {
+            syntax.failAt(source, caseStart, prefix, "expected enum case name after " + name + ".");
+        }
+        caseEnd := textLib.skipName(source, caseStart);
+        caseName := textLib.slice(source, caseStart, caseEnd);
+        caseIdx := types.enumCaseIndex(resolvedEnum, caseName);
+        if caseIdx < 0 {
+            syntax.failAt(source, caseStart, prefix, "enum " + types.enumDisplayName(resolvedEnum) + " has no case " + caseName);
+        }
+        return (kind = resolvedEnum, code = integer.intText(caseIdx), intValue = caseIdx, textValue = "", constant = true, next = caseEnd);
+    }
     if afterName < textLib.length(source) and textLib.at(source, afterName) == "{" and types.findAlias(aliases, name) >= 0 {
         var resolvedRec := "";
         if inferMode {
@@ -1015,7 +1043,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
     ctx.intParsed("", 0, true, start)
 };
 
-/** Resolves leading-dot loop metadata expressions (`.count`, `.value`, `.item`, `.index`). */
+/** Resolves leading-dot enum case shorthand (`.Case`) or loop metadata expressions (`.count`, `.value`, `.item`, `.index`). */
 resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: String, expected: String, ctxs: List<ConstructCtx>): Parsed {
     fieldStart := syntax.skipTrivia(source, start + 1, prefix);
     size := textLib.length(source);
@@ -1025,6 +1053,19 @@ resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: 
     fieldEnd := textLib.skipName(source, fieldStart);
     fieldName := textLib.slice(source, fieldStart, fieldEnd);
     loopIdx := ctx.findLeadingDotLoopIdx(ctxs);
+    normExp := normalizeExpectedValueKind(expected);
+    if types.isEnumKind(normExp) {
+        isLoopMetaName := fieldName == "count" or fieldName == "value" or fieldName == "item" or fieldName == "index";
+        if loopIdx >= 0 and isLoopMetaName {
+            syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + "; qualify as " +
+            types.enumDisplayName(normExp) + "." + fieldName + " or @tag." + fieldName);
+        }
+        caseIdx := types.enumCaseIndex(normExp, fieldName);
+        if caseIdx < 0 {
+            syntax.failAt(source, fieldStart, prefix, "enum " + types.enumDisplayName(normExp) + " has no case " + fieldName);
+        }
+        return (kind = normExp, code = integer.intText(caseIdx), intValue = caseIdx, textValue = "", constant = true, next = fieldEnd);
+    }
     if loopIdx == ir.DOT_LOOP_IN_CONDITIONAL {
         syntax.failAt(source, start, prefix, "leading-dot ." + fieldName + " is not available inside a conditional; use an explicit loop @tag");
     } else if loopIdx == ir.DOT_LOOP_IN_FINALLY {
@@ -2191,8 +2232,33 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 blockConstant = false;
                 cursor = statementNext;
             } else if textLib.startsWithAt(source, afterItemName, ":=") and
+            textLib.wordAt(source, syntax.skipTrivia(source, afterItemName + 2, prefix), "enum") {
+                isStatement = true;
+                if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
+                if target =!= ir.TARGET_TS {
+                    syntax.failAt(source, itemStart, prefix, "C backend does not support enum values yet");
+                }
+                var earlierInnerAlias := false;
+                loop blockAliases as alias {
+                    if alias.name == itemName and alias.depth == nextAliasDepth and alias.at < itemStart {
+                        earlierInnerAlias = true;
+                    }
+                }
+                if earlierInnerAlias { syntax.failAt(source, itemStart, prefix, "duplicate type alias " + itemName); }
+                ctx.rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
+                listLib.pushBack(mut declaredInBlock, itemName);
+                aliasIdx := types.aliasIndexAt(blockAliases, itemStart);
+                if aliasIdx < 0 { syntax.failAt(source, itemStart, prefix, "malformed enum declaration " + itemName); }
+                aliasEntry := blockAliases[aliasIdx];
+                if aliasEntry.target == "" { syntax.failAt(source, itemStart, prefix, "malformed enum declaration " + itemName); }
+                seenInner: List<String> = [];
+                _resolvedEnum := types.resolveTypeText(source, itemStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), aliasEntry.target, seenInner);
+                afterEnumEnd := syntax.consumeStatementEnd(source, aliasEntry.end, prefix);
+                cursor = if afterEnumEnd >= 0 { afterEnumEnd } else { aliasEntry.end };
+            } else if textLib.startsWithAt(source, afterItemName, ":=") and
             not textLib.wordAt(source, syntax.skipTrivia(source, afterItemName + 2, prefix), "type") and
             not textLib.wordAt(source, syntax.skipTrivia(source, afterItemName + 2, prefix), "record") and
+            not textLib.wordAt(source, syntax.skipTrivia(source, afterItemName + 2, prefix), "enum") and
             not textLib.wordAt(source, syntax.skipTrivia(source, afterItemName + 2, prefix), "import") {
                 isStatement = true;
                 if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
@@ -3012,8 +3078,35 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
     left
 };
 
-/** One parsed subject-match pattern result (condition, tab-delimited bindings, irrefutability, Bool coverage mask, next offset, markers). */
-PatResult := type (cond: String, bindings: String, irrefutable: Bool, boolMask: Int, next: Int, markers: String);
+/** One parsed subject-match pattern result (condition, tab-delimited bindings, irrefutability, Bool coverage mask, covered enum case pipe-bag, next offset, markers). */
+PatResult := type (cond: String, bindings: String, irrefutable: Bool, boolMask: Int, enumCases: String, next: Int, markers: String);
+
+/** Merges pipe-delimited enum case indices from `add` into `acc` (`|0|1|`), returning the updated bag and count of newly added cases. */
+mergeEnumCaseBag := fn(acc: String, add: String): (bag: String, added: Int) {
+    if add == "" { return (bag = acc, added = 0); }
+    var out := if acc == "" { "|" } else { acc };
+    var added := 0;
+    size := textLib.length(add);
+    var pos := 0;
+    loop pos < size {
+        if textLib.at(add, pos) == "|" {
+            pos = pos + 1;
+            continue;
+        }
+        nextPipe := textLib.indexOfText(add, "|", pos);
+        end := if nextPipe < 0 { size } else { nextPipe };
+        if end > pos {
+            tok := textLib.slice(add, pos, end);
+            tag := "|" + tok + "|";
+            if textLib.indexOfText(out, tag, 0) < 0 {
+                out = out + tok + "|";
+                added = added + 1;
+            }
+        }
+        pos = end + 1;
+    }
+    (bag = out, added = added)
+};
 
 /** Checks whether a pattern type annotation matches a subject or component type kind. */
 patternTypeMatches := fn(actualKind: String, expectedKind: String): Bool {
@@ -3267,7 +3360,7 @@ parseComparisonPatternRhs := fn(target: String, source: String, opPos: Int, opTe
     leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = opPos);
     cmp := ctx.compareParsed(target, source, opPos, opText, leftFake, rhs, prefix);
     markers := if inferMode { ctx.collectParsedMarkers("", rhs) } else { "" };
-    (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, next = rhs.next, markers = markers)
+    (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, enumCases = "", next = rhs.next, markers = markers)
 };
 
 /** Parses one atomic subject-match pattern (without top-level `or` alternatives). */
@@ -3282,18 +3375,37 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
         return parseComparisonPatternRhs(target, source, pos, cmpOp.text, cmpOp.width, prefix, subjKind, subjCode, subjConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     }
     ch := textLib.at(source, pos);
+    if ch == "." {
+        if not types.isEnumKind(subjKind) {
+            syntax.failAt(source, pos, prefix, "leading-dot case pattern requires an enum subject, got " + types.displayKind(subjKind));
+        }
+        cStart := syntax.skipTrivia(source, pos + 1, prefix);
+        if cStart >= size or not textLib.isNameStart(textLib.at(source, cStart)) {
+            syntax.failAt(source, cStart, prefix, "expected enum case name after .");
+        }
+        cEnd := textLib.skipName(source, cStart);
+        cName := textLib.slice(source, cStart, cEnd);
+        caseIdx := types.enumCaseIndex(subjKind, cName);
+        if caseIdx < 0 {
+            syntax.failAt(source, cStart, prefix, "enum " + types.enumDisplayName(subjKind) + " has no case " + cName);
+        }
+        lit := (kind = subjKind, code = integer.intText(caseIdx), intValue = caseIdx, textValue = "", constant = true, next = cEnd);
+        leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
+        cmp := ctx.compareParsed(target, source, pos, "==", leftFake, lit, prefix);
+        return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, enumCases = "|" + integer.intText(caseIdx) + "|", next = cEnd, markers = "");
+    }
     if ch == ":" {
         ty := types.parseTypeAt(source, pos + 1, prefix, aliases, "pattern type", "");
         if not patternTypeMatches(subjKind, ty.kind) {
             syntax.failAt(source, pos, prefix, "pattern type " + types.displayKind(ty.kind) + " does not match " + types.displayKind(subjKind));
         }
-        return (cond = "true", bindings = "", irrefutable = true, boolMask = 0, next = ty.next, markers = "");
+        return (cond = "true", bindings = "", irrefutable = true, boolMask = 0, enumCases = "", next = ty.next, markers = "");
     }
     if ch == "\"" {
         lit := syntax.parseText(target, source, pos, prefix);
         leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
         cmp := ctx.compareParsed(target, source, pos, "==", leftFake, lit, prefix);
-        return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, next = lit.next, markers = "");
+        return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, enumCases = "", next = lit.next, markers = "");
     }
     if textLib.isDigit(ch) or ((ch == "-" or ch == "+") and pos + 1 < size and textLib.isDigit(textLib.at(source, syntax.skipTrivia(source, pos + 1, prefix)))) {
         isNeg := ch == "-";
@@ -3306,7 +3418,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
         };
         leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
         cmp := ctx.compareParsed(target, source, pos, "==", leftFake, signedLit, prefix);
-        return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, next = signedLit.next, markers = "");
+        return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, enumCases = "", next = signedLit.next, markers = "");
     }
     if ch == "{" {
         if not types.isRecordKind(subjKind) {
@@ -3321,7 +3433,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
             cCursor = syntax.skipTrivia(source, cCursor, prefix);
             if cCursor >= size { syntax.failAt(source, pos, prefix, "expected } to close record pattern"); }
             if textLib.at(source, cCursor) == "}" {
-                return (cond = recCond, bindings = recBindings, irrefutable = recIrref, boolMask = 0, next = cCursor + 1, markers = recMarkers);
+                return (cond = recCond, bindings = recBindings, irrefutable = recIrref, boolMask = 0, enumCases = "", next = cCursor + 1, markers = recMarkers);
             }
             if syntax.isSingleEquals(source, cCursor) {
                 fStart := syntax.skipTrivia(source, cCursor + 1, prefix);
@@ -3422,13 +3534,13 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
             if subjKind =!= ir.VALUE_KIND_UNIT {
                 syntax.failAt(source, pos, prefix, "unit pattern () requires Unit, got " + types.displayKind(subjKind));
             }
-            return (cond = "true", bindings = "", irrefutable = true, boolMask = 0, next = afterOpen + 1, markers = "");
+            return (cond = "true", bindings = "", irrefutable = true, boolMask = 0, enumCases = "", next = afterOpen + 1, markers = "");
         }
         if not types.isTupleKind(subjKind) or not parenIsTuplePattern(source, pos, prefix) {
             inner := parseMatchPattern(target, source, afterOpen, prefix, subjKind, subjCode, subjConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
             closePos := syntax.skipTrivia(source, inner.next, prefix);
             afterClose := syntax.expectSymbol(source, closePos, ")", prefix);
-            return (cond = inner.cond, bindings = inner.bindings, irrefutable = inner.irrefutable, boolMask = inner.boolMask, next = afterClose, markers = inner.markers);
+            return (cond = inner.cond, bindings = inner.bindings, irrefutable = inner.irrefutable, boolMask = inner.boolMask, enumCases = inner.enumCases, next = afterClose, markers = inner.markers);
         }
         tupleCount := types.tupleComponentCount(subjKind);
         var tCursor := afterOpen;
@@ -3445,7 +3557,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                 if itemCount =!= tupleCount {
                     syntax.failAt(source, pos, prefix, "tuple pattern expected " + integer.intText(itemCount) + " fields, got " + integer.intText(tupleCount));
                 }
-                return (cond = tupCond, bindings = tupBindings, irrefutable = tupIrref, boolMask = 0, next = tCursor + 1, markers = tupMarkers);
+                return (cond = tupCond, bindings = tupBindings, irrefutable = tupIrref, boolMask = 0, enumCases = "", next = tCursor + 1, markers = tupMarkers);
             }
             if syntax.isSingleEquals(source, tCursor) {
                 fStart := syntax.skipTrivia(source, tCursor + 1, prefix);
@@ -3609,7 +3721,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                 if elemIdx =!= expectedLen {
                     syntax.failAt(source, pos, prefix, "array pattern expected " + integer.intText(elemIdx) + " elements, got " + integer.intText(expectedLen));
                 }
-                return (cond = arrCond, bindings = arrBindings, irrefutable = arrIrref, boolMask = 0, next = aCursor + 1, markers = arrMarkers);
+                return (cond = arrCond, bindings = arrBindings, irrefutable = arrIrref, boolMask = 0, enumCases = "", next = aCursor + 1, markers = arrMarkers);
             }
             elemExpr := "(" + subjCode + ")[" + integer.intText(elemIdx) + "]!";
             subNonConst := (kind = elemKind, code = elemExpr, intValue = 0, textValue = "", constant = false, next = 0);
@@ -3636,13 +3748,54 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
             leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
             cmp := ctx.compareParsed(target, source, pos, "==", leftFake, lit, prefix);
             mask := if word == "true" { 1 } else { 2 };
-            return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = mask, next = nameEnd, markers = "");
+            return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = mask, enumCases = "", next = nameEnd, markers = "");
         }
         if word =!= "_" and syntax.isReservedWord(word) {
             syntax.failAt(source, pos, prefix, "unexpected keyword " + word + " in match pattern");
         }
         var endPos := nameEnd;
         afterWord := syntax.skipTrivia(source, nameEnd, prefix);
+        if afterWord < size and textLib.at(source, afterWord) == "." {
+            var resolvedEnum := "";
+            var caseDotPos := afterWord;
+            if types.findAlias(aliases, word) >= 0 {
+                emptySeen: List<String> = [];
+                resolvedEnum = types.resolveAliasKind(source, pos, prefix, aliases, word, emptySeen);
+            } else {
+                modIdx := ir.localIndex(locals, word);
+                if modIdx >= 0 and locals[modIdx].kind == ir.VALUE_KIND_MODULE {
+                    tStart := syntax.skipTrivia(source, afterWord + 1, prefix);
+                    if tStart < size and textLib.isNameStart(textLib.at(source, tStart)) {
+                        tEnd := textLib.skipName(source, tStart);
+                        qual := locals[modIdx].textValue + "." + textLib.slice(source, tStart, tEnd);
+                        if types.findAlias(aliases, qual) >= 0 {
+                            emptySeen: List<String> = [];
+                            resolvedEnum = types.resolveAliasKind(source, tStart, prefix, aliases, qual, emptySeen);
+                            caseDotPos = syntax.skipTrivia(source, tEnd, prefix);
+                        }
+                    }
+                }
+            }
+            if resolvedEnum =!= "" and types.isEnumKind(resolvedEnum) and caseDotPos < size and textLib.at(source, caseDotPos) == "." {
+                if resolvedEnum =!= subjKind {
+                    syntax.failAt(source, pos, prefix, "enum case pattern " + types.displayKind(resolvedEnum) + " does not match " + types.displayKind(subjKind));
+                }
+                cStart := syntax.skipTrivia(source, caseDotPos + 1, prefix);
+                if cStart >= size or not textLib.isNameStart(textLib.at(source, cStart)) {
+                    syntax.failAt(source, cStart, prefix, "expected enum case name after .");
+                }
+                cEnd := textLib.skipName(source, cStart);
+                cName := textLib.slice(source, cStart, cEnd);
+                caseIdx := types.enumCaseIndex(resolvedEnum, cName);
+                if caseIdx < 0 {
+                    syntax.failAt(source, cStart, prefix, "enum " + types.enumDisplayName(resolvedEnum) + " has no case " + cName);
+                }
+                lit := (kind = subjKind, code = integer.intText(caseIdx), intValue = caseIdx, textValue = "", constant = true, next = cEnd);
+                leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
+                cmp := ctx.compareParsed(target, source, pos, "==", leftFake, lit, prefix);
+                return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, enumCases = "|" + integer.intText(caseIdx) + "|", next = cEnd, markers = "");
+            }
+        }
         if afterWord < size and textLib.at(source, afterWord) == ":" {
             ty := types.parseTypeAt(source, afterWord + 1, prefix, aliases, "pattern type", "");
             if not patternTypeMatches(subjKind, ty.kind) {
@@ -3650,10 +3803,10 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
             }
             endPos = ty.next;
         }
-        return (cond = "true", bindings = word + "\t" + subjKind + "\t" + subjCode + "\n", irrefutable = true, boolMask = 0, next = endPos, markers = "");
+        return (cond = "true", bindings = word + "\t" + subjKind + "\t" + subjCode + "\n", irrefutable = true, boolMask = 0, enumCases = "", next = endPos, markers = "");
     }
     syntax.failAt(source, pos, prefix, "expected match pattern");
-    (cond = "false", bindings = "", irrefutable = false, boolMask = 0, next = pos + 1, markers = "")
+    (cond = "false", bindings = "", irrefutable = false, boolMask = 0, enumCases = "", next = pos + 1, markers = "")
 };
 
 /** Parses one match pattern with optional leading `or` and `or` alternatives (`[or] pat (or pat)*`). */
@@ -3675,6 +3828,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
     var altCount := 1;
     var anyIrref := first.irrefutable;
     var combinedMask := first.boolMask;
+    var combinedEnumCases := first.enumCases;
     var combinedMarkers := first.markers;
     var lastEnd := first.next;
     loop textLib.wordAt(source, nextPos, "or") {
@@ -3688,6 +3842,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
         altCount = altCount + 1;
         if alt.irrefutable { anyIrref = true; }
         combinedMask = combineBoolMask(combinedMask, alt.boolMask);
+        combinedEnumCases = mergeEnumCaseBag(combinedEnumCases, alt.enumCases).bag;
         if inferMode { combinedMarkers = combinedMarkers + alt.markers; }
         lastEnd = alt.next;
         nextPos = syntax.skipTrivia(source, lastEnd, prefix);
@@ -3698,7 +3853,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
         loop i < altCount {
             part := if altConds[i] == "" { "true" } else { altConds[i] };
             if part == "true" {
-                return (cond = "true", bindings = first.bindings, irrefutable = anyIrref, boolMask = combinedMask, next = lastEnd, markers = combinedMarkers);
+                return (cond = "true", bindings = first.bindings, irrefutable = anyIrref, boolMask = combinedMask, enumCases = combinedEnumCases, next = lastEnd, markers = combinedMarkers);
             }
             if part =!= "false" {
                 orCond = if orCond == "" { "(" + part + ")" } else { orCond + " || (" + part + ")" };
@@ -3706,7 +3861,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
             i = i + 1;
         }
         finalOrCond := if orCond == "" { "false" } else { "(" + orCond + ")" };
-        return (cond = finalOrCond, bindings = first.bindings, irrefutable = anyIrref, boolMask = combinedMask, next = lastEnd, markers = combinedMarkers);
+        return (cond = finalOrCond, bindings = first.bindings, irrefutable = anyIrref, boolMask = combinedMask, enumCases = combinedEnumCases, next = lastEnd, markers = combinedMarkers);
     }
     /* Binding-producing `or` alternatives: emit a short-circuiting IIFE assigning the shared arm bindings on first match. */
     var iife := "(() => { ";
@@ -3732,7 +3887,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
         }
         bPos = lineEnd + 1;
     }
-    (cond = iife, bindings = declBindings, irrefutable = anyIrref, boolMask = combinedMask, next = lastEnd, markers = combinedMarkers)
+    (cond = iife, bindings = declBindings, irrefutable = anyIrref, boolMask = combinedMask, enumCases = combinedEnumCases, next = lastEnd, markers = combinedMarkers)
 };
 
 /** Parses a subject-based `match <subject> { ... }` body for value, statement, or tagged/then/finally IIFE lowering. */
@@ -3768,6 +3923,9 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
     var allNever := true;
     var sawIrrefutable := false;
     var boolMask := 0;
+    var coveredEnumBag := "|";
+    var coveredEnumCount := 0;
+    enumTotalCases := if types.isEnumKind(subj.kind) { types.enumCaseCount(subj.kind) } else { -1 };
     var armCount := 0;
     var emittedRuntimeArms := 0;
     var staticallyMatched := false;
@@ -3786,14 +3944,16 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             syntax.failAt(source, subjOpen, prefix, "expected } to close match");
         }
         if textLib.at(source, cursor) == "}" {
-            isExhaustive := sawIrrefutable or (subj.kind == ir.VALUE_KIND_BOOL and boolMask == 3);
+            isExhaustive := sawIrrefutable or (subj.kind == ir.VALUE_KIND_BOOL and boolMask == 3) or
+            (enumTotalCases > 0 and coveredEnumCount == enumTotalCases);
             if not isExhaustive {
                 syntax.failAt(source, cursor, prefix, "match requires an exhaustive fallback arm");
             }
             cursor = cursor + 1;
             break;
         }
-        if sawIrrefutable or (subj.kind == ir.VALUE_KIND_BOOL and boolMask == 3) {
+        if sawIrrefutable or (subj.kind == ir.VALUE_KIND_BOOL and boolMask == 3) or
+        (enumTotalCases > 0 and coveredEnumCount == enumTotalCases) {
             syntax.failAt(source, cursor, prefix, "unreachable match arm after exhaustive arm");
         }
         armStart := cursor;
@@ -3868,6 +4028,11 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         if not hasGuard {
             if pat.irrefutable { sawIrrefutable = true; }
             boolMask = combineBoolMask(boolMask, pat.boolMask);
+            if enumTotalCases > 0 and pat.enumCases =!= "" {
+                mergedEnum := mergeEnumCaseBag(coveredEnumBag, pat.enumCases);
+                coveredEnumBag = mergedEnum.bag;
+                coveredEnumCount = coveredEnumCount + mergedEnum.added;
+            }
         }
         armBodyStart := syntax.skipTrivia(source, armOpen + 1, prefix);
         bodySink := if mode == "stmt" { "stmt" } else { "branch" };
@@ -4887,6 +5052,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     left = ctx.withMarkers((kind = types.arrayElementKind(left.kind), code = "(" + left.code + ")[" + integer.intText(fieldIndex) + "]!",
                     intValue = 0, textValue = "", constant = false, next = end),
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                } else if types.isEnumKind(left.kind) {
+                    syntax.failAt(source, postPosition, prefix, "enum values do not support positional field access ." + textLib.slice(source, labelStart, end));
                 } else if types.isRecordKind(left.kind) {
                     syntax.failAt(source, postPosition, prefix, "record values do not support positional field access ." + textLib.slice(source, labelStart, end));
                 } else if not types.isTupleKind(left.kind) {
@@ -4913,7 +5080,34 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         constant = false, next = labelEnd);
                     } else {
                         afterMemberLabel := syntax.skipTrivia(source, labelEnd, prefix);
-                        if afterMemberLabel < textLib.length(source) and textLib.at(source, afterMemberLabel) == "{" and types.findAlias(aliases, qualified) >= 0 {
+                        if afterMemberLabel < textLib.length(source) and textLib.at(source, afterMemberLabel) == "." and types.findAlias(aliases, qualified) >= 0 {
+                            var modEnumKind := "";
+                            if inferMode {
+                                emptySeen: List<String> = [];
+                                canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
+                                if not canRes.ok or not types.isEnumKind(canRes.kind) {
+                                    return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                                }
+                                modEnumKind = canRes.kind;
+                            } else {
+                                emptySeen: List<String> = [];
+                                modEnumKind = types.resolveAliasKind(source, labelStart, prefix, aliases, qualified, emptySeen);
+                                if not types.isEnumKind(modEnumKind) {
+                                    syntax.failAt(source, labelStart, prefix, "enum case access requires an enum type, got " + types.displayKind(modEnumKind));
+                                }
+                            }
+                            caseStart := syntax.skipTrivia(source, afterMemberLabel + 1, prefix);
+                            if caseStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, caseStart)) {
+                                syntax.failAt(source, caseStart, prefix, "expected enum case name after " + qualified + ".");
+                            }
+                            caseEnd := textLib.skipName(source, caseStart);
+                            caseName := textLib.slice(source, caseStart, caseEnd);
+                            caseIdx := types.enumCaseIndex(modEnumKind, caseName);
+                            if caseIdx < 0 {
+                                syntax.failAt(source, caseStart, prefix, "enum " + types.enumDisplayName(modEnumKind) + " has no case " + caseName);
+                            }
+                            left = (kind = modEnumKind, code = integer.intText(caseIdx), intValue = caseIdx, textValue = "", constant = true, next = caseEnd);
+                        } else if afterMemberLabel < textLib.length(source) and textLib.at(source, afterMemberLabel) == "{" and types.findAlias(aliases, qualified) >= 0 {
                             var modRecKind := "";
                             if inferMode {
                                 emptySeen: List<String> = [];
@@ -4942,6 +5136,30 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             left = (kind = member.kind, code = member.runtime, intValue = member.intValue,
                             textValue = member.textValue, constant = member.constant, next = labelEnd);
                         }
+                    }
+                } else if types.isEnumKind(left.kind) {
+                    if label =!= "value" {
+                        syntax.failAt(source, labelStart, prefix, "enum " + types.enumDisplayName(left.kind) + " has no field " + label);
+                    }
+                    backing := types.enumBackingKind(left.kind);
+                    if backing == "" {
+                        syntax.failAt(source, labelStart, prefix, "enum " + types.enumDisplayName(left.kind) + " has no backing value type");
+                    }
+                    if left.constant {
+                        cInfo := types.enumCaseAt(left.kind, left.intValue);
+                        left = ctx.withMarkers((kind = backing, code = cInfo.valueCode, intValue = 0, textValue = "", constant = false, next = labelEnd),
+                        if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                    } else {
+                        cCount := types.enumCaseCount(left.kind);
+                        vals: mut List<String> = [];
+                        var ci := 0;
+                        loop ci < cCount {
+                            listLib.pushBack(mut vals, types.enumCaseAt(left.kind, ci).valueCode);
+                            ci = ci + 1;
+                        }
+                        left = ctx.withMarkers((kind = backing, code = "([" + textLib.joinTexts(vals, ", ") + "][" + left.code + "]!)",
+                        intValue = 0, textValue = "", constant = false, next = labelEnd),
+                        if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                     }
                 } else if types.isRecordKind(left.kind) {
                     fieldKind := types.recordFieldKind(left.kind, label);
@@ -5125,7 +5343,8 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
             }
         }
         rightMinimum := if operator.text == "**" { level } else { level + 1 };
-        right := parseBinaryCtx(target, source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, "", rightMinimum, ctxs, iifeDepth, inferMode, "", aliases);
+        rightExpected := if (operator.text == "==" or operator.text == "=!=") and types.isEnumKind(left.kind) { left.kind } else { "" };
+        right := parseBinaryCtx(target, source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, rightExpected, rightMinimum, ctxs, iifeDepth, inferMode, "", aliases);
         var opMarkers := if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), right) } else { "" };
         leftLoopId := types.loopValMarkerId(left.kind);
         rightLoopId := types.loopValMarkerId(right.kind);

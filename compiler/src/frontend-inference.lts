@@ -1073,6 +1073,11 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                     position = if recTarget.next > valueStart { recTarget.next } else { valueStart + 6 };
                     continue;
                 }
+                if textLib.wordAt(source, valueStart, "enum") {
+                    enumTarget := types.collectEnumTarget(source, valueStart + 4, prefix, "", nameStart, name);
+                    position = if enumTarget.next > valueStart { enumTarget.next } else { valueStart + 4 };
+                    continue;
+                }
                 if not textLib.wordAt(source, valueStart, "import") and not trace.tokenInPipeBag(seenDeclBag, name) {
                     seenDeclBag = trace.appendPipeBag(seenDeclBag, name);
                     listLib.pushBack(mut decls, (kind = ir.DECL_KIND_FUTURE_DECL, name = name, runtime = "",
@@ -1211,7 +1216,7 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                         declName := textLib.slice(source, declStart, declEnd);
                         if textLib.wordAt(source, valStart, "fn") {
                             listLib.pushBack(mut decls, (kind = ir.DECL_KIND_PUB_FN, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
-                        } else if textLib.wordAt(source, valStart, "type") or textLib.wordAt(source, valStart, "record") {
+                        } else if textLib.wordAt(source, valStart, "type") or textLib.wordAt(source, valStart, "record") or textLib.wordAt(source, valStart, "enum") {
                             listLib.pushBack(mut decls, (kind = ir.DECL_KIND_PUB_TYPE, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
                         } else {
                             listLib.pushBack(mut decls, (kind = ir.DECL_KIND_PUB_VAL, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
@@ -1304,6 +1309,13 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                     listLib.pushBack(mut decls, (kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = recTarget.text,
                     intValue = nameStart, textValue = integer.intText(recTarget.next)));
                     position = recTarget.next;
+                    continue;
+                }
+                if textLib.wordAt(source, valueStart, "enum") {
+                    enumTarget := types.collectEnumTarget(source, valueStart + 4, prefix, moduleKey, nameStart, name);
+                    listLib.pushBack(mut decls, (kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = enumTarget.text,
+                    intValue = nameStart, textValue = integer.intText(enumTarget.next)));
+                    position = enumTarget.next;
                     continue;
                 }
                 if textLib.wordAt(source, valueStart, "fn") {

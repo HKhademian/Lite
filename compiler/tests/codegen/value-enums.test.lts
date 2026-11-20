@@ -1,0 +1,153 @@
+/* Value enums: plain and backing-typed nominal enums, contextual .Case, .value, and exhaustive match. */
+
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* 1. Plain, Float, Int (with auto-increment & negative), String (with <>[]()), Bool, and inferred value enums */
+basicEnumsSrc :=
+"io := import \"core/io\";\n" +
+"Plain := enum { Red; Green; Blue; }\n" +
+"Status := enum : Float {\n" +
+"    Ready = 1.1;\n" +
+"    Busy = 2.2;\n" +
+"    Stopped = 3.3\n" +
+"}\n" +
+"ExitCode := enum : Int {\n" +
+"    Neg = -2;\n" +
+"    Next;\n" +
+"    Ten = 10;\n" +
+"    Eleven;\n" +
+"}\n" +
+"Op := enum : String {\n" +
+"    Lt = \"<\";\n" +
+"    Gt = \">\";\n" +
+"    Pair = \"(a)[0]\";\n" +
+"}\n" +
+"Flag := enum : Bool { Off = false; On = true; }\n" +
+"Inferred := enum { A = 10; B; C = 30; }\n" +
+"p := Plain.Green;\n" +
+"s: Status = .Busy;\n" +
+"e1: ExitCode = .Next;\n" +
+"e2: ExitCode = .Eleven;\n" +
+"o := Op.Gt;\n" +
+"o2 := Op.Pair;\n" +
+"f: Flag = .On;\n" +
+"inf: Inferred = .B;\n" +
+"io.outputLine(p, s, s.value, e1.value, e2.value, o.value, o2.value, f.value, inf.value);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "basic value enums TS", basicEnumsSrc,
+"Plain.Green Status.Busy 2.2 -1 11 > (a)[0] true 11\n");
+
+/* 2. Contextual .Case in bindings, reassignments, calls, returns, ==/=!==, if/match, and exhaustive match */
+contextMatchSrc :=
+"io := import \"core/io\";\n" +
+"Status := enum : Float {\n" +
+"    Ready = 1.1;\n" +
+"    Busy = 2.2;\n" +
+"    Stopped = 3.3;\n" +
+"}\n" +
+"nextStatus := fn(s: Status): Status {\n" +
+"    match s {\n" +
+"        .Ready { .Busy }\n" +
+"        .Busy { .Stopped }\n" +
+"        .Stopped { .Ready }\n" +
+"    }\n" +
+"};\n" +
+"label := fn(s: Status): String {\n" +
+"    match s {\n" +
+"        Status.Ready or .Busy { \"active\" }\n" +
+"        .Stopped { \"done\" }\n" +
+"    }\n" +
+"};\n" +
+"var cur: Status = .Ready;\n" +
+"io.outputLine(cur == .Ready, cur =!= .Stopped, label(cur), cur.value);\n" +
+"cur = nextStatus(cur);\n" +
+"io.outputLine(cur, label(cur), cur.value);\n" +
+"cur = nextStatus(.Busy);\n" +
+"io.outputLine(cur, label(cur), cur.value);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "contextual .Case and exhaustive match TS", contextMatchSrc,
+"true true active 1.1\nStatus.Busy active 2.2\nStatus.Stopped done 3.3\n");
+
+/* 3. Constant enum match folding, zero-initialization, inner-block enum, and composite containers */
+combinedSrc :=
+"io := import \"core/io\";\n" +
+"Dir := enum : Int { North; East; South; West; }\n" +
+"Step := record { dir: Dir; dist: Int; };\n" +
+"folded := match Dir.South {\n" +
+"    .North { \"n\" }\n" +
+"    .East or .West { \"ew\" }\n" +
+"    .South { \"s\" }\n" +
+"};\n" +
+"var defDir: Dir;\n" +
+"steps: List<Step> = [Step { dir = .North, dist = 3 }, Step { dir = .West, dist = 4 }];\n" +
+"innerRes := {\n" +
+"    Local := enum { Alpha; Beta; }\n" +
+"    v: Local = .Beta;\n" +
+"    match v { .Alpha { 1 } .Beta { 2 } }\n" +
+"};\n" +
+"io.outputLine(folded, defDir, defDir.value, steps[1].dir, innerRes);\n";
+combinedTs := compilerTest.compileStdin(root, tsComp, combinedSrc, "");
+test.checkInt("combined enum TS compile", 0, combinedTs.status);
+test.check("constant enum match folds dead arms", not text.containsText(combinedTs.stdout, "\"ew\""));
+compilerTest.assertCompileRunTs(root, tsComp, "combined enum TS run", combinedSrc,
+"s Dir.North 0 Dir.West 2\n");
+
+/* 4. Rejections: malformed declarations, nominal distinctness, missing cases, C backend */
+badSrc: List<String> = [
+"E := enum {};",
+"E := enum { A; A; };",
+"x := 1; E := enum : Int { A = x };",
+"E := enum : Int { A = \"hi\" };",
+"E := enum : Float { A = 1.0; B };",
+"E := enum : Unit { A };",
+"E := enum { A; B; }; x := E.Missing;",
+"E := enum { A; B; }; x: E = .Missing;",
+"A := enum { X; }; B := enum { X; }; a: A = B.X;",
+"A := enum { X; }; B := enum { X; }; r := A.X == B.X;",
+"S := enum : Float { Ready = 1.1 }; r := S.Ready == 1.1;",
+"S := enum : Int { A = 1; B = 2 }; r := S.A < S.B;",
+"P := enum { A; B; }; x := P.A.value;",
+"P := enum { A; B; C; }; x := match P.A { .A { 1 } .B { 2 } };",
+"P := enum { A; B; }; x := match P.A { .A { 1 } .B { 2 } _ { 3 } };",
+"A := enum { X; }; B := enum { X; }; x := match A.X { B.X { 1 } _ { 0 } };"
+];
+badErr: List<String> = [
+"enum must declare at least one case",
+"duplicate enum case A",
+"enum case value must be a scalar constant literal",
+"enum case A value has type String, expected Int",
+"enum case B requires an explicit Float backing value",
+"unsupported enum backing type Unit",
+"enum E has no case Missing",
+"enum E has no case Missing",
+"cannot initialize A with B",
+"cannot compare A and B",
+"cannot compare S and Float",
+"operator < requires Int operands",
+"enum P has no backing value type",
+"match requires an exhaustive fallback arm",
+"unreachable match arm after exhaustive arm",
+"enum case pattern B does not match A"
+];
+var bi := 0;
+loop bi < 16 {
+    compilerTest.assertCompileErrorContains(root, tsComp, "bad enum " + badSrc[bi], badSrc[bi], badErr[bi]);
+    bi = bi + 1;
+}
+
+compilerTest.assertCompileErrorContains(root, cComp, "enum C backend rejection",
+"E := enum { A; B; }; x := E.A;", "C backend does not support enum values yet");
+
+test.done("value-enums");

@@ -413,6 +413,123 @@ pub arrayExtent := fn(kind: String): Int {
     syntax.parseDigits(kind, semi + 1, textLib.length(kind) - 1)
 };
 
+/** True when `kind` is this compiler's canonical nominal enum kind `Enum<lp(id#at#Name)lp(Backing)count;...>`. */
+pub isEnumKind := fn(kind: String): Bool {
+    size := textLib.length(kind);
+    size > 6 and textLib.startsWithAt(kind, 0, "Enum<") and textLib.at(kind, size - 1) == ">"
+};
+
+/** Parses the header metadata of canonical `Enum<lp(id#at#Name)lp(Backing)count;...>`. */
+enumHeaderInfo := fn(kind: String): (ok: Bool, displayName: String, backing: String, count: Int, casesStart: Int) {
+    if not isEnumKind(kind) { return (ok = false, displayName = "", backing = "", count = 0, casesStart = -1); }
+    hdr := decodeLengthPrefixedAt(kind, 5);
+    if hdr.next < 0 { return (ok = false, displayName = "", backing = "", count = 0, casesStart = -1); }
+    bk := decodeLengthPrefixedAt(kind, hdr.next);
+    if bk.next < 0 { return (ok = false, displayName = "", backing = "", count = 0, casesStart = -1); }
+    size := textLib.length(kind);
+    var cur := bk.next;
+    var countEnd := cur;
+    loop countEnd < size and textLib.isDigit(textLib.at(kind, countEnd)) {
+        countEnd = countEnd + 1;
+    }
+    if countEnd == cur or countEnd >= size or textLib.at(kind, countEnd) =!= ";" {
+        return (ok = false, displayName = "", backing = "", count = 0, casesStart = -1);
+    }
+    count := syntax.parseDigits(kind, cur, countEnd);
+    hdrLen := textLib.length(hdr.text);
+    var hashPos := hdrLen - 1;
+    loop hashPos >= 0 and textLib.at(hdr.text, hashPos) =!= "#" {
+        hashPos = hashPos - 1;
+    }
+    disp := if hashPos >= 0 { textLib.slice(hdr.text, hashPos + 1, hdrLen) } else { hdr.text };
+    (ok = true, displayName = disp, backing = bk.text, count = count, casesStart = countEnd + 1)
+};
+
+/** Returns the display name of canonical enum kind `kind`. */
+pub enumDisplayName := fn(kind: String): String {
+    info := enumHeaderInfo(kind);
+    if not info.ok { kind } else { info.displayName }
+};
+
+/** Returns the backing scalar kind of canonical enum kind `kind`, or `""` for a plain enum. */
+pub enumBackingKind := fn(kind: String): String {
+    info := enumHeaderInfo(kind);
+    if not info.ok { "" } else { info.backing }
+};
+
+/** Returns the number of cases in canonical enum kind `kind`. */
+pub enumCaseCount := fn(kind: String): Int {
+    info := enumHeaderInfo(kind);
+    if not info.ok { 0 } else { info.count }
+};
+
+/** Returns the 0-based case index matching `caseName` in canonical enum `kind`, or -1 when absent. */
+pub enumCaseIndex := fn(kind: String, caseName: String): Int {
+    info := enumHeaderInfo(kind);
+    if not info.ok or caseName == "" { return -1; }
+    var cur := info.casesStart;
+    var idx := 0;
+    loop idx < info.count {
+        nDec := decodeLengthPrefixedAt(kind, cur);
+        if nDec.next < 0 { return -1; }
+        vDec := decodeLengthPrefixedAt(kind, nDec.next);
+        if vDec.next < 0 { return -1; }
+        if nDec.text == caseName { return idx; }
+        cur = vDec.next;
+        idx = idx + 1;
+    }
+    -1
+};
+
+/** Returns the case name and encoded TS backing value code at 0-based `targetIndex` in canonical enum `kind`. */
+pub enumCaseAt := fn(kind: String, targetIndex: Int): (name: String, valueCode: String) {
+    info := enumHeaderInfo(kind);
+    if not info.ok or targetIndex < 0 or targetIndex >= info.count {
+        return (name = "", valueCode = "");
+    }
+    var cur := info.casesStart;
+    var idx := 0;
+    loop idx < info.count {
+        nDec := decodeLengthPrefixedAt(kind, cur);
+        if nDec.next < 0 { return (name = "", valueCode = ""); }
+        vDec := decodeLengthPrefixedAt(kind, nDec.next);
+        if vDec.next < 0 { return (name = "", valueCode = ""); }
+        if idx == targetIndex { return (name = nDec.text, valueCode = vDec.text); }
+        cur = vDec.next;
+        idx = idx + 1;
+    }
+    (name = "", valueCode = "")
+};
+
+/** Escapes angle/paren/bracket characters inside a JS/TS string literal so `Enum<...>` never contains unbalanced delimiters. */
+escapeEnumStringLiteral := fn(code: String): String {
+    size := textLib.length(code);
+    parts: mut List<String> = [];
+    var segStart := 0;
+    var i := 0;
+    loop i < size {
+        ch := textLib.at(code, i);
+        repl := match {
+            ch == "<" { "\\u003c" }
+            ch == ">" { "\\u003e" }
+            ch == "(" { "\\u0028" }
+            ch == ")" { "\\u0029" }
+            ch == "[" { "\\u005b" }
+            ch == "]" { "\\u005d" }
+            _ { "" }
+        };
+        if repl =!= "" {
+            if i > segStart { listLib.pushBack(mut parts, textLib.slice(code, segStart, i)); }
+            listLib.pushBack(mut parts, repl);
+            segStart = i + 1;
+        }
+        i = i + 1;
+    }
+    if segStart == 0 { return code; }
+    if segStart < size { listLib.pushBack(mut parts, textLib.slice(code, segStart, size)); }
+    textLib.joinTexts(parts, "")
+};
+
 /** True when `kind` is this compiler's canonical nominal record kind `Record<id#at#DisplayName;f1:K1,...>`. */
 pub isRecordKind := fn(kind: String): Bool {
     size := textLib.length(kind);
@@ -625,9 +742,9 @@ pub encodeRecordDefaultsFromAliases := fn(aliases: List<AliasDecl>, recordKind: 
     encodeRecordPairs(keys, values)
 };
 
-/** True when TS local/var declarations of `kind` require an explicit type annotation (empty lists, arrays, records, or callables). */
+/** True when TS local/var declarations of `kind` require an explicit type annotation (empty lists, arrays, records, enums, or callables). */
 pub needsTsTypeAnnotation := fn(kind: String): Bool {
-    isListKind(kind) or isArrayKind(kind) or isRecordKind(kind) or containsFnKind(kind)
+    isListKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or containsFnKind(kind)
 };
 
 /** True when `expectedKind` and `actualKind` represent structurally identical kinds modulo callable/tuple parameter labels. */
@@ -749,6 +866,7 @@ pub tsFunctionType := fn(kind: String): String {
         }
         result + " }"
     }
+    else if isEnumKind(kind) { "number" }
     else if isRecordKind(kind) {
         count := recordComponentCount(kind);
         if count == 0 { return "{}"; }
@@ -791,6 +909,18 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
     if isListKind(kind) or isArrayKind(kind) {
         element := if isListKind(kind) { listElementKind(kind) } else { arrayElementKind(kind) };
         return "(\"[\" + (" + code + ").map((value: " + tsFunctionType(element) + ") => " + self(element, "value") + ").join(\", \") + \"]\")";
+    }
+    if isEnumKind(kind) {
+        enumName := enumDisplayName(kind);
+        count := enumCaseCount(kind);
+        labels: mut List<String> = [];
+        var idx := 0;
+        loop idx < count {
+            cInfo := enumCaseAt(kind, idx);
+            listLib.pushBack(mut labels, tsLiteral.textLiteralCode(enumName + "." + cInfo.name));
+            idx = idx + 1;
+        }
+        return "([" + textLib.joinTexts(labels, ", ") + "][" + code + "]!)";
     }
     if isRecordKind(kind) {
         recName := recordDisplayName(kind);
@@ -850,6 +980,7 @@ pub tupleFieldKind := fn(kind: String, label: String): String {
 
 /** Renders one canonical kind for diagnostics, adding spaces inside flat tuples, lists, and callable signatures. */
 pub displayKind := fn(kind: String): String {
+    if isEnumKind(kind) { return enumDisplayName(kind); }
     if isRecordKind(kind) { return recordDisplayName(kind); }
     if isListKind(kind) { return "List<" + self(listElementKind(kind)) + ">"; }
     if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + integer.intText(arrayExtent(kind)) + "]"; }
@@ -891,6 +1022,36 @@ pub displayKind := fn(kind: String): String {
 pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
     size := textLib.length(source);
     start := syntax.skipTrivia(source, position, prefix);
+    if not useLocalErr and start < size and textLib.startsWithAt(source, start, "@enumraw:") {
+        hdr := decodeLengthPrefixedAt(source, start + 9);
+        bkRaw := decodeLengthPrefixedAt(source, hdr.next);
+        var cur := bkRaw.next;
+        var countEnd := cur;
+        loop countEnd < size and textLib.isDigit(textLib.at(source, countEnd)) {
+            countEnd = countEnd + 1;
+        }
+        caseCount := if countEnd > cur { syntax.parseDigits(source, cur, countEnd) } else { 0 };
+        cur = if countEnd < size and textLib.at(source, countEnd) == ";" { countEnd + 1 } else { countEnd };
+        var resolvedBacking := "";
+        if bkRaw.text =!= "" {
+            bkParsed := self(errSource, errPos, false, bkRaw.text, 0, prefix, aliases, "enum backing", "", seen);
+            if syntax.skipTrivia(bkRaw.text, bkParsed.next, prefix) < textLib.length(bkRaw.text) {
+                syntax.failAt(errSource, errPos, prefix, "unexpected text after enum backing type");
+            }
+            resolvedBacking = bkParsed.kind;
+        }
+        built := buildCanonicalEnumKind(hdr.text, resolvedBacking, source, cur, caseCount, prefix);
+        if not built.ok {
+            syntax.failAt(errSource, errPos, prefix, built.error);
+        }
+        return (kind = built.kind, next = built.next);
+    }
+    if not useLocalErr and start < size and textLib.startsWithAt(source, start, "Enum<") {
+        end := skipKindToken(source, start);
+        if end > start + 6 and textLib.at(source, end - 1) == ">" {
+            return (kind = textLib.slice(source, start, end), next = end);
+        }
+    }
     if not useLocalErr and start < size and textLib.startsWithAt(source, start, "@recraw:") {
         hdr := decodeLengthPrefixedAt(source, start + 8);
         var cur := hdr.next;
@@ -1485,6 +1646,234 @@ skipRecordFieldDefault := fn(source: String, start: Int, limit: Int, prefix: Str
     cur
 };
 
+/** True when `kind` is an admissible scalar enum backing type. */
+isEnumBackingKind := fn(kind: String): Bool {
+    numeric.isIntKind(kind) or numeric.isFloatKind(kind) or kind == ir.VALUE_KIND_STRING or kind == ir.VALUE_KIND_BOOL
+};
+
+/** Parses one enum case backing literal from `rawText` (signed Int/Float, String, or Bool) and returns its kind, TS code, and integer value. */
+parseEnumCaseLiteral := fn(rawText: String, expectedBacking: String, prefix: String): (ok: Bool, kind: String, code: String, intValue: Int, error: String) {
+    size := textLib.length(rawText);
+    pos := syntax.skipTrivia(rawText, 0, prefix);
+    if pos >= size {
+        return (ok = false, kind = "", code = "", intValue = 0, error = "expected constant value for enum case");
+    }
+    ch := textLib.at(rawText, pos);
+    if textLib.wordAt(rawText, pos, "true") or textLib.wordAt(rawText, pos, "false") {
+        isTrue := textLib.wordAt(rawText, pos, "true");
+        endPos := pos + (if isTrue { 4 } else { 5 });
+        if syntax.skipTrivia(rawText, endPos, prefix) < size {
+            return (ok = false, kind = "", code = "", intValue = 0, error = "unexpected text after enum case value");
+        }
+        return (ok = true, kind = ir.VALUE_KIND_BOOL, code = if isTrue { "true" } else { "false" }, intValue = if isTrue { 1 } else { 0 }, error = "");
+    }
+    if ch == "\"" {
+        lit := syntax.parseText(ir.TARGET_TS, rawText, pos, prefix);
+        if syntax.skipTrivia(rawText, lit.next, prefix) < size {
+            return (ok = false, kind = "", code = "", intValue = 0, error = "unexpected text after enum case value");
+        }
+        return (ok = true, kind = ir.VALUE_KIND_STRING, code = escapeEnumStringLiteral(lit.code), intValue = 0, error = "");
+    }
+    isNeg := ch == "-";
+    isSign := ch == "-" or ch == "+";
+    numPos := if isSign { syntax.skipTrivia(rawText, pos + 1, prefix) } else { pos };
+    if numPos < size and textLib.isDigit(textLib.at(rawText, numPos)) {
+        hintKind := if expectedBacking == ir.VALUE_KIND_FLOAT32 or expectedBacking == ir.VALUE_KIND_FLOAT {
+            expectedBacking
+        } else if numeric.isIntKind(expectedBacking) {
+            expectedBacking
+        } else {
+            ""
+        };
+        lit := syntax.parseNumber(ir.TARGET_TS, rawText, numPos, prefix, hintKind, 10);
+        if syntax.skipTrivia(rawText, lit.next, prefix) < size {
+            return (ok = false, kind = "", code = "", intValue = 0, error = "unexpected text after enum case value");
+        }
+        if numeric.isFloatKind(lit.kind) {
+            fCode := if isNeg { "-" + lit.code } else { lit.code };
+            return (ok = true, kind = lit.kind, code = fCode, intValue = 0, error = "");
+        }
+        if numeric.isIntKind(lit.kind) {
+            finalInt := if isNeg {
+                neg := integer.intNegate(lit.intValue);
+                if not neg.ok {
+                    return (ok = false, kind = "", code = "", intValue = 0, error = "enum case integer value out of range");
+                }
+                neg.value
+            } else {
+                lit.intValue
+            };
+            targetIntKind := if numeric.isIntKind(expectedBacking) { expectedBacking } else { lit.kind };
+            if not numeric.intKindFits(targetIntKind, finalInt) {
+                return (ok = false, kind = "", code = "", intValue = 0, error = "enum case value does not fit " + displayKind(targetIntKind));
+            }
+            if numeric.isFloatKind(expectedBacking) {
+                fLit := integer.intText(finalInt);
+                return (ok = true, kind = expectedBacking, code = if expectedBacking == ir.VALUE_KIND_FLOAT32 { "Math.fround(" + fLit + ")" } else { fLit }, intValue = 0, error = "");
+            }
+            intCode := if finalInt < 0 { "(-" + integer.intText(0 - finalInt) + "n)" } else { integer.intText(finalInt) + "n" };
+            return (ok = true, kind = targetIntKind, code = intCode, intValue = finalInt, error = "");
+        }
+    }
+    (ok = false, kind = "", code = "", intValue = 0, error = "enum case value must be a scalar constant literal")
+};
+
+/** Builds canonical `Enum<...>` from decoded `@enumraw:` header, resolved optional backing kind, and length-prefixed `(name, rawVal)` pairs. */
+buildCanonicalEnumKind := fn(hdrText: String, explicitBacking: String, rawSource: String, casesStart: Int, caseCount: Int, prefix: String): (ok: Bool, kind: String, next: Int, error: String) {
+    if caseCount <= 0 {
+        return (ok = false, kind = "", next = casesStart, error = "enum must declare at least one case");
+    }
+    if explicitBacking =!= "" and not isEnumBackingKind(explicitBacking) {
+        return (ok = false, kind = "", next = casesStart, error = "unsupported enum backing type " + displayKind(explicitBacking));
+    }
+    names: mut List<String> = [];
+    rawVals: mut List<String> = [];
+    var cur := casesStart;
+    var hasAnyVal := false;
+    var firstValText := "";
+    var idx := 0;
+    loop idx < caseCount {
+        nDec := decodeLengthPrefixedAt(rawSource, cur);
+        if nDec.next < 0 { return (ok = false, kind = "", next = casesStart, error = "malformed enum case name"); }
+        vDec := decodeLengthPrefixedAt(rawSource, nDec.next);
+        if vDec.next < 0 { return (ok = false, kind = "", next = casesStart, error = "malformed enum case value"); }
+        if listLib.listContainsText(names, nDec.text) {
+            return (ok = false, kind = "", next = casesStart, error = "duplicate enum case " + nDec.text);
+        }
+        listLib.pushBack(mut names, nDec.text);
+        listLib.pushBack(mut rawVals, vDec.text);
+        if vDec.text =!= "" and not hasAnyVal {
+            hasAnyVal = true;
+            firstValText = vDec.text;
+        }
+        cur = vDec.next;
+        idx = idx + 1;
+    }
+    var backingKind := explicitBacking;
+    if backingKind == "" and hasAnyVal {
+        probe := parseEnumCaseLiteral(firstValText, "", prefix);
+        if not probe.ok {
+            return (ok = false, kind = "", next = casesStart, error = probe.error);
+        }
+        backingKind = probe.kind;
+    }
+    var encodedPairs := "";
+    var nextInt := 0;
+    var cIdx := 0;
+    loop cIdx < caseCount {
+        cName := names[cIdx];
+        cRaw := rawVals[cIdx];
+        var valCode := "";
+        if backingKind == "" {
+            valCode = "";
+        } else if cRaw =!= "" {
+            lit := parseEnumCaseLiteral(cRaw, backingKind, prefix);
+            if not lit.ok {
+                return (ok = false, kind = "", next = casesStart, error = lit.error);
+            }
+            if lit.kind =!= backingKind {
+                return (ok = false, kind = "", next = casesStart, error = "enum case " + cName + " value has type " + displayKind(lit.kind) + ", expected " + displayKind(backingKind));
+            }
+            valCode = lit.code;
+            if numeric.isIntKind(backingKind) {
+                nextInt = lit.intValue + 1;
+            }
+        } else if numeric.isIntKind(backingKind) {
+            if not numeric.intKindFits(backingKind, nextInt) {
+                return (ok = false, kind = "", next = casesStart, error = "enum case " + cName + " auto-assigned value does not fit " + displayKind(backingKind));
+            }
+            valCode = if nextInt < 0 { "(-" + integer.intText(0 - nextInt) + "n)" } else { integer.intText(nextInt) + "n" };
+            nextInt = nextInt + 1;
+        } else {
+            return (ok = false, kind = "", next = casesStart, error = "enum case " + cName + " requires an explicit " + displayKind(backingKind) + " backing value");
+        }
+        encodedPairs = encodedPairs + encodeLengthPrefixedText(cName) + encodeLengthPrefixedText(valCode);
+        cIdx = cIdx + 1;
+    }
+    canonical := "Enum<" + encodeLengthPrefixedText(hdrText) + encodeLengthPrefixedText(backingKind) + integer.intText(caseCount) + ";" + encodedPairs + ">";
+    (ok = true, kind = canonical, next = cur, error = "")
+};
+
+/** Pre-scans `Name := enum [: BackingType] { Case [= val]; ... }` into an encoded `@enumraw:` target and end offset. */
+pub collectEnumTarget := fn(source: String, afterEnumKw: Int, prefix: String, moduleIdentity: String, declAt: Int, enumName: String): (text: String, next: Int) {
+    size := textLib.length(source);
+    var cursor := syntax.skipTrivia(source, afterEnumKw, prefix);
+    var rawBacking := "";
+    if cursor < size and textLib.at(source, cursor) == ":" {
+        bkStart := syntax.skipTrivia(source, cursor + 1, prefix);
+        bkRes := collectTypeTarget(source, bkStart, prefix);
+        rawBacking = bkRes.text;
+        cursor = syntax.skipTrivia(source, bkRes.next, prefix);
+    }
+    if cursor >= size or textLib.at(source, cursor) =!= "{" {
+        return (text = "", next = cursor);
+    }
+    closeEnd := syntax.scanBraceEnd(source, cursor, prefix);
+    if closeEnd < 0 {
+        return (text = "", next = size);
+    }
+    bodyLimit := closeEnd - 1;
+    cursor = cursor + 1;
+    names: mut List<String> = [];
+    vals: mut List<String> = [];
+    var count := 0;
+    loop cursor < bodyLimit {
+        cursor = syntax.skipItemSeparators(source, cursor, prefix);
+        if cursor >= bodyLimit { break; }
+        if textLib.at(source, cursor) == "," {
+            cursor = cursor + 1;
+            continue;
+        }
+        if not textLib.isNameStart(textLib.at(source, cursor)) {
+            return (text = "", next = closeEnd);
+        }
+        cStart := cursor;
+        cEnd := textLib.skipName(source, cStart);
+        cName := textLib.slice(source, cStart, cEnd);
+        if syntax.isReservedWord(cName) {
+            return (text = "", next = closeEnd);
+        }
+        afterName := syntax.skipTrivia(source, cEnd, prefix);
+        var rawVal := "";
+        if syntax.isSingleEquals(source, afterName) {
+            valStart := syntax.skipTrivia(source, afterName + 1, prefix);
+            var vCur := valStart;
+            loop vCur < bodyLimit {
+                vCh := textLib.at(source, vCur);
+                if vCh == ";" or vCh == "," or vCh == "\n" or vCh == "\r" { break; }
+                if vCh == "\"" {
+                    sEnd := syntax.skipAliasString(source, vCur);
+                    if sEnd <= vCur { break; }
+                    vCur = sEnd;
+                    continue;
+                }
+                if vCh == "/" and vCur + 1 < bodyLimit and textLib.at(source, vCur + 1) == "*" {
+                    break;
+                }
+                vCur = vCur + 1;
+            }
+            rawVal = textLib.slice(source, valStart, vCur);
+            cursor = vCur;
+        } else {
+            cursor = afterName;
+        }
+        if cursor < bodyLimit and (textLib.at(source, cursor) == ";" or textLib.at(source, cursor) == ",") {
+            cursor = cursor + 1;
+        }
+        listLib.pushBack(mut names, cName);
+        listLib.pushBack(mut vals, rawVal);
+        count = count + 1;
+    }
+    var pairs := "";
+    var idx := 0;
+    loop idx < count {
+        pairs = pairs + encodeLengthPrefixedText(names[idx]) + encodeLengthPrefixedText(vals[idx]);
+        idx = idx + 1;
+    }
+    enumHeader := moduleIdentity + "#" + integer.intText(declAt) + "#" + enumName;
+    (text = "@enumraw:" + encodeLengthPrefixedText(enumHeader) + encodeLengthPrefixedText(rawBacking) + integer.intText(count) + ";" + pairs, next = closeEnd)
+};
+
 /** Pre-scans `Name := record { field: Type [= default]; ... }` into an encoded `@recraw:` target and end offset. */
 pub collectRecordTarget := fn(source: String, bracePos: Int, prefix: String, moduleIdentity: String, declAt: Int, recName: String): (text: String, next: Int) {
     size := textLib.length(source);
@@ -1548,13 +1937,15 @@ pub collectRecordTarget := fn(source: String, bracePos: Int, prefix: String, mod
     (text = "@recraw:" + encodeLengthPrefixedText(recHeader) + integer.intText(count) + ";" + pairs, next = closeEnd)
 };
 
-/** Finds the nearest `"type"` or `"record"` keyword offset at or after `cursor`, or -1 when neither exists. */
+/** Finds the nearest `"type"`, `"record"`, or `"enum"` keyword offset at or after `cursor`, or -1 when none exists. */
 pub nextAliasOrRecordHit := fn(source: String, cursor: Int): Int {
     tHit := textLib.indexOfText(source, "type", cursor);
     rHit := textLib.indexOfText(source, "record", cursor);
-    if tHit < 0 { return rHit; }
-    if rHit < 0 { return tHit; }
-    if tHit < rHit { tHit } else { rHit }
+    eHit := textLib.indexOfText(source, "enum", cursor);
+    var best := tHit;
+    if rHit >= 0 and (best < 0 or rHit < best) { best = rHit; }
+    if eHit >= 0 and (best < 0 or eHit < best) { best = eHit; }
+    best
 };
 
 /** Pre-collects shallow `Name := type Target` and `Name := record { ... }` declarations inside the `{ ... }` block opening at `openBracePos`. */
@@ -1614,6 +2005,12 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
                     hasFound = true;
                     cursor = if recTarget.next > typePos + 6 { recTarget.next } else { typePos + 6 };
                     continue;
+                } else if textLib.wordAt(source, typePos, "enum") {
+                    enumTarget := collectEnumTarget(source, typePos + 4, prefix, "b" + integer.intText(blockDepth), nameStart, name);
+                    listLib.pushBack(mut found, (name = name, target = enumTarget.text, at = nameStart, end = enumTarget.next, depth = blockDepth));
+                    hasFound = true;
+                    cursor = if enumTarget.next > typePos + 4 { enumTarget.next } else { typePos + 4 };
+                    continue;
                 }
             }
             cursor = opPos;
@@ -1634,6 +2031,36 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
     size := textLib.length(source);
     start := syntax.skipTrivia(source, position, prefix);
     if start >= size { return (ok = false, kind = "", next = start); }
+    if textLib.startsWithAt(source, start, "@enumraw:") {
+        hdr := decodeLengthPrefixedAt(source, start + 9);
+        if hdr.next < 0 { return (ok = false, kind = "", next = start); }
+        bkRaw := decodeLengthPrefixedAt(source, hdr.next);
+        if bkRaw.next < 0 { return (ok = false, kind = "", next = start); }
+        var cur := bkRaw.next;
+        var countEnd := cur;
+        loop countEnd < size and textLib.isDigit(textLib.at(source, countEnd)) {
+            countEnd = countEnd + 1;
+        }
+        caseCount := if countEnd > cur { syntax.parseDigits(source, cur, countEnd) } else { 0 };
+        cur = if countEnd < size and textLib.at(source, countEnd) == ";" { countEnd + 1 } else { countEnd };
+        var resolvedBacking := "";
+        if bkRaw.text =!= "" {
+            bkParsed := self(bkRaw.text, 0, prefix, aliases, "", seen, depthLeft - 1);
+            if not bkParsed.ok or syntax.skipTrivia(bkRaw.text, bkParsed.next, prefix) < textLib.length(bkRaw.text) {
+                return (ok = false, kind = "", next = start);
+            }
+            resolvedBacking = bkParsed.kind;
+        }
+        built := buildCanonicalEnumKind(hdr.text, resolvedBacking, source, cur, caseCount, prefix);
+        if not built.ok { return (ok = false, kind = "", next = start); }
+        return (ok = true, kind = built.kind, next = built.next);
+    }
+    if textLib.startsWithAt(source, start, "Enum<") {
+        end := skipKindToken(source, start);
+        if end > start + 6 and textLib.at(source, end - 1) == ">" {
+            return (ok = true, kind = textLib.slice(source, start, end), next = end);
+        }
+    }
     if textLib.startsWithAt(source, start, "@recraw:") {
         hdr := decodeLengthPrefixedAt(source, start + 8);
         if hdr.next < 0 { return (ok = false, kind = "", next = start); }

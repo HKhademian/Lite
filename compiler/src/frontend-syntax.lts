@@ -130,7 +130,7 @@ pub isReservedWord := fn(name: String): Bool {
     name == "pub" or name == "var" or name == "mut" or name == "fn" or name == "loop" or
     name == "break" or name == "continue" or name == "return" or name == "if" or
     name == "else" or name == "then" or name == "finally" or name == "match" or
-    name == "import" or name == "using" or name == "record" or name == "type" or
+    name == "import" or name == "using" or name == "record" or name == "enum" or name == "type" or
     name == "and" or name == "or" or name == "not" or name == "true" or name == "false"
 };
 
@@ -145,6 +145,7 @@ featureDoc := fn(name: String): String {
         name == "match" { "docs/match.md" }
         name == "pub" or name == "import" or name == "using" { "docs/modules-and-packages.md" }
         name == "record" or name == "type" { "docs/types-and-inference.md" }
+        name == "enum" { "docs/enums-and-variants.md" }
         name == "break" or name == "continue" { "docs/control-flow.md" }
         name == "then" or name == "finally" { "docs/finally.md" }
         _ { "docs/grammar-sketch.md" }

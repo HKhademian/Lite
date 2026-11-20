@@ -31,6 +31,7 @@ cDeclType := fn(kind: String): String {
 /** Fails cleanly when a reachable scalar/function signature references an unsupported C type. */
 checkUnsupportedCType := fn(kind: String): Unit {
     if frontend.isTupleKind(kind) { diagLib.fail("", "C backend does not support tuple values yet"); }
+    if frontend.isEnumKind(kind) { diagLib.fail("", "C backend does not support enum values yet"); }
     if frontend.isRecordKind(kind) { diagLib.fail("", "C backend does not support record values yet"); }
     if frontend.isListKind(kind) { diagLib.fail("", "C backend does not support list values yet"); }
     if frontend.isArrayKind(kind) { diagLib.fail("", "C backend does not support array values yet"); }
