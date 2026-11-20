@@ -141,6 +141,21 @@ printCount(value);    /* illustrative incompatible expectation: Int64 */
 /* Direction: report an inference conflict; do not select first use. */
 ```
 
+Confirmed joint-review case, assuming the three ID types are distinct and the
+calls each require exactly the indicated type:
+
+```text
+v := 10;
+findUser(v);    /* expects UserID */
+findRoom(v);    /* expects RoomID */
+findTicket(v);  /* expects TicketID */
+```
+
+All three uses constrain one binding. No type satisfies all three constraints,
+so Lite must report a compile-time inference conflict. Reordering the calls
+cannot change this outcome. The numeric default only supplies a type when
+context leaves the literal unconstrained. It cannot resolve a conflict.
+
 This direction is under investigation, not an implemented rule. Scope of
 “relevant uses,” compatible constraints, ambiguity, recursion, public APIs,
 diagnostics, unused bindings, and the precise commitment point remain to be
