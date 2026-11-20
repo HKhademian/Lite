@@ -121,3 +121,13 @@ open below.
 - [Lexical structure](lexical-structure.md)
 - [Memory and performance](memory-and-performance.md)
 - Adjacent literal joining was requested as a C-style convenience; no complete C string or encoding semantics are adopted by this note.
+
+## Joint review: text semantics
+
+The selected direction uses valid UTF-8 for native `String` storage and Unicode scalar values for `Char`. `String` length counts scalars and scalar indexing selects one whole `Char`. Its cost may include a scan. Exact API names, native layout and invalid-input failure policy remain open. A byte sequence has its own operations and can hold arbitrary bytes. Expose or convert encoded bytes explicitly. Grapheme traversal is a separate operation.
+
+Text tooling can consume a stream of `Char` values from UTF-8, UTF-16, UTF-32 or another decoder and emit via an encoding adapter. Contiguous output in a different encoding requires transcoding. A decoder can stream values without allocating a converted copy of the whole input.
+
+Equality compares the exact scalar sequence. Normalization is explicit. Two valid native strings can compare byte lengths and byte contents. Cross-encoding algorithms can compare decoded scalars as they advance. Ordering is lexicographic by scalar value. The first differing scalar determines order. When one string is a prefix, it comes first. Embedded U+0000 is a real scalar and comparison can continue past it. Unsigned-byte comparison gives the same order for valid native UTF-8.
+
+Hashing must agree with equality. If a map or set accepts lookup through other encoding adapters under the same equality contract, it must hash equal scalar sequences consistently. It could feed the corresponding UTF-8 bytes incrementally. Cross-encoding lookup and hash API design remain open. See the [encoding comparison](../research/investigations/language-review/07-collections.md#prior-art-string-storage-and-indexing).
