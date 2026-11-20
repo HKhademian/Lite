@@ -1,0 +1,978 @@
+/** Generates `/learn/` index, lesson/tutorial page bodies, payloads, and search entries (`site/learn-pages.ts`). */
+
+integer := import "core/int";
+list := import "core/list";
+text := import "core/text";
+json := import "util/json";
+siteTools := import "util/site-tools";
+
+escapeHtml := siteTools.escapeSiteHtml;
+
+envMetaLabel := fn(env: String): String {
+    if env == "play" { "Lite Play" } else if env == "cli" { "CLI / Host OS" } else { "Browser + CLI" }
+};
+
+envMetaPillClass := fn(env: String): String {
+    if env == "play" { "status-pill-play" } else if env == "cli" { "status-pill-cli" } else { "status-pill-universal" }
+};
+
+replaceAllText := fn(source: String, needle: String, replacement: String): String {
+    nLen := text.length(needle);
+    if nLen == 0 { return source; }
+    sLen := text.length(source);
+    out: mut List<String> = [];
+    var pos := 0;
+    loop pos < sLen {
+        found := text.indexOfText(source, needle, pos);
+        if found < 0 {
+            list.pushBack(mut out, text.slice(source, pos, sLen));
+            break;
+        }
+        if found > pos {
+            list.pushBack(mut out, text.slice(source, pos, found));
+        }
+        list.pushBack(mut out, replacement);
+        pos = found + nLen;
+    }
+    text.joinTexts(out, "")
+};
+
+safeJsonForScript := fn(rawJson: String): String {
+    replaceAllText(rawJson, "<", "\\u003c")
+};
+
+readOptStr := fn(src: String, objPos: Int, key: String): String {
+    res := json.readObjectString(src, objPos, key);
+    if res.found and res.ok { res.value } else { "" }
+};
+
+readStringArrayAt := fn(src: String, arrPos: Int): List<String> {
+    out: mut List<String> = [];
+    offs := json.arrayElementOffsets(src, arrPos);
+    loop offs as off {
+        r := json.readStringAt(src, off);
+        if r.ok {
+            list.pushBack(mut out, r.value);
+        }
+    }
+    out
+};
+
+readStringList := fn(src: String, objPos: Int, key: String): List<String> {
+    fld := json.findObjectField(src, objPos, key);
+    if not fld.found {
+        empty: List<String> = [];
+        return empty;
+    }
+    readStringArrayAt(src, fld.valuePos)
+};
+
+readRawField := fn(src: String, objPos: Int, key: String, fallback: String): String {
+    fld := json.findObjectField(src, objPos, key);
+    if not fld.found { return fallback; }
+    sp := json.valueSpan(src, fld.valuePos);
+    if not sp.ok { return fallback; }
+    text.slice(src, sp.start, sp.end)
+};
+
+findIdIndex := fn(ids: List<String>, targetId: String): Int {
+    var i := 0;
+    n := list.listCountText(ids);
+    loop i < n {
+        if ids[i] == targetId { return i; }
+        i = i + 1;
+    }
+    -1
+};
+
+renderIndexBody := fn(
+src: String,
+trackOffs: List<Int>,
+itemOffs: List<Int>,
+itemIds: List<String>
+): String {
+    totalCount := list.listCountInt(itemOffs);
+    totalStr := integer.intText(totalCount);
+
+    var univCount := 0;
+    var playCount := 0;
+    var cliCount := 0;
+    orderedHrefObjs: mut List<String> = [];
+    loop itemOffs as iPos {
+        env := readOptStr(src, iPos, "environment");
+        if env == "universal" {
+            univCount = univCount + 1;
+        } else if env == "play" {
+            playCount = playCount + 1;
+        } else if env == "cli" {
+            cliCount = cliCount + 1;
+        }
+        id := readOptStr(src, iPos, "id");
+        trackId := readOptStr(src, iPos, "trackId");
+        slug := readOptStr(src, iPos, "slug");
+        title := readOptStr(src, iPos, "title");
+        hrefObj := "{\"id\":" + json.quoteString(id)
+        + ",\"trackId\":" + json.quoteString(trackId)
+        + ",\"href\":" + json.quoteString(trackId + "/" + slug + ".html")
+        + ",\"title\":" + json.quoteString(title) + "}";
+        list.pushBack(mut orderedHrefObjs, hrefObj);
+    }
+
+    firstHref := if totalCount > 0 {
+        readOptStr(src, itemOffs[0], "trackId") + "/" + readOptStr(src, itemOffs[0], "slug") + ".html"
+    } else {
+        "getting-started/hello-lite.html"
+    };
+
+    trackSections: mut List<String> = [];
+    loop trackOffs as tPos {
+        trId := readOptStr(src, tPos, "id");
+        trTitle := readOptStr(src, tPos, "title");
+        trSummary := readOptStr(src, tPos, "summary");
+        trLessonIds := readStringList(src, tPos, "lessonIds");
+
+        cards: mut List<String> = [];
+        loop trLessonIds as lid {
+            itemIdx := findIdIndex(itemIds, lid);
+            if itemIdx < 0 { continue; }
+            iPos := itemOffs[itemIdx];
+            id := readOptStr(src, iPos, "id");
+            slug := readOptStr(src, iPos, "slug");
+            title := readOptStr(src, iPos, "title");
+            kind := readOptStr(src, iPos, "kind");
+            env := readOptStr(src, iPos, "environment");
+            sourceFile := readOptStr(src, iPos, "sourceFile");
+            previewSvg := readOptStr(src, iPos, "previewSvg");
+            teaches := readStringList(src, iPos, "teaches");
+
+            href := trId + "/" + slug + ".html";
+            tagParts: mut List<String> = [];
+            var ti := 0;
+            var tLim := list.listCountText(teaches);
+            if tLim > 4 { tLim = 4; }
+            loop ti < tLim {
+                list.pushBack(mut tagParts, "<code>" + escapeHtml(teaches[ti]) + "</code>");
+                ti = ti + 1;
+            }
+            tags := text.joinTexts(tagParts, " ");
+            searchBlob := text.toLowerAscii(title + " " + text.joinTexts(teaches, " ") + " " + trTitle + " " + sourceFile);
+            ctaLabel := if kind == "tutorial" { "Build Tutorial" } else { "Start Lesson" };
+            card := "<article class=\"portal-card learn-index-card\" data-lesson-id=\"" + escapeHtml(id)
+            + "\" data-env=\"" + escapeHtml(env)
+            + "\" data-search=\"" + escapeHtml(searchBlob) + "\">\n"
+            + "  <div class=\"portal-card-head\">\n"
+            + "    <h3><a href=\"" + escapeHtml(href) + "\">" + escapeHtml(title) + "</a></h3>\n"
+            + "    <span class=\"status-pill " + envMetaPillClass(env) + "\">" + escapeHtml(envMetaLabel(env)) + "</span>\n"
+            + "  </div>\n"
+            + "  " + previewSvg + "\n"
+            + "  <div class=\"module-sym-preview\">" + tags + "</div>\n"
+            + "  <div class=\"portal-card-foot\">\n"
+            + "    <span class=\"learn-status-label code-card-meta\" data-status-for=\"" + escapeHtml(id) + "\">Not started</span>\n"
+            + "    <a href=\"" + escapeHtml(href) + "\">" + ctaLabel + " &rarr;</a>\n"
+            + "  </div>\n"
+            + "</article>";
+            list.pushBack(mut cards, card);
+        }
+        trCount := integer.intText(list.listCountText(trLessonIds));
+        trUnit := if trId == "tutorials" { "projects" } else { "lessons" };
+        sec := "<section class=\"section\" id=\"track-" + escapeHtml(trId) + "\" data-learn-track=\"" + escapeHtml(trId) + "\">\n"
+        + "  <div class=\"section-head\">\n"
+        + "    <h2>" + escapeHtml(trTitle) + "</h2>\n"
+        + "    <span class=\"code-card-meta\" data-track-progress=\"" + escapeHtml(trId) + "\">0 / " + trCount + " done &middot; " + trCount + " " + trUnit + "</span>\n"
+        + "  </div>\n"
+        + "  <p class=\"section-note\">" + escapeHtml(trSummary) + "</p>\n"
+        + "  <div class=\"portal-grid\">\n"
+        + "    " + text.joinTexts(cards, "\n") + "\n"
+        + "  </div>\n"
+        + "</section>";
+        list.pushBack(mut trackSections, sec);
+    }
+
+    lessonsJson := "[" + text.joinTexts(orderedHrefObjs, ",") + "]";
+    idxLines: List<String> = [
+    "<section class=\"page-hero\">",
+    "  <h1>Learn Lite</h1>",
+    "  <p class=\"hero-lead\">",
+    "    <strong>Lite Academy</strong> brings together Docs, References, Gym, and Play &mdash; start from your first",
+    "    interactive I/O script and progress through parallel wiring, trace safety, closures, modules, and complete",
+    "    browser-runnable projects.",
+    "  </p>",
+    "  <div class=\"learn-progress-banner\">",
+    "    <div class=\"learn-progress-stats\">",
+    "      <strong id=\"learn-progress-text\">0 / " + totalStr + " completed</strong>",
+    "      <div class=\"learn-bar-track\"><div id=\"learn-progress-fill\" class=\"learn-bar-fill\" style=\"width: 0%;\"></div></div>",
+    "    </div>",
+    "    <div class=\"hero-actions\" style=\"margin: 0;\">",
+    "      <a id=\"learn-continue-btn\" class=\"btn btn-primary\" href=\"" + escapeHtml(firstHref) + "\">Start Learning &rarr;</a>",
+    "      <a class=\"btn\" href=\"../docs/handbook/overview-and-setup.html\">Read Handbook</a>",
+    "    </div>",
+    "  </div>",
+    "</section>",
+    "<section class=\"gym-filters\" aria-label=\"Filter curriculum\">",
+    "  <input id=\"learn-search\" class=\"filter-input\" type=\"search\" placeholder=\"Filter lessons, tutorials, or topics...\" aria-label=\"Filter Learn lessons\">",
+    "  <div class=\"gym-filter-group\" role=\"group\" aria-label=\"Environment filter\">",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"all\" aria-pressed=\"true\">All (" + totalStr + ")</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"universal\" aria-pressed=\"false\">Browser + CLI (" + integer.intText(univCount) + ")</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"play\" aria-pressed=\"false\">Lite Play (" + integer.intText(playCount) + ")</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"cli\" aria-pressed=\"false\">CLI / Host OS (" + integer.intText(cliCount) + ")</button>",
+    "  </div>",
+    "  <div class=\"gym-filter-group\">",
+    "    <button id=\"learn-filter-incomplete\" class=\"gym-filter-btn\" type=\"button\" aria-pressed=\"false\">Incomplete Only</button>",
+    "    <span id=\"learn-visible-count\" class=\"code-card-meta\">Showing " + totalStr + " / " + totalStr + "</span>",
+    "  </div>",
+    "</section>",
+    text.joinTexts(trackSections, "\n"),
+    "<script>",
+    "  (function () {",
+    "    var lessons = " + lessonsJson + ";",
+    "    var activeEnv = \"all\";",
+    "    var incompleteOnly = false;",
+    "    var searchInput = document.getElementById(\"learn-search\");",
+    "",
+    "    function loadCompleted() {",
+    "      var completed = {};",
+    "      try {",
+    "        var raw = localStorage.getItem(\"lite-learn-progress-v1\");",
+    "        if (raw) {",
+    "          var parsed = JSON.parse(raw);",
+    "          if (parsed && typeof parsed === \"object\") completed = parsed;",
+    "        }",
+    "      } catch (e) {}",
+    "      return completed;",
+    "    }",
+    "",
+    "    function applyLearnFilter(completed) {",
+    "      var q = searchInput ? searchInput.value.trim().toLowerCase() : \"\";",
+    "      var cards = document.querySelectorAll(\".learn-index-card\");",
+    "      var shown = 0;",
+    "      for (var i = 0; i < cards.length; i += 1) {",
+    "        var card = cards[i];",
+    "        var id = card.getAttribute(\"data-lesson-id\") || \"\";",
+    "        var env = card.getAttribute(\"data-env\") || \"\";",
+    "        var blob = card.getAttribute(\"data-search\") || \"\";",
+    "        var vis = (activeEnv === \"all\" || env === activeEnv) &&",
+    "          (!incompleteOnly || !completed[id]) &&",
+    "          (!q || blob.indexOf(q) >= 0);",
+    "        card.hidden = !vis;",
+    "        if (vis) shown += 1;",
+    "      }",
+    "      var tracks = document.querySelectorAll(\"[data-learn-track]\");",
+    "      for (var t = 0; t < tracks.length; t += 1) {",
+    "        var sec = tracks[t];",
+    "        sec.hidden = sec.querySelector(\".learn-index-card:not([hidden])\") === null;",
+    "      }",
+    "      var countEl = document.getElementById(\"learn-visible-count\");",
+    "      if (countEl) countEl.textContent = \"Showing \" + shown + \" / \" + lessons.length;",
+    "    }",
+    "",
+    "    var completed = loadCompleted();",
+    "    var doneCount = 0;",
+    "    var firstIncomplete = null;",
+    "    var trackDone = {};",
+    "    var trackTotal = {};",
+    "    for (var i = 0; i < lessons.length; i += 1) {",
+    "      var item = lessons[i];",
+    "      trackTotal[item.trackId] = (trackTotal[item.trackId] || 0) + 1;",
+    "      var isDone = Boolean(completed[item.id]);",
+    "      if (isDone) {",
+    "        doneCount += 1;",
+    "        trackDone[item.trackId] = (trackDone[item.trackId] || 0) + 1;",
+    "      } else if (!firstIncomplete) {",
+    "        firstIncomplete = item;",
+    "      }",
+    "      var label = document.querySelector('[data-status-for=\"' + item.id + '\"]');",
+    "      if (label) {",
+    "        label.textContent = isDone ? \"Completed\" : \"Not started\";",
+    "        if (isDone) label.classList.add(\"learn-done-label\");",
+    "      }",
+    "    }",
+    "    var trackBadges = document.querySelectorAll(\"[data-track-progress]\");",
+    "    for (var tb = 0; tb < trackBadges.length; tb += 1) {",
+    "      var trId = trackBadges[tb].getAttribute(\"data-track-progress\");",
+    "      if (!trId) continue;",
+    "      var tot = trackTotal[trId] || 0;",
+    "      var dn = trackDone[trId] || 0;",
+    "      var unit = trId === \"tutorials\" ? \"projects\" : \"lessons\";",
+    "      trackBadges[tb].textContent = dn + \" / \" + tot + \" done · \" + tot + \" \" + unit;",
+    "    }",
+    "    var txt = document.getElementById(\"learn-progress-text\");",
+    "    var fill = document.getElementById(\"learn-progress-fill\");",
+    "    var cont = document.getElementById(\"learn-continue-btn\");",
+    "    if (txt) txt.textContent = doneCount + \" / \" + lessons.length + \" completed\";",
+    "    if (fill) fill.style.width = (lessons.length ? Math.round((doneCount / lessons.length) * 100) : 0) + \"%\";",
+    "    if (cont) {",
+    "      if (firstIncomplete && doneCount > 0) {",
+    "        cont.href = firstIncomplete.href;",
+    "        cont.textContent = \"Continue: \" + firstIncomplete.title + \" ->\";",
+    "      } else if (doneCount === lessons.length && lessons.length > 0) {",
+    "        cont.href = \"../gym/\";",
+    "        cont.textContent = \"Course Complete! Enter Lite Gym ->\";",
+    "      }",
+    "    }",
+    "",
+    "    var envBtns = document.querySelectorAll(\"[data-learn-env]\");",
+    "    for (var eb = 0; eb < envBtns.length; eb += 1) {",
+    "      envBtns[eb].addEventListener(\"click\", function () {",
+    "        activeEnv = this.getAttribute(\"data-learn-env\") || \"all\";",
+    "        for (var j = 0; j < envBtns.length; j += 1) {",
+    "          envBtns[j].setAttribute(\"aria-pressed\", envBtns[j] === this ? \"true\" : \"false\");",
+    "        }",
+    "        applyLearnFilter(loadCompleted());",
+    "      });",
+    "    }",
+    "    var incBtn = document.getElementById(\"learn-filter-incomplete\");",
+    "    if (incBtn) {",
+    "      incBtn.addEventListener(\"click\", function () {",
+    "        incompleteOnly = !incompleteOnly;",
+    "        this.setAttribute(\"aria-pressed\", incompleteOnly ? \"true\" : \"false\");",
+    "        applyLearnFilter(loadCompleted());",
+    "      });",
+    "    }",
+    "    if (searchInput) {",
+    "      searchInput.addEventListener(\"input\", function () { applyLearnFilter(loadCompleted()); });",
+    "    }",
+    "    applyLearnFilter(completed);",
+    "  })();",
+    "</script>"
+    ];
+    text.joinTexts(idxLines, "\n")
+};
+
+renderLessonBody := fn(
+src: String,
+idx: Int,
+itemOffs: List<Int>,
+itemIds: List<String>,
+trackOffs: List<Int>,
+repoUrl: String
+): String {
+    totalCount := list.listCountInt(itemOffs);
+    iPos := itemOffs[idx];
+    itemId := readOptStr(src, iPos, "id");
+    itemSlug := readOptStr(src, iPos, "slug");
+    itemTrackId := readOptStr(src, iPos, "trackId");
+    itemTrackTitle := readOptStr(src, iPos, "trackTitle");
+    itemTitle := readOptStr(src, iPos, "title");
+    itemEnv := readOptStr(src, iPos, "environment");
+    itemSourceFile := readOptStr(src, iPos, "sourceFile");
+    itemOutPath := readOptStr(src, iPos, "outPath");
+    itemGuideHtml := readOptStr(src, iPos, "guideHtml");
+    itemSource := readOptStr(src, iPos, "source");
+    itemOutput := readOptStr(src, iPos, "output");
+    itemBuiltinPlayHref := readOptStr(src, iPos, "builtinPlayHref");
+    itemRelatedHtml := readOptStr(src, iPos, "relatedHtml");
+    itemEditorBlockHtml := readOptStr(src, iPos, "editorBlockHtml");
+    itemSplitHandleHtml := readOptStr(src, iPos, "splitHandleHtml");
+    itemCodeModeBarHtml := readOptStr(src, iPos, "codeModeBarHtml");
+    itemStdinDisplay := readOptStr(src, iPos, "stdinDisplay");
+    itemArgsDisplay := readOptStr(src, iPos, "argsDisplay");
+    itemHelperSpecs := readStringList(src, iPos, "helperSpecs");
+    itemExtraModulesRawJson := readRawField(src, iPos, "extraModules", "{}");
+
+    isPlay := itemEnv == "play";
+    isCli := itemEnv == "cli";
+
+    sidebarParts: mut List<String> = [];
+    loop trackOffs as tPos {
+        trId := readOptStr(src, tPos, "id");
+        trTitle := readOptStr(src, tPos, "title");
+        trLessonIds := readStringList(src, tPos, "lessonIds");
+        openAttr := if trId == itemTrackId { " open" } else { "" };
+        liParts: mut List<String> = [];
+        loop trLessonIds as lid {
+            lIdx := findIdIndex(itemIds, lid);
+            if lIdx < 0 { continue; }
+            lPos := itemOffs[lIdx];
+            lsId := readOptStr(src, lPos, "id");
+            lsSlug := readOptStr(src, lPos, "slug");
+            lsTitle := readOptStr(src, lPos, "title");
+            href := "../" + trId + "/" + lsSlug + ".html";
+            cls := if lsId == itemId { " class=\"active\"" } else { "" };
+            li := "<li><a href=\"" + escapeHtml(href) + "\"" + cls + " data-nav-lesson=\"" + escapeHtml(lsId) + "\"><span>" + escapeHtml(lsTitle) + "</span><span class=\"learn-done-dot\" aria-hidden=\"true\"></span></a></li>";
+            list.pushBack(mut liParts, li);
+        }
+        grp := "<details class=\"portal-nav-group\"" + openAttr + ">\n"
+        + "        <summary>" + escapeHtml(trTitle) + "</summary>\n"
+        + "        <ul class=\"portal-nav-list\">\n"
+        + "          " + text.joinTexts(liParts, "\n          ") + "\n"
+        + "        </ul>\n"
+        + "      </details>";
+        list.pushBack(mut sidebarParts, grp);
+    }
+
+    sourceHref := if repoUrl =!= "" { repoUrl + "/blob/main/" + itemSourceFile } else { "#" };
+    helperList := if list.listCountText(itemHelperSpecs) > 0 {
+        hParts: mut List<String> = [];
+        loop itemHelperSpecs as spec {
+            list.pushBack(mut hParts, "<code>" + escapeHtml(spec) + "</code>");
+        }
+        "<p class=\"code-card-meta\">Bundled helper modules: " + text.joinTexts(hParts, ", ") + "</p>"
+    } else {
+        ""
+    };
+
+    prevLink := if idx > 0 {
+        pPos := itemOffs[idx - 1];
+        "<a class=\"btn\" href=\"../" + escapeHtml(readOptStr(src, pPos, "trackId")) + "/" + escapeHtml(readOptStr(src, pPos, "slug")) + ".html\">&larr; " + escapeHtml(readOptStr(src, pPos, "title")) + "</a>"
+    } else {
+        "<a class=\"btn\" href=\"../\">&larr; Track Index</a>"
+    };
+    nextLink := if idx + 1 < totalCount {
+        nPos := itemOffs[idx + 1];
+        "<a class=\"btn btn-primary\" href=\"../" + escapeHtml(readOptStr(src, nPos, "trackId")) + "/" + escapeHtml(readOptStr(src, nPos, "slug")) + ".html\">" + escapeHtml(readOptStr(src, nPos, "title")) + " &rarr;</a>"
+    } else {
+        "<a class=\"btn btn-primary\" href=\"../../gym/\">Practice in Gym &rarr;</a>"
+    };
+
+    runBtnLabel := if isCli { "Compile TS" } else { "Run" };
+    statusLabel := if isCli {
+        "Verified CLI output loaded (browser runs Compile TS)"
+    } else {
+        "Verified output loaded — edit & Run"
+    };
+    outTabSel := if isPlay { "false" } else { "true" };
+    canvasTabSel := if isPlay { "true" } else { "false" };
+    canvasTabHidden := if isPlay { "" } else { " hidden" };
+    outHidden := if isPlay { " hidden" } else { "" };
+    canvasWrapHidden := if isPlay { "" } else { " hidden" };
+    outputDisplay := if itemOutput =!= "" { itemOutput } else { "(no stdout output)" };
+    isCliJson := if isCli { "true" } else { "false" };
+    isPlayJson := if isPlay { "true" } else { "false" };
+
+    lines: List<String> = [
+    "<div id=\"ln-workbench\" class=\"learn-workbench has-split\" data-academy-visit-path=\"" + escapeHtml(itemOutPath) + "\" data-academy-visit-title=\"" + escapeHtml(itemTitle) + "\" data-academy-visit-section=\"Learn\">",
+    "  <aside class=\"portal-sidebar learn-sidebar\" aria-label=\"Curriculum\">",
+    "    <p class=\"portal-sidebar-title\"><a href=\"../\">All Tracks (" + integer.intText(totalCount) + ")</a></p>",
+    "    " + text.joinTexts(sidebarParts, "\n      "),
+    "  </aside>",
+    "",
+    "  <article class=\"md-prose learn-guide\">",
+    "    <div class=\"portal-mobile-bar\">",
+    "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Tracks &amp; Lessons</button>",
+    "    </div>",
+    "    <div class=\"portal-card-head\" style=\"margin-bottom: 0.65rem;\">",
+    "      <div style=\"display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;\">",
+    "        <button id=\"ln-sidebar-toggle\" class=\"btn\" type=\"button\" aria-pressed=\"false\" title=\"Collapse or expand tracks sidebar\">Hide Tracks</button>",
+    "        <span class=\"code-card-meta\"><a href=\"../\">Learn</a> / " + escapeHtml(itemTrackTitle) + "</span>",
+    "      </div>",
+    "      <span class=\"status-pill " + envMetaPillClass(itemEnv) + "\">" + escapeHtml(envMetaLabel(itemEnv)) + "</span>",
+    "    </div>",
+    "    " + itemGuideHtml,
+    "    " + helperList,
+    "    " + itemRelatedHtml,
+    "    <div class=\"learn-complete-row\">",
+    "      <button id=\"ln-complete\" class=\"btn\" type=\"button\" aria-pressed=\"false\">Mark Lesson Complete</button>",
+    "      <a class=\"code-card-meta\" href=\"" + escapeHtml(sourceHref) + "\">Source: <code>" + escapeHtml(itemSourceFile) + "</code></a>",
+    "    </div>",
+    "    <nav class=\"docs-pager\" aria-label=\"Lesson navigation\">",
+    "      " + prevLink,
+    "      " + nextLink,
+    "    </nav>",
+    "  </article>",
+    "",
+    "  " + itemSplitHandleHtml,
+    "",
+    "  <section class=\"pane learn-runner\" aria-label=\"Interactive Lite runner\">",
+    "    <div class=\"pane-head\">",
+    "      <div class=\"sample-picker\">",
+    "        <strong>Try Live</strong>",
+    "        <span class=\"code-card-meta\">" + escapeHtml(itemSourceFile) + "</span>",
+    "      </div>",
+    "      <div class=\"pg-actions\">",
+    "        <button id=\"ln-reset\" class=\"btn\" type=\"button\">Reset</button>",
+    "        <a id=\"ln-open-play\" class=\"btn\" href=\"" + escapeHtml(itemBuiltinPlayHref) + "\" title=\"Open in Playground\">Open in Play &rarr;</a>",
+    "        <button id=\"ln-run\" class=\"btn btn-primary\" type=\"button\" title=\"Ctrl/Cmd + Enter\">" + runBtnLabel + "</button>",
+    "      </div>",
+    "    </div>",
+    "    " + itemEditorBlockHtml,
+    "    <div class=\"pg-io-strip\">",
+    "      <label class=\"pg-io-field\">Stdin <input id=\"ln-stdin\" type=\"text\" value=\"" + escapeHtml(itemStdinDisplay) + "\" placeholder=\"line1\\nline2\"></label>",
+    "      <label class=\"pg-io-field\">Args <input id=\"ln-args\" type=\"text\" value=\"" + escapeHtml(itemArgsDisplay) + "\" placeholder=\"arg1 arg2\"></label>",
+    "      <span id=\"ln-cursor\" class=\"ed-cursor-meta\">Ln 1, Col 1</span>",
+    "      <span id=\"ln-status\" class=\"pg-status\">" + statusLabel + "</span>",
+    "    </div>",
+    "    <div class=\"pane-head\">",
+    "      <div class=\"pg-tabs\" role=\"tablist\" aria-label=\"Runner panels\">",
+    "        <button id=\"ln-tab-output\" class=\"pg-tab\" type=\"button\" role=\"tab\" data-tab=\"output\" aria-selected=\"" + outTabSel + "\">Output</button>",
+    "        <button id=\"ln-tab-canvas\" class=\"pg-tab\" type=\"button\" role=\"tab\" data-tab=\"canvas\" aria-selected=\"" + canvasTabSel + "\"" + canvasTabHidden + ">Canvas</button>",
+    "        <button id=\"ln-tab-ts\" class=\"pg-tab\" type=\"button\" role=\"tab\" data-tab=\"ts\" aria-selected=\"false\">Generated TS</button>",
+    "        <button id=\"ln-tab-c\" class=\"pg-tab\" type=\"button\" role=\"tab\" data-tab=\"c\" aria-selected=\"false\">Generated C</button>",
+    "      </div>",
+    "      <div class=\"pg-actions\">",
+    "        <button id=\"ln-pause\" class=\"pg-pause-btn\" type=\"button\" aria-pressed=\"false\" hidden>",
+    "          <span class=\"pg-icon-playing\">&#9646;&#9646;</span>",
+    "          <span class=\"pg-icon-paused\">&#9654;</span>",
+    "        </button>",
+    "        <button id=\"ln-copy\" class=\"pg-copy-btn\" type=\"button\" aria-label=\"Copy runner output\">Copy</button>",
+    "      </div>",
+    "    </div>",
+    "    " + itemCodeModeBarHtml,
+    "    <pre id=\"ln-output\" class=\"code-block pg-panel\"" + outHidden + ">" + escapeHtml(outputDisplay) + "</pre>",
+    "    <div id=\"ln-canvas-wrap\" class=\"pg-panel pg-canvas-wrap\"" + canvasWrapHidden + ">",
+    "      <div class=\"pg-canvas-bar\">",
+    "        <span id=\"ln-canvas-title\" class=\"pg-canvas-title\">" + escapeHtml(itemTitle) + "</span>",
+    "        <span class=\"pg-canvas-tools\">",
+    "          <span id=\"ln-fps\">0.0 fps · 0.0 ms</span>",
+    "          <span class=\"pg-sep\">·</span>",
+    "          <span id=\"ln-canvas-size\">0×0</span>",
+    "          <button id=\"ln-mute\" class=\"pg-mute-btn\" type=\"button\" aria-pressed=\"false\" aria-label=\"Toggle sound\">",
+    "            <svg viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\">",
+    "              <path class=\"pg-sound-body\" d=\"M2 6h3l4-3v10l-4-3H2z\"/>",
+    "              <path class=\"pg-sound-wave\" d=\"M11.5 5.2a4 4 0 0 1 0 5.6M13.5 3.4a6.5 6.5 0 0 1 0 9.2\"/>",
+    "              <path class=\"pg-sound-slash\" d=\"M11 5.5l4 5M15 5.5l-4 5\"/>",
+    "            </svg>",
+    "          </button>",
+    "        </span>",
+    "      </div>",
+    "      <div class=\"pg-canvas-stage\">",
+    "        <canvas id=\"ln-canvas\" class=\"pg-canvas\" width=\"240\" height=\"160\" tabindex=\"0\"></canvas>",
+    "      </div>",
+    "    </div>",
+    "    <pre id=\"ln-ts\" class=\"code-block pg-panel\" hidden><code></code></pre>",
+    "    <pre id=\"ln-c\" class=\"code-block pg-panel\" hidden><code></code></pre>",
+    "  </section>",
+    "</div>",
+    "<script type=\"module\">",
+    "  import { formatCodeView } from \"../../runtime/code-view.js\";",
+    "  import { bindCodeModeButtons, bindLiteEditor, bindSplitPane } from \"../../runtime/editor-client.js\";",
+    "  import { highlightC, highlightLite, highlightTs } from \"../../runtime/highlight.js\";",
+    "  import { createPlayStage, createWorkerClient } from \"../../runtime/play-stage.js\";",
+    "",
+    "  const lessonId = " + json.quoteString(itemId) + ";",
+    "  const lessonSlug = " + json.quoteString(itemSlug) + ";",
+    "  const isCliLesson = " + isCliJson + ";",
+    "  const isPlayLesson = " + isPlayJson + ";",
+    "  const lessonEnvironment = " + json.quoteString(itemEnv) + ";",
+    "  const initialSource = " + safeJsonForScript(json.quoteString(itemSource)) + ";",
+    "  const initialStdinDisplay = " + safeJsonForScript(json.quoteString(itemStdinDisplay)) + ";",
+    "  const initialArgsDisplay = " + safeJsonForScript(json.quoteString(itemArgsDisplay)) + ";",
+    "  const initialExtraModules = " + safeJsonForScript(itemExtraModulesRawJson) + ";",
+    "",
+    "  const workbenchEl = document.getElementById(\"ln-workbench\");",
+    "  const splitEl = document.getElementById(\"ln-split\");",
+    "  const sidebarToggleBtn = document.getElementById(\"ln-sidebar-toggle\");",
+    "  const editorEl = document.getElementById(\"ln-editor\");",
+    "  const editorGutterEl = document.getElementById(\"ln-editor-gutter\");",
+    "  const editorPreEl = document.getElementById(\"ln-editor-pre\").querySelector(\"code\");",
+    "  const cursorEl = document.getElementById(\"ln-cursor\");",
+    "  const stdinEl = document.getElementById(\"ln-stdin\");",
+    "  const argsEl = document.getElementById(\"ln-args\");",
+    "  const statusEl = document.getElementById(\"ln-status\");",
+    "  const runBtn = document.getElementById(\"ln-run\");",
+    "  const resetBtn = document.getElementById(\"ln-reset\");",
+    "  const copyBtn = document.getElementById(\"ln-copy\");",
+    "  const completeBtn = document.getElementById(\"ln-complete\");",
+    "  const outputEl = document.getElementById(\"ln-output\");",
+    "  const tsEl = document.getElementById(\"ln-ts\").querySelector(\"code\");",
+    "  const cEl = document.getElementById(\"ln-c\").querySelector(\"code\");",
+    "  const tabOutput = document.getElementById(\"ln-tab-output\");",
+    "  const tabCanvas = document.getElementById(\"ln-tab-canvas\");",
+    "  const tabTs = document.getElementById(\"ln-tab-ts\");",
+    "  const tabC = document.getElementById(\"ln-tab-c\");",
+    "  const codeModesEl = document.getElementById(\"ln-code-modes\");",
+    "  const canvasWrap = document.getElementById(\"ln-canvas-wrap\");",
+    "  const canvas = document.getElementById(\"ln-canvas\");",
+    "  const canvasTitleEl = document.getElementById(\"ln-canvas-title\");",
+    "  const canvasSizeEl = document.getElementById(\"ln-canvas-size\");",
+    "  const fpsEl = document.getElementById(\"ln-fps\");",
+    "  const pauseBtn = document.getElementById(\"ln-pause\");",
+    "  const muteBtn = document.getElementById(\"ln-mute\");",
+    "",
+    "  let payloadData = null;",
+    "  let activeTab = isPlayLesson ? \"canvas\" : \"output\";",
+    "  let codeMode = \"program\";",
+    "  let lastRawTs = \"\";",
+    "  let lastRawC = \"\";",
+    "",
+    "  const SIDEBAR_COLLAPSE_KEY = \"lite.learn.sidebar\";",
+    "  function applySidebarCollapsed(collapsed, save) {",
+    "    if (workbenchEl) workbenchEl.classList.toggle(\"is-sidebar-collapsed\", collapsed);",
+    "    if (sidebarToggleBtn) {",
+    "      sidebarToggleBtn.setAttribute(\"aria-pressed\", collapsed ? \"true\" : \"false\");",
+    "      sidebarToggleBtn.textContent = collapsed ? \"Show Tracks\" : \"Hide Tracks\";",
+    "    }",
+    "    if (save) {",
+    "      try { localStorage.setItem(SIDEBAR_COLLAPSE_KEY, collapsed ? \"1\" : \"0\"); } catch {}",
+    "    }",
+    "  }",
+    "  try {",
+    "    if (localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === \"1\") applySidebarCollapsed(true, false);",
+    "  } catch {}",
+    "  if (sidebarToggleBtn) {",
+    "    sidebarToggleBtn.addEventListener(\"click\", () => {",
+    "      const next = !(workbenchEl && workbenchEl.classList.contains(\"is-sidebar-collapsed\"));",
+    "      applySidebarCollapsed(next, true);",
+    "    });",
+    "  }",
+    "",
+    "  if (splitEl && workbenchEl) {",
+    "    bindSplitPane({",
+    "      splitEl,",
+    "      containerEl: workbenchEl,",
+    "      cssVar: \"--ln-split\",",
+    "      storageKey: \"lite.learn.split\",",
+    "      defaultPct: 50,",
+    "      minPct: 28,",
+    "      maxPct: 72,",
+    "    });",
+    "  }",
+    "",
+    "  function loadProgress() {",
+    "    try {",
+    "      const raw = localStorage.getItem(\"lite-learn-progress-v1\");",
+    "      if (raw) {",
+    "        const parsed = JSON.parse(raw);",
+    "        if (parsed && typeof parsed === \"object\") return parsed;",
+    "      }",
+    "    } catch {}",
+    "    return {};",
+    "  }",
+    "",
+    "  function syncProgressUi() {",
+    "    const progress = loadProgress();",
+    "    const done = Boolean(progress[lessonId]);",
+    "    completeBtn.setAttribute(\"aria-pressed\", done ? \"true\" : \"false\");",
+    "    completeBtn.textContent = done ? \"Completed (Click to Unmark)\" : \"Mark Lesson Complete\";",
+    "    for (const el of document.querySelectorAll(\"[data-nav-lesson]\")) {",
+    "      const id = el.getAttribute(\"data-nav-lesson\");",
+    "      if (id && progress[id]) el.classList.add(\"is-completed\");",
+    "      else el.classList.remove(\"is-completed\");",
+    "    }",
+    "    if (window.LiteAcademy && typeof window.LiteAcademy.refresh === \"function\") {",
+    "      window.LiteAcademy.refresh();",
+    "    }",
+    "  }",
+    "",
+    "  completeBtn.addEventListener(\"click\", () => {",
+    "    const progress = loadProgress();",
+    "    if (progress[lessonId]) delete progress[lessonId];",
+    "    else progress[lessonId] = true;",
+    "    try { localStorage.setItem(\"lite-learn-progress-v1\", JSON.stringify(progress)); } catch {}",
+    "    syncProgressUi();",
+    "  });",
+    "  syncProgressUi();",
+    "",
+    "  const workerClient = createWorkerClient(\"../../runtime/worker.js\");",
+    "  const stage = createPlayStage({",
+    "    canvas,",
+    "    workerClient,",
+    "    sizeEl: canvasSizeEl,",
+    "    titleEl: canvasTitleEl,",
+    "    fpsEl,",
+    "    pauseBtn,",
+    "    muteBtn,",
+    "    isCanvasVisible: () => activeTab === \"canvas\",",
+    "    onStatus: (s) => { statusEl.textContent = s; },",
+    "    onError: (stderr) => {",
+    "      statusEl.textContent = \"Play error\";",
+    "      outputEl.textContent = stderr || \"Canvas update failed.\";",
+    "      showTab(\"output\");",
+    "    },",
+    "  });",
+    "",
+    "  const editorCtrl = bindLiteEditor({",
+    "    editor: editorEl,",
+    "    preCode: editorPreEl,",
+    "    highlight: highlightLite,",
+    "    indent: \"    \",",
+    "    gutter: editorGutterEl,",
+    "    cursorEl,",
+    "    autoIndent: true,",
+    "    onInput: () => {",
+    "      lastRawC = \"\";",
+    "    },",
+    "    onRun: () => {",
+    "      stage.unlockAudio();",
+    "      void executeCurrent();",
+    "    },",
+    "  });",
+    "",
+    "  function renderCodeTabs() {",
+    "    tsEl.innerHTML = lastRawTs ? highlightTs(formatCodeView(lastRawTs, \"ts\", codeMode)) : \"\";",
+    "    cEl.innerHTML = lastRawC ? highlightC(formatCodeView(lastRawC, \"c\", codeMode)) : \"\";",
+    "  }",
+    "",
+    "  function showTab(tab) {",
+    "    activeTab = tab;",
+    "    outputEl.hidden = tab !== \"output\";",
+    "    canvasWrap.hidden = tab !== \"canvas\";",
+    "    document.getElementById(\"ln-ts\").hidden = tab !== \"ts\";",
+    "    document.getElementById(\"ln-c\").hidden = tab !== \"c\";",
+    "    codeModesEl.hidden = tab !== \"ts\" && tab !== \"c\";",
+    "    if (copyBtn) copyBtn.hidden = tab === \"canvas\";",
+    "    tabOutput.setAttribute(\"aria-selected\", tab === \"output\" ? \"true\" : \"false\");",
+    "    tabCanvas.setAttribute(\"aria-selected\", tab === \"canvas\" ? \"true\" : \"false\");",
+    "    tabTs.setAttribute(\"aria-selected\", tab === \"ts\" ? \"true\" : \"false\");",
+    "    tabC.setAttribute(\"aria-selected\", tab === \"c\" ? \"true\" : \"false\");",
+    "    if (tab === \"ts\" || tab === \"c\") renderCodeTabs();",
+    "    stage.syncPauseUi(tab === \"canvas\", false);",
+    "    if (tab === \"canvas\") stage.resumeLoop();",
+    "    else stage.pauseLoop();",
+    "  }",
+    "  tabOutput.addEventListener(\"click\", () => showTab(\"output\"));",
+    "  tabCanvas.addEventListener(\"click\", () => showTab(\"canvas\"));",
+    "  tabTs.addEventListener(\"click\", () => showTab(\"ts\"));",
+    "  tabC.addEventListener(\"click\", () => {",
+    "    showTab(\"c\");",
+    "    if (!lastRawC) void requestCompileC();",
+    "  });",
+    "",
+    "  bindCodeModeButtons({",
+    "    buttons: document.querySelectorAll(\"#ln-code-modes .code-mode-btn\"),",
+    "    onChange: (mode) => {",
+    "      codeMode = mode;",
+    "      renderCodeTabs();",
+    "    },",
+    "  });",
+    "",
+    "  if (copyBtn) {",
+    "    let copyTimer = 0;",
+    "    copyBtn.addEventListener(\"click\", () => {",
+    "      const txt = activeTab === \"ts\" ? (tsEl.textContent || \"\") : activeTab === \"c\" ? (cEl.textContent || \"\") : (outputEl.textContent || \"\");",
+    "      if (!txt || !navigator.clipboard || !navigator.clipboard.writeText) return;",
+    "      navigator.clipboard.writeText(txt).then(() => {",
+    "        copyBtn.textContent = \"Copied\";",
+    "        copyBtn.classList.add(\"copied\");",
+    "        if (copyTimer) window.clearTimeout(copyTimer);",
+    "        copyTimer = window.setTimeout(() => {",
+    "          copyBtn.textContent = \"Copy\";",
+    "          copyBtn.classList.remove(\"copied\");",
+    "        }, 1500);",
+    "      }, () => {});",
+    "    });",
+    "  }",
+    "",
+    "  async function requestCompileC() {",
+    "    const res = await workerClient.call(\"compile-c\", {",
+    "      source: editorEl.value,",
+    "      extraModules: payloadData ? payloadData.extraModules : initialExtraModules,",
+    "    });",
+    "    if (res.ok && res.c) {",
+    "      lastRawC = String(res.c);",
+    "      renderCodeTabs();",
+    "    } else if (res.stderr) {",
+    "      lastRawC = \"/* \" + res.stderr + \" */\";",
+    "      renderCodeTabs();",
+    "    }",
+    "  }",
+    "",
+    "  async function executeCurrent() {",
+    "    stage.stop();",
+    "    editorCtrl.clearErrors();",
+    "    const stdinDecoded = stdinEl.value.replaceAll(\"\\\\n\", \"\\n\");",
+    "    const argsList = argsEl.value.trim() ? argsEl.value.trim().split(/\\s+/) : [];",
+    "    const extraModules = payloadData ? payloadData.extraModules : initialExtraModules;",
+    "    statusEl.textContent = isCliLesson ? \"Compiling TS...\" : \"Running...\";",
+    "    lastRawC = \"\";",
+    "",
+    "    const action = isCliLesson ? \"compile\" : \"run\";",
+    "    const res = await workerClient.call(action, {",
+    "      source: editorEl.value,",
+    "      stdin: stdinDecoded,",
+    "      args: argsList,",
+    "      extraModules,",
+    "    });",
+    "    lastRawTs = res.ts ? String(res.ts) : \"\";",
+    "    renderCodeTabs();",
+    "",
+    "    if (!res.ok) {",
+    "      editorCtrl.setErrorFromStderr(res.stderr || \"\");",
+    "      statusEl.textContent = \"Error\";",
+    "      outputEl.textContent = res.stderr || \"Compilation or execution failed.\";",
+    "      showTab(\"output\");",
+    "      return;",
+    "    }",
+    "",
+    "    if (isCliLesson) {",
+    "      statusEl.textContent = \"Compiled TS cleanly (run locally with ./bin/lite run for host I/O)\";",
+    "      return;",
+    "    }",
+    "",
+    "    if (Array.isArray(res.tones) && res.tones.length > 0) stage.playTones(res.tones);",
+    "    const frame = res.play || res.canvas;",
+    "    if (frame && frame.width > 0 && frame.height > 0) {",
+    "      tabCanvas.hidden = false;",
+    "      stage.startSession(frame, Boolean(res.play));",
+    "      showTab(\"canvas\");",
+    "      stage.syncPauseUi(true, true);",
+    "      statusEl.textContent = res.play ? \"Play frame active\" : \"Canvas rendered\";",
+    "      return;",
+    "    }",
+    "",
+    "    tabCanvas.hidden = true;",
+    "    outputEl.textContent = res.stdout || (res.stderr ? res.stderr : \"(no output)\");",
+    "    if (res.stderr && res.stdout) outputEl.textContent += \"\\n[stderr]\\n\" + res.stderr;",
+    "    statusEl.textContent = \"Ran in browser\";",
+    "    showTab(\"output\");",
+    "  }",
+    "",
+    "  const openPlayBtn = document.getElementById(\"ln-open-play\");",
+    "  if (openPlayBtn) {",
+    "    openPlayBtn.addEventListener(\"click\", (event) => {",
+    "      const isUnmodified = editorEl.value.trimEnd() === initialSource.trimEnd() &&",
+    "        stdinEl.value === initialStdinDisplay &&",
+    "        argsEl.value === initialArgsDisplay;",
+    "      if (isUnmodified) return;",
+    "      if (window.LiteSnips && typeof window.LiteSnips.openInPlayground === \"function\") {",
+    "        event.preventDefault();",
+    "        const bundledModules = payloadData && payloadData.extraModules ? payloadData.extraModules : initialExtraModules;",
+    "        window.LiteSnips.openInPlayground({",
+    "          title: " + json.quoteString(itemTitle) + ",",
+    "          code: editorEl.value,",
+    "          stdin: stdinEl.value.replaceAll(\"\\\\n\", \"\\n\"),",
+    "          args: argsEl.value,",
+    "          origin: \"learn:\" + lessonId,",
+    "          extraModules: bundledModules && Object.keys(bundledModules).length > 0 ? bundledModules : null,",
+    "          environment: lessonEnvironment,",
+    "        });",
+    "      }",
+    "    });",
+    "  }",
+    "",
+    "  runBtn.addEventListener(\"click\", () => { stage.unlockAudio(); void executeCurrent(); });",
+    "  resetBtn.addEventListener(\"click\", () => {",
+    "    if (!payloadData) return;",
+    "    stage.stop();",
+    "    editorCtrl.clearErrors();",
+    "    stdinEl.value = (payloadData.stdin || \"\").replace(/\\n/g, \"\\\\n\");",
+    "    argsEl.value = (payloadData.args || []).join(\" \");",
+    "    outputEl.textContent = payloadData.output || \"(no stdout output)\";",
+    "    lastRawTs = payloadData.ts || \"\";",
+    "    lastRawC = \"\";",
+    "    editorCtrl.setValue(payloadData.source);",
+    "    renderCodeTabs();",
+    "    statusEl.textContent = \"Reset to lesson source\";",
+    "  });",
+    "",
+    "  fetch(\"../payloads/\" + encodeURIComponent(lessonSlug) + \".json\")",
+    "    .then((r) => r.json())",
+    "    .then((data) => {",
+    "      payloadData = data;",
+    "      lastRawTs = data.ts || \"\";",
+    "      renderCodeTabs();",
+    "      if (isPlayLesson) void executeCurrent();",
+    "    })",
+    "    .catch(() => {});",
+    "</script>"
+    ];
+    text.joinTexts(lines, "\n")
+};
+
+/** Builds `/learn/` index, lesson pages, JSON payloads, and search entries from stdin JSON. */
+pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, error: String) {
+    valid := json.validate(inputJson);
+    if not valid.ok {
+        return (ok = false, jsonText = "", error = "site-learn: invalid input JSON: " + valid.error);
+    }
+    repoUrl := readOptStr(inputJson, 0, "repoUrl");
+
+    tracksField := json.findObjectField(inputJson, 0, "tracks");
+    itemsField := json.findObjectField(inputJson, 0, "items");
+    if not tracksField.found or not itemsField.found {
+        return (ok = false, jsonText = "", error = "site-learn: input JSON requires tracks and items");
+    }
+
+    trackOffs := json.arrayElementOffsets(inputJson, tracksField.valuePos);
+    itemOffs := json.arrayElementOffsets(inputJson, itemsField.valuePos);
+
+    itemIds: mut List<String> = [];
+    loop itemOffs as iPos {
+        list.pushBack(mut itemIds, readOptStr(inputJson, iPos, "id"));
+    }
+
+    pagesJson: mut List<String> = [];
+    indexBody := renderIndexBody(inputJson, trackOffs, itemOffs, itemIds);
+    indexPageObj := "{"
+    + "\"relPath\":\"learn/index.html\","
+    + "\"title\":\"Learn — Lite\","
+    + "\"description\":\"Interactive Lite language curriculum, showcase guides, and browser-runnable project tutorials.\","
+    + "\"basePath\":\"../\","
+    + "\"mainClass\":\"\","
+    + "\"body\":" + json.quoteString(indexBody)
+    + "}";
+    list.pushBack(mut pagesJson, indexPageObj);
+
+    payloadsJson: mut List<String> = [];
+    searchEntriesJson: mut List<String> = [];
+    var lessonCount := 0;
+    var tutorialCount := 0;
+    var idx := 0;
+    totalItems := list.listCountInt(itemOffs);
+    loop idx < totalItems {
+        iPos := itemOffs[idx];
+        itId := readOptStr(inputJson, iPos, "id");
+        itSlug := readOptStr(inputJson, iPos, "slug");
+        itTrackId := readOptStr(inputJson, iPos, "trackId");
+        itTrackTitle := readOptStr(inputJson, iPos, "trackTitle");
+        itTitle := readOptStr(inputJson, iPos, "title");
+        itKind := readOptStr(inputJson, iPos, "kind");
+        itEnv := readOptStr(inputJson, iPos, "environment");
+        itSourceFile := readOptStr(inputJson, iPos, "sourceFile");
+        itOutPath := readOptStr(inputJson, iPos, "outPath");
+        itSource := readOptStr(inputJson, iPos, "source");
+        itGeneratedTs := readOptStr(inputJson, iPos, "generatedTs");
+        itOutput := readOptStr(inputJson, iPos, "output");
+        itStdin := readOptStr(inputJson, iPos, "stdin");
+        itArgsRaw := readRawField(inputJson, iPos, "args", "[]");
+        itExtraModulesRaw := readRawField(inputJson, iPos, "extraModules", "{}");
+        itTeaches := readStringList(inputJson, iPos, "teaches");
+
+        if itKind == "tutorial" {
+            tutorialCount = tutorialCount + 1;
+        } else {
+            lessonCount = lessonCount + 1;
+        }
+
+        body := renderLessonBody(inputJson, idx, itemOffs, itemIds, trackOffs, repoUrl);
+        pageObj := "{"
+        + "\"relPath\":" + json.quoteString(itOutPath) + ","
+        + "\"title\":" + json.quoteString(itTitle + " — Learn — Lite") + ","
+        + "\"description\":" + json.quoteString(itTrackTitle + ": " + itTitle) + ","
+        + "\"basePath\":\"../../\","
+        + "\"mainClass\":\"learn-main\","
+        + "\"body\":" + json.quoteString(body)
+        + "}";
+        list.pushBack(mut pagesJson, pageObj);
+
+        payloadContent := "{"
+        + "\"id\":" + json.quoteString(itId) + ","
+        + "\"slug\":" + json.quoteString(itSlug) + ","
+        + "\"trackId\":" + json.quoteString(itTrackId) + ","
+        + "\"title\":" + json.quoteString(itTitle) + ","
+        + "\"environment\":" + json.quoteString(itEnv) + ","
+        + "\"source\":" + json.quoteString(itSource) + ","
+        + "\"ts\":" + json.quoteString(itGeneratedTs) + ","
+        + "\"output\":" + json.quoteString(itOutput) + ","
+        + "\"stdin\":" + json.quoteString(itStdin) + ","
+        + "\"args\":" + itArgsRaw + ","
+        + "\"extraModules\":" + itExtraModulesRaw
+        + "}";
+        payloadObj := "{"
+        + "\"relPath\":" + json.quoteString("learn/payloads/" + itSlug + ".json") + ","
+        + "\"content\":" + json.quoteString(payloadContent)
+        + "}";
+        list.pushBack(mut payloadsJson, payloadObj);
+
+        badge := if itKind == "tutorial" { "Tutorial" } else { "Lesson" };
+        seObj := "{"
+        + "\"kind\":\"learn\","
+        + "\"title\":" + json.quoteString(itTitle) + ","
+        + "\"subtitle\":" + json.quoteString(itTrackTitle + " · " + text.joinTexts(itTeaches, ", ")) + ","
+        + "\"href\":" + json.quoteString(itOutPath) + ","
+        + "\"keywords\":" + json.quoteString(itSlug + " " + itTrackId + " " + text.joinTexts(itTeaches, " ") + " " + itSourceFile) + ","
+        + "\"badge\":" + json.quoteString(badge)
+        + "}";
+        list.pushBack(mut searchEntriesJson, seObj);
+
+        idx = idx + 1;
+    }
+
+    outJson := "{"
+    + "\"lessonCount\":" + integer.intText(lessonCount) + ","
+    + "\"tutorialCount\":" + integer.intText(tutorialCount) + ","
+    + "\"pages\":[" + text.joinTexts(pagesJson, ",") + "],"
+    + "\"payloads\":[" + text.joinTexts(payloadsJson, ",") + "],"
+    + "\"searchEntries\":[" + text.joinTexts(searchEntriesJson, ",") + "]"
+    + "}";
+    (ok = true, jsonText = outJson, error = "")
+};
