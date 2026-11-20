@@ -78,8 +78,9 @@ the others still lack their current layer.
 ## Current position and parked work
 
 - **Active pass:** fourth layer, concrete syntax and semantics.
-- **Next topic:** 1. Core types and values, beginning with primitives and
-  literals; keep comparable depth across the ten areas.
+- **Current topic:** 7. Collections. The review has reached string comparison
+  and hashing. Resume with the remaining collection questions before topic 8.
+  Keep comparable depth across the ten areas.
 - **Joint layer completion:** the ten first-layer outlines, second-layer
   connection summaries, and third-layer main rules and tradeoffs were discussed
   through topic 10. These breadth passes do

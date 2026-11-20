@@ -1,6 +1,6 @@
 # Language review: ten foundational areas
 
-Status: **first three layers discussed; fourth layer starting**. This is a non-normative
+Status: **first three layers discussed; fourth layer at collections and text**. This is a non-normative
 investigation for the joint, one-at-a-time review. Current selections remain the
 baseline until explicitly revised; initial judgments are starting hypotheses,
 not approval, implementation evidence, or a substitute for concrete decisions.
@@ -8,7 +8,7 @@ The latest source and owning pages must be rechecked when each discussion starts
 
 The agreed [onion review method](review-method.md) works through all ten areas
 at one level of depth before returning for a deeper layer. The current position
-is the fourth layer, starting with primitive values and literals. Each review keeps five stable subtopics,
+is the fourth layer, currently at collections and text. Each review keeps five stable subtopics,
 records baseline evidence, concrete probes, tradeoffs, open questions, and links
 to related areas. When a discussion exposes a cross-topic issue, record it at the
 owning topic and return to the active question; bring a prerequisite forward only
@@ -38,6 +38,7 @@ The following notes include compiler evidence, benefits, costs, blockers and pro
 - [4. Enums and variants](04-enums.md)
 - [5. Functions and calls](05-functions.md)
 - [6. Control flow and patterns](06-control-flow.md)
+  - [Loop result and metadata review](loop-metadata-review.md)
 - [7. Collections](07-collections.md)
 - [8. Errors, panics, and cleanup](08-failure-cleanup.md)
 - [9. Modules and public APIs](09-modules.md)
