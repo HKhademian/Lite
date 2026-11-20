@@ -5,14 +5,27 @@ import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../igniter/artifacts.ts';
+import { academyClientJs } from './academy-state.ts';
 import { buildSite, parseBuildArgs } from './build.ts';
 import { formatCodeView } from './code-view.ts';
-import { bindCodeModeButtons, bindLiteEditor } from './editor-client.ts';
+import {
+  bindCodeModeButtons,
+  bindLiteEditor,
+  bindSplitPane,
+  computeAutoIndent,
+  computeCursorLineCol,
+  computeOutdent,
+  decodeSharePayload,
+  encodeSharePayload,
+  parseErrorLines,
+  renderLineNumbersHtml,
+} from './editor-client.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
+import { mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
-import { renderCodeEditorBlock, renderCodeModeBar } from './ui-blocks.ts';
+import { renderCodeEditorBlock, renderCodeModeBar, renderSplitHandle } from './ui-blocks.ts';
 
 const root = dirname(import.meta.dirname);
 let cachedTsCompiler: CompilerBuild | undefined;
@@ -1347,7 +1360,13 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
   assert.equal(cliLesson?.environment, 'cli', 'expected files-paths-and-cleanup to carry environment=cli in library.json');
 
   assert.equal(createdBars.length, 1);
+  const runBtn = createdBars[0]!.buttons.find(b => b.textContent.includes('Run'));
+  const copyBtn = createdBars[0]!.buttons.find(b => b.textContent === 'Copy');
+  const saveBtn = createdBars[0]!.buttons.find(b => b.textContent === 'Save');
   const playBtn = createdBars[0]!.buttons.find(b => b.textContent.includes('Open in Play'));
+  assert(runBtn, 'expected inline Run button on Lite code block');
+  assert(copyBtn, 'expected Copy button on Lite code block');
+  assert(saveBtn, 'expected Save button on Lite code block');
   assert(playBtn, 'expected Open in Play button on Lite code block');
   playBtn.click();
   assert(mockWin.location.href.startsWith('../../playground/?snip='), mockWin.location.href);
@@ -1429,4 +1448,162 @@ test('stripLiteTs and formatCodeView handle construct-level finally and abrupt u
   assert.equal(faultRes.exitCode, 1);
   assert.equal(faultRes.stdout, 'inner\nouter\n');
   assert.equal(faultRes.stderr, 'fault.lts:4:23: ArithmeticPanic: division by zero\n');
+});
+
+test('editor-client helpers: line numbers, error parsing, auto-indent, outdent, share codec, and split pane', () => {
+  assert.deepEqual(parseErrorLines('playground.lts:4:9: unknown name\nplayground.lts:12:1: mismatch\nplayground.lts:4:10: dup'), [4, 12]);
+  assert.deepEqual(parseErrorLines('Syntax error on line 7'), [7]);
+  assert.deepEqual(parseErrorLines(''), []);
+
+  const gutterHtml = renderLineNumbersHtml(4, [3], 2);
+  assert(gutterHtml.includes('<span class="ed-ln">1</span>'));
+  assert(gutterHtml.includes('<span class="ed-ln is-active">2</span>'));
+  assert(gutterHtml.includes('<span class="ed-ln is-error">3</span>'));
+  assert(gutterHtml.includes('<span class="ed-ln">4</span>'));
+
+  assert.deepEqual(computeCursorLineCol('ab\ncde\nf', 5), { line: 2, col: 3 });
+
+  const openBrace = computeAutoIndent('main := fn() {}', 14, '    ');
+  assert.equal(openBrace.text, '\n    \n');
+  assert.equal(openBrace.cursorOffset, 5);
+
+  const afterBrace = computeAutoIndent('    if ok {', 11, '    ');
+  assert.equal(afterBrace.text, '\n        ');
+
+  const outdented = computeOutdent('    a := 1;\n        b := 2;', 4, 18, '    ');
+  assert(outdented !== null);
+  assert.equal(outdented.value, 'a := 1;\n    b := 2;');
+
+  const encoded = encodeSharePayload({ title: 'Demo Aé', code: 'io.outputLine("Hi!");', stdin: '1\n', args: 'x' });
+  assert(!encoded.includes('+') && !encoded.includes('/') && !encoded.includes('='));
+  assert.deepEqual(decodeSharePayload(encoded), { title: 'Demo Aé', code: 'io.outputLine("Hi!");', stdin: '1\n', args: 'x' });
+  assert.equal(decodeSharePayload('!!!bad!!!'), null);
+
+  const splitHandleHtml = renderSplitHandle({ id: 'demo-split', ariaLabel: 'Resize demo' });
+  assert(splitHandleHtml.includes('id="demo-split"'));
+  assert(splitHandleHtml.includes('role="separator"'));
+
+  const listeners = new Map<string, Array<(ev: unknown) => void>>();
+  const attrs = new Map<string, string>();
+  const props = new Map<string, string>();
+  const stored = new Map<string, string>([['demo.split', '62']]);
+  const splitCtrl = bindSplitPane({
+    splitEl: {
+      classList: { add() {}, remove() {} },
+      setAttribute(k, v) { attrs.set(k, v); },
+      addEventListener(type, fn) { (listeners.get(type) ?? (() => { const a: Array<(ev: unknown) => void> = []; listeners.set(type, a); return a; })()).push(fn); },
+    },
+    containerEl: {
+      style: { setProperty(k, v) { props.set(k, v); } },
+      getBoundingClientRect: () => ({ left: 0, width: 1000 }),
+    },
+    storageKey: 'demo.split',
+    storage: {
+      getItem: (k) => stored.get(k) ?? null,
+      setItem: (k, v) => { stored.set(k, v); },
+    },
+  });
+  assert.equal(props.get('--pg-split'), '62%');
+  assert.equal(attrs.get('aria-valuenow'), '62');
+  splitCtrl.setPct(99, true);
+  assert.equal(props.get('--pg-split'), '78%');
+  assert.equal(stored.get('demo.split'), '78');
+});
+
+test('play-stage helpers: renderFrameToImageData and mapPointerToCell', () => {
+  const buf = new Uint8ClampedArray(4 * 4 * 4);
+  renderFrameToImageData({ width: 4, height: 4, ops: [1, 0xff112233, 2, 1, 1, 2, 2, 0xff445566] }, buf, 4, 4);
+  // Clear pixel (0, 0) ARGB 0xff112233 -> RGBA (0x11, 0x22, 0x33, 0xff)
+  assert.deepEqual([buf[0], buf[1], buf[2], buf[3]], [0x11, 0x22, 0x33, 0xff]);
+  // Rect pixel (1, 1) -> offset (1 * 4 + 1) * 4 = 20 -> RGBA (0x44, 0x55, 0x66, 0xff)
+  assert.deepEqual([buf[20], buf[21], buf[22], buf[23]], [0x44, 0x55, 0x66, 0xff]);
+
+  renderFrameToImageData({ width: 2, height: 2, pixels: [0x80aabbcc, 0, 0, 0] }, buf, 2, 2);
+  assert.deepEqual([buf[0], buf[1], buf[2], buf[3]], [0xaa, 0xbb, 0xcc, 0x80]);
+
+  const cell = mapPointerToCell(150, 100, { left: 0, top: 0, width: 300, height: 200 }, 30, 20);
+  assert.deepEqual(cell, { x: 15, y: 10 });
+  const letterboxed = mapPointerToCell(100, 100, { left: 0, top: 0, width: 400, height: 200 }, 20, 20);
+  assert.deepEqual(letterboxed, { x: 0, y: 10 });
+});
+
+test('academy-state runtime initializes window.LiteAcademy and aggregates progress', () => {
+  const storage = new Map<string, string>([
+    ['lite-learn-progress-v1', JSON.stringify({ 'learn.a': true, 'learn.b': false })],
+    ['lite-gym-progress-v1', JSON.stringify({ solved: { 'gym.1': true, 'gym.2': true }, drafts: {} })],
+    ['lite.snips.v1', JSON.stringify([{ id: '1', code: 'x' }])],
+  ]);
+  const hbNav = {
+    attrs: new Map<string, string>([['data-handbook-nav-slug', 'tuples-arrays-lists-and-aliases']]),
+    classes: new Set<string>(),
+    getAttribute(k: string) { return this.attrs.get(k) ?? null; },
+    classList: {
+      add(c: string) { hbNav.classes.add(c); },
+      remove(c: string) { hbNav.classes.delete(c); },
+    },
+    addEventListener() {},
+  };
+  const resumeBar = { hidden: true };
+  const lessonsStat = { textContent: '' };
+  const gymStat = { textContent: '' };
+  const hbStat = { textContent: '' };
+  const snipsStat = { textContent: '' };
+  const mockWin: Record<string, unknown> = {
+    location: { href: 'https://example.test/docs/handbook/tuples-arrays-lists-and-aliases.html' },
+    localStorage: {
+      getItem: (k: string) => storage.get(k) ?? null,
+      setItem: (k: string, v: string) => { storage.set(k, v); },
+    },
+  };
+  const mockDoc = {
+    readyState: 'complete',
+    title: 'Tuples',
+    body: { dataset: { basePath: '../../' }, classList: { add() {}, remove() {}, contains: () => false } },
+    querySelector(sel: string) {
+      if (sel === '[data-handbook-slug]') {
+        return {
+          getAttribute: () => 'tuples-arrays-lists-and-aliases',
+          querySelector: () => ({ textContent: 'Tuples, Arrays, Lists & Aliases' }),
+        };
+      }
+      return null;
+    },
+    querySelectorAll(sel: string) {
+      if (sel === '[data-handbook-nav-slug]') return [hbNav];
+      return [];
+    },
+    getElementById(id: string) {
+      if (id === 'academy-resume-bar') return resumeBar;
+      if (id === 'academy-stat-lessons') return lessonsStat;
+      if (id === 'academy-stat-gym') return gymStat;
+      if (id === 'academy-stat-handbook') return hbStat;
+      if (id === 'academy-stat-snips') return snipsStat;
+      return null;
+    },
+    addEventListener() {},
+  };
+  runInNewContext(academyClientJs, {
+    window: mockWin,
+    document: mockDoc,
+    navigator: {},
+    Date,
+    Array,
+    JSON,
+    Set,
+    setTimeout,
+  });
+  const academy = mockWin['LiteAcademy'] as {
+    getSummary: () => { lessonsDone: number; gymSolved: number; handbookReadCount: number; snipsCount: number };
+  };
+  assert(academy);
+  const summary = academy.getSummary();
+  assert.equal(summary.lessonsDone, 1);
+  assert.equal(summary.gymSolved, 2);
+  assert.equal(summary.handbookReadCount, 1);
+  assert.equal(summary.snipsCount, 1);
+  assert(hbNav.classes.has('is-completed'));
+  assert.equal(resumeBar.hidden, false);
+  assert.equal(lessonsStat.textContent, '1');
+  assert.equal(gymStat.textContent, '2');
+  assert.equal(hbStat.textContent, '1');
 });

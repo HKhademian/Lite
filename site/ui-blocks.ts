@@ -1,5 +1,6 @@
-/** Shared HTML builders for interactive code editors and inspector toolbars. */
+/** Shared HTML builders for interactive code editors, split handles, and inspector toolbars. */
 
+import { renderLineNumbersHtml } from './editor-client.ts';
 import { escapeHtml } from './highlight.ts';
 
 export interface CodeEditorBlockOptions {
@@ -7,6 +8,8 @@ export interface CodeEditorBlockOptions {
   ariaLabel: string;
   preId?: string;
   preCodeId?: string;
+  gutterId?: string;
+  showLineNumbers?: boolean;
   minHeight?: string;
   initialSource?: string;
   initialHtml?: string;
@@ -18,26 +21,50 @@ export interface CodeModeBarOptions {
   ariaLabel?: string;
 }
 
+export interface SplitHandleOptions {
+  id: string;
+  ariaLabel: string;
+  initialPct?: number;
+  title?: string;
+}
+
 const CODE_MODES: readonly Readonly<{ mode: string; label: string }>[] = [
   { mode: 'program', label: 'Program' },
   { mode: 'portable', label: 'Portable' },
   { mode: 'full', label: 'Full' },
 ];
 
-/** Renders the synchronized syntax-highlighted backdrop and editable `.pg-editor-input` textarea. */
+/** Renders the synchronized line-number gutter, syntax-highlighted backdrop, and editable `.pg-editor-input` textarea. */
 export function renderCodeEditorBlock(options: Readonly<CodeEditorBlockOptions>): string {
   const wrapStyle = options.minHeight ? ` style="min-height: ${escapeHtml(options.minHeight)};"` : '';
   const preIdAttr = options.preId ? ` id="${escapeHtml(options.preId)}"` : '';
   const preCodeIdAttr = options.preCodeId ? ` id="${escapeHtml(options.preCodeId)}"` : '';
+  const gutterIdAttr = options.gutterId ? ` id="${escapeHtml(options.gutterId)}"` : '';
   const initialHtml = options.initialHtml ?? '';
+  const initialSource = options.initialSource ?? '';
   const initialEscaped = options.initialSource !== undefined ? escapeHtml(options.initialSource) : '';
+  const showLines = options.showLineNumbers ?? true;
+  const lineCount = initialSource === '' ? 1 : initialSource.split('\n').length;
+  const gutterHtml = showLines
+    ? `  <div${gutterIdAttr} class="pg-editor-gutter" aria-hidden="true">${renderLineNumbersHtml(lineCount, [], 1)}</div>`
+    : '';
 
   return [
     `<div class="pg-editor-wrap"${wrapStyle}>`,
-    `  <pre${preIdAttr} class="pg-editor-pre" aria-hidden="true"><code${preCodeIdAttr}>${initialHtml}</code></pre>`,
-    `  <textarea id="${escapeHtml(options.textareaId)}" class="pg-editor-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="${escapeHtml(options.ariaLabel)}">${initialEscaped}</textarea>`,
+    ...(gutterHtml ? [gutterHtml] : []),
+    `  <div class="pg-editor-body">`,
+    `    <pre${preIdAttr} class="pg-editor-pre" aria-hidden="true"><code${preCodeIdAttr}>${initialHtml}</code></pre>`,
+    `    <textarea id="${escapeHtml(options.textareaId)}" class="pg-editor-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="${escapeHtml(options.ariaLabel)}">${initialEscaped}</textarea>`,
+    `  </div>`,
     `</div>`,
   ].join('\n');
+}
+
+/** Renders a keyboard- and pointer-accessible vertical resize handle between two workbench panes. */
+export function renderSplitHandle(options: Readonly<SplitHandleOptions>): string {
+  const pct = Math.round(options.initialPct ?? 50);
+  const title = options.title ?? 'Drag to resize panes (double-click to reset 50/50)';
+  return `<div id="${escapeHtml(options.id)}" class="pg-split" role="separator" aria-orientation="vertical" aria-label="${escapeHtml(options.ariaLabel)}" aria-valuemin="22" aria-valuemax="78" aria-valuenow="${String(pct)}" tabindex="0" title="${escapeHtml(title)}"></div>`;
 }
 
 /** Renders the Program / Portable / Full toggle bar shared by Play, Learn, and Gym. */
