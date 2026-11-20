@@ -67,3 +67,13 @@ For `run_twice`, compare a stateless callback, independent copied counter, read-
 Bindings (2), errors (8), and generics (10) affect calls and callback contracts. Record new decisions with their owning area; return to this review after the dependency is understood.
 
 Related preliminary notes: [2](02-bindings.md), [8](08-failure-cleanup.md), [10](10-generics-comptime.md).
+
+## Joint review: callable contracts and grants
+
+A function type describes the callable contract. A function value supplies an implementation. A type alias can name the contract. The current review covers captureless function values. Capture rules are undecided, including returning a function that retains writable access granted by an earlier call.
+
+Argument omission belongs to the public function type. The default expression belongs to the implementation. The discussion used `fn(value: Int, factor: Int?): Int` as the public type and `(v, f = 2) { v * f }` as the implementation. Public labels route supplied values, and receiver names are local. A combined declaration with `factor: Int = 2` expresses both concepts. The placement of the omission marker in these sketches needs reconciliation with the earlier grammar.
+
+The user corrected the review's writable-parameter example: `var` applies inside the function body, and `mut` is declared in the function header. A call that grants writable access must express consent explicitly and already possess the access being granted. Grant syntax remains open. The correction needs reconciliation with existing documents describing caller-slot `var` parameters.
+
+A zero-initialized callable returns all-zero of its declared result type after ordinary evaluation of supplied arguments. The zero implementation does not evaluate omitted defaults. Where there is no declared result type, the body can determine it unambiguously. The final expression supplies a block's value. Untagged return and failure transfers target the innermost enclosing function, subject to their respective rules.
