@@ -211,6 +211,28 @@ already typed `count: Int`. Whether a later `v = 20` can realize the fresh
 Int-Like literal as `UserID` remains undecided. This example does not settle
 the general inference rules for writes to mutable bindings.
 
+The joint review confirmed that lexical nesting, source order, and branch
+reachability give no priority to a use. All uses that resolve to the same
+binding contribute to the same inference problem, including uses in a branch
+whose condition is already known at compile time. For example:
+
+```text
+v := 10;
+isUser := true;
+if isUser {
+    findUser(v); /* expects UserID */
+} else {
+    findRoom(v); /* expects RoomID */
+}
+```
+
+The two requirements conflict even though the second call cannot execute.
+Reversing branch order, changing which branch will execute, or adding another
+block around a use leaves the conflict intact as long as both names still
+resolve to the same binding. Branch elimination preserves this source-level
+check. A shadowing declaration changes which binding a use constrains under
+the [lexical lookup rule](../../../docs/local-shadowing-and-copies.md#inner-declarations-shadow-across-kinds).
+
 This direction is under investigation, not an implemented rule. Scope of
 “relevant uses,” compatible constraints, ambiguity, recursion, public APIs,
 diagnostics, unused bindings, and the precise commitment point remain to be
