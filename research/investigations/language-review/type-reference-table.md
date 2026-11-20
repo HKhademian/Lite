@@ -88,6 +88,14 @@ guarantee for dynamic internal type references; see [persistence](#user-directio
   unions need identity rules too. A module/local-number pair for declarations
   alone does not yet define canonical identities for all composite types.
 
+## Joint review: which forms need their own entry?
+
+A transparent alias resolves to its target and needs no independent type identity entry. An unapplied generic can have a named declaration in compile-time metadata. A particular instantiation is a separate question. Its declaration and resolved arguments can describe it, with identity following the instantiated type's rules. A distinct type declaration introduces its own identity even when it shares another type's layout.
+
+Structural unions and outcomes can be described directly in interface metadata. A union is described by its normalized member identities. An outcome is described by its ordered success and failure types. This avoids assigning a declared type-table entry to every composed spelling. A composed type can still occupy a position that needs a runtime discriminator. For example, the outcome in `(Int ! FileError) | String` is one member of the outer union. If Kind stores member type references directly, that member needs a resolvable reference in the relevant scope. A union-local tag mapping could represent the same alternative with a different scheme. Keep compile-time identity, table interning, and runtime tag encoding separate. The decision about when to allocate a reference remains open.
+
+Check that aliases preserve identity, reordered union spellings resolve to the same type, outcome success and failure roles remain distinct, and independently built components agree on the tag for an outcome used as a union member. No table layout or implementation is selected here.
+
 ## Assignment and separate builds
 
 1. **Coordinated identifiers:** a registry or published package/module identity
