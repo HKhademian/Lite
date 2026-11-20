@@ -260,6 +260,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(gymIndex.includes('Problem Workouts (25)'));
   assert(gymIndex.includes('Export JSON'));
   assert(gymIndex.includes('Import JSON'));
+  assert(gymIndex.includes('id="gym-search"'));
+  assert(gymIndex.includes('data-filter-domain='));
+  assert(!gymIndex.includes('42 browser-graded'));
   for (const gymRel of [
     'gym/drills/immutable-vs-var.html',
     'gym/drills/record-shorthand-destructure.html',
@@ -274,6 +277,12 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const astDojo = readFileSync(join(out, 'gym/workouts/expression-ast-eval.html'), 'utf8');
   assert(astDojo.includes('Submit &amp; Grade'));
   assert(astDojo.includes('../../runtime/worker.js'));
+  assert(astDojo.includes('../../runtime/play-stage.js'));
+  assert(astDojo.includes('class="md-prose doc-prose"'));
+  assert(astDojo.includes('id="gym-editor-gutter"'));
+  assert(astDojo.includes('id="gym-split"'));
+  assert(astDojo.includes('id="gym-tab-scratch"'));
+  assert(astDojo.includes('gym-sidebar'));
   assert(astDojo.includes('Reveal Reference Solution'));
   const drillDojo = readFileSync(join(out, 'gym/drills/immutable-vs-var.html'), 'utf8');
   assert(drillDojo.includes('<textarea id="gym-editor" class="pg-editor-input"'));

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "title": "Lite Gym — Drills & Workouts Catalog",
-  "description": "42 browser-graded exercises combining 18 Litelings concept drills and 24 belt-ranked problem workouts across White, Amber, Emerald, and Obsidian tiers.",
+  "description": "45 browser-graded exercises combining 20 Litelings concept drills and 25 belt-ranked problem workouts across White, Amber, Emerald, and Obsidian tiers.",
   "exercises": [
     {
       "id": "drills.foundations.bindings.immutable-vs-var",
