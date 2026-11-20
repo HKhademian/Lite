@@ -1,0 +1,604 @@
+/** Generates `/`, `/gallery/`, and `/playground/` page bodies (`site/build.ts`). */
+
+integer := import "core/int";
+list := import "core/list";
+text := import "core/text";
+json := import "util/json";
+siteTools := import "./tools.lts";
+
+escapeHtml := siteTools.escapeSiteHtml;
+
+readOptStr := fn(src: String, objPos: Int, key: String): String {
+    res := json.readObjectString(src, objPos, key);
+    if res.found and res.ok { res.value } else { "" }
+};
+
+readOptInt := fn(src: String, objPos: Int, key: String): Int {
+    res := json.readObjectInt(src, objPos, key);
+    if res.found and res.ok { res.value } else { 0 }
+};
+
+readOptBool := fn(src: String, objPos: Int, key: String): Bool {
+    res := json.readObjectBool(src, objPos, key);
+    if res.found and res.ok { res.value } else { false }
+};
+
+readStringList := fn(src: String, objPos: Int, key: String): List<String> {
+    out: mut List<String> = [];
+    fld := json.findObjectField(src, objPos, key);
+    if not fld.found { return out; }
+    offs := json.arrayElementOffsets(src, fld.valuePos);
+    loop offs as off {
+        r := json.readStringAt(src, off);
+        if r.ok {
+            list.pushBack(mut out, r.value);
+        }
+    }
+    out
+};
+
+findById := fn(src: String, offs: List<Int>, targetId: String): Int {
+    loop offs as pos {
+        if readOptStr(src, pos, "id") == targetId { return pos; }
+    }
+    -1
+};
+
+lastSlashSegment := fn(s: String): String {
+    n := text.length(s);
+    var i := n - 1;
+    loop i >= 0 {
+        if text.at(s, i) == "/" {
+            return text.slice(s, i + 1, n);
+        }
+        i = i - 1;
+    }
+    s
+};
+
+renderSampleCard := fn(src: String, sPos: Int, basePath: String, includeNote: Bool): String {
+    id := readOptStr(src, sPos, "id");
+    title := readOptStr(src, sPos, "title");
+    note := readOptStr(src, sPos, "note");
+    file := readOptStr(src, sPos, "file");
+    args := readStringList(src, sPos, "args");
+    stdin := readOptStr(src, sPos, "stdin");
+    showOutput := readOptBool(src, sPos, "showOutput");
+    sourceHtml := readOptStr(src, sPos, "sourceHtml");
+    output := readOptStr(src, sPos, "output");
+
+    inputParts: mut List<String> = [];
+    if list.listCountText(args) > 0 {
+        list.pushBack(mut inputParts, "args: " + text.joinTexts(args, " "));
+    }
+    if stdin =!= "" {
+        list.pushBack(mut inputParts, "stdin: " + json.quoteString(stdin));
+    }
+    metaText := if list.listCountText(inputParts) > 0 { text.joinTexts(inputParts, " · ") } else { file };
+    noteBlock := if includeNote { "<p class=\"sample-note\">" + escapeHtml(note) + "</p>" } else { "" };
+    outputBlock := if showOutput {
+        "<div class=\"output-block\">\n"
+        + "    <div class=\"output-label\">Output</div>\n"
+        + "    <pre>" + escapeHtml(text.trimEnd(output)) + "</pre>\n"
+        + "  </div>"
+    } else {
+        ""
+    };
+
+    lines: List<String> = [
+    "<article class=\"code-card\" id=\"sample-" + escapeHtml(id) + "\">",
+    "  <div class=\"code-card-head\">",
+    "    <span class=\"code-card-title\">" + escapeHtml(title) + "</span>",
+    "    <span class=\"code-card-meta\">" + escapeHtml(metaText) + "</span>",
+    "  </div>",
+    "  " + noteBlock,
+    "  <pre class=\"code-block\"><code>" + sourceHtml + "</code></pre>",
+    "  " + outputBlock,
+    "  <footer class=\"sample-foot\">",
+    "    <a href=\"" + basePath + "playground/?sample=" + escapeHtml(id) + "\">Play &rarr;</a>",
+    "  </footer>",
+    "</article>"
+    ];
+    text.joinTexts(lines, "\n")
+};
+
+renderHomeBody := fn(src: String, renderedOffs: List<Int>): String {
+    repoUrl := readOptStr(src, 0, "repoUrl");
+    brandWordmark := readOptStr(src, 0, "brandWordmark");
+    proseLite := readOptStr(src, 0, "proseLite");
+    heroSampleId := readOptStr(src, 0, "heroSampleId");
+    heroSampleFile := readOptStr(src, 0, "heroSampleFile");
+
+    countsField := json.findObjectField(src, 0, "counts");
+    cPos := if countsField.found { countsField.valuePos } else { 0 };
+    lessons := integer.intText(readOptInt(src, cPos, "lessons"));
+    tutorials := integer.intText(readOptInt(src, cPos, "tutorials"));
+    drills := integer.intText(readOptInt(src, cPos, "drills"));
+    workouts := integer.intText(readOptInt(src, cPos, "workouts"));
+    docsPages := integer.intText(readOptInt(src, cPos, "docsPages"));
+    modules := integer.intText(readOptInt(src, cPos, "modules"));
+
+    heroPos := findById(src, renderedOffs, heroSampleId);
+    heroCard := if heroPos >= 0 { renderSampleCard(src, heroPos, "", false) } else { "" };
+
+    featuredIds: List<String> = ["double-sum", "factorial", "decisions", "script-arguments"];
+    featuredCards: mut List<String> = [];
+    loop featuredIds as fid {
+        fPos := findById(src, renderedOffs, fid);
+        if fPos >= 0 {
+            list.pushBack(mut featuredCards, renderSampleCard(src, fPos, "", true));
+        }
+    }
+
+    cloneUrl := if repoUrl =!= "" { repoUrl + ".git" } else { "<repository-url>" };
+    rawDir := if repoUrl =!= "" { lastSlashSegment(repoUrl) } else { "Lite" };
+    cloneDir := if rawDir =!= "" { rawDir } else { "Lite" };
+
+    lines: List<String> = [
+    "<section class=\"hero\">",
+    "  <div>",
+    "    <div class=\"hero-display\">",
+    "      " + brandWordmark,
+    "      <h1>is light.</h1>",
+    "    </div>",
+    "    <p class=\"hero-lead\">",
+    "      A small, explicit language and self-hosted compiler designed for low runtime weight,",
+    "      clear consequences, and readable code.",
+    "    </p>",
+    "    <div class=\"hero-actions\">",
+    "      <a class=\"btn btn-primary\" href=\"playground/\">Play online</a>",
+    "      <a class=\"btn\" href=\"learn/\">Start Learning</a>",
+    "    </div>",
+    "    <div class=\"quickstart\" role=\"region\" aria-label=\"Quickstart shell commands\">",
+    "      <div class=\"quickstart-head\">",
+    "        <span class=\"quickstart-title\">",
+    "          <span class=\"quickstart-dots\" aria-hidden=\"true\"><span></span><span></span><span></span></span>",
+    "          <span class=\"quickstart-label\">shell</span>",
+    "        </span>",
+    "        <button id=\"quickstart-copy\" class=\"quickstart-copy\" type=\"button\" aria-label=\"Copy shell commands\">Copy</button>",
+    "      </div>",
+    "      <pre class=\"quickstart-body\"><code><span class=\"shell-line\"><span class=\"shell-cmd\">git</span> clone " + escapeHtml(cloneUrl) + "</span>",
+    "<span class=\"shell-line\"><span class=\"shell-cmd\">cd</span> " + escapeHtml(cloneDir) + "</span>",
+    "<span class=\"shell-line\"><span class=\"shell-cmd\">./bin/lite</span> run " + escapeHtml(heroSampleFile) + "</span></code></pre>",
+    "    </div>",
+    "    <script>",
+    "      (function () {",
+    "        var copyBtn = document.getElementById(\"quickstart-copy\");",
+    "        if (!copyBtn) return;",
+    "        var timer = 0;",
+    "        copyBtn.addEventListener(\"click\", function () {",
+    "          var lines = Array.prototype.map.call(",
+    "            document.querySelectorAll(\".quickstart-body .shell-line\"),",
+    "            function (el) { return el.textContent || \"\"; }",
+    "          );",
+    "          var text = lines.join(\"\\n\");",
+    "          function markCopied() {",
+    "            copyBtn.textContent = \"Copied\";",
+    "            copyBtn.classList.add(\"copied\");",
+    "            if (timer) window.clearTimeout(timer);",
+    "            timer = window.setTimeout(function () {",
+    "              copyBtn.textContent = \"Copy\";",
+    "              copyBtn.classList.remove(\"copied\");",
+    "            }, 1600);",
+    "          }",
+    "          if (navigator.clipboard && navigator.clipboard.writeText) {",
+    "            navigator.clipboard.writeText(text).then(markCopied, function () {});",
+    "          } else {",
+    "            var ta = document.createElement(\"textarea\");",
+    "            ta.value = text;",
+    "            ta.setAttribute(\"readonly\", \"\");",
+    "            ta.style.position = \"fixed\";",
+    "            ta.style.opacity = \"0\";",
+    "            document.body.appendChild(ta);",
+    "            ta.select();",
+    "            try { if (document.execCommand(\"copy\")) markCopied(); } catch (e) {}",
+    "            document.body.removeChild(ta);",
+    "          }",
+    "        });",
+    "      })();",
+    "    </script>",
+    "  </div>",
+    "  " + heroCard,
+    "</section>",
+    "",
+    "<section class=\"section\">",
+    "  <div class=\"section-head\">",
+    "    <h2>Lite Academy</h2>",
+    "    <span class=\"code-card-meta\">Learn &middot; Gym &middot; Docs &middot; Play</span>",
+    "  </div>",
+    "  <p class=\"section-note\">One unified studio bringing together guided lessons, in-browser katas, live runnable docs, and a multi-backend playground.</p>",
+    "  <div id=\"academy-resume-bar\" class=\"academy-resume-bar\" hidden>",
+    "    <div class=\"academy-stats\">",
+    "      <strong id=\"academy-resume-title\">Your Academy Progress</strong>",
+    "      <span class=\"academy-stat-chip\"><strong id=\"academy-stat-lessons\">0</strong> Lessons</span>",
+    "      <span class=\"academy-stat-chip\"><strong id=\"academy-stat-gym\">0</strong> Gym Solved</span>",
+    "      <span class=\"academy-stat-chip\"><strong id=\"academy-stat-handbook\">0</strong> Handbook Read</span>",
+    "      <span class=\"academy-stat-chip\"><strong id=\"academy-stat-snips\">0</strong> Sketches</span>",
+    "    </div>",
+    "    <a id=\"academy-resume-link\" class=\"btn btn-primary\" href=\"learn/\">Resume Learning &rarr;</a>",
+    "  </div>",
+    "  <div class=\"academy-pillar-grid\">",
+    "    <article class=\"portal-card\">",
+    "      <div class=\"portal-card-head\">",
+    "        <h3><a href=\"learn/\">Learn Studio</a></h3>",
+    "        <span class=\"badge\">" + lessons + " lessons &middot; " + tutorials + " tutorials</span>",
+    "      </div>",
+    "      <p>Guided curriculum across core language abilities with split-pane live execution and interactive Play tutorials.</p>",
+    "      <div class=\"portal-card-foot\">",
+    "        <a href=\"learn/\">Start Learning &rarr;</a>",
+    "      </div>",
+    "    </article>",
+    "    <article class=\"portal-card\">",
+    "      <div class=\"portal-card-head\">",
+    "        <h3><a href=\"gym/\">Lite Gym</a></h3>",
+    "        <span class=\"badge\">" + drills + " drills &middot; " + workouts + " workouts</span>",
+    "      </div>",
+    "      <p>Litelings diagnostic drills and belt-ranked multi-test katas graded in-browser with custom stdin sandbox.</p>",
+    "      <div class=\"portal-card-foot\">",
+    "        <a href=\"gym/\">Enter Gym &rarr;</a>",
+    "      </div>",
+    "    </article>",
+    "    <article class=\"portal-card\">",
+    "      <div class=\"portal-card-head\">",
+    "        <h3><a href=\"docs/\">Docs &amp; Handbook</a></h3>",
+    "        <span class=\"badge\">" + docsPages + " pages</span>",
+    "      </div>",
+    "      <p>Runnable 7-chapter Shipped Handbook alongside status-badged design, proposal, and compiler specifications.</p>",
+    "      <div class=\"portal-card-foot\">",
+    "        <a href=\"docs/\">Read Docs &rarr;</a>",
+    "      </div>",
+    "    </article>",
+    "    <article class=\"portal-card\">",
+    "      <div class=\"portal-card-head\">",
+    "        <h3><a href=\"playground/\">Play Studio</a></h3>",
+    "        <span class=\"badge\">TS &middot; C &middot; Canvas</span>",
+    "      </div>",
+    "      <p>Write Lite in-browser with live TS/C codegen inspection, 60fps Canvas &amp; Audio stage, and shareable sketches.</p>",
+    "      <div class=\"portal-card-foot\">",
+    "        <a href=\"playground/\">Play &rarr;</a>",
+    "      </div>",
+    "    </article>",
+    "  </div>",
+    "  <div class=\"academy-ref-strip\">",
+    "    <span><strong>References &amp; Tooling:</strong> Auto-generated API reference for all " + modules + " shipped <code>core/*</code> &amp; <code>extra/*</code> modules, CLI workflows, and VS Code support.</span>",
+    "    <div class=\"academy-ref-links\">",
+    "      <a href=\"modules/\">References &rarr;</a>",
+    "      <a href=\"tools/\">Tools &rarr;</a>",
+    "    </div>",
+    "  </div>",
+    "</section>",
+    "",
+    "<section class=\"section\">",
+    "  <div class=\"section-head\">",
+    "    <h2>Design Principles</h2>",
+    "  </div>",
+    "  <div class=\"pillars\">",
+    "    <div class=\"pillar\">",
+    "      <h3>Explicit Behavior</h3>",
+    "      <p>Consequential operations—prompts, output, mutation, and imports—are always visible in source.</p>",
+    "    </div>",
+    "    <div class=\"pillar\">",
+    "      <h3>Low Runtime Weight</h3>",
+    "      <p>Generated artifacts run cleanly with minimal support code today and target native C ahead.</p>",
+    "    </div>",
+    "    <div class=\"pillar\">",
+    "      <h3>Verified Toolchain</h3>",
+    "      <p>Every showcased example is compiled and executed by the " + proseLite + " compiler at build time.</p>",
+    "    </div>",
+    "  </div>",
+    "</section>",
+    "",
+    "<section class=\"section\">",
+    "  <div class=\"section-head\">",
+    "    <h2>Featured Examples</h2>",
+    "    <a href=\"gallery/\">Explore Gallery (" + integer.intText(list.listCountInt(renderedOffs)) + " samples) &rarr;</a>",
+    "  </div>",
+    "  <div class=\"sample-grid\">",
+    "    " + text.joinTexts(featuredCards, "\n"),
+    "  </div>",
+    "</section>"
+    ];
+    text.joinTexts(lines, "\n")
+};
+
+renderGalleryCard := fn(src: String, sPos: Int, basePath: String): String {
+    id := readOptStr(src, sPos, "id");
+    title := readOptStr(src, sPos, "title");
+    note := readOptStr(src, sPos, "note");
+    file := readOptStr(src, sPos, "file");
+    badge := readOptStr(src, sPos, "badge");
+    previewSvg := readOptStr(src, sPos, "previewSvg");
+    sourceHtml := readOptStr(src, sPos, "sourceHtml");
+
+    badgeHtml := if badge =!= "" {
+        "<span class=\"gallery-badge\">" + escapeHtml(badge) + "</span>"
+    } else {
+        "<span class=\"code-card-meta\">" + escapeHtml(file) + "</span>"
+    };
+    lines: List<String> = [
+    "<article class=\"code-card\" id=\"sample-" + escapeHtml(id) + "\">",
+    "  <div class=\"code-card-head\">",
+    "    <span class=\"code-card-title\">" + escapeHtml(title) + "</span>",
+    "    " + badgeHtml,
+    "  </div>",
+    "  " + previewSvg,
+    "  <p class=\"sample-note\" style=\"flex: 1;\">" + escapeHtml(note) + "</p>",
+    "  <details class=\"gallery-code\">",
+    "    <summary>Source (" + escapeHtml(file) + ")</summary>",
+    "    <pre class=\"code-block\"><code>" + sourceHtml + "</code></pre>",
+    "  </details>",
+    "  <footer class=\"sample-foot\">",
+    "    <a href=\"" + basePath + "playground/?sample=" + escapeHtml(id) + "\">Play &rarr;</a>",
+    "  </footer>",
+    "</article>"
+    ];
+    text.joinTexts(lines, "\n")
+};
+
+renderGalleryBody := fn(
+src: String,
+sampleGroupOffs: List<Int>,
+playGroupOffs: List<Int>,
+renderedOffs: List<Int>,
+renderedPlayOffs: List<Int>
+): String {
+    proseLite := readOptStr(src, 0, "proseLite");
+
+    langJumps: mut List<String> = [];
+    langSections: mut List<String> = [];
+    loop sampleGroupOffs as gPos {
+        gId := readOptStr(src, gPos, "id");
+        gTitle := readOptStr(src, gPos, "title");
+        gDesc := readOptStr(src, gPos, "description");
+        gFolder := readOptStr(src, gPos, "folder");
+        cards: mut List<String> = [];
+        loop renderedOffs as sPos {
+            if readOptStr(src, sPos, "group") == gId {
+                list.pushBack(mut cards, renderGalleryCard(src, sPos, "../"));
+            }
+        }
+        cnt := integer.intText(list.listCountText(cards));
+        list.pushBack(mut langJumps, "<a class=\"gallery-jump\" href=\"#group-" + escapeHtml(gId) + "\">" + escapeHtml(gTitle) + " <span>" + cnt + "</span></a>");
+        badge := if gFolder =!= "" { "<span class=\"gallery-badge\">" + escapeHtml(gFolder) + "/</span>" } else { "" };
+        sLines: List<String> = [
+        "<section class=\"section\" id=\"group-" + escapeHtml(gId) + "\">",
+        "  <div class=\"section-head\">",
+        "    <h2>" + escapeHtml(gTitle) + "</h2>",
+        "    " + badge,
+        "  </div>",
+        "  <p class=\"section-note\">" + escapeHtml(gDesc) + "</p>",
+        "  <div class=\"sample-grid\">",
+        "    " + text.joinTexts(cards, "\n"),
+        "  </div>",
+        "</section>"
+        ];
+        list.pushBack(mut langSections, text.joinTexts(sLines, "\n"));
+    }
+
+    playJumps: mut List<String> = [];
+    playSections: mut List<String> = [];
+    loop playGroupOffs as gPos {
+        gId := readOptStr(src, gPos, "id");
+        gTitle := readOptStr(src, gPos, "title");
+        gDesc := readOptStr(src, gPos, "description");
+        gFolder := readOptStr(src, gPos, "folder");
+        cards: mut List<String> = [];
+        loop renderedPlayOffs as sPos {
+            if readOptStr(src, sPos, "group") == gId {
+                list.pushBack(mut cards, renderGalleryCard(src, sPos, "../"));
+            }
+        }
+        cnt := integer.intText(list.listCountText(cards));
+        list.pushBack(mut playJumps, "<a class=\"gallery-jump\" href=\"#group-" + escapeHtml(gId) + "\">" + escapeHtml(gTitle) + " <span>" + cnt + "</span></a>");
+        sLines: List<String> = [
+        "<section class=\"section\" id=\"group-" + escapeHtml(gId) + "\">",
+        "  <div class=\"section-head\">",
+        "    <h2>" + escapeHtml(gTitle) + "</h2>",
+        "    <span class=\"gallery-badge\">" + escapeHtml(gFolder) + "/</span>",
+        "  </div>",
+        "  <p class=\"section-note\">" + escapeHtml(gDesc) + "</p>",
+        "  <div class=\"sample-grid\">",
+        "    " + text.joinTexts(cards, "\n"),
+        "  </div>",
+        "</section>"
+        ];
+        list.pushBack(mut playSections, text.joinTexts(sLines, "\n"));
+    }
+
+    lines: List<String> = [
+    "<section style=\"padding: 2rem 0 1.25rem;\">",
+    "  <h1 style=\"margin: 0 0 0.5rem;\">Gallery</h1>",
+    "  <p class=\"hero-lead\" style=\"margin: 0 0 1rem;\">",
+    "    All " + integer.intText(list.listCountInt(renderedOffs)) + " core &amp; program examples and " + integer.intText(list.listCountInt(renderedPlayOffs)) + " folder-grouped canvas, audio, and game showcases below are compiled and executed by the " + proseLite + " compiler during the site build.",
+    "  </p>",
+    "  <nav class=\"gallery-jumps\" aria-label=\"Gallery categories\">",
+    "    <div class=\"gallery-tier-line\">",
+    "      <span class=\"gallery-tier-label\">Language &amp; Programs</span>",
+    "      " + text.joinTexts(langJumps, "\n      "),
+    "    </div>",
+    "    <div class=\"gallery-tier-line\">",
+    "      <span class=\"gallery-tier-label\">Play &mdash; Canvas, Audio &amp; Games</span>",
+    "      " + text.joinTexts(playJumps, "\n      "),
+    "    </div>",
+    "  </nav>",
+    "</section>",
+    text.joinTexts(langSections, "\n"),
+    text.joinTexts(playSections, "\n")
+    ];
+    text.joinTexts(lines, "\n")
+};
+
+renderPlaygroundBody := fn(src: String): String {
+    defaultTitle := readOptStr(src, 0, "defaultSampleTitle");
+    editorBlockHtml := readOptStr(src, 0, "pgEditorBlockHtml");
+    codeModeBarHtml := readOptStr(src, 0, "pgCodeModeBarHtml");
+    scriptHtml := readOptStr(src, 0, "pgScriptHtml");
+
+    lines: List<String> = [
+    "<div id=\"pg-workbench\" class=\"workbench\">",
+    "  <section class=\"pane\" aria-label=\"Source editor\">",
+    "    <div class=\"pane-head\">",
+    "      <div class=\"sample-picker\">",
+    "        <button id=\"pg-sketches-btn\" class=\"btn pg-icon-btn\" type=\"button\" title=\"Open stored codes, samples, examples, cases, and pieces\" aria-label=\"Open stored codes, samples, examples, cases, or pieces\">",
+    "          <svg viewBox=\"0 0 16 16\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">",
+    "            <path d=\"M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 1.5h4.5A1.5 1.5 0 0 1 14 6v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12V4.5Z\"/>",
+    "          </svg>",
+    "          <span id=\"pg-sketches-count\" class=\"badge\">0</span>",
+    "        </button>",
+    "        <span id=\"pg-current-title\" class=\"pg-active-title\">" + escapeHtml(defaultTitle) + "</span>",
+    "      </div>",
+    "      <div class=\"pg-actions\">",
+    "        <button id=\"pg-save-snip\" class=\"btn pg-icon-btn pg-save-btn\" type=\"button\" hidden title=\"Save changes to localStorage (UUIDv7) and update URL\" aria-label=\"Save changes\">",
+    "          <svg viewBox=\"0 0 16 16\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">",
+    "            <path d=\"M12.5 14H3.5A1.5 1.5 0 0 1 2 12.5v-9A1.5 1.5 0 0 1 3.5 2h7l3.5 3.5v7A1.5 1.5 0 0 1 12.5 14Z\"/>",
+    "            <path d=\"M10.5 14v-4h-5v4M5.5 2v3h4\"/>",
+    "          </svg>",
+    "        </button>",
+    "        <button id=\"pg-reset\" class=\"btn\" type=\"button\" hidden title=\"Discard unsaved changes and reset\">Reset</button>",
+    "        <button id=\"pg-share\" class=\"btn\" type=\"button\" title=\"Encode sketch into shareable #code= URL and copy link\">Share</button>",
+    "        <button id=\"pg-compile\" class=\"btn\" type=\"button\">Compile</button>",
+    "        <button id=\"pg-play\" class=\"btn btn-primary\" type=\"button\" title=\"Run (Ctrl/Cmd + Enter)\">&#9654; Play</button>",
+    "      </div>",
+    "    </div>",
+    "    " + editorBlockHtml,
+    "    <div class=\"pg-io-strip\">",
+    "      <label class=\"pg-io-field\">args <input id=\"pg-args\" type=\"text\" placeholder=\"optional args\"></label>",
+    "      <label class=\"pg-io-field\">stdin <input id=\"pg-stdin\" type=\"text\" placeholder=\"optional stdin\"></label>",
+    "      <span id=\"pg-cursor\" class=\"ed-cursor-meta\">Ln 1, Col 1</span>",
+    "      <span id=\"pg-file\" class=\"pg-status\"></span>",
+    "    </div>",
+    "  </section>",
+    "",
+    "  <div id=\"pg-split\" class=\"pg-split\" role=\"separator\" aria-orientation=\"vertical\" aria-label=\"Resize editor and inspector panes\" aria-valuemin=\"20\" aria-valuemax=\"80\" aria-valuenow=\"50\" tabindex=\"0\" title=\"Drag to resize panes (double-click to reset 50/50)\"></div>",
+    "",
+    "  <section class=\"pane\" aria-label=\"Compiler and output inspector\">",
+    "    <div class=\"pane-head\">",
+    "      <div class=\"pg-tabs\" role=\"tablist\">",
+    "        <button class=\"pg-tab\" role=\"tab\" data-tab=\"output\" aria-selected=\"true\" type=\"button\">Output</button>",
+    "        <button class=\"pg-tab\" role=\"tab\" data-tab=\"ts\" aria-selected=\"false\" type=\"button\">Generated TS</button>",
+    "        <button class=\"pg-tab\" role=\"tab\" data-tab=\"c\" aria-selected=\"false\" type=\"button\">Generated C</button>",
+    "        <button id=\"tab-canvas\" class=\"pg-tab\" role=\"tab\" data-tab=\"canvas\" aria-selected=\"false\" type=\"button\" hidden>Canvas</button>",
+    "      </div>",
+    "      <div class=\"pg-actions\">",
+    "        <span id=\"pg-status\" class=\"pg-status\" aria-live=\"polite\">Ready</span>",
+    "        <button id=\"pg-pause\" class=\"pg-pause-btn\" type=\"button\" aria-pressed=\"false\" title=\"Playing — click to pause canvas events\" hidden>",
+    "          <svg viewBox=\"0 0 16 16\" width=\"11\" height=\"11\" fill=\"currentColor\" aria-hidden=\"true\">",
+    "            <path class=\"pg-icon-playing\" d=\"M4 2.5v11l9-5.5-9-5.5Z\"/>",
+    "            <g class=\"pg-icon-paused\"><rect x=\"3\" y=\"2.5\" width=\"3.5\" height=\"11\" rx=\"0.8\"/><rect x=\"9.5\" y=\"2.5\" width=\"3.5\" height=\"11\" rx=\"0.8\"/></g>",
+    "          </svg>",
+    "          <span id=\"pg-pause-label\">Playing</span>",
+    "        </button>",
+    "        <button id=\"pg-copy\" class=\"pg-copy-btn\" type=\"button\" aria-label=\"Copy inspector content\">Copy</button>",
+    "      </div>",
+    "    </div>",
+    "",
+    "    " + codeModeBarHtml,
+    "",
+    "    <div id=\"panel-output\" class=\"pg-panel\" role=\"tabpanel\">",
+    "      <pre class=\"code-block\"><code id=\"pg-output\"></code></pre>",
+    "    </div>",
+    "",
+    "    <div id=\"panel-ts\" class=\"pg-panel\" role=\"tabpanel\" hidden>",
+    "      <pre class=\"code-block\"><code id=\"pg-ts\"></code></pre>",
+    "    </div>",
+    "",
+    "    <div id=\"panel-c\" class=\"pg-panel\" role=\"tabpanel\" hidden>",
+    "      <pre class=\"code-block\"><code id=\"pg-c\"></code></pre>",
+    "    </div>",
+    "",
+    "    <div id=\"panel-canvas\" class=\"pg-panel\" role=\"tabpanel\" hidden>",
+    "      <div id=\"pg-canvas-wrap\" class=\"pg-canvas-wrap\">",
+    "        <div class=\"pg-canvas-bar\">",
+    "          <span id=\"pg-canvas-title\" class=\"pg-canvas-title\">Canvas Stage</span>",
+    "          <div class=\"pg-canvas-tools\">",
+    "            <span id=\"pg-fps\" class=\"pg-status\">0.0 fps &middot; 0.0 ms</span>",
+    "            <span class=\"pg-sep\" aria-hidden=\"true\">&middot;</span>",
+    "            <span id=\"pg-canvas-size\" class=\"pg-status\">(320x200)</span>",
+    "            <span class=\"pg-sep\" aria-hidden=\"true\">&middot;</span>",
+    "            <button id=\"pg-mute\" class=\"pg-mute-btn\" type=\"button\" aria-pressed=\"false\" aria-label=\"Sound on — click to mute\" title=\"Sound on — click to mute\">",
+    "              <svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">",
+    "                <path class=\"pg-sound-body\" d=\"M11 5 6 9H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3l5 4V5Z\" fill=\"currentColor\" fill-opacity=\"0.16\"/>",
+    "                <path class=\"pg-sound-wave\" d=\"M15.5 8.5a5 5 0 0 1 0 7\"/>",
+    "                <path class=\"pg-sound-wave\" d=\"M18.5 5.5a9 9 0 0 1 0 13\"/>",
+    "                <line class=\"pg-sound-slash\" x1=\"3.5\" y1=\"3.5\" x2=\"20.5\" y2=\"20.5\" stroke-width=\"2.2\"/>",
+    "              </svg>",
+    "            </button>",
+    "            <button id=\"pg-canvas-fullscreen\" class=\"pg-copy-btn\" type=\"button\" aria-pressed=\"false\" title=\"Toggle fullscreen stage\">Fullscreen</button>",
+    "          </div>",
+    "        </div>",
+    "        <div class=\"pg-canvas-stage\">",
+    "          <canvas id=\"pg-canvas\" class=\"pg-canvas\" tabindex=\"0\" width=\"320\" height=\"200\" aria-label=\"Lite Play canvas stage\"></canvas>",
+    "        </div>",
+    "      </div>",
+    "    </div>",
+    "  </section>",
+    "</div>",
+    "",
+    "<div id=\"pg-sketches-modal\" class=\"snips-modal-backdrop\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"pg-sketches-title\" hidden>",
+    "  <div class=\"snips-modal\">",
+    "    <div class=\"snips-modal-head\">",
+    "      <h2 id=\"pg-sketches-title\">Load &amp; Stored Sketches</h2>",
+    "      <div class=\"pg-actions\">",
+    "        <button id=\"pg-sketches-new\" class=\"btn btn-primary\" type=\"button\">+ New Sketch</button>",
+    "        <button id=\"pg-sketches-clear\" class=\"btn\" type=\"button\">Clear Saved</button>",
+    "        <button id=\"pg-sketches-close\" class=\"btn\" type=\"button\" aria-label=\"Close load explorer\">Close</button>",
+    "      </div>",
+    "    </div>",
+    "    <div class=\"snips-cat-tabs\" role=\"group\" aria-label=\"Starter templates\">",
+    "      <span class=\"code-card-meta\" style=\"align-self:center;margin-right:0.25rem;\">Templates:</span>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-template=\"hello\">Hello Lite</button>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-template=\"stdin\">Input &amp; Loops</button>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-template=\"canvas\">Canvas Scene</button>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-template=\"play\">Play Loop</button>",
+    "    </div>",
+    "    <div id=\"pg-sketches-cat-tabs\" class=\"snips-cat-tabs\" role=\"group\" aria-label=\"Code categories\">",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-cat=\"all\" aria-pressed=\"true\">All</button>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-cat=\"saved\" aria-pressed=\"false\">Saved</button>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-cat=\"sample\" aria-pressed=\"false\">Samples</button>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-cat=\"example\" aria-pressed=\"false\">Examples</button>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-cat=\"case\" aria-pressed=\"false\">Cases</button>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-cat=\"piece\" aria-pressed=\"false\">Pieces</button>",
+    "    </div>",
+    "    <div class=\"snips-modal-tools\">",
+    "      <input id=\"pg-sketches-filter\" type=\"search\" placeholder=\"Filter stored sketches, samples, examples, cases, and pieces...\" aria-label=\"Filter code entries\">",
+    "      <span id=\"pg-sketches-summary\" class=\"code-card-meta\">0 items</span>",
+    "    </div>",
+    "    <div id=\"pg-sketches-list\" class=\"snips-list\"></div>",
+    "  </div>",
+    "</div>",
+    "",
+    scriptHtml
+    ];
+    text.joinTexts(lines, "\n")
+};
+
+/** Builds `/`, `/gallery/`, and `/playground/` page bodies from stdin JSON. */
+pub buildSitePagesJson := fn(inputJson: String): (ok: Bool, jsonText: String, error: String) {
+    valid := json.validate(inputJson);
+    if not valid.ok {
+        return (ok = false, jsonText = "", error = "site-pages: invalid input JSON: " + valid.error);
+    }
+    sgField := json.findObjectField(inputJson, 0, "sampleGroups");
+    pgField := json.findObjectField(inputJson, 0, "playGroups");
+    rsField := json.findObjectField(inputJson, 0, "renderedSamples");
+    rpField := json.findObjectField(inputJson, 0, "renderedPlaySamples");
+    if not sgField.found or not pgField.found or not rsField.found or not rpField.found {
+        return (ok = false, jsonText = "", error = "site-pages: input JSON requires sampleGroups, playGroups, renderedSamples, and renderedPlaySamples");
+    }
+
+    sampleGroupOffs := json.arrayElementOffsets(inputJson, sgField.valuePos);
+    playGroupOffs := json.arrayElementOffsets(inputJson, pgField.valuePos);
+    renderedOffs := json.arrayElementOffsets(inputJson, rsField.valuePos);
+    renderedPlayOffs := json.arrayElementOffsets(inputJson, rpField.valuePos);
+
+    homeBody := renderHomeBody(inputJson, renderedOffs);
+    galleryBody := renderGalleryBody(inputJson, sampleGroupOffs, playGroupOffs, renderedOffs, renderedPlayOffs);
+    playgroundBody := renderPlaygroundBody(inputJson);
+
+    outJson := "{"
+    + "\"homeBody\":" + json.quoteString(homeBody) + ","
+    + "\"galleryBody\":" + json.quoteString(galleryBody) + ","
+    + "\"playgroundBody\":" + json.quoteString(playgroundBody)
+    + "}";
+    (ok = true, jsonText = outJson, error = "")
+};

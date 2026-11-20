@@ -5,7 +5,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, 
 import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../igniter/artifacts.ts';
+import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, ensureTool, type CompilerBuild } from '../igniter/artifacts.ts';
 import { academyClientJs } from './academy-state.ts';
 import { extractModules } from './docs-client.ts';
 import {
@@ -14,12 +14,11 @@ import {
   readRepositoryUrl,
   readSourceRevision,
   renderPage,
-  type SourceRevision,
 } from './chrome.ts';
 import { captureCanvasPreview } from './canvas-preview.ts';
 import { buildDocsSection, discoverDocsPayload } from './docs-pages.ts';
 import { heroSample, playgroundDefaultSample, sampleGroups, showcaseSamples, type ShowcaseSample } from './groups.ts';
-import { escapeHtml, highlightLite, highlightTs } from './highlight.ts';
+import { highlightLite, highlightTs } from './highlight.ts';
 import { buildGymSection } from './gym-pages.ts';
 import type { GymCatalog } from './gym-verify.ts';
 import { buildLearnSection, type LearnCatalog } from './learn-pages.ts';
@@ -27,6 +26,7 @@ import { buildLiteAcademyGraph, collectHtmlIds, validateBuiltSiteReferences } fr
 import { buildModulesSection } from './modules-pages.ts';
 import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
+import { renderPlaygroundClientScript } from './playground-client.ts';
 import { collectPlaygroundLibrary } from './playground-library.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
 import { renderCodeEditorBlock, renderCodeModeBar } from './ui-blocks.ts';
@@ -130,35 +130,6 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
   }
 }
 
-function renderSampleCard(sample: RenderedSample, basePath: string, includeNote = true): string {
-  const inputParts: string[] = [];
-  if (sample.args.length > 0) inputParts.push(`args: ${sample.args.join(' ')}`);
-  if (sample.stdin !== '') inputParts.push(`stdin: ${JSON.stringify(sample.stdin)}`);
-  const metaText = inputParts.length > 0 ? inputParts.join(' · ') : sample.file;
-  const noteBlock = includeNote
-    ? `<p class="sample-note">${escapeHtml(sample.note)}</p>`
-    : '';
-  const outputBlock = sample.showOutput === true
-    ? `<div class="output-block">
-    <div class="output-label">Output</div>
-    <pre>${escapeHtml(sample.output.trimEnd())}</pre>
-  </div>`
-    : '';
-
-  return `<article class="code-card" id="sample-${escapeHtml(sample.id)}">
-  <div class="code-card-head">
-    <span class="code-card-title">${escapeHtml(sample.title)}</span>
-    <span class="code-card-meta">${escapeHtml(metaText)}</span>
-  </div>
-  ${noteBlock}
-  <pre class="code-block"><code>${sample.sourceHtml}</code></pre>
-  ${outputBlock}
-  <footer class="sample-foot">
-    <a href="${basePath}playground/?sample=${escapeHtml(sample.id)}">Play &rarr;</a>
-  </footer>
-</article>`;
-}
-
 type EcosystemCounts = Readonly<{
   lessons: number;
   tutorials: number;
@@ -168,316 +139,16 @@ type EcosystemCounts = Readonly<{
   modules: number;
 }>;
 
-function renderHomePage(
-  rendered: ReadonlyMap<string, RenderedSample>,
-  repoUrl: string,
-  rev: SourceRevision,
-  lightSwitchShine: boolean,
-  counts: EcosystemCounts,
-): string {
-  const hero = rendered.get(heroSample.id);
-  if (hero === undefined) throw new Error('missing rendered hero sample');
-  const featuredIds = ['double-sum', 'factorial', 'decisions', 'script-arguments'];
-  const featuredCards = featuredIds
-    .map(id => rendered.get(id))
-    .filter((s): s is RenderedSample => s !== undefined)
-    .map(s => renderSampleCard(s, ''))
-    .join('\n');
-
-  const cloneUrl = repoUrl ? `${repoUrl}.git` : '<repository-url>';
-  const cloneDir = repoUrl ? (repoUrl.split('/').pop() || 'Lite') : 'Lite';
-
-  const body = `<section class="hero">
-  <div>
-    <div class="hero-display">
-      ${brandWordmark}
-      <h1>is light.</h1>
-    </div>
-    <p class="hero-lead">
-      A small, explicit language and self-hosted compiler designed for low runtime weight,
-      clear consequences, and readable code.
-    </p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="playground/">Play online</a>
-      <a class="btn" href="learn/">Start Learning</a>
-    </div>
-    <div class="quickstart" role="region" aria-label="Quickstart shell commands">
-      <div class="quickstart-head">
-        <span class="quickstart-title">
-          <span class="quickstart-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-          <span class="quickstart-label">shell</span>
-        </span>
-        <button id="quickstart-copy" class="quickstart-copy" type="button" aria-label="Copy shell commands">Copy</button>
-      </div>
-      <pre class="quickstart-body"><code><span class="shell-line"><span class="shell-cmd">git</span> clone ${escapeHtml(cloneUrl)}</span>
-<span class="shell-line"><span class="shell-cmd">cd</span> ${escapeHtml(cloneDir)}</span>
-<span class="shell-line"><span class="shell-cmd">./bin/lite</span> run ${escapeHtml(heroSample.file)}</span></code></pre>
-    </div>
-    <script>
-      (function () {
-        var copyBtn = document.getElementById("quickstart-copy");
-        if (!copyBtn) return;
-        var timer = 0;
-        copyBtn.addEventListener("click", function () {
-          var lines = Array.prototype.map.call(
-            document.querySelectorAll(".quickstart-body .shell-line"),
-            function (el) { return el.textContent || ""; }
-          );
-          var text = lines.join("\\n");
-          function markCopied() {
-            copyBtn.textContent = "Copied";
-            copyBtn.classList.add("copied");
-            if (timer) window.clearTimeout(timer);
-            timer = window.setTimeout(function () {
-              copyBtn.textContent = "Copy";
-              copyBtn.classList.remove("copied");
-            }, 1600);
-          }
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(markCopied, function () {});
-          } else {
-            var ta = document.createElement("textarea");
-            ta.value = text;
-            ta.setAttribute("readonly", "");
-            ta.style.position = "fixed";
-            ta.style.opacity = "0";
-            document.body.appendChild(ta);
-            ta.select();
-            try { if (document.execCommand("copy")) markCopied(); } catch (e) {}
-            document.body.removeChild(ta);
-          }
-        });
-      })();
-    </script>
-  </div>
-  ${renderSampleCard(hero, '', false)}
-</section>
-
-<section class="section">
-  <div class="section-head">
-    <h2>Lite Academy</h2>
-    <span class="code-card-meta">Learn &middot; Gym &middot; Docs &middot; Play</span>
-  </div>
-  <p class="section-note">One unified studio bringing together guided lessons, in-browser katas, live runnable docs, and a multi-backend playground.</p>
-  <div id="academy-resume-bar" class="academy-resume-bar" hidden>
-    <div class="academy-stats">
-      <strong id="academy-resume-title">Your Academy Progress</strong>
-      <span class="academy-stat-chip"><strong id="academy-stat-lessons">0</strong> Lessons</span>
-      <span class="academy-stat-chip"><strong id="academy-stat-gym">0</strong> Gym Solved</span>
-      <span class="academy-stat-chip"><strong id="academy-stat-handbook">0</strong> Handbook Read</span>
-      <span class="academy-stat-chip"><strong id="academy-stat-snips">0</strong> Sketches</span>
-    </div>
-    <a id="academy-resume-link" class="btn btn-primary" href="learn/">Resume Learning &rarr;</a>
-  </div>
-  <div class="academy-pillar-grid">
-    <article class="portal-card">
-      <div class="portal-card-head">
-        <h3><a href="learn/">Learn Studio</a></h3>
-        <span class="badge">${String(counts.lessons)} lessons &middot; ${String(counts.tutorials)} tutorials</span>
-      </div>
-      <p>Guided curriculum across core language abilities with split-pane live execution and interactive Play tutorials.</p>
-      <div class="portal-card-foot">
-        <a href="learn/">Start Learning &rarr;</a>
-      </div>
-    </article>
-    <article class="portal-card">
-      <div class="portal-card-head">
-        <h3><a href="gym/">Lite Gym</a></h3>
-        <span class="badge">${String(counts.drills)} drills &middot; ${String(counts.workouts)} workouts</span>
-      </div>
-      <p>Litelings diagnostic drills and belt-ranked multi-test katas graded in-browser with custom stdin sandbox.</p>
-      <div class="portal-card-foot">
-        <a href="gym/">Enter Gym &rarr;</a>
-      </div>
-    </article>
-    <article class="portal-card">
-      <div class="portal-card-head">
-        <h3><a href="docs/">Docs &amp; Handbook</a></h3>
-        <span class="badge">${String(counts.docsPages)} pages</span>
-      </div>
-      <p>Runnable 7-chapter Shipped Handbook alongside status-badged design, proposal, and compiler specifications.</p>
-      <div class="portal-card-foot">
-        <a href="docs/">Read Docs &rarr;</a>
-      </div>
-    </article>
-    <article class="portal-card">
-      <div class="portal-card-head">
-        <h3><a href="playground/">Play Studio</a></h3>
-        <span class="badge">TS &middot; C &middot; Canvas</span>
-      </div>
-      <p>Write Lite in-browser with live TS/C codegen inspection, 60fps Canvas &amp; Audio stage, and shareable sketches.</p>
-      <div class="portal-card-foot">
-        <a href="playground/">Play &rarr;</a>
-      </div>
-    </article>
-  </div>
-  <div class="academy-ref-strip">
-    <span><strong>References &amp; Tooling:</strong> Auto-generated API reference for all ${String(counts.modules)} shipped <code>core/*</code> &amp; <code>extra/*</code> modules, CLI workflows, and VS Code support.</span>
-    <div class="academy-ref-links">
-      <a href="modules/">References &rarr;</a>
-      <a href="tools/">Tools &rarr;</a>
-    </div>
-  </div>
-</section>
-
-<section class="section">
-  <div class="section-head">
-    <h2>Design Principles</h2>
-  </div>
-  <div class="pillars">
-    <div class="pillar">
-      <h3>Explicit Behavior</h3>
-      <p>Consequential operations—prompts, output, mutation, and imports—are always visible in source.</p>
-    </div>
-    <div class="pillar">
-      <h3>Low Runtime Weight</h3>
-      <p>Generated artifacts run cleanly with minimal support code today and target native C ahead.</p>
-    </div>
-    <div class="pillar">
-      <h3>Verified Toolchain</h3>
-      <p>Every showcased example is compiled and executed by the ${proseLite} compiler at build time.</p>
-    </div>
-  </div>
-</section>
-
-<section class="section">
-  <div class="section-head">
-    <h2>Featured Examples</h2>
-    <a href="gallery/">Explore Gallery (${String(rendered.size)} samples) &rarr;</a>
-  </div>
-  <div class="sample-grid">
-    ${featuredCards}
-  </div>
-</section>`;
-
-  return renderPage({
-    title: 'Lite — LiteLang & LiteScript',
-    basePath: '',
-    active: 'home',
-    repoUrl,
-    rev,
-    body,
-    lightSwitchShine,
-  });
-}
-
-function renderGalleryCard(sample: RenderedSample, basePath: string): string {
-  const badgeHtml = sample.badge
-    ? `<span class="gallery-badge">${escapeHtml(sample.badge)}</span>`
-    : `<span class="code-card-meta">${escapeHtml(sample.file)}</span>`;
-  const previewBlock = sample.previewSvg ?? '';
-  return `<article class="code-card" id="sample-${escapeHtml(sample.id)}">
-  <div class="code-card-head">
-    <span class="code-card-title">${escapeHtml(sample.title)}</span>
-    ${badgeHtml}
-  </div>
-  ${previewBlock}
-  <p class="sample-note" style="flex: 1;">${escapeHtml(sample.note)}</p>
-  <details class="gallery-code">
-    <summary>Source (${escapeHtml(sample.file)})</summary>
-    <pre class="code-block"><code>${sample.sourceHtml}</code></pre>
-  </details>
-  <footer class="sample-foot">
-    <a href="${basePath}playground/?sample=${escapeHtml(sample.id)}">Play &rarr;</a>
-  </footer>
-</article>`;
-}
-
-function renderGalleryPage(
-  rendered: ReadonlyMap<string, RenderedSample>,
-  renderedPlay: ReadonlyMap<string, RenderedSample>,
-  repoUrl: string,
-  rev: SourceRevision,
-  lightSwitchShine: boolean,
-): string {
-  const languageJumps = sampleGroups.map(group => {
-    const count = showcaseSamples.filter(s => s.group === group.id && rendered.has(s.id)).length;
-    return `<a class="gallery-jump" href="#group-${escapeHtml(group.id)}">${escapeHtml(group.title)} <span>${String(count)}</span></a>`;
-  }).join('\n      ');
-
-  const playJumps = playGroups.map(group => {
-    const count = playSamples.filter(s => s.group === group.id && renderedPlay.has(s.id)).length;
-    return `<a class="gallery-jump" href="#group-${escapeHtml(group.id)}">${escapeHtml(group.title)} <span>${String(count)}</span></a>`;
-  }).join('\n      ');
-
-  const languageSections = sampleGroups.map(group => {
-    const cards = showcaseSamples
-      .filter(s => s.group === group.id)
-      .map(s => rendered.get(s.id))
-      .filter((s): s is RenderedSample => s !== undefined)
-      .map(s => renderGalleryCard(s, '../'))
-      .join('\n');
-    const badge = group.folder ? `<span class="gallery-badge">${escapeHtml(group.folder)}/</span>` : '';
-    return `<section class="section" id="group-${escapeHtml(group.id)}">
-  <div class="section-head">
-    <h2>${escapeHtml(group.title)}</h2>
-    ${badge}
-  </div>
-  <p class="section-note">${escapeHtml(group.description)}</p>
-  <div class="sample-grid">
-    ${cards}
-  </div>
-</section>`;
-  }).join('\n');
-
-  const playSections = playGroups.map(group => {
-    const cards = playSamples
-      .filter(s => s.group === group.id)
-      .map(s => renderedPlay.get(s.id))
-      .filter((s): s is RenderedSample => s !== undefined)
-      .map(s => renderGalleryCard(s, '../'))
-      .join('\n');
-    return `<section class="section" id="group-${escapeHtml(group.id)}">
-  <div class="section-head">
-    <h2>${escapeHtml(group.title)}</h2>
-    <span class="gallery-badge">${escapeHtml(group.folder)}/</span>
-  </div>
-  <p class="section-note">${escapeHtml(group.description)}</p>
-  <div class="sample-grid">
-    ${cards}
-  </div>
-</section>`;
-  }).join('\n');
-
-  const body = `<section style="padding: 2rem 0 1.25rem;">
-  <h1 style="margin: 0 0 0.5rem;">Gallery</h1>
-  <p class="hero-lead" style="margin: 0 0 1rem;">
-    All ${String(rendered.size)} core &amp; program examples and ${String(renderedPlay.size)} folder-grouped canvas, audio, and game showcases below are compiled and executed by the ${proseLite} compiler during the site build.
-  </p>
-  <nav class="gallery-jumps" aria-label="Gallery categories">
-    <div class="gallery-tier-line">
-      <span class="gallery-tier-label">Language &amp; Programs</span>
-      ${languageJumps}
-    </div>
-    <div class="gallery-tier-line">
-      <span class="gallery-tier-label">Play &mdash; Canvas, Audio &amp; Games</span>
-      ${playJumps}
-    </div>
-  </nav>
-</section>
-${languageSections}
-${playSections}`;
-
-  return renderPage({
-    title: 'Gallery — Lite',
-    description: 'Verified Lite language examples and category-grouped canvas, audio, and game showcases.',
-    basePath: '../',
-    active: 'gallery',
-    repoUrl,
-    rev,
-    body,
-    lightSwitchShine,
-  });
-}
-
-function renderPlaygroundPage(
-  rendered: ReadonlyMap<string, RenderedSample>,
-  renderedPlay: ReadonlyMap<string, RenderedSample>,
-  repoUrl: string,
-  rev: SourceRevision,
-  lightSwitchShine: boolean,
-): string {
-  const payload = [
+/** Generates `/`, `/gallery/`, and `/playground/` page bodies via `tools/src/site-pages.lts`. */
+function buildSitePages(options: Readonly<{
+  rendered: ReadonlyMap<string, RenderedSample>;
+  renderedPlay: ReadonlyMap<string, RenderedSample>;
+  repoUrl: string;
+  counts: EcosystemCounts;
+}>): Readonly<{ homeBody: string; galleryBody: string; playgroundBody: string }> {
+  const { rendered, renderedPlay, repoUrl, counts } = options;
+  if (!rendered.has(heroSample.id)) throw new Error("missing rendered hero sample");
+  const pgPayload = [
     ...Array.from(rendered.values()).map(s => ({
       id: s.id,
       title: s.title,
@@ -493,1176 +164,59 @@ function renderPlaygroundPage(
       play: true,
     })),
   ];
-  const serialized = JSON.stringify(payload).replaceAll('<', '\\u003c');
+  const serialized = JSON.stringify(pgPayload).replaceAll("<", "\\u003c");
+  const pgScriptHtml = renderPlaygroundClientScript(serialized, playgroundDefaultSample.id);
 
-  const body = `<div id="pg-workbench" class="workbench">
-  <section class="pane" aria-label="Source editor">
-    <div class="pane-head">
-      <div class="sample-picker">
-        <button id="pg-sketches-btn" class="btn pg-icon-btn" type="button" title="Open stored codes, samples, examples, cases, and pieces" aria-label="Open stored codes, samples, examples, cases, or pieces">
-          <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 1.5h4.5A1.5 1.5 0 0 1 14 6v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12V4.5Z"/>
-          </svg>
-          <span id="pg-sketches-count" class="badge">0</span>
-        </button>
-        <span id="pg-current-title" class="pg-active-title">${escapeHtml(playgroundDefaultSample.title)}</span>
-      </div>
-      <div class="pg-actions">
-        <button id="pg-save-snip" class="btn pg-icon-btn pg-save-btn" type="button" hidden title="Save changes to localStorage (UUIDv7) and update URL" aria-label="Save changes">
-          <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12.5 14H3.5A1.5 1.5 0 0 1 2 12.5v-9A1.5 1.5 0 0 1 3.5 2h7l3.5 3.5v7A1.5 1.5 0 0 1 12.5 14Z"/>
-            <path d="M10.5 14v-4h-5v4M5.5 2v3h4"/>
-          </svg>
-        </button>
-        <button id="pg-reset" class="btn" type="button" hidden title="Discard unsaved changes and reset">Reset</button>
-        <button id="pg-share" class="btn" type="button" title="Encode sketch into shareable #code= URL and copy link">Share</button>
-        <button id="pg-compile" class="btn" type="button">Compile</button>
-        <button id="pg-play" class="btn btn-primary" type="button" title="Run (Ctrl/Cmd + Enter)">&#9654; Play</button>
-      </div>
-    </div>
-    ${renderCodeEditorBlock({
-      textareaId: 'pg-editor',
-      ariaLabel: 'Lite source editor',
-      preCodeId: 'pg-source',
-      gutterId: 'pg-editor-gutter',
-    })}
-    <div class="pg-io-strip">
-      <label class="pg-io-field">args <input id="pg-args" type="text" placeholder="optional args"></label>
-      <label class="pg-io-field">stdin <input id="pg-stdin" type="text" placeholder="optional stdin"></label>
-      <span id="pg-cursor" class="ed-cursor-meta">Ln 1, Col 1</span>
-      <span id="pg-file" class="pg-status"></span>
-    </div>
-  </section>
-
-  <div id="pg-split" class="pg-split" role="separator" aria-orientation="vertical" aria-label="Resize editor and inspector panes" aria-valuemin="20" aria-valuemax="80" aria-valuenow="50" tabindex="0" title="Drag to resize panes (double-click to reset 50/50)"></div>
-
-  <section class="pane" aria-label="Compiler and output inspector">
-    <div class="pane-head">
-      <div class="pg-tabs" role="tablist">
-        <button class="pg-tab" role="tab" data-tab="output" aria-selected="true" type="button">Output</button>
-        <button class="pg-tab" role="tab" data-tab="ts" aria-selected="false" type="button">Generated TS</button>
-        <button class="pg-tab" role="tab" data-tab="c" aria-selected="false" type="button">Generated C</button>
-        <button id="tab-canvas" class="pg-tab" role="tab" data-tab="canvas" aria-selected="false" type="button" hidden>Canvas</button>
-      </div>
-      <div class="pg-actions">
-        <span id="pg-status" class="pg-status" aria-live="polite">Ready</span>
-        <button id="pg-pause" class="pg-pause-btn" type="button" aria-pressed="false" title="Playing — click to pause canvas events" hidden>
-          <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor" aria-hidden="true">
-            <path class="pg-icon-playing" d="M4 2.5v11l9-5.5-9-5.5Z"/>
-            <g class="pg-icon-paused"><rect x="3" y="2.5" width="3.5" height="11" rx="0.8"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="0.8"/></g>
-          </svg>
-          <span id="pg-pause-label">Playing</span>
-        </button>
-        <button id="pg-copy" class="pg-copy-btn" type="button" aria-label="Copy inspector content">Copy</button>
-      </div>
-    </div>
-
-    ${renderCodeModeBar({
-      id: 'pg-code-modes',
-      buttonIdPrefix: 'mode-',
-      ariaLabel: 'Generated code view',
-    })}
-
-    <div id="panel-output" class="pg-panel" role="tabpanel">
-      <pre class="code-block"><code id="pg-output"></code></pre>
-    </div>
-
-    <div id="panel-ts" class="pg-panel" role="tabpanel" hidden>
-      <pre class="code-block"><code id="pg-ts"></code></pre>
-    </div>
-
-    <div id="panel-c" class="pg-panel" role="tabpanel" hidden>
-      <pre class="code-block"><code id="pg-c"></code></pre>
-    </div>
-
-    <div id="panel-canvas" class="pg-panel" role="tabpanel" hidden>
-      <div id="pg-canvas-wrap" class="pg-canvas-wrap">
-        <div class="pg-canvas-bar">
-          <span id="pg-canvas-title" class="pg-canvas-title">Canvas Stage</span>
-          <div class="pg-canvas-tools">
-            <span id="pg-fps" class="pg-status">0.0 fps &middot; 0.0 ms</span>
-            <span class="pg-sep" aria-hidden="true">&middot;</span>
-            <span id="pg-canvas-size" class="pg-status">(320x200)</span>
-            <span class="pg-sep" aria-hidden="true">&middot;</span>
-            <button id="pg-mute" class="pg-mute-btn" type="button" aria-pressed="false" aria-label="Sound on — click to mute" title="Sound on — click to mute">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path class="pg-sound-body" d="M11 5 6 9H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3l5 4V5Z" fill="currentColor" fill-opacity="0.16"/>
-                <path class="pg-sound-wave" d="M15.5 8.5a5 5 0 0 1 0 7"/>
-                <path class="pg-sound-wave" d="M18.5 5.5a9 9 0 0 1 0 13"/>
-                <line class="pg-sound-slash" x1="3.5" y1="3.5" x2="20.5" y2="20.5" stroke-width="2.2"/>
-              </svg>
-            </button>
-            <button id="pg-canvas-fullscreen" class="pg-copy-btn" type="button" aria-pressed="false" title="Toggle fullscreen stage">Fullscreen</button>
-          </div>
-        </div>
-        <div class="pg-canvas-stage">
-          <canvas id="pg-canvas" class="pg-canvas" tabindex="0" width="320" height="200" aria-label="Lite Play canvas stage"></canvas>
-        </div>
-      </div>
-    </div>
-  </section>
-</div>
-
-<div id="pg-sketches-modal" class="snips-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pg-sketches-title" hidden>
-  <div class="snips-modal">
-    <div class="snips-modal-head">
-      <h2 id="pg-sketches-title">Load &amp; Stored Sketches</h2>
-      <div class="pg-actions">
-        <button id="pg-sketches-new" class="btn btn-primary" type="button">+ New Sketch</button>
-        <button id="pg-sketches-clear" class="btn" type="button">Clear Saved</button>
-        <button id="pg-sketches-close" class="btn" type="button" aria-label="Close load explorer">Close</button>
-      </div>
-    </div>
-    <div class="snips-cat-tabs" role="group" aria-label="Starter templates">
-      <span class="code-card-meta" style="align-self:center;margin-right:0.25rem;">Templates:</span>
-      <button class="snips-cat-tab" type="button" data-template="hello">Hello Lite</button>
-      <button class="snips-cat-tab" type="button" data-template="stdin">Input &amp; Loops</button>
-      <button class="snips-cat-tab" type="button" data-template="canvas">Canvas Scene</button>
-      <button class="snips-cat-tab" type="button" data-template="play">Play Loop</button>
-    </div>
-    <div id="pg-sketches-cat-tabs" class="snips-cat-tabs" role="group" aria-label="Code categories">
-      <button class="snips-cat-tab" type="button" data-cat="all" aria-pressed="true">All</button>
-      <button class="snips-cat-tab" type="button" data-cat="saved" aria-pressed="false">Saved</button>
-      <button class="snips-cat-tab" type="button" data-cat="sample" aria-pressed="false">Samples</button>
-      <button class="snips-cat-tab" type="button" data-cat="example" aria-pressed="false">Examples</button>
-      <button class="snips-cat-tab" type="button" data-cat="case" aria-pressed="false">Cases</button>
-      <button class="snips-cat-tab" type="button" data-cat="piece" aria-pressed="false">Pieces</button>
-    </div>
-    <div class="snips-modal-tools">
-      <input id="pg-sketches-filter" type="search" placeholder="Filter stored sketches, samples, examples, cases, and pieces..." aria-label="Filter code entries">
-      <span id="pg-sketches-summary" class="code-card-meta">0 items</span>
-    </div>
-    <div id="pg-sketches-list" class="snips-list"></div>
-  </div>
-</div>
-
-<script type="module">
-  import { formatCodeView } from "./code-view.js";
-  import { bindCodeModeButtons, bindLiteEditor, bindSplitPane, decodeSharePayload, encodeSharePayload } from "./editor-client.js";
-  import { highlightLite, highlightTs, highlightC } from "./highlight.js";
-  import { createPlayStage, createWorkerClient } from "./play-stage.js";
-  const samples = ${serialized};
-  const byId = new Map(samples.map(s => [s.id, s]));
-  const cache = new Map();
-  const workbenchEl = document.getElementById("pg-workbench");
-  const splitEl = document.getElementById("pg-split");
-  const resetBtn = document.getElementById("pg-reset");
-  const shareBtn = document.getElementById("pg-share");
-  const compileBtn = document.getElementById("pg-compile");
-  const playBtn = document.getElementById("pg-play");
-  const pauseBtn = document.getElementById("pg-pause");
-  const pauseLabelEl = document.getElementById("pg-pause-label");
-  const copyBtn = document.getElementById("pg-copy");
-  const statusEl = document.getElementById("pg-status");
-  const fileEl = document.getElementById("pg-file");
-  const editorEl = document.getElementById("pg-editor");
-  const gutterEl = document.getElementById("pg-editor-gutter");
-  const cursorEl = document.getElementById("pg-cursor");
-  const sourceEl = document.getElementById("pg-source");
-  const argsEl = document.getElementById("pg-args");
-  const stdinEl = document.getElementById("pg-stdin");
-  const outputEl = document.getElementById("pg-output");
-  const tsEl = document.getElementById("pg-ts");
-  const cEl = document.getElementById("pg-c");
-  const codeModesBar = document.getElementById("pg-code-modes");
-  const modeButtons = Array.from(document.querySelectorAll(".code-mode-btn"));
-  const tabCanvas = document.getElementById("tab-canvas");
-  const canvasWrap = document.getElementById("pg-canvas-wrap");
-  const canvas = document.getElementById("pg-canvas");
-  const canvasTitleEl = document.getElementById("pg-canvas-title");
-  const canvasSizeEl = document.getElementById("pg-canvas-size");
-  const muteBtn = document.getElementById("pg-mute");
-  const fullscreenBtn = document.getElementById("pg-canvas-fullscreen");
-  const fpsEl = document.getElementById("pg-fps");
-  const tabs = Array.from(document.querySelectorAll(".pg-tab"));
-  const panels = {
-    output: document.getElementById("panel-output"),
-    ts: document.getElementById("panel-ts"),
-    c: document.getElementById("panel-c"),
-    canvas: document.getElementById("panel-canvas"),
-  };
-
-  let activeTab = "output";
-  let codeMode = "program";
-  let rawTs = "";
-  let rawC = "";
-  let cMessage = "";
-  let currentSample = null;
-  let lastCSource = null;
-  const snipsApi = typeof window !== "undefined" && window.LiteSnips ? window.LiteSnips : null;
-  const saveSnipBtn = document.getElementById("pg-save-snip");
-  const titleEl = document.getElementById("pg-current-title");
-  let activeSnipId = null;
-  let activeLibraryItem = null;
-  let currentExtraModules = null;
-  let currentEnvironment = "universal";
-  let libraryItems = null;
-  let libraryPromise = null;
-  let baseline = { code: "", stdin: "", args: "" };
-
-  function syncSnipsBadge() {
-    const badge = document.getElementById("pg-sketches-count");
-    if (badge && snipsApi) badge.textContent = String(snipsApi.list().length);
-  }
-
-  function updateDirtyState() {
-    const dirty = editorEl.value !== baseline.code || stdinEl.value !== baseline.stdin || argsEl.value !== baseline.args;
-    if (saveSnipBtn) saveSnipBtn.hidden = !dirty;
-    if (resetBtn) resetBtn.hidden = !dirty;
-    return dirty;
-  }
-
-  function setBaseline() {
-    baseline = { code: editorEl.value, stdin: stdinEl.value, args: argsEl.value };
-    if (saveSnipBtn) saveSnipBtn.hidden = true;
-    if (resetBtn) resetBtn.hidden = true;
-  }
-
-  function loadLibraryCatalog() {
-    if (libraryItems) return Promise.resolve(libraryItems);
-    if (!libraryPromise) {
-      libraryPromise = fetch("./library.json")
-        .then((res) => (res.ok ? res.json() : []))
-        .then((data) => {
-          libraryItems = Array.isArray(data) ? data : [];
-          return libraryItems;
-        })
-        .catch(() => {
-          libraryItems = [];
-          return libraryItems;
-        });
-    }
-    return libraryPromise;
-  }
-
-  if (splitEl && workbenchEl) {
-    bindSplitPane({
-      splitEl,
-      containerEl: workbenchEl,
-      cssVar: "--pg-split",
-      storageKey: "lite.pg.split",
-      defaultPct: 50,
-      minPct: 20,
-      maxPct: 80,
-    });
-  }
-
-  const workerClient = createWorkerClient("./worker.js");
-  const stage = createPlayStage({
-    canvas,
-    workerClient,
-    sizeEl: canvasSizeEl,
-    titleEl: canvasTitleEl,
-    fpsEl,
-    pauseBtn,
-    pauseLabelEl,
-    muteBtn,
-    isCanvasVisible: () => activeTab === "canvas",
-    onStatus: (s) => {
-      statusEl.textContent = s;
-      statusEl.hidden = activeTab === "canvas" && stage.isPlayable() && s !== "Modified";
-    },
-    onError: (stderr) => {
-      statusEl.textContent = "Play error";
-      outputEl.textContent = stderr || "Canvas update failed.";
-      showTab("output");
-    },
-  });
-  stage.syncPauseUi(false, false);
-
-  function renderCodeViews() {
-    tsEl.innerHTML = rawTs ? highlightTs(formatCodeView(rawTs, "ts", codeMode)) : "";
-    cEl.innerHTML = rawC ? highlightC(formatCodeView(rawC, "c", codeMode)) : highlightC(cMessage);
-  }
-
-  bindCodeModeButtons({
-    buttons: modeButtons,
-    onChange: (mode) => {
-      codeMode = mode;
-      renderCodeViews();
-    },
+  const mapSample = (s: RenderedSample) => ({
+    id: s.id,
+    group: s.group,
+    title: s.title,
+    note: s.note,
+    file: s.file,
+    args: s.args,
+    stdin: s.stdin,
+    showOutput: s.showOutput === true,
+    sourceHtml: s.sourceHtml,
+    output: s.output,
+    badge: s.badge ?? "",
+    previewSvg: s.previewSvg ?? "",
   });
 
-  function showTab(name) {
-    activeTab = name;
-    for (const tab of tabs) {
-      tab.setAttribute("aria-selected", tab.dataset.tab === name ? "true" : "false");
-    }
-    for (const [key, panel] of Object.entries(panels)) {
-      panel.hidden = key !== name;
-    }
-    const showPause = name === "canvas" && stage.isPlayable();
-    codeModesBar.hidden = name !== "ts" && name !== "c";
-    copyBtn.hidden = name === "canvas";
-    pauseBtn.hidden = !showPause;
-    statusEl.hidden = showPause && statusEl.textContent !== "Modified";
-    if (name === "canvas") stage.resumeLoop();
-    else stage.pauseLoop();
-    if (name === "c") void compileCForEditor();
-  }
-
-  for (const tab of tabs) {
-    tab.addEventListener("click", () => {
-      showTab(tab.dataset.tab);
-      if (tab.dataset.tab === "canvas") canvas.focus({ preventScroll: true });
-    });
-  }
-
-  const editorCtrl = bindLiteEditor({
-    editor: editorEl,
-    preCode: sourceEl,
-    highlight: highlightLite,
-    indent: "  ",
-    gutter: gutterEl,
-    cursorEl,
-    autoIndent: true,
-    onInput: (_src, fromTab) => {
-      if (!fromTab) stage.pauseLoop();
-      const dirty = updateDirtyState();
-      statusEl.textContent = dirty ? "Modified — click Save" : (fromTab ? "Modified" : "Ready");
-      statusEl.hidden = false;
-    },
-    onRun: () => {
-      stage.unlockAudio();
-      void runAction("play");
-    },
+  const result = spawnSync(process.execPath, [ensureTool("site-pages")], {
+    cwd: root,
+    input: JSON.stringify({
+      repoUrl,
+      brandWordmark,
+      proseLite,
+      heroSampleId: heroSample.id,
+      heroSampleFile: heroSample.file,
+      defaultSampleTitle: playgroundDefaultSample.title,
+      counts,
+      sampleGroups: sampleGroups.map(g => ({ id: g.id, title: g.title, description: g.description, folder: g.folder ?? "" })),
+      playGroups: playGroups.map(g => ({ id: g.id, title: g.title, description: g.description, folder: g.folder })),
+      renderedSamples: showcaseSamples.map(s => rendered.get(s.id)).filter((s): s is RenderedSample => s !== undefined).map(mapSample),
+      renderedPlaySamples: playSamples.map(s => renderedPlay.get(s.id)).filter((s): s is RenderedSample => s !== undefined).map(mapSample),
+      pgEditorBlockHtml: renderCodeEditorBlock({
+        textareaId: "pg-editor",
+        ariaLabel: "Lite source editor",
+        preCodeId: "pg-source",
+        gutterId: "pg-editor-gutter",
+      }),
+      pgCodeModeBarHtml: renderCodeModeBar({
+        id: "pg-code-modes",
+        buttonIdPrefix: "mode-",
+        ariaLabel: "Generated code view",
+      }),
+      pgScriptHtml,
+    }),
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
   });
-  stdinEl.addEventListener("input", updateDirtyState);
-  argsEl.addEventListener("input", updateDirtyState);
-
-  async function fetchSample(id) {
-    if (cache.has(id)) return cache.get(id);
-    const res = await fetch("./samples/" + encodeURIComponent(id) + ".json");
-    if (!res.ok) throw new Error("Failed to load sample " + id);
-    const data = await res.json();
-    cache.set(id, data);
-    return data;
+  if (result.error) throw result.error;
+  if (result.status !== 0 || result.signal !== null) {
+    throw new Error(`lite site-pages failed (${result.status ?? result.signal}): ${result.stderr}`);
   }
-
-  function setPlaygroundQuery(key, value) {
-    const nextUrl = new URL(window.location.href);
-    for (const k of ["sample", "snip", "draft", "item", "example", "case", "piece"]) {
-      nextUrl.searchParams.delete(k);
-    }
-    if (String(nextUrl.hash || "").startsWith("#code=")) nextUrl.hash = "";
-    if (key && value) nextUrl.searchParams.set(key, value);
-    window.history.replaceState({}, "", nextUrl);
-  }
-
-  function stopPlay(hideTab) {
-    stage.stop();
-    if (hideTab) {
-      tabCanvas.hidden = true;
-      if (activeTab === "canvas") showTab("output");
-    }
-  }
-
-  async function loadSample(id, mode) {
-    const meta = byId.get(id) ?? samples[0];
-    if (!meta) return;
-    activeSnipId = null;
-    activeLibraryItem = null;
-    currentExtraModules = null;
-    currentEnvironment = "universal";
-    stopPlay(true);
-    editorCtrl.clearErrors();
-    if (titleEl) titleEl.textContent = meta.title;
-    fileEl.textContent = meta.file;
-    statusEl.textContent = "Loading " + meta.file + "...";
-
-    setPlaygroundQuery("sample", meta.id);
-
-    const sample = await fetchSample(meta.id);
-    currentSample = sample;
-    editorCtrl.setValue(sample.source);
-    rawTs = sample.ts ?? "";
-    rawC = "";
-    cMessage = "/* Press Compile or open Generated C to emit C. */";
-    lastCSource = null;
-    renderCodeViews();
-    if (activeTab === "c") void compileCForEditor();
-    argsEl.value = sample.args.join(" ");
-    stdinEl.value = sample.stdin.replaceAll("\\n", "\\\\n");
-    setBaseline();
-
-    if (mode === "compile") {
-      showTab("ts");
-      statusEl.textContent = "Compiled to TypeScript";
-    } else if (meta.play) {
-      await runAction("play");
-    } else if (mode === "play") {
-      showTab("output");
-      outputEl.textContent = "";
-      statusEl.textContent = "Running " + meta.file + "...";
-      setTimeout(() => {
-        outputEl.textContent = sample.output;
-        statusEl.textContent = "Exited 0 (verified)";
-      }, 100);
-    } else if (meta.showOutput) {
-      outputEl.textContent = sample.output;
-      statusEl.textContent = "Verified output ready";
-    } else {
-      outputEl.textContent = "(Press Play to run)";
-      statusEl.textContent = "Ready — press Play";
-    }
-  }
-
-  function parseStdin() {
-    return stdinEl.value.replaceAll("\\\\n", "\\n");
-  }
-
-  function parseArgs() {
-    const raw = argsEl.value.trim();
-    return raw ? raw.split(/\\s+/) : [];
-  }
-
-  function formatCOutput(c, cError) {
-    if (c) return c;
-    const msg = (cError || "C backend does not support this program yet.").trim();
-    return "/* " + msg.replaceAll("*/", "* /") + " */";
-  }
-
-  async function compileCForEditor() {
-    const source = editorEl.value;
-    if (lastCSource === source) return;
-    rawC = "";
-    cMessage = "/* Compiling C in browser... */";
-    renderCodeViews();
-    try {
-      const res = await workerClient.call("compile-c", {
-        source,
-        stdin: "",
-        args: [],
-        ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
-      });
-      if (editorEl.value !== source) return;
-      lastCSource = source;
-      if (res.c) {
-        rawC = String(res.c);
-        cMessage = "";
-      } else {
-        rawC = "";
-        cMessage = formatCOutput("", res.stderr);
-      }
-      renderCodeViews();
-    } catch (err) {
-      rawC = "";
-      cMessage = "/* " + (err instanceof Error ? err.message : String(err)) + " */";
-      renderCodeViews();
-    }
-  }
-
-  async function runAction(action) {
-    stopPlay(false);
-    editorCtrl.clearErrors();
-    const source = editorEl.value;
-    const stdin = parseStdin();
-    const args = parseArgs();
-    statusEl.hidden = false;
-    statusEl.textContent = action === "compile" ? "Compiling in browser..." : "Running in browser...";
-    if (action === "play") {
-      outputEl.textContent = "";
-    }
-    try {
-      const res = await workerClient.call(action, {
-        source,
-        stdin,
-        args,
-        ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
-      });
-      if (res.ts) rawTs = String(res.ts);
-      if (action === "compile" && (res.c !== undefined || res.cError !== undefined)) {
-        lastCSource = source;
-        if (res.c) {
-          rawC = String(res.c);
-          cMessage = "";
-        } else {
-          rawC = "";
-          cMessage = formatCOutput("", res.cError);
-        }
-      }
-      renderCodeViews();
-      if (!res.ok) {
-        editorCtrl.setErrorFromStderr(res.stderr || "");
-        tabCanvas.hidden = true;
-        showTab("output");
-        const isCliFailure =
-          currentEnvironment === "cli" ||
-          /import\\s+"core\\/(file|path|process|time)"/.test(source);
-        const cliHint = isCliFailure && action === "play"
-          ? "\\n[host note] This source targets the CLI / Host OS environment; browser mode supports Compile TS/C, while local execution uses ./bin/lite run."
-          : "";
-        outputEl.textContent = (res.stdout ? res.stdout + "\\n" : "") + (res.stderr || "Execution failed.") + cliHint;
-        statusEl.textContent = res.ts ? (isCliFailure ? "CLI / Host OS runtime required" : "Runtime error") : "Compile error";
-        return;
-      }
-      if (action === "compile") {
-        if (activeTab !== "c") showTab("ts");
-        statusEl.textContent = "Compiled to TypeScript" + (res.c ? " & C" : "");
-        return;
-      }
-
-      outputEl.textContent = res.stdout + (res.stderr ? (res.stdout ? "\\n" : "") + res.stderr : "");
-      if (Array.isArray(res.tones) && res.tones.length > 0) stage.playTones(res.tones);
-
-      const frame = res.play || res.canvas;
-      if (frame && frame.width > 0 && frame.height > 0) {
-        tabCanvas.hidden = false;
-        stage.startSession(frame, Boolean(res.play));
-        if (res.play) {
-          showTab("canvas");
-          stage.syncPauseUi(true, true);
-        } else {
-          statusEl.textContent = "Rendered canvas (in browser)";
-          showTab("canvas");
-        }
-      } else {
-        tabCanvas.hidden = true;
-        showTab("output");
-        statusEl.textContent = "Exited 0 (in browser)";
-      }
-    } catch (err) {
-      tabCanvas.hidden = true;
-      showTab("output");
-      outputEl.textContent = err instanceof Error ? err.message : String(err);
-      statusEl.textContent = "Worker error";
-    }
-  }
-
-  resetBtn.addEventListener("click", () => {
-    stage.unlockAudio();
-    if (activeSnipId && loadSnip(activeSnipId)) return;
-    if (activeLibraryItem) { loadLibraryItem(activeLibraryItem); return; }
-    void loadSample((currentSample && currentSample.id) || "${escapeHtml(playgroundDefaultSample.id)}", "load");
-  });
-  compileBtn.addEventListener("click", () => { void runAction("compile"); });
-  playBtn.addEventListener("click", () => { stage.unlockAudio(); void runAction("play"); });
-
-  if (shareBtn) {
-    shareBtn.addEventListener("click", () => {
-      const encoded = encodeSharePayload({
-        title: titleEl ? titleEl.textContent || "Shared Sketch" : "Shared Sketch",
-        code: editorEl.value,
-        stdin: parseStdin(),
-        args: argsEl.value,
-      });
-      const shareUrl = new URL(window.location.href);
-      shareUrl.search = "";
-      shareUrl.hash = "#code=" + encoded;
-      window.history.replaceState({}, "", shareUrl);
-      statusEl.hidden = false;
-      statusEl.textContent = "Share link encoded in URL";
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(String(shareUrl)).then(() => {
-          statusEl.textContent = "Share link copied to clipboard";
-        }, () => {});
-      }
-    });
-  }
-
-  if (fullscreenBtn && canvasWrap) {
-    function setCanvasFullscreen(next) {
-      canvasWrap.classList.toggle("is-fullscreen", next);
-      fullscreenBtn.setAttribute("aria-pressed", next ? "true" : "false");
-      fullscreenBtn.textContent = next ? "Exit Fullscreen" : "Fullscreen";
-    }
-    fullscreenBtn.addEventListener("click", () => {
-      setCanvasFullscreen(!canvasWrap.classList.contains("is-fullscreen"));
-    });
-    document.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape") {
-        if (canvasWrap.classList.contains("is-fullscreen")) setCanvasFullscreen(false);
-        if (sketchesModal && !sketchesModal.hidden) sketchesModal.hidden = true;
-      }
-    });
-  }
-
-  let copyTimer = 0;
-  copyBtn.addEventListener("click", () => {
-    const target = activeTab === "ts" ? tsEl : activeTab === "c" ? cEl : outputEl;
-    const text = target.textContent || "";
-    if (!text) return;
-    const markCopied = () => {
-      copyBtn.textContent = "Copied";
-      copyBtn.classList.add("copied");
-      if (copyTimer) window.clearTimeout(copyTimer);
-      copyTimer = window.setTimeout(() => {
-        copyBtn.textContent = "Copy";
-        copyBtn.classList.remove("copied");
-      }, 1600);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(markCopied, () => {});
-    }
-  });
-
-  function loadSnip(id) {
-    if (!snipsApi) return false;
-    const snip = snipsApi.get(id);
-    if (!snip) return false;
-    stopPlay(true);
-    editorCtrl.clearErrors();
-    activeSnipId = snip.id;
-    activeLibraryItem = null;
-    currentSample = null;
-    currentExtraModules = snip.extraModules || null;
-    currentEnvironment = snip.environment || "universal";
-    editorCtrl.setValue(snip.code);
-    stdinEl.value = String(snip.stdin || "").replaceAll("\\n", "\\\\n");
-    argsEl.value = String(snip.args || "");
-    if (titleEl) titleEl.textContent = snip.title;
-    fileEl.textContent = snip.title + " · " + snip.id.slice(0, 8);
-    rawTs = "";
-    rawC = "";
-    cMessage = "/* Press Compile or open Generated C to emit C. */";
-    lastCSource = null;
-    renderCodeViews();
-    setBaseline();
-    if (currentEnvironment === "cli") {
-      outputEl.textContent = "(CLI / Host OS sketch — press Compile for TS/C, or run locally with ./bin/lite run)";
-      statusEl.textContent = "Loaded CLI sketch: " + snip.title;
-    } else {
-      outputEl.textContent = "(Press Play to run)";
-      statusEl.textContent = "Loaded sketch: " + snip.title;
-    }
-    setPlaygroundQuery("snip", snip.id);
-    syncSnipsBadge();
-    return true;
-  }
-
-  function loadLibraryItem(item) {
-    if (!item) return;
-    if (item.sampleId && byId.has(item.sampleId)) {
-      void loadSample(item.sampleId, "load");
-      return;
-    }
-    stopPlay(true);
-    editorCtrl.clearErrors();
-    activeSnipId = null;
-    activeLibraryItem = item;
-    currentSample = null;
-    currentExtraModules = item.extraModules || null;
-    currentEnvironment = item.environment || "universal";
-    editorCtrl.setValue(item.source);
-    stdinEl.value = String(item.stdin || "").replaceAll("\\n", "\\\\n");
-    argsEl.value = Array.isArray(item.args) ? item.args.join(" ") : "";
-    if (titleEl) titleEl.textContent = item.title;
-    fileEl.textContent = item.file || item.title;
-    rawTs = "";
-    rawC = "";
-    cMessage = "/* Press Compile or open Generated C to emit C. */";
-    lastCSource = null;
-    renderCodeViews();
-    setBaseline();
-    if (currentEnvironment === "cli") {
-      outputEl.textContent = "(CLI / Host OS source — press Compile for TS/C, or run locally with ./bin/lite run " + (item.file || "file.lts") + ")";
-      statusEl.textContent = "Loaded CLI " + item.badge + ": " + item.title;
-    } else {
-      outputEl.textContent = "(Press Play to run)";
-      statusEl.textContent = "Loaded " + item.badge + ": " + item.title;
-    }
-    setPlaygroundQuery(item.category || "piece", item.slug || item.id);
-  }
-
-  const sketchesBtn = document.getElementById("pg-sketches-btn");
-  const sketchesModal = document.getElementById("pg-sketches-modal");
-  const sketchesClose = document.getElementById("pg-sketches-close");
-  const sketchesNew = document.getElementById("pg-sketches-new");
-  const sketchesClear = document.getElementById("pg-sketches-clear");
-  const sketchesFilter = document.getElementById("pg-sketches-filter");
-  const sketchesSummary = document.getElementById("pg-sketches-summary");
-  const sketchesList = document.getElementById("pg-sketches-list");
-  const catTabs = Array.from(document.querySelectorAll("#pg-sketches-cat-tabs .snips-cat-tab"));
-  let activeCat = "all";
-  let clearArmed = false;
-
-  function renderSavedRow(item) {
-    const row = document.createElement("article");
-    row.className = "snips-item" + (item.id === activeSnipId ? " active" : "");
-
-    const head = document.createElement("div");
-    head.className = "snips-item-head";
-
-    const titleSpan = document.createElement("span");
-    titleSpan.className = "snips-item-title";
-    titleSpan.textContent = item.title;
-    head.appendChild(titleSpan);
-
-    const meta = document.createElement("div");
-    meta.className = "snips-item-meta";
-    const idCode = document.createElement("code");
-    idCode.textContent = item.id;
-    const originSpan = document.createElement("span");
-    originSpan.className = "badge";
-    originSpan.textContent = "Saved · " + (item.origin || "custom");
-    const dateSpan = document.createElement("span");
-    dateSpan.textContent = String(item.updatedAt || "").slice(0, 16).replace("T", " ");
-    meta.appendChild(idCode);
-    meta.appendChild(originSpan);
-    meta.appendChild(dateSpan);
-
-    const preview = document.createElement("pre");
-    preview.className = "snips-preview";
-    preview.textContent = (item.code.split("\\n").find((l) => l.trim() !== "") || "(empty)").trim();
-
-    const actions = document.createElement("div");
-    actions.className = "snips-item-actions";
-
-    const openBtn = document.createElement("button");
-    openBtn.type = "button";
-    openBtn.className = "btn btn-primary";
-    openBtn.textContent = item.id === activeSnipId ? "Loaded" : "Open";
-    openBtn.addEventListener("click", () => {
-      loadSnip(item.id);
-      if (sketchesModal) sketchesModal.hidden = true;
-    });
-
-    const renameBtn = document.createElement("button");
-    renameBtn.type = "button";
-    renameBtn.className = "btn";
-    renameBtn.textContent = "Rename";
-    renameBtn.addEventListener("click", () => {
-      const input = document.createElement("input");
-      input.type = "text";
-      input.className = "snips-rename-input";
-      input.value = item.title;
-      input.setAttribute("aria-label", "New title for sketch");
-      const saveTitleBtn = document.createElement("button");
-      saveTitleBtn.type = "button";
-      saveTitleBtn.className = "btn btn-primary";
-      saveTitleBtn.textContent = "Save Title";
-      const wrap = document.createElement("div");
-      wrap.className = "snips-rename-row";
-      wrap.appendChild(input);
-      wrap.appendChild(saveTitleBtn);
-      head.replaceChild(wrap, titleSpan);
-      input.focus();
-      input.select();
-      const commitRename = () => {
-        const nextTitle = input.value.trim();
-        if (nextTitle) {
-          snipsApi.update(item.id, { title: nextTitle });
-          if (item.id === activeSnipId) {
-            if (titleEl) titleEl.textContent = nextTitle;
-            fileEl.textContent = nextTitle + " · " + item.id.slice(0, 8);
-          }
-        }
-        renderSketchesList();
-      };
-      saveTitleBtn.addEventListener("click", commitRename);
-      input.addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter") { ev.preventDefault(); commitRename(); }
-        else if (ev.key === "Escape") { ev.preventDefault(); renderSketchesList(); }
-      });
-    });
-
-    const dupBtn = document.createElement("button");
-    dupBtn.type = "button";
-    dupBtn.className = "btn";
-    dupBtn.textContent = "Duplicate";
-    dupBtn.addEventListener("click", () => {
-      snipsApi.saveNew({
-        title: item.title + " (copy)",
-        code: item.code,
-        stdin: item.stdin,
-        args: item.args,
-        origin: item.origin,
-        extraModules: item.extraModules || null,
-        environment: item.environment || "universal",
-      });
-      syncSnipsBadge();
-      renderSketchesList();
-    });
-
-    const delBtn = document.createElement("button");
-    delBtn.type = "button";
-    delBtn.className = "btn";
-    delBtn.textContent = "Delete";
-    delBtn.addEventListener("click", () => {
-      snipsApi.remove(item.id);
-      if (item.id === activeSnipId) activeSnipId = null;
-      syncSnipsBadge();
-      renderSketchesList();
-    });
-
-    actions.appendChild(openBtn);
-    actions.appendChild(renameBtn);
-    actions.appendChild(dupBtn);
-    actions.appendChild(delBtn);
-
-    row.appendChild(head);
-    row.appendChild(meta);
-    row.appendChild(preview);
-    row.appendChild(actions);
-    return row;
-  }
-
-  function renderLibraryRow(item) {
-    const isLoaded = Boolean(
-      (item.sampleId && currentSample && currentSample.id === item.sampleId && !activeSnipId) ||
-      (activeLibraryItem && activeLibraryItem.id === item.id),
-    );
-    const row = document.createElement("article");
-    row.className = "snips-item" + (isLoaded ? " active" : "");
-
-    const head = document.createElement("div");
-    head.className = "snips-item-head";
-    const titleSpan = document.createElement("span");
-    titleSpan.className = "snips-item-title";
-    titleSpan.textContent = item.title;
-    const catBadge = document.createElement("span");
-    catBadge.className = "badge";
-    catBadge.textContent = item.badge || item.category;
-    head.appendChild(titleSpan);
-    head.appendChild(catBadge);
-
-    const meta = document.createElement("div");
-    meta.className = "snips-item-meta";
-    const fileCode = document.createElement("code");
-    fileCode.textContent = item.file;
-    meta.appendChild(fileCode);
-
-    const preview = document.createElement("pre");
-    preview.className = "snips-preview";
-    preview.textContent = (String(item.source || "").split("\\n").find((l) => l.trim() !== "") || "(empty)").trim();
-
-    const actions = document.createElement("div");
-    actions.className = "snips-item-actions";
-    const openBtn = document.createElement("button");
-    openBtn.type = "button";
-    openBtn.className = "btn btn-primary";
-    openBtn.textContent = isLoaded ? "Loaded" : "Load";
-    openBtn.addEventListener("click", () => {
-      loadLibraryItem(item);
-      if (sketchesModal) sketchesModal.hidden = true;
-    });
-    actions.appendChild(openBtn);
-
-    row.appendChild(head);
-    row.appendChild(meta);
-    row.appendChild(preview);
-    row.appendChild(actions);
-    return row;
-  }
-
-  function renderSketchesList() {
-    if (!sketchesList) return;
-    const savedAll = snipsApi ? snipsApi.list() : [];
-    const libAll = Array.isArray(libraryItems) ? libraryItems : [];
-    const q = sketchesFilter ? sketchesFilter.value.trim().toLowerCase() : "";
-
-    const showSaved = activeCat === "all" || activeCat === "saved";
-    const filteredSaved = showSaved
-      ? (q
-          ? savedAll.filter((item) =>
-              item.title.toLowerCase().includes(q) ||
-              item.id.toLowerCase().includes(q) ||
-              item.origin.toLowerCase().includes(q) ||
-              item.code.toLowerCase().includes(q),
-            )
-          : savedAll)
-      : [];
-
-    const filteredLib = activeCat === "saved"
-      ? []
-      : libAll.filter((item) => {
-          if (activeCat !== "all" && item.category !== activeCat) return false;
-          if (!q) return true;
-          return (
-            item.title.toLowerCase().includes(q) ||
-            item.file.toLowerCase().includes(q) ||
-            item.badge.toLowerCase().includes(q) ||
-            item.source.toLowerCase().includes(q)
-          );
-        });
-
-    const totalShown = filteredSaved.length + filteredLib.length;
-    if (sketchesSummary) {
-      sketchesSummary.textContent = totalShown + " items" + (!libraryItems && activeCat !== "saved" ? " (loading library...)" : "");
-    }
-
-    sketchesList.innerHTML = "";
-    if (totalShown === 0) {
-      const empty = document.createElement("div");
-      empty.className = "gym-result-empty";
-      empty.textContent = activeCat === "saved" && savedAll.length === 0
-        ? "No saved sketches in localStorage yet. Modify any code and click the Save icon or + New Sketch."
-        : "No matching code entries.";
-      sketchesList.appendChild(empty);
-      return;
-    }
-
-    for (const item of filteredSaved) {
-      sketchesList.appendChild(renderSavedRow(item));
-    }
-    const libCap = activeCat === "all" && !q ? 80 : 250;
-    for (const item of filteredLib.slice(0, libCap)) {
-      sketchesList.appendChild(renderLibraryRow(item));
-    }
-  }
-
-  if (saveSnipBtn && snipsApi) {
-    saveSnipBtn.addEventListener("click", () => {
-      const cleanStdin = stdinEl.value.replaceAll("\\\\n", "\\n");
-      if (activeSnipId) {
-        const updated = snipsApi.update(activeSnipId, {
-          code: editorEl.value,
-          stdin: cleanStdin,
-          args: argsEl.value,
-          extraModules: currentExtraModules,
-          environment: currentEnvironment,
-        });
-        if (updated) {
-          setBaseline();
-          if (titleEl) titleEl.textContent = updated.title;
-          fileEl.textContent = updated.title + " · " + updated.id.slice(0, 8);
-          statusEl.textContent = "Saved sketch (" + updated.id.slice(0, 8) + ")";
-          setPlaygroundQuery("snip", updated.id);
-          syncSnipsBadge();
-          return;
-        }
-      }
-      const defaultTitle = activeLibraryItem
-        ? activeLibraryItem.title
-        : currentSample && currentSample.id
-          ? (byId.get(currentSample.id)?.title ?? currentSample.id)
-          : "Custom Sketch";
-      const defaultOrigin = activeLibraryItem
-        ? activeLibraryItem.id
-        : currentSample
-          ? "sample:" + currentSample.id
-          : "playground";
-      const created = snipsApi.saveNew({
-        title: defaultTitle,
-        code: editorEl.value,
-        stdin: cleanStdin,
-        args: argsEl.value,
-        origin: defaultOrigin,
-        extraModules: currentExtraModules,
-        environment: currentEnvironment,
-      });
-      if (created) {
-        activeSnipId = created.id;
-        activeLibraryItem = null;
-        currentSample = null;
-        setBaseline();
-        if (titleEl) titleEl.textContent = created.title;
-        fileEl.textContent = created.title + " · " + created.id.slice(0, 8);
-        statusEl.textContent = "Saved new sketch (" + created.id.slice(0, 8) + ")";
-        setPlaygroundQuery("snip", created.id);
-        syncSnipsBadge();
-      }
-    });
-  }
-
-  for (const tab of catTabs) {
-    tab.addEventListener("click", () => {
-      activeCat = tab.dataset.cat || "all";
-      for (const t of catTabs) t.setAttribute("aria-pressed", t === tab ? "true" : "false");
-      renderSketchesList();
-    });
-  }
-
-  if (sketchesBtn && sketchesModal) {
-    sketchesBtn.addEventListener("click", () => {
-      clearArmed = false;
-      if (sketchesClear) sketchesClear.textContent = "Clear Saved";
-      renderSketchesList();
-      sketchesModal.hidden = false;
-      if (sketchesFilter) sketchesFilter.focus();
-      if (!libraryItems) {
-        void loadLibraryCatalog().then(() => renderSketchesList());
-      }
-    });
-    if (sketchesClose) {
-      sketchesClose.addEventListener("click", () => { sketchesModal.hidden = true; });
-    }
-    sketchesModal.addEventListener("click", (ev) => {
-      if (ev.target === sketchesModal) sketchesModal.hidden = true;
-    });
-    if (sketchesFilter) {
-      sketchesFilter.addEventListener("input", renderSketchesList);
-    }
-    if (sketchesNew && snipsApi) {
-      sketchesNew.addEventListener("click", () => {
-        const created = snipsApi.saveNew({
-          title: "Custom Sketch",
-          code: 'io := import "core/io";\\n\\nio.outputLine("Hello from Lite!");\\n',
-          stdin: "",
-          args: "",
-          origin: "custom",
-        });
-        if (created) {
-          loadSnip(created.id);
-          sketchesModal.hidden = true;
-        }
-      });
-    }
-    if (sketchesClear && snipsApi) {
-      sketchesClear.addEventListener("click", () => {
-        if (!clearArmed) {
-          clearArmed = true;
-          sketchesClear.textContent = "Confirm Clear Saved";
-          return;
-        }
-        clearArmed = false;
-        sketchesClear.textContent = "Clear Saved";
-        snipsApi.clear();
-        activeSnipId = null;
-        syncSnipsBadge();
-        renderSketchesList();
-        updateDirtyState();
-        statusEl.textContent = "Cleared saved sketches";
-      });
-    }
-  }
-
-  const STARTER_TEMPLATES = {
-    hello: {
-      title: "Hello Lite",
-      code: 'io := import "core/io";\\n\\nio.outputLine("Hello from Lite Play Studio!");\\n',
-      stdin: "",
-      args: "",
-    },
-    stdin: {
-      title: "Input & Loops",
-      code: 'io := import "core/io";\\nformat := import "core/format";\\n\\nlines := io.inputLines();\\nvar i := 0;\\nloop i < 5 and i < format.listCountText(lines) {\\n  io.outputLine(format.intText(i + 1) + ": " + lines[i]);\\n  i = i + 1;\\n}\\n',
-      stdin: "alpha\\nbeta\\ngamma",
-      args: "",
-    },
-    canvas: {
-      title: "Canvas Scene",
-      code: 'canvas := import "extra/canvas";\\n\\ncanvas.open(160, 100, "Lite Canvas");\\ncanvas.clear(0xFF0B0C0E);\\ncanvas.fillRect(20, 20, 120, 60, 0xFFC97B14);\\ncanvas.fillRect(36, 36, 88, 28, 0xFFF0B45A);\\ncanvas.present();\\n',
-      stdin: "",
-      args: "",
-    },
-    play: {
-      title: "Play Loop",
-      code: 'canvas := import "extra/canvas";\\n\\nvar x := 10;\\ncanvas.open(160, 96, "Moving Block");\\nonCanvasUpdate := fn(dt: Float): Bool {\\n  x = (x + 2) % 140;\\n  canvas.clear(0xFF141210);\\n  canvas.fillRect(x, 36, 20, 20, 0xFFF0B45A);\\n  canvas.present();\\n  true\\n};\\ncanvas.present();\\n',
-      stdin: "",
-      args: "",
-    },
-  };
-  for (const tplBtn of document.querySelectorAll("[data-template]")) {
-    tplBtn.addEventListener("click", () => {
-      const key = tplBtn.getAttribute("data-template");
-      const tpl = key ? STARTER_TEMPLATES[key] : null;
-      if (!tpl) return;
-      if (snipsApi) {
-        const created = snipsApi.saveNew({
-          title: tpl.title,
-          code: tpl.code,
-          stdin: tpl.stdin,
-          args: tpl.args,
-          origin: "template:" + key,
-        });
-        if (created) {
-          loadSnip(created.id);
-          if (sketchesModal) sketchesModal.hidden = true;
-          return;
-        }
-      }
-      stopPlay(true);
-      editorCtrl.clearErrors();
-      editorCtrl.setValue(tpl.code);
-      stdinEl.value = tpl.stdin.replaceAll("\\n", "\\\\n");
-      argsEl.value = tpl.args;
-      if (titleEl) titleEl.textContent = tpl.title;
-      setBaseline();
-      if (sketchesModal) sketchesModal.hidden = true;
-    });
-  }
-
-  if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
-    window.addEventListener("lite:snips-changed", syncSnipsBadge);
-  }
-  syncSnipsBadge();
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const initial = urlParams.get("sample") ?? "${escapeHtml(playgroundDefaultSample.id)}";
-  const snipIdParam = urlParams.get("snip");
-  const exampleParam = urlParams.get("example");
-  const caseParam = urlParams.get("case");
-  const pieceParam = urlParams.get("piece");
-  const itemParam = urlParams.get("item");
-  const rawHash = typeof window !== "undefined" && window.location && window.location.hash ? String(window.location.hash) : "";
-  let loadedDraft = false;
-  if (rawHash.startsWith("#code=")) {
-    const shared = decodeSharePayload(rawHash.slice(6));
-    if (shared && typeof shared.code === "string") {
-      loadedDraft = true;
-      activeSnipId = null;
-      activeLibraryItem = null;
-      currentSample = null;
-      editorCtrl.clearErrors();
-      editorCtrl.setValue(shared.code);
-      stdinEl.value = String(shared.stdin || "").replaceAll("\\n", "\\\\n");
-      argsEl.value = String(shared.args || "");
-      if (titleEl) titleEl.textContent = shared.title || "Shared Sketch";
-      fileEl.textContent = "shared#code";
-      rawTs = "";
-      rawC = "";
-      cMessage = "/* Press Compile or open Generated C to emit C. */";
-      lastCSource = null;
-      renderCodeViews();
-      setBaseline();
-      outputEl.textContent = "(Loaded shared sketch — press Play)";
-      statusEl.textContent = "Loaded shared sketch from URL";
-    }
-  }
-  if (!loadedDraft && snipIdParam && loadSnip(snipIdParam)) {
-    loadedDraft = true;
-  }
-  if (!loadedDraft && (exampleParam || caseParam || pieceParam || itemParam)) {
-    loadedDraft = true;
-    void loadLibraryCatalog().then((items) => {
-      let found = null;
-      if (exampleParam) found = items.find((e) => e.category === "example" && e.slug === exampleParam);
-      else if (caseParam) found = items.find((e) => e.category === "case" && e.slug === caseParam);
-      else if (pieceParam) found = items.find((e) => e.category === "piece" && e.slug === pieceParam);
-      else if (itemParam) found = items.find((e) => e.id === itemParam || e.slug === itemParam);
-      if (found) loadLibraryItem(found);
-      else void loadSample(initial, "load");
-    });
-  }
-  if (!loadedDraft && urlParams.get("draft") === "gym" && typeof sessionStorage !== "undefined") {
-    try {
-      const rawDraft = sessionStorage.getItem("lite-playground-draft-v1");
-      if (rawDraft) {
-        const draft = JSON.parse(rawDraft);
-        if (draft && typeof draft.source === "string") {
-          editorCtrl.setValue(draft.source);
-          stdinEl.value = String(draft.stdin || "").replaceAll("\\n", "\\\\n");
-          argsEl.value = "";
-          fileEl.textContent = (draft.title || "gym") + ".lts";
-          rawTs = "";
-          rawC = "";
-          cMessage = "/* Press Compile or open Generated C to emit C. */";
-          lastCSource = null;
-          renderCodeViews();
-          setBaseline();
-          outputEl.textContent = "(Press Play to run)";
-          statusEl.textContent = "Loaded from Lite Gym — press Play";
-          loadedDraft = true;
-        }
-      }
-    } catch {}
-  }
-  if (!loadedDraft) void loadSample(initial, "load");
-</script>`;
-
-  return renderPage({
-    title: 'Playground — Lite',
-    description: 'Write, compile to TypeScript or C, and run Lite programs in your browser.',
-    basePath: '../',
-    active: 'playground',
-    repoUrl,
-    rev,
-    body,
-    bodyClass: 'playground-page',
-    mainClass: 'playground-main',
-    lightSwitchShine,
-  });
+  return JSON.parse(result.stdout) as { homeBody: string; galleryBody: string; playgroundBody: string };
 }
 
 export function parseBuildArgs(argv: readonly string[]): BuildSiteOptions {
@@ -1707,8 +261,6 @@ export function buildSite(options?: BuildSiteOptions): void {
     const srcSvg = join(root, 'brand', svgFile);
     if (existsSync(srcSvg)) cpSync(srcSvg, join(outputDir, 'brand', svgFile));
   }
-  writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
-  writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
 
   const compilerJs = stripTypeScriptTypes(readFileSync(tsCompiler.path, 'utf8'), { mode: 'strip' });
   const compilerCJs = stripTypeScriptTypes(readFileSync(buildCCompiler().path, 'utf8'), { mode: 'strip' });
@@ -1914,15 +466,57 @@ export function buildSite(options?: BuildSiteOptions): void {
   }
   writeFileSync(join(outputDir, 'playground', 'library.json'), JSON.stringify(playgroundLibrary));
 
-  writeFileSync(
-    join(outputDir, 'index.html'),
-    renderHomePage(rendered, repoUrl, rev, lightSwitchShine, {
+  const sitePages = buildSitePages({
+    rendered,
+    renderedPlay,
+    repoUrl,
+    counts: {
       lessons: learnOut.lessonCount,
       tutorials: learnOut.tutorialCount,
       drills: gymOut.drillCount,
       workouts: gymOut.kataCount,
       docsPages: docsOut.files.size,
       modules: extractedModules.length,
+    },
+  });
+  writeFileSync(
+    join(outputDir, 'index.html'),
+    renderPage({
+      title: 'Lite — LiteLang & LiteScript',
+      basePath: '',
+      active: 'home',
+      repoUrl,
+      rev,
+      body: sitePages.homeBody,
+      lightSwitchShine,
+    }),
+  );
+  writeFileSync(
+    join(outputDir, 'gallery', 'index.html'),
+    renderPage({
+      title: 'Gallery — Lite',
+      description: 'Verified Lite language examples and category-grouped canvas, audio, and game showcases.',
+      basePath: '../',
+      active: 'gallery',
+      repoUrl,
+      rev,
+      body: sitePages.galleryBody,
+      lightSwitchShine,
+    }),
+  );
+  writeFileSync(
+    join(outputDir, 'playground', 'index.html'),
+    renderPage({
+      title: 'Playground — Lite',
+      description: 'Write, compile to TypeScript or C, and run Lite programs in your browser.',
+      basePath: '../',
+      active: 'playground',
+      repoUrl,
+      rev,
+      body: sitePages.playgroundBody,
+      bodyClass: 'playground-page',
+      mainClass: 'playground-main',
+      lightSwitchShine,
     }),
   );
   writeFileSync(
