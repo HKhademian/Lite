@@ -494,3 +494,11 @@ Compare `UserID | String` narrowing, a record field of that union, a `[UserID; 0
 Records (3), enums (4), collections (7), and generic constraints (10) depend on these choices. Record new decisions with their owning area; return to this review after the dependency is understood.
 
 Related preliminary notes: [3](03-records.md), [4](04-enums.md), [7](07-collections.md), [10](10-generics-comptime.md).
+
+## Joint review: operations on the union remainder
+
+The review distinguishes the zero-initialized state (Kind 0, no type reference) from a nonzero Kind that selects no allowed member. A function parameter of the same union type receives the caller's state unchanged. Its body uses the same checks and matching rules as any other block.
+
+The proposed equality sequence is to compare Kinds first, return unequal for different Kinds, return equal for two zero Kinds, and compare typed payloads when both Kinds identify the same allowed member. Equal unrecognized nonzero Kinds have no member equality operation. Their outcome, and eligibility for unions containing members that lack equality, remain open. This is a review direction, with no raw payload comparison implied. The later enum review revisits outlier coverage in [enums](04-enums.md#joint-review-value-and-carrier-enums).
+
+The review also explored letting a written `_` include the outlier and requiring narrowing within that arm. A separate sketch let omitted known-member arms contribute nothing. These were alternatives under discussion. The later enum review returned to expanding `_` over the declared members with a separate outlier guard. Keep that choice distinct from the write behavior of an empty or absent normal branch.
