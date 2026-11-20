@@ -16,6 +16,8 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Confirmed in joint review:** A `Panic` propagates implicitly through enclosing calls until a matching catcher handles it. An `Error` belongs to a visible returned-error contract (`T ! E`). The caller explicitly handles it or explicitly propagates it. Keep these two paths as the baseline for subsequent review. [Result and errors](../../../docs/result-and-errors.md) · [Panics](../../../docs/panics.md)
 
+**Ordinary operations:** Indexing and basic arithmetic yield ordinary values on success. Their runtime faults use the Panic path. For design verification, test an in-range `items[i]` yielding the element, an out-of-range runtime `i` raising a typed Panic, and an arithmetic fault such as division by zero under a defined division rule. An explicit lookup can offer an absence value where it is expected. [Checked fault policy](../../../docs/checked-fault-policy.md)
+
 **Initial assessment and probes:** Compare a missing file reported as a returned error with an indexing fault. Decide recovery requirements from the operation contract rather than assuming all failures are interchangeable.
 
 ## 8.2 Function contracts

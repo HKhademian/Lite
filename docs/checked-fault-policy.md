@@ -2,6 +2,8 @@
 
 Status: **policy history with selected sequence and arithmetic directions, 2026-10-20**. Ordinary sequence access/removal uses typed faults with attached local recovery. Basic arithmetic faults use typed panics, not returned `Result` errors; target-level `else` filters support local recovery of matching types. The [shared recovery document](expression-recovery.md) records the recovery surface. Alternatives below preserve the earlier review rather than competing current meanings.
 
+The joint review reaffirmed that ordinary indexing and arithmetic are direct value operations. A successful `items[i]` yields the element, and a successful arithmetic expression yields the numeric value. An out-of-bounds access or division by zero under the applicable division rules raises a typed `Panic`, which propagates implicitly unless caught. Ordinary access and arithmetic require no `Option` unwrap or explicit `Error` propagation. A separately requested lookup may expose expected absence as a value under its own contract.
+
 ## Keep two design questions separate
 
 Which collection supports an operation is a static contract question. What happens when a supported operation receives an invalid index is a failure-policy question. Making indexing more convenient does not require bundling traversal, indexing, size, and contiguity in every parameter type.
