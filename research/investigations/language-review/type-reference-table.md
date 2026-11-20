@@ -96,6 +96,12 @@ Structural unions and outcomes can be described directly in interface metadata. 
 
 Check that aliases preserve identity, reordered union spellings resolve to the same type, outcome success and failure roles remain distinct, and independently built components agree on the tag for an outcome used as a union member. No table layout or implementation is selected here.
 
+## Runtime identity for composed alternatives
+
+The user raises `List<X> | List<Y>` as a case where both concrete instantiations can be known at compile time while the active one depends on execution. Assuming the lists have distinct type identities, a runtime type test or match must distinguish them even when both are empty or have identical storage layouts. Inspecting the elements or comparing layouts cannot establish which alternative was supplied. The outer union must make the active instantiation available through its Kind or an equivalent discriminator. Ordinary statically typed `List<X>` values do not need to carry that discriminator solely because they were instantiated from a generic.
+
+For a composed member, the discriminator must resolve to the complete alternative, such as `List<X>` or `Int ! FileError`. When the active member is itself an outcome, its own state determines success versus failure and supplies any additional failure information needed by handlers. Test an empty list of each alternative, a match after an `if` whose selected branch depends on runtime input, and a stored outcome inside a union. An implementation may omit metadata where the compiler proves the active type or can recover it unambiguously from the representation, preserving match and recovery behavior. The representation, scope of references, and any public type introspection API remain under review.
+
 ## Assignment and separate builds
 
 1. **Coordinated identifiers:** a registry or published package/module identity
