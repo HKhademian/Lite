@@ -29,9 +29,13 @@ Status: **preliminary, 2026-11-15; awaiting joint review**. All recommendations 
 
 **Initial assessment and probes:** An external caller can see a public record type but may not be allowed to construct or inspect a private field. Test public signatures exposing private types.
 
+**Joint review status:** Publishing a top-level type and exposing access to its fields are separate decisions. The review covered top-level exports, then moved to same-block declarations and initialization. Direct external construction, private-field access, and private types appearing in public signatures remain open.
+
 ## 9.4 Initialization
 
 **Baseline:** First-stage module values use compile-time-known initial values, including var/mut; later runtime initialization and storage are open.
+
+**Confirmed in joint review:** Top-level value initializers in first-stage `.lt` modules must be known at compile time. This also applies to the initial value of a `var` or `mut` binding. Runtime-dependent module initialization remains open for later stages. [Module initialization](../../../docs/modules-and-packages.md#compile-time-known-initial-definitions)
 
 **Initial assessment and probes:** Trace module A importing B and reading its initial value. Check dependencies, cycles and side effects without assuming source-order runtime initialization.
 
