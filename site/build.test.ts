@@ -189,9 +189,33 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(handbookSingle.includes('id="chapter-bindings-and-mutability"'));
   assert(handbookSingle.includes('Continue to <a href="#chapter-bindings-and-mutability"'));
   assert(handbookSingle.includes('#h5-nominal-record-types--name-shorthand'));
+  assert(handbookSingle.includes('data-play-href="../../playground/?piece=bindings-and-mutability-0"'));
+  const bindingsHbHtml = readFileSync(join(out, 'docs/handbook/bindings-and-mutability.html'), 'utf8');
+  assert(bindingsHbHtml.includes('data-play-href="../../playground/?piece=bindings-and-mutability-0"'));
+  const playLibItems = JSON.parse(readFileSync(join(out, 'playground/library.json'), 'utf8')) as Array<{ category: string; slug: string }>;
+  const libPieceSlugs = new Set(playLibItems.filter(it => it.category === 'piece').map(it => it.slug));
+  for (const hbFile of [...readdirSync(join(out, 'docs/handbook')).filter(f => f.endsWith('.html')).map(f => join(out, 'docs/handbook', f))]) {
+    const hbHtml = readFileSync(hbFile, 'utf8');
+    const preMatches = [...hbHtml.matchAll(/<pre class="code-block"([^>]*)>/g)];
+    for (const pm of preMatches) {
+      if (pm[1]!.includes('data-runnable="true"')) {
+        const hrefMatch = /data-play-href="([^"]+)"/.exec(pm[1]!);
+        assert(hrefMatch, `missing data-play-href on runnable block in ${hbFile}`);
+        const qPiece = /\?piece=([a-z0-9-]+)/.exec(hrefMatch[1]!);
+        assert(qPiece && libPieceSlugs.has(qPiece[1]!), `unmapped piece slug ${hrefMatch[1]} in ${hbFile}`);
+      }
+    }
+  }
   const startHereHtml = readFileSync(join(out, 'docs/design/start-here.html'), 'utf8');
   assert(startHereHtml.includes('Open in Play &rarr;'));
+  assert(startHereHtml.includes('href="../../playground/?sample=double-sum"'));
   assert(startHereHtml.includes('Verified in TS'));
+  const tourHtml = readFileSync(join(out, 'docs/design/tour.html'), 'utf8');
+  assert(tourHtml.includes('href="../../playground/?case=mutable-accumulator"'));
+  assert(tourHtml.includes('Open in Play &rarr;'));
+  const modPkgHtml = readFileSync(join(out, 'docs/design/modules-and-packages.html'), 'utf8');
+  assert(modPkgHtml.includes('data-runnable="false"'));
+  assert(!modPkgHtml.includes('data-play-href='));
   const lpHtml = readFileSync(join(out, 'docs/proposals/LP-0001-operation-specific-panic-recovery.html'), 'utf8');
   assert(lpHtml.includes('Working Proposal'));
   const tuplesHbHtml = readFileSync(join(out, 'docs/handbook/tuples-arrays-lists-and-aliases.html'), 'utf8');
@@ -275,6 +299,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(orbPage.includes('id="ln-split"'));
   assert(orbPage.includes('id="ln-copy"'));
   assert(orbPage.includes('class="docs-crosslinks"'));
+  const helloLearnHtml = readFileSync(join(out, 'learn/getting-started/hello-lite.html'), 'utf8');
+  assert(helloLearnHtml.includes('id="ln-open-play" class="btn" href="../../playground/?piece=hello-lite"'));
 
   const gymIndex = readFileSync(join(out, 'gym/index.html'), 'utf8');
   assert(gymIndex.includes('0 / 45 solved'));
@@ -309,6 +335,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const drillDojo = readFileSync(join(out, 'gym/drills/immutable-vs-var.html'), 'utf8');
   assert(drillDojo.includes('<textarea id="gym-editor" class="pg-editor-input"'));
   assert(drillDojo.includes('<pre id="gym-editor-pre" class="pg-editor-pre"'));
+  assert(drillDojo.includes('id="gym-open-play" class="pg-copy-btn" href="../../playground/?piece=gym-immutable-vs-var"'));
+  assert(!drillDojo.includes('?draft=gym'));
   assert(!drillDojo.includes('class="pg-editor"'));
   assert(!drillDojo.includes('class="pg-pane"'));
   assert(!drillDojo.includes('class="pg-pane-head"'));
@@ -1340,7 +1368,7 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
   const snipsPath = join(root, 'dist', 'site', 'runtime', 'snips.js');
   const snipsJs = readFileSync(snipsPath, 'utf8');
   const storage = new Map<string, string>();
-  const createdBars: Array<{ className: string; buttons: Array<{ textContent: string; className: string; click: () => void }> }> = [];
+  const createdBars: Array<{ className: string; buttons: Array<{ tagName: string; href: string; textContent: string; className: string; click: () => void }> }> = [];
 
   const mockPre = {
     tagName: 'PRE',
@@ -1350,7 +1378,42 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
     parentElement: { tagName: 'DIV', previousElementSibling: null, querySelector: () => null, parentElement: { tagName: 'MAIN' } },
     getAttribute: (name: string) => (name === 'data-lang' ? 'lite' : null),
     closest: (sel: string) => (sel.includes('.doc-prose') ? { tagName: 'DIV' } : null),
-    insertAdjacentElement: (_pos: string, bar: { className: string; buttons: Array<{ textContent: string; className: string; click: () => void }> }) => {
+    insertAdjacentElement: (_pos: string, bar: { className: string; buttons: Array<{ tagName: string; href: string; textContent: string; className: string; click: () => void }> }) => {
+      createdBars.push(bar);
+    },
+  };
+
+  const mockBuiltinPre = {
+    tagName: 'PRE',
+    textContent: 'course := "LiteLang";\n',
+    dataset: {} as Record<string, string>,
+    previousElementSibling: { tagName: 'H2', textContent: 'Immutable Bindings' },
+    parentElement: { tagName: 'DIV', previousElementSibling: null, querySelector: () => null, parentElement: { tagName: 'MAIN' } },
+    getAttribute: (name: string) => {
+      if (name === 'data-lang') return 'lite';
+      if (name === 'data-runnable') return 'true';
+      if (name === 'data-play-href') return '../../playground/?piece=bindings-and-mutability-0';
+      return null;
+    },
+    closest: (sel: string) => (sel.includes('.doc-prose') ? { tagName: 'DIV' } : null),
+    insertAdjacentElement: (_pos: string, bar: { className: string; buttons: Array<{ tagName: string; href: string; textContent: string; className: string; click: () => void }> }) => {
+      createdBars.push(bar);
+    },
+  };
+
+  const mockNonRunnablePre = {
+    tagName: 'PRE',
+    textContent: 'math := import "./math";\n',
+    dataset: {} as Record<string, string>,
+    previousElementSibling: null,
+    parentElement: { tagName: 'DIV', previousElementSibling: null, querySelector: () => null, parentElement: { tagName: 'MAIN' } },
+    getAttribute: (name: string) => {
+      if (name === 'data-lang') return 'lite';
+      if (name === 'data-runnable') return 'false';
+      return null;
+    },
+    closest: (sel: string) => (sel.includes('.doc-prose') ? { tagName: 'DIV' } : null),
+    insertAdjacentElement: (_pos: string, bar: { className: string; buttons: Array<{ tagName: string; href: string; textContent: string; className: string; click: () => void }> }) => {
       createdBars.push(bar);
     },
   };
@@ -1382,6 +1445,7 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
     const node = {
       tagName: tag.toUpperCase(),
       type: '',
+      href: '',
       className: '',
       textContent: '',
       dataset: {} as Record<string, string>,
@@ -1405,7 +1469,7 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
       title: 'Overview & Setup — Docs — Lite',
       body: { dataset: { basePath: '../../' } },
       querySelector: () => ({ textContent: 'Overview & Setup' }),
-      querySelectorAll: (sel: string) => (sel === 'pre.code-block' ? [mockPre] : []),
+      querySelectorAll: (sel: string) => (sel === 'pre.code-block' ? [mockPre, mockBuiltinPre, mockNonRunnablePre] : []),
       createElement: (tag: string) => makeMockNode(tag),
       addEventListener() {},
     },
@@ -1461,7 +1525,7 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
   const cliLesson = libJson.find(entry => entry.file === 'language/showcases/modules/filesystem/files-paths-and-cleanup.lts');
   assert.equal(cliLesson?.environment, 'cli', 'expected files-paths-and-cleanup to carry environment=cli in library.json');
 
-  assert.equal(createdBars.length, 1);
+  assert.equal(createdBars.length, 3);
   const runBtn = createdBars[0]!.buttons.find(b => b.textContent.includes('Run'));
   const copyBtn = createdBars[0]!.buttons.find(b => b.textContent === 'Copy');
   const saveBtn = createdBars[0]!.buttons.find(b => b.textContent === 'Save');
@@ -1469,7 +1533,19 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
   assert(runBtn, 'expected inline Run button on Lite code block');
   assert(copyBtn, 'expected Copy button on Lite code block');
   assert(saveBtn, 'expected Save button on Lite code block');
-  assert(playBtn, 'expected Open in Play button on Lite code block');
+  assert(playBtn, 'expected Open in Play button on fallback Lite code block');
+  assert.equal(playBtn.tagName, 'BUTTON');
+
+  const builtinBar = createdBars[1]!;
+  const builtinPlayLink = builtinBar.buttons.find(b => b.textContent.includes('Open in Play'));
+  assert(builtinPlayLink, 'expected Open in Play link on builtin Docs/Handbook code block');
+  assert.equal(builtinPlayLink.tagName, 'A');
+  assert.equal(builtinPlayLink.href, '../../playground/?piece=bindings-and-mutability-0');
+  assert.equal(api.list().length, 1, 'builtin Play link must not create localStorage ?snip= sketches');
+
+  const nonRunnableBar = createdBars[2]!;
+  assert.deepEqual(nonRunnableBar.buttons.map(b => b.textContent), ['Copy']);
+
   playBtn.click();
   assert(mockWin.location.href.startsWith('../../playground/?snip='), mockWin.location.href);
   const loadedId = decodeURIComponent(mockWin.location.href.split('?snip=')[1]!);
@@ -1830,13 +1906,26 @@ test('validateBuiltSiteReferences catches broken files, missing fragments, unres
   const scratch = mkdtempSync(join(tmpdir(), 'lite-site-refs-'));
   try {
     mkdirSync(join(scratch, 'docs'), { recursive: true });
+    mkdirSync(join(scratch, 'playground'), { recursive: true });
     writeFileSync(
       join(scratch, 'index.html'),
       '<!doctype html><a href="docs/page.html#ok">Ok</a>',
     );
     writeFileSync(
+      join(scratch, 'playground', 'index.html'),
+      '<!doctype html><h1>Playground</h1>',
+    );
+    writeFileSync(
+      join(scratch, 'playground', 'library.json'),
+      JSON.stringify([
+        { id: 'piece/valid-piece', slug: 'valid-piece', category: 'piece' },
+      ]),
+    );
+    writeFileSync(
       join(scratch, 'docs', 'page.html'),
       '<!doctype html><h2 id="ok">Ok</h2>' +
+        '<a href="../playground/?piece=valid-piece">Valid play</a>' +
+        '<pre class="code-block" data-play-href="../playground/?piece=does-not-exist"></pre>' +
         '<a href="missing.html">Missing file</a>' +
         '<a href="#missing-id">Missing frag</a>' +
         '<a href="page.html#ok" data-lite-uri="lite://learn/nope">Unresolved</a>',
@@ -1872,6 +1961,7 @@ test('validateBuiltSiteReferences catches broken files, missing fragments, unres
         'missing-fragment',
         'missing-fragment',
         'missing-graph-fragment',
+        'missing-play-target',
         'unresolved-lite-uri',
       ],
     );

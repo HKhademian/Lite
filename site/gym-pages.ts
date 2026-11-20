@@ -518,6 +518,9 @@ function renderGymExercisePage(
   const totalCases = ex.visibleCases.length + ex.hiddenCases.length;
   const starterClean = item.starterSource.trimEnd();
   const solutionClean = item.solutionSource.trimEnd();
+  const builtinPlayHref = graph
+    ? graph.resolveUri(`lite://play/piece/gym-${ex.slug}`, item.outPath).href
+    : `../../playground/?piece=${encodeURIComponent(`gym-${ex.slug}`)}`;
   const prevHref = prev ? relativeHref(item.outPath, prev.outPath) : '';
   const nextHref = next ? relativeHref(item.outPath, next.outPath) : '';
 
@@ -602,7 +605,7 @@ function renderGymExercisePage(
             </div>
             <div class="pg-actions">
               <button id="gym-reset" class="pg-copy-btn" type="button">Reset Starter</button>
-              <a id="gym-open-play" class="pg-copy-btn" href="../../playground/?draft=gym">Open in Play &rarr;</a>
+              <a id="gym-open-play" class="pg-copy-btn" href="${escapeHtml(builtinPlayHref)}">Open in Play &rarr;</a>
             </div>
           </div>
           ${renderCodeEditorBlock({
@@ -672,6 +675,7 @@ function renderGymExercisePage(
   const exerciseId = ${JSON.stringify(ex.id)};
   const exerciseSlug = ${JSON.stringify(ex.slug)};
   const exerciseTitle = ${JSON.stringify(ex.title)};
+  const initialStarter = ${JSON.stringify(starterClean).replaceAll('<', '\\u003c')};
   const initialHints = ${JSON.stringify(ex.hints)};
 
   const shellEl = document.getElementById("gym-shell");
@@ -807,6 +811,7 @@ function renderGymExercisePage(
   });
 
   openPlayLink.addEventListener("click", (event) => {
+    if (editorEl.value.trimEnd() === initialStarter) return;
     const firstStdin = payloadData && payloadData.visibleCases && payloadData.visibleCases[0]
       ? String(payloadData.visibleCases[0].stdin || "")
       : "";

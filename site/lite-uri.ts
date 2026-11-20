@@ -1129,6 +1129,7 @@ export type SiteReferenceViolationReason =
   | 'bad-playground-href'
   | 'missing-file'
   | 'missing-fragment'
+  | 'missing-play-target'
   | 'missing-graph-node'
   | 'dangling-graph-edge'
   | 'missing-graph-fragment';
@@ -1194,6 +1195,38 @@ export function validateBuiltSiteReferences(siteDir: string): SiteReferenceRepor
   let searchEntriesChecked = 0;
   let graphNodesChecked = 0;
   let graphEdgesChecked = 0;
+
+  const playgroundIndexAbs = join(absSiteDir, 'playground', 'index.html');
+  const playgroundSamplesDir = join(absSiteDir, 'playground', 'samples');
+  const hasSampleFilesDir = existsSync(playgroundSamplesDir);
+  const libJsonPath = join(absSiteDir, 'playground', 'library.json');
+  let playTargets:
+    | Readonly<{
+        byCat: Readonly<Record<'sample' | 'example' | 'case' | 'piece', Set<string>>>;
+        allIds: Set<string>;
+      }>
+    | undefined;
+  if (existsSync(libJsonPath)) {
+    const items = JSON.parse(readFileSync(libJsonPath, 'utf8')) as ReadonlyArray<
+      Readonly<{ id?: string; slug?: string; category?: string; sampleId?: string }>
+    >;
+    const byCat: Record<'sample' | 'example' | 'case' | 'piece', Set<string>> = {
+      sample: new Set(),
+      example: new Set(),
+      case: new Set(),
+      piece: new Set(),
+    };
+    const allIds = new Set<string>();
+    for (const item of items) {
+      if (item.id) allIds.add(item.id);
+      if (item.slug) allIds.add(item.slug);
+      if (item.sampleId) byCat.sample.add(item.sampleId);
+      if (item.slug && (item.category === 'sample' || item.category === 'example' || item.category === 'case' || item.category === 'piece')) {
+        byCat[item.category].add(item.slug);
+      }
+    }
+    playTargets = { byCat, allIds };
+  }
 
   const getStrippedHtml = (absPath: string): string => {
     const cached = htmlCache.get(absPath);
@@ -1265,6 +1298,28 @@ export function validateBuiltSiteReferences(siteDir: string): SiteReferenceRepor
         violations.push({ source, target: rawTarget, reason: missingFragReason });
       }
     }
+
+    if (targetFileAbs === playgroundIndexAbs && qIdx >= 0) {
+      const params = new URLSearchParams(pathAndQuery.slice(qIdx + 1));
+      const sampleVal = params.get('sample');
+      if (sampleVal !== null && sampleVal !== '') {
+        const sampleJsonOk = hasSampleFilesDir && existsSync(join(playgroundSamplesDir, `${sampleVal}.json`));
+        const libSampleOk = playTargets ? playTargets.byCat.sample.has(sampleVal) : false;
+        if ((hasSampleFilesDir || playTargets) && !sampleJsonOk && !libSampleOk) {
+          violations.push({ source, target: rawTarget, reason: 'missing-play-target' });
+        }
+      }
+      for (const cat of ['example', 'case', 'piece'] as const) {
+        const val = params.get(cat);
+        if (val !== null && val !== '' && playTargets && !playTargets.byCat[cat].has(val)) {
+          violations.push({ source, target: rawTarget, reason: 'missing-play-target' });
+        }
+      }
+      const itemVal = params.get('item');
+      if (itemVal !== null && itemVal !== '' && playTargets && !playTargets.allIds.has(itemVal)) {
+        violations.push({ source, target: rawTarget, reason: 'missing-play-target' });
+      }
+    }
   };
 
   for (const htmlFile of htmlFiles) {
@@ -1286,6 +1341,21 @@ export function validateBuiltSiteReferences(siteDir: string): SiteReferenceRepor
       checkLocalTarget({
         source: relSource,
         rawTarget: rawHref,
+        fromFileAbs: htmlFile,
+        missingFileReason: 'missing-file',
+        missingFragReason: 'missing-fragment',
+      });
+    }
+
+    const playAttrRe = /data-play-href="([^"]*)"/g;
+    for (let m = playAttrRe.exec(stripped); m !== null; m = playAttrRe.exec(stripped)) {
+      const rawPlayHref = m[1] ?? '';
+      const trimmed = rawPlayHref.trim();
+      if (trimmed === '' || isExternalHref(trimmed)) continue;
+      localLinksChecked += 1;
+      checkLocalTarget({
+        source: relSource,
+        rawTarget: rawPlayHref,
         fromFileAbs: htmlFile,
         missingFileReason: 'missing-file',
         missingFragReason: 'missing-fragment',

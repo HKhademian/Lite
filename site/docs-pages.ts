@@ -106,6 +106,7 @@ export function postprocessMarkdownHtml(options: Readonly<{
   snippets: ReadonlyMap<string, RegisteredSnippet>;
   repoUrl: string;
   highlightUnmarkedAsLite?: boolean;
+  chapterSlug?: string;
   graph?: LiteAcademyGraph;
   fromUri?: string;
 }>): string {
@@ -118,19 +119,51 @@ export function postprocessMarkdownHtml(options: Readonly<{
     snippets,
     repoUrl,
     highlightUnmarkedAsLite = false,
+    chapterSlug,
     graph,
     fromUri,
   } = options;
 
+  let liteFenceIdx = 0;
   let html = rawHtml.replace(
     /<pre class="md-code" data-lang="([^"]*)" data-fence="(\d+)"><code>([\s\S]*?)<\/code><\/pre>/g,
     (_full, rawLang: string, fenceStr: string, innerEscaped: string) => {
       const lang = unescapeHtmlEntities(rawLang).trim().toLowerCase();
       const rawCode = unescapeHtmlEntities(innerEscaped).replace(/\n$/, '');
       const snippet = snippets.get(`${sourcePath}#${fenceStr}`);
+      const isLiteFence = lang === 'lite' || lang === 'lts';
+
+      let builtinPlayHref = '';
+      let builtinPlayUri = '';
+      if (snippet !== undefined) {
+        if (snippet.sampleId !== undefined) {
+          const playUri = `lite://play/${snippet.sampleId}`;
+          builtinPlayUri = playUri;
+          builtinPlayHref = graph
+            ? graph.resolveUri(playUri, outPath).href
+            : `${relativeHref(outPath, 'playground/')}?sample=${encodeURIComponent(snippet.sampleId)}`;
+        } else if (graph) {
+          const mappedUri = graph.resolveSourcePathToUri(snippet.sourcePath);
+          if (mappedUri && mappedUri.startsWith('lite://play/')) {
+            builtinPlayUri = mappedUri;
+            builtinPlayHref = graph.resolveUri(mappedUri, outPath).href;
+          }
+        }
+      } else if (chapterSlug && isLiteFence) {
+        const pieceIdx = liteFenceIdx;
+        liteFenceIdx += 1;
+        if (rawCode.trim() !== '') {
+          const pieceSlug = `${chapterSlug}-${pieceIdx}`;
+          const playUri = `lite://play/piece/${pieceSlug}`;
+          builtinPlayUri = playUri;
+          builtinPlayHref = graph
+            ? graph.resolveUri(playUri, outPath).href
+            : `${relativeHref(outPath, 'playground/')}?piece=${encodeURIComponent(pieceSlug)}`;
+        }
+      }
 
       let codeHtml: string;
-      const isLiteSnippet = lang === 'lite' || lang === 'lts' || (lang === 'text' && snippet !== undefined) || (lang === '' && highlightUnmarkedAsLite);
+      const isLiteSnippet = isLiteFence || (lang === 'text' && snippet !== undefined) || (lang === '' && highlightUnmarkedAsLite);
       if (isLiteSnippet) {
         codeHtml = highlightLite(rawCode);
         if (graph && fromUri) {
@@ -145,12 +178,14 @@ export function postprocessMarkdownHtml(options: Readonly<{
       }
 
       const effectiveLang = lang || (highlightUnmarkedAsLite ? 'lite' : 'text');
-      const runnableAttr = isLiteSnippet ? ' data-runnable="true"' : '';
-      const preBlock = `<pre class="code-block" data-lang="${escapeHtml(effectiveLang)}" data-fence="${fenceStr}"${runnableAttr}><code>${codeHtml}</code></pre>`;
+      const isRunnable = Boolean(chapterSlug || snippet !== undefined) && isLiteSnippet;
+      const runnableAttr = isLiteSnippet ? ` data-runnable="${isRunnable ? 'true' : 'false'}"` : '';
+      const playHrefAttr = builtinPlayHref !== '' ? ` data-play-href="${escapeHtml(builtinPlayHref)}"` : '';
+      const playUriAttr = builtinPlayUri !== '' ? ` data-play-uri="${escapeHtml(builtinPlayUri)}"` : '';
+      const preBlock = `<pre class="code-block" data-lang="${escapeHtml(effectiveLang)}" data-fence="${fenceStr}"${runnableAttr}${playHrefAttr}${playUriAttr}><code>${codeHtml}</code></pre>`;
       if (snippet !== undefined) {
-        if (snippet.sampleId !== undefined) {
-          const playHref = `${relativeHref(outPath, 'playground/')}?sample=${encodeURIComponent(snippet.sampleId)}`;
-          return `<div class="code-card md-snippet-card">${preBlock}<div class="sample-foot"><span class="code-card-meta"><code>${escapeHtml(snippet.sourcePath)}</code></span><a href="${escapeHtml(playHref)}">Open in Play &rarr;</a></div></div>`;
+        if (builtinPlayHref !== '') {
+          return `<div class="code-card md-snippet-card">${preBlock}<div class="sample-foot"><span class="code-card-meta"><code>${escapeHtml(snippet.sourcePath)}</code></span><a href="${escapeHtml(builtinPlayHref)}">Open in Play &rarr;</a></div></div>`;
         }
         const srcHref = repoUrl ? `${repoUrl}/blob/main/${snippet.sourcePath}` : '#';
         return `<div class="code-card md-snippet-card">${preBlock}<div class="sample-foot"><span class="code-card-meta">Verified snippet</span><a href="${escapeHtml(srcHref)}"><code>${escapeHtml(snippet.sourcePath)}</code></a></div></div>`;
@@ -286,6 +321,7 @@ export function buildDocsSection(options: Readonly<{
       snippets,
       repoUrl,
       highlightUnmarkedAsLite: meta.layer === 'handbook',
+      ...(meta.layer === 'handbook' && meta.chapterSlug ? { chapterSlug: meta.chapterSlug } : {}),
       ...(graph !== undefined ? { graph } : {}),
       ...(fromUri !== undefined ? { fromUri } : {}),
     });

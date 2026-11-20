@@ -489,9 +489,11 @@ export const snipsClientJs = `(function () {
 
       var inSolutionBox = pre.closest("#gym-solution-box") !== null;
       var inDocProse = pre.closest(".md-prose, .doc-prose") !== null;
-      var isLiteBlock = isLiteLang || inSolutionBox;
+      var explicitRunnable = pre.getAttribute("data-runnable");
+      var builtinPlayHref = pre.getAttribute("data-play-href") || "";
+      var isLiteBlock = explicitRunnable === "false" ? false : (isLiteLang || inSolutionBox);
       if (!inDocProse && !inSolutionBox) continue;
-      if (!isLiteBlock && lang === "") continue;
+      if (!isLiteLang && !inSolutionBox && lang === "") continue;
 
       pre.dataset.snipBound = "1";
       var bar = document.createElement("div");
@@ -523,20 +525,27 @@ export const snipsClientJs = `(function () {
             flashButton(b, "Saved");
           };
         })(pre, saveBtn));
-
-        var playBtn = makeActionBtn("Open in Play →", "lite-snip-play");
-        playBtn.addEventListener("click", (function (el) {
-          return function () {
-            api.openInPlayground({
-              title: inferTitleForPre(el),
-              code: (el.textContent || "").replace(/\\n$/, ""),
-              origin: currentOriginLabel()
-            });
-          };
-        })(pre));
-
         bar.appendChild(saveBtn);
-        bar.appendChild(playBtn);
+
+        if (builtinPlayHref) {
+          var playLink = document.createElement("a");
+          playLink.className = "lite-snip-btn lite-snip-play";
+          playLink.href = builtinPlayHref;
+          playLink.textContent = "Open in Play →";
+          bar.appendChild(playLink);
+        } else {
+          var playBtn = makeActionBtn("Open in Play →", "lite-snip-play");
+          playBtn.addEventListener("click", (function (el) {
+            return function () {
+              api.openInPlayground({
+                title: inferTitleForPre(el),
+                code: (el.textContent || "").replace(/\\n$/, ""),
+                origin: currentOriginLabel()
+              });
+            };
+          })(pre));
+          bar.appendChild(playBtn);
+        }
       }
 
       pre.insertAdjacentElement("afterend", bar);

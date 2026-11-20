@@ -399,6 +399,11 @@ function renderLessonPage(
   const next = idx + 1 < allItems.length ? allItems[idx + 1] : undefined;
   const isPlay = lesson.environment === 'play';
   const isCli = lesson.environment === 'cli';
+  const builtinPlayHref = graph
+    ? graph.resolveUri(`lite://play/piece/${lesson.slug}`, item.outPath).href
+    : `../../playground/?piece=${encodeURIComponent(lesson.slug)}`;
+  const initialStdinDisplay = lesson.stdin.replace(/\n/g, '\\n');
+  const initialArgsDisplay = lesson.args.join(' ');
 
   const sidebarGroups = [...catalog.tracks]
     .sort((a, b) => a.order - b.order)
@@ -491,7 +496,7 @@ function renderLessonPage(
       </div>
       <div class="pg-actions">
         <button id="ln-reset" class="btn" type="button">Reset</button>
-        <button id="ln-open-play" class="btn" type="button" title="Save sketch and open in Playground">Open in Play &rarr;</button>
+        <a id="ln-open-play" class="btn" href="${escapeHtml(builtinPlayHref)}" title="Open in Playground">Open in Play &rarr;</a>
         <button id="ln-run" class="btn btn-primary" type="button" title="Ctrl/Cmd + Enter">${isCli ? 'Compile TS' : 'Run'}</button>
       </div>
     </div>
@@ -562,6 +567,9 @@ function renderLessonPage(
   const isCliLesson = ${JSON.stringify(isCli)};
   const isPlayLesson = ${JSON.stringify(isPlay)};
   const lessonEnvironment = ${JSON.stringify(lesson.environment)};
+  const initialSource = ${JSON.stringify(item.source).replaceAll('<', '\\u003c')};
+  const initialStdinDisplay = ${JSON.stringify(initialStdinDisplay).replaceAll('<', '\\u003c')};
+  const initialArgsDisplay = ${JSON.stringify(initialArgsDisplay).replaceAll('<', '\\u003c')};
   const initialExtraModules = ${JSON.stringify(item.extraModules).replaceAll('<', '\\u003c')};
 
   const workbenchEl = document.getElementById("ln-workbench");
@@ -824,8 +832,13 @@ function renderLessonPage(
 
   const openPlayBtn = document.getElementById("ln-open-play");
   if (openPlayBtn) {
-    openPlayBtn.addEventListener("click", () => {
+    openPlayBtn.addEventListener("click", (event) => {
+      const isUnmodified = editorEl.value.trimEnd() === initialSource.trimEnd() &&
+        stdinEl.value === initialStdinDisplay &&
+        argsEl.value === initialArgsDisplay;
+      if (isUnmodified) return;
       if (window.LiteSnips && typeof window.LiteSnips.openInPlayground === "function") {
+        event.preventDefault();
         const bundledModules = payloadData && payloadData.extraModules ? payloadData.extraModules : initialExtraModules;
         window.LiteSnips.openInPlayground({
           title: ${JSON.stringify(lesson.title)},

@@ -2385,6 +2385,8 @@ a.is-completed .learn-done-dot {
   flex-wrap: wrap;
 }
 .lite-snip-btn {
+  display: inline-flex;
+  align-items: center;
   appearance: none;
   border: 1px solid var(--border);
   background: var(--surface-elevated);
@@ -2395,11 +2397,13 @@ a.is-completed .learn-done-dot {
   line-height: 1.2;
   padding: 0.24rem 0.58rem;
   border-radius: 6px;
+  text-decoration: none;
   cursor: pointer;
 }
 .lite-snip-btn:hover {
   color: var(--ink);
   border-color: var(--accent);
+  text-decoration: none;
 }
 .lite-snip-btn:disabled {
   opacity: 0.6;
