@@ -317,6 +317,27 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         ei = ei + 1;
     }
 
+    brandSrcs: List<String> = ["brand/README.md", "brand/name.md", "brand/investigation/README.md"];
+    brandOuts: List<String> = ["overview.html", "name.html", "investigation.html"];
+    brandLbls: List<String> = ["brand overview", "name", "investigation"];
+    var bi := 0;
+    loop bi < 3 {
+        src := brandSrcs[bi];
+        if fs.kind(path.join(rootDir, src)) == fs.FILE_KIND_FILE {
+            outPath := claimOutPath(usedOut, "docs/brand/" + brandOuts[bi]);
+            list.pushBack(mut usedOut, outPath);
+            list.pushBack(mut metaSrcs, src);
+            list.pushBack(mut metaOuts, outPath);
+            list.pushBack(mut metaLayers, "spec");
+            list.pushBack(mut metaGroups, "brand");
+            list.pushBack(mut metaNavs, brandLbls[bi]);
+            list.pushBack(mut metaSums, "");
+            list.pushBack(mut metaChSlugs, "");
+            list.pushBack(mut metaVerified, list.listContainsText(verifiedDocs, src));
+        }
+        bi = bi + 1;
+    }
+
     metasJson: mut List<String> = [];
     mapJson: mut List<String> = [];
     renderedJson: mut List<String> = [];
@@ -539,11 +560,11 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
         + "    </aside>";
     }
 
-    grpIds: List<String> = ["start", "design", "proposals", "compiler"];
-    grpTitles: List<String> = ["Start & Overview", "Design Reference", "Proposals (LP)", "Compiler & Contribute"];
+    grpIds: List<String> = ["start", "design", "proposals", "compiler", "brand"];
+    grpTitles: List<String> = ["Start & Overview", "Design Reference", "Proposals (LP)", "Compiler & Contribute", "Brand & Identity"];
     grpBlocks: mut List<String> = [];
     var gi := 0;
-    loop gi < 4 {
+    loop gi < 5 {
         gid := grpIds[gi];
         lis: mut List<String> = [];
         var hasActive := gid == "start";

@@ -17,7 +17,7 @@ export type DocMeta = Readonly<{
   sourcePath: string;
   outPath: string;
   layer: DocLayer;
-  group: 'handbook' | 'start' | 'design' | 'proposals' | 'compiler';
+  group: 'handbook' | 'start' | 'design' | 'proposals' | 'compiler' | 'brand';
   navLabel: string;
   summary?: string;
   chapterSlug?: string;
@@ -307,6 +307,7 @@ export function buildDocsSection(options: Readonly<{
           { kind: 'play', label: 'Play', limit: 4 },
           { kind: 'handbook', label: 'Handbook', limit: 4 },
           { kind: 'doc', label: 'Design Spec', limit: 4 },
+          { kind: 'brand', label: 'Brand', limit: 4 },
         ],
       });
     }

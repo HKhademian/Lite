@@ -1,5 +1,5 @@
 /** Canonical `lite://` internal URI resolver, link verifier, and bidirectional Academy usage graph. */
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, posix, relative, resolve } from 'node:path';
 import type { ModuleApiDoc } from './docs-client.ts';
 import type { ShowcaseSample } from './groups.ts';
@@ -7,11 +7,11 @@ import { escapeHtml } from './highlight.ts';
 import type { PlayGroup, PlaySample } from './play-samples.ts';
 import type { PlaygroundLibraryItem } from './playground-library.ts';
 
-export type LiteEntityKind = 'handbook' | 'doc' | 'learn' | 'gym' | 'play' | 'module' | 'tool' | 'gallery';
+export type LiteEntityKind = 'handbook' | 'doc' | 'brand' | 'learn' | 'gym' | 'play' | 'module' | 'tool' | 'gallery';
 
 export type ParsedLiteUri = Readonly<{
   raw: string;
-  ns: LiteEntityKind;
+  ns: LiteEntityKind | 'repo';
   target: string;
   fragment: string;
 }>;
@@ -38,14 +38,17 @@ export type LiteGraphEdge = Readonly<{
 
 export type ResolvedLiteUri = Readonly<{
   canonicalUri: string;
-  node: LiteGraphNode;
+  kind: LiteEntityKind | 'repo';
+  node?: LiteGraphNode;
   href: string;
   fragment?: string;
+  external?: boolean;
 }>;
 
 export type RelatedBuckets = Readonly<{
   handbook: readonly LiteGraphNode[];
   doc: readonly LiteGraphNode[];
+  brand: readonly LiteGraphNode[];
   learn: readonly LiteGraphNode[];
   gym: readonly LiteGraphNode[];
   play: readonly LiteGraphNode[];
@@ -139,10 +142,12 @@ export function parseLiteUri(raw: string): ParsedLiteUri | null {
   const slashIdx = body.indexOf('/');
   const rawNs = (slashIdx < 0 ? body : body.slice(0, slashIdx)).toLowerCase();
   let target = slashIdx < 0 ? '' : trimSlashes(body.slice(slashIdx + 1));
-  let ns: LiteEntityKind;
+  let ns: LiteEntityKind | 'repo';
 
   if (rawNs === 'handbook') {
     ns = 'handbook';
+  } else if (rawNs === 'brand' || rawNs === 'branding') {
+    ns = 'brand';
   } else if (rawNs === 'doc' || rawNs === 'docs') {
     if (target === 'handbook') {
       ns = 'handbook';
@@ -150,9 +155,42 @@ export function parseLiteUri(raw: string): ParsedLiteUri | null {
     } else if (target.startsWith('handbook/')) {
       ns = 'handbook';
       target = target.slice(9);
+    } else if (target === 'brand') {
+      ns = 'brand';
+      target = '';
+    } else if (target.startsWith('brand/')) {
+      ns = 'brand';
+      target = target.slice(6);
     } else {
       ns = 'doc';
     }
+  } else if (rawNs === 'spec') {
+    ns = 'doc';
+    const cleanSpec = stripOneSuffix(stripOneSuffix(target, '.html'), '.md');
+    if (cleanSpec === '' || cleanSpec === 'overview' || cleanSpec === 'README') {
+      target = 'spec-overview';
+    } else if (cleanSpec === 'index') {
+      target = 'spec';
+    } else if (!target.startsWith('spec/')) {
+      target = `spec/${target}`;
+    }
+  } else if (rawNs === 'proposal' || rawNs === 'proposals') {
+    ns = 'doc';
+    if (target === '') {
+      target = 'proposals/README';
+    } else if (!target.startsWith('proposals/')) {
+      target = `proposals/${target}`;
+    }
+  } else if (rawNs === 'compiler') {
+    ns = 'doc';
+    const cleanComp = stripOneSuffix(stripOneSuffix(target, '.html'), '.md');
+    if (cleanComp === '' || cleanComp === 'overview' || cleanComp === 'README') {
+      target = 'compiler/overview';
+    } else if (!target.startsWith('compiler/')) {
+      target = `compiler/${target}`;
+    }
+  } else if (rawNs === 'repo') {
+    ns = 'repo';
   } else if (rawNs === 'learn') {
     ns = 'learn';
   } else if (rawNs === 'gym') {
@@ -211,6 +249,8 @@ export function collectHtmlIds(html: string): string[] {
 
 /** Bidirectional usage graph and `lite://` URI resolver for Lite Academy. */
 export class LiteAcademyGraph {
+  readonly #rootDir: string | undefined;
+  readonly #repoUrl: string | undefined;
   readonly #nodes = new Map<string, LiteGraphNode>();
   readonly #aliases = new Map<string, string>();
   readonly #bySourcePath = new Map<string, string>();
@@ -220,6 +260,11 @@ export class LiteAcademyGraph {
   readonly #edgeKeys = new Set<string>();
   readonly #outgoing = new Map<string, LiteGraphEdge[]>();
   readonly #incoming = new Map<string, LiteGraphEdge[]>();
+
+  constructor(options?: Readonly<{ rootDir?: string; repoUrl?: string }>) {
+    this.#rootDir = options?.rootDir;
+    this.#repoUrl = options?.repoUrl;
+  }
 
   registerNode(node: LiteGraphNode, aliases: readonly string[] = []): void {
     this.#nodes.set(node.uri, node);
@@ -291,6 +336,56 @@ export class LiteAcademyGraph {
     if (!parsed) {
       throw new Error(`Invalid lite URI: ${rawUri}`);
     }
+    if (parsed.ns === 'repo') {
+      const cleanPath = trimSlashes(parsed.target);
+      if (cleanPath === '' || cleanPath.split('/').includes('..')) {
+        throw new Error(`Invalid lite://repo URI: ${rawUri}`);
+      }
+      const existingUri = this.resolveSourcePathToUri(cleanPath);
+      if (existingUri !== undefined) {
+        const existingNode = this.#nodes.get(existingUri);
+        if (existingNode) {
+          this.verifyNodeFragment(existingNode, parsed.fragment, rawUri);
+          const href = relativeWebHref(fromOutPath, existingNode.outPath, parsed.fragment);
+          return {
+            canonicalUri: existingNode.uri,
+            kind: existingNode.kind,
+            node: existingNode,
+            href,
+            ...(parsed.fragment !== '' ? { fragment: parsed.fragment } : {}),
+          };
+        }
+      }
+      if (!this.#rootDir) {
+        throw new Error(`Unresolved lite://repo target (rootDir unavailable): ${rawUri}`);
+      }
+      const absRoot = resolve(this.#rootDir);
+      const diskPath = resolve(absRoot, cleanPath);
+      const relCheck = relative(absRoot, diskPath);
+      if (relCheck.startsWith('..') || !existsSync(diskPath)) {
+        throw new Error(`Unresolved lite://repo target: ${rawUri}`);
+      }
+      const isDir = statSync(diskPath).isDirectory();
+      const repoBase = (this.#repoUrl ?? '').replace(/\/+$/, '');
+      if (repoBase === '') {
+        return {
+          canonicalUri: `lite://repo/${cleanPath}`,
+          kind: 'repo',
+          href: '#top',
+          ...(parsed.fragment !== '' ? { fragment: parsed.fragment } : {}),
+        };
+      }
+      const blobOrTree = isDir ? 'tree' : 'blob';
+      const href = `${repoBase}/${blobOrTree}/main/${cleanPath}${parsed.fragment !== '' ? `#${parsed.fragment}` : ''}`;
+      return {
+        canonicalUri: `lite://repo/${cleanPath}`,
+        kind: 'repo',
+        href,
+        ...(parsed.fragment !== '' ? { fragment: parsed.fragment } : {}),
+        external: true,
+      };
+    }
+
     const canonicalUri = this.resolveCanonicalUri(parsed);
     if (!canonicalUri) {
       throw new Error(`Unresolved lite URI target: ${rawUri}`);
@@ -299,26 +394,30 @@ export class LiteAcademyGraph {
     if (!node) {
       throw new Error(`Missing node for canonical URI: ${canonicalUri}`);
     }
-    if (parsed.fragment !== '') {
-      if (node.kind === 'handbook' || node.kind === 'doc') {
-        const anchors = this.#docAnchors.get(canonicalUri);
-        if (anchors && canonicalUri !== 'lite://handbook/single-page' && !anchors.has(parsed.fragment)) {
-          throw new Error(`Missing heading fragment #${parsed.fragment} in ${rawUri}`);
-        }
-      } else if (node.kind === 'module') {
-        const syms = this.#moduleSymbols.get(canonicalUri);
-        if (syms && !syms.has(parsed.fragment)) {
-          throw new Error(`Missing module symbol #${parsed.fragment} in ${rawUri}`);
-        }
-      }
-    }
+    this.verifyNodeFragment(node, parsed.fragment, rawUri);
     const href = relativeWebHref(fromOutPath, node.outPath, parsed.fragment);
     return {
       canonicalUri,
+      kind: node.kind,
       node,
       href,
       ...(parsed.fragment !== '' ? { fragment: parsed.fragment } : {}),
     };
+  }
+
+  private verifyNodeFragment(node: LiteGraphNode, fragment: string, rawUri: string): void {
+    if (fragment === '') return;
+    if (node.kind === 'handbook' || node.kind === 'doc' || node.kind === 'brand') {
+      const anchors = this.#docAnchors.get(node.uri);
+      if (anchors && node.uri !== 'lite://handbook/single-page' && !anchors.has(fragment)) {
+        throw new Error(`Missing heading fragment #${fragment} in ${rawUri}`);
+      }
+    } else if (node.kind === 'module') {
+      const syms = this.#moduleSymbols.get(node.uri);
+      if (syms && !syms.has(fragment)) {
+        throw new Error(`Missing module symbol #${fragment} in ${rawUri}`);
+      }
+    }
   }
 
   recordEdge(edge: LiteGraphEdge): void {
@@ -363,19 +462,22 @@ export class LiteAcademyGraph {
     if (!this.#nodes.has(fromUri)) return;
     for (const rawUri of extractLiteUrisFromMarkdown(markdown)) {
       const resolved = this.resolveUri(rawUri, fromOutPath);
-      this.recordEdge({
-        from: fromUri,
-        to: resolved.canonicalUri,
-        kind: 'lite-uri',
-        ...(resolved.fragment ? { fragment: resolved.fragment } : {}),
-      });
+      if (resolved.node) {
+        this.recordEdge({
+          from: fromUri,
+          to: resolved.canonicalUri,
+          kind: 'lite-uri',
+          ...(resolved.fragment ? { fragment: resolved.fragment } : {}),
+        });
+      }
     }
   }
 
   /** Pre-scans every node's Markdown source so bidirectional `lite-uri` backlinks are complete prior to section builds. */
   preScanMarkdownLiteUris(rootDir: string): void {
+    const scannableKinds = new Set<LiteEntityKind>(['handbook', 'doc', 'brand', 'learn', 'gym']);
     for (const node of this.#nodes.values()) {
-      if (!node.sourcePath || !node.sourcePath.endsWith('.md')) continue;
+      if (!scannableKinds.has(node.kind) || !node.sourcePath || !node.sourcePath.endsWith('.md')) continue;
       const full = join(rootDir, node.sourcePath);
       if (!existsSync(full)) continue;
       try {
@@ -403,6 +505,7 @@ export class LiteAcademyGraph {
     const buckets: Record<LiteEntityKind, LiteGraphNode[]> = {
       handbook: [],
       doc: [],
+      brand: [],
       learn: [],
       gym: [],
       play: [],
@@ -417,7 +520,7 @@ export class LiteAcademyGraph {
         return;
       }
       const node = this.#nodes.get(peerUri);
-      if (!node) return;
+      if (!node || node.outPath.endsWith('.svg')) return;
       seen.add(peerUri);
       buckets[node.kind].push(node);
     };
@@ -439,6 +542,7 @@ export class LiteAcademyGraph {
     const byKind: Record<LiteEntityKind, number> = {
       handbook: 0,
       doc: 0,
+      brand: 0,
       learn: 0,
       gym: 0,
       play: 0,
@@ -578,7 +682,7 @@ export function rewriteLiteUriHtml(options: Readonly<{
     (_full, _hrefAttr: string, rawUriAttr: string, restAttrs: string) => {
       const rawUri = unescapeAttrEntities(rawUriAttr);
       const resolved = graph.resolveUri(rawUri, outPath);
-      if (fromUri) {
+      if (fromUri && resolved.node) {
         graph.recordEdge({
           from: fromUri,
           to: resolved.canonicalUri,
@@ -586,7 +690,8 @@ export function rewriteLiteUriHtml(options: Readonly<{
           ...(resolved.fragment ? { fragment: resolved.fragment } : {}),
         });
       }
-      return `<a href="${escapeAttrEntities(resolved.href)}" data-lite-kind="${resolved.node.kind}"${restAttrs}>`;
+      const relAttr = resolved.external && !restAttrs.includes('rel=') ? ' target="_blank" rel="noopener"' : '';
+      return `<a href="${escapeAttrEntities(resolved.href)}" data-lite-kind="${resolved.kind}"${relAttr}${restAttrs}>`;
     },
   );
 }
@@ -600,6 +705,7 @@ function stemOfPath(relPath: string): string {
 /** Builds the complete Lite Academy URI graph from docs, modules, learn, gym, samples, library, and tools. */
 export function buildLiteAcademyGraph(options: Readonly<{
   rootDir: string;
+  repoUrl?: string;
   docs: readonly GraphDocSeed[];
   modules: readonly ModuleApiDoc[];
   learnLessons: readonly GraphLearnSeed[];
@@ -611,6 +717,7 @@ export function buildLiteAcademyGraph(options: Readonly<{
 }>): LiteAcademyGraph {
   const {
     rootDir,
+    repoUrl,
     docs,
     modules,
     learnLessons,
@@ -620,7 +727,7 @@ export function buildLiteAcademyGraph(options: Readonly<{
     playGroups,
     playgroundLibrary,
   } = options;
-  const graph = new LiteAcademyGraph();
+  const graph = new LiteAcademyGraph({ rootDir, ...(repoUrl !== undefined ? { repoUrl } : {}) });
 
   /* Section root nodes */
   graph.registerNode({ uri: 'lite://handbook', kind: 'handbook', title: 'Shipped Lite Handbook', outPath: 'docs/#handbook' });
@@ -651,10 +758,53 @@ export function buildLiteAcademyGraph(options: Readonly<{
         [`lite://handbook/${doc.sourcePath}`],
       );
       if (doc.anchors) graph.setDocAnchors(uri, doc.anchors);
+    } else if (doc.group === 'brand') {
+      let brandUri = `lite://brand/${stemOfPath(doc.outPath)}`;
+      let aliases: string[] = [`lite://brand/${doc.sourcePath}`, `lite://doc/${doc.sourcePath}`];
+      if (doc.sourcePath === 'brand/README.md') {
+        brandUri = 'lite://brand';
+        aliases = [
+          'lite://brand/overview',
+          'lite://brand/README',
+          'lite://brand/README.md',
+          'lite://brand/brand/README.md',
+          'lite://doc/brand',
+          'lite://doc/brand/README.md',
+        ];
+      } else if (doc.sourcePath === 'brand/name.md') {
+        brandUri = 'lite://brand/name';
+        aliases = [
+          'lite://brand/name.md',
+          'lite://brand/brand/name.md',
+          'lite://doc/brand/name',
+          'lite://doc/brand/name.md',
+        ];
+      } else if (doc.sourcePath === 'brand/investigation/README.md') {
+        brandUri = 'lite://brand/investigation';
+        aliases = [
+          'lite://brand/investigation/README',
+          'lite://brand/investigation/README.md',
+          'lite://brand/brand/investigation/README.md',
+        ];
+      }
+      graph.registerNode(
+        {
+          uri: brandUri,
+          kind: 'brand',
+          title: doc.title || doc.navLabel,
+          subtitle: doc.sourcePath,
+          outPath: doc.outPath,
+          sourcePath: doc.sourcePath,
+          badge: 'Brand',
+        },
+        aliases,
+      );
+      if (doc.anchors) graph.setDocAnchors(brandUri, doc.anchors);
     } else {
       const outStem = stemOfPath(doc.outPath);
       let docSlug = outStem;
-      if (doc.group === 'proposals') docSlug = `proposals/${outStem}`;
+      if (doc.sourcePath === 'CONTRIBUTING.md') docSlug = 'contributing';
+      else if (doc.group === 'proposals') docSlug = `proposals/${outStem}`;
       else if (doc.group === 'compiler') docSlug = `compiler/${outStem}`;
       else if (doc.navLabel.startsWith('spec/')) docSlug = `spec/${doc.navLabel.slice(5)}`;
       else if (doc.navLabel.startsWith('research/')) docSlug = `research/${doc.navLabel.slice(9)}`;
@@ -670,7 +820,9 @@ export function buildLiteAcademyGraph(options: Readonly<{
       }
       if (doc.sourcePath === 'docs/README.md') aliases.push('lite://doc/overview');
       if (doc.sourcePath === 'docs/spec/README.md') aliases.push('lite://doc/spec-overview');
-      if (doc.sourcePath === 'CONTRIBUTING.md') aliases.push('lite://doc/contributing', 'lite://doc/CONTRIBUTING');
+      if (doc.sourcePath === 'docs/proposals/README.md') aliases.push('lite://doc/proposals');
+      if (doc.sourcePath === 'CONTRIBUTING.md') aliases.push('lite://doc/CONTRIBUTING', 'lite://doc/compiler/contributing');
+      if (doc.sourcePath === 'igniter/tests/README.md') aliases.push('lite://doc/compiler/igniter/tests/README');
 
       graph.registerNode(
         {
@@ -685,6 +837,25 @@ export function buildLiteAcademyGraph(options: Readonly<{
         aliases,
       );
       if (doc.anchors) graph.setDocAnchors(uri, doc.anchors);
+    }
+  }
+
+  /* Canonical brand vector assets */
+  for (const svgFile of ['lite-wordmark.svg', 'lite-mark.svg', 'lite-mark-minimal.svg', 'lite-favicon.svg', 'identity-in-use.svg']) {
+    const relAsset = `brand/${svgFile}`;
+    if (existsSync(join(rootDir, relAsset))) {
+      graph.registerNode(
+        {
+          uri: `lite://brand/${svgFile}`,
+          kind: 'brand',
+          title: svgFile,
+          subtitle: relAsset,
+          outPath: relAsset,
+          sourcePath: relAsset,
+          badge: 'SVG',
+        },
+        [`lite://brand/${relAsset}`],
+      );
     }
   }
 
@@ -891,6 +1062,7 @@ const DEFAULT_CROSSLINK_SECTIONS: readonly CrosslinkSectionSpec[] = [
   { kind: 'module', label: 'Module', limit: 10 },
   { kind: 'play', label: 'Play', limit: 6 },
   { kind: 'doc', label: 'Design Spec', limit: 6 },
+  { kind: 'brand', label: 'Brand', limit: 4 },
 ];
 
 /** Renders a deduplicated bidirectional Academy cross-links grid from graph buckets. */

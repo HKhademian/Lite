@@ -113,13 +113,25 @@ test('renderDocuments and extractModules return valid structured metadata via ge
 test('docs --check validates lite:// and lite:/ internal URIs, fragments, and module symbols offline', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-docs-uri-'));
   try {
-    mkdirSync(join(directory, 'docs'), { recursive: true });
+    mkdirSync(join(directory, 'docs/spec'), { recursive: true });
+    mkdirSync(join(directory, 'docs/proposals'), { recursive: true });
+    mkdirSync(join(directory, 'brand/investigation'), { recursive: true });
+    mkdirSync(join(directory, 'compiler'), { recursive: true });
     mkdirSync(join(directory, 'lib/core'), { recursive: true });
     mkdirSync(join(directory, 'language/learn/handbook/getting-started'), { recursive: true });
     mkdirSync(join(directory, 'language/gym'), { recursive: true });
     mkdirSync(join(directory, 'samples'), { recursive: true });
+    mkdirSync(join(directory, 'igniter'), { recursive: true });
     writeFileSync(join(directory, 'language/learn/handbook/getting-started/overview-and-setup.md'), '# Overview\n\n## First Steps\n');
     writeFileSync(join(directory, 'docs/records.md'), '# Records\n\n## Defaults\n');
+    writeFileSync(join(directory, 'docs/spec/README.md'), '# Spec\n\n## LS-001\n');
+    writeFileSync(join(directory, 'docs/proposals/LP-0001.md'), '# LP-0001\n');
+    writeFileSync(join(directory, 'compiler/parity.md'), '# Parity\n');
+    writeFileSync(join(directory, 'brand/README.md'), '# Brand\n');
+    writeFileSync(join(directory, 'brand/name.md'), '# Name\n\n## Decision\n');
+    writeFileSync(join(directory, 'brand/investigation/README.md'), '# Investigation\n');
+    writeFileSync(join(directory, 'brand/lite-wordmark.svg'), '<svg/>');
+    writeFileSync(join(directory, 'igniter/.node-version'), '22.0.0\n');
     writeFileSync(join(directory, 'lib/core/io.lts'), 'pub outputLine := fn(x: String): Unit {};\n');
     writeFileSync(
       join(directory, 'language/learn/catalog.json'),
@@ -136,6 +148,14 @@ test('docs --check validates lite:// and lite:/ internal URIs, fragments, and mo
         '# Hub',
         '- [Hb](lite://handbook/overview-and-setup#first-steps)',
         '- [Doc](lite:/doc/records#defaults)',
+        '- [Spec](lite://spec#ls-001)',
+        '- [Proposal](lite://proposal/LP-0001)',
+        '- [Compiler](lite://compiler/parity)',
+        '- [Brand](lite://brand)',
+        '- [BrandName](lite://brand/name#decision)',
+        '- [BrandSvg](lite://brand/lite-wordmark.svg)',
+        '- [RepoFile](lite://repo/igniter/.node-version)',
+        '- [RepoMd](lite://repo/compiler/parity.md#parity)',
         '- [Learn](lite://learn/hello-lite)',
         '- [Gym](lite://gym/drill/immutable-vs-var)',
         '- [Mod](lite://module/core/io#outputLine)',
@@ -151,6 +171,10 @@ test('docs --check validates lite:// and lite:/ internal URIs, fragments, and mo
         '# Bad',
         '- [Ns](lite://bogus/x)',
         '- [HbFrag](lite://handbook/overview-and-setup#missing)',
+        '- [BrandMissing](lite://brand/absent)',
+        '- [RepoMissing](lite://repo/absent/file.txt)',
+        '- [RepoTraversal](lite://repo/../secret.txt)',
+        '- [RepoFrag](lite://repo/compiler/parity.md#nope)',
         '- [LearnMissing](lite://learn/nope)',
         '- [GymMode](lite://gym/workout/immutable-vs-var)',
         '- [ModSym](lite://module/core/io#nonexistent)',
@@ -158,9 +182,13 @@ test('docs --check validates lite:// and lite:/ internal URIs, fragments, and mo
       ].join('\n') + '\n',
     );
     const failures = checkDocuments(directory);
-    assert.equal(failures.length, 6, failures.join('\n'));
+    assert.equal(failures.length, 10, failures.join('\n'));
     assert(failures.some(f => f.includes('unknown lite URI namespace')));
-    assert(failures.some(f => f.includes('missing fragment')));
+    assert(failures.some(f => f.includes('missing fragment') && f.includes('overview-and-setup#missing')));
+    assert(failures.some(f => f.includes('missing lite://brand')));
+    assert(failures.some(f => f.includes('missing lite://repo')));
+    assert(failures.some(f => f.includes('invalid lite://repo')));
+    assert(failures.some(f => f.includes('missing fragment') && f.includes('parity.md#nope')));
     assert(failures.some(f => f.includes('missing lite://learn')));
     assert(failures.some(f => f.includes('missing lite://gym')));
     assert(failures.some(f => f.includes('missing module symbol')));

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Build the static public showcase site and playground into dist/site/. */
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -1702,6 +1702,11 @@ export function buildSite(options?: BuildSiteOptions): void {
 
   writeFileSync(join(outputDir, 'style.css'), siteCss);
   cpSync(join(root, 'brand', 'lite-favicon.svg'), join(outputDir, 'favicon.svg'));
+  mkdirSync(join(outputDir, 'brand'), { recursive: true });
+  for (const svgFile of ['lite-wordmark.svg', 'lite-mark.svg', 'lite-mark-minimal.svg', 'lite-favicon.svg', 'identity-in-use.svg']) {
+    const srcSvg = join(root, 'brand', svgFile);
+    if (existsSync(srcSvg)) cpSync(srcSvg, join(outputDir, 'brand', svgFile));
+  }
   writeFileSync(join(outputDir, 'gallery', 'index.html'), renderGalleryPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
   writeFileSync(join(outputDir, 'playground', 'index.html'), renderPlaygroundPage(rendered, renderedPlay, repoUrl, rev, lightSwitchShine));
 
@@ -1754,6 +1759,7 @@ export function buildSite(options?: BuildSiteOptions): void {
 
   const graph = buildLiteAcademyGraph({
     rootDir: root,
+    repoUrl,
     docs: discoveredDocs.metas.map((m) => {
       const ren = renderedDocByPath.get(m.sourcePath);
       return {

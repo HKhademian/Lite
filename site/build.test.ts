@@ -177,6 +177,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     'docs/design/start-here.html',
     'docs/proposals/LP-0001-operation-specific-panic-recovery.html',
     'docs/compiler/overview.html',
+    'docs/brand/overview.html',
+    'docs/brand/name.html',
+    'docs/brand/investigation.html',
+    'brand/lite-wordmark.svg',
   ]) {
     assert(existsSync(join(out, docRel)), `missing docs page: ${docRel}`);
   }
@@ -1728,9 +1732,14 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
     '../../playground/?sample=nominal-records',
   );
 
-  const g = new LiteAcademyGraph();
+  const g = new LiteAcademyGraph({ rootDir: root, repoUrl: 'https://github.com/example/Lite' });
   g.registerNode({ uri: 'lite://handbook/tuples-arrays-lists-and-aliases', kind: 'handbook', title: 'Tuples', outPath: 'docs/handbook/tuples-arrays-lists-and-aliases.html' });
   g.setDocAnchors('lite://handbook/tuples-arrays-lists-and-aliases', ['nominal-record-types--name-shorthand']);
+  g.registerNode({ uri: 'lite://doc/spec-overview', kind: 'doc', title: 'Spec', outPath: 'docs/design/spec-overview.html' });
+  g.setDocAnchors('lite://doc/spec-overview', ['ls-001--source-syntax-and-evaluation']);
+  g.registerNode({ uri: 'lite://brand/name', kind: 'brand', title: 'The Lite name', outPath: 'docs/brand/name.html' });
+  g.setDocAnchors('lite://brand/name', ['decision']);
+  g.registerNode({ uri: 'lite://brand/lite-wordmark.svg', kind: 'brand', title: 'lite-wordmark.svg', outPath: 'brand/lite-wordmark.svg' });
   g.registerNode({ uri: 'lite://learn/records-and-patterns', kind: 'learn', title: 'Records', outPath: 'learn/types/records-and-patterns.html' });
   g.registerNode({ uri: 'lite://gym/record-shorthand-destructure', kind: 'gym', title: 'Drill', outPath: 'gym/drills/record-shorthand-destructure.html' });
   g.registerNode({ uri: 'lite://play/double-sum', kind: 'play', title: 'Double', outPath: 'playground/?sample=double-sum' });
@@ -1739,7 +1748,7 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   g.registerNode({ uri: 'lite://tool/fmt', kind: 'tool', title: 'lite fmt', outPath: 'tools/#cmd-fmt' });
 
   const rewritten = rewriteLiteUriHtml({
-    html: '<a href="lite://play/double-sum" data-lite-uri="lite://play/double-sum">Play</a> <a href="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand" data-lite-uri="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand">Hb</a> <a href="lite://module/core/list#pushBack" data-lite-uri="lite://module/core/list#pushBack">Mod</a>',
+    html: '<a href="lite://play/double-sum" data-lite-uri="lite://play/double-sum">Play</a> <a href="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand" data-lite-uri="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand">Hb</a> <a href="lite://module/core/list#pushBack" data-lite-uri="lite://module/core/list#pushBack">Mod</a> <a href="lite://spec#ls-001--source-syntax-and-evaluation" data-lite-uri="lite://spec#ls-001--source-syntax-and-evaluation">Spec</a> <a href="lite://brand/name#decision" data-lite-uri="lite://brand/name#decision">Brand</a> <a href="lite://brand/lite-wordmark.svg" data-lite-uri="lite://brand/lite-wordmark.svg">Svg</a> <a href="lite://repo/igniter/.node-version" data-lite-uri="lite://repo/igniter/.node-version">Node</a>',
     outPath: 'learn/types/records-and-patterns.html',
     graph: g,
     fromUri: 'lite://learn/records-and-patterns',
@@ -1747,6 +1756,13 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   assert(rewritten.includes('href="../../playground/?sample=double-sum" data-lite-kind="play"'));
   assert(rewritten.includes('href="../../docs/handbook/tuples-arrays-lists-and-aliases.html#nominal-record-types--name-shorthand" data-lite-kind="handbook"'));
   assert(rewritten.includes('href="../../modules/core/list.html#pushBack" data-lite-kind="module"'));
+  assert(rewritten.includes('href="../../docs/design/spec-overview.html#ls-001--source-syntax-and-evaluation" data-lite-kind="doc"'));
+  assert(rewritten.includes('href="../../docs/brand/name.html#decision" data-lite-kind="brand"'));
+  assert(rewritten.includes('href="../../brand/lite-wordmark.svg" data-lite-kind="brand"'));
+  assert(rewritten.includes('href="https://github.com/example/Lite/blob/main/igniter/.node-version" data-lite-kind="repo" target="_blank" rel="noopener"'));
+  assert.throws(() => g.resolveUri('lite://repo/does-not-exist.txt', 'docs/index.html'), /Unresolved lite:\/\/repo target/);
+  assert.throws(() => g.resolveUri('lite://repo/../secret.txt', 'docs/index.html'), /Invalid lite:\/\/repo URI/);
+  assert.throws(() => g.resolveUri('lite://brand/name#missing', 'docs/index.html'), /Missing heading fragment/);
   assert.equal(g.getBacklinks('lite://module/core/list').length, 1);
 
   assert.deepEqual(

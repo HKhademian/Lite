@@ -157,6 +157,8 @@ parseLiteUri := fn(rawTarget: String): (ok: Bool, ns: String, target: String, fr
     var ns := "";
     if rawNs == "handbook" {
         ns = "handbook";
+    } else if rawNs == "brand" or rawNs == "branding" {
+        ns = "brand";
     } else if rawNs == "doc" or rawNs == "docs" {
         if target == "handbook" {
             ns = "handbook";
@@ -164,9 +166,42 @@ parseLiteUri := fn(rawTarget: String): (ok: Bool, ns: String, target: String, fr
         } else if text.startsWithAt(target, 0, "handbook/") {
             ns = "handbook";
             target = text.slice(target, 9, text.length(target));
+        } else if target == "brand" {
+            ns = "brand";
+            target = "";
+        } else if text.startsWithAt(target, 0, "brand/") {
+            ns = "brand";
+            target = text.slice(target, 6, text.length(target));
         } else {
             ns = "doc";
         }
+    } else if rawNs == "spec" {
+        ns = "doc";
+        cleanSpec := stripSuffix(stripSuffix(target, ".html"), ".md");
+        if cleanSpec == "" or cleanSpec == "overview" or cleanSpec == "README" {
+            target = "spec-overview";
+        } else if cleanSpec == "index" {
+            target = "spec";
+        } else if not text.startsWithAt(target, 0, "spec/") {
+            target = "spec/" + target;
+        }
+    } else if rawNs == "proposal" or rawNs == "proposals" {
+        ns = "doc";
+        if target == "" {
+            target = "proposals/README";
+        } else if not text.startsWithAt(target, 0, "proposals/") {
+            target = "proposals/" + target;
+        }
+    } else if rawNs == "compiler" {
+        ns = "doc";
+        cleanComp := stripSuffix(stripSuffix(target, ".html"), ".md");
+        if cleanComp == "" or cleanComp == "overview" or cleanComp == "README" {
+            target = "compiler/overview";
+        } else if not text.startsWithAt(target, 0, "compiler/") {
+            target = "compiler/" + target;
+        }
+    } else if rawNs == "repo" {
+        ns = "repo";
     } else if rawNs == "learn" {
         ns = "learn";
     } else if rawNs == "gym" {
@@ -229,9 +264,10 @@ resolveLiteDocSource := fn(directory: String, rawTarget: String): (found: Bool, 
     else if clean == "spec-overview" { list.pushBack(mut candidates, "docs/spec/README.md"); }
     else if clean == "contributing" or clean == "CONTRIBUTING" { list.pushBack(mut candidates, "CONTRIBUTING.md"); }
     else if clean == "compiler/overview" { list.pushBack(mut candidates, "compiler/README.md"); }
-    else if clean == "compiler/bootstrap-readme" { list.pushBack(mut candidates, "compiler/bootstrap/README.md"); }
-    else if clean == "compiler/manifests-readme" { list.pushBack(mut candidates, "compiler/manifests/README.md"); }
-    else if clean == "compiler/igniter-tests" { list.pushBack(mut candidates, "igniter/tests/README.md"); }
+    else if clean == "compiler/bootstrap-readme" or clean == "compiler/bootstrap/README" { list.pushBack(mut candidates, "compiler/bootstrap/README.md"); }
+    else if clean == "compiler/manifests-readme" or clean == "compiler/manifests/README" { list.pushBack(mut candidates, "compiler/manifests/README.md"); }
+    else if clean == "compiler/igniter-tests" or clean == "igniter/tests/README" or clean == "compiler/igniter/tests/README" { list.pushBack(mut candidates, "igniter/tests/README.md"); }
+    else if clean == "compiler/contributing" { list.pushBack(mut candidates, "CONTRIBUTING.md"); }
     else if text.startsWithAt(clean, 0, "spec/") { list.pushBack(mut candidates, "docs/spec/" + text.slice(clean, 5, text.length(clean)) + ".md"); }
     else if text.startsWithAt(clean, 0, "spec-") { list.pushBack(mut candidates, "docs/spec/" + text.slice(clean, 5, text.length(clean)) + ".md"); }
     else if text.startsWithAt(clean, 0, "research/") { list.pushBack(mut candidates, "docs/research/" + text.slice(clean, 9, text.length(clean)) + ".md"); }
@@ -355,22 +391,98 @@ hasLtsSlugInDirs := fn(directory: String, dirs: List<String>, slug: String): Boo
     false
 };
 
+hasPathTraversal := fn(target: String): Bool {
+    target == ".." or
+    text.startsWithAt(target, 0, "../") or
+    text.endsWith(target, "/..") or
+    text.containsText(target, "/../")
+};
+
+isAllAsciiDigits := fn(value: String): Bool {
+    n := text.length(value);
+    if n == 0 { return false; }
+    var i := 0;
+    loop i < n {
+        if not text.isDigit(text.at(value, i)) { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+hasHandbookPieceSlug := fn(directory: String, pieceSlug: String): Bool {
+    n := text.length(pieceSlug);
+    var lastDash := -1;
+    var i := 0;
+    loop i < n {
+        if text.at(pieceSlug, i) == "-" { lastDash = i; }
+        i = i + 1;
+    }
+    if lastDash <= 0 { return false; }
+    suffix := text.slice(pieceSlug, lastDash + 1, n);
+    if not isAllAsciiDigits(suffix) { return false; }
+    hbRel := handbookSourceForSlug(text.slice(pieceSlug, 0, lastDash));
+    if hbRel == "" { return false; }
+    fs.kind(path.resolve(directory, hbRel)) == fs.FILE_KIND_FILE
+};
+
 checkPlayTarget := fn(directory: String, rawTarget: String): Bool {
     if rawTarget == "" { return true; }
     if text.startsWithAt(rawTarget, 0, "sample/") {
         return siteSamplesContainId(directory, text.slice(rawTarget, 7, text.length(rawTarget)));
     }
     if text.startsWithAt(rawTarget, 0, "example/") {
-        return hasLtsSlugInDirs(directory, ["language/examples"], text.slice(rawTarget, 8, text.length(rawTarget)));
+        exSlug := text.slice(rawTarget, 8, text.length(rawTarget));
+        if hasLtsSlugInDirs(directory, ["language/examples", "language/showcases"], exSlug) {
+            return true;
+        }
+        if text.startsWithAt(exSlug, 0, "showcase-") {
+            return hasLtsSlugInDirs(directory, ["language/showcases"], text.slice(exSlug, 9, text.length(exSlug)));
+        }
+        return false;
     }
     if text.startsWithAt(rawTarget, 0, "case/") {
         return hasLtsSlugInDirs(directory, ["language/cases"], text.slice(rawTarget, 5, text.length(rawTarget)));
     }
     if text.startsWithAt(rawTarget, 0, "piece/") {
-        return hasLtsSlugInDirs(directory, ["language/showcases", "language/samples", "samples"], text.slice(rawTarget, 6, text.length(rawTarget)));
+        pieceSlug := text.slice(rawTarget, 6, text.length(rawTarget));
+        if hasLtsSlugInDirs(directory, ["language/showcases", "language/samples", "samples"], pieceSlug) {
+            return true;
+        }
+        if text.startsWithAt(pieceSlug, 0, "gym-") and catalogHasGymTarget(directory, text.slice(pieceSlug, 4, text.length(pieceSlug))) {
+            return true;
+        }
+        if catalogHasLearnTarget(directory, pieceSlug) {
+            return true;
+        }
+        return hasHandbookPieceSlug(directory, pieceSlug);
     }
     if siteSamplesContainId(directory, rawTarget) { return true; }
     hasLtsSlugInDirs(directory, ["language/examples", "language/cases", "language/showcases", "language/samples", "samples"], rawTarget)
+};
+
+resolveLiteBrandSource := fn(directory: String, rawTarget: String): String {
+    if hasPathTraversal(rawTarget) { return ""; }
+    clean := stripSuffix(rawTarget, ".html");
+    candidates: mut List<String> = [];
+    if clean == "" or clean == "index" or clean == "overview" or clean == "README" or clean == "README.md" or clean == "brand/README.md" {
+        list.pushBack(mut candidates, "brand/README.md");
+    } else if clean == "name" or clean == "name.md" or clean == "brand/name.md" {
+        list.pushBack(mut candidates, "brand/name.md");
+    } else if clean == "investigation" or clean == "investigation/README" or clean == "investigation/README.md" or clean == "brand/investigation/README.md" {
+        list.pushBack(mut candidates, "brand/investigation/README.md");
+    } else {
+        bare := if text.startsWithAt(rawTarget, 0, "brand/") { text.slice(rawTarget, 6, text.length(rawTarget)) } else { rawTarget };
+        list.pushBack(mut candidates, "brand/" + bare);
+        mdClean := stripSuffix(stripSuffix(bare, ".html"), ".md");
+        list.pushBack(mut candidates, "brand/" + mdClean + ".md");
+    }
+    loop candidates as rel {
+        abs := path.resolve(directory, rel);
+        if fs.kind(abs) == fs.FILE_KIND_FILE {
+            return abs;
+        }
+    }
+    ""
 };
 
 checkLiteUri := fn(
@@ -385,6 +497,30 @@ cachePaths: List<String>, cachePacked: List<String>
     target := parsed.target;
     fragment := parsed.fragment;
 
+    if ns == "brand" {
+        dest := resolveLiteBrandSource(directory, target);
+        if dest == "" {
+            return relPath + ": missing lite://brand target " + rawTarget;
+        }
+        if fragment =!= "" and text.endsWith(dest, ".md") and not checkFragmentInMd(dest, fragment, cachePaths, cachePacked) {
+            return relPath + ": missing fragment in " + rawTarget;
+        }
+        return "";
+    }
+    if ns == "repo" {
+        if target == "" or hasPathTraversal(target) {
+            return relPath + ": invalid lite://repo target " + rawTarget;
+        }
+        dest := path.resolve(directory, target);
+        destKind := fs.kind(dest);
+        if destKind == fs.FILE_KIND_MISSING {
+            return relPath + ": missing lite://repo target " + rawTarget;
+        }
+        if fragment =!= "" and destKind == fs.FILE_KIND_FILE and text.endsWith(dest, ".md") and not checkFragmentInMd(dest, fragment, cachePaths, cachePacked) {
+            return relPath + ": missing fragment in " + rawTarget;
+        }
+        return "";
+    }
     if ns == "handbook" {
         clean := stripSuffix(stripSuffix(target, ".html"), ".md");
         if clean == "" or clean == "single-page" { return ""; }
