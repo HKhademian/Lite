@@ -403,3 +403,55 @@ if ccInfo.available {
     test.checkInt("loop false C run status", 0, loopFalseCRun.status);
     test.checkText("loop false C stdout", "1\n", loopFalseCRun.stdout);
 }
+
+/* straight-line var dead-store elimination and scalar literal propagation */
+test.check("const branch TS eliminates dead var note", not text.containsText(constBranchTs.stdout, "\"none\"") and not text.containsText(constBranchTs.stdout, "lite_note"));
+
+deadStoreSrc :=
+"io := import \"core/io\";\n" +
+"var x := 1;\n" +
+"x = 2;\n" +
+"x = 3;\n" +
+"io.outputLine(x);\n";
+deadStoreTs := compilerTest.compileStdin(root, tsComp, deadStoreSrc, "");
+test.checkInt("dead store TS compile", 0, deadStoreTs.status);
+test.check("dead store TS drops overwritten literals", not text.containsText(deadStoreTs.stdout, "1n") and not text.containsText(deadStoreTs.stdout, "2n"));
+compilerTest.assertCompileRunTs(root, tsComp, "dead store TS run", deadStoreSrc, "3\n");
+
+readBeforeOverwriteSrc :=
+"io := import \"core/io\";\n" +
+"var a := 10;\n" +
+"var b := a + 5;\n" +
+"a = 20;\n" +
+"io.outputLine(a, b);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "read-before-overwrite TS run", readBeforeOverwriteSrc, "20 15\n");
+
+closureBarrierSrc :=
+"io := import \"core/io\";\n" +
+"var count := 0;\n" +
+"bump := fn(): Unit { count = count + 1; };\n" +
+"count = 5;\n" +
+"bump();\n" +
+"io.outputLine(count);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "closure barrier TS run", closureBarrierSrc, "6\n");
+
+noHoistNonLiteralSrc :=
+"io := import \"core/io\";\n" +
+"var x := 0;\n" +
+"var y := 1;\n" +
+"y = y + 2;\n" +
+"x = y;\n" +
+"io.outputLine(x);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "no-hoist non-literal TS run", noHoistNonLiteralSrc, "3\n");
+
+elseIfNoLeakSrc :=
+"io := import \"core/io\";\n" +
+"var p := 0;\n" +
+"var flag := false;\n" +
+"if flag {\n" +
+"    p = 1;\n" +
+"} else if p == 0 {\n" +
+"    p = 2;\n" +
+"}\n" +
+"io.outputLine(p);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "else-if pre-flush barrier TS run", elseIfNoLeakSrc, "2\n");

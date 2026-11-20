@@ -1021,10 +1021,458 @@ unwrapSyntheticScopes := fn(items: Items): Items {
     out
 };
 
+/** True when `kind` is a mutable scalar `var` declaration eligible for straight-line dead-store and constant propagation. */
+isVarScalarKind := fn(kind: String): Bool {
+    kind == ir.ITEM_KIND_VAR_INT or kind == ir.ITEM_KIND_VAR_STRING or kind == ir.ITEM_KIND_VAR_BOOL or kind == ir.ITEM_KIND_VAR_FLOAT
+};
+
+/** True when `kind` is a scalar reassignment eligible for straight-line dead-store and constant propagation. */
+isAssignScalarKind := fn(kind: String): Bool {
+    kind == ir.ITEM_KIND_ASSIGN_INT or kind == ir.ITEM_KIND_ASSIGN_STRING or kind == ir.ITEM_KIND_ASSIGN_BOOL or kind == ir.ITEM_KIND_ASSIGN_FLOAT
+};
+
+/** True when `code` is an atomic TS scalar literal (`true`, `false`, `"..."`, `[0-9]+n`, or `(-[0-9]+n)`). */
+isSimpleTsScalarLiteral := fn(code: String): Bool {
+    if code == "true" or code == "false" { return true; }
+    size := textLib.length(code);
+    if size < 2 { return false; }
+    first := textLib.at(code, 0);
+    if first == "\"" {
+        if textLib.at(code, size - 1) =!= "\"" { return false; }
+        var i := 1;
+        loop i < size - 1 {
+            ch := textLib.at(code, i);
+            if ch == "\\" {
+                i = i + 2;
+                if i > size - 1 { return false; }
+                continue;
+            }
+            if ch == "\"" { return false; }
+            i = i + 1;
+        }
+        return true;
+    }
+    if textLib.at(code, size - 1) == "n" {
+        var i := 0;
+        loop i < size - 1 {
+            if not textLib.isDigit(textLib.at(code, i)) { return false; }
+            i = i + 1;
+        }
+        return size >= 2;
+    }
+    if size >= 5 and textLib.startsWithAt(code, 0, "(-") and textLib.at(code, size - 2) == "n" and textLib.at(code, size - 1) == ")" {
+        var i := 2;
+        loop i < size - 2 {
+            if not textLib.isDigit(textLib.at(code, i)) { return false; }
+            i = i + 1;
+        }
+        return true;
+    }
+    false
+};
+
+/** Replaces one element at `index` in a bounded small list of Strings. */
+setSmallTextAt := fn(values: List<String>, index: Int, value: String): List<String> {
+    out: mut List<String> = [];
+    var i := 0;
+    loop values as item {
+        listLib.pushBack(mut out, if i == index { value } else { item });
+        i = i + 1;
+    }
+    out
+};
+
+/** Replaces one element at `index` in a bounded small list of Ints. */
+setSmallIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> {
+    out: mut List<Int> = [];
+    var i := 0;
+    loop values as item {
+        listLib.pushBack(mut out, if i == index { value } else { item });
+        i = i + 1;
+    }
+    out
+};
+
+/** Replaces one element at `index` in a bounded small list of Bools. */
+setSmallBoolAt := fn(values: List<Bool>, index: Int, value: Bool): List<Bool> {
+    out: mut List<Bool> = [];
+    var i := 0;
+    loop values as item {
+        listLib.pushBack(mut out, if i == index { value } else { item });
+        i = i + 1;
+    }
+    out
+};
+
+/** Finds `name` in bounded `activeNames` (size <= 64), or returns -1. */
+findActiveVarSlot := fn(activeNames: List<String>, activeCount: Int, name: String): Int {
+    var i := 0;
+    loop i < activeCount {
+        if activeNames[i] == name { return i; }
+        i = i + 1;
+    }
+    -1
+};
+
+/** Substitutes active literal `var` identifiers in `code` (outside strings, property accesses, and arrow functions) in O(|code|) time, returning a pipe-bag of any remaining active slot indices read. */
+rewriteAndMarkActiveReads := fn(code: String, activeSet: TokenBuckets, activeNames: List<String>, activeConstCodes: List<String>, activeRead: List<Bool>, activeCount: Int, allowSub: Bool): (code: String, readPipe: String, changed: Bool) {
+    if activeCount == 0 or code == "" {
+        return (code = code, readPipe = "", changed = false);
+    }
+    size := textLib.length(code);
+    canSub := allowSub and textLib.indexOfText(code, "=>", 0) < 0 and
+    textLib.indexOfText(code, "===", 0) < 0 and textLib.indexOfText(code, "!==", 0) < 0;
+    parts: mut List<String> = [];
+    var segStart := 0;
+    var changed := false;
+    var readPipe := "";
+    var pos := 0;
+    loop pos < size {
+        ch := textLib.at(code, pos);
+        if ch == "\"" {
+            pos = pos + 1;
+            loop pos < size {
+                sCh := textLib.at(code, pos);
+                if sCh == "\\" {
+                    pos = pos + 2;
+                    continue;
+                }
+                pos = pos + 1;
+                if sCh == "\"" { break; }
+            }
+            continue;
+        }
+        if textLib.isNameStart(ch) {
+            var end := pos + 1;
+            loop end < size and (textLib.isNameContinue(textLib.at(code, end)) or textLib.at(code, end) == "$") {
+                end = end + 1;
+            }
+            isProp := pos > 0 and textLib.at(code, pos - 1) == ".";
+            if not isProp {
+                tok := textLib.slice(code, pos, end);
+                if tokenBucketHas(activeSet, tok) {
+                    slot := findActiveVarSlot(activeNames, activeCount, tok);
+                    if slot >= 0 {
+                        constVal := activeConstCodes[slot];
+                        if canSub and constVal =!= "" {
+                            if pos > segStart {
+                                listLib.pushBack(mut parts, textLib.slice(code, segStart, pos));
+                            }
+                            listLib.pushBack(mut parts, constVal);
+                            segStart = end;
+                            changed = true;
+                        } else if not activeRead[slot] {
+                            slotTag := "|" + integer.intText(slot) + "|";
+                            if textLib.indexOfText(readPipe, slotTag, 0) < 0 {
+                                readPipe = if readPipe == "" { slotTag } else { readPipe + integer.intText(slot) + "|" };
+                            }
+                        }
+                    }
+                }
+            }
+            pos = end;
+            continue;
+        }
+        pos = pos + 1;
+    }
+    if not changed {
+        return (code = code, readPipe = readPipe, changed = false);
+    }
+    if segStart < size {
+        listLib.pushBack(mut parts, textLib.slice(code, segStart, size));
+    }
+    (code = textLib.joinTexts(parts, ""), readPipe = readPipe, changed = true)
+};
+
+/** True when `code` mentions identifier `targetName` outside string literals and property accesses, in O(|code|) time. */
+codeMentionsIdent := fn(code: String, targetName: String): Bool {
+    if code == "" or textLib.indexOfText(code, targetName, 0) < 0 { return false; }
+    size := textLib.length(code);
+    var pos := 0;
+    loop pos < size {
+        ch := textLib.at(code, pos);
+        if ch == "\"" {
+            pos = pos + 1;
+            loop pos < size {
+                sCh := textLib.at(code, pos);
+                if sCh == "\\" {
+                    pos = pos + 2;
+                    continue;
+                }
+                pos = pos + 1;
+                if sCh == "\"" { break; }
+            }
+            continue;
+        }
+        if textLib.isNameStart(ch) {
+            var end := pos + 1;
+            loop end < size and (textLib.isNameContinue(textLib.at(code, end)) or textLib.at(code, end) == "$") {
+                end = end + 1;
+            }
+            if not (pos > 0 and textLib.at(code, pos - 1) == ".") and textLib.slice(code, pos, end) == targetName {
+                return true;
+            }
+            pos = end;
+            continue;
+        }
+        pos = pos + 1;
+    }
+    false
+};
+
+/** Performs straight-line basic-block dead-store elimination and scalar literal propagation on `var` bindings in O(n + B) time. */
+pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
+    if target =!= ir.TARGET_TS { return items; }
+    var total := 0;
+    var hasVarOrAssign := false;
+    loop items as scanItem {
+        total = total + 1;
+        if isVarScalarKind(scanItem.kind) or isAssignScalarKind(scanItem.kind) {
+            hasVarOrAssign = true;
+        }
+    }
+    if total == 0 or not hasVarOrAssign { return items; }
+
+    var activeSet := emptyTokenBuckets();
+    var activeNames: List<String> = [];
+    var activeDeclIdxs: List<Int> = [];
+    var activeDeclMerged: List<Bool> = [];
+    var activeDeclCodes: List<String> = [];
+    var activeWriteIdxs: List<Int> = [];
+    var activeWriteIsDecl: List<Bool> = [];
+    var activeWritePure: List<Bool> = [];
+    var activeRead: List<Bool> = [];
+    var activeConstCodes: List<String> = [];
+    var activeCount := 0;
+
+    var dropSet := emptyTokenBuckets();
+    var hasDrops := false;
+    overrideIdxs: mut List<Int> = [];
+    overrideCodes: mut List<String> = [];
+    var overrideCount := 0;
+    var anyRewrite := false;
+    outItems: mut Items = [];
+
+    var idx := 0;
+    loop idx < total {
+        item := items[idx];
+        kind := item.kind;
+        isBarrier := kind == ir.ITEM_KIND_IF or kind == ir.ITEM_KIND_ELSE_IF or kind == ir.ITEM_KIND_ELSE or kind == ir.ITEM_KIND_END_IF or
+        kind == ir.ITEM_KIND_LOOP or kind == ir.ITEM_KIND_LOOP_SEQ or kind == ir.ITEM_KIND_END_LOOP or
+        kind == ir.ITEM_KIND_SCOPE or kind == ir.ITEM_KIND_END_SCOPE or
+        kind == ir.ITEM_KIND_FUNCTION_START or kind == ir.ITEM_KIND_FUNCTION_END or
+        kind == ir.ITEM_KIND_RETURN or kind == ir.ITEM_KIND_BREAK or kind == ir.ITEM_KIND_CONTINUE or
+        kind == ir.ITEM_KIND_UNREACHABLE or kind == ir.ITEM_KIND_MAIN_STOP or
+        kind == ir.ITEM_KIND_CALL or kind == ir.ITEM_KIND_END_OUTPUT;
+
+        isPreFlushBarrier := kind == ir.ITEM_KIND_ELSE_IF or kind == ir.ITEM_KIND_ELSE or kind == ir.ITEM_KIND_END_IF or
+        kind == ir.ITEM_KIND_LOOP or kind == ir.ITEM_KIND_END_LOOP or
+        kind == ir.ITEM_KIND_SCOPE or kind == ir.ITEM_KIND_END_SCOPE or
+        kind == ir.ITEM_KIND_FUNCTION_START or kind == ir.ITEM_KIND_FUNCTION_END;
+        rewritten := if isPreFlushBarrier {
+            (code = item.code, readPipe = "", changed = false)
+        } else {
+            rewriteAndMarkActiveReads(item.code, activeSet, activeNames, activeConstCodes, activeRead, activeCount, true)
+        };
+        newCode := rewritten.code;
+        if rewritten.readPipe =!= "" {
+            nextReadFlags: mut List<Bool> = [];
+            var rIdx := 0;
+            loop rIdx < activeCount {
+                tag := "|" + integer.intText(rIdx) + "|";
+                listLib.pushBack(mut nextReadFlags, activeRead[rIdx] or textLib.indexOfText(rewritten.readPipe, tag, 0) >= 0);
+                rIdx = rIdx + 1;
+            }
+            activeRead = nextReadFlags;
+        }
+        if rewritten.changed { anyRewrite = true; }
+        codePure := isSideEffectFreeCode(target, newCode) and textLib.indexOfText(newCode, "=>", 0) < 0;
+        updatedItem := if rewritten.changed {
+            (kind = item.kind, name = item.name, runtime = item.runtime, code = newCode, intValue = item.intValue, textValue = item.textValue)
+        } else {
+            item
+        };
+        listLib.pushBack(mut outItems, updatedItem);
+
+        if isBarrier or not codePure {
+            var s := 0;
+            loop s < activeCount {
+                if activeDeclMerged[s] {
+                    listLib.pushBack(mut overrideIdxs, activeDeclIdxs[s]);
+                    listLib.pushBack(mut overrideCodes, activeDeclCodes[s]);
+                    overrideCount = overrideCount + 1;
+                }
+                s = s + 1;
+            }
+            activeSet = emptyTokenBuckets();
+            activeNames = [];
+            activeDeclIdxs = [];
+            activeDeclMerged = [];
+            activeDeclCodes = [];
+            activeWriteIdxs = [];
+            activeWriteIsDecl = [];
+            activeWritePure = [];
+            activeRead = [];
+            activeConstCodes = [];
+            activeCount = 0;
+        } else if isVarScalarKind(kind) and item.runtime =!= "" {
+            litCode := if isSimpleTsScalarLiteral(newCode) { newCode } else { "" };
+            if activeCount < 64 {
+                activeSet = tokenBucketAdd(activeSet, item.runtime);
+                nextNames: mut List<String> = [];
+                nextDeclIdxs: mut List<Int> = [];
+                nextDeclMerged: mut List<Bool> = [];
+                nextDeclCodes: mut List<String> = [];
+                nextWriteIdxs: mut List<Int> = [];
+                nextWriteIsDecl: mut List<Bool> = [];
+                nextWritePure: mut List<Bool> = [];
+                nextRead: mut List<Bool> = [];
+                nextConstCodes: mut List<String> = [];
+                var copyI := 0;
+                loop copyI < activeCount {
+                    listLib.pushBack(mut nextNames, activeNames[copyI]);
+                    listLib.pushBack(mut nextDeclIdxs, activeDeclIdxs[copyI]);
+                    listLib.pushBack(mut nextDeclMerged, activeDeclMerged[copyI]);
+                    listLib.pushBack(mut nextDeclCodes, activeDeclCodes[copyI]);
+                    listLib.pushBack(mut nextWriteIdxs, activeWriteIdxs[copyI]);
+                    listLib.pushBack(mut nextWriteIsDecl, activeWriteIsDecl[copyI]);
+                    listLib.pushBack(mut nextWritePure, activeWritePure[copyI]);
+                    listLib.pushBack(mut nextRead, activeRead[copyI]);
+                    listLib.pushBack(mut nextConstCodes, activeConstCodes[copyI]);
+                    copyI = copyI + 1;
+                }
+                listLib.pushBack(mut nextNames, item.runtime);
+                listLib.pushBack(mut nextDeclIdxs, idx);
+                listLib.pushBack(mut nextDeclMerged, false);
+                listLib.pushBack(mut nextDeclCodes, "");
+                listLib.pushBack(mut nextWriteIdxs, idx);
+                listLib.pushBack(mut nextWriteIsDecl, true);
+                listLib.pushBack(mut nextWritePure, codePure);
+                listLib.pushBack(mut nextRead, false);
+                listLib.pushBack(mut nextConstCodes, litCode);
+                activeNames = nextNames;
+                activeDeclIdxs = nextDeclIdxs;
+                activeDeclMerged = nextDeclMerged;
+                activeDeclCodes = nextDeclCodes;
+                activeWriteIdxs = nextWriteIdxs;
+                activeWriteIsDecl = nextWriteIsDecl;
+                activeWritePure = nextWritePure;
+                activeRead = nextRead;
+                activeConstCodes = nextConstCodes;
+                activeCount = activeCount + 1;
+            }
+        } else if isAssignScalarKind(kind) and item.runtime =!= "" {
+            litCode := if isSimpleTsScalarLiteral(newCode) { newCode } else { "" };
+            slot := if tokenBucketHas(activeSet, item.runtime) { findActiveVarSlot(activeNames, activeCount, item.runtime) } else { -1 };
+            if slot >= 0 {
+                canDropPrev := not activeRead[slot] and activeWritePure[slot] and not codeMentionsIdent(newCode, item.runtime);
+                if canDropPrev and activeWriteIsDecl[slot] and (idx == activeWriteIdxs[slot] + 1 or litCode =!= "") {
+                    activeDeclMerged = setSmallBoolAt(activeDeclMerged, slot, true);
+                    activeDeclCodes = setSmallTextAt(activeDeclCodes, slot, newCode);
+                    activeWritePure = setSmallBoolAt(activeWritePure, slot, codePure);
+                    activeRead = setSmallBoolAt(activeRead, slot, false);
+                    activeConstCodes = setSmallTextAt(activeConstCodes, slot, litCode);
+                    dropSet = tokenBucketAdd(dropSet, integer.intText(idx));
+                    hasDrops = true;
+                } else {
+                    if canDropPrev and not activeWriteIsDecl[slot] {
+                        dropSet = tokenBucketAdd(dropSet, integer.intText(activeWriteIdxs[slot]));
+                        hasDrops = true;
+                    }
+                    activeWriteIdxs = setSmallIntAt(activeWriteIdxs, slot, idx);
+                    activeWriteIsDecl = setSmallBoolAt(activeWriteIsDecl, slot, false);
+                    activeWritePure = setSmallBoolAt(activeWritePure, slot, codePure);
+                    activeRead = setSmallBoolAt(activeRead, slot, false);
+                    activeConstCodes = setSmallTextAt(activeConstCodes, slot, litCode);
+                }
+            } else if activeCount < 64 {
+                activeSet = tokenBucketAdd(activeSet, item.runtime);
+                nextNames: mut List<String> = [];
+                nextDeclIdxs: mut List<Int> = [];
+                nextDeclMerged: mut List<Bool> = [];
+                nextDeclCodes: mut List<String> = [];
+                nextWriteIdxs: mut List<Int> = [];
+                nextWriteIsDecl: mut List<Bool> = [];
+                nextWritePure: mut List<Bool> = [];
+                nextRead: mut List<Bool> = [];
+                nextConstCodes: mut List<String> = [];
+                var copyI := 0;
+                loop copyI < activeCount {
+                    listLib.pushBack(mut nextNames, activeNames[copyI]);
+                    listLib.pushBack(mut nextDeclIdxs, activeDeclIdxs[copyI]);
+                    listLib.pushBack(mut nextDeclMerged, activeDeclMerged[copyI]);
+                    listLib.pushBack(mut nextDeclCodes, activeDeclCodes[copyI]);
+                    listLib.pushBack(mut nextWriteIdxs, activeWriteIdxs[copyI]);
+                    listLib.pushBack(mut nextWriteIsDecl, activeWriteIsDecl[copyI]);
+                    listLib.pushBack(mut nextWritePure, activeWritePure[copyI]);
+                    listLib.pushBack(mut nextRead, activeRead[copyI]);
+                    listLib.pushBack(mut nextConstCodes, activeConstCodes[copyI]);
+                    copyI = copyI + 1;
+                }
+                listLib.pushBack(mut nextNames, item.runtime);
+                listLib.pushBack(mut nextDeclIdxs, -1);
+                listLib.pushBack(mut nextDeclMerged, false);
+                listLib.pushBack(mut nextDeclCodes, "");
+                listLib.pushBack(mut nextWriteIdxs, idx);
+                listLib.pushBack(mut nextWriteIsDecl, false);
+                listLib.pushBack(mut nextWritePure, codePure);
+                listLib.pushBack(mut nextRead, false);
+                listLib.pushBack(mut nextConstCodes, litCode);
+                activeNames = nextNames;
+                activeDeclIdxs = nextDeclIdxs;
+                activeDeclMerged = nextDeclMerged;
+                activeDeclCodes = nextDeclCodes;
+                activeWriteIdxs = nextWriteIdxs;
+                activeWriteIsDecl = nextWriteIsDecl;
+                activeWritePure = nextWritePure;
+                activeRead = nextRead;
+                activeConstCodes = nextConstCodes;
+                activeCount = activeCount + 1;
+            }
+        }
+        idx = idx + 1;
+    }
+
+    var sEnd := 0;
+    loop sEnd < activeCount {
+        if activeDeclMerged[sEnd] {
+            listLib.pushBack(mut overrideIdxs, activeDeclIdxs[sEnd]);
+            listLib.pushBack(mut overrideCodes, activeDeclCodes[sEnd]);
+            overrideCount = overrideCount + 1;
+        }
+        sEnd = sEnd + 1;
+    }
+
+    if not anyRewrite and not hasDrops and overrideCount == 0 {
+        return items;
+    }
+
+    finalItems: mut Items = [];
+    var ovPos := 0;
+    var k := 0;
+    loop k < total {
+        if hasDrops and tokenBucketHas(dropSet, integer.intText(k)) {
+            k = k + 1;
+            continue;
+        }
+        cur := outItems[k];
+        if ovPos < overrideCount and overrideIdxs[ovPos] == k {
+            listLib.pushBack(mut finalItems, (kind = cur.kind, name = cur.name, runtime = cur.runtime,
+            code = overrideCodes[ovPos], intValue = cur.intValue, textValue = cur.textValue));
+            ovPos = ovPos + 1;
+        } else {
+            listLib.pushBack(mut finalItems, cur);
+        }
+        k = k + 1;
+    }
+    finalItems
+};
+
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
 pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
-    simplified := simplifyConstantBranches(items, target);
-    pruned := unwrapSyntheticScopes(pruneBlockScopedItems(simplified, target));
+    simplified := unwrapSyntheticScopes(simplifyConstantBranches(items, target));
+    varOpt := optimizeStraightLineVars(simplified, target);
+    pruned := unwrapSyntheticScopes(pruneBlockScopedItems(varOpt, target));
     var hasPrunable := false;
     var seedTokens := emptyTokenBuckets();
     var fnDepth := 0;

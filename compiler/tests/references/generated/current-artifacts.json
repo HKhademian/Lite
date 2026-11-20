@@ -1,7 +1,7 @@
 {
   "note": "Unified Block Model Slice 3 (uniform lexical closures/captures, inner-block parallel compile-time symbol wiring, uniform execution-trace initialization safety, and escaping-closure checks on TS; C continues rejecting fn values explicitly). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-20",
-  "sourceSha256": "2add23d46b4e5dd277af2257ea2bcc16074cf2c66a8afca6a04254198cc9afa1",
+  "sourceSha256": "90cdd66c8c1484b7ae0098477a757317b1b116f0612b651b7ebfe95df83bb2f9",
   "compilerSha256": "97614fe3bd7524eaf569da979beba25485240096c3f002b469e21b9c8583945f",
   "programCases": 69,
   "rejectedCases": 25,
@@ -327,13 +327,13 @@
     {
       "name": "bool-literals-logic",
       "source": "001-007-bool-literals-logic.lts",
-      "ts": "sha256:7a23fdfd10c5294226d036c5d03f9f97db83d40c6fb0d08237fa98f3d6e2ab88",
+      "ts": "sha256:d66edb2aab2bb880e5fa03fabafa52846f8120ce9e0446ce12d89b1f40c0f5d9",
       "c": "sha256:bdaa4c0c3ea4d44b399cca83ff5ac425b550ef601e9396d13215408b22221024"
     },
     {
       "name": "int-comparisons-if-else",
       "source": "001-007-int-comparisons-if-else.lts",
-      "ts": "sha256:77df21bd2b954234913a73d552a809728db6dee8d8e52c0dbe1ce6afec3bfc55",
+      "ts": "sha256:6e2653d5b94970aeb613886ed5ef6d281739a57d46fd4aca7dc4444519125938",
       "c": "sha256:ac6c98e487c5058758d044c28fb0a890fa33621404165886bdbe8bb6005e821d"
     },
     {
@@ -351,7 +351,7 @@
     {
       "name": "not-precedence",
       "source": "001-007-not-precedence.lts",
-      "ts": "sha256:55107474aafd0c03304db96c41658f606b81bae32410565e8ef99773382e22c2",
+      "ts": "sha256:f26e8888492150cfd06fef3eb86245c19914b1d0e7f0be2f3e8c47e0f28c70ec",
       "c": "sha256:eac217c623eb9c4bb824143f91a3ef6f811f88235b45d0c952408858999cbfbc"
     },
     {
@@ -369,19 +369,19 @@
     {
       "name": "runtime-division",
       "source": "001-009-runtime-division.lts",
-      "ts": "sha256:5074f45cb70fa53e11cf46ff8d2157cb3d24e365858d4c27f3a6d37888463aa1",
+      "ts": "sha256:c1b1946b35c61b047bf3c25cc1a81646b159cbf16ddd58b27d960ab9592213f9",
       "c": "sha256:30d774104fb1ab96195125a0ded2ae4a0724b7a7f15919146740d181179af379"
     },
     {
       "name": "runtime-remainder",
       "source": "001-009-runtime-remainder.lts",
-      "ts": "sha256:460d0b4c0fc5c5eac964feec599099eeb6f02341b152dc8db5180c00ff68a59a",
+      "ts": "sha256:85edb805ff713973042ff90b0c0f8527fa681a9d9d4dd713e49cf293f2b57af6",
       "c": "sha256:13fde5228df81f8e3c6e202d7ca301295280312b160a4540d0a4c893d55ba86d"
     },
     {
       "name": "runtime-string-concat",
       "source": "001-010-runtime-string-concat.lts",
-      "ts": "sha256:452765a502d5aa38247e5df11da1263d9d748333f7d75f2070c8e149f2b8287b",
+      "ts": "sha256:d288916c6d2cdc3e6e51396e1db9dca2fa732b42dca45afad7442cfa3cf775b0",
       "c": "sha256:f6b847aa713ce6d18ce00527f26946a64665e3727a6b9ab4da0890d67548838f"
     },
     {
@@ -421,5 +421,5 @@
       "c": "sha256:f39edfd607784fbc069b8635dd916d7e52ea0cb5573ddd48ea27d2fb58ea5cd3"
     }
   ],
-  "artifactSha256": "c9beed169ce60a5a463e1ed886932a4e4170e70189d4bcd6222ddc1961877cb7"
+  "artifactSha256": "168d3b1f8b89981e6835da15c00ee9e5be467c4acbd8b2787a898f5c46977917"
 }
