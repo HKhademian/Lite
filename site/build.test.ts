@@ -229,6 +229,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(learnIndex.includes('0 / 24 completed'));
   assert(learnIndex.includes('Track 0 — Getting Started'));
   assert(learnIndex.includes('Track 7 — Standalone Project Tutorials'));
+  assert(learnIndex.includes('id="learn-search"'));
+  assert(learnIndex.includes('data-learn-env="play"'));
   for (const learnRel of [
     'learn/getting-started/hello-lite.html',
     'learn/foundations/bindings-and-mutability.html',
@@ -246,6 +248,11 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const orbPage = readFileSync(join(out, 'learn/tutorials/orb-catcher-game.html'), 'utf8');
   assert(orbPage.includes('id="ln-canvas"'));
   assert(orbPage.includes('../../runtime/worker.js'));
+  assert(orbPage.includes('../../runtime/play-stage.js'));
+  assert(orbPage.includes('id="ln-editor-gutter"'));
+  assert(orbPage.includes('id="ln-split"'));
+  assert(orbPage.includes('id="ln-copy"'));
+  assert(orbPage.includes('class="docs-crosslinks"'));
 
   const gymIndex = readFileSync(join(out, 'gym/index.html'), 'utf8');
   assert(gymIndex.includes('0 / 45 solved'));
