@@ -208,6 +208,10 @@ show(items);
 
 This is a design case for a loop proven to visit each element exactly once and complete the writes before the read. A skipped write can leave an uninitialized element, and a repeated index can attempt an overwrite. The proof forms that the compiler recognizes remain open.
 
+### Cleanup after interrupted construction
+
+Apply the eventual ownership and cleanup rules to the initialized parts that hold live values on each exit path. If acquisition of the second resource in a reserved record fails, the first initialized field can still require cleanup even though the whole record never became readable. Untouched fields provide no value to clean up. Probe exits after zero, one, and both field writes. When the initialized regions are known at a given exit, the compiler can emit the applicable cleanup directly. The cleanup order and representation for paths with runtime-dependent initialization remain open.
+
 ### Initialization before a pending call begins
 
 Selected on **2026-10-25**: a var local reserved with = ? may have its location selected by an earlier var argument and then receive its first whole value in a later argument before invocation. Selection does not read the payload. For use_int requiring var Int and Int, use_int(var value, ({ value = 42; 0 })) is valid after var value: Int = ?, because the caller initializes value before the callee receives it. The scalar temporary form makes the same order explicit; see [initialization during preparation](lite://doc/call-replacement-flow#initialization-during-argument-preparation-selected).
