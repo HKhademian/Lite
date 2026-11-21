@@ -1,0 +1,49 @@
+{
+  "Loop collect": {
+    "prefix": "loopcol",
+    "body": [
+      "${1:result} := loop ${2:items} { ${3:.item} }.collected;$0"
+    ],
+    "description": "Transform a sequence into a List<T> with loop .collected"
+  },
+  "Loop filter and collect": {
+    "prefix": "loopfilter",
+    "body": [
+      "${1:result} := loop ${2:items} { if ${3:.item > 0} { ${4:.item} } }.collected;$0"
+    ],
+    "description": "Filter and transform a sequence with a partial if tail and .collected"
+  },
+  "Map literal": {
+    "prefix": "maplit",
+    "body": [
+      "${1:table}: ${2:Map<String, Int>} = [\"${3:key}\" = ${4:0}];$0"
+    ],
+    "description": "Typed Map<K, V> literal initializer"
+  },
+  "Set literal": {
+    "prefix": "setlit",
+    "body": [
+      "${1:tags}: ${2:Set<String>} = [\"${3:item}\"];$0"
+    ],
+    "description": "Typed Set<T> literal initializer"
+  },
+  "Record declaration": {
+    "prefix": "rec",
+    "body": [
+      "${1:Name} := record {",
+      "    ${2:field}: ${3:Int};",
+      "};$0"
+    ],
+    "description": "Nominal record type declaration"
+  },
+  "Enum declaration": {
+    "prefix": "enum",
+    "body": [
+      "${1:Name} := enum {",
+      "    ${2:CaseA};",
+      "    ${3:CaseB};",
+      "};$0"
+    ],
+    "description": "Nominal enum type declaration"
+  }
+}

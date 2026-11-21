@@ -309,7 +309,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
 
   const gymIndex = readFileSync(join(out, 'gym/index.html'), 'utf8');
   assert(gymIndex.includes('0 / 56 solved'));
-  assert(gymIndex.includes('Concept Drills (24)'));
+  assert(gymIndex.includes('Concept Drills (27)'));
   assert(gymIndex.includes('Problem Workouts (29)'));
   assert(gymIndex.includes('Export JSON'));
   assert(gymIndex.includes('Import JSON'));

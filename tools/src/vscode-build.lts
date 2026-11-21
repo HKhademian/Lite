@@ -9,11 +9,11 @@ extTs := import "external/ts";
 project := import "util/project";
 
 replaceAll := fn(haystack: String, needle: String, replacement: String): String {
-    nLen := text.length(needle);
-    if nLen == 0 { return haystack; }
+    nLen := needle.length;
+    if needle.isEmpty { return haystack; }
     parts: mut List<String> = [];
     var pos := 0;
-    size := text.length(haystack);
+    size := haystack.length;
     loop pos <= size {
         found := text.indexOfText(haystack, needle, pos);
         if found < 0 {

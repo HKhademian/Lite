@@ -43,6 +43,12 @@
         "path": "./syntaxes/lite.tmLanguage.json"
       }
     ],
+    "snippets": [
+      {
+        "language": "lite",
+        "path": "./snippets/lite.code-snippets"
+      }
+    ],
     "commands": [
       {
         "command": "lite.checkFile",
