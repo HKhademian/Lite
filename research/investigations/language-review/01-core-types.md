@@ -583,6 +583,13 @@ requires a `UserID` key, even if the corresponding `Int` has the same hash.
 If `UserID` defines its own equality, equal keys must produce the same hash
 under that rule. The declaration syntax for custom equality and hashing is open.
 
+When `UserID` is backed by `Int64`, the default same-type equality and hashing
+can use the same implementation as `Int64` directly on the shared
+representation. Two `UserID` values use that equality implementation after type
+checking admits the operands. An `Int64` and a `UserID` still require an explicit
+mixed-type operation or conversion. Reuse follows the backing type's value
+semantics, including when those semantics require more than comparing bytes.
+
 Treat type identity, conversion, operations, and physical representation as separate decisions. The user's direction distinguishes contextual fresh literals from established typed values; a typed declaration does not itself authorize converting an established String or another distinct value into `UserID`.
 
 ## Expanded assessment
