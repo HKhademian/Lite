@@ -87,4 +87,4 @@ For declared carrier cases, equality compares case identities first. Distinct ca
 
 ### Automatic value overflow
 
-The joint review confirmed a compile-time error if an automatically assigned integer enum value exceeds the backing type's range. For `Code := enum : Int8 { last = 127; next; }`, automatic progression would require 128 and must be rejected. Explicitly writing `next = 0` is valid. An automatic case after that receives 1. Progression for floating-point and other backing types remains a separate question.
+The joint review classifies an automatically assigned integer enum value outside the backing type's range as an overflow panic during compile-time evaluation, analogous to checked overflow at runtime. When the panic prevents the compiler from obtaining the required value, the enum declaration fails compilation. For `Code := enum : Int8 { last = 127; next; }`, automatic progression would require 128. Explicitly writing `next = 0` is valid. An automatic case after that receives 1. Progression for floating-point and other backing types remains a separate question.
