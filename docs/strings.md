@@ -61,6 +61,7 @@ In the generated-TS compiler, every `String` exposes two read-only metadata prop
 
 - `s.length` (`Int`): Unicode code-point count (matching `core/text.length(s)`).
 - `s.isEmpty` (`Bool`): `true` when `s` is `""`.
+- Range slicing (`s[start..end]`, `s[start..=end]`, `s[..end]`, `s[start..]`, `s[..]`): bounds-checked Unicode code-point slice (matching `core/text.slice`). Single-index `s[i]` remains explicit via `core/text.at(s, i)`.
 
 ## Notes
 

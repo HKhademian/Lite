@@ -6040,21 +6040,108 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 intValue = 0, textValue = "", constant = false, next = next),
                 if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), key) } else { "" });
             } else {
-                if not types.isListKind(left.kind) and not types.isArrayKind(left.kind) {
-                    syntax.failAt(source, postPosition, prefix, "indexing requires a list or map value");
+                isStrSlice := left.kind == ir.VALUE_KIND_STRING;
+                if not types.isListKind(left.kind) and not types.isArrayKind(left.kind) and not isStrSlice {
+                    syntax.failAt(source, postPosition, prefix, "indexing requires a list, array, map, or string value");
                 }
                 indexStart := syntax.skipTrivia(source, postPosition + 1, prefix);
-                index := parseBinaryCtx(target, source, indexStart, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
-                if index.kind =!= ir.VALUE_KIND_INT {
-                    syntax.failAt(source, indexStart, prefix, "list index must be Int, got " + types.displayKind(index.kind));
+                var isRangeSlice := false;
+                var isIncSlice := false;
+                var hasSliceStart := false;
+                var hasSliceEnd := false;
+                var sliceStartCode := "0n";
+                var sliceEndCode := "";
+                var sliceCloseNext := indexStart;
+                var sliceMarkers := if inferMode { ctx.collectParsedMarkers("", left) } else { "" };
+                if textLib.startsWithAt(source, indexStart, "..") {
+                    isRangeSlice = true;
+                    isIncSlice = textLib.startsWithAt(source, indexStart, "..=");
+                    afterDots := syntax.skipTrivia(source, indexStart + (if isIncSlice { 3 } else { 2 }), prefix);
+                    if afterDots < textLib.length(source) and textLib.at(source, afterDots) == "]" {
+                        if isIncSlice {
+                            syntax.failAt(source, afterDots, prefix, "expected end index after ..=");
+                        }
+                        sliceCloseNext = afterDots + 1;
+                    } else {
+                        endParsed := parseBinaryCtx(target, source, afterDots, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+                        if inferMode { sliceMarkers = ctx.collectParsedMarkers(sliceMarkers, endParsed); }
+                        if not numeric.isIntKind(endParsed.kind) {
+                            syntax.failAt(source, afterDots, prefix, "slice end must be Int, got " + types.displayKind(endParsed.kind));
+                        }
+                        hasSliceEnd = true;
+                        rawEnd := ctx.assignValueCode(target, ir.VALUE_KIND_INT, endParsed.kind, endParsed.code);
+                        sliceEndCode = if isIncSlice { "((lite$se: bigint) => lite$se < 0n ? -1n : lite$se + 1n)(" + rawEnd + ")" } else { rawEnd };
+                        sliceCloseNext = syntax.expectSymbol(source, syntax.skipTrivia(source, endParsed.next, prefix), "]", prefix);
+                    }
+                } else {
+                    index := parseBinaryCtx(target, source, indexStart, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+                    if inferMode { sliceMarkers = ctx.collectParsedMarkers(sliceMarkers, index); }
+                    afterFirst := syntax.skipTrivia(source, index.next, prefix);
+                    if textLib.startsWithAt(source, afterFirst, "..") {
+                        isRangeSlice = true;
+                        if not numeric.isIntKind(index.kind) {
+                            syntax.failAt(source, indexStart, prefix, "slice start must be Int, got " + types.displayKind(index.kind));
+                        }
+                        hasSliceStart = true;
+                        sliceStartCode = ctx.assignValueCode(target, ir.VALUE_KIND_INT, index.kind, index.code);
+                        isIncSlice = textLib.startsWithAt(source, afterFirst, "..=");
+                        afterDots := syntax.skipTrivia(source, afterFirst + (if isIncSlice { 3 } else { 2 }), prefix);
+                        if afterDots < textLib.length(source) and textLib.at(source, afterDots) == "]" {
+                            if isIncSlice {
+                                syntax.failAt(source, afterDots, prefix, "expected end index after ..=");
+                            }
+                            sliceCloseNext = afterDots + 1;
+                        } else {
+                            endParsed := parseBinaryCtx(target, source, afterDots, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+                            if inferMode { sliceMarkers = ctx.collectParsedMarkers(sliceMarkers, endParsed); }
+                            if not numeric.isIntKind(endParsed.kind) {
+                                syntax.failAt(source, afterDots, prefix, "slice end must be Int, got " + types.displayKind(endParsed.kind));
+                            }
+                            hasSliceEnd = true;
+                            rawEnd := ctx.assignValueCode(target, ir.VALUE_KIND_INT, endParsed.kind, endParsed.code);
+                            sliceEndCode = if isIncSlice { "((lite$se: bigint) => lite$se < 0n ? -1n : lite$se + 1n)(" + rawEnd + ")" } else { rawEnd };
+                            sliceCloseNext = syntax.expectSymbol(source, syntax.skipTrivia(source, endParsed.next, prefix), "]", prefix);
+                        }
+                    } else {
+                        if isStrSlice {
+                            syntax.failAt(source, postPosition, prefix, "string indexing requires a range slice (use core/text.at for single code points)");
+                        }
+                        if index.kind =!= ir.VALUE_KIND_INT {
+                            syntax.failAt(source, indexStart, prefix, "list index must be Int, got " + types.displayKind(index.kind));
+                        }
+                        close := syntax.skipTrivia(source, index.next, prefix);
+                        next := syntax.expectSymbol(source, close, "]", prefix);
+                        elemKind := if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
+                        left = ctx.withMarkers((kind = elemKind,
+                        code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
+                        intValue = 0, textValue = "", constant = false, next = next),
+                        sliceMarkers);
+                    }
                 }
-                close := syntax.skipTrivia(source, index.next, prefix);
-                next := syntax.expectSymbol(source, close, "]", prefix);
-                elemKind := if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
-                left = ctx.withMarkers((kind = elemKind,
-                code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
-                intValue = 0, textValue = "", constant = false, next = next),
-                if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), index) } else { "" });
+                if isRangeSlice {
+                    if target =!= ir.TARGET_TS {
+                        syntax.failAt(source, postPosition, prefix, "C backend does not support range slicing yet");
+                    }
+                    _usedStart := hasSliceStart;
+                    if isStrSlice {
+                        sliceCode := if hasSliceEnd {
+                            "lite$textSlice((" + left.code + "), " + sliceStartCode + ", " + sliceEndCode + ", " + integer.intText(indexStart) + ")"
+                        } else {
+                            "((lite$st: string) => lite$textSlice(lite$st, " + sliceStartCode + ", lite$textLength(lite$st), " + integer.intText(indexStart) + "))(" + left.code + ")"
+                        };
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_STRING, code = sliceCode,
+                        intValue = 0, textValue = "", constant = false, next = sliceCloseNext), sliceMarkers);
+                    } else {
+                        elemKind := if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
+                        sliceCode := if hasSliceEnd {
+                            "lite$listSlice((" + left.code + "), " + sliceStartCode + ", " + sliceEndCode + ", " + integer.intText(indexStart) + ")"
+                        } else {
+                            "((lite$sl: readonly (" + types.tsFunctionType(elemKind) + ")[]) => lite$listSlice(lite$sl, " + sliceStartCode + ", BigInt(lite$sl.length), " + integer.intText(indexStart) + "))(" + left.code + ")"
+                        };
+                        left = ctx.withMarkers((kind = "List<" + elemKind + ">", code = sliceCode,
+                        intValue = 0, textValue = "", constant = false, next = sliceCloseNext), sliceMarkers);
+                    }
+                }
             }
         } else if left.kind == ir.VALUE_KIND_LIST_OP {
             left = parseListIntrinsicCall(target, source, exprStart, left.next, left.textValue, left.code, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);

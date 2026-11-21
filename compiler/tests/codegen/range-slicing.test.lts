@@ -1,0 +1,68 @@
+/* Focused tests for copy-by-default range slicing on List<T>, [T; N], and String. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* 1. List, Array, and String range slicing (.., ..=, open start, open end, full copy, Unicode, value isolation) */
+sliceProg :=
+"io := import \"core/io\";\n" +
+"items: mut List<Int> = [10, 20, 30, 40, 50];\n" +
+"mid := items[1..4];\n" +
+"inc := items[1..=3];\n" +
+"head := items[..2];\n" +
+"tail := items[3..];\n" +
+"full := items[..];\n" +
+"items[1] = 999;\n" +
+"arr := [1, 2, 3, 4];\n" +
+"arrMid := arr[1..3];\n" +
+"arrInc := arr[..=2];\n" +
+"s := \"hello\";\n" +
+"emoji := \"a🚀b✨c\";\n" +
+"io.outputLine(mid.length, mid);\n" +
+"io.outputLine(inc.length, inc);\n" +
+"io.outputLine(head, tail, full.length, full[1]);\n" +
+"io.outputLine(arrMid, arrInc);\n" +
+"io.outputLine(s[1..4], s[..2], s[2..], s[..], s[1..=3]);\n" +
+"io.outputLine(emoji[1..4], emoji[1..4].length);\n" +
+"io.outputLine(loop items[2..5] { .item + 1 }.collected);\n";
+
+optFlags := ["-O0", "-O1", "-O2", "-O3"];
+loop optFlags as flag {
+    cSl := compilerTest.compileStdin(root, tsComp, sliceProg, flag);
+    test.checkInt("range slicing compile " + flag + ": " + cSl.stderr, 0, cSl.status);
+    rSl := compilerTest.checkAndRunTs(root, cSl.stdout);
+    test.checkInt("range slicing run " + flag + ": " + rSl.stderr, 0, rSl.status);
+    test.checkText("range slicing stdout " + flag,
+    "3 [20, 30, 40]\n3 [20, 30, 40]\n[10, 20] [40, 50] 5 20\n[2, 3] [1, 2, 3]\nell he llo hello ell\n🚀b✨ 3\n[31, 41, 51]\n",
+    rSl.stdout);
+}
+
+/* 2. Compile-time rejections */
+compilerTest.assertCompileError(root, tsComp, "string single index rejected",
+"s := \"hi\";\nx := s[0];\n",
+"2:7: string indexing requires a range slice (use core/text.at for single code points)\n");
+compilerTest.assertCompileError(root, tsComp, "open inclusive slice rejected",
+"xs := [1, 2];\ny := xs[1..=];\n",
+"2:13: expected end index after ..=\n");
+compilerTest.assertCompileError(root, tsComp, "non-Int slice start rejected",
+"xs := [1, 2];\ny := xs[\"a\"..2];\n",
+"2:9: slice start must be Int, got String\n");
+compilerTest.assertCompileError(root, tsComp, "non-Int slice end rejected",
+"xs := [1, 2];\ny := xs[0..\"b\"];\n",
+"2:12: slice end must be Int, got String\n");
+compilerTest.assertCompileError(root, cComp, "C rejects range slicing",
+"s := \"hello\";\ny := s[1..3];\n",
+"2:7: C backend does not support range slicing yet\n");
+
+test.done("range-slicing");
