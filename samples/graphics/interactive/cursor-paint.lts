@@ -62,7 +62,7 @@ onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit {
         loop palette {
             sx := 12 + (.index * 34);
             if col >= sx - 2 and col <= sx + 26 {
-                st = PaintState { colorIdx = .index, brushDown = st.brushDown };
+                st.colorIdx = .index;
                 drawPaletteBar();
                 audio.tone(frequency = 360 + (st.colorIdx * 90), durationMs = 55, volume = 15);
                 return;

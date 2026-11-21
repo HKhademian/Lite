@@ -2491,46 +2491,186 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 blockConstant = false;
                 cursor = statementNext;
-            } else if afterItemName < textLib.length(source) and textLib.at(source, afterItemName) == "[" and ir.localIndex(blockLocals, itemName) >= 0 and types.isMapKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind) and syntax.scanBracketEnd(source, afterItemName, prefix) >= 0 and syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) {
+            } else if afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "[" and ir.localIndex(blockLocals, itemName) >= 0 and
+            (types.isMapKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind) or types.isListKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind) or types.isArrayKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind)) and
+            syntax.scanBracketEnd(source, afterItemName, prefix) >= 0 and
+            (syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) or
+             syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0) {
                 isStatement = true;
                 entry := blockLocals[ir.localIndex(blockLocals, itemName)];
                 if entry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
-                if not entry.writable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable map " + itemName); }
-                kKind := types.mapKeyKind(entry.kind);
-                vKind := types.mapValueKind(entry.kind);
-                kStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
-                keyParsed := parseBinaryCtx(target, source, kStart, prefix, blockLocals, functions, params, currentName, kKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
-                if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, keyParsed); }
-                if not types.isCompatibleKind(kKind, keyParsed.kind) {
-                    syntax.failAt(source, kStart, prefix, "map key must be " + types.displayKind(kKind) + ", got " + types.displayKind(keyParsed.kind));
+                bracketEndPos := syntax.scanBracketEnd(source, afterItemName, prefix);
+                afterBrk := syntax.skipTrivia(source, bracketEndPos, prefix);
+                idxCompOp := syntax.compoundAssignOp(source, afterBrk);
+                opWidth := if idxCompOp.width > 0 { idxCompOp.width } else { 1 };
+                if types.isMapKind(entry.kind) {
+                    if not entry.writable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable map " + itemName); }
+                    kKind := types.mapKeyKind(entry.kind);
+                    vKind := types.mapValueKind(entry.kind);
+                    kStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
+                    keyParsed := parseBinaryCtx(target, source, kStart, prefix, blockLocals, functions, params, currentName, kKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, keyParsed); }
+                    if not types.isCompatibleKind(kKind, keyParsed.kind) {
+                        syntax.failAt(source, kStart, prefix, "map key must be " + types.displayKind(kKind) + ", got " + types.displayKind(keyParsed.kind));
+                    }
+                    closePos := syntax.expectSymbol(source, syntax.skipTrivia(source, keyParsed.next, prefix), "]", prefix);
+                    opPos := syntax.skipTrivia(source, closePos, prefix);
+                    vStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
+                    valParsed := parseBinaryCtx(target, source, vStart, prefix, blockLocals, functions, params, currentName, vKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, valParsed); }
+                    if not types.isCompatibleKind(vKind, valParsed.kind) {
+                        syntax.failAt(source, vStart, prefix, "map value must be " + types.displayKind(vKind) + ", got " + types.displayKind(valParsed.kind));
+                    }
+                    kCode := ctx.assignValueCode(target, kKind, keyParsed.kind, keyParsed.code);
+                    stmtCode := if idxCompOp.width > 0 {
+                        curValCode := "lite$mapAt(" + entry.runtime + ", lite$ck, " + integer.intText(itemStart) + ")";
+                        nextValCode := ctx.compoundAssignCode(target, source, opPos, prefix, vKind, curValCode, idxCompOp.baseOp, valParsed);
+                        "((lite$ck: " + types.tsFunctionType(kKind) + ") => (" + entry.runtime + ").set(lite$ck, " + nextValCode + "))(" + kCode + ")"
+                    } else {
+                        "(" + entry.runtime + ").set(" + kCode + ", " + ctx.assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")"
+                    };
+                    if target == ir.TARGET_TS and not inferMode and not blockExits {
+                        trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
+                    }
+                    statementNext := syntax.consumeStatementEnd(source, valParsed.next, prefix);
+                    if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after map assignment"); }
+                    if target == ir.TARGET_TS and not inferMode and not blockExits {
+                        blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
+                    }
+                    if not blockExits {
+                        listLib.pushBack(mut statements, stmtCode + ";");
+                        listLib.pushBack(mut stmtOwners, "");
+                        listLib.pushBack(mut stmtDeps, stmtCode);
+                        trackedStmtCount = trackedStmtCount + 1;
+                        statementCount = statementCount + 1;
+                    }
+                    blockConstant = false;
+                    cursor = statementNext;
+                } else {
+                    isArr := types.isArrayKind(entry.kind);
+                    if not isArr and not entry.writable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable list " + itemName); }
+                    if isArr and not entry.mutable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable array " + itemName); }
+                    if target =!= ir.TARGET_TS { syntax.failAt(source, itemStart, prefix, "C backend does not support list index assignment yet"); }
+                    elKind := if isArr { types.arrayElementKind(entry.kind) } else { types.listElementKind(entry.kind) };
+                    idxStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
+                    idxParsed := parseBinaryCtx(target, source, idxStart, prefix, blockLocals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, idxParsed); }
+                    if not numeric.isIntKind(idxParsed.kind) {
+                        syntax.failAt(source, idxStart, prefix, "list index must be Int, got " + types.displayKind(idxParsed.kind));
+                    }
+                    closePos := syntax.expectSymbol(source, syntax.skipTrivia(source, idxParsed.next, prefix), "]", prefix);
+                    opPos := syntax.skipTrivia(source, closePos, prefix);
+                    vStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
+                    valParsed := parseBinaryCtx(target, source, vStart, prefix, blockLocals, functions, params, currentName, elKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, valParsed); }
+                    if not types.isCompatibleKind(elKind, valParsed.kind) {
+                        syntax.failAt(source, vStart, prefix, "list element must be " + types.displayKind(elKind) + ", got " + types.displayKind(valParsed.kind));
+                    }
+                    idxCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxParsed.kind, idxParsed.code);
+                    stmtCode := if idxCompOp.width > 0 {
+                        curElCode := "lite$listAt(" + entry.runtime + ", lite$ci, " + integer.intText(itemStart) + ")";
+                        nextElCode := ctx.compoundAssignCode(target, source, opPos, prefix, elKind, curElCode, idxCompOp.baseOp, valParsed);
+                        "((lite$ci: bigint) => lite$listSet(" + entry.runtime + ", lite$ci, " + nextElCode + ", " + integer.intText(itemStart) + "))(" + idxCode + ")"
+                    } else {
+                        "lite$listSet(" + entry.runtime + ", " + idxCode + ", " + ctx.assignValueCode(target, elKind, valParsed.kind, valParsed.code) + ", " + integer.intText(itemStart) + ")"
+                    };
+                    if target == ir.TARGET_TS and not inferMode and not blockExits {
+                        trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
+                    }
+                    statementNext := syntax.consumeStatementEnd(source, valParsed.next, prefix);
+                    if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after list assignment"); }
+                    if target == ir.TARGET_TS and not inferMode and not blockExits {
+                        blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
+                    }
+                    if not blockExits {
+                        listLib.pushBack(mut statements, stmtCode + ";");
+                        listLib.pushBack(mut stmtOwners, "");
+                        listLib.pushBack(mut stmtDeps, stmtCode);
+                        trackedStmtCount = trackedStmtCount + 1;
+                        statementCount = statementCount + 1;
+                    }
+                    blockConstant = false;
+                    cursor = statementNext;
                 }
-                closePos := syntax.expectSymbol(source, syntax.skipTrivia(source, keyParsed.next, prefix), "]", prefix);
-                eqPos := syntax.skipTrivia(source, closePos, prefix);
-                vStart := syntax.skipTrivia(source, eqPos + 1, prefix);
-                valParsed := parseBinaryCtx(target, source, vStart, prefix, blockLocals, functions, params, currentName, vKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
-                if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, valParsed); }
-                if not types.isCompatibleKind(vKind, valParsed.kind) {
-                    syntax.failAt(source, vStart, prefix, "map value must be " + types.displayKind(vKind) + ", got " + types.displayKind(valParsed.kind));
+            } else if afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "." and ir.localIndex(blockLocals, itemName) >= 0 and
+            (types.isRecordKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind) or types.isTupleKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind)) {
+                recEntry := blockLocals[ir.localIndex(blockLocals, itemName)];
+                var scanPos := afterItemName;
+                var curKind := recEntry.kind;
+                fieldChain: mut List<String> = [];
+                var chainValid := true;
+                loop scanPos < blockSourceSize and textLib.at(source, scanPos) == "." {
+                    fStart := syntax.skipTrivia(source, scanPos + 1, prefix);
+                    if fStart >= blockSourceSize or not textLib.isNameStart(textLib.at(source, fStart)) {
+                        chainValid = false;
+                        break;
+                    }
+                    fEnd := textLib.skipName(source, fStart);
+                    fName := textLib.slice(source, fStart, fEnd);
+                    nextKind := if types.isRecordKind(curKind) { types.recordFieldKind(curKind, fName) }
+                    else if types.isTupleKind(curKind) { types.tupleFieldKind(curKind, fName) }
+                    else { "" };
+                    if nextKind == "" {
+                        chainValid = false;
+                        break;
+                    }
+                    listLib.pushBack(mut fieldChain, fName);
+                    curKind = nextKind;
+                    scanPos = syntax.skipTrivia(source, fEnd, prefix);
                 }
-                stmtCode := "(" + entry.runtime + ").set(" + ctx.assignValueCode(target, kKind, keyParsed.kind, keyParsed.code) + ", " +
-                ctx.assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")";
-                if target == ir.TARGET_TS and not inferMode and not blockExits {
-                    trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
+                recCompOp := if chainValid and scanPos < blockSourceSize { syntax.compoundAssignOp(source, scanPos) } else { (op = "", baseOp = "", width = 0) };
+                chainLen := listLib.length(fieldChain);
+                if chainValid and chainLen >= 1 and chainLen <= 2 and scanPos < blockSourceSize and (syntax.isSingleEquals(source, scanPos) or recCompOp.width > 0) {
+                    isStatement = true;
+                    if recEntry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
+                    if not recEntry.mutable { syntax.failAt(source, itemStart, prefix, "cannot mutate field of immutable local " + itemName); }
+                    if target =!= ir.TARGET_TS { syntax.failAt(source, itemStart, prefix, "C backend does not support record field assignment yet"); }
+                    opPos := scanPos;
+                    opWidth := if recCompOp.width > 0 { recCompOp.width } else { 1 };
+                    rhsStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
+                    rhsParsed := parseBinaryCtx(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, curKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, rhsParsed); }
+                    if not types.isCompatibleKind(curKind, rhsParsed.kind) {
+                        syntax.failAt(source, rhsStart, prefix, "cannot assign " + types.displayKind(rhsParsed.kind) + " to field of type " + types.displayKind(curKind));
+                    }
+                    f0 := fieldChain[0];
+                    stmtCode := if chainLen == 1 {
+                        lhsPath := "(" + recEntry.runtime + ")." + f0;
+                        rhsCode := if recCompOp.width > 0 {
+                            ctx.compoundAssignCode(target, source, opPos, prefix, curKind, lhsPath, recCompOp.baseOp, rhsParsed)
+                        } else {
+                            ctx.assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
+                        };
+                        "(" + recEntry.runtime + " = { ...(" + recEntry.runtime + "), " + f0 + ": " + rhsCode + " })"
+                    } else {
+                        f1 := fieldChain[1];
+                        subPath := "(" + recEntry.runtime + ")." + f0;
+                        lhsPath := "(" + subPath + ")." + f1;
+                        rhsCode := if recCompOp.width > 0 {
+                            ctx.compoundAssignCode(target, source, opPos, prefix, curKind, lhsPath, recCompOp.baseOp, rhsParsed)
+                        } else {
+                            ctx.assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
+                        };
+                        "(" + recEntry.runtime + " = { ...(" + recEntry.runtime + "), " + f0 + ": { ...(" + subPath + "), " + f1 + ": " + rhsCode + " } })"
+                    };
+                    if target == ir.TARGET_TS and not inferMode and not blockExits {
+                        trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
+                    }
+                    statementNext := syntax.consumeStatementEnd(source, rhsParsed.next, prefix);
+                    if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, rhsParsed.next, prefix), prefix, "expected ; after field assignment"); }
+                    if target == ir.TARGET_TS and not inferMode and not blockExits {
+                        blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
+                    }
+                    if not blockExits {
+                        listLib.pushBack(mut statements, stmtCode + ";");
+                        listLib.pushBack(mut stmtOwners, "");
+                        listLib.pushBack(mut stmtDeps, stmtCode);
+                        trackedStmtCount = trackedStmtCount + 1;
+                        statementCount = statementCount + 1;
+                    }
+                    blockConstant = false;
+                    cursor = statementNext;
                 }
-                statementNext := syntax.consumeStatementEnd(source, valParsed.next, prefix);
-                if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after map assignment"); }
-                if target == ir.TARGET_TS and not inferMode and not blockExits {
-                    blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
-                }
-                if not blockExits {
-                    listLib.pushBack(mut statements, stmtCode + ";");
-                    listLib.pushBack(mut stmtOwners, "");
-                    listLib.pushBack(mut stmtDeps, stmtCode);
-                    trackedStmtCount = trackedStmtCount + 1;
-                    statementCount = statementCount + 1;
-                }
-                blockConstant = false;
-                cursor = statementNext;
             } else if syntax.isSingleEquals(source, afterItemName) {
                 isStatement = true;
                 index := ir.localIndex(blockLocals, itemName);

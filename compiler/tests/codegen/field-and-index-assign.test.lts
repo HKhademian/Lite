@@ -57,6 +57,34 @@ test.checkInt("compound index assign run: " + rIdx.stderr, 0, rIdx.status);
 test.checkText("compound index assign stdout", "15 16 12 12\n", rIdx.stdout);
 
 /* 3. Compile-time rejections */
+/* 4. Field and compound index assignment inside expression loops, conditionals, and value blocks */
+blockAssignProg :=
+"io := import \"core/io\";\n" +
+"Pos := record { x: Int; y: Int; };\n" +
+"Hero := record { pos: Pos; hp: Int; };\n" +
+"var h := Hero { pos = Pos { x = 1, y = 2 }, hp = 10 };\n" +
+"snap := h;\n" +
+"m: mut Map<String, Int> = [\"hits\" = 0];\n" +
+"xs: mut List<Int> = [10, 20];\n" +
+"loop [3, 5] {\n" +
+"    h.hp += .item;\n" +
+"    h.pos.x += .index + 1;\n" +
+"    m[\"hits\"] += 1;\n" +
+"    xs[.index] += .item;\n" +
+"}\n" +
+"res := {\n" +
+"    h.pos.y = 99;\n" +
+"    h.hp\n" +
+"};\n" +
+"io.outputLine(snap.hp, snap.pos.x, snap.pos.y, \"|\", h.hp, h.pos.x, h.pos.y, res, m[\"hits\"], xs[0], xs[1]);\n";
+
+cBlk := compilerTest.compileStdin(root, tsComp, blockAssignProg, "");
+test.checkInt("block field/index assign compile: " + cBlk.stderr, 0, cBlk.status);
+rBlk := compilerTest.checkAndRunTs(root, cBlk.stdout);
+test.checkInt("block field/index assign run: " + rBlk.stderr, 0, rBlk.status);
+test.checkText("block field/index assign stdout", "10 1 2 | 18 4 99 18 2 13 25\n", rBlk.stdout);
+
+/* 5. Compile-time rejections */
 compilerTest.assertCompileError(root, tsComp, "immutable record field assign", "Pos := record { x: Int; };\np := Pos { x = 1 };\np.x = 2;\n", "3:1: cannot mutate field of immutable local p\n");
 compilerTest.assertCompileError(root, tsComp, "immutable map compound assign", "m: Map<String, Int> = [\"a\" = 1];\nm[\"a\"] += 1;\n", "2:1: cannot mutate immutable map m\n");
 compilerTest.assertCompileError(root, tsComp, "immutable list compound assign", "xs: List<Int> = [1, 2];\nxs[0] += 1;\n", "2:1: cannot mutate immutable list xs\n");
