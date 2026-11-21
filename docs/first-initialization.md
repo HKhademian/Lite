@@ -216,6 +216,14 @@ Apply the eventual ownership and cleanup rules to the initialized parts that hol
 
 The user confirms that a callee can initialize reserved caller storage. The compiler checks its body with the granted output region initially unwritten. A callee may write a field without reading its old value. Reading the field, using it in a compound assignment, or passing it as an ordinary input all require proof of a prior write on every reaching path. For a reserved `Point`, `show(p.x)` is rejected at entry and allowed after `p.x = 10`. `show(p)` requires both fields initialized. The caller can rely on the callee's separately checked completion guarantee. How to declare and grant this access, and how to communicate partial state after a failed call, remain open.
 
+```text
+p: Point = ?;
+initPointButDoNotReadBeforeInitedAndOnlyInitOnce(mut p); /* illustrative grant */
+show(p);
+```
+
+The illustrative `mut p` expresses explicit consent to writes under a single-write initialization contract. Each field becomes readable after its first write. The callee can use it in later expressions immediately and cannot write that same region again under this contract. The callee's checked contract must guarantee that the complete `Point` is initialized on every successful return for the final `show(p)` to be valid. Actual parameter and grant syntax remain open.
+
 ### Initialization before a pending call begins
 
 Selected on **2026-10-25**: a var local reserved with = ? may have its location selected by an earlier var argument and then receive its first whole value in a later argument before invocation. Selection does not read the payload. For use_int requiring var Int and Int, use_int(var value, ({ value = 42; 0 })) is valid after var value: Int = ?, because the caller initializes value before the callee receives it. The scalar temporary form makes the same order explicit; see [initialization during preparation](lite://doc/call-replacement-flow#initialization-during-argument-preparation-selected).
