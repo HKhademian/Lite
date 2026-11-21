@@ -1,0 +1,22 @@
+{
+  "id": "feature.types.collections.typed-sets",
+  "kind": "feature",
+  "source": {
+    "file": "typed-sets.lts",
+    "hash": "sha256:865328a7c344a35bc2fc816d664db013fd8be80dce40ac1dec314b1fadf637a3"
+  },
+  "features": [
+    "feature.types.collections.typed-sets"
+  ],
+  "guideline": "Checks zero-initialized mut Set<T>, core/set add/has/remove/size intrinsics, deduplication, and independent value snapshots.",
+  "cases": [
+    {
+      "name": "set-ops-and-snapshot",
+      "stdout": {
+        "text": "true 1 true 2\n",
+        "hash": "sha256:cc3b4d1c92821161b991d1d355f13459e0d8791631cbebbe79eb97833b4008f2"
+      },
+      "exitCode": 0
+    }
+  ]
+}

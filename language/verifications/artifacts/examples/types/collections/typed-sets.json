@@ -1,0 +1,24 @@
+{
+  "id": "example.types.collections.typed-sets",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/types/collections/typed-sets.lts",
+    "hash": "sha256:dc53650d35d2b8fb09106f9ccf579b854f19520d1d343f68d88cb47fb2ac7c4f"
+  },
+  "features": [
+    "feature.types.collections.typed-sets",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Demonstrates Set<T> deduplication, core/set intrinsics, value-copy snapshots, and insertion-order traversal.",
+  "cases": [
+    {
+      "name": "typed-sets",
+      "stdout": {
+        "text": "live: {typed} has lite: false\nsnapshot size: 2 values: [lite, typed]\nlite\ntyped\n",
+        "hash": "sha256:a4d75dbeabd327947b002be7285a71403b9a82dfc09604462828591ec71366c0"
+      },
+      "exitCode": 0
+    }
+  ]
+}

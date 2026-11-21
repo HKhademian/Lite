@@ -1,0 +1,10 @@
+io := import "core/io";
+set := import "core/set";
+
+nums: mut Set<Int>;
+set.add(mut nums, 10);
+set.add(mut nums, 20);
+set.add(mut nums, 10);
+copy := nums;
+removed := set.remove(mut nums, 10);
+io.outputLine(removed, set.size(nums), set.has(copy, 10), set.size(copy));

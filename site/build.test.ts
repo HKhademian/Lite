@@ -272,7 +272,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     }
   }
   const learnIndex = readFileSync(join(out, 'learn/index.html'), 'utf8');
-  assert(learnIndex.includes('0 / 27 completed'));
+  assert(learnIndex.includes('0 / 28 completed'));
   assert(learnIndex.includes('Track 0 — Getting Started'));
   assert(learnIndex.includes('Track 7 — Standalone Project Tutorials'));
   assert(learnIndex.includes('id="learn-search"'));
@@ -282,6 +282,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     'learn/foundations/bindings-and-mutability.html',
     'learn/control/subject-match-and-patterns.html',
     'learn/types/typed-maps.html',
+    'learn/types/typed-sets.html',
     'learn/types/value-enums.html',
     'learn/types/records-and-patterns.html',
     'learn/modules/modules-and-visibility.html',
@@ -306,9 +307,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(helloLearnHtml.includes('id="ln-open-play" class="btn" href="../../playground/?piece=hello-lite"'));
 
   const gymIndex = readFileSync(join(out, 'gym/index.html'), 'utf8');
-  assert(gymIndex.includes('0 / 51 solved'));
-  assert(gymIndex.includes('Concept Drills (23)'));
-  assert(gymIndex.includes('Problem Workouts (28)'));
+  assert(gymIndex.includes('0 / 53 solved'));
+  assert(gymIndex.includes('Concept Drills (24)'));
+  assert(gymIndex.includes('Problem Workouts (29)'));
   assert(gymIndex.includes('Export JSON'));
   assert(gymIndex.includes('Import JSON'));
   assert(gymIndex.includes('id="gym-search"'));
@@ -317,11 +318,13 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   for (const gymRel of [
     'gym/drills/immutable-vs-var.html',
     'gym/drills/map-mut-grant.html',
+    'gym/drills/set-mut-grant.html',
     'gym/drills/enum-exhaustive-match.html',
     'gym/drills/subject-match-guard.html',
     'gym/drills/record-shorthand-destructure.html',
     'gym/drills/named-tuple-and-array-destructure.html',
     'gym/workouts/word-frequency-counter.html',
+    'gym/workouts/unique-visitor-count.html',
     'gym/workouts/traffic-signal-cycle.html',
     'gym/workouts/order-invoice-summary.html',
     'gym/workouts/ticket-pricing-router.html',
@@ -371,14 +374,16 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     modules: number;
   };
   assert.equal(buildMeta.samples, showcaseSamples.length);
-  assert.equal(buildMeta.lessons, 24);
+  assert.equal(buildMeta.lessons, 25);
   assert.equal(buildMeta.tutorials, 3);
-  assert.equal(buildMeta.gymExercises, 51);
-  assert.equal(buildMeta.modules, 18);
+  assert.equal(buildMeta.gymExercises, 53);
+  assert.equal(buildMeta.modules, 19);
   assert(buildMeta.docsPages >= 200);
   assert(existsSync(join(out, 'docs/design/site-architecture.html')));
   assert(existsSync(join(out, 'docs/design/maps.html')));
+  assert(existsSync(join(out, 'docs/design/sets.html')));
   assert(existsSync(join(out, 'modules/core/map.html')));
+  assert(existsSync(join(out, 'modules/core/set.html')));
   const refReport = validateBuiltSiteReferences(out);
   assert.deepEqual(refReport.violations, []);
   assert(refReport.htmlFiles >= 300);

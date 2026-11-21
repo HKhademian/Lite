@@ -1,0 +1,24 @@
+{
+  "id": "showcase.types.collections.typed-sets-and-membership",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/types/collections/typed-sets-and-membership.lts",
+    "hash": "sha256:99322b3b6d21622c5f4c03cd41248eada9474b79e07dfc86aeba479e0a2ffd47"
+  },
+  "features": [
+    "feature.types.collections.typed-sets",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Zero-initialized Set<T>, core/set membership and mutation grants, independent snapshots, and element traversal.",
+  "cases": [
+    {
+      "name": "typed-sets-and-membership",
+      "stdout": {
+        "text": "removed: true live: {reader} frozen: {reader, editor}\nlive size: 1 has editor in frozen: true\nrole: reader\nrole: editor\n",
+        "hash": "sha256:bd3d2d52c665bf6faa4b017afad540f8fdc30d2e022681d74bd1c7878fea8cbf"
+      },
+      "exitCode": 0
+    }
+  ]
+}

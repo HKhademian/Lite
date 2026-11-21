@@ -1,6 +1,6 @@
 # Tuples, Arrays, Lists & Aliases
 
-Lite separates structural shapes from nominal data types: structural tuples (`(x = 1, y = 2)`), nominal `record` types (`User := record { ... }`), fixed `[T; N]` arrays for static sequences, growable `List<T>` collections for dynamic buffers, and transparent `type` aliases.
+Lite separates structural shapes from nominal data types: structural tuples (`(x = 1, y = 2)`), nominal `record` types (`User := record { ... }`), fixed `[T; N]` arrays for static sequences, growable `List<T>` collections for dynamic buffers, and transparent aliases.
 
 ## Tuples, Labels & `=name` Shorthand
 
@@ -75,6 +75,21 @@ map.set(mut scores, "bob", 25);
 io.outputLine(scores["alice"], map.getOr(scores, "carol", 0), map.size(scores));
 ```
 
+## Typed Sets `Set<T>`
+
+Store unique scalar or nominal `enum` values with `Set<T>`. Sets zero-initialize empty, require `mut Set<T>` for mutating [core/set](lite://module/core/set) calls (`add`, `remove`, `clear`), copy independently on assignment, and iterate elements in insertion order:
+
+```lite
+io := import "core/io";
+set := import "core/set";
+
+tags: mut Set<String>;
+set.add(mut tags, "lite");
+set.add(mut tags, "typed");
+set.add(mut tags, "lite");
+io.outputLine(tags, set.size(tags), set.has(tags, "lite"));
+```
+
 ## Nominal Plain & Value Enums
 
 Declare nominal closed case sets with `enum { ... }` or attach scalar backing values with `enum : Type { ... }` (`Int*`, `Float*`, `String`, `Bool`). Use contextual `.Case` shorthand wherever the enum type is known, read backing values via `.value`, and rely on exhaustive `match`:
@@ -95,7 +110,15 @@ io.outputLine(s, s.value, label);
 
 ## Transparent `type` Aliases & Inner Type Scope
 
-Use `Name := type TypeExpression` to give an existing type another name. `Point` names a tuple type with fields `x` and `y`. `Pair` names a tuple type with two unnamed `Int` components and is scoped to the block. The annotation `pair: Pair` can refer to the alias before its declaration because blocks support forward type references.
+The selected design spells a transparent alias `Name := alias TypeExpression`.
+For example, `Point := alias (x: Int, y: Int)` names a structural tuple type.
+A `distinct` declaration creates a fresh type identity. See
+[aliases and distinct type declarations](lite://doc/type-aliases).
+
+The runnable example uses `Name := type TypeExpression`, the spelling accepted
+by the current Playground. `Point` names a tuple type with fields `x` and `y`.
+`Pair` names a tuple type with two unnamed `Int` components scoped to the block.
+The annotation `pair: Pair` uses the block's forward type lookup.
 
 ```lite
 io := import "core/io";
@@ -113,7 +136,7 @@ io.outputLine(p, pairSum);
 
 The block's final expression adds the two tuple components, so `pairSum` is `30`.
 
-See [Tuples & Patterns](lite://doc/tuples-and-patterns), [Records](lite://doc/records), [Enums & Variants](lite://doc/enums-and-variants), [Aggregate Patterns](lite://doc/aggregate-patterns), [Arrays](lite://doc/arrays), [Lists](lite://doc/lists), [Typed Maps](lite://doc/maps), and [Type Aliases](lite://doc/type-aliases).
+See [Tuples & Patterns](lite://doc/tuples-and-patterns), [Records](lite://doc/records), [Enums & Variants](lite://doc/enums-and-variants), [Aggregate Patterns](lite://doc/aggregate-patterns), [Arrays](lite://doc/arrays), [Lists](lite://doc/lists), [Typed Maps](lite://doc/maps), [Typed Sets](lite://doc/sets), and [Type Aliases](lite://doc/type-aliases).
 
 ## Next Chapter
 

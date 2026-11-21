@@ -1,0 +1,23 @@
+{
+  "id": "case.types.collections.reject-immutable-set-add",
+  "kind": "reject",
+  "source": "reject-immutable-set-add.lts",
+  "features": [
+    "feature.types.collections.typed-sets"
+  ],
+  "cases": [
+    {
+      "name": "rejects-mutating-immutable-set",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-immutable-set-add.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

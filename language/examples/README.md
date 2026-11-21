@@ -132,6 +132,9 @@ examples. They live under [compiler/](lite://doc/compiler/overview) and are run 
 - [033 — Value enums](lite://play/example/value-enums): declares an `Int`-backed nominal
   `enum`, uses auto-incremented cases, contextual `.Case` shorthand, `.value` reads,
   and exhaustive `match`.
+- [034 — Typed sets](lite://play/example/typed-sets): demonstrates `Set<T>` deduplication,
+  `core/set` operations (`add`, `has`, `remove`, `size`, `values`), independent value
+  snapshots, and insertion-order element iteration.
 
 For project showcases, graphics, audio, and mini-game demos, see [samples](lite://repo/samples/README.md).
 For the progressive chapter-by-chapter learning curriculum, see the [ability and feature showcase](lite://repo/language/showcases/README.md).

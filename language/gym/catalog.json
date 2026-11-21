@@ -647,6 +647,34 @@
         { "name": "fallback-stopped", "stdin": "9\n", "args": [], "expectedStdout": "stopped\n" }
       ]
     },
+    {
+      "id": "drills.types.collections.set-mut-grant",
+      "slug": "set-mut-grant",
+      "title": "Mutable Set<T> Grants",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "collections",
+      "promptFile": "language/gym/drills/types/collections/set-mut-grant/README.md",
+      "starterFile": "language/gym/drills/types/collections/set-mut-grant/starter.lts",
+      "solutionFile": "language/gym/drills/types/collections/set-mut-grant/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "Change `seen: Set<Int>;` to `seen: mut Set<Int>;` so the set allows mutations.",
+        "Pass an explicit `mut` grant to `set.add(mut seen, 10);` and `set.add(mut seen, x);`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/sets.md"],
+      "relatedLessons": ["learn.types.collections.typed-sets"],
+      "visibleCases": [
+        { "name": "distinct", "stdin": "20\n", "args": [], "expectedStdout": "2\n" },
+        { "name": "duplicate", "stdin": "10\n", "args": [], "expectedStdout": "1\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero", "stdin": "0\n", "args": [], "expectedStdout": "2\n" },
+        { "name": "negative", "stdin": "-10\n", "args": [], "expectedStdout": "2\n" }
+      ]
+    },
 
     {
       "id": "workouts.units.conversions.temperature-scales",
@@ -1459,6 +1487,34 @@
       "hiddenCases": [
         { "name": "zero-steps", "stdin": "0\n", "args": [], "expectedStdout": "Signal.Red 0\n" },
         { "name": "full-cycle", "stdin": "3\n", "args": [], "expectedStdout": "Signal.Red 60\n" }
+      ]
+    },
+    {
+      "id": "workouts.collections.sets.unique-visitor-count",
+      "slug": "unique-visitor-count",
+      "title": "Unique Visitor Counter",
+      "mode": "kata",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "collections",
+      "promptFile": "language/gym/workouts/collections/unique-visitor-count/README.md",
+      "starterFile": "language/gym/workouts/collections/unique-visitor-count/starter.lts",
+      "solutionFile": "language/gym/workouts/collections/unique-visitor-count/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Insert each visitor name with `set.add(mut visitors, name);`.",
+        "Duplicates are ignored automatically in O(1), so `set.size(visitors)` gives the unique count."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/sets.md"],
+      "relatedLessons": ["learn.types.collections.typed-sets"],
+      "visibleCases": [
+        { "name": "repeated-visitors", "stdin": "4\nada\nlin\nada\nsam\nlin\n", "args": [], "expectedStdout": "3 true\n" },
+        { "name": "missing-query", "stdin": "3\nava\nben\nava\ncora\n", "args": [], "expectedStdout": "2 false\n" }
+      ],
+      "hiddenCases": [
+        { "name": "empty", "stdin": "0\nguest\n", "args": [], "expectedStdout": "0 false\n" },
+        { "name": "single-match", "stdin": "2\nsolo\nsolo\nsolo\n", "args": [], "expectedStdout": "1 true\n" }
       ]
     }
   ]

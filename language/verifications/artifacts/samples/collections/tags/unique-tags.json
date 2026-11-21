@@ -1,0 +1,24 @@
+{
+  "id": "sample.collections.tags.unique-tags",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/collections/tags/unique-tags.lts",
+    "hash": "sha256:ae9acbdead1bfb1c5bd63252e86efe1ff6b5b08b0008023f07cbff3bcd82af00"
+  },
+  "features": [
+    "feature.types.collections.typed-sets",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Deduplicates a list of tags into a Set<String> and inspects size, membership, and insertion-ordered values.",
+  "cases": [
+    {
+      "name": "unique-tags",
+      "stdout": {
+        "text": "3 true [cli, core, docs]\n",
+        "hash": "sha256:d0852f29849f4b26b48cd9b3bf01c17bf7e1d3b01cb13309b74b1ea244bdf248"
+      },
+      "exitCode": 0
+    }
+  ]
+}

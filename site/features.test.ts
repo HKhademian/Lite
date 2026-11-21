@@ -66,6 +66,7 @@ test('highlightLite highlights newer built-in types and operators', () => {
   assert(highlightLite('User := record { name: String; };').includes('<span class="tok-keyword">record</span>'), 'missing keyword highlight: record');
   assert(highlightLite('State := enum { Ready; Done; };').includes('<span class="tok-keyword">enum</span>'), 'missing keyword highlight: enum');
   assert(highlightLite('scores: mut Map<String, Int>;').includes('<span class="tok-type">Map</span>'), 'missing type highlight: Map');
+  assert(highlightLite('tags: mut Set<String>;').includes('<span class="tok-type">Set</span>'), 'missing type highlight: Set');
   const opHtml = highlightLite('a ** b += c :/= d :%= e <!= f >!= g <! h >! i');
   for (const op of ['**', '+=', ':/=', ':%=', '&lt;!=', '&gt;!=', '&lt;!', '&gt;!']) {
     assert(opHtml.includes(`<span class="tok-op">${op}</span>`), `missing operator highlight: ${op}`);
@@ -105,6 +106,7 @@ test('showcaseSamples includes examples covering named calls, tuples, arrays, an
     'tuple-label-conversion',
     'growable-lists',
     'typed-maps',
+    'typed-sets',
     'value-enums',
     'nominal-records',
     'aggregate-destructuring',
@@ -173,12 +175,12 @@ test('stripLiteTs strips Map<K, V> generic args and non-null assertions before c
   assert.deepEqual(res, { found: true, value: 7n });
 });
 
-test('verifyGymCorpus compiles and executes all 51 Gym starters and solutions', () => {
+test('verifyGymCorpus compiles and executes all 53 Gym starters and solutions', () => {
   const result = verifyGymCorpus();
-  assert.equal(result.exerciseCount, 51);
-  assert.equal(result.drillCount, 23);
-  assert.equal(result.kataCount, 28);
-  assert(result.caseCount >= 204, `expected at least 204 test cases, got ${String(result.caseCount)}`);
+  assert.equal(result.exerciseCount, 53);
+  assert.equal(result.drillCount, 24);
+  assert.equal(result.kataCount, 29);
+  assert(result.caseCount >= 212, `expected at least 212 test cases, got ${String(result.caseCount)}`);
 });
 
 interface LearnHelperModule {

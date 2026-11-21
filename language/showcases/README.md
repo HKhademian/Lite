@@ -1,6 +1,6 @@
 # LiteLang Ability and Feature Showcase
 
-A progressive six-chapter, twenty-two-topic verified curriculum teaching every core **LiteLang** language ability and `lib/core/` module. Run any topic directly from the repository root with:
+A progressive six-chapter, twenty-three-topic verified curriculum teaching every core **LiteLang** language ability and `lib/core/` module. Run any topic directly from the repository root with:
 
 ```sh
 ./bin/lite run language/showcases/foundations/bindings/bindings-and-mutability.lts
@@ -26,9 +26,10 @@ Every topic is backed by a verified scenario manifest under [artifacts/showcases
 - [01 — Tuples, Shorthand Labels, Label Conversion, and Destructuring](lite://play/example/showcase-tuples-and-destructuring): positional/named/mixed/singleton tuples, `=name` shorthand, label conversion, and `var` destructuring. ([tuples](lite://doc/tuples-and-patterns), [label conversions](lite://doc/tuple-label-conversions))
 - [02 — Fixed `[T; N]` Arrays vs Mutable `List<T>` Snapshots](lite://play/example/showcase-arrays-and-lists): fixed arrays vs growable `mut` and `var mut` lists, `push_front`/`push_back`/`pop_front`/`pop_back`, and snapshots. ([arrays](lite://doc/arrays), [lists](lite://doc/lists), [mutability](lite://doc/mutability))
 - [03 — Typed Maps `Map<K, V>`, `core/map` Lookups, and Value Snapshots](lite://play/example/showcase-typed-maps-and-lookup): zero-initialized `mut Map<K, V>`, indexed reads/writes, `core/map` lookups, independent value snapshots, and entry iteration. ([maps](lite://doc/maps), [mutability](lite://doc/mutability))
-- [04 — Nominal Plain & Value Enums, `.Case` Shorthand, and Exhaustive Match](lite://play/example/showcase-value-enums-and-match): plain and `Float`-backed nominal enums, zero-initialization, contextual `.Case` shorthand, `.value` reads, and exhaustive `match`. ([enums and variants](lite://doc/enums-and-variants), [match](lite://doc/match))
-- [05 — Transparent Type Aliases Across Root and Inner Blocks](lite://play/example/showcase-type-aliases-and-scoping): root and inner-block `type` aliases, forward inner alias chains, and outer alias preservation. ([type aliases](lite://doc/type-aliases), [blocks](lite://doc/blocks-and-results))
-- [06 — Nominal Records, =name Shorthand, and Aggregate Destructuring](lite://play/example/showcase-records-and-patterns): nominal `record` declarations, defaults and zero-init, `=name` construction/destructuring, named/mixed tuple patterns, and fixed-array destructuring. ([records](lite://doc/records), [aggregate patterns](lite://doc/aggregate-patterns))
+- [04 — Typed Sets `Set<T>`, `core/set` Membership, and Value Snapshots](lite://play/example/showcase-typed-sets-and-membership): zero-initialized `mut Set<T>`, `core/set` membership and mutation grants, independent value snapshots, and insertion-order element iteration. ([sets](lite://doc/sets), [mutability](lite://doc/mutability))
+- [05 — Nominal Plain & Value Enums, `.Case` Shorthand, and Exhaustive Match](lite://play/example/showcase-value-enums-and-match): plain and `Float`-backed nominal enums, zero-initialization, contextual `.Case` shorthand, `.value` reads, and exhaustive `match`. ([enums and variants](lite://doc/enums-and-variants), [match](lite://doc/match))
+- [06 — Transparent Type Aliases Across Root and Inner Blocks](lite://play/example/showcase-type-aliases-and-scoping): root and inner-block `type` aliases, forward inner alias chains, and outer alias preservation. ([type aliases](lite://doc/type-aliases), [blocks](lite://doc/blocks-and-results))
+- [07 — Nominal Records, =name Shorthand, and Aggregate Destructuring](lite://play/example/showcase-records-and-patterns): nominal `record` declarations, defaults and zero-init, `=name` construction/destructuring, named/mixed tuple patterns, and fixed-array destructuring. ([records](lite://doc/records), [aggregate patterns](lite://doc/aggregate-patterns))
 
 ## Chapter 4 — Unified Block Model & Execution Trace (`blocks/`)
 

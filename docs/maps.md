@@ -57,4 +57,4 @@ Import [core/map](lite://module/core/map) for explicit operations:
 - Runnable & rejection cases: [run-typed-map-ops](lite://repo/language/cases/types/collections/run-typed-map-ops.case.json), [reject-immutable-map-write](lite://repo/language/cases/types/collections/reject-immutable-map-write.case.json)
 - Gym practice: [Mutable Map<K, V> Grants](lite://gym/drills/map-mut-grant) and [Word Frequency Counter](lite://gym/workouts/word-frequency-counter)
 
-Related: [lists](lite://doc/lists), [collections and iterators](lite://doc/collections-and-iterators), [enums and variants](lite://doc/enums-and-variants), [mutability](lite://doc/mutability), [tour](lite://doc/tour), and [documentation index](lite://doc/overview).
+Related: [lists](lite://doc/lists), [typed sets](lite://doc/sets), [collections and iterators](lite://doc/collections-and-iterators), [enums and variants](lite://doc/enums-and-variants), [mutability](lite://doc/mutability), [tour](lite://doc/tour), and [documentation index](lite://doc/overview).

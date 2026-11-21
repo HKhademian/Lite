@@ -46,13 +46,18 @@ and [operators](lite://doc/operators) for the selected contracts.
 - [Typed maps](lite://play/example/typed-maps): `Map<K, V>` key-value indexing,
   `core/map` lookups, value snapshots, and entry iteration; continue with
   [maps](lite://doc/maps).
+- [Typed sets](lite://play/example/typed-sets): `Set<T>` deduplication,
+  `core/set` membership and mutation grants, value snapshots, and element
+  iteration; continue with [sets](lite://doc/sets).
 - [Value enums](lite://play/example/value-enums): nominal plain and backing-typed
   enums, contextual `.Case` shorthand, `.value` reads, and exhaustive `match`;
   continue with [enums and variants](lite://doc/enums-and-variants).
 - [Integer calculator](lite://play/example/integer-calculator): a scanner and
   recursive parser composed from smaller features.
-- [Type aliases](lite://play/example/type-aliases): transparent `type` contracts for
-  tuples and growable lists; continue with [type aliases](lite://doc/type-aliases).
+- [Type aliases](lite://play/example/type-aliases) shows how to name tuple and
+  list types using the current compiler's `:= type` syntax. The
+  [alias and distinct reference](lite://doc/type-aliases) covers the selected
+  replacement syntax.
 - [Sum loop](lite://play/example/sum-loop): mutable accumulators, `+=` updates, and
   explicit loop exit; continue with [loops](lite://doc/loops).
 - [Subjectless match](lite://play/example/subjectless-match): ordered

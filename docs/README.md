@@ -115,13 +115,14 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Arrays](lite://doc/arrays): [T; N] fixed extents, header-free inline layout, zero-sized element counts, literal/spread construction, runtime arrays for variadic tails, and open ownership/runtime representation details.
 - [Lists](lite://doc/lists): explicitly selected growable storage, length versus uninitialized capacity, explicit mutation, and open owner-copy semantics; no unconditional List literal default.
 - [Typed maps](lite://doc/maps): generated-TS `Map<K, V>` key-value collections, scalar/enum keys, checked indexing, `core/map` intrinsics, insertion-order traversal, and independent value-copy snapshots.
+- [Typed sets](lite://doc/sets): generated-TS `Set<T>` value sets, scalar/enum elements, `core/set` intrinsics, insertion-order traversal, and independent value-copy snapshots.
 - [Slices](lite://doc/slices): proposed borrowed contiguous views, read-only defaults, mutable access, lifetime/invalidation, and initialized bounds.
 
 - [Types and inference](lite://doc/types-and-inference): static contracts, general safe widening, component-wise tuple value widening, complete-contract proofs for generic widening, and the intended type-system scope.
 - [Record literal boundaries](lite://doc/record-literal-boundaries): optional semicolons after record initializers and unresolved inferred-literal versus executable-block classification.
 - [Records](lite://doc/records): selected record declarations, contextual construction, and destination-first deconstruction; full inference and memory contracts remain open.
 - [Record type identity](lite://doc/record-type-identity): selected distinct identity per declaration, including inline types; explicit reconstruction, shared type reuse, and reference comparisons.
-- [Type aliases](lite://doc/type-aliases): selected Alias := type TypeExpression, optional leading | in union initializers, transparent identity, and comparison with the rejected direct-binding alternative.
+- [Aliases and distinct type declarations](lite://doc/type-aliases) describes names for structural types and existing symbols, fresh type identity, and the compiler migration status.
 - [Plain union normalization](lite://doc/union-normalization): selected order independence, flattening, duplicate removal, and unchanged identity with optional leading |, without collapsing nominal records, enum cases, Option, or Result.
 - [Union membership](lite://doc/union-membership): selected automatic member admission, checked payload reads/ordinary arguments, proven member-payload writes versus whole-union replacement grants, unchanged declared replacements under narrowing, nominal identity, and remaining representation contracts.
 - [Union widening](lite://doc/union-widening): selected automatic widening when every normalized source alternative is an exact destination member, with checked narrowing in the reverse direction.

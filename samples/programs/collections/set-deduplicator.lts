@@ -1,0 +1,14 @@
+/* Deduplicate a sequence in O(n) using Set<String> and core/set. */
+io := import "core/io";
+set := import "core/set";
+
+items := ["alpha", "beta", "alpha", "gamma", "beta", "delta"];
+unique: mut Set<String>;
+loop items as item {
+    set.add(mut unique, item);
+}
+
+io.outputLine("count:", set.size(unique));
+loop unique as item {
+    io.outputLine(item);
+}

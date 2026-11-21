@@ -1,0 +1,9 @@
+io := import "core/io";
+set := import "core/set";
+
+raw := ["cli", "core", "cli", "docs", "core"];
+seen: mut Set<String>;
+loop raw as item {
+    set.add(mut seen, item);
+}
+io.outputLine(set.size(seen), set.has(seen, "docs"), set.values(seen));

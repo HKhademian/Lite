@@ -1,0 +1,10 @@
+io := import "core/io";
+set := import "core/set";
+
+tags: mut Set<String>;
+set.add(mut tags, "lite");
+set.add(mut tags, "fast");
+set.add(mut tags, "lite");
+saved: Set<String> = tags;
+removed := set.remove(mut tags, "lite");
+io.outputLine(removed, set.size(tags), set.has(saved, "lite"), set.size(saved));

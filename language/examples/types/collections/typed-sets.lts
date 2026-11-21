@@ -1,0 +1,16 @@
+io := import "core/io";
+set := import "core/set";
+
+tags: mut Set<String>;
+set.add(mut tags, "lite");
+set.add(mut tags, "typed");
+set.add(mut tags, "lite");
+
+snapshot: Set<String> = tags;
+set.remove(mut tags, "lite");
+
+io.outputLine("live:", tags, "has lite:", set.has(tags, "lite"));
+io.outputLine("snapshot size:", set.size(snapshot), "values:", set.values(snapshot));
+loop snapshot as tag {
+    io.outputLine(tag);
+}

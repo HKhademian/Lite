@@ -305,6 +305,30 @@
           "order": 3
         },
         {
+          "id": "showcase.types.collections.typed-sets-and-membership",
+          "title": "Typed Sets Set<T>, core/set Membership, and Value Snapshots",
+          "file": "language/showcases/types/collections/typed-sets-and-membership.lts",
+          "helperFiles": [],
+          "manifest": "language/verifications/artifacts/showcases/types/collections/typed-sets-and-membership.json",
+          "summary": "Demonstrates zero-initialized mut Set<T>, core/set add/has/remove/size, independent value snapshots, and insertion-order element iteration.",
+          "teaches": [
+            "Set<T>",
+            "mut Set",
+            "core/set",
+            "loop s as item"
+          ],
+          "features": [
+            "feature.types.collections.typed-sets",
+            "feature.control.loops.sequence-traversal",
+            "feature.io.reporting.report-values"
+          ],
+          "docs": [
+            "docs/sets.md",
+            "docs/mutability.md"
+          ],
+          "order": 4
+        },
+        {
           "id": "showcase.types.enums.value-enums-and-match",
           "title": "Nominal Plain & Value Enums, .Case Shorthand, and Exhaustive Match",
           "file": "language/showcases/types/enums/value-enums-and-match.lts",

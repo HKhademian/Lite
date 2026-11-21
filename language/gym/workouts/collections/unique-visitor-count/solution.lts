@@ -1,0 +1,14 @@
+io := import "core/io";
+set := import "core/set";
+
+n := io.inputInt();
+_eol := io.inputLine();
+visitors: mut Set<String>;
+var i := 0;
+loop i < n {
+    name := io.inputLine();
+    set.add(mut visitors, name);
+    i += 1;
+}
+query := io.inputLine();
+io.outputLine(set.size(visitors), set.has(visitors, query));

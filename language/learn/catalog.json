@@ -226,6 +226,22 @@
           "docs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/maps.md"]
         },
         {
+          "id": "learn.types.collections.typed-sets",
+          "slug": "typed-sets",
+          "title": "Typed Sets Set<T> & core/set Membership",
+          "kind": "lesson",
+          "domain": "types",
+          "subGroup": "collections",
+          "environment": "universal",
+          "guideFile": "language/learn/lessons/types/collections/typed-sets.md",
+          "sourceFile": "language/showcases/types/collections/typed-sets-and-membership.lts",
+          "helperModules": [],
+          "stdin": "",
+          "args": [],
+          "teaches": ["Set<T>", "core/set", "mut", "loop s as item"],
+          "docs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/sets.md"]
+        },
+        {
           "id": "learn.types.enums.value-enums",
           "slug": "value-enums",
           "title": "Nominal Plain & Value Enums with Exhaustive Match",

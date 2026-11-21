@@ -1,0 +1,19 @@
+io := import "core/io";
+set := import "core/set";
+
+/* Zero-initialized mutable set: Set<T> starts empty and deduplicates in O(1) */
+roles: mut Set<String>;
+set.add(mut roles, "reader");
+set.add(mut roles, "editor");
+set.add(mut roles, "reader");
+
+/* Independent value snapshots preserve earlier membership */
+frozen: Set<String> = roles;
+removed := set.remove(mut roles, "editor");
+io.outputLine("removed:", removed, "live:", roles, "frozen:", frozen);
+io.outputLine("live size:", set.size(roles), "has editor in frozen:", set.has(frozen, "editor"));
+
+/* Iterate elements in insertion order */
+loop frozen as role {
+    io.outputLine("role:", role);
+}

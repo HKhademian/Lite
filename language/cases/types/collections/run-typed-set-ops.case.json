@@ -1,0 +1,24 @@
+{
+  "id": "case.types.collections.run-typed-set-ops",
+  "kind": "feature",
+  "source": "typed-set-ops.lts",
+  "features": [
+    "feature.types.collections.typed-sets",
+    "feature.io.reporting.report-values"
+  ],
+  "cases": [
+    {
+      "name": "set-intrinsics-and-snapshot",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "true 1 true 2\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

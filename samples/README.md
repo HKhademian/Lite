@@ -16,6 +16,7 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [packet-router](lite://play/packet-router) — Network packet classifier using subject-based `match` over records, `or` alternatives, `if` guards, and fixed-array summaries.
 - [map-word-counter](lite://play/map-word-counter) — Word frequency counter using `Map<String, Int>`, `core/map` lookups, and insertion-order entry iteration.
 - [signal-controller](lite://play/signal-controller) — Traffic signal state machine using an `Int`-backed value `enum`, `.value` durations, and exhaustive `match`.
+- [set-deduplicator](lite://play/set-deduplicator) — Deduplicates a sequence in O(n) using `Set<String>`, `core/set`, and insertion-order traversal.
 
 ## Canvas Art (`graphics/art/`)
 
