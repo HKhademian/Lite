@@ -430,6 +430,8 @@ The joint review distinguishes two conversion intents:
 
 A valuewise conversion can preserve the same bits when the representations already agree. The requested operation is determined by its semantics. Exact syntax, supported type pairs, overflow, rounding, and invalid target representations remain open.
 
+Conversions can discard information at compile time or runtime. Under a truncating conversion, `Float` value `3.1` becomes `Int` value `3`. Converting that result to `Float` yields `3.0`. Compile-time execution follows the same conversion semantics. The tuple-to-array spread illustrates a different kind of loss: the resulting union-element array preserves the element values and their active types, while its static type no longer assigns a distinct type to each position. Spreading it back cannot recover the original per-position typing from the array type. [Tuple and array shapes](../../../docs/tuple-array-shapes.md)
+
 ## 1.5 Unions and value operations
 
 **Baseline (updated 2026-11-17):** Plain unions normalize order and duplicates. A bare typed declaration zero-initializes every type; a multi-member union zero is initialized with Kind 0 and no known active member. Contextual `0` can mean zeroed storage or a numeric value; distinct viable results are an inference error. An explicit zero-value expression remains under design.
