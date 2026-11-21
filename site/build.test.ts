@@ -24,6 +24,7 @@ import {
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
 import { extractLiteUrisFromMarkdown, LiteAcademyGraph, parseLiteUri, relativeWebHref, rewriteLiteUriHtml, validateBuiltSiteReferences } from './lite-uri.ts';
+import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { createPlayStage, createWorkerClient, mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
@@ -2164,4 +2165,25 @@ test('unified Markdown docs under brand, docs, compiler, language, and repo guid
     }
   }
   assert.deepEqual(leftovers, [], `Found non-lite:// relative links:\n${leftovers.join('\n')}`);
+});
+
+test('play keepalive preserves Play bridge exports and callbacks across -O0..-O3 without leaking', () => {
+  const snake = playSamples.find(s => s.id === 'play-grid-snake');
+  assert(snake !== undefined, 'missing play-grid-snake sample');
+  const src = readFileSync(resolve(root, snake.file), 'utf8');
+  const ka = appendPlayKeepalive(src);
+  assert(ka !== null, 'expected Play keepalive wrapper');
+  const compiler = buildTsCompiler();
+  for (const lv of [0, 1, 2, 3]) {
+    const res = compileBuiltCompiler(compiler, { text: ka, name: snake.file, cwd: root, options: [`-O${lv}`] });
+    assert.equal(res.status, 0, `-O${lv} compile failed: ${res.stderr.toString('utf8')}`);
+    const stripped = stripPlayKeepaliveTs(res.stdout.toString('utf8'));
+    assert.match(stripped, /\bfunction liteFn\$[a-zA-Z0-9_$]+\$litePlayCanvasSnapshot\b/, `-O${lv} missing litePlayCanvasSnapshot`);
+    assert.match(stripped, /\bfunction liteFn\$[a-zA-Z0-9_$]+\$litePlayCanvasPixels\b/, `-O${lv} missing litePlayCanvasPixels`);
+    assert.match(stripped, /\bfunction liteFn\$[a-zA-Z0-9_$]+\$litePlayCanvasTakeOps\b/, `-O${lv} missing litePlayCanvasTakeOps`);
+    assert.match(stripped, /\bfunction liteFn\$[a-zA-Z0-9_$]+\$litePlayAudioDrain\b/, `-O${lv} missing litePlayAudioDrain`);
+    assert.match(stripped, /\bfunction liteFn_onCanvasInit\b/, `-O${lv} missing onCanvasInit`);
+    assert(!stripped.includes('litePlayKeepalive99'), `-O${lv} leaked litePlayKeepalive99`);
+    assert(!stripped.includes('if (false)'), `-O${lv} leaked if (false) keepalive block`);
+  }
 });

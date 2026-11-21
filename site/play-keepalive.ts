@@ -2,6 +2,7 @@
 
 const KEEPALIVE_VAR = 'litePlayKeepalive99';
 const KEEPALIVE_TS_VAR = `lite_${KEEPALIVE_VAR}`;
+const KEEPALIVE_TS_FN = `liteFn_${KEEPALIVE_VAR}`;
 
 const CALLBACK_CALLS: Readonly<Record<string, string>> = {
   onCanvasInit: '()',
@@ -158,32 +159,41 @@ export function appendPlayKeepalive(source: string): string | null {
   }
 
   const body = calls.map((line) => `    ${line}`).join('\n');
-  return `${source}\nvar ${KEEPALIVE_VAR} := false;\nif ${KEEPALIVE_VAR} {\n${body}\n}\n`;
+  return `${source}\n${KEEPALIVE_VAR} := fn(): Bool {\n    var k := false;\n    if k { k = false; }\n    k\n};\nif ${KEEPALIVE_VAR}() {\n${body}\n}\n`;
 }
 
-/** Strips the synthetic Play keepalive variable and branch from emitted TypeScript. */
+/** Strips the synthetic Play keepalive guard and branch from emitted TypeScript. */
 export function stripPlayKeepaliveTs(ts: string): string {
   const lines = ts.replace(/\r\n?/g, '\n').split('\n');
   const out: string[] = [];
-  let skippingIfBlock = false;
+  let skippingBlock = false;
   let braceDepth = 0;
 
   for (const line of lines) {
-    if (skippingIfBlock) {
+    if (skippingBlock) {
       braceDepth += countBracesOutsideStrings(line);
       if (braceDepth <= 0) {
-        skippingIfBlock = false;
+        skippingBlock = false;
         braceDepth = 0;
       }
       continue;
     }
     const trimmed = line.trim();
-    if (trimmed.startsWith(`let ${KEEPALIVE_TS_VAR}`) || trimmed === `void ${KEEPALIVE_TS_VAR};`) {
+    if (
+      trimmed.startsWith(`let ${KEEPALIVE_TS_VAR}`) ||
+      trimmed === `void ${KEEPALIVE_TS_VAR};` ||
+      trimmed === `void ${KEEPALIVE_TS_FN};`
+    ) {
       continue;
     }
-    if (trimmed.startsWith(`if (${KEEPALIVE_TS_VAR})`) && trimmed.includes('{')) {
+    if (
+      (trimmed.startsWith(`function ${KEEPALIVE_TS_FN}(`) ||
+        trimmed.startsWith(`if (${KEEPALIVE_TS_FN}())`) ||
+        trimmed.startsWith(`if (${KEEPALIVE_TS_VAR})`)) &&
+      trimmed.includes('{')
+    ) {
       braceDepth = countBracesOutsideStrings(line);
-      if (braceDepth > 0) skippingIfBlock = true;
+      if (braceDepth > 0) skippingBlock = true;
       continue;
     }
     out.push(line);

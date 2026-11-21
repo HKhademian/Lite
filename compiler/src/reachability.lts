@@ -1541,6 +1541,27 @@ widenInlineArgForTarget := fn(target: String, rawArg: String): String {
     rawArg
 };
 
+/** True when `runtime` is a host-invoked Play bridge export or callback that must retain its standalone function symbol at `-O3`. */
+isHostPlayBridgeFn := fn(runtime: String): Bool {
+    textLib.containsText(runtime, "litePlayCanvas") or
+    textLib.containsText(runtime, "litePlayAudio") or
+    textLib.containsText(runtime, "litePlayKeepalive") or
+    textLib.endsWith(runtime, "_onCanvasInit") or
+    textLib.endsWith(runtime, "_canvas_onInit") or
+    textLib.endsWith(runtime, "_onCanvasUpdate") or
+    textLib.endsWith(runtime, "_canvas_onUpdate") or
+    textLib.endsWith(runtime, "_onCanvasKeyDown") or
+    textLib.endsWith(runtime, "_canvas_onKeyDown") or
+    textLib.endsWith(runtime, "_onCanvasKeyUp") or
+    textLib.endsWith(runtime, "_canvas_onKeyUp") or
+    textLib.endsWith(runtime, "_onCanvasPointerMove") or
+    textLib.endsWith(runtime, "_canvas_onPointerMove") or
+    textLib.endsWith(runtime, "_onCanvasPointerDown") or
+    textLib.endsWith(runtime, "_canvas_onPointerDown") or
+    textLib.endsWith(runtime, "_onCanvasPointerUp") or
+    textLib.endsWith(runtime, "_canvas_onPointerUp")
+};
+
 /** Inlines small single-`RETURN` pure leaf functions (0 or 1 parameter) at simple call sites in O(n) for `-O3`. */
 inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
     var total := 0;
@@ -1558,7 +1579,7 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
             if bodyIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_TRANSFER_TRY and items[bodyIdx].intValue == 0 {
                 bodyIdx = bodyIdx + 1;
             }
-            if fnDepth == 0 and bodyIdx + 1 < total and items[bodyIdx].kind == ir.ITEM_KIND_RETURN and items[bodyIdx + 1].kind == ir.ITEM_KIND_FUNCTION_END {
+            if fnDepth == 0 and not isHostPlayBridgeFn(it.runtime) and bodyIdx + 1 < total and items[bodyIdx].kind == ir.ITEM_KIND_RETURN and items[bodyIdx + 1].kind == ir.ITEM_KIND_FUNCTION_END {
                 retCode := items[bodyIdx].code;
                 rLen := textLib.length(retCode);
                 isPureLeaf := rLen > 0 and rLen <= 256 and
