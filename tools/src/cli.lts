@@ -9,10 +9,11 @@ usageText := fn(): String {
     "Usage: ./bin/lite <command> [options]\n\nCommands:\n" +
     "  check [--builtin-mode SPEC] file.lts     Check source only\n" +
     "  fmt [--check] [FILE_OR_DIR... | -]        Format Lite source files\n" +
-    "  compile [--target ts] [--builtin-mode SPEC] file.lts  Compile to a TS artifact\n" +
-    "  run [--builtin-mode SPEC] file.lts [-- argument ...]  Compile to a temporary artifact and execute it\n" +
-    "  verify [--all|--update|--coverage]        Verify generated TS artifacts\n" +
+    "  compile [--target ts] [-O0|-O1|-O2|-O3] [--builtin-mode SPEC] file.lts  Compile to a TS artifact\n" +
+    "  run [-O0|-O1|-O2|-O3] [--builtin-mode SPEC] file.lts [-- argument ...]  Compile to a temporary artifact and execute it\n" +
+    "  verify [--all|--update|--coverage|--pedantic]  Verify generated TS artifacts\n" +
     "  test [--smoke|--fast|--full] [--verbose|--mute|--silence]  Fast, quiet smoke by default\n" +
+    "  test --pedantic [--filter ID] [--shard i/n]  Verify & benchmark all cases across -O0..-O3\n" +
     "  docs [QUERY|--json|--check]               Browse and search documentation\n" +
     "  doctor [--docs]                           Check repository consistency\n" +
     "  test --cases [FILTER|FILE.case.json]      Run declarative cases\n" +

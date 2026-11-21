@@ -9,6 +9,7 @@ path := import "core/path";
 cases := import "util/cases";
 project := import "util/project";
 unitTests := import "util/unit-tests";
+verify := import "util/verify";
 
 smokeTestFiles := fn(): List<String> {
     files: List<String> = [
@@ -74,6 +75,9 @@ run := fn(rawArgs: List<String>): Unit {
     if list.listCountText(args) > 0 and args[0] == "--unit" {
         _flag := list.popFront(mut args);
         io.exit(unitTests.runUnitCli(project.findRepoRoot(), args));
+    }
+    if list.listCountText(args) > 0 and args[0] == "--pedantic" {
+        io.exit(verify.runVerification(project.findRepoRoot(), args));
     }
 
     var mode := "";
