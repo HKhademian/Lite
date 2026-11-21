@@ -488,6 +488,16 @@ p3 := (...a2);  /* array → tuple */
 The delimiters select the destination shape. Each spread contributes two values in order, so `a1` and `a2` infer `[Int; 2]`, while `p2` and `p3` are two-element tuples. An extent mismatch, such as `[...p1]` into `[Int; 3]`, fails the destination checks. These are design examples for explicit construction.
 
 ```text
+point := (x = 10, y = 20);
+tupleCopy := (...point);
+arrayCopy := [...point];
+tupleCopyArrayWithoutLabel := (...arrayCopy);
+tupleCopyArrayWithLabel: (x, y) = (...arrayCopy);
+```
+
+`tupleCopy` preserves `x` and `y`. The array preserves the ordered values and discards their source labels from the compile-time type. Spreading the array supplies unnamed values. The label-only destination `(x, y)` assigns new labels by position and infers both component types as `Int`, so `tupleCopyArrayWithLabel` has type `(x: Int, y: Int)`. This is a design example for destination label inference.
+
+```text
 mixed := (10, "tea");
 items := [...mixed];
 roundTrip := (...items);
