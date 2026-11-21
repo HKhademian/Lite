@@ -46,6 +46,9 @@ and [operators](lite://doc/operators) for the selected contracts.
 - [Typed maps](lite://play/example/typed-maps): `Map<K, V>` key-value indexing,
   `core/map` lookups, value snapshots, and entry iteration; continue with
   [maps](lite://doc/maps).
+- [Value enums](lite://play/example/value-enums): nominal plain and backing-typed
+  enums, contextual `.Case` shorthand, `.value` reads, and exhaustive `match`;
+  continue with [enums and variants](lite://doc/enums-and-variants).
 - [Integer calculator](lite://play/example/integer-calculator): a scanner and
   recursive parser composed from smaller features.
 - [Type aliases](lite://play/example/type-aliases): transparent `type` contracts for

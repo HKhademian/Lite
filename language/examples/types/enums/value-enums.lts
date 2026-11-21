@@ -1,0 +1,22 @@
+io := import "core/io";
+
+Priority := enum : Int {
+    Low = 1;
+    Medium;
+    High = 5;
+};
+
+label := fn(p: Priority): String {
+    match p {
+        .Low { "routine" }
+        .Medium { "elevated" }
+        .High { "urgent" }
+    }
+};
+
+var cur: Priority = .Low;
+io.outputLine(cur, cur.value, label(cur));
+cur = .Medium;
+io.outputLine(cur, cur.value, label(cur));
+cur = Priority.High;
+io.outputLine(cur, cur.value, label(cur));

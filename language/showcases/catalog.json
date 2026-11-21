@@ -305,6 +305,31 @@
           "order": 3
         },
         {
+          "id": "showcase.types.enums.value-enums-and-match",
+          "title": "Nominal Plain & Value Enums, .Case Shorthand, and Exhaustive Match",
+          "file": "language/showcases/types/enums/value-enums-and-match.lts",
+          "helperFiles": [],
+          "manifest": "language/verifications/artifacts/showcases/types/enums/value-enums-and-match.json",
+          "summary": "Demonstrates plain and Float-backed nominal enums, zero-initialization, contextual .Case shorthand, .value reads, and exhaustive match.",
+          "teaches": [
+            "enum",
+            "enum : Type",
+            ".Case",
+            ".value",
+            "exhaustive match"
+          ],
+          "features": [
+            "feature.types.enums.value-enums",
+            "feature.control.branching.subject-match",
+            "feature.io.reporting.report-values"
+          ],
+          "docs": [
+            "docs/enums-and-variants.md",
+            "docs/match.md"
+          ],
+          "order": 4
+        },
+        {
           "id": "showcase.types.aliases.type-aliases-and-scoping",
           "title": "Transparent Type Aliases Across Root and Inner Blocks",
           "file": "language/showcases/types/aliases/type-aliases-and-scoping.lts",

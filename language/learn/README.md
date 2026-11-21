@@ -6,7 +6,7 @@ The **Learn** curriculum powers the structured guide side of **Lite Academy** (`
 
 - [catalog.json](lite://repo/language/learn/catalog.json) — machine-readable curriculum manifest validated against [learn.schema.json](lite://repo/config/learn.schema.json).
 - [handbook/](lite://handbook/overview-and-setup) — 7-chapter shipped Lite language handbook (`01` through `07`).
-- `lessons/` — 23 interactive track lessons (`Track 0` – `Track 6`), each pairing a markdown guide with a runnable `.lts` program.
+- `lessons/` — 24 interactive track lessons (`Track 0` – `Track 6`), each pairing a markdown guide with a runnable `.lts` program.
 - `tutorials/` — 3 standalone multi-step or multi-file project tutorials (`Track 7`), including relative helper modules bundled into the browser playground.
 
 ## Tracks
@@ -16,7 +16,7 @@ The **Learn** curriculum powers the structured guide side of **Lite Academy** (`
 | `0` | `getting-started` | Track 0 — Getting Started | 2 lessons |
 | `1` | `foundations` | Track 1 — Foundations: Bindings, Numbers & Text | 3 lessons |
 | `2` | `control` | Track 2 — Control Flow, Loops & Cleanup | 4 lessons |
-| `3` | `types` | Track 3 — Data Shapes, Collections & Aliases | 5 lessons |
+| `3` | `types` | Track 3 — Data Shapes, Collections & Aliases | 6 lessons |
 | `4` | `blocks` | Track 4 — The Unified Block Model & Trace Safety | 3 lessons |
 | `5` | `functions` | Track 5 — Functions, Pipelines & Closures | 3 lessons |
 | `6` | `modules` | Track 6 — Modules & System Utilities | 3 lessons |

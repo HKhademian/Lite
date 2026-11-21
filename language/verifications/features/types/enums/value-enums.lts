@@ -1,0 +1,17 @@
+io := import "core/io";
+
+Status := enum : Int {
+    Ok = 200;
+    Created;
+    NotFound = 404;
+};
+
+describe := fn(s: Status): String {
+    match s {
+        .Ok or .Created { "success" }
+        .NotFound { "missing" }
+    }
+};
+
+s: Status = .Created;
+io.outputLine(s, s.value, describe(s), describe(.NotFound));

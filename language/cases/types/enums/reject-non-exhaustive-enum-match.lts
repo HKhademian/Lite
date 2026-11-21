@@ -1,0 +1,6 @@
+Mode := enum { Fast; Slow; Idle; };
+m: Mode = .Fast;
+x := match m {
+    .Fast { 1 }
+    .Slow { 2 }
+};

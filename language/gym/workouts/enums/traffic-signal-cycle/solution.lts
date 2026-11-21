@@ -1,0 +1,26 @@
+io := import "core/io";
+
+Signal := enum : Int {
+    Red = 30;
+    Green = 25;
+    Yellow = 5;
+};
+
+nextSignal := fn(s: Signal): Signal {
+    match s {
+        .Red { .Green }
+        .Green { .Yellow }
+        .Yellow { .Red }
+    }
+};
+
+steps := io.inputInt();
+var cur: Signal = .Red;
+var elapsed := 0;
+var i := 0;
+loop i < steps {
+    elapsed += cur.value;
+    cur = nextSignal(cur);
+    i += 1;
+}
+io.outputLine(cur, elapsed);

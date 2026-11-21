@@ -1,0 +1,1 @@
+language/cases/types/enums/reject-non-exhaustive-enum-match.lts:6:1: match requires an exhaustive fallback arm

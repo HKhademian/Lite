@@ -1,0 +1,27 @@
+io := import "core/io";
+
+/* Plain nominal enum and backing-typed value enum */
+Phase := enum { Idle; Running; Done; };
+
+Level := enum : Float {
+    Quiet = 0.5;
+    Normal = 1.0;
+    Loud = 2.5;
+};
+
+nextPhase := fn(p: Phase): Phase {
+    match p {
+        .Idle { .Running }
+        .Running { .Done }
+        .Done { .Idle }
+    }
+};
+
+/* Contextual .Case shorthand, .value access, and zero-init (first case) */
+var phase: Phase;
+gain: Level = .Loud;
+io.outputLine("start:", phase, "gain:", gain, gain.value);
+phase = nextPhase(phase);
+io.outputLine("step1:", phase, "running?", phase == .Running);
+phase = nextPhase(phase);
+io.outputLine("step2:", phase);

@@ -1,0 +1,24 @@
+{
+  "id": "showcase.types.enums.value-enums-and-match",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/types/enums/value-enums-and-match.lts",
+    "hash": "sha256:1ee487a25181335543ef7a3413a4b114acf439d0f23948faf6585fd6ca3cbfe7"
+  },
+  "features": [
+    "feature.types.enums.value-enums",
+    "feature.control.branching.subject-match",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Plain and Float-backed nominal enums, zero-initialization, contextual .Case shorthand, .value reads, and exhaustive match.",
+  "cases": [
+    {
+      "name": "value-enums-and-match",
+      "stdout": {
+        "text": "start: Phase.Idle gain: Level.Loud 2.5\nstep1: Phase.Running running? true\nstep2: Phase.Done\n",
+        "hash": "sha256:23eaf14be9118e26b762db8fa97f2262b6e3c81e1a59144ef81393756c5710d5"
+      },
+      "exitCode": 0
+    }
+  ]
+}

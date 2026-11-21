@@ -1,0 +1,22 @@
+io := import "core/io";
+
+State := enum { Ready; Busy; Stopped; };
+
+fromCode := fn(code: Int): State {
+    match code {
+        0 { .Ready }
+        1 { .Busy }
+        _ { .Stopped }
+    }
+};
+
+label := fn(s: State): String {
+    match s {
+        .Ready { "ready" }
+        .Busy { "busy" }
+        .Stopped { "stopped" }
+    }
+};
+
+code := io.inputInt();
+io.outputLine(label(fromCode(code)));

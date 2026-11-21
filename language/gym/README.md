@@ -5,14 +5,14 @@ The **Gym** corpus powers the interactive practice dojo of **Lite Academy** (`/g
 ## Layout
 
 - [catalog.json](lite://repo/language/gym/catalog.json) — machine-readable exercise manifest validated against [gym.schema.json](lite://repo/config/gym.schema.json).
-- `drills/` — 22 language drills across `foundations`, `control`, `types`, `blocks`, `functions`, and `modules`.
-- `workouts/` — 27 algorithmic katas across `arithmetic`, `control`, `text`, `arrays`, `collections`, `records`, `parsing`, `algorithms`, `units`, `calendar`, and `finance`.
+- `drills/` — 23 language drills across `foundations`, `control`, `types`, `blocks`, `functions`, and `modules`.
+- `workouts/` — 28 algorithmic katas across `arithmetic`, `control`, `text`, `arrays`, `collections`, `enums`, `records`, `parsing`, `algorithms`, `units`, `calendar`, and `finance`.
 - Each exercise contains a `prompt.md`, a deliberately failing `starter.lts` (`compile-error` or `wrong-output`), and a passing `solution.lts`.
 
 ## Exercise Breakdown
 
-- **Total exercises**: 49 (`22` drills, `27` katas)
-- **Belts**: `11` white, `18` amber, `14` emerald, `6` obsidian
+- **Total exercises**: 51 (`23` drills, `28` katas)
+- **Belts**: `11` white, `20` amber, `14` emerald, `6` obsidian
 - **Verification**: every starter is verified to fail as declared and every solution is verified to compile and pass all visible + hidden cases via [site/gym-verify.ts](lite://repo/site/gym-verify.ts) and [site/features.test.ts](lite://repo/site/features.test.ts).
 
 ## Related Corpora

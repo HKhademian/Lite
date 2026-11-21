@@ -1,0 +1,19 @@
+io := import "core/io";
+
+HttpStatus := enum : Int {
+    Ok = 200;
+    Created;
+    BadRequest = 400;
+    NotFound = 404;
+};
+
+isOk := fn(code: HttpStatus): Bool {
+    match code {
+        .Ok or .Created { true }
+        .BadRequest or .NotFound { false }
+    }
+};
+
+c1: HttpStatus = .Created;
+c2 := HttpStatus.NotFound;
+io.outputLine(c1.value, isOk(c1), c2.value, isOk(c2));

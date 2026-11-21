@@ -1,0 +1,23 @@
+{
+  "id": "case.types.enums.reject-non-exhaustive-enum-match",
+  "kind": "reject",
+  "source": "reject-non-exhaustive-enum-match.lts",
+  "features": [
+    "feature.types.enums.value-enums"
+  ],
+  "cases": [
+    {
+      "name": "rejects-missing-enum-case-in-match",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-non-exhaustive-enum-match.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

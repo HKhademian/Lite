@@ -178,6 +178,15 @@
       ]
     },
     {
+      "id": "feature.types.enums.value-enums",
+      "summary": "Nominal plain and scalar-backed value enums, contextual .Case shorthand, .value access, and exhaustive match.",
+      "case": "features/types/enums/value-enums.json",
+      "status": "verified",
+      "docs": [
+        "docs/enums-and-variants.md"
+      ]
+    },
+    {
       "id": "feature.text.strings.codepoint-helpers",
       "summary": "Temporary code-point text helpers.",
       "case": "features/text/strings/codepoint-helpers.json",

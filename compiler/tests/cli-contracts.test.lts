@@ -160,14 +160,14 @@ if not skipHeavy {
     test.check("verify fn values", text.containsText(verified.stdout, "PASS feature.functions.callables.function-values/double-five [ts]"));
     test.check("verify blocks", text.containsText(verified.stdout, "PASS feature.blocks.wiring.parallel-symbol-wiring/even-four [ts]"));
     test.check("verify showcase", text.containsText(verified.stdout, "PASS showcase.foundations.bindings.bindings-and-mutability/bindings-and-mutability [ts]"));
-    test.check("verify counts", text.containsText(verified.stdout, "verification passed: 143 executed, 0 cached"));
+    test.check("verify counts", text.containsText(verified.stdout, "verification passed: 147 executed, 0 cached"));
 
     covered := runCmd(liteBin, ["verify", "--coverage"], root, vEnv, "");
     test.checkInt("verify --coverage status", 0, covered.status);
-    test.check("coverage features", text.containsText(covered.stdout, "features: 56 registered, 56 cases"));
-    test.check("coverage examples", text.containsText(covered.stdout, "examples: 30/30 manifests"));
-    test.check("coverage samples", text.containsText(covered.stdout, "samples: 26/26 manifests"));
-    test.check("coverage showcases", text.containsText(covered.stdout, "showcases: 21/21 manifests"));
+    test.check("coverage features", text.containsText(covered.stdout, "features: 57 registered, 57 cases"));
+    test.check("coverage examples", text.containsText(covered.stdout, "examples: 31/31 manifests"));
+    test.check("coverage samples", text.containsText(covered.stdout, "samples: 27/27 manifests"));
+    test.check("coverage showcases", text.containsText(covered.stdout, "showcases: 22/22 manifests"));
 
     firstV := runCmd(liteBin, ["verify", "--all", "--filter", "features/numeric/integers/signed-arithmetic.json"], root, vEnv, "");
     test.checkInt("verify cache 1", 0, firstV.status);

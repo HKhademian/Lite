@@ -226,6 +226,22 @@
           "docs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/maps.md"]
         },
         {
+          "id": "learn.types.enums.value-enums",
+          "slug": "value-enums",
+          "title": "Nominal Plain & Value Enums with Exhaustive Match",
+          "kind": "lesson",
+          "domain": "types",
+          "subGroup": "enums",
+          "environment": "universal",
+          "guideFile": "language/learn/lessons/types/enums/value-enums.md",
+          "sourceFile": "language/showcases/types/enums/value-enums-and-match.lts",
+          "helperModules": [],
+          "stdin": "",
+          "args": [],
+          "teaches": ["enum", "enum : Type", ".Case", ".value", "exhaustive match"],
+          "docs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/enums-and-variants.md"]
+        },
+        {
           "id": "learn.types.aliases.type-aliases-and-scoping",
           "slug": "type-aliases-and-scoping",
           "title": "Transparent Type Aliases Across Root & Inner Blocks",

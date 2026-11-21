@@ -4,7 +4,7 @@ Folder-grouped project samples showcasing algorithms, high-resolution RGBA canva
 
 For core language-specification examples (`001`–`024`), see [language/examples](lite://repo/language/examples/README.md).
 
-## Programs (`programs/{math,search,text,parsing,records,control,collections}/`)
+## Programs (`programs/{math,search,text,parsing,records,control,collections,enums}/`)
 
 - [fibonacci](lite://play/fibonacci) — Iterative Fibonacci sequence and explicit formatting.
 - [primes-sieve](lite://play/primes-sieve) — Prime generation up to 50 with `mut List<Int>`.
@@ -15,6 +15,7 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [inventory-ledger](lite://play/inventory-ledger) — Inventory summary combining nominal records, `=name` shorthand, named tuple returns, and fixed-array bounds.
 - [packet-router](lite://play/packet-router) — Network packet classifier using subject-based `match` over records, `or` alternatives, `if` guards, and fixed-array summaries.
 - [map-word-counter](lite://play/map-word-counter) — Word frequency counter using `Map<String, Int>`, `core/map` lookups, and insertion-order entry iteration.
+- [signal-controller](lite://play/signal-controller) — Traffic signal state machine using an `Int`-backed value `enum`, `.value` durations, and exhaustive `match`.
 
 ## Canvas Art (`graphics/art/`)
 

@@ -1,0 +1,24 @@
+{
+  "id": "sample.enums.status.http-status",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/enums/status/http-status.lts",
+    "hash": "sha256:bd2755bb2c5750b5615242252b2556636de0c5ca4a1c950aa55d96001c9bc872"
+  },
+  "features": [
+    "feature.types.enums.value-enums",
+    "feature.control.branching.subject-match",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Models HTTP status codes as an Int-backed value enum and classifies success vs error via exhaustive match.",
+  "cases": [
+    {
+      "name": "http-status",
+      "stdout": {
+        "text": "201 true 404 false\n",
+        "hash": "sha256:a94cd3e129060f107e370b9ccb5276fd793423efb1e5cc498e4be334f5d5f1e4"
+      },
+      "exitCode": 0
+    }
+  ]
+}

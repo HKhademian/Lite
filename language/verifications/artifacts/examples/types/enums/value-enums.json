@@ -1,0 +1,24 @@
+{
+  "id": "example.types.enums.value-enums",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/types/enums/value-enums.lts",
+    "hash": "sha256:9c0f221c599e46f90e0b0e8acf978936eaeea909462122bae17311ee2d850e9d"
+  },
+  "features": [
+    "feature.types.enums.value-enums",
+    "feature.control.branching.subject-match",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Demonstrates backing-typed value enums, auto-increment, contextual .Case shorthand, .value access, and exhaustive match.",
+  "cases": [
+    {
+      "name": "value-enums",
+      "stdout": {
+        "text": "Priority.Low 1 routine\nPriority.Medium 2 elevated\nPriority.High 5 urgent\n",
+        "hash": "sha256:d419cc47381786a76a3b65a663dbd9e88221a6aab86bb45af03f99a5f6d04f77"
+      },
+      "exitCode": 0
+    }
+  ]
+}

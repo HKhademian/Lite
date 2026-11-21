@@ -129,6 +129,9 @@ examples. They live under [compiler/](lite://doc/compiler/overview) and are run 
 - [032 — Typed maps](lite://play/example/typed-maps): demonstrates `Map<K, V>` indexed
   writes/reads, `core/map` operations (`set`, `has`, `getOr`, `remove`, `size`),
   independent value snapshots, and insertion-order entry iteration.
+- [033 — Value enums](lite://play/example/value-enums): declares an `Int`-backed nominal
+  `enum`, uses auto-incremented cases, contextual `.Case` shorthand, `.value` reads,
+  and exhaustive `match`.
 
 For project showcases, graphics, audio, and mini-game demos, see [samples](lite://repo/samples/README.md).
 For the progressive chapter-by-chapter learning curriculum, see the [ability and feature showcase](lite://repo/language/showcases/README.md).

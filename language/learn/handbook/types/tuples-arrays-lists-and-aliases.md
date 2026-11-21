@@ -75,6 +75,24 @@ map.set(mut scores, "bob", 25);
 io.outputLine(scores["alice"], map.getOr(scores, "carol", 0), map.size(scores));
 ```
 
+## Nominal Plain & Value Enums
+
+Declare nominal closed case sets with `enum { ... }` or attach scalar backing values with `enum : Type { ... }` (`Int*`, `Float*`, `String`, `Bool`). Use contextual `.Case` shorthand wherever the enum type is known, read backing values via `.value`, and rely on exhaustive `match`:
+
+```lite
+io := import "core/io";
+
+Status := enum : Int {
+    Ok = 200;
+    Created;
+    NotFound = 404;
+};
+
+s: Status = .Created;
+label := match s { .Ok or .Created { "ok" } .NotFound { "missing" } };
+io.outputLine(s, s.value, label);
+```
+
 ## Transparent `type` Aliases & Inner Type Scope
 
 Declare transparent type names with `type` at root or inside any `{ ... }` block. Inner blocks support forward type references and lexical type shadowing:
@@ -93,7 +111,7 @@ localLen := {
 io.outputLine(p, localLen);
 ```
 
-See [Tuples & Patterns](lite://doc/tuples-and-patterns), [Records](lite://doc/records), [Aggregate Patterns](lite://doc/aggregate-patterns), [Arrays](lite://doc/arrays), [Lists](lite://doc/lists), [Typed Maps](lite://doc/maps), and [Type Aliases](lite://doc/type-aliases).
+See [Tuples & Patterns](lite://doc/tuples-and-patterns), [Records](lite://doc/records), [Enums & Variants](lite://doc/enums-and-variants), [Aggregate Patterns](lite://doc/aggregate-patterns), [Arrays](lite://doc/arrays), [Lists](lite://doc/lists), [Typed Maps](lite://doc/maps), and [Type Aliases](lite://doc/type-aliases).
 
 ## Next Chapter
 

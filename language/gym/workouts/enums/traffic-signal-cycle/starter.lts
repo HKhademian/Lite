@@ -1,0 +1,14 @@
+io := import "core/io";
+
+Signal := enum : Int {
+    Red = 30;
+    Green = 25;
+    Yellow = 5;
+};
+
+steps := io.inputInt();
+var cur: Signal = .Red;
+var elapsed := 0;
+/* TODO: loop steps times, add cur.value to elapsed, and advance cur via match */
+_s := steps;
+io.outputLine(cur, elapsed);

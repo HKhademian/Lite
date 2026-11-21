@@ -207,6 +207,15 @@ This direction does not add class, data class, value class, sealed, or distinct 
 
 No representation is selected by writing these examples. Plain enums can have compact numeric representations and payload enums can use tagged representations, but their actual ABI and costs need a specification and implementation.
 
+## Current generated-TS support and examples
+
+The generated-TS compiler currently implements nominal plain and scalar-backed value enums (`Int`, `Int8`, `Int16`, `Int32`, `Float`, `Float32`, `String`, `Bool`), auto-incremented integer cases, inferred backing types, zero-initialization to the first case, qualified `Enum.Case` and contextual `.Case` shorthand, `.value` reads, equality (`==` / `=!=`), and exhaustive `match` (the C backend currently rejects enum values).
+
+- Interactive example: [value enums](lite://play/example/value-enums)
+- Guided lesson: [Nominal Plain & Value Enums](lite://learn/types/value-enums)
+- Gym practice: [Exhaustive Enum match](lite://gym/drills/enum-exhaustive-match) and [Traffic Signal Cycle](lite://gym/workouts/traffic-signal-cycle)
+- Verification & cases: [value-enums feature](lite://repo/language/verifications/features/types/enums/value-enums.json), [run-value-enum-match](lite://repo/language/cases/types/enums/run-value-enum-match.case.json), [reject-non-exhaustive-enum-match](lite://repo/language/cases/types/enums/reject-non-exhaustive-enum-match.case.json)
+
 ## References and related concepts
 
 - [Swift enumerations](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/Enumerations.md): distinguishes associated values and raw values; those mechanisms should not be conflated.

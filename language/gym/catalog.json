@@ -619,6 +619,34 @@
         { "name": "large-bonus", "stdin": "90\n", "args": [], "expectedStdout": "100\n" }
       ]
     },
+    {
+      "id": "drills.types.enums.enum-exhaustive-match",
+      "slug": "enum-exhaustive-match",
+      "title": "Exhaustive Enum match",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "enums",
+      "promptFile": "language/gym/drills/types/enums/enum-exhaustive-match/README.md",
+      "starterFile": "language/gym/drills/types/enums/enum-exhaustive-match/starter.lts",
+      "solutionFile": "language/gym/drills/types/enums/enum-exhaustive-match/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "Every declared case of `State` (`Ready`, `Busy`, `Stopped`) must be covered in `match s { ... }`.",
+        "Add `.Stopped { \"stopped\" }` inside the `match s` expression."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/enums-and-variants.md"],
+      "relatedLessons": ["learn.types.enums.value-enums"],
+      "visibleCases": [
+        { "name": "ready", "stdin": "0\n", "args": [], "expectedStdout": "ready\n" },
+        { "name": "stopped", "stdin": "2\n", "args": [], "expectedStdout": "stopped\n" }
+      ],
+      "hiddenCases": [
+        { "name": "busy", "stdin": "1\n", "args": [], "expectedStdout": "busy\n" },
+        { "name": "fallback-stopped", "stdin": "9\n", "args": [], "expectedStdout": "stopped\n" }
+      ]
+    },
 
     {
       "id": "workouts.units.conversions.temperature-scales",
@@ -1403,6 +1431,34 @@
       "hiddenCases": [
         { "name": "empty-input", "stdin": "0\nnone\n", "args": [], "expectedStdout": "0 0\n" },
         { "name": "all-unique", "stdin": "3\na\nb\nc\nb\n", "args": [], "expectedStdout": "3 1\n" }
+      ]
+    },
+    {
+      "id": "workouts.enums.signals.traffic-signal-cycle",
+      "slug": "traffic-signal-cycle",
+      "title": "Traffic Signal Cycle",
+      "mode": "kata",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "enums",
+      "promptFile": "language/gym/workouts/enums/traffic-signal-cycle/README.md",
+      "starterFile": "language/gym/workouts/enums/traffic-signal-cycle/starter.lts",
+      "solutionFile": "language/gym/workouts/enums/traffic-signal-cycle/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Write an exhaustive helper `nextSignal(s: Signal): Signal` mapping `.Red -> .Green -> .Yellow -> .Red`.",
+        "In a loop of `steps` iterations, add `cur.value` to `elapsed` and set `cur = nextSignal(cur)`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/enums-and-variants.md"],
+      "relatedLessons": ["learn.types.enums.value-enums"],
+      "visibleCases": [
+        { "name": "one-step", "stdin": "1\n", "args": [], "expectedStdout": "Signal.Green 30\n" },
+        { "name": "four-steps", "stdin": "4\n", "args": [], "expectedStdout": "Signal.Green 90\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero-steps", "stdin": "0\n", "args": [], "expectedStdout": "Signal.Red 0\n" },
+        { "name": "full-cycle", "stdin": "3\n", "args": [], "expectedStdout": "Signal.Red 60\n" }
       ]
     }
   ]

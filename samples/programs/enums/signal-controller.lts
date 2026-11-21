@@ -1,0 +1,24 @@
+/* Traffic signal controller using value enums, .Case shorthand, and exhaustive match. */
+io := import "core/io";
+
+Signal := enum : Int {
+    Red = 30;
+    Green = 25;
+    Yellow = 5;
+};
+
+nextSignal := fn(s: Signal): Signal {
+    match s {
+        .Red { .Green }
+        .Green { .Yellow }
+        .Yellow { .Red }
+    }
+};
+
+var cur: Signal = .Red;
+var step := 0;
+loop step < 4 {
+    io.outputLine(cur, cur.value);
+    cur = nextSignal(cur);
+    step += 1;
+}

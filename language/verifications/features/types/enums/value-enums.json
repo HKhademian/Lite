@@ -1,0 +1,22 @@
+{
+  "id": "feature.types.enums.value-enums",
+  "kind": "feature",
+  "source": {
+    "file": "value-enums.lts",
+    "hash": "sha256:eeec2159f406a61ef8c567d1a9b13596ba6e19d1e06564829139b0d22fd54d2b"
+  },
+  "features": [
+    "feature.types.enums.value-enums"
+  ],
+  "guideline": "Checks nominal plain and backing-typed enums, auto-incremented Int cases, contextual .Case shorthand, .value access, and exhaustive match.",
+  "cases": [
+    {
+      "name": "value-enums-and-match",
+      "stdout": {
+        "text": "Status.Created 201 success missing\n",
+        "hash": "sha256:a4a6150a4836b55bf1d53391060befc56aff7e23bb67f3e1bf8de84493f41883"
+      },
+      "exitCode": 0
+    }
+  ]
+}

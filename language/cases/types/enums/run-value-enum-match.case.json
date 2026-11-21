@@ -1,0 +1,25 @@
+{
+  "id": "case.types.enums.run-value-enum-match",
+  "kind": "feature",
+  "source": "value-enum-match.lts",
+  "features": [
+    "feature.types.enums.value-enums",
+    "feature.control.branching.subject-match",
+    "feature.io.reporting.report-values"
+  ],
+  "cases": [
+    {
+      "name": "enum-auto-increment-and-match",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "Role.Admin 11 admin guest\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}
