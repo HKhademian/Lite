@@ -460,6 +460,11 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(editorClientJs.includes("event.key === 'Tab'"));
   assert(playground.includes('id="pg-c"'));
   assert(playground.includes('id="pg-share"'));
+  assert(playground.includes('id="pg-opt-level"'));
+  assert(playground.includes('<option value="1" selected>-O1</option>'));
+  assert(playground.includes('<option value="3">-O3</option>'));
+  const workerJs = readFileSync(join(out, 'playground', 'worker.js'), 'utf8');
+  assert(workerJs.includes("'-O' + String(level)"));
   assert(playground.includes('id="pg-editor-gutter"'));
   assert(playground.includes('id="pg-canvas-fullscreen"'));
   assert(playground.includes('id="mode-program"'));

@@ -14,6 +14,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   const splitEl = document.getElementById("pg-split");
   const resetBtn = document.getElementById("pg-reset");
   const shareBtn = document.getElementById("pg-share");
+  const optLevelEl = document.getElementById("pg-opt-level");
   const compileBtn = document.getElementById("pg-compile");
   const playBtn = document.getElementById("pg-play");
   const pauseBtn = document.getElementById("pg-pause");
@@ -55,6 +56,34 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   let cMessage = "";
   let currentSample = null;
   let lastCSource = null;
+  let lastCOptLevel = null;
+  const OPT_STORAGE_KEY = "lite.pg.optLevel";
+  function readOptLevel() {
+    const raw = optLevelEl ? Number(optLevelEl.value) : 1;
+    return Number.isInteger(raw) && raw >= 0 && raw <= 3 ? raw : 1;
+  }
+  if (optLevelEl) {
+    try {
+      const saved = window.localStorage.getItem(OPT_STORAGE_KEY);
+      if (saved === "0" || saved === "1" || saved === "2" || saved === "3") {
+        optLevelEl.value = saved;
+      }
+    } catch {}
+    optLevelEl.addEventListener("change", () => {
+      const lv = readOptLevel();
+      try { window.localStorage.setItem(OPT_STORAGE_KEY, String(lv)); } catch {}
+      lastCSource = null;
+      lastCOptLevel = null;
+      if (activeTab === "ts") {
+        void runAction("compile");
+      } else if (activeTab === "c") {
+        void compileCForEditor();
+      } else {
+        statusEl.hidden = false;
+        statusEl.textContent = "Optimization level: -O" + String(lv);
+      }
+    });
+  }
   const snipsApi = typeof window !== "undefined" && window.LiteSnips ? window.LiteSnips : null;
   const saveSnipBtn = document.getElementById("pg-save-snip");
   const titleEl = document.getElementById("pg-current-title");
@@ -290,19 +319,22 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
 
   async function compileCForEditor() {
     const source = editorEl.value;
-    if (lastCSource === source) return;
+    const optLevel = readOptLevel();
+    if (lastCSource === source && lastCOptLevel === optLevel) return;
     rawC = "";
-    cMessage = "/* Compiling C in browser... */";
+    cMessage = "/* Compiling C in browser (-O" + String(optLevel) + ")... */";
     renderCodeViews();
     try {
       const res = await workerClient.call("compile-c", {
         source,
         stdin: "",
         args: [],
+        optLevel,
         ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
       });
-      if (editorEl.value !== source) return;
+      if (editorEl.value !== source || readOptLevel() !== optLevel) return;
       lastCSource = source;
+      lastCOptLevel = optLevel;
       if (res.c) {
         rawC = String(res.c);
         cMessage = "";
@@ -324,8 +356,9 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     const source = editorEl.value;
     const stdin = parseStdin();
     const args = parseArgs();
+    const optLevel = readOptLevel();
     statusEl.hidden = false;
-    statusEl.textContent = action === "compile" ? "Compiling in browser..." : "Running in browser...";
+    statusEl.textContent = action === "compile" ? "Compiling in browser (-O" + String(optLevel) + ")..." : "Running in browser (-O" + String(optLevel) + ")...";
     if (action === "play") {
       outputEl.textContent = "";
     }
@@ -334,11 +367,13 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         source,
         stdin,
         args,
+        optLevel,
         ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
       });
       if (res.ts) rawTs = String(res.ts);
       if (action === "compile" && (res.c !== undefined || res.cError !== undefined)) {
         lastCSource = source;
+        lastCOptLevel = optLevel;
         if (res.c) {
           rawC = String(res.c);
           cMessage = "";
@@ -364,7 +399,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       }
       if (action === "compile") {
         if (activeTab !== "c") showTab("ts");
-        statusEl.textContent = "Compiled to TypeScript" + (res.c ? " & C" : "");
+        statusEl.textContent = "Compiled to TypeScript" + (res.c ? " & C" : "") + " (-O" + String(optLevel) + ")";
         return;
       }
 

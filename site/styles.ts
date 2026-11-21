@@ -958,6 +958,24 @@ body.pg-resizing {
   align-items: center;
   gap: 0.45rem;
 }
+.pg-opt-select {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.34rem 0.45rem;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--ink);
+  cursor: pointer;
+}
+.pg-opt-select:hover {
+  border-color: var(--accent);
+}
+.pg-opt-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 .pg-editor-wrap {
   position: relative;
   display: flex;

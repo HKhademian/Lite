@@ -166,9 +166,15 @@ function runWithProcessStub(argv, stdinText, fn, vfs) {
   }
 }
 
-function compileWith(compilerSource, vfs, source) {
+function normalizeOptLevel(raw) {
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 && n <= 3 ? n : 1;
+}
+
+function compileWith(compilerSource, vfs, source, optLevel = 1) {
+  const level = normalizeOptLevel(optLevel);
   return runWithProcessStub(
-    ['node', '/project/compiler.js', '--stdin', '--name', 'playground.lts', '--root', '/project/playground.lts'],
+    ['node', '/project/compiler.js', '--stdin', '--name', 'playground.lts', '--root', '/project/playground.lts', '-O' + String(level)],
     source ?? '',
     (proc, write) => {
       const compileMain = new Function('process', compilerSource)(proc);
@@ -178,11 +184,11 @@ function compileWith(compilerSource, vfs, source) {
   );
 }
 
-function compileTsForPlayground(compilerSource, stdlib, extraModules, source) {
+function compileTsForPlayground(compilerSource, stdlib, extraModules, source, optLevel = 1) {
   const withKeepalive = appendPlayKeepalive(source ?? '');
   if (withKeepalive !== null) {
     const keepaliveVfs = buildPlaygroundVfs(stdlib, extraModules, withKeepalive);
-    const keepaliveResult = compileWith(compilerSource, keepaliveVfs, withKeepalive);
+    const keepaliveResult = compileWith(compilerSource, keepaliveVfs, withKeepalive, optLevel);
     if (keepaliveResult.ok && keepaliveResult.stdout) {
       return {
         ...keepaliveResult,
@@ -191,7 +197,7 @@ function compileTsForPlayground(compilerSource, stdlib, extraModules, source) {
     }
   }
   const baseVfs = buildPlaygroundVfs(stdlib, extraModules, source);
-  return compileWith(compilerSource, baseVfs, source);
+  return compileWith(compilerSource, baseVfs, source, optLevel);
 }
 
 function attachPlayBridge(js) {
@@ -263,7 +269,8 @@ function drainTones() {
 
 self.onmessage = async (event) => {
   const payload = event.data ?? {};
-  const { id, action, source, stdin, args, extraModules } = payload;
+  const { id, action, source, stdin, args, extraModules, optLevel } = payload;
+  const level = normalizeOptLevel(optLevel);
   try {
     if (action === 'stop') {
       globalThis.__litePlay = null;
@@ -317,7 +324,7 @@ self.onmessage = async (event) => {
     if (action === 'compile-c') {
       const cSource = await loadCompilerSource('compiler-c.js');
       const vfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
-      const cResult = compileWith(cSource, vfs, source);
+      const cResult = compileWith(cSource, vfs, source, level);
       self.postMessage({
         id,
         ok: cResult.ok && Boolean(cResult.stdout),
@@ -328,7 +335,7 @@ self.onmessage = async (event) => {
     }
 
     const tsCompilerSource = await loadCompilerSource('compiler.js');
-    const compileResult = compileTsForPlayground(tsCompilerSource, stdlib, extraModules ?? null, source);
+    const compileResult = compileTsForPlayground(tsCompilerSource, stdlib, extraModules ?? null, source, level);
 
     if (!compileResult.ok || !compileResult.stdout) {
       self.postMessage({
@@ -349,7 +356,7 @@ self.onmessage = async (event) => {
     if (action === 'compile') {
       const cSource = await loadCompilerSource('compiler-c.js');
       const vfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
-      const cResult = compileWith(cSource, vfs, source);
+      const cResult = compileWith(cSource, vfs, source, level);
       self.postMessage({
         id,
         ok: true,
