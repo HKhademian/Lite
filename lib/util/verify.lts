@@ -10,6 +10,7 @@ time := import "core/time";
 unicode := import "core/unicode";
 list := import "core/list";
 map := import "core/map";
+set := import "core/set";
 path := import "core/path";
 json := import "util/json";
 streams := import "util/streams";
@@ -666,8 +667,8 @@ computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool
     (ok = true, hex = crypto.sha256Bytes(unicode.utf8Encode(text.joinTexts(parts, "\n"))), error = "")
 };
 
-loadVerifyCache := fn(cacheFile: String, enabled: Bool): List<String> {
-    passed: mut List<String> = [];
+loadVerifyCache := fn(cacheFile: String, enabled: Bool): Set<String> {
+    passed: mut Set<String>;
     if not enabled or fs.kind(cacheFile) =!= fs.FILE_KIND_FILE { return passed; }
     readRes := fs.readText(cacheFile);
     if not readRes.ok or not json.validate(readRes.text).ok or not isJsonObjectAt(readRes.text, 0) {
@@ -682,13 +683,13 @@ loadVerifyCache := fn(cacheFile: String, enabled: Bool): List<String> {
     loop json.objectKeys(readRes.text, passedField.valuePos) as key {
         val := json.readObjectBool(readRes.text, passedField.valuePos, key);
         if val.found and val.ok and val.value {
-            list.pushBack(mut passed, key);
+            set.add(mut passed, key);
         }
     }
     passed
 };
 
-saveVerifyCache := fn(cacheFile: String, passedKeys: List<String>): Unit {
+saveVerifyCache := fn(cacheFile: String, passedKeys: Set<String>): Unit {
     mkRes := fs.makeDir(path.parentDir(cacheFile));
     if not mkRes.ok { return; }
     entries: mut List<String> = [];
@@ -697,26 +698,6 @@ saveVerifyCache := fn(cacheFile: String, passedKeys: List<String>): Unit {
     }
     body := "{\"version\":1,\"passed\":{" + text.joinTexts(entries, ",") + "}}\n";
     _w := fs.writeText(cacheFile, body);
-};
-
-removeText := fn(items: List<String>, target: String): List<String> {
-    out: mut List<String> = [];
-    loop items as item {
-        if item =!= target {
-            list.pushBack(mut out, item);
-        }
-    }
-    out
-};
-
-addUniqueText := fn(items: List<String>, target: String): List<String> {
-    if list.listContainsText(items, target) { return items; }
-    out: mut List<String> = [];
-    loop items as item {
-        list.pushBack(mut out, item);
-    }
-    list.pushBack(mut out, target);
-    out
 };
 
 shardMatches := fn(manifestId: String, scenarioName: String, hasShard: Bool, shardIndex: Int, shardCount: Int): Bool {
@@ -1149,7 +1130,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     } else {
         path.join(rootDir, "dist/verifications.json")
     };
-    var passedKeys := loadVerifyCache(cacheFile, not opts.update and opts.cache);
+    passedKeys: mut Set<String> = loadVerifyCache(cacheFile, not opts.update and opts.cache);
     var cacheDirty := false;
 
     var hasGitChanges := false;
@@ -1245,7 +1226,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                         if not needsArtifact {
                             loop selectedOffsets as sPos {
                                 k := caseCacheKey(rtHash.hex, mId, mKind, sourceHash, meta.appendText, mText, sPos);
-                                if not opts.cache or not list.listContainsText(passedKeys, k) {
+                                if not opts.cache or not set.has(passedKeys, k) {
                                     needsArtifact = true;
                                     break;
                                 }
@@ -1312,7 +1293,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                             label := mId + "/" + sName + " [ts]";
                             cKey := caseCacheKey(rtHash.hex, mId, mKind, sourceHash, meta.appendText, mText, sPos);
 
-                            if not opts.update and opts.cache and list.listContainsText(passedKeys, cKey) {
+                            if not opts.update and opts.cache and set.has(passedKeys, cKey) {
                                 cached = cached + 1;
                                 if not opts.quiet { io.outputLine("PASS " + label + " (cached)"); }
                             } else {
@@ -1364,7 +1345,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                     executed = executed + 1;
                                     if not compileOk {
                                         if not opts.update {
-                                            passedKeys = removeText(passedKeys, cKey);
+                                            _rmKey := set.remove(mut passedKeys, cKey);
                                             cacheDirty = true;
                                             io.outputLine("FAIL " + label + ": " + compileError);
                                         } else {
@@ -1439,7 +1420,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                         runSeq = runSeq + 1;
                                         if not ran.ok {
                                             if not opts.update {
-                                                passedKeys = removeText(passedKeys, cKey);
+                                                _rmKey := set.remove(mut passedKeys, cKey);
                                                 cacheDirty = true;
                                                 io.outputLine("FAIL " + label + ": " + ran.error);
                                             } else {
@@ -1457,7 +1438,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                 sameErr := streams.equalBytes(stderrBytes, expStderr);
                                                 sameExit := ran.exitCode == expExit;
                                                 if not sameOut or not sameErr or not sameExit {
-                                                    passedKeys = removeText(passedKeys, cKey);
+                                                    _rmKey := set.remove(mut passedKeys, cKey);
                                                     cacheDirty = true;
                                                     io.outputLine("FAIL " + label);
                                                     if not sameOut {
@@ -1471,7 +1452,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                     }
                                                     failures = failures + 1;
                                                 } else {
-                                                    passedKeys = addUniqueText(passedKeys, cKey);
+                                                    set.add(mut passedKeys, cKey);
                                                     cacheDirty = true;
                                                     if not opts.quiet { io.outputLine("PASS " + label); }
                                                 }

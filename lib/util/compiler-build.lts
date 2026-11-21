@@ -6,6 +6,7 @@ proc := import "core/process";
 crypto := import "core/crypto";
 text := import "core/text";
 list := import "core/list";
+map := import "core/map";
 path := import "core/path";
 unicode := import "core/unicode";
 json := import "util/json";
@@ -656,8 +657,8 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
         return failBuild("generated compiler returned invalid source dependency list");
     }
 
-    seenAbsPaths: mut List<String> = [sourcePath];
-    seenSha256s: mut List<String> = [sourceRootSha256];
+    seenShaByPath: mut Map<String, String>;
+    seenShaByPath[sourcePath] = sourceRootSha256;
     loop json.arrayElementOffsets(traceRead.text, filesField.valuePos) as fPos {
         fp := json.readObjectString(traceRead.text, fPos, "path");
         fsHash := json.readObjectString(traceRead.text, fPos, "sha256");
@@ -665,25 +666,23 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
             _rm := fs.remove(work);
             return failBuild("generated compiler returned invalid source dependency list");
         }
-        existingIdx := list.listIndexOfText(seenAbsPaths, fp.value);
-        if existingIdx >= 0 {
-            if seenSha256s[existingIdx] =!= fsHash.value {
+        prev := map.get(seenShaByPath, fp.value);
+        if prev.found {
+            if prev.value =!= fsHash.value {
                 _rm := fs.remove(work);
                 return failBuild("compiler source bytes changed during build: " + fp.value);
             }
         } else {
-            list.pushBack(mut seenAbsPaths, fp.value);
-            list.pushBack(mut seenSha256s, fsHash.value);
+            seenShaByPath[fp.value] = fsHash.value;
         }
     }
 
     depsQuoted: mut List<String> = [];
     dhCompact: mut List<String> = [];
     dhPretty: mut List<String> = [];
-    var idx := 0;
-    loop idx < list.listCountText(seenAbsPaths) {
-        absFile := seenAbsPaths[idx];
-        expectedHash := seenSha256s[idx];
+    loop seenShaByPath as entry {
+        absFile := entry.key;
+        expectedHash := entry.value;
         diskHash := crypto.sha256File(absFile);
         if not diskHash.ok or diskHash.hex =!= expectedHash {
             _rm := fs.remove(work);
@@ -693,7 +692,6 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
         list.pushBack(mut depsQuoted, json.quoteString(relFile));
         list.pushBack(mut dhCompact, "{\"path\":" + json.quoteString(relFile) + ",\"sha256\":" + json.quoteString(expectedHash) + "}");
         list.pushBack(mut dhPretty, "{\n      \"path\": " + json.quoteString(relFile) + ",\n      \"sha256\": " + json.quoteString(expectedHash) + "\n    }");
-        idx = idx + 1;
     }
 
     edgesCompact: mut List<String> = [];
