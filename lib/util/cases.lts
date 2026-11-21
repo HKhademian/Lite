@@ -7,6 +7,7 @@ crypto := import "core/crypto";
 integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
+set := import "core/set";
 path := import "core/path";
 json := import "util/json";
 streams := import "util/streams";
@@ -50,9 +51,9 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     if not validJson.ok { return (ok = false, id = "", error = caseFile + ": " + validJson.error); }
 
     topKeys := json.objectKeys(textSrc, 0);
-    allowedTop: List<String> = ["id", "kind", "pending", "features", "cases", "benchmark", "tool", "source"];
+    allowedTop: Set<String> = ["id", "kind", "pending", "features", "cases", "benchmark", "tool", "source"];
     loop topKeys as k {
-        if not list.listContainsText(allowedTop, k) {
+        if not set.has(allowedTop, k) {
             return (ok = false, id = "", error = caseFile + ": unexpected case key " + k);
         }
     }
@@ -64,11 +65,11 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     caseId := idRes.value;
 
     kindRes := json.readObjectString(textSrc, 0, "kind");
-    validKinds: List<String> = [
+    validKinds: Set<String> = [
     CASE_KIND_TOOL, CASE_KIND_FEATURE, CASE_KIND_REJECT,
     CASE_KIND_COMPILE, CASE_KIND_SAMPLE, CASE_KIND_EXAMPLE
     ];
-    if not kindRes.found or not kindRes.ok or not list.listContainsText(validKinds, kindRes.value) {
+    if not kindRes.found or not kindRes.ok or not set.has(validKinds, kindRes.value) {
         return (ok = false, id = "", error = caseFile + ": invalid case kind");
     }
     kind := kindRes.value;
@@ -102,36 +103,36 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
 
     featField := json.findObjectField(textSrc, 0, "features");
     if not featField.found { return (ok = false, id = "", error = caseFile + ": features must be an array"); }
-    seenFeatures: mut List<String> = [];
+    seenFeatures: mut Set<String>;
     loop json.arrayElementOffsets(textSrc, featField.valuePos) as fPos {
         fStr := json.readStringAt(textSrc, fPos);
         if not fStr.ok { return (ok = false, id = "", error = caseFile + ": features must be strings"); }
-        if list.listContainsText(seenFeatures, fStr.value) {
+        if set.has(seenFeatures, fStr.value) {
             return (ok = false, id = "", error = caseFile + ": duplicate feature IDs");
         }
-        list.pushBack(mut seenFeatures, fStr.value);
+        set.add(mut seenFeatures, fStr.value);
     }
 
     casesField := json.findObjectField(textSrc, 0, "cases");
     if not casesField.found { return (ok = false, id = "", error = caseFile + ": case scenarios required"); }
     scenarios := json.arrayElementOffsets(textSrc, casesField.valuePos);
-    if list.listCountInt(scenarios) == 0 {
+    if list.length(scenarios) == 0 {
         return (ok = false, id = "", error = caseFile + ": case scenarios required");
     }
 
-    allowedScenario: List<String> = ["name", "args", "stdin", "stdout", "stderr", "exitCode", "timeoutMs", "artifact", "inputFiles", "outputFiles", "workspace", "tag", "files"];
-    seenScenarios: mut List<String> = [];
+    allowedScenario: Set<String> = ["name", "args", "stdin", "stdout", "stderr", "exitCode", "timeoutMs", "artifact", "inputFiles", "outputFiles", "workspace", "tag", "files"];
+    seenScenarios: mut Set<String>;
     loop scenarios as sPos {
         loop json.objectKeys(textSrc, sPos) as sk {
-            if not list.listContainsText(allowedScenario, sk) {
+            if not set.has(allowedScenario, sk) {
                 return (ok = false, id = "", error = caseFile + ": unexpected scenario key " + sk);
             }
         }
         nameRes := json.readObjectString(textSrc, sPos, "name");
-        if not nameRes.found or not nameRes.ok or nameRes.value == "" or list.listContainsText(seenScenarios, nameRes.value) {
+        if not nameRes.found or not nameRes.ok or nameRes.value == "" or set.has(seenScenarios, nameRes.value) {
             return (ok = false, id = "", error = caseFile + ": scenario names must be unique");
         }
-        list.pushBack(mut seenScenarios, nameRes.value);
+        set.add(mut seenScenarios, nameRes.value);
 
         codeRes := json.readObjectInt(textSrc, sPos, "exitCode");
         if not codeRes.found or not codeRes.ok or codeRes.value < 0 or codeRes.value > 255 {

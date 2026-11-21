@@ -2,6 +2,7 @@
 
 io := import "core/io";
 list := import "core/list";
+map := import "core/map";
 cli := import "util/cli";
 project := import "util/project";
 
@@ -29,26 +30,26 @@ usageText := fn(): String {
     "Reserved names: ./ltl/lite link"
 };
 
+ROUTE_TARGETS: Map<String, String> = [
+"check" = "lite-check",
+"fmt" = "lite-fmt",
+"compile" = "lite-compile",
+"run" = "lite-run",
+"verify" = "lite-verify",
+"test" = "lite-test",
+"docs" = "lite-docs",
+"doctor" = "lite-doctor",
+"bench" = "lite-bench",
+"release" = "lite-release",
+"wipe" = "lite-wipe",
+];
+
 supportedCommands := fn(): List<String> {
-    commands: List<String> = [
-    "check", "fmt", "compile", "run", "verify", "test", "docs", "doctor", "bench", "release", "wipe"
-    ];
-    commands
+    map.keys(ROUTE_TARGETS)
 };
 
 routeTarget := fn(command: String): String {
-    if command == "check" { return "lite-check"; }
-    if command == "fmt" { return "lite-fmt"; }
-    if command == "compile" { return "lite-compile"; }
-    if command == "run" { return "lite-run"; }
-    if command == "verify" { return "lite-verify"; }
-    if command == "test" { return "lite-test"; }
-    if command == "docs" { return "lite-docs"; }
-    if command == "doctor" { return "lite-doctor"; }
-    if command == "bench" { return "lite-bench"; }
-    if command == "release" { return "lite-release"; }
-    if command == "wipe" { return "lite-wipe"; }
-    ""
+    map.getOr(ROUTE_TARGETS, command, "")
 };
 
 run := fn(rawArgs: List<String>): Unit {

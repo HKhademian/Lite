@@ -6,6 +6,7 @@ path := import "core/path";
 proc := import "core/process";
 text := import "core/text";
 list := import "core/list";
+map := import "core/map";
 integer := import "core/int";
 crypto := import "core/crypto";
 time := import "core/time";
@@ -189,27 +190,30 @@ selectedCompilerSha256: String, selectedBuilderSha256: String, totalDepBytes: In
     )
 };
 
+MODULE_IDENTITIES: Map<String, String> = [
+"lib/core/io.lts" = "lite.core.io.v1",
+"lib/core/int.lts" = "lite.core.int.v1",
+"lib/core/list.lts" = "lite.core.list.v1",
+"lib/core/map.lts" = "lite.core.map.v1",
+"lib/core/set.lts" = "lite.core.set.v1",
+"lib/core/text.lts" = "lite.core.text.v1",
+"lib/core/file.lts" = "lite.core.file.v1",
+"lib/core/process.lts" = "lite.core.process.v1",
+"lib/core/crypto.lts" = "lite.core.crypto.v1",
+"lib/core/time.lts" = "lite.core.time.v1",
+"lib/core/unicode.lts" = "lite.core.unicode.v1",
+"compiler/src/modules.lts" = "lite.compiler.modules.v1",
+];
+
 /** Identifies source bytes matching a shipped core/compiler host module. */
 pub sourceModuleIdentity := fn(rootDir: String, sourceBytes: List<Int>): String {
-    paths: List<String> = [
-    "lib/core/io.lts", "lib/core/int.lts", "lib/core/list.lts", "lib/core/text.lts",
-    "lib/core/file.lts", "lib/core/process.lts", "lib/core/crypto.lts", "lib/core/time.lts",
-    "lib/core/unicode.lts", "compiler/src/modules.lts"
-    ];
-    identities: List<String> = [
-    "lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.text.v1",
-    "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1",
-    "lite.core.unicode.v1", "lite.compiler.modules.v1"
-    ];
-    var i := 0;
-    loop i < list.listCountText(paths) {
-        full := path.join(rootDir, paths[i]);
+    loop MODULE_IDENTITIES as entry {
+        full := path.join(rootDir, entry.key);
         if fs.kind(full) == fs.FILE_KIND_FILE {
             if streams.equalBytes(sourceBytes, fs.readBytes(full)) {
-                return identities[i];
+                return entry.value;
             }
         }
-        i = i + 1;
     }
     ""
 };

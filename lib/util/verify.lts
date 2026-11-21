@@ -1250,13 +1250,13 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                     var lv := 0;
                                     loop lv < 4 {
                                         cOpt := compileManifestArtifactOpt(rootDir, compBuild.compilerPath, workDir, fullSource, meta.hasSourceFile, meta.sourcePath, lv);
-                                        pedanticCompileNs[lv] = pedanticCompileNs[lv] + cOpt.compileNs;
+                                        pedanticCompileNs[lv] += cOpt.compileNs;
                                         if not cOpt.ok {
                                             compileOk = false;
                                             compileError = cOpt.error;
                                             break;
                                         }
-                                        pedanticBytes[lv] = pedanticBytes[lv] + cOpt.emittedBytes;
+                                        pedanticBytes[lv] += cOpt.emittedBytes;
                                         list.pushBack(mut pedanticArtifacts, cOpt.artifactPath);
                                         lv = lv + 1;
                                     }
@@ -1368,7 +1368,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                             ran := runArtifactScenario(rootDir, pedanticArtifacts[lv], workDir, inBytes, scenarioArgs, runSeq);
                                             rElapsed := time.monotonicNs() - rStart;
                                             runSeq = runSeq + 1;
-                                            pedanticRunNs[lv] = pedanticRunNs[lv] + rElapsed;
+                                            pedanticRunNs[lv] += rElapsed;
                                             if not ran.ok {
                                                 io.outputLine("FAIL " + lvLabel + ": " + ran.error);
                                                 allLevelsOk = false;
