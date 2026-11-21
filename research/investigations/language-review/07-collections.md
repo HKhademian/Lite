@@ -124,3 +124,14 @@ Writable access requires consent and a supported write operation. Positional rep
 Ordinary range indexing follows copy-by-default value semantics. For `middle := items[1..3]`, a later write to `items[1]` does not change `middle`. The compiler may avoid copying when it preserves that behavior. An explicitly requested view can share storage under a separate lifetime and mutation contract. View spelling remains open.
 
 See [loop result inference](loop-metadata-review.md#collected-type-and-cost) and [string review](../../../docs/strings.md#joint-review-text-semantics).
+
+### Map and set initializer syntax
+
+The preferred form from this review uses `key = value` entries in brackets for maps and ordinary bracket elements in a `Set<T>` context:
+
+```text
+keys: Map<String, Direction> = ["ArrowUp" = .Up, "w" = .Up];
+tags: Set<String> = ["a", "b"];
+```
+
+The map entry uses `=` to supply a value, as in labeled tuples and record initializers. Its left operand is a key expression. The expected map type supplies the key and value contracts, and the expected set type selects set construction. An uncontextualized `["a", "b"]` still infers a fixed array. Typed empty declarations already zero-initialize maps and sets. Empty literal forms, inference of maps without an expected type, and duplicate-key behavior in literals remain open. These examples record the syntax direction under review. [Maps](../../../docs/maps.md) · [Sets](../../../docs/sets.md)
