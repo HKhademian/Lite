@@ -165,6 +165,29 @@ An ordinary parameter requiring User, mut User, or var User assumes a valid inco
 
 This decision covers whole-value initialization only. It does not select x.field = ... or indexed writes as construction operations on uninitialized subobjects. Large-array initialization is the main motivating next step: track which elements are valid while the array's storage already exists, without reading untouched elements or requiring a preliminary zero fill.
 
+### Proposed field-by-field initialization
+
+The joint review considers tracking initialized parts of a reserved value separately. In the design example below, `Point` holds two `Int16` fields. The byte sketches assume little-endian storage with no padding.
+
+```text
+Point := record { x: Int16; y: Int16; }
+
+p0: Point;        /* [0, 0, 0, 0] */
+show(p0);         /* whole value is initialized */
+
+p1: Point = ?;    /* [?, ?, ?, ?] */
+p1.x = 10;        /* [10, 0, ?, ?] */
+show(p1.x);       /* x is initialized */
+p1.y = 20;        /* [10, 0, 20, 0] */
+show(p1);         /* both fields are initialized */
+show(p1.x);
+show(p1.y);
+```
+
+Separate rejection cases: reading `p1` before either write, reading `p1` or `p1.y` after only the write to `p1.x`, and writing `p1.x` a second time without writable access to replace it. A repeat write of the same value is still a write. Each read requires proof that the region it observes contains a valid initialized value on every reaching path. A partial first write leaves the remaining parts untouched. The compiler can potentially track this information statically for disjoint named fields.
+
+The byte sketch motivates region-level tracking. The exact unit of tracking remains open. Typed fields give a tractable starting point. Padding and inactive union payload storage need separate rules before treating every physical byte as a readable part of the value. Raw byte writes also need a validity rule before they can produce a typed field value. Construction through aliases or callees, overlapping and dynamic index writes, and cleanup after interrupted construction remain open. These examples are a proposal beyond the selected whole-value rule.
+
 ### Initialization before a pending call begins
 
 Selected on **2026-10-25**: a var local reserved with = ? may have its location selected by an earlier var argument and then receive its first whole value in a later argument before invocation. Selection does not read the payload. For use_int requiring var Int and Int, use_int(var value, ({ value = 42; 0 })) is valid after var value: Int = ?, because the caller initializes value before the callee receives it. The scalar temporary form makes the same order explicit; see [initialization during preparation](lite://doc/call-replacement-flow#initialization-during-argument-preparation-selected).
