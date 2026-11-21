@@ -439,4 +439,14 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
     stdin: '',
     showOutput: true,
   },
+  {
+    id: 'loop-collect-filter',
+    group: 'programs',
+    title: 'Loop collect & filter',
+    note: 'Map, filter, and classify collections with loop .collected, partial if/match tails, and .length/.isEmpty.',
+    file: 'samples/programs/collections/loop-collect-filter.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
 ];

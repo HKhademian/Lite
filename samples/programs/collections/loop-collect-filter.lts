@@ -1,0 +1,23 @@
+/* Map, filter, and classify collections with loop `.collected` and partial `if`/`match` tails. */
+
+io := import "core/io";
+
+readings := [-4, 3, 0, 12, -1, 7, 25];
+
+/* Transform every element into a new List<Int>. */
+doubled := loop readings { .item * 2 }.collected;
+
+/* Partial `if` tail: only matching items commit to `.collected`. */
+positives := loop readings { if .item > 0 { .item * 10 } }.collected;
+
+/* Partial `match` tail: classify only values in range. */
+labels := loop readings {
+    match {
+        .item >= 20 { "high" }
+        .item > 0 { "ok" }
+    }
+}.collected;
+
+io.outputLine("all:", doubled.length, doubled);
+io.outputLine("positives:", positives.length, positives.isEmpty, positives);
+io.outputLine("labels:", labels.length, labels);
