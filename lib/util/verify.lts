@@ -9,6 +9,7 @@ text := import "core/text";
 time := import "core/time";
 unicode := import "core/unicode";
 list := import "core/list";
+map := import "core/map";
 path := import "core/path";
 json := import "util/json";
 streams := import "util/streams";
@@ -1021,16 +1022,6 @@ padRight := fn(s: String, width: Int): String {
     out
 };
 
-addAt4 := fn(xs: List<Int>, idx: Int, delta: Int): List<Int> {
-    out: mut List<Int> = [];
-    var i := 0;
-    loop i < 4 {
-        list.pushBack(mut out, if i == idx { xs[i] + delta } else { xs[i] });
-        i = i + 1;
-    }
-    out
-};
-
 printPedanticBenchmark := fn(
 manifestCount: Int, scenarioCount: Int,
 totalCompileNs: List<Int>, totalRunNs: List<Int>, totalBytes: List<Int>
@@ -1196,9 +1187,9 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     var cached := 0;
     var pedanticManifests := 0;
     var pedanticScenarios := 0;
-    var pedanticCompileNs: List<Int> = [0, 0, 0, 0];
-    var pedanticRunNs: List<Int> = [0, 0, 0, 0];
-    var pedanticBytes: List<Int> = [0, 0, 0, 0];
+    pedanticCompileNs: mut List<Int> = [0, 0, 0, 0];
+    pedanticRunNs: mut List<Int> = [0, 0, 0, 0];
+    pedanticBytes: mut List<Int> = [0, 0, 0, 0];
 
     dirKinds: List<String> = [KIND_FEATURE, KIND_EXAMPLE, KIND_SAMPLE, KIND_SHOWCASE];
     loop dirKinds as mKind {
@@ -1278,13 +1269,13 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                     var lv := 0;
                                     loop lv < 4 {
                                         cOpt := compileManifestArtifactOpt(rootDir, compBuild.compilerPath, workDir, fullSource, meta.hasSourceFile, meta.sourcePath, lv);
-                                        pedanticCompileNs = addAt4(pedanticCompileNs, lv, cOpt.compileNs);
+                                        pedanticCompileNs[lv] = pedanticCompileNs[lv] + cOpt.compileNs;
                                         if not cOpt.ok {
                                             compileOk = false;
                                             compileError = cOpt.error;
                                             break;
                                         }
-                                        pedanticBytes = addAt4(pedanticBytes, lv, cOpt.emittedBytes);
+                                        pedanticBytes[lv] = pedanticBytes[lv] + cOpt.emittedBytes;
                                         list.pushBack(mut pedanticArtifacts, cOpt.artifactPath);
                                         lv = lv + 1;
                                     }
@@ -1313,8 +1304,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                             }
                         }
 
-                        updatedScenarioNames: mut List<String> = [];
-                        updatedScenarioBodies: mut List<String> = [];
+                        updatedScenarios: mut Map<String, String>;
                         var runSeq := 0;
 
                         loop selectedOffsets as sPos {
@@ -1397,7 +1387,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                             ran := runArtifactScenario(rootDir, pedanticArtifacts[lv], workDir, inBytes, scenarioArgs, runSeq);
                                             rElapsed := time.monotonicNs() - rStart;
                                             runSeq = runSeq + 1;
-                                            pedanticRunNs = addAt4(pedanticRunNs, lv, rElapsed);
+                                            pedanticRunNs[lv] = pedanticRunNs[lv] + rElapsed;
                                             if not ran.ok {
                                                 io.outputLine("FAIL " + lvLabel + ": " + ran.error);
                                                 allLevelsOk = false;
@@ -1460,8 +1450,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                             stdoutBytes := fs.readBytes(ran.outPath);
                                             stderrBytes := fs.readBytes(ran.errPath);
                                             if opts.update {
-                                                list.pushBack(mut updatedScenarioNames, sName);
-                                                list.pushBack(mut updatedScenarioBodies, formatUpdatedScenarioJson(mText, sPos, mDir, stdoutBytes, stderrBytes, ran.exitCode));
+                                                updatedScenarios[sName] = formatUpdatedScenarioJson(mText, sPos, mDir, stdoutBytes, stderrBytes, ran.exitCode);
                                             } else {
                                                 expExit := json.readObjectInt(mText, sPos, "exitCode").value;
                                                 sameOut := streams.equalBytes(stdoutBytes, expStdout);
@@ -1501,18 +1490,10 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                             finalScenarios: mut List<String> = [];
                             loop allScenarios as sPos {
                                 sName := json.readObjectString(mText, sPos, "name").value;
-                                var foundUpdated := false;
-                                var ui := 0;
-                                uCount := list.listCountText(updatedScenarioNames);
-                                loop ui < uCount {
-                                    if updatedScenarioNames[ui] == sName {
-                                        list.pushBack(mut finalScenarios, updatedScenarioBodies[ui]);
-                                        foundUpdated = true;
-                                        break;
-                                    }
-                                    ui = ui + 1;
-                                }
-                                if not foundUpdated {
+                                upd := map.get(updatedScenarios, sName);
+                                if upd.found {
+                                    list.pushBack(mut finalScenarios, upd.value);
+                                } else {
                                     list.pushBack(mut finalScenarios, "    " + formatScenarioSpanJson(mText, sPos));
                                 }
                             }

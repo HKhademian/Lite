@@ -7,6 +7,7 @@ io := import "core/io";
 list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
+set := import "core/set";
 text := import "core/text";
 cases := import "util/cases";
 json := import "util/json";
@@ -253,7 +254,8 @@ rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: S
         return (ok = false, path = "", sha256 = "", rebuilt = false, error = wrArt.error);
     }
 
-    seenPaths: mut List<String> = [canonSource];
+    seenPaths: mut Set<String>;
+    set.add(mut seenPaths, canonSource);
     depJson: mut List<String> = [];
     edgeJson: mut List<String> = [];
 
@@ -267,8 +269,8 @@ rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: S
         if item.kind == frontend.ITEM_KIND_MODULE_LOADED {
             rpDep := fs.realPath(item.name);
             cDep := if rpDep.ok { rpDep.path } else { item.name };
-            if not list.listContainsText(seenPaths, cDep) {
-                list.pushBack(mut seenPaths, cDep);
+            if not set.has(seenPaths, cDep) {
+                set.add(mut seenPaths, cDep);
                 hDep := crypto.sha256File(cDep);
                 if not hDep.ok {
                     return (ok = false, path = "", sha256 = "", rebuilt = false, error = hDep.error);
