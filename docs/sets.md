@@ -16,7 +16,7 @@ fixedTags: Set<String> = ["lite", "typed", "lite"];
 tags: mut Set<String> = ["lite"];
 set.add(mut tags, "typed");
 
-io.outputLine(tags, set.size(tags), set.has(fixedTags, "lite"));
+io.outputLine(tags, tags.size, tags.isEmpty, set.has(fixedTags, "lite"));
 ```
 
 Run the interactive [typed sets example](lite://play/example/typed-sets), follow the [typed sets lesson](lite://learn/types/typed-sets), or inspect the [core/set module API](lite://module/core/set).

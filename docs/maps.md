@@ -15,9 +15,9 @@ map := import "core/map";
 defaults: Map<String, Int> = ["alice" = 10, "bob" = 25];
 scores: mut Map<String, Int> = ["alice" = 10];
 map.set(mut scores, "bob", 25);
-scores["alice"] = 18;
+scores["alice"] += 8;
 
-io.outputLine(scores["alice"], map.getOr(scores, "carol", 0), map.size(defaults));
+io.outputLine(scores["alice"], map.getOr(scores, "carol", 0), defaults.size, defaults.isEmpty);
 ```
 
 Run the interactive [typed maps example](lite://play/example/typed-maps), follow the [typed maps lesson](lite://learn/types/typed-maps), or inspect the [core/map module API](lite://module/core/map).

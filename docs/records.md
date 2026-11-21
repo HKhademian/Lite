@@ -73,6 +73,18 @@ Student { studentName = name, studentGrade = grade, } := student;
 
 This restriction concerns record-pattern productions. It cannot ban every identifier followed by braces: in `match person { Student {} }`, bare Student is an ordinary binding name and the following braces are its empty arm body. That is not a Student type test or record deconstruction. Do not use capitalization or lookup of an outer type to change that binding meaning. Enum-case selectors such as `.Some(...)` still test a case and are unaffected; positional constructor-family patterns remain separate schema/type-test proposals.
 
+### Copy-on-write field updates
+
+In the generated-TS compiler, a `var` record binding supports direct 1- and 2-level field assignment and compound updates (`=`, `+=`, `-=`, `*=`, `/=`, `%=`) using value-preserving copy-on-write:
+
+```text
+var player := Player { pos = Vec2 { x = 0, y = 0 }, hp = 100 };
+snapshot := player;
+player.hp -= 10;
+player.pos.x += 5;
+// snapshot.hp is still 100 and snapshot.pos.x is still 0
+```
+
 ### Proposed same-name field shorthand
 
 The explicit `= name` same-name shorthand expands `= name` to `name = name` in both record construction (`User { = name, = age }`) and named record destructuring (`{ a = label, = other } := rec;`, `{ = age: Int } := rec;`), matching tuple/call `= name` shorthand. Bare `{ name, age } := user` without `=` remains a separate proposal because it would need distinct omission and bare-`_` rules. Explicit `_ = age` binds age under the unused-allowed name.

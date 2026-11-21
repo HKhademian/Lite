@@ -25,6 +25,23 @@ checks the corresponding interactive program.
 Read [declarations](lite://doc/declarations-and-assignment), [mutability](lite://doc/mutability)
 and [operators](lite://doc/operators) for the selected contracts.
 
+## Modern collections, loops, and records
+
+```text
+io := import "core/io";
+
+nums := [-2, 3, 0, 5];
+posDoubled := loop nums { if .item > 0 { .item * 2 } }.collected;
+
+scores: mut Map<String, Int> = ["alice" = 10, "bob" = 20];
+scores["alice"] += 5;
+
+tags: Set<String> = ["lite", "typed", "lite"];
+io.outputLine(posDoubled.length, scores.size, tags.size, "hello".length);
+```
+
+Loops collect committed values with `.collected` (partial `if`/`match` tails skip non-matching items), `Map`/`Set` support bracket initializers and zero-initialization, and `List`, `[T; N]`, `Map`, `Set`, and `String` expose read-only `.length`/`.size`/`.isEmpty` properties.
+
 ## Follow a useful program
 
 - [Decisions](lite://play/decisions): conditions and short-circuiting;

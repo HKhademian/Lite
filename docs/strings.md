@@ -55,6 +55,13 @@ world";
 
 The newline inside the quotes is data. The working direction preserves literal contents exactly; indentation is not automatically removed. The formatter must not alter the data when formatting surrounding code.
 
+## String properties
+
+In the generated-TS compiler, every `String` exposes two read-only metadata properties without importing `core/text`:
+
+- `s.length` (`Int`): Unicode code-point count (matching `core/text.length(s)`).
+- `s.isEmpty` (`Bool`): `true` when `s` is `""`.
+
 ## Notes
 
 The next [focused FVP review](lite://repo/research/investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31)
