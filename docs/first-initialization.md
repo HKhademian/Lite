@@ -194,6 +194,20 @@ The byte sketch motivates region-level tracking. The exact unit of tracking rema
 
 A zero-initialized `mut point: Point;` followed by the same two field writes can lower to the same stores as the reserved-storage example. For this scalar-field record, the optimizer can elide the initial zero stores if it proves that no read or other observation can see them. The reserved form expresses first writes directly and may make that proof easier. With neither `mut` nor `var`, each initialized field is protected from later writes, including through a whole-value overwrite. The mutable example permits later field writes even if the emitted initialization stores are identical. Either form can store directly in the final location. If an intermediate state becomes observable through a read, alias, call, or exit with cleanup, the compiler must preserve the behavior required by that path. Copies can arise from evaluation order, overlapping accesses, or ownership requirements. Partial initialization alone does not require them.
 
+### Apply the same region rule to array elements
+
+An array element is a typed region, just like a record field. A first write into reserved array storage follows the same checks. The index must select a valid element and, in a single-write region, the selected element must be uninitialized on every path reaching the write. A read of one element needs that element initialized. A read of the whole array needs all of its elements initialized.
+
+```text
+items: [Int; 4] = ?;
+loop 0..=3 as i {
+    items[i] = i;
+}
+show(items);
+```
+
+This is a design case for a loop proven to visit each element exactly once and complete the writes before the read. A skipped write can leave an uninitialized element, and a repeated index can attempt an overwrite. The proof forms that the compiler recognizes remain open.
+
 ### Initialization before a pending call begins
 
 Selected on **2026-10-25**: a var local reserved with = ? may have its location selected by an earlier var argument and then receive its first whole value in a later argument before invocation. Selection does not read the payload. For use_int requiring var Int and Int, use_int(var value, ({ value = 42; 0 })) is valid after var value: Int = ?, because the caller initializes value before the callee receives it. The scalar temporary form makes the same order explicit; see [initialization during preparation](lite://doc/call-replacement-flow#initialization-during-argument-preparation-selected).
