@@ -24,17 +24,18 @@ mapProg :=
 "counts: mut Map<String, Int> = [\"x\" = 1];\n" +
 "counts[\"y\"] = 2;\n" +
 "emptyM: Map<String, Int> = [];\n" +
+"zeroM: Map<String, Int>;\n" +
 "io.outputLine(map.size(keys), keys[\"ArrowUp\"], keys[\"s\"]);\n" +
 "io.outputLine(map.size(scores), scores[\"alice\"], scores[\"bob\"]);\n" +
-"io.outputLine(map.size(counts), counts[\"x\"], counts[\"y\"], map.size(emptyM));\n";
+"io.outputLine(map.size(counts), counts[\"x\"], counts[\"y\"], map.size(emptyM), map.size(zeroM));\n";
 
 cMap := compilerTest.compileStdin(root, tsComp, mapProg, "");
 test.checkInt("map literals compile: " + cMap.stderr, 0, cMap.status);
 rMap := compilerTest.checkAndRunTs(root, cMap.stdout);
 test.checkInt("map literals run: " + rMap.stderr, 0, rMap.status);
-test.checkText("map literals stdout", "3 Direction.Up Direction.Down\n2 10 25\n2 1 2 0\n", rMap.stdout);
+test.checkText("map literals stdout", "3 Direction.Up Direction.Down\n2 10 25\n2 1 2 0 0\n", rMap.stdout);
 
-/* 2. Typed immutable & mutable Set literals (deduplication, enum shorthand, empty Set literal) */
+/* 2. Typed immutable & mutable Set literals (deduplication, enum shorthand, empty Set literal & zero-init) */
 setProg :=
 "io := import \"core/io\";\n" +
 "set := import \"core/set\";\n" +
@@ -44,15 +45,16 @@ setProg :=
 "bag: mut Set<Int> = [1, 2];\n" +
 "set.add(mut bag, 3);\n" +
 "emptyS: Set<Int> = [];\n" +
+"zeroS: Set<Int>;\n" +
 "io.outputLine(set.size(tags), set.has(tags, \"lite\"), set.has(tags, \"nope\"));\n" +
 "io.outputLine(set.size(dirs), set.has(dirs, .Up), set.has(dirs, .Left));\n" +
-"io.outputLine(set.size(bag), set.has(bag, 3), set.size(emptyS));\n";
+"io.outputLine(set.size(bag), set.has(bag, 3), set.size(emptyS), set.size(zeroS));\n";
 
 cSet := compilerTest.compileStdin(root, tsComp, setProg, "");
 test.checkInt("set literals compile: " + cSet.stderr, 0, cSet.status);
 rSet := compilerTest.checkAndRunTs(root, cSet.stdout);
 test.checkInt("set literals run: " + rSet.stderr, 0, rSet.status);
-test.checkText("set literals stdout", "2 true false\n2 true false\n3 true 0\n", rSet.stdout);
+test.checkText("set literals stdout", "2 true false\n2 true false\n3 true 0 0\n", rSet.stdout);
 
 /* 3. Compile-time rejections */
 compilerTest.assertCompileError(root, tsComp, "map missing equals", "m: Map<String, Int> = [\"a\"];\n", "1:27: expected = after map key in Map literal\n");
