@@ -568,6 +568,12 @@ default and returns `false`. The other three expressions, `a + b`, `a + c`,
 and `a == c`, require an explicitly defined operation for those operand types.
 The syntax for defining such operations remains open. These are design cases.
 
+A distinct type that uses its underlying type's equality can also reuse its
+hash when the underlying type supports hashing. `Map<UserID, User>` still
+requires a `UserID` key, even if the corresponding `Int` has the same hash.
+If `UserID` defines its own equality, equal keys must produce the same hash
+under that rule. The declaration syntax for custom equality and hashing is open.
+
 Treat type identity, conversion, operations, and physical representation as separate decisions. The user's direction distinguishes contextual fresh literals from established typed values; a typed declaration does not itself authorize converting an established String or another distinct value into `UserID`.
 
 ## Expanded assessment
