@@ -18,4 +18,4 @@ All iteration in Lite flows through `loop`—from `while`-style conditional loop
 1. Change `if item > 50 { break item; }` to `if item > 100` to see what `.value` and `.count` become when the loop finishes naturally.
 2. Compute a sum with `loop [1, 2, 3, 4] { .value + .item }` or filter-transform with `loop [-2, 3, 5] { if .item > 0 { .item * 2 } }.collected`.
 
-See [Handbook: Conditionals, Match & Loops](lite://handbook/conditionals-match-and-loops) and [Loops](lite://doc/loops).
+See [Handbook: Conditionals, Match & Loops](lite://handbook/conditionals-match-and-loops), [Loops](lite://doc/loops), [Loop collect & filter showcase](lite://play/loop-collect-filter), and the [Loop .collected Filtering drill](lite://gym/drills/loop-collected-filter).

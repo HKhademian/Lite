@@ -18,4 +18,4 @@ Model structured data with nominal `record` types, explicit field defaults, cont
 1. Switch `{ endpoint = host, ... }` to a `var { ... }` pattern and adjust `endpoint` before printing.
 2. Add a second `record` type with a nested record default and destructure both levels into locals.
 
-See [Handbook: Tuples, Arrays, Lists & Aliases](lite://handbook/tuples-arrays-lists-and-aliases), [Records](lite://doc/records), and [Aggregate Patterns](lite://doc/aggregate-patterns).
+See [Handbook: Tuples, Arrays, Lists & Aliases](lite://handbook/tuples-arrays-lists-and-aliases), [Records](lite://doc/records), [Aggregate Patterns](lite://doc/aggregate-patterns), and the [Copy-on-Write Record Field Updates drill](lite://gym/drills/record-field-updates).
