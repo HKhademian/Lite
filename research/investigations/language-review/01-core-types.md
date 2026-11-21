@@ -395,6 +395,13 @@ is no active member. No default wrapper, bounds policy, or type spelling is
 selected by this comparison. A proof that the access is in bounds removes
 this failure case from the design example.
 
+The follow-up compares those alternatives with ordinary list indexing. Plain
+tuple `pair[i]` could use the same typed bounds Panic as `items[i]`, keeping
+the bounds policy consistent and letting the possible slot types determine
+the success type. A separate checked access could represent expected absence
+as a value. Panic is a candidate for plain tuple indexing. The default and
+any checked syntax remain open. [Checked fault policy](../../../docs/checked-fault-policy.md)
+
 The exact interpretation of “index values must be known at compile time” needs
 clarification alongside the dynamic-index requirement: for example, whether the
 compiler must know the exact value, a finite set, a range, or can conservatively
