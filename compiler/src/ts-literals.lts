@@ -63,6 +63,10 @@ pub boolLiteralCode := fn(value: Bool): String {
 
 /** Emits one ordinary list value copy as a fresh TypeScript array so later mutation cannot reach the source. */
 pub listCopyCode := fn(code: String): String {
+    if textLib.startsWithAt(code, 0, "[...(") and textLib.endsWith(code, ")]") and
+    textLib.indexOfText(code, ")]", 0) == textLib.length(code) - 2 {
+        return code;
+    }
     "[...(" + code + ")]"
 }
 
@@ -85,15 +89,15 @@ pub logicCode := fn(op: String, left: String, right: String): String {
 /** Emits a kind-aware TypeScript comparison; equality uses strict operators and not-less/not-more spellings invert the ordering. Bool comparisons coerce through `Boolean` so literal-type narrowing cannot reject them. */
 pub comparisonCode := fn(op: String, kind: String, left: String, right: String): String {
     operator := if op == "==" { "===" }
-        else if op == "=!=" { "!==" }
-        else if op == "<" { "<" }
-        else if op == "<!" { ">=" }
-        else if op == "<=" { "<=" }
-        else if op == "<!=" { ">" }
-        else if op == ">" { ">" }
-        else if op == ">!" { "<=" }
-        else if op == ">=" { ">=" }
-        else { "<" };
+    else if op == "=!=" { "!==" }
+    else if op == "<" { "<" }
+    else if op == "<!" { ">=" }
+    else if op == "<=" { "<=" }
+    else if op == "<!=" { ">" }
+    else if op == ">" { ">" }
+    else if op == ">!" { "<=" }
+    else if op == ">=" { ">=" }
+    else { "<" };
     if kind == numeric.KIND_BOOL {
         "(Boolean(" + left + ") " + operator + " Boolean(" + right + "))"
     } else {

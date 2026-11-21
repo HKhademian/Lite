@@ -76,6 +76,23 @@ co3 := compilerTest.compileStdinWithOpts(root, cComp, root, cSrc, "", "", ["-O3"
 test.checkInt("C backend -O3 compiles", 0, co3.status);
 test.check("C backend -O3 inlines inc", not text.containsText(co3.stdout, "lt_fn_inc("));
 
+/* 2-argument leaf inlining at -O3 and zero-copy immutable list loop + no double [...([...(...)])] */
+twoArgSrc :=
+"io := import \"core/io\";\n" +
+"addPair := fn(a: Int, b: Int): Int { a + b };\n" +
+"nums: List<Int> = [1, 2, 3];\n" +
+"var sum := 0;\n" +
+"loop nums as n { sum = addPair(sum, n); }\n" +
+"io.outputLine(sum);\n";
+t3 := compilerTest.compileStdinWithOpts(root, tsComp, root, twoArgSrc, "", "", ["-O3"]);
+test.checkInt("2-arg -O3 compiles", 0, t3.status);
+test.check("-O3 inlines 2-arg leaf addPair", not text.containsText(t3.stdout, "function liteFn_addPair"));
+test.check("no double array spread clone", not text.containsText(t3.stdout, "[...([...("));
+test.check("immutable list loop avoids array spread copy", text.containsText(t3.stdout, "for (const lite_n of (lite_nums))"));
+rt3 := compilerTest.checkAndRunTs(root, t3.stdout);
+test.checkInt("2-arg -O3 runs", 0, rt3.status);
+test.checkText("2-arg -O3 stdout", "6\n", rt3.stdout);
+
 /* Invalid optimization level is rejected cleanly */
 badO4 := compilerTest.compileStdinWithOpts(root, tsComp, root, cSrc, "", "", ["-O4"]);
 test.check("rejects -O4", badO4.status == 2);

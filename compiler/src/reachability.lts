@@ -1562,14 +1562,15 @@ isHostPlayBridgeFn := fn(runtime: String): Bool {
     textLib.endsWith(runtime, "_canvas_onPointerUp")
 };
 
-/** Inlines small single-`RETURN` pure leaf functions (0 or 1 parameter) at simple call sites in O(n) for `-O3`. */
+/** Inlines small single-`RETURN` pure leaf functions (0, 1, or 2 parameters) at simple call sites using fast `indexOfText` jumping for `-O3`. */
 inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
     var total := 0;
     loop items { total = total + 1; }
     if total < 3 { return items; }
     paramPrefix := "lite_";
     leafBodies: mut Map<String, String>;
-    leafParams: mut Map<String, String>;
+    leafParams1: mut Map<String, String>;
+    leafParams2: mut Map<String, String>;
     var fnDepth := 0;
     var i := 0;
     loop i < total {
@@ -1592,13 +1593,32 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
                     enc := it.textValue;
                     if enc == "" {
                         leafBodies[it.runtime] = retCode;
-                        leafParams[it.runtime] = "";
-                    } else if textLib.indexOfText(enc, "|", 0) < 0 {
-                        eqPos := textLib.indexOfText(enc, "=", 0);
-                        if eqPos > 0 {
-                            pName := textLib.slice(enc, 0, eqPos);
-                            leafBodies[it.runtime] = retCode;
-                            leafParams[it.runtime] = paramPrefix + pName;
+                        leafParams1[it.runtime] = "";
+                        leafParams2[it.runtime] = "";
+                    } else {
+                        pipe1 := textLib.indexOfText(enc, "|", 0);
+                        if pipe1 < 0 {
+                            eqPos := textLib.indexOfText(enc, "=", 0);
+                            if eqPos > 0 {
+                                pName := textLib.slice(enc, 0, eqPos);
+                                leafBodies[it.runtime] = retCode;
+                                leafParams1[it.runtime] = paramPrefix + pName;
+                                leafParams2[it.runtime] = "";
+                            }
+                        } else if textLib.indexOfText(enc, "|", pipe1 + 1) < 0 {
+                            part1 := textLib.slice(enc, 0, pipe1);
+                            part2 := textLib.slice(enc, pipe1 + 1, textLib.length(enc));
+                            eq1 := textLib.indexOfText(part1, "=", 0);
+                            eq2 := textLib.indexOfText(part2, "=", 0);
+                            if eq1 > 0 and eq2 > 0 {
+                                p1 := paramPrefix + textLib.slice(part1, 0, eq1);
+                                p2 := paramPrefix + textLib.slice(part2, 0, eq2);
+                                if p1 =!= p2 {
+                                    leafBodies[it.runtime] = retCode;
+                                    leafParams1[it.runtime] = p1;
+                                    leafParams2[it.runtime] = p2;
+                                }
+                            }
                         }
                     }
                 }
@@ -1613,29 +1633,39 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
 
     fnPrefix := if target == ir.TARGET_TS { "liteFn" } else { "lt_fn_" };
     inlineInCode := fn(code: String): String {
-        if code == "" or textLib.indexOfText(code, fnPrefix, 0) < 0 { return code; }
+        firstHit := textLib.indexOfText(code, fnPrefix, 0);
+        if code == "" or firstHit < 0 { return code; }
         cLen := textLib.length(code);
         var out := "";
+        var copyFrom := 0;
         var cursor := 0;
+        var nextFn := firstHit;
+        var nextDQuote := textLib.indexOfText(code, "\"", 0);
+        var nextSQuote := textLib.indexOfText(code, "'", 0);
         var changed := false;
-        loop cursor < cLen {
-            ch := textLib.at(code, cursor);
-            if ch == "\"" or ch == "'" {
-                qEnd := syntax.skipAliasString(code, cursor);
-                out = out + textLib.slice(code, cursor, qEnd);
-                cursor = qEnd;
+        loop nextFn >= 0 {
+            if nextDQuote >= 0 and nextDQuote < cursor { nextDQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextSQuote >= 0 and nextSQuote < cursor { nextSQuote = textLib.indexOfText(code, "'", cursor); }
+            var qHit := -1;
+            if nextDQuote >= 0 and nextDQuote < nextFn { qHit = nextDQuote; }
+            if nextSQuote >= 0 and nextSQuote < nextFn and (qHit < 0 or nextSQuote < qHit) { qHit = nextSQuote; }
+            if qHit >= 0 {
+                cursor = syntax.skipAliasString(code, qHit);
+                if nextFn < cursor { nextFn = textLib.indexOfText(code, fnPrefix, cursor); }
                 continue;
             }
-            if textLib.startsWithAt(code, cursor, fnPrefix) and
-            (cursor == 0 or (not textLib.isNameContinue(textLib.at(code, cursor - 1)) and textLib.at(code, cursor - 1) =!= "$")) {
-                var nameEnd := textLib.skipName(code, cursor);
+            prevOk := nextFn == 0 or (not textLib.isNameContinue(textLib.at(code, nextFn - 1)) and textLib.at(code, nextFn - 1) =!= "$");
+            if prevOk {
+                var nameEnd := textLib.skipName(code, nextFn);
                 loop nameEnd < cLen and textLib.at(code, nameEnd) == "$" {
                     nameEnd = textLib.skipName(code, nameEnd + 1);
                 }
-                fnName := textLib.slice(code, cursor, nameEnd);
+                fnName := textLib.slice(code, nextFn, nameEnd);
                 if nameEnd < cLen and textLib.at(code, nameEnd) == "(" and mapLib.has(leafBodies, fnName) {
                     var pDepth := 1;
                     var scan := nameEnd + 1;
+                    var commaPos := -1;
+                    var commaCount := 0;
                     loop scan < cLen and pDepth > 0 {
                         sc := textLib.at(code, scan);
                         if sc == "\"" or sc == "'" {
@@ -1644,31 +1674,56 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
                         }
                         if sc == "(" { pDepth = pDepth + 1; }
                         else if sc == ")" { pDepth = pDepth - 1; }
+                        else if sc == "," and pDepth == 1 {
+                            commaPos = scan;
+                            commaCount = commaCount + 1;
+                        }
                         scan = scan + 1;
                     }
                     if pDepth == 0 {
-                        rawArg := textLib.trim(textLib.slice(code, nameEnd + 1, scan - 1));
-                        pRt := leafParams[fnName];
+                        rawArgs := textLib.trim(textLib.slice(code, nameEnd + 1, scan - 1));
+                        p1 := leafParams1[fnName];
+                        p2 := leafParams2[fnName];
                         body := leafBodies[fnName];
-                        if pRt == "" and rawArg == "" {
-                            out = out + "(" + body + ")";
+                        if p1 == "" and rawArgs == "" {
+                            out = out + textLib.slice(code, copyFrom, nextFn) + "(" + body + ")";
+                            copyFrom = scan;
                             cursor = scan;
                             changed = true;
+                            nextFn = textLib.indexOfText(code, fnPrefix, cursor);
                             continue;
-                        } else if pRt =!= "" and isSimpleInlineArg(rawArg) {
-                            subArg := widenInlineArgForTarget(target, rawArg);
-                            out = out + "(" + replaceParamToken(body, pRt, subArg) + ")";
+                        } else if p1 =!= "" and p2 == "" and commaCount == 0 and isSimpleInlineArg(rawArgs) {
+                            subArg := widenInlineArgForTarget(target, rawArgs);
+                            out = out + textLib.slice(code, copyFrom, nextFn) + "(" + replaceParamToken(body, p1, subArg) + ")";
+                            copyFrom = scan;
                             cursor = scan;
                             changed = true;
+                            nextFn = textLib.indexOfText(code, fnPrefix, cursor);
                             continue;
+                        } else if p1 =!= "" and p2 =!= "" and commaCount == 1 and commaPos > nameEnd {
+                            arg1 := textLib.trim(textLib.slice(code, nameEnd + 1, commaPos));
+                            arg2 := textLib.trim(textLib.slice(code, commaPos + 1, scan - 1));
+                            if isSimpleInlineArg(arg1) and isSimpleInlineArg(arg2) and
+                            textLib.indexOfText(arg1, p2, 0) < 0 {
+                                sub1 := widenInlineArgForTarget(target, arg1);
+                                sub2 := widenInlineArgForTarget(target, arg2);
+                                step1 := replaceParamToken(body, p1, sub1);
+                                step2 := replaceParamToken(step1, p2, sub2);
+                                out = out + textLib.slice(code, copyFrom, nextFn) + "(" + step2 + ")";
+                                copyFrom = scan;
+                                cursor = scan;
+                                changed = true;
+                                nextFn = textLib.indexOfText(code, fnPrefix, cursor);
+                                continue;
+                            }
                         }
                     }
                 }
             }
-            out = out + ch;
-            cursor = cursor + 1;
+            cursor = nextFn + 1;
+            nextFn = textLib.indexOfText(code, fnPrefix, cursor);
         }
-        if changed { out } else { code }
+        if changed { out + textLib.slice(code, copyFrom, cLen) } else { code }
     };
 
     rewritten: mut Items = [];

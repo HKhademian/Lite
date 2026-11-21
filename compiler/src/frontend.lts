@@ -2338,6 +2338,18 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     }
                     foundW
                 };
+                seqIsImmutableLocal := {
+                    var foundImm := false;
+                    if isListKind(parsed.kind) or isArrayKind(parsed.kind) {
+                        loop locals as locI {
+                            if locI.runtime == parsed.code and not locI.writable {
+                                foundImm = true;
+                                break;
+                            }
+                        }
+                    }
+                    foundImm
+                };
                 if textLib.wordAt(source, afterParsed, "as") {
                     if not isListKind(parsed.kind) and not isArrayKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) {
                         failAt(source, position, prefix, "loop sequence must be a List, Array, Map, or Set, got " + displayKind(parsed.kind));
@@ -2370,6 +2382,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                         sequenceCode = parsed.code;
+                        if target == TARGET_TS and seqIsImmutableLocal {
+                            loopSeqMode = 1;
+                        }
                     }
                     position = skipTrivia(source, itemEnd, prefix);
                 } else if isListKind(parsed.kind) or isArrayKind(parsed.kind) or types.isMapKind(parsed.kind) or types.isSetKind(parsed.kind) {
@@ -2394,6 +2409,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                         sequenceCode = parsed.code;
+                        if target == TARGET_TS and seqIsImmutableLocal {
+                            loopSeqMode = 1;
+                        }
                     }
                     position = afterParsed;
                 } else {
