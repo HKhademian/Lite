@@ -847,6 +847,7 @@ pub fnShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
 
 /** True when `kind` is or contains a callable function kind (for display and backend checks). */
 pub containsFnKind := fn(kind: String): Bool {
+    if textLib.indexOfText(kind, "fn(", 0) < 0 { return false; }
     if isFnKind(kind) { return true; }
     if isListKind(kind) { return self(listElementKind(kind)); }
     if isMapKind(kind) { return self(mapKeyKind(kind)) or self(mapValueKind(kind)); }

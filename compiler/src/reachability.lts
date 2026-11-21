@@ -1482,11 +1482,60 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
     varOpt := optimizeStraightLineVars(simplified, target);
     pruned := unwrapSyntheticScopes(pruneBlockScopedItems(varOpt, target));
     var hasPrunable := false;
-    var seedTokens := emptyTokenBuckets();
+    reachable: mut Set<String>;
+    addCodeTokens := fn(code: String): Unit {
+        var nextLite := textLib.indexOfText(code, "lite", 0);
+        var nextLt := textLib.indexOfText(code, "lt_", 0);
+        if nextLite < 0 and nextLt < 0 { return; }
+        var nextQuote := textLib.indexOfText(code, "\"", 0);
+        size := textLib.length(code);
+        var cursor := 0;
+        loop cursor < size {
+            if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
+            if nextLt >= 0 and nextLt < cursor { nextLt = textLib.indexOfText(code, "lt_", cursor); }
+            var hit := -1;
+            if nextLite >= 0 and (nextLt < 0 or nextLite < nextLt) {
+                hit = nextLite;
+            } else if nextLt >= 0 {
+                hit = nextLt;
+            }
+            if hit < 0 { return; }
+            if nextQuote >= 0 and nextQuote < hit {
+                if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+                if nextQuote >= 0 and nextQuote < hit {
+                    cursor = syntax.skipAliasString(code, nextQuote);
+                    continue;
+                }
+            }
+            if hit > 0 {
+                prev := textLib.at(code, hit - 1);
+                if prev == "$" or textLib.isNameContinue(prev) {
+                    cursor = textLib.skipName(code, hit + 3);
+                    loop cursor < size and textLib.at(code, cursor) == "$" {
+                        cursor = textLib.skipName(code, cursor + 1);
+                    }
+                    continue;
+                }
+            }
+            var endPos := textLib.skipName(code, hit);
+            loop endPos < size and textLib.at(code, endPos) == "$" {
+                endPos = textLib.skipName(code, endPos + 1);
+            }
+            name := textLib.slice(code, hit, endPos);
+            token := if textLib.startsWithAt(name, 0, "lt_fn_") or textLib.startsWithAt(name, 0, "liteFn$") or
+            textLib.startsWithAt(name, 0, "liteFn_") {
+                name + "("
+            } else {
+                name
+            };
+            setLib.add(mut reachable, token);
+            cursor = endPos;
+        }
+    };
     var fnDepth := 0;
     var blockDepth := 0;
     var nextIsPure := false;
-    pureDecls: mut List<String> = [];
+    pureDecls: mut Set<String>;
     loop pruned as item {
         if item.kind == ir.ITEM_KIND_PURE_GLOBAL {
             nextIsPure = true;
@@ -1512,26 +1561,25 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
         nextIsPure = false;
         if item.kind == ir.ITEM_KIND_SCOPE or item.kind == ir.ITEM_KIND_IF or item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ {
             blockDepth = blockDepth + 1;
-            seedTokens = codeReachableTokensSet(item.code, seedTokens);
+            addCodeTokens(item.code);
         } else if item.kind == ir.ITEM_KIND_END_SCOPE or item.kind == ir.ITEM_KIND_END_IF or item.kind == ir.ITEM_KIND_END_LOOP {
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if isPureDecl {
             hasPrunable = true;
-            listLib.pushBack(mut pureDecls, item.runtime);
+            setLib.add(mut pureDecls, item.runtime);
         } else if item.kind =!= ir.ITEM_KIND_IMPORT and item.kind =!= ir.ITEM_KIND_PUBLIC_FUNCTION and item.kind =!= ir.ITEM_KIND_PUBLIC_VALUE and
         item.kind =!= ir.ITEM_KIND_PUBLIC_TYPE and item.kind =!= ir.ITEM_KIND_NOOP {
-            seedTokens = codeReachableTokensSet(item.code, seedTokens);
+            addCodeTokens(item.code);
             if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
-                seedTokens = tokenBucketAdd(seedTokens, item.runtime);
+                setLib.add(mut reachable, item.runtime);
             }
         }
     }
     if not hasPrunable { return pruned; }
 
-    var reachable := seedTokens;
-    var scanned := emptyTokenBuckets();
+    scanned: mut Set<String>;
     loop true {
-        beforeCount := reachable.count;
+        beforeCount := setLib.size(reachable);
         var scanFnDepth := 0;
         var scanBlockDepth := 0;
         var scanBody := false;
@@ -1541,8 +1589,8 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
             } else if item.kind == ir.ITEM_KIND_FUNCTION_START {
                 if scanFnDepth == 0 {
                     token := item.runtime + "(";
-                    scanBody = tokenBucketHas(reachable, token) and not tokenBucketHas(scanned, token);
-                    if scanBody { scanned = tokenBucketAdd(scanned, token); }
+                    scanBody = setLib.has(reachable, token) and not setLib.has(scanned, token);
+                    if scanBody { setLib.add(mut scanned, token); }
                 }
                 scanFnDepth = scanFnDepth + 1;
             } else if item.kind == ir.ITEM_KIND_FUNCTION_END {
@@ -1550,17 +1598,17 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
                 if scanFnDepth == 0 { scanBody = false; }
             } else if scanFnDepth > 0 {
                 if scanBody {
-                    reachable = codeReachableTokensSet(item.code, reachable);
+                    addCodeTokens(item.code);
                     if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
-                        reachable = tokenBucketAdd(reachable, item.runtime);
+                        setLib.add(mut reachable, item.runtime);
                     }
                 }
             } else {
                 if scanBlockDepth == 0 and isTopDeclKind(item.kind) {
-                    if listLib.listContainsText(pureDecls, item.runtime) and tokenBucketHas(reachable, item.runtime) and
-                    not tokenBucketHas(scanned, item.runtime) {
-                        scanned = tokenBucketAdd(scanned, item.runtime);
-                        reachable = codeReachableTokensSet(item.code, reachable);
+                    if setLib.has(pureDecls, item.runtime) and setLib.has(reachable, item.runtime) and
+                    not setLib.has(scanned, item.runtime) {
+                        setLib.add(mut scanned, item.runtime);
+                        addCodeTokens(item.code);
                     }
                 }
                 if item.kind == ir.ITEM_KIND_SCOPE or item.kind == ir.ITEM_KIND_IF or item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ {
@@ -1570,7 +1618,7 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
                 }
             }
         }
-        if reachable.count == beforeCount { break; }
+        if setLib.size(reachable) == beforeCount { break; }
     }
 
     filtered: mut Items = [];
@@ -1585,7 +1633,7 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
         }
         if item.kind == ir.ITEM_KIND_FUNCTION_START {
             nextDeclPure = false;
-            if keepFnDepth == 0 { keepFn = tokenBucketHas(reachable, item.runtime + "("); }
+            if keepFnDepth == 0 { keepFn = setLib.has(reachable, item.runtime + "("); }
             keepFnDepth = keepFnDepth + 1;
             if keepFn { listLib.pushBack(mut filtered, item); }
         } else if item.kind == ir.ITEM_KIND_FUNCTION_END {
@@ -1600,7 +1648,7 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
         } else {
             dropDecl := keepBlockDepth == 0 and isTopDeclKind(item.kind) and
             (nextDeclPure or ((target == ir.TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code))) and
-            not tokenBucketHas(reachable, item.runtime);
+            not setLib.has(reachable, item.runtime);
             nextDeclPure = false;
             if item.kind == ir.ITEM_KIND_SCOPE or item.kind == ir.ITEM_KIND_IF or item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ {
                 keepBlockDepth = keepBlockDepth + 1;
