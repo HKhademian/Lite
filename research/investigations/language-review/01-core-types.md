@@ -390,6 +390,17 @@ have type `X`, the other slots do not affect `p[i]`. A write of an `X` value
 fits every reachable slot under the usual writable-access rules. No wrapper
 is needed merely to distinguish which of those same-typed slots was chosen.
 
+For writable tuples with different reachable slot types, the user proposes
+emitting a write specialized to the slot chosen at runtime. Suppose slot 0
+has type `Int` and slot 1 has type `Int | String`. An already typed `Int` value
+fits both. The generated write stores the integer directly for slot 0. For
+slot 1 it constructs the union with `Int` as the active member and stores it.
+The compiler checks that the assigned value fits every reachable slot and
+preserves single evaluation of the index and value and any required replacement
+cleanup. A `String` write needs a proof excluding slot 0. This is a proposed
+lowering for dynamic writes. It does not select an encoding or imply compiler
+support.
+
 If the index might be out of bounds, the user wants to consider returning a
 value that represents the failed access. `Option<T>` would return `None`.
 `Result<T, BoundsError>` would expose a typed error and could carry the index
