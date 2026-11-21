@@ -5,6 +5,9 @@ board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
 list := import "core/list";
+map := import "core/map";
+rand := import "core/random";
+set := import "core/set";
 
 tile := 16;
 cols := 20;
@@ -12,103 +15,198 @@ rows := 12;
 ctx := canvas.play(width = cols * tile, height = rows * tile, title = "Grid Snake · Arrows/WASD");
 bg := canvas.rgb(10, 15, 22);
 
-Cell := type (x: Int, y: Int);
+Cell := record {
+    x: Int;
+    y: Int;
+};
 
-var snake: mut List<Cell> = [(x = 8, y = 6), (x = 7, y = 6), (x = 6, y = 6)];
-var dirX := 1;
-var dirY := 0;
-var foodX := 14;
-var foodY := 6;
-var seed := 7;
-var gameOver := false;
-var acc := 0.0;
+Direction := enum {
+    Up;
+    Down;
+    Left;
+    Right;
+};
+
+GameStatus := enum {
+    Playing;
+    GameOver;
+};
+
+GameState := record {
+    dir: Direction;
+    food: Cell;
+    rng: rand.Rng;
+    status: GameStatus;
+    acc: Float;
+};
+
+cellKey := fn(c: Cell): Int { (c.y * cols) + c.x };
+
+dirDelta := fn(d: Direction): (dx: Int, dy: Int) {
+    match d {
+        .Up { (dx = 0, dy = -1) }
+        .Down { (dx = 0, dy = 1) }
+        .Left { (dx = -1, dy = 0) }
+        .Right { (dx = 1, dy = 0) }
+    }
+};
+
+isOpposite := fn(a: Direction, b: Direction): Bool {
+    da := dirDelta(a);
+    db := dirDelta(b);
+    (da.dx + db.dx == 0) and (da.dy + db.dy == 0)
+};
+
+keyBindings: mut Map<String, Direction>;
+keyBindings["ArrowUp"] = .Up;
+keyBindings["w"] = .Up;
+keyBindings["ArrowDown"] = .Down;
+keyBindings["s"] = .Down;
+keyBindings["ArrowLeft"] = .Left;
+keyBindings["a"] = .Left;
+keyBindings["ArrowRight"] = .Right;
+keyBindings["d"] = .Right;
+
+snake: mut List<Cell> = [];
+occupied: mut Set<Int>;
+
+var state := GameState {
+    dir = .Right,
+    food = Cell { x = 14, y = 6 },
+    rng = rand.create(7),
+    status = .Playing,
+    acc = 0.0
+};
 
 resetGame := fn(): Unit {
-    snake = [(x = 8, y = 6), (x = 7, y = 6), (x = 6, y = 6)];
-    dirX = 1;
-    dirY = 0;
-    foodX = 14;
-    foodY = 6;
-    gameOver = false;
-}
+    list.clear(mut snake);
+    set.clear(mut occupied);
+    initial: List<Cell> = [Cell { x = 8, y = 6 }, Cell { x = 7, y = 6 }, Cell { x = 6, y = 6 }];
+    loop initial as c {
+        list.pushBack(mut snake, c);
+        set.add(mut occupied, cellKey(c));
+    }
+    state = GameState {
+        dir = .Right,
+        food = Cell { x = 14, y = 6 },
+        rng = state.rng,
+        status = .Playing,
+        acc = 0.0
+    };
+};
 
 render := fn(): Unit {
     canvas.clear(bg);
     board.drawRect(0, 0, ctx.width, ctx.height, canvas.rgba(255, 255, 255, 28));
-    /* Food pulse */
-    fx := (foodX * tile) + (tile / 2);
-    fy := (foodY * tile) + (tile / 2);
+
+    fx := (state.food.x * tile) + (tile / 2);
+    fy := (state.food.y * tile) + (tile / 2);
     board.fillCircle(fx, fy, 7, canvas.rgba(240, 118, 128, 60));
     board.fillCircle(fx, fy, 5, canvas.rgb(240, 118, 128));
 
     var idx := 0;
     loop snake as seg {
-        col := if gameOver {
-            canvas.rgb(214, 110, 118)
-        } else if idx == 0 {
-            canvas.rgb(154, 232, 162)
-        } else {
-            canvas.rgb(98, 186, 126)
+        col := match state.status {
+            .GameOver { canvas.rgb(214, 110, 118) }
+            .Playing {
+                if idx == 0 { canvas.rgb(154, 232, 162) } else { canvas.rgb(98, 186, 126) }
+            }
         };
         canvas.fillRect((seg.x * tile) + 1, (seg.y * tile) + 1, tile - 2, tile - 2, col);
         idx += 1;
     }
-}
+};
+
+endGame := fn(): Unit {
+    state = GameState {
+        dir = state.dir,
+        food = state.food,
+        rng = state.rng,
+        status = .GameOver,
+        acc = 0.0
+    };
+    audio.tone(frequency = 170, durationMs = 180, volume = 18);
+    render();
+};
 
 onCanvasInit := fn(): Unit {
     render();
-}
+};
 
 onCanvasUpdate := fn(dt: Float): Int {
-    if gameOver { return 0; }
-    acc = acc + dt;
-    if acc >= 0.14 {
-        acc = 0.0;
-        head := snake[0];
-        nx := head.x + dirX;
-        ny := head.y + dirY;
-        if nx < 0 or nx >= cols or ny < 0 or ny >= rows {
-            gameOver = true;
-            audio.tone(frequency = 170, durationMs = 180, volume = 18);
-            render();
-            return 0;
-        }
-        var hitSelf := false;
-        loop snake as seg {
-            if seg.x == nx and seg.y == ny { hitSelf = true; }
-        }
-        if hitSelf {
-            gameOver = true;
-            audio.tone(frequency = 170, durationMs = 180, volume = 18);
-            render();
-            return 0;
-        }
-        ate := nx == foodX and ny == foodY;
-        list.pushFront(mut snake, (x = nx, y = ny));
-        if ate {
-            seed = (seed * 7) + 11;
-            foodX = 1 + (seed % (cols - 2));
-            foodY = 1 + ((seed / 3) % (rows - 2));
-            audio.tone(frequency = 587, durationMs = 80, volume = 16);
-        } else {
-            _ := list.popBack(mut snake);
-        }
-        render();
+    if state.status == .GameOver { return 0; }
+    nextAcc := state.acc + dt;
+    if nextAcc < 0.14 {
+        state = GameState {
+            dir = state.dir,
+            food = state.food,
+            rng = state.rng,
+            status = state.status,
+            acc = nextAcc
+        };
+        return 0;
     }
+
+    head := snake[0];
+    delta := dirDelta(state.dir);
+    next := Cell { x = head.x + delta.dx, y = head.y + delta.dy };
+    if next.x < 0 or next.x >= cols or next.y < 0 or next.y >= rows {
+        endGame();
+        return 0;
+    }
+    if set.has(occupied, cellKey(next)) {
+        endGame();
+        return 0;
+    }
+
+    ate := next.x == state.food.x and next.y == state.food.y;
+    list.pushFront(mut snake, next);
+    set.add(mut occupied, cellKey(next));
+    if ate {
+        rx := rand.rangeInt(state.rng, 1, cols - 1);
+        ry := rand.rangeInt(rx.next, 1, rows - 1);
+        state = GameState {
+            dir = state.dir,
+            food = Cell { x = rx.value, y = ry.value },
+            rng = ry.next,
+            status = .Playing,
+            acc = 0.0
+        };
+        audio.tone(frequency = 587, durationMs = 80, volume = 16);
+    } else {
+        tail := list.popBack(mut snake);
+        _removed := set.remove(mut occupied, cellKey(tail));
+        state = GameState {
+            dir = state.dir,
+            food = state.food,
+            rng = state.rng,
+            status = .Playing,
+            acc = 0.0
+        };
+    }
+    render();
     0
-}
+};
 
 onCanvasKeyDown := fn(key: String): Unit {
-    if (key == "ArrowLeft" or key == "a") and dirX == 0 { dirX = -1; dirY = 0; }
-    else if (key == "ArrowRight" or key == "d") and dirX == 0 { dirX = 1; dirY = 0; }
-    else if (key == "ArrowUp" or key == "w") and dirY == 0 { dirX = 0; dirY = -1; }
-    else if (key == "ArrowDown" or key == "s") and dirY == 0 { dirX = 0; dirY = 1; }
-    else if key == " " {
+    if key == " " {
         resetGame();
         render();
         audio.tone(frequency = 440, durationMs = 60, volume = 14);
+        return;
     }
-}
+    hit := map.get(keyBindings, key);
+    if hit.found and not isOpposite(state.dir, hit.value) {
+        state = GameState {
+            dir = hit.value,
+            food = state.food,
+            rng = state.rng,
+            status = state.status,
+            acc = state.acc
+        };
+    }
+};
 
+resetGame();
 render();
 io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);
