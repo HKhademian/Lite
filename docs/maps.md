@@ -6,18 +6,18 @@ Status: **generated-TS `Map<K, V>` and `core/map` slice implemented; C backend m
 
 ## Purpose and beginner examples
 
-Declare a map with an explicit `Map<K, V>` type annotation. Zero-initialization produces an empty map; reserved storage (`= ?`) is not supported for `Map`.
+Declare a map with a `[key = value, ...]` literal (inferred or explicitly typed), an empty typed `[]` literal, or zero-initialization (`Map<K, V>;`). Reserved storage (`= ?`) is not supported for `Map`.
 
 ```text
 io := import "core/io";
 map := import "core/map";
 
-scores: mut Map<String, Int>;
-scores["alice"] = 10;
+defaults: Map<String, Int> = ["alice" = 10, "bob" = 25];
+scores: mut Map<String, Int> = ["alice" = 10];
 map.set(mut scores, "bob", 25);
 scores["alice"] = 18;
 
-io.outputLine(scores["alice"], map.getOr(scores, "carol", 0));
+io.outputLine(scores["alice"], map.getOr(scores, "carol", 0), map.size(defaults));
 ```
 
 Run the interactive [typed maps example](lite://play/example/typed-maps), follow the [typed maps lesson](lite://learn/types/typed-maps), or inspect the [core/map module API](lite://module/core/map).

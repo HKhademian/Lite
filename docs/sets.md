@@ -6,18 +6,17 @@ Status: **generated-TS `Set<T>` and `core/set` slice implemented; C backend set 
 
 ## Purpose and beginner examples
 
-Declare a set with an explicit `Set<T>` type annotation. Zero-initialization produces an empty set; reserved storage (`= ?`) is not supported for `Set`.
+Declare a set with an explicit `Set<T>` type annotation, optionally initialized with a `[elem, ...]` or `[]` literal. Zero-initialization also produces an empty set; reserved storage (`= ?`) is not supported for `Set`.
 
 ```text
 io := import "core/io";
 set := import "core/set";
 
-tags: mut Set<String>;
-set.add(mut tags, "lite");
+fixedTags: Set<String> = ["lite", "typed", "lite"];
+tags: mut Set<String> = ["lite"];
 set.add(mut tags, "typed");
-set.add(mut tags, "lite");
 
-io.outputLine(tags, set.size(tags), set.has(tags, "lite"));
+io.outputLine(tags, set.size(tags), set.has(fixedTags, "lite"));
 ```
 
 Run the interactive [typed sets example](lite://play/example/typed-sets), follow the [typed sets lesson](lite://learn/types/typed-sets), or inspect the [core/set module API](lite://module/core/set).

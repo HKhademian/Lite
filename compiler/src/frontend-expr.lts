@@ -239,15 +239,113 @@ parseUnarySignExpr := fn(target: String, source: String, start: Int, ch: String,
     if inferMode { ctx.collectParsedMarkers("", operand) } else { "" })
 };
 
-/** Parses `[a, b, ...]` list or fixed-size array literals starting at `start`. */
+/** Parses `[a, b, ...]` list/array/set literals and `[k = v, ...]` map literals starting at `start`. */
 parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     var cursor := syntax.skipTrivia(source, start + 1, prefix);
     isTailList := textLib.startsWithAt(expected, 0, "TailList<");
+    isMapTarget := types.isMapKind(expected);
+    isSetTarget := types.isSetKind(expected);
     isListTarget := types.isListKind(expected) or isTailList;
+
+    /* Empty bracket literal `[]` with Map<K, V> or Set<T> expected type */
+    if cursor < textLib.length(source) and textLib.at(source, cursor) == "]" {
+        if isMapTarget {
+            if target =!= ir.TARGET_TS {
+                syntax.failAt(source, start, prefix, "C backend does not support Map yet");
+            }
+            close := syntax.expectSymbol(source, cursor, "]", prefix);
+            kKind := types.mapKeyKind(expected);
+            vKind := types.mapValueKind(expected);
+            return (kind = expected, code = "new Map<" + types.tsFunctionType(kKind) + ", " + types.tsFunctionType(vKind) + ">()",
+            intValue = 0, textValue = "", constant = false, next = close);
+        }
+        if isSetTarget {
+            if target =!= ir.TARGET_TS {
+                syntax.failAt(source, start, prefix, "C backend does not support Set yet");
+            }
+            close := syntax.expectSymbol(source, cursor, "]", prefix);
+            eKind := types.setElementKind(expected);
+            return (kind = expected, code = "new Set<" + types.tsFunctionType(eKind) + ">()",
+            intValue = 0, textValue = "", constant = false, next = close);
+        }
+    }
+
     var elementKind := "";
     if types.isListKind(expected) { elementKind = types.listElementKind(expected); }
     else if isTailList { elementKind = types.listElementKind(textLib.slice(expected, 4, textLib.length(expected))); }
     else if types.isArrayKind(expected) { elementKind = types.arrayElementKind(expected); }
+    else if isSetTarget { elementKind = types.setElementKind(expected); }
+    else if isMapTarget { elementKind = types.mapKeyKind(expected); }
+
+    /* Non-empty bracket literal: peek after first element for `=` to distinguish Map `[k = v, ...]` from List/Array/Set `[a, b, ...]`. */
+    if cursor < textLib.length(source) and textLib.at(source, cursor) =!= "]" {
+        firstStart := cursor;
+        firstElem := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, elementKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        afterFirst := syntax.skipTrivia(source, firstElem.next, prefix);
+        if afterFirst < textLib.length(source) and syntax.isSingleEquals(source, afterFirst) {
+            if target =!= ir.TARGET_TS {
+                syntax.failAt(source, start, prefix, "C backend does not support Map yet");
+            }
+            var keyKind := if isMapTarget { types.mapKeyKind(expected) } else { "" };
+            var valKind := if isMapTarget { types.mapValueKind(expected) } else { "" };
+            entryCodes: mut List<String> = [];
+            var mapMarkers := "";
+            var entryCount := 0;
+            var curKeyStart := firstStart;
+            var curKey := firstElem;
+            var curEq := afterFirst;
+            loop true {
+                if inferMode { mapMarkers = ctx.collectParsedMarkers(mapMarkers, curKey); }
+                if not types.isMapKeyKind(curKey.kind) {
+                    syntax.failAt(source, curKeyStart, prefix, "unsupported map key type " + types.displayKind(curKey.kind));
+                }
+                if keyKind == "" {
+                    keyKind = curKey.kind;
+                } else if not types.isCompatibleKind(keyKind, curKey.kind) {
+                    syntax.failAt(source, curKeyStart, prefix, "map entry " + formatLib.decimalText(entryCount + 1) + " key must be " +
+                    types.displayKind(keyKind) + ", got " + types.displayKind(curKey.kind));
+                }
+                valStart := syntax.skipTrivia(source, curEq + 1, prefix);
+                valParsed := parseBinaryCtx(target, source, valStart, prefix, locals, functions, params, currentName, valKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+                if inferMode { mapMarkers = ctx.collectParsedMarkers(mapMarkers, valParsed); }
+                if valParsed.kind == ir.VALUE_KIND_UNIT or valParsed.kind == ir.VALUE_KIND_NEVER {
+                    syntax.failAt(source, valStart, prefix, "map entry " + formatLib.decimalText(entryCount + 1) + " value cannot be " + types.displayKind(valParsed.kind));
+                }
+                if valKind == "" {
+                    valKind = valParsed.kind;
+                } else if not types.isCompatibleKind(valKind, valParsed.kind) {
+                    syntax.failAt(source, valStart, prefix, "map entry " + formatLib.decimalText(entryCount + 1) + " value must be " +
+                    types.displayKind(valKind) + ", got " + types.displayKind(valParsed.kind));
+                }
+                kCode := ctx.assignValueCode(target, keyKind, curKey.kind, curKey.code);
+                vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
+                listLib.pushBack(mut entryCodes, "[" + kCode + ", " + vCode + "]");
+                entryCount = entryCount + 1;
+                cursor = syntax.skipTrivia(source, valParsed.next, prefix);
+                if cursor < textLib.length(source) and textLib.at(source, cursor) == "," {
+                    cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+                    if cursor < textLib.length(source) and textLib.at(source, cursor) == "]" { break; }
+                    curKeyStart = cursor;
+                    curKey = parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, keyKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+                    curEq = syntax.skipTrivia(source, curKey.next, prefix);
+                    if curEq >= textLib.length(source) or not syntax.isSingleEquals(source, curEq) {
+                        syntax.failAt(source, curEq, prefix, "expected = after map key");
+                    }
+                } else {
+                    break;
+                }
+            }
+            cursor = syntax.expectSymbol(source, cursor, "]", prefix);
+            mapKind := "Map<" + keyKind + "," + valKind + ">";
+            return ctx.withMarkers((kind = mapKind,
+            code = "new Map<" + types.tsFunctionType(keyKind) + ", " + types.tsFunctionType(valKind) + ">([" + textLib.joinTexts(entryCodes, ", ") + "])",
+            intValue = 0, textValue = "", constant = false, next = cursor), mapMarkers);
+        }
+        if isMapTarget {
+            syntax.failAt(source, afterFirst, prefix, "expected = after map key in Map literal");
+        }
+    }
+
     elementCodes: mut List<String> = [];
     var listMarkers := "";
     var count := 0;
@@ -268,7 +366,7 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
         if elementKind == "" {
             if element.kind =!= ir.VALUE_KIND_NEVER { elementKind = element.kind; }
         } else {
-            compatible := if isListTarget { types.isCompatibleKind(elementKind, element.kind) }
+            compatible := if isListTarget or isSetTarget { types.isCompatibleKind(elementKind, element.kind) }
             else { element.kind == ir.VALUE_KIND_NEVER or element.kind == elementKind or types.fnShapeMatches(elementKind, element.kind) };
             if not compatible {
                 syntax.failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " must be " +
@@ -285,6 +383,14 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
         }
     }
     cursor = syntax.expectSymbol(source, cursor, "]", prefix);
+    if isSetTarget {
+        if target =!= ir.TARGET_TS {
+            syntax.failAt(source, start, prefix, "C backend does not support Set yet");
+        }
+        return ctx.withMarkers((kind = expected,
+        code = "new Set<" + types.tsFunctionType(elementKind) + ">([" + textLib.joinTexts(elementCodes, ", ") + "])",
+        intValue = 0, textValue = "", constant = false, next = cursor), listMarkers);
+    }
     if count > 0 and elementKind == "" {
         syntax.failAt(source, start, prefix, "list element 1 cannot be Never");
     }

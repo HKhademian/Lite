@@ -1,0 +1,64 @@
+/* Focused tests for Map `[k = v, ...]` / `[]` and Set `[a, b, ...]` / `[]` literal initializers. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* 1. Typed immutable Map literal with enum shorthand, inferred Map literal, mutable Map literal, empty Map literal */
+mapProg :=
+"io := import \"core/io\";\n" +
+"map := import \"core/map\";\n" +
+"Direction := enum { Up; Down; Left; Right; };\n" +
+"keys: Map<String, Direction> = [\"ArrowUp\" = .Up, \"w\" = .Up, \"s\" = .Down,];\n" +
+"scores := [\"alice\" = 10, \"bob\" = 25];\n" +
+"counts: mut Map<String, Int> = [\"x\" = 1];\n" +
+"counts[\"y\"] = 2;\n" +
+"emptyM: Map<String, Int> = [];\n" +
+"io.outputLine(map.size(keys), keys[\"ArrowUp\"], keys[\"s\"]);\n" +
+"io.outputLine(map.size(scores), scores[\"alice\"], scores[\"bob\"]);\n" +
+"io.outputLine(map.size(counts), counts[\"x\"], counts[\"y\"], map.size(emptyM));\n";
+
+cMap := compilerTest.compileStdin(root, tsComp, mapProg, "");
+test.checkInt("map literals compile: " + cMap.stderr, 0, cMap.status);
+rMap := compilerTest.checkAndRunTs(root, cMap.stdout);
+test.checkInt("map literals run: " + rMap.stderr, 0, rMap.status);
+test.checkText("map literals stdout", "3 Direction.Up Direction.Down\n2 10 25\n2 1 2 0\n", rMap.stdout);
+
+/* 2. Typed immutable & mutable Set literals (deduplication, enum shorthand, empty Set literal) */
+setProg :=
+"io := import \"core/io\";\n" +
+"set := import \"core/set\";\n" +
+"Direction := enum { Up; Down; Left; Right; };\n" +
+"tags: Set<String> = [\"lite\", \"fast\", \"lite\"];\n" +
+"dirs: Set<Direction> = [.Up, .Down, .Up];\n" +
+"bag: mut Set<Int> = [1, 2];\n" +
+"set.add(mut bag, 3);\n" +
+"emptyS: Set<Int> = [];\n" +
+"io.outputLine(set.size(tags), set.has(tags, \"lite\"), set.has(tags, \"nope\"));\n" +
+"io.outputLine(set.size(dirs), set.has(dirs, .Up), set.has(dirs, .Left));\n" +
+"io.outputLine(set.size(bag), set.has(bag, 3), set.size(emptyS));\n";
+
+cSet := compilerTest.compileStdin(root, tsComp, setProg, "");
+test.checkInt("set literals compile: " + cSet.stderr, 0, cSet.status);
+rSet := compilerTest.checkAndRunTs(root, cSet.stdout);
+test.checkInt("set literals run: " + rSet.stderr, 0, rSet.status);
+test.checkText("set literals stdout", "2 true false\n2 true false\n3 true 0\n", rSet.stdout);
+
+/* 3. Compile-time rejections */
+compilerTest.assertCompileError(root, tsComp, "map missing equals", "m: Map<String, Int> = [\"a\"];\n", "1:27: expected = after map key in Map literal\n");
+compilerTest.assertCompileError(root, tsComp, "map key type mismatch", "m := [\"a\" = 1, 2 = 3];\n", "1:16: map entry 2 key must be String, got Int\n");
+compilerTest.assertCompileError(root, tsComp, "map value type mismatch", "m := [\"a\" = 1, \"b\" = \"two\"];\n", "1:22: map entry 2 value must be Int, got String\n");
+compilerTest.assertCompileError(root, cComp, "C rejects Map literal", "m := [\"a\" = 1];\n", "1:6: C backend does not support Map yet\n");
+compilerTest.assertCompileError(root, cComp, "C rejects Set literal", "s: Set<Int> = [1, 2];\n", "1:15: C backend does not support Set yet\n");
+
+test.done("map-set-literals");

@@ -57,15 +57,16 @@ isOpposite := fn(a: Direction, b: Direction): Bool {
     (da.dx + db.dx == 0) and (da.dy + db.dy == 0)
 };
 
-keyBindings: mut Map<String, Direction>;
-keyBindings["ArrowUp"] = .Up;
-keyBindings["w"] = .Up;
-keyBindings["ArrowDown"] = .Down;
-keyBindings["s"] = .Down;
-keyBindings["ArrowLeft"] = .Left;
-keyBindings["a"] = .Left;
-keyBindings["ArrowRight"] = .Right;
-keyBindings["d"] = .Right;
+keyBindings: Map<String, Direction> = [
+"ArrowUp" = .Up,
+"w" = .Up,
+"ArrowDown" = .Down,
+"s" = .Down,
+"ArrowLeft" = .Left,
+"a" = .Left,
+"ArrowRight" = .Right,
+"d" = .Right,
+];
 
 snake: mut List<Cell> = [];
 occupied: mut Set<Int>;
