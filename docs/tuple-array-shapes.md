@@ -475,15 +475,17 @@ u := (...x, ...y, ...z);
 
 The [T; N] spelling records the fixed-array form used in this discussion; N is a compile-time extent. Spreading such an array into a fixed tuple contributes exactly N unnamed components. Spreading a fixed tuple into an array supplies its values in stored order; each must fit the destination element type. Known lengths add when constructing combined spreads. A tuple-valued array element remains one component unless separately spread.
 
-The joint review confirmed explicit unpacking in both directions:
+The joint review confirmed that either source shape can be unpacked into either destination shape:
 
 ```text
-pair := (10, 20);
-items: [Int; 2] = [...pair];
-copiedPair := (...items);
+p1 := (10, 20);
+p2 := (...p1);  /* tuple → tuple */
+a1 := [...p1];  /* tuple → array */
+a2 := [...a1];  /* array → array */
+p3 := (...a2);  /* array → tuple */
 ```
 
-The delimiters select the destination shape. The spread contributes two values in order, so `items` is an array and `copiedPair` is a tuple. An extent mismatch, such as `[...pair]` into `[Int; 3]`, fails the destination checks. These are design examples for explicit construction.
+The delimiters select the destination shape. Each spread contributes two values in order, so `a1` and `a2` infer `[Int; 2]`, while `p2` and `p3` are two-element tuples. An extent mismatch, such as `[...p1]` into `[Int; 3]`, fails the destination checks. These are design examples for explicit construction.
 
 Homogeneous tuples give a direct element type. Heterogeneous tuples can populate an explicitly compatible common element contract, including an explicitly chosen union where ordinary admission rules permit it. Known-size nonempty heterogeneous literals now infer the normalized union of their established contribution types. Numeric conversions and unresolved element types remain separate; no implicit Any or unchecked conversion is introduced.
 
