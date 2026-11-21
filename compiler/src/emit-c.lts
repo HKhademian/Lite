@@ -14,7 +14,7 @@ dedent := fn(indent: String): String {
 /** Maps a restricted Lite scalar or Unit/Never kind to its C11 type. */
 cScalarType := fn(kind: String): String {
     if kind == frontend.VALUE_KIND_UNIT or kind == frontend.VALUE_KIND_NEVER { "void" }
-    else if frontend.isIntScalarKind(kind) { "int64_t" }
+    else if frontend.isIntScalarKind(kind) or frontend.isEnumKind(kind) { "int64_t" }
     else if kind == frontend.VALUE_KIND_BOOL { "bool" }
     else if frontend.isFloatScalarKind(kind) { "double" }
     else { "const char *" }
@@ -22,7 +22,8 @@ cScalarType := fn(kind: String): String {
 
 /** Maps a local or mutable variable item kind to its C11 declaration type prefix. */
 cDeclType := fn(kind: String): String {
-    if kind == frontend.ITEM_KIND_LOCAL_INT or kind == frontend.ITEM_KIND_VAR_INT { "int64_t " }
+    if kind == frontend.ITEM_KIND_LOCAL_INT or kind == frontend.ITEM_KIND_VAR_INT or
+    kind == frontend.ITEM_KIND_LOCAL_RECORD or kind == frontend.ITEM_KIND_VAR_RECORD { "int64_t " }
     else if kind == frontend.ITEM_KIND_LOCAL_FLOAT or kind == frontend.ITEM_KIND_VAR_FLOAT { "double " }
     else if kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL { "bool " }
     else { "const char *" }
@@ -33,7 +34,6 @@ checkUnsupportedCType := fn(kind: String): Unit {
     if frontend.isTupleKind(kind) { diagLib.fail("", "C backend does not support tuple values yet"); }
     if frontend.isMapKind(kind) { diagLib.fail("", "C backend does not support map values yet"); }
     if frontend.isSetKind(kind) { diagLib.fail("", "C backend does not support set values yet"); }
-    if frontend.isEnumKind(kind) { diagLib.fail("", "C backend does not support enum values yet"); }
     if frontend.isRecordKind(kind) { diagLib.fail("", "C backend does not support record values yet"); }
     if frontend.isListKind(kind) { diagLib.fail("", "C backend does not support list values yet"); }
     if frontend.isArrayKind(kind) { diagLib.fail("", "C backend does not support array values yet"); }
@@ -281,7 +281,8 @@ isCLocalDeclKind := fn(kind: String): Bool {
     kind == frontend.ITEM_KIND_LOCAL_INT or kind == frontend.ITEM_KIND_VAR_INT or
     kind == frontend.ITEM_KIND_LOCAL_STRING or kind == frontend.ITEM_KIND_VAR_STRING or
     kind == frontend.ITEM_KIND_LOCAL_FLOAT or kind == frontend.ITEM_KIND_VAR_FLOAT or
-    kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL
+    kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL or
+    kind == frontend.ITEM_KIND_LOCAL_RECORD or kind == frontend.ITEM_KIND_VAR_RECORD
 };
 
 /** Detects leaked JS tuple or array literal syntax inside a scalar-typed expression on C, skipping quoted strings. */
@@ -293,6 +294,23 @@ unsupportedAggregateCode := fn(code: String): String {
         ch := textLib.at(code, cursor);
         if ch == "\"" {
             cursor = frontend.skipAliasString(code, cursor);
+        } else if ch == "(" and textLib.startsWithAt(code, cursor, "((const ") {
+            var depth := 0;
+            loop cursor < size {
+                c2 := textLib.at(code, cursor);
+                if c2 == "\"" {
+                    cursor = frontend.skipAliasString(code, cursor);
+                } else {
+                    if c2 == "(" { depth = depth + 1; }
+                    else if c2 == ")" {
+                        depth = depth - 1;
+                        if depth == 0 { cursor = cursor + 1; break; }
+                    }
+                    cursor = cursor + 1;
+                }
+            }
+        } else if ch == "[" and textLib.startsWithAt(code, cursor, "[0] == '\\0'") {
+            cursor = cursor + textLib.length("[0] == '\\0'");
         } else if ch == "{" {
             return "C backend does not support tuple values yet";
         } else if ch == "[" {
@@ -368,6 +386,17 @@ cCall := fn(kind: String, code: String): String {
         kind == frontend.VALUE_KIND_NEVER { "((void)(" + code + "), 0)" }
         kind == frontend.VALUE_KIND_UNIT {
             if code == "0" { "printf(\"Unit\")" } else { "((void)(" + code + "), printf(\"Unit\"))" }
+        }
+        frontend.isEnumKind(kind) {
+            dName := frontend.enumDisplayName(kind);
+            cCount := frontend.enumCaseCount(kind);
+            labels: mut List<String> = [];
+            var ci := 0;
+            loop ci < cCount {
+                listLib.pushBack(mut labels, cLiteral.textLiteralCode(dName + "." + frontend.enumCaseNameAt(kind, ci)));
+                ci = ci + 1;
+            }
+            "printf(\"%s\", ((const char *const[]){" + textLib.joinTexts(labels, ", ") + "}[" + code + "]))"
         }
         frontend.isFloatScalarKind(kind) { "lt_print_float((double)(" + code + "))" }
         frontend.isIntScalarKind(kind) { "printf(\"%\" PRId64, (int64_t)(" + code + "))" }
@@ -759,7 +788,7 @@ emitOutputArgument := fn(kind: String, code: String, name: String, indent: Strin
         if code =!= "0" { io.outputLine(indent + "(void)(" + code + ");"); }
         return;
     }
-    typeCode := if frontend.isIntScalarKind(kind) { "int64_t " }
+    typeCode := if frontend.isIntScalarKind(kind) or frontend.isEnumKind(kind) { "int64_t " }
     else if kind == frontend.VALUE_KIND_BOOL { "bool " }
     else if frontend.isFloatScalarKind(kind) { "double " }
     else { "const char *" };
@@ -790,7 +819,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 io.outputLine(indent + cDeclType(item.kind) + item.runtime + " = " + code + ";");
             }
             io.outputLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT {
+        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD {
             io.outputLine(indent + item.runtime + " = " + code + ";");
         } else if item.kind == frontend.ITEM_KIND_RETURN {
             if fnResult == frontend.VALUE_KIND_UNIT {
@@ -952,7 +981,8 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         if frontend.isSetKind(item.kind) or frontend.isSetKind(item.textValue) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isSetKind(item.name)) {
             diagLib.fail("", "C backend does not support set values yet");
         }
-        if frontend.isRecordKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isRecordKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD {
+        isRecordDecl := (item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD) and not frontend.isEnumKind(item.textValue);
+        if frontend.isRecordKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isRecordKind(item.name)) or isRecordDecl {
             diagLib.fail("", "C backend does not support record values yet");
         }
         if frontend.isListKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isListKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST {

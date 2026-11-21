@@ -1,0 +1,51 @@
+/* End-to-end C11 execution tests for Phase C2: plain enums and value enums (Int, Float, Bool, String backing). */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+ccInfo := compilerTest.probeCc();
+test.check("cc available", ccInfo.cc =!= "");
+
+enumProg :=
+"io := import \"core/io\";\n" +
+"Dir := enum { Up; Down; Left; Right; };\n" +
+"Status := enum : Int { Ok = 200; Created; NotFound = 404; };\n" +
+"Scale := enum : Float { Half = 0.5; Full = 1.0; };\n" +
+"Flag := enum : Bool { Off = false; On = true; };\n" +
+"Code := enum : String { Alpha = \"A\"; Beta = \"B\"; };\n" +
+"nextDir := fn(d: Dir): Dir {\n" +
+"    if d == .Up { .Right } else if d == .Right { .Down } else if d == .Down { .Left } else { .Up }\n" +
+"};\n" +
+"statusValue := fn(s: Status): Int { s.value };\n" +
+"codeValue := fn(c: Code): String { c.value };\n" +
+"var cur: Dir = .Up;\n" +
+"cur = nextDir(cur);\n" +
+"s: Status = .Created;\n" +
+"sc: Scale = .Half;\n" +
+"fl: Flag = .On;\n" +
+"cd: Code = .Beta;\n" +
+"io.outputLine(cur, cur == .Right, cur =!= .Up);\n" +
+"io.outputLine(s, s.value, statusValue(s), Status.NotFound.value);\n" +
+"io.outputLine(sc, sc.value, fl, fl.value, cd, codeValue(cd));\n";
+
+cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, enumProg, "", "");
+test.checkInt("C enums run: " + cRes.stderr, 0, cRes.status);
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, enumProg, "");
+test.checkInt("TS enums run: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("C/TS enum stdout parity", tsRes.stdout, cRes.stdout);
+test.checkText("C enum exact stdout",
+"Dir.Right true true\nStatus.Created 201 201 404\nScale.Half 0.5 Flag.On true Code.Beta B\n",
+cRes.stdout);
+
+test.done("c-backend-enums");

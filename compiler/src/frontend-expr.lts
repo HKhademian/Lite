@@ -2376,9 +2376,6 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             textLib.wordAt(source, syntax.skipTrivia(source, afterItemName + 2, prefix), "enum") {
                 isStatement = true;
                 if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
-                if target =!= ir.TARGET_TS {
-                    syntax.failAt(source, itemStart, prefix, "C backend does not support enum values yet");
-                }
                 var earlierInnerAlias := false;
                 loop blockAliases as alias {
                     if alias.name == itemName and alias.depth == nextAliasDepth and alias.at < itemStart {
@@ -5947,6 +5944,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         cInfo := types.enumCaseAt(left.kind, left.intValue);
                         var evConst := false;
                         var evInt := 0;
+                        var emittedValCode := cInfo.valueCode;
                         if backing == ir.VALUE_KIND_BOOL {
                             evConst = true;
                             evInt = if cInfo.valueCode == "true" { 1 } else { 0 };
@@ -5960,19 +5958,47 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                     evConst = true;
                                     evInt = if isNeg { -mag } else { mag };
                                 }
+                                if target == ir.TARGET_C {
+                                    emittedValCode = ir.targetIntLiteralCode(target, evInt, false, textLib.slice(cInfo.valueCode, 0, vcLen - 1));
+                                }
+                            }
+                        } else if target == ir.TARGET_C and numeric.isFloatKind(backing) {
+                            if textLib.startsWithAt(emittedValCode, 0, "Number(\"") and textLib.length(emittedValCode) > 10 {
+                                emittedValCode = textLib.slice(emittedValCode, 8, textLib.length(emittedValCode) - 2);
+                            } else if textLib.startsWithAt(emittedValCode, 0, "Math.fround(Number(\"") and textLib.length(emittedValCode) > 23 {
+                                emittedValCode = textLib.slice(emittedValCode, 20, textLib.length(emittedValCode) - 3);
                             }
                         }
-                        left = ctx.withMarkers((kind = backing, code = cInfo.valueCode, intValue = evInt, textValue = "", constant = evConst, next = labelEnd),
+                        left = ctx.withMarkers((kind = backing, code = emittedValCode, intValue = evInt, textValue = "", constant = evConst, next = labelEnd),
                         if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                     } else {
                         cCount := types.enumCaseCount(left.kind);
                         vals: mut List<String> = [];
                         var ci := 0;
                         loop ci < cCount {
-                            listLib.pushBack(mut vals, types.enumCaseAt(left.kind, ci).valueCode);
+                            rawVal := types.enumCaseAt(left.kind, ci).valueCode;
+                            itemVal := if target == ir.TARGET_C and numeric.isIntKind(backing) and textLib.length(rawVal) >= 2 and textLib.at(rawVal, textLib.length(rawVal) - 1) == "n" {
+                                textLib.slice(rawVal, 0, textLib.length(rawVal) - 1)
+                            } else if target == ir.TARGET_C and numeric.isFloatKind(backing) and textLib.startsWithAt(rawVal, 0, "Number(\"") and textLib.length(rawVal) > 10 {
+                                textLib.slice(rawVal, 8, textLib.length(rawVal) - 2)
+                            } else if target == ir.TARGET_C and numeric.isFloatKind(backing) and textLib.startsWithAt(rawVal, 0, "Math.fround(Number(\"") and textLib.length(rawVal) > 23 {
+                                textLib.slice(rawVal, 20, textLib.length(rawVal) - 3)
+                            } else {
+                                rawVal
+                            };
+                            listLib.pushBack(mut vals, itemVal);
                             ci = ci + 1;
                         }
-                        left = ctx.withMarkers((kind = backing, code = "([" + textLib.joinTexts(vals, ", ") + "][" + left.code + "]!)",
+                        lookupCode := if target == ir.TARGET_C {
+                            cElemType := if numeric.isIntKind(backing) { "const int64_t" }
+                            else if backing == ir.VALUE_KIND_BOOL { "const bool" }
+                            else if numeric.isFloatKind(backing) { "const double" }
+                            else { "const char *const" };
+                            "((" + cElemType + "[]){" + textLib.joinTexts(vals, ", ") + "}[" + left.code + "])"
+                        } else {
+                            "([" + textLib.joinTexts(vals, ", ") + "][" + left.code + "]!)"
+                        };
+                        left = ctx.withMarkers((kind = backing, code = lookupCode,
                         intValue = 0, textValue = "", constant = false, next = labelEnd),
                         if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                     }

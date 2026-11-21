@@ -147,7 +147,7 @@ loop bi < 16 {
     bi = bi + 1;
 }
 
-compilerTest.assertCompileErrorContains(root, cComp, "enum C backend rejection",
-"E := enum { A; B; }; x := E.A;", "C backend does not support enum values yet");
+cEnumRes := compilerTest.compileStdin(root, cComp, "E := enum { A; B; }; x := E.A;\n", "");
+test.checkInt("enum C backend compile: " + cEnumRes.stderr, 0, cEnumRes.status);
 
 test.done("value-enums");

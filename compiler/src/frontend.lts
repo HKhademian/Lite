@@ -267,6 +267,9 @@ pub isTupleKind := fn(kind: String): Bool { types.isTupleKind(kind) };
 pub isMapKind := fn(kind: String): Bool { types.isMapKind(kind) };
 pub isSetKind := fn(kind: String): Bool { types.isSetKind(kind) };
 pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
+pub enumDisplayName := fn(kind: String): String { types.enumDisplayName(kind) };
+pub enumCaseCount := fn(kind: String): Int { types.enumCaseCount(kind) };
+pub enumCaseNameAt := fn(kind: String, index: Int): String { types.enumCaseAt(kind, index).name };
 pub isRecordKind := fn(kind: String): Bool { types.isRecordKind(kind) };
 
 /** Returns the runtime JS property name for a tuple field (`_0` when unnamed, otherwise the field label). */
@@ -2730,9 +2733,6 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             continue;
         }
         if textLib.startsWithAt(source, position, ":=") and textLib.wordAt(source, afterDefinition, "enum") {
-            if target =!= TARGET_TS {
-                failAt(source, afterDefinition, prefix, "C backend does not support enum values yet");
-            }
             var earlierAlias := false;
             loop aliases as alias {
                 if alias.name == name and alias.depth == depth and alias.at < nameStart { earlierAlias = true; }
