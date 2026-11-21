@@ -360,6 +360,17 @@ executed guard. A prior [early-exit distinctness rule](../../../docs/call-replac
 does not itself establish this new bounds-narrowing contract. Invalidation
 after replacement, effects or aliasing and the supported proof forms remain open.
 
+The joint review distinguishes a compile-time proof about a runtime index from
+a compile-time-known index value. Inside the true branch of `if i >= 0 and i < 2`,
+the proposed `pair[i]` can use the tuple's statically known slots and infer the
+union of their types. The proof can remove a redundant bounds check while the
+actual slot selection still depends on `i`. With `pair := (10, "tea")` and only
+`io.output(pair.0)`, the optimizer can omit the unused pure `"tea"` component.
+With `pair[i]` and possible positions `{0, 1}`, the range proof alone cannot
+discard either possible value. The emitter can choose a branch or another
+equivalent implementation. Any required effects of element initialization must
+be preserved.
+
 The exact interpretation of “index values must be known at compile time” needs
 clarification alongside the dynamic-index requirement: for example, whether the
 compiler must know the exact value, a finite set, a range, or can conservatively
