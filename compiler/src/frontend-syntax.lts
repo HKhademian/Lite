@@ -1057,7 +1057,7 @@ pub loopNeedsExprLowering := fn(source: String, position: Int, prefix: String): 
     rawEnd := scanRawLoopEnd(source, trimmed, prefix);
     if rawEnd < 0 { return false; }
     afterRaw := skipTrivia(source, rawEnd, prefix);
-    if afterRaw < size and (textLib.wordAt(source, afterRaw, "then") or textLib.wordAt(source, afterRaw, "finally")) {
+    if afterRaw < size and (textLib.wordAt(source, afterRaw, "then") or textLib.wordAt(source, afterRaw, "finally") or textLib.at(source, afterRaw) == ".") {
         return true;
     }
     var cursor := trimmed;

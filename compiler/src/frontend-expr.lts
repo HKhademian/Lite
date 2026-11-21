@@ -38,7 +38,7 @@ FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutab
 AliasDecl := type (name: String, target: String, at: Int, end: Int, depth: Int);
 
 /** Lexical control-flow and metadata context matching `frontend-ir.ConstructCtx`. */
-ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool);
+ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
 
 /** Normalizes expected contextual value kind by erasing non-value sentinels and unwrapping `TailList<T>`. */
 normalizeExpectedValueKind := fn(expected: String): String {
@@ -74,7 +74,7 @@ parseFinallyClause := fn(target: String, source: String, afterFinWordPos: Int, p
     finOpen := syntax.expectSymbol(source, afterFinKw, "{", prefix);
     finBarrierCtx := (id = 0, tag = "", kind = ir.CTX_KIND_FINALLY, phase = ir.CTX_PHASE_FINALLY,
     iifeDepth = bodyDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "",
-    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+    iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
     finParsed := parseBinaryCtx(target, source, finOpen - 1, prefix, locals, functions, params, currentName,
     "", 0, ctx.appendCtx(ownerCtxs, finBarrierCtx), bodyDepth, inferMode, "finally", aliases);
     afterFinClose := syntax.skipTrivia(source, finParsed.next, prefix);
@@ -462,7 +462,7 @@ parseTagPrefixExpr := fn(target: String, source: String, start: Int, prefix: Str
         pass1ValKind := if hintExpected == "" { ir.VAL_KIND_INFER } else { (ir.VAL_KIND_INFER + ":") + hintExpected };
         pass1Ctx := (id = blockId, tag = tagInfo.tag, kind = ir.CTX_KIND_BLOCK, phase = ir.CTX_PHASE_BODY,
         iifeDepth = iifeDepth + 1, valKind = pass1ValKind, valVar = blockValVar, label = blockLabel,
-        iterLabel = taggedLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+        iterLabel = taggedLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
         pass1 := parseBinaryCtx(target, source, afterTag, prefix, locals, functions, params, currentName,
         hintExpected, 0, ctx.appendCtx(ctxs, pass1Ctx), iifeDepth + 1, true, "tagged", aliases);
         var result := pass1;
@@ -471,7 +471,7 @@ parseTagPrefixExpr := fn(target: String, source: String, start: Int, prefix: Str
             pass2Expected := if inferredKind == ir.VALUE_KIND_UNIT or inferredKind == ir.VALUE_KIND_NEVER { "" } else { inferredKind };
             pass2Ctx := (id = blockId, tag = tagInfo.tag, kind = ir.CTX_KIND_BLOCK, phase = ir.CTX_PHASE_BODY,
             iifeDepth = iifeDepth + 1, valKind = inferredKind, valVar = blockValVar, label = blockLabel,
-            iterLabel = taggedLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+            iterLabel = taggedLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
             result = parseBinaryCtx(target, source, afterTag, prefix, locals, functions, params, currentName,
             pass2Expected, 0, ctx.appendCtx(ctxs, pass2Ctx), iifeDepth + 1, false, "tagged", aliases);
         }
@@ -482,7 +482,7 @@ parseTagPrefixExpr := fn(target: String, source: String, start: Int, prefix: Str
         if afterTaggedClose < tagSourceSize and textLib.wordAt(source, afterTaggedClose, "finally") {
             taggedFinCtx := (id = blockId, tag = tagInfo.tag, kind = ir.CTX_KIND_BLOCK, phase = ir.CTX_PHASE_FINALLY,
             iifeDepth = iifeDepth + 1, valKind = result.kind, valVar = blockValVar, label = blockLabel,
-            iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+            iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
             finParsed := parseFinallyClause(target, source, afterTaggedClose, prefix, locals, functions, params, currentName,
             ctx.appendCtx(ctxs, taggedFinCtx), iifeDepth + 1, inferMode, aliases);
             taggedTryBody := if result.kind == ir.VALUE_KIND_UNIT {
@@ -618,7 +618,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     }
     fnCtx := (id = 0, tag = "", kind = ir.CTX_KIND_FN, phase = ir.CTX_PHASE_BODY, iifeDepth = iifeDepth + 1,
     valKind = retKind, valVar = "", label = "", iterLabel = integer.intText(fnLexDepth), countVar = "", itemVar = "",
-    itemKind = "", indexVar = "", hasIndex = false);
+    itemKind = "", indexVar = "", hasIndex = false, colVar = "");
     emptyFnCtxs: List<ConstructCtx> = [];
     fnCtxs := ctx.appendCtx(emptyFnCtxs, fnCtx);
     var fnBodySink := "fnBody";
@@ -1161,7 +1161,7 @@ resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: 
     loopIdx := ctx.findLeadingDotLoopIdx(ctxs);
     normExp := normalizeExpectedValueKind(expected);
     if types.isEnumKind(normExp) {
-        isLoopMetaName := fieldName == "count" or fieldName == "value" or fieldName == "item" or fieldName == "index";
+        isLoopMetaName := fieldName == "count" or fieldName == "value" or fieldName == "item" or fieldName == "index" or fieldName == "collected";
         if loopIdx >= 0 and isLoopMetaName {
             syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + "; qualify as " +
             types.enumDisplayName(normExp) + "." + fieldName + " or @tag." + fieldName);
@@ -1810,6 +1810,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                                 };
                                 if loopCtx.valKind == ir.VALUE_KIND_UNIT {
                                     listLib.pushBack(mut statements, "void (" + payCode + "); " + jumpStmt);
+                                } else if loopCtx.colVar =!= "" {
+                                    listLib.pushBack(mut statements, loopCtx.valVar + " = " + payCode + "; " + loopCtx.colVar + ".push(" + loopCtx.valVar + "); " + jumpStmt);
                                 } else {
                                     listLib.pushBack(mut statements, loopCtx.valVar + " = " + payCode + "; " + jumpStmt);
                                 }
@@ -1849,7 +1851,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     var isFirstIf := true;
                     ifBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = ir.CTX_KIND_IF, phase = ir.CTX_PHASE_BODY,
                     iifeDepth = bodyDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
-                    countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+                    countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
                     loop true {
                         syntax.rejectHeaderBlockTag(source, ifCursor, prefix, if isFirstIf { "if" } else { "else if" });
                         condParsed := parseBinaryCtx(target, source, ifCursor, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "", blockAliases);
@@ -1946,7 +1948,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     var allArmsExit := true;
                     matchBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = ir.CTX_KIND_MATCH, phase = ir.CTX_PHASE_BODY,
                     iifeDepth = bodyDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
-                    countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+                    countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
                     loop true {
                         matchCursor = syntax.skipItemSeparators(source, matchCursor, prefix);
                         if matchCursor >= blockSourceSize {
@@ -2129,7 +2131,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     stmtLoopLexDepthStr := integer.intText(ir.maxLocalLexDepth(loopLocals) + 1);
                     loopCtx := (id = loopId, tag = "", kind = ir.CTX_KIND_LOOP, phase = ir.CTX_PHASE_BODY,
                     iifeDepth = bodyDepth, valKind = "", valVar = "", label = loopLabel,
-                    iterLabel = stmtLoopLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+                    iterLabel = stmtLoopLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
                     loopStmtSink := if loopItemName =!= "" { "stmt:" + loopItemName } else { "stmt" };
                     loopBody := parseBinaryCtx(target, source, loopOpen - 1, prefix, loopLocals, functions, params, currentName,
                     "", 0, ctx.appendCtx(ctxs, loopCtx), bodyDepth, inferMode, loopStmtSink, blockAliases);
@@ -2793,7 +2795,11 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     }
                 } else {
                     tailLoopCode := ctx.assignValueCode(target, topLoopValKind, blockKind, blockCode);
-                    listLib.pushBack(mut statements, topLoopValVar + " = " + tailLoopCode + ";");
+                    if topLoopCtx.colVar =!= "" {
+                        listLib.pushBack(mut statements, topLoopValVar + " = " + tailLoopCode + "; " + topLoopCtx.colVar + ".push(" + topLoopValVar + ");");
+                    } else {
+                        listLib.pushBack(mut statements, topLoopValVar + " = " + tailLoopCode + ";");
+                    }
                 }
             } else if not lastPartialIfDiverges and topLoopValKind =!= ir.VALUE_KIND_UNIT {
                 syntax.failAt(source, start, prefix, "loop body must produce " + types.displayKind(topLoopValKind));
@@ -2944,7 +2950,22 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
     rawLoopEnd := syntax.scanRawLoopEnd(source, condParseStart, prefix);
     afterRawLoop := if rawLoopEnd >= 0 { syntax.skipTrivia(source, rawLoopEnd, prefix) } else { -1 };
     hasActualThen := afterRawLoop >= 0 and textLib.wordAt(source, afterRawLoop, "then");
-    afterOptLoopThen := if hasActualThen { syntax.scanTrailingThenEnd(source, rawLoopEnd, prefix, false) } else { rawLoopEnd };
+    var suffixField := "";
+    var suffixFieldAt := -1;
+    var suffixEnd := rawLoopEnd;
+    if not hasActualThen and afterRawLoop >= 0 and afterRawLoop < textLib.length(source) and textLib.at(source, afterRawLoop) == "." {
+        sFieldStart := syntax.skipTrivia(source, afterRawLoop + 1, prefix);
+        if sFieldStart < textLib.length(source) and textLib.isNameStart(textLib.at(source, sFieldStart)) {
+            sFieldEnd := textLib.skipName(source, sFieldStart);
+            sName := textLib.slice(source, sFieldStart, sFieldEnd);
+            if sName == "collected" or sName == "count" or sName == "value" {
+                suffixField = sName;
+                suffixFieldAt = sFieldStart;
+                suffixEnd = sFieldEnd;
+            }
+        }
+    }
+    afterOptLoopThen := if hasActualThen { syntax.scanTrailingThenEnd(source, rawLoopEnd, prefix, false) } else { suffixEnd };
     afterOptLoopThenTrivia := if afterOptLoopThen >= 0 { syntax.skipTrivia(source, afterOptLoopThen, prefix) } else { -1 };
     hasLoopFinally := afterOptLoopThenTrivia >= 0 and textLib.wordAt(source, afterOptLoopThenTrivia, "finally");
     if target =!= ir.TARGET_TS {
@@ -2959,6 +2980,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
     loopId := ctx.nextCtxId(ctxs);
     loopIdStr := integer.intText(loopId);
     loopValVar := "lite$val" + loopIdStr;
+    loopColVar := "lite$col" + loopIdStr;
     loopCountVar := "lite$cnt" + loopIdStr;
     loopItemMetaVar := "lite$litem" + loopIdStr;
     loopIdxVar := "lite$lidx" + loopIdStr;
@@ -2966,7 +2988,20 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
     loopLabel := "lite$l" + loopIdStr;
     loopDepth := iifeDepth + 1;
     normExpected := normalizeExpectedValueKind(expected);
-    loopHintExpected := if hasActualThen { "" } else { normExpected };
+    loopHintExpected := if hasActualThen or suffixField == "count" {
+        ""
+    } else if suffixField == "collected" {
+        if types.isListKind(normExpected) { types.listElementKind(normExpected) } else { "" }
+    } else {
+        normExpected
+    };
+    wantsCollected := if suffixField == "collected" {
+        true
+    } else if hasActualThen and afterOptLoopThen > rawLoopEnd {
+        textLib.indexOfText(textLib.slice(source, rawLoopEnd, afterOptLoopThen), "collected", 0) >= 0
+    } else {
+        false
+    };
     loopTagDisplay := if condParseTag =!= "" { condParseTag } else { "loop" };
     passCount := if inferMode { 1 } else { 2 };
     var resolvedPreThenKind := "";
@@ -2979,6 +3014,8 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
     loop pass <= passCount {
         isPass1 := pass == 1;
         passInfer := isPass1 or inferMode;
+        passEmitCollected := not isPass1 and wantsCollected and resolvedPreThenKind =!= ir.VALUE_KIND_UNIT and resolvedPreThenKind =!= ir.VALUE_KIND_NEVER;
+        passColVar := if passEmitCollected { loopColVar } else { "" };
         passCtxValKind := if isPass1 {
             if loopHintExpected == "" { ir.VAL_KIND_INFER } else { (ir.VAL_KIND_INFER + ":") + loopHintExpected }
         } else {
@@ -2993,7 +3030,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         };
         headerCtx := (id = loopId, tag = condParseTag, kind = ir.CTX_KIND_LOOP, phase = ir.CTX_PHASE_HEADER,
         iifeDepth = loopDepth, valKind = passCtxValKind, valVar = loopValVar, label = loopLabel,
-        iterLabel = loopLabel, countVar = loopCountVar, itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+        iterLabel = loopLabel, countVar = loopCountVar, itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = passColVar);
         headerCtxs := ctx.appendCtx(ctxs, headerCtx);
         hdrStart := syntax.skipTrivia(source, condParseStart + 4, prefix);
         syntax.rejectHeaderBlockTag(source, hdrStart, prefix, "loop");
@@ -3085,7 +3122,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         bodyCtx := (id = loopId, tag = condParseTag, kind = ir.CTX_KIND_LOOP, phase = ir.CTX_PHASE_BODY,
         iifeDepth = loopDepth, valKind = passCtxValKind, valVar = loopValVar, label = loopLabel,
         iterLabel = loopBodyLexDepthStr, countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = seqItemKind,
-        indexVar = loopIdxVar, hasIndex = isSeqLoop);
+        indexVar = loopIdxVar, hasIndex = isSeqLoop, colVar = passColVar);
         bodyCtxs := ctx.appendCtx(ctxs, bodyCtx);
         loopBodySink := if isSeqLoop and seqItemName =!= "" { "loopBody:" + seqItemName } else { "loopBody" };
         bodyParsed := parseBinaryCtx(target, source, loopOpen - 1, prefix, loopLocals, functions, params, currentName,
@@ -3108,12 +3145,15 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                     thenProbeCtx := (id = loopId, tag = condParseTag, kind = ir.CTX_KIND_LOOP, phase = ir.CTX_PHASE_THEN,
                     iifeDepth = loopDepth, valKind = ir.VAL_KIND_INFER, valVar = loopValVar, label = loopLabel,
                     iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = seqItemKind,
-                    indexVar = loopIdxVar, hasIndex = isSeqLoop);
+                    indexVar = loopIdxVar, hasIndex = isSeqLoop, colVar = "");
                     thenProbe := parseBinaryCtx(target, source, probeThenOpen - 1, prefix, locals, functions, params, currentName,
                     normExpected, 0, ctx.appendCtx(ctxs, thenProbeCtx), iifeDepth, true, "exprOut", aliases);
                     passMarkers = ctx.collectParsedMarkers(passMarkers, thenProbe);
                 }
                 resolvedPreThenKind = infer.inferLoopValueKind(passMarkers, loopId, loopTagDisplay, source, condParseTagAt, prefix, loopHintExpected);
+            }
+            if suffixField == "collected" and resolvedPreThenKind == ir.VALUE_KIND_UNIT {
+                syntax.failAt(source, suffixFieldAt, prefix, "loop producing Unit does not expose .collected");
             }
         } else {
             metaStep := if isSeqLoop {
@@ -3135,6 +3175,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             hasPayBrk := reach.codeUsesTextCall(bodyParsed.code, "lite$throwTransfer(" + brkPayId + ",");
             hasBareBrk := reach.codeUsesTextCall(bodyParsed.code, "lite$throwTransfer(" + brkBareId + ",");
             valAssign := if resolvedPreThenKind == ir.VALUE_KIND_UNIT or resolvedPreThenKind == ir.VALUE_KIND_NEVER { "" }
+            else if passEmitCollected { loopValVar + " = lite$transferVal; " + loopColVar + ".push(" + loopValVar + "); " }
             else { loopValVar + " = lite$transferVal; " };
             var wrappedBody := bodyParsed.code;
             if hasPayCont or hasBareCont or hasPayBrk or hasBareBrk {
@@ -3182,6 +3223,8 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         }
         pass = pass + 1;
     }
+    emitCollected := wantsCollected and resolvedPreThenKind =!= ir.VALUE_KIND_UNIT and resolvedPreThenKind =!= ir.VALUE_KIND_NEVER;
+    finalColVar := if emitCollected { loopColVar } else { "" };
     var decls := "";
     if not inferMode {
         decls = "let " + loopCountVar + ": bigint = 0n; void " + loopCountVar + "; ";
@@ -3196,6 +3239,9 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             decls = decls + "let " + loopValVar + ": " + types.tsFunctionType(resolvedPreThenKind) + " = " +
             ctx.zeroParsed(target, resolvedPreThenKind, 0).code + "; void " + loopValVar + "; ";
         }
+        if emitCollected {
+            decls = decls + "const " + loopColVar + ": (" + types.tsFunctionType(resolvedPreThenKind) + ")[] = []; void " + loopColVar + "; ";
+        }
     }
     var loopIifeBody := "";
     var left := ctx.intParsed("", 0, true, condParseStart);
@@ -3207,7 +3253,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         loopThenCtx := (id = loopId, tag = condParseTag, kind = ir.CTX_KIND_LOOP, phase = ir.CTX_PHASE_THEN,
         iifeDepth = loopDepth, valKind = resolvedPreThenKind, valVar = loopValVar, label = loopLabel,
         iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
-        indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
+        indexVar = loopIdxVar, hasIndex = finalIsSeqLoop, colVar = finalColVar);
         thenParsed := parseBinaryCtx(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
         normExpected, 0, ctx.appendCtx(ctxs, loopThenCtx), iifeDepth, inferMode, "branch", aliases);
         if inferMode {
@@ -3231,18 +3277,42 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             intValue = 0, textValue = "", constant = false, next = thenParsed.next);
         }
     } else if inferMode {
-        left = ctx.withMarkers((kind = resolvedPreThenKind, code = "", intValue = 0, textValue = "", constant = false, next = loopEndCursor), loopOuterMarkers);
+        resultNext := if suffixField =!= "" { suffixEnd } else { loopEndCursor };
+        resultKind := if resolvedPreThenKind == ir.VALUE_KIND_NEVER {
+            ir.VALUE_KIND_NEVER
+        } else if suffixField == "collected" {
+            "List<" + resolvedPreThenKind + ">"
+        } else if suffixField == "count" {
+            ir.VALUE_KIND_INT
+        } else {
+            resolvedPreThenKind
+        };
+        left = ctx.withMarkers((kind = resultKind, code = "", intValue = 0, textValue = "", constant = false, next = resultNext), loopOuterMarkers);
     } else {
-        finalRet := if resolvedPreThenKind == ir.VALUE_KIND_UNIT {
-            " return undefined;"
-        } else if resolvedPreThenKind == ir.VALUE_KIND_NEVER {
+        resultNext := if suffixField =!= "" { suffixEnd } else { loopEndCursor };
+        resultKind := if resolvedPreThenKind == ir.VALUE_KIND_NEVER {
+            ir.VALUE_KIND_NEVER
+        } else if suffixField == "collected" {
+            "List<" + resolvedPreThenKind + ">"
+        } else if suffixField == "count" {
+            ir.VALUE_KIND_INT
+        } else {
+            resolvedPreThenKind
+        };
+        finalRet := if resolvedPreThenKind == ir.VALUE_KIND_NEVER {
             " throw new Error(\"unreachable\");"
+        } else if suffixField == "collected" {
+            " return " + loopColVar + ";"
+        } else if suffixField == "count" {
+            " return " + loopCountVar + ";"
+        } else if resolvedPreThenKind == ir.VALUE_KIND_UNIT {
+            " return undefined;"
         } else {
             " return " + loopValVar + ";"
         };
         loopIifeBody = decls + loopStmtCode + finalRet;
-        left = (kind = resolvedPreThenKind, code = "(() => { " + loopIifeBody + " })()",
-        intValue = 0, textValue = "", constant = false, next = loopEndCursor);
+        left = (kind = resultKind, code = "(() => { " + loopIifeBody + " })()",
+        intValue = 0, textValue = "", constant = false, next = resultNext);
     }
     afterLoopConstruct := syntax.skipTrivia(source, left.next, prefix);
     if hasActualThen and afterLoopConstruct < textLib.length(source) and textLib.wordAt(source, afterLoopConstruct, "then") {
@@ -3252,7 +3322,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         loopFinCtx := (id = loopId, tag = condParseTag, kind = ir.CTX_KIND_LOOP, phase = ir.CTX_PHASE_FINALLY,
         iifeDepth = loopDepth, valKind = resolvedPreThenKind, valVar = loopValVar, label = loopLabel,
         iterLabel = "", countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = finalSeqItemKind,
-        indexVar = loopIdxVar, hasIndex = finalIsSeqLoop);
+        indexVar = loopIdxVar, hasIndex = finalIsSeqLoop, colVar = finalColVar);
         finParsed := parseFinallyClause(target, source, afterLoopConstruct, prefix, locals, functions, params, currentName,
         ctx.appendCtx(ctxs, loopFinCtx), loopDepth, inferMode, aliases);
         left = finishFinallyIife(loopIifeBody, finParsed, left.kind, left, inferMode);
@@ -4378,7 +4448,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
 pub parseSubjectMatchStmt := fn(target: String, source: String, matchStart: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     matchBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = ir.CTX_KIND_MATCH, phase = ir.CTX_PHASE_BODY,
     iifeDepth = iifeDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
-    countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+    countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
     res := parseSubjectMatchBody(target, source, matchStart, prefix, locals, functions, params, currentName, "", matchBarrierCtxs, iifeDepth, inferMode, "stmt", "", "", aliases);
     stmtCode := if res.isDirect {
         if res.code == "" { "" } else { "{ " + res.code + " }" }
@@ -4423,7 +4493,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
     if not useIifeCond {
         condBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = condParseKind, phase = ir.CTX_PHASE_BODY,
         iifeDepth = iifeDepth, valKind = "", valVar = "", label = "", iterLabel = "",
-        countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+        countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
         if condParseKind == ir.CTX_KIND_IF {
             var cursor := syntax.skipTrivia(source, condParseStart + 2, prefix);
             var ifMarkers := "";
@@ -4667,7 +4737,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         };
         condCtx := (id = condId, tag = condParseTag, kind = condParseKind, phase = ir.CTX_PHASE_BODY,
         iifeDepth = condDepth, valKind = passCtxValKind, valVar = condValVar, label = condLabel,
-        iterLabel = integer.intText(ir.maxLocalLexDepth(locals) + 1), countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+        iterLabel = integer.intText(ir.maxLocalLexDepth(locals) + 1), countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
         condPassCtxs := ctx.appendCtx(ctxs, condCtx);
         passBranchExpected := if isPass1 {
             condHintExpected
@@ -4962,7 +5032,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         thenPass1ValKind := if normExpected == "" { ir.VAL_KIND_INFER } else { (ir.VAL_KIND_INFER + ":") + normExpected };
         thenPass1Ctx := (id = thenId, tag = condParseTag, kind = condParseKind, phase = ir.CTX_PHASE_THEN,
         iifeDepth = condDepth, valKind = thenPass1ValKind, valVar = thenValVar, label = thenLabel,
-        iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false);
+        iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false, colVar = "");
         thenPass1 := parseBinaryCtx(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
         normExpected, 0, ctx.appendCtx(ctxs, thenPass1Ctx), condDepth, true, "tagged", aliases);
         if inferMode {
@@ -4974,7 +5044,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             thenPass2Expected := if thenValKind == ir.VALUE_KIND_UNIT or thenValKind == ir.VALUE_KIND_NEVER { "" } else { thenValKind };
             thenPass2Ctx := (id = thenId, tag = condParseTag, kind = condParseKind, phase = ir.CTX_PHASE_THEN,
             iifeDepth = condDepth, valKind = thenValKind, valVar = thenValVar, label = thenLabel,
-            iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false);
+            iterLabel = "", countVar = "", itemVar = condValVar, itemKind = resolvedPreThenKind, indexVar = "", hasIndex = false, colVar = "");
             thenPass2 := parseBinaryCtx(target, source, thenOpen - 1, prefix, locals, functions, params, currentName,
             thenPass2Expected, 0, ctx.appendCtx(ctxs, thenPass2Ctx), condDepth, false, "tagged", aliases);
             if resolvedPreThenKind == ir.VALUE_KIND_NEVER {
@@ -5026,7 +5096,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         }
         condFinCtx := (id = condId, tag = condParseTag, kind = condParseKind, phase = ir.CTX_PHASE_FINALLY,
         iifeDepth = condDepth, valKind = resolvedPreThenKind, valVar = condValVar, label = condLabel,
-        iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+        iterLabel = "", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
         finParsed := parseFinallyClause(target, source, afterCondConstruct, prefix, locals, functions, params, currentName,
         ctx.appendCtx(ctxs, condFinCtx), condDepth, inferMode, aliases);
         left = finishFinallyIife(condIifeBody, finParsed, left.kind, left, inferMode);

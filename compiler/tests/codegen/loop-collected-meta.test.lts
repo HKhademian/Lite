@@ -1,0 +1,116 @@
+/* Focused tests for loop `.collected` metadata and `.collected`/`.count`/`.value` loop suffixes. */
+
+test := import "core/test";
+textLib := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* 1. Map, filter, filter-map, early break (bare + payload), empty, all-skipped, contributed zero, .count/.value suffixes */
+basicProg :=
+"io := import \"core/io\";\n" +
+"list := import \"core/list\";\n" +
+"Direction := enum { Up; Down; };\n" +
+"nums := [1, 2, 3, 4, 5, 6];\n" +
+"doubled := loop [1, 2, 3, 4] { .item * 2 }.collected;\n" +
+"odds := loop nums as n { if n % 2 == 0 { continue; } n }.collected;\n" +
+"mixed := @m loop [1, 2, 3, 4] { if @m.item == 2 { continue; } if @m.item == 3 { continue 30; } .item * 10 }.collected;\n" +
+"stopBare := loop [1, 2, 3, 4] as x { if x == 3 { break; } x }.collected;\n" +
+"stopPay := loop [1, 2, 3, 4] as x { if x == 3 { break 99; } x }.collected;\n" +
+"emptyIn: List<Int> = [];\n" +
+"emptyOut := loop emptyIn { .item * 2 }.collected;\n" +
+"allSkip := loop [1, 2, 3] as x { if x > 0 { continue; } x }.collected;\n" +
+"zeros := loop [1, 2] { 0 }.collected;\n" +
+"cnt := loop [10, 20, 30] { .item + 1 }.count;\n" +
+"lastVal := loop [10, 20, 30] { .item + 1 }.value;\n" +
+"dirs: List<Direction> = loop [0, 1] as x { if x == 0 { .Up } else { .Down } }.collected;\n" +
+"io.outputLine(list.length(doubled), doubled[0], doubled[3]);\n" +
+"io.outputLine(list.length(odds), odds[0], odds[1], odds[2]);\n" +
+"io.outputLine(list.length(mixed), mixed[0], mixed[1], mixed[2]);\n" +
+"io.outputLine(list.length(stopBare), stopBare[0], stopBare[1]);\n" +
+"io.outputLine(list.length(stopPay), stopPay[0], stopPay[1], stopPay[2]);\n" +
+"io.outputLine(list.length(emptyOut), list.length(allSkip), list.length(zeros), zeros[0], zeros[1]);\n" +
+"io.outputLine(cnt, lastVal, list.length(dirs), dirs[0], dirs[1]);\n";
+
+cBasic := compilerTest.compileStdin(root, tsComp, basicProg, "");
+test.checkInt("loop .collected basic compile: " + cBasic.stderr, 0, cBasic.status);
+rBasic := compilerTest.checkAndRunTs(root, cBasic.stdout);
+test.checkInt("loop .collected basic run: " + rBasic.stderr, 0, rBasic.status);
+test.checkText("loop .collected basic stdout",
+"4 2 8\n3 1 3 5\n3 10 30 40\n2 1 2\n3 1 2 99\n0 0 2 0 0\n3 31 2 Direction.Up Direction.Down\n",
+rBasic.stdout);
+
+/* 2. then { ... } combining .value, .count, .collected, and nested tagged @outer.collected */
+thenProg :=
+"io := import \"core/io\";\n" +
+"list := import \"core/list\";\n" +
+"Summary := record { last: Int; n: Int; items: List<Int>; };\n" +
+"summary := loop [2, 4, 6] {\n" +
+"    .item * 10\n" +
+"} then {\n" +
+"    Summary { last = .value, n = .count, items = .collected }\n" +
+"};\n" +
+"io.outputLine(summary.last, summary.n, list.length(summary.items), summary.items[1]);\n" +
+"tagged := @outer loop [1, 2, 3] {\n" +
+"    if @outer.item == 2 { continue; }\n" +
+"    .item + 10\n" +
+"} then {\n" +
+"    @outer.collected\n" +
+"};\n" +
+"io.outputLine(list.length(tagged), tagged[0], tagged[1]);\n" +
+"matrix := loop [[1, 2], [3, 4]] as row {\n" +
+"    loop row { .item * 10 }.collected\n" +
+"}.collected;\n" +
+"io.outputLine(list.length(matrix), matrix[0][1], matrix[1][0]);\n";
+
+cThen := compilerTest.compileStdin(root, tsComp, thenProg, "");
+test.checkInt("loop .collected then/nested compile: " + cThen.stderr, 0, cThen.status);
+rThen := compilerTest.checkAndRunTs(root, cThen.stdout);
+test.checkInt("loop .collected then/nested run: " + rThen.stderr, 0, rThen.status);
+test.checkText("loop .collected then/nested stdout", "60 3 3 40\n2 11 13\n2 20 30\n", rThen.stdout);
+
+/* 3. Zero-cost check: loop without .collected must not allocate lite$col */
+noColProg :=
+"io := import \"core/io\";\n" +
+"last := loop [1, 2, 3] { .item * 2 };\n" +
+"io.outputLine(last);\n";
+cNoCol := compilerTest.compileStdin(root, tsComp, noColProg, "");
+test.checkInt("no-collected compile: " + cNoCol.stderr, 0, cNoCol.status);
+test.check("no lite$col emitted when unused", textLib.indexOfText(cNoCol.stdout, "lite$col", 0) < 0);
+
+/* 4. Verify -O0..-O3 produce identical runtime output */
+optFlags := ["-O0", "-O1", "-O2", "-O3"];
+loop optFlags as flag {
+    cOpt := compilerTest.compileStdin(root, tsComp, basicProg, flag);
+    test.checkInt("loop .collected compile " + flag + ": " + cOpt.stderr, 0, cOpt.status);
+    rOpt := compilerTest.checkAndRunTs(root, cOpt.stdout);
+    test.checkInt("loop .collected run " + flag + ": " + rOpt.stderr, 0, rOpt.status);
+    test.checkText("loop .collected stdout " + flag,
+    "4 2 8\n3 1 3 5\n3 10 30 40\n2 1 2\n3 1 2 99\n0 0 2 0 0\n3 31 2 Direction.Up Direction.Down\n",
+    rOpt.stdout);
+}
+
+/* 5. Compile-time rejections */
+compilerTest.assertCompileError(root, tsComp, ".collected in loop body",
+"x := loop [1, 2] { .collected };\n",
+"1:21: .collected is only available in a loop's then block or as a loop suffix\n");
+compilerTest.assertCompileError(root, tsComp, ".collected on Unit loop suffix",
+"io := import \"core/io\";\nx := loop [1, 2] { io.outputLine(.item); }.collected;\n",
+"2:44: loop producing Unit does not expose .collected\n");
+compilerTest.assertCompileError(root, tsComp, ".collected on Unit loop then",
+"io := import \"core/io\";\nx := loop [1, 2] { io.outputLine(.item); } then { .collected };\n",
+"2:52: loop producing Unit does not expose .collected\n");
+compilerTest.assertCompileError(root, cComp, "C rejects loop .collected",
+"x := loop [1, 2] { .item }.collected;\n",
+"1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n");
+
+test.done("loop-collected-meta");

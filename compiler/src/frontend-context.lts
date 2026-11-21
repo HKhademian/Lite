@@ -22,7 +22,7 @@ BlockDecl := type (name: String, depth: Int);
 BranchUpdate := type (depth: Int, runtime: String, initState: String, code: String);
 
 /** Lexical control-flow and metadata context matching `frontend-ir.ConstructCtx`. */
-ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool);
+ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
 
 /** Builds an integer parsed value with explicit scalar kind `kind`; `textValue` is empty. */
 pub typedIntParsed := fn(kind: String, code: String, value: Int, constant: Bool, next: Int): Parsed {
@@ -1018,6 +1018,34 @@ pub resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String,
             syntax.failAt(source, fieldStart, prefix, "loop does not expose .index without a sequence source");
         }
         return intParsed(ctx.indexVar, 0, false, fieldEnd);
+    }
+    if fieldName == "collected" {
+        if ctx.phase =!= ir.CTX_PHASE_THEN {
+            syntax.failAt(source, fieldStart, prefix, ".collected is only available in a loop's then block or as a loop suffix");
+        }
+        if ctx.valKind == ir.VAL_KIND_INFER {
+            if types.isListKind(expected) {
+                elemExp := types.listElementKind(expected);
+                if elemExp =!= "" and elemExp =!= ir.VALUE_KIND_UNIT and elemExp =!= ir.VALUE_KIND_NEVER and
+                not textLib.startsWithAt(elemExp, 0, "TailList<") and not textLib.startsWithAt(elemExp, 0, "__loopVal:") {
+                    return withMarkers((kind = expected, code = ctx.colVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
+                    integer.intText(ctx.id) + "=" + elemExp + "\n");
+                }
+            }
+            return (kind = "List<__loopVal:" + integer.intText(ctx.id) + ">", code = ctx.colVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
+        }
+        if textLib.startsWithAt(ctx.valKind, 0, (ir.VAL_KIND_INFER + ":")) {
+            hint := textLib.slice(ctx.valKind, 10, textLib.length(ctx.valKind));
+            return withMarkers((kind = "List<" + hint + ">", code = ctx.colVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
+            integer.intText(ctx.id) + "=" + hint + "\n");
+        }
+        if ctx.valKind == ir.VALUE_KIND_UNIT {
+            syntax.failAt(source, fieldStart, prefix, "loop producing Unit does not expose .collected");
+        }
+        if ctx.valKind == ir.VALUE_KIND_NEVER {
+            syntax.failAt(source, fieldStart, prefix, "diverging loop does not expose .collected");
+        }
+        return (kind = "List<" + ctx.valKind + ">", code = ctx.colVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
     }
     syntax.failAt(source, fieldStart, prefix, "unknown loop metadata field ." + fieldName);
     intParsed("", 0, false, fieldEnd)

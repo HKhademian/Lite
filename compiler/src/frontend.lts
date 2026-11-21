@@ -48,7 +48,7 @@ FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutab
 /** One transparent type alias. */
 AliasDecl := type (name: String, target: String, at: Int, end: Int, depth: Int);
 /** Lexical control-flow and metadata context for an enclosing construct. */
-ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool);
+ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
 /** 32-bucket hashed string set for O(1) reachable-token membership checks across large module graphs. */
 pub TokenBuckets := type (count: Int, b0: String, b1: String, b2: String, b3: String, b4: String, b5: String, b6: String, b7: String, b8: String, b9: String, b10: String, b11: String, b12: String, b13: String, b14: String, b15: String, b16: String, b17: String, b18: String, b19: String, b20: String, b21: String, b22: String, b23: String, b24: String, b25: String, b26: String, b27: String, b28: String, b29: String, b30: String, b31: String);
 
@@ -2063,7 +2063,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             rejectHeaderBlockTag(source, conditionStart, prefix, "if");
             ifBarrierCtx := (id = 0, tag = "", kind = CTX_KIND_IF, phase = CTX_PHASE_BODY, iifeDepth = 0,
             valKind = "", valVar = "", label = "", iterLabel = "", countVar = "",
-            itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+            itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
             condition := parseExpressionCtx(target, source, position, prefix, locals, functions, functionParams, currentName,
             appendCtx(stmtCtxs, ifBarrierCtx), aliases);
             if condition.kind =!= VALUE_KIND_BOOL {
@@ -2204,7 +2204,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             textLib.at(source, afterUnderscore) == "{";
             matchBarrierCtx := (id = 0, tag = "", kind = CTX_KIND_MATCH, phase = CTX_PHASE_BODY, iifeDepth = 0,
             valKind = "", valVar = "", label = "", iterLabel = "", countVar = "",
-            itemVar = "", itemKind = "", indexVar = "", hasIndex = false);
+            itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
             var firstArmOpen := -1;
             if isFirstFallback {
                 firstArmOpen = afterUnderscore;
@@ -2483,7 +2483,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             listLib.pushBack(mut loopTransferStarts, loopStartTransfers);
             listLib.pushBack(mut stmtCtxs, (id = stmtLoopId, tag = "", kind = CTX_KIND_LOOP, phase = CTX_PHASE_BODY,
             iifeDepth = 0, valKind = "", valVar = "", label = "",
-            iterLabel = integer.intText(depth + 1), countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+            iterLabel = integer.intText(depth + 1), countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
             listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
             branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
             preLocalsLen = loopPreLocalsLen, liveBranchCount = liveBranchCount));
@@ -2861,7 +2861,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 }
                 listLib.pushBack(mut stmtCtxs, (id = 0, tag = "", kind = CTX_KIND_FN, phase = CTX_PHASE_BODY,
                 iifeDepth = 0, valKind = header.result, valVar = "", label = "",
-                iterLabel = "1", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false));
+                iterLabel = "1", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
                 fnPreLocalsLen := localsCount(locals);
                 upgradedFnLocals := upgradeRootUninitLocalsForFn(locals, rootAssignedNames, futureValues, functions, nameStart);
                 locals = [];

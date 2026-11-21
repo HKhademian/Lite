@@ -109,6 +109,7 @@ An omitted source means unconditional iteration. There is no while keyword, requ
 - .index: zero-based traversal position for sources that provide positional traversal, not original source index/key. Ordered arrays, lists, and slices provide it; a unique set or other nonpositional iterable does not expose `.index`. Body positions begin at 0 even for an explicit reverse or stepped source.
 - .count: number of entered iterations. It starts at zero before the first check, is one-based in the body, includes skipped entries, and remains readable in completion.
 - .value: last committed body result of static type T, initialized to T's language-defined all-zero value. A completed tail expression, continue value, or break value commits; plain continue and bare break preserve it.
+- .collected: ordered `List<T>` of every committed body contribution (tail expressions, `continue v`, and `break v`), available in `then` (or as a direct loop suffix `.collected`). Bare `continue`, bare `break`, and noncontributing paths do not append; `Unit`-producing loops do not expose `.collected`. Storage is retained only when `.collected` is observably used.
 
 During an active iteration, `.item` and, for positional sources, `.index` describe that entry. In `then`, they describe the last entered iteration when one exists. If no body was entered, `then` exposes a type-directed zero placeholder for `.item`; for positional sources `.index` is `0`, while nonpositional sources have no `.index`. `.count == 0` distinguishes empty completion from an actual first entry. These fields are not available in source/condition evaluation before an entry. Count and value are available before the first condition, in the body, and in `then`. Retain last-item state only when completion observably uses it. See [empty-loop metadata](lite://doc/loop-last-item#zero-iteration-placeholders), [loop value](lite://doc/loop-value) for zero rules, and [continuity](lite://doc/continuity-and-analogy#similar-input-different-capabilities) for the capability boundary.
 
@@ -125,6 +126,14 @@ sum := loop numbers as number {
     print(.count);
     .value
 }
+```
+
+When a loop has no `then` block, you can also project its completion metadata directly with a suffix (`.collected`, `.count`, or `.value`):
+
+```text
+doubled := loop numbers { .item * 2 }.collected;
+evens := loop numbers as n { if n % 2 =!= 0 { continue; } n }.collected;
+iterations := loop numbers { .item * 2 }.count;
 ```
 
 Then shares the owning loop context, tagged or untagged. Its tail expression produces the final result; then {} produces Unit. Without then, the selected normal result is final .value, including initialized zero for an empty/all-skipped loop. Complete inference remains open. See [completion](lite://doc/loop-completion).
