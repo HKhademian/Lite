@@ -2327,6 +2327,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 parsed := parseExpressionCtx(target, source, position, prefix, locals, functions, functionParams, currentName, stmtCtxs, aliases);
                 locals = checkStatementTrace(target, source, loopHdrPos, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 afterParsed := skipTrivia(source, parsed.next, prefix);
+                if textLib.startsWithAt(source, afterParsed, "..") {
+                    failAt(source, afterParsed, prefix, "C backend does not support range loops yet");
+                }
                 seqIsWritableLocal := {
                     var foundW := false;
                     if types.isMapKind(parsed.kind) or types.isSetKind(parsed.kind) {

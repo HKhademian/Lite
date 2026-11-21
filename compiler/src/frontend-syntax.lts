@@ -1081,7 +1081,7 @@ pub loopNeedsExprLowering := fn(source: String, position: Int, prefix: String): 
             cursor = cursor + 1;
             prevExpr = true;
         } else if ch == "." {
-            if not prevExpr { return true; }
+            if not prevExpr or textLib.startsWithAt(source, cursor, "..") { return true; }
             cursor = cursor + 1;
             prevExpr = false;
         } else if textLib.isDigit(ch) {

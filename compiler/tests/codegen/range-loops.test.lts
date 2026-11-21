@@ -1,0 +1,64 @@
+/* Focused tests for range loops (`loop a..b`, `loop a..=b`, `as i`, `.item`/`.index`/`.count`/`.collected`). */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* 1. Half-open (..), inclusive (..=), empty ranges, negative bounds, as i, .collected, partial if, nested ranges, end evaluated once */
+rangeProg :=
+"io := import \"core/io\";\n" +
+"var sum := 0;\n" +
+"loop 0..5 as i {\n" +
+"    sum += i;\n" +
+"}\n" +
+"squares := loop 1..=5 { .item * .item }.collected;\n" +
+"evens := loop 0..=8 { if .item % 2 == 0 { .item } }.collected;\n" +
+"emptyHalf := loop 5..5 { .item }.collected;\n" +
+"emptyRev := loop 5..2 { .item }.collected;\n" +
+"singleInc := loop 5..=5 { .item }.collected;\n" +
+"negRange := loop -2..=2 { .item }.collected;\n" +
+"withIdx := loop 10..13 { .item * 10 + .index }.collected;\n" +
+"var endCalls := 0;\n" +
+"getEnd := fn(): Int { endCalls += 1; 4 };\n" +
+"onceRes := loop 0..getEnd() { .item }.collected;\n" +
+"io.outputLine(sum);\n" +
+"io.outputLine(squares.length, squares);\n" +
+"io.outputLine(evens.length, evens);\n" +
+"io.outputLine(emptyHalf.length, emptyRev.length, singleInc.length, singleInc[0]);\n" +
+"io.outputLine(negRange.length, negRange);\n" +
+"io.outputLine(withIdx);\n" +
+"io.outputLine(endCalls, onceRes.length, onceRes[3]);\n";
+
+optFlags := ["-O0", "-O1", "-O2", "-O3"];
+loop optFlags as flag {
+    cRng := compilerTest.compileStdin(root, tsComp, rangeProg, flag);
+    test.checkInt("range loops compile " + flag + ": " + cRng.stderr, 0, cRng.status);
+    rRng := compilerTest.checkAndRunTs(root, cRng.stdout);
+    test.checkInt("range loops run " + flag + ": " + rRng.stderr, 0, rRng.status);
+    test.checkText("range loops stdout " + flag,
+    "10\n5 [1, 4, 9, 16, 25]\n5 [0, 2, 4, 6, 8]\n0 0 1 5\n5 [-2, -1, 0, 1, 2]\n[100, 111, 122]\n1 4 3\n",
+    rRng.stdout);
+}
+
+/* 2. Compile-time rejections */
+compilerTest.assertCompileError(root, tsComp, "non-Int range start",
+"loop \"a\"..5 { }\n",
+"1:6: range loop start must be Int, got String\n");
+compilerTest.assertCompileError(root, tsComp, "non-Int range end",
+"loop 0..\"b\" { }\n",
+"1:9: range loop end must be Int, got String\n");
+compilerTest.assertCompileError(root, cComp, "C rejects range loop",
+"loop 0..5 { }\n",
+"1:7: C backend does not support range loops yet\n");
+
+test.done("range-loops");

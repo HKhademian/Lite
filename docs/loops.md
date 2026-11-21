@@ -133,9 +133,12 @@ When a loop has no `then` block, you can also project its completion metadata di
 ```text
 doubled := loop numbers { .item * 2 }.collected;
 posDoubled := loop numbers { if .item > 0 { .item * 2 } }.collected;
-evens := loop numbers as n { if n % 2 =!= 0 { continue; } n }.collected;
+squares := loop 1..=5 { .item * .item }.collected;
+evens := loop 0..10 as i { if i % 2 == 0 { i } }.collected;
 iterations := loop numbers { .item * 2 }.count;
 ```
+
+Integer range loops (`loop start..end` half-open, `loop start..=end` inclusive, with optional `as i`) evaluate `start` and `end` once and expose `.item`, `.index`, `.count`, `.value`, and `.collected` with zero intermediate list allocation.
 
 Then shares the owning loop context, tagged or untagged. Its tail expression produces the final result; then {} produces Unit. Without then, the selected normal result is final .value, including initialized zero for an empty/all-skipped loop. Complete inference remains open. See [completion](lite://doc/loop-completion).
 

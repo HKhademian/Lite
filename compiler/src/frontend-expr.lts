@@ -3191,6 +3191,10 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         syntax.rejectHeaderBlockTag(source, hdrStart, prefix, "loop");
         var passMarkers := "";
         var isSeqLoop := false;
+        var isRangeLoop := false;
+        var isRangeInclusive := false;
+        var rangeStartCode := "";
+        var rangeEndCode := "";
         var isUncond := false;
         var condCode := "true";
         var seqCode := "";
@@ -3203,7 +3207,36 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             hdr := parseBinaryCtx(target, source, hdrStart, prefix, locals, functions, params, currentName, "", 0, headerCtxs, loopDepth, passInfer, "", aliases);
             if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, hdr); }
             afterHdr := syntax.skipTrivia(source, hdr.next, prefix);
-            if textLib.wordAt(source, afterHdr, "as") {
+            if textLib.startsWithAt(source, afterHdr, "..") {
+                if not numeric.isIntKind(hdr.kind) {
+                    syntax.failAt(source, hdrStart, prefix, "range loop start must be Int, got " + types.displayKind(hdr.kind));
+                }
+                isRangeInclusive = textLib.startsWithAt(source, afterHdr, "..=");
+                endStart := syntax.skipTrivia(source, afterHdr + (if isRangeInclusive { 3 } else { 2 }), prefix);
+                endHdr := parseBinaryCtx(target, source, endStart, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, headerCtxs, loopDepth, passInfer, "", aliases);
+                if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, endHdr); }
+                if not numeric.isIntKind(endHdr.kind) {
+                    syntax.failAt(source, endStart, prefix, "range loop end must be Int, got " + types.displayKind(endHdr.kind));
+                }
+                isRangeLoop = true;
+                isSeqLoop = true;
+                seqItemKind = ir.VALUE_KIND_INT;
+                rangeStartCode = ctx.assignValueCode(target, ir.VALUE_KIND_INT, hdr.kind, hdr.code);
+                rangeEndCode = ctx.assignValueCode(target, ir.VALUE_KIND_INT, endHdr.kind, endHdr.code);
+                afterEnd := syntax.skipTrivia(source, endHdr.next, prefix);
+                if textLib.wordAt(source, afterEnd, "as") {
+                    itemNameStart := syntax.skipTrivia(source, afterEnd + 2, prefix);
+                    if itemNameStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, itemNameStart)) {
+                        syntax.failAt(source, itemNameStart, prefix, "expected an item name after as");
+                    }
+                    itemNameEnd := textLib.skipName(source, itemNameStart);
+                    seqItemName = textLib.slice(source, itemNameStart, itemNameEnd);
+                    if syntax.isReservedWord(seqItemName) { syntax.unsupportedFeature(source, itemNameStart, seqItemName, prefix); }
+                    beforeLoopOpen = syntax.skipTrivia(source, itemNameEnd, prefix);
+                } else {
+                    beforeLoopOpen = afterEnd;
+                }
+            } else if textLib.wordAt(source, afterHdr, "as") {
                 if not types.isListKind(hdr.kind) and not types.isArrayKind(hdr.kind) and not types.isMapKind(hdr.kind) and not types.isSetKind(hdr.kind) {
                     syntax.failAt(source, hdrStart, prefix, "loop sequence must be a List, Array, Map, or Set, got " + types.displayKind(hdr.kind));
                 }
@@ -3350,7 +3383,12 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 wrappedBody = "try { " + bodyParsed.code + " } catch (lite$err) { " +
                 textLib.joinTexts(catchClauses, " else ") + " else { throw lite$err; } }";
             }
-            rawLoopStmt := if isSeqLoop {
+            rawLoopStmt := if isRangeLoop {
+                rangeEndVar := "lite$rend" + loopIdStr;
+                rangeCmp := if isRangeInclusive { "<=" } else { "<" };
+                "for (let " + loopIterVar + ": bigint = " + rangeStartCode + ", " + rangeEndVar + ": bigint = " + rangeEndCode + "; " +
+                loopIterVar + " " + rangeCmp + " " + rangeEndVar + "; " + loopIterVar + " += 1n) { " + metaStep + wrappedBody + " }"
+            } else if isSeqLoop {
                 "for (const " + loopIterVar + " of " + ir.targetListCopyCode(target, seqCode) + ") { " + metaStep + wrappedBody + " }"
             } else {
                 whileCond := if condCode == "true" { "Boolean(true)" } else if condCode == "false" { "Boolean(false)" } else { "Boolean(" + condCode + ")" };
@@ -3359,7 +3397,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             needsLoopLabel := reach.codeUsesTextCall(rawLoopStmt, "break " + loopLabel + ";") or
             reach.codeUsesTextCall(rawLoopStmt, "continue " + loopLabel + ";");
             labeledLoop := if needsLoopLabel { loopLabel + ": " + rawLoopStmt } else { rawLoopStmt };
-            hdrCheckText := if isSeqLoop { seqCode } else { condCode };
+            hdrCheckText := if isRangeLoop { rangeStartCode + " " + rangeEndCode } else if isSeqLoop { seqCode } else { condCode };
             hdrHasPayBrk := reach.codeUsesTextCall(hdrCheckText, "lite$throwTransfer(" + brkPayId + ",");
             hdrHasBareBrk := reach.codeUsesTextCall(hdrCheckText, "lite$throwTransfer(" + brkBareId + ",");
             if hdrHasPayBrk or hdrHasBareBrk {
