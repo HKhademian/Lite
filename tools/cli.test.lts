@@ -166,7 +166,7 @@ loop toolNames as name {
     srcAbs := path.join(root, srcRel);
     srcRead := fs.readText(srcAbs);
     test.check("read " + srcRel, srcRead.ok);
-    compiled := compilerTest.compileStdinWithOpts(root, tsComp.path, root, srcRead.text, srcRel, srcAbs, []);
+    compiled := compilerTest.compileStdinWithOpts(root, tsComp.path, root, srcRead.text, srcRel, srcAbs, ["-O3"]);
     test.checkInt("compile " + srcRel + ": " + compiled.stderr, 0, compiled.status);
     genRead := fs.readText(path.join(root, "dist/tools/" + name + ".ts"));
     test.check("read dist/tools/" + name + ".ts", genRead.ok);

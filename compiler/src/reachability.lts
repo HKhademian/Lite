@@ -1525,6 +1525,22 @@ replaceParamToken := fn(body: String, paramRt: String, argCode: String): String 
     out
 };
 
+/** Widens TS literal arguments (`2`, `2n`, `true`/`false`) when inlining so strict `tsc` does not flag `TS2367` on comparisons. */
+widenInlineArgForTarget := fn(target: String, rawArg: String): String {
+    if target =!= ir.TARGET_TS { return rawArg; }
+    if rawArg == "true" or rawArg == "false" {
+        return "(" + rawArg + " as boolean)";
+    }
+    first := textLib.at(rawArg, 0);
+    if textLib.isDigit(first) or first == "-" {
+        if textLib.endsWith(rawArg, "n") {
+            return "(" + rawArg + " as bigint)";
+        }
+        return "(" + rawArg + " as number)";
+    }
+    rawArg
+};
+
 /** Inlines small single-`RETURN` pure leaf functions (0 or 1 parameter) at simple call sites in O(n) for `-O3`. */
 inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
     var total := 0;
@@ -1619,7 +1635,8 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
                             changed = true;
                             continue;
                         } else if pRt =!= "" and isSimpleInlineArg(rawArg) {
-                            out = out + "(" + replaceParamToken(body, pRt, rawArg) + ")";
+                            subArg := widenInlineArgForTarget(target, rawArg);
+                            out = out + "(" + replaceParamToken(body, pRt, subArg) + ")";
                             cursor = scan;
                             changed = true;
                             continue;
