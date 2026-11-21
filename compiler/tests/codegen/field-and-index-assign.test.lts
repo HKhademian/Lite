@@ -1,0 +1,65 @@
+/* Focused tests for mutable record/tuple field assignment and compound index assignment. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+/* 1. 1-level and 2-level record/tuple field assignment + compound ops + value isolation */
+recProg :=
+"io := import \"core/io\";\n" +
+"Dir := enum { Up; Down; Left; Right; };\n" +
+"Pos := record { x: Int; y: Int; };\n" +
+"State := record { dir: Dir; pos: Pos; acc: Float; };\n" +
+"var st := State { dir = .Right, pos = Pos { x = 10, y = 20 }, acc = 1.0 };\n" +
+"var snap := st;\n" +
+"st.dir = .Left;\n" +
+"st.acc += 0.5;\n" +
+"st.pos.x += 5;\n" +
+"st.pos.y -= 3;\n" +
+"snap.pos.x = 999;\n" +
+"var pt := (a = 2, b = 4);\n" +
+"pt.a *= 3;\n" +
+"io.outputLine(st.dir, st.pos.x, st.pos.y, st.acc);\n" +
+"io.outputLine(snap.dir, snap.pos.x, snap.pos.y, pt.a, pt.b);\n";
+
+cRec := compilerTest.compileStdin(root, tsComp, recProg, "");
+test.checkInt("record field assign compile: " + cRec.stderr, 0, cRec.status);
+rRec := compilerTest.checkAndRunTs(root, cRec.stdout);
+test.checkInt("record field assign run: " + rRec.stderr, 0, rRec.status);
+test.checkText("record field assign stdout", "Dir.Left 15 17 1.5\nDir.Right 999 20 6 4\n", rRec.stdout);
+
+/* 2. Compound Map and List/Array index assignment */
+idxProg :=
+"io := import \"core/io\";\n" +
+"counts: mut Map<String, Int> = [\"a\" = 10, \"b\" = 20];\n" +
+"counts[\"a\"] += 5;\n" +
+"counts[\"b\"] -= 4;\n" +
+"xs: mut List<Int> = [1, 2, 3];\n" +
+"xs[1] += 10;\n" +
+"var arr: [Int; 2] = [4, 5];\n" +
+"arr[0] *= 3;\n" +
+"io.outputLine(counts[\"a\"], counts[\"b\"], xs[1], arr[0]);\n";
+
+cIdx := compilerTest.compileStdin(root, tsComp, idxProg, "");
+test.checkInt("compound index assign compile: " + cIdx.stderr, 0, cIdx.status);
+rIdx := compilerTest.checkAndRunTs(root, cIdx.stdout);
+test.checkInt("compound index assign run: " + rIdx.stderr, 0, rIdx.status);
+test.checkText("compound index assign stdout", "15 16 12 12\n", rIdx.stdout);
+
+/* 3. Compile-time rejections */
+compilerTest.assertCompileError(root, tsComp, "immutable record field assign", "Pos := record { x: Int; };\np := Pos { x = 1 };\np.x = 2;\n", "3:1: cannot mutate field of immutable local p\n");
+compilerTest.assertCompileError(root, tsComp, "immutable map compound assign", "m: Map<String, Int> = [\"a\" = 1];\nm[\"a\"] += 1;\n", "2:1: cannot mutate immutable map m\n");
+compilerTest.assertCompileError(root, tsComp, "immutable list compound assign", "xs: List<Int> = [1, 2];\nxs[0] += 1;\n", "2:1: cannot mutate immutable list xs\n");
+compilerTest.assertCompileError(root, cComp, "C rejects record field assign", "Pos := record { x: Int; };\nvar p := Pos { x = 1 };\np.x = 2;\n", "3:1: C backend does not support record field assignment yet\n");
+
+test.done("field-and-index-assign");

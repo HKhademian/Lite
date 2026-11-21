@@ -3007,7 +3007,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if mapLocalIdx >= 0 and types.isMapKind(locals[mapLocalIdx].kind) {
                 bracketEnd := syntax.scanBracketEnd(source, position, prefix);
                 afterBracket := if bracketEnd >= 0 { skipTrivia(source, bracketEnd, prefix) } else { -1 };
-                if afterBracket >= 0 and isSingleEquals(source, afterBracket) {
+                mapCompOp := if afterBracket >= 0 { compoundAssignOp(source, afterBracket) } else { (op = "", baseOp = "", width = 0) };
+                if afterBracket >= 0 and (isSingleEquals(source, afterBracket) or mapCompOp.width > 0) {
                     entry := locals[mapLocalIdx];
                     if entry.initState =!= INIT_STATE_INIT {
                         failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
@@ -3023,14 +3024,21 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         failAt(source, kStart, prefix, "map key must be " + displayKind(kKind) + ", got " + displayKind(keyParsed.kind));
                     }
                     closePos := expectSymbol(source, skipTrivia(source, keyParsed.next, prefix), "]", prefix);
-                    eqPos := skipTrivia(source, closePos, prefix);
-                    vStart := skipTrivia(source, eqPos + 1, prefix);
+                    opPos := skipTrivia(source, closePos, prefix);
+                    opWidth := if mapCompOp.width > 0 { mapCompOp.width } else { 1 };
+                    vStart := skipTrivia(source, opPos + opWidth, prefix);
                     valParsed := parseExpressionAsCtx(target, source, vStart, prefix, locals, functions, functionParams, currentName, vKind, stmtCtxs, aliases);
                     if not types.isCompatibleKind(vKind, valParsed.kind) {
                         failAt(source, vStart, prefix, "map value must be " + displayKind(vKind) + ", got " + displayKind(valParsed.kind));
                     }
-                    stmtCode := "(" + entry.runtime + ").set(" + assignValueCode(target, kKind, keyParsed.kind, keyParsed.code) + ", " +
-                    assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")";
+                    kCode := assignValueCode(target, kKind, keyParsed.kind, keyParsed.code);
+                    stmtCode := if mapCompOp.width > 0 {
+                        curValCode := "lite$mapAt(" + entry.runtime + ", lite$ck, " + integer.intText(nameStart) + ")";
+                        nextValCode := compoundAssignCode(target, source, opPos, prefix, vKind, curValCode, mapCompOp.baseOp, valParsed);
+                        "((lite$ck: " + tsFunctionType(kKind) + ") => (" + entry.runtime + ").set(lite$ck, " + nextValCode + "))(" + kCode + ")"
+                    } else {
+                        "(" + entry.runtime + ").set(" + kCode + ", " + assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")"
+                    };
                     locals = checkStatementTrace(target, source, nameStart, prefix, stmtCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                     statementNext := consumeStatementEnd(source, valParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after map assignment"); }
@@ -3047,7 +3055,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             } else if mapLocalIdx >= 0 and (isListKind(locals[mapLocalIdx].kind) or isArrayKind(locals[mapLocalIdx].kind)) {
                 bracketEnd := syntax.scanBracketEnd(source, position, prefix);
                 afterBracket := if bracketEnd >= 0 { skipTrivia(source, bracketEnd, prefix) } else { -1 };
-                if afterBracket >= 0 and isSingleEquals(source, afterBracket) {
+                listCompOp := if afterBracket >= 0 { compoundAssignOp(source, afterBracket) } else { (op = "", baseOp = "", width = 0) };
+                if afterBracket >= 0 and (isSingleEquals(source, afterBracket) or listCompOp.width > 0) {
                     entry := locals[mapLocalIdx];
                     if entry.initState =!= INIT_STATE_INIT {
                         failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
@@ -3069,17 +3078,105 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         failAt(source, idxStart, prefix, "list index must be Int, got " + displayKind(idxParsed.kind));
                     }
                     closePos := expectSymbol(source, skipTrivia(source, idxParsed.next, prefix), "]", prefix);
-                    eqPos := skipTrivia(source, closePos, prefix);
-                    vStart := skipTrivia(source, eqPos + 1, prefix);
+                    opPos := skipTrivia(source, closePos, prefix);
+                    opWidth := if listCompOp.width > 0 { listCompOp.width } else { 1 };
+                    vStart := skipTrivia(source, opPos + opWidth, prefix);
                     valParsed := parseExpressionAsCtx(target, source, vStart, prefix, locals, functions, functionParams, currentName, elKind, stmtCtxs, aliases);
                     if not types.isCompatibleKind(elKind, valParsed.kind) {
                         failAt(source, vStart, prefix, "list element must be " + displayKind(elKind) + ", got " + displayKind(valParsed.kind));
                     }
-                    stmtCode := "lite$listSet(" + entry.runtime + ", " + assignValueCode(target, VALUE_KIND_INT, idxParsed.kind, idxParsed.code) + ", " +
-                    assignValueCode(target, elKind, valParsed.kind, valParsed.code) + ", " + integer.intText(nameStart) + ")";
+                    idxCode := assignValueCode(target, VALUE_KIND_INT, idxParsed.kind, idxParsed.code);
+                    stmtCode := if listCompOp.width > 0 {
+                        curElCode := "lite$listAt(" + entry.runtime + ", lite$ci, " + integer.intText(nameStart) + ")";
+                        nextElCode := compoundAssignCode(target, source, opPos, prefix, elKind, curElCode, listCompOp.baseOp, valParsed);
+                        "((lite$ci: bigint) => lite$listSet(" + entry.runtime + ", lite$ci, " + nextElCode + ", " + integer.intText(nameStart) + "))(" + idxCode + ")"
+                    } else {
+                        "lite$listSet(" + entry.runtime + ", " + idxCode + ", " + assignValueCode(target, elKind, valParsed.kind, valParsed.code) + ", " + integer.intText(nameStart) + ")"
+                    };
                     locals = checkStatementTrace(target, source, nameStart, prefix, stmtCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                     statementNext := consumeStatementEnd(source, valParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after list assignment"); }
+                    position = statementNext;
+                    if currentLive and not currentStopped {
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_CALL, name = "", runtime = "", code = stmtCode, intValue = 0, textValue = ""));
+                        if codeHasRawTransfer(stmtCode) {
+                            listLib.pushBack(mut transferCodes, stmtCode);
+                            transferCount = transferCount + 1;
+                        }
+                    }
+                    continue;
+                }
+            }
+        }
+        if position < size and textLib.at(source, position) == "." {
+            recLocalIdx := localIndex(locals, name);
+            if recLocalIdx >= 0 and (types.isRecordKind(locals[recLocalIdx].kind) or types.isTupleKind(locals[recLocalIdx].kind)) {
+                var scanPos := position;
+                var curKind := locals[recLocalIdx].kind;
+                fieldChain: mut List<String> = [];
+                var chainValid := true;
+                loop scanPos < size and textLib.at(source, scanPos) == "." {
+                    fStart := skipTrivia(source, scanPos + 1, prefix);
+                    if fStart >= size or not textLib.isNameStart(textLib.at(source, fStart)) {
+                        chainValid = false;
+                        break;
+                    }
+                    fEnd := textLib.skipName(source, fStart);
+                    fName := textLib.slice(source, fStart, fEnd);
+                    nextKind := if types.isRecordKind(curKind) { types.recordFieldKind(curKind, fName) }
+                    else if types.isTupleKind(curKind) { types.tupleFieldKind(curKind, fName) }
+                    else { "" };
+                    if nextKind == "" {
+                        chainValid = false;
+                        break;
+                    }
+                    listLib.pushBack(mut fieldChain, fName);
+                    curKind = nextKind;
+                    scanPos = skipTrivia(source, fEnd, prefix);
+                }
+                recCompOp := if chainValid and scanPos < size { compoundAssignOp(source, scanPos) } else { (op = "", baseOp = "", width = 0) };
+                chainLen := listLib.length(fieldChain);
+                if chainValid and chainLen >= 1 and chainLen <= 2 and scanPos < size and (isSingleEquals(source, scanPos) or recCompOp.width > 0) {
+                    entry := locals[recLocalIdx];
+                    if entry.initState =!= INIT_STATE_INIT {
+                        failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
+                    }
+                    if not entry.mutable {
+                        failAt(source, nameStart, prefix, "cannot mutate field of immutable local " + name);
+                    }
+                    if target =!= TARGET_TS {
+                        failAt(source, nameStart, prefix, "C backend does not support record field assignment yet");
+                    }
+                    opPos := scanPos;
+                    opWidth := if recCompOp.width > 0 { recCompOp.width } else { 1 };
+                    rhsStart := skipTrivia(source, opPos + opWidth, prefix);
+                    rhsParsed := parseExpressionAsCtx(target, source, rhsStart, prefix, locals, functions, functionParams, currentName, curKind, stmtCtxs, aliases);
+                    if not types.isCompatibleKind(curKind, rhsParsed.kind) {
+                        failAt(source, rhsStart, prefix, "cannot assign " + displayKind(rhsParsed.kind) + " to field of type " + displayKind(curKind));
+                    }
+                    f0 := fieldChain[0];
+                    stmtCode := if chainLen == 1 {
+                        lhsPath := "(" + entry.runtime + ")." + f0;
+                        rhsCode := if recCompOp.width > 0 {
+                            compoundAssignCode(target, source, opPos, prefix, curKind, lhsPath, recCompOp.baseOp, rhsParsed)
+                        } else {
+                            assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
+                        };
+                        "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + f0 + ": " + rhsCode + " })"
+                    } else {
+                        f1 := fieldChain[1];
+                        subPath := "(" + entry.runtime + ")." + f0;
+                        lhsPath := "(" + subPath + ")." + f1;
+                        rhsCode := if recCompOp.width > 0 {
+                            compoundAssignCode(target, source, opPos, prefix, curKind, lhsPath, recCompOp.baseOp, rhsParsed)
+                        } else {
+                            assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
+                        };
+                        "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + f0 + ": { ...(" + subPath + "), " + f1 + ": " + rhsCode + " } })"
+                    };
+                    locals = checkStatementTrace(target, source, nameStart, prefix, stmtCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+                    statementNext := consumeStatementEnd(source, rhsParsed.next, prefix);
+                    if statementNext < 0 { failAt(source, skipTrivia(source, rhsParsed.next, prefix), prefix, "expected ; after field assignment"); }
                     position = statementNext;
                     if currentLive and not currentStopped {
                         listLib.pushBack(mut items, (kind = ITEM_KIND_CALL, name = "", runtime = "", code = stmtCode, intValue = 0, textValue = ""));
