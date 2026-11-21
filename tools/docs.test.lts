@@ -137,7 +137,7 @@ test.check("select ts compiler", tsComp.ok);
 docsSrcPath := path.join(root, "tools/src/docs.lts");
 docsSrc := fs.readText(docsSrcPath);
 test.check("read tools/src/docs.lts", docsSrc.ok);
-compiledDocs := compilerTest.compileStdinWithOpts(root, tsComp.path, root, docsSrc.text, "tools/src/docs.lts", docsSrcPath, []);
+compiledDocs := compilerTest.compileStdinWithOpts(root, tsComp.path, root, docsSrc.text, "tools/src/docs.lts", docsSrcPath, ["-O3"]);
 test.checkInt("compile tools/src/docs.lts: " + compiledDocs.stderr, 0, compiledDocs.status);
 
 ignitedDocsPath := path.join(root, "dist/tools/docs.ts");

@@ -125,7 +125,7 @@ test.check("select ts compiler", tsComp.ok);
 fmtSrcPath := path.join(root, "tools/src/fmt.lts");
 fmtSrc := fs.readText(fmtSrcPath);
 test.check("read tools/src/fmt.lts", fmtSrc.ok);
-compiledFmt := compilerTest.compileStdinWithOpts(root, tsComp.path, root, fmtSrc.text, "tools/src/fmt.lts", fmtSrcPath, []);
+compiledFmt := compilerTest.compileStdinWithOpts(root, tsComp.path, root, fmtSrc.text, "tools/src/fmt.lts", fmtSrcPath, ["-O3"]);
 test.checkInt("compile tools/src/fmt.lts: " + compiledFmt.stderr, 0, compiledFmt.status);
 
 ignitedFmtPath := path.join(root, "dist/tools/fmt.ts");
