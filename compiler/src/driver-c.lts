@@ -29,7 +29,7 @@ pub run := fn(args: List<String>): Unit {
     identity = loaded.identity, source = loaded.text, initialGraph = emptyGraph,
     projectRoot = loaded.projectRoot, =cwd, =builtinSpecs
     );
-    emitter.emitProgramWithSpecs(items = modules.moduleItems(graph), source = loaded.text, prefix = loaded.display, =builtinSpecs);
+    emitter.emitProgramWithSpecsOpt(items = modules.moduleItems(graph), source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel);
     if flags.hasTrace {
         hostFs.writeTraceJson(flags.tracePath, graph);
     }

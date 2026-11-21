@@ -14,7 +14,7 @@ frontend := import "./frontend.lts";
 /** Parses scalar CLI flags and positional file target for TS and C compiler drivers without reading `io.inputArgs()`. */
 pub parseCompilerFlags := fn(rawArgs: List<String>): (
 ok: Bool, isStdin: Bool, hasName: Bool, name: String, hasRoot: Bool, rootPath: String,
-hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: String, error: String
+hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, optLevel: Int, filePath: String, error: String
 ) {
     var isStdin := false;
     var hasName := false;
@@ -25,23 +25,59 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
     var outPath := "";
     var hasTrace := false;
     var tracePath := "";
+    var optLevel := 1;
     var filePath := "";
+
+    parseOptText := fn(raw: String): Int {
+        if raw == "0" { 0 }
+        else if raw == "1" { 1 }
+        else if raw == "2" { 2 }
+        else if raw == "3" { 3 }
+        else { -1 }
+    };
 
     args: mut List<String> = rawArgs;
     loop listLib.listCountText(args) > 0 {
         arg := listLib.popFront(mut args);
         if arg == "--stdin" {
             isStdin = true;
+        } else if arg == "-O0" {
+            optLevel = 0;
+        } else if arg == "-O1" {
+            optLevel = 1;
+        } else if arg == "-O2" {
+            optLevel = 2;
+        } else if arg == "-O3" {
+            optLevel = 3;
+        } else if textLib.startsWithAt(arg, 0, "-O") {
+            return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "unsupported optimization flag " + arg + " (expected -O0, -O1, -O2, or -O3)");
+        } else if arg == "--opt" {
+            if listLib.listCountText(args) == 0 {
+                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "missing value for --opt");
+            }
+            rawOpt := listLib.popFront(mut args);
+            parsedOpt := parseOptText(rawOpt);
+            if parsedOpt < 0 {
+                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "unsupported optimization level " + rawOpt + " (expected 0, 1, 2, or 3)");
+            }
+            optLevel = parsedOpt;
+        } else if textLib.startsWithAt(arg, 0, "--opt=") {
+            rawOpt := textLib.slice(arg, 6, textLib.length(arg));
+            parsedOpt := parseOptText(rawOpt);
+            if parsedOpt < 0 {
+                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "unsupported optimization level " + rawOpt + " (expected 0, 1, 2, or 3)");
+            }
+            optLevel = parsedOpt;
         } else if arg == "--builtin-mode" {
             if listLib.listCountText(args) == 0 {
-                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --builtin-mode");
+                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "missing value for --builtin-mode");
             }
             _ignoredSpec := listLib.popFront(mut args);
         } else if textLib.startsWithAt(arg, 0, "--builtin-mode=") {
             _ignoredInlineSpec := true;
         } else if arg == "--name" {
             if listLib.listCountText(args) == 0 {
-                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --name");
+                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "missing value for --name");
             }
             hasName = true;
             name = listLib.popFront(mut args);
@@ -50,7 +86,7 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
             name = textLib.slice(arg, 7, textLib.length(arg));
         } else if arg == "--root" {
             if listLib.listCountText(args) == 0 {
-                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --root");
+                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "missing value for --root");
             }
             hasRoot = true;
             rootPath = listLib.popFront(mut args);
@@ -59,7 +95,7 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
             rootPath = textLib.slice(arg, 7, textLib.length(arg));
         } else if arg == "--out" {
             if listLib.listCountText(args) == 0 {
-                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --out");
+                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "missing value for --out");
             }
             hasOut = true;
             outPath = listLib.popFront(mut args);
@@ -68,7 +104,7 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
             outPath = textLib.slice(arg, 6, textLib.length(arg));
         } else if arg == "--trace-json" {
             if listLib.listCountText(args) == 0 {
-                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --trace-json");
+                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "missing value for --trace-json");
             }
             hasTrace = true;
             tracePath = listLib.popFront(mut args);
@@ -76,21 +112,21 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
             hasTrace = true;
             tracePath = textLib.slice(arg, 13, textLib.length(arg));
         } else if textLib.startsWithAt(arg, 0, "-") {
-            return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unknown compiler option " + arg);
+            return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "unknown compiler option " + arg);
         } else if filePath =!= "" {
-            return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unexpected argument " + arg);
+            return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "unexpected argument " + arg);
         } else {
             filePath = arg;
         }
     }
 
     if isStdin and filePath =!= "" {
-        return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "cannot combine --stdin with a file argument");
+        return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "cannot combine --stdin with a file argument");
     }
     if not isStdin and filePath == "" {
-        return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing input file (or --stdin)");
+        return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "missing input file (or --stdin)");
     }
-    (ok = true, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "")
+    (ok = true, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "")
 }
 
 /** Extracts repeatable `--builtin-mode` specification values from `rawArgs`. */

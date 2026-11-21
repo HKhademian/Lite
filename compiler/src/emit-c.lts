@@ -769,10 +769,10 @@ emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, h
     idx
 };
 
-/** Emits the C program from the flat item stream with explicit `--builtin-mode` specifications. */
-pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
+/** Emits the C program from the flat item stream with explicit `--builtin-mode` specifications and optimization level (`0..3`). */
+pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
     _modes := frontend.parseBuiltinModeSpecs(prefix, builtinSpecs);
-    reachable := frontend.filterReachableItemsForTarget(items, frontend.TARGET_C);
+    reachable := frontend.filterReachableItemsWithOpt(items, frontend.TARGET_C, optLevel);
     calls := frontend.targetHelperCalls(reachable);
     var floatOutput := false;
     var hasFunctions := false;
@@ -930,8 +930,13 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
     io.outputLine("}");
 }
 
+/** Emits the C program from the flat item stream with explicit `--builtin-mode` specifications at default `-O1`. */
+pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
+    emitProgramWithSpecsOpt(items, source, prefix, builtinSpecs, 1);
+}
+
 /** Emits the C program from the flat item stream using default builtin modes. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
     emptySpecs: List<String> = [];
-    emitProgramWithSpecs(items, source, prefix, emptySpecs);
+    emitProgramWithSpecsOpt(items, source, prefix, emptySpecs, 1);
 }

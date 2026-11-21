@@ -1477,10 +1477,199 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
 };
 
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
-pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
-    simplified := unwrapSyntheticScopes(simplifyConstantBranches(items, target));
-    varOpt := optimizeStraightLineVars(simplified, target);
-    pruned := unwrapSyntheticScopes(pruneBlockScopedItems(varOpt, target));
+/** True when `arg` is a side-effect-free simple identifier or numeric/boolean literal safe to duplicate during `-O3` leaf inlining. */
+isSimpleInlineArg := fn(arg: String): Bool {
+    len := textLib.length(arg);
+    if len == 0 { return false; }
+    var i := 0;
+    if textLib.at(arg, 0) == "-" {
+        if len == 1 { return false; }
+        i = 1;
+    }
+    loop i < len {
+        ch := textLib.at(arg, i);
+        if not textLib.isNameContinue(ch) and ch =!= "$" and ch =!= "." { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+/** Replaces whole-token occurrences of `paramRt` with `argCode` outside quoted strings. */
+replaceParamToken := fn(body: String, paramRt: String, argCode: String): String {
+    if paramRt == "" { return body; }
+    pLen := textLib.length(paramRt);
+    bLen := textLib.length(body);
+    var out := "";
+    var cursor := 0;
+    loop cursor < bLen {
+        ch := textLib.at(body, cursor);
+        if ch == "\"" or ch == "'" {
+            qEnd := syntax.skipAliasString(body, cursor);
+            out = out + textLib.slice(body, cursor, qEnd);
+            cursor = qEnd;
+            continue;
+        }
+        if textLib.startsWithAt(body, cursor, paramRt) {
+            prevOk := cursor == 0 or (not textLib.isNameContinue(textLib.at(body, cursor - 1)) and textLib.at(body, cursor - 1) =!= "$");
+            afterPos := cursor + pLen;
+            nextOk := afterPos >= bLen or (not textLib.isNameContinue(textLib.at(body, afterPos)) and textLib.at(body, afterPos) =!= "$");
+            if prevOk and nextOk {
+                out = out + argCode;
+                cursor = afterPos;
+                continue;
+            }
+        }
+        out = out + ch;
+        cursor = cursor + 1;
+    }
+    out
+};
+
+/** Inlines small single-`RETURN` pure leaf functions (0 or 1 parameter) at simple call sites in O(n) for `-O3`. */
+inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
+    var total := 0;
+    loop items { total = total + 1; }
+    if total < 3 { return items; }
+    paramPrefix := "lite_";
+    leafBodies: mut Map<String, String>;
+    leafParams: mut Map<String, String>;
+    var fnDepth := 0;
+    var i := 0;
+    loop i < total {
+        it := items[i];
+        if it.kind == ir.ITEM_KIND_FUNCTION_START {
+            var bodyIdx := i + 1;
+            if bodyIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_TRANSFER_TRY and items[bodyIdx].intValue == 0 {
+                bodyIdx = bodyIdx + 1;
+            }
+            if fnDepth == 0 and bodyIdx + 1 < total and items[bodyIdx].kind == ir.ITEM_KIND_RETURN and items[bodyIdx + 1].kind == ir.ITEM_KIND_FUNCTION_END {
+                retCode := items[bodyIdx].code;
+                rLen := textLib.length(retCode);
+                isPureLeaf := rLen > 0 and rLen <= 256 and
+                textLib.indexOfText(retCode, it.runtime + "(", 0) < 0 and
+                textLib.indexOfText(retCode, ";", 0) < 0 and
+                textLib.indexOfText(retCode, "return ", 0) < 0 and
+                textLib.indexOfText(retCode, "lite$fault", 0) < 0 and
+                textLib.indexOfText(retCode, "lite$exit", 0) < 0;
+                if isPureLeaf {
+                    enc := it.textValue;
+                    if enc == "" {
+                        leafBodies[it.runtime] = retCode;
+                        leafParams[it.runtime] = "";
+                    } else if textLib.indexOfText(enc, "|", 0) < 0 {
+                        eqPos := textLib.indexOfText(enc, "=", 0);
+                        if eqPos > 0 {
+                            pName := textLib.slice(enc, 0, eqPos);
+                            leafBodies[it.runtime] = retCode;
+                            leafParams[it.runtime] = paramPrefix + pName;
+                        }
+                    }
+                }
+            }
+            fnDepth = fnDepth + 1;
+        } else if it.kind == ir.ITEM_KIND_FUNCTION_END {
+            if fnDepth > 0 { fnDepth = fnDepth - 1; }
+        }
+        i = i + 1;
+    }
+    if mapLib.size(leafBodies) == 0 { return items; }
+
+    fnPrefix := if target == ir.TARGET_TS { "liteFn" } else { "lt_fn_" };
+    inlineInCode := fn(code: String): String {
+        if code == "" or textLib.indexOfText(code, fnPrefix, 0) < 0 { return code; }
+        cLen := textLib.length(code);
+        var out := "";
+        var cursor := 0;
+        var changed := false;
+        loop cursor < cLen {
+            ch := textLib.at(code, cursor);
+            if ch == "\"" or ch == "'" {
+                qEnd := syntax.skipAliasString(code, cursor);
+                out = out + textLib.slice(code, cursor, qEnd);
+                cursor = qEnd;
+                continue;
+            }
+            if textLib.startsWithAt(code, cursor, fnPrefix) and
+            (cursor == 0 or (not textLib.isNameContinue(textLib.at(code, cursor - 1)) and textLib.at(code, cursor - 1) =!= "$")) {
+                var nameEnd := textLib.skipName(code, cursor);
+                loop nameEnd < cLen and textLib.at(code, nameEnd) == "$" {
+                    nameEnd = textLib.skipName(code, nameEnd + 1);
+                }
+                fnName := textLib.slice(code, cursor, nameEnd);
+                if nameEnd < cLen and textLib.at(code, nameEnd) == "(" and mapLib.has(leafBodies, fnName) {
+                    var pDepth := 1;
+                    var scan := nameEnd + 1;
+                    loop scan < cLen and pDepth > 0 {
+                        sc := textLib.at(code, scan);
+                        if sc == "\"" or sc == "'" {
+                            scan = syntax.skipAliasString(code, scan);
+                            continue;
+                        }
+                        if sc == "(" { pDepth = pDepth + 1; }
+                        else if sc == ")" { pDepth = pDepth - 1; }
+                        scan = scan + 1;
+                    }
+                    if pDepth == 0 {
+                        rawArg := textLib.trim(textLib.slice(code, nameEnd + 1, scan - 1));
+                        pRt := leafParams[fnName];
+                        body := leafBodies[fnName];
+                        if pRt == "" and rawArg == "" {
+                            out = out + "(" + body + ")";
+                            cursor = scan;
+                            changed = true;
+                            continue;
+                        } else if pRt =!= "" and isSimpleInlineArg(rawArg) {
+                            out = out + "(" + replaceParamToken(body, pRt, rawArg) + ")";
+                            cursor = scan;
+                            changed = true;
+                            continue;
+                        }
+                    }
+                }
+            }
+            out = out + ch;
+            cursor = cursor + 1;
+        }
+        if changed { out } else { code }
+    };
+
+    rewritten: mut Items = [];
+    loop items as it {
+        newCode := if it.kind == ir.ITEM_KIND_FUNCTION_START or it.kind == ir.ITEM_KIND_FUNCTION_END or it.code == "" {
+            it.code
+        } else {
+            inlineInCode(it.code)
+        };
+        listLib.pushBack(mut rewritten, (kind = it.kind, name = it.name, runtime = it.runtime, code = newCode, intValue = it.intValue, textValue = it.textValue));
+    }
+    rewritten
+};
+
+/** Runs the multi-level optimization pipeline (`-O0`..`-O3`) and whole-program reachability DCE for `target`. */
+pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: Int): Items {
+    var pruned := items;
+    if optLevel >= 3 {
+        pruned = inlineSingleExprLeafFunctions(pruned, target);
+    }
+    if optLevel >= 1 {
+        maxRounds := if optLevel >= 3 { 3 } else if optLevel == 2 { 2 } else { 1 };
+        var round := 0;
+        loop round < maxRounds {
+            var beforeCount := 0;
+            loop pruned { beforeCount = beforeCount + 1; }
+            simplified := unwrapSyntheticScopes(simplifyConstantBranches(pruned, target));
+            varOpt := optimizeStraightLineVars(simplified, target);
+            nextPruned := unwrapSyntheticScopes(pruneBlockScopedItems(varOpt, target));
+            pruned = nextPruned;
+            var afterCount := 0;
+            loop pruned { afterCount = afterCount + 1; }
+            round = round + 1;
+            if round >= 1 and afterCount == beforeCount and optLevel >= 2 {
+                /* Already converged in size; run at most one extra pass at -O2/-O3 when round 1 shrank items. */
+                if round == 1 { break; }
+            }
+        }
+    }
     var hasPrunable := false;
     reachable: mut Set<String>;
     addCodeTokens := fn(code: String): Unit {
@@ -1661,7 +1850,12 @@ pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
     filtered
 };
 
-/** Removes unreachable top-level function bodies and side-effect-free declarations for TS emission. */
+/** Runs default `-O1` optimization passes and whole-program reachability DCE for `target`. */
+pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
+    filterReachableItemsWithOpt(items, target, 1)
+};
+
+/** Removes unreachable top-level function bodies and side-effect-free declarations for TS emission at default `-O1`. */
 pub filterReachableItems := fn(items: Items): Items {
-    filterReachableItemsForTarget(items, ir.TARGET_TS)
+    filterReachableItemsWithOpt(items, ir.TARGET_TS, 1)
 };

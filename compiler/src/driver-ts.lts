@@ -30,7 +30,7 @@ pub run := fn(args: List<String>): Unit {
     items := modules.moduleItems(graph);
     if flags.hasOut {
         writer := io.bufferWriter();
-        emitter.emitProgramTo(=writer, =items, source = loaded.text, prefix = loaded.display, =builtinSpecs);
+        emitter.emitProgramToOpt(=writer, =items, source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel);
         outRes := io.writerText(writer);
         _cl := io.closeWriter(writer);
         if not outRes.ok {
@@ -41,7 +41,7 @@ pub run := fn(args: List<String>): Unit {
             diagLib.fail(loaded.display, "cannot write output file " + flags.outPath + ": " + wRes.error);
         }
     } else {
-        emitter.emitProgramWithSpecs(=items, source = loaded.text, prefix = loaded.display, =builtinSpecs);
+        emitter.emitProgramWithSpecsOpt(=items, source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel);
     }
     if flags.hasTrace {
         hostFs.writeTraceJson(flags.tracePath, graph);

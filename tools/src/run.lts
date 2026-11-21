@@ -10,7 +10,7 @@ project := import "util/project";
 compilerBuild := import "util/compiler-build";
 
 usageExit := fn(): Unit {
-    io.errorLine("Usage: ./bin/lite run [--builtin-mode SPEC]... file.lts [-- argument ...]");
+    io.errorLine("Usage: ./bin/lite run [-O0|-O1|-O2|-O3] [--builtin-mode SPEC]... file.lts [-- argument ...]");
     io.exit(2);
 };
 
@@ -30,6 +30,12 @@ run := fn(rawArgs: List<String>): Unit {
             list.pushBack(mut builtinOpts, list.popFront(mut args));
         } else if text.startsWithAt(arg, 0, "--builtin-mode=") {
             list.pushBack(mut builtinOpts, arg);
+        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or text.startsWithAt(arg, 0, "--opt=") {
+            list.pushBack(mut builtinOpts, arg);
+        } else if arg == "--opt" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            list.pushBack(mut builtinOpts, arg);
+            list.pushBack(mut builtinOpts, list.popFront(mut args));
         } else {
             scriptPath = arg;
             break;

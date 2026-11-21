@@ -1,0 +1,88 @@
+/* Multi-level optimization flags: -O0, -O1 (default), -O2, -O3, and --opt=0..3 on TS and C compilers. */
+
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+src :=
+"io := import \"core/io\";\n" +
+"State := enum { Idle; Active; Done; };\n" +
+"nextState := fn(s: State): State {\n" +
+"    match s {\n" +
+"        .Idle { .Active }\n" +
+"        .Active { .Done }\n" +
+"        .Done { .Idle }\n" +
+"    }\n" +
+"};\n" +
+"inc := fn(x: Int): Int { x + 1 };\n" +
+"var dead := 10;\n" +
+"dead = 20;\n" +
+"if false {\n" +
+"    io.outputLine(\"never-printed\");\n" +
+"}\n" +
+"var st: State = .Idle;\n" +
+"st = nextState(st);\n" +
+"io.outputLine(inc(dead), st);\n";
+
+o0 := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", ["-O0"]);
+test.checkInt("-O0 compiles", 0, o0.status);
+test.check("-O0 keeps constant-false branch", text.containsText(o0.stdout, "never-printed"));
+test.check("-O0 keeps leaf function inc", text.containsText(o0.stdout, "function liteFn_inc"));
+
+o1 := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", ["-O1"]);
+test.checkInt("-O1 compiles", 0, o1.status);
+test.check("-O1 eliminates constant-false branch", not text.containsText(o1.stdout, "never-printed"));
+test.check("-O1 keeps leaf function inc", text.containsText(o1.stdout, "function liteFn_inc"));
+
+o2 := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", ["-O2"]);
+test.checkInt("-O2 compiles", 0, o2.status);
+test.check("-O2 eliminates constant-false branch", not text.containsText(o2.stdout, "never-printed"));
+
+o3 := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", ["-O3"]);
+test.checkInt("-O3 compiles", 0, o3.status);
+test.check("-O3 inlines and removes inc", not text.containsText(o3.stdout, "function liteFn_inc"));
+test.check("-O3 inlines and removes nextState", not text.containsText(o3.stdout, "function liteFn_nextState"));
+
+optEq3 := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", ["--opt=3"]);
+test.checkInt("--opt=3 compiles", 0, optEq3.status);
+test.check("--opt=3 matches -O3 output", optEq3.stdout == o3.stdout);
+
+/* All four levels produce identical runtime output and pass strict TS checking */
+r0 := compilerTest.checkAndRunTs(root, o0.stdout);
+r1 := compilerTest.checkAndRunTs(root, o1.stdout);
+r2 := compilerTest.checkAndRunTs(root, o2.stdout);
+r3 := compilerTest.checkAndRunTs(root, o3.stdout);
+test.checkInt("-O0 runs", 0, r0.status);
+test.checkInt("-O1 runs", 0, r1.status);
+test.checkInt("-O2 runs", 0, r2.status);
+test.checkInt("-O3 runs", 0, r3.status);
+test.check("all levels match stdout", r0.stdout == "21 State.Active\n" and r1.stdout == r0.stdout and r2.stdout == r0.stdout and r3.stdout == r0.stdout);
+
+/* C backend accepts -O0..-O3 */
+cSrc := "io := import \"core/io\";\ninc := fn(x: Int): Int { x + 1 };\nio.outputLine(inc(41));\n";
+co3 := compilerTest.compileStdinWithOpts(root, cComp, root, cSrc, "", "", ["-O3"]);
+test.checkInt("C backend -O3 compiles", 0, co3.status);
+test.check("C backend -O3 inlines inc", not text.containsText(co3.stdout, "lt_fn_inc("));
+
+/* Invalid optimization level is rejected cleanly */
+badO4 := compilerTest.compileStdinWithOpts(root, tsComp, root, cSrc, "", "", ["-O4"]);
+test.check("rejects -O4", badO4.status == 2);
+test.check("-O4 diagnostic: " + badO4.stderr, text.containsText(badO4.stderr, "unsupported optimization flag -O4"));
+
+badOpt := compilerTest.compileStdinWithOpts(root, tsComp, root, cSrc, "", "", ["--opt", "9"]);
+test.check("rejects --opt 9", badOpt.status == 2);
+test.check("--opt 9 diagnostic: " + badOpt.stderr, text.containsText(badOpt.stderr, "unsupported optimization level 9"));
+
+test.done("opt-levels");

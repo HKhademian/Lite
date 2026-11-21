@@ -520,6 +520,7 @@ pub flattenTokenBuckets := fn(s: TokenBuckets): String { reach.flattenTokenBucke
 pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuckets { reach.codeReachableTokensSet(code, existing) };
 
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
+pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: Int): Items { reach.filterReachableItemsWithOpt(items, target, optLevel) };
 pub filterReachableItemsForTarget := fn(items: Items, target: String): Items { reach.filterReachableItemsForTarget(items, target) };
 
 /** Removes unreachable top-level function bodies and side-effect-free declarations for TS emission. */

@@ -9,7 +9,7 @@ TARGET_TS := "ts";
 TARGET_C := "c";
 
 usageExit := fn(): Unit {
-    io.errorLine("Usage: ./bin/lite-compile [--target ts|c] [--builtin-mode SPEC]... file.lts");
+    io.errorLine("Usage: ./bin/lite-compile [--target ts|c] [-O0|-O1|-O2|-O3] [--builtin-mode SPEC]... file.lts");
     io.exit(2);
 };
 

@@ -2139,9 +2139,9 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: 
     out
 }
 
-/** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications. */
-pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
-    effectiveItems := frontend.filterReachableItemsForTarget(applySoftBuiltins(items, prefix, builtinSpecs), frontend.TARGET_TS);
+/** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications and optimization level (`0..3`). */
+pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+    effectiveItems := frontend.filterReachableItemsWithOpt(applySoftBuiltins(items, prefix, builtinSpecs), frontend.TARGET_TS, optLevel);
     calls := frontend.targetHelperCalls(effectiveItems);
     abruptFault := usesAbruptFault(calls);
     abruptUnwind := usesAbruptUnwind(calls);
@@ -2354,17 +2354,27 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
     }
 }
 
+/** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications at default `-O1`. */
+pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
+    emitProgramWithSpecsOpt(items, source, prefix, builtinSpecs, 1);
+}
+
 /** Emits the TS module from the flat item stream to stdout using default builtin modes. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
     emptySpecs: List<String> = [];
-    emitProgramWithSpecs(items, source, prefix, emptySpecs);
+    emitProgramWithSpecsOpt(items, source, prefix, emptySpecs, 1);
 }
 
-/** Emits the TS module from the flat item stream into `writer`. */
-pub emitProgramTo := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
+/** Emits the TS module from the flat item stream into `writer` at optimization level `optLevel` (`0..3`). */
+pub emitProgramToOpt := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
     tsOutUseWriter = true;
     tsOutWriterKind = writer.kind;
     tsOutWriterHandle = writer.handle;
-    emitProgramWithSpecs(items, source, prefix, builtinSpecs);
+    emitProgramWithSpecsOpt(items, source, prefix, builtinSpecs, optLevel);
     tsOutUseWriter = false;
+}
+
+/** Emits the TS module from the flat item stream into `writer` at default `-O1`. */
+pub emitProgramTo := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
+    emitProgramToOpt(writer, items, source, prefix, builtinSpecs, 1);
 }
