@@ -383,6 +383,13 @@ usual type test or pattern rules. The bounds proof alone does not unwrap it.
 The union container is part of the value semantics. The compiler may elide
 its physical storage when it preserves all observable union behavior.
 
+The joint review confirmed that when a runtime index is proven in bounds and
+all reachable slots have type `X`, the read has type `X` by union
+normalization. For example, if `2 <= i and i <= 5` and slots 2 through 5 all
+have type `X`, the other slots do not affect `p[i]`. A write of an `X` value
+fits every reachable slot under the usual writable-access rules. No wrapper
+is needed merely to distinguish which of those same-typed slots was chosen.
+
 If the index might be out of bounds, the user wants to consider returning a
 value that represents the failed access. `Option<T>` would return `None`.
 `Result<T, BoundsError>` would expose a typed error and could carry the index
