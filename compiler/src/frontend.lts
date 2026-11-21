@@ -3042,6 +3042,52 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     }
                     continue;
                 }
+            } else if mapLocalIdx >= 0 and (isListKind(locals[mapLocalIdx].kind) or isArrayKind(locals[mapLocalIdx].kind)) {
+                bracketEnd := syntax.scanBracketEnd(source, position, prefix);
+                afterBracket := if bracketEnd >= 0 { skipTrivia(source, bracketEnd, prefix) } else { -1 };
+                if afterBracket >= 0 and isSingleEquals(source, afterBracket) {
+                    entry := locals[mapLocalIdx];
+                    if entry.initState =!= INIT_STATE_INIT {
+                        failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
+                    }
+                    isArr := isArrayKind(entry.kind);
+                    if not isArr and not entry.writable {
+                        failAt(source, nameStart, prefix, "cannot mutate immutable list " + name);
+                    }
+                    if isArr and not entry.mutable {
+                        failAt(source, nameStart, prefix, "cannot mutate immutable array " + name);
+                    }
+                    if target =!= TARGET_TS {
+                        failAt(source, nameStart, prefix, "C backend does not support list index assignment yet");
+                    }
+                    elKind := if isArr { arrayElementKind(entry.kind) } else { listElementKind(entry.kind) };
+                    idxStart := skipTrivia(source, position + 1, prefix);
+                    idxParsed := parseExpressionAsCtx(target, source, idxStart, prefix, locals, functions, functionParams, currentName, VALUE_KIND_INT, stmtCtxs, aliases);
+                    if not numeric.isIntKind(idxParsed.kind) {
+                        failAt(source, idxStart, prefix, "list index must be Int, got " + displayKind(idxParsed.kind));
+                    }
+                    closePos := expectSymbol(source, skipTrivia(source, idxParsed.next, prefix), "]", prefix);
+                    eqPos := skipTrivia(source, closePos, prefix);
+                    vStart := skipTrivia(source, eqPos + 1, prefix);
+                    valParsed := parseExpressionAsCtx(target, source, vStart, prefix, locals, functions, functionParams, currentName, elKind, stmtCtxs, aliases);
+                    if not types.isCompatibleKind(elKind, valParsed.kind) {
+                        failAt(source, vStart, prefix, "list element must be " + displayKind(elKind) + ", got " + displayKind(valParsed.kind));
+                    }
+                    stmtCode := "lite$listSet(" + entry.runtime + ", " + assignValueCode(target, VALUE_KIND_INT, idxParsed.kind, idxParsed.code) + ", " +
+                    assignValueCode(target, elKind, valParsed.kind, valParsed.code) + ", " + integer.intText(nameStart) + ")";
+                    locals = checkStatementTrace(target, source, nameStart, prefix, stmtCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+                    statementNext := consumeStatementEnd(source, valParsed.next, prefix);
+                    if statementNext < 0 { failAt(source, skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after list assignment"); }
+                    position = statementNext;
+                    if currentLive and not currentStopped {
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_CALL, name = "", runtime = "", code = stmtCode, intValue = 0, textValue = ""));
+                        if codeHasRawTransfer(stmtCode) {
+                            listLib.pushBack(mut transferCodes, stmtCode);
+                            transferCount = transferCount + 1;
+                        }
+                    }
+                    continue;
+                }
             }
         }
         if isSingleEquals(source, position) {

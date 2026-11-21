@@ -4930,7 +4930,83 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
 
 /** Parses list push/pop intrinsic operations (`push_back`, `pop_back`, `push_front`, `pop_front`). */
 parseListIntrinsicCall := fn(target: String, source: String, start: Int, argOpen: Int, opName: String, opDisplay: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    if opName == "length" or opName == "reverse" or opName == "slice" {
+        open := syntax.expectSymbol(source, argOpen, "(", prefix);
+        listStart := syntax.skipTrivia(source, open, prefix);
+        lst := parseBinaryCtx(target, source, listStart, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if not types.isListKind(lst.kind) {
+            syntax.failAt(source, listStart, prefix, opDisplay + " expects a List, got " + types.displayKind(lst.kind));
+        }
+        if opName == "length" {
+            close := ctx.expectNonemptyCallClose(source, lst.next, prefix);
+            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "BigInt((" + lst.code + ").length)",
+            intValue = 0, textValue = "", constant = false, next = close),
+            if inferMode { ctx.collectParsedMarkers("", lst) } else { "" });
+        }
+        if opName == "reverse" {
+            close := ctx.expectNonemptyCallClose(source, lst.next, prefix);
+            return ctx.withMarkers((kind = lst.kind, code = "[...(" + lst.code + ")].reverse()",
+            intValue = 0, textValue = "", constant = false, next = close),
+            if inferMode { ctx.collectParsedMarkers("", lst) } else { "" });
+        }
+        comma1 := syntax.skipTrivia(source, lst.next, prefix);
+        if comma1 >= textLib.length(source) or textLib.at(source, comma1) =!= "," {
+            syntax.failAt(source, comma1, prefix, opDisplay + " expects start index after the list");
+        }
+        sStart := syntax.skipTrivia(source, comma1 + 1, prefix);
+        sArg := parseBinaryCtx(target, source, sStart, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if not numeric.isIntKind(sArg.kind) {
+            syntax.failAt(source, sStart, prefix, opDisplay + " start index must be Int, got " + types.displayKind(sArg.kind));
+        }
+        comma2 := syntax.skipTrivia(source, sArg.next, prefix);
+        if comma2 >= textLib.length(source) or textLib.at(source, comma2) =!= "," {
+            syntax.failAt(source, comma2, prefix, opDisplay + " expects end index after start");
+        }
+        eStart := syntax.skipTrivia(source, comma2 + 1, prefix);
+        eArg := parseBinaryCtx(target, source, eStart, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if not numeric.isIntKind(eArg.kind) {
+            syntax.failAt(source, eStart, prefix, opDisplay + " end index must be Int, got " + types.displayKind(eArg.kind));
+        }
+        close := ctx.expectNonemptyCallClose(source, eArg.next, prefix);
+        sCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, sArg.kind, sArg.code);
+        eCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, eArg.kind, eArg.code);
+        mk := if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers(ctx.collectParsedMarkers("", lst), sArg), eArg) } else { "" };
+        return ctx.withMarkers((kind = lst.kind, code = "lite$listSlice(" + lst.code + ", " + sCode + ", " + eCode + ", " + integer.intText(start) + ")",
+        intValue = 0, textValue = "", constant = false, next = close), mk);
+    }
     grant := ctx.parseListGrant(source, argOpen, prefix, locals, opDisplay);
+    if opName == "clear" {
+        close := ctx.expectNonemptyCallClose(source, grant.next, prefix);
+        return (kind = ir.VALUE_KIND_UNIT, code = "((" + grant.runtime + ").length = 0, undefined)",
+        intValue = 0, textValue = "", constant = false, next = close);
+    }
+    if opName == "set_at" {
+        comma1 := syntax.skipTrivia(source, grant.next, prefix);
+        if comma1 >= textLib.length(source) or textLib.at(source, comma1) =!= "," {
+            syntax.failAt(source, comma1, prefix, opDisplay + " expects an index after the mut list");
+        }
+        idxStart := syntax.skipTrivia(source, comma1 + 1, prefix);
+        idxArg := parseBinaryCtx(target, source, idxStart, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if not numeric.isIntKind(idxArg.kind) {
+            syntax.failAt(source, idxStart, prefix, opDisplay + " index must be Int, got " + types.displayKind(idxArg.kind));
+        }
+        comma2 := syntax.skipTrivia(source, idxArg.next, prefix);
+        if comma2 >= textLib.length(source) or textLib.at(source, comma2) =!= "," {
+            syntax.failAt(source, comma2, prefix, opDisplay + " expects a value after the index");
+        }
+        valStart := syntax.skipTrivia(source, comma2 + 1, prefix);
+        elementKind := types.listElementKind(grant.kind);
+        valArg := parseBinaryCtx(target, source, valStart, prefix, locals, functions, params, currentName, elementKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if not types.isCompatibleKind(elementKind, valArg.kind) {
+            syntax.failAt(source, valStart, prefix, opDisplay + " element must be " + types.displayKind(elementKind) + ", got " + types.displayKind(valArg.kind));
+        }
+        close := ctx.expectNonemptyCallClose(source, valArg.next, prefix);
+        idxCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
+        valCode := ctx.assignValueCode(target, elementKind, valArg.kind, valArg.code);
+        mk := if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", idxArg), valArg) } else { "" };
+        return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = "lite$listSet(" + grant.runtime + ", " + idxCode + ", " + valCode + ", " + integer.intText(start) + ")",
+        intValue = 0, textValue = "", constant = false, next = close), mk);
+    }
     if opName == "push_back" or opName == "push_front" {
         cursor := syntax.skipTrivia(source, grant.next, prefix);
         if cursor >= textLib.length(source) or textLib.at(source, cursor) =!= "," {
@@ -5569,6 +5645,11 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 else if info.runtime == "lite$core$list$popBack:v1" { listOpName = "pop_back"; listOpDisplay = "popBack"; }
                 else if info.runtime == "lite$core$list$pushFront:v1" { listOpName = "push_front"; listOpDisplay = "pushFront"; }
                 else if info.runtime == "lite$core$list$popFront:v1" { listOpName = "pop_front"; listOpDisplay = "popFront"; }
+                else if info.runtime == "lite$core$list$length:v1" { listOpName = "length"; listOpDisplay = "length"; }
+                else if info.runtime == "lite$core$list$setAt:v1" { listOpName = "set_at"; listOpDisplay = "setAt"; }
+                else if info.runtime == "lite$core$list$slice:v1" { listOpName = "slice"; listOpDisplay = "slice"; }
+                else if info.runtime == "lite$core$list$reverse:v1" { listOpName = "reverse"; listOpDisplay = "reverse"; }
+                else if info.runtime == "lite$core$list$clear:v1" { listOpName = "clear"; listOpDisplay = "clear"; }
                 else if info.runtime == "lite$core$map$set:v1" { mapOpName = "set"; }
                 else if info.runtime == "lite$core$map$get:v1" { mapOpName = "get"; }
                 else if info.runtime == "lite$core$map$getOr:v1" { mapOpName = "getOr"; }

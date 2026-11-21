@@ -95,6 +95,11 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, params: String,
         else if name == "popBack" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popBack:v1" }
         else if name == "pushFront" and params == "values=mut List<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$pushFront:v1" }
         else if name == "popFront" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popFront:v1" }
+        else if name == "length" and params == "values=List<T>" and result == ir.VALUE_KIND_INT { "lite$core$list$length:v1" }
+        else if name == "setAt" and params == "values=mut List<T>|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$setAt:v1" }
+        else if name == "slice" and params == "values=List<T>|start=Int|end=Int" and result == "List<T>" { "lite$core$list$slice:v1" }
+        else if name == "reverse" and params == "values=List<T>" and result == "List<T>" { "lite$core$list$reverse:v1" }
+        else if name == "clear" and params == "values=mut List<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$list$clear:v1" }
         else { "" }
     } else if moduleIdentity == "lite.core.map.v1" {
         if name == "set" and params == "entries=mut Map<K,V>|key=K|value=V" and result == ir.VALUE_KIND_UNIT { "lite$core$map$set:v1" }
