@@ -747,7 +747,7 @@
       "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
-      "title": "restricted C compiler rejects input, diagnostic and text builtins clearly",
+      "title": "restricted C compiler rejects input builtins clearly",
       "destination": "compiler/tests/codegen/builtins-io.test.lts",
       "originalLine": 2162,
       "dependencies": [
@@ -757,7 +757,7 @@
       "route": "default generated compiler/phase/artifact execution with independent expectations"
     },
     {
-      "title": "restricted C compiler preserves existing output and rejects function syntax clearly",
+      "title": "C compiler preserves report-42 baseline output and executes scalar functions",
       "destination": "compiler/tests/codegen/builtins-io.test.lts",
       "originalLine": 2176,
       "dependencies": [
