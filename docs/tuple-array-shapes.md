@@ -487,6 +487,14 @@ p3 := (...a2);  /* array → tuple */
 
 The delimiters select the destination shape. Each spread contributes two values in order, so `a1` and `a2` infer `[Int; 2]`, while `p2` and `p3` are two-element tuples. An extent mismatch, such as `[...p1]` into `[Int; 3]`, fails the destination checks. These are design examples for explicit construction.
 
+```text
+mixed := (10, "tea");
+items := [...mixed];
+roundTrip := (...items);
+```
+
+`items` has type `[Int | String; 2]`. Spreading it into `roundTrip` preserves the values and their order. Both tuple slots have type `Int | String`, the array's element type. The original tuple's per-slot types are absent from the array's type.
+
 Homogeneous tuples give a direct element type. Heterogeneous tuples can populate an explicitly compatible common element contract, including an explicitly chosen union where ordinary admission rules permit it. Known-size nonempty heterogeneous literals now infer the normalized union of their established contribution types. Numeric conversions and unresolved element types remain separate; no implicit Any or unchecked conversion is introduced.
 
 Evaluate each source expression once in written order. Type/length compatibility does not prove identical layout, zero copying, ownership transfer, alias safety, or no allocation. Construction and cleanup must obey the eventual memory rules. A runtime-length array can supply a declared array tail; it cannot determine a statically enumerated fixed tuple's component count without an additional proven extent.
