@@ -71,7 +71,7 @@ The accepted tradeoff is differing modifier placement between inferred and annot
 Type-side mut gives a natural representation for a possible qualified alias or unnamed callable parameter contract. For example, the following remains a candidate for the broader type grammar:
 
 ```text
-WritableUser := type mut User;
+WritableUser := alias mut User;
 ```
 
 Alias naming cannot manufacture writable access; a source must supply the required authority. This would not declare a new nominal record type or make User globally mutable. Full access-qualified alias legality is still open.

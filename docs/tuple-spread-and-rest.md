@@ -69,8 +69,8 @@ Function calls have a separately selected fixed-slot construction rule: position
 In type position, ...Params expands a tuple schema using the same append-or-replace-by-label rule as value construction. Unnamed components append; a later spread label replaces its original slot's type without moving it. Explicit labels remain unique. This constructs a contract at compile time; it does not change a stored tuple's type.
 
 ```text
-Params1 := type (:Int, score: String, :Int);
-Params2 := type (:Int, score: Int);
+Params1 := alias (:Int, score: String, :Int);
+Params2 := alias (:Int, score: Int);
 /* (...Params1, ...Params2) gives (:Int, score: Int, :Int, :Int) */
 
 exp : fn (...Params1, ...Params2, ...rest: Int): Int =
@@ -113,7 +113,7 @@ The same discovery applies to fully fixed tuple spreads: (...items, ...base), fo
 
 ## Destination-guided prefix and tail repacking selected
 
-An explicit expected tuple schema can guide spread reconstruction between a compatible fixed prefix plus array tail and a rest-only tuple, selected 2026-10-25. For Prefix := type (:Int, :Int, ...rest: Int) and TailOnly := type (...rest: Int), packed: TailOnly = (...prefix_value) gathers the fixed values and original tail into packed.rest. Reconstructing Prefix from a TailOnly source requires proof of at least two compatible values; the rest-only schema alone supplies no such minimum. Without a requested destination shape, (...prefix_value) reconstructs the emitted items using known-count/unknown-tail inference; ordinary copy := prefix_value retains its organization. Plain stored assignment retains its compatibility rules. Existing labels, access, ownership, evaluation, and cleanup requirements remain; no implicit cast, array/tuple identity, zero-copy guarantee, or general mixed-label collision policy is selected. See [repacking examples and limits](lite://doc/tuple-array-shapes#destination-guided-repacking).
+An explicit expected tuple schema can guide spread reconstruction between a compatible fixed prefix plus array tail and a rest-only tuple, selected 2026-10-25. For Prefix := alias (:Int, :Int, ...rest: Int) and TailOnly := alias (...rest: Int), packed: TailOnly = (...prefix_value) gathers the fixed values and original tail into packed.rest. Reconstructing Prefix from a TailOnly source requires proof of at least two compatible values; the rest-only schema alone supplies no such minimum. Without a requested destination shape, (...prefix_value) reconstructs the emitted items using known-count/unknown-tail inference; ordinary copy := prefix_value retains its organization. Plain stored assignment retains its compatibility rules. Existing labels, access, ownership, evaluation, and cleanup requirements remain; no implicit cast, array/tuple identity, zero-copy guarantee, or general mixed-label collision policy is selected. See [repacking examples and limits](lite://doc/tuple-array-shapes#destination-guided-repacking).
 
 ## Pattern rest gradual-change outcome
 

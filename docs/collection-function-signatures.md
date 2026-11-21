@@ -140,7 +140,7 @@ Neither a concrete List API nor an abstract result contract can promise construc
 
 ## Type aliases and stored function values
 
-The selected Alias := type TypeExpression form can give a complex contract a readable name once its expression grammar is designed. A transparent alias does not create a common object superclass, turn a generic requirement into a runtime value representation, or settle opaque identity.
+The selected Alias := alias TypeExpression form can give a complex contract a readable name once its expression grammar is designed. A transparent alias does not create a common object superclass, turn a generic requirement into a runtime value representation, or settle opaque identity.
 
 A generic function that works for several provider types also differs from one runtime function value accepting an erased provider. Callback parameters, closures, exports, separate compilation, and heterogeneous stored collections need representation and generic-instantiation rules. These are part of the function-type review, not automatic consequences of bracket sugar.
 

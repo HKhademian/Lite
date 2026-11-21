@@ -1,5 +1,9 @@
 # Imports, Visibility & Core I/O
 
+This runnable example uses the current compiler's `:= type` syntax for
+transparent type aliases. The selected replacement is `:= alias`. See
+[aliases and distinct type declarations](lite://doc/type-aliases).
+
 Lite keeps module dependencies explicit and local: every external capability enters a file through a named `import` binding, and only symbols marked `pub` leave a module.
 
 ## Namespace Imports & `pub` Contracts

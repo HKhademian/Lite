@@ -6,6 +6,10 @@ Last updated: 2026-10-31
 Catalog brief: [INV-029](TOPICS.md#inv-029)
 Baseline: igniter-v0.1.0-alpha.22, `dd31cb0`
 
+The 2026-11-21 [alias and distinct reference](../../docs/type-aliases.md)
+records the replacement spelling. The examples here preserve the syntax under
+review in October.
+
 ## Selected decision
 
 The user selects Option 1 (one ordinary lexical binding namespace) and explicitly
@@ -36,7 +40,7 @@ Tokens := type List<Token>;
 take := fn(token: Token): String { token.text }
 ```
 
-The [owning contract](../../docs/type-aliases.md#selected-rule) already selects
+At the time of this investigation, the owning contract selected
 Alias := type TypeExpression and transparent identity. Direct Alias := Existing
 is not an alternative alias spelling. But that same contract explicitly leaves
 namespace/shadowing rules open; the [Unit contract](../../docs/unit.md) likewise does

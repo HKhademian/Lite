@@ -100,7 +100,7 @@ var (A | B) = var A | var B
 
 The equation denotes equivalent access contracts, not a new runtime equality operator. Thus var (A | B) | C has the same summary as var A | var B | C. Distribution marks the alternatives accepted by one location; it does not merge two possible locations or erase their separate storage constraints.
 
-A transparent alias must retain its entire denoted type as the operand. If Pair := type A | B, then var Pair qualifies both alternatives, matching var (A | B); alias expansion must not accidentally turn it into var A | B. This follows the selected transparent-alias identity and operand scope. Complete placement in signatures and declarations is still open. Spaces between var and its operand have no semantic role.
+A transparent alias must retain its entire denoted type as the operand. If Pair := alias A | B, then var Pair qualifies both alternatives, matching var (A | B); alias expansion must not accidentally turn it into var A | B. This follows the selected transparent-alias identity and operand scope. Complete placement in signatures and declarations is still open. Spaces between var and its operand have no semantic role.
 
 ## Remaining choices
 

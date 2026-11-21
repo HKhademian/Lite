@@ -9,9 +9,9 @@ Status: **fixed-array [T; N] source examples, known-size literal inference, and 
 User clarification, 2026-11-17: the two-component fixed array `[Int64; 2]`
 and the unnamed tuple `(:Int64, :Int64)` are **not the same type**, even though
 their selected inline layouts agree. Equal size, layout or stored bits do not
-establish type identity. Likewise, the user's illustrative distinct `UserID`
-and its underlying `Int` may hold the same numeric value while remaining
-different types. The precise distinct-declaration syntax remains under review.
+establish type identity. Likewise, `UserID := distinct Int` declares a type
+whose identity is separate from `Int`. See
+[aliases and distinct type declarations](lite://doc/type-aliases).
 
 This bounded decision settles the two-component identity example; it does not
 select general array-to-tuple conversion, arbitrary reinterpretation, ABI

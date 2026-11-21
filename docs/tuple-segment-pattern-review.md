@@ -83,8 +83,8 @@ An empty declared segment is one remaining stored component. No remaining compon
 ## Segment roles and extents participate in identity
 
 ```text
-Plain := type (head: Int, rest: [Int; 3]);
-Segmented := type (head: Int, ...rest: Int; 3);
+Plain := alias (head: Int, rest: [Int; 3]);
+Segmented := alias (head: Int, ...rest: Int; 3);
 ```
 
 Both expose an Int member and an array member at the same positions, but unpack differently. Their structural contracts must retain the ordinary/segment role as well as ordered labels, resolved member types, and segment extent contracts. The older identity wording based only on labels and externally accessed member types is incomplete for segment-bearing tuples.

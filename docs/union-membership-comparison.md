@@ -5,7 +5,7 @@ Status: **primary-source comparison dated 2026-10-18**. LiteScript's member-entr
 ## LiteScript baseline
 
 ```text
-Person := type User | Guest;
+Person := alias User | Guest;
 person: Person = user;
 
 if person: User {

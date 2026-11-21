@@ -9,8 +9,8 @@ The subsequent [gradual-change reasoning](lite://doc/tuple-remainder-gradual-rea
 The rest operator declares a named homogeneous array segment within a tuple. Its type entry uses ...name: T, with an optional ; C static extent. The surrounding tuple-entry syntax supplies the array meaning, so the element/extent portion needs no additional array brackets.
 
 ```text
-General := type (...rest: Int);
-Three := type (...rest: Int; 3);
+General := alias (...rest: Int);
+Three := alias (...rest: Int; 3);
 ```
 
 ...rest: T admits zero or more elements, each of type T, with no exact extent in that contract. ...rest: T; C requires exactly C elements and exposes an array member of type [T; C]. C must be a valid nonnegative compile-time extent under the fixed-array rules. It is an exact count, not a maximum, capacity, or runtime expression. There is currently one trailing declared segment; the label rest is ordinary and may be replaced by another name.
@@ -91,10 +91,10 @@ An ordinary array-valued component stays one item when its containing tuple is u
 The syntax always types each element, including tuple/array-valued elements:
 
 ```text
-Arrays := type (...rest: [Int; 3]);
+Arrays := alias (...rest: [Int; 3]);
 /* any count of elements, each a three-Int array */
 
-TwoArrays := type (...rest: [Int; 3]; 2);
+TwoArrays := alias (...rest: [Int; 3]; 2);
 /* exactly two elements, each a three-Int array */
 ```
 

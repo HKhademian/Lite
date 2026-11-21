@@ -9,19 +9,19 @@ Direct [union-target type tests](lite://doc/type-tests-and-narrowing#union-targe
 Assume A, B, and C name existing distinct types:
 
 ```text
-First := type A | B;
-Reordered := type B | A;
-Repeated := type A | B | A;
+First := alias A | B;
+Reordered := alias B | A;
+Repeated := alias A | B | A;
 
-Flat := type A | B | C;
-Nested := type A | (B | C);
+Flat := alias A | B | C;
+Nested := alias A | (B | C);
 ```
 
 First, Reordered, and Repeated denote the same union type. Flat and Nested also denote the same union type. These are transparent aliases, not declarations of fresh nominal record types.
 
 ### Optional leading | selected
 
-Selected 2026-10-24: a nonempty plain-union chain in type context may start with one optional |. Thus Leading := type | A | B denotes the same type as First above, and Singleton := type | A denotes A. Grouped unions may also use their own leading |. This is a presentation rule applied before normalization, not another union member or permission for empty/stacked/interior extra/trailing separators. It adds no Unit, bottom type, or identity. Public intersection-type semantics and leading & remain unselected; illustrative failure aggregates are separate. See [optional leading separators](lite://doc/leading-separators#plain-union-types).
+Selected 2026-10-24: a nonempty plain-union chain in type context may start with one optional |. Thus Leading := alias | A | B denotes the same type as First above, and Singleton := alias | A denotes A. Grouped unions may also use their own leading |. This is a presentation rule applied before normalization, not another union member or permission for empty/stacked/interior extra/trailing separators. It adds no Unit, bottom type, or identity. Public intersection-type semantics and leading & remain unselected; illustrative failure aggregates are separate. See [optional leading separators](lite://doc/leading-separators#plain-union-types).
 
 ### Selected rules
 
@@ -30,14 +30,14 @@ Selected 2026-10-24: a nonempty plain-union chain in type context may start with
 3. **Exact duplicate identities disappear.** A | A is A; A | B | A is A | B.
 4. **Transparent aliases do not add alternatives.** Resolve alias identity before duplicate removal. Preserve useful source alias names for diagnostics without treating them as runtime tags.
 
-The right side's type context is established by the selected type prefix. These equations describe semantic type identity, not new equality operators or runtime type-value comparisons.
+The `alias` declaration interprets the whole right side as a type expression in these examples. The equations describe semantic type identity.
 
 ## Aliases and nominal records
 
 ```text
-Member := type User;
-Person := type User | Guest;
-SamePerson := type Member | Person | Guest;
+Member := alias User;
+Person := alias User | Guest;
+SamePerson := alias Member | Person | Guest;
 ```
 
 SamePerson denotes User | Guest. Member contributes User again, and Person contributes its existing plain union members. Neither contributes a new wrapper.
@@ -49,9 +49,9 @@ Alias resolution must obey the eventual scope/cycle contract; this rule does not
 ## Success and error unions
 
 ```text
-ReadErrors := type ReadError | SharedError;
-LoadError := type ReadErrors | ParseError | SharedError;
-Outcome := type User ! LoadError;
+ReadErrors := alias ReadError | SharedError;
+LoadError := alias ReadErrors | ParseError | SharedError;
+Outcome := alias User ! LoadError;
 ```
 
 LoadError normalizes to ReadError | SharedError | ParseError, independent of presentation order. The outcome retains its success/failure distinction. Error propagation still needs to fit the declared error contract; duplicate removal does not declare coverage for an unrelated error.
@@ -100,7 +100,7 @@ Equivalent semantic types do not make source declaration order a stable runtime 
 - Internal Never reads for exhausted conditional branches are selected in [unreachable flow](lite://doc/never-and-unreachable-flow). Public bottom/top types and their general algebra remain open. The user specifically requests future exploration of Never | T and Never & T; no public intersection syntax or general simplification law is selected here. Do not select public Never or Any by example.
 - [Common field reads](lite://doc/union-field-reads) use normalized unions after confirming availability on every alternative. [Field writes](lite://doc/union-field-writes) must fit every possible target's field type, rather than merely the projected read union. Methods, explicit access notation, ownership/capability combination, runtime layout, ABI, and complete diagnostics remain open.
 
-The value-level example person: Person = user for Person := type User | Guest is now selected. Automatic member inclusion avoids a cast, while recovering User from an arbitrary Person requires narrowing. See [union membership](lite://doc/union-membership).
+The value-level example person: Person = user for Person := alias User | Guest is now selected. Automatic member inclusion avoids a cast, while recovering User from an arbitrary Person requires narrowing. See [union membership](lite://doc/union-membership).
 
 ## References
 

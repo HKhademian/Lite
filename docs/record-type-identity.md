@@ -1,6 +1,6 @@
 # Record type identity and assignment compatibility
 
-Status: **distinct identity per record type declaration selected 2026-10-18, including named and unnamed inline declarations; equal fields do not permit implicit conversion, and conversion uses explicit reconstruction**. Transparent aliases use selected Alias := type TypeExpression. Inferred standalone literal types, additional conversion facilities, and the complete type-relation contract remain open. This review does not choose value/reference semantics, generated equality, layout, or inheritance.
+Status: **distinct identity per record type declaration selected 2026-10-18, including named and unnamed inline declarations; equal fields do not permit implicit conversion, and conversion uses explicit reconstruction**. Transparent aliases use selected Alias := alias TypeExpression. Inferred standalone literal types, additional conversion facilities, and the complete type-relation contract remain open. This review does not choose value/reference semantics, generated equality, layout, or inheritance.
 
 ## The decision
 
@@ -28,9 +28,9 @@ Both approaches can be statically checked. Strong typing alone does not settle t
 
 ## Selected named-record rule
 
-Each separately declared named record creates a distinct type. Another name for the existing type is an alias, not a fresh record declaration. The selected spelling is Member := type User; general type-value binding rules remain open.
+Each named record declaration creates a distinct type. `Member := alias User` gives the existing `User` type a second name, preserving its identity.
 
-The [alias comparison](lite://doc/type-aliases) evaluated Member := User versus Member := type User across unions and other composite types. The explicit prefix is now selected consistently for named aliases. It remains transparent and does not introduce a new record identity.
+See [aliases and distinct type declarations](lite://doc/type-aliases) for the selected syntax and current compiler status.
 
 ```text
 /* Rejected: no implicit User-to-Student conversion. */

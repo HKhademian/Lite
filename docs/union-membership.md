@@ -5,7 +5,7 @@ Status: **selected 2026-10-18: an existing member value is admitted to a plain u
 ## Selected example
 
 ```text
-Person := type User | Guest;
+Person := alias User | Guest;
 user: User = { name = "Ali", age = 10, }
 person: Person = user;
 ```
@@ -20,10 +20,10 @@ The user subsequently clarified [metadata plus C-style overlapping payload](lite
 
 ## Identity checks
 
-Resolve transparent aliases and normalize the target union before checking exact membership. Member := type User denotes User again; it is not another alternative. A separately declared Student record is not User merely because its fields match.
+Resolve transparent aliases and normalize the target union before checking exact membership. Member := alias User denotes User again; it is not another alternative. A separately declared Student record is not User merely because its fields match.
 
 ```text
-Person := type User | Guest;
+Person := alias User | Guest;
 student: Student = { name = "Ali", age = 10, }
 bad: Person = student; /* rejected: Student is not a listed member */
 ```

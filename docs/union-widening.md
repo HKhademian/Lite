@@ -7,8 +7,8 @@ This is one selected proof of [general safe widening](lite://doc/types-and-infer
 ## Description and template
 
 ```text
-Source := type A | B;
-Destination := type A | B | C;
+Source := alias A | B;
+Destination := alias A | B | C;
 
 source: Source = choose_source();
 destination: Destination = source;
@@ -27,9 +27,9 @@ Widening a zero-valued member preserves that member, even when the destination u
 Resolve transparent aliases, flatten nested plain unions, and remove duplicate identities before comparing the alternatives. Widening succeeds exactly when the normalized source alternatives are a subset of the destination alternatives. A single-member source follows the already selected [member admission rule](lite://doc/union-membership).
 
 ```text
-Member := type User;
-Person := type User | Guest;
-Account := type Guest | Admin | Member;
+Member := alias User;
+Person := alias User | Guest;
+Account := alias Guest | Admin | Member;
 
 person: Person = choose_person();
 account: Account = person; /* accepted: User and Guest are covered */

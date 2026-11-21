@@ -1,139 +1,107 @@
-# Type aliases and explicit type context
+# Aliases and distinct type declarations
 
-Status: **explicit Alias := type TypeExpression selected 2026-10-18 for named transparent aliases**. Direct type binding without the prefix was evaluated and not selected as an alternate alias spelling. Record declaration identity is selected separately. Tuple type component forms are selected separately; complete recursive tuple, generic, and function-type grammar remains to be formalized.
+The selected design uses `alias` to give a type or an existing symbol another
+name. The `distinct` declaration creates a fresh type identity from a type
+expression. Record and enum declarations create their own nominal types.
 
-## Reviewed spellings
+**Compiler status.** The current compiler and Playground use
+`Name := type TypeExpression` for transparent type aliases. The examples below
+specify the new design. They use the planned spelling and include cases for the
+compiler migration.
 
-### A. Bind a type directly: not selected
-
-```text
-Member := User;
-Person := User | Guest;
-LoadError := ReadError | ParseError;
-Outcome := (User | Guest) ! LoadError;
-AnyOutcome := User!;
-NameAge := (:String, :Int);
-Users := List<User>;
-Formatter := fn(value: Int): String;
-```
-
-This follows the uniform binding idea most closely: the right-hand side can denote a type, just as another initializer can denote a function or ordinary value. It is shortest for simple names and unions. It requires a defined compile-time type-expression model and rules for operators on type-denoting operands; it does not inherently require runtime type objects or reflection.
-
-### B. Explicitly introduce a type expression: selected
+## Name a structural type or an existing type
 
 ```text
-Member := type User;
-Person := type User | Guest;
-LoadError := type ReadError | ParseError;
-Outcome := type (User | Guest) ! LoadError;
-AnyOutcome := type User!;
-NameAge := type (:String, :Int);
-Users := type List<User>;
-Formatter := type fn(value: Int): String;
+Point0 := alias (x: Int, y: Int);
+Point1 := alias [Int; 5];
+Point5 := alias Point1;
+
+x1: Point1;
+x5: Point5 = x1;
 ```
 
-The type keyword gives the complete right-hand side a type-expression context through the declaration boundary. It does not mean only the first union member, a cast, or a fresh nominal wrapper. All operands of the union/fallible composition are type operands. Ordinary semicolon and completed-item boundaries still apply; whitespace and newlines never set the keyword's scope.
+`Point0` names the structural named-tuple type. `Point1`, `Point5`, and
+`[Int; 5]` all denote the same structural array type. `x5` is a separate
+variable initialized from the value of `x1` under ordinary value-transfer rules.
 
-The first block records the rejected alternative; the second uses the selected prefix. They are not interchangeable alias spellings. If User denotes a type, Member := User is not the selected way to alias it. If a name instead denotes an ordinary value, the ordinary value-binding rule still applies; capitalization never decides this. The examples use selected tuple component and named callable parameter forms; complete recursive type grammar and generic List<User> notation remain to be formalized.
+A type alias accepts a complete type expression, including a tuple, array,
+union, fallible type, generic application, or function signature. Each form
+retains its existing type grammar and precedence. For example,
+`Value := alias | String | Int` and `Value := alias String | Int` name the same
+union. Type aliases can be declared at file scope and inside blocks. A type
+annotation can refer to a later type alias under the applicable forward
+type-lookup rules.
 
-## Optional leading union separator selected
-
-The alias initializer's established type context permits one optional leading | on a nonempty plain-union chain:
+## Give an existing symbol another name
 
 ```text
-Value := type
-    | String
-    | Int
-    | Float;
+xalias := alias x1;
+
+pointLib := import "./points";
+points := alias pointLib;
 ```
 
-This denotes exactly String | Int | Float under the ordinary transparent-alias and union-normalization rules. A singleton Value := type | String denotes String. The same leading form is available in other established type contexts and explicitly grouped union chains. No empty member, Unit, new nominal wrapper, or changed fallible-type precedence is introduced. Empty, stacked, interior extra, and trailing separators are invalid. Leading & awaits intersection-type selection; it is not admitted merely by analogy. See [optional leading separators](lite://doc/leading-separators#plain-union-types), selected 2026-10-24.
+`xalias` and `x1` name the same variable and share its storage. A read through
+either name observes the same value. A write through either name is visible
+through the other when the corresponding reassignment or held-data mutation
+permission allows it. Declaring an alias creates no storage and grants no
+additional access.
 
-## What changes as types become more complex
+A reference to a function can likewise acquire a second name while preserving
+the callable it denotes. `import` introduces the local module name `pointLib`
+directly. `points` resolves to that same module with its existing visibility
+rules.
 
-- **Existing named type:** Member := User is concise and readily resolvable when User denotes a type. The explicit form advertises the declaration's role before the reader resolves User.
-- **Union:** both are compact. The explicit form fixes | in type context. The short form can also be unambiguous through defined operand-kind rules; it is not inherently unparsable. Any value-level bitwise meaning of | would need a separate operator contract, not silent guessing.
-- **Fallible type:** User! is the selected shorthand for User ! Error in type context, while outcome! extracts or propagates in value context. The explicit prefix establishes which grammar applies. The short form must resolve whether its operand denotes a type or an outcome value.
-- **Tuple type:** (:String, :Int) uses the selected unnamed typed component form. Bare entries such as (name, age) in tuple type context instead supply labels with inferred component types; they require a static inference source. In ordinary expression context, a tuple can contain ordinary values. The explicit type prefix establishes type context; this comparison does not introduce runtime type values or a second alias spelling.
-- **Generic application:** List<User> needs a type-application grammar; < and > cannot depend on whitespace or capitalized naming conventions to separate them from comparison expressions. An explicit type context helps reuse annotation grammar. The short form remains feasible with proper type-expression rules.
-- **Function type:** type fn(value: Int): String clearly asks for a callable type. Without the prefix, the grammar must distinguish that from a function literal requiring parameters and a body. Named parameter, access-qualifier, and fallible result forms are selected separately; complete recursive grammar, remaining callable compatibility beyond destination label adaptation, and capture representation remain open. Public labels through an alias follow its destination contract. Writing the alias as a receiving-declaration annotation can authorize label conversion; merely expecting that alias in an ordinary transfer does not bypass label checks; see [tuple/callable label conversion](lite://doc/tuple-label-conversions).
+Resolve alias operands in the ordinary lexical namespace. A name can denote a
+type, variable, function, or module. In particular, a local value binding that
+shadows a type name still resolves to a value, so using it as a type annotation
+is a type error. Capitalization plays no role. Resolution must respect scope,
+visibility, and initialization. Chaining aliases preserves the original target
+and cycles are errors.
 
-These are readability and grammar-design tradeoffs, not claims that one spelling can be implemented and the other cannot. A compiler need not add runtime work for either alias form.
+The initial symbol-alias contract covers existing names and type expressions.
+Computed expressions such as `alias (a + b)` have no alias meaning in this
+contract. Aliases of fields or indexed places remain open, including when a
+receiver or index would be evaluated and how long the resulting place remains
+valid.
 
-## Selected transparent meaning
-
-Using the selected explicit form:
+## Declare a fresh type
 
 ```text
-Member := type User;
-user: User = { name = "Ali", age = 10, }
-member: Member = user;
+Point2 := record { x: Int, y: Int }
+Point3 := enum { x, y }
+Point4 := distinct Point1;
 ```
 
-User and Member denote the same type. No structural conversion, reconstruction, runtime allocation, or new data wrapper is introduced by the alias. Actual value transfer still follows the eventual ownership/copy/move rules.
+Each declaration introduces its own type identity. Because `Point1` resolves
+to `[Int; 5]`, writing `Point4 := distinct [Int; 5];` in place of the last
+line has the same meaning. Each separate `distinct` declaration creates its
+own identity even when several declarations use the same underlying type.
+An alias of `Point4` preserves `Point4`'s identity.
 
-The alias preserves the target's fields, construction defaults, valid-zero contract, and access permissions. It cannot grant visibility or mutation capabilities. A : Member test denotes the same type test as : User; alias names must not become separate union cases merely because their spellings differ. General union canonicalization remains its own contract.
+A distinct type shares its underlying representation subject to the target's
+layout and ABI contract. An established `[Int; 5]` value cannot be assigned
+implicitly to `Point4`, and an established `Point4` value cannot be assigned
+implicitly to `[Int; 5]`. Existing rules for contextual fresh literals are a
+separate contract. The earlier design review also specifies default same-type
+equality and compatible hash reuse where the backing type supports them.
+Backing representation alone does not grant mixed-type equality or arithmetic.
+Array indexing and destructuring on distinct types, aggregate literal admission,
+explicit conversion syntax, custom operations, and precise target ABI details
+remain open. See [the core type review](lite://repo/research/investigations/language-review/01-core-types.md#12-identity-and-distinct-types).
 
-The [selected union normalization rule](lite://doc/union-normalization) now ignores plain-union member order, flattens nested plain unions, and removes duplicates by resolved identity, including aliases. It retains distinct record declarations, enum cases, and Option/Result boundaries. Subtype absorption and broader assignability remain open.
+## Example outcomes
 
-Similarly:
+- `x5: Point5 = x1` is accepted with ordinary array value transfer.
+- With `x1` declared as `x1: mut Point1;`, writing `xalias[0] = 9` is
+  observable as `x1[0] == 9`. The same write is rejected without writable
+  access to `x1`.
+- `Other := distinct [Int; 5]` declares a different type from `Point4`.
+  Passing an established `Other` value to a parameter of type `Point4` is
+  rejected without an explicit conversion.
+- A module member accessible through `pointLib` is accessible through
+  `points` under the same visibility rules. Private members stay private.
 
-```text
-LoadError := type ReadError | ParseError;
-ReadOutcome := type String ! LoadError;
-```
-
-The error alias preserves its existing alternatives rather than declaring a new error family. The outcome alias does not unwrap a Result. Successful returns remain implicit, failures explicit, and propagation must fit the declared error coverage. Naming a union does not make it a tagged enum with fresh .ReadError or .ParseError case constructors.
-
-## Alias versus new declaration
-
-```text
-/* Proposed transparent alias: reuse User's identity. */
-Member := type User;
-
-/* Selected record declaration form: create a distinct type. */
-Student := record {
-    name: String;
-    age: Int;
-}
-```
-
-The type prefix must not quietly mean distinct. A separate nominal domain wrapper can already be expressed with a fresh record declaration; scalar newtype syntax remains open. Renaming a type must not implicitly grant inheritance or import all fields into another declared record.
-
-An explicit prefix raises an additional boundary: should Name := type { ... } be allowed to define an inline record type, and would that replace Name := record { ... }? That is a separate declaration-grammar choice. Do not silently add a second interchangeable record declaration syntax during the alias decision. The existing record form and the proposed field-type shorthand after colon retain their current statuses.
-
-## Selected rule
-
-FVP follow-up, **2026-10-31**: the
-[INV-029 name-resolution review](lite://repo/research/investigations/INV-029-fvp-alias-name-resolution.md)
-selects one ordinary lexical namespace for source-introduced aliases and value
-bindings. A value binding shadows an earlier same-name alias; subsequent lookup
-in a type annotation finds the value and fails with a static type error stating
-the binding does not denote a type. Dual namespaces are rejected. The alias
-remains transparent with zero runtime memory or allocation.
-
-Use one spelling for all named aliases:
-
-```text
-Alias := type TypeExpression;
-```
-
-This retains uniform Name := ... definitions while making the initializer's role explicit, much as record, enum, and fn already do for their declarations. It is longer for a single existing name, but gives unions, fallible types, tuples, generic applications, and function types a consistent type context. Type annotations already have that context after colon, so they need no extra keyword:
-
-```text
-person: User | Guest = user;
-outcome: User ! LoadError = load_user(id);
-```
-
-The explicit form was selected after considering composite types, superseding the earlier preference for the shortest simple alias. Require type for both simple and composite aliases. Optional type prefixes and a simple/complex spelling split are not selected.
-
-Remaining contracts: exact alias production and type boundaries; use in local/module scopes; public visibility and API evolution; generic alias parameters; alias cycles and recursive nominal boundaries; namespace/shadowing rules; function and tuple type syntax; and whether types can participate in other compile-time expressions. Aliases alone do not select mutable or runtime first-class type values.
-
-## Reference-language comparison
-
-- Rust uses explicit type Name = ExistingType aliases, which introduce names for existing types. Its nominal enum facility should not be confused with general User | Guest union syntax. Source: [Rust aliases](https://doc.rust-lang.org/reference/items/type-aliases.html).
-- Odin aliases a named type through its ordinary constant-definition form, as in My_Int :: int; distinct types are a separate operation. This supports the shorter-binding direction. Source: [Odin type aliases](https://odin-lang.org/docs/overview/#type-alias).
-- TypeScript uses an explicit type declaration for simple aliases and unions, including type ID = number | string. Naming the union does not introduce a distinct version of the type. Source: [TypeScript aliases](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-aliases).
-- Kotlin uses typealias for existing, generic, function, and nested types; aliases do not introduce new types. This supports explicit intent for composite aliases without determining LiteScript's punctuation or scope rules. Source: [Kotlin aliases](https://kotlinlang.org/docs/type-aliases.html).
-
-Related: [record identity](lite://doc/record-type-identity), [fallible compositions](lite://doc/fallible-types-and-error-composition), [types and inference](lite://doc/types-and-inference), and [grammar sketch](lite://doc/grammar-sketch).
+See [record type identity](lite://doc/record-type-identity),
+[enums and variants](lite://doc/enums-and-variants),
+[mutability](lite://doc/mutability), and [grammar sketch](lite://doc/grammar-sketch).

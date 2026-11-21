@@ -284,7 +284,7 @@ separate [structured-data investigation](structured-data-like.md).
 
 ## 1.2 Identity and distinct types
 
-**Baseline:** Transparent aliases retain identity; record declarations are nominal. The user likes `UserID := distinct String` and `UserData := distinct (name: String, age: Int)` and favors distinctness in both directions; general distinct syntax and semantics need review.
+**Baseline:** Transparent aliases retain identity and record declarations are nominal. The follow-up below records the selected `alias` and `distinct` forms.
 
 **User clarification:** A type alias gives the same type concept another
 symbol: `Int` and `Int64` name the same type. A distinct type has its own type
@@ -298,13 +298,10 @@ Sharing a layout does not by itself authorize implicit conversion or unchecked
 memory reinterpretation. This is a type-design direction, not evidence that
 the current compiler implements general distinct types.
 
-**Parked for future discussion:** The user is considering making alias and
-distinct type definitions explicit parts of the language syntax. Review how
-the two concepts should be expressed and distinguished, including their effect
-on readability and grammar. `Alias := type TypeExpression` is the currently
-selected transparent-alias spelling; the illustrated `distinct` form has not
-settled the full syntax. This question does not select new keywords or replace
-the existing alias rule.
+**2026-11-21 follow-up:** `alias` gives the same type or existing symbol
+another name. `distinct` creates a new type identity based on a type expression.
+The [language reference](../../../docs/type-aliases.md) records both forms and
+their implementation status.
 
 **Initial assessment and probes:** Keep separate UserID and OrderID even with String underneath. Compare nominal wrappers with transparent aliases and ask which operations, invariants and representation each preserves.
 
@@ -377,9 +374,9 @@ array does not by itself settle tuple/array identity or conversion.
 
 ### User direction: literals and established values
 
-The following is a bounded design direction, not an implemented feature. The
-declaration and `cast<T>` notation are illustrative; final distinct-type and
-explicit-conversion syntax, operation semantics, and implementation are open.
+The following cases specify the selected distinct declaration and the design
+direction for conversions. The `cast<T>` spelling, remaining operation
+semantics, and implementation are open.
 The term `cast` here denotes explicit conversion intent, not a selected builtin,
 unchecked reinterpretation, or promise that every conversion is allowed.
 

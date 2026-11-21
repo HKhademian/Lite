@@ -1,5 +1,9 @@
 # Modules, Namespace Imports & `pub` Visibility Boundaries
 
+This runnable example uses the current compiler's `:= type` syntax for
+transparent type aliases. The selected replacement is `:= alias`. See
+[aliases and distinct type declarations](lite://doc/type-aliases).
+
 Split reusable logic into separate module files exposing only intentional `pub` types, constants, and functions while keeping helper internals private.
 
 ## Walkthrough

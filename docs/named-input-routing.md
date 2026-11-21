@@ -467,7 +467,7 @@ These declarations are now valid in the selected direction:
 ```text
 pair: (:Int, :Int) = (1, 2);
 (left, right): (:Int, :Int) = (1, 2);
-NameAge := type (:String, :Int);
+NameAge := alias (:String, :Int);
 ```
 
 The entry forms follow the existing type-only : Type convention while retaining context-specific meaning. In a tuple type, :Int describes an unnamed component. In a pattern, :Int tests a component without binding. A named _: Int component is not an unnamed placeholder; underscore remains an ordinary identifier.

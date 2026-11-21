@@ -1,6 +1,6 @@
 # Fallible types and error composition
 
-Status: **`T ! E` fallible types, union `|` binding more tightly than binary type `!`, `T!` shorthand for `T ! Error`, and Alias := type TypeExpression selected**. Complete error-family composition, propagation membership, and general type grammar still need formalization.
+Status: **`T ! E` fallible types, union `|` binding more tightly than binary type `!`, `T!` shorthand for `T ! Error`, and Alias := alias TypeExpression selected**. Complete error-family composition, propagation membership, and general type grammar still need formalization.
 
 ## Purpose
 
@@ -99,12 +99,12 @@ A family can already contain multiple error cases and structured payloads. A fun
 The selected transparent alias spelling can name an error composition:
 
 ```text
-LoadError := type ReadError | ParseError;
+LoadError := alias ReadError | ParseError;
 ```
 
 This follows the selected uniform binding and explicit type-prefix rule. It names a composition without introducing another nominal wrapper or losing the original error identity. Detailed union composition and propagation membership remain separate contracts.
 
-The [alias syntax review](lite://doc/type-aliases) compared this explicit form with LoadError := ReadError | ParseError, along with simple, tuple, generic, and function aliases. One explicit type prefix is now selected for all named aliases. The keyword covers the full type expression, not just its first union member.
+The `alias` keyword covers the complete type expression, including all union members. See [aliases and distinct type declarations](lite://doc/type-aliases) for current compiler status.
 
 The function can then declare:
 

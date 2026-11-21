@@ -236,19 +236,19 @@ These nested forms also work inside already supported conditional patterns. The 
 In an established type-expression context, a plain-union chain permits one optional leading `|`:
 
 ```text
-Value := type
+Value := alias
     | String
     | Int
     | Float;
 
-Compact := type String | Int | Float;
-Grouped := type (| String | Int) | Float;
-Single := type | String;
+Compact := alias String | Int | Float;
+Grouped := alias (| String | Int) | Float;
+Single := alias | String;
 ```
 
-`Value`, `Compact`, and `Grouped` denote the same type. `Single` denotes `String`. The `type` keyword establishes the alias's type context; an annotation or explicit type grouping can likewise supply type context. This is not a new alias spelling or a value-expression operator.
+`Value`, `Compact`, and `Grouped` denote the same type. `Single` denotes `String`. The `alias` declaration supplies type context in these examples. An annotation or explicit type grouping can also supply that context.
 
-The leading `|` introduces no empty member, `Unit`, bottom type, or fresh nominal identity. Plain-union normalization and existing precedence with fallible type `!` are unchanged. Each union chain, including a grouped chain or a union operand of a fallible type, has its own optional leading `|`. For example, `Outcome := type (| String | Int) ! (| ReadError | ParseError);` has the same type as the form without those two leaders. See [type aliases](lite://doc/type-aliases), [union normalization](lite://doc/union-normalization), and [fallible type grouping](lite://doc/fallible-types-and-error-composition#grouping).
+The leading `|` introduces no empty member, `Unit`, bottom type, or fresh nominal identity. Plain-union normalization and existing precedence with fallible type `!` are unchanged. Each union chain, including a grouped chain or a union operand of a fallible type, has its own optional leading `|`. For example, `Outcome := alias (| String | Int) ! (| ReadError | ParseError);` has the same type as the form without those two leaders. See [type aliases](lite://doc/type-aliases), [union normalization](lite://doc/union-normalization), and [fallible type grouping](lite://doc/fallible-types-and-error-composition#grouping).
 
 The same presentation is intended for a leading `&` if intersection types are selected. This decision does not establish public intersection syntax, its semantics, or its precedence. Illustrative simultaneous-failure aggregates using `A & B` do not establish intersection types or gain a leading `&` through this rule.
 
@@ -263,7 +263,7 @@ The same presentation is intended for a leading `&` if intersection types are se
 /* Invalid: no real operand/member. */
 if and { act() }
 if or { act() }
-Empty := type |;
+Empty := alias |;
 ready := and;
 loop or { act() }
 
@@ -274,12 +274,12 @@ if a and or b { act() }
 if a or and b { act() }
 ready := a and or b;
 ready := not and a;
-Invalid := type | | String;
-InvalidInterior := type String | | Int;
+Invalid := alias | | String;
+InvalidInterior := alias String | | Int;
 
 /* Invalid: missing final operand/member. */
 if a and { act() }
-InvalidTail := type String |;
+InvalidTail := alias String |;
 ```
 
 Ordinary item and list separators retain their own contracts. A leading `|` is unrelated to duplicate type-member normalization, repeated semicolons, or optional boundary commas in call inputs. No general permission to repeat arbitrary punctuation follows.
@@ -298,7 +298,7 @@ For a compact layout:
 
 ```text
 ready := connected and authenticated;
-Value := type String | Int;
+Value := alias String | Int;
 ```
 
 For a multiline layout:
@@ -310,7 +310,7 @@ ready :=
     and permitted
 ;
 
-Value := type
+Value := alias
     | String
     | Int
     | Float;

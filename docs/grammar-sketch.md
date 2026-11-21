@@ -86,13 +86,15 @@ item := declaration
       | exit
       | expression
       | type_item
+      | alias_declaration
 
-type_item := identifier ":=" (record_type | enum_definition | "type" type_expression)
+type_item := identifier ":=" (record_type | enum_definition)
+           | distinct_declaration
 ```
 
 `closed_item` and `simple_item` are disjoint categories of `item`. A `closed_item` is a complete unparenthesized block construct, including its attached clauses, a complete record-construction expression, or a declaration, assignment, or exit whose outer expression ends directly in either form. Examples include a standalone block, an `if` chain, a `match`, a loop with hooks, and a binding initialized by a function or type body. A `simple_item` is any other item.
 
-`type_item` covers the selected nominal record and enum definitions and transparent type aliases. It is recognized when an identifier followed by `:=` has a `record`, `enum`, or `type` right-hand side; it declares a type, not a value binding. A record/enum definition ending directly in its body is a closed item; a `type` alias is a simple item. The `record_type`, `enum_definition`, and `type_alias` fragments below remain incomplete, and `type_expression` still denotes the unfinished type grammar. No `&` intersection/failure-aggregate production is selected.
+`type_item` covers nominal record, enum, and distinct declarations. Record and enum definitions ending directly in their bodies are closed items. The `alias` and `distinct` forms are simple items. An alias may name a type or another kind of symbol. See the [alias and distinct forms](lite://doc/grammar-sketch#selected-alias-form).
 
 The sketch allows leading extra separators and repeated separators after simple items. A final simple item may omit its separator before the enclosing `}` or end of file. A closed item ends itself and permits optional trailing separators. Separators are not AST items and do not produce `Unit`. Declarations and assignments remain items, not general value expressions.
 
@@ -637,10 +639,17 @@ In type declarations, union `|` binds more tightly than binary fallible type `!`
 ### Selected alias form
 
 ```text
-type_alias := identifier ":=" "type" type_expression
+alias_declaration := identifier ":=" "alias" alias_target
+alias_target := type_expression | existing_symbol
+distinct_declaration := identifier ":=" "distinct" type_expression
 ```
 
-The [type alias comparison](lite://doc/type-aliases) selected Alias := type TypeExpression. The prefix establishes type context for the whole alias initializer, including unions and fallible types, and creates no fresh nominal wrapper. Direct type binding without the prefix is not an alternate alias spelling. This is a surface production, not a completed type parser; tuple, generic, function-type, scope/cycle, and fresh-record alias boundaries remain open.
+An alias names the type, variable, function, or module its operand denotes.
+An identifier that fits either syntactic form is resolved by lexical lookup.
+A type operand uses the full type-expression grammar, including unions and
+fallible types. A distinct declaration accepts a type operand and creates a
+fresh type identity. These surface forms are selected for the next compiler
+migration. See [aliases and distinct type declarations](lite://doc/type-aliases).
 
 Plain-union [normalization](lite://doc/union-normalization) is selected independently of precedence: member order does not affect identity, nested plain unions flatten, and duplicate identities disappear after alias resolution. These rules do not flatten Option/Result/enum boundaries, merge distinct nominal records, reorder match arms, or choose an ABI.
 
@@ -650,7 +659,7 @@ Plain-union [normalization](lite://doc/union-normalization) is selected independ
 union_type := ["|"] union_member_type { "|" union_member_type }
 ```
 
-This is a selected nonempty-chain fragment in type context, not a complete type-expression grammar. union_member_type excludes ungrouped top-level | and binary fallible !; its recursive productions and other constructor precedence remain open. Established grouping may contain another union chain. Thus Alias := type | A | B and Alias := type A | B denote the same type, while Alias := type |, Alias := type | | A, and Alias := type A | are invalid. A singleton | A denotes A and adds no empty member or Unit. Each union operand of binary ! uses this same fragment, preserving the selected tighter union precedence. No public intersection-type or leading-& production is selected. See [optional leading separators](lite://doc/leading-separators#plain-union-types).
+This is a selected nonempty-chain fragment in type context, not a complete type-expression grammar. union_member_type excludes ungrouped top-level | and binary fallible !; its recursive productions and other constructor precedence remain open. Established grouping may contain another union chain. Thus Alias := alias | A | B and Alias := alias A | B denote the same type, while Alias := alias |, Alias := alias | | A, and Alias := alias A | are invalid. A singleton | A denotes A and adds no empty member or Unit. Each union operand of binary ! uses this same fragment, preserving the selected tighter union precedence. No public intersection-type or leading-& production is selected. See [optional leading separators](lite://doc/leading-separators#plain-union-types).
 
 ## Escaping-error inference at an omitted output
 

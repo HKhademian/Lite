@@ -1,6 +1,8 @@
 # Transparent Type Aliases Across Root & Inner Blocks
 
-Give domain names to tuple, list, or function shapes with `type` aliases—at file scope or inside any local `{ ... }` block.
+This runnable lesson uses the current compiler's `:= type` syntax for transparent
+aliases at file and block scope. The selected replacement is `:= alias`.
+See [aliases and distinct type declarations](lite://doc/type-aliases).
 
 ## Walkthrough
 

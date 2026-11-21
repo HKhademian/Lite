@@ -142,7 +142,7 @@ Record type declarations have selected nominal identity, including unnamed inlin
 
 ## Optional leading union separator
 
-An established type-expression context permits one optional leading | on a nonempty plain-union chain, selected 2026-10-24. Value := type | String | Int and Value := type String | Int denote the same transparent alias; an annotation such as value: (| String | Int) uses the same union type. This spelling neither adds Unit nor changes inference, type identity, normalization, or precedence. Leading & is conditional on future intersection-type selection. See [optional leading separators](lite://doc/leading-separators#plain-union-types).
+An established type-expression context permits one optional leading | on a nonempty plain-union chain, selected 2026-10-24. Value := alias | String | Int and Value := alias String | Int denote the same transparent alias; an annotation such as value: (| String | Int) uses the same union type. This spelling neither adds Unit nor changes inference, type identity, normalization, or precedence. Leading & is conditional on future intersection-type selection. See [optional leading separators](lite://doc/leading-separators#plain-union-types).
 
 ## Tuple type components
 

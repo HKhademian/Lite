@@ -25,7 +25,7 @@ Student := record {
 }
 ```
 
-Student names the record type, name is a String field, and grade is an Int field. This replaces the earlier `Student := type { ... }` record sketch. Transparent type aliases are separate and selected as `Alias := type TypeExpression`; see [type aliases](lite://doc/type-aliases).
+Student names the record type, name is a String field, and grade is an Int field. This replaces the earlier `Student := type { ... }` record sketch. To give an existing type another name, use the selected `Alias := alias TypeExpression` form. See [aliases and distinct type declarations](lite://doc/type-aliases).
 
 ## Field values and named patterns
 
@@ -122,11 +122,10 @@ coverage and omission rules remain open. Record construction supplies fields by
 name and still follows the separate rules for omitted fields and defaults. Tuple positions and labels
 keep their own rules; equal fields do not imply record/tuple compatibility.
 
-The user also favors a general distinct-type direction, for example
-`UserID := distinct String` and `UserData := distinct (name: String, age: Int)`.
-This is separate from record declarations and transparent aliases. Its syntax,
-conversions, inherited operations, and implementation remain to be reviewed;
-these examples do not settle those contracts.
+The design also selects `UserID := distinct String` and
+`UserData := distinct (name: String, age: Int)`. Each declaration has a fresh
+identity and an underlying type. See [aliases and distinct type declarations](lite://doc/type-aliases)
+for the implementation status and open conversion and operation rules.
 
 The [record creation and initialization overview](lite://doc/record-initialization) separates zero initialization, selected by an omitted simple typed initializer, from declared-default construction with = {}. A general explicit zero-value expression is under design. Zero initialization bypasses declared field defaults. Every type, including all record fields, must map all-zero storage to a valid language value; there is no zeroability eligibility restriction. Empty contextual record initialization is selected. Field-default resolution and inline-type grammar still need formalization; they do not silently complete this document's other initialization/type-system contracts.
 

@@ -252,7 +252,8 @@ generated TypeScript driver reads and parses imported units using the compiler's
 Lite-owned graph walk. It marks a unit visited before following imports and
 processed after its outgoing imports. Namespace aliases expose `pub` functions,
 immutable scalar values, and public types; private declarations remain hidden.
-Repeated aliases share one module identity.
+Repeated imports of the same module share one module identity.
+
 Duplicate aliases and exported names are rejected. Qualified public types work
 in annotations and function signatures. Retained source spans for runtime
 diagnostics and compiler-source adoption remain pending. Cycles terminate
@@ -332,6 +333,12 @@ The current host-side source expander is a bootstrap bridge, not the language
 semantics. It may remain while the Lite-written compiler learns module imports;
 the finished path must pass separate source units to the compiler and remove
 text splicing and flattened line maps.
+
+The selected alias design also permits a second name for an existing import,
+as in `points := alias pointLib` after `pointLib := import "./points"`.
+Both names qualify the same module and apply the same visibility rules.
+See [aliases and distinct type declarations](lite://doc/type-aliases) for
+implementation status.
 
 ## Broader module import sketch
 

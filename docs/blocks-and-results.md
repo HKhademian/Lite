@@ -10,7 +10,8 @@ parallel forward symbol wiring across root and inner blocks, compile-time
 execution-trace safety, and side-effect-free dead-code elimination. Generated C
 supports statement scopes, inner `type` aliases, parallel non-`fn` type wiring,
 and scalar DCE while explicitly rejecting `fn` values. See the
-[transition queue](lite://doc/compiler/gaps).
+[transition queue](lite://doc/compiler/gaps). The selected replacement for
+`:= type` is described in [aliases and distinct type declarations](lite://doc/type-aliases).
 
 An executable block groups items, introduces lexical scope, and produces its final item's result when execution reaches the end.
 
@@ -208,7 +209,7 @@ In LiteLang, a source file (`.lts` script or `.lt` module) acts as the root bloc
 with invisible braces and no parent block; every inner `{ ... }` block has a
 parent block and shares the same core block rules:
 
-- Same-block redeclaration across values, `var`/`mut`, `fn`, `type` aliases,
+- Same-block redeclaration across values, `var`/`mut`, `fn`, aliases,
   and imports is rejected in both root and inner blocks.
 - Symbol visibility within a block is wired in parallel at compile time for
   types, functions, and inner declarations; deferred `fn` bodies resolve

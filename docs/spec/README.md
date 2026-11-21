@@ -75,6 +75,7 @@ Selected:
 
 - `T ! E` is a recoverable outcome type; `T!` is its shorthand. Success and error handling are explicit.
 - `Option<T>` is a named explicit optional type. There is no implicit null or nullable ordinary value. `Unit` is a real type.
+- [Alias and distinct declarations](lite://doc/type-aliases) distinguish another name for a type or symbol from a fresh nominal type.
 - `A | B` is a normalized plain union: order-independent, flattened, and duplicate-free. Normalization does not collapse nominal records, enum cases, `Option`, or `Result` into their payloads or into `Unit`.
 - Equivalent union spellings share the same member-to-Kind mapping at a shared representation boundary, including between compatible separately compiled consumers. Actual numeric tags, their stability policy, layout/ABI and unknown-tag behavior remain open; see [the Kind mapping rule](lite://doc/union-zero#one-kind-mapping-for-the-same-union-type).
 - A value is admitted to a union when its normalized type is an exact member; widening preserves the source member. Narrowing is checked.

@@ -1,5 +1,9 @@
 # Callable Types, Contextual Inference & Higher-Order Pipelines
 
+This runnable example uses the current compiler's `:= type` syntax for
+transparent type aliases. The selected replacement is `:= alias`. See
+[aliases and distinct type declarations](lite://doc/type-aliases).
+
 Treat functions as first-class values: pass lambdas without redundant annotations, store them in lists, and compose `map` / `filter` / `fold` pipelines.
 
 ## Walkthrough

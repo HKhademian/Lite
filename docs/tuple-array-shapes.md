@@ -5,9 +5,9 @@ Status: **selected design direction, 2026-10-24; no compiler, parser, runtime, o
 ## Type spread constructs an input contract
 
 ```text
-Params1 := type (:Int, score: String, :Int);
-Params2 := type (:Int, score: Int);
-EachRestType := type (:X, :Y, :Z);
+Params1 := alias (:Int, score: String, :Int);
+Params2 := alias (:Int, score: Int);
+EachRestType := alias (:X, :Y, :Z);
 
 exp : fn (...Params1, ...Params2, ...rest: EachRestType): Int =
     (a, score, b, c, ...myrest) {
@@ -144,7 +144,7 @@ The array-tail capability is not limited to functions. The tuple's fixed compone
 ### Construction guarantees the destination type
 
 ```text
-Args := type (first: Int, second: Int, ...rest: Int);
+Args := alias (first: Int, second: Int, ...rest: Int);
 extra := read_numbers();
 fixed: [Int; 5] = [1, 2, 3, 4, 5];
 
@@ -246,8 +246,8 @@ No labels are discovered by inspecting runtime array elements. A tuple-valued ta
 Selected in the follow-up discussion, 2026-10-25: a fixed-prefix-plus-tail tuple and a rest-only tuple can supply the same ordered inputs without being the same tuple type. Their fixed guarantees and observable tail members differ.
 
 ```text
-Prefix := type (:Int, :Int, ...rest: Int);
-TailOnly := type (...rest: Int);
+Prefix := alias (:Int, :Int, ...rest: Int);
+TailOnly := alias (...rest: Int);
 
 p: Prefix = (1, 2, ...rest = [3]);
 q: TailOnly = (...rest = [1, 2, 3]);
@@ -268,7 +268,7 @@ The supported example has compatible unnamed fixed components and the same expli
 ### Rest-only tuples need no fixed components
 
 ```text
-OnlyRest := type (...rest: Int);
+OnlyRest := alias (...rest: Int);
 named: OnlyRest = (...extra);
 
 a := (...fixed);   /* five statically known unnamed Int components */
@@ -382,7 +382,7 @@ Call spread and intrinsic .call use the same emitted sequence under the receivin
 Selected in the follow-up discussion, 2026-10-24/25: a declared rest segment may omit its element type after the required colon when static inference supplies it. No infer keyword is required or selected.
 
 ```text
-Params := type (:Int, :Int);
+Params := alias (:Int, :Int);
 expanded: (...Params) = (1, 2);
 
 inferred: (...rest:) = (...extra);
@@ -522,7 +522,7 @@ The discussion considered fn args : Params : Return, fn args :: Return, and fn :
 It also considered typing a whole input pack with fn (...args: Params): Return. Under the selected variadic element rule, ...args: Params describes additional inputs each of type Params; it must not double as an annotation of the entire collected tuple. Establish a whole input contract at the destination instead:
 
 ```text
-Params := type (:Int, :Int, score: Int);
+Params := alias (:Int, :Int, score: Int);
 exp : fn (...Params): Int = (...args) {
     args.0 + args.1 + args.score
 }
