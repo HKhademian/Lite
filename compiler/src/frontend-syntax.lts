@@ -944,8 +944,11 @@ pub scanRawMatchEnd := fn(source: String, position: Int, prefix: String): Int {
         return -1;
     }
     var armCursor := skipItemSeparators(source, hdr.openPos + 1, prefix);
+    var armCount := 0;
     loop armCursor < size {
-        if textLib.at(source, armCursor) == "}" { return -1; }
+        if textLib.at(source, armCursor) == "}" {
+            return if armCount > 0 { armCursor + 1 } else { -1 };
+        }
         afterUnderscore := skipTrivia(source, armCursor + 1, prefix);
         isFallback := textLib.wordAt(source, armCursor, "_") and afterUnderscore < size and
         textLib.at(source, afterUnderscore) == "{";
@@ -954,6 +957,7 @@ pub scanRawMatchEnd := fn(source: String, position: Int, prefix: String): Int {
         if armOpen < 0 or (not isFallback and armOpen == armCursor) { return -1; }
         armEnd := scanBraceEnd(source, armOpen, prefix);
         if armEnd < 0 { return -1; }
+        armCount = armCount + 1;
         afterArm := skipItemSeparators(source, armEnd, prefix);
         if isFallback {
             if afterArm < size and textLib.at(source, afterArm) == "}" {

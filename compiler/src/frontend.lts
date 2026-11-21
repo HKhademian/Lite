@@ -722,7 +722,7 @@ scanRawMatchEnd := fn(source: String, position: Int, prefix: String): Int { synt
 scanValueMatchEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int { syntax.scanValueMatchEnd(source, position, prefix, requireValueBranches) };
 
 /** Finds the innermost loop context for leading-dot metadata, stopping on conditional, cleanup, or function barriers (-2 conditional, -3 finally, -1 outside). */
-findLeadingDotLoopIdx := fn(ctxs: List<ConstructCtx>): Int { ctx.findLeadingDotLoopIdx(ctxs) };
+findLeadingDotLoopIdx := fn(ctxs: List<ConstructCtx>, allowThroughCond: Bool): Int { ctx.findLeadingDotLoopIdx(ctxs, allowThroughCond) };
 
 /** Finds the innermost active enclosing loop context, skipping loops whose body already completed (`then` or `finally`) and stopping at `fn`. */
 findActiveLoopCtxIndex := fn(ctxs: List<ConstructCtx>): Int { ctx.findActiveLoopCtxIndex(ctxs) };

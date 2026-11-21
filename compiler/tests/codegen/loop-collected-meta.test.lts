@@ -99,7 +99,38 @@ loop optFlags as flag {
     rOpt.stdout);
 }
 
-/* 5. Compile-time rejections */
+/* 5. Partial if / match filtering tails with unambiguous .item / .index / .count inside conditionals */
+partialProg :=
+"io := import \"core/io\";\n" +
+"xs := [-1, 2, -3, 4, 15];\n" +
+"posDoubled := loop xs { if .item > 0 { .item * 2 } }.collected;\n" +
+"tiered := loop xs { if .item > 10 { .item * 3 } else if .item > 0 { .item * 2 } }.collected;\n" +
+"nested := loop xs { if .item > 0 { if .item < 10 { .item * 10 + .index } } }.collected;\n" +
+"matchedSubj := loop [1, 2, 3, 2] { match .item { 1 { 10 } 2 { 20 } } }.collected;\n" +
+"matchedCond := loop xs { match { (.item > 10) { .item * 3 } (.item > 0) { .item * 2 } } }.collected;\n" +
+"lastPos := loop [-1, 2, -3, 4, -5] { if .item > 0 { .item * 2 } };\n" +
+"nonePos := loop [-1, -2] { if .item > 0 { .item * 2 } };\n" +
+"io.outputLine(posDoubled.length, posDoubled[0], posDoubled[1], posDoubled[2]);\n" +
+"io.outputLine(tiered.length, tiered[0], tiered[1], tiered[2]);\n" +
+"io.outputLine(nested.length, nested[0], nested[1]);\n" +
+"io.outputLine(matchedSubj.length, matchedSubj[0], matchedSubj[1], matchedSubj[2]);\n" +
+"io.outputLine(matchedCond.length, matchedCond[0], matchedCond[1], matchedCond[2]);\n" +
+"io.outputLine(lastPos, nonePos);\n";
+
+loop optFlags as flag {
+    cPart := compilerTest.compileStdin(root, tsComp, partialProg, flag);
+    test.checkInt("loop partial filter compile " + flag + ": " + cPart.stderr, 0, cPart.status);
+    rPart := compilerTest.checkAndRunTs(root, cPart.stdout);
+    test.checkInt("loop partial filter run " + flag + ": " + rPart.stderr, 0, rPart.status);
+    test.checkText("loop partial filter stdout " + flag,
+    "3 4 8 30\n3 4 8 45\n2 21 43\n3 10 20 20\n3 4 8 45\n8 0\n",
+    rPart.stdout);
+}
+
+/* 6. Compile-time rejections */
+compilerTest.assertCompileError(root, tsComp, ".value still rejected inside conditional",
+"x := loop [1, 2] { if .value > 0 { 1 } };\n",
+"1:23: leading-dot .value is not available inside a conditional; use an explicit loop @tag\n");
 compilerTest.assertCompileError(root, tsComp, ".collected in loop body",
 "x := loop [1, 2] { .collected };\n",
 "1:21: .collected is only available in a loop's then block or as a loop suffix\n");

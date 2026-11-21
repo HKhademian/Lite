@@ -115,7 +115,7 @@ During an active iteration, `.item` and, for positional sources, `.index` descri
 
 See [last-item/index access](lite://doc/loop-last-item) for zero/empty behavior and field-sensitive retention.
 
-For loops, leading-dot access uses the loop context without searching outward; inside a conditional, use an explicit loop tag for loop metadata. A conditional's `.value` requires its own explicit tag and is readable only in its attached `then`; ambiguous leading-dot metadata reads are rejected. Named @tag access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
+For loops, leading-dot access uses the loop context without searching outward. Inside a conditional (`if` / `match`), unambiguous loop fields (`.item`, `.index`, `.count`) resolve to the enclosing loop, while `.value` still requires an explicit loop `@tag` (because conditionals also have a `.value` concept in `then`). Ambiguous leading-dot metadata reads (e.g. colliding with an expected enum case) are rejected. Named `@tag` access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
 
 ## Normal result and completion
 
@@ -128,10 +128,11 @@ sum := loop numbers as number {
 }
 ```
 
-When a loop has no `then` block, you can also project its completion metadata directly with a suffix (`.collected`, `.count`, or `.value`):
+When a loop has no `then` block, you can also project its completion metadata directly with a suffix (`.collected`, `.count`, or `.value`), and partial `if` / `match` tails commit only when a branch matches (leaving `.value` and `.collected` untouched otherwise):
 
 ```text
 doubled := loop numbers { .item * 2 }.collected;
+posDoubled := loop numbers { if .item > 0 { .item * 2 } }.collected;
 evens := loop numbers as n { if n % 2 =!= 0 { continue; } n }.collected;
 iterations := loop numbers { .item * 2 }.count;
 ```

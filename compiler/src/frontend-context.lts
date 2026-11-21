@@ -940,13 +940,13 @@ pub callReordersArgs := fn(source: String, openParen: Int, prefix: String, param
     entryIdx =!= paramCount
 };
 
-/** Finds the innermost loop context for leading-dot metadata, stopping on conditional, cleanup, or function barriers (-2 conditional, -3 finally, -1 outside). */
-pub findLeadingDotLoopIdx := fn(ctxs: List<ConstructCtx>): Int {
+/** Finds the innermost loop context for leading-dot metadata, stopping on conditional (unless `allowThroughCond`), cleanup, or function barriers (-2 conditional, -3 finally, -1 outside). */
+pub findLeadingDotLoopIdx := fn(ctxs: List<ConstructCtx>, allowThroughCond: Bool): Int {
     var index := ctxCount(ctxs) - 1;
     loop index >= 0 {
         kind := ctxs[index].kind;
         if kind == ir.CTX_KIND_LOOP { return index; }
-        if kind == ir.CTX_KIND_IF or kind == ir.CTX_KIND_MATCH { return ir.DOT_LOOP_IN_CONDITIONAL; }
+        if (kind == ir.CTX_KIND_IF or kind == ir.CTX_KIND_MATCH) and not allowThroughCond { return ir.DOT_LOOP_IN_CONDITIONAL; }
         if kind == ir.CTX_KIND_FINALLY { return ir.DOT_LOOP_IN_FINALLY; }
         if kind == ir.CTX_KIND_FN { return ir.DOT_LOOP_OUTSIDE; }
         index = index - 1;

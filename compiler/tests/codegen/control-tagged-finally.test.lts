@@ -626,11 +626,9 @@ compilerTest.assertCompileRunTs(
 );
 
 loopMetaRej: List<(bad: String, m1: String, m2: String)> = [
-    (bad = "x := loop [1] { if .item == 1 { 1 } else { 2 } };", m1 = "leading-dot .item is not available inside a conditional; use an explicit loop @tag", m2 = ""),
-    (bad = "x := loop [1] { if true { .count } else { 0 } };", m1 = "leading-dot .count is not available inside a conditional; use an explicit loop @tag", m2 = ""),
-    (bad = "x := loop [1] { match { (.item == 1) { 1 } _ { 2 } } };", m1 = "leading-dot .item is not available inside a conditional; use an explicit loop @tag", m2 = ""),
-    (bad = "loop [1] { if .count == 1 { } }", m1 = "leading-dot .count is not available inside a conditional; use an explicit loop @tag", m2 = ""),
-    (bad = "loop [1] { match { (.count == 1) { } _ { } } }", m1 = "leading-dot .count is not available inside a conditional; use an explicit loop @tag", m2 = ""),
+    (bad = "x := loop [1] { if .value == 1 { 1 } else { 2 } };", m1 = "leading-dot .value is not available inside a conditional; use an explicit loop @tag", m2 = ""),
+    (bad = "x := loop [1] { if true { .value } else { 0 } };", m1 = "leading-dot .value is not available inside a conditional; use an explicit loop @tag", m2 = ""),
+    (bad = "x := loop [1] { match { (.value == 1) { 1 } _ { 2 } } };", m1 = "leading-dot .value is not available inside a conditional; use an explicit loop @tag", m2 = ""),
     (bad = "x := loop .item == 1 { 1 };", m1 = ".item is not available in loop header", m2 = ""),
     (bad = "x := loop .index == 1 { 1 };", m1 = ".index is not available in loop header", m2 = ""),
     (bad = "x := loop .count < 1 { .index };", m1 = "loop does not expose .index without a sequence source", m2 = ""),

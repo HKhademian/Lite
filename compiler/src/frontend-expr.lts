@@ -1158,7 +1158,8 @@ resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: 
     }
     fieldEnd := textLib.skipName(source, fieldStart);
     fieldName := textLib.slice(source, fieldStart, fieldEnd);
-    loopIdx := ctx.findLeadingDotLoopIdx(ctxs);
+    allowThroughCond := fieldName == "item" or fieldName == "index" or fieldName == "count";
+    loopIdx := ctx.findLeadingDotLoopIdx(ctxs, allowThroughCond);
     normExp := normalizeExpectedValueKind(expected);
     if types.isEnumKind(normExp) {
         isLoopMetaName := fieldName == "count" or fieldName == "value" or fieldName == "item" or fieldName == "index" or fieldName == "collected";
@@ -1844,6 +1845,10 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 if not useValueIf {
                     isStatement = true;
+                    afterRawIfTail := if rawStmtIfEnd >= 0 { syntax.skipItemSeparators(source, rawStmtIfEnd, prefix) } else { -1 };
+                    isLoopTailPartialIf := isLoopBody and target == ir.TARGET_TS and afterRawIfTail >= 0 and afterRawIfTail < blockSourceSize and textLib.at(source, afterRawIfTail) == "}";
+                    ifBranchSink := if isLoopTailPartialIf { "loopBody" } else { "stmt" };
+                    ifBranchExpected := if isLoopTailPartialIf { expected } else { "" };
                     var ifParts := "";
                     var allBranchesExit := true;
                     var hasElseBranch := false;
@@ -1870,7 +1875,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         beforeOpen := syntax.skipTrivia(source, condParsed.next, prefix);
                         syntax.rejectMisplacedTag(source, beforeOpen, prefix, if isFirstIf { "block tag cannot appear before { in if" } else { "block tag cannot appear before { in else if" });
                         openPos := syntax.expectSymbol(source, beforeOpen, "{", prefix);
-                        branch := parseBinaryCtx(target, source, openPos - 1, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
+                        branch := parseBinaryCtx(target, source, openPos - 1, prefix, blockLocals, functions, params, currentName, ifBranchExpected, 0, ifBarrierCtxs, bodyDepth, inferMode, ifBranchSink, blockAliases);
                         if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, branch); }
                         if branch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
                         prefixKw := if isFirstIf { "if (" } else { " else if (" };
@@ -1886,7 +1891,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             } else {
                                 hasElseBranch = true;
                                 elseOpen := syntax.expectSymbol(source, afterElse, "{", prefix);
-                                elseBranch := parseBinaryCtx(target, source, elseOpen - 1, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
+                                elseBranch := parseBinaryCtx(target, source, elseOpen - 1, prefix, blockLocals, functions, params, currentName, ifBranchExpected, 0, ifBarrierCtxs, bodyDepth, inferMode, ifBranchSink, blockAliases);
                                 if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, elseBranch); }
                                 if elseBranch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
                                 ifParts = ifParts + " else { " + elseBranch.code + " }";
@@ -1905,7 +1910,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, ifParts);
                         }
                     }
-                    if not hasElseBranch and allBranchesExit {
+                    if (not hasElseBranch and allBranchesExit) or isLoopTailPartialIf {
                         lastPartialIfDiverges = true;
                     }
                     blockConstant = false;
@@ -1921,8 +1926,10 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 rawStmtMatchEnd := syntax.scanRawMatchEnd(source, itemStart, prefix);
                 afterRawStmtMatch := if rawStmtMatchEnd >= 0 { syntax.skipTrivia(source, rawStmtMatchEnd, prefix) } else { -1 };
                 stmtMatchHasThen := afterRawStmtMatch >= 0 and (textLib.wordAt(source, afterRawStmtMatch, "then") or textLib.wordAt(source, afterRawStmtMatch, "finally"));
+                afterRawMatchTail := if rawStmtMatchEnd >= 0 { syntax.skipItemSeparators(source, rawStmtMatchEnd, prefix) } else { -1 };
+                isLoopTailMatch := isLoopBody and target == ir.TARGET_TS and not stmtMatchHasThen and afterRawMatchTail >= 0 and afterRawMatchTail < blockSourceSize and textLib.at(source, afterRawMatchTail) == "}";
                 var useValueMatch := stmtMatchHasThen;
-                if (not isStmtBody) and target == ir.TARGET_TS and not useValueMatch {
+                if (not isStmtBody) and (not isLoopTailMatch) and target == ir.TARGET_TS and not useValueMatch {
                     valMatchEnd := syntax.scanValueMatchEnd(source, itemStart, prefix, false);
                     if valMatchEnd >= 0 {
                         afterValMatch := syntax.skipItemSeparators(source, valMatchEnd, prefix);
@@ -1933,14 +1940,21 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 if not useValueMatch and isSubjectStmtMatch {
                     isStatement = true;
-                    subStmt := parseSubjectMatchStmt(target, source, itemStart, prefix, blockLocals, functions, params, currentName, ctxs, bodyDepth, inferMode, blockAliases);
+                    subStmt := if isLoopTailMatch {
+                        parseSubjectMatchLoopTail(target, source, itemStart, prefix, blockLocals, functions, params, currentName, expected, ctxs, bodyDepth, inferMode, blockAliases)
+                    } else {
+                        parseSubjectMatchStmt(target, source, itemStart, prefix, blockLocals, functions, params, currentName, ctxs, bodyDepth, inferMode, blockAliases)
+                    };
                     if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, subStmt); }
                     listLib.pushBack(mut statements, subStmt.code);
                     statementCount = statementCount + 1;
                     if subStmt.kind == ir.VALUE_KIND_NEVER { blockExits = true; }
+                    if isLoopTailMatch { lastPartialIfDiverges = true; }
                     cursor = subStmt.next;
                 } else if not useValueMatch {
                     isStatement = true;
+                    matchArmSink := if isLoopTailMatch { "loopBody" } else { "stmt" };
+                    matchArmExpected := if isLoopTailMatch { expected } else { "" };
                     var matchCursor := syntax.skipItemSeparators(source, afterItemName + 1, prefix);
                     var matchParts := "";
                     var sawFallback := false;
@@ -1955,7 +1969,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             syntax.failAt(source, afterItemName, prefix, "expected } to close match");
                         }
                         if textLib.at(source, matchCursor) == "}" {
-                            if not sawFallback {
+                            if not sawFallback and not isLoopTailMatch {
                                 syntax.failAt(source, matchCursor, prefix, "subjectless match requires a final _ fallback arm");
                             }
                             matchCursor = matchCursor + 1;
@@ -1972,7 +1986,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         textLib.at(source, afterUnder) == "{";
                         if isFallback {
                             sawFallback = true;
-                            arm := parseBinaryCtx(target, source, afterUnder, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
+                            arm := parseBinaryCtx(target, source, afterUnder, prefix, blockLocals, functions, params, currentName, matchArmExpected, 0, matchBarrierCtxs, bodyDepth, inferMode, matchArmSink, blockAliases);
                             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, arm); }
                             if arm.kind =!= ir.VALUE_KIND_NEVER { allArmsExit = false; }
                             if armCount == 0 {
@@ -2012,7 +2026,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             } else {
                                 condParsed.code
                             };
-                            arm := parseBinaryCtx(target, source, armOpen, prefix, blockLocals, functions, params, currentName, "", 0, matchBarrierCtxs, bodyDepth, inferMode, "stmt", blockAliases);
+                            arm := parseBinaryCtx(target, source, armOpen, prefix, blockLocals, functions, params, currentName, matchArmExpected, 0, matchBarrierCtxs, bodyDepth, inferMode, matchArmSink, blockAliases);
                             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, arm); }
                             if arm.kind =!= ir.VALUE_KIND_NEVER { allArmsExit = false; }
                             armKw := if armCount == 0 { "if (" } else { " else if (" };
@@ -2023,12 +2037,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     }
                     if not blockExits {
                         listLib.pushBack(mut statements, matchParts);
-                        if allArmsExit { blockExits = true; }
+                        if sawFallback and allArmsExit { blockExits = true; }
                         statementCount = statementCount + 1;
                         if target == ir.TARGET_TS and not inferMode {
                             blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, matchParts);
                         }
                     }
+                    if isLoopTailMatch { lastPartialIfDiverges = true; }
                     blockConstant = false;
                     stmtNext := syntax.consumeStatementEnd(source, matchCursor, prefix);
                     cursor = if stmtNext >= 0 { stmtNext } else { matchCursor };
@@ -2748,7 +2763,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         if inferMode { blockMarkers } else { "" });
     }
     if isLoopBody {
-        topLoopCtx := ctxs[ctx.ctxCount(ctxs) - 1];
+        topLoopCtx := ctxs[ctx.findActiveLoopCtxIndex(ctxs)];
         topLoopId := topLoopCtx.id;
         topLoopValKind := topLoopCtx.valKind;
         topLoopValVar := topLoopCtx.valVar;
@@ -4190,8 +4205,9 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
     ternaryVals: mut List<String> = [];
     ternaryKinds: mut List<String> = [];
     var ternaryCount := 0;
+    isStmtLike := mode == "stmt" or mode == "loopTail";
     var cursor := syntax.skipItemSeparators(source, subjOpen + 1, prefix);
-    var resultKind := if mode == "stmt" { ir.VALUE_KIND_UNIT } else { "" };
+    var resultKind := if isStmtLike { ir.VALUE_KIND_UNIT } else { "" };
     var allNever := true;
     var sawIrrefutable := false;
     var boolMask := 0;
@@ -4218,9 +4234,10 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         if textLib.at(source, cursor) == "}" {
             isExhaustive := sawIrrefutable or (subj.kind == ir.VALUE_KIND_BOOL and boolMask == 3) or
             (enumTotalCases > 0 and coveredEnumCount == enumTotalCases);
-            if not isExhaustive {
+            if not isExhaustive and mode =!= "loopTail" {
                 syntax.failAt(source, cursor, prefix, "match requires an exhaustive fallback arm");
             }
+            if not isExhaustive { allNever = false; }
             cursor = cursor + 1;
             break;
         }
@@ -4307,12 +4324,12 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             }
         }
         armBodyStart := syntax.skipTrivia(source, armOpen + 1, prefix);
-        bodySink := if mode == "stmt" { "stmt" } else { "branch" };
+        bodySink := if mode == "loopTail" { "loopBody" } else if mode == "stmt" { "stmt" } else { "branch" };
         armExpected := if mode == "stmt" { "" } else { expected };
         branch := parseBinaryCtx(target, source, armOpen, prefix, armLocals, functions, params, currentName, armExpected, 0, ctxs, iifeDepth, inferMode, bodySink, aliases);
         if inferMode { matchMarkers = ctx.collectParsedMarkers(matchMarkers, branch); }
         if branch.kind =!= ir.VALUE_KIND_NEVER { allNever = false; }
-        if mode =!= "stmt" {
+        if not isStmtLike {
             joinedKind := types.joinBranchKind(resultKind, branch.kind);
             if joinedKind == "" {
                 syntax.failAt(source, armBodyStart, prefix, "value match arms must have the same kind, got " +
@@ -4321,7 +4338,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             resultKind = joinedKind;
         }
         var bodyEmit := "";
-        if mode == "stmt" {
+        if isStmtLike {
             bodyEmit = branch.code;
         } else if mode == "iife" {
             bodyEmit = ctx.condBranchStmtCode(target, resolvedValKind, condValVar, branch.kind, branch.code);
@@ -4393,7 +4410,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         armCount = armCount + 1;
         cursor = branch.next;
     }
-    finalKind := if mode == "stmt" {
+    finalKind := if isStmtLike {
         if allNever { ir.VALUE_KIND_NEVER } else { ir.VALUE_KIND_UNIT }
     } else {
         resultKind
@@ -4407,7 +4424,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                 isDirect = true, constant = directConst, intValue = if directConst { winBranchInt } else { 0 },
                 textValue = if directConst { winBranchText } else { "" });
             }
-            if mode == "stmt" {
+            if isStmtLike {
                 return (code = winBranchCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
                 isDirect = true, constant = false, intValue = 0, textValue = "");
             }
@@ -4415,7 +4432,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             return (code = directStmt, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
             isDirect = true, constant = false, intValue = 0, textValue = "");
         }
-        directBody := if mode == "stmt" {
+        directBody := if isStmtLike {
             winBranchCode
         } else if mode == "iife" {
             ctx.condBranchStmtCode(target, resolvedValKind, condValVar, winBranchKind, winBranchCode)
@@ -4442,6 +4459,20 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         isDirect = true, constant = false, intValue = 0, textValue = "");
     }
     (code = armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers, isDirect = false, constant = false, intValue = 0, textValue = "")
+};
+
+/** Parses a loop-tail subject-based `match <subject> { ... }` where matching arms commit to the loop and non-matching iterations leave `.value`/`.collected` untouched. */
+parseSubjectMatchLoopTail := fn(target: String, source: String, matchStart: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    matchBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = ir.CTX_KIND_MATCH, phase = ir.CTX_PHASE_BODY,
+    iifeDepth = iifeDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
+    countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
+    res := parseSubjectMatchBody(target, source, matchStart, prefix, locals, functions, params, currentName, expected, matchBarrierCtxs, iifeDepth, inferMode, "loopTail", "", "", aliases);
+    stmtCode := if res.isDirect {
+        if res.code == "" { "" } else { "{ " + res.code + " }" }
+    } else {
+        "{ " + res.code + "}"
+    };
+    ctx.withMarkers((kind = res.kind, code = stmtCode, intValue = 0, textValue = "", constant = false, next = res.next), res.markers)
 };
 
 /** Parses a statement-position subject-based `match <subject> { ... }` (used from `frontend.lts` and `parseBlockExpr`). */
