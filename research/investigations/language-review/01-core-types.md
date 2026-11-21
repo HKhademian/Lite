@@ -371,6 +371,18 @@ discard either possible value. The emitter can choose a branch or another
 equivalent implementation. Any required effects of element initialization must
 be preserved.
 
+The possible slot types determine the result type. One possible slot, or
+several possible slots that share one type, give that type directly. For
+example, a runtime choice between the two slots of `(10, 20)` yields `Int`.
+When the possible positions have different types, the result is an ordinary
+union value. In `value := pair[i]` for `pair := (10, "tea")`
+and `i` proven to be 0 or 1, `value` has type `Int | String`. Its active member
+is the value from the selected slot, with the corresponding union Kind. Code
+that needs an `Int` or a `String` must narrow or unpack the union through the
+usual type test or pattern rules. The bounds proof alone does not unwrap it.
+The union container is part of the value semantics. The compiler may elide
+its physical storage when it preserves all observable union behavior.
+
 The exact interpretation of “index values must be known at compile time” needs
 clarification alongside the dynamic-index requirement: for example, whether the
 compiler must know the exact value, a finite set, a range, or can conservatively
