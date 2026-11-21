@@ -91,6 +91,12 @@ Metadata carries the information needed to identify the active member. The paylo
 
 All-zero initialization clears the complete value, including metadata. Kind 0 identifies no known active member; the union value is initialized. Member numbering, metadata width/position, and ownership/drop support remain open. This is a conceptual representation direction, not a fixed foreign ABI or a prohibition on equivalent optimized layouts.
 
+### Plain values and union writes
+
+Ordinary statically typed values require no universal runtime type header. The compiler knows the destination's type and emits a write for its layout. A representation can still carry data needed by its own operations, such as a string's length.
+
+For a runtime write of an `Int` to an `Int` slot, the generated code stores the integer. For a write of that same `Int` to an `Int | String` slot, the generated code stores the integer as the payload and sets the union's Kind to `Int`. The source type is already known in this example, so the write can use a known Kind. A later read that can observe either member uses Kind to interpret the shared payload. The discriminator belongs to the enclosing union representation. Optimization can omit it where the active member is proven and the representation is unobserved. Exact layout and tag encoding remain open.
+
 ## Concrete case
 
 ```text
