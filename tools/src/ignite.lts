@@ -235,7 +235,7 @@ rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: S
     );
 
     writer := io.bufferWriter();
-    emitter.emitProgramTo(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = relRoot, builtinSpecs = emptySpecs);
+    emitter.emitProgramToOpt(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = relRoot, builtinSpecs = emptySpecs, optLevel = 3);
     outRes := io.writerText(writer);
     _cl := io.closeWriter(writer);
     if not outRes.ok {
@@ -345,7 +345,7 @@ ensureDistCompiler := fn(rootDir: String, expectedArtSha: String, force: Bool): 
     projectRoot = rootDir, cwd = rootDir, builtinSpecs = emptySpecs
     );
     writer := io.bufferWriter();
-    emitter.emitProgramTo(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = "compiler/src/ts-root.lts", builtinSpecs = emptySpecs);
+    emitter.emitProgramToOpt(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = "compiler/src/ts-root.lts", builtinSpecs = emptySpecs, optLevel = 3);
     outRes := io.writerText(writer);
     _cl := io.closeWriter(writer);
     if not outRes.ok {

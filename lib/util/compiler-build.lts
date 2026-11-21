@@ -138,7 +138,7 @@ ensureDistSeedCompiler := fn(rootDir: String, seedPath: String, sourcePath: Stri
     outPath := path.join(work, "compiler.ts");
     errPath := path.join(work, "compiler.stderr");
     rootBytes := fs.readBytes(sourcePath);
-    compArgs: List<String> = [seedPath, "--compile", "--stdin", "--name", sourceName, "--root", sourcePath];
+    compArgs: List<String> = [seedPath, "--compile", "--stdin", "--name", sourceName, "--root", sourcePath, "-O3"];
     emptyEnv: List<String> = [];
     runRes := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, rootBytes, outPath, errPath);
     if runRes.error =!= "" {
@@ -601,7 +601,7 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
     rootBytes := fs.readBytes(sourcePath);
     sourceRootSha256 := crypto.sha256Bytes(rootBytes);
     sourceBridgeSha256 := sha256Text("standalone-v1");
-    indexKey := sha256Text("trace-v5:" + target + ":" + seedInfo.artifactSha256 + ":" + sourceName + ":" + sourceRootSha256 + ":" + sourceBridgeSha256);
+    indexKey := sha256Text("trace-v6:O3:" + target + ":" + seedInfo.artifactSha256 + ":" + sourceName + ":" + sourceRootSha256 + ":" + sourceBridgeSha256);
 
     cacheRoot := path.join(rootDir, "dist/compiler-cache");
     indexPath := path.join(cacheRoot, "selection/" + indexKey + ".json");
@@ -625,7 +625,7 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
     tracePath := path.join(work, "trace.json");
     outPath := path.join(work, "compiler.ts");
     errPath := path.join(work, "compiler.stderr");
-    compArgs: List<String> = [seedInfo.seedPath, "--compile", "--stdin", "--name", sourceName, "--root", sourcePath, "--trace-json", tracePath];
+    compArgs: List<String> = [seedInfo.seedPath, "--compile", "--stdin", "--name", sourceName, "--root", sourcePath, "-O3", "--trace-json", tracePath];
     emptyEnv: List<String> = [];
     runRes := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, rootBytes, outPath, errPath);
     if runRes.error =!= "" {
@@ -749,7 +749,7 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
         return (ok = true, path = distCompilerPath, sourceSha256 = sourceSha256, artifactSha256 = artHash.hex, builderSha256 = seedInfo.artifactSha256, cached = false, jsonText = seedJson, error = "");
     }
 
-    key := sha256Text(target + ":" + seedInfo.artifactSha256 + ":" + sourceSha256 + ":" + expectedDepsCompact);
+    key := sha256Text(target + ":O3:" + seedInfo.artifactSha256 + ":" + sourceSha256 + ":" + expectedDepsCompact);
     destDir := path.join(cacheRoot, key);
     if fs.kind(path.join(destDir, "provenance.json")) == fs.FILE_KIND_MISSING {
         chk := strictCheckArtifact(rootDir, outPath, path.join(work, "tsc"));
