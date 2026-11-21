@@ -95,7 +95,7 @@ io.outputLine(s, s.value, label);
 
 ## Transparent `type` Aliases & Inner Type Scope
 
-Declare transparent type names with `type` at root or inside any `{ ... }` block. Inner blocks support forward type references and lexical type shadowing:
+Use `Name := type TypeExpression` to give an existing type another name. `Point` names a tuple type with fields `x` and `y`. `Pair` names a tuple type with two unnamed `Int` components and is scoped to the block. The annotation `pair: Pair` can refer to the alias before its declaration because blocks support forward type references.
 
 ```lite
 io := import "core/io";
@@ -103,13 +103,15 @@ io := import "core/io";
 Point := type (x: Int, y: Int);
 p: Point = (x = 3, y = 4);
 
-localLen := {
+pairSum := {
     pair: Pair = (10, 20);
     Pair := type (:Int, :Int);
-    pair[0] + pair[1]
+    pair.0 + pair.1
 };
-io.outputLine(p, localLen);
+io.outputLine(p, pairSum);
 ```
+
+The block's final expression adds the two tuple components, so `pairSum` is `30`.
 
 See [Tuples & Patterns](lite://doc/tuples-and-patterns), [Records](lite://doc/records), [Enums & Variants](lite://doc/enums-and-variants), [Aggregate Patterns](lite://doc/aggregate-patterns), [Arrays](lite://doc/arrays), [Lists](lite://doc/lists), [Typed Maps](lite://doc/maps), and [Type Aliases](lite://doc/type-aliases).
 
