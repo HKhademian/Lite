@@ -2,6 +2,8 @@
 
 integer := import "core/int";
 listLib := import "core/list";
+mapLib := import "core/map";
+setLib := import "core/set";
 textLib := import "core/text";
 ir := import "./frontend-ir.lts";
 syntax := import "./frontend-syntax.lts";
@@ -540,100 +542,7 @@ blockAncestorDistance := fn(targetBlockId: Int, startBlockId: Int, parentBlockId
     -1
 };
 
-/** Finds matching declaration index in `decl*` along the lexical parent chain from `startBlockId`, or -1. */
-findDeclInBlockChain := fn(runtime: String, startBlockId: Int, parentBlockIds: List<Int>,
-declRuntimes: List<String>, declBlockIds: List<Int>, declCount: Int): Int {
-    var bestIdx := -1;
-    var bestDist := -1;
-    var d := declCount - 1;
-    loop d >= 0 {
-        if declRuntimes[d] == runtime {
-            dist := blockAncestorDistance(declBlockIds[d], startBlockId, parentBlockIds);
-            if dist >= 0 and (bestDist < 0 or dist < bestDist) {
-                bestIdx = d;
-                bestDist = dist;
-                if dist == 0 { return d; }
-            }
-        }
-        d = d - 1;
-    }
-    bestIdx
-};
-
-/** Maps runtime identifier references in `code` to matching declaration item indices along `startBlockId`'s lexical ancestor chain. */
-resolveBlockLexicalDeps := fn(code: String, startBlockId: Int, parentBlockIds: List<Int>,
-declRuntimes: List<String>, declBlockIds: List<Int>, declIdxs: List<Int>, declCount: Int): String {
-    if declCount <= 0 or startBlockId <= 0 or code == "" { return ""; }
-    var nextLite := textLib.indexOfText(code, "lite", 0);
-    var nextLt := textLib.indexOfText(code, "lt_", 0);
-    if nextLite < 0 and nextLt < 0 { return ""; }
-    var nextQuote := textLib.indexOfText(code, "\"", 0);
-    size := textLib.length(code);
-    var bag := "";
-    var cursor := 0;
-    loop cursor < size {
-        if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
-        if nextLt >= 0 and nextLt < cursor { nextLt = textLib.indexOfText(code, "lt_", cursor); }
-        var hit := -1;
-        if nextLite >= 0 and (nextLt < 0 or nextLite < nextLt) {
-            hit = nextLite;
-        } else if nextLt >= 0 {
-            hit = nextLt;
-        }
-        if hit < 0 { return bag; }
-        if nextQuote >= 0 and nextQuote < hit {
-            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
-            if nextQuote >= 0 and nextQuote < hit {
-                cursor = syntax.skipAliasString(code, nextQuote);
-                continue;
-            }
-        }
-        if hit > 0 {
-            prev := textLib.at(code, hit - 1);
-            if prev == "$" or textLib.isNameContinue(prev) {
-                cursor = textLib.skipName(code, hit + 3);
-                loop cursor < size and textLib.at(code, cursor) == "$" {
-                    cursor = textLib.skipName(code, cursor + 1);
-                }
-                continue;
-            }
-        }
-        var endPos := textLib.skipName(code, hit);
-        loop endPos < size and textLib.at(code, endPos) == "$" {
-            endPos = textLib.skipName(code, endPos + 1);
-        }
-        tok := textLib.slice(code, hit, endPos);
-        matchedDecl := findDeclInBlockChain(tok, startBlockId, parentBlockIds, declRuntimes, declBlockIds, declCount);
-        if matchedDecl >= 0 {
-            bag = trace.appendPipeBag(bag, integer.intText(declIdxs[matchedDecl]));
-        }
-        cursor = endPos;
-    }
-    bag
-};
-
-/** Merges every index token in pipe-delimited `links` into `bag` without duplicates. */
-mergeIndexPipeBag := fn(bag: String, links: String): String {
-    if links == "" { return bag; }
-    var out := bag;
-    len := textLib.length(links);
-    var pos := 0;
-    loop pos < len {
-        if textLib.at(links, pos) == "|" {
-            pos = pos + 1;
-            continue;
-        }
-        nextBar := textLib.indexOfText(links, "|", pos);
-        endPos := if nextBar < 0 { len } else { nextBar };
-        if endPos > pos {
-            out = trace.appendPipeBag(out, textLib.slice(links, pos, endPos));
-        }
-        pos = endPos + 1;
-    }
-    out
-};
-
-/** Eliminates dead pure locals, pure discarded expressions, and resulting empty scopes per lexical block (supporting forward same-block references). */
+/** Eliminates dead pure locals, pure discarded expressions, and resulting empty scopes per lexical block using O(n + e) Map/Set reachability. */
 pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
     var total := 0;
     loop items { total = total + 1; }
@@ -643,7 +552,8 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
     var stackLen := 1;
     parentBlockIds: mut List<Int> = [-1];
     var nextBlockId := 1;
-    declRuntimes: mut List<String> = [];
+    declHead: mut Map<String, Int>;
+    declPrev: mut List<Int> = [];
     declBlockIds: mut List<Int> = [];
     declIdxs: mut List<Int> = [];
     declPrunables: mut List<Bool> = [];
@@ -681,7 +591,9 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
             listLib.pushBack(mut blockStack, newBlockId);
             stackLen = stackLen + 1;
             if item.kind == ir.ITEM_KIND_LOOP_SEQ and item.runtime =!= "" {
-                listLib.pushBack(mut declRuntimes, item.runtime);
+                prevD := mapLib.getOr(declHead, item.runtime, -1);
+                listLib.pushBack(mut declPrev, prevD);
+                declHead[item.runtime] = declCount;
                 listLib.pushBack(mut declBlockIds, newBlockId);
                 listLib.pushBack(mut declIdxs, idx);
                 listLib.pushBack(mut declPrunables, false);
@@ -698,7 +610,9 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
                 owner = idx;
                 hasPrunable = true;
             }
-            listLib.pushBack(mut declRuntimes, item.runtime);
+            prevD := mapLib.getOr(declHead, item.runtime, -1);
+            listLib.pushBack(mut declPrev, prevD);
+            declHead[item.runtime] = declCount;
             listLib.pushBack(mut declBlockIds, evalBlockId);
             listLib.pushBack(mut declIdxs, idx);
             listLib.pushBack(mut declPrunables, canPruneDecl);
@@ -710,57 +624,151 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
     }
     if not hasPrunable { return items; }
 
+    findDecl := fn(runtime: String, startBlockId: Int): Int {
+        var d := mapLib.getOr(declHead, runtime, -1);
+        if d < 0 { return -1; }
+        var bestIdx := -1;
+        var bestDist := -1;
+        loop d >= 0 {
+            dist := blockAncestorDistance(declBlockIds[d], startBlockId, parentBlockIds);
+            if dist >= 0 and (bestDist < 0 or dist < bestDist) {
+                bestIdx = d;
+                bestDist = dist;
+                if dist == 0 { return d; }
+            }
+            d = declPrev[d];
+        }
+        bestIdx
+    };
+
+    depTargets: mut List<Int> = [];
+    var depTotal := 0;
+    depStarts: mut List<Int> = [];
+    depEnds: mut List<Int> = [];
+
+    collectDeps := fn(code: String, startBlockId: Int): Unit {
+        if declCount <= 0 or startBlockId <= 0 or code == "" { return; }
+        var nextLite := textLib.indexOfText(code, "lite", 0);
+        var nextLt := textLib.indexOfText(code, "lt_", 0);
+        if nextLite < 0 and nextLt < 0 { return; }
+        var nextQuote := textLib.indexOfText(code, "\"", 0);
+        size := textLib.length(code);
+        var cursor := 0;
+        loop cursor < size {
+            if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
+            if nextLt >= 0 and nextLt < cursor { nextLt = textLib.indexOfText(code, "lt_", cursor); }
+            var hit := -1;
+            if nextLite >= 0 and (nextLt < 0 or nextLite < nextLt) {
+                hit = nextLite;
+            } else if nextLt >= 0 {
+                hit = nextLt;
+            }
+            if hit < 0 { return; }
+            if nextQuote >= 0 and nextQuote < hit {
+                if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+                if nextQuote >= 0 and nextQuote < hit {
+                    cursor = syntax.skipAliasString(code, nextQuote);
+                    continue;
+                }
+            }
+            if hit > 0 {
+                prev := textLib.at(code, hit - 1);
+                if prev == "$" or textLib.isNameContinue(prev) {
+                    cursor = textLib.skipName(code, hit + 3);
+                    loop cursor < size and textLib.at(code, cursor) == "$" {
+                        cursor = textLib.skipName(code, cursor + 1);
+                    }
+                    continue;
+                }
+            }
+            var endPos := textLib.skipName(code, hit);
+            loop endPos < size and textLib.at(code, endPos) == "$" {
+                endPos = textLib.skipName(code, endPos + 1);
+            }
+            tok := textLib.slice(code, hit, endPos);
+            matchedDecl := findDecl(tok, startBlockId);
+            if matchedDecl >= 0 {
+                listLib.pushBack(mut depTargets, declIdxs[matchedDecl]);
+                depTotal = depTotal + 1;
+            }
+            cursor = endPos;
+        }
+    };
+
     resolvedOwners: mut List<Int> = [];
-    itemDeps: mut List<String> = [];
+    ownerItemsHead: mut Map<Int, Int>;
+    ownerItemsNext: mut List<Int> = [];
     var idx2 := 0;
     loop idx2 < total {
         item := items[idx2];
         evalBlock := itemEvalBlocks[idx2];
         var owner2 := itemOwners[idx2];
-        var deps := "";
+        listLib.pushBack(mut depStarts, depTotal);
         if owner2 == -2 {
-            deps = "";
+            _skip := 0;
         } else if evalBlock > 0 and textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
-            matchedDecl := findDeclInBlockChain(item.runtime, evalBlock, parentBlockIds, declRuntimes, declBlockIds, declCount);
+            matchedDecl := findDecl(item.runtime, evalBlock);
             if matchedDecl >= 0 and declPrunables[matchedDecl] and (target == ir.TARGET_TS or not isCUnsupportedItem(item)) and
             isSideEffectFreeCode(target, item.code) {
                 owner2 = declIdxs[matchedDecl];
-                deps = resolveBlockLexicalDeps(item.code, evalBlock, parentBlockIds, declRuntimes, declBlockIds, declIdxs, declCount);
+                collectDeps(item.code, evalBlock);
             } else {
-                deps = resolveBlockLexicalDeps(item.runtime + " " + item.code, evalBlock, parentBlockIds, declRuntimes, declBlockIds, declIdxs, declCount);
+                collectDeps(item.runtime + " " + item.code, evalBlock);
             }
         } else {
-            deps = resolveBlockLexicalDeps(item.code, evalBlock, parentBlockIds, declRuntimes, declBlockIds, declIdxs, declCount);
+            collectDeps(item.code, evalBlock);
         }
+        listLib.pushBack(mut depEnds, depTotal);
         listLib.pushBack(mut resolvedOwners, owner2);
-        listLib.pushBack(mut itemDeps, deps);
+        if owner2 >= 0 {
+            prevOwnerItem := mapLib.getOr(ownerItemsHead, owner2, -1);
+            listLib.pushBack(mut ownerItemsNext, prevOwnerItem);
+            ownerItemsHead[owner2] = idx2;
+        } else {
+            listLib.pushBack(mut ownerItemsNext, -1);
+        }
         idx2 = idx2 + 1;
     }
 
-    var liveDeclBag := "";
+    liveDecls: mut Set<Int>;
+    queue: mut List<Int> = [];
+    var qHead := 0;
+    var qTail := 0;
     var seedIdx := 0;
     loop seedIdx < total {
         if resolvedOwners[seedIdx] == -1 {
-            liveDeclBag = mergeIndexPipeBag(liveDeclBag, itemDeps[seedIdx]);
+            var dp := depStarts[seedIdx];
+            dpEnd := depEnds[seedIdx];
+            loop dp < dpEnd {
+                dep := depTargets[dp];
+                if not setLib.has(liveDecls, dep) {
+                    setLib.add(mut liveDecls, dep);
+                    listLib.pushBack(mut queue, dep);
+                    qTail = qTail + 1;
+                }
+                dp = dp + 1;
+            }
         }
         seedIdx = seedIdx + 1;
     }
-    var scannedItemBag := "";
-    loop true {
-        beforeLen := textLib.length(liveDeclBag);
-        var j := 0;
-        loop j < total {
-            own := resolvedOwners[j];
-            if own >= 0 and trace.tokenInPipeBag(liveDeclBag, integer.intText(own)) {
-                key := integer.intText(j);
-                if not trace.tokenInPipeBag(scannedItemBag, key) {
-                    scannedItemBag = trace.appendPipeBag(scannedItemBag, key);
-                    liveDeclBag = mergeIndexPipeBag(liveDeclBag, itemDeps[j]);
+    loop qHead < qTail {
+        declItemIdx := queue[qHead];
+        qHead = qHead + 1;
+        var ownedItem := mapLib.getOr(ownerItemsHead, declItemIdx, -1);
+        loop ownedItem >= 0 {
+            var dp := depStarts[ownedItem];
+            dpEnd := depEnds[ownedItem];
+            loop dp < dpEnd {
+                dep := depTargets[dp];
+                if not setLib.has(liveDecls, dep) {
+                    setLib.add(mut liveDecls, dep);
+                    listLib.pushBack(mut queue, dep);
+                    qTail = qTail + 1;
                 }
+                dp = dp + 1;
             }
-            j = j + 1;
+            ownedItem = ownerItemsNext[ownedItem];
         }
-        if textLib.length(liveDeclBag) == beforeLen { break; }
     }
 
     peeled: mut Items = [];
@@ -768,7 +776,7 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
     var k := 0;
     loop k < total {
         ownk := resolvedOwners[k];
-        keepItem := ownk == -1 or (ownk >= 0 and trace.tokenInPipeBag(liveDeclBag, integer.intText(ownk)));
+        keepItem := ownk == -1 or (ownk >= 0 and setLib.has(liveDecls, ownk));
         if keepItem {
             cur := items[k];
             if cur.kind == ir.ITEM_KIND_END_SCOPE and peeledLen > 0 and peeled[peeledLen - 1].kind == ir.ITEM_KIND_SCOPE {

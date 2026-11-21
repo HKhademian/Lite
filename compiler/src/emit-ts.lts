@@ -101,6 +101,16 @@ usesMapIndex := fn(calls: String): Bool {
     usesBuiltin(calls, "mapAt")
 }
 
+/** True when any emitted item calls the shared `core/map` `get` helper. */
+usesMapGet := fn(calls: String): Bool {
+    usesBuiltin(calls, "mapGet")
+}
+
+/** True when any emitted item calls the shared `core/map` `getOr` helper. */
+usesMapGetOr := fn(calls: String): Bool {
+    usesBuiltin(calls, "mapGetOr")
+}
+
 /** True when any emitted item reads a list element through the checked helper. */
 usesListIndex := fn(calls: String): Bool {
     usesBuiltin(calls, "listAt")
@@ -1872,10 +1882,29 @@ emitBuiltinHelpers := fn(calls: String): Unit {
 /** Emits the checked map-index helper used by generated programs that read map entries via `m[k]`. */
 emitMapIndexHelper := fn(): Unit {
     outLine("function lite$mapAt<K, V>(entries: ReadonlyMap<K, V>, key: K, at: number): V {");
-    outLine("    if (!entries.has(key)) {");
+    outLine("    const value = entries.get(key);");
+    outLine("    if (value === undefined) {");
     outLine("        lite$fault(\"KeyPanic\", at, \"missing map key\");");
     outLine("    }");
-    outLine("    return entries.get(key) as V;");
+    outLine("    return value;");
+    outLine("}");
+    outLine("");
+}
+
+/** Emits the single-lookup `core/map` `get` helper. */
+emitMapGetHelper := fn(): Unit {
+    outLine("function lite$mapGet<K, V>(entries: ReadonlyMap<K, V>, key: K, zero: V): { found: boolean; value: V } {");
+    outLine("    const value = entries.get(key);");
+    outLine("    return value !== undefined ? { found: true, value } : { found: false, value: zero };");
+    outLine("}");
+    outLine("");
+}
+
+/** Emits the single-lookup `core/map` `getOr` helper. */
+emitMapGetOrHelper := fn(): Unit {
+    outLine("function lite$mapGetOr<K, V>(entries: ReadonlyMap<K, V>, key: K, fallback: V): V {");
+    outLine("    const value = entries.get(key);");
+    outLine("    return value !== undefined ? value : fallback;");
     outLine("}");
     outLine("");
 }
@@ -2125,6 +2154,8 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
     emitBuiltinHelpers(calls);
     if usesListIndex(calls) { emitListIndexHelper(); }
     if usesMapIndex(calls) { emitMapIndexHelper(); }
+    if usesMapGet(calls) { emitMapGetHelper(); }
+    if usesMapGetOr(calls) { emitMapGetOrHelper(); }
     if usesListPop(calls) { emitListPopHelper(); }
     if usesListPopFront(calls) { emitListPopFrontHelper(); }
     emitIntArithmeticHelpers(calls, source, prefix);
@@ -2249,7 +2280,8 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
             indent = dedent(indent);
             outLine(indent + "}");
         } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ {
-            outLine(indent + "for (const " + item.runtime + " of " + tsLiteral.listCopyCode(item.code) + ") {");
+            seqExpr := if textLib.startsWithAt(item.code, 0, "Array.from(") { item.code } else { tsLiteral.listCopyCode(item.code) };
+            outLine(indent + "for (const " + item.runtime + " of " + seqExpr + ") {");
             indent = indent + "    ";
             outLine(indent + "void " + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_LOOP {

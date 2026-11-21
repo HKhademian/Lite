@@ -158,8 +158,12 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
 pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     if kind == ir.VALUE_KIND_NEVER { code }
     else if types.isListKind(kind) or types.isArrayKind(kind) { ir.targetListCopyCode(target, code) }
-    else if types.isMapKind(kind) { if target == ir.TARGET_TS { "new Map(" + code + ")" } else { code } }
-    else if types.isSetKind(kind) { if target == ir.TARGET_TS { "new Set(" + code + ")" } else { code } }
+    else if types.isMapKind(kind) {
+        if target == ir.TARGET_TS and not textLib.startsWithAt(code, 0, "new Map<") and not textLib.startsWithAt(code, 0, "new Map(") { "new Map(" + code + ")" } else { code }
+    }
+    else if types.isSetKind(kind) {
+        if target == ir.TARGET_TS and not textLib.startsWithAt(code, 0, "new Set<") and not textLib.startsWithAt(code, 0, "new Set(") { "new Set(" + code + ")" } else { code }
+    }
     else { code }
 };
 

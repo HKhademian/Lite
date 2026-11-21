@@ -4981,13 +4981,17 @@ parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
         return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + m.code + ").has(" + keyCode + "))",
         intValue = 0, textValue = "", constant = false, next = close), markers);
     }
-    tsK := types.tsFunctionType(kKind);
     tsV := types.tsFunctionType(vKind);
+    needsCopy := ctx.copiedValueCode(target, vKind, "lite$v") =!= "lite$v";
     if opName == "get" {
         close := ctx.expectNonemptyCallClose(source, key.next, prefix);
         zeroVal := ctx.zeroParsed(target, vKind, close).code;
-        gotCode := ctx.copiedValueCode(target, vKind, "lite$m.get(lite$k)!");
-        code := "((lite$m: Map<" + tsK + ", " + tsV + ">, lite$k: " + tsK + "): { found: boolean; value: " + tsV + " } => lite$m.has(lite$k) ? { found: true, value: " + gotCode + " } : { found: false, value: " + zeroVal + " })(" + m.code + ", " + keyCode + ")";
+        code := if not needsCopy {
+            "lite$mapGet((" + m.code + "), " + keyCode + ", " + zeroVal + ")"
+        } else {
+            copied := ctx.copiedValueCode(target, vKind, "lite$v");
+            "((lite$v: " + tsV + " | undefined): { found: boolean; value: " + tsV + " } => lite$v !== undefined ? { found: true, value: " + copied + " } : { found: false, value: " + zeroVal + " })((" + m.code + ").get(" + keyCode + "))"
+        };
         return ctx.withMarkers((kind = "(found:Bool,value:" + vKind + ")", code = code,
         intValue = 0, textValue = "", constant = false, next = close), markers);
     }
@@ -5003,8 +5007,12 @@ parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
     }
     close := ctx.expectNonemptyCallClose(source, fb.next, prefix);
     fbCode := ctx.assignValueCode(target, vKind, fb.kind, fb.code);
-    gotCode := ctx.copiedValueCode(target, vKind, "lite$m.get(lite$k)!");
-    code := "((lite$m: Map<" + tsK + ", " + tsV + ">, lite$k: " + tsK + ", lite$fb: " + tsV + "): " + tsV + " => lite$m.has(lite$k) ? " + gotCode + " : lite$fb)(" + m.code + ", " + keyCode + ", " + fbCode + ")";
+    code := if not needsCopy {
+        "lite$mapGetOr((" + m.code + "), " + keyCode + ", " + fbCode + ")"
+    } else {
+        copied := ctx.copiedValueCode(target, vKind, "lite$v");
+        "((lite$v: " + tsV + " | undefined, lite$fb: " + tsV + "): " + tsV + " => lite$v !== undefined ? " + copied + " : lite$fb)((" + m.code + ").get(" + keyCode + "), " + fbCode + ")"
+    };
     ctx.withMarkers((kind = vKind, code = code, intValue = 0, textValue = "", constant = false, next = close), markers)
 };
 
