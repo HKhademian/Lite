@@ -424,6 +424,15 @@ failure behavior, and literal use with explicitly written types in other
 contexts all remain to review. The examples show explicit conversion intent, not a decision that every
 pair of distinct types must admit conversion or that conversion is infallible.
 
+### Bitwise and valuewise casts
+
+The joint review distinguishes two conversion intents:
+
+- A bitwise cast preserves the bits of an equal-size representation and interprets them under the target type. Equal storage size is a prerequisite in this model. Whether the bits also meet the target's representation and validity requirements is a separate question.
+- A valuewise cast converts a source value according to the target type's rules. It can preserve the exact value while changing its representation, as with `Int16` one to `Int32` one or `Int8` one to illustrative `Float16` one. It can also change the numeric value under a defined rule. An illustrative `Float8` value near `3.2` becomes `Int64` three if the conversion truncates toward zero. The examples select neither those floating formats nor a rounding rule.
+
+A valuewise conversion can preserve the same bits when the representations already agree. The requested operation is determined by its semantics. Exact syntax, supported type pairs, overflow, rounding, and invalid target representations remain open.
+
 ## 1.5 Unions and value operations
 
 **Baseline (updated 2026-11-17):** Plain unions normalize order and duplicates. A bare typed declaration zero-initializes every type; a multi-member union zero is initialized with Kind 0 and no known active member. Contextual `0` can mean zeroed storage or a numeric value; distinct viable results are an inference error. An explicit zero-value expression remains under design.
