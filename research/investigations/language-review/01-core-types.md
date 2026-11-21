@@ -383,6 +383,18 @@ usual type test or pattern rules. The bounds proof alone does not unwrap it.
 The union container is part of the value semantics. The compiler may elide
 its physical storage when it preserves all observable union behavior.
 
+If the index might be out of bounds, the user wants to consider returning a
+value that represents the failed access. `Option<T>` would return `None`.
+`Result<T, BoundsError>` would expose a typed error and could carry the index
+and extent. For a result that is already a union, another candidate is to
+return its actual `UNKNOWN` state with no active member. `T` here denotes the
+type of a successful access, which can be a single type or a normalized union.
+The `UNKNOWN` option needs a separate rule for a single-type result, such as
+indexing `(10, 20)`, and an `UNKNOWN` result alone does not explain why there
+is no active member. No default wrapper, bounds policy, or type spelling is
+selected by this comparison. A proof that the access is in bounds removes
+this failure case from the design example.
+
 The exact interpretation of “index values must be known at compile time” needs
 clarification alongside the dynamic-index requirement: for example, whether the
 compiler must know the exact value, a finite set, a range, or can conservatively
