@@ -68,10 +68,19 @@ Lite uses a single `loop` keyword for all iteration forms:
 
 Inside sequence and conditional loops, dot-prefixed metadata tracks state without extra counter boilerplate:
 
-- `.item` — current element in an unnamed sequence loop.
-- `.index` — zero-based iteration index.
-- `.count` — total completed iterations (`then` clause).
-- `.value` — payload carried out by `break expr;` when exiting a loop early.
+- `.item` — current element in an unnamed sequence loop (also readable inside `if`/`match` conditionals).
+- `.index` — zero-based iteration index (also readable inside `if`/`match` conditionals).
+- `.count` — entered iteration count (readable in header, body, `if`/`match`, `then`, or as a `.count` suffix).
+- `.value` — last committed body result (tail expression, `continue expr;`, or `break expr;`).
+- `.collected` — ordered `List<T>` of every committed body contribution, readable in `then` or directly as a `.collected` suffix (zero-cost when unused). Partial `if` and `match` loop tails commit only when a branch matches:
+
+```lite
+io := import "core/io";
+
+xs := [-2, 3, 0, 5];
+posDoubled := loop xs { if .item > 0 { .item * 2 } }.collected;
+io.outputLine(posDoubled, posDoubled.length);
+```
 
 Attach a `then { ... }` clause to compute a result after the loop completes (either normally or via `break value`):
 

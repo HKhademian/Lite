@@ -5,7 +5,7 @@ Strings in Lite store valid Unicode text and separate scalar character indexing 
 ## Walkthrough
 
 1. Double-quoted strings interpret `\t`, `\"`, and Unicode literals like emoji (`🚀`).
-2. `text.length(cleaned)` and `text.at(cleaned, i)` index **Unicode code points**, so multi-byte characters count as 1 scalar.
+2. `cleaned.length` (or `text.length(cleaned)`) and `text.at(cleaned, i)` index **Unicode code points**, so multi-byte characters count as 1 scalar; `cleaned.isEmpty` checks for `""`.
 3. `unicode.toCodePoints(phrase)` returns the scalar integer list, and `unicode.utf8Encode` / `utf8DecodeStrict` convert cleanly to and from UTF-8 bytes.
 
 > [!NOTE]

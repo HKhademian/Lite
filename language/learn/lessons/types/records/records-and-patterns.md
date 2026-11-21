@@ -8,6 +8,7 @@ Model structured data with nominal `record` types, explicit field defaults, cont
 2. `= port` inside `Config { host = "api.lite", = port }` and `{ = port: Int, = tls } := primary;` expands cleanly to `port = port` without repeating field names.
 3. Named and mixed tuples support selective extraction with `(state, statusCode = code, = region) := status;`.
 4. Fixed-extent `[T; N]` arrays destructure directly with `[soft, _, hard] := limits;` (`var` makes every bound local mutable).
+5. `var` record bindings support copy-on-write field updates (`cfg.port += 1;` or 2-level `state.pos.x += dx;`) without mutating earlier value snapshots.
 
 > [!NOTE]
 > Two nominal `record` types remain distinct even when they declare the exact same field names and types; assign explicitly across distinct records, and destructure records with `{ ... }` rather than bare `{ name }`.
