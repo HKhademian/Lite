@@ -61,9 +61,10 @@ checkCFunctionSignature := fn(item: frontend.Item): Unit {
 
 /** Emits UTF-8 Unicode scalar `core/text` C11 helpers only for primitives referenced by `calls`. */
 emitTextPrimitiveHelpers := fn(calls: String): Unit {
-    hasLen := usesIntHelper(calls, "lite$textLength(");
+    hasSliceFrom := usesIntHelper(calls, "lite$textSliceFrom(");
+    hasLen := usesIntHelper(calls, "lite$textLength(") or hasSliceFrom;
     hasAt := usesIntHelper(calls, "lite$textAt(");
-    hasSlice := usesIntHelper(calls, "lite$textSlice(");
+    hasSlice := usesIntHelper(calls, "lite$textSlice(") or hasSliceFrom;
     if not hasLen and not hasAt and not hasSlice { return; }
     io.outputLine("static size_t lt_utf8_step(const char *s, size_t offset) {");
     io.outputLine("    const unsigned char b = (unsigned char)s[offset];");
@@ -122,6 +123,119 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
         io.outputLine("    while (remaining > 0 && s[b_end] != '\\0') { b_end += lt_utf8_step(s, b_end); remaining -= 1; }");
         io.outputLine("    if (remaining > 0) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
         io.outputLine("    return lt_alloc_text_slice(s, b_start, b_end);");
+        io.outputLine("}");
+    }
+    if hasSliceFrom {
+        io.outputLine("static const char *lt_text_slice_from(const char *s, int64_t start, size_t at) {");
+        io.outputLine("    return lt_text_slice(s, start, lt_text_length(s), at);");
+        io.outputLine("}");
+    }
+    io.outputLine("");
+};
+
+/** True when a program calls supported C11 stdin helpers (`inputAll`, `inputLine`, `inputInt`, `inputFloat`). */
+usesInputHelpers := fn(calls: String): Bool {
+    usesIntHelper(calls, "lite$inputAll(") or usesIntHelper(calls, "lite$inputLine(") or
+    usesIntHelper(calls, "lite$inputInt(") or usesIntHelper(calls, "lite$inputFloat(")
+};
+
+/** Emits portable ISO C11 stdin helpers matching Lite's `core/io` prompt and `InputFault` contracts. */
+emitInputHelpers := fn(calls: String): Unit {
+    hasAll := usesIntHelper(calls, "lite$inputAll(");
+    hasLine := usesIntHelper(calls, "lite$inputLine(");
+    hasInt := usesIntHelper(calls, "lite$inputInt(");
+    hasFloat := usesIntHelper(calls, "lite$inputFloat(");
+    if not hasAll and not hasLine and not hasInt and not hasFloat { return; }
+    io.outputLine("static void lt_input_prompt(const char *prompt) {");
+    io.outputLine("    if (prompt != NULL) { fputs(prompt, stdout); fflush(stdout); }");
+    io.outputLine("}");
+    if hasLine or hasInt or hasFloat {
+        io.outputLine("static _Noreturn void lt_input_fault(const char *at, const char *message) {");
+        io.outputLine("    fprintf(stderr, \"%s%s\\n\", at, message);");
+        io.outputLine("    exit(1);");
+        io.outputLine("}");
+    }
+    if hasInt or hasFloat {
+        io.outputLine("static char *lt_input_word(void) {");
+        io.outputLine("    int ch = fgetc(stdin);");
+        io.outputLine("    while (ch != EOF && (ch == ' ' || ch == '\\t' || ch == '\\r' || ch == '\\n')) { ch = fgetc(stdin); }");
+        io.outputLine("    if (ch == EOF) { return NULL; }");
+        io.outputLine("    size_t cap = 64u, len = 0u;");
+        io.outputLine("    char *buf = malloc(cap);");
+        io.outputLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate input buffer\\n\"); exit(1); }");
+        io.outputLine("    while (ch != EOF && ch != ' ' && ch != '\\t' && ch != '\\r' && ch != '\\n') {");
+        io.outputLine("        if (len + 1u >= cap) { cap *= 2u; buf = realloc(buf, cap); if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow input buffer\\n\"); exit(1); } }");
+        io.outputLine("        buf[len++] = (char)ch;");
+        io.outputLine("        ch = fgetc(stdin);");
+        io.outputLine("    }");
+        io.outputLine("    if (ch != EOF) { ungetc(ch, stdin); }");
+        io.outputLine("    buf[len] = '\\0';");
+        io.outputLine("    return buf;");
+        io.outputLine("}");
+    }
+    if hasAll {
+        io.outputLine("static const char *lt_input_all(const char *prompt, const char *at) {");
+        io.outputLine("    (void)at;");
+        io.outputLine("    lt_input_prompt(prompt);");
+        io.outputLine("    size_t cap = 128u, len = 0u;");
+        io.outputLine("    char *buf = malloc(cap);");
+        io.outputLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate input buffer\\n\"); exit(1); }");
+        io.outputLine("    int ch = fgetc(stdin);");
+        io.outputLine("    while (ch != EOF) {");
+        io.outputLine("        if (len + 1u >= cap) { cap *= 2u; buf = realloc(buf, cap); if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow input buffer\\n\"); exit(1); } }");
+        io.outputLine("        buf[len++] = (char)ch;");
+        io.outputLine("        ch = fgetc(stdin);");
+        io.outputLine("    }");
+        io.outputLine("    buf[len] = '\\0';");
+        io.outputLine("    return buf;");
+        io.outputLine("}");
+    }
+    if hasLine {
+        io.outputLine("static const char *lt_input_line(const char *prompt, const char *at) {");
+        io.outputLine("    lt_input_prompt(prompt);");
+        io.outputLine("    int ch = fgetc(stdin);");
+        io.outputLine("    if (ch == EOF) { lt_input_fault(at, \"EOF before inputLine value\"); }");
+        io.outputLine("    size_t cap = 128u, len = 0u;");
+        io.outputLine("    char *buf = malloc(cap);");
+        io.outputLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate input buffer\\n\"); exit(1); }");
+        io.outputLine("    while (ch != EOF && ch != '\\n') {");
+        io.outputLine("        if (len + 1u >= cap) { cap *= 2u; buf = realloc(buf, cap); if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow input buffer\\n\"); exit(1); } }");
+        io.outputLine("        buf[len++] = (char)ch;");
+        io.outputLine("        ch = fgetc(stdin);");
+        io.outputLine("    }");
+        io.outputLine("    if (ch == '\\n' && len > 0u && buf[len - 1u] == '\\r') { len -= 1u; }");
+        io.outputLine("    buf[len] = '\\0';");
+        io.outputLine("    return buf;");
+        io.outputLine("}");
+    }
+    if hasInt {
+        io.outputLine("static int64_t lt_input_int(const char *prompt, const char *at) {");
+        io.outputLine("    lt_input_prompt(prompt);");
+        io.outputLine("    char *tok = lt_input_word();");
+        io.outputLine("    if (tok == NULL) { lt_input_fault(at, \"EOF before inputInt value\"); }");
+        io.outputLine("    size_t i = (tok[0] == '+' || tok[0] == '-') ? 1u : 0u;");
+        io.outputLine("    if (tok[i] == '\\0') { free(tok); lt_input_fault(at, \"expected an integer token\"); }");
+        io.outputLine("    while (tok[i] != '\\0') { if (tok[i] < '0' || tok[i] > '9') { free(tok); lt_input_fault(at, \"expected an integer token\"); } i += 1u; }");
+        io.outputLine("    errno = 0;");
+        io.outputLine("    char *endp = NULL;");
+        io.outputLine("    long long val = strtoll(tok, &endp, 10);");
+        io.outputLine("    int err = errno;");
+        io.outputLine("    free(tok);");
+        io.outputLine("    if (err == ERANGE || val < INT64_MIN || val > INT64_MAX) { lt_input_fault(at, \"input outside signed 64-bit range\"); }");
+        io.outputLine("    return (int64_t)val;");
+        io.outputLine("}");
+    }
+    if hasFloat {
+        io.outputLine("static double lt_input_float(const char *prompt, const char *at) {");
+        io.outputLine("    lt_input_prompt(prompt);");
+        io.outputLine("    char *tok = lt_input_word();");
+        io.outputLine("    if (tok == NULL) { lt_input_fault(at, \"EOF before inputFloat value\"); }");
+        io.outputLine("    char *endp = NULL;");
+        io.outputLine("    double val = strtod(tok, &endp);");
+        io.outputLine("    bool ok = endp != tok && *endp == '\\0' && isfinite(val);");
+        io.outputLine("    free(tok);");
+        io.outputLine("    if (!ok) { lt_input_fault(at, \"expected a finite floating token\"); }");
+        io.outputLine("    return val;");
         io.outputLine("}");
     }
     io.outputLine("");
@@ -217,9 +331,29 @@ normalizeCBuiltinCalls := fn(code: String): String {
             out = out + textLib.slice(code, flushed, cursor) + "lt_text_at(";
             cursor = cursor + textLib.length("lite$textAt(");
             flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$textSliceFrom(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_text_slice_from(";
+            cursor = cursor + textLib.length("lite$textSliceFrom(");
+            flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$textSlice(") {
             out = out + textLib.slice(code, flushed, cursor) + "lt_text_slice(";
             cursor = cursor + textLib.length("lite$textSlice(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputAll(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_input_all(";
+            cursor = cursor + textLib.length("lite$inputAll(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputLine(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_input_line(";
+            cursor = cursor + textLib.length("lite$inputLine(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputInt(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_input_int(";
+            cursor = cursor + textLib.length("lite$inputInt(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputFloat(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_input_float(";
+            cursor = cursor + textLib.length("lite$inputFloat(");
             flushed = cursor;
         } else {
             cursor = cursor + 1;
@@ -251,9 +385,7 @@ usesIntHelper := fn(calls: String, name: String): Bool {
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
 unsupportedBuiltinCode := fn(calls: String): String {
     match {
-        usesIntHelper(calls, "lite$inputArgs(") or usesIntHelper(calls, "lite$inputAll(") or
-        usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or
-        usesIntHelper(calls, "lite$inputFloat(") { "C backend does not support input builtins yet" }
+        usesIntHelper(calls, "lite$inputArgs(") { "C backend does not support inputArgs yet" }
         usesIntHelper(calls, "lite$fileKind(") or usesIntHelper(calls, "lite$fileOpenReader(") or
         usesIntHelper(calls, "lite$fileOpenWriter(") or usesIntHelper(calls, "lite$fileOpenAppender(") or
         usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
@@ -356,13 +488,13 @@ emitFloatArithmeticHelpers := fn(calls: String): Unit {
 /** True when a program calls `core/text` UTF-8 scalar primitives. */
 usesTextPrimitives := fn(calls: String): Bool {
     usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or
-    usesIntHelper(calls, "lite$textSlice(")
+    usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(")
 }
 
 /** Emits portable C11 guards that reject overflow and bounds faults before evaluating operations. */
 emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
     usesArith := usesIntArithmetic(calls) or usesIntDivision(calls) or usesFloatArithmetic(calls);
-    usesBounds := usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(");
+    usesBounds := usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(");
     if not usesArith and not usesBounds { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     io.outputLine("static const size_t lt_int_lines[] = {" + frontend.lineStartCodes(source) + "};");
@@ -845,12 +977,16 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     }
     hasReportError := usesIntHelper(calls, "lite$reportError(");
     hasExit := usesIntHelper(calls, "lite$exit(");
+    hasInput := usesInputHelpers(calls);
+    hasInputInt := usesIntHelper(calls, "lite$inputInt(");
+    hasInputFloat := usesIntHelper(calls, "lite$inputFloat(");
     io.outputLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) { io.outputLine("#include <stdlib.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput { io.outputLine("#include <stdlib.h>"); }
+    if hasInputInt { io.outputLine("#include <errno.h>"); }
     io.outputLine("#include <inttypes.h>");
     io.outputLine("#include <stdbool.h>");
     io.outputLine("#include <string.h>");
-    if usesFloatArithmetic(calls) { io.outputLine("#include <math.h>"); }
+    if usesFloatArithmetic(calls) or hasInputFloat { io.outputLine("#include <math.h>"); }
     if floatValues {
         io.outputLine("#include <float.h>");
         io.outputLine("_Static_assert(FLT_RADIX == 2 && DBL_MANT_DIG == 53 && DBL_MAX_EXP == 1024, \"Float requires binary64 double\");");
@@ -868,6 +1004,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     emitIntDivisionHelpers(calls);
     if usesStringConcat(calls) { emitStringConcatHelper(); }
     emitTextPrimitiveHelpers(calls);
+    emitInputHelpers(calls);
     var hoistedGlobals := frontend.emptyTokenBuckets();
     if hasFunctions {
         if hasFnOutput { io.outputLine("static int lt_io_status = 0;"); }

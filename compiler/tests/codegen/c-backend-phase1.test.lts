@@ -1,0 +1,63 @@
+/* End-to-end C11 execution tests for Phase C1: stdin builtins, String properties & slicing, and named/reordered call args. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+ccInfo := compilerTest.probeCc();
+test.check("cc available", ccInfo.cc =!= "");
+
+checkCParity := fn(name: String, src: String, stdinText: String, expectedStdout: String): Unit {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", stdinText);
+    test.checkInt(name + " C run: " + cRes.stderr, 0, cRes.status);
+    test.checkText(name + " C stdout", expectedStdout, cRes.stdout);
+    if stdinText == "" {
+        tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+        test.checkInt(name + " TS run: " + tsRes.stderr, 0, tsRes.status);
+        test.checkText(name + " TS/C parity", tsRes.stdout, cRes.stdout);
+    }
+};
+
+/* 1. String .length, .isEmpty, and range slicing (ASCII + Unicode) */
+strProg :=
+"io := import \"core/io\";\n" +
+"s := \"hello\";\n" +
+"empty := \"\";\n" +
+"emoji := \"a🚀b✨c\";\n" +
+"io.outputLine(s.length, s.isEmpty, empty.length, empty.isEmpty);\n" +
+"io.outputLine(s[1..4], s[..2], s[2..], s[..], s[1..=3]);\n" +
+"io.outputLine(emoji.length, emoji[1..4], emoji[1..4].length, emoji[2..]);\n";
+checkCParity("string-props-slice", strProg, "", "5 false 0 true\nell he llo hello ell\n5 🚀b✨ 3 b✨c\n");
+
+/* 2. Named and reordered call arguments + self recursion */
+namedProg :=
+"io := import \"core/io\";\n" +
+"digits := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c };\n" +
+"b := 2;\n" +
+"io.outputLine(digits(c = 3, 1, =b));\n" +
+"io.outputLine(digits(9, a = 1, 2, 3));\n" +
+"count := fn(n: Int, total: Int): Int { if n == 0 { return total; } self(total = total + n, n = n - 1) };\n" +
+"io.outputLine(count(total = 0, n = 4));\n";
+checkCParity("named-calls", namedProg, "", "123\n123\n10\n");
+
+/* 3. Stdin builtins: inputLine, inputInt, inputFloat, inputAll */
+stdinProg :=
+"io := import \"core/io\";\n" +
+"name := io.inputLine(\"Name: \");\n" +
+"a := io.inputInt();\n" +
+"b := io.inputFloat();\n" +
+"rest := io.inputAll();\n" +
+"io.outputLine(name, a + 1, b * 2.0, rest.length);\n";
+checkCParity("stdin-builtins", stdinProg, "Ada\n41 1.5\nxyz", "Name: Ada 42 3 4\n");
+
+test.done("c-backend-phase1");

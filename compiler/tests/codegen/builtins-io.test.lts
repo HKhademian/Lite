@@ -163,20 +163,10 @@ loop ibi < 13 {
     ibi = ibi + 1;
 }
 
-/* restricted C compiler rejects input builtins clearly */
-cRejSrc: List<String> = [
-"io := import \"core/io\"; io.outputLine(io.inputAll());\n",
+/* restricted C compiler still rejects List-returning inputArgs until List<T> lands */
+compilerTest.assertCompileError(root, cComp, "C reject inputArgs",
 "io := import \"core/io\"; io.outputLine(io.inputArgs());\n",
-];
-cRejErr: List<String> = [
-"C backend does not support input builtins yet\n",
-"C backend does not support input builtins yet\n",
-];
-var cri := 0;
-loop cri < 2 {
-    compilerTest.assertCompileError(root, cComp, "C reject " + cRejSrc[cri], cRejSrc[cri], cRejErr[cri]);
-    cri = cri + 1;
-}
+"C backend does not support inputArgs yet\n");
 
 /* C compiler executes core/text UTF-8 primitives, pure helpers, and core/format natively */
 ccTextInfo := compilerTest.probeCc();

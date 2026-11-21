@@ -5759,10 +5759,34 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
         }
         targetCallee := if isModuleFn { callRuntime } else { "(" + callRuntime + ")" };
         emittedCode = targetCallee + "(" + textLib.joinTexts(finalArgs, ", ") + ")";
-    } else {
-        if target =!= ir.TARGET_TS {
-            syntax.failAt(source, errPos, prefix, "C backend does not support named or reordered call arguments yet");
+    } else if target =!= ir.TARGET_TS {
+        if not isModuleFn {
+            syntax.failAt(source, errPos, prefix, "C backend does not support indirect function calls yet");
         }
+        discarded: mut List<String> = [];
+        var kIdx := 0;
+        loop kIdx < entryCount {
+            targetSlot := entrySlots[kIdx];
+            if slotEntry[targetSlot] =!= kIdx {
+                listLib.pushBack(mut discarded, "(void)(" + entryCodes[kIdx] + ")");
+            }
+            kIdx = kIdx + 1;
+        }
+        reorderedArgs: mut List<String> = [];
+        var sIdx := 0;
+        loop sIdx < callCount {
+            k := slotEntry[sIdx];
+            argExpected := types.paramKindOf(callParams[callFirst + sIdx]);
+            listLib.pushBack(mut reorderedArgs, ctx.assignValueCode(target, argExpected, entryKinds[k], entryCodes[k]));
+            sIdx = sIdx + 1;
+        }
+        callExpr := callRuntime + "(" + textLib.joinTexts(reorderedArgs, ", ") + ")";
+        emittedCode = if listLib.length(discarded) > 0 {
+            "(" + textLib.joinTexts(discarded, ", ") + ", " + callExpr + ")"
+        } else {
+            callExpr
+        };
+    } else {
         evalStmts: mut List<String> = [];
         if not isModuleFn {
             listLib.pushBack(mut evalStmts, "const lite$fn = " + callRuntime + ";");
@@ -5994,9 +6018,6 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         syntax.failAt(source, labelStart, prefix, kindLabel + " has no property ." + label);
                     }
                 } else if left.kind == ir.VALUE_KIND_STRING {
-                    if target =!= ir.TARGET_TS {
-                        syntax.failAt(source, postPosition, prefix, "C backend does not support string properties yet");
-                    }
                     if label == "length" {
                         left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "lite$textLength(" + left.code + ")",
                         intValue = 0, textValue = "", constant = false, next = labelEnd),
@@ -6004,7 +6025,13 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     } else if label == "isEmpty" {
                         isConstEmpty := left.constant;
                         emptyInt := if isConstEmpty and left.textValue == "" { 1 } else { 0 };
-                        emptyCode := if isConstEmpty { if emptyInt == 1 { "true" } else { "false" } } else { "((" + left.code + ") === \"\")" };
+                        emptyCode := if isConstEmpty {
+                            if emptyInt == 1 { "true" } else { "false" }
+                        } else if target == ir.TARGET_C {
+                            "((" + left.code + ")[0] == '\\0')"
+                        } else {
+                            "((" + left.code + ") === \"\")"
+                        };
                         left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = emptyCode,
                         intValue = emptyInt, textValue = "", constant = isConstEmpty, next = labelEnd),
                         if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
@@ -6049,7 +6076,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 var isIncSlice := false;
                 var hasSliceStart := false;
                 var hasSliceEnd := false;
-                var sliceStartCode := "0n";
+                var sliceStartCode := if target == ir.TARGET_C { "0" } else { "0n" };
                 var sliceEndCode := "";
                 var sliceCloseNext := indexStart;
                 var sliceMarkers := if inferMode { ctx.collectParsedMarkers("", left) } else { "" };
@@ -6070,7 +6097,10 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         }
                         hasSliceEnd = true;
                         rawEnd := ctx.assignValueCode(target, ir.VALUE_KIND_INT, endParsed.kind, endParsed.code);
-                        sliceEndCode = if isIncSlice { "((lite$se: bigint) => lite$se < 0n ? -1n : lite$se + 1n)(" + rawEnd + ")" } else { rawEnd };
+                        sliceEndCode = if isIncSlice {
+                            if target == ir.TARGET_C { "((int64_t)(" + rawEnd + ") < 0 ? -1 : ((int64_t)(" + rawEnd + ") + 1))" }
+                            else { "((lite$se: bigint) => lite$se < 0n ? -1n : lite$se + 1n)(" + rawEnd + ")" }
+                        } else { rawEnd };
                         sliceCloseNext = syntax.expectSymbol(source, syntax.skipTrivia(source, endParsed.next, prefix), "]", prefix);
                     }
                 } else {
@@ -6099,7 +6129,10 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             }
                             hasSliceEnd = true;
                             rawEnd := ctx.assignValueCode(target, ir.VALUE_KIND_INT, endParsed.kind, endParsed.code);
-                            sliceEndCode = if isIncSlice { "((lite$se: bigint) => lite$se < 0n ? -1n : lite$se + 1n)(" + rawEnd + ")" } else { rawEnd };
+                            sliceEndCode = if isIncSlice {
+                                if target == ir.TARGET_C { "((int64_t)(" + rawEnd + ") < 0 ? -1 : ((int64_t)(" + rawEnd + ") + 1))" }
+                                else { "((lite$se: bigint) => lite$se < 0n ? -1n : lite$se + 1n)(" + rawEnd + ")" }
+                            } else { rawEnd };
                             sliceCloseNext = syntax.expectSymbol(source, syntax.skipTrivia(source, endParsed.next, prefix), "]", prefix);
                         }
                     } else {
@@ -6119,13 +6152,15 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     }
                 }
                 if isRangeSlice {
-                    if target =!= ir.TARGET_TS {
+                    if target =!= ir.TARGET_TS and not isStrSlice {
                         syntax.failAt(source, postPosition, prefix, "C backend does not support range slicing yet");
                     }
                     _usedStart := hasSliceStart;
                     if isStrSlice {
                         sliceCode := if hasSliceEnd {
                             "lite$textSlice((" + left.code + "), " + sliceStartCode + ", " + sliceEndCode + ", " + integer.intText(indexStart) + ")"
+                        } else if target == ir.TARGET_C {
+                            "lite$textSliceFrom((" + left.code + "), " + sliceStartCode + ", " + integer.intText(indexStart) + ")"
                         } else {
                             "((lite$st: string) => lite$textSlice(lite$st, " + sliceStartCode + ", lite$textLength(lite$st), " + integer.intText(indexStart) + "))(" + left.code + ")"
                         };
@@ -6251,7 +6286,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         listLib.pushBack(mut argumentCodes, ir.targetIntLiteralCode(target, 0, false, "0"));
                     }
                     if optionalPrompt {
-                        if argumentCount == 0 { listLib.pushBack(mut argumentCodes, "undefined"); }
+                        if argumentCount == 0 { listLib.pushBack(mut argumentCodes, if target == ir.TARGET_C { "NULL" } else { "undefined" }); }
                         place := sourceLib.lineColumn(source, errPos);
                         location := (if prefix == "" { "" } else { prefix + ":" }) + formatLib.decimalText(place.line) + ":" +
                         formatLib.decimalText(place.column) + ": InputFault: ";

@@ -77,8 +77,8 @@ compilerTest.assertCompileError(root, tsComp, "Set rejects .length",
 compilerTest.assertCompileError(root, tsComp, "String rejects .size",
 "s := \"hi\";\nn := s.size;\n",
 "2:8: String has no property .size\n");
-compilerTest.assertCompileError(root, cComp, "C rejects string properties",
-"s := \"hi\";\nn := s.length;\n",
-"2:7: C backend does not support string properties yet\n");
+compilerTest.assertCompileError(root, cComp, "C rejects list collection properties",
+"xs := [1, 2];\nn := xs.length;\n",
+"2:8: C backend does not support collection properties yet\n");
 
 test.done("collection-props");
