@@ -4,6 +4,7 @@ audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
+map := import "core/map";
 text := import "core/text";
 
 mazeRows: List<String> = [
@@ -20,14 +21,45 @@ cols := 11;
 rows := 7;
 ctx := canvas.play(width = cols * tile, height = rows * tile, title = "Pixel Maze · Arrows/WASD, Space Reset");
 
-var playerCol := 1;
-var playerRow := 1;
-var won := false;
+Direction := enum {
+    Up;
+    Down;
+    Left;
+    Right;
+};
+
+Player := record {
+    col: Int;
+    row: Int;
+    won: Bool;
+};
+
+moveKeys: Map<String, Direction> = [
+"ArrowLeft" = .Left,
+"a" = .Left,
+"ArrowRight" = .Right,
+"d" = .Right,
+"ArrowUp" = .Up,
+"w" = .Up,
+"ArrowDown" = .Down,
+"s" = .Down,
+];
+
+dirDelta := fn(d: Direction): (dc: Int, dr: Int) {
+    match d {
+        .Left { (dc = -1, dr = 0) }
+        .Right { (dc = 1, dr = 0) }
+        .Up { (dc = 0, dr = -1) }
+        .Down { (dc = 0, dr = 1) }
+    }
+};
+
+var player := Player { col = 1, row = 1, won = false };
 
 tileAt := fn(c: Int, r: Int): String {
     if r < 0 or r >= rows or c < 0 or c >= cols { return "#"; }
     text.at(mazeRows[r], c)
-}
+};
 
 render := fn(): Unit {
     canvas.clear(canvas.rgb(12, 16, 26));
@@ -51,26 +83,27 @@ render := fn(): Unit {
         }
         r += 1;
     }
-    px := (playerCol * tile) + (tile / 2);
-    py := (playerRow * tile) + (tile / 2);
-    playerColor := if won { canvas.rgb(255, 214, 104) } else { canvas.rgb(104, 198, 232) };
+    px := (player.col * tile) + (tile / 2);
+    py := (player.row * tile) + (tile / 2);
+    playerColor := if player.won { canvas.rgb(255, 214, 104) } else { canvas.rgb(104, 198, 232) };
     board.fillCircle(px, py, 10, canvas.rgba(104, 198, 232, 56));
     board.fillCircle(px, py, 7, playerColor);
-}
+};
 
-tryMove := fn(dc: Int, dr: Int): Unit {
-    if won { return; }
-    nc := playerCol + dc;
-    nr := playerRow + dr;
+tryMove := fn(dir: Direction): Unit {
+    if player.won { return; }
+    delta := dirDelta(dir);
+    nc := player.col + delta.dc;
+    nr := player.row + delta.dr;
     cell := tileAt(nc, nr);
     if cell == "#" {
         audio.tone(frequency = 150, durationMs = 45, volume = 12);
         return;
     }
-    playerCol = nc;
-    playerRow = nr;
+    player.col = nc;
+    player.row = nr;
     if cell == "*" {
-        won = true;
+        player.won = true;
         audio.tone(frequency = 523, durationMs = 110, volume = 20);
         audio.tone(frequency = 659, durationMs = 110, volume = 20);
         audio.tone(frequency = 784, durationMs = 180, volume = 22);
@@ -78,25 +111,22 @@ tryMove := fn(dc: Int, dr: Int): Unit {
         audio.tone(frequency = 340 + (nc * 16), durationMs = 35, volume = 10);
     }
     render();
-}
+};
 
 onCanvasInit := fn(): Unit {
     render();
-}
+};
 
 onCanvasKeyDown := fn(key: String): Unit {
-    if key == "ArrowLeft" or key == "a" { tryMove(-1, 0); }
-    else if key == "ArrowRight" or key == "d" { tryMove(1, 0); }
-    else if key == "ArrowUp" or key == "w" { tryMove(0, -1); }
-    else if key == "ArrowDown" or key == "s" { tryMove(0, 1); }
-    else if key == " " {
-        playerCol = 1;
-        playerRow = 1;
-        won = false;
+    if key == " " {
+        player = Player { col = 1, row = 1, won = false };
         render();
         audio.tone(frequency = 262, durationMs = 60, volume = 14);
+        return;
     }
-}
+    hit := map.get(moveKeys, key);
+    if hit.found { tryMove(hit.value); }
+};
 
 render();
 io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);
