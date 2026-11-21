@@ -84,11 +84,9 @@ onCanvasInit := fn(): Unit {
 };
 
 onCanvasUpdate := fn(dt: Float): Int {
-    nextAcc := state.acc + dt;
-    if nextAcc < 0.02 {
-        state = GameState { padX = state.padX, ball = state.ball, acc = nextAcc };
-        return 0;
-    }
+    state.acc += dt;
+    if state.acc < 0.02 { return 0; }
+    state.acc = 0.0;
 
     var bx := state.ball.x + state.ball.dx;
     var by := state.ball.y + state.ball.dy;
@@ -147,32 +145,29 @@ onCanvasUpdate := fn(dt: Float): Int {
         audio.tone(frequency = 196, durationMs = 110, volume = 14);
     }
 
-    state = GameState {
-        padX = state.padX,
-        ball = Ball { x = bx, y = by, dx = bdx, dy = bdy },
-        acc = 0.0
-    };
+    state.ball = Ball { x = bx, y = by, dx = bdx, dy = bdy };
     render();
     0
 };
 
 onCanvasKeyDown := fn(key: String): Unit {
     if key == "ArrowLeft" or key == "a" {
-        state = GameState { padX = clampPad(state.padX - 18), ball = state.ball, acc = state.acc };
+        state.padX = clampPad(state.padX - 18);
         render();
     } else if key == "ArrowRight" or key == "d" {
-        state = GameState { padX = clampPad(state.padX + 18), ball = state.ball, acc = state.acc };
+        state.padX = clampPad(state.padX + 18);
         render();
     } else if key == " " {
         resetBricks();
-        state = GameState { padX = state.padX, ball = defaultBall(), acc = 0.0 };
+        state.ball = defaultBall();
+        state.acc = 0.0;
         render();
     }
 };
 
 onCanvasPointerMove := fn(col: Int, row: Int): Unit {
     _unusedRow := row;
-    state = GameState { padX = clampPad(col - (padW / 2)), ball = state.ball, acc = state.acc };
+    state.padX = clampPad(col - (padW / 2));
 };
 
 resetBricks();

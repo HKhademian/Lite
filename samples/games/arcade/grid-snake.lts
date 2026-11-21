@@ -119,13 +119,8 @@ render := fn(): Unit {
 };
 
 endGame := fn(): Unit {
-    state = GameState {
-        dir = state.dir,
-        food = state.food,
-        rng = state.rng,
-        status = .GameOver,
-        acc = 0.0
-    };
+    state.status = .GameOver;
+    state.acc = 0.0;
     audio.tone(frequency = 170, durationMs = 180, volume = 18);
     render();
 };
@@ -136,17 +131,9 @@ onCanvasInit := fn(): Unit {
 
 onCanvasUpdate := fn(dt: Float): Int {
     if state.status == .GameOver { return 0; }
-    nextAcc := state.acc + dt;
-    if nextAcc < 0.14 {
-        state = GameState {
-            dir = state.dir,
-            food = state.food,
-            rng = state.rng,
-            status = state.status,
-            acc = nextAcc
-        };
-        return 0;
-    }
+    state.acc += dt;
+    if state.acc < 0.14 { return 0; }
+    state.acc = 0.0;
 
     head := snake[0];
     delta := dirDelta(state.dir);
@@ -166,24 +153,12 @@ onCanvasUpdate := fn(dt: Float): Int {
     if ate {
         rx := rand.rangeInt(state.rng, 1, cols - 1);
         ry := rand.rangeInt(rx.next, 1, rows - 1);
-        state = GameState {
-            dir = state.dir,
-            food = Cell { x = rx.value, y = ry.value },
-            rng = ry.next,
-            status = .Playing,
-            acc = 0.0
-        };
+        state.food = Cell { x = rx.value, y = ry.value };
+        state.rng = ry.next;
         audio.tone(frequency = 587, durationMs = 80, volume = 16);
     } else {
         tail := list.popBack(mut snake);
         _removed := set.remove(mut occupied, cellKey(tail));
-        state = GameState {
-            dir = state.dir,
-            food = state.food,
-            rng = state.rng,
-            status = .Playing,
-            acc = 0.0
-        };
     }
     render();
     0
@@ -198,13 +173,7 @@ onCanvasKeyDown := fn(key: String): Unit {
     }
     hit := map.get(keyBindings, key);
     if hit.found and not isOpposite(state.dir, hit.value) {
-        state = GameState {
-            dir = hit.value,
-            food = state.food,
-            rng = state.rng,
-            status = state.status,
-            acc = state.acc
-        };
+        state.dir = hit.value;
     }
 };
 

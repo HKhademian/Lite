@@ -91,19 +91,14 @@ onCanvasInit := fn(): Unit {
 };
 
 onCanvasUpdate := fn(dt: Float): Int {
-    nextAcc := state.acc + dt;
-    if nextAcc < 0.02 {
-        state = GameState { leftY = state.leftY, rightY = state.rightY, ball = state.ball, score = state.score, acc = nextAcc };
-        return 0;
-    }
+    state.acc += dt;
+    if state.acc < 0.02 { return 0; }
+    state.acc = 0.0;
 
     var bx := state.ball.x + state.ball.dx;
     var by := state.ball.y + state.ball.dy;
     var bdx := state.ball.dx;
     var bdy := state.ball.dy;
-    var rightY := state.rightY;
-    var leftScore := state.score.left;
-    var rightScore := state.score.right;
 
     if by <= 10 or by >= ctx.height - 10 {
         bdy = -bdy;
@@ -112,59 +107,49 @@ onCanvasUpdate := fn(dt: Float): Int {
 
     /* AI tracks ball vertically */
     target := by - (padH / 2);
-    if target > rightY + 2 { rightY = clampPad(rightY + 2); }
-    else if target < rightY - 2 { rightY = clampPad(rightY - 2); }
+    if target > state.rightY + 2 { state.rightY = clampPad(state.rightY + 2); }
+    else if target < state.rightY - 2 { state.rightY = clampPad(state.rightY - 2); }
 
-    var nextBall := Ball { x = bx, y = by, dx = bdx, dy = bdy };
     if bdx < 0 and bx <= 18 + padW + 4 and bx >= 16 and by >= state.leftY - 4 and by <= state.leftY + padH + 4 {
-        nextBall = Ball { x = bx, y = by, dx = -bdx, dy = bdy };
+        state.ball = Ball { x = bx, y = by, dx = -bdx, dy = bdy };
         audio.tone(frequency = 480, durationMs = 45, volume = 14);
-    } else if bdx > 0 and bx >= ctx.width - 18 - padW - 4 and bx <= ctx.width - 16 and by >= rightY - 4 and by <= rightY + padH + 4 {
-        nextBall = Ball { x = bx, y = by, dx = -bdx, dy = bdy };
+    } else if bdx > 0 and bx >= ctx.width - 18 - padW - 4 and bx <= ctx.width - 16 and by >= state.rightY - 4 and by <= state.rightY + padH + 4 {
+        state.ball = Ball { x = bx, y = by, dx = -bdx, dy = bdy };
         audio.tone(frequency = 420, durationMs = 45, volume = 14);
     } else if bx < 6 {
-        rightScore += 1;
+        state.score.right += 1;
         audio.tone(frequency = 220, durationMs = 120, volume = 16);
-        nextBall = serveBall(.Right, bdy);
+        state.ball = serveBall(.Right, bdy);
     } else if bx > ctx.width - 6 {
-        leftScore += 1;
+        state.score.left += 1;
         audio.tone(frequency = 660, durationMs = 120, volume = 16);
-        nextBall = serveBall(.Left, bdy);
+        state.ball = serveBall(.Left, bdy);
+    } else {
+        state.ball = Ball { x = bx, y = by, dx = bdx, dy = bdy };
     }
 
-    state = GameState {
-        leftY = state.leftY,
-        rightY = rightY,
-        ball = nextBall,
-        score = Score { left = leftScore, right = rightScore },
-        acc = 0.0
-    };
     render();
     0
 };
 
 onCanvasKeyDown := fn(key: String): Unit {
     if key == "ArrowUp" or key == "w" {
-        state = GameState { leftY = clampPad(state.leftY - 14), rightY = state.rightY, ball = state.ball, score = state.score, acc = state.acc };
+        state.leftY = clampPad(state.leftY - 14);
         render();
     } else if key == "ArrowDown" or key == "s" {
-        state = GameState { leftY = clampPad(state.leftY + 14), rightY = state.rightY, ball = state.ball, score = state.score, acc = state.acc };
+        state.leftY = clampPad(state.leftY + 14);
         render();
     } else if key == " " {
-        state = GameState {
-            leftY = state.leftY,
-            rightY = state.rightY,
-            ball = serveBall(.Right, state.ball.dy),
-            score = Score { left = 0, right = 0 },
-            acc = 0.0
-        };
+        state.ball = serveBall(.Right, state.ball.dy);
+        state.score = Score { left = 0, right = 0 };
+        state.acc = 0.0;
         render();
     }
 };
 
 onCanvasPointerMove := fn(col: Int, row: Int): Unit {
     _unusedCol := col;
-    state = GameState { leftY = clampPad(row - (padH / 2)), rightY = state.rightY, ball = state.ball, score = state.score, acc = state.acc };
+    state.leftY = clampPad(row - (padH / 2));
 };
 
 render();
