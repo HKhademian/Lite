@@ -2319,11 +2319,24 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             var sequenceCode := "";
             var itemName := "";
             var itemKind := "";
+            var loopSeqMode := 0;
             if position < size and textLib.at(source, position) =!= "{" {
                 loopHdrPos := position;
                 parsed := parseExpressionCtx(target, source, position, prefix, locals, functions, functionParams, currentName, stmtCtxs, aliases);
                 locals = checkStatementTrace(target, source, loopHdrPos, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 afterParsed := skipTrivia(source, parsed.next, prefix);
+                seqIsWritableLocal := {
+                    var foundW := false;
+                    if types.isMapKind(parsed.kind) or types.isSetKind(parsed.kind) {
+                        loop locals as locW {
+                            if locW.runtime == parsed.code and locW.writable {
+                                foundW = true;
+                                break;
+                            }
+                        }
+                    }
+                    foundW
+                };
                 if textLib.wordAt(source, afterParsed, "as") {
                     if not isListKind(parsed.kind) and not isArrayKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) {
                         failAt(source, position, prefix, "loop sequence must be a List, Array, Map, or Set, got " + displayKind(parsed.kind));
@@ -2339,10 +2352,20 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         kKind := types.mapKeyKind(parsed.kind);
                         vKind := types.mapValueKind(parsed.kind);
                         itemKind = "(key:" + kKind + ",value:" + vKind + ")";
-                        sequenceCode = "Array.from((" + parsed.code + ").entries(), ([lite$k, lite$v]) => ({ key: lite$k, value: lite$v }))";
+                        if target == TARGET_TS and not seqIsWritableLocal {
+                            sequenceCode = parsed.code;
+                            loopSeqMode = 2;
+                        } else {
+                            sequenceCode = "Array.from((" + parsed.code + ").entries(), ([lite$k, lite$v]) => ({ key: lite$k, value: lite$v }))";
+                        }
                     } else if types.isSetKind(parsed.kind) {
                         itemKind = types.setElementKind(parsed.kind);
-                        sequenceCode = "Array.from((" + parsed.code + ").values())";
+                        if target == TARGET_TS and not seqIsWritableLocal {
+                            sequenceCode = parsed.code;
+                            loopSeqMode = 1;
+                        } else {
+                            sequenceCode = "Array.from((" + parsed.code + ").values())";
+                        }
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                         sequenceCode = parsed.code;
@@ -2353,10 +2376,20 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         kKind := types.mapKeyKind(parsed.kind);
                         vKind := types.mapValueKind(parsed.kind);
                         itemKind = "(key:" + kKind + ",value:" + vKind + ")";
-                        sequenceCode = "Array.from((" + parsed.code + ").entries(), ([lite$k, lite$v]) => ({ key: lite$k, value: lite$v }))";
+                        if target == TARGET_TS and not seqIsWritableLocal {
+                            sequenceCode = parsed.code;
+                            loopSeqMode = 2;
+                        } else {
+                            sequenceCode = "Array.from((" + parsed.code + ").entries(), ([lite$k, lite$v]) => ({ key: lite$k, value: lite$v }))";
+                        }
                     } else if types.isSetKind(parsed.kind) {
                         itemKind = types.setElementKind(parsed.kind);
-                        sequenceCode = "Array.from((" + parsed.code + ").values())";
+                        if target == TARGET_TS and not seqIsWritableLocal {
+                            sequenceCode = parsed.code;
+                            loopSeqMode = 1;
+                        } else {
+                            sequenceCode = "Array.from((" + parsed.code + ").values())";
+                        }
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                         sequenceCode = parsed.code;
@@ -2387,7 +2420,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = ITEM_KIND_LOOP_SEQ, name = itemName, runtime = runtime, code = sequenceCode,
-                    intValue = 0, textValue = itemKind));
+                    intValue = loopSeqMode, textValue = itemKind));
                     if codeHasRawTransfer(sequenceCode) {
                         listLib.pushBack(mut transferCodes, sequenceCode);
                         transferCount = transferCount + 1;
@@ -2400,7 +2433,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
                     listLib.pushBack(mut items, (kind = ITEM_KIND_LOOP_SEQ, name = "", runtime = tempItemRuntime, code = sequenceCode,
-                    intValue = 0, textValue = itemKind));
+                    intValue = loopSeqMode, textValue = itemKind));
                     if codeHasRawTransfer(sequenceCode) {
                         listLib.pushBack(mut transferCodes, sequenceCode);
                         transferCount = transferCount + 1;

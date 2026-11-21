@@ -1639,8 +1639,8 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         outLine("    if (len > 64) {");
         outLine("        if (lite$bmpSet.size >= 128) lite$bmpSet.clear();");
         outLine("        lite$bmpSet.add(text);");
-        outLine("        lite$lastBmp = text;");
         outLine("    }");
+        outLine("    lite$lastBmp = text;");
         outLine("    return true;");
         outLine("}");
         outLine("function lite$textPoints(text: string): readonly string[] {");
@@ -2280,10 +2280,21 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
             indent = dedent(indent);
             outLine(indent + "}");
         } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ {
-            seqExpr := if textLib.startsWithAt(item.code, 0, "Array.from(") { item.code } else { tsLiteral.listCopyCode(item.code) };
-            outLine(indent + "for (const " + item.runtime + " of " + seqExpr + ") {");
-            indent = indent + "    ";
-            outLine(indent + "void " + item.runtime + ";");
+            if item.intValue == 1 {
+                outLine(indent + "for (const " + item.runtime + " of (" + item.code + ")) {");
+                indent = indent + "    ";
+                outLine(indent + "void " + item.runtime + ";");
+            } else if item.intValue == 2 {
+                outLine(indent + "for (const [lite$mk, lite$mv] of (" + item.code + ")) {");
+                indent = indent + "    ";
+                outLine(indent + "const " + item.runtime + " = { key: lite$mk, value: lite$mv };");
+                outLine(indent + "void " + item.runtime + ";");
+            } else {
+                seqExpr := if textLib.startsWithAt(item.code, 0, "Array.from(") { item.code } else { tsLiteral.listCopyCode(item.code) };
+                outLine(indent + "for (const " + item.runtime + " of " + seqExpr + ") {");
+                indent = indent + "    ";
+                outLine(indent + "void " + item.runtime + ";");
+            }
         } else if item.kind == frontend.ITEM_KIND_LOOP {
             condition := if item.code == "" { "Boolean(true)" }
             else if item.code == "false" { "Boolean(false)" }

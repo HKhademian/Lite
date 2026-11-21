@@ -3988,12 +3988,32 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         _ := syntax.expectSymbol(source, afterSubj, "{", prefix);
     }
     matchId := ctx.nextCtxId(ctxs) + matchStart;
-    subjVar := "lite$subj" + integer.intText(matchId);
+    subjIsSimpleIdent := {
+        sLen := textLib.length(subj.code);
+        var okId := sLen > 0 and textLib.isNameStart(textLib.at(subj.code, 0));
+        var si := 1;
+        loop okId and si < sLen {
+            ch := textLib.at(subj.code, si);
+            if not textLib.isNameContinue(ch) and ch =!= "$" { okId = false; }
+            si = si + 1;
+        }
+        okId
+    };
+    var canTernary := target == ir.TARGET_TS and not inferMode and mode == "value" and subjIsSimpleIdent;
+    subjVar := if canTernary { subj.code } else { "lite$subj" + integer.intText(matchId) };
     doneVar := "lite$done" + integer.intText(matchId);
     subjTsType := if types.needsTsTypeAnnotation(subj.kind) { ": " + types.tsFunctionType(subj.kind) } else { "" };
     armDepth := ir.maxLocalLexDepth(locals) + 1;
     var matchMarkers := if inferMode { ctx.collectParsedMarkers("", subj) } else { "" };
-    var armsCode := "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; let " + doneVar + ": boolean = false; ";
+    var armsCode := if canTernary {
+        "let " + doneVar + ": boolean = false; "
+    } else {
+        "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; let " + doneVar + ": boolean = false; "
+    };
+    ternaryConds: mut List<String> = [];
+    ternaryVals: mut List<String> = [];
+    ternaryKinds: mut List<String> = [];
+    var ternaryCount := 0;
     var cursor := syntax.skipItemSeparators(source, subjOpen + 1, prefix);
     var resultKind := if mode == "stmt" { ir.VALUE_KIND_UNIT } else { "" };
     var allNever := true;
@@ -4153,6 +4173,16 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                 winVoidStmts = voidStmts;
             } else {
                 armsCode = armsCode + "if (!" + doneVar + ") { " + declStmts + assignStmts + voidStmts + doneVar + " = true; " + bodyEmit + " } ";
+                if canTernary {
+                    if declStmts =!= "" or branch.kind == ir.VALUE_KIND_NEVER {
+                        canTernary = false;
+                    } else {
+                        listLib.pushBack(mut ternaryConds, "true");
+                        listLib.pushBack(mut ternaryVals, branch.code);
+                        listLib.pushBack(mut ternaryKinds, branch.kind);
+                        ternaryCount = ternaryCount + 1;
+                    }
+                }
             }
         } else if not armDead {
             var innerMatch := "";
@@ -4168,6 +4198,21 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             };
             armsCode = armsCode + "if (!" + doneVar + ") { " + declStmts + armCheck + " } ";
             emittedRuntimeArms = emittedRuntimeArms + 1;
+            if canTernary {
+                if declStmts =!= "" or branch.kind == ir.VALUE_KIND_NEVER {
+                    canTernary = false;
+                } else {
+                    tCond := if hasGuard and guardCode =!= "true" {
+                        if patCond == "true" { guardCode } else { "((" + patCond + ") && (" + guardCode + "))" }
+                    } else {
+                        patCond
+                    };
+                    listLib.pushBack(mut ternaryConds, tCond);
+                    listLib.pushBack(mut ternaryVals, branch.code);
+                    listLib.pushBack(mut ternaryKinds, branch.kind);
+                    ternaryCount = ternaryCount + 1;
+                }
+            }
         }
         armCount = armCount + 1;
         cursor = branch.next;
@@ -4208,6 +4253,17 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             return (code = "(((): " + retType + " => { " + armsCode + "})())", kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
             isDirect = true, constant = false, intValue = 0, textValue = "");
         }
+    }
+    if canTernary and ternaryCount >= 2 {
+        var tExpr := ctx.assignValueCode(target, finalKind, ternaryKinds[ternaryCount - 1], ternaryVals[ternaryCount - 1]);
+        var ti := ternaryCount - 2;
+        loop ti >= 0 {
+            tVal := ctx.assignValueCode(target, finalKind, ternaryKinds[ti], ternaryVals[ti]);
+            tExpr = "((" + ternaryConds[ti] + ") ? (" + tVal + ") : (" + tExpr + "))";
+            ti = ti - 1;
+        }
+        return (code = tExpr, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
+        isDirect = true, constant = false, intValue = 0, textValue = "");
     }
     (code = armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers, isDirect = false, constant = false, intValue = 0, textValue = "")
 };
@@ -5404,7 +5460,24 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     }
                     if left.constant {
                         cInfo := types.enumCaseAt(left.kind, left.intValue);
-                        left = ctx.withMarkers((kind = backing, code = cInfo.valueCode, intValue = 0, textValue = "", constant = false, next = labelEnd),
+                        var evConst := false;
+                        var evInt := 0;
+                        if backing == ir.VALUE_KIND_BOOL {
+                            evConst = true;
+                            evInt = if cInfo.valueCode == "true" { 1 } else { 0 };
+                        } else if numeric.isIntKind(backing) {
+                            vcLen := textLib.length(cInfo.valueCode);
+                            if vcLen >= 2 and textLib.at(cInfo.valueCode, vcLen - 1) == "n" {
+                                isNeg := textLib.at(cInfo.valueCode, 0) == "-";
+                                dStart := if isNeg { 1 } else { 0 };
+                                if dStart < vcLen - 1 {
+                                    mag := syntax.parseDigits(cInfo.valueCode, dStart, vcLen - 1);
+                                    evConst = true;
+                                    evInt = if isNeg { -mag } else { mag };
+                                }
+                            }
+                        }
+                        left = ctx.withMarkers((kind = backing, code = cInfo.valueCode, intValue = evInt, textValue = "", constant = evConst, next = labelEnd),
                         if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                     } else {
                         cCount := types.enumCaseCount(left.kind);
@@ -5733,6 +5806,18 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
                     left.intValue =!= 0 or right.intValue =!= 0
                 };
                 left = ctx.boolParsed(ir.targetBoolLiteralCode(target, value), value, true, right.next);
+            } else if left.constant and operator.text == "and" {
+                if left.intValue == 0 {
+                    left = ctx.boolParsed(ir.targetBoolLiteralCode(target, false), false, true, right.next);
+                } else {
+                    left = ctx.boolParsed(right.code, right.intValue =!= 0, right.constant, right.next);
+                }
+            } else if left.constant and operator.text == "or" {
+                if left.intValue =!= 0 {
+                    left = ctx.boolParsed(ir.targetBoolLiteralCode(target, true), true, true, right.next);
+                } else {
+                    left = ctx.boolParsed(right.code, right.intValue =!= 0, right.constant, right.next);
+                }
             } else {
                 left = ctx.boolParsed(ir.targetLogicCode(target, operator.text, left.code, right.code), false, false, right.next);
             }
@@ -5789,6 +5874,14 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
                 } else {
                     left = ctx.typedIntParsed(promoted, ctx.runtimeTypedIntegerCode(target, promoted, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
                 }
+            } else if left.kind == promoted and ((operator.text == "+" or operator.text == "-") and right.constant and right.intValue == 0) {
+                left = ctx.typedIntParsed(promoted, left.code, left.intValue, left.constant, right.next);
+            } else if right.kind == promoted and operator.text == "+" and left.constant and left.intValue == 0 {
+                left = ctx.typedIntParsed(promoted, right.code, right.intValue, right.constant, right.next);
+            } else if left.kind == promoted and operator.text == "*" and right.constant and right.intValue == 1 {
+                left = ctx.typedIntParsed(promoted, left.code, left.intValue, left.constant, right.next);
+            } else if right.kind == promoted and operator.text == "*" and left.constant and left.intValue == 1 {
+                left = ctx.typedIntParsed(promoted, right.code, right.intValue, right.constant, right.next);
             } else {
                 left = ctx.typedIntParsed(promoted, ctx.runtimeTypedIntegerCode(target, promoted, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
             }
@@ -5796,6 +5889,10 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
             if left.constant and right.constant {
                 combined := left.textValue + right.textValue;
                 left = ctx.textParsed(ir.targetTextLiteralCode(target, combined), combined, true, right.next);
+            } else if left.constant and left.textValue == "" {
+                left = ctx.textParsed(right.code, right.textValue, right.constant, right.next);
+            } else if right.constant and right.textValue == "" {
+                left = ctx.textParsed(left.code, left.textValue, left.constant, right.next);
             } else {
                 left = ctx.textParsed(ir.targetConcatCode(target, left.code, right.code), "", false, right.next);
             }
