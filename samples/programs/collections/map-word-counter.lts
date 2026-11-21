@@ -9,7 +9,7 @@ loop words as word {
     counts[word] = prev + 1;
 }
 
-io.outputLine("unique:", map.size(counts));
+io.outputLine("unique:", counts.size);
 loop counts as entry {
     io.outputLine(entry.key, entry.value);
 }

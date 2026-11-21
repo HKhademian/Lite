@@ -1,8 +1,7 @@
-/* Iterative and recursive Fibonacci sequence with zero heap churn. */
+/* Iterative Fibonacci sequence collected with loop `.collected` metadata. */
 
 intLib := import "core/int";
 io := import "core/io";
-list := import "core/list";
 
 fibIter := fn(n: Int): Int {
     if n <= 1 { return n; }
@@ -18,19 +17,12 @@ fibIter := fn(n: Int): Int {
     curr
 }
 
-terms: mut List<Int> = [];
-var i := 0;
-loop i < 10 {
-    list.pushBack(mut terms, fibIter(i));
-    i += 1;
-}
+terms := loop .count < 10 { fibIter(.count - 1) }.collected;
 
 var line := "";
-var idx := 0;
-loop terms as val {
-    if idx > 0 { line = line + ", "; }
-    line = line + intLib.intText(val);
-    idx += 1;
+loop terms {
+    if .index > 0 { line += ", "; }
+    line += intLib.intText(.item);
 }
 io.outputLine("fib(0..9):", line);
 io.outputLine("fib(12):", fibIter(12));
