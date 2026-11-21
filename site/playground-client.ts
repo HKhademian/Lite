@@ -78,6 +78,8 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         void runAction("compile");
       } else if (activeTab === "c") {
         void compileCForEditor();
+      } else if (activeTab === "canvas") {
+        void runAction("play");
       } else {
         statusEl.hidden = false;
         statusEl.textContent = "Optimization level: -O" + String(lv);

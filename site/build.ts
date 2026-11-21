@@ -60,6 +60,8 @@ function coreModuleIdentity(relPath: string): string {
     case 'lib/core/io.lts': return 'lite.core.io.v1';
     case 'lib/core/int.lts': return 'lite.core.int.v1';
     case 'lib/core/list.lts': return 'lite.core.list.v1';
+    case 'lib/core/map.lts': return 'lite.core.map.v1';
+    case 'lib/core/set.lts': return 'lite.core.set.v1';
     case 'lib/core/text.lts': return 'lite.core.text.v1';
     case 'lib/core/file.lts': return 'lite.core.file.v1';
     case 'lib/core/process.lts': return 'lite.core.process.v1';
