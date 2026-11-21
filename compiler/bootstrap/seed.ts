@@ -4,7 +4,7 @@ export const seed = {
   "artifact": "igniter.ts",
   "recorded": "2026-11-21",
   "note": "Single checked-in -O3 bootstrap igniter; compiles compiler and tools with -O3 into untracked dist/.",
-  "igniterSha256": "a2cdd147531236b3b3afba7651cc184e9244720a554883530995e6a8a9cb280c",
-  "sourceSha256": "ce943839569f80b8624dc2e0ffc5a021bf8b0dd79f3c88595b6b88a519877467",
-  "artifactSha256": "438970f947c17f87aca6112e3be2497394950f30fa42cdcbe99b46c646d5416d",
+  "igniterSha256": "902dcfefd7b4e69f329606898a9ff8707dec6ad33eba9d7a1c76209bb5779e1d",
+  "sourceSha256": "0373329fac78fab4243c4531d6fa507736e0779c1f114911520ca1d1e48540c7",
+  "artifactSha256": "0fb8b09c335f6735906af622574467e72a99e418ad1843ce9db79a5c51a155b5",
 } as const;

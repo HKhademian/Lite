@@ -1141,7 +1141,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 if not shadowedBefore {
                     headerPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
                     fnListIntrinsic := (moduleIdentity == "lite.core.list.v1" and
-                    (fnName == "pushBack" or fnName == "popBack" or fnName == "pushFront" or fnName == "popFront")) or
+                    (fnName == "pushBack" or fnName == "popBack" or fnName == "pushFront" or fnName == "popFront" or
+                    fnName == "length" or fnName == "setAt" or fnName == "slice" or fnName == "reverse" or fnName == "clear")) or
                     (moduleIdentity == "lite.core.map.v1" and
                     (fnName == "set" or fnName == "get" or fnName == "getOr" or fnName == "has" or
                     fnName == "remove" or fnName == "size" or fnName == "clear" or fnName == "keys" or fnName == "values")) or
@@ -2766,7 +2767,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 wasPreRegistered := existingFnIdx >= 0 and functions[existingFnIdx].declAt == nameStart;
                 rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, 0, name);
                 position = skipTrivia(source, afterDeclare + 2, prefix);
-                listIntrinsic := (moduleIdentity == "lite.core.list.v1" and (name == "pushBack" or name == "popBack" or name == "pushFront" or name == "popFront")) or
+                listIntrinsic := (moduleIdentity == "lite.core.list.v1" and (name == "pushBack" or name == "popBack" or name == "pushFront" or name == "popFront" or
+                name == "length" or name == "setAt" or name == "slice" or name == "reverse" or name == "clear")) or
                 (moduleIdentity == "lite.core.map.v1" and
                 (name == "set" or name == "get" or name == "getOr" or name == "has" or
                 name == "remove" or name == "size" or name == "clear" or name == "keys" or name == "values")) or

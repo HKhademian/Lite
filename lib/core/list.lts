@@ -1,5 +1,7 @@
 /* Provisional bootstrap list-search support. Not an official standard library. */
 
+text := import "core/text";
+
 /** Registered list mutation intrinsic; T is scoped to these bodyless core declarations only. */
 pub pushBack := fn<T>(values: mut List<T>, value: T): Unit;
 
@@ -11,6 +13,119 @@ pub pushFront := fn<T>(values: mut List<T>, value: T): Unit;
 
 /** Registered list mutation intrinsic; removes and returns the first element of `values`. */
 pub popFront := fn<T>(values: mut List<T>): T;
+
+/** Registered list intrinsic; returns the number of elements in `values`. */
+pub length := fn<T>(values: List<T>): Int;
+
+/** Registered list mutation intrinsic; replaces the element at `index` in `values`. */
+pub setAt := fn<T>(values: mut List<T>, index: Int, value: T): Unit;
+
+/** Registered list intrinsic; returns a new list containing `values[start..end)`. */
+pub slice := fn<T>(values: List<T>, start: Int, end: Int): List<T>;
+
+/** Registered list intrinsic; returns a new list with the elements of `values` in reverse order. */
+pub reverse := fn<T>(values: List<T>): List<T>;
+
+/** Registered list mutation intrinsic; removes all elements from `values`. */
+pub clear := fn<T>(values: mut List<T>): Unit;
+
+/** Returns a new sorted ascending copy of `values` using stable O(n log n) merge sort. */
+pub sortInts := fn(values: List<Int>): List<Int> {
+    n := length(values);
+    if n <= 1 { return values; }
+    var src: mut List<Int> = values;
+    var width := 1;
+    loop width < n {
+        dst: mut List<Int> = [];
+        var left := 0;
+        loop left < n {
+            mid := if left + width < n { left + width } else { n };
+            right := if left + width * 2 < n { left + width * 2 } else { n };
+            var i := left;
+            var j := mid;
+            loop i < mid and j < right {
+                if src[i] <= src[j] {
+                    pushBack(mut dst, src[i]);
+                    i += 1;
+                } else {
+                    pushBack(mut dst, src[j]);
+                    j += 1;
+                }
+            }
+            loop i < mid {
+                pushBack(mut dst, src[i]);
+                i += 1;
+            }
+            loop j < right {
+                pushBack(mut dst, src[j]);
+                j += 1;
+            }
+            left += width * 2;
+        }
+        src = dst;
+        width = width * 2;
+    }
+    src
+};
+
+ASCII_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+textLessOrEqual := fn(a: String, b: String): Bool {
+    la := text.length(a);
+    lb := text.length(b);
+    limit := if la < lb { la } else { lb };
+    var i := 0;
+    loop i < limit {
+        ca := text.at(a, i);
+        cb := text.at(b, i);
+        if ca =!= cb {
+            oa := text.indexOfText(ASCII_ORDER, ca, 0);
+            ob := text.indexOfText(ASCII_ORDER, cb, 0);
+            return oa <= ob;
+        }
+        i += 1;
+    }
+    la <= lb
+};
+
+/** Returns a new lexicographically sorted ascending copy of `values` using stable O(n log n) merge sort. */
+pub sortTexts := fn(values: List<String>): List<String> {
+    n := length(values);
+    if n <= 1 { return values; }
+    var src: mut List<String> = values;
+    var width := 1;
+    loop width < n {
+        dst: mut List<String> = [];
+        var left := 0;
+        loop left < n {
+            mid := if left + width < n { left + width } else { n };
+            right := if left + width * 2 < n { left + width * 2 } else { n };
+            var i := left;
+            var j := mid;
+            loop i < mid and j < right {
+                if textLessOrEqual(src[i], src[j]) {
+                    pushBack(mut dst, src[i]);
+                    i += 1;
+                } else {
+                    pushBack(mut dst, src[j]);
+                    j += 1;
+                }
+            }
+            loop i < mid {
+                pushBack(mut dst, src[i]);
+                i += 1;
+            }
+            loop j < right {
+                pushBack(mut dst, src[j]);
+                j += 1;
+            }
+            left += width * 2;
+        }
+        src = dst;
+        width = width * 2;
+    }
+    src
+};
 
 /** Returns the index of `target` in `values`, or -1 when absent. */
 pub listIndexOfText := fn(values: List<String>, target: String): Int {
