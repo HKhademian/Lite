@@ -1,0 +1,24 @@
+{
+  "id": "example.types.collections.typed-maps",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/types/collections/typed-maps.lts",
+    "hash": "sha256:c6041e06d05b3d831af87b02242b1ebe18906f797f5877a5efacb28baf231230"
+  },
+  "features": [
+    "feature.types.collections.typed-maps",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Demonstrates Map<K, V> indexing, core/map intrinsics, value-copy snapshots, and insertion-order entry traversal.",
+  "cases": [
+    {
+      "name": "typed-maps",
+      "stdout": {
+        "text": "alice: 18 has bob: false\nfallback: 0 snapshot size: 2\nalice 18\nbob 25\n",
+        "hash": "sha256:bcb557e44f558d18ebeba57f6a2fe71d2cb9e1282d48a3ce85f9f24b88c310ea"
+      },
+      "exitCode": 0
+    }
+  ]
+}

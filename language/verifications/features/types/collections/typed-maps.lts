@@ -1,0 +1,12 @@
+io := import "core/io";
+map := import "core/map";
+
+scores: mut Map<String, Int>;
+scores["alice"] = 10;
+map.set(mut scores, "bob", 20);
+scores["alice"] = 15;
+saved: Map<String, Int> = scores;
+map.remove(mut scores, "bob");
+hit := map.get(saved, "bob");
+miss := map.getOr(scores, "bob", 99);
+io.outputLine(scores["alice"], map.size(scores), hit.found, hit.value, miss);

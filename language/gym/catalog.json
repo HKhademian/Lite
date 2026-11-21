@@ -591,6 +591,34 @@
         { "name": "accented", "stdin": "café\n", "args": [], "expectedStdout": "scalars:4 utf8Bytes:5\n" }
       ]
     },
+    {
+      "id": "drills.types.collections.map-mut-grant",
+      "slug": "map-mut-grant",
+      "title": "Mutable Map<K, V> Grants",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "collections",
+      "promptFile": "language/gym/drills/types/collections/map-mut-grant/README.md",
+      "starterFile": "language/gym/drills/types/collections/map-mut-grant/starter.lts",
+      "solutionFile": "language/gym/drills/types/collections/map-mut-grant/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "Change `scores: Map<String, Int>;` to `scores: mut Map<String, Int>;` so the map allows writes.",
+        "Pass an explicit `mut` grant to `map.set(mut scores, \"bonus\", bonus);`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/maps.md"],
+      "relatedLessons": ["learn.types.collections.typed-maps"],
+      "visibleCases": [
+        { "name": "positive-bonus", "stdin": "7\n", "args": [], "expectedStdout": "17\n" },
+        { "name": "zero-bonus", "stdin": "0\n", "args": [], "expectedStdout": "10\n" }
+      ],
+      "hiddenCases": [
+        { "name": "negative-bonus", "stdin": "-4\n", "args": [], "expectedStdout": "6\n" },
+        { "name": "large-bonus", "stdin": "90\n", "args": [], "expectedStdout": "100\n" }
+      ]
+    },
 
     {
       "id": "workouts.units.conversions.temperature-scales",
@@ -1347,6 +1375,34 @@
       "hiddenCases": [
         { "name": "empty", "stdin": "0\n", "args": [], "expectedStdout": "0 0\n" },
         { "name": "child-vip-precedence", "stdin": "2\n10 1 1\n65 1 2\n", "args": [], "expectedStdout": "35 2\n" }
+      ]
+    },
+    {
+      "id": "workouts.collections.maps.word-frequency-counter",
+      "slug": "word-frequency-counter",
+      "title": "Word Frequency Counter",
+      "mode": "kata",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "collections",
+      "promptFile": "language/gym/workouts/collections/word-frequency-counter/README.md",
+      "starterFile": "language/gym/workouts/collections/word-frequency-counter/starter.lts",
+      "solutionFile": "language/gym/workouts/collections/word-frequency-counter/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Use `map.getOr(counts, word, 0)` to read the current count for `word` without faulting on first sight.",
+        "Update the tally with `counts[word] = map.getOr(counts, word, 0) + 1;`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/maps.md"],
+      "relatedLessons": ["learn.types.collections.typed-maps"],
+      "visibleCases": [
+        { "name": "repeated-words", "stdin": "4\napple\npear\napple\napple\napple\n", "args": [], "expectedStdout": "2 3\n" },
+        { "name": "missing-query", "stdin": "3\nred\nblue\nred\ngreen\n", "args": [], "expectedStdout": "2 0\n" }
+      ],
+      "hiddenCases": [
+        { "name": "empty-input", "stdin": "0\nnone\n", "args": [], "expectedStdout": "0 0\n" },
+        { "name": "all-unique", "stdin": "3\na\nb\nc\nb\n", "args": [], "expectedStdout": "3 1\n" }
       ]
     }
   ]

@@ -64,6 +64,7 @@ test('highlightLite highlights newer built-in types and operators', () => {
   }
   assert(html.includes('<span class="tok-keyword">match</span>'), 'missing keyword highlight: match');
   assert(highlightLite('User := record { name: String; };').includes('<span class="tok-keyword">record</span>'), 'missing keyword highlight: record');
+  assert(highlightLite('scores: mut Map<String, Int>;').includes('<span class="tok-type">Map</span>'), 'missing type highlight: Map');
   const opHtml = highlightLite('a ** b += c :/= d :%= e <!= f >!= g <! h >! i');
   for (const op of ['**', '+=', ':/=', ':%=', '&lt;!=', '&gt;!=', '&lt;!', '&gt;!']) {
     assert(opHtml.includes(`<span class="tok-op">${op}</span>`), `missing operator highlight: ${op}`);
@@ -102,6 +103,7 @@ test('showcaseSamples includes examples covering named calls, tuples, arrays, an
     'mixed-tuples',
     'tuple-label-conversion',
     'growable-lists',
+    'typed-maps',
     'nominal-records',
     'aggregate-destructuring',
     'integer-calculator',
@@ -156,12 +158,25 @@ test('stripLiteTs strips anonymous function parameter and return types', () => {
   assert.equal(fn(), 5n);
 });
 
-test('verifyGymCorpus compiles and executes all 47 Gym starters and solutions', () => {
+test('stripLiteTs strips Map<K, V> generic args and non-null assertions before closing braces', () => {
+  const src = [
+    'const lite$scores: Map<string, bigint> = new Map<string, bigint>();',
+    'lite$scores.set("a", 7n);',
+    'const lite$res = ((lite$m: Map<string, bigint>, lite$k: string): { found: boolean; value: bigint } => lite$m.has(lite$k) ? { found: true, value: lite$m.get(lite$k)! } : { found: false, value: 0n })(lite$scores, "a");',
+    'return lite$res;',
+  ].join('\n');
+  const stripped = stripLiteTs(src);
+  assert(!stripped.includes('get(lite$k)!'), stripped);
+  const res = (new Function(stripped) as () => { found: boolean; value: bigint })();
+  assert.deepEqual(res, { found: true, value: 7n });
+});
+
+test('verifyGymCorpus compiles and executes all 49 Gym starters and solutions', () => {
   const result = verifyGymCorpus();
-  assert.equal(result.exerciseCount, 47);
-  assert.equal(result.drillCount, 21);
-  assert.equal(result.kataCount, 26);
-  assert(result.caseCount >= 188, `expected at least 188 test cases, got ${String(result.caseCount)}`);
+  assert.equal(result.exerciseCount, 49);
+  assert.equal(result.drillCount, 22);
+  assert.equal(result.kataCount, 27);
+  assert(result.caseCount >= 196, `expected at least 196 test cases, got ${String(result.caseCount)}`);
 });
 
 interface LearnHelperModule {

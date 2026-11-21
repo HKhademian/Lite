@@ -43,6 +43,9 @@ and [operators](lite://doc/operators) for the selected contracts.
   [named input routing](lite://doc/named-input-routing).
 - [Growable lists](lite://play/example/growable-lists): explicit storage and mutation;
   continue with [lists](lite://doc/lists).
+- [Typed maps](lite://play/example/typed-maps): `Map<K, V>` key-value indexing,
+  `core/map` lookups, value snapshots, and entry iteration; continue with
+  [maps](lite://doc/maps).
 - [Integer calculator](lite://play/example/integer-calculator): a scanner and
   recursive parser composed from smaller features.
 - [Type aliases](lite://play/example/type-aliases): transparent `type` contracts for

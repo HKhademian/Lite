@@ -1,0 +1,17 @@
+io := import "core/io";
+map := import "core/map";
+
+scores: mut Map<String, Int>;
+scores["ada"] = 42;
+scores["lin"] = 37;
+scores["sam"] = 51;
+
+var bestName := "";
+var bestScore := 0;
+loop scores as entry {
+    if entry.value > bestScore {
+        bestName = entry.key;
+        bestScore = entry.value;
+    }
+}
+io.outputLine(bestName, bestScore, map.size(scores));

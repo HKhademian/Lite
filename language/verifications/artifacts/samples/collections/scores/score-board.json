@@ -1,0 +1,24 @@
+{
+  "id": "sample.collections.scores.score-board",
+  "kind": "sample",
+  "source": {
+    "file": "../../../../../samples/collections/scores/score-board.lts",
+    "hash": "sha256:032e9e4407ecc9badb8507845c0b3f687940b1b4055e795d1d86845553fde4ca"
+  },
+  "features": [
+    "feature.types.collections.typed-maps",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Tracks player scores in a Map<String, Int> and finds the highest scorer via loop entry iteration.",
+  "cases": [
+    {
+      "name": "score-board",
+      "stdout": {
+        "text": "sam 51 3\n",
+        "hash": "sha256:93b27f9e4f1e86bec7ec4b1d6735c9d59b78d5025046a3178fed6e3e60d757aa"
+      },
+      "exitCode": 0
+    }
+  ]
+}

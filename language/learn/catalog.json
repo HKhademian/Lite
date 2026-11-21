@@ -210,6 +210,22 @@
           "docs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/lists.md"]
         },
         {
+          "id": "learn.types.collections.typed-maps",
+          "slug": "typed-maps",
+          "title": "Typed Maps Map<K, V> & core/map Lookups",
+          "kind": "lesson",
+          "domain": "types",
+          "subGroup": "collections",
+          "environment": "universal",
+          "guideFile": "language/learn/lessons/types/collections/typed-maps.md",
+          "sourceFile": "language/showcases/types/collections/typed-maps-and-lookup.lts",
+          "helperModules": [],
+          "stdin": "",
+          "args": [],
+          "teaches": ["Map<K, V>", "core/map", "mut", "m[k] = v", "loop m as entry"],
+          "docs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/maps.md"]
+        },
+        {
           "id": "learn.types.aliases.type-aliases-and-scoping",
           "slug": "type-aliases-and-scoping",
           "title": "Transparent Type Aliases Across Root & Inner Blocks",

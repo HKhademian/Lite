@@ -280,6 +280,31 @@
           "order": 2
         },
         {
+          "id": "showcase.types.collections.typed-maps-and-lookup",
+          "title": "Typed Maps Map<K, V>, core/map Lookups, and Value Snapshots",
+          "file": "language/showcases/types/collections/typed-maps-and-lookup.lts",
+          "helperFiles": [],
+          "manifest": "language/verifications/artifacts/showcases/types/collections/typed-maps-and-lookup.json",
+          "summary": "Demonstrates zero-initialized mut Map<K, V>, indexed reads/writes, core/map get/getOr/remove/keys, independent value snapshots, and entry iteration.",
+          "teaches": [
+            "Map<K, V>",
+            "mut Map",
+            "core/map",
+            "m[k] = v",
+            "loop m as entry"
+          ],
+          "features": [
+            "feature.types.collections.typed-maps",
+            "feature.control.loops.sequence-traversal",
+            "feature.io.reporting.report-values"
+          ],
+          "docs": [
+            "docs/maps.md",
+            "docs/mutability.md"
+          ],
+          "order": 3
+        },
+        {
           "id": "showcase.types.aliases.type-aliases-and-scoping",
           "title": "Transparent Type Aliases Across Root and Inner Blocks",
           "file": "language/showcases/types/aliases/type-aliases-and-scoping.lts",

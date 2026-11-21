@@ -1,0 +1,2 @@
+m: Map<String, Int>;
+m["a"] = 1;

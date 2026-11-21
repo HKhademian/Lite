@@ -108,4 +108,4 @@ Prefer a valid empty list without a public null state or mandatory allocation fo
 
 The goal is specialized element storage and predictable allocation costs, without mandatory per-element boxing. No implementation, mandatory two/three-word ABI, growth factor, or measured performance is established.
 
-Related: [sequence families](lite://doc/sequence-types), [arrays](lite://doc/arrays), [slices](lite://doc/slices), [reserved storage](lite://doc/reserved-storage), and [mutability](lite://doc/mutability).
+Related: [sequence families](lite://doc/sequence-types), [arrays](lite://doc/arrays), [maps](lite://doc/maps), [slices](lite://doc/slices), [reserved storage](lite://doc/reserved-storage), and [mutability](lite://doc/mutability).

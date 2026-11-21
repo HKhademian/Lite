@@ -4,7 +4,7 @@ Folder-grouped project samples showcasing algorithms, high-resolution RGBA canva
 
 For core language-specification examples (`001`–`024`), see [language/examples](lite://repo/language/examples/README.md).
 
-## Programs (`programs/{math,search,text,parsing,records,control}/`)
+## Programs (`programs/{math,search,text,parsing,records,control,collections}/`)
 
 - [fibonacci](lite://play/fibonacci) — Iterative Fibonacci sequence and explicit formatting.
 - [primes-sieve](lite://play/primes-sieve) — Prime generation up to 50 with `mut List<Int>`.
@@ -14,6 +14,7 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [rpn-evaluator](lite://play/rpn-evaluator) — Stack-based Reverse Polish Notation evaluator.
 - [inventory-ledger](lite://play/inventory-ledger) — Inventory summary combining nominal records, `=name` shorthand, named tuple returns, and fixed-array bounds.
 - [packet-router](lite://play/packet-router) — Network packet classifier using subject-based `match` over records, `or` alternatives, `if` guards, and fixed-array summaries.
+- [map-word-counter](lite://play/map-word-counter) — Word frequency counter using `Map<String, Int>`, `core/map` lookups, and insertion-order entry iteration.
 
 ## Canvas Art (`graphics/art/`)
 

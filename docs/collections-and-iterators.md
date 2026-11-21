@@ -60,6 +60,7 @@ The type of an iterator's end signal must not reintroduce universal nullability.
 ## Related concepts and references
 
 - [Loops](lite://doc/loops)
+- [Lists](lite://doc/lists) and [Typed maps](lite://doc/maps) ([`core/map`](lite://module/core/map))
 - [Loop receivers](lite://doc/loop-receivers)
 - [Memory and performance](lite://doc/memory-and-performance)
 - [V iteration examples](https://docs.vlang.io/statements-&-expressions.html#for-loop) and [Rust iterator loops](https://doc.rust-lang.org/reference/expressions/loop-expr.html#iterator-loops) are comparisons rather than selected protocols.

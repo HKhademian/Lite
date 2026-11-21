@@ -1,0 +1,24 @@
+{
+  "id": "showcase.types.collections.typed-maps-and-lookup",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/types/collections/typed-maps-and-lookup.lts",
+    "hash": "sha256:f8005a8e00b19caa179645741ca434f95ef742b35ce97baca7dd29ae4037cab1"
+  },
+  "features": [
+    "feature.types.collections.typed-maps",
+    "feature.control.loops.sequence-traversal",
+    "feature.io.reporting.report-values"
+  ],
+  "description": "Zero-initialized Map<K, V>, core/map lookups, mut grants, independent snapshots, and entry iteration.",
+  "cases": [
+    {
+      "name": "typed-maps-and-lookup",
+      "stdout": {
+        "text": "apple: 4 bread: true 5 tea: 0\nremoved: true live size: 1 frozen size: 2\nfrozen total: 9 keys: [apple, bread]\n",
+        "hash": "sha256:5870882a55edcd64880b69a6153d7873e600fa91a2550c92dea96fddb65887d2"
+      },
+      "exitCode": 0
+    }
+  ]
+}

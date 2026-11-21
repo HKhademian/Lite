@@ -323,7 +323,7 @@ export function stripLiteTs(source: string): string {
         let next = i + 1;
         while (next < n && /\s/.test(source[next]!)) next += 1;
         const nextCh = source[next] ?? '';
-        if (nextCh !== '' && '.[(;,)]:?=*/%&|<>^'.includes(nextCh)) {
+        if (nextCh !== '' && '.[(;,)}:)?=*/%&|<>^'.includes(nextCh)) {
           i += 1;
           continue;
         }

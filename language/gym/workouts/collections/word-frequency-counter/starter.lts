@@ -1,0 +1,15 @@
+io := import "core/io";
+map := import "core/map";
+
+n := io.inputInt();
+_eol := io.inputLine();
+counts: mut Map<String, Int>;
+var i := 0;
+loop i < n {
+    word := io.inputLine();
+    /* TODO: increment counts[word] using map.getOr */
+    _ignored := word;
+    i += 1;
+}
+query := io.inputLine();
+io.outputLine(map.size(counts), map.getOr(counts, query, 0));

@@ -126,6 +126,9 @@ examples. They live under [compiler/](lite://doc/compiler/overview) and are run 
 - [031 — Subject match](lite://play/subject-match): demonstrates subject-based `match`
   over scalars, nominal records, and tuples with comparison patterns, `or` alternatives,
   and `if` guards.
+- [032 — Typed maps](lite://play/example/typed-maps): demonstrates `Map<K, V>` indexed
+  writes/reads, `core/map` operations (`set`, `has`, `getOr`, `remove`, `size`),
+  independent value snapshots, and insertion-order entry iteration.
 
 For project showcases, graphics, audio, and mini-game demos, see [samples](lite://repo/samples/README.md).
 For the progressive chapter-by-chapter learning curriculum, see the [ability and feature showcase](lite://repo/language/showcases/README.md).

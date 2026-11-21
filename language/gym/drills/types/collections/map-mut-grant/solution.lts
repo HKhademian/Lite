@@ -1,0 +1,8 @@
+io := import "core/io";
+map := import "core/map";
+
+bonus := io.inputInt();
+scores: mut Map<String, Int>;
+scores["base"] = 10;
+map.set(mut scores, "bonus", bonus);
+io.outputLine(scores["base"] + scores["bonus"]);

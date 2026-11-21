@@ -169,6 +169,15 @@
       ]
     },
     {
+      "id": "feature.types.collections.typed-maps",
+      "summary": "Typed Map<K, V> collections, core/map intrinsics, indexed reads/writes, and entry traversal.",
+      "case": "features/types/collections/typed-maps.json",
+      "status": "verified",
+      "docs": [
+        "docs/maps.md"
+      ]
+    },
+    {
       "id": "feature.text.strings.codepoint-helpers",
       "summary": "Temporary code-point text helpers.",
       "case": "features/text/strings/codepoint-helpers.json",

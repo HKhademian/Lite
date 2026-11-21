@@ -1,0 +1,24 @@
+{
+  "id": "case.types.collections.run-typed-map-ops",
+  "kind": "feature",
+  "source": "typed-map-ops.lts",
+  "features": [
+    "feature.types.collections.typed-maps",
+    "feature.io.reporting.report-values"
+  ],
+  "cases": [
+    {
+      "name": "map-index-intrinsics-and-snapshot",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "true 5 -1 1 2\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

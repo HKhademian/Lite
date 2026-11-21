@@ -1,0 +1,23 @@
+{
+  "id": "case.types.collections.reject-immutable-map-write",
+  "kind": "reject",
+  "source": "reject-immutable-map-write.lts",
+  "features": [
+    "feature.types.collections.typed-maps"
+  ],
+  "cases": [
+    {
+      "name": "rejects-writing-immutable-map",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-immutable-map-write.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

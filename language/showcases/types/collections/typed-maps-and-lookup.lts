@@ -1,0 +1,25 @@
+io := import "core/io";
+map := import "core/map";
+
+/* Zero-initialized mutable map: Map<K, V> starts empty */
+prices: mut Map<String, Int>;
+prices["apple"] = 3;
+map.set(mut prices, "bread", 5);
+prices["apple"] = 4;
+
+/* Safe lookups with get / getOr and independent value snapshots */
+frozen: Map<String, Int> = prices;
+foundBread := map.get(prices, "bread");
+missingTea := map.getOr(prices, "tea", 0);
+
+/* Mutation requires mut; frozen snapshot stays untouched */
+removed := map.remove(mut prices, "bread");
+io.outputLine("apple:", prices["apple"], "bread:", foundBread.found, foundBread.value, "tea:", missingTea);
+io.outputLine("removed:", removed, "live size:", map.size(prices), "frozen size:", map.size(frozen));
+
+/* Iterate entries in insertion order */
+var total := 0;
+loop frozen as entry {
+    total += entry.value;
+}
+io.outputLine("frozen total:", total, "keys:", map.keys(frozen));

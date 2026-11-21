@@ -1,0 +1,22 @@
+{
+  "id": "feature.types.collections.typed-maps",
+  "kind": "feature",
+  "source": {
+    "file": "typed-maps.lts",
+    "hash": "sha256:cf5f8cda26c8a2c81e6b72603a9249db2808a7189f345c12989738febc3a7287"
+  },
+  "features": [
+    "feature.types.collections.typed-maps"
+  ],
+  "guideline": "Checks zero-initialized mut Map<K, V>, indexed writes/reads, core/map intrinsics, and value-copy snapshots.",
+  "cases": [
+    {
+      "name": "map-ops-and-snapshot",
+      "stdout": {
+        "text": "15 1 true 20 99\n",
+        "hash": "sha256:d89721cb29bca3889fba9fc697f4462f8e3b14a5170db88487470aa2d0e65e12"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -61,6 +61,20 @@ io.outputLine("ends:", first, third, "head:", head, "queue:", fmt.joinIntTexts(q
 
 Notice `saved: List<Int> = queue;` takes an independent value snapshot of `queue`—popping from `queue` afterward does not mutate `saved`. Both `push_front`/`push_back` builtins and [core/list](lite://module/core/list) methods ([`list.pushBack`](lite://module/core/list#pushBack), [`list.popFront`](lite://module/core/list#popFront), etc.) are supported.
 
+## Typed Maps `Map<K, V>`
+
+Store typed key-value entries with `Map<K, V>` (scalar or nominal `enum` keys, any value type). Maps zero-initialize empty, require `mut Map<K, V>` for indexed writes (`scores["alice"] = 18;`) or mutating [core/map](lite://module/core/map) calls, copy independently on assignment, and iterate `(key, value)` pairs in insertion order:
+
+```lite
+io := import "core/io";
+map := import "core/map";
+
+scores: mut Map<String, Int>;
+scores["alice"] = 18;
+map.set(mut scores, "bob", 25);
+io.outputLine(scores["alice"], map.getOr(scores, "carol", 0), map.size(scores));
+```
+
 ## Transparent `type` Aliases & Inner Type Scope
 
 Declare transparent type names with `type` at root or inside any `{ ... }` block. Inner blocks support forward type references and lexical type shadowing:
@@ -79,7 +93,7 @@ localLen := {
 io.outputLine(p, localLen);
 ```
 
-See [Tuples & Patterns](lite://doc/tuples-and-patterns), [Records](lite://doc/records), [Aggregate Patterns](lite://doc/aggregate-patterns), [Arrays](lite://doc/arrays), [Lists](lite://doc/lists), and [Type Aliases](lite://doc/type-aliases).
+See [Tuples & Patterns](lite://doc/tuples-and-patterns), [Records](lite://doc/records), [Aggregate Patterns](lite://doc/aggregate-patterns), [Arrays](lite://doc/arrays), [Lists](lite://doc/lists), [Typed Maps](lite://doc/maps), and [Type Aliases](lite://doc/type-aliases).
 
 ## Next Chapter
 

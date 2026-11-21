@@ -114,6 +114,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Sequence storage families](lite://doc/sequence-types): fixed-array inference for fresh known-size literals, element-wise fixed-array value widening without added write permission, explicit growable Lists, proposed owners/views, and separate permissions and storage contracts.
 - [Arrays](lite://doc/arrays): [T; N] fixed extents, header-free inline layout, zero-sized element counts, literal/spread construction, runtime arrays for variadic tails, and open ownership/runtime representation details.
 - [Lists](lite://doc/lists): explicitly selected growable storage, length versus uninitialized capacity, explicit mutation, and open owner-copy semantics; no unconditional List literal default.
+- [Typed maps](lite://doc/maps): generated-TS `Map<K, V>` key-value collections, scalar/enum keys, checked indexing, `core/map` intrinsics, insertion-order traversal, and independent value-copy snapshots.
 - [Slices](lite://doc/slices): proposed borrowed contiguous views, read-only defaults, mutable access, lifetime/invalidation, and initialized bounds.
 
 - [Types and inference](lite://doc/types-and-inference): static contracts, general safe widening, component-wise tuple value widening, complete-contract proofs for generic widening, and the intended type-system scope.
