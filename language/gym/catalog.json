@@ -1516,6 +1516,90 @@
         { "name": "empty", "stdin": "0\nguest\n", "args": [], "expectedStdout": "0 false\n" },
         { "name": "single-match", "stdin": "2\nsolo\nsolo\nsolo\n", "args": [], "expectedStdout": "1 true\n" }
       ]
+    },
+    {
+      "id": "drills.control.loops.loop-collected-filter",
+      "slug": "loop-collected-filter",
+      "title": "Loop .collected Filtering",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "control",
+      "subGroup": "loops",
+      "promptFile": "language/gym/drills/control/loops/loop-collected-filter/README.md",
+      "starterFile": "language/gym/drills/control/loops/loop-collected-filter/starter.lts",
+      "solutionFile": "language/gym/drills/control/loops/loop-collected-filter/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Use `loop raw { if .item > 0 { .item * 2 } }.collected` so non-positive items are skipped without appending.",
+        "Read `doubled.length` and `doubled.isEmpty` directly on the collected `List<Int>`."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md", "docs/loops.md"],
+      "relatedLessons": ["learn.control.loops.loops-and-completion"],
+      "visibleCases": [
+        { "name": "mixed", "stdin": "5\n-2 3 0 5 -1\n", "args": [], "expectedStdout": "2 6 10\n" },
+        { "name": "all-positive", "stdin": "3\n1 4 7\n", "args": [], "expectedStdout": "3 2 14\n" }
+      ],
+      "hiddenCases": [
+        { "name": "all-skipped", "stdin": "3\n-5 0 -1\n", "args": [], "expectedStdout": "0 empty\n" },
+        { "name": "single-positive", "stdin": "1\n9\n", "args": [], "expectedStdout": "1 18 18\n" }
+      ]
+    },
+    {
+      "id": "drills.types.collections.collection-string-props",
+      "slug": "collection-string-props",
+      "title": "Collection & String Metadata Properties",
+      "mode": "drill",
+      "belt": "white",
+      "domain": "types",
+      "subGroup": "collections",
+      "promptFile": "language/gym/drills/types/collections/collection-string-props/README.md",
+      "starterFile": "language/gym/drills/types/collections/collection-string-props/starter.lts",
+      "solutionFile": "language/gym/drills/types/collections/collection-string-props/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "`String` and `List<T>` expose `.length` and `.isEmpty`.",
+        "`Set<T>` and `Map<K, V>` expose `.size` and `.isEmpty`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/strings.md", "docs/sets.md"],
+      "relatedLessons": ["learn.types.collections.arrays-and-lists", "learn.types.collections.typed-sets"],
+      "visibleCases": [
+        { "name": "basic", "stdin": "lite\n3\na\nb\na\n", "args": [], "expectedStdout": "4 false 3 2 false\n" },
+        { "name": "unicode", "stdin": "a🚀b\n2\nx\nx\n", "args": [], "expectedStdout": "3 false 2 1 false\n" }
+      ],
+      "hiddenCases": [
+        { "name": "empty-all", "stdin": "\n0\n", "args": [], "expectedStdout": "0 true 0 0 true\n" },
+        { "name": "distinct", "stdin": "hi\n3\nred\ngreen\nblue\n", "args": [], "expectedStdout": "2 false 3 3 false\n" }
+      ]
+    },
+    {
+      "id": "drills.types.records.record-field-updates",
+      "slug": "record-field-updates",
+      "title": "Copy-on-Write Record Field Updates",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "types",
+      "subGroup": "records",
+      "promptFile": "language/gym/drills/types/records/record-field-updates/README.md",
+      "starterFile": "language/gym/drills/types/records/record-field-updates/starter.lts",
+      "solutionFile": "language/gym/drills/types/records/record-field-updates/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Update nested fields directly on `var player`: `player.pos.x += dx;` and `player.pos.y += dy;`.",
+        "Update `player.hp -= dmg;`; copy-on-write keeps `snapshot` untouched."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/records.md"],
+      "relatedLessons": ["learn.types.records.records-and-patterns"],
+      "visibleCases": [
+        { "name": "move-and-hit", "stdin": "5 -3 15\n", "args": [], "expectedStdout": "10 20 100 | 15 17 85\n" },
+        { "name": "zero-dmg", "stdin": "-4 6 0\n", "args": [], "expectedStdout": "10 20 100 | 6 26 100\n" }
+      ],
+      "hiddenCases": [
+        { "name": "heal-negative-dmg", "stdin": "0 0 -10\n", "args": [], "expectedStdout": "10 20 100 | 10 20 110\n" },
+        { "name": "full-hit", "stdin": "2 8 100\n", "args": [], "expectedStdout": "10 20 100 | 12 28 0\n" }
+      ]
     }
   ]
 }

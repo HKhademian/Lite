@@ -1,0 +1,19 @@
+io := import "core/io";
+list := import "core/list";
+set := import "core/set";
+
+word := io.inputLine();
+n := io.inputInt();
+_eol := io.inputLine();
+tags: mut List<String> = [];
+unique: mut Set<String>;
+var i := 0;
+loop i < n {
+    t := io.inputLine();
+    list.pushBack(mut tags, t);
+    set.add(mut unique, t);
+    i += 1;
+}
+
+/* TODO: replace the placeholders using word.length, word.isEmpty, tags.length, unique.size, unique.isEmpty */
+io.outputLine(0, false, 0, 0, false);

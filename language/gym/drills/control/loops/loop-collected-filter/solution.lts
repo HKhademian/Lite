@@ -1,0 +1,18 @@
+io := import "core/io";
+list := import "core/list";
+
+n := io.inputInt();
+raw: mut List<Int> = [];
+var i := 0;
+loop i < n {
+    list.pushBack(mut raw, io.inputInt());
+    i += 1;
+}
+
+doubled := loop raw { if .item > 0 { .item * 2 } }.collected;
+
+if doubled.isEmpty {
+    io.outputLine(0, "empty");
+} else {
+    io.outputLine(doubled.length, doubled[0], doubled[doubled.length - 1]);
+}

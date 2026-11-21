@@ -175,12 +175,12 @@ test('stripLiteTs strips Map<K, V> generic args and non-null assertions before c
   assert.deepEqual(res, { found: true, value: 7n });
 });
 
-test('verifyGymCorpus compiles and executes all 53 Gym starters and solutions', () => {
+test('verifyGymCorpus compiles and executes all 56 Gym starters and solutions', () => {
   const result = verifyGymCorpus();
-  assert.equal(result.exerciseCount, 53);
-  assert.equal(result.drillCount, 24);
+  assert.equal(result.exerciseCount, 56);
+  assert.equal(result.drillCount, 27);
   assert.equal(result.kataCount, 29);
-  assert(result.caseCount >= 212, `expected at least 212 test cases, got ${String(result.caseCount)}`);
+  assert(result.caseCount >= 224, `expected at least 224 test cases, got ${String(result.caseCount)}`);
 });
 
 interface LearnHelperModule {

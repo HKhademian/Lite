@@ -1,0 +1,15 @@
+io := import "core/io";
+
+Vec2 := record { x: Int; y: Int; };
+Player := record { pos: Vec2; hp: Int; };
+
+dx := io.inputInt();
+dy := io.inputInt();
+dmg := io.inputInt();
+
+var player := Player { pos = Vec2 { x = 10, y = 20 }, hp = 100 };
+snapshot := player;
+
+/* TODO: update player.pos.x += dx, player.pos.y += dy, and player.hp -= dmg */
+
+io.outputLine(snapshot.pos.x, snapshot.pos.y, snapshot.hp, "|", player.pos.x, player.pos.y, player.hp);
