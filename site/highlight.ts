@@ -19,6 +19,10 @@ const liteTypes = new Set([
   'Bool', 'Int', 'Int8', 'Int16', 'Int32', 'Int64', 'Float', 'Float32', 'Float64', 'Double', 'String', 'Unit', 'Void', 'Never', 'List', 'Map', 'Set', 'Array',
 ]);
 
+const liteMetaProps = new Set([
+  'item', 'index', 'count', 'value', 'collected', 'length', 'size', 'isEmpty',
+]);
+
 const tsKeywords = new Set([
   'as', 'async', 'await', 'break', 'case', 'catch', 'class', 'const',
   'continue', 'declare', 'default', 'else', 'export', 'extends', 'false',
@@ -104,6 +108,18 @@ function highlightCode(source: string, keywords: ReadonlySet<string>, types: Rea
       out.push(`<span class="tok-keyword">${escapeHtml(source.slice(i, j))}</span>`);
       i = j;
       continue;
+    }
+
+    // Loop metadata and built-in collection/string properties (.item, .collected, .length, .size, .isEmpty)
+    if (highlightTags && ch === '.' && i + 1 < n && /[a-zA-Z_]/.test(source[i + 1]!)) {
+      let j = i + 2;
+      while (j < n && /[a-zA-Z0-9_]/.test(source[j]!)) j += 1;
+      const prop = source.slice(i + 1, j);
+      if (liteMetaProps.has(prop)) {
+        out.push(`.<span class="tok-type">${escapeHtml(prop)}</span>`);
+        i = j;
+        continue;
+      }
     }
 
     // Identifiers, keywords, built-in types
