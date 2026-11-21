@@ -50,7 +50,8 @@ this implementation. No native/performance claim follows.
 
 In the current self-hosted compiler, `core/list` exports `pushBack`, `popBack`,
 `pushFront`, and `popFront` for `mut List<T>` alongside indexed element writes
-(`items[i] = v`, `items[i] += v`), as used in
+(`items[i] = v`, `items[i] += v`) and read-only metadata properties (`.length` and
+`.isEmpty` on `List<T>`, `[T; N]`, and `String`), as used in
 [example 013](lite://play/example/growable-lists).
 
 ## Length, capacity, and initialization

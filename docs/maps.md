@@ -39,7 +39,7 @@ Import [core/map](lite://module/core/map) for explicit operations:
 - `map.getOr(m, key, fallback)` — returns the stored value or `fallback`
 - `map.has(m, key)` — returns `Bool` membership
 - `map.remove(mut m, key)` — removes `key` and returns whether it existed (`Bool`)
-- `map.size(m)` — returns entry count (`Int`)
+- `map.size(m)` (or `m.size`) — returns entry count (`Int`); `m.isEmpty` returns `Bool`
 - `map.clear(mut m)` — removes all entries (`Unit`)
 - `map.keys(m)` — returns `List<K>` in insertion order
 - `map.values(m)` — returns `List<V>` in insertion order

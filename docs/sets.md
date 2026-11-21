@@ -33,7 +33,7 @@ Import [core/set](lite://module/core/set) for set operations:
 - `set.add(mut s, value)` — insert `value` if absent (`Unit`, O(1))
 - `set.has(s, value)` — returns `Bool` membership (O(1))
 - `set.remove(mut s, value)` — removes `value` and returns whether it existed (`Bool`, O(1))
-- `set.size(s)` — returns element count (`Int`, O(1))
+- `set.size(s)` (or `s.size`) — returns element count (`Int`, O(1)); `s.isEmpty` returns `Bool`
 - `set.clear(mut s)` — removes all elements (`Unit`, O(1))
 - `set.values(s)` — returns `List<T>` in insertion order (O(n))
 

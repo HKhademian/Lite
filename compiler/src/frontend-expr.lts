@@ -5752,6 +5752,56 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     left = ctx.withMarkers((kind = fieldKind, code = "(" + left.code + ")." + prop,
                     intValue = 0, textValue = "", constant = false, next = labelEnd),
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                } else if types.isListKind(left.kind) or types.isArrayKind(left.kind) {
+                    if target =!= ir.TARGET_TS {
+                        syntax.failAt(source, postPosition, prefix, "C backend does not support collection properties yet");
+                    }
+                    kindLabel := if types.isListKind(left.kind) { "List" } else { "Array" };
+                    if label == "length" {
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "BigInt((" + left.code + ").length)",
+                        intValue = 0, textValue = "", constant = false, next = labelEnd),
+                        if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                    } else if label == "isEmpty" {
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + left.code + ").length === 0)",
+                        intValue = 0, textValue = "", constant = false, next = labelEnd),
+                        if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                    } else {
+                        syntax.failAt(source, labelStart, prefix, kindLabel + " has no property ." + label);
+                    }
+                } else if types.isMapKind(left.kind) or types.isSetKind(left.kind) {
+                    if target =!= ir.TARGET_TS {
+                        syntax.failAt(source, postPosition, prefix, "C backend does not support collection properties yet");
+                    }
+                    kindLabel := if types.isMapKind(left.kind) { "Map" } else { "Set" };
+                    if label == "size" {
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "BigInt((" + left.code + ").size)",
+                        intValue = 0, textValue = "", constant = false, next = labelEnd),
+                        if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                    } else if label == "isEmpty" {
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + left.code + ").size === 0)",
+                        intValue = 0, textValue = "", constant = false, next = labelEnd),
+                        if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                    } else {
+                        syntax.failAt(source, labelStart, prefix, kindLabel + " has no property ." + label);
+                    }
+                } else if left.kind == ir.VALUE_KIND_STRING {
+                    if target =!= ir.TARGET_TS {
+                        syntax.failAt(source, postPosition, prefix, "C backend does not support string properties yet");
+                    }
+                    if label == "length" {
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "lite$textLength(" + left.code + ")",
+                        intValue = 0, textValue = "", constant = false, next = labelEnd),
+                        if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                    } else if label == "isEmpty" {
+                        isConstEmpty := left.constant;
+                        emptyInt := if isConstEmpty and left.textValue == "" { 1 } else { 0 };
+                        emptyCode := if isConstEmpty { if emptyInt == 1 { "true" } else { "false" } } else { "((" + left.code + ") === \"\")" };
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = emptyCode,
+                        intValue = emptyInt, textValue = "", constant = isConstEmpty, next = labelEnd),
+                        if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                    } else {
+                        syntax.failAt(source, labelStart, prefix, "String has no property ." + label);
+                    }
                 } else {
                     if not types.isTupleKind(left.kind) {
                         syntax.failAt(source, postPosition, prefix, "field access requires a tuple or module value");
