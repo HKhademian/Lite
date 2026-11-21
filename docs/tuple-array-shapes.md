@@ -475,6 +475,16 @@ u := (...x, ...y, ...z);
 
 The [T; N] spelling records the fixed-array form used in this discussion; N is a compile-time extent. Spreading such an array into a fixed tuple contributes exactly N unnamed components. Spreading a fixed tuple into an array supplies its values in stored order; each must fit the destination element type. Known lengths add when constructing combined spreads. A tuple-valued array element remains one component unless separately spread.
 
+The joint review confirmed explicit unpacking in both directions:
+
+```text
+pair := (10, 20);
+items: [Int; 2] = [...pair];
+copiedPair := (...items);
+```
+
+The delimiters select the destination shape. The spread contributes two values in order, so `items` is an array and `copiedPair` is a tuple. An extent mismatch, such as `[...pair]` into `[Int; 3]`, fails the destination checks. These are design examples for explicit construction.
+
 Homogeneous tuples give a direct element type. Heterogeneous tuples can populate an explicitly compatible common element contract, including an explicitly chosen union where ordinary admission rules permit it. Known-size nonempty heterogeneous literals now infer the normalized union of their established contribution types. Numeric conversions and unresolved element types remain separate; no implicit Any or unchecked conversion is introduced.
 
 Evaluate each source expression once in written order. Type/length compatibility does not prove identical layout, zero copying, ownership transfer, alias safety, or no allocation. Construction and cleanup must obey the eventual memory rules. A runtime-length array can supply a declared array tail; it cannot determine a statically enumerated fixed tuple's component count without an additional proven extent.
