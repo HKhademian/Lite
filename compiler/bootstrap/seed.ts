@@ -2,9 +2,9 @@
 export const seed = {
   "target": "ts",
   "artifact": "igniter.ts",
-  "recorded": "2026-11-20",
+  "recorded": "2026-11-21",
   "note": "Single checked-in bootstrap igniter; compiles compiler and tools into untracked dist/.",
-  "igniterSha256": "c795e2d72a68789ab96c13229eb5ddd120e6134112a307585d99350ea0c95d9f",
-  "sourceSha256": "1c20c35e886ea63e9a90869d383ce2d2363eafefaa477a69299ff7576bb1c11b",
-  "artifactSha256": "c8ba7255e6483731dd8d7008fb421298d085167000840617038ea04ccc8d1562",
+  "igniterSha256": "88096ae937dc91f41fe000b8179b76fd7937887bd9bd39c123497a1aa9691879",
+  "sourceSha256": "1511ab256e6ea281d6f7322282a2054baf7b5d24fd68a558a44294896f37fb65",
+  "artifactSha256": "cb5036abd7a3109d6f9af61fc0ccd472c12ad5c633c9b24aa2c5ab1f7a969a80",
 } as const;

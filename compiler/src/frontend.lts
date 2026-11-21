@@ -265,6 +265,7 @@ pub isTupleKind := fn(kind: String): Bool { types.isTupleKind(kind) };
 
 /** True when `kind` is this compiler's canonical nominal record kind `Record<id#at#DisplayName;f1:K1,...>`. */
 pub isMapKind := fn(kind: String): Bool { types.isMapKind(kind) };
+pub isSetKind := fn(kind: String): Bool { types.isSetKind(kind) };
 pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
 pub isRecordKind := fn(kind: String): Bool { types.isRecordKind(kind) };
 
@@ -1142,7 +1143,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     (fnName == "pushBack" or fnName == "popBack" or fnName == "pushFront" or fnName == "popFront")) or
                     (moduleIdentity == "lite.core.map.v1" and
                     (fnName == "set" or fnName == "get" or fnName == "getOr" or fnName == "has" or
-                    fnName == "remove" or fnName == "size" or fnName == "clear" or fnName == "keys" or fnName == "values"));
+                    fnName == "remove" or fnName == "size" or fnName == "clear" or fnName == "keys" or fnName == "values")) or
+                    (moduleIdentity == "lite.core.set.v1" and
+                    (fnName == "add" or fnName == "has" or fnName == "remove" or
+                    fnName == "size" or fnName == "clear" or fnName == "values"));
                     if canPreParseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic) {
                         header := parseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic);
                         afterHdr := skipTrivia(source, header.next, prefix);
@@ -2321,8 +2325,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 locals = checkStatementTrace(target, source, loopHdrPos, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 afterParsed := skipTrivia(source, parsed.next, prefix);
                 if textLib.wordAt(source, afterParsed, "as") {
-                    if not isListKind(parsed.kind) and not isArrayKind(parsed.kind) and not types.isMapKind(parsed.kind) {
-                        failAt(source, position, prefix, "loop sequence must be a List, Array, or Map, got " + displayKind(parsed.kind));
+                    if not isListKind(parsed.kind) and not isArrayKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) {
+                        failAt(source, position, prefix, "loop sequence must be a List, Array, Map, or Set, got " + displayKind(parsed.kind));
                     }
                     itemStart := skipTrivia(source, afterParsed + 2, prefix);
                     if itemStart >= size or not textLib.isNameStart(textLib.at(source, itemStart)) {
@@ -2336,17 +2340,23 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         vKind := types.mapValueKind(parsed.kind);
                         itemKind = "(key:" + kKind + ",value:" + vKind + ")";
                         sequenceCode = "Array.from((" + parsed.code + ").entries(), ([lite$k, lite$v]) => ({ key: lite$k, value: lite$v }))";
+                    } else if types.isSetKind(parsed.kind) {
+                        itemKind = types.setElementKind(parsed.kind);
+                        sequenceCode = "Array.from((" + parsed.code + ").values())";
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                         sequenceCode = parsed.code;
                     }
                     position = skipTrivia(source, itemEnd, prefix);
-                } else if isListKind(parsed.kind) or isArrayKind(parsed.kind) or types.isMapKind(parsed.kind) {
+                } else if isListKind(parsed.kind) or isArrayKind(parsed.kind) or types.isMapKind(parsed.kind) or types.isSetKind(parsed.kind) {
                     if types.isMapKind(parsed.kind) {
                         kKind := types.mapKeyKind(parsed.kind);
                         vKind := types.mapValueKind(parsed.kind);
                         itemKind = "(key:" + kKind + ",value:" + vKind + ")";
                         sequenceCode = "Array.from((" + parsed.code + ").entries(), ([lite$k, lite$v]) => ({ key: lite$k, value: lite$v }))";
+                    } else if types.isSetKind(parsed.kind) {
+                        itemKind = types.setElementKind(parsed.kind);
+                        sequenceCode = "Array.from((" + parsed.code + ").values())";
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                         sequenceCode = parsed.code;
@@ -2460,8 +2470,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             }
             parsed := parseInitializerExpression(target, source, skipTrivia(source, afterName + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
             locals = checkStatementTrace(target, source, localStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
-            if not isListKind(parsed.kind) and not types.isMapKind(parsed.kind) {
-                failAt(source, localStart, prefix, "mut requires a List or Map value, got " + displayKind(parsed.kind));
+            if not isListKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) {
+                failAt(source, localStart, prefix, "mut requires a List, Map, or Set value, got " + displayKind(parsed.kind));
             }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
@@ -2509,8 +2519,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 rawVarRhsCode = parsed.code;
                 locals = checkStatementTrace(target, source, localStart, prefix, rawVarRhsCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 rejectNonValueBinding(source, localStart, prefix, parsed.kind, localName);
-                if declaredWritable and not isListKind(parsed.kind) and not types.isMapKind(parsed.kind) {
-                    failAt(source, localStart, prefix, "mut requires a List or Map value, got " + displayKind(parsed.kind));
+                if declaredWritable and not isListKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) {
+                    failAt(source, localStart, prefix, "mut requires a List, Map, or Set value, got " + displayKind(parsed.kind));
                 }
             } else if position < size and textLib.at(source, position) == ":" {
                 if declaredWritable { failAt(source, localStart, prefix, "var mut cannot be combined with explicit type annotation"); }
@@ -2524,6 +2534,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     if reservedEnd >= 0 {
                         if isListKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for List"); }
                         if types.isMapKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for Map"); }
+                        if types.isSetKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for Set"); }
                         declInitState = if hasBlockDecl(blockAssignedDecls, depth, localName) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
                         parsed = zeroParsed(target, typed.kind, reservedEnd);
                     } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
@@ -2706,7 +2717,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 listIntrinsic := (moduleIdentity == "lite.core.list.v1" and (name == "pushBack" or name == "popBack" or name == "pushFront" or name == "popFront")) or
                 (moduleIdentity == "lite.core.map.v1" and
                 (name == "set" or name == "get" or name == "getOr" or name == "has" or
-                name == "remove" or name == "size" or name == "clear" or name == "keys" or name == "values"));
+                name == "remove" or name == "size" or name == "clear" or name == "keys" or name == "values")) or
+                (moduleIdentity == "lite.core.set.v1" and
+                (name == "add" or name == "has" or name == "remove" or
+                name == "size" or name == "clear" or name == "values"));
                 header := parseFunctionHeader(source, position, prefix, aliases, listIntrinsic);
                 position = skipTrivia(source, header.next, prefix);
                 rejectMisplacedTag(source, position, prefix, "unexpected block tag in function header");
@@ -2885,6 +2899,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 if reservedEnd >= 0 {
                     if isListKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for List"); }
                     if types.isMapKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for Map"); }
+                    if types.isSetKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for Set"); }
                     declInitState = if hasBlockDecl(blockAssignedDecls, depth, name) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
                     parsed = zeroParsed(target, typed.kind, reservedEnd);
                 } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {

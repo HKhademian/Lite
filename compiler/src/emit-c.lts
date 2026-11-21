@@ -32,6 +32,7 @@ cDeclType := fn(kind: String): String {
 checkUnsupportedCType := fn(kind: String): Unit {
     if frontend.isTupleKind(kind) { diagLib.fail("", "C backend does not support tuple values yet"); }
     if frontend.isMapKind(kind) { diagLib.fail("", "C backend does not support map values yet"); }
+    if frontend.isSetKind(kind) { diagLib.fail("", "C backend does not support set values yet"); }
     if frontend.isEnumKind(kind) { diagLib.fail("", "C backend does not support enum values yet"); }
     if frontend.isRecordKind(kind) { diagLib.fail("", "C backend does not support record values yet"); }
     if frontend.isListKind(kind) { diagLib.fail("", "C backend does not support list values yet"); }
@@ -815,6 +816,9 @@ pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: St
         }
         if frontend.isMapKind(item.kind) or frontend.isMapKind(item.textValue) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isMapKind(item.name)) {
             diagLib.fail("", "C backend does not support map values yet");
+        }
+        if frontend.isSetKind(item.kind) or frontend.isSetKind(item.textValue) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isSetKind(item.name)) {
+            diagLib.fail("", "C backend does not support set values yet");
         }
         if frontend.isRecordKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isRecordKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD {
             diagLib.fail("", "C backend does not support record values yet");

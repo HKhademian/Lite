@@ -132,6 +132,9 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
     if types.isMapKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare map values");
     }
+    if types.isSetKind(left.kind) {
+        syntax.failAt(source, at, prefix, "cannot compare set values");
+    }
     if types.isFnKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare function values");
     }
@@ -156,6 +159,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     if kind == ir.VALUE_KIND_NEVER { code }
     else if types.isListKind(kind) or types.isArrayKind(kind) { ir.targetListCopyCode(target, code) }
     else if types.isMapKind(kind) { if target == ir.TARGET_TS { "new Map(" + code + ")" } else { code } }
+    else if types.isSetKind(kind) { if target == ir.TARGET_TS { "new Set(" + code + ")" } else { code } }
     else { code }
 };
 
@@ -224,6 +228,35 @@ pub parseMapGrant := fn(source: String, open: Int, prefix: String, locals: List<
     }
     if not entry.writable {
         syntax.failAt(source, cursor, prefix, "cannot mutate immutable map " + mapName);
+    }
+    (runtime = entry.runtime, kind = entry.kind, next = nameEnd)
+};
+
+/** Parses the `mut name` grant after a `core/set` mutating call opener. */
+pub parseSetGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
+    cursor := syntax.skipTrivia(source, open + 1, prefix);
+    if not textLib.wordAt(source, cursor, "mut") {
+        syntax.failAt(source, cursor, prefix, operation + " requires mut set argument");
+    }
+    nameStart := syntax.skipTrivia(source, cursor + 3, prefix);
+    if nameStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, nameStart)) {
+        syntax.failAt(source, nameStart, prefix, "expected set name after mut");
+    }
+    nameEnd := textLib.skipName(source, nameStart);
+    setName := textLib.slice(source, nameStart, nameEnd);
+    index := ir.localIndex(locals, setName);
+    if index < 0 {
+        syntax.failAt(source, cursor, prefix, "unknown value " + setName);
+    }
+    entry := locals[index];
+    if entry.initState =!= ir.INIT_STATE_INIT {
+        syntax.failAt(source, nameStart, prefix, "cannot read uninitialized local " + setName);
+    }
+    if not types.isSetKind(entry.kind) {
+        syntax.failAt(source, cursor, prefix, operation + " requires a Set<T> argument");
+    }
+    if not entry.writable {
+        syntax.failAt(source, cursor, prefix, "cannot mutate immutable set " + setName);
     }
     (runtime = entry.runtime, kind = entry.kind, next = nameEnd)
 };
@@ -463,6 +496,10 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         kTs := types.tsFunctionType(types.mapKeyKind(kind));
         vTs := types.tsFunctionType(types.mapValueKind(kind));
         (kind = kind, code = "new Map<" + kTs + ", " + vTs + ">()", intValue = 0, textValue = "", constant = false, next = next)
+    }
+    else if types.isSetKind(kind) {
+        eTs := types.tsFunctionType(types.setElementKind(kind));
+        (kind = kind, code = "new Set<" + eTs + ">()", intValue = 0, textValue = "", constant = false, next = next)
     }
     else if types.isEnumKind(kind) {
         (kind = kind, code = "0", intValue = 0, textValue = "", constant = true, next = next)
@@ -987,7 +1024,7 @@ pub storageKind := fn(kind: String): String {
     match {
         types.isListKind(kind) or types.isArrayKind(kind) { "List" }
         types.isTupleKind(kind) { "Tuple" }
-        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isMapKind(kind) { "Record" }
+        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) { "Record" }
         types.isFnKind(kind) { "Fn" }
         numeric.isIntKind(kind) { ir.VALUE_KIND_INT }
         numeric.isFloatKind(kind) { ir.VALUE_KIND_FLOAT }
@@ -997,7 +1034,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isEnumKind(kind) or types.isMapKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isEnumKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

@@ -107,6 +107,14 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, params: String,
         else if name == "keys" and params == "entries=Map<K,V>" and result == "List<K>" { "lite$core$map$keys:v1" }
         else if name == "values" and params == "entries=Map<K,V>" and result == "List<V>" { "lite$core$map$values:v1" }
         else { "" }
+    } else if moduleIdentity == "lite.core.set.v1" {
+        if name == "add" and params == "s=mut Set<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$set$add:v1" }
+        else if name == "has" and params == "s=Set<T>|value=T" and result == ir.VALUE_KIND_BOOL { "lite$core$set$has:v1" }
+        else if name == "remove" and params == "s=mut Set<T>|value=T" and result == ir.VALUE_KIND_BOOL { "lite$core$set$remove:v1" }
+        else if name == "size" and params == "s=Set<T>" and result == ir.VALUE_KIND_INT { "lite$core$set$size:v1" }
+        else if name == "clear" and params == "s=mut Set<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$set$clear:v1" }
+        else if name == "values" and params == "s=Set<T>" and result == "List<T>" { "lite$core$set$values:v1" }
+        else { "" }
     } else if moduleIdentity == "lite.core.file.v1" {
         if name == "kind" and params == "path=String" and result == ir.VALUE_KIND_STRING { "lite$fileKind" }
         else if name == "openReader" and params == "path=String" and result == "(kind:String,handle:Int)" { "lite$fileOpenReader" }
