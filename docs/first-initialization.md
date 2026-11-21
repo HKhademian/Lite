@@ -214,7 +214,20 @@ Apply the eventual ownership and cleanup rules to the initialized parts that hol
 
 ### Reads during initialization by a callee
 
-The user confirms that a callee can initialize reserved caller storage. The compiler checks its body with the granted output region initially unwritten. A callee may write a field without reading its old value. Reading the field, using it in a compound assignment, or passing it as an ordinary input all require proof of a prior write on every reaching path. For a reserved `Point`, `show(p.x)` is rejected at entry and allowed after `p.x = 10`. `show(p)` requires both fields initialized. The caller can rely on the callee's separately checked completion guarantee. How to declare and grant this access, and how to communicate partial state after a failed call, remain open.
+The latest review direction rejects passing unwritten caller storage and favors constructing the value with an initialized local temporary. The callee receives ordinary `mut` access, so it may read and write the temporary from entry. The block's final expression supplies the finished value to the outer binding.
+
+```text
+p: Point = {
+    mut tmp: Point;
+    initPointYouCanReadAndWriteHowManyTimesYouWant(mut tmp);
+    tmp
+};
+show(p);
+```
+
+The call is illustrative. `tmp` starts with the zero value of `Point`, and `p` becomes available once its initializer completes. The compiler may omit physical copies or zero stores when it can preserve the observed behavior. A callee that reads an initial zero makes that value observable.
+
+The earlier reserved-storage alternative below is retained as review history. It would give the callee an initially unwritten region and require proofs for both reads after first writes and completion on all successful returns. That is a separate contract from ordinary `mut`.
 
 ```text
 p: Point = ?;
@@ -222,7 +235,7 @@ initPointButDoNotReadBeforeInitedAndOnlyInitOnce(mut p); /* illustrative grant *
 show(p);
 ```
 
-The illustrative `mut p` expresses explicit consent to writes under a single-write initialization contract. Each field becomes readable after its first write. The callee can use it in later expressions immediately and cannot write that same region again under this contract. The callee's checked contract must guarantee that the complete `Point` is initialized on every successful return for the final `show(p)` to be valid. Actual parameter and grant syntax remain open.
+In that earlier sketch, `mut p` would require a special single-write initialization contract. Each field would become readable after its first write. The final `show(p)` would depend on the callee proving complete initialization on every successful return. The current review favors the initialized temporary instead of adding this call contract.
 
 ### Initialization before a pending call begins
 
