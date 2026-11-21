@@ -217,8 +217,19 @@ Declared-default construction is separate: = {} uses field defaults, whereas omi
 
 ## 10. Evaluation, mutability, and implementation cost
 
-- Recommend initially restricting declared field defaults to compile-time values. Effectful or recoverably fallible runtime setup belongs in an explicitly called factory, preserving visible failure handling. Exact constant-expression grammar remains open.
-- The joint review favors independent field defaults. In a `Range` record, a default for `end` should not read the instance's `start` field. A constructor function can take `start`, compute `end`, and explicitly supply both fields. The initial design can avoid a dependency order or cycle rules for sibling field defaults.
+- An earlier recommendation was to start with compile-time field defaults. The accepted example below allows a default to depend on an earlier field. An explicit factory remains a way to make effectful or recoverably fallible setup visible. Exact restrictions on default expressions remain open.
+- The joint review accepts this case of an omitted field's default reading an earlier field of the same record:
+
+  ```text
+  Range := record {
+      start: Int;
+      end: Int = start + 10;
+  }
+
+  r: Range = { start = 5 };
+  ```
+
+  The default uses the supplied `start`, so `r.end` is `15`. An explicit `end` overrides that default. This design example allows the dependency on the earlier field. General dependency resolution, forward references, cycles, and the treatment of effectful defaults remain open.
 - Evaluate explicit initializer expressions once, left to right in written order, under the selected ordinary evaluation-order rule. Do not evaluate a superseded field default for side effects.
 - Each construction establishes its own logical default values. Do not introduce accidental shared writable collections through a declaration default. Ownership/copy rules must establish whether any noncopyable default can be reused.
 - `mut user := User {}` grants writable held-data access; `var user := User {}` permits replacing the binding; `var mut` permits both. Default initialization does not change those permissions.
