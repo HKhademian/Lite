@@ -1,11 +1,8 @@
 io := import "core/io";
 set := import "core/set";
 
-/* Zero-initialized mutable set: Set<T> starts empty and deduplicates in O(1) */
-roles: mut Set<String>;
-set.add(mut roles, "reader");
-set.add(mut roles, "editor");
-set.add(mut roles, "reader");
+/* Set literal initializer with [elem, ...] deduplicates in O(1) (empty sets also zero-init) */
+roles: mut Set<String> = ["reader", "editor", "reader"];
 
 /* Independent value snapshots preserve earlier membership */
 frozen: Set<String> = roles;

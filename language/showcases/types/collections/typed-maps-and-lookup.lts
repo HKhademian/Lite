@@ -1,11 +1,10 @@
 io := import "core/io";
 map := import "core/map";
 
-/* Zero-initialized mutable map: Map<K, V> starts empty */
-prices: mut Map<String, Int>;
-prices["apple"] = 3;
+/* Map literal initializer with [key = value, ...] entries (empty maps also zero-init) */
+prices: mut Map<String, Int> = ["apple" = 3];
 map.set(mut prices, "bread", 5);
-prices["apple"] = 4;
+prices["apple"] += 1;
 
 /* Safe lookups with get / getOr and independent value snapshots */
 frozen: Map<String, Int> = prices;

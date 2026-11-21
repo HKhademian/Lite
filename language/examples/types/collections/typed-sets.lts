@@ -1,9 +1,7 @@
 io := import "core/io";
 set := import "core/set";
 
-tags: mut Set<String>;
-set.add(mut tags, "lite");
-set.add(mut tags, "typed");
+tags: mut Set<String> = ["lite", "typed"];
 set.add(mut tags, "lite");
 
 snapshot: Set<String> = tags;
