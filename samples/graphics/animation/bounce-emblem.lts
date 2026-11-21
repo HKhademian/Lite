@@ -36,12 +36,16 @@ scale := 6;
 spriteW := 7 * scale;
 spriteH := 7 * scale;
 
-var px := 32;
-var py := 28;
-var dx := 2;
-var dy := 2;
-var colorIdx := 0;
-var acc := 0.0;
+EmblemState := record {
+    x: Int;
+    y: Int;
+    dx: Int;
+    dy: Int;
+    colorIdx: Int;
+    acc: Float;
+};
+
+var st := EmblemState { x = 32, y = 28, dx = 2, dy = 2, colorIdx = 0, acc = 0.0 };
 
 render := fn(): Unit {
     canvas.clear(bg);
@@ -56,9 +60,9 @@ render := fn(): Unit {
         gy += 40;
     }
     board.drawRect(0, 0, ctx.width, ctx.height, border);
-    board.fillCircle(px + (spriteW / 2), py + (spriteH / 2), 34, haloColors[colorIdx]);
-    board.drawSpriteScaled(px + 4, py + 4, sprite, "#", scale, shadow);
-    board.drawSpriteScaled(px, py, sprite, "#", scale, palette[colorIdx]);
+    board.fillCircle(st.x + (spriteW / 2), st.y + (spriteH / 2), 34, haloColors[st.colorIdx]);
+    board.drawSpriteScaled(st.x + 4, st.y + 4, sprite, "#", scale, shadow);
+    board.drawSpriteScaled(st.x, st.y, sprite, "#", scale, palette[st.colorIdx]);
 }
 
 onCanvasInit := fn(): Unit {
@@ -66,27 +70,27 @@ onCanvasInit := fn(): Unit {
 }
 
 onCanvasUpdate := fn(dt: Float): Int {
-    acc = acc + dt;
-    if acc >= 0.016 {
-        acc = 0.0;
-        nx := px + dx;
-        ny := py + dy;
+    st.acc += dt;
+    if st.acc >= 0.016 {
+        st.acc = 0.0;
+        nx := st.x + st.dx;
+        ny := st.y + st.dy;
         var bounced := false;
         if nx < 4 or nx > ctx.width - spriteW - 4 {
-            dx = 0 - dx;
+            st.dx = 0 - st.dx;
             bounced = true;
         } else {
-            px = nx;
+            st.x = nx;
         }
         if ny < 4 or ny > ctx.height - spriteH - 4 {
-            dy = 0 - dy;
+            st.dy = 0 - st.dy;
             bounced = true;
         } else {
-            py = ny;
+            st.y = ny;
         }
         if bounced {
-            colorIdx = (colorIdx + 1) % 4;
-            audio.tone(frequency = notes[colorIdx], durationMs = 70, volume = 14);
+            st.colorIdx = (st.colorIdx + 1) % palette.length;
+            audio.tone(frequency = notes[st.colorIdx], durationMs = 70, volume = 14);
         }
         render();
     }

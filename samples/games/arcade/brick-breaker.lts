@@ -4,7 +4,6 @@ audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
-list := import "core/list";
 math := import "core/math";
 
 ctx := canvas.play(width = 320, height = 200, title = "Brick Breaker · Arrows or Pointer");
@@ -33,15 +32,10 @@ GameState := record {
     acc: Float;
 };
 
-bricks: mut List<Bool> = [];
+var bricks: mut List<Bool> = [];
 
 resetBricks := fn(): Unit {
-    list.clear(mut bricks);
-    var i := 0;
-    loop i < brickCount {
-        list.pushBack(mut bricks, true);
-        i += 1;
-    }
+    bricks = loop .count < brickCount { true }.collected;
 };
 
 defaultBall := fn(): Ball {

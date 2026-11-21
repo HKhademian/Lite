@@ -13,8 +13,12 @@ cy := ctx.height / 2;
 cosTable: List<Int> = [100, 97, 87, 71, 50, 26, 0, -26, -50, -71, -87, -97, -100, -97, -87, -71, -50, -26, 0, 26, 50, 71, 87, 97];
 sinTable: List<Int> = [0, 26, 50, 71, 87, 97, 100, 97, 87, 71, 50, 26, 0, -26, -50, -71, -87, -97, -100, -97, -87, -71, -50, -26];
 
-var tick := 0;
-var acc := 0.0;
+OrbitState := record {
+    tick: Int;
+    acc: Float;
+};
+
+var st := OrbitState { tick = 0, acc = 0.0 };
 
 render := fn(): Unit {
     canvas.clear(bg);
@@ -26,9 +30,10 @@ render := fn(): Unit {
     board.fillCircle(cx, cy, 22, canvas.rgba(255, 196, 86, 48));
     board.fillCircle(cx, cy, 14, canvas.rgb(255, 212, 108));
 
-    i1 := (tick * 2) % 24;
-    i2 := tick % 24;
-    i3 := (tick + 12) % 24;
+    n := cosTable.length;
+    i1 := (st.tick * 2) % n;
+    i2 := st.tick % n;
+    i3 := (st.tick + 12) % n;
 
     p1x := cx + ((cosTable[i1] * 44) / 100);
     p1y := cy + ((sinTable[i1] * 44) / 100);
@@ -49,10 +54,10 @@ onCanvasInit := fn(): Unit {
 }
 
 onCanvasUpdate := fn(dt: Float): Int {
-    acc = acc + dt;
-    if acc >= 0.06 {
-        acc = 0.0;
-        tick = (tick + 1) % 24;
+    st.acc += dt;
+    if st.acc >= 0.06 {
+        st.acc = 0.0;
+        st.tick = (st.tick + 1) % cosTable.length;
         render();
     }
     0
