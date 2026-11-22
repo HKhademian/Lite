@@ -175,6 +175,21 @@ test('stripLiteTs strips Map<K, V> generic args and non-null assertions before c
   assert.deepEqual(res, { found: true, value: 7n });
 });
 
+test('stripLiteTs strips comma-separated typed declarators in for headers and let lists', () => {
+  const src = [
+    'let lite$sum: bigint = 0n;',
+    'for (let lite$iter1: bigint = 1n, lite$rend1: bigint = 5n; lite$iter1 <= lite$rend1; lite$iter1 += 1n) {',
+    '  lite$sum += lite$iter1;',
+    '}',
+    'const pair = { left: 2n, right: 3n }, extra: bigint = 4n;',
+    'return lite$sum + pair.left + pair.right + extra;',
+  ].join('\n');
+  const stripped = stripLiteTs(src);
+  assert(!stripped.includes(': bigint'), stripped);
+  const res = (new Function(stripped) as () => bigint)();
+  assert.equal(res, 24n);
+});
+
 test('verifyGymCorpus compiles and executes all 56 Gym starters and solutions', () => {
   const result = verifyGymCorpus();
   assert.equal(result.exerciseCount, 56);

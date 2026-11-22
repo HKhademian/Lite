@@ -155,6 +155,8 @@ export function stripLiteTs(source: string): string {
   const out: string[] = [];
   let i = 0;
   const n = source.length;
+  let depth = 0;
+  const declListDepths: number[] = [];
 
   while (i < n) {
     const ch = source[i]!;
@@ -287,13 +289,33 @@ export function stripLiteTs(source: string): string {
       }
     }
 
-    // `const/let/var name: Type = ...;` and `let name!: Type;`
-    const declMatch = /^(const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*!?\s*:/.exec(source.slice(i));
-    if (declMatch !== null && (i === 0 || !/[a-zA-Z0-9_$]/.test(source[i - 1]!))) {
+    // `const/let/var name[: Type] = ...[, name2[: Type] = ...];` and `let name!: Type;`
+    const declMatch = /^(const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/.exec(source.slice(i));
+    if (declMatch !== null && (i === 0 || !/[a-zA-Z0-9_$.]/.test(source[i - 1]!))) {
+      declListDepths.push(depth);
       out.push(`${declMatch[1]!} ${declMatch[2]!}`);
       i += declMatch[0]!.length;
-      i = skipTypeAnnotation(source, i, new Set(['=', ';']));
-      if (source[i] === '=') out.push(' ');
+      const typeMatch = /^\s*!?\s*:/.exec(source.slice(i));
+      if (typeMatch !== null) {
+        i += typeMatch[0]!.length;
+        i = skipTypeAnnotation(source, i, new Set(['=', ',', ';']));
+        if (source[i] === '=') out.push(' ');
+      }
+      continue;
+    }
+
+    // Subsequent comma-separated declarators in an active `const`/`let`/`var` list
+    if (ch === ',' && declListDepths.length > 0 && declListDepths[declListDepths.length - 1] === depth) {
+      out.push(',');
+      i += 1;
+      while (i < n && /\s/.test(source[i]!)) { out.push(source[i]!); i += 1; }
+      const nextDecl = /^([a-zA-Z_$][a-zA-Z0-9_$]*)\s*!?\s*:/.exec(source.slice(i));
+      if (nextDecl !== null) {
+        out.push(nextDecl[1]!);
+        i += nextDecl[0]!.length;
+        i = skipTypeAnnotation(source, i, new Set(['=', ',', ';']));
+        if (source[i] === '=') out.push(' ');
+      }
       continue;
     }
 
@@ -327,6 +349,19 @@ export function stripLiteTs(source: string): string {
           i += 1;
           continue;
         }
+      }
+    }
+
+    if (ch === '(' || ch === '{' || ch === '[') {
+      depth += 1;
+    } else if (ch === ')' || ch === '}' || ch === ']') {
+      while (declListDepths.length > 0 && declListDepths[declListDepths.length - 1] === depth) {
+        declListDepths.pop();
+      }
+      if (depth > 0) depth -= 1;
+    } else if (ch === ';') {
+      while (declListDepths.length > 0 && declListDepths[declListDepths.length - 1] === depth) {
+        declListDepths.pop();
       }
     }
 
