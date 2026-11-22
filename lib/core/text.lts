@@ -204,6 +204,11 @@ pub trim := fn(source: String): String {
     trimEnd(trimStart(source))
 }
 
+/** True when `source` starts with `prefix`. */
+pub startsWith := fn(source: String, prefix: String): Bool {
+    startsWithAt(source, 0, prefix)
+};
+
 /** True when `source` ends with `suffix`. */
 pub endsWith := fn(source: String, suffix: String): Bool {
     sourceLen := length(source);

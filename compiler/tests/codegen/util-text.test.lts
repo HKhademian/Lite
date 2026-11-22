@@ -1,0 +1,54 @@
+/* Dual-target (TS + C11) tests for `core/text.startsWith` and `util/text` (`split`, `splitLines`, `replaceAll`). */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"list := import \"core/list\";\n" +
+"text := import \"core/text\";\n" +
+"ut := import \"util/text\";\n" +
+"\n" +
+"io.outputLine(text.startsWith(\"hello world\", \"hello\"), text.startsWith(\"hello\", \"world\"), text.startsWith(\"\", \"\"));\n" +
+"parts := ut.split(\"a,b,,c\", \",\");\n" +
+"io.outputLine(list.length(parts), text.joinTexts(parts, \"|\"));\n" +
+"chars := ut.split(\"abc\", \"\");\n" +
+"io.outputLine(list.length(chars), text.joinTexts(chars, \"-\"));\n" +
+"lines := ut.splitLines(\"one\\r\\ntwo\\nthree\\n\");\n" +
+"io.outputLine(list.length(lines), text.joinTexts(lines, \"/\"));\n" +
+"io.outputLine(ut.replaceAll(\"foo bar foo baz foo\", \"foo\", \"QUX\"));\n" +
+"io.outputLine(ut.replaceAll(\"no match\", \"xyz\", \"123\"));\n";
+
+expected :=
+"true false true\n" +
+"4 a|b||c\n" +
+"3 a-b-c\n" +
+"3 one/two/three\n" +
+"QUX bar QUX baz QUX\n" +
+"no match\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+test.checkText("ts stdout", expected, tsRes.stdout);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stderr", "", cRes.stderr);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+}
+
+test.done("util-text");
