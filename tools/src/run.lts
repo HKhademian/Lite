@@ -166,10 +166,14 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "    else if mode == 2 { __lpSurf.setTargetFps(win, 120.0); }\n" +
     "    else { __lpSurf.uncapFrameRate(win); }\n" +
     "};\n" +
-    "__lpDrawStageBar := fn(win: __lpSurf.Surface, winW: Int, canvasH: Int, barH: Int, paused: Bool, muted: Bool, fpsMode: Int, debugOn: Bool, hudFps: Int): Unit {\n" +
+    "__lpDrawStageBar := fn(win: __lpSurf.Surface, winW: Int, barY: Int, barH: Int, visible: Bool, paused: Bool, muted: Bool, fpsMode: Int, debugOn: Bool, hudFps: Int): Unit {\n" +
     "    if barH <= 0 { return; }\n" +
-    "    by := canvasH * 1.0;\n" +
-    "    __lpSurf.fillRect(win, __lpSurf.rect(0.0, by, winW * 1.0, barH * 1.0), __lpSurf.rgb(0.08, 0.10, 0.14));\n" +
+    "    by := barY * 1.0;\n" +
+    "    if not visible {\n" +
+    "        __lpSurf.fillRect(win, __lpSurf.rect(0.0, by, winW * 1.0, barH * 1.0), __lpSurf.rgb(0.04, 0.05, 0.08));\n" +
+    "        return;\n" +
+    "    }\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(0.0, by, winW * 1.0, barH * 1.0), __lpSurf.rgba(0.08, 0.10, 0.14, 0.92));\n" +
     "    __lpSurf.fillRect(win, __lpSurf.rect(0.0, by, winW * 1.0, 1.0), __lpSurf.rgb(0.22, 0.27, 0.36));\n" +
     "    pillBg := __lpSurf.rgb(0.15, 0.19, 0.26);\n" +
     "    amberBg := __lpSurf.rgb(0.65, 0.42, 0.12);\n" +
@@ -287,7 +291,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
         if debugHud {
             footer = footer +
             "    vtCap := __lpSurf.vitals(win);\n" +
-            "    __lpDrawStageBar(win, canvasW, canvasH, barH, false, false, " + integer.intText(initFpsMode) + ", true, 60);\n" +
+            "    __lpDrawStageBar(win, canvasW, canvasH, barH, barH > 0, false, false, " + integer.intText(initFpsMode) + ", true, 60);\n" +
             "    __lpDrawDebugHud(win, 60, 166, 12, __lpFloorInt(((vtCap.memoryBytes / 1048576.0) * 10.0) + 0.5), vtCap.frameCount, " + integer.intText(initFpsMode) + ", false, false);\n";
         }
         footer = footer +
@@ -304,6 +308,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "    var paused := false;\n" +
     "    var muted := false;\n" +
     "    var debugOn := " + (if debugHud { "true" } else { "false" }) + ";\n" +
+    "    var barVisible := " + (if showBar { "true" } else { "false" }) + ";\n" +
     "    var fpsMode := " + integer.intText(initFpsMode) + ";\n" +
     "    var hudFps := 60;\n" +
     "    var hudMsT := 166;\n" +
@@ -311,7 +316,9 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "    var hudRssT := 0;\n" +
     "    var hudFrames := 0;\n" +
     "    var nextHudNs := 0;\n" +
-    "    __lpDrawStageBar(win, canvasW, canvasH, barH, paused, muted, fpsMode, debugOn, hudFps);\n" +
+    "    drawBarH := if barH > 0 { barH } else if barVisible { 28 } else { 0 };\n" +
+    "    drawBarY := if barH > 0 { canvasH } else { canvasH - 28 };\n" +
+    "    __lpDrawStageBar(win, canvasW, drawBarY, drawBarH, barVisible, paused, muted, fpsMode, debugOn, hudFps);\n" +
     "    if debugOn { __lpDrawDebugHud(win, hudFps, hudMsT, hudCpuT, hudRssT, hudFrames, fpsMode, paused, muted); }\n" +
     "    __lpSurf.present(win);\n" +
     "    var prevKey := \"\";\n" +
@@ -322,7 +329,10 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "        inp := __lpSurf.poll(win);\n" +
     "        if not inp.open or inp.key == \"Escape\" { break; }\n" +
     "        var handledKey := false;\n" +
-    "        if inp.key == \"p\" or inp.key == \"P\" {\n" +
+    "        if inp.key == \"F12\" {\n" +
+    "            barVisible = not barVisible;\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"p\" or inp.key == \"P\" {\n" +
     "            paused = not paused;\n" +
     "            handledKey = true;\n" +
     "        } else if inp.key == \"m\" or inp.key == \"M\" {\n" +
@@ -350,7 +360,8 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     }
     footer = footer +
     "        prevKey = if handledKey { \"\" } else { inp.key };\n" +
-    "        inBar := barH > 0 and inp.pointerY >= (canvasH * 1.0);\n" +
+    "        activeBarY := if barH > 0 { canvasH } else { canvasH - 28 };\n" +
+    "        inBar := barVisible and inp.pointerY >= (activeBarY * 1.0);\n" +
     "        if inBar and inp.pointerDown and not prevDown {\n" +
     "            px := inp.pointerX;\n" +
     "            if px >= 6.0 and px <= 68.0 { paused = not paused; }\n" +
@@ -401,7 +412,8 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "            hudRssT = __lpFloorInt(((vt.memoryBytes / 1048576.0) * 10.0) + 0.5);\n" +
     "            hudFrames = vt.frameCount;\n" +
     "        }\n" +
-    "        __lpDrawStageBar(win, canvasW, canvasH, barH, paused, muted, fpsMode, debugOn, hudFps);\n" +
+    "        curBarH := if barH > 0 { barH } else if barVisible { 28 } else { 0 };\n" +
+    "        __lpDrawStageBar(win, canvasW, activeBarY, curBarH, barVisible, paused, muted, fpsMode, debugOn, hudFps);\n" +
     "        if debugOn { __lpDrawDebugHud(win, hudFps, hudMsT, hudCpuT, hudRssT, hudFrames, fpsMode, paused, muted); }\n" +
     "        __lpSurf.present(win);\n" +
     "    }\n" +
@@ -437,7 +449,7 @@ run := fn(rawArgs: List<String>): Unit {
             playUncap = true;
         } else if arg == "--debug" or arg == "--hud" {
             playDebug = true;
-        } else if arg == "--no-bar" {
+        } else if arg == "--no-bar" or arg == "--hide-bar" {
             playBar = false;
         } else if arg == "--scale" {
             if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
