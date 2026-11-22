@@ -805,6 +805,7 @@ usesCSoftBuiltins := fn(calls: String): Bool {
     usesIntHelper(calls, "lt_c_text_to_int(") or usesIntHelper(calls, "lt_c_text_trim(") or
     usesIntHelper(calls, "lt_c_text_ends_with(") or usesIntHelper(calls, "lt_c_text_repeat(") or
     usesIntHelper(calls, "lt_c_text_contains(") or usesIntHelper(calls, "lt_c_text_to_lower(") or
+    usesIntHelper(calls, "lt_c_text_is_") or
     usesIntHelper(calls, "lt_c_sha256_text(") or usesIntHelper(calls, "lt_c_sha256_bytes(")
 };
 
@@ -1640,6 +1641,7 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
 
 /** Declares hygienic arithmetic/comparison temporaries at unique assignment sites, skipping quoted text and hoisted closure bodies. */
 emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
+    seen: mut List<String> = [];
     loop items as item {
         var cursor := 0;
         loop cursor < textLib.length(item.code) {
@@ -1651,10 +1653,14 @@ emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
             } else if ch == "l" and (textLib.startsWithAt(item.code, cursor, "lt_arg_") or textLib.startsWithAt(item.code, cursor, "lt_cmp_")) {
                 end := textLib.skipName(item.code, cursor);
                 if textLib.startsWithAt(item.code, end, " = ") {
-                    tag := if textLib.startsWithAt(item.code, cursor, "lt_cmp_") or textLib.startsWithAt(item.code, cursor, "lt_arg_f_") { textLib.at(item.code, cursor + 7) } else { "i" };
-                    typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
-                    else if tag == "f" { "double " } else { "int64_t " };
-                    outLine("    " + typeCode + textLib.slice(item.code, cursor, end) + ";");
+                    tName := textLib.slice(item.code, cursor, end);
+                    if not listLib.listContainsText(seen, tName) {
+                        listLib.pushBack(mut seen, tName);
+                        tag := if textLib.startsWithAt(item.code, cursor, "lt_cmp_") or textLib.startsWithAt(item.code, cursor, "lt_arg_f_") { textLib.at(item.code, cursor + 7) } else { "i" };
+                        typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
+                        else if tag == "f" { "double " } else { "int64_t " };
+                        outLine("    " + typeCode + tName + ";");
+                    }
                 }
                 cursor = end;
             } else { cursor = cursor + 1; }
@@ -3263,19 +3269,11 @@ cSoftBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Stri
         if fnName == "repeatText" { return "lt_c_text_repeat(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
         if fnName == "containsText" { return "lt_c_text_contains(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
         if fnName == "toLowerAscii" { return "lt_c_text_to_lower(" + arg0 + ")"; }
-        if fnName == "isDigit" { return "(*(" + arg0 + ") >= '0' && *(" + arg0 + ") <= '9' && *((" + arg0 + ") + 1) == '\\0')"; }
-        if fnName == "isAsciiLetter" {
-            return "(((*(" + arg0 + ") >= 'a' && *(" + arg0 + ") <= 'z') || (*(" + arg0 + ") >= 'A' && *(" + arg0 + ") <= 'Z')) && *((" + arg0 + ") + 1) == '\\0')";
-        }
-        if fnName == "isNameStart" {
-            return "(((*(" + arg0 + ") == '_') || (*(" + arg0 + ") >= 'a' && *(" + arg0 + ") <= 'z') || (*(" + arg0 + ") >= 'A' && *(" + arg0 + ") <= 'Z')) && *((" + arg0 + ") + 1) == '\\0')";
-        }
-        if fnName == "isNameContinue" {
-            return "(((*(" + arg0 + ") == '_') || (*(" + arg0 + ") >= 'a' && *(" + arg0 + ") <= 'z') || (*(" + arg0 + ") >= 'A' && *(" + arg0 + ") <= 'Z') || (*(" + arg0 + ") >= '0' && *(" + arg0 + ") <= '9')) && *((" + arg0 + ") + 1) == '\\0')";
-        }
-        if fnName == "isWhitespace" {
-            return "(((*(" + arg0 + ") == ' ') || (*(" + arg0 + ") == '\\t') || (*(" + arg0 + ") == '\\r') || (*(" + arg0 + ") == '\\n')) && *((" + arg0 + ") + 1) == '\\0')";
-        }
+        if fnName == "isDigit" { return "lt_c_text_is_digit(" + arg0 + ")"; }
+        if fnName == "isAsciiLetter" { return "lt_c_text_is_ascii_letter(" + arg0 + ")"; }
+        if fnName == "isNameStart" { return "lt_c_text_is_name_start(" + arg0 + ")"; }
+        if fnName == "isNameContinue" { return "lt_c_text_is_name_continue(" + arg0 + ")"; }
+        if fnName == "isWhitespace" { return "lt_c_text_is_whitespace(" + arg0 + ")"; }
     } else if moduleName == "lib/core/file" {
         if fnName == "readText" { return "lt_c_file_read_text(" + arg0 + ")"; }
         if fnName == "writeText" { return "lt_c_file_write_text(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
@@ -3327,6 +3325,21 @@ applyCSoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs:
 /** Emits C11 native fast-path helpers for `core/int`, `core/text`, and `core/file` soft builtins. */
 emitCSoftBuiltinHelpers := fn(calls: String): Unit {
     if not usesCSoftBuiltins(calls) { return; }
+    if usesIntHelper(calls, "lt_c_text_is_digit(") {
+        outLine("static bool lt_c_text_is_digit(const char *s) { return s[0] >= '0' && s[0] <= '9' && s[1] == '\\0'; }");
+    }
+    if usesIntHelper(calls, "lt_c_text_is_ascii_letter(") {
+        outLine("static bool lt_c_text_is_ascii_letter(const char *s) { return ((s[0] >= 'a' && s[0] <= 'z') || (s[0] >= 'A' && s[0] <= 'Z')) && s[1] == '\\0'; }");
+    }
+    if usesIntHelper(calls, "lt_c_text_is_name_start(") {
+        outLine("static bool lt_c_text_is_name_start(const char *s) { return (s[0] == '_' || (s[0] >= 'a' && s[0] <= 'z') || (s[0] >= 'A' && s[0] <= 'Z')) && s[1] == '\\0'; }");
+    }
+    if usesIntHelper(calls, "lt_c_text_is_name_continue(") {
+        outLine("static bool lt_c_text_is_name_continue(const char *s) { return (s[0] == '_' || (s[0] >= 'a' && s[0] <= 'z') || (s[0] >= 'A' && s[0] <= 'Z') || (s[0] >= '0' && s[0] <= '9')) && s[1] == '\\0'; }");
+    }
+    if usesIntHelper(calls, "lt_c_text_is_whitespace(") {
+        outLine("static bool lt_c_text_is_whitespace(const char *s) { return (s[0] == ' ' || s[0] == '\\t' || s[0] == '\\r' || s[0] == '\\n') && s[1] == '\\0'; }");
+    }
     if usesIntHelper(calls, "lt_c_int_text(") {
         outLine("static const char *lt_c_int_text(int64_t v) {");
         outLine("    char *buf = malloc(32);");

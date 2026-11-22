@@ -3469,7 +3469,8 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
     var suffixField := "";
     var suffixFieldAt := -1;
     var suffixEnd := rawLoopEnd;
-    if not hasActualThen and afterRawLoop >= 0 and afterRawLoop < textLib.length(source) and textLib.at(source, afterRawLoop) == "." {
+    if not hasActualThen and afterRawLoop >= 0 and afterRawLoop < textLib.length(source) and textLib.at(source, afterRawLoop) == "." and
+    textLib.indexOfText(textLib.slice(source, rawLoopEnd, afterRawLoop), "\n", 0) < 0 {
         sFieldStart := syntax.skipTrivia(source, afterRawLoop + 1, prefix);
         if sFieldStart < textLib.length(source) and textLib.isNameStart(textLib.at(source, sFieldStart)) {
             sFieldEnd := textLib.skipName(source, sFieldStart);
