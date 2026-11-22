@@ -131,7 +131,7 @@ snippetFails := text.joinTexts(checkDocuments(dir2), "\n");
 test.check("snippet mismatch reported: " + snippetFails, text.indexOfText(snippetFails, "code fence 0 differs", 0) >= 0);
 _rm2 := fs.remove(dir2);
 
-/* 3. ignited docs artifact in dist/tools matches tools/src/docs.lts and passes strict TS checking */
+/* 3. tools/src/docs.lts compiles cleanly with strict TS checking and has an ignited artifact in dist/tools */
 tsComp := compilerBuild.selectCompilerPath(root, "ts");
 test.check("select ts compiler", tsComp.ok);
 docsSrcPath := path.join(root, "tools/src/docs.lts");
@@ -140,14 +140,20 @@ test.check("read tools/src/docs.lts", docsSrc.ok);
 compiledDocs := compilerTest.compileStdinWithOpts(root, tsComp.path, root, docsSrc.text, "tools/src/docs.lts", docsSrcPath, ["-O3"]);
 test.checkInt("compile tools/src/docs.lts: " + compiledDocs.stderr, 0, compiledDocs.status);
 
-ignitedDocsPath := path.join(root, "dist/tools/docs.ts");
-ignitedDocs := fs.readText(ignitedDocsPath);
-test.check("read dist/tools/docs.ts", ignitedDocs.ok);
-test.checkText("ignited docs matches compiled tools/src/docs.lts", compiledDocs.stdout, ignitedDocs.text);
+hasIgnitedDocsC := fs.kind(path.join(root, "dist/tools/docs")) == fs.FILE_KIND_FILE;
+hasIgnitedDocsTs := fs.kind(path.join(root, "dist/tools/docs.ts")) == fs.FILE_KIND_FILE;
+test.check("ignited docs artifact exists", hasIgnitedDocsC or hasIgnitedDocsTs);
+if hasIgnitedDocsTs {
+    ignitedDocs := fs.readText(path.join(root, "dist/tools/docs.ts"));
+    test.check("read dist/tools/docs.ts", ignitedDocs.ok);
+    test.checkText("ignited docs matches compiled tools/src/docs.lts", compiledDocs.stdout, ignitedDocs.text);
+}
 
 tscDirRes := fs.makeTempDir("lite-docs-tsc-");
 test.check("tscDir makeTempDir", tscDirRes.ok);
-tscCheck := cases.checkTsArtifactFileWithStatus(root, ignitedDocsPath, path.join(tscDirRes.path, "tsc"), 60000);
+tmpDocsTs := path.join(tscDirRes.path, "docs.ts");
+test.check("write temp docs.ts", fs.writeText(tmpDocsTs, compiledDocs.stdout).ok);
+tscCheck := cases.checkTsArtifactFileWithStatus(root, tmpDocsTs, path.join(tscDirRes.path, "tsc"), 60000);
 test.check("docs.ts strict tsc: " + tscCheck.error, tscCheck.ok);
 _rmTsc := fs.remove(tscDirRes.path);
 

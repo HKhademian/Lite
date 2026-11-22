@@ -21,7 +21,7 @@ errPath := path.join(work, "err");
 emptyBytes: List<Int> = [];
 args: List<String> = [path.join(root, "bin/lite-test"), "--cases"];
 envOver: List<String> = ["LITE_TEST_SUMMARY_FILE=" + summaryPath];
-res := proc.runBytes(proc.execPath(), args, root, envOver, 180000, emptyBytes, outPath, errPath);
+res := proc.runBytes(proc.execPath(), args, root, envOver, 300000, emptyBytes, outPath, errPath);
 test.check("lite-test --cases process error: " + res.error, res.error == "");
 
 sumRead := fs.readText(summaryPath);

@@ -119,7 +119,7 @@ loop cfIdx < list.listCountText(copiedFiles) {
 }
 _rmCorpus := fs.remove(corpusTmp);
 
-/* 3. ignited fmt artifact in dist/tools matches tools/src/fmt.lts and passes strict TS checking */
+/* 3. tools/src/fmt.lts compiles cleanly with strict TS checking and has an ignited artifact in dist/tools */
 tsComp := compilerBuild.selectCompilerPath(root, "ts");
 test.check("select ts compiler", tsComp.ok);
 fmtSrcPath := path.join(root, "tools/src/fmt.lts");
@@ -128,14 +128,20 @@ test.check("read tools/src/fmt.lts", fmtSrc.ok);
 compiledFmt := compilerTest.compileStdinWithOpts(root, tsComp.path, root, fmtSrc.text, "tools/src/fmt.lts", fmtSrcPath, ["-O3"]);
 test.checkInt("compile tools/src/fmt.lts: " + compiledFmt.stderr, 0, compiledFmt.status);
 
-ignitedFmtPath := path.join(root, "dist/tools/fmt.ts");
-ignitedFmt := fs.readText(ignitedFmtPath);
-test.check("read dist/tools/fmt.ts", ignitedFmt.ok);
-test.checkText("ignited fmt matches compiled tools/src/fmt.lts", compiledFmt.stdout, ignitedFmt.text);
+hasIgnitedFmtC := fs.kind(path.join(root, "dist/tools/fmt")) == fs.FILE_KIND_FILE;
+hasIgnitedFmtTs := fs.kind(path.join(root, "dist/tools/fmt.ts")) == fs.FILE_KIND_FILE;
+test.check("ignited fmt artifact exists", hasIgnitedFmtC or hasIgnitedFmtTs);
+if hasIgnitedFmtTs {
+    ignitedFmt := fs.readText(path.join(root, "dist/tools/fmt.ts"));
+    test.check("read dist/tools/fmt.ts", ignitedFmt.ok);
+    test.checkText("ignited fmt matches compiled tools/src/fmt.lts", compiledFmt.stdout, ignitedFmt.text);
+}
 
 tscDirRes := fs.makeTempDir("lite-fmt-tsc-");
 test.check("tscDir makeTempDir", tscDirRes.ok);
-tscCheck := cases.checkTsArtifactFileWithStatus(root, ignitedFmtPath, path.join(tscDirRes.path, "tsc"), 60000);
+tmpFmtTs := path.join(tscDirRes.path, "fmt.ts");
+test.check("write temp fmt.ts", fs.writeText(tmpFmtTs, compiledFmt.stdout).ok);
+tscCheck := cases.checkTsArtifactFileWithStatus(root, tmpFmtTs, path.join(tscDirRes.path, "tsc"), 60000);
 test.check("fmt.ts strict tsc: " + tscCheck.error, tscCheck.ok);
 _rmTsc := fs.remove(tscDirRes.path);
 
@@ -143,8 +149,10 @@ _rmTsc := fs.remove(tscDirRes.path);
 versionRun := runNode([liteBin, "fmt", "--version"], "");
 test.checkInt("fmt --version status: " + versionRun.stderr, 0, versionRun.status);
 test.check("fmt --version header", text.startsWithAt(versionRun.stdout, 0, "lite fmt "));
-test.check("fmt --version kind", text.indexOfText(versionRun.stdout, "\nkind: ignited-ts (target: ts)\n", 0) >= 0);
-artNeedle := "artifact: dist/tools/fmt.ts (sha256: ";
+fmtIsC := fs.kind(path.join(root, "dist/tools/fmt")) == fs.FILE_KIND_FILE;
+expectedKindLine := if fmtIsC { "\nkind: ignited-c (target: c)\n" } else { "\nkind: ignited-ts (target: ts)\n" };
+test.check("fmt --version kind", text.indexOfText(versionRun.stdout, expectedKindLine, 0) >= 0);
+artNeedle := if fmtIsC { "artifact: dist/tools/fmt (sha256: " } else { "artifact: dist/tools/fmt.ts (sha256: " };
 artIdx := text.indexOfText(versionRun.stdout, artNeedle, 0);
 test.check("fmt --version artifact line", artIdx >= 0);
 hashStart := artIdx + text.length(artNeedle);

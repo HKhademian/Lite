@@ -161,6 +161,7 @@ toolNames: List<String> = [
 "cli", "compile", "compile-c", "compile-ts", "checker", "check", "run",
 "run-ts-artifact", "verify", "test-runner", "test", "bench", "ci", "release", "ignite"
 ];
+var compiledIgniteTs := "";
 loop toolNames as name {
     srcRel := "tools/src/" + name + ".lts";
     srcAbs := path.join(root, srcRel);
@@ -168,12 +169,18 @@ loop toolNames as name {
     test.check("read " + srcRel, srcRead.ok);
     compiled := compilerTest.compileStdinWithOpts(root, tsComp.path, root, srcRead.text, srcRel, srcAbs, ["-O3"]);
     test.checkInt("compile " + srcRel + ": " + compiled.stderr, 0, compiled.status);
-    genRead := fs.readText(path.join(root, "dist/tools/" + name + ".ts"));
-    test.check("read dist/tools/" + name + ".ts", genRead.ok);
-    test.checkText(name + " artifact out of date", compiled.stdout, genRead.text);
+    if name == "ignite" { compiledIgniteTs = compiled.stdout; }
+    hasC := fs.kind(path.join(root, "dist/tools/" + name)) == fs.FILE_KIND_FILE;
+    hasTs := fs.kind(path.join(root, "dist/tools/" + name + ".ts")) == fs.FILE_KIND_FILE;
+    test.check("ignited artifact exists for " + name, hasC or hasTs);
+    if hasTs {
+        genRead := fs.readText(path.join(root, "dist/tools/" + name + ".ts"));
+        test.check("read dist/tools/" + name + ".ts", genRead.ok);
+        test.checkText(name + " artifact out of date", compiled.stdout, genRead.text);
+    }
 }
 trackedIgniter := stripShebang(fs.readText(path.join(root, "compiler/bootstrap/igniter.ts")).text);
-test.checkText("compiler/bootstrap/igniter.ts out of date", fs.readText(path.join(root, "dist/tools/ignite.ts")).text, trackedIgniter);
+test.checkText("compiler/bootstrap/igniter.ts out of date", compiledIgniteTs, trackedIgniter);
 
 /* 9. lite router help, version, and unknown command handling match exit and output contracts */
 help := command("lite", ["help"]);
@@ -187,24 +194,25 @@ test.checkInt("lite missing status", 2, missing.status);
 test.checkText("lite missing stdout", "", missing.stdout);
 test.checkText("lite missing stderr", help.stdout, missing.stderr);
 
+cliIsC := fs.kind(path.join(root, "dist/tools/cli")) == fs.FILE_KIND_FILE;
 version := command("lite", ["--version"]);
 test.checkInt("lite --version status", 0, version.status);
 test.check("lite --version header", text.startsWithAt(version.stdout, 0, "lite cli "));
-test.check("lite --version kind", text.indexOfText(version.stdout, "\nkind: ignited-ts (target: ts)\n", 0) >= 0);
-vArtNeedle := "artifact: dist/tools/cli.ts (sha256: ";
+test.check("lite --version kind", text.indexOfText(version.stdout, if cliIsC { "\nkind: ignited-c (target: c)\n" } else { "\nkind: ignited-ts (target: ts)\n" }, 0) >= 0);
+vArtNeedle := if cliIsC { "artifact: dist/tools/cli (sha256: " } else { "artifact: dist/tools/cli.ts (sha256: " };
 vArtIdx := text.indexOfText(version.stdout, vArtNeedle, 0);
 test.check("lite --version artifact", vArtIdx >= 0);
 test.check("lite --version sha12", isHex12(text.slice(version.stdout, vArtIdx + text.length(vArtNeedle), vArtIdx + text.length(vArtNeedle) + 12)));
 test.check("lite --version source", text.indexOfText(version.stdout, "source: tools/src/cli.lts (", 0) >= 0);
 test.check("lite --version built-by", text.indexOfText(version.stdout, " modules, built-by: ", 0) >= 0);
-test.check("lite --version host", text.indexOfText(version.stdout, "host: node v", 0) >= 0);
+test.check("lite --version host", text.indexOfText(version.stdout, if cliIsC { "host: c11 (" } else { "host: node v" }, 0) >= 0);
 
 versionJson := command("lite", ["--version", "--json"]);
 test.checkInt("lite --version --json status: " + versionJson.stderr, 0, versionJson.status);
 test.checkText("version json command", "lite cli", json.readObjectString(versionJson.stdout, 0, "command").value);
 test.checkText("version json component", "cli", json.readObjectString(versionJson.stdout, 0, "component").value);
-test.checkText("version json kind", "ignited-ts", json.readObjectString(versionJson.stdout, 0, "kind").value);
-test.checkText("version json artifact", "dist/tools/cli.ts", json.readObjectString(versionJson.stdout, 0, "artifact").value);
+test.checkText("version json kind", if cliIsC { "ignited-c" } else { "ignited-ts" }, json.readObjectString(versionJson.stdout, 0, "kind").value);
+test.checkText("version json artifact", if cliIsC { "dist/tools/cli" } else { "dist/tools/cli.ts" }, json.readObjectString(versionJson.stdout, 0, "artifact").value);
 test.checkText("version json source", "tools/src/cli.lts", json.readObjectString(versionJson.stdout, 0, "source").value);
 
 igniterVer := command("lite-ignite", ["--version"]);
@@ -223,8 +231,12 @@ test.checkInt("lite-fmt --check status", 0, expectedFmt.status);
 assertSameCmd("lite fmt --check", expectedFmt, command("lite", ["fmt", "--check", fmtTarget]));
 assertSameCmd("lite --fmt --check", expectedFmt, command("lite", ["--fmt", "--check", fmtTarget]));
 assertSameCmd("lite -- fmt --check", expectedFmt, command("lite", ["--", "fmt", "--check", fmtTarget]));
-directFmt := runIn(proc.execPath(), [path.join(root, "dist/tools/fmt.ts"), "--check", fmtTarget], root, 60000);
-assertSameCmd("direct dist/tools/fmt.ts", expectedFmt, directFmt);
+directFmt := if fs.kind(path.join(root, "dist/tools/fmt")) == fs.FILE_KIND_FILE {
+    runIn(path.join(root, "dist/tools/fmt"), ["--check", fmtTarget], root, 60000)
+} else {
+    runIn(proc.execPath(), [path.join(root, "dist/tools/fmt.ts"), "--check", fmtTarget], root, 60000)
+};
+assertSameCmd("direct dist/tools/fmt", expectedFmt, directFmt);
 
 /* 11. ignition rebuilds missing, tampered, and dependency-changed tools into dist/tools */
 test.check("no tools/generated dir", fs.kind(path.join(root, "tools/generated")) == fs.FILE_KIND_MISSING);
@@ -330,8 +342,8 @@ test.check("dist/stale deleted", fs.kind(path.join(wipeDir, "dist/stale")) == fs
 test.check("tmp deleted", fs.kind(path.join(wipeDir, "tmp")) == fs.FILE_KIND_MISSING);
 test.check("igniter/node_modules deleted", fs.kind(path.join(wipeDir, "igniter/node_modules")) == fs.FILE_KIND_MISSING);
 test.check("wipe compiler.ts", fs.kind(path.join(wipeDir, "dist/bootstrap/compiler.ts")) == fs.FILE_KIND_FILE);
-test.check("wipe cli.ts", fs.kind(path.join(wipeDir, "dist/tools/cli.ts")) == fs.FILE_KIND_FILE);
-test.check("wipe ignite.ts", fs.kind(path.join(wipeDir, "dist/tools/ignite.ts")) == fs.FILE_KIND_FILE);
+test.check("wipe cli artifact", fs.kind(path.join(wipeDir, "dist/tools/cli")) == fs.FILE_KIND_FILE or fs.kind(path.join(wipeDir, "dist/tools/cli.ts")) == fs.FILE_KIND_FILE);
+test.check("wipe ignite artifact", fs.kind(path.join(wipeDir, "dist/tools/ignite")) == fs.FILE_KIND_FILE or fs.kind(path.join(wipeDir, "dist/tools/ignite.ts")) == fs.FILE_KIND_FILE);
 
 wipeChecked := json.readObjectBool(wiped.stdout, 0, "checked");
 test.check("wipe checked == false", wipeChecked.found and wipeChecked.ok and not wipeChecked.value);

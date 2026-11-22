@@ -90,28 +90,98 @@ isSha256Hex := fn(hex: String): Bool {
 }
 
 /** Reads `compiler/bootstrap/seed.ts` hashes and verifies the tracked single-file bootstrap igniter digest. */
-readSeedInfo := fn(rootDir: String): (ok: Bool, igniterSha256: String, sourceSha256: String, artifactSha256: String, error: String) {
+readSeedInfo := fn(rootDir: String): (ok: Bool, igniterSha256: String, sourceSha256: String, artifactSha256: String, cArtifactSha256: String, error: String) {
     seedFile := path.join(rootDir, "compiler/bootstrap/seed.ts");
     seedRead := fs.readText(seedFile);
     if not seedRead.ok {
-        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", error = "ignite: cannot read seed metadata: " + seedRead.error);
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: cannot read seed metadata: " + seedRead.error);
     }
     brace := text.indexOfText(seedRead.text, "{", 0);
     if brace < 0 {
-        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", error = "ignite: invalid seed.ts object");
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: invalid seed.ts object");
     }
     ignField := json.readObjectString(seedRead.text, brace, "igniterSha256");
     srcField := json.readObjectString(seedRead.text, brace, "sourceSha256");
     artField := json.readObjectString(seedRead.text, brace, "artifactSha256");
+    cArtField := json.readObjectString(seedRead.text, brace, "cArtifactSha256");
     if not ignField.found or not ignField.ok or not srcField.found or not srcField.ok or not artField.found or not artField.ok {
-        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", error = "ignite: missing seed hash fields");
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: missing seed hash fields");
     }
     ignHash := crypto.sha256File(path.join(rootDir, "compiler/bootstrap/igniter.ts"));
     if not ignHash.ok or ignHash.hex =!= ignField.value {
-        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", error = "ignite: selected TS bootstrap seed hash mismatch");
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: selected TS bootstrap seed hash mismatch");
     }
-    (ok = true, igniterSha256 = ignField.value, sourceSha256 = srcField.value, artifactSha256 = artField.value, error = "")
+    cSha := if cArtField.found and cArtField.ok { cArtField.value } else { "" };
+    (ok = true, igniterSha256 = ignField.value, sourceSha256 = srcField.value, artifactSha256 = artField.value, cArtifactSha256 = cSha, error = "")
 }
+
+/** Probes whether a host C compiler (`$CC` or `cc`) is available. */
+probeCc := fn(): (available: Bool, cc: String) {
+    ccEnv := proc.envGet("CC");
+    ccCmd := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
+    emptyEnv: List<String> = [];
+    res := proc.run(ccCmd, ["--version"], "", emptyEnv, true, "");
+    if res.error == "" and res.status == 0 {
+        return (available = true, cc = ccCmd);
+    }
+    (available = false, cc = "")
+};
+
+/** Resolves the ignited tooling target: C by default when `cc` and `compiler.c` are available, unless `--target ts` / `LITE_IGNITE_TARGET=ts` or `cc` is absent. */
+resolveIgniteTarget := fn(rootDir: String, requested: String): (ok: Bool, target: String, cc: String, allowTsFallback: Bool, error: String) {
+    envT := proc.envGet("LITE_IGNITE_TARGET");
+    mode := if requested =!= "" { requested } else if envT.found and envT.value =!= "" { envT.value } else { "auto" };
+    if mode == "ts" {
+        return (ok = true, target = "ts", cc = "", allowTsFallback = false, error = "");
+    }
+    if mode =!= "c" and mode =!= "auto" {
+        return (ok = false, target = "", cc = "", allowTsFallback = false, error = "ignite: unknown target \"" + mode + "\" (expected c, ts, or auto)");
+    }
+    hasSeedC := fs.kind(path.join(rootDir, "compiler/bootstrap/compiler.c")) == fs.FILE_KIND_FILE;
+    ccInfo := if hasSeedC { probeCc() } else { (available = false, cc = "") };
+    if ccInfo.available {
+        return (ok = true, target = "c", cc = ccInfo.cc, allowTsFallback = true, error = "");
+    }
+    if mode == "c" {
+        reason := if not hasSeedC { "compiler/bootstrap/compiler.c is missing" } else { "no C compiler (cc) is available" };
+        return (ok = false, target = "", cc = "", allowTsFallback = false, error = "ignite: --target c requested, but " + reason);
+    }
+    (ok = true, target = "ts", cc = "", allowTsFallback = false, error = "")
+};
+
+/** Ensures the native C11 bootstrap compiler binary `dist/bootstrap/compiler-c` is built from tracked `compiler/bootstrap/compiler.c`. */
+ensureDistCCompiler := fn(rootDir: String, expectedCSha: String, ccCmd: String, force: Bool): (ok: Bool, path: String, error: String) {
+    bootDir := path.join(rootDir, "dist/bootstrap");
+    binPath := path.join(bootDir, "compiler-c");
+    stampPath := path.join(bootDir, "compiler-c.sha256");
+    seedCPath := path.join(rootDir, "compiler/bootstrap/compiler.c");
+    if not force and fs.kind(binPath) == fs.FILE_KIND_FILE and fs.kind(stampPath) == fs.FILE_KIND_FILE {
+        stamp := fs.readText(stampPath);
+        if stamp.ok and text.trim(stamp.text) == expectedCSha and expectedCSha =!= "" {
+            return (ok = true, path = binPath, error = "");
+        }
+    }
+    seedHash := crypto.sha256File(seedCPath);
+    if not seedHash.ok {
+        return (ok = false, path = "", error = "ignite: cannot read " + seedCPath + ": " + seedHash.error);
+    }
+    if expectedCSha =!= "" and seedHash.hex =!= expectedCSha {
+        return (ok = false, path = "", error = "ignite: compiler/bootstrap/compiler.c hash mismatch against seed.ts");
+    }
+    mkRes := fs.makeDir(bootDir);
+    if not mkRes.ok {
+        return (ok = false, path = "", error = mkRes.error);
+    }
+    emptyEnv: List<String> = [];
+    ccArgs: List<String> = ["-std=c11", "-O2", seedCPath, "-o", binPath, "-lm"];
+    ccRes := proc.run(ccCmd, ccArgs, rootDir, emptyEnv, true, "");
+    if ccRes.error =!= "" or ccRes.status =!= 0 {
+        detail := if ccRes.error =!= "" { ccRes.error } else { text.trim(ccRes.stderr) };
+        return (ok = false, path = "", error = "ignite: failed to compile bootstrap C11 compiler: " + detail);
+    }
+    _wr := fs.writeText(stampPath, seedHash.hex + "\n");
+    (ok = true, path = binPath, error = "")
+};
 
 /** Lists all `.lts` tool names under `tools/src/` sorted ASCII lexicographically. */
 listToolNames := fn(rootDir: String): List<String> {
@@ -127,16 +197,16 @@ listToolNames := fn(rootDir: String): List<String> {
 }
 
 /** Validates existing ignited tool artifact and provenance against current sources, dependencies, and seed hash. */
-readValidProvenance := fn(rootDir: String, name: String, compilerArtifactSha: String): (valid: Bool, sha256: String) {
+readValidProvenance := fn(rootDir: String, name: String, expectedTarget: String, compilerArtifactSha: String, requireFallback: Bool): (valid: Bool, path: String, sha256: String) {
     distDir := path.join(rootDir, "dist/tools");
-    artifactPath := path.join(distDir, name + ".ts");
+    artifactPath := if expectedTarget == "c" { path.join(distDir, name) } else { path.join(distDir, name + ".ts") };
     provPath := path.join(distDir, name + ".provenance.json");
     if fs.kind(artifactPath) =!= fs.FILE_KIND_FILE or fs.kind(provPath) =!= fs.FILE_KIND_FILE {
-        return (valid = false, sha256 = "");
+        return (valid = false, path = "", sha256 = "");
     }
     provRead := fs.readText(provPath);
     if not provRead.ok or not json.validate(provRead.text).ok {
-        return (valid = false, sha256 = "");
+        return (valid = false, path = "", sha256 = "");
     }
     provText := provRead.text;
     ver := json.readObjectInt(provText, 0, "version");
@@ -145,35 +215,39 @@ readValidProvenance := fn(rootDir: String, name: String, compilerArtifactSha: St
     cArtField := json.readObjectString(provText, 0, "compilerArtifactSha256");
     cSrcField := json.readObjectString(provText, 0, "compilerSourceSha256");
     artShaField := json.readObjectString(provText, 0, "artifactSha256");
-    if not ver.found or not ver.ok or ver.value =!= 1 { return (valid = false, sha256 = ""); }
-    if not toolField.found or toolField.value =!= name { return (valid = false, sha256 = ""); }
-    if not tgtField.found or tgtField.value =!= "ts" { return (valid = false, sha256 = ""); }
-    if not cArtField.found or cArtField.value =!= compilerArtifactSha { return (valid = false, sha256 = ""); }
-    if not cSrcField.found or not cSrcField.ok or not artShaField.found or not artShaField.ok { return (valid = false, sha256 = ""); }
+    if not ver.found or not ver.ok or ver.value =!= 1 { return (valid = false, path = "", sha256 = ""); }
+    if not toolField.found or toolField.value =!= name { return (valid = false, path = "", sha256 = ""); }
+    if not tgtField.found or tgtField.value =!= expectedTarget { return (valid = false, path = "", sha256 = ""); }
+    if requireFallback {
+        fbField := json.readObjectBool(provText, 0, "fallbackFromC");
+        if not fbField.found or not fbField.ok or not fbField.value { return (valid = false, path = "", sha256 = ""); }
+    }
+    if not cArtField.found or cArtField.value =!= compilerArtifactSha { return (valid = false, path = "", sha256 = ""); }
+    if not cSrcField.found or not cSrcField.ok or not artShaField.found or not artShaField.ok { return (valid = false, path = "", sha256 = ""); }
 
     artDisk := crypto.sha256File(artifactPath);
     if not artDisk.ok or artDisk.hex =!= artShaField.value {
-        return (valid = false, sha256 = "");
+        return (valid = false, path = "", sha256 = "");
     }
 
     depsField := json.findObjectField(provText, 0, "dependencies");
     edgesField := json.findObjectField(provText, 0, "edges");
-    if not depsField.found or not edgesField.found { return (valid = false, sha256 = ""); }
+    if not depsField.found or not edgesField.found { return (valid = false, path = "", sha256 = ""); }
 
     depOffsets := json.arrayElementOffsets(provText, depsField.valuePos);
-    if list.listCountInt(depOffsets) == 0 { return (valid = false, sha256 = ""); }
+    if list.listCountInt(depOffsets) == 0 { return (valid = false, path = "", sha256 = ""); }
 
     depPaths: mut List<String> = [];
     var idx := 0;
     loop depOffsets as dPos {
         dp := json.readObjectString(provText, dPos, "path");
         dh := json.readObjectString(provText, dPos, "sha256");
-        if not dp.found or not dp.ok or not dh.found or not dh.ok { return (valid = false, sha256 = ""); }
-        if not validRelativePath(dp.value) or not isSha256Hex(dh.value) { return (valid = false, sha256 = ""); }
-        if idx == 0 and dp.value =!= "tools/src/" + name + ".lts" { return (valid = false, sha256 = ""); }
+        if not dp.found or not dp.ok or not dh.found or not dh.ok { return (valid = false, path = "", sha256 = ""); }
+        if not validRelativePath(dp.value) or not isSha256Hex(dh.value) { return (valid = false, path = "", sha256 = ""); }
+        if idx == 0 and dp.value =!= "tools/src/" + name + ".lts" { return (valid = false, path = "", sha256 = ""); }
         diskHash := crypto.sha256File(path.join(rootDir, dp.value));
         if not diskHash.ok or diskHash.hex =!= dh.value {
-            return (valid = false, sha256 = "");
+            return (valid = false, path = "", sha256 = "");
         }
         list.pushBack(mut depPaths, dp.value);
         idx = idx + 1;
@@ -185,76 +259,28 @@ readValidProvenance := fn(rootDir: String, name: String, compilerArtifactSha: St
         es := json.readObjectString(provText, ePos, "spec");
         ep := json.readObjectString(provText, ePos, "path");
         if not ei.found or not ei.ok or not es.found or not es.ok or not ep.found or not ep.ok {
-            return (valid = false, sha256 = "");
+            return (valid = false, path = "", sha256 = "");
         }
         if not list.listContainsText(depPaths, ei.value) or not list.listContainsText(depPaths, ep.value) {
-            return (valid = false, sha256 = "");
+            return (valid = false, path = "", sha256 = "");
         }
         resolved := hostFs.resolveImportPath(path.join(rootDir, ei.value), es.value, rootDir, rootDir);
-        if not resolved.ok { return (valid = false, sha256 = ""); }
+        if not resolved.ok { return (valid = false, path = "", sha256 = ""); }
         rpRes := fs.realPath(resolved.path);
         rpExp := fs.realPath(path.join(rootDir, ep.value));
         if not rpRes.ok or not rpExp.ok or rpRes.path =!= rpExp.path {
-            return (valid = false, sha256 = "");
+            return (valid = false, path = "", sha256 = "");
         }
     }
-    (valid = true, sha256 = artShaField.value)
+    (valid = true, path = artifactPath, sha256 = artShaField.value)
 }
 
-/** Compiles `tools/src/<name>.lts` in-process and persists `dist/tools/<name>.ts` + provenance. */
-igniteSingleTool := fn(
-rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: String, force: Bool
-): (ok: Bool, path: String, sha256: String, rebuilt: Bool, error: String) {
-    sourcePath := path.join(rootDir, "tools/src/" + name + ".lts");
-    if fs.kind(sourcePath) =!= fs.FILE_KIND_FILE {
-        return (ok = false, path = "", sha256 = "", rebuilt = false, error = "ignite: unknown tool \"" + name + "\" (missing " + sourcePath + ")");
-    }
-    distDir := path.join(rootDir, "dist/tools");
-    artifactPath := path.join(distDir, name + ".ts");
-    provPath := path.join(distDir, name + ".provenance.json");
-
-    if not force {
-        prev := readValidProvenance(rootDir, name, compilerArtifactSha);
-        if prev.valid {
-            return (ok = true, path = artifactPath, sha256 = prev.sha256, rebuilt = false, error = "");
-        }
-    }
-
-    rpSource := fs.realPath(sourcePath);
-    canonSource := if rpSource.ok { rpSource.path } else { sourcePath };
-    srcRead := fs.readText(canonSource);
-    if not srcRead.ok {
-        return (ok = false, path = "", sha256 = "", rebuilt = false, error = "ignite: failed to read " + canonSource + ": " + srcRead.error);
-    }
-
-    relRoot := "tools/src/" + name + ".lts";
-    emptyGraph: frontend.Items = [];
-    emptySpecs: List<String> = [];
-    graph := modules.visitSourceModule(
-    target = frontend.TARGET_TS, path = canonSource, display = relRoot,
-    identity = "", source = srcRead.text, initialGraph = emptyGraph,
-    projectRoot = rootDir, cwd = rootDir, builtinSpecs = emptySpecs
-    );
-
-    writer := io.bufferWriter();
-    emitter.emitProgramToOpt(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = relRoot, builtinSpecs = emptySpecs, optLevel = 3);
-    outRes := io.writerText(writer);
-    _cl := io.closeWriter(writer);
-    if not outRes.ok {
-        return (ok = false, path = "", sha256 = "", rebuilt = false, error = "ignite: emit failed for " + relRoot + ": " + outRes.error);
-    }
-
-    mkRes := fs.makeDir(distDir);
-    if not mkRes.ok {
-        return (ok = false, path = "", sha256 = "", rebuilt = false, error = mkRes.error);
-    }
-
-    artSha := crypto.sha256Text(outRes.text);
-    wrArt := fs.writeText(artifactPath, outRes.text);
-    if not wrArt.ok {
-        return (ok = false, path = "", sha256 = "", rebuilt = false, error = wrArt.error);
-    }
-
+/** Writes `dist/tools/<name>.provenance.json` from a resolved module graph. */
+writeToolProvenance := fn(
+rootDir: String, name: String, targetName: String, compilerArtifactSha: String, compilerSourceSha: String,
+artSha: String, canonSource: String, graph: frontend.Items, fallbackFromC: Bool
+): (ok: Bool, error: String) {
+    provPath := path.join(path.join(rootDir, "dist/tools"), name + ".provenance.json");
     seenPaths: mut Set<String>;
     set.add(mut seenPaths, canonSource);
     depJson: mut List<String> = [];
@@ -262,7 +288,7 @@ rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: S
 
     rootSha := crypto.sha256File(canonSource);
     if not rootSha.ok {
-        return (ok = false, path = "", sha256 = "", rebuilt = false, error = rootSha.error);
+        return (ok = false, error = rootSha.error);
     }
     list.pushBack(mut depJson, "    {\n      \"path\": " + json.quoteString(hostFs.displaySourcePath(canonSource, rootDir)) + ",\n      \"sha256\": " + json.quoteString(rootSha.hex) + "\n    }");
 
@@ -274,7 +300,7 @@ rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: S
                 set.add(mut seenPaths, cDep);
                 hDep := crypto.sha256File(cDep);
                 if not hDep.ok {
-                    return (ok = false, path = "", sha256 = "", rebuilt = false, error = hDep.error);
+                    return (ok = false, error = hDep.error);
                 }
                 relDep := hostFs.displaySourcePath(cDep, rootDir);
                 list.pushBack(mut depJson, "    {\n      \"path\": " + json.quoteString(relDep) + ",\n      \"sha256\": " + json.quoteString(hDep.hex) + "\n    }");
@@ -291,10 +317,12 @@ rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: S
         }
     }
 
+    fbLine := if fallbackFromC { "  \"fallbackFromC\": true,\n" } else { "" };
     provBody := "{\n"
     + "  \"version\": 1,\n"
     + "  \"tool\": " + json.quoteString(name) + ",\n"
-    + "  \"target\": \"ts\",\n"
+    + "  \"target\": " + json.quoteString(targetName) + ",\n"
+    + fbLine
     + "  \"compilerArtifactSha256\": " + json.quoteString(compilerArtifactSha) + ",\n"
     + "  \"compilerSourceSha256\": " + json.quoteString(compilerSourceSha) + ",\n"
     + "  \"artifactSha256\": " + json.quoteString(artSha) + ",\n"
@@ -302,20 +330,196 @@ rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: S
     + "  \"edges\": [\n" + text.joinTexts(edgeJson, ",\n") + "\n  ]\n}\n";
     wrProv := fs.writeText(provPath, provBody);
     if not wrProv.ok {
-        return (ok = false, path = "", sha256 = "", rebuilt = false, error = wrProv.error);
+        return (ok = false, error = wrProv.error);
+    }
+    (ok = true, error = "")
+};
+
+/** Compiles `tools/src/<name>.lts` in-process to `dist/tools/<name>.ts` + provenance. */
+igniteSingleToolTs := fn(
+rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: String, force: Bool, fallbackFromC: Bool
+): (ok: Bool, path: String, target: String, sha256: String, rebuilt: Bool, error: String) {
+    sourcePath := path.join(rootDir, "tools/src/" + name + ".lts");
+    if fs.kind(sourcePath) =!= fs.FILE_KIND_FILE {
+        return (ok = false, path = "", target = "ts", sha256 = "", rebuilt = false, error = "ignite: unknown tool \"" + name + "\" (missing " + sourcePath + ")");
+    }
+    distDir := path.join(rootDir, "dist/tools");
+    artifactPath := path.join(distDir, name + ".ts");
+
+    if not force {
+        prev := readValidProvenance(rootDir, name, "ts", compilerArtifactSha, fallbackFromC);
+        if prev.valid {
+            return (ok = true, path = prev.path, target = "ts", sha256 = prev.sha256, rebuilt = false, error = "");
+        }
     }
 
-    (ok = true, path = artifactPath, sha256 = artSha, rebuilt = true, error = "")
-}
-
-/** Runs an ignited tool artifact with forwarded arguments and exits with its status. */
-executeIgnitedTool := fn(artifactPath: String, forwardArgs: List<String>): Unit {
-    runArgs: mut List<String> = [artifactPath];
-    loop forwardArgs as a {
-        list.pushBack(mut runArgs, a);
+    rpSource := fs.realPath(sourcePath);
+    canonSource := if rpSource.ok { rpSource.path } else { sourcePath };
+    srcRead := fs.readText(canonSource);
+    if not srcRead.ok {
+        return (ok = false, path = "", target = "ts", sha256 = "", rebuilt = false, error = "ignite: failed to read " + canonSource + ": " + srcRead.error);
     }
+
+    relRoot := "tools/src/" + name + ".lts";
+    emptyGraph: frontend.Items = [];
+    emptySpecs: List<String> = [];
+    graph := modules.visitSourceModule(
+    target = frontend.TARGET_TS, path = canonSource, display = relRoot,
+    identity = "", source = srcRead.text, initialGraph = emptyGraph,
+    projectRoot = rootDir, cwd = rootDir, builtinSpecs = emptySpecs
+    );
+
+    writer := io.bufferWriter();
+    emitter.emitProgramToOpt(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = relRoot, builtinSpecs = emptySpecs, optLevel = 3);
+    outRes := io.writerText(writer);
+    _cl := io.closeWriter(writer);
+    if not outRes.ok {
+        return (ok = false, path = "", target = "ts", sha256 = "", rebuilt = false, error = "ignite: emit failed for " + relRoot + ": " + outRes.error);
+    }
+
+    mkRes := fs.makeDir(distDir);
+    if not mkRes.ok {
+        return (ok = false, path = "", target = "ts", sha256 = "", rebuilt = false, error = mkRes.error);
+    }
+
+    artSha := crypto.sha256Text(outRes.text);
+    wrArt := fs.writeText(artifactPath, outRes.text);
+    if not wrArt.ok {
+        return (ok = false, path = "", target = "ts", sha256 = "", rebuilt = false, error = wrArt.error);
+    }
+
+    nativeStale := path.join(distDir, name);
+    if fs.kind(nativeStale) == fs.FILE_KIND_FILE {
+        _rm := fs.remove(nativeStale);
+    }
+
+    provRes := writeToolProvenance(rootDir, name, "ts", compilerArtifactSha, compilerSourceSha, artSha, canonSource, graph, fallbackFromC);
+    if not provRes.ok {
+        return (ok = false, path = "", target = "ts", sha256 = "", rebuilt = false, error = provRes.error);
+    }
+
+    (ok = true, path = artifactPath, target = "ts", sha256 = artSha, rebuilt = true, error = "")
+};
+
+/** Compiles `tools/src/<name>.lts` via native C11 (`dist/bootstrap/compiler-c` + `cc`) into `dist/tools/<name>`, falling back to TS when external host builtins are required. */
+igniteSingleTool := fn(
+rootDir: String, name: String, target: String, ccCmd: String, allowTsFallback: Bool,
+tsCompilerSha: String, cCompilerSha: String, compilerSourceSha: String, force: Bool
+): (ok: Bool, path: String, target: String, sha256: String, rebuilt: Bool, error: String) {
+    if target == "ts" {
+        return igniteSingleToolTs(rootDir, name, tsCompilerSha, compilerSourceSha, force, false);
+    }
+    sourcePath := path.join(rootDir, "tools/src/" + name + ".lts");
+    if fs.kind(sourcePath) =!= fs.FILE_KIND_FILE {
+        return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = "ignite: unknown tool \"" + name + "\" (missing " + sourcePath + ")");
+    }
+    distDir := path.join(rootDir, "dist/tools");
+    artifactPath := path.join(distDir, name);
+
+    if not force {
+        prevC := readValidProvenance(rootDir, name, "c", cCompilerSha, false);
+        if prevC.valid {
+            return (ok = true, path = prevC.path, target = "c", sha256 = prevC.sha256, rebuilt = false, error = "");
+        }
+        if allowTsFallback {
+            prevFb := readValidProvenance(rootDir, name, "ts", tsCompilerSha, true);
+            if prevFb.valid {
+                return (ok = true, path = prevFb.path, target = "ts", sha256 = prevFb.sha256, rebuilt = false, error = "");
+            }
+        }
+    }
+
+    cBoot := ensureDistCCompiler(rootDir, cCompilerSha, ccCmd, false);
+    if not cBoot.ok {
+        return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = cBoot.error);
+    }
+
+    tmpDir := fs.makeTempDir("lite-ignite-c-");
+    if not tmpDir.ok {
+        return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = tmpDir.error);
+    }
+    cOutPath := path.join(tmpDir.path, name + ".c");
     emptyEnv: List<String> = [];
-    res := proc.run(proc.execPath(), runArgs, "", emptyEnv, false, "");
+    compArgs: List<String> = ["-O1", sourcePath, "--out", cOutPath];
+    compRes := proc.run(cBoot.path, compArgs, rootDir, emptyEnv, true, "");
+    if compRes.error =!= "" or compRes.status =!= 0 {
+        _rmTmp := fs.remove(tmpDir.path);
+        detail := if compRes.error =!= "" { compRes.error } else { text.trim(compRes.stderr) };
+        if allowTsFallback and text.containsText(detail, "external host builtins") {
+            return igniteSingleToolTs(rootDir, name, tsCompilerSha, compilerSourceSha, force, true);
+        }
+        return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = "ignite: C11 compile failed for " + name + ": " + detail);
+    }
+
+    mkRes := fs.makeDir(distDir);
+    if not mkRes.ok {
+        _rmTmp := fs.remove(tmpDir.path);
+        return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = mkRes.error);
+    }
+    tmpBin := path.join(tmpDir.path, name);
+    ccArgs: List<String> = ["-std=c11", "-O1", cOutPath, "-o", tmpBin, "-lm"];
+    ccRes := proc.run(ccCmd, ccArgs, rootDir, emptyEnv, true, "");
+    if ccRes.error =!= "" or ccRes.status =!= 0 {
+        _rmTmp := fs.remove(tmpDir.path);
+        detail := if ccRes.error =!= "" { ccRes.error } else { text.trim(ccRes.stderr) };
+        return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = "ignite: cc failed for " + name + ": " + detail);
+    }
+    mvRes := fs.copy(tmpBin, artifactPath);
+    _rmTmp := fs.remove(tmpDir.path);
+    if not mvRes.ok {
+        return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = mvRes.error);
+    }
+
+    tsStale := path.join(distDir, name + ".ts");
+    if fs.kind(tsStale) == fs.FILE_KIND_FILE {
+        _rm := fs.remove(tsStale);
+    }
+
+    artDisk := crypto.sha256File(artifactPath);
+    if not artDisk.ok {
+        return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = artDisk.error);
+    }
+
+    rpSource := fs.realPath(sourcePath);
+    canonSource := if rpSource.ok { rpSource.path } else { sourcePath };
+    srcRead := fs.readText(canonSource);
+    if not srcRead.ok {
+        return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = "ignite: failed to read " + canonSource + ": " + srcRead.error);
+    }
+    relRoot := "tools/src/" + name + ".lts";
+    emptyGraph: frontend.Items = [];
+    emptySpecs: List<String> = [];
+    graph := modules.visitSourceModule(
+    target = frontend.TARGET_TS, path = canonSource, display = relRoot,
+    identity = "", source = srcRead.text, initialGraph = emptyGraph,
+    projectRoot = rootDir, cwd = rootDir, builtinSpecs = emptySpecs
+    );
+
+    provRes := writeToolProvenance(rootDir, name, "c", cCompilerSha, compilerSourceSha, artDisk.hex, canonSource, graph, false);
+    if not provRes.ok {
+        return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = provRes.error);
+    }
+
+    (ok = true, path = artifactPath, target = "c", sha256 = artDisk.hex, rebuilt = true, error = "")
+};
+
+/** Runs an ignited tool artifact (native C11 binary or TS script) with forwarded arguments and exits with its status. */
+executeIgnitedTool := fn(artifactPath: String, forwardArgs: List<String>): Unit {
+    if text.endsWith(artifactPath, ".ts") {
+        runArgs: mut List<String> = [artifactPath];
+        loop forwardArgs as a {
+            list.pushBack(mut runArgs, a);
+        }
+        emptyEnv: List<String> = [];
+        res := proc.run(project.nodeExecPath(), runArgs, "", emptyEnv, false, "");
+        if res.error =!= "" {
+            io.errorLine("ignite: " + res.error);
+            io.exit(1);
+        }
+        io.exit(res.status);
+    }
+    nativeEnv: List<String> = ["LITE_NODE=" + project.nodeExecPath()];
+    res := proc.run(artifactPath, forwardArgs, "", nativeEnv, false, "");
     if res.error =!= "" {
         io.errorLine("ignite: " + res.error);
         io.exit(1);
@@ -409,18 +613,19 @@ runWipe := fn(rootDir: String, installDeps: Bool, quiet: Bool): (ok: Bool, error
 
 /** Runs post-ignition build and repository verification commands. */
 runPostIgniteVerify := fn(rootDir: String, quiet: Bool): (ok: Bool, error: String) {
+    nodeBin := project.nodeExecPath();
     vsArgs: List<String> = ["editors/vscode/scripts/build.ts"];
-    vsStep := runStep("vscode build", proc.execPath(), vsArgs, rootDir, quiet);
+    vsStep := runStep("vscode build", nodeBin, vsArgs, rootDir, quiet);
     if not vsStep.ok { return vsStep; }
     liteBin := path.join(rootDir, "bin/lite");
     docArgs: List<String> = [liteBin, "doctor"];
-    docStep := runStep("lite doctor", proc.execPath(), docArgs, rootDir, quiet);
+    docStep := runStep("lite doctor", nodeBin, docArgs, rootDir, quiet);
     if not docStep.ok { return docStep; }
     covArgs: List<String> = [liteBin, "verify", "--coverage"];
-    covStep := runStep("lite verify --coverage", proc.execPath(), covArgs, rootDir, quiet);
+    covStep := runStep("lite verify --coverage", nodeBin, covArgs, rootDir, quiet);
     if not covStep.ok { return covStep; }
     testArgs: List<String> = [liteBin, "test", "--full"];
-    runStep("lite test --full", proc.execPath(), testArgs, rootDir, quiet)
+    runStep("lite test --full", nodeBin, testArgs, rootDir, quiet)
 };
 
 /** Executes the unified Lite igniter entrypoint for symlinked tool commands or direct CLI management. */
@@ -442,7 +647,12 @@ run := fn(rawArgs: List<String>): Unit {
     entryPath := proc.entryPath();
     entryTool := toolForEntry(entryPath);
     if entryTool =!= "" {
-        ensured := igniteSingleTool(rootDir, entryTool, seedInfo.artifactSha256, seedInfo.sourceSha256, false);
+        tgt := resolveIgniteTarget(rootDir, "");
+        if not tgt.ok {
+            io.errorLine(tgt.error);
+            io.exit(1);
+        }
+        ensured := igniteSingleTool(rootDir, entryTool, tgt.target, tgt.cc, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, false);
         if not ensured.ok {
             io.errorLine(ensured.error);
             io.exit(1);
@@ -464,6 +674,7 @@ run := fn(rawArgs: List<String>): Unit {
         project.handleNamedVersionFlag(rawArgs, "cli", "lite-ignite");
     }
 
+    var requestedTarget := "";
     var checkExplicit := false;
     var noCheck := false;
     var force := false;
@@ -479,7 +690,19 @@ run := fn(rawArgs: List<String>): Unit {
     args: mut List<String> = rawArgs;
     loop list.listCountText(args) > 0 {
         arg := list.popFront(mut args);
-        if arg == "--check" {
+        if arg == "--target" {
+            if list.listCountText(args) == 0 {
+                io.errorLine("ignite: missing target for --target (expected c, ts, or auto)");
+                io.exit(2);
+            }
+            requestedTarget = list.popFront(mut args);
+        } else if text.startsWithAt(arg, 0, "--target=") {
+            requestedTarget = text.slice(arg, 9, text.length(arg));
+        } else if arg == "--c" {
+            requestedTarget = "c";
+        } else if arg == "--ts" {
+            requestedTarget = "ts";
+        } else if arg == "--check" {
             checkExplicit = true;
         } else if arg == "--no-check" {
             noCheck = true;
@@ -512,7 +735,7 @@ run := fn(rawArgs: List<String>): Unit {
             }
             break;
         } else if arg == "--help" or arg == "-h" {
-            io.outputLine("Usage: ./bin/lite-ignite [--check] [--force] [--clean] [--wipe [--no-install] [--no-check] [--verify]] [--json] [TOOL...]");
+            io.outputLine("Usage: ./bin/lite-ignite [--target c|ts|auto] [--c|--ts] [--check] [--force] [--clean] [--wipe [--no-install] [--no-check] [--verify]] [--json] [TOOL...]");
             io.exit(0);
         } else if text.startsWithAt(arg, 0, "-") {
             io.errorLine("ignite: unknown option " + arg);
@@ -522,8 +745,14 @@ run := fn(rawArgs: List<String>): Unit {
         }
     }
 
+    tgt := resolveIgniteTarget(rootDir, requestedTarget);
+    if not tgt.ok {
+        io.errorLine(tgt.error);
+        io.exit(1);
+    }
+
     if runToolName =!= "" {
-        ensured := igniteSingleTool(rootDir, runToolName, seedInfo.artifactSha256, seedInfo.sourceSha256, force);
+        ensured := igniteSingleTool(rootDir, runToolName, tgt.target, tgt.cc, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
         if not ensured.ok {
             io.errorLine(ensured.error);
             io.exit(1);
@@ -532,7 +761,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     if ensureName =!= "" {
-        ensured := igniteSingleTool(rootDir, ensureName, seedInfo.artifactSha256, seedInfo.sourceSha256, force);
+        ensured := igniteSingleTool(rootDir, ensureName, tgt.target, tgt.cc, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
         if not ensured.ok {
             io.errorLine(ensured.error);
             io.exit(1);
@@ -556,6 +785,13 @@ run := fn(rawArgs: List<String>): Unit {
     check := if noCheck { false } else if checkExplicit { true } else if wipe { fs.kind(path.join(rootDir, "igniter/node_modules/typescript/bin/tsc")) == fs.FILE_KIND_FILE } else { false };
 
     if list.listCountText(selected) == 0 {
+        if tgt.target == "c" {
+            cBoot := ensureDistCCompiler(rootDir, seedInfo.cArtifactSha256, tgt.cc, force);
+            if not cBoot.ok {
+                io.errorLine(cBoot.error);
+                io.exit(1);
+            }
+        }
         distComp := ensureDistCompiler(rootDir, seedInfo.artifactSha256, force);
         if not distComp.ok {
             io.errorLine(distComp.error);
@@ -565,30 +801,38 @@ run := fn(rawArgs: List<String>): Unit {
 
     targetNames := if list.listCountText(selected) > 0 { selected } else { listToolNames(rootDir) };
     artifactPaths: mut List<String> = [];
+    tsArtifactPaths: mut List<String> = [];
     toolEntries: mut List<String> = [];
     var rebuiltCount := 0;
+    var cCount := 0;
+    var tsCount := 0;
     loop targetNames as toolName {
-        res := igniteSingleTool(rootDir, toolName, seedInfo.artifactSha256, seedInfo.sourceSha256, force);
+        res := igniteSingleTool(rootDir, toolName, tgt.target, tgt.cc, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
         if not res.ok {
             io.errorLine(res.error);
             io.exit(1);
         }
         if res.rebuilt { rebuiltCount = rebuiltCount + 1; }
+        if res.target == "c" { cCount = cCount + 1; } else {
+            tsCount = tsCount + 1;
+            list.pushBack(mut tsArtifactPaths, res.path);
+        }
         list.pushBack(mut artifactPaths, res.path);
         entryStr := "    {\n      \"name\": " + json.quoteString(toolName)
+        + ",\n      \"target\": " + json.quoteString(res.target)
         + ",\n      \"path\": " + json.quoteString(res.path)
         + ",\n      \"sha256\": " + json.quoteString(res.sha256)
         + ",\n      \"rebuilt\": " + (if res.rebuilt { "true" } else { "false" }) + "\n    }";
         list.pushBack(mut toolEntries, entryStr);
     }
 
-    if check and list.listCountText(artifactPaths) > 0 {
+    if check and list.listCountText(tsArtifactPaths) > 0 {
         tmpChk := fs.makeTempDir("lite-ignite-check-");
         if not tmpChk.ok {
             io.errorLine("ignite: " + tmpChk.error);
             io.exit(1);
         }
-        chk := cases.checkTsArtifactFilesWithStatus(rootDir, artifactPaths, tmpChk.path, 0);
+        chk := cases.checkTsArtifactFilesWithStatus(rootDir, tsArtifactPaths, tmpChk.path, 0);
         _rm := fs.remove(tmpChk.path);
         if not chk.ok {
             io.errorLine("ignited tools failed strict TypeScript checking:\n" + chk.error);
@@ -605,12 +849,15 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     if jsonOutput {
-        outJson := "{\n  \"tools\": [\n" + text.joinTexts(toolEntries, ",\n") + "\n  ],\n"
+        outJson := "{\n  \"target\": " + json.quoteString(tgt.target) + ",\n  \"tools\": [\n" + text.joinTexts(toolEntries, ",\n") + "\n  ],\n"
         + "  \"checked\": " + (if check { "true" } else { "false" }) + "\n}";
         io.outputLine(outJson);
     } else {
         suffix := if check { ", strict TS checked" } else { "" };
-        io.outputLine("Ignited " + integer.intText(list.listCountText(artifactPaths)) + " tool(s) into dist/tools (" + integer.intText(rebuiltCount) + " rebuilt" + suffix + ").");
+        breakdown := if cCount > 0 and tsCount > 0 { ", " + integer.intText(cCount) + " c / " + integer.intText(tsCount) + " ts" }
+        else if cCount > 0 { ", target c" }
+        else { ", target ts" };
+        io.outputLine("Ignited " + integer.intText(list.listCountText(artifactPaths)) + " tool(s) into dist/tools (" + integer.intText(rebuiltCount) + " rebuilt" + breakdown + suffix + ").");
     }
 };
 

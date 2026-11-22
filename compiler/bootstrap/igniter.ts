@@ -281,6 +281,11 @@ function lite$processEntryPath(): string { return process.argv[1] ?? ""; }
 function lite$processPlatform(): string { return process.platform; }
 function lite$processArch(): string { return process.arch; }
 function lite$processRuntimeVersion(): string { return process.version; }
+function lite$processEnvGet(name: string): { found: boolean; value: string } {
+    if (!Object.prototype.hasOwnProperty.call(process.env, name)) return { found: false, value: "" };
+    const raw = process.env[name];
+    return raw === undefined ? { found: false, value: "" } : { found: true, value: raw };
+}
 function lite$buildEnv(envOverrides: readonly string[]): { ok: true; env: Record<string, string | undefined> } | { ok: false; error: string } {
     const env: Record<string, string | undefined> = { ...process.env };
     for (const entry of envOverrides) {
@@ -647,7 +652,7 @@ function lite$listPopFront<T>(items: T[], at: number): T {
     return items.shift() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 90, 91, 123, 149, 179, 203, 231, 259, 290, 316, 344, 374, 402, 436, 491, 545, 597, 649, 700, 701, 841, 888, 925, 962, 1005, 1045, 1106, 1118, 1230, 1263, 1304, 1345, 1388, 1433, 1482, 1533, 1572, 1614, 1651, 1696, 1733, 1779, 1822, 1855, 1902, 1957, 2016, 2085, 2144, 2193, 2258, 2360, 2458, 2507, 2578, 2655, 2716, 2781, 2842, 2913, 2990, 3039, 3094, 3169, 3245, 3262, 3268, 3270, 3271, 3381, 3430, 3531, 3553, 3559, 3640, 3642, 3643, 3714, 3753, 3802, 3818, 3836, 3867, 3991, 4017, 4027, 4046, 4052, 4061, 4063, 4064, 4176, 4310, 4376, 4415, 4440, 4593, 4599, 4653, 4672, 4803, 4809, 4887, 4964, 5043, 5172, 5305, 5311, 5398, 5456, 5605, 5611, 5735, 5737, 5738, 5824, 5877, 5926, 5963, 5995, 6023, 6065, 6147, 6157, 6163, 6171, 6173, 6174, 6291, 6410, 6459, 6513, 6576, 6672, 6717, 6723, 6762, 6826, 6871, 6877, 6908, 6963, 7024, 7086, 7165, 7242, 7315, 7410, 7506, 7600, 7711, 7846, 7847, 7895, 7956, 8001, 8007, 8008, 8076, 8138, 8230, 8231, 8305, 8388, 8389, 8426, 8444, 8474, 8535, 8598, 8705, 8818, 8925, 8994, 9052, 9101, 9111, 9158, 9181, 9187, 9188, 9264, 9295, 9360, 9421, 9482, 9579, 9628, 9638, 9746, 9795, 9805, 9909, 9977, 10022, 10082, 10153, 10202, 10212, 10218, 10265, 10267, 10268, 10368, 10392, 10491, 10567, 10635, 10686, 10834, 10840, 10889, 10943, 11006, 11007, 11026, 11099, 11123, 11227, 11237, 11243, 11244, 11285, 11358, 11399, 11423, 11565, 11571, 11572, 11617, 11654, 11689, 11729, 11801, 11870, 11938, 11945, 11946, 11979, 12136, 12173, 12208, 12231, 12369, 12375, 12376, 12410, 12432, 12523, 12529, 12530, 12576, 12630, 12652, 12743, 12749, 12750, 12782, 12823, 12859, 12896, 12897, 12944, 12968, 13061, 13067, 13263, 13264, 13289, 13348, 13393, 13460, 13506, 13552, 13601, 13634, 13736, 13754, 13821, 13986, 14000, 14064, 14109, 14157, 14261, 14368, 14445, 14511, 14587, 14634, 14644, 14650, 14651, 14673, 14701, 14755, 14787, 14874, 14957, 15023, 15101, 15176, 15224, 15247, 15339, 15345, 15346, 15428, 15430, 15431, 15520, 15602, 15650, 15678, 15717, 15723, 15756, 15828, 15854, 15900, 15920, 15926, 15951, 15953, 15954, 16059, 16167, 16220, 16271, 16333, 16382, 16442, 16486, 16496, 16502, 16564, 16598, 16658, 16696, 16720, 16815, 16821, 16858, 16893, 16933, 17021, 17090, 17158, 17165, 17198, 17374, 17411, 17446, 17469, 17561, 17567, 17601, 17623, 17673, 17679, 17730, 17753, 17804, 17810, 17838, 17841, 17842, 17915, 18036, 18069, 18131, 18177, 18291, 18368, 18446, 18452, 18480, 18483, 18484, 18596, 18688, 18721, 18794, 18870, 18967, 19046, 19052, 19071, 19147, 19153, 19203, 19282, 19328, 19349, 19436, 19459, 19538, 19548, 19650, 19696, 19719, 19807, 19817, 19932, 19976, 19982, 20010, 20013, 20014, 20084, 20169, 20233, 20313, 20353, 20400, 20449, 20530, 20572, 20635, 20727, 20769, 20827, 20902, 20905, 20906, 21012, 21053, 21092, 21115, 21192, 21212, 21218, 21254, 21316, 21317, 21356, 21381, 21419, 21439, 21445, 21446, 21481, 21523, 21549, 21661, 21689, 21730, 21754, 21764, 21815, 21821, 21822, 21893, 21939, 21985, 22017, 22033, 22039, 22040, 22083, 22117, 22186, 22199, 22270, 22276, 22277, 22309, 22335, 22359, 22383, 22440, 22469, 22499, 22528, 22554, 22581, 22618, 22619, 22657, 22697, 22737, 22767, 22801, 22841, 22869, 22906, 22932, 22969, 22995, 23031, 23056, 23098, 23131, 23169, 23201, 23237, 23268, 23306, 23353, 23425, 23453, 23467, 23517, 23552, 23599, 23668, 23696, 23710, 23761, 23827, 23876, 23890, 23909, 23960, 24112, 24136, 24187, 24246, 24270, 24287, 24333, 24343, 24349, 24350, 24378, 24492, 24520, 24561, 24585, 24595, 24643, 24649, 24650, 24677, 24790, 24818, 24859, 24883, 24893, 24930, 24950, 24956, 24957, 24971, 25033, 25061, 25102, 25126, 25136, 25158, 25180, 25240, 25308, 25314, 25315, 25505, 25506, 25549, 25630, 25659, 25701, 25725, 25735, 25741, 25742, 25843, 25885, 25925, 25952, 25987, 26094, 26118, 26155, 26179, 26189, 26249, 26301, 26376, 26437, 26502, 26597, 26647, 26653, 26654, 26711, 26767, 26794, 26847, 26871, 26881, 26974, 27013, 27037, 27129, 27153, 27163, 27169, 27170, 27191, 27251, 27278, 27318, 27342, 27352, 27358, 27359, 27379, 27470, 27548, 27580, 27593, 27659, 27839, 27845, 27848, 27849, 27870];
+const lite$intLines: readonly number[] = [0, 90, 91, 123, 149, 179, 203, 231, 259, 290, 316, 344, 374, 402, 436, 491, 545, 597, 649, 700, 701, 841, 888, 925, 962, 1005, 1045, 1106, 1118, 1230, 1263, 1304, 1345, 1388, 1433, 1482, 1533, 1572, 1614, 1651, 1696, 1733, 1779, 1822, 1855, 1902, 1957, 2016, 2085, 2144, 2193, 2258, 2360, 2458, 2507, 2578, 2655, 2716, 2781, 2842, 2913, 2990, 3039, 3094, 3169, 3245, 3262, 3268, 3270, 3271, 3381, 3430, 3531, 3553, 3559, 3640, 3642, 3643, 3714, 3753, 3802, 3818, 3836, 3867, 3991, 4017, 4027, 4046, 4052, 4061, 4063, 4064, 4176, 4335, 4401, 4440, 4465, 4640, 4646, 4700, 4719, 4872, 4878, 4956, 5033, 5112, 5193, 5322, 5477, 5483, 5570, 5628, 5799, 5805, 5886, 6034, 6036, 6037, 6107, 6156, 6188, 6270, 6303, 6370, 6415, 6462, 6468, 6501, 6504, 6505, 6670, 6812, 6859, 6978, 7000, 7089, 7095, 7137, 7290, 7296, 7395, 7474, 7500, 7594, 7600, 7621, 7746, 7877, 7883, 7960, 7963, 7964, 8103, 8239, 8292, 8341, 8399, 8469, 8574, 8615, 8703, 8763, 8773, 8779, 8825, 8850, 8958, 8964, 9027, 9146, 9152, 9186, 9208, 9269, 9275, 9308, 9389, 9456, 9506, 9596, 9707, 9713, 9770, 9814, 9817, 9818, 9904, 9957, 10006, 10043, 10075, 10103, 10145, 10227, 10237, 10243, 10251, 10253, 10254, 10371, 10551, 10600, 10717, 10780, 10876, 10932, 10938, 10977, 11041, 11097, 11103, 11134, 11189, 11250, 11312, 11391, 11468, 11541, 11647, 11754, 11869, 11894, 11964, 12084, 12090, 12212, 12358, 12359, 12407, 12468, 12524, 12530, 12531, 12599, 12661, 12764, 12765, 12839, 12933, 12934, 12971, 12989, 13019, 13080, 13143, 13261, 13385, 13503, 13572, 13630, 13690, 13700, 13747, 13770, 13776, 13777, 13853, 13884, 13949, 14010, 14071, 14168, 14228, 14238, 14346, 14406, 14416, 14520, 14599, 14644, 14704, 14775, 14835, 14845, 14851, 14919, 14921, 14922, 15002, 15029, 15136, 15216, 15247, 15335, 15367, 15408, 15444, 15481, 15482, 15529, 15553, 15605, 15611, 15807, 15808, 15833, 15892, 15937, 16004, 16050, 16096, 16145, 16178, 16239, 16257, 16324, 16489, 16503, 16567, 16612, 16660, 16764, 16871, 16948, 17014, 17090, 17137, 17147, 17153, 17154, 17233, 17255, 17283, 17337, 17399, 17412, 17499, 17582, 17648, 17726, 17801, 17849, 17872, 17923, 17929, 17957, 17960, 17961, 18051, 18077, 18197, 18289, 18357, 18408, 18571, 18577, 18626, 18680, 18681, 18700, 18794, 18818, 18934, 18944, 18950, 18951, 18992, 19065, 19106, 19130, 19287, 19293, 19294, 19339, 19376, 19411, 19451, 19523, 19592, 19660, 19667, 19668, 19701, 19858, 19895, 19930, 19953, 20106, 20112, 20113, 20147, 20169, 20275, 20281, 20282, 20328, 20382, 20404, 20510, 20516, 20517, 20562, 20613, 20652, 20658, 20659, 20799, 20823, 20931, 20937, 20938, 21035, 21038, 21039, 21217, 21241, 21326, 21410, 21502, 21526, 21624, 21630, 21698, 21749, 21911, 21917, 21966, 22012, 22013, 22032, 22111, 22136, 22253, 22263, 22292, 22377, 22407, 22531, 22545, 22555, 22561, 22562, 22633, 22655, 22760, 22766, 22767, 22815, 22838, 22944, 22950, 23003, 23036, 23105, 23181, 23235, 23277, 23373, 23458, 23559, 23569, 23719, 23725, 23726, 23760, 23782, 23824, 23929, 23935, 23979, 24058, 24125, 24175, 24217, 24307, 24448, 24454, 24498, 24536, 24558, 24663, 24669, 24670, 24719, 24766, 24801, 24807, 24808, 24856, 24880, 24987, 24993, 24994, 25035, 25108, 25149, 25173, 25329, 25335, 25380, 25417, 25452, 25492, 25564, 25633, 25701, 25708, 25709, 25838, 25862, 25969, 25975, 25976, 26077, 26080, 26081, 26203, 26285, 26329, 26381, 26413, 26456, 26466, 26503, 26586, 26616, 26666, 26690, 26700, 26729, 26735, 26806, 26880, 26906, 26952, 26972, 26978, 27003, 27005, 27006, 27111, 27219, 27272, 27323, 27385, 27434, 27494, 27538, 27548, 27554, 27616, 27650, 27710, 27748, 27772, 27867, 27873, 27910, 27945, 27985, 28073, 28142, 28210, 28217, 28250, 28426, 28463, 28498, 28521, 28613, 28619, 28653, 28675, 28725, 28731, 28782, 28805, 28856, 28862, 28890, 28893, 28894, 28967, 29088, 29121, 29183, 29229, 29343, 29420, 29498, 29504, 29532, 29535, 29536, 29648, 29740, 29773, 29846, 29922, 30019, 30098, 30104, 30123, 30199, 30205, 30255, 30334, 30380, 30401, 30488, 30511, 30590, 30600, 30702, 30748, 30771, 30859, 30869, 30984, 31028, 31034, 31062, 31065, 31066, 31136, 31221, 31260, 31324, 31396, 31436, 31483, 31532, 31605, 31647, 31710, 31794, 31836, 31894, 31961, 31964, 31965, 32071, 32112, 32151, 32174, 32251, 32271, 32277, 32313, 32375, 32376, 32415, 32440, 32478, 32498, 32504, 32505, 32540, 32582, 32608, 32657, 32681, 32718, 32742, 32752, 32931, 32959, 33000, 33024, 33034, 33085, 33091, 33092, 33163, 33209, 33255, 33287, 33303, 33309, 33310, 33353, 33387, 33456, 33469, 33540, 33546, 33547, 33578, 33610, 33636, 33660, 33684, 33741, 33770, 33800, 33829, 33855, 33882, 33919, 33920, 33958, 33998, 34038, 34069, 34116, 34211, 34239, 34253, 34308, 34367, 34435, 34468, 34503, 34537, 34573, 34610, 34644, 34684, 34712, 34749, 34775, 34812, 34838, 34874, 34899, 34941, 34974, 35012, 35044, 35080, 35111, 35149, 35196, 35268, 35296, 35310, 35360, 35395, 35442, 35511, 35539, 35553, 35604, 35670, 35719, 35733, 35752, 35803, 35987, 36011, 36062, 36121, 36145, 36162, 36208, 36218, 36224, 36225, 36283, 36303, 36336, 36356, 36362, 36363, 36391, 36572, 36600, 36641, 36665, 36675, 36723, 36729, 36730, 36757, 36937, 36965, 37006, 37030, 37040, 37077, 37097, 37103, 37104, 37118, 37180, 37208, 37249, 37273, 37283, 37305, 37327, 37387, 37455, 37461, 37462, 37652, 37653, 37696, 37727, 37819, 37849, 37892, 37920, 37934, 37944, 38025, 38054, 38096, 38120, 38130, 38136, 38137, 38238, 38280, 38324, 38364, 38391, 38412, 38434, 38469, 38643, 38667, 38704, 38728, 38738, 38798, 38859, 38894, 38952, 38962, 39014, 39089, 39154, 39215, 39280, 39375, 39425, 39431, 39432, 39491, 39547, 39574, 39627, 39651, 39661, 39756, 39795, 39819, 39911, 39935, 39945, 39951, 39952, 39973, 40033, 40060, 40100, 40124, 40134, 40140, 40141, 40161, 40305, 40383, 40415, 40428, 40494, 40625, 40669, 40701, 40893, 40899, 40902, 40903, 40924];
 const lite$intSource = "tools/src/ignite.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -2951,6 +2956,26 @@ export function main(lite$write?: (text: string) => void): string {
         return { found: true, ok: (lite_num).ok, value: (lite_num).value };
     }
     void liteFn$lib$util$json$readObjectInt;
+    function liteFn$lib$util$json$readObjectBool(lite_source: string, lite_objectStart: bigint, lite_key: string): { found: boolean; ok: boolean; value: boolean } {
+        void lite_source;
+        void lite_objectStart;
+        void lite_key;
+        const lite_field = liteFn$lib$util$json$findObjectField(lite_source, lite_objectStart, lite_key);
+        void lite_field;
+        if ((!((lite_field).found))) {
+            return { found: false, ok: false, value: false };
+        }
+        const lite_pos = liteFn$lib$util$json$skipJsonSpaces(lite_source, (lite_field).valuePos);
+        void lite_pos;
+        if (liteFn$lib$core$text$startsWithAt(lite_source, lite_pos, "true")) {
+            return { found: true, ok: true, value: true };
+        }
+        if (liteFn$lib$core$text$startsWithAt(lite_source, lite_pos, "false")) {
+            return { found: true, ok: true, value: false };
+        }
+        return { found: true, ok: false, value: false };
+    }
+    void liteFn$lib$util$json$readObjectBool;
     function liteFn$lib$util$json$arrayElementOffsets(lite_source: string, lite_arrayStart: bigint): bigint[] {
         void lite_source;
         void lite_arrayStart;
@@ -17989,13 +18014,13 @@ export function main(lite$write?: (text: string) => void): string {
     function liteFn$lib$util$project$classifyArtifactKind(lite_relEntry: string): string {
         void lite_relEntry;
         if (liteFn$lib$core$text$startsWithAt(lite_relEntry, 0n, "dist/tools/")) {
-            return "ignited-ts";
+            return (Boolean(liteFn$lib$core$text$endsWith(lite_relEntry, ".ts")) ? "ignited-ts" : "ignited-c");
         }
         if (((lite_relEntry) === ("compiler/bootstrap/igniter.ts"))) {
             return "bootstrap-igniter-ts";
         }
         if (liteFn$lib$core$text$startsWithAt(lite_relEntry, 0n, "dist/bootstrap/")) {
-            return "bootstrap-compiler-ts";
+            return (Boolean(liteFn$lib$core$text$endsWith(lite_relEntry, ".ts")) ? "bootstrap-compiler-ts" : "bootstrap-compiler-c");
         }
         if (liteFn$lib$core$text$startsWithAt(lite_relEntry, 0n, "dist/compiler-cache/")) {
             return "cached-compiler-ts";
@@ -18017,7 +18042,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite$textLength(lite_hex)) <= (12n))) {
             return lite_hex;
         }
-        return lite$textSlice(lite_hex, 0n, 12n, 3508);
+        return lite$textSlice(lite_hex, 0n, 12n, 3661);
     }
     void liteFn$lib$util$project$shortHash;
     function liteFn$lib$util$project$readSeedMeta(lite_root: string): { target: string; recorded: string; igniterSha256: string; sourceSha256: string; artifactSha256: string } {
@@ -18052,12 +18077,12 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_root;
         void lite_relEntry;
         void lite_kind;
-        if (((((((lite_root) === (""))) || (((lite_kind) !== ("ignited-ts"))))) || ((!(liteFn$lib$core$text$endsWith(lite_relEntry, ".ts")))))) {
+        if (((((lite_root) === (""))) || ((((((lite_kind) !== ("ignited-ts"))) && (((lite_kind) !== ("ignited-c")))))))) {
             return { target: "", artifactSha256: "", compilerArtifactSha256: "", compilerSourceSha256: "", source: "", moduleCount: 0n };
         }
         const lite_prefixLen = lite$textLength("dist/tools/");
         void lite_prefixLen;
-        const lite_toolName = lite$textSlice(lite_relEntry, lite_prefixLen, lite$subtractInt(lite$textLength(lite_relEntry), 3n, 5627), 5573);
+        const lite_toolName = (Boolean(liteFn$lib$core$text$endsWith(lite_relEntry, ".ts")) ? lite$textSlice(lite_relEntry, lite_prefixLen, lite$subtractInt(lite$textLength(lite_relEntry), 3n, 5813), 5759) : lite$textSlice(lite_relEntry, lite_prefixLen, lite$textLength(lite_relEntry), 5839));
         void lite_toolName;
         const lite_provRead = liteFn$lib$core$file$readText(liteFn$lib$core$path$resolve(lite_root, (((("dist/tools/") + (lite_toolName))) + (".provenance.json"))));
         void lite_provRead;
@@ -18085,7 +18110,7 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_offsets;
             lite_depCount = liteFn$lib$core$list$listCountInt([...(lite_offsets)]);
             if (((lite_depCount) > (0n))) {
-                const lite_firstPath = liteFn$lib$util$json$readObjectString(lite_provText, lite$listAt((lite_offsets), 0n, 6587), "path");
+                const lite_firstPath = liteFn$lib$util$json$readObjectString(lite_provText, lite$listAt((lite_offsets), 0n, 6855), "path");
                 void lite_firstPath;
                 if ((((lite_firstPath).found) && ((lite_firstPath).ok))) {
                     lite_srcPath = (lite_firstPath).value;
@@ -18130,7 +18155,9 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_source = (Boolean((((lite_prov).source) !== (""))) ? (lite_prov).source : (Boolean(((lite_kind) === ("bootstrap-igniter-ts"))) ? "tools/src/ignite.lts" : ""));
         void lite_source;
-        const lite_hostRuntime = (("node ") + (lite$processRuntimeVersion()));
+        const lite_rtVer = lite$processRuntimeVersion();
+        void lite_rtVer;
+        const lite_hostRuntime = (Boolean(((lite_rtVer) === ("c11"))) ? "c11" : (("node ") + (lite_rtVer)));
         void lite_hostRuntime;
         if (lite_asJson) {
             const lite_out = (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((("{\n  \"command\": ") + (liteFn$lib$util$json$quoteString(lite_label)))) + (",\n"))) + ("  \"component\": "))) + (liteFn$lib$util$json$quoteString(lite_component)))) + (",\n"))) + ("  \"version\": "))) + (liteFn$lib$util$json$quoteString(lite_version)))) + (",\n"))) + ("  \"kind\": "))) + (liteFn$lib$util$json$quoteString(lite_kind)))) + (",\n"))) + ("  \"target\": "))) + (liteFn$lib$util$json$quoteString(lite_target)))) + (",\n"))) + ("  \"compilerVersion\": "))) + (liteFn$lib$util$json$quoteString(lite_compilerVersion)))) + (",\n"))) + ("  \"runtimeVersion\": "))) + (liteFn$lib$util$json$quoteString(lite_runtimeVersion)))) + (",\n"))) + ("  \"artifact\": "))) + (liteFn$lib$util$json$quoteString(lite_relEntry)))) + (",\n"))) + ("  \"artifactSha256\": "))) + (liteFn$lib$util$json$quoteString(lite_artSha)))) + (",\n"))) + ("  \"source\": "))) + (liteFn$lib$util$json$quoteString(lite_source)))) + (",\n"))) + ("  \"modules\": "))) + (liteFn$lib$core$int$intText((lite_prov).moduleCount)))) + (",\n"))) + ("  \"compilerArtifactSha256\": "))) + (liteFn$lib$util$json$quoteString((lite_prov).compilerArtifactSha256)))) + (",\n"))) + ("  \"compilerSourceSha256\": "))) + (liteFn$lib$util$json$quoteString((lite_prov).compilerSourceSha256)))) + (",\n"))) + ("  \"seedArtifactSha256\": "))) + (liteFn$lib$util$json$quoteString((lite_seed).artifactSha256)))) + (",\n"))) + ("  \"seedSourceSha256\": "))) + (liteFn$lib$util$json$quoteString((lite_seed).sourceSha256)))) + (",\n"))) + ("  \"seedIgniterSha256\": "))) + (liteFn$lib$util$json$quoteString((lite_seed).igniterSha256)))) + (",\n"))) + ("  \"seedRecorded\": "))) + (liteFn$lib$util$json$quoteString((lite_seed).recorded)))) + (",\n"))) + ("  \"hostRuntime\": "))) + (liteFn$lib$util$json$quoteString(lite_hostRuntime)))) + (",\n"))) + ("  \"platform\": "))) + (liteFn$lib$util$json$quoteString(lite$processPlatform())))) + (",\n"))) + ("  \"arch\": "))) + (liteFn$lib$util$json$quoteString(lite$processArch())))) + ("\n"))) + ("}"));
@@ -18172,12 +18199,12 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_label;
         const lite_argCount = liteFn$lib$core$list$listCountText([...(lite_args)]);
         void lite_argCount;
-        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 11390)) === ("--version"))))) {
+        if (((((lite_argCount) > (0n))) && (((lite$listAt((lite_args), 0n, 11715)) === ("--version"))))) {
             if (((lite_argCount) === (1n))) {
                 liteFn$lib$util$project$printVersionMeta(lite_label, lite_component, false);
                 lite$exit(0n);
             }
-            if (((((lite_argCount) === (2n))) && (((lite$listAt((lite_args), 1n, 11560)) === ("--json"))))) {
+            if (((((lite_argCount) === (2n))) && (((lite$listAt((lite_args), 1n, 11885)) === ("--json"))))) {
                 liteFn$lib$util$project$printVersionMeta(lite_label, lite_component, true);
                 lite$exit(0n);
             }
@@ -18186,6 +18213,22 @@ export function main(lite$write?: (text: string) => void): string {
         }
     }
     void liteFn$lib$util$project$handleNamedVersionFlag;
+    function liteFn$lib$util$project$nodeExecPath(): string {
+        const lite_envNode = lite$processEnvGet("LITE_NODE");
+        void lite_envNode;
+        if ((((lite_envNode).found) && ((((lite_envNode).value) !== (""))))) {
+            return (lite_envNode).value;
+        }
+        const lite_exec = lite$processExecPath();
+        void lite_exec;
+        const lite_base = liteFn$lib$core$path$baseName(lite_exec);
+        void lite_base;
+        if (((((lite_base) === ("node"))) || (((lite_base) === ("node.exe"))))) {
+            return lite_exec;
+        }
+        return "node";
+    }
+    void liteFn$lib$util$project$nodeExecPath;
     function liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$normalizeExpectedValueKind(lite_expected: string): string {
         void lite_expected;
         return (Boolean(((((lite_expected) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))) || (((lite_expected) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) ? "" : (Boolean(liteFn$lib$core$text$startsWithAt(lite_expected, 0n, "TailList<")) ? (((("List<") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$listElementKind(lite$textSlice(lite_expected, 4n, lite$textLength(lite_expected), 2636))))) + (">")) : lite_expected));
@@ -27804,7 +27847,7 @@ export function main(lite$write?: (text: string) => void): string {
                 if ((!((lite_span).ok))) {
                     return { ok: false, text: "", error: ((((lite_cfgPath) + (": invalid compilerOptions."))) + (lite_key)) };
                 }
-                lite_parts.push(((((liteFn$lib$util$json$quoteString(lite_key)) + (":"))) + (lite$textSlice((lite_cfgRes).text, (lite_span).start, (lite_span).end, 20396))));
+                lite_parts.push(((((liteFn$lib$util$json$quoteString(lite_key)) + (":"))) + (lite$textSlice((lite_cfgRes).text, (lite_span).start, (lite_span).end, 20430))));
             }
         }
         lite_parts.push("\"types\":[]");
@@ -27850,7 +27893,7 @@ export function main(lite$write?: (text: string) => void): string {
                 return { ok: false, status: (-1n), error: (lite_copyArt).error };
             }
             lite_localFiles.push(lite_localFile);
-            lite_idx = lite$addInt(lite_idx, 1n, 21849);
+            lite_idx = lite$addInt(lite_idx, 1n, 21883);
         }
         const lite_cfgRes = liteFn$lib$util$cases$buildTsConfigFilesText(lite_rootDir, [...(lite_localFiles)]);
         void lite_cfgRes;
@@ -27890,7 +27933,7 @@ export function main(lite$write?: (text: string) => void): string {
         } else {
             const lite_args: string[] = [...([liteFn$lib$core$path$join(lite_rootDir, "igniter/node_modules/typescript/bin/tsc"), "-p", lite_tsconfigPath])];
             void lite_args;
-            const lite_res = lite$processRunBytes(lite$processExecPath(), [...(lite_args)], lite_workDir, [...(lite_emptyEnv)], lite_timeoutMs, [...(lite_emptyBytes)], lite_outPath, lite_errPath);
+            const lite_res = lite$processRunBytes(liteFn$lib$util$project$nodeExecPath(), [...(lite_args)], lite_workDir, [...(lite_emptyEnv)], lite_timeoutMs, [...(lite_emptyBytes)], lite_outPath, lite_errPath);
             void lite_res;
             lite_status = (lite_res).status;
             lite_procErr = (lite_res).error;
@@ -36001,19 +36044,19 @@ export function main(lite$write?: (text: string) => void): string {
         return true;
     }
     void liteFn_isSha256Hex;
-    function liteFn_readSeedInfo(lite_rootDir: string): { ok: boolean; igniterSha256: string; sourceSha256: string; artifactSha256: string; error: string } {
+    function liteFn_readSeedInfo(lite_rootDir: string): { ok: boolean; igniterSha256: string; sourceSha256: string; artifactSha256: string; cArtifactSha256: string; error: string } {
         void lite_rootDir;
         const lite_seedFile = liteFn$lib$core$path$join(lite_rootDir, "compiler/bootstrap/seed.ts");
         void lite_seedFile;
         const lite_seedRead = (lite$fileReadText(lite_seedFile));
         void lite_seedRead;
         if ((!((lite_seedRead).ok))) {
-            return { ok: false, igniterSha256: "", sourceSha256: "", artifactSha256: "", error: (("ignite: cannot read seed metadata: ") + ((lite_seedRead).error)) };
+            return { ok: false, igniterSha256: "", sourceSha256: "", artifactSha256: "", cArtifactSha256: "", error: (("ignite: cannot read seed metadata: ") + ((lite_seedRead).error)) };
         }
         const lite_brace = liteFn$lib$core$text$indexOfText((lite_seedRead).text, "{", 0n);
         void lite_brace;
         if (((lite_brace) < (0n))) {
-            return { ok: false, igniterSha256: "", sourceSha256: "", artifactSha256: "", error: "ignite: invalid seed.ts object" };
+            return { ok: false, igniterSha256: "", sourceSha256: "", artifactSha256: "", cArtifactSha256: "", error: "ignite: invalid seed.ts object" };
         }
         const lite_ignField = liteFn$lib$util$json$readObjectString((lite_seedRead).text, lite_brace, "igniterSha256");
         void lite_ignField;
@@ -36021,17 +36064,113 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_srcField;
         const lite_artField = liteFn$lib$util$json$readObjectString((lite_seedRead).text, lite_brace, "artifactSha256");
         void lite_artField;
+        const lite_cArtField = liteFn$lib$util$json$readObjectString((lite_seedRead).text, lite_brace, "cArtifactSha256");
+        void lite_cArtField;
         if ((((((((((((!((lite_ignField).found))) || ((!((lite_ignField).ok))))) || ((!((lite_srcField).found))))) || ((!((lite_srcField).ok))))) || ((!((lite_artField).found))))) || ((!((lite_artField).ok))))) {
-            return { ok: false, igniterSha256: "", sourceSha256: "", artifactSha256: "", error: "ignite: missing seed hash fields" };
+            return { ok: false, igniterSha256: "", sourceSha256: "", artifactSha256: "", cArtifactSha256: "", error: "ignite: missing seed hash fields" };
         }
         const lite_ignHash = liteFn$lib$core$crypto$sha256File(liteFn$lib$core$path$join(lite_rootDir, "compiler/bootstrap/igniter.ts"));
         void lite_ignHash;
         if ((((!((lite_ignHash).ok))) || ((((lite_ignHash).hex) !== ((lite_ignField).value))))) {
-            return { ok: false, igniterSha256: "", sourceSha256: "", artifactSha256: "", error: "ignite: selected TS bootstrap seed hash mismatch" };
+            return { ok: false, igniterSha256: "", sourceSha256: "", artifactSha256: "", cArtifactSha256: "", error: "ignite: selected TS bootstrap seed hash mismatch" };
         }
-        return { ok: true, igniterSha256: (lite_ignField).value, sourceSha256: (lite_srcField).value, artifactSha256: (lite_artField).value, error: "" };
+        const lite_cSha = (Boolean((((lite_cArtField).found) && ((lite_cArtField).ok))) ? (lite_cArtField).value : "");
+        void lite_cSha;
+        return { ok: true, igniterSha256: (lite_ignField).value, sourceSha256: (lite_srcField).value, artifactSha256: (lite_artField).value, cArtifactSha256: lite_cSha, error: "" };
     }
     void liteFn_readSeedInfo;
+    function liteFn_probeCc(): { available: boolean; cc: string } {
+        const lite_ccEnv = lite$processEnvGet("CC");
+        void lite_ccEnv;
+        const lite_ccCmd = (Boolean((((lite_ccEnv).found) && ((((lite_ccEnv).value) !== (""))))) ? (lite_ccEnv).value : "cc");
+        void lite_ccCmd;
+        const lite_emptyEnv: string[] = [...([])];
+        void lite_emptyEnv;
+        const lite_res = lite$processRun(lite_ccCmd, [...(["--version"])], "", [...(lite_emptyEnv)], true, "");
+        void lite_res;
+        if ((((((lite_res).error) === (""))) && ((((lite_res).status) === (0n))))) {
+            return { available: true, cc: lite_ccCmd };
+        }
+        return { available: false, cc: "" };
+    }
+    void liteFn_probeCc;
+    function liteFn_resolveIgniteTarget(lite_rootDir: string, lite_requested: string): { ok: boolean; target: string; cc: string; allowTsFallback: boolean; error: string } {
+        void lite_rootDir;
+        void lite_requested;
+        const lite_envT = lite$processEnvGet("LITE_IGNITE_TARGET");
+        void lite_envT;
+        const lite_mode = (Boolean(((lite_requested) !== (""))) ? lite_requested : (Boolean((((lite_envT).found) && ((((lite_envT).value) !== (""))))) ? (lite_envT).value : "auto"));
+        void lite_mode;
+        if (((lite_mode) === ("ts"))) {
+            return { ok: true, target: "ts", cc: "", allowTsFallback: false, error: "" };
+        }
+        if (((((lite_mode) !== ("c"))) && (((lite_mode) !== ("auto"))))) {
+            return { ok: false, target: "", cc: "", allowTsFallback: false, error: (((("ignite: unknown target \"") + (lite_mode))) + ("\" (expected c, ts, or auto)")) };
+        }
+        const lite_hasSeedC = ((lite$fileKind(liteFn$lib$core$path$join(lite_rootDir, "compiler/bootstrap/compiler.c"))) === (lite$m$lib$core$file$FILE_KIND_FILE));
+        void lite_hasSeedC;
+        const lite_ccInfo = (Boolean(lite_hasSeedC) ? liteFn_probeCc() : { available: false, cc: "" });
+        void lite_ccInfo;
+        if ((lite_ccInfo).available) {
+            return { ok: true, target: "c", cc: (lite_ccInfo).cc, allowTsFallback: true, error: "" };
+        }
+        if (((lite_mode) === ("c"))) {
+            const lite_reason = (Boolean((!(lite_hasSeedC))) ? "compiler/bootstrap/compiler.c is missing" : "no C compiler (cc) is available");
+            void lite_reason;
+            return { ok: false, target: "", cc: "", allowTsFallback: false, error: (("ignite: --target c requested, but ") + (lite_reason)) };
+        }
+        return { ok: true, target: "ts", cc: "", allowTsFallback: false, error: "" };
+    }
+    void liteFn_resolveIgniteTarget;
+    function liteFn_ensureDistCCompiler(lite_rootDir: string, lite_expectedCSha: string, lite_ccCmd: string, lite_force: boolean): { ok: boolean; path: string; error: string } {
+        void lite_rootDir;
+        void lite_expectedCSha;
+        void lite_ccCmd;
+        void lite_force;
+        const lite_bootDir = liteFn$lib$core$path$join(lite_rootDir, "dist/bootstrap");
+        void lite_bootDir;
+        const lite_binPath = liteFn$lib$core$path$join(lite_bootDir, "compiler-c");
+        void lite_binPath;
+        const lite_stampPath = liteFn$lib$core$path$join(lite_bootDir, "compiler-c.sha256");
+        void lite_stampPath;
+        const lite_seedCPath = liteFn$lib$core$path$join(lite_rootDir, "compiler/bootstrap/compiler.c");
+        void lite_seedCPath;
+        if ((((((!(lite_force))) && (((lite$fileKind(lite_binPath)) === (lite$m$lib$core$file$FILE_KIND_FILE))))) && (((lite$fileKind(lite_stampPath)) === (lite$m$lib$core$file$FILE_KIND_FILE))))) {
+            const lite_stamp = (lite$fileReadText(lite_stampPath));
+            void lite_stamp;
+            if ((((((lite_stamp).ok) && (((liteFn$lib$core$text$trim((lite_stamp).text)) === (lite_expectedCSha))))) && (((lite_expectedCSha) !== (""))))) {
+                return { ok: true, path: lite_binPath, error: "" };
+            }
+        }
+        const lite_seedHash = (lite$cryptoDigestFile("sha256", lite_seedCPath));
+        void lite_seedHash;
+        if ((!((lite_seedHash).ok))) {
+            return { ok: false, path: "", error: (((((("ignite: cannot read ") + (lite_seedCPath))) + (": "))) + ((lite_seedHash).error)) };
+        }
+        if (((((lite_expectedCSha) !== (""))) && ((((lite_seedHash).hex) !== (lite_expectedCSha))))) {
+            return { ok: false, path: "", error: "ignite: compiler/bootstrap/compiler.c hash mismatch against seed.ts" };
+        }
+        const lite_mkRes = lite$fileMakeDir(lite_bootDir);
+        void lite_mkRes;
+        if ((!((lite_mkRes).ok))) {
+            return { ok: false, path: "", error: (lite_mkRes).error };
+        }
+        const lite_emptyEnv: string[] = [...([])];
+        void lite_emptyEnv;
+        const lite_ccArgs: string[] = [...(["-std=c11", "-O2", lite_seedCPath, "-o", lite_binPath, "-lm"])];
+        void lite_ccArgs;
+        const lite_ccRes = lite$processRun(lite_ccCmd, [...(lite_ccArgs)], lite_rootDir, [...(lite_emptyEnv)], true, "");
+        void lite_ccRes;
+        if ((((((lite_ccRes).error) !== (""))) || ((((lite_ccRes).status) !== (0n))))) {
+            const lite_detail = (Boolean((((lite_ccRes).error) !== (""))) ? (lite_ccRes).error : liteFn$lib$core$text$trim((lite_ccRes).stderr));
+            void lite_detail;
+            return { ok: false, path: "", error: (("ignite: failed to compile bootstrap C11 compiler: ") + (lite_detail)) };
+        }
+        const lite__wr = liteFn$lib$core$file$writeText(lite_stampPath, (((lite_seedHash).hex) + ("\n")));
+        void lite__wr;
+        return { ok: true, path: lite_binPath, error: "" };
+    }
+    void liteFn_ensureDistCCompiler;
     function liteFn_listToolNames(lite_rootDir: string): string[] {
         void lite_rootDir;
         const lite_toolsDir = liteFn$lib$core$path$join(lite_rootDir, "tools/src");
@@ -36043,29 +36182,31 @@ export function main(lite$write?: (text: string) => void): string {
         for (const lite_entry of (lite_entries)) {
             void lite_entry;
             if (liteFn$lib$core$text$endsWith(lite_entry, ".lts")) {
-                lite_out.push(lite$textSlice(lite_entry, 0n, lite$subtractInt(lite$textLength(lite_entry), 4n, 6140), 6100));
+                lite_out.push(lite$textSlice(lite_entry, 0n, lite$subtractInt(lite$textLength(lite_entry), 4n, 10220), 10180));
             }
         }
         return [...(lite_out)];
     }
     void liteFn_listToolNames;
-    function liteFn_readValidProvenance(lite_rootDir: string, lite_name: string, lite_compilerArtifactSha: string): { valid: boolean; sha256: string } {
+    function liteFn_readValidProvenance(lite_rootDir: string, lite_name: string, lite_expectedTarget: string, lite_compilerArtifactSha: string, lite_requireFallback: boolean): { valid: boolean; path: string; sha256: string } {
         void lite_rootDir;
         void lite_name;
+        void lite_expectedTarget;
         void lite_compilerArtifactSha;
+        void lite_requireFallback;
         const lite_distDir = liteFn$lib$core$path$join(lite_rootDir, "dist/tools");
         void lite_distDir;
-        const lite_artifactPath = liteFn$lib$core$path$join(lite_distDir, ((lite_name) + (".ts")));
+        const lite_artifactPath = (Boolean(((lite_expectedTarget) === ("c"))) ? liteFn$lib$core$path$join(lite_distDir, lite_name) : liteFn$lib$core$path$join(lite_distDir, ((lite_name) + (".ts"))));
         void lite_artifactPath;
         const lite_provPath = liteFn$lib$core$path$join(lite_distDir, ((lite_name) + (".provenance.json")));
         void lite_provPath;
         if (((((lite$fileKind(lite_artifactPath)) !== (lite$m$lib$core$file$FILE_KIND_FILE))) || (((lite$fileKind(lite_provPath)) !== (lite$m$lib$core$file$FILE_KIND_FILE))))) {
-            return { valid: false, sha256: "" };
+            return { valid: false, path: "", sha256: "" };
         }
         const lite_provRead = (lite$fileReadText(lite_provPath));
         void lite_provRead;
         if ((((!((lite_provRead).ok))) || ((!((liteFn$lib$util$json$validate((lite_provRead).text)).ok))))) {
-            return { valid: false, sha256: "" };
+            return { valid: false, path: "", sha256: "" };
         }
         const lite_provText = (lite_provRead).text;
         void lite_provText;
@@ -36082,36 +36223,43 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_artShaField = liteFn$lib$util$json$readObjectString(lite_provText, 0n, "artifactSha256");
         void lite_artShaField;
         if ((((((!((lite_ver).found))) || ((!((lite_ver).ok))))) || ((((lite_ver).value) !== (1n))))) {
-            return { valid: false, sha256: "" };
+            return { valid: false, path: "", sha256: "" };
         }
         if ((((!((lite_toolField).found))) || ((((lite_toolField).value) !== (lite_name))))) {
-            return { valid: false, sha256: "" };
+            return { valid: false, path: "", sha256: "" };
         }
-        if ((((!((lite_tgtField).found))) || ((((lite_tgtField).value) !== ("ts"))))) {
-            return { valid: false, sha256: "" };
+        if ((((!((lite_tgtField).found))) || ((((lite_tgtField).value) !== (lite_expectedTarget))))) {
+            return { valid: false, path: "", sha256: "" };
+        }
+        if (lite_requireFallback) {
+            const lite_fbField = liteFn$lib$util$json$readObjectBool(lite_provText, 0n, "fallbackFromC");
+            void lite_fbField;
+            if ((((((!((lite_fbField).found))) || ((!((lite_fbField).ok))))) || ((!((lite_fbField).value))))) {
+                return { valid: false, path: "", sha256: "" };
+            }
         }
         if ((((!((lite_cArtField).found))) || ((((lite_cArtField).value) !== (lite_compilerArtifactSha))))) {
-            return { valid: false, sha256: "" };
+            return { valid: false, path: "", sha256: "" };
         }
         if ((((((((!((lite_cSrcField).found))) || ((!((lite_cSrcField).ok))))) || ((!((lite_artShaField).found))))) || ((!((lite_artShaField).ok))))) {
-            return { valid: false, sha256: "" };
+            return { valid: false, path: "", sha256: "" };
         }
         const lite_artDisk = (lite$cryptoDigestFile("sha256", lite_artifactPath));
         void lite_artDisk;
         if ((((!((lite_artDisk).ok))) || ((((lite_artDisk).hex) !== ((lite_artShaField).value))))) {
-            return { valid: false, sha256: "" };
+            return { valid: false, path: "", sha256: "" };
         }
         const lite_depsField = liteFn$lib$util$json$findObjectField(lite_provText, 0n, "dependencies");
         void lite_depsField;
         const lite_edgesField = liteFn$lib$util$json$findObjectField(lite_provText, 0n, "edges");
         void lite_edgesField;
         if ((((!((lite_depsField).found))) || ((!((lite_edgesField).found))))) {
-            return { valid: false, sha256: "" };
+            return { valid: false, path: "", sha256: "" };
         }
         const lite_depOffsets: bigint[] = [...(liteFn$lib$util$json$arrayElementOffsets(lite_provText, (lite_depsField).valuePos))];
         void lite_depOffsets;
         if (((liteFn$lib$core$list$listCountInt([...(lite_depOffsets)])) === (0n))) {
-            return { valid: false, sha256: "" };
+            return { valid: false, path: "", sha256: "" };
         }
         const lite_depPaths: string[] = [...([])];
         void lite_depPaths;
@@ -36124,21 +36272,21 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_dh = liteFn$lib$util$json$readObjectString(lite_provText, lite_dPos, "sha256");
             void lite_dh;
             if ((((((((!((lite_dp).found))) || ((!((lite_dp).ok))))) || ((!((lite_dh).found))))) || ((!((lite_dh).ok))))) {
-                return { valid: false, sha256: "" };
+                return { valid: false, path: "", sha256: "" };
             }
             if ((((!(liteFn_validRelativePath((lite_dp).value)))) || ((!(liteFn_isSha256Hex((lite_dh).value)))))) {
-                return { valid: false, sha256: "" };
+                return { valid: false, path: "", sha256: "" };
             }
             if (((((lite_idx) === (0n))) && ((((lite_dp).value) !== ((((("tools/src/") + (lite_name))) + (".lts"))))))) {
-                return { valid: false, sha256: "" };
+                return { valid: false, path: "", sha256: "" };
             }
             const lite_diskHash = liteFn$lib$core$crypto$sha256File(liteFn$lib$core$path$join(lite_rootDir, (lite_dp).value));
             void lite_diskHash;
             if ((((!((lite_diskHash).ok))) || ((((lite_diskHash).hex) !== ((lite_dh).value))))) {
-                return { valid: false, sha256: "" };
+                return { valid: false, path: "", sha256: "" };
             }
             lite_depPaths.push((lite_dp).value);
-            lite_idx = lite$addInt(lite_idx, 1n, 9176);
+            lite_idx = lite$addInt(lite_idx, 1n, 13765);
         }
         const lite_edgeOffsets: bigint[] = [...(liteFn$lib$util$json$arrayElementOffsets(lite_provText, (lite_edgesField).valuePos))];
         void lite_edgeOffsets;
@@ -36151,90 +36299,39 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_ep = liteFn$lib$util$json$readObjectString(lite_provText, lite_ePos, "path");
             void lite_ep;
             if ((((((((((((!((lite_ei).found))) || ((!((lite_ei).ok))))) || ((!((lite_es).found))))) || ((!((lite_es).ok))))) || ((!((lite_ep).found))))) || ((!((lite_ep).ok))))) {
-                return { valid: false, sha256: "" };
+                return { valid: false, path: "", sha256: "" };
             }
             if ((((!(liteFn$lib$core$list$listContainsText([...(lite_depPaths)], (lite_ei).value)))) || ((!(liteFn$lib$core$list$listContainsText([...(lite_depPaths)], (lite_ep).value)))))) {
-                return { valid: false, sha256: "" };
+                return { valid: false, path: "", sha256: "" };
             }
             const lite_resolved = liteFn$_p__p_$_p__p_$compiler$src$host__fs$resolveImportPath(liteFn$lib$core$path$join(lite_rootDir, (lite_ei).value), (lite_es).value, lite_rootDir, lite_rootDir);
             void lite_resolved;
             if ((!((lite_resolved).ok))) {
-                return { valid: false, sha256: "" };
+                return { valid: false, path: "", sha256: "" };
             }
             const lite_rpRes = lite$fileRealPath((lite_resolved).path);
             void lite_rpRes;
             const lite_rpExp = lite$fileRealPath(liteFn$lib$core$path$join(lite_rootDir, (lite_ep).value));
             void lite_rpExp;
             if ((((((!((lite_rpRes).ok))) || ((!((lite_rpExp).ok))))) || ((((lite_rpRes).path) !== ((lite_rpExp).path))))) {
-                return { valid: false, sha256: "" };
+                return { valid: false, path: "", sha256: "" };
             }
         }
-        return { valid: true, sha256: (lite_artShaField).value };
+        return { valid: true, path: lite_artifactPath, sha256: (lite_artShaField).value };
     }
     void liteFn_readValidProvenance;
-    function liteFn_igniteSingleTool(lite_rootDir: string, lite_name: string, lite_compilerArtifactSha: string, lite_compilerSourceSha: string, lite_force: boolean): { ok: boolean; path: string; sha256: string; rebuilt: boolean; error: string } {
+    function liteFn_writeToolProvenance(lite_rootDir: string, lite_name: string, lite_targetName: string, lite_compilerArtifactSha: string, lite_compilerSourceSha: string, lite_artSha: string, lite_canonSource: string, lite_graph: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[], lite_fallbackFromC: boolean): { ok: boolean; error: string } {
         void lite_rootDir;
         void lite_name;
+        void lite_targetName;
         void lite_compilerArtifactSha;
         void lite_compilerSourceSha;
-        void lite_force;
-        const lite_sourcePath = liteFn$lib$core$path$join(lite_rootDir, (((("tools/src/") + (lite_name))) + (".lts")));
-        void lite_sourcePath;
-        if (((lite$fileKind(lite_sourcePath)) !== (lite$m$lib$core$file$FILE_KIND_FILE))) {
-            return { ok: false, path: "", sha256: "", rebuilt: false, error: (((((((("ignite: unknown tool \"") + (lite_name))) + ("\" (missing "))) + (lite_sourcePath))) + (")")) };
-        }
-        const lite_distDir = liteFn$lib$core$path$join(lite_rootDir, "dist/tools");
-        void lite_distDir;
-        const lite_artifactPath = liteFn$lib$core$path$join(lite_distDir, ((lite_name) + (".ts")));
-        void lite_artifactPath;
-        const lite_provPath = liteFn$lib$core$path$join(lite_distDir, ((lite_name) + (".provenance.json")));
-        void lite_provPath;
-        if ((!(lite_force))) {
-            const lite_prev = liteFn_readValidProvenance(lite_rootDir, lite_name, lite_compilerArtifactSha);
-            void lite_prev;
-            if ((lite_prev).valid) {
-                return { ok: true, path: lite_artifactPath, sha256: (lite_prev).sha256, rebuilt: false, error: "" };
-            }
-        }
-        const lite_rpSource = lite$fileRealPath(lite_sourcePath);
-        void lite_rpSource;
-        const lite_canonSource = (Boolean((lite_rpSource).ok) ? (lite_rpSource).path : lite_sourcePath);
-        void lite_canonSource;
-        const lite_srcRead = (lite$fileReadText(lite_canonSource));
-        void lite_srcRead;
-        if ((!((lite_srcRead).ok))) {
-            return { ok: false, path: "", sha256: "", rebuilt: false, error: (((((("ignite: failed to read ") + (lite_canonSource))) + (": "))) + ((lite_srcRead).error)) };
-        }
-        const lite_relRoot = (((("tools/src/") + (lite_name))) + (".lts"));
-        void lite_relRoot;
-        const lite_emptyGraph: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...([])];
-        void lite_emptyGraph;
-        const lite_emptySpecs: string[] = [...([])];
-        void lite_emptySpecs;
-        const lite_graph: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$visitSourceModule(lite$m$_p__p_$_p__p_$compiler$src$frontend$TARGET_TS, lite_canonSource, lite_relRoot, "", (lite_srcRead).text, [...(lite_emptyGraph)], lite_rootDir, lite_rootDir, [...(lite_emptySpecs)]))];
-        void lite_graph;
-        const lite_writer = lite$ioBufferWriter();
-        void lite_writer;
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$emitProgramToOpt(lite_writer, [...(liteFn$_p__p_$_p__p_$compiler$src$modules$moduleItems([...(lite_graph)]))], (lite_srcRead).text, lite_relRoot, [...(lite_emptySpecs)], 3n);
-        const lite_outRes = lite$ioWriterText(lite_writer);
-        void lite_outRes;
-        const lite__cl = lite$ioCloseWriter(lite_writer);
-        void lite__cl;
-        if ((!((lite_outRes).ok))) {
-            return { ok: false, path: "", sha256: "", rebuilt: false, error: (((((("ignite: emit failed for ") + (lite_relRoot))) + (": "))) + ((lite_outRes).error)) };
-        }
-        const lite_mkRes = lite$fileMakeDir(lite_distDir);
-        void lite_mkRes;
-        if ((!((lite_mkRes).ok))) {
-            return { ok: false, path: "", sha256: "", rebuilt: false, error: (lite_mkRes).error };
-        }
-        const lite_artSha = liteFn$lib$core$crypto$sha256Text((lite_outRes).text);
         void lite_artSha;
-        const lite_wrArt = liteFn$lib$core$file$writeText(lite_artifactPath, (lite_outRes).text);
-        void lite_wrArt;
-        if ((!((lite_wrArt).ok))) {
-            return { ok: false, path: "", sha256: "", rebuilt: false, error: (lite_wrArt).error };
-        }
+        void lite_canonSource;
+        void lite_graph;
+        void lite_fallbackFromC;
+        const lite_provPath = liteFn$lib$core$path$join(liteFn$lib$core$path$join(lite_rootDir, "dist/tools"), ((lite_name) + (".provenance.json")));
+        void lite_provPath;
         const lite_seenPaths: Set<string> = new Set<string>();
         void lite_seenPaths;
         ((lite_seenPaths).add(lite_canonSource), undefined);
@@ -36245,7 +36342,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_rootSha = (lite$cryptoDigestFile("sha256", lite_canonSource));
         void lite_rootSha;
         if ((!((lite_rootSha).ok))) {
-            return { ok: false, path: "", sha256: "", rebuilt: false, error: (lite_rootSha).error };
+            return { ok: false, error: (lite_rootSha).error };
         }
         lite_depJson.push((((((((("    {\n      \"path\": ") + (liteFn$lib$util$json$quoteString(liteFn$_p__p_$_p__p_$compiler$src$host__fs$displaySourcePath(lite_canonSource, lite_rootDir))))) + (",\n      \"sha256\": "))) + (liteFn$lib$util$json$quoteString((lite_rootSha).hex)))) + ("\n    }")));
         for (const lite_item of (lite_graph)) {
@@ -36260,7 +36357,7 @@ export function main(lite$write?: (text: string) => void): string {
                     const lite_hDep = (lite$cryptoDigestFile("sha256", lite_cDep));
                     void lite_hDep;
                     if ((!((lite_hDep).ok))) {
-                        return { ok: false, path: "", sha256: "", rebuilt: false, error: (lite_hDep).error };
+                        return { ok: false, error: (lite_hDep).error };
                     }
                     const lite_relDep = liteFn$_p__p_$_p__p_$compiler$src$host__fs$displaySourcePath(lite_cDep, lite_rootDir);
                     void lite_relDep;
@@ -36280,28 +36377,244 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_edgeJson.push(lite_eStr);
             }
         }
-        const lite_provBody = (((((((((((((((((((((((((((((((((((("{\n  \"version\": 1,\n  \"tool\": ") + (liteFn$lib$util$json$quoteString(lite_name)))) + (",\n"))) + ("  \"target\": \"ts\",\n"))) + ("  \"compilerArtifactSha256\": "))) + (liteFn$lib$util$json$quoteString(lite_compilerArtifactSha)))) + (",\n"))) + ("  \"compilerSourceSha256\": "))) + (liteFn$lib$util$json$quoteString(lite_compilerSourceSha)))) + (",\n"))) + ("  \"artifactSha256\": "))) + (liteFn$lib$util$json$quoteString(lite_artSha)))) + (",\n"))) + ("  \"dependencies\": [\n"))) + (liteFn$lib$core$text$joinTexts([...(lite_depJson)], ",\n")))) + ("\n  ],\n"))) + ("  \"edges\": [\n"))) + (liteFn$lib$core$text$joinTexts([...(lite_edgeJson)], ",\n")))) + ("\n  ]\n}\n"));
+        const lite_fbLine = (Boolean(lite_fallbackFromC) ? "  \"fallbackFromC\": true,\n" : "");
+        void lite_fbLine;
+        const lite_provBody = (((((((((((((((((((((((((((((((((((((((((("{\n  \"version\": 1,\n  \"tool\": ") + (liteFn$lib$util$json$quoteString(lite_name)))) + (",\n"))) + ("  \"target\": "))) + (liteFn$lib$util$json$quoteString(lite_targetName)))) + (",\n"))) + (lite_fbLine))) + ("  \"compilerArtifactSha256\": "))) + (liteFn$lib$util$json$quoteString(lite_compilerArtifactSha)))) + (",\n"))) + ("  \"compilerSourceSha256\": "))) + (liteFn$lib$util$json$quoteString(lite_compilerSourceSha)))) + (",\n"))) + ("  \"artifactSha256\": "))) + (liteFn$lib$util$json$quoteString(lite_artSha)))) + (",\n"))) + ("  \"dependencies\": [\n"))) + (liteFn$lib$core$text$joinTexts([...(lite_depJson)], ",\n")))) + ("\n  ],\n"))) + ("  \"edges\": [\n"))) + (liteFn$lib$core$text$joinTexts([...(lite_edgeJson)], ",\n")))) + ("\n  ]\n}\n"));
         void lite_provBody;
         const lite_wrProv = (lite$fileWriteText(lite_provPath, lite_provBody));
         void lite_wrProv;
         if ((!((lite_wrProv).ok))) {
-            return { ok: false, path: "", sha256: "", rebuilt: false, error: (lite_wrProv).error };
+            return { ok: false, error: (lite_wrProv).error };
         }
-        return { ok: true, path: lite_artifactPath, sha256: lite_artSha, rebuilt: true, error: "" };
+        return { ok: true, error: "" };
+    }
+    void liteFn_writeToolProvenance;
+    function liteFn_igniteSingleToolTs(lite_rootDir: string, lite_name: string, lite_compilerArtifactSha: string, lite_compilerSourceSha: string, lite_force: boolean, lite_fallbackFromC: boolean): { ok: boolean; path: string; target: string; sha256: string; rebuilt: boolean; error: string } {
+        void lite_rootDir;
+        void lite_name;
+        void lite_compilerArtifactSha;
+        void lite_compilerSourceSha;
+        void lite_force;
+        void lite_fallbackFromC;
+        const lite_sourcePath = liteFn$lib$core$path$join(lite_rootDir, (((("tools/src/") + (lite_name))) + (".lts")));
+        void lite_sourcePath;
+        if (((lite$fileKind(lite_sourcePath)) !== (lite$m$lib$core$file$FILE_KIND_FILE))) {
+            return { ok: false, path: "", target: "ts", sha256: "", rebuilt: false, error: (((((((("ignite: unknown tool \"") + (lite_name))) + ("\" (missing "))) + (lite_sourcePath))) + (")")) };
+        }
+        const lite_distDir = liteFn$lib$core$path$join(lite_rootDir, "dist/tools");
+        void lite_distDir;
+        const lite_artifactPath = liteFn$lib$core$path$join(lite_distDir, ((lite_name) + (".ts")));
+        void lite_artifactPath;
+        if ((!(lite_force))) {
+            const lite_prev = liteFn_readValidProvenance(lite_rootDir, lite_name, "ts", lite_compilerArtifactSha, lite_fallbackFromC);
+            void lite_prev;
+            if ((lite_prev).valid) {
+                return { ok: true, path: (lite_prev).path, target: "ts", sha256: (lite_prev).sha256, rebuilt: false, error: "" };
+            }
+        }
+        const lite_rpSource = lite$fileRealPath(lite_sourcePath);
+        void lite_rpSource;
+        const lite_canonSource = (Boolean((lite_rpSource).ok) ? (lite_rpSource).path : lite_sourcePath);
+        void lite_canonSource;
+        const lite_srcRead = (lite$fileReadText(lite_canonSource));
+        void lite_srcRead;
+        if ((!((lite_srcRead).ok))) {
+            return { ok: false, path: "", target: "ts", sha256: "", rebuilt: false, error: (((((("ignite: failed to read ") + (lite_canonSource))) + (": "))) + ((lite_srcRead).error)) };
+        }
+        const lite_relRoot = (((("tools/src/") + (lite_name))) + (".lts"));
+        void lite_relRoot;
+        const lite_emptyGraph: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...([])];
+        void lite_emptyGraph;
+        const lite_emptySpecs: string[] = [...([])];
+        void lite_emptySpecs;
+        const lite_graph: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$visitSourceModule(lite$m$_p__p_$_p__p_$compiler$src$frontend$TARGET_TS, lite_canonSource, lite_relRoot, "", (lite_srcRead).text, [...(lite_emptyGraph)], lite_rootDir, lite_rootDir, [...(lite_emptySpecs)]))];
+        void lite_graph;
+        const lite_writer = lite$ioBufferWriter();
+        void lite_writer;
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$emitProgramToOpt(lite_writer, [...(liteFn$_p__p_$_p__p_$compiler$src$modules$moduleItems([...(lite_graph)]))], (lite_srcRead).text, lite_relRoot, [...(lite_emptySpecs)], 3n);
+        const lite_outRes = lite$ioWriterText(lite_writer);
+        void lite_outRes;
+        const lite__cl = lite$ioCloseWriter(lite_writer);
+        void lite__cl;
+        if ((!((lite_outRes).ok))) {
+            return { ok: false, path: "", target: "ts", sha256: "", rebuilt: false, error: (((((("ignite: emit failed for ") + (lite_relRoot))) + (": "))) + ((lite_outRes).error)) };
+        }
+        const lite_mkRes = lite$fileMakeDir(lite_distDir);
+        void lite_mkRes;
+        if ((!((lite_mkRes).ok))) {
+            return { ok: false, path: "", target: "ts", sha256: "", rebuilt: false, error: (lite_mkRes).error };
+        }
+        const lite_artSha = liteFn$lib$core$crypto$sha256Text((lite_outRes).text);
+        void lite_artSha;
+        const lite_wrArt = liteFn$lib$core$file$writeText(lite_artifactPath, (lite_outRes).text);
+        void lite_wrArt;
+        if ((!((lite_wrArt).ok))) {
+            return { ok: false, path: "", target: "ts", sha256: "", rebuilt: false, error: (lite_wrArt).error };
+        }
+        const lite_nativeStale = liteFn$lib$core$path$join(lite_distDir, lite_name);
+        void lite_nativeStale;
+        if (((lite$fileKind(lite_nativeStale)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
+            const lite__rm = lite$fileRemove(lite_nativeStale);
+            void lite__rm;
+        }
+        const lite_provRes = liteFn_writeToolProvenance(lite_rootDir, lite_name, "ts", lite_compilerArtifactSha, lite_compilerSourceSha, lite_artSha, lite_canonSource, [...(lite_graph)], lite_fallbackFromC);
+        void lite_provRes;
+        if ((!((lite_provRes).ok))) {
+            return { ok: false, path: "", target: "ts", sha256: "", rebuilt: false, error: (lite_provRes).error };
+        }
+        return { ok: true, path: lite_artifactPath, target: "ts", sha256: lite_artSha, rebuilt: true, error: "" };
+    }
+    void liteFn_igniteSingleToolTs;
+    function liteFn_igniteSingleTool(lite_rootDir: string, lite_name: string, lite_target: string, lite_ccCmd: string, lite_allowTsFallback: boolean, lite_tsCompilerSha: string, lite_cCompilerSha: string, lite_compilerSourceSha: string, lite_force: boolean): { ok: boolean; path: string; target: string; sha256: string; rebuilt: boolean; error: string } {
+        void lite_rootDir;
+        void lite_name;
+        void lite_target;
+        void lite_ccCmd;
+        void lite_allowTsFallback;
+        void lite_tsCompilerSha;
+        void lite_cCompilerSha;
+        void lite_compilerSourceSha;
+        void lite_force;
+        if (((lite_target) === ("ts"))) {
+            return liteFn_igniteSingleToolTs(lite_rootDir, lite_name, lite_tsCompilerSha, lite_compilerSourceSha, lite_force, false);
+        }
+        const lite_sourcePath = liteFn$lib$core$path$join(lite_rootDir, (((("tools/src/") + (lite_name))) + (".lts")));
+        void lite_sourcePath;
+        if (((lite$fileKind(lite_sourcePath)) !== (lite$m$lib$core$file$FILE_KIND_FILE))) {
+            return { ok: false, path: "", target: "c", sha256: "", rebuilt: false, error: (((((((("ignite: unknown tool \"") + (lite_name))) + ("\" (missing "))) + (lite_sourcePath))) + (")")) };
+        }
+        const lite_distDir = liteFn$lib$core$path$join(lite_rootDir, "dist/tools");
+        void lite_distDir;
+        const lite_artifactPath = liteFn$lib$core$path$join(lite_distDir, lite_name);
+        void lite_artifactPath;
+        if ((!(lite_force))) {
+            const lite_prevC = liteFn_readValidProvenance(lite_rootDir, lite_name, "c", lite_cCompilerSha, false);
+            void lite_prevC;
+            if ((lite_prevC).valid) {
+                return { ok: true, path: (lite_prevC).path, target: "c", sha256: (lite_prevC).sha256, rebuilt: false, error: "" };
+            }
+            if (lite_allowTsFallback) {
+                const lite_prevFb = liteFn_readValidProvenance(lite_rootDir, lite_name, "ts", lite_tsCompilerSha, true);
+                void lite_prevFb;
+                if ((lite_prevFb).valid) {
+                    return { ok: true, path: (lite_prevFb).path, target: "ts", sha256: (lite_prevFb).sha256, rebuilt: false, error: "" };
+                }
+            }
+        }
+        const lite_cBoot = liteFn_ensureDistCCompiler(lite_rootDir, lite_cCompilerSha, lite_ccCmd, false);
+        void lite_cBoot;
+        if ((!((lite_cBoot).ok))) {
+            return { ok: false, path: "", target: "c", sha256: "", rebuilt: false, error: (lite_cBoot).error };
+        }
+        const lite_tmpDir = lite$fileMakeTempDir("lite-ignite-c-");
+        void lite_tmpDir;
+        if ((!((lite_tmpDir).ok))) {
+            return { ok: false, path: "", target: "c", sha256: "", rebuilt: false, error: (lite_tmpDir).error };
+        }
+        const lite_cOutPath = liteFn$lib$core$path$join((lite_tmpDir).path, ((lite_name) + (".c")));
+        void lite_cOutPath;
+        const lite_emptyEnv: string[] = [...([])];
+        void lite_emptyEnv;
+        const lite_compArgs: string[] = [...(["-O1", lite_sourcePath, "--out", lite_cOutPath])];
+        void lite_compArgs;
+        const lite_compRes = lite$processRun((lite_cBoot).path, [...(lite_compArgs)], lite_rootDir, [...(lite_emptyEnv)], true, "");
+        void lite_compRes;
+        if ((((((lite_compRes).error) !== (""))) || ((((lite_compRes).status) !== (0n))))) {
+            const lite__rmTmp = lite$fileRemove((lite_tmpDir).path);
+            void lite__rmTmp;
+            const lite_detail = (Boolean((((lite_compRes).error) !== (""))) ? (lite_compRes).error : liteFn$lib$core$text$trim((lite_compRes).stderr));
+            void lite_detail;
+            if (((lite_allowTsFallback) && (liteFn$lib$core$text$containsText(lite_detail, "external host builtins")))) {
+                return liteFn_igniteSingleToolTs(lite_rootDir, lite_name, lite_tsCompilerSha, lite_compilerSourceSha, lite_force, true);
+            }
+            return { ok: false, path: "", target: "c", sha256: "", rebuilt: false, error: (((((("ignite: C11 compile failed for ") + (lite_name))) + (": "))) + (lite_detail)) };
+        }
+        const lite_mkRes = lite$fileMakeDir(lite_distDir);
+        void lite_mkRes;
+        if ((!((lite_mkRes).ok))) {
+            const lite__rmTmp = lite$fileRemove((lite_tmpDir).path);
+            void lite__rmTmp;
+            return { ok: false, path: "", target: "c", sha256: "", rebuilt: false, error: (lite_mkRes).error };
+        }
+        const lite_tmpBin = liteFn$lib$core$path$join((lite_tmpDir).path, lite_name);
+        void lite_tmpBin;
+        const lite_ccArgs: string[] = [...(["-std=c11", "-O1", lite_cOutPath, "-o", lite_tmpBin, "-lm"])];
+        void lite_ccArgs;
+        const lite_ccRes = lite$processRun(lite_ccCmd, [...(lite_ccArgs)], lite_rootDir, [...(lite_emptyEnv)], true, "");
+        void lite_ccRes;
+        if ((((((lite_ccRes).error) !== (""))) || ((((lite_ccRes).status) !== (0n))))) {
+            const lite__rmTmp = lite$fileRemove((lite_tmpDir).path);
+            void lite__rmTmp;
+            const lite_detail = (Boolean((((lite_ccRes).error) !== (""))) ? (lite_ccRes).error : liteFn$lib$core$text$trim((lite_ccRes).stderr));
+            void lite_detail;
+            return { ok: false, path: "", target: "c", sha256: "", rebuilt: false, error: (((((("ignite: cc failed for ") + (lite_name))) + (": "))) + (lite_detail)) };
+        }
+        const lite_mvRes = lite$fileCopy(lite_tmpBin, lite_artifactPath);
+        void lite_mvRes;
+        const lite__rmTmp = lite$fileRemove((lite_tmpDir).path);
+        void lite__rmTmp;
+        if ((!((lite_mvRes).ok))) {
+            return { ok: false, path: "", target: "c", sha256: "", rebuilt: false, error: (lite_mvRes).error };
+        }
+        const lite_tsStale = liteFn$lib$core$path$join(lite_distDir, ((lite_name) + (".ts")));
+        void lite_tsStale;
+        if (((lite$fileKind(lite_tsStale)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
+            const lite__rm = lite$fileRemove(lite_tsStale);
+            void lite__rm;
+        }
+        const lite_artDisk = (lite$cryptoDigestFile("sha256", lite_artifactPath));
+        void lite_artDisk;
+        if ((!((lite_artDisk).ok))) {
+            return { ok: false, path: "", target: "c", sha256: "", rebuilt: false, error: (lite_artDisk).error };
+        }
+        const lite_rpSource = lite$fileRealPath(lite_sourcePath);
+        void lite_rpSource;
+        const lite_canonSource = (Boolean((lite_rpSource).ok) ? (lite_rpSource).path : lite_sourcePath);
+        void lite_canonSource;
+        const lite_srcRead = (lite$fileReadText(lite_canonSource));
+        void lite_srcRead;
+        if ((!((lite_srcRead).ok))) {
+            return { ok: false, path: "", target: "c", sha256: "", rebuilt: false, error: (((((("ignite: failed to read ") + (lite_canonSource))) + (": "))) + ((lite_srcRead).error)) };
+        }
+        const lite_relRoot = (((("tools/src/") + (lite_name))) + (".lts"));
+        void lite_relRoot;
+        const lite_emptyGraph: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...([])];
+        void lite_emptyGraph;
+        const lite_emptySpecs: string[] = [...([])];
+        void lite_emptySpecs;
+        const lite_graph: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$visitSourceModule(lite$m$_p__p_$_p__p_$compiler$src$frontend$TARGET_TS, lite_canonSource, lite_relRoot, "", (lite_srcRead).text, [...(lite_emptyGraph)], lite_rootDir, lite_rootDir, [...(lite_emptySpecs)]))];
+        void lite_graph;
+        const lite_provRes = liteFn_writeToolProvenance(lite_rootDir, lite_name, "c", lite_cCompilerSha, lite_compilerSourceSha, (lite_artDisk).hex, lite_canonSource, [...(lite_graph)], false);
+        void lite_provRes;
+        if ((!((lite_provRes).ok))) {
+            return { ok: false, path: "", target: "c", sha256: "", rebuilt: false, error: (lite_provRes).error };
+        }
+        return { ok: true, path: lite_artifactPath, target: "c", sha256: (lite_artDisk).hex, rebuilt: true, error: "" };
     }
     void liteFn_igniteSingleTool;
     function liteFn_executeIgnitedTool(lite_artifactPath: string, lite_forwardArgs: string[]): void {
         void lite_artifactPath;
         void lite_forwardArgs;
-        const lite_runArgs: string[] = [...([lite_artifactPath])];
-        void lite_runArgs;
-        for (const lite_a of (lite_forwardArgs)) {
-            void lite_a;
-            lite_runArgs.push(lite_a);
+        if (liteFn$lib$core$text$endsWith(lite_artifactPath, ".ts")) {
+            const lite_runArgs: string[] = [...([lite_artifactPath])];
+            void lite_runArgs;
+            for (const lite_a of (lite_forwardArgs)) {
+                void lite_a;
+                lite_runArgs.push(lite_a);
+            }
+            const lite_emptyEnv: string[] = [...([])];
+            void lite_emptyEnv;
+            const lite_res = lite$processRun(liteFn$lib$util$project$nodeExecPath(), [...(lite_runArgs)], "", [...(lite_emptyEnv)], false, "");
+            void lite_res;
+            if ((((lite_res).error) !== (""))) {
+                lite$reportError((("ignite: ") + ((lite_res).error)));
+                lite$exit(1n);
+            }
+            lite$exit((lite_res).status);
         }
-        const lite_emptyEnv: string[] = [...([])];
-        void lite_emptyEnv;
-        const lite_res = lite$processRun(lite$processExecPath(), [...(lite_runArgs)], "", [...(lite_emptyEnv)], false, "");
+        const lite_nativeEnv: string[] = [...([(("LITE_NODE=") + (liteFn$lib$util$project$nodeExecPath()))])];
+        void lite_nativeEnv;
+        const lite_res = lite$processRun(lite_artifactPath, [...(lite_forwardArgs)], "", [...(lite_nativeEnv)], false, "");
         void lite_res;
         if ((((lite_res).error) !== (""))) {
             lite$reportError((("ignite: ") + ((lite_res).error)));
@@ -36434,9 +36747,11 @@ export function main(lite$write?: (text: string) => void): string {
     function liteFn_runPostIgniteVerify(lite_rootDir: string, lite_quiet: boolean): { ok: boolean; error: string } {
         void lite_rootDir;
         void lite_quiet;
+        const lite_nodeBin = liteFn$lib$util$project$nodeExecPath();
+        void lite_nodeBin;
         const lite_vsArgs: string[] = [...(["editors/vscode/scripts/build.ts"])];
         void lite_vsArgs;
-        const lite_vsStep = liteFn_runStep("vscode build", lite$processExecPath(), [...(lite_vsArgs)], lite_rootDir, lite_quiet);
+        const lite_vsStep = liteFn_runStep("vscode build", lite_nodeBin, [...(lite_vsArgs)], lite_rootDir, lite_quiet);
         void lite_vsStep;
         if ((!((lite_vsStep).ok))) {
             return lite_vsStep;
@@ -36445,21 +36760,21 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_liteBin;
         const lite_docArgs: string[] = [...([lite_liteBin, "doctor"])];
         void lite_docArgs;
-        const lite_docStep = liteFn_runStep("lite doctor", lite$processExecPath(), [...(lite_docArgs)], lite_rootDir, lite_quiet);
+        const lite_docStep = liteFn_runStep("lite doctor", lite_nodeBin, [...(lite_docArgs)], lite_rootDir, lite_quiet);
         void lite_docStep;
         if ((!((lite_docStep).ok))) {
             return lite_docStep;
         }
         const lite_covArgs: string[] = [...([lite_liteBin, "verify", "--coverage"])];
         void lite_covArgs;
-        const lite_covStep = liteFn_runStep("lite verify --coverage", lite$processExecPath(), [...(lite_covArgs)], lite_rootDir, lite_quiet);
+        const lite_covStep = liteFn_runStep("lite verify --coverage", lite_nodeBin, [...(lite_covArgs)], lite_rootDir, lite_quiet);
         void lite_covStep;
         if ((!((lite_covStep).ok))) {
             return lite_covStep;
         }
         const lite_testArgs: string[] = [...([lite_liteBin, "test", "--full"])];
         void lite_testArgs;
-        return liteFn_runStep("lite test --full", lite$processExecPath(), [...(lite_testArgs)], lite_rootDir, lite_quiet);
+        return liteFn_runStep("lite test --full", lite_nodeBin, [...(lite_testArgs)], lite_rootDir, lite_quiet);
     }
     void liteFn_runPostIgniteVerify;
     function liteFn_run(lite_rawArgs: string[]): void {
@@ -36485,7 +36800,13 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_entryTool = liteFn_toolForEntry(lite_entryPath);
         void lite_entryTool;
         if (((lite_entryTool) !== (""))) {
-            const lite_ensured = liteFn_igniteSingleTool(lite_rootDir, lite_entryTool, (lite_seedInfo).artifactSha256, (lite_seedInfo).sourceSha256, false);
+            const lite_tgt = liteFn_resolveIgniteTarget(lite_rootDir, "");
+            void lite_tgt;
+            if ((!((lite_tgt).ok))) {
+                lite$reportError((lite_tgt).error);
+                lite$exit(1n);
+            }
+            const lite_ensured = liteFn_igniteSingleTool(lite_rootDir, lite_entryTool, (lite_tgt).target, (lite_tgt).cc, (lite_tgt).allowTsFallback, (lite_seedInfo).artifactSha256, (lite_seedInfo).cArtifactSha256, (lite_seedInfo).sourceSha256, false);
             void lite_ensured;
             if ((!((lite_ensured).ok))) {
                 lite$reportError((lite_ensured).error);
@@ -36493,10 +36814,10 @@ export function main(lite$write?: (text: string) => void): string {
             }
             liteFn_executeIgnitedTool((lite_ensured).path, [...(lite_rawArgs)]);
         }
-        if (((((liteFn$lib$core$list$listCountText([...(lite_rawArgs)])) > (0n))) && (((lite$listAt((lite_rawArgs), 0n, 21873)) === ("--compile"))))) {
+        if (((((liteFn$lib$core$list$listCountText([...(lite_rawArgs)])) > (0n))) && (((lite$listAt((lite_rawArgs), 0n, 33143)) === ("--compile"))))) {
             const lite_compArgs: string[] = [...(lite_rawArgs)];
             void lite_compArgs;
-            const lite__flag = lite$listPopFront(lite_compArgs, 21956);
+            const lite__flag = lite$listPopFront(lite_compArgs, 33226);
             void lite__flag;
             liteFn$_p__p_$_p__p_$compiler$src$driver__ts$run([...(lite_compArgs)]);
             return;
@@ -36508,6 +36829,8 @@ export function main(lite$write?: (text: string) => void): string {
         } else {
             liteFn$lib$util$project$handleNamedVersionFlag([...(lite_rawArgs)], "cli", "lite-ignite");
         }
+        let lite_requestedTarget = "";
+        void lite_requestedTarget;
         let lite_checkExplicit = false;
         void lite_checkExplicit;
         let lite_noCheck = false;
@@ -36533,9 +36856,21 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_args: string[] = [...(lite_rawArgs)];
         void lite_args;
         while (((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) {
-            const lite_arg = lite$listPopFront(lite_args, 22712);
+            const lite_arg = lite$listPopFront(lite_args, 34013);
             void lite_arg;
-            if (((lite_arg) === ("--check"))) {
+            if (((lite_arg) === ("--target"))) {
+                if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
+                    lite$reportError("ignite: missing target for --target (expected c, ts, or auto)");
+                    lite$exit(2n);
+                }
+                lite_requestedTarget = lite$listPopFront(lite_args, 34283);
+            } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--target=")) {
+                lite_requestedTarget = lite$textSlice(lite_arg, 9n, lite$textLength(lite_arg), 34397);
+            } else if (((lite_arg) === ("--c"))) {
+                lite_requestedTarget = "c";
+            } else if (((lite_arg) === ("--ts"))) {
+                lite_requestedTarget = "ts";
+            } else if (((lite_arg) === ("--check"))) {
                 lite_checkExplicit = true;
             } else if (((lite_arg) === ("--no-check"))) {
                 lite_noCheck = true;
@@ -36556,20 +36891,20 @@ export function main(lite$write?: (text: string) => void): string {
                     lite$reportError("ignite: missing tool name for --ensure");
                     lite$exit(2n);
                 }
-                lite_ensureName = lite$listPopFront(lite_args, 23492);
+                lite_ensureName = lite$listPopFront(lite_args, 35335);
             } else if (((lite_arg) === ("--run"))) {
                 if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
                     lite$reportError("ignite: missing tool name for --run");
                     lite$exit(2n);
                 }
-                lite_runToolName = lite$listPopFront(lite_args, 23736);
-                if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) && (((lite$listAt((lite_args), 0n, 23814)) === ("--"))))) {
-                    const lite__sep = lite$listPopFront(lite_args, 23851);
+                lite_runToolName = lite$listPopFront(lite_args, 35579);
+                if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) && (((lite$listAt((lite_args), 0n, 35657)) === ("--"))))) {
+                    const lite__sep = lite$listPopFront(lite_args, 35694);
                     void lite__sep;
                 }
                 break;
             } else if (((((lite_arg) === ("--help"))) || (((lite_arg) === ("-h"))))) {
-                lite$emit("Usage: ./bin/lite-ignite [--check] [--force] [--clean] [--wipe [--no-install] [--no-check] [--verify]] [--json] [TOOL...]" + "\n");
+                lite$emit("Usage: ./bin/lite-ignite [--target c|ts|auto] [--c|--ts] [--check] [--force] [--clean] [--wipe [--no-install] [--no-check] [--verify]] [--json] [TOOL...]" + "\n");
                 lite$exit(0n);
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "-")) {
                 lite$reportError((("ignite: unknown option ") + (lite_arg)));
@@ -36578,8 +36913,14 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_selected.push(lite_arg);
             }
         }
+        const lite_tgt = liteFn_resolveIgniteTarget(lite_rootDir, lite_requestedTarget);
+        void lite_tgt;
+        if ((!((lite_tgt).ok))) {
+            lite$reportError((lite_tgt).error);
+            lite$exit(1n);
+        }
         if (((lite_runToolName) !== (""))) {
-            const lite_ensured = liteFn_igniteSingleTool(lite_rootDir, lite_runToolName, (lite_seedInfo).artifactSha256, (lite_seedInfo).sourceSha256, lite_force);
+            const lite_ensured = liteFn_igniteSingleTool(lite_rootDir, lite_runToolName, (lite_tgt).target, (lite_tgt).cc, (lite_tgt).allowTsFallback, (lite_seedInfo).artifactSha256, (lite_seedInfo).cArtifactSha256, (lite_seedInfo).sourceSha256, lite_force);
             void lite_ensured;
             if ((!((lite_ensured).ok))) {
                 lite$reportError((lite_ensured).error);
@@ -36588,7 +36929,7 @@ export function main(lite$write?: (text: string) => void): string {
             liteFn_executeIgnitedTool((lite_ensured).path, [...(lite_args)]);
         }
         if (((lite_ensureName) !== (""))) {
-            const lite_ensured = liteFn_igniteSingleTool(lite_rootDir, lite_ensureName, (lite_seedInfo).artifactSha256, (lite_seedInfo).sourceSha256, lite_force);
+            const lite_ensured = liteFn_igniteSingleTool(lite_rootDir, lite_ensureName, (lite_tgt).target, (lite_tgt).cc, (lite_tgt).allowTsFallback, (lite_seedInfo).artifactSha256, (lite_seedInfo).cArtifactSha256, (lite_seedInfo).sourceSha256, lite_force);
             void lite_ensured;
             if ((!((lite_ensured).ok))) {
                 lite$reportError((lite_ensured).error);
@@ -36614,6 +36955,14 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_check = (Boolean(lite_noCheck) ? false : (Boolean(lite_checkExplicit) ? true : (Boolean(lite_wipe) ? ((lite$fileKind(liteFn$lib$core$path$join(lite_rootDir, "igniter/node_modules/typescript/bin/tsc"))) === (lite$m$lib$core$file$FILE_KIND_FILE)) : false)));
         void lite_check;
         if (((liteFn$lib$core$list$listCountText([...(lite_selected)])) === (0n))) {
+            if ((((lite_tgt).target) === ("c"))) {
+                const lite_cBoot = liteFn_ensureDistCCompiler(lite_rootDir, (lite_seedInfo).cArtifactSha256, (lite_tgt).cc, lite_force);
+                void lite_cBoot;
+                if ((!((lite_cBoot).ok))) {
+                    lite$reportError((lite_cBoot).error);
+                    lite$exit(1n);
+                }
+            }
             const lite_distComp = liteFn_ensureDistCompiler(lite_rootDir, (lite_seedInfo).artifactSha256, lite_force);
             void lite_distComp;
             if ((!((lite_distComp).ok))) {
@@ -36625,34 +36974,46 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_targetNames;
         const lite_artifactPaths: string[] = [...([])];
         void lite_artifactPaths;
+        const lite_tsArtifactPaths: string[] = [...([])];
+        void lite_tsArtifactPaths;
         const lite_toolEntries: string[] = [...([])];
         void lite_toolEntries;
         let lite_rebuiltCount = 0n;
         void lite_rebuiltCount;
+        let lite_cCount = 0n;
+        void lite_cCount;
+        let lite_tsCount = 0n;
+        void lite_tsCount;
         for (const lite_toolName of (lite_targetNames)) {
             void lite_toolName;
-            const lite_res = liteFn_igniteSingleTool(lite_rootDir, lite_toolName, (lite_seedInfo).artifactSha256, (lite_seedInfo).sourceSha256, lite_force);
+            const lite_res = liteFn_igniteSingleTool(lite_rootDir, lite_toolName, (lite_tgt).target, (lite_tgt).cc, (lite_tgt).allowTsFallback, (lite_seedInfo).artifactSha256, (lite_seedInfo).cArtifactSha256, (lite_seedInfo).sourceSha256, lite_force);
             void lite_res;
             if ((!((lite_res).ok))) {
                 lite$reportError((lite_res).error);
                 lite$exit(1n);
             }
             if ((lite_res).rebuilt) {
-                lite_rebuiltCount = lite$addInt(lite_rebuiltCount, 1n, 26242);
+                lite_rebuiltCount = lite$addInt(lite_rebuiltCount, 1n, 38791);
+            }
+            if ((((lite_res).target) === ("c"))) {
+                lite_cCount = lite$addInt(lite_cCount, 1n, 38845);
+            } else {
+                lite_tsCount = lite$addInt(lite_tsCount, 1n, 38889);
+                lite_tsArtifactPaths.push((lite_res).path);
             }
             lite_artifactPaths.push((lite_res).path);
-            const lite_entryStr = (((((((((((((((("    {\n      \"name\": ") + (liteFn$lib$util$json$quoteString(lite_toolName)))) + (",\n      \"path\": "))) + (liteFn$lib$util$json$quoteString((lite_res).path)))) + (",\n      \"sha256\": "))) + (liteFn$lib$util$json$quoteString((lite_res).sha256)))) + (",\n      \"rebuilt\": "))) + (((Boolean((lite_res).rebuilt) ? "true" : "false"))))) + ("\n    }"));
+            const lite_entryStr = (((((((((((((((((((("    {\n      \"name\": ") + (liteFn$lib$util$json$quoteString(lite_toolName)))) + (",\n      \"target\": "))) + (liteFn$lib$util$json$quoteString((lite_res).target)))) + (",\n      \"path\": "))) + (liteFn$lib$util$json$quoteString((lite_res).path)))) + (",\n      \"sha256\": "))) + (liteFn$lib$util$json$quoteString((lite_res).sha256)))) + (",\n      \"rebuilt\": "))) + (((Boolean((lite_res).rebuilt) ? "true" : "false"))))) + ("\n    }"));
             void lite_entryStr;
             lite_toolEntries.push(lite_entryStr);
         }
-        if (((lite_check) && (((liteFn$lib$core$list$listCountText([...(lite_artifactPaths)])) > (0n))))) {
+        if (((lite_check) && (((liteFn$lib$core$list$listCountText([...(lite_tsArtifactPaths)])) > (0n))))) {
             const lite_tmpChk = lite$fileMakeTempDir("lite-ignite-check-");
             void lite_tmpChk;
             if ((!((lite_tmpChk).ok))) {
                 lite$reportError((("ignite: ") + ((lite_tmpChk).error)));
                 lite$exit(1n);
             }
-            const lite_chk = liteFn$lib$util$cases$checkTsArtifactFilesWithStatus(lite_rootDir, [...(lite_artifactPaths)], (lite_tmpChk).path, 0n);
+            const lite_chk = liteFn$lib$util$cases$checkTsArtifactFilesWithStatus(lite_rootDir, [...(lite_tsArtifactPaths)], (lite_tmpChk).path, 0n);
             void lite_chk;
             const lite__rm = lite$fileRemove((lite_tmpChk).path);
             void lite__rm;
@@ -36670,13 +37031,15 @@ export function main(lite$write?: (text: string) => void): string {
             }
         }
         if (lite_jsonOutput) {
-            const lite_outJson = (((((((((("{\n  \"tools\": [\n") + (liteFn$lib$core$text$joinTexts([...(lite_toolEntries)], ",\n")))) + ("\n  ],\n"))) + ("  \"checked\": "))) + (((Boolean(lite_check) ? "true" : "false"))))) + ("\n}"));
+            const lite_outJson = (((((((((((((("{\n  \"target\": ") + (liteFn$lib$util$json$quoteString((lite_tgt).target)))) + (",\n  \"tools\": [\n"))) + (liteFn$lib$core$text$joinTexts([...(lite_toolEntries)], ",\n")))) + ("\n  ],\n"))) + ("  \"checked\": "))) + (((Boolean(lite_check) ? "true" : "false"))))) + ("\n}"));
             void lite_outJson;
             lite$emit(lite_outJson + "\n");
         } else {
             const lite_suffix = (Boolean(lite_check) ? ", strict TS checked" : "");
             void lite_suffix;
-            lite$emit((((((((((((("Ignited ") + (liteFn$lib$core$int$intText(liteFn$lib$core$list$listCountText([...(lite_artifactPaths)]))))) + (" tool(s) into dist/tools ("))) + ((String(lite_rebuiltCount))))) + (" rebuilt"))) + (lite_suffix))) + (").")) + "\n");
+            const lite_breakdown = (Boolean(((((lite_cCount) > (0n))) && (((lite_tsCount) > (0n))))) ? ((((((((", ") + ((String(lite_cCount))))) + (" c / "))) + ((String(lite_tsCount))))) + (" ts")) : (Boolean(((lite_cCount) > (0n))) ? ", target c" : ", target ts"));
+            void lite_breakdown;
+            lite$emit((((((((((((((("Ignited ") + (liteFn$lib$core$int$intText(liteFn$lib$core$list$listCountText([...(lite_artifactPaths)]))))) + (" tool(s) into dist/tools ("))) + ((String(lite_rebuiltCount))))) + (" rebuilt"))) + (lite_breakdown))) + (lite_suffix))) + (").")) + "\n");
         }
     }
     void liteFn_run;
