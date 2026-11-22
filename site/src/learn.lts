@@ -3,10 +3,12 @@
 integer := import "core/int";
 list := import "core/list";
 text := import "core/text";
+lru := import "extra/lru";
 json := import "util/json";
 siteTools := import "./tools.lts";
 
 escapeHtml := siteTools.escapeSiteHtml;
+learnMetaCache := lru.createText(1024);
 
 envMetaLabel := fn(env: String): String {
     if env == "play" { "Lite Play" } else if env == "cli" { "CLI / Host OS" } else { "Browser + CLI" }
@@ -42,6 +44,16 @@ safeJsonForScript := fn(rawJson: String): String {
 };
 
 readOptStr := fn(src: String, objPos: Int, key: String): String {
+    cacheable := key == "id" or key == "title" or key == "slug" or key == "trackId" or key == "environment";
+    if cacheable {
+        ck := integer.intText(objPos) + ":" + key;
+        hit := lru.getText(learnMetaCache, ck);
+        if hit.found { return hit.value; }
+        res := json.readObjectString(src, objPos, key);
+        val := if res.found and res.ok { res.value } else { "" };
+        _ev := lru.putText(learnMetaCache, ck, val);
+        return val;
+    }
     res := json.readObjectString(src, objPos, key);
     if res.found and res.ok { res.value } else { "" }
 };
@@ -860,6 +872,7 @@ repoUrl: String
 
 /** Builds `/learn/` index, lesson pages, JSON payloads, and search entries from stdin JSON. */
 pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, error: String) {
+    lru.clearText(learnMetaCache);
     valid := json.validate(inputJson);
     if not valid.ok {
         return (ok = false, jsonText = "", error = "site-learn: invalid input JSON: " + valid.error);
