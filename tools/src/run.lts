@@ -116,7 +116,13 @@ run := fn(rawArgs: List<String>): Unit {
             io.exit(1);
         }
         binPath := path.join(tempDir.path, baseNoExt);
-        ccArgs: List<String> = ["-std=c11", "-O1", cArtifact, "-o", binPath, "-lm"];
+        ccArgs: mut List<String> = ["-std=c11", "-O1", cArtifact, "-o", binPath, "-lm"];
+        if proc.platform() == "darwin" and text.containsText(compiled.stdout, "LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
+            list.pushBack(mut ccArgs, "-framework");
+            list.pushBack(mut ccArgs, "Cocoa");
+            list.pushBack(mut ccArgs, "-framework");
+            list.pushBack(mut ccArgs, "CoreGraphics");
+        }
         ccRes := proc.run("cc", ccArgs, tempDir.path, emptyEnv, true, "");
         if ccRes.error =!= "" {
             fs.remove(tempDir.path);

@@ -680,6 +680,50 @@ normalizeCBuiltinCalls := fn(code: String): String {
             out = out + textLib.slice(code, flushed, cursor) + "lt_time_monotonic_ns(";
             cursor = cursor + textLib.length("lite$timeMonotonicNs(");
             flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasOpen(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_open(";
+            cursor = cursor + textLib.length("lite$extraCanvasOpen(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasPoll(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_poll(";
+            cursor = cursor + textLib.length("lite$extraCanvasPoll(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasPresent(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_present(";
+            cursor = cursor + textLib.length("lite$extraCanvasPresent(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasClose(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_close(";
+            cursor = cursor + textLib.length("lite$extraCanvasClose(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasClear(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_clear(";
+            cursor = cursor + textLib.length("lite$extraCanvasClear(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasFillRect(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_fill_rect(";
+            cursor = cursor + textLib.length("lite$extraCanvasFillRect(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasStrokeRect(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_stroke_rect(";
+            cursor = cursor + textLib.length("lite$extraCanvasStrokeRect(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasFillCircle(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_fill_circle(";
+            cursor = cursor + textLib.length("lite$extraCanvasFillCircle(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasStrokeLine(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_stroke_line(";
+            cursor = cursor + textLib.length("lite$extraCanvasStrokeLine(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasDrawText(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_draw_text(";
+            cursor = cursor + textLib.length("lite$extraCanvasDrawText(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasCapture(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_capture(";
+            cursor = cursor + textLib.length("lite$extraCanvasCapture(");
+            flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeEpochNs(") {
             out = out + textLib.slice(code, flushed, cursor) + "lt_time_epoch_ns(";
             cursor = cursor + textLib.length("lite$timeEpochNs(");
@@ -3575,6 +3619,246 @@ emitCSoftBuiltinHelpers := fn(calls: String): Unit {
     }
 };
 
+/** True when any emitted item calls an `extra/canvas` surface or drawing builtin. */
+usesExtraCanvasBuiltins := fn(calls: String): Bool {
+    usesIntHelper(calls, "lite$extraCanvasOpen(") or usesIntHelper(calls, "lite$extraCanvasPoll(") or
+    usesIntHelper(calls, "lite$extraCanvasPresent(") or usesIntHelper(calls, "lite$extraCanvasClose(") or
+    usesIntHelper(calls, "lite$extraCanvasClear(") or usesIntHelper(calls, "lite$extraCanvasFillRect(") or
+    usesIntHelper(calls, "lite$extraCanvasStrokeRect(") or usesIntHelper(calls, "lite$extraCanvasFillCircle(") or
+    usesIntHelper(calls, "lite$extraCanvasStrokeLine(") or usesIntHelper(calls, "lite$extraCanvasDrawText(") or
+    usesIntHelper(calls, "lite$extraCanvasCapture(")
+};
+
+/** Emits the self-contained C11 `extra/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder). */
+emitCExtraCanvasHelpers := fn(calls: String): Unit {
+    if not usesExtraCanvasBuiltins(calls) { return; }
+    surfTag := frontend.cStructTag("(handle:Int)");
+    colTag := frontend.cStructTag("(r:Float,g:Float,b:Float,a:Float)");
+    ptTag := frontend.cStructTag("(x:Float,y:Float)");
+    rcTag := frontend.cStructTag("(x:Float,y:Float,width:Float,height:Float)");
+    inpTag := frontend.cStructTag("(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
+    okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
+    outLine("typedef struct { int w; int h; uint8_t *pixels; bool open; double px; double py; bool pdown; char key[16]; int64_t last_ms; bool headless; void *win; void *view; } lt_canvas_state;");
+    outLine("static lt_canvas_state lt_canvas_slots[16];");
+    outLine("static int64_t lt_canvas_now_ms(void) { struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return (int64_t)ts.tv_sec * 1000 + (int64_t)(ts.tv_nsec / 1000000); }");
+    outLine("static inline uint8_t lt_canvas_u8(double v) { if (!(v > 0.0)) return 0; if (v >= 1.0) return 255; return (uint8_t)(v * 255.0 + 0.5); }");
+    outLine("static inline void lt_canvas_blend(lt_canvas_state *s, int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {");
+    outLine("    if (x < 0 || y < 0 || x >= s->w || y >= s->h || a == 0) return;");
+    outLine("    uint8_t *p = s->pixels + ((size_t)y * (size_t)s->w + (size_t)x) * 4u;");
+    outLine("    if (a == 255) { p[0] = r; p[1] = g; p[2] = b; p[3] = 255; return; }");
+    outLine("    unsigned inv = 255u - (unsigned)a;");
+    outLine("    p[0] = (uint8_t)(((unsigned)r * a + (unsigned)p[0] * inv + 127u) >> 8);");
+    outLine("    p[1] = (uint8_t)(((unsigned)g * a + (unsigned)p[1] * inv + 127u) >> 8);");
+    outLine("    p[2] = (uint8_t)(((unsigned)b * a + (unsigned)p[2] * inv + 127u) >> 8);");
+    outLine("    unsigned oa = (unsigned)a + (((unsigned)p[3] * inv + 127u) >> 8);");
+    outLine("    p[3] = (uint8_t)(oa > 255u ? 255u : oa);");
+    outLine("}");
+    outLine("static inline lt_canvas_state *lt_canvas_get(int64_t h) { if (h < 1 || h > 16) return NULL; lt_canvas_state *s = &lt_canvas_slots[h - 1]; return s->pixels ? s : NULL; }");
+    outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+    outLine("static bool lt_cocoa_ready = false;");
+    outLine("static void lt_cocoa_init(void) {");
+    outLine("    if (lt_cocoa_ready) return; lt_cocoa_ready = true;");
+    outLine("    id app = ((id (*)(id, SEL))objc_msgSend)((id)objc_getClass(\"NSApplication\"), sel_registerName(\"sharedApplication\"));");
+    outLine("    ((signed char (*)(id, SEL, int64_t))objc_msgSend)(app, sel_registerName(\"setActivationPolicy:\"), 0);");
+    outLine("    ((void (*)(id, SEL))objc_msgSend)(app, sel_registerName(\"finishLaunching\"));");
+    outLine("}");
+    outLine("#endif");
+    outLine("static inline " + surfTag + " lt_canvas_open(const char *title, int64_t width, int64_t height) {");
+    outLine("    int w = width > 0 ? (int)width : 1; int h = height > 0 ? (int)height : 1;");
+    outLine("    int slot = -1; for (int i = 0; i < 16; i += 1) { if (lt_canvas_slots[i].pixels == NULL) { slot = i; break; } }");
+    outLine("    if (slot < 0) return (" + surfTag + "){ .f_handle = 0 };");
+    outLine("    lt_canvas_state *s = &lt_canvas_slots[slot]; memset(s, 0, sizeof(*s));");
+    outLine("    s->w = w; s->h = h; s->open = true; s->last_ms = lt_canvas_now_ms();");
+    outLine("    s->pixels = calloc((size_t)w * (size_t)h * 4u, 1u);");
+    outLine("    const char *hl = getenv(\"LITE_CANVAS_HEADLESS\");");
+    outLine("    s->headless = (hl != NULL && strcmp(hl, \"1\") == 0);");
+    outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+    outLine("    if (!s->headless) {");
+    outLine("        lt_cocoa_init();");
+    outLine("        CGRect frame = CGRectMake(120.0, 120.0, (double)w, (double)h);");
+    outLine("        id win = ((id (*)(id, SEL))objc_msgSend)((id)objc_getClass(\"NSWindow\"), sel_registerName(\"alloc\"));");
+    outLine("        win = ((id (*)(id, SEL, CGRect, unsigned long, unsigned long, signed char))objc_msgSend)(win, sel_registerName(\"initWithContentRect:styleMask:backing:defer:\"), frame, 7ul, 2ul, 0);");
+    outLine("        id nsTitle = ((id (*)(id, SEL, const char *))objc_msgSend)((id)objc_getClass(\"NSString\"), sel_registerName(\"stringWithUTF8String:\"), title ? title : \"Lite Canvas\");");
+    outLine("        ((void (*)(id, SEL, id))objc_msgSend)(win, sel_registerName(\"setTitle:\"), nsTitle);");
+    outLine("        id cv = ((id (*)(id, SEL))objc_msgSend)(win, sel_registerName(\"contentView\"));");
+    outLine("        ((void (*)(id, SEL, signed char))objc_msgSend)(cv, sel_registerName(\"setWantsLayer:\"), 1);");
+    outLine("        ((void (*)(id, SEL, id))objc_msgSend)(win, sel_registerName(\"makeKeyAndOrderFront:\"), NULL);");
+    outLine("        id app = ((id (*)(id, SEL))objc_msgSend)((id)objc_getClass(\"NSApplication\"), sel_registerName(\"sharedApplication\"));");
+    outLine("        ((void (*)(id, SEL, signed char))objc_msgSend)(app, sel_registerName(\"activateIgnoringOtherApps:\"), 1);");
+    outLine("        s->win = (void *)win; s->view = (void *)cv;");
+    outLine("    }");
+    outLine("#else");
+    outLine("    (void)title;");
+    outLine("#endif");
+    outLine("    return (" + surfTag + "){ .f_handle = (int64_t)(slot + 1) };");
+    outLine("}");
+    outLine("static inline " + inpTag + " lt_canvas_poll(" + surfTag + " surf) {");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle);");
+    outLine("    if (!s) return (" + inpTag + "){ .f_open = false, .f_width = 0, .f_height = 0, .f_pointerX = 0.0, .f_pointerY = 0.0, .f_pointerDown = false, .f_key = \"\", .f_deltaMs = 0 };");
+    outLine("    s->key[0] = '\\0';");
+    outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+    outLine("    if (!s->headless && s->win != NULL) {");
+    outLine("        id app = ((id (*)(id, SEL))objc_msgSend)((id)objc_getClass(\"NSApplication\"), sel_registerName(\"sharedApplication\"));");
+    outLine("        id mode = ((id (*)(id, SEL, const char *))objc_msgSend)((id)objc_getClass(\"NSString\"), sel_registerName(\"stringWithUTF8String:\"), \"kCFRunLoopDefaultMode\");");
+    outLine("        for (;;) {");
+    outLine("            id ev = ((id (*)(id, SEL, unsigned long, id, id, signed char))objc_msgSend)(app, sel_registerName(\"nextEventMatchingMask:untilDate:inMode:dequeue:\"), ~0ul, NULL, mode, 1);");
+    outLine("            if (ev == NULL) break;");
+    outLine("            unsigned long et = ((unsigned long (*)(id, SEL))objc_msgSend)(ev, sel_registerName(\"type\"));");
+    outLine("            if (et == 1ul) s->pdown = true;");
+    outLine("            else if (et == 2ul) s->pdown = false;");
+    outLine("            else if (et == 10ul) {");
+    outLine("                id chars = ((id (*)(id, SEL))objc_msgSend)(ev, sel_registerName(\"characters\"));");
+    outLine("                const char *u = chars ? ((const char *(*)(id, SEL))objc_msgSend)(chars, sel_registerName(\"UTF8String\")) : \"\";");
+    outLine("                if (u && u[0] == 27) { strncpy(s->key, \"Escape\", 15); s->key[15] = '\\0'; }");
+    outLine("                else if (u) { strncpy(s->key, u, 15); s->key[15] = '\\0'; }");
+    outLine("            }");
+    outLine("            ((void (*)(id, SEL, id))objc_msgSend)(app, sel_registerName(\"sendEvent:\"), ev);");
+    outLine("        }");
+    outLine("        signed char vis = ((signed char (*)(id, SEL))objc_msgSend)((id)s->win, sel_registerName(\"isVisible\"));");
+    outLine("        if (!vis) s->open = false;");
+    outLine("        CGPoint pt = ((CGPoint (*)(id, SEL))objc_msgSend)((id)s->win, sel_registerName(\"mouseLocationOutsideOfEventStream\"));");
+    outLine("        s->px = pt.x; s->py = (double)s->h - pt.y;");
+    outLine("    }");
+    outLine("#endif");
+    outLine("    int64_t now = lt_canvas_now_ms(); int64_t dt = now - s->last_ms; if (dt < 0) dt = 0; s->last_ms = now;");
+    outLine("    const char *kcopy = s->key[0] ? strdup(s->key) : \"\";");
+    outLine("    return (" + inpTag + "){ .f_open = s->open, .f_width = s->w, .f_height = s->h, .f_pointerX = s->px, .f_pointerY = s->py, .f_pointerDown = s->pdown, .f_key = kcopy, .f_deltaMs = dt };");
+    outLine("}");
+    outLine("static inline void lt_canvas_present(" + surfTag + " surf) {");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s || s->headless) return;");
+    outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+    outLine("    if (s->view != NULL) {");
+    outLine("        CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();");
+    outLine("        CGDataProviderRef prov = CGDataProviderCreateWithData(NULL, s->pixels, (size_t)s->w * (size_t)s->h * 4u, NULL);");
+    outLine("        CGImageRef img = CGImageCreate((size_t)s->w, (size_t)s->h, 8, 32, (size_t)s->w * 4u, cs, kCGBitmapByteOrderDefault | kCGImageAlphaLast, prov, NULL, false, kCGRenderingIntentDefault);");
+    outLine("        id layer = ((id (*)(id, SEL))objc_msgSend)((id)s->view, sel_registerName(\"layer\"));");
+    outLine("        if (layer != NULL && img != NULL) { ((void (*)(id, SEL, id))objc_msgSend)(layer, sel_registerName(\"setContents:\"), (id)img); }");
+    outLine("        if (img != NULL) CGImageRelease(img);");
+    outLine("        CGDataProviderRelease(prov); CGColorSpaceRelease(cs);");
+    outLine("    }");
+    outLine("#endif");
+    outLine("    struct timespec sl = { 0, 16000000L }; nanosleep(&sl, NULL);");
+    outLine("}");
+    outLine("static inline void lt_canvas_close(" + surfTag + " surf) {");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
+    outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+    outLine("    if (!s->headless && s->win != NULL) { ((void (*)(id, SEL))objc_msgSend)((id)s->win, sel_registerName(\"close\")); }");
+    outLine("#endif");
+    outLine("    free(s->pixels); memset(s, 0, sizeof(*s));");
+    outLine("}");
+    outLine("static inline void lt_canvas_clear(" + surfTag + " surf, " + colTag + " fill) {");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
+    outLine("    uint8_t r = lt_canvas_u8(fill.f_r), g = lt_canvas_u8(fill.f_g), b = lt_canvas_u8(fill.f_b), a = lt_canvas_u8(fill.f_a);");
+    outLine("    size_t n = (size_t)s->w * (size_t)s->h;");
+    outLine("    for (size_t i = 0; i < n; i += 1) { s->pixels[i*4] = r; s->pixels[i*4+1] = g; s->pixels[i*4+2] = b; s->pixels[i*4+3] = a; }");
+    outLine("}");
+    outLine("static inline void lt_canvas_fill_rect(" + surfTag + " surf, " + rcTag + " area, " + colTag + " fill) {");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
+    outLine("    uint8_t r = lt_canvas_u8(fill.f_r), g = lt_canvas_u8(fill.f_g), b = lt_canvas_u8(fill.f_b), a = lt_canvas_u8(fill.f_a);");
+    outLine("    int x0 = (int)floor(area.f_x); if (x0 < 0) x0 = 0;");
+    outLine("    int y0 = (int)floor(area.f_y); if (y0 < 0) y0 = 0;");
+    outLine("    int x1 = (int)ceil(area.f_x + area.f_width); if (x1 > s->w) x1 = s->w;");
+    outLine("    int y1 = (int)ceil(area.f_y + area.f_height); if (y1 > s->h) y1 = s->h;");
+    outLine("    for (int y = y0; y < y1; y += 1) for (int x = x0; x < x1; x += 1) lt_canvas_blend(s, x, y, r, g, b, a);");
+    outLine("}");
+    outLine("static inline void lt_canvas_stroke_rect(" + surfTag + " surf, " + rcTag + " area, double lw, " + colTag + " stroke) {");
+    outLine("    if (lw < 1.0) lw = 1.0;");
+    outLine("    lt_canvas_fill_rect(surf, (" + rcTag + "){ area.f_x, area.f_y, area.f_width, lw }, stroke);");
+    outLine("    lt_canvas_fill_rect(surf, (" + rcTag + "){ area.f_x, area.f_y + area.f_height - lw, area.f_width, lw }, stroke);");
+    outLine("    lt_canvas_fill_rect(surf, (" + rcTag + "){ area.f_x, area.f_y, lw, area.f_height }, stroke);");
+    outLine("    lt_canvas_fill_rect(surf, (" + rcTag + "){ area.f_x + area.f_width - lw, area.f_y, lw, area.f_height }, stroke);");
+    outLine("}");
+    outLine("static inline void lt_canvas_fill_circle(" + surfTag + " surf, " + ptTag + " center, double radius, " + colTag + " fill) {");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s || radius <= 0.0) return;");
+    outLine("    uint8_t r = lt_canvas_u8(fill.f_r), g = lt_canvas_u8(fill.f_g), b = lt_canvas_u8(fill.f_b), a = lt_canvas_u8(fill.f_a);");
+    outLine("    int x0 = (int)floor(center.f_x - radius); if (x0 < 0) x0 = 0;");
+    outLine("    int y0 = (int)floor(center.f_y - radius); if (y0 < 0) y0 = 0;");
+    outLine("    int x1 = (int)ceil(center.f_x + radius); if (x1 > s->w) x1 = s->w;");
+    outLine("    int y1 = (int)ceil(center.f_y + radius); if (y1 > s->h) y1 = s->h;");
+    outLine("    double r2 = radius * radius;");
+    outLine("    for (int y = y0; y < y1; y += 1) { double dy = (double)y + 0.5 - center.f_y; for (int x = x0; x < x1; x += 1) { double dx = (double)x + 0.5 - center.f_x; if (dx * dx + dy * dy <= r2) lt_canvas_blend(s, x, y, r, g, b, a); } }");
+    outLine("}");
+    outLine("static inline void lt_canvas_stroke_line(" + surfTag + " surf, " + ptTag + " st, " + ptTag + " en, double lw, " + colTag + " stroke) {");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
+    outLine("    uint8_t r = lt_canvas_u8(stroke.f_r), g = lt_canvas_u8(stroke.f_g), b = lt_canvas_u8(stroke.f_b), a = lt_canvas_u8(stroke.f_a);");
+    outLine("    double half = lw * 0.5; if (half < 0.5) half = 0.5; double h2 = half * half;");
+    outLine("    double minx = st.f_x < en.f_x ? st.f_x : en.f_x, maxx = st.f_x > en.f_x ? st.f_x : en.f_x;");
+    outLine("    double miny = st.f_y < en.f_y ? st.f_y : en.f_y, maxy = st.f_y > en.f_y ? st.f_y : en.f_y;");
+    outLine("    int x0 = (int)floor(minx - half - 1.0); if (x0 < 0) x0 = 0;");
+    outLine("    int y0 = (int)floor(miny - half - 1.0); if (y0 < 0) y0 = 0;");
+    outLine("    int x1 = (int)ceil(maxx + half + 1.0); if (x1 > s->w) x1 = s->w;");
+    outLine("    int y1 = (int)ceil(maxy + half + 1.0); if (y1 > s->h) y1 = s->h;");
+    outLine("    double vx = en.f_x - st.f_x, vy = en.f_y - st.f_y, len2 = vx * vx + vy * vy;");
+    outLine("    for (int y = y0; y < y1; y += 1) for (int x = x0; x < x1; x += 1) {");
+    outLine("        double px = (double)x + 0.5 - st.f_x, py = (double)y + 0.5 - st.f_y;");
+    outLine("        double t = len2 > 0.0 ? (px * vx + py * vy) / len2 : 0.0; if (t < 0.0) t = 0.0; if (t > 1.0) t = 1.0;");
+    outLine("        double dx = px - t * vx, dy = py - t * vy;");
+    outLine("        if (dx * dx + dy * dy <= h2) lt_canvas_blend(s, x, y, r, g, b, a);");
+    outLine("    }");
+    outLine("}");
+    outLine("static inline const uint8_t *lt_canvas_glyph(char ch) {");
+    outLine("    static const uint8_t g_sp[7]={0,0,0,0,0,0,0}, g_ex[7]={4,4,4,4,4,0,4}, g_dot[7]={0,0,0,0,0,12,12}, g_com[7]={0,0,0,0,4,4,8}, g_col[7]={0,4,4,0,4,4,0}, g_min[7]={0,0,0,31,0,0,0}, g_plu[7]={0,4,4,31,4,4,0}, g_sl[7]={1,2,2,4,8,8,16}, g_lp[7]={2,4,8,8,8,4,2}, g_rp[7]={8,4,2,2,2,4,8};");
+    outLine("    static const uint8_t g_dig[10][7]={{14,17,19,21,25,17,14},{4,12,4,4,4,4,14},{14,17,1,2,4,8,31},{30,1,1,14,1,1,30},{2,6,10,18,31,2,2},{31,16,30,1,1,17,14},{14,16,30,17,17,17,14},{31,1,2,4,8,8,8},{14,17,17,14,17,17,14},{14,17,17,15,1,1,14}};");
+    outLine("    static const uint8_t g_abc[26][7]={{14,17,17,31,17,17,17},{30,17,17,30,17,17,30},{14,17,16,16,16,17,14},{28,18,17,17,17,18,28},{31,16,16,30,16,16,31},{31,16,16,30,16,16,16},{14,17,16,23,17,17,15},{17,17,17,31,17,17,17},{14,4,4,4,4,4,14},{7,2,2,2,18,18,12},{17,18,20,24,20,18,17},{16,16,16,16,16,16,31},{17,27,21,21,17,17,17},{17,25,21,19,17,17,17},{14,17,17,17,17,17,14},{30,17,17,30,16,16,16},{14,17,17,17,21,18,13},{30,17,17,30,20,18,17},{15,16,16,14,1,1,30},{31,4,4,4,4,4,4},{17,17,17,17,17,17,14},{17,17,17,17,17,10,4},{17,17,17,21,21,27,17},{17,17,10,4,10,17,17},{17,17,10,4,4,4,4},{31,1,2,4,8,16,31}};");
+    outLine("    if (ch >= 'a' && ch <= 'z') ch = (char)(ch - 32);");
+    outLine("    if (ch >= '0' && ch <= '9') return g_dig[ch - '0'];");
+    outLine("    if (ch >= 'A' && ch <= 'Z') return g_abc[ch - 'A'];");
+    outLine("    if (ch == '!') return g_ex; if (ch == '.') return g_dot; if (ch == ',') return g_com; if (ch == ':') return g_col;");
+    outLine("    if (ch == '-') return g_min; if (ch == '+') return g_plu; if (ch == '/') return g_sl; if (ch == '(') return g_lp; if (ch == ')') return g_rp;");
+    outLine("    return g_sp;");
+    outLine("}");
+    outLine("static inline void lt_canvas_draw_text(" + surfTag + " surf, const char *content, " + ptTag + " at, double size, " + colTag + " fill) {");
+    outLine("    if (!content) return; int scale = (int)floor(size / 7.0 + 0.5); if (scale < 1) scale = 1;");
+    outLine("    int cx = (int)floor(at.f_x), cy = (int)floor(at.f_y);");
+    outLine("    for (size_t i = 0; content[i] != '\\0'; i += 1) {");
+    outLine("        const uint8_t *g = lt_canvas_glyph(content[i]);");
+    outLine("        for (int row = 0; row < 7; row += 1) for (int col = 0; col < 5; col += 1) {");
+    outLine("            if ((g[row] & (16 >> col)) != 0) lt_canvas_fill_rect(surf, (" + rcTag + "){ (double)(cx + col * scale), (double)(cy + row * scale), (double)scale, (double)scale }, fill);");
+    outLine("        }");
+    outLine("        cx += 6 * scale;");
+    outLine("    }");
+    outLine("}");
+    outLine("static inline uint32_t lt_png_crc(const uint8_t *buf, size_t len) { uint32_t c = 0xffffffffu; for (size_t i = 0; i < len; i += 1) { c ^= buf[i]; for (int k = 0; k < 8; k += 1) c = (c >> 1) ^ (0xedb88320u & (uint32_t)(-(int32_t)(c & 1u))); } return c ^ 0xffffffffu; }");
+    outLine("static inline void lt_png_u32(uint8_t *p, uint32_t v) { p[0]=(uint8_t)(v>>24); p[1]=(uint8_t)(v>>16); p[2]=(uint8_t)(v>>8); p[3]=(uint8_t)v; }");
+    outLine("static inline bool lt_png_chunk(FILE *f, const char *tag, const uint8_t *data, size_t len) {");
+    outLine("    uint8_t *buf = malloc(4u + len); if (!buf) return false;");
+    outLine("    memcpy(buf, tag, 4u); if (len > 0) memcpy(buf + 4u, data, len);");
+    outLine("    uint8_t hdr[4], crc[4]; lt_png_u32(hdr, (uint32_t)len); lt_png_u32(crc, lt_png_crc(buf, 4u + len));");
+    outLine("    bool ok = fwrite(hdr, 1, 4, f) == 4 && fwrite(buf, 1, 4u + len, f) == 4u + len && fwrite(crc, 1, 4, f) == 4;");
+    outLine("    free(buf); return ok;");
+    outLine("}");
+    outLine("static inline " + okErrTag + " lt_canvas_capture(" + surfTag + " surf, const char *out_path) {");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle);");
+    outLine("    if (!s) return (" + okErrTag + "){ .f_ok = false, .f_error = \"invalid canvas surface handle\" };");
+    outLine("    FILE *f = fopen(out_path, \"wb\");");
+    outLine("    if (!f) return (" + okErrTag + "){ .f_ok = false, .f_error = \"cannot open output path\" };");
+    outLine("    static const uint8_t sig[8] = {137,80,78,71,13,10,26,10};");
+    outLine("    uint8_t ihdr[13] = {0}; lt_png_u32(ihdr, (uint32_t)s->w); lt_png_u32(ihdr + 4, (uint32_t)s->h); ihdr[8] = 8; ihdr[9] = 6;");
+    outLine("    size_t stride = 1u + (size_t)s->w * 4u; size_t raw_len = (size_t)s->h * stride;");
+    outLine("    uint8_t *raw = malloc(raw_len); if (!raw) { fclose(f); return (" + okErrTag + "){ .f_ok = false, .f_error = \"out of memory\" }; }");
+    outLine("    for (int y = 0; y < s->h; y += 1) { raw[(size_t)y * stride] = 0; memcpy(raw + (size_t)y * stride + 1u, s->pixels + (size_t)y * (size_t)s->w * 4u, (size_t)s->w * 4u); }");
+    outLine("    size_t blocks = (raw_len + 65534u) / 65535u; if (blocks == 0) blocks = 1;");
+    outLine("    size_t zlen = 2u + raw_len + blocks * 5u + 4u;");
+    outLine("    uint8_t *z = malloc(zlen); if (!z) { free(raw); fclose(f); return (" + okErrTag + "){ .f_ok = false, .f_error = \"out of memory\" }; }");
+    outLine("    size_t zp = 0; z[zp++] = 0x78; z[zp++] = 0x01;");
+    outLine("    uint32_t a1 = 1u, a2 = 0u;");
+    outLine("    for (size_t i = 0; i < raw_len; i += 1) { a1 = (a1 + raw[i]) % 65521u; a2 = (a2 + a1) % 65521u; }");
+    outLine("    size_t off = 0; while (off < raw_len || (raw_len == 0 && off == 0)) {");
+    outLine("        size_t chunk = raw_len - off; if (chunk > 65535u) chunk = 65535u;");
+    outLine("        bool last = (off + chunk >= raw_len);");
+    outLine("        z[zp++] = last ? 1u : 0u; z[zp++] = (uint8_t)(chunk & 255u); z[zp++] = (uint8_t)((chunk >> 8) & 255u);");
+    outLine("        uint16_t nlen = (uint16_t)(~chunk); z[zp++] = (uint8_t)(nlen & 255u); z[zp++] = (uint8_t)((nlen >> 8) & 255u);");
+    outLine("        if (chunk > 0) { memcpy(z + zp, raw + off, chunk); zp += chunk; }");
+    outLine("        off += chunk; if (raw_len == 0) break;");
+    outLine("    }");
+    outLine("    lt_png_u32(z + zp, (a2 << 16) | a1); zp += 4u;");
+    outLine("    bool ok = fwrite(sig, 1, 8, f) == 8 && lt_png_chunk(f, \"IHDR\", ihdr, 13u) && lt_png_chunk(f, \"IDAT\", z, zp) && lt_png_chunk(f, \"IEND\", NULL, 0u);");
+    outLine("    free(z); free(raw); fclose(f);");
+    outLine("    return (" + okErrTag + "){ .f_ok = ok, .f_error = ok ? \"\" : \"failed writing PNG\" };");
+    outLine("}");
+    outLine("");
+};
+
 pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
     softItems := applyCSoftBuiltins(items, prefix, builtinSpecs);
     reachable := frontend.filterReachableItemsWithOpt(softItems, frontend.TARGET_C, optLevel);
@@ -3826,6 +4110,15 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
             }
         }
     }
+    hasExtraCanvas := usesExtraCanvasBuiltins(calls);
+    if hasExtraCanvas {
+        listLib.pushBack(mut seedKinds, "(handle:Int)");
+        listLib.pushBack(mut seedKinds, "(r:Float,g:Float,b:Float,a:Float)");
+        listLib.pushBack(mut seedKinds, "(x:Float,y:Float)");
+        listLib.pushBack(mut seedKinds, "(x:Float,y:Float,width:Float,height:Float)");
+        listLib.pushBack(mut seedKinds, "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
+        listLib.pushBack(mut seedKinds, "(ok:Bool,error:String)");
+    }
     if textLib.indexOfText(calls, "|lt_list_i64_", 0) >= 0 { listLib.pushBack(mut seedKinds, "List<Int>"); }
     if textLib.indexOfText(calls, "|lt_list_f64_", 0) >= 0 { listLib.pushBack(mut seedKinds, "List<Float>"); }
     if textLib.indexOfText(calls, "|lt_list_bool_", 0) >= 0 { listLib.pushBack(mut seedKinds, "List<Bool>"); }
@@ -3890,8 +4183,11 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         outLine("#define _XOPEN_SOURCE 700");
         outLine("#endif");
     }
+    if hasExtraCanvas {
+        outLine("/* LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics */");
+    }
     outLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns or usesIntHelper(calls, "calloc(") { outLine("#include <stdlib.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns or hasExtraCanvas or usesIntHelper(calls, "calloc(") { outLine("#include <stdlib.h>"); }
     if hasInputInt or hasPosixHost or usesIntHelper(calls, "lt_c_text_to_int(") { outLine("#include <errno.h>"); }
     outLine("#include <inttypes.h>");
     outLine("#include <stdbool.h>");
@@ -3902,13 +4198,20 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         outLine("#include <sys/stat.h>");
         outLine("#include <dirent.h>");
     }
-    if usesTimeBuiltins(calls) or usesProcessSpawnBuiltins(calls) { outLine("#include <time.h>"); }
+    if usesTimeBuiltins(calls) or usesProcessSpawnBuiltins(calls) or hasExtraCanvas { outLine("#include <time.h>"); }
     if usesProcessSpawnBuiltins(calls) {
         outLine("#include <signal.h>");
         outLine("#include <poll.h>");
         outLine("#include <sys/wait.h>");
     }
-    if usesFloatArithmetic(calls) or hasInputFloat { outLine("#include <math.h>"); }
+    if usesFloatArithmetic(calls) or hasInputFloat or hasExtraCanvas { outLine("#include <math.h>"); }
+    if hasExtraCanvas {
+        outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+        outLine("#include <objc/runtime.h>");
+        outLine("#include <objc/message.h>");
+        outLine("#include <CoreGraphics/CoreGraphics.h>");
+        outLine("#endif");
+    }
     if floatValues {
         outLine("#include <float.h>");
         outLine("_Static_assert(FLT_RADIX == 2 && DBL_MANT_DIG == 53 && DBL_MAX_EXP == 1024, \"Float requires binary64 double\");");
@@ -3997,6 +4300,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     }
     emitCHostBuiltinHelpers(calls);
     emitCSoftBuiltinHelpers(calls);
+    emitCExtraCanvasHelpers(calls);
     var hoistedGlobals := frontend.emptyTokenBuckets();
     if hasFunctions {
         if hasFnOutput { outLine("static int lt_io_status = 0;"); }

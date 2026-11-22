@@ -1,0 +1,167 @@
+/** Abstract, encoding-independent color values and color-space helpers. */
+
+/** Opaque color value; zero-initialized `Color` is transparent black. */
+pub Color := type (r: Float, g: Float, b: Float, a: Float);
+
+clampUnit := fn(value: Float): Float {
+    if value < 0.0 { return 0.0; }
+    if value > 1.0 { return 1.0; }
+    value
+};
+
+clampByte := fn(value: Int): Int {
+    if value < 0 { return 0; }
+    if value > 255 { return 255; }
+    value
+};
+
+/** Constructs a color from normalized RGBA channel values in `0.0..1.0`. */
+pub fromRgba := fn(r: Float, g: Float, b: Float, a: Float): Color {
+    (r = r, g = g, b = b, a = a)
+};
+
+/** Constructs an opaque color from normalized RGB channel values in `0.0..1.0`. */
+pub fromRgb := fn(r: Float, g: Float, b: Float): Color {
+    (r = r, g = g, b = b, a = 1.0)
+};
+
+/** Constructs a color from 8-bit integer RGBA channel values in `0..255`. */
+pub fromRgba8 := fn(r: Int, g: Int, b: Int, a: Int): Color {
+    (
+    r = clampByte(r) / 255.0,
+    g = clampByte(g) / 255.0,
+    b = clampByte(b) / 255.0,
+    a = clampByte(a) / 255.0
+    )
+};
+
+/** Constructs an opaque color from 8-bit integer RGB channel values in `0..255`. */
+pub fromRgb8 := fn(r: Int, g: Int, b: Int): Color {
+    fromRgba8(r, g, b, 255)
+};
+
+hueToRgb := fn(p: Float, q: Float, rawT: Float): Float {
+    var t := rawT;
+    if t < 0.0 { t = t + 1.0; }
+    if t > 1.0 { t = t - 1.0; }
+    if t < 1.0 / 6.0 { return p + (q - p) * 6.0 * t; }
+    if t < 0.5 { return q; }
+    if t < 2.0 / 3.0 { return p + (q - p) * (2.0 / 3.0 - t) * 6.0; }
+    p
+};
+
+/** Constructs a color from hue (`0.0..360.0` degrees), saturation (`0.0..1.0`), lightness (`0.0..1.0`), and alpha (`0.0..1.0`). */
+pub fromHsla := fn(hueDeg: Float, saturation: Float, lightness: Float, alpha: Float): Color {
+    s := clampUnit(saturation);
+    l := clampUnit(lightness);
+    a := clampUnit(alpha);
+    if s == 0.0 {
+        return (r = l, g = l, b = l, a = a);
+    }
+    var h := hueDeg / 360.0;
+    loop h < 0.0 { h = h + 1.0; }
+    loop h >= 1.0 { h = h - 1.0; }
+    q := if l < 0.5 { l * (1.0 + s) } else { l + s - l * s };
+    p := 2.0 * l - q;
+    (
+    r = hueToRgb(p, q, h + 1.0 / 3.0),
+    g = hueToRgb(p, q, h),
+    b = hueToRgb(p, q, h - 1.0 / 3.0),
+    a = a
+    )
+};
+
+/** Constructs an opaque color from hue (`0.0..360.0` degrees), saturation (`0.0..1.0`), and lightness (`0.0..1.0`). */
+pub fromHsl := fn(hueDeg: Float, saturation: Float, lightness: Float): Color {
+    fromHsla(hueDeg, saturation, lightness, 1.0)
+};
+
+/** Reads the red channel as a normalized `Float` (`0.0..1.0`). */
+pub redFloat := fn(c: Color): Float { c.r };
+
+/** Reads the green channel as a normalized `Float` (`0.0..1.0`). */
+pub greenFloat := fn(c: Color): Float { c.g };
+
+/** Reads the blue channel as a normalized `Float` (`0.0..1.0`). */
+pub blueFloat := fn(c: Color): Float { c.b };
+
+/** Reads the alpha channel as a normalized `Float` (`0.0..1.0`). */
+pub alphaFloat := fn(c: Color): Float { c.a };
+
+toByte := fn(v: Float): Int {
+    scaled := clampUnit(v) * 255.0 + 0.5;
+    var lo := 0;
+    var hi := 255;
+    loop lo < hi {
+        mid := (lo + hi + 1) / 2;
+        if mid <= scaled {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    lo
+};
+
+/** Reads the red channel quantized to `0..255`. */
+pub red8 := fn(c: Color): Int { toByte(c.r) };
+
+/** Reads the green channel quantized to `0..255`. */
+pub green8 := fn(c: Color): Int { toByte(c.g) };
+
+/** Reads the blue channel quantized to `0..255`. */
+pub blue8 := fn(c: Color): Int { toByte(c.b) };
+
+/** Reads the alpha channel quantized to `0..255`. */
+pub alpha8 := fn(c: Color): Int { toByte(c.a) };
+
+/** Returns a copy of `c` with its red channel replaced. */
+pub withRedFloat := fn(c: Color, r: Float): Color { (r = r, g = c.g, b = c.b, a = c.a) };
+
+/** Returns a copy of `c` with its green channel replaced. */
+pub withGreenFloat := fn(c: Color, g: Float): Color { (r = c.r, g = g, b = c.b, a = c.a) };
+
+/** Returns a copy of `c` with its blue channel replaced. */
+pub withBlueFloat := fn(c: Color, b: Float): Color { (r = c.r, g = c.g, b = b, a = c.a) };
+
+/** Returns a copy of `c` with its alpha channel replaced. */
+pub withAlphaFloat := fn(c: Color, a: Float): Color { (r = c.r, g = c.g, b = c.b, a = a) };
+
+/** Linearly interpolates between `a` and `b` by factor `t` (`0.0..1.0`). */
+pub mix := fn(a: Color, b: Color, t: Float): Color {
+    k := clampUnit(t);
+    inv := 1.0 - k;
+    (
+    r = a.r * inv + b.r * k,
+    g = a.g * inv + b.g * k,
+    b = a.b * inv + b.b * k,
+    a = a.a * inv + b.a * k
+    )
+};
+
+/** Transparent black (`0, 0, 0, 0`). */
+pub TRANSPARENT := (r = 0.0, g = 0.0, b = 0.0, a = 0.0);
+
+/** Opaque black. */
+pub BLACK := (r = 0.0, g = 0.0, b = 0.0, a = 1.0);
+
+/** Opaque white. */
+pub WHITE := (r = 1.0, g = 1.0, b = 1.0, a = 1.0);
+
+/** Pure red. */
+pub RED := (r = 1.0, g = 0.0, b = 0.0, a = 1.0);
+
+/** Pure green. */
+pub GREEN := (r = 0.0, g = 1.0, b = 0.0, a = 1.0);
+
+/** Pure blue. */
+pub BLUE := (r = 0.0, g = 0.0, b = 1.0, a = 1.0);
+
+/** Pure yellow. */
+pub YELLOW := (r = 1.0, g = 1.0, b = 0.0, a = 1.0);
+
+/** Pure cyan. */
+pub CYAN := (r = 0.0, g = 1.0, b = 1.0, a = 1.0);
+
+/** Pure magenta. */
+pub MAGENTA := (r = 1.0, g = 0.0, b = 1.0, a = 1.0);

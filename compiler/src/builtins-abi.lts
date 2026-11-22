@@ -11,9 +11,36 @@ Item := type (kind: String, name: String, runtime: String, code: String, intValu
 /** Collection of items matching `frontend-ir.Items`. */
 Items := type List<Item>;
 
-/** True when `moduleIdentity` is a verified `lite.core.*` or `lite.external.*` host module identity. */
+/** True when `moduleIdentity` is a verified `lite.core.*`, `lite.external.*`, or `lite.extra.*` host module identity. */
 pub isHostModuleIdentity := fn(moduleIdentity: String): Bool {
-    textLib.startsWithAt(moduleIdentity, 0, "lite.core.") or textLib.startsWithAt(moduleIdentity, 0, "lite.external.")
+    textLib.startsWithAt(moduleIdentity, 0, "lite.core.") or
+    textLib.startsWithAt(moduleIdentity, 0, "lite.external.") or
+    textLib.startsWithAt(moduleIdentity, 0, "lite.extra.")
+};
+
+/** Resolves a bodyless `lib/extra/` declaration when its module identity and ABI match. */
+extraHostFunction := fn(moduleIdentity: String, name: String, params: String, result: String): String {
+    if moduleIdentity == "lite.extra.canvas.v1" {
+        surf := "(handle:Int)";
+        col := "(r:Float,g:Float,b:Float,a:Float)";
+        pt := "(x:Float,y:Float)";
+        rc := "(x:Float,y:Float,width:Float,height:Float)";
+        inp := "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)";
+        if name == "open" and params == "title=String|width=Int|height=Int" and result == surf { "lite$extraCanvasOpen" }
+        else if name == "poll" and params == "surface=" + surf and result == inp { "lite$extraCanvasPoll" }
+        else if name == "present" and params == "surface=" + surf and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasPresent" }
+        else if name == "close" and params == "surface=" + surf and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClose" }
+        else if name == "clear" and params == "surface=" + surf + "|fill=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClear" }
+        else if name == "fillRect" and params == "surface=" + surf + "|area=" + rc + "|fill=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasFillRect" }
+        else if name == "strokeRect" and params == "surface=" + surf + "|area=" + rc + "|lineWidth=Float|stroke=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasStrokeRect" }
+        else if name == "fillCircle" and params == "surface=" + surf + "|center=" + pt + "|radius=Float|fill=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasFillCircle" }
+        else if name == "strokeLine" and params == "surface=" + surf + "|start=" + pt + "|finish=" + pt + "|lineWidth=Float|stroke=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasStrokeLine" }
+        else if name == "drawText" and params == "surface=" + surf + "|content=String|at=" + pt + "|size=Float|fill=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasDrawText" }
+        else if name == "capture" and params == "surface=" + surf + "|outPath=String" and result == "(ok:Bool,error:String)" { "lite$extraCanvasCapture" }
+        else { "" }
+    } else {
+        ""
+    }
 };
 
 /** Resolves a bodyless external host declaration only when its `lib/external/` module identity and ABI match. */
@@ -53,6 +80,9 @@ externalHostFunction := fn(moduleIdentity: String, name: String, params: String,
 pub coreHostFunction := fn(moduleIdentity: String, name: String, params: String, result: String): String {
     if textLib.startsWithAt(moduleIdentity, 0, "lite.external.") {
         return externalHostFunction(moduleIdentity, name, params, result);
+    }
+    if textLib.startsWithAt(moduleIdentity, 0, "lite.extra.") {
+        return extraHostFunction(moduleIdentity, name, params, result);
     }
     if moduleIdentity == "lite.core.io.v1" {
         if params == "...values" and result == ir.VALUE_KIND_UNIT {

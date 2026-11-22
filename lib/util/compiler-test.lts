@@ -347,7 +347,14 @@ pub compileAndRunC := fn(cCode: String, cc: String, stdinText: String): RunOutpu
 
     ccOut := path.join(workDir, "cc.stdout");
     ccErr := path.join(workDir, "cc.stderr");
-    ccRes := proc.runBytes(cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", cPath, "-o", exePath, "-lm"], workDir, emptyEnv(), 30000, emptyBytes(), ccOut, ccErr);
+    ccArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", cPath, "-o", exePath, "-lm"];
+    if proc.platform() == "darwin" and text.containsText(cCode, "LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
+        list.pushBack(mut ccArgs, "-framework");
+        list.pushBack(mut ccArgs, "Cocoa");
+        list.pushBack(mut ccArgs, "-framework");
+        list.pushBack(mut ccArgs, "CoreGraphics");
+    }
+    ccRes := proc.runBytes(cc, ccArgs, workDir, emptyEnv(), 30000, emptyBytes(), ccOut, ccErr);
     test.check("compileAndRunC cc error: " + ccRes.error, ccRes.error == "");
     if ccRes.status =!= 0 {
         msg := fs.readText(ccErr).text;

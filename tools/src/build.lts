@@ -174,7 +174,14 @@ run := fn(rawArgs: List<String>): Unit {
 
     ccEnv := proc.envGet("CC");
     ccCmd := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
-    ccArgs: List<String> = ["-std=c11", ccOpt, cArtifact, "-o", finalOut, "-lm"];
+    ccArgs: mut List<String> = ["-std=c11", ccOpt, cArtifact, "-o", finalOut, "-lm"];
+    cText := fs.readText(cArtifact);
+    if cText.ok and proc.platform() == "darwin" and text.containsText(cText.text, "LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
+        list.pushBack(mut ccArgs, "-framework");
+        list.pushBack(mut ccArgs, "Cocoa");
+        list.pushBack(mut ccArgs, "-framework");
+        list.pushBack(mut ccArgs, "CoreGraphics");
+    }
     ccRes := proc.run(ccCmd, ccArgs, "", emptyEnv, true, "");
     fs.remove(tempDir.path);
     if ccRes.error =!= "" {
