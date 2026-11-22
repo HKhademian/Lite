@@ -3750,7 +3750,15 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("                id chars = ((id (*)(id, SEL))objc_msgSend)(ev, sel_registerName(\"characters\"));");
     outLine("                const char *u = chars ? ((const char *(*)(id, SEL))objc_msgSend)(chars, sel_registerName(\"UTF8String\")) : \"\";");
     outLine("                if (u && u[0] == 27) { strncpy(s->key, \"Escape\", 15); s->key[15] = '\\0'; }");
+    outLine("                else if (u && (u[0] == '\\r' || u[0] == '\\n')) { strncpy(s->key, \"Enter\", 15); s->key[15] = '\\0'; }");
+    outLine("                else if (u && (u[0] == 127 || u[0] == 8)) { strncpy(s->key, \"Backspace\", 15); s->key[15] = '\\0'; }");
+    outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x80) { strncpy(s->key, \"ArrowUp\", 15); s->key[15] = '\\0'; }");
+    outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x81) { strncpy(s->key, \"ArrowDown\", 15); s->key[15] = '\\0'; }");
+    outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x82) { strncpy(s->key, \"ArrowLeft\", 15); s->key[15] = '\\0'; }");
+    outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x83) { strncpy(s->key, \"ArrowRight\", 15); s->key[15] = '\\0'; }");
     outLine("                else if (u) { strncpy(s->key, u, 15); s->key[15] = '\\0'; }");
+    outLine("                unsigned long mods = ((unsigned long (*)(id, SEL))objc_msgSend)(ev, sel_registerName(\"modifierFlags\"));");
+    outLine("                if ((mods & (1ul << 20)) == 0ul) continue;");
     outLine("            }");
     outLine("            ((void (*)(id, SEL, id))objc_msgSend)(app, sel_registerName(\"sendEvent:\"), ev);");
     outLine("        }");
