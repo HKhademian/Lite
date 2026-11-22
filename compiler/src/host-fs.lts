@@ -9,6 +9,7 @@ listLib := import "core/list";
 path := import "core/path";
 textLib := import "core/text";
 unicode := import "core/unicode";
+tb := import "util/text-builder";
 frontend := import "./frontend.lts";
 
 /** Parses an optimization level digit (`0`..`3`), returning `-1` when invalid. */
@@ -386,25 +387,29 @@ hexDigit := fn(n: Int): String {
 
 /** Formats one string as a valid JSON double-quoted literal. */
 quoteJson := fn(s: String): String {
-    var out := "\"";
+    out: mut tb.TextBuilder;
+    tb.append(mut out, "\"");
     codePoints := unicode.toCodePoints(s);
     loop codePoints as cp {
-        if cp == 34 { out = out + "\\\""; }
-        else if cp == 92 { out = out + "\\\\"; }
-        else if cp == 8 { out = out + "\\b"; }
-        else if cp == 12 { out = out + "\\f"; }
-        else if cp == 10 { out = out + "\\n"; }
-        else if cp == 13 { out = out + "\\r"; }
-        else if cp == 9 { out = out + "\\t"; }
+        if cp == 34 { tb.append(mut out, "\\\""); }
+        else if cp == 92 { tb.append(mut out, "\\\\"); }
+        else if cp == 8 { tb.append(mut out, "\\b"); }
+        else if cp == 12 { tb.append(mut out, "\\f"); }
+        else if cp == 10 { tb.append(mut out, "\\n"); }
+        else if cp == 13 { tb.append(mut out, "\\r"); }
+        else if cp == 9 { tb.append(mut out, "\\t"); }
         else if cp < 32 {
-            out = out + "\\u00" + hexDigit(cp / 16) + hexDigit(cp % 16);
+            tb.append(mut out, "\\u00");
+            tb.append(mut out, hexDigit(cp / 16));
+            tb.append(mut out, hexDigit(cp % 16));
         } else {
             one: List<Int> = [cp];
             dec := unicode.fromCodePoints(one);
-            out = out + if dec.ok { dec.text } else { "" };
+            if dec.ok { tb.append(mut out, dec.text); }
         }
     }
-    out + "\""
+    tb.append(mut out, "\"");
+    tb.build(out)
 }
 
 /** Serializes `{ files, edges }` trace JSON from `graph` to `tracePath`. */

@@ -2,6 +2,7 @@ diagLib := import "core/diag";
 integer := import "core/int";
 listLib := import "core/list";
 textLib := import "core/text";
+tb := import "util/text-builder";
 frontend := import "./frontend.lts";
 hostFs := import "./host-fs.lts";
 /* Initial source graph traversal for the generated TypeScript compiler. */
@@ -65,15 +66,15 @@ compareText := fn(left: String, right: String): Int {
 /** Converts Windows backslashes to forward slashes so path slugs are platform-uniform. */
 normalizeSlashes := fn(path: String): String {
     if textLib.indexOfText(path, "\\", 0) < 0 { return path; }
-    var result := "";
+    result: mut tb.TextBuilder;
     var index := 0;
     size := textLib.length(path);
     loop index < size {
         ch := textLib.at(path, index);
-        result = result + if ch == "\\" { "/" } else { ch };
+        tb.append(mut result, if ch == "\\" { "/" } else { ch });
         index = index + 1;
     }
-    result
+    tb.build(result)
 }
 
 /** Drops one trailing `.lts` suffix when a non-empty stem precedes it. */
@@ -170,29 +171,30 @@ logicalModuleName := fn(rootDir: String, path: String, display: String): String 
 
 /** Prefix-free, injective target identifier slug for one logical module path. */
 encodeModuleSlug := fn(target: String, logical: String): String {
-    var result := "";
+    result: mut tb.TextBuilder;
     var index := 0;
     size := textLib.length(logical);
     loop index < size {
         ch := textLib.at(logical, index);
         if textLib.isAsciiLetter(ch) or textLib.isDigit(ch) {
-            result = result + ch;
+            tb.append(mut result, ch);
         } else if ch == "/" {
-            result = result + if target == frontend.TARGET_TS { "$" } else { "_s_" };
+            tb.append(mut result, if target == frontend.TARGET_TS { "$" } else { "_s_" });
         } else if ch == "-" {
-            result = result + if target == frontend.TARGET_TS { "__" } else { "_d_" };
+            tb.append(mut result, if target == frontend.TARGET_TS { "__" } else { "_d_" });
         } else if ch == "_" {
-            result = result + "_u_";
+            tb.append(mut result, "_u_");
         } else if ch == "." {
-            result = result + "_p_";
+            tb.append(mut result, "_p_");
         } else {
             code := asciiCode(ch);
-            result = result + if code >= 0 { "_a" + integer.intText(code) + "_" } else { "_z_" };
+            tb.append(mut result, if code >= 0 { "_a" + integer.intText(code) + "_" } else { "_z_" });
         }
         index = index + 1;
     }
-    if result == "" { return "module"; }
-    result
+    built := tb.build(result);
+    if built == "" { return "module"; }
+    built
 }
 
 /** Returns true if any visited module already reserves `moduleKey`. */

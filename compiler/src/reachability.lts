@@ -5,6 +5,7 @@ listLib := import "core/list";
 mapLib := import "core/map";
 setLib := import "core/set";
 textLib := import "core/text";
+tb := import "util/text-builder";
 ir := import "./frontend-ir.lts";
 syntax := import "./frontend-syntax.lts";
 types := import "./frontend-types.lts";
@@ -1503,16 +1504,16 @@ isSimpleInlineArg := fn(arg: String): Bool {
 /** Replaces whole-token occurrences of `paramRt` with `argCode` outside quoted strings. */
 replaceParamToken := fn(body: String, paramRt: String, argCode: String): String {
     if paramRt == "" { return body; }
+    if textLib.indexOfText(body, paramRt, 0) < 0 { return body; }
     pLen := textLib.length(paramRt);
     bLen := textLib.length(body);
-    var out := "";
+    out: mut tb.TextBuilder;
     var cursor := 0;
+    var flushed := 0;
     loop cursor < bLen {
         ch := textLib.at(body, cursor);
         if ch == "\"" or ch == "'" {
-            qEnd := syntax.skipAliasString(body, cursor);
-            out = out + textLib.slice(body, cursor, qEnd);
-            cursor = qEnd;
+            cursor = syntax.skipAliasString(body, cursor);
             continue;
         }
         if textLib.startsWithAt(body, cursor, paramRt) {
@@ -1520,15 +1521,18 @@ replaceParamToken := fn(body: String, paramRt: String, argCode: String): String 
             afterPos := cursor + pLen;
             nextOk := afterPos >= bLen or (not textLib.isNameContinue(textLib.at(body, afterPos)) and textLib.at(body, afterPos) =!= "$");
             if prevOk and nextOk {
-                out = out + argCode;
+                if cursor > flushed { tb.append(mut out, textLib.slice(body, flushed, cursor)); }
+                tb.append(mut out, argCode);
                 cursor = afterPos;
+                flushed = cursor;
                 continue;
             }
         }
-        out = out + ch;
         cursor = cursor + 1;
     }
-    out
+    if flushed == 0 { return body; }
+    if flushed < bLen { tb.append(mut out, textLib.slice(body, flushed, bLen)); }
+    tb.build(out)
 };
 
 /** Widens TS literal arguments (`2`, `2n`, `true`/`false`) when inlining so strict `tsc` does not flag `TS2367` on comparisons. */
