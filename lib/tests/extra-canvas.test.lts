@@ -100,6 +100,44 @@ if ccInfo.available {
     cPngBytes := fs.readBytes(cPng);
     test.check("c png exists and has PNG signature", cPngBytes.length > 32 and
     cPngBytes[0] == 137 and cPngBytes[1] == 80 and cPngBytes[2] == 78 and cPngBytes[3] == 71);
+
+    /* 3. C11 AddressSanitizer + UBSan + 5,000-frame RSS stability leak gate */
+    leakSrc :=
+    "io := import \"core/io\";\n" +
+    "canvas := import \"extra/canvas\";\n" +
+    "surf := canvas.open(\"LeakCheck\", 160, 120);\n" +
+    "canvas.uncapFrameRate(surf);\n" +
+    "var rssStart := 0;\n" +
+    "var i := 0;\n" +
+    "loop i < 5000 {\n" +
+    "    _inp := canvas.poll(surf);\n" +
+    "    canvas.clear(surf, canvas.BLACK);\n" +
+    "    canvas.fillRect(surf, canvas.rect(10.0, 10.0, 40.0, 30.0), canvas.RED);\n" +
+    "    canvas.fillCircle(surf, canvas.point(80.0, 60.0), 20.0, canvas.withAlpha(canvas.CYAN, 0.5));\n" +
+    "    canvas.drawText(surf, \"OK\", canvas.point(12.0, 12.0), 14.0, canvas.WHITE);\n" +
+    "    canvas.present(surf);\n" +
+    "    if i == 500 { rssStart = canvas.vitals(surf).memoryBytes; }\n" +
+    "    i = i + 1;\n" +
+    "}\n" +
+    "rssEnd := canvas.vitals(surf).memoryBytes;\n" +
+    "growth := rssEnd - rssStart;\n" +
+    "io.outputLine(growth <= 1048576);\n" +
+    "canvas.close(surf);\n";
+    leakComp := compilerTest.compileStdin(root, selC.path, leakSrc, "");
+    test.checkInt("leak c compile: " + leakComp.stderr, 0, leakComp.status);
+    leakCFile := path.join(tmpDir, "leak.c");
+    leakBin := path.join(tmpDir, "leak");
+    test.check("write leak.c", fs.writeText(leakCFile, leakComp.stdout).ok);
+    asanArgs: List<String> = if proc.platform() == "darwin" {
+        ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", leakCFile, "-o", leakBin, "-lm", "-framework", "Cocoa", "-framework", "CoreGraphics"]
+    } else {
+        ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", leakCFile, "-o", leakBin, "-lm"]
+    };
+    asanCc := proc.run(ccInfo.cc, asanArgs, tmpDir, [], true, "");
+    test.checkInt("asan cc status: " + asanCc.stderr, 0, asanCc.status);
+    asanRun := proc.run(leakBin, [], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+    test.checkInt("asan run status: " + asanRun.stderr, 0, asanRun.status);
+    test.checkText("5000-frame RSS growth <= 1MB", "true\n", asanRun.stdout);
 }
 
 _rm := fs.remove(tmpDir);

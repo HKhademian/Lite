@@ -89,6 +89,9 @@ stepDt := 1.0 / 120.0;
 var accumSec := 0.0;
 var updateCount := 0;
 var totalTimeSec := 0.0;
+var hudTimerSec := 1.0;
+var line1 := "FPS:0.0  UPS:0.0  FT:0.0MS  CAP:60";
+var line2 := "CPU:0.0MS  MEM:0.0MB  KEYS:1/2/3/0";
 var frame := 0;
 
 loop true {
@@ -96,10 +99,10 @@ loop true {
     if not inp.open or inp.key == "Escape" or inp.key == "q" {
         break;
     }
-    if inp.key == "1" { canvas.setTargetFps(surface, 30.0); }
-    else if inp.key == "2" { canvas.setTargetFps(surface, 60.0); }
-    else if inp.key == "3" { canvas.setTargetFps(surface, 120.0); }
-    else if inp.key == "0" or inp.key == "u" { canvas.uncapFrameRate(surface); }
+    if inp.key == "1" { canvas.setTargetFps(surface, 30.0); hudTimerSec = 1.0; }
+    else if inp.key == "2" { canvas.setTargetFps(surface, 60.0); hudTimerSec = 1.0; }
+    else if inp.key == "3" { canvas.setTargetFps(surface, 120.0); hudTimerSec = 1.0; }
+    else if inp.key == "0" or inp.key == "u" { canvas.uncapFrameRate(surface); hudTimerSec = 1.0; }
 
     vit := canvas.vitals(surface);
     frameSec := if vit.frameTimeMs > 0.0 {
@@ -109,6 +112,7 @@ loop true {
     };
     accumSec = accumSec + frameSec;
     totalTimeSec = totalTimeSec + frameSec;
+    hudTimerSec = hudTimerSec + frameSec;
     var subSteps := 0;
     loop accumSec >= stepDt and subSteps < 8 {
         x1 = x1 + vx1 * stepDt;
@@ -156,14 +160,17 @@ loop true {
         canvas.fillCircle(surface, canvas.point(inp.pointerX, inp.pointerY), pRadius, pColor);
     }
 
-    /* Live Vitals HUD */
+    /* Live Vitals HUD (refreshed at 4 Hz to avoid per-frame string churn) */
     canvas.fillRect(surface, canvas.rect(14.0, 12.0, 612.0, 68.0), panel);
     canvas.strokeRect(surface, canvas.rect(14.0, 12.0, 612.0, 68.0), 2.0, accent);
-    ups := if totalTimeSec > 0.0 { updateCount / totalTimeSec } else { 0.0 };
-    capLabel := if vit.targetFps <= 0.0 { "UNCAP" } else { integer.intText(roundInt(vit.targetFps)) };
-    memMb := vit.memoryBytes / 1048576.0;
-    line1 := "FPS:" + fmt1(vit.fps) + "  UPS:" + fmt1(ups) + "  FT:" + fmt1(vit.avgFrameTimeMs) + "MS  CAP:" + capLabel;
-    line2 := "CPU:" + fmt1(vit.cpuTimeMs) + "MS  MEM:" + fmt1(memMb) + "MB  KEYS:1/2/3/0";
+    if hudTimerSec >= 0.25 {
+        hudTimerSec = 0.0;
+        ups := if totalTimeSec > 0.0 { updateCount / totalTimeSec } else { 0.0 };
+        capLabel := if vit.targetFps <= 0.0 { "UNCAP" } else { integer.intText(roundInt(vit.targetFps)) };
+        memMb := vit.memoryBytes / 1048576.0;
+        line1 = "FPS:" + fmt1(vit.fps) + "  UPS:" + fmt1(ups) + "  FT:" + fmt1(vit.avgFrameTimeMs) + "MS  CAP:" + capLabel;
+        line2 = "CPU:" + fmt1(vit.cpuTimeMs) + "MS  MEM:" + fmt1(memMb) + "MB  KEYS:1/2/3/0";
+    }
     canvas.drawText(surface, line1, canvas.point(26.0, 24.0), 14.0, canvas.WHITE);
     canvas.drawText(surface, line2, canvas.point(26.0, 50.0), 14.0, mint);
 
