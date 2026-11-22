@@ -5,28 +5,26 @@ listLib := import "core/list";
 diagLib := import "core/diag";
 io := import "core/io";
 textLib := import "core/text";
+tb := import "util/text-builder";
 
 var cOutUseWriter := false;
-var cOutWriterKind := "";
-var cOutWriterHandle := 0;
+cOutBuf: mut tb.TextBuilder;
 
-/** Emits one C11 line to either stdout or an explicit `io.Writer`. */
+/** Emits one C11 line to either stdout or the buffered `TextBuilder` for `--out`. */
 outLine := fn(s: String): Unit {
     if not cOutUseWriter {
         io.outputLine(s);
     } else {
-        w: io.Writer = (kind = cOutWriterKind, handle = cOutWriterHandle);
-        _res := io.writeLine(w, s);
+        tb.appendLine(mut cOutBuf, s);
     }
 };
 
-/** Emits raw C11 text to either stdout or an explicit `io.Writer`. */
+/** Emits raw C11 text to either stdout or the buffered `TextBuilder` for `--out`. */
 outText := fn(s: String): Unit {
     if not cOutUseWriter {
         io.output(s);
     } else {
-        w: io.Writer = (kind = cOutWriterKind, handle = cOutWriterHandle);
-        _res := io.writeText(w, s);
+        tb.append(mut cOutBuf, s);
     }
 };
 
@@ -4020,12 +4018,11 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
 /** Emits the C program to an explicit `io.Writer` with `--builtin-mode` specifications and optimization level (`0..3`). */
 pub emitProgramToOpt := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
     cOutUseWriter = true;
-    cOutWriterKind = writer.kind;
-    cOutWriterHandle = writer.handle;
+    tb.clear(mut cOutBuf);
     emitProgramWithSpecsOpt(items, source, prefix, builtinSpecs, optLevel);
+    _res := io.writeText(writer, tb.build(cOutBuf));
+    tb.clear(mut cOutBuf);
     cOutUseWriter = false;
-    cOutWriterKind = "";
-    cOutWriterHandle = 0;
 };
 
 /** Emits the C program from the flat item stream with explicit `--builtin-mode` specifications at default `-O1`. */
