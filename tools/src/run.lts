@@ -4,20 +4,289 @@ io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
+integer := import "core/int";
 list := import "core/list";
 path := import "core/path";
 project := import "util/project";
 compilerBuild := import "util/compiler-build";
 
 usageExit := fn(): Unit {
-    io.errorLine("Usage: ./bin/lite run [--target ts|c] [-O0|-O1|-O2|-O3] [--builtin-mode SPEC]... file.lts [-- argument ...]");
+    io.errorLine("Usage: ./bin/lite run [--target ts|c] [-O0|-O1|-O2|-O3] [--builtin-mode SPEC]... [--play [--scale N] [--fps N|--uncap] [--capture PNG]] file.lts [-- argument ...]");
     io.exit(2);
+};
+
+parsePosInt := fn(raw: String): Int {
+    n := text.length(raw);
+    if n == 0 { return 0; }
+    var acc := 0;
+    var i := 0;
+    loop i < n {
+        ch := text.at(raw, i);
+        d := if ch == "0" { 0 } else if ch == "1" { 1 } else if ch == "2" { 2 }
+             else if ch == "3" { 3 } else if ch == "4" { 4 } else if ch == "5" { 5 }
+             else if ch == "6" { 6 } else if ch == "7" { 7 } else if ch == "8" { 8 }
+             else if ch == "9" { 9 } else { -1 };
+        if d < 0 { return 0; }
+        acc = (acc * 10) + d;
+        i += 1;
+    }
+    acc
+};
+
+escapeLiteString := fn(raw: String): String {
+    var out := "";
+    n := text.length(raw);
+    var i := 0;
+    loop i < n {
+        ch := text.at(raw, i);
+        if ch == "\\" { out = out + "\\\\"; }
+        else if ch == "\"" { out = out + "\\\""; }
+        else { out = out + ch; }
+        i += 1;
+    }
+    out
+};
+
+splitLines := fn(source: String): List<String> {
+    out: mut List<String> = [];
+    n := text.length(source);
+    var pos := 0;
+    loop pos <= n {
+        nl := text.indexOfText(source, "\n", pos);
+        if nl < 0 {
+            list.pushBack(mut out, text.slice(source, pos, n));
+            break;
+        }
+        list.pushBack(mut out, text.slice(source, pos, nl));
+        pos = nl + 1;
+    }
+    out
+};
+
+findCanvasAlias := fn(source: String): String {
+    lines := splitLines(source);
+    loop lines as rawLine {
+        line := text.trim(rawLine);
+        if text.containsText(line, "\"extra/canvas\"") and text.containsText(line, "import") and text.containsText(line, ":=") {
+            var work := line;
+            if text.startsWithAt(work, 0, "pub ") {
+                work = text.trim(text.slice(work, 4, text.length(work)));
+            }
+            colonIdx := text.indexOfText(work, ":=", 0);
+            if colonIdx > 0 {
+                alias := text.trim(text.slice(work, 0, colonIdx));
+                if alias =!= "" and not text.containsText(alias, " ") {
+                    return alias;
+                }
+            }
+        }
+    }
+    ""
+};
+
+hasTopLevelFn := fn(source: String, fnName: String): Bool {
+    lines := splitLines(source);
+    loop lines as rawLine {
+        line := text.trim(rawLine);
+        var work := line;
+        if text.startsWithAt(work, 0, "pub ") {
+            work = text.trim(text.slice(work, 4, text.length(work)));
+        }
+        if text.startsWithAt(work, 0, fnName) {
+            rest := text.trim(text.slice(work, text.length(fnName), text.length(work)));
+            if text.startsWithAt(rest, 0, ":=") {
+                after := text.trim(text.slice(rest, 2, text.length(rest)));
+                if text.startsWithAt(after, 0, "fn") {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+};
+
+buildPlayWrapper := fn(source: String, canvasAlias: String, scale: Int, fps: Int, uncap: Bool, capturePath: String): String {
+    hasInit := hasTopLevelFn(source, "onCanvasInit");
+    hasUpdate := hasTopLevelFn(source, "onCanvasUpdate");
+    hasKeyDown := hasTopLevelFn(source, "onCanvasKeyDown");
+    hasKeyUp := hasTopLevelFn(source, "onCanvasKeyUp");
+    hasPtrMove := hasTopLevelFn(source, "onCanvasPointerMove");
+    hasPtrDown := hasTopLevelFn(source, "onCanvasPointerDown");
+    hasPtrUp := hasTopLevelFn(source, "onCanvasPointerUp");
+
+    header :=
+        "__lpSurf := import \"extra/surface\";\n" +
+        "__lpColor := import \"extra/color\";\n" +
+        "__lpList := import \"core/list\";\n";
+
+    var footer := "\n/* --- Desktop Play host driver (extra/canvas -> extra/surface) --- */\n";
+    footer = footer +
+        "__lpDecodeColor := fn(argb: Int): __lpSurf.Color {\n" +
+        "    a0 := (argb / 16777216) % 256;\n" +
+        "    r0 := (argb / 65536) % 256;\n" +
+        "    g0 := (argb / 256) % 256;\n" +
+        "    b0 := argb % 256;\n" +
+        "    a := if a0 < 0 { a0 + 256 } else { a0 };\n" +
+        "    r := if r0 < 0 { r0 + 256 } else { r0 };\n" +
+        "    g := if g0 < 0 { g0 + 256 } else { g0 };\n" +
+        "    b := if b0 < 0 { b0 + 256 } else { b0 };\n" +
+        "    __lpColor.fromRgba8(r, g, b, a)\n" +
+        "};\n" +
+        "__lpFloorInt := fn(v: Float): Int {\n" +
+        "    if v <= 0.0 { return 0; }\n" +
+        "    var hi := 1;\n" +
+        "    loop hi < 1000000 and hi <= v { hi = hi * 2; }\n" +
+        "    var lo := 0;\n" +
+        "    loop lo < hi {\n" +
+        "        mid := (lo + hi + 1) / 2;\n" +
+        "        if mid <= v { lo = mid; } else { hi = mid - 1; }\n" +
+        "    }\n" +
+        "    lo\n" +
+        "};\n" +
+        "__lpFlush := fn(win: __lpSurf.Surface, scale: Int, lastDrawCount: Int): Int {\n" +
+        "    snap := " + canvasAlias + ".litePlayCanvasSnapshot();\n" +
+        "    scaleF := scale * 1.0;\n" +
+        "    var nextDraw := lastDrawCount;\n" +
+        "    px := " + canvasAlias + ".litePlayCanvasPixels();\n" +
+        "    pxLen := __lpList.length(px);\n" +
+        "    if pxLen > 0 and pxLen == snap.width * snap.height and snap.drawCount =!= lastDrawCount {\n" +
+        "        nextDraw = snap.drawCount;\n" +
+        "        var py := 0;\n" +
+        "        loop py < snap.height {\n" +
+        "            rowOff := py * snap.width;\n" +
+        "            var pxIdx := 0;\n" +
+        "            loop pxIdx < snap.width {\n" +
+        "                colVal := px[rowOff + pxIdx];\n" +
+        "                var runEnd := pxIdx + 1;\n" +
+        "                loop runEnd < snap.width and px[rowOff + runEnd] == colVal {\n" +
+        "                    runEnd += 1;\n" +
+        "                }\n" +
+        "                __lpSurf.fillRect(win, __lpSurf.rect(pxIdx * scaleF, py * scaleF, (runEnd - pxIdx) * scaleF, scaleF), __lpDecodeColor(colVal));\n" +
+        "                pxIdx = runEnd;\n" +
+        "            }\n" +
+        "            py += 1;\n" +
+        "        }\n" +
+        "    }\n" +
+        "    ops := " + canvasAlias + ".litePlayCanvasTakeOps();\n" +
+        "    n := __lpList.length(ops);\n" +
+        "    var i := 0;\n" +
+        "    loop i < n {\n" +
+        "        op := ops[i];\n" +
+        "        if op == 1 and i + 1 < n {\n" +
+        "            __lpSurf.clear(win, __lpDecodeColor(ops[i + 1]));\n" +
+        "            i += 2;\n" +
+        "        } else if op == 2 and i + 5 < n {\n" +
+        "            __lpSurf.fillRect(win, __lpSurf.rect(ops[i + 1] * scaleF, ops[i + 2] * scaleF, ops[i + 3] * scaleF, ops[i + 4] * scaleF), __lpDecodeColor(ops[i + 5]));\n" +
+        "            i += 6;\n" +
+        "        } else {\n" +
+        "            break;\n" +
+        "        }\n" +
+        "    }\n" +
+        "    nextDraw\n" +
+        "};\n" +
+        "__lpRunPlay := fn(): Unit {\n" +
+        "    snap := " + canvasAlias + ".litePlayCanvasSnapshot();\n" +
+        "    if snap.width <= 0 or snap.height <= 0 { return; }\n" +
+        "    reqScale := " + integer.intText(scale) + ";\n" +
+        "    scale := if reqScale > 0 { reqScale } else if snap.width <= 240 { 3 } else if snap.width <= 480 { 2 } else { 1 };\n" +
+        "    win := __lpSurf.open(snap.title, snap.width * scale, snap.height * scale);\n";
+
+    if uncap {
+        footer = footer + "    __lpSurf.uncapFrameRate(win);\n";
+    } else if fps > 0 {
+        footer = footer + "    __lpSurf.setTargetFps(win, " + integer.intText(fps) + ".0);\n";
+    }
+
+    footer = footer + "    var lastDraw := -1;\n";
+    if hasInit {
+        footer = footer + "    onCanvasInit();\n";
+    }
+    footer = footer + "    lastDraw = __lpFlush(win, scale, lastDraw);\n";
+    if capturePath =!= "" {
+        if hasUpdate {
+            footer = footer +
+                "    _capSt := onCanvasUpdate(0.025);\n" +
+                "    lastDraw = __lpFlush(win, scale, lastDraw);\n";
+        }
+        footer = footer +
+            "    __lpSurf.present(win);\n" +
+            "    _capRes := __lpSurf.capture(win, \"" + escapeLiteString(capturePath) + "\");\n" +
+            "    __lpSurf.close(win);\n" +
+            "    return;\n" +
+            "};\n" +
+            "__lpRunPlay();\n";
+        return header + source + footer;
+    }
+
+    footer = footer +
+        "    __lpSurf.present(win);\n" +
+        "    var prevKey := \"\";\n" +
+        "    var prevDown := false;\n" +
+        "    var prevCol := -1;\n" +
+        "    var prevRow := -1;\n" +
+        "    loop true {\n" +
+        "        inp := __lpSurf.poll(win);\n" +
+        "        if not inp.open or inp.key == \"Escape\" { break; }\n";
+
+    if hasKeyDown {
+        footer = footer +
+            "        if inp.key =!= \"\" { onCanvasKeyDown(inp.key); }\n";
+    }
+    if hasKeyUp {
+        footer = footer +
+            "        if prevKey =!= \"\" and inp.key == \"\" { onCanvasKeyUp(prevKey); }\n";
+    }
+    footer = footer +
+        "        prevKey = inp.key;\n" +
+        "        col := __lpFloorInt(inp.pointerX / (scale * 1.0));\n" +
+        "        row := __lpFloorInt(inp.pointerY / (scale * 1.0));\n";
+
+    if hasPtrMove {
+        footer = footer +
+            "        if col =!= prevCol or row =!= prevRow { onCanvasPointerMove(col, row); }\n";
+    }
+    if hasPtrDown {
+        footer = footer +
+            "        if inp.pointerDown and not prevDown { onCanvasPointerDown(col, row, 0); }\n";
+    }
+    if hasPtrUp {
+        footer = footer +
+            "        if not inp.pointerDown and prevDown { onCanvasPointerUp(col, row, 0); }\n";
+    }
+    footer = footer +
+        "        prevCol = col;\n" +
+        "        prevRow = row;\n" +
+        "        prevDown = inp.pointerDown;\n";
+
+    if hasUpdate {
+        footer = footer +
+            "        rawDt := inp.deltaMs / 1000.0;\n" +
+            "        dt := if rawDt > 0.05 { 0.05 } else if rawDt <= 0.0 { 0.016 } else { rawDt };\n" +
+            "        st := onCanvasUpdate(dt);\n" +
+            "        if st =!= 0 { break; }\n";
+    }
+
+    footer = footer +
+        "        lastDraw = __lpFlush(win, scale, lastDraw);\n" +
+        "        __lpSurf.present(win);\n" +
+        "    }\n" +
+        "    __lpSurf.close(win);\n" +
+        "};\n" +
+        "__lpRunPlay();\n";
+
+    header + source + footer
 };
 
 run := fn(rawArgs: List<String>): Unit {
     args: mut List<String> = rawArgs;
     builtinOpts: mut List<String> = [];
     var target := "ts";
+    var targetSet := false;
+    var playMode := false;
+    var playScale := 0;
+    var playFps := 60;
+    var playUncap := false;
+    var playCapture := "";
     var scriptPath := "";
     loop list.listCountText(args) > 0 {
         arg := list.popFront(mut args);
@@ -25,11 +294,32 @@ run := fn(rawArgs: List<String>): Unit {
             if list.listCountText(args) == 0 { usageExit(); }
             scriptPath = list.popFront(mut args);
             break;
+        } else if arg == "--play" {
+            playMode = true;
+        } else if arg == "--uncap" {
+            playUncap = true;
+        } else if arg == "--scale" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            playScale = parsePosInt(list.popFront(mut args));
+        } else if text.startsWithAt(arg, 0, "--scale=") {
+            playScale = parsePosInt(text.slice(arg, 8, text.length(arg)));
+        } else if arg == "--fps" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            playFps = parsePosInt(list.popFront(mut args));
+        } else if text.startsWithAt(arg, 0, "--fps=") {
+            playFps = parsePosInt(text.slice(arg, 6, text.length(arg)));
+        } else if arg == "--capture" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            playCapture = list.popFront(mut args);
+        } else if text.startsWithAt(arg, 0, "--capture=") {
+            playCapture = text.slice(arg, 10, text.length(arg));
         } else if arg == "--target" {
             if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
             target = list.popFront(mut args);
+            targetSet = true;
         } else if text.startsWithAt(arg, 0, "--target=") {
             target = text.slice(arg, 9, text.length(arg));
+            targetSet = true;
         } else if arg == "--builtin-mode" {
             if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
             list.pushBack(mut builtinOpts, arg);
@@ -46,6 +336,10 @@ run := fn(rawArgs: List<String>): Unit {
             scriptPath = arg;
             break;
         }
+    }
+
+    if playMode and not targetSet {
+        target = "c";
     }
 
     if target =!= "ts" and target =!= "c" {
@@ -84,25 +378,55 @@ run := fn(rawArgs: List<String>): Unit {
     }
     emptyEnv: List<String> = [];
 
-    compileArgs: mut List<String> = [sel.path];
-    loop builtinOpts as opt {
-        list.pushBack(mut compileArgs, opt);
-    }
-    list.pushBack(mut compileArgs, scriptPath);
-    compiled := proc.run(project.nodeExecPath(), compileArgs, "", emptyEnv, true, "");
-    if compiled.error =!= "" {
-        io.errorLine("lite run: " + compiled.error);
-        io.exit(1);
-    }
-    if compiled.status =!= 0 {
-        project.errorText(compiled.stderr);
-        io.exit(compiled.status);
-    }
-
     tempDir := fs.makeTempDir("lite-run-");
     if not tempDir.ok {
         io.errorLine("lite run: " + tempDir.error);
         io.exit(1);
+    }
+
+    var compileInput := scriptPath;
+    if playMode {
+        srcRead := fs.readText(scriptPath);
+        if not srcRead.ok {
+            fs.remove(tempDir.path);
+            io.errorLine("lite run: " + srcRead.error);
+            io.exit(1);
+        }
+        canvasAlias := findCanvasAlias(srcRead.text);
+        if canvasAlias =!= "" {
+            resolvedCapture := if playCapture == "" { "" } else { path.resolve(proc.cwd(), playCapture) };
+            wrapped := buildPlayWrapper(srcRead.text, canvasAlias, playScale, playFps, playUncap, resolvedCapture);
+            wrappedPath := path.join(tempDir.path, "play-entry.lts");
+            wRes := fs.writeText(wrappedPath, wrapped);
+            if not wRes.ok {
+                fs.remove(tempDir.path);
+                io.errorLine("lite run: " + wRes.error);
+                io.exit(1);
+            }
+            compileInput = wrappedPath;
+        }
+    }
+
+    compileArgs: mut List<String> = [sel.path];
+    loop builtinOpts as opt {
+        list.pushBack(mut compileArgs, opt);
+    }
+    list.pushBack(mut compileArgs, compileInput);
+    compiled := proc.run(project.nodeExecPath(), compileArgs, "", emptyEnv, true, "");
+    if compiled.error =!= "" {
+        fs.remove(tempDir.path);
+        io.errorLine("lite run: " + compiled.error);
+        io.exit(1);
+    }
+    if compiled.status =!= 0 {
+        fs.remove(tempDir.path);
+        project.errorText(compiled.stderr);
+        io.exit(compiled.status);
+    }
+
+    runEnv: mut List<String> = [];
+    if playCapture =!= "" {
+        list.pushBack(mut runEnv, "LITE_CANVAS_HEADLESS=1");
     }
 
     base := path.baseName(scriptPath);
@@ -134,7 +458,7 @@ run := fn(rawArgs: List<String>): Unit {
             project.errorText(ccRes.stderr);
             io.exit(ccRes.status);
         }
-        cExecRes := proc.run(binPath, args, "", emptyEnv, false, "");
+        cExecRes := proc.run(binPath, args, "", runEnv, false, "");
         fs.remove(tempDir.path);
         if cExecRes.error =!= "" {
             io.errorLine("lite run: " + cExecRes.error);
@@ -168,7 +492,7 @@ run := fn(rawArgs: List<String>): Unit {
     loop args as arg {
         list.pushBack(mut entryArgs, arg);
     }
-    execRes := proc.run(project.nodeExecPath(), entryArgs, "", emptyEnv, false, "");
+    execRes := proc.run(project.nodeExecPath(), entryArgs, "", runEnv, false, "");
     fs.remove(tempDir.path);
 
     if execRes.error =!= "" {

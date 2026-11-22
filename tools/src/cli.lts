@@ -13,6 +13,7 @@ usageText := fn(): String {
     "  compile [--target ts|c] [-O0|-O1|-O2|-O3] [--builtin-mode SPEC] file.lts  Compile to a TS or C11 artifact\n" +
     "  build [-O0|-O1|-O2|-O3] [--cc-opt -O2] [-o OUTPUT] [--keep-c] file.lts  Build a standalone native executable via C11\n" +
     "  run [--target ts|c] [-O0|-O1|-O2|-O3] [--builtin-mode SPEC] file.lts [-- argument ...]  Compile to a temporary artifact and execute it\n" +
+    "  play [--target c|ts] [--scale N] [--fps N|--uncap] [--capture PNG] file.lts  Run a Play (`extra/canvas`) sample in a desktop window\n" +
     "  verify [--all|--update|--coverage|--pedantic]  Verify generated TS artifacts\n" +
     "  test [--smoke|--fast|--full] [--verbose|--mute|--silence]  Fast, quiet smoke by default\n" +
     "  test --pedantic [--filter ID] [--shard i/n]  Verify & benchmark all cases across -O0..-O3\n" +
@@ -36,6 +37,7 @@ ROUTE_TARGETS: Map<String, String> = [
 "compile" = "lite-compile",
 "build" = "lite-build",
 "run" = "lite-run",
+"play" = "lite-run",
 "verify" = "lite-verify",
 "test" = "lite-test",
 "docs" = "lite-docs",
@@ -73,6 +75,14 @@ run := fn(rawArgs: List<String>): Unit {
     if target == "" {
         io.errorLine(usageText());
         io.exit(2);
+    }
+    if command == "play" {
+        playArgs: mut List<String> = ["--play"];
+        loop args as a {
+            list.pushBack(mut playArgs, a);
+        }
+        project.forwardNode("bin/" + target, playArgs);
+        return;
     }
     project.forwardNode("bin/" + target, args);
 };
