@@ -132,11 +132,18 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
     outLine("    return slot;");
     outLine("}");
     if hasAt or hasSlice {
+        outLine("static const char *lt_ascii_char(unsigned char c) {");
+        outLine("    static char tbl[128][2];");
+        outLine("    static bool init = false;");
+        outLine("    if (!init) { for (int i = 0; i < 128; i++) { tbl[i][0] = (char)i; tbl[i][1] = '\\0'; } init = true; }");
+        outLine("    return tbl[c];");
+        outLine("}");
         outLine("static const char *lt_alloc_text_slice(const char *s, size_t start, size_t end) {");
         outLine("    const size_t len = end - start;");
-        outLine("    char *out = malloc(len + 1u);");
-        outLine("    if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate sliced text\\n\"); exit(1); }");
-        outLine("    if (len > 0u) { memcpy(out, s + start, len); }");
+        outLine("    if (len == 0u) { return \"\"; }");
+        outLine("    if (len == 1u && (unsigned char)s[start] < 128u) { return lt_ascii_char((unsigned char)s[start]); }");
+        outLine("    char *out = lt_str_alloc(len + 1u);");
+        outLine("    memcpy(out, s + start, len);");
         outLine("    out[len] = '\\0';");
         outLine("    return out;");
         outLine("}");
@@ -1850,15 +1857,13 @@ emitIntDivisionHelpers := fn(calls: String): Unit {
 /** Emits the checked UTF-8 byte concatenation helper; each allocated result is intentionally leaked by this bootstrap backend. */
 emitStringConcatHelper := fn(): Unit {
     outLine("static const char *lite_concat(const char *left, const char *right) {");
+    outLine("    if (left[0] == '\\0') { return right; }");
+    outLine("    if (right[0] == '\\0') { return left; }");
     outLine("    const size_t left_length = strlen(left);");
     outLine("    const size_t right_length = strlen(right);");
-    outLine("    char *combined = malloc(left_length + right_length + 1);");
-    outLine("    if (combined == NULL) {");
-    outLine("        fprintf(stderr, \"MemoryFault: cannot allocate concatenated text\\n\");");
-    outLine("        exit(1);");
-    outLine("    }");
+    outLine("    char *combined = lt_str_alloc(left_length + right_length + 1u);");
     outLine("    memcpy(combined, left, left_length);");
-    outLine("    memcpy(combined + left_length, right, right_length + 1);");
+    outLine("    memcpy(combined + left_length, right, right_length + 1u);");
     outLine("    return combined;");
     outLine("}");
     outLine("");
@@ -3342,9 +3347,11 @@ emitCSoftBuiltinHelpers := fn(calls: String): Unit {
     }
     if usesIntHelper(calls, "lt_c_int_text(") {
         outLine("static const char *lt_c_int_text(int64_t v) {");
-        outLine("    char *buf = malloc(32);");
-        outLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate int text\\n\"); exit(1); }");
-        outLine("    snprintf(buf, 32, \"%\" PRId64, v);");
+        outLine("    char tmp[32];");
+        outLine("    int n = snprintf(tmp, sizeof tmp, \"%\" PRId64, v);");
+        outLine("    if (n < 0) { n = 0; }");
+        outLine("    char *buf = lt_str_alloc((size_t)n + 1u);");
+        outLine("    memcpy(buf, tmp, (size_t)n + 1u);");
         outLine("    return buf;");
         outLine("}");
     }
@@ -3905,6 +3912,26 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     emitIntArithmeticHelpers(calls, source, prefix);
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
+    if usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") {
+        outLine("static char *lt_str_alloc(size_t n) {");
+        outLine("    static char *slab = NULL;");
+        outLine("    static size_t pos = 0u, cap = 0u;");
+        outLine("    if (n > 16384u) {");
+        outLine("        char *p = malloc(n);");
+        outLine("        if (p == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+        outLine("        return p;");
+        outLine("    }");
+        outLine("    if (pos + n > cap) {");
+        outLine("        cap = 65536u;");
+        outLine("        slab = malloc(cap);");
+        outLine("        if (slab == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+        outLine("        pos = 0u;");
+        outLine("    }");
+        outLine("    char *p = slab + pos;");
+        outLine("    pos += n;");
+        outLine("    return p;");
+        outLine("}");
+    }
     if usesStringConcat(calls) { emitStringConcatHelper(); }
     emitTextPrimitiveHelpers(calls);
     emitInputHelpers(calls);
