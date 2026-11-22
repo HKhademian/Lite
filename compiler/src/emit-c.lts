@@ -812,7 +812,9 @@ usesCSoftBuiltins := fn(calls: String): Bool {
     usesIntHelper(calls, "lt_c_text_to_int(") or usesIntHelper(calls, "lt_c_text_trim(") or
     usesIntHelper(calls, "lt_c_text_ends_with(") or usesIntHelper(calls, "lt_c_text_repeat(") or
     usesIntHelper(calls, "lt_c_text_contains(") or usesIntHelper(calls, "lt_c_text_to_lower(") or
-    usesIntHelper(calls, "lt_c_text_is_") or
+    usesIntHelper(calls, "lt_c_text_is_digit(") or usesIntHelper(calls, "lt_c_text_is_ascii_letter(") or
+    usesIntHelper(calls, "lt_c_text_is_name_start(") or usesIntHelper(calls, "lt_c_text_is_name_continue(") or
+    usesIntHelper(calls, "lt_c_text_is_whitespace(") or
     usesIntHelper(calls, "lt_c_sha256_text(") or usesIntHelper(calls, "lt_c_sha256_bytes(")
 };
 
