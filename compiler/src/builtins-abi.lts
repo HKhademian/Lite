@@ -37,6 +37,8 @@ extraHostFunction := fn(moduleIdentity: String, name: String, params: String, re
         else if name == "strokeLine" and params == "surface=" + surf + "|start=" + pt + "|finish=" + pt + "|lineWidth=Float|stroke=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasStrokeLine" }
         else if name == "drawText" and params == "surface=" + surf + "|content=String|at=" + pt + "|size=Float|fill=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasDrawText" }
         else if name == "capture" and params == "surface=" + surf + "|outPath=String" and result == "(ok:Bool,error:String)" { "lite$extraCanvasCapture" }
+        else if name == "setTargetFps" and params == "surface=" + surf + "|fps=Float" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetTargetFps" }
+        else if name == "vitals" and params == "surface=" + surf and result == "(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)" { "lite$extraCanvasVitals" }
         else { "" }
     } else {
         ""

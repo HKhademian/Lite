@@ -3128,7 +3128,7 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_surf;
             const lite_inp = "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)";
             void lite_inp;
-            return (Boolean(((((((lite_name) === ("open"))) && (((lite_params) === ("title=String|width=Int|height=Int"))))) && (((lite_result) === (lite_surf))))) ? "lite$extraCanvasOpen" : (Boolean(((((((lite_name) === ("poll"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite_inp))))) ? "lite$extraCanvasPoll" : (Boolean(((((((lite_name) === ("present"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasPresent" : (Boolean(((((((lite_name) === ("close"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasClose" : (Boolean(((((((lite_name) === ("clear"))) && (((lite_params) === ("surface=(handle:Int)|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasClear" : (Boolean(((((((lite_name) === ("fillRect"))) && (((lite_params) === ("surface=(handle:Int)|area=(x:Float,y:Float,width:Float,height:Float)|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasFillRect" : (Boolean(((((((lite_name) === ("strokeRect"))) && (((lite_params) === ("surface=(handle:Int)|area=(x:Float,y:Float,width:Float,height:Float)|lineWidth=Float|stroke=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasStrokeRect" : (Boolean(((((((lite_name) === ("fillCircle"))) && (((lite_params) === ("surface=(handle:Int)|center=(x:Float,y:Float)|radius=Float|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasFillCircle" : (Boolean(((((((lite_name) === ("strokeLine"))) && (((lite_params) === ("surface=(handle:Int)|start=(x:Float,y:Float)|finish=(x:Float,y:Float)|lineWidth=Float|stroke=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasStrokeLine" : (Boolean(((((((lite_name) === ("drawText"))) && (((lite_params) === ("surface=(handle:Int)|content=String|at=(x:Float,y:Float)|size=Float|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasDrawText" : (Boolean(((((((lite_name) === ("capture"))) && (((lite_params) === ("surface=(handle:Int)|outPath=String"))))) && (((lite_result) === ("(ok:Bool,error:String)"))))) ? "lite$extraCanvasCapture" : "")))))))))));
+            return (Boolean(((((((lite_name) === ("open"))) && (((lite_params) === ("title=String|width=Int|height=Int"))))) && (((lite_result) === (lite_surf))))) ? "lite$extraCanvasOpen" : (Boolean(((((((lite_name) === ("poll"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite_inp))))) ? "lite$extraCanvasPoll" : (Boolean(((((((lite_name) === ("present"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasPresent" : (Boolean(((((((lite_name) === ("close"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasClose" : (Boolean(((((((lite_name) === ("clear"))) && (((lite_params) === ("surface=(handle:Int)|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasClear" : (Boolean(((((((lite_name) === ("fillRect"))) && (((lite_params) === ("surface=(handle:Int)|area=(x:Float,y:Float,width:Float,height:Float)|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasFillRect" : (Boolean(((((((lite_name) === ("strokeRect"))) && (((lite_params) === ("surface=(handle:Int)|area=(x:Float,y:Float,width:Float,height:Float)|lineWidth=Float|stroke=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasStrokeRect" : (Boolean(((((((lite_name) === ("fillCircle"))) && (((lite_params) === ("surface=(handle:Int)|center=(x:Float,y:Float)|radius=Float|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasFillCircle" : (Boolean(((((((lite_name) === ("strokeLine"))) && (((lite_params) === ("surface=(handle:Int)|start=(x:Float,y:Float)|finish=(x:Float,y:Float)|lineWidth=Float|stroke=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasStrokeLine" : (Boolean(((((((lite_name) === ("drawText"))) && (((lite_params) === ("surface=(handle:Int)|content=String|at=(x:Float,y:Float)|size=Float|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasDrawText" : (Boolean(((((((lite_name) === ("capture"))) && (((lite_params) === ("surface=(handle:Int)|outPath=String"))))) && (((lite_result) === ("(ok:Bool,error:String)"))))) ? "lite$extraCanvasCapture" : (Boolean(((((((lite_name) === ("setTargetFps"))) && (((lite_params) === ("surface=(handle:Int)|fps=Float"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasSetTargetFps" : (Boolean(((((((lite_name) === ("vitals"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === ("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)"))))) ? "lite$extraCanvasVitals" : "")))))))))))));
         } else {
             return "";
         }
@@ -3311,13 +3311,13 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_rawLen = lite$textLength(lite_raw);
         void lite_rawLen;
-        if (((lite$textAt(lite_raw, lite$subtractInt(lite_rawLen, 1n, 24158), 24135)) === ("/"))) {
+        if (((lite$textAt(lite_raw, lite$subtractInt(lite_rawLen, 1n, 24536), 24513)) === ("/"))) {
             return "";
         }
         let lite_out = lite_raw;
         void lite_out;
-        if (((((lite_rawLen) > (4n))) && (liteFn$lib$core$text$startsWithAt(lite_raw, lite$subtractInt(lite_rawLen, 4n, 24260), ".lts")))) {
-            lite_out = lite$textSlice(lite_raw, 0n, lite$subtractInt(lite_rawLen, 4n, 24318), 24289);
+        if (((((lite_rawLen) > (4n))) && (liteFn$lib$core$text$startsWithAt(lite_raw, lite$subtractInt(lite_rawLen, 4n, 24638), ".lts")))) {
+            lite_out = lite$textSlice(lite_raw, 0n, lite$subtractInt(lite_rawLen, 4n, 24696), 24667);
         }
         if (((liteFn$lib$core$text$indexOfText(lite_out, ".", 0n)) >= (0n))) {
             return "";
@@ -3345,16 +3345,16 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_eq) <= (0n))) {
             liteFn$lib$core$diag$fail(lite_prefix, (("invalid --builtin-mode specification: ") + (lite_spec)));
         }
-        const lite_target = lite$textSlice(lite_spec, 0n, lite_eq, 25118);
+        const lite_target = lite$textSlice(lite_spec, 0n, lite_eq, 25496);
         void lite_target;
-        const lite_mode = lite$textSlice(lite_spec, lite$addInt(lite_eq, 1n, 25181), lite$textLength(lite_spec), 25158);
+        const lite_mode = lite$textSlice(lite_spec, lite$addInt(lite_eq, 1n, 25559), lite$textLength(lite_spec), 25536);
         void lite_mode;
         if (((((lite_mode) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$BUILTIN_MODE_BUILTIN))) && (((lite_mode) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$BUILTIN_MODE_PURE))))) {
             liteFn$lib$core$diag$fail(lite_prefix, (("invalid --builtin-mode value: ") + (lite_mode)));
         }
         const lite_tLen = lite$textLength(lite_target);
         void lite_tLen;
-        const lite_isLtsFile = ((((lite_tLen) > (4n))) && (liteFn$lib$core$text$startsWithAt(lite_target, lite$subtractInt(lite_tLen, 4n, 25462), ".lts")));
+        const lite_isLtsFile = ((((lite_tLen) > (4n))) && (liteFn$lib$core$text$startsWithAt(lite_target, lite$subtractInt(lite_tLen, 4n, 25840), ".lts")));
         void lite_isLtsFile;
         let lite_lastDot = (-1n);
         void lite_lastDot;
@@ -3367,12 +3367,12 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             lite_lastDot = lite_found;
-            lite_scan = lite$addInt(lite_found, 1n, 25669);
+            lite_scan = lite$addInt(lite_found, 1n, 26047);
         }
-        if ((((((!(lite_isLtsFile))) && (((lite_lastDot) > (0n))))) && (((liteFn$lib$core$text$indexOfText(lite_target, "/", lite$addInt(lite_lastDot, 1n, 25762))) < (0n))))) {
-            const lite_modPart = lite$textSlice(lite_target, 0n, lite_lastDot, 25792);
+        if ((((((!(lite_isLtsFile))) && (((lite_lastDot) > (0n))))) && (((liteFn$lib$core$text$indexOfText(lite_target, "/", lite$addInt(lite_lastDot, 1n, 26140))) < (0n))))) {
+            const lite_modPart = lite$textSlice(lite_target, 0n, lite_lastDot, 26170);
             void lite_modPart;
-            const lite_fnPart = lite$textSlice(lite_target, lite$addInt(lite_lastDot, 1n, 25875), lite_tLen, 25845);
+            const lite_fnPart = lite$textSlice(lite_target, lite$addInt(lite_lastDot, 1n, 26253), lite_tLen, 26223);
             void lite_fnPart;
             if (((((liteFn$lib$core$text$indexOfText(lite_modPart, ".", 0n)) < (0n))) && (((lite_fnPart) !== (""))))) {
                 const lite_normMod$2 = liteFn$_p__p_$_p__p_$compiler$src$builtins__abi$normalizeBuiltinModule(lite_modPart);
@@ -31963,7 +31963,7 @@ export function main(lite$write?: (text: string) => void): string {
     void liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesExternal;
     function liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesExtraCanvas(lite_calls: string): boolean {
         void lite_calls;
-        return ((((((((((((((((((((liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasOpen")) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPoll")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPresent")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasClose")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasClear")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasFillRect")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasStrokeRect")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasFillCircle")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasStrokeLine")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasDrawText")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasCapture")));
+        return ((((((((((((((((((((((((liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasOpen")) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPoll")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPresent")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasClose")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasClear")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasFillRect")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasStrokeRect")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasFillCircle")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasStrokeLine")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasDrawText")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasCapture")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasSetTargetFps")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasVitals")));
     }
     void liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesExtraCanvas;
     function liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesHostOs(lite_calls: string): boolean {
@@ -33340,8 +33340,10 @@ export function main(lite$write?: (text: string) => void): string {
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("type LiteCanvasRect = { x: number; y: number; width: number; height: number };");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("type LiteCanvasSurface = { handle: bigint };");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("type LiteCanvasInput = { open: boolean; width: bigint; height: bigint; pointerX: number; pointerY: number; pointerDown: boolean; key: string; deltaMs: bigint };");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("interface LiteCanvasState { w: number; h: number; pixels: Uint8Array; open: boolean; pointerX: number; pointerY: number; pointerDown: boolean; key: string; lastMs: number; headless: boolean; dir: string; child: any; }");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("type LiteCanvasVitals = { frameCount: bigint; frameTimeMs: number; avgFrameTimeMs: number; fps: number; targetFps: number; cpuTimeMs: number; memoryBytes: bigint };");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("interface LiteCanvasState { w: number; h: number; pixels: Uint8Array; open: boolean; pointerX: number; pointerY: number; pointerDown: boolean; key: string; lastMs: number; frameStartMs: number; frameCount: number; targetFps: number; lastFrameMs: number; avgFrameMs: number; headless: boolean; dir: string; child: any; }");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("const lite$canvasMap = new Map<number, LiteCanvasState>();");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("const lite$canvasSleepArr = new Int32Array(new SharedArrayBuffer(4));");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("let lite$canvasNextId = 1;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$canvasClampByte(v: number): number { if (!(v > 0)) return 0; if (v >= 1) return 255; return Math.round(v * 255); }");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$canvasBlend(s: LiteCanvasState, x: number, y: number, r: number, g: number, b: number, a: number): void {");
@@ -33408,7 +33410,8 @@ export function main(lite$write?: (text: string) => void): string {
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        `srv.listen(0,'127.0.0.1',()=>{const u='http://127.0.0.1:'+srv.address().port+'/';const cmd=process.platform==='darwin'?'open':process.platform==='win32'?'cmd':'xdg-open';const a=process.platform==='win32'?['/c','start','',u]:[u];cp.spawn(cmd,a,{stdio:'ignore',detached:true}).unref();});`;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        child = cp.spawn(process.execPath, ['-e', bridge, dir, title, String(w), String(h)], { stdio: 'ignore' });");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    }");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    lite$canvasMap.set(id, { w, h, pixels: new Uint8Array(w * h * 4), open: true, pointerX: 0, pointerY: 0, pointerDown: false, key: '', lastMs: Date.now(), headless, dir, child });");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const nowMs = performance.now();");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    lite$canvasMap.set(id, { w, h, pixels: new Uint8Array(w * h * 4), open: true, pointerX: 0, pointerY: 0, pointerDown: false, key: '', lastMs: nowMs, frameStartMs: nowMs, frameCount: 0, targetFps: 60.0, lastFrameMs: 0, avgFrameMs: 0, headless, dir, child });");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    return { handle: BigInt(id) };");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasPoll(surface: LiteCanvasSurface): LiteCanvasInput {");
@@ -33418,17 +33421,42 @@ export function main(lite$write?: (text: string) => void): string {
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs');");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        try { const st = JSON.parse(fs.readFileSync(s.dir + '/state.json', 'utf8')); s.open = Boolean(st.open); s.pointerX = Number(st.pointerX || 0); s.pointerY = Number(st.pointerY || 0); s.pointerDown = Boolean(st.pointerDown); s.key = String(st.key || ''); } catch {}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    }");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const now = Date.now(); const dt = Math.max(0, now - s.lastMs); s.lastMs = now;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const now = performance.now(); const dt = Math.max(0, Math.round(now - s.lastMs)); s.lastMs = now;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const k = s.key; s.key = '';");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    return { open: s.open, width: BigInt(s.w), height: BigInt(s.h), pointerX: s.pointerX, pointerY: s.pointerY, pointerDown: s.pointerDown, key: k, deltaMs: BigInt(dt) };");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasPresent(surface: LiteCanvasSurface): void {");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s || s.headless || !s.dir) return;");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs');");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const tmp = s.dir + '/frame.tmp'; const dst = s.dir + '/frame.png';");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    try { fs.writeFileSync(tmp, lite$canvasEncodePng(s)); fs.renameSync(tmp, dst); } catch {}");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 16);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s) return;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s.headless && s.dir) {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs');");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const tmp = s.dir + '/frame.tmp'; const dst = s.dir + '/frame.png';");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        try { fs.writeFileSync(tmp, lite$canvasEncodePng(s)); fs.renameSync(tmp, dst); } catch {}");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    }");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s.headless && s.targetFps > 0) {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const targetMs = 1000.0 / s.targetFps;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const elapsed = performance.now() - s.frameStartMs;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const rem = Math.floor(targetMs - elapsed);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        if (rem >= 1) Atomics.wait(lite$canvasSleepArr, 0, 0, rem);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    }");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const endMs = performance.now();");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const frameMs = Math.max(0.0001, endMs - s.frameStartMs);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    s.frameStartMs = endMs;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    s.frameCount += 1;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    s.lastFrameMs = frameMs;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    s.avgFrameMs = s.avgFrameMs <= 0 ? frameMs : s.avgFrameMs * 0.85 + frameMs * 0.15;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasSetTargetFps(surface: LiteCanvasSurface, fps: number): void {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    s.targetFps = fps > 0 ? fps : 0;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasVitals(surface: LiteCanvasSurface): LiteCanvasVitals {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const cpu = process.cpuUsage(); const cpuMs = (cpu.user + cpu.system) / 1000.0;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const rss = BigInt(process.memoryUsage().rss);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s) return { frameCount: 0n, frameTimeMs: 0, avgFrameTimeMs: 0, fps: 0, targetFps: 0, cpuTimeMs: cpuMs, memoryBytes: rss };");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const fps = s.avgFrameMs > 0 ? 1000.0 / s.avgFrameMs : 0;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    return { frameCount: BigInt(s.frameCount), frameTimeMs: s.lastFrameMs, avgFrameTimeMs: s.avgFrameMs, fps, targetFps: s.targetFps, cpuTimeMs: cpuMs, memoryBytes: rss };");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasClose(surface: LiteCanvasSurface): void {");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const id = Number(surface.handle); const s = lite$canvasMap.get(id);");
@@ -33993,20 +34021,20 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_end = lite_separator;
             }
             if (((lite_index) === (lite_targetIndex))) {
-                const lite_entry = lite$textSlice(lite_encoded, lite_start, lite_end, 146359);
+                const lite_entry = lite$textSlice(lite_encoded, lite_start, lite_end, 148713);
                 void lite_entry;
                 const lite_eq = liteFn$lib$core$text$indexOfText(lite_entry, "=", 0n);
                 void lite_eq;
                 if (((lite_eq) <= (0n))) {
                     return "";
                 }
-                return (("lite_") + (lite$textSlice(lite_entry, 0n, lite_eq, 146516)));
+                return (("lite_") + (lite$textSlice(lite_entry, 0n, lite_eq, 148870)));
             }
             if (((lite_separator) < (0n))) {
                 return "";
             }
-            lite_index = lite$addInt(lite_index, 1n, 146609);
-            lite_start = lite$addInt(lite_separator, 1n, 146641);
+            lite_index = lite$addInt(lite_index, 1n, 148963);
+            lite_start = lite$addInt(lite_separator, 1n, 148995);
         }
         return "";
     }
@@ -34190,9 +34218,9 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_item;
             if (((lite_skippingDepth) > (0n))) {
                 if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_FUNCTION_START))) {
-                    lite_skippingDepth = lite$addInt(lite_skippingDepth, 1n, 153214);
+                    lite_skippingDepth = lite$addInt(lite_skippingDepth, 1n, 155568);
                 } else if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_FUNCTION_END))) {
-                    lite_skippingDepth = lite$subtractInt(lite_skippingDepth, 1n, 153334);
+                    lite_skippingDepth = lite$subtractInt(lite_skippingDepth, 1n, 155688);
                     if (((lite_skippingDepth) === (0n))) {
                         lite_out.push(lite_item);
                     }
@@ -34449,7 +34477,7 @@ export function main(lite$write?: (text: string) => void): string {
                     lite_line = ((lite_line) + (" + \" \" + "));
                 }
                 lite_line = ((lite_line) + ((liteFn$_p__p_$_p__p_$compiler$src$emit__ts$displayValueCode((lite_item).kind, (lite_item).code))));
-                lite_count = lite$addInt(lite_count, 1n, 166024);
+                lite_count = lite$addInt(lite_count, 1n, 168378);
             }
         }
         if ((!(lite_mainStopped))) {

@@ -724,6 +724,14 @@ normalizeCBuiltinCalls := fn(code: String): String {
             out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_capture(";
             cursor = cursor + textLib.length("lite$extraCanvasCapture(");
             flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasSetTargetFps(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_set_target_fps(";
+            cursor = cursor + textLib.length("lite$extraCanvasSetTargetFps(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasVitals(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_vitals(";
+            cursor = cursor + textLib.length("lite$extraCanvasVitals(");
+            flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeEpochNs(") {
             out = out + textLib.slice(code, flushed, cursor) + "lt_time_epoch_ns(";
             cursor = cursor + textLib.length("lite$timeEpochNs(");
@@ -3626,10 +3634,11 @@ usesExtraCanvasBuiltins := fn(calls: String): Bool {
     usesIntHelper(calls, "lite$extraCanvasClear(") or usesIntHelper(calls, "lite$extraCanvasFillRect(") or
     usesIntHelper(calls, "lite$extraCanvasStrokeRect(") or usesIntHelper(calls, "lite$extraCanvasFillCircle(") or
     usesIntHelper(calls, "lite$extraCanvasStrokeLine(") or usesIntHelper(calls, "lite$extraCanvasDrawText(") or
-    usesIntHelper(calls, "lite$extraCanvasCapture(")
+    usesIntHelper(calls, "lite$extraCanvasCapture(") or usesIntHelper(calls, "lite$extraCanvasSetTargetFps(") or
+    usesIntHelper(calls, "lite$extraCanvasVitals(")
 };
 
-/** Emits the self-contained C11 `extra/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder). */
+/** Emits the self-contained C11 `extra/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder + vitals). */
 emitCExtraCanvasHelpers := fn(calls: String): Unit {
     if not usesExtraCanvasBuiltins(calls) { return; }
     surfTag := frontend.cStructTag("(handle:Int)");
@@ -3637,10 +3646,12 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     ptTag := frontend.cStructTag("(x:Float,y:Float)");
     rcTag := frontend.cStructTag("(x:Float,y:Float,width:Float,height:Float)");
     inpTag := frontend.cStructTag("(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
+    vitTag := frontend.cStructTag("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)");
     okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
-    outLine("typedef struct { int w; int h; uint8_t *pixels; bool open; double px; double py; bool pdown; char key[16]; int64_t last_ms; bool headless; void *win; void *view; } lt_canvas_state;");
+    outLine("typedef struct { int w; int h; uint8_t *pixels; bool open; double px; double py; bool pdown; char key[16]; int64_t last_ms; int64_t frame_start_ns; int64_t frame_count; double target_fps; double last_frame_ms; double avg_frame_ms; bool headless; void *win; void *view; } lt_canvas_state;");
     outLine("static lt_canvas_state lt_canvas_slots[16];");
-    outLine("static int64_t lt_canvas_now_ms(void) { struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return (int64_t)ts.tv_sec * 1000 + (int64_t)(ts.tv_nsec / 1000000); }");
+    outLine("static inline int64_t lt_canvas_now_ns(void) { struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return (int64_t)ts.tv_sec * 1000000000LL + (int64_t)ts.tv_nsec; }");
+    outLine("static inline int64_t lt_canvas_now_ms(void) { return lt_canvas_now_ns() / 1000000LL; }");
     outLine("static inline uint8_t lt_canvas_u8(double v) { if (!(v > 0.0)) return 0; if (v >= 1.0) return 255; return (uint8_t)(v * 255.0 + 0.5); }");
     outLine("static inline void lt_canvas_blend(lt_canvas_state *s, int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {");
     outLine("    if (x < 0 || y < 0 || x >= s->w || y >= s->h || a == 0) return;");
@@ -3668,7 +3679,7 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    int slot = -1; for (int i = 0; i < 16; i += 1) { if (lt_canvas_slots[i].pixels == NULL) { slot = i; break; } }");
     outLine("    if (slot < 0) return (" + surfTag + "){ .f_handle = 0 };");
     outLine("    lt_canvas_state *s = &lt_canvas_slots[slot]; memset(s, 0, sizeof(*s));");
-    outLine("    s->w = w; s->h = h; s->open = true; s->last_ms = lt_canvas_now_ms();");
+    outLine("    s->w = w; s->h = h; s->open = true; s->last_ms = lt_canvas_now_ms(); s->frame_start_ns = lt_canvas_now_ns(); s->target_fps = 60.0;");
     outLine("    s->pixels = calloc((size_t)w * (size_t)h * 4u, 1u);");
     outLine("    const char *hl = getenv(\"LITE_CANVAS_HEADLESS\");");
     outLine("    s->headless = (hl != NULL && strcmp(hl, \"1\") == 0);");
@@ -3725,9 +3736,9 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    return (" + inpTag + "){ .f_open = s->open, .f_width = s->w, .f_height = s->h, .f_pointerX = s->px, .f_pointerY = s->py, .f_pointerDown = s->pdown, .f_key = kcopy, .f_deltaMs = dt };");
     outLine("}");
     outLine("static inline void lt_canvas_present(" + surfTag + " surf) {");
-    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s || s->headless) return;");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
     outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
-    outLine("    if (s->view != NULL) {");
+    outLine("    if (!s->headless && s->view != NULL) {");
     outLine("        CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();");
     outLine("        CGDataProviderRef prov = CGDataProviderCreateWithData(NULL, s->pixels, (size_t)s->w * (size_t)s->h * 4u, NULL);");
     outLine("        CGImageRef img = CGImageCreate((size_t)s->w, (size_t)s->h, 8, 32, (size_t)s->w * 4u, cs, kCGBitmapByteOrderDefault | kCGImageAlphaLast, prov, NULL, false, kCGRenderingIntentDefault);");
@@ -3737,7 +3748,42 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("        CGDataProviderRelease(prov); CGColorSpaceRelease(cs);");
     outLine("    }");
     outLine("#endif");
-    outLine("    struct timespec sl = { 0, 16000000L }; nanosleep(&sl, NULL);");
+    outLine("    int64_t after_ns = lt_canvas_now_ns();");
+    outLine("    if (!s->headless && s->target_fps > 0.0) {");
+    outLine("        int64_t target_ns = (int64_t)(1000000000.0 / s->target_fps);");
+    outLine("        int64_t rem_ns = target_ns - (after_ns - s->frame_start_ns);");
+    outLine("        if (rem_ns > 200000LL) {");
+    outLine("            struct timespec sl = { (time_t)(rem_ns / 1000000000LL), (long)(rem_ns % 1000000000LL) };");
+    outLine("            nanosleep(&sl, NULL);");
+    outLine("            after_ns = lt_canvas_now_ns();");
+    outLine("        }");
+    outLine("    }");
+    outLine("    double fms = (double)(after_ns - s->frame_start_ns) / 1000000.0;");
+    outLine("    if (fms < 0.0001) fms = 0.0001;");
+    outLine("    s->frame_start_ns = after_ns;");
+    outLine("    s->frame_count += 1;");
+    outLine("    s->last_frame_ms = fms;");
+    outLine("    s->avg_frame_ms = s->avg_frame_ms <= 0.0 ? fms : s->avg_frame_ms * 0.85 + fms * 0.15;");
+    outLine("}");
+    outLine("static inline void lt_canvas_set_target_fps(" + surfTag + " surf, double fps) {");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
+    outLine("    s->target_fps = fps > 0.0 ? fps : 0.0;");
+    outLine("}");
+    outLine("static inline " + vitTag + " lt_canvas_vitals(" + surfTag + " surf) {");
+    outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle);");
+    outLine("    struct rusage ru; memset(&ru, 0, sizeof(ru)); getrusage(RUSAGE_SELF, &ru);");
+    outLine("    double cpu_ms = (double)ru.ru_utime.tv_sec * 1000.0 + (double)ru.ru_utime.tv_usec / 1000.0 + (double)ru.ru_stime.tv_sec * 1000.0 + (double)ru.ru_stime.tv_usec / 1000.0;");
+    outLine("    int64_t rss = 0;");
+    outLine("#if defined(__APPLE__)");
+    outLine("    struct mach_task_basic_info mi; mach_msg_type_number_t mc = MACH_TASK_BASIC_INFO_COUNT;");
+    outLine("    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&mi, &mc) == KERN_SUCCESS) rss = (int64_t)mi.resident_size;");
+    outLine("    else rss = (int64_t)ru.ru_maxrss;");
+    outLine("#else");
+    outLine("    rss = (int64_t)ru.ru_maxrss * 1024LL;");
+    outLine("#endif");
+    outLine("    if (!s) return (" + vitTag + "){ .f_frameCount = 0, .f_frameTimeMs = 0.0, .f_avgFrameTimeMs = 0.0, .f_fps = 0.0, .f_targetFps = 0.0, .f_cpuTimeMs = cpu_ms, .f_memoryBytes = rss };");
+    outLine("    double fps = s->avg_frame_ms > 0.0 ? 1000.0 / s->avg_frame_ms : 0.0;");
+    outLine("    return (" + vitTag + "){ .f_frameCount = s->frame_count, .f_frameTimeMs = s->last_frame_ms, .f_avgFrameTimeMs = s->avg_frame_ms, .f_fps = fps, .f_targetFps = s->target_fps, .f_cpuTimeMs = cpu_ms, .f_memoryBytes = rss };");
     outLine("}");
     outLine("static inline void lt_canvas_close(" + surfTag + " surf) {");
     outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
@@ -4117,6 +4163,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         listLib.pushBack(mut seedKinds, "(x:Float,y:Float)");
         listLib.pushBack(mut seedKinds, "(x:Float,y:Float,width:Float,height:Float)");
         listLib.pushBack(mut seedKinds, "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
+        listLib.pushBack(mut seedKinds, "(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)");
         listLib.pushBack(mut seedKinds, "(ok:Bool,error:String)");
     }
     if textLib.indexOfText(calls, "|lt_list_i64_", 0) >= 0 { listLib.pushBack(mut seedKinds, "List<Int>"); }
@@ -4206,6 +4253,10 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     }
     if usesFloatArithmetic(calls) or hasInputFloat or hasExtraCanvas { outLine("#include <math.h>"); }
     if hasExtraCanvas {
+        outLine("#include <sys/resource.h>");
+        outLine("#if defined(__APPLE__)");
+        outLine("#include <mach/mach.h>");
+        outLine("#endif");
         outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
         outLine("#include <objc/runtime.h>");
         outLine("#include <objc/message.h>");

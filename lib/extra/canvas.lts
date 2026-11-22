@@ -17,6 +17,9 @@ pub Surface := type (handle: Int);
 /** Snapshot of surface state and user input for the current frame. */
 pub FrameInput := type (open: Bool, width: Int, height: Int, pointerX: Float, pointerY: Float, pointerDown: Bool, key: String, deltaMs: Int);
 
+/** Runtime performance and resource vitals for an active surface. */
+pub Vitals := type (frameCount: Int, frameTimeMs: Float, avgFrameTimeMs: Float, fps: Float, targetFps: Float, cpuTimeMs: Float, memoryBytes: Int);
+
 /** Constructs a 2D point `(x, y)`. */
 pub point := fn(x: Float, y: Float): Point { (x = x, y = y) };
 
@@ -97,3 +100,23 @@ pub drawText := fn(surface: Surface, content: String, at: Point, size: Float, fi
 
 /** Captures the current surface contents to an image file at `outPath` (backend-encoded PNG). */
 pub capture := fn(surface: Surface, outPath: String): (ok: Bool, error: String);
+
+/** Sets the target frame rate in frames per second (`<= 0.0` releases the cap and runs uncapped; default is `60.0`). */
+pub setTargetFps := fn(surface: Surface, fps: Float): Unit;
+
+/** Sets the target frame time in milliseconds (`<= 0.0` releases the cap and runs uncapped). */
+pub setFrameTimeMs := fn(surface: Surface, ms: Float): Unit {
+    if ms <= 0.0 {
+        setTargetFps(surface, 0.0);
+    } else {
+        setTargetFps(surface, 1000.0 / ms);
+    }
+};
+
+/** Releases the frame-rate cap so the surface runs as fast as the host allows. */
+pub uncapFrameRate := fn(surface: Surface): Unit {
+    setTargetFps(surface, 0.0);
+};
+
+/** Reads live performance and resource vitals (frame count, frame time, FPS, CPU time, and resident memory bytes). */
+pub vitals := fn(surface: Surface): Vitals;
