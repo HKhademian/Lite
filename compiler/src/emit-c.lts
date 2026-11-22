@@ -49,6 +49,7 @@ cScalarType := fn(kind: String): String {
     else if frontend.cMapTag(kind) =!= "" { frontend.cMapTag(kind) }
     else if frontend.cSetTag(kind) =!= "" { frontend.cSetTag(kind) }
     else if frontend.cStructTag(kind) =!= "" { frontend.cStructTag(kind) }
+    else if frontend.cFnTag(kind) =!= "" { frontend.cFnTag(kind) }
     else if kind == frontend.VALUE_KIND_UNIT or kind == frontend.VALUE_KIND_NEVER { "void" }
     else if frontend.isIntScalarKind(kind) or frontend.isEnumKind(kind) { "int64_t" }
     else if kind == frontend.VALUE_KIND_BOOL { "bool" }
@@ -63,7 +64,8 @@ cDeclTypeItem := fn(item: frontend.Item): String {
         "lt_list_" + cListTagForKind(item.textValue) + " "
     } else if kind == frontend.ITEM_KIND_LOCAL_TUPLE or kind == frontend.ITEM_KIND_VAR_TUPLE {
         frontend.cStructTag(item.textValue) + " "
-    } else if kind == frontend.ITEM_KIND_LOCAL_RECORD or kind == frontend.ITEM_KIND_VAR_RECORD {
+    } else if kind == frontend.ITEM_KIND_LOCAL_RECORD or kind == frontend.ITEM_KIND_VAR_RECORD or
+    kind == frontend.ITEM_KIND_LOCAL_FN or kind == frontend.ITEM_KIND_VAR_FN {
         cScalarType(item.textValue) + " "
     } else if kind == frontend.ITEM_KIND_LOCAL_INT or kind == frontend.ITEM_KIND_VAR_INT { "int64_t " }
     else if kind == frontend.ITEM_KIND_LOCAL_FLOAT or kind == frontend.ITEM_KIND_VAR_FLOAT { "double " }
@@ -79,7 +81,7 @@ checkUnsupportedCType := fn(kind: String): Unit {
     if frontend.isRecordKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support record values yet"); }
     if frontend.isListKind(kind) and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support list values yet"); }
     if frontend.isArrayKind(kind) and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support array values yet"); }
-    if frontend.containsFnKind(kind) { diagLib.fail("", "C backend does not support function values yet"); }
+    if frontend.isFnKind(kind) and frontend.cFnTag(kind) == "" { diagLib.fail("", "C backend does not support function values yet"); }
 };
 
 /** Checks parameter and return types of a reachable top-level or module function for C11 emission. */
@@ -348,7 +350,30 @@ isCLocalDeclKind := fn(kind: String): Bool {
     kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL or
     kind == frontend.ITEM_KIND_LOCAL_RECORD or kind == frontend.ITEM_KIND_VAR_RECORD or
     kind == frontend.ITEM_KIND_LOCAL_TUPLE or kind == frontend.ITEM_KIND_VAR_TUPLE or
-    kind == frontend.ITEM_KIND_LOCAL_LIST or kind == frontend.ITEM_KIND_VAR_LIST
+    kind == frontend.ITEM_KIND_LOCAL_LIST or kind == frontend.ITEM_KIND_VAR_LIST or
+    kind == frontend.ITEM_KIND_LOCAL_FN or kind == frontend.ITEM_KIND_VAR_FN
+};
+
+/** Skips a balanced CFN_START ... CFN_END hoisted-closure block starting at `start` in `code`. */
+skipCFnBlock := fn(code: String, start: Int): Int {
+    size := textLib.length(code);
+    var cursor := start + 13;
+    var depth := 1;
+    loop cursor < size and depth > 0 {
+        ch := textLib.at(code, cursor);
+        if ch == "\"" {
+            cursor = frontend.skipAliasString(code, cursor);
+        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
+            depth = depth + 1;
+            cursor = cursor + 13;
+        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_END@*/") {
+            depth = depth - 1;
+            cursor = cursor + 13;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    cursor
 };
 
 /** Detects leaked JS tuple or array literal syntax inside a scalar-typed expression on C, skipping quoted strings, type annotations, and C11 compound literals. */
@@ -360,11 +385,13 @@ unsupportedAggregateCode := fn(code: String): String {
         ch := textLib.at(code, cursor);
         if ch == "\"" {
             cursor = frontend.skipAliasString(code, cursor);
+        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
+            cursor = skipCFnBlock(code, cursor);
         } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:") or textLib.startsWithAt(code, cursor, "/*@P:")) {
             endTag := textLib.indexOfText(code, "@*/", cursor + 5);
             cursor = if endTag >= 0 { endTag + 3 } else { size };
-        } else if ch == "(" and (textLib.startsWithAt(code, cursor, "((const ") or textLib.startsWithAt(code, cursor, "(const ") or textLib.startsWithAt(code, cursor, "((lt_s_")) {
-            isDouble := textLib.startsWithAt(code, cursor, "((const ") or textLib.startsWithAt(code, cursor, "((lt_s_");
+        } else if ch == "(" and (textLib.startsWithAt(code, cursor, "((const ") or textLib.startsWithAt(code, cursor, "(const ") or textLib.startsWithAt(code, cursor, "((lt_s_") or textLib.startsWithAt(code, cursor, "((lt_fnv_")) {
+            isDouble := textLib.startsWithAt(code, cursor, "((const ") or textLib.startsWithAt(code, cursor, "((lt_s_") or textLib.startsWithAt(code, cursor, "((lt_fnv_");
             var depth := 0;
             loop cursor < size {
                 c2 := textLib.at(code, cursor);
@@ -425,6 +452,10 @@ normalizeCBuiltinCalls := fn(code: String): String {
         ch := textLib.at(code, cursor);
         if ch == "\"" {
             cursor = frontend.skipAliasString(code, cursor);
+        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
+            out = out + textLib.slice(code, flushed, cursor);
+            cursor = skipCFnBlock(code, cursor);
+            flushed = cursor;
         } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:") or textLib.startsWithAt(code, cursor, "/*@P:")) {
             endTag := textLib.indexOfText(code, "@*/", cursor + 5);
             out = out + textLib.slice(code, flushed, cursor);
@@ -1607,7 +1638,7 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
     outLine("");
 }
 
-/** Declares hygienic arithmetic/comparison temporaries at unique assignment sites, skipping quoted text. */
+/** Declares hygienic arithmetic/comparison temporaries at unique assignment sites, skipping quoted text and hoisted closure bodies. */
 emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
     loop items as item {
         var cursor := 0;
@@ -1615,6 +1646,8 @@ emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
             ch := textLib.at(item.code, cursor);
             if ch == "\"" {
                 cursor = frontend.skipAliasString(item.code, cursor);
+            } else if ch == "/" and textLib.startsWithAt(item.code, cursor, "/*@CFN_START:") {
+                cursor = skipCFnBlock(item.code, cursor);
             } else if ch == "l" and (textLib.startsWithAt(item.code, cursor, "lt_arg_") or textLib.startsWithAt(item.code, cursor, "lt_cmp_")) {
                 end := textLib.skipName(item.code, cursor);
                 if textLib.startsWithAt(item.code, end, " = ") {
@@ -1628,6 +1661,37 @@ emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
         }
     }
 }
+
+/** Collects hygienic arithmetic/comparison temporary declarations for a single hoisted closure definition and injects them at its placeholder. */
+injectCFnTemps := fn(code: String): String {
+    marker := "/*@CFN_TEMPS@*/";
+    mIdx := textLib.indexOfText(code, marker, 0);
+    if mIdx < 0 { return code; }
+    var decls := "";
+    seen: mut List<String> = [];
+    var cursor := 0;
+    size := textLib.length(code);
+    loop cursor < size {
+        ch := textLib.at(code, cursor);
+        if ch == "\"" {
+            cursor = frontend.skipAliasString(code, cursor);
+        } else if ch == "l" and (textLib.startsWithAt(code, cursor, "lt_arg_") or textLib.startsWithAt(code, cursor, "lt_cmp_")) {
+            end := textLib.skipName(code, cursor);
+            if textLib.startsWithAt(code, end, " = ") {
+                tName := textLib.slice(code, cursor, end);
+                if not listLib.listContainsText(seen, tName) {
+                    listLib.pushBack(mut seen, tName);
+                    tag := if textLib.startsWithAt(code, cursor, "lt_cmp_") or textLib.startsWithAt(code, cursor, "lt_arg_f_") { textLib.at(code, cursor + 7) } else { "i" };
+                    typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
+                    else if tag == "f" { "double " } else { "int64_t " };
+                    decls = decls + typeCode + tName + "; ";
+                }
+            }
+            cursor = end;
+        } else { cursor = cursor + 1; }
+    }
+    textLib.slice(code, 0, mIdx) + decls + textLib.slice(code, mIdx + textLib.length(marker), size)
+};
 
 /** Emits shortest round-trip binary64 display with decimal/exponent thresholds shared by the TS runtime; source remains statically checked and no locale is selected by generated programs. */
 emitFloatOutputHelpers := fn(): Unit {
@@ -1854,7 +1918,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 outLine(indent + cDeclTypeItem(item) + item.runtime + " = " + code + ";");
             }
             outLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_LIST {
+        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
             if textLib.startsWithAt(code, 0, "/*@CBLK:") {
                 endHdr := textLib.indexOfText(code, "@*/", 8);
                 retVar := textLib.slice(code, 8, endHdr);
@@ -2126,6 +2190,20 @@ collectSubKinds := fn(kind: String): List<String> {
         listLib.pushBack(mut out, "S|" + kind);
         return out;
     }
+    if frontend.isFnKind(kind) {
+        if frontend.cFnTag(kind) == "" { return out; }
+        pCount := frontend.fnParamCount(kind);
+        var pi := 0;
+        loop pi < pCount {
+            subP := self(frontend.fnParamComponent(kind, pi).kind);
+            loop subP as s { listLib.pushBack(mut out, s); }
+            pi = pi + 1;
+        }
+        subR := self(frontend.fnResultKind(kind));
+        loop subR as s { listLib.pushBack(mut out, s); }
+        listLib.pushBack(mut out, "F|" + kind);
+        return out;
+    }
     out
 };
 
@@ -2182,7 +2260,7 @@ collectTypeFlags := fn(kind: String): List<String> {
     out
 };
 
-/** Extracts all `/*@T:<kind>@*/` and `/*@C:<exp>|<act>@*/` payloads from emitted C expression `code`. */
+/** Extracts all `/*@T:<kind>@*/`, `/*@P:<kind>@*/`, and `/*@C:<exp>|<act>@*/` payloads from emitted C expression `code`. */
 extractCTypeAnnotations := fn(code: String): List<String> {
     out: mut List<String> = [];
     if textLib.indexOfText(code, "/*@", 0) < 0 { return out; }
@@ -2202,6 +2280,65 @@ extractCTypeAnnotations := fn(code: String): List<String> {
         }
     }
     out
+};
+
+/** Recursively extracts balanced CFN_START ... CFN_END hoisted closure/trampoline definitions (innermost first), encoded as `<key>\n<body>`. */
+extractCHoistedFns := fn(code: String): List<String> {
+    out: mut List<String> = [];
+    if textLib.indexOfText(code, "/*@CFN_START:", 0) < 0 { return out; }
+    size := textLib.length(code);
+    var cursor := 0;
+    loop cursor < size {
+        ch := textLib.at(code, cursor);
+        if ch == "\"" {
+            cursor = frontend.skipAliasString(code, cursor);
+        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
+            keyEnd := textLib.indexOfText(code, "@*/", cursor + 13);
+            blockEnd := skipCFnBlock(code, cursor);
+            if keyEnd > cursor + 13 and blockEnd >= keyEnd + 16 {
+                key := textLib.slice(code, cursor + 13, keyEnd);
+                body := textLib.slice(code, keyEnd + 3, blockEnd - 13);
+                nested := self(body);
+                loop nested as entry {
+                    listLib.pushBack(mut out, entry);
+                }
+                listLib.pushBack(mut out, key + "\n" + body);
+            }
+            cursor = blockEnd;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    out
+};
+
+/** Emits a C11 fat-pointer struct typedef and `_call` helper for function value type `kind`. */
+emitCFnTypeHelper := fn(kind: String, calls: String): Unit {
+    fTag := frontend.cFnTag(kind);
+    retKind := frontend.fnResultKind(kind);
+    retC := cScalarType(retKind);
+    pCount := frontend.fnParamCount(kind);
+    var fpParams := "void *";
+    var callParams := fTag + " f";
+    var callArgs := "f.env";
+    var i := 0;
+    loop i < pCount {
+        pC := cScalarType(frontend.fnParamComponent(kind, i).kind);
+        aName := "a" + integer.intText(i);
+        fpParams = fpParams + ", " + pC;
+        callParams = callParams + ", " + pC + " " + aName;
+        callArgs = callArgs + ", " + aName;
+        i = i + 1;
+    }
+    outLine("typedef struct " + fTag + " { " + retC + " (*fn)(" + fpParams + "); void *env; } " + fTag + ";");
+    if usesIntHelper(calls, fTag + "_call(") {
+        if retC == "void" {
+            outLine("static void " + fTag + "_call(" + callParams + ") { f.fn(" + callArgs + "); }");
+        } else {
+            outLine("static " + retC + " " + fTag + "_call(" + callParams + ") { return f.fn(" + callArgs + "); }");
+        }
+    }
+    outLine("");
 };
 
 /** Emits C11 `core/unicode` hard builtin helpers (`toCodePoints`, `fromCodePoints`). */
@@ -3476,7 +3613,9 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isArrayKind(item.name) and cListTagForKind(item.name) == "") {
             diagLib.fail("", "C backend does not support array values yet");
         }
-        if frontend.containsFnKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.containsFnKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
+        if (frontend.isFnKind(item.kind) and frontend.cFnTag(item.kind) == "") or
+        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isFnKind(item.name) and frontend.cFnTag(item.name) == "") or
+        ((item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN) and frontend.cFnTag(item.textValue) == "") {
             diagLib.fail("", "C backend does not support function values yet");
         }
         if item.kind == frontend.ITEM_KIND_LOOP_SEQ and frontend.cListTag(item.textValue) == "" {
@@ -3488,6 +3627,29 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         aggErr := unsupportedAggregateCode(item.code);
         if aggErr =!= "" {
             diagLib.fail("", aggErr);
+        }
+    }
+    hoistedFnKeys: mut List<String> = [];
+    hoistedFnDefs: mut List<String> = [];
+    loop reachable as item {
+        extracted := extractCHoistedFns(item.code);
+        loop extracted as entry {
+            sepIdx := textLib.indexOfText(entry, "\n", 0);
+            if sepIdx > 0 {
+                eKey := textLib.slice(entry, 0, sepIdx);
+                eBody := textLib.slice(entry, sepIdx + 1, textLib.length(entry));
+                if not listLib.listContainsText(hoistedFnKeys, eKey) {
+                    listLib.pushBack(mut hoistedFnKeys, eKey);
+                    listLib.pushBack(mut hoistedFnDefs, eBody);
+                }
+            }
+        }
+    }
+    hasHoistedFns := listLib.length(hoistedFnDefs) > 0;
+    if hasHoistedFns {
+        hasFunctions = true;
+        loop hoistedFnDefs as hDef {
+            fnRefTokens = frontend.codeReachableTokensSet(hDef, fnRefTokens);
         }
     }
     orderedEntries: mut List<String> = [];
@@ -3542,8 +3704,9 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         }
         if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST or
         item.kind == frontend.ITEM_KIND_LOCAL_TUPLE or item.kind == frontend.ITEM_KIND_VAR_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or
-        item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD {
-            if cListTagForKind(item.textValue) =!= "" or frontend.cStructTag(item.textValue) =!= "" or frontend.cMapTag(item.textValue) =!= "" or frontend.cSetTag(item.textValue) =!= "" {
+        item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or
+        item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
+            if cListTagForKind(item.textValue) =!= "" or frontend.cStructTag(item.textValue) =!= "" or frontend.cMapTag(item.textValue) =!= "" or frontend.cSetTag(item.textValue) =!= "" or frontend.cFnTag(item.textValue) =!= "" {
                 listLib.pushBack(mut seedKinds, item.textValue);
             }
         }
@@ -3646,10 +3809,12 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
             isL := textLib.startsWithAt(sub, 0, "L|");
             isM := textLib.startsWithAt(sub, 0, "M|");
             isE := textLib.startsWithAt(sub, 0, "E|");
+            isF := textLib.startsWithAt(sub, 0, "F|");
             payload := textLib.slice(sub, 2, textLib.length(sub));
             tKey := if isL { "L:" + frontend.cListTag(payload) }
             else if isM { "M:" + frontend.cMapTag(payload) }
             else if isE { "E:" + frontend.cSetTag(payload) }
+            else if isF { "F:" + frontend.cFnTag(payload) }
             else { "S:" + frontend.cStructTag(payload) };
             if not frontend.tokenBucketHas(seenTypeKeys, tKey) {
                 seenTypeKeys = frontend.tokenBucketAdd(seenTypeKeys, tKey);
@@ -3693,7 +3858,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         outLine("#endif");
     }
     outLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins { outLine("#include <stdlib.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns { outLine("#include <stdlib.h>"); }
     if hasInputInt or hasPosixHost or usesIntHelper(calls, "lt_c_text_to_int(") { outLine("#include <errno.h>"); }
     outLine("#include <inttypes.h>");
     outLine("#include <stdbool.h>");
@@ -3733,6 +3898,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         isL := textLib.startsWithAt(oe, 0, "L|");
         isM := textLib.startsWithAt(oe, 0, "M|");
         isE := textLib.startsWithAt(oe, 0, "E|");
+        isF := textLib.startsWithAt(oe, 0, "F|");
         payload := textLib.slice(oe, 2, textLib.length(oe));
         if isL {
             lTag := frontend.cListTag(payload);
@@ -3750,6 +3916,8 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
             eNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "E:" + eTag);
             eNeedPrint := frontend.tokenBucketHas(printTypeKeys, "E:" + eTag);
             emitCSetHelpers(payload, calls, eNeedCopy, eNeedPrint);
+        } else if isF {
+            emitCFnTypeHelper(payload, calls);
         } else {
             sTag := frontend.cStructTag(payload);
             sNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "S:" + sTag);
@@ -3802,6 +3970,9 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
             if item.kind == frontend.ITEM_KIND_FUNCTION_START {
                 outLine("static " + cScalarType(item.code) + " " + item.runtime + "(" + cParameterList(item.textValue) + ");");
             }
+        }
+        loop hoistedFnDefs as hDef {
+            outLine(injectCFnTemps(normalizeCBuiltinCalls(hDef)));
         }
         outLine("");
         var totalItems := 0;

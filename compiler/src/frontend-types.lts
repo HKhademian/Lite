@@ -755,7 +755,32 @@ cIsSupportedElem := fn(kind: String): Bool {
         }
         return true;
     }
+    if isFnKind(kind) {
+        pCount := fnParamCount(kind);
+        var pi := 0;
+        loop pi < pCount {
+            if not self(fnParamComponent(kind, pi).kind) { return false; }
+            pi = pi + 1;
+        }
+        rKind := fnResultKind(kind);
+        return rKind == ir.VALUE_KIND_UNIT or rKind == ir.VALUE_KIND_NEVER or self(rKind);
+    }
     false
+};
+
+/** Maps a C-supported function value kind to its parameter-name-erased C11 typedef name `lt_fnv_...`, or `""` if unsupported. */
+pub cFnTag := fn(kind: String): String {
+    if not isFnKind(kind) or not cIsSupportedElem(kind) { return ""; }
+    pCount := fnParamCount(kind);
+    var sig := "fn(";
+    var i := 0;
+    loop i < pCount {
+        if i > 0 { sig = sig + ","; }
+        sig = sig + fnParamComponent(kind, i).kind;
+        i = i + 1;
+    }
+    sig = sig + "):" + fnResultKind(kind);
+    "lt_fnv_" + cStructHash(sig)
 };
 
 /** Maps a C-supported tuple or nominal record kind to its deterministic C11 typedef name `lt_s_...`, or `""` if unsupported. */
@@ -798,6 +823,7 @@ pub cListTag := fn(elemKind: String): String {
     else if elemKind == ir.VALUE_KIND_BOOL { "bool" }
     else if elemKind == ir.VALUE_KIND_STRING { "str" }
     else if isTupleKind(elemKind) or isRecordKind(elemKind) { cStructTag(elemKind) }
+    else if isFnKind(elemKind) { cFnTag(elemKind) }
     else { "" }
 };
 
@@ -850,6 +876,7 @@ pub cValueType := fn(kind: String): String {
     else if cMapTag(kind) =!= "" { cMapTag(kind) }
     else if cSetTag(kind) =!= "" { cSetTag(kind) }
     else if cStructTag(kind) =!= "" { cStructTag(kind) }
+    else if cFnTag(kind) =!= "" { cFnTag(kind) }
     else if kind == ir.VALUE_KIND_UNIT or kind == ir.VALUE_KIND_NEVER { "void" }
     else if numeric.isIntKind(kind) or isEnumKind(kind) { "int64_t" }
     else if kind == ir.VALUE_KIND_BOOL { "bool" }

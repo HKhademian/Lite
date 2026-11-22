@@ -1,0 +1,82 @@
+/* End-to-end C11 vs TS parity tests for Phase C10b: first-class function values, indirect calls, self recursion, module-function trampolines, immutable & mutable lexical captures, and lists of closures. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"list := import \"core/list\";\n" +
+"\n" +
+"/* 1. Top-level module function passed as a value (trampoline) */\n" +
+"triple := fn(x: Int): Int { x * 3 };\n" +
+"apply := fn(f: fn(Int): Int, v: Int): Int { f(v) };\n" +
+"\n" +
+"/* 2. Self-recursive function value */\n" +
+"fact := fn(n: Int): Int {\n" +
+"    if n <= 1 { 1 } else { n * self(n - 1) }\n" +
+"};\n" +
+"\n" +
+"/* 3. Immutable capture + nested closure */\n" +
+"makeAdder := fn(base: Int): fn(Int): Int {\n" +
+"    fn(x: Int): Int { base + x }\n" +
+"};\n" +
+"\n" +
+"/* 4. Mutable capture with independent closure state */\n" +
+"makeCounter := fn(start: Int, step: Int): fn(): Int {\n" +
+"    var count := start;\n" +
+"    fn(): Int {\n" +
+"        count = count + step;\n" +
+"        count\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"/* 5. List of closures capturing loop variables */\n" +
+"tasks: mut List<fn(): Int> = [];\n" +
+"loop [10, 20, 30] as item {\n" +
+"    list.pushBack(mut tasks, fn(): Int { item + 5 });\n" +
+"}\n" +
+"\n" +
+"dbl := fn(x: Int): Int { x * 2 };\n" +
+"io.outputLine(apply(triple, 4), apply(dbl, 7), fact(5));\n" +
+"add10 := makeAdder(10);\n" +
+"add25 := makeAdder(25);\n" +
+"io.outputLine(add10(3), add25(3));\n" +
+"c1 := makeCounter(0, 5);\n" +
+"c2 := makeCounter(100, 1);\n" +
+"io.outputLine(c1(), c1(), c2(), c1(), c2());\n" +
+"io.outputLine(tasks[0](), tasks[1](), tasks[2]());\n";
+
+expected :=
+"12 14 120\n" +
+"13 28\n" +
+"5 10 101 15 102\n" +
+"15 25 35\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+test.checkText("ts stdout", expected, tsRes.stdout);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+    test.checkText("c stderr", "", cRes.stderr);
+} else {
+    cOnly := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt("c compile status: " + cOnly.stderr, 0, cOnly.status);
+}
+
+test.done("c-backend-closures");

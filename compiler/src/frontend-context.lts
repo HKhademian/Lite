@@ -654,6 +654,10 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         (kind = kind, code = "[" + textLib.joinTexts(items, ", ") + "]", intValue = 0, textValue = "", constant = false, next = next)
     }
     else if types.isFnKind(kind) {
+        if target == ir.TARGET_C {
+            fTag := types.cFnTag(kind);
+            return (kind = kind, code = "((/*@T:" + kind + "@*/" + fTag + "){ NULL, NULL })", intValue = 0, textValue = "", constant = false, next = next);
+        }
         paramCount := types.fnParamCount(kind);
         var paramsCode := "";
         var voidStmts := "";
@@ -953,6 +957,38 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
         }
     }
     if flushed == 0 { tryCode } else { out + textLib.slice(tryCode, flushed, size) }
+};
+
+/** Replaces whole-word occurrences of C identifier `ident` outside quoted strings with `replacement`. */
+pub cReplaceIdentToken := fn(code: String, ident: String, replacement: String): String {
+    if ident == "" or textLib.indexOfText(code, ident, 0) < 0 { return code; }
+    size := textLib.length(code);
+    idLen := textLib.length(ident);
+    firstCh := textLib.at(ident, 0);
+    var out := "";
+    var cursor := 0;
+    var flushed := 0;
+    loop cursor < size {
+        ch := textLib.at(code, cursor);
+        if ch == "\"" or ch == "'" {
+            cursor = cursor + 1;
+            loop cursor < size {
+                c2 := textLib.at(code, cursor);
+                if c2 == "\\" { cursor = cursor + 2; }
+                else if c2 == ch { cursor = cursor + 1; break; }
+                else { cursor = cursor + 1; }
+            }
+        } else if ch == firstCh and textLib.startsWithAt(code, cursor, ident) and
+        (cursor == 0 or not textLib.isNameContinue(textLib.at(code, cursor - 1))) and
+        (cursor + idLen >= size or not textLib.isNameContinue(textLib.at(code, cursor + idLen))) {
+            out = out + textLib.slice(code, flushed, cursor) + replacement;
+            cursor = cursor + idLen;
+            flushed = cursor;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    if flushed == 0 { code } else { out + textLib.slice(code, flushed, size) }
 };
 
 /** Returns the number of entries in `ctxs`. */

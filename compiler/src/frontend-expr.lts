@@ -581,9 +581,7 @@ parseTagPrefixExpr := fn(target: String, source: String, start: Int, prefix: Str
 
 /** Parses a `fn(...) { ... }` anonymous/closure function literal expression starting after `fn`. */
 parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
-    if target =!= ir.TARGET_TS {
-        syntax.failAt(source, nameStart, prefix, "C backend does not support function values yet");
-    }
+    isCFnLit := target == ir.TARGET_C;
     size := textLib.length(source);
     var cursor := syntax.expectSymbol(source, syntax.skipTrivia(source, afterKw, prefix), "(", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
@@ -647,7 +645,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     fnKind := encodedKind + "):" + retKind;
     fnLexDepth := ir.maxLocalLexDepth(locals) + 1;
     fnLocals: mut List<Local> = [];
-    selfRuntime := ir.freshScopeTemp(locals, "lite$self");
+    selfRuntime := if isCFnLit { "lt_self_" + integer.intText(nameStart) } else { ir.freshScopeTemp(locals, "lite$self") };
     listLib.pushBack(mut fnLocals, (name = "$self", runtime = selfRuntime, kind = fnKind,
     mutable = false, writable = false, depth = fnLexDepth, constant = false, code = "",
     intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
@@ -674,21 +672,26 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         }
     }
     var tsParamsCode := "";
+    var cParamsCode := "void *_env";
     var paramVoidStmts := "";
+    paramRuntimes: mut List<String> = [];
     var pBindIdx := 0;
     loop pBindIdx < paramIdx {
         pName := paramNames[pBindIdx];
         pKind := paramKinds[pBindIdx];
         pRuntime := ir.localRuntimeName(target, fnLocals, pName, "", fnLexDepth);
+        listLib.pushBack(mut paramRuntimes, pRuntime);
         listLib.pushBack(mut fnLocals, (name = pName, runtime = pRuntime, kind = pKind,
         mutable = false, writable = false, depth = fnLexDepth, constant = false, code = "",
         intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
         if pBindIdx > 0 { tsParamsCode = tsParamsCode + ", "; }
         tsParamsCode = tsParamsCode + pRuntime + ": " + types.tsFunctionType(pKind);
-        paramVoidStmts = paramVoidStmts + "void " + pRuntime + "; ";
+        cParamsCode = cParamsCode + ", " + types.cValueType(pKind) + " " + pRuntime;
+        paramVoidStmts = paramVoidStmts + (if isCFnLit { "(void)" + pRuntime + "; " } else { "void " + pRuntime + "; " });
         pBindIdx = pBindIdx + 1;
     }
-    fnCtx := (id = 0, tag = "", kind = ir.CTX_KIND_FN, phase = ir.CTX_PHASE_BODY, iifeDepth = iifeDepth + 1,
+    fnBodyDepth := if isCFnLit { iifeDepth } else { iifeDepth + 1 };
+    fnCtx := (id = 0, tag = "", kind = ir.CTX_KIND_FN, phase = ir.CTX_PHASE_BODY, iifeDepth = fnBodyDepth,
     valKind = retKind, valVar = "", label = "", iterLabel = integer.intText(fnLexDepth), countVar = "", itemVar = "",
     itemKind = "", indexVar = "", hasIndex = false, colVar = "");
     emptyFnCtxs: List<ConstructCtx> = [];
@@ -698,8 +701,77 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         fnBodySink = "fnBody:" + textLib.joinTexts(paramNames, ",");
     }
     fnBody := parseBinaryCtx(target, source, cursor, prefix, fnLocals, functions, params, "<fn>",
-    retKind, 0, fnCtxs, iifeDepth + 1, inferMode, fnBodySink, aliases);
+    retKind, 0, fnCtxs, fnBodyDepth, inferMode, fnBodySink, aliases);
     usesSelf := reach.codeUsesTextCall(fnBody.code, selfRuntime);
+    if isCFnLit {
+        if inferMode {
+            return ctx.withMarkers((kind = fnKind, code = "", intValue = 0, textValue = fnKind, constant = false, next = fnBody.next),
+            ctx.collectParsedMarkers("", fnBody));
+        }
+        cFnTag := types.cFnTag(fnKind);
+        cid := integer.intText(nameStart) + "_" + integer.intText(paramIdx);
+        clName := "lt_cl_" + cid;
+        envType := "lt_env_" + cid;
+        cRetType := types.cValueType(retKind);
+        capRuntimes: mut List<String> = [];
+        capKinds: mut List<String> = [];
+        capMutables: mut List<Bool> = [];
+        var locScanIdx := 0;
+        loop locals as le { locScanIdx = locScanIdx + 1; }
+        var ri := locScanIdx - 1;
+        loop ri >= 0 {
+            le := locals[ri];
+            if le.depth > 0 and le.name =!= "$self" and le.runtime =!= "" and
+            not listLib.listContainsText(paramRuntimes, le.runtime) and
+            not listLib.listContainsText(capRuntimes, le.runtime) and
+            reach.codeUsesTextCall(fnBody.code, le.runtime) {
+                listLib.pushBack(mut capRuntimes, le.runtime);
+                listLib.pushBack(mut capKinds, le.kind);
+                listLib.pushBack(mut capMutables, le.mutable or le.writable);
+            }
+            ri = ri - 1;
+        }
+        capCount := listLib.length(capRuntimes);
+        selfBind := if usesSelf { cFnTag + " " + selfRuntime + " = { " + clName + ", _env }; (void)" + selfRuntime + "; " } else { "" };
+        if capCount == 0 {
+            cFnDef := "static " + cRetType + " " + clName + "(" + cParamsCode + ") { (void)_env; /*@CFN_TEMPS@*/" + selfBind + paramVoidStmts + fnBody.code + " }";
+            cExpr := "/*@T:" + fnKind + "@*//*@CFN_START:" + clName + "@*/" + cFnDef + "/*@CFN_END@*/((" + cFnTag + "){ " + clName + ", NULL })";
+            return (kind = fnKind, code = cExpr, intValue = 0, textValue = fnKind, constant = false, next = fnBody.next);
+        }
+        var envFields := "";
+        var envUnpack := "";
+        var mkParams := "";
+        var mkInits := "";
+        var mkArgs := "";
+        var bodyRewritten := fnBody.code;
+        var ci := 0;
+        loop ci < capCount {
+            cRt := capRuntimes[ci];
+            cK := capKinds[ci];
+            cM := capMutables[ci];
+            cT := types.cValueType(cK);
+            fName := "f_" + integer.intText(ci);
+            pName := "a_" + integer.intText(ci);
+            envFields = envFields + cT + " " + fName + "; ";
+            if ci > 0 {
+                mkParams = mkParams + ", ";
+                mkArgs = mkArgs + ", ";
+            }
+            mkParams = mkParams + cT + " " + pName;
+            mkArgs = mkArgs + ctx.copiedValueCode(target, cK, cRt);
+            mkInits = mkInits + "e->" + fName + " = " + pName + "; ";
+            if cM {
+                bodyRewritten = ctx.cReplaceIdentToken(bodyRewritten, cRt, "(((" + envType + " *)_env)->" + fName + ")");
+            } else {
+                envUnpack = envUnpack + cT + " " + cRt + " = ((" + envType + " *)_env)->" + fName + "; (void)" + cRt + "; ";
+            }
+            ci = ci + 1;
+        }
+        mkName := "lt_mk_" + cid;
+        cFnDef := "typedef struct { " + envFields + "} " + envType + ";\nstatic " + cRetType + " " + clName + "(" + cParamsCode + ") { (void)_env; /*@CFN_TEMPS@*/" + selfBind + envUnpack + paramVoidStmts + bodyRewritten + " }\nstatic " + cFnTag + " " + mkName + "(" + mkParams + ") { " + envType + " *e = malloc(sizeof(" + envType + ")); if (e == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } " + mkInits + "return (" + cFnTag + "){ " + clName + ", e }; }";
+        cExpr := "/*@T:" + fnKind + "@*//*@CFN_START:" + clName + "@*/" + cFnDef + "/*@CFN_END@*/" + mkName + "(" + mkArgs + ")";
+        return (kind = fnKind, code = cExpr, intValue = 0, textValue = fnKind, constant = false, next = fnBody.next);
+    }
     fnPrefix := if usesSelf { "(function " + selfRuntime } else { "(function " };
     fnFullCode := fnPrefix + "(" + tsParamsCode + "): " + types.tsFunctionType(retKind) + " { " + paramVoidStmts + fnBody.code + " })";
     ctx.withMarkers((kind = fnKind, code = fnFullCode, intValue = 0, textValue = fnKind, constant = false, next = fnBody.next),
@@ -3115,7 +3187,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         listLib.pushBack(mut statements, "(" + blockCode + ");");
                         blockExits = true;
                     } else {
-                        listLib.pushBack(mut statements, "return " + ctx.assignValueCode(target, expected, blockKind, blockCode) + ";");
+                        fnRetVal := ctx.assignValueCode(target, expected, blockKind, blockCode);
+                        if target == ir.TARGET_C and textLib.startsWithAt(fnRetVal, 0, "/*@CBLK:") {
+                            rVar := "lt_fnret_" + integer.intText(start);
+                            listLib.pushBack(mut statements, "{ " + types.cValueType(expected) + " " + rVar + "; " + ctx.cUnwrapIntoVar(rVar, expected, fnRetVal) + " return " + rVar + "; }");
+                        } else {
+                            listLib.pushBack(mut statements, "return " + fnRetVal + ";");
+                        }
                         blockExits = true;
                     }
                 }
@@ -4676,16 +4754,29 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
         finalOrCond := if orCond == "" { "false" } else { "(" + orCond + ")" };
         return (cond = finalOrCond, bindings = first.bindings, irrefutable = anyIrref, boolMask = combinedMask, enumCases = combinedEnumCases, next = lastEnd, markers = combinedMarkers);
     }
-    /* Binding-producing `or` alternatives: emit a short-circuiting IIFE assigning the shared arm bindings on first match. */
-    var iife := "(() => { ";
-    var i := 0;
-    loop i < altCount {
-        c := if altConds[i] == "" { "true" } else { altConds[i] };
-        assigns := emitPatAssignments(target, locals, armDepth, altBindings[i]);
-        iife = iife + "if (" + c + ") { " + assigns + "return true; } ";
-        i = i + 1;
+    /* Binding-producing `or` alternatives: emit a short-circuiting check assigning the shared arm bindings on first match. */
+    var orCondCode := "";
+    if target == ir.TARGET_C {
+        var cOr := "/*@COR@*/bool lt_or = false; ";
+        var i := 0;
+        loop i < altCount {
+            c := if altConds[i] == "" { "true" } else { altConds[i] };
+            assigns := emitPatAssignments(target, locals, armDepth, altBindings[i]);
+            cOr = cOr + "if (!lt_or && (" + c + ")) { " + assigns + "lt_or = true; } ";
+            i = i + 1;
+        }
+        orCondCode = cOr;
+    } else {
+        var iife := "(() => { ";
+        var i := 0;
+        loop i < altCount {
+            c := if altConds[i] == "" { "true" } else { altConds[i] };
+            assigns := emitPatAssignments(target, locals, armDepth, altBindings[i]);
+            iife = iife + "if (" + c + ") { " + assigns + "return true; } ";
+            i = i + 1;
+        }
+        orCondCode = iife + "return false; })()";
     }
-    iife = iife + "return false; })()";
     /* Preserve binding declarations (names + kinds) with empty per-binding expr sentinel so arm header emits `let rt!: T;` once. */
     var declBindings := "";
     bSize := textLib.length(first.bindings);
@@ -4700,7 +4791,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
         }
         bPos = lineEnd + 1;
     }
-    (cond = iife, bindings = declBindings, irrefutable = anyIrref, boolMask = combinedMask, enumCases = combinedEnumCases, next = lastEnd, markers = combinedMarkers)
+    (cond = orCondCode, bindings = declBindings, irrefutable = anyIrref, boolMask = combinedMask, enumCases = combinedEnumCases, next = lastEnd, markers = combinedMarkers)
 };
 
 /** Parses a subject-based `match <subject> { ... }` body for value, statement, or tagged/then/finally IIFE lowering. */
@@ -4961,6 +5052,9 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             }
             armCheck := if patCond == "true" {
                 innerMatch
+            } else if isCTarget and textLib.startsWithAt(patCond, 0, "/*@COR@*/") {
+                canTernary = false;
+                textLib.slice(patCond, 9, textLib.length(patCond)) + "if (lt_or) { " + innerMatch + " }"
             } else {
                 pCheck := if isCTarget { patCond } else { "Boolean(" + patCond + ")" };
                 "if (" + pCheck + ") { " + innerMatch + " }"
@@ -6249,11 +6343,15 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
             pIdx = pIdx + 1;
         }
         targetCallee := if isModuleFn { callRuntime } else { "(" + callRuntime + ")" };
-        emittedCode = targetCallee + "(" + textLib.joinTexts(finalArgs, ", ") + ")";
-    } else if target =!= ir.TARGET_TS {
-        if not isModuleFn {
-            syntax.failAt(source, errPos, prefix, "C backend does not support indirect function calls yet");
+        if target == ir.TARGET_C and not isModuleFn {
+            callFnKind := types.fnCanonicalKind(callParams, callFirst, callCount, callResult);
+            callFnTag := types.cFnTag(callFnKind);
+            cCallArgs := if callCount > 0 { callRuntime + ", " + textLib.joinTexts(finalArgs, ", ") } else { callRuntime };
+            emittedCode = "/*@T:" + callFnKind + "@*/" + callFnTag + "_call(" + cCallArgs + ")";
+        } else {
+            emittedCode = targetCallee + "(" + textLib.joinTexts(finalArgs, ", ") + ")";
         }
+    } else if target =!= ir.TARGET_TS {
         discarded: mut List<String> = [];
         var kIdx := 0;
         loop kIdx < entryCount {
@@ -6271,7 +6369,14 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
             listLib.pushBack(mut reorderedArgs, ctx.assignReadOnlyArgCode(target, argExpected, entryKinds[k], entryCodes[k]));
             sIdx = sIdx + 1;
         }
-        callExpr := callRuntime + "(" + textLib.joinTexts(reorderedArgs, ", ") + ")";
+        callExpr := if not isModuleFn {
+            callFnKind := types.fnCanonicalKind(callParams, callFirst, callCount, callResult);
+            callFnTag := types.cFnTag(callFnKind);
+            cCallArgs := if callCount > 0 { callRuntime + ", " + textLib.joinTexts(reorderedArgs, ", ") } else { callRuntime };
+            "/*@T:" + callFnKind + "@*/" + callFnTag + "_call(" + cCallArgs + ")"
+        } else {
+            callRuntime + "(" + textLib.joinTexts(reorderedArgs, ", ") + ")"
+        };
         emittedCode = if listLib.length(discarded) > 0 {
             "(" + textLib.joinTexts(discarded, ", ") + ", " + callExpr + ")"
         } else {
@@ -6480,6 +6585,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             rawVal := types.enumCaseAt(left.kind, ci).valueCode;
                             itemVal := if target == ir.TARGET_C and numeric.isIntKind(backing) and textLib.length(rawVal) >= 2 and textLib.at(rawVal, textLib.length(rawVal) - 1) == "n" {
                                 textLib.slice(rawVal, 0, textLib.length(rawVal) - 1)
+                            } else if target == ir.TARGET_C and numeric.isIntKind(backing) and textLib.length(rawVal) >= 4 and textLib.startsWithAt(rawVal, 0, "(-") and textLib.startsWithAt(rawVal, textLib.length(rawVal) - 2, "n)") {
+                                textLib.slice(rawVal, 0, textLib.length(rawVal) - 2) + ")"
                             } else if target == ir.TARGET_C and numeric.isFloatKind(backing) and textLib.startsWithAt(rawVal, 0, "Number(\"") and textLib.length(rawVal) > 10 {
                                 textLib.slice(rawVal, 8, textLib.length(rawVal) - 2)
                             } else if target == ir.TARGET_C and numeric.isFloatKind(backing) and textLib.startsWithAt(rawVal, 0, "Math.fround(Number(\"") and textLib.length(rawVal) > 23 {
@@ -6788,11 +6895,36 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 } else if info.count < 0 {
                     syntax.failAt(source, errPos, prefix, "host output functions are standalone statements");
                 } else if postPosition >= textLib.length(source) or textLib.at(source, postPosition) =!= "(" {
-                    if textLib.startsWithAt(info.runtime, 0, "lite$") or target =!= ir.TARGET_TS {
+                    if textLib.startsWithAt(info.runtime, 0, "lite$") {
                         syntax.failAt(source, errPos, prefix, "function " + calleeDisplay + " must be called");
                     }
                     fnValKind := types.fnCanonicalKind(params, info.first, info.count, info.result);
-                    left = (kind = fnValKind, code = info.runtime, intValue = 0, textValue = "", constant = false, next = left.next);
+                    if target == ir.TARGET_C {
+                        wTag := types.cFnTag(fnValKind);
+                        wName := "lt_wrap_" + info.runtime;
+                        wRet := types.cValueType(info.result);
+                        var wParams := "void *_env";
+                        var wArgs := "";
+                        var wi := 0;
+                        loop wi < info.count {
+                            pK := types.paramKindOf(params[info.first + wi]);
+                            aName := "lt_a_" + integer.intText(wi);
+                            wParams = wParams + ", " + types.cValueType(pK) + " " + aName;
+                            if wi > 0 { wArgs = wArgs + ", "; }
+                            wArgs = wArgs + aName;
+                            wi = wi + 1;
+                        }
+                        wBody := if info.result == ir.VALUE_KIND_UNIT or info.result == ir.VALUE_KIND_NEVER {
+                            info.runtime + "(" + wArgs + ");"
+                        } else {
+                            "return " + info.runtime + "(" + wArgs + ");"
+                        };
+                        wDef := "static " + wRet + " " + wName + "(" + wParams + ") { (void)_env; " + wBody + " }";
+                        left = (kind = fnValKind, code = "/*@T:" + fnValKind + "@*//*@CFN_START:" + wName + "@*/" + wDef + "/*@CFN_END@*/((" + wTag + "){ " + wName + ", NULL })",
+                        intValue = 0, textValue = "", constant = false, next = left.next);
+                    } else {
+                        left = (kind = fnValKind, code = info.runtime, intValue = 0, textValue = "", constant = false, next = left.next);
+                    }
                 } else if textLib.startsWithAt(info.runtime, 0, "lite$") {
                     var cursor := syntax.skipTrivia(source, postPosition + 1, prefix);
                     argumentCodes: mut List<String> = [];
@@ -6863,9 +6995,6 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     callRuntime = info.runtime;
                 }
             } else {
-                if target =!= ir.TARGET_TS {
-                    syntax.failAt(source, postPosition, prefix, "C backend does not support indirect function calls yet");
-                }
                 callParams = types.fnParamEntries(left.kind);
                 callFirst = 0;
                 callCount = types.fnParamCount(left.kind);

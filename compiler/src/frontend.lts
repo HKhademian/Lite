@@ -273,6 +273,7 @@ pub enumCaseNameAt := fn(kind: String, index: Int): String { types.enumCaseAt(ki
 pub cListTag := fn(elemKind: String): String { types.cListTag(elemKind) };
 pub cListElemType := fn(tag: String): String { types.cListElemType(tag) };
 pub cStructTag := fn(kind: String): String { types.cStructTag(kind) };
+pub cFnTag := fn(kind: String): String { types.cFnTag(kind) };
 pub cFieldName := fn(prop: String): String { types.cFieldName(prop) };
 pub cTypeHasListField := fn(kind: String): Bool { types.cTypeHasListField(kind) };
 pub cTupleConvertName := fn(expectedKind: String, actualKind: String): String { types.cTupleConvertName(expectedKind, actualKind) };
