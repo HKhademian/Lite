@@ -6091,7 +6091,7 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
         var pIdx := 0;
         loop pIdx < callCount {
             argExpected := types.paramKindOf(callParams[callFirst + pIdx]);
-            listLib.pushBack(mut finalArgs, ctx.assignValueCode(target, argExpected, entryKinds[pIdx], entryCodes[pIdx]));
+            listLib.pushBack(mut finalArgs, ctx.assignReadOnlyArgCode(target, argExpected, entryKinds[pIdx], entryCodes[pIdx]));
             pIdx = pIdx + 1;
         }
         targetCallee := if isModuleFn { callRuntime } else { "(" + callRuntime + ")" };
@@ -6114,7 +6114,7 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
         loop sIdx < callCount {
             k := slotEntry[sIdx];
             argExpected := types.paramKindOf(callParams[callFirst + sIdx]);
-            listLib.pushBack(mut reorderedArgs, ctx.assignValueCode(target, argExpected, entryKinds[k], entryCodes[k]));
+            listLib.pushBack(mut reorderedArgs, ctx.assignReadOnlyArgCode(target, argExpected, entryKinds[k], entryCodes[k]));
             sIdx = sIdx + 1;
         }
         callExpr := callRuntime + "(" + textLib.joinTexts(reorderedArgs, ", ") + ")";
@@ -6665,7 +6665,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                 syntax.failAt(source, cursor, prefix, "argument " + formatLib.decimalText(argumentCount + 1) + " of " + calleeDisplay +
                                 " must be " + types.displayKind(argExpected) + ", got " + types.displayKind(argument.kind));
                             }
-                            listLib.pushBack(mut argumentCodes, ctx.assignValueCode(target, argExpected, argument.kind, argument.code));
+                            listLib.pushBack(mut argumentCodes, ctx.assignReadOnlyArgCode(target, argExpected, argument.kind, argument.code));
                             argumentCount = argumentCount + 1;
                             cursor = syntax.skipTrivia(source, argument.next, prefix);
                             if cursor < size and textLib.at(source, cursor) == "," {

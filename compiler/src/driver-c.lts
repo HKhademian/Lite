@@ -2,18 +2,16 @@ frontend := import "./frontend.lts";
 modules := import "./modules.lts";
 emitter := import "./emit-c.lts";
 hostFs := import "./host-fs.lts";
+diagLib := import "core/diag";
+fs := import "core/file";
 io := import "core/io";
 proc := import "core/process";
 
-/** Runs the C emitter over one parsed CLI argument list (`--stdin`, file path, `--trace-json`, `--builtin-mode`). */
+/** Runs the C emitter over one parsed CLI argument list (`--stdin`, file path, `--out`, `--trace-json`, `--builtin-mode`). */
 pub run := fn(args: List<String>): Unit {
     flags := hostFs.parseCompilerFlags(args);
     if not flags.ok {
         io.errorLine(flags.error);
-        io.exit(2);
-    }
-    if flags.hasOut {
-        io.errorLine("--out is not supported on C compiler yet");
         io.exit(2);
     }
     builtinSpecs := hostFs.extractBuiltinSpecs(args);
@@ -29,7 +27,22 @@ pub run := fn(args: List<String>): Unit {
     identity = loaded.identity, source = loaded.text, initialGraph = emptyGraph,
     projectRoot = loaded.projectRoot, =cwd, =builtinSpecs
     );
-    emitter.emitProgramWithSpecsOpt(items = modules.moduleItems(graph), source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel);
+    items := modules.moduleItems(graph);
+    if flags.hasOut {
+        writer := io.bufferWriter();
+        emitter.emitProgramToOpt(=writer, =items, source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel);
+        outRes := io.writerText(writer);
+        _cl := io.closeWriter(writer);
+        if not outRes.ok {
+            diagLib.fail(loaded.display, outRes.error);
+        }
+        wRes := fs.writeText(flags.outPath, outRes.text);
+        if not wRes.ok {
+            diagLib.fail(loaded.display, "cannot write output file " + flags.outPath + ": " + wRes.error);
+        }
+    } else {
+        emitter.emitProgramWithSpecsOpt(=items, source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel);
+    }
     if flags.hasTrace {
         hostFs.writeTraceJson(flags.tracePath, graph);
     }

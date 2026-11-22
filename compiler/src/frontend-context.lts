@@ -234,6 +234,23 @@ pub assignValueCode := fn(target: String, expectedKind: String, actualKind: Stri
     }
 };
 
+/** Converts read-only call arguments; on C skips CoW rc bumps for immutable value parameters so callers avoid spurious detaches. */
+pub assignReadOnlyArgCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
+    if actualKind == ir.VALUE_KIND_NEVER {
+        actualCode
+    } else if expectedKind == ir.VALUE_KIND_FLOAT32 and numeric.isIntKind(actualKind) {
+        ir.targetFloat32OperandCode(target, actualKind, actualCode)
+    } else if expectedKind == ir.VALUE_KIND_FLOAT and numeric.isIntKind(actualKind) {
+        ir.targetFloatOperandCode(target, actualKind, actualCode)
+    } else if expectedKind =!= actualKind and types.tupleShapeMatches(expectedKind, actualKind) {
+        types.convertTupleValueForTarget(target, expectedKind, actualKind, actualCode)
+    } else if target == ir.TARGET_C {
+        actualCode
+    } else {
+        copiedValueCode(target, expectedKind, actualCode)
+    }
+};
+
 /** Rejects declarations inferred as non-storable `Unit` or `Never`. */
 pub rejectNonValueBinding := fn(source: String, at: Int, prefix: String, kind: String, name: String): Unit {
     if kind == ir.VALUE_KIND_UNIT or kind == ir.VALUE_KIND_NEVER {

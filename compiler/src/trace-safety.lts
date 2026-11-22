@@ -2,6 +2,7 @@
 
 integer := import "core/int";
 listLib := import "core/list";
+setLib := import "core/set";
 textLib := import "core/text";
 ir := import "./frontend-ir.lts";
 syntax := import "./frontend-syntax.lts";
@@ -53,40 +54,27 @@ pub localsHasAnyUnready := fn(locals: List<Local>): Bool {
         }
     }
     if not hasPotential { return false; }
-    var activeBag := "|";
-    var futureBag := "|";
+    activeSet: mut Set<String> = [];
+    futureList: mut List<String> = [];
     var i := count - 1;
     loop i >= 0 {
         entry := locals[i];
         if entry.depth >= -1 {
-            marker := "|" + entry.runtime + "|";
-            if textLib.indexOfText(activeBag, marker, 0) < 0 {
+            if not setLib.has(activeSet, entry.runtime) {
                 if entry.depth >= 0 and entry.initState =!= ir.INIT_STATE_INIT {
                     return true;
                 }
-                activeBag = activeBag + entry.runtime + "|";
+                setLib.add(mut activeSet, entry.runtime);
             }
         } else {
-            futureBag = futureBag + entry.runtime + "|";
+            listLib.pushBack(mut futureList, entry.runtime);
         }
         i = i - 1;
     }
-    if futureBag == "|" { return false; }
-    var pos := 0;
-    fLen := textLib.length(futureBag);
-    loop pos < fLen {
-        if textLib.at(futureBag, pos) == "|" {
-            next := textLib.indexOfText(futureBag, "|", pos + 1);
-            if next > pos + 1 {
-                rt := textLib.slice(futureBag, pos + 1, next);
-                if textLib.indexOfText(activeBag, "|" + rt + "|", 0) < 0 {
-                    return true;
-                }
-                pos = next;
-                continue;
-            }
+    loop futureList as rt {
+        if not setLib.has(activeSet, rt) {
+            return true;
         }
-        pos = pos + 1;
     }
     false
 };
