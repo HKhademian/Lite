@@ -11,6 +11,15 @@ textLib := import "core/text";
 unicode := import "core/unicode";
 frontend := import "./frontend.lts";
 
+/** Parses an optimization level digit (`0`..`3`), returning `-1` when invalid. */
+parseOptText := fn(raw: String): Int {
+    if raw == "0" { 0 }
+    else if raw == "1" { 1 }
+    else if raw == "2" { 2 }
+    else if raw == "3" { 3 }
+    else { -1 }
+};
+
 /** Parses scalar CLI flags and positional file target for TS and C compiler drivers without reading `io.inputArgs()`. */
 pub parseCompilerFlags := fn(rawArgs: List<String>): (
 ok: Bool, isStdin: Bool, hasName: Bool, name: String, hasRoot: Bool, rootPath: String,
@@ -27,14 +36,6 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, optLevel: Int,
     var tracePath := "";
     var optLevel := 1;
     var filePath := "";
-
-    parseOptText := fn(raw: String): Int {
-        if raw == "0" { 0 }
-        else if raw == "1" { 1 }
-        else if raw == "2" { 2 }
-        else if raw == "3" { 3 }
-        else { -1 }
-    };
 
     args: mut List<String> = rawArgs;
     loop listLib.listCountText(args) > 0 {
