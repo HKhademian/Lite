@@ -10,13 +10,14 @@ project := import "util/project";
 compilerBuild := import "util/compiler-build";
 
 usageExit := fn(): Unit {
-    io.errorLine("Usage: ./bin/lite run [-O0|-O1|-O2|-O3] [--builtin-mode SPEC]... file.lts [-- argument ...]");
+    io.errorLine("Usage: ./bin/lite run [--target ts|c] [-O0|-O1|-O2|-O3] [--builtin-mode SPEC]... file.lts [-- argument ...]");
     io.exit(2);
 };
 
 run := fn(rawArgs: List<String>): Unit {
     args: mut List<String> = rawArgs;
     builtinOpts: mut List<String> = [];
+    var target := "ts";
     var scriptPath := "";
     loop list.listCountText(args) > 0 {
         arg := list.popFront(mut args);
@@ -24,6 +25,11 @@ run := fn(rawArgs: List<String>): Unit {
             if list.listCountText(args) == 0 { usageExit(); }
             scriptPath = list.popFront(mut args);
             break;
+        } else if arg == "--target" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            target = list.popFront(mut args);
+        } else if text.startsWithAt(arg, 0, "--target=") {
+            target = text.slice(arg, 9, text.length(arg));
         } else if arg == "--builtin-mode" {
             if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
             list.pushBack(mut builtinOpts, arg);
@@ -42,6 +48,10 @@ run := fn(rawArgs: List<String>): Unit {
         }
     }
 
+    if target =!= "ts" and target =!= "c" {
+        io.errorLine("lite run: unknown target " + target + " (expected ts or c)");
+        usageExit();
+    }
     if scriptPath == "" {
         usageExit();
     }
@@ -67,7 +77,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     root := project.findRepoRoot();
-    sel := compilerBuild.selectCompilerPath(root, "ts");
+    sel := compilerBuild.selectCompilerPath(root, target);
     if not sel.ok {
         io.errorLine("lite run: " + sel.error);
         io.exit(1);
@@ -97,6 +107,35 @@ run := fn(rawArgs: List<String>): Unit {
 
     base := path.baseName(scriptPath);
     baseNoExt := text.slice(base, 0, text.length(base) - 4);
+    if target == "c" {
+        cArtifact := path.join(tempDir.path, baseNoExt + ".c");
+        cWrite := fs.writeText(cArtifact, compiled.stdout);
+        if not cWrite.ok {
+            fs.remove(tempDir.path);
+            io.errorLine("lite run: " + cWrite.error);
+            io.exit(1);
+        }
+        binPath := path.join(tempDir.path, baseNoExt);
+        ccArgs: List<String> = ["-std=c11", "-O1", cArtifact, "-o", binPath, "-lm"];
+        ccRes := proc.run("cc", ccArgs, tempDir.path, emptyEnv, true, "");
+        if ccRes.error =!= "" {
+            fs.remove(tempDir.path);
+            io.errorLine("lite run: cc failed: " + ccRes.error);
+            io.exit(1);
+        }
+        if ccRes.status =!= 0 {
+            fs.remove(tempDir.path);
+            project.errorText(ccRes.stderr);
+            io.exit(ccRes.status);
+        }
+        cExecRes := proc.run(binPath, args, "", emptyEnv, false, "");
+        fs.remove(tempDir.path);
+        if cExecRes.error =!= "" {
+            io.errorLine("lite run: " + cExecRes.error);
+            io.exit(1);
+        }
+        io.exit(cExecRes.status);
+    }
     artifact := path.join(tempDir.path, baseNoExt + ".ts");
     writeRes := fs.writeText(artifact, compiled.stdout);
     if not writeRes.ok {
