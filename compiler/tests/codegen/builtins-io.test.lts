@@ -163,6 +163,7 @@ loop ibi < 13 {
     ibi = ibi + 1;
 }
 
+/* (superseded: restricted C compiler rejects input builtins clearly — C11 now supports all input builtins natively) */
 /* C compiler supports List<String>-returning inputArgs */
 cArgsCompile := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(io.inputArgs());\n", "");
 test.checkInt("C compiles inputArgs: " + cArgsCompile.stderr, 0, cArgsCompile.status);

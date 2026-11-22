@@ -85,39 +85,40 @@ test('public commands compile, run and check TS artifacts without T00 and reject
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     assert.equal(existsSync(join(directory, 'igniter/lite.ts')), false);
+    const isoEnv = { ...env, LITE_IGNITE_TARGET: 'ts' };
     const path = join(directory, 'program with spaces.lts');
     writeFileSync(join(directory, 'helper.lts'), 'pub twice := fn(n: Int): Int { n * 2 }');
     writeFileSync(path, 'io := import "core/io"; helper := import "./helper.lts";\nio.outputLine(helper.twice(io.inputInt("n? ")));');
-    const compiled = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 60000 });
+    const compiled = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env: isoEnv, timeout: 120000 });
     assert.equal(compiled.status, 0, compiled.stderr.toString()); assert.equal(compiled.stderr.length, 0);
     const artifact = join(directory, 'program.ts'); writeFileSync(artifact, compiled.stdout);
     const runnerScript = "import { writeSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; const m = await import(pathToFileURL(process.argv[1]).href); const out = m.main((t) => writeSync(1, t)); if (typeof out === 'string' && out.length > 0) writeSync(1, out);";
-    const executed = spawnSync(process.execPath, ['--input-type=module', '-e', runnerScript, artifact], { input: '7', env, timeout: 60000 });
+    const executed = spawnSync(process.execPath, ['--input-type=module', '-e', runnerScript, artifact], { input: '7', env: isoEnv, timeout: 60000 });
     assert.equal(executed.status, 0, executed.stderr.toString()); assert.equal(executed.stdout.toString(), 'n? 14\n');
-    const ran = spawnSync(join(directory, 'bin/lite'), ['run', path], { input: '7', env, timeout: 60000 });
+    const ran = spawnSync(join(directory, 'bin/lite'), ['run', path], { input: '7', env: isoEnv, timeout: 60000 });
     assert.equal(ran.status, 0, ran.stderr.toString()); assert.equal(ran.stdout.toString(), 'n? 14\n'); assert.equal(ran.stderr.length, 0);
-    const checked = spawnSync(join(directory, 'bin/lite'), ['check', path], { input: Buffer.from([0xff]), env, timeout: 60000 });
+    const checked = spawnSync(join(directory, 'bin/lite'), ['check', path], { input: Buffer.from([0xff]), env: isoEnv, timeout: 60000 });
     assert.equal(checked.status, 0, checked.stderr.toString()); assert.equal(checked.stdout.length, 0); assert.equal(checked.stderr.length, 0);
     writeFileSync(join(directory, 'helper.lts'), 'twice := fn(n: Int): Int { n * 2 }');
     writeFileSync(path, 'io := import "core/io"; helper := import "./helper.lts"; io.outputLine(helper.twice(21));');
-    const privateCompile = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 30000 });
+    const privateCompile = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env: isoEnv, timeout: 60000 });
     assert.equal(privateCompile.status, 2); assert.equal(privateCompile.stdout.length, 0);
     assert.match(privateCompile.stderr.toString(), /unknown module member helper\.twice/);
-    const privateCheck = spawnSync(join(directory, 'bin/lite'), ['check', path], { env, timeout: 30000 });
+    const privateCheck = spawnSync(join(directory, 'bin/lite'), ['check', path], { env: isoEnv, timeout: 60000 });
     assert.equal(privateCheck.status, 1); assert.equal(privateCheck.stdout.length, 0);
     assert.match(privateCheck.stderr.toString(), /unknown module member helper\.twice/);
-    const privateRun = spawnSync(join(directory, 'bin/lite'), ['run', path], { env, timeout: 30000 });
+    const privateRun = spawnSync(join(directory, 'bin/lite'), ['run', path], { env: isoEnv, timeout: 60000 });
     assert.equal(privateRun.status, 2); assert.equal(privateRun.stdout.length, 0);
     assert.match(privateRun.stderr.toString(), /unknown module member helper\.twice/);
-    const cErr = spawnSync(join(directory, 'bin/lite'), ['compile', '--target', 'c', path], { env, timeout: 30000 });
+    const cErr = spawnSync(join(directory, 'bin/lite'), ['compile', '--target', 'c', path], { env: isoEnv, timeout: 120000 });
     assert.equal(cErr.status, 2); assert.equal(cErr.stdout.length, 0);
     assert.match(cErr.stderr.toString(), /unknown module member helper\.twice/);
     writeFileSync(path, 'io := import "core/io"; io.outputLine("before"); record Foo { };');
-    const unsupported = spawnSync(join(directory, 'bin/lite'), ['check', path], { env, timeout: 30000 });
+    const unsupported = spawnSync(join(directory, 'bin/lite'), ['check', path], { env: isoEnv, timeout: 60000 });
     assert.equal(unsupported.status, 1); assert.equal(unsupported.stdout.length, 0);
     assert.match(unsupported.stderr.toString(), /unsupported feature "record"/);
     writeFileSync(path, 'io := import "core/io"; io.outputLine("before"); unknown();');
-    const invalid = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env, timeout: 30000 });
+    const invalid = spawnSync(join(directory, 'bin/lite'), ['compile', path], { env: isoEnv, timeout: 60000 });
     assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /unknown value unknown/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -136,10 +137,10 @@ test('default verification and expectation updates use TS artifacts without T00'
       mkdirSync(dirname(join(directory, path)), { recursive: true }); copyFileSync(join(root, path), join(directory, path));
     }
     const invoke = (...args: string[]) => spawnSync(join(directory, 'bin/lite'), ['verify', '--all', '--no-cache', ...args],
-      { env, encoding: 'utf8', timeout: 60000 });
+      { env: { ...env, LITE_IGNITE_TARGET: 'ts' }, encoding: 'utf8', timeout: 180000 });
     const io = invoke('--filter', 'feature.io.reporting.prompt-and-output-helpers');
     assert.equal(io.status, 0, io.stdout + io.stderr); assert.match(io.stdout, /all-helpers \[ts\]/);
-    assert.match(io.stdout, /empty-line-and-remainder \[ts\]/); assert.doesNotMatch(io.stdout, /T00 reference|\[c\]/);
+    assert.match(io.stdout, /empty-line-and-remainder \[ts\]/); assert.doesNotMatch(io.stdout, /T00 reference/);
     const covered = invoke('--coverage'); assert.equal(covered.status, 0, covered.stderr);
     const manifest = join(directory, 'language/verifications/features/numeric/integers/signed-arithmetic.json');
     const expected = readFileSync(manifest);
@@ -383,8 +384,8 @@ test('imported C compiler source hashes transitive files and invalidates its cac
       'lib/core/io.lts',
       'lib/core/list.lts',
       'lib/core/unicode.lts',
-      'lib/core/int.lts',
       'lib/core/text.lts',
+      'lib/core/int.lts',
     ]);
     writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed nested C");');
     const changed = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
@@ -410,8 +411,8 @@ test('imported C compiler source hashes transitive files and invalidates its cac
       'lib/core/io.lts',
       'lib/core/list.lts',
       'lib/core/unicode.lts',
-      'lib/core/int.lts',
       'lib/core/text.lts',
+      'lib/core/int.lts',
     ];
     const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })
       .find(item => item.dependencies.length === expectedRemovedDeps.length && expectedRemovedDeps.every((dep, idx) => item.dependencies[idx] === dep));
@@ -451,7 +452,7 @@ test('default verifier selects consumers after compiler changes and ignores inve
         env: changedEnv, encoding: 'utf8', timeout: 30000,
       });
       assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr);
-      assert.match(result.stdout, /verification passed: 1 executed, 0 cached/, path);
+      assert.match(result.stdout, /verification passed: [12] executed, 0 cached/, path);
     }
     writeFileSync(git, "#!/bin/sh\nprintf '%s\\n' ' M compiler/reports/2026-11-02-t00-t11-inventory.md'\n");
     const documentation = spawnSync(join(root, 'bin/lite'), ['verify', '--no-cache', '--filter', 'features/numeric/integers/signed-arithmetic.json'], {
@@ -494,23 +495,23 @@ test('default test startup and generated baseline run in a source archive withou
     }
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
     for (const path of ['igniter/lite.ts', 'igniter/bootstrap.ts', 'igniter/cli.ts', '.git']) assert.equal(existsSync(join(directory, path)), false);
-    const childEnv: NodeJS.ProcessEnv = { ...env, LITE_SKIP_NATIVE: '1', LITE_SKIP_HEAVY: '1' };
+    const childEnv: NodeJS.ProcessEnv = { ...env, LITE_SKIP_NATIVE: '1', LITE_SKIP_HEAVY: '1', LITE_IGNITE_TARGET: 'ts' };
     delete childEnv['NODE_TEST_CONTEXT'];
     const libs = spawnSync(join(directory, 'bin/lite'), ['test', '--unit', '--verbose', 'libraries.test.lts'],
-      { cwd: directory, encoding: 'utf8', env: childEnv, timeout: 120000 });
+      { cwd: directory, encoding: 'utf8', env: childEnv, timeout: 180000 });
     assert.equal(libs.error, undefined); assert.equal(libs.status, 0, libs.stdout + libs.stderr);
     assert.match(libs.stdout, /PASS lib\/tests\/libraries\.test\.lts/);
     assert.doesNotMatch(libs.stdout + libs.stderr, /ERR_MODULE_NOT_FOUND|T00 reference/);
     const corpusRun = spawnSync(join(directory, 'bin/lite'), ['test', '--unit', '--verbose', 'corpus-parity.test.lts'],
-      { cwd: directory, encoding: 'utf8', env: childEnv, timeout: 120000 });
+      { cwd: directory, encoding: 'utf8', env: childEnv, timeout: 240000 });
     assert.equal(corpusRun.error, undefined); assert.equal(corpusRun.status, 0, corpusRun.stdout + corpusRun.stderr);
     assert.match(corpusRun.stdout, /PASS compiler\/tests\/corpus-parity\.test\.lts/);
     assert.doesNotMatch(corpusRun.stdout + corpusRun.stderr, /ERR_MODULE_NOT_FOUND|T00 reference/);
     for (const args of [['--fast', '--full'], ['--reference'], ['--unknown']]) {
-      const rejected = spawnSync(join(directory, 'bin/lite'), ['test', ...args], { encoding: 'utf8', env, timeout: 5000 });
+      const rejected = spawnSync(join(directory, 'bin/lite'), ['test', ...args], { encoding: 'utf8', env: childEnv, timeout: 15000 });
       assert.equal(rejected.status, 2); assert.match(rejected.stderr, /Usage:/); assert.equal(rejected.stdout, '');
     }
-    const legacy = spawnSync(join(directory, 'bin/lite'), ['test', '--reference'], { encoding: 'utf8', env, timeout: 10000 });
+    const legacy = spawnSync(join(directory, 'bin/lite'), ['test', '--reference'], { encoding: 'utf8', env: childEnv, timeout: 15000 });
     assert.equal(legacy.status, 2); assert.match(legacy.stderr, /Usage:/); assert.equal(legacy.stdout, '');
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

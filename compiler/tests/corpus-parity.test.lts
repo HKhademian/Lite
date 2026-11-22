@@ -244,8 +244,9 @@ compilerTest.assertCompileError(root, cComp, "record C", "record Foo { };", recE
 missErr := "2:6: expected an Int, Float, String or Bool expression\n";
 compilerTest.assertCompileError(root, tsComp, "missing TS", "x := 1;\ny := ;\n", missErr);
 compilerTest.assertCompileError(root, cComp, "missing C", "x := 1;\ny := ;\n", missErr);
-loopErr := "1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n";
-compilerTest.assertCompileError(root, cComp, "loop C", "x := loop { 1 };", loopErr);
+loopOk := compilerTest.compileStdin(root, cComp, "x := loop { break 1 };", "");
+test.checkInt("loop expr C status", 0, loopOk.status);
+test.checkText("loop expr C err", "", loopOk.stderr);
 
 namedOk := compilerTest.compileStdin(root, tsComp, "io := import \"core/io\"; io.outputLine(42);", "named source.lts");
 ref42 := fs.readText(path.join(root, "compiler/tests/references/generated/report-42.ts")).text;
