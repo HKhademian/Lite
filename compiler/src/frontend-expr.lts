@@ -6274,18 +6274,18 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
                         }
                         mNameStart := syntax.skipTrivia(source, rhsStart + 3, prefix);
                         if mNameStart >= size or not textLib.isNameStart(textLib.at(source, mNameStart)) {
-                            syntax.failAt(source, mNameStart, prefix, "expected a list name after mut");
+                            syntax.failAt(source, mNameStart, prefix, "expected a collection name after mut");
                         }
                         mNameEnd := textLib.skipName(source, mNameStart);
                         mListName := textLib.slice(source, mNameStart, mNameEnd);
                         mIdx := ir.localIndex(locals, mListName);
                         if mIdx < 0 { syntax.failAt(source, mNameStart, prefix, "unknown value " + mListName); }
                         mEntry := locals[mIdx];
-                        if not types.isListKind(mEntry.kind) {
-                            syntax.failAt(source, mNameStart, prefix, calleeDisplay + " requires a List value, got " + types.displayKind(mEntry.kind));
+                        if not types.isListKind(mEntry.kind) and not types.isMapKind(mEntry.kind) and not types.isSetKind(mEntry.kind) {
+                            syntax.failAt(source, mNameStart, prefix, calleeDisplay + " requires a List, Map, or Set value, got " + types.displayKind(mEntry.kind));
                         }
                         if not mEntry.writable {
-                            syntax.failAt(source, mNameStart, prefix, "cannot mutate list " + mListName + " without mut");
+                            syntax.failAt(source, mNameStart, prefix, "cannot mutate " + mListName + " without mut");
                         }
                         mCode := if target == ir.TARGET_C { "&" + mEntry.runtime } else { mEntry.runtime };
                         listLib.pushBack(mut entryPositions, rhsStart);
@@ -6327,18 +6327,18 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
                         }
                         mNameStart := syntax.skipTrivia(source, cursor + 3, prefix);
                         if mNameStart >= size or not textLib.isNameStart(textLib.at(source, mNameStart)) {
-                            syntax.failAt(source, mNameStart, prefix, "expected a list name after mut");
+                            syntax.failAt(source, mNameStart, prefix, "expected a collection name after mut");
                         }
                         mNameEnd := textLib.skipName(source, mNameStart);
                         mListName := textLib.slice(source, mNameStart, mNameEnd);
                         mIdx := ir.localIndex(locals, mListName);
                         if mIdx < 0 { syntax.failAt(source, mNameStart, prefix, "unknown value " + mListName); }
                         mEntry := locals[mIdx];
-                        if not types.isListKind(mEntry.kind) {
-                            syntax.failAt(source, mNameStart, prefix, calleeDisplay + " requires a List value, got " + types.displayKind(mEntry.kind));
+                        if not types.isListKind(mEntry.kind) and not types.isMapKind(mEntry.kind) and not types.isSetKind(mEntry.kind) {
+                            syntax.failAt(source, mNameStart, prefix, calleeDisplay + " requires a List, Map, or Set value, got " + types.displayKind(mEntry.kind));
                         }
                         if not mEntry.writable {
-                            syntax.failAt(source, mNameStart, prefix, "cannot mutate list " + mListName + " without mut");
+                            syntax.failAt(source, mNameStart, prefix, "cannot mutate " + mListName + " without mut");
                         }
                         mCode := if target == ir.TARGET_C { "&" + mEntry.runtime } else { mEntry.runtime };
                         listLib.pushBack(mut entryPositions, cursor);

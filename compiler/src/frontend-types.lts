@@ -1722,8 +1722,8 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
                 cursor = syntax.skipTrivia(source, cursor + 3, prefix);
             }
             typed := parseFunctionType(source, cursor, prefix, aliases, genericType);
-            if access =!= "" and not listIntrinsic and not isListKind(typed.kind) {
-                syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for List parameters or registered core declarations");
+            if access =!= "" and not listIntrinsic and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) {
+                syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for List, Map, or Set parameters or registered core declarations");
             }
             cursor = syntax.skipTrivia(source, typed.next, prefix);
             if count > 0 { encoded = encoded + "|"; }
