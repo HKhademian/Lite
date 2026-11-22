@@ -270,6 +270,8 @@ pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
 pub enumDisplayName := fn(kind: String): String { types.enumDisplayName(kind) };
 pub enumCaseCount := fn(kind: String): Int { types.enumCaseCount(kind) };
 pub enumCaseNameAt := fn(kind: String, index: Int): String { types.enumCaseAt(kind, index).name };
+pub cListTag := fn(elemKind: String): String { types.cListTag(elemKind) };
+pub cListElemType := fn(tag: String): String { types.cListElemType(tag) };
 pub isRecordKind := fn(kind: String): Bool { types.isRecordKind(kind) };
 
 /** Returns the runtime JS property name for a tuple field (`_0` when unnamed, otherwise the field label). */
@@ -3071,10 +3073,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     if isArr and not entry.mutable {
                         failAt(source, nameStart, prefix, "cannot mutate immutable array " + name);
                     }
-                    if target =!= TARGET_TS {
+                    elKind := if isArr { arrayElementKind(entry.kind) } else { listElementKind(entry.kind) };
+                    cTag := if target == TARGET_C { types.cListTag(elKind) } else { "" };
+                    if target =!= TARGET_TS and cTag == "" {
                         failAt(source, nameStart, prefix, "C backend does not support list index assignment yet");
                     }
-                    elKind := if isArr { arrayElementKind(entry.kind) } else { listElementKind(entry.kind) };
                     idxStart := skipTrivia(source, position + 1, prefix);
                     idxParsed := parseExpressionAsCtx(target, source, idxStart, prefix, locals, functions, functionParams, currentName, VALUE_KIND_INT, stmtCtxs, aliases);
                     if not numeric.isIntKind(idxParsed.kind) {
@@ -3089,7 +3092,15 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         failAt(source, vStart, prefix, "list element must be " + displayKind(elKind) + ", got " + displayKind(valParsed.kind));
                     }
                     idxCode := assignValueCode(target, VALUE_KIND_INT, idxParsed.kind, idxParsed.code);
-                    stmtCode := if listCompOp.width > 0 {
+                    stmtCode := if target == TARGET_C {
+                        if listCompOp.width > 0 {
+                            curElCode := "lt_list_" + cTag + "_at(" + entry.runtime + ", " + idxCode + ", " + integer.intText(nameStart) + ")";
+                            nextElCode := compoundAssignCode(target, source, opPos, prefix, elKind, curElCode, listCompOp.baseOp, valParsed);
+                            "lt_list_" + cTag + "_set(&" + entry.runtime + ", " + idxCode + ", " + nextElCode + ", " + integer.intText(nameStart) + ")"
+                        } else {
+                            "lt_list_" + cTag + "_set(&" + entry.runtime + ", " + idxCode + ", " + assignValueCode(target, elKind, valParsed.kind, valParsed.code) + ", " + integer.intText(nameStart) + ")"
+                        }
+                    } else if listCompOp.width > 0 {
                         curElCode := "lite$listAt(" + entry.runtime + ", lite$ci, " + integer.intText(nameStart) + ")";
                         nextElCode := compoundAssignCode(target, source, opPos, prefix, elKind, curElCode, listCompOp.baseOp, valParsed);
                         "((lite$ci: bigint) => lite$listSet(" + entry.runtime + ", lite$ci, " + nextElCode + ", " + integer.intText(nameStart) + "))(" + idxCode + ")"

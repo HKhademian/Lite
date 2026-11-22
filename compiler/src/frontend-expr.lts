@@ -402,7 +402,18 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
     } else {
         "[" + elementKind + ";" + integer.intText(count) + "]"
     };
-    ctx.withMarkers((kind = resultKind, code = "[" + textLib.joinTexts(elementCodes, ", ") + "]",
+    listCode := if target == ir.TARGET_C and types.cListTag(elementKind) =!= "" {
+        cTag := types.cListTag(elementKind);
+        if count == 0 {
+            "lt_list_" + cTag + "_from(0, NULL)"
+        } else {
+            cArrType := if cTag == "str" { "const char *const" } else { "const " + types.cListElemType(cTag) };
+            "lt_list_" + cTag + "_from(" + integer.intText(count) + ", (" + cArrType + "[]){" + textLib.joinTexts(elementCodes, ", ") + "})"
+        }
+    } else {
+        "[" + textLib.joinTexts(elementCodes, ", ") + "]"
+    };
+    ctx.withMarkers((kind = resultKind, code = listCode,
     intValue = 0, textValue = "", constant = false, next = cursor), listMarkers)
 };
 
@@ -5321,13 +5332,16 @@ parseListIntrinsicCall := fn(target: String, source: String, start: Int, argOpen
         }
         if opName == "length" {
             close := ctx.expectNonemptyCallClose(source, lst.next, prefix);
-            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "BigInt((" + lst.code + ").length)",
+            lenCode := if target == ir.TARGET_C { "((" + lst.code + ").len)" } else { "BigInt((" + lst.code + ").length)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = lenCode,
             intValue = 0, textValue = "", constant = false, next = close),
             if inferMode { ctx.collectParsedMarkers("", lst) } else { "" });
         }
         if opName == "reverse" {
             close := ctx.expectNonemptyCallClose(source, lst.next, prefix);
-            return ctx.withMarkers((kind = lst.kind, code = "[...(" + lst.code + ")].reverse()",
+            revTag := if target == ir.TARGET_C { types.cListTag(types.listElementKind(lst.kind)) } else { "" };
+            revCode := if revTag =!= "" { "lt_list_" + revTag + "_reverse(" + lst.code + ")" } else { "[...(" + lst.code + ")].reverse()" };
+            return ctx.withMarkers((kind = lst.kind, code = revCode,
             intValue = 0, textValue = "", constant = false, next = close),
             if inferMode { ctx.collectParsedMarkers("", lst) } else { "" });
         }
@@ -5353,13 +5367,21 @@ parseListIntrinsicCall := fn(target: String, source: String, start: Int, argOpen
         sCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, sArg.kind, sArg.code);
         eCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, eArg.kind, eArg.code);
         mk := if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers(ctx.collectParsedMarkers("", lst), sArg), eArg) } else { "" };
-        return ctx.withMarkers((kind = lst.kind, code = "lite$listSlice(" + lst.code + ", " + sCode + ", " + eCode + ", " + integer.intText(start) + ")",
+        slTag := if target == ir.TARGET_C { types.cListTag(types.listElementKind(lst.kind)) } else { "" };
+        slCode := if slTag =!= "" {
+            "lt_list_" + slTag + "_slice(" + lst.code + ", " + sCode + ", " + eCode + ", " + integer.intText(start) + ")"
+        } else {
+            "lite$listSlice(" + lst.code + ", " + sCode + ", " + eCode + ", " + integer.intText(start) + ")"
+        };
+        return ctx.withMarkers((kind = lst.kind, code = slCode,
         intValue = 0, textValue = "", constant = false, next = close), mk);
     }
     grant := ctx.parseListGrant(source, argOpen, prefix, locals, opDisplay);
+    grantTag := if target == ir.TARGET_C { types.cListTag(types.listElementKind(grant.kind)) } else { "" };
     if opName == "clear" {
         close := ctx.expectNonemptyCallClose(source, grant.next, prefix);
-        return (kind = ir.VALUE_KIND_UNIT, code = "((" + grant.runtime + ").length = 0, undefined)",
+        clrCode := if grantTag =!= "" { "lt_list_" + grantTag + "_clear(&" + grant.runtime + ")" } else { "((" + grant.runtime + ").length = 0, undefined)" };
+        return (kind = ir.VALUE_KIND_UNIT, code = clrCode,
         intValue = 0, textValue = "", constant = false, next = close);
     }
     if opName == "set_at" {
@@ -5386,7 +5408,12 @@ parseListIntrinsicCall := fn(target: String, source: String, start: Int, argOpen
         idxCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
         valCode := ctx.assignValueCode(target, elementKind, valArg.kind, valArg.code);
         mk := if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", idxArg), valArg) } else { "" };
-        return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = "lite$listSet(" + grant.runtime + ", " + idxCode + ", " + valCode + ", " + integer.intText(start) + ")",
+        setCode := if grantTag =!= "" {
+            "lt_list_" + grantTag + "_set(&" + grant.runtime + ", " + idxCode + ", " + valCode + ", " + integer.intText(start) + ")"
+        } else {
+            "lite$listSet(" + grant.runtime + ", " + idxCode + ", " + valCode + ", " + integer.intText(start) + ")"
+        };
+        return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = setCode,
         intValue = 0, textValue = "", constant = false, next = close), mk);
     }
     if opName == "push_back" or opName == "push_front" {
@@ -5402,14 +5429,25 @@ parseListIntrinsicCall := fn(target: String, source: String, start: Int, argOpen
             ", got " + types.displayKind(value.kind));
         }
         close := ctx.expectNonemptyCallClose(source, value.next, prefix);
-        method := if opName == "push_back" { ".push(" } else { ".unshift(" };
-        return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = grant.runtime + method + ctx.assignValueCode(target, elementKind, value.kind, value.code) + ")",
+        vCode := ctx.assignValueCode(target, elementKind, value.kind, value.code);
+        pushCode := if grantTag =!= "" {
+            "lt_list_" + grantTag + "_" + opName + "(&" + grant.runtime + ", " + vCode + ")"
+        } else {
+            method := if opName == "push_back" { ".push(" } else { ".unshift(" };
+            grant.runtime + method + vCode + ")"
+        };
+        return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = pushCode,
         intValue = 0, textValue = "", constant = false, next = close),
         if inferMode { ctx.collectParsedMarkers("", value) } else { "" });
     }
     close := ctx.expectNonemptyCallClose(source, grant.next, prefix);
-    helper := if opName == "pop_back" { "lite$listPopBack(" } else { "lite$listPopFront(" };
-    (kind = types.listElementKind(grant.kind), code = helper + grant.runtime + ", " + integer.intText(start) + ")",
+    popCode := if grantTag =!= "" {
+        "lt_list_" + grantTag + "_" + opName + "(&" + grant.runtime + ", " + integer.intText(start) + ")"
+    } else {
+        helper := if opName == "pop_back" { "lite$listPopBack(" } else { "lite$listPopFront(" };
+        helper + grant.runtime + ", " + integer.intText(start) + ")"
+    };
+    (kind = types.listElementKind(grant.kind), code = popCode,
     intValue = 0, textValue = "", constant = false, next = close)
 };
 
@@ -6012,16 +6050,20 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     intValue = 0, textValue = "", constant = false, next = labelEnd),
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                 } else if types.isListKind(left.kind) or types.isArrayKind(left.kind) {
-                    if target =!= ir.TARGET_TS {
+                    elKind := if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
+                    cTag := if target == ir.TARGET_C { types.cListTag(elKind) } else { "" };
+                    if target =!= ir.TARGET_TS and cTag == "" {
                         syntax.failAt(source, postPosition, prefix, "C backend does not support collection properties yet");
                     }
                     kindLabel := if types.isListKind(left.kind) { "List" } else { "Array" };
                     if label == "length" {
-                        left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "BigInt((" + left.code + ").length)",
+                        lenCode := if target == ir.TARGET_C { "((" + left.code + ").len)" } else { "BigInt((" + left.code + ").length)" };
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = lenCode,
                         intValue = 0, textValue = "", constant = false, next = labelEnd),
                         if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                     } else if label == "isEmpty" {
-                        left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + left.code + ").length === 0)",
+                        empCode := if target == ir.TARGET_C { "((" + left.code + ").len == 0)" } else { "((" + left.code + ").length === 0)" };
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = empCode,
                         intValue = 0, textValue = "", constant = false, next = labelEnd),
                         if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                     } else {
@@ -6171,14 +6213,21 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         close := syntax.skipTrivia(source, index.next, prefix);
                         next := syntax.expectSymbol(source, close, "]", prefix);
                         elemKind := if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
-                        left = ctx.withMarkers((kind = elemKind,
-                        code = "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")",
+                        cAtTag := if target == ir.TARGET_C { types.cListTag(elemKind) } else { "" };
+                        atCode := if cAtTag =!= "" {
+                            "lt_list_" + cAtTag + "_at((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")"
+                        } else {
+                            "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")"
+                        };
+                        left = ctx.withMarkers((kind = elemKind, code = atCode,
                         intValue = 0, textValue = "", constant = false, next = next),
                         sliceMarkers);
                     }
                 }
                 if isRangeSlice {
-                    if target =!= ir.TARGET_TS and not isStrSlice {
+                    elemKindForC := if isStrSlice { "" } else if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
+                    cSliceTag := if target == ir.TARGET_C and not isStrSlice { types.cListTag(elemKindForC) } else { "" };
+                    if target =!= ir.TARGET_TS and not isStrSlice and cSliceTag == "" {
                         syntax.failAt(source, postPosition, prefix, "C backend does not support range slicing yet");
                     }
                     _usedStart := hasSliceStart;
@@ -6193,8 +6242,14 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         left = ctx.withMarkers((kind = ir.VALUE_KIND_STRING, code = sliceCode,
                         intValue = 0, textValue = "", constant = false, next = sliceCloseNext), sliceMarkers);
                     } else {
-                        elemKind := if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
-                        sliceCode := if hasSliceEnd {
+                        elemKind := elemKindForC;
+                        sliceCode := if cSliceTag =!= "" {
+                            if hasSliceEnd {
+                                "lt_list_" + cSliceTag + "_slice((" + left.code + "), " + sliceStartCode + ", " + sliceEndCode + ", " + integer.intText(indexStart) + ")"
+                            } else {
+                                "lt_list_" + cSliceTag + "_slice_from((" + left.code + "), " + sliceStartCode + ", " + integer.intText(indexStart) + ")"
+                            }
+                        } else if hasSliceEnd {
                             "lite$listSlice((" + left.code + "), " + sliceStartCode + ", " + sliceEndCode + ", " + integer.intText(indexStart) + ")"
                         } else {
                             "((lite$sl: readonly (" + types.tsFunctionType(elemKind) + ")[]) => lite$listSlice(lite$sl, " + sliceStartCode + ", BigInt(lite$sl.length), " + integer.intText(indexStart) + "))(" + left.code + ")"

@@ -11,18 +11,30 @@ dedent := fn(indent: String): String {
     textLib.slice(indent, 0, textLib.length(indent) - 4)
 }
 
-/** Maps a restricted Lite scalar or Unit/Never kind to its C11 type. */
+/** Returns the C11 scalar list tag (`i64`, `f64`, `bool`, `str`) for a List/Array kind, or `""` if not a C-supported list/array. */
+cListTagForKind := fn(kind: String): String {
+    if frontend.isListKind(kind) { frontend.cListTag(frontend.listElementKind(kind)) }
+    else if frontend.isArrayKind(kind) { frontend.cListTag(frontend.arrayElementKind(kind)) }
+    else { "" }
+};
+
+/** Maps a restricted Lite scalar, enum, scalar list/array, or Unit/Never kind to its C11 type. */
 cScalarType := fn(kind: String): String {
-    if kind == frontend.VALUE_KIND_UNIT or kind == frontend.VALUE_KIND_NEVER { "void" }
+    listTag := cListTagForKind(kind);
+    if listTag =!= "" { "lt_list_" + listTag }
+    else if kind == frontend.VALUE_KIND_UNIT or kind == frontend.VALUE_KIND_NEVER { "void" }
     else if frontend.isIntScalarKind(kind) or frontend.isEnumKind(kind) { "int64_t" }
     else if kind == frontend.VALUE_KIND_BOOL { "bool" }
     else if frontend.isFloatScalarKind(kind) { "double" }
     else { "const char *" }
 };
 
-/** Maps a local or mutable variable item kind to its C11 declaration type prefix. */
-cDeclType := fn(kind: String): String {
-    if kind == frontend.ITEM_KIND_LOCAL_INT or kind == frontend.ITEM_KIND_VAR_INT or
+/** Maps a local or mutable variable item to its C11 declaration type prefix. */
+cDeclTypeItem := fn(item: frontend.Item): String {
+    kind := item.kind;
+    if kind == frontend.ITEM_KIND_LOCAL_LIST or kind == frontend.ITEM_KIND_VAR_LIST {
+        "lt_list_" + cListTagForKind(item.textValue) + " "
+    } else if kind == frontend.ITEM_KIND_LOCAL_INT or kind == frontend.ITEM_KIND_VAR_INT or
     kind == frontend.ITEM_KIND_LOCAL_RECORD or kind == frontend.ITEM_KIND_VAR_RECORD { "int64_t " }
     else if kind == frontend.ITEM_KIND_LOCAL_FLOAT or kind == frontend.ITEM_KIND_VAR_FLOAT { "double " }
     else if kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL { "bool " }
@@ -35,8 +47,8 @@ checkUnsupportedCType := fn(kind: String): Unit {
     if frontend.isMapKind(kind) { diagLib.fail("", "C backend does not support map values yet"); }
     if frontend.isSetKind(kind) { diagLib.fail("", "C backend does not support set values yet"); }
     if frontend.isRecordKind(kind) { diagLib.fail("", "C backend does not support record values yet"); }
-    if frontend.isListKind(kind) { diagLib.fail("", "C backend does not support list values yet"); }
-    if frontend.isArrayKind(kind) { diagLib.fail("", "C backend does not support array values yet"); }
+    if frontend.isListKind(kind) and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support list values yet"); }
+    if frontend.isArrayKind(kind) and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support array values yet"); }
     if frontend.containsFnKind(kind) { diagLib.fail("", "C backend does not support function values yet"); }
 };
 
@@ -282,10 +294,11 @@ isCLocalDeclKind := fn(kind: String): Bool {
     kind == frontend.ITEM_KIND_LOCAL_STRING or kind == frontend.ITEM_KIND_VAR_STRING or
     kind == frontend.ITEM_KIND_LOCAL_FLOAT or kind == frontend.ITEM_KIND_VAR_FLOAT or
     kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL or
-    kind == frontend.ITEM_KIND_LOCAL_RECORD or kind == frontend.ITEM_KIND_VAR_RECORD
+    kind == frontend.ITEM_KIND_LOCAL_RECORD or kind == frontend.ITEM_KIND_VAR_RECORD or
+    kind == frontend.ITEM_KIND_LOCAL_LIST or kind == frontend.ITEM_KIND_VAR_LIST
 };
 
-/** Detects leaked JS tuple or array literal syntax inside a scalar-typed expression on C, skipping quoted strings. */
+/** Detects leaked JS tuple or array literal syntax inside a scalar-typed expression on C, skipping quoted strings and C11 compound literals. */
 unsupportedAggregateCode := fn(code: String): String {
     if textLib.indexOfText(code, "{", 0) < 0 and textLib.indexOfText(code, "[", 0) < 0 { return ""; }
     size := textLib.length(code);
@@ -294,7 +307,8 @@ unsupportedAggregateCode := fn(code: String): String {
         ch := textLib.at(code, cursor);
         if ch == "\"" {
             cursor = frontend.skipAliasString(code, cursor);
-        } else if ch == "(" and textLib.startsWithAt(code, cursor, "((const ") {
+        } else if ch == "(" and (textLib.startsWithAt(code, cursor, "((const ") or textLib.startsWithAt(code, cursor, "(const ")) {
+            isDouble := textLib.startsWithAt(code, cursor, "((const ");
             var depth := 0;
             loop cursor < size {
                 c2 := textLib.at(code, cursor);
@@ -304,7 +318,25 @@ unsupportedAggregateCode := fn(code: String): String {
                     if c2 == "(" { depth = depth + 1; }
                     else if c2 == ")" {
                         depth = depth - 1;
-                        if depth == 0 { cursor = cursor + 1; break; }
+                        if depth == 0 {
+                            cursor = cursor + 1;
+                            if not isDouble and cursor < size and textLib.at(code, cursor) == "{" {
+                                var bDepth := 0;
+                                loop cursor < size {
+                                    c3 := textLib.at(code, cursor);
+                                    if c3 == "\"" { cursor = frontend.skipAliasString(code, cursor); }
+                                    else {
+                                        if c3 == "{" { bDepth = bDepth + 1; }
+                                        else if c3 == "}" {
+                                            bDepth = bDepth - 1;
+                                            if bDepth == 0 { cursor = cursor + 1; break; }
+                                        }
+                                        cursor = cursor + 1;
+                                    }
+                                }
+                            }
+                            break;
+                        }
                     }
                     cursor = cursor + 1;
                 }
@@ -357,6 +389,10 @@ normalizeCBuiltinCalls := fn(code: String): String {
             out = out + textLib.slice(code, flushed, cursor) + "lt_text_slice(";
             cursor = cursor + textLib.length("lite$textSlice(");
             flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputArgs(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_input_args(";
+            cursor = cursor + textLib.length("lite$inputArgs(");
+            flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputAll(") {
             out = out + textLib.slice(code, flushed, cursor) + "lt_input_all(";
             cursor = cursor + textLib.length("lite$inputAll(");
@@ -399,6 +435,7 @@ cCall := fn(kind: String, code: String): String {
             "printf(\"%s\", ((const char *const[]){" + textLib.joinTexts(labels, ", ") + "}[" + code + "]))"
         }
         frontend.isFloatScalarKind(kind) { "lt_print_float((double)(" + code + "))" }
+        cListTagForKind(kind) =!= "" { "lt_list_" + cListTagForKind(kind) + "_print(" + code + ")" }
         frontend.isIntScalarKind(kind) { "printf(\"%\" PRId64, (int64_t)(" + code + "))" }
         kind == frontend.VALUE_KIND_BOOL { "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))" }
         _ { "printf(\"%s\", " + code + ")" }
@@ -414,7 +451,6 @@ usesIntHelper := fn(calls: String, name: String): Bool {
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
 unsupportedBuiltinCode := fn(calls: String): String {
     match {
-        usesIntHelper(calls, "lite$inputArgs(") { "C backend does not support inputArgs yet" }
         usesIntHelper(calls, "lite$fileKind(") or usesIntHelper(calls, "lite$fileOpenReader(") or
         usesIntHelper(calls, "lite$fileOpenWriter(") or usesIntHelper(calls, "lite$fileOpenAppender(") or
         usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
@@ -520,10 +556,140 @@ usesTextPrimitives := fn(calls: String): Bool {
     usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(")
 }
 
+/** True when `calls` references any bounds-checked C11 list helper for `tag`. */
+usesListBoundsForTag := fn(calls: String, tag: String): Bool {
+    usesIntHelper(calls, "lt_list_" + tag + "_at(") or usesIntHelper(calls, "lt_list_" + tag + "_set(") or
+    usesIntHelper(calls, "lt_list_" + tag + "_pop_back(") or usesIntHelper(calls, "lt_list_" + tag + "_pop_front(") or
+    usesIntHelper(calls, "lt_list_" + tag + "_slice(") or usesIntHelper(calls, "lt_list_" + tag + "_slice_from(")
+};
+
+/** Emits portable ISO C11 list struct and only the helper operations used for `tag` (`i64`, `f64`, `bool`, `str`). */
+emitCListTagHelpers := fn(tag: String, calls: String, needCopy: Bool, needPrint: Bool, needFrom: Bool): Unit {
+    cType := frontend.cListElemType(tag);
+    cElemConstPtr := if tag == "str" { "const char *const *" } else { "const " + cType + " *" };
+    lType := "lt_list_" + tag;
+    hasFrom := needFrom or usesIntHelper(calls, lType + "_from(");
+    hasCopy := needCopy or usesIntHelper(calls, lType + "_copy(");
+    hasAt := usesIntHelper(calls, lType + "_at(");
+    hasSet := usesIntHelper(calls, lType + "_set(");
+    hasPushBack := usesIntHelper(calls, lType + "_push_back(");
+    hasPushFront := usesIntHelper(calls, lType + "_push_front(");
+    hasPopBack := usesIntHelper(calls, lType + "_pop_back(");
+    hasPopFront := usesIntHelper(calls, lType + "_pop_front(");
+    hasSliceFrom := usesIntHelper(calls, lType + "_slice_from(");
+    hasSlice := usesIntHelper(calls, lType + "_slice(") or hasSliceFrom;
+    hasReverse := usesIntHelper(calls, lType + "_reverse(");
+    hasClear := usesIntHelper(calls, lType + "_clear(");
+    io.outputLine("typedef struct { " + cType + " *data; int64_t len; int64_t cap; } " + lType + ";");
+    if hasFrom or hasCopy or hasSlice or hasReverse {
+        io.outputLine("static " + lType + " " + lType + "_from(int64_t count, " + cElemConstPtr + "elems) {");
+        io.outputLine("    " + lType + " out = { NULL, count, count };");
+        io.outputLine("    if (count > 0) {");
+        io.outputLine("        out.data = malloc((size_t)count * sizeof(" + cType + "));");
+        io.outputLine("        if (out.data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
+        io.outputLine("        memcpy(out.data, elems, (size_t)count * sizeof(" + cType + "));");
+        io.outputLine("    }");
+        io.outputLine("    return out;");
+        io.outputLine("}");
+    }
+    if hasCopy {
+        io.outputLine("static " + lType + " " + lType + "_copy(" + lType + " src) {");
+        io.outputLine("    return " + lType + "_from(src.len, src.data);");
+        io.outputLine("}");
+    }
+    if hasAt {
+        io.outputLine("static " + cType + " " + lType + "_at(" + lType + " xs, int64_t idx, size_t at) {");
+        io.outputLine("    if (idx < 0 || idx >= xs.len) { lt_bound_fault(at, \"list index outside its extent\"); }");
+        io.outputLine("    return xs.data[idx];");
+        io.outputLine("}");
+    }
+    if hasSet {
+        io.outputLine("static void " + lType + "_set(" + lType + " *xs, int64_t idx, " + cType + " val, size_t at) {");
+        io.outputLine("    if (idx < 0 || idx >= xs->len) { lt_bound_fault(at, \"list index outside its extent\"); }");
+        io.outputLine("    xs->data[idx] = val;");
+        io.outputLine("}");
+    }
+    if hasPushBack or hasPushFront {
+        io.outputLine("static void " + lType + "_grow(" + lType + " *xs, int64_t need) {");
+        io.outputLine("    if (xs->cap >= need) { return; }");
+        io.outputLine("    int64_t next = xs->cap > 0 ? xs->cap * 2 : 8;");
+        io.outputLine("    while (next < need) { next *= 2; }");
+        io.outputLine("    " + cType + " *buf = realloc(xs->data, (size_t)next * sizeof(" + cType + "));");
+        io.outputLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow list\\n\"); exit(1); }");
+        io.outputLine("    xs->data = buf; xs->cap = next;");
+        io.outputLine("}");
+    }
+    if hasPushBack {
+        io.outputLine("static void " + lType + "_push_back(" + lType + " *xs, " + cType + " val) {");
+        io.outputLine("    " + lType + "_grow(xs, xs->len + 1);");
+        io.outputLine("    xs->data[xs->len++] = val;");
+        io.outputLine("}");
+    }
+    if hasPushFront {
+        io.outputLine("static void " + lType + "_push_front(" + lType + " *xs, " + cType + " val) {");
+        io.outputLine("    " + lType + "_grow(xs, xs->len + 1);");
+        io.outputLine("    if (xs->len > 0) { memmove(xs->data + 1, xs->data, (size_t)xs->len * sizeof(" + cType + ")); }");
+        io.outputLine("    xs->data[0] = val; xs->len += 1;");
+        io.outputLine("}");
+    }
+    if hasPopBack {
+        io.outputLine("static " + cType + " " + lType + "_pop_back(" + lType + " *xs, size_t at) {");
+        io.outputLine("    if (xs->len <= 0) { lt_bound_fault(at, \"cannot pop from an empty list\"); }");
+        io.outputLine("    return xs->data[--xs->len];");
+        io.outputLine("}");
+    }
+    if hasPopFront {
+        io.outputLine("static " + cType + " " + lType + "_pop_front(" + lType + " *xs, size_t at) {");
+        io.outputLine("    if (xs->len <= 0) { lt_bound_fault(at, \"cannot pop from an empty list\"); }");
+        io.outputLine("    " + cType + " head = xs->data[0];");
+        io.outputLine("    xs->len -= 1;");
+        io.outputLine("    if (xs->len > 0) { memmove(xs->data, xs->data + 1, (size_t)xs->len * sizeof(" + cType + ")); }");
+        io.outputLine("    return head;");
+        io.outputLine("}");
+    }
+    if hasSlice {
+        io.outputLine("static " + lType + " " + lType + "_slice(" + lType + " xs, int64_t start, int64_t end, size_t at) {");
+        io.outputLine("    if (start < 0 || end < start || end > xs.len) { lt_bound_fault(at, \"list slice bounds outside its extent\"); }");
+        io.outputLine("    return " + lType + "_from(end - start, xs.data + start);");
+        io.outputLine("}");
+    }
+    if hasSliceFrom {
+        io.outputLine("static " + lType + " " + lType + "_slice_from(" + lType + " xs, int64_t start, size_t at) {");
+        io.outputLine("    return " + lType + "_slice(xs, start, xs.len, at);");
+        io.outputLine("}");
+    }
+    if hasReverse {
+        io.outputLine("static " + lType + " " + lType + "_reverse(" + lType + " xs) {");
+        io.outputLine("    " + lType + " out = " + lType + "_from(xs.len, xs.data);");
+        io.outputLine("    for (int64_t i = 0; i < out.len / 2; i += 1) { " + cType + " t = out.data[i]; out.data[i] = out.data[out.len - 1 - i]; out.data[out.len - 1 - i] = t; }");
+        io.outputLine("    return out;");
+        io.outputLine("}");
+    }
+    if hasClear {
+        io.outputLine("static void " + lType + "_clear(" + lType + " *xs) { xs->len = 0; }");
+    }
+    if needPrint {
+        io.outputLine("static int " + lType + "_print(" + lType + " xs) {");
+        io.outputLine("    if (printf(\"[\") < 0) { return -1; }");
+        io.outputLine("    for (int64_t i = 0; i < xs.len; i += 1) {");
+        io.outputLine("        if (i > 0 && printf(\", \") < 0) { return -1; }");
+        elemPrint := if tag == "i64" { "printf(\"%\" PRId64, xs.data[i])" }
+        else if tag == "f64" { "lt_print_float(xs.data[i])" }
+        else if tag == "bool" { "printf(\"%s\", xs.data[i] ? \"true\" : \"false\")" }
+        else { "printf(\"%s\", xs.data[i])" };
+        io.outputLine("        if (" + elemPrint + " < 0) { return -1; }");
+        io.outputLine("    }");
+        io.outputLine("    return printf(\"]\");");
+        io.outputLine("}");
+    }
+    io.outputLine("");
+};
+
 /** Emits portable C11 guards that reject overflow and bounds faults before evaluating operations. */
 emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
     usesArith := usesIntArithmetic(calls) or usesIntDivision(calls) or usesFloatArithmetic(calls);
-    usesBounds := usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(");
+    usesBounds := usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or
+    usesListBoundsForTag(calls, "i64") or usesListBoundsForTag(calls, "f64") or usesListBoundsForTag(calls, "bool") or usesListBoundsForTag(calls, "str");
     if not usesArith and not usesBounds { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     io.outputLine("static const size_t lt_int_lines[] = {" + frontend.lineStartCodes(source) + "};");
@@ -788,7 +954,8 @@ emitOutputArgument := fn(kind: String, code: String, name: String, indent: Strin
         if code =!= "0" { io.outputLine(indent + "(void)(" + code + ");"); }
         return;
     }
-    typeCode := if frontend.isIntScalarKind(kind) or frontend.isEnumKind(kind) { "int64_t " }
+    typeCode := if cListTagForKind(kind) =!= "" { "lt_list_" + cListTagForKind(kind) + " " }
+    else if frontend.isIntScalarKind(kind) or frontend.isEnumKind(kind) { "int64_t " }
     else if kind == frontend.VALUE_KIND_BOOL { "bool " }
     else if frontend.isFloatScalarKind(kind) { "double " }
     else { "const char *" };
@@ -810,16 +977,18 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
     var firstCode := "";
     var firstTemp := "";
     var writes := "";
+    var seqLoopId := 0;
+    loopSeqFlags: mut List<Int> = [];
     loop stream as item {
         code := normalizeCBuiltinCalls(item.code);
         if isCLocalDeclKind(item.kind) {
             if fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime) {
                 io.outputLine(indent + item.runtime + " = " + code + ";");
             } else {
-                io.outputLine(indent + cDeclType(item.kind) + item.runtime + " = " + code + ";");
+                io.outputLine(indent + cDeclTypeItem(item) + item.runtime + " = " + code + ";");
             }
             io.outputLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD {
+        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_LIST {
             io.outputLine(indent + item.runtime + " = " + code + ";");
         } else if item.kind == frontend.ITEM_KIND_RETURN {
             if fnResult == frontend.VALUE_KIND_UNIT {
@@ -866,9 +1035,34 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             io.outputLine(indent + "while (" + condition + ") {");
             indent = indent + "    ";
             blockDepth = blockDepth + 1;
+            listLib.pushBack(mut loopSeqFlags, 0);
+        } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ {
+            tag := frontend.cListTag(item.textValue);
+            seqId := integer.intText(seqLoopId);
+            seqLoopId = seqLoopId + 1;
+            seqVar := "lt_seq_" + seqId;
+            idxVar := "lt_sidx_" + seqId;
+            seqInit := if item.intValue == 1 { code } else { "lt_list_" + tag + "_copy(" + code + ")" };
+            io.outputLine(indent + "{");
+            io.outputLine(indent + "    lt_list_" + tag + " " + seqVar + " = " + seqInit + ";");
+            io.outputLine(indent + "    for (int64_t " + idxVar + " = 0; " + idxVar + " < " + seqVar + ".len; " + idxVar + " += 1) {");
+            if item.runtime =!= "" {
+                io.outputLine(indent + "        " + frontend.cListElemType(tag) + " " + item.runtime + " = " + seqVar + ".data[" + idxVar + "];");
+                io.outputLine(indent + "        (void)" + item.runtime + ";");
+            }
+            indent = indent + "        ";
+            blockDepth = blockDepth + 1;
+            listLib.pushBack(mut loopSeqFlags, 1);
         } else if item.kind == frontend.ITEM_KIND_END_LOOP {
-            indent = dedent(indent);
-            io.outputLine(indent + "}");
+            isSeqEnd := if loopSeqFlags.length > 0 { listLib.popBack(mut loopSeqFlags) == 1 } else { false };
+            if isSeqEnd {
+                indent = dedent(dedent(indent));
+                io.outputLine(indent + "    }");
+                io.outputLine(indent + "}");
+            } else {
+                indent = dedent(indent);
+                io.outputLine(indent + "}");
+            }
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if item.kind == frontend.ITEM_KIND_END or item.kind == frontend.ITEM_KIND_END_OUTPUT {
             if count == 1 { io.output(outputWriteCode(firstKind, firstCode, indent, failAction)); }
@@ -985,16 +1179,19 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         if frontend.isRecordKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isRecordKind(item.name)) or isRecordDecl {
             diagLib.fail("", "C backend does not support record values yet");
         }
-        if frontend.isListKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isListKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST {
+        if (frontend.isListKind(item.kind) and cListTagForKind(item.kind) == "") or
+        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isListKind(item.name) and cListTagForKind(item.name) == "") or
+        ((item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST) and cListTagForKind(item.textValue) == "") {
             diagLib.fail("", "C backend does not support list values yet");
         }
-        if frontend.isArrayKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isArrayKind(item.name)) {
+        if (frontend.isArrayKind(item.kind) and cListTagForKind(item.kind) == "") or
+        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isArrayKind(item.name) and cListTagForKind(item.name) == "") {
             diagLib.fail("", "C backend does not support array values yet");
         }
         if frontend.containsFnKind(item.kind) or (item.kind == frontend.ITEM_KIND_DISCARD and frontend.containsFnKind(item.name)) or item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
             diagLib.fail("", "C backend does not support function values yet");
         }
-        if item.kind == frontend.ITEM_KIND_LOOP_SEQ {
+        if item.kind == frontend.ITEM_KIND_LOOP_SEQ and frontend.cListTag(item.textValue) == "" {
             diagLib.fail("", "C backend does not support list traversal yet");
         }
         if frontend.codeUsesListIndex(item.code) or frontend.codeUsesListPop(item.code) or frontend.codeUsesListCopy(item.code) {
@@ -1005,13 +1202,63 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
             diagLib.fail("", aggErr);
         }
     }
+    var needListI64 := false;
+    var needListF64 := false;
+    var needListBool := false;
+    var needListStr := false;
+    var needCopyI64 := false;
+    var needCopyF64 := false;
+    var needCopyBool := false;
+    var needCopyStr := false;
+    var needPrintI64 := false;
+    var needPrintF64 := false;
+    var needPrintBool := false;
+    var needPrintStr := false;
+    hasInputArgs := usesIntHelper(calls, "lite$inputArgs(");
+    if hasInputArgs { needListStr = true; }
+    loop reachable as item {
+        kTag := cListTagForKind(item.kind);
+        tTag := if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST { cListTagForKind(item.textValue) }
+        else if item.kind == frontend.ITEM_KIND_LOOP_SEQ { frontend.cListTag(item.textValue) }
+        else { "" };
+        if kTag == "i64" or tTag == "i64" { needListI64 = true; }
+        if kTag == "f64" or tTag == "f64" { needListF64 = true; }
+        if kTag == "bool" or tTag == "bool" { needListBool = true; }
+        if kTag == "str" or tTag == "str" { needListStr = true; }
+        if kTag == "i64" { needPrintI64 = true; }
+        if kTag == "f64" { needPrintF64 = true; floatOutput = true; floatValues = true; }
+        if kTag == "bool" { needPrintBool = true; }
+        if kTag == "str" { needPrintStr = true; }
+        if item.kind == frontend.ITEM_KIND_LOOP_SEQ and item.intValue =!= 1 {
+            if tTag == "i64" { needCopyI64 = true; }
+            if tTag == "f64" { needCopyF64 = true; }
+            if tTag == "bool" { needCopyBool = true; }
+            if tTag == "str" { needCopyStr = true; }
+        }
+        if item.kind == frontend.ITEM_KIND_FUNCTION_START {
+            rTag := cListTagForKind(item.code);
+            if rTag == "i64" { needListI64 = true; }
+            if rTag == "f64" { needListF64 = true; }
+            if rTag == "bool" { needListBool = true; }
+            if rTag == "str" { needListStr = true; }
+            if textLib.indexOfText(item.textValue, "=List<Int", 0) >= 0 or textLib.indexOfText(item.textValue, "=[Int", 0) >= 0 { needListI64 = true; }
+            if textLib.indexOfText(item.textValue, "=List<Float", 0) >= 0 or textLib.indexOfText(item.textValue, "=[Float", 0) >= 0 { needListF64 = true; }
+            if textLib.indexOfText(item.textValue, "=List<Bool", 0) >= 0 or textLib.indexOfText(item.textValue, "=[Bool", 0) >= 0 { needListBool = true; }
+            if textLib.indexOfText(item.textValue, "=List<String", 0) >= 0 or textLib.indexOfText(item.textValue, "=[String", 0) >= 0 { needListStr = true; }
+        }
+    }
+    if textLib.indexOfText(calls, "|lt_list_i64_", 0) >= 0 { needListI64 = true; }
+    if textLib.indexOfText(calls, "|lt_list_f64_", 0) >= 0 { needListF64 = true; }
+    if textLib.indexOfText(calls, "|lt_list_bool_", 0) >= 0 { needListBool = true; }
+    if textLib.indexOfText(calls, "|lt_list_str_", 0) >= 0 { needListStr = true; }
+    hasAnyList := needListI64 or needListF64 or needListBool or needListStr;
     hasReportError := usesIntHelper(calls, "lite$reportError(");
     hasExit := usesIntHelper(calls, "lite$exit(");
     hasInput := usesInputHelpers(calls);
     hasInputInt := usesIntHelper(calls, "lite$inputInt(");
     hasInputFloat := usesIntHelper(calls, "lite$inputFloat(");
     io.outputLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput { io.outputLine("#include <stdlib.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList { io.outputLine("#include <stdlib.h>"); }
     if hasInputInt { io.outputLine("#include <errno.h>"); }
     io.outputLine("#include <inttypes.h>");
     io.outputLine("#include <stdbool.h>");
@@ -1035,6 +1282,19 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     if usesStringConcat(calls) { emitStringConcatHelper(); }
     emitTextPrimitiveHelpers(calls);
     emitInputHelpers(calls);
+    if needListI64 { emitCListTagHelpers("i64", calls, needCopyI64, needPrintI64, false); }
+    if needListF64 { emitCListTagHelpers("f64", calls, needCopyF64, needPrintF64, false); }
+    if needListBool { emitCListTagHelpers("bool", calls, needCopyBool, needPrintBool, false); }
+    if needListStr { emitCListTagHelpers("str", calls, needCopyStr, needPrintStr, hasInputArgs); }
+    if hasInputArgs {
+        io.outputLine("static int lt_argc = 0;");
+        io.outputLine("static char **lt_argv = NULL;");
+        io.outputLine("static lt_list_str lt_input_args(void) {");
+        io.outputLine("    if (lt_argc <= 1) { return lt_list_str_from(0, NULL); }");
+        io.outputLine("    return lt_list_str_from((int64_t)(lt_argc - 1), (const char *const *)(lt_argv + 1));");
+        io.outputLine("}");
+        io.outputLine("");
+    }
     var hoistedGlobals := frontend.emptyTokenBuckets();
     if hasFunctions {
         if hasFnOutput { io.outputLine("static int lt_io_status = 0;"); }
@@ -1046,14 +1306,14 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
             } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
                 if scanDepth > 0 { scanDepth = scanDepth - 1; }
             } else if scanDepth == 0 {
-                if item.kind == frontend.ITEM_KIND_SCOPE or item.kind == frontend.ITEM_KIND_IF or item.kind == frontend.ITEM_KIND_LOOP {
+                if item.kind == frontend.ITEM_KIND_SCOPE or item.kind == frontend.ITEM_KIND_IF or item.kind == frontend.ITEM_KIND_LOOP or item.kind == frontend.ITEM_KIND_LOOP_SEQ {
                     scanBlocks = scanBlocks + 1;
                 } else if item.kind == frontend.ITEM_KIND_END_SCOPE or item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_LOOP {
                     if scanBlocks > 0 { scanBlocks = scanBlocks - 1; }
                 } else if scanBlocks == 0 and isCLocalDeclKind(item.kind) and frontend.tokenBucketHas(fnRefTokens, item.runtime) and
                 not frontend.tokenBucketHas(hoistedGlobals, item.runtime) {
                     hoistedGlobals = frontend.tokenBucketAdd(hoistedGlobals, item.runtime);
-                    io.outputLine("static " + cDeclType(item.kind) + item.runtime + ";");
+                    io.outputLine("static " + cDeclTypeItem(item) + item.runtime + ";");
                 }
             }
         }
@@ -1085,7 +1345,12 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     } else {
         loop reachable as item { listLib.pushBack(mut mainItems, item); }
     }
-    io.outputLine("int main(void) {");
+    if hasInputArgs {
+        io.outputLine("int main(int argc, char **argv) {");
+        io.outputLine("    lt_argc = argc; lt_argv = argv;");
+    } else {
+        io.outputLine("int main(void) {");
+    }
     io.outputLine("    int status = 0;");
     emitArithmeticTemporaries(mainItems);
     emitCItemStream(mainItems, hoistedGlobals, "", "status = 1;");

@@ -163,10 +163,9 @@ loop ibi < 13 {
     ibi = ibi + 1;
 }
 
-/* restricted C compiler still rejects List-returning inputArgs until List<T> lands */
-compilerTest.assertCompileError(root, cComp, "C reject inputArgs",
-"io := import \"core/io\"; io.outputLine(io.inputArgs());\n",
-"C backend does not support inputArgs yet\n");
+/* C compiler supports List<String>-returning inputArgs */
+cArgsCompile := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(io.inputArgs());\n", "");
+test.checkInt("C compiles inputArgs: " + cArgsCompile.stderr, 0, cArgsCompile.status);
 
 /* C compiler executes core/text UTF-8 primitives, pure helpers, and core/format natively */
 ccTextInfo := compilerTest.probeCc();
@@ -255,4 +254,6 @@ if ccInfo.available {
     cIdOnly := compilerTest.compileStdin(root, cComp, cIdSrc, "");
     test.checkInt("C top-level fn status", 0, cIdOnly.status);
 }
-compilerTest.assertCompileError(root, cComp, "C fn List reject", "io := import \"core/io\"; f := fn (): List<Int> { return [1]; }\nio.outputLine(f());\n", "C backend does not support list values yet\n");
+cFnList := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; f := fn (): List<Int> { return [1]; }\nio.outputLine(f());\n", "");
+test.checkInt("C fn List<Int> compiles: " + cFnList.stderr, 0, cFnList.status);
+compilerTest.assertCompileError(root, cComp, "C fn tuple List reject", "io := import \"core/io\"; f := fn (): List<(Int, Int)> { return [(1, 2)]; }\nio.outputLine(f());\n", "C backend does not support list values yet\n");

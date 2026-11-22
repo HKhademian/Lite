@@ -61,8 +61,7 @@ compilerTest.assertCompileError(root, tsComp, "non-Int slice start rejected",
 compilerTest.assertCompileError(root, tsComp, "non-Int slice end rejected",
 "xs := [1, 2];\ny := xs[0..\"b\"];\n",
 "2:12: slice end must be Int, got String\n");
-compilerTest.assertCompileError(root, cComp, "C rejects list range slicing",
-"xs := [1, 2, 3];\ny := xs[1..3];\n",
-"2:8: C backend does not support range slicing yet\n");
+cListSlice := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; xs := [1, 2, 3]; y := xs[1..3]; io.outputLine(y);\n", "");
+test.checkInt("C compiles list range slicing: " + cListSlice.stderr, 0, cListSlice.status);
 
 test.done("range-slicing");

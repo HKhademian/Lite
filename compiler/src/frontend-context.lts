@@ -157,7 +157,28 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; `Never` and other kinds are unchanged. */
 pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     if kind == ir.VALUE_KIND_NEVER { code }
-    else if types.isListKind(kind) or types.isArrayKind(kind) { ir.targetListCopyCode(target, code) }
+    else if types.isListKind(kind) or types.isArrayKind(kind) {
+        if target == ir.TARGET_C {
+            elKind := if types.isListKind(kind) { types.listElementKind(kind) } else { types.arrayElementKind(kind) };
+            tag := types.cListTag(elKind);
+            if tag =!= "" {
+                if textLib.startsWithAt(code, 0, "lt_list_" + tag + "_from(") or
+                textLib.startsWithAt(code, 0, "lt_list_" + tag + "_copy(") or
+                textLib.startsWithAt(code, 0, "lt_list_" + tag + "_slice(") or
+                textLib.startsWithAt(code, 0, "lt_list_" + tag + "_slice_from(") or
+                textLib.startsWithAt(code, 0, "lt_list_" + tag + "_reverse(") or
+                textLib.startsWithAt(code, 0, "lite$inputArgs(") {
+                    code
+                } else {
+                    "lt_list_" + tag + "_copy(" + code + ")"
+                }
+            } else {
+                ir.targetListCopyCode(target, code)
+            }
+        } else {
+            ir.targetListCopyCode(target, code)
+        }
+    }
     else if types.isMapKind(kind) {
         if target == ir.TARGET_TS and not textLib.startsWithAt(code, 0, "new Map<") and not textLib.startsWithAt(code, 0, "new Map(") { "new Map(" + code + ")" } else { code }
     }

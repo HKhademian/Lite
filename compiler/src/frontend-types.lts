@@ -439,6 +439,23 @@ pub mapValueKind := fn(kind: String): String {
     if comma < 0 { "" } else { textLib.slice(kind, comma + 1, textLib.length(kind) - 1) }
 };
 
+/** Maps a C-supported scalar/enum list element kind to its canonical C11 list tag (`i64`, `f64`, `bool`, `str`), or `""` if unsupported. */
+pub cListTag := fn(elemKind: String): String {
+    if numeric.isIntKind(elemKind) or isEnumKind(elemKind) { "i64" }
+    else if numeric.isFloatKind(elemKind) { "f64" }
+    else if elemKind == ir.VALUE_KIND_BOOL { "bool" }
+    else if elemKind == ir.VALUE_KIND_STRING { "str" }
+    else { "" }
+};
+
+/** Maps a canonical C11 list tag (`i64`, `f64`, `bool`, `str`) to its C11 element type name. */
+pub cListElemType := fn(tag: String): String {
+    if tag == "i64" { "int64_t" }
+    else if tag == "f64" { "double" }
+    else if tag == "bool" { "bool" }
+    else { "const char *" }
+};
+
 /** True when `kind` is a value-comparable scalar or nominal enum kind admissible as a `Map<K, V>` key. */
 pub isMapKeyKind := fn(kind: String): Bool {
     numeric.isIntKind(kind) or numeric.isFloatKind(kind) or kind == ir.VALUE_KIND_STRING or

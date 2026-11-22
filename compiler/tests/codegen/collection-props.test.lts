@@ -77,8 +77,10 @@ compilerTest.assertCompileError(root, tsComp, "Set rejects .length",
 compilerTest.assertCompileError(root, tsComp, "String rejects .size",
 "s := \"hi\";\nn := s.size;\n",
 "2:8: String has no property .size\n");
-compilerTest.assertCompileError(root, cComp, "C rejects list collection properties",
-"xs := [1, 2];\nn := xs.length;\n",
-"2:8: C backend does not support collection properties yet\n");
+cListProp := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; xs := [1, 2]; io.outputLine(xs.length, xs.isEmpty);\n", "");
+test.checkInt("C compiles list collection properties: " + cListProp.stderr, 0, cListProp.status);
+compilerTest.assertCompileError(root, cComp, "C rejects map collection properties",
+"m := [\"a\" = 1];\nn := m.size;\n",
+"1:6: C backend does not support Map yet\n");
 
 test.done("collection-props");
