@@ -495,6 +495,7 @@ renderPlaygroundBody := fn(src: String): String {
     "          </svg>",
     "          <span id=\"pg-pause-label\">Playing</span>",
     "        </button>",
+    "        <button id=\"pg-fullscreen\" class=\"pg-copy-btn\" type=\"button\" aria-label=\"Toggle canvas fullscreen\" title=\"Toggle fullscreen (F)\" hidden>Fullscreen</button>",
     "        <button id=\"pg-copy\" class=\"pg-copy-btn\" type=\"button\" aria-label=\"Copy inspector content\">Copy</button>",
     "      </div>",
     "    </div>",

@@ -48,6 +48,33 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     c: document.getElementById("panel-c"),
     canvas: document.getElementById("panel-canvas"),
   };
+  const fullscreenBtn = document.getElementById("pg-fullscreen");
+  function syncFullscreenUi() {
+    if (!fullscreenBtn) return;
+    const isFs = document.fullscreenElement === panels.canvas;
+    fullscreenBtn.textContent = isFs ? "Exit Fullscreen" : "Fullscreen";
+    fullscreenBtn.setAttribute("aria-pressed", isFs ? "true" : "false");
+  }
+  function toggleCanvasFullscreen() {
+    if (!panels.canvas) return;
+    if (document.fullscreenElement === panels.canvas) {
+      if (typeof document.exitFullscreen === "function") void document.exitFullscreen().catch(() => {});
+    } else if (typeof panels.canvas.requestFullscreen === "function") {
+      void panels.canvas.requestFullscreen().catch(() => {});
+    }
+  }
+  if (fullscreenBtn) {
+    fullscreenBtn.addEventListener("click", toggleCanvasFullscreen);
+    document.addEventListener("fullscreenchange", syncFullscreenUi);
+  }
+  if (canvas) {
+    canvas.addEventListener("keydown", (ev) => {
+      if ((ev.key === "f" || ev.key === "F") && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {
+        ev.preventDefault();
+        toggleCanvasFullscreen();
+      }
+    });
+  }
 
   let activeTab = "output";
   let codeMode = "program";
@@ -195,6 +222,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     codeModesBar.hidden = name !== "ts" && name !== "c";
     copyBtn.hidden = name === "canvas";
     pauseBtn.hidden = !showPause;
+    if (fullscreenBtn) fullscreenBtn.hidden = name !== "canvas";
     statusEl.hidden = showPause && statusEl.textContent !== "Modified";
     if (name === "canvas") stage.resumeLoop();
     else stage.pauseLoop();
