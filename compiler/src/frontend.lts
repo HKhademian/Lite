@@ -2304,15 +2304,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     atFnTailLoop = true;
                 }
             }
-            if hasStmtLoopThen or hasStmtLoopFin or loopNeedsExprLowering(source, nameStart, prefix) or (target == TARGET_TS and atFnTailLoop) {
-                if target =!= TARGET_TS {
-                    if hasStmtLoopFin {
-                        failAt(source, afterRawStmtLoopTok, prefix, "C backend does not support finally blocks yet");
-                    }
-                    if hasStmtLoopThen {
-                        failAt(source, nameStart, prefix, "C backend does not support loop then blocks yet");
-                    }
-                }
+            if hasStmtLoopThen or hasStmtLoopFin or loopNeedsExprLowering(source, nameStart, prefix) or atFnTailLoop {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
                 locals = checkStatementTrace(target, source, nameStart, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);

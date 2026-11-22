@@ -1,0 +1,101 @@
+/* End-to-end C11 vs TS parity tests for Phase C10a: tagged blocks/conditionals/loops, then, finally (including LIFO unwinding on early return/goto), and break/continue payloads. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"\n" +
+"/* 1. Tagged block with early return @blk */\n" +
+"absDoubled := fn(x: Int): Int {\n" +
+"    @blk {\n" +
+"        if x < 0 { return @blk 0 - x; }\n" +
+"        x * 2\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"/* 2. Tagged if + then */\n" +
+"scaled := fn(x: Int): Int {\n" +
+"    @cond if x > 5 { x + 1 } else { x - 1 } then {\n" +
+"        @cond.value * 10\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"/* 3. Nested tagged loops with continue @outer, break @outer payload, and then */\n" +
+"nestedLoop := fn(): (sum: Int, val: Int) {\n" +
+"    var sum := 0;\n" +
+"    outerVal := @outer loop [1, 2, 3] as a {\n" +
+"        @inner loop [10, 20] as b {\n" +
+"            if a == 2 and b == 10 { continue @outer; }\n" +
+"            if a == 3 and b == 20 { break @outer sum + a; }\n" +
+"            sum += a * b;\n" +
+"        }\n" +
+"        sum\n" +
+"    } then {\n" +
+"        .value\n" +
+"    };\n" +
+"    (sum = sum, val = outerVal)\n" +
+"};\n" +
+"\n" +
+"/* 4. Nested finally with LIFO unwinding on early return */\n" +
+"unwindReturn := fn(early: Bool): Int {\n" +
+"    {\n" +
+"        {\n" +
+"            if early { return 42; }\n" +
+"            io.outputLine(\"body-normal\");\n" +
+"            7\n" +
+"        } finally {\n" +
+"            io.outputLine(\"fin-inner\");\n" +
+"        }\n" +
+"    } finally {\n" +
+"        io.outputLine(\"fin-outer\");\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"io.outputLine(absDoubled(7), absDoubled(-4));\n" +
+"io.outputLine(scaled(7), scaled(-4));\n" +
+"nl := nestedLoop();\n" +
+"io.outputLine(nl.sum, nl.val);\n" +
+"io.outputLine(unwindReturn(true));\n" +
+"io.outputLine(unwindReturn(false));\n";
+
+expected :=
+"14 4\n" +
+"80 -50\n" +
+"60 63\n" +
+"fin-inner\n" +
+"fin-outer\n" +
+"42\n" +
+"body-normal\n" +
+"fin-inner\n" +
+"fin-outer\n" +
+"7\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+test.checkText("ts stdout", expected, tsRes.stdout);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+    test.checkText("c stderr", "", cRes.stderr);
+} else {
+    cOnly := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt("c compile status: " + cOnly.stderr, 0, cOnly.status);
+}
+
+test.done("c-backend-control-parity");

@@ -360,7 +360,7 @@ unsupportedAggregateCode := fn(code: String): String {
         ch := textLib.at(code, cursor);
         if ch == "\"" {
             cursor = frontend.skipAliasString(code, cursor);
-        } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:")) {
+        } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:") or textLib.startsWithAt(code, cursor, "/*@P:")) {
             endTag := textLib.indexOfText(code, "@*/", cursor + 5);
             cursor = if endTag >= 0 { endTag + 3 } else { size };
         } else if ch == "(" and (textLib.startsWithAt(code, cursor, "((const ") or textLib.startsWithAt(code, cursor, "(const ") or textLib.startsWithAt(code, cursor, "((lt_s_")) {
@@ -425,7 +425,7 @@ normalizeCBuiltinCalls := fn(code: String): String {
         ch := textLib.at(code, cursor);
         if ch == "\"" {
             cursor = frontend.skipAliasString(code, cursor);
-        } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:")) {
+        } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:") or textLib.startsWithAt(code, cursor, "/*@P:")) {
             endTag := textLib.indexOfText(code, "@*/", cursor + 5);
             out = out + textLib.slice(code, flushed, cursor);
             cursor = if endTag >= 0 { endTag + 3 } else { size };
@@ -2192,7 +2192,7 @@ extractCTypeAnnotations := fn(code: String): List<String> {
         ch := textLib.at(code, cursor);
         if ch == "\"" {
             cursor = frontend.skipAliasString(code, cursor);
-        } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:")) {
+        } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:") or textLib.startsWithAt(code, cursor, "/*@P:")) {
             endTag := textLib.indexOfText(code, "@*/", cursor + 5);
             if endTag < 0 { break; }
             listLib.pushBack(mut out, textLib.slice(code, cursor + 3, endTag));
@@ -3599,6 +3599,15 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         loop annots as ann {
             if textLib.startsWithAt(ann, 0, "T:") {
                 listLib.pushBack(mut seedKinds, textLib.slice(ann, 2, textLib.length(ann)));
+            } else if textLib.startsWithAt(ann, 0, "P:") {
+                pk := textLib.slice(ann, 2, textLib.length(ann));
+                listLib.pushBack(mut seedKinds, pk);
+                pFlagsA := collectTypeFlags(pk);
+                loop pFlagsA as pfA {
+                    if pfA == "FLOAT" { floatOutput = true; floatValues = true; }
+                    else if pfA == "FLOAT32" { float32Values = true; }
+                    else { printTypeKeys = frontend.tokenBucketAdd(printTypeKeys, pfA); }
+                }
             } else if textLib.startsWithAt(ann, 0, "C:") {
                 body := textLib.slice(ann, 2, textLib.length(ann));
                 bar := textLib.indexOfText(body, "|", 0);

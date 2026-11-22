@@ -855,7 +855,13 @@ next: Int
 
 /** Formats one conditional branch statement for a lowered IIFE conditional (`if`, `else if`, `else`, or `match` arm). */
 pub condBranchStmtCode := fn(target: String, valKind: String, valVar: String, branchKind: String, branchCode: String): String {
-    if valKind == ir.VALUE_KIND_NEVER {
+    if target == ir.TARGET_C {
+        if valKind == ir.VALUE_KIND_NEVER or branchKind == ir.VALUE_KIND_NEVER or valKind == ir.VALUE_KIND_UNIT {
+            cUnwrapIntoVar("", branchKind, branchCode)
+        } else {
+            cUnwrapIntoVar(valVar, valKind, assignValueCode(target, valKind, branchKind, branchCode))
+        }
+    } else if valKind == ir.VALUE_KIND_NEVER {
         "return (" + branchCode + ");"
     } else if branchKind == ir.VALUE_KIND_NEVER {
         "(" + branchCode + ");"
@@ -864,6 +870,89 @@ pub condBranchStmtCode := fn(target: String, valKind: String, valVar: String, br
     } else {
         valVar + " = " + assignValueCode(target, valKind, branchKind, branchCode) + ";"
     }
+};
+
+/** Rewrites `return ...;` and outer `goto <label>;` inside C11 `tryCode` so `{ finCode }` runs before every early exit. */
+pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: String, finId: Int): String {
+    if finCode == "" { return tryCode; }
+    if textLib.indexOfText(tryCode, "return", 0) < 0 and textLib.indexOfText(tryCode, "goto ", 0) < 0 {
+        return tryCode;
+    }
+    size := textLib.length(tryCode);
+    var out := "";
+    var cursor := 0;
+    var flushed := 0;
+    var rSeq := 0;
+    loop cursor < size {
+        ch := textLib.at(tryCode, cursor);
+        if ch == "\"" or ch == "'" {
+            cursor = cursor + 1;
+            loop cursor < size {
+                c2 := textLib.at(tryCode, cursor);
+                if c2 == "\\" { cursor = cursor + 2; }
+                else if c2 == ch { cursor = cursor + 1; break; }
+                else { cursor = cursor + 1; }
+            }
+        } else if ch == "g" and textLib.startsWithAt(tryCode, cursor, "goto ") and
+        (cursor == 0 or not textLib.isNameContinue(textLib.at(tryCode, cursor - 1))) {
+            lblStart := cursor + 5;
+            semi := textLib.indexOfText(tryCode, ";", lblStart);
+            if semi > lblStart {
+                lbl := textLib.trim(textLib.slice(tryCode, lblStart, semi));
+                if textLib.indexOfText(tryCode, lbl + ":", 0) < 0 {
+                    out = out + textLib.slice(tryCode, flushed, cursor) + "{ { " + finCode + " } goto " + lbl + "; }";
+                    cursor = semi + 1;
+                    flushed = cursor;
+                    continue;
+                }
+            }
+            cursor = cursor + 1;
+        } else if ch == "r" and textLib.startsWithAt(tryCode, cursor, "return") and
+        (cursor == 0 or not textLib.isNameContinue(textLib.at(tryCode, cursor - 1))) and
+        (cursor + 6 >= size or not textLib.isNameContinue(textLib.at(tryCode, cursor + 6))) {
+            var scan := cursor + 6;
+            var depth := 0;
+            var semi := -1;
+            loop scan < size {
+                sc := textLib.at(tryCode, scan);
+                if sc == "\"" or sc == "'" {
+                    scan = scan + 1;
+                    loop scan < size {
+                        s2 := textLib.at(tryCode, scan);
+                        if s2 == "\\" { scan = scan + 2; }
+                        else if s2 == sc { scan = scan + 1; break; }
+                        else { scan = scan + 1; }
+                    }
+                } else if sc == "(" or sc == "{" or sc == "[" {
+                    depth = depth + 1; scan = scan + 1;
+                } else if sc == ")" or sc == "}" or sc == "]" {
+                    if depth > 0 { depth = depth - 1; }
+                    scan = scan + 1;
+                } else if sc == ";" and depth == 0 {
+                    semi = scan; break;
+                } else {
+                    scan = scan + 1;
+                }
+            }
+            if semi >= 0 {
+                retExpr := textLib.trim(textLib.slice(tryCode, cursor + 6, semi));
+                if retExpr == "" or fnRetKind == "" or fnRetKind == ir.VALUE_KIND_UNIT or fnRetKind == ir.VALUE_KIND_NEVER {
+                    out = out + textLib.slice(tryCode, flushed, cursor) + "{ { " + finCode + " } return; }";
+                } else {
+                    rSeq = rSeq + 1;
+                    tmpVar := "lt_fr_" + integer.intText(finId) + "_" + integer.intText(rSeq);
+                    out = out + textLib.slice(tryCode, flushed, cursor) + "{ " + types.cValueType(fnRetKind) + " " + tmpVar + " = (" + retExpr + "); { " + finCode + " } return " + tmpVar + "; }";
+                }
+                cursor = semi + 1;
+                flushed = cursor;
+                continue;
+            }
+            cursor = cursor + 1;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    if flushed == 0 { tryCode } else { out + textLib.slice(tryCode, flushed, size) }
 };
 
 /** Returns the number of entries in `ctxs`. */
