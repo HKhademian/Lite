@@ -474,19 +474,7 @@ _rmMod := fs.remove(modTmp.path);
 compilerTest.assertCompileErrorContainsNamed(root, cComp, "c trace pre-init", "f := fn(): Int { late }; early := f(); late := 1;", fixtureName, "cannot call before late is initialized");
 
 cRejCases: List<(src: String, sub: String)> = [
-    (src = "f := fn(xs: List<Int>): Int { 1 }; io := import \"core/io\"; io.outputLine(f([1]));", sub = "list values"),
-    (src = "f := fn(): (a: Int) { (a = 1) }; io := import \"core/io\"; _ := f();", sub = "tuple values"),
-    (src = "fs := import \"core/file\"; x := fs.kind(\".\");", sub = "C backend does not support filesystem builtins yet"),
-    (src = "fs := import \"core/file\"; x := fs.readBytes(\".\");", sub = "filesystem builtins"),
-    (src = "fs := import \"core/file\"; x := fs.writeBytes(\".\", []);", sub = "filesystem builtins"),
-    (src = "io := import \"core/io\"; x := io.bufferWriter();", sub = "stream builtins"),
-    (src = "io := import \"core/io\"; x := io.stdinReader();", sub = "stream builtins"),
-    (src = "proc := import \"core/process\"; x := proc.cwd();", sub = "C backend does not support process builtins yet"),
-    (src = "proc := import \"core/process\"; x := proc.runBytes(\"true\", [], \"\", [], 0, [], \"\", \"\");", sub = "process builtins"),
-    (src = "c := import \"core/crypto\"; x := c.sha256Text(\"a\");", sub = "crypto builtins"),
-    (src = "c := import \"core/crypto\"; x := c.sha256Bytes([]);", sub = "crypto builtins"),
-    (src = "c := import \"core/crypto\"; x := c.sha512Text(\"a\");", sub = "crypto builtins"),
-    (src = "c := import \"core/crypto\"; x := c.base64Decode(\"YQ==\");", sub = "crypto builtins"),
+    (src = "proc := import \"core/process\"; x := proc.runBytes(\"true\", [], \"\", [], 0, [], \"\", \"\");", sub = "process spawn builtins"),
     (src = "c := import \"core/crypto\"; x := c.randomBytes(4);", sub = "crypto builtins"),
     (src = "t := import \"core/time\"; x := t.monotonicNs();", sub = "time builtins"),
     (src = "t := import \"core/time\"; t.sleepMs(1);", sub = "time builtins"),
@@ -495,10 +483,7 @@ cRejCases: List<(src: String, sub: String)> = [
     (src = "extHttp := import \"external/http\"; x := extHttp.serveStatic(\".\", \"\", \"127.0.0.1\", 0);", sub = "external host builtins"),
     (src = "extBench := import \"external/bench\"; x := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\");", sub = "external host builtins"),
     (src = "pool := import \"external/pool\"; x := pool.cpuCount();", sub = "external host builtins"),
-    (src = "pool := import \"external/pool\"; x := pool.runPoolJson([], [], \"\", 0);", sub = "external host builtins"),
-    (src = "u := import \"core/unicode\"; x := u.utf8Encode(\"ab\");", sub = "unicode builtins"),
-    (src = "u := import \"core/unicode\"; x := u.utf16Length(\"ab\");", sub = "unicode builtins"),
-    (src = "u := import \"core/unicode\"; x := u.codePointAt(\"ab\", 0);", sub = "unicode builtins")
+    (src = "pool := import \"external/pool\"; x := pool.runPoolJson([], [], \"\", 0);", sub = "external host builtins")
 ];
 loop cRejCases as cr {
     cR := compilerTest.compileStdin(root, cComp, cr.src, fixtureName);

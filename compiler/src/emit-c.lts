@@ -92,6 +92,21 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
     io.outputLine("    if ((b & 0xF8u) == 0xF0u && s[offset + 1] != '\\0' && s[offset + 2] != '\\0' && s[offset + 3] != '\\0') { return 4u; }");
     io.outputLine("    return 1u;");
     io.outputLine("}");
+    io.outputLine("typedef struct { const char *s; size_t byte_len; int64_t cp_len; bool ascii; size_t last_b; int64_t last_cp; } lt_utf8_meta;");
+    io.outputLine("static lt_utf8_meta lt_utf8_cache[8];");
+    io.outputLine("static int lt_utf8_cache_next = 0;");
+    io.outputLine("static lt_utf8_meta *lt_utf8_get_meta(const char *s) {");
+    io.outputLine("    for (int i = 0; i < 8; i += 1) { if (lt_utf8_cache[i].s == s) { return &lt_utf8_cache[i]; } }");
+    io.outputLine("    size_t b = 0u; int64_t cp = 0; bool ascii = true;");
+    io.outputLine("    while (s[b] != '\\0') {");
+    io.outputLine("        if ((unsigned char)s[b] < 0x80u) { b += 1u; cp += 1; }");
+    io.outputLine("        else { ascii = false; b += lt_utf8_step(s, b); cp += 1; }");
+    io.outputLine("    }");
+    io.outputLine("    lt_utf8_meta *slot = &lt_utf8_cache[lt_utf8_cache_next];");
+    io.outputLine("    lt_utf8_cache_next = (lt_utf8_cache_next + 1) & 7;");
+    io.outputLine("    slot->s = s; slot->byte_len = b; slot->cp_len = cp; slot->ascii = ascii; slot->last_b = 0u; slot->last_cp = 0;");
+    io.outputLine("    return slot;");
+    io.outputLine("}");
     if hasAt or hasSlice {
         io.outputLine("static const char *lt_alloc_text_slice(const char *s, size_t start, size_t end) {");
         io.outputLine("    const size_t len = end - start;");
@@ -102,28 +117,31 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
         io.outputLine("    return out;");
         io.outputLine("}");
         io.outputLine("static size_t lt_utf8_byte_at(const char *s, int64_t target, bool allow_end, bool *ok) {");
-        io.outputLine("    if (target < 0) { *ok = false; return 0u; }");
-        io.outputLine("    size_t byte_pos = 0u;");
-        io.outputLine("    int64_t count = 0;");
-        io.outputLine("    while (s[byte_pos] != '\\0') {");
-        io.outputLine("        if (count == target) { *ok = true; return byte_pos; }");
-        io.outputLine("        byte_pos += lt_utf8_step(s, byte_pos);");
-        io.outputLine("        count += 1;");
-        io.outputLine("    }");
-        io.outputLine("    *ok = allow_end && count == target;");
+        io.outputLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
+        io.outputLine("    if (target < 0 || target > m->cp_len || (!allow_end && target == m->cp_len)) { *ok = false; return 0u; }");
+        io.outputLine("    if (m->ascii) { *ok = true; return (size_t)target; }");
+        io.outputLine("    if (target == m->cp_len) { *ok = true; return m->byte_len; }");
+        io.outputLine("    size_t byte_pos = (target >= m->last_cp) ? m->last_b : 0u;");
+        io.outputLine("    int64_t count = (target >= m->last_cp) ? m->last_cp : 0;");
+        io.outputLine("    while (count < target && s[byte_pos] != '\\0') { byte_pos += lt_utf8_step(s, byte_pos); count += 1; }");
+        io.outputLine("    m->last_b = byte_pos; m->last_cp = count;");
+        io.outputLine("    *ok = true;");
         io.outputLine("    return byte_pos;");
         io.outputLine("}");
     }
     if hasLen {
-        io.outputLine("static int64_t lt_text_length(const char *s) {");
-        io.outputLine("    size_t byte_pos = 0u;");
-        io.outputLine("    int64_t count = 0;");
-        io.outputLine("    while (s[byte_pos] != '\\0') { byte_pos += lt_utf8_step(s, byte_pos); count += 1; }");
-        io.outputLine("    return count;");
-        io.outputLine("}");
+        io.outputLine("static int64_t lt_text_length(const char *s) { return lt_utf8_get_meta(s)->cp_len; }");
     }
     if hasAt {
+        io.outputLine("static char lt_ascii_chars[128][2];");
+        io.outputLine("static bool lt_ascii_chars_init = false;");
         io.outputLine("static const char *lt_text_at(const char *s, int64_t position, size_t at) {");
+        io.outputLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
+        io.outputLine("    if (position < 0 || position >= m->cp_len) { lt_bound_fault(at, \"textAt index outside text\"); }");
+        io.outputLine("    if (m->ascii) {");
+        io.outputLine("        if (!lt_ascii_chars_init) { for (int i = 0; i < 128; i += 1) { lt_ascii_chars[i][0] = (char)i; lt_ascii_chars[i][1] = '\\0'; } lt_ascii_chars_init = true; }");
+        io.outputLine("        return lt_ascii_chars[(unsigned char)s[position]];");
+        io.outputLine("    }");
         io.outputLine("    bool ok = false;");
         io.outputLine("    const size_t start = lt_utf8_byte_at(s, position, false, &ok);");
         io.outputLine("    if (!ok) { lt_bound_fault(at, \"textAt index outside text\"); }");
@@ -132,7 +150,9 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
     }
     if hasSlice {
         io.outputLine("static const char *lt_text_slice(const char *s, int64_t start, int64_t end, size_t at) {");
-        io.outputLine("    if (start < 0 || end < start) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
+        io.outputLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
+        io.outputLine("    if (start < 0 || end < start || end > m->cp_len) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
+        io.outputLine("    if (m->ascii) { return lt_alloc_text_slice(s, (size_t)start, (size_t)end); }");
         io.outputLine("    bool ok = false;");
         io.outputLine("    const size_t b_start = lt_utf8_byte_at(s, start, true, &ok);");
         io.outputLine("    if (!ok) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
@@ -428,6 +448,158 @@ normalizeCBuiltinCalls := fn(code: String): String {
             out = out + textLib.slice(code, flushed, cursor) + "lt_input_float(";
             cursor = cursor + textLib.length("lite$inputFloat(");
             flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$unicodeToCodePoints(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_unicode_to_code_points(";
+            cursor = cursor + textLib.length("lite$unicodeToCodePoints(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$unicodeFromCodePoints(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_unicode_from_code_points(";
+            cursor = cursor + textLib.length("lite$unicodeFromCodePoints(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioStdinReader(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_stdin_reader(";
+            cursor = cursor + textLib.length("lite$ioStdinReader(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioStdoutWriter(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_stdout_writer(";
+            cursor = cursor + textLib.length("lite$ioStdoutWriter(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioStderrWriter(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_stderr_writer(";
+            cursor = cursor + textLib.length("lite$ioStderrWriter(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioBufferReader(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_buffer_reader(";
+            cursor = cursor + textLib.length("lite$ioBufferReader(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioBufferWriter(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_buffer_writer(";
+            cursor = cursor + textLib.length("lite$ioBufferWriter(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterBytes(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_writer_bytes(";
+            cursor = cursor + textLib.length("lite$ioWriterBytes(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterText(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_writer_text(";
+            cursor = cursor + textLib.length("lite$ioWriterText(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioClearWriter(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_clear_writer(";
+            cursor = cursor + textLib.length("lite$ioClearWriter(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioReaderOk(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_reader_ok(";
+            cursor = cursor + textLib.length("lite$ioReaderOk(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioReaderAtEof(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_reader_at_eof(";
+            cursor = cursor + textLib.length("lite$ioReaderAtEof(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioReaderError(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_reader_error(";
+            cursor = cursor + textLib.length("lite$ioReaderError(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioRead(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_read(";
+            cursor = cursor + textLib.length("lite$ioRead(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioCloseReader(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_close_reader(";
+            cursor = cursor + textLib.length("lite$ioCloseReader(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterOk(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_writer_ok(";
+            cursor = cursor + textLib.length("lite$ioWriterOk(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterError(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_writer_error(";
+            cursor = cursor + textLib.length("lite$ioWriterError(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWrite(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_write(";
+            cursor = cursor + textLib.length("lite$ioWrite(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioFlush(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_flush(";
+            cursor = cursor + textLib.length("lite$ioFlush(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioCloseWriter(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_io_close_writer(";
+            cursor = cursor + textLib.length("lite$ioCloseWriter(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileKind(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_kind(";
+            cursor = cursor + textLib.length("lite$fileKind(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileOpenReader(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_open_reader(";
+            cursor = cursor + textLib.length("lite$fileOpenReader(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileOpenWriter(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_open_writer(";
+            cursor = cursor + textLib.length("lite$fileOpenWriter(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileOpenAppender(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_open_appender(";
+            cursor = cursor + textLib.length("lite$fileOpenAppender(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileListDir(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_list_dir(";
+            cursor = cursor + textLib.length("lite$fileListDir(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileMakeDir(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_make_dir(";
+            cursor = cursor + textLib.length("lite$fileMakeDir(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileRemove(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_remove(";
+            cursor = cursor + textLib.length("lite$fileRemove(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileCopy(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_copy(";
+            cursor = cursor + textLib.length("lite$fileCopy(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileSymlink(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_symlink(";
+            cursor = cursor + textLib.length("lite$fileSymlink(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileRealPath(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_real_path(";
+            cursor = cursor + textLib.length("lite$fileRealPath(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileMakeTempDir(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_file_make_temp_dir(";
+            cursor = cursor + textLib.length("lite$fileMakeTempDir(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processCwd(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_process_cwd(";
+            cursor = cursor + textLib.length("lite$processCwd(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processExecPath(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_process_exec_path(";
+            cursor = cursor + textLib.length("lite$processExecPath(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processEntryPath(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_process_entry_path(";
+            cursor = cursor + textLib.length("lite$processEntryPath(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processPlatform(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_process_platform(";
+            cursor = cursor + textLib.length("lite$processPlatform(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processArch(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_process_arch(";
+            cursor = cursor + textLib.length("lite$processArch(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processRuntimeVersion(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_process_runtime_version(";
+            cursor = cursor + textLib.length("lite$processRuntimeVersion(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processEnvGet(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_process_env_get(";
+            cursor = cursor + textLib.length("lite$processEnvGet(");
+            flushed = cursor;
         } else {
             cursor = cursor + 1;
         }
@@ -473,34 +645,8 @@ usesIntHelper := fn(calls: String, name: String): Bool {
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
 unsupportedBuiltinCode := fn(calls: String): String {
     match {
-        usesIntHelper(calls, "lite$fileKind(") or usesIntHelper(calls, "lite$fileOpenReader(") or
-        usesIntHelper(calls, "lite$fileOpenWriter(") or usesIntHelper(calls, "lite$fileOpenAppender(") or
-        usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
-        usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
-        usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lite$fileRealPath(") or
-        usesIntHelper(calls, "lite$fileMakeTempDir(") {
-            "C backend does not support filesystem builtins yet"
-        }
-        usesIntHelper(calls, "lite$ioStdinReader(") or usesIntHelper(calls, "lite$ioStdoutWriter(") or
-        usesIntHelper(calls, "lite$ioStderrWriter(") or usesIntHelper(calls, "lite$ioBufferReader(") or
-        usesIntHelper(calls, "lite$ioTextReader(") or usesIntHelper(calls, "lite$ioBufferWriter(") or
-        usesIntHelper(calls, "lite$ioWriterBytes(") or usesIntHelper(calls, "lite$ioWriterText(") or
-        usesIntHelper(calls, "lite$ioClearWriter(") or usesIntHelper(calls, "lite$ioReaderOk(") or
-        usesIntHelper(calls, "lite$ioReaderAtEof(") or usesIntHelper(calls, "lite$ioReaderError(") or
-        usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioReadAll(") or
-        usesIntHelper(calls, "lite$ioReadAllText(") or usesIntHelper(calls, "lite$ioReadLine(") or
-        usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioWriterOk(") or
-        usesIntHelper(calls, "lite$ioWriterError(") or usesIntHelper(calls, "lite$ioWrite(") or
-        usesIntHelper(calls, "lite$ioWriteText(") or usesIntHelper(calls, "lite$ioWriteLine(") or
-        usesIntHelper(calls, "lite$ioFlush(") or usesIntHelper(calls, "lite$ioCloseWriter(") {
-            "C backend does not support stream builtins yet"
-        }
-        usesIntHelper(calls, "lite$processCwd(") or usesIntHelper(calls, "lite$processExecPath(") or
-        usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processPlatform(") or
-        usesIntHelper(calls, "lite$processArch(") or usesIntHelper(calls, "lite$processRuntimeVersion(") or
-        usesIntHelper(calls, "lite$processEnvGet(") or usesIntHelper(calls, "lite$processRun(") or
-        usesIntHelper(calls, "lite$processRunBytes(") {
-            "C backend does not support process builtins yet"
+        usesIntHelper(calls, "lite$processRun(") or usesIntHelper(calls, "lite$processRunBytes(") {
+            "C backend does not support process spawn builtins yet"
         }
         usesIntHelper(calls, "lite$cryptoRandomBytes(") or usesIntHelper(calls, "lite$cryptoDigestBytes(") or
         usesIntHelper(calls, "lite$cryptoDigestText(") or usesIntHelper(calls, "lite$cryptoDigestFile(") or
@@ -512,9 +658,6 @@ unsupportedBuiltinCode := fn(calls: String): String {
         usesIntHelper(calls, "lite$timeSleepMs(") or usesIntHelper(calls, "lite$timeLocalDate(") {
             "C backend does not support time builtins yet"
         }
-        usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") {
-            "C backend does not support unicode builtins yet"
-        }
         usesIntHelper(calls, "lite$extTsStripTypes(") or usesIntHelper(calls, "lite$extHttpFetchToFile(") or
         usesIntHelper(calls, "lite$extHttpServeStatic(") or usesIntHelper(calls, "lite$extBenchMeasureCompiler(") or
         usesIntHelper(calls, "lite$extPoolCpuCount(") or usesIntHelper(calls, "lite$extPoolRunJson(") {
@@ -522,7 +665,48 @@ unsupportedBuiltinCode := fn(calls: String): String {
         }
         _ { "" }
     }
-}
+};
+
+/** True when any emitted item calls a core/unicode hard builtin. */
+usesUnicodeBuiltins := fn(calls: String): Bool {
+    usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(")
+};
+
+/** True when any emitted item calls a core/io stream or core/file stream opener builtin. */
+usesStreamBuiltins := fn(calls: String): Bool {
+    usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or
+    usesIntHelper(calls, "lite$fileOpenAppender(") or usesIntHelper(calls, "lite$ioStdinReader(") or
+    usesIntHelper(calls, "lite$ioStdoutWriter(") or usesIntHelper(calls, "lite$ioStderrWriter(") or
+    usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioBufferWriter(") or
+    usesIntHelper(calls, "lite$ioWriterBytes(") or usesIntHelper(calls, "lite$ioWriterText(") or
+    usesIntHelper(calls, "lite$ioClearWriter(") or usesIntHelper(calls, "lite$ioReaderOk(") or
+    usesIntHelper(calls, "lite$ioReaderAtEof(") or usesIntHelper(calls, "lite$ioReaderError(") or
+    usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioCloseReader(") or
+    usesIntHelper(calls, "lite$ioWriterOk(") or usesIntHelper(calls, "lite$ioWriterError(") or
+    usesIntHelper(calls, "lite$ioWrite(") or usesIntHelper(calls, "lite$ioFlush(") or
+    usesIntHelper(calls, "lite$ioCloseWriter(")
+};
+
+/** True when any emitted item calls a core/file non-stream filesystem builtin. */
+usesFileBuiltins := fn(calls: String): Bool {
+    usesIntHelper(calls, "lite$fileKind(") or usesIntHelper(calls, "lite$fileListDir(") or
+    usesIntHelper(calls, "lite$fileMakeDir(") or usesIntHelper(calls, "lite$fileRemove(") or
+    usesIntHelper(calls, "lite$fileCopy(") or usesIntHelper(calls, "lite$fileSymlink(") or
+    usesIntHelper(calls, "lite$fileRealPath(") or usesIntHelper(calls, "lite$fileMakeTempDir(")
+};
+
+/** True when any emitted item calls a core/process query builtin. */
+usesProcessQueryBuiltins := fn(calls: String): Bool {
+    usesIntHelper(calls, "lite$processCwd(") or usesIntHelper(calls, "lite$processExecPath(") or
+    usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processPlatform(") or
+    usesIntHelper(calls, "lite$processArch(") or usesIntHelper(calls, "lite$processRuntimeVersion(") or
+    usesIntHelper(calls, "lite$processEnvGet(")
+};
+
+/** True when any emitted item needs POSIX OS headers (`unistd.h`, `fcntl.h`, `sys/stat.h`, `dirent.h`). */
+usesPosixHost := fn(calls: String): Bool {
+    usesStreamBuiltins(calls) or usesFileBuiltins(calls) or usesProcessQueryBuiltins(calls)
+};
 
 /** True when any emitted item needs one of the checked Int division helpers. */
 usesIntDivision := fn(calls: String): Bool {
@@ -833,7 +1017,7 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     if hasKeys {
         kListType := "lt_list_" + kTag;
         io.outputLine("static " + kListType + " " + mTag + "_keys(" + mTag + " m) {");
-        io.outputLine("    " + kListType + " out = { NULL, m.len, m.len };");
+        io.outputLine("    " + kListType + " out = { NULL, m.len, m.len, NULL };");
         io.outputLine("    if (m.len > 0) {");
         io.outputLine("        out.data = malloc((size_t)m.len * sizeof(" + kType + "));");
         io.outputLine("        if (out.data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
@@ -847,7 +1031,7 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         if vListTag =!= "" {
             vListType := "lt_list_" + vListTag;
             io.outputLine("static " + vListType + " " + mTag + "_values(" + mTag + " m) {");
-            io.outputLine("    " + vListType + " out = { NULL, m.len, m.len };");
+            io.outputLine("    " + vListType + " out = { NULL, m.len, m.len, NULL };");
             io.outputLine("    if (m.len > 0) {");
             io.outputLine("        out.data = malloc((size_t)m.len * sizeof(" + vType + "));");
             io.outputLine("        if (out.data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
@@ -943,7 +1127,7 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     if hasValues {
         vListType := "lt_list_" + kTag;
         io.outputLine("static " + vListType + " " + sTag + "_values(" + sTag + " s) {");
-        io.outputLine("    " + vListType + " out = { NULL, s.len, s.len };");
+        io.outputLine("    " + vListType + " out = { NULL, s.len, s.len, NULL };");
         io.outputLine("    if (s.len > 0) {");
         io.outputLine("        out.data = malloc((size_t)s.len * sizeof(" + eType + "));");
         io.outputLine("        if (out.data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
@@ -983,13 +1167,16 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: String, needCopy
     hasSlice := usesIntHelper(calls, lType + "_slice(") or hasSliceFrom;
     hasReverse := usesIntHelper(calls, lType + "_reverse(");
     hasClear := usesIntHelper(calls, lType + "_clear(");
-    io.outputLine("typedef struct { " + cType + " *data; int64_t len; int64_t cap; } " + lType + ";");
+    io.outputLine("typedef struct { " + cType + " *data; int64_t len; int64_t cap; int64_t *rc; } " + lType + ";");
+    hasMut := hasSet or hasPushBack or hasPushFront or hasPopBack or hasPopFront;
     if hasFrom or hasCopy or hasSlice or hasReverse {
         io.outputLine("static " + lType + " " + lType + "_from(int64_t count, " + cElemConstPtr + "elems) {");
-        io.outputLine("    " + lType + " out = { NULL, count, count };");
+        io.outputLine("    " + lType + " out = { NULL, count, count, NULL };");
         io.outputLine("    if (count > 0) {");
         io.outputLine("        out.data = malloc((size_t)count * sizeof(" + cType + "));");
-        io.outputLine("        if (out.data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
+        io.outputLine("        out.rc = malloc(sizeof(int64_t));");
+        io.outputLine("        if (out.data == NULL || out.rc == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
+        io.outputLine("        *(out.rc) = 1;");
         io.outputLine("        memcpy(out.data, elems, (size_t)count * sizeof(" + cType + "));");
         io.outputLine("    }");
         io.outputLine("    return out;");
@@ -997,6 +1184,8 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: String, needCopy
     }
     if hasCopy {
         io.outputLine("static " + lType + " " + lType + "_copy(" + lType + " src) {");
+        io.outputLine("    if (src.len <= 0) { return (" + lType + "){ NULL, 0, 0, NULL }; }");
+        io.outputLine("    if (src.rc != NULL) { *(src.rc) += 1; return src; }");
         if elemNeedsDeepCopy {
             io.outputLine("    " + lType + " out = " + lType + "_from(src.len, src.data);");
             io.outputLine("    for (int64_t i = 0; i < out.len; i += 1) { out.data[i] = " + tag + "_copy(out.data[i]); }");
@@ -1004,6 +1193,26 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: String, needCopy
         } else {
             io.outputLine("    return " + lType + "_from(src.len, src.data);");
         }
+        io.outputLine("}");
+    }
+    if hasMut {
+        io.outputLine("static void " + lType + "_detach(" + lType + " *xs, int64_t min_cap) {");
+        io.outputLine("    if (xs->rc != NULL && *(xs->rc) > 1) {");
+        io.outputLine("        *(xs->rc) -= 1;");
+        io.outputLine("        int64_t ncap = xs->len > min_cap ? xs->len : min_cap;");
+        io.outputLine("        if (ncap < 8) { ncap = 8; }");
+        io.outputLine("        " + cType + " *buf = malloc((size_t)ncap * sizeof(" + cType + "));");
+        io.outputLine("        int64_t *nrc = malloc(sizeof(int64_t));");
+        io.outputLine("        if (buf == NULL || nrc == NULL) { fprintf(stderr, \"MemoryFault: cannot detach list\\n\"); exit(1); }");
+        io.outputLine("        *nrc = 1;");
+        io.outputLine("        if (xs->len > 0) {");
+        io.outputLine("            memcpy(buf, xs->data, (size_t)xs->len * sizeof(" + cType + "));");
+        if elemNeedsDeepCopy {
+            io.outputLine("            for (int64_t i = 0; i < xs->len; i += 1) { buf[i] = " + tag + "_copy(buf[i]); }");
+        }
+        io.outputLine("        }");
+        io.outputLine("        xs->data = buf; xs->cap = ncap; xs->rc = nrc;");
+        io.outputLine("    }");
         io.outputLine("}");
     }
     if hasAt {
@@ -1015,16 +1224,19 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: String, needCopy
     if hasSet {
         io.outputLine("static void " + lType + "_set(" + lType + " *xs, int64_t idx, " + cType + " val, size_t at) {");
         io.outputLine("    if (idx < 0 || idx >= xs->len) { lt_bound_fault(at, \"list index outside its extent\"); }");
+        io.outputLine("    " + lType + "_detach(xs, xs->len);");
         io.outputLine("    xs->data[idx] = val;");
         io.outputLine("}");
     }
     if hasPushBack or hasPushFront {
         io.outputLine("static void " + lType + "_grow(" + lType + " *xs, int64_t need) {");
+        io.outputLine("    " + lType + "_detach(xs, need);");
         io.outputLine("    if (xs->cap >= need) { return; }");
         io.outputLine("    int64_t next = xs->cap > 0 ? xs->cap * 2 : 8;");
         io.outputLine("    while (next < need) { next *= 2; }");
         io.outputLine("    " + cType + " *buf = realloc(xs->data, (size_t)next * sizeof(" + cType + "));");
         io.outputLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow list\\n\"); exit(1); }");
+        io.outputLine("    if (xs->rc == NULL) { xs->rc = malloc(sizeof(int64_t)); if (xs->rc == NULL) { fprintf(stderr, \"MemoryFault: cannot grow list\\n\"); exit(1); } *(xs->rc) = 1; }");
         io.outputLine("    xs->data = buf; xs->cap = next;");
         io.outputLine("}");
     }
@@ -1044,12 +1256,14 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: String, needCopy
     if hasPopBack {
         io.outputLine("static " + cType + " " + lType + "_pop_back(" + lType + " *xs, size_t at) {");
         io.outputLine("    if (xs->len <= 0) { lt_bound_fault(at, \"cannot pop from an empty list\"); }");
+        io.outputLine("    " + lType + "_detach(xs, xs->len);");
         io.outputLine("    return xs->data[--xs->len];");
         io.outputLine("}");
     }
     if hasPopFront {
         io.outputLine("static " + cType + " " + lType + "_pop_front(" + lType + " *xs, size_t at) {");
         io.outputLine("    if (xs->len <= 0) { lt_bound_fault(at, \"cannot pop from an empty list\"); }");
+        io.outputLine("    " + lType + "_detach(xs, xs->len);");
         io.outputLine("    " + cType + " head = xs->data[0];");
         io.outputLine("    xs->len -= 1;");
         io.outputLine("    if (xs->len > 0) { memmove(xs->data, xs->data + 1, (size_t)xs->len * sizeof(" + cType + ")); }");
@@ -1075,7 +1289,10 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: String, needCopy
         io.outputLine("}");
     }
     if hasClear {
-        io.outputLine("static void " + lType + "_clear(" + lType + " *xs) { xs->len = 0; }");
+        io.outputLine("static void " + lType + "_clear(" + lType + " *xs) {");
+        io.outputLine("    if (xs->rc != NULL && *(xs->rc) > 1) { *(xs->rc) -= 1; xs->data = NULL; xs->cap = 0; xs->rc = NULL; }");
+        io.outputLine("    xs->len = 0;");
+        io.outputLine("}");
     }
     if needPrint {
         io.outputLine("static int " + lType + "_print(" + lType + " xs) {");
@@ -1764,6 +1981,645 @@ extractCTypeAnnotations := fn(code: String): List<String> {
     out
 };
 
+/** Emits C11 `core/unicode` hard builtin helpers (`toCodePoints`, `fromCodePoints`). */
+emitCUnicodeBuiltinHelpers := fn(calls: String): Unit {
+    if usesIntHelper(calls, "lite$unicodeToCodePoints(") {
+        io.outputLine("static lt_list_i64 lt_unicode_to_code_points(const char *text) {");
+        io.outputLine("    const uint8_t *p = (const uint8_t *)text;");
+        io.outputLine("    int64_t len = 0; int64_t cap = 16;");
+        io.outputLine("    int64_t *data = malloc((size_t)cap * sizeof(int64_t));");
+        io.outputLine("    if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate code points\\n\"); exit(1); }");
+        io.outputLine("    while (*p != 0) {");
+        io.outputLine("        int64_t cp = 0xFFFD;");
+        io.outputLine("        uint8_t b0 = *p;");
+        io.outputLine("        if (b0 < 0x80) { cp = (int64_t)b0; p += 1; }");
+        io.outputLine("        else if ((b0 & 0xE0) == 0xC0 && p[1] != 0) { cp = (int64_t)(((b0 & 0x1F) << 6) | (p[1] & 0x3F)); p += 2; }");
+        io.outputLine("        else if ((b0 & 0xF0) == 0xE0 && p[1] != 0 && p[2] != 0) { cp = (int64_t)(((b0 & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F)); p += 3; }");
+        io.outputLine("        else if ((b0 & 0xF8) == 0xF0 && p[1] != 0 && p[2] != 0 && p[3] != 0) { cp = (int64_t)(((b0 & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) | (p[3] & 0x3F)); p += 4; }");
+        io.outputLine("        else { p += 1; }");
+        io.outputLine("        if (len >= cap) { cap *= 2; data = realloc(data, (size_t)cap * sizeof(int64_t)); if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot grow code points\\n\"); exit(1); } }");
+        io.outputLine("        data[len++] = cp;");
+        io.outputLine("    }");
+        io.outputLine("    lt_list_i64 out = { data, len, cap, NULL };");
+        io.outputLine("    return out;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$unicodeFromCodePoints(") {
+        okTextTag := frontend.cStructTag("(ok:Bool,text:String,error:String)");
+        io.outputLine("static " + okTextTag + " lt_unicode_from_code_points(lt_list_i64 points) {");
+        io.outputLine("    size_t cap = (size_t)(points.len > 0 ? points.len * 4 : 1) + 1;");
+        io.outputLine("    char *buf = malloc(cap);");
+        io.outputLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate text\\n\"); exit(1); }");
+        io.outputLine("    size_t pos = 0;");
+        io.outputLine("    for (int64_t i = 0; i < points.len; i += 1) {");
+        io.outputLine("        int64_t cp = points.data[i];");
+        io.outputLine("        if (cp < 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {");
+        io.outputLine("            free(buf);");
+        io.outputLine("            char *msg = malloc(96);");
+        io.outputLine("            if (msg == NULL) { return (" + okTextTag + "){ false, \"\", \"invalid Unicode scalar code point\" }; }");
+        io.outputLine("            snprintf(msg, 96, \"invalid Unicode scalar code point: %\" PRId64, cp);");
+        io.outputLine("            return (" + okTextTag + "){ false, \"\", msg };");
+        io.outputLine("        }");
+        io.outputLine("        if (cp < 0x80) { buf[pos++] = (char)cp; }");
+        io.outputLine("        else if (cp < 0x800) { buf[pos++] = (char)(0xC0 | (cp >> 6)); buf[pos++] = (char)(0x80 | (cp & 0x3F)); }");
+        io.outputLine("        else if (cp < 0x10000) { buf[pos++] = (char)(0xE0 | (cp >> 12)); buf[pos++] = (char)(0x80 | ((cp >> 6) & 0x3F)); buf[pos++] = (char)(0x80 | (cp & 0x3F)); }");
+        io.outputLine("        else { buf[pos++] = (char)(0xF0 | (cp >> 18)); buf[pos++] = (char)(0x80 | ((cp >> 12) & 0x3F)); buf[pos++] = (char)(0x80 | ((cp >> 6) & 0x3F)); buf[pos++] = (char)(0x80 | (cp & 0x3F)); }");
+        io.outputLine("    }");
+        io.outputLine("    buf[pos] = '\\0';");
+        io.outputLine("    return (" + okTextTag + "){ true, buf, \"\" };");
+        io.outputLine("}");
+    }
+};
+
+/** Emits C11 `core/io` stream and `core/file` stream-opener helpers. */
+emitCStreamBuiltinHelpers := fn(calls: String): Unit {
+    if not usesStreamBuiltins(calls) { return; }
+    shTag := frontend.cStructTag("(kind:String,handle:Int)");
+    okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
+    okTextTag := frontend.cStructTag("(ok:Bool,text:String,error:String)");
+    okWrittenTag := frontend.cStructTag("(ok:Bool,written:Int,error:String)");
+    fKind := frontend.cFieldName("kind");
+    fHandle := frontend.cFieldName("handle");
+    needFileOpen := usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or usesIntHelper(calls, "lite$fileOpenAppender(");
+    needAlloc := needFileOpen or usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioBufferWriter(");
+    needLookup := usesIntHelper(calls, "lite$ioReaderOk(") or usesIntHelper(calls, "lite$ioReaderAtEof(") or
+        usesIntHelper(calls, "lite$ioReaderError(") or usesIntHelper(calls, "lite$ioRead(") or
+        usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioWriterOk(") or
+        usesIntHelper(calls, "lite$ioWriterError(") or usesIntHelper(calls, "lite$ioWrite(") or
+        usesIntHelper(calls, "lite$ioFlush(") or usesIntHelper(calls, "lite$ioCloseWriter(") or
+        usesIntHelper(calls, "lite$ioWriterBytes(") or usesIntHelper(calls, "lite$ioWriterText(") or
+        usesIntHelper(calls, "lite$ioClearWriter(");
+    needStdinState := usesIntHelper(calls, "lite$ioReaderOk(") or usesIntHelper(calls, "lite$ioReaderAtEof(") or
+        usesIntHelper(calls, "lite$ioReaderError(") or usesIntHelper(calls, "lite$ioRead(");
+    if needAlloc or needLookup {
+        io.outputLine("typedef struct { int kind; int fd; uint8_t *buf; int64_t len; int64_t cap; int64_t pos; bool eof; bool closed; const char *error; } lt_stream_entry;");
+        io.outputLine("static lt_stream_entry *lt_streams = NULL;");
+        io.outputLine("static int64_t lt_streams_len = 0;");
+        io.outputLine("static int64_t lt_streams_cap = 0;");
+    }
+    if needStdinState {
+        io.outputLine("static bool lt_stdin_eof = false;");
+        io.outputLine("static const char *lt_stdin_err = \"\";");
+    }
+    if needAlloc {
+        io.outputLine("static int64_t lt_alloc_stream(lt_stream_entry entry) {");
+        io.outputLine("    if (lt_streams_len >= lt_streams_cap) {");
+        io.outputLine("        lt_streams_cap = lt_streams_cap == 0 ? 16 : lt_streams_cap * 2;");
+        io.outputLine("        lt_streams = realloc(lt_streams, (size_t)lt_streams_cap * sizeof(lt_stream_entry));");
+        io.outputLine("        if (lt_streams == NULL) { fprintf(stderr, \"MemoryFault: cannot grow stream table\\n\"); exit(1); }");
+        io.outputLine("    }");
+        io.outputLine("    int64_t id = lt_streams_len + 10;");
+        io.outputLine("    lt_streams[lt_streams_len++] = entry;");
+        io.outputLine("    return id;");
+        io.outputLine("}");
+    }
+    if needLookup {
+        io.outputLine("static lt_stream_entry *lt_lookup_stream(int64_t handle) {");
+        io.outputLine("    int64_t idx = handle - 10;");
+        io.outputLine("    if (idx < 0 || idx >= lt_streams_len) { return NULL; }");
+        io.outputLine("    return &lt_streams[idx];");
+        io.outputLine("}");
+    }
+    if needFileOpen {
+        io.outputLine("static " + shTag + " lt_file_open_stream(const char *path, int flags, bool for_write) {");
+        io.outputLine("    int fd = open(path, flags, 0666);");
+        io.outputLine("    if (fd < 0) {");
+        io.outputLine("        const char *err = lt_dup_str(strerror(errno));");
+        io.outputLine("        lt_stream_entry e = { 4, -1, NULL, 0, 0, 0, false, false, err };");
+        io.outputLine("        return (" + shTag + "){ \"error\", lt_alloc_stream(e) };");
+        io.outputLine("    }");
+        io.outputLine("    if (!for_write) {");
+        io.outputLine("        struct stat st;");
+        io.outputLine("        if (fstat(fd, &st) == 0 && S_ISDIR(st.st_mode)) {");
+        io.outputLine("            close(fd);");
+        io.outputLine("            lt_stream_entry e = { 4, -1, NULL, 0, 0, 0, false, false, \"EISDIR: illegal operation on a directory\" };");
+        io.outputLine("            return (" + shTag + "){ \"error\", lt_alloc_stream(e) };");
+        io.outputLine("        }");
+        io.outputLine("    }");
+        io.outputLine("    lt_stream_entry e = { 1, fd, NULL, 0, 0, 0, false, false, \"\" };");
+        io.outputLine("    return (" + shTag + "){ \"file\", lt_alloc_stream(e) };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$fileOpenReader(") {
+        io.outputLine("static " + shTag + " lt_file_open_reader(const char *path) { return lt_file_open_stream(path, O_RDONLY, false); }");
+    }
+    if usesIntHelper(calls, "lite$fileOpenWriter(") {
+        io.outputLine("static " + shTag + " lt_file_open_writer(const char *path) { return lt_file_open_stream(path, O_WRONLY | O_CREAT | O_TRUNC, true); }");
+    }
+    if usesIntHelper(calls, "lite$fileOpenAppender(") {
+        io.outputLine("static " + shTag + " lt_file_open_appender(const char *path) { return lt_file_open_stream(path, O_WRONLY | O_CREAT | O_APPEND, true); }");
+    }
+    if usesIntHelper(calls, "lite$ioStdinReader(") {
+        io.outputLine("static " + shTag + " lt_io_stdin_reader(void) { return (" + shTag + "){ \"stdin\", 0 }; }");
+    }
+    if usesIntHelper(calls, "lite$ioStdoutWriter(") {
+        io.outputLine("static " + shTag + " lt_io_stdout_writer(void) { return (" + shTag + "){ \"stdout\", 1 }; }");
+    }
+    if usesIntHelper(calls, "lite$ioStderrWriter(") {
+        io.outputLine("static " + shTag + " lt_io_stderr_writer(void) { return (" + shTag + "){ \"stderr\", 2 }; }");
+    }
+    if usesIntHelper(calls, "lite$ioBufferReader(") {
+        io.outputLine("static " + shTag + " lt_io_buffer_reader(lt_list_i64 bytes) {");
+        io.outputLine("    uint8_t *buf = bytes.len > 0 ? malloc((size_t)bytes.len) : NULL;");
+        io.outputLine("    if (bytes.len > 0 && buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate buffer reader\\n\"); exit(1); }");
+        io.outputLine("    for (int64_t i = 0; i < bytes.len; i += 1) {");
+        io.outputLine("        if (bytes.data[i] < 0 || bytes.data[i] > 255) {");
+        io.outputLine("            free(buf);");
+        io.outputLine("            lt_stream_entry e = { 4, -1, NULL, 0, 0, 0, false, false, \"byte value outside 0..255\" };");
+        io.outputLine("            return (" + shTag + "){ \"error\", lt_alloc_stream(e) };");
+        io.outputLine("        }");
+        io.outputLine("        buf[i] = (uint8_t)bytes.data[i];");
+        io.outputLine("    }");
+        io.outputLine("    lt_stream_entry e = { 2, -1, buf, bytes.len, bytes.len, 0, false, false, \"\" };");
+        io.outputLine("    return (" + shTag + "){ \"buffer\", lt_alloc_stream(e) };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioBufferWriter(") {
+        io.outputLine("static " + shTag + " lt_io_buffer_writer(void) {");
+        io.outputLine("    lt_stream_entry e = { 3, -1, NULL, 0, 0, 0, false, false, \"\" };");
+        io.outputLine("    return (" + shTag + "){ \"buffer\", lt_alloc_stream(e) };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioReaderError(") {
+        io.outputLine("static const char *lt_io_reader_error(" + shTag + " reader) {");
+        io.outputLine("    if (strcmp(reader." + fKind + ", \"stdin\") == 0 && reader." + fHandle + " == 0) { return lt_stdin_err; }");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(reader." + fHandle + ");");
+        io.outputLine("    if (e == NULL) { return \"invalid reader handle\"; }");
+        io.outputLine("    if (e->kind == 3) { return \"handle is a writer, not a reader\"; }");
+        io.outputLine("    if (e->error[0] != '\\0') { return e->error; }");
+        io.outputLine("    if (e->closed) { return \"reader is closed\"; }");
+        io.outputLine("    return \"\";");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioReaderOk(") {
+        io.outputLine("static bool lt_io_reader_ok(" + shTag + " reader) {");
+        io.outputLine("    if (strcmp(reader." + fKind + ", \"stdin\") == 0 && reader." + fHandle + " == 0) { return lt_stdin_err[0] == '\\0'; }");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(reader." + fHandle + ");");
+        io.outputLine("    return e != NULL && (e->kind == 1 || e->kind == 2) && !e->closed && e->error[0] == '\\0';");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioReaderAtEof(") {
+        io.outputLine("static bool lt_io_reader_at_eof(" + shTag + " reader) {");
+        io.outputLine("    if (strcmp(reader." + fKind + ", \"stdin\") == 0 && reader." + fHandle + " == 0) { return lt_stdin_eof; }");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(reader." + fHandle + ");");
+        io.outputLine("    if (e != NULL && (e->kind == 1 || e->kind == 2)) { return e->eof; }");
+        io.outputLine("    return true;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioRead(") {
+        io.outputLine("static lt_list_i64 lt_io_read(" + shTag + " reader, int64_t max_bytes) {");
+        io.outputLine("    lt_list_i64 empty = { NULL, 0, 0, NULL };");
+        io.outputLine("    if (max_bytes <= 0) { return empty; }");
+        io.outputLine("    if (strcmp(reader." + fKind + ", \"stdin\") == 0 && reader." + fHandle + " == 0) {");
+        io.outputLine("        if (lt_stdin_err[0] != '\\0' || lt_stdin_eof) { return empty; }");
+        io.outputLine("        size_t cap = max_bytes > 16777216 ? 16777216 : (size_t)max_bytes;");
+        io.outputLine("        uint8_t *tmp = malloc(cap);");
+        io.outputLine("        if (tmp == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate read buffer\\n\"); exit(1); }");
+        io.outputLine("        ssize_t n = read(0, tmp, cap);");
+        io.outputLine("        if (n < 0) { lt_stdin_err = lt_dup_str(strerror(errno)); free(tmp); return empty; }");
+        io.outputLine("        if (n == 0) { lt_stdin_eof = true; free(tmp); return empty; }");
+        io.outputLine("        int64_t *data = malloc((size_t)n * sizeof(int64_t));");
+        io.outputLine("        if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate bytes\\n\"); exit(1); }");
+        io.outputLine("        for (ssize_t i = 0; i < n; i += 1) { data[i] = (int64_t)tmp[i]; }");
+        io.outputLine("        free(tmp);");
+        io.outputLine("        return (lt_list_i64){ data, (int64_t)n, (int64_t)n, NULL };");
+        io.outputLine("    }");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(reader." + fHandle + ");");
+        io.outputLine("    if (e == NULL || e->closed || e->error[0] != '\\0' || e->kind == 4 || e->kind == 3 || e->eof) { return empty; }");
+        io.outputLine("    if (e->kind == 2) {");
+        io.outputLine("        int64_t avail = e->len - e->pos;");
+        io.outputLine("        int64_t take = max_bytes > avail ? avail : max_bytes;");
+        io.outputLine("        if (take <= 0) { e->eof = true; return empty; }");
+        io.outputLine("        int64_t *data = malloc((size_t)take * sizeof(int64_t));");
+        io.outputLine("        if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate bytes\\n\"); exit(1); }");
+        io.outputLine("        for (int64_t i = 0; i < take; i += 1) { data[i] = (int64_t)e->buf[e->pos + i]; }");
+        io.outputLine("        e->pos += take;");
+        io.outputLine("        return (lt_list_i64){ data, take, take, NULL };");
+        io.outputLine("    }");
+        io.outputLine("    size_t cap = max_bytes > 16777216 ? 16777216 : (size_t)max_bytes;");
+        io.outputLine("    uint8_t *tmp = malloc(cap);");
+        io.outputLine("    if (tmp == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate read buffer\\n\"); exit(1); }");
+        io.outputLine("    ssize_t n = read(e->fd, tmp, cap);");
+        io.outputLine("    if (n < 0) { e->error = lt_dup_str(strerror(errno)); free(tmp); return empty; }");
+        io.outputLine("    if (n == 0) { e->eof = true; free(tmp); return empty; }");
+        io.outputLine("    int64_t *data = malloc((size_t)n * sizeof(int64_t));");
+        io.outputLine("    if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate bytes\\n\"); exit(1); }");
+        io.outputLine("    for (ssize_t i = 0; i < n; i += 1) { data[i] = (int64_t)tmp[i]; }");
+        io.outputLine("    free(tmp);");
+        io.outputLine("    return (lt_list_i64){ data, (int64_t)n, (int64_t)n, NULL };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioCloseReader(") {
+        io.outputLine("static " + okErrTag + " lt_io_close_reader(" + shTag + " reader) {");
+        io.outputLine("    if (strcmp(reader." + fKind + ", \"stdin\") == 0 && reader." + fHandle + " == 0) { return (" + okErrTag + "){ true, \"\" }; }");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(reader." + fHandle + ");");
+        io.outputLine("    if (e == NULL) { return (" + okErrTag + "){ false, \"invalid reader handle\" }; }");
+        io.outputLine("    if (e->kind == 4) { return (" + okErrTag + "){ false, e->error }; }");
+        io.outputLine("    if (e->kind == 3) { return (" + okErrTag + "){ false, \"handle is a writer, not a reader\" }; }");
+        io.outputLine("    if (e->kind == 1 && !e->closed) {");
+        io.outputLine("        int rc = close(e->fd);");
+        io.outputLine("        e->closed = true;");
+        io.outputLine("        if (rc < 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    }");
+        io.outputLine("    e->closed = true;");
+        io.outputLine("    return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioWriterError(") {
+        io.outputLine("static const char *lt_io_writer_error(" + shTag + " writer) {");
+        io.outputLine("    if ((strcmp(writer." + fKind + ", \"stdout\") == 0 && writer." + fHandle + " == 1) || (strcmp(writer." + fKind + ", \"stderr\") == 0 && writer." + fHandle + " == 2)) { return \"\"; }");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(writer." + fHandle + ");");
+        io.outputLine("    if (e == NULL) { return \"invalid writer handle\"; }");
+        io.outputLine("    if (e->kind == 2) { return \"handle is a reader, not a writer\"; }");
+        io.outputLine("    if (e->error[0] != '\\0') { return e->error; }");
+        io.outputLine("    if (e->closed) { return \"writer is closed\"; }");
+        io.outputLine("    return \"\";");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioWriterOk(") {
+        io.outputLine("static bool lt_io_writer_ok(" + shTag + " writer) {");
+        io.outputLine("    if ((strcmp(writer." + fKind + ", \"stdout\") == 0 && writer." + fHandle + " == 1) || (strcmp(writer." + fKind + ", \"stderr\") == 0 && writer." + fHandle + " == 2)) { return true; }");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(writer." + fHandle + ");");
+        io.outputLine("    return e != NULL && (e->kind == 1 || e->kind == 3) && !e->closed && e->error[0] == '\\0';");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioWrite(") {
+        io.outputLine("static " + okWrittenTag + " lt_io_write(" + shTag + " writer, lt_list_i64 bytes) {");
+        io.outputLine("    uint8_t *tmp = bytes.len > 0 ? malloc((size_t)bytes.len) : NULL;");
+        io.outputLine("    if (bytes.len > 0 && tmp == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate write buffer\\n\"); exit(1); }");
+        io.outputLine("    for (int64_t i = 0; i < bytes.len; i += 1) {");
+        io.outputLine("        if (bytes.data[i] < 0 || bytes.data[i] > 255) { free(tmp); return (" + okWrittenTag + "){ false, 0, \"byte value outside 0..255\" }; }");
+        io.outputLine("        tmp[i] = (uint8_t)bytes.data[i];");
+        io.outputLine("    }");
+        io.outputLine("    int target_fd = -1;");
+        io.outputLine("    lt_stream_entry *e = NULL;");
+        io.outputLine("    if (strcmp(writer." + fKind + ", \"stdout\") == 0 && writer." + fHandle + " == 1) { target_fd = 1; }");
+        io.outputLine("    else if (strcmp(writer." + fKind + ", \"stderr\") == 0 && writer." + fHandle + " == 2) { target_fd = 2; }");
+        io.outputLine("    else {");
+        io.outputLine("        e = lt_lookup_stream(writer." + fHandle + ");");
+        io.outputLine("        if (e == NULL) { free(tmp); return (" + okWrittenTag + "){ false, 0, \"invalid writer handle\" }; }");
+        io.outputLine("        if (e->kind == 4) { free(tmp); return (" + okWrittenTag + "){ false, 0, e->error }; }");
+        io.outputLine("        if (e->kind == 2) { free(tmp); return (" + okWrittenTag + "){ false, 0, \"handle is a reader, not a writer\" }; }");
+        io.outputLine("        if (e->closed) { free(tmp); return (" + okWrittenTag + "){ false, 0, \"writer is closed\" }; }");
+        io.outputLine("        if (e->error[0] != '\\0') { free(tmp); return (" + okWrittenTag + "){ false, 0, e->error }; }");
+        io.outputLine("        if (e->kind == 3) {");
+        io.outputLine("            if (bytes.len > 0) {");
+        io.outputLine("                if (e->len + bytes.len > e->cap) {");
+        io.outputLine("                    int64_t ncap = e->cap == 0 ? 64 : e->cap * 2;");
+        io.outputLine("                    while (ncap < e->len + bytes.len) { ncap *= 2; }");
+        io.outputLine("                    e->buf = realloc(e->buf, (size_t)ncap);");
+        io.outputLine("                    if (e->buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow buffer writer\\n\"); exit(1); }");
+        io.outputLine("                    e->cap = ncap;");
+        io.outputLine("                }");
+        io.outputLine("                memcpy(e->buf + e->len, tmp, (size_t)bytes.len);");
+        io.outputLine("                e->len += bytes.len;");
+        io.outputLine("            }");
+        io.outputLine("            free(tmp);");
+        io.outputLine("            return (" + okWrittenTag + "){ true, bytes.len, \"\" };");
+        io.outputLine("        }");
+        io.outputLine("        target_fd = e->fd;");
+        io.outputLine("    }");
+        io.outputLine("    int64_t off = 0;");
+        io.outputLine("    while (off < bytes.len) {");
+        io.outputLine("        ssize_t n = write(target_fd, tmp + off, (size_t)(bytes.len - off));");
+        io.outputLine("        if (n < 0) {");
+        io.outputLine("            const char *msg = lt_dup_str(strerror(errno));");
+        io.outputLine("            if (e != NULL) { e->error = msg; }");
+        io.outputLine("            free(tmp);");
+        io.outputLine("            return (" + okWrittenTag + "){ false, 0, msg };");
+        io.outputLine("        }");
+        io.outputLine("        off += (int64_t)n;");
+        io.outputLine("    }");
+        io.outputLine("    free(tmp);");
+        io.outputLine("    return (" + okWrittenTag + "){ true, bytes.len, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioFlush(") {
+        io.outputLine("static " + okErrTag + " lt_io_flush(" + shTag + " writer) {");
+        io.outputLine("    if ((strcmp(writer." + fKind + ", \"stdout\") == 0 && writer." + fHandle + " == 1) || (strcmp(writer." + fKind + ", \"stderr\") == 0 && writer." + fHandle + " == 2)) { return (" + okErrTag + "){ true, \"\" }; }");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(writer." + fHandle + ");");
+        io.outputLine("    if (e == NULL) { return (" + okErrTag + "){ false, \"invalid writer handle\" }; }");
+        io.outputLine("    if (e->kind == 4) { return (" + okErrTag + "){ false, e->error }; }");
+        io.outputLine("    if (e->kind == 2) { return (" + okErrTag + "){ false, \"handle is a reader, not a writer\" }; }");
+        io.outputLine("    if (e->closed) { return (" + okErrTag + "){ false, \"writer is closed\" }; }");
+        io.outputLine("    if (e->kind == 3) { return (" + okErrTag + "){ true, \"\" }; }");
+        io.outputLine("    if (fsync(e->fd) < 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioCloseWriter(") {
+        io.outputLine("static " + okErrTag + " lt_io_close_writer(" + shTag + " writer) {");
+        io.outputLine("    if ((strcmp(writer." + fKind + ", \"stdout\") == 0 && writer." + fHandle + " == 1) || (strcmp(writer." + fKind + ", \"stderr\") == 0 && writer." + fHandle + " == 2)) { return (" + okErrTag + "){ true, \"\" }; }");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(writer." + fHandle + ");");
+        io.outputLine("    if (e == NULL) { return (" + okErrTag + "){ false, \"invalid writer handle\" }; }");
+        io.outputLine("    if (e->kind == 4) { return (" + okErrTag + "){ false, e->error }; }");
+        io.outputLine("    if (e->kind == 2) { return (" + okErrTag + "){ false, \"handle is a reader, not a writer\" }; }");
+        io.outputLine("    if (e->kind == 1 && !e->closed) {");
+        io.outputLine("        int rc = close(e->fd);");
+        io.outputLine("        e->closed = true;");
+        io.outputLine("        if (rc < 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    }");
+        io.outputLine("    e->closed = true;");
+        io.outputLine("    return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioWriterBytes(") {
+        io.outputLine("static lt_list_i64 lt_io_writer_bytes(" + shTag + " writer) {");
+        io.outputLine("    lt_list_i64 empty = { NULL, 0, 0, NULL };");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(writer." + fHandle + ");");
+        io.outputLine("    if (e == NULL || e->kind != 3 || e->len <= 0) { return empty; }");
+        io.outputLine("    int64_t *data = malloc((size_t)e->len * sizeof(int64_t));");
+        io.outputLine("    if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate writer bytes\\n\"); exit(1); }");
+        io.outputLine("    for (int64_t i = 0; i < e->len; i += 1) { data[i] = (int64_t)e->buf[i]; }");
+        io.outputLine("    return (lt_list_i64){ data, e->len, e->len, NULL };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioWriterText(") {
+        io.outputLine("static " + okTextTag + " lt_io_writer_text(" + shTag + " writer) {");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(writer." + fHandle + ");");
+        io.outputLine("    if (e == NULL) { return (" + okTextTag + "){ false, \"\", \"invalid writer handle\" }; }");
+        io.outputLine("    if (e->kind != 3) { return (" + okTextTag + "){ false, \"\", \"writer is not a buffer writer\" }; }");
+        io.outputLine("    if (e->error[0] != '\\0') { return (" + okTextTag + "){ false, \"\", e->error }; }");
+        io.outputLine("    for (int64_t i = 0; i < e->len; ) {");
+        io.outputLine("        uint8_t b0 = e->buf[i];");
+        io.outputLine("        if (b0 < 0x80) { i += 1; }");
+        io.outputLine("        else if (b0 >= 0xC2 && b0 <= 0xDF && i + 1 < e->len && (e->buf[i + 1] & 0xC0) == 0x80) { i += 2; }");
+        io.outputLine("        else if (b0 >= 0xE0 && b0 <= 0xEF && i + 2 < e->len && (e->buf[i + 1] & 0xC0) == 0x80 && (e->buf[i + 2] & 0xC0) == 0x80 && !(b0 == 0xE0 && e->buf[i + 1] < 0xA0) && !(b0 == 0xED && e->buf[i + 1] >= 0xA0)) { i += 3; }");
+        io.outputLine("        else if (b0 >= 0xF0 && b0 <= 0xF4 && i + 3 < e->len && (e->buf[i + 1] & 0xC0) == 0x80 && (e->buf[i + 2] & 0xC0) == 0x80 && (e->buf[i + 3] & 0xC0) == 0x80 && !(b0 == 0xF0 && e->buf[i + 1] < 0x90) && !(b0 == 0xF4 && e->buf[i + 1] >= 0x90)) { i += 4; }");
+        io.outputLine("        else { return (" + okTextTag + "){ false, \"\", \"invalid UTF-8 byte sequence\" }; }");
+        io.outputLine("    }");
+        io.outputLine("    char *out = malloc((size_t)e->len + 1);");
+        io.outputLine("    if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate writer text\\n\"); exit(1); }");
+        io.outputLine("    if (e->len > 0) { memcpy(out, e->buf, (size_t)e->len); }");
+        io.outputLine("    out[e->len] = '\\0';");
+        io.outputLine("    return (" + okTextTag + "){ true, out, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$ioClearWriter(") {
+        io.outputLine("static void lt_io_clear_writer(" + shTag + " writer) {");
+        io.outputLine("    lt_stream_entry *e = lt_lookup_stream(writer." + fHandle + ");");
+        io.outputLine("    if (e != NULL && e->kind == 3) { e->len = 0; }");
+        io.outputLine("}");
+    }
+};
+
+/** Emits C11 `core/file` non-stream filesystem builtin helpers. */
+emitCFileBuiltinHelpers := fn(calls: String): Unit {
+    if not usesFileBuiltins(calls) { return; }
+    okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
+    okPathTag := frontend.cStructTag("(ok:Bool,path:String,error:String)");
+    if usesIntHelper(calls, "lite$fileKind(") {
+        io.outputLine("static const char *lt_file_kind(const char *path) {");
+        io.outputLine("    struct stat st;");
+        io.outputLine("    if (stat(path, &st) != 0) { return \"missing\"; }");
+        io.outputLine("    if (S_ISREG(st.st_mode)) { return \"file\"; }");
+        io.outputLine("    if (S_ISDIR(st.st_mode)) { return \"dir\"; }");
+        io.outputLine("    return \"other\";");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$fileListDir(") {
+        io.outputLine("static int lt_cmp_cstr(const void *a, const void *b) {");
+        io.outputLine("    const char *sa = *(const char *const *)a;");
+        io.outputLine("    const char *sb = *(const char *const *)b;");
+        io.outputLine("    return strcmp(sa, sb);");
+        io.outputLine("}");
+        io.outputLine("static lt_list_str lt_file_list_dir(const char *path) {");
+        io.outputLine("    DIR *d = opendir(path);");
+        io.outputLine("    if (d == NULL) { fprintf(stderr, \"cannot list directory %s: %s\\n\", path, strerror(errno)); exit(2); }");
+        io.outputLine("    int64_t len = 0; int64_t cap = 16;");
+        io.outputLine("    const char **data = malloc((size_t)cap * sizeof(const char *));");
+        io.outputLine("    if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate dir list\\n\"); exit(1); }");
+        io.outputLine("    struct dirent *ent;");
+        io.outputLine("    while ((ent = readdir(d)) != NULL) {");
+        io.outputLine("        if (strcmp(ent->d_name, \".\") == 0 || strcmp(ent->d_name, \"..\") == 0) { continue; }");
+        io.outputLine("        if (len >= cap) { cap *= 2; data = realloc(data, (size_t)cap * sizeof(const char *)); if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot grow dir list\\n\"); exit(1); } }");
+        io.outputLine("        data[len++] = lt_dup_str(ent->d_name);");
+        io.outputLine("    }");
+        io.outputLine("    closedir(d);");
+        io.outputLine("    if (len > 1) { qsort(data, (size_t)len, sizeof(const char *), lt_cmp_cstr); }");
+        io.outputLine("    return (lt_list_str){ data, len, cap, NULL };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$fileMakeDir(") {
+        io.outputLine("static " + okErrTag + " lt_file_make_dir(const char *path) {");
+        io.outputLine("    if (path[0] == '\\0') { return (" + okErrTag + "){ false, \"empty path\" }; }");
+        io.outputLine("    char *tmp = lt_dup_str(path);");
+        io.outputLine("    size_t n = strlen(tmp);");
+        io.outputLine("    while (n > 1 && tmp[n - 1] == '/') { tmp[--n] = '\\0'; }");
+        io.outputLine("    for (size_t i = 1; i < n; i += 1) {");
+        io.outputLine("        if (tmp[i] == '/') {");
+        io.outputLine("            tmp[i] = '\\0';");
+        io.outputLine("            if (mkdir(tmp, 0777) != 0 && errno != EEXIST) { const char *err = lt_dup_str(strerror(errno)); free(tmp); return (" + okErrTag + "){ false, err }; }");
+        io.outputLine("            tmp[i] = '/';");
+        io.outputLine("        }");
+        io.outputLine("    }");
+        io.outputLine("    if (mkdir(tmp, 0777) != 0) {");
+        io.outputLine("        struct stat st;");
+        io.outputLine("        if (!(errno == EEXIST && stat(tmp, &st) == 0 && S_ISDIR(st.st_mode))) {");
+        io.outputLine("            const char *err = lt_dup_str(strerror(errno)); free(tmp); return (" + okErrTag + "){ false, err };");
+        io.outputLine("        }");
+        io.outputLine("    }");
+        io.outputLine("    free(tmp);");
+        io.outputLine("    return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$fileRemove(") {
+        io.outputLine("static " + okErrTag + " lt_file_remove(const char *path) {");
+        io.outputLine("    struct stat st;");
+        io.outputLine("    if (lstat(path, &st) != 0) {");
+        io.outputLine("        if (errno == ENOENT) { return (" + okErrTag + "){ true, \"\" }; }");
+        io.outputLine("        return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) };");
+        io.outputLine("    }");
+        io.outputLine("    if (S_ISDIR(st.st_mode)) {");
+        io.outputLine("        DIR *d = opendir(path);");
+        io.outputLine("        if (d == NULL) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("        struct dirent *ent;");
+        io.outputLine("        while ((ent = readdir(d)) != NULL) {");
+        io.outputLine("            if (strcmp(ent->d_name, \".\") == 0 || strcmp(ent->d_name, \"..\") == 0) { continue; }");
+        io.outputLine("            size_t clen = strlen(path) + 1 + strlen(ent->d_name) + 1;");
+        io.outputLine("            char *child = malloc(clen);");
+        io.outputLine("            if (child == NULL) { closedir(d); return (" + okErrTag + "){ false, \"out of memory\" }; }");
+        io.outputLine("            snprintf(child, clen, \"%s/%s\", path, ent->d_name);");
+        io.outputLine("            " + okErrTag + " sub = lt_file_remove(child);");
+        io.outputLine("            free(child);");
+        io.outputLine("            if (!sub." + frontend.cFieldName("ok") + ") { closedir(d); return sub; }");
+        io.outputLine("        }");
+        io.outputLine("        closedir(d);");
+        io.outputLine("        if (rmdir(path) != 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("        return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("    }");
+        io.outputLine("    if (unlink(path) != 0 && errno != ENOENT) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$fileCopy(") {
+        io.outputLine("static " + okErrTag + " lt_file_copy(const char *from_path, const char *to_path) {");
+        io.outputLine("    struct stat st;");
+        io.outputLine("    if (lstat(from_path, &st) != 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    if (S_ISLNK(st.st_mode)) {");
+        io.outputLine("        char lbuf[4096];");
+        io.outputLine("        ssize_t n = readlink(from_path, lbuf, sizeof(lbuf) - 1);");
+        io.outputLine("        if (n < 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("        lbuf[n] = '\\0';");
+        io.outputLine("        unlink(to_path);");
+        io.outputLine("        if (symlink(lbuf, to_path) != 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("        return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("    }");
+        io.outputLine("    if (S_ISDIR(st.st_mode)) {");
+        io.outputLine("        if (mkdir(to_path, 0777) != 0 && errno != EEXIST) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("        DIR *d = opendir(from_path);");
+        io.outputLine("        if (d == NULL) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("        struct dirent *ent;");
+        io.outputLine("        while ((ent = readdir(d)) != NULL) {");
+        io.outputLine("            if (strcmp(ent->d_name, \".\") == 0 || strcmp(ent->d_name, \"..\") == 0) { continue; }");
+        io.outputLine("            size_t slen = strlen(from_path) + 1 + strlen(ent->d_name) + 1;");
+        io.outputLine("            size_t dlen = strlen(to_path) + 1 + strlen(ent->d_name) + 1;");
+        io.outputLine("            char *sp = malloc(slen); char *dp = malloc(dlen);");
+        io.outputLine("            if (sp == NULL || dp == NULL) { free(sp); free(dp); closedir(d); return (" + okErrTag + "){ false, \"out of memory\" }; }");
+        io.outputLine("            snprintf(sp, slen, \"%s/%s\", from_path, ent->d_name);");
+        io.outputLine("            snprintf(dp, dlen, \"%s/%s\", to_path, ent->d_name);");
+        io.outputLine("            " + okErrTag + " sub = lt_file_copy(sp, dp);");
+        io.outputLine("            free(sp); free(dp);");
+        io.outputLine("            if (!sub." + frontend.cFieldName("ok") + ") { closedir(d); return sub; }");
+        io.outputLine("        }");
+        io.outputLine("        closedir(d);");
+        io.outputLine("        return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("    }");
+        io.outputLine("    int in_fd = open(from_path, O_RDONLY);");
+        io.outputLine("    if (in_fd < 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    int out_fd = open(to_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);");
+        io.outputLine("    if (out_fd < 0) { const char *err = lt_dup_str(strerror(errno)); close(in_fd); return (" + okErrTag + "){ false, err }; }");
+        io.outputLine("    uint8_t buf[65536];");
+        io.outputLine("    for (;;) {");
+        io.outputLine("        ssize_t n = read(in_fd, buf, sizeof(buf));");
+        io.outputLine("        if (n < 0) { const char *err = lt_dup_str(strerror(errno)); close(in_fd); close(out_fd); return (" + okErrTag + "){ false, err }; }");
+        io.outputLine("        if (n == 0) { break; }");
+        io.outputLine("        ssize_t off = 0;");
+        io.outputLine("        while (off < n) {");
+        io.outputLine("            ssize_t w = write(out_fd, buf + off, (size_t)(n - off));");
+        io.outputLine("            if (w < 0) { const char *err = lt_dup_str(strerror(errno)); close(in_fd); close(out_fd); return (" + okErrTag + "){ false, err }; }");
+        io.outputLine("            off += w;");
+        io.outputLine("        }");
+        io.outputLine("    }");
+        io.outputLine("    close(in_fd); close(out_fd);");
+        io.outputLine("    return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$fileSymlink(") {
+        io.outputLine("static " + okErrTag + " lt_file_symlink(const char *target_path, const char *link_path) {");
+        io.outputLine("    if (symlink(target_path, link_path) != 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$fileRealPath(") {
+        io.outputLine("static " + okPathTag + " lt_file_real_path(const char *path) {");
+        io.outputLine("    char *resolved = realpath(path, NULL);");
+        io.outputLine("    if (resolved == NULL) { return (" + okPathTag + "){ false, \"\", lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    return (" + okPathTag + "){ true, resolved, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$fileMakeTempDir(") {
+        io.outputLine("static " + okPathTag + " lt_file_make_temp_dir(const char *prefix) {");
+        io.outputLine("    const char *base = getenv(\"TMPDIR\");");
+        io.outputLine("    if (base == NULL || base[0] == '\\0') { base = \"/tmp\"; }");
+        io.outputLine("    size_t blen = strlen(base);");
+        io.outputLine("    bool need_slash = blen > 0 && base[blen - 1] != '/';");
+        io.outputLine("    size_t plen = strlen(prefix);");
+        io.outputLine("    char *tmpl = malloc(blen + (need_slash ? 1 : 0) + plen + 7);");
+        io.outputLine("    if (tmpl == NULL) { return (" + okPathTag + "){ false, \"\", \"out of memory\" }; }");
+        io.outputLine("    snprintf(tmpl, blen + (need_slash ? 1 : 0) + plen + 7, \"%s%s%sXXXXXX\", base, need_slash ? \"/\" : \"\", prefix);");
+        io.outputLine("    char *created = mkdtemp(tmpl);");
+        io.outputLine("    if (created == NULL) { const char *err = lt_dup_str(strerror(errno)); free(tmpl); return (" + okPathTag + "){ false, \"\", err }; }");
+        io.outputLine("    return (" + okPathTag + "){ true, created, \"\" };");
+        io.outputLine("}");
+    }
+};
+
+/** Emits C11 `core/process` query builtin helpers. */
+emitCProcessBuiltinHelpers := fn(calls: String): Unit {
+    if not usesProcessQueryBuiltins(calls) { return; }
+    if usesIntHelper(calls, "lite$processCwd(") {
+        io.outputLine("static const char *lt_process_cwd(void) {");
+        io.outputLine("    char *d = getcwd(NULL, 0);");
+        io.outputLine("    return d != NULL ? d : \"\";");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$processExecPath(") {
+        io.outputLine("static const char *lt_process_exec_path(void) {");
+        io.outputLine("    if (lt_argc <= 0 || lt_argv == NULL || lt_argv[0] == NULL) { return \"\"; }");
+        io.outputLine("    char *r = realpath(lt_argv[0], NULL);");
+        io.outputLine("    return r != NULL ? r : lt_argv[0];");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$processEntryPath(") {
+        io.outputLine("static const char *lt_process_entry_path(void) {");
+        io.outputLine("    if (lt_argc <= 0 || lt_argv == NULL || lt_argv[0] == NULL) { return \"\"; }");
+        io.outputLine("    char *r = realpath(lt_argv[0], NULL);");
+        io.outputLine("    return r != NULL ? r : lt_argv[0];");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$processPlatform(") {
+        io.outputLine("static const char *lt_process_platform(void) {");
+        io.outputLine("#if defined(__APPLE__)");
+        io.outputLine("    return \"darwin\";");
+        io.outputLine("#elif defined(__linux__)");
+        io.outputLine("    return \"linux\";");
+        io.outputLine("#elif defined(_WIN32)");
+        io.outputLine("    return \"win32\";");
+        io.outputLine("#else");
+        io.outputLine("    return \"unknown\";");
+        io.outputLine("#endif");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$processArch(") {
+        io.outputLine("static const char *lt_process_arch(void) {");
+        io.outputLine("#if defined(__aarch64__) || defined(_M_ARM64)");
+        io.outputLine("    return \"arm64\";");
+        io.outputLine("#elif defined(__x86_64__) || defined(_M_X64)");
+        io.outputLine("    return \"x64\";");
+        io.outputLine("#else");
+        io.outputLine("    return \"unknown\";");
+        io.outputLine("#endif");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lite$processRuntimeVersion(") {
+        io.outputLine("static const char *lt_process_runtime_version(void) { return \"c11\"; }");
+    }
+    if usesIntHelper(calls, "lite$processEnvGet(") {
+        foundValTag := frontend.cStructTag("(found:Bool,value:String)");
+        io.outputLine("static " + foundValTag + " lt_process_env_get(const char *name) {");
+        io.outputLine("    const char *v = getenv(name);");
+        io.outputLine("    if (v == NULL) { return (" + foundValTag + "){ false, \"\" }; }");
+        io.outputLine("    return (" + foundValTag + "){ true, v };");
+        io.outputLine("}");
+    }
+};
+
+/** Emits all C11 host builtin helpers (`core/unicode`, `core/io` streams, `core/file`, `core/process`). */
+emitCHostBuiltinHelpers := fn(calls: String): Unit {
+    needDupStr := usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or
+        usesIntHelper(calls, "lite$fileOpenAppender(") or usesIntHelper(calls, "lite$ioRead(") or
+        usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioWrite(") or
+        usesIntHelper(calls, "lite$ioFlush(") or usesIntHelper(calls, "lite$ioCloseWriter(") or
+        usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
+        usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
+        usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lite$fileRealPath(") or
+        usesIntHelper(calls, "lite$fileMakeTempDir(");
+    if needDupStr {
+        io.outputLine("static char *lt_dup_str(const char *s) {");
+        io.outputLine("    size_t n = strlen(s);");
+        io.outputLine("    char *out = malloc(n + 1);");
+        io.outputLine("    if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot duplicate string\\n\"); exit(1); }");
+        io.outputLine("    memcpy(out, s, n + 1);");
+        io.outputLine("    return out;");
+        io.outputLine("}");
+    }
+    emitCUnicodeBuiltinHelpers(calls);
+    emitCStreamBuiltinHelpers(calls);
+    emitCFileBuiltinHelpers(calls);
+    emitCProcessBuiltinHelpers(calls);
+};
+
 pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
     _modes := frontend.parseBuiltinModeSpecs(prefix, builtinSpecs);
     reachable := frontend.filterReachableItemsWithOpt(items, frontend.TARGET_C, optLevel);
@@ -1857,7 +2713,28 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     var seenConvNames := frontend.emptyTokenBuckets();
     seedKinds: mut List<String> = [];
     hasInputArgs := usesIntHelper(calls, "lite$inputArgs(");
-    if hasInputArgs { listLib.pushBack(mut seedKinds, "List<String>"); }
+    hasMainArgs := hasInputArgs or usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processExecPath(");
+    if hasInputArgs or usesIntHelper(calls, "lite$fileListDir(") { listLib.pushBack(mut seedKinds, "List<String>"); }
+    if usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") or
+    usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioWriterBytes(") or
+    usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioWrite(") {
+        listLib.pushBack(mut seedKinds, "List<Int>");
+    }
+    if usesStreamBuiltins(calls) { listLib.pushBack(mut seedKinds, "(kind:String,handle:Int)"); }
+    if usesIntHelper(calls, "lite$unicodeFromCodePoints(") or usesIntHelper(calls, "lite$ioWriterText(") {
+        listLib.pushBack(mut seedKinds, "(ok:Bool,text:String,error:String)");
+    }
+    if usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioFlush(") or
+    usesIntHelper(calls, "lite$ioCloseWriter(") or usesIntHelper(calls, "lite$fileMakeDir(") or
+    usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
+    usesIntHelper(calls, "lite$fileSymlink(") {
+        listLib.pushBack(mut seedKinds, "(ok:Bool,error:String)");
+    }
+    if usesIntHelper(calls, "lite$ioWrite(") { listLib.pushBack(mut seedKinds, "(ok:Bool,written:Int,error:String)"); }
+    if usesIntHelper(calls, "lite$fileRealPath(") or usesIntHelper(calls, "lite$fileMakeTempDir(") {
+        listLib.pushBack(mut seedKinds, "(ok:Bool,path:String,error:String)");
+    }
+    if usesIntHelper(calls, "lite$processEnvGet(") { listLib.pushBack(mut seedKinds, "(found:Bool,value:String)"); }
     loop reachable as item {
         if cListTagForKind(item.kind) =!= "" or frontend.cStructTag(item.kind) =!= "" or frontend.cMapTag(item.kind) =!= "" or frontend.cSetTag(item.kind) =!= "" {
             listLib.pushBack(mut seedKinds, item.kind);
@@ -2004,12 +2881,27 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     hasInput := usesInputHelpers(calls);
     hasInputInt := usesIntHelper(calls, "lite$inputInt(");
     hasInputFloat := usesIntHelper(calls, "lite$inputFloat(");
+    hasPosixHost := usesPosixHost(calls);
+    hasUnicodeHost := usesUnicodeBuiltins(calls);
+    if hasPosixHost {
+        io.outputLine("#if defined(__APPLE__)");
+        io.outputLine("#define _DARWIN_C_SOURCE");
+        io.outputLine("#else");
+        io.outputLine("#define _XOPEN_SOURCE 700");
+        io.outputLine("#endif");
+    }
     io.outputLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList { io.outputLine("#include <stdlib.h>"); }
-    if hasInputInt { io.outputLine("#include <errno.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost { io.outputLine("#include <stdlib.h>"); }
+    if hasInputInt or hasPosixHost { io.outputLine("#include <errno.h>"); }
     io.outputLine("#include <inttypes.h>");
     io.outputLine("#include <stdbool.h>");
     io.outputLine("#include <string.h>");
+    if hasPosixHost {
+        io.outputLine("#include <fcntl.h>");
+        io.outputLine("#include <unistd.h>");
+        io.outputLine("#include <sys/stat.h>");
+        io.outputLine("#include <dirent.h>");
+    }
     if usesFloatArithmetic(calls) or hasInputFloat { io.outputLine("#include <math.h>"); }
     if floatValues {
         io.outputLine("#include <float.h>");
@@ -2063,15 +2955,18 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         emitCTupleConvHelper(convExpKinds[convIdx], convActKinds[convIdx]);
         convIdx = convIdx + 1;
     }
-    if hasInputArgs {
+    if hasMainArgs {
         io.outputLine("static int lt_argc = 0;");
         io.outputLine("static char **lt_argv = NULL;");
+    }
+    if hasInputArgs {
         io.outputLine("static lt_list_str lt_input_args(void) {");
         io.outputLine("    if (lt_argc <= 1) { return lt_list_str_from(0, NULL); }");
         io.outputLine("    return lt_list_str_from((int64_t)(lt_argc - 1), (const char *const *)(lt_argv + 1));");
         io.outputLine("}");
         io.outputLine("");
     }
+    emitCHostBuiltinHelpers(calls);
     var hoistedGlobals := frontend.emptyTokenBuckets();
     if hasFunctions {
         if hasFnOutput { io.outputLine("static int lt_io_status = 0;"); }
@@ -2122,7 +3017,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     } else {
         loop reachable as item { listLib.pushBack(mut mainItems, item); }
     }
-    if hasInputArgs {
+    if hasMainArgs {
         io.outputLine("int main(int argc, char **argv) {");
         io.outputLine("    lt_argc = argc; lt_argv = argv;");
     } else {

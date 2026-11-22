@@ -1383,7 +1383,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhs.code + ");");
                         blockExits = true;
                     } else {
-                        listLib.pushBack(mut statements, "void (" + rhs.code + ");");
+                        listLib.pushBack(mut statements, if target == ir.TARGET_C { "(void)(" + rhs.code + ");" } else { "void (" + rhs.code + ");" });
                         if reach.isPrunableExprForTarget(target, ir.VALUE_KIND_UNIT, rhs.code) {
                             listLib.pushBack(mut stmtOwners, "#discard");
                             listLib.pushBack(mut stmtDeps, "");
@@ -2940,7 +2940,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     listLib.pushBack(mut statements, stmtReturnPrefix + "(" + expr.code + ");");
                     blockExits = true;
                 } else {
-                    listLib.pushBack(mut statements, "void (" + expr.code + ");");
+                    listLib.pushBack(mut statements, if target == ir.TARGET_C { "(void)(" + expr.code + ");" } else { "void (" + expr.code + ");" });
                     if reach.isPrunableExprForTarget(target, expr.kind, expr.code) {
                         listLib.pushBack(mut stmtOwners, "#discard");
                         listLib.pushBack(mut stmtDeps, "");
@@ -2998,7 +2998,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 listLib.pushBack(mut statements, "(" + blockCode + ");");
                 blockExits = true;
             } else if blockCode =!= ir.targetUnitLiteralCode(target) {
-                listLib.pushBack(mut statements, "void (" + blockCode + ");");
+                listLib.pushBack(mut statements, if target == ir.TARGET_C { "(void)(" + blockCode + ");" } else { "void (" + blockCode + ");" });
             }
         }
         finCode := textLib.joinTexts(statements, " ");
@@ -3017,7 +3017,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         listLib.pushBack(mut statements, "(" + blockCode + ");");
                         blockExits = true;
                     } else if blockCode =!= ir.targetUnitLiteralCode(target) {
-                        listLib.pushBack(mut statements, "void (" + blockCode + ");");
+                        listLib.pushBack(mut statements, if target == ir.TARGET_C { "(void)(" + blockCode + ");" } else { "void (" + blockCode + ");" });
                     }
                 } else if expected == ir.VALUE_KIND_NEVER {
                     if blockKind =!= ir.VALUE_KIND_NEVER {
@@ -3166,7 +3166,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 blockExits = true;
             } else if topValKind == ir.VALUE_KIND_UNIT {
                 if blockCode =!= ir.targetUnitLiteralCode(target) {
-                    listLib.pushBack(mut statements, "void (" + blockCode + ");");
+                    listLib.pushBack(mut statements, if target == ir.TARGET_C { "(void)(" + blockCode + ");" } else { "void (" + blockCode + ");" });
                 }
             } else {
                 tailCode := ctx.assignValueCode(target, topValKind, blockKind, blockCode);

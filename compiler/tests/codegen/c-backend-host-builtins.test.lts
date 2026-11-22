@@ -1,0 +1,126 @@
+/* End-to-end C11 execution tests for Phase C7: core/unicode, core/io streams, core/file, core/process queries, pure-Lite core/crypto, and Copy-on-Write list value semantics. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"fs := import \"core/file\";\n" +
+"proc := import \"core/process\";\n" +
+"unicode := import \"core/unicode\";\n" +
+"crypto := import \"core/crypto\";\n" +
+"listLib := import \"core/list\";\n" +
+"\n" +
+"/* 1. core/unicode round-trip */\n" +
+"cps := unicode.toCodePoints(\"Hi!\");\n" +
+"io.outputLine(cps);\n" +
+"dec := unicode.fromCodePoints([76, 105, 116, 101]);\n" +
+"io.outputLine(dec.ok);\n" +
+"io.outputLine(dec.text);\n" +
+"bad := unicode.fromCodePoints([-1]);\n" +
+"io.outputLine(bad.ok);\n" +
+"\n" +
+"/* 2. core/io buffer streams */\n" +
+"bw := io.bufferWriter();\n" +
+"w1 := io.writeText(bw, \"hello \");\n" +
+"w2 := io.writeText(bw, \"streams\");\n" +
+"wt := io.writerText(bw);\n" +
+"io.outputLine(w1.ok and w2.ok and wt.ok);\n" +
+"io.outputLine(wt.text);\n" +
+"io.clearWriter(bw);\n" +
+"io.outputLine(io.writerText(bw).text);\n" +
+"\n" +
+"br := io.bufferReader([65, 66, 67]);\n" +
+"rt := io.readAllText(br);\n" +
+"io.outputLine(rt.ok);\n" +
+"io.outputLine(rt.text);\n" +
+"\n" +
+"/* 3. core/file temp dir, write/read, listDir, copy, realPath, remove */\n" +
+"td := fs.makeTempDir(\"lite-c7-test-\");\n" +
+"io.outputLine(td.ok);\n" +
+"p1 := td.path + \"/a.txt\";\n" +
+"p2 := td.path + \"/b.txt\";\n" +
+"wr := fs.writeText(p1, \"alpha-123\");\n" +
+"rd := fs.readText(p1);\n" +
+"cp := fs.copy(p1, p2);\n" +
+"rp := fs.realPath(p1);\n" +
+"io.outputLine(wr.ok and rd.ok and cp.ok and rp.ok);\n" +
+"io.outputLine(rd.text);\n" +
+"io.outputLine(fs.kind(p1));\n" +
+"io.outputLine(fs.kind(td.path));\n" +
+"io.outputLine(fs.kind(td.path + \"/missing\"));\n" +
+"io.outputLine(fs.listDir(td.path));\n" +
+"rm := fs.remove(td.path);\n" +
+"io.outputLine(rm.ok);\n" +
+"io.outputLine(fs.kind(td.path));\n" +
+"\n" +
+"/* 4. core/process queries & pure-Lite core/crypto */\n" +
+"io.outputLine(proc.cwd() =!= \"\");\n" +
+"io.outputLine(proc.platform() =!= \"\");\n" +
+"io.outputLine(proc.arch() =!= \"\");\n" +
+"io.outputLine(proc.envGet(\"LITE_NONEXISTENT_ENV_VAR_XYZ\").found);\n" +
+"io.outputLine(crypto.sha256Text(\"abc\"));\n" +
+"\n" +
+"/* 5. Copy-on-Write list value semantics */\n" +
+"a: mut List<Int> = [1, 2, 3];\n" +
+"b := a;\n" +
+"a[0] = 99;\n" +
+"listLib.pushBack(mut a, 4);\n" +
+"io.outputLine(a);\n" +
+"io.outputLine(b);\n";
+
+expected :=
+"[72, 105, 33]\n" +
+"true\n" +
+"Lite\n" +
+"false\n" +
+"true\n" +
+"hello streams\n" +
+"\n" +
+"true\n" +
+"ABC\n" +
+"true\n" +
+"true\n" +
+"alpha-123\n" +
+"file\n" +
+"dir\n" +
+"missing\n" +
+"[a.txt, b.txt]\n" +
+"true\n" +
+"missing\n" +
+"true\n" +
+"true\n" +
+"true\n" +
+"false\n" +
+"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\n" +
+"[99, 2, 3, 4]\n" +
+"[1, 2, 3]\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+test.checkText("ts stdout", expected, tsRes.stdout);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+    test.checkText("c stderr", "", cRes.stderr);
+} else {
+    cOnly := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt("c compile status: " + cOnly.stderr, 0, cOnly.status);
+}
+
+test.done("c-backend-host-builtins");
