@@ -1,0 +1,77 @@
+/* End-to-end C11 execution tests for Phase C6: statement-bearing value blocks, early return inside value blocks/conditionals, and complex subject match expressions. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"\n" +
+"/* 1. Statement-bearing value blocks and loops inside value blocks */\n" +
+"x := { a := 2; b := a * 3; b + 1 };\n" +
+"xs := [1, 4, 7, 9];\n" +
+"hasSeven := {\n" +
+"    var found := false;\n" +
+"    loop xs as v {\n" +
+"        if v == 7 { found = true; break; }\n" +
+"    }\n" +
+"    found\n" +
+"};\n" +
+"io.outputLine(x, hasSeven, { k := 10; k * 2 });\n" +
+"\n" +
+"/* 2. Early return inside value-if branch (compiler frontend-types pattern) */\n" +
+"checkedNeg := fn(isNeg: Bool, n: Int): (ok: Bool, value: Int) {\n" +
+"    finalVal := if isNeg {\n" +
+"        if n == 0 {\n" +
+"            return (ok = false, value = -1);\n" +
+"        }\n" +
+"        0 - n\n" +
+"    } else {\n" +
+"        n\n" +
+"    };\n" +
+"    (ok = true, value = finalVal)\n" +
+"};\n" +
+"io.outputLine(checkedNeg(true, 5), checkedNeg(true, 0), checkedNeg(false, 9));\n" +
+"\n" +
+"/* 3. Complex subject match (side-effecting call subject evaluated once + statement-bearing arm) */\n" +
+"var calls := 0;\n" +
+"probe := fn(n: Int): Int { calls += 1; n };\n" +
+"classify := fn(n: Int): String {\n" +
+"    res := match probe(n) {\n" +
+"        0 { \"zero\" }\n" +
+"        v if v > 10 {\n" +
+"            doubled := v * 2;\n" +
+"            if doubled > 30 { \"huge\" } else { \"big\" }\n" +
+"        }\n" +
+"        _ { \"small\" }\n" +
+"    };\n" +
+"    res\n" +
+"};\n" +
+"io.outputLine(classify(0), classify(12), classify(20), classify(3), calls);\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+    test.checkText("c stderr", "", cRes.stderr);
+} else {
+    cOnly := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt("c compile status: " + cOnly.stderr, 0, cOnly.status);
+}
+
+test.done("c-backend-value-blocks");

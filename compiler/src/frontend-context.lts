@@ -156,7 +156,7 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
 
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; `Never` and other kinds are unchanged. */
 pub copiedValueCode := fn(target: String, kind: String, code: String): String {
-    if kind == ir.VALUE_KIND_NEVER { code }
+    if kind == ir.VALUE_KIND_NEVER or (target == ir.TARGET_C and textLib.startsWithAt(code, 0, "/*@CBLK:")) { code }
     else if types.isListKind(kind) or types.isArrayKind(kind) {
         if target == ir.TARGET_C {
             elKind := if types.isListKind(kind) { types.listElementKind(kind) } else { types.arrayElementKind(kind) };
@@ -711,8 +711,66 @@ ternaryBranchCode := fn(target: String, resultKind: String, branchKind: String, 
     }
 };
 
+/** Unwraps a C11 expression (possibly `/*@CBLK:<ret>@*/<body>`) into a statement assigning `varName` (or discarding for Unit/Never). */
+pub cUnwrapIntoVar := fn(varName: String, kind: String, code: String): String {
+    if textLib.startsWithAt(code, 0, "/*@CBLK:") {
+        endHdr := textLib.indexOfText(code, "@*/", 8);
+        retVar := textLib.slice(code, 8, endHdr);
+        blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
+        if varName == "" or kind == ir.VALUE_KIND_NEVER or kind == ir.VALUE_KIND_UNIT {
+            "{ " + blkBody + " }"
+        } else {
+            "{ " + blkBody + " " + varName + " = " + retVar + "; }"
+        }
+    } else if kind == ir.VALUE_KIND_NEVER {
+        "(void)(" + code + ");"
+    } else if varName == "" or kind == ir.VALUE_KIND_UNIT {
+        if code == "0" { "" } else { "(void)(" + code + ");" }
+    } else {
+        varName + " = " + code + ";"
+    }
+};
+
 /** Builds a nested conditional expression while converting any branch that widens to `resultKind`. */
 pub ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: List<String>, branchCodes: List<String>, branchKinds: List<String>, branchCount: Int): String {
+    if target == ir.TARGET_C {
+        var hasCBlk := false;
+        var bi := 0;
+        loop bi < branchCount {
+            if textLib.startsWithAt(branchCodes[bi], 0, "/*@CBLK:") {
+                hasCBlk = true;
+                break;
+            }
+            bi = bi + 1;
+        }
+        if hasCBlk {
+            if branchCount == 1 {
+                return branchCodes[0];
+            }
+            cVar := if resultKind == ir.VALUE_KIND_UNIT or resultKind == ir.VALUE_KIND_NEVER { "" } else { "lt_cval_" + integer.intText(textLib.length(branchCodes[0]) + branchCount) };
+            var declPrefix := if cVar == "" { "" } else { types.cValueType(resultKind) + " " + cVar + "; " };
+            var stmt := "";
+            var ci := 0;
+            loop ci < branchCount {
+                bCode := if branchKinds[ci] == ir.VALUE_KIND_NEVER or resultKind == ir.VALUE_KIND_UNIT or textLib.startsWithAt(branchCodes[ci], 0, "/*@CBLK:") {
+                    branchCodes[ci]
+                } else {
+                    assignValueCode(target, resultKind, branchKinds[ci], branchCodes[ci])
+                };
+                bStmt := cUnwrapIntoVar(cVar, branchKinds[ci], bCode);
+                if ci == 0 {
+                    stmt = "if (" + conditionCodes[0] + ") { " + bStmt + " }";
+                } else if ci < branchCount - 1 {
+                    stmt = stmt + " else if (" + conditionCodes[ci] + ") { " + bStmt + " }";
+                } else {
+                    stmt = stmt + " else { " + bStmt + " }";
+                }
+                ci = ci + 1;
+            }
+            retTok := if cVar == "" { "0" } else { cVar };
+            return "/*@CBLK:" + retTok + "@*/" + declPrefix + stmt;
+        }
+    }
     var code := ternaryBranchCode(target, resultKind, branchKinds[branchCount - 1], branchCodes[branchCount - 1]);
     var index := branchCount - 2;
     loop index >= 0 {

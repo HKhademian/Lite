@@ -104,7 +104,8 @@ valBlkRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "io := import \"core/io\"; io.outputLine({ 1 2 });", m1 = "expected ; or }", m2 = "")
 ];
 assertRejectsTarget(tsComp, "value-blocks", valBlkRej);
-compilerTest.assertCompileErrorContains(root, cComp, "value-blocks c", "io := import \"core/io\"; x := { y := 2; y * 3 }; io.outputLine(x);", "C backend does not support statement-bearing value blocks yet");
+cValBlkComp := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; x := { y := 2; y * 3 }; io.outputLine(x);", "");
+test.checkInt("value-blocks c compiles: " + cValBlkComp.stderr, 0, cValBlkComp.status);
 
 /* Never-valued io.exit supports default status, value flow, control joins, dead-code checks, and rejections */
 compilerTest.assertCompileRunTs(root, tsComp, "io-exit default", "io := import \"core/io\"; io.output(\"ready\"); io.exit();", "ready");

@@ -1252,6 +1252,35 @@ resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: 
 };
 
 /** Parses `{ ... }` block expressions, statement blocks, function bodies, loop bodies, finally blocks, and conditional branches. */
+/** Emits one local declaration statement for TS or C11, unwrapping `/*@CBLK:<ret>@*/<body>` cleanly on C11. */
+blockDeclStmt := fn(target: String, declKw: String, runtime: String, kind: String, tsTypeAnn: String, initCode: String): String {
+    if target == ir.TARGET_C {
+        cType := types.cValueType(kind);
+        if textLib.startsWithAt(initCode, 0, "/*@CBLK:") {
+            endHdr := textLib.indexOfText(initCode, "@*/", 8);
+            retVar := textLib.slice(initCode, 8, endHdr);
+            blkBody := textLib.slice(initCode, endHdr + 3, textLib.length(initCode));
+            cType + " " + runtime + "; { " + blkBody + " " + runtime + " = " + retVar + "; } (void)" + runtime + ";"
+        } else {
+            cType + " " + runtime + " = " + initCode + "; (void)" + runtime + ";"
+        }
+    } else {
+        declKw + runtime + tsTypeAnn + " = " + initCode + "; void " + runtime + ";"
+    }
+};
+
+/** Emits one assignment statement inside a block for TS or C11, unwrapping `/*@CBLK:<ret>@*/<body>` cleanly on C11. */
+blockAssignStmt := fn(target: String, runtime: String, valCode: String): String {
+    if target == ir.TARGET_C and textLib.startsWithAt(valCode, 0, "/*@CBLK:") {
+        endHdr := textLib.indexOfText(valCode, "@*/", 8);
+        retVar := textLib.slice(valCode, 8, endHdr);
+        blkBody := textLib.slice(valCode, endHdr + 3, textLib.length(valCode));
+        "{ " + blkBody + " " + runtime + " = " + retVar + "; }"
+    } else {
+        runtime + " = " + valCode + ";"
+    }
+};
+
 parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, bodySink: String, aliases: List<AliasDecl>): Parsed {
     isTaggedBody := bodySink == "tagged";
     isLoopBody := bodySink == "loopBody" or textLib.startsWithAt(bodySink, 0, "loopBody:");
@@ -1398,7 +1427,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     declKw := if destructureMutable { "let " } else { "const " };
                     tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(groupedBindKind) { ": " + types.tsFunctionType(groupedBindKind) } else { "" };
                     groupedCode := ctx.assignValueCode(target, groupedBindKind, rhs.kind, rhs.code);
-                    listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + groupedCode + "; void " + bindRuntime + ";");
+                    listLib.pushBack(mut statements, blockDeclStmt(target, declKw, bindRuntime, groupedBindKind, tsTypeAnn, groupedCode));
                     listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, groupedBindKind, groupedCode) { bindRuntime } else { "" });
                     listLib.pushBack(mut stmtDeps, groupedCode);
                     trackedStmtCount = trackedStmtCount + 1;
@@ -1421,7 +1450,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 mutable = false, writable = false, depth = blockLexDepth, constant = false, code = aggFnDeps,
                 intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
                 if not blockExits {
-                    listLib.pushBack(mut statements, "const " + tempRuntime + " = " + rhs.code + "; void " + tempRuntime + ";");
+                    listLib.pushBack(mut statements, blockDeclStmt(target, "const ", tempRuntime, rhs.kind, "", rhs.code));
                     listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, rhs.kind, rhs.code) { tempRuntime } else { "" });
                     listLib.pushBack(mut stmtDeps, rhs.code);
                     trackedStmtCount = trackedStmtCount + 1;
@@ -1457,7 +1486,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         if not blockExits {
                             declKw := if destructureMutable { "let " } else { "const " };
                             tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(bindKind) { ": " + types.tsFunctionType(bindKind) } else { "" };
-                            listLib.pushBack(mut statements, declKw + bindRuntime + tsTypeAnn + " = " + fieldCode + "; void " + bindRuntime + ";");
+                            listLib.pushBack(mut statements, blockDeclStmt(target, declKw, bindRuntime, bindKind, tsTypeAnn, fieldCode));
                             listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, bindKind, fieldCode) { bindRuntime } else { "" });
                             listLib.pushBack(mut stmtDeps, fieldCode);
                             trackedStmtCount = trackedStmtCount + 1;
@@ -1720,10 +1749,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         stmtNext := syntax.consumeStatementEnd(source, retValStart, prefix);
                         if stmtNext < 0 { syntax.failAt(source, retValStart, prefix, "expected ; after return"); }
                         if not blockExits {
-                            if fnCtx.iifeDepth == bodyDepth {
+                            if fnCtx.iifeDepth == bodyDepth or target == ir.TARGET_C {
                                 listLib.pushBack(mut statements, "return;");
                             } else {
-                                if target =!= ir.TARGET_TS { syntax.failAt(source, itemStart, prefix, "C backend does not support non-local return yet"); }
                                 listLib.pushBack(mut statements, stmtReturnPrefix + "lite$throwTransfer(0, undefined);");
                             }
                             blockExits = true;
@@ -1753,11 +1781,23 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         if not blockExits {
                             retValCode := ctx.assignValueCode(target, fnResult, rhs.kind, rhs.code);
                             if rhs.kind == ir.VALUE_KIND_NEVER {
-                                listLib.pushBack(mut statements, stmtReturnPrefix + "(" + retValCode + ");");
+                                if target == ir.TARGET_C {
+                                    listLib.pushBack(mut statements, ctx.cUnwrapIntoVar("", ir.VALUE_KIND_NEVER, retValCode));
+                                } else {
+                                    listLib.pushBack(mut statements, stmtReturnPrefix + "(" + retValCode + ");");
+                                }
+                            } else if target == ir.TARGET_C {
+                                if textLib.startsWithAt(retValCode, 0, "/*@CBLK:") {
+                                    endHdrR := textLib.indexOfText(retValCode, "@*/", 8);
+                                    retVarR := textLib.slice(retValCode, 8, endHdrR);
+                                    blkBodyR := textLib.slice(retValCode, endHdrR + 3, textLib.length(retValCode));
+                                    listLib.pushBack(mut statements, "{ " + types.cValueType(fnResult) + " lt_ret; " + blkBodyR + " lt_ret = " + retVarR + "; return lt_ret; }");
+                                } else {
+                                    listLib.pushBack(mut statements, "return " + retValCode + ";");
+                                }
                             } else if fnCtx.iifeDepth == bodyDepth {
                                 listLib.pushBack(mut statements, "return " + retValCode + ";");
                             } else {
-                                if target =!= ir.TARGET_TS { syntax.failAt(source, itemStart, prefix, "C backend does not support non-local return yet"); }
                                 listLib.pushBack(mut statements, stmtReturnPrefix + "lite$throwTransfer(0, " + retValCode + ");");
                             }
                             blockExits = true;
@@ -2189,21 +2229,40 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     loopLocals: mut List<Local> = [];
                     loop blockLocals as entry { listLib.pushBack(mut loopLocals, entry); }
                     var loopHeadCode := "";
+                    var loopTailClose := " }";
                     if loopItemName =!= "" {
                         loopItemRuntime := ir.localRuntimeName(target, loopLocals, loopItemName, "", blockLexDepth);
                         loopItemCode := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(loopItemKind) { trace.computeCallableRhsDeps(loopSeqCode) } else { loopItemRuntime };
                         listLib.pushBack(mut loopLocals, (name = loopItemName, runtime = loopItemRuntime, kind = loopItemKind,
                         mutable = false, writable = false, depth = blockLexDepth, constant = false, code = loopItemCode,
                         intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
-                        loopHeadCode = "for (const " + loopItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
+                        if target == ir.TARGET_C {
+                            bSeqTag := types.cListTag(loopItemKind);
+                            bSeqVar := "lt_bseq_" + integer.intText(loopId) + "_" + integer.intText(itemStart);
+                            bSeqI := "lt_bsi_" + integer.intText(loopId) + "_" + integer.intText(itemStart);
+                            loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = lt_list_" + bSeqTag + "_copy(" + loopSeqCode + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + ".len; " + bSeqI + " += 1) { " + types.cListElemType(bSeqTag) + " " + loopItemRuntime + " = " + bSeqVar + ".data[" + bSeqI + "]; (void)" + loopItemRuntime + "; ";
+                            loopTailClose = " } }";
+                        } else {
+                            loopHeadCode = "for (const " + loopItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
+                        }
                     } else if loopSeqCode =!= "" {
                         tempItemRuntime := ir.freshScopeTemp(loopLocals, "lite$item");
                         listLib.pushBack(mut loopLocals, (name = "$item", runtime = tempItemRuntime, kind = ir.VALUE_KIND_UNIT,
                         mutable = false, writable = false, depth = blockLexDepth, constant = false, code = "",
                         intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
-                        loopHeadCode = "for (const " + tempItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
+                        if target == ir.TARGET_C {
+                            bSeqTag := types.cListTag(loopItemKind);
+                            bSeqVar := "lt_bseq_" + integer.intText(loopId) + "_" + integer.intText(itemStart);
+                            bSeqI := "lt_bsi_" + integer.intText(loopId) + "_" + integer.intText(itemStart);
+                            loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = lt_list_" + bSeqTag + "_copy(" + loopSeqCode + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + ".len; " + bSeqI + " += 1) { ";
+                            loopTailClose = " } }";
+                        } else {
+                            loopHeadCode = "for (const " + tempItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
+                        }
                     } else {
-                        condText := if loopCondCode == "" { "Boolean(true)" } else if loopCondCode == "false" { "Boolean(false)" } else { loopCondCode };
+                        condText := if target == ir.TARGET_C {
+                            if loopCondCode == "" { "true" } else { loopCondCode }
+                        } else if loopCondCode == "" { "Boolean(true)" } else if loopCondCode == "false" { "Boolean(false)" } else { loopCondCode };
                         loopHeadCode = "while (" + condText + ") { ";
                     }
                     stmtLoopLexDepthStr := integer.intText(ir.maxLocalLexDepth(loopLocals) + 1);
@@ -2224,7 +2283,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     };
                     loopLabelPrefix := if needsLoopLabel { loopLabel + ": " } else { "" };
                     if not blockExits {
-                        listLib.pushBack(mut statements, loopLabelPrefix + loopHeadCode + wrappedLoopBody + " }");
+                        listLib.pushBack(mut statements, loopLabelPrefix + loopHeadCode + wrappedLoopBody + loopTailClose);
                         if isFnBody and loopSeqCode == "" and loopCondCode == "" and not hasCrossBreak and
                         not needsLoopLabel and not reach.codeUsesTextCall(wrappedLoopBody, "break") {
                             listLib.pushBack(mut statements, "throw new Error(\"unreachable loop completion\");");
@@ -2382,7 +2441,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     } else {
                         varInitCode := ctx.assignValueCode(target, declParsed.kind, declParsed.kind, declParsed.code);
                         tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
-                        listLib.pushBack(mut statements, "let " + runtime + tsTypeAnn + " = " + varInitCode + "; void " + runtime + ";");
+                        listLib.pushBack(mut statements, blockDeclStmt(target, "let ", runtime, declParsed.kind, tsTypeAnn, varInitCode));
                         listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, declParsed.kind, varInitCode) { runtime } else { "" });
                         listLib.pushBack(mut stmtDeps, varInitCode);
                         trackedStmtCount = trackedStmtCount + 1;
@@ -2427,7 +2486,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if not blockExits {
                     mutInitCode := ctx.copiedValueCode(target, declParsed.kind, declParsed.code);
                     tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
-                    listLib.pushBack(mut statements, "const " + runtime + tsTypeAnn + " = " + mutInitCode + "; void " + runtime + ";");
+                    listLib.pushBack(mut statements, blockDeclStmt(target, "const ", runtime, declParsed.kind, tsTypeAnn, mutInitCode));
                     listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, declParsed.kind, mutInitCode) { runtime } else { "" });
                     listLib.pushBack(mut stmtDeps, mutInitCode);
                     trackedStmtCount = trackedStmtCount + 1;
@@ -2484,7 +2543,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if not blockExits {
                     valInitCode := ctx.copiedValueCode(target, declParsed.kind, declParsed.code);
                     tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
-                    listLib.pushBack(mut statements, "const " + runtime + tsTypeAnn + " = " + valInitCode + "; void " + runtime + ";");
+                    listLib.pushBack(mut statements, blockDeclStmt(target, "const ", runtime, declParsed.kind, tsTypeAnn, valInitCode));
                     listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, declParsed.kind, valInitCode) { runtime } else { "" });
                     listLib.pushBack(mut stmtDeps, valInitCode);
                     trackedStmtCount = trackedStmtCount + 1;
@@ -2542,7 +2601,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     } else {
                         declKw := if declInitState == ir.INIT_STATE_INIT { "const " } else { "let " };
                         tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(typed.kind) { ": " + types.tsFunctionType(typed.kind) } else { "" };
-                        listLib.pushBack(mut statements, declKw + runtime + tsTypeAnn + " = " + declCode + "; void " + runtime + ";");
+                        listLib.pushBack(mut statements, blockDeclStmt(target, declKw, runtime, typed.kind, tsTypeAnn, declCode));
                         listLib.pushBack(mut stmtOwners, if reach.isPrunableExprForTarget(target, typed.kind, declCode) { runtime } else { "" });
                         listLib.pushBack(mut stmtDeps, declCode);
                         trackedStmtCount = trackedStmtCount + 1;
@@ -2794,7 +2853,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         listLib.pushBack(mut statements, stmtReturnPrefix + "(" + rhsCode + ");");
                         blockExits = true;
                     } else {
-                        listLib.pushBack(mut statements, entry.runtime + " = " + rhsCode + ";");
+                        listLib.pushBack(mut statements, blockAssignStmt(target, entry.runtime, rhsCode));
                         isLocalOwner := not ir.localsRangeUsesRuntime(blockLocals, outerLocalsLen, entry.runtime);
                         assignOwner := if isLocalOwner and reach.isPrunableExprForTarget(target, entry.kind, rhsCode) { entry.runtime } else { "" };
                         assignDeps := if assignOwner =!= "" { rhsCode } else { entry.runtime + " " + rhsCode };
@@ -3170,8 +3229,10 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         }
     }
     if blockExits {
-        if target =!= ir.TARGET_TS {
-            syntax.failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
+        if target == ir.TARGET_C {
+            return ctx.withMarkers((kind = ir.VALUE_KIND_NEVER, code = "/*@CBLK:0@*/" + textLib.joinTexts(statements, " "),
+            intValue = 0, textValue = "", constant = false, next = cursor),
+            if inferMode { blockMarkers } else { "" });
         }
         return ctx.withMarkers((kind = ir.VALUE_KIND_NEVER, code = "(() => { " + textLib.joinTexts(statements, " ") + " })()",
         intValue = 0, textValue = "", constant = false, next = cursor),
@@ -3181,8 +3242,21 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         baseBlock := (kind = blockKind, code = blockCode, intValue = blockInt, textValue = blockText, constant = blockConstant, next = cursor);
         return if inferMode and blockMarkers =!= "" { ctx.withMarkers(baseBlock, blockMarkers) } else { baseBlock };
     }
-    if target =!= ir.TARGET_TS {
-        syntax.failAt(source, start, prefix, "C backend does not support statement-bearing value blocks yet");
+    if target == ir.TARGET_C {
+        stmtsJoinedC := textLib.joinTexts(statements, " ");
+        if blockKind == ir.VALUE_KIND_UNIT or blockKind == ir.VALUE_KIND_NEVER {
+            tailC := ctx.cUnwrapIntoVar("", blockKind, blockCode);
+            return ctx.withMarkers((kind = blockKind, code = "/*@CBLK:0@*/" + stmtsJoinedC + (if tailC =!= "" { " " + tailC } else { "" }),
+            intValue = 0, textValue = "", constant = false, next = cursor),
+            if inferMode { blockMarkers } else { "" });
+        }
+        blkVar := "lt_blk_" + integer.intText(start);
+        tailValC := ctx.copiedValueCode(target, blockKind, blockCode);
+        tailAssignC := ctx.cUnwrapIntoVar(blkVar, blockKind, tailValC);
+        return ctx.withMarkers((kind = blockKind,
+        code = "/*@CBLK:" + blkVar + "@*/" + types.cValueType(blockKind) + " " + blkVar + "; { " + stmtsJoinedC + " " + tailAssignC + " }",
+        intValue = 0, textValue = "", constant = false, next = cursor),
+        if inferMode { blockMarkers } else { "" });
     }
     returnCode := if blockKind == ir.VALUE_KIND_UNIT {
         if blockCode == ir.targetUnitLiteralCode(target) { "return undefined;" }
@@ -4536,6 +4610,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
     var canTernary := not inferMode and mode == "value" and (subjIsSimpleIdent or (isCTarget and subj.constant));
     subjVar := if canTernary { subj.code } else if isCTarget { "lt_subj_" + integer.intText(matchId) } else { "lite$subj" + integer.intText(matchId) };
     doneVar := if isCTarget { "lt_done_" + integer.intText(matchId) } else { "lite$done" + integer.intText(matchId) };
+    cMatchValVar := "lt_mval_" + integer.intText(matchId);
     subjTsType := if types.needsTsTypeAnnotation(subj.kind) { ": " + types.tsFunctionType(subj.kind) } else { "" };
     armDepth := ir.maxLocalLexDepth(locals) + 1;
     var matchMarkers := if inferMode { ctx.collectParsedMarkers("", subj) } else { "" };
@@ -4709,12 +4784,17 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             bodyEmit = branch.code;
         } else if mode == "iife" {
             bodyEmit = ctx.condBranchStmtCode(target, resolvedValKind, condValVar, branch.kind, branch.code);
+        } else if isCTarget {
+            bodyEmit = ctx.cUnwrapIntoVar(cMatchValVar, branch.kind, branch.code);
         } else {
             if branch.kind == ir.VALUE_KIND_NEVER {
                 bodyEmit = "void (" + branch.code + ");";
             } else {
                 bodyEmit = "return (" + branch.code + ");";
             }
+        }
+        if isCTarget and textLib.startsWithAt(branch.code, 0, "/*@CBLK:") {
+            canTernary = false;
         }
         patCond := if pat.cond == "" { "true" } else { pat.cond };
         armDead := staticallyMatched or patCond == "false" or (hasGuard and guardCode == "false");
@@ -4805,6 +4885,8 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             winBranchCode
         } else if mode == "iife" {
             ctx.condBranchStmtCode(target, resolvedValKind, condValVar, winBranchKind, winBranchCode)
+        } else if isCTarget {
+            ctx.cUnwrapIntoVar(cMatchValVar, winBranchKind, ctx.assignValueCode(target, finalKind, winBranchKind, winBranchCode))
         } else {
             "return (" + ctx.assignValueCode(target, finalKind, winBranchKind, winBranchCode) + ");"
         };
@@ -4814,7 +4896,10 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         armsCode = subjPrefix + winDeclStmts + winAssignStmts + winVoidStmts + directBody + " ";
         if mode == "value" {
             if isCTarget {
-                syntax.failAt(source, matchStart, prefix, "C backend does not support complex subject match expressions yet");
+                cDecl := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "" } else { types.cValueType(finalKind) + " " + cMatchValVar + "; " };
+                cRetTok := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "0" } else { cMatchValVar };
+                return (code = "/*@CBLK:" + cRetTok + "@*/" + cDecl + armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
+                isDirect = true, constant = false, intValue = 0, textValue = "");
             }
             retType := types.tsFunctionType(finalKind);
             return (code = "(((): " + retType + " => { " + armsCode + "})())", kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
@@ -4833,7 +4918,12 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         isDirect = true, constant = false, intValue = 0, textValue = "");
     }
     if isCTarget and mode == "value" {
-        syntax.failAt(source, matchStart, prefix, "C backend does not support complex subject match expressions yet");
+        cDecl := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "" } else { types.cValueType(finalKind) + " " + cMatchValVar + "; " };
+        cRetTok := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "0" } else { cMatchValVar };
+        cSubjLead := if textLib.startsWithAt(armsCode, 0, types.cValueType(subj.kind) + " " + subjVar) { "" }
+        else { types.cValueType(subj.kind) + " " + subjVar + " = " + subj.code + "; (void)" + subjVar + "; bool " + doneVar + " = false; " };
+        return (code = "/*@CBLK:" + cRetTok + "@*/" + cDecl + cSubjLead + armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
+        isDirect = true, constant = false, intValue = 0, textValue = "");
     }
     (code = armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers, isDirect = false, constant = false, intValue = 0, textValue = "")
 };
