@@ -1,27 +1,60 @@
-/** Interactive desktop canvas demo using abstract `extra/canvas` and `extra/color` APIs.
+/** Interactive desktop canvas demo with live vitals HUD (FPS, UPS, frame time, CPU time, RSS memory)
+ * and runtime frame-cap controls (1=30fps, 2=60fps, 3=120fps, 0/u=uncapped, Esc/q=quit).
  *
  * Run natively (C11 macOS AppKit window):
  *   ./bin/lite run --target c samples/programs/gui/bouncing-canvas.lts
  *
- * Run on TypeScript desktop host:
- *   ./bin/lite run --target ts samples/programs/gui/bouncing-canvas.lts
- *
- * Render one frame headlessly to PNG:
- *   LITE_CANVAS_HEADLESS=1 ./bin/lite run --target c samples/programs/gui/bouncing-canvas.lts -- --capture /tmp/demo.png
+ * Benchmark N frames uncapped:
+ *   LITE_CANVAS_HEADLESS=1 ./bin/lite run --target c samples/programs/gui/bouncing-canvas.lts -- --bench 300 --uncapped
  */
 
 canvas := import "extra/canvas";
 color := import "extra/color";
+integer := import "core/int";
 io := import "core/io";
 list := import "core/list";
+text := import "core/text";
+
+roundInt := fn(v: Float): Int {
+    if v <= 0.0 { return 0; }
+    var hi := 1;
+    loop hi < 1000000000 and hi <= v { hi = hi * 2; }
+    var lo := 0;
+    loop lo < hi {
+        mid := (lo + hi + 1) / 2;
+        if mid <= v + 0.5 { lo = mid; } else { hi = mid - 1; }
+    }
+    lo
+};
+
+fmt1 := fn(v: Float): String {
+    tenths := roundInt(v * 10.0);
+    whole := tenths / 10;
+    frac := tenths - whole * 10;
+    integer.intText(whole) + "." + integer.intText(frac)
+};
 
 args := io.inputArgs();
 var capturePath := "";
+var benchFrames := 0;
+var initTargetFps := 60.0;
 var i := 0;
 loop i < list.length(args) {
-    if args[i] == "--capture" and i + 1 < list.length(args) {
+    arg := args[i];
+    if arg == "--capture" and i + 1 < list.length(args) {
         capturePath = args[i + 1];
         i = i + 2;
+    } else if arg == "--bench" and i + 1 < list.length(args) {
+        parsed := text.textToInt(args[i + 1]);
+        if parsed.ok and parsed.value > 0 { benchFrames = parsed.value; }
+        i = i + 2;
+    } else if arg == "--fps" and i + 1 < list.length(args) {
+        parsed := text.textToInt(args[i + 1]);
+        if parsed.ok { initTargetFps = parsed.value * 1.0; }
+        i = i + 2;
+    } else if arg == "--uncapped" {
+        initTargetFps = 0.0;
+        i = i + 1;
     } else {
         i = i + 1;
     }
@@ -30,33 +63,75 @@ loop i < list.length(args) {
 w := 640;
 h := 400;
 surface := canvas.open("LiteScript Canvas Demo", w, h);
+if initTargetFps =!= 60.0 {
+    canvas.setTargetFps(surface, initTargetFps);
+}
 
 bg := canvas.rgb(0.07, 0.09, 0.14);
 grid := canvas.rgba(1.0, 1.0, 1.0, 0.08);
-panel := canvas.rgba(0.14, 0.18, 0.27, 0.85);
+panel := canvas.rgba(0.11, 0.14, 0.22, 0.88);
 accent := canvas.hsl(198.0, 0.85, 0.58);
 warm := canvas.hsl(342.0, 0.82, 0.62);
+mint := canvas.hsl(152.0, 0.72, 0.58);
 
 var x1 := 140.0;
 var y1 := 150.0;
-var vx1 := 2.6;
-var vy1 := 2.1;
+var vx1 := 156.0;
+var vy1 := 126.0;
 
 var x2 := 460.0;
 var y2 := 240.0;
-var vx2 := -2.2;
-var vy2 := -1.8;
+var vx2 := -132.0;
+var vy2 := -108.0;
 
+/* Fixed-timestep simulation at 120 UPS decoupled from render FPS */
+stepDt := 1.0 / 120.0;
+var accumSec := 0.0;
+var updateCount := 0;
+var totalTimeSec := 0.0;
 var frame := 0;
+
 loop true {
     inp := canvas.poll(surface);
     if not inp.open or inp.key == "Escape" or inp.key == "q" {
         break;
     }
+    if inp.key == "1" { canvas.setTargetFps(surface, 30.0); }
+    else if inp.key == "2" { canvas.setTargetFps(surface, 60.0); }
+    else if inp.key == "3" { canvas.setTargetFps(surface, 120.0); }
+    else if inp.key == "0" or inp.key == "u" { canvas.uncapFrameRate(surface); }
+
+    vit := canvas.vitals(surface);
+    frameSec := if vit.frameTimeMs > 0.0 {
+        if vit.frameTimeMs > 100.0 { 0.1 } else { vit.frameTimeMs / 1000.0 }
+    } else {
+        stepDt
+    };
+    accumSec = accumSec + frameSec;
+    totalTimeSec = totalTimeSec + frameSec;
+    var subSteps := 0;
+    loop accumSec >= stepDt and subSteps < 8 {
+        x1 = x1 + vx1 * stepDt;
+        y1 = y1 + vy1 * stepDt;
+        if x1 < 36.0 { x1 = 36.0; vx1 = 0.0 - vx1; }
+        if x1 > 604.0 { x1 = 604.0; vx1 = 0.0 - vx1; }
+        if y1 < 100.0 { y1 = 100.0; vy1 = 0.0 - vy1; }
+        if y1 > 364.0 { y1 = 364.0; vy1 = 0.0 - vy1; }
+
+        x2 = x2 + vx2 * stepDt;
+        y2 = y2 + vy2 * stepDt;
+        if x2 < 32.0 { x2 = 32.0; vx2 = 0.0 - vx2; }
+        if x2 > 608.0 { x2 = 608.0; vx2 = 0.0 - vx2; }
+        if y2 < 100.0 { y2 = 100.0; vy2 = 0.0 - vy2; }
+        if y2 > 368.0 { y2 = 368.0; vy2 = 0.0 - vy2; }
+
+        accumSec = accumSec - stepDt;
+        updateCount = updateCount + 1;
+        subSteps = subSteps + 1;
+    }
 
     canvas.clear(surface, bg);
 
-    /* Subtle background grid */
     var gx := 40.0;
     loop gx < 640.0 {
         canvas.strokeLine(surface, canvas.point(gx, 0.0), canvas.point(gx, 400.0), 1.0, grid);
@@ -68,29 +143,32 @@ loop true {
         gy = gy + 40.0;
     }
 
-    /* Header card */
-    canvas.fillRect(surface, canvas.rect(20.0, 18.0, 320.0, 46.0), panel);
-    canvas.strokeRect(surface, canvas.rect(20.0, 18.0, 320.0, 46.0), 2.0, accent);
-    canvas.drawText(surface, "LITESCRIPT CANVAS", canvas.point(34.0, 34.0), 14.0, canvas.WHITE);
-
-    /* Connecting beam between bouncing orbs */
+    /* Connecting beam and bouncing orbs */
     canvas.strokeLine(surface, canvas.point(x1, y1), canvas.point(x2, y2), 3.0, canvas.mix(accent, warm, 0.5));
-
-    /* Bouncing translucent glow + core orbs */
     canvas.fillCircle(surface, canvas.point(x1, y1), 36.0, canvas.withAlpha(accent, 0.25));
     canvas.fillCircle(surface, canvas.point(x1, y1), 22.0, accent);
-
     canvas.fillCircle(surface, canvas.point(x2, y2), 32.0, canvas.withAlpha(warm, 0.25));
     canvas.fillCircle(surface, canvas.point(x2, y2), 18.0, warm);
 
-    /* Interactive pointer highlight */
     if inp.pointerX > 0.0 or inp.pointerY > 0.0 {
         pColor := if inp.pointerDown { color.YELLOW } else { canvas.withAlpha(canvas.WHITE, 0.7) };
         pRadius := if inp.pointerDown { 18.0 } else { 10.0 };
         canvas.fillCircle(surface, canvas.point(inp.pointerX, inp.pointerY), pRadius, pColor);
     }
 
+    /* Live Vitals HUD */
+    canvas.fillRect(surface, canvas.rect(14.0, 12.0, 612.0, 68.0), panel);
+    canvas.strokeRect(surface, canvas.rect(14.0, 12.0, 612.0, 68.0), 2.0, accent);
+    ups := if totalTimeSec > 0.0 { updateCount / totalTimeSec } else { 0.0 };
+    capLabel := if vit.targetFps <= 0.0 { "UNCAP" } else { integer.intText(roundInt(vit.targetFps)) };
+    memMb := vit.memoryBytes / 1048576.0;
+    line1 := "FPS:" + fmt1(vit.fps) + "  UPS:" + fmt1(ups) + "  FT:" + fmt1(vit.avgFrameTimeMs) + "MS  CAP:" + capLabel;
+    line2 := "CPU:" + fmt1(vit.cpuTimeMs) + "MS  MEM:" + fmt1(memMb) + "MB  KEYS:1/2/3/0";
+    canvas.drawText(surface, line1, canvas.point(26.0, 24.0), 14.0, canvas.WHITE);
+    canvas.drawText(surface, line2, canvas.point(26.0, 50.0), 14.0, mint);
+
     canvas.present(surface);
+    frame = frame + 1;
 
     if capturePath =!= "" {
         cap := canvas.capture(surface, capturePath);
@@ -102,19 +180,16 @@ loop true {
         io.outputLine("captured: " + capturePath);
         break;
     }
-
-    x1 = x1 + vx1;
-    y1 = y1 + vy1;
-    if x1 < 36.0 or x1 > 604.0 { vx1 = 0.0 - vx1; }
-    if y1 < 76.0 or y1 > 364.0 { vy1 = 0.0 - vy1; }
-
-    x2 = x2 + vx2;
-    y2 = y2 + vy2;
-    if x2 < 32.0 or x2 > 608.0 { vx2 = 0.0 - vx2; }
-    if y2 < 76.0 or y2 > 368.0 { vy2 = 0.0 - vy2; }
-
-    frame = frame + 1;
-    if frame >= 3600 { break; }
+    if benchFrames > 0 and frame >= benchFrames {
+        fin := canvas.vitals(surface);
+        finUps := if totalTimeSec > 0.0 { updateCount / totalTimeSec } else { 0.0 };
+        finCap := if fin.targetFps <= 0.0 { "uncapped" } else { fmt1(fin.targetFps) };
+        io.outputLine("frames=" + integer.intText(fin.frameCount) + " updates=" + integer.intText(updateCount) +
+        " fps=" + fmt1(fin.fps) + " ups=" + fmt1(finUps) +
+        " frameMs=" + fmt1(fin.avgFrameTimeMs) + " cap=" + finCap +
+        " cpuMs=" + fmt1(fin.cpuTimeMs) + " rssMb=" + fmt1(fin.memoryBytes / 1048576.0));
+        break;
+    }
 }
 
 canvas.close(surface);
