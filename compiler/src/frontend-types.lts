@@ -439,23 +439,6 @@ pub mapValueKind := fn(kind: String): String {
     if comma < 0 { "" } else { textLib.slice(kind, comma + 1, textLib.length(kind) - 1) }
 };
 
-/** Maps a C-supported scalar/enum list element kind to its canonical C11 list tag (`i64`, `f64`, `bool`, `str`), or `""` if unsupported. */
-pub cListTag := fn(elemKind: String): String {
-    if numeric.isIntKind(elemKind) or isEnumKind(elemKind) { "i64" }
-    else if numeric.isFloatKind(elemKind) { "f64" }
-    else if elemKind == ir.VALUE_KIND_BOOL { "bool" }
-    else if elemKind == ir.VALUE_KIND_STRING { "str" }
-    else { "" }
-};
-
-/** Maps a canonical C11 list tag (`i64`, `f64`, `bool`, `str`) to its C11 element type name. */
-pub cListElemType := fn(tag: String): String {
-    if tag == "i64" { "int64_t" }
-    else if tag == "f64" { "double" }
-    else if tag == "bool" { "bool" }
-    else { "const char *" }
-};
-
 /** True when `kind` is a value-comparable scalar or nominal enum kind admissible as a `Map<K, V>` key. */
 pub isMapKeyKind := fn(kind: String): Bool {
     numeric.isIntKind(kind) or numeric.isFloatKind(kind) or kind == ir.VALUE_KIND_STRING or
@@ -721,6 +704,122 @@ pub recordFieldKind := fn(kind: String, label: String): String {
         if cursor < end and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
     }
     ""
+};
+
+/** Prefixes a tuple/record runtime property name with `f_` for C11 struct members so C keywords never collide. */
+pub cFieldName := fn(prop: String): String {
+    "f_" + prop
+};
+
+/** Deterministic dual-prime hash of canonical kind string `kind` for C11 struct typedef names. */
+cStructHash := fn(kind: String): String {
+    table := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_():,;<>#[]!@$-./=";
+    var h1 := 5381;
+    var h2 := 216613626;
+    size := textLib.length(kind);
+    var i := 0;
+    loop i < size {
+        ch := textLib.at(kind, i);
+        idx := textLib.indexOfText(table, ch, 0);
+        v := if idx >= 0 { idx + 1 } else { 97 };
+        h1 = (h1 * 131 + v) % 1000000007;
+        h2 = (h2 * 137 + v) % 1000000009;
+        i = i + 1;
+    }
+    integer.intText(h1) + "_" + integer.intText(h2)
+};
+
+/** True when `kind` is a C11-supported value kind (scalar, enum, struct, or list/array of supported elements). */
+cIsSupportedElem := fn(kind: String): Bool {
+    if numeric.isIntKind(kind) or isEnumKind(kind) or numeric.isFloatKind(kind) or
+    kind == ir.VALUE_KIND_BOOL or kind == ir.VALUE_KIND_STRING { return true; }
+    if isListKind(kind) { return self(listElementKind(kind)); }
+    if isArrayKind(kind) { return self(arrayElementKind(kind)); }
+    if isTupleKind(kind) {
+        count := tupleComponentCount(kind);
+        var i := 0;
+        loop i < count {
+            if not self(tupleComponent(kind, i).kind) { return false; }
+            i = i + 1;
+        }
+        return true;
+    }
+    if isRecordKind(kind) {
+        count := recordComponentCount(kind);
+        var i := 0;
+        loop i < count {
+            if not self(recordComponent(kind, i).kind) { return false; }
+            i = i + 1;
+        }
+        return true;
+    }
+    false
+};
+
+/** Maps a C-supported tuple or nominal record kind to its deterministic C11 typedef name `lt_s_...`, or `""` if unsupported. */
+pub cStructTag := fn(kind: String): String {
+    if (isTupleKind(kind) or isRecordKind(kind)) and cIsSupportedElem(kind) {
+        "lt_s_" + cStructHash(kind)
+    } else {
+        ""
+    }
+};
+
+/** True when `kind` is a list/array or a tuple/record transitively containing a list/array field. */
+pub cTypeHasListField := fn(kind: String): Bool {
+    if isListKind(kind) or isArrayKind(kind) { return true; }
+    if isTupleKind(kind) {
+        count := tupleComponentCount(kind);
+        var i := 0;
+        loop i < count {
+            if self(tupleComponent(kind, i).kind) { return true; }
+            i = i + 1;
+        }
+        return false;
+    }
+    if isRecordKind(kind) {
+        count := recordComponentCount(kind);
+        var i := 0;
+        loop i < count {
+            if self(recordComponent(kind, i).kind) { return true; }
+            i = i + 1;
+        }
+        return false;
+    }
+    false
+};
+
+/** Maps a C-supported list element kind (scalar, enum, tuple, or record) to its canonical C11 list tag, or `""` if unsupported. */
+pub cListTag := fn(elemKind: String): String {
+    if numeric.isIntKind(elemKind) or isEnumKind(elemKind) { "i64" }
+    else if numeric.isFloatKind(elemKind) { "f64" }
+    else if elemKind == ir.VALUE_KIND_BOOL { "bool" }
+    else if elemKind == ir.VALUE_KIND_STRING { "str" }
+    else if isTupleKind(elemKind) or isRecordKind(elemKind) { cStructTag(elemKind) }
+    else { "" }
+};
+
+/** Maps a canonical C11 list tag (`i64`, `f64`, `bool`, `str`, or `lt_s_...`) to its C11 element type name. */
+pub cListElemType := fn(tag: String): String {
+    if tag == "i64" { "int64_t" }
+    else if tag == "f64" { "double" }
+    else if tag == "bool" { "bool" }
+    else if tag == "str" { "const char *" }
+    else { tag }
+};
+
+/** Returns the C11 tuple-label conversion helper name for converting `actualKind` to `expectedKind`. */
+pub cTupleConvertName := fn(expectedKind: String, actualKind: String): String {
+    "lt_conv_" + cStructTag(expectedKind) + "_from_" + cStructTag(actualKind)
+};
+
+/** Converts one tuple expression to `expectedKind` for the given backend `target`. */
+pub convertTupleValueForTarget := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
+    if target == ir.TARGET_C and cStructTag(expectedKind) =!= "" and cStructTag(actualKind) =!= "" {
+        "/*@C:" + expectedKind + "|" + actualKind + "@*/" + cTupleConvertName(expectedKind, actualKind) + "(" + actualCode + ")"
+    } else {
+        convertTupleValue(expectedKind, actualKind, actualCode)
+    }
 };
 
 /** Encodes `text` using `<length>:<text>` so serialized record defaults and raw types never collide with delimiters. */

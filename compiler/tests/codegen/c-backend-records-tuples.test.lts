@@ -1,0 +1,76 @@
+/** Verifies Phase C4 C11 backend support for tuples, nominal records, lists/arrays of structs, destructuring, and 1/2-level field assignment. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"list := import \"core/list\";\n" +
+"\n" +
+"/* 1. Tuples, label conversions, and formatting */\n" +
+"stored := (width = 640, height = 480);\n" +
+"point: (x: Int, y: Int) = stored;\n" +
+"plain: (:Int, :Int) = point;\n" +
+"mixed: (:Int, height: Int) = plain;\n" +
+"single := (42,);\n" +
+"io.outputLine(stored, point, plain, mixed, single);\n" +
+"io.outputLine(stored.width, point.y, mixed.0, mixed.height, single.0);\n" +
+"\n" +
+"/* 2. Nominal records with defaults, nested records, and list fields */\n" +
+"Empty := record {};\n" +
+"Vec2 := record { x: Int = 1; y: Int = 2 };\n" +
+"Entity := record { name: String; pos: Vec2; tags: List<String> };\n" +
+"e0 := Empty {};\n" +
+"v0 := Vec2 {};\n" +
+"var ent := Entity { name = \"hero\", pos = Vec2 { x = 10, y = 20 }, tags = [\"a\", \"b\"] };\n" +
+"var snap := ent;\n" +
+"ent.pos.x += 5;\n" +
+"ent.name = \"mage\";\n" +
+"io.outputLine(e0, v0);\n" +
+"io.outputLine(ent);\n" +
+"io.outputLine(snap);\n" +
+"\n" +
+"/* 3. Lists & fixed arrays of tuples/records */\n" +
+"Token := type (kind: String, text: String);\n" +
+"Tokens := type List<Token>;\n" +
+"describe := fn(tok: Token): String { tok.kind + \":\" + tok.text };\n" +
+"tokens: mut Tokens = [];\n" +
+"list.pushBack(mut tokens, (kind = \"id\", text = \"x\"));\n" +
+"list.pushBack(mut tokens, (kind = \"op\", text = \"+\"));\n" +
+"loop tokens as tok { io.outputLine(describe(tok)); }\n" +
+"fixed := [Vec2 { x = 3, y = 4 }, Vec2 { x = 5, y = 6 }];\n" +
+"io.outputLine(fixed, fixed.0.x, fixed[1].y);\n" +
+"\n" +
+"/* 4. Destructuring (tuple, record, array) */\n" +
+"(dx, dy) := plain;\n" +
+"{ ename = name, epos = pos } := snap;\n" +
+"[fa, fb] := fixed;\n" +
+"io.outputLine(dx, dy, ename, epos.x, fa.x, fb.y);\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+    test.checkText("c stderr", "", cRes.stderr);
+} else {
+    cOnly := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt("c compile status: " + cOnly.stderr, 0, cOnly.status);
+}
+
+test.done("c-backend-records-tuples");

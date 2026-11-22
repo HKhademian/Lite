@@ -173,7 +173,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
                     "lt_list_" + tag + "_copy(" + code + ")"
                 }
             } else {
-                ir.targetListCopyCode(target, code)
+                code
             }
         } else {
             ir.targetListCopyCode(target, code)
@@ -184,6 +184,14 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     }
     else if types.isSetKind(kind) {
         if target == ir.TARGET_TS and not textLib.startsWithAt(code, 0, "new Set<") and not textLib.startsWithAt(code, 0, "new Set(") { "new Set(" + code + ")" } else { code }
+    }
+    else if target == ir.TARGET_C and (types.isTupleKind(kind) or types.isRecordKind(kind)) and types.cTypeHasListField(kind) {
+        tag := types.cStructTag(kind);
+        if tag =!= "" and not textLib.startsWithAt(code, 0, "/*@T:") and not textLib.startsWithAt(code, 0, tag + "_copy(") {
+            tag + "_copy(" + code + ")"
+        } else {
+            code
+        }
     }
     else { code }
 };
@@ -197,7 +205,7 @@ pub assignValueCode := fn(target: String, expectedKind: String, actualKind: Stri
     } else if expectedKind == ir.VALUE_KIND_FLOAT and numeric.isIntKind(actualKind) {
         ir.targetFloatOperandCode(target, actualKind, actualCode)
     } else if expectedKind =!= actualKind and types.tupleShapeMatches(expectedKind, actualKind) {
-        types.convertTupleValue(expectedKind, actualKind, actualCode)
+        types.convertTupleValueForTarget(target, expectedKind, actualKind, actualCode)
     } else {
         copiedValueCode(target, expectedKind, actualCode)
     }
@@ -507,6 +515,21 @@ pub joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List
 pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
     if types.isTupleKind(kind) {
         count := types.tupleComponentCount(kind);
+        if target == ir.TARGET_C and types.cStructTag(kind) =!= "" {
+            tag := types.cStructTag(kind);
+            if count == 0 {
+                return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ ._empty = 0 })", intValue = 0, textValue = "", constant = false, next = next);
+            }
+            var cCode := "";
+            var index := 0;
+            loop index < count {
+                comp := types.tupleComponent(kind, index);
+                if index > 0 { cCode = cCode + ", "; }
+                cCode = cCode + "." + types.cFieldName(comp.prop) + " = " + self(target, comp.kind, next).code;
+                index = index + 1;
+            }
+            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ " + cCode + " })", intValue = 0, textValue = "", constant = false, next = next);
+        }
         var code := "{ ";
         var index := 0;
         loop index < count {
@@ -531,6 +554,21 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
     }
     else if types.isRecordKind(kind) {
         count := types.recordComponentCount(kind);
+        if target == ir.TARGET_C and types.cStructTag(kind) =!= "" {
+            tag := types.cStructTag(kind);
+            if count == 0 {
+                return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ ._empty = 0 })", intValue = 0, textValue = "", constant = false, next = next);
+            }
+            var cCode := "";
+            var index := 0;
+            loop index < count {
+                comp := types.recordComponent(kind, index);
+                if index > 0 { cCode = cCode + ", "; }
+                cCode = cCode + "." + types.cFieldName(comp.prop) + " = " + self(target, comp.kind, next).code;
+                index = index + 1;
+            }
+            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ " + cCode + " })", intValue = 0, textValue = "", constant = false, next = next);
+        }
         if count == 0 { return (kind = kind, code = "{}", intValue = 0, textValue = "", constant = false, next = next); }
         var code := "{ ";
         var index := 0;
@@ -542,7 +580,13 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         }
         (kind = kind, code = code + " }", intValue = 0, textValue = "", constant = false, next = next)
     }
-    else if types.isListKind(kind) { (kind = kind, code = "[]", intValue = 0, textValue = "", constant = false, next = next) }
+    else if types.isListKind(kind) {
+        if target == ir.TARGET_C and types.cListTag(types.listElementKind(kind)) =!= "" {
+            cTag := types.cListTag(types.listElementKind(kind));
+            return (kind = kind, code = "lt_list_" + cTag + "_from(0, NULL)", intValue = 0, textValue = "", constant = false, next = next);
+        }
+        (kind = kind, code = "[]", intValue = 0, textValue = "", constant = false, next = next)
+    }
     else if types.isArrayKind(kind) {
         elemKind := types.arrayElementKind(kind);
         extent := types.arrayExtent(kind);
@@ -552,6 +596,14 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         loop i < extent {
             listLib.pushBack(mut items, elemZero);
             i = i + 1;
+        }
+        if target == ir.TARGET_C and types.cListTag(elemKind) =!= "" {
+            cTag := types.cListTag(elemKind);
+            if extent == 0 {
+                return (kind = kind, code = "lt_list_" + cTag + "_from(0, NULL)", intValue = 0, textValue = "", constant = false, next = next);
+            }
+            cArrType := if cTag == "str" { "const char *const" } else { "const " + types.cListElemType(cTag) };
+            return (kind = kind, code = "lt_list_" + cTag + "_from(" + integer.intText(extent) + ", (" + cArrType + "[]){" + textLib.joinTexts(items, ", ") + "})", intValue = 0, textValue = "", constant = false, next = next);
         }
         (kind = kind, code = "[" + textLib.joinTexts(items, ", ") + "]", intValue = 0, textValue = "", constant = false, next = next)
     }
@@ -1087,7 +1139,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isEnumKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

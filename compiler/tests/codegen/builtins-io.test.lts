@@ -256,4 +256,4 @@ if ccInfo.available {
 }
 cFnList := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; f := fn (): List<Int> { return [1]; }\nio.outputLine(f());\n", "");
 test.checkInt("C fn List<Int> compiles: " + cFnList.stderr, 0, cFnList.status);
-compilerTest.assertCompileError(root, cComp, "C fn tuple List reject", "io := import \"core/io\"; f := fn (): List<(Int, Int)> { return [(1, 2)]; }\nio.outputLine(f());\n", "C backend does not support list values yet\n");
+compilerTest.assertCompileError(root, cComp, "C fn Map reject", "io := import \"core/io\"; f := fn (): Map<String, Int> { return [\"a\" = 1]; }\nio.outputLine(f());\n", "1:63: C backend does not support Map yet\n");

@@ -272,6 +272,13 @@ pub enumCaseCount := fn(kind: String): Int { types.enumCaseCount(kind) };
 pub enumCaseNameAt := fn(kind: String, index: Int): String { types.enumCaseAt(kind, index).name };
 pub cListTag := fn(elemKind: String): String { types.cListTag(elemKind) };
 pub cListElemType := fn(tag: String): String { types.cListElemType(tag) };
+pub cStructTag := fn(kind: String): String { types.cStructTag(kind) };
+pub cFieldName := fn(prop: String): String { types.cFieldName(prop) };
+pub cTypeHasListField := fn(kind: String): Bool { types.cTypeHasListField(kind) };
+pub cTupleConvertName := fn(expectedKind: String, actualKind: String): String { types.cTupleConvertName(expectedKind, actualKind) };
+pub recordDisplayName := fn(kind: String): String { types.recordDisplayName(kind) };
+pub recordComponentCount := fn(kind: String): Int { types.recordComponentCount(kind) };
+pub recordComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String, prop: String) { types.recordComponent(kind, targetIndex) };
 pub isRecordKind := fn(kind: String): Bool { types.isRecordKind(kind) };
 
 /** Returns the runtime JS property name for a tuple field (`_0` when unnamed, otherwise the field label). */
@@ -1657,7 +1664,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             tempSlot := if destructure.shape == "record" { "$rec" } else if destructure.shape == "array" { "$arr" } else { "$tuple" };
             tempItemKind := if destructure.shape == "record" { ITEM_KIND_LOCAL_RECORD } else if destructure.shape == "array" { ITEM_KIND_LOCAL_LIST } else { ITEM_KIND_LOCAL_TUPLE };
             tempRuntime := freshScopeTemp(locals, tempPrefix);
-            resolvedBindings := expr.resolveAggregateBindings(destructure.shape, destructure.count, destructure.encodedClauses, rhs.kind, tempRuntime, source, destructureOpen, prefix);
+            resolvedBindings := expr.resolveAggregateBindings(target, destructure.shape, destructure.count, destructure.encodedClauses, rhs.kind, tempRuntime, source, destructureOpen, prefix);
             statementNext := consumeStatementEnd(source, rhs.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after " + destructure.shape + " destructuring"); }
             position = statementNext;
@@ -1667,7 +1674,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 listLib.pushBack(mut items, (kind = tempItemKind, name = "", runtime = tempRuntime,
-                code = rhs.code, intValue = 0, textValue = if destructure.shape == "tuple" { "" } else { storageTextPayload(rhs.kind, "") }));
+                code = rhs.code, intValue = 0, textValue = storageTextPayload(rhs.kind, "")));
                 if codeHasRawTransfer(rhs.code) {
                     listLib.pushBack(mut transferCodes, rhs.code);
                     transferCount = transferCount + 1;
@@ -2994,7 +3001,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         listLib.pushBack(mut items, (kind = ITEM_KIND_PURE_GLOBAL, name = runtime, runtime = runtime, code = "", intValue = 0, textValue = ""));
                     }
                     listLib.pushBack(mut items, (kind = declItemPrefix + storageKind(typed.kind), name = name, runtime = runtime,
-                    code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                    code = assignedCode, intValue = parsed.intValue, textValue = storageTextPayload(typed.kind, parsed.textValue)));
                 }
                 if codeHasRawTransfer(assignedCode) {
                     listLib.pushBack(mut transferCodes, assignedCode);
@@ -3158,7 +3165,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     if not entry.mutable {
                         failAt(source, nameStart, prefix, "cannot mutate field of immutable local " + name);
                     }
-                    if target =!= TARGET_TS {
+                    if target =!= TARGET_TS and types.cStructTag(entry.kind) == "" {
                         failAt(source, nameStart, prefix, "C backend does not support record field assignment yet");
                     }
                     opPos := scanPos;
@@ -3169,24 +3176,34 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         failAt(source, rhsStart, prefix, "cannot assign " + displayKind(rhsParsed.kind) + " to field of type " + displayKind(curKind));
                     }
                     f0 := fieldChain[0];
+                    f0Prop := if target == TARGET_C { types.cFieldName(f0) } else { f0 };
                     stmtCode := if chainLen == 1 {
-                        lhsPath := "(" + entry.runtime + ")." + f0;
+                        lhsPath := "(" + entry.runtime + ")." + f0Prop;
                         rhsCode := if recCompOp.width > 0 {
                             compoundAssignCode(target, source, opPos, prefix, curKind, lhsPath, recCompOp.baseOp, rhsParsed)
                         } else {
                             assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
                         };
-                        "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + f0 + ": " + rhsCode + " })"
+                        if target == TARGET_C {
+                            "(" + entry.runtime + "." + f0Prop + " = " + rhsCode + ")"
+                        } else {
+                            "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + f0 + ": " + rhsCode + " })"
+                        }
                     } else {
                         f1 := fieldChain[1];
-                        subPath := "(" + entry.runtime + ")." + f0;
-                        lhsPath := "(" + subPath + ")." + f1;
+                        f1Prop := if target == TARGET_C { types.cFieldName(f1) } else { f1 };
+                        subPath := "(" + entry.runtime + ")." + f0Prop;
+                        lhsPath := "(" + subPath + ")." + f1Prop;
                         rhsCode := if recCompOp.width > 0 {
                             compoundAssignCode(target, source, opPos, prefix, curKind, lhsPath, recCompOp.baseOp, rhsParsed)
                         } else {
                             assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
                         };
-                        "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + f0 + ": { ...(" + subPath + "), " + f1 + ": " + rhsCode + " } })"
+                        if target == TARGET_C {
+                            "(" + entry.runtime + "." + f0Prop + "." + f1Prop + " = " + rhsCode + ")"
+                        } else {
+                            "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + f0 + ": { ...(" + subPath + "), " + f1 + ": " + rhsCode + " } })"
+                        }
                     };
                     locals = checkStatementTrace(target, source, nameStart, prefix, stmtCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                     statementNext := consumeStatementEnd(source, rhsParsed.next, prefix);
@@ -3267,7 +3284,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     code = assignedCode, intValue = 0, textValue = ""));
                 } else {
                     listLib.pushBack(mut items, (kind = ITEM_PREFIX_ASSIGN + storageKind(entry.kind), name = name, runtime = entry.runtime,
-                    code = assignedCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                    code = assignedCode, intValue = parsed.intValue, textValue = storageTextPayload(entry.kind, parsed.textValue)));
                 }
                 if codeHasRawTransfer(assignedCode) {
                     listLib.pushBack(mut transferCodes, assignedCode);

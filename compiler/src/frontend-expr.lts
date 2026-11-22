@@ -174,18 +174,35 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
         }
         cursor = syntax.expectSymbol(source, cursor, ")", prefix);
         var kindText := "(";
-        var codeText := "{ ";
         var index := 0;
         loop index < count {
-            if index > 0 {
-                kindText = kindText + ",";
-                codeText = codeText + ", ";
-            }
+            if index > 0 { kindText = kindText + ","; }
             kindText = kindText + labels[index] + ":" + kinds[index];
-            codeText = codeText + types.tupleObjectKey(labels[index], index) + ": " + codes[index];
             index = index + 1;
         }
-        return ctx.withMarkers((kind = kindText + ")", code = codeText + " }", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
+        tupleKind := kindText + ")";
+        if target == ir.TARGET_C and types.cStructTag(tupleKind) =!= "" {
+            tag := types.cStructTag(tupleKind);
+            if count == 0 {
+                return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ ._empty = 0 })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
+            }
+            var cCodeText := "";
+            var ci := 0;
+            loop ci < count {
+                if ci > 0 { cCodeText = cCodeText + ", "; }
+                cCodeText = cCodeText + "." + types.cFieldName(types.tupleRuntimeProp(labels[ci], ci)) + " = " + codes[ci];
+                ci = ci + 1;
+            }
+            return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ " + cCodeText + " })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
+        }
+        var codeText := "{ ";
+        var ti := 0;
+        loop ti < count {
+            if ti > 0 { codeText = codeText + ", "; }
+            codeText = codeText + types.tupleObjectKey(labels[ti], ti) + ": " + codes[ti];
+            ti = ti + 1;
+        }
+        return ctx.withMarkers((kind = tupleKind, code = codeText + " }", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
     }
     var groupedExpected := expected;
     if numeric.isNumericKind(expected) {
@@ -751,8 +768,10 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
         }
     }
     compCount := types.recordComponentCount(recordKind);
+    cRecTag := if target == ir.TARGET_C { types.cStructTag(recordKind) } else { "" };
     if compCount == 0 {
-        return ctx.withMarkers((kind = recordKind, code = "{}", intValue = 0, textValue = "", constant = false, next = cursor), recMarkers);
+        emptyRecCode := if cRecTag =!= "" { "/*@T:" + recordKind + "@*/((" + cRecTag + "){ ._empty = 0 })" } else { "{}" };
+        return ctx.withMarkers((kind = recordKind, code = emptyRecCode, intValue = 0, textValue = "", constant = false, next = cursor), recMarkers);
     }
     encodedSupplied := types.encodeRecordPairs(suppliedKeys, suppliedCodes);
     fieldExprs: mut List<String> = [];
@@ -778,11 +797,20 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
                 chosen = ctx.zeroParsed(target, comp.kind, cursor).code;
             }
         }
-        listLib.pushBack(mut fieldExprs, types.tupleObjectKey(comp.label, compIdx) + ": " + chosen);
+        if cRecTag =!= "" {
+            listLib.pushBack(mut fieldExprs, "." + types.cFieldName(comp.prop) + " = " + chosen);
+        } else {
+            listLib.pushBack(mut fieldExprs, types.tupleObjectKey(comp.label, compIdx) + ": " + chosen);
+        }
         compIdx = compIdx + 1;
     }
     _unused := encodedSupplied;
-    ctx.withMarkers((kind = recordKind, code = "{ " + textLib.joinTexts(fieldExprs, ", ") + " }", intValue = 0, textValue = "", constant = false, next = cursor), recMarkers)
+    recCode := if cRecTag =!= "" {
+        "/*@T:" + recordKind + "@*/((" + cRecTag + "){ " + textLib.joinTexts(fieldExprs, ", ") + " })"
+    } else {
+        "{ " + textLib.joinTexts(fieldExprs, ", ") + " }"
+    };
+    ctx.withMarkers((kind = recordKind, code = recCode, intValue = 0, textValue = "", constant = false, next = cursor), recMarkers)
 };
 
 /** Detects a leading `(...) :=`, `{...} :=`, `[...] :=` (or `var ...`) destructuring pattern, rejecting construction-shaped `Name {...} :=` headers. */
@@ -935,7 +963,7 @@ pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, al
 };
 
 /** Validates `rhsKind` against a parsed aggregate destructuring pattern and resolves each clause to `(bindName, propExpr, srcKind, targetKind)`. */
-pub resolveAggregateBindings := fn(shape: String, count: Int, encodedClauses: String, rhsKind: String, tempRuntime: String, source: String, openPos: Int, prefix: String): String {
+pub resolveAggregateBindings := fn(target: String, shape: String, count: Int, encodedClauses: String, rhsKind: String, tempRuntime: String, source: String, openPos: Int, prefix: String): String {
     if shape == "record" and not types.isRecordKind(rhsKind) {
         syntax.failAt(source, openPos, prefix, "record destructuring requires a record value, got " + types.displayKind(rhsKind));
     }
@@ -981,7 +1009,8 @@ pub resolveAggregateBindings := fn(shape: String, count: Int, encodedClauses: St
             if srcKind == "" {
                 syntax.failAt(source, openPos, prefix, "record " + types.recordDisplayName(rhsKind) + " has no field " + sourceField);
             }
-            propExpr = tempRuntime + "." + types.recordComponentProp(rhsKind, sourceField);
+            recProp := types.recordComponentProp(rhsKind, sourceField);
+            propExpr = tempRuntime + "." + (if target == ir.TARGET_C { types.cFieldName(recProp) } else { recProp });
         } else if shape == "tuple" {
             var compIdx := -1;
             if clauseMode == "named" {
@@ -1008,10 +1037,14 @@ pub resolveAggregateBindings := fn(shape: String, count: Int, encodedClauses: St
             }
             comp := types.tupleComponent(rhsKind, compIdx);
             srcKind = comp.kind;
-            propExpr = tempRuntime + "." + comp.prop;
+            propExpr = tempRuntime + "." + (if target == ir.TARGET_C { types.cFieldName(comp.prop) } else { comp.prop });
         } else {
             srcKind = types.arrayElementKind(rhsKind);
-            propExpr = tempRuntime + "[" + integer.intText(clIndex) + "]!";
+            if target == ir.TARGET_C and types.cListTag(srcKind) =!= "" {
+                propExpr = "lt_list_" + types.cListTag(srcKind) + "_at(" + tempRuntime + ", " + integer.intText(clIndex) + ", " + integer.intText(openPos) + ")";
+            } else {
+                propExpr = tempRuntime + "[" + integer.intText(clIndex) + "]!";
+            }
         }
         var targetKind := srcKind;
         if expectedKind =!= "" {
@@ -1356,7 +1389,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 tempPrefix := if destructure.shape == "record" { "lite$rec" } else if destructure.shape == "array" { "lite$arr" } else { "lite$tuple" };
                 tempSlot := if destructure.shape == "record" { "$rec" } else if destructure.shape == "array" { "$arr" } else { "$tuple" };
                 tempRuntime := ir.freshScopeTemp(blockLocals, tempPrefix);
-                resolvedBindings := resolveAggregateBindings(destructure.shape, destructure.count, destructure.encodedClauses, rhs.kind, tempRuntime, source, destructureOpen, prefix);
+                resolvedBindings := resolveAggregateBindings(target, destructure.shape, destructure.count, destructure.encodedClauses, rhs.kind, tempRuntime, source, destructureOpen, prefix);
                 statementNext := syntax.consumeStatementEnd(source, rhs.next, prefix);
                 if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, rhs.next, prefix), prefix, "expected ; after " + destructure.shape + " destructuring"); }
                 if target == ir.TARGET_TS and not inferMode and not blockExits {
@@ -2558,8 +2591,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     isArr := types.isArrayKind(entry.kind);
                     if not isArr and not entry.writable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable list " + itemName); }
                     if isArr and not entry.mutable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable array " + itemName); }
-                    if target =!= ir.TARGET_TS { syntax.failAt(source, itemStart, prefix, "C backend does not support list index assignment yet"); }
                     elKind := if isArr { types.arrayElementKind(entry.kind) } else { types.listElementKind(entry.kind) };
+                    cListAssignTag := if target == ir.TARGET_C { types.cListTag(elKind) } else { "" };
+                    if target =!= ir.TARGET_TS and cListAssignTag == "" { syntax.failAt(source, itemStart, prefix, "C backend does not support list index assignment yet"); }
                     idxStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
                     idxParsed := parseBinaryCtx(target, source, idxStart, prefix, blockLocals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                     if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, idxParsed); }
@@ -2575,7 +2609,15 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         syntax.failAt(source, vStart, prefix, "list element must be " + types.displayKind(elKind) + ", got " + types.displayKind(valParsed.kind));
                     }
                     idxCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxParsed.kind, idxParsed.code);
-                    stmtCode := if idxCompOp.width > 0 {
+                    stmtCode := if target == ir.TARGET_C {
+                        if idxCompOp.width > 0 {
+                            curElCode := "lt_list_" + cListAssignTag + "_at(" + entry.runtime + ", " + idxCode + ", " + integer.intText(itemStart) + ")";
+                            nextElCode := ctx.compoundAssignCode(target, source, opPos, prefix, elKind, curElCode, idxCompOp.baseOp, valParsed);
+                            "lt_list_" + cListAssignTag + "_set(&" + entry.runtime + ", " + idxCode + ", " + nextElCode + ", " + integer.intText(itemStart) + ")"
+                        } else {
+                            "lt_list_" + cListAssignTag + "_set(&" + entry.runtime + ", " + idxCode + ", " + ctx.assignValueCode(target, elKind, valParsed.kind, valParsed.code) + ", " + integer.intText(itemStart) + ")"
+                        }
+                    } else if idxCompOp.width > 0 {
                         curElCode := "lite$listAt(" + entry.runtime + ", lite$ci, " + integer.intText(itemStart) + ")";
                         nextElCode := ctx.compoundAssignCode(target, source, opPos, prefix, elKind, curElCode, idxCompOp.baseOp, valParsed);
                         "((lite$ci: bigint) => lite$listSet(" + entry.runtime + ", lite$ci, " + nextElCode + ", " + integer.intText(itemStart) + "))(" + idxCode + ")"
@@ -2632,7 +2674,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     isStatement = true;
                     if recEntry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
                     if not recEntry.mutable { syntax.failAt(source, itemStart, prefix, "cannot mutate field of immutable local " + itemName); }
-                    if target =!= ir.TARGET_TS { syntax.failAt(source, itemStart, prefix, "C backend does not support record field assignment yet"); }
+                    if target =!= ir.TARGET_TS and types.cStructTag(recEntry.kind) == "" { syntax.failAt(source, itemStart, prefix, "C backend does not support record field assignment yet"); }
                     opPos := scanPos;
                     opWidth := if recCompOp.width > 0 { recCompOp.width } else { 1 };
                     rhsStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
@@ -2642,24 +2684,34 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         syntax.failAt(source, rhsStart, prefix, "cannot assign " + types.displayKind(rhsParsed.kind) + " to field of type " + types.displayKind(curKind));
                     }
                     f0 := fieldChain[0];
+                    f0Prop := if target == ir.TARGET_C { types.cFieldName(f0) } else { f0 };
                     stmtCode := if chainLen == 1 {
-                        lhsPath := "(" + recEntry.runtime + ")." + f0;
+                        lhsPath := "(" + recEntry.runtime + ")." + f0Prop;
                         rhsCode := if recCompOp.width > 0 {
                             ctx.compoundAssignCode(target, source, opPos, prefix, curKind, lhsPath, recCompOp.baseOp, rhsParsed)
                         } else {
                             ctx.assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
                         };
-                        "(" + recEntry.runtime + " = { ...(" + recEntry.runtime + "), " + f0 + ": " + rhsCode + " })"
+                        if target == ir.TARGET_C {
+                            "(" + recEntry.runtime + "." + f0Prop + " = " + rhsCode + ")"
+                        } else {
+                            "(" + recEntry.runtime + " = { ...(" + recEntry.runtime + "), " + f0 + ": " + rhsCode + " })"
+                        }
                     } else {
                         f1 := fieldChain[1];
-                        subPath := "(" + recEntry.runtime + ")." + f0;
-                        lhsPath := "(" + subPath + ")." + f1;
+                        f1Prop := if target == ir.TARGET_C { types.cFieldName(f1) } else { f1 };
+                        subPath := "(" + recEntry.runtime + ")." + f0Prop;
+                        lhsPath := "(" + subPath + ")." + f1Prop;
                         rhsCode := if recCompOp.width > 0 {
                             ctx.compoundAssignCode(target, source, opPos, prefix, curKind, lhsPath, recCompOp.baseOp, rhsParsed)
                         } else {
                             ctx.assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
                         };
-                        "(" + recEntry.runtime + " = { ...(" + recEntry.runtime + "), " + f0 + ": { ...(" + subPath + "), " + f1 + ": " + rhsCode + " } })"
+                        if target == ir.TARGET_C {
+                            "(" + recEntry.runtime + "." + f0Prop + "." + f1Prop + " = " + rhsCode + ")"
+                        } else {
+                            "(" + recEntry.runtime + " = { ...(" + recEntry.runtime + "), " + f0 + ": { ...(" + subPath + "), " + f1 + ": " + rhsCode + " } })"
+                        }
                     };
                     if target == ir.TARGET_TS and not inferMode and not blockExits {
                         trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
@@ -5882,7 +5934,13 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     if fieldIndex >= types.arrayExtent(left.kind) {
                         syntax.failAt(source, labelStart, prefix, "array index " + textLib.slice(source, labelStart, end) + " out of bounds");
                     }
-                    left = ctx.withMarkers((kind = types.arrayElementKind(left.kind), code = "(" + left.code + ")[" + integer.intText(fieldIndex) + "]!",
+                    arrElKind := types.arrayElementKind(left.kind);
+                    arrElemCode := if target == ir.TARGET_C and types.cListTag(arrElKind) =!= "" {
+                        "lt_list_" + types.cListTag(arrElKind) + "_at(" + left.code + ", " + integer.intText(fieldIndex) + ", " + integer.intText(postPosition) + ")"
+                    } else {
+                        "(" + left.code + ")[" + integer.intText(fieldIndex) + "]!"
+                    };
+                    left = ctx.withMarkers((kind = arrElKind, code = arrElemCode,
                     intValue = 0, textValue = "", constant = false, next = end),
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                 } else if types.isEnumKind(left.kind) {
@@ -5896,7 +5954,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     if comp.kind == "" {
                         syntax.failAt(source, labelStart, prefix, "tuple has no field " + textLib.slice(source, labelStart, end));
                     }
-                    left = ctx.withMarkers((kind = comp.kind, code = "(" + left.code + ")." + comp.prop,
+                    tProp := if target == ir.TARGET_C { types.cFieldName(comp.prop) } else { comp.prop };
+                    left = ctx.withMarkers((kind = comp.kind, code = "(" + left.code + ")." + tProp,
                     intValue = 0, textValue = "", constant = false, next = end),
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                 }
@@ -6046,7 +6105,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         syntax.failAt(source, labelStart, prefix, "record " + types.recordDisplayName(left.kind) + " has no field " + label);
                     }
                     prop := types.recordComponentProp(left.kind, label);
-                    left = ctx.withMarkers((kind = fieldKind, code = "(" + left.code + ")." + prop,
+                    rProp := if target == ir.TARGET_C { types.cFieldName(prop) } else { prop };
+                    left = ctx.withMarkers((kind = fieldKind, code = "(" + left.code + ")." + rProp,
                     intValue = 0, textValue = "", constant = false, next = labelEnd),
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                 } else if types.isListKind(left.kind) or types.isArrayKind(left.kind) {
@@ -6114,7 +6174,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     if fieldKind == "" {
                         syntax.failAt(source, labelStart, prefix, "tuple has no field " + label);
                     }
-                    left = ctx.withMarkers((kind = fieldKind, code = "(" + left.code + ")." + label,
+                    tLabelProp := if target == ir.TARGET_C { types.cFieldName(label) } else { label };
+                    left = ctx.withMarkers((kind = fieldKind, code = "(" + left.code + ")." + tLabelProp,
                     intValue = 0, textValue = "", constant = false, next = labelEnd),
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                 }
