@@ -1,0 +1,120 @@
+/** Interactive desktop canvas demo using abstract `extra/canvas` and `extra/color` APIs.
+ *
+ * Run natively (C11 macOS AppKit window):
+ *   ./bin/lite run --target c samples/programs/gui/bouncing-canvas.lts
+ *
+ * Run on TypeScript desktop host:
+ *   ./bin/lite run --target ts samples/programs/gui/bouncing-canvas.lts
+ *
+ * Render one frame headlessly to PNG:
+ *   LITE_CANVAS_HEADLESS=1 ./bin/lite run --target c samples/programs/gui/bouncing-canvas.lts -- --capture /tmp/demo.png
+ */
+
+canvas := import "extra/canvas";
+color := import "extra/color";
+io := import "core/io";
+list := import "core/list";
+
+args := io.inputArgs();
+var capturePath := "";
+var i := 0;
+loop i < list.length(args) {
+    if args[i] == "--capture" and i + 1 < list.length(args) {
+        capturePath = args[i + 1];
+        i = i + 2;
+    } else {
+        i = i + 1;
+    }
+}
+
+w := 640;
+h := 400;
+surface := canvas.open("LiteScript Canvas Demo", w, h);
+
+bg := canvas.rgb(0.07, 0.09, 0.14);
+grid := canvas.rgba(1.0, 1.0, 1.0, 0.08);
+panel := canvas.rgba(0.14, 0.18, 0.27, 0.85);
+accent := canvas.hsl(198.0, 0.85, 0.58);
+warm := canvas.hsl(342.0, 0.82, 0.62);
+
+var x1 := 140.0;
+var y1 := 150.0;
+var vx1 := 2.6;
+var vy1 := 2.1;
+
+var x2 := 460.0;
+var y2 := 240.0;
+var vx2 := -2.2;
+var vy2 := -1.8;
+
+var frame := 0;
+loop true {
+    inp := canvas.poll(surface);
+    if not inp.open or inp.key == "Escape" or inp.key == "q" {
+        break;
+    }
+
+    canvas.clear(surface, bg);
+
+    /* Subtle background grid */
+    var gx := 40.0;
+    loop gx < 640.0 {
+        canvas.strokeLine(surface, canvas.point(gx, 0.0), canvas.point(gx, 400.0), 1.0, grid);
+        gx = gx + 40.0;
+    }
+    var gy := 40.0;
+    loop gy < 400.0 {
+        canvas.strokeLine(surface, canvas.point(0.0, gy), canvas.point(640.0, gy), 1.0, grid);
+        gy = gy + 40.0;
+    }
+
+    /* Header card */
+    canvas.fillRect(surface, canvas.rect(20.0, 18.0, 320.0, 46.0), panel);
+    canvas.strokeRect(surface, canvas.rect(20.0, 18.0, 320.0, 46.0), 2.0, accent);
+    canvas.drawText(surface, "LITESCRIPT CANVAS", canvas.point(34.0, 34.0), 14.0, canvas.WHITE);
+
+    /* Connecting beam between bouncing orbs */
+    canvas.strokeLine(surface, canvas.point(x1, y1), canvas.point(x2, y2), 3.0, canvas.mix(accent, warm, 0.5));
+
+    /* Bouncing translucent glow + core orbs */
+    canvas.fillCircle(surface, canvas.point(x1, y1), 36.0, canvas.withAlpha(accent, 0.25));
+    canvas.fillCircle(surface, canvas.point(x1, y1), 22.0, accent);
+
+    canvas.fillCircle(surface, canvas.point(x2, y2), 32.0, canvas.withAlpha(warm, 0.25));
+    canvas.fillCircle(surface, canvas.point(x2, y2), 18.0, warm);
+
+    /* Interactive pointer highlight */
+    if inp.pointerX > 0.0 or inp.pointerY > 0.0 {
+        pColor := if inp.pointerDown { color.YELLOW } else { canvas.withAlpha(canvas.WHITE, 0.7) };
+        pRadius := if inp.pointerDown { 18.0 } else { 10.0 };
+        canvas.fillCircle(surface, canvas.point(inp.pointerX, inp.pointerY), pRadius, pColor);
+    }
+
+    canvas.present(surface);
+
+    if capturePath =!= "" {
+        cap := canvas.capture(surface, capturePath);
+        if not cap.ok {
+            io.errorLine("capture failed: " + cap.error);
+            canvas.close(surface);
+            io.exit(1);
+        }
+        io.outputLine("captured: " + capturePath);
+        break;
+    }
+
+    x1 = x1 + vx1;
+    y1 = y1 + vy1;
+    if x1 < 36.0 or x1 > 604.0 { vx1 = 0.0 - vx1; }
+    if y1 < 76.0 or y1 > 364.0 { vy1 = 0.0 - vy1; }
+
+    x2 = x2 + vx2;
+    y2 = y2 + vy2;
+    if x2 < 32.0 or x2 > 608.0 { vx2 = 0.0 - vx2; }
+    if y2 < 76.0 or y2 > 368.0 { vy2 = 0.0 - vy2; }
+
+    frame = frame + 1;
+    if frame >= 3600 { break; }
+}
+
+canvas.close(surface);

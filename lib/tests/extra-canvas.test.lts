@@ -1,0 +1,99 @@
+/* Dual-target (TS + C11) tests for abstract `extra/color` and `extra/canvas` APIs. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+ccInfo := compilerTest.probeCc();
+
+tmpRes := fs.makeTempDir("lite-extra-canvas-test-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+tmpDir := tmpRes.path;
+tsPng := path.join(tmpDir, "ts.png");
+cPng := path.join(tmpDir, "c.png");
+
+makeSrc := fn(outPng: String): String {
+    "io := import \"core/io\";\n" +
+    "color := import \"extra/color\";\n" +
+    "canvas := import \"extra/canvas\";\n" +
+    "\n" +
+    "zero: color.Color;\n" +
+    "io.outputLine(color.red8(zero), color.green8(zero), color.blue8(zero), color.alpha8(zero));\n" +
+    "c1 := color.fromRgb8(255, 128, 0);\n" +
+    "io.outputLine(color.red8(c1), color.green8(c1), color.blue8(c1), color.alpha8(c1));\n" +
+    "mid := color.mix(color.BLACK, color.WHITE, 0.5);\n" +
+    "io.outputLine(color.red8(mid), color.alpha8(mid));\n" +
+    "h := color.fromHsl(120.0, 1.0, 0.5);\n" +
+    "io.outputLine(color.red8(h), color.green8(h), color.blue8(h));\n" +
+    "\n" +
+    "surf := canvas.open(\"Test\", 64, 48);\n" +
+    "inp := canvas.poll(surf);\n" +
+    "io.outputLine(inp.open, inp.width, inp.height);\n" +
+    "canvas.clear(surf, canvas.rgb(0.1, 0.2, 0.3));\n" +
+    "canvas.fillRect(surf, canvas.rect(4.0, 4.0, 20.0, 12.0), canvas.RED);\n" +
+    "canvas.strokeRect(surf, canvas.rect(2.0, 2.0, 60.0, 44.0), 2.0, canvas.WHITE);\n" +
+    "canvas.fillCircle(surf, canvas.point(32.0, 24.0), 10.0, canvas.withAlpha(canvas.CYAN, 0.5));\n" +
+    "canvas.strokeLine(surf, canvas.point(0.0, 0.0), canvas.point(63.0, 47.0), 2.0, canvas.YELLOW);\n" +
+    "canvas.drawText(surf, \"OK\", canvas.point(8.0, 28.0), 14.0, canvas.WHITE);\n" +
+    "canvas.present(surf);\n" +
+    "cap := canvas.capture(surf, \"" + outPng + "\");\n" +
+    "io.outputLine(cap.ok, cap.error);\n" +
+    "canvas.close(surf);\n"
+};
+
+expected :=
+"0 0 0 0\n" +
+"255 128 0 255\n" +
+"128 255\n" +
+"0 255 0\n" +
+"true 64 48\n" +
+"true \n";
+
+/* 1. TS target headless verification */
+tsSrc := makeSrc(tsPng);
+tsComp := compilerTest.compileStdin(root, selTs.path, tsSrc, "");
+test.checkInt("ts compile status: " + tsComp.stderr, 0, tsComp.status);
+tsOutFile := path.join(tmpDir, "ts.ts");
+test.check("write ts.ts", fs.writeText(tsOutFile, tsComp.stdout).ok);
+tsRun := proc.run(project.nodeExecPath(), [tsOutFile], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+test.checkInt("ts run status: " + tsRun.stderr, 0, tsRun.status);
+test.checkText("ts stdout", expected, tsRun.stdout);
+tsPngBytes := fs.readBytes(tsPng);
+test.check("ts png exists and has PNG signature", tsPngBytes.length > 32 and
+tsPngBytes[0] == 137 and tsPngBytes[1] == 80 and tsPngBytes[2] == 78 and tsPngBytes[3] == 71);
+
+/* 2. C11 target headless verification */
+if ccInfo.available {
+    cSrc := makeSrc(cPng);
+    cComp := compilerTest.compileStdin(root, selC.path, cSrc, "");
+    test.checkInt("c compile status: " + cComp.stderr, 0, cComp.status);
+    cFile := path.join(tmpDir, "c_app.c");
+    cBin := path.join(tmpDir, "c_app");
+    test.check("write c_app.c", fs.writeText(cFile, cComp.stdout).ok);
+    ccArgs: List<String> = if proc.platform() == "darwin" {
+        ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cFile, "-o", cBin, "-lm", "-framework", "Cocoa", "-framework", "CoreGraphics"]
+    } else {
+        ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cFile, "-o", cBin, "-lm"]
+    };
+    ccRes := proc.run(ccInfo.cc, ccArgs, tmpDir, [], true, "");
+    test.checkInt("c cc status: " + ccRes.stderr, 0, ccRes.status);
+    cRun := proc.run(cBin, [], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+    test.checkInt("c run status: " + cRun.stderr, 0, cRun.status);
+    test.checkText("c stdout parity", tsRun.stdout, cRun.stdout);
+    cPngBytes := fs.readBytes(cPng);
+    test.check("c png exists and has PNG signature", cPngBytes.length > 32 and
+    cPngBytes[0] == 137 and cPngBytes[1] == 80 and cPngBytes[2] == 78 and cPngBytes[3] == 71);
+}
+
+_rm := fs.remove(tmpDir);
+test.done("extra-canvas");
