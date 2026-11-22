@@ -1576,13 +1576,16 @@ emitExternalHelpers := fn(calls: String): Unit {
 /** Emits the self-contained `extra/canvas` desktop + headless runtime for TS programs. */
 emitExtraCanvasHelpers := fn(calls: String): Unit {
     if not usesExtraCanvas(calls) { return; }
+    outLine("declare const performance: { now(): number };");
     outLine("type LiteCanvasColor = { r: number; g: number; b: number; a: number };");
     outLine("type LiteCanvasPoint = { x: number; y: number };");
     outLine("type LiteCanvasRect = { x: number; y: number; width: number; height: number };");
     outLine("type LiteCanvasSurface = { handle: bigint };");
     outLine("type LiteCanvasInput = { open: boolean; width: bigint; height: bigint; pointerX: number; pointerY: number; pointerDown: boolean; key: string; deltaMs: bigint };");
     outLine("type LiteCanvasVitals = { frameCount: bigint; frameTimeMs: number; avgFrameTimeMs: number; fps: number; targetFps: number; cpuTimeMs: number; memoryBytes: bigint };");
-    outLine("type LiteCanvasBounds = { x: bigint; y: bigint; width: bigint; height: bigint; fullscreen: boolean };");
+    if usesBuiltin(calls, "extraCanvasBounds") {
+        outLine("type LiteCanvasBounds = { x: bigint; y: bigint; width: bigint; height: bigint; fullscreen: boolean };");
+    }
     outLine("interface LiteCanvasState { w: number; h: number; x: number; y: number; fullscreen: boolean; pixels: Uint8Array; open: boolean; pointerX: number; pointerY: number; pointerDown: boolean; key: string; lastMs: number; frameStartMs: number; frameCount: number; targetFps: number; lastFrameMs: number; avgFrameMs: number; headless: boolean; dir: string; child: any; }");
     outLine("const lite$canvasMap = new Map<number, LiteCanvasState>();");
     outLine("const lite$canvasSleepArr = new Int32Array(new SharedArrayBuffer(4));");
@@ -1620,7 +1623,7 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    return out;");
     outLine("}");
     outLine("function lite$canvasEncodePng(s: LiteCanvasState): Uint8Array {");
-    outLine("    const zlib = process.getBuiltinModule('node:zlib') as typeof import('node:zlib');");
+    outLine("    const zlib = (process as any).getBuiltinModule('node:zlib');");
     outLine("    const sig = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);");
     outLine("    const ihdr = new Uint8Array(13); const dv = new DataView(ihdr.buffer);");
     outLine("    dv.setUint32(0, s.w, false); dv.setUint32(4, s.h, false); ihdr[8] = 8; ihdr[9] = 6;");
@@ -1635,13 +1638,13 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("function lite$extraCanvasOpen(title: string, width: bigint, height: bigint): LiteCanvasSurface {");
     outLine("    const w = Math.max(1, Number(width)); const h = Math.max(1, Number(height));");
     outLine("    const id = lite$canvasNextId++;");
-    outLine("    const headless = process.env.LITE_CANVAS_HEADLESS === '1';");
+    outLine("    const headless = process.env['LITE_CANVAS_HEADLESS'] === '1';");
     outLine("    let dir = ''; let child: any = null;");
     outLine("    if (!headless) {");
-    outLine("        const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs');");
-    outLine("        const os = process.getBuiltinModule('node:os') as typeof import('node:os');");
-    outLine("        const pathMod = process.getBuiltinModule('node:path') as typeof import('node:path');");
-    outLine("        const cp = process.getBuiltinModule('node:child_process') as typeof import('node:child_process');");
+    outLine("        const fs = (process as any).getBuiltinModule('node:fs');");
+    outLine("        const os = (process as any).getBuiltinModule('node:os');");
+    outLine("        const pathMod = (process as any).getBuiltinModule('node:path');");
+    outLine("        const cp = (process as any).getBuiltinModule('node:child_process');");
     outLine("        dir = fs.mkdtempSync(pathMod.join(os.tmpdir(), 'lite-canvas-'));");
     outLine("        const bridge = `const http=require('node:http'),fs=require('node:fs'),cp=require('node:child_process');` +");
     outLine("        `const dir=process.argv[1],title=process.argv[2],w=Number(process.argv[3]),h=Number(process.argv[4]);` +");
@@ -1660,7 +1663,7 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
     outLine("    if (!s) return { open: false, width: 0n, height: 0n, pointerX: 0, pointerY: 0, pointerDown: false, key: '', deltaMs: 0n };");
     outLine("    if (!s.headless && s.dir) {");
-    outLine("        const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs');");
+    outLine("        const fs = (process as any).getBuiltinModule('node:fs');");
     outLine("        try { const st = JSON.parse(fs.readFileSync(s.dir + '/state.json', 'utf8')); s.open = Boolean(st.open); s.pointerX = Number(st.pointerX || 0); s.pointerY = Number(st.pointerY || 0); s.pointerDown = Boolean(st.pointerDown); s.key = String(st.key || ''); } catch {}");
     outLine("    }");
     outLine("    const now = performance.now(); const dt = Math.max(0, Math.round(now - s.lastMs)); s.lastMs = now;");
@@ -1671,7 +1674,7 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
     outLine("    if (!s) return;");
     outLine("    if (!s.headless && s.dir) {");
-    outLine("        const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs');");
+    outLine("        const fs = (process as any).getBuiltinModule('node:fs');");
     outLine("        const tmp = s.dir + '/frame.tmp'; const dst = s.dir + '/frame.png';");
     outLine("        try { fs.writeFileSync(tmp, lite$canvasEncodePng(s)); fs.renameSync(tmp, dst); } catch {}");
     outLine("    }");
@@ -1694,8 +1697,8 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("}");
     outLine("function lite$extraCanvasVitals(surface: LiteCanvasSurface): LiteCanvasVitals {");
     outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
-    outLine("    const cpu = process.cpuUsage(); const cpuMs = (cpu.user + cpu.system) / 1000.0;");
-    outLine("    const rss = BigInt(process.memoryUsage().rss);");
+    outLine("    const cpu = (process as any).cpuUsage(); const cpuMs = (cpu.user + cpu.system) / 1000.0;");
+    outLine("    const rss = BigInt((process as any).memoryUsage().rss);");
     outLine("    if (!s) return { frameCount: 0n, frameTimeMs: 0, avgFrameTimeMs: 0, fps: 0, targetFps: 0, cpuTimeMs: cpuMs, memoryBytes: rss };");
     outLine("    const fps = s.avgFrameMs > 0 ? 1000.0 / s.avgFrameMs : 0;");
     outLine("    return { frameCount: BigInt(s.frameCount), frameTimeMs: s.lastFrameMs, avgFrameTimeMs: s.avgFrameMs, fps, targetFps: s.targetFps, cpuTimeMs: cpuMs, memoryBytes: rss };");
@@ -1704,7 +1707,7 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    const id = Number(surface.handle); const s = lite$canvasMap.get(id);");
     outLine("    if (!s) return; s.open = false;");
     outLine("    if (s.child) { try { s.child.kill(); } catch {} }");
-    outLine("    if (s.dir) { const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs'); try { fs.rmSync(s.dir, { recursive: true, force: true }); } catch {} }");
+    outLine("    if (s.dir) { const fs = (process as any).getBuiltinModule('node:fs'); try { fs.rmSync(s.dir, { recursive: true, force: true }); } catch {} }");
     outLine("    lite$canvasMap.delete(id);");
     outLine("}");
     outLine("function lite$extraCanvasClear(surface: LiteCanvasSurface, fill: LiteCanvasColor): void {");
@@ -1763,35 +1766,45 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("        cx += 6 * scale;");
     outLine("    }");
     outLine("}");
-    outLine("function lite$extraCanvasCapture(surface: LiteCanvasSurface, outPath: string): { ok: boolean; error: string } {");
-    outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
-    outLine("    if (!s) return { ok: false, error: 'invalid canvas surface handle' };");
-    outLine("    try { const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs'); fs.writeFileSync(outPath, lite$canvasEncodePng(s)); return { ok: true, error: '' }; }");
-    outLine("    catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) }; }");
-    outLine("}");
-    outLine("function lite$extraCanvasPlayTone(surface: LiteCanvasSurface, frequency: bigint, durationMs: bigint, volume: bigint): void {");
-    outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
-    outLine("    if (!s || s.headless) return;");
-    outLine("    void frequency; void durationMs; void volume;");
-    outLine("}");
-    outLine("function lite$extraCanvasBounds(surface: LiteCanvasSurface): LiteCanvasBounds {");
-    outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
-    outLine("    if (!s) return { x: 0n, y: 0n, width: 0n, height: 0n, fullscreen: false };");
-    outLine("    return { x: BigInt(s.x), y: BigInt(s.y), width: BigInt(s.w), height: BigInt(s.h), fullscreen: s.fullscreen };");
-    outLine("}");
-    outLine("function lite$extraCanvasResize(surface: LiteCanvasSurface, width: bigint, height: bigint): void {");
-    outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
-    outLine("    const nw = Math.max(1, Number(width)), nh = Math.max(1, Number(height));");
-    outLine("    if (nw === s.w && nh === s.h) return;");
-    outLine("    const nb = new Uint8Array(nw * nh * 4);");
-    outLine("    const cw = Math.min(s.w, nw), ch = Math.min(s.h, nh);");
-    outLine("    for (let row = 0; row < ch; row += 1) nb.set(s.pixels.subarray(row * s.w * 4, row * s.w * 4 + cw * 4), row * nw * 4);");
-    outLine("    s.pixels = nb; s.w = nw; s.h = nh;");
-    outLine("}");
-    outLine("function lite$extraCanvasSetFullscreen(surface: LiteCanvasSurface, enabled: boolean): void {");
-    outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
-    outLine("    s.fullscreen = enabled;");
-    outLine("}");
+    if usesBuiltin(calls, "extraCanvasCapture") {
+        outLine("function lite$extraCanvasCapture(surface: LiteCanvasSurface, outPath: string): { ok: boolean; error: string } {");
+        outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
+        outLine("    if (!s) return { ok: false, error: 'invalid canvas surface handle' };");
+        outLine("    try { const fs = (process as any).getBuiltinModule('node:fs'); fs.writeFileSync(outPath, lite$canvasEncodePng(s)); return { ok: true, error: '' }; }");
+        outLine("    catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) }; }");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "extraCanvasPlayTone") {
+        outLine("function lite$extraCanvasPlayTone(surface: LiteCanvasSurface, frequency: bigint, durationMs: bigint, volume: bigint): void {");
+        outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
+        outLine("    if (!s || s.headless) return;");
+        outLine("    void frequency; void durationMs; void volume;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "extraCanvasBounds") {
+        outLine("function lite$extraCanvasBounds(surface: LiteCanvasSurface): LiteCanvasBounds {");
+        outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
+        outLine("    if (!s) return { x: 0n, y: 0n, width: 0n, height: 0n, fullscreen: false };");
+        outLine("    return { x: BigInt(s.x), y: BigInt(s.y), width: BigInt(s.w), height: BigInt(s.h), fullscreen: s.fullscreen };");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "extraCanvasResize") {
+        outLine("function lite$extraCanvasResize(surface: LiteCanvasSurface, width: bigint, height: bigint): void {");
+        outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
+        outLine("    const nw = Math.max(1, Number(width)), nh = Math.max(1, Number(height));");
+        outLine("    if (nw === s.w && nh === s.h) return;");
+        outLine("    const nb = new Uint8Array(nw * nh * 4);");
+        outLine("    const cw = Math.min(s.w, nw), ch = Math.min(s.h, nh);");
+        outLine("    for (let row = 0; row < ch; row += 1) nb.set(s.pixels.subarray(row * s.w * 4, row * s.w * 4 + cw * 4), row * nw * 4);");
+        outLine("    s.pixels = nb; s.w = nw; s.h = nh;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "extraCanvasSetFullscreen") {
+        outLine("function lite$extraCanvasSetFullscreen(surface: LiteCanvasSurface, enabled: boolean): void {");
+        outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
+        outLine("    s.fullscreen = enabled;");
+        outLine("}");
+    }
     outLine("");
 }
 
