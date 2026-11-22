@@ -1,0 +1,56 @@
+/* Dual-target (TS + C11) tests for `util/text-builder`. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"tb := import \"util/text-builder\";\n" +
+"\n" +
+"b: mut tb.TextBuilder;\n" +
+"io.outputLine(tb.count(b), tb.build(b));\n" +
+"tb.append(mut b, \"alpha\");\n" +
+"tb.append(mut b, \"\");\n" +
+"tb.append(mut b, \"beta\");\n" +
+"tb.append(mut b, \"gamma\");\n" +
+"io.outputLine(tb.count(b), tb.build(b), tb.buildJoined(b, \", \"));\n" +
+"tb.clear(mut b);\n" +
+"tb.appendLine(mut b, \"line1\");\n" +
+"tb.appendLine(mut b, \"\");\n" +
+"tb.appendLine(mut b, \"line2\");\n" +
+"io.output(tb.build(b));\n" +
+"io.outputLine(tb.count(b));\n";
+
+expected :=
+"0 \n" +
+"3 alphabetagamma alpha, beta, gamma\n" +
+"line1\n" +
+"\n" +
+"line2\n" +
+"5\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+test.checkText("ts stdout", expected, tsRes.stdout);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stderr", "", cRes.stderr);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+}
+
+test.done("text-builder");

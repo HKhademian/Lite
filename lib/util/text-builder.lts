@@ -1,0 +1,42 @@
+/* List-backed O(n) text builder utility. Zero-initialize with `b: mut tb.TextBuilder;`. */
+
+list := import "core/list";
+text := import "core/text";
+
+/** Buffered string builder backed by a list of chunks and a single final concatenation. */
+pub TextBuilder := type List<String>;
+
+/** Appends a non-empty chunk to `b` in amortized O(1). */
+pub append := fn(b: mut TextBuilder, chunk: String): Unit {
+    if chunk =!= "" {
+        list.pushBack(mut b, chunk);
+    }
+};
+
+/** Appends `line` followed by a newline (`\\n`) to `b` in amortized O(1). */
+pub appendLine := fn(b: mut TextBuilder, line: String): Unit {
+    if line =!= "" {
+        list.pushBack(mut b, line);
+    }
+    list.pushBack(mut b, "\n");
+};
+
+/** Materializes all buffered chunks into one String via a single O(n) pass. */
+pub build := fn(b: TextBuilder): String {
+    text.joinTexts(b, "")
+};
+
+/** Materializes all buffered chunks joined by `separator` via a single O(n) pass. */
+pub buildJoined := fn(b: TextBuilder, separator: String): String {
+    text.joinTexts(b, separator)
+};
+
+/** Returns the number of buffered chunks currently stored in `b`. */
+pub count := fn(b: TextBuilder): Int {
+    list.length(b)
+};
+
+/** Removes all buffered chunks from `b` so it can be reused. */
+pub clear := fn(b: mut TextBuilder): Unit {
+    list.clear(mut b);
+};
