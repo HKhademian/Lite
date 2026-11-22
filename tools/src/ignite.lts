@@ -29,6 +29,7 @@ toolForEntry := fn(rawEntry: String): String {
         base == "igniter.ts" or base == "lite-ignite" or base == "lite-bootstrap" or base == "lite-wipe" { "" }
         base == "lite" { "cli" }
         base == "lite-bench" { "bench" }
+        base == "lite-build" { "build" }
         base == "lite-check" { "checker" }
         base == "lite-compile" { "compile" }
         base == "lite-compile-c" { "compile-c" }

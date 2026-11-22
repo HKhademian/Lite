@@ -1,0 +1,193 @@
+/** Compile one Lite script via the C11 backend and host C compiler into a standalone native executable. */
+
+io := import "core/io";
+fs := import "core/file";
+proc := import "core/process";
+text := import "core/text";
+list := import "core/list";
+path := import "core/path";
+project := import "util/project";
+compilerBuild := import "util/compiler-build";
+
+usageText := fn(): String {
+    "Usage: ./bin/lite build [-O0|-O1|-O2|-O3] [--cc-opt -O0|-O1|-O2|-O3] [--builtin-mode SPEC]... [-o OUTPUT] [--keep-c] [--quiet] file.lts"
+};
+
+usageExit := fn(): Unit {
+    io.errorLine(usageText());
+    io.exit(2);
+};
+
+findNativeCompiler := fn(): String {
+    envC := proc.envGet("LITE_COMPILER_C");
+    if envC.found and envC.value =!= "" and fs.kind(envC.value) == fs.FILE_KIND_FILE {
+        return envC.value;
+    }
+    exec := proc.execPath();
+    execBase := path.baseName(exec);
+    if execBase =!= "node" and execBase =!= "node.exe" {
+        sibling := path.join(path.parentDir(exec), "lite-compile-c");
+        if fs.kind(sibling) == fs.FILE_KIND_FILE {
+            return sibling;
+        }
+    }
+    ""
+};
+
+run := fn(rawArgs: List<String>): Unit {
+    args: mut List<String> = rawArgs;
+    compileOpts: mut List<String> = [];
+    var outPath := "";
+    var ccOpt := "-O2";
+    var keepC := false;
+    var quiet := false;
+    var hasOpt := false;
+    var scriptPath := "";
+
+    loop list.listCountText(args) > 0 {
+        arg := list.popFront(mut args);
+        if arg == "-h" or arg == "--help" {
+            io.outputLine(usageText());
+            io.exit(0);
+        } else if arg == "--" {
+            if list.listCountText(args) == 0 { usageExit(); }
+            scriptPath = list.popFront(mut args);
+            break;
+        } else if arg == "-o" or arg == "--out" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            outPath = list.popFront(mut args);
+        } else if text.startsWithAt(arg, 0, "--out=") {
+            outPath = text.slice(arg, 6, text.length(arg));
+        } else if arg == "--cc-opt" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            ccOpt = list.popFront(mut args);
+        } else if text.startsWithAt(arg, 0, "--cc-opt=") {
+            ccOpt = text.slice(arg, 9, text.length(arg));
+        } else if arg == "--keep-c" {
+            keepC = true;
+        } else if arg == "--quiet" or arg == "-q" {
+            quiet = true;
+        } else if arg == "--builtin-mode" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            list.pushBack(mut compileOpts, arg);
+            list.pushBack(mut compileOpts, list.popFront(mut args));
+        } else if text.startsWithAt(arg, 0, "--builtin-mode=") {
+            list.pushBack(mut compileOpts, arg);
+        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or text.startsWithAt(arg, 0, "--opt=") {
+            hasOpt = true;
+            list.pushBack(mut compileOpts, arg);
+        } else if arg == "--opt" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            hasOpt = true;
+            list.pushBack(mut compileOpts, arg);
+            list.pushBack(mut compileOpts, list.popFront(mut args));
+        } else if text.startsWithAt(arg, 0, "-") {
+            io.errorLine("lite build: unknown option " + arg);
+            usageExit();
+        } else {
+            if scriptPath =!= "" { usageExit(); }
+            scriptPath = arg;
+        }
+    }
+
+    if scriptPath == "" {
+        usageExit();
+    }
+    if not text.endsWith(scriptPath, ".lts") {
+        io.errorLine("lite build: source must be a .lts file");
+        io.exit(2);
+    }
+    if fs.kind(scriptPath) =!= fs.FILE_KIND_FILE {
+        io.errorLine("lite build: cannot read " + scriptPath);
+        io.exit(2);
+    }
+
+    base := path.baseName(scriptPath);
+    baseNoExt := text.slice(base, 0, text.length(base) - 4);
+    finalOut := if outPath =!= "" { path.resolve(proc.cwd(), outPath) } else { path.resolve(proc.cwd(), baseNoExt) };
+    outParent := path.parentDir(finalOut);
+    if outParent =!= "" and not path.isDirectory(outParent) {
+        mk := fs.makeDir(outParent);
+        if not mk.ok {
+            io.errorLine("lite build: " + mk.error);
+            io.exit(1);
+        }
+    }
+
+    tempDir := fs.makeTempDir("lite-build-");
+    if not tempDir.ok {
+        io.errorLine("lite build: " + tempDir.error);
+        io.exit(1);
+    }
+    cArtifact := if keepC { finalOut + ".c" } else { path.join(tempDir.path, baseNoExt + ".c") };
+    emptyEnv: List<String> = [];
+
+    nativeCompiler := findNativeCompiler();
+    if nativeCompiler =!= "" {
+        nativeArgs: mut List<String> = [];
+        if not hasOpt { list.pushBack(mut nativeArgs, "-O1"); }
+        loop compileOpts as opt { list.pushBack(mut nativeArgs, opt); }
+        list.pushBack(mut nativeArgs, scriptPath);
+        list.pushBack(mut nativeArgs, "--out");
+        list.pushBack(mut nativeArgs, cArtifact);
+        compiled := proc.run(nativeCompiler, nativeArgs, "", emptyEnv, true, "");
+        if compiled.error =!= "" {
+            fs.remove(tempDir.path);
+            io.errorLine("lite build: " + compiled.error);
+            io.exit(1);
+        }
+        if compiled.status =!= 0 {
+            fs.remove(tempDir.path);
+            project.errorText(compiled.stderr);
+            io.exit(compiled.status);
+        }
+    } else {
+        root := project.findRepoRoot();
+        sel := compilerBuild.selectCompilerPath(root, "c");
+        if not sel.ok {
+            fs.remove(tempDir.path);
+            io.errorLine("lite build: " + sel.error);
+            io.exit(1);
+        }
+        nodeArgs: mut List<String> = [sel.path];
+        if not hasOpt { list.pushBack(mut nodeArgs, "-O1"); }
+        loop compileOpts as opt { list.pushBack(mut nodeArgs, opt); }
+        list.pushBack(mut nodeArgs, scriptPath);
+        compiled := proc.run(proc.execPath(), nodeArgs, "", emptyEnv, true, "");
+        if compiled.error =!= "" {
+            fs.remove(tempDir.path);
+            io.errorLine("lite build: " + compiled.error);
+            io.exit(1);
+        }
+        if compiled.status =!= 0 {
+            fs.remove(tempDir.path);
+            project.errorText(compiled.stderr);
+            io.exit(compiled.status);
+        }
+        cWrite := fs.writeText(cArtifact, compiled.stdout);
+        if not cWrite.ok {
+            fs.remove(tempDir.path);
+            io.errorLine("lite build: " + cWrite.error);
+            io.exit(1);
+        }
+    }
+
+    ccEnv := proc.envGet("CC");
+    ccCmd := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
+    ccArgs: List<String> = ["-std=c11", ccOpt, cArtifact, "-o", finalOut, "-lm"];
+    ccRes := proc.run(ccCmd, ccArgs, "", emptyEnv, true, "");
+    fs.remove(tempDir.path);
+    if ccRes.error =!= "" {
+        io.errorLine("lite build: " + ccCmd + " failed: " + ccRes.error);
+        io.exit(1);
+    }
+    if ccRes.status =!= 0 {
+        project.errorText(ccRes.stderr);
+        io.exit(ccRes.status);
+    }
+    if not quiet {
+        io.outputLine(finalOut);
+    }
+};
+
+run(io.inputArgs());

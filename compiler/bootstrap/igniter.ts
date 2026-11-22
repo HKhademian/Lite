@@ -647,7 +647,7 @@ function lite$listPopFront<T>(items: T[], at: number): T {
     return items.shift() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 90, 91, 123, 149, 179, 203, 231, 259, 290, 316, 344, 374, 402, 436, 491, 545, 597, 649, 700, 701, 841, 888, 925, 962, 1005, 1045, 1106, 1118, 1230, 1263, 1304, 1347, 1392, 1441, 1492, 1531, 1573, 1610, 1655, 1692, 1738, 1781, 1814, 1861, 1916, 1975, 2044, 2103, 2152, 2217, 2319, 2417, 2466, 2537, 2614, 2675, 2740, 2801, 2872, 2949, 2998, 3053, 3128, 3204, 3221, 3227, 3229, 3230, 3340, 3389, 3490, 3512, 3518, 3599, 3601, 3602, 3673, 3712, 3761, 3777, 3795, 3826, 3950, 3976, 3986, 4005, 4011, 4020, 4022, 4023, 4135, 4269, 4335, 4374, 4399, 4552, 4558, 4612, 4631, 4762, 4768, 4846, 4923, 5002, 5131, 5264, 5270, 5357, 5415, 5564, 5570, 5694, 5696, 5697, 5783, 5836, 5885, 5922, 5954, 5982, 6024, 6106, 6116, 6122, 6130, 6132, 6133, 6250, 6369, 6418, 6472, 6535, 6631, 6676, 6682, 6721, 6785, 6830, 6836, 6867, 6922, 6983, 7045, 7124, 7201, 7274, 7369, 7465, 7559, 7670, 7805, 7806, 7854, 7915, 7960, 7966, 7967, 8035, 8097, 8189, 8190, 8264, 8347, 8348, 8385, 8403, 8433, 8494, 8557, 8664, 8777, 8884, 8953, 9011, 9060, 9070, 9117, 9140, 9146, 9147, 9223, 9254, 9319, 9380, 9441, 9538, 9587, 9597, 9705, 9754, 9764, 9868, 9936, 9981, 10041, 10112, 10161, 10171, 10177, 10224, 10226, 10227, 10327, 10351, 10450, 10526, 10594, 10645, 10793, 10799, 10848, 10902, 10965, 10966, 10985, 11058, 11082, 11186, 11196, 11202, 11203, 11244, 11317, 11358, 11382, 11524, 11530, 11531, 11576, 11613, 11648, 11688, 11760, 11829, 11897, 11904, 11905, 11938, 12095, 12132, 12167, 12190, 12328, 12334, 12335, 12369, 12391, 12482, 12488, 12489, 12535, 12589, 12611, 12702, 12708, 12709, 12741, 12782, 12818, 12855, 12856, 12903, 12927, 13020, 13026, 13222, 13223, 13248, 13307, 13352, 13419, 13465, 13511, 13560, 13593, 13695, 13713, 13780, 13945, 13959, 14023, 14068, 14116, 14220, 14327, 14404, 14470, 14546, 14593, 14603, 14609, 14610, 14632, 14660, 14714, 14746, 14833, 14916, 14982, 15060, 15135, 15183, 15206, 15298, 15304, 15305, 15387, 15389, 15390, 15479, 15561, 15609, 15637, 15676, 15682, 15715, 15787, 15813, 15859, 15879, 15885, 15910, 15912, 15913, 16018, 16126, 16179, 16230, 16292, 16341, 16401, 16445, 16455, 16461, 16523, 16557, 16617, 16655, 16679, 16774, 16780, 16817, 16852, 16892, 16980, 17049, 17117, 17124, 17157, 17333, 17370, 17405, 17428, 17520, 17526, 17560, 17582, 17632, 17638, 17689, 17712, 17763, 17769, 17797, 17800, 17801, 17874, 17995, 18028, 18090, 18136, 18250, 18327, 18405, 18411, 18439, 18442, 18443, 18555, 18647, 18680, 18753, 18829, 18926, 19005, 19011, 19030, 19106, 19112, 19162, 19241, 19287, 19308, 19395, 19418, 19497, 19507, 19609, 19655, 19678, 19766, 19776, 19891, 19935, 19941, 19969, 19972, 19973, 20043, 20128, 20192, 20272, 20312, 20359, 20408, 20489, 20531, 20594, 20686, 20728, 20786, 20861, 20864, 20865, 20971, 21012, 21051, 21074, 21151, 21171, 21177, 21213, 21275, 21276, 21315, 21340, 21378, 21398, 21404, 21405, 21440, 21482, 21508, 21620, 21648, 21689, 21713, 21723, 21774, 21780, 21781, 21852, 21898, 21944, 21976, 21992, 21998, 21999, 22042, 22076, 22145, 22158, 22229, 22235, 22236, 22268, 22294, 22318, 22342, 22399, 22428, 22458, 22487, 22513, 22540, 22577, 22578, 22616, 22656, 22696, 22726, 22760, 22800, 22828, 22865, 22891, 22928, 22954, 22990, 23015, 23057, 23090, 23128, 23160, 23196, 23227, 23265, 23312, 23384, 23412, 23426, 23476, 23511, 23558, 23627, 23655, 23669, 23720, 23786, 23835, 23849, 23868, 23919, 24071, 24095, 24146, 24205, 24229, 24246, 24292, 24302, 24308, 24309, 24337, 24451, 24479, 24520, 24544, 24554, 24602, 24608, 24609, 24636, 24749, 24777, 24818, 24842, 24852, 24889, 24909, 24915, 24916, 24930, 24992, 25020, 25061, 25085, 25095, 25117, 25139, 25199, 25267, 25273, 25274, 25464, 25465, 25508, 25589, 25618, 25660, 25684, 25694, 25700, 25701, 25802, 25844, 25884, 25911, 25946, 26053, 26077, 26114, 26138, 26148, 26208, 26260, 26335, 26396, 26461, 26556, 26606, 26612, 26613, 26670, 26726, 26753, 26806, 26830, 26840, 26933, 26972, 26996, 27088, 27112, 27122, 27128, 27129, 27150, 27210, 27237, 27277, 27301, 27311, 27317, 27318, 27338, 27429, 27507, 27539, 27552, 27618, 27798, 27804, 27807, 27808, 27829];
+const lite$intLines: readonly number[] = [0, 90, 91, 123, 149, 179, 203, 231, 259, 290, 316, 344, 374, 402, 436, 491, 545, 597, 649, 700, 701, 841, 888, 925, 962, 1005, 1045, 1106, 1118, 1230, 1263, 1304, 1345, 1388, 1433, 1482, 1533, 1572, 1614, 1651, 1696, 1733, 1779, 1822, 1855, 1902, 1957, 2016, 2085, 2144, 2193, 2258, 2360, 2458, 2507, 2578, 2655, 2716, 2781, 2842, 2913, 2990, 3039, 3094, 3169, 3245, 3262, 3268, 3270, 3271, 3381, 3430, 3531, 3553, 3559, 3640, 3642, 3643, 3714, 3753, 3802, 3818, 3836, 3867, 3991, 4017, 4027, 4046, 4052, 4061, 4063, 4064, 4176, 4310, 4376, 4415, 4440, 4593, 4599, 4653, 4672, 4803, 4809, 4887, 4964, 5043, 5172, 5305, 5311, 5398, 5456, 5605, 5611, 5735, 5737, 5738, 5824, 5877, 5926, 5963, 5995, 6023, 6065, 6147, 6157, 6163, 6171, 6173, 6174, 6291, 6410, 6459, 6513, 6576, 6672, 6717, 6723, 6762, 6826, 6871, 6877, 6908, 6963, 7024, 7086, 7165, 7242, 7315, 7410, 7506, 7600, 7711, 7846, 7847, 7895, 7956, 8001, 8007, 8008, 8076, 8138, 8230, 8231, 8305, 8388, 8389, 8426, 8444, 8474, 8535, 8598, 8705, 8818, 8925, 8994, 9052, 9101, 9111, 9158, 9181, 9187, 9188, 9264, 9295, 9360, 9421, 9482, 9579, 9628, 9638, 9746, 9795, 9805, 9909, 9977, 10022, 10082, 10153, 10202, 10212, 10218, 10265, 10267, 10268, 10368, 10392, 10491, 10567, 10635, 10686, 10834, 10840, 10889, 10943, 11006, 11007, 11026, 11099, 11123, 11227, 11237, 11243, 11244, 11285, 11358, 11399, 11423, 11565, 11571, 11572, 11617, 11654, 11689, 11729, 11801, 11870, 11938, 11945, 11946, 11979, 12136, 12173, 12208, 12231, 12369, 12375, 12376, 12410, 12432, 12523, 12529, 12530, 12576, 12630, 12652, 12743, 12749, 12750, 12782, 12823, 12859, 12896, 12897, 12944, 12968, 13061, 13067, 13263, 13264, 13289, 13348, 13393, 13460, 13506, 13552, 13601, 13634, 13736, 13754, 13821, 13986, 14000, 14064, 14109, 14157, 14261, 14368, 14445, 14511, 14587, 14634, 14644, 14650, 14651, 14673, 14701, 14755, 14787, 14874, 14957, 15023, 15101, 15176, 15224, 15247, 15339, 15345, 15346, 15428, 15430, 15431, 15520, 15602, 15650, 15678, 15717, 15723, 15756, 15828, 15854, 15900, 15920, 15926, 15951, 15953, 15954, 16059, 16167, 16220, 16271, 16333, 16382, 16442, 16486, 16496, 16502, 16564, 16598, 16658, 16696, 16720, 16815, 16821, 16858, 16893, 16933, 17021, 17090, 17158, 17165, 17198, 17374, 17411, 17446, 17469, 17561, 17567, 17601, 17623, 17673, 17679, 17730, 17753, 17804, 17810, 17838, 17841, 17842, 17915, 18036, 18069, 18131, 18177, 18291, 18368, 18446, 18452, 18480, 18483, 18484, 18596, 18688, 18721, 18794, 18870, 18967, 19046, 19052, 19071, 19147, 19153, 19203, 19282, 19328, 19349, 19436, 19459, 19538, 19548, 19650, 19696, 19719, 19807, 19817, 19932, 19976, 19982, 20010, 20013, 20014, 20084, 20169, 20233, 20313, 20353, 20400, 20449, 20530, 20572, 20635, 20727, 20769, 20827, 20902, 20905, 20906, 21012, 21053, 21092, 21115, 21192, 21212, 21218, 21254, 21316, 21317, 21356, 21381, 21419, 21439, 21445, 21446, 21481, 21523, 21549, 21661, 21689, 21730, 21754, 21764, 21815, 21821, 21822, 21893, 21939, 21985, 22017, 22033, 22039, 22040, 22083, 22117, 22186, 22199, 22270, 22276, 22277, 22309, 22335, 22359, 22383, 22440, 22469, 22499, 22528, 22554, 22581, 22618, 22619, 22657, 22697, 22737, 22767, 22801, 22841, 22869, 22906, 22932, 22969, 22995, 23031, 23056, 23098, 23131, 23169, 23201, 23237, 23268, 23306, 23353, 23425, 23453, 23467, 23517, 23552, 23599, 23668, 23696, 23710, 23761, 23827, 23876, 23890, 23909, 23960, 24112, 24136, 24187, 24246, 24270, 24287, 24333, 24343, 24349, 24350, 24378, 24492, 24520, 24561, 24585, 24595, 24643, 24649, 24650, 24677, 24790, 24818, 24859, 24883, 24893, 24930, 24950, 24956, 24957, 24971, 25033, 25061, 25102, 25126, 25136, 25158, 25180, 25240, 25308, 25314, 25315, 25505, 25506, 25549, 25630, 25659, 25701, 25725, 25735, 25741, 25742, 25843, 25885, 25925, 25952, 25987, 26094, 26118, 26155, 26179, 26189, 26249, 26301, 26376, 26437, 26502, 26597, 26647, 26653, 26654, 26711, 26767, 26794, 26847, 26871, 26881, 26974, 27013, 27037, 27129, 27153, 27163, 27169, 27170, 27191, 27251, 27278, 27318, 27342, 27352, 27358, 27359, 27379, 27470, 27548, 27580, 27593, 27659, 27839, 27845, 27848, 27849, 27870];
 const lite$intSource = "tools/src/ignite.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -35972,7 +35972,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_parent;
         const lite_grandparent = liteFn$lib$core$path$baseName((liteFn$lib$core$path$resolve(lite_parentDir, "..")));
         void lite_grandparent;
-        return (Boolean(((((((((lite_base) === ("igniter.ts"))) || (((lite_base) === ("lite-ignite"))))) || (((lite_base) === ("lite-bootstrap"))))) || (((lite_base) === ("lite-wipe"))))) ? "" : (Boolean(((lite_base) === ("lite"))) ? "cli" : (Boolean(((lite_base) === ("lite-bench"))) ? "bench" : (Boolean(((lite_base) === ("lite-check"))) ? "checker" : (Boolean(((lite_base) === ("lite-compile"))) ? "compile" : (Boolean(((lite_base) === ("lite-compile-c"))) ? "compile-c" : (Boolean(((lite_base) === ("lite-compile-ts"))) ? "compile-ts" : (Boolean(((lite_base) === ("lite-docs"))) ? "docs" : (Boolean(((lite_base) === ("lite-doctor"))) ? "check" : (Boolean(((lite_base) === ("lite-fmt"))) ? "fmt" : (Boolean(((lite_base) === ("lite-release"))) ? "release" : (Boolean(((lite_base) === ("lite-run"))) ? "run" : (Boolean(((lite_base) === ("lite-test"))) ? "test-runner" : (Boolean(((lite_base) === ("lite-verify"))) ? "verify" : (Boolean(((lite_base) === ("ci.ts"))) ? "ci" : (Boolean(((lite_base) === ("self-host.ts"))) ? "self-host" : (Boolean(((lite_base) === ("corpus-parity.ts"))) ? "corpus-parity" : (Boolean(((lite_base) === ("run-ts-artifact.ts"))) ? "run-ts-artifact" : (Boolean(((lite_base) === ("compiler-performance.ts"))) ? "compiler-performance" : (Boolean(((lite_base) === ("compiler-worker.ts"))) ? "compiler-worker" : (Boolean(((lite_base) === ("text-cache.ts"))) ? "text-cache" : (Boolean(((((lite_base) === ("serve.ts"))) && (((lite_parent) === ("site"))))) ? "site-serve" : (Boolean(((((((lite_base) === ("build.ts"))) && (((lite_parent) === ("scripts"))))) && (((lite_grandparent) === ("compiler"))))) ? "compiler-build" : (Boolean(((((((lite_base) === ("build.ts"))) && (((lite_parent) === ("scripts"))))) && (((lite_grandparent) === ("vscode"))))) ? "vscode-build" : (Boolean(((lite_base) === ("build.ts"))) ? "challenge-build" : (Boolean(((lite_base) === ("build_benchmark_euler.ts"))) ? "challenge-build-euler" : (Boolean(((lite_base) === ("build_benchmark_leetcode.ts"))) ? "challenge-build-leetcode" : (Boolean(((lite_base) === ("build_tests.ts"))) ? "challenge-build-tests" : (Boolean(((lite_base) === ("fetch_sources.ts"))) ? "challenge-fetch-sources" : (Boolean(((lite_base) === ("fetch_tests.ts"))) ? "challenge-fetch-tests" : (Boolean(((lite_base) === ("fetch_benchmark_euler.ts"))) ? "challenge-fetch-euler" : (Boolean(((lite_base) === ("fetch_benchmark_leetcode.ts"))) ? "challenge-fetch-leetcode" : (Boolean(((lite_base) === ("query.ts"))) ? "challenge-query" : (Boolean(((lite_base) === ("validate.ts"))) ? "challenge-validate" : (Boolean(((lite_base) === ("validate_benchmark.ts"))) ? "challenge-validate-benchmark" : (Boolean(((((lite_base) === ("release.ts"))) && (((lite_parent) === ("scripts"))))) ? "compiler-release" : ""))))))))))))))))))))))))))))))))))));
+        return (Boolean(((((((((lite_base) === ("igniter.ts"))) || (((lite_base) === ("lite-ignite"))))) || (((lite_base) === ("lite-bootstrap"))))) || (((lite_base) === ("lite-wipe"))))) ? "" : (Boolean(((lite_base) === ("lite"))) ? "cli" : (Boolean(((lite_base) === ("lite-bench"))) ? "bench" : (Boolean(((lite_base) === ("lite-build"))) ? "build" : (Boolean(((lite_base) === ("lite-check"))) ? "checker" : (Boolean(((lite_base) === ("lite-compile"))) ? "compile" : (Boolean(((lite_base) === ("lite-compile-c"))) ? "compile-c" : (Boolean(((lite_base) === ("lite-compile-ts"))) ? "compile-ts" : (Boolean(((lite_base) === ("lite-docs"))) ? "docs" : (Boolean(((lite_base) === ("lite-doctor"))) ? "check" : (Boolean(((lite_base) === ("lite-fmt"))) ? "fmt" : (Boolean(((lite_base) === ("lite-release"))) ? "release" : (Boolean(((lite_base) === ("lite-run"))) ? "run" : (Boolean(((lite_base) === ("lite-test"))) ? "test-runner" : (Boolean(((lite_base) === ("lite-verify"))) ? "verify" : (Boolean(((lite_base) === ("ci.ts"))) ? "ci" : (Boolean(((lite_base) === ("self-host.ts"))) ? "self-host" : (Boolean(((lite_base) === ("corpus-parity.ts"))) ? "corpus-parity" : (Boolean(((lite_base) === ("run-ts-artifact.ts"))) ? "run-ts-artifact" : (Boolean(((lite_base) === ("compiler-performance.ts"))) ? "compiler-performance" : (Boolean(((lite_base) === ("compiler-worker.ts"))) ? "compiler-worker" : (Boolean(((lite_base) === ("text-cache.ts"))) ? "text-cache" : (Boolean(((((lite_base) === ("serve.ts"))) && (((lite_parent) === ("site"))))) ? "site-serve" : (Boolean(((((((lite_base) === ("build.ts"))) && (((lite_parent) === ("scripts"))))) && (((lite_grandparent) === ("compiler"))))) ? "compiler-build" : (Boolean(((((((lite_base) === ("build.ts"))) && (((lite_parent) === ("scripts"))))) && (((lite_grandparent) === ("vscode"))))) ? "vscode-build" : (Boolean(((lite_base) === ("build.ts"))) ? "challenge-build" : (Boolean(((lite_base) === ("build_benchmark_euler.ts"))) ? "challenge-build-euler" : (Boolean(((lite_base) === ("build_benchmark_leetcode.ts"))) ? "challenge-build-leetcode" : (Boolean(((lite_base) === ("build_tests.ts"))) ? "challenge-build-tests" : (Boolean(((lite_base) === ("fetch_sources.ts"))) ? "challenge-fetch-sources" : (Boolean(((lite_base) === ("fetch_tests.ts"))) ? "challenge-fetch-tests" : (Boolean(((lite_base) === ("fetch_benchmark_euler.ts"))) ? "challenge-fetch-euler" : (Boolean(((lite_base) === ("fetch_benchmark_leetcode.ts"))) ? "challenge-fetch-leetcode" : (Boolean(((lite_base) === ("query.ts"))) ? "challenge-query" : (Boolean(((lite_base) === ("validate.ts"))) ? "challenge-validate" : (Boolean(((lite_base) === ("validate_benchmark.ts"))) ? "challenge-validate-benchmark" : (Boolean(((((lite_base) === ("release.ts"))) && (((lite_parent) === ("scripts"))))) ? "compiler-release" : "")))))))))))))))))))))))))))))))))))));
     }
     void liteFn_toolForEntry;
     function liteFn_validRelativePath(lite_relPath: string): boolean {
@@ -35991,12 +35991,12 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (64n))) {
-            const lite_ch = lite$textAt(lite_hex, lite_i, 3809);
+            const lite_ch = lite$textAt(lite_hex, lite_i, 3850);
             void lite_ch;
             if ((((((((((((((!(((lite_ch.length === 1 && lite_ch >= "0" && lite_ch <= "9"))))) && (((lite_ch) !== ("a"))))) && (((lite_ch) !== ("b"))))) && (((lite_ch) !== ("c"))))) && (((lite_ch) !== ("d"))))) && (((lite_ch) !== ("e"))))) && (((lite_ch) !== ("f"))))) {
                 return false;
             }
-            lite_i = lite$addInt(lite_i, 1n, 4000);
+            lite_i = lite$addInt(lite_i, 1n, 4041);
         }
         return true;
     }
@@ -36043,7 +36043,7 @@ export function main(lite$write?: (text: string) => void): string {
         for (const lite_entry of (lite_entries)) {
             void lite_entry;
             if (liteFn$lib$core$text$endsWith(lite_entry, ".lts")) {
-                lite_out.push(lite$textSlice(lite_entry, 0n, lite$subtractInt(lite$textLength(lite_entry), 4n, 6099), 6059));
+                lite_out.push(lite$textSlice(lite_entry, 0n, lite$subtractInt(lite$textLength(lite_entry), 4n, 6140), 6100));
             }
         }
         return [...(lite_out)];
@@ -36138,7 +36138,7 @@ export function main(lite$write?: (text: string) => void): string {
                 return { valid: false, sha256: "" };
             }
             lite_depPaths.push((lite_dp).value);
-            lite_idx = lite$addInt(lite_idx, 1n, 9135);
+            lite_idx = lite$addInt(lite_idx, 1n, 9176);
         }
         const lite_edgeOffsets: bigint[] = [...(liteFn$lib$util$json$arrayElementOffsets(lite_provText, (lite_edgesField).valuePos))];
         void lite_edgeOffsets;
@@ -36493,10 +36493,10 @@ export function main(lite$write?: (text: string) => void): string {
             }
             liteFn_executeIgnitedTool((lite_ensured).path, [...(lite_rawArgs)]);
         }
-        if (((((liteFn$lib$core$list$listCountText([...(lite_rawArgs)])) > (0n))) && (((lite$listAt((lite_rawArgs), 0n, 21832)) === ("--compile"))))) {
+        if (((((liteFn$lib$core$list$listCountText([...(lite_rawArgs)])) > (0n))) && (((lite$listAt((lite_rawArgs), 0n, 21873)) === ("--compile"))))) {
             const lite_compArgs: string[] = [...(lite_rawArgs)];
             void lite_compArgs;
-            const lite__flag = lite$listPopFront(lite_compArgs, 21915);
+            const lite__flag = lite$listPopFront(lite_compArgs, 21956);
             void lite__flag;
             liteFn$_p__p_$_p__p_$compiler$src$driver__ts$run([...(lite_compArgs)]);
             return;
@@ -36533,7 +36533,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_args: string[] = [...(lite_rawArgs)];
         void lite_args;
         while (((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) {
-            const lite_arg = lite$listPopFront(lite_args, 22671);
+            const lite_arg = lite$listPopFront(lite_args, 22712);
             void lite_arg;
             if (((lite_arg) === ("--check"))) {
                 lite_checkExplicit = true;
@@ -36556,15 +36556,15 @@ export function main(lite$write?: (text: string) => void): string {
                     lite$reportError("ignite: missing tool name for --ensure");
                     lite$exit(2n);
                 }
-                lite_ensureName = lite$listPopFront(lite_args, 23451);
+                lite_ensureName = lite$listPopFront(lite_args, 23492);
             } else if (((lite_arg) === ("--run"))) {
                 if (((liteFn$lib$core$list$listCountText([...(lite_args)])) === (0n))) {
                     lite$reportError("ignite: missing tool name for --run");
                     lite$exit(2n);
                 }
-                lite_runToolName = lite$listPopFront(lite_args, 23695);
-                if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) && (((lite$listAt((lite_args), 0n, 23773)) === ("--"))))) {
-                    const lite__sep = lite$listPopFront(lite_args, 23810);
+                lite_runToolName = lite$listPopFront(lite_args, 23736);
+                if (((((liteFn$lib$core$list$listCountText([...(lite_args)])) > (0n))) && (((lite$listAt((lite_args), 0n, 23814)) === ("--"))))) {
+                    const lite__sep = lite$listPopFront(lite_args, 23851);
                     void lite__sep;
                 }
                 break;
@@ -36638,7 +36638,7 @@ export function main(lite$write?: (text: string) => void): string {
                 lite$exit(1n);
             }
             if ((lite_res).rebuilt) {
-                lite_rebuiltCount = lite$addInt(lite_rebuiltCount, 1n, 26201);
+                lite_rebuiltCount = lite$addInt(lite_rebuiltCount, 1n, 26242);
             }
             lite_artifactPaths.push((lite_res).path);
             const lite_entryStr = (((((((((((((((("    {\n      \"name\": ") + (liteFn$lib$util$json$quoteString(lite_toolName)))) + (",\n      \"path\": "))) + (liteFn$lib$util$json$quoteString((lite_res).path)))) + (",\n      \"sha256\": "))) + (liteFn$lib$util$json$quoteString((lite_res).sha256)))) + (",\n      \"rebuilt\": "))) + (((Boolean((lite_res).rebuilt) ? "true" : "false"))))) + ("\n    }"));

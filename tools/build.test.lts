@@ -1,0 +1,50 @@
+/** The native build command compiles Lite programs into standalone native executables via C11. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+runCmd := fn(cmd: String, args: List<String>, cwd: String): (status: Int, stdout: String, stderr: String) {
+    emptyEnv: List<String> = [];
+    res := proc.run(cmd, args, cwd, emptyEnv, true, "");
+    test.check("runCmd error: " + res.error, res.error == "");
+    (status = res.status, stdout = res.stdout, stderr = res.stderr)
+};
+
+dirRes := fs.makeTempDir("lite-build-test-");
+test.check("makeTempDir: " + dirRes.error, dirRes.ok);
+dir := dirRes.path;
+
+/* 1. Multi-module native build via bin/lite-build */
+mainPath := path.join(dir, "main.lts");
+libPath := path.join(dir, "lib.lts");
+outBin := path.join(dir, "app");
+test.check("write lib.lts", fs.writeText(libPath, "pub answer := 42;\n").ok);
+test.check("write main.lts", fs.writeText(mainPath, "lib := import \"./lib.lts\";\nio := import \"core/io\";\nio.outputLine(lib.answer);\n").ok);
+
+b1 := runCmd(proc.execPath(), [path.join(root, "bin/lite-build"), mainPath, "-o", outBin], root);
+test.checkInt("lite-build status: " + b1.stderr, 0, b1.status);
+test.check("native binary exists", fs.kind(outBin) == fs.FILE_KIND_FILE);
+
+emptyArgs: List<String> = [];
+r1 := runCmd(outBin, emptyArgs, dir);
+test.checkInt("native binary exit: " + r1.stderr, 0, r1.status);
+test.checkText("native binary stdout", "42\n", r1.stdout);
+
+/* 2. Subcommand routing via bin/lite build with --keep-c and CLI args */
+outArgsBin := path.join(dir, "args-app");
+b2 := runCmd(proc.execPath(), [path.join(root, "bin/lite"), "build", "--keep-c", "-q", "-o", outArgsBin, "language/examples/io/process/script-arguments.lts"], root);
+test.checkInt("lite build status: " + b2.stderr, 0, b2.status);
+test.checkText("quiet build stdout", "", b2.stdout);
+test.check("kept C artifact exists", fs.kind(outArgsBin + ".c") == fs.FILE_KIND_FILE);
+
+r2 := runCmd(outArgsBin, ["alpha", "beta"], dir);
+test.checkInt("args binary exit: " + r2.stderr, 0, r2.status);
+test.checkText("args binary stdout", "alpha\nbeta\n", r2.stdout);
+
+_rmDir := fs.remove(dir);
