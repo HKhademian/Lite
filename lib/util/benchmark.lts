@@ -4,6 +4,7 @@ io := import "core/io";
 fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
+project := import "util/project";
 text := import "core/text";
 list := import "core/list";
 integer := import "core/int";
@@ -136,7 +137,7 @@ ensureWorkerArtifact := fn(rootDir: String): String {
     }
     ensArgs: List<String> = [path.join(rootDir, "compiler/bootstrap/igniter.ts"), "--ensure", "compiler-worker"];
     emptyEnv: List<String> = [];
-    _ens := proc.run(proc.execPath(), ensArgs, rootDir, emptyEnv, true, "");
+    _ens := proc.run(project.nodeExecPath(), ensArgs, rootDir, emptyEnv, true, "");
     if fs.kind(distWorker) == fs.FILE_KIND_FILE {
         return distWorker;
     }
@@ -162,7 +163,7 @@ maxRssKiB: Int, outPath: String, errPath: String, error: String
     envOverrides: List<String> = ["LITE_WORKER_METRICS_FILE=" + metricsPath];
 
     startNs := time.monotonicNs();
-    res := proc.runBytes(proc.execPath(), args, rootDir, envOverrides, timeoutMs, sourceBytes, outPath, errPath);
+    res := proc.runBytes(project.nodeExecPath(), args, rootDir, envOverrides, timeoutMs, sourceBytes, outPath, errPath);
     processMicros := (time.monotonicNs() - startNs) / 1000;
     if res.error =!= "" {
         return (ok = false, status = -1, processMicros = 0, loadMicros = 0, compileMicros = 0, cpuMicros = 0, maxRssKiB = 0, outPath = outPath, errPath = errPath, error = res.error);
@@ -548,7 +549,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
         runArgs: List<String> = [runnerPath, syntheticEmittedFiles[ri]];
         rOut := path.join(workDir, "syn-run-" + integer.intText(ri) + ".out");
         rErr := path.join(workDir, "syn-run-" + integer.intText(ri) + ".err");
-        rRes := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv, 10000, emptyBytes, rOut, rErr);
+        rRes := proc.runBytes(project.nodeExecPath(), runArgs, workDir, emptyEnv, 10000, emptyBytes, rOut, rErr);
         expText := syntheticExpectedText(outputCounts[ri]);
         okSynRun := rRes.error == "" and rRes.status == 0
         and unicode.utf8DecodeLossy(fs.readBytes(rOut)) == expText
@@ -569,7 +570,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
         rErr := path.join(workDir, "rt-1000-" + integer.intText(rpass + warmups) + ".err");
         runArgs: List<String> = [runnerPath, syntheticEmittedFiles[2]];
         rStartNs := time.monotonicNs();
-        rRes := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv, 10000, emptyBytes, rOut, rErr);
+        rRes := proc.runBytes(project.nodeExecPath(), runArgs, workDir, emptyEnv, 10000, emptyBytes, rOut, rErr);
         rElapsedMicros := (time.monotonicNs() - rStartNs) / 1000;
         ok1000 := rRes.error == "" and rRes.status == 0
         and unicode.utf8DecodeLossy(fs.readBytes(rOut)) == expected1000

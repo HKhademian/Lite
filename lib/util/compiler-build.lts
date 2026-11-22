@@ -3,6 +3,7 @@
 fs := import "core/file";
 integer := import "core/int";
 proc := import "core/process";
+project := import "util/project";
 crypto := import "core/crypto";
 text := import "core/text";
 list := import "core/list";
@@ -141,7 +142,7 @@ ensureDistSeedCompiler := fn(rootDir: String, seedPath: String, sourcePath: Stri
     rootBytes := fs.readBytes(sourcePath);
     compArgs: List<String> = [seedPath, "--compile", "--stdin", "--name", sourceName, "--root", sourcePath, "-O3"];
     emptyEnv: List<String> = [];
-    runRes := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, rootBytes, outPath, errPath);
+    runRes := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, rootBytes, outPath, errPath);
     if runRes.error =!= "" {
         _rm := fs.remove(work);
         return (ok = false, path = "", error = runRes.error);
@@ -544,7 +545,7 @@ strictCheckArtifact := fn(rootDir: String, artifactPath: String, tscWorkDir: Str
         list.pushBack(mut tscArgs, path.join(rootDir, "igniter/node_modules/typescript/bin/tsc"));
         list.pushBack(mut tscArgs, "-p");
         list.pushBack(mut tscArgs, cfgPath);
-        proc.execPath()
+        project.nodeExecPath()
     };
     res := proc.run(cmd, tscArgs, rootDir, emptyEnv, true, "");
     if res.error =!= "" { return (ok = false, error = res.error); }
@@ -628,7 +629,7 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
     errPath := path.join(work, "compiler.stderr");
     compArgs: List<String> = [seedInfo.seedPath, "--compile", "--stdin", "--name", sourceName, "--root", sourcePath, "-O3", "--trace-json", tracePath];
     emptyEnv: List<String> = [];
-    runRes := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, rootBytes, outPath, errPath);
+    runRes := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, rootBytes, outPath, errPath);
     if runRes.error =!= "" {
         _rm := fs.remove(work);
         return failBuild(runRes.error);

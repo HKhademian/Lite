@@ -100,7 +100,7 @@ computeToolingHash := fn(rootDir: String): String {
 readCompilerJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: String) {
     emptyEnv: List<String> = [];
     args: List<String> = [path.join(rootDir, "compiler/scripts/build.ts")];
-    built := proc.run(proc.execPath(), args, rootDir, emptyEnv, true, "");
+    built := proc.run(project.nodeExecPath(), args, rootDir, emptyEnv, true, "");
     if built.error =!= "" { return (ok = false, jsonText = "", error = built.error); }
     if built.status =!= 0 { return (ok = false, jsonText = "", error = built.stdout + built.stderr); }
     tsField := json.findObjectField(built.stdout, 0, "ts");

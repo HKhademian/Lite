@@ -20,7 +20,7 @@ runCheckedTsc := fn(rootDir: String, configPath: String): Unit {
     tscScript := "igniter/node_modules/typescript/bin/tsc";
     tscArgs: List<String> = [tscScript, "-p", configPath];
     emptyEnv: List<String> = [];
-    res := proc.run(proc.execPath(), tscArgs, rootDir, emptyEnv, true, "");
+    res := proc.run(project.nodeExecPath(), tscArgs, rootDir, emptyEnv, true, "");
     if res.error =!= "" {
         failDoctor(res.error);
     }
@@ -36,7 +36,7 @@ runIgniteCheck := fn(rootDir: String): Unit {
     igniteScript := "compiler/bootstrap/igniter.ts";
     igniteArgs: List<String> = [igniteScript, "--check"];
     emptyEnv: List<String> = [];
-    res := proc.run(proc.execPath(), igniteArgs, rootDir, emptyEnv, true, "");
+    res := proc.run(project.nodeExecPath(), igniteArgs, rootDir, emptyEnv, true, "");
     if res.error =!= "" {
         failDoctor(res.error);
     }

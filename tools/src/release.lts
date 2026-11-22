@@ -209,7 +209,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     runChecked(work, "tar", untarArgs, work, "");
 
     sourceDocArgs: List<String> = [path.join(source, "bin/lite"), "doctor", "--docs"];
-    runChecked(work, proc.execPath(), sourceDocArgs, source, "");
+    runChecked(work, project.nodeExecPath(), sourceDocArgs, source, "");
 
     var hasBoot := false;
     var bootJson := "null";
@@ -234,7 +234,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
 
         ladderDirectory := path.join(work, "ladder");
         selfHostArgs: List<String> = [path.join(source, "compiler/scripts/self-host.ts"), "--out", ladderDirectory];
-        ladderRaw := runChecked(work, proc.execPath(), selfHostArgs, source, "");
+        ladderRaw := runChecked(work, project.nodeExecPath(), selfHostArgs, source, "");
         ladderSpan := json.valueSpan(ladderRaw, 0);
         if not ladderSpan.ok { failRelease(work, ladderSpan.error); }
         fixedField := json.readObjectBool(ladderRaw, ladderSpan.start, "fixedPoint");
@@ -249,7 +249,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
 
         gen3 := path.join(ladderDirectory, "generation-3.ts");
         parityArgs: List<String> = [path.join(source, "compiler/scripts/corpus-parity.ts"), "--artifact", gen3];
-        corpusRaw := runChecked(work, proc.execPath(), parityArgs, source, "");
+        corpusRaw := runChecked(work, project.nodeExecPath(), parityArgs, source, "");
         corpusSpan := json.valueSpan(corpusRaw, 0);
         if not corpusSpan.ok { failRelease(work, corpusSpan.error); }
         mismatchField := json.findObjectField(corpusRaw, corpusSpan.start, "mismatches");
@@ -266,7 +266,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
 
         if profile == rel.PROFILE_LANGUAGE {
             verifyArgs: List<String> = [path.join(source, "bin/lite"), "verify", "--all", "--no-cache"];
-            runChecked(work, proc.execPath(), verifyArgs, source, "");
+            runChecked(work, project.nodeExecPath(), verifyArgs, source, "");
             bootSupport = "current canonical contracts passed";
         } else {
             bootSupport = "restricted generated-TS subset; consult migration inventory";
@@ -305,7 +305,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
             failRelease(work, "install locked editor packaging dependencies");
         }
         buildArgs: List<String> = [path.join(source, "editors/vscode/scripts/build.ts")];
-        runChecked(work, proc.execPath(), buildArgs, source, "");
+        runChecked(work, project.nodeExecPath(), buildArgs, source, "");
         stageDir := path.join(work, "vsix-stage");
         cpExt := fs.copy(path.join(source, "editors/vscode"), stageDir);
         if not cpExt.ok { failRelease(work, cpExt.error); }
@@ -321,7 +321,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         if not wPkg.ok { failRelease(work, wPkg.error); }
         vsixFile = "lite-" + selected.version + ".vsix";
         vsixArgs: List<String> = [packager, "package", "--no-dependencies", "--allow-missing-repository", "--skip-license", "--out", path.join(work, vsixFile)];
-        runChecked(work, proc.execPath(), vsixArgs, stageDir, "");
+        runChecked(work, project.nodeExecPath(), vsixArgs, stageDir, "");
         vsixDigest := crypto.sha256File(path.join(work, vsixFile));
         if not vsixDigest.ok { failRelease(work, vsixDigest.error); }
         hasVsix = true;
@@ -380,10 +380,10 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     runChecked(work, "tar", exTgzArgs, work, "");
 
     extDocArgs: List<String> = [path.join(extracted, "bin/lite"), "doctor", "--docs"];
-    runChecked(work, proc.execPath(), extDocArgs, extracted, "");
+    runChecked(work, project.nodeExecPath(), extDocArgs, extracted, "");
 
     compArgs: List<String> = [path.join(extracted, "bin/lite-compile"), "igniter/tests/compiler/001-001-report-int-42.lts"];
-    emitted := runChecked(work, proc.execPath(), compArgs, extracted, "");
+    emitted := runChecked(work, project.nodeExecPath(), compArgs, extracted, "");
     helloPath := path.join(work, "hello.ts");
     wrHello := fs.writeText(helloPath, emitted);
     if not wrHello.ok { failRelease(work, wrHello.error); }
@@ -399,7 +399,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     if not wrHelloRunner.ok { failRelease(work, wrHelloRunner.error); }
 
     entryArgs: List<String> = [helloRunner];
-    helloOut := runChecked(work, proc.execPath(), entryArgs, extracted, "");
+    helloOut := runChecked(work, project.nodeExecPath(), entryArgs, extracted, "");
     if helloOut =!= "42\n" {
         failRelease(work, "extracted compiler roundtrip produced unexpected output: " + helloOut);
     }

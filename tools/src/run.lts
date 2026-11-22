@@ -89,7 +89,7 @@ run := fn(rawArgs: List<String>): Unit {
         list.pushBack(mut compileArgs, opt);
     }
     list.pushBack(mut compileArgs, scriptPath);
-    compiled := proc.run(proc.execPath(), compileArgs, "", emptyEnv, true, "");
+    compiled := proc.run(project.nodeExecPath(), compileArgs, "", emptyEnv, true, "");
     if compiled.error =!= "" {
         io.errorLine("lite run: " + compiled.error);
         io.exit(1);
@@ -162,7 +162,7 @@ run := fn(rawArgs: List<String>): Unit {
     loop args as arg {
         list.pushBack(mut entryArgs, arg);
     }
-    execRes := proc.run(proc.execPath(), entryArgs, "", emptyEnv, false, "");
+    execRes := proc.run(project.nodeExecPath(), entryArgs, "", emptyEnv, false, "");
     fs.remove(tempDir.path);
 
     if execRes.error =!= "" {

@@ -164,7 +164,7 @@ run := fn(rawArgs: List<String>): Unit {
     tempErrPath := path.join(work, "run.stderr");
     emptyEnv: List<String> = [];
 
-    runRes := proc.runBytes(proc.execPath(), cmdArgs, "", emptyEnv, 0, stdinBytes, tempOutPath, tempErrPath);
+    runRes := proc.runBytes(project.nodeExecPath(), cmdArgs, "", emptyEnv, 0, stdinBytes, tempOutPath, tempErrPath);
     if runRes.error =!= "" {
         _rm := fs.remove(work);
         io.errorLine(runRes.error);

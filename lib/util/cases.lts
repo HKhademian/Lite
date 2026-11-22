@@ -3,6 +3,7 @@
 fs := import "core/file";
 io := import "core/io";
 proc := import "core/process";
+project := import "util/project";
 crypto := import "core/crypto";
 integer := import "core/int";
 text := import "core/text";
@@ -477,7 +478,7 @@ pub checkTsArtifactFilesWithStatus := fn(rootDir: String, files: List<String>, w
         procErr = res.error;
     } else {
         args: List<String> = [path.join(rootDir, "igniter/node_modules/typescript/bin/tsc"), "-p", tsconfigPath];
-        res := proc.runBytes(proc.execPath(), args, workDir, emptyEnv, timeoutMs, emptyBytes, outPath, errPath);
+        res := proc.runBytes(project.nodeExecPath(), args, workDir, emptyEnv, timeoutMs, emptyBytes, outPath, errPath);
         status = res.status;
         procErr = res.error;
     }
@@ -637,7 +638,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
         }
         outPath := path.join(work, "tool.stdout");
         errPath := path.join(work, "tool.stderr");
-        runRes := proc.runBytes(proc.execPath(), cmdArgs, workspace, emptyEnv, timeoutMs, stdinBytes, outPath, errPath);
+        runRes := proc.runBytes(project.nodeExecPath(), cmdArgs, workspace, emptyEnv, timeoutMs, stdinBytes, outPath, errPath);
         if runRes.error =!= "" { return (ok = false, artifactSha = "", error = runRes.error); }
         actualStatus = runRes.status;
         actualStdout = fs.readBytes(outPath);
@@ -649,7 +650,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
         compArgs: List<String> = [path.join(rootDir, "bin/lite-compile"), compileArg];
         compOutPath := path.join(work, "compile.stdout");
         compErrPath := path.join(work, "compile.stderr");
-        compiled := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, timeoutMs, emptyBytes, compOutPath, compErrPath);
+        compiled := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, timeoutMs, emptyBytes, compOutPath, compErrPath);
         if compiled.error =!= "" { return (ok = false, artifactSha = "", error = compiled.error); }
 
         compOutBytes := fs.readBytes(compOutPath);
@@ -721,7 +722,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
             }
             runOutPath := path.join(work, "run.stdout");
             runErrPath := path.join(work, "run.stderr");
-            runRes := proc.runBytes(proc.execPath(), runArgs, filesDir, emptyEnv, timeoutMs, stdinBytes, runOutPath, runErrPath);
+            runRes := proc.runBytes(project.nodeExecPath(), runArgs, filesDir, emptyEnv, timeoutMs, stdinBytes, runOutPath, runErrPath);
             if runRes.error =!= "" { return (ok = false, artifactSha = "", error = runRes.error); }
 
             outFilesField := json.findObjectField(caseText, sPos, "outputFiles");

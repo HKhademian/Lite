@@ -6,6 +6,7 @@ integer := import "core/int";
 list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
+project := import "util/project";
 test := import "core/test";
 text := import "core/text";
 unicode := import "core/unicode";
@@ -39,7 +40,7 @@ pub prepareDriver := fn(rootDir: String, compilerPath: String, relSourcePath: St
 
     artifactPath := path.join(workDir, "driver.ts");
     compErr := path.join(workDir, "compile.stderr");
-    comp := proc.runBytes(proc.execPath(), [compilerPath, relSourcePath], rootDir, emptyEnv(), 60000, emptyBytes(), artifactPath, compErr);
+    comp := proc.runBytes(project.nodeExecPath(), [compilerPath, relSourcePath], rootDir, emptyEnv(), 60000, emptyBytes(), artifactPath, compErr);
     test.check("prepareDriver compiler error: " + comp.error, comp.error == "");
     test.checkInt("prepareDriver compile " + relSourcePath, 0, comp.status);
     test.checkText("prepareDriver stderr " + relSourcePath, "", fs.readText(compErr).text);
@@ -64,7 +65,7 @@ pub runDriver := fn(driver: TestDriver, stdinText: String): RunOutput {
     outPath := path.join(driver.workDir, "run.stdout");
     errPath := path.join(driver.workDir, "run.stderr");
     ran := proc.runBytes(
-    proc.execPath(), [driver.runnerPath, driver.artifactPath], driver.workDir, emptyEnv(), 30000, unicode.utf8Encode(stdinText), outPath, errPath
+    project.nodeExecPath(), [driver.runnerPath, driver.artifactPath], driver.workDir, emptyEnv(), 30000, unicode.utf8Encode(stdinText), outPath, errPath
     );
     test.check("runDriver process error: " + ran.error, ran.error == "");
     outRes := fs.readText(outPath);
@@ -111,7 +112,7 @@ extraCompilerArgs: List<String>
     }
     outPath := path.join(workDir, "out");
     errPath := path.join(workDir, "err");
-    res := proc.runBytes(proc.execPath(), args, cwdDir, emptyEnv(), 60000, unicode.utf8Encode(source), outPath, errPath);
+    res := proc.runBytes(project.nodeExecPath(), args, cwdDir, emptyEnv(), 60000, unicode.utf8Encode(source), outPath, errPath);
     test.check("compileStdin error: " + res.error, res.error == "");
     outText := fs.readText(outPath).text;
     errText := fs.readText(errPath).text;
@@ -136,7 +137,7 @@ pub compileFile := fn(compilerPath: String, cwdDir: String, args: List<String>):
     }
     outPath := path.join(workDir, "out");
     errPath := path.join(workDir, "err");
-    res := proc.runBytes(proc.execPath(), cmdArgs, cwdDir, emptyEnv(), 60000, emptyBytes(), outPath, errPath);
+    res := proc.runBytes(project.nodeExecPath(), cmdArgs, cwdDir, emptyEnv(), 60000, emptyBytes(), outPath, errPath);
     test.check("compileFile error: " + res.error, res.error == "");
     outText := fs.readText(outPath).text;
     errText := fs.readText(errPath).text;
@@ -178,7 +179,7 @@ pub runPreparedTsWithBytes := fn(prepared: PreparedTs, stdinBytes: List<Int>, ex
     }
     outPath := path.join(prepared.workDir, "run.stdout");
     errPath := path.join(prepared.workDir, "run.stderr");
-    ran := proc.runBytes(proc.execPath(), runArgs, prepared.workDir, emptyEnv(), 30000, stdinBytes, outPath, errPath);
+    ran := proc.runBytes(project.nodeExecPath(), runArgs, prepared.workDir, emptyEnv(), 30000, stdinBytes, outPath, errPath);
     test.check("runPreparedTs error: " + ran.error, ran.error == "");
     outText := fs.readText(outPath).text;
     errText := fs.readText(errPath).text;

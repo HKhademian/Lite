@@ -3,6 +3,7 @@
 io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
+project := import "util/project";
 integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
@@ -76,7 +77,7 @@ pub runUnitWorker := fn(taskJson: String): Int {
     emptyEnv: List<String> = [];
     emptyBytes: List<Int> = [];
     compArgs: List<String> = [compilerPath, relFile];
-    comp := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 60000, emptyBytes, outTsPath, compErrPath);
+    comp := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 60000, emptyBytes, outTsPath, compErrPath);
     if comp.error =!= "" or comp.status =!= 0 {
         msg := if comp.error =!= "" { comp.error } else { readWorkerFailureText(compErrPath, outTsPath, "compilation failed") };
         _rmComp := fs.remove(workDir);
@@ -102,7 +103,7 @@ pub runUnitWorker := fn(taskJson: String): Int {
     runOutPath := path.join(workDir, "run.stdout");
     runErrPath := path.join(workDir, "run.stderr");
     runArgs: List<String> = [runnerPath, outTsPath];
-    ran := proc.runBytes(proc.execPath(), runArgs, rootDir, emptyEnv, 600000, emptyBytes, runOutPath, runErrPath);
+    ran := proc.runBytes(project.nodeExecPath(), runArgs, rootDir, emptyEnv, 600000, emptyBytes, runOutPath, runErrPath);
     if ran.error =!= "" or ran.status =!= 0 {
         msg := if ran.error =!= "" { ran.error } else { readWorkerFailureText(runErrPath, runOutPath, "unit test failed") };
         _rmRun := fs.remove(workDir);
@@ -144,7 +145,7 @@ pub runUnitTestFiles := fn(rootDir: String, selectedRel: List<String>, maxJobs: 
         + ",\"compiler\":" + json.quoteString(sel.path)
         + ",\"file\":" + json.quoteString(relFile) + "}";
         argJson := "[" + json.quoteString(runnerScript) + ",\"--unit-worker\"," + json.quoteString(taskJson) + "]";
-        list.pushBack(mut commands, proc.execPath());
+        list.pushBack(mut commands, project.nodeExecPath());
         list.pushBack(mut argListsJson, argJson);
     }
 

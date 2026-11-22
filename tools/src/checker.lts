@@ -71,7 +71,7 @@ run := fn(rawArgs: List<String>): Unit {
     emptyBytes: List<Int> = [];
     emptyEnv: List<String> = [];
 
-    compiled := proc.runBytes(proc.execPath(), compArgs, "", emptyEnv, 0, emptyBytes, outTsPath, errPath);
+    compiled := proc.runBytes(project.nodeExecPath(), compArgs, "", emptyEnv, 0, emptyBytes, outTsPath, errPath);
     if compiled.error =!= "" {
         _rm := fs.remove(work);
         io.errorLine(target + ": " + compiled.error);

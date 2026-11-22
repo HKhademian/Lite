@@ -153,7 +153,7 @@ run := fn(rawArgs: List<String>): Unit {
         if not hasOpt { list.pushBack(mut nodeArgs, "-O1"); }
         loop compileOpts as opt { list.pushBack(mut nodeArgs, opt); }
         list.pushBack(mut nodeArgs, scriptPath);
-        compiled := proc.run(proc.execPath(), nodeArgs, "", emptyEnv, true, "");
+        compiled := proc.run(project.nodeExecPath(), nodeArgs, "", emptyEnv, true, "");
         if compiled.error =!= "" {
             fs.remove(tempDir.path);
             io.errorLine("lite build: " + compiled.error);

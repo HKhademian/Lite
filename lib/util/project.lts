@@ -66,9 +66,13 @@ relativeToRoot := fn(root: String, targetPath: String): String {
 
 /** Classifies the active execution artifact kind from its repo-relative entrypoint path. */
 classifyArtifactKind := fn(relEntry: String): String {
-    if text.startsWithAt(relEntry, 0, "dist/tools/") { return "ignited-ts"; }
+    if text.startsWithAt(relEntry, 0, "dist/tools/") {
+        return if text.endsWith(relEntry, ".ts") { "ignited-ts" } else { "ignited-c" };
+    }
     if relEntry == "compiler/bootstrap/igniter.ts" { return "bootstrap-igniter-ts"; }
-    if text.startsWithAt(relEntry, 0, "dist/bootstrap/") { return "bootstrap-compiler-ts"; }
+    if text.startsWithAt(relEntry, 0, "dist/bootstrap/") {
+        return if text.endsWith(relEntry, ".ts") { "bootstrap-compiler-ts" } else { "bootstrap-compiler-c" };
+    }
     if text.startsWithAt(relEntry, 0, "dist/compiler-cache/") { return "cached-compiler-ts"; }
     if text.endsWith(relEntry, ".ts") or text.endsWith(relEntry, ".js") { return "ts-script"; }
     if relEntry == "" { return "unknown"; }
@@ -111,11 +115,15 @@ readSeedMeta := fn(root: String): (target: String, recorded: String, igniterSha2
 
 /** Reads optional ignited-tool provenance from `dist/tools/<tool>.provenance.json`. */
 readToolProvenance := fn(root: String, relEntry: String, kind: String): (target: String, artifactSha256: String, compilerArtifactSha256: String, compilerSourceSha256: String, source: String, moduleCount: Int) {
-    if root == "" or kind =!= "ignited-ts" or not text.endsWith(relEntry, ".ts") {
+    if root == "" or (kind =!= "ignited-ts" and kind =!= "ignited-c") {
         return (target = "", artifactSha256 = "", compilerArtifactSha256 = "", compilerSourceSha256 = "", source = "", moduleCount = 0);
     }
     prefixLen := text.length("dist/tools/");
-    toolName := text.slice(relEntry, prefixLen, text.length(relEntry) - 3);
+    toolName := if text.endsWith(relEntry, ".ts") {
+        text.slice(relEntry, prefixLen, text.length(relEntry) - 3)
+    } else {
+        text.slice(relEntry, prefixLen, text.length(relEntry))
+    };
     provRead := fs.readText(path.resolve(root, "dist/tools/" + toolName + ".provenance.json"));
     if not provRead.ok or not json.validate(provRead.text).ok {
         return (target = "", artifactSha256 = "", compilerArtifactSha256 = "", compilerSourceSha256 = "", source = "", moduleCount = 0);
@@ -165,7 +173,8 @@ printVersionMeta := fn(label: String, component: String, asJson: Bool): Unit {
         if hashed.ok { artSha = hashed.hex; }
     }
     source := if prov.source =!= "" { prov.source } else if kind == "bootstrap-igniter-ts" { "tools/src/ignite.lts" } else { "" };
-    hostRuntime := "node " + proc.runtimeVersion();
+    rtVer := proc.runtimeVersion();
+    hostRuntime := if rtVer == "c11" { "c11" } else { "node " + rtVer };
 
     if asJson {
         out := "{\n"
@@ -256,6 +265,16 @@ pub errorText := fn(chunk: String): Unit {
     }
 };
 
+/** Returns the Node.js executable path: `LITE_NODE` if set, `proc.execPath()` when running under Node, or `"node"` when running as a native binary. */
+pub nodeExecPath := fn(): String {
+    envNode := proc.envGet("LITE_NODE");
+    if envNode.found and envNode.value =!= "" { return envNode.value; }
+    exec := proc.execPath();
+    base := path.baseName(exec);
+    if base == "node" or base == "node.exe" { return exec; }
+    "node"
+};
+
 /** Forwards CLI arguments to a Node script under the repo root, inheriting streams and exiting with its status. */
 pub forwardNode := fn(scriptRelPath: String, args: List<String>): Unit {
     root := findRepoRoot();
@@ -265,7 +284,7 @@ pub forwardNode := fn(scriptRelPath: String, args: List<String>): Unit {
         list.pushBack(mut nodeArgs, arg);
     }
     emptyEnv: List<String> = [];
-    res := proc.run(proc.execPath(), nodeArgs, "", emptyEnv, false, "");
+    res := proc.run(nodeExecPath(), nodeArgs, "", emptyEnv, false, "");
     if res.error =!= "" {
         io.errorLine(res.error);
         io.exit(1);
@@ -298,7 +317,7 @@ pub runCompilerArtifact := fn(artifactPath: String, compilerArgs: List<String>):
         list.pushBack(mut nodeArgs, arg);
     }
     emptyEnv: List<String> = [];
-    res := proc.run(proc.execPath(), nodeArgs, "", emptyEnv, false, "");
+    res := proc.run(nodeExecPath(), nodeArgs, "", emptyEnv, false, "");
     if res.error =!= "" {
         io.errorLine(res.error);
         return 1;

@@ -3,6 +3,7 @@
 io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
+project := import "util/project";
 crypto := import "core/crypto";
 integer := import "core/int";
 text := import "core/text";
@@ -974,7 +975,7 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String, optLevel: Int
     emptyEnv: List<String> = [];
     compArgs: List<String> = [compilerPath, "--stdin", "--name", displayName, "--root", absRootPath, "-O" + lvText];
     startNs := time.monotonicNs();
-    compiled := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outTsPath, errPath);
+    compiled := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outTsPath, errPath);
     elapsedNs := time.monotonicNs() - startNs;
     if compiled.error =!= "" {
         return (ok = false, artifactPath = "", compileNs = elapsedNs, emittedBytes = 0, error = compiled.error);
@@ -1051,7 +1052,7 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String
     errCPath := path.join(workDir, "compile-c.stderr");
     emptyEnv: List<String> = [];
     compArgs: List<String> = [cCompilerPath, "--stdin", "--name", displayName, "--root", absRootPath, "-O1"];
-    compiled := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outCPath, errCPath);
+    compiled := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outCPath, errCPath);
     if compiled.error =!= "" {
         return (ok = false, binaryPath = "", error = compiled.error);
     }
@@ -1101,7 +1102,7 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String
     errPath := path.join(workDir, "compile.stderr");
     emptyEnv: List<String> = [];
     compArgs: List<String> = [compilerPath, "--stdin", "--name", displayName, "--root", absRootPath];
-    compiled := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outTsPath, errPath);
+    compiled := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outTsPath, errPath);
     if compiled.error =!= "" {
         return (ok = false, artifactPath = "", error = compiled.error);
     }
@@ -1134,7 +1135,7 @@ stdinBytes: List<Int>, scenarioArgs: List<String>, idx: Int
     outPath := path.join(workDir, "run-" + integer.intText(idx) + ".stdout");
     errPath := path.join(workDir, "run-" + integer.intText(idx) + ".stderr");
     emptyEnv: List<String> = [];
-    res := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv, 10000, stdinBytes, outPath, errPath);
+    res := proc.runBytes(project.nodeExecPath(), runArgs, workDir, emptyEnv, 10000, stdinBytes, outPath, errPath);
     if res.error =!= "" {
         return (ok = false, outPath = outPath, errPath = errPath, exitCode = -1, error = "generated TS artifact failed: " + res.error);
     }

@@ -4,6 +4,7 @@ io := import "core/io";
 fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
+project := import "util/project";
 text := import "core/text";
 list := import "core/list";
 map := import "core/map";
@@ -340,7 +341,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
         tmpErr := path.join(genWork, "gen-" + integer.intText(gen) + ".stderr");
         compArgs: List<String> = [runnerPath, builderPath, "--stdin", "--name", sourceName, "--root", rootSourcePath, "-O3"];
         startNs := time.monotonicNs();
-        compRes := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, sourceBytes, tmpOutTs, tmpErr);
+        compRes := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, sourceBytes, tmpOutTs, tmpErr);
         compileMs := (time.monotonicNs() - startNs) / 1000000;
         if compRes.error =!= "" {
             _rm := fs.remove(genWork);
@@ -622,7 +623,7 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
             outFile := path.join(workDir, "comp-" + integer.intText(compileSeq) + ".out");
             errFile := path.join(workDir, "comp-" + integer.intText(compileSeq) + ".err");
             compArgs: List<String> = [runnerPath, artifactPath, "--stdin", "--name", "", "--root", sourcePath];
-            cRes := proc.runBytes(proc.execPath(), compArgs, workDir, emptyEnv, 0, fixSourceBytes, outFile, errFile);
+            cRes := proc.runBytes(project.nodeExecPath(), compArgs, workDir, emptyEnv, 0, fixSourceBytes, outFile, errFile);
             if cRes.error =!= "" {
                 _rm := fs.remove(workDir);
                 return (ok = false, cases = 0, programs = 0, rejections = 0, executions = 0, mismatchCount = 0, firstMismatch = "", jsonBody = "", error = cRes.error);
@@ -717,7 +718,7 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
             rOut := path.join(workDir, "run-" + integer.intText(si) + ".out");
             rErr := path.join(workDir, "run-" + integer.intText(si) + ".err");
             runArgs: List<String> = [runnerPath, tsFile];
-            ran := proc.runBytes(proc.execPath(), runArgs, workDir, emptyEnv, 10000, inBytes, rOut, rErr);
+            ran := proc.runBytes(project.nodeExecPath(), runArgs, workDir, emptyEnv, 10000, inBytes, rOut, rErr);
             executions = executions + 1;
             okRun := ran.error == "" and ran.status == progExpExits[si]
             and streams.equalBytes(fs.readBytes(rOut), fs.readBytes(progExpOutFiles[si]))
