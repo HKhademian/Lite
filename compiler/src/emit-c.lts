@@ -8,14 +8,17 @@ textLib := import "core/text";
 tb := import "util/text-builder";
 
 var cOutUseWriter := false;
+var cCompactEmit := false;
 cOutBuf: mut tb.TextBuilder;
 
 /** Emits one C11 line to either stdout or the buffered `TextBuilder` for `--out`. */
 outLine := fn(s: String): Unit {
+    line := if cCompactEmit { textLib.trimStart(s) } else { s };
+    if cCompactEmit and line == "" { return; }
     if not cOutUseWriter {
-        io.outputLine(s);
+        io.outputLine(line);
     } else {
-        tb.appendLine(mut cOutBuf, s);
+        tb.appendLine(mut cOutBuf, line);
     }
 };
 
@@ -3906,6 +3909,8 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
 };
 
 pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+    prevCompact := cCompactEmit;
+    cCompactEmit = optLevel == 4;
     softItems := applyCSoftBuiltins(items, prefix, builtinSpecs);
     reachable := frontend.filterReachableItemsWithOpt(softItems, frontend.TARGET_C, optLevel);
     calls := frontend.targetHelperCalls(reachable);
@@ -4420,6 +4425,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         outLine("    return status;");
     }
     outLine("}");
+    cCompactEmit = prevCompact;
 }
 
 /** Emits the C program to an explicit `io.Writer` with `--builtin-mode` specifications and optimization level (`0..3`). */

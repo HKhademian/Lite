@@ -1802,14 +1802,14 @@ extractReachableCodeTokens := fn(code: String): List<String> {
     out
 };
 
-/** Runs the multi-level optimization pipeline (`-O0`..`-O3`) and whole-program reachability DCE for `target`. */
+/** Runs the multi-level optimization pipeline (`-O0`..`-O3`, `-Os` = `4`) and whole-program reachability DCE for `target`. */
 pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: Int): Items {
     var pruned := items;
-    if optLevel >= 3 {
+    if optLevel == 3 {
         pruned = inlineSingleExprLeafFunctions(pruned, target);
     }
     if optLevel >= 1 {
-        maxRounds := if optLevel >= 3 { 3 } else if optLevel == 2 { 2 } else { 1 };
+        maxRounds := if optLevel == 3 { 3 } else if optLevel == 2 or optLevel == 4 { 2 } else { 1 };
         var round := 0;
         loop round < maxRounds {
             var beforeCount := 0;

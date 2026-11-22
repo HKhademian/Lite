@@ -10,7 +10,7 @@ project := import "util/project";
 compilerBuild := import "util/compiler-build";
 
 usageText := fn(): String {
-    "Usage: ./bin/lite build [-O0|-O1|-O2|-O3] [--cc-opt -O0|-O1|-O2|-O3] [--builtin-mode SPEC]... [-o OUTPUT] [--keep-c] [--quiet] file.lts"
+    "Usage: ./bin/lite build [-O0|-O1|-O2|-O3|-Os] [--cc-opt -O0|-O1|-O2|-O3|-Os] [--builtin-mode SPEC]... [-o OUTPUT] [--keep-c] [--quiet] file.lts"
 };
 
 usageExit := fn(): Unit {
@@ -39,6 +39,8 @@ run := fn(rawArgs: List<String>): Unit {
     compileOpts: mut List<String> = [];
     var outPath := "";
     var ccOpt := "-O2";
+    var explicitCcOpt := false;
+    var sizeOpt := false;
     var keepC := false;
     var quiet := false;
     var hasOpt := false;
@@ -61,8 +63,10 @@ run := fn(rawArgs: List<String>): Unit {
         } else if arg == "--cc-opt" {
             if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
             ccOpt = list.popFront(mut args);
+            explicitCcOpt = true;
         } else if text.startsWithAt(arg, 0, "--cc-opt=") {
             ccOpt = text.slice(arg, 9, text.length(arg));
+            explicitCcOpt = true;
         } else if arg == "--keep-c" {
             keepC = true;
         } else if arg == "--quiet" or arg == "-q" {
@@ -73,14 +77,17 @@ run := fn(rawArgs: List<String>): Unit {
             list.pushBack(mut compileOpts, list.popFront(mut args));
         } else if text.startsWithAt(arg, 0, "--builtin-mode=") {
             list.pushBack(mut compileOpts, arg);
-        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or text.startsWithAt(arg, 0, "--opt=") {
+        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or text.startsWithAt(arg, 0, "--opt=") {
             hasOpt = true;
+            if arg == "-Os" or arg == "--opt=s" or arg == "--opt=S" { sizeOpt = true; }
             list.pushBack(mut compileOpts, arg);
         } else if arg == "--opt" {
             if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
             hasOpt = true;
+            optVal := list.popFront(mut args);
+            if optVal == "s" or optVal == "S" { sizeOpt = true; }
             list.pushBack(mut compileOpts, arg);
-            list.pushBack(mut compileOpts, list.popFront(mut args));
+            list.pushBack(mut compileOpts, optVal);
         } else if text.startsWithAt(arg, 0, "-") {
             io.errorLine("lite build: unknown option " + arg);
             usageExit();
@@ -174,7 +181,11 @@ run := fn(rawArgs: List<String>): Unit {
 
     ccEnv := proc.envGet("CC");
     ccCmd := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
-    ccArgs: mut List<String> = ["-std=c11", ccOpt, cArtifact, "-o", finalOut, "-lm"];
+    effectiveCcOpt := if sizeOpt and not explicitCcOpt { "-Os" } else { ccOpt };
+    ccArgs: mut List<String> = ["-std=c11", effectiveCcOpt, cArtifact, "-o", finalOut, "-lm"];
+    if sizeOpt and proc.platform() == "darwin" {
+        list.pushBack(mut ccArgs, "-Wl,-dead_strip");
+    }
     cText := fs.readText(cArtifact);
     if cText.ok and proc.platform() == "darwin" and text.containsText(cText.text, "LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
         list.pushBack(mut ccArgs, "-framework");

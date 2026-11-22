@@ -7,14 +7,17 @@ textLib := import "core/text";
 var tsOutUseWriter := false;
 var tsOutWriterKind := "";
 var tsOutWriterHandle := 0;
+var tsCompactEmit := false;
 
 /** Emits one line to either standard output or an explicit target `io.Writer`. */
 outLine := fn(s: String): Unit {
+    line := if tsCompactEmit { textLib.trimStart(s) } else { s };
+    if tsCompactEmit and line == "" { return; }
     if not tsOutUseWriter {
-        io.outputLine(s);
+        io.outputLine(line);
     } else {
         w: io.Writer = (kind = tsOutWriterKind, handle = tsOutWriterHandle);
-        _res := io.writeLine(w, s);
+        _res := io.writeLine(w, line);
     }
 };
 
@@ -2387,6 +2390,8 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: 
 
 /** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications and optimization level (`0..3`). */
 pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+    prevCompact := tsCompactEmit;
+    tsCompactEmit = optLevel == 4;
     effectiveItems := frontend.filterReachableItemsWithOpt(applySoftBuiltins(items, prefix, builtinSpecs), frontend.TARGET_TS, optLevel);
     calls := frontend.targetHelperCalls(effectiveItems);
     abruptFault := usesAbruptFault(calls);
@@ -2600,6 +2605,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         outLine("    });");
         outLine("}");
     }
+    tsCompactEmit = prevCompact;
 }
 
 /** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications at default `-O1`. */
