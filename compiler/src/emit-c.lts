@@ -3760,6 +3760,7 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x81) { strncpy(s->key, \"ArrowDown\", 15); s->key[15] = '\\0'; }");
     outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x82) { strncpy(s->key, \"ArrowLeft\", 15); s->key[15] = '\\0'; }");
     outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x83) { strncpy(s->key, \"ArrowRight\", 15); s->key[15] = '\\0'; }");
+    outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] >= 0x84 && (unsigned char)u[2] <= 0x8F) { snprintf(s->key, 16, \"F%d\", (int)((unsigned char)u[2] - 0x83)); }");
     outLine("                else if (u) { strncpy(s->key, u, 15); s->key[15] = '\\0'; }");
     outLine("                unsigned long mods = ((unsigned long (*)(id, SEL))objc_msgSend)(ev, sel_registerName(\"modifierFlags\"));");
     outLine("                if ((mods & (1ul << 20)) == 0ul) continue;");
