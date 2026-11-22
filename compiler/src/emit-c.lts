@@ -758,6 +758,18 @@ normalizeCBuiltinCalls := fn(code: String): String {
             out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_play_tone(";
             cursor = cursor + textLib.length("lite$extraCanvasPlayTone(");
             flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasBounds(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_bounds(";
+            cursor = cursor + textLib.length("lite$extraCanvasBounds(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasResize(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_resize(";
+            cursor = cursor + textLib.length("lite$extraCanvasResize(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasSetFullscreen(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_set_fullscreen(";
+            cursor = cursor + textLib.length("lite$extraCanvasSetFullscreen(");
+            flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeEpochNs(") {
             out = out + textLib.slice(code, flushed, cursor) + "lt_time_epoch_ns(";
             cursor = cursor + textLib.length("lite$timeEpochNs(");
@@ -3661,7 +3673,9 @@ usesExtraCanvasBuiltins := fn(calls: String): Bool {
     usesIntHelper(calls, "lite$extraCanvasStrokeRect(") or usesIntHelper(calls, "lite$extraCanvasFillCircle(") or
     usesIntHelper(calls, "lite$extraCanvasStrokeLine(") or usesIntHelper(calls, "lite$extraCanvasDrawText(") or
     usesIntHelper(calls, "lite$extraCanvasCapture(") or usesIntHelper(calls, "lite$extraCanvasSetTargetFps(") or
-    usesIntHelper(calls, "lite$extraCanvasVitals(") or usesIntHelper(calls, "lite$extraCanvasPlayTone(")
+    usesIntHelper(calls, "lite$extraCanvasVitals(") or usesIntHelper(calls, "lite$extraCanvasPlayTone(") or
+    usesIntHelper(calls, "lite$extraCanvasBounds(") or usesIntHelper(calls, "lite$extraCanvasResize(") or
+    usesIntHelper(calls, "lite$extraCanvasSetFullscreen(")
 };
 
 /** Emits the self-contained C11 `extra/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder + vitals). */
@@ -3673,8 +3687,9 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     rcTag := frontend.cStructTag("(x:Float,y:Float,width:Float,height:Float)");
     inpTag := frontend.cStructTag("(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
     vitTag := frontend.cStructTag("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)");
+    bndTag := frontend.cStructTag("(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
     okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
-    outLine("typedef struct { int w; int h; uint8_t *pixels; bool open; double px; double py; bool pdown; char key[16]; char key_out[16]; int64_t last_ms; int64_t frame_start_ns; int64_t frame_count; double target_fps; double last_frame_ms; double avg_frame_ms; bool headless; void *win; void *view; } lt_canvas_state;");
+    outLine("typedef struct { int w; int h; int x; int y; bool fullscreen; uint8_t *pixels; bool open; double px; double py; bool pdown; char key[16]; char key_out[16]; int64_t last_ms; int64_t frame_start_ns; int64_t frame_count; double target_fps; double last_frame_ms; double avg_frame_ms; bool headless; void *win; void *view; } lt_canvas_state;");
     outLine("static lt_canvas_state lt_canvas_slots[16];");
     outLine("static inline int64_t lt_canvas_now_ns(void) { struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return (int64_t)ts.tv_sec * 1000000000LL + (int64_t)ts.tv_nsec; }");
     outLine("static inline int64_t lt_canvas_now_ms(void) { return lt_canvas_now_ns() / 1000000LL; }");
@@ -3707,12 +3722,45 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    objc_autoreleasePoolPop(pool);");
     outLine("}");
     outLine("#endif");
+    outLine("static inline void lt_canvas_realloc_buf(lt_canvas_state *s, int nw, int nh) {");
+    outLine("    if (nw < 1) nw = 1; if (nh < 1) nh = 1;");
+    outLine("    if (nw == s->w && nh == s->h) return;");
+    outLine("    uint8_t *nb = calloc((size_t)nw * (size_t)nh * 4u, 1u);");
+    outLine("    if (!nb) return;");
+    outLine("    if (s->pixels != NULL) {");
+    outLine("        int cw = s->w < nw ? s->w : nw; int ch = s->h < nh ? s->h : nh;");
+    outLine("        for (int row = 0; row < ch; row += 1) memcpy(nb + (size_t)row * (size_t)nw * 4u, s->pixels + (size_t)row * (size_t)s->w * 4u, (size_t)cw * 4u);");
+    outLine("        free(s->pixels);");
+    outLine("    }");
+    outLine("    s->pixels = nb; s->w = nw; s->h = nh;");
+    outLine("}");
+    outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+    outLine("static inline CGRect lt_objc_rect(id obj, SEL sel) {");
+    outLine("#if defined(__x86_64__)");
+    outLine("    CGRect r; ((void (*)(CGRect *, id, SEL))objc_msgSend_stret)(&r, obj, sel); return r;");
+    outLine("#else");
+    outLine("    return ((CGRect (*)(id, SEL))objc_msgSend)(obj, sel);");
+    outLine("#endif");
+    outLine("}");
+    outLine("static inline void lt_canvas_sync_bounds(lt_canvas_state *s) {");
+    outLine("    if (!s || s->headless || s->win == NULL || s->view == NULL) return;");
+    outLine("    CGRect wf = lt_objc_rect((id)s->win, sel_registerName(\"frame\"));");
+    outLine("    s->x = (int)wf.origin.x; s->y = (int)wf.origin.y;");
+    outLine("    unsigned long mask = ((unsigned long (*)(id, SEL))objc_msgSend)((id)s->win, sel_registerName(\"styleMask\"));");
+    outLine("    s->fullscreen = ((mask & (1ul << 14)) != 0ul);");
+    outLine("    CGRect vb = lt_objc_rect((id)s->view, sel_registerName(\"bounds\"));");
+    outLine("    int nw = (int)(vb.size.width + 0.5); int nh = (int)(vb.size.height + 0.5);");
+    outLine("    if (nw > 0 && nh > 0 && (nw != s->w || nh != s->h)) lt_canvas_realloc_buf(s, nw, nh);");
+    outLine("}");
+    outLine("#else");
+    outLine("static inline void lt_canvas_sync_bounds(lt_canvas_state *s) { (void)s; }");
+    outLine("#endif");
     outLine("static inline " + surfTag + " lt_canvas_open(const char *title, int64_t width, int64_t height) {");
     outLine("    int w = width > 0 ? (int)width : 1; int h = height > 0 ? (int)height : 1;");
     outLine("    int slot = -1; for (int i = 0; i < 16; i += 1) { if (lt_canvas_slots[i].pixels == NULL) { slot = i; break; } }");
     outLine("    if (slot < 0) return (" + surfTag + "){ .f_handle = 0 };");
     outLine("    lt_canvas_state *s = &lt_canvas_slots[slot]; memset(s, 0, sizeof(*s));");
-    outLine("    s->w = w; s->h = h; s->open = true; s->last_ms = lt_canvas_now_ms(); s->frame_start_ns = lt_canvas_now_ns(); s->target_fps = 60.0;");
+    outLine("    s->w = w; s->h = h; s->x = 120; s->y = 120; s->fullscreen = false; s->open = true; s->last_ms = lt_canvas_now_ms(); s->frame_start_ns = lt_canvas_now_ns(); s->target_fps = 60.0;");
     outLine("    s->pixels = calloc((size_t)w * (size_t)h * 4u, 1u);");
     outLine("    const char *hl = getenv(\"LITE_CANVAS_HEADLESS\");");
     outLine("    s->headless = (hl != NULL && strcmp(hl, \"1\") == 0);");
@@ -3721,7 +3769,8 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("        lt_cocoa_init();");
     outLine("        CGRect frame = CGRectMake(120.0, 120.0, (double)w, (double)h);");
     outLine("        id win = ((id (*)(id, SEL))objc_msgSend)((id)objc_getClass(\"NSWindow\"), sel_registerName(\"alloc\"));");
-    outLine("        win = ((id (*)(id, SEL, CGRect, unsigned long, unsigned long, signed char))objc_msgSend)(win, sel_registerName(\"initWithContentRect:styleMask:backing:defer:\"), frame, 7ul, 2ul, 0);");
+    outLine("        win = ((id (*)(id, SEL, CGRect, unsigned long, unsigned long, signed char))objc_msgSend)(win, sel_registerName(\"initWithContentRect:styleMask:backing:defer:\"), frame, 15ul, 2ul, 0);");
+    outLine("        ((void (*)(id, SEL, unsigned long))objc_msgSend)(win, sel_registerName(\"setCollectionBehavior:\"), 1ul << 7);");
     outLine("        id nsTitle = ((id (*)(id, SEL, const char *))objc_msgSend)((id)objc_getClass(\"NSString\"), sel_registerName(\"stringWithUTF8String:\"), title ? title : \"Lite Canvas\");");
     outLine("        ((void (*)(id, SEL, id))objc_msgSend)(win, sel_registerName(\"setTitle:\"), nsTitle);");
     outLine("        id cv = ((id (*)(id, SEL))objc_msgSend)(win, sel_registerName(\"contentView\"));");
@@ -3769,6 +3818,7 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("        }");
     outLine("        signed char vis = ((signed char (*)(id, SEL))objc_msgSend)((id)s->win, sel_registerName(\"isVisible\"));");
     outLine("        if (!vis) s->open = false;");
+    outLine("        lt_canvas_sync_bounds(s);");
     outLine("        CGPoint pt = ((CGPoint (*)(id, SEL))objc_msgSend)((id)s->win, sel_registerName(\"mouseLocationOutsideOfEventStream\"));");
     outLine("        s->px = pt.x; s->py = (double)s->h - pt.y;");
     outLine("        objc_autoreleasePoolPop(pool);");
@@ -3831,6 +3881,47 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    double fps = s->avg_frame_ms > 0.0 ? 1000.0 / s->avg_frame_ms : 0.0;");
     outLine("    return (" + vitTag + "){ .f_frameCount = s->frame_count, .f_frameTimeMs = s->last_frame_ms, .f_avgFrameTimeMs = s->avg_frame_ms, .f_fps = fps, .f_targetFps = s->target_fps, .f_cpuTimeMs = cpu_ms, .f_memoryBytes = rss };");
     outLine("}");
+    if usesIntHelper(calls, "lite$extraCanvasBounds(") {
+        outLine("static inline " + bndTag + " lt_canvas_bounds(" + surfTag + " surf) {");
+        outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle);");
+        outLine("    if (!s) return (" + bndTag + "){ .f_x = 0, .f_y = 0, .f_width = 0, .f_height = 0, .f_fullscreen = false };");
+        outLine("    lt_canvas_sync_bounds(s);");
+        outLine("    return (" + bndTag + "){ .f_x = (int64_t)s->x, .f_y = (int64_t)s->y, .f_width = (int64_t)s->w, .f_height = (int64_t)s->h, .f_fullscreen = s->fullscreen };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasResize(") {
+        outLine("static inline void lt_canvas_resize(" + surfTag + " surf, int64_t width, int64_t height) {");
+        outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
+        outLine("    int nw = width > 0 ? (int)width : 1; int nh = height > 0 ? (int)height : 1;");
+        outLine("    lt_canvas_realloc_buf(s, nw, nh);");
+        outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+        outLine("    if (!s->headless && s->win != NULL) {");
+        outLine("        void *pool = objc_autoreleasePoolPush();");
+        outLine("        CGSize sz = CGSizeMake((double)nw, (double)nh);");
+        outLine("        ((void (*)(id, SEL, CGSize))objc_msgSend)((id)s->win, sel_registerName(\"setContentSize:\"), sz);");
+        outLine("        objc_autoreleasePoolPop(pool);");
+        outLine("    }");
+        outLine("#endif");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasSetFullscreen(") {
+        outLine("static inline void lt_canvas_set_fullscreen(" + surfTag + " surf, bool enabled) {");
+        outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
+        outLine("    lt_canvas_sync_bounds(s);");
+        outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+        outLine("    if (!s->headless && s->win != NULL) {");
+        outLine("        if (enabled != s->fullscreen) {");
+        outLine("            void *pool = objc_autoreleasePoolPush();");
+        outLine("            ((void (*)(id, SEL, id))objc_msgSend)((id)s->win, sel_registerName(\"toggleFullScreen:\"), NULL);");
+        outLine("            objc_autoreleasePoolPop(pool);");
+        outLine("        }");
+        outLine("        s->fullscreen = enabled;");
+        outLine("        return;");
+        outLine("    }");
+        outLine("#endif");
+        outLine("    s->fullscreen = enabled;");
+        outLine("}");
+    }
     outLine("static inline void lt_canvas_close(" + surfTag + " surf) {");
     outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
     outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");

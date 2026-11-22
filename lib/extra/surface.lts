@@ -20,6 +20,9 @@ pub FrameInput := type (open: Bool, width: Int, height: Int, pointerX: Float, po
 /** Runtime performance and resource vitals for an active surface. */
 pub Vitals := type (frameCount: Int, frameTimeMs: Float, avgFrameTimeMs: Float, fps: Float, targetFps: Float, cpuTimeMs: Float, memoryBytes: Int);
 
+/** Window geometry and fullscreen state snapshot for an active surface. */
+pub Bounds := type (x: Int, y: Int, width: Int, height: Int, fullscreen: Bool);
+
 /** Constructs a 2D point `(x, y)`. */
 pub point := fn(x: Float, y: Float): Point { (x = x, y = y) };
 
@@ -123,3 +126,44 @@ pub vitals := fn(surface: Surface): Vitals;
 
 /** Plays a short synthesized sine tone (`frequency` Hz, `durationMs` ms, `volume` 1..100) asynchronously on desktop hosts. */
 pub playTone := fn(surface: Surface, frequency: Int, durationMs: Int, volume: Int): Unit;
+
+/** Returns passive window geometry (`x`, `y`, `width`, `height`) and `fullscreen` state for `surface`. */
+pub bounds := fn(surface: Surface): Bounds;
+
+/** Resizes `surface` and its backing framebuffer to `width x height` logical pixels. */
+pub resize := fn(surface: Surface, width: Int, height: Int): Unit;
+
+/** Enters or exits native fullscreen mode on desktop hosts. */
+pub setFullscreen := fn(surface: Surface, enabled: Bool): Unit;
+
+/** Returns the current logical width of `surface` in pixels. */
+pub width := fn(surface: Surface): Int {
+    bounds(surface).width
+};
+
+/** Returns the current logical height of `surface` in pixels. */
+pub height := fn(surface: Surface): Int {
+    bounds(surface).height
+};
+
+/** Returns the current logical `(width, height)` size of `surface`. */
+pub size := fn(surface: Surface): (width: Int, height: Int) {
+    b := bounds(surface);
+    (width = b.width, height = b.height)
+};
+
+/** Returns the current window `(x, y)` position of `surface`. */
+pub position := fn(surface: Surface): (x: Int, y: Int) {
+    b := bounds(surface);
+    (x = b.x, y = b.y)
+};
+
+/** True when `surface` is currently in fullscreen mode. */
+pub isFullscreen := fn(surface: Surface): Bool {
+    bounds(surface).fullscreen
+};
+
+/** Toggles fullscreen mode on `surface`. */
+pub toggleFullscreen := fn(surface: Surface): Unit {
+    setFullscreen(surface, not isFullscreen(surface));
+};

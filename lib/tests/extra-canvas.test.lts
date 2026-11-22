@@ -52,6 +52,14 @@ makeSrc := fn(outPng: String): String {
     "canvas.uncapFrameRate(surf);\n" +
     "v2 := canvas.vitals(surf);\n" +
     "io.outputLine(v0.frameCount, v0.targetFps == 60.0, v1.targetFps == 120.0, v2.targetFps == 0.0, v0.frameTimeMs > 0.0, v0.memoryBytes > 0);\n" +
+    "sz0 := canvas.size(surf);\n" +
+    "pos0 := canvas.position(surf);\n" +
+    "canvas.resize(surf, 96, 72);\n" +
+    "canvas.setFullscreen(surf, true);\n" +
+    "b1 := canvas.bounds(surf);\n" +
+    "canvas.toggleFullscreen(surf);\n" +
+    "io.outputLine(sz0.width, sz0.height, pos0.x >= 0, b1.width, b1.height, b1.fullscreen, canvas.isFullscreen(surf));\n" +
+    "canvas.resize(surf, 64, 48);\n" +
     "cap := canvas.capture(surf, \"" + outPng + "\");\n" +
     "io.outputLine(cap.ok, cap.error);\n" +
     "canvas.close(surf);\n"
@@ -64,6 +72,7 @@ expected :=
 "0 255 0\n" +
 "true 64 48\n" +
 "1 true true true true true\n" +
+"64 48 true 96 72 true false\n" +
 "true \n";
 
 /* 1. TS target headless verification */

@@ -249,7 +249,9 @@ usesExtraCanvas := fn(calls: String): Bool {
     usesBuiltin(calls, "extraCanvasStrokeRect") or usesBuiltin(calls, "extraCanvasFillCircle") or
     usesBuiltin(calls, "extraCanvasStrokeLine") or usesBuiltin(calls, "extraCanvasDrawText") or
     usesBuiltin(calls, "extraCanvasCapture") or usesBuiltin(calls, "extraCanvasSetTargetFps") or
-    usesBuiltin(calls, "extraCanvasVitals") or usesBuiltin(calls, "extraCanvasPlayTone")
+    usesBuiltin(calls, "extraCanvasVitals") or usesBuiltin(calls, "extraCanvasPlayTone") or
+    usesBuiltin(calls, "extraCanvasBounds") or usesBuiltin(calls, "extraCanvasResize") or
+    usesBuiltin(calls, "extraCanvasSetFullscreen")
 }
 
 /** True when any emitted item calls any OS/host tool builtin beyond basic I/O and text. */
@@ -1580,7 +1582,8 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("type LiteCanvasSurface = { handle: bigint };");
     outLine("type LiteCanvasInput = { open: boolean; width: bigint; height: bigint; pointerX: number; pointerY: number; pointerDown: boolean; key: string; deltaMs: bigint };");
     outLine("type LiteCanvasVitals = { frameCount: bigint; frameTimeMs: number; avgFrameTimeMs: number; fps: number; targetFps: number; cpuTimeMs: number; memoryBytes: bigint };");
-    outLine("interface LiteCanvasState { w: number; h: number; pixels: Uint8Array; open: boolean; pointerX: number; pointerY: number; pointerDown: boolean; key: string; lastMs: number; frameStartMs: number; frameCount: number; targetFps: number; lastFrameMs: number; avgFrameMs: number; headless: boolean; dir: string; child: any; }");
+    outLine("type LiteCanvasBounds = { x: bigint; y: bigint; width: bigint; height: bigint; fullscreen: boolean };");
+    outLine("interface LiteCanvasState { w: number; h: number; x: number; y: number; fullscreen: boolean; pixels: Uint8Array; open: boolean; pointerX: number; pointerY: number; pointerDown: boolean; key: string; lastMs: number; frameStartMs: number; frameCount: number; targetFps: number; lastFrameMs: number; avgFrameMs: number; headless: boolean; dir: string; child: any; }");
     outLine("const lite$canvasMap = new Map<number, LiteCanvasState>();");
     outLine("const lite$canvasSleepArr = new Int32Array(new SharedArrayBuffer(4));");
     outLine("let lite$canvasNextId = 1;");
@@ -1650,7 +1653,7 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("        child = cp.spawn(process.execPath, ['-e', bridge, dir, title, String(w), String(h)], { stdio: 'ignore' });");
     outLine("    }");
     outLine("    const nowMs = performance.now();");
-    outLine("    lite$canvasMap.set(id, { w, h, pixels: new Uint8Array(w * h * 4), open: true, pointerX: 0, pointerY: 0, pointerDown: false, key: '', lastMs: nowMs, frameStartMs: nowMs, frameCount: 0, targetFps: 60.0, lastFrameMs: 0, avgFrameMs: 0, headless, dir, child });");
+    outLine("    lite$canvasMap.set(id, { w, h, x: 120, y: 120, fullscreen: false, pixels: new Uint8Array(w * h * 4), open: true, pointerX: 0, pointerY: 0, pointerDown: false, key: '', lastMs: nowMs, frameStartMs: nowMs, frameCount: 0, targetFps: 60.0, lastFrameMs: 0, avgFrameMs: 0, headless, dir, child });");
     outLine("    return { handle: BigInt(id) };");
     outLine("}");
     outLine("function lite$extraCanvasPoll(surface: LiteCanvasSurface): LiteCanvasInput {");
@@ -1770,6 +1773,24 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
     outLine("    if (!s || s.headless) return;");
     outLine("    void frequency; void durationMs; void volume;");
+    outLine("}");
+    outLine("function lite$extraCanvasBounds(surface: LiteCanvasSurface): LiteCanvasBounds {");
+    outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
+    outLine("    if (!s) return { x: 0n, y: 0n, width: 0n, height: 0n, fullscreen: false };");
+    outLine("    return { x: BigInt(s.x), y: BigInt(s.y), width: BigInt(s.w), height: BigInt(s.h), fullscreen: s.fullscreen };");
+    outLine("}");
+    outLine("function lite$extraCanvasResize(surface: LiteCanvasSurface, width: bigint, height: bigint): void {");
+    outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
+    outLine("    const nw = Math.max(1, Number(width)), nh = Math.max(1, Number(height));");
+    outLine("    if (nw === s.w && nh === s.h) return;");
+    outLine("    const nb = new Uint8Array(nw * nh * 4);");
+    outLine("    const cw = Math.min(s.w, nw), ch = Math.min(s.h, nh);");
+    outLine("    for (let row = 0; row < ch; row += 1) nb.set(s.pixels.subarray(row * s.w * 4, row * s.w * 4 + cw * 4), row * nw * 4);");
+    outLine("    s.pixels = nb; s.w = nw; s.h = nh;");
+    outLine("}");
+    outLine("function lite$extraCanvasSetFullscreen(surface: LiteCanvasSurface, enabled: boolean): void {");
+    outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
+    outLine("    s.fullscreen = enabled;");
     outLine("}");
     outLine("");
 }
