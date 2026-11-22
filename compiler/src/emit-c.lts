@@ -4478,7 +4478,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     emitIntArithmeticHelpers(calls, source, prefix);
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
-    if usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") {
+    if usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") {
         outLine("static char *lt_str_alloc(size_t n) {");
         outLine("    static char *slab = NULL;");
         outLine("    static size_t pos = 0u, cap = 0u;");
