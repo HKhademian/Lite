@@ -118,6 +118,15 @@ export const playSamples: readonly PlaySample[] = [
 
   /* Animation */
   {
+    id: 'play-hello',
+    group: 'play-animation',
+    title: 'Hello Play — Minimal Starter',
+    note: 'Compact extra/canvas + extra/audio boilerplate with bounce chimes, Space reverse, and click-to-place; runs in Browser Play and natively via ./bin/lite play (320×180).',
+    file: 'samples/graphics/animation/hello-play.lts',
+    args: [],
+    stdin: '',
+  },
+  {
     id: 'play-bounce',
     group: 'play-animation',
     title: 'Bounce — ℓite Mark & Chime',

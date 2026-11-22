@@ -1,6 +1,6 @@
 # Lite Samples
 
-Folder-grouped project samples showcasing algorithms, high-resolution RGBA canvas drawing, animation, interactive controls, Web Audio synthesis, and mini-games.
+Folder-grouped project samples showcasing algorithms, high-resolution RGBA canvas drawing, animation, interactive controls, Web Audio synthesis, and mini-games. Run any Play (`extra/canvas` / `extra/audio`) sample natively on desktop with `./bin/lite play <file.lts>`.
 
 For core language-specification examples (`001`–`024`), see [language/examples](lite://repo/language/examples/README.md).
 
@@ -30,6 +30,7 @@ For core language-specification examples (`001`–`024`), see [language/examples
 
 ## Animation (`graphics/animation/`)
 
+- [hello-play](lite://play/play-hello) — `320x180` minimal `extra/canvas` + `extra/audio` starter (runs in Browser Play and natively via `./bin/lite play`).
 - [bounce-emblem](lite://play/play-bounce) — `320x200` bouncing `ℓite` emblem with chimes.
 - [neon-rain](lite://play/play-neon-rain) — `320x200` falling neon streaks with alpha trails.
 - [solar-orbit](lite://play/play-solar-orbit) — `320x220` multi-ring orbital motion.

@@ -1,0 +1,64 @@
+/* Minimal extra/canvas + extra/audio starter: runs identically in Browser Play and natively via `./bin/lite play`. */
+
+audio := import "extra/audio";
+canvas := import "extra/canvas";
+io := import "core/io";
+
+ctx := canvas.play(width = 320, height = 180, title = "Hello Play · Space/Click Chime");
+bg := canvas.rgb(12, 16, 28);
+boxColor := canvas.rgb(104, 196, 224);
+accentColor := canvas.rgb(240, 180, 90);
+
+var x := 24;
+var dx := 3;
+var acc := 0.0;
+var flash := 0;
+
+render := fn(): Unit {
+    canvas.clear(bg);
+    canvas.fillRect(8, 8, ctx.width - 16, ctx.height - 16, canvas.rgba(255, 255, 255, 16));
+    fill := if flash > 0 { accentColor } else { boxColor };
+    canvas.fillRect(x, 70, 40, 40, fill);
+};
+
+onCanvasInit := fn(): Unit {
+    render();
+};
+
+onCanvasUpdate := fn(dt: Float): Int {
+    acc += dt;
+    if acc < 0.016 { return 0; }
+    acc = 0.0;
+
+    if flash > 0 { flash -= 1; }
+    x += dx;
+    if x <= 12 or x + 40 >= ctx.width - 12 {
+        dx = -dx;
+        flash = 8;
+        audio.tone(frequency = if dx > 0 { 440 } else { 587 }, durationMs = 60, volume = 25);
+    }
+    render();
+    0
+};
+
+onCanvasKeyDown := fn(key: String): Unit {
+    if key == " " {
+        dx = -dx;
+        flash = 10;
+        audio.tone(frequency = 660, durationMs = 90, volume = 30);
+        render();
+    }
+};
+
+onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit {
+    _row := row;
+    _btn := button;
+    target := col - 20;
+    x = if target < 12 { 12 } else if target > ctx.width - 52 { ctx.width - 52 } else { target };
+    flash = 10;
+    audio.tone(frequency = 523, durationMs = 70, volume = 28);
+    render();
+};
+
+render();
+io.outputLine("Canvas:", ctx.title, ctx.width, "x", ctx.height);
