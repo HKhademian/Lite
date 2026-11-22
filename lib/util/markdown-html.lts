@@ -5,11 +5,12 @@ text := import "core/text";
 list := import "core/list";
 json := import "util/json";
 md := import "util/markdown";
+tb := import "util/text-builder";
 
 /** Escapes HTML special characters (`&`, `<`, `>`, `"`). */
 pub escapeHtml := fn(raw: String): String {
     size := text.length(raw);
-    var out := "";
+    out: mut tb.TextBuilder;
     var runStart := 0;
     var i := 0;
     loop i < size {
@@ -20,15 +21,15 @@ pub escapeHtml := fn(raw: String): String {
         else if ch == ">" { esc = "&gt;"; }
         else if ch == "\"" { esc = "&quot;"; }
         if esc =!= "" {
-            if i > runStart { out = out + text.slice(raw, runStart, i); }
-            out = out + esc;
+            if i > runStart { tb.append(mut out, text.slice(raw, runStart, i)); }
+            tb.append(mut out, esc);
             runStart = i + 1;
         }
         i += 1;
     }
     if runStart == 0 { return raw; }
-    if runStart < size { out = out + text.slice(raw, runStart, size); }
-    out
+    if runStart < size { tb.append(mut out, text.slice(raw, runStart, size)); }
+    tb.build(out)
 };
 
 countCharAt := fn(source: String, start: Int, limit: Int, ch: String): Int {

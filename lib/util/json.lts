@@ -3,6 +3,7 @@
 text := import "core/text";
 list := import "core/list";
 unicode := import "core/unicode";
+tb := import "util/text-builder";
 
 isJsonSpace := fn(ch: String): Bool {
     ch == " " or ch == "\t" or ch == "\r" or ch == "\n"
@@ -56,46 +57,52 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): (ok: Bool, valu
         return (ok = false, value = "", next = start, error = "expected JSON string");
     }
     var pos := start + 1;
-    var out := "";
+    out: mut tb.TextBuilder;
     var runStart := pos;
     loop pos < size {
         ch := text.at(source, pos);
         if ch == "\"" {
-            if decode and pos > runStart {
-                out = out + text.slice(source, runStart, pos);
+            if not decode {
+                return (ok = true, value = "", next = pos + 1, error = "");
             }
-            return (ok = true, value = out, next = pos + 1, error = "");
+            if runStart == start + 1 {
+                return (ok = true, value = text.slice(source, runStart, pos), next = pos + 1, error = "");
+            }
+            if pos > runStart {
+                tb.append(mut out, text.slice(source, runStart, pos));
+            }
+            return (ok = true, value = tb.build(out), next = pos + 1, error = "");
         }
         if ch == "\\" {
             if decode and pos > runStart {
-                out = out + text.slice(source, runStart, pos);
+                tb.append(mut out, text.slice(source, runStart, pos));
             }
             if pos + 1 >= size {
                 return (ok = false, value = "", next = pos, error = "unterminated string escape");
             }
             esc := text.at(source, pos + 1);
             if esc == "\"" or esc == "\\" or esc == "/" {
-                if decode { out = out + esc; }
+                if decode { tb.append(mut out, esc); }
                 pos = pos + 2;
                 runStart = pos;
             } else if esc == "n" {
-                if decode { out = out + "\n"; }
+                if decode { tb.append(mut out, "\n"); }
                 pos = pos + 2;
                 runStart = pos;
             } else if esc == "r" {
-                if decode { out = out + "\r"; }
+                if decode { tb.append(mut out, "\r"); }
                 pos = pos + 2;
                 runStart = pos;
             } else if esc == "t" {
-                if decode { out = out + "\t"; }
+                if decode { tb.append(mut out, "\t"); }
                 pos = pos + 2;
                 runStart = pos;
             } else if esc == "b" {
-                if decode { out = out + unicode.fromCodePoint(8).text; }
+                if decode { tb.append(mut out, unicode.fromCodePoint(8).text); }
                 pos = pos + 2;
                 runStart = pos;
             } else if esc == "f" {
-                if decode { out = out + unicode.fromCodePoint(12).text; }
+                if decode { tb.append(mut out, unicode.fromCodePoint(12).text); }
                 pos = pos + 2;
                 runStart = pos;
             } else if esc == "u" {
@@ -115,22 +122,22 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): (ok: Bool, valu
                             pair: List<Int> = [code, secondHex.value];
                             pairRes := unicode.utf16DecodeStrict(pair);
                             if pairRes.ok {
-                                out = out + pairRes.text;
+                                tb.append(mut out, pairRes.text);
                                 consumed = 12;
                             } else {
-                                out = out + text.slice(source, pos, pos + 6);
+                                tb.append(mut out, text.slice(source, pos, pos + 6));
                             }
                         } else {
-                            out = out + text.slice(source, pos, pos + 6);
+                            tb.append(mut out, text.slice(source, pos, pos + 6));
                         }
                     } else if code >= 55296 and code <= 57343 {
-                        out = out + text.slice(source, pos, pos + 6);
+                        tb.append(mut out, text.slice(source, pos, pos + 6));
                     } else {
                         cpRes := unicode.fromCodePoint(code);
                         if cpRes.ok {
-                            out = out + cpRes.text;
+                            tb.append(mut out, cpRes.text);
                         } else {
-                            out = out + text.slice(source, pos, pos + 6);
+                            tb.append(mut out, text.slice(source, pos, pos + 6));
                         }
                     }
                 }
