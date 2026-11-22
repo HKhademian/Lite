@@ -1,20 +1,24 @@
-# Generated bootstrap igniter
+# Generated bootstrap compilers (`igniter.ts` and `compiler.c`)
 
-`igniter.ts` is the single checked-in generated TypeScript bootstrap igniter and
-compiler seed. [seed.ts](lite://repo/compiler/bootstrap/seed.ts) records the igniter hash alongside the
-compiled compiler source, artifact, and revision identities. Running
-`./bin/lite-ignite` (or invoking any `bin/lite*` symlink) materializes the
-standalone compiler (`dist/bootstrap/compiler.ts`) and all tools
-(`dist/tools/*.ts`) inside untracked `dist/`. Running `./bin/lite-wipe` (or
-`./bin/lite-ignite --wipe`) wipes all untracked and ignored files via
-`git clean -ffdx`, reinstalls locked npm dependencies (`igniter/` and
-`editors/vscode/`), and re-ignites `dist/` cleanly from scratch. Numbered
-compiler generations are historical records, not parallel active compiler sources.
+This directory tracks **two** Lite-generated bootstrap sources in version control:
 
-The TypeScript compiler and retained C emitter are both compiled from their
-Lite source roots by that same igniter. The C backend is still TS-hosted; it is
-not a native C compiler or a C self-hosting fixed point. No separate generated
-C-emitter seed is selected or required.
+1. **`igniter.ts`** — Checked-in `-O3` TypeScript bootstrap igniter and compiler
+   seed for Node.js workflows. Running `./bin/lite-ignite` (or invoking any
+   `bin/lite*` symlink) materializes the standalone compiler
+   (`dist/bootstrap/compiler.ts`) and all tools (`dist/tools/*.ts`) inside
+   untracked `dist/`.
+2. **`compiler.c`** — Checked-in standalone C11 bootstrap compiler generated
+   directly from `compiler/src/c-root.lts`. Any standard C11 compiler
+   (`cc -std=c11 -Wall -Wextra -Werror -O2 compiler/bootstrap/compiler.c -o lite-c -lm`)
+   builds a native Lite-to-C11 compiler binary with **zero Node.js dependency**.
+
+[seed.ts](lite://repo/compiler/bootstrap/seed.ts) records the SHA-256 provenance
+for both `igniter.ts` and `compiler.c` alongside the compiler source graph hash.
+Both bootstrap paths reach a byte-identical 3-generation self-hosting fixed point.
+Running `./bin/lite-wipe` (or `./bin/lite-ignite --wipe`) wipes all untracked
+and ignored files via `git clean -ffdx`, reinstalls locked npm dependencies, and
+re-ignites `dist/` cleanly from scratch. Numbered compiler generations are
+historical records, not parallel active compiler sources.
 
 The TS and C manifests each name one Lite root. The generated compiler follows
 its language-level imports. The host reads only the root file and supplies
@@ -35,6 +39,7 @@ checked cache artifact. There is no T00 fallback.
 node igniter/node_modules/typescript/bin/tsc -p compiler/bootstrap/tsconfig.json
 node compiler/scripts/build.ts
 node compiler/scripts/self-host.ts --out /tmp/lite-selfhost
+./compiler/scripts/self-host-c.sh --out /tmp/lite-selfhost-c
 node compiler/scripts/corpus-parity.ts
 node benchmark/compiler-performance.ts --samples 3 --warmups 1
 ```
