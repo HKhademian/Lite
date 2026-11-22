@@ -13,7 +13,8 @@
   ],
   "description": "Parallel forward wiring, mutual and own-name recursion, nearer-forward shadowing, and eager outer reads.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks parallel compile-time symbol wiring across root and inner blocks, mutual/own-name recursion, 4-level shadowing, and eager outer-shadow reads.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

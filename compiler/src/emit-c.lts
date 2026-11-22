@@ -3881,7 +3881,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         outLine("#endif");
     }
     outLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns { outLine("#include <stdlib.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns or usesIntHelper(calls, "calloc(") { outLine("#include <stdlib.h>"); }
     if hasInputInt or hasPosixHost or usesIntHelper(calls, "lt_c_text_to_int(") { outLine("#include <errno.h>"); }
     outLine("#include <inttypes.h>");
     outLine("#include <stdbool.h>");

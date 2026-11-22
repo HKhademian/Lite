@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks execution-trace initialization safety across root and inner blocks, write-before-read reserved locals, and list-pushed forward closures.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

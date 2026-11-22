@@ -721,10 +721,12 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         var ri := locScanIdx - 1;
         loop ri >= 0 {
             le := locals[ri];
-            if le.depth > 0 and le.name =!= "$self" and le.runtime =!= "" and
+            isCell := textLib.startsWithAt(le.runtime, 0, "(*lt_cell_");
+            scanTok := if isCell { textLib.slice(le.runtime, 2, textLib.length(le.runtime) - 1) } else { le.runtime };
+            if (le.depth > 0 or isCell) and le.name =!= "$self" and scanTok =!= "" and
             not listLib.listContainsText(paramRuntimes, le.runtime) and
             not listLib.listContainsText(capRuntimes, le.runtime) and
-            reach.codeUsesTextCall(fnBody.code, le.runtime) {
+            reach.codeUsesTextCall(fnBody.code, scanTok) {
                 listLib.pushBack(mut capRuntimes, le.runtime);
                 listLib.pushBack(mut capKinds, le.kind);
                 listLib.pushBack(mut capMutables, le.mutable or le.writable);
@@ -750,20 +752,30 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             cK := capKinds[ci];
             cM := capMutables[ci];
             cT := types.cValueType(cK);
+            isCell := textLib.startsWithAt(cRt, 0, "(*lt_cell_");
             fName := "f_" + integer.intText(ci);
             pName := "a_" + integer.intText(ci);
-            envFields = envFields + cT + " " + fName + "; ";
             if ci > 0 {
                 mkParams = mkParams + ", ";
                 mkArgs = mkArgs + ", ";
             }
-            mkParams = mkParams + cT + " " + pName;
-            mkArgs = mkArgs + ctx.copiedValueCode(target, cK, cRt);
-            mkInits = mkInits + "e->" + fName + " = " + pName + "; ";
-            if cM {
-                bodyRewritten = ctx.cReplaceIdentToken(bodyRewritten, cRt, "(((" + envType + " *)_env)->" + fName + ")");
+            if isCell {
+                cellPtr := textLib.slice(cRt, 2, textLib.length(cRt) - 1);
+                envFields = envFields + cT + " *" + fName + "; ";
+                mkParams = mkParams + cT + " *" + pName;
+                mkArgs = mkArgs + cellPtr;
+                mkInits = mkInits + "e->" + fName + " = " + pName + "; ";
+                envUnpack = envUnpack + cT + " *" + cellPtr + " = ((" + envType + " *)_env)->" + fName + "; (void)" + cellPtr + "; ";
             } else {
-                envUnpack = envUnpack + cT + " " + cRt + " = ((" + envType + " *)_env)->" + fName + "; (void)" + cRt + "; ";
+                envFields = envFields + cT + " " + fName + "; ";
+                mkParams = mkParams + cT + " " + pName;
+                mkArgs = mkArgs + ctx.copiedValueCode(target, cK, cRt);
+                mkInits = mkInits + "e->" + fName + " = " + pName + "; ";
+                if cM {
+                    bodyRewritten = ctx.cReplaceIdentToken(bodyRewritten, cRt, "(((" + envType + " *)_env)->" + fName + ")");
+                } else {
+                    envUnpack = envUnpack + cT + " " + cRt + " = ((" + envType + " *)_env)->" + fName + "; (void)" + cRt + "; ";
+                }
             }
             ci = ci + 1;
         }
@@ -1350,14 +1362,25 @@ resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: 
 /** Emits one local declaration statement for TS or C11, unwrapping `/*@CBLK:<ret>@*/<body>` cleanly on C11. */
 blockDeclStmt := fn(target: String, declKw: String, runtime: String, kind: String, tsTypeAnn: String, initCode: String): String {
     if target == ir.TARGET_C {
-        cType := types.cValueType(kind);
-        if textLib.startsWithAt(initCode, 0, "/*@CBLK:") {
-            endHdr := textLib.indexOfText(initCode, "@*/", 8);
-            retVar := textLib.slice(initCode, 8, endHdr);
-            blkBody := textLib.slice(initCode, endHdr + 3, textLib.length(initCode));
-            cType + " " + runtime + "; { " + blkBody + " " + runtime + " = " + retVar + "; } (void)" + runtime + ";"
+        if textLib.startsWithAt(runtime, 0, "(*lt_cell_") {
+            if textLib.startsWithAt(initCode, 0, "/*@CBLK:") {
+                endHdr := textLib.indexOfText(initCode, "@*/", 8);
+                retVar := textLib.slice(initCode, 8, endHdr);
+                blkBody := textLib.slice(initCode, endHdr + 3, textLib.length(initCode));
+                "{ " + blkBody + " " + runtime + " = " + retVar + "; }"
+            } else {
+                runtime + " = " + initCode + ";"
+            }
         } else {
-            cType + " " + runtime + " = " + initCode + "; (void)" + runtime + ";"
+            cType := types.cValueType(kind);
+            if textLib.startsWithAt(initCode, 0, "/*@CBLK:") {
+                endHdr := textLib.indexOfText(initCode, "@*/", 8);
+                retVar := textLib.slice(initCode, 8, endHdr);
+                blkBody := textLib.slice(initCode, endHdr + 3, textLib.length(initCode));
+                cType + " " + runtime + "; { " + blkBody + " " + runtime + " = " + retVar + "; } (void)" + runtime + ";"
+            } else {
+                cType + " " + runtime + " = " + initCode + "; (void)" + runtime + ";"
+            }
         }
     } else {
         declKw + runtime + tsTypeAnn + " = " + initCode + "; void " + runtime + ";"
@@ -1400,17 +1423,40 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         listLib.pushBack(mut declaredInBlock, seededName);
         seedBag = trace.appendPipeBag(seedBag, seededName);
     }
-    blockAssignedBag := if target == ir.TARGET_TS {
-        infer.scanInnerBlockAssignedBag(target, source, start, prefix, seedBag)
-    } else {
-        ""
-    };
-    if target == ir.TARGET_TS {
-        preScannedLocals := infer.appendBlockFutureLocals(target, source, start, prefix, blockLexDepth, seedBag, blockAssignedBag, blockAliases, functions, params, blockLocals);
-        blockLocals = [];
-        loop preScannedLocals as entry { listLib.pushBack(mut blockLocals, entry); }
-    }
+    blockAssignedBag := infer.scanInnerBlockAssignedBag(target, source, start, prefix, seedBag);
     statements: mut List<String> = [];
+    preScannedLocals := infer.appendBlockFutureLocals(target, source, start, prefix, blockLexDepth, seedBag, blockAssignedBag, blockAliases, functions, params, blockLocals);
+    if target == ir.TARGET_C {
+        blkEndPos := syntax.scanBraceEnd(source, start, prefix);
+        hasFnInBlock := blkEndPos > start and textLib.indexOfText(textLib.slice(source, start, blkEndPos), "fn", 0) >= 0;
+        placeholderDepthC := 0 - 2 - blockLexDepth;
+        if hasFnInBlock {
+            boxedLocals: mut List<Local> = [];
+            loop preScannedLocals as entry {
+                if entry.depth == placeholderDepthC and entry.kind =!= "" and entry.kind =!= ir.VALUE_KIND_UNIT and entry.kind =!= ir.VALUE_KIND_NEVER {
+                    cT := types.cValueType(entry.kind);
+                    if cT =!= "" and cT =!= "void" {
+                        cellPtr := "lt_cell_" + entry.runtime;
+                        cellRt := "(*" + cellPtr + ")";
+                        listLib.pushBack(mut statements, "/*@T:" + entry.kind + "@*/" + cT + " *" + cellPtr + " = calloc(1, sizeof(" + cT + ")); if (" + cellPtr + " == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } (void)" + cellPtr + ";");
+                        listLib.pushBack(mut boxedLocals, (name = entry.name, runtime = cellRt, kind = entry.kind,
+                        mutable = entry.mutable, writable = entry.writable, depth = entry.depth,
+                        constant = entry.constant, code = entry.code, intValue = entry.intValue,
+                        textValue = entry.textValue, initState = entry.initState));
+                    } else {
+                        listLib.pushBack(mut boxedLocals, entry);
+                    }
+                } else {
+                    listLib.pushBack(mut boxedLocals, entry);
+                }
+            }
+            blockLocals = boxedLocals;
+        } else {
+            blockLocals = preScannedLocals;
+        }
+    } else {
+        blockLocals = preScannedLocals;
+    }
     stmtOwners: mut List<String> = [];
     stmtDeps: mut List<String> = [];
     var trackedStmtCount := 0;

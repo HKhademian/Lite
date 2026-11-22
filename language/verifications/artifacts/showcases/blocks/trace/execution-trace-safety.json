@@ -14,7 +14,8 @@
   ],
   "description": "Valid runtime execution-trace ordering, write-before-read reserved storage, and list-queued closures.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

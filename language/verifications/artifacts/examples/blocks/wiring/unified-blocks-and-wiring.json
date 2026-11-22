@@ -14,7 +14,8 @@
   ],
   "description": "Inner-block type aliases, forward mutual recursion, eager outer-shadow reads, and trace-safe ? storage.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

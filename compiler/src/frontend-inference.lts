@@ -675,7 +675,7 @@ pub blockHasInnerFn := fn(source: String, openBracePos: Int, prefix: String): In
 
 /** Pre-scans direct top-level statements inside `{ ... }` (`openBracePos .. closeBracePos - 1`) for direct `name = ...` assignments (`"|a|b|"`). */
 pub scanInnerBlockAssignedBag := fn(target: String, source: String, openBracePos: Int, prefix: String, seedBag: String): String {
-    if target =!= ir.TARGET_TS { return ""; }
+    if target =!= ir.TARGET_TS and target =!= ir.TARGET_C { return ""; }
     closeBracePos := blockHasInnerFn(source, openBracePos, prefix);
     if closeBracePos < 0 { return ""; }
     limit := closeBracePos - 1;
@@ -937,7 +937,7 @@ pub resolveFutureDecls := fn(target: String, source: String, prefix: String, mod
 pub appendBlockFutureLocals := fn(target: String, source: String, openBracePos: Int, prefix: String, blockLexDepth: Int,
 seedBag: String, assignedBag: String, aliases: List<AliasDecl>, functions: List<FunctionInfo>,
 functionParams: List<String>, locals: List<Local>): List<Local> {
-    if target =!= ir.TARGET_TS { return locals; }
+    if target =!= ir.TARGET_TS and target =!= ir.TARGET_C { return locals; }
     closeBracePos := blockHasInnerFn(source, openBracePos, prefix);
     if closeBracePos < 0 { return locals; }
     limit := closeBracePos - 1;

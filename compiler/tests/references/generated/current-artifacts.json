@@ -1,8 +1,8 @@
 {
   "note": "Unified Block Model Slice 3 (uniform lexical closures/captures, inner-block parallel compile-time symbol wiring, uniform execution-trace initialization safety, and escaping-closure checks on TS; C continues rejecting fn values explicitly). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-21",
-  "sourceSha256": "d71bb0e75496ce80e3096f128d0abade4740adc044f8d462b0752f2fd540d0be",
-  "compilerSha256": "80e1df4815e86371158bffa7062a84d61ac422af716efa8dec08dda04f84c43b",
+  "sourceSha256": "0015fdc8417bb73e39463fa6dc35363d0b2f0da2f4e24cdf622fb2740ad41470",
+  "compilerSha256": "296288e82a3adf2214032975c3ef1eaff6820bc09bcc40041a049cdc9a447f28",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
