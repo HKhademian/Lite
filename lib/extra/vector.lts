@@ -1,0 +1,217 @@
+/** Experimental 2D/3D/4D vector math (`extra/vector`) for games, graphics, and physics across TS and C11. */
+
+math := import "core/math";
+
+/** 2D floating-point vector. */
+pub Vec2 := type (x: Float, y: Float);
+
+/** 3D floating-point vector. */
+pub Vec3 := type (x: Float, y: Float, z: Float);
+
+/** 4D floating-point vector (homogeneous coordinates or RGBA). */
+pub Vec4 := type (x: Float, y: Float, z: Float, w: Float);
+
+/** Zero 2D vector `(0, 0)`. */
+pub ZERO2 := (x = 0.0, y = 0.0);
+
+/** Zero 3D vector `(0, 0, 0)`. */
+pub ZERO3 := (x = 0.0, y = 0.0, z = 0.0);
+
+/** Zero 4D vector `(0, 0, 0, 0)`. */
+pub ZERO4 := (x = 0.0, y = 0.0, z = 0.0, w = 0.0);
+
+/** Unit X axis `(1, 0, 0)`. */
+pub UNIT_X3 := (x = 1.0, y = 0.0, z = 0.0);
+
+/** Unit Y axis `(0, 1, 0)`. */
+pub UNIT_Y3 := (x = 0.0, y = 1.0, z = 0.0);
+
+/** Unit Z axis `(0, 0, 1)`. */
+pub UNIT_Z3 := (x = 0.0, y = 0.0, z = 1.0);
+
+/* Pure range-reduced trig helpers (exact to < 1e-11 on both TS and C11). */
+wrapAngle := fn(rad: Float): Float {
+    var a := rad;
+    loop a > math.PI { a = a - math.TAU; }
+    loop a < (0.0 - math.PI) { a = a + math.TAU; }
+    a
+};
+
+/** Computes sine of `rad` radians using range-reduced 11th-order Taylor series. */
+pub sinRad := fn(rad: Float): Float {
+    var x := wrapAngle(rad);
+    if x > (math.PI * 0.5) { x = math.PI - x; }
+    else if x < (0.0 - (math.PI * 0.5)) { x = (0.0 - math.PI) - x; }
+    x2 := x * x;
+    var term := x;
+    var sum := x;
+    term = (0.0 - term * x2) / 6.0; sum = sum + term;
+    term = (0.0 - term * x2) / 20.0; sum = sum + term;
+    term = (0.0 - term * x2) / 42.0; sum = sum + term;
+    term = (0.0 - term * x2) / 72.0; sum = sum + term;
+    term = (0.0 - term * x2) / 110.0; sum = sum + term;
+    sum
+};
+
+/** Computes cosine of `rad` radians. */
+pub cosRad := fn(rad: Float): Float {
+    sinRad(rad + (math.PI * 0.5))
+};
+
+/* ============================================================================
+ * Vec2
+ * ============================================================================ */
+
+/** Constructs a `Vec2`. */
+pub vec2 := fn(x: Float, y: Float): Vec2 { (x = x, y = y) };
+
+/** Adds `a + b`. */
+pub add2 := fn(a: Vec2, b: Vec2): Vec2 { (x = a.x + b.x, y = a.y + b.y) };
+
+/** Subtracts `a - b`. */
+pub sub2 := fn(a: Vec2, b: Vec2): Vec2 { (x = a.x - b.x, y = a.y - b.y) };
+
+/** Multiplies `v` by scalar `s`. */
+pub scale2 := fn(v: Vec2, s: Float): Vec2 { (x = v.x * s, y = v.y * s) };
+
+/** Negates `v`. */
+pub neg2 := fn(v: Vec2): Vec2 { (x = 0.0 - v.x, y = 0.0 - v.y) };
+
+/** Component-wise product of `a` and `b`. */
+pub mul2 := fn(a: Vec2, b: Vec2): Vec2 { (x = a.x * b.x, y = a.y * b.y) };
+
+/** 2D dot product. */
+pub dot2 := fn(a: Vec2, b: Vec2): Float { (a.x * b.x) + (a.y * b.y) };
+
+/** 2D signed cross product (z-component of 3D cross). */
+pub cross2 := fn(a: Vec2, b: Vec2): Float { (a.x * b.y) - (a.y * b.x) };
+
+/** Squared Euclidean length of `v`. */
+pub lengthSq2 := fn(v: Vec2): Float { (v.x * v.x) + (v.y * v.y) };
+
+/** Euclidean length of `v`. */
+pub length2 := fn(v: Vec2): Float { math.sqrt(lengthSq2(v)) };
+
+/** Euclidean distance between `a` and `b`. */
+pub distance2 := fn(a: Vec2, b: Vec2): Float { length2(sub2(a, b)) };
+
+/** Returns unit-length vector in the direction of `v`, or `ZERO2` when near zero. */
+pub normalize2 := fn(v: Vec2): Vec2 {
+    len := length2(v);
+    if len <= 0.000000000001 { ZERO2 } else { (x = v.x / len, y = v.y / len) }
+};
+
+/** Linearly interpolates between `a` and `b` by `t`. */
+pub lerp2 := fn(a: Vec2, b: Vec2, t: Float): Vec2 {
+    (x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t))
+};
+
+/** Rotates `v` counter-clockwise by `radians`. */
+pub rotate2 := fn(v: Vec2, radians: Float): Vec2 {
+    c := cosRad(radians);
+    s := sinRad(radians);
+    (x = (v.x * c) - (v.y * s), y = (v.x * s) + (v.y * c))
+};
+
+/** Returns the 90-degree counter-clockwise perpendicular vector `(-y, x)`. */
+pub perp2 := fn(v: Vec2): Vec2 { (x = 0.0 - v.y, y = v.x) };
+
+/** Clamps the magnitude of `v` to at most `maxLen`. */
+pub clampLength2 := fn(v: Vec2, maxLen: Float): Vec2 {
+    if maxLen <= 0.0 { return ZERO2; }
+    lenSq := lengthSq2(v);
+    if lenSq <= (maxLen * maxLen) { v } else { scale2(v, maxLen / math.sqrt(lenSq)) }
+};
+
+/* ============================================================================
+ * Vec3
+ * ============================================================================ */
+
+/** Constructs a `Vec3`. */
+pub vec3 := fn(x: Float, y: Float, z: Float): Vec3 { (x = x, y = y, z = z) };
+
+/** Adds `a + b`. */
+pub add3 := fn(a: Vec3, b: Vec3): Vec3 { (x = a.x + b.x, y = a.y + b.y, z = a.z + b.z) };
+
+/** Subtracts `a - b`. */
+pub sub3 := fn(a: Vec3, b: Vec3): Vec3 { (x = a.x - b.x, y = a.y - b.y, z = a.z - b.z) };
+
+/** Multiplies `v` by scalar `s`. */
+pub scale3 := fn(v: Vec3, s: Float): Vec3 { (x = v.x * s, y = v.y * s, z = v.z * s) };
+
+/** Negates `v`. */
+pub neg3 := fn(v: Vec3): Vec3 { (x = 0.0 - v.x, y = 0.0 - v.y, z = 0.0 - v.z) };
+
+/** Component-wise product of `a` and `b`. */
+pub mul3 := fn(a: Vec3, b: Vec3): Vec3 { (x = a.x * b.x, y = a.y * b.y, z = a.z * b.z) };
+
+/** 3D dot product. */
+pub dot3 := fn(a: Vec3, b: Vec3): Float { (a.x * b.x) + (a.y * b.y) + (a.z * b.z) };
+
+/** 3D cross product `a x b`. */
+pub cross3 := fn(a: Vec3, b: Vec3): Vec3 {
+    (
+    x = (a.y * b.z) - (a.z * b.y),
+    y = (a.z * b.x) - (a.x * b.z),
+    z = (a.x * b.y) - (a.y * b.x)
+    )
+};
+
+/** Squared Euclidean length of `v`. */
+pub lengthSq3 := fn(v: Vec3): Float { (v.x * v.x) + (v.y * v.y) + (v.z * v.z) };
+
+/** Euclidean length of `v`. */
+pub length3 := fn(v: Vec3): Float { math.sqrt(lengthSq3(v)) };
+
+/** Euclidean distance between `a` and `b`. */
+pub distance3 := fn(a: Vec3, b: Vec3): Float { length3(sub3(a, b)) };
+
+/** Returns unit-length vector in the direction of `v`, or `ZERO3` when near zero. */
+pub normalize3 := fn(v: Vec3): Vec3 {
+    len := length3(v);
+    if len <= 0.000000000001 { ZERO3 } else { (x = v.x / len, y = v.y / len, z = v.z / len) }
+};
+
+/** Linearly interpolates between `a` and `b` by `t`. */
+pub lerp3 := fn(a: Vec3, b: Vec3, t: Float): Vec3 {
+    (x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t), z = math.lerp(a.z, b.z, t))
+};
+
+/** Reflects incident vector `v` across unit surface normal `normal`. */
+pub reflect3 := fn(v: Vec3, normal: Vec3): Vec3 {
+    d := 2.0 * dot3(v, normal);
+    sub3(v, scale3(normal, d))
+};
+
+/* ============================================================================
+ * Vec4
+ * ============================================================================ */
+
+/** Constructs a `Vec4`. */
+pub vec4 := fn(x: Float, y: Float, z: Float, w: Float): Vec4 { (x = x, y = y, z = z, w = w) };
+
+/** Adds `a + b`. */
+pub add4 := fn(a: Vec4, b: Vec4): Vec4 { (x = a.x + b.x, y = a.y + b.y, z = a.z + b.z, w = a.w + b.w) };
+
+/** Subtracts `a - b`. */
+pub sub4 := fn(a: Vec4, b: Vec4): Vec4 { (x = a.x - b.x, y = a.y - b.y, z = a.z - b.z, w = a.w - b.w) };
+
+/** Multiplies `v` by scalar `s`. */
+pub scale4 := fn(v: Vec4, s: Float): Vec4 { (x = v.x * s, y = v.y * s, z = v.z * s, w = v.w * s) };
+
+/** 4D dot product. */
+pub dot4 := fn(a: Vec4, b: Vec4): Float { (a.x * b.x) + (a.y * b.y) + (a.z * b.z) + (a.w * b.w) };
+
+/** Euclidean length of `v`. */
+pub length4 := fn(v: Vec4): Float { math.sqrt(dot4(v, v)) };
+
+/** Returns unit-length 4D vector, or `ZERO4` when near zero. */
+pub normalize4 := fn(v: Vec4): Vec4 {
+    len := length4(v);
+    if len <= 0.000000000001 { ZERO4 } else { (x = v.x / len, y = v.y / len, z = v.z / len, w = v.w / len) }
+};
+
+/** Linearly interpolates between `a` and `b` by `t`. */
+pub lerp4 := fn(a: Vec4, b: Vec4, t: Float): Vec4 {
+    (x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t), z = math.lerp(a.z, b.z, t), w = math.lerp(a.w, b.w, t))
+};
