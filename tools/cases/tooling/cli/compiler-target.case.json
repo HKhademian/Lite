@@ -7,7 +7,7 @@
   ],
   "cases": [
     {
-      "name": "deferred-c",
+      "name": "missing-c-source",
       "args": [
         "--target",
         "c",
@@ -20,7 +20,7 @@
         "text": ""
       },
       "stderr": {
-        "text": "lite-compile-c: C output is deferred until after the TS compiler migration\n"
+        "text": "lite-compile-c: cannot read ignored.lts\n"
       },
       "exitCode": 2
     }

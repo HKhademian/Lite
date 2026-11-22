@@ -78,9 +78,13 @@ test.checkText("lite-compile ts out", ref42Ts, rCompTs.stdout);
 test.checkText("lite-compile ts err", "", rCompTs.stderr);
 
 rCompC := runCmd(path.join(root, "bin/lite-compile"), ["--target", "c", samplePath], root, emptyEnv(), "");
-test.checkInt("lite-compile c", 2, rCompC.status);
-test.checkText("lite-compile c out", "", rCompC.stdout);
-test.check("lite-compile c deferred", text.containsText(rCompC.stderr, "C output is deferred"));
+test.checkInt("lite-compile c", 0, rCompC.status);
+test.check("lite-compile c out", text.containsText(rCompC.stdout, "int main(void)"));
+test.checkText("lite-compile c err", "", rCompC.stderr);
+
+rShortC := runCmd(path.join(root, "bin/lite-compile-c"), [samplePath], root, emptyEnv(), "");
+test.checkInt("lite-compile-c", 0, rShortC.status);
+test.checkText("lite-compile-c out", rCompC.stdout, rShortC.stdout);
 
 rShort := runCmd(path.join(root, "bin/lite-compile-ts"), [samplePath], root, emptyEnv(), "");
 test.checkInt("lite-compile-ts", 0, rShort.status);

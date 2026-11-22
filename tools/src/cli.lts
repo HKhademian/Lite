@@ -26,7 +26,6 @@ usageText := fn(): String {
     "  help                                      Show this help\n\n" +
     "Compiler entry points: ./bin/lite-compile, ./bin/lite compile\n" +
     "Target commands: ./bin/lite-compile-ts, ./bin/lite-compile-c\n" +
-    "C output is deferred until after the TS compiler migration.\n" +
     "Reserved names: ./ltl/lite link"
 };
 

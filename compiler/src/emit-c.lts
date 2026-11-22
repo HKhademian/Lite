@@ -934,47 +934,116 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     hasKeys := usesIntHelper(calls, mTag + "_keys(");
     hasValues := usesIntHelper(calls, mTag + "_values(");
     io.outputLine("typedef struct { " + kType + " key; " + vType + " val; } " + mTag + "_entry;");
-    io.outputLine("typedef struct { " + mTag + "_entry *data; int64_t len; int64_t cap; } " + mTag + ";");
+    io.outputLine("typedef struct { " + mTag + "_entry *data; int64_t len; int64_t cap; int64_t *idx; int64_t idx_cap; int64_t *rc; } " + mTag + ";");
     needFind := hasFrom or hasSet or hasHas or hasAt or hasGet or hasGetOr or hasRemove;
+    needMut := hasFrom or hasSet or hasRemove;
     if needFind {
         io.outputLine("static bool " + mTag + "_keq(" + kType + " a, " + kType + " b) { return " + kEq + "; }");
+        io.outputLine("static uint64_t " + mTag + "_hash(" + kType + " k) {");
+        if kTag == "str" {
+            io.outputLine("    uint64_t h = UINT64_C(14695981039346656037);");
+            io.outputLine("    for (const unsigned char *p = (const unsigned char *)k; *p != 0; p += 1) { h ^= (uint64_t)(*p); h *= UINT64_C(1099511628211); }");
+            io.outputLine("    return h;");
+        } else {
+            io.outputLine("    uint64_t x = (uint64_t)k;");
+            io.outputLine("    x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);");
+            io.outputLine("    x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);");
+            io.outputLine("    return x ^ (x >> 31);");
+        }
+        io.outputLine("}");
         io.outputLine("static int64_t " + mTag + "_find(" + mTag + " m, " + kType + " k) {");
+        io.outputLine("    if (m.len <= 0) { return -1; }");
+        io.outputLine("    if (m.idx != NULL && m.idx_cap > 0) {");
+        io.outputLine("        uint64_t mask = (uint64_t)(m.idx_cap - 1);");
+        io.outputLine("        uint64_t pos = " + mTag + "_hash(k) & mask;");
+        io.outputLine("        for (;;) {");
+        io.outputLine("            int64_t slot = m.idx[pos];");
+        io.outputLine("            if (slot == 0) { return -1; }");
+        io.outputLine("            if (slot > 0 && " + mTag + "_keq(m.data[slot - 1].key, k)) { return slot - 1; }");
+        io.outputLine("            pos = (pos + 1u) & mask;");
+        io.outputLine("        }");
+        io.outputLine("    }");
         io.outputLine("    for (int64_t i = 0; i < m.len; i += 1) { if (" + mTag + "_keq(m.data[i].key, k)) { return i; } }");
         io.outputLine("    return -1;");
         io.outputLine("}");
     }
+    if needMut {
+        io.outputLine("static void " + mTag + "_rehash(" + mTag + " *m, int64_t next_cap) {");
+        io.outputLine("    int64_t *nidx = calloc((size_t)next_cap, sizeof(int64_t));");
+        io.outputLine("    if (nidx == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate map index\\n\"); exit(1); }");
+        io.outputLine("    uint64_t mask = (uint64_t)(next_cap - 1);");
+        io.outputLine("    for (int64_t i = 0; i < m->len; i += 1) {");
+        io.outputLine("        uint64_t pos = " + mTag + "_hash(m->data[i].key) & mask;");
+        io.outputLine("        while (nidx[pos] != 0) { pos = (pos + 1u) & mask; }");
+        io.outputLine("        nidx[pos] = i + 1;");
+        io.outputLine("    }");
+        io.outputLine("    free(m->idx); m->idx = nidx; m->idx_cap = next_cap;");
+        io.outputLine("}");
+        io.outputLine("static void " + mTag + "_detach(" + mTag + " *m) {");
+        io.outputLine("    if (m->rc != NULL && *(m->rc) > 1) {");
+        io.outputLine("        *(m->rc) -= 1;");
+        io.outputLine("        int64_t ncap = m->len > 8 ? m->len : 8;");
+        io.outputLine("        " + mTag + "_entry *ndata = malloc((size_t)ncap * sizeof(" + mTag + "_entry));");
+        io.outputLine("        int64_t *nrc = malloc(sizeof(int64_t));");
+        io.outputLine("        if (ndata == NULL || nrc == NULL) { fprintf(stderr, \"MemoryFault: cannot detach map\\n\"); exit(1); }");
+        io.outputLine("        *nrc = 1;");
+        if vCopy == "v" {
+            io.outputLine("        if (m->len > 0) { memcpy(ndata, m->data, (size_t)m->len * sizeof(" + mTag + "_entry)); }");
+        } else {
+            io.outputLine("        for (int64_t i = 0; i < m->len; i += 1) { " + vType + " v = m->data[i].val; ndata[i].key = m->data[i].key; ndata[i].val = " + vCopy + "; }");
+        }
+        io.outputLine("        m->data = ndata; m->cap = ncap; m->idx = NULL; m->idx_cap = 0; m->rc = nrc;");
+        io.outputLine("        if (m->len > 0) { int64_t ic = 16; while (ic < m->len * 2) { ic *= 2; } " + mTag + "_rehash(m, ic); }");
+        io.outputLine("    }");
+        io.outputLine("}");
+    }
     if hasFrom or hasSet {
         io.outputLine("static void " + mTag + "_set(" + mTag + " *m, " + kType + " k, " + vType + " v) {");
+        io.outputLine("    " + mTag + "_detach(m);");
         io.outputLine("    int64_t idx = " + mTag + "_find(*m, k);");
         io.outputLine("    if (idx >= 0) { m->data[idx].val = v; return; }");
         io.outputLine("    if (m->len >= m->cap) {");
         io.outputLine("        int64_t next = m->cap > 0 ? m->cap * 2 : 8;");
         io.outputLine("        " + mTag + "_entry *buf = realloc(m->data, (size_t)next * sizeof(" + mTag + "_entry));");
         io.outputLine("        if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow map\\n\"); exit(1); }");
+        io.outputLine("        if (m->rc == NULL) { m->rc = malloc(sizeof(int64_t)); if (m->rc == NULL) { fprintf(stderr, \"MemoryFault: cannot grow map\\n\"); exit(1); } *(m->rc) = 1; }");
         io.outputLine("        m->data = buf; m->cap = next;");
         io.outputLine("    }");
-        io.outputLine("    m->data[m->len].key = k; m->data[m->len].val = v; m->len += 1;");
+        io.outputLine("    int64_t entry_idx = m->len;");
+        io.outputLine("    m->data[entry_idx].key = k; m->data[entry_idx].val = v; m->len += 1;");
+        io.outputLine("    if (m->idx == NULL || m->len * 2 > m->idx_cap) {");
+        io.outputLine("        int64_t ic = m->idx_cap > 0 ? m->idx_cap * 2 : 16;");
+        io.outputLine("        while (ic < m->len * 2) { ic *= 2; }");
+        io.outputLine("        " + mTag + "_rehash(m, ic);");
+        io.outputLine("    } else {");
+        io.outputLine("        uint64_t mask = (uint64_t)(m->idx_cap - 1);");
+        io.outputLine("        uint64_t pos = " + mTag + "_hash(k) & mask;");
+        io.outputLine("        while (m->idx[pos] > 0) { pos = (pos + 1u) & mask; }");
+        io.outputLine("        m->idx[pos] = entry_idx + 1;");
+        io.outputLine("    }");
         io.outputLine("}");
     }
     if hasFrom {
         io.outputLine("static " + mTag + " " + mTag + "_from(int64_t count, const " + mTag + "_entry *elems) {");
-        io.outputLine("    " + mTag + " out = { NULL, 0, 0 };");
+        io.outputLine("    " + mTag + " out = { NULL, 0, 0, NULL, 0, NULL };");
         io.outputLine("    for (int64_t i = 0; i < count; i += 1) { " + mTag + "_set(&out, elems[i].key, elems[i].val); }");
         io.outputLine("    return out;");
         io.outputLine("}");
     }
     if hasCopy {
         io.outputLine("static " + mTag + " " + mTag + "_copy(" + mTag + " src) {");
-        io.outputLine("    " + mTag + " out = { NULL, src.len, src.len };");
-        io.outputLine("    if (src.len > 0) {");
-        io.outputLine("        out.data = malloc((size_t)src.len * sizeof(" + mTag + "_entry));");
-        io.outputLine("        if (out.data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate map\\n\"); exit(1); }");
+        io.outputLine("    if (src.len <= 0) { return (" + mTag + "){ NULL, 0, 0, NULL, 0, NULL }; }");
+        io.outputLine("    if (src.rc != NULL) { *(src.rc) += 1; return src; }");
+        io.outputLine("    " + mTag + " out = { NULL, src.len, src.len, NULL, 0, NULL };");
+        io.outputLine("    out.data = malloc((size_t)src.len * sizeof(" + mTag + "_entry));");
+        io.outputLine("    out.rc = malloc(sizeof(int64_t));");
+        io.outputLine("    if (out.data == NULL || out.rc == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate map\\n\"); exit(1); }");
+        io.outputLine("    *(out.rc) = 1;");
         if vCopy == "v" {
-            io.outputLine("        memcpy(out.data, src.data, (size_t)src.len * sizeof(" + mTag + "_entry));");
+            io.outputLine("    memcpy(out.data, src.data, (size_t)src.len * sizeof(" + mTag + "_entry));");
         } else {
-            io.outputLine("        for (int64_t i = 0; i < src.len; i += 1) { " + vType + " v = src.data[i].val; out.data[i].key = src.data[i].key; out.data[i].val = " + vCopy + "; }");
+            io.outputLine("    for (int64_t i = 0; i < src.len; i += 1) { " + vType + " v = src.data[i].val; out.data[i].key = src.data[i].key; out.data[i].val = " + vCopy + "; }");
         }
-        io.outputLine("    }");
         io.outputLine("    return out;");
         io.outputLine("}");
     }
@@ -1007,12 +1076,19 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         io.outputLine("static bool " + mTag + "_remove(" + mTag + " *m, " + kType + " k) {");
         io.outputLine("    int64_t idx = " + mTag + "_find(*m, k);");
         io.outputLine("    if (idx < 0) { return false; }");
+        io.outputLine("    " + mTag + "_detach(m);");
         io.outputLine("    if (idx + 1 < m->len) { memmove(m->data + idx, m->data + idx + 1, (size_t)(m->len - idx - 1) * sizeof(" + mTag + "_entry)); }");
-        io.outputLine("    m->len -= 1; return true;");
+        io.outputLine("    m->len -= 1;");
+        io.outputLine("    if (m->idx_cap > 0) { " + mTag + "_rehash(m, m->idx_cap); }");
+        io.outputLine("    return true;");
         io.outputLine("}");
     }
     if hasClear {
-        io.outputLine("static void " + mTag + "_clear(" + mTag + " *m) { m->len = 0; }");
+        io.outputLine("static void " + mTag + "_clear(" + mTag + " *m) {");
+        io.outputLine("    if (m->rc != NULL && *(m->rc) > 1) { *(m->rc) -= 1; m->data = NULL; m->cap = 0; m->idx = NULL; m->idx_cap = 0; m->rc = NULL; }");
+        io.outputLine("    else if (m->idx != NULL && m->idx_cap > 0) { memset(m->idx, 0, (size_t)m->idx_cap * sizeof(int64_t)); }");
+        io.outputLine("    m->len = 0;");
+        io.outputLine("}");
     }
     if hasKeys {
         kListType := "lt_list_" + kTag;
@@ -1071,42 +1147,107 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     hasRemove := usesIntHelper(calls, sTag + "_remove(");
     hasClear := usesIntHelper(calls, sTag + "_clear(");
     hasValues := usesIntHelper(calls, sTag + "_values(");
-    io.outputLine("typedef struct { " + eType + " *data; int64_t len; int64_t cap; } " + sTag + ";");
+    io.outputLine("typedef struct { " + eType + " *data; int64_t len; int64_t cap; int64_t *idx; int64_t idx_cap; int64_t *rc; } " + sTag + ";");
     needFind := hasFrom or hasAdd or hasHas or hasRemove;
+    needMut := hasFrom or hasAdd or hasRemove;
     if needFind {
         io.outputLine("static bool " + sTag + "_eq(" + eType + " a, " + eType + " b) { return " + kEq + "; }");
+        io.outputLine("static uint64_t " + sTag + "_hash(" + eType + " k) {");
+        if kTag == "str" {
+            io.outputLine("    uint64_t h = UINT64_C(14695981039346656037);");
+            io.outputLine("    for (const unsigned char *p = (const unsigned char *)k; *p != 0; p += 1) { h ^= (uint64_t)(*p); h *= UINT64_C(1099511628211); }");
+            io.outputLine("    return h;");
+        } else {
+            io.outputLine("    uint64_t x = (uint64_t)k;");
+            io.outputLine("    x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);");
+            io.outputLine("    x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);");
+            io.outputLine("    return x ^ (x >> 31);");
+        }
+        io.outputLine("}");
         io.outputLine("static int64_t " + sTag + "_find(" + sTag + " s, " + eType + " v) {");
+        io.outputLine("    if (s.len <= 0) { return -1; }");
+        io.outputLine("    if (s.idx != NULL && s.idx_cap > 0) {");
+        io.outputLine("        uint64_t mask = (uint64_t)(s.idx_cap - 1);");
+        io.outputLine("        uint64_t pos = " + sTag + "_hash(v) & mask;");
+        io.outputLine("        for (;;) {");
+        io.outputLine("            int64_t slot = s.idx[pos];");
+        io.outputLine("            if (slot == 0) { return -1; }");
+        io.outputLine("            if (slot > 0 && " + sTag + "_eq(s.data[slot - 1], v)) { return slot - 1; }");
+        io.outputLine("            pos = (pos + 1u) & mask;");
+        io.outputLine("        }");
+        io.outputLine("    }");
         io.outputLine("    for (int64_t i = 0; i < s.len; i += 1) { if (" + sTag + "_eq(s.data[i], v)) { return i; } }");
         io.outputLine("    return -1;");
+        io.outputLine("}");
+    }
+    if needMut {
+        io.outputLine("static void " + sTag + "_rehash(" + sTag + " *s, int64_t next_cap) {");
+        io.outputLine("    int64_t *nidx = calloc((size_t)next_cap, sizeof(int64_t));");
+        io.outputLine("    if (nidx == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate set index\\n\"); exit(1); }");
+        io.outputLine("    uint64_t mask = (uint64_t)(next_cap - 1);");
+        io.outputLine("    for (int64_t i = 0; i < s->len; i += 1) {");
+        io.outputLine("        uint64_t pos = " + sTag + "_hash(s->data[i]) & mask;");
+        io.outputLine("        while (nidx[pos] != 0) { pos = (pos + 1u) & mask; }");
+        io.outputLine("        nidx[pos] = i + 1;");
+        io.outputLine("    }");
+        io.outputLine("    free(s->idx); s->idx = nidx; s->idx_cap = next_cap;");
+        io.outputLine("}");
+        io.outputLine("static void " + sTag + "_detach(" + sTag + " *s) {");
+        io.outputLine("    if (s->rc != NULL && *(s->rc) > 1) {");
+        io.outputLine("        *(s->rc) -= 1;");
+        io.outputLine("        int64_t ncap = s->len > 8 ? s->len : 8;");
+        io.outputLine("        " + eType + " *ndata = malloc((size_t)ncap * sizeof(" + eType + "));");
+        io.outputLine("        int64_t *nrc = malloc(sizeof(int64_t));");
+        io.outputLine("        if (ndata == NULL || nrc == NULL) { fprintf(stderr, \"MemoryFault: cannot detach set\\n\"); exit(1); }");
+        io.outputLine("        *nrc = 1;");
+        io.outputLine("        if (s->len > 0) { memcpy(ndata, s->data, (size_t)s->len * sizeof(" + eType + ")); }");
+        io.outputLine("        s->data = ndata; s->cap = ncap; s->idx = NULL; s->idx_cap = 0; s->rc = nrc;");
+        io.outputLine("        if (s->len > 0) { int64_t ic = 16; while (ic < s->len * 2) { ic *= 2; } " + sTag + "_rehash(s, ic); }");
+        io.outputLine("    }");
         io.outputLine("}");
     }
     if hasFrom or hasAdd {
         io.outputLine("static void " + sTag + "_add(" + sTag + " *s, " + eType + " v) {");
         io.outputLine("    if (" + sTag + "_find(*s, v) >= 0) { return; }");
+        io.outputLine("    " + sTag + "_detach(s);");
         io.outputLine("    if (s->len >= s->cap) {");
         io.outputLine("        int64_t next = s->cap > 0 ? s->cap * 2 : 8;");
         io.outputLine("        " + eType + " *buf = realloc(s->data, (size_t)next * sizeof(" + eType + "));");
         io.outputLine("        if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow set\\n\"); exit(1); }");
+        io.outputLine("        if (s->rc == NULL) { s->rc = malloc(sizeof(int64_t)); if (s->rc == NULL) { fprintf(stderr, \"MemoryFault: cannot grow set\\n\"); exit(1); } *(s->rc) = 1; }");
         io.outputLine("        s->data = buf; s->cap = next;");
         io.outputLine("    }");
-        io.outputLine("    s->data[s->len++] = v;");
+        io.outputLine("    int64_t entry_idx = s->len;");
+        io.outputLine("    s->data[entry_idx] = v; s->len += 1;");
+        io.outputLine("    if (s->idx == NULL || s->len * 2 > s->idx_cap) {");
+        io.outputLine("        int64_t ic = s->idx_cap > 0 ? s->idx_cap * 2 : 16;");
+        io.outputLine("        while (ic < s->len * 2) { ic *= 2; }");
+        io.outputLine("        " + sTag + "_rehash(s, ic);");
+        io.outputLine("    } else {");
+        io.outputLine("        uint64_t mask = (uint64_t)(s->idx_cap - 1);");
+        io.outputLine("        uint64_t pos = " + sTag + "_hash(v) & mask;");
+        io.outputLine("        while (s->idx[pos] > 0) { pos = (pos + 1u) & mask; }");
+        io.outputLine("        s->idx[pos] = entry_idx + 1;");
+        io.outputLine("    }");
         io.outputLine("}");
     }
     if hasFrom {
         io.outputLine("static " + sTag + " " + sTag + "_from(int64_t count, " + eConstPtr + "elems) {");
-        io.outputLine("    " + sTag + " out = { NULL, 0, 0 };");
+        io.outputLine("    " + sTag + " out = { NULL, 0, 0, NULL, 0, NULL };");
         io.outputLine("    for (int64_t i = 0; i < count; i += 1) { " + sTag + "_add(&out, elems[i]); }");
         io.outputLine("    return out;");
         io.outputLine("}");
     }
     if hasCopy {
         io.outputLine("static " + sTag + " " + sTag + "_copy(" + sTag + " src) {");
-        io.outputLine("    " + sTag + " out = { NULL, src.len, src.len };");
-        io.outputLine("    if (src.len > 0) {");
-        io.outputLine("        out.data = malloc((size_t)src.len * sizeof(" + eType + "));");
-        io.outputLine("        if (out.data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate set\\n\"); exit(1); }");
-        io.outputLine("        memcpy(out.data, src.data, (size_t)src.len * sizeof(" + eType + "));");
-        io.outputLine("    }");
+        io.outputLine("    if (src.len <= 0) { return (" + sTag + "){ NULL, 0, 0, NULL, 0, NULL }; }");
+        io.outputLine("    if (src.rc != NULL) { *(src.rc) += 1; return src; }");
+        io.outputLine("    " + sTag + " out = { NULL, src.len, src.len, NULL, 0, NULL };");
+        io.outputLine("    out.data = malloc((size_t)src.len * sizeof(" + eType + "));");
+        io.outputLine("    out.rc = malloc(sizeof(int64_t));");
+        io.outputLine("    if (out.data == NULL || out.rc == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate set\\n\"); exit(1); }");
+        io.outputLine("    *(out.rc) = 1;");
+        io.outputLine("    memcpy(out.data, src.data, (size_t)src.len * sizeof(" + eType + "));");
         io.outputLine("    return out;");
         io.outputLine("}");
     }
@@ -1117,12 +1258,19 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         io.outputLine("static bool " + sTag + "_remove(" + sTag + " *s, " + eType + " v) {");
         io.outputLine("    int64_t idx = " + sTag + "_find(*s, v);");
         io.outputLine("    if (idx < 0) { return false; }");
+        io.outputLine("    " + sTag + "_detach(s);");
         io.outputLine("    if (idx + 1 < s->len) { memmove(s->data + idx, s->data + idx + 1, (size_t)(s->len - idx - 1) * sizeof(" + eType + ")); }");
-        io.outputLine("    s->len -= 1; return true;");
+        io.outputLine("    s->len -= 1;");
+        io.outputLine("    if (s->idx_cap > 0) { " + sTag + "_rehash(s, s->idx_cap); }");
+        io.outputLine("    return true;");
         io.outputLine("}");
     }
     if hasClear {
-        io.outputLine("static void " + sTag + "_clear(" + sTag + " *s) { s->len = 0; }");
+        io.outputLine("static void " + sTag + "_clear(" + sTag + " *s) {");
+        io.outputLine("    if (s->rc != NULL && *(s->rc) > 1) { *(s->rc) -= 1; s->data = NULL; s->cap = 0; s->idx = NULL; s->idx_cap = 0; s->rc = NULL; }");
+        io.outputLine("    else if (s->idx != NULL && s->idx_cap > 0) { memset(s->idx, 0, (size_t)s->idx_cap * sizeof(int64_t)); }");
+        io.outputLine("    s->len = 0;");
+        io.outputLine("}");
     }
     if hasValues {
         vListType := "lt_list_" + kTag;
