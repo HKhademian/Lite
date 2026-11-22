@@ -690,6 +690,42 @@ pub scanBracedRange := fn(source: String, start: Int, depthStart: Int, prefix: S
 };
 
 /** Returns the position after the braced block starting at `open`, or -1 when it never closes. Strings and comments are skipped. */
+/** Single-pass scan over `{ ... }` returning whether it contains a `fn` keyword or `?` reserved-init token outside strings/comments. */
+pub scanBlockFastFlags := fn(source: String, open: Int, prefix: String): (hasFn: Bool, hasReserved: Bool) {
+    size := textLib.length(source);
+    if open < 0 or open >= size or textLib.at(source, open) =!= "{" {
+        return (hasFn = false, hasReserved = false);
+    }
+    var cursor := open + 1;
+    var depth := 1;
+    var hasFn := false;
+    var hasReserved := false;
+    loop cursor < size and depth > 0 {
+        ch := textLib.at(source, cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(source, cursor);
+        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
+            cursor = skipComment(source, cursor, prefix);
+        } else if ch == "{" {
+            depth = depth + 1;
+            cursor = cursor + 1;
+        } else if ch == "}" {
+            depth = depth - 1;
+            cursor = cursor + 1;
+        } else if ch == "?" {
+            hasReserved = true;
+            cursor = cursor + 1;
+        } else if ch == "f" and textLib.wordAt(source, cursor, "fn") and
+        (cursor == 0 or not textLib.isNameContinue(textLib.at(source, cursor - 1))) {
+            hasFn = true;
+            cursor = cursor + 2;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    (hasFn = hasFn, hasReserved = hasReserved)
+};
+
 pub scanBraceEnd := fn(source: String, open: Int, prefix: String): Int {
     scanBracedRange(source, open, 0, prefix)
 };

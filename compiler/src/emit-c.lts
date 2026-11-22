@@ -1914,6 +1914,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
     var writes := "";
     var seqLoopId := 0;
     loopSeqFlags: mut List<Int> = [];
+    loopSeqReleases: mut List<String> = [];
     loop stream as item {
         code := normalizeCBuiltinCalls(item.code);
         if isCLocalDeclKind(item.kind) {
@@ -2003,6 +2004,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             indent = indent + "    ";
             blockDepth = blockDepth + 1;
             listLib.pushBack(mut loopSeqFlags, 0);
+            listLib.pushBack(mut loopSeqReleases, "");
         } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ {
             seqId := integer.intText(seqLoopId);
             seqLoopId = seqLoopId + 1;
@@ -2023,6 +2025,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 indent = indent + "        ";
                 blockDepth = blockDepth + 1;
                 listLib.pushBack(mut loopSeqFlags, 1);
+                listLib.pushBack(mut loopSeqReleases, "");
             } else if item.intValue == 4 {
                 /* Map loop: item.textValue is `(key:K,value:V)`, first `@T:` in item.code is `Map<K,V>`. */
                 annots := extractCTypeAnnotations(item.code);
@@ -2041,6 +2044,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 indent = indent + "        ";
                 blockDepth = blockDepth + 1;
                 listLib.pushBack(mut loopSeqFlags, 1);
+                listLib.pushBack(mut loopSeqReleases, "");
             } else if item.intValue == 5 {
                 /* Set loop: item.textValue is element kind `T`. */
                 sTag := frontend.cSetTag("Set<" + item.textValue + ">");
@@ -2056,6 +2060,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 indent = indent + "        ";
                 blockDepth = blockDepth + 1;
                 listLib.pushBack(mut loopSeqFlags, 1);
+                listLib.pushBack(mut loopSeqReleases, "");
             } else {
                 tag := frontend.cListTag(item.textValue);
                 seqVar := "lt_seq_" + seqId;
@@ -2071,12 +2076,17 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 indent = indent + "        ";
                 blockDepth = blockDepth + 1;
                 listLib.pushBack(mut loopSeqFlags, 1);
+                listLib.pushBack(mut loopSeqReleases, if item.intValue == 1 { "" } else { seqVar });
             }
         } else if item.kind == frontend.ITEM_KIND_END_LOOP {
             isSeqEnd := if loopSeqFlags.length > 0 { listLib.popBack(mut loopSeqFlags) == 1 } else { false };
+            relVar := if loopSeqReleases.length > 0 { listLib.popBack(mut loopSeqReleases) } else { "" };
             if isSeqEnd {
                 indent = dedent(dedent(indent));
                 outLine(indent + "    }");
+                if relVar =!= "" {
+                    outLine(indent + "    if (" + relVar + ".rc != NULL) { if (*(" + relVar + ".rc) <= 1) { free(" + relVar + ".data); free(" + relVar + ".rc); } else { *(" + relVar + ".rc) -= 1; } }");
+                }
                 outLine(indent + "}");
             } else {
                 indent = dedent(indent);

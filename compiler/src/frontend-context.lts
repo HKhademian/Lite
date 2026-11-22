@@ -383,26 +383,19 @@ pub compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix:
 
 /** Counts entries in `locals`. */
 pub localsCount := fn(locals: List<Local>): Int {
-    var count := 0;
-    loop locals { count += 1; }
-    count
+    listLib.length(locals)
 };
 
 /** Returns the prefix of `locals` up to `targetLen` entries. */
 pub truncateLocals := fn(locals: List<Local>, targetLen: Int): List<Local> {
-    kept: mut List<Local> = [];
-    var idx := 0;
-    loop locals as local {
-        if idx < targetLen { listLib.pushBack(mut kept, local); }
-        idx = idx + 1;
-    }
-    kept
+    if targetLen >= listLib.length(locals) { return locals; }
+    if targetLen <= 0 { return []; }
+    listLib.slice(locals, 0, targetLen)
 };
 
 /** Returns outer-local initialization and callable-dependency updates from `locals[preLen..)` appended to `updates` for `branchDepth`. */
 pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, branchDepth: Int, updates: List<BranchUpdate>): List<BranchUpdate> {
-    nextUpdates: mut List<BranchUpdate> = [];
-    loop updates as existing { listLib.pushBack(mut nextUpdates, existing); }
+    nextUpdates: mut List<BranchUpdate> = updates;
     var idx := 0;
     branchRuntimes: mut List<String> = [];
     branchStates: mut List<String> = [];
@@ -506,12 +499,8 @@ pub joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List
         }
         idx = idx + 1;
     }
-    nextLocals: mut List<Local> = [];
-    var k := 0;
-    loop locals as l {
-        if k < preLen { listLib.pushBack(mut nextLocals, l); }
-        k = k + 1;
-    }
+    if updatedRuntimes.length == 0 { return truncateLocals(locals, preLen); }
+    nextLocals: mut List<Local> = truncateLocals(locals, preLen);
     loop updatedRuntimes as rt {
         var preIdx := -1;
         var i := 0;
@@ -1016,8 +1005,7 @@ pub ctxCount := fn(ctxs: List<ConstructCtx>): Int {
 
 /** Returns a copy of `ctxs` with `entry` appended at the end. */
 pub appendCtx := fn(ctxs: List<ConstructCtx>, entry: ConstructCtx): List<ConstructCtx> {
-    copy: mut List<ConstructCtx> = [];
-    loop ctxs as existing { listLib.pushBack(mut copy, existing); }
+    copy: mut List<ConstructCtx> = ctxs;
     listLib.pushBack(mut copy, entry);
     copy
 };
@@ -1053,6 +1041,26 @@ pub findCtxByKindIndex := fn(ctxs: List<ConstructCtx>, kind: String): Int {
 
 /** Returns the entries of `locals` declared below `depth` (including pre-scanned future placeholders below `depth`), preserving order. */
 pub visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> {
+    var dropped := false;
+    var firstDrop := -1;
+    var keptAfterDrop := false;
+    var idx := 0;
+    loop locals as entry {
+        keep := (entry.depth >= -1 and entry.depth < depth) or
+        (entry.depth <= -2 and (0 - 2 - entry.depth) < depth);
+        if not keep {
+            if not dropped { dropped = true; firstDrop = idx; }
+        } else if dropped {
+            keptAfterDrop = true;
+            break;
+        }
+        idx = idx + 1;
+    }
+    if not dropped { return locals; }
+    if not keptAfterDrop {
+        if firstDrop <= 0 { return []; }
+        return listLib.slice(locals, 0, firstDrop);
+    }
     kept: mut List<Local> = [];
     loop locals as entry {
         if (entry.depth >= -1 and entry.depth < depth) or
@@ -1065,6 +1073,24 @@ pub visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> {
 
 /** Drops current-block declaration records at or above `depth`, keeping enclosing blocks intact. */
 pub popBlockDecls := fn(decls: List<BlockDecl>, depth: Int): List<BlockDecl> {
+    var dropped := false;
+    var firstDrop := -1;
+    var keptAfterDrop := false;
+    var idx := 0;
+    loop decls as entry {
+        if entry.depth >= depth {
+            if not dropped { dropped = true; firstDrop = idx; }
+        } else if dropped {
+            keptAfterDrop = true;
+            break;
+        }
+        idx = idx + 1;
+    }
+    if not dropped { return decls; }
+    if not keptAfterDrop {
+        if firstDrop <= 0 { return []; }
+        return listLib.slice(decls, 0, firstDrop);
+    }
     kept: mut List<BlockDecl> = [];
     loop decls as entry {
         if entry.depth < depth {

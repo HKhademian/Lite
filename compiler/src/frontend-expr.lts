@@ -1423,14 +1423,19 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         listLib.pushBack(mut declaredInBlock, seededName);
         seedBag = trace.appendPipeBag(seedBag, seededName);
     }
-    blockAssignedBag := infer.scanInnerBlockAssignedBag(target, source, start, prefix, seedBag);
+    blkFlags := syntax.scanBlockFastFlags(source, start, prefix);
+    hasFnInBlock := blkFlags.hasFn;
+    hasReservedInBlock := blkFlags.hasReserved;
+    blockAssignedBag := if hasReservedInBlock or hasFnInBlock {
+        infer.scanInnerBlockAssignedBag(target, source, start, prefix, seedBag)
+    } else {
+        ""
+    };
     statements: mut List<String> = [];
-    preScannedLocals := infer.appendBlockFutureLocals(target, source, start, prefix, blockLexDepth, seedBag, blockAssignedBag, blockAliases, functions, params, blockLocals);
-    if target == ir.TARGET_C {
-        blkEndPos := syntax.scanBraceEnd(source, start, prefix);
-        hasFnInBlock := blkEndPos > start and textLib.indexOfText(textLib.slice(source, start, blkEndPos), "fn", 0) >= 0;
-        placeholderDepthC := 0 - 2 - blockLexDepth;
-        if hasFnInBlock {
+    if hasFnInBlock {
+        preScannedLocals := infer.appendBlockFutureLocals(target, source, start, prefix, blockLexDepth, seedBag, blockAssignedBag, blockAliases, functions, params, blockLocals);
+        if target == ir.TARGET_C {
+            placeholderDepthC := 0 - 2 - blockLexDepth;
             boxedLocals: mut List<Local> = [];
             loop preScannedLocals as entry {
                 if entry.depth == placeholderDepthC and entry.kind =!= "" and entry.kind =!= ir.VALUE_KIND_UNIT and entry.kind =!= ir.VALUE_KIND_NEVER {
@@ -1454,8 +1459,6 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         } else {
             blockLocals = preScannedLocals;
         }
-    } else {
-        blockLocals = preScannedLocals;
     }
     stmtOwners: mut List<String> = [];
     stmtDeps: mut List<String> = [];
@@ -2425,8 +2428,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     loopOpen := syntax.expectSymbol(source, loopHeaderPos, "{", prefix);
                     loopId := ctx.nextCtxId(ctxs);
                     loopLabel := "lite$l" + integer.intText(loopId);
-                    loopLocals: mut List<Local> = [];
-                    loop blockLocals as entry { listLib.pushBack(mut loopLocals, entry); }
+                    loopLocals: mut List<Local> = blockLocals;
                     var loopHeadCode := "";
                     var loopTailClose := " }";
                     if loopItemName =!= "" {
@@ -2440,7 +2442,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             bSeqVar := "lt_bseq_" + integer.intText(loopId) + "_" + integer.intText(itemStart);
                             bSeqI := "lt_bsi_" + integer.intText(loopId) + "_" + integer.intText(itemStart);
                             loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = lt_list_" + bSeqTag + "_copy(" + loopSeqCode + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + ".len; " + bSeqI + " += 1) { " + types.cListElemType(bSeqTag) + " " + loopItemRuntime + " = " + bSeqVar + ".data[" + bSeqI + "]; (void)" + loopItemRuntime + "; ";
-                            loopTailClose = " } }";
+                            loopTailClose = " } if (" + bSeqVar + ".rc != NULL) { if (*(" + bSeqVar + ".rc) <= 1) { free(" + bSeqVar + ".data); free(" + bSeqVar + ".rc); } else { *(" + bSeqVar + ".rc) -= 1; } } }";
                         } else {
                             loopHeadCode = "for (const " + loopItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
                         }
@@ -2454,7 +2456,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             bSeqVar := "lt_bseq_" + integer.intText(loopId) + "_" + integer.intText(itemStart);
                             bSeqI := "lt_bsi_" + integer.intText(loopId) + "_" + integer.intText(itemStart);
                             loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = lt_list_" + bSeqTag + "_copy(" + loopSeqCode + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + ".len; " + bSeqI + " += 1) { ";
-                            loopTailClose = " } }";
+                            loopTailClose = " } if (" + bSeqVar + ".rc != NULL) { if (*(" + bSeqVar + ".rc) <= 1) { free(" + bSeqVar + ".data); free(" + bSeqVar + ".rc); } else { *(" + bSeqVar + ".rc) -= 1; } } }";
                         } else {
                             loopHeadCode = "for (const " + tempItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
                         }

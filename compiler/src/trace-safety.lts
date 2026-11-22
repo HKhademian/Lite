@@ -973,8 +973,7 @@ pub mergeOuterCallableUpdatesFromCode := fn(locals: List<Local>, code: String): 
         }
     }
     if not hasCallable { return locals; }
-    nextLocals: mut List<Local> = [];
-    loop locals as l { listLib.pushBack(mut nextLocals, l); }
+    nextLocals: mut List<Local> = locals;
     stripped := stripDeferredFnBodies(code);
     if stripped.pairsText =!= "" {
         pairsLen := textLib.length(stripped.pairsText);

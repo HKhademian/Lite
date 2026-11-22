@@ -1382,6 +1382,11 @@ pub appendAssignedBagDecls := fn(assignedBag: String, decls: List<BlockDecl>, de
 
 /** Removes deferred-only entries after one function body has been checked. */
 pub withoutFutureValues := fn(locals: List<Local>): List<Local> {
+    var hasFuture := false;
+    loop locals as entry {
+        if entry.depth == -1 { hasFuture = true; break; }
+    }
+    if not hasFuture { return locals; }
     kept: mut List<Local> = [];
     loop locals as entry {
         if entry.depth >= 0 or entry.depth <= -2 { listLib.pushBack(mut kept, entry); }

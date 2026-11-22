@@ -991,9 +991,8 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
 
 /** Upgrades uninitialized root bindings and appends forward root `futureValues` visible inside a top-level function body. */
 upgradeRootUninitLocalsForFn := fn(locals: List<Local>, rootAssignedNames: List<String>, futureValues: List<FutureValue>, functions: List<FunctionInfo>, fnDeclAt: Int): List<Local> {
-    nextLocals: mut List<Local> = [];
+    nextLocals: mut List<Local> = locals;
     preLen := localsCount(locals);
-    loop locals as l { listLib.pushBack(mut nextLocals, l); }
     var upgradedRootBag := "";
     var rootIdx := 0;
     loop rootIdx < preLen {
@@ -2403,7 +2402,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                         sequenceCode = parsed.code;
-                        if target == TARGET_TS and seqIsImmutableLocal {
+                        if (target == TARGET_TS or target == TARGET_C) and seqIsImmutableLocal {
                             loopSeqMode = 1;
                         }
                     }
@@ -2436,7 +2435,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                         sequenceCode = parsed.code;
-                        if target == TARGET_TS and seqIsImmutableLocal {
+                        if (target == TARGET_TS or target == TARGET_C) and seqIsImmutableLocal {
                             loopSeqMode = 1;
                         }
                     }
