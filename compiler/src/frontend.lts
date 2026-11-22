@@ -2921,12 +2921,14 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 var fnParamSeedBag := "";
                 loop splitPipeEntries(header.params, header.count) as entry {
                     parameterName := paramNameOf(entry);
-                    parameterKind := paramKindOf(entry);
-                    runtime := "lite_" + parameterName;
+                    rawParamKind := paramKindOf(entry);
+                    isMutParam := textLib.startsWithAt(rawParamKind, 0, "mut ");
+                    parameterKind := if isMutParam { textLib.slice(rawParamKind, 4, textLib.length(rawParamKind)) } else { rawParamKind };
+                    runtime := if isMutParam and target == TARGET_C { "(*lite_" + parameterName + ")" } else { "lite_" + parameterName };
                     fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
                     listLib.pushBack(mut blockDecls, (name = parameterName, depth = 1));
                     listLib.pushBack(mut locals, (name = parameterName, runtime = runtime, kind = parameterKind,
-                    mutable = false, writable = false, depth = 1, constant = false, code = runtime,
+                    mutable = false, writable = isMutParam, depth = 1, constant = false, code = runtime,
                     intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                     if not wasPreRegistered {
                         listLib.pushBack(mut functionParams, entry);

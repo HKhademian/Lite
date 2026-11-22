@@ -1719,11 +1719,13 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
             cursor = syntax.skipTrivia(source, cursor, prefix);
             var access := "";
             if textLib.wordAt(source, cursor, "mut") {
-                if not listIntrinsic { syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for registered core declarations"); }
                 access = "mut ";
                 cursor = syntax.skipTrivia(source, cursor + 3, prefix);
             }
             typed := parseFunctionType(source, cursor, prefix, aliases, genericType);
+            if access =!= "" and not listIntrinsic and not isListKind(typed.kind) {
+                syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for List parameters or registered core declarations");
+            }
             cursor = syntax.skipTrivia(source, typed.next, prefix);
             if count > 0 { encoded = encoded + "|"; }
             encoded = encoded + parameterName + "=" + access + typed.kind;

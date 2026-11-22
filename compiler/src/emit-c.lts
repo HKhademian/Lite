@@ -318,9 +318,11 @@ cParameterList := fn(encoded: String): String {
         entry := textLib.slice(encoded, start, end);
         eq := textLib.indexOfText(entry, "=", 0);
         paramName := textLib.slice(entry, 0, eq);
-        paramKind := textLib.slice(entry, eq + 1, textLib.length(entry));
+        rawParamKind := textLib.slice(entry, eq + 1, textLib.length(entry));
+        isMutParam := textLib.startsWithAt(rawParamKind, 0, "mut ");
+        paramKind := if isMutParam { textLib.slice(rawParamKind, 4, textLib.length(rawParamKind)) } else { rawParamKind };
         if textLib.length(result) > 0 { result = result + ", "; }
-        result = result + cScalarType(paramKind) + " lite_" + paramName;
+        result = result + cScalarType(paramKind) + (if isMutParam { " *lite_" } else { " lite_" }) + paramName;
         if sep < 0 { break; }
         start = sep + 1;
     }
@@ -3748,7 +3750,8 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
                     pEntry := textLib.slice(item.textValue, pStart, pEnd);
                     pEq := textLib.indexOfText(pEntry, "=", 0);
                     if pEq >= 0 {
-                        pKind := textLib.slice(pEntry, pEq + 1, textLib.length(pEntry));
+                        rawPKind := textLib.slice(pEntry, pEq + 1, textLib.length(pEntry));
+                        pKind := if textLib.startsWithAt(rawPKind, 0, "mut ") { textLib.slice(rawPKind, 4, textLib.length(rawPKind)) } else { rawPKind };
                         if cListTagForKind(pKind) =!= "" or frontend.cStructTag(pKind) =!= "" or frontend.cMapTag(pKind) =!= "" or frontend.cSetTag(pKind) =!= "" {
                             listLib.pushBack(mut seedKinds, pKind);
                         }

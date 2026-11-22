@@ -1,0 +1,82 @@
+/* Dual-target (TS + C11) tests for user-defined `mut List<T>` parameters and call-site `mut` grants. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"list := import \"core/list\";\n" +
+"text := import \"core/text\";\n" +
+"\n" +
+"Buf := type List<String>;\n" +
+"\n" +
+"pushChunk := fn(b: mut Buf, s: String): Unit {\n" +
+"    if text.length(s) > 0 {\n" +
+"        list.pushBack(mut b, s);\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"pushPair := fn(b: mut Buf, a: String, c: String): Unit {\n" +
+"    pushChunk(mut b, a);\n" +
+"    pushChunk(s = c, b = mut b);\n" +
+"};\n" +
+"\n" +
+"b: mut Buf;\n" +
+"pushChunk(mut b, \"hello\");\n" +
+"pushChunk(mut b, \"\");\n" +
+"pushPair(mut b, \" \", \"world\");\n" +
+"io.outputLine(list.length(b), text.joinTexts(b, \"\"));\n" +
+"list.clear(mut b);\n" +
+"io.outputLine(list.length(b), text.joinTexts(b, \"\"));\n";
+
+expected :=
+"3 hello world\n" +
+"0 \n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+test.checkText("ts stdout", expected, tsRes.stdout);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stderr", "", cRes.stderr);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+}
+
+/* Negative diagnostics on both TS and C */
+compilerTest.assertCompileErrorContains(root, tsComp, "missing mut at call site (ts)",
+"f := fn(b: mut List<String>): Unit { }; xs: mut List<String>; f(xs);",
+"requires mut list argument");
+compilerTest.assertCompileErrorContains(root, cComp, "missing mut at call site (c)",
+"f := fn(b: mut List<String>): Unit { }; xs: mut List<String>; f(xs);",
+"requires mut list argument");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "immutable list passed with mut (ts)",
+"f := fn(b: mut List<String>): Unit { }; xs: List<String> = [\"a\"]; f(mut xs);",
+"cannot mutate list xs without mut");
+compilerTest.assertCompileErrorContains(root, cComp, "immutable list passed with mut (c)",
+"f := fn(b: mut List<String>): Unit { }; xs: List<String> = [\"a\"]; f(mut xs);",
+"cannot mutate list xs without mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "mut Int param rejected (ts)",
+"f := fn(x: mut Int): Unit { };",
+"mut parameter signatures are reserved for List parameters");
+compilerTest.assertCompileErrorContains(root, cComp, "mut Int param rejected (c)",
+"f := fn(x: mut Int): Unit { };",
+"mut parameter signatures are reserved for List parameters");
+
+test.done("mut-list-params");

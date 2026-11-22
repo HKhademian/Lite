@@ -6270,14 +6270,42 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
                     slotExplicit = ctx.setBoolAt(slotExplicit, slot, true);
                     slotEntry = ctx.setIntAt(slotEntry, slot, entryCount);
                     argExpected := types.paramKindOf(callParams[callFirst + slot]);
-                    arg := parseBinaryCtx(target, source, rhsStart, prefix, locals, functions, params, currentName, argExpected, 0, ctxs, argIifeDepth, inferMode, "", aliases);
-                    if inferMode { callMarkers = ctx.collectParsedMarkers(callMarkers, arg); }
-                    listLib.pushBack(mut entryPositions, rhsStart);
-                    listLib.pushBack(mut entrySlots, slot);
-                    listLib.pushBack(mut entryKinds, arg.kind);
-                    listLib.pushBack(mut entryCodes, arg.code);
-                    entryCount += 1;
-                    cursor = syntax.skipTrivia(source, arg.next, prefix);
+                    if textLib.startsWithAt(argExpected, 0, "mut ") {
+                        if not textLib.wordAt(source, rhsStart, "mut") {
+                            syntax.failAt(source, rhsStart, prefix, "argument " + formatLib.decimalText(slot + 1) + " of " + calleeDisplay + " requires mut list argument");
+                        }
+                        mNameStart := syntax.skipTrivia(source, rhsStart + 3, prefix);
+                        if mNameStart >= size or not textLib.isNameStart(textLib.at(source, mNameStart)) {
+                            syntax.failAt(source, mNameStart, prefix, "expected a list name after mut");
+                        }
+                        mNameEnd := textLib.skipName(source, mNameStart);
+                        mListName := textLib.slice(source, mNameStart, mNameEnd);
+                        mIdx := ir.localIndex(locals, mListName);
+                        if mIdx < 0 { syntax.failAt(source, mNameStart, prefix, "unknown value " + mListName); }
+                        mEntry := locals[mIdx];
+                        if not types.isListKind(mEntry.kind) {
+                            syntax.failAt(source, mNameStart, prefix, calleeDisplay + " requires a List value, got " + types.displayKind(mEntry.kind));
+                        }
+                        if not mEntry.writable {
+                            syntax.failAt(source, mNameStart, prefix, "cannot mutate list " + mListName + " without mut");
+                        }
+                        mCode := if target == ir.TARGET_C { "&" + mEntry.runtime } else { mEntry.runtime };
+                        listLib.pushBack(mut entryPositions, rhsStart);
+                        listLib.pushBack(mut entrySlots, slot);
+                        listLib.pushBack(mut entryKinds, "mut " + mEntry.kind);
+                        listLib.pushBack(mut entryCodes, mCode);
+                        entryCount += 1;
+                        cursor = syntax.skipTrivia(source, mNameEnd, prefix);
+                    } else {
+                        arg := parseBinaryCtx(target, source, rhsStart, prefix, locals, functions, params, currentName, argExpected, 0, ctxs, argIifeDepth, inferMode, "", aliases);
+                        if inferMode { callMarkers = ctx.collectParsedMarkers(callMarkers, arg); }
+                        listLib.pushBack(mut entryPositions, rhsStart);
+                        listLib.pushBack(mut entrySlots, slot);
+                        listLib.pushBack(mut entryKinds, arg.kind);
+                        listLib.pushBack(mut entryCodes, arg.code);
+                        entryCount += 1;
+                        cursor = syntax.skipTrivia(source, arg.next, prefix);
+                    }
                 } else {
                     var nextSlot := -1;
                     var scan := 0;
@@ -6295,14 +6323,42 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
                     slotName := types.paramNameOf(callParams[callFirst + nextSlot]);
                     posExpected := if listLib.listContainsText(explicitLabels, slotName) { "" } else { types.paramKindOf(callParams[callFirst + nextSlot]) };
                     slotEntry = ctx.setIntAt(slotEntry, nextSlot, entryCount);
-                    arg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, posExpected, 0, ctxs, argIifeDepth, inferMode, "", aliases);
-                    if inferMode { callMarkers = ctx.collectParsedMarkers(callMarkers, arg); }
-                    listLib.pushBack(mut entryPositions, cursor);
-                    listLib.pushBack(mut entrySlots, nextSlot);
-                    listLib.pushBack(mut entryKinds, arg.kind);
-                    listLib.pushBack(mut entryCodes, arg.code);
-                    entryCount += 1;
-                    cursor = syntax.skipTrivia(source, arg.next, prefix);
+                    if textLib.startsWithAt(posExpected, 0, "mut ") {
+                        if not textLib.wordAt(source, cursor, "mut") {
+                            syntax.failAt(source, cursor, prefix, "argument " + formatLib.decimalText(nextSlot + 1) + " of " + calleeDisplay + " requires mut list argument");
+                        }
+                        mNameStart := syntax.skipTrivia(source, cursor + 3, prefix);
+                        if mNameStart >= size or not textLib.isNameStart(textLib.at(source, mNameStart)) {
+                            syntax.failAt(source, mNameStart, prefix, "expected a list name after mut");
+                        }
+                        mNameEnd := textLib.skipName(source, mNameStart);
+                        mListName := textLib.slice(source, mNameStart, mNameEnd);
+                        mIdx := ir.localIndex(locals, mListName);
+                        if mIdx < 0 { syntax.failAt(source, mNameStart, prefix, "unknown value " + mListName); }
+                        mEntry := locals[mIdx];
+                        if not types.isListKind(mEntry.kind) {
+                            syntax.failAt(source, mNameStart, prefix, calleeDisplay + " requires a List value, got " + types.displayKind(mEntry.kind));
+                        }
+                        if not mEntry.writable {
+                            syntax.failAt(source, mNameStart, prefix, "cannot mutate list " + mListName + " without mut");
+                        }
+                        mCode := if target == ir.TARGET_C { "&" + mEntry.runtime } else { mEntry.runtime };
+                        listLib.pushBack(mut entryPositions, cursor);
+                        listLib.pushBack(mut entrySlots, nextSlot);
+                        listLib.pushBack(mut entryKinds, "mut " + mEntry.kind);
+                        listLib.pushBack(mut entryCodes, mCode);
+                        entryCount += 1;
+                        cursor = syntax.skipTrivia(source, mNameEnd, prefix);
+                    } else {
+                        arg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, posExpected, 0, ctxs, argIifeDepth, inferMode, "", aliases);
+                        if inferMode { callMarkers = ctx.collectParsedMarkers(callMarkers, arg); }
+                        listLib.pushBack(mut entryPositions, cursor);
+                        listLib.pushBack(mut entrySlots, nextSlot);
+                        listLib.pushBack(mut entryKinds, arg.kind);
+                        listLib.pushBack(mut entryCodes, arg.code);
+                        entryCount += 1;
+                        cursor = syntax.skipTrivia(source, arg.next, prefix);
+                    }
                 }
             }
             if cursor < size and textLib.at(source, cursor) == "," {
@@ -6331,7 +6387,11 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
         k := slotEntry[slotIdx];
         if k =!= slotIdx { isIdentityOrder = false; }
         argExpected := types.paramKindOf(callParams[callFirst + slotIdx]);
-        if not types.isCompatibleKind(argExpected, entryKinds[k]) {
+        isMutExp := textLib.startsWithAt(argExpected, 0, "mut ");
+        isMutAct := textLib.startsWithAt(entryKinds[k], 0, "mut ");
+        chkExp := if isMutExp { textLib.slice(argExpected, 4, textLib.length(argExpected)) } else { argExpected };
+        chkAct := if isMutAct { textLib.slice(entryKinds[k], 4, textLib.length(entryKinds[k])) } else { entryKinds[k] };
+        if isMutExp =!= isMutAct or not types.isCompatibleKind(chkExp, chkAct) {
             syntax.failAt(source, entryPositions[k], prefix, "argument " + formatLib.decimalText(slotIdx + 1) + " of " +
             calleeDisplay + " must be " + types.displayKind(argExpected) + ", got " + types.displayKind(entryKinds[k]));
         }
@@ -6344,7 +6404,11 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
         var pIdx := 0;
         loop pIdx < callCount {
             argExpected := types.paramKindOf(callParams[callFirst + pIdx]);
-            listLib.pushBack(mut finalArgs, ctx.assignReadOnlyArgCode(target, argExpected, entryKinds[pIdx], entryCodes[pIdx]));
+            if textLib.startsWithAt(argExpected, 0, "mut ") {
+                listLib.pushBack(mut finalArgs, entryCodes[pIdx]);
+            } else {
+                listLib.pushBack(mut finalArgs, ctx.assignReadOnlyArgCode(target, argExpected, entryKinds[pIdx], entryCodes[pIdx]));
+            }
             pIdx = pIdx + 1;
         }
         targetCallee := if isModuleFn { callRuntime } else { "(" + callRuntime + ")" };
@@ -6371,7 +6435,11 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
         loop sIdx < callCount {
             k := slotEntry[sIdx];
             argExpected := types.paramKindOf(callParams[callFirst + sIdx]);
-            listLib.pushBack(mut reorderedArgs, ctx.assignReadOnlyArgCode(target, argExpected, entryKinds[k], entryCodes[k]));
+            if textLib.startsWithAt(argExpected, 0, "mut ") {
+                listLib.pushBack(mut reorderedArgs, entryCodes[k]);
+            } else {
+                listLib.pushBack(mut reorderedArgs, ctx.assignReadOnlyArgCode(target, argExpected, entryKinds[k], entryCodes[k]));
+            }
             sIdx = sIdx + 1;
         }
         callExpr := if not isModuleFn {
@@ -6403,7 +6471,12 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
                 } else if slotEntry[targetSlot] == kIdx {
                     temp := "lite$arg" + integer.intText(kIdx);
                     argExpected := types.paramKindOf(callParams[callFirst + targetSlot]);
-                    listLib.pushBack(mut evalStmts, "const " + temp + " = " + ctx.assignValueCode(target, argExpected, entryKinds[kIdx], entryCodes[kIdx]) + ";");
+                    argRhs := if textLib.startsWithAt(argExpected, 0, "mut ") {
+                        entryCodes[kIdx]
+                    } else {
+                        ctx.assignValueCode(target, argExpected, entryKinds[kIdx], entryCodes[kIdx])
+                    };
+                    listLib.pushBack(mut evalStmts, "const " + temp + " = " + argRhs + ";");
                 } else {
                     listLib.pushBack(mut evalStmts, "void (" + entryCodes[kIdx] + ");");
                 }

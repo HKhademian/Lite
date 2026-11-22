@@ -55,7 +55,10 @@ tsParameterList := fn(encoded: String): String {
         entry := textLib.slice(encoded, start, end);
         equals := textLib.indexOfText(entry, "=", 0);
         parameterName := textLib.slice(entry, 0, equals);
-        parameterKind := textLib.slice(entry, equals + 1, textLib.length(entry));
+        rawParameterKind := textLib.slice(entry, equals + 1, textLib.length(entry));
+        parameterKind := if textLib.startsWithAt(rawParameterKind, 0, "mut ") {
+            textLib.slice(rawParameterKind, 4, textLib.length(rawParameterKind))
+        } else { rawParameterKind };
         if textLib.length(result) > 0 { result = result + ", "; }
         result = result + "lite_" + parameterName + ": " + tsFunctionType(parameterKind);
         if separator < 0 { break; }
