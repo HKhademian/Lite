@@ -1,0 +1,219 @@
+/* Dual-target (TS + C11) and ASan/UBSan tests for `extra/ring`, `extra/deque`, `extra/heap`, `extra/bitset`, and `extra/sparse`. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+ccInfo := compilerTest.probeCc();
+
+tmpRes := fs.makeTempDir("lite-extra-structures-test-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+tmpDir := tmpRes.path;
+
+functionalSrc :=
+"io := import \"core/io\";\n" +
+"ring := import \"extra/ring\";\n" +
+"deque := import \"extra/deque\";\n" +
+"heap := import \"extra/heap\";\n" +
+"bitset := import \"extra/bitset\";\n" +
+"sparse := import \"extra/sparse\";\n" +
+"\n" +
+"/* 1. extra/ring */\n" +
+"ri := ring.createInts(3);\n" +
+"o1 := ring.pushInt(ri, 10);\n" +
+"o2 := ring.pushInt(ri, 20);\n" +
+"o3 := ring.pushInt(ri, 30);\n" +
+"tp := ring.tryPushInt(ri, 99);\n" +
+"o4 := ring.pushInt(ri, 40);\n" +
+"io.outputLine(\"ringInt\", o1, o2, o3, tp, o4, ring.peekOldestInt(ri).value, ring.peekNewestInt(ri).value, ring.atInt(ri, 1).value, ring.sumInts(ri));\n" +
+"p1 := ring.popInt(ri);\n" +
+"io.outputLine(\"ringPop\", p1.found, p1.value, ring.intCount(ri));\n" +
+"ring.destroyInts(ri);\n" +
+"\n" +
+"rf := ring.createFloats(4);\n" +
+"_f1 := ring.pushFloat(rf, 10.0);\n" +
+"_f2 := ring.pushFloat(rf, 20.0);\n" +
+"_f3 := ring.pushFloat(rf, 30.0);\n" +
+"mm := ring.minMaxFloat(rf);\n" +
+"io.outputLine(\"ringFloat\", ring.avgFloat(rf), mm.min, mm.max, ring.floatCount(rf));\n" +
+"ring.destroyFloats(rf);\n" +
+"\n" +
+"/* 2. extra/deque */\n" +
+"dq := deque.createInts(4);\n" +
+"_d1 := deque.pushBackInt(dq, 2);\n" +
+"_d2 := deque.pushFrontInt(dq, 1);\n" +
+"_d3 := deque.pushBackInt(dq, 3);\n" +
+"_d4 := deque.pushFrontInt(dq, 0);\n" +
+"dFull := deque.pushBackInt(dq, 9);\n" +
+"df := deque.popFrontInt(dq);\n" +
+"db := deque.popBackInt(dq);\n" +
+"io.outputLine(\"dequeInt\", dFull, df.value, db.value, deque.peekFrontInt(dq).value, deque.peekBackInt(dq).value, deque.intCount(dq));\n" +
+"deque.destroyInts(dq);\n" +
+"\n" +
+"td := deque.createTexts(3);\n" +
+"_t1 := deque.pushBackText(td, \"b\");\n" +
+"_t2 := deque.pushFrontText(td, \"a\");\n" +
+"_t3 := deque.pushBackText(td, \"c\");\n" +
+"tf := deque.popFrontText(td);\n" +
+"tb := deque.popBackText(td);\n" +
+"io.outputLine(\"dequeText\", tf.value, tb.value, deque.textCount(td));\n" +
+"deque.destroyTexts(td);\n" +
+"\n" +
+"/* 3. extra/heap */\n" +
+"mn := heap.createMin(8);\n" +
+"_m1 := heap.pushMin(mn, 50);\n" +
+"_m2 := heap.pushMin(mn, 10);\n" +
+"_m3 := heap.pushMin(mn, 30);\n" +
+"_m4 := heap.pushMin(mn, 20);\n" +
+"io.outputLine(\"minHeap\", heap.popMin(mn).value, heap.popMin(mn).value, heap.popMin(mn).value, heap.popMin(mn).value, heap.popMin(mn).found);\n" +
+"heap.destroyMin(mn);\n" +
+"\n" +
+"mx := heap.createMax(8);\n" +
+"_x1 := heap.pushMax(mx, 10);\n" +
+"_x2 := heap.pushMax(mx, 50);\n" +
+"_x3 := heap.pushMax(mx, 30);\n" +
+"io.outputLine(\"maxHeap\", heap.popMax(mx).value, heap.popMax(mx).value, heap.popMax(mx).value);\n" +
+"heap.destroyMax(mx);\n" +
+"\n" +
+"pq := heap.createPQ(8);\n" +
+"_q1 := heap.pushPQ(pq, 30, 103);\n" +
+"_q2 := heap.pushPQ(pq, 10, 101);\n" +
+"_q3 := heap.pushPQ(pq, 20, 102);\n" +
+"pqa := heap.popPQ(pq);\n" +
+"pqb := heap.popPQ(pq);\n" +
+"io.outputLine(\"pq\", pqa.priority, pqa.item, pqb.priority, pqb.item, heap.pqCount(pq));\n" +
+"heap.destroyPQ(pq);\n" +
+"\n" +
+"/* 4. extra/bitset */\n" +
+"b1 := bitset.create(65);\n" +
+"b2 := bitset.create(65);\n" +
+"_bs1 := bitset.set(b1, 0);\n" +
+"_bs2 := bitset.set(b1, 31);\n" +
+"_bs3 := bitset.set(b1, 64);\n" +
+"_bs4 := bitset.set(b2, 31);\n" +
+"_bs5 := bitset.set(b2, 45);\n" +
+"io.outputLine(\"bitset1\", bitset.test(b1, 0), bitset.test(b1, 31), bitset.test(b1, 64), bitset.test(b1, 65), bitset.countOnes(b1), bitset.firstSet(b1), bitset.firstClear(b1));\n" +
+"bitset.orInto(b1, b2);\n" +
+"cntOr := bitset.countOnes(b1);\n" +
+"bitset.andInto(b1, b2);\n" +
+"cntAnd := bitset.countOnes(b1);\n" +
+"eqAfterAnd := bitset.equals(b1, b2);\n" +
+"bitset.xorInto(b1, b2);\n" +
+"io.outputLine(\"bitsetOps\", cntOr, cntAnd, eqAfterAnd, bitset.countOnes(b1), bitset.firstSet(b1));\n" +
+"bitset.setAll(b1);\n" +
+"io.outputLine(\"bitsetAll\", bitset.countOnes(b1), bitset.firstClear(b1));\n" +
+"bitset.destroy(b1);\n" +
+"bitset.destroy(b2);\n" +
+"\n" +
+"/* 5. extra/sparse */\n" +
+"ss := sparse.create(100);\n" +
+"si1 := sparse.insert(ss, 42);\n" +
+"si2 := sparse.insert(ss, 7);\n" +
+"siDup := sparse.insert(ss, 42);\n" +
+"si3 := sparse.insert(ss, 99);\n" +
+"sr1 := sparse.remove(ss, 42);\n" +
+"srDup := sparse.remove(ss, 42);\n" +
+"io.outputLine(\"sparse\", si1, si2, siDup, si3, sr1, srDup, sparse.has(ss, 42), sparse.has(ss, 7), sparse.has(ss, 99), sparse.count(ss), sparse.denseAt(ss, 0), sparse.denseAt(ss, 1));\n" +
+"sparse.clear(ss);\n" +
+"io.outputLine(\"sparseClear\", sparse.count(ss), sparse.has(ss, 99));\n" +
+"sparse.destroy(ss);\n";
+
+expectedOut :=
+"ringInt false false false false true 20 40 30 90\n" +
+"ringPop true 20 2\n" +
+"ringFloat 20 10 30 3\n" +
+"dequeInt false 0 3 1 2 2\n" +
+"dequeText a c 1\n" +
+"minHeap 10 20 30 50 false\n" +
+"maxHeap 50 30 10\n" +
+"pq 10 101 20 102 1\n" +
+"bitset1 true true true false 3 0 1\n" +
+"bitsetOps 4 2 true 0 -1\n" +
+"bitsetAll 65 -1\n" +
+"sparse true true false true true false false true true 2 99 7\n" +
+"sparseClear 0 false\n";
+
+emptyEnv: List<String> = [];
+tsComp := compilerTest.compileStdin(root, selTs.path, functionalSrc, "");
+test.checkInt("TS compile status: " + tsComp.stderr, 0, tsComp.status);
+tsOutFile := path.join(tmpDir, "functional.ts");
+test.check("write functional.ts", fs.writeText(tsOutFile, tsComp.stdout).ok);
+tsRunner := path.join(tmpDir, "runner.ts");
+tsRunnerCode :=
+"import { writeSync } from 'node:fs';\n" +
+"import { main } from './functional.ts';\n" +
+"const out = main((t: string): void => { writeSync(1, t); });\n" +
+"if (typeof out === 'string' && out.length > 0) writeSync(1, out);\n";
+test.check("write runner.ts", fs.writeText(tsRunner, tsRunnerCode).ok);
+tsRun := proc.run(project.nodeExecPath(), [tsRunner], root, emptyEnv, true, "");
+test.checkInt("TS run status: " + tsRun.stderr, 0, tsRun.status);
+test.checkText("TS functional output", expectedOut, tsRun.stdout);
+
+if ccInfo.available {
+    cComp := compilerTest.compileStdin(root, selC.path, functionalSrc, "");
+    test.checkInt("C11 compile status: " + cComp.stderr, 0, cComp.status);
+    cFile := path.join(tmpDir, "functional.c");
+    cBin := path.join(tmpDir, "functional");
+    test.check("write functional.c", fs.writeText(cFile, cComp.stdout).ok);
+    ccRes := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cFile, "-o", cBin, "-lm"], tmpDir, emptyEnv, true, "");
+    test.checkInt("C11 cc status: " + ccRes.stderr, 0, ccRes.status);
+    cRun := proc.run(cBin, [], root, emptyEnv, true, "");
+    test.checkInt("C11 run status: " + cRun.stderr, 0, cRun.status);
+    test.checkText("C11 functional output matches TS", expectedOut, cRun.stdout);
+
+    stressSrc :=
+    "io := import \"core/io\";\n" +
+    "ring := import \"extra/ring\";\n" +
+    "deque := import \"extra/deque\";\n" +
+    "heap := import \"extra/heap\";\n" +
+    "bitset := import \"extra/bitset\";\n" +
+    "sparse := import \"extra/sparse\";\n" +
+    "\n" +
+    "r := ring.createInts(32);\n" +
+    "dq := deque.createInts(32);\n" +
+    "hp := heap.createMin(64);\n" +
+    "bs := bitset.create(128);\n" +
+    "ss := sparse.create(128);\n" +
+    "var i := 0;\n" +
+    "loop i < 5000 {\n" +
+    "    _ro := ring.pushInt(r, i);\n" +
+    "    _dp := deque.pushBackInt(dq, i);\n" +
+    "    if deque.intCount(dq) > 16 { _df := deque.popFrontInt(dq); }\n" +
+    "    _hp := heap.pushMin(hp, (i * 37) % 1000);\n" +
+    "    if heap.minCount(hp) > 32 { _hm := heap.popMin(hp); }\n" +
+    "    _bt := bitset.toggle(bs, i % 128);\n" +
+    "    id := i % 128;\n" +
+    "    if sparse.has(ss, id) { _sr := sparse.remove(ss, id); } else { _si := sparse.insert(ss, id); }\n" +
+    "    i += 1;\n" +
+    "}\n" +
+    "io.outputLine(\"stress\", ring.intCount(r), deque.intCount(dq), heap.minCount(hp), bitset.countOnes(bs), sparse.count(ss));\n" +
+    "ring.destroyInts(r);\n" +
+    "deque.destroyInts(dq);\n" +
+    "heap.destroyMin(hp);\n" +
+    "bitset.destroy(bs);\n" +
+    "sparse.destroy(ss);\n";
+
+    stressPath := path.join(tmpDir, "stress.lts");
+    ws := fs.writeText(stressPath, stressSrc);
+    test.check("write stress.lts: " + ws.error, ws.ok);
+
+    sanBin := path.join(tmpDir, "stress-san");
+    buildSan := proc.run(path.join(root, "bin/lite"), ["build", "--sanitize", "--quiet", "-o", sanBin, stressPath], root, emptyEnv, true, "");
+    test.check("ASan/UBSan build ok: " + buildSan.stderr, buildSan.status == 0 and buildSan.error == "");
+
+    runSan := proc.run(sanBin, [], tmpDir, emptyEnv, true, "");
+    test.check("ASan/UBSan stress exit 0: " + runSan.stderr, runSan.status == 0 and runSan.error == "");
+    test.checkText("ASan/UBSan stress output", "stress 32 16 32 120 120\n", runSan.stdout);
+}
+
+fs.remove(tmpDir);
