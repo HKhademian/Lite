@@ -729,12 +729,14 @@ cStructHash := fn(kind: String): String {
     integer.intText(h1) + "_" + integer.intText(h2)
 };
 
-/** True when `kind` is a C11-supported value kind (scalar, enum, struct, or list/array of supported elements). */
+/** True when `kind` is a C11-supported value kind (scalar, enum, struct, map, set, or list/array of supported elements). */
 cIsSupportedElem := fn(kind: String): Bool {
     if numeric.isIntKind(kind) or isEnumKind(kind) or numeric.isFloatKind(kind) or
     kind == ir.VALUE_KIND_BOOL or kind == ir.VALUE_KIND_STRING { return true; }
     if isListKind(kind) { return self(listElementKind(kind)); }
     if isArrayKind(kind) { return self(arrayElementKind(kind)); }
+    if isMapKind(kind) { return isMapKeyKind(mapKeyKind(kind)) and self(mapValueKind(kind)); }
+    if isSetKind(kind) { return isMapKeyKind(setElementKind(kind)); }
     if isTupleKind(kind) {
         count := tupleComponentCount(kind);
         var i := 0;
@@ -765,9 +767,9 @@ pub cStructTag := fn(kind: String): String {
     }
 };
 
-/** True when `kind` is a list/array or a tuple/record transitively containing a list/array field. */
+/** True when `kind` is a list/array/map/set or a tuple/record transitively containing one. */
 pub cTypeHasListField := fn(kind: String): Bool {
-    if isListKind(kind) or isArrayKind(kind) { return true; }
+    if isListKind(kind) or isArrayKind(kind) or isMapKind(kind) or isSetKind(kind) { return true; }
     if isTupleKind(kind) {
         count := tupleComponentCount(kind);
         var i := 0;
@@ -808,10 +810,45 @@ pub cListElemType := fn(tag: String): String {
     else { tag }
 };
 
+/** Maps a C-supported map/set key kind to its C11 tag (`i64`, `f64`, `bool`, `str`), or `""`. */
+pub cMapKeyTag := fn(kKind: String): String {
+    if numeric.isIntKind(kKind) or isEnumKind(kKind) { "i64" }
+    else if numeric.isFloatKind(kKind) { "f64" }
+    else if kKind == ir.VALUE_KIND_BOOL { "bool" }
+    else if kKind == ir.VALUE_KIND_STRING { "str" }
+    else { "" }
+};
+
+/** Maps a C-supported map value kind to its C11 value tag, or `""`. */
+pub cMapValTag := fn(vKind: String): String {
+    lt := cListTag(vKind);
+    if lt =!= "" { return lt; }
+    if isListKind(vKind) and cListTag(listElementKind(vKind)) =!= "" { return "list_" + cListTag(listElementKind(vKind)); }
+    if isArrayKind(vKind) and cListTag(arrayElementKind(vKind)) =!= "" { return "list_" + cListTag(arrayElementKind(vKind)); }
+    ""
+};
+
+/** Maps a C-supported `Map<K, V>` kind to its C11 typedef name `lt_map_<kt>_<vt>`, or `""`. */
+pub cMapTag := fn(kind: String): String {
+    if not isMapKind(kind) { return ""; }
+    kt := cMapKeyTag(mapKeyKind(kind));
+    vt := cMapValTag(mapValueKind(kind));
+    if kt =!= "" and vt =!= "" { "lt_map_" + kt + "_" + vt } else { "" }
+};
+
+/** Maps a C-supported `Set<T>` kind to its C11 typedef name `lt_set_<kt>`, or `""`. */
+pub cSetTag := fn(kind: String): String {
+    if not isSetKind(kind) { return ""; }
+    kt := cMapKeyTag(setElementKind(kind));
+    if kt =!= "" { "lt_set_" + kt } else { "" }
+};
+
 /** Maps any C11-supported Lite value kind to its C11 type name. */
 pub cValueType := fn(kind: String): String {
     if isListKind(kind) { "lt_list_" + cListTag(listElementKind(kind)) }
     else if isArrayKind(kind) { "lt_list_" + cListTag(arrayElementKind(kind)) }
+    else if cMapTag(kind) =!= "" { cMapTag(kind) }
+    else if cSetTag(kind) =!= "" { cSetTag(kind) }
     else if cStructTag(kind) =!= "" { cStructTag(kind) }
     else if kind == ir.VALUE_KIND_UNIT or kind == ir.VALUE_KIND_NEVER { "void" }
     else if numeric.isIntKind(kind) or isEnumKind(kind) { "int64_t" }

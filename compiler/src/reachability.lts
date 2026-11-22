@@ -121,7 +121,7 @@ scanCodeCalls := fn(code: String, existing: String, userFnsOnly: Bool): String {
                 (textLib.startsWithAt(name, 0, "lite$") and not textLib.startsWithAt(name, 0, "lite$m$")) or
                 textLib.startsWithAt(name, 0, "lite_") or
                 (textLib.startsWithAt(name, 0, "lt_") and not textLib.startsWithAt(name, 0, "lt_fn_") and
-                not textLib.startsWithAt(name, 0, "lt_m_") and (not textLib.startsWithAt(name, 0, "lt_s") or textLib.startsWithAt(name, 0, "lt_s_")))
+                not textLib.startsWithAt(name, 0, "lt_m_") and (not textLib.startsWithAt(name, 0, "lt_s") or textLib.startsWithAt(name, 0, "lt_s_") or textLib.startsWithAt(name, 0, "lt_set_")))
             };
             if matched {
                 token := name + "(|";

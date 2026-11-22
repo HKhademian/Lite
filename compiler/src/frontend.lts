@@ -276,6 +276,13 @@ pub cStructTag := fn(kind: String): String { types.cStructTag(kind) };
 pub cFieldName := fn(prop: String): String { types.cFieldName(prop) };
 pub cTypeHasListField := fn(kind: String): Bool { types.cTypeHasListField(kind) };
 pub cTupleConvertName := fn(expectedKind: String, actualKind: String): String { types.cTupleConvertName(expectedKind, actualKind) };
+pub cMapKeyTag := fn(kKind: String): String { types.cMapKeyTag(kKind) };
+pub cMapValTag := fn(vKind: String): String { types.cMapValTag(vKind) };
+pub cMapTag := fn(kind: String): String { types.cMapTag(kind) };
+pub cSetTag := fn(kind: String): String { types.cSetTag(kind) };
+pub mapKeyKind := fn(kind: String): String { types.mapKeyKind(kind) };
+pub mapValueKind := fn(kind: String): String { types.mapValueKind(kind) };
+pub setElementKind := fn(kind: String): String { types.setElementKind(kind) };
 pub recordDisplayName := fn(kind: String): String { types.recordDisplayName(kind) };
 pub recordComponentCount := fn(kind: String): Int { types.recordComponentCount(kind) };
 pub recordComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String, prop: String) { types.recordComponent(kind, targetIndex) };
@@ -2402,7 +2409,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         kKind := types.mapKeyKind(parsed.kind);
                         vKind := types.mapValueKind(parsed.kind);
                         itemKind = "(key:" + kKind + ",value:" + vKind + ")";
-                        if target == TARGET_TS and not seqIsWritableLocal {
+                        if target == TARGET_C {
+                            sequenceCode = "/*@T:" + parsed.kind + "@*//*@T:" + itemKind + "@*/" + parsed.code;
+                            loopSeqMode = 4;
+                        } else if target == TARGET_TS and not seqIsWritableLocal {
                             sequenceCode = parsed.code;
                             loopSeqMode = 2;
                         } else {
@@ -2410,7 +2420,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         }
                     } else if types.isSetKind(parsed.kind) {
                         itemKind = types.setElementKind(parsed.kind);
-                        if target == TARGET_TS and not seqIsWritableLocal {
+                        if target == TARGET_C {
+                            sequenceCode = "/*@T:" + parsed.kind + "@*/" + parsed.code;
+                            loopSeqMode = 5;
+                        } else if target == TARGET_TS and not seqIsWritableLocal {
                             sequenceCode = parsed.code;
                             loopSeqMode = 1;
                         } else {
@@ -2429,7 +2442,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         kKind := types.mapKeyKind(parsed.kind);
                         vKind := types.mapValueKind(parsed.kind);
                         itemKind = "(key:" + kKind + ",value:" + vKind + ")";
-                        if target == TARGET_TS and not seqIsWritableLocal {
+                        if target == TARGET_C {
+                            sequenceCode = "/*@T:" + parsed.kind + "@*//*@T:" + itemKind + "@*/" + parsed.code;
+                            loopSeqMode = 4;
+                        } else if target == TARGET_TS and not seqIsWritableLocal {
                             sequenceCode = parsed.code;
                             loopSeqMode = 2;
                         } else {
@@ -2437,7 +2453,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         }
                     } else if types.isSetKind(parsed.kind) {
                         itemKind = types.setElementKind(parsed.kind);
-                        if target == TARGET_TS and not seqIsWritableLocal {
+                        if target == TARGET_C {
+                            sequenceCode = "/*@T:" + parsed.kind + "@*/" + parsed.code;
+                            loopSeqMode = 5;
+                        } else if target == TARGET_TS and not seqIsWritableLocal {
                             sequenceCode = parsed.code;
                             loopSeqMode = 1;
                         } else {
@@ -3066,7 +3085,16 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         failAt(source, vStart, prefix, "map value must be " + displayKind(vKind) + ", got " + displayKind(valParsed.kind));
                     }
                     kCode := assignValueCode(target, kKind, keyParsed.kind, keyParsed.code);
-                    stmtCode := if mapCompOp.width > 0 {
+                    stmtCode := if target == TARGET_C {
+                        mTag := types.cMapTag(entry.kind);
+                        if mapCompOp.width > 0 {
+                            curValCode := mTag + "_at(" + entry.runtime + ", " + kCode + ", " + integer.intText(nameStart) + ")";
+                            nextValCode := compoundAssignCode(target, source, opPos, prefix, vKind, curValCode, mapCompOp.baseOp, valParsed);
+                            mTag + "_set(&" + entry.runtime + ", " + kCode + ", " + nextValCode + ")"
+                        } else {
+                            mTag + "_set(&" + entry.runtime + ", " + kCode + ", " + assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")"
+                        }
+                    } else if mapCompOp.width > 0 {
                         curValCode := "lite$mapAt(" + entry.runtime + ", lite$ck, " + integer.intText(nameStart) + ")";
                         nextValCode := compoundAssignCode(target, source, opPos, prefix, vKind, curValCode, mapCompOp.baseOp, valParsed);
                         "((lite$ck: " + tsFunctionType(kKind) + ") => (" + entry.runtime + ").set(lite$ck, " + nextValCode + "))(" + kCode + ")"

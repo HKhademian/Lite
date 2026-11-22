@@ -267,20 +267,26 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
     /* Empty bracket literal `[]` with Map<K, V> or Set<T> expected type */
     if cursor < textLib.length(source) and textLib.at(source, cursor) == "]" {
         if isMapTarget {
-            if target =!= ir.TARGET_TS {
-                syntax.failAt(source, start, prefix, "C backend does not support Map yet");
-            }
             close := syntax.expectSymbol(source, cursor, "]", prefix);
+            if target == ir.TARGET_C {
+                mTag := types.cMapTag(expected);
+                if mTag == "" { syntax.failAt(source, start, prefix, "C backend does not support Map yet"); }
+                return (kind = expected, code = "/*@T:" + expected + "@*/" + mTag + "_from(0, NULL)",
+                intValue = 0, textValue = "", constant = false, next = close);
+            }
             kKind := types.mapKeyKind(expected);
             vKind := types.mapValueKind(expected);
             return (kind = expected, code = "new Map<" + types.tsFunctionType(kKind) + ", " + types.tsFunctionType(vKind) + ">()",
             intValue = 0, textValue = "", constant = false, next = close);
         }
         if isSetTarget {
-            if target =!= ir.TARGET_TS {
-                syntax.failAt(source, start, prefix, "C backend does not support Set yet");
-            }
             close := syntax.expectSymbol(source, cursor, "]", prefix);
+            if target == ir.TARGET_C {
+                sTag := types.cSetTag(expected);
+                if sTag == "" { syntax.failAt(source, start, prefix, "C backend does not support Set yet"); }
+                return (kind = expected, code = "/*@T:" + expected + "@*/" + sTag + "_from(0, NULL)",
+                intValue = 0, textValue = "", constant = false, next = close);
+            }
             eKind := types.setElementKind(expected);
             return (kind = expected, code = "new Set<" + types.tsFunctionType(eKind) + ">()",
             intValue = 0, textValue = "", constant = false, next = close);
@@ -300,12 +306,10 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
         firstElem := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, elementKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
         afterFirst := syntax.skipTrivia(source, firstElem.next, prefix);
         if afterFirst < textLib.length(source) and syntax.isSingleEquals(source, afterFirst) {
-            if target =!= ir.TARGET_TS {
-                syntax.failAt(source, start, prefix, "C backend does not support Map yet");
-            }
             var keyKind := if isMapTarget { types.mapKeyKind(expected) } else { "" };
             var valKind := if isMapTarget { types.mapValueKind(expected) } else { "" };
             entryCodes: mut List<String> = [];
+            cEntryCodes: mut List<String> = [];
             var mapMarkers := "";
             var entryCount := 0;
             var curKeyStart := firstStart;
@@ -337,6 +341,7 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
                 kCode := ctx.assignValueCode(target, keyKind, curKey.kind, curKey.code);
                 vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
                 listLib.pushBack(mut entryCodes, "[" + kCode + ", " + vCode + "]");
+                listLib.pushBack(mut cEntryCodes, "{ " + kCode + ", " + vCode + " }");
                 entryCount = entryCount + 1;
                 cursor = syntax.skipTrivia(source, valParsed.next, prefix);
                 if cursor < textLib.length(source) and textLib.at(source, cursor) == "," {
@@ -354,6 +359,13 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
             }
             cursor = syntax.expectSymbol(source, cursor, "]", prefix);
             mapKind := "Map<" + keyKind + "," + valKind + ">";
+            if target == ir.TARGET_C {
+                mTag := types.cMapTag(mapKind);
+                if mTag == "" { syntax.failAt(source, start, prefix, "C backend does not support Map yet"); }
+                return ctx.withMarkers((kind = mapKind,
+                code = "/*@T:" + mapKind + "@*/" + mTag + "_from(" + integer.intText(entryCount) + ", (const " + mTag + "_entry[]){" + textLib.joinTexts(cEntryCodes, ", ") + "})",
+                intValue = 0, textValue = "", constant = false, next = cursor), mapMarkers);
+            }
             return ctx.withMarkers((kind = mapKind,
             code = "new Map<" + types.tsFunctionType(keyKind) + ", " + types.tsFunctionType(valKind) + ">([" + textLib.joinTexts(entryCodes, ", ") + "])",
             intValue = 0, textValue = "", constant = false, next = cursor), mapMarkers);
@@ -401,8 +413,17 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
     }
     cursor = syntax.expectSymbol(source, cursor, "]", prefix);
     if isSetTarget {
-        if target =!= ir.TARGET_TS {
-            syntax.failAt(source, start, prefix, "C backend does not support Set yet");
+        if target == ir.TARGET_C {
+            sTag := types.cSetTag(expected);
+            if sTag == "" { syntax.failAt(source, start, prefix, "C backend does not support Set yet"); }
+            kTag := types.cMapKeyTag(elementKind);
+            cArrType := if kTag == "str" { "const char *const" } else { "const " + types.cListElemType(kTag) };
+            sCode := if count == 0 {
+                "/*@T:" + expected + "@*/" + sTag + "_from(0, NULL)"
+            } else {
+                "/*@T:" + expected + "@*/" + sTag + "_from(" + integer.intText(count) + ", (" + cArrType + "[]){" + textLib.joinTexts(elementCodes, ", ") + "})"
+            };
+            return ctx.withMarkers((kind = expected, code = sCode, intValue = 0, textValue = "", constant = false, next = cursor), listMarkers);
         }
         return ctx.withMarkers((kind = expected,
         code = "new Set<" + types.tsFunctionType(elementKind) + ">([" + textLib.joinTexts(elementCodes, ", ") + "])",
@@ -2560,7 +2581,16 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         syntax.failAt(source, vStart, prefix, "map value must be " + types.displayKind(vKind) + ", got " + types.displayKind(valParsed.kind));
                     }
                     kCode := ctx.assignValueCode(target, kKind, keyParsed.kind, keyParsed.code);
-                    stmtCode := if idxCompOp.width > 0 {
+                    stmtCode := if target == ir.TARGET_C {
+                        mTag := types.cMapTag(entry.kind);
+                        if idxCompOp.width > 0 {
+                            curValCode := mTag + "_at(" + entry.runtime + ", " + kCode + ", " + integer.intText(itemStart) + ")";
+                            nextValCode := ctx.compoundAssignCode(target, source, opPos, prefix, vKind, curValCode, idxCompOp.baseOp, valParsed);
+                            mTag + "_set(&" + entry.runtime + ", " + kCode + ", " + nextValCode + ")"
+                        } else {
+                            mTag + "_set(&" + entry.runtime + ", " + kCode + ", " + ctx.assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")"
+                        }
+                    } else if idxCompOp.width > 0 {
                         curValCode := "lite$mapAt(" + entry.runtime + ", lite$ck, " + integer.intText(itemStart) + ")";
                         nextValCode := ctx.compoundAssignCode(target, source, opPos, prefix, vKind, curValCode, idxCompOp.baseOp, valParsed);
                         "((lite$ck: " + types.tsFunctionType(kKind) + ") => (" + entry.runtime + ").set(lite$ck, " + nextValCode + "))(" + kCode + ")"
@@ -5545,9 +5575,11 @@ parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
         grant := ctx.parseMapGrant(source, argOpen, prefix, locals, opDisplay);
         kKind := types.mapKeyKind(grant.kind);
         vKind := types.mapValueKind(grant.kind);
+        mTag := if target == ir.TARGET_C { types.cMapTag(grant.kind) } else { "" };
         if opName == "clear" {
             close := ctx.expectNonemptyCallClose(source, grant.next, prefix);
-            return (kind = ir.VALUE_KIND_UNIT, code = "((" + grant.runtime + ").clear(), undefined)",
+            clrCode := if mTag =!= "" { mTag + "_clear(&" + grant.runtime + ")" } else { "((" + grant.runtime + ").clear(), undefined)" };
+            return (kind = ir.VALUE_KIND_UNIT, code = clrCode,
             intValue = 0, textValue = "", constant = false, next = close);
         }
         comma1 := syntax.skipTrivia(source, grant.next, prefix);
@@ -5562,7 +5594,8 @@ parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
         keyCode := ctx.assignValueCode(target, kKind, key.kind, key.code);
         if opName == "remove" {
             close := ctx.expectNonemptyCallClose(source, key.next, prefix);
-            return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + grant.runtime + ").delete(" + keyCode + "))",
+            rmCode := if mTag =!= "" { mTag + "_remove(&" + grant.runtime + ", " + keyCode + ")" } else { "((" + grant.runtime + ").delete(" + keyCode + "))" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = rmCode,
             intValue = 0, textValue = "", constant = false, next = close),
             if inferMode { ctx.collectParsedMarkers("", key) } else { "" });
         }
@@ -5577,7 +5610,8 @@ parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
         }
         close := ctx.expectNonemptyCallClose(source, val.next, prefix);
         valCode := ctx.assignValueCode(target, vKind, val.kind, val.code);
-        return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = "((" + grant.runtime + ").set(" + keyCode + ", " + valCode + "), undefined)",
+        setCode := if mTag =!= "" { mTag + "_set(&" + grant.runtime + ", " + keyCode + ", " + valCode + ")" } else { "((" + grant.runtime + ").set(" + keyCode + ", " + valCode + "), undefined)" };
+        return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = setCode,
         intValue = 0, textValue = "", constant = false, next = close),
         if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", key), val) } else { "" });
     }
@@ -5589,20 +5623,24 @@ parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
     }
     kKind := types.mapKeyKind(m.kind);
     vKind := types.mapValueKind(m.kind);
+    mTag := if target == ir.TARGET_C { types.cMapTag(m.kind) } else { "" };
     var markers := if inferMode { ctx.collectParsedMarkers("", m) } else { "" };
     if opName == "size" {
         close := ctx.expectNonemptyCallClose(source, m.next, prefix);
-        return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "BigInt((" + m.code + ").size)",
+        szCode := if mTag =!= "" { "((" + m.code + ").len)" } else { "BigInt((" + m.code + ").size)" };
+        return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = szCode,
         intValue = 0, textValue = "", constant = false, next = close), markers);
     }
     if opName == "keys" {
         close := ctx.expectNonemptyCallClose(source, m.next, prefix);
-        return ctx.withMarkers((kind = "List<" + kKind + ">", code = "Array.from((" + m.code + ").keys())",
+        kListCode := if mTag =!= "" { mTag + "_keys(" + m.code + ")" } else { "Array.from((" + m.code + ").keys())" };
+        return ctx.withMarkers((kind = "List<" + kKind + ">", code = kListCode,
         intValue = 0, textValue = "", constant = false, next = close), markers);
     }
     if opName == "values" {
         close := ctx.expectNonemptyCallClose(source, m.next, prefix);
-        return ctx.withMarkers((kind = "List<" + vKind + ">", code = "Array.from((" + m.code + ").values())",
+        vListCode := if mTag =!= "" { mTag + "_values(" + m.code + ")" } else { "Array.from((" + m.code + ").values())" };
+        return ctx.withMarkers((kind = "List<" + vKind + ">", code = vListCode,
         intValue = 0, textValue = "", constant = false, next = close), markers);
     }
     comma1 := syntax.skipTrivia(source, m.next, prefix);
@@ -5618,7 +5656,8 @@ parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
     keyCode := ctx.assignValueCode(target, kKind, key.kind, key.code);
     if opName == "has" {
         close := ctx.expectNonemptyCallClose(source, key.next, prefix);
-        return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + m.code + ").has(" + keyCode + "))",
+        hasCode := if mTag =!= "" { mTag + "_has(" + m.code + ", " + keyCode + ")" } else { "((" + m.code + ").has(" + keyCode + "))" };
+        return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = hasCode,
         intValue = 0, textValue = "", constant = false, next = close), markers);
     }
     tsV := types.tsFunctionType(vKind);
@@ -5626,13 +5665,16 @@ parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
     if opName == "get" {
         close := ctx.expectNonemptyCallClose(source, key.next, prefix);
         zeroVal := ctx.zeroParsed(target, vKind, close).code;
-        code := if not needsCopy {
+        resTupleKind := "(found:Bool,value:" + vKind + ")";
+        code := if mTag =!= "" {
+            "/*@T:" + resTupleKind + "@*/" + mTag + "_get(" + m.code + ", " + keyCode + ", " + zeroVal + ")"
+        } else if not needsCopy {
             "lite$mapGet((" + m.code + "), " + keyCode + ", " + zeroVal + ")"
         } else {
             copied := ctx.copiedValueCode(target, vKind, "lite$v");
             "((lite$v: " + tsV + " | undefined): { found: boolean; value: " + tsV + " } => lite$v !== undefined ? { found: true, value: " + copied + " } : { found: false, value: " + zeroVal + " })((" + m.code + ").get(" + keyCode + "))"
         };
-        return ctx.withMarkers((kind = "(found:Bool,value:" + vKind + ")", code = code,
+        return ctx.withMarkers((kind = resTupleKind, code = code,
         intValue = 0, textValue = "", constant = false, next = close), markers);
     }
     comma2 := syntax.skipTrivia(source, key.next, prefix);
@@ -5647,7 +5689,9 @@ parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
     }
     close := ctx.expectNonemptyCallClose(source, fb.next, prefix);
     fbCode := ctx.assignValueCode(target, vKind, fb.kind, fb.code);
-    code := if not needsCopy {
+    code := if mTag =!= "" {
+        mTag + "_get_or(" + m.code + ", " + keyCode + ", " + fbCode + ")"
+    } else if not needsCopy {
         "lite$mapGetOr((" + m.code + "), " + keyCode + ", " + fbCode + ")"
     } else {
         copied := ctx.copiedValueCode(target, vKind, "lite$v");
@@ -5661,9 +5705,11 @@ parseSetIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
     if opName == "add" or opName == "remove" or opName == "clear" {
         grant := ctx.parseSetGrant(source, argOpen, prefix, locals, opDisplay);
         elemKind := types.setElementKind(grant.kind);
+        sTag := if target == ir.TARGET_C { types.cSetTag(grant.kind) } else { "" };
         if opName == "clear" {
             close := ctx.expectNonemptyCallClose(source, grant.next, prefix);
-            return (kind = ir.VALUE_KIND_UNIT, code = "((" + grant.runtime + ").clear(), undefined)",
+            clrCode := if sTag =!= "" { sTag + "_clear(&" + grant.runtime + ")" } else { "((" + grant.runtime + ").clear(), undefined)" };
+            return (kind = ir.VALUE_KIND_UNIT, code = clrCode,
             intValue = 0, textValue = "", constant = false, next = close);
         }
         comma := syntax.skipTrivia(source, grant.next, prefix);
@@ -5678,11 +5724,13 @@ parseSetIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
         close := ctx.expectNonemptyCallClose(source, val.next, prefix);
         valCode := ctx.assignValueCode(target, elemKind, val.kind, val.code);
         if opName == "add" {
-            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = "((" + grant.runtime + ").add(" + valCode + "), undefined)",
+            addCode := if sTag =!= "" { sTag + "_add(&" + grant.runtime + ", " + valCode + ")" } else { "((" + grant.runtime + ").add(" + valCode + "), undefined)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = addCode,
             intValue = 0, textValue = "", constant = false, next = close),
             if inferMode { ctx.collectParsedMarkers("", val) } else { "" });
         }
-        return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + grant.runtime + ").delete(" + valCode + "))",
+        rmCode := if sTag =!= "" { sTag + "_remove(&" + grant.runtime + ", " + valCode + ")" } else { "((" + grant.runtime + ").delete(" + valCode + "))" };
+        return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = rmCode,
         intValue = 0, textValue = "", constant = false, next = close),
         if inferMode { ctx.collectParsedMarkers("", val) } else { "" });
     }
@@ -5693,15 +5741,18 @@ parseSetIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
         syntax.failAt(source, setStart, prefix, opDisplay + " expects a Set, got " + types.displayKind(s.kind));
     }
     elemKind := types.setElementKind(s.kind);
+    sTag := if target == ir.TARGET_C { types.cSetTag(s.kind) } else { "" };
     var markers := if inferMode { ctx.collectParsedMarkers("", s) } else { "" };
     if opName == "size" {
         close := ctx.expectNonemptyCallClose(source, s.next, prefix);
-        return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "BigInt((" + s.code + ").size)",
+        szCode := if sTag =!= "" { "((" + s.code + ").len)" } else { "BigInt((" + s.code + ").size)" };
+        return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = szCode,
         intValue = 0, textValue = "", constant = false, next = close), markers);
     }
     if opName == "values" {
         close := ctx.expectNonemptyCallClose(source, s.next, prefix);
-        return ctx.withMarkers((kind = "List<" + elemKind + ">", code = "Array.from((" + s.code + ").values())",
+        valListCode := if sTag =!= "" { sTag + "_values(" + s.code + ")" } else { "Array.from((" + s.code + ").values())" };
+        return ctx.withMarkers((kind = "List<" + elemKind + ">", code = valListCode,
         intValue = 0, textValue = "", constant = false, next = close), markers);
     }
     comma := syntax.skipTrivia(source, s.next, prefix);
@@ -5716,7 +5767,8 @@ parseSetIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
     }
     close := ctx.expectNonemptyCallClose(source, val.next, prefix);
     valCode := ctx.assignValueCode(target, elemKind, val.kind, val.code);
-    ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + s.code + ").has(" + valCode + "))",
+    hasCode := if sTag =!= "" { sTag + "_has(" + s.code + ", " + valCode + ")" } else { "((" + s.code + ").has(" + valCode + "))" };
+    ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = hasCode,
     intValue = 0, textValue = "", constant = false, next = close), markers)
 };
 
@@ -6166,16 +6218,21 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         syntax.failAt(source, labelStart, prefix, kindLabel + " has no property ." + label);
                     }
                 } else if types.isMapKind(left.kind) or types.isSetKind(left.kind) {
-                    if target =!= ir.TARGET_TS {
+                    msTag := if target == ir.TARGET_C {
+                        if types.isMapKind(left.kind) { types.cMapTag(left.kind) } else { types.cSetTag(left.kind) }
+                    } else { "" };
+                    if target =!= ir.TARGET_TS and msTag == "" {
                         syntax.failAt(source, postPosition, prefix, "C backend does not support collection properties yet");
                     }
                     kindLabel := if types.isMapKind(left.kind) { "Map" } else { "Set" };
                     if label == "size" {
-                        left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "BigInt((" + left.code + ").size)",
+                        szCode := if target == ir.TARGET_C { "((" + left.code + ").len)" } else { "BigInt((" + left.code + ").size)" };
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = szCode,
                         intValue = 0, textValue = "", constant = false, next = labelEnd),
                         if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                     } else if label == "isEmpty" {
-                        left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = "((" + left.code + ").size === 0)",
+                        empCode := if target == ir.TARGET_C { "((" + left.code + ").len == 0)" } else { "((" + left.code + ").size === 0)" };
+                        left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = empCode,
                         intValue = 0, textValue = "", constant = false, next = labelEnd),
                         if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                     } else {
@@ -6227,8 +6284,14 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 }
                 close := syntax.skipTrivia(source, key.next, prefix);
                 next := syntax.expectSymbol(source, close, "]", prefix);
+                kCodeAt := ctx.assignValueCode(target, kKind, key.kind, key.code);
+                mapAtCode := if target == ir.TARGET_C and types.cMapTag(left.kind) =!= "" {
+                    types.cMapTag(left.kind) + "_at(" + left.code + ", " + kCodeAt + ", " + integer.intText(indexStart) + ")"
+                } else {
+                    "lite$mapAt((" + left.code + "), " + kCodeAt + ", " + integer.intText(indexStart) + ")"
+                };
                 left = ctx.withMarkers((kind = vKind,
-                code = "lite$mapAt((" + left.code + "), " + ctx.assignValueCode(target, kKind, key.kind, key.code) + ", " + integer.intText(indexStart) + ")",
+                code = mapAtCode,
                 intValue = 0, textValue = "", constant = false, next = next),
                 if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), key) } else { "" });
             } else {

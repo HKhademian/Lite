@@ -180,10 +180,32 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
         }
     }
     else if types.isMapKind(kind) {
-        if target == ir.TARGET_TS and not textLib.startsWithAt(code, 0, "new Map<") and not textLib.startsWithAt(code, 0, "new Map(") { "new Map(" + code + ")" } else { code }
+        if target == ir.TARGET_C {
+            mTag := types.cMapTag(kind);
+            if mTag =!= "" and not textLib.startsWithAt(code, 0, "/*@T:") and not textLib.startsWithAt(code, 0, mTag + "_from(") and not textLib.startsWithAt(code, 0, mTag + "_copy(") {
+                mTag + "_copy(" + code + ")"
+            } else {
+                code
+            }
+        } else if target == ir.TARGET_TS and not textLib.startsWithAt(code, 0, "new Map<") and not textLib.startsWithAt(code, 0, "new Map(") {
+            "new Map(" + code + ")"
+        } else {
+            code
+        }
     }
     else if types.isSetKind(kind) {
-        if target == ir.TARGET_TS and not textLib.startsWithAt(code, 0, "new Set<") and not textLib.startsWithAt(code, 0, "new Set(") { "new Set(" + code + ")" } else { code }
+        if target == ir.TARGET_C {
+            sTag := types.cSetTag(kind);
+            if sTag =!= "" and not textLib.startsWithAt(code, 0, "/*@T:") and not textLib.startsWithAt(code, 0, sTag + "_from(") and not textLib.startsWithAt(code, 0, sTag + "_copy(") {
+                sTag + "_copy(" + code + ")"
+            } else {
+                code
+            }
+        } else if target == ir.TARGET_TS and not textLib.startsWithAt(code, 0, "new Set<") and not textLib.startsWithAt(code, 0, "new Set(") {
+            "new Set(" + code + ")"
+        } else {
+            code
+        }
     }
     else if target == ir.TARGET_C and (types.isTupleKind(kind) or types.isRecordKind(kind)) and types.cTypeHasListField(kind) {
         tag := types.cStructTag(kind);
@@ -541,11 +563,17 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         (kind = kind, code = code + " }", intValue = 0, textValue = "", constant = false, next = next)
     }
     else if types.isMapKind(kind) {
+        if target == ir.TARGET_C and types.cMapTag(kind) =!= "" {
+            return (kind = kind, code = "/*@T:" + kind + "@*/" + types.cMapTag(kind) + "_from(0, NULL)", intValue = 0, textValue = "", constant = false, next = next);
+        }
         kTs := types.tsFunctionType(types.mapKeyKind(kind));
         vTs := types.tsFunctionType(types.mapValueKind(kind));
         (kind = kind, code = "new Map<" + kTs + ", " + vTs + ">()", intValue = 0, textValue = "", constant = false, next = next)
     }
     else if types.isSetKind(kind) {
+        if target == ir.TARGET_C and types.cSetTag(kind) =!= "" {
+            return (kind = kind, code = "/*@T:" + kind + "@*/" + types.cSetTag(kind) + "_from(0, NULL)", intValue = 0, textValue = "", constant = false, next = next);
+        }
         eTs := types.tsFunctionType(types.setElementKind(kind));
         (kind = kind, code = "new Set<" + eTs + ">()", intValue = 0, textValue = "", constant = false, next = next)
     }

@@ -1,0 +1,69 @@
+/* End-to-end C11 execution tests for Phase C5b: Map<K, V> and Set<T> literals, indexing, core/map & core/set intrinsics, value-copy, loops, and output formatting. */
+
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"map := import \"core/map\";\n" +
+"set := import \"core/set\";\n" +
+"\n" +
+"scores: mut Map<String, Int> = [\"alice\" = 10];\n" +
+"map.set(mut scores, \"bob\", 25);\n" +
+"scores[\"alice\"] += 8;\n" +
+"scores[\"carol\"] = 40;\n" +
+"snapM: Map<String, Int> = scores;\n" +
+"removed := map.remove(mut scores, \"bob\");\n" +
+"io.outputLine(\"scores:\", scores, \"removed:\", removed, \"size:\", scores.size, scores.isEmpty);\n" +
+"io.outputLine(\"alice:\", scores[\"alice\"], \"has bob:\", map.has(scores, \"bob\"), \"getOr:\", map.getOr(scores, \"bob\", -1));\n" +
+"g1 := map.get(scores, \"alice\");\n" +
+"g2 := map.get(scores, \"bob\");\n" +
+"io.outputLine(\"g1:\", g1.found, g1.value, \"g2:\", g2.found, g2.value);\n" +
+"io.outputLine(\"keys:\", map.keys(snapM), \"vals:\", map.values(snapM));\n" +
+"loop snapM as entry { io.outputLine(\"m:\", entry.key, entry.value); }\n" +
+"map.clear(mut scores);\n" +
+"io.outputLine(\"cleared:\", scores.size, scores.isEmpty);\n" +
+"\n" +
+"tags: mut Set<String> = [\"lite\", \"typed\", \"lite\"];\n" +
+"set.add(mut tags, \"c11\");\n" +
+"snapS: Set<String> = tags;\n" +
+"sRem := set.remove(mut tags, \"lite\");\n" +
+"io.outputLine(\"tags:\", tags, \"sRem:\", sRem, \"has lite:\", set.has(tags, \"lite\"), \"size:\", tags.size, tags.isEmpty);\n" +
+"io.outputLine(\"snapS vals:\", set.values(snapS), \"snapS size:\", set.size(snapS));\n" +
+"loop snapS as tag { io.outputLine(\"s:\", tag); }\n" +
+"set.clear(mut tags);\n" +
+"io.outputLine(\"s cleared:\", tags.size, tags.isEmpty);\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+    test.checkText("c stderr", "", cRes.stderr);
+
+    panicSrc := "io := import \"core/io\"; m: Map<String, Int> = [\"a\" = 1]; io.outputLine(m[\"missing\"]);\n";
+    cPanic := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, panicSrc, "", "");
+    test.checkInt("c map missing key panic status", 1, cPanic.status);
+    test.check("c map missing key panic msg: " + cPanic.stderr, text.containsText(cPanic.stderr, "BoundPanic: map key not found"));
+} else {
+    cOnly := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt("c compile status: " + cOnly.stderr, 0, cOnly.status);
+}
+
+test.done("c-backend-maps-sets");
