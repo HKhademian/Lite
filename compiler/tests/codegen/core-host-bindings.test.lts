@@ -474,11 +474,6 @@ _rmMod := fs.remove(modTmp.path);
 compilerTest.assertCompileErrorContainsNamed(root, cComp, "c trace pre-init", "f := fn(): Int { late }; early := f(); late := 1;", fixtureName, "cannot call before late is initialized");
 
 cRejCases: List<(src: String, sub: String)> = [
-    (src = "proc := import \"core/process\"; x := proc.runBytes(\"true\", [], \"\", [], 0, [], \"\", \"\");", sub = "process spawn builtins"),
-    (src = "c := import \"core/crypto\"; x := c.randomBytes(4);", sub = "crypto builtins"),
-    (src = "t := import \"core/time\"; x := t.monotonicNs();", sub = "time builtins"),
-    (src = "t := import \"core/time\"; t.sleepMs(1);", sub = "time builtins"),
-    (src = "t := import \"core/time\"; x := t.localDate();", sub = "time builtins"),
     (src = "extTs := import \"external/ts\"; x := extTs.stripTypes(\"const a: number = 1;\");", sub = "external host builtins"),
     (src = "extHttp := import \"external/http\"; x := extHttp.serveStatic(\".\", \"\", \"127.0.0.1\", 0);", sub = "external host builtins"),
     (src = "extBench := import \"external/bench\"; x := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\");", sub = "external host builtins"),

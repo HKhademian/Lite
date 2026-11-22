@@ -21,6 +21,7 @@ src :=
 "proc := import \"core/process\";\n" +
 "unicode := import \"core/unicode\";\n" +
 "crypto := import \"core/crypto\";\n" +
+"time := import \"core/time\";\n" +
 "listLib := import \"core/list\";\n" +
 "\n" +
 "/* 1. core/unicode round-trip */\n" +
@@ -79,7 +80,20 @@ src :=
 "a[0] = 99;\n" +
 "listLib.pushBack(mut a, 4);\n" +
 "io.outputLine(a);\n" +
-"io.outputLine(b);\n";
+"io.outputLine(b);\n" +
+"\n" +
+"/* 6. core/time, core/crypto.randomBytes, core/process.run */\n" +
+"t0 := time.monotonicNs();\n" +
+"time.sleepMs(2);\n" +
+"t1 := time.monotonicNs();\n" +
+"io.outputLine(t1 > t0 and time.epochNs() > 0);\n" +
+"io.outputLine(time.localDate().length == 10);\n" +
+"rnd := crypto.randomBytes(16);\n" +
+"io.outputLine(listLib.length(rnd));\n" +
+"pr := proc.run(\"sh\", [\"-c\", \"printf 'hello-%s' \\\"$LITE_TEST_ENV\\\"\"], \"\", [\"LITE_TEST_ENV=world\"], true, \"\");\n" +
+"io.outputLine(pr.status);\n" +
+"io.outputLine(pr.stdout);\n" +
+"io.outputLine(pr.error);\n";
 
 expected :=
 "[72, 105, 33]\n" +
@@ -106,7 +120,13 @@ expected :=
 "false\n" +
 "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\n" +
 "[99, 2, 3, 4]\n" +
-"[1, 2, 3]\n";
+"[1, 2, 3]\n" +
+"true\n" +
+"true\n" +
+"16\n" +
+"0\n" +
+"hello-world\n" +
+"\n";
 
 tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
 test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);

@@ -626,6 +626,34 @@ normalizeCBuiltinCalls := fn(code: String): String {
             out = out + textLib.slice(code, flushed, cursor) + "lt_process_env_get(";
             cursor = cursor + textLib.length("lite$processEnvGet(");
             flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processRun(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_process_run(";
+            cursor = cursor + textLib.length("lite$processRun(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processRunBytes(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_process_run_bytes(";
+            cursor = cursor + textLib.length("lite$processRunBytes(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$cryptoRandomBytes(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_crypto_random_bytes(";
+            cursor = cursor + textLib.length("lite$cryptoRandomBytes(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeMonotonicNs(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_time_monotonic_ns(";
+            cursor = cursor + textLib.length("lite$timeMonotonicNs(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeEpochNs(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_time_epoch_ns(";
+            cursor = cursor + textLib.length("lite$timeEpochNs(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeSleepMs(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_time_sleep_ms(";
+            cursor = cursor + textLib.length("lite$timeSleepMs(");
+            flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeLocalDate(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_time_local_date(";
+            cursor = cursor + textLib.length("lite$timeLocalDate(");
+            flushed = cursor;
         } else {
             cursor = cursor + 1;
         }
@@ -671,19 +699,6 @@ usesIntHelper := fn(calls: String, name: String): Bool {
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
 unsupportedBuiltinCode := fn(calls: String): String {
     match {
-        usesIntHelper(calls, "lite$processRun(") or usesIntHelper(calls, "lite$processRunBytes(") {
-            "C backend does not support process spawn builtins yet"
-        }
-        usesIntHelper(calls, "lite$cryptoRandomBytes(") or usesIntHelper(calls, "lite$cryptoDigestBytes(") or
-        usesIntHelper(calls, "lite$cryptoDigestText(") or usesIntHelper(calls, "lite$cryptoDigestFile(") or
-        usesIntHelper(calls, "lite$cryptoHmacSha256Bytes(") or usesIntHelper(calls, "lite$cryptoEncodeBytes(") or
-        usesIntHelper(calls, "lite$cryptoDecodeBytes(") {
-            "C backend does not support crypto builtins yet"
-        }
-        usesIntHelper(calls, "lite$timeMonotonicNs(") or usesIntHelper(calls, "lite$timeEpochNs(") or
-        usesIntHelper(calls, "lite$timeSleepMs(") or usesIntHelper(calls, "lite$timeLocalDate(") {
-            "C backend does not support time builtins yet"
-        }
         usesIntHelper(calls, "lite$extTsStripTypes(") or usesIntHelper(calls, "lite$extHttpFetchToFile(") or
         usesIntHelper(calls, "lite$extHttpServeStatic(") or usesIntHelper(calls, "lite$extBenchMeasureCompiler(") or
         usesIntHelper(calls, "lite$extPoolCpuCount(") or usesIntHelper(calls, "lite$extPoolRunJson(") {
@@ -691,6 +706,17 @@ unsupportedBuiltinCode := fn(calls: String): String {
         }
         _ { "" }
     }
+};
+
+/** True when any emitted item calls a `core/time` builtin. */
+usesTimeBuiltins := fn(calls: String): Bool {
+    usesIntHelper(calls, "lite$timeMonotonicNs(") or usesIntHelper(calls, "lite$timeEpochNs(") or
+    usesIntHelper(calls, "lite$timeSleepMs(") or usesIntHelper(calls, "lite$timeLocalDate(")
+};
+
+/** True when any emitted item calls a `core/process` child-spawn builtin. */
+usesProcessSpawnBuiltins := fn(calls: String): Bool {
+    usesIntHelper(calls, "lite$processRun(") or usesIntHelper(calls, "lite$processRunBytes(")
 };
 
 /** True when any emitted item calls a core/unicode hard builtin. */
@@ -753,7 +779,8 @@ usesCSoftBuiltins := fn(calls: String): Bool {
 
 /** True when any emitted item needs POSIX OS headers (`unistd.h`, `fcntl.h`, `sys/stat.h`, `dirent.h`). */
 usesPosixHost := fn(calls: String): Bool {
-    usesStreamBuiltins(calls) or usesFileBuiltins(calls) or usesProcessQueryBuiltins(calls) or usesCFileSoft(calls)
+    usesStreamBuiltins(calls) or usesFileBuiltins(calls) or usesProcessQueryBuiltins(calls) or usesCFileSoft(calls) or
+    usesProcessSpawnBuiltins(calls) or usesTimeBuiltins(calls) or usesIntHelper(calls, "lite$cryptoRandomBytes(")
 };
 
 /** True when any emitted item needs one of the checked Int division helpers. */
@@ -2791,7 +2818,242 @@ emitCProcessBuiltinHelpers := fn(calls: String): Unit {
     }
 };
 
-/** Emits all C11 host builtin helpers (`core/unicode`, `core/io` streams, `core/file`, `core/process`). */
+/** Emits C11 `core/time`, `core/crypto.randomBytes`, and `core/process.run`/`runBytes` helpers. */
+emitCProcessSpawnAndTimeHelpers := fn(calls: String): Unit {
+    if usesIntHelper(calls, "lite$timeMonotonicNs(") {
+        outLine("static int64_t lt_time_monotonic_ns(void) {");
+        outLine("    struct timespec ts;");
+        outLine("    clock_gettime(CLOCK_MONOTONIC, &ts);");
+        outLine("    return (int64_t)ts.tv_sec * INT64_C(1000000000) + (int64_t)ts.tv_nsec;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$timeEpochNs(") {
+        outLine("static int64_t lt_time_epoch_ns(void) {");
+        outLine("    struct timespec ts;");
+        outLine("    clock_gettime(CLOCK_REALTIME, &ts);");
+        outLine("    return (int64_t)ts.tv_sec * INT64_C(1000000000) + (int64_t)ts.tv_nsec;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$timeSleepMs(") {
+        outLine("static void lt_time_sleep_ms(int64_t ms) {");
+        outLine("    if (ms <= 0) { return; }");
+        outLine("    if (ms > INT64_C(2147483647)) { ms = INT64_C(2147483647); }");
+        outLine("    struct timespec req = { (time_t)(ms / 1000), (long)((ms % 1000) * 1000000) };");
+        outLine("    nanosleep(&req, NULL);");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$timeLocalDate(") {
+        outLine("static const char *lt_time_local_date(void) {");
+        outLine("    time_t t = time(NULL);");
+        outLine("    struct tm tm_buf;");
+        outLine("    localtime_r(&t, &tm_buf);");
+        outLine("    char *buf = malloc(16);");
+        outLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate date\\n\"); exit(1); }");
+        outLine("    snprintf(buf, 16, \"%04d-%02d-%02d\", tm_buf.tm_year + 1900, tm_buf.tm_mon + 1, tm_buf.tm_mday);");
+        outLine("    return buf;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$cryptoRandomBytes(") {
+        outLine("static lt_list_i64 lt_crypto_random_bytes(int64_t count) {");
+        outLine("    if (count < 0 || count > INT64_C(2147483647)) { fprintf(stderr, \"randomBytes count out of range: %\" PRId64 \"\\n\", count); exit(2); }");
+        outLine("    if (count == 0) { return (lt_list_i64){ NULL, 0, 0, NULL }; }");
+        outLine("    int fd = open(\"/dev/urandom\", O_RDONLY);");
+        outLine("    if (fd < 0) { fprintf(stderr, \"cannot open /dev/urandom: %s\\n\", strerror(errno)); exit(2); }");
+        outLine("    uint8_t *raw = malloc((size_t)count);");
+        outLine("    if (raw == NULL) { close(fd); fprintf(stderr, \"MemoryFault: cannot allocate random bytes\\n\"); exit(1); }");
+        outLine("    size_t off = 0u;");
+        outLine("    while (off < (size_t)count) {");
+        outLine("        ssize_t n = read(fd, raw + off, (size_t)count - off);");
+        outLine("        if (n <= 0) { free(raw); close(fd); fprintf(stderr, \"cannot read /dev/urandom\\n\"); exit(2); }");
+        outLine("        off += (size_t)n;");
+        outLine("    }");
+        outLine("    close(fd);");
+        outLine("    int64_t *data = malloc((size_t)count * sizeof(int64_t));");
+        outLine("    int64_t *rc = malloc(sizeof(int64_t));");
+        outLine("    if (data == NULL || rc == NULL) { free(raw); fprintf(stderr, \"MemoryFault: cannot allocate random list\\n\"); exit(1); }");
+        outLine("    *rc = 1;");
+        outLine("    for (int64_t i = 0; i < count; i += 1) { data[i] = (int64_t)raw[i]; }");
+        outLine("    free(raw);");
+        outLine("    return (lt_list_i64){ data, count, count, rc };");
+        outLine("}");
+    }
+    if usesProcessSpawnBuiltins(calls) {
+        outLine("typedef struct { int64_t status; uint8_t *out; size_t out_len; uint8_t *err; size_t err_len; const char *error; } lt_spawn_res;");
+        outLine("static void lt_buf_append(uint8_t **buf, size_t *len, size_t *cap, const uint8_t *src, size_t n) {");
+        outLine("    if (n == 0u) { return; }");
+        outLine("    if (*len + n + 1u > *cap) {");
+        outLine("        size_t ncap = *cap == 0u ? 4096u : *cap * 2u;");
+        outLine("        while (ncap < *len + n + 1u) { ncap *= 2u; }");
+        outLine("        uint8_t *nb = realloc(*buf, ncap);");
+        outLine("        if (nb == NULL) { fprintf(stderr, \"MemoryFault: cannot grow capture buffer\\n\"); exit(1); }");
+        outLine("        *buf = nb; *cap = ncap;");
+        outLine("    }");
+        outLine("    memcpy(*buf + *len, src, n); *len += n;");
+        outLine("}");
+        outLine("static int64_t lt_mono_ms(void) {");
+        outLine("    struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);");
+        outLine("    return (int64_t)ts.tv_sec * 1000 + (int64_t)(ts.tv_nsec / 1000000);");
+        outLine("}");
+        outLine("static lt_spawn_res lt_spawn_core(const char *command, lt_list_str args, const char *cwd, lt_list_str env_ov, bool capture, int64_t timeout_ms, const uint8_t *in_data, size_t in_len) {");
+        outLine("    for (int64_t i = 0; i < env_ov.len; i += 1) {");
+        outLine("        if (strchr(env_ov.data[i], '=') == NULL) {");
+        outLine("            size_t elen = strlen(env_ov.data[i]) + 40u;");
+        outLine("            char *msg = malloc(elen);");
+        outLine("            if (msg != NULL) { snprintf(msg, elen, \"invalid environment override: %s\", env_ov.data[i]); }");
+        outLine("            return (lt_spawn_res){ -1, NULL, 0u, NULL, 0u, msg != NULL ? msg : \"invalid environment override\" };");
+        outLine("        }");
+        outLine("    }");
+        outLine("    int in_p[2] = { -1, -1 }; int out_p[2] = { -1, -1 }; int err_p[2] = { -1, -1 }; int exec_p[2] = { -1, -1 };");
+        outLine("    if (pipe(exec_p) != 0) { return (lt_spawn_res){ -1, NULL, 0u, NULL, 0u, lt_dup_str(strerror(errno)) }; }");
+        outLine("    fcntl(exec_p[1], F_SETFD, FD_CLOEXEC);");
+        outLine("    if (capture) {");
+        outLine("        if (pipe(in_p) != 0 || pipe(out_p) != 0 || pipe(err_p) != 0) {");
+        outLine("            const char *msg = lt_dup_str(strerror(errno));");
+        outLine("            if (in_p[0] >= 0) { close(in_p[0]); close(in_p[1]); }");
+        outLine("            if (out_p[0] >= 0) { close(out_p[0]); close(out_p[1]); }");
+        outLine("            if (err_p[0] >= 0) { close(err_p[0]); close(err_p[1]); }");
+        outLine("            close(exec_p[0]); close(exec_p[1]);");
+        outLine("            return (lt_spawn_res){ -1, NULL, 0u, NULL, 0u, msg };");
+        outLine("        }");
+        outLine("    }");
+        outLine("    char **argv = malloc((size_t)(args.len + 2) * sizeof(char *));");
+        outLine("    if (argv == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate argv\\n\"); exit(1); }");
+        outLine("    argv[0] = (char *)command;");
+        outLine("    for (int64_t i = 0; i < args.len; i += 1) { argv[i + 1] = (char *)args.data[i]; }");
+        outLine("    argv[args.len + 1] = NULL;");
+        outLine("    fflush(stdout); fflush(stderr);");
+        outLine("    pid_t pid = fork();");
+        outLine("    if (pid < 0) {");
+        outLine("        const char *msg = lt_dup_str(strerror(errno));");
+        outLine("        free(argv);");
+        outLine("        if (capture) { close(in_p[0]); close(in_p[1]); close(out_p[0]); close(out_p[1]); close(err_p[0]); close(err_p[1]); }");
+        outLine("        close(exec_p[0]); close(exec_p[1]);");
+        outLine("        return (lt_spawn_res){ -1, NULL, 0u, NULL, 0u, msg };");
+        outLine("    }");
+        outLine("    if (pid == 0) {");
+        outLine("        close(exec_p[0]);");
+        outLine("        if (capture) {");
+        outLine("            dup2(in_p[0], 0); dup2(out_p[1], 1); dup2(err_p[1], 2);");
+        outLine("            close(in_p[0]); close(in_p[1]); close(out_p[0]); close(out_p[1]); close(err_p[0]); close(err_p[1]);");
+        outLine("        }");
+        outLine("        if (cwd[0] != '\\0' && chdir(cwd) != 0) { int e = errno; ssize_t _w = write(exec_p[1], &e, sizeof(e)); (void)_w; _exit(127); }");
+        outLine("        for (int64_t i = 0; i < env_ov.len; i += 1) {");
+        outLine("            const char *eq = strchr(env_ov.data[i], '=');");
+        outLine("            if (eq == env_ov.data[i]) { unsetenv(eq + 1); }");
+        outLine("            else if (eq != NULL) {");
+        outLine("                size_t klen = (size_t)(eq - env_ov.data[i]);");
+        outLine("                char *key = malloc(klen + 1u);");
+        outLine("                if (key != NULL) { memcpy(key, env_ov.data[i], klen); key[klen] = '\\0'; setenv(key, eq + 1, 1); free(key); }");
+        outLine("            }");
+        outLine("        }");
+        outLine("        execvp(command, argv);");
+        outLine("        int e = errno; ssize_t _w = write(exec_p[1], &e, sizeof(e)); (void)_w; _exit(127);");
+        outLine("    }");
+        outLine("    free(argv);");
+        outLine("    close(exec_p[1]);");
+        outLine("    int exec_err = 0;");
+        outLine("    ssize_t en = read(exec_p[0], &exec_err, sizeof(exec_err));");
+        outLine("    close(exec_p[0]);");
+        outLine("    uint8_t *out_buf = NULL; size_t out_len = 0u; size_t out_cap = 0u;");
+        outLine("    uint8_t *err_buf = NULL; size_t err_len = 0u; size_t err_cap = 0u;");
+        outLine("    bool timed_out = false;");
+        outLine("    if (capture) {");
+        outLine("        close(in_p[0]); close(out_p[1]); close(err_p[1]);");
+        outLine("        fcntl(in_p[1], F_SETFL, O_NONBLOCK); fcntl(out_p[0], F_SETFL, O_NONBLOCK); fcntl(err_p[0], F_SETFL, O_NONBLOCK);");
+        outLine("        size_t in_off = 0u;");
+        outLine("        if (in_len == 0u) { close(in_p[1]); in_p[1] = -1; }");
+        outLine("        int64_t deadline = timeout_ms > 0 ? lt_mono_ms() + timeout_ms : 0;");
+        outLine("        uint8_t tmp[16384];");
+        outLine("        while (in_p[1] >= 0 || out_p[0] >= 0 || err_p[0] >= 0) {");
+        outLine("            struct pollfd fds[3]; int nfds = 0;");
+        outLine("            int idx_in = -1, idx_out = -1, idx_err = -1;");
+        outLine("            if (in_p[1] >= 0) { idx_in = nfds; fds[nfds].fd = in_p[1]; fds[nfds].events = POLLOUT; fds[nfds].revents = 0; nfds += 1; }");
+        outLine("            if (out_p[0] >= 0) { idx_out = nfds; fds[nfds].fd = out_p[0]; fds[nfds].events = POLLIN; fds[nfds].revents = 0; nfds += 1; }");
+        outLine("            if (err_p[0] >= 0) { idx_err = nfds; fds[nfds].fd = err_p[0]; fds[nfds].events = POLLIN; fds[nfds].revents = 0; nfds += 1; }");
+        outLine("            int pto = -1;");
+        outLine("            if (deadline > 0) {");
+        outLine("                int64_t rem = deadline - lt_mono_ms();");
+        outLine("                if (rem <= 0) { timed_out = true; kill(pid, SIGKILL); break; }");
+        outLine("                pto = rem > 60000 ? 60000 : (int)rem;");
+        outLine("            }");
+        outLine("            int pr = poll(fds, (nfds_t)nfds, pto);");
+        outLine("            if (pr < 0) { if (errno == EINTR) { continue; } break; }");
+        outLine("            if (pr == 0 && deadline > 0 && lt_mono_ms() >= deadline) { timed_out = true; kill(pid, SIGKILL); break; }");
+        outLine("            if (idx_in >= 0 && (fds[idx_in].revents & (POLLOUT | POLLERR | POLLHUP))) {");
+        outLine("                ssize_t w = write(in_p[1], in_data + in_off, in_len - in_off);");
+        outLine("                if (w > 0) { in_off += (size_t)w; if (in_off >= in_len) { close(in_p[1]); in_p[1] = -1; } }");
+        outLine("                else if (w < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) { close(in_p[1]); in_p[1] = -1; }");
+        outLine("            }");
+        outLine("            if (idx_out >= 0 && (fds[idx_out].revents & (POLLIN | POLLHUP | POLLERR))) {");
+        outLine("                ssize_t r = read(out_p[0], tmp, sizeof(tmp));");
+        outLine("                if (r > 0) { lt_buf_append(&out_buf, &out_len, &out_cap, tmp, (size_t)r); }");
+        outLine("                else if (r == 0 || (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)) { close(out_p[0]); out_p[0] = -1; }");
+        outLine("            }");
+        outLine("            if (idx_err >= 0 && (fds[idx_err].revents & (POLLIN | POLLHUP | POLLERR))) {");
+        outLine("                ssize_t r = read(err_p[0], tmp, sizeof(tmp));");
+        outLine("                if (r > 0) { lt_buf_append(&err_buf, &err_len, &err_cap, tmp, (size_t)r); }");
+        outLine("                else if (r == 0 || (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)) { close(err_p[0]); err_p[0] = -1; }");
+        outLine("            }");
+        outLine("        }");
+        outLine("        if (in_p[1] >= 0) { close(in_p[1]); }");
+        outLine("        if (out_p[0] >= 0) { close(out_p[0]); }");
+        outLine("        if (err_p[0] >= 0) { close(err_p[0]); }");
+        outLine("    }");
+        outLine("    int wstatus = 0;");
+        outLine("    while (waitpid(pid, &wstatus, 0) < 0 && errno == EINTR) {}");
+        outLine("    if (en == (ssize_t)sizeof(exec_err) && exec_err != 0) {");
+        outLine("        return (lt_spawn_res){ -1, out_buf, out_len, err_buf, err_len, lt_dup_str(strerror(exec_err)) };");
+        outLine("    }");
+        outLine("    if (timed_out) { return (lt_spawn_res){ -1, out_buf, out_len, err_buf, err_len, \"ETIMEDOUT\" }; }");
+        outLine("    if (WIFSIGNALED(wstatus)) {");
+        outLine("        char *smsg = malloc(64);");
+        outLine("        if (smsg != NULL) { snprintf(smsg, 64, \"terminated by signal %d\", WTERMSIG(wstatus)); }");
+        outLine("        return (lt_spawn_res){ -1, out_buf, out_len, err_buf, err_len, smsg != NULL ? smsg : \"terminated by signal\" };");
+        outLine("    }");
+        outLine("    int64_t code = WIFEXITED(wstatus) ? (int64_t)WEXITSTATUS(wstatus) : 1;");
+        outLine("    return (lt_spawn_res){ code, out_buf, out_len, err_buf, err_len, \"\" };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$processRun(") {
+        runTag := frontend.cStructTag("(status:Int,stdout:String,stderr:String,error:String)");
+        outLine("static " + runTag + " lt_process_run(const char *command, lt_list_str args, const char *cwd, lt_list_str env_ov, bool capture, const char *stdin_text) {");
+        outLine("    lt_spawn_res r = lt_spawn_core(command, args, cwd, env_ov, capture, 0, (const uint8_t *)stdin_text, strlen(stdin_text));");
+        outLine("    char *so = \"\"; char *se = \"\";");
+        outLine("    if (r.out != NULL) { so = realloc(r.out, r.out_len + 1u); if (so == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } so[r.out_len] = '\\0'; }");
+        outLine("    if (r.err != NULL) { se = realloc(r.err, r.err_len + 1u); if (se == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } se[r.err_len] = '\\0'; }");
+        outLine("    return (" + runTag + "){ r.status, so, se, r.error };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$processRunBytes(") {
+        rbTag := frontend.cStructTag("(status:Int,error:String)");
+        outLine("static " + rbTag + " lt_process_run_bytes(const char *command, lt_list_str args, const char *cwd, lt_list_str env_ov, int64_t timeout_ms, lt_list_i64 stdin_bytes, const char *stdout_path, const char *stderr_path) {");
+        outLine("    uint8_t *in_buf = stdin_bytes.len > 0 ? malloc((size_t)stdin_bytes.len) : NULL;");
+        outLine("    if (stdin_bytes.len > 0 && in_buf == NULL) { return (" + rbTag + "){ -1, \"out of memory\" }; }");
+        outLine("    for (int64_t i = 0; i < stdin_bytes.len; i += 1) {");
+        outLine("        if (stdin_bytes.data[i] < 0 || stdin_bytes.data[i] > 255) { free(in_buf); return (" + rbTag + "){ -1, \"byte value outside 0..255\" }; }");
+        outLine("        in_buf[i] = (uint8_t)stdin_bytes.data[i];");
+        outLine("    }");
+        outLine("    lt_spawn_res r = lt_spawn_core(command, args, cwd, env_ov, true, timeout_ms, in_buf, (size_t)stdin_bytes.len);");
+        outLine("    free(in_buf);");
+        outLine("    const char *werr = \"\";");
+        outLine("    if (stdout_path[0] != '\\0') {");
+        outLine("        int fd = open(stdout_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);");
+        outLine("        if (fd < 0) { werr = lt_dup_str(strerror(errno)); }");
+        outLine("        else { size_t off = 0u; while (off < r.out_len) { ssize_t w = write(fd, r.out + off, r.out_len - off); if (w < 0) { werr = lt_dup_str(strerror(errno)); break; } off += (size_t)w; } close(fd); }");
+        outLine("    }");
+        outLine("    if (werr[0] == '\\0' && stderr_path[0] != '\\0') {");
+        outLine("        int fd = open(stderr_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);");
+        outLine("        if (fd < 0) { werr = lt_dup_str(strerror(errno)); }");
+        outLine("        else { size_t off = 0u; while (off < r.err_len) { ssize_t w = write(fd, r.err + off, r.err_len - off); if (w < 0) { werr = lt_dup_str(strerror(errno)); break; } off += (size_t)w; } close(fd); }");
+        outLine("    }");
+        outLine("    free(r.out); free(r.err);");
+        outLine("    if (werr[0] != '\\0') { return (" + rbTag + "){ -1, werr }; }");
+        outLine("    return (" + rbTag + "){ r.status, r.error };");
+        outLine("}");
+    }
+};
+
+/** Emits all C11 host builtin helpers (`core/unicode`, `core/io` streams, `core/file`, `core/process`, `core/time`, `core/crypto`). */
 emitCHostBuiltinHelpers := fn(calls: String): Unit {
     needDupStr := usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or
         usesIntHelper(calls, "lite$fileOpenAppender(") or usesIntHelper(calls, "lite$ioRead(") or
@@ -2800,7 +3062,7 @@ emitCHostBuiltinHelpers := fn(calls: String): Unit {
         usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
         usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
         usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lite$fileRealPath(") or
-        usesIntHelper(calls, "lite$fileMakeTempDir(") or usesCFileSoft(calls);
+        usesIntHelper(calls, "lite$fileMakeTempDir(") or usesCFileSoft(calls) or usesProcessSpawnBuiltins(calls);
     if needDupStr {
         outLine("static char *lt_dup_str(const char *s) {");
         outLine("    size_t n = strlen(s);");
@@ -2814,6 +3076,7 @@ emitCHostBuiltinHelpers := fn(calls: String): Unit {
     emitCStreamBuiltinHelpers(calls);
     emitCFileBuiltinHelpers(calls);
     emitCProcessBuiltinHelpers(calls);
+    emitCProcessSpawnAndTimeHelpers(calls);
 };
 
 /** Extracts the C runtime parameter name (`lite_<name>`) at `targetIndex` from an encoded parameter list. */
@@ -3237,12 +3500,15 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     seedKinds: mut List<String> = [];
     hasInputArgs := usesIntHelper(calls, "lite$inputArgs(");
     hasMainArgs := hasInputArgs or usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processExecPath(");
-    if hasInputArgs or usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lt_c_text_join(") { listLib.pushBack(mut seedKinds, "List<String>"); }
+    if hasInputArgs or usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lt_c_text_join(") or usesProcessSpawnBuiltins(calls) { listLib.pushBack(mut seedKinds, "List<String>"); }
     if usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") or
     usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioWriterBytes(") or
-    usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioWrite(") {
+    usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioWrite(") or
+    usesIntHelper(calls, "lite$cryptoRandomBytes(") or usesIntHelper(calls, "lite$processRunBytes(") {
         listLib.pushBack(mut seedKinds, "List<Int>");
     }
+    if usesIntHelper(calls, "lite$processRun(") { listLib.pushBack(mut seedKinds, "(status:Int,stdout:String,stderr:String,error:String)"); }
+    if usesIntHelper(calls, "lite$processRunBytes(") { listLib.pushBack(mut seedKinds, "(status:Int,error:String)"); }
     if usesStreamBuiltins(calls) { listLib.pushBack(mut seedKinds, "(kind:String,handle:Int)"); }
     if usesIntHelper(calls, "lite$unicodeFromCodePoints(") or usesIntHelper(calls, "lite$ioWriterText(") or
     usesIntHelper(calls, "lt_c_file_read_text(") {
@@ -3428,6 +3694,12 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         outLine("#include <unistd.h>");
         outLine("#include <sys/stat.h>");
         outLine("#include <dirent.h>");
+    }
+    if usesTimeBuiltins(calls) or usesProcessSpawnBuiltins(calls) { outLine("#include <time.h>"); }
+    if usesProcessSpawnBuiltins(calls) {
+        outLine("#include <signal.h>");
+        outLine("#include <poll.h>");
+        outLine("#include <sys/wait.h>");
     }
     if usesFloatArithmetic(calls) or hasInputFloat { outLine("#include <math.h>"); }
     if floatValues {
