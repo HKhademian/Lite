@@ -23,9 +23,9 @@ parsePosInt := fn(raw: String): Int {
     loop i < n {
         ch := text.at(raw, i);
         d := if ch == "0" { 0 } else if ch == "1" { 1 } else if ch == "2" { 2 }
-             else if ch == "3" { 3 } else if ch == "4" { 4 } else if ch == "5" { 5 }
-             else if ch == "6" { 6 } else if ch == "7" { 7 } else if ch == "8" { 8 }
-             else if ch == "9" { 9 } else { -1 };
+        else if ch == "3" { 3 } else if ch == "4" { 4 } else if ch == "5" { 5 }
+        else if ch == "6" { 6 } else if ch == "7" { 7 } else if ch == "8" { 8 }
+        else if ch == "9" { 9 } else { -1 };
         if d < 0 { return 0; }
         acc = (acc * 10) + d;
         i += 1;
@@ -114,7 +114,7 @@ hasTopLevelFn := fn(source: String, fnName: String): Bool {
     false
 };
 
-buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, scale: Int, fps: Int, uncap: Bool, capturePath: String): String {
+buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, scale: Int, fps: Int, uncap: Bool, debugHud: Bool, showBar: Bool, capturePath: String): String {
     hasInit := hasTopLevelFn(source, "onCanvasInit");
     hasUpdate := hasTopLevelFn(source, "onCanvasUpdate");
     hasKeyDown := hasTopLevelFn(source, "onCanvasKeyDown");
@@ -124,93 +124,149 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     hasPtrUp := hasTopLevelFn(source, "onCanvasPointerUp");
 
     header :=
-        "__lpSurf := import \"extra/surface\";\n" +
-        "__lpColor := import \"extra/color\";\n" +
-        "__lpList := import \"core/list\";\n";
+    "__lpSurf := import \"extra/surface\";\n" +
+    "__lpColor := import \"extra/color\";\n" +
+    "__lpList := import \"core/list\";\n" +
+    "__lpIo := import \"core/io\";\n" +
+    "__lpInt := import \"core/int\";\n" +
+    "__lpTime := import \"core/time\";\n";
 
-    var footer := "\n/* --- Desktop Play host driver (extra/canvas -> extra/surface) --- */\n";
+    var footer := "\n/* --- Desktop Play host driver (extra/canvas + extra/audio -> extra/surface) --- */\n";
     footer = footer +
-        "__lpDecodeColor := fn(argb: Int): __lpSurf.Color {\n" +
-        "    a0 := (argb / 16777216) % 256;\n" +
-        "    r0 := (argb / 65536) % 256;\n" +
-        "    g0 := (argb / 256) % 256;\n" +
-        "    b0 := argb % 256;\n" +
-        "    a := if a0 < 0 { a0 + 256 } else { a0 };\n" +
-        "    r := if r0 < 0 { r0 + 256 } else { r0 };\n" +
-        "    g := if g0 < 0 { g0 + 256 } else { g0 };\n" +
-        "    b := if b0 < 0 { b0 + 256 } else { b0 };\n" +
-        "    __lpColor.fromRgba8(r, g, b, a)\n" +
-        "};\n" +
-        "__lpFloorInt := fn(v: Float): Int {\n" +
-        "    if v <= 0.0 { return 0; }\n" +
-        "    var hi := 1;\n" +
-        "    loop hi < 1000000 and hi <= v { hi = hi * 2; }\n" +
-        "    var lo := 0;\n" +
-        "    loop lo < hi {\n" +
-        "        mid := (lo + hi + 1) / 2;\n" +
-        "        if mid <= v { lo = mid; } else { hi = mid - 1; }\n" +
-        "    }\n" +
-        "    lo\n" +
-        "};\n" +
-        "__lpFlush := fn(win: __lpSurf.Surface, scale: Int, lastDrawCount: Int): Int {\n" +
-        "    snap := " + canvasAlias + ".litePlayCanvasSnapshot();\n" +
-        "    scaleF := scale * 1.0;\n" +
-        "    var nextDraw := lastDrawCount;\n" +
-        "    px := " + canvasAlias + ".litePlayCanvasPixels();\n" +
-        "    pxLen := __lpList.length(px);\n" +
-        "    if pxLen > 0 and pxLen == snap.width * snap.height and snap.drawCount =!= lastDrawCount {\n" +
-        "        nextDraw = snap.drawCount;\n" +
-        "        var py := 0;\n" +
-        "        loop py < snap.height {\n" +
-        "            rowOff := py * snap.width;\n" +
-        "            var pxIdx := 0;\n" +
-        "            loop pxIdx < snap.width {\n" +
-        "                colVal := px[rowOff + pxIdx];\n" +
-        "                var runEnd := pxIdx + 1;\n" +
-        "                loop runEnd < snap.width and px[rowOff + runEnd] == colVal {\n" +
-        "                    runEnd += 1;\n" +
-        "                }\n" +
-        "                __lpSurf.fillRect(win, __lpSurf.rect(pxIdx * scaleF, py * scaleF, (runEnd - pxIdx) * scaleF, scaleF), __lpDecodeColor(colVal));\n" +
-        "                pxIdx = runEnd;\n" +
-        "            }\n" +
-        "            py += 1;\n" +
-        "        }\n" +
-        "    }\n" +
-        "    ops := " + canvasAlias + ".litePlayCanvasTakeOps();\n" +
-        "    n := __lpList.length(ops);\n" +
-        "    var i := 0;\n" +
-        "    loop i < n {\n" +
-        "        op := ops[i];\n" +
-        "        if op == 1 and i + 1 < n {\n" +
-        "            __lpSurf.clear(win, __lpDecodeColor(ops[i + 1]));\n" +
-        "            i += 2;\n" +
-        "        } else if op == 2 and i + 5 < n {\n" +
-        "            __lpSurf.fillRect(win, __lpSurf.rect(ops[i + 1] * scaleF, ops[i + 2] * scaleF, ops[i + 3] * scaleF, ops[i + 4] * scaleF), __lpDecodeColor(ops[i + 5]));\n" +
-        "            i += 6;\n" +
-        "        } else {\n" +
-        "            break;\n" +
-        "        }\n" +
-        "    }\n";
+    "__lpDecodeColor := fn(argb: Int): __lpSurf.Color {\n" +
+    "    a0 := (argb / 16777216) % 256;\n" +
+    "    r0 := (argb / 65536) % 256;\n" +
+    "    g0 := (argb / 256) % 256;\n" +
+    "    b0 := argb % 256;\n" +
+    "    a := if a0 < 0 { a0 + 256 } else { a0 };\n" +
+    "    r := if r0 < 0 { r0 + 256 } else { r0 };\n" +
+    "    g := if g0 < 0 { g0 + 256 } else { g0 };\n" +
+    "    b := if b0 < 0 { b0 + 256 } else { b0 };\n" +
+    "    __lpColor.fromRgba8(r, g, b, a)\n" +
+    "};\n" +
+    "__lpFloorInt := fn(v: Float): Int {\n" +
+    "    if v <= 0.0 { return 0; }\n" +
+    "    var hi := 1;\n" +
+    "    loop hi < 1000000 and hi <= v { hi = hi * 2; }\n" +
+    "    var lo := 0;\n" +
+    "    loop lo < hi {\n" +
+    "        mid := (lo + hi + 1) / 2;\n" +
+    "        if mid <= v { lo = mid; } else { hi = mid - 1; }\n" +
+    "    }\n" +
+    "    lo\n" +
+    "};\n" +
+    "__lpFmt1 := fn(tenths: Int): String {\n" +
+    "    whole := tenths / 10;\n" +
+    "    frac := tenths % 10;\n" +
+    "    __lpInt.intText(whole) + \".\" + __lpInt.intText(if frac < 0 { 0 } else { frac })\n" +
+    "};\n" +
+    "__lpApplyFps := fn(win: __lpSurf.Surface, mode: Int): Unit {\n" +
+    "    if mode == 0 { __lpSurf.setTargetFps(win, 60.0); }\n" +
+    "    else if mode == 1 { __lpSurf.setTargetFps(win, 30.0); }\n" +
+    "    else if mode == 2 { __lpSurf.setTargetFps(win, 120.0); }\n" +
+    "    else { __lpSurf.uncapFrameRate(win); }\n" +
+    "};\n" +
+    "__lpDrawStageBar := fn(win: __lpSurf.Surface, winW: Int, canvasH: Int, barH: Int, paused: Bool, muted: Bool, fpsMode: Int, debugOn: Bool, hudFps: Int): Unit {\n" +
+    "    if barH <= 0 { return; }\n" +
+    "    by := canvasH * 1.0;\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(0.0, by, winW * 1.0, barH * 1.0), __lpSurf.rgb(0.08, 0.10, 0.14));\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(0.0, by, winW * 1.0, 1.0), __lpSurf.rgb(0.22, 0.27, 0.36));\n" +
+    "    pillBg := __lpSurf.rgb(0.15, 0.19, 0.26);\n" +
+    "    amberBg := __lpSurf.rgb(0.65, 0.42, 0.12);\n" +
+    "    coralBg := __lpSurf.rgb(0.62, 0.20, 0.24);\n" +
+    "    cyanBg := __lpSurf.rgb(0.14, 0.44, 0.56);\n" +
+    "    mintBg := __lpSurf.rgb(0.14, 0.46, 0.34);\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(6.0, by + 4.0, 62.0, 20.0), if paused { amberBg } else { pillBg });\n" +
+    "    __lpSurf.drawText(win, if paused { \"PLAY\" } else { \"PAUSE\" }, __lpSurf.point(12.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(74.0, by + 4.0, 44.0, 20.0), pillBg);\n" +
+    "    __lpSurf.drawText(win, \"RST\", __lpSurf.point(82.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(124.0, by + 4.0, 62.0, 20.0), if muted { coralBg } else { pillBg });\n" +
+    "    __lpSurf.drawText(win, if muted { \"MUTED\" } else { \"SOUND\" }, __lpSurf.point(130.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    fpsLabel := if fpsMode == 0 { \"60FPS\" } else if fpsMode == 1 { \"30FPS\" } else if fpsMode == 2 { \"120FP\" } else { \"UNCAP\" };\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(192.0, by + 4.0, 64.0, 20.0), if fpsMode == 3 { cyanBg } else { pillBg });\n" +
+    "    __lpSurf.drawText(win, fpsLabel, __lpSurf.point(198.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(262.0, by + 4.0, 44.0, 20.0), if debugOn { mintBg } else { pillBg });\n" +
+    "    __lpSurf.drawText(win, \"DBG\", __lpSurf.point(270.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    if winW >= 420 {\n" +
+    "        stat := __lpInt.intText(hudFps) + \" FPS\";\n" +
+    "        __lpSurf.drawText(win, stat, __lpSurf.point((winW - 84) * 1.0, by + 10.0), 8.0, __lpSurf.rgb(0.68, 0.76, 0.86));\n" +
+    "    }\n" +
+    "};\n" +
+    "__lpDrawDebugHud := fn(win: __lpSurf.Surface, hudFps: Int, hudMsT: Int, hudCpuT: Int, hudRssT: Int, hudFrames: Int, fpsMode: Int, paused: Bool, muted: Bool): Unit {\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(8.0, 8.0, 296.0, 42.0), __lpSurf.rgba(0.04, 0.06, 0.10, 0.82));\n" +
+    "    __lpSurf.strokeRect(win, __lpSurf.rect(8.0, 8.0, 296.0, 42.0), 1.0, __lpSurf.rgba(0.45, 0.78, 0.90, 0.65));\n" +
+    "    capTxt := if fpsMode == 0 { \"60\" } else if fpsMode == 1 { \"30\" } else if fpsMode == 2 { \"120\" } else { \"UNCAP\" };\n" +
+    "    stTxt := (if paused { \" PAUSED\" } else { \"\" }) + (if muted { \" MUTED\" } else { \"\" });\n" +
+    "    l1 := \"FPS \" + __lpInt.intText(hudFps) + \"  MS \" + __lpFmt1(hudMsT) + \"  CAP \" + capTxt + stTxt;\n" +
+    "    l2 := \"RSS \" + __lpFmt1(hudRssT) + \"MB  CPU \" + __lpFmt1(hudCpuT) + \"MS  FRM \" + __lpInt.intText(hudFrames);\n" +
+    "    __lpSurf.drawText(win, l1, __lpSurf.point(14.0, 14.0), 8.0, __lpSurf.WHITE);\n" +
+    "    __lpSurf.drawText(win, l2, __lpSurf.point(14.0, 30.0), 8.0, __lpSurf.rgb(0.55, 0.88, 0.76));\n" +
+    "};\n" +
+    "__lpFlush := fn(win: __lpSurf.Surface, scale: Int, canvasW: Int, canvasH: Int, lastDrawCount: Int, muted: Bool): Int {\n" +
+    "    snap := " + canvasAlias + ".litePlayCanvasSnapshot();\n" +
+    "    scaleF := scale * 1.0;\n" +
+    "    var nextDraw := lastDrawCount;\n" +
+    "    px := " + canvasAlias + ".litePlayCanvasPixels();\n" +
+    "    pxLen := __lpList.length(px);\n" +
+    "    if pxLen > 0 and pxLen == snap.width * snap.height and snap.drawCount =!= lastDrawCount {\n" +
+    "        nextDraw = snap.drawCount;\n" +
+    "        var py := 0;\n" +
+    "        loop py < snap.height {\n" +
+    "            rowOff := py * snap.width;\n" +
+    "            var pxIdx := 0;\n" +
+    "            loop pxIdx < snap.width {\n" +
+    "                colVal := px[rowOff + pxIdx];\n" +
+    "                var runEnd := pxIdx + 1;\n" +
+    "                loop runEnd < snap.width and px[rowOff + runEnd] == colVal {\n" +
+    "                    runEnd += 1;\n" +
+    "                }\n" +
+    "                __lpSurf.fillRect(win, __lpSurf.rect(pxIdx * scaleF, py * scaleF, (runEnd - pxIdx) * scaleF, scaleF), __lpDecodeColor(colVal));\n" +
+    "                pxIdx = runEnd;\n" +
+    "            }\n" +
+    "            py += 1;\n" +
+    "        }\n" +
+    "    }\n" +
+    "    ops := " + canvasAlias + ".litePlayCanvasTakeOps();\n" +
+    "    n := __lpList.length(ops);\n" +
+    "    var i := 0;\n" +
+    "    loop i < n {\n" +
+    "        op := ops[i];\n" +
+    "        if op == 1 and i + 1 < n {\n" +
+    "            __lpSurf.fillRect(win, __lpSurf.rect(0.0, 0.0, canvasW * 1.0, canvasH * 1.0), __lpDecodeColor(ops[i + 1]));\n" +
+    "            i += 2;\n" +
+    "        } else if op == 2 and i + 5 < n {\n" +
+    "            __lpSurf.fillRect(win, __lpSurf.rect(ops[i + 1] * scaleF, ops[i + 2] * scaleF, ops[i + 3] * scaleF, ops[i + 4] * scaleF), __lpDecodeColor(ops[i + 5]));\n" +
+    "            i += 6;\n" +
+    "        } else {\n" +
+    "            break;\n" +
+    "        }\n" +
+    "    }\n";
     if audioAlias =!= "" {
         footer = footer +
-            "    tones := " + audioAlias + ".litePlayAudioDrain();\n" +
-            "    tn := __lpList.length(tones);\n" +
-            "    var ti := 0;\n" +
-            "    loop ti + 2 < tn {\n" +
-            "        __lpSurf.playTone(win, tones[ti], tones[ti + 1], tones[ti + 2]);\n" +
-            "        ti += 3;\n" +
-            "    }\n";
+        "    tones := " + audioAlias + ".litePlayAudioDrain();\n" +
+        "    if not muted {\n" +
+        "        tn := __lpList.length(tones);\n" +
+        "        var ti := 0;\n" +
+        "        loop ti + 2 < tn {\n" +
+        "            __lpSurf.playTone(win, tones[ti], tones[ti + 1], tones[ti + 2]);\n" +
+        "            ti += 3;\n" +
+        "        }\n" +
+        "    }\n";
     }
     footer = footer +
-        "    nextDraw\n" +
-        "};\n" +
-        "__lpRunPlay := fn(): Unit {\n" +
-        "    snap := " + canvasAlias + ".litePlayCanvasSnapshot();\n" +
-        "    if snap.width <= 0 or snap.height <= 0 { return; }\n" +
-        "    reqScale := " + integer.intText(scale) + ";\n" +
-        "    scale := if reqScale > 0 { reqScale } else if snap.width <= 240 { 3 } else if snap.width <= 480 { 2 } else { 1 };\n" +
-        "    win := __lpSurf.open(snap.title, snap.width * scale, snap.height * scale);\n";
+    "    nextDraw\n" +
+    "};\n" +
+    "__lpRunPlay := fn(): Unit {\n" +
+    "    snap := " + canvasAlias + ".litePlayCanvasSnapshot();\n" +
+    "    if snap.width <= 0 or snap.height <= 0 { return; }\n" +
+    "    reqScale := " + integer.intText(scale) + ";\n" +
+    "    scale := if reqScale > 0 { reqScale } else if snap.width <= 240 { 3 } else if snap.width <= 480 { 2 } else { 1 };\n" +
+    "    canvasW := snap.width * scale;\n" +
+    "    canvasH := snap.height * scale;\n" +
+    "    barH := " + (if (capturePath == "" or debugHud) and showBar { "28" } else { "0" }) + ";\n" +
+    "    win := __lpSurf.open(snap.title, canvasW, canvasH + barH);\n";
 
+    initFpsMode := if uncap { 3 } else if fps == 30 { 1 } else if fps == 120 { 2 } else { 0 };
     if uncap {
         footer = footer + "    __lpSurf.uncapFrameRate(win);\n";
     } else if fps > 0 {
@@ -221,78 +277,137 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     if hasInit {
         footer = footer + "    onCanvasInit();\n";
     }
-    footer = footer + "    lastDraw = __lpFlush(win, scale, lastDraw);\n";
+    footer = footer + "    lastDraw = __lpFlush(win, scale, canvasW, canvasH, lastDraw, false);\n";
     if capturePath =!= "" {
         if hasUpdate {
             footer = footer +
-                "    _capSt := onCanvasUpdate(0.025);\n" +
-                "    lastDraw = __lpFlush(win, scale, lastDraw);\n";
+            "    _capSt := onCanvasUpdate(0.025);\n" +
+            "    lastDraw = __lpFlush(win, scale, canvasW, canvasH, lastDraw, false);\n";
+        }
+        if debugHud {
+            footer = footer +
+            "    vtCap := __lpSurf.vitals(win);\n" +
+            "    __lpDrawStageBar(win, canvasW, canvasH, barH, false, false, " + integer.intText(initFpsMode) + ", true, 60);\n" +
+            "    __lpDrawDebugHud(win, 60, 166, 12, __lpFloorInt(((vtCap.memoryBytes / 1048576.0) * 10.0) + 0.5), vtCap.frameCount, " + integer.intText(initFpsMode) + ", false, false);\n";
         }
         footer = footer +
-            "    __lpSurf.present(win);\n" +
-            "    _capRes := __lpSurf.capture(win, \"" + escapeLiteString(capturePath) + "\");\n" +
-            "    __lpSurf.close(win);\n" +
-            "    return;\n" +
-            "};\n" +
-            "__lpRunPlay();\n";
+        "    __lpSurf.present(win);\n" +
+        "    _capRes := __lpSurf.capture(win, \"" + escapeLiteString(capturePath) + "\");\n" +
+        "    __lpSurf.close(win);\n" +
+        "    return;\n" +
+        "};\n" +
+        "__lpRunPlay();\n";
         return header + source + footer;
     }
 
     footer = footer +
-        "    __lpSurf.present(win);\n" +
-        "    var prevKey := \"\";\n" +
-        "    var prevDown := false;\n" +
-        "    var prevCol := -1;\n" +
-        "    var prevRow := -1;\n" +
-        "    loop true {\n" +
-        "        inp := __lpSurf.poll(win);\n" +
-        "        if not inp.open or inp.key == \"Escape\" { break; }\n";
+    "    var paused := false;\n" +
+    "    var muted := false;\n" +
+    "    var debugOn := " + (if debugHud { "true" } else { "false" }) + ";\n" +
+    "    var fpsMode := " + integer.intText(initFpsMode) + ";\n" +
+    "    var hudFps := 60;\n" +
+    "    var hudMsT := 166;\n" +
+    "    var hudCpuT := 0;\n" +
+    "    var hudRssT := 0;\n" +
+    "    var hudFrames := 0;\n" +
+    "    var nextHudNs := 0;\n" +
+    "    __lpDrawStageBar(win, canvasW, canvasH, barH, paused, muted, fpsMode, debugOn, hudFps);\n" +
+    "    if debugOn { __lpDrawDebugHud(win, hudFps, hudMsT, hudCpuT, hudRssT, hudFrames, fpsMode, paused, muted); }\n" +
+    "    __lpSurf.present(win);\n" +
+    "    var prevKey := \"\";\n" +
+    "    var prevDown := false;\n" +
+    "    var prevCol := -1;\n" +
+    "    var prevRow := -1;\n" +
+    "    loop true {\n" +
+    "        inp := __lpSurf.poll(win);\n" +
+    "        if not inp.open or inp.key == \"Escape\" { break; }\n" +
+    "        var handledKey := false;\n" +
+    "        if inp.key == \"p\" or inp.key == \"P\" {\n" +
+    "            paused = not paused;\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"m\" or inp.key == \"M\" {\n" +
+    "            muted = not muted;\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"f\" or inp.key == \"F\" {\n" +
+    "            fpsMode = (fpsMode + 1) % 4;\n" +
+    "            __lpApplyFps(win, fpsMode);\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"v\" or inp.key == \"V\" {\n" +
+    "            debugOn = not debugOn;\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"r\" or inp.key == \"R\" {\n" +
+    "            __lpSurf.close(win);\n" +
+    "            __lpIo.exit(42);\n" +
+    "        }\n";
 
     if hasKeyDown {
         footer = footer +
-            "        if inp.key =!= \"\" { onCanvasKeyDown(inp.key); }\n";
+        "        if not handledKey and inp.key =!= \"\" and not paused { onCanvasKeyDown(inp.key); }\n";
     }
     if hasKeyUp {
         footer = footer +
-            "        if prevKey =!= \"\" and inp.key == \"\" { onCanvasKeyUp(prevKey); }\n";
+        "        if prevKey =!= \"\" and inp.key == \"\" and not paused { onCanvasKeyUp(prevKey); }\n";
     }
     footer = footer +
-        "        prevKey = inp.key;\n" +
-        "        col := __lpFloorInt(inp.pointerX / (scale * 1.0));\n" +
-        "        row := __lpFloorInt(inp.pointerY / (scale * 1.0));\n";
+    "        prevKey = if handledKey { \"\" } else { inp.key };\n" +
+    "        inBar := barH > 0 and inp.pointerY >= (canvasH * 1.0);\n" +
+    "        if inBar and inp.pointerDown and not prevDown {\n" +
+    "            px := inp.pointerX;\n" +
+    "            if px >= 6.0 and px <= 68.0 { paused = not paused; }\n" +
+    "            else if px >= 74.0 and px <= 118.0 { __lpSurf.close(win); __lpIo.exit(42); }\n" +
+    "            else if px >= 124.0 and px <= 186.0 { muted = not muted; }\n" +
+    "            else if px >= 192.0 and px <= 256.0 { fpsMode = (fpsMode + 1) % 4; __lpApplyFps(win, fpsMode); }\n" +
+    "            else if px >= 262.0 and px <= 306.0 { debugOn = not debugOn; }\n" +
+    "        }\n" +
+    "        col := __lpFloorInt(inp.pointerX / (scale * 1.0));\n" +
+    "        row := __lpFloorInt(inp.pointerY / (scale * 1.0));\n";
 
     if hasPtrMove {
         footer = footer +
-            "        if col =!= prevCol or row =!= prevRow { onCanvasPointerMove(col, row); }\n";
+        "        if not inBar and not paused and (col =!= prevCol or row =!= prevRow) { onCanvasPointerMove(col, row); }\n";
     }
     if hasPtrDown {
         footer = footer +
-            "        if inp.pointerDown and not prevDown { onCanvasPointerDown(col, row, 0); }\n";
+        "        if not inBar and not paused and inp.pointerDown and not prevDown { onCanvasPointerDown(col, row, 0); }\n";
     }
     if hasPtrUp {
         footer = footer +
-            "        if not inp.pointerDown and prevDown { onCanvasPointerUp(col, row, 0); }\n";
+        "        if not inBar and not paused and not inp.pointerDown and prevDown { onCanvasPointerUp(col, row, 0); }\n";
     }
     footer = footer +
-        "        prevCol = col;\n" +
-        "        prevRow = row;\n" +
-        "        prevDown = inp.pointerDown;\n";
+    "        prevCol = col;\n" +
+    "        prevRow = row;\n" +
+    "        prevDown = inp.pointerDown;\n";
 
     if hasUpdate {
         footer = footer +
-            "        rawDt := inp.deltaMs / 1000.0;\n" +
-            "        dt := if rawDt > 0.05 { 0.05 } else if rawDt <= 0.0 { 0.016 } else { rawDt };\n" +
-            "        st := onCanvasUpdate(dt);\n" +
-            "        if st =!= 0 { break; }\n";
+        "        if not paused {\n" +
+        "            rawDt := inp.deltaMs / 1000.0;\n" +
+        "            dt := if rawDt > 0.05 { 0.05 } else if rawDt <= 0.0 { 0.016 } else { rawDt };\n" +
+        "            st := onCanvasUpdate(dt);\n" +
+        "            if st =!= 0 { break; }\n" +
+        "        }\n";
     }
 
     footer = footer +
-        "        lastDraw = __lpFlush(win, scale, lastDraw);\n" +
-        "        __lpSurf.present(win);\n" +
-        "    }\n" +
-        "    __lpSurf.close(win);\n" +
-        "};\n" +
-        "__lpRunPlay();\n";
+    "        lastDraw = __lpFlush(win, scale, canvasW, canvasH, lastDraw, muted);\n" +
+    "        nowNs := __lpTime.monotonicNs();\n" +
+    "        if nowNs >= nextHudNs {\n" +
+    "            nextHudNs = nowNs + 250000000;\n" +
+    "            vt := __lpSurf.vitals(win);\n" +
+    "            hudFps = __lpFloorInt(vt.fps + 0.5);\n" +
+    "            hudMsT = __lpFloorInt((vt.avgFrameTimeMs * 10.0) + 0.5);\n" +
+    "            hudCpuT = __lpFloorInt((vt.cpuTimeMs * 10.0) + 0.5);\n" +
+    "            hudRssT = __lpFloorInt(((vt.memoryBytes / 1048576.0) * 10.0) + 0.5);\n" +
+    "            hudFrames = vt.frameCount;\n" +
+    "        }\n" +
+    "        __lpDrawStageBar(win, canvasW, canvasH, barH, paused, muted, fpsMode, debugOn, hudFps);\n" +
+    "        if debugOn { __lpDrawDebugHud(win, hudFps, hudMsT, hudCpuT, hudRssT, hudFrames, fpsMode, paused, muted); }\n" +
+    "        __lpSurf.present(win);\n" +
+    "    }\n" +
+    "    __lpSurf.close(win);\n" +
+    "};\n" +
+    "__lpRunPlay();\n";
 
     header + source + footer
 };
@@ -306,6 +421,8 @@ run := fn(rawArgs: List<String>): Unit {
     var playScale := 0;
     var playFps := 60;
     var playUncap := false;
+    var playDebug := false;
+    var playBar := true;
     var playCapture := "";
     var scriptPath := "";
     loop list.listCountText(args) > 0 {
@@ -318,6 +435,10 @@ run := fn(rawArgs: List<String>): Unit {
             playMode = true;
         } else if arg == "--uncap" {
             playUncap = true;
+        } else if arg == "--debug" or arg == "--hud" {
+            playDebug = true;
+        } else if arg == "--no-bar" {
+            playBar = false;
         } else if arg == "--scale" {
             if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
             playScale = parsePosInt(list.popFront(mut args));
@@ -416,7 +537,7 @@ run := fn(rawArgs: List<String>): Unit {
         audioAlias := findAudioAlias(srcRead.text);
         if canvasAlias =!= "" {
             resolvedCapture := if playCapture == "" { "" } else { path.resolve(proc.cwd(), playCapture) };
-            wrapped := buildPlayWrapper(srcRead.text, canvasAlias, audioAlias, playScale, playFps, playUncap, resolvedCapture);
+            wrapped := buildPlayWrapper(srcRead.text, canvasAlias, audioAlias, playScale, playFps, playUncap, playDebug, playBar, resolvedCapture);
             wrappedPath := path.join(tempDir.path, "play-entry.lts");
             wRes := fs.writeText(wrappedPath, wrapped);
             if not wRes.ok {
@@ -479,13 +600,23 @@ run := fn(rawArgs: List<String>): Unit {
             project.errorText(ccRes.stderr);
             io.exit(ccRes.status);
         }
-        cExecRes := proc.run(binPath, args, "", runEnv, false, "");
+        var cStatus := 0;
+        var cErr := "";
+        loop true {
+            cExecRes := proc.run(binPath, args, "", runEnv, false, "");
+            cStatus = cExecRes.status;
+            cErr = cExecRes.error;
+            if playMode and cErr == "" and cStatus == 42 {
+                continue;
+            }
+            break;
+        }
         fs.remove(tempDir.path);
-        if cExecRes.error =!= "" {
-            io.errorLine("lite run: " + cExecRes.error);
+        if cErr =!= "" {
+            io.errorLine("lite run: " + cErr);
             io.exit(1);
         }
-        io.exit(cExecRes.status);
+        io.exit(cStatus);
     }
     artifact := path.join(tempDir.path, baseNoExt + ".ts");
     writeRes := fs.writeText(artifact, compiled.stdout);
@@ -513,14 +644,24 @@ run := fn(rawArgs: List<String>): Unit {
     loop args as arg {
         list.pushBack(mut entryArgs, arg);
     }
-    execRes := proc.run(project.nodeExecPath(), entryArgs, "", runEnv, false, "");
+    var tsStatus := 0;
+    var tsErr := "";
+    loop true {
+        execRes := proc.run(project.nodeExecPath(), entryArgs, "", runEnv, false, "");
+        tsStatus = execRes.status;
+        tsErr = execRes.error;
+        if playMode and tsErr == "" and tsStatus == 42 {
+            continue;
+        }
+        break;
+    }
     fs.remove(tempDir.path);
 
-    if execRes.error =!= "" {
-        io.errorLine("lite run: " + execRes.error);
+    if tsErr =!= "" {
+        io.errorLine("lite run: " + tsErr);
         io.exit(1);
     }
-    io.exit(execRes.status);
+    io.exit(tsStatus);
 };
 
 run(io.inputArgs());
