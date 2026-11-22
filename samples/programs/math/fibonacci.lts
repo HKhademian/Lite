@@ -2,6 +2,7 @@
 
 intLib := import "core/int";
 io := import "core/io";
+tb := import "util/text-builder";
 
 fibIter := fn(n: Int): Int {
     if n <= 1 { return n; }
@@ -19,10 +20,9 @@ fibIter := fn(n: Int): Int {
 
 terms := loop .count < 10 { fibIter(.count - 1) }.collected;
 
-var line := "";
+b: mut tb.TextBuilder;
 loop terms {
-    if .index > 0 { line += ", "; }
-    line += intLib.intText(.item);
+    tb.append(mut b, intLib.intText(.item));
 }
-io.outputLine("fib(0..9):", line);
+io.outputLine("fib(0..9):", tb.buildJoined(b, ", "));
 io.outputLine("fib(12):", fibIter(12));
