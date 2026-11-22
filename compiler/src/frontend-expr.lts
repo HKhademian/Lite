@@ -1245,7 +1245,7 @@ resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: 
     } else if loopIdx < 0 {
         syntax.failAt(source, start, prefix, "." + fieldName + " outside loop");
     }
-    if target =!= ir.TARGET_TS {
+    if target =!= ir.TARGET_TS and target =!= ir.TARGET_C {
         syntax.failAt(source, start, prefix, "C backend does not support loop metadata yet");
     }
     ctx.resolveLoopField(target, ctxs[loopIdx], fieldName, expected, source, fieldStart, fieldEnd, prefix)
@@ -1911,7 +1911,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if not useValueIf {
                     isStatement = true;
                     afterRawIfTail := if rawStmtIfEnd >= 0 { syntax.skipItemSeparators(source, rawStmtIfEnd, prefix) } else { -1 };
-                    isLoopTailPartialIf := isLoopBody and target == ir.TARGET_TS and afterRawIfTail >= 0 and afterRawIfTail < blockSourceSize and textLib.at(source, afterRawIfTail) == "}";
+                    isLoopTailPartialIf := isLoopBody and afterRawIfTail >= 0 and afterRawIfTail < blockSourceSize and textLib.at(source, afterRawIfTail) == "}";
                     ifBranchSink := if isLoopTailPartialIf { "loopBody" } else { "stmt" };
                     ifBranchExpected := if isLoopTailPartialIf { expected } else { "" };
                     var ifParts := "";
@@ -1933,7 +1933,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             trace.checkTraceSafety(source, ifCursor, prefix, condParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                         }
                         condCode := if condParsed.constant {
-                            "Boolean(" + ir.targetBoolLiteralCode(target, condParsed.intValue =!= 0) + ")"
+                            litB := ir.targetBoolLiteralCode(target, condParsed.intValue =!= 0);
+                            if target == ir.TARGET_C { litB } else { "Boolean(" + litB + ")" }
                         } else {
                             condParsed.code
                         };
@@ -1989,7 +1990,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 afterRawStmtMatch := if rawStmtMatchEnd >= 0 { syntax.skipTrivia(source, rawStmtMatchEnd, prefix) } else { -1 };
                 stmtMatchHasThen := afterRawStmtMatch >= 0 and (textLib.wordAt(source, afterRawStmtMatch, "then") or textLib.wordAt(source, afterRawStmtMatch, "finally"));
                 afterRawMatchTail := if rawStmtMatchEnd >= 0 { syntax.skipItemSeparators(source, rawStmtMatchEnd, prefix) } else { -1 };
-                isLoopTailMatch := isLoopBody and target == ir.TARGET_TS and not stmtMatchHasThen and afterRawMatchTail >= 0 and afterRawMatchTail < blockSourceSize and textLib.at(source, afterRawMatchTail) == "}";
+                isLoopTailMatch := isLoopBody and not stmtMatchHasThen and afterRawMatchTail >= 0 and afterRawMatchTail < blockSourceSize and textLib.at(source, afterRawMatchTail) == "}";
                 var useValueMatch := stmtMatchHasThen;
                 if (not isStmtBody) and (not isLoopTailMatch) and not useValueMatch {
                     valMatchEnd := syntax.scanValueMatchEnd(source, itemStart, prefix, false);
@@ -3033,12 +3034,21 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     blockExits = true;
                 } else if topLoopValKind == ir.VALUE_KIND_UNIT {
                     if blockCode =!= ir.targetUnitLiteralCode(target) {
-                        listLib.pushBack(mut statements, "void (" + blockCode + ");");
+                        if target == ir.TARGET_C {
+                            listLib.pushBack(mut statements, "(void)(" + blockCode + ");");
+                        } else {
+                            listLib.pushBack(mut statements, "void (" + blockCode + ");");
+                        }
                     }
                 } else {
                     tailLoopCode := ctx.assignValueCode(target, topLoopValKind, blockKind, blockCode);
                     if topLoopCtx.colVar =!= "" {
-                        listLib.pushBack(mut statements, topLoopValVar + " = " + tailLoopCode + "; " + topLoopCtx.colVar + ".push(" + topLoopValVar + ");");
+                        if target == ir.TARGET_C {
+                            colTag := types.cListTag(topLoopValKind);
+                            listLib.pushBack(mut statements, topLoopValVar + " = " + tailLoopCode + "; lt_list_" + colTag + "_push_back(&" + topLoopCtx.colVar + ", " + topLoopValVar + ");");
+                        } else {
+                            listLib.pushBack(mut statements, topLoopValVar + " = " + tailLoopCode + "; " + topLoopCtx.colVar + ".push(" + topLoopValVar + ");");
+                        }
                     } else {
                         listLib.pushBack(mut statements, topLoopValVar + " = " + tailLoopCode + ";");
                     }
@@ -3217,17 +3227,20 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         if hasLoopFinally {
             syntax.failAt(source, afterOptLoopThenTrivia, prefix, "C backend does not support finally blocks yet");
         }
-        syntax.unsupportedFeature(source, condParseStart, "loop", prefix);
+        if hasActualThen {
+            syntax.failAt(source, condParseStart, prefix, "C backend does not support loop then blocks yet");
+        }
     }
+    isCLoop := target == ir.TARGET_C;
     loopId := ctx.nextCtxId(ctxs);
     loopIdStr := integer.intText(loopId);
-    loopValVar := "lite$val" + loopIdStr;
-    loopColVar := "lite$col" + loopIdStr;
-    loopCountVar := "lite$cnt" + loopIdStr;
-    loopItemMetaVar := "lite$litem" + loopIdStr;
-    loopIdxVar := "lite$lidx" + loopIdStr;
-    loopIterVar := "lite$iter" + loopIdStr;
-    loopLabel := "lite$l" + loopIdStr;
+    loopValVar := if isCLoop { "lt_val_" + loopIdStr } else { "lite$val" + loopIdStr };
+    loopColVar := if isCLoop { "lt_col_" + loopIdStr } else { "lite$col" + loopIdStr };
+    loopCountVar := if isCLoop { "lt_cnt_" + loopIdStr } else { "lite$cnt" + loopIdStr };
+    loopItemMetaVar := if isCLoop { "lt_litem_" + loopIdStr } else { "lite$litem" + loopIdStr };
+    loopIdxVar := if isCLoop { "lt_lidx_" + loopIdStr } else { "lite$lidx" + loopIdStr };
+    loopIterVar := if isCLoop { "lt_iter_" + loopIdStr } else { "lite$iter" + loopIdStr };
+    loopLabel := if isCLoop { "lt_l_" + loopIdStr } else { "lite$l" + loopIdStr };
     loopDepth := iifeDepth + 1;
     normExpected := normalizeExpectedValueKind(expected);
     loopHintExpected := if hasActualThen or suffixField == "count" {
@@ -3431,7 +3444,18 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 syntax.failAt(source, suffixFieldAt, prefix, "loop producing Unit does not expose .collected");
             }
         } else {
-            metaStep := if isSeqLoop {
+            metaStep := if isCLoop {
+                if isSeqLoop {
+                    itemStep := if seqItemKind == "" or seqItemKind == ir.VALUE_KIND_UNIT {
+                        ""
+                    } else {
+                        loopItemMetaVar + " = " + loopIterVar + "; "
+                    };
+                    loopIdxVar + " = " + loopCountVar + "; " + loopCountVar + " += 1; " + itemStep
+                } else {
+                    loopCountVar + " += 1; "
+                }
+            } else if isSeqLoop {
                 itemStep := if seqItemKind == "" or seqItemKind == ir.VALUE_KIND_UNIT {
                     "void " + loopIterVar + "; "
                 } else {
@@ -3470,7 +3494,23 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 wrappedBody = "try { " + bodyParsed.code + " } catch (lite$err) { " +
                 textLib.joinTexts(catchClauses, " else ") + " else { throw lite$err; } }";
             }
-            rawLoopStmt := if isRangeLoop {
+            rawLoopStmt := if isCLoop {
+                if isRangeLoop {
+                    rangeEndVar := "lt_rend_" + loopIdStr;
+                    rangeCmp := if isRangeInclusive { "<=" } else { "<" };
+                    "for (int64_t " + loopIterVar + " = " + rangeStartCode + ", " + rangeEndVar + " = " + rangeEndCode + "; " +
+                    loopIterVar + " " + rangeCmp + " " + rangeEndVar + "; " + loopIterVar + " += 1) { " + metaStep + wrappedBody + " }"
+                } else if isSeqLoop {
+                    seqTag := types.cListTag(seqItemKind);
+                    seqVar := "lt_lseq_" + loopIdStr;
+                    seqI := "lt_lsi_" + loopIdStr;
+                    "{ lt_list_" + seqTag + " " + seqVar + " = lt_list_" + seqTag + "_copy(" + seqCode + "); " +
+                    "for (int64_t " + seqI + " = 0; " + seqI + " < " + seqVar + ".len; " + seqI + " += 1) { " +
+                    types.cListElemType(seqTag) + " " + loopIterVar + " = " + seqVar + ".data[" + seqI + "]; " + metaStep + wrappedBody + " } }"
+                } else {
+                    "while (" + condCode + ") { " + metaStep + wrappedBody + " }"
+                }
+            } else if isRangeLoop {
                 rangeEndVar := "lite$rend" + loopIdStr;
                 rangeCmp := if isRangeInclusive { "<=" } else { "<" };
                 "for (let " + loopIterVar + ": bigint = " + rangeStartCode + ", " + rangeEndVar + ": bigint = " + rangeEndCode + "; " +
@@ -3507,20 +3547,39 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
     finalColVar := if emitCollected { loopColVar } else { "" };
     var decls := "";
     if not inferMode {
-        decls = "let " + loopCountVar + ": bigint = 0n; void " + loopCountVar + "; ";
-        if finalIsSeqLoop {
-            decls = decls + "let " + loopIdxVar + ": bigint = 0n; void " + loopIdxVar + "; ";
-            if finalSeqItemKind =!= "" and finalSeqItemKind =!= ir.VALUE_KIND_UNIT {
-                decls = decls + "let " + loopItemMetaVar + ": " + types.tsFunctionType(finalSeqItemKind) + " = " +
-                ctx.zeroParsed(target, finalSeqItemKind, 0).code + "; void " + loopItemMetaVar + "; ";
+        if isCLoop {
+            decls = "int64_t " + loopCountVar + " = 0; (void)" + loopCountVar + "; ";
+            if finalIsSeqLoop {
+                decls = decls + "int64_t " + loopIdxVar + " = 0; (void)" + loopIdxVar + "; ";
+                if finalSeqItemKind =!= "" and finalSeqItemKind =!= ir.VALUE_KIND_UNIT {
+                    decls = decls + types.cValueType(finalSeqItemKind) + " " + loopItemMetaVar + " = " +
+                    ctx.zeroParsed(target, finalSeqItemKind, 0).code + "; (void)" + loopItemMetaVar + "; ";
+                }
             }
-        }
-        if resolvedPreThenKind =!= ir.VALUE_KIND_UNIT and resolvedPreThenKind =!= ir.VALUE_KIND_NEVER {
-            decls = decls + "let " + loopValVar + ": " + types.tsFunctionType(resolvedPreThenKind) + " = " +
-            ctx.zeroParsed(target, resolvedPreThenKind, 0).code + "; void " + loopValVar + "; ";
-        }
-        if emitCollected {
-            decls = decls + "const " + loopColVar + ": (" + types.tsFunctionType(resolvedPreThenKind) + ")[] = []; void " + loopColVar + "; ";
+            if resolvedPreThenKind =!= ir.VALUE_KIND_UNIT and resolvedPreThenKind =!= ir.VALUE_KIND_NEVER {
+                decls = decls + types.cValueType(resolvedPreThenKind) + " " + loopValVar + " = " +
+                ctx.zeroParsed(target, resolvedPreThenKind, 0).code + "; (void)" + loopValVar + "; ";
+            }
+            if emitCollected {
+                colTag := types.cListTag(resolvedPreThenKind);
+                decls = decls + "lt_list_" + colTag + " " + loopColVar + " = lt_list_" + colTag + "_from(0, NULL); (void)" + loopColVar + "; ";
+            }
+        } else {
+            decls = "let " + loopCountVar + ": bigint = 0n; void " + loopCountVar + "; ";
+            if finalIsSeqLoop {
+                decls = decls + "let " + loopIdxVar + ": bigint = 0n; void " + loopIdxVar + "; ";
+                if finalSeqItemKind =!= "" and finalSeqItemKind =!= ir.VALUE_KIND_UNIT {
+                    decls = decls + "let " + loopItemMetaVar + ": " + types.tsFunctionType(finalSeqItemKind) + " = " +
+                    ctx.zeroParsed(target, finalSeqItemKind, 0).code + "; void " + loopItemMetaVar + "; ";
+                }
+            }
+            if resolvedPreThenKind =!= ir.VALUE_KIND_UNIT and resolvedPreThenKind =!= ir.VALUE_KIND_NEVER {
+                decls = decls + "let " + loopValVar + ": " + types.tsFunctionType(resolvedPreThenKind) + " = " +
+                ctx.zeroParsed(target, resolvedPreThenKind, 0).code + "; void " + loopValVar + "; ";
+            }
+            if emitCollected {
+                decls = decls + "const " + loopColVar + ": (" + types.tsFunctionType(resolvedPreThenKind) + ")[] = []; void " + loopColVar + "; ";
+            }
         }
     }
     var loopIifeBody := "";
@@ -3579,20 +3638,33 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         } else {
             resolvedPreThenKind
         };
-        finalRet := if resolvedPreThenKind == ir.VALUE_KIND_NEVER {
-            " throw new Error(\"unreachable\");"
-        } else if suffixField == "collected" {
-            " return " + loopColVar + ";"
-        } else if suffixField == "count" {
-            " return " + loopCountVar + ";"
-        } else if resolvedPreThenKind == ir.VALUE_KIND_UNIT {
-            " return undefined;"
+        if isCLoop {
+            if resultKind == ir.VALUE_KIND_UNIT {
+                left = (kind = resultKind, code = "{ /*c-stmt*/ " + decls + loopStmtCode + " }",
+                intValue = 0, textValue = "", constant = false, next = resultNext);
+            } else {
+                cRetVar := if suffixField == "collected" { loopColVar }
+                else if suffixField == "count" { loopCountVar }
+                else { loopValVar };
+                left = (kind = resultKind, code = "/*@CBLK:" + cRetVar + "@*/" + decls + loopStmtCode,
+                intValue = 0, textValue = "", constant = false, next = resultNext);
+            }
         } else {
-            " return " + loopValVar + ";"
-        };
-        loopIifeBody = decls + loopStmtCode + finalRet;
-        left = (kind = resultKind, code = "(() => { " + loopIifeBody + " })()",
-        intValue = 0, textValue = "", constant = false, next = resultNext);
+            finalRet := if resolvedPreThenKind == ir.VALUE_KIND_NEVER {
+                " throw new Error(\"unreachable\");"
+            } else if suffixField == "collected" {
+                " return " + loopColVar + ";"
+            } else if suffixField == "count" {
+                " return " + loopCountVar + ";"
+            } else if resolvedPreThenKind == ir.VALUE_KIND_UNIT {
+                " return undefined;"
+            } else {
+                " return " + loopValVar + ";"
+            };
+            loopIifeBody = decls + loopStmtCode + finalRet;
+            left = (kind = resultKind, code = "(() => { " + loopIifeBody + " })()",
+            intValue = 0, textValue = "", constant = false, next = resultNext);
+        }
     }
     afterLoopConstruct := syntax.skipTrivia(source, left.next, prefix);
     if hasActualThen and afterLoopConstruct < textLib.length(source) and textLib.wordAt(source, afterLoopConstruct, "then") {

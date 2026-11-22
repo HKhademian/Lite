@@ -353,6 +353,8 @@ unsupportedAggregateCode := fn(code: String): String {
             }
         } else if ch == "[" and textLib.startsWithAt(code, cursor, "[0] == '\\0'") {
             cursor = cursor + textLib.length("[0] == '\\0'");
+        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CBLK:") {
+            return "";
         } else if ch == "{" and textLib.startsWithAt(code, cursor, "{ /*c-stmt*/") {
             return "";
         } else if ch == "{" {
@@ -1386,16 +1388,40 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
     loop stream as item {
         code := normalizeCBuiltinCalls(item.code);
         if isCLocalDeclKind(item.kind) {
-            if fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime) {
+            if textLib.startsWithAt(code, 0, "/*@CBLK:") {
+                endHdr := textLib.indexOfText(code, "@*/", 8);
+                retVar := textLib.slice(code, 8, endHdr);
+                blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
+                if not (fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime)) {
+                    io.outputLine(indent + cDeclTypeItem(item) + item.runtime + ";");
+                }
+                io.outputLine(indent + "{ " + blkBody + " " + item.runtime + " = " + retVar + "; }");
+            } else if fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime) {
                 io.outputLine(indent + item.runtime + " = " + code + ";");
             } else {
                 io.outputLine(indent + cDeclTypeItem(item) + item.runtime + " = " + code + ";");
             }
             io.outputLine(indent + "(void)" + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_LIST {
-            io.outputLine(indent + item.runtime + " = " + code + ";");
+            if textLib.startsWithAt(code, 0, "/*@CBLK:") {
+                endHdr := textLib.indexOfText(code, "@*/", 8);
+                retVar := textLib.slice(code, 8, endHdr);
+                blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
+                io.outputLine(indent + "{ " + blkBody + " " + item.runtime + " = " + retVar + "; }");
+            } else {
+                io.outputLine(indent + item.runtime + " = " + code + ";");
+            }
         } else if item.kind == frontend.ITEM_KIND_RETURN {
-            if fnResult == frontend.VALUE_KIND_UNIT {
+            if textLib.startsWithAt(code, 0, "/*@CBLK:") {
+                endHdr := textLib.indexOfText(code, "@*/", 8);
+                retVar := textLib.slice(code, 8, endHdr);
+                blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
+                if fnResult == frontend.VALUE_KIND_UNIT {
+                    io.outputLine(indent + "{ " + blkBody + " } return;");
+                } else {
+                    io.outputLine(indent + "{ " + cScalarType(fnResult) + " lt_ret; " + blkBody + " lt_ret = " + retVar + "; return lt_ret; }");
+                }
+            } else if fnResult == frontend.VALUE_KIND_UNIT {
                 if code =!= "" { io.outputLine(indent + "(void)(" + code + ");"); }
                 io.outputLine(indent + "return;");
             } else if code == "" {

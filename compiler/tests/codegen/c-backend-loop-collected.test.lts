@@ -1,0 +1,61 @@
+/* End-to-end C11 execution tests for Phase C5c: loop metadata (.item, .index, .count), .collected/.value/.count suffixes, and partial if/match loop tails. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"intLib := import \"core/int\";\n" +
+"\n" +
+"readings := [-4, 3, 0, 12, -1, 7, 25];\n" +
+"doubled := loop readings { .item * 2 }.collected;\n" +
+"positives := loop readings { if .item > 0 { .item * 10 } }.collected;\n" +
+"labels := loop readings {\n" +
+"    match {\n" +
+"        .item >= 20 { \"high\" }\n" +
+"        .item > 0 { \"ok\" }\n" +
+"    }\n" +
+"}.collected;\n" +
+"io.outputLine(doubled);\n" +
+"io.outputLine(positives);\n" +
+"io.outputLine(labels);\n" +
+"\n" +
+"squares := loop 1..=5 { .item * .item }.collected;\n" +
+"iters := loop .count < 4 { .count }.count;\n" +
+"lastVal := loop 1..=4 { .item * 3 }.value;\n" +
+"io.outputLine(squares, iters, lastVal);\n" +
+"\n" +
+"var joined := \"\";\n" +
+"loop squares {\n" +
+"    if .index > 0 { joined += \", \"; }\n" +
+"    joined += intLib.intText(.item);\n" +
+"}\n" +
+"io.outputLine(joined);\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+    test.checkText("c stderr", "", cRes.stderr);
+} else {
+    cOnly := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt("c compile status: " + cOnly.stderr, 0, cOnly.status);
+}
+
+test.done("c-backend-loop-collected");

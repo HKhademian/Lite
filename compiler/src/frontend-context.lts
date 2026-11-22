@@ -167,7 +167,8 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
                 textLib.startsWithAt(code, 0, "lt_list_" + tag + "_slice(") or
                 textLib.startsWithAt(code, 0, "lt_list_" + tag + "_slice_from(") or
                 textLib.startsWithAt(code, 0, "lt_list_" + tag + "_reverse(") or
-                textLib.startsWithAt(code, 0, "lite$inputArgs(") {
+                textLib.startsWithAt(code, 0, "lite$inputArgs(") or
+                textLib.startsWithAt(code, 0, "/*@CBLK:") {
                     code
                 } else {
                     "lt_list_" + tag + "_copy(" + code + ")"

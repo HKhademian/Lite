@@ -2312,25 +2312,29 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     if hasStmtLoopThen {
                         failAt(source, nameStart, prefix, "C backend does not support loop then blocks yet");
                     }
-                } else {
-                    expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
-                    currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
-                    locals = checkStatementTrace(target, source, nameStart, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
-                    if currentLive and not currentStopped {
-                        listLib.pushBack(mut items, (kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
-                        runtime = "", code = expression.code, intValue = 0, textValue = ""));
-                        if codeHasRawTransfer(expression.code) {
-                            listLib.pushBack(mut transferCodes, expression.code);
-                            transferCount = transferCount + 1;
-                        }
-                    }
-                    if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
-                        if not currentStopped { currentReturned = true; }
-                        currentStopped = true;
-                    }
-                    position = expression.next;
-                    continue;
                 }
+                expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
+                currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+                locals = checkStatementTrace(target, source, nameStart, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+                if currentLive and not currentStopped {
+                    stmtItemKind := if target == TARGET_C and textLib.startsWithAt(expression.code, 0, "{ /*c-stmt*/") {
+                        ITEM_KIND_CALL
+                    } else {
+                        expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult)
+                    };
+                    listLib.pushBack(mut items, (kind = stmtItemKind, name = expression.valueKind,
+                    runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(expression.code) {
+                        listLib.pushBack(mut transferCodes, expression.code);
+                        transferCount = transferCount + 1;
+                    }
+                }
+                if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
+                    if not currentStopped { currentReturned = true; }
+                    currentStopped = true;
+                }
+                position = expression.next;
+                continue;
             }
             rejectHeaderBlockTag(source, position, prefix, "loop");
             var conditionCode := "";
