@@ -10,7 +10,7 @@ project := import "util/project";
 compilerBuild := import "util/compiler-build";
 
 usageText := fn(): String {
-    "Usage: ./bin/lite build [-O0|-O1|-O2|-O3|-Os] [--cc-opt -O0|-O1|-O2|-O3|-Os] [--builtin-mode SPEC]... [-o OUTPUT] [--keep-c] [--quiet] file.lts"
+    "Usage: ./bin/lite build [-O0|-O1|-O2|-O3|-Os] [--cc-opt -O0|-O1|-O2|-O3|-Os] [--sanitize] [--builtin-mode SPEC]... [-o OUTPUT] [--keep-c] [--quiet] file.lts"
 };
 
 usageExit := fn(): Unit {
@@ -41,6 +41,7 @@ run := fn(rawArgs: List<String>): Unit {
     var ccOpt := "-O2";
     var explicitCcOpt := false;
     var sizeOpt := false;
+    var sanitize := false;
     var keepC := false;
     var quiet := false;
     var hasOpt := false;
@@ -67,6 +68,8 @@ run := fn(rawArgs: List<String>): Unit {
         } else if text.startsWithAt(arg, 0, "--cc-opt=") {
             ccOpt = text.slice(arg, 9, text.length(arg));
             explicitCcOpt = true;
+        } else if arg == "--sanitize" {
+            sanitize = true;
         } else if arg == "--keep-c" {
             keepC = true;
         } else if arg == "--quiet" or arg == "-q" {
@@ -185,6 +188,11 @@ run := fn(rawArgs: List<String>): Unit {
     ccArgs: mut List<String> = ["-std=c11", effectiveCcOpt, cArtifact, "-o", finalOut, "-lm"];
     if sizeOpt and proc.platform() == "darwin" {
         list.pushBack(mut ccArgs, "-Wl,-dead_strip");
+    }
+    if sanitize {
+        list.pushBack(mut ccArgs, "-fsanitize=address,undefined");
+        list.pushBack(mut ccArgs, "-fno-omit-frame-pointer");
+        list.pushBack(mut ccArgs, "-g");
     }
     cText := fs.readText(cArtifact);
     if cText.ok and proc.platform() == "darwin" and text.containsText(cText.text, "LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
