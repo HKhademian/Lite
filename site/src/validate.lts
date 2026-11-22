@@ -7,6 +7,7 @@ path := import "core/path";
 proc := import "core/process";
 text := import "core/text";
 unicode := import "core/unicode";
+intern := import "extra/intern";
 challenges := import "util/challenges";
 json := import "util/json";
 
@@ -343,13 +344,10 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     absSiteDir := path.resolve(proc.cwd(), siteDirRaw);
 
     sortedSiteFiles := collectAllSiteFiles(absSiteDir);
-    siteFilesBlob := if list.listCountText(sortedSiteFiles) == 0 {
-        ""
-    } else {
-        "\n" + text.joinTexts(sortedSiteFiles, "\n") + "\n"
-    };
+    siteFileTable := intern.create();
     htmlFiles: mut List<String> = [];
     loop sortedSiteFiles as relFile {
+        _sfId := intern.intern(siteFileTable, relFile);
         if text.endsWith(relFile, ".html") {
             list.pushBack(mut htmlFiles, relFile);
         }
@@ -367,12 +365,12 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
 
     /* Load playground library targets if present. */
     hasSampleFilesDir := fs.kind(path.join(absSiteDir, "playground/samples")) == fs.FILE_KIND_DIR;
-    hasPlayTargets := text.indexOfText(siteFilesBlob, "\nplayground/library.json\n", 0) >= 0;
-    rawAllIds: mut List<String> = [];
-    rawCatSample: mut List<String> = [];
-    rawCatExample: mut List<String> = [];
-    rawCatCase: mut List<String> = [];
-    rawCatPiece: mut List<String> = [];
+    hasPlayTargets := intern.has(siteFileTable, "playground/library.json");
+    playAllIds := intern.create();
+    playCatSample := intern.create();
+    playCatExample := intern.create();
+    playCatCase := intern.create();
+    playCatPiece := intern.create();
     if hasPlayTargets {
         libRead := fs.readText(path.join(absSiteDir, "playground/library.json"));
         if libRead.ok {
@@ -381,23 +379,18 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
                 itSlug := readOptStr(libRead.text, itemPos, "slug");
                 itCat := readOptStr(libRead.text, itemPos, "category");
                 itSampleId := readOptStr(libRead.text, itemPos, "sampleId");
-                if itId =!= "" { list.pushBack(mut rawAllIds, itId); }
-                if itSlug =!= "" { list.pushBack(mut rawAllIds, itSlug); }
-                if itSampleId =!= "" { list.pushBack(mut rawCatSample, itSampleId); }
+                if itId =!= "" { _a := intern.intern(playAllIds, itId); }
+                if itSlug =!= "" { _b := intern.intern(playAllIds, itSlug); }
+                if itSampleId =!= "" { _c := intern.intern(playCatSample, itSampleId); }
                 if itSlug =!= "" {
-                    if itCat == "sample" { list.pushBack(mut rawCatSample, itSlug); }
-                    else if itCat == "example" { list.pushBack(mut rawCatExample, itSlug); }
-                    else if itCat == "case" { list.pushBack(mut rawCatCase, itSlug); }
-                    else if itCat == "piece" { list.pushBack(mut rawCatPiece, itSlug); }
+                    if itCat == "sample" { _d := intern.intern(playCatSample, itSlug); }
+                    else if itCat == "example" { _e := intern.intern(playCatExample, itSlug); }
+                    else if itCat == "case" { _f := intern.intern(playCatCase, itSlug); }
+                    else if itCat == "piece" { _g := intern.intern(playCatPiece, itSlug); }
                 }
             }
         }
     }
-    playAllIdsBlob := "\n" + text.joinTexts(rawAllIds, "\n") + "\n";
-    playCatSampleBlob := "\n" + text.joinTexts(rawCatSample, "\n") + "\n";
-    playCatExampleBlob := "\n" + text.joinTexts(rawCatExample, "\n") + "\n";
-    playCatCaseBlob := "\n" + text.joinTexts(rawCatCase, "\n") + "\n";
-    playCatPieceBlob := "\n" + text.joinTexts(rawCatPiece, "\n") + "\n";
 
     violations: mut List<String> = [];
     var localLinksChecked := 0;
@@ -430,9 +423,9 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     fromRelDir: String,
     missingFileReason: String,
     missingFragReason: String
-    ): Unit {
+    ): Int {
         decoded := unescapeAttrEntities(text.trim(rawTarget));
-        if decoded == "" or isExternalHref(decoded) { return; }
+        if decoded == "" or isExternalHref(decoded) { return 0; }
 
         hashIdx := text.indexOfText(decoded, "#", 0);
         pathAndQuery := if hashIdx >= 0 { text.slice(decoded, 0, hashIdx) } else { decoded };
@@ -451,18 +444,19 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
         relToSite := resolved.relPath;
         exists := if resolved.escaped {
             false
-        } else if text.indexOfText(siteFilesBlob, "\n" + relToSite + "\n", 0) >= 0 {
+        } else if intern.has(siteFileTable, relToSite) {
             true
         } else {
             fs.kind(path.join(absSiteDir, relToSite)) =!= fs.FILE_KIND_MISSING
         };
         if not exists {
             list.pushBack(mut violations, violationJson(source, rawTarget, missingFileReason));
-            return;
+            return 0;
         }
 
+        var fragHit := 0;
         if rawFrag =!= "" and text.endsWith(relToSite, ".html") {
-            fragmentsChecked = fragmentsChecked + 1;
+            fragHit = 1;
             if not hasHtmlFrag(relToSite, rawFrag) {
                 list.pushBack(mut violations, violationJson(source, rawTarget, missingFragReason));
             }
@@ -472,31 +466,32 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
             queryStr := text.slice(pathAndQuery, qIdx + 1, text.length(pathAndQuery));
             sampleParam := getQueryParam(queryStr, "sample");
             if sampleParam.found and sampleParam.value =!= "" {
-                sampleJsonOk := hasSampleFilesDir and text.indexOfText(siteFilesBlob, "\nplayground/samples/" + sampleParam.value + ".json\n", 0) >= 0;
-                libSampleOk := hasPlayTargets and text.indexOfText(playCatSampleBlob, "\n" + sampleParam.value + "\n", 0) >= 0;
+                sampleJsonOk := hasSampleFilesDir and intern.has(siteFileTable, "playground/samples/" + sampleParam.value + ".json");
+                libSampleOk := hasPlayTargets and intern.has(playCatSample, sampleParam.value);
                 if (hasSampleFilesDir or hasPlayTargets) and not sampleJsonOk and not libSampleOk {
                     list.pushBack(mut violations, violationJson(source, rawTarget, "missing-play-target"));
                 }
             }
             if hasPlayTargets {
                 exParam := getQueryParam(queryStr, "example");
-                if exParam.found and exParam.value =!= "" and text.indexOfText(playCatExampleBlob, "\n" + exParam.value + "\n", 0) < 0 {
+                if exParam.found and exParam.value =!= "" and not intern.has(playCatExample, exParam.value) {
                     list.pushBack(mut violations, violationJson(source, rawTarget, "missing-play-target"));
                 }
                 caseParam := getQueryParam(queryStr, "case");
-                if caseParam.found and caseParam.value =!= "" and text.indexOfText(playCatCaseBlob, "\n" + caseParam.value + "\n", 0) < 0 {
+                if caseParam.found and caseParam.value =!= "" and not intern.has(playCatCase, caseParam.value) {
                     list.pushBack(mut violations, violationJson(source, rawTarget, "missing-play-target"));
                 }
                 pieceParam := getQueryParam(queryStr, "piece");
-                if pieceParam.found and pieceParam.value =!= "" and text.indexOfText(playCatPieceBlob, "\n" + pieceParam.value + "\n", 0) < 0 {
+                if pieceParam.found and pieceParam.value =!= "" and not intern.has(playCatPiece, pieceParam.value) {
                     list.pushBack(mut violations, violationJson(source, rawTarget, "missing-play-target"));
                 }
                 itemParam := getQueryParam(queryStr, "item");
-                if itemParam.found and itemParam.value =!= "" and text.indexOfText(playAllIdsBlob, "\n" + itemParam.value + "\n", 0) < 0 {
+                if itemParam.found and itemParam.value =!= "" and not intern.has(playAllIds, itemParam.value) {
                     list.pushBack(mut violations, violationJson(source, rawTarget, "missing-play-target"));
                 }
             }
         }
+        fragHit
     };
 
     /* 1. Scan all HTML files for unresolved attributes, href="...", and data-play-href="...". */
@@ -533,7 +528,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
                 trimmed := text.trim(rawHref);
                 if trimmed =!= "" and trimmed =!= "#" and not isExternalHref(trimmed) {
                     localLinksChecked = localLinksChecked + 1;
-                    checkLocalTarget(relSource, rawHref, relSource, relDir, "missing-file", "missing-fragment");
+                    fragmentsChecked = fragmentsChecked + checkLocalTarget(relSource, rawHref, relSource, relDir, "missing-file", "missing-fragment");
                 }
             }
             pos = valEnd + 1;
@@ -550,7 +545,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
             trimmed := text.trim(rawPlayHref);
             if trimmed =!= "" and not isExternalHref(trimmed) {
                 localLinksChecked = localLinksChecked + 1;
-                checkLocalTarget(relSource, rawPlayHref, relSource, relDir, "missing-file", "missing-fragment");
+                fragmentsChecked = fragmentsChecked + checkLocalTarget(relSource, rawPlayHref, relSource, relDir, "missing-file", "missing-fragment");
             }
             pPos = valEnd + 1;
         }
@@ -559,7 +554,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     }
 
     /* 2. Check search-index.json. */
-    if text.indexOfText(siteFilesBlob, "\nsearch-index.json\n", 0) < 0 {
+    if not intern.has(siteFileTable, "search-index.json") {
         list.pushBack(mut violations, violationJson("search-index.json", "search-index.json", "missing-file"));
     } else {
         searchRead := fs.readText(path.join(absSiteDir, "search-index.json"));
@@ -568,13 +563,13 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
                 href := readOptStr(searchRead.text, ePos, "href");
                 if href == "" { continue; }
                 searchEntriesChecked = searchEntriesChecked + 1;
-                checkLocalTarget("search-index.json", href, "index.html", "", "missing-file", "missing-fragment");
+                fragmentsChecked = fragmentsChecked + checkLocalTarget("search-index.json", href, "index.html", "", "missing-file", "missing-fragment");
             }
         }
     }
 
     /* 3. Check link-graph.json. */
-    if text.indexOfText(siteFilesBlob, "\nlink-graph.json\n", 0) < 0 {
+    if not intern.has(siteFileTable, "link-graph.json") {
         list.pushBack(mut violations, violationJson("link-graph.json", "link-graph.json", "missing-file"));
     } else {
         graphRead := fs.readText(path.join(absSiteDir, "link-graph.json"));
@@ -595,7 +590,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
                     }
                     list.pushBack(mut nodeUris, uri);
                     list.pushBack(mut nodeOutPaths, outPath);
-                    checkLocalTarget("link-graph.json (" + uri + ")", outPath, "index.html", "", "missing-graph-node", "missing-graph-fragment");
+                    fragmentsChecked = fragmentsChecked + checkLocalTarget("link-graph.json (" + uri + ")", outPath, "index.html", "", "missing-graph-node", "missing-graph-fragment");
                 }
             }
             nodeOrder := challenges.sortIndexByKeys(nodeUris);
@@ -619,12 +614,19 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
                     hPos := text.indexOfText(toOut, "#", 0);
                     baseOut := if hPos >= 0 { text.slice(toOut, 0, hPos) } else { toOut };
                     if frag =!= "" and baseOut =!= "" {
-                        checkLocalTarget("link-graph.json (" + fromUri + " -> " + toUri + ")", baseOut + "#" + frag, "index.html", "", "missing-graph-node", "missing-graph-fragment");
+                        fragmentsChecked = fragmentsChecked + checkLocalTarget("link-graph.json (" + fromUri + " -> " + toUri + ")", baseOut + "#" + frag, "index.html", "", "missing-graph-node", "missing-graph-fragment");
                     }
                 }
             }
         }
     }
+
+    intern.destroy(siteFileTable);
+    intern.destroy(playAllIds);
+    intern.destroy(playCatSample);
+    intern.destroy(playCatExample);
+    intern.destroy(playCatCase);
+    intern.destroy(playCatPiece);
 
     "{"
     + "\"htmlFiles\":" + integer.intText(htmlCount) + ","
