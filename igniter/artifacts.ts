@@ -13,21 +13,39 @@ const ensuredTools = new Map<string, string>();
 
 export const sha256 = (bytes: string | Buffer): string => createHash('sha256').update(bytes).digest('hex');
 
-/** Ensures `tools/src/<name>.lts` is compiled into `dist/tools/<name>.ts` via the Lite igniter. */
-export function ensureTool(name: string, options: Readonly<{ force?: boolean }> = {}): string {
+/** Ensures `tools/src/<name>.lts` is compiled into `dist/tools/` via the Lite igniter. */
+export function ensureTool(name: string, options: Readonly<{ force?: boolean; target?: 'c' | 'ts' }> = {}): string {
+  const key = `${name}:${options.target ?? 'auto'}`;
   if (!options.force) {
-    const cached = ensuredTools.get(name);
+    const cached = ensuredTools.get(key);
     if (cached !== undefined) return cached;
   }
-  const args = options.force ? [igniterScript, '--force', '--ensure', name] : [igniterScript, '--ensure', name];
+  const args: string[] = [igniterScript];
+  if (options.target) args.push('--target', options.target);
+  if (options.force) args.push('--force');
+  args.push('--ensure', name);
   const result = spawnSync(process.execPath, args, { cwd: repoRoot, encoding: 'utf8', timeout: 60_000 });
   if (result.error) throw result.error;
   if (result.status !== 0 || result.signal !== null) {
     throw new Error(`ignite ${name} failed (${result.status ?? result.signal}):\n${result.stdout}${result.stderr}`);
   }
   const artifact = result.stdout.trim();
-  ensuredTools.set(name, artifact);
+  ensuredTools.set(key, artifact);
   return artifact;
+}
+
+/** Executes an ignited tool (native C11 binary directly, or TS artifact via Node) and returns the spawnSync result. */
+export function spawnTool(
+  name: string,
+  args: readonly string[],
+  options: Readonly<{ cwd?: string; encoding?: BufferEncoding; input?: string | Buffer; timeout?: number; maxBuffer?: number; env?: NodeJS.ProcessEnv; target?: 'c' | 'ts' }> = {},
+) {
+  const tool = ensureTool(name, options.target ? { target: options.target } : {});
+  const env = { ...process.env, LITE_NODE: process.execPath, ...(options.env ?? {}) };
+  if (tool.endsWith('.ts')) {
+    return spawnSync(process.execPath, [tool, ...args], { ...options, encoding: options.encoding ?? 'utf8', env });
+  }
+  return spawnSync(tool, [...args], { ...options, encoding: options.encoding ?? 'utf8', env });
 }
 
 /** Runs the Lite igniter across selected or all tools under `tools/src/` and returns parsed JSON summary. */
@@ -308,31 +326,29 @@ const cachedBuilds = new Map<CompilerTarget, CompilerBuild>();
 
 /** Validates one compiler manifest JSON file through the Lite `compiler-build` tool. */
 export function loadManifest(path: string): Manifest {
-  const tool = ensureTool('compiler-build');
   const resolved = resolve(path);
-  const result = spawnSync(process.execPath, [tool, '--manifest', resolved], {
+  const result = spawnTool('compiler-build', ['--manifest', resolved], {
     cwd: dirname(resolved), encoding: 'utf8', timeout: 30_000,
   });
   if (result.error !== undefined) throw result.error;
   if (result.status !== 0 || result.signal !== null) {
-    throw new Error((result.stderr || result.stdout || `manifest validation failed (${result.status ?? result.signal})`).trim());
+    throw new Error((String(result.stderr || result.stdout || `manifest validation failed (${result.status ?? result.signal})`)).trim());
   }
-  return JSON.parse(result.stdout) as Manifest;
+  return JSON.parse(String(result.stdout)) as Manifest;
 }
 
 /** Selects and builds the current generated compiler artifact via `tools/src/compiler-build.lts`. */
 export function buildCompiler(target: CompilerTarget): CompilerBuild {
   const memo = cachedBuilds.get(target);
   if (memo !== undefined && existsSync(memo.path)) return memo;
-  const tool = ensureTool('compiler-build');
-  const result = spawnSync(process.execPath, [tool, '--root', repoRoot, '--target', target], {
+  const result = spawnTool('compiler-build', ['--root', repoRoot, '--target', target], {
     cwd: repoRoot, encoding: 'utf8', timeout: 120_000, maxBuffer: 16 * 1024 * 1024,
   });
   if (result.error !== undefined) throw result.error;
   if (result.status !== 0 || result.signal !== null) {
-    throw new Error((result.stderr || result.stdout || `compiler build failed (${result.status ?? result.signal})`).trim());
+    throw new Error((String(result.stderr || result.stdout || `compiler build failed (${result.status ?? result.signal})`)).trim());
   }
-  const built = JSON.parse(result.stdout) as CompilerBuild;
+  const built = JSON.parse(String(result.stdout)) as CompilerBuild;
   cachedBuilds.set(target, built);
   return built;
 }

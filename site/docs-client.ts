@@ -1,6 +1,6 @@
 /** Site-build JSON bridge to the ignited Lite documentation tool (`dist/tools/docs.ts`). */
 import { spawnSync } from 'node:child_process';
-import { ensureTool, repoRoot } from '../igniter/artifacts.ts';
+import { spawnTool, repoRoot } from '../igniter/artifacts.ts';
 
 export type Document = { path: string; title: string; headings: string[] };
 
@@ -39,7 +39,7 @@ export type ModuleApiDoc = Readonly<{
 }>;
 
 function runDocs(args: readonly string[], directory: string, stdinInput?: string) {
-  const result = spawnSync(process.execPath, [ensureTool('docs'), ...args], {
+  const result = spawnTool('docs', [...args], {
     cwd: repoRoot,
     env: { ...process.env, LITE_DOCS_ROOT: directory },
     input: stdinInput ?? '',

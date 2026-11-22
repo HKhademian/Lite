@@ -167,14 +167,16 @@ function runWithProcessStub(argv, stdinText, fn, vfs) {
 }
 
 function normalizeOptLevel(raw) {
+  if (raw === 's' || raw === 'S') return 4;
   const n = Number(raw);
-  return Number.isInteger(n) && n >= 0 && n <= 3 ? n : 1;
+  return Number.isInteger(n) && n >= 0 && n <= 4 ? n : 1;
 }
 
 function compileWith(compilerSource, vfs, source, optLevel = 1) {
   const level = normalizeOptLevel(optLevel);
+  const optFlag = level === 4 ? '-Os' : '-O' + String(level);
   return runWithProcessStub(
-    ['node', '/project/compiler.js', '--stdin', '--name', 'playground.lts', '--root', '/project/playground.lts', '-O' + String(level)],
+    ['node', '/project/compiler.js', '--stdin', '--name', 'playground.lts', '--root', '/project/playground.lts', optFlag],
     source ?? '',
     (proc, write) => {
       const compileMain = new Function('process', compilerSource)(proc);

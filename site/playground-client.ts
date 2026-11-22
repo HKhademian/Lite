@@ -60,12 +60,15 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   const OPT_STORAGE_KEY = "lite.pg.optLevel";
   function readOptLevel() {
     const raw = optLevelEl ? Number(optLevelEl.value) : 1;
-    return Number.isInteger(raw) && raw >= 0 && raw <= 3 ? raw : 1;
+    return Number.isInteger(raw) && raw >= 0 && raw <= 4 ? raw : 1;
+  }
+  function formatOptFlag(level) {
+    return level === 4 ? "-Os" : "-O" + String(level);
   }
   if (optLevelEl) {
     try {
       const saved = window.localStorage.getItem(OPT_STORAGE_KEY);
-      if (saved === "0" || saved === "1" || saved === "2" || saved === "3") {
+      if (saved === "0" || saved === "1" || saved === "2" || saved === "3" || saved === "4") {
         optLevelEl.value = saved;
       }
     } catch {}
@@ -324,7 +327,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     const optLevel = readOptLevel();
     if (lastCSource === source && lastCOptLevel === optLevel) return;
     rawC = "";
-    cMessage = "/* Compiling C in browser (-O" + String(optLevel) + ")... */";
+    cMessage = "/* Compiling C in browser (" + formatOptFlag(optLevel) + ")... */";
     renderCodeViews();
     try {
       const res = await workerClient.call("compile-c", {
@@ -360,7 +363,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     const args = parseArgs();
     const optLevel = readOptLevel();
     statusEl.hidden = false;
-    statusEl.textContent = action === "compile" ? "Compiling in browser (-O" + String(optLevel) + ")..." : "Running in browser (-O" + String(optLevel) + ")...";
+    statusEl.textContent = action === "compile" ? "Compiling in browser (" + formatOptFlag(optLevel) + ")..." : "Running in browser (" + formatOptFlag(optLevel) + ")...";
     if (action === "play") {
       outputEl.textContent = "";
     }
@@ -401,7 +404,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       }
       if (action === "compile") {
         if (activeTab !== "c") showTab("ts");
-        statusEl.textContent = "Compiled to TypeScript" + (res.c ? " & C" : "") + " (-O" + String(optLevel) + ")";
+        statusEl.textContent = "Compiled to TypeScript" + (res.c ? " & C" : "") + " (" + formatOptFlag(optLevel) + ")";
         return;
       }
 

@@ -5,7 +5,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, 
 import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, ensureTool, type CompilerBuild } from '../igniter/artifacts.ts';
+import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, spawnTool, type CompilerBuild } from '../igniter/artifacts.ts';
 import { academyClientJs } from './academy-state.ts';
 import { extractModules } from './docs-client.ts';
 import {
@@ -111,6 +111,7 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
       input: sample.stdin,
       encoding: 'utf8',
       timeout: 30_000,
+      env: { ...process.env, LITE_CANVAS_HEADLESS: '1' },
     });
     if (run.error !== undefined) throw run.error;
     if (run.status !== 0) {
@@ -184,8 +185,9 @@ function buildSitePages(options: Readonly<{
     previewSvg: s.previewSvg ?? "",
   });
 
-  const result = spawnSync(process.execPath, [ensureTool("site-pages")], {
+  const result = spawnTool("site-pages", [], {
     cwd: root,
+    target: "ts",
     input: JSON.stringify({
       repoUrl,
       brandWordmark,

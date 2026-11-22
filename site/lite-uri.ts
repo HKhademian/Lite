@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, posix, relative, resolve } from 'node:path';
-import { ensureTool } from '../igniter/artifacts.ts';
+import { spawnTool } from '../igniter/artifacts.ts';
 import type { ModuleApiDoc } from './docs-client.ts';
 import type { ShowcaseSample } from './groups.ts';
 import { escapeHtml } from './highlight.ts';
@@ -1154,9 +1154,10 @@ export type SiteReferenceReport = Readonly<{
 
 /** Verifies every built HTML link, `#fragment` target, `search-index.json`, and `link-graph.json` in `siteDir` via `tools/src/site-validate.lts`. */
 export function validateBuiltSiteReferences(siteDir: string): SiteReferenceReport {
-  const result = spawnSync(process.execPath, [ensureTool('site-validate'), siteDir], {
+  const result = spawnTool('site-validate', [siteDir], {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
+    target: 'ts',
   });
   if (result.error) throw result.error;
   if (result.status !== 0 || result.signal !== null) {

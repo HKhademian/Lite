@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
-import { ensureTool, type CompilerBuild } from '../igniter/artifacts.ts';
+import { spawnTool, type CompilerBuild } from '../igniter/artifacts.ts';
 import { renderDocuments, type ModuleApiDoc, type RenderedDocument } from './docs-client.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import { buildDocOutMap, postprocessMarkdownHtml } from './docs-pages.ts';
@@ -199,7 +199,7 @@ export function buildGymSection(options: Readonly<{
     };
   });
 
-  const result = spawnSync(process.execPath, [ensureTool('site-gym')], {
+  const result = spawnTool('site-gym', [], {
     cwd: rootDir,
     input: JSON.stringify({ description: catalog.description, items: itemsPayload }),
     encoding: 'utf8',

@@ -1,6 +1,6 @@
 /** Host adapter collecting Playground library items via the ignited Lite tool (`tools/src/site-library.lts`). */
 import { spawnSync } from 'node:child_process';
-import { ensureTool } from '../igniter/artifacts.ts';
+import { spawnTool } from '../igniter/artifacts.ts';
 import type { ShowcaseSample } from './groups.ts';
 import type { PlaySample } from './play-samples.ts';
 
@@ -33,7 +33,7 @@ export function collectPlaygroundLibrary(options: Readonly<{
   rootDir: string;
   samples: readonly (ShowcaseSample | PlaySample)[];
 }>): readonly PlaygroundLibraryItem[] {
-  const result = spawnSync(process.execPath, [ensureTool('site-library'), options.rootDir], {
+  const result = spawnTool('site-library', [options.rootDir], {
     cwd: options.rootDir,
     input: JSON.stringify(options.samples),
     encoding: 'utf8',

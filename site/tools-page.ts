@@ -1,6 +1,6 @@
 /** Generates `/tools/` toolchain hub via the ignited Lite tool (`tools/src/site-tools.lts`). */
 import { spawnSync } from 'node:child_process';
-import { ensureTool } from '../igniter/artifacts.ts';
+import { spawnTool } from '../igniter/artifacts.ts';
 import { renderPage, type SourceRevision } from './chrome.ts';
 import type { SearchEntry } from './search.ts';
 
@@ -16,7 +16,7 @@ export function buildToolsSection(options: Readonly<{
   lightSwitchShine: boolean;
 }>): ToolsBuildOutput {
   const { repoUrl, rev, lightSwitchShine } = options;
-  const result = spawnSync(process.execPath, [ensureTool('site-tools'), repoUrl], {
+  const result = spawnTool('site-tools', [repoUrl], {
     encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
   });

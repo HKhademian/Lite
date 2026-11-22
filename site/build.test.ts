@@ -378,7 +378,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert.equal(buildMeta.lessons, 25);
   assert.equal(buildMeta.tutorials, 3);
   assert.equal(buildMeta.gymExercises, 56);
-  assert.equal(buildMeta.modules, 21);
+  assert.equal(buildMeta.modules, 23);
   assert(buildMeta.docsPages >= 200);
   assert(existsSync(join(out, 'docs/design/site-architecture.html')));
   assert(existsSync(join(out, 'docs/design/maps.html')));
@@ -466,6 +466,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="pg-opt-level"'));
   assert(playground.includes('<option value="1" selected>-O1</option>'));
   assert(playground.includes('<option value="3">-O3</option>'));
+  assert(playground.includes('<option value="4">-Os</option>'));
   const workerJs = readFileSync(join(out, 'playground', 'worker.js'), 'utf8');
   assert(workerJs.includes("'-O' + String(level)"));
   assert(playground.includes('id="pg-editor-gutter"'));

@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { compileBuiltCompiler, ensureTool, type CompilerBuild } from '../igniter/artifacts.ts';
+import { compileBuiltCompiler, spawnTool, type CompilerBuild } from '../igniter/artifacts.ts';
 import { renderDocuments, type ModuleApiDoc, type RenderedDocument } from './docs-client.ts';
 import { captureCanvasPreview } from './canvas-preview.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
@@ -260,7 +260,7 @@ export function buildLearnSection(options: Readonly<{
     lessonIds: track.lessons.map((l) => l.id),
   }));
 
-  const result = spawnSync(process.execPath, [ensureTool('site-learn')], {
+  const result = spawnTool('site-learn', [], {
     cwd: rootDir,
     input: JSON.stringify({ repoUrl, tracks: tracksPayload, items: itemsPayload }),
     encoding: 'utf8',

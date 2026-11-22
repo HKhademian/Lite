@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { posix, resolve } from 'node:path';
-import { ensureTool } from '../igniter/artifacts.ts';
+import { spawnTool } from '../igniter/artifacts.ts';
 import type { RenderedDocument } from './docs-client.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import type { ShowcaseSample } from './groups.ts';
@@ -53,7 +53,7 @@ function unescapeHtmlEntities(raw: string): string {
 }
 
 function runSiteDocsTool(args: readonly string[], input?: string): string {
-  const result = spawnSync(process.execPath, [ensureTool('site-docs'), ...args], {
+  const result = spawnTool('site-docs', [...args], {
     cwd: rootDir,
     input: input ?? '',
     encoding: 'utf8',

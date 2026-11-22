@@ -1,6 +1,6 @@
 /** Generates `/modules/` index and detail pages via the ignited Lite tool (`tools/src/site-modules.lts`). */
 import { spawnSync } from 'node:child_process';
-import { ensureTool } from '../igniter/artifacts.ts';
+import { spawnTool } from '../igniter/artifacts.ts';
 import type { ModuleApiDoc } from './docs-client.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import type { ShowcaseSample } from './groups.ts';
@@ -66,7 +66,7 @@ export function buildModulesSection(options: Readonly<{
     };
   });
 
-  const result = spawnSync(process.execPath, [ensureTool('site-modules')], {
+  const result = spawnTool('site-modules', [], {
     cwd: rootDir,
     input: JSON.stringify({ rootDir, repoUrl, modules: enrichedModules, samples }),
     encoding: 'utf8',
