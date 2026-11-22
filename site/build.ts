@@ -238,20 +238,30 @@ export function parseBuildArgs(argv: readonly string[]): BuildSiteOptions {
 }
 
 export function buildSite(options?: BuildSiteOptions): void {
+  const buildStart = performance.now();
+  const phaseMs: string[] = [];
+  const timePhase = <T>(label: string, fn: () => T): T => {
+    const t0 = performance.now();
+    const res = fn();
+    phaseMs.push(`${label}=${String(Math.round(performance.now() - t0))}ms`);
+    return res;
+  };
   const lightSwitchShine = options?.lightSwitchShine ?? true;
-  const tsCompiler = options?.tsCompiler ?? buildTsCompiler();
+  const tsCompiler = timePhase('compiler', () => options?.tsCompiler ?? buildTsCompiler());
   const repoUrl = readRepositoryUrl();
   const rev = readSourceRevision();
   const rendered = new Map<string, RenderedSample>();
   const renderedPlay = new Map<string, RenderedSample>();
 
   const playBadgeByGroup = new Map(playGroups.map(group => [group.id, group.badge]));
-  for (const sample of showcaseSamples) {
-    rendered.set(sample.id, compileAndRunSample(sample, tsCompiler));
-  }
-  for (const sample of playSamples) {
-    renderedPlay.set(sample.id, compileAndRunSample(sample, tsCompiler, playBadgeByGroup.get(sample.group)));
-  }
+  timePhase('samples', () => {
+    for (const sample of showcaseSamples) {
+      rendered.set(sample.id, compileAndRunSample(sample, tsCompiler));
+    }
+    for (const sample of playSamples) {
+      renderedPlay.set(sample.id, compileAndRunSample(sample, tsCompiler, playBadgeByGroup.get(sample.group)));
+    }
+  });
 
   rmSync(outputDir, { recursive: true, force: true });
   mkdirSync(join(outputDir, 'runtime'), { recursive: true });
@@ -267,7 +277,7 @@ export function buildSite(options?: BuildSiteOptions): void {
   }
 
   const compilerJs = stripTypeScriptTypes(readFileSync(tsCompiler.path, 'utf8'), { mode: 'strip' });
-  const compilerCJs = stripTypeScriptTypes(readFileSync(buildCCompiler().path, 'utf8'), { mode: 'strip' });
+  const compilerCJs = timePhase('compiler-c', () => stripTypeScriptTypes(readFileSync(buildCCompiler().path, 'utf8'), { mode: 'strip' }));
   const stripTsJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'strip-ts.ts'), 'utf8'), { mode: 'strip' });
   const playKeepaliveJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'play-keepalive.ts'), 'utf8'), { mode: 'strip' });
   const codeViewJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'code-view.ts'), 'utf8'), { mode: 'strip' });
@@ -303,12 +313,12 @@ export function buildSite(options?: BuildSiteOptions): void {
   writeFileSync(join(outputDir, 'runtime', 'search.js'), searchClientJs);
   writeFileSync(join(outputDir, 'runtime', 'snips.js'), snipsClientJs);
 
-  const extractedModules = extractModules(root);
-  const playgroundLibrary = collectPlaygroundLibrary({
+  const extractedModules = timePhase('extract-modules', () => extractModules(root));
+  const playgroundLibrary = timePhase('library', () => collectPlaygroundLibrary({
     rootDir: root,
     samples: [...showcaseSamples, ...playSamples],
-  });
-  const discoveredDocs = discoverDocsPayload();
+  }));
+  const discoveredDocs = timePhase('discover-docs', () => discoverDocsPayload());
   const renderedDocByPath = new Map(discoveredDocs.rendered.map((d) => [d.path, d]));
   const learnCatalog = JSON.parse(readFileSync(join(root, 'language', 'learn', 'catalog.json'), 'utf8')) as LearnCatalog;
   const gymCatalog = JSON.parse(readFileSync(join(root, 'language', 'gym', 'catalog.json'), 'utf8')) as GymCatalog;
@@ -358,11 +368,11 @@ export function buildSite(options?: BuildSiteOptions): void {
     playgroundLibrary,
   });
 
-  const toolsOut = buildToolsSection({ repoUrl, rev, lightSwitchShine });
+  const toolsOut = timePhase('tools', () => buildToolsSection({ repoUrl, rev, lightSwitchShine }));
   mkdirSync(join(outputDir, 'tools'), { recursive: true });
   writeFileSync(join(outputDir, 'tools', 'index.html'), toolsOut.html);
 
-  const learnOut = buildLearnSection({
+  const learnOut = timePhase('learn', () => buildLearnSection({
     tsCompiler,
     modules: extractedModules,
     showcaseSamples,
@@ -371,14 +381,14 @@ export function buildSite(options?: BuildSiteOptions): void {
     rev,
     lightSwitchShine,
     graph,
-  });
+  }));
   for (const [relPath, html] of learnOut.files) {
     const dest = join(outputDir, relPath);
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, html);
   }
 
-  const gymOut = buildGymSection({
+  const gymOut = timePhase('gym', () => buildGymSection({
     tsCompiler,
     modules: extractedModules,
     showcaseSamples,
@@ -387,14 +397,14 @@ export function buildSite(options?: BuildSiteOptions): void {
     rev,
     lightSwitchShine,
     graph,
-  });
+  }));
   for (const [relPath, content] of gymOut.files) {
     const dest = join(outputDir, relPath);
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, content);
   }
 
-  const docsOut = buildDocsSection({
+  const docsOut = timePhase('docs', () => buildDocsSection({
     showcaseSamples,
     playSamples,
     repoUrl,
@@ -402,14 +412,14 @@ export function buildSite(options?: BuildSiteOptions): void {
     lightSwitchShine,
     discovered: discoveredDocs,
     graph,
-  });
+  }));
   for (const [relPath, html] of docsOut.files) {
     const dest = join(outputDir, relPath);
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, html);
   }
 
-  const modulesOut = buildModulesSection({
+  const modulesOut = timePhase('modules', () => buildModulesSection({
     modules: extractedModules,
     showcaseSamples,
     playSamples,
@@ -418,7 +428,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     rev,
     lightSwitchShine,
     graph,
-  });
+  }));
   for (const [relPath, html] of modulesOut.files) {
     const dest = join(outputDir, relPath);
     mkdirSync(dirname(dest), { recursive: true });
@@ -470,7 +480,7 @@ export function buildSite(options?: BuildSiteOptions): void {
   }
   writeFileSync(join(outputDir, 'playground', 'library.json'), JSON.stringify(playgroundLibrary));
 
-  const sitePages = buildSitePages({
+  const sitePages = timePhase('pages', () => buildSitePages({
     rendered,
     renderedPlay,
     repoUrl,
@@ -482,7 +492,7 @@ export function buildSite(options?: BuildSiteOptions): void {
       docsPages: docsOut.files.size,
       modules: extractedModules.length,
     },
-  });
+  }));
   writeFileSync(
     join(outputDir, 'index.html'),
     renderPage({
@@ -543,7 +553,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     ) + '\n',
   );
 
-  const refReport = validateBuiltSiteReferences(outputDir);
+  const refReport = timePhase('validate', () => validateBuiltSiteReferences(outputDir));
   if (refReport.violations.length > 0) {
     const sample = refReport.violations
       .slice(0, 15)
@@ -554,8 +564,10 @@ export function buildSite(options?: BuildSiteOptions): void {
     );
   }
 
+  const totalSec = ((performance.now() - buildStart) / 1000).toFixed(2);
+  const rssMb = (process.memoryUsage().rss / 1048576).toFixed(1);
   console.log(
-    `Built Lite site (${String(rendered.size)} verified samples, ${String(refReport.localLinksChecked)} local links, ${String(refReport.fragmentsChecked)} fragments verified) -> dist/site/`,
+    `Built Lite site (${String(rendered.size)} verified samples, ${String(refReport.localLinksChecked)} local links, ${String(refReport.fragmentsChecked)} fragments verified) -> dist/site/ [${totalSec}s, rss=${rssMb}MB | ${phaseMs.join(' ')}]`,
   );
 }
 

@@ -1147,6 +1147,7 @@ stdinBytes: List<Int>, scenarioArgs: List<String>, idx: Int
 
 /** Executes `lite verify` over `language/verifications` under `rootDir` and returns process exit status. */
 pub runVerification := fn(rootDir: String, args: List<String>): Int {
+    verifyStartNs := time.monotonicNs();
     opts := parseVerifyArgs(args);
     if not opts.ok {
         io.errorLine("lite verify: " + opts.error);
@@ -1677,15 +1678,20 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     if opts.pedantic {
         printPedanticBenchmark(pedanticManifests, pedanticScenarios, pedanticCompileNs, pedanticRunNs, pedanticBytes);
     }
+    elapsedMs := (time.monotonicNs() - verifyStartNs) / 1000000;
+    elapsedTenths := (elapsedMs + 50) / 100;
+    elapsedWhole := elapsedTenths / 10;
+    elapsedFrac := elapsedTenths - elapsedWhole * 10;
+    elapsedTag := " (" + integer.intText(elapsedWhole) + "." + integer.intText(elapsedFrac) + "s)";
     if failures > 0 {
-        io.outputLine("verification failed: " + integer.intText(failures) + " failing scenario(s), " + integer.intText(executed) + " executed, " + integer.intText(cached) + " cached");
+        io.outputLine("verification failed: " + integer.intText(failures) + " failing scenario(s), " + integer.intText(executed) + " executed, " + integer.intText(cached) + " cached" + elapsedTag);
         return 1;
     }
     if not opts.update {
         if executed == 0 and cached == 0 {
             io.outputLine("verification passed: no selected scenarios");
         } else {
-            io.outputLine("verification passed: " + integer.intText(executed) + " executed, " + integer.intText(cached) + " cached");
+            io.outputLine("verification passed: " + integer.intText(executed) + " executed, " + integer.intText(cached) + " cached" + elapsedTag);
         }
     }
     0
