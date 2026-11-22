@@ -1112,8 +1112,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
     scopedAliases := types.aliasesUpToDepth(aliases, blockLexDepth);
     futureValues := resolveFutureDecls(target, source, prefix, "", false, decls, assignedBag, scopedAliases, functions, functionParams, locals);
 
-    nextLocals: mut List<Local> = [];
-    loop locals as entry { listLib.pushBack(mut nextLocals, entry); }
+    nextLocals: mut List<Local> = locals;
     placeholderDepth := 0 - 2 - blockLexDepth;
     pushedNames: mut List<String> = [];
     pushedAts: mut List<Int> = [];

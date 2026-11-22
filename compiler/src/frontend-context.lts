@@ -435,8 +435,7 @@ pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, ha
     loop updates as u {
         if u.depth == blockDepth { listLib.pushBack(mut here, u); }
     }
-    nextLocals: mut List<Local> = [];
-    loop locals as l { listLib.pushBack(mut nextLocals, l); }
+    nextLocals: mut List<Local> = locals;
     if hasElse and liveBranchCount == 0 { return nextLocals; }
     seenRuntimes: mut List<String> = [];
     loop here as u {

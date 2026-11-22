@@ -1259,25 +1259,17 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             after := skipTrivia(source, position + 1, prefix);
             if (blockKind == BLOCK_KIND_IF or blockKind == BLOCK_KIND_IF_VALUE) and after < size and textLib.wordAt(source, after, "else") {
                 locals = visibleLocals(locals, depth);
-                keptDecls := popBlockDecls(blockDecls, depth);
-                blockDecls = [];
-                loop keptDecls as d { listLib.pushBack(mut blockDecls, d); }
-                keptAssigned := popBlockDecls(blockAssignedDecls, depth);
-                blockAssignedDecls = [];
-                loop keptAssigned as ad { listLib.pushBack(mut blockAssignedDecls, ad); }
+                blockDecls = popBlockDecls(blockDecls, depth);
+                blockAssignedDecls = popBlockDecls(blockAssignedDecls, depth);
                 aliases = popBlockAliases(aliases, depth);
                 var stateCount := 0;
                 loop savedStates { stateCount += 1; }
                 branchPreLen := savedStates[stateCount - 1].preLocalsLen;
                 if currentLive and not currentStopped {
-                    nextBranchUpdates := recordBranchUpdates(locals, branchPreLen, depth - 1, blockCount, branchUpdates);
-                    branchUpdates = [];
-                    loop nextBranchUpdates as u { listLib.pushBack(mut branchUpdates, u); }
+                    branchUpdates = recordBranchUpdates(locals, branchPreLen, depth - 1, blockCount, branchUpdates);
                     liveBranchCount = liveBranchCount + 1;
                 }
-                nextLocals := truncateLocals(locals, branchPreLen);
-                locals = [];
-                loop nextLocals as l { listLib.pushBack(mut locals, l); }
+                locals = truncateLocals(locals, branchPreLen);
                 afterElse := skipTrivia(source, after + 4, prefix);
                 rejectMisplacedTag(source, afterElse, prefix, "block tag cannot appear after else");
                 branchesReturned = branchesReturned and currentReturned;
@@ -1331,25 +1323,17 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     failAt(source, nextArmStart, prefix, "subjectless match requires a final _ fallback arm");
                 }
                 locals = visibleLocals(locals, depth);
-                keptDecls := popBlockDecls(blockDecls, depth);
-                blockDecls = [];
-                loop keptDecls as d { listLib.pushBack(mut blockDecls, d); }
-                keptAssigned := popBlockDecls(blockAssignedDecls, depth);
-                blockAssignedDecls = [];
-                loop keptAssigned as ad { listLib.pushBack(mut blockAssignedDecls, ad); }
+                blockDecls = popBlockDecls(blockDecls, depth);
+                blockAssignedDecls = popBlockDecls(blockAssignedDecls, depth);
                 aliases = popBlockAliases(aliases, depth);
                 var stateCount := 0;
                 loop savedStates { stateCount += 1; }
                 branchPreLen := savedStates[stateCount - 1].preLocalsLen;
                 if currentLive and not currentStopped {
-                    nextBranchUpdates := recordBranchUpdates(locals, branchPreLen, depth - 1, blockCount, branchUpdates);
-                    branchUpdates = [];
-                    loop nextBranchUpdates as u { listLib.pushBack(mut branchUpdates, u); }
+                    branchUpdates = recordBranchUpdates(locals, branchPreLen, depth - 1, blockCount, branchUpdates);
                     liveBranchCount = liveBranchCount + 1;
                 }
-                nextLocals := truncateLocals(locals, branchPreLen);
-                locals = [];
-                loop nextLocals as l { listLib.pushBack(mut locals, l); }
+                locals = truncateLocals(locals, branchPreLen);
                 branchesReturned = branchesReturned and currentReturned;
                 branchesStopped = branchesStopped and currentStopped;
                 currentReturned = false;
@@ -1509,26 +1493,16 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             parent := listLib.popBack(mut savedStates);
             if blockKind == BLOCK_KIND_IF or blockKind == BLOCK_KIND_IF_VALUE or blockKind == BLOCK_KIND_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE {
                 if currentLive and not currentStopped {
-                    nextBranchUpdates := recordBranchUpdates(locals, parent.preLocalsLen, depth, blockCount, branchUpdates);
-                    branchUpdates = [];
-                    loop nextBranchUpdates as u { listLib.pushBack(mut branchUpdates, u); }
+                    branchUpdates = recordBranchUpdates(locals, parent.preLocalsLen, depth, blockCount, branchUpdates);
                     liveBranchCount = liveBranchCount + 1;
                 }
                 truncated := truncateLocals(locals, parent.preLocalsLen);
-                joinedLocals := joinBranchLocals(truncated, parent.preLocalsLen, blockCount, hasElse or blockKind == BLOCK_KIND_ELSE, liveBranchCount, branchUpdates);
-                keptUpdates := popBranchUpdates(branchUpdates, blockCount);
-                locals = [];
-                loop joinedLocals as l { listLib.pushBack(mut locals, l); }
-                branchUpdates = [];
-                loop keptUpdates as u { listLib.pushBack(mut branchUpdates, u); }
+                locals = joinBranchLocals(truncated, parent.preLocalsLen, blockCount, hasElse or blockKind == BLOCK_KIND_ELSE, liveBranchCount, branchUpdates);
+                branchUpdates = popBranchUpdates(branchUpdates, blockCount);
             } else if blockKind == BLOCK_KIND_LOOP {
-                loopJoined := joinLoopUpdates(locals, parent.preLocalsLen, depth);
-                locals = [];
-                loop loopJoined as l { listLib.pushBack(mut locals, l); }
+                locals = joinLoopUpdates(locals, parent.preLocalsLen, depth);
             } else if blockKind == BLOCK_KIND_FUNCTION {
-                truncatedFn := truncateLocals(locals, parent.preLocalsLen);
-                locals = [];
-                loop truncatedFn as l { listLib.pushBack(mut locals, l); }
+                locals = truncateLocals(locals, parent.preLocalsLen);
             }
             liveBranchCount = parent.liveBranchCount;
             currentReturned = parent.returned or (not parent.stopped and completedReturn and blockKind =!= BLOCK_KIND_FUNCTION);

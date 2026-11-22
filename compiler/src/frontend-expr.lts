@@ -1387,8 +1387,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     allowOutput := isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isBranchBody or isFnBody or (bodySink == "exprOut");
     bodyDepth := if isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isFnBody { iifeDepth } else { iifeDepth + 1 };
     stmtReturnPrefix := if isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isFnBody { "" } else { "return " };
-    var blockLocals: mut List<Local> = [];
-    loop locals as entry { listLib.pushBack(mut blockLocals, entry); }
+    var blockLocals: mut List<Local> = locals;
     outerLocalsLen := ctx.localsCount(blockLocals);
     blockLexDepth := ir.maxLocalLexDepth(blockLocals) + 1;
     emptyFuturesHere: List<FutureValue> = [];
@@ -3644,8 +3643,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         }
         syntax.rejectMisplacedTag(source, beforeLoopOpen, prefix, "block tag cannot appear before { in loop");
         loopOpen := syntax.expectSymbol(source, beforeLoopOpen, "{", prefix);
-        loopLocals: mut List<Local> = [];
-        loop locals as entry { listLib.pushBack(mut loopLocals, entry); }
+        loopLocals: mut List<Local> = locals;
         loopItemLexDepth := ir.maxLocalLexDepth(loopLocals) + 1;
         if isSeqLoop and seqItemName =!= "" {
             if seqItemKind == ir.VALUE_KIND_UNIT {
@@ -4896,8 +4894,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         pat := parseMatchPattern(target, source, armStart, prefix, subj.kind, subjVar, subj, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
         if inferMode { matchMarkers = matchMarkers + pat.markers; }
         /* Build arm-local scope with pattern bindings. */
-        armLocals: mut List<Local> = [];
-        loop locals as entry { listLib.pushBack(mut armLocals, entry); }
+        armLocals: mut List<Local> = locals;
         var declStmts := "";
         var assignStmts := "";
         var voidStmts := "";

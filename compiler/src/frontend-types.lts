@@ -942,8 +942,7 @@ pub findRecordDefaultCode := fn(aliases: List<AliasDecl>, recordKind: String, fi
 
 /** Appends `$recpop:<recordKind>` and decoded `$recdef:<recordKind>#<field>` entries from serialized `encoded` defaults onto `aliases`. */
 pub appendEncodedRecordDefaults := fn(aliases: List<AliasDecl>, recordKind: String, encoded: String, depth: Int): List<AliasDecl> {
-    out: mut List<AliasDecl> = [];
-    loop aliases as entry { listLib.pushBack(mut out, entry); }
+    out: mut List<AliasDecl> = aliases;
     listLib.pushBack(mut out, (name = "$recpop:" + recordKind, target = "1", at = -1, end = 0, depth = depth));
     if encoded == "" { return out; }
     size := textLib.length(encoded);
@@ -2340,8 +2339,7 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
         }
     }
     if not hasFound { return baseAliases; }
-    out: mut List<AliasDecl> = [];
-    loop baseAliases as entry { listLib.pushBack(mut out, entry); }
+    out: mut List<AliasDecl> = baseAliases;
     loop found as entry { listLib.pushBack(mut out, entry); }
     out
 };
