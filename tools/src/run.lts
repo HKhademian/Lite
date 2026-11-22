@@ -122,6 +122,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     hasPtrMove := hasTopLevelFn(source, "onCanvasPointerMove");
     hasPtrDown := hasTopLevelFn(source, "onCanvasPointerDown");
     hasPtrUp := hasTopLevelFn(source, "onCanvasPointerUp");
+    hasResize := hasTopLevelFn(source, "onSurfaceResize");
 
     header :=
     "__lpSurf := import \"extra/surface\";\n" +
@@ -325,12 +326,33 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "    var prevDown := false;\n" +
     "    var prevCol := -1;\n" +
     "    var prevRow := -1;\n" +
+    "    var prevWinW := canvasW;\n" +
+    "    var prevWinH := canvasH + barH;\n" +
+    "    var curWinW := canvasW;\n" +
+    "    var curWinH := canvasH + barH;\n" +
+    "    var curScale := scale;\n" +
     "    loop true {\n" +
     "        inp := __lpSurf.poll(win);\n" +
     "        if not inp.open or inp.key == \"Escape\" { break; }\n" +
+    "        if inp.width > 0 and inp.height > 0 and (inp.width =!= prevWinW or inp.height =!= prevWinH) {\n" +
+    "            prevWinW = inp.width;\n" +
+    "            prevWinH = inp.height;\n" +
+    "            curWinW = inp.width;\n" +
+    "            curWinH = inp.height;\n" +
+    "            availH := if barH > 0 and curWinH > barH { curWinH - barH } else { curWinH };\n" +
+    "            sx := curWinW / snap.width;\n" +
+    "            sy := availH / snap.height;\n" +
+    "            fitS := if sx < sy { sx } else { sy };\n" +
+    "            curScale = if fitS < 1 { 1 } else { fitS };\n" +
+    "            __lpSurf.clear(win, __lpSurf.rgb(0.04, 0.05, 0.08));\n" +
+    (if hasResize { "            onSurfaceResize(curWinW, availH);\n" } else { "" }) +
+    "        }\n" +
     "        var handledKey := false;\n" +
     "        if inp.key == \"F12\" {\n" +
     "            barVisible = not barVisible;\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"F11\" {\n" +
+    "            __lpSurf.toggleFullscreen(win);\n" +
     "            handledKey = true;\n" +
     "        } else if inp.key == \"p\" or inp.key == \"P\" {\n" +
     "            paused = not paused;\n" +
@@ -360,7 +382,8 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     }
     footer = footer +
     "        prevKey = if handledKey { \"\" } else { inp.key };\n" +
-    "        activeBarY := if barH > 0 { canvasH } else { canvasH - 28 };\n" +
+    "        curCanvasH := if barH > 0 and curWinH > barH { curWinH - barH } else { curWinH };\n" +
+    "        activeBarY := if barH > 0 { curCanvasH } else { curWinH - 28 };\n" +
     "        inBar := barVisible and inp.pointerY >= (activeBarY * 1.0);\n" +
     "        if inBar and inp.pointerDown and not prevDown {\n" +
     "            px := inp.pointerX;\n" +
@@ -370,8 +393,8 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "            else if px >= 192.0 and px <= 256.0 { fpsMode = (fpsMode + 1) % 4; __lpApplyFps(win, fpsMode); }\n" +
     "            else if px >= 262.0 and px <= 306.0 { debugOn = not debugOn; }\n" +
     "        }\n" +
-    "        col := __lpFloorInt(inp.pointerX / (scale * 1.0));\n" +
-    "        row := __lpFloorInt(inp.pointerY / (scale * 1.0));\n";
+    "        col := __lpFloorInt(inp.pointerX / (curScale * 1.0));\n" +
+    "        row := __lpFloorInt(inp.pointerY / (curScale * 1.0));\n";
 
     if hasPtrMove {
         footer = footer +
@@ -401,7 +424,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     }
 
     footer = footer +
-    "        lastDraw = __lpFlush(win, scale, canvasW, canvasH, lastDraw, muted);\n" +
+    "        lastDraw = __lpFlush(win, curScale, curWinW, curCanvasH, lastDraw, muted);\n" +
     "        nowNs := __lpTime.monotonicNs();\n" +
     "        if nowNs >= nextHudNs {\n" +
     "            nextHudNs = nowNs + 250000000;\n" +
@@ -413,7 +436,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "            hudFrames = vt.frameCount;\n" +
     "        }\n" +
     "        curBarH := if barH > 0 { barH } else if barVisible { 28 } else { 0 };\n" +
-    "        __lpDrawStageBar(win, canvasW, activeBarY, curBarH, barVisible, paused, muted, fpsMode, debugOn, hudFps);\n" +
+    "        __lpDrawStageBar(win, curWinW, activeBarY, curBarH, barVisible, paused, muted, fpsMode, debugOn, hudFps);\n" +
     "        if debugOn { __lpDrawDebugHud(win, hudFps, hudMsT, hudCpuT, hudRssT, hudFrames, fpsMode, paused, muted); }\n" +
     "        __lpSurf.present(win);\n" +
     "    }\n" +
