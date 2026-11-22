@@ -754,6 +754,10 @@ normalizeCBuiltinCalls := fn(code: String): String {
             out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_vitals(";
             cursor = cursor + textLib.length("lite$extraCanvasVitals(");
             flushed = cursor;
+        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasPlayTone(") {
+            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_play_tone(";
+            cursor = cursor + textLib.length("lite$extraCanvasPlayTone(");
+            flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeEpochNs(") {
             out = out + textLib.slice(code, flushed, cursor) + "lt_time_epoch_ns(";
             cursor = cursor + textLib.length("lite$timeEpochNs(");
@@ -3657,7 +3661,7 @@ usesExtraCanvasBuiltins := fn(calls: String): Bool {
     usesIntHelper(calls, "lite$extraCanvasStrokeRect(") or usesIntHelper(calls, "lite$extraCanvasFillCircle(") or
     usesIntHelper(calls, "lite$extraCanvasStrokeLine(") or usesIntHelper(calls, "lite$extraCanvasDrawText(") or
     usesIntHelper(calls, "lite$extraCanvasCapture(") or usesIntHelper(calls, "lite$extraCanvasSetTargetFps(") or
-    usesIntHelper(calls, "lite$extraCanvasVitals(")
+    usesIntHelper(calls, "lite$extraCanvasVitals(") or usesIntHelper(calls, "lite$extraCanvasPlayTone(")
 };
 
 /** Emits the self-contained C11 `extra/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder + vitals). */
@@ -3951,6 +3955,55 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
         outLine("    bool ok = fwrite(sig, 1, 8, f) == 8 && lt_png_chunk(f, \"IHDR\", ihdr, 13u) && lt_png_chunk(f, \"IDAT\", z, zp) && lt_png_chunk(f, \"IEND\", NULL, 0u);");
         outLine("    free(z); free(raw); fclose(f);");
         outLine("    return (" + okErrTag + "){ .f_ok = ok, .f_error = ok ? \"\" : \"failed writing PNG\" };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasPlayTone(") {
+        outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+        outLine("static id lt_sound_ring[16];");
+        outLine("static int lt_sound_ring_idx = 0;");
+        outLine("static inline void lt_wav_u16(uint8_t *p, uint16_t v) { p[0] = (uint8_t)(v & 0xffu); p[1] = (uint8_t)(v >> 8); }");
+        outLine("static inline void lt_wav_u32(uint8_t *p, uint32_t v) { p[0] = (uint8_t)(v & 0xffu); p[1] = (uint8_t)((v >> 8) & 0xffu); p[2] = (uint8_t)((v >> 16) & 0xffu); p[3] = (uint8_t)(v >> 24); }");
+        outLine("#endif");
+        outLine("static inline void lt_canvas_play_tone(" + surfTag + " surf, int64_t freq, int64_t duration_ms, int64_t volume) {");
+        outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle);");
+        outLine("    if (!s || s->headless || freq < 20 || freq > 20000 || duration_ms <= 0 || duration_ms > 3000 || volume <= 0) return;");
+        outLine("    if (volume > 100) volume = 100;");
+        outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
+        outLine("    const uint32_t sr = 44100u;");
+        outLine("    uint32_t samples = (uint32_t)(((uint64_t)sr * (uint64_t)duration_ms) / 1000u);");
+        outLine("    if (samples < 16u) samples = 16u;");
+        outLine("    uint32_t data_bytes = samples * 2u;");
+        outLine("    uint8_t *wav = malloc(44u + data_bytes);");
+        outLine("    if (!wav) return;");
+        outLine("    memcpy(wav, \"RIFF\", 4u); lt_wav_u32(wav + 4u, 36u + data_bytes); memcpy(wav + 8u, \"WAVEfmt \", 8u);");
+        outLine("    lt_wav_u32(wav + 16u, 16u); lt_wav_u16(wav + 20u, 1u); lt_wav_u16(wav + 22u, 1u);");
+        outLine("    lt_wav_u32(wav + 24u, sr); lt_wav_u32(wav + 28u, sr * 2u); lt_wav_u16(wav + 32u, 2u); lt_wav_u16(wav + 34u, 16u);");
+        outLine("    memcpy(wav + 36u, \"data\", 4u); lt_wav_u32(wav + 40u, data_bytes);");
+        outLine("    double amp = ((double)volume / 100.0) * 12000.0;");
+        outLine("    double phase_inc = 6.28318530717958647692 * (double)freq / (double)sr;");
+        outLine("    uint32_t fade = samples < 440u ? (samples / 2u) : 220u;");
+        outLine("    for (uint32_t i = 0; i < samples; i += 1u) {");
+        outLine("        double env = 1.0;");
+        outLine("        if (fade > 0u && i < fade) env = (double)i / (double)fade;");
+        outLine("        else if (fade > 0u && i + fade > samples) env = (double)(samples - i) / (double)fade;");
+        outLine("        int16_t v = (int16_t)(sin(phase_inc * (double)i) * amp * env);");
+        outLine("        lt_wav_u16(wav + 44u + i * 2u, (uint16_t)v);");
+        outLine("    }");
+        outLine("    void *pool = objc_autoreleasePoolPush();");
+        outLine("    id nsData = ((id (*)(id, SEL, const void *, unsigned long))objc_msgSend)((id)objc_getClass(\"NSData\"), sel_registerName(\"dataWithBytes:length:\"), wav, (unsigned long)(44u + data_bytes));");
+        outLine("    free(wav);");
+        outLine("    id snd = ((id (*)(id, SEL))objc_msgSend)((id)objc_getClass(\"NSSound\"), sel_registerName(\"alloc\"));");
+        outLine("    snd = ((id (*)(id, SEL, id))objc_msgSend)(snd, sel_registerName(\"initWithData:\"), nsData);");
+        outLine("    if (snd != NULL) {");
+        outLine("        int slot = lt_sound_ring_idx; lt_sound_ring_idx = (lt_sound_ring_idx + 1) & 15;");
+        outLine("        if (lt_sound_ring[slot] != NULL) { ((void (*)(id, SEL))objc_msgSend)(lt_sound_ring[slot], sel_registerName(\"release\")); }");
+        outLine("        lt_sound_ring[slot] = snd;");
+        outLine("        ((signed char (*)(id, SEL))objc_msgSend)(snd, sel_registerName(\"play\"));");
+        outLine("    }");
+        outLine("    objc_autoreleasePoolPop(pool);");
+        outLine("#else");
+        outLine("    (void)freq; (void)duration_ms; (void)volume;");
+        outLine("#endif");
         outLine("}");
     }
     outLine("");

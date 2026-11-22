@@ -249,7 +249,7 @@ usesExtraCanvas := fn(calls: String): Bool {
     usesBuiltin(calls, "extraCanvasStrokeRect") or usesBuiltin(calls, "extraCanvasFillCircle") or
     usesBuiltin(calls, "extraCanvasStrokeLine") or usesBuiltin(calls, "extraCanvasDrawText") or
     usesBuiltin(calls, "extraCanvasCapture") or usesBuiltin(calls, "extraCanvasSetTargetFps") or
-    usesBuiltin(calls, "extraCanvasVitals")
+    usesBuiltin(calls, "extraCanvasVitals") or usesBuiltin(calls, "extraCanvasPlayTone")
 }
 
 /** True when any emitted item calls any OS/host tool builtin beyond basic I/O and text. */
@@ -1765,6 +1765,11 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    if (!s) return { ok: false, error: 'invalid canvas surface handle' };");
     outLine("    try { const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs'); fs.writeFileSync(outPath, lite$canvasEncodePng(s)); return { ok: true, error: '' }; }");
     outLine("    catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) }; }");
+    outLine("}");
+    outLine("function lite$extraCanvasPlayTone(surface: LiteCanvasSurface, frequency: bigint, durationMs: bigint, volume: bigint): void {");
+    outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
+    outLine("    if (!s || s.headless) return;");
+    outLine("    void frequency; void durationMs; void volume;");
     outLine("}");
     outLine("");
 }

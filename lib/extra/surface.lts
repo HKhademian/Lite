@@ -120,3 +120,6 @@ pub uncapFrameRate := fn(surface: Surface): Unit {
 
 /** Reads live performance and resource vitals (frame count, frame time, FPS, CPU time, and resident memory bytes). */
 pub vitals := fn(surface: Surface): Vitals;
+
+/** Plays a short synthesized sine tone (`frequency` Hz, `durationMs` ms, `volume` 1..100) asynchronously on desktop hosts. */
+pub playTone := fn(surface: Surface, frequency: Int, durationMs: Int, volume: Int): Unit;
