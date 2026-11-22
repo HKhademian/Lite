@@ -30516,9 +30516,9 @@ export function main(lite$write?: (text: string) => void): string {
                     if (liteFn$lib$core$list$listContainsText([...(lite_publishedFunctions)], lite_name)) {
                         lite_items.push({ kind: lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_FUNCTION, name: lite_name, runtime: lite_functionRuntime, code: (lite_header).result, intValue: (lite_header).count, textValue: (lite_header).params });
                     }
-                    const lite_softModule = (Boolean(((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$TARGET_TS))) && (liteFn$lib$core$list$listContainsText([...(lite_publishedFunctions)], lite_name)))) ? liteFn$_p__p_$_p__p_$compiler$src$builtins__abi$coreSoftBuiltin(lite_moduleIdentity, lite_name, (lite_header).params, (lite_header).result) : "");
+                    const lite_softModule = (Boolean(liteFn$lib$core$list$listContainsText([...(lite_publishedFunctions)], lite_name)) ? liteFn$_p__p_$_p__p_$compiler$src$builtins__abi$coreSoftBuiltin(lite_moduleIdentity, lite_name, (lite_header).params, (lite_header).result) : "");
                     void lite_softModule;
-                    const lite_skipAsSoft = ((((((((lite_neededFns) !== ("*"))) && (((lite_softModule) !== (""))))) && (lite_skipSoftBuiltins))) && (((liteFn$_p__p_$_p__p_$compiler$src$frontend$resolveBuiltinMode([...(lite_builtinRules)], lite_softModule, lite_name)) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$BUILTIN_MODE_BUILTIN))));
+                    const lite_skipAsSoft = ((((((((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$TARGET_TS))) && (((lite_neededFns) !== ("*"))))) && (((lite_softModule) !== (""))))) && (lite_skipSoftBuiltins))) && (((liteFn$_p__p_$_p__p_$compiler$src$frontend$resolveBuiltinMode([...(lite_builtinRules)], lite_softModule, lite_name)) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$BUILTIN_MODE_BUILTIN))));
                     void lite_skipAsSoft;
                     const lite_skipAsUnneeded = ((((((lite_neededFns) !== ("*"))) && ((!(lite_skipAsSoft))))) && ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend$hasHelperToken(lite_neededFns, ((lite_functionRuntime) + ("(")))))));
                     void lite_skipAsUnneeded;

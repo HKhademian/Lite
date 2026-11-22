@@ -83,7 +83,8 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
     hasLen := usesIntHelper(calls, "lite$textLength(") or hasSliceFrom;
     hasAt := usesIntHelper(calls, "lite$textAt(");
     hasSlice := usesIntHelper(calls, "lite$textSlice(") or hasSliceFrom;
-    if not hasLen and not hasAt and not hasSlice { return; }
+    hasSoftUtf8 := usesCTextSoftUtf8(calls);
+    if not hasLen and not hasAt and not hasSlice and not hasSoftUtf8 { return; }
     io.outputLine("static size_t lt_utf8_step(const char *s, size_t offset) {");
     io.outputLine("    const unsigned char b = (unsigned char)s[offset];");
     io.outputLine("    if (b < 0x80u) { return 1u; }");
@@ -93,17 +94,16 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
     io.outputLine("    return 1u;");
     io.outputLine("}");
     io.outputLine("typedef struct { const char *s; size_t byte_len; int64_t cp_len; bool ascii; size_t last_b; int64_t last_cp; } lt_utf8_meta;");
-    io.outputLine("static lt_utf8_meta lt_utf8_cache[8];");
-    io.outputLine("static int lt_utf8_cache_next = 0;");
+    io.outputLine("static lt_utf8_meta lt_utf8_cache[64];");
     io.outputLine("static lt_utf8_meta *lt_utf8_get_meta(const char *s) {");
-    io.outputLine("    for (int i = 0; i < 8; i += 1) { if (lt_utf8_cache[i].s == s) { return &lt_utf8_cache[i]; } }");
+    io.outputLine("    size_t h = (((size_t)(uintptr_t)s) >> 4) & 63u;");
+    io.outputLine("    if (lt_utf8_cache[h].s == s) { return &lt_utf8_cache[h]; }");
     io.outputLine("    size_t b = 0u; int64_t cp = 0; bool ascii = true;");
     io.outputLine("    while (s[b] != '\\0') {");
     io.outputLine("        if ((unsigned char)s[b] < 0x80u) { b += 1u; cp += 1; }");
     io.outputLine("        else { ascii = false; b += lt_utf8_step(s, b); cp += 1; }");
     io.outputLine("    }");
-    io.outputLine("    lt_utf8_meta *slot = &lt_utf8_cache[lt_utf8_cache_next];");
-    io.outputLine("    lt_utf8_cache_next = (lt_utf8_cache_next + 1) & 7;");
+    io.outputLine("    lt_utf8_meta *slot = &lt_utf8_cache[h];");
     io.outputLine("    slot->s = s; slot->byte_len = b; slot->cp_len = cp; slot->ascii = ascii; slot->last_b = 0u; slot->last_cp = 0;");
     io.outputLine("    return slot;");
     io.outputLine("}");
@@ -116,6 +116,8 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
         io.outputLine("    out[len] = '\\0';");
         io.outputLine("    return out;");
         io.outputLine("}");
+    }
+    if hasAt or hasSlice or hasSoftUtf8 {
         io.outputLine("static size_t lt_utf8_byte_at(const char *s, int64_t target, bool allow_end, bool *ok) {");
         io.outputLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
         io.outputLine("    if (target < 0 || target > m->cp_len || (!allow_end && target == m->cp_len)) { *ok = false; return 0u; }");
@@ -703,9 +705,31 @@ usesProcessQueryBuiltins := fn(calls: String): Bool {
     usesIntHelper(calls, "lite$processEnvGet(")
 };
 
+/** True when any emitted item calls a C11 soft-builtin text helper that needs `lt_utf8_get_meta`/`lt_utf8_byte_at`. */
+usesCTextSoftUtf8 := fn(calls: String): Bool {
+    usesIntHelper(calls, "lt_c_text_skip_while(") or usesIntHelper(calls, "lt_c_text_index_of(") or
+    usesIntHelper(calls, "lt_c_text_starts_with_at(") or usesIntHelper(calls, "lt_c_text_word_at(")
+};
+
+/** True when any emitted item calls a C11 soft-builtin file/crypto-file helper that needs POSIX headers. */
+usesCFileSoft := fn(calls: String): Bool {
+    usesIntHelper(calls, "lt_c_file_read_text(") or usesIntHelper(calls, "lt_c_file_write_text(") or
+    usesIntHelper(calls, "lt_c_file_append_text(") or usesIntHelper(calls, "lt_c_sha256_file(")
+};
+
+/** True when any emitted item calls any C11 soft-builtin fast-path helper. */
+usesCSoftBuiltins := fn(calls: String): Bool {
+    usesCTextSoftUtf8(calls) or usesCFileSoft(calls) or
+    usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or
+    usesIntHelper(calls, "lt_c_text_to_int(") or usesIntHelper(calls, "lt_c_text_trim(") or
+    usesIntHelper(calls, "lt_c_text_ends_with(") or usesIntHelper(calls, "lt_c_text_repeat(") or
+    usesIntHelper(calls, "lt_c_text_contains(") or usesIntHelper(calls, "lt_c_text_to_lower(") or
+    usesIntHelper(calls, "lt_c_sha256_text(") or usesIntHelper(calls, "lt_c_sha256_bytes(")
+};
+
 /** True when any emitted item needs POSIX OS headers (`unistd.h`, `fcntl.h`, `sys/stat.h`, `dirent.h`). */
 usesPosixHost := fn(calls: String): Bool {
-    usesStreamBuiltins(calls) or usesFileBuiltins(calls) or usesProcessQueryBuiltins(calls)
+    usesStreamBuiltins(calls) or usesFileBuiltins(calls) or usesProcessQueryBuiltins(calls) or usesCFileSoft(calls)
 };
 
 /** True when any emitted item needs one of the checked Int division helpers. */
@@ -2752,7 +2776,7 @@ emitCHostBuiltinHelpers := fn(calls: String): Unit {
         usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
         usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
         usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lite$fileRealPath(") or
-        usesIntHelper(calls, "lite$fileMakeTempDir(");
+        usesIntHelper(calls, "lite$fileMakeTempDir(") or usesCFileSoft(calls);
     if needDupStr {
         io.outputLine("static char *lt_dup_str(const char *s) {");
         io.outputLine("    size_t n = strlen(s);");
@@ -2768,9 +2792,336 @@ emitCHostBuiltinHelpers := fn(calls: String): Unit {
     emitCProcessBuiltinHelpers(calls);
 };
 
+/** Extracts the C runtime parameter name (`lite_<name>`) at `targetIndex` from an encoded parameter list. */
+cParamRuntimeAt := fn(encoded: String, targetIndex: Int): String {
+    if encoded == "" or targetIndex < 0 { return ""; }
+    var index := 0;
+    var start := 0;
+    loop true {
+        separator := textLib.indexOfText(encoded, "|", start);
+        end := if separator >= 0 { separator } else { textLib.length(encoded) };
+        if index == targetIndex {
+            entry := textLib.slice(encoded, start, end);
+            eq := textLib.indexOfText(entry, "=", 0);
+            if eq <= 0 { return ""; }
+            return "lite_" + textLib.slice(entry, 0, eq);
+        }
+        if separator < 0 { return ""; }
+        index = index + 1;
+        start = separator + 1;
+    }
+    ""
+};
+
+/** Returns a C11 native fast-path return expression for a registered soft-builtin function, or `""`. */
+cSoftBuiltinExpr := fn(moduleName: String, fnName: String, params: String): String {
+    arg0 := cParamRuntimeAt(params, 0);
+    if moduleName == "lib/core/int" {
+        if fnName == "intText" { return "lt_c_int_text(" + arg0 + ")"; }
+    } else if moduleName == "lib/core/text" {
+        if fnName == "skipSpaces" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", true)"; }
+        if fnName == "skipName" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", false)"; }
+        if fnName == "indexOf" or fnName == "indexOfText" {
+            return "lt_c_text_index_of(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
+        }
+        if fnName == "startsWithAt" {
+            return "lt_c_text_starts_with_at(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
+        }
+        if fnName == "wordAt" {
+            return "lt_c_text_word_at(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
+        }
+        if fnName == "joinTexts" { return "lt_c_text_join(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "textToInt" { return "lt_c_text_to_int(" + arg0 + ")"; }
+        if fnName == "trimStart" { return "lt_c_text_trim(" + arg0 + ", true, false)"; }
+        if fnName == "trimEnd" { return "lt_c_text_trim(" + arg0 + ", false, true)"; }
+        if fnName == "trim" { return "lt_c_text_trim(" + arg0 + ", true, true)"; }
+        if fnName == "endsWith" { return "lt_c_text_ends_with(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "repeatText" { return "lt_c_text_repeat(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "containsText" { return "lt_c_text_contains(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "toLowerAscii" { return "lt_c_text_to_lower(" + arg0 + ")"; }
+        if fnName == "isDigit" { return "(*(" + arg0 + ") >= '0' && *(" + arg0 + ") <= '9' && *((" + arg0 + ") + 1) == '\\0')"; }
+        if fnName == "isAsciiLetter" {
+            return "(((*(" + arg0 + ") >= 'a' && *(" + arg0 + ") <= 'z') || (*(" + arg0 + ") >= 'A' && *(" + arg0 + ") <= 'Z')) && *((" + arg0 + ") + 1) == '\\0')";
+        }
+        if fnName == "isNameStart" {
+            return "(((*(" + arg0 + ") == '_') || (*(" + arg0 + ") >= 'a' && *(" + arg0 + ") <= 'z') || (*(" + arg0 + ") >= 'A' && *(" + arg0 + ") <= 'Z')) && *((" + arg0 + ") + 1) == '\\0')";
+        }
+        if fnName == "isNameContinue" {
+            return "(((*(" + arg0 + ") == '_') || (*(" + arg0 + ") >= 'a' && *(" + arg0 + ") <= 'z') || (*(" + arg0 + ") >= 'A' && *(" + arg0 + ") <= 'Z') || (*(" + arg0 + ") >= '0' && *(" + arg0 + ") <= '9')) && *((" + arg0 + ") + 1) == '\\0')";
+        }
+        if fnName == "isWhitespace" {
+            return "(((*(" + arg0 + ") == ' ') || (*(" + arg0 + ") == '\\t') || (*(" + arg0 + ") == '\\r') || (*(" + arg0 + ") == '\\n')) && *((" + arg0 + ") + 1) == '\\0')";
+        }
+    } else if moduleName == "lib/core/file" {
+        if fnName == "readText" { return "lt_c_file_read_text(" + arg0 + ")"; }
+        if fnName == "writeText" { return "lt_c_file_write_text(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "appendText" { return "lt_c_file_append_text(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+    }
+    ""
+};
+
+/** Replaces verified soft-builtin function bodies with C11 host overrides unless switched to `pure` by `--builtin-mode`. */
+applyCSoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: List<String>): frontend.Items {
+    rules := frontend.parseBuiltinModeSpecs(prefix, builtinSpecs);
+    out: mut frontend.Items = [];
+    var skippingDepth := 0;
+    var pendingSoftFn := "";
+    var pendingSoftRuntime := "";
+    var pendingSoftParams := "";
+    loop rawItems as item {
+        if skippingDepth > 0 {
+            if item.kind == frontend.ITEM_KIND_FUNCTION_START {
+                skippingDepth = skippingDepth + 1;
+            } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
+                skippingDepth = skippingDepth - 1;
+                if skippingDepth == 0 { listLib.pushBack(mut out, item); }
+            }
+            continue;
+        }
+        if item.kind == frontend.ITEM_KIND_SOFT_BUILTIN {
+            if pendingSoftFn =!= "" and item.name == pendingSoftFn and item.runtime == pendingSoftRuntime and item.textValue == pendingSoftParams {
+                overrideCode := cSoftBuiltinExpr(item.code, item.name, item.textValue);
+                if overrideCode =!= "" and frontend.resolveBuiltinMode(rules, item.code, item.name) == frontend.BUILTIN_MODE_BUILTIN {
+                    listLib.pushBack(mut out, (kind = frontend.ITEM_KIND_RETURN, name = "", runtime = "", code = overrideCode, intValue = 0, textValue = ""));
+                    skippingDepth = 1;
+                }
+            }
+            pendingSoftFn = ""; pendingSoftRuntime = ""; pendingSoftParams = "";
+            continue;
+        }
+        pendingSoftFn = ""; pendingSoftRuntime = ""; pendingSoftParams = "";
+        listLib.pushBack(mut out, item);
+        if item.kind == frontend.ITEM_KIND_FUNCTION_START {
+            pendingSoftFn = item.name;
+            pendingSoftRuntime = item.runtime;
+            pendingSoftParams = item.textValue;
+        }
+    }
+    out
+};
+
+/** Emits C11 native fast-path helpers for `core/int`, `core/text`, and `core/file` soft builtins. */
+emitCSoftBuiltinHelpers := fn(calls: String): Unit {
+    if not usesCSoftBuiltins(calls) { return; }
+    if usesIntHelper(calls, "lt_c_int_text(") {
+        io.outputLine("static const char *lt_c_int_text(int64_t v) {");
+        io.outputLine("    char *buf = malloc(32);");
+        io.outputLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate int text\\n\"); exit(1); }");
+        io.outputLine("    snprintf(buf, 32, \"%\" PRId64, v);");
+        io.outputLine("    return buf;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_text_skip_while(") {
+        io.outputLine("static int64_t lt_c_text_skip_while(const char *s, int64_t start, bool spaces) {");
+        io.outputLine("    if (start < 0) { fprintf(stderr, \"BoundPanic: textAt index outside text\\n\"); exit(1); }");
+        io.outputLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
+        io.outputLine("    if (start >= m->cp_len) { return start; }");
+        io.outputLine("    bool ok = false;");
+        io.outputLine("    size_t b = lt_utf8_byte_at(s, start, true, &ok);");
+        io.outputLine("    int64_t cp = start;");
+        io.outputLine("    while (s[b] != '\\0') {");
+        io.outputLine("        unsigned char c = (unsigned char)s[b];");
+        io.outputLine("        bool keep = spaces ? (c == ' ' || c == '\\t' || c == '\\r' || c == '\\n')");
+        io.outputLine("            : ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_');");
+        io.outputLine("        if (!keep) { break; }");
+        io.outputLine("        b += 1u; cp += 1;");
+        io.outputLine("    }");
+        io.outputLine("    return cp;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_text_starts_with_at(") or usesIntHelper(calls, "lt_c_text_word_at(") {
+        io.outputLine("static bool lt_c_text_starts_with_at(const char *s, int64_t pos, const char *sub) {");
+        io.outputLine("    if (pos < 0) { return false; }");
+        io.outputLine("    size_t sub_len = strlen(sub);");
+        io.outputLine("    if (pos == 0) { return sub_len == 0u || strncmp(s, sub, sub_len) == 0; }");
+        io.outputLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
+        io.outputLine("    if (pos > m->cp_len) { return false; }");
+        io.outputLine("    if (sub_len == 0u) { return true; }");
+        io.outputLine("    if (m->ascii) { return (size_t)pos + sub_len <= m->byte_len && memcmp(s + pos, sub, sub_len) == 0; }");
+        io.outputLine("    bool ok = false;");
+        io.outputLine("    size_t b = lt_utf8_byte_at(s, pos, true, &ok);");
+        io.outputLine("    return ok && b + sub_len <= m->byte_len && memcmp(s + b, sub, sub_len) == 0;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_text_word_at(") {
+        io.outputLine("static bool lt_c_text_word_at(const char *s, int64_t pos, const char *word) {");
+        io.outputLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
+        io.outputLine("    if (pos < 0 || pos > m->cp_len) { return false; }");
+        io.outputLine("    size_t wlen = strlen(word);");
+        io.outputLine("    size_t b = 0u;");
+        io.outputLine("    if (m->ascii) { b = (size_t)pos; }");
+        io.outputLine("    else { bool ok = false; b = lt_utf8_byte_at(s, pos, true, &ok); if (!ok) { return false; } }");
+        io.outputLine("    if (b + wlen > m->byte_len || memcmp(s + b, word, wlen) != 0) { return false; }");
+        io.outputLine("    if (b + wlen >= m->byte_len) { return true; }");
+        io.outputLine("    unsigned char c = (unsigned char)s[b + wlen];");
+        io.outputLine("    return !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_');");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_text_index_of(") {
+        io.outputLine("static int64_t lt_c_text_index_of(const char *s, const char *needle, int64_t start) {");
+        io.outputLine("    if (start < 0) { return -1; }");
+        io.outputLine("    if (start == 0) {");
+        io.outputLine("        if (needle[0] == '\\0') { return 0; }");
+        io.outputLine("        const char *found = strstr(s, needle);");
+        io.outputLine("        if (found == NULL) { return -1; }");
+        io.outputLine("        size_t target_b = (size_t)(found - s);");
+        io.outputLine("        int64_t cp = 0; size_t b = 0u;");
+        io.outputLine("        while (b < target_b) {");
+        io.outputLine("            if ((unsigned char)s[b] < 0x80u) { b += 1u; cp += 1; }");
+        io.outputLine("            else { b += lt_utf8_step(s, b); cp += 1; }");
+        io.outputLine("        }");
+        io.outputLine("        return cp;");
+        io.outputLine("    }");
+        io.outputLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
+        io.outputLine("    if (start > m->cp_len) { return -1; }");
+        io.outputLine("    if (needle[0] == '\\0') { return start; }");
+        io.outputLine("    if (m->ascii) {");
+        io.outputLine("        const char *found = strstr(s + start, needle);");
+        io.outputLine("        return found == NULL ? -1 : (int64_t)(found - s);");
+        io.outputLine("    }");
+        io.outputLine("    bool ok = false;");
+        io.outputLine("    size_t b = lt_utf8_byte_at(s, start, true, &ok);");
+        io.outputLine("    if (!ok) { return -1; }");
+        io.outputLine("    const char *found = strstr(s + b, needle);");
+        io.outputLine("    if (found == NULL) { return -1; }");
+        io.outputLine("    size_t target_b = (size_t)(found - s);");
+        io.outputLine("    int64_t cp = start;");
+        io.outputLine("    while (b < target_b) { b += lt_utf8_step(s, b); cp += 1; }");
+        io.outputLine("    return cp;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_text_join(") {
+        io.outputLine("static const char *lt_c_text_join(lt_list_str values, const char *sep) {");
+        io.outputLine("    if (values.len <= 0) { return \"\"; }");
+        io.outputLine("    if (values.len == 1) { return values.data[0]; }");
+        io.outputLine("    size_t sep_len = strlen(sep);");
+        io.outputLine("    size_t total = sep_len * (size_t)(values.len - 1);");
+        io.outputLine("    for (int64_t i = 0; i < values.len; i += 1) { total += strlen(values.data[i]); }");
+        io.outputLine("    char *out = malloc(total + 1u);");
+        io.outputLine("    if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate joined text\\n\"); exit(1); }");
+        io.outputLine("    size_t pos = 0u;");
+        io.outputLine("    for (int64_t i = 0; i < values.len; i += 1) {");
+        io.outputLine("        if (i > 0 && sep_len > 0u) { memcpy(out + pos, sep, sep_len); pos += sep_len; }");
+        io.outputLine("        size_t n = strlen(values.data[i]);");
+        io.outputLine("        if (n > 0u) { memcpy(out + pos, values.data[i], n); pos += n; }");
+        io.outputLine("    }");
+        io.outputLine("    out[pos] = '\\0';");
+        io.outputLine("    return out;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_text_to_int(") {
+        t2iTag := frontend.cStructTag("(value:Int,ok:Bool)");
+        io.outputLine("static " + t2iTag + " lt_c_text_to_int(const char *s) {");
+        io.outputLine("    if (s[0] == '\\0') { return (" + t2iTag + "){ 0, false }; }");
+        io.outputLine("    size_t i = 0u;");
+        io.outputLine("    if (s[0] == '+' || s[0] == '-') { i = 1u; }");
+        io.outputLine("    if (s[i] == '\\0') { return (" + t2iTag + "){ 0, false }; }");
+        io.outputLine("    for (size_t j = i; s[j] != '\\0'; j += 1u) { if (s[j] < '0' || s[j] > '9') { return (" + t2iTag + "){ 0, false }; } }");
+        io.outputLine("    errno = 0; char *end = NULL;");
+        io.outputLine("    long long v = strtoll(s, &end, 10);");
+        io.outputLine("    if (errno == ERANGE || end == NULL || *end != '\\0') { return (" + t2iTag + "){ 0, false }; }");
+        io.outputLine("    return (" + t2iTag + "){ (int64_t)v, true };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_text_trim(") {
+        io.outputLine("static const char *lt_c_text_trim(const char *s, bool left, bool right) {");
+        io.outputLine("    size_t len = strlen(s); size_t a = 0u; size_t b = len;");
+        io.outputLine("    if (left) { while (a < b && (s[a] == ' ' || s[a] == '\\t' || s[a] == '\\r' || s[a] == '\\n')) { a += 1u; } }");
+        io.outputLine("    if (right) { while (b > a && (s[b - 1u] == ' ' || s[b - 1u] == '\\t' || s[b - 1u] == '\\r' || s[b - 1u] == '\\n')) { b -= 1u; } }");
+        io.outputLine("    if (a == 0u && b == len) { return s; }");
+        io.outputLine("    size_t n = b - a; char *out = malloc(n + 1u);");
+        io.outputLine("    if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate trimmed text\\n\"); exit(1); }");
+        io.outputLine("    if (n > 0u) { memcpy(out, s + a, n); }");
+        io.outputLine("    out[n] = '\\0'; return out;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_text_ends_with(") {
+        io.outputLine("static bool lt_c_text_ends_with(const char *s, const char *suf) {");
+        io.outputLine("    size_t sl = strlen(s); size_t sufl = strlen(suf);");
+        io.outputLine("    return sufl <= sl && memcmp(s + (sl - sufl), suf, sufl) == 0;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_text_repeat(") {
+        io.outputLine("static const char *lt_c_text_repeat(const char *s, int64_t count) {");
+        io.outputLine("    if (count <= 0 || s[0] == '\\0') { return \"\"; }");
+        io.outputLine("    size_t sl = strlen(s); size_t total = sl * (size_t)count;");
+        io.outputLine("    char *out = malloc(total + 1u);");
+        io.outputLine("    if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate repeated text\\n\"); exit(1); }");
+        io.outputLine("    for (int64_t i = 0; i < count; i += 1) { memcpy(out + (size_t)i * sl, s, sl); }");
+        io.outputLine("    out[total] = '\\0'; return out;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_text_contains(") {
+        io.outputLine("static bool lt_c_text_contains(const char *s, const char *needle) { return strstr(s, needle) != NULL; }");
+    }
+    if usesIntHelper(calls, "lt_c_text_to_lower(") {
+        io.outputLine("static const char *lt_c_text_to_lower(const char *s) {");
+        io.outputLine("    size_t n = strlen(s); char *out = malloc(n + 1u);");
+        io.outputLine("    if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate lower text\\n\"); exit(1); }");
+        io.outputLine("    for (size_t i = 0u; i < n; i += 1u) { char c = s[i]; out[i] = (c >= 'A' && c <= 'Z') ? (char)(c + 32) : c; }");
+        io.outputLine("    out[n] = '\\0'; return out;");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_file_read_text(") {
+        okTextTag := frontend.cStructTag("(ok:Bool,text:String,error:String)");
+        io.outputLine("static " + okTextTag + " lt_c_file_read_text(const char *path) {");
+        io.outputLine("    int fd = open(path, O_RDONLY);");
+        io.outputLine("    if (fd < 0) { return (" + okTextTag + "){ false, \"\", lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    struct stat st;");
+        io.outputLine("    if (fstat(fd, &st) != 0) { const char *err = lt_dup_str(strerror(errno)); close(fd); return (" + okTextTag + "){ false, \"\", err }; }");
+        io.outputLine("    if (S_ISDIR(st.st_mode)) { close(fd); return (" + okTextTag + "){ false, \"\", \"EISDIR: illegal operation on a directory\" }; }");
+        io.outputLine("    size_t cap = st.st_size > 0 ? (size_t)st.st_size : 4096u;");
+        io.outputLine("    uint8_t *buf = malloc(cap + 1u);");
+        io.outputLine("    if (buf == NULL) { close(fd); return (" + okTextTag + "){ false, \"\", \"out of memory\" }; }");
+        io.outputLine("    size_t len = 0u;");
+        io.outputLine("    for (;;) {");
+        io.outputLine("        if (len >= cap) { cap = cap * 2u + 4096u; uint8_t *nb = realloc(buf, cap + 1u); if (nb == NULL) { free(buf); close(fd); return (" + okTextTag + "){ false, \"\", \"out of memory\" }; } buf = nb; }");
+        io.outputLine("        ssize_t n = read(fd, buf + len, cap - len);");
+        io.outputLine("        if (n < 0) { const char *err = lt_dup_str(strerror(errno)); free(buf); close(fd); return (" + okTextTag + "){ false, \"\", err }; }");
+        io.outputLine("        if (n == 0) { break; }");
+        io.outputLine("        len += (size_t)n;");
+        io.outputLine("    }");
+        io.outputLine("    close(fd);");
+        io.outputLine("    for (size_t i = 0u; i < len; ) {");
+        io.outputLine("        uint8_t b0 = buf[i];");
+        io.outputLine("        if (b0 < 0x80u) { i += 1u; }");
+        io.outputLine("        else if (b0 >= 0xC2u && b0 <= 0xDFu && i + 1u < len && (buf[i + 1u] & 0xC0u) == 0x80u) { i += 2u; }");
+        io.outputLine("        else if (b0 >= 0xE0u && b0 <= 0xEFu && i + 2u < len && (buf[i + 1u] & 0xC0u) == 0x80u && (buf[i + 2u] & 0xC0u) == 0x80u && !(b0 == 0xE0u && buf[i + 1u] < 0xA0u) && !(b0 == 0xEDu && buf[i + 1u] >= 0xA0u)) { i += 3u; }");
+        io.outputLine("        else if (b0 >= 0xF0u && b0 <= 0xF4u && i + 3u < len && (buf[i + 1u] & 0xC0u) == 0x80u && (buf[i + 2u] & 0xC0u) == 0x80u && (buf[i + 3u] & 0xC0u) == 0x80u && !(b0 == 0xF0u && buf[i + 1u] < 0x90u) && !(b0 == 0xF4u && buf[i + 1u] >= 0x90u)) { i += 4u; }");
+        io.outputLine("        else { free(buf); return (" + okTextTag + "){ false, \"\", \"invalid UTF-8 byte sequence\" }; }");
+        io.outputLine("    }");
+        io.outputLine("    buf[len] = 0u;");
+        io.outputLine("    return (" + okTextTag + "){ true, (const char *)buf, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_file_write_text(") or usesIntHelper(calls, "lt_c_file_append_text(") {
+        okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
+        io.outputLine("static " + okErrTag + " lt_c_file_put_text(const char *path, const char *text, int flags) {");
+        io.outputLine("    int fd = open(path, flags, 0666);");
+        io.outputLine("    if (fd < 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    size_t len = strlen(text); size_t off = 0u;");
+        io.outputLine("    while (off < len) {");
+        io.outputLine("        ssize_t n = write(fd, text + off, len - off);");
+        io.outputLine("        if (n < 0) { const char *err = lt_dup_str(strerror(errno)); close(fd); return (" + okErrTag + "){ false, err }; }");
+        io.outputLine("        off += (size_t)n;");
+        io.outputLine("    }");
+        io.outputLine("    if (close(fd) < 0) { return (" + okErrTag + "){ false, lt_dup_str(strerror(errno)) }; }");
+        io.outputLine("    return (" + okErrTag + "){ true, \"\" };");
+        io.outputLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_file_write_text(") {
+        okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
+        io.outputLine("static " + okErrTag + " lt_c_file_write_text(const char *path, const char *text) { return lt_c_file_put_text(path, text, O_WRONLY | O_CREAT | O_TRUNC); }");
+    }
+    if usesIntHelper(calls, "lt_c_file_append_text(") {
+        okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
+        io.outputLine("static " + okErrTag + " lt_c_file_append_text(const char *path, const char *text) { return lt_c_file_put_text(path, text, O_WRONLY | O_CREAT | O_APPEND); }");
+    }
+};
+
 pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
-    _modes := frontend.parseBuiltinModeSpecs(prefix, builtinSpecs);
-    reachable := frontend.filterReachableItemsWithOpt(items, frontend.TARGET_C, optLevel);
+    softItems := applyCSoftBuiltins(items, prefix, builtinSpecs);
+    reachable := frontend.filterReachableItemsWithOpt(softItems, frontend.TARGET_C, optLevel);
     calls := frontend.targetHelperCalls(reachable);
     var floatOutput := false;
     var hasFunctions := false;
@@ -2862,22 +3213,25 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     seedKinds: mut List<String> = [];
     hasInputArgs := usesIntHelper(calls, "lite$inputArgs(");
     hasMainArgs := hasInputArgs or usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processExecPath(");
-    if hasInputArgs or usesIntHelper(calls, "lite$fileListDir(") { listLib.pushBack(mut seedKinds, "List<String>"); }
+    if hasInputArgs or usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lt_c_text_join(") { listLib.pushBack(mut seedKinds, "List<String>"); }
     if usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") or
     usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioWriterBytes(") or
     usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioWrite(") {
         listLib.pushBack(mut seedKinds, "List<Int>");
     }
     if usesStreamBuiltins(calls) { listLib.pushBack(mut seedKinds, "(kind:String,handle:Int)"); }
-    if usesIntHelper(calls, "lite$unicodeFromCodePoints(") or usesIntHelper(calls, "lite$ioWriterText(") {
+    if usesIntHelper(calls, "lite$unicodeFromCodePoints(") or usesIntHelper(calls, "lite$ioWriterText(") or
+    usesIntHelper(calls, "lt_c_file_read_text(") {
         listLib.pushBack(mut seedKinds, "(ok:Bool,text:String,error:String)");
     }
     if usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioFlush(") or
     usesIntHelper(calls, "lite$ioCloseWriter(") or usesIntHelper(calls, "lite$fileMakeDir(") or
     usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
-    usesIntHelper(calls, "lite$fileSymlink(") {
+    usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lt_c_file_write_text(") or
+    usesIntHelper(calls, "lt_c_file_append_text(") {
         listLib.pushBack(mut seedKinds, "(ok:Bool,error:String)");
     }
+    if usesIntHelper(calls, "lt_c_text_to_int(") { listLib.pushBack(mut seedKinds, "(value:Int,ok:Bool)"); }
     if usesIntHelper(calls, "lite$ioWrite(") { listLib.pushBack(mut seedKinds, "(ok:Bool,written:Int,error:String)"); }
     if usesIntHelper(calls, "lite$fileRealPath(") or usesIntHelper(calls, "lite$fileMakeTempDir(") {
         listLib.pushBack(mut seedKinds, "(ok:Bool,path:String,error:String)");
@@ -3031,6 +3385,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     hasInputFloat := usesIntHelper(calls, "lite$inputFloat(");
     hasPosixHost := usesPosixHost(calls);
     hasUnicodeHost := usesUnicodeBuiltins(calls);
+    hasSoftBuiltins := usesCSoftBuiltins(calls);
     if hasPosixHost {
         io.outputLine("#if defined(__APPLE__)");
         io.outputLine("#define _DARWIN_C_SOURCE");
@@ -3039,8 +3394,8 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         io.outputLine("#endif");
     }
     io.outputLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost { io.outputLine("#include <stdlib.h>"); }
-    if hasInputInt or hasPosixHost { io.outputLine("#include <errno.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins { io.outputLine("#include <stdlib.h>"); }
+    if hasInputInt or hasPosixHost or usesIntHelper(calls, "lt_c_text_to_int(") { io.outputLine("#include <errno.h>"); }
     io.outputLine("#include <inttypes.h>");
     io.outputLine("#include <stdbool.h>");
     io.outputLine("#include <string.h>");
@@ -3115,6 +3470,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         io.outputLine("");
     }
     emitCHostBuiltinHelpers(calls);
+    emitCSoftBuiltinHelpers(calls);
     var hoistedGlobals := frontend.emptyTokenBuckets();
     if hasFunctions {
         if hasFnOutput { io.outputLine("static int lt_io_status = 0;"); }

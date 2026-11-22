@@ -2873,12 +2873,12 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_FUNCTION, name = name, runtime = functionRuntime, code = header.result,
                     intValue = header.count, textValue = header.params));
                 }
-                softModule := if target == TARGET_TS and listLib.listContainsText(publishedFunctions, name) {
+                softModule := if listLib.listContainsText(publishedFunctions, name) {
                     builtinsAbi.coreSoftBuiltin(moduleIdentity, name, header.params, header.result)
                 } else {
                     ""
                 };
-                skipAsSoft := neededFns =!= "*" and softModule =!= "" and skipSoftBuiltins and
+                skipAsSoft := target == TARGET_TS and neededFns =!= "*" and softModule =!= "" and skipSoftBuiltins and
                 resolveBuiltinMode(builtinRules, softModule, name) == BUILTIN_MODE_BUILTIN;
                 skipAsUnneeded := neededFns =!= "*" and not skipAsSoft and not hasHelperToken(neededFns, functionRuntime + "(");
                 if skipAsSoft or skipAsUnneeded {
