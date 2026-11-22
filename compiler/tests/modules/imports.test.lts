@@ -158,7 +158,8 @@ test.check("core/list popBack not variadic", not text.containsText(listSrc, "pub
 
 listProg := "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [1]; list.pushBack(mut values, 2); io.outputLine(list.popBack(mut values), values);";
 compilerTest.assertCompileRunTs(root, tsComp, "core/list valid", listProg, "2 [1]\n");
-compilerTest.assertCompileErrorContains(root, cComp, "core/list C rejected", listProg, "C backend does not support list values yet");
+cListProgRes := compilerTest.compileStdin(root, cComp, listProg, "");
+test.checkInt("core/list C compiles: " + cListProgRes.stderr, 0, cListProgRes.status);
 invalidListCases: List<String> = [
 "list := import \"core/list\"; values: mut List<Int> = []; list.pushBack(mut values, \"x\");",
 "list := import \"core/list\"; values: List<Int> = []; list.pushBack(mut values, 1);",

@@ -12,6 +12,9 @@
     "feature.io.reporting.report-values"
   ],
   "description": "Parallel forward wiring, mutual and own-name recursion, nearer-forward shadowing, and eager outer reads.",
+  "targets": [
+    "ts"
+  ],
   "cases": [
     {
       "name": "parallel-symbol-wiring",

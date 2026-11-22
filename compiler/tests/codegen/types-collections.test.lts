@@ -153,7 +153,8 @@ loop ti < 7 {
     compilerTest.assertCompileError(root, tsComp, "bad tuple " + badTupleSrc[ti], badTupleSrc[ti], badTupleErr[ti]);
     ti = ti + 1;
 }
-compilerTest.assertCompileError(root, cComp, "tuple rejected in C", "io := import \"core/io\"; p: (kind: String) = (kind = \"a\");\nio.outputLine(p.kind);\n", "C backend does not support tuple values yet\n");
+cTupleRes := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; p: (kind: String) = (kind = \"a\");\nio.outputLine(p.kind);\n", "");
+test.checkInt("tuple compiles in C: " + cTupleRes.stderr, 0, cTupleRes.status);
 
 /* restricted compiler compiles growable lists, literals and indexing to runnable TS */
 listSrc :=
@@ -208,8 +209,10 @@ loop li < 6 {
     compilerTest.assertCompileError(root, tsComp, "bad list " + badListSrc[li], badListSrc[li], badListErr[li]);
     li = li + 1;
 }
-compilerTest.assertCompileError(root, cComp, "list C reject 1", "io := import \"core/io\"; values: List<Int> = [1];\nio.outputLine(1);\n", "C backend does not support list values yet\n");
-compilerTest.assertCompileError(root, cComp, "list C reject 2", "io := import \"core/io\"; io.outputLine([1][0]);\n", "C backend does not support list values yet\n");
+cList1 := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; values: List<Int> = [1];\nio.outputLine(1);\n", "");
+test.checkInt("list C compiles 1: " + cList1.stderr, 0, cList1.status);
+cList2 := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine([1][0]);\n", "");
+test.checkInt("list C compiles 2: " + cList2.stderr, 0, cList2.status);
 
 /* restricted compiler compiles list traversal to runnable TS */
 travSrc :=
@@ -256,7 +259,8 @@ loop lti < 5 {
     compilerTest.assertCompileError(root, tsComp, "bad traversal " + badTravSrc[lti], badTravSrc[lti], badTravErr[lti]);
     lti = lti + 1;
 }
-compilerTest.assertCompileError(root, cComp, "list traversal C reject", "io := import \"core/io\"; loop [1, 2] as item { io.outputLine(item); }\n", "C backend does not support list traversal yet\n");
+cTravRes := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; loop [1, 2] as item { io.outputLine(item); }\n", "");
+test.checkInt("list traversal C compiles: " + cTravRes.stderr, 0, cTravRes.status);
 
 /* restricted compiler compiles list mutation grants, push and pop to runnable TS */
 mutSrc :=
@@ -342,11 +346,12 @@ loop mi < 10 {
     compilerTest.assertCompileError(root, tsComp, "bad mut " + badMutSrc[mi], badMutSrc[mi], badMutErr[mi]);
     mi = mi + 1;
 }
-badMutC: List<String> = [
+mutCOk: List<String> = [
 "list := import \"core/list\"; values: mut List<Int> = [1];\nlist.pushBack(mut values, 2);\n",
 "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [1];\nio.outputLine(list.popBack(mut values));\n",
 "list := import \"core/list\"; values: mut List<Int>;\nlist.pushBack(mut values, 2);\n",
 ];
-loop badMutC as src {
-    compilerTest.assertCompileError(root, cComp, "bad mut C", src, "C backend does not support list values yet\n");
+loop mutCOk as src {
+    cMutRes := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt("mut C compiles: " + cMutRes.stderr, 0, cMutRes.status);
 }

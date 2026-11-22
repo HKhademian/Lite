@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks labeled block value returns, conditional then value forwarding, and nested tagged loop transfers.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

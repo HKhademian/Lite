@@ -103,9 +103,9 @@ loop bi < 7 {
     bi = bi + 1;
 }
 
-/* 4. C backend rejection */
-compilerTest.assertCompileErrorContains(root, cComp, "set C backend rejection",
-"set := import \"core/set\";\ns: mut Set<String>;\nset.add(mut s, \"a\");\n",
-"C backend does not support set values yet");
+/* 4. C backend compiles Set values cleanly */
+cSetRes := compilerTest.compileStdin(root, cComp,
+"set := import \"core/set\";\ns: mut Set<String>;\nset.add(mut s, \"a\");\n", "");
+test.checkInt("set C compiles: " + cSetRes.stderr, 0, cSetRes.status);
 
 test.done("set");

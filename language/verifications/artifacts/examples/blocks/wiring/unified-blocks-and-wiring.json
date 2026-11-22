@@ -13,6 +13,9 @@
     "feature.io.reporting.report-values"
   ],
   "description": "Inner-block type aliases, forward mutual recursion, eager outer-shadow reads, and trace-safe ? storage.",
+  "targets": [
+    "ts"
+  ],
   "cases": [
     {
       "name": "unified-block-summary",

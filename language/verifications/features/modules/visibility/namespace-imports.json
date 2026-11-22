@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks sibling module imports exposing pub types, pub values, and pub functions while keeping private helpers encapsulated.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

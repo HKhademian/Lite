@@ -1029,6 +1029,68 @@ totalCompileNs: List<Int>, totalRunNs: List<Int>, totalBytes: List<Int>
     }
 };
 
+probeCcBin := fn(): String {
+    emptyEnv: List<String> = [];
+    res := proc.run("cc", ["--version"], proc.cwd(), emptyEnv, true, "");
+    if res.error == "" and res.status == 0 { "cc" } else { "" }
+};
+
+manifestIncludesC := fn(mText: String): Bool {
+    targetsField := json.findObjectField(mText, 0, "targets");
+    if not targetsField.found { return true; }
+    list.listContainsText(readStringArrayField(mText, 0, "targets"), "c")
+};
+
+compileManifestArtifactC := fn(
+rootDir: String, cCompilerPath: String, ccBin: String, workDir: String,
+sourceText: String, hasSourceFile: Bool, sourcePath: String
+): (ok: Bool, binaryPath: String, error: String) {
+    displayName := if hasSourceFile { path.relative(rootDir, sourcePath) } else { "" };
+    absRootPath := if hasSourceFile { sourcePath } else { path.join(rootDir, "__lite_stdin__.lts") };
+    outCPath := path.join(workDir, "artifact.c");
+    errCPath := path.join(workDir, "compile-c.stderr");
+    emptyEnv: List<String> = [];
+    compArgs: List<String> = [cCompilerPath, "--stdin", "--name", displayName, "--root", absRootPath, "-O1"];
+    compiled := proc.runBytes(proc.execPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outCPath, errCPath);
+    if compiled.error =!= "" {
+        return (ok = false, binaryPath = "", error = compiled.error);
+    }
+    if compiled.status =!= 0 {
+        errRead := fs.readText(errCPath);
+        diag := if errRead.ok { text.trim(errRead.text) } else { "C compilation error" };
+        return (ok = false, binaryPath = "", error = "C compiler exited " + integer.intText(compiled.status) + ": " + diag);
+    }
+    outBinPath := path.join(workDir, "program-c");
+    ccOutPath := path.join(workDir, "cc.stdout");
+    ccErrPath := path.join(workDir, "cc.stderr");
+    emptyBytes: List<Int> = [];
+    ccArgs: List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", outCPath, "-o", outBinPath, "-lm"];
+    ccRes := proc.runBytes(ccBin, ccArgs, workDir, emptyEnv, 30000, emptyBytes, ccOutPath, ccErrPath);
+    if ccRes.error =!= "" {
+        return (ok = false, binaryPath = "", error = ccRes.error);
+    }
+    if ccRes.status =!= 0 {
+        errRead := fs.readText(ccErrPath);
+        diag := if errRead.ok { text.trim(errRead.text) } else { "cc error" };
+        return (ok = false, binaryPath = "", error = "cc -std=c11 -Wall -Wextra -Werror exited " + integer.intText(ccRes.status) + ":\n" + diag);
+    }
+    (ok = true, binaryPath = outBinPath, error = "")
+};
+
+runCArtifactScenario := fn(
+binaryPath: String, workDir: String,
+stdinBytes: List<Int>, scenarioArgs: List<String>, idx: Int
+): (ok: Bool, outPath: String, errPath: String, exitCode: Int, error: String) {
+    outPath := path.join(workDir, "run-c-" + integer.intText(idx) + ".stdout");
+    errPath := path.join(workDir, "run-c-" + integer.intText(idx) + ".stderr");
+    emptyEnv: List<String> = [];
+    res := proc.runBytes(binaryPath, scenarioArgs, workDir, emptyEnv, 10000, stdinBytes, outPath, errPath);
+    if res.error =!= "" {
+        return (ok = false, outPath = outPath, errPath = errPath, exitCode = res.status, error = res.error);
+    }
+    (ok = true, outPath = outPath, errPath = errPath, exitCode = res.status, error = "")
+};
+
 compileManifestArtifact := fn(
 rootDir: String, compilerPath: String, workDir: String,
 sourceText: String, hasSourceFile: Bool, sourcePath: String
@@ -1116,6 +1178,16 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     if not compBuild.ok {
         io.errorLine("lite verify: " + compBuild.error);
         return 1;
+    }
+    ccBin := probeCcBin();
+    var cCompPath := "";
+    if ccBin =!= "" and not opts.update and not opts.pedantic {
+        cBuilt := compilerBuild.buildCompiler(rootDir, "c");
+        if not cBuilt.ok {
+            io.errorLine("lite verify: C compiler build failed: " + cBuilt.error);
+            return 1;
+        }
+        cCompPath = cBuilt.path;
     }
     compilerDeps := readStringArrayField(compBuild.metaJson, 0, "dependencies");
     rtHash := computeRuntimeHash(rootDir, compilerDeps);
@@ -1455,6 +1527,112 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                     set.add(mut passedKeys, cKey);
                                                     cacheDirty = true;
                                                     if not opts.quiet { io.outputLine("PASS " + label); }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if manifestIncludesC(mText) and cCompPath =!= "" and ccBin =!= "" and not opts.update and not opts.pedantic {
+                            var needsCArtifact := false;
+                            loop selectedOffsets as sPos {
+                                kC := caseCacheKey(rtHash.hex + "|c", mId, mKind, sourceHash, meta.appendText, mText, sPos);
+                                if not opts.cache or not set.has(passedKeys, kC) {
+                                    needsCArtifact = true;
+                                    break;
+                                }
+                            }
+                            var cCompileOk := true;
+                            var cCompileError := "";
+                            var cBinaryPath := "";
+                            if needsCArtifact {
+                                if workDir == "" {
+                                    tmpCRes := fs.makeTempDir("lite-verify-c-");
+                                    if not tmpCRes.ok {
+                                        cCompileOk = false;
+                                        cCompileError = tmpCRes.error;
+                                    } else {
+                                        workDir = tmpCRes.path;
+                                    }
+                                }
+                                if cCompileOk {
+                                    cCompRes := compileManifestArtifactC(rootDir, cCompPath, ccBin, workDir, fullSource, meta.hasSourceFile, meta.sourcePath);
+                                    if not cCompRes.ok {
+                                        cCompileOk = false;
+                                        cCompileError = cCompRes.error;
+                                    } else {
+                                        cBinaryPath = cCompRes.binaryPath;
+                                    }
+                                }
+                            }
+                            loop selectedOffsets as sPos {
+                                sName := json.readObjectString(mText, sPos, "name").value;
+                                cLabel := mId + "/" + sName + " [c]";
+                                cKeyC := caseCacheKey(rtHash.hex + "|c", mId, mKind, sourceHash, meta.appendText, mText, sPos);
+                                if opts.cache and set.has(passedKeys, cKeyC) {
+                                    cached = cached + 1;
+                                    if not opts.quiet { io.outputLine("PASS " + cLabel + " (cached)"); }
+                                } else {
+                                    emptyBytesC: List<Int> = [];
+                                    var cStreamsOk := true;
+                                    var cExpStdout := emptyBytesC;
+                                    var cExpStderr := emptyBytesC;
+                                    var cInBytes := emptyBytesC;
+                                    cStdinF := json.findObjectField(mText, sPos, "stdin");
+                                    if cStdinF.found {
+                                        cInBytes = streams.readStreamBytes(mText, cStdinF.valuePos, mDir);
+                                    }
+                                    cStdoutF := json.findObjectField(mText, sPos, "stdout");
+                                    if cStdoutF.found {
+                                        cExpStdout = streams.readStreamBytes(mText, cStdoutF.valuePos, mDir);
+                                    }
+                                    cStderrF := json.findObjectField(mText, sPos, "stderr");
+                                    if cStderrF.found {
+                                        cExpStderr = streams.readStreamBytes(mText, cStderrF.valuePos, mDir);
+                                    }
+                                    if cStreamsOk {
+                                        executed = executed + 1;
+                                        if not cCompileOk {
+                                            _rmKeyC := set.remove(mut passedKeys, cKeyC);
+                                            cacheDirty = true;
+                                            io.outputLine("FAIL " + cLabel + ": " + cCompileError);
+                                            failures = failures + 1;
+                                        } else {
+                                            cScenarioArgs := readStringArrayField(mText, sPos, "args");
+                                            cRan := runCArtifactScenario(cBinaryPath, workDir, cInBytes, cScenarioArgs, runSeq);
+                                            runSeq = runSeq + 1;
+                                            if not cRan.ok {
+                                                _rmKeyC := set.remove(mut passedKeys, cKeyC);
+                                                cacheDirty = true;
+                                                io.outputLine("FAIL " + cLabel + ": " + cRan.error);
+                                                failures = failures + 1;
+                                            } else {
+                                                cStdoutBytes := fs.readBytes(cRan.outPath);
+                                                cStderrBytes := fs.readBytes(cRan.errPath);
+                                                cExpExit := json.readObjectInt(mText, sPos, "exitCode").value;
+                                                cSameOut := streams.equalBytes(cStdoutBytes, cExpStdout);
+                                                cSameErr := streams.equalBytes(cStderrBytes, cExpStderr);
+                                                cSameExit := cRan.exitCode == cExpExit;
+                                                if not cSameOut or not cSameErr or not cSameExit {
+                                                    _rmKeyC := set.remove(mut passedKeys, cKeyC);
+                                                    cacheDirty = true;
+                                                    io.outputLine("FAIL " + cLabel);
+                                                    if not cSameOut {
+                                                        io.outputLine("  stdout expected " + describeBytes(cExpStdout) + " got " + describeBytes(cStdoutBytes));
+                                                    }
+                                                    if not cSameErr {
+                                                        io.outputLine("  stderr expected " + describeBytes(cExpStderr) + " got " + describeBytes(cStderrBytes));
+                                                    }
+                                                    if not cSameExit {
+                                                        io.outputLine("  exitCode expected " + integer.intText(cExpExit) + " got " + integer.intText(cRan.exitCode));
+                                                    }
+                                                    failures = failures + 1;
+                                                } else {
+                                                    set.add(mut passedKeys, cKeyC);
+                                                    cacheDirty = true;
+                                                    if not opts.quiet { io.outputLine("PASS " + cLabel); }
                                                 }
                                             }
                                         }

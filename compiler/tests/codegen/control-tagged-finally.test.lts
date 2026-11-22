@@ -259,7 +259,8 @@ matchTsSrc := text.joinTexts([
     "io.outputLine(choose(1), choose(2), choose(3), direct, grouped, single, nested, tailScore(-1), tailScore(0), tailScore(5), loopMatch(5));"
 ], "\n");
 compilerTest.assertCompileRunTs(root, tsComp, "match-ts", matchTsSrc, "probe:first\nprobe:first\nprobe:second\nprobe:first\nprobe:second\none two other 5 20 7 nested 10 20 30 20\n");
-compilerTest.assertCompileErrorContains(root, cComp, "match-ts tuple proj c reject", matchTsSrc, "C backend does not support tuple values yet");
+matchCRes := compilerTest.compileStdin(root, cComp, matchTsSrc, "");
+test.checkInt("match-ts c compiles: " + matchCRes.stderr, 0, matchCRes.status);
 
 matchValScalarSrc := text.joinTexts([
     "io := import \"core/io\";",
@@ -449,7 +450,8 @@ taggedBlkRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "f := fn(): Int @bad { 1 };", m1 = "unexpected block tag in function header", m2 = "")
 ];
 assertRejectsTarget(tsComp, "tagged-blocks", taggedBlkRej);
-compilerTest.assertCompileErrorContains(root, cComp, "tagged-blocks c", "io := import \"core/io\"; x := @blk { 1 }; io.outputLine(x);", "C backend does not support tagged blocks yet");
+taggedBlkCRes := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; x := @blk { 1 }; io.outputLine(x);", "");
+test.checkInt("tagged-blocks c compiles: " + taggedBlkCRes.stderr, 0, taggedBlkCRes.status);
 
 /* tagged conditionals and conditional then blocks */
 taggedCondSrc := text.joinTexts([
@@ -548,13 +550,16 @@ taggedCondRej: List<(bad: String, m1: String, m2: String)> = [
 ];
 assertRejectsTarget(tsComp, "tagged-cond", taggedCondRej);
 
-taggedCondCRej: List<(bad: String, m1: String, m2: String)> = [
-    (bad = "x := @t if true { 1 } else { 2 };", m1 = "C backend does not support tagged conditionals yet", m2 = ""),
-    (bad = "x := if true { 1 } else { 2 } then { 3 };", m1 = "C backend does not support conditional then blocks yet", m2 = ""),
-    (bad = "x := @m match { _ { 1 } };", m1 = "C backend does not support tagged conditionals yet", m2 = ""),
-    (bad = "x := match { _ { 1 } } then { 2 };", m1 = "C backend does not support conditional then blocks yet", m2 = "")
+taggedCondCOk: List<String> = [
+    "x := @t if true { 1 } else { 2 };",
+    "x := if true { 1 } else { 2 } then { 3 };",
+    "x := @m match { _ { 1 } };",
+    "x := match { _ { 1 } } then { 2 };"
 ];
-assertRejectsTarget(cComp, "tagged-cond c", taggedCondCRej);
+loop taggedCondCOk as okSrc {
+    cRes := compilerTest.compileStdin(root, cComp, okSrc, "");
+    test.checkInt("tagged-cond c compiles (" + okSrc + "): " + cRes.stderr, 0, cRes.status);
+}
 
 /* loop values, metadata, then clauses, barriers, and payload exits */
 loopMetaSrc := text.joinTexts([
@@ -643,13 +648,16 @@ loopMetaRej: List<(bad: String, m1: String, m2: String)> = [
 ];
 assertRejectsTarget(tsComp, "loop-metadata", loopMetaRej);
 
-loopMetaCRej: List<(bad: String, m1: String, m2: String)> = [
-    (bad = "x := @t loop [1] { 1 };", m1 = "C backend does not support tagged loops yet", m2 = ""),
-    (bad = "loop [1] { } then { }", m1 = "C backend does not support loop then blocks yet", m2 = ""),
-    (bad = "loop [1] { .item; }", m1 = "C backend does not support loop metadata yet", m2 = ""),
-    (bad = "loop true { break 1; }", m1 = "C backend does not support break payloads yet", m2 = "")
+loopMetaCOk: List<String> = [
+    "x := @t loop [1] { 1 };",
+    "loop [1] { } then { }",
+    "loop [1] { .item; }",
+    "loop true { break 1; }"
 ];
-assertRejectsTarget(cComp, "loop-metadata c", loopMetaCRej);
+loop loopMetaCOk as okSrc {
+    cRes := compilerTest.compileStdin(root, cComp, okSrc, "");
+    test.checkInt("loop-metadata c compiles (" + okSrc + "): " + cRes.stderr, 0, cRes.status);
+}
 
 /* construct-level finally cleanup, LIFO unwinding, barriers, and failure precedence */
 finFeatureRes := fs.readText(path.join(root, "language/verifications/features/control/unwinding/finally-cleanup.lts"));
@@ -758,12 +766,15 @@ finRej: List<(bad: String, m1: String, m2: String)> = [
 ];
 assertRejectsTarget(tsComp, "finally", finRej);
 
-finCRej: List<(bad: String, m1: String, m2: String)> = [
-    (bad = "{ 1 } finally { }", m1 = "C backend does not support finally blocks yet", m2 = ""),
-    (bad = "if true { } finally { }", m1 = "C backend does not support finally blocks yet", m2 = ""),
-    (bad = "loop [1] { } finally { }", m1 = "C backend does not support finally blocks yet", m2 = ""),
-    (bad = "x := match { _ { 1 } } finally { };", m1 = "C backend does not support finally blocks yet", m2 = "")
+finCOk: List<String> = [
+    "{ 1 } finally { }",
+    "if true { } finally { }",
+    "loop [1] { } finally { }",
+    "x := match { _ { 1 } } finally { };"
 ];
-assertRejectsTarget(cComp, "finally c", finCRej);
+loop finCOk as okSrc {
+    cRes := compilerTest.compileStdin(root, cComp, okSrc, "");
+    test.checkInt("finally c compiles (" + okSrc + "): " + cRes.stderr, 0, cRes.status);
+}
 
 test.done("control-tagged-finally");

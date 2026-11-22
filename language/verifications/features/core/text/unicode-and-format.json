@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks scalar code-point conversions, strict UTF-8 round-trips, invalid UTF-8 detection, and text/integer padding via core/format.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

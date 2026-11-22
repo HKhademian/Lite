@@ -117,7 +117,8 @@ loop lbi < 7 {
     compilerTest.assertCompileError(root, cComp, "loop bad C " + loopBadSrc[lbi], loopBadSrc[lbi], loopBadErr[lbi]);
     lbi = lbi + 1;
 }
-compilerTest.assertCompileError(root, cComp, "loop payload C", "loop true { break 1; }\n", "1:13: C backend does not support break payloads yet\n");
+cLoopPay := compilerTest.compileStdin(root, cComp, "loop true { break 1; }\n", "");
+test.checkInt("loop payload C compiles: " + cLoopPay.stderr, 0, cLoopPay.status);
 
 /* restricted compiler accepts one optional leading and/or in Bool expressions for TS */
 leadTsSrc :=

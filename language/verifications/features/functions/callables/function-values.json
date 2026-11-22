@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks callable type aliases, passing top-level and non-capturing fn values, contextual inference, and local self recursion.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

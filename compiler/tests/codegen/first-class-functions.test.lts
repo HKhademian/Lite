@@ -165,14 +165,14 @@ loop fnTsRej as rj {
     test.check("fn-rej ts msg (" + rj.src + ") got: " + res.stderr, ok);
 }
 
-fnCRej: List<(src: String, msg: String)> = [
-    (src = "{ f := fn(): Int { 1 }; _ := f(); }", msg = "C backend does not support function values yet"),
-    (src = "var f: fn(Int): Int;", msg = "C backend does not support function values yet"),
-    (src = "inc := fn(x: Int): Int { x + 1 }; ops: List<fn(Int): Int> = [inc];", msg = "function inc must be called"),
-    (src = "inc := fn(x: Int): Int { x + 1 }; apply := fn(op: fn(Int): Int): Int { op(1) }; _ := apply(inc);", msg = "C backend does not support indirect function calls yet")
+fnCOk: List<String> = [
+    "{ f := fn(): Int { 1 }; _ := f(); }",
+    "inc := fn(x: Int): Int { x + 1 }; ops: List<fn(Int): Int> = [inc];",
+    "inc := fn(x: Int): Int { x + 1 }; apply := fn(op: fn(Int): Int): Int { op(1) }; _ := apply(inc);"
 ];
-loop fnCRej as cr {
-    compilerTest.assertCompileErrorContains(root, cComp, "fn-rej c", cr.src, cr.msg);
+loop fnCOk as okSrc {
+    cFnRes := compilerTest.compileStdin(root, cComp, okSrc, "");
+    test.checkInt("fn-ok c (" + okSrc + "): " + cFnRes.stderr, 0, cFnRes.status);
 }
 
 test.done("first-class-functions");

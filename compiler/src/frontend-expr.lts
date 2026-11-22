@@ -3330,7 +3330,11 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
             } else {
                 tailCode := ctx.assignValueCode(target, topValKind, blockKind, blockCode);
-                listLib.pushBack(mut statements, topValVar + " = " + tailCode + ";");
+                if target == ir.TARGET_C {
+                    listLib.pushBack(mut statements, ctx.cUnwrapIntoVar(topValVar, topValKind, tailCode));
+                } else {
+                    listLib.pushBack(mut statements, topValVar + " = " + tailCode + ";");
+                }
             }
         }
         bodyJoined := textLib.joinTexts(statements, " ");
@@ -5112,7 +5116,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             "return (" + ctx.assignValueCode(target, finalKind, winBranchKind, winBranchCode) + ");"
         };
         subjPrefix := if subj.constant and winDeclStmts == "" { "" }
-        else if isCTarget { types.cValueType(subj.kind) + " " + subjVar + " = " + subj.code + "; (void)" + subjVar + "; " }
+        else if isCTarget { if subjVar == subj.code { "" } else { types.cValueType(subj.kind) + " " + subjVar + " = " + subj.code + "; (void)" + subjVar + "; " } }
         else { "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; " };
         armsCode = subjPrefix + winDeclStmts + winAssignStmts + winVoidStmts + directBody + " ";
         if mode == "value" {
@@ -5142,6 +5146,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         cDecl := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "" } else { types.cValueType(finalKind) + " " + cMatchValVar + "; " };
         cRetTok := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "0" } else { cMatchValVar };
         cSubjLead := if textLib.startsWithAt(armsCode, 0, types.cValueType(subj.kind) + " " + subjVar) { "" }
+        else if subjVar == subj.code { "bool " + doneVar + " = false; " }
         else { types.cValueType(subj.kind) + " " + subjVar + " = " + subj.code + "; (void)" + subjVar + "; bool " + doneVar + " = false; " };
         return (code = "/*@CBLK:" + cRetTok + "@*/" + cDecl + cSubjLead + armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
         isDirect = true, constant = false, intValue = 0, textValue = "");

@@ -320,8 +320,7 @@ namedArrDestrRej: List<(bad: String, m1: String, m2: String)> = [
 ];
 assertRejectsAny("named-tuple-and-array-destructuring", namedArrDestrRej);
 arrDestrCRes := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; [a, b] := [1, 2]; io.outputLine(a, b);\n", "c_arr_destr.lts");
-test.checkInt("C arr destructuring rejected", 2, arrDestrCRes.status);
-test.check("C arr destructuring message: " + arrDestrCRes.stderr, text.containsText(arrDestrCRes.stderr, "C backend does not support list values yet"));
+test.checkInt("C arr destructuring compiles: " + arrDestrCRes.stderr, 0, arrDestrCRes.status);
 
 /* scope-local counters avoid source-offset churn in functions, destructuring, loops, and C shadows */
 workBody := text.joinTexts([

@@ -29,14 +29,15 @@ host adapters, test harnesses and platform glue may remain TypeScript under the
 [source-file policy](../../docs/tooling-source-policy.md); they must not become a parallel
 language implementation.
 
-The current generated TS compiler can rebuild its own supported source subset.
-Public compile/check, default tests and routine compiler tools use generated TS.
-Public `run` compiles a script to a temporary artifact and executes it with the
-Node entry. The handwritten T00 interpreter and its active routes are retired;
-generated TS is the only maintained language implementation. C output/native
-self-hosting are deferred, and the historical C emitter remains TS-hosted. New
-compiler work belongs in Lite, with TypeScript limited to host, test and platform
-adapters.
+The generated TS and C11 compilers both rebuild the full compiler source graph
+(3-generation fixed point verified on both targets). Public compile/check,
+default tests, and `lite verify` enforce **mandatory dual-target parity**:
+every new language feature, stdlib builtin, verification case, sample, and
+showcase MUST support **both** the TypeScript (`ts`) and C11 (`c`) emitters and
+pass both targets (under strict `tsc` and `cc -std=c11 -Wall -Wextra -Werror`)
+in `./bin/lite verify` and `./bin/lite test`. Do not land TS-only feature
+implementations or leave C11 parity deferred. New compiler work belongs in
+Lite, with TypeScript limited to host, test and platform adapters.
 
 Distinguish the language the compiler **accepts** from the language used to
 **write** it. A feature can be implemented in Lite using already supported

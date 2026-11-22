@@ -13,6 +13,9 @@
     "feature.io.reporting.report-values"
   ],
   "description": "Valid runtime execution-trace ordering, write-before-read reserved storage, and list-queued closures.",
+  "targets": [
+    "ts"
+  ],
   "cases": [
     {
       "name": "execution-trace-safety",

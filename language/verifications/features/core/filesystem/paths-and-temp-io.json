@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks deterministic core/path transforms and temp workspace directory, text read/write/append, and finally cleanup via core/file.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

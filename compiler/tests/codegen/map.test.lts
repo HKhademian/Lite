@@ -137,9 +137,9 @@ loop bi < 8 {
     bi = bi + 1;
 }
 
-/* 5. C backend rejection */
-compilerTest.assertCompileErrorContains(root, cComp, "map C backend rejection",
-"io := import \"core/io\";\nm: mut Map<String, Int>;\nm[\"a\"] = 1;\nio.outputLine(m[\"a\"]);\n",
-"C backend does not support map values yet");
+/* 5. C backend compiles Map values cleanly */
+cMapRes := compilerTest.compileStdin(root, cComp,
+"io := import \"core/io\";\nm: mut Map<String, Int>;\nm[\"a\"] = 1;\nio.outputLine(m[\"a\"]);\n", "");
+test.checkInt("map C compiles: " + cMapRes.stderr, 0, cMapRes.status);
 
 test.done("map");

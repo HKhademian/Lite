@@ -1,15 +1,16 @@
 # Lite compiler prototype
 
-This directory contains the Lite-written compiler and its bootstrap host. TS
-compilation defaults to the one verified generated compiler in
-[`bootstrap/`](lite://doc/compiler/bootstrap-readme). Public compile and check use generated TS;
-check-only also strictly checks the artifact without executing it. Public
-`./bin/lite run` compiles to a temporary artifact and executes it through
-`entry.ts`; compiled programs also run as `node compiler/entry.ts program.ts`.
-C emitter remains buildable internally through the same TS compiler host; public
-C output and a native C self-hosting compiler remain deferred. The handwritten
-T00 compiler, numbered generated compiler chain and separate C seed have been
-retired; one selected TS igniter drives both target emitters. See the
+This directory contains the Lite-written compiler and its bootstrap hosts. Both
+the TypeScript (`ts`) and C11 (`c`) emitters are first-class, self-hosting
+targets backed by tracked generated bootstrap sources in
+[`bootstrap/`](lite://doc/compiler/bootstrap-readme). Public `./bin/lite run`
+compiles to a temporary artifact and executes it through `entry.ts`; compiled TS
+programs also run as `node compiler/entry.ts program.ts`, and `./bin/lite-compile-c`
+emits standalone C11 (`cc -std=c11 -Wall -Wextra -Werror`). Every new language
+feature, stdlib builtin, verification case, sample, and showcase MUST support
+both `ts` and `c` and pass both targets in `./bin/lite verify` and
+`./bin/lite test`. The handwritten T00 compiler and numbered generated compiler
+chain have been retired. See the
 [owner-approved transition](lite://doc/compiler/transition-plan).
 The accepted language remains
 the restricted bootstrap subset, not the entire language design.

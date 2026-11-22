@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks monotonic clock progression, epoch/ISO/local date formatting invariants, and process runtime/cwd checks via core/time and core/process.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

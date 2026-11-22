@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks SHA-256, SHA-512, HMAC-SHA256, Hex, and Base64 round-trips and validators via core/crypto.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

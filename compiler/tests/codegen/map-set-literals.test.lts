@@ -60,7 +60,9 @@ test.checkText("set literals stdout", "2 true false\n2 true false\n3 true 0 0\n"
 compilerTest.assertCompileError(root, tsComp, "map missing equals", "m: Map<String, Int> = [\"a\"];\n", "1:27: expected = after map key in Map literal\n");
 compilerTest.assertCompileError(root, tsComp, "map key type mismatch", "m := [\"a\" = 1, 2 = 3];\n", "1:16: map entry 2 key must be String, got Int\n");
 compilerTest.assertCompileError(root, tsComp, "map value type mismatch", "m := [\"a\" = 1, \"b\" = \"two\"];\n", "1:22: map entry 2 value must be Int, got String\n");
-compilerTest.assertCompileError(root, cComp, "C rejects Map literal", "m := [\"a\" = 1];\n", "1:6: C backend does not support Map yet\n");
-compilerTest.assertCompileError(root, cComp, "C rejects Set literal", "s: Set<Int> = [1, 2];\n", "1:15: C backend does not support Set yet\n");
+cMapLit := compilerTest.compileStdin(root, cComp, "m := [\"a\" = 1];\n", "");
+test.checkInt("C compiles Map literal: " + cMapLit.stderr, 0, cMapLit.status);
+cSetLit := compilerTest.compileStdin(root, cComp, "s: Set<Int> = [1, 2];\n", "");
+test.checkInt("C compiles Set literal: " + cSetLit.stderr, 0, cSetLit.status);
 
 test.done("map-set-literals");

@@ -177,11 +177,10 @@ test.checkInt("cross-module record run status", 0, modRun.status);
 test.checkText("cross-module record run stdout", "localhost Tehran 99 Tehran 123 prod 99\n", modRun.stdout);
 _rm := fs.remove(modDir);
 
-/* C backend rejects record values cleanly */
+/* C backend supports record values cleanly */
 cRecordSrc := "User := record { x: Int; }\nu := User { x = 1 };\n";
 cRes := compilerTest.compileStdin(root, cComp, cRecordSrc, "c_record.lts");
-test.checkInt("C record rejected", 2, cRes.status);
-test.check("C record message: " + cRes.stderr, text.containsText(cRes.stderr, "C backend does not support record values yet"));
+test.checkInt("C record compiles: " + cRes.stderr, 0, cRes.status);
 
 /* Negative diagnostics */
 badRecSrc: List<String> = [

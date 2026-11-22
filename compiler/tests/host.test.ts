@@ -341,9 +341,13 @@ test('the graph-built TS-hosted C emitter preserves source names and subset reje
     assert.equal(fnNative.phase, 'run'); assert.equal(fnNative.status, 0, fnNative.stderr.toString());
     assert.equal(fnNative.stdout.toString(), '1\n'); assert.equal(fnNative.stderr.length, 0);
   }
-  assert.deepEqual(compileTarget('c', { text: 'io := import "core/io"; xs: List<Int> = [1]; io.outputLine(xs[0]);' }), {
-    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('C backend does not support list values yet\n'),
-  });
+  const listC = compileTarget('c', { text: 'io := import "core/io"; xs: List<Int> = [1]; io.outputLine(xs[0]);' });
+  assert.equal(listC.status, 0);
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+    const listNative = runCArtifact(listC.stdout.toString());
+    assert.equal(listNative.phase, 'run'); assert.equal(listNative.status, 0, listNative.stderr.toString());
+    assert.equal(listNative.stdout.toString(), '1\n'); assert.equal(listNative.stderr.length, 0);
+  }
   const directory = isolatedCheckout();
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));

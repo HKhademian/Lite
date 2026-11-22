@@ -383,18 +383,16 @@ if ccProbe.available {
     test.checkText("slice2b c-dce stdout", "5\n", cDceRun.stdout);
 }
 
-slice2bBadC: List<String> = [
+slice2bOkC: List<String> = [
     "values: List<Int> = [1];",
     "p := (a = 1);",
-    "var f: fn(Int): Int;",
     "[1, 2];",
     "{ f := fn(): Int { 1 }; 5 }",
     "x := { y := 1; 5 };"
 ];
-loop slice2bBadC as badSrc {
-    rC := compilerTest.compileStdin(root, cComp, badSrc, "");
-    test.checkInt("slice2b bad-c status: " + badSrc, 2, rC.status);
-    test.checkText("slice2b bad-c stdout empty", "", rC.stdout);
+loop slice2bOkC as okSrc {
+    rC := compilerTest.compileStdin(root, cComp, okSrc, "");
+    test.checkInt("slice2b ok-c status: " + okSrc + " -> " + rC.stderr, 0, rC.status);
 }
 
 compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff1", "io := import \"core/io\"; var out := 1; dead := { out = 9; 5 }; io.outputLine(out);", "9\n");
@@ -606,8 +604,10 @@ slice3Precedence := text.joinTexts([
 ], "\n");
 checkTsDceCase("slice3 precedence", slice3Precedence, "9234 15 2 4 4 21 9 77\n", emptySubs, ["999n"]);
 
-compilerTest.assertCompileErrorContains(root, cComp, "slice3 c rej 1", "{ x := 1; f := fn(): Int { x }; _ := f(); }", "C backend does not support");
-compilerTest.assertCompileErrorContains(root, cComp, "slice3 c rej 2", "make := fn(x: Int): fn(): Int { fn(): Int { x } };", "C backend does not support");
+cSlice3a := compilerTest.compileStdin(root, cComp, "{ x := 1; f := fn(): Int { x }; _ := f(); }", "");
+test.checkInt("slice3 c ok 1: " + cSlice3a.stderr, 0, cSlice3a.status);
+cSlice3b := compilerTest.compileStdin(root, cComp, "make := fn(x: Int): fn(): Int { fn(): Int { x } };", "");
+test.checkInt("slice3 c ok 2: " + cSlice3b.stderr, 0, cSlice3b.status);
 
 slice3BadRej: List<(src: String, msg: String)> = [
     (src = "{ f := fn(): Int { x }; _ := f(); x := 1; }", msg = "cannot call before x is initialized"),

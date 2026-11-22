@@ -258,4 +258,5 @@ cFnList := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; f :
 test.checkInt("C fn List<Int> compiles: " + cFnList.stderr, 0, cFnList.status);
 cFnMap := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; f := fn (): Map<String, Int> { return [\"a\" = 1]; }\nio.outputLine(f());\n", "");
 test.checkInt("C fn Map compiles: " + cFnMap.stderr, 0, cFnMap.status);
-compilerTest.assertCompileError(root, cComp, "C fn value reject", "f := fn(): fn(): Int { fn(): Int { 1 } };\n", "1:24: C backend does not support function values yet\n");
+cFnVal := compilerTest.compileStdin(root, cComp, "f := fn(): fn(): Int { fn(): Int { 1 } };\n", "");
+test.checkInt("C fn value compiles: " + cFnVal.stderr, 0, cFnVal.status);

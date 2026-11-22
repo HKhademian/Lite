@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks optional input prompts, ordered token/line/all reads, Float display, arrays/tuples, zero arguments and output newlines.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

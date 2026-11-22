@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks lexical captures of immutable, var, mut List, parameter, loop-item, and escaping counter frames on generated TS.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

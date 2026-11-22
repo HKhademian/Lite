@@ -10,7 +10,8 @@
   ],
   "guideline": "Checks value-producing blocks, nested scopes, inner-block transparent type aliases, and pure dead-code elimination.",
   "targets": [
-    "ts"
+    "ts",
+    "c"
   ],
   "cases": [
     {

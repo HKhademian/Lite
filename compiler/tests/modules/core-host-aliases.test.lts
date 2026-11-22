@@ -67,7 +67,8 @@ compilerTest.assertCompileErrorContainsNamed(root, tsComp, "errorLine type rejec
 errLineC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.errorLine(\"x\");", fixtureName);
 test.checkInt("errorLine C status", 0, errLineC.status);
 test.checkText("errorLine C stderr", "", errLineC.stderr);
-compilerTest.assertCompileErrorContainsNamed(root, cComp, "list output C rejected", "io := import \"core/io\"; io.outputLine([1, 2]);", fixtureName, "C backend does not support");
+listOutC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine([1, 2]);", fixtureName);
+test.checkInt("list output C compiles: " + listOutC.stderr, 0, listOutC.status);
 
 supportedC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(1, \"x\", true);", fixtureName);
 test.checkInt("supported C io.outputLine status", 0, supportedC.status);
