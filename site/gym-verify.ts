@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /** Verifies every Gym exercise's canonical solution and expected starter failure across all visible & hidden cases. */
-import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../igniter/artifacts.ts';
 import { rootDir } from './chrome.ts';
 import { stripLiteTs } from './strip-ts.ts';
@@ -116,7 +117,46 @@ export function verifyGymCorpus(tsCompiler?: CompilerBuild): Readonly<{
 }> {
   const compiler = tsCompiler ?? buildTsCompiler();
   const catalogPath = join(rootDir, 'language', 'gym', 'catalog.json');
-  const catalog = JSON.parse(readFileSync(catalogPath, 'utf8')) as GymCatalog;
+  const catalogRaw = readFileSync(catalogPath, 'utf8');
+  const catalog = JSON.parse(catalogRaw) as GymCatalog;
+
+  let gymCacheFile: string | undefined;
+  if (process.env.LITE_SITE_NO_CACHE !== '1') {
+    const h = createHash('sha256').update('gym-v1\0').update(readFileSync(compiler.path)).update('\0').update(catalogRaw);
+    let allExist = true;
+    for (const ex of catalog.exercises) {
+      for (const rel of [ex.promptFile, ex.starterFile, ex.solutionFile, ...ex.relatedDocs]) {
+        if (!existsSync(resolve(rootDir, rel))) { allExist = false; break; }
+      }
+      if (!allExist) break;
+      h.update('\0').update(readFileSync(resolve(rootDir, ex.starterFile)));
+      h.update('\0').update(readFileSync(resolve(rootDir, ex.solutionFile)));
+    }
+    if (allExist) {
+      const key = h.digest('hex').slice(0, 32);
+      gymCacheFile = join(rootDir, 'dist', 'cache', 'site-gym', `${key}.json`);
+      if (existsSync(gymCacheFile)) {
+        try {
+          const cached = JSON.parse(readFileSync(gymCacheFile, 'utf8')) as {
+            exerciseCount: number;
+            drillCount: number;
+            kataCount: number;
+            caseCount: number;
+            entries: [string, { starterSource: string; solutionSource: string; solutionTs: string }][];
+          };
+          return {
+            exerciseCount: cached.exerciseCount,
+            drillCount: cached.drillCount,
+            kataCount: cached.kataCount,
+            caseCount: cached.caseCount,
+            compiledSolutions: new Map(cached.entries),
+          };
+        } catch {
+          /* ignore corrupt cache entry and rebuild */
+        }
+      }
+    }
+  }
   const failures: string[] = [];
   const compiledSolutions = new Map<string, Readonly<{ starterSource: string; solutionSource: string; solutionTs: string }>>();
 
@@ -187,6 +227,17 @@ export function verifyGymCorpus(tsCompiler?: CompilerBuild): Readonly<{
 
   if (failures.length > 0) {
     throw new Error(`Gym corpus verification failed (${String(failures.length)} issues):\n${failures.join('\n')}`);
+  }
+
+  if (gymCacheFile !== undefined) {
+    mkdirSync(dirname(gymCacheFile), { recursive: true });
+    writeFileSync(gymCacheFile, JSON.stringify({
+      exerciseCount: catalog.exercises.length,
+      drillCount,
+      kataCount,
+      caseCount,
+      entries: Array.from(compiledSolutions.entries()),
+    }));
   }
 
   return {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Build the static public showcase site and playground into dist/site/. */
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -72,9 +73,41 @@ function coreModuleIdentity(relPath: string): string {
   }
 }
 
-function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge?: string): RenderedSample {
+function computeSampleCacheSalt(tsCompiler: CompilerBuild): string {
+  const h = createHash('sha256');
+  h.update('v1\0');
+  h.update(readFileSync(tsCompiler.path));
+  for (const rel of ['lib/extra/canvas.lts', 'lib/extra/board.lts', 'lib/extra/audio.lts', 'lib/extra/pool.lts', 'lib/extra/arena.lts', 'lib/extra/sparse.lts']) {
+    const p = resolve(root, rel);
+    if (existsSync(p)) { h.update('\0' + rel + '\0'); h.update(readFileSync(p)); }
+  }
+  return h.digest('hex').slice(0, 24);
+}
+
+function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge?: string, cacheSalt?: string): RenderedSample {
   const fullPath = resolve(root, sample.file);
   const source = readFileSync(fullPath, 'utf8');
+  let cacheFile: string | undefined;
+  if (cacheSalt !== undefined && process.env.LITE_SITE_NO_CACHE !== '1') {
+    const key = createHash('sha256')
+      .update(cacheSalt)
+      .update('\0').update(sample.id)
+      .update('\0').update(sample.file)
+      .update('\0').update(source)
+      .update('\0').update(JSON.stringify(sample.args))
+      .update('\0').update(sample.stdin)
+      .update('\0').update(badge ?? '')
+      .digest('hex').slice(0, 32);
+    const cacheDir = join(root, 'dist', 'cache', 'site-samples');
+    cacheFile = join(cacheDir, `${key}.json`);
+    if (existsSync(cacheFile)) {
+      try {
+        return JSON.parse(readFileSync(cacheFile, 'utf8')) as RenderedSample;
+      } catch {
+        /* ignore corrupt cache entry and rebuild */
+      }
+    }
+  }
   const keepaliveSource = appendPlayKeepalive(source);
   let compiled = compileBuiltCompiler(tsCompiler, {
     text: keepaliveSource ?? source,
@@ -118,7 +151,7 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
       throw new Error(`failed to run ${sample.file} (exit ${String(run.status)}):\n${run.stderr}`);
     }
     const previewSvg = captureCanvasPreview(generatedTs, sample.title);
-    return {
+    const renderedSample: RenderedSample = {
       ...sample,
       source,
       sourceHtml: highlightLite(source.trimEnd()),
@@ -128,6 +161,11 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
       ...(previewSvg !== undefined ? { previewSvg } : {}),
       ...(badge !== undefined ? { badge } : {}),
     };
+    if (cacheFile !== undefined) {
+      mkdirSync(dirname(cacheFile), { recursive: true });
+      writeFileSync(cacheFile, JSON.stringify(renderedSample));
+    }
+    return renderedSample;
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
@@ -255,11 +293,12 @@ export function buildSite(options?: BuildSiteOptions): void {
 
   const playBadgeByGroup = new Map(playGroups.map(group => [group.id, group.badge]));
   timePhase('samples', () => {
+    const sampleSalt = computeSampleCacheSalt(tsCompiler);
     for (const sample of showcaseSamples) {
-      rendered.set(sample.id, compileAndRunSample(sample, tsCompiler));
+      rendered.set(sample.id, compileAndRunSample(sample, tsCompiler, undefined, sampleSalt));
     }
     for (const sample of playSamples) {
-      renderedPlay.set(sample.id, compileAndRunSample(sample, tsCompiler, playBadgeByGroup.get(sample.group)));
+      renderedPlay.set(sample.id, compileAndRunSample(sample, tsCompiler, playBadgeByGroup.get(sample.group), sampleSalt));
     }
   });
 
