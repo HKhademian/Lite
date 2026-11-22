@@ -4362,6 +4362,7 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         listLib.pushBack(mut seedKinds, "(x:Float,y:Float,width:Float,height:Float)");
         listLib.pushBack(mut seedKinds, "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
         listLib.pushBack(mut seedKinds, "(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)");
+        listLib.pushBack(mut seedKinds, "(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
         listLib.pushBack(mut seedKinds, "(ok:Bool,error:String)");
     }
     if textLib.indexOfText(calls, "|lt_list_i64_", 0) >= 0 { listLib.pushBack(mut seedKinds, "List<Int>"); }
