@@ -1,0 +1,259 @@
+/* Dual-target (TS + C11) and ASan/UBSan tests for `extra/arena`, `extra/pool`, `extra/intern`, and `extra/lru`. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+ccInfo := compilerTest.probeCc();
+
+tmpRes := fs.makeTempDir("lite-extra-memory-test-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+tmpDir := tmpRes.path;
+
+functionalSrc :=
+"io := import \"core/io\";\n" +
+"integer := import \"core/int\";\n" +
+"arena := import \"extra/arena\";\n" +
+"pool := import \"extra/pool\";\n" +
+"intern := import \"extra/intern\";\n" +
+"lru := import \"extra/lru\";\n" +
+"\n" +
+"/* 1. extra/arena: byte arena + alignment + int32 + mark/rewind + reset + reuse */\n" +
+"a := arena.create(64);\n" +
+"s1 := arena.alloc(a, 5);\n" +
+"s2 := arena.allocAligned(a, 8, 8);\n" +
+"badAlign := arena.allocAligned(a, 4, 3);\n" +
+"ovf := arena.alloc(a, 100);\n" +
+"io.outputLine(\"arena1\", s1.ok, s1.offset, s2.ok, s2.offset, badAlign.ok, ovf.ok);\n" +
+"_w1 := arena.writeByte(a, 0, 255);\n" +
+"_w2 := arena.writeInt32(a, s2.offset, -123456);\n" +
+"_w3 := arena.writeInt32(a, s2.offset + 4, 987654);\n" +
+"io.outputLine(\"arenaRW\", arena.readByte(a, 0), arena.readInt32(a, s2.offset), arena.readInt32(a, s2.offset + 4));\n" +
+"m := arena.mark(a);\n" +
+"_s3 := arena.alloc(a, 16);\n" +
+"usedBeforeRewind := arena.usedBytes(a);\n" +
+"rewOk := arena.rewind(a, m);\n" +
+"usedAfterRewind := arena.usedBytes(a);\n" +
+"arena.reset(a);\n" +
+"st := arena.stats(a);\n" +
+"io.outputLine(\"arenaStats\", usedBeforeRewind, rewOk, usedAfterRewind, st.usedBytes, st.peakBytes, st.resetCount, st.capacityBytes);\n" +
+"arena.destroy(a);\n" +
+"io.outputLine(\"arenaDead\", arena.isValid(a), arena.alloc(a, 4).ok);\n" +
+"a2 := arena.create(32);\n" +
+"io.outputLine(\"arenaReuse\", arena.isValid(a2), arena.capacityBytes(a2));\n" +
+"arena.destroy(a2);\n" +
+"\n" +
+"/* Typed IntArena & FloatArena */\n" +
+"ia := arena.createInts(16);\n" +
+"i0 := arena.allocInt(ia, 42);\n" +
+"ispan := arena.allocIntSpan(ia, 4, 7);\n" +
+"_iset := arena.setInt(ia, ispan.offset + 2, 99);\n" +
+"im := arena.markInts(ia);\n" +
+"_iExtra := arena.allocInt(ia, 100);\n" +
+"_iRew := arena.rewindInts(ia, im);\n" +
+"io.outputLine(\"intArena\", i0, arena.getInt(ia, i0), arena.getInt(ia, ispan.offset + 2), arena.usedInts(ia), arena.peakInts(ia));\n" +
+"arena.resetInts(ia);\n" +
+"arena.destroyInts(ia);\n" +
+"\n" +
+"fa := arena.createFloats(8);\n" +
+"f0 := arena.allocFloat(fa, 1.5);\n" +
+"fspan := arena.allocFloatSpan(fa, 3, 2.5);\n" +
+"io.outputLine(\"floatArena\", f0, arena.getFloat(fa, f0), arena.getFloat(fa, fspan.offset + 1), arena.usedFloats(fa));\n" +
+"arena.destroyFloats(fa);\n" +
+"\n" +
+"/* 2. extra/pool: generational ABA protection + SlotPool + IntPool + TextPool */\n" +
+"sp := pool.createSlots(2);\n" +
+"h1 := pool.acquireSlot(sp);\n" +
+"h2 := pool.acquireSlot(sp);\n" +
+"hFull := pool.acquireSlot(sp);\n" +
+"rel1 := pool.releaseSlot(sp, h1);\n" +
+"relDup := pool.releaseSlot(sp, h1);\n" +
+"h3 := pool.acquireSlot(sp);\n" +
+"io.outputLine(\"slotPool\", h1.index, h2.index, pool.isHandleValid(hFull), rel1, relDup, h3.index == h1.index, h3.generation > h1.generation, pool.isSlotAlive(sp, h1), pool.isSlotAlive(sp, h3));\n" +
+"pool.clearSlots(sp);\n" +
+"io.outputLine(\"slotClear\", pool.slotCount(sp), pool.isSlotAlive(sp, h2), pool.isSlotAlive(sp, h3));\n" +
+"pool.destroySlots(sp);\n" +
+"\n" +
+"ip := pool.createInts(4);\n" +
+"ih := pool.acquireInt(ip, 101);\n" +
+"_is := pool.setInt(ip, ih, 202);\n" +
+"ig1 := pool.getInt(ip, ih);\n" +
+"_ir := pool.releaseInt(ip, ih);\n" +
+"ig2 := pool.getInt(ip, ih);\n" +
+"io.outputLine(\"intPool\", ig1.found, ig1.value, ig2.found, pool.intCount(ip));\n" +
+"pool.destroyInts(ip);\n" +
+"\n" +
+"tp := pool.createTexts(4);\n" +
+"th := pool.acquireText(tp, \"alpha\");\n" +
+"_ts := pool.setText(tp, th, \"beta\");\n" +
+"tg1 := pool.getText(tp, th);\n" +
+"_tr := pool.releaseText(tp, th);\n" +
+"tg2 := pool.getText(tp, th);\n" +
+"io.outputLine(\"textPool\", tg1.found, tg1.value, tg2.found, pool.textCount(tp));\n" +
+"pool.destroyTexts(tp);\n" +
+"\n" +
+"/* 3. extra/intern: deduplication + multi-table isolation + clear/destroy */\n" +
+"t1 := intern.create();\n" +
+"t2 := intern.create();\n" +
+"idA := intern.intern(t1, \"alpha\");\n" +
+"idA2 := intern.intern(t1, \"alpha\");\n" +
+"idColon := intern.intern(t1, \":alpha\");\n" +
+"idOther := intern.intern(t2, \"alpha\");\n" +
+"ist := intern.stats(t1);\n" +
+"io.outputLine(\"intern\", idA == idA2, idA =!= idColon, intern.resolveOr(t1, idA, \"\"), intern.resolveOr(t1, idColon, \"\"), intern.resolve(t1, idOther).found, ist.uniqueCount, ist.internCalls, ist.hitCalls);\n" +
+"intern.clear(t1);\n" +
+"io.outputLine(\"internClear\", intern.count(t1), intern.has(t1, \"alpha\"), intern.hasId(t1, idA), intern.has(t2, \"alpha\"));\n" +
+"intern.destroy(t1);\n" +
+"intern.destroy(t2);\n" +
+"\n" +
+"/* 4. extra/lru: O(1) bounded LRU for Text, Int, and IntKey */\n" +
+"c := lru.createText(3);\n" +
+"_p1 := lru.putText(c, \"a\", \"1\");\n" +
+"_p2 := lru.putText(c, \"b\", \"2\");\n" +
+"_p3 := lru.putText(c, \"c\", \"3\");\n" +
+"ga := lru.getText(c, \"a\");\n" +
+"pk := lru.peekText(c, \"b\");\n" +
+"ev := lru.putText(c, \"d\", \"4\");\n" +
+"lst := lru.textStats(c);\n" +
+"io.outputLine(\"lruText\", ga.found, ga.value, pk.value, ev.evicted, ev.evictedKey, ev.evictedValue, lru.hasText(c, \"b\"), lru.newestTextKey(c).key, lru.oldestTextKey(c).key, lst.count, lst.hits, lst.misses, lst.evictions);\n" +
+"rmOk := lru.removeText(c, \"c\");\n" +
+"ev2 := lru.evictOldestText(c);\n" +
+"io.outputLine(\"lruTextRm\", rmOk, ev2.evicted, ev2.key, lru.textCount(c));\n" +
+"lru.destroyText(c);\n" +
+"\n" +
+"ci := lru.createInt(2);\n" +
+"_pi1 := lru.putInt(ci, \"x\", 10);\n" +
+"_pi2 := lru.putInt(ci, \"y\", 20);\n" +
+"_gi := lru.getInt(ci, \"x\");\n" +
+"evi := lru.putInt(ci, \"z\", 30);\n" +
+"io.outputLine(\"lruInt\", evi.evicted, evi.evictedKey, evi.evictedValue, lru.getInt(ci, \"y\").found, lru.intCount(ci));\n" +
+"lru.destroyInt(ci);\n" +
+"\n" +
+"ck := lru.createIntKey(2);\n" +
+"_pk1 := lru.putIntKey(ck, 100, 1);\n" +
+"_pk2 := lru.putIntKey(ck, 200, 2);\n" +
+"_gk := lru.getIntKey(ck, 100);\n" +
+"evk := lru.putIntKey(ck, 300, 3);\n" +
+"io.outputLine(\"lruIntKey\", evk.evicted, evk.evictedKey, evk.evictedValue, lru.hasIntKey(ck, 200), lru.intKeyCount(ck));\n" +
+"lru.destroyIntKey(ck);\n";
+
+funcPath := path.join(tmpDir, "functional.lts");
+wr := fs.writeText(funcPath, functionalSrc);
+test.check("write functional.lts: " + wr.error, wr.ok);
+
+expectedOut :=
+"arena1 true 0 true 8 false false\n" +
+"arenaRW 255 -123456 987654\n" +
+"arenaStats 32 true 16 0 32 1 64\n" +
+"arenaDead false false\n" +
+"arenaReuse true 32\n" +
+"intArena 0 42 99 5 6\n" +
+"floatArena 0 1.5 2.5 4\n" +
+"slotPool 0 1 false true false true true false true\n" +
+"slotClear 0 false false\n" +
+"intPool true 202 false 0\n" +
+"textPool true beta false 0\n" +
+"intern true true alpha :alpha false 2 3 1\n" +
+"internClear 0 false false true\n" +
+"lruText true 1 2 true b 2 false d c 3 1 0 1\n" +
+"lruTextRm true true a 1\n" +
+"lruInt true y 20 false 2\n" +
+"lruIntKey true 200 2 false 2\n";
+
+/* Run on TS target */
+emptyEnv: List<String> = [];
+tsComp := compilerTest.compileStdin(root, selTs.path, functionalSrc, "");
+test.checkInt("TS compile status: " + tsComp.stderr, 0, tsComp.status);
+tsOutFile := path.join(tmpDir, "functional.ts");
+test.check("write functional.ts", fs.writeText(tsOutFile, tsComp.stdout).ok);
+tsRunner := path.join(tmpDir, "runner.ts");
+tsRunnerCode :=
+"import { writeSync } from 'node:fs';\n" +
+"import { main } from './functional.ts';\n" +
+"const out = main((t: string): void => { writeSync(1, t); });\n" +
+"if (typeof out === 'string' && out.length > 0) writeSync(1, out);\n";
+test.check("write runner.ts", fs.writeText(tsRunner, tsRunnerCode).ok);
+tsRun := proc.run(project.nodeExecPath(), [tsRunner], root, emptyEnv, true, "");
+test.checkInt("TS run status: " + tsRun.stderr, 0, tsRun.status);
+test.checkText("TS functional output", expectedOut, tsRun.stdout);
+
+/* Run on C11 target */
+if ccInfo.available {
+    cComp := compilerTest.compileStdin(root, selC.path, functionalSrc, "");
+    test.checkInt("C11 compile status: " + cComp.stderr, 0, cComp.status);
+    cFile := path.join(tmpDir, "functional.c");
+    cBin := path.join(tmpDir, "functional");
+    test.check("write functional.c", fs.writeText(cFile, cComp.stdout).ok);
+    ccRes := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cFile, "-o", cBin, "-lm"], tmpDir, emptyEnv, true, "");
+    test.checkInt("C11 cc status: " + ccRes.stderr, 0, ccRes.status);
+    cRun := proc.run(cBin, [], root, emptyEnv, true, "");
+    test.checkInt("C11 run status: " + cRun.stderr, 0, cRun.status);
+    test.checkText("C11 functional output matches TS", expectedOut, cRun.stdout);
+
+    /* Stress & ASan/UBSan bounded-memory verification via ./bin/lite build --sanitize */
+    stressSrc :=
+    "io := import \"core/io\";\n" +
+    "integer := import \"core/int\";\n" +
+    "arena := import \"extra/arena\";\n" +
+    "pool := import \"extra/pool\";\n" +
+    "intern := import \"extra/intern\";\n" +
+    "lru := import \"extra/lru\";\n" +
+    "\n" +
+    "a := arena.create(256);\n" +
+    "var f := 0;\n" +
+    "loop f < 5000 {\n" +
+    "    s := arena.allocAligned(a, 64, 8);\n" +
+    "    _w := arena.writeInt32(a, s.offset, f);\n" +
+    "    arena.reset(a);\n" +
+    "    f += 1;\n" +
+    "}\n" +
+    "sp := pool.createInts(32);\n" +
+    "var p := 0;\n" +
+    "loop p < 5000 {\n" +
+    "    h := pool.acquireInt(sp, p);\n" +
+    "    _r := pool.releaseInt(sp, h);\n" +
+    "    p += 1;\n" +
+    "}\n" +
+    "it := intern.create();\n" +
+    "var ic := 0;\n" +
+    "loop ic < 500 {\n" +
+    "    _s1 := intern.intern(it, \"sym_\" + integer.intText(ic % 16));\n" +
+    "    if (ic % 50) == 49 { intern.clear(it); }\n" +
+    "    ic += 1;\n" +
+    "}\n" +
+    "lc := lru.createIntKey(32);\n" +
+    "var lk := 0;\n" +
+    "loop lk < 5000 {\n" +
+    "    _ev := lru.putIntKey(lc, lk, lk * 2);\n" +
+    "    lk += 1;\n" +
+    "}\n" +
+    "io.outputLine(\"stress\", arena.resetCount(a), pool.intCount(sp), intern.count(it), lru.intKeyCount(lc), lru.intKeyStats(lc).evictions);\n" +
+    "arena.destroy(a);\n" +
+    "pool.destroyInts(sp);\n" +
+    "intern.destroy(it);\n" +
+    "lru.destroyIntKey(lc);\n";
+
+    stressPath := path.join(tmpDir, "stress.lts");
+    ws := fs.writeText(stressPath, stressSrc);
+    test.check("write stress.lts: " + ws.error, ws.ok);
+
+    sanBin := path.join(tmpDir, "stress-san");
+    buildSan := proc.run(path.join(root, "bin/lite"), ["build", "--sanitize", "--quiet", "-o", sanBin, stressPath], root, emptyEnv, true, "");
+    test.check("ASan/UBSan build ok: " + buildSan.stderr, buildSan.status == 0 and buildSan.error == "");
+
+    runSan := proc.run(sanBin, [], tmpDir, emptyEnv, true, "");
+    test.check("ASan/UBSan stress exit 0: " + runSan.stderr, runSan.status == 0 and runSan.error == "");
+    test.checkText("ASan/UBSan stress output", "stress 5000 0 0 32 4968\n", runSan.stdout);
+}
+
+fs.remove(tmpDir);
