@@ -36,14 +36,19 @@ export function readRepositoryUrl(): string {
 
 export function readSourceRevision(): SourceRevision {
   const commitResult = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: rootDir, encoding: 'utf8' });
-  if (commitResult.error !== undefined) throw commitResult.error;
-  if (commitResult.status !== 0) throw new Error('could not read the source commit');
-  const timeResult = spawnSync('git', ['show', '-s', '--format=%cI', 'HEAD'], { cwd: rootDir, encoding: 'utf8' });
-  if (timeResult.error !== undefined) throw timeResult.error;
-  if (timeResult.status !== 0) throw new Error('could not read the commit timestamp');
+  if (commitResult.error === undefined && commitResult.status === 0) {
+    const timeResult = spawnSync('git', ['show', '-s', '--format=%cI', 'HEAD'], { cwd: rootDir, encoding: 'utf8' });
+    return {
+      commit: commitResult.stdout.trim(),
+      timestamp: timeResult.error === undefined && timeResult.status === 0
+        ? timeResult.stdout.trim()
+        : new Date().toISOString(),
+    };
+  }
+  const envCommit = process.env['GITHUB_SHA']?.trim();
   return {
-    commit: commitResult.stdout.trim(),
-    timestamp: timeResult.stdout.trim(),
+    commit: envCommit !== undefined && envCommit !== '' ? envCommit : 'archive',
+    timestamp: new Date().toISOString(),
   };
 }
 

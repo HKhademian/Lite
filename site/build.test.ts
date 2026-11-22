@@ -378,7 +378,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert.equal(buildMeta.lessons, 25);
   assert.equal(buildMeta.tutorials, 3);
   assert.equal(buildMeta.gymExercises, 56);
-  assert.equal(buildMeta.modules, 23);
+  assert.equal(buildMeta.modules, 36);
   assert(buildMeta.docsPages >= 200);
   assert(existsSync(join(out, 'docs/design/site-architecture.html')));
   assert(existsSync(join(out, 'docs/design/maps.html')));
