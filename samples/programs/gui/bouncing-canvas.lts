@@ -8,11 +8,12 @@
  *   LITE_CANVAS_HEADLESS=1 ./bin/lite run --target c samples/programs/gui/bouncing-canvas.lts -- --bench 300 --uncapped
  */
 
-canvas := import "extra/canvas";
+canvas := import "extra/surface";
 color := import "extra/color";
 integer := import "core/int";
 io := import "core/io";
 list := import "core/list";
+proc := import "core/process";
 text := import "core/text";
 
 roundInt := fn(v: Float): Int {
@@ -58,6 +59,10 @@ loop i < list.length(args) {
     } else {
         i = i + 1;
     }
+}
+hlEnv := proc.envGet("LITE_CANVAS_HEADLESS");
+if hlEnv.found and hlEnv.value == "1" and benchFrames == 0 and capturePath == "" {
+    benchFrames = 1;
 }
 
 w := 640;

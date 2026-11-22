@@ -20,7 +20,7 @@ pub isHostModuleIdentity := fn(moduleIdentity: String): Bool {
 
 /** Resolves a bodyless `lib/extra/` declaration when its module identity and ABI match. */
 extraHostFunction := fn(moduleIdentity: String, name: String, params: String, result: String): String {
-    if moduleIdentity == "lite.extra.canvas.v1" {
+    if moduleIdentity == "lite.extra.surface.v1" {
         surf := "(handle:Int)";
         col := "(r:Float,g:Float,b:Float,a:Float)";
         pt := "(x:Float,y:Float)";

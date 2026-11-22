@@ -1,0 +1,122 @@
+/** Abstract, target-independent 2D desktop & headless drawing surface (`lite.extra.surface.v1`). */
+
+color := import "extra/color";
+
+/** Opaque color value re-exported from `extra/color`. */
+pub Color := type color.Color;
+
+/** 2D point in logical surface coordinates. */
+pub Point := type (x: Float, y: Float);
+
+/** Axis-aligned rectangle in logical surface coordinates. */
+pub Rect := type (x: Float, y: Float, width: Float, height: Float);
+
+/** Opaque handle identifying an open abstract drawing surface. */
+pub Surface := type (handle: Int);
+
+/** Snapshot of surface state and user input for the current frame. */
+pub FrameInput := type (open: Bool, width: Int, height: Int, pointerX: Float, pointerY: Float, pointerDown: Bool, key: String, deltaMs: Int);
+
+/** Runtime performance and resource vitals for an active surface. */
+pub Vitals := type (frameCount: Int, frameTimeMs: Float, avgFrameTimeMs: Float, fps: Float, targetFps: Float, cpuTimeMs: Float, memoryBytes: Int);
+
+/** Constructs a 2D point `(x, y)`. */
+pub point := fn(x: Float, y: Float): Point { (x = x, y = y) };
+
+/** Constructs a rectangle `(x, y, width, height)`. */
+pub rect := fn(x: Float, y: Float, width: Float, height: Float): Rect { (x = x, y = y, width = width, height = height) };
+
+/** Constructs an opaque color from normalized RGB channels (`0.0..1.0`). */
+pub rgb := fn(r: Float, g: Float, b: Float): Color { color.fromRgb(r, g, b) };
+
+/** Constructs a color from normalized RGBA channels (`0.0..1.0`). */
+pub rgba := fn(r: Float, g: Float, b: Float, a: Float): Color { color.fromRgba(r, g, b, a) };
+
+/** Constructs an opaque color from HSL (`hueDeg` in `0..360`, `s` and `l` in `0.0..1.0`). */
+pub hsl := fn(hueDeg: Float, s: Float, l: Float): Color { color.fromHsl(hueDeg, s, l) };
+
+/** Linearly blends `a` and `b` by `t` (`0.0..1.0`). */
+pub mix := fn(a: Color, b: Color, t: Float): Color { color.mix(a, b, t) };
+
+/** Returns `c` with its alpha channel replaced. */
+pub withAlpha := fn(c: Color, a: Float): Color { color.withAlphaFloat(c, a) };
+
+/** Transparent black. */
+pub TRANSPARENT := color.TRANSPARENT;
+
+/** Opaque black. */
+pub BLACK := color.BLACK;
+
+/** Opaque white. */
+pub WHITE := color.WHITE;
+
+/** Pure red. */
+pub RED := color.RED;
+
+/** Pure green. */
+pub GREEN := color.GREEN;
+
+/** Pure blue. */
+pub BLUE := color.BLUE;
+
+/** Pure yellow. */
+pub YELLOW := color.YELLOW;
+
+/** Pure cyan. */
+pub CYAN := color.CYAN;
+
+/** Pure magenta. */
+pub MAGENTA := color.MAGENTA;
+
+/** Opens an abstract drawing surface with the requested logical title and dimensions. */
+pub open := fn(title: String, width: Int, height: Int): Surface;
+
+/** Polls current surface state and input events for the next frame. */
+pub poll := fn(surface: Surface): FrameInput;
+
+/** Presents the current frame to the backing display target. */
+pub present := fn(surface: Surface): Unit;
+
+/** Closes the surface and releases its host resources. */
+pub close := fn(surface: Surface): Unit;
+
+/** Clears the entire surface to `fill`. */
+pub clear := fn(surface: Surface, fill: Color): Unit;
+
+/** Fills `area` with `fill`. */
+pub fillRect := fn(surface: Surface, area: Rect, fill: Color): Unit;
+
+/** Strokes the outline of `area` with thickness `lineWidth` and color `stroke`. */
+pub strokeRect := fn(surface: Surface, area: Rect, lineWidth: Float, stroke: Color): Unit;
+
+/** Fills a circle centered at `center` with `radius` and color `fill`. */
+pub fillCircle := fn(surface: Surface, center: Point, radius: Float, fill: Color): Unit;
+
+/** Strokes a line segment from `start` to `finish` with thickness `lineWidth` and color `stroke`. */
+pub strokeLine := fn(surface: Surface, start: Point, finish: Point, lineWidth: Float, stroke: Color): Unit;
+
+/** Draws `content` at `at` using logical pixel height `size` and color `fill`. */
+pub drawText := fn(surface: Surface, content: String, at: Point, size: Float, fill: Color): Unit;
+
+/** Captures the current surface contents to an image file at `outPath` (backend-encoded PNG). */
+pub capture := fn(surface: Surface, outPath: String): (ok: Bool, error: String);
+
+/** Sets the target frame rate in frames per second (`<= 0.0` releases the cap and runs uncapped; default is `60.0`). */
+pub setTargetFps := fn(surface: Surface, fps: Float): Unit;
+
+/** Sets the target frame time in milliseconds (`<= 0.0` releases the cap and runs uncapped). */
+pub setFrameTimeMs := fn(surface: Surface, ms: Float): Unit {
+    if ms <= 0.0 {
+        setTargetFps(surface, 0.0);
+    } else {
+        setTargetFps(surface, 1000.0 / ms);
+    }
+};
+
+/** Releases the frame-rate cap so the surface runs as fast as the host allows. */
+pub uncapFrameRate := fn(surface: Surface): Unit {
+    setTargetFps(surface, 0.0);
+};
+
+/** Reads live performance and resource vitals (frame count, frame time, FPS, CPU time, and resident memory bytes). */
+pub vitals := fn(surface: Surface): Vitals;

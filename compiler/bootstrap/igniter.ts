@@ -3123,7 +3123,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_name;
         void lite_params;
         void lite_result;
-        if (((lite_moduleIdentity) === ("lite.extra.canvas.v1"))) {
+        if (((lite_moduleIdentity) === ("lite.extra.surface.v1"))) {
             const lite_surf = "(handle:Int)";
             void lite_surf;
             const lite_inp = "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)";
@@ -3311,13 +3311,13 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_rawLen = lite$textLength(lite_raw);
         void lite_rawLen;
-        if (((lite$textAt(lite_raw, lite$subtractInt(lite_rawLen, 1n, 24536), 24513)) === ("/"))) {
+        if (((lite$textAt(lite_raw, lite$subtractInt(lite_rawLen, 1n, 24537), 24514)) === ("/"))) {
             return "";
         }
         let lite_out = lite_raw;
         void lite_out;
-        if (((((lite_rawLen) > (4n))) && (liteFn$lib$core$text$startsWithAt(lite_raw, lite$subtractInt(lite_rawLen, 4n, 24638), ".lts")))) {
-            lite_out = lite$textSlice(lite_raw, 0n, lite$subtractInt(lite_rawLen, 4n, 24696), 24667);
+        if (((((lite_rawLen) > (4n))) && (liteFn$lib$core$text$startsWithAt(lite_raw, lite$subtractInt(lite_rawLen, 4n, 24639), ".lts")))) {
+            lite_out = lite$textSlice(lite_raw, 0n, lite$subtractInt(lite_rawLen, 4n, 24697), 24668);
         }
         if (((liteFn$lib$core$text$indexOfText(lite_out, ".", 0n)) >= (0n))) {
             return "";
@@ -3345,16 +3345,16 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_eq) <= (0n))) {
             liteFn$lib$core$diag$fail(lite_prefix, (("invalid --builtin-mode specification: ") + (lite_spec)));
         }
-        const lite_target = lite$textSlice(lite_spec, 0n, lite_eq, 25496);
+        const lite_target = lite$textSlice(lite_spec, 0n, lite_eq, 25497);
         void lite_target;
-        const lite_mode = lite$textSlice(lite_spec, lite$addInt(lite_eq, 1n, 25559), lite$textLength(lite_spec), 25536);
+        const lite_mode = lite$textSlice(lite_spec, lite$addInt(lite_eq, 1n, 25560), lite$textLength(lite_spec), 25537);
         void lite_mode;
         if (((((lite_mode) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$BUILTIN_MODE_BUILTIN))) && (((lite_mode) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$BUILTIN_MODE_PURE))))) {
             liteFn$lib$core$diag$fail(lite_prefix, (("invalid --builtin-mode value: ") + (lite_mode)));
         }
         const lite_tLen = lite$textLength(lite_target);
         void lite_tLen;
-        const lite_isLtsFile = ((((lite_tLen) > (4n))) && (liteFn$lib$core$text$startsWithAt(lite_target, lite$subtractInt(lite_tLen, 4n, 25840), ".lts")));
+        const lite_isLtsFile = ((((lite_tLen) > (4n))) && (liteFn$lib$core$text$startsWithAt(lite_target, lite$subtractInt(lite_tLen, 4n, 25841), ".lts")));
         void lite_isLtsFile;
         let lite_lastDot = (-1n);
         void lite_lastDot;
@@ -3367,12 +3367,12 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             lite_lastDot = lite_found;
-            lite_scan = lite$addInt(lite_found, 1n, 26047);
+            lite_scan = lite$addInt(lite_found, 1n, 26048);
         }
-        if ((((((!(lite_isLtsFile))) && (((lite_lastDot) > (0n))))) && (((liteFn$lib$core$text$indexOfText(lite_target, "/", lite$addInt(lite_lastDot, 1n, 26140))) < (0n))))) {
-            const lite_modPart = lite$textSlice(lite_target, 0n, lite_lastDot, 26170);
+        if ((((((!(lite_isLtsFile))) && (((lite_lastDot) > (0n))))) && (((liteFn$lib$core$text$indexOfText(lite_target, "/", lite$addInt(lite_lastDot, 1n, 26141))) < (0n))))) {
+            const lite_modPart = lite$textSlice(lite_target, 0n, lite_lastDot, 26171);
             void lite_modPart;
-            const lite_fnPart = lite$textSlice(lite_target, lite$addInt(lite_lastDot, 1n, 26253), lite_tLen, 26223);
+            const lite_fnPart = lite$textSlice(lite_target, lite$addInt(lite_lastDot, 1n, 26254), lite_tLen, 26224);
             void lite_fnPart;
             if (((((liteFn$lib$core$text$indexOfText(lite_modPart, ".", 0n)) < (0n))) && (((lite_fnPart) !== (""))))) {
                 const lite_normMod$2 = liteFn$_p__p_$_p__p_$compiler$src$builtins__abi$normalizeBuiltinModule(lite_modPart);
@@ -34814,9 +34814,9 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_projectRoot) === (""))) {
             return "";
         }
-        const lite_paths: string[] = [...(["lib/core/io.lts", "lib/core/int.lts", "lib/core/list.lts", "lib/core/map.lts", "lib/core/set.lts", "lib/core/text.lts", "lib/core/file.lts", "lib/core/process.lts", "lib/core/crypto.lts", "lib/core/time.lts", "lib/core/unicode.lts", "lib/external/ts.lts", "lib/external/http.lts", "lib/external/bench.lts", "lib/external/pool.lts", "lib/extra/canvas.lts", "compiler/src/modules.lts"])];
+        const lite_paths: string[] = [...(["lib/core/io.lts", "lib/core/int.lts", "lib/core/list.lts", "lib/core/map.lts", "lib/core/set.lts", "lib/core/text.lts", "lib/core/file.lts", "lib/core/process.lts", "lib/core/crypto.lts", "lib/core/time.lts", "lib/core/unicode.lts", "lib/external/ts.lts", "lib/external/http.lts", "lib/external/bench.lts", "lib/external/pool.lts", "lib/extra/surface.lts", "compiler/src/modules.lts"])];
         void lite_paths;
-        const lite_identities: string[] = [...(["lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.map.v1", "lite.core.set.v1", "lite.core.text.v1", "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1", "lite.core.unicode.v1", "lite.external.ts.v1", "lite.external.http.v1", "lite.external.bench.v1", "lite.external.pool.v1", "lite.extra.canvas.v1", "lite.compiler.modules.v1"])];
+        const lite_identities: string[] = [...(["lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.map.v1", "lite.core.set.v1", "lite.core.text.v1", "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1", "lite.core.unicode.v1", "lite.external.ts.v1", "lite.external.http.v1", "lite.external.bench.v1", "lite.external.pool.v1", "lite.extra.surface.v1", "lite.compiler.modules.v1"])];
         void lite_identities;
         if (((lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityRoot) !== (lite_projectRoot))) {
             lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityRoot = lite_projectRoot;
@@ -34825,7 +34825,7 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_loadIdx = 0n;
             void lite_loadIdx;
             while (((lite_loadIdx) < (liteFn$lib$core$list$listCountText([...(lite_paths)])))) {
-                const lite_full = liteFn$lib$core$path$join(lite_projectRoot, lite$listAt((lite_paths), lite_loadIdx, 13310));
+                const lite_full = liteFn$lib$core$path$join(lite_projectRoot, lite$listAt((lite_paths), lite_loadIdx, 13312));
                 void lite_full;
                 if (((lite$fileKind(lite_full)) === (lite$m$lib$core$file$FILE_KIND_FILE))) {
                     const lite_loaded = (lite$fileReadText(lite_full));
@@ -34841,16 +34841,16 @@ export function main(lite$write?: (text: string) => void): string {
                     lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityLoaded.push(false);
                     lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityTexts.push("");
                 }
-                lite_loadIdx = lite$addInt(lite_loadIdx, 1n, 13971);
+                lite_loadIdx = lite$addInt(lite_loadIdx, 1n, 13973);
             }
         }
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (liteFn$lib$core$list$listCountText([...(lite_paths)])))) {
-            if (((lite$listAt((lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityLoaded), lite_i, 14084)) && (((lite$listAt((lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityTexts), lite_i, 14111)) === (lite_sourceText))))) {
-                return lite$listAt((lite_identities), lite_i, 14160);
+            if (((lite$listAt((lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityLoaded), lite_i, 14086)) && (((lite$listAt((lite$m$_p__p_$_p__p_$compiler$src$host__fs$cachedIdentityTexts), lite_i, 14113)) === (lite_sourceText))))) {
+                return lite$listAt((lite_identities), lite_i, 14162);
             }
-            lite_i = lite$addInt(lite_i, 1n, 14188);
+            lite_i = lite$addInt(lite_i, 1n, 14190);
         }
         return "";
     }
@@ -34866,7 +34866,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_colon = liteFn$lib$core$text$indexOfText(lite_errMsg, ":", 0n);
         void lite_colon;
         if (((((lite_colon) > (0n))) && (((lite_colon) <= (16n))))) {
-            const lite_code = lite$textSlice(lite_errMsg, 0n, lite_colon, 14788);
+            const lite_code = lite$textSlice(lite_errMsg, 0n, lite_colon, 14790);
             void lite_code;
             if (liteFn$lib$core$text$startsWithAt(lite_code, 0n, "E")) {
                 return lite_code;
@@ -34996,8 +34996,8 @@ export function main(lite$write?: (text: string) => void): string {
                 liteFn$lib$util$text__builder$append(lite_out, "\\t");
             } else if (((lite_cp) < (32n))) {
                 liteFn$lib$util$text__builder$append(lite_out, "\\u00");
-                liteFn$lib$util$text__builder$append(lite_out, liteFn$_p__p_$_p__p_$compiler$src$host__fs$hexDigit(lite$divideInt(lite_cp, 16n, 19070)));
-                liteFn$lib$util$text__builder$append(lite_out, liteFn$_p__p_$_p__p_$compiler$src$host__fs$hexDigit(lite$remainderInt(lite_cp, 16n, 19121)));
+                liteFn$lib$util$text__builder$append(lite_out, liteFn$_p__p_$_p__p_$compiler$src$host__fs$hexDigit(lite$divideInt(lite_cp, 16n, 19072)));
+                liteFn$lib$util$text__builder$append(lite_out, liteFn$_p__p_$_p__p_$compiler$src$host__fs$hexDigit(lite$remainderInt(lite_cp, 16n, 19123)));
             } else {
                 const lite_one: bigint[] = [...([lite_cp])];
                 void lite_one;

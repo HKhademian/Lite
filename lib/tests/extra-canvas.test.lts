@@ -25,7 +25,7 @@ cPng := path.join(tmpDir, "c.png");
 makeSrc := fn(outPng: String): String {
     "io := import \"core/io\";\n" +
     "color := import \"extra/color\";\n" +
-    "canvas := import \"extra/canvas\";\n" +
+    "canvas := import \"extra/surface\";\n" +
     "\n" +
     "zero: color.Color;\n" +
     "io.outputLine(color.red8(zero), color.green8(zero), color.blue8(zero), color.alpha8(zero));\n" +
@@ -104,7 +104,7 @@ if ccInfo.available {
     /* 3. C11 AddressSanitizer + UBSan + 5,000-frame RSS stability leak gate */
     leakSrc :=
     "io := import \"core/io\";\n" +
-    "canvas := import \"extra/canvas\";\n" +
+    "canvas := import \"extra/surface\";\n" +
     "surf := canvas.open(\"LeakCheck\", 160, 120);\n" +
     "canvas.uncapFrameRate(surf);\n" +
     "var rssStart := 0;\n" +
