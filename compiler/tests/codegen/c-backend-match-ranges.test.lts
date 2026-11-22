@@ -1,0 +1,89 @@
+/* End-to-end C11 execution tests for Phase C5a: subject match (scalar/enum/record/tuple/array, value & statement) and integer range loops. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Color := enum : String { Red = \"#f00\"; Green = \"#0f0\"; Blue = \"#00f\"; };\n" +
+"Reading := record { sensor: String; level: Int = 0; online: Bool = true; };\n" +
+"\n" +
+"classify := fn(level: Int): String {\n" +
+"    match level {\n" +
+"        0 { \"idle\" }\n" +
+"        1 or 2 or 3 { \"low\" }\n" +
+"        >= 90 { \"critical\" }\n" +
+"        v if 50 <= v < 90 { \"elevated\" }\n" +
+"        _ { \"normal\" }\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"summarize := fn(r: Reading): String {\n" +
+"    match r {\n" +
+"        { online == false, = sensor } { sensor + \":off\" }\n" +
+"        { = sensor, = level } { sensor + \":\" + classify(level) }\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"colorName := fn(c: Color): String {\n" +
+"    match c {\n" +
+"        .Red { \"R:\" + c.value }\n" +
+"        .Green { \"G:\" + c.value }\n" +
+"        .Blue { \"B:\" + c.value }\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"io.outputLine(summarize(Reading { sensor = \"A\", level = 95 }), summarize(Reading { sensor = \"B\", level = 64 }), summarize(Reading { sensor = \"C\", level = 0, online = false }));\n" +
+"io.outputLine(colorName(.Red), colorName(.Green), colorName(.Blue));\n" +
+"\n" +
+"pair := (\"warn\", code = 429);\n" +
+"act := match pair { (\"warn\", 429 or 503 = code) { \"backoff\" } _ { \"ok\" } };\n" +
+"arr: [Int; 2] = [3, 1];\n" +
+"arrLabel := match arr { [_, 0] { \"zero\" } [a, b] if a > b { \"gt\" } _ { \"other\" } };\n" +
+"io.outputLine(act, arrLabel);\n" +
+"\n" +
+"var hits := 0;\n" +
+"var sumExcl := 0;\n" +
+"loop 0..5 as i {\n" +
+"    sumExcl += i;\n" +
+"    match i {\n" +
+"        1 or 3 { hits += 1; }\n" +
+"        _ { }\n" +
+"    }\n" +
+"}\n" +
+"var sumIncl := 0;\n" +
+"loop 1..=5 as i { sumIncl += i; }\n" +
+"var emptyCount := 0;\n" +
+"loop 5..2 as i { emptyCount += i; }\n" +
+"var anonCount := 0;\n" +
+"loop 0..3 { anonCount += 1; }\n" +
+"io.outputLine(sumExcl, sumIncl, hits, emptyCount, anonCount);\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+    test.checkText("c stderr", "", cRes.stderr);
+} else {
+    cOnly := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt("c compile status: " + cOnly.stderr, 0, cOnly.status);
+}
+
+test.done("c-backend-match-ranges");

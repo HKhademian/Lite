@@ -1964,16 +1964,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             } else if itemName == "match" {
                 syntax.rejectMisplacedTag(source, afterItemName, prefix, "block tag cannot appear before { in match");
                 isSubjectStmtMatch := afterItemName < blockSourceSize and textLib.at(source, afterItemName) =!= "{";
-                if isSubjectStmtMatch and target =!= ir.TARGET_TS {
-                    syntax.failAt(source, itemStart, prefix, "C backend does not support subject match yet");
-                }
                 rawStmtMatchEnd := syntax.scanRawMatchEnd(source, itemStart, prefix);
                 afterRawStmtMatch := if rawStmtMatchEnd >= 0 { syntax.skipTrivia(source, rawStmtMatchEnd, prefix) } else { -1 };
                 stmtMatchHasThen := afterRawStmtMatch >= 0 and (textLib.wordAt(source, afterRawStmtMatch, "then") or textLib.wordAt(source, afterRawStmtMatch, "finally"));
                 afterRawMatchTail := if rawStmtMatchEnd >= 0 { syntax.skipItemSeparators(source, rawStmtMatchEnd, prefix) } else { -1 };
                 isLoopTailMatch := isLoopBody and target == ir.TARGET_TS and not stmtMatchHasThen and afterRawMatchTail >= 0 and afterRawMatchTail < blockSourceSize and textLib.at(source, afterRawMatchTail) == "}";
                 var useValueMatch := stmtMatchHasThen;
-                if (not isStmtBody) and (not isLoopTailMatch) and target == ir.TARGET_TS and not useValueMatch {
+                if (not isStmtBody) and (not isLoopTailMatch) and not useValueMatch {
                     valMatchEnd := syntax.scanValueMatchEnd(source, itemStart, prefix, false);
                     if valMatchEnd >= 0 {
                         afterValMatch := syntax.skipItemSeparators(source, valMatchEnd, prefix);
@@ -3960,7 +3957,8 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                     }
                     afterField = syntax.skipTrivia(source, ty.next, prefix);
                 }
-                propExpr := "(" + subjCode + ")." + types.recordComponentProp(subjKind, fieldName);
+                recProp1 := types.recordComponentProp(subjKind, fieldName);
+                propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(recProp1) } else { recProp1 });
                 recBindings = mergePatBindings(recBindings, fieldName + "\t" + fieldKind + "\t" + propExpr + "\n", source, fStart, prefix);
                 cCursor = afterField;
             } else {
@@ -3976,7 +3974,8 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                     if fieldKind == "" {
                         syntax.failAt(source, srcStart, prefix, "record " + types.recordDisplayName(subjKind) + " has no field " + srcField);
                     }
-                    propExpr := "(" + subjCode + ")." + types.recordComponentProp(subjKind, srcField);
+                    recProp2 := types.recordComponentProp(subjKind, srcField);
+                    propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(recProp2) } else { recProp2 });
                     subNonConst := (kind = fieldKind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
                     sub := parseMatchPattern(target, source, cCursor, prefix, fieldKind, propExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
                     afterSub := syntax.skipTrivia(source, sub.next, prefix);
@@ -4001,7 +4000,8 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                         if fieldKind == "" {
                             syntax.failAt(source, cCursor, prefix, "record " + types.recordDisplayName(subjKind) + " has no field " + fieldName);
                         }
-                        propExpr := "(" + subjCode + ")." + types.recordComponentProp(subjKind, fieldName);
+                        recProp1 := types.recordComponentProp(subjKind, fieldName);
+                propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(recProp1) } else { recProp1 });
                         subNonConst := (kind = fieldKind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
                         sub := parseComparisonPatternRhs(target, source, afterName, fieldCmp.text, fieldCmp.width, prefix, fieldKind, propExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                         recCond = combinePatCond(recCond, sub.cond);
@@ -4017,7 +4017,8 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                         if not patternTypeMatches(fieldKind, ty.kind) {
                             syntax.failAt(source, cCursor, prefix, "record field " + fieldName + " has type " + types.displayKind(fieldKind) + ", expected " + types.displayKind(ty.kind));
                         }
-                        propExpr := "(" + subjCode + ")." + types.recordComponentProp(subjKind, fieldName);
+                        recProp1 := types.recordComponentProp(subjKind, fieldName);
+                propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(recProp1) } else { recProp1 });
                         recBindings = mergePatBindings(recBindings, fieldName + "\t" + fieldKind + "\t" + propExpr + "\n", source, cCursor, prefix);
                         cCursor = syntax.skipTrivia(source, ty.next, prefix);
                     } else {
@@ -4090,7 +4091,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                     }
                     afterField = syntax.skipTrivia(source, ty.next, prefix);
                 }
-                propExpr := "(" + subjCode + ")." + comp.prop;
+                propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(comp.prop) } else { comp.prop });
                 tupBindings = mergePatBindings(tupBindings, fieldName + "\t" + comp.kind + "\t" + propExpr + "\n", source, fStart, prefix);
                 itemCount = itemCount + 1;
                 tCursor = afterField;
@@ -4157,7 +4158,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                     }
                     usedSlots = usedSlots + integer.intText(slotIdx) + "|";
                     comp := types.tupleComponent(subjKind, slotIdx);
-                    propExpr := "(" + subjCode + ")." + comp.prop;
+                    propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(comp.prop) } else { comp.prop });
                     subNonConst := (kind = comp.kind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
                     sub := parseMatchPattern(target, source, tCursor, prefix, comp.kind, propExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
                     afterSub := syntax.skipTrivia(source, sub.next, prefix);
@@ -4184,7 +4185,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                     }
                     usedSlots = usedSlots + integer.intText(slotIdx) + "|";
                     comp := types.tupleComponent(subjKind, slotIdx);
-                    propExpr := "(" + subjCode + ")." + comp.prop;
+                    propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(comp.prop) } else { comp.prop });
                     subNonConst := (kind = comp.kind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
                     sub := parseMatchPattern(target, source, tCursor, prefix, comp.kind, propExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
                     tupCond = combinePatCond(tupCond, sub.cond);
@@ -4228,7 +4229,11 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                 }
                 return (cond = arrCond, bindings = arrBindings, irrefutable = arrIrref, boolMask = 0, enumCases = "", next = aCursor + 1, markers = arrMarkers);
             }
-            elemExpr := "(" + subjCode + ")[" + integer.intText(elemIdx) + "]!";
+            elemExpr := if target == ir.TARGET_C and types.cListTag(elemKind) =!= "" {
+                "lt_list_" + types.cListTag(elemKind) + "_at(" + subjCode + ", " + integer.intText(elemIdx) + ", " + integer.intText(pos) + ")"
+            } else {
+                "(" + subjCode + ")[" + integer.intText(elemIdx) + "]!"
+            };
             subNonConst := (kind = elemKind, code = elemExpr, intValue = 0, textValue = "", constant = false, next = 0);
             sub := parseMatchPattern(target, source, aCursor, prefix, elemKind, elemExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
             arrCond = combinePatCond(arrCond, sub.cond);
@@ -4397,9 +4402,6 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
 
 /** Parses a subject-based `match <subject> { ... }` body for value, statement, or tagged/then/finally IIFE lowering. */
 parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, mode: String, condValVar: String, resolvedValKind: String, aliases: List<AliasDecl>): (code: String, kind: String, allNever: Bool, next: Int, markers: String, isDirect: Bool, constant: Bool, intValue: Int, textValue: String) {
-    if target =!= ir.TARGET_TS {
-        syntax.failAt(source, matchStart, prefix, "C backend does not support subject match yet");
-    }
     size := textLib.length(source);
     subjStart := syntax.skipTrivia(source, matchStart + 5, prefix);
     syntax.rejectHeaderBlockTag(source, subjStart, prefix, "match");
@@ -4423,18 +4425,25 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         var si := 1;
         loop okId and si < sLen {
             ch := textLib.at(subj.code, si);
-            if not textLib.isNameContinue(ch) and ch =!= "$" { okId = false; }
+            if not textLib.isNameContinue(ch) and ch =!= "$" and (target =!= ir.TARGET_C or ch =!= ".") { okId = false; }
             si = si + 1;
         }
         okId
     };
-    var canTernary := target == ir.TARGET_TS and not inferMode and mode == "value" and subjIsSimpleIdent;
-    subjVar := if canTernary { subj.code } else { "lite$subj" + integer.intText(matchId) };
-    doneVar := "lite$done" + integer.intText(matchId);
+    isCTarget := target == ir.TARGET_C;
+    var canTernary := not inferMode and mode == "value" and (subjIsSimpleIdent or (isCTarget and subj.constant));
+    subjVar := if canTernary { subj.code } else if isCTarget { "lt_subj_" + integer.intText(matchId) } else { "lite$subj" + integer.intText(matchId) };
+    doneVar := if isCTarget { "lt_done_" + integer.intText(matchId) } else { "lite$done" + integer.intText(matchId) };
     subjTsType := if types.needsTsTypeAnnotation(subj.kind) { ": " + types.tsFunctionType(subj.kind) } else { "" };
     armDepth := ir.maxLocalLexDepth(locals) + 1;
     var matchMarkers := if inferMode { ctx.collectParsedMarkers("", subj) } else { "" };
-    var armsCode := if canTernary {
+    var armsCode := if isCTarget {
+        if canTernary {
+            ""
+        } else {
+            types.cValueType(subj.kind) + " " + subjVar + " = " + subj.code + "; (void)" + subjVar + "; bool " + doneVar + " = false; "
+        }
+    } else if canTernary {
         "let " + doneVar + ": boolean = false; "
     } else {
         "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; let " + doneVar + ": boolean = false; "
@@ -4504,18 +4513,36 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                 bKind := textLib.slice(pat.bindings, t1 + 1, t2);
                 bExpr := textLib.slice(pat.bindings, t2 + 1, lineEnd);
                 bRt := ir.localRuntimeName(target, locals, bName, "", armDepth);
-                bTsType := types.tsFunctionType(bKind);
-                if bExpr == "" {
-                    declStmts = declStmts + "let " + bRt + "!: " + bTsType + "; ";
+                if isCTarget and canTernary and bExpr =!= "" {
+                    bindIsConst := subj.constant and bExpr == subjVar;
+                    listLib.pushBack(mut armLocals, (name = bName, runtime = bExpr, kind = bKind, mutable = false, writable = false,
+                    depth = armDepth, constant = bindIsConst, code = bExpr, intValue = if bindIsConst { subj.intValue } else { 0 },
+                    textValue = if bindIsConst { subj.textValue } else { "" }, initState = ir.INIT_STATE_INIT));
                 } else {
-                    declStmts = declStmts + "let " + bRt + "!: " + bTsType + "; ";
-                    assignStmts = assignStmts + bRt + " = " + bExpr + "; ";
+                    if isCTarget {
+                        bCType := types.cValueType(bKind);
+                        if bExpr == "" {
+                            declStmts = declStmts + bCType + " " + bRt + "; ";
+                        } else {
+                            declStmts = declStmts + bCType + " " + bRt + "; ";
+                            assignStmts = assignStmts + bRt + " = " + bExpr + "; ";
+                        }
+                        voidStmts = voidStmts + "(void)" + bRt + "; ";
+                    } else {
+                        bTsType := types.tsFunctionType(bKind);
+                        if bExpr == "" {
+                            declStmts = declStmts + "let " + bRt + "!: " + bTsType + "; ";
+                        } else {
+                            declStmts = declStmts + "let " + bRt + "!: " + bTsType + "; ";
+                            assignStmts = assignStmts + bRt + " = " + bExpr + "; ";
+                        }
+                        voidStmts = voidStmts + "void " + bRt + "; ";
+                    }
+                    bindIsConst := subj.constant and bExpr == subjVar;
+                    listLib.pushBack(mut armLocals, (name = bName, runtime = bRt, kind = bKind, mutable = false, writable = false,
+                    depth = armDepth, constant = bindIsConst, code = bRt, intValue = if bindIsConst { subj.intValue } else { 0 },
+                    textValue = if bindIsConst { subj.textValue } else { "" }, initState = ir.INIT_STATE_INIT));
                 }
-                voidStmts = voidStmts + "void " + bRt + "; ";
-                bindIsConst := subj.constant and bExpr == subjVar;
-                listLib.pushBack(mut armLocals, (name = bName, runtime = bRt, kind = bKind, mutable = false, writable = false,
-                depth = armDepth, constant = bindIsConst, code = bRt, intValue = if bindIsConst { subj.intValue } else { 0 },
-                textValue = if bindIsConst { subj.textValue } else { "" }, initState = ir.INIT_STATE_INIT));
             }
             bPos = lineEnd + 1;
         }
@@ -4618,14 +4645,16 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         } else if not armDead {
             var innerMatch := "";
             if hasGuard and guardCode =!= "true" {
-                innerMatch = assignStmts + voidStmts + "if (Boolean(" + guardCode + ")) { " + doneVar + " = true; " + bodyEmit + " }";
+                gCheck := if isCTarget { guardCode } else { "Boolean(" + guardCode + ")" };
+                innerMatch = assignStmts + voidStmts + "if (" + gCheck + ") { " + doneVar + " = true; " + bodyEmit + " }";
             } else {
                 innerMatch = assignStmts + voidStmts + doneVar + " = true; " + bodyEmit;
             }
             armCheck := if patCond == "true" {
                 innerMatch
             } else {
-                "if (Boolean(" + patCond + ")) { " + innerMatch + " }"
+                pCheck := if isCTarget { patCond } else { "Boolean(" + patCond + ")" };
+                "if (" + pCheck + ") { " + innerMatch + " }"
             };
             armsCode = armsCode + "if (!" + doneVar + ") { " + declStmts + armCheck + " } ";
             emittedRuntimeArms = emittedRuntimeArms + 1;
@@ -4654,10 +4683,10 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         resultKind
     };
     if hasDirectWin {
-        if winDeclStmts == "" and subj.constant {
+        if winDeclStmts == "" and (subj.constant or (isCTarget and canTernary)) {
             if mode == "value" {
                 directCode := ctx.assignValueCode(target, finalKind, winBranchKind, winBranchCode);
-                directConst := winBranchConst and (winBranchKind == finalKind or (numeric.isIntKind(finalKind) and numeric.isIntKind(winBranchKind)));
+                directConst := subj.constant and winBranchConst and (winBranchKind == finalKind or (numeric.isIntKind(finalKind) and numeric.isIntKind(winBranchKind)));
                 return (code = directCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
                 isDirect = true, constant = directConst, intValue = if directConst { winBranchInt } else { 0 },
                 textValue = if directConst { winBranchText } else { "" });
@@ -4677,15 +4706,20 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         } else {
             "return (" + ctx.assignValueCode(target, finalKind, winBranchKind, winBranchCode) + ");"
         };
-        subjPrefix := if subj.constant and winDeclStmts == "" { "" } else { "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; " };
+        subjPrefix := if subj.constant and winDeclStmts == "" { "" }
+        else if isCTarget { types.cValueType(subj.kind) + " " + subjVar + " = " + subj.code + "; (void)" + subjVar + "; " }
+        else { "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; " };
         armsCode = subjPrefix + winDeclStmts + winAssignStmts + winVoidStmts + directBody + " ";
         if mode == "value" {
+            if isCTarget {
+                syntax.failAt(source, matchStart, prefix, "C backend does not support complex subject match expressions yet");
+            }
             retType := types.tsFunctionType(finalKind);
             return (code = "(((): " + retType + " => { " + armsCode + "})())", kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
             isDirect = true, constant = false, intValue = 0, textValue = "");
         }
     }
-    if canTernary and ternaryCount >= 2 {
+    if canTernary and ternaryCount >= 1 {
         var tExpr := ctx.assignValueCode(target, finalKind, ternaryKinds[ternaryCount - 1], ternaryVals[ternaryCount - 1]);
         var ti := ternaryCount - 2;
         loop ti >= 0 {
@@ -4695,6 +4729,9 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         }
         return (code = tExpr, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
         isDirect = true, constant = false, intValue = 0, textValue = "");
+    }
+    if isCTarget and mode == "value" {
+        syntax.failAt(source, matchStart, prefix, "C backend does not support complex subject match expressions yet");
     }
     (code = armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers, isDirect = false, constant = false, intValue = 0, textValue = "")
 };
@@ -4719,7 +4756,9 @@ pub parseSubjectMatchStmt := fn(target: String, source: String, matchStart: Int,
     iifeDepth = iifeDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
     countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
     res := parseSubjectMatchBody(target, source, matchStart, prefix, locals, functions, params, currentName, "", matchBarrierCtxs, iifeDepth, inferMode, "stmt", "", "", aliases);
-    stmtCode := if res.isDirect {
+    stmtCode := if target == ir.TARGET_C {
+        if res.code == "" { "" } else { "{ /*c-stmt*/ " + res.code + " }" }
+    } else if res.isDirect {
         if res.code == "" { "" } else { "{ " + res.code + " }" }
     } else {
         "{ " + res.code + "}"
@@ -4736,9 +4775,6 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
     } else {
         false
     };
-    if isSubjectMatch and target =!= ir.TARGET_TS {
-        syntax.failAt(source, condParseStart, prefix, "C backend does not support subject match yet");
-    }
     rawCondEnd := if condParseKind == ir.CTX_KIND_IF {
         syntax.scanRawIfChainEnd(source, condParseStart, prefix, true)
     } else {

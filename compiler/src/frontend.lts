@@ -2126,9 +2126,6 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
         if name == "match" {
             rejectMisplacedTag(source, position, prefix, "block tag cannot appear before { in match");
             isSubjectRootMatch := position < size and textLib.at(source, position) =!= "{";
-            if isSubjectRootMatch and target =!= TARGET_TS {
-                failAt(source, nameStart, prefix, "C backend does not support subject match yet");
-            }
             rawMatchEnd := scanRawMatchEnd(source, nameStart, prefix);
             afterRawMatch := if rawMatchEnd >= 0 { skipTrivia(source, rawMatchEnd, prefix) } else { -1 };
             if afterRawMatch >= 0 and (textLib.wordAt(source, afterRawMatch, "then") or textLib.wordAt(source, afterRawMatch, "finally")) {
@@ -2152,7 +2149,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             }
             var valueTailBranch := false;
             if currentName =!= "" and currentResult =!= VALUE_KIND_UNIT and atValueTail(blocks, blockCount) and not currentStopped {
-                if target == TARGET_TS {
+                if target == TARGET_TS or isSubjectRootMatch {
                     valueEnd := scanValueMatchEnd(source, nameStart, prefix, true);
                     if valueEnd >= 0 {
                         afterMatch := skipItemSeparators(source, valueEnd, prefix);
@@ -2340,8 +2337,32 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 locals = checkStatementTrace(target, source, loopHdrPos, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 afterParsed := skipTrivia(source, parsed.next, prefix);
                 if textLib.startsWithAt(source, afterParsed, "..") {
-                    failAt(source, afterParsed, prefix, "C backend does not support range loops yet");
-                }
+                    if not numeric.isIntKind(parsed.kind) {
+                        failAt(source, loopHdrPos, prefix, "range start must be Int, got " + displayKind(parsed.kind));
+                    }
+                    isInclRange := textLib.startsWithAt(source, afterParsed, "..=");
+                    rEndStart := skipTrivia(source, afterParsed + (if isInclRange { 3 } else { 2 }), prefix);
+                    rEndParsed := parseExpressionAsCtx(target, source, rEndStart, prefix, locals, functions, functionParams, currentName, VALUE_KIND_INT, stmtCtxs, aliases);
+                    if not numeric.isIntKind(rEndParsed.kind) {
+                        failAt(source, rEndStart, prefix, "range end must be Int, got " + displayKind(rEndParsed.kind));
+                    }
+                    afterREnd := skipTrivia(source, rEndParsed.next, prefix);
+                    sequenceCode = parsed.code + "\n" + rEndParsed.code;
+                    itemKind = VALUE_KIND_INT;
+                    loopSeqMode = if isInclRange { 3 } else { 2 };
+                    if textLib.wordAt(source, afterREnd, "as") {
+                        rItemStart := skipTrivia(source, afterREnd + 2, prefix);
+                        if rItemStart >= size or not textLib.isNameStart(textLib.at(source, rItemStart)) {
+                            failAt(source, rItemStart, prefix, "expected an item name after as");
+                        }
+                        rItemEnd := textLib.skipName(source, rItemStart);
+                        itemName = textLib.slice(source, rItemStart, rItemEnd);
+                        if isReservedWord(itemName) { unsupportedFeature(source, rItemStart, itemName, prefix); }
+                        position = skipTrivia(source, rItemEnd, prefix);
+                    } else {
+                        position = afterREnd;
+                    }
+                } else {
                 seqIsWritableLocal := {
                     var foundW := false;
                     if types.isMapKind(parsed.kind) or types.isSetKind(parsed.kind) {
@@ -2440,6 +2461,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         conditionCode = parsed.code;
                     }
                     position = skipTrivia(source, parsed.next, prefix);
+                }
                 }
             }
             rejectMisplacedTag(source, position, prefix, "block tag cannot appear before { in loop");

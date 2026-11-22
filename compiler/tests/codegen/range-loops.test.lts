@@ -57,8 +57,7 @@ compilerTest.assertCompileError(root, tsComp, "non-Int range start",
 compilerTest.assertCompileError(root, tsComp, "non-Int range end",
 "loop 0..\"b\" { }\n",
 "1:9: range loop end must be Int, got String\n");
-compilerTest.assertCompileError(root, cComp, "C rejects range loop",
-"loop 0..5 { }\n",
-"1:7: C backend does not support range loops yet\n");
+cRangeRes := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; loop 0..5 as i { io.outputLine(i); }\n", "");
+test.checkInt("C compiles range loop: " + cRangeRes.stderr, 0, cRangeRes.status);
 
 test.done("range-loops");

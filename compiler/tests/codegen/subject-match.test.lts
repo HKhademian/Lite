@@ -108,10 +108,9 @@ compilerTest.assertCompileRunTs(root, tsComp, "subject match aggregates guards a
 "9 70 6\n" +
 "found: 60 tagged: 71 fin: ran\n");
 
-/* C backend rejects subject-based match cleanly */
-cMatchRes := compilerTest.compileStdin(root, cComp, "x := match 1 { 1 { 2 } _ { 3 } };", "c_subj_match.lts");
-test.checkInt("C subject match rejected", 2, cMatchRes.status);
-test.check("C subject match message: " + cMatchRes.stderr, text.containsText(cMatchRes.stderr, "C backend does not support subject match yet"));
+/* C backend compiles subject-based match cleanly */
+cMatchRes := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; x := match 1 { 1 { 2 } _ { 3 } }; io.outputLine(x);", "c_subj_match.lts");
+test.checkInt("C subject match compiles: " + cMatchRes.stderr, 0, cMatchRes.status);
 
 /* Negative diagnostics */
 badSrc: List<String> = [
