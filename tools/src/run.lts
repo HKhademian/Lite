@@ -63,11 +63,12 @@ splitLines := fn(source: String): List<String> {
     out
 };
 
-findCanvasAlias := fn(source: String): String {
+findModuleAlias := fn(source: String, modulePath: String): String {
+    needle := "\"" + modulePath + "\"";
     lines := splitLines(source);
     loop lines as rawLine {
         line := text.trim(rawLine);
-        if text.containsText(line, "\"extra/canvas\"") and text.containsText(line, "import") and text.containsText(line, ":=") {
+        if text.containsText(line, needle) and text.containsText(line, "import") and text.containsText(line, ":=") {
             var work := line;
             if text.startsWithAt(work, 0, "pub ") {
                 work = text.trim(text.slice(work, 4, text.length(work)));
@@ -82,6 +83,14 @@ findCanvasAlias := fn(source: String): String {
         }
     }
     ""
+};
+
+findCanvasAlias := fn(source: String): String {
+    findModuleAlias(source, "extra/canvas")
+};
+
+findAudioAlias := fn(source: String): String {
+    findModuleAlias(source, "extra/audio")
 };
 
 hasTopLevelFn := fn(source: String, fnName: String): Bool {
@@ -105,7 +114,7 @@ hasTopLevelFn := fn(source: String, fnName: String): Bool {
     false
 };
 
-buildPlayWrapper := fn(source: String, canvasAlias: String, scale: Int, fps: Int, uncap: Bool, capturePath: String): String {
+buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, scale: Int, fps: Int, uncap: Bool, capturePath: String): String {
     hasInit := hasTopLevelFn(source, "onCanvasInit");
     hasUpdate := hasTopLevelFn(source, "onCanvasUpdate");
     hasKeyDown := hasTopLevelFn(source, "onCanvasKeyDown");
@@ -181,7 +190,18 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, scale: Int, fps: Int
         "        } else {\n" +
         "            break;\n" +
         "        }\n" +
-        "    }\n" +
+        "    }\n";
+    if audioAlias =!= "" {
+        footer = footer +
+            "    tones := " + audioAlias + ".litePlayAudioDrain();\n" +
+            "    tn := __lpList.length(tones);\n" +
+            "    var ti := 0;\n" +
+            "    loop ti + 2 < tn {\n" +
+            "        __lpSurf.playTone(win, tones[ti], tones[ti + 1], tones[ti + 2]);\n" +
+            "        ti += 3;\n" +
+            "    }\n";
+    }
+    footer = footer +
         "    nextDraw\n" +
         "};\n" +
         "__lpRunPlay := fn(): Unit {\n" +
@@ -393,9 +413,10 @@ run := fn(rawArgs: List<String>): Unit {
             io.exit(1);
         }
         canvasAlias := findCanvasAlias(srcRead.text);
+        audioAlias := findAudioAlias(srcRead.text);
         if canvasAlias =!= "" {
             resolvedCapture := if playCapture == "" { "" } else { path.resolve(proc.cwd(), playCapture) };
-            wrapped := buildPlayWrapper(srcRead.text, canvasAlias, playScale, playFps, playUncap, resolvedCapture);
+            wrapped := buildPlayWrapper(srcRead.text, canvasAlias, audioAlias, playScale, playFps, playUncap, resolvedCapture);
             wrappedPath := path.join(tempDir.path, "play-entry.lts");
             wRes := fs.writeText(wrappedPath, wrapped);
             if not wRes.ok {
