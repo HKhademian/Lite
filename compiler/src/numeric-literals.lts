@@ -13,6 +13,7 @@ pub KIND_BOOL := "Bool";
 pub KIND_UNIT := "Unit";
 pub KIND_NEVER := "Never";
 
+/** Resolves canonical numeric type alias `name` to its internal kind, or `""` if unknown. */
 pub numericAliasKind := fn(name: String): String {
     if name == "Int64" { KIND_INT }
     else if name == "Float64" or name == "Double" { KIND_FLOAT }

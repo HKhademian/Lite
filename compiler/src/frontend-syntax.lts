@@ -726,6 +726,7 @@ pub scanBlockFastFlags := fn(source: String, open: Int, prefix: String): (hasFn:
     (hasFn = hasFn, hasReserved = hasReserved)
 };
 
+/** Scans from an opening `{` at `open` to its matching closing `}`, skipping strings and comments. */
 pub scanBraceEnd := fn(source: String, open: Int, prefix: String): Int {
     scanBracedRange(source, open, 0, prefix)
 };

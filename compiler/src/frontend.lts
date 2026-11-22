@@ -265,28 +265,51 @@ pub isTupleKind := fn(kind: String): Bool { types.isTupleKind(kind) };
 
 /** True when `kind` is this compiler's canonical nominal record kind `Record<id#at#DisplayName;f1:K1,...>`. */
 pub isMapKind := fn(kind: String): Bool { types.isMapKind(kind) };
+/** True when `kind` is a `Set<T>` type kind. */
 pub isSetKind := fn(kind: String): Bool { types.isSetKind(kind) };
+/** True when `kind` is a nominal `enum` type kind. */
 pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
+/** Returns the user-facing display name for an enum `kind`. */
 pub enumDisplayName := fn(kind: String): String { types.enumDisplayName(kind) };
+/** Returns the number of declared cases in an enum `kind`. */
 pub enumCaseCount := fn(kind: String): Int { types.enumCaseCount(kind) };
+/** Returns the case name at `index` in an enum `kind`. */
 pub enumCaseNameAt := fn(kind: String, index: Int): String { types.enumCaseAt(kind, index).name };
+/** Returns the C11 list typedef tag for element kind `elemKind`. */
 pub cListTag := fn(elemKind: String): String { types.cListTag(elemKind) };
+/** Returns the C11 element type name for list typedef `tag`. */
 pub cListElemType := fn(tag: String): String { types.cListElemType(tag) };
+/** Returns the C11 struct typedef tag for tuple or record `kind`. */
 pub cStructTag := fn(kind: String): String { types.cStructTag(kind) };
+/** Returns the C11 function-value typedef tag for callable `kind`. */
 pub cFnTag := fn(kind: String): String { types.cFnTag(kind) };
+/** Returns the C11 struct field identifier for Lite property `prop`. */
 pub cFieldName := fn(prop: String): String { types.cFieldName(prop) };
+/** True when C11 representation of `kind` contains a list field. */
 pub cTypeHasListField := fn(kind: String): Bool { types.cTypeHasListField(kind) };
+/** Returns the C11 tuple conversion helper name between `actualKind` and `expectedKind`. */
 pub cTupleConvertName := fn(expectedKind: String, actualKind: String): String { types.cTupleConvertName(expectedKind, actualKind) };
+/** Returns the C11 map key tag for `kKind`. */
 pub cMapKeyTag := fn(kKind: String): String { types.cMapKeyTag(kKind) };
+/** Returns the C11 map value tag for `vKind`. */
 pub cMapValTag := fn(vKind: String): String { types.cMapValTag(vKind) };
+/** Returns the C11 map typedef tag for `kind`. */
 pub cMapTag := fn(kind: String): String { types.cMapTag(kind) };
+/** Returns the C11 set typedef tag for `kind`. */
 pub cSetTag := fn(kind: String): String { types.cSetTag(kind) };
+/** Extracts the key kind from a `Map<K, V>` kind. */
 pub mapKeyKind := fn(kind: String): String { types.mapKeyKind(kind) };
+/** Extracts the value kind from a `Map<K, V>` kind. */
 pub mapValueKind := fn(kind: String): String { types.mapValueKind(kind) };
+/** Extracts the element kind from a `Set<T>` kind. */
 pub setElementKind := fn(kind: String): String { types.setElementKind(kind) };
+/** Returns the user-facing display name for a nominal record `kind`. */
 pub recordDisplayName := fn(kind: String): String { types.recordDisplayName(kind) };
+/** Returns the number of fields in a nominal record `kind`. */
 pub recordComponentCount := fn(kind: String): Int { types.recordComponentCount(kind) };
+/** Returns the field label, kind, and runtime prop at `targetIndex` of a nominal record `kind`. */
 pub recordComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String, prop: String) { types.recordComponent(kind, targetIndex) };
+/** True when `kind` is a nominal `record` type kind. */
 pub isRecordKind := fn(kind: String): Bool { types.isRecordKind(kind) };
 
 /** Returns the runtime JS property name for a tuple field (`_0` when unnamed, otherwise the field label). */
@@ -541,6 +564,7 @@ pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuc
 
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
 pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: Int): Items { reach.filterReachableItemsWithOpt(items, target, optLevel) };
+/** Filters `items` to only those reachable for `target` at default optimization level. */
 pub filterReachableItemsForTarget := fn(items: Items, target: String): Items { reach.filterReachableItemsForTarget(items, target) };
 
 /** Removes unreachable top-level function bodies and side-effect-free declarations for TS emission. */

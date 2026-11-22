@@ -70,6 +70,7 @@ pub sortInts := fn(values: List<Int>): List<Int> {
 
 ASCII_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
+/** Lexicographical ASCII comparison helper used by `sortTexts`. */
 textLessOrEqual := fn(a: String, b: String): Bool {
     la := text.length(a);
     lb := text.length(b);

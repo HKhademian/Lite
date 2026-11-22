@@ -4101,6 +4101,7 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("");
 };
 
+/** Emits a complete C11 program using explicit builtin specs and optimization level `optLevel`. */
 pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
     prevCompact := cCompactEmit;
     cCompactEmit = optLevel == 4;

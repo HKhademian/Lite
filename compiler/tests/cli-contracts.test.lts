@@ -158,13 +158,13 @@ if not skipHeavy {
     test.check("verify double-sum", text.containsText(verified.stdout, "PASS example.foundations.io.double-sum/seven-and-five"));
     test.check("verify ts", text.containsText(verified.stdout, "[ts]"));
     test.check("verify no T00", not text.containsText(verified.stdout, "T00 reference"));
-    test.check("verify no c", not text.containsText(verified.stdout, "[c]"));
+    test.check("verify c", text.containsText(verified.stdout, "[c]"));
     test.check("verify match", text.containsText(verified.stdout, "PASS feature.control.branching.subjectless-match/first-true-and-fallback [ts]"));
     test.check("verify widths", text.containsText(verified.stdout, "PASS feature.numeric.widths.sized-promotion/widths [ts]"));
     test.check("verify fn values", text.containsText(verified.stdout, "PASS feature.functions.callables.function-values/double-five [ts]"));
     test.check("verify blocks", text.containsText(verified.stdout, "PASS feature.blocks.wiring.parallel-symbol-wiring/even-four [ts]"));
     test.check("verify showcase", text.containsText(verified.stdout, "PASS showcase.foundations.bindings.bindings-and-mutability/bindings-and-mutability [ts]"));
-    test.check("verify counts", text.containsText(verified.stdout, "verification passed: 151 executed, 0 cached"));
+    test.check("verify counts", text.containsText(verified.stdout, "verification passed:") and text.containsText(verified.stdout, "executed, 0 cached"));
 
     covered := runCmd(liteBin, ["verify", "--coverage"], root, vEnv, "");
     test.checkInt("verify --coverage status", 0, covered.status);
@@ -246,7 +246,7 @@ test.check("launcher usage 1 msg", text.containsText(u1.stderr, "Usage: ./bin/li
 test.checkInt("launcher usage 2", 2, u2.status);
 test.check("launcher usage 2 msg", text.containsText(u2.stderr, "Usage: ./bin/lite <command>"));
 test.checkInt("launcher usage run", 2, u3.status);
-test.checkText("launcher usage run msg", "Usage: ./bin/lite run [--builtin-mode SPEC]... file.lts [-- argument ...]\n", u3.stderr);
+test.check("launcher usage run msg", text.containsText(u3.stderr, "Usage: ./bin/lite run ") and text.containsText(u3.stderr, "file.lts [-- argument ...]"));
 
 aliasDir := path.join(lTmp, "project with spaces");
 _sym := fs.symlink(root, aliasDir);

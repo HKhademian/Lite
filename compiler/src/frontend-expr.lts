@@ -1399,6 +1399,7 @@ blockAssignStmt := fn(target: String, runtime: String, valCode: String): String 
     }
 };
 
+/** Parses a braced block expression `{ ... }` and returns its evaluated target expression. */
 parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, bodySink: String, aliases: List<AliasDecl>): Parsed {
     isTaggedBody := bodySink == "tagged";
     isLoopBody := bodySink == "loopBody" or textLib.startsWithAt(bodySink, 0, "loopBody:");
