@@ -1,0 +1,204 @@
+/** Experimental string interner and symbol table (`extra/intern`) for O(1) identity checks and deduplication. */
+
+integer := import "core/int";
+list := import "core/list";
+map := import "core/map";
+text := import "core/text";
+
+/** Integer identifier representing a unique interned string inside an `Interner`. */
+pub SymbolId := type Int;
+
+/** Sentinel invalid symbol identifier. */
+pub INVALID_SYMBOL := -1;
+
+/** Opaque generational handle to an interner table. */
+pub Interner := type (handle: Int, gen: Int);
+
+/** Deduplication statistics snapshot for an `Interner`. */
+pub InternStats := type (uniqueCount: Int, totalChars: Int, internCalls: Int, hitCalls: Int);
+
+/* --- Global string entry slab (recycled on clear/destroy) --- */
+var entryText: mut List<String> = [];
+var entryOwner: mut List<Int> = [];
+var entryOwnerGen: mut List<Int> = [];
+var entryAlive: mut List<Bool> = [];
+var entryNextInTable: mut List<Int> = [];
+var entryFreeSlots: mut List<Int> = [];
+
+/* --- Lookup map: "<tableId>:<text>" -> global entry index (SymbolId) --- */
+var lookupMap: mut Map<String, Int>;
+
+/* --- Per-interner metadata --- */
+var tblHead: mut List<Int> = [];
+var tblCount: mut List<Int> = [];
+var tblChars: mut List<Int> = [];
+var tblCalls: mut List<Int> = [];
+var tblHits: mut List<Int> = [];
+var tblGen: mut List<Int> = [];
+var tblAlive: mut List<Bool> = [];
+var tblFreeSlots: mut List<Int> = [];
+
+validTable := fn(table: Interner): Bool {
+    idx := table.handle;
+    idx >= 0 and idx < list.length(tblAlive) and tblAlive[idx] and tblGen[idx] == table.gen
+};
+
+makeKey := fn(tableId: Int, value: String): String {
+    integer.intText(tableId) + ":" + value
+};
+
+purgeEntries := fn(tableId: Int): Unit {
+    var cur := tblHead[tableId];
+    loop cur >= 0 {
+        next := entryNextInTable[cur];
+        key := makeKey(tableId, entryText[cur]);
+        _rm := map.remove(mut lookupMap, key);
+        list.setAt(mut entryAlive, cur, false);
+        list.setAt(mut entryText, cur, "");
+        list.setAt(mut entryOwner, cur, -1);
+        list.setAt(mut entryOwnerGen, cur, 0);
+        list.setAt(mut entryNextInTable, cur, -1);
+        list.pushBack(mut entryFreeSlots, cur);
+        cur = next;
+    }
+    list.setAt(mut tblHead, tableId, -1);
+    list.setAt(mut tblCount, tableId, 0);
+    list.setAt(mut tblChars, tableId, 0);
+    list.setAt(mut tblCalls, tableId, 0);
+    list.setAt(mut tblHits, tableId, 0);
+};
+
+/** Creates a new empty string interner. */
+pub create := fn(): Interner {
+    if list.length(tblFreeSlots) > 0 {
+        slot := list.popBack(mut tblFreeSlots);
+        list.setAt(mut tblHead, slot, -1);
+        list.setAt(mut tblCount, slot, 0);
+        list.setAt(mut tblChars, slot, 0);
+        list.setAt(mut tblCalls, slot, 0);
+        list.setAt(mut tblHits, slot, 0);
+        list.setAt(mut tblAlive, slot, true);
+        return (handle = slot, gen = tblGen[slot]);
+    }
+    slot := list.length(tblHead);
+    list.pushBack(mut tblHead, -1);
+    list.pushBack(mut tblCount, 0);
+    list.pushBack(mut tblChars, 0);
+    list.pushBack(mut tblCalls, 0);
+    list.pushBack(mut tblHits, 0);
+    list.pushBack(mut tblGen, 1);
+    list.pushBack(mut tblAlive, true);
+    (handle = slot, gen = 1)
+};
+
+/** True when `table` refers to a live interner. */
+pub isValid := fn(table: Interner): Bool {
+    validTable(table)
+};
+
+/** Interns `value` in O(1), returning its stable `SymbolId` (or `INVALID_SYMBOL` if `table` is invalid). */
+pub intern := fn(table: Interner, value: String): SymbolId {
+    if not validTable(table) { return INVALID_SYMBOL; }
+    tid := table.handle;
+    list.setAt(mut tblCalls, tid, tblCalls[tid] + 1);
+    key := makeKey(tid, value);
+    existing := map.get(lookupMap, key);
+    if existing.found {
+        list.setAt(mut tblHits, tid, tblHits[tid] + 1);
+        return existing.value;
+    }
+
+    var eid := -1;
+    if list.length(entryFreeSlots) > 0 {
+        eid = list.popBack(mut entryFreeSlots);
+        list.setAt(mut entryText, eid, value);
+        list.setAt(mut entryOwner, eid, tid);
+        list.setAt(mut entryOwnerGen, eid, table.gen);
+        list.setAt(mut entryAlive, eid, true);
+        list.setAt(mut entryNextInTable, eid, tblHead[tid]);
+    } else {
+        eid = list.length(entryText);
+        list.pushBack(mut entryText, value);
+        list.pushBack(mut entryOwner, tid);
+        list.pushBack(mut entryOwnerGen, table.gen);
+        list.pushBack(mut entryAlive, true);
+        list.pushBack(mut entryNextInTable, tblHead[tid]);
+    }
+    list.setAt(mut tblHead, tid, eid);
+    list.setAt(mut tblCount, tid, tblCount[tid] + 1);
+    list.setAt(mut tblChars, tid, tblChars[tid] + text.length(value));
+    map.set(mut lookupMap, key, eid);
+    eid
+};
+
+/** Looks up `value` without inserting it. */
+pub lookup := fn(table: Interner, value: String): (found: Bool, id: SymbolId) {
+    if not validTable(table) { return (found = false, id = INVALID_SYMBOL); }
+    res := map.get(lookupMap, makeKey(table.handle, value));
+    if res.found {
+        (found = true, id = res.value)
+    } else {
+        (found = false, id = INVALID_SYMBOL)
+    }
+};
+
+/** True when `value` is currently interned in `table`. */
+pub has := fn(table: Interner, value: String): Bool {
+    if not validTable(table) { return false; }
+    map.has(lookupMap, makeKey(table.handle, value))
+};
+
+/** True when `id` currently resolves to a live symbol owned by `table`. */
+pub hasId := fn(table: Interner, id: SymbolId): Bool {
+    if not validTable(table) or id < 0 or id >= list.length(entryAlive) { return false; }
+    entryAlive[id] and entryOwner[id] == table.handle and entryOwnerGen[id] == table.gen
+};
+
+/** Resolves `id` back to its interned `String` in O(1). */
+pub resolve := fn(table: Interner, id: SymbolId): (found: Bool, value: String) {
+    if not hasId(table, id) { return (found = false, value = ""); }
+    (found = true, value = entryText[id])
+};
+
+/** Resolves `id` back to its interned `String`, or `fallback` when absent. */
+pub resolveOr := fn(table: Interner, id: SymbolId, fallback: String): String {
+    if not hasId(table, id) { return fallback; }
+    entryText[id]
+};
+
+/** Returns the number of unique strings currently stored in `table`. */
+pub count := fn(table: Interner): Int {
+    if not validTable(table) { return 0; }
+    tblCount[table.handle]
+};
+
+/** Returns the total character count of all unique strings currently stored in `table`. */
+pub totalChars := fn(table: Interner): Int {
+    if not validTable(table) { return 0; }
+    tblChars[table.handle]
+};
+
+/** Returns deduplication statistics for `table`. */
+pub stats := fn(table: Interner): InternStats {
+    if not validTable(table) {
+        return (uniqueCount = 0, totalChars = 0, internCalls = 0, hitCalls = 0);
+    }
+    tid := table.handle;
+    (uniqueCount = tblCount[tid], totalChars = tblChars[tid], internCalls = tblCalls[tid], hitCalls = tblHits[tid])
+};
+
+/** Clears all interned strings from `table`, removing its map keys and recycling entry slots. */
+pub clear := fn(table: Interner): Unit {
+    if not validTable(table) { return; }
+    purgeEntries(table.handle);
+};
+
+/** Destroys `table`, freeing all of its map entries and recycling its handle slot. */
+pub destroy := fn(table: Interner): Unit {
+    if not validTable(table) { return; }
+    tid := table.handle;
+    purgeEntries(tid);
+    list.setAt(mut tblAlive, tid, false);
+    list.setAt(mut tblGen, tid, tblGen[tid] + 1);
+    list.pushBack(mut tblFreeSlots, tid);
+};
