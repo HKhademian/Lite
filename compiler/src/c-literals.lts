@@ -86,11 +86,11 @@ pub logicCode := fn(op: String, left: String, right: String): String {
     else { "((" + left + ") || (" + right + "))" }
 }
 
-/** Emits a kind-aware C comparison; String equality uses `strcmp` and not-less/not-more spellings invert the ordering. */
+/** Emits a kind-aware C comparison; String equality uses `lt_text_eq` and not-less/not-more spellings invert the ordering. */
 pub comparisonCode := fn(op: String, kind: String, left: String, right: String): String {
     if kind == numeric.KIND_STRING {
-        if op == "==" { "strcmp(" + left + ", " + right + ") == 0" }
-        else { "strcmp(" + left + ", " + right + ") != 0" }
+        if op == "==" { "lt_text_eq(" + left + ", " + right + ")" }
+        else { "!lt_text_eq(" + left + ", " + right + ")" }
     } else {
         operator := if op == "==" { "==" }
         else if op == "=!=" { "!=" }

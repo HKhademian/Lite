@@ -126,11 +126,13 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
     outLine("}");
     outLine("typedef struct { const char *s; size_t byte_len; int64_t cp_len; bool ascii; size_t last_b; int64_t last_cp; uint32_t stamp; } lt_utf8_meta;");
     outLine("static lt_utf8_meta lt_utf8_cache[256];");
+    outLine("static lt_utf8_meta *lt_utf8_last = NULL;");
     outLine("static uint32_t lt_utf8_clock = 1u;");
     outLine("static lt_utf8_meta *lt_utf8_get_meta(const char *s) {");
+    outLine("    if (lt_utf8_last != NULL && lt_utf8_last->s == s) { return lt_utf8_last; }");
     outLine("    size_t base = ((((size_t)(uintptr_t)s) >> 4) & 63u) << 2;");
     outLine("    for (size_t w = 0u; w < 4u; w += 1u) {");
-    outLine("        if (lt_utf8_cache[base + w].s == s) { lt_utf8_cache[base + w].stamp = ++lt_utf8_clock; return &lt_utf8_cache[base + w]; }");
+    outLine("        if (lt_utf8_cache[base + w].s == s) { lt_utf8_cache[base + w].stamp = ++lt_utf8_clock; lt_utf8_last = &lt_utf8_cache[base + w]; return lt_utf8_last; }");
     outLine("    }");
     outLine("    size_t b = 0u; int64_t cp = 0; bool ascii = true;");
     outLine("    while (s[b] != '\\0') {");
@@ -147,6 +149,7 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
     outLine("    }");
     outLine("    lt_utf8_meta *slot = &lt_utf8_cache[victim];");
     outLine("    slot->s = s; slot->byte_len = b; slot->cp_len = cp; slot->ascii = ascii; slot->last_b = 0u; slot->last_cp = 0; slot->stamp = ++lt_utf8_clock;");
+    outLine("    lt_utf8_last = slot;");
     outLine("    return slot;");
     outLine("}");
     if hasAt or hasSlice {
@@ -1201,7 +1204,7 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     kTag := frontend.cMapKeyTag(kKind);
     kType := cScalarType(kKind);
     vType := cScalarType(vKind);
-    kEq := if kTag == "str" { "strcmp(a, b) == 0" } else { "a == b" };
+    kEq := if kTag == "str" { "a == b || (a[0] == b[0] && (a[0] == '\\0' || strcmp(a + 1, b + 1) == 0))" } else { "a == b" };
     vCopy := if cListTagForKind(vKind) =!= "" { "lt_list_" + cListTagForKind(vKind) + "_copy(v)" }
     else if frontend.cMapTag(vKind) =!= "" { frontend.cMapTag(vKind) + "_copy(v)" }
     else if frontend.cSetTag(vKind) =!= "" { frontend.cSetTag(vKind) + "_copy(v)" }
@@ -1478,7 +1481,7 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     kTag := frontend.cMapKeyTag(eKind);
     eType := cScalarType(eKind);
     eConstPtr := if kTag == "str" { "const char *const *" } else { "const " + eType + " *" };
-    kEq := if kTag == "str" { "strcmp(a, b) == 0" } else { "a == b" };
+    kEq := if kTag == "str" { "a == b || (a[0] == b[0] && (a[0] == '\\0' || strcmp(a + 1, b + 1) == 0))" } else { "a == b" };
     hasFrom := usesIntHelper(calls, sTag + "_from(");
     hasCopy := needCopy or usesIntHelper(calls, sTag + "_copy(");
     hasAdd := usesIntHelper(calls, sTag + "_add(");
@@ -4738,6 +4741,11 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     outLine("#include <inttypes.h>");
     outLine("#include <stdbool.h>");
     outLine("#include <string.h>");
+    if usesIntHelper(calls, "lt_text_eq(") {
+        outLine("static inline bool lt_text_eq(const char *a, const char *b) {");
+        outLine("    return a == b || (a[0] == b[0] && (a[0] == '\\0' || (a[1] == b[1] && (a[1] == '\\0' || strcmp(a + 2, b + 2) == 0))));");
+        outLine("}");
+    }
     if hasPosixHost {
         outLine("#include <fcntl.h>");
         outLine("#include <unistd.h>");
