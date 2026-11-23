@@ -477,7 +477,7 @@ unsupportedAggregateCode := fn(code: String): String {
 normalizeCBuiltinCalls := fn(code: String): String {
     if textLib.indexOfText(code, "lite$", 0) < 0 and textLib.indexOfText(code, "/*@", 0) < 0 { return code; }
     size := textLib.length(code);
-    var out := "";
+    out: mut tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     loop cursor < size {
@@ -485,311 +485,386 @@ normalizeCBuiltinCalls := fn(code: String): String {
         if ch == "\"" {
             cursor = frontend.skipAliasString(code, cursor);
         } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
-            out = out + textLib.slice(code, flushed, cursor);
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
             cursor = skipCFnBlock(code, cursor);
             flushed = cursor;
         } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:") or textLib.startsWithAt(code, cursor, "/*@P:")) {
             endTag := textLib.indexOfText(code, "@*/", cursor + 5);
-            out = out + textLib.slice(code, flushed, cursor);
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
             cursor = if endTag >= 0 { endTag + 3 } else { size };
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$reportError(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_report_error(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_report_error(");
             cursor = cursor + textLib.length("lite$reportError(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$exit(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_exit(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_exit(");
             cursor = cursor + textLib.length("lite$exit(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$textLength(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_text_length(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_text_length(");
             cursor = cursor + textLib.length("lite$textLength(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$textAt(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_text_at(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_text_at(");
             cursor = cursor + textLib.length("lite$textAt(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$textSliceFrom(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_text_slice_from(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_text_slice_from(");
             cursor = cursor + textLib.length("lite$textSliceFrom(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$textSlice(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_text_slice(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_text_slice(");
             cursor = cursor + textLib.length("lite$textSlice(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputArgs(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_input_args(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_input_args(");
             cursor = cursor + textLib.length("lite$inputArgs(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputAll(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_input_all(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_input_all(");
             cursor = cursor + textLib.length("lite$inputAll(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputLine(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_input_line(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_input_line(");
             cursor = cursor + textLib.length("lite$inputLine(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputInt(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_input_int(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_input_int(");
             cursor = cursor + textLib.length("lite$inputInt(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputFloat(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_input_float(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_input_float(");
             cursor = cursor + textLib.length("lite$inputFloat(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$unicodeToCodePoints(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_unicode_to_code_points(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_unicode_to_code_points(");
             cursor = cursor + textLib.length("lite$unicodeToCodePoints(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$unicodeFromCodePoints(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_unicode_from_code_points(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_unicode_from_code_points(");
             cursor = cursor + textLib.length("lite$unicodeFromCodePoints(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioStdinReader(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_stdin_reader(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_stdin_reader(");
             cursor = cursor + textLib.length("lite$ioStdinReader(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioStdoutWriter(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_stdout_writer(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_stdout_writer(");
             cursor = cursor + textLib.length("lite$ioStdoutWriter(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioStderrWriter(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_stderr_writer(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_stderr_writer(");
             cursor = cursor + textLib.length("lite$ioStderrWriter(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioBufferReader(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_buffer_reader(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_buffer_reader(");
             cursor = cursor + textLib.length("lite$ioBufferReader(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioBufferWriter(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_buffer_writer(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_buffer_writer(");
             cursor = cursor + textLib.length("lite$ioBufferWriter(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterBytes(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_writer_bytes(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_writer_bytes(");
             cursor = cursor + textLib.length("lite$ioWriterBytes(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterText(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_writer_text(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_writer_text(");
             cursor = cursor + textLib.length("lite$ioWriterText(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioClearWriter(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_clear_writer(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_clear_writer(");
             cursor = cursor + textLib.length("lite$ioClearWriter(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioReaderOk(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_reader_ok(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_reader_ok(");
             cursor = cursor + textLib.length("lite$ioReaderOk(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioReaderAtEof(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_reader_at_eof(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_reader_at_eof(");
             cursor = cursor + textLib.length("lite$ioReaderAtEof(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioReaderError(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_reader_error(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_reader_error(");
             cursor = cursor + textLib.length("lite$ioReaderError(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioRead(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_read(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_read(");
             cursor = cursor + textLib.length("lite$ioRead(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioCloseReader(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_close_reader(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_close_reader(");
             cursor = cursor + textLib.length("lite$ioCloseReader(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterOk(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_writer_ok(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_writer_ok(");
             cursor = cursor + textLib.length("lite$ioWriterOk(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterError(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_writer_error(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_writer_error(");
             cursor = cursor + textLib.length("lite$ioWriterError(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWrite(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_write(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_write(");
             cursor = cursor + textLib.length("lite$ioWrite(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioFlush(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_flush(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_flush(");
             cursor = cursor + textLib.length("lite$ioFlush(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioCloseWriter(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_io_close_writer(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_io_close_writer(");
             cursor = cursor + textLib.length("lite$ioCloseWriter(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileKind(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_kind(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_kind(");
             cursor = cursor + textLib.length("lite$fileKind(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileOpenReader(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_open_reader(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_open_reader(");
             cursor = cursor + textLib.length("lite$fileOpenReader(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileOpenWriter(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_open_writer(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_open_writer(");
             cursor = cursor + textLib.length("lite$fileOpenWriter(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileOpenAppender(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_open_appender(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_open_appender(");
             cursor = cursor + textLib.length("lite$fileOpenAppender(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileListDir(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_list_dir(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_list_dir(");
             cursor = cursor + textLib.length("lite$fileListDir(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileMakeDir(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_make_dir(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_make_dir(");
             cursor = cursor + textLib.length("lite$fileMakeDir(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileRemove(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_remove(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_remove(");
             cursor = cursor + textLib.length("lite$fileRemove(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileCopy(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_copy(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_copy(");
             cursor = cursor + textLib.length("lite$fileCopy(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileSymlink(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_symlink(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_symlink(");
             cursor = cursor + textLib.length("lite$fileSymlink(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileRealPath(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_real_path(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_real_path(");
             cursor = cursor + textLib.length("lite$fileRealPath(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileMakeTempDir(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_file_make_temp_dir(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_file_make_temp_dir(");
             cursor = cursor + textLib.length("lite$fileMakeTempDir(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processCwd(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_process_cwd(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_process_cwd(");
             cursor = cursor + textLib.length("lite$processCwd(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processExecPath(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_process_exec_path(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_process_exec_path(");
             cursor = cursor + textLib.length("lite$processExecPath(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processEntryPath(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_process_entry_path(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_process_entry_path(");
             cursor = cursor + textLib.length("lite$processEntryPath(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processPlatform(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_process_platform(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_process_platform(");
             cursor = cursor + textLib.length("lite$processPlatform(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processArch(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_process_arch(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_process_arch(");
             cursor = cursor + textLib.length("lite$processArch(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processRuntimeVersion(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_process_runtime_version(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_process_runtime_version(");
             cursor = cursor + textLib.length("lite$processRuntimeVersion(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processEnvGet(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_process_env_get(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_process_env_get(");
             cursor = cursor + textLib.length("lite$processEnvGet(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processRun(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_process_run(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_process_run(");
             cursor = cursor + textLib.length("lite$processRun(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processRunBytes(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_process_run_bytes(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_process_run_bytes(");
             cursor = cursor + textLib.length("lite$processRunBytes(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$cryptoRandomBytes(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_crypto_random_bytes(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_crypto_random_bytes(");
             cursor = cursor + textLib.length("lite$cryptoRandomBytes(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeMonotonicNs(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_time_monotonic_ns(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_time_monotonic_ns(");
             cursor = cursor + textLib.length("lite$timeMonotonicNs(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasOpen(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_open(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_open(");
             cursor = cursor + textLib.length("lite$extraCanvasOpen(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasPoll(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_poll(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_poll(");
             cursor = cursor + textLib.length("lite$extraCanvasPoll(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasPresent(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_present(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_present(");
             cursor = cursor + textLib.length("lite$extraCanvasPresent(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasClose(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_close(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_close(");
             cursor = cursor + textLib.length("lite$extraCanvasClose(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasClear(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_clear(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_clear(");
             cursor = cursor + textLib.length("lite$extraCanvasClear(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasFillRect(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_fill_rect(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_fill_rect(");
             cursor = cursor + textLib.length("lite$extraCanvasFillRect(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasStrokeRect(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_stroke_rect(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_stroke_rect(");
             cursor = cursor + textLib.length("lite$extraCanvasStrokeRect(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasFillCircle(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_fill_circle(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_fill_circle(");
             cursor = cursor + textLib.length("lite$extraCanvasFillCircle(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasStrokeLine(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_stroke_line(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_stroke_line(");
             cursor = cursor + textLib.length("lite$extraCanvasStrokeLine(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasDrawText(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_draw_text(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_draw_text(");
             cursor = cursor + textLib.length("lite$extraCanvasDrawText(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasCapture(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_capture(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_capture(");
             cursor = cursor + textLib.length("lite$extraCanvasCapture(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasSetTargetFps(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_set_target_fps(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_set_target_fps(");
             cursor = cursor + textLib.length("lite$extraCanvasSetTargetFps(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasVitals(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_vitals(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_vitals(");
             cursor = cursor + textLib.length("lite$extraCanvasVitals(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasPlayTone(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_play_tone(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_play_tone(");
             cursor = cursor + textLib.length("lite$extraCanvasPlayTone(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasBounds(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_bounds(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_bounds(");
             cursor = cursor + textLib.length("lite$extraCanvasBounds(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasResize(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_resize(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_resize(");
             cursor = cursor + textLib.length("lite$extraCanvasResize(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasSetFullscreen(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_canvas_set_fullscreen(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_canvas_set_fullscreen(");
             cursor = cursor + textLib.length("lite$extraCanvasSetFullscreen(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeEpochNs(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_time_epoch_ns(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_time_epoch_ns(");
             cursor = cursor + textLib.length("lite$timeEpochNs(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeSleepMs(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_time_sleep_ms(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_time_sleep_ms(");
             cursor = cursor + textLib.length("lite$timeSleepMs(");
             flushed = cursor;
         } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeLocalDate(") {
-            out = out + textLib.slice(code, flushed, cursor) + "lt_time_local_date(";
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, "lt_time_local_date(");
             cursor = cursor + textLib.length("lite$timeLocalDate(");
             flushed = cursor;
         } else {
             cursor = cursor + 1;
         }
     }
-    if flushed == 0 { code } else { out + textLib.slice(code, flushed, size) }
+    if flushed == 0 { return code; }
+    if flushed < size { tb.append(mut out, textLib.slice(code, flushed, size)); }
+    tb.build(out)
 };
 
 /** Builds one checked printf call for an Int*, Float*, String, Bool, Unit or Never report value without a trailing newline. */
@@ -1775,7 +1850,7 @@ injectCFnTemps := fn(code: String): String {
     marker := "/*@CFN_TEMPS@*/";
     mIdx := textLib.indexOfText(code, marker, 0);
     if mIdx < 0 { return code; }
-    var decls := "";
+    decls: mut tb.TextBuilder;
     seen: mut List<String> = [];
     var cursor := 0;
     size := textLib.length(code);
@@ -1792,13 +1867,13 @@ injectCFnTemps := fn(code: String): String {
                     tag := if textLib.startsWithAt(code, cursor, "lt_cmp_") or textLib.startsWithAt(code, cursor, "lt_arg_f_") { textLib.at(code, cursor + 7) } else { "i" };
                     typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
                     else if tag == "f" { "double " } else { "int64_t " };
-                    decls = decls + typeCode + tName + "; ";
+                    tb.append(mut decls, typeCode + tName + "; ");
                 }
             }
             cursor = end;
         } else { cursor = cursor + 1; }
     }
-    textLib.slice(code, 0, mIdx) + decls + textLib.slice(code, mIdx + textLib.length(marker), size)
+    textLib.slice(code, 0, mIdx) + tb.build(decls) + textLib.slice(code, mIdx + textLib.length(marker), size)
 };
 
 /** Emits shortest round-trip binary64 display with decimal/exponent thresholds shared by the TS runtime; source remains statically checked and no locale is selected by generated programs. */
@@ -2059,7 +2134,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
     var firstKind := "";
     var firstCode := "";
     var firstTemp := "";
-    var writes := "";
+    writes: mut tb.TextBuilder;
     var seqLoopId := 0;
     loopSeqFlags: mut List<Int> = [];
     loopSeqReleases: mut List<String> = [];
@@ -2309,10 +2384,10 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                     outText(outputWriteCode(firstKind, firstCode, indent, failAction));
                 }
             }
-            else if count > 1 { outText(writes); }
+            else if count > 1 { outText(tb.build(writes)); }
             if item.kind == frontend.ITEM_KIND_END { outLine(indent + "if (printf(\"\\n\") < 0) { " + failAction + " }"); }
             count = 0;
-            writes = "";
+            tb.clear(mut writes);
         } else if item.kind == frontend.ITEM_KIND_MAIN_STOP or item.kind == frontend.ITEM_KIND_IMPORT or
         item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or
         item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_PURE_GLOBAL or
@@ -2326,13 +2401,14 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                     firstTemp = "lt_output_" + integer.intText(tempIndex);
                     tempIndex = tempIndex + 1;
                     emitOutputArgument(firstKind, firstCode, firstTemp, indent);
-                    writes = outputWriteCode(firstKind, if firstKind == frontend.VALUE_KIND_UNIT or firstKind == frontend.VALUE_KIND_NEVER { "0" } else { firstTemp }, indent, failAction);
+                    tb.clear(mut writes);
+                    tb.append(mut writes, outputWriteCode(firstKind, if firstKind == frontend.VALUE_KIND_UNIT or firstKind == frontend.VALUE_KIND_NEVER { "0" } else { firstTemp }, indent, failAction));
                 }
                 temp := "lt_output_" + integer.intText(tempIndex);
                 tempIndex = tempIndex + 1;
                 emitOutputArgument(item.kind, code, temp, indent);
-                writes = writes + indent + "if (printf(\" \") < 0) { " + failAction + " }\n" +
-                outputWriteCode(item.kind, if item.kind == frontend.VALUE_KIND_UNIT or item.kind == frontend.VALUE_KIND_NEVER { "0" } else { temp }, indent, failAction);
+                tb.append(mut writes, indent + "if (printf(\" \") < 0) { " + failAction + " }\n");
+                tb.append(mut writes, outputWriteCode(item.kind, if item.kind == frontend.VALUE_KIND_UNIT or item.kind == frontend.VALUE_KIND_NEVER { "0" } else { temp }, indent, failAction));
             }
             count = count + 1;
         }

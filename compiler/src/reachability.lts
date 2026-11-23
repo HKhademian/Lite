@@ -82,7 +82,8 @@ scanCodeCalls := fn(code: String, existing: String, userFnsOnly: Bool): String {
     if nextLite < 0 and nextLt < 0 and nextFinally < 0 { return existing; }
     var nextQuote := textLib.indexOfText(code, "\"", 0);
     size := textLib.length(code);
-    var calls := existing;
+    added: mut tb.TextBuilder;
+    seenAdded: mut Set<String>;
     var cursor := 0;
     loop cursor < size {
         if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
@@ -92,7 +93,9 @@ scanCodeCalls := fn(code: String, existing: String, userFnsOnly: Bool): String {
         if nextLite >= 0 { hit = nextLite; }
         if nextLt >= 0 and (hit < 0 or nextLt < hit) { hit = nextLt; }
         if nextFinally >= 0 and (hit < 0 or nextFinally < hit) { hit = nextFinally; }
-        if hit < 0 { return calls; }
+        if hit < 0 {
+            return if tb.count(added) == 0 { existing } else { existing + tb.build(added) };
+        }
         if nextQuote >= 0 and nextQuote < hit {
             if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
             if nextQuote >= 0 and nextQuote < hit {
@@ -127,7 +130,10 @@ scanCodeCalls := fn(code: String, existing: String, userFnsOnly: Bool): String {
             };
             if matched {
                 token := name + "(|";
-                if textLib.indexOfText(calls, "|" + token, 0) < 0 { calls = calls + token; }
+                if not setLib.has(seenAdded, token) and textLib.indexOfText(existing, "|" + token, 0) < 0 {
+                    setLib.add(mut seenAdded, token);
+                    tb.append(mut added, token);
+                }
             }
         } else if not userFnsOnly and name == "finally" {
             var afterFin := endPos;
@@ -135,12 +141,15 @@ scanCodeCalls := fn(code: String, existing: String, userFnsOnly: Bool): String {
                 afterFin = afterFin + 1;
             }
             if afterFin < size and textLib.at(code, afterFin) == "{" {
-                if textLib.indexOfText(calls, "|lite$finally(|", 0) < 0 { calls = calls + "lite$finally(|"; }
+                if not setLib.has(seenAdded, "lite$finally(|") and textLib.indexOfText(existing, "|lite$finally(|", 0) < 0 {
+                    setLib.add(mut seenAdded, "lite$finally(|");
+                    tb.append(mut added, "lite$finally(|");
+                }
             }
         }
         cursor = endPos;
     }
-    calls
+    if tb.count(added) == 0 { existing } else { existing + tb.build(added) }
 };
 
 /** Collects distinct target helper call names, skipping quoted text and consuming whole identifiers. Existing names avoid duplicate work across items. */
@@ -259,15 +268,16 @@ pub tokenBucketAdd := fn(s: TokenBuckets, needle: String): TokenBuckets {
 
 /** Serializes all 32 buckets into one `|`-delimited string. */
 pub flattenTokenBuckets := fn(s: TokenBuckets): String {
-    var out := "|";
+    out: mut tb.TextBuilder;
+    tb.append(mut out, "|");
     var i := 0;
     loop i < 32 {
         b := tokenBucketGet(s, i);
         bLen := textLib.length(b);
-        if bLen > 1 { out = out + textLib.slice(b, 1, bLen); }
+        if bLen > 1 { tb.append(mut out, textLib.slice(b, 1, bLen)); }
         i = i + 1;
     }
-    out
+    tb.build(out)
 };
 
 /** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code` into `existing`. */
@@ -1677,7 +1687,7 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
     firstHit := textLib.indexOfText(code, fnPrefix, 0);
     if code == "" or firstHit < 0 { return code; }
     cLen := textLib.length(code);
-    var out := "";
+    out: mut tb.TextBuilder;
     var copyFrom := 0;
     var cursor := 0;
     var nextFn := firstHit;
@@ -1727,7 +1737,8 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
                     p2 := leafParams2[fnName];
                     body := leafBodies[fnName];
                     if p1 == "" and rawArgs == "" {
-                        out = out + textLib.slice(code, copyFrom, nextFn) + "(" + body + ")";
+                        if nextFn > copyFrom { tb.append(mut out, textLib.slice(code, copyFrom, nextFn)); }
+                        tb.append(mut out, "(" + body + ")");
                         copyFrom = scan;
                         cursor = scan;
                         changed = true;
@@ -1735,7 +1746,8 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
                         continue;
                     } else if p1 =!= "" and p2 == "" and commaCount == 0 and isSimpleInlineArg(rawArgs) {
                         subArg := widenInlineArgForTarget(target, rawArgs);
-                        out = out + textLib.slice(code, copyFrom, nextFn) + "(" + replaceParamToken(body, p1, subArg) + ")";
+                        if nextFn > copyFrom { tb.append(mut out, textLib.slice(code, copyFrom, nextFn)); }
+                        tb.append(mut out, "(" + replaceParamToken(body, p1, subArg) + ")");
                         copyFrom = scan;
                         cursor = scan;
                         changed = true;
@@ -1750,7 +1762,8 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
                             sub2 := widenInlineArgForTarget(target, arg2);
                             step1 := replaceParamToken(body, p1, sub1);
                             step2 := replaceParamToken(step1, p2, sub2);
-                            out = out + textLib.slice(code, copyFrom, nextFn) + "(" + step2 + ")";
+                            if nextFn > copyFrom { tb.append(mut out, textLib.slice(code, copyFrom, nextFn)); }
+                            tb.append(mut out, "(" + step2 + ")");
                             copyFrom = scan;
                             cursor = scan;
                             changed = true;
@@ -1764,7 +1777,9 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
         cursor = nextFn + 1;
         nextFn = textLib.indexOfText(code, fnPrefix, cursor);
     }
-    if changed { out + textLib.slice(code, copyFrom, cLen) } else { code }
+    if not changed { return code; }
+    if copyFrom < cLen { tb.append(mut out, textLib.slice(code, copyFrom, cLen)); }
+    tb.build(out)
 };
 
 /** Extracts reachable runtime tokens (`lite...` / `lt_...`) from `code` outside quoted strings. */

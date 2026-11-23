@@ -4,6 +4,7 @@ integer := import "core/int";
 listLib := import "core/list";
 setLib := import "core/set";
 textLib := import "core/text";
+tb := import "util/text-builder";
 ir := import "./frontend-ir.lts";
 syntax := import "./frontend-syntax.lts";
 types := import "./frontend-types.lts";
@@ -106,7 +107,8 @@ pub appendPipeBag := fn(bag: String, tok: String): String {
 pub mergePipeBags := fn(base: String, extra: String): String {
     if extra == "" { return base; }
     if base == "" { return extra; }
-    var out := base;
+    added: mut tb.TextBuilder;
+    seenAdded: mut Set<String>;
     len := textLib.length(extra);
     var pos := 0;
     loop pos < len {
@@ -117,11 +119,15 @@ pub mergePipeBags := fn(base: String, extra: String): String {
         nextBar := textLib.indexOfText(extra, "|", pos);
         endPos := if nextBar < 0 { len } else { nextBar };
         if endPos > pos {
-            out = appendPipeBag(out, textLib.slice(extra, pos, endPos));
+            tok := textLib.slice(extra, pos, endPos);
+            if not setLib.has(seenAdded, tok) and textLib.indexOfText(base, "|" + tok + "|", 0) < 0 {
+                setLib.add(mut seenAdded, tok);
+                tb.append(mut added, tok + "|");
+            }
         }
         pos = endPos + 1;
     }
-    out
+    if tb.count(added) == 0 { base } else { base + tb.build(added) }
 };
 
 /** Extracts the `allBag` portion (`allBag + "\n" + readBag`) from encoded callable dependency metadata. */

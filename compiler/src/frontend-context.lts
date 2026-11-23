@@ -3,6 +3,7 @@
 integer := import "core/int";
 listLib := import "core/list";
 textLib := import "core/text";
+tb := import "util/text-builder";
 numeric := import "./numeric-literals.lts";
 ir := import "./frontend-ir.lts";
 syntax := import "./frontend-syntax.lts";
@@ -875,7 +876,7 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
         return tryCode;
     }
     size := textLib.length(tryCode);
-    var out := "";
+    out: mut tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     var rSeq := 0;
@@ -913,7 +914,8 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
             if semi > lblStart {
                 lbl := textLib.trim(textLib.slice(tryCode, lblStart, semi));
                 if textLib.indexOfText(tryCode, lbl + ":", 0) < 0 {
-                    out = out + textLib.slice(tryCode, flushed, cursor) + "{ { " + finCode + " } goto " + lbl + "; }";
+                    if cursor > flushed { tb.append(mut out, textLib.slice(tryCode, flushed, cursor)); }
+                    tb.append(mut out, "{ { " + finCode + " } goto " + lbl + "; }");
                     cursor = semi + 1;
                     flushed = cursor;
                     continue;
@@ -949,12 +951,13 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
             }
             if semi >= 0 {
                 retExpr := textLib.trim(textLib.slice(tryCode, cursor + 6, semi));
+                if cursor > flushed { tb.append(mut out, textLib.slice(tryCode, flushed, cursor)); }
                 if retExpr == "" or fnRetKind == "" or fnRetKind == ir.VALUE_KIND_UNIT or fnRetKind == ir.VALUE_KIND_NEVER {
-                    out = out + textLib.slice(tryCode, flushed, cursor) + "{ { " + finCode + " } return; }";
+                    tb.append(mut out, "{ { " + finCode + " } return; }");
                 } else {
                     rSeq = rSeq + 1;
                     tmpVar := "lt_fr_" + integer.intText(finId) + "_" + integer.intText(rSeq);
-                    out = out + textLib.slice(tryCode, flushed, cursor) + "{ " + types.cValueType(fnRetKind) + " " + tmpVar + " = (" + retExpr + "); { " + finCode + " } return " + tmpVar + "; }";
+                    tb.append(mut out, "{ " + types.cValueType(fnRetKind) + " " + tmpVar + " = (" + retExpr + "); { " + finCode + " } return " + tmpVar + "; }");
                 }
                 cursor = semi + 1;
                 flushed = cursor;
@@ -965,7 +968,9 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
             cursor = cursor + 1;
         }
     }
-    if flushed == 0 { tryCode } else { out + textLib.slice(tryCode, flushed, size) }
+    if flushed == 0 { return tryCode; }
+    if flushed < size { tb.append(mut out, textLib.slice(tryCode, flushed, size)); }
+    tb.build(out)
 };
 
 /** Replaces whole-word occurrences of C identifier `ident` outside quoted strings with `replacement`. */
@@ -974,7 +979,7 @@ pub cReplaceIdentToken := fn(code: String, ident: String, replacement: String): 
     size := textLib.length(code);
     idLen := textLib.length(ident);
     firstCh := textLib.at(ident, 0);
-    var out := "";
+    out: mut tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     loop cursor < size {
@@ -990,14 +995,17 @@ pub cReplaceIdentToken := fn(code: String, ident: String, replacement: String): 
         } else if ch == firstCh and textLib.startsWithAt(code, cursor, ident) and
         (cursor == 0 or not textLib.isNameContinue(textLib.at(code, cursor - 1))) and
         (cursor + idLen >= size or not textLib.isNameContinue(textLib.at(code, cursor + idLen))) {
-            out = out + textLib.slice(code, flushed, cursor) + replacement;
+            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+            tb.append(mut out, replacement);
             cursor = cursor + idLen;
             flushed = cursor;
         } else {
             cursor = cursor + 1;
         }
     }
-    if flushed == 0 { code } else { out + textLib.slice(code, flushed, size) }
+    if flushed == 0 { return code; }
+    if flushed < size { tb.append(mut out, textLib.slice(code, flushed, size)); }
+    tb.build(out)
 };
 
 /** Returns the number of entries in `ctxs`. */
@@ -1183,7 +1191,7 @@ pub filterOtherMarkers := fn(raw: String, excludeId: Int): String {
     excludeKey := integer.intText(excludeId);
     size := textLib.length(raw);
     var cursor := 0;
-    var kept := "";
+    kept: mut tb.TextBuilder;
     loop cursor < size {
         eqPos := textLib.indexOfText(raw, "=", cursor);
         if eqPos < 0 { break; }
@@ -1191,11 +1199,11 @@ pub filterOtherMarkers := fn(raw: String, excludeId: Int): String {
         endPos := if nlPos < 0 { size } else { nlPos };
         entryId := textLib.slice(raw, cursor, eqPos);
         if entryId =!= excludeKey {
-            kept = kept + textLib.slice(raw, cursor, endPos) + "\n";
+            tb.appendLine(mut kept, textLib.slice(raw, cursor, endPos));
         }
         cursor = endPos + 1;
     }
-    kept
+    tb.build(kept)
 };
 
 /** Unifies all inferred exit kinds recorded for `targetId` in `raw` markers, failing on incompatible exit types. */
