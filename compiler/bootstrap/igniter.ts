@@ -41489,9 +41489,10 @@ export function main(lite$write?: (text: string) => void): string {
         return [...(lite_result)];
     }
     void liteFn$_p__p_$_p__p_$compiler$src$modules$appendModuleExports;
-    function liteFn$_p__p_$_p__p_$compiler$src$modules$appendTransitiveTypeOps(lite_graph: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[], lite_existing: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[]): { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] {
+    function liteFn$_p__p_$_p__p_$compiler$src$modules$appendTransitiveTypeOps(lite_graph: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[], lite_existing: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[], lite_skipModPath: string): { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] {
         void lite_graph;
         void lite_existing;
+        void lite_skipModPath;
         let lite_result: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...(lite_existing)];
         void lite_result;
         const lite_seenOps: Set<string> = new Set<string>();
@@ -41502,9 +41503,15 @@ export function main(lite$write?: (text: string) => void): string {
                 ((lite_seenOps).add((lite_prev).name), undefined);
             }
         }
+        let lite_insideSkip = false;
+        void lite_insideSkip;
         for (const lite_item of (lite_graph)) {
             void lite_item;
-            if ((((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_TYPE_OP))) && ((!(((lite_seenOps).has((lite_item).name))))))) {
+            if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_MODULE_START))) {
+                lite_insideSkip = ((((lite_skipModPath) !== (""))) && ((((lite_item).name) === (lite_skipModPath))));
+            } else if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_MODULE_END))) {
+                lite_insideSkip = false;
+            } else if ((((((!(lite_insideSkip))) && ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_TYPE_OP))))) && ((!(((lite_seenOps).has((lite_item).name))))))) {
                 ((lite_seenOps).add((lite_item).name), undefined);
                 lite_result.push(lite_item);
             }
@@ -41541,7 +41548,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_token;
         const lite_tokLen = lite$textLength(lite_token);
         void lite_tokLen;
-        if (((((lite_tokLen) === (0n))) || (((lite$textAt(lite_token, lite$subtractInt(lite_tokLen, 1n, 13564), 13539)) !== ("("))))) {
+        if (((((lite_tokLen) === (0n))) || (((lite$textAt(lite_token, lite$subtractInt(lite_tokLen, 1n, 13893), 13868)) !== ("("))))) {
             return false;
         }
         if ((!(liteFn$lib$core$text$startsWithAt(lite_token, 0n, lite_prefix)))) {
@@ -41569,14 +41576,14 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_hit) < (0n))) {
                 return false;
             }
-            const lite_tokStart = lite$addInt(lite_hit, 1n, 14262);
+            const lite_tokStart = lite$addInt(lite_hit, 1n, 14591);
             void lite_tokStart;
             const lite_nextBar = liteFn$lib$core$text$indexOfText(lite_reachable, "|", lite_tokStart);
             void lite_nextBar;
             const lite_tokEnd = (Boolean(((lite_nextBar) >= (0n))) ? lite_nextBar : lite$textLength(lite_reachable));
             void lite_tokEnd;
-            if (((((lite_tokEnd) > (lite_tokStart))) && (((lite$textAt(lite_reachable, lite$subtractInt(lite_tokEnd, 1n, 14477), 14448)) === ("("))))) {
-                const lite_token = lite$textSlice(lite_reachable, lite_tokStart, lite_tokEnd, 14512);
+            if (((((lite_tokEnd) > (lite_tokStart))) && (((lite$textAt(lite_reachable, lite$subtractInt(lite_tokEnd, 1n, 14806), 14777)) === ("("))))) {
+                const lite_token = lite$textSlice(lite_reachable, lite_tokStart, lite_tokEnd, 14841);
                 void lite_token;
                 if (((liteFn$_p__p_$_p__p_$compiler$src$modules$tokenBelongsToModuleFn(lite_target, lite_moduleKey, lite_prefix, lite_token)) && ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend$tokenBucketHas(new Set(lite_compiledFns), lite_token)))))) {
                     return true;
@@ -41633,13 +41640,13 @@ export function main(lite$write?: (text: string) => void): string {
                 continue;
             }
             if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_FUNCTION_START))) {
-                lite_fnDepth = lite$addInt(lite_fnDepth, 1n, 16604);
+                lite_fnDepth = lite$addInt(lite_fnDepth, 1n, 16933);
                 lite_nextIsPure = false;
                 continue;
             }
             if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_FUNCTION_END))) {
                 if (((lite_fnDepth) > (0n))) {
-                    lite_fnDepth = lite$subtractInt(lite_fnDepth, 1n, 16778);
+                    lite_fnDepth = lite$subtractInt(lite_fnDepth, 1n, 17107);
                 }
                 lite_nextIsPure = false;
                 continue;
@@ -41652,11 +41659,11 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_isPureDecl;
             lite_nextIsPure = false;
             if ((((((((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_SCOPE))) || ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_IF))))) || ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_LOOP))))) || ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_LOOP_SEQ))))) {
-                lite_blockDepth = lite$addInt(lite_blockDepth, 1n, 17229);
+                lite_blockDepth = lite$addInt(lite_blockDepth, 1n, 17558);
                 liteFn$_p__p_$_p__p_$compiler$src$frontend$codeReachableTokensSet((lite_item).code, lite_seed);
             } else if ((((((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_END_SCOPE))) || ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_END_IF))))) || ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_END_LOOP))))) {
                 if (((lite_blockDepth) > (0n))) {
-                    lite_blockDepth = lite$subtractInt(lite_blockDepth, 1n, 17504);
+                    lite_blockDepth = lite$subtractInt(lite_blockDepth, 1n, 17833);
                 }
             } else if ((((((((((((((((((!(lite_isPureDecl))) && ((((lite_item).kind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_IMPORT))))) && ((((lite_item).kind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_FUNCTION))))) && ((((lite_item).kind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_TYPE_OP))))) && ((((lite_item).kind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_VALUE))))) && ((((lite_item).kind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_TYPE))))) && ((((lite_item).kind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_NOOP))))) && ((((lite_item).kind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_SOURCE_LOC))))) && ((((lite_item).kind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_COMMENT))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$modules$scanItemTokens(lite_item, lite_seed);
@@ -41732,9 +41739,9 @@ export function main(lite$write?: (text: string) => void): string {
                             lite_result.push(lite_tok);
                         }
                     }
-                    lite_fnDepth = lite$addInt(lite_fnDepth, 1n, 20072);
+                    lite_fnDepth = lite$addInt(lite_fnDepth, 1n, 20401);
                 } else if ((((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_FUNCTION_END))) && (((lite_fnDepth) > (0n))))) {
-                    lite_fnDepth = lite$subtractInt(lite_fnDepth, 1n, 20196);
+                    lite_fnDepth = lite$subtractInt(lite_fnDepth, 1n, 20525);
                 }
             }
         }
@@ -41883,7 +41890,7 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_metaKeys.push((lite_item).runtime);
                 lite_metaDisplays.push((lite_item).code);
                 lite_metaIdentities.push((lite_item).textValue);
-                lite_metaCount = lite$addInt(lite_metaCount, 1n, 24751);
+                lite_metaCount = lite$addInt(lite_metaCount, 1n, 25080);
             } else if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_CORE_MODULE_SOURCE))) {
                 lite_metaSources.push((lite_item).code);
             }
@@ -41919,16 +41926,16 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_index = 0n;
             void lite_index;
             while (((lite_index) < (lite_metaCount))) {
-                const lite_modPath = lite$listAt((lite_metaPaths), lite_index, 25803);
+                const lite_modPath = lite$listAt((lite_metaPaths), lite_index, 26132);
                 void lite_modPath;
-                const lite_modKey = lite$listAt((lite_metaKeys), lite_index, 25842);
+                const lite_modKey = lite$listAt((lite_metaKeys), lite_index, 26171);
                 void lite_modKey;
                 if (liteFn$_p__p_$_p__p_$compiler$src$modules$coreModuleNeedsReparse(lite_target, lite_modKey, lite_reachable, new Set(lite_compiledFns))) {
-                    const lite_importedExports: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$appendTransitiveTypeOps([...(lite_graph)], [...(liteFn$_p__p_$_p__p_$compiler$src$modules$coreModuleExports([...(lite_graph)], lite_modPath))]))];
+                    const lite_importedExports: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$appendTransitiveTypeOps([...(lite_graph)], [...(liteFn$_p__p_$_p__p_$compiler$src$modules$coreModuleExports([...(lite_graph)], lite_modPath))], lite_modPath))];
                     void lite_importedExports;
                     const lite_beforeCount = BigInt((lite_compiledFns).size);
                     void lite_beforeCount;
-                    const lite_reparsed: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend$parseProgramWithModuleSelectiveSpecs(lite_target, lite$listAt((lite_metaSources), lite_index, 26193), lite$listAt((lite_metaDisplays), lite_index, 26239), [...(lite_importedExports)], lite_modKey, lite$listAt((lite_metaIdentities), lite_index, 26342), lite_reachable, ((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$TARGET_TS)), [...(lite_builtinSpecs)]))];
+                    const lite_reparsed: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend$parseProgramWithModuleSelectiveSpecs(lite_target, lite$listAt((lite_metaSources), lite_index, 26531), lite$listAt((lite_metaDisplays), lite_index, 26577), [...(lite_importedExports)], lite_modKey, lite$listAt((lite_metaIdentities), lite_index, 26680), lite_reachable, ((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$TARGET_TS)), [...(lite_builtinSpecs)]))];
                     void lite_reparsed;
                     lite_graph = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$replaceModuleItems([...(lite_graph)], lite_modPath, [...(lite_reparsed)]))];
                     lite_coreGraph = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$replaceModuleItems([...(lite_coreGraph)], lite_modPath, [...(lite_reparsed)]))];
@@ -41938,7 +41945,7 @@ export function main(lite$write?: (text: string) => void): string {
                         lite_anyReparsed = true;
                     }
                 }
-                lite_index = lite$addInt(lite_index, 1n, 26853);
+                lite_index = lite$addInt(lite_index, 1n, 27191);
             }
             const lite_moreMono: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend$drainGenericInstances(lite_target))];
             void lite_moreMono;
@@ -42077,24 +42084,24 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_depIdentities.push((lite_loaded).identity);
                 lite_depTexts.push((lite_loaded).text);
                 lite_depLogicals.push(liteFn$_p__p_$_p__p_$compiler$src$modules$logicalModuleName(lite_rootDir, (lite_loaded).path, (lite_loaded).display));
-                lite_depCount = lite$addInt(lite_depCount, 1n, 31947);
+                lite_depCount = lite$addInt(lite_depCount, 1n, 32285);
             }
         }
         const lite_sortedOrder: bigint[] = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$sortedDepIndices([...(lite_depLogicals)], [...(lite_depPaths)], lite_depCount))];
         void lite_sortedOrder;
         for (const lite_depIdx of (lite_sortedOrder)) {
             void lite_depIdx;
-            const lite_depPath = lite$listAt((lite_depPaths), lite_depIdx, 32100);
+            const lite_depPath = lite$listAt((lite_depPaths), lite_depIdx, 32438);
             void lite_depPath;
             if ((!(liteFn$_p__p_$_p__p_$compiler$src$modules$moduleVisited([...(lite_graph)], lite_depPath)))) {
-                lite_graph = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$visitSourceModule(lite_target, lite_depPath, lite$listAt((lite_depDisplays), lite_depIdx, 32228), lite$listAt((lite_depIdentities), lite_depIdx, 32262), lite$listAt((lite_depTexts), lite_depIdx, 32301), [...(lite_graph)], lite_projectRoot, lite_cwd, [...(lite_builtinSpecs)]))];
+                lite_graph = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$visitSourceModule(lite_target, lite_depPath, lite$listAt((lite_depDisplays), lite_depIdx, 32566), lite$listAt((lite_depIdentities), lite_depIdx, 32600), lite$listAt((lite_depTexts), lite_depIdx, 32639), [...(lite_graph)], lite_projectRoot, lite_cwd, [...(lite_builtinSpecs)]))];
             }
         }
         let lite_maxChildLevel = (-1n);
         void lite_maxChildLevel;
         for (const lite_depIdx of (lite_sortedOrder)) {
             void lite_depIdx;
-            const lite_depPath = lite$listAt((lite_depPaths), lite_depIdx, 32475);
+            const lite_depPath = lite$listAt((lite_depPaths), lite_depIdx, 32813);
             void lite_depPath;
             if (liteFn$_p__p_$_p__p_$compiler$src$modules$moduleProcessed([...(lite_graph)], lite_depPath)) {
                 const lite_childLevel = liteFn$_p__p_$_p__p_$compiler$src$modules$moduleLevelForPath([...(lite_graph)], lite_depPath);
@@ -42112,7 +42119,7 @@ export function main(lite$write?: (text: string) => void): string {
                 }
             }
         }
-        const lite_level = lite$addInt(lite_maxChildLevel, 1n, 32934);
+        const lite_level = lite$addInt(lite_maxChildLevel, 1n, 33272);
         void lite_level;
         let lite_importedExports: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...([])];
         void lite_importedExports;
@@ -42120,14 +42127,14 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_clauseIndex;
         for (const lite_clause of (lite_clauses)) {
             void lite_clause;
-            const lite_depPath = lite$listAt((lite_clausePaths), lite_clauseIndex, 33076);
+            const lite_depPath = lite$listAt((lite_clausePaths), lite_clauseIndex, 33414);
             void lite_depPath;
             if (liteFn$_p__p_$_p__p_$compiler$src$modules$moduleProcessed([...(lite_graph)], lite_depPath)) {
                 lite_importedExports = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$appendModuleExports([...(lite_importedExports)], [...(liteFn$_p__p_$_p__p_$compiler$src$modules$moduleAliasExports([...(lite_graph)], lite_depPath, (lite_clause).name))], lite_path))];
             }
-            lite_clauseIndex = lite$addInt(lite_clauseIndex, 1n, 33302);
+            lite_clauseIndex = lite$addInt(lite_clauseIndex, 1n, 33640);
         }
-        lite_importedExports = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$appendTransitiveTypeOps([...(lite_graph)], [...(lite_importedExports)]))];
+        lite_importedExports = [...(liteFn$_p__p_$_p__p_$compiler$src$modules$appendTransitiveTypeOps([...(lite_graph)], [...(lite_importedExports)], lite_path))];
         const lite_isCoreMod = (((!(lite_isRoot))) && ((liteFn$_p__p_$_p__p_$compiler$src$builtins__abi$isHostModuleIdentity(lite_identity))));
         void lite_isCoreMod;
         const lite_localItems: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...((Boolean(lite_isCoreMod) ? [...(liteFn$_p__p_$_p__p_$compiler$src$frontend$parseProgramWithModuleSelectiveSpecs(lite_target, lite_source, lite_display, [...(lite_importedExports)], lite_moduleKey, lite_identity, "|", ((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$TARGET_TS)), [...(lite_builtinSpecs)]))] : [...(liteFn$_p__p_$_p__p_$compiler$src$frontend$parseProgramWithModule(lite_target, lite_source, lite_display, [...(lite_importedExports)], lite_moduleKey, lite_identity))]))];
@@ -42145,8 +42152,8 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_importIndex;
             for (const lite_clause of (lite_clauses)) {
                 void lite_clause;
-                lite_graph.push({ kind: lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_CORE_MODULE_IMPORT, name: lite_path, runtime: (lite_clause).name, code: lite$listAt((lite_clausePaths), lite_importIndex, 34880), intValue: 0n, textValue: "" });
-                lite_importIndex = lite$addInt(lite_importIndex, 1n, 34964);
+                lite_graph.push({ kind: lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_CORE_MODULE_IMPORT, name: lite_path, runtime: (lite_clause).name, code: lite$listAt((lite_clausePaths), lite_importIndex, 35224), intValue: 0n, textValue: "" });
+                lite_importIndex = lite$addInt(lite_importIndex, 1n, 35308);
             }
         }
         lite_graph.push({ kind: lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_MODULE_PROCESSED, name: lite_path, runtime: lite_moduleKey, code: lite_logical, intValue: lite_level, textValue: "" });
@@ -42173,34 +42180,34 @@ export function main(lite$write?: (text: string) => void): string {
         for (const lite_item of (lite_graph)) {
             void lite_item;
             if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_MODULE_START))) {
-                lite_startIndices.push(lite$addInt(lite_index, 1n, 35745));
+                lite_startIndices.push(lite$addInt(lite_index, 1n, 36089));
                 lite_startLevels.push((lite_item).intValue);
                 lite_startLogicals.push((lite_item).code);
                 lite_startPaths.push((lite_item).name);
-                lite_moduleCount = lite$addInt(lite_moduleCount, 1n, 35968);
+                lite_moduleCount = lite$addInt(lite_moduleCount, 1n, 36312);
             }
-            lite_index = lite$addInt(lite_index, 1n, 36005);
+            lite_index = lite$addInt(lite_index, 1n, 36349);
         }
-        const lite_order: bigint[] = [...(liteFn$lib$util$collections$sortIndicesBy(lite_moduleCount, (function (lite_a: bigint, lite_b: bigint): boolean { void lite_a; void lite_b; return (Boolean(((lite$listAt((lite_startLevels), lite_a, 36118)) !== (lite$listAt((lite_startLevels), lite_b, 36137)))) ? ((lite$listAt((lite_startLevels), lite_a, 36166)) < (lite$listAt((lite_startLevels), lite_b, 36183))) : (() => {
-            const lite_cmpLogical = liteFn$_p__p_$_p__p_$compiler$src$modules$compareText(lite$listAt((lite_startLogicals), lite_a, 36255), lite$listAt((lite_startLogicals), lite_b, 36273));
+        const lite_order: bigint[] = [...(liteFn$lib$util$collections$sortIndicesBy(lite_moduleCount, (function (lite_a: bigint, lite_b: bigint): boolean { void lite_a; void lite_b; return (Boolean(((lite$listAt((lite_startLevels), lite_a, 36462)) !== (lite$listAt((lite_startLevels), lite_b, 36481)))) ? ((lite$listAt((lite_startLevels), lite_a, 36510)) < (lite$listAt((lite_startLevels), lite_b, 36527))) : (() => {
+            const lite_cmpLogical = liteFn$_p__p_$_p__p_$compiler$src$modules$compareText(lite$listAt((lite_startLogicals), lite_a, 36599), lite$listAt((lite_startLogicals), lite_b, 36617));
             void lite_cmpLogical;
-            return (Boolean(((lite_cmpLogical) !== (0n))) ? ((lite_cmpLogical) < (0n)) : ((liteFn$_p__p_$_p__p_$compiler$src$modules$compareText(lite$listAt((lite_startPaths), lite_a, 36359), lite$listAt((lite_startPaths), lite_b, 36374))) <= (0n)));
+            return (Boolean(((lite_cmpLogical) !== (0n))) ? ((lite_cmpLogical) < (0n)) : ((liteFn$_p__p_$_p__p_$compiler$src$modules$compareText(lite$listAt((lite_startPaths), lite_a, 36703), lite$listAt((lite_startPaths), lite_b, 36718))) <= (0n)));
         })()); })))];
         void lite_order;
         const lite_result: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [...([])];
         void lite_result;
         for (const lite_best of (lite_order)) {
             void lite_best;
-            let lite_itemIndex = lite$listAt((lite_startIndices), lite_best, 36503);
+            let lite_itemIndex = lite$listAt((lite_startIndices), lite_best, 36847);
             void lite_itemIndex;
             while (Boolean(true)) {
-                const lite_entry = lite$listAt((lite_graph), lite_itemIndex, 36557);
+                const lite_entry = lite$listAt((lite_graph), lite_itemIndex, 36901);
                 void lite_entry;
                 if ((((lite_entry).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_MODULE_END))) {
                     break;
                 }
                 lite_result.push(lite_entry);
-                lite_itemIndex = lite$addInt(lite_itemIndex, 1n, 36722);
+                lite_itemIndex = lite$addInt(lite_itemIndex, 1n, 37066);
             }
         }
         return [...(lite_result)];

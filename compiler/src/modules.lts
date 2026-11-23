@@ -301,15 +301,20 @@ appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, pr
     result
 }
 
-/** Collects all `PublicTypeOp` declarations across already-processed modules in `graph`, deduplicated by canonical key. */
-appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items): frontend.Items {
+/** Collects all `PublicTypeOp` declarations across already-processed modules in `graph` (excluding `skipModPath`), deduplicated by canonical key. */
+appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, skipModPath: String): frontend.Items {
     var result: mut frontend.Items = existing;
     seenOps: mut Set<String>;
     loop existing as prev {
         if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP { setLib.add(mut seenOps, prev.name); }
     }
+    var insideSkip := false;
     loop graph as item {
-        if item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and not setLib.has(seenOps, item.name) {
+        if item.kind == frontend.ITEM_KIND_MODULE_START {
+            insideSkip = skipModPath =!= "" and item.name == skipModPath;
+        } else if item.kind == frontend.ITEM_KIND_MODULE_END {
+            insideSkip = false;
+        } else if not insideSkip and item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and not setLib.has(seenOps, item.name) {
             setLib.add(mut seenOps, item.name);
             listLib.pushBack(mut result, item);
         }
@@ -619,7 +624,7 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
             modPath := metaPaths[index];
             modKey := metaKeys[index];
             if coreModuleNeedsReparse(target, modKey, reachable, compiledFns) {
-                importedExports := appendTransitiveTypeOps(graph, coreModuleExports(graph, modPath));
+                importedExports := appendTransitiveTypeOps(graph, coreModuleExports(graph, modPath), modPath);
                 beforeCount := setLib.size(compiledFns);
                 reparsed := frontend.parseProgramWithModuleSelectiveSpecs(=target, source = metaSources[index],
                 prefix = metaDisplays[index], exports = importedExports, moduleKey = modKey,
@@ -770,7 +775,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
         clauseIndex = clauseIndex + 1;
     }
-    importedExports = appendTransitiveTypeOps(graph, importedExports);
+    importedExports = appendTransitiveTypeOps(graph, importedExports, path);
 
     isCoreMod := not isRoot and frontend.isHostModuleIdentity(identity);
     localItems := if isCoreMod {
