@@ -1059,7 +1059,7 @@ test('formatCodeView simplifies Program identifiers without collisions on TS and
     '        const lite_msg = "lite_x liteFn_foo lt_s2_x";',
     '        lite$emit((lite_x$2 + lite_x_2 + lite_class + lite_Number + lite_pair.x + lite$m$left$util$val + lite$m$right$util$val).toString() + liteFn$left$util$tag() + liteFn$right$util$tag() + lite_msg + "\\n");',
     '    }',
-    '    return lite$out;',
+    '    return lite$out.join("");',
     '}',
   ].join('\n');
 
@@ -1726,7 +1726,7 @@ test('stripLiteTs and formatCodeView handle construct-level finally and abrupt u
 
   const programView = formatCodeView(faultTs, 'ts', 'program');
   assert(!programView.includes('lite$abrupt'), programView);
-  assert(!programView.includes('return lite$out;'), programView);
+  assert(!programView.includes('return lite$out.join("")'), programView);
 
   const faultRes = runStripped(faultTs);
   assert.equal(faultRes.exitCode, 1);

@@ -50,7 +50,6 @@ run := fn(): Int {
         return 1;
     }
     extRoot := path.join(root, "editors/vscode");
-    _rmLegacyDist := fs.remove(path.join(extRoot, "dist"));
     distDir := path.join(root, "dist/vscode");
     mkRes := fs.makeDir(distDir);
     if not mkRes.ok {

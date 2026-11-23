@@ -79,13 +79,12 @@ test('highlightLite highlights newer built-in types and operators', () => {
 
   const programView = formatCodeView([
     'export function main(): string {',
-    '    let lite$out = "";',
+    '    const lite$out: string[] = [];',
     '    let lite$val1: bigint = 0n;',
     '    void lite$val1;',
-    '    void lite$cnt1;',
     '    lite$val1 = 5n;',
     '    lite$emit(String(lite$val1) + "\\n");',
-    '    return lite$out;',
+    '    return lite$out.join("");',
     '}',
   ].join('\n'), 'ts', 'program');
   assert(!programView.includes('void lite$'));
@@ -179,12 +178,12 @@ test('stripLiteTs strips Map<K, V> generic args and non-null assertions before c
 
 test('stripLiteTs strips comma-separated typed declarators in for headers and let lists', () => {
   const src = [
-    'let lite$sum: bigint = 0n;',
-    'for (let lite$iter1: bigint = 1n, lite$rend1: bigint = 5n; lite$iter1 <= lite$rend1; lite$iter1 += 1n) {',
-    '  lite$sum += lite$iter1;',
+    'let lite_sum: bigint = 0n;',
+    'for (let i: bigint = 1n, _end: bigint = 5n; i <= _end; i += 1n) {',
+    '  lite_sum += i;',
     '}',
     'const pair = { left: 2n, right: 3n }, extra: bigint = 4n;',
-    'return lite$sum + pair.left + pair.right + extra;',
+    'return lite_sum + pair.left + pair.right + extra;',
   ].join('\n');
   const stripped = stripLiteTs(src);
   assert(!stripped.includes(': bigint'), stripped);

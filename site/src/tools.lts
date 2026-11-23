@@ -208,7 +208,7 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     + "        <span class=\"status-pill status-pill-selected\">TextMate Grammar</span>\n"
     + "      </div>\n"
     + "      <p>\n"
-    + "        The local Lite extension provides approximate lexical highlighting for <code>.lt</code>, <code>.lts</code>, and legacy <code>.lite</code>\n"
+    + "        The local Lite extension provides approximate lexical highlighting for <code>.lt</code> and <code>.lts</code>\n"
     + "        files without spawning a language server. It handles nested block comments, raw fenced comments, multiline double-quoted strings,\n"
     + "        colon-prefixed floor operators (<code>:/</code>, <code>:%</code>, <code>:/=</code>, <code>:%=</code>), and <code>@tag</code> loop markers.\n"
     + "      </p>\n"

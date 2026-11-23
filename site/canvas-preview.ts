@@ -45,7 +45,7 @@ export function captureCanvasPreview(generatedTs: string, title: string): string
   if (snapFn === undefined || opsFn === undefined) return undefined;
 
   let runnable = stripLiteTs(generatedTs);
-  const tailReturn = /return (?:lite\$out(?:\.join\(""\))?|"");\s*\}\s*$/;
+  const tailReturn = /return (?:lite\$out\.join\(""\)|"");\s*\}\s*$/;
   if (!tailReturn.test(runnable)) return undefined;
   runnable = runnable.replace(tailReturn, [
     'const __pick = (a, b) => (typeof a === "function" ? a : typeof b === "function" ? b : null);',

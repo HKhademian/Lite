@@ -54,10 +54,8 @@ function extractTsProgram(source: string): string {
     const trimmed = line.trim();
 
     if (
-      trimmed === 'let lite$out = "";' ||
       trimmed === 'const lite$out: string[] = [];' ||
       trimmed === 'lite$out = [];' ||
-      trimmed === 'return lite$out;' ||
       trimmed === 'return lite$out.join("");' ||
       (trimmed === 'return "";' && i === body.length - 1)
     ) {
