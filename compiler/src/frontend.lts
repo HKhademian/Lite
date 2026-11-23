@@ -569,11 +569,6 @@ pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuc
 pub OptClass := type optCfg.OptClass;
 pub OptConfig := type optCfg.OptConfig;
 pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optCfg.OptConfig): Items { reach.filterReachableItemsWithConfig(items, target, cfg) };
-/** Filters `items` to only those reachable for `target` at default optimization level. */
-pub filterReachableItemsForTarget := fn(items: Items, target: String): Items { reach.filterReachableItemsForTarget(items, target) };
-
-/** Removes unreachable top-level function bodies and side-effect-free declarations for TS emission. */
-pub filterReachableItems := fn(items: Items): Items { reach.filterReachableItems(items) };
 
 /** Reads one raw alias target type from `position`, capturing a parenthesized tuple type or a generic `List<...>` application through its matching close, or a single name. */
 collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: String, next: Int) { types.collectTypeTarget(source, position, prefix) };
@@ -954,7 +949,7 @@ parseImportClause := fn(target: String, source: String, position: Int, alias: St
 /** Collects top-level import clauses before parsing so imported declarations can seed the importing file's symbol table. */
 pub collectImportClauses := fn(target: String, source: String, prefix: String): Items { infer.collectImportClauses(target, source, prefix) };
 
-/** Parses one legacy or imported output statement into the same ordered argument group and ending marker. */
+/** Parses one imported `io.output` / `io.outputLine` statement into its ordered argument group and ending marker. */
 parseOutputStatement := fn(target: String, source: String, openPosition: Int, outputName: String, prefix: String,
 locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
 live: Bool, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Items {

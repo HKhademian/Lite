@@ -2742,17 +2742,6 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     tsSourceMapMode = prevSourceMap;
 }
 
-/** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications at default `-O1`. */
-pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
-    emitProgramWithConfig(items, source, prefix, builtinSpecs, optCfg.presetConfig(optCfg.OptClass.O1, frontend.TARGET_TS));
-}
-
-/** Emits the TS module from the flat item stream to stdout using default builtin modes. */
-pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
-    emptySpecs: List<String> = [];
-    emitProgramWithConfig(items, source, prefix, emptySpecs, optCfg.presetConfig(optCfg.OptClass.O1, frontend.TARGET_TS));
-}
-
 /** Emits the TS module into `writer` driven by composable `OptConfig`. */
 pub emitProgramToWithConfig := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     tsOutUseWriter = true;
@@ -2761,8 +2750,3 @@ pub emitProgramToWithConfig := fn(writer: io.Writer, items: frontend.Items, sour
     emitProgramWithConfig(items, source, prefix, builtinSpecs, config);
     tsOutUseWriter = false;
 };
-
-/** Emits the TS module from the flat item stream into `writer` at default `-O1`. */
-pub emitProgramTo := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
-    emitProgramToWithConfig(writer, items, source, prefix, builtinSpecs, optCfg.presetConfig(optCfg.OptClass.O1, frontend.TARGET_TS));
-}
