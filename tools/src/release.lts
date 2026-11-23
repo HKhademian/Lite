@@ -11,6 +11,7 @@ path := import "core/path";
 json := import "util/json";
 project := import "util/project";
 rel := import "util/release";
+tb := import "util/text-builder";
 
 failRelease := fn(workToClean: String, message: String): Unit {
     if workToClean =!= "" {
@@ -433,13 +434,13 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     if not wrNotes.ok { failRelease(work, wrNotes.error); }
 
     sumFiles := fs.listDir(output);
-    var sums := "";
+    sums: mut tb.TextBuilder;
     loop sumFiles as file {
         dRes := crypto.sha256File(path.join(output, file));
         if not dRes.ok { failRelease(work, dRes.error); }
-        sums = sums + dRes.hex + "  " + file + "\n";
+        tb.appendLine(mut sums, dRes.hex + "  " + file);
     }
-    wrSums := fs.writeText(path.join(output, "SHA256SUMS"), sums);
+    wrSums := fs.writeText(path.join(output, "SHA256SUMS"), tb.build(sums));
     if not wrSums.ok { failRelease(work, wrSums.error); }
 
     rmWork := fs.remove(work);

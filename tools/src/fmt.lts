@@ -7,6 +7,7 @@ text := import "core/text";
 list := import "core/list";
 path := import "core/path";
 project := import "util/project";
+tb := import "util/text-builder";
 
 scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, netChange: Int, normalized: String, inBlockComment: Bool) {
     var inBlock := startInBlock;
@@ -14,7 +15,8 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
     var leadingCloses := 0;
     var sawCode := false;
     var netChange := 0;
-    var out := "";
+    out: mut tb.TextBuilder;
+    var runStart := 0;
     var lastChar := "";
     lineLen := text.length(line);
     var i := 0;
@@ -22,10 +24,8 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
     loop i < lineLen {
         ch := text.at(line, i);
         if inBlock {
-            out = out + ch;
             lastChar = ch;
             if ch == "*" and i + 1 < lineLen and text.at(line, i + 1) == "/" {
-                out = out + "/";
                 lastChar = "/";
                 inBlock = false;
                 i = i + 2;
@@ -33,11 +33,9 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
                 i = i + 1;
             }
         } else if inString =!= "" {
-            out = out + ch;
             lastChar = ch;
             if ch == "\\" and i + 1 < lineLen {
                 nextCh := text.at(line, i + 1);
-                out = out + nextCh;
                 lastChar = nextCh;
                 i = i + 2;
             } else {
@@ -45,10 +43,9 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
                 i = i + 1;
             }
         } else if ch == "/" and i + 1 < lineLen and text.at(line, i + 1) == "/" {
-            out = out + text.slice(line, i, lineLen);
+            i = lineLen;
             break;
         } else if ch == "/" and i + 1 < lineLen and text.at(line, i + 1) == "*" {
-            out = out + "/*";
             lastChar = "*";
             inBlock = true;
             sawCode = true;
@@ -56,38 +53,44 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
         } else if ch == "\"" or ch == "'" {
             inString = ch;
             sawCode = true;
-            out = out + ch;
             lastChar = ch;
             i = i + 1;
         } else if ch == "}" {
             if not sawCode { leadingCloses = leadingCloses + 1; } else { netChange = netChange - 1; }
-            out = out + "}";
             lastChar = "}";
             sawCode = true;
             if i + 1 < lineLen and text.isAsciiLetter(text.at(line, i + 1)) {
-                out = out + " ";
+                tb.append(mut out, text.slice(line, runStart, i + 1));
+                tb.append(mut out, " ");
+                runStart = i + 1;
                 lastChar = " ";
             }
             i = i + 1;
         } else if ch == "{" {
             if lastChar =!= "" and not text.isWhitespace(lastChar) and lastChar =!= "(" and lastChar =!= "[" {
-                out = out + " ";
+                if i > runStart { tb.append(mut out, text.slice(line, runStart, i)); }
+                tb.append(mut out, " ");
+                runStart = i;
             }
             netChange = netChange + 1;
-            out = out + "{";
             lastChar = "{";
             sawCode = true;
             i = i + 1;
         } else {
             if not text.isWhitespace(ch) { sawCode = true; }
-            out = out + ch;
             lastChar = ch;
             i = i + 1;
         }
     }
 
+    normalizedRaw := if runStart == 0 {
+        line
+    } else {
+        if runStart < lineLen { tb.append(mut out, text.slice(line, runStart, lineLen)); }
+        tb.build(out)
+    };
     totalNet := netChange - leadingCloses;
-    (leadingCloses = leadingCloses, netChange = totalNet, normalized = text.trimEnd(out), inBlockComment = inBlock)
+    (leadingCloses = leadingCloses, netChange = totalNet, normalized = text.trimEnd(normalizedRaw), inBlockComment = inBlock)
 }
 
 /** Formats Lite source text cleanly and idempotently (4-space indentation, LF, single trailing newline). */

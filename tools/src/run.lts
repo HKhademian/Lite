@@ -9,6 +9,7 @@ list := import "core/list";
 path := import "core/path";
 project := import "util/project";
 compilerBuild := import "util/compiler-build";
+tb := import "util/text-builder";
 
 usageExit := fn(): Unit {
     io.errorLine("Usage: ./bin/lite run [--target ts|c] [-O0|-O1|-O2|-O3] [--builtin-mode SPEC]... [--play [--scale N] [--fps N|--uncap] [--capture PNG]] file.lts [-- argument ...]");
@@ -34,17 +35,22 @@ parsePosInt := fn(raw: String): Int {
 };
 
 escapeLiteString := fn(raw: String): String {
-    var out := "";
+    out: mut tb.TextBuilder;
     n := text.length(raw);
+    var runStart := 0;
     var i := 0;
     loop i < n {
         ch := text.at(raw, i);
-        if ch == "\\" { out = out + "\\\\"; }
-        else if ch == "\"" { out = out + "\\\""; }
-        else { out = out + ch; }
+        if ch == "\\" or ch == "\"" {
+            if i > runStart { tb.append(mut out, text.slice(raw, runStart, i)); }
+            tb.append(mut out, if ch == "\\" { "\\\\" } else { "\\\"" });
+            runStart = i + 1;
+        }
         i += 1;
     }
-    out
+    if runStart == 0 { return raw; }
+    if runStart < n { tb.append(mut out, text.slice(raw, runStart, n)); }
+    tb.build(out)
 };
 
 splitLines := fn(source: String): List<String> {
