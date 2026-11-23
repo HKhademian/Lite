@@ -64,6 +64,9 @@ contract or select new language syntax. For the planned migration of hardcoded
 built-in dot access (`List`, `Array`, `Map`, `Set`, `String`) to hard/soft/pure
 declarations in `lib/core/*.lts`, see
 [type-operations and builtin dot-access migration](lite://doc/compiler/type-operations-migration-plan).
+For the compiler data-structure, C11 string runtime, and v2 tokenized/typed-IR
+pipeline roadmap, see
+[compiler architecture and performance roadmap](lite://repo/compiler/architecture-roadmap.md).
 
 ## Bootstrap source subset
 
