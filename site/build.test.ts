@@ -482,10 +482,12 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(editorClientJs.includes("event.key === 'Tab'"));
   assert(playground.includes('id="pg-generated-code"'));
   assert(playground.includes('id="pg-share"'));
-  assert(playground.includes('id="pg-opt-level"'));
-  assert(playground.includes('<option value="1" selected>-O1</option>'));
-  assert(playground.includes('<option value="3">-O3</option>'));
-  assert(playground.includes('<option value="4">-Os</option>'));
+  assert(!playground.includes('id="pg-opt-level"'), 'redundant toolbar opt-level dropdown should be removed in favor of Options dialog');
+  assert(playground.includes('id="pg-opts-preset"'));
+  assert(playground.includes('<option value="1" selected>-O1 (Default CLI)</option>'));
+  assert(playground.includes('<option value="3">-O3 (Aggressive + inline)</option>'));
+  assert(playground.includes('<option value="4">-Os (Compact size)</option>'));
+  assert(playground.includes('<option value="5">-Oc (Custom zero baseline)</option>'));
   const workerJs = readFileSync(join(out, 'playground', 'worker.js'), 'utf8');
   assert(workerJs.includes("'-O' + String(level)"));
   assert(playground.includes('id="pg-editor-gutter"'));

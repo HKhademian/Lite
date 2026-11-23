@@ -14,7 +14,6 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   const splitEl = document.getElementById("pg-split");
   const resetBtn = document.getElementById("pg-reset");
   const shareBtn = document.getElementById("pg-share");
-  const optLevelEl = document.getElementById("pg-opt-level");
   const compileBtn = document.getElementById("pg-compile");
   const playBtn = document.getElementById("pg-play");
   const pauseBtn = document.getElementById("pg-pause");
@@ -181,7 +180,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   }
 
   function readOptLevel() {
-    const raw = optLevelEl ? Number(optLevelEl.value) : compilerOpts.preset;
+    const raw = Number(compilerOpts.preset);
     return Number.isInteger(raw) && raw >= 0 && raw <= 5 ? raw : 1;
   }
   function formatOptFlag(level) {
@@ -217,7 +216,6 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     } catch {}
   }
   function syncCompilerOptsUi() {
-    if (optLevelEl) optLevelEl.value = String(compilerOpts.preset);
     if (compilerOptsPresetEl) compilerOptsPresetEl.value = String(compilerOpts.preset);
     if (compilerOptsEmitFmtEl) compilerOptsEmitFmtEl.value = compilerOpts.emitFormat;
     if (compilerOptsSourceMapEl) compilerOptsSourceMapEl.value = compilerOpts.sourceMap;
@@ -256,24 +254,6 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   function invalidateCompiledCache() {
     lastCSource = null;
     lastCOptLevel = null;
-  }
-  if (optLevelEl) {
-    optLevelEl.addEventListener("change", () => {
-      const lv = readOptLevel();
-      compilerOpts.preset = lv;
-      saveCompilerOpts();
-      syncCompilerOptsUi();
-      invalidateCompiledCache();
-      if (activeTab === "generated") {
-        if (activeGenLang === "c") void compileCForEditor();
-        else void runAction("compile");
-      } else if (activeTab === "canvas" && tabCanvas && !tabCanvas.disabled) {
-        void runAction("play");
-      } else {
-        statusEl.hidden = false;
-        statusEl.textContent = "Compiler options: " + compilerFlagsKey().trim();
-      }
-    });
   }
   if (compilerOptsBtn && compilerOptsModal) {
     compilerOptsBtn.addEventListener("click", () => {
@@ -1479,9 +1459,13 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       let nextOpt = readOptLevel();
       for (const tok of rest) {
         if (tok === "-Os") nextOpt = 4;
+        else if (tok === "-Oc") nextOpt = 5;
         else if (/^-O[0-3]$/.test(tok)) nextOpt = Number(tok.slice(2));
       }
-      if (optLevelEl) optLevelEl.value = String(nextOpt);
+      compilerOpts.preset = nextOpt;
+      saveCompilerOpts();
+      syncCompilerOptsUi();
+      invalidateCompiledCache();
       void runAction("compile", { optLevel: nextOpt });
       return;
     }
