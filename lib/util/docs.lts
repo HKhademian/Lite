@@ -4,6 +4,7 @@ fs := import "core/file";
 integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
+map := import "core/map";
 path := import "core/path";
 json := import "util/json";
 md := import "util/markdown";
@@ -223,15 +224,17 @@ parseLiteUri := fn(rawTarget: String): (ok: Bool, ns: String, target: String, fr
 
 checkFragmentInMd := fn(
 destination: String, fragment: String,
-cachePaths: List<String>, cachePacked: List<String>
+anchorCache: mut Map<String, String>
 ): Bool {
     if fragment == "" { return true; }
-    cacheIdx := list.listIndexOfText(cachePaths, destination);
-    packed := if cacheIdx >= 0 {
-        cachePacked[cacheIdx]
+    cached := map.get(anchorCache, destination);
+    packed := if cached.found {
+        cached.value
     } else {
         targetRead := fs.readText(destination);
-        if targetRead.ok { packAnchors(md.collectAnchors(targetRead.text)) } else { "\n" }
+        built := if targetRead.ok { packAnchors(md.collectAnchors(targetRead.text)) } else { "\n" };
+        map.set(mut anchorCache, destination, built);
+        built
     };
     text.containsText(packed, "\n" + fragment + "\n")
 };
@@ -494,7 +497,7 @@ resolveLiteBrandSource := fn(directory: String, rawTarget: String): String {
 
 checkLiteUri := fn(
 directory: String, relPath: String, rawTarget: String,
-cachePaths: List<String>, cachePacked: List<String>
+anchorCache: mut Map<String, String>
 ): String {
     parsed := parseLiteUri(rawTarget);
     if not parsed.ok {
@@ -509,7 +512,7 @@ cachePaths: List<String>, cachePacked: List<String>
         if dest == "" {
             return relPath + ": missing lite://brand target " + rawTarget;
         }
-        if fragment =!= "" and text.endsWith(dest, ".md") and not checkFragmentInMd(dest, fragment, cachePaths, cachePacked) {
+        if fragment =!= "" and text.endsWith(dest, ".md") and not checkFragmentInMd(dest, fragment, mut anchorCache) {
             return relPath + ": missing fragment in " + rawTarget;
         }
         return "";
@@ -523,7 +526,7 @@ cachePaths: List<String>, cachePacked: List<String>
         if destKind == fs.FILE_KIND_MISSING {
             return relPath + ": missing lite://repo target " + rawTarget;
         }
-        if fragment =!= "" and destKind == fs.FILE_KIND_FILE and text.endsWith(dest, ".md") and not checkFragmentInMd(dest, fragment, cachePaths, cachePacked) {
+        if fragment =!= "" and destKind == fs.FILE_KIND_FILE and text.endsWith(dest, ".md") and not checkFragmentInMd(dest, fragment, mut anchorCache) {
             return relPath + ": missing fragment in " + rawTarget;
         }
         return "";
@@ -539,7 +542,7 @@ cachePaths: List<String>, cachePacked: List<String>
         if fs.kind(dest) =!= fs.FILE_KIND_FILE {
             return relPath + ": missing lite://handbook target " + rawTarget;
         }
-        if fragment =!= "" and not checkFragmentInMd(dest, fragment, cachePaths, cachePacked) {
+        if fragment =!= "" and not checkFragmentInMd(dest, fragment, mut anchorCache) {
             return relPath + ": missing fragment in " + rawTarget;
         }
         return "";
@@ -549,7 +552,7 @@ cachePaths: List<String>, cachePacked: List<String>
         if not res.found {
             return relPath + ": missing lite://doc target " + rawTarget;
         }
-        if not res.isVirtualIndex and fragment =!= "" and not checkFragmentInMd(res.filePath, fragment, cachePaths, cachePacked) {
+        if not res.isVirtualIndex and fragment =!= "" and not checkFragmentInMd(res.filePath, fragment, mut anchorCache) {
             return relPath + ": missing fragment in " + rawTarget;
         }
         return "";
@@ -624,8 +627,7 @@ cachePaths: List<String>, cachePacked: List<String>
 /** Verifies Markdown fences, links, heading fragments, and `config/documentation.json` entries under `directory`. */
 pub checkDocuments := fn(directory: String): List<String> {
     failures: mut List<String> = [];
-    cachePaths: mut List<String> = [];
-    cachePacked: mut List<String> = [];
+    anchorCache: mut Map<String, String>;
     files := listDocFiles(directory);
 
     loop files as fullFile {
@@ -641,7 +643,7 @@ pub checkDocuments := fn(directory: String): List<String> {
             links := md.extractLinkTargets(md.stripCodeBlocks(docText));
             loop links as rawTarget {
                 if isLiteUri(rawTarget) {
-                    uriErr := checkLiteUri(directory, relPath, rawTarget, cachePaths, cachePacked);
+                    uriErr := checkLiteUri(directory, relPath, rawTarget, mut anchorCache);
                     if uriErr =!= "" {
                         list.pushBack(mut failures, uriErr);
                     }
@@ -659,17 +661,7 @@ pub checkDocuments := fn(directory: String): List<String> {
                         if destKind == fs.FILE_KIND_MISSING {
                             list.pushBack(mut failures, relPath + ": missing link " + target);
                         } else if fragment =!= "" and path.extName(destination) == ".md" and destKind == fs.FILE_KIND_FILE {
-                            cacheIdx := list.listIndexOfText(cachePaths, destination);
-                            var packed := "";
-                            if cacheIdx >= 0 {
-                                packed = cachePacked[cacheIdx];
-                            } else {
-                                targetRead := fs.readText(destination);
-                                packed = if targetRead.ok { packAnchors(md.collectAnchors(targetRead.text)) } else { "\n" };
-                                list.pushBack(mut cachePaths, destination);
-                                list.pushBack(mut cachePacked, packed);
-                            }
-                            if not text.containsText(packed, "\n" + fragment + "\n") {
+                            if not checkFragmentInMd(destination, fragment, mut anchorCache) {
                                 list.pushBack(mut failures, relPath + ": missing fragment " + target);
                             }
                         }

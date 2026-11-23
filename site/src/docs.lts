@@ -3,7 +3,9 @@
 fs := import "core/file";
 integer := import "core/int";
 list := import "core/list";
+map := import "core/map";
 path := import "core/path";
+set := import "core/set";
 text := import "core/text";
 challenges := import "util/challenges";
 json := import "util/json";
@@ -66,8 +68,11 @@ listSortedMdInDir := fn(dirPath: String): List<String> {
     out
 };
 
-claimOutPath := fn(usedOut: List<String>, preferred: String): String {
-    if not list.listContainsText(usedOut, preferred) { return preferred; }
+claimOutPath := fn(usedOut: mut Set<String>, preferred: String): String {
+    if not set.has(usedOut, preferred) {
+        set.add(mut usedOut, preferred);
+        return preferred;
+    }
     stem := if text.endsWith(preferred, ".html") {
         text.slice(preferred, 0, text.length(preferred) - 5)
     } else {
@@ -77,14 +82,19 @@ claimOutPath := fn(usedOut: List<String>, preferred: String): String {
     var idx := 2;
     loop {
         cand := stem + "-" + integer.intText(idx) + ext;
-        if not list.listContainsText(usedOut, cand) { return cand; }
+        if not set.has(usedOut, cand) {
+            set.add(mut usedOut, cand);
+            return cand;
+        }
         idx = idx + 1;
     }
     preferred
 };
 
-loadVerifiedDocsList := fn(rootDir: String): List<String> {
-    out: mut List<String> = ["docs/start-here.md", "docs/tour.md"];
+loadVerifiedDocsSet := fn(rootDir: String): Set<String> {
+    out: mut Set<String>;
+    set.add(mut out, "docs/start-here.md");
+    set.add(mut out, "docs/tour.md");
     catalogPath := path.join(rootDir, "language/showcases/catalog.json");
     if fs.kind(catalogPath) =!= fs.FILE_KIND_FILE { return out; }
     catRead := fs.readText(catalogPath);
@@ -97,9 +107,7 @@ loadVerifiedDocsList := fn(rootDir: String): List<String> {
         if not topF.found { continue; }
         loop json.arrayElementOffsets(catJson, topF.valuePos) as tp {
             loop challenges.readStringArray(catJson, tp, "docs") as dPath {
-                if not list.listContainsText(out, dPath) {
-                    list.pushBack(mut out, dPath);
-                }
+                set.add(mut out, dPath);
             }
         }
     }
@@ -192,23 +200,22 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         hi = hi + 1;
     }
 
-    verifiedDocs := loadVerifiedDocsList(rootDir);
-    usedOut: mut List<String> = [];
+    verifiedDocs := loadVerifiedDocsSet(rootDir);
+    usedOut: mut Set<String>;
 
     startOrder: List<String> = [
     "docs/README.md", "docs/start-here.md", "docs/tour.md", "docs/white-paper.md",
     "docs/principles.md", "docs/decisions-and-open-questions.md", "docs/spec/README.md",
     "docs/normative-pages.md", "docs/grammar-sketch.md"
     ];
-    startSeen: mut List<String> = [];
+    startSeen: mut Set<String>;
     loop startOrder as src {
         if fs.kind(path.join(rootDir, src)) == fs.FILE_KIND_FILE {
-            list.pushBack(mut startSeen, src);
+            set.add(mut startSeen, src);
             base := if src == "docs/README.md" { "overview.html" }
             else if src == "docs/spec/README.md" { "spec-overview.html" }
             else { siteLib.posixBasename(src, ".md") + ".html" };
-            outPath := claimOutPath(usedOut, "docs/design/" + base);
-            list.pushBack(mut usedOut, outPath);
+            outPath := claimOutPath(mut usedOut, "docs/design/" + base);
             list.pushBack(mut metaSrcs, src);
             list.pushBack(mut metaOuts, outPath);
             list.pushBack(mut metaLayers, "spec");
@@ -216,15 +223,14 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
             list.pushBack(mut metaNavs, siteLib.posixBasename(src, ".md"));
             list.pushBack(mut metaSums, "");
             list.pushBack(mut metaChSlugs, "");
-            list.pushBack(mut metaVerified, list.listContainsText(verifiedDocs, src));
+            list.pushBack(mut metaVerified, set.has(verifiedDocs, src));
         }
     }
 
     loop listSortedMdInDir(path.join(rootDir, "docs")) as file {
         src := "docs/" + file;
-        if list.listContainsText(startSeen, src) { continue; }
-        outPath := claimOutPath(usedOut, "docs/design/" + siteLib.posixBasename(src, ".md") + ".html");
-        list.pushBack(mut usedOut, outPath);
+        if set.has(startSeen, src) { continue; }
+        outPath := claimOutPath(mut usedOut, "docs/design/" + siteLib.posixBasename(src, ".md") + ".html");
         list.pushBack(mut metaSrcs, src);
         list.pushBack(mut metaOuts, outPath);
         list.pushBack(mut metaLayers, "spec");
@@ -232,15 +238,14 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         list.pushBack(mut metaNavs, siteLib.posixBasename(src, ".md"));
         list.pushBack(mut metaSums, "");
         list.pushBack(mut metaChSlugs, "");
-        list.pushBack(mut metaVerified, list.listContainsText(verifiedDocs, src));
+        list.pushBack(mut metaVerified, set.has(verifiedDocs, src));
     }
 
     loop listSortedMdInDir(path.join(rootDir, "docs/spec")) as file {
         src := "docs/spec/" + file;
-        if list.listContainsText(startSeen, src) { continue; }
+        if set.has(startSeen, src) { continue; }
         stem := siteLib.posixBasename(file, ".md");
-        outPath := claimOutPath(usedOut, "docs/design/spec-" + stem + ".html");
-        list.pushBack(mut usedOut, outPath);
+        outPath := claimOutPath(mut usedOut, "docs/design/spec-" + stem + ".html");
         list.pushBack(mut metaSrcs, src);
         list.pushBack(mut metaOuts, outPath);
         list.pushBack(mut metaLayers, "spec");
@@ -248,14 +253,13 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         list.pushBack(mut metaNavs, "spec/" + stem);
         list.pushBack(mut metaSums, "");
         list.pushBack(mut metaChSlugs, "");
-        list.pushBack(mut metaVerified, list.listContainsText(verifiedDocs, src));
+        list.pushBack(mut metaVerified, set.has(verifiedDocs, src));
     }
 
     loop listSortedMdInDir(path.join(rootDir, "docs/research")) as file {
         src := "docs/research/" + file;
         stem := siteLib.posixBasename(file, ".md");
-        outPath := claimOutPath(usedOut, "docs/design/research-" + stem + ".html");
-        list.pushBack(mut usedOut, outPath);
+        outPath := claimOutPath(mut usedOut, "docs/design/research-" + stem + ".html");
         list.pushBack(mut metaSrcs, src);
         list.pushBack(mut metaOuts, outPath);
         list.pushBack(mut metaLayers, "spec");
@@ -263,14 +267,13 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         list.pushBack(mut metaNavs, "research/" + stem);
         list.pushBack(mut metaSums, "");
         list.pushBack(mut metaChSlugs, "");
-        list.pushBack(mut metaVerified, list.listContainsText(verifiedDocs, src));
+        list.pushBack(mut metaVerified, set.has(verifiedDocs, src));
     }
 
     loop listSortedMdInDir(path.join(rootDir, "docs/proposals")) as file {
         src := "docs/proposals/" + file;
         stem := siteLib.posixBasename(file, ".md");
-        outPath := claimOutPath(usedOut, "docs/proposals/" + stem + ".html");
-        list.pushBack(mut usedOut, outPath);
+        outPath := claimOutPath(mut usedOut, "docs/proposals/" + stem + ".html");
         list.pushBack(mut metaSrcs, src);
         list.pushBack(mut metaOuts, outPath);
         list.pushBack(mut metaLayers, "spec");
@@ -278,7 +281,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         list.pushBack(mut metaNavs, stem);
         list.pushBack(mut metaSums, "");
         list.pushBack(mut metaChSlugs, "");
-        list.pushBack(mut metaVerified, list.listContainsText(verifiedDocs, src));
+        list.pushBack(mut metaVerified, set.has(verifiedDocs, src));
     }
 
     compOrder: List<String> = ["compiler/README.md", "compiler/transition-plan.md", "compiler/parity.md", "compiler/gaps.md"];
@@ -290,14 +293,13 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         cp := "compiler/" + file;
         if not list.listContainsText(compOrder, cp) { list.pushBack(mut compAll, cp); }
     }
-    compSeen: mut List<String> = [];
+    compSeen: mut Set<String>;
     loop compAll as src {
-        if list.listContainsText(compSeen, src) { continue; }
-        list.pushBack(mut compSeen, src);
+        if set.has(compSeen, src) { continue; }
+        set.add(mut compSeen, src);
         outName := if src == "compiler/README.md" { "overview.html" } else { siteLib.posixBasename(src, ".md") + ".html" };
         navLbl := if src == "compiler/README.md" { "compiler overview" } else { siteLib.posixBasename(src, ".md") };
-        outPath := claimOutPath(usedOut, "docs/compiler/" + outName);
-        list.pushBack(mut usedOut, outPath);
+        outPath := claimOutPath(mut usedOut, "docs/compiler/" + outName);
         list.pushBack(mut metaSrcs, src);
         list.pushBack(mut metaOuts, outPath);
         list.pushBack(mut metaLayers, "spec");
@@ -305,7 +307,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         list.pushBack(mut metaNavs, navLbl);
         list.pushBack(mut metaSums, "");
         list.pushBack(mut metaChSlugs, "");
-        list.pushBack(mut metaVerified, list.listContainsText(verifiedDocs, src));
+        list.pushBack(mut metaVerified, set.has(verifiedDocs, src));
     }
 
     extraSrcs: List<String> = ["compiler/bootstrap/README.md", "compiler/manifests/README.md", "igniter/tests/README.md", "CONTRIBUTING.md"];
@@ -315,8 +317,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     loop ei < 4 {
         src := extraSrcs[ei];
         if fs.kind(path.join(rootDir, src)) == fs.FILE_KIND_FILE {
-            outPath := claimOutPath(usedOut, "docs/compiler/" + extraOuts[ei]);
-            list.pushBack(mut usedOut, outPath);
+            outPath := claimOutPath(mut usedOut, "docs/compiler/" + extraOuts[ei]);
             list.pushBack(mut metaSrcs, src);
             list.pushBack(mut metaOuts, outPath);
             list.pushBack(mut metaLayers, "spec");
@@ -324,7 +325,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
             list.pushBack(mut metaNavs, extraLbls[ei]);
             list.pushBack(mut metaSums, "");
             list.pushBack(mut metaChSlugs, "");
-            list.pushBack(mut metaVerified, list.listContainsText(verifiedDocs, src));
+            list.pushBack(mut metaVerified, set.has(verifiedDocs, src));
         }
         ei = ei + 1;
     }
@@ -336,8 +337,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     loop bi < 3 {
         src := brandSrcs[bi];
         if fs.kind(path.join(rootDir, src)) == fs.FILE_KIND_FILE {
-            outPath := claimOutPath(usedOut, "docs/brand/" + brandOuts[bi]);
-            list.pushBack(mut usedOut, outPath);
+            outPath := claimOutPath(mut usedOut, "docs/brand/" + brandOuts[bi]);
             list.pushBack(mut metaSrcs, src);
             list.pushBack(mut metaOuts, outPath);
             list.pushBack(mut metaLayers, "spec");
@@ -345,7 +345,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
             list.pushBack(mut metaNavs, brandLbls[bi]);
             list.pushBack(mut metaSums, "");
             list.pushBack(mut metaChSlugs, "");
-            list.pushBack(mut metaVerified, list.listContainsText(verifiedDocs, src));
+            list.pushBack(mut metaVerified, set.has(verifiedDocs, src));
         }
         bi = bi + 1;
     }
@@ -716,7 +716,7 @@ activeOutPath: String, activeGroup: String, tmpls: List<String>, baseIdx: Int
     + "    </aside>"
 };
 
-rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOuts: List<String>, hbChapterIds: List<String>): String {
+rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOutIndex: Map<String, Int>, hbChapterIds: List<String>): String {
     withIds: mut List<String> = [];
     len := text.length(html);
     var pos := 0;
@@ -771,7 +771,7 @@ rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOuts: L
             hashPos := text.indexOfText(rawVal, "#", 0);
             filePart := if hashPos >= 0 { text.slice(rawVal, 0, hashPos) } else { rawVal };
             resolved := siteLib.posixJoinAndNormalize("docs/handbook", filePart);
-            hit := list.listIndexOfText(hbOuts, resolved);
+            hit := map.getOr(hbOutIndex, resolved, -1);
             if hit >= 0 {
                 if hashPos >= 0 and hashPos + 1 < text.length(rawVal) {
                     fragPart := text.slice(rawVal, hashPos + 1, text.length(rawVal));
@@ -1051,10 +1051,12 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     "{\"relPath\":\"docs/spec/index.html\",\"title\":\"Design Specification — Docs — Lite\",\"description\":\"LiteLang design specification, proposals, and compiler documentation index.\",\"basePath\":\"../../\",\"body\":" + json.quoteString(specLandingBody) + "}");
 
     hbChapterIds: mut List<String> = [];
+    hbOutIndex: mut Map<String, Int>;
     hi = 0;
     loop hi < hbCount {
         chSlug := if hbSlugs[hi] =!= "" { hbSlugs[hi] } else { hbNavs[hi] };
         list.pushBack(mut hbChapterIds, "chapter-" + chSlug);
+        map.set(mut hbOutIndex, hbOuts[hi], hi);
         hi = hi + 1;
     }
     chBlocks: mut List<String> = [];
@@ -1063,7 +1065,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     loop hi < hbCount {
         chSlug := if hbSlugs[hi] =!= "" { hbSlugs[hi] } else { "ch-" + integer.intText(hi + 1) };
         anchorPrefix := "h" + integer.intText(hi + 1) + "-";
-        rewritten := rewriteSinglePageChapterHtml(hbHtmls[hi], anchorPrefix, hbOuts, hbChapterIds);
+        rewritten := rewriteSinglePageChapterHtml(hbHtmls[hi], anchorPrefix, hbOutIndex, hbChapterIds);
         list.pushBack(mut chBlocks,
         "<section class=\"section handbook-single-chapter\" id=\"chapter-" + escapeHtml(chSlug) + "\">\n"
         + "      <div class=\"portal-card-head\" style=\"margin-bottom: 0.5rem;\">\n"
@@ -1206,7 +1208,8 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         hi = hi + 1;
     }
 
-    specDirKeys: mut List<String> = [];
+    specDirIndex: mut Map<String, Int>;
+    var specDirCount := 0;
     specDirTmpls: mut List<String> = [];
     si = 0;
     loop si < spCount {
@@ -1217,10 +1220,11 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mSum := spSums[si];
         dTitle := spTitles[si];
         mDir := siteLib.posixDirname(mOut);
-        var dirIdx := list.listIndexOfText(specDirKeys, mDir);
+        var dirIdx := map.getOr(specDirIndex, mDir, -1);
         if dirIdx < 0 {
-            dirIdx = list.listCountText(specDirKeys);
-            list.pushBack(mut specDirKeys, mDir);
+            dirIdx = specDirCount;
+            specDirCount = specDirCount + 1;
+            map.set(mut specDirIndex, mDir, dirIdx);
             builtTmpls := buildSpecGroupTemplates(mOut, spOuts, spGroups, spNavs, spTitles, spVerified);
             var ti := 0;
             loop ti < 5 {

@@ -4,6 +4,7 @@ fs := import "core/file";
 integer := import "core/int";
 list := import "core/list";
 path := import "core/path";
+set := import "core/set";
 text := import "core/text";
 challenges := import "util/challenges";
 json := import "util/json";
@@ -140,9 +141,10 @@ collectRelativeModulesJson := fn(
 ): String {
     var queueFiles: mut List<String> = [entryRelFile];
     var queueTexts: mut List<String> = [entrySource];
-    var seenFiles: mut List<String> = [entryRelFile];
-    var modSpecs: mut List<String> = [];
-    var modJsonEntries: mut List<String> = [];
+    seenFiles: mut Set<String>;
+    set.add(mut seenFiles, entryRelFile);
+    modSpecs: mut Set<String>;
+    modJsonEntries: mut List<String> = [];
     var qi := 0;
     loop qi < list.listCountText(queueFiles) {
         fromFile := queueFiles[qi];
@@ -170,13 +172,12 @@ collectRelativeModulesJson := fn(
                                 + ",\"display\":" + json.quoteString(resolvedRel)
                                 + ",\"identity\":" + json.quoteString(ident)
                                 + ",\"text\":" + json.quoteString(modText) + "}";
-                            existingIdx := list.listIndexOfText(modSpecs, spec);
-                            if existingIdx < 0 {
-                                list.pushBack(mut modSpecs, spec);
+                            if not set.has(modSpecs, spec) {
+                                set.add(mut modSpecs, spec);
                                 list.pushBack(mut modJsonEntries, entryJson);
                             }
-                            if not list.listContainsText(seenFiles, resolvedRel) {
-                                list.pushBack(mut seenFiles, resolvedRel);
+                            if not set.has(seenFiles, resolvedRel) {
+                                set.add(mut seenFiles, resolvedRel);
                                 list.pushBack(mut queueFiles, resolvedRel);
                                 list.pushBack(mut queueTexts, modText);
                             }
@@ -249,13 +250,19 @@ cleanSlugBase := fn(preferred: String): String {
     if e <= s { "item" } else { text.slice(joined, s, e) }
 };
 
-nextAvailableSlug := fn(used: List<String>, preferred: String): String {
+nextAvailableSlug := fn(used: mut Set<String>, preferred: String): String {
     base := cleanSlugBase(preferred);
-    if not list.listContainsText(used, base) { return base; }
+    if not set.has(used, base) {
+        set.add(mut used, base);
+        return base;
+    }
     var suffix := 2;
     loop {
         cand := base + "-" + integer.intText(suffix);
-        if not list.listContainsText(used, cand) { return cand; }
+        if not set.has(used, cand) {
+            set.add(mut used, cand);
+            return cand;
+        }
         suffix = suffix + 1;
     }
     base
@@ -342,10 +349,10 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
     }
 
     items: mut List<String> = [];
-    usedSamples: mut List<String> = [];
-    usedExamples: mut List<String> = [];
-    usedCases: mut List<String> = [];
-    usedPieces: mut List<String> = [];
+    usedSamples: mut Set<String>;
+    usedExamples: mut Set<String>;
+    usedCases: mut Set<String>;
+    usedPieces: mut Set<String>;
 
     trimmedSamples := text.trim(samplesJson);
     if trimmedSamples =!= "" and challenges.isJsonArrayAt(trimmedSamples, 0) {
@@ -361,8 +368,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
                 return (ok = false, jsonText = "", error = "missing sample file " + relFile + ": " + srcRead.error);
             }
             isPlay := text.startsWithAt(relFile, 0, "samples/graphics/") or text.startsWithAt(relFile, 0, "samples/games/");
-            slug := nextAvailableSlug(usedSamples, sid);
-            list.pushBack(mut usedSamples, slug);
+            slug := nextAvailableSlug(mut usedSamples, sid);
             list.pushBack(mut items, buildItemJson(
                 "sample/" + slug, slug, "sample", if isPlay { "Play" } else { "Sample" }, ttl,
                 relFile, srcRead.text, stdinVal, argsList, "", "", sid
@@ -383,8 +389,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
         base := posixBasename(relFile, ".lts");
         isShowcase := text.startsWithAt(relFile, 0, "language/showcases/");
         preferred := if isShowcase { "showcase-" + base } else { base };
-        slug := nextAvailableSlug(usedExamples, preferred);
-        list.pushBack(mut usedExamples, slug);
+        slug := nextAvailableSlug(mut usedExamples, preferred);
         src := fs.readText(path.join(rootDir, relFile)).text;
         extraJson := collectRelativeModulesJson(rootDir, hostIds, hostTexts, relFile, src);
         envVal := detectSourceEnvironment(src);
@@ -396,8 +401,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
 
     loop walkFilesWithSuffix(path.join(rootDir, "language/cases"), "language/cases", ".lts") as relFile {
         base := posixBasename(relFile, ".lts");
-        slug := nextAvailableSlug(usedCases, base);
-        list.pushBack(mut usedCases, slug);
+        slug := nextAvailableSlug(mut usedCases, base);
         src := fs.readText(path.join(rootDir, relFile)).text;
         badge := if text.startsWithAt(base, 0, "reject-") { "Reject Case" } else { "Case" };
         list.pushBack(mut items, buildItemJson(
@@ -433,8 +437,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
                 envR := json.readObjectString(lText, lp, "environment");
                 envVal := if envR.found and envR.ok { envR.value } else { "universal" };
                 argsList := challenges.readStringArray(lText, lp, "args");
-                slug := nextAvailableSlug(usedPieces, lSlug);
-                list.pushBack(mut usedPieces, slug);
+                slug := nextAvailableSlug(mut usedPieces, lSlug);
                 src := fs.readText(path.join(rootDir, srcFile)).text;
                 extraJson := collectRelativeModulesJson(rootDir, hostIds, hostTexts, srcFile, src);
                 list.pushBack(mut items, buildItemJson(
@@ -467,8 +470,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
                 if fsR.found and fsR.ok { firstStdin = fsR.value; }
                 firstArgs = challenges.readStringArray(gText, fcPos, "args");
             }
-            slug := nextAvailableSlug(usedPieces, "gym-" + gSlug);
-            list.pushBack(mut usedPieces, slug);
+            slug := nextAvailableSlug(mut usedPieces, "gym-" + gSlug);
             src := fs.readText(path.join(rootDir, starterFile)).text;
             list.pushBack(mut items, buildItemJson(
                 "piece/" + slug, slug, "piece", if gMode == "drill" { "Drill" } else { "Workout" },
@@ -500,8 +502,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
                     code := text.joinTexts(codeLines, "\n");
                     if text.trim(code) =!= "" {
                         heading := extractHeadingForLine(lines, li, fallbackHeading);
-                        slug := nextAvailableSlug(usedPieces, chapterSlug + "-" + integer.intText(fenceIdx));
-                        list.pushBack(mut usedPieces, slug);
+                        slug := nextAvailableSlug(mut usedPieces, chapterSlug + "-" + integer.intText(fenceIdx));
                         list.pushBack(mut items, buildItemJson(
                             "piece/" + slug, slug, "piece", "Handbook",
                             heading, relPath, code, "", emptyArgs, "", "", ""

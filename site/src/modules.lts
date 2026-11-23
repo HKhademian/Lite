@@ -3,9 +3,12 @@
 fs := import "core/file";
 integer := import "core/int";
 list := import "core/list";
+map := import "core/map";
 path := import "core/path";
+set := import "core/set";
 text := import "core/text";
 challenges := import "util/challenges";
+collections := import "util/collections";
 json := import "util/json";
 siteTools := import "./tools.lts";
 
@@ -160,20 +163,23 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         list.pushBack(mut sampBadges, if bR.found and bR.ok { bR.value } else { "sample" });
     }
 
-    modUsageCounts: mut List<Int> = [];
-    var mi0 := 0;
-    loop mi0 < modCount { list.pushBack(mut modUsageCounts, 0); mi0 = mi0 + 1; }
-
     edgeModIdx: mut List<Int> = [];
     edgeSampIdx: mut List<Int> = [];
     var si := 0;
+    modIdIndex: mut Map<String, Int>;
+    var mIdx := 0;
+    loop mIdx < modCount {
+        map.set(mut modIdIndex, modIds[mIdx], mIdx);
+        mIdx = mIdx + 1;
+    }
+    modUsageCounts: mut Map<Int, Int>;
     sCount := list.listCountText(sampIds);
     loop si < sCount {
         sPath := path.join(rootDir, sampFiles[si]);
         sRead := fs.readText(sPath);
         if sRead.ok {
             src := sRead.text;
-            seenModsInSample: mut List<Int> = [];
+            seenModsInSample: mut Set<Int>;
             var pos := 0;
             slen := text.length(src);
             loop pos < slen {
@@ -186,11 +192,12 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
                         qEnd := text.indexOfText(src, "\"", p + 1);
                         if qEnd > p + 1 {
                             mId := text.slice(src, p + 1, qEnd);
-                            hit := list.listIndexOfText(modIds, mId);
-                            if hit >= 0 and not list.listContainsInt(seenModsInSample, hit) {
-                                list.pushBack(mut seenModsInSample, hit);
+                            hit := map.getOr(modIdIndex, mId, -1);
+                            if hit >= 0 and not set.has(seenModsInSample, hit) {
+                                set.add(mut seenModsInSample, hit);
                                 list.pushBack(mut edgeModIdx, hit);
                                 list.pushBack(mut edgeSampIdx, si);
+                                map.set(mut modUsageCounts, hit, map.getOr(modUsageCounts, hit, 0) + 1);
                             }
                             pos = qEnd + 1;
                             continue;
@@ -201,6 +208,18 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
             }
         }
         si = si + 1;
+    }
+
+    edgeTotal := list.listCountInt(edgeModIdx);
+    edgeOrder := collections.sortIndicesBy(edgeTotal, fn(a: Int, b: Int): Bool { edgeModIdx[a] <= edgeModIdx[b] });
+    edgeModStart: mut Map<Int, Int>;
+    var eoIdx := 0;
+    loop eoIdx < edgeTotal {
+        em := edgeModIdx[edgeOrder[eoIdx]];
+        if not map.has(edgeModStart, em) {
+            map.set(mut edgeModStart, em, eoIdx);
+        }
+        eoIdx = eoIdx + 1;
     }
 
     var coreCount := 0;
@@ -236,8 +255,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         }
         moreCount := if symCount > 5 { " <span class=\"code-card-meta\">+" + integer.intText(symCount - 5) + " more</span>" } else { "" };
 
-        var usages := 0;
-        loop edgeModIdx as emi { if emi == mi { usages = usages + 1; } }
+        usages := map.getOr(modUsageCounts, mi, 0);
         usageText := if usages > 0 { " · " + integer.intText(usages) + " sample" + (if usages == 1 { "" } else { "s" }) } else { "" };
         searchBlob := challenges.asciiLower(mId + " " + mSum + " " + text.joinTexts(symNames, " "));
         card := "<article class=\"portal-card module-index-card\" data-env=\"" + escapeHtml(mEnv) + "\" data-search=\"" + escapeHtml(searchBlob) + "\">\n"
@@ -383,25 +401,23 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         }
 
         usageCards: mut List<String> = [];
-        var ei := 0;
-        loop ei < list.listCountInt(edgeModIdx) {
-            if edgeModIdx[ei] == mi {
-                uIdx := edgeSampIdx[ei];
-                uId := escapeHtml(sampIds[uIdx]);
-                list.pushBack(mut usageCards,
-                "<article class=\"portal-card\">\n"
-                + "          <div class=\"portal-card-head\">\n"
-                + "            <strong>" + escapeHtml(sampTitles[uIdx]) + "</strong>\n"
-                + "            <span class=\"status-pill\">" + escapeHtml(sampBadges[uIdx]) + "</span>\n"
-                + "          </div>\n"
-                + "          <p><code>" + escapeHtml(sampFiles[uIdx]) + "</code></p>\n"
-                + "          <div class=\"portal-card-foot\">\n"
-                + "            <a href=\"../../gallery/#sample-" + uId + "\">Gallery</a>\n"
-                + "            <a href=\"../../playground/?sample=" + uId + "\">Open in Play &rarr;</a>\n"
-                + "          </div>\n"
-                + "        </article>");
-            }
-            ei = ei + 1;
+        var eo := map.getOr(edgeModStart, mi, edgeTotal);
+        loop eo < edgeTotal and edgeModIdx[edgeOrder[eo]] == mi {
+            uIdx := edgeSampIdx[edgeOrder[eo]];
+            uId := escapeHtml(sampIds[uIdx]);
+            list.pushBack(mut usageCards,
+            "<article class=\"portal-card\">\n"
+            + "          <div class=\"portal-card-head\">\n"
+            + "            <strong>" + escapeHtml(sampTitles[uIdx]) + "</strong>\n"
+            + "            <span class=\"status-pill\">" + escapeHtml(sampBadges[uIdx]) + "</span>\n"
+            + "          </div>\n"
+            + "          <p><code>" + escapeHtml(sampFiles[uIdx]) + "</code></p>\n"
+            + "          <div class=\"portal-card-foot\">\n"
+            + "            <a href=\"../../gallery/#sample-" + uId + "\">Gallery</a>\n"
+            + "            <a href=\"../../playground/?sample=" + uId + "\">Open in Play &rarr;</a>\n"
+            + "          </div>\n"
+            + "        </article>");
+            eo = eo + 1;
         }
 
         secHtml: mut List<String> = [];

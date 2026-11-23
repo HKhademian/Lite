@@ -3,6 +3,8 @@
 integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
+map := import "core/map";
+set := import "core/set";
 tb := import "util/text-builder";
 
 findLineEnd := fn(source: String, start: Int, size: Int): Int {
@@ -220,18 +222,17 @@ pub headingAnchor := fn(heading: String): String {
 /** Collects GitHub-style heading anchors (including `-1`, `-2` duplicate suffixes) and explicit HTML `id=`/`name=` anchors. */
 pub collectAnchors := fn(docText: String): List<String> {
     found: mut List<String> = [];
-    seenSlugs: mut List<String> = [];
+    foundSet: mut Set<String>;
+    slugCounts: mut Map<String, Int>;
     headings := extractHeadings(stripCodeBlocks(docText));
 
     loop headings as heading {
         slug := headingAnchor(heading);
-        var dupCount := 0;
-        loop seenSlugs as prev {
-            if prev == slug { dupCount = dupCount + 1; }
-        }
-        list.pushBack(mut seenSlugs, slug);
+        dupCount := map.getOr(slugCounts, slug, 0);
+        map.set(mut slugCounts, slug, dupCount + 1);
         anchor := if dupCount == 0 { slug } else { slug + "-" + integer.intText(dupCount) };
-        if not list.listContainsText(found, anchor) {
+        if not set.has(foundSet, anchor) {
+            set.add(mut foundSet, anchor);
             list.pushBack(mut found, anchor);
         }
     }
@@ -257,7 +258,8 @@ pub collectAnchors := fn(docText: String): List<String> {
                 valEnd := text.indexOfText(docText, q, valStart);
                 if valEnd > valStart {
                     val := text.slice(docText, valStart, valEnd);
-                    if not list.listContainsText(found, val) {
+                    if not set.has(foundSet, val) {
+                        set.add(mut foundSet, val);
                         list.pushBack(mut found, val);
                     }
                     pos = valEnd + 1;
