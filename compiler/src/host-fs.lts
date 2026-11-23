@@ -73,6 +73,20 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, optLevel: Int,
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "unsupported optimization level " + rawOpt + " (expected 0, 1, 2, 3, or s)");
             }
             optLevel = parsedOpt;
+        } else if arg == "--emit-format" {
+            if listLib.listCountText(args) == 0 {
+                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "missing value for --emit-format (expected pretty or compact)");
+            }
+            _ignoredFmt := listLib.popFront(mut args);
+        } else if textLib.startsWithAt(arg, 0, "--emit-format=") {
+            _ignoredInlineFmt := true;
+        } else if arg == "--source-map" {
+            if listLib.listCountText(args) == 0 {
+                return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "missing value for --source-map (expected none, comments, or lines)");
+            }
+            _ignoredSm := listLib.popFront(mut args);
+        } else if textLib.startsWithAt(arg, 0, "--source-map=") {
+            _ignoredInlineSm := true;
         } else if arg == "--builtin-mode" {
             if listLib.listCountText(args) == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "missing value for --builtin-mode");
@@ -133,6 +147,44 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, optLevel: Int,
     }
     (ok = true, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =optLevel, =filePath, error = "")
 }
+
+/** Extracts and validates `--emit-format` (`pretty`|`compact`) and `--source-map` (`none`|`comments`|`lines`) options. */
+pub extractEmitOptions := fn(rawArgs: List<String>): (ok: Bool, emitFormat: String, sourceMap: String, error: String) {
+    var emitFormat := "";
+    var sourceMap := "";
+    args: mut List<String> = rawArgs;
+    loop listLib.listCountText(args) > 0 {
+        arg := listLib.popFront(mut args);
+        if arg == "--emit-format" {
+            if listLib.listCountText(args) == 0 {
+                return (ok = false, =emitFormat, =sourceMap, error = "missing value for --emit-format (expected pretty or compact)");
+            }
+            emitFormat = listLib.popFront(mut args);
+            if emitFormat =!= "pretty" and emitFormat =!= "compact" {
+                return (ok = false, =emitFormat, =sourceMap, error = "unsupported --emit-format " + emitFormat + " (expected pretty or compact)");
+            }
+        } else if textLib.startsWithAt(arg, 0, "--emit-format=") {
+            emitFormat = textLib.slice(arg, 14, textLib.length(arg));
+            if emitFormat =!= "pretty" and emitFormat =!= "compact" {
+                return (ok = false, =emitFormat, =sourceMap, error = "unsupported --emit-format " + emitFormat + " (expected pretty or compact)");
+            }
+        } else if arg == "--source-map" {
+            if listLib.listCountText(args) == 0 {
+                return (ok = false, =emitFormat, =sourceMap, error = "missing value for --source-map (expected none, comments, or lines)");
+            }
+            sourceMap = listLib.popFront(mut args);
+            if sourceMap =!= "none" and sourceMap =!= "comments" and sourceMap =!= "lines" {
+                return (ok = false, =emitFormat, =sourceMap, error = "unsupported --source-map " + sourceMap + " (expected none, comments, or lines)");
+            }
+        } else if textLib.startsWithAt(arg, 0, "--source-map=") {
+            sourceMap = textLib.slice(arg, 13, textLib.length(arg));
+            if sourceMap =!= "none" and sourceMap =!= "comments" and sourceMap =!= "lines" {
+                return (ok = false, =emitFormat, =sourceMap, error = "unsupported --source-map " + sourceMap + " (expected none, comments, or lines)");
+            }
+        }
+    }
+    (ok = true, =emitFormat, =sourceMap, error = "")
+};
 
 /** Extracts repeatable `--builtin-mode` specification values from `rawArgs`. */
 pub extractBuiltinSpecs := fn(rawArgs: List<String>): List<String> {

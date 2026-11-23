@@ -1,5 +1,6 @@
 frontend := import "./frontend.lts";
 cLiteral := import "./c-literals.lts";
+emitFmt := import "./emit-format.lts";
 integer := import "core/int";
 listLib := import "core/list";
 diagLib := import "core/diag";
@@ -9,11 +10,12 @@ tb := import "util/text-builder";
 
 var cOutUseWriter := false;
 var cCompactEmit := false;
+var cSourceMapMode := "none";
 cOutBuf: mut tb.TextBuilder;
 
 /** Emits one C11 line to either stdout or the buffered `TextBuilder` for `--out`. */
 outLine := fn(s: String): Unit {
-    line := if cCompactEmit { textLib.trimStart(s) } else { s };
+    line := if cCompactEmit { textLib.trimStart(s) } else { emitFmt.formatEmittedLine(s) };
     if cCompactEmit and line == "" { return; }
     if not cOutUseWriter {
         io.outputLine(line);
@@ -2005,7 +2007,37 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
     var seqLoopId := 0;
     loopSeqFlags: mut List<Int> = [];
     loopSeqReleases: mut List<String> = [];
+    var pendingLocFile := "";
+    var pendingLocLine := 0;
+    var pendingLocCol := "";
+    var lastEmittedLocFile := "";
+    var lastEmittedLocLine := 0;
     loop stream as item {
+        if item.kind == frontend.ITEM_KIND_SOURCE_LOC {
+            pendingLocFile = item.name;
+            pendingLocLine = item.intValue;
+            pendingLocCol = item.code;
+            continue;
+        }
+        if cSourceMapMode =!= emitFmt.SOURCEMAP_NONE and pendingLocLine > 0 and
+        item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and
+        item.kind =!= frontend.ITEM_KIND_SOFT_BUILTIN and item.kind =!= frontend.ITEM_KIND_NOOP and
+        item.kind =!= frontend.ITEM_KIND_END_IF and item.kind =!= frontend.ITEM_KIND_ELSE and
+        item.kind =!= frontend.ITEM_KIND_ELSE_IF and item.kind =!= frontend.ITEM_KIND_END_LOOP and
+        item.kind =!= frontend.ITEM_KIND_END_SCOPE and item.kind =!= frontend.ITEM_KIND_MAIN_STOP {
+            if pendingLocFile =!= lastEmittedLocFile or pendingLocLine =!= lastEmittedLocLine {
+                dispFile := if pendingLocFile =!= "" { pendingLocFile } else { "<stdin>" };
+                if cSourceMapMode == emitFmt.SOURCEMAP_LINES {
+                    outLine("#line " + integer.intText(pendingLocLine) + " " + cLiteral.textLiteralCode(dispFile));
+                } else {
+                    outLine(indent + "// " + dispFile + ":" + integer.intText(pendingLocLine) + ":" + pendingLocCol);
+                }
+                lastEmittedLocFile = pendingLocFile;
+                lastEmittedLocLine = pendingLocLine;
+            }
+            pendingLocLine = 0;
+        }
         code := normalizeCBuiltinCalls(item.code);
         if isCLocalDeclKind(item.kind) {
             if textLib.startsWithAt(code, 0, "/*@CBLK:") {
@@ -2056,8 +2088,18 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 endHdr := textLib.indexOfText(code, "@*/", 8);
                 blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
                 outLine(indent + "{ " + blkBody + " }");
-            } else if item.kind == frontend.ITEM_KIND_CALL and textLib.startsWithAt(code, 0, "{ /*c-stmt*/") {
-                outLine(indent + code);
+            } else if textLib.startsWithAt(code, 0, "{ /*c-stmt*/") {
+                trimmedCStmt := textLib.trim(code);
+                if textLib.endsWith(trimmedCStmt, "}") {
+                    innerC := textLib.trim(textLib.slice(trimmedCStmt, 12, textLib.length(trimmedCStmt) - 1));
+                    if textLib.startsWithAt(innerC, 0, "for (") or textLib.startsWithAt(innerC, 0, "while (") or textLib.startsWithAt(innerC, 0, "if (") {
+                        outLine(indent + innerC);
+                    } else {
+                        outLine(indent + "{ " + innerC + " }");
+                    }
+                } else {
+                    outLine(indent + code);
+                }
             } else {
                 outLine(indent + "(void)(" + code + ");");
             }
@@ -2201,7 +2243,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
         } else if item.kind == frontend.ITEM_KIND_MAIN_STOP or item.kind == frontend.ITEM_KIND_IMPORT or
         item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or
         item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_PURE_GLOBAL or
-        item.kind == frontend.ITEM_KIND_SOFT_BUILTIN or item.kind == frontend.ITEM_KIND_NOOP {
+        item.kind == frontend.ITEM_KIND_SOFT_BUILTIN or item.kind == frontend.ITEM_KIND_NOOP or item.kind == frontend.ITEM_KIND_SOURCE_LOC {
         } else {
             if count == 0 {
                 firstKind = item.kind;
@@ -4101,10 +4143,12 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("");
 };
 
-/** Emits a complete C11 program using explicit builtin specs and optimization level `optLevel`. */
-pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+/** Emits a complete C11 program using explicit builtin specs, `optLevel`, `--emit-format`, and `--source-map`. */
+pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
     prevCompact := cCompactEmit;
-    cCompactEmit = optLevel == 4;
+    prevSourceMap := cSourceMapMode;
+    cCompactEmit = emitFmt.resolveEmitFormat(emitFormat, optLevel) == emitFmt.FORMAT_COMPACT;
+    cSourceMapMode = emitFmt.resolveSourceMap(sourceMap, frontend.TARGET_C, optLevel);
     softItems := applyCSoftBuiltins(items, prefix, builtinSpecs);
     reachable := frontend.filterReachableItemsWithOpt(softItems, frontend.TARGET_C, optLevel);
     calls := frontend.targetHelperCalls(reachable);
@@ -4605,32 +4649,56 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     } else {
         loop reachable as item { listLib.pushBack(mut mainItems, item); }
     }
+    var hasMainOutput := false;
+    loop mainItems as mOutScan {
+        if mOutScan.kind == frontend.ITEM_KIND_END or mOutScan.kind == frontend.ITEM_KIND_END_OUTPUT {
+            hasMainOutput = true;
+            break;
+        }
+    }
     if hasMainArgs {
         outLine("int main(int argc, char **argv) {");
         outLine("    lt_argc = argc; lt_argv = argv;");
     } else {
         outLine("int main(void) {");
     }
-    outLine("    int status = 0;");
+    if hasMainOutput {
+        outLine("    int status = 0;");
+    }
     emitArithmeticTemporaries(mainItems);
-    emitCItemStream(mainItems, hoistedGlobals, "", "status = 1;");
-    if hasFnOutput {
+    emitCItemStream(mainItems, hoistedGlobals, "", if hasMainOutput { "status = 1;" } else { "" });
+    if hasMainOutput and hasFnOutput {
         outLine("    return status ? status : lt_io_status;");
-    } else {
+    } else if hasMainOutput {
         outLine("    return status;");
+    } else if hasFnOutput {
+        outLine("    return lt_io_status;");
+    } else {
+        outLine("    return 0;");
     }
     outLine("}");
     cCompactEmit = prevCompact;
+    cSourceMapMode = prevSourceMap;
 }
 
-/** Emits the C program to an explicit `io.Writer` with `--builtin-mode` specifications and optimization level (`0..3`). */
-pub emitProgramToOpt := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+/** Emits a complete C11 program using explicit builtin specs and optimization level `optLevel`. */
+pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+    emitProgramWithOpts(items, source, prefix, builtinSpecs, optLevel, "", "");
+};
+
+/** Emits the C program to an explicit `io.Writer` with `--emit-format` and `--source-map`. */
+pub emitProgramToWithOpts := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
     cOutUseWriter = true;
     tb.clear(mut cOutBuf);
-    emitProgramWithSpecsOpt(items, source, prefix, builtinSpecs, optLevel);
+    emitProgramWithOpts(items, source, prefix, builtinSpecs, optLevel, emitFormat, sourceMap);
     _res := io.writeText(writer, tb.build(cOutBuf));
     tb.clear(mut cOutBuf);
     cOutUseWriter = false;
+};
+
+/** Emits the C program to an explicit `io.Writer` with `--builtin-mode` specifications and optimization level (`0..4`). */
+pub emitProgramToOpt := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+    emitProgramToWithOpts(writer, items, source, prefix, builtinSpecs, optLevel, "", "");
 };
 
 /** Emits the C program from the flat item stream with explicit `--builtin-mode` specifications at default `-O1`. */

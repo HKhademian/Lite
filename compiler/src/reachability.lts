@@ -1136,6 +1136,7 @@ rewriteAndMarkActiveReads := fn(code: String, activeSet: TokenBuckets, activeNam
     }
     size := textLib.length(code);
     canSub := allowSub and textLib.indexOfText(code, "=>", 0) < 0 and
+    textLib.indexOfText(code, "{", 0) < 0 and textLib.indexOfText(code, " = ", 0) < 0 and
     textLib.indexOfText(code, "===", 0) < 0 and textLib.indexOfText(code, "!==", 0) < 0;
     parts: mut List<String> = [];
     var segStart := 0;
@@ -1272,18 +1273,24 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
     loop idx < total {
         item := items[idx];
         kind := item.kind;
+        if kind == ir.ITEM_KIND_SOURCE_LOC {
+            listLib.pushBack(mut outItems, item);
+            idx = idx + 1;
+            continue;
+        }
         isBarrier := kind == ir.ITEM_KIND_IF or kind == ir.ITEM_KIND_ELSE_IF or kind == ir.ITEM_KIND_ELSE or kind == ir.ITEM_KIND_END_IF or
         kind == ir.ITEM_KIND_LOOP or kind == ir.ITEM_KIND_LOOP_SEQ or kind == ir.ITEM_KIND_END_LOOP or
         kind == ir.ITEM_KIND_SCOPE or kind == ir.ITEM_KIND_END_SCOPE or
         kind == ir.ITEM_KIND_FUNCTION_START or kind == ir.ITEM_KIND_FUNCTION_END or
         kind == ir.ITEM_KIND_RETURN or kind == ir.ITEM_KIND_BREAK or kind == ir.ITEM_KIND_CONTINUE or
         kind == ir.ITEM_KIND_UNREACHABLE or kind == ir.ITEM_KIND_MAIN_STOP or
-        kind == ir.ITEM_KIND_CALL or kind == ir.ITEM_KIND_END_OUTPUT;
+        kind == ir.ITEM_KIND_CALL or kind == ir.ITEM_KIND_DISCARD or kind == ir.ITEM_KIND_END_OUTPUT;
 
         isPreFlushBarrier := kind == ir.ITEM_KIND_ELSE_IF or kind == ir.ITEM_KIND_ELSE or kind == ir.ITEM_KIND_END_IF or
         kind == ir.ITEM_KIND_LOOP or kind == ir.ITEM_KIND_END_LOOP or
         kind == ir.ITEM_KIND_SCOPE or kind == ir.ITEM_KIND_END_SCOPE or
-        kind == ir.ITEM_KIND_FUNCTION_START or kind == ir.ITEM_KIND_FUNCTION_END;
+        kind == ir.ITEM_KIND_FUNCTION_START or kind == ir.ITEM_KIND_FUNCTION_END or
+        kind == ir.ITEM_KIND_DISCARD;
         rewritten := if isPreFlushBarrier {
             (code = item.code, readPipe = "", changed = false)
         } else {
@@ -1587,10 +1594,20 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
         it := items[i];
         if it.kind == ir.ITEM_KIND_FUNCTION_START {
             var bodyIdx := i + 1;
+            loop bodyIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_SOURCE_LOC {
+                bodyIdx = bodyIdx + 1;
+            }
             if bodyIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_TRANSFER_TRY and items[bodyIdx].intValue == 0 {
                 bodyIdx = bodyIdx + 1;
             }
-            if fnDepth == 0 and not isHostPlayBridgeFn(it.runtime) and bodyIdx + 1 < total and items[bodyIdx].kind == ir.ITEM_KIND_RETURN and items[bodyIdx + 1].kind == ir.ITEM_KIND_FUNCTION_END {
+            loop bodyIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_SOURCE_LOC {
+                bodyIdx = bodyIdx + 1;
+            }
+            var afterRetIdx := bodyIdx + 1;
+            loop afterRetIdx < total and items[afterRetIdx].kind == ir.ITEM_KIND_SOURCE_LOC {
+                afterRetIdx = afterRetIdx + 1;
+            }
+            if fnDepth == 0 and not isHostPlayBridgeFn(it.runtime) and afterRetIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_RETURN and items[afterRetIdx].kind == ir.ITEM_KIND_FUNCTION_END {
                 retCode := items[bodyIdx].code;
                 rLen := textLib.length(retCode);
                 isPureLeaf := rLen > 0 and rLen <= 256 and
@@ -1802,9 +1819,135 @@ extractReachableCodeTokens := fn(code: String): List<String> {
     out
 };
 
+isImportedModuleRuntime := fn(runtime: String): Bool {
+    textLib.startsWithAt(runtime, 0, "lite$m$") or textLib.startsWithAt(runtime, 0, "lt_m_")
+};
+
+isImportedModuleFnRuntime := fn(runtime: String): Bool {
+    textLib.startsWithAt(runtime, 0, "liteFn$") or textLib.indexOfText(runtime, "__", 0) >= 0
+};
+
+/** Evaluates a pure constant emitted integer expression (`+`, `-`, `*`, parentheses) without overflow; returns `(ok = false, value = 0)` otherwise. */
+evalConstIntAtom := fn(src: String, start: Int, target: String): (ok: Bool, value: Int, next: Int) {
+    n := textLib.length(src);
+    var p := start;
+    loop p < n and textLib.at(src, p) == " " { p = p + 1; }
+    if p >= n { return (ok = false, value = 0, next = p); }
+    if textLib.at(src, p) == "(" {
+        inner := evalConstIntAdd(src, p + 1, target);
+        if not inner.ok { return (ok = false, value = 0, next = p); }
+        var q := inner.next;
+        loop q < n and textLib.at(src, q) == " " { q = q + 1; }
+        if q < n and textLib.at(src, q) == ")" {
+            return (ok = true, value = inner.value, next = q + 1);
+        }
+        return (ok = false, value = 0, next = p);
+    }
+    if target == ir.TARGET_C {
+        if textLib.startsWithAt(src, p, "INT64_C(") {
+            var q := p + 8;
+            var neg := false;
+            if q < n and textLib.at(src, q) == "-" { neg = true; q = q + 1; }
+            dStart := q;
+            loop q < n and textLib.isDigit(textLib.at(src, q)) { q = q + 1; }
+            if q > dStart and q < n and textLib.at(src, q) == ")" {
+                parsed := textLib.textToInt(textLib.slice(src, if neg { p + 8 } else { dStart }, q));
+                if parsed.ok { return (ok = true, value = parsed.value, next = q + 1); }
+            }
+        }
+        return (ok = false, value = 0, next = p);
+    }
+    var neg := false;
+    var q := p;
+    if q < n and textLib.at(src, q) == "-" { neg = true; q = q + 1; }
+    dStart := q;
+    loop q < n and textLib.isDigit(textLib.at(src, q)) { q = q + 1; }
+    if q > dStart and q < n and textLib.at(src, q) == "n" {
+        parsed := textLib.textToInt(textLib.slice(src, if neg { p } else { dStart }, q));
+        if parsed.ok { return (ok = true, value = parsed.value, next = q + 1); }
+    }
+    (ok = false, value = 0, next = p)
+};
+
+evalConstIntMul := fn(src: String, start: Int, target: String): (ok: Bool, value: Int, next: Int) {
+    n := textLib.length(src);
+    var cur := evalConstIntAtom(src, start, target);
+    if not cur.ok { return cur; }
+    loop true {
+        var p := cur.next;
+        loop p < n and textLib.at(src, p) == " " { p = p + 1; }
+        if p < n and textLib.at(src, p) == "*" {
+            rhs := evalConstIntAtom(src, p + 1, target);
+            if not rhs.ok { return (ok = false, value = 0, next = p); }
+            prod := integer.intMultiply(cur.value, rhs.value);
+            if not prod.ok { return (ok = false, value = 0, next = p); }
+            cur = (ok = true, value = prod.value, next = rhs.next);
+        } else {
+            break;
+        }
+    }
+    cur
+};
+
+evalConstIntAdd := fn(src: String, start: Int, target: String): (ok: Bool, value: Int, next: Int) {
+    n := textLib.length(src);
+    var cur := evalConstIntMul(src, start, target);
+    if not cur.ok { return cur; }
+    loop true {
+        var p := cur.next;
+        loop p < n and textLib.at(src, p) == " " { p = p + 1; }
+        if p < n and (textLib.at(src, p) == "+" or textLib.at(src, p) == "-") {
+            isAdd := textLib.at(src, p) == "+";
+            rhs := evalConstIntMul(src, p + 1, target);
+            if not rhs.ok { return (ok = false, value = 0, next = p); }
+            comb := if isAdd { integer.intAdd(cur.value, rhs.value) } else { integer.intSubtract(cur.value, rhs.value) };
+            if not comb.ok { return (ok = false, value = 0, next = p); }
+            cur = (ok = true, value = comb.value, next = rhs.next);
+        } else {
+            break;
+        }
+    }
+    cur
+};
+
+foldPureConstIntCode := fn(code: String, target: String): String {
+    trimmed := textLib.trim(code);
+    if trimmed == "" { return code; }
+    hasOp := textLib.indexOfText(trimmed, " + ", 0) >= 0 or textLib.indexOfText(trimmed, " - ", 0) >= 0 or textLib.indexOfText(trimmed, " * ", 0) >= 0;
+    if not hasOp { return code; }
+    res := evalConstIntAdd(trimmed, 0, target);
+    if not res.ok { return code; }
+    var tail := res.next;
+    loop tail < textLib.length(trimmed) and textLib.at(trimmed, tail) == " " { tail = tail + 1; }
+    if tail =!= textLib.length(trimmed) { return code; }
+    if target == ir.TARGET_C {
+        if res.value == integer.intMin { "INT64_MIN" } else { "INT64_C(" + integer.intText(res.value) + ")" }
+    } else {
+        integer.intText(res.value) + "n"
+    }
+};
+
+foldConstantScalarItems := fn(items: Items, target: String): Items {
+    out: mut Items = [];
+    loop items as item {
+        if item.kind == ir.ITEM_KIND_LOCAL_INT or item.kind == ir.ITEM_KIND_VAR_INT or item.kind == ir.ITEM_KIND_ASSIGN_INT or item.kind == ir.ITEM_KIND_RETURN {
+            folded := foldPureConstIntCode(item.code, target);
+            if folded =!= item.code {
+                listLib.pushBack(mut out, (kind = item.kind, name = item.name, runtime = item.runtime, code = folded, intValue = item.intValue, textValue = item.textValue));
+                continue;
+            }
+        }
+        listLib.pushBack(mut out, item);
+    }
+    out
+};
+
 /** Runs the multi-level optimization pipeline (`-O0`..`-O3`, `-Os` = `4`) and whole-program reachability DCE for `target`. */
 pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: Int): Items {
     var pruned := items;
+    if optLevel >= 2 {
+        pruned = foldConstantScalarItems(pruned, target);
+    }
     if optLevel == 3 {
         pruned = inlineSingleExprLeafFunctions(pruned, target);
     }
@@ -1839,7 +1982,11 @@ pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: In
             continue;
         }
         if item.kind == ir.ITEM_KIND_FUNCTION_START {
-            hasPrunable = true;
+            if optLevel == 0 and fnDepth == 0 and not isImportedModuleFnRuntime(item.runtime) {
+                setLib.add(mut reachable, item.runtime + "(");
+            } else {
+                hasPrunable = true;
+            }
             fnDepth = fnDepth + 1;
             nextIsPure = false;
             continue;
@@ -1854,7 +2001,8 @@ pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: In
             continue;
         }
         isTopDecl := blockDepth == 0 and isTopDeclKind(item.kind);
-        isPureDecl := isTopDecl and (nextIsPure or ((target == ir.TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code)));
+        canPruneDecl := optLevel >= 1 or isImportedModuleRuntime(item.runtime);
+        isPureDecl := isTopDecl and canPruneDecl and (nextIsPure or ((target == ir.TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code)));
         nextIsPure = false;
         if item.kind == ir.ITEM_KIND_SCOPE or item.kind == ir.ITEM_KIND_IF or item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ {
             blockDepth = blockDepth + 1;
@@ -1865,7 +2013,7 @@ pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: In
             hasPrunable = true;
             setLib.add(mut pureDecls, item.runtime);
         } else if item.kind =!= ir.ITEM_KIND_IMPORT and item.kind =!= ir.ITEM_KIND_PUBLIC_FUNCTION and item.kind =!= ir.ITEM_KIND_PUBLIC_VALUE and
-        item.kind =!= ir.ITEM_KIND_PUBLIC_TYPE and item.kind =!= ir.ITEM_KIND_NOOP {
+        item.kind =!= ir.ITEM_KIND_PUBLIC_TYPE and item.kind =!= ir.ITEM_KIND_NOOP and item.kind =!= ir.ITEM_KIND_SOURCE_LOC {
             loop extractReachableCodeTokens(item.code) as rTok { setLib.add(mut reachable, rTok); }
             if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
                 setLib.add(mut reachable, item.runtime);
@@ -1944,6 +2092,7 @@ pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: In
             if keepFn { listLib.pushBack(mut filtered, item); }
         } else {
             dropDecl := keepBlockDepth == 0 and isTopDeclKind(item.kind) and
+            (optLevel >= 1 or isImportedModuleRuntime(item.runtime)) and
             (nextDeclPure or ((target == ir.TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code))) and
             not setLib.has(reachable, item.runtime);
             nextDeclPure = false;

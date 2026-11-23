@@ -1,0 +1,367 @@
+/** Shared token-aware structured formatter for emitted TypeScript and C11 target code. */
+
+listLib := import "core/list";
+textLib := import "core/text";
+tb := import "util/text-builder";
+
+/** Output format mode: `"pretty"` (multi-line 4-space indented) or `"compact"` (minimal whitespace for `-Os`). */
+pub FORMAT_PRETTY := "pretty";
+pub FORMAT_COMPACT := "compact";
+
+/** Source-map mode: `"none"`, `"comments"` (`// file:line:col`), or `"lines"` (C11 `#line` / TS comments). */
+pub SOURCEMAP_NONE := "none";
+pub SOURCEMAP_COMMENTS := "comments";
+pub SOURCEMAP_LINES := "lines";
+
+/** True when `name` is a clean ASCII target identifier that cannot collide with JS/TS/C keywords or standard headers. */
+pub isSafeTargetIdent := fn(name: String, isC: Bool): Bool {
+    n := textLib.length(name);
+    if n == 0 or n > 48 { return false; }
+    var i := 0;
+    loop i < n {
+        ch := textLib.at(name, i);
+        if i == 0 and not textLib.isNameStart(ch) { return false; }
+        if not textLib.isNameContinue(ch) { return false; }
+        i = i + 1;
+    }
+    if textLib.startsWithAt(name, 0, "_") or textLib.startsWithAt(name, 0, "lite") or textLib.startsWithAt(name, 0, "lt_") {
+        return false;
+    }
+    sharedBlocked := "|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|false|finally|for|function|if|import|in|instanceof|let|new|null|return|super|switch|this|throw|true|try|typeof|undefined|var|void|while|with|yield|await|async|implements|interface|package|private|protected|public|static|arguments|eval|main|status|out|emit|write|string|number|boolean|bigint|symbol|object|any|unknown|never|type|as|from|of|";
+    if textLib.indexOfText(sharedBlocked, "|" + name + "|", 0) >= 0 { return false; }
+    if isC {
+        cBlocked := "|auto|char|double|extern|float|goto|int|long|register|restrict|short|signed|sizeof|struct|typedef|union|unsigned|volatile|inline|bool|FILE|EOF|NULL|errno|stdin|stdout|stderr|argc|argv|index|rindex|time|sin|cos|tan|log|exp|pow|sqrt|abs|labs|div|ldiv|exit|free|malloc|calloc|realloc|read|write|open|close|stat|link|unlink|pipe|fork|wait|exec|kill|signal|printf|fprintf|sprintf|snprintf|puts|fputs|strlen|strcmp|strcpy|memcpy|memmove|memset|strtod|strtof|strtoll|";
+        if textLib.indexOfText(cBlocked, "|" + name + "|", 0) >= 0 { return false; }
+    }
+    true
+};
+
+/** Resolves effective emit format from explicit flag (`""` = auto) and `optLevel` (`4` = `-Os`). */
+pub resolveEmitFormat := fn(explicit: String, optLevel: Int): String {
+    if explicit == FORMAT_PRETTY or explicit == FORMAT_COMPACT { return explicit; }
+    if optLevel == 4 { FORMAT_COMPACT } else { FORMAT_PRETTY }
+};
+
+/** Resolves effective source-map mode from explicit flag (`""` = auto), `target`, and `optLevel`. */
+pub resolveSourceMap := fn(explicit: String, target: String, optLevel: Int): String {
+    if explicit == SOURCEMAP_NONE or explicit == SOURCEMAP_COMMENTS or explicit == SOURCEMAP_LINES {
+        return explicit;
+    }
+    if optLevel == 0 {
+        if target == "c" { SOURCEMAP_LINES } else { SOURCEMAP_COMMENTS }
+    } else {
+        SOURCEMAP_NONE
+    }
+};
+
+/** Returns `n` spaces for 4-space indentation levels. */
+indentSpaces := fn(level: Int): String {
+    var out := "";
+    var i := 0;
+    loop i < level {
+        out = out + "    ";
+        i = i + 1;
+    }
+    out
+};
+
+/** Skips a quoted string or char literal starting at `start`, returning index after closing quote. */
+skipQuoted := fn(s: String, start: Int): Int {
+    n := textLib.length(s);
+    quote := textLib.at(s, start);
+    var i := start + 1;
+    loop i < n {
+        ch := textLib.at(s, i);
+        if ch == "\\" {
+            i = i + 2;
+        } else if ch == quote {
+            return i + 1;
+        } else {
+            i = i + 1;
+        }
+    }
+    n
+};
+
+/** Skips a C/TS block comment starting at `/*`, returning index after `*/`. */
+skipBlockComment := fn(s: String, start: Int): Int {
+    endPos := textLib.indexOfText(s, "*/", start + 2);
+    if endPos < 0 { textLib.length(s) } else { endPos + 2 }
+};
+
+/** True when `code` mentions identifier `ident` as a standalone token outside quoted strings and `.prop` accesses. */
+pub codeUsesIdent := fn(code: String, ident: String): Bool {
+    if code == "" or ident == "" { return false; }
+    if textLib.indexOfText(code, ident, 0) < 0 { return false; }
+    n := textLib.length(code);
+    m := textLib.length(ident);
+    var i := 0;
+    loop i < n {
+        ch := textLib.at(code, i);
+        if ch == "\"" or ch == "'" or ch == "`" {
+            i = skipQuoted(code, i);
+            continue;
+        }
+        if textLib.startsWithAt(code, i, ident) {
+            beforeOk := i == 0 or (
+                not textLib.isNameContinue(textLib.at(code, i - 1)) and
+                textLib.at(code, i - 1) =!= "$" and
+                textLib.at(code, i - 1) =!= "."
+            );
+            afterPos := i + m;
+            afterOk := afterPos >= n or (
+                not textLib.isNameContinue(textLib.at(code, afterPos)) and
+                textLib.at(code, afterPos) =!= "$"
+            );
+            if beforeOk and afterOk { return true; }
+        }
+        i = i + 1;
+    }
+    false
+};
+
+/** True when `s[bracePos]` (`{`) opens a statement block rather than a data/type/struct literal. */
+isStatementBlockOpen := fn(s: String, bracePos: Int): Bool {
+    n := textLib.length(s);
+    /* Scan ahead at brace depth 1 to see if this brace contains a top-level `;` or is an empty block after control syntax. */
+    var p := bracePos - 1;
+    loop p >= 0 and (textLib.at(s, p) == " " or textLib.at(s, p) == "\t") { p = p - 1; }
+    prevCh := if p >= 0 { textLib.at(s, p) } else { "" };
+    /* Data literals immediately follow `=`, `,`, `(`, `[`, `?`, or C compound literal `(Type){`. */
+    if prevCh == "=" or prevCh == "," or prevCh == "(" or prevCh == "[" or prevCh == "?" {
+        return false;
+    }
+    /* Check if preceded by a keyword or control header (`else`, `try`, `do`, `finally`, `=>`, `)`). */
+    afterWord := prevCh == ")" or prevCh == ";" or prevCh == "{" or prevCh == "" or
+        (prevCh == ">" and p > 0 and textLib.at(s, p - 1) == "=");
+    var isCtrlKw := false;
+    var headerKw := "";
+    if p >= 0 and textLib.isNameContinue(prevCh) {
+        var wStart := p;
+        loop wStart > 0 and textLib.isNameContinue(textLib.at(s, wStart - 1)) { wStart = wStart - 1; }
+        word := textLib.slice(s, wStart, p + 1);
+        headerKw = word;
+        isCtrlKw = word == "else" or word == "try" or word == "do" or word == "finally";
+    }
+    if not afterWord and not isCtrlKw {
+        return false;
+    }
+    /* For `)` distinguish `if/for/while/catch/switch (...) {` from C compound literal `(Type){ .f = 1 }`. */
+    if prevCh == ")" {
+        var depth := 1;
+        var q := p - 1;
+        loop q >= 0 and depth > 0 {
+            c := textLib.at(s, q);
+            if c == ")" { depth = depth + 1; }
+            else if c == "(" { depth = depth - 1; }
+            q = q - 1;
+        }
+        loop q >= 0 and (textLib.at(s, q) == " " or textLib.at(s, q) == "\t") { q = q - 1; }
+        if q < 0 or not textLib.isNameContinue(textLib.at(s, q)) {
+            return false;
+        }
+        var kwStart := q;
+        loop kwStart > 0 and textLib.isNameContinue(textLib.at(s, kwStart - 1)) { kwStart = kwStart - 1; }
+        kw := textLib.slice(s, kwStart, q + 1);
+        headerKw = kw;
+        if kw =!= "for" and kw =!= "while" and kw =!= "if" and kw =!= "catch" and kw =!= "switch" {
+            return false;
+        }
+    }
+    /* Verify the matching `}` exists on this line and the body is either empty or statement-oriented (has `;` or nested `{`). */
+    var bDepth := 1;
+    var pDepth := 0;
+    var semiCount := 0;
+    var hasNestedBrace := false;
+    var hasNonSpace := false;
+    var k := bracePos + 1;
+    loop k < n and bDepth > 0 {
+        c := textLib.at(s, k);
+        if c == "\"" or c == "'" or c == "`" {
+            hasNonSpace = true;
+            k = skipQuoted(s, k);
+        } else if c == "/" and k + 1 < n and textLib.at(s, k + 1) == "*" {
+            k = skipBlockComment(s, k);
+        } else if c == "(" {
+            hasNonSpace = true;
+            pDepth = pDepth + 1;
+            k = k + 1;
+        } else if c == ")" {
+            if pDepth > 0 { pDepth = pDepth - 1; }
+            k = k + 1;
+        } else if c == "{" {
+            hasNonSpace = true;
+            if bDepth == 1 and pDepth == 0 { hasNestedBrace = true; }
+            bDepth = bDepth + 1;
+            k = k + 1;
+        } else if c == "}" {
+            bDepth = bDepth - 1;
+            k = k + 1;
+        } else if c == ";" {
+            hasNonSpace = true;
+            if bDepth == 1 and pDepth == 0 { semiCount = semiCount + 1; }
+            k = k + 1;
+        } else {
+            if c =!= " " and c =!= "\t" { hasNonSpace = true; }
+            k = k + 1;
+        }
+    }
+    if bDepth =!= 0 { return false; }
+    /* Keep short single-statement `if (...) { stmt; }` concise on one line when there is no nested block or trailing clause. */
+    if headerKw == "if" and not hasNestedBrace and semiCount == 1 and k == n and n <= 96 {
+        return false;
+    }
+    semiCount > 0 or hasNestedBrace or not hasNonSpace
+};
+
+/** Expands a single-line lowered statement containing inline statement blocks (`for (...) { ... }`, etc.) into 4-space indented lines. */
+pub formatEmittedLine := fn(rawLine: String): String {
+    if textLib.indexOfText(rawLine, "{", 0) < 0 { return rawLine; }
+    trimmed := textLib.trimStart(rawLine);
+    if trimmed == "" or textLib.startsWithAt(trimmed, 0, "#") or textLib.startsWithAt(trimmed, 0, "//") or textLib.startsWithAt(trimmed, 0, "/*") {
+        return rawLine;
+    }
+    /* Fast path: already a normal block header (`if (...) {`) or single-line without inline body statements. */
+    hasInline := textLib.indexOfText(trimmed, "; ", 0) >= 0 or textLib.indexOfText(trimmed, "{ ", 0) >= 0 or textLib.indexOfText(trimmed, " }", 0) >= 0;
+    if not hasInline { return rawLine; }
+
+    baseSpaces := textLib.length(rawLine) - textLib.length(trimmed);
+    baseIndent := textLib.slice(rawLine, 0, baseSpaces);
+    n := textLib.length(trimmed);
+    out: mut tb.TextBuilder;
+    var blockDepth := 0;
+    var parenDepth := 0;
+    /* Stack of brace kinds: 1 = expanded statement block, 0 = inline data/object/type brace. */
+    braceStack: mut List<Int> = [];
+    var i := 0;
+    var atLineStart := true;
+    var changed := false;
+
+    loop i < n {
+        ch := textLib.at(trimmed, i);
+        if atLineStart {
+            if ch == " " or ch == "\t" {
+                i = i + 1;
+                continue;
+            }
+            if ch == "}" and listLib.listCountInt(braceStack) > 0 and braceStack[listLib.listCountInt(braceStack) - 1] == 1 {
+                _pop := listLib.popBack(mut braceStack);
+                if blockDepth > 0 { blockDepth = blockDepth - 1; }
+                tb.append(mut out, baseIndent + indentSpaces(blockDepth) + "}");
+                i = i + 1;
+                atLineStart = false;
+                /* Check if `else` or `catch` or `finally` or `;` follows on same line. */
+                var peek := i;
+                loop peek < n and textLib.at(trimmed, peek) == " " { peek = peek + 1; }
+                if peek < n and (textLib.wordAt(trimmed, peek, "else") or textLib.wordAt(trimmed, peek, "catch") or textLib.wordAt(trimmed, peek, "finally")) {
+                    tb.append(mut out, " ");
+                    i = peek;
+                } else if peek < n and (textLib.at(trimmed, peek) == ";" or textLib.at(trimmed, peek) == ")" or textLib.at(trimmed, peek) == ",") {
+                    i = peek;
+                } else if peek < n {
+                    tb.append(mut out, "\n");
+                    atLineStart = true;
+                    i = peek;
+                }
+                continue;
+            }
+            tb.append(mut out, baseIndent + indentSpaces(blockDepth));
+            atLineStart = false;
+        }
+        if ch == "\"" or ch == "'" or ch == "`" {
+            endQ := skipQuoted(trimmed, i);
+            tb.append(mut out, textLib.slice(trimmed, i, endQ));
+            i = endQ;
+        } else if ch == "/" and i + 1 < n and textLib.at(trimmed, i + 1) == "*" {
+            endC := skipBlockComment(trimmed, i);
+            tb.append(mut out, textLib.slice(trimmed, i, endC));
+            i = endC;
+        } else if ch == "(" {
+            parenDepth = parenDepth + 1;
+            tb.append(mut out, "(");
+            i = i + 1;
+        } else if ch == ")" {
+            if parenDepth > 0 { parenDepth = parenDepth - 1; }
+            tb.append(mut out, ")");
+            i = i + 1;
+        } else if ch == "{" {
+            expand := parenDepth == 0 and isStatementBlockOpen(trimmed, i);
+            if expand {
+                /* Check for empty block `{  }`. */
+                var nextNonWs := i + 1;
+                loop nextNonWs < n and (textLib.at(trimmed, nextNonWs) == " " or textLib.at(trimmed, nextNonWs) == "\t") {
+                    nextNonWs = nextNonWs + 1;
+                }
+                if nextNonWs < n and textLib.at(trimmed, nextNonWs) == "}" {
+                    changed = true;
+                    tb.append(mut out, "{\n" + baseIndent + indentSpaces(blockDepth) + "}");
+                    i = nextNonWs + 1;
+                    var afterEmpty := i;
+                    loop afterEmpty < n and textLib.at(trimmed, afterEmpty) == " " { afterEmpty = afterEmpty + 1; }
+                    if afterEmpty < n and (textLib.wordAt(trimmed, afterEmpty, "else") or textLib.wordAt(trimmed, afterEmpty, "catch") or textLib.wordAt(trimmed, afterEmpty, "finally")) {
+                        tb.append(mut out, " ");
+                        i = afterEmpty;
+                    } else if afterEmpty < n and (textLib.at(trimmed, afterEmpty) == ";" or textLib.at(trimmed, afterEmpty) == ")" or textLib.at(trimmed, afterEmpty) == ",") {
+                        i = afterEmpty;
+                    } else if afterEmpty < n {
+                        tb.append(mut out, "\n");
+                        atLineStart = true;
+                        i = afterEmpty;
+                    }
+                } else {
+                    changed = true;
+                    listLib.pushBack(mut braceStack, 1);
+                    blockDepth = blockDepth + 1;
+                    tb.append(mut out, "{\n");
+                    atLineStart = true;
+                    i = nextNonWs;
+                }
+            } else {
+                listLib.pushBack(mut braceStack, 0);
+                tb.append(mut out, "{");
+                i = i + 1;
+            }
+        } else if ch == "}" {
+            isExpanded := listLib.listCountInt(braceStack) > 0 and braceStack[listLib.listCountInt(braceStack) - 1] == 1;
+            if listLib.listCountInt(braceStack) > 0 {
+                _pop := listLib.popBack(mut braceStack);
+            }
+            if isExpanded {
+                changed = true;
+                if blockDepth > 0 { blockDepth = blockDepth - 1; }
+                tb.append(mut out, "\n" + baseIndent + indentSpaces(blockDepth) + "}");
+                i = i + 1;
+                var peek := i;
+                loop peek < n and textLib.at(trimmed, peek) == " " { peek = peek + 1; }
+                if peek < n and (textLib.wordAt(trimmed, peek, "else") or textLib.wordAt(trimmed, peek, "catch") or textLib.wordAt(trimmed, peek, "finally")) {
+                    tb.append(mut out, " ");
+                    i = peek;
+                } else if peek < n and (textLib.at(trimmed, peek) == ";" or textLib.at(trimmed, peek) == ")" or textLib.at(trimmed, peek) == ",") {
+                    i = peek;
+                } else if peek < n {
+                    tb.append(mut out, "\n");
+                    atLineStart = true;
+                    i = peek;
+                }
+            } else {
+                tb.append(mut out, "}");
+                i = i + 1;
+            }
+        } else if ch == ";" and parenDepth == 0 and blockDepth > 0 and listLib.listCountInt(braceStack) > 0 and braceStack[listLib.listCountInt(braceStack) - 1] == 1 {
+            tb.append(mut out, ";");
+            i = i + 1;
+            var peek := i;
+            loop peek < n and textLib.at(trimmed, peek) == " " { peek = peek + 1; }
+            if peek < n {
+                changed = true;
+                tb.append(mut out, "\n");
+                atLineStart = true;
+                i = peek;
+            }
+        } else {
+            tb.append(mut out, ch);
+            i = i + 1;
+        }
+    }
+    if changed { tb.build(out) } else { rawLine }
+};

@@ -424,7 +424,7 @@ scanTopLevelTokens := fn(items: frontend.Items, existing: frontend.TokenBuckets)
         } else if item.kind == frontend.ITEM_KIND_END_SCOPE or item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_LOOP {
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if not isPureDecl and item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
-        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_NOOP {
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_SOURCE_LOC {
             seed = scanItemTokens(item, seed);
         }
     }

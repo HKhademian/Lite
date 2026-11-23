@@ -14,6 +14,11 @@ pub run := fn(args: List<String>): Unit {
         io.errorLine(flags.error);
         io.exit(2);
     }
+    emitOpts := hostFs.extractEmitOptions(args);
+    if not emitOpts.ok {
+        io.errorLine(emitOpts.error);
+        io.exit(2);
+    }
     builtinSpecs := hostFs.extractBuiltinSpecs(args);
     cwd := proc.cwd();
     stdinText := if flags.isStdin { io.inputAll() } else { "" };
@@ -30,7 +35,7 @@ pub run := fn(args: List<String>): Unit {
     items := modules.moduleItems(graph);
     if flags.hasOut {
         writer := io.bufferWriter();
-        emitter.emitProgramToOpt(=writer, =items, source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel);
+        emitter.emitProgramToWithOpts(=writer, =items, source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel, emitFormat = emitOpts.emitFormat, sourceMap = emitOpts.sourceMap);
         outRes := io.writerText(writer);
         _cl := io.closeWriter(writer);
         if not outRes.ok {
@@ -41,7 +46,7 @@ pub run := fn(args: List<String>): Unit {
             diagLib.fail(loaded.display, "cannot write output file " + flags.outPath + ": " + wRes.error);
         }
     } else {
-        emitter.emitProgramWithSpecsOpt(=items, source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel);
+        emitter.emitProgramWithOpts(=items, source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel, emitFormat = emitOpts.emitFormat, sourceMap = emitOpts.sourceMap);
     }
     if flags.hasTrace {
         hostFs.writeTraceJson(flags.tracePath, graph);

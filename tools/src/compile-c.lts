@@ -26,6 +26,14 @@ run := fn(rawArgs: List<String>): Unit {
                 list.pushBack(mut positional, list.popFront(mut args));
             }
             break;
+        } else if arg == "--emit-format" or arg == "--source-map" {
+            if list.listCountText(args) == 0 or args[0] == "--" {
+                usageExit();
+            }
+            list.pushBack(mut forwardArgs, arg);
+            list.pushBack(mut forwardArgs, list.popFront(mut args));
+        } else if text.startsWithAt(arg, 0, "--emit-format=") or text.startsWithAt(arg, 0, "--source-map=") {
+            list.pushBack(mut forwardArgs, arg);
         } else if arg == "--builtin-mode" {
             if list.listCountText(args) == 0 or args[0] == "--" {
                 usageExit();

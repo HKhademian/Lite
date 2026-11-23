@@ -1,5 +1,7 @@
 tsLiteral := import "./ts-literals.lts";
+emitFmt := import "./emit-format.lts";
 frontend := import "./frontend.lts";
+integer := import "core/int";
 io := import "core/io";
 listLib := import "core/list";
 textLib := import "core/text";
@@ -8,10 +10,11 @@ var tsOutUseWriter := false;
 var tsOutWriterKind := "";
 var tsOutWriterHandle := 0;
 var tsCompactEmit := false;
+var tsSourceMapMode := "none";
 
 /** Emits one line to either standard output or an explicit target `io.Writer`. */
 outLine := fn(s: String): Unit {
-    line := if tsCompactEmit { textLib.trimStart(s) } else { s };
+    line := if tsCompactEmit { textLib.trimStart(s) } else { emitFmt.formatEmittedLine(s) };
     if tsCompactEmit and line == "" { return; }
     if not tsOutUseWriter {
         io.outputLine(line);
@@ -398,8 +401,8 @@ emitInputHelpers := fn(calls: String): Unit {
     outLine("}");
     outLine("function lite$prompt(text: string | undefined): void {");
     outLine("    if (text === undefined) return;");
-    outLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out + text);");
-    outLine("    lite$out = \"\";");
+    outLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out.join(\"\") + text);");
+    outLine("    lite$out = [];");
     outLine("}");
     outLine("function lite$peek(at: string): string | null {");
     outLine("    if (lite$pending !== undefined) return lite$pending;");
@@ -1866,7 +1869,7 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         if abruptUnwind {
             outLine("    return lite$throwAbruptExit(Number(status));");
         } else {
-            outLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out);");
+            outLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out.join(\"\"));");
             outLine("    process.exit(Number(status));");
         }
         outLine("}");
@@ -2427,18 +2430,28 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: 
     out
 }
 
-/** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications and optimization level (`0..3`). */
-pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+/** Emits the TS module with explicit `--builtin-mode`, `optLevel`, `--emit-format`, and `--source-map`. */
+pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
     prevCompact := tsCompactEmit;
-    tsCompactEmit = optLevel == 4;
+    prevSourceMap := tsSourceMapMode;
+    tsCompactEmit = emitFmt.resolveEmitFormat(emitFormat, optLevel) == emitFmt.FORMAT_COMPACT;
+    tsSourceMapMode = emitFmt.resolveSourceMap(sourceMap, frontend.TARGET_TS, optLevel);
     effectiveItems := frontend.filterReachableItemsWithOpt(applySoftBuiltins(items, prefix, builtinSpecs), frontend.TARGET_TS, optLevel);
     calls := frontend.targetHelperCalls(effectiveItems);
     abruptFault := usesAbruptFault(calls);
     abruptUnwind := usesAbruptUnwind(calls);
     hasInput := usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
     hasExit := usesBuiltin(calls, "exit") or usesDiagFailExit(calls) or hasInput or abruptUnwind;
+    var hasEmitItem := false;
+    loop effectiveItems as emitScan {
+        if emitScan.kind == frontend.ITEM_KIND_END or emitScan.kind == frontend.ITEM_KIND_END_OUTPUT {
+            hasEmitItem = true;
+            break;
+        }
+    }
+    usesEmit := hasEmitItem or hasExit or hasInput or abruptUnwind or textLib.indexOfText(calls, "lite$emit(", 0) >= 0;
     if hasExit {
-        outLine("let lite$out = \"\";");
+        outLine("let lite$out: string[] = [];");
         outLine("");
     }
     emitBuiltinHelpers(calls);
@@ -2453,16 +2466,23 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
     emitIntArithmeticHelpers(calls, source, prefix);
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
-    outLine("export function main(lite$write?: (text: string) => void): string {");
-    if hasExit { outLine("    lite$out = \"\";"); }
-    if hasInput { outLine("    lite$resetInput();"); }
-    if usesStreamRuntime(calls) { outLine("    lite$resetStreams();"); }
-    if not hasExit { outLine("    let lite$out = \"\";"); }
-    outLine("    function lite$emit(text: string): void {");
-    outLine("        if (lite$write === undefined) lite$out += text;");
-    outLine("        else lite$write(text);");
-    outLine("    }");
-    outLine("    void lite$emit;");
+    if usesEmit {
+        outLine("export function main(lite$write?: (text: string) => void): string {");
+        if hasExit { outLine("    lite$out = [];"); }
+        if hasInput { outLine("    lite$resetInput();"); }
+        if usesStreamRuntime(calls) { outLine("    lite$resetStreams();"); }
+        if not hasExit { outLine("    const lite$out: string[] = [];"); }
+        outLine("    function lite$emit(text: string): void {");
+        outLine("        if (lite$write === undefined) lite$out.push(text);");
+        outLine("        else lite$write(text);");
+        outLine("    }");
+        if not hasEmitItem and textLib.indexOfText(calls, "lite$emit(", 0) < 0 {
+            outLine("    void lite$emit;");
+        }
+    } else {
+        outLine("export function main(_write?: (text: string) => void): string {");
+        if usesStreamRuntime(calls) { outLine("    lite$resetStreams();"); }
+    }
     var indent := "    ";
     if abruptUnwind {
         outLine("    lite$abruptActive = false;");
@@ -2481,7 +2501,34 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
             activeTries = activeTries + tryItem.runtime + "|";
         }
     }
+    var pendingLocFile := "";
+    var pendingLocLine := 0;
+    var pendingLocCol := "";
+    var lastEmittedLocFile := "";
+    var lastEmittedLocLine := 0;
     loop effectiveItems as item {
+        if item.kind == frontend.ITEM_KIND_SOURCE_LOC {
+            pendingLocFile = item.name;
+            pendingLocLine = item.intValue;
+            pendingLocCol = item.code;
+            continue;
+        }
+        if tsSourceMapMode =!= emitFmt.SOURCEMAP_NONE and pendingLocLine > 0 and
+        item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and
+        item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_END_IF and
+        item.kind =!= frontend.ITEM_KIND_ELSE and item.kind =!= frontend.ITEM_KIND_ELSE_IF and
+        item.kind =!= frontend.ITEM_KIND_END_LOOP and item.kind =!= frontend.ITEM_KIND_END_SCOPE and
+        item.kind =!= frontend.ITEM_KIND_FUNCTION_END and item.kind =!= frontend.ITEM_KIND_TRANSFER_CATCH and
+        item.kind =!= frontend.ITEM_KIND_LOOP_TRANSFER_CATCH and item.kind =!= frontend.ITEM_KIND_MAIN_STOP {
+            if pendingLocFile =!= lastEmittedLocFile or pendingLocLine =!= lastEmittedLocLine {
+                dispFile := if pendingLocFile =!= "" { pendingLocFile } else { "<stdin>" };
+                outLine(indent + "// " + dispFile + ":" + integer.intText(pendingLocLine) + ":" + pendingLocCol);
+                lastEmittedLocFile = pendingLocFile;
+                lastEmittedLocLine = pendingLocLine;
+            }
+            pendingLocLine = 0;
+        }
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
             outLine(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
             tsFunctionType(item.code) + " {");
@@ -2527,7 +2574,24 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         } else if item.kind == frontend.ITEM_KIND_CALL {
             outLine(indent + item.code + ";");
         } else if item.kind == frontend.ITEM_KIND_DISCARD {
-            outLine(indent + "void (" + item.code + ");");
+            trimmedDiscard := textLib.trim(item.code);
+            unwrapped := if textLib.startsWithAt(trimmedDiscard, 0, "(() => { ") and textLib.endsWith(trimmedDiscard, " return undefined; })()") {
+                innerBody := textLib.trim(textLib.slice(trimmedDiscard, 9, textLib.length(trimmedDiscard) - 23));
+                if textLib.indexOfText(innerBody, "return ", 0) < 0 and textLib.indexOfText(innerBody, "return;", 0) < 0 {
+                    if textLib.startsWithAt(innerBody, 0, "for (") or textLib.startsWithAt(innerBody, 0, "while (") or textLib.startsWithAt(innerBody, 0, "if (") or textLib.startsWithAt(innerBody, 0, "try {") {
+                        innerBody
+                    } else if innerBody == "" {
+                        ""
+                    } else {
+                        "{ " + innerBody + " }"
+                    }
+                } else { "" }
+            } else { "" };
+            if unwrapped =!= "" {
+                outLine(indent + unwrapped);
+            } else {
+                outLine(indent + "void (" + item.code + ");");
+            }
         } else if item.kind == frontend.ITEM_KIND_LOCAL_INT or item.kind == frontend.ITEM_KIND_LOCAL_STRING or item.kind == frontend.ITEM_KIND_LOCAL_BOOL or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_LOCAL_TUPLE {
             outLine(indent + "const " + item.runtime + " = " + item.code + ";");
             outLine(indent + "void " + item.runtime + ";");
@@ -2619,13 +2683,19 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
             count = count + 1;
         }
     }
-    if not mainStopped { outLine(indent + "return lite$out;"); }
+    if not mainStopped {
+        if usesEmit {
+            outLine(indent + "return lite$out.join(\"\");");
+        } else {
+            outLine(indent + "return \"\";");
+        }
+    }
     if abruptUnwind {
         outLine("    } catch (lite$err) {");
         outLine("        if (lite$err === lite$abruptToken) {");
-        outLine("            if (lite$out !== \"\") {");
-        outLine("                process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out);");
-        outLine("                lite$out = \"\";");
+        outLine("            if (lite$out.length > 0) {");
+        outLine("                process.getBuiltinModule(\"node:fs\").writeSync(1, lite$out.join(\"\"));");
+        outLine("                lite$out = [];");
         outLine("            }");
         outLine("            if (lite$abruptStderr !== \"\") {");
         outLine("                process.getBuiltinModule(\"node:fs\").writeSync(2, lite$abruptStderr);");
@@ -2645,7 +2715,13 @@ pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix:
         outLine("}");
     }
     tsCompactEmit = prevCompact;
+    tsSourceMapMode = prevSourceMap;
 }
+
+/** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications and optimization level (`0..4`). */
+pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+    emitProgramWithOpts(items, source, prefix, builtinSpecs, optLevel, "", "");
+};
 
 /** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications at default `-O1`. */
 pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
@@ -2658,13 +2734,18 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     emitProgramWithSpecsOpt(items, source, prefix, emptySpecs, 1);
 }
 
-/** Emits the TS module from the flat item stream into `writer` at optimization level `optLevel` (`0..3`). */
-pub emitProgramToOpt := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+/** Emits the TS module into `writer` with explicit `--emit-format` and `--source-map`. */
+pub emitProgramToWithOpts := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
     tsOutUseWriter = true;
     tsOutWriterKind = writer.kind;
     tsOutWriterHandle = writer.handle;
-    emitProgramWithSpecsOpt(items, source, prefix, builtinSpecs, optLevel);
+    emitProgramWithOpts(items, source, prefix, builtinSpecs, optLevel, emitFormat, sourceMap);
     tsOutUseWriter = false;
+};
+
+/** Emits the TS module from the flat item stream into `writer` at optimization level `optLevel` (`0..4`). */
+pub emitProgramToOpt := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
+    emitProgramToWithOpts(writer, items, source, prefix, builtinSpecs, optLevel, "", "");
 }
 
 /** Emits the TS module from the flat item stream into `writer` at default `-O1`. */

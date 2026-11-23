@@ -160,6 +160,7 @@ pub ITEM_KIND_END_OUTPUT := ir.ITEM_KIND_END_OUTPUT;
 pub ITEM_KIND_MAIN_STOP := ir.ITEM_KIND_MAIN_STOP;
 pub ITEM_KIND_IMPORT := ir.ITEM_KIND_IMPORT;
 pub ITEM_KIND_NOOP := ir.ITEM_KIND_NOOP;
+pub ITEM_KIND_SOURCE_LOC := ir.ITEM_KIND_SOURCE_LOC;
 pub ITEM_KIND_LOCAL_TUPLE := ir.ITEM_KIND_LOCAL_TUPLE;
 pub ITEM_KIND_LOCAL_RECORD := ir.ITEM_KIND_LOCAL_RECORD;
 pub ITEM_KIND_LOCAL_LIST := ir.ITEM_KIND_LOCAL_LIST;
@@ -1264,6 +1265,10 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     loopIds: mut List<Int> = [];
     loopTryKeys: mut List<String> = [];
     loopTransferStarts: mut List<Int> = [];
+    var locCursor := 0;
+    var locLine := 1;
+    var locLineStart := 0;
+    var lastEmittedLocLine := 0;
     loop position < size {
         ch := textLib.at(source, position);
         if ch == ";" {
@@ -1542,6 +1547,20 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 position = skipTrivia(source, position + 1, prefix);
             }
             continue;
+        }
+        if position > locCursor {
+            loop locCursor < position {
+                if textLib.at(source, locCursor) == "\n" {
+                    locLine = locLine + 1;
+                    locLineStart = locCursor + 1;
+                }
+                locCursor = locCursor + 1;
+            }
+        }
+        if currentLive and locLine =!= lastEmittedLocLine {
+            lastEmittedLocLine = locLine;
+            locCol := (position - locLineStart) + 1;
+            listLib.pushBack(mut items, (kind = ITEM_KIND_SOURCE_LOC, name = prefix, runtime = "", code = integer.intText(locCol), intValue = locLine, textValue = ""));
         }
         if ch == "{" {
             rawBraceEnd := scanBraceEnd(source, position, prefix);
