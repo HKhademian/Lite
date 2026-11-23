@@ -1,0 +1,194 @@
+/* Dual-target (TS + C11) tests for Slice 1C provisional `$getIndex` / `$setIndex` operator hooks. */
+
+test := import "core/test";
+file := import "core/file";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+runBoth := fn(label: String, src: String, expected: String): Unit {
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+    test.checkInt(label + " ts status: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(label + " ts stderr", "", tsRes.stderr);
+    test.checkText(label + " ts stdout", expected, tsRes.stdout);
+    if ccInfo.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+        test.checkInt(label + " c status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " c stderr", "", cRes.stderr);
+        test.checkText(label + " c stdout parity", tsRes.stdout, cRes.stdout);
+    }
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccInfo.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+/* 1. Positional record indexing, COW snapshot isolation, single-evaluation compound +=, nested inner-block & mut Self forwarding. */
+posIdxSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Pair := record {\n" +
+"    a: Int;\n" +
+"    b: Int;\n" +
+"}\n" +
+"\n" +
+"Pair.$getIndex := fn(p: Self, i: Int): Int {\n" +
+"    if i == 0 { p.a } else { p.b }\n" +
+"};\n" +
+"\n" +
+"Pair.$setIndex := fn(p: mut Self, i: Int, v: Int): Unit {\n" +
+"    if i == 0 { p.a = v; } else { p.b = v; }\n" +
+"};\n" +
+"\n" +
+"var keyEvalCount := 0;\n" +
+"pickIdx := fn(i: Int): Int {\n" +
+"    keyEvalCount += 1;\n" +
+"    i\n" +
+"};\n" +
+"\n" +
+"Pair.bumpBoth := fn(p: mut Self, delta: Int): Unit {\n" +
+"    p[0] = p[0] + delta;\n" +
+"    if delta > 0 {\n" +
+"        p[pickIdx(1)] += delta * 2;\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"mut pair := Pair { a = 10, b = 20 };\n" +
+"snap := pair;\n" +
+"pair[0] = 30;\n" +
+"pair[pickIdx(1)] += 5;\n" +
+"pair.bumpBoth(3);\n" +
+"io.outputLine(snap[0], snap[1], pair[0], pair[1], keyEvalCount);\n";
+
+runBoth("positional-index-hooks", posIdxSrc, "10 20 33 31 2\n");
+
+/* 2. Keyed (String) indexing on a record + read-only indexing on an enum. */
+keyedSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Stats := record {\n" +
+"    hp: Int;\n" +
+"    mp: Int;\n" +
+"}\n" +
+"\n" +
+"Stats.$getIndex := fn(s: Self, key: String): Int {\n" +
+"    if key == \"hp\" { s.hp } else { s.mp }\n" +
+"};\n" +
+"\n" +
+"Stats.$setIndex := fn(s: mut Self, key: String, val: Int): Unit {\n" +
+"    if key == \"hp\" { s.hp = val; } else { s.mp = val; }\n" +
+"};\n" +
+"\n" +
+"mut st := Stats { hp = 100, mp = 50 };\n" +
+"st[\"hp\"] -= 25;\n" +
+"st[\"mp\"] = 80;\n" +
+"io.outputLine(st[\"hp\"], st[\"mp\"]);\n";
+
+runBoth("keyed-index-hooks", keyedSrc, "75 80\n");
+
+/* 3. Cross-module transitive pub $getIndex / $setIndex visibility. */
+tmpDir := file.makeTempDir("lite-idx-hooks-");
+test.check("makeTempDir: " + tmpDir.error, tmpDir.ok);
+vecPath := tmpDir.path + "/pair.lts";
+facPath := tmpDir.path + "/factory.lts";
+appPath := tmpDir.path + "/app.lts";
+
+vecSrc :=
+"pub Pair := record { a: Int; b: Int; }\n" +
+"pub Pair.$getIndex := fn(p: Self, i: Int): Int { if i == 0 { p.a } else { p.b } };\n" +
+"pub Pair.$setIndex := fn(p: mut Self, i: Int, v: Int): Unit { if i == 0 { p.a = v; } else { p.b = v; } };\n";
+
+facSrc :=
+"p := import \"./pair.lts\";\n" +
+"pub make := fn(a: Int, b: Int): p.Pair { p.Pair { a = a, b = b } };\n";
+
+appSrc :=
+"io := import \"core/io\";\n" +
+"f := import \"./factory.lts\";\n" +
+"mut q := f.make(1, 2);\n" +
+"q[0] = 7;\n" +
+"q[1] += 8;\n" +
+"io.outputLine(q[0], q[1]);\n";
+
+_w1 := file.writeText(vecPath, vecSrc);
+_w2 := file.writeText(facPath, facSrc);
+_w3 := file.writeText(appPath, appSrc);
+
+tsModComp := compilerTest.compileFile(tsComp, tmpDir.path, [appPath]);
+test.checkInt("cross-mod idx hooks ts compile: " + tsModComp.stderr, 0, tsModComp.status);
+tsModRes := compilerTest.checkAndRunTs(root, tsModComp.stdout);
+test.checkInt("cross-mod idx hooks ts status: " + tsModRes.stderr, 0, tsModRes.status);
+test.checkText("cross-mod idx hooks ts stdout", "7 10\n", tsModRes.stdout);
+if ccInfo.available {
+    cModComp := compilerTest.compileFile(cComp, tmpDir.path, [appPath]);
+    test.checkInt("cross-mod idx hooks c compile: " + cModComp.stderr, 0, cModComp.status);
+    cModRes := compilerTest.compileAndRunC(cModComp.stdout, ccInfo.cc, "");
+    test.checkInt("cross-mod idx hooks c status: " + cModRes.stderr, 0, cModRes.status);
+    test.checkText("cross-mod idx hooks c stdout parity", tsModRes.stdout, cModRes.stdout);
+}
+_rm := file.remove(tmpDir.path);
+
+/* 4. Rejections: direct dot call, direct type ref, read-only write, missing $setIndex, signature mismatches, missing $getIndex for compound. */
+expectRejectBoth("direct-dot-call-getIndex",
+"P := record { a: Int; }\n" +
+"P.$getIndex := fn(p: Self, i: Int): Int { p.a };\n" +
+"p := P { a = 1 };\n" +
+"x := p.$getIndex(0);\n",
+"compiler hook $getIndex cannot be called directly");
+
+expectRejectBoth("direct-type-ref-getIndex",
+"P := record { a: Int; }\n" +
+"P.$getIndex := fn(p: Self, i: Int): Int { p.a };\n" +
+"x := P.$getIndex;\n",
+"compiler hook $getIndex cannot be referenced directly");
+
+expectRejectBoth("readonly-index-assign",
+"P := record { a: Int; }\n" +
+"P.$setIndex := fn(p: mut Self, i: Int, v: Int): Unit { p.a = v; };\n" +
+"p := P { a = 1 };\n" +
+"p[0] = 2;\n",
+"cannot mutate read-only value p via index assignment");
+
+expectRejectBoth("missing-setIndex",
+"P := record { a: Int; }\n" +
+"P.$getIndex := fn(p: Self, i: Int): Int { p.a };\n" +
+"mut p := P { a = 1 };\n" +
+"p[0] = 2;\n",
+"does not define $setIndex");
+
+expectRejectBoth("compound-missing-getIndex",
+"P := record { a: Int; }\n" +
+"P.$setIndex := fn(p: mut Self, i: Int, v: Int): Unit { p.a = v; };\n" +
+"mut p := P { a = 1 };\n" +
+"p[0] += 2;\n",
+"compound index assignment requires both $getIndex and $setIndex");
+
+expectRejectBoth("getIndex-mut-receiver-rejected",
+"P := record { a: Int; }\n" +
+"P.$getIndex := fn(p: mut Self, i: Int): Int { p.a };\n",
+"$getIndex receiver on P must be read-only Self");
+
+expectRejectBoth("setIndex-non-mut-receiver-rejected",
+"P := record { a: Int; }\n" +
+"P.$setIndex := fn(p: Self, i: Int, v: Int): Unit { };\n",
+"$setIndex receiver on P must be mut Self");
+
+expectRejectBoth("setIndex-non-unit-return-rejected",
+"P := record { a: Int; }\n" +
+"P.$setIndex := fn(p: mut Self, i: Int, v: Int): Int { v };\n",
+"$setIndex on P must return Unit");
+
+test.done("index-operator-hooks");

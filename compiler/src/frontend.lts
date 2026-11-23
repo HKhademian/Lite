@@ -3616,6 +3616,64 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         }
         if position < size and textLib.at(source, position) == "[" {
             mapLocalIdx := localIndex(locals, name);
+            if mapLocalIdx >= 0 and (expr.hasIndexHook(locals[mapLocalIdx].kind, "$setIndex", functions) or
+            (not types.isMapKind(locals[mapLocalIdx].kind) and not isListKind(locals[mapLocalIdx].kind) and not isArrayKind(locals[mapLocalIdx].kind) and
+            expr.hasIndexHook(locals[mapLocalIdx].kind, "$getIndex", functions))) {
+                bracketEnd := syntax.scanBracketEnd(source, position, prefix);
+                afterBracket := if bracketEnd >= 0 { skipTrivia(source, bracketEnd, prefix) } else { -1 };
+                hookCompOp := if afterBracket >= 0 { compoundAssignOp(source, afterBracket) } else { (op = "", baseOp = "", width = 0) };
+                if afterBracket >= 0 and (isSingleEquals(source, afterBracket) or hookCompOp.width > 0) {
+                    entry := locals[mapLocalIdx];
+                    if entry.initState =!= INIT_STATE_INIT {
+                        failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
+                    }
+                    setHook := expr.resolveIndexHookOp(target, source, nameStart, prefix, entry.kind, "$setIndex", functions, functionParams, false);
+                    if not setHook.found {
+                        failAt(source, nameStart, prefix, "type " + displayKind(entry.kind) + " does not define $setIndex for index assignment");
+                    }
+                    if not entry.writable {
+                        failAt(source, nameStart, prefix, "cannot mutate read-only value " + name + " via index assignment");
+                    }
+                    var getHookRuntime := "";
+                    if hookCompOp.width > 0 {
+                        getHook := expr.resolveIndexHookOp(target, source, nameStart, prefix, entry.kind, "$getIndex", functions, functionParams, false);
+                        if not getHook.found {
+                            failAt(source, nameStart, prefix, "compound index assignment requires both $getIndex and $setIndex on " + displayKind(entry.kind));
+                        }
+                        if not types.isCompatibleKind(getHook.keyKind, setHook.keyKind) or not types.isCompatibleKind(setHook.valKind, getHook.valKind) {
+                            failAt(source, nameStart, prefix, "incompatible $getIndex and $setIndex types for compound index assignment on " + displayKind(entry.kind));
+                        }
+                        getHookRuntime = getHook.runtime;
+                    }
+                    kStart := skipTrivia(source, position + 1, prefix);
+                    keyParsed := parseExpressionAsCtx(target, source, kStart, prefix, locals, functions, functionParams, currentName, setHook.keyKind, stmtCtxs, aliases);
+                    if not types.isCompatibleKind(setHook.keyKind, keyParsed.kind) {
+                        failAt(source, kStart, prefix, "index must be " + displayKind(setHook.keyKind) + ", got " + displayKind(keyParsed.kind));
+                    }
+                    closePos := expectSymbol(source, skipTrivia(source, keyParsed.next, prefix), "]", prefix);
+                    opPos := skipTrivia(source, closePos, prefix);
+                    opWidth := if hookCompOp.width > 0 { hookCompOp.width } else { 1 };
+                    vStart := skipTrivia(source, opPos + opWidth, prefix);
+                    valParsed := parseExpressionAsCtx(target, source, vStart, prefix, locals, functions, functionParams, currentName, setHook.valKind, stmtCtxs, aliases);
+                    if not types.isCompatibleKind(setHook.valKind, valParsed.kind) {
+                        failAt(source, vStart, prefix, "assigned value must be " + displayKind(setHook.valKind) + ", got " + displayKind(valParsed.kind));
+                    }
+                    kCode := assignValueCode(target, setHook.keyKind, keyParsed.kind, keyParsed.code);
+                    stmtCode := expr.emitHookIndexAssignCode(target, source, opPos, prefix, entry, setHook.runtime, getHookRuntime, setHook.keyKind, setHook.valKind, kCode, hookCompOp.baseOp, valParsed);
+                    locals = checkStatementTrace(target, source, nameStart, prefix, stmtCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+                    statementNext := consumeStatementEnd(source, valParsed.next, prefix);
+                    if statementNext < 0 { failAt(source, skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after index assignment"); }
+                    position = statementNext;
+                    if currentLive and not currentStopped {
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_CALL, name = "", runtime = "", code = stmtCode, intValue = 0, textValue = ""));
+                        if codeHasRawTransfer(stmtCode) {
+                            listLib.pushBack(mut transferCodes, stmtCode);
+                            transferCount = transferCount + 1;
+                        }
+                    }
+                    continue;
+                }
+            }
             if mapLocalIdx >= 0 and types.isMapKind(locals[mapLocalIdx].kind) {
                 bracketEnd := syntax.scanBracketEnd(source, position, prefix);
                 afterBracket := if bracketEnd >= 0 { skipTrivia(source, bracketEnd, prefix) } else { -1 };

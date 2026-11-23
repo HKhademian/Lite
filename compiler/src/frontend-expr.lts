@@ -1320,6 +1320,14 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             }
         }
         memberStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        if memberStart < textLib.length(source) and textLib.at(source, memberStart) == "$" {
+            hookEnd := if memberStart + 1 < textLib.length(source) and textLib.isNameStart(textLib.at(source, memberStart + 1)) {
+                textLib.skipName(source, memberStart + 1)
+            } else {
+                memberStart + 1
+            };
+            syntax.failAt(source, memberStart, prefix, "compiler hook " + textLib.slice(source, memberStart, hookEnd) + " cannot be referenced directly; use [...] indexing");
+        }
         if memberStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, memberStart)) {
             syntax.failAt(source, memberStart, prefix, "expected member name after " + name + ".");
         }
@@ -2864,10 +2872,14 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 blockConstant = false;
                 cursor = statementNext;
             } else if afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "[" and sym.localIndex(blockLocals, itemName) >= 0 and
-            (types.isMapKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or types.isListKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or types.isArrayKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind)) and
             syntax.scanBracketEnd(source, afterItemName, prefix) >= 0 and
             (syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) or
-             syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0) {
+             syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0) and
+            (hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$setIndex", functions) or
+             hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$getIndex", functions) or
+             types.isMapKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or
+             types.isListKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or
+             types.isArrayKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind)) {
                 isStatement = true;
                 entry := blockLocals[sym.localIndex(blockLocals, itemName)];
                 if entry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
@@ -2875,7 +2887,60 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 afterBrk := syntax.skipTrivia(source, bracketEndPos, prefix);
                 idxCompOp := syntax.compoundAssignOp(source, afterBrk);
                 opWidth := if idxCompOp.width > 0 { idxCompOp.width } else { 1 };
-                if types.isMapKind(entry.kind) {
+                if hasIndexHook(entry.kind, "$setIndex", functions) or (not types.isMapKind(entry.kind) and not types.isListKind(entry.kind) and not types.isArrayKind(entry.kind)) {
+                    setHook := resolveIndexHookOp(target, source, itemStart, prefix, entry.kind, "$setIndex", functions, params, inferMode);
+                    if not setHook.found {
+                        syntax.failAt(source, itemStart, prefix, "type " + types.displayKind(entry.kind) + " does not define $setIndex for index assignment");
+                    }
+                    if not entry.writable {
+                        syntax.failAt(source, itemStart, prefix, "cannot mutate read-only value " + itemName + " via index assignment");
+                    }
+                    var getHookRuntime := "";
+                    if idxCompOp.width > 0 {
+                        getHook := resolveIndexHookOp(target, source, itemStart, prefix, entry.kind, "$getIndex", functions, params, inferMode);
+                        if not getHook.found {
+                            syntax.failAt(source, itemStart, prefix, "compound index assignment requires both $getIndex and $setIndex on " + types.displayKind(entry.kind));
+                        }
+                        if not types.isCompatibleKind(getHook.keyKind, setHook.keyKind) or not types.isCompatibleKind(setHook.valKind, getHook.valKind) {
+                            syntax.failAt(source, itemStart, prefix, "incompatible $getIndex and $setIndex types for compound index assignment on " + types.displayKind(entry.kind));
+                        }
+                        getHookRuntime = getHook.runtime;
+                    }
+                    kStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
+                    keyParsed := parseBinaryCtx(target, source, kStart, prefix, blockLocals, functions, params, currentName, setHook.keyKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, keyParsed); }
+                    if not types.isCompatibleKind(setHook.keyKind, keyParsed.kind) {
+                        syntax.failAt(source, kStart, prefix, "index must be " + types.displayKind(setHook.keyKind) + ", got " + types.displayKind(keyParsed.kind));
+                    }
+                    closePos := syntax.expectSymbol(source, syntax.skipTrivia(source, keyParsed.next, prefix), "]", prefix);
+                    opPos := syntax.skipTrivia(source, closePos, prefix);
+                    vStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
+                    valParsed := parseBinaryCtx(target, source, vStart, prefix, blockLocals, functions, params, currentName, setHook.valKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, valParsed); }
+                    if not types.isCompatibleKind(setHook.valKind, valParsed.kind) {
+                        syntax.failAt(source, vStart, prefix, "assigned value must be " + types.displayKind(setHook.valKind) + ", got " + types.displayKind(valParsed.kind));
+                    }
+                    kCode := ctx.assignValueCode(target, setHook.keyKind, keyParsed.kind, keyParsed.code);
+                    stmtCode := emitHookIndexAssignCode(target, source, opPos, prefix, entry, setHook.runtime, getHookRuntime, setHook.keyKind, setHook.valKind, kCode, idxCompOp.baseOp, valParsed);
+                    if target == ir.TARGET_TS and not inferMode and not blockExits {
+                        trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
+                    }
+                    statementNext := syntax.consumeStatementEnd(source, valParsed.next, prefix);
+                    if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after index assignment"); }
+                    if target == ir.TARGET_TS and not inferMode and not blockExits {
+                        blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
+                    }
+                    if not blockExits {
+                        emittedStmt := if target == ir.TARGET_C and textLib.startsWithAt(stmtCode, 0, "{ /*c-stmt*/") { stmtCode } else { stmtCode + ";" };
+                        listLib.pushBack(mut statements, emittedStmt);
+                        listLib.pushBack(mut stmtOwners, "");
+                        listLib.pushBack(mut stmtDeps, stmtCode);
+                        trackedStmtCount = trackedStmtCount + 1;
+                        statementCount = statementCount + 1;
+                    }
+                    blockConstant = false;
+                    cursor = statementNext;
+                } else if types.isMapKind(entry.kind) {
                     if not entry.writable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable map " + itemName); }
                     kKind := types.mapKeyKind(entry.kind);
                     vKind := types.mapValueKind(entry.kind);
@@ -6326,6 +6391,145 @@ parseSetIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
     intValue = 0, textValue = "", constant = false, next = close), markers)
 };
 
+/** True when `kind` has a `$getIndex` or `$setIndex` operator hook registered in `functions`. */
+pub hasIndexHook := fn(kind: String, opName: String, functions: List<FunctionInfo>): Bool {
+    ownerKey := types.typeOpOwnerKey(kind);
+    if ownerKey == "" { return false; }
+    sym.findFunction(functions, "$typeop:" + ownerKey + "." + opName) >= 0
+};
+
+/** Resolves a `$getIndex` or `$setIndex` operator hook on `receiverKind`, instantiating generics on demand when `not inferMode`. */
+pub resolveIndexHookOp := fn(target: String, source: String, errPos: Int, prefix: String, receiverKind: String, opName: String, functions: List<FunctionInfo>, params: List<String>, inferMode: Bool): (found: Bool, runtime: String, keyKind: String, valKind: String, resultKind: String) {
+    ownerKey := types.typeOpOwnerKey(receiverKind);
+    if ownerKey == "" {
+        return (found = false, runtime = "", keyKind = "", valKind = "", resultKind = "");
+    }
+    opIdx := sym.findFunction(functions, "$typeop:" + ownerKey + "." + opName);
+    if opIdx < 0 {
+        return (found = false, runtime = "", keyKind = "", valKind = "", resultKind = "");
+    }
+    info := functions[opIdx];
+    rawRecv := types.paramKindOf(params[info.first]);
+    recvBase := if textLib.startsWithAt(rawRecv, 0, "mut ") { textLib.slice(rawRecv, 4, textLib.length(rawRecv)) } else { rawRecv };
+    rawKey := types.paramKindOf(params[info.first + 1]);
+    rawVal := if opName == "$setIndex" { types.paramKindOf(params[info.first + 2]) } else { info.result };
+    if textLib.startsWithAt(info.runtime, 0, "$gen:") {
+        tplKey := textLib.slice(info.runtime, 5, textLib.length(info.runtime));
+        tplIdx := generics.findTemplate(tplKey);
+        if tplIdx < 0 {
+            syntax.failAt(source, errPos, prefix, "internal error: missing generic template " + tplKey);
+        }
+        tpl := generics.getTemplate(tplIdx);
+        bindings: mut Map<String, String>;
+        uErr := generics.unifyKindMut(tpl.genericParams, recvBase, receiverKind, mut bindings);
+        if uErr =!= "" {
+            syntax.failAt(source, errPos, prefix, opName + " requires " + types.displayKind(recvBase) + ", got " + types.displayKind(receiverKind));
+        }
+        loop generics.splitGenericParams(tpl.genericParams) as gp {
+            if not mapLib.has(bindings, gp) {
+                syntax.failAt(source, errPos, prefix, "cannot infer type parameter " + gp + " for " + opName + " on " + types.displayKind(receiverKind));
+            }
+        }
+        concKey := generics.substKind(tpl.genericParams, rawKey, bindings);
+        concVal := generics.substKind(tpl.genericParams, rawVal, bindings);
+        concRes := generics.substKind(tpl.genericParams, info.result, bindings);
+        var effRuntime := info.runtime;
+        if not inferMode {
+            allSubstParts: mut List<String> = [];
+            loop generics.splitPipeEntries(tpl.params, tpl.paramCount) as tpEntry {
+                tpName := types.paramNameOf(tpEntry);
+                tpRaw := types.paramKindOf(tpEntry);
+                tpIsMut := textLib.startsWithAt(tpRaw, 0, "mut ");
+                tpBase := if tpIsMut { textLib.slice(tpRaw, 4, textLib.length(tpRaw)) } else { tpRaw };
+                tpConc := generics.substKind(tpl.genericParams, tpBase, bindings);
+                listLib.pushBack(mut allSubstParts, tpName + "=" + (if tpIsMut { "mut " } else { "" }) + tpConc);
+            }
+            effRuntime = generics.requestInstance(target, tplKey, generics.encodeBindings(tpl.genericParams, bindings), textLib.joinTexts(allSubstParts, "|"), concRes);
+        }
+        return (found = true, runtime = effRuntime, keyKind = concKey, valKind = concVal, resultKind = concRes);
+    }
+    if not types.isCompatibleKind(recvBase, receiverKind) {
+        syntax.failAt(source, errPos, prefix, opName + " requires " + types.displayKind(recvBase) + ", got " + types.displayKind(receiverKind));
+    }
+    (found = true, runtime = info.runtime, keyKind = rawKey, valKind = rawVal, resultKind = info.result)
+};
+
+/** Emits TS or C11 statement code for `entry[key] = val` or single-evaluation compound `entry[key] op= val` via `$setIndex` (and `$getIndex`). */
+pub emitHookIndexAssignCode := fn(target: String, source: String, opPos: Int, prefix: String, entry: Local, setRuntime: String, getRuntime: String, keyKind: String, valKind: String, keyCode: String, compBaseOp: String, valParsed: Parsed): String {
+    isCompound := compBaseOp =!= "";
+    if target == ir.TARGET_C {
+        if isCompound {
+            cKeyType := types.cValueType(keyKind);
+            cValType := types.cValueType(valKind);
+            curRead := getRuntime + "(" + entry.runtime + ", lt_ck)";
+            nextVal := ctx.compoundAssignCode(target, source, opPos, prefix, valKind, "lt_cv", compBaseOp, valParsed);
+            return "{ /*c-stmt*/ " + cKeyType + " lt_ck = " + keyCode + "; " + cValType + " lt_cv = " + curRead + "; " + setRuntime + "(&" + entry.runtime + ", lt_ck, " + nextVal + "); }";
+        }
+        vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
+        return setRuntime + "(&" + entry.runtime + ", " + keyCode + ", " + vCode + ")";
+    }
+    isRec := types.isRecordKind(entry.kind);
+    alreadyBoxed := isRec and textLib.endsWith(entry.runtime, ".v");
+    boxExpr := if alreadyBoxed { textLib.slice(entry.runtime, 0, textLib.length(entry.runtime) - 2) } else { "" };
+    if isCompound {
+        tsKeyType := types.tsFunctionType(keyKind);
+        curRead := getRuntime + "(" + entry.runtime + ", lite$ck)";
+        nextVal := ctx.compoundAssignCode(target, source, opPos, prefix, valKind, "lite$cv", compBaseOp, valParsed);
+        if isRec and not alreadyBoxed {
+            return "(() => { const lite$ck: " + tsKeyType + " = " + keyCode + "; const lite$cv = " + curRead + "; const lite$ib = { v: " + entry.runtime + " }; " + setRuntime + "(lite$ib, lite$ck, " + nextVal + "); " + entry.runtime + " = lite$ib.v; })()";
+        }
+        recvArg := if alreadyBoxed { boxExpr } else { entry.runtime };
+        return "(() => { const lite$ck: " + tsKeyType + " = " + keyCode + "; const lite$cv = " + curRead + "; " + setRuntime + "(" + recvArg + ", lite$ck, " + nextVal + "); })()";
+    }
+    vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
+    if isRec and not alreadyBoxed {
+        return "(() => { const lite$ib = { v: " + entry.runtime + " }; " + setRuntime + "(lite$ib, " + keyCode + ", " + vCode + "); " + entry.runtime + " = lite$ib.v; })()";
+    }
+    recvArg := if alreadyBoxed { boxExpr } else { entry.runtime };
+    setRuntime + "(" + recvArg + ", " + keyCode + ", " + vCode + ")"
+};
+
+/** True when the bracket expression starting at `openBracket` contains a top-level `..` range slice separator before `]`. */
+isBracketRangeSlice := fn(source: String, openBracket: Int, prefix: String): Bool {
+    size := textLib.length(source);
+    var cursor := syntax.skipTrivia(source, openBracket + 1, prefix);
+    var depth := 0;
+    loop cursor < size {
+        ch := textLib.at(source, cursor);
+        if ch == "\"" {
+            cursor = cursor + 1;
+            loop cursor < size {
+                sc := textLib.at(source, cursor);
+                if sc == "\\" { cursor = cursor + 2; continue; }
+                if sc == "\"" { cursor = cursor + 1; break; }
+                cursor = cursor + 1;
+            }
+            continue;
+        }
+        if ch == "[" or ch == "(" or ch == "{" {
+            depth = depth + 1;
+            cursor = cursor + 1;
+            continue;
+        }
+        if ch == "]" {
+            if depth == 0 { return false; }
+            depth = depth - 1;
+            cursor = cursor + 1;
+            continue;
+        }
+        if ch == ")" or ch == "}" {
+            if depth > 0 { depth = depth - 1; }
+            cursor = cursor + 1;
+            continue;
+        }
+        if depth == 0 and textLib.startsWithAt(source, cursor, "..") {
+            return true;
+        }
+        cursor = cursor + 1;
+    }
+    false
+};
+
 /** Finds the innermost local in `locals` whose runtime identifier matches `runtime`, or -1. */
 findLocalIndexByRuntime := fn(locals: List<Local>, runtime: String): Int {
     if runtime == "" { return -1; }
@@ -6930,6 +7134,13 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     intValue = 0, textValue = "", constant = false, next = end),
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                 }
+            } else if labelStart < textLib.length(source) and textLib.at(source, labelStart) == "$" {
+                hookEnd := if labelStart + 1 < textLib.length(source) and textLib.isNameStart(textLib.at(source, labelStart + 1)) {
+                    textLib.skipName(source, labelStart + 1)
+                } else {
+                    labelStart + 1
+                };
+                syntax.failAt(source, labelStart, prefix, "compiler hook " + textLib.slice(source, labelStart, hookEnd) + " cannot be called directly; use [...] indexing");
             } else if labelStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, labelStart)) {
                 break;
             } else {
@@ -6960,6 +7171,14 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                 }
                             }
                             caseStart := syntax.skipTrivia(source, afterMemberLabel + 1, prefix);
+                            if caseStart < textLib.length(source) and textLib.at(source, caseStart) == "$" {
+                                hookEnd := if caseStart + 1 < textLib.length(source) and textLib.isNameStart(textLib.at(source, caseStart + 1)) {
+                                    textLib.skipName(source, caseStart + 1)
+                                } else {
+                                    caseStart + 1
+                                };
+                                syntax.failAt(source, caseStart, prefix, "compiler hook " + textLib.slice(source, caseStart, hookEnd) + " cannot be referenced directly; use [...] indexing");
+                            }
                             if caseStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, caseStart)) {
                                 syntax.failAt(source, caseStart, prefix, "expected member name after " + qualified + ".");
                             }
@@ -7191,7 +7410,27 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 }
             }
         } else if postPosition < textLib.length(source) and textLib.at(source, postPosition) == "[" {
-            if types.isMapKind(left.kind) {
+            isSliceBrk := isBracketRangeSlice(source, postPosition, prefix);
+            getHook := if not isSliceBrk {
+                resolveIndexHookOp(target, source, postPosition, prefix, left.kind, "$getIndex", functions, params, inferMode)
+            } else {
+                (found = false, runtime = "", keyKind = "", valKind = "", resultKind = "")
+            };
+            if getHook.found {
+                indexStart := syntax.skipTrivia(source, postPosition + 1, prefix);
+                key := parseBinaryCtx(target, source, indexStart, prefix, locals, functions, params, currentName, getHook.keyKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+                if not types.isCompatibleKind(getHook.keyKind, key.kind) {
+                    syntax.failAt(source, indexStart, prefix, "index must be " + types.displayKind(getHook.keyKind) + ", got " + types.displayKind(key.kind));
+                }
+                close := syntax.skipTrivia(source, key.next, prefix);
+                next := syntax.expectSymbol(source, close, "]", prefix);
+                recvCode := ctx.assignReadOnlyArgCode(target, left.kind, left.kind, left.code);
+                kCode := ctx.assignReadOnlyArgCode(target, getHook.keyKind, key.kind, key.code);
+                left = ctx.withMarkers((kind = getHook.valKind,
+                code = getHook.runtime + "(" + recvCode + ", " + kCode + ")",
+                intValue = 0, textValue = "", constant = false, next = next),
+                if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), key) } else { "" });
+            } else if types.isMapKind(left.kind) {
                 kKind := types.mapKeyKind(left.kind);
                 vKind := types.mapValueKind(left.kind);
                 indexStart := syntax.skipTrivia(source, postPosition + 1, prefix);

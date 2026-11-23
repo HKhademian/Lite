@@ -1977,6 +1977,31 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
     cursor = syntax.skipTrivia(source, cursor, prefix);
     cursor = syntax.expectSymbol(source, cursor, ":", prefix);
     resultType := parseFunctionType(source, cursor, prefix, scopedAliases, genericType);
+    if opName == "$getIndex" {
+        if count =!= 2 {
+            syntax.failAt(source, position, prefix, "$getIndex on " + typeName + " must have exactly 2 parameters (receiver, index)");
+        }
+        firstSep := textLib.indexOfText(encoded, "|", 0);
+        recvPart := if firstSep < 0 { encoded } else { textLib.slice(encoded, 0, firstSep) };
+        if textLib.startsWithAt(paramKindOf(recvPart), 0, "mut ") {
+            syntax.failAt(source, position, prefix, "$getIndex receiver on " + typeName + " must be read-only Self (not mut Self)");
+        }
+        if resultType.kind == ir.VALUE_KIND_UNIT {
+            syntax.failAt(source, position, prefix, "$getIndex on " + typeName + " must return a value (not Unit)");
+        }
+    } else if opName == "$setIndex" {
+        if count =!= 3 {
+            syntax.failAt(source, position, prefix, "$setIndex on " + typeName + " must have exactly 3 parameters (mut receiver, index, value)");
+        }
+        firstSep := textLib.indexOfText(encoded, "|", 0);
+        recvPart := if firstSep < 0 { encoded } else { textLib.slice(encoded, 0, firstSep) };
+        if not textLib.startsWithAt(paramKindOf(recvPart), 0, "mut ") {
+            syntax.failAt(source, position, prefix, "$setIndex receiver on " + typeName + " must be mut Self");
+        }
+        if resultType.kind =!= ir.VALUE_KIND_UNIT {
+            syntax.failAt(source, position, prefix, "$setIndex on " + typeName + " must return Unit");
+        }
+    }
     (next = resultType.next, result = resultType.kind, params = encoded, count = count, genericType = genericType)
 };
 
