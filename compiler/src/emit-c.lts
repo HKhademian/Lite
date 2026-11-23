@@ -4,6 +4,7 @@ emitFmt := import "./emit-format.lts";
 optCfg := import "./opt-config.lts";
 integer := import "core/int";
 listLib := import "core/list";
+mapLib := import "core/map";
 diagLib := import "core/diag";
 io := import "core/io";
 setLib := import "core/set";
@@ -109,7 +110,7 @@ checkCFunctionSignature := fn(item: frontend.Item): Unit {
 };
 
 /** Emits UTF-8 Unicode scalar `core/text` C11 helpers only for primitives referenced by `calls`. */
-emitTextPrimitiveHelpers := fn(calls: String): Unit {
+emitTextPrimitiveHelpers := fn(calls: Set<String>): Unit {
     hasSliceFrom := usesIntHelper(calls, "lite$textSliceFrom(");
     hasLen := usesIntHelper(calls, "lite$textLength(") or hasSliceFrom;
     hasAt := usesIntHelper(calls, "lite$textAt(");
@@ -256,13 +257,13 @@ emitTextPrimitiveHelpers := fn(calls: String): Unit {
 };
 
 /** True when a program calls supported C11 stdin helpers (`inputAll`, `inputLine`, `inputInt`, `inputFloat`). */
-usesInputHelpers := fn(calls: String): Bool {
+usesInputHelpers := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$inputAll(") or usesIntHelper(calls, "lite$inputLine(") or
     usesIntHelper(calls, "lite$inputInt(") or usesIntHelper(calls, "lite$inputFloat(")
 };
 
 /** Emits portable ISO C11 stdin helpers matching Lite's `core/io` prompt and `InputFault` contracts. */
-emitInputHelpers := fn(calls: String): Unit {
+emitInputHelpers := fn(calls: Set<String>): Unit {
     hasAll := usesIntHelper(calls, "lite$inputAll(");
     hasLine := usesIntHelper(calls, "lite$inputLine(");
     hasInt := usesIntHelper(calls, "lite$inputInt(");
@@ -503,393 +504,141 @@ unsupportedAggregateCode := fn(code: String): String {
     ""
 };
 
-/** Rewrites registered `lite$...(` builtin calls and strips internal `/*@T:...*/`/`/*@C:...*/` markers outside quoted strings. */
+/* Lazily initialized O(1) rewrite table from `lite$<name>` suffix to C11 runtime function name. */
+var cBuiltinMapReady := false;
+cBuiltinMap: mut Map<String, String>;
+
+/** Populates `cBuiltinMap` once with all registered `lite$...(` -> `lt_...(` C11 runtime mappings. */
+ensureCBuiltinMap := fn(): Unit {
+    if cBuiltinMapReady { return; }
+    cBuiltinMapReady = true;
+    mapLib.set(mut cBuiltinMap, "reportError", "lt_report_error");
+    mapLib.set(mut cBuiltinMap, "exit", "lt_exit");
+    mapLib.set(mut cBuiltinMap, "textLength", "lt_text_length");
+    mapLib.set(mut cBuiltinMap, "textAt", "lt_text_at");
+    mapLib.set(mut cBuiltinMap, "textSliceFrom", "lt_text_slice_from");
+    mapLib.set(mut cBuiltinMap, "textSlice", "lt_text_slice");
+    mapLib.set(mut cBuiltinMap, "inputArgs", "lt_input_args");
+    mapLib.set(mut cBuiltinMap, "inputAll", "lt_input_all");
+    mapLib.set(mut cBuiltinMap, "inputLine", "lt_input_line");
+    mapLib.set(mut cBuiltinMap, "inputInt", "lt_input_int");
+    mapLib.set(mut cBuiltinMap, "inputFloat", "lt_input_float");
+    mapLib.set(mut cBuiltinMap, "unicodeToCodePoints", "lt_unicode_to_code_points");
+    mapLib.set(mut cBuiltinMap, "unicodeFromCodePoints", "lt_unicode_from_code_points");
+    mapLib.set(mut cBuiltinMap, "ioStdinReader", "lt_io_stdin_reader");
+    mapLib.set(mut cBuiltinMap, "ioStdoutWriter", "lt_io_stdout_writer");
+    mapLib.set(mut cBuiltinMap, "ioStderrWriter", "lt_io_stderr_writer");
+    mapLib.set(mut cBuiltinMap, "ioBufferReader", "lt_io_buffer_reader");
+    mapLib.set(mut cBuiltinMap, "ioBufferWriter", "lt_io_buffer_writer");
+    mapLib.set(mut cBuiltinMap, "ioWriterBytes", "lt_io_writer_bytes");
+    mapLib.set(mut cBuiltinMap, "ioWriterText", "lt_io_writer_text");
+    mapLib.set(mut cBuiltinMap, "ioClearWriter", "lt_io_clear_writer");
+    mapLib.set(mut cBuiltinMap, "ioReaderOk", "lt_io_reader_ok");
+    mapLib.set(mut cBuiltinMap, "ioReaderAtEof", "lt_io_reader_at_eof");
+    mapLib.set(mut cBuiltinMap, "ioReaderError", "lt_io_reader_error");
+    mapLib.set(mut cBuiltinMap, "ioRead", "lt_io_read");
+    mapLib.set(mut cBuiltinMap, "ioCloseReader", "lt_io_close_reader");
+    mapLib.set(mut cBuiltinMap, "ioWriterOk", "lt_io_writer_ok");
+    mapLib.set(mut cBuiltinMap, "ioWriterError", "lt_io_writer_error");
+    mapLib.set(mut cBuiltinMap, "ioWrite", "lt_io_write");
+    mapLib.set(mut cBuiltinMap, "ioFlush", "lt_io_flush");
+    mapLib.set(mut cBuiltinMap, "ioCloseWriter", "lt_io_close_writer");
+    mapLib.set(mut cBuiltinMap, "fileKind", "lt_file_kind");
+    mapLib.set(mut cBuiltinMap, "fileOpenReader", "lt_file_open_reader");
+    mapLib.set(mut cBuiltinMap, "fileOpenWriter", "lt_file_open_writer");
+    mapLib.set(mut cBuiltinMap, "fileOpenAppender", "lt_file_open_appender");
+    mapLib.set(mut cBuiltinMap, "fileListDir", "lt_file_list_dir");
+    mapLib.set(mut cBuiltinMap, "fileMakeDir", "lt_file_make_dir");
+    mapLib.set(mut cBuiltinMap, "fileRemove", "lt_file_remove");
+    mapLib.set(mut cBuiltinMap, "fileCopy", "lt_file_copy");
+    mapLib.set(mut cBuiltinMap, "fileSymlink", "lt_file_symlink");
+    mapLib.set(mut cBuiltinMap, "fileRealPath", "lt_file_real_path");
+    mapLib.set(mut cBuiltinMap, "fileMakeTempDir", "lt_file_make_temp_dir");
+    mapLib.set(mut cBuiltinMap, "processCwd", "lt_process_cwd");
+    mapLib.set(mut cBuiltinMap, "processExecPath", "lt_process_exec_path");
+    mapLib.set(mut cBuiltinMap, "processEntryPath", "lt_process_entry_path");
+    mapLib.set(mut cBuiltinMap, "processPlatform", "lt_process_platform");
+    mapLib.set(mut cBuiltinMap, "processArch", "lt_process_arch");
+    mapLib.set(mut cBuiltinMap, "processRuntimeVersion", "lt_process_runtime_version");
+    mapLib.set(mut cBuiltinMap, "processEnvGet", "lt_process_env_get");
+    mapLib.set(mut cBuiltinMap, "processRun", "lt_process_run");
+    mapLib.set(mut cBuiltinMap, "processRunBytes", "lt_process_run_bytes");
+    mapLib.set(mut cBuiltinMap, "cryptoRandomBytes", "lt_crypto_random_bytes");
+    mapLib.set(mut cBuiltinMap, "timeMonotonicNs", "lt_time_monotonic_ns");
+    mapLib.set(mut cBuiltinMap, "timeEpochNs", "lt_time_epoch_ns");
+    mapLib.set(mut cBuiltinMap, "timeSleepMs", "lt_time_sleep_ms");
+    mapLib.set(mut cBuiltinMap, "timeLocalDate", "lt_time_local_date");
+    mapLib.set(mut cBuiltinMap, "extraCanvasOpen", "lt_canvas_open");
+    mapLib.set(mut cBuiltinMap, "extraCanvasPoll", "lt_canvas_poll");
+    mapLib.set(mut cBuiltinMap, "extraCanvasPresent", "lt_canvas_present");
+    mapLib.set(mut cBuiltinMap, "extraCanvasClose", "lt_canvas_close");
+    mapLib.set(mut cBuiltinMap, "extraCanvasClear", "lt_canvas_clear");
+    mapLib.set(mut cBuiltinMap, "extraCanvasFillRect", "lt_canvas_fill_rect");
+    mapLib.set(mut cBuiltinMap, "extraCanvasStrokeRect", "lt_canvas_stroke_rect");
+    mapLib.set(mut cBuiltinMap, "extraCanvasFillCircle", "lt_canvas_fill_circle");
+    mapLib.set(mut cBuiltinMap, "extraCanvasStrokeLine", "lt_canvas_stroke_line");
+    mapLib.set(mut cBuiltinMap, "extraCanvasDrawText", "lt_canvas_draw_text");
+    mapLib.set(mut cBuiltinMap, "extraCanvasCapture", "lt_canvas_capture");
+    mapLib.set(mut cBuiltinMap, "extraCanvasSetTargetFps", "lt_canvas_set_target_fps");
+    mapLib.set(mut cBuiltinMap, "extraCanvasVitals", "lt_canvas_vitals");
+    mapLib.set(mut cBuiltinMap, "extraCanvasPlayTone", "lt_canvas_play_tone");
+    mapLib.set(mut cBuiltinMap, "extraCanvasBounds", "lt_canvas_bounds");
+    mapLib.set(mut cBuiltinMap, "extraCanvasResize", "lt_canvas_resize");
+    mapLib.set(mut cBuiltinMap, "extraCanvasSetFullscreen", "lt_canvas_set_fullscreen");
+};
+
+/** Rewrites registered `lite$...(` builtin calls via O(1) map lookup and strips internal `/*@T:...*/`/`/*@C:...*/`/`/*@P:...*/`/`/*@CFN_START:...*/` markers outside quoted strings. */
 normalizeCBuiltinCalls := fn(code: String): String {
-    if textLib.indexOfText(code, "lite$", 0) < 0 and textLib.indexOfText(code, "/*@", 0) < 0 { return code; }
+    var nextLite := textLib.indexOfText(code, "lite$", 0);
+    var nextAnnot := textLib.indexOfText(code, "/*@", 0);
+    if nextLite < 0 and nextAnnot < 0 { return code; }
+    ensureCBuiltinMap();
     size := textLib.length(code);
+    var nextQuote := textLib.indexOfText(code, "\"", 0);
     out: mut tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     loop cursor < size {
-        ch := textLib.at(code, cursor);
-        if ch == "\"" {
-            cursor = frontend.skipAliasString(code, cursor);
-        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            cursor = skipCFnBlock(code, cursor);
-            flushed = cursor;
-        } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:") or textLib.startsWithAt(code, cursor, "/*@P:")) {
-            endTag := textLib.indexOfText(code, "@*/", cursor + 5);
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            cursor = if endTag >= 0 { endTag + 3 } else { size };
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$reportError(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_report_error(");
-            cursor = cursor + textLib.length("lite$reportError(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$exit(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_exit(");
-            cursor = cursor + textLib.length("lite$exit(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$textLength(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_text_length(");
-            cursor = cursor + textLib.length("lite$textLength(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$textAt(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_text_at(");
-            cursor = cursor + textLib.length("lite$textAt(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$textSliceFrom(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_text_slice_from(");
-            cursor = cursor + textLib.length("lite$textSliceFrom(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$textSlice(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_text_slice(");
-            cursor = cursor + textLib.length("lite$textSlice(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputArgs(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_input_args(");
-            cursor = cursor + textLib.length("lite$inputArgs(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputAll(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_input_all(");
-            cursor = cursor + textLib.length("lite$inputAll(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputLine(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_input_line(");
-            cursor = cursor + textLib.length("lite$inputLine(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputInt(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_input_int(");
-            cursor = cursor + textLib.length("lite$inputInt(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$inputFloat(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_input_float(");
-            cursor = cursor + textLib.length("lite$inputFloat(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$unicodeToCodePoints(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_unicode_to_code_points(");
-            cursor = cursor + textLib.length("lite$unicodeToCodePoints(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$unicodeFromCodePoints(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_unicode_from_code_points(");
-            cursor = cursor + textLib.length("lite$unicodeFromCodePoints(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioStdinReader(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_stdin_reader(");
-            cursor = cursor + textLib.length("lite$ioStdinReader(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioStdoutWriter(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_stdout_writer(");
-            cursor = cursor + textLib.length("lite$ioStdoutWriter(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioStderrWriter(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_stderr_writer(");
-            cursor = cursor + textLib.length("lite$ioStderrWriter(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioBufferReader(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_buffer_reader(");
-            cursor = cursor + textLib.length("lite$ioBufferReader(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioBufferWriter(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_buffer_writer(");
-            cursor = cursor + textLib.length("lite$ioBufferWriter(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterBytes(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_writer_bytes(");
-            cursor = cursor + textLib.length("lite$ioWriterBytes(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterText(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_writer_text(");
-            cursor = cursor + textLib.length("lite$ioWriterText(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioClearWriter(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_clear_writer(");
-            cursor = cursor + textLib.length("lite$ioClearWriter(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioReaderOk(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_reader_ok(");
-            cursor = cursor + textLib.length("lite$ioReaderOk(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioReaderAtEof(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_reader_at_eof(");
-            cursor = cursor + textLib.length("lite$ioReaderAtEof(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioReaderError(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_reader_error(");
-            cursor = cursor + textLib.length("lite$ioReaderError(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioRead(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_read(");
-            cursor = cursor + textLib.length("lite$ioRead(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioCloseReader(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_close_reader(");
-            cursor = cursor + textLib.length("lite$ioCloseReader(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterOk(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_writer_ok(");
-            cursor = cursor + textLib.length("lite$ioWriterOk(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWriterError(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_writer_error(");
-            cursor = cursor + textLib.length("lite$ioWriterError(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioWrite(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_write(");
-            cursor = cursor + textLib.length("lite$ioWrite(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioFlush(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_flush(");
-            cursor = cursor + textLib.length("lite$ioFlush(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$ioCloseWriter(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_io_close_writer(");
-            cursor = cursor + textLib.length("lite$ioCloseWriter(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileKind(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_kind(");
-            cursor = cursor + textLib.length("lite$fileKind(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileOpenReader(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_open_reader(");
-            cursor = cursor + textLib.length("lite$fileOpenReader(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileOpenWriter(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_open_writer(");
-            cursor = cursor + textLib.length("lite$fileOpenWriter(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileOpenAppender(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_open_appender(");
-            cursor = cursor + textLib.length("lite$fileOpenAppender(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileListDir(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_list_dir(");
-            cursor = cursor + textLib.length("lite$fileListDir(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileMakeDir(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_make_dir(");
-            cursor = cursor + textLib.length("lite$fileMakeDir(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileRemove(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_remove(");
-            cursor = cursor + textLib.length("lite$fileRemove(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileCopy(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_copy(");
-            cursor = cursor + textLib.length("lite$fileCopy(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileSymlink(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_symlink(");
-            cursor = cursor + textLib.length("lite$fileSymlink(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileRealPath(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_real_path(");
-            cursor = cursor + textLib.length("lite$fileRealPath(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$fileMakeTempDir(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_file_make_temp_dir(");
-            cursor = cursor + textLib.length("lite$fileMakeTempDir(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processCwd(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_process_cwd(");
-            cursor = cursor + textLib.length("lite$processCwd(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processExecPath(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_process_exec_path(");
-            cursor = cursor + textLib.length("lite$processExecPath(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processEntryPath(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_process_entry_path(");
-            cursor = cursor + textLib.length("lite$processEntryPath(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processPlatform(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_process_platform(");
-            cursor = cursor + textLib.length("lite$processPlatform(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processArch(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_process_arch(");
-            cursor = cursor + textLib.length("lite$processArch(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processRuntimeVersion(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_process_runtime_version(");
-            cursor = cursor + textLib.length("lite$processRuntimeVersion(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processEnvGet(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_process_env_get(");
-            cursor = cursor + textLib.length("lite$processEnvGet(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processRun(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_process_run(");
-            cursor = cursor + textLib.length("lite$processRun(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$processRunBytes(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_process_run_bytes(");
-            cursor = cursor + textLib.length("lite$processRunBytes(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$cryptoRandomBytes(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_crypto_random_bytes(");
-            cursor = cursor + textLib.length("lite$cryptoRandomBytes(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeMonotonicNs(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_time_monotonic_ns(");
-            cursor = cursor + textLib.length("lite$timeMonotonicNs(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasOpen(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_open(");
-            cursor = cursor + textLib.length("lite$extraCanvasOpen(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasPoll(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_poll(");
-            cursor = cursor + textLib.length("lite$extraCanvasPoll(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasPresent(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_present(");
-            cursor = cursor + textLib.length("lite$extraCanvasPresent(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasClose(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_close(");
-            cursor = cursor + textLib.length("lite$extraCanvasClose(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasClear(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_clear(");
-            cursor = cursor + textLib.length("lite$extraCanvasClear(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasFillRect(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_fill_rect(");
-            cursor = cursor + textLib.length("lite$extraCanvasFillRect(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasStrokeRect(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_stroke_rect(");
-            cursor = cursor + textLib.length("lite$extraCanvasStrokeRect(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasFillCircle(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_fill_circle(");
-            cursor = cursor + textLib.length("lite$extraCanvasFillCircle(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasStrokeLine(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_stroke_line(");
-            cursor = cursor + textLib.length("lite$extraCanvasStrokeLine(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasDrawText(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_draw_text(");
-            cursor = cursor + textLib.length("lite$extraCanvasDrawText(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasCapture(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_capture(");
-            cursor = cursor + textLib.length("lite$extraCanvasCapture(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasSetTargetFps(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_set_target_fps(");
-            cursor = cursor + textLib.length("lite$extraCanvasSetTargetFps(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasVitals(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_vitals(");
-            cursor = cursor + textLib.length("lite$extraCanvasVitals(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasPlayTone(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_play_tone(");
-            cursor = cursor + textLib.length("lite$extraCanvasPlayTone(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasBounds(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_bounds(");
-            cursor = cursor + textLib.length("lite$extraCanvasBounds(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasResize(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_resize(");
-            cursor = cursor + textLib.length("lite$extraCanvasResize(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$extraCanvasSetFullscreen(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_canvas_set_fullscreen(");
-            cursor = cursor + textLib.length("lite$extraCanvasSetFullscreen(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeEpochNs(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_time_epoch_ns(");
-            cursor = cursor + textLib.length("lite$timeEpochNs(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeSleepMs(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_time_sleep_ms(");
-            cursor = cursor + textLib.length("lite$timeSleepMs(");
-            flushed = cursor;
-        } else if ch == "l" and textLib.startsWithAt(code, cursor, "lite$timeLocalDate(") {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
-            tb.append(mut out, "lt_time_local_date(");
-            cursor = cursor + textLib.length("lite$timeLocalDate(");
-            flushed = cursor;
+        if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite$", cursor); }
+        if nextAnnot >= 0 and nextAnnot < cursor { nextAnnot = textLib.indexOfText(code, "/*@", cursor); }
+        var hit := -1;
+        if nextLite >= 0 { hit = nextLite; }
+        if nextAnnot >= 0 and (hit < 0 or nextAnnot < hit) { hit = nextAnnot; }
+        if hit < 0 { break; }
+        if nextQuote >= 0 and nextQuote < hit {
+            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote >= 0 and nextQuote < hit {
+                cursor = frontend.skipAliasString(code, nextQuote);
+                continue;
+            }
+        }
+        if hit == nextAnnot {
+            if textLib.startsWithAt(code, hit, "/*@CFN_START:") {
+                if hit > flushed { tb.append(mut out, textLib.slice(code, flushed, hit)); }
+                cursor = skipCFnBlock(code, hit);
+                flushed = cursor;
+            } else if textLib.startsWithAt(code, hit, "/*@T:") or textLib.startsWithAt(code, hit, "/*@C:") or textLib.startsWithAt(code, hit, "/*@P:") {
+                endTag := textLib.indexOfText(code, "@*/", hit + 5);
+                if hit > flushed { tb.append(mut out, textLib.slice(code, flushed, hit)); }
+                cursor = if endTag >= 0 { endTag + 3 } else { size };
+                flushed = cursor;
+            } else {
+                cursor = hit + 3;
+            }
         } else {
-            cursor = cursor + 1;
+            endName := textLib.skipName(code, hit + 5);
+            if endName > hit + 5 and endName < size and textLib.at(code, endName) == "(" {
+                found := mapLib.get(cBuiltinMap, textLib.slice(code, hit + 5, endName));
+                if found.found {
+                    if hit > flushed { tb.append(mut out, textLib.slice(code, flushed, hit)); }
+                    tb.append(mut out, found.value);
+                    tb.append(mut out, "(");
+                    cursor = endName + 1;
+                    flushed = cursor;
+                    continue;
+                }
+            }
+            cursor = endName;
         }
     }
     if flushed == 0 { return code; }
@@ -927,13 +676,12 @@ cCall := fn(kind: String, code: String): String {
 }
 
 /** True when any emitted item calls the checked Int division-family helper `name`. */
-usesIntHelper := fn(calls: String, name: String): Bool {
-    if calls == "|" { return false; }
-    textLib.indexOfText(calls, "|" + name + "|", 0) >= 0
+usesIntHelper := fn(calls: Set<String>, name: String): Bool {
+    setLib.has(calls, name)
 }
 
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
-unsupportedBuiltinCode := fn(calls: String): String {
+unsupportedBuiltinCode := fn(calls: Set<String>): String {
     match {
         usesIntHelper(calls, "lite$extTsStripTypes(") or usesIntHelper(calls, "lite$extHttpFetchToFile(") or
         usesIntHelper(calls, "lite$extHttpServeStatic(") or usesIntHelper(calls, "lite$extBenchMeasureCompiler(") or
@@ -945,23 +693,23 @@ unsupportedBuiltinCode := fn(calls: String): String {
 };
 
 /** True when any emitted item calls a `core/time` builtin. */
-usesTimeBuiltins := fn(calls: String): Bool {
+usesTimeBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$timeMonotonicNs(") or usesIntHelper(calls, "lite$timeEpochNs(") or
     usesIntHelper(calls, "lite$timeSleepMs(") or usesIntHelper(calls, "lite$timeLocalDate(")
 };
 
 /** True when any emitted item calls a `core/process` child-spawn builtin. */
-usesProcessSpawnBuiltins := fn(calls: String): Bool {
+usesProcessSpawnBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$processRun(") or usesIntHelper(calls, "lite$processRunBytes(")
 };
 
 /** True when any emitted item calls a core/unicode hard builtin. */
-usesUnicodeBuiltins := fn(calls: String): Bool {
+usesUnicodeBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(")
 };
 
 /** True when any emitted item calls a core/io stream or core/file stream opener builtin. */
-usesStreamBuiltins := fn(calls: String): Bool {
+usesStreamBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or
     usesIntHelper(calls, "lite$fileOpenAppender(") or usesIntHelper(calls, "lite$ioStdinReader(") or
     usesIntHelper(calls, "lite$ioStdoutWriter(") or usesIntHelper(calls, "lite$ioStderrWriter(") or
@@ -976,7 +724,7 @@ usesStreamBuiltins := fn(calls: String): Bool {
 };
 
 /** True when any emitted item calls a core/file non-stream filesystem builtin. */
-usesFileBuiltins := fn(calls: String): Bool {
+usesFileBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$fileKind(") or usesIntHelper(calls, "lite$fileListDir(") or
     usesIntHelper(calls, "lite$fileMakeDir(") or usesIntHelper(calls, "lite$fileRemove(") or
     usesIntHelper(calls, "lite$fileCopy(") or usesIntHelper(calls, "lite$fileSymlink(") or
@@ -984,7 +732,7 @@ usesFileBuiltins := fn(calls: String): Bool {
 };
 
 /** True when any emitted item calls a core/process query builtin. */
-usesProcessQueryBuiltins := fn(calls: String): Bool {
+usesProcessQueryBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$processCwd(") or usesIntHelper(calls, "lite$processExecPath(") or
     usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processPlatform(") or
     usesIntHelper(calls, "lite$processArch(") or usesIntHelper(calls, "lite$processRuntimeVersion(") or
@@ -992,19 +740,19 @@ usesProcessQueryBuiltins := fn(calls: String): Bool {
 };
 
 /** True when any emitted item calls a C11 soft-builtin text helper that needs `lt_utf8_get_meta`/`lt_utf8_byte_at`. */
-usesCTextSoftUtf8 := fn(calls: String): Bool {
+usesCTextSoftUtf8 := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lt_c_text_skip_while(") or usesIntHelper(calls, "lt_c_text_index_of(") or
     usesIntHelper(calls, "lt_c_text_starts_with_at(") or usesIntHelper(calls, "lt_c_text_word_at(")
 };
 
 /** True when any emitted item calls a C11 soft-builtin file/crypto-file helper that needs POSIX headers. */
-usesCFileSoft := fn(calls: String): Bool {
+usesCFileSoft := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lt_c_file_read_text(") or usesIntHelper(calls, "lt_c_file_write_text(") or
     usesIntHelper(calls, "lt_c_file_append_text(") or usesIntHelper(calls, "lt_c_sha256_file(")
 };
 
 /** True when any emitted item calls any C11 soft-builtin fast-path helper. */
-usesCSoftBuiltins := fn(calls: String): Bool {
+usesCSoftBuiltins := fn(calls: Set<String>): Bool {
     usesCTextSoftUtf8(calls) or usesCFileSoft(calls) or
     usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or
     usesIntHelper(calls, "lt_c_text_to_int(") or usesIntHelper(calls, "lt_c_text_trim(") or
@@ -1017,31 +765,31 @@ usesCSoftBuiltins := fn(calls: String): Bool {
 };
 
 /** True when any emitted item needs POSIX OS headers (`unistd.h`, `fcntl.h`, `sys/stat.h`, `dirent.h`). */
-usesPosixHost := fn(calls: String): Bool {
+usesPosixHost := fn(calls: Set<String>): Bool {
     usesStreamBuiltins(calls) or usesFileBuiltins(calls) or usesProcessQueryBuiltins(calls) or usesCFileSoft(calls) or
     usesProcessSpawnBuiltins(calls) or usesTimeBuiltins(calls) or usesIntHelper(calls, "lite$cryptoRandomBytes(")
 };
 
 /** True when any emitted item needs one of the checked Int division helpers. */
-usesIntDivision := fn(calls: String): Bool {
+usesIntDivision := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite_divide_int(") or usesIntHelper(calls, "lite_remainder_int(") or
     usesIntHelper(calls, "lite_floor_divide_int(") or usesIntHelper(calls, "lite_floor_modulo_int(")
 }
 
 /** True when a program needs checked dynamic Int* arithmetic or narrow range guards. */
-usesIntArithmetic := fn(calls: String): Bool {
+usesIntArithmetic := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lt_checked_add(") or usesIntHelper(calls, "lt_checked_subtract(") or
     usesIntHelper(calls, "lt_checked_multiply(") or usesIntHelper(calls, "lt_checked_negate(") or
     usesIntHelper(calls, "lt_checked_narrow_int(")
 }
 
 /** True when binary64/binary32 operations need finite-result and zero-divisor guards. */
-usesFloatArithmetic := fn(calls: String): Bool {
+usesFloatArithmetic := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lt_float_op(") or usesIntHelper(calls, "lt_float32_op(") or usesIntHelper(calls, "lt_float_power(")
 }
 
 /** Emits checked binary64/binary32 operations; caller temporaries preserve left-to-right operand effects. */
-emitFloatArithmeticHelpers := fn(calls: String): Unit {
+emitFloatArithmeticHelpers := fn(calls: Set<String>): Unit {
     if not usesFloatArithmetic(calls) { return; }
     if usesIntHelper(calls, "lt_float_power(") {
         outLine("static double lt_float_power(double left, double right, size_t at) {");
@@ -1071,21 +819,14 @@ emitFloatArithmeticHelpers := fn(calls: String): Unit {
 }
 
 /** True when a program calls `core/text` UTF-8 scalar primitives. */
-usesTextPrimitives := fn(calls: String): Bool {
+usesTextPrimitives := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or
     usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(")
 }
 
-/** True when `calls` references any bounds-checked C11 list helper for `tag`. */
 /** True when any list or map bounds helper is called in `calls`. */
-usesAnyListBounds := fn(calls: String): Bool {
-    if calls == "|" { return false; }
-    size := textLib.length(calls);
-    var start := 1;
-    loop start < size {
-        sep := textLib.indexOfText(calls, "|", start);
-        end := if sep >= 0 { sep } else { size };
-        tok := textLib.slice(calls, start, end);
+usesAnyListBounds := fn(calls: Set<String>): Bool {
+    loop calls as tok {
         if textLib.startsWithAt(tok, 0, "lt_list_") and (
             textLib.endsWith(tok, "_at(") or textLib.endsWith(tok, "_set(") or
             textLib.endsWith(tok, "_pop_back(") or textLib.endsWith(tok, "_pop_front(") or
@@ -1096,8 +837,6 @@ usesAnyListBounds := fn(calls: String): Bool {
         if textLib.startsWithAt(tok, 0, "lt_map_") and textLib.endsWith(tok, "_at(") {
             return true;
         }
-        if sep < 0 { break; }
-        start = sep + 1;
     }
     false
 };
@@ -1223,7 +962,7 @@ emitCTupleConvHelper := fn(expectedKind: String, actualKind: String): Unit {
 };
 
 /** Emits portable ISO C11 insertion-order-preserving `Map<K, V>` struct and only the helpers used for `kind`. */
-emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bool): Unit {
+emitCMapHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool): Unit {
     kKind := frontend.mapKeyKind(kind);
     vKind := frontend.mapValueKind(kind);
     mTag := frontend.cMapTag(kind);
@@ -1499,7 +1238,7 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
 };
 
 /** Emits portable ISO C11 insertion-order-preserving `Set<T>` struct and only the helpers used for `kind`. */
-emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bool): Unit {
+emitCSetHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool): Unit {
     eKind := frontend.setElementKind(kind);
     sTag := frontend.cSetTag(kind);
     kTag := frontend.cMapKeyTag(eKind);
@@ -1709,7 +1448,7 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
 };
 
 /** Emits portable ISO C11 list struct and only the helper operations used for `tag` (`i64`, `f64`, `bool`, `str`, or `lt_s_...`). */
-emitCListTagHelpers := fn(tag: String, elemKind: String, calls: String, needCopy: Bool, needPrint: Bool, needFrom: Bool): Unit {
+emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool, needFrom: Bool): Unit {
     cType := frontend.cListElemType(tag);
     cElemConstPtr := "const " + cType + " *";
     lType := "lt_list_" + tag;
@@ -1872,7 +1611,7 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: String, needCopy
 };
 
 /** Emits portable C11 guards that reject overflow and bounds faults before evaluating operations. */
-emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
+emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: String): Unit {
     usesArith := usesIntArithmetic(calls) or usesIntDivision(calls) or usesFloatArithmetic(calls);
     usesBounds := usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or
     usesAnyListBounds(calls);
@@ -1943,33 +1682,51 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
     outLine("");
 }
 
-/** Declares hygienic arithmetic/comparison temporaries at unique assignment sites, skipping quoted text and hoisted closure bodies. */
+/** Declares hygienic arithmetic/comparison temporaries at unique assignment sites, jumping directly to `lt_arg_`/`lt_cmp_` outside strings and hoisted closure bodies. */
 emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
     seen: mut Set<String>;
     loop items as item {
         code := item.code;
+        var nextArg := textLib.indexOfText(code, "lt_arg_", 0);
+        var nextCmp := textLib.indexOfText(code, "lt_cmp_", 0);
+        if nextArg < 0 and nextCmp < 0 { continue; }
         codeLen := textLib.length(code);
+        var nextQuote := textLib.indexOfText(code, "\"", 0);
+        var nextCfn := textLib.indexOfText(code, "/*@CFN_START:", 0);
         var cursor := 0;
         loop cursor < codeLen {
-            ch := textLib.at(code, cursor);
-            if ch == "\"" {
-                cursor = frontend.skipAliasString(code, cursor);
-            } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
-                cursor = skipCFnBlock(code, cursor);
-            } else if ch == "l" and (textLib.startsWithAt(code, cursor, "lt_arg_") or textLib.startsWithAt(code, cursor, "lt_cmp_")) {
-                end := textLib.skipName(code, cursor);
-                if textLib.startsWithAt(code, end, " = ") {
-                    tName := textLib.slice(code, cursor, end);
-                    if not setLib.has(seen, tName) {
-                        setLib.add(mut seen, tName);
-                        tag := if textLib.startsWithAt(code, cursor, "lt_cmp_") or textLib.startsWithAt(code, cursor, "lt_arg_f_") { textLib.at(code, cursor + 7) } else { "i" };
-                        typeCode := if tag == "s" { "lt_str " } else if tag == "b" { "bool " }
-                        else if tag == "f" { "double " } else { "int64_t " };
-                        outLine("    " + typeCode + tName + ";");
-                    }
+            if nextArg >= 0 and nextArg < cursor { nextArg = textLib.indexOfText(code, "lt_arg_", cursor); }
+            if nextCmp >= 0 and nextCmp < cursor { nextCmp = textLib.indexOfText(code, "lt_cmp_", cursor); }
+            var hit := -1;
+            if nextArg >= 0 { hit = nextArg; }
+            if nextCmp >= 0 and (hit < 0 or nextCmp < hit) { hit = nextCmp; }
+            if hit < 0 { break; }
+            if nextQuote >= 0 and nextQuote < hit {
+                if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+                if nextQuote >= 0 and nextQuote < hit {
+                    cursor = frontend.skipAliasString(code, nextQuote);
+                    continue;
                 }
-                cursor = end;
-            } else { cursor = cursor + 1; }
+            }
+            if nextCfn >= 0 and nextCfn < hit {
+                if nextCfn < cursor { nextCfn = textLib.indexOfText(code, "/*@CFN_START:", cursor); }
+                if nextCfn >= 0 and nextCfn < hit {
+                    cursor = skipCFnBlock(code, nextCfn);
+                    continue;
+                }
+            }
+            end := textLib.skipName(code, hit);
+            if textLib.startsWithAt(code, end, " = ") {
+                tName := textLib.slice(code, hit, end);
+                if not setLib.has(seen, tName) {
+                    setLib.add(mut seen, tName);
+                    tag := if textLib.startsWithAt(code, hit, "lt_cmp_") or textLib.startsWithAt(code, hit, "lt_arg_f_") { textLib.at(code, hit + 7) } else { "i" };
+                    typeCode := if tag == "s" { "lt_str " } else if tag == "b" { "bool " }
+                    else if tag == "f" { "double " } else { "int64_t " };
+                    outLine("    " + typeCode + tName + ";");
+                }
+            }
+            cursor = end;
         }
     }
 }
@@ -1979,28 +1736,42 @@ injectCFnTemps := fn(code: String): String {
     marker := "/*@CFN_TEMPS@*/";
     mIdx := textLib.indexOfText(code, marker, 0);
     if mIdx < 0 { return code; }
+    var nextArg := textLib.indexOfText(code, "lt_arg_", 0);
+    var nextCmp := textLib.indexOfText(code, "lt_cmp_", 0);
+    size := textLib.length(code);
+    if nextArg < 0 and nextCmp < 0 {
+        return textLib.slice(code, 0, mIdx) + textLib.slice(code, mIdx + textLib.length(marker), size);
+    }
     decls: mut tb.TextBuilder;
     seen: mut Set<String>;
+    var nextQuote := textLib.indexOfText(code, "\"", 0);
     var cursor := 0;
-    size := textLib.length(code);
     loop cursor < size {
-        ch := textLib.at(code, cursor);
-        if ch == "\"" {
-            cursor = frontend.skipAliasString(code, cursor);
-        } else if ch == "l" and (textLib.startsWithAt(code, cursor, "lt_arg_") or textLib.startsWithAt(code, cursor, "lt_cmp_")) {
-            end := textLib.skipName(code, cursor);
-            if textLib.startsWithAt(code, end, " = ") {
-                tName := textLib.slice(code, cursor, end);
-                if not setLib.has(seen, tName) {
-                    setLib.add(mut seen, tName);
-                    tag := if textLib.startsWithAt(code, cursor, "lt_cmp_") or textLib.startsWithAt(code, cursor, "lt_arg_f_") { textLib.at(code, cursor + 7) } else { "i" };
-                    typeCode := if tag == "s" { "lt_str " } else if tag == "b" { "bool " }
-                    else if tag == "f" { "double " } else { "int64_t " };
-                    tb.append(mut decls, typeCode + tName + "; ");
-                }
+        if nextArg >= 0 and nextArg < cursor { nextArg = textLib.indexOfText(code, "lt_arg_", cursor); }
+        if nextCmp >= 0 and nextCmp < cursor { nextCmp = textLib.indexOfText(code, "lt_cmp_", cursor); }
+        var hit := -1;
+        if nextArg >= 0 { hit = nextArg; }
+        if nextCmp >= 0 and (hit < 0 or nextCmp < hit) { hit = nextCmp; }
+        if hit < 0 { break; }
+        if nextQuote >= 0 and nextQuote < hit {
+            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote >= 0 and nextQuote < hit {
+                cursor = frontend.skipAliasString(code, nextQuote);
+                continue;
             }
-            cursor = end;
-        } else { cursor = cursor + 1; }
+        }
+        end := textLib.skipName(code, hit);
+        if textLib.startsWithAt(code, end, " = ") {
+            tName := textLib.slice(code, hit, end);
+            if not setLib.has(seen, tName) {
+                setLib.add(mut seen, tName);
+                tag := if textLib.startsWithAt(code, hit, "lt_cmp_") or textLib.startsWithAt(code, hit, "lt_arg_f_") { textLib.at(code, hit + 7) } else { "i" };
+                typeCode := if tag == "s" { "lt_str " } else if tag == "b" { "bool " }
+                else if tag == "f" { "double " } else { "int64_t " };
+                tb.append(mut decls, typeCode + tName + "; ");
+            }
+        }
+        cursor = end;
     }
     textLib.slice(code, 0, mIdx) + tb.build(decls) + textLib.slice(code, mIdx + textLib.length(marker), size)
 };
@@ -2097,7 +1868,7 @@ emitFloatOutputHelpers := fn(): Unit {
 }
 
 /** True when any emitted item concatenates dynamic Strings through the checked helper. */
-usesStringConcat := fn(calls: String): Bool {
+usesStringConcat := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite_concat(")
 }
 
@@ -2143,7 +1914,7 @@ emitIntFloorModuloHelper := fn(): Unit {
 }
 
 /** Emits every checked Int division-family helper the program reads. */
-emitIntDivisionHelpers := fn(calls: String): Unit {
+emitIntDivisionHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lite_divide_int(") or usesIntHelper(calls, "lite_floor_divide_int(") {
         emitIntDivideHelper();
     }
@@ -2702,23 +2473,31 @@ collectTypeFlags := fn(kind: String): List<String> {
     out
 };
 
-/** Extracts all `/*@T:<kind>@*/`, `/*@P:<kind>@*/`, and `/*@C:<exp>|<act>@*/` payloads from emitted C expression `code`. */
+/** Extracts all `/*@T:<kind>@*/`, `/*@P:<kind>@*/`, and `/*@C:<exp>|<act>@*/` payloads from emitted C expression `code`, jumping via `indexOfText`. */
 extractCTypeAnnotations := fn(code: String): List<String> {
     out: mut List<String> = [];
-    if textLib.indexOfText(code, "/*@", 0) < 0 { return out; }
+    var nextAnnot := textLib.indexOfText(code, "/*@", 0);
+    if nextAnnot < 0 { return out; }
     size := textLib.length(code);
+    var nextQuote := textLib.indexOfText(code, "\"", 0);
     var cursor := 0;
     loop cursor < size {
-        ch := textLib.at(code, cursor);
-        if ch == "\"" {
-            cursor = frontend.skipAliasString(code, cursor);
-        } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:") or textLib.startsWithAt(code, cursor, "/*@P:")) {
-            endTag := textLib.indexOfText(code, "@*/", cursor + 5);
+        if nextAnnot < cursor { nextAnnot = textLib.indexOfText(code, "/*@", cursor); }
+        if nextAnnot < 0 { break; }
+        if nextQuote >= 0 and nextQuote < nextAnnot {
+            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote >= 0 and nextQuote < nextAnnot {
+                cursor = frontend.skipAliasString(code, nextQuote);
+                continue;
+            }
+        }
+        if textLib.startsWithAt(code, nextAnnot, "/*@T:") or textLib.startsWithAt(code, nextAnnot, "/*@C:") or textLib.startsWithAt(code, nextAnnot, "/*@P:") {
+            endTag := textLib.indexOfText(code, "@*/", nextAnnot + 5);
             if endTag < 0 { break; }
-            listLib.pushBack(mut out, textLib.slice(code, cursor + 3, endTag));
+            listLib.pushBack(mut out, textLib.slice(code, nextAnnot + 3, endTag));
             cursor = endTag + 3;
         } else {
-            cursor = cursor + 1;
+            cursor = nextAnnot + 3;
         }
     }
     out
@@ -2727,35 +2506,39 @@ extractCTypeAnnotations := fn(code: String): List<String> {
 /** Recursively extracts balanced CFN_START ... CFN_END hoisted closure/trampoline definitions (innermost first), encoded as `<key>\n<body>`. */
 extractCHoistedFns := fn(code: String): List<String> {
     out: mut List<String> = [];
-    if textLib.indexOfText(code, "/*@CFN_START:", 0) < 0 { return out; }
+    var nextCfn := textLib.indexOfText(code, "/*@CFN_START:", 0);
+    if nextCfn < 0 { return out; }
     size := textLib.length(code);
+    var nextQuote := textLib.indexOfText(code, "\"", 0);
     var cursor := 0;
     loop cursor < size {
-        ch := textLib.at(code, cursor);
-        if ch == "\"" {
-            cursor = frontend.skipAliasString(code, cursor);
-        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
-            keyEnd := textLib.indexOfText(code, "@*/", cursor + 13);
-            blockEnd := skipCFnBlock(code, cursor);
-            if keyEnd > cursor + 13 and blockEnd >= keyEnd + 16 {
-                key := textLib.slice(code, cursor + 13, keyEnd);
-                body := textLib.slice(code, keyEnd + 3, blockEnd - 13);
-                nested := self(body);
-                loop nested as entry {
-                    listLib.pushBack(mut out, entry);
-                }
-                listLib.pushBack(mut out, key + "\n" + body);
+        if nextCfn < cursor { nextCfn = textLib.indexOfText(code, "/*@CFN_START:", cursor); }
+        if nextCfn < 0 { break; }
+        if nextQuote >= 0 and nextQuote < nextCfn {
+            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote >= 0 and nextQuote < nextCfn {
+                cursor = frontend.skipAliasString(code, nextQuote);
+                continue;
             }
-            cursor = blockEnd;
-        } else {
-            cursor = cursor + 1;
         }
+        keyEnd := textLib.indexOfText(code, "@*/", nextCfn + 13);
+        blockEnd := skipCFnBlock(code, nextCfn);
+        if keyEnd > nextCfn + 13 and blockEnd >= keyEnd + 16 {
+            key := textLib.slice(code, nextCfn + 13, keyEnd);
+            body := textLib.slice(code, keyEnd + 3, blockEnd - 13);
+            nested := self(body);
+            loop nested as entry {
+                listLib.pushBack(mut out, entry);
+            }
+            listLib.pushBack(mut out, key + "\n" + body);
+        }
+        cursor = blockEnd;
     }
     out
 };
 
 /** Emits a C11 fat-pointer struct typedef and `_call` helper for function value type `kind`. */
-emitCFnTypeHelper := fn(kind: String, calls: String): Unit {
+emitCFnTypeHelper := fn(kind: String, calls: Set<String>): Unit {
     fTag := frontend.cFnTag(kind);
     retKind := frontend.fnResultKind(kind);
     retC := cScalarType(retKind);
@@ -2784,7 +2567,7 @@ emitCFnTypeHelper := fn(kind: String, calls: String): Unit {
 };
 
 /** Emits C11 `core/unicode` hard builtin helpers (`toCodePoints`, `fromCodePoints`). */
-emitCUnicodeBuiltinHelpers := fn(calls: String): Unit {
+emitCUnicodeBuiltinHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lite$unicodeToCodePoints(") {
         outLine("static lt_list_i64 lt_unicode_to_code_points(lt_str text) {");
         outLine("    const uint8_t *p = (const uint8_t *)lt_text_cstr(text);");
@@ -2835,7 +2618,7 @@ emitCUnicodeBuiltinHelpers := fn(calls: String): Unit {
 };
 
 /** Emits C11 `core/io` stream and `core/file` stream-opener helpers. */
-emitCStreamBuiltinHelpers := fn(calls: String): Unit {
+emitCStreamBuiltinHelpers := fn(calls: Set<String>): Unit {
     if not usesStreamBuiltins(calls) { return; }
     shTag := frontend.cStructTag("(kind:String,handle:Int)");
     okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
@@ -3169,7 +2952,7 @@ emitCStreamBuiltinHelpers := fn(calls: String): Unit {
 };
 
 /** Emits C11 `core/file` non-stream filesystem builtin helpers. */
-emitCFileBuiltinHelpers := fn(calls: String): Unit {
+emitCFileBuiltinHelpers := fn(calls: Set<String>): Unit {
     if not usesFileBuiltins(calls) { return; }
     okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
     okPathTag := frontend.cStructTag("(ok:Bool,path:String,error:String)");
@@ -3347,7 +3130,7 @@ emitCFileBuiltinHelpers := fn(calls: String): Unit {
 };
 
 /** Emits C11 `core/process` query builtin helpers. */
-emitCProcessBuiltinHelpers := fn(calls: String): Unit {
+emitCProcessBuiltinHelpers := fn(calls: Set<String>): Unit {
     if not usesProcessQueryBuiltins(calls) { return; }
     if usesIntHelper(calls, "lite$processCwd(") {
         outLine("static lt_str lt_process_cwd(void) {");
@@ -3407,7 +3190,7 @@ emitCProcessBuiltinHelpers := fn(calls: String): Unit {
 };
 
 /** Emits C11 `core/time`, `core/crypto.randomBytes`, and `core/process.run`/`runBytes` helpers. */
-emitCProcessSpawnAndTimeHelpers := fn(calls: String): Unit {
+emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lite$timeMonotonicNs(") {
         outLine("static int64_t lt_time_monotonic_ns(void) {");
         outLine("    struct timespec ts;");
@@ -3645,7 +3428,7 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: String): Unit {
 };
 
 /** Emits all C11 host builtin helpers (`core/unicode`, `core/io` streams, `core/file`, `core/process`, `core/time`, `core/crypto`). */
-emitCHostBuiltinHelpers := fn(calls: String): Unit {
+emitCHostBuiltinHelpers := fn(calls: Set<String>): Unit {
     needDupStr := usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or
         usesIntHelper(calls, "lite$fileOpenAppender(") or usesIntHelper(calls, "lite$ioRead(") or
         usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioWrite(") or
@@ -3771,7 +3554,7 @@ applyCSoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs:
 };
 
 /** Emits C11 native fast-path helpers for `core/int`, `core/text`, and `core/file` soft builtins. */
-emitCSoftBuiltinHelpers := fn(calls: String): Unit {
+emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
     if not usesCSoftBuiltins(calls) { return; }
     if usesIntHelper(calls, "lt_c_text_is_digit(") {
         outLine("static bool lt_c_text_is_digit(lt_str s) { return s.byte_len == 1u && s.data[0] >= '0' && s.data[0] <= '9'; }");
@@ -4053,7 +3836,7 @@ emitCSoftBuiltinHelpers := fn(calls: String): Unit {
 };
 
 /** True when any emitted item calls an `extra/canvas` surface or drawing builtin. */
-usesExtraCanvasBuiltins := fn(calls: String): Bool {
+usesExtraCanvasBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$extraCanvasOpen(") or usesIntHelper(calls, "lite$extraCanvasPoll(") or
     usesIntHelper(calls, "lite$extraCanvasPresent(") or usesIntHelper(calls, "lite$extraCanvasClose(") or
     usesIntHelper(calls, "lite$extraCanvasClear(") or usesIntHelper(calls, "lite$extraCanvasFillRect(") or
@@ -4066,7 +3849,7 @@ usesExtraCanvasBuiltins := fn(calls: String): Bool {
 };
 
 /** Emits the self-contained C11 `extra/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder + vitals). */
-emitCExtraCanvasHelpers := fn(calls: String): Unit {
+emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     if not usesExtraCanvasBuiltins(calls) { return; }
     surfTag := frontend.cStructTag("(handle:Int)");
     colTag := frontend.cStructTag("(r:Float,g:Float,b:Float,a:Float)");
@@ -4489,6 +4272,14 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("");
 };
 
+/** True when any call token in `calls` starts with `prefix`. */
+hasCallPrefix := fn(calls: Set<String>, prefix: String): Bool {
+    loop calls as tok {
+        if textLib.startsWithAt(tok, 0, prefix) { return true; }
+    }
+    false
+};
+
 /** Emits a complete C11 program driven by composable `OptConfig`. */
 pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     prevCompact := cCompactEmit;
@@ -4497,7 +4288,15 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     cSourceMapMode = config.sourceMap;
     softItems := applyCSoftBuiltins(items, prefix, builtinSpecs);
     reachable := frontend.filterReachableItemsWithConfig(softItems, frontend.TARGET_C, config);
-    calls := frontend.targetHelperCalls(reachable);
+    calls := frontend.targetHelperCallSet(reachable);
+    unsupported := unsupportedBuiltinCode(calls);
+    if unsupported =!= "" {
+        diagLib.fail("", unsupported);
+    }
+    if usesIntHelper(calls, "lite$listAt(") or usesIntHelper(calls, "lite$listPopBack(") or
+    usesIntHelper(calls, "lite$listPopFront(") or usesIntHelper(calls, "lt_list_copy(") {
+        diagLib.fail("", "C backend does not support list values yet");
+    }
     var floatOutput := false;
     var hasFunctions := false;
     var hasFnOutput := false;
@@ -4530,10 +4329,6 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
                 frontend.tokenBucketAdd(mut fnRefTokens, item.runtime);
             }
-        }
-        unsupported := unsupportedBuiltinCode(frontend.targetCodeCalls(item.code, "|"));
-        if unsupported =!= "" {
-            diagLib.fail("", unsupported);
         }
         if (frontend.isTupleKind(item.kind) and frontend.cStructTag(item.kind) == "") or
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isTupleKind(item.name) and frontend.cStructTag(item.name) == "") or
@@ -4571,9 +4366,6 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         }
         if item.kind == frontend.ITEM_KIND_LOOP_SEQ and frontend.cListTag(item.textValue) == "" {
             diagLib.fail("", "C backend does not support list traversal yet");
-        }
-        if frontend.codeUsesListIndex(item.code) or frontend.codeUsesListPop(item.code) or frontend.codeUsesListCopy(item.code) {
-            diagLib.fail("", "C backend does not support list values yet");
         }
         aggErr := unsupportedAggregateCode(item.code);
         if aggErr =!= "" {
@@ -4756,10 +4548,10 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         listLib.pushBack(mut seedKinds, "(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
         listLib.pushBack(mut seedKinds, "(ok:Bool,error:String)");
     }
-    if textLib.indexOfText(calls, "|lt_list_i64_", 0) >= 0 { listLib.pushBack(mut seedKinds, "List<Int>"); }
-    if textLib.indexOfText(calls, "|lt_list_f64_", 0) >= 0 { listLib.pushBack(mut seedKinds, "List<Float>"); }
-    if textLib.indexOfText(calls, "|lt_list_bool_", 0) >= 0 { listLib.pushBack(mut seedKinds, "List<Bool>"); }
-    if textLib.indexOfText(calls, "|lt_list_str_", 0) >= 0 { listLib.pushBack(mut seedKinds, "List<String>"); }
+    if hasCallPrefix(calls, "lt_list_i64_") { listLib.pushBack(mut seedKinds, "List<Int>"); }
+    if hasCallPrefix(calls, "lt_list_f64_") { listLib.pushBack(mut seedKinds, "List<Float>"); }
+    if hasCallPrefix(calls, "lt_list_bool_") { listLib.pushBack(mut seedKinds, "List<Bool>"); }
+    if hasCallPrefix(calls, "lt_list_str_") { listLib.pushBack(mut seedKinds, "List<String>"); }
     var hasAnyList := false;
     loop seedKinds as sk {
         tFlags := collectTypeFlags(sk);
@@ -4791,7 +4583,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         if textLib.startsWithAt(oe, 0, "S|") {
             sKind := textLib.slice(oe, 2, textLib.length(oe));
             sTag := frontend.cStructTag(sKind);
-            if textLib.indexOfText(calls, "|lt_list_" + sTag + "_", 0) >= 0 and not setLib.has(seenTypeKeys, "L:" + sTag) {
+            if hasCallPrefix(calls, "lt_list_" + sTag + "_") and not setLib.has(seenTypeKeys, "L:" + sTag) {
                 setLib.add(mut seenTypeKeys, "L:" + sTag);
                 listLib.pushBack(mut extraListSeeds, "L|" + sKind);
                 hasAnyList = true;

@@ -548,6 +548,7 @@ pub targetCodeCalls := fn(code: String, existing: String): String { reach.target
 pub userFunctionCalls := fn(code: String, existing: String): String { reach.userFunctionCalls(code, existing) };
 
 /** Collects a program's target helper requirements once, with a bounded distinct-name result. */
+pub targetHelperCallSet := fn(items: Items): Set<String> { reach.targetHelperCallSet(items) };
 pub targetHelperCalls := fn(items: Items): String { reach.targetHelperCalls(items) };
 
 /** True when `calls` already contains the pipe-delimited call token `needle`. */
@@ -567,6 +568,7 @@ pub flattenTokenBuckets := fn(s: TokenBuckets): String { reach.flattenTokenBucke
 
 /** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code` into `existing` in place. */
 pub codeReachableTokensSet := fn(code: String, existing: mut TokenBuckets): Unit { reach.codeReachableTokensSet(code, mut existing); };
+pub closeReachableGraph := fn(graph: Items, reachable: mut TokenBuckets, scanned: mut TokenBuckets): Unit { reach.closeReachableGraph(graph, mut reachable, mut scanned); };
 
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
 pub OptClass := type optCfg.OptClass;

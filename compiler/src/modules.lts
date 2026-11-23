@@ -415,70 +415,10 @@ scanTopLevelTokens := fn(items: frontend.Items, seed: mut frontend.TokenBuckets)
     }
 }
 
-/** Propagates reachable tokens through compiled functions and pure globals in `graph` in place. */
+/** Propagates reachable tokens through compiled functions and pure globals in `graph` in place via an O(V + E) BFS worklist. */
 closeReachableTokens := fn(graph: frontend.Items, reachable: mut frontend.TokenBuckets,
 scanned: mut frontend.TokenBuckets): Unit {
-    loop true {
-        beforeCount := setLib.size(reachable);
-        var fnDepth := 0;
-        var blockDepth := 0;
-        var nextIsPure := false;
-        var activeFnWanted := false;
-        var activeFnToken := "";
-        loop graph as item {
-            if item.kind == frontend.ITEM_KIND_MODULE_START {
-                fnDepth = 0;
-                blockDepth = 0;
-                nextIsPure = false;
-                activeFnWanted = false;
-                activeFnToken = "";
-                continue;
-            }
-            if item.kind == frontend.ITEM_KIND_MODULE_END or item.kind == frontend.ITEM_KIND_MODULE_VISITED or item.kind == frontend.ITEM_KIND_MODULE_PROCESSED or
-            item.kind == frontend.ITEM_KIND_CORE_MODULE_META or item.kind == frontend.ITEM_KIND_CORE_MODULE_SOURCE or item.kind == frontend.ITEM_KIND_CORE_MODULE_IMPORT {
-                nextIsPure = false;
-                continue;
-            }
-            if item.kind == frontend.ITEM_KIND_PURE_GLOBAL {
-                nextIsPure = true;
-                continue;
-            }
-            if item.kind == frontend.ITEM_KIND_FUNCTION_START {
-                if fnDepth == 0 {
-                    activeFnToken = item.runtime + "(";
-                    activeFnWanted = frontend.tokenBucketHas(reachable, activeFnToken) and
-                    not frontend.tokenBucketHas(scanned, activeFnToken);
-                    if activeFnWanted { frontend.tokenBucketAdd(mut scanned, activeFnToken); }
-                }
-                fnDepth = fnDepth + 1;
-                nextIsPure = false;
-                continue;
-            }
-            if item.kind == frontend.ITEM_KIND_FUNCTION_END {
-                if fnDepth > 0 { fnDepth = fnDepth - 1; }
-                if fnDepth == 0 { activeFnWanted = false; activeFnToken = ""; }
-                nextIsPure = false;
-                continue;
-            }
-            if fnDepth > 0 {
-                if activeFnWanted { scanItemTokens(item, mut reachable); }
-                nextIsPure = false;
-                continue;
-            }
-            isPureDecl := blockDepth == 0 and nextIsPure;
-            nextIsPure = false;
-            if item.kind == frontend.ITEM_KIND_SCOPE or item.kind == frontend.ITEM_KIND_IF or item.kind == frontend.ITEM_KIND_LOOP or item.kind == frontend.ITEM_KIND_LOOP_SEQ {
-                blockDepth = blockDepth + 1;
-            } else if item.kind == frontend.ITEM_KIND_END_SCOPE or item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_LOOP {
-                if blockDepth > 0 { blockDepth = blockDepth - 1; }
-            } else if isPureDecl and item.runtime =!= "" and frontend.tokenBucketHas(reachable, item.runtime) and
-            not frontend.tokenBucketHas(scanned, item.runtime) {
-                frontend.tokenBucketAdd(mut scanned, item.runtime);
-                frontend.codeReachableTokensSet(item.code, mut reachable);
-            }
-        }
-        if setLib.size(reachable) == beforeCount { break; }
-    }
+    frontend.closeReachableGraph(graph, mut reachable, mut scanned);
 }
 
 /** Collects `ModuleStart`..`ModuleEnd` slices for modules whose path is in `metaPaths`. */
