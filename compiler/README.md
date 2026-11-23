@@ -60,7 +60,10 @@ seed or host glue.
 The staged path from this prototype to runnable TS/C bootstrap compilers is the
 [bootstrap and self-hosting plan](lite://doc/bootstrap-plan). It is an
 implementation plan; it does not change the restricted compiler's current
-contract or select new language syntax.
+contract or select new language syntax. For the planned migration of hardcoded
+built-in dot access (`List`, `Array`, `Map`, `Set`, `String`) to hard/soft/pure
+declarations in `lib/core/*.lts`, see
+[type-operations and builtin dot-access migration](lite://doc/compiler/type-operations-migration-plan).
 
 ## Bootstrap source subset
 

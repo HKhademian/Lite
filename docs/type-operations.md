@@ -150,11 +150,12 @@ Consulted selectively from the [project reference languages](lite://doc/referenc
 
 ## Compiler status
 
-Not yet implemented in the self-hosted TS or C11 compiler. Today, member dot access supports `module.symbol`, tuple/record fields, enum `.value`, and compiler-handled `.length`, `.size`, and `.isEmpty` properties.
+Not yet implemented in the self-hosted TS or C11 compiler. Today, member dot access supports `module.symbol`, tuple/record fields, enum `.value`, and compiler-handled `.length`, `.size`, and `.isEmpty` properties. See [the type-operations and builtin dot-access migration plan](lite://doc/compiler/type-operations-migration-plan) for the phased roadmap to migrate hardcoded dot access into hard/soft/pure declarations in `lib/core/*.lts`.
 
 ## Related concepts
 
 - [Documentation index](lite://doc/overview)
+- [Type-operations migration plan](lite://doc/compiler/type-operations-migration-plan)
 - [Functions](lite://doc/functions)
 - [Generic notation](lite://doc/generic-notation)
 - [Records](lite://doc/records)
