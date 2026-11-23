@@ -1,16 +1,30 @@
 # INV-030 — Method and extension-operation declaration syntax
 
-Status: inventoried; no syntax selected, no implementation started
+Status: core direction selected 2026-11-23 ([docs/type-operations.md](../../docs/type-operations.md)); compiler implementation not started
 Contributor: project contributor (agent-assisted)
-Last updated: 2026-10-31
+Last updated: 2026-11-23
 Catalog brief: [INV-030](TOPICS.md#inv-030)
 Covered subtopics: whole topic; method/extension declaration syntax
 Subtopic brief: none
 
-This is a non-normative investigation note outside the language draft. Recording
-a preference or example here does not select a language rule.
+This note preserves the original 2026-10-31 exploration and records the
+2026-11-23 design selection. Normative rules live in
+[docs/type-operations.md](../../docs/type-operations.md) and the
+[decision ledger](../../docs/decisions-and-open-questions.md).
 
-## Investigation question
+## 2026-11-23 resolution summary
+
+Selected direction:
+
+- **Uniform type-qualified bindings:** `[pub] TypeName.op := fn[<TypeParams>](recv: [mut] Self[<...>], ...): Ret { ... }`, statically lowered to ordinary function calls with no classes or bound-method closures.
+- **`self` versus `Self`, and `Self`-only receivers:** `self` remains the function's reference to itself (`self(...)` recursion); `Self` is the type reference to the attached receiver type. For now, the receiver parameter may only have `Self` type (`v: Self`, `v: mut Self`, or `Self<...>` for generic type families), paired with an ordinary named first parameter.
+- **Generics from the beginning:** type parameters (both receiver-level like `List<T>` and operation-level like `List.map<T, U>`) live in LiteLang's separate `fn<...>` list (`items: mut Self<T>`); concrete instantiations (such as `fn(items: Self<Int>): Int`) use the same form with one unique binding per `TypeName.op`.
+- **Owned nominal types only for now:** inherent operations belong only to the module defining a `record`, `enum`, `distinct` (fresh owned type), or built-in nominal type family. `pub` operations travel with the type. Because `alias` is pure transparent symbol/target substitution with no identity or namespace of its own (as if the targeted symbol were written directly), attaching operations through an `alias` or to foreign targets is disallowed for now.
+- **Deferred future direction:** explicitly imported extension operations (Kotlin/Swift-like extendability without implicit global patching) are documented for future design alongside LiteLang's explicit member-introduction/`using` syntax.
+
+Remaining open items (call-site `mut` visibility on dot calls, zero-argument properties versus calls, `Self` in generic type-family operations, explicit call-site type arguments, and future extension opt-in syntax) are tracked in [docs/type-operations.md](../../docs/type-operations.md#open-decisions).
+
+## Historical 2026-10-31 investigation question
 
 How should Lite declare additional operations that are called with dot syntax,
 without classes, and how should the receiver bind?

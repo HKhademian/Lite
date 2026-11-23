@@ -56,6 +56,7 @@ Nominal identity, structural conformance, interface coherence, orphan-style impl
 ## Related concepts and references
 
 - [Declarations and assignment](lite://doc/declarations-and-assignment)
+- [Type-attached operations](lite://doc/type-operations)
 - [Types and inference](lite://doc/types-and-inference)
 - [Memory and performance](lite://doc/memory-and-performance)
 - [Swift value and reference types](https://www.swift.org/documentation/articles/value-and-reference-types.html) is a useful comparison for local reasoning and composed values, not an adopted ARC or class model.

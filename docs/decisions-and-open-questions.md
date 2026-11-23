@@ -1,8 +1,48 @@
 # Decisions and open questions
 
-Dated decision ledger, updated through **2026-11-17**. Older entries retain their
+Dated decision ledger, updated through **2026-11-23**. Older entries retain their
 original scope. Decisions do not establish compiler conformance; use
 [the transition](lite://doc/compiler/transition-plan) for current execution evidence.
+
+## Type-attached operations, `self` versus `Self`, and owned-type visibility, 2026-11-23
+
+Selected design direction (not yet implemented in the compiler):
+
+1. **Static type-attached operations (`TypeName.op := fn[<...>](...)`):**
+   Support `value.op(...)` dot-call ergonomics without classes or runtime
+   inheritance via static type-qualified uniform bindings. Both `x.op(...)` and
+   `TypeName.op(x, ...)` target the same compile-time function, and
+   `TypeName.op` remains an ordinary unbound function value.
+2. **`self` versus `Self`, and `Self`-only receiver rule:** retain lowercase
+   `self` strictly as the function's reference to itself (`self(...)`
+   recursion), and select `Self` as the type reference to the attached receiver
+   type. Receivers use ordinary named first parameters and **may only have
+   `Self` type for now** (`v: Self`, `v: mut Self`, or parameterized
+   `Self<T>` / `mut Self<T>` / `Self<Int>` for generic type families).
+3. **Generics supported from the beginning:** generic type families such as
+   `List<T>` and `Map<K, V>` declare all type parameters in LiteLang's separate
+   `fn<...>` list (`pub List.pushBack := fn<T>(items: mut Self<T>, value: T): Unit`,
+   `pub List.map := fn<T, U>(items: Self<T>, f: fn(T): U): Self<U>`, concrete
+   `pub List.sum := fn(items: Self<Int>): Int`), with no angle brackets on the
+   left-hand side of `:=` and one unique binding per `TypeName.op`.
+4. **Owned nominal types only (for now); `alias`/foreign attachments disallowed:**
+   `record`, `enum`, `distinct` (fresh owned type identity), and built-in
+   nominal type families own their inherent operations; `pub TypeName.op`
+   travels with the type to importers while non-`pub` stays private to the
+   defining file. Because `alias` is pure transparent symbol/target
+   substitution with no separate identity or namespace of its own (as if the
+   targeted symbol were written directly), attaching operations through an
+   `alias` or to foreign targets is disallowed for now.
+5. **Recorded future direction — explicit imported extensions:** Kotlin/Swift-style
+   extendability for foreign or aliased types is intentionally deferred for a
+   future design stage and must require **explicit** import/opt-in (never
+   implicit or ambient global patching).
+
+Call-site `mut` visibility on dot calls, zero-argument properties versus calls,
+receiverless type-associated helpers, explicit call-site type arguments,
+and future `using`/extension opt-in syntax remain open. See
+[type-attached operations](lite://doc/type-operations) and
+[INV-030](lite://repo/research/investigations/INV-030-method-declaration-syntax.md).
 
 ## Compile-time agreement and runtime values, 2026-11-17
 

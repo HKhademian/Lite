@@ -104,4 +104,5 @@ remain open. See [the core type review](lite://repo/research/investigations/lang
 
 See [record type identity](lite://doc/record-type-identity),
 [enums and variants](lite://doc/enums-and-variants),
+[type-attached operations](lite://doc/type-operations),
 [mutability](lite://doc/mutability), and [grammar sketch](lite://doc/grammar-sketch).
