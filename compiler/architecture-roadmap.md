@@ -1,24 +1,26 @@
 # Compiler architecture and performance roadmap
 
-Status: **active implementation roadmap, 2026-11-23**. Phases **#1**, **#2**, **#3**, **#4**, and **#6a** are genuine data-structure and runtime upgrades on the active compiler; phases **#5** and **#6b** document the decoupled v2 frontend pipeline to execute once those foundations are in place.
+Status: **foundation phases #1–#4 + #6a complete (2026-11-23); v2 pipeline (#5 and #6b) documented and ready**. Native C11 self-compilation of the full compiler (`c-root.lts` → `compiler.c`) dropped from **1977 ms** (original baseline) / **871 ms** (post-Tier-1 baseline) down to **321.3 ms** (**6.15×** faster overall; **2.71×** faster across #1–#4 + #6a), with 3-generation byte-for-byte fixed points on both TS and C11.
 
 ## Overview
 
-The active Lite compiler ([`compiler/src/frontend.lts`](lite://repo/compiler/src/frontend.lts), [`compiler/src/frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lts), [`compiler/src/frontend-types.lts`](lite://repo/compiler/src/frontend-types.lts), [`compiler/src/emit-ts.lts`](lite://repo/compiler/src/emit-ts.lts), [`compiler/src/emit-c.lts`](lite://repo/compiler/src/emit-c.lts)) currently parses raw UTF-8 source by character offset while fusing typechecking and target TS/C11 code emission. Downstream passes ([`compiler/src/trace-safety.lts`](lite://repo/compiler/src/trace-safety.lts), [`compiler/src/reachability.lts`](lite://repo/compiler/src/reachability.lts), [`compiler/src/emit-c.lts`](lite://repo/compiler/src/emit-c.lts)) then re-scan emitted code strings to recover dependencies, helper calls, and type annotations.
+The active Lite compiler ([`compiler/src/frontend.lts`](lite://repo/compiler/src/frontend.lts), [`compiler/src/frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lts), [`compiler/src/frontend-types.lts`](lite://repo/compiler/src/frontend-types.lts), [`compiler/src/emit-ts.lts`](lite://repo/compiler/src/emit-ts.lts), [`compiler/src/emit-c.lts`](lite://repo/compiler/src/emit-c.lts)) now uses $O(1)$ scoped symbol indexing, single-pass brace matching, canonical type and component memoization, 16-byte length-prefixed C11 `lt_str` strings, an $O(V + E)$ call-graph BFS worklist for reachability, $O(1)$ `Set<String>` helper queries, and an $O(1)$ C11 builtin rewrite map.
 
 Every phase below eliminates a structural bottleneck rather than adding heuristic flags, while preserving strict dual-target TS/C11 parity, all 94 corpus contracts, and 3-generation self-hosting fixed points.
 
-## Execution order
+## Execution order & measured results
 
-| Phase | Upgrade | Target area | Status |
-|---|---|---|---|
-| **#1** | Scoped $O(1)$ `SymbolTable` with undo-stack shadowing and scope invariants | [`frontend-ir.lts`](lite://repo/compiler/src/frontend-ir.lts), [`frontend.lts`](lite://repo/compiler/src/frontend.lts), [`frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lts), [`trace-safety.lts`](lite://repo/compiler/src/trace-safety.lts) | Planned (next) |
-| **#2** | Single-pass `BraceIndex` (`Map<Int, Int>`) per source file | [`frontend-syntax.lts`](lite://repo/compiler/src/frontend-syntax.lts), [`frontend.lts`](lite://repo/compiler/src/frontend.lts), [`frontend-inference.lts`](lite://repo/compiler/src/frontend-inference.lts) | Planned |
-| **#3** | Canonical `TypeCache` interning (`cStructTag`, `containsFnKind`, type metadata) | [`frontend-types.lts`](lite://repo/compiler/src/frontend-types.lts), [`emit-c.lts`](lite://repo/compiler/src/emit-c.lts) | Planned |
-| **#4** | Fat length-prefixed C11 strings (`lt_str`) | [`c-literals.lts`](lite://repo/compiler/src/c-literals.lts), [`emit-c.lts`](lite://repo/compiler/src/emit-c.lts) | Planned |
-| **#6a** | Structured IR metadata on `Parsed` and `Item` (eliminate emitted-code string scraping) | [`frontend-ir.lts`](lite://repo/compiler/src/frontend-ir.lts), [`frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lts), [`trace-safety.lts`](lite://repo/compiler/src/trace-safety.lts), [`reachability.lts`](lite://repo/compiler/src/reachability.lts), [`emit-c.lts`](lite://repo/compiler/src/emit-c.lts) | Planned |
-| **#5** | Full-language single-pass tokenized frontend (`Source -> Tokens`) | [`lexer.lts`](lite://repo/compiler/src/lexer.lts), frontend parser | Documented for after #1–#4 + #6a |
-| **#6b** | Decoupled `Tokens -> Arena AST -> TypeChecker -> Typed IR -> TS/C Backends` | Compiler v2 frontend & emitters | Documented for after #1–#4 + #6a |
+| Phase | Upgrade | Target area | Native C→C self-compile (min) | Status |
+|---|---|---|---|---|
+| Baseline | Original compiler before algorithmic cleanup | Full compiler | `1977 ms` | Baseline |
+| Tier-1 | $O(1)$ Map/Set tombstones, `Set<String>` buckets, MRU UTF-8 cache, `lib/util/collections.lts` | [`emit-c.lts`](lite://repo/compiler/src/emit-c.lts), [`reachability.lts`](lite://repo/compiler/src/reachability.lts) | `871 ms` (`2.27×`) | Done (`b791a650`) |
+| **#1** | Scoped $O(1)$ `SymbolTable` with undo-stack shadowing and trace-safety invariants | [`symbol-table.lts`](lite://repo/compiler/src/symbol-table.lts), [`frontend.lts`](lite://repo/compiler/src/frontend.lts), [`frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lts), [`trace-safety.lts`](lite://repo/compiler/src/trace-safety.lts) | `724.9 ms` (`2.73×`) | Done (`5af84147`) |
+| **#2** | Single-pass `BraceIndex` (`Map<Int, Int>`) per source file | [`frontend-syntax.lts`](lite://repo/compiler/src/frontend-syntax.lts) | `587.7 ms` (`3.36×`) | Done (`3e4cb62c`) |
+| **#3** | Canonical `TypeCache` interning (`cStructTag`, `cValueType`, `tsFunctionType`, parsed tuple/record component tables) | [`frontend-types.lts`](lite://repo/compiler/src/frontend-types.lts) | `466.5 ms` (`4.24×`) | Done (`ea0b9907`) |
+| **#4** | Fat 16-byte length-prefixed C11 strings (`lt_str`) with compile-time `byte_len`/`cp_len`, 8-byte word hashing, and 1-byte `lt_text_eq` fast path | [`c-literals.lts`](lite://repo/compiler/src/c-literals.lts), [`frontend-ir.lts`](lite://repo/compiler/src/frontend-ir.lts), [`frontend-types.lts`](lite://repo/compiler/src/frontend-types.lts), [`emit-c.lts`](lite://repo/compiler/src/emit-c.lts) | `390.9 ms` (`5.06×`) | Done (`89dc26fe`) |
+| **#6a** | $O(V + E)$ worklist BFS reachability, `Set<String>` helper queries, $O(1)$ C builtin rewrite map, and jump-scanning passes | [`reachability.lts`](lite://repo/compiler/src/reachability.lts), [`modules.lts`](lite://repo/compiler/src/modules.lts), [`emit-c.lts`](lite://repo/compiler/src/emit-c.lts) | `321.3 ms` (`6.15×`) | Done (`88231e13`) |
+| **#5** | Full-language single-pass tokenized frontend (`Source -> Tokens`) | [`lexer.lts`](lite://repo/compiler/src/lexer.lts), frontend parser | — | Documented (next v2 frontier) |
+| **#6b** | Decoupled `Tokens -> Arena AST -> TypeChecker -> Typed IR -> TS/C Backends` | Compiler v2 frontend & emitters | — | Documented (next v2 frontier) |
 
 ---
 
@@ -49,28 +51,30 @@ Canonical type kinds (`"Tuple<...>"`, `"Record<...>"`, `"List<...>"`, `"fn(...):
 
 ### Phase #4 — Fat length-prefixed strings in C11 (`lt_str`)
 
-Replace bare `const char *` plus the global 256-slot `lt_utf8_cache` with a compact value struct carrying NUL-terminated storage and exact lengths:
+Replaced bare `const char *` plus mandatory `lt_utf8_cache` probes with a 16-byte register-passed value struct carrying NUL-terminated storage and exact lengths:
 
 ```c
 typedef struct {
-    const char *data; /* Always NUL-terminated for zero-copy C/POSIX interop */
-    int64_t byte_len; /* Exact UTF-8 byte length */
-    int64_t cp_len;   /* Exact Unicode scalar length when >= 0 (ASCII iff cp_len == byte_len), -1 if lazy */
+    const char *data;  /* Always NUL-terminated for zero-copy C/POSIX interop */
+    uint32_t byte_len; /* Exact UTF-8 byte length */
+    int32_t cp_len;    /* Exact Unicode scalar length when >= 0 (ASCII iff cp_len == (int32_t)byte_len), -1 if lazy */
 } lt_str;
 ```
 
-- Compile-time string literals carry exact `byte_len` and `cp_len` with zero runtime scan.
-- `lt_text_eq` rejects unequal lengths in 1 cycle and uses pointer equality or `memcmp`.
-- `lt_text_length` and ASCII `lt_text_at` / `lt_text_slice` execute in $O(1)$ with zero global cache traffic.
-- `lt_str_concat` and `lt_list_str_join` compute output sizes without `strlen`.
-- Benefits every C11-compiled Lite program, not only the compiler.
+- Compile-time string literals (`LT_STR_LIT("...", cp)`) carry exact `byte_len` (via C `sizeof`) and `cp_len` with zero runtime scan.
+- `lt_text_eq` rejects unequal lengths and mismatched first bytes inline without calling `memcmp`; `lt_text_hash` hashes 8-byte words via `memcpy`.
+- `lt_text_length` and ASCII `lt_text_at` (backed by compile-time `lt_ascii_tbl`) / `lt_text_slice` / `lt_c_text_*` execute in $O(1)$ without touching the UTF-8 cursor cache.
+- `lite_concat` and `lt_c_text_join` compute exact output sizes without `strlen` and propagate `cp_len`.
+- Verified with dedicated [`compiler/tests/codegen/c-backend-strings.test.lts`](lite://repo/compiler/tests/codegen/c-backend-strings.test.lts) covering ASCII, multi-byte UTF-8, default zero-init, `Map`/`Set`, and string-backed enums.
 
-### Phase #6a — Structured IR metadata on `Parsed` and `Item`
+### Phase #6a — Structured call-graph BFS, `Set<String>` helper queries, and $O(1)$ builtin lowering
 
-Record structured runtime references, helper call tokens, and C type tags directly during frontend resolution rather than re-parsing generated C/TS strings in downstream passes:
+Eliminated the dominant downstream emitted-code string-scraping bottlenecks across [`reachability.lts`](lite://repo/compiler/src/reachability.lts), [`modules.lts`](lite://repo/compiler/src/modules.lts), and [`emit-c.lts`](lite://repo/compiler/src/emit-c.lts):
 
-- Eliminate string-scraping scans (`extractCTypeAnnotations`, `codeReachableTokensSet`, `targetCodeCalls`, `extractExprDepsPair`) where structured side-channel sets/lists can be populated directly at emission time.
-- Keeps emitted TS and C11 bytes identical and preserves all 94 corpus contracts and 3-generation fixed points.
+- Replaced the repeated whole-program fixpoint loops in `filterReachableItemsWithConfig` and `closeReachableTokens` with a single-pass function/declaration index plus an $O(V + E)$ BFS worklist (`closeReachableGraph`).
+- Replaced pipe-delimited `|...|` helper strings and repeated `strstr` queries in `emit-c.lts` with `targetHelperCallSet` (`Set<String>`), eliminating redundant per-item `targetCodeCalls` and list-helper re-scans.
+- Replaced the 62-branch character-by-character `normalizeCBuiltinCalls` scanner with an $O(1)$ `Map<String, String>` rewrite table and SIMD `indexOfText` jumping (also applied to `emitArithmeticTemporaries`, `injectCFnTemps`, `extractCTypeAnnotations`, and `extractCHoistedFns`).
+- Kept emitted TS and C11 behavior identical across all 94 corpus contracts and 3-generation fixed points while reducing `emit-c.lts` + `reachability.lts` + `modules.lts` by 93 net lines.
 
 ---
 
