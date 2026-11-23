@@ -1218,7 +1218,7 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     hasKeys := usesIntHelper(calls, mTag + "_keys(");
     hasValues := usesIntHelper(calls, mTag + "_values(");
     outLine("typedef struct { " + kType + " key; " + vType + " val; } " + mTag + "_entry;");
-    outLine("typedef struct { " + mTag + "_entry *data; int64_t len; int64_t cap; int64_t *idx; int64_t idx_cap; int64_t *rc; } " + mTag + ";");
+    outLine("typedef struct { " + mTag + "_entry *data; int64_t len; int64_t used; int64_t cap; int64_t *idx; int64_t idx_cap; uint8_t *dead; int64_t *rc; } " + mTag + ";");
     needFind := hasFrom or hasSet or hasHas or hasAt or hasGet or hasGetOr or hasRemove;
     needMut := hasFrom or hasSet or hasRemove;
     if needFind {
@@ -1247,16 +1247,21 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         outLine("            pos = (pos + 1u) & mask;");
         outLine("        }");
         outLine("    }");
-        outLine("    for (int64_t i = 0; i < m.len; i += 1) { if (" + mTag + "_keq(m.data[i].key, k)) { return i; } }");
+        outLine("    for (int64_t i = 0; i < m.used; i += 1) { if ((m.dead == NULL || !m.dead[i]) && " + mTag + "_keq(m.data[i].key, k)) { return i; } }");
         outLine("    return -1;");
         outLine("}");
     }
     if needMut {
         outLine("static void " + mTag + "_rehash(" + mTag + " *m, int64_t next_cap) {");
+        outLine("    if (m->dead != NULL) {");
+        outLine("        int64_t w = 0;");
+        outLine("        for (int64_t i = 0; i < m->used; i += 1) { if (!m->dead[i]) { if (w != i) { m->data[w] = m->data[i]; } w += 1; } }");
+        outLine("        m->used = w; free(m->dead); m->dead = NULL;");
+        outLine("    }");
         outLine("    int64_t *nidx = calloc((size_t)next_cap, sizeof(int64_t));");
         outLine("    if (nidx == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate map index\\n\"); exit(1); }");
         outLine("    uint64_t mask = (uint64_t)(next_cap - 1);");
-        outLine("    for (int64_t i = 0; i < m->len; i += 1) {");
+        outLine("    for (int64_t i = 0; i < m->used; i += 1) {");
         outLine("        uint64_t pos = " + mTag + "_hash(m->data[i].key) & mask;");
         outLine("        while (nidx[pos] != 0) { pos = (pos + 1u) & mask; }");
         outLine("        nidx[pos] = i + 1;");
@@ -1271,12 +1276,16 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         outLine("        int64_t *nrc = malloc(sizeof(int64_t));");
         outLine("        if (ndata == NULL || nrc == NULL) { fprintf(stderr, \"MemoryFault: cannot detach map\\n\"); exit(1); }");
         outLine("        *nrc = 1;");
+        outLine("        int64_t w = 0;");
+        outLine("        for (int64_t i = 0; i < m->used; i += 1) {");
+        outLine("            if (m->dead != NULL && m->dead[i]) { continue; }");
         if vCopy == "v" {
-            outLine("        if (m->len > 0) { memcpy(ndata, m->data, (size_t)m->len * sizeof(" + mTag + "_entry)); }");
+            outLine("            ndata[w] = m->data[i]; w += 1;");
         } else {
-            outLine("        for (int64_t i = 0; i < m->len; i += 1) { " + vType + " v = m->data[i].val; ndata[i].key = m->data[i].key; ndata[i].val = " + vCopy + "; }");
+            outLine("            " + vType + " v = m->data[i].val; ndata[w].key = m->data[i].key; ndata[w].val = " + vCopy + "; w += 1;");
         }
-        outLine("        m->data = ndata; m->cap = ncap; m->idx = NULL; m->idx_cap = 0; m->rc = nrc;");
+        outLine("        }");
+        outLine("        m->data = ndata; m->used = w; m->cap = ncap; m->idx = NULL; m->idx_cap = 0; m->dead = NULL; m->rc = nrc;");
         outLine("        if (m->len > 0) { int64_t ic = 16; while (ic < m->len * 2) { ic *= 2; } " + mTag + "_rehash(m, ic); }");
         outLine("    }");
         outLine("}");
@@ -1286,16 +1295,26 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         outLine("    " + mTag + "_detach(m);");
         outLine("    int64_t idx = " + mTag + "_find(*m, k);");
         outLine("    if (idx >= 0) { m->data[idx].val = v; return; }");
-        outLine("    if (m->len >= m->cap) {");
-        outLine("        int64_t next = m->cap > 0 ? m->cap * 2 : 8;");
-        outLine("        " + mTag + "_entry *buf = realloc(m->data, (size_t)next * sizeof(" + mTag + "_entry));");
-        outLine("        if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow map\\n\"); exit(1); }");
-        outLine("        if (m->rc == NULL) { m->rc = malloc(sizeof(int64_t)); if (m->rc == NULL) { fprintf(stderr, \"MemoryFault: cannot grow map\\n\"); exit(1); } *(m->rc) = 1; }");
-        outLine("        m->data = buf; m->cap = next;");
+        outLine("    if (m->used >= m->cap) {");
+        outLine("        if (m->dead != NULL && m->len * 2 <= m->cap) {");
+        outLine("            int64_t ic = 16; while (ic < m->len * 2) { ic *= 2; }");
+        outLine("            " + mTag + "_rehash(m, ic);");
+        outLine("        } else {");
+        outLine("            if (m->dead != NULL) { int64_t ic = 16; while (ic < m->len * 2) { ic *= 2; } " + mTag + "_rehash(m, ic); }");
+        outLine("            if (m->used >= m->cap) {");
+        outLine("                int64_t next = m->cap > 0 ? m->cap * 2 : 8;");
+        outLine("                " + mTag + "_entry *buf = realloc(m->data, (size_t)next * sizeof(" + mTag + "_entry));");
+        outLine("                if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow map\\n\"); exit(1); }");
+        outLine("                if (m->rc == NULL) { m->rc = malloc(sizeof(int64_t)); if (m->rc == NULL) { fprintf(stderr, \"MemoryFault: cannot grow map\\n\"); exit(1); } *(m->rc) = 1; }");
+        outLine("                m->data = buf; m->cap = next;");
+        outLine("            }");
+        outLine("        }");
         outLine("    }");
-        outLine("    int64_t entry_idx = m->len;");
-        outLine("    m->data[entry_idx].key = k; m->data[entry_idx].val = v; m->len += 1;");
-        outLine("    if (m->idx == NULL || m->len * 2 > m->idx_cap) {");
+        outLine("    int64_t entry_idx = m->used;");
+        outLine("    m->data[entry_idx].key = k; m->data[entry_idx].val = v;");
+        outLine("    if (m->dead != NULL) { m->dead[entry_idx] = 0; }");
+        outLine("    m->used += 1; m->len += 1;");
+        outLine("    if (m->idx == NULL || m->used * 2 > m->idx_cap) {");
         outLine("        int64_t ic = m->idx_cap > 0 ? m->idx_cap * 2 : 16;");
         outLine("        while (ic < m->len * 2) { ic *= 2; }");
         outLine("        " + mTag + "_rehash(m, ic);");
@@ -1309,25 +1328,29 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     }
     if hasFrom {
         outLine("static " + mTag + " " + mTag + "_from(int64_t count, const " + mTag + "_entry *elems) {");
-        outLine("    " + mTag + " out = { NULL, 0, 0, NULL, 0, NULL };");
+        outLine("    " + mTag + " out = { NULL, 0, 0, 0, NULL, 0, NULL, NULL };");
         outLine("    for (int64_t i = 0; i < count; i += 1) { " + mTag + "_set(&out, elems[i].key, elems[i].val); }");
         outLine("    return out;");
         outLine("}");
     }
     if hasCopy {
         outLine("static " + mTag + " " + mTag + "_copy(" + mTag + " src) {");
-        outLine("    if (src.len <= 0) { return (" + mTag + "){ NULL, 0, 0, NULL, 0, NULL }; }");
+        outLine("    if (src.len <= 0) { return (" + mTag + "){ NULL, 0, 0, 0, NULL, 0, NULL, NULL }; }");
         outLine("    if (src.rc != NULL) { *(src.rc) += 1; return src; }");
-        outLine("    " + mTag + " out = { NULL, src.len, src.len, NULL, 0, NULL };");
+        outLine("    " + mTag + " out = { NULL, src.len, src.len, src.len, NULL, 0, NULL, NULL };");
         outLine("    out.data = malloc((size_t)src.len * sizeof(" + mTag + "_entry));");
         outLine("    out.rc = malloc(sizeof(int64_t));");
         outLine("    if (out.data == NULL || out.rc == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate map\\n\"); exit(1); }");
         outLine("    *(out.rc) = 1;");
+        outLine("    int64_t w = 0;");
+        outLine("    for (int64_t i = 0; i < src.used; i += 1) {");
+        outLine("        if (src.dead != NULL && src.dead[i]) { continue; }");
         if vCopy == "v" {
-            outLine("    memcpy(out.data, src.data, (size_t)src.len * sizeof(" + mTag + "_entry));");
+            outLine("        out.data[w] = src.data[i]; w += 1;");
         } else {
-            outLine("    for (int64_t i = 0; i < src.len; i += 1) { " + vType + " v = src.data[i].val; out.data[i].key = src.data[i].key; out.data[i].val = " + vCopy + "; }");
+            outLine("        " + vType + " v = src.data[i].val; out.data[w].key = src.data[i].key; out.data[w].val = " + vCopy + "; w += 1;");
         }
+        outLine("    }");
         outLine("    return out;");
         outLine("}");
     }
@@ -1358,19 +1381,45 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     }
     if hasRemove {
         outLine("static bool " + mTag + "_remove(" + mTag + " *m, " + kType + " k) {");
-        outLine("    int64_t idx = " + mTag + "_find(*m, k);");
-        outLine("    if (idx < 0) { return false; }");
+        outLine("    if (" + mTag + "_find(*m, k) < 0) { return false; }");
         outLine("    " + mTag + "_detach(m);");
-        outLine("    if (idx + 1 < m->len) { memmove(m->data + idx, m->data + idx + 1, (size_t)(m->len - idx - 1) * sizeof(" + mTag + "_entry)); }");
+        outLine("    if (m->idx == NULL || m->idx_cap <= 0) {");
+        outLine("        int64_t ic = 16; while (ic < m->len * 2) { ic *= 2; }");
+        outLine("        " + mTag + "_rehash(m, ic);");
+        outLine("    }");
+        outLine("    uint64_t mask = (uint64_t)(m->idx_cap - 1);");
+        outLine("    uint64_t pos = " + mTag + "_hash(k) & mask;");
+        outLine("    int64_t slot_idx = -1;");
+        outLine("    for (;;) {");
+        outLine("        int64_t slot = m->idx[pos];");
+        outLine("        if (slot == 0) { return false; }");
+        outLine("        if (slot > 0 && " + mTag + "_keq(m->data[slot - 1].key, k)) { slot_idx = slot - 1; m->idx[pos] = -1; break; }");
+        outLine("        pos = (pos + 1u) & mask;");
+        outLine("    }");
+        outLine("    if (m->dead == NULL) {");
+        outLine("        m->dead = calloc((size_t)(m->cap > 0 ? m->cap : 1), sizeof(uint8_t));");
+        outLine("        if (m->dead == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate map tombstones\\n\"); exit(1); }");
+        outLine("    }");
+        outLine("    m->dead[slot_idx] = 1;");
         outLine("    m->len -= 1;");
-        outLine("    if (m->idx_cap > 0) { " + mTag + "_rehash(m, m->idx_cap); }");
+        outLine("    if (m->len == 0) {");
+        outLine("        m->used = 0; free(m->dead); m->dead = NULL;");
+        outLine("        memset(m->idx, 0, (size_t)m->idx_cap * sizeof(int64_t));");
+        outLine("    } else if (m->used >= 16 && (m->used - m->len) * 2 >= m->used) {");
+        outLine("        int64_t ic = 16; while (ic < m->len * 2) { ic *= 2; }");
+        outLine("        " + mTag + "_rehash(m, ic);");
+        outLine("    }");
         outLine("    return true;");
         outLine("}");
     }
     if hasClear {
         outLine("static void " + mTag + "_clear(" + mTag + " *m) {");
-        outLine("    if (m->rc != NULL && *(m->rc) > 1) { *(m->rc) -= 1; m->data = NULL; m->cap = 0; m->idx = NULL; m->idx_cap = 0; m->rc = NULL; }");
-        outLine("    else if (m->idx != NULL && m->idx_cap > 0) { memset(m->idx, 0, (size_t)m->idx_cap * sizeof(int64_t)); }");
+        outLine("    if (m->rc != NULL && *(m->rc) > 1) { *(m->rc) -= 1; m->data = NULL; m->used = 0; m->cap = 0; m->idx = NULL; m->idx_cap = 0; m->dead = NULL; m->rc = NULL; }");
+        outLine("    else {");
+        outLine("        if (m->idx != NULL && m->idx_cap > 0) { memset(m->idx, 0, (size_t)m->idx_cap * sizeof(int64_t)); }");
+        outLine("        if (m->dead != NULL) { free(m->dead); m->dead = NULL; }");
+        outLine("        m->used = 0;");
+        outLine("    }");
         outLine("    m->len = 0;");
         outLine("}");
     }
@@ -1381,7 +1430,8 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         outLine("    if (m.len > 0) {");
         outLine("        out.data = malloc((size_t)m.len * sizeof(" + kType + "));");
         outLine("        if (out.data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
-        outLine("        for (int64_t i = 0; i < m.len; i += 1) { out.data[i] = m.data[i].key; }");
+        outLine("        int64_t w = 0;");
+        outLine("        for (int64_t i = 0; i < m.used; i += 1) { if (m.dead == NULL || !m.dead[i]) { out.data[w] = m.data[i].key; w += 1; } }");
         outLine("    }");
         outLine("    return out;");
         outLine("}");
@@ -1395,7 +1445,8 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
             outLine("    if (m.len > 0) {");
             outLine("        out.data = malloc((size_t)m.len * sizeof(" + vType + "));");
             outLine("        if (out.data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
-            outLine("        for (int64_t i = 0; i < m.len; i += 1) { " + vType + " v = m.data[i].val; out.data[i] = " + vCopy + "; }");
+            outLine("        int64_t w = 0;");
+            outLine("        for (int64_t i = 0; i < m.used; i += 1) { if (m.dead == NULL || !m.dead[i]) { " + vType + " v = m.data[i].val; out.data[w] = " + vCopy + "; w += 1; } }");
             outLine("    }");
             outLine("    return out;");
             outLine("}");
@@ -1404,8 +1455,11 @@ emitCMapHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     if needPrint {
         outLine("static int " + mTag + "_print(" + mTag + " m) {");
         outLine("    if (printf(\"{\") < 0) { return -1; }");
-        outLine("    for (int64_t i = 0; i < m.len; i += 1) {");
-        outLine("        if (i > 0 && printf(\", \") < 0) { return -1; }");
+        outLine("    bool first = true;");
+        outLine("    for (int64_t i = 0; i < m.used; i += 1) {");
+        outLine("        if (m.dead != NULL && m.dead[i]) { continue; }");
+        outLine("        if (!first && printf(\", \") < 0) { return -1; }");
+        outLine("        first = false;");
         outLine("        if (" + cCall(kKind, "m.data[i].key") + " < 0) { return -1; }");
         outLine("        if (printf(\": \") < 0) { return -1; }");
         outLine("        if (" + cCall(vKind, "m.data[i].val") + " < 0) { return -1; }");
@@ -1431,7 +1485,7 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     hasRemove := usesIntHelper(calls, sTag + "_remove(");
     hasClear := usesIntHelper(calls, sTag + "_clear(");
     hasValues := usesIntHelper(calls, sTag + "_values(");
-    outLine("typedef struct { " + eType + " *data; int64_t len; int64_t cap; int64_t *idx; int64_t idx_cap; int64_t *rc; } " + sTag + ";");
+    outLine("typedef struct { " + eType + " *data; int64_t len; int64_t used; int64_t cap; int64_t *idx; int64_t idx_cap; uint8_t *dead; int64_t *rc; } " + sTag + ";");
     needFind := hasFrom or hasAdd or hasHas or hasRemove;
     needMut := hasFrom or hasAdd or hasRemove;
     if needFind {
@@ -1460,16 +1514,21 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         outLine("            pos = (pos + 1u) & mask;");
         outLine("        }");
         outLine("    }");
-        outLine("    for (int64_t i = 0; i < s.len; i += 1) { if (" + sTag + "_eq(s.data[i], v)) { return i; } }");
+        outLine("    for (int64_t i = 0; i < s.used; i += 1) { if ((s.dead == NULL || !s.dead[i]) && " + sTag + "_eq(s.data[i], v)) { return i; } }");
         outLine("    return -1;");
         outLine("}");
     }
     if needMut {
         outLine("static void " + sTag + "_rehash(" + sTag + " *s, int64_t next_cap) {");
+        outLine("    if (s->dead != NULL) {");
+        outLine("        int64_t w = 0;");
+        outLine("        for (int64_t i = 0; i < s->used; i += 1) { if (!s->dead[i]) { if (w != i) { s->data[w] = s->data[i]; } w += 1; } }");
+        outLine("        s->used = w; free(s->dead); s->dead = NULL;");
+        outLine("    }");
         outLine("    int64_t *nidx = calloc((size_t)next_cap, sizeof(int64_t));");
         outLine("    if (nidx == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate set index\\n\"); exit(1); }");
         outLine("    uint64_t mask = (uint64_t)(next_cap - 1);");
-        outLine("    for (int64_t i = 0; i < s->len; i += 1) {");
+        outLine("    for (int64_t i = 0; i < s->used; i += 1) {");
         outLine("        uint64_t pos = " + sTag + "_hash(s->data[i]) & mask;");
         outLine("        while (nidx[pos] != 0) { pos = (pos + 1u) & mask; }");
         outLine("        nidx[pos] = i + 1;");
@@ -1484,8 +1543,9 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         outLine("        int64_t *nrc = malloc(sizeof(int64_t));");
         outLine("        if (ndata == NULL || nrc == NULL) { fprintf(stderr, \"MemoryFault: cannot detach set\\n\"); exit(1); }");
         outLine("        *nrc = 1;");
-        outLine("        if (s->len > 0) { memcpy(ndata, s->data, (size_t)s->len * sizeof(" + eType + ")); }");
-        outLine("        s->data = ndata; s->cap = ncap; s->idx = NULL; s->idx_cap = 0; s->rc = nrc;");
+        outLine("        int64_t w = 0;");
+        outLine("        for (int64_t i = 0; i < s->used; i += 1) { if (s->dead == NULL || !s->dead[i]) { ndata[w] = s->data[i]; w += 1; } }");
+        outLine("        s->data = ndata; s->used = w; s->cap = ncap; s->idx = NULL; s->idx_cap = 0; s->dead = NULL; s->rc = nrc;");
         outLine("        if (s->len > 0) { int64_t ic = 16; while (ic < s->len * 2) { ic *= 2; } " + sTag + "_rehash(s, ic); }");
         outLine("    }");
         outLine("}");
@@ -1494,16 +1554,26 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         outLine("static void " + sTag + "_add(" + sTag + " *s, " + eType + " v) {");
         outLine("    if (" + sTag + "_find(*s, v) >= 0) { return; }");
         outLine("    " + sTag + "_detach(s);");
-        outLine("    if (s->len >= s->cap) {");
-        outLine("        int64_t next = s->cap > 0 ? s->cap * 2 : 8;");
-        outLine("        " + eType + " *buf = realloc(s->data, (size_t)next * sizeof(" + eType + "));");
-        outLine("        if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow set\\n\"); exit(1); }");
-        outLine("        if (s->rc == NULL) { s->rc = malloc(sizeof(int64_t)); if (s->rc == NULL) { fprintf(stderr, \"MemoryFault: cannot grow set\\n\"); exit(1); } *(s->rc) = 1; }");
-        outLine("        s->data = buf; s->cap = next;");
+        outLine("    if (s->used >= s->cap) {");
+        outLine("        if (s->dead != NULL && s->len * 2 <= s->cap) {");
+        outLine("            int64_t ic = 16; while (ic < s->len * 2) { ic *= 2; }");
+        outLine("            " + sTag + "_rehash(s, ic);");
+        outLine("        } else {");
+        outLine("            if (s->dead != NULL) { int64_t ic = 16; while (ic < s->len * 2) { ic *= 2; } " + sTag + "_rehash(s, ic); }");
+        outLine("            if (s->used >= s->cap) {");
+        outLine("                int64_t next = s->cap > 0 ? s->cap * 2 : 8;");
+        outLine("                " + eType + " *buf = realloc(s->data, (size_t)next * sizeof(" + eType + "));");
+        outLine("                if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow set\\n\"); exit(1); }");
+        outLine("                if (s->rc == NULL) { s->rc = malloc(sizeof(int64_t)); if (s->rc == NULL) { fprintf(stderr, \"MemoryFault: cannot grow set\\n\"); exit(1); } *(s->rc) = 1; }");
+        outLine("                s->data = buf; s->cap = next;");
+        outLine("            }");
+        outLine("        }");
         outLine("    }");
-        outLine("    int64_t entry_idx = s->len;");
-        outLine("    s->data[entry_idx] = v; s->len += 1;");
-        outLine("    if (s->idx == NULL || s->len * 2 > s->idx_cap) {");
+        outLine("    int64_t entry_idx = s->used;");
+        outLine("    s->data[entry_idx] = v;");
+        outLine("    if (s->dead != NULL) { s->dead[entry_idx] = 0; }");
+        outLine("    s->used += 1; s->len += 1;");
+        outLine("    if (s->idx == NULL || s->used * 2 > s->idx_cap) {");
         outLine("        int64_t ic = s->idx_cap > 0 ? s->idx_cap * 2 : 16;");
         outLine("        while (ic < s->len * 2) { ic *= 2; }");
         outLine("        " + sTag + "_rehash(s, ic);");
@@ -1517,21 +1587,22 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     }
     if hasFrom {
         outLine("static " + sTag + " " + sTag + "_from(int64_t count, " + eConstPtr + "elems) {");
-        outLine("    " + sTag + " out = { NULL, 0, 0, NULL, 0, NULL };");
+        outLine("    " + sTag + " out = { NULL, 0, 0, 0, NULL, 0, NULL, NULL };");
         outLine("    for (int64_t i = 0; i < count; i += 1) { " + sTag + "_add(&out, elems[i]); }");
         outLine("    return out;");
         outLine("}");
     }
     if hasCopy {
         outLine("static " + sTag + " " + sTag + "_copy(" + sTag + " src) {");
-        outLine("    if (src.len <= 0) { return (" + sTag + "){ NULL, 0, 0, NULL, 0, NULL }; }");
+        outLine("    if (src.len <= 0) { return (" + sTag + "){ NULL, 0, 0, 0, NULL, 0, NULL, NULL }; }");
         outLine("    if (src.rc != NULL) { *(src.rc) += 1; return src; }");
-        outLine("    " + sTag + " out = { NULL, src.len, src.len, NULL, 0, NULL };");
+        outLine("    " + sTag + " out = { NULL, src.len, src.len, src.len, NULL, 0, NULL, NULL };");
         outLine("    out.data = malloc((size_t)src.len * sizeof(" + eType + "));");
         outLine("    out.rc = malloc(sizeof(int64_t));");
         outLine("    if (out.data == NULL || out.rc == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate set\\n\"); exit(1); }");
         outLine("    *(out.rc) = 1;");
-        outLine("    memcpy(out.data, src.data, (size_t)src.len * sizeof(" + eType + "));");
+        outLine("    int64_t w = 0;");
+        outLine("    for (int64_t i = 0; i < src.used; i += 1) { if (src.dead == NULL || !src.dead[i]) { out.data[w] = src.data[i]; w += 1; } }");
         outLine("    return out;");
         outLine("}");
     }
@@ -1540,19 +1611,45 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     }
     if hasRemove {
         outLine("static bool " + sTag + "_remove(" + sTag + " *s, " + eType + " v) {");
-        outLine("    int64_t idx = " + sTag + "_find(*s, v);");
-        outLine("    if (idx < 0) { return false; }");
+        outLine("    if (" + sTag + "_find(*s, v) < 0) { return false; }");
         outLine("    " + sTag + "_detach(s);");
-        outLine("    if (idx + 1 < s->len) { memmove(s->data + idx, s->data + idx + 1, (size_t)(s->len - idx - 1) * sizeof(" + eType + ")); }");
+        outLine("    if (s->idx == NULL || s->idx_cap <= 0) {");
+        outLine("        int64_t ic = 16; while (ic < s->len * 2) { ic *= 2; }");
+        outLine("        " + sTag + "_rehash(s, ic);");
+        outLine("    }");
+        outLine("    uint64_t mask = (uint64_t)(s->idx_cap - 1);");
+        outLine("    uint64_t pos = " + sTag + "_hash(v) & mask;");
+        outLine("    int64_t slot_idx = -1;");
+        outLine("    for (;;) {");
+        outLine("        int64_t slot = s->idx[pos];");
+        outLine("        if (slot == 0) { return false; }");
+        outLine("        if (slot > 0 && " + sTag + "_eq(s->data[slot - 1], v)) { slot_idx = slot - 1; s->idx[pos] = -1; break; }");
+        outLine("        pos = (pos + 1u) & mask;");
+        outLine("    }");
+        outLine("    if (s->dead == NULL) {");
+        outLine("        s->dead = calloc((size_t)(s->cap > 0 ? s->cap : 1), sizeof(uint8_t));");
+        outLine("        if (s->dead == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate set tombstones\\n\"); exit(1); }");
+        outLine("    }");
+        outLine("    s->dead[slot_idx] = 1;");
         outLine("    s->len -= 1;");
-        outLine("    if (s->idx_cap > 0) { " + sTag + "_rehash(s, s->idx_cap); }");
+        outLine("    if (s->len == 0) {");
+        outLine("        s->used = 0; free(s->dead); s->dead = NULL;");
+        outLine("        memset(s->idx, 0, (size_t)s->idx_cap * sizeof(int64_t));");
+        outLine("    } else if (s->used >= 16 && (s->used - s->len) * 2 >= s->used) {");
+        outLine("        int64_t ic = 16; while (ic < s->len * 2) { ic *= 2; }");
+        outLine("        " + sTag + "_rehash(s, ic);");
+        outLine("    }");
         outLine("    return true;");
         outLine("}");
     }
     if hasClear {
         outLine("static void " + sTag + "_clear(" + sTag + " *s) {");
-        outLine("    if (s->rc != NULL && *(s->rc) > 1) { *(s->rc) -= 1; s->data = NULL; s->cap = 0; s->idx = NULL; s->idx_cap = 0; s->rc = NULL; }");
-        outLine("    else if (s->idx != NULL && s->idx_cap > 0) { memset(s->idx, 0, (size_t)s->idx_cap * sizeof(int64_t)); }");
+        outLine("    if (s->rc != NULL && *(s->rc) > 1) { *(s->rc) -= 1; s->data = NULL; s->used = 0; s->cap = 0; s->idx = NULL; s->idx_cap = 0; s->dead = NULL; s->rc = NULL; }");
+        outLine("    else {");
+        outLine("        if (s->idx != NULL && s->idx_cap > 0) { memset(s->idx, 0, (size_t)s->idx_cap * sizeof(int64_t)); }");
+        outLine("        if (s->dead != NULL) { free(s->dead); s->dead = NULL; }");
+        outLine("        s->used = 0;");
+        outLine("    }");
         outLine("    s->len = 0;");
         outLine("}");
     }
@@ -1563,7 +1660,8 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
         outLine("    if (s.len > 0) {");
         outLine("        out.data = malloc((size_t)s.len * sizeof(" + eType + "));");
         outLine("        if (out.data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
-        outLine("        memcpy(out.data, s.data, (size_t)s.len * sizeof(" + eType + "));");
+        outLine("        int64_t w = 0;");
+        outLine("        for (int64_t i = 0; i < s.used; i += 1) { if (s.dead == NULL || !s.dead[i]) { out.data[w] = s.data[i]; w += 1; } }");
         outLine("    }");
         outLine("    return out;");
         outLine("}");
@@ -1571,8 +1669,11 @@ emitCSetHelpers := fn(kind: String, calls: String, needCopy: Bool, needPrint: Bo
     if needPrint {
         outLine("static int " + sTag + "_print(" + sTag + " s) {");
         outLine("    if (printf(\"{\") < 0) { return -1; }");
-        outLine("    for (int64_t i = 0; i < s.len; i += 1) {");
-        outLine("        if (i > 0 && printf(\", \") < 0) { return -1; }");
+        outLine("    bool first = true;");
+        outLine("    for (int64_t i = 0; i < s.used; i += 1) {");
+        outLine("        if (s.dead != NULL && s.dead[i]) { continue; }");
+        outLine("        if (!first && printf(\", \") < 0) { return -1; }");
+        outLine("        first = false;");
         outLine("        if (" + cCall(eKind, "s.data[i]") + " < 0) { return -1; }");
         outLine("    }");
         outLine("    return printf(\"}\");");
@@ -2316,7 +2417,8 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 idxVar := "lt_sidx_" + seqId;
                 outLine(indent + "{");
                 outLine(indent + "    " + mTag + " " + seqVar + " = " + mTag + "_copy(" + code + ");");
-                outLine(indent + "    for (int64_t " + idxVar + " = 0; " + idxVar + " < " + seqVar + ".len; " + idxVar + " += 1) {");
+                outLine(indent + "    for (int64_t " + idxVar + " = 0; " + idxVar + " < " + seqVar + ".used; " + idxVar + " += 1) {");
+                outLine(indent + "        if (" + seqVar + ".dead != NULL && " + seqVar + ".dead[" + idxVar + "]) { continue; }");
                 if item.runtime =!= "" {
                     outLine(indent + "        " + entryTag + " " + item.runtime + " = (" + entryTag + "){ .f_key = " + seqVar + ".data[" + idxVar + "].key, .f_value = " + seqVar + ".data[" + idxVar + "].val };");
                     outLine(indent + "        (void)" + item.runtime + ";");
@@ -2332,7 +2434,8 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 idxVar := "lt_sidx_" + seqId;
                 outLine(indent + "{");
                 outLine(indent + "    " + sTag + " " + seqVar + " = " + sTag + "_copy(" + code + ");");
-                outLine(indent + "    for (int64_t " + idxVar + " = 0; " + idxVar + " < " + seqVar + ".len; " + idxVar + " += 1) {");
+                outLine(indent + "    for (int64_t " + idxVar + " = 0; " + idxVar + " < " + seqVar + ".used; " + idxVar + " += 1) {");
+                outLine(indent + "        if (" + seqVar + ".dead != NULL && " + seqVar + ".dead[" + idxVar + "]) { continue; }");
                 if item.runtime =!= "" {
                     outLine(indent + "        " + cScalarType(item.textValue) + " " + item.runtime + " = " + seqVar + ".data[" + idxVar + "];");
                     outLine(indent + "        (void)" + item.runtime + ";");
