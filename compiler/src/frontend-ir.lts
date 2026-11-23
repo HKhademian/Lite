@@ -1,6 +1,7 @@
 /** Shared frontend IR types, constants, scalar predicates, symbol-table helpers, and TS/C literal backend dispatch helpers. */
 
 integer := import "core/int";
+listLib := import "core/list";
 textLib := import "core/text";
 numeric := import "./numeric-literals.lts";
 tsLiteral := import "./ts-literals.lts";
@@ -81,6 +82,7 @@ pub DECL_KIND_PUB_FN := "PubFn";
 pub DECL_KIND_PUB_TYPE := "PubType";
 pub DECL_KIND_PUB_VAL := "PubVal";
 pub DECL_KIND_HAS_INNER_ALIAS := "HasInnerAlias";
+pub DECL_KIND_HAS_INNER_FN := "HasInnerFn";
 
 pub DECL_BIND_VAL := "val";
 pub DECL_BIND_VAR := "var";
@@ -312,13 +314,13 @@ pub findFunction := fn(functions: List<FunctionInfo>, name: String): Int {
 
 /** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
 pub localIndex := fn(locals: List<Local>, name: String): Int {
-    var index := 0;
-    var found := -1;
-    loop locals as local {
-        if local.depth >= -1 and local.name == name { found = index; }
-        index = index + 1;
+    var index := listLib.length(locals) - 1;
+    loop index >= 0 {
+        local := locals[index];
+        if local.depth >= -1 and local.name == name { return index; }
+        index = index - 1;
     }
-    found
+    -1
 };
 
 /** True when `locals` already binds runtime identifier `runtime` in scope or as a pre-scanned future placeholder. */

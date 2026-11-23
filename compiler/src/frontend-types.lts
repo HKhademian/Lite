@@ -2270,23 +2270,16 @@ pub nextAliasOrRecordHit := fn(source: String, cursor: Int): Int {
 
 /** Pre-collects shallow `Name := type Target` and `Name := record { ... }` declarations inside the `{ ... }` block opening at `openBracePos`. */
 pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: String, blockDepth: Int, baseAliases: List<AliasDecl>): List<AliasDecl> {
-    size := textLib.length(source);
-    if openBracePos < 0 or openBracePos >= size or textLib.at(source, openBracePos) =!= "{" {
-        return baseAliases;
-    }
-    var nextTypeHit := nextAliasOrRecordHit(source, openBracePos + 1);
-    if nextTypeHit < 0 { return baseAliases; }
+    flags := syntax.scanBlockFastFlags(source, openBracePos, prefix);
+    if not flags.hasAliasKw { return baseAliases; }
+    limit := if flags.end >= 0 { flags.end } else { textLib.length(source) };
     found: mut List<AliasDecl> = [];
     var hasFound := false;
     var cursor := openBracePos + 1;
     var parenDepth := 0;
-    loop cursor < size {
+    loop cursor < limit {
         cursor = syntax.skipTrivia(source, cursor, prefix);
-        if cursor >= size { break; }
-        if cursor > nextTypeHit {
-            nextTypeHit = nextAliasOrRecordHit(source, cursor);
-            if nextTypeHit < 0 { break; }
-        }
+        if cursor >= limit { break; }
         ch := textLib.at(source, cursor);
         if ch == "\"" {
             cursor = syntax.skipAliasString(source, cursor);

@@ -1418,14 +1418,18 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     emptyFuturesHere: List<FutureValue> = [];
     emptyItemsHere: List<Item> = [];
     nextAliasDepth := types.maxAliasDepth(aliases) + 1;
-    var blockAliases := types.collectBlockTypeAliases(source, start, prefix, nextAliasDepth, aliases);
+    blkFlags := syntax.scanBlockFastFlags(source, start, prefix);
+    var blockAliases := if blkFlags.hasAliasKw {
+        types.collectBlockTypeAliases(source, start, prefix, nextAliasDepth, aliases)
+    } else {
+        aliases
+    };
     declaredInBlock: mut List<String> = [];
     var seedBag := "";
     loop ctx.seedBlockDeclaredNames(bodySink) as seededName {
         listLib.pushBack(mut declaredInBlock, seededName);
         seedBag = trace.appendPipeBag(seedBag, seededName);
     }
-    blkFlags := syntax.scanBlockFastFlags(source, start, prefix);
     hasFnInBlock := blkFlags.hasFn;
     hasReservedInBlock := blkFlags.hasReserved;
     blockAssignedBag := if hasReservedInBlock or hasFnInBlock {

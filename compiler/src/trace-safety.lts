@@ -46,36 +46,36 @@ pub unreachedFutureLocalName := fn(locals: List<Local>, runtime: String): String
 
 /** True when any unreached future placeholder (`depth <= -2`) or uninitialized reached binding (`depth >= 0`) exists in `locals`. */
 pub localsHasAnyUnready := fn(locals: List<Local>): Bool {
-    var count := 0;
-    var hasPotential := false;
-    loop locals as entry {
-        count = count + 1;
-        if entry.depth <= -2 or (entry.depth >= 0 and entry.initState =!= ir.INIT_STATE_INIT) {
-            hasPotential = true;
-        }
-    }
-    if not hasPotential { return false; }
-    activeSet: mut Set<String> = [];
-    futureList: mut List<String> = [];
+    count := listLib.length(locals);
     var i := count - 1;
     loop i >= 0 {
         entry := locals[i];
-        if entry.depth >= -1 {
-            if not setLib.has(activeSet, entry.runtime) {
-                if entry.depth >= 0 and entry.initState =!= ir.INIT_STATE_INIT {
-                    return true;
+        if entry.depth >= 0 and entry.initState =!= ir.INIT_STATE_INIT {
+            var shadowed := false;
+            var j := i + 1;
+            loop j < count {
+                later := locals[j];
+                if later.depth >= -1 and later.runtime == entry.runtime {
+                    shadowed = true;
+                    break;
                 }
-                setLib.add(mut activeSet, entry.runtime);
+                j = j + 1;
             }
-        } else {
-            listLib.pushBack(mut futureList, entry.runtime);
+            if not shadowed { return true; }
+        } else if entry.depth <= -2 {
+            var hasActive := false;
+            var j := count - 1;
+            loop j >= 0 {
+                other := locals[j];
+                if other.depth >= -1 and other.runtime == entry.runtime {
+                    hasActive = true;
+                    break;
+                }
+                j = j - 1;
+            }
+            if not hasActive { return true; }
         }
         i = i - 1;
-    }
-    loop futureList as rt {
-        if not setLib.has(activeSet, rt) {
-            return true;
-        }
     }
     false
 };
@@ -1183,13 +1183,22 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
         aSeedPos = aSeedPos + 1;
     }
 
+    var hasFutureLocal := false;
+    loop locals as lEntry {
+        if lEntry.depth <= -2 {
+            hasFutureLocal = true;
+            break;
+        }
+    }
     var allHead := 0;
     loop allHead < allCount {
         curTok := allQueue[allHead];
         allHead = allHead + 1;
-        unreachedName := unreachedFutureLocalName(locals, curTok);
-        if unreachedName =!= "" {
-            syntax.failAt(source, stmtAt, prefix, "cannot call before " + unreachedName + " is initialized");
+        if hasFutureLocal {
+            unreachedName := unreachedFutureLocalName(locals, curTok);
+            if unreachedName =!= "" {
+                syntax.failAt(source, stmtAt, prefix, "cannot call before " + unreachedName + " is initialized");
+            }
         }
         if currentName == "" {
             futIdx := findFutureByRuntime(futureValues, curTok);
@@ -1218,13 +1227,13 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                 k = k + 1;
             }
         }
-        fnIdx := findFunctionByRuntime(functions, curTok);
-        if fnIdx >= 0 {
-            fnInfo := functions[fnIdx];
-            if currentName == "" and fnInfo.declAt > stmtAt {
-                syntax.failAt(source, stmtAt, prefix, "cannot call before " + fnInfo.name + " is initialized");
-            }
-            if currentName == "" {
+        if currentName == "" {
+            fnIdx := findFunctionByRuntime(functions, curTok);
+            if fnIdx >= 0 {
+                fnInfo := functions[fnIdx];
+                if fnInfo.declAt > stmtAt {
+                    syntax.failAt(source, stmtAt, prefix, "cannot call before " + fnInfo.name + " is initialized");
+                }
                 startItem := findFunctionStartItem(items, curTok);
                 if startItem >= 0 {
                     paramBag := parseParamRuntimesList(items[startItem].textValue);

@@ -90,6 +90,7 @@ DECL_KIND_PUB_FN := ir.DECL_KIND_PUB_FN;
 DECL_KIND_PUB_TYPE := ir.DECL_KIND_PUB_TYPE;
 DECL_KIND_PUB_VAL := ir.DECL_KIND_PUB_VAL;
 DECL_KIND_HAS_INNER_ALIAS := ir.DECL_KIND_HAS_INNER_ALIAS;
+DECL_KIND_HAS_INNER_FN := ir.DECL_KIND_HAS_INNER_FN;
 
 DECL_BIND_VAL := ir.DECL_BIND_VAL;
 DECL_BIND_VAR := ir.DECL_BIND_VAR;
@@ -1083,6 +1084,22 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     var position := skipTrivia(source, 0, prefix);
     var items: mut Items = [];
     if position == size { return items; }
+    neededFnSet: mut Set<String>;
+    if neededFns =!= "*" {
+        nfLen := textLib.length(neededFns);
+        var nfPos := 0;
+        loop nfPos < nfLen {
+            if textLib.at(neededFns, nfPos) == "|" {
+                nfNext := textLib.indexOfText(neededFns, "|", nfPos + 1);
+                if nfNext > nfPos + 1 {
+                    setLib.add(mut neededFnSet, textLib.slice(neededFns, nfPos + 1, nfNext));
+                    nfPos = nfNext;
+                    continue;
+                }
+            }
+            nfPos = nfPos + 1;
+        }
+    }
     var builtinRules: Items = [];
     if skipSoftBuiltins and target == TARGET_TS and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
         builtinRules = parseBuiltinModeSpecs(prefix, builtinSpecs);
@@ -1101,6 +1118,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     publishedValues: mut Set<String>;
     publishedTypes: mut Set<String>;
     var hasInnerAlias := false;
+    var hasInnerFn := false;
     rootAssignedNames: mut Set<String>;
     loop decls as decl {
         if decl.kind == DECL_KIND_ALIAS {
@@ -1114,6 +1132,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             setLib.add(mut publishedTypes, decl.name);
         } else if decl.kind == DECL_KIND_HAS_INNER_ALIAS {
             hasInnerAlias = true;
+        } else if decl.kind == DECL_KIND_HAS_INNER_FN {
+            hasInnerFn = true;
         } else if decl.kind == DECL_KIND_ROOT_ASSIGN {
             setLib.add(mut rootAssignedNames, decl.name);
         }
@@ -1340,9 +1360,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     elseArmOpen = position - 1;
                 }
                 if hasInnerAlias { aliases = collectBlockTypeAliases(source, elseArmOpen, prefix, depth, aliases); }
-                elseAssignedBag := scanInnerBlockAssignedBag(target, source, elseArmOpen, prefix, "");
-                blockAssignedDecls = appendAssignedBagDecls(elseAssignedBag, blockAssignedDecls, depth);
-                locals = appendBlockFutureLocals(target, source, elseArmOpen, prefix, depth, "", elseAssignedBag, aliases, functions, functionParams, locals);
+                if hasInnerFn and blockHasInnerFn(source, elseArmOpen, prefix) >= 0 {
+                    elseAssignedBag := scanInnerBlockAssignedBag(target, source, elseArmOpen, prefix, "");
+                    blockAssignedDecls = appendAssignedBagDecls(elseAssignedBag, blockAssignedDecls, depth);
+                    locals = appendBlockFutureLocals(target, source, elseArmOpen, prefix, depth, "", elseAssignedBag, aliases, functions, functionParams, locals);
+                }
                 position = skipTrivia(source, position, prefix);
                 continue;
             }
@@ -1424,9 +1446,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     blockCount = blockCount + 1;
                 }
                 if hasInnerAlias { aliases = collectBlockTypeAliases(source, armOpen, prefix, depth, aliases); }
-                armAssignedBag := scanInnerBlockAssignedBag(target, source, armOpen, prefix, "");
-                blockAssignedDecls = appendAssignedBagDecls(armAssignedBag, blockAssignedDecls, depth);
-                locals = appendBlockFutureLocals(target, source, armOpen, prefix, depth, "", armAssignedBag, aliases, functions, functionParams, locals);
+                if hasInnerFn and blockHasInnerFn(source, armOpen, prefix) >= 0 {
+                    armAssignedBag := scanInnerBlockAssignedBag(target, source, armOpen, prefix, "");
+                    blockAssignedDecls = appendAssignedBagDecls(armAssignedBag, blockAssignedDecls, depth);
+                    locals = appendBlockFutureLocals(target, source, armOpen, prefix, depth, "", armAssignedBag, aliases, functions, functionParams, locals);
+                }
                 position = skipTrivia(source, armOpen + 1, prefix);
                 continue;
             }
@@ -1618,9 +1642,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 blockCount = blockCount + 1;
                 depth = depth + 1;
                 if hasInnerAlias { aliases = collectBlockTypeAliases(source, position, prefix, depth, aliases); }
-                scopeAssignedBag := scanInnerBlockAssignedBag(target, source, position, prefix, "");
-                blockAssignedDecls = appendAssignedBagDecls(scopeAssignedBag, blockAssignedDecls, depth);
-                locals = appendBlockFutureLocals(target, source, position, prefix, depth, "", scopeAssignedBag, aliases, functions, functionParams, locals);
+                if hasInnerFn and blockHasInnerFn(source, position, prefix) >= 0 {
+                    scopeAssignedBag := scanInnerBlockAssignedBag(target, source, position, prefix, "");
+                    blockAssignedDecls = appendAssignedBagDecls(scopeAssignedBag, blockAssignedDecls, depth);
+                    locals = appendBlockFutureLocals(target, source, position, prefix, depth, "", scopeAssignedBag, aliases, functions, functionParams, locals);
+                }
                 position = skipTrivia(source, position + 1, prefix);
                 continue;
             }
@@ -2152,9 +2178,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if hasInnerAlias {
                 aliases = collectBlockTypeAliases(source, ifOpenBrace, prefix, depth, aliases);
             }
-            ifAssignedBag := scanInnerBlockAssignedBag(target, source, ifOpenBrace, prefix, "");
-            blockAssignedDecls = appendAssignedBagDecls(ifAssignedBag, blockAssignedDecls, depth);
-            locals = appendBlockFutureLocals(target, source, ifOpenBrace, prefix, depth, "", ifAssignedBag, aliases, functions, functionParams, locals);
+            if hasInnerFn and blockHasInnerFn(source, ifOpenBrace, prefix) >= 0 {
+                ifAssignedBag := scanInnerBlockAssignedBag(target, source, ifOpenBrace, prefix, "");
+                blockAssignedDecls = appendAssignedBagDecls(ifAssignedBag, blockAssignedDecls, depth);
+                locals = appendBlockFutureLocals(target, source, ifOpenBrace, prefix, depth, "", ifAssignedBag, aliases, functions, functionParams, locals);
+            }
             position = skipTrivia(source, position, prefix);
             continue;
         }
@@ -2314,9 +2342,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if hasInnerAlias {
                 aliases = collectBlockTypeAliases(source, firstArmOpen, prefix, depth, aliases);
             }
-            firstArmAssignedBag := scanInnerBlockAssignedBag(target, source, firstArmOpen, prefix, "");
-            blockAssignedDecls = appendAssignedBagDecls(firstArmAssignedBag, blockAssignedDecls, depth);
-            locals = appendBlockFutureLocals(target, source, firstArmOpen, prefix, depth, "", firstArmAssignedBag, aliases, functions, functionParams, locals);
+            if hasInnerFn and blockHasInnerFn(source, firstArmOpen, prefix) >= 0 {
+                firstArmAssignedBag := scanInnerBlockAssignedBag(target, source, firstArmOpen, prefix, "");
+                blockAssignedDecls = appendAssignedBagDecls(firstArmAssignedBag, blockAssignedDecls, depth);
+                locals = appendBlockFutureLocals(target, source, firstArmOpen, prefix, depth, "", firstArmAssignedBag, aliases, functions, functionParams, locals);
+            }
             position = skipTrivia(source, firstArmOpen + 1, prefix);
             continue;
         }
@@ -2581,10 +2611,12 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if hasInnerAlias {
                 aliases = collectBlockTypeAliases(source, loopOpenBrace, prefix, depth, aliases);
             }
-            loopSeedBag := if itemName =!= "" { appendPipeBag("", itemName) } else { "" };
-            loopAssignedBag := scanInnerBlockAssignedBag(target, source, loopOpenBrace, prefix, loopSeedBag);
-            blockAssignedDecls = appendAssignedBagDecls(loopAssignedBag, blockAssignedDecls, depth);
-            locals = appendBlockFutureLocals(target, source, loopOpenBrace, prefix, depth, loopSeedBag, loopAssignedBag, aliases, functions, functionParams, locals);
+            if hasInnerFn and blockHasInnerFn(source, loopOpenBrace, prefix) >= 0 {
+                loopSeedBag := if itemName =!= "" { appendPipeBag("", itemName) } else { "" };
+                loopAssignedBag := scanInnerBlockAssignedBag(target, source, loopOpenBrace, prefix, loopSeedBag);
+                blockAssignedDecls = appendAssignedBagDecls(loopAssignedBag, blockAssignedDecls, depth);
+                locals = appendBlockFutureLocals(target, source, loopOpenBrace, prefix, depth, loopSeedBag, loopAssignedBag, aliases, functions, functionParams, locals);
+            }
             position = skipTrivia(source, position, prefix);
             continue;
         }
@@ -2901,7 +2933,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 };
                 skipAsSoft := target == TARGET_TS and neededFns =!= "*" and softModule =!= "" and skipSoftBuiltins and
                 resolveBuiltinMode(builtinRules, softModule, name) == BUILTIN_MODE_BUILTIN;
-                skipAsUnneeded := neededFns =!= "*" and not skipAsSoft and not hasHelperToken(neededFns, functionRuntime + "(");
+                skipAsUnneeded := neededFns =!= "*" and not skipAsSoft and not setLib.has(neededFnSet, functionRuntime + "(");
                 if skipAsSoft or skipAsUnneeded {
                     if not wasPreRegistered {
                         loop splitPipeEntries(header.params, header.count) as sp {
@@ -2982,9 +3014,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 if hasInnerAlias {
                     aliases = collectBlockTypeAliases(source, fnOpenBrace, prefix, depth, aliases);
                 }
-                fnAssignedBag := scanInnerBlockAssignedBag(target, source, fnOpenBrace, prefix, fnParamSeedBag);
-                blockAssignedDecls = appendAssignedBagDecls(fnAssignedBag, blockAssignedDecls, depth);
-                locals = appendBlockFutureLocals(target, source, fnOpenBrace, prefix, depth, fnParamSeedBag, fnAssignedBag, aliases, functions, functionParams, locals);
+                if hasInnerFn and blockHasInnerFn(source, fnOpenBrace, prefix) >= 0 {
+                    fnAssignedBag := scanInnerBlockAssignedBag(target, source, fnOpenBrace, prefix, fnParamSeedBag);
+                    blockAssignedDecls = appendAssignedBagDecls(fnAssignedBag, blockAssignedDecls, depth);
+                    locals = appendBlockFutureLocals(target, source, fnOpenBrace, prefix, depth, fnParamSeedBag, fnAssignedBag, aliases, functions, functionParams, locals);
+                }
                 position = skipTrivia(source, position, prefix);
                 continue;
             }

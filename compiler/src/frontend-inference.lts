@@ -620,11 +620,12 @@ skipTypeAnnotationSpan := fn(source: String, annStart: Int, limit: Int, prefix: 
     cursor
 };
 
-/** Skips a pre-scanned `fn(...) { ... }` expression span up to `limit`, optionally detecting inner `type` aliases in its body. */
-skipFnExprSpan := fn(source: String, headerPos: Int, limit: Int, prefix: String, checkInnerAlias: Bool): (next: Int, hasInnerAlias: Bool) {
+/** Skips a pre-scanned `fn(...) { ... }` expression span up to `limit`, optionally detecting inner `type`/`record`/`enum` aliases or nested `fn` expressions in its body. */
+skipFnExprSpan := fn(source: String, headerPos: Int, limit: Int, prefix: String, checkInner: Bool): (next: Int, hasInnerAlias: Bool, hasInnerFn: Bool) {
     var cursor := headerPos;
     var parenDepth := 0;
     var hasInnerAlias := false;
+    var hasInnerFn := false;
     loop cursor < limit {
         cursor = syntax.skipTrivia(source, cursor, prefix);
         if cursor >= limit { break; }
@@ -641,15 +642,18 @@ skipFnExprSpan := fn(source: String, headerPos: Int, limit: Int, prefix: String,
             cursor = cursor + 1;
             break;
         } else if parenDepth == 0 and ch == "{" {
-            bodyEnd := syntax.scanBraceEnd(source, cursor, prefix);
-            if bodyEnd >= 0 {
-                if checkInnerAlias {
-                    typeHit := types.nextAliasOrRecordHit(source, cursor + 1);
-                    if typeHit >= 0 and typeHit < bodyEnd { hasInnerAlias = true; }
+            if checkInner {
+                bf := syntax.scanBlockFastFlags(source, cursor, prefix);
+                if bf.end >= 0 {
+                    if bf.hasAnyAliasKw { hasInnerAlias = true; }
+                    if bf.hasFn { hasInnerFn = true; }
+                    cursor = bf.end;
+                } else {
+                    cursor = limit;
                 }
-                cursor = bodyEnd;
             } else {
-                cursor = limit;
+                bodyEnd := syntax.scanBraceEnd(source, cursor, prefix);
+                if bodyEnd >= 0 { cursor = bodyEnd; } else { cursor = limit; }
             }
             break;
         } else if parenDepth == 0 and ch == "}" {
@@ -658,7 +662,7 @@ skipFnExprSpan := fn(source: String, headerPos: Int, limit: Int, prefix: String,
             cursor = cursor + 1;
         }
     }
-    (next = cursor, hasInnerAlias = hasInnerAlias)
+    (next = cursor, hasInnerAlias = hasInnerAlias, hasInnerFn = hasInnerFn)
 };
 
 /** Returns closing brace index if an inner `{ ... }` block contains `"fn"`, or -1 to fast-skip pre-scanning. */
@@ -1150,6 +1154,7 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
     var depth := 0;
     var parenDepth := 0;
     var hasInnerAlias := false;
+    var hasInnerFn := false;
     loop position < size {
         position = syntax.skipTrivia(source, position, prefix);
         if position >= size { break; }
@@ -1158,7 +1163,12 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
             position = syntax.skipAliasString(source, position);
         } else if ch == "{" {
             if depth == 0 {
-                blockEnd := syntax.scanBraceEnd(source, position, prefix);
+                blockFlags := if not hasInnerAlias or not hasInnerFn {
+                    syntax.scanBlockFastFlags(source, position, prefix)
+                } else {
+                    (hasFn = false, hasReserved = false, hasAliasKw = false, hasAnyAliasKw = false, end = syntax.scanBraceEnd(source, position, prefix))
+                };
+                blockEnd := blockFlags.end;
                 if blockEnd >= 0 {
                     afterBrace := if parenDepth == 0 { syntax.skipTrivia(source, blockEnd, prefix) } else { -1 };
                     if afterBrace >= 0 and textLib.startsWithAt(source, afterBrace, ":=") {
@@ -1168,12 +1178,13 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                         position = rhsPos;
                         continue;
                     }
-                    if not hasInnerAlias {
-                        typeHit := types.nextAliasOrRecordHit(source, position + 1);
-                        if typeHit >= 0 and typeHit < blockEnd {
-                            hasInnerAlias = true;
-                            listLib.pushBack(mut decls, (kind = ir.DECL_KIND_HAS_INNER_ALIAS, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
-                        }
+                    if not hasInnerAlias and blockFlags.hasAnyAliasKw {
+                        hasInnerAlias = true;
+                        listLib.pushBack(mut decls, (kind = ir.DECL_KIND_HAS_INNER_ALIAS, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                    }
+                    if not hasInnerFn and blockFlags.hasFn {
+                        hasInnerFn = true;
+                        listLib.pushBack(mut decls, (kind = ir.DECL_KIND_HAS_INNER_FN, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
                     }
                     position = blockEnd;
                     continue;
@@ -1321,10 +1332,14 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                     headerPos := syntax.skipTrivia(source, valueStart + 2, prefix);
                     listLib.pushBack(mut decls, (kind = ir.DECL_KIND_FUTURE_FN, name = name, runtime = "", code = "",
                     intValue = nameStart, textValue = integer.intText(headerPos)));
-                    skippedFn := skipFnExprSpan(source, headerPos, size, prefix, not hasInnerAlias);
-                    if skippedFn.hasInnerAlias {
+                    skippedFn := skipFnExprSpan(source, headerPos, size, prefix, not hasInnerAlias or not hasInnerFn);
+                    if not hasInnerAlias and skippedFn.hasInnerAlias {
                         hasInnerAlias = true;
                         listLib.pushBack(mut decls, (kind = ir.DECL_KIND_HAS_INNER_ALIAS, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                    }
+                    if not hasInnerFn and skippedFn.hasInnerFn {
+                        hasInnerFn = true;
+                        listLib.pushBack(mut decls, (kind = ir.DECL_KIND_HAS_INNER_FN, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
                     }
                     position = skippedFn.next;
                     continue;

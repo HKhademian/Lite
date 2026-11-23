@@ -268,27 +268,32 @@ modulePublicDeclarations := fn(graph: frontend.Items, path: String): frontend.It
 /** Appends an import interface, rejecting alias and public-name collisions. */
 appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, prefix: String): frontend.Items {
     var result: mut frontend.Items = existing;
-    loop incoming as item {
-        var duplicate := false;
-        loop result as previous {
-            if item.kind == frontend.ITEM_KIND_MODULE_ALIAS {
-                if (previous.kind == frontend.ITEM_KIND_MODULE_ALIAS and previous.name == item.name) or
-                ((previous.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or previous.kind == frontend.ITEM_KIND_PUBLIC_VALUE) and previous.name == item.name) {
-                    duplicate = true;
-                }
-            } else if item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
-                if ((previous.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or previous.kind == frontend.ITEM_KIND_PUBLIC_VALUE) and previous.name == item.name) or
-                (previous.kind == frontend.ITEM_KIND_MODULE_ALIAS and previous.name == item.name) {
-                    duplicate = true;
-                }
-            } else if item.kind == frontend.ITEM_KIND_PUBLIC_TYPE and previous.kind == frontend.ITEM_KIND_PUBLIC_TYPE and previous.name == item.name {
-                duplicate = true;
-            }
+    seenValueOrAlias: mut Set<String>;
+    seenTypes: mut Set<String>;
+    loop existing as previous {
+        if previous.kind == frontend.ITEM_KIND_MODULE_ALIAS or
+        previous.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or previous.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
+            setLib.add(mut seenValueOrAlias, previous.name);
+        } else if previous.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
+            setLib.add(mut seenTypes, previous.name);
         }
-        if duplicate {
-            if item.kind == frontend.ITEM_KIND_MODULE_ALIAS { diagLib.fail(prefix, "duplicate module alias " + item.name); }
-            if item.kind == frontend.ITEM_KIND_PUBLIC_TYPE { diagLib.fail(prefix, "duplicate imported public type " + item.name); }
-            diagLib.fail(prefix, "duplicate imported public name " + item.name);
+    }
+    loop incoming as item {
+        if item.kind == frontend.ITEM_KIND_MODULE_ALIAS {
+            if setLib.has(seenValueOrAlias, item.name) {
+                diagLib.fail(prefix, "duplicate module alias " + item.name);
+            }
+            setLib.add(mut seenValueOrAlias, item.name);
+        } else if item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
+            if setLib.has(seenValueOrAlias, item.name) {
+                diagLib.fail(prefix, "duplicate imported public name " + item.name);
+            }
+            setLib.add(mut seenValueOrAlias, item.name);
+        } else if item.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
+            if setLib.has(seenTypes, item.name) {
+                diagLib.fail(prefix, "duplicate imported public type " + item.name);
+            }
+            setLib.add(mut seenTypes, item.name);
         }
         listLib.pushBack(mut result, item);
     }

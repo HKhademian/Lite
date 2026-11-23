@@ -766,17 +766,18 @@ pub scanBracedRange := fn(source: String, start: Int, depthStart: Int, prefix: S
     -1
 };
 
-/** Returns the position after the braced block starting at `open`, or -1 when it never closes. Strings and comments are skipped. */
-/** Single-pass scan over `{ ... }` returning whether it contains a `fn` keyword or `?` reserved-init token outside strings/comments. */
-pub scanBlockFastFlags := fn(source: String, open: Int, prefix: String): (hasFn: Bool, hasReserved: Bool) {
+/** Single-pass scan over `{ ... }` returning fast flags (`fn`, `?`, shallow/nested alias keywords) and the end position past `}`. */
+pub scanBlockFastFlags := fn(source: String, open: Int, prefix: String): (hasFn: Bool, hasReserved: Bool, hasAliasKw: Bool, hasAnyAliasKw: Bool, end: Int) {
     size := textLib.length(source);
     if open < 0 or open >= size or textLib.at(source, open) =!= "{" {
-        return (hasFn = false, hasReserved = false);
+        return (hasFn = false, hasReserved = false, hasAliasKw = false, hasAnyAliasKw = false, end = -1);
     }
     var cursor := open + 1;
     var depth := 1;
     var hasFn := false;
     var hasReserved := false;
+    var hasAliasKw := false;
+    var hasAnyAliasKw := false;
     loop cursor < size and depth > 0 {
         ch := textLib.at(source, cursor);
         if ch == "\"" {
@@ -796,11 +797,28 @@ pub scanBlockFastFlags := fn(source: String, open: Int, prefix: String): (hasFn:
         (cursor == 0 or not textLib.isNameContinue(textLib.at(source, cursor - 1))) {
             hasFn = true;
             cursor = cursor + 2;
+        } else if (ch == "t" or ch == "r" or ch == "e") and
+        (cursor == 0 or not textLib.isNameContinue(textLib.at(source, cursor - 1))) {
+            if ch == "t" and textLib.wordAt(source, cursor, "type") {
+                hasAnyAliasKw = true;
+                if depth == 1 { hasAliasKw = true; }
+                cursor = cursor + 4;
+            } else if ch == "r" and textLib.wordAt(source, cursor, "record") {
+                hasAnyAliasKw = true;
+                if depth == 1 { hasAliasKw = true; }
+                cursor = cursor + 6;
+            } else if ch == "e" and textLib.wordAt(source, cursor, "enum") {
+                hasAnyAliasKw = true;
+                if depth == 1 { hasAliasKw = true; }
+                cursor = cursor + 4;
+            } else {
+                cursor = cursor + 1;
+            }
         } else {
             cursor = cursor + 1;
         }
     }
-    (hasFn = hasFn, hasReserved = hasReserved)
+    (hasFn = hasFn, hasReserved = hasReserved, hasAliasKw = hasAliasKw, hasAnyAliasKw = hasAnyAliasKw, end = if depth == 0 { cursor } else { -1 })
 };
 
 /** Scans from an opening `{` at `open` to its matching closing `}`, skipping strings and comments. */
