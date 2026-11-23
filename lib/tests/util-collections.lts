@@ -47,4 +47,14 @@ test.checkInt("countTexts y", 2, map.getOr(counts, "y", 0));
 test.checkInt("countTexts z", 1, map.getOr(counts, "z", 0));
 test.checkInt("countTexts missing", 0, map.getOr(counts, "w", 0));
 
+/* textLessOrEqual: differing lengths, prefixes, and non-ASCII fallback */
+test.check("book <= actual is false", not collections.textLessOrEqual("book", "actual"));
+test.check("actual <= book is true", collections.textLessOrEqual("actual", "book"));
+test.check("act <= actual is true", collections.textLessOrEqual("act", "actual"));
+test.check("actual <= act is false", not collections.textLessOrEqual("actual", "act"));
+test.check("a <= é is true", collections.textLessOrEqual("a", "é"));
+test.check("é <= a is false", not collections.textLessOrEqual("é", "a"));
+test.check("é <= ü is true", collections.textLessOrEqual("é", "ü"));
+test.check("ü <= é is false", not collections.textLessOrEqual("ü", "é"));
+
 test.done("util-collections");

@@ -4,10 +4,17 @@ list := import "core/list";
 map := import "core/map";
 set := import "core/set";
 text := import "core/text";
+unicode := import "core/unicode";
+
+/** Comparator returning true when `a` should be ordered before or equal to `b`. */
+pub IntComparator := type fn(Int, Int): Bool;
+
+/** Comparator returning true when `a` should be ordered before or equal to `b`. */
+pub TextComparator := type fn(String, String): Bool;
 
 ASCII_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
-/** Lexicographical ASCII comparison (`a <= b`), matching `core/list.sortTexts`. */
+/** Lexicographical Unicode code-point comparison (`a <= b`), with a fast ASCII path. */
 pub textLessOrEqual := fn(a: String, b: String): Bool {
     la := text.length(a);
     lb := text.length(b);
@@ -19,7 +26,8 @@ pub textLessOrEqual := fn(a: String, b: String): Bool {
         if ca =!= cb {
             oa := text.indexOfText(ASCII_ORDER, ca, 0);
             ob := text.indexOfText(ASCII_ORDER, cb, 0);
-            return oa <= ob;
+            if oa >= 0 and ob >= 0 { return oa <= ob; }
+            return unicode.codePointAt(ca, 0) <= unicode.codePointAt(cb, 0);
         }
         i += 1;
     }
@@ -27,7 +35,7 @@ pub textLessOrEqual := fn(a: String, b: String): Bool {
 };
 
 /** Returns a stable O(n log n) sorted index permutation `[0..count-1]` ordered by `lessOrEq(i, j)`. */
-pub sortIndicesBy := fn(count: Int, lessOrEq: fn(Int, Int): Bool): List<Int> {
+pub sortIndicesBy := fn(count: Int, lessOrEq: IntComparator): List<Int> {
     var src: mut List<Int> = [];
     var k := 0;
     loop k < count {
@@ -70,7 +78,7 @@ pub sortIndicesBy := fn(count: Int, lessOrEq: fn(Int, Int): Bool): List<Int> {
 };
 
 /** Returns a stable O(n log n) copy of `values` ordered by `lessOrEq(a, b)`. */
-pub sortIntsBy := fn(values: List<Int>, lessOrEq: fn(Int, Int): Bool): List<Int> {
+pub sortIntsBy := fn(values: List<Int>, lessOrEq: IntComparator): List<Int> {
     n := list.length(values);
     if n <= 1 { return values; }
     order := sortIndicesBy(n, fn(i: Int, j: Int): Bool { lessOrEq(values[i], values[j]) });
@@ -82,7 +90,7 @@ pub sortIntsBy := fn(values: List<Int>, lessOrEq: fn(Int, Int): Bool): List<Int>
 };
 
 /** Returns a stable O(n log n) copy of `values` ordered by `lessOrEq(a, b)`. */
-pub sortTextsBy := fn(values: List<String>, lessOrEq: fn(String, String): Bool): List<String> {
+pub sortTextsBy := fn(values: List<String>, lessOrEq: TextComparator): List<String> {
     n := list.length(values);
     if n <= 1 { return values; }
     order := sortIndicesBy(n, fn(i: Int, j: Int): Bool { lessOrEq(values[i], values[j]) });
