@@ -42,7 +42,7 @@ run := fn(rawArgs: List<String>): Unit {
             list.pushBack(mut forwardArgs, list.popFront(mut args));
         } else if text.startsWithAt(arg, 0, "--builtin-mode=") {
             list.pushBack(mut forwardArgs, arg);
-        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or text.startsWithAt(arg, 0, "--opt=") {
+        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or arg == "-Oc" or text.startsWithAt(arg, 0, "--opt=") or text.startsWithAt(arg, 0, "-f") {
             list.pushBack(mut forwardArgs, arg);
         } else if arg == "--opt" {
             if list.listCountText(args) == 0 or args[0] == "--" {

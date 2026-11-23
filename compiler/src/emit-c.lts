@@ -1,6 +1,7 @@
 frontend := import "./frontend.lts";
 cLiteral := import "./c-literals.lts";
 emitFmt := import "./emit-format.lts";
+optCfg := import "./opt-config.lts";
 integer := import "core/int";
 listLib := import "core/list";
 diagLib := import "core/diag";
@@ -1989,6 +1990,25 @@ emitOutputArgument := fn(kind: String, code: String, name: String, indent: Strin
     outLine(indent + typeCode + name + " = " + code + ";");
 }
 
+/** Emits a preserved comment or doc block with per-line `indent`. */
+emitCComment := fn(indent: String, commentText: String): Unit {
+    n := textLib.length(commentText);
+    var start := 0;
+    loop start <= n {
+        nl := textLib.indexOfText(commentText, "\n", start);
+        end := if nl >= 0 { nl } else { n };
+        rawLine := textLib.slice(commentText, start, end);
+        cleanLine := if start == 0 { rawLine } else { textLib.trimStart(rawLine) };
+        if start == 0 or cleanLine =!= "" {
+            outLine(indent + cleanLine);
+        } else {
+            outLine("");
+        }
+        if nl < 0 { break; }
+        start = nl + 1;
+    }
+};
+
 /** Formats one output write after every argument has evaluated successfully. */
 outputWriteCode := fn(kind: String, code: String, indent: String, failAction: String): String {
     indent + "if (" + cCall(kind, code) + " < 0) { " + failAction + " }\n"
@@ -2013,6 +2033,10 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
     var lastEmittedLocFile := "";
     var lastEmittedLocLine := 0;
     loop stream as item {
+        if item.kind == frontend.ITEM_KIND_COMMENT {
+            emitCComment(indent, item.code);
+            continue;
+        }
         if item.kind == frontend.ITEM_KIND_SOURCE_LOC {
             pendingLocFile = item.name;
             pendingLocLine = item.intValue;
@@ -2243,7 +2267,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
         } else if item.kind == frontend.ITEM_KIND_MAIN_STOP or item.kind == frontend.ITEM_KIND_IMPORT or
         item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or
         item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_PURE_GLOBAL or
-        item.kind == frontend.ITEM_KIND_SOFT_BUILTIN or item.kind == frontend.ITEM_KIND_NOOP or item.kind == frontend.ITEM_KIND_SOURCE_LOC {
+        item.kind == frontend.ITEM_KIND_SOFT_BUILTIN or item.kind == frontend.ITEM_KIND_NOOP or item.kind == frontend.ITEM_KIND_SOURCE_LOC or item.kind == frontend.ITEM_KIND_COMMENT {
         } else {
             if count == 0 {
                 firstKind = item.kind;
@@ -4143,14 +4167,14 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("");
 };
 
-/** Emits a complete C11 program using explicit builtin specs, `optLevel`, `--emit-format`, and `--source-map`. */
-pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
+/** Emits a complete C11 program driven by composable `OptConfig`. */
+pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     prevCompact := cCompactEmit;
     prevSourceMap := cSourceMapMode;
-    cCompactEmit = emitFmt.resolveEmitFormat(emitFormat, optLevel) == emitFmt.FORMAT_COMPACT;
-    cSourceMapMode = emitFmt.resolveSourceMap(sourceMap, frontend.TARGET_C, optLevel);
+    cCompactEmit = config.emitFormat == emitFmt.FORMAT_COMPACT;
+    cSourceMapMode = config.sourceMap;
     softItems := applyCSoftBuiltins(items, prefix, builtinSpecs);
-    reachable := frontend.filterReachableItemsWithOpt(softItems, frontend.TARGET_C, optLevel);
+    reachable := frontend.filterReachableItemsWithConfig(softItems, frontend.TARGET_C, config);
     calls := frontend.targetHelperCalls(reachable);
     var floatOutput := false;
     var hasFunctions := false;
@@ -4632,6 +4656,18 @@ pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: Str
         var fnIdx := 0;
         loop fnIdx < totalItems {
             if reachable[fnIdx].kind == frontend.ITEM_KIND_FUNCTION_START {
+                /* Emit any immediately preceding top-level comments right above the C function definition. */
+                var cScan := fnIdx - 1;
+                loop cScan >= 0 and (reachable[cScan].kind == frontend.ITEM_KIND_COMMENT or reachable[cScan].kind == frontend.ITEM_KIND_SOURCE_LOC) {
+                    cScan = cScan - 1;
+                }
+                var cEmit := cScan + 1;
+                loop cEmit < fnIdx {
+                    if reachable[cEmit].kind == frontend.ITEM_KIND_COMMENT {
+                        emitCComment("", reachable[cEmit].code);
+                    }
+                    cEmit = cEmit + 1;
+                }
                 fnIdx = emitOneCFunction(reachable, fnIdx, totalItems, hoistedGlobals);
             } else {
                 fnIdx = fnIdx + 1;
@@ -4640,11 +4676,29 @@ pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: Str
     }
     mainItems: mut frontend.Items = [];
     if hasFunctions {
+        var rTotal := 0;
+        loop reachable { rTotal = rTotal + 1; }
         var mDepth := 0;
-        loop reachable as item {
+        var ri := 0;
+        loop ri < rTotal {
+            item := reachable[ri];
             if item.kind == frontend.ITEM_KIND_FUNCTION_START { mDepth = mDepth + 1; }
             else if item.kind == frontend.ITEM_KIND_FUNCTION_END { if mDepth > 0 { mDepth = mDepth - 1; } }
-            else if mDepth == 0 { listLib.pushBack(mut mainItems, item); }
+            else if mDepth == 0 {
+                /* Skip comments attached directly to a top-level function definition (already emitted above it). */
+                var attachedToFn := false;
+                if item.kind == frontend.ITEM_KIND_COMMENT {
+                    var look := ri + 1;
+                    loop look < rTotal and (reachable[look].kind == frontend.ITEM_KIND_COMMENT or reachable[look].kind == frontend.ITEM_KIND_SOURCE_LOC) {
+                        look = look + 1;
+                    }
+                    if look < rTotal and reachable[look].kind == frontend.ITEM_KIND_FUNCTION_START {
+                        attachedToFn = true;
+                    }
+                }
+                if not attachedToFn { listLib.pushBack(mut mainItems, item); }
+            }
+            ri = ri + 1;
         }
     } else {
         loop reachable as item { listLib.pushBack(mut mainItems, item); }
@@ -4681,19 +4735,29 @@ pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: Str
     cSourceMapMode = prevSourceMap;
 }
 
+/** Emits a complete C11 program using explicit builtin specs, `optLevel`, `--emit-format`, and `--source-map`. */
+pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
+    emitProgramWithConfig(items, source, prefix, builtinSpecs, optCfg.configFromLegacyOpts(optLevel, frontend.TARGET_C, emitFormat, sourceMap));
+};
+
 /** Emits a complete C11 program using explicit builtin specs and optimization level `optLevel`. */
 pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
     emitProgramWithOpts(items, source, prefix, builtinSpecs, optLevel, "", "");
 };
 
-/** Emits the C program to an explicit `io.Writer` with `--emit-format` and `--source-map`. */
-pub emitProgramToWithOpts := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
+/** Emits the C program to an explicit `io.Writer` driven by composable `OptConfig`. */
+pub emitProgramToWithConfig := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     cOutUseWriter = true;
     tb.clear(mut cOutBuf);
-    emitProgramWithOpts(items, source, prefix, builtinSpecs, optLevel, emitFormat, sourceMap);
+    emitProgramWithConfig(items, source, prefix, builtinSpecs, config);
     _res := io.writeText(writer, tb.build(cOutBuf));
     tb.clear(mut cOutBuf);
     cOutUseWriter = false;
+};
+
+/** Emits the C program to an explicit `io.Writer` with `--emit-format` and `--source-map`. */
+pub emitProgramToWithOpts := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
+    emitProgramToWithConfig(writer, items, source, prefix, builtinSpecs, optCfg.configFromLegacyOpts(optLevel, frontend.TARGET_C, emitFormat, sourceMap));
 };
 
 /** Emits the C program to an explicit `io.Writer` with `--builtin-mode` specifications and optimization level (`0..4`). */

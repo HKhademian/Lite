@@ -1,5 +1,6 @@
 tsLiteral := import "./ts-literals.lts";
 emitFmt := import "./emit-format.lts";
+optCfg := import "./opt-config.lts";
 frontend := import "./frontend.lts";
 integer := import "core/int";
 io := import "core/io";
@@ -2430,13 +2431,32 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: 
     out
 }
 
-/** Emits the TS module with explicit `--builtin-mode`, `optLevel`, `--emit-format`, and `--source-map`. */
-pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
+/** Emits a preserved comment or doc block with per-line `indent`. */
+emitTsComment := fn(indent: String, commentText: String): Unit {
+    n := textLib.length(commentText);
+    var start := 0;
+    loop start <= n {
+        nl := textLib.indexOfText(commentText, "\n", start);
+        end := if nl >= 0 { nl } else { n };
+        rawLine := textLib.slice(commentText, start, end);
+        cleanLine := if start == 0 { rawLine } else { textLib.trimStart(rawLine) };
+        if start == 0 or cleanLine =!= "" {
+            outLine(indent + cleanLine);
+        } else {
+            outLine("");
+        }
+        if nl < 0 { break; }
+        start = nl + 1;
+    }
+};
+
+/** Emits the TS module driven by composable `OptConfig`. */
+pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     prevCompact := tsCompactEmit;
     prevSourceMap := tsSourceMapMode;
-    tsCompactEmit = emitFmt.resolveEmitFormat(emitFormat, optLevel) == emitFmt.FORMAT_COMPACT;
-    tsSourceMapMode = emitFmt.resolveSourceMap(sourceMap, frontend.TARGET_TS, optLevel);
-    effectiveItems := frontend.filterReachableItemsWithOpt(applySoftBuiltins(items, prefix, builtinSpecs), frontend.TARGET_TS, optLevel);
+    tsCompactEmit = config.emitFormat == emitFmt.FORMAT_COMPACT;
+    tsSourceMapMode = config.sourceMap;
+    effectiveItems := frontend.filterReachableItemsWithConfig(applySoftBuiltins(items, prefix, builtinSpecs), frontend.TARGET_TS, config);
     calls := frontend.targetHelperCalls(effectiveItems);
     abruptFault := usesAbruptFault(calls);
     abruptUnwind := usesAbruptUnwind(calls);
@@ -2507,6 +2527,10 @@ pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: Str
     var lastEmittedLocFile := "";
     var lastEmittedLocLine := 0;
     loop effectiveItems as item {
+        if item.kind == frontend.ITEM_KIND_COMMENT {
+            emitTsComment(indent, item.code);
+            continue;
+        }
         if item.kind == frontend.ITEM_KIND_SOURCE_LOC {
             pendingLocFile = item.name;
             pendingLocLine = item.intValue;
@@ -2718,7 +2742,12 @@ pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: Str
     tsSourceMapMode = prevSourceMap;
 }
 
-/** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications and optimization level (`0..4`). */
+/** Emits the TS module with explicit `--builtin-mode`, `optLevel`, `--emit-format`, and `--source-map`. */
+pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
+    emitProgramWithConfig(items, source, prefix, builtinSpecs, optCfg.configFromLegacyOpts(optLevel, frontend.TARGET_TS, emitFormat, sourceMap));
+};
+
+/** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications and optimization level (`0..5`). */
 pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
     emitProgramWithOpts(items, source, prefix, builtinSpecs, optLevel, "", "");
 };
@@ -2734,13 +2763,18 @@ pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Un
     emitProgramWithSpecsOpt(items, source, prefix, emptySpecs, 1);
 }
 
-/** Emits the TS module into `writer` with explicit `--emit-format` and `--source-map`. */
-pub emitProgramToWithOpts := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
+/** Emits the TS module into `writer` driven by composable `OptConfig`. */
+pub emitProgramToWithConfig := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     tsOutUseWriter = true;
     tsOutWriterKind = writer.kind;
     tsOutWriterHandle = writer.handle;
-    emitProgramWithOpts(items, source, prefix, builtinSpecs, optLevel, emitFormat, sourceMap);
+    emitProgramWithConfig(items, source, prefix, builtinSpecs, config);
     tsOutUseWriter = false;
+};
+
+/** Emits the TS module into `writer` with explicit `--emit-format` and `--source-map`. */
+pub emitProgramToWithOpts := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
+    emitProgramToWithConfig(writer, items, source, prefix, builtinSpecs, optCfg.configFromLegacyOpts(optLevel, frontend.TARGET_TS, emitFormat, sourceMap));
 };
 
 /** Emits the TS module from the flat item stream into `writer` at optimization level `optLevel` (`0..4`). */

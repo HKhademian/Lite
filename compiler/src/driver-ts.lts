@@ -2,21 +2,22 @@ frontend := import "./frontend.lts";
 modules := import "./modules.lts";
 emitter := import "./emit-ts.lts";
 hostFs := import "./host-fs.lts";
+optCfg := import "./opt-config.lts";
 diagLib := import "core/diag";
 fs := import "core/file";
 io := import "core/io";
 proc := import "core/process";
 
-/** Compiles one parsed CLI argument list (`--stdin`, file path, `--out`, `--trace-json`, `--builtin-mode`). */
+/** Compiles one parsed CLI argument list (`--stdin`, file path, `--out`, `--trace-json`, `--builtin-mode`, `-O...`, `-f...`). */
 pub run := fn(args: List<String>): Unit {
     flags := hostFs.parseCompilerFlags(args);
     if not flags.ok {
         io.errorLine(flags.error);
         io.exit(2);
     }
-    emitOpts := hostFs.extractEmitOptions(args);
-    if not emitOpts.ok {
-        io.errorLine(emitOpts.error);
+    optConfig := optCfg.parseOptConfig(args, frontend.TARGET_TS);
+    if not optConfig.ok {
+        io.errorLine(optConfig.error);
         io.exit(2);
     }
     builtinSpecs := hostFs.extractBuiltinSpecs(args);
@@ -35,7 +36,7 @@ pub run := fn(args: List<String>): Unit {
     items := modules.moduleItems(graph);
     if flags.hasOut {
         writer := io.bufferWriter();
-        emitter.emitProgramToWithOpts(=writer, =items, source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel, emitFormat = emitOpts.emitFormat, sourceMap = emitOpts.sourceMap);
+        emitter.emitProgramToWithConfig(=writer, =items, source = loaded.text, prefix = loaded.display, =builtinSpecs, config = optConfig);
         outRes := io.writerText(writer);
         _cl := io.closeWriter(writer);
         if not outRes.ok {
@@ -46,7 +47,7 @@ pub run := fn(args: List<String>): Unit {
             diagLib.fail(loaded.display, "cannot write output file " + flags.outPath + ": " + wRes.error);
         }
     } else {
-        emitter.emitProgramWithOpts(=items, source = loaded.text, prefix = loaded.display, =builtinSpecs, optLevel = flags.optLevel, emitFormat = emitOpts.emitFormat, sourceMap = emitOpts.sourceMap);
+        emitter.emitProgramWithConfig(=items, source = loaded.text, prefix = loaded.display, =builtinSpecs, config = optConfig);
     }
     if flags.hasTrace {
         hostFs.writeTraceJson(flags.tracePath, graph);

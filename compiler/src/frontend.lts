@@ -6,6 +6,7 @@ numeric := import "./numeric-literals.lts";
 integer := import "core/int";
 tsLiteral := import "./ts-literals.lts";
 ir := import "./frontend-ir.lts";
+optCfg := import "./opt-config.lts";
 builtinsAbi := import "./builtins-abi.lts";
 syntax := import "./frontend-syntax.lts";
 types := import "./frontend-types.lts";
@@ -161,6 +162,7 @@ pub ITEM_KIND_MAIN_STOP := ir.ITEM_KIND_MAIN_STOP;
 pub ITEM_KIND_IMPORT := ir.ITEM_KIND_IMPORT;
 pub ITEM_KIND_NOOP := ir.ITEM_KIND_NOOP;
 pub ITEM_KIND_SOURCE_LOC := ir.ITEM_KIND_SOURCE_LOC;
+pub ITEM_KIND_COMMENT := ir.ITEM_KIND_COMMENT;
 pub ITEM_KIND_LOCAL_TUPLE := ir.ITEM_KIND_LOCAL_TUPLE;
 pub ITEM_KIND_LOCAL_RECORD := ir.ITEM_KIND_LOCAL_RECORD;
 pub ITEM_KIND_LOCAL_LIST := ir.ITEM_KIND_LOCAL_LIST;
@@ -564,6 +566,8 @@ pub flattenTokenBuckets := fn(s: TokenBuckets): String { reach.flattenTokenBucke
 pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuckets { reach.codeReachableTokensSet(code, existing) };
 
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
+pub OptConfig := type optCfg.OptConfig;
+pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optCfg.OptConfig): Items { reach.filterReachableItemsWithConfig(items, target, cfg) };
 pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: Int): Items { reach.filterReachableItemsWithOpt(items, target, optLevel) };
 /** Filters `items` to only those reachable for `target` at default optimization level. */
 pub filterReachableItemsForTarget := fn(items: Items, target: String): Items { reach.filterReachableItemsForTarget(items, target) };
@@ -1269,6 +1273,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     var locLine := 1;
     var locLineStart := 0;
     var lastEmittedLocLine := 0;
+    rootComments := if moduleKey == "" { syntax.scanRootComments(source, prefix) } else { syntax.scanRootComments("", prefix) };
+    rootCommentCount := listLib.length(rootComments);
+    var rootCommentIdx := 0;
     loop position < size {
         ch := textLib.at(source, position);
         if ch == ";" {
@@ -1555,6 +1562,13 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     locLineStart = locCursor + 1;
                 }
                 locCursor = locCursor + 1;
+            }
+        }
+        if currentLive and rootCommentIdx < rootCommentCount {
+            loop rootCommentIdx < rootCommentCount and rootComments[rootCommentIdx].endPos <= position {
+                rc := rootComments[rootCommentIdx];
+                listLib.pushBack(mut items, (kind = ITEM_KIND_COMMENT, name = prefix, runtime = "", code = rc.text, intValue = if rc.isDoc { 1 } else { 0 }, textValue = ""));
+                rootCommentIdx = rootCommentIdx + 1;
             }
         }
         if currentLive and locLine =!= lastEmittedLocLine {

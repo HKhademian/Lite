@@ -80,7 +80,13 @@ run := fn(rawArgs: List<String>): Unit {
             list.pushBack(mut compileOpts, list.popFront(mut args));
         } else if text.startsWithAt(arg, 0, "--builtin-mode=") {
             list.pushBack(mut compileOpts, arg);
-        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or text.startsWithAt(arg, 0, "--opt=") {
+        } else if arg == "--emit-format" or arg == "--source-map" {
+            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            list.pushBack(mut compileOpts, arg);
+            list.pushBack(mut compileOpts, list.popFront(mut args));
+        } else if text.startsWithAt(arg, 0, "--emit-format=") or text.startsWithAt(arg, 0, "--source-map=") or text.startsWithAt(arg, 0, "-f") {
+            list.pushBack(mut compileOpts, arg);
+        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or arg == "-Oc" or text.startsWithAt(arg, 0, "--opt=") {
             hasOpt = true;
             if arg == "-Os" or arg == "--opt=s" or arg == "--opt=S" { sizeOpt = true; }
             list.pushBack(mut compileOpts, arg);

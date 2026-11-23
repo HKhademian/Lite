@@ -7,6 +7,7 @@ setLib := import "core/set";
 textLib := import "core/text";
 tb := import "util/text-builder";
 ir := import "./frontend-ir.lts";
+optCfg := import "./opt-config.lts";
 syntax := import "./frontend-syntax.lts";
 types := import "./frontend-types.lts";
 trace := import "./trace-safety.lts";
@@ -1273,7 +1274,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
     loop idx < total {
         item := items[idx];
         kind := item.kind;
-        if kind == ir.ITEM_KIND_SOURCE_LOC {
+        if kind == ir.ITEM_KIND_SOURCE_LOC or kind == ir.ITEM_KIND_COMMENT {
             listLib.pushBack(mut outItems, item);
             idx = idx + 1;
             continue;
@@ -1579,11 +1580,11 @@ isHostPlayBridgeFn := fn(runtime: String): Bool {
     textLib.endsWith(runtime, "_canvas_onPointerUp")
 };
 
-/** Inlines small single-`RETURN` pure leaf functions (0, 1, or 2 parameters) at simple call sites using fast `indexOfText` jumping for `-O3`. */
-inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
+/** Inlines small single-`RETURN` pure leaf functions (0, 1, or 2 parameters) at simple call sites up to `maxBodySize`. */
+inlineSingleExprLeafFunctions := fn(items: Items, target: String, maxBodySize: Int): Items {
     var total := 0;
     loop items { total = total + 1; }
-    if total < 3 { return items; }
+    if total < 3 or maxBodySize <= 0 { return items; }
     paramPrefix := "lite_";
     leafBodies: mut Map<String, String>;
     leafParams1: mut Map<String, String>;
@@ -1594,23 +1595,23 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String): Items {
         it := items[i];
         if it.kind == ir.ITEM_KIND_FUNCTION_START {
             var bodyIdx := i + 1;
-            loop bodyIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_SOURCE_LOC {
+            loop bodyIdx < total and (items[bodyIdx].kind == ir.ITEM_KIND_SOURCE_LOC or items[bodyIdx].kind == ir.ITEM_KIND_COMMENT) {
                 bodyIdx = bodyIdx + 1;
             }
             if bodyIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_TRANSFER_TRY and items[bodyIdx].intValue == 0 {
                 bodyIdx = bodyIdx + 1;
             }
-            loop bodyIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_SOURCE_LOC {
+            loop bodyIdx < total and (items[bodyIdx].kind == ir.ITEM_KIND_SOURCE_LOC or items[bodyIdx].kind == ir.ITEM_KIND_COMMENT) {
                 bodyIdx = bodyIdx + 1;
             }
             var afterRetIdx := bodyIdx + 1;
-            loop afterRetIdx < total and items[afterRetIdx].kind == ir.ITEM_KIND_SOURCE_LOC {
+            loop afterRetIdx < total and (items[afterRetIdx].kind == ir.ITEM_KIND_SOURCE_LOC or items[afterRetIdx].kind == ir.ITEM_KIND_COMMENT) {
                 afterRetIdx = afterRetIdx + 1;
             }
             if fnDepth == 0 and not isHostPlayBridgeFn(it.runtime) and afterRetIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_RETURN and items[afterRetIdx].kind == ir.ITEM_KIND_FUNCTION_END {
                 retCode := items[bodyIdx].code;
                 rLen := textLib.length(retCode);
-                isPureLeaf := rLen > 0 and rLen <= 256 and
+                isPureLeaf := rLen > 0 and rLen <= maxBodySize and
                 textLib.indexOfText(retCode, it.runtime + "(", 0) < 0 and
                 textLib.indexOfText(retCode, ";", 0) < 0 and
                 textLib.indexOfText(retCode, "return ", 0) < 0 and
@@ -1942,34 +1943,68 @@ foldConstantScalarItems := fn(items: Items, target: String): Items {
     out
 };
 
-/** Runs the multi-level optimization pipeline (`-O0`..`-O3`, `-Os` = `4`) and whole-program reachability DCE for `target`. */
-pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: Int): Items {
-    var pruned := items;
-    if optLevel >= 2 {
+/** Drops `ITEM_KIND_COMMENT` items according to `preserveComments` and `preserveDocs`. */
+filterCommentItems := fn(items: Items, preserveComments: Bool, preserveDocs: Bool): Items {
+    if preserveComments and preserveDocs { return items; }
+    var hasComment := false;
+    loop items as it {
+        if it.kind == ir.ITEM_KIND_COMMENT {
+            hasComment = true;
+            break;
+        }
+    }
+    if not hasComment { return items; }
+    out: mut Items = [];
+    loop items as it {
+        if it.kind == ir.ITEM_KIND_COMMENT {
+            isDoc := it.intValue == 1;
+            if (isDoc and preserveDocs) or (not isDoc and preserveComments) {
+                listLib.pushBack(mut out, it);
+            }
+        } else {
+            listLib.pushBack(mut out, it);
+        }
+    }
+    out
+};
+
+/** Runs the composable per-pass optimization pipeline driven purely by `cfg` (`OptConfig`) and whole-program reachability DCE for `target`. */
+pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optCfg.OptConfig): Items {
+    var pruned := filterCommentItems(items, cfg.preserveComments, cfg.preserveDocs);
+    if cfg.constFold {
         pruned = foldConstantScalarItems(pruned, target);
     }
-    if optLevel == 3 {
-        pruned = inlineSingleExprLeafFunctions(pruned, target);
+    inlineLim := optCfg.effectiveInlineMaxSize(cfg);
+    if inlineLim > 0 {
+        pruned = inlineSingleExprLeafFunctions(pruned, target, inlineLim);
     }
-    if optLevel >= 1 {
-        maxRounds := if optLevel == 3 { 3 } else if optLevel == 2 or optLevel == 4 { 2 } else { 1 };
+    maxRounds := optCfg.effectiveOptRounds(cfg);
+    if maxRounds > 0 {
         var round := 0;
         loop round < maxRounds {
             var beforeCount := 0;
             loop pruned { beforeCount = beforeCount + 1; }
-            simplified := unwrapSyntheticScopes(simplifyConstantBranches(pruned, target));
-            varOpt := optimizeStraightLineVars(simplified, target);
-            nextPruned := unwrapSyntheticScopes(pruneBlockScopedItems(varOpt, target));
-            pruned = nextPruned;
+            var cur := pruned;
+            if cfg.branchSimplify {
+                cur = unwrapSyntheticScopes(simplifyConstantBranches(cur, target));
+            }
+            if cfg.deadStore {
+                cur = optimizeStraightLineVars(cur, target);
+            }
+            if cfg.blockPrune {
+                cur = unwrapSyntheticScopes(pruneBlockScopedItems(cur, target));
+            }
+            pruned = cur;
             var afterCount := 0;
             loop pruned { afterCount = afterCount + 1; }
             round = round + 1;
-            if round >= 1 and afterCount == beforeCount and optLevel >= 2 {
-                /* Already converged in size; run at most one extra pass at -O2/-O3 when round 1 shrank items. */
+            if round >= 1 and afterCount == beforeCount and maxRounds >= 2 {
+                /* Already converged in size; stop after round 1 when no further shrinkage occurred. */
                 if round == 1 { break; }
             }
         }
     }
+    pruneUserDecls := cfg.dce;
     var hasPrunable := false;
     reachable: mut Set<String>;
     var fnDepth := 0;
@@ -1982,7 +2017,7 @@ pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: In
             continue;
         }
         if item.kind == ir.ITEM_KIND_FUNCTION_START {
-            if optLevel == 0 and fnDepth == 0 and not isImportedModuleFnRuntime(item.runtime) {
+            if not pruneUserDecls and fnDepth == 0 and not isImportedModuleFnRuntime(item.runtime) {
                 setLib.add(mut reachable, item.runtime + "(");
             } else {
                 hasPrunable = true;
@@ -2001,7 +2036,7 @@ pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: In
             continue;
         }
         isTopDecl := blockDepth == 0 and isTopDeclKind(item.kind);
-        canPruneDecl := optLevel >= 1 or isImportedModuleRuntime(item.runtime);
+        canPruneDecl := pruneUserDecls or isImportedModuleRuntime(item.runtime);
         isPureDecl := isTopDecl and canPruneDecl and (nextIsPure or ((target == ir.TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code)));
         nextIsPure = false;
         if item.kind == ir.ITEM_KIND_SCOPE or item.kind == ir.ITEM_KIND_IF or item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ {
@@ -2013,7 +2048,7 @@ pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: In
             hasPrunable = true;
             setLib.add(mut pureDecls, item.runtime);
         } else if item.kind =!= ir.ITEM_KIND_IMPORT and item.kind =!= ir.ITEM_KIND_PUBLIC_FUNCTION and item.kind =!= ir.ITEM_KIND_PUBLIC_VALUE and
-        item.kind =!= ir.ITEM_KIND_PUBLIC_TYPE and item.kind =!= ir.ITEM_KIND_NOOP and item.kind =!= ir.ITEM_KIND_SOURCE_LOC {
+        item.kind =!= ir.ITEM_KIND_PUBLIC_TYPE and item.kind =!= ir.ITEM_KIND_NOOP and item.kind =!= ir.ITEM_KIND_SOURCE_LOC and item.kind =!= ir.ITEM_KIND_COMMENT {
             loop extractReachableCodeTokens(item.code) as rTok { setLib.add(mut reachable, rTok); }
             if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
                 setLib.add(mut reachable, item.runtime);
@@ -2092,7 +2127,7 @@ pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: In
             if keepFn { listLib.pushBack(mut filtered, item); }
         } else {
             dropDecl := keepBlockDepth == 0 and isTopDeclKind(item.kind) and
-            (optLevel >= 1 or isImportedModuleRuntime(item.runtime)) and
+            (pruneUserDecls or isImportedModuleRuntime(item.runtime)) and
             (nextDeclPure or ((target == ir.TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code))) and
             not setLib.has(reachable, item.runtime);
             nextDeclPure = false;
@@ -2105,6 +2140,11 @@ pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: In
         }
     }
     filtered
+};
+
+/** Runs the preset optimization pipeline (`-O0`..`-O3`, `-Os` = `4`, `-Oc` = `5`) and whole-program reachability DCE for `target`. */
+pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: Int): Items {
+    filterReachableItemsWithConfig(items, target, optCfg.presetConfig(optCfg.presetFromLegacyLevel(optLevel), target))
 };
 
 /** Runs default `-O1` optimization passes and whole-program reachability DCE for `target`. */

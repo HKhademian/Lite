@@ -90,6 +90,68 @@ pub skipComment := fn(source: String, position: Int, prefix: String): Int {
     cursor
 };
 
+/** Neutralizes nested `/*` and `*/` sequences inside a comment body so C11 `-Wcomment -Werror` and TS parse cleanly. */
+sanitizeCommentBody := fn(body: String): String {
+    if textLib.indexOfText(body, "/*", 0) < 0 and textLib.indexOfText(body, "*/", 0) < 0 {
+        return body;
+    }
+    n := textLib.length(body);
+    var out := "";
+    var i := 0;
+    loop i < n {
+        if i + 1 < n and textLib.at(body, i) == "/" and textLib.at(body, i + 1) == "*" {
+            out = out + "/ *";
+            i = i + 2;
+        } else if i + 1 < n and textLib.at(body, i) == "*" and textLib.at(body, i + 1) == "/" {
+            out = out + "* /";
+            i = i + 2;
+        } else {
+            out = out + textLib.at(body, i);
+            i = i + 1;
+        }
+    }
+    out
+};
+
+/** Pre-scans standalone leading `/* ... */` and `/** ... */` comments in `source` in O(N) time, skipping string literals. */
+pub scanRootComments := fn(source: String, prefix: String): List<(endPos: Int, isDoc: Bool, text: String)> {
+    out: mut List<(endPos: Int, isDoc: Bool, text: String)> = [];
+    if textLib.indexOfText(source, "/*", 0) < 0 { return out; }
+    size := textLib.length(source);
+    var i := 0;
+    var onlyWsOnLine := true;
+    loop i < size {
+        ch := textLib.at(source, i);
+        if ch == "\n" {
+            onlyWsOnLine = true;
+            i = i + 1;
+        } else if ch == " " or ch == "\t" or ch == "\r" {
+            i = i + 1;
+        } else if ch == "\"" {
+            onlyWsOnLine = false;
+            i = skipAliasString(source, i);
+        } else if ch == "/" and textLib.startsWithAt(source, i, "/*") {
+            endPos := skipComment(source, i, prefix);
+            if onlyWsOnLine {
+                fence := rawFenceLength(source, i);
+                rawLen := endPos - i;
+                isDoc := fence == 0 and rawLen >= 5 and textLib.startsWithAt(source, i, "/**") and not textLib.startsWithAt(source, i, "/**/");
+                bodyStart := if fence > 0 { i + 2 + fence } else if isDoc { i + 3 } else { i + 2 };
+                bodyEnd := if fence > 0 { endPos - 2 - fence } else { endPos - 2 };
+                body := if bodyEnd >= bodyStart { sanitizeCommentBody(textLib.slice(source, bodyStart, bodyEnd)) } else { "" };
+                formatted := if isDoc { "/**" + body + "*/" } else { "/*" + body + "*/" };
+                listLib.pushBack(mut out, (=endPos, =isDoc, text = formatted));
+            }
+            /* After a closing comment on a line, another standalone comment may follow if only whitespace precedes it. */
+            i = endPos;
+        } else {
+            onlyWsOnLine = false;
+            i = i + 1;
+        }
+    }
+    out
+};
+
 /** Returns the first position at or after `start` that is neither whitespace nor a comment; comments separate tokens as whitespace does. */
 pub skipTrivia := fn(source: String, start: Int, prefix: String): Int {
     size := textLib.length(source);

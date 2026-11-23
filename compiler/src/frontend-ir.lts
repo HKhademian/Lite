@@ -154,6 +154,7 @@ pub ITEM_KIND_MAIN_STOP := "MainStop";
 pub ITEM_KIND_IMPORT := "Import";
 pub ITEM_KIND_NOOP := "Noop";
 pub ITEM_KIND_SOURCE_LOC := "SourceLoc";
+pub ITEM_KIND_COMMENT := "Comment";
 pub ITEM_KIND_LOCAL_TUPLE := "LocalTuple";
 pub ITEM_KIND_LOCAL_RECORD := "LocalRecord";
 pub ITEM_KIND_LOCAL_LIST := "LocalList";
