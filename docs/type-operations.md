@@ -18,7 +18,7 @@ Type-attached operations reuse LiteLang's uniform binding syntax (`:= fn`) and s
 }
 ```
 
-**Receiver type rule (selected for now):** the first parameter is the receiver and **may only have `Self` type** (`Self` or `mut Self`, parameterized as `Self<...>` for generic type families). Unrelated or non-`Self` receiver parameter types are rejected for now.
+**Receiver type rule (selected for now):** the first parameter is the receiver and **must explicitly have `Self` type** (`Self` or `mut Self`, parameterized as `Self<...>` for generic type families). Omitted receiver types, bare `Self` on a generic type family, and unrelated/non-`Self` receiver parameter types are rejected for now. `Self` refers directly to the attached `TypeName`, obeying the same explicit parameterization and `name: mut Type` placement rules as ordinary type names ([mut qualifier placement](lite://doc/mut-qualifier-placement)).
 
 ### Non-generic nominal types
 
@@ -49,6 +49,9 @@ pub Map.getOr := fn<K, V>(entries: Self<K, V>, key: K, fallback: V): V { ... }
 
 // Receiver type parameter T plus operation-only type parameter U:
 pub List.map := fn<T, U>(items: Self<T>, f: fn(T): U): Self<U> { ... }
+
+// Nested generic receiver:
+pub List.flatten := fn<T>(items: Self<Self<T>>): Self<T> { ... }
 
 // Operation restricted to one concrete instantiation:
 pub List.sum := fn(items: Self<Int>): Int { ... }
