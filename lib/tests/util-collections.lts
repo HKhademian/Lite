@@ -1,0 +1,50 @@
+/** Dual-target tests for `util/collections` O(n log n) sorts and O(n) Set/Map helpers. */
+
+collections := import "util/collections";
+format := import "core/format";
+list := import "core/list";
+map := import "core/map";
+test := import "core/test";
+text := import "core/text";
+
+/* sortIndicesBy with capturing multi-key closure */
+keys: List<String> = ["b", "a", "c", "a2"];
+scores: List<Int> = [20, 50, 20, 50];
+order := collections.sortIndicesBy(4, fn(i: Int, j: Int): Bool {
+    if scores[i] =!= scores[j] { scores[i] > scores[j] }
+    else { collections.textLessOrEqual(keys[i], keys[j]) }
+});
+test.checkText("sortIndicesBy multi-key", "1,3,0,2", format.joinIntTexts(order, ","));
+
+emptyOrd := collections.sortIndicesBy(0, fn(i: Int, j: Int): Bool { i <= j });
+test.checkInt("sortIndicesBy empty", 0, list.length(emptyOrd));
+
+/* sortIntsBy descending + stability */
+nums: List<Int> = [3, 1, 4, 1, 5, 9, 2];
+descNums := collections.sortIntsBy(nums, fn(a: Int, b: Int): Bool { a >= b });
+test.checkText("sortIntsBy desc", "9,5,4,3,2,1,1", format.joinIntTexts(descNums, ","));
+
+/* sortTextsBy length then lex */
+words: List<String> = ["pear", "fig", "apple", "kiwi", "ant"];
+byLen := collections.sortTextsBy(words, fn(a: String, b: String): Bool {
+    la := text.length(a);
+    lb := text.length(b);
+    if la =!= lb { la < lb } else { collections.textLessOrEqual(a, b) }
+});
+test.checkText("sortTextsBy len+lex", "ant,fig,kiwi,pear,apple", text.joinTexts(byLen, ","));
+
+/* dedupTexts & dedupInts */
+rawWords: List<String> = ["b", "a", "b", "c", "a", "d"];
+test.checkText("dedupTexts", "b,a,c,d", text.joinTexts(collections.dedupTexts(rawWords), ","));
+
+rawInts: List<Int> = [5, 2, 5, 8, 2, 1];
+test.checkText("dedupInts", "5,2,8,1", format.joinIntTexts(collections.dedupInts(rawInts), ","));
+
+/* countTexts */
+counts := collections.countTexts(["x", "y", "x", "z", "x", "y"]);
+test.checkInt("countTexts x", 3, map.getOr(counts, "x", 0));
+test.checkInt("countTexts y", 2, map.getOr(counts, "y", 0));
+test.checkInt("countTexts z", 1, map.getOr(counts, "z", 0));
+test.checkInt("countTexts missing", 0, map.getOr(counts, "w", 0));
+
+test.done("util-collections");

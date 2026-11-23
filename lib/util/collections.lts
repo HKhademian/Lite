@@ -1,0 +1,130 @@
+/** Reusable O(n log n) comparator-driven merge sorts and O(n) Set/Map collection helpers. */
+
+list := import "core/list";
+map := import "core/map";
+set := import "core/set";
+text := import "core/text";
+
+ASCII_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+/** Lexicographical ASCII comparison (`a <= b`), matching `core/list.sortTexts`. */
+pub textLessOrEqual := fn(a: String, b: String): Bool {
+    la := text.length(a);
+    lb := text.length(b);
+    limit := if la < lb { la } else { lb };
+    var i := 0;
+    loop i < limit {
+        ca := text.at(a, i);
+        cb := text.at(b, i);
+        if ca =!= cb {
+            oa := text.indexOfText(ASCII_ORDER, ca, 0);
+            ob := text.indexOfText(ASCII_ORDER, cb, 0);
+            return oa <= ob;
+        }
+        i += 1;
+    }
+    la <= lb
+};
+
+/** Returns a stable O(n log n) sorted index permutation `[0..count-1]` ordered by `lessOrEq(i, j)`. */
+pub sortIndicesBy := fn(count: Int, lessOrEq: fn(Int, Int): Bool): List<Int> {
+    var src: mut List<Int> = [];
+    var k := 0;
+    loop k < count {
+        list.pushBack(mut src, k);
+        k += 1;
+    }
+    if count <= 1 { return src; }
+    var width := 1;
+    loop width < count {
+        dst: mut List<Int> = [];
+        var left := 0;
+        loop left < count {
+            mid := if left + width < count { left + width } else { count };
+            right := if left + width * 2 < count { left + width * 2 } else { count };
+            var i := left;
+            var j := mid;
+            loop i < mid and j < right {
+                if lessOrEq(src[i], src[j]) {
+                    list.pushBack(mut dst, src[i]);
+                    i += 1;
+                } else {
+                    list.pushBack(mut dst, src[j]);
+                    j += 1;
+                }
+            }
+            loop i < mid {
+                list.pushBack(mut dst, src[i]);
+                i += 1;
+            }
+            loop j < right {
+                list.pushBack(mut dst, src[j]);
+                j += 1;
+            }
+            left += width * 2;
+        }
+        src = dst;
+        width = width * 2;
+    }
+    src
+};
+
+/** Returns a stable O(n log n) copy of `values` ordered by `lessOrEq(a, b)`. */
+pub sortIntsBy := fn(values: List<Int>, lessOrEq: fn(Int, Int): Bool): List<Int> {
+    n := list.length(values);
+    if n <= 1 { return values; }
+    order := sortIndicesBy(n, fn(i: Int, j: Int): Bool { lessOrEq(values[i], values[j]) });
+    out: mut List<Int> = [];
+    loop order as idx {
+        list.pushBack(mut out, values[idx]);
+    }
+    out
+};
+
+/** Returns a stable O(n log n) copy of `values` ordered by `lessOrEq(a, b)`. */
+pub sortTextsBy := fn(values: List<String>, lessOrEq: fn(String, String): Bool): List<String> {
+    n := list.length(values);
+    if n <= 1 { return values; }
+    order := sortIndicesBy(n, fn(i: Int, j: Int): Bool { lessOrEq(values[i], values[j]) });
+    out: mut List<String> = [];
+    loop order as idx {
+        list.pushBack(mut out, values[idx]);
+    }
+    out
+};
+
+/** Returns unique elements of `values` preserving first-seen order in O(n). */
+pub dedupTexts := fn(values: List<String>): List<String> {
+    seen: mut Set<String>;
+    out: mut List<String> = [];
+    loop values as v {
+        if not set.has(seen, v) {
+            set.add(mut seen, v);
+            list.pushBack(mut out, v);
+        }
+    }
+    out
+};
+
+/** Returns unique elements of `values` preserving first-seen order in O(n). */
+pub dedupInts := fn(values: List<Int>): List<Int> {
+    seen: mut Set<Int>;
+    out: mut List<Int> = [];
+    loop values as v {
+        if not set.has(seen, v) {
+            set.add(mut seen, v);
+            list.pushBack(mut out, v);
+        }
+    }
+    out
+};
+
+/** Counts occurrences of each string in `values` in O(n), preserving first-seen key order. */
+pub countTexts := fn(values: List<String>): Map<String, Int> {
+    counts: mut Map<String, Int>;
+    loop values as v {
+        prev := map.getOr(counts, v, 0);
+        map.set(mut counts, v, prev + 1);
+    }
+    counts
+};
