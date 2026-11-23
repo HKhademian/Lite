@@ -639,7 +639,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             if extent == 0 {
                 return (kind = kind, code = "lt_list_" + cTag + "_from(0, NULL)", intValue = 0, textValue = "", constant = false, next = next);
             }
-            cArrType := if cTag == "str" { "const char *const" } else { "const " + types.cListElemType(cTag) };
+            cArrType := "const " + types.cListElemType(cTag);
             return (kind = kind, code = "lt_list_" + cTag + "_from(" + integer.intText(extent) + ", (" + cArrType + "[]){" + textLib.joinTexts(items, ", ") + "})", intValue = 0, textValue = "", constant = false, next = next);
         }
         (kind = kind, code = "[" + textLib.joinTexts(items, ", ") + "]", intValue = 0, textValue = "", constant = false, next = next)

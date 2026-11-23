@@ -294,7 +294,7 @@ pub targetLogicCode := fn(target: String, op: String, left: String, right: Strin
 pub targetNotCode := fn(target: String, value: String): String { if target == TARGET_TS { tsLiteral.notCode(value) } else { cLiteral.notCode(value) } }
 
 /** Selects the TS or C backend implementation for one text literal. */
-pub targetTextLiteralCode := fn(target: String, value: String): String { if target == TARGET_TS { tsLiteral.textLiteralCode(value) } else { cLiteral.textLiteralCode(value) } }
+pub targetTextLiteralCode := fn(target: String, value: String): String { if target == TARGET_TS { tsLiteral.textLiteralCode(value) } else { cLiteral.strLiteralCode(value) } }
 
 /** Selects the TS or C backend implementation for evaluating an expression to Unit. */
 pub targetUnitEvaluationCode := fn(target: String, code: String): String { if target == TARGET_TS { tsLiteral.unitEvaluationCode(code) } else { cLiteral.unitEvaluationCode(code) } }

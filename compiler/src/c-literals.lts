@@ -42,6 +42,11 @@ pub textLiteralCode := fn(value: String): String {
     tb.build(out)
 }
 
+/** Formats a Lite String literal as a compile-time length-prefixed `lt_str` value (`byte_len` via `sizeof`, `cp_len` exact). */
+pub strLiteralCode := fn(value: String): String {
+    "LT_STR_LIT(" + textLiteralCode(value) + ", " + integer.intText(textLib.length(value)) + ")"
+}
+
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
 pub floatLiteralCode := fn(digits: String, negative: Bool): String {
     parsed := "lt_float_literal(" + textLiteralCode(digits) + ")";

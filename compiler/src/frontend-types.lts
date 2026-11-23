@@ -838,7 +838,7 @@ pub cListElemType := fn(tag: String): String {
     if tag == "i64" { "int64_t" }
     else if tag == "f64" { "double" }
     else if tag == "bool" { "bool" }
-    else if tag == "str" { "const char *" }
+    else if tag == "str" { "lt_str" }
     else { tag }
 };
 
@@ -878,7 +878,7 @@ pub cSetTag := fn(kind: String): String {
 /** Maps any C11-supported Lite value kind to its C11 type name. */
 pub cValueType := fn(kind: String): String {
     if kind == ir.VALUE_KIND_INT or numeric.isIntKind(kind) or isEnumKind(kind) { return "int64_t"; }
-    if kind == ir.VALUE_KIND_STRING { return "const char *"; }
+    if kind == ir.VALUE_KIND_STRING { return "lt_str"; }
     if kind == ir.VALUE_KIND_BOOL { return "bool"; }
     if kind == ir.VALUE_KIND_UNIT or kind == ir.VALUE_KIND_NEVER { return "void"; }
     if numeric.isFloatKind(kind) { return "double"; }
@@ -890,7 +890,7 @@ pub cValueType := fn(kind: String): String {
     else if cSetTag(kind) =!= "" { cSetTag(kind) }
     else if cStructTag(kind) =!= "" { cStructTag(kind) }
     else if cFnTag(kind) =!= "" { cFnTag(kind) }
-    else { "const char *" };
+    else { "lt_str" };
     mapLib.set(mut cValueTypeCache, kind, res);
     res
 };

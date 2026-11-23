@@ -442,7 +442,7 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
             sTag := types.cSetTag(expected);
             if sTag == "" { syntax.failAt(source, start, prefix, "C backend does not support Set yet"); }
             kTag := types.cMapKeyTag(elementKind);
-            cArrType := if kTag == "str" { "const char *const" } else { "const " + types.cListElemType(kTag) };
+            cArrType := "const " + types.cListElemType(kTag);
             sCode := if count == 0 {
                 "/*@T:" + expected + "@*/" + sTag + "_from(0, NULL)"
             } else {
@@ -470,7 +470,7 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
         if count == 0 {
             "lt_list_" + cTag + "_from(0, NULL)"
         } else {
-            cArrType := if cTag == "str" { "const char *const" } else { "const " + types.cListElemType(cTag) };
+            cArrType := "const " + types.cListElemType(cTag);
             "lt_list_" + cTag + "_from(" + integer.intText(count) + ", (" + cArrType + "[]){" + textLib.joinTexts(elementCodes, ", ") + "})"
         }
     } else {
@@ -1763,7 +1763,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             } else if outArg.kind == ir.VALUE_KIND_BOOL {
                                 "printf(\"%s\", (" + outArg.code + ") ? \"true\" : \"false\");"
                             } else if outArg.kind == ir.VALUE_KIND_STRING {
-                                "printf(\"%s\", " + outArg.code + ");"
+                                "lt_print_str(" + outArg.code + ");"
                             } else if numeric.isIntKind(outArg.kind) {
                                 "printf(\"%\" PRId64, (int64_t)(" + outArg.code + "));"
                             } else if numeric.isFloatKind(outArg.kind) {
@@ -6751,6 +6751,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             } else if textLib.startsWithAt(emittedValCode, 0, "Math.fround(Number(\"") and textLib.length(emittedValCode) > 23 {
                                 emittedValCode = textLib.slice(emittedValCode, 20, textLib.length(emittedValCode) - 3);
                             }
+                        } else if target == ir.TARGET_C and backing == ir.VALUE_KIND_STRING {
+                            emittedValCode = "LT_STR(" + emittedValCode + ")";
                         }
                         left = ctx.withMarkers((kind = backing, code = emittedValCode, intValue = evInt, textValue = "", constant = evConst, next = labelEnd),
                         if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
@@ -6768,6 +6770,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                 textLib.slice(rawVal, 8, textLib.length(rawVal) - 2)
                             } else if target == ir.TARGET_C and numeric.isFloatKind(backing) and textLib.startsWithAt(rawVal, 0, "Math.fround(Number(\"") and textLib.length(rawVal) > 23 {
                                 textLib.slice(rawVal, 20, textLib.length(rawVal) - 3)
+                            } else if target == ir.TARGET_C and backing == ir.VALUE_KIND_STRING {
+                                "LT_STR(" + rawVal + ")"
                             } else {
                                 rawVal
                             };
@@ -6778,7 +6782,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             cElemType := if numeric.isIntKind(backing) { "const int64_t" }
                             else if backing == ir.VALUE_KIND_BOOL { "const bool" }
                             else if numeric.isFloatKind(backing) { "const double" }
-                            else { "const char *const" };
+                            else { "const lt_str" };
                             "((" + cElemType + "[]){" + textLib.joinTexts(vals, ", ") + "}[" + left.code + "])"
                         } else {
                             "([" + textLib.joinTexts(vals, ", ") + "][" + left.code + "]!)"
@@ -7152,7 +7156,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         listLib.pushBack(mut argumentCodes, ir.targetIntLiteralCode(target, 0, false, "0"));
                     }
                     if optionalPrompt {
-                        if argumentCount == 0 { listLib.pushBack(mut argumentCodes, if target == ir.TARGET_C { "NULL" } else { "undefined" }); }
+                        if argumentCount == 0 { listLib.pushBack(mut argumentCodes, if target == ir.TARGET_C { "LT_NULL_STR" } else { "undefined" }); }
                         place := sourceLib.lineColumn(source, errPos);
                         location := (if prefix == "" { "" } else { prefix + ":" }) + formatLib.decimalText(place.line) + ":" +
                         formatLib.decimalText(place.column) + ": InputFault: ";
