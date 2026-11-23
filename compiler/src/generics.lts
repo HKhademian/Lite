@@ -1,0 +1,617 @@
+/** Generic function template registry, type unification/substitution, and on-demand monomorphization queue. */
+
+integer := import "core/int";
+listLib := import "core/list";
+mapLib := import "core/map";
+setLib := import "core/set";
+textLib := import "core/text";
+ir := import "./frontend-ir.lts";
+types := import "./frontend-types.lts";
+
+Item := type ir.Item;
+Items := type ir.Items;
+Local := type ir.Local;
+FunctionInfo := type ir.FunctionInfo;
+AliasDecl := type ir.AliasDecl;
+FutureValue := type ir.FutureValue;
+
+/** Registered uninstantiated generic function or type-attached operation template. */
+pub GenericTemplate := type (
+    key: String,
+    qualName: String,
+    typeOpKey: String,
+    moduleKey: String,
+    moduleIdentity: String,
+    prefix: String,
+    source: String,
+    bodyStart: Int,
+    bodyEnd: Int,
+    declAt: Int,
+    genericParams: String,
+    params: String,
+    paramCount: Int,
+    result: String,
+    selfTarget: String,
+    isPub: Bool
+);
+
+/** Index slice into flat environment tables for one parsed module. */
+pub ModuleEnvRange := type (
+    moduleKey: String,
+    localsStart: Int, localsCount: Int,
+    fnsStart: Int, fnsCount: Int,
+    paramsStart: Int, paramsCount: Int,
+    aliasesStart: Int, aliasesCount: Int,
+    futuresStart: Int, futuresCount: Int,
+    assignedStart: Int, assignedCount: Int
+);
+
+/** One requested concrete monomorphization of a `GenericTemplate`. */
+pub GenericInstance := type (
+    templateKey: String,
+    bindingsEncoded: String,
+    substParams: String,
+    substResult: String,
+    runtime: String,
+    moduleKey: String,
+    compiled: Bool
+);
+
+templates: mut List<GenericTemplate> = [];
+templateByKey: mut Map<String, Int>;
+
+envRanges: mut List<ModuleEnvRange> = [];
+moduleEnvByKey: mut Map<String, Int>;
+envLocalsPool: mut List<Local> = [];
+envFunctionsPool: mut List<FunctionInfo> = [];
+envFnParamsPool: mut List<String> = [];
+envAliasesPool: mut List<AliasDecl> = [];
+envFuturesPool: mut List<FutureValue> = [];
+envAssignedPool: mut List<String> = [];
+
+instances: mut List<GenericInstance> = [];
+instanceByKey: mut Map<String, Int>;
+
+/** Resets all generic template, module-environment, and monomorphization state before a fresh compilation. */
+pub resetAll := fn(): Unit {
+    listLib.clear(mut templates);
+    mapLib.clear(mut templateByKey);
+    listLib.clear(mut envRanges);
+    mapLib.clear(mut moduleEnvByKey);
+    listLib.clear(mut envLocalsPool);
+    listLib.clear(mut envFunctionsPool);
+    listLib.clear(mut envFnParamsPool);
+    listLib.clear(mut envAliasesPool);
+    listLib.clear(mut envFuturesPool);
+    listLib.clear(mut envAssignedPool);
+    listLib.clear(mut instances);
+    mapLib.clear(mut instanceByKey);
+};
+
+/** Registers or refreshes one `GenericTemplate` keyed by `tpl.key`. */
+pub registerTemplate := fn(tpl: GenericTemplate): Unit {
+    existing := mapLib.getOr(templateByKey, tpl.key, -1);
+    if existing >= 0 {
+        templates[existing] = tpl;
+        return;
+    }
+    idx := listLib.length(templates);
+    listLib.pushBack(mut templates, tpl);
+    mapLib.set(mut templateByKey, tpl.key, idx);
+};
+
+/** Returns the index of the registered template for `key`, or -1. */
+pub findTemplate := fn(key: String): Int {
+    mapLib.getOr(templateByKey, key, -1)
+};
+
+/** Returns the `GenericTemplate` at `idx`. */
+pub getTemplate := fn(idx: Int): GenericTemplate {
+    templates[idx]
+};
+
+/** Saves or replaces the depth-0 environment snapshot for `moduleKey` in flat pools. */
+pub saveModuleEnv := fn(moduleKey: String, locals: List<Local>, functions: List<FunctionInfo>,
+functionParams: List<String>, aliases: List<AliasDecl>, futureValues: List<FutureValue>, rootAssigned: List<String>): Unit {
+    lStart := listLib.length(envLocalsPool);
+    loop locals as l { listLib.pushBack(mut envLocalsPool, l); }
+    lCount := listLib.length(envLocalsPool) - lStart;
+
+    fStart := listLib.length(envFunctionsPool);
+    loop functions as f { listLib.pushBack(mut envFunctionsPool, f); }
+    fCount := listLib.length(envFunctionsPool) - fStart;
+
+    pStart := listLib.length(envFnParamsPool);
+    loop functionParams as p { listLib.pushBack(mut envFnParamsPool, p); }
+    pCount := listLib.length(envFnParamsPool) - pStart;
+
+    aStart := listLib.length(envAliasesPool);
+    loop aliases as a { listLib.pushBack(mut envAliasesPool, a); }
+    aCount := listLib.length(envAliasesPool) - aStart;
+
+    fvStart := listLib.length(envFuturesPool);
+    loop futureValues as fv { listLib.pushBack(mut envFuturesPool, fv); }
+    fvCount := listLib.length(envFuturesPool) - fvStart;
+
+    rStart := listLib.length(envAssignedPool);
+    loop rootAssigned as ra { listLib.pushBack(mut envAssignedPool, ra); }
+    rCount := listLib.length(envAssignedPool) - rStart;
+
+    rng: ModuleEnvRange = (
+        moduleKey = moduleKey,
+        localsStart = lStart, localsCount = lCount,
+        fnsStart = fStart, fnsCount = fCount,
+        paramsStart = pStart, paramsCount = pCount,
+        aliasesStart = aStart, aliasesCount = aCount,
+        futuresStart = fvStart, futuresCount = fvCount,
+        assignedStart = rStart, assignedCount = rCount
+    );
+    existing := mapLib.getOr(moduleEnvByKey, moduleKey, -1);
+    if existing >= 0 {
+        envRanges[existing] = rng;
+        return;
+    }
+    idx := listLib.length(envRanges);
+    listLib.pushBack(mut envRanges, rng);
+    mapLib.set(mut moduleEnvByKey, moduleKey, idx);
+};
+
+/** Returns the index of the saved `ModuleEnvRange` for `moduleKey`, or -1. */
+pub findModuleEnv := fn(moduleKey: String): Int {
+    mapLib.getOr(moduleEnvByKey, moduleKey, -1)
+};
+
+/** Returns the `ModuleEnvRange` at `idx`. */
+pub getModuleEnvRange := fn(idx: Int): ModuleEnvRange {
+    envRanges[idx]
+};
+
+/** Returns pooled `Local` at `poolIdx`. */
+pub getEnvLocal := fn(poolIdx: Int): Local { envLocalsPool[poolIdx] };
+
+/** Returns pooled `FunctionInfo` at `poolIdx`. */
+pub getEnvFunction := fn(poolIdx: Int): FunctionInfo { envFunctionsPool[poolIdx] };
+
+/** Returns pooled function parameter entry at `poolIdx`. */
+pub getEnvFnParam := fn(poolIdx: Int): String { envFnParamsPool[poolIdx] };
+
+/** Returns pooled `AliasDecl` at `poolIdx`. */
+pub getEnvAlias := fn(poolIdx: Int): AliasDecl { envAliasesPool[poolIdx] };
+
+/** Returns pooled `FutureValue` at `poolIdx`. */
+pub getEnvFuture := fn(poolIdx: Int): FutureValue { envFuturesPool[poolIdx] };
+
+/** Returns pooled root-assigned name at `poolIdx`. */
+pub getEnvAssigned := fn(poolIdx: Int): String { envAssignedPool[poolIdx] };
+
+/** Splits a `|`-delimited parameter encoding into `count` entries. */
+pub splitPipeEntries := fn(encoded: String, count: Int): List<String> {
+    out: mut List<String> = [];
+    if count <= 0 { return out; }
+    size := textLib.length(encoded);
+    var start := 0;
+    loop start <= size {
+        bar := textLib.indexOfText(encoded, "|", start);
+        end := if bar < 0 { size } else { bar };
+        listLib.pushBack(mut out, textLib.slice(encoded, start, end));
+        if bar < 0 { break; }
+        start = bar + 1;
+    }
+    out
+};
+
+/** Splits a comma-separated generic parameter list (`"T,U"`) into individual names. */
+pub splitGenericParams := fn(genericParams: String): List<String> {
+    out: mut List<String> = [];
+    size := textLib.length(genericParams);
+    if size == 0 { return out; }
+    var start := 0;
+    loop start <= size {
+        comma := textLib.indexOfText(genericParams, ",", start);
+        end := if comma < 0 { size } else { comma };
+        part := textLib.slice(genericParams, start, end);
+        if part =!= "" { listLib.pushBack(mut out, part); }
+        if comma < 0 { break; }
+        start = comma + 1;
+    }
+    out
+};
+
+/** True when `name` is one of the comma-separated generic type parameter names in `genericParams`. */
+pub isGenericParam := fn(genericParams: String, name: String): Bool {
+    if genericParams == "" or name == "" { return false; }
+    if genericParams == name { return true; }
+    size := textLib.length(genericParams);
+    var start := 0;
+    loop start <= size {
+        comma := textLib.indexOfText(genericParams, ",", start);
+        end := if comma < 0 { size } else { comma };
+        if textLib.slice(genericParams, start, end) == name { return true; }
+        if comma < 0 { break; }
+        start = comma + 1;
+    }
+    false
+};
+
+/** Deterministic collision-resistant hash token of `text` for TS/C11-safe identifier mangling. */
+hashHex32 := fn(text: String): String {
+    table := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_():,;<>#[]!@$-./=|";
+    var h1 := 5381;
+    var h2 := 216613626;
+    size := textLib.length(text);
+    var i := 0;
+    loop i < size {
+        ch := textLib.at(text, i);
+        idx := textLib.indexOfText(table, ch, 0);
+        v := if idx >= 0 { idx + 1 } else { 97 };
+        h1 = (h1 * 131 + v) % 1000000007;
+        h2 = (h2 * 137 + v) % 1000000009;
+        i = i + 1;
+    }
+    integer.intText(h1) + "_" + integer.intText(h2)
+};
+
+/** Produces a readable, TS/C11-safe deterministic mangled token for one concrete canonical type kind. */
+mangleOneKind := fn(kind: String): String {
+    if kind == ir.VALUE_KIND_INT or kind == ir.VALUE_KIND_INT8 or kind == ir.VALUE_KIND_INT16 or kind == ir.VALUE_KIND_INT32 or
+    kind == ir.VALUE_KIND_FLOAT or kind == ir.VALUE_KIND_FLOAT32 or kind == ir.VALUE_KIND_STRING or
+    kind == ir.VALUE_KIND_BOOL or kind == ir.VALUE_KIND_UNIT {
+        return kind;
+    }
+    if types.isListKind(kind) {
+        return "L_" + self(types.listElementKind(kind)) + "_E";
+    }
+    if types.isSetKind(kind) {
+        return "S_" + self(types.setElementKind(kind)) + "_E";
+    }
+    if types.isMapKind(kind) {
+        return "M_" + self(types.mapKeyKind(kind)) + "_" + self(types.mapValueKind(kind)) + "_E";
+    }
+    if types.isArrayKind(kind) {
+        return "A" + integer.intText(types.arrayExtent(kind)) + "_" + self(types.arrayElementKind(kind)) + "_E";
+    }
+    "K_" + hashHex32(kind)
+};
+
+/** Encodes `bindings` in `genericParams` declaration order as `T=Int|U=String`. */
+pub encodeBindings := fn(genericParams: String, bindings: Map<String, String>): String {
+    parts: mut List<String> = [];
+    loop splitGenericParams(genericParams) as p {
+        listLib.pushBack(mut parts, p + "=" + mapLib.getOr(bindings, p, ""));
+    }
+    textLib.joinTexts(parts, "|")
+};
+
+/** Encodes only currently bound entries of `bindings` in `genericParams` order as `T=Int`. */
+pub encodePartialBindings := fn(genericParams: String, bindings: Map<String, String>): String {
+    parts: mut List<String> = [];
+    loop splitGenericParams(genericParams) as p {
+        if mapLib.has(bindings, p) {
+            listLib.pushBack(mut parts, p + "=" + mapLib.getOr(bindings, p, ""));
+        }
+    }
+    textLib.joinTexts(parts, "|")
+};
+
+/** Decodes `"T=Int|U=String"` into a list of `(name, kind)` pairs. */
+pub decodeBindings := fn(bindingsEncoded: String): List<(name: String, kind: String)> {
+    out: mut List<(name: String, kind: String)> = [];
+    size := textLib.length(bindingsEncoded);
+    if size == 0 { return out; }
+    var start := 0;
+    loop start <= size {
+        bar := textLib.indexOfText(bindingsEncoded, "|", start);
+        end := if bar < 0 { size } else { bar };
+        entry := textLib.slice(bindingsEncoded, start, end);
+        eq := textLib.indexOfText(entry, "=", 0);
+        if eq > 0 {
+            listLib.pushBack(mut out, (name = textLib.slice(entry, 0, eq), kind = textLib.slice(entry, eq + 1, textLib.length(entry))));
+        }
+        if bar < 0 { break; }
+        start = bar + 1;
+    }
+    out
+};
+
+/** Builds a TS/C11-safe deterministic suffix for encoded generic bindings. */
+mangleBindings := fn(bindingsEncoded: String): String {
+    parts: mut List<String> = [];
+    loop decodeBindings(bindingsEncoded) as b {
+        listLib.pushBack(mut parts, mangleOneKind(b.kind));
+    }
+    joined := textLib.joinTexts(parts, "__");
+    if textLib.length(joined) > 64 {
+        return "H_" + hashHex32(bindingsEncoded);
+    }
+    joined
+};
+
+/** Requests (or reuses cached) concrete monomorphization of `templateKey` for `bindingsEncoded`, returning its target runtime name. */
+pub requestInstance := fn(target: String, templateKey: String, bindingsEncoded: String, substParams: String, substResult: String): String {
+    cacheKey := templateKey + "|" + bindingsEncoded;
+    existing := mapLib.getOr(instanceByKey, cacheKey, -1);
+    if existing >= 0 {
+        return instances[existing].runtime;
+    }
+    tplIdx := findTemplate(templateKey);
+    tpl := templates[tplIdx];
+    mangled := mangleBindings(bindingsEncoded);
+    instRuntime := ir.moduleFunctionRuntime(target, tpl.moduleKey, tpl.qualName + "__G_" + mangled);
+    idx := listLib.length(instances);
+    listLib.pushBack(mut instances, (
+        templateKey = templateKey,
+        bindingsEncoded = bindingsEncoded,
+        substParams = substParams,
+        substResult = substResult,
+        runtime = instRuntime,
+        moduleKey = tpl.moduleKey,
+        compiled = false
+    ));
+    mapLib.set(mut instanceByKey, cacheKey, idx);
+    instRuntime
+};
+
+/** Returns the index of the next uncompiled `GenericInstance`, or -1 when the queue is drained. */
+pub nextUncompiledInstanceIndex := fn(): Int {
+    var i := 0;
+    n := listLib.length(instances);
+    loop i < n {
+        if not instances[i].compiled { return i; }
+        i = i + 1;
+    }
+    -1
+};
+
+/** Returns the `GenericInstance` at `idx`. */
+pub getInstance := fn(idx: Int): GenericInstance {
+    instances[idx]
+};
+
+/** Marks the `GenericInstance` at `idx` as compiled. */
+pub markInstanceCompiled := fn(idx: Int): Unit {
+    cur := instances[idx];
+    instances[idx] = (
+        templateKey = cur.templateKey,
+        bindingsEncoded = cur.bindingsEncoded,
+        substParams = cur.substParams,
+        substResult = cur.substResult,
+        runtime = cur.runtime,
+        moduleKey = cur.moduleKey,
+        compiled = true
+    );
+};
+
+/** True when `kind` still contains any unbound generic type parameter from `genericParams`. */
+pub kindHasUnboundGeneric := fn(genericParams: String, kind: String, bindings: Map<String, String>): Bool {
+    if isGenericParam(genericParams, kind) {
+        return not mapLib.has(bindings, kind);
+    }
+    if types.isListKind(kind) {
+        return self(genericParams, types.listElementKind(kind), bindings);
+    }
+    if types.isSetKind(kind) {
+        return self(genericParams, types.setElementKind(kind), bindings);
+    }
+    if types.isMapKind(kind) {
+        return self(genericParams, types.mapKeyKind(kind), bindings) or self(genericParams, types.mapValueKind(kind), bindings);
+    }
+    if types.isArrayKind(kind) {
+        return self(genericParams, types.arrayElementKind(kind), bindings);
+    }
+    if types.isTupleKind(kind) {
+        n := types.tupleComponentCount(kind);
+        var i := 0;
+        loop i < n {
+            if self(genericParams, types.tupleComponent(kind, i).kind, bindings) { return true; }
+            i = i + 1;
+        }
+        return false;
+    }
+    if types.isFnKind(kind) {
+        n := types.fnParamCount(kind);
+        var i := 0;
+        loop i < n {
+            if self(genericParams, types.fnParamComponent(kind, i).kind, bindings) { return true; }
+            i = i + 1;
+        }
+        return self(genericParams, types.fnResultKind(kind), bindings);
+    }
+    false
+};
+
+/** Substitutes bound generic parameters from `bindings` into canonical `pattern`. */
+pub substKind := fn(genericParams: String, pattern: String, bindings: Map<String, String>): String {
+    if isGenericParam(genericParams, pattern) {
+        return mapLib.getOr(bindings, pattern, pattern);
+    }
+    if types.isListKind(pattern) {
+        return "List<" + self(genericParams, types.listElementKind(pattern), bindings) + ">";
+    }
+    if types.isSetKind(pattern) {
+        return "Set<" + self(genericParams, types.setElementKind(pattern), bindings) + ">";
+    }
+    if types.isMapKind(pattern) {
+        return "Map<" + self(genericParams, types.mapKeyKind(pattern), bindings) + "," +
+        self(genericParams, types.mapValueKind(pattern), bindings) + ">";
+    }
+    if types.isArrayKind(pattern) {
+        return "[" + self(genericParams, types.arrayElementKind(pattern), bindings) + ";" +
+        integer.intText(types.arrayExtent(pattern)) + "]";
+    }
+    if types.isTupleKind(pattern) {
+        n := types.tupleComponentCount(pattern);
+        parts: mut List<String> = [];
+        var i := 0;
+        loop i < n {
+            comp := types.tupleComponent(pattern, i);
+            listLib.pushBack(mut parts, comp.label + ":" + self(genericParams, comp.kind, bindings));
+            i = i + 1;
+        }
+        return "(" + textLib.joinTexts(parts, ",") + ")";
+    }
+    if types.isFnKind(pattern) {
+        n := types.fnParamCount(pattern);
+        parts: mut List<String> = [];
+        var i := 0;
+        loop i < n {
+            comp := types.fnParamComponent(pattern, i);
+            listLib.pushBack(mut parts, comp.label + ":" + self(genericParams, comp.kind, bindings));
+            i = i + 1;
+        }
+        return "fn(" + textLib.joinTexts(parts, ",") + "):" + self(genericParams, types.fnResultKind(pattern), bindings);
+    }
+    pattern
+};
+
+/** Substitutes `bindings` into `pattern` to produce an expected-type hint for parsing an argument (returns `""` if still partially generic, or `fn(...):$InferRet` when only a callback's return type is unbound). */
+pub substKindForExpected := fn(genericParams: String, pattern: String, bindings: Map<String, String>): String {
+    if not kindHasUnboundGeneric(genericParams, pattern, bindings) {
+        return substKind(genericParams, pattern, bindings);
+    }
+    if types.isListKind(pattern) {
+        return "$ListAny";
+    }
+    if types.isFnKind(pattern) {
+        n := types.fnParamCount(pattern);
+        parts: mut List<String> = [];
+        var i := 0;
+        loop i < n {
+            comp := types.fnParamComponent(pattern, i);
+            if kindHasUnboundGeneric(genericParams, comp.kind, bindings) {
+                return "";
+            }
+            listLib.pushBack(mut parts, comp.label + ":" + substKind(genericParams, comp.kind, bindings));
+            i = i + 1;
+        }
+        rawRet := types.fnResultKind(pattern);
+        retHint := if kindHasUnboundGeneric(genericParams, rawRet, bindings) {
+            "$InferRet"
+        } else {
+            substKind(genericParams, rawRet, bindings)
+        };
+        return "fn(" + textLib.joinTexts(parts, ",") + "):" + retHint;
+    }
+    ""
+};
+
+/** Recursively unifies generic `pattern` against concrete `actual`, updating `bindings` in place and returning `""` on success or an error message. */
+pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, bindings: mut Map<String, String>): String {
+    if actual == ir.VALUE_KIND_NEVER { return ""; }
+    if isGenericParam(genericParams, pattern) {
+        if mapLib.has(bindings, pattern) {
+            existing := mapLib.getOr(bindings, pattern, "");
+            if not types.isCompatibleKind(existing, actual) {
+                return "conflicting type bindings for " + pattern + ": " + types.displayKind(existing) + " vs " + types.displayKind(actual);
+            }
+            return "";
+        }
+        mapLib.set(mut bindings, pattern, actual);
+        return "";
+    }
+    if types.isListKind(pattern) {
+        if not types.isListKind(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        return self(genericParams, types.listElementKind(pattern), types.listElementKind(actual), mut bindings);
+    }
+    if types.isSetKind(pattern) {
+        if not types.isSetKind(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        return self(genericParams, types.setElementKind(pattern), types.setElementKind(actual), mut bindings);
+    }
+    if types.isMapKind(pattern) {
+        if not types.isMapKind(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        kErr := self(genericParams, types.mapKeyKind(pattern), types.mapKeyKind(actual), mut bindings);
+        if kErr =!= "" { return kErr; }
+        return self(genericParams, types.mapValueKind(pattern), types.mapValueKind(actual), mut bindings);
+    }
+    if types.isArrayKind(pattern) {
+        if not types.isArrayKind(actual) or types.arrayExtent(pattern) =!= types.arrayExtent(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        return self(genericParams, types.arrayElementKind(pattern), types.arrayElementKind(actual), mut bindings);
+    }
+    if types.isTupleKind(pattern) {
+        if not types.isTupleKind(actual) or types.tupleComponentCount(pattern) =!= types.tupleComponentCount(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        n := types.tupleComponentCount(pattern);
+        var i := 0;
+        loop i < n {
+            pc := types.tupleComponent(pattern, i);
+            ac := types.tupleComponent(actual, i);
+            if pc.label =!= ac.label {
+                return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+            }
+            cErr := self(genericParams, pc.kind, ac.kind, mut bindings);
+            if cErr =!= "" { return cErr; }
+            i = i + 1;
+        }
+        return "";
+    }
+    if types.isFnKind(pattern) {
+        if not types.isFnKind(actual) or types.fnParamCount(pattern) =!= types.fnParamCount(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        n := types.fnParamCount(pattern);
+        var i := 0;
+        loop i < n {
+            pErr := self(genericParams, types.fnParamComponent(pattern, i).kind, types.fnParamComponent(actual, i).kind, mut bindings);
+            if pErr =!= "" { return pErr; }
+            i = i + 1;
+        }
+        return self(genericParams, types.fnResultKind(pattern), types.fnResultKind(actual), mut bindings);
+    }
+    if not types.isCompatibleKind(pattern, actual) {
+        return "expected " + types.displayKind(pattern) + ", got " + types.displayKind(actual);
+    }
+    ""
+};
+
+/** Validates map key / set element constraints across a substituted concrete type, returning `""` if valid. */
+pub validateSubstitutedKind := fn(kind: String): String {
+    if types.isListKind(kind) {
+        return self(types.listElementKind(kind));
+    }
+    if types.isSetKind(kind) {
+        elem := types.setElementKind(kind);
+        if not types.isMapKeyKind(elem) {
+            return "unsupported set element type " + types.displayKind(elem);
+        }
+        return self(elem);
+    }
+    if types.isMapKind(kind) {
+        k := types.mapKeyKind(kind);
+        if not types.isMapKeyKind(k) {
+            return "unsupported map key type " + types.displayKind(k);
+        }
+        return self(types.mapValueKind(kind));
+    }
+    if types.isArrayKind(kind) {
+        return self(types.arrayElementKind(kind));
+    }
+    if types.isTupleKind(kind) {
+        n := types.tupleComponentCount(kind);
+        var i := 0;
+        loop i < n {
+            err := self(types.tupleComponent(kind, i).kind);
+            if err =!= "" { return err; }
+            i = i + 1;
+        }
+        return "";
+    }
+    if types.isFnKind(kind) {
+        n := types.fnParamCount(kind);
+        var i := 0;
+        loop i < n {
+            err := self(types.fnParamComponent(kind, i).kind);
+            if err =!= "" { return err; }
+            i = i + 1;
+        }
+        return self(types.fnResultKind(kind));
+    }
+    ""
+};

@@ -128,6 +128,7 @@ pub ITEM_KIND_CORE_MODULE_SOURCE := "CoreModuleSource";
 pub ITEM_KIND_CORE_MODULE_IMPORT := "CoreModuleImport";
 pub ITEM_KIND_PUBLIC_FUNCTION := "PublicFunction";
 pub ITEM_KIND_PUBLIC_TYPE_OP := "PublicTypeOp";
+pub ITEM_KIND_MONO_OWNER := "MonoOwner";
 pub ITEM_KIND_PUBLIC_VALUE := "PublicValue";
 pub ITEM_KIND_PUBLIC_TYPE := "PublicType";
 pub ITEM_KIND_PURE_GLOBAL := "PureGlobal";

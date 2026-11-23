@@ -1,0 +1,204 @@
+/* Dual-target (TS + C11) tests for Slice 1B generic function bodies and monomorphization. */
+
+test := import "core/test";
+file := import "core/file";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+runBoth := fn(label: String, src: String, expected: String): Unit {
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+    test.checkInt(label + " ts status: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(label + " ts stderr", "", tsRes.stderr);
+    test.checkText(label + " ts stdout", expected, tsRes.stdout);
+    if ccInfo.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+        test.checkInt(label + " c status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " c stderr", "", cRes.stderr);
+        test.checkText(label + " c stdout parity", tsRes.stdout, cRes.stdout);
+    }
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccInfo.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+/* 1. Standalone generic functions: identity, pair, forward calls, mut List<T>, self recursion, mapList with unannotated lambda, expected-return inference. */
+genStandaloneSrc :=
+"io := import \"core/io\";\n" +
+"list := import \"core/list\";\n" +
+"\n" +
+"forwardDouble := fn(x: Int): Int {\n" +
+"    identity(x) * 2\n" +
+"};\n" +
+"\n" +
+"identity := fn<T>(x: T): T {\n" +
+"    x\n" +
+"};\n" +
+"\n" +
+"makePair := fn<A, B>(first: A, second: B): (a: A, b: B) {\n" +
+"    (a = first, b = second)\n" +
+"};\n" +
+"\n" +
+"pushTwice := fn<T>(dst: mut List<T>, val: T): Unit {\n" +
+"    list.pushBack(mut dst, val);\n" +
+"    list.pushBack(mut dst, val);\n" +
+"};\n" +
+"\n" +
+"repeatInto := fn<T>(dst: mut List<T>, val: T, n: Int): Unit {\n" +
+"    if n <= 0 { return; }\n" +
+"    list.pushBack(mut dst, val);\n" +
+"    self(mut dst, val, n - 1);\n" +
+"};\n" +
+"\n" +
+"mapList := fn<T, U>(items: List<T>, f: fn(T): U): List<U> {\n" +
+"    out: mut List<U> = [];\n" +
+"    loop items as item {\n" +
+"        list.pushBack(mut out, f(item));\n" +
+"    }\n" +
+"    out\n" +
+"};\n" +
+"\n" +
+"emptyList := fn<T>(): List<T> {\n" +
+"    res: List<T> = [];\n" +
+"    res\n" +
+"};\n" +
+"\n" +
+"a := forwardDouble(21);\n" +
+"b := identity(\"hello\");\n" +
+"p := makePair(second = \"ok\", first = 7);\n" +
+"nums: mut List<Int> = [];\n" +
+"pushTwice(mut nums, 5);\n" +
+"repeatInto(mut nums, 9, 2);\n" +
+"words: mut List<String> = [];\n" +
+"pushTwice(mut words, \"go\");\n" +
+"doubled := mapList(nums, fn(n) { n * 2 });\n" +
+"flags := mapList(nums, fn(n) { n > 6 });\n" +
+"emptyInts: List<Int> = emptyList();\n" +
+"io.outputLine(a, b, p.a, p.b);\n" +
+"io.outputLine(list.length(nums), nums[0], nums[2], list.length(words), words[1]);\n" +
+"io.outputLine(doubled[0], doubled[2], flags[0], flags[2], list.length(emptyInts));\n";
+
+runBoth("standalone-generics", genStandaloneSrc, "42 hello 7 ok\n4 5 9 2 go\n10 18 false true 0\n");
+
+/* 2. Generic type-attached operations on owned nominal records, including mut Self, callbacks with inferred lambda types, and nested generics. */
+genTypeOpSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Vec2 := record {\n" +
+"    x: Int;\n" +
+"    y: Int;\n" +
+"}\n" +
+"\n" +
+"Vec2.fold := fn<U>(v: Self, init: U, step: fn(U, Int): U): U {\n" +
+"    s1 := step(init, v.x);\n" +
+"    step(s1, v.y)\n" +
+"};\n" +
+"\n" +
+"Vec2.tagWith := fn<T>(v: Self, tag: T): (tag: T, sum: Int) {\n" +
+"    (tag = tag, sum = v.x + v.y)\n" +
+"};\n" +
+"\n" +
+"Vec2.updateAndTag := fn<T>(v: mut Self, dx: Int, tag: T): (tag: T, x: Int) {\n" +
+"    v.x += dx;\n" +
+"    (tag = tag, x = v.x)\n" +
+"};\n" +
+"\n" +
+"mut v := Vec2 { x = 3, y = 4 };\n" +
+"snap := v;\n" +
+"total := v.fold(10, fn(acc, n) { acc + n });\n" +
+"t1 := v.tagWith(\"pt\");\n" +
+"t2 := v.updateAndTag(5, true);\n" +
+"io.outputLine(total, t1.tag, t1.sum, t2.tag, t2.x, snap.x, v.x);\n";
+
+runBoth("generic-type-ops", genTypeOpSrc, "17 pt 7 true 8 3 8\n");
+
+/* 3. Cross-module pub generic functions and transitive pub generic type-attached operations. */
+tmpDir := file.makeTempDir("lite-gen-ops-");
+test.check("makeTempDir: " + tmpDir.error, tmpDir.ok);
+libPath := tmpDir.path + "/genlib.lts";
+midPath := tmpDir.path + "/factory.lts";
+appPath := tmpDir.path + "/app.lts";
+
+libSrc :=
+"list := import \"core/list\";\n" +
+"pub Box := record { value: Int; }\n" +
+"pub Box.transform := fn<U>(b: Self, f: fn(Int): U): U {\n" +
+"    f(b.value)\n" +
+"};\n" +
+"pub filterList := fn<T>(items: List<T>, pred: fn(T): Bool): List<T> {\n" +
+"    out: mut List<T> = [];\n" +
+"    loop items as item {\n" +
+"        if pred(item) { list.pushBack(mut out, item); }\n" +
+"    }\n" +
+"    out\n" +
+"};\n";
+
+midSrc :=
+"g := import \"./genlib.lts\";\n" +
+"pub makeBox := fn(v: Int): g.Box { g.Box { value = v } };\n";
+
+appSrc :=
+"io := import \"core/io\";\n" +
+"list := import \"core/list\";\n" +
+"g := import \"./genlib.lts\";\n" +
+"f := import \"./factory.lts\";\n" +
+"b := f.makeBox(7);\n" +
+"doubled := b.transform(fn(n) { n * 3 });\n" +
+"isPos := b.transform(fn(n) { n > 0 });\n" +
+"evens := g.filterList([1, 2, 3, 4, 5, 6], fn(n) { n % 2 == 0 });\n" +
+"io.outputLine(doubled, isPos, list.length(evens), evens[0], evens[2]);\n";
+
+_w1 := file.writeText(libPath, libSrc);
+_w2 := file.writeText(midPath, midSrc);
+_w3 := file.writeText(appPath, appSrc);
+
+tsModComp := compilerTest.compileFile(tsComp, tmpDir.path, [appPath]);
+test.checkInt("cross-mod generics ts compile: " + tsModComp.stderr, 0, tsModComp.status);
+tsModRes := compilerTest.checkAndRunTs(root, tsModComp.stdout);
+test.checkInt("cross-mod generics ts status: " + tsModRes.stderr, 0, tsModRes.status);
+test.checkText("cross-mod generics ts stdout", "21 true 3 2 6\n", tsModRes.stdout);
+if ccInfo.available {
+    cModComp := compilerTest.compileFile(cComp, tmpDir.path, [appPath]);
+    test.checkInt("cross-mod generics c compile: " + cModComp.stderr, 0, cModComp.status);
+    cModRes := compilerTest.compileAndRunC(cModComp.stdout, ccInfo.cc, "");
+    test.checkInt("cross-mod generics c status: " + cModRes.stderr, 0, cModRes.status);
+    test.checkText("cross-mod generics c stdout parity", tsModRes.stdout, cModRes.stdout);
+}
+_rm := file.remove(tmpDir.path);
+
+/* 4. Rejections: bare generic fn value, conflicting bindings, uninferrable type param, invalid Set<T> key. */
+expectRejectBoth("bare-generic-value",
+"id := fn<T>(x: T): T { x };\n" +
+"f := id;\n",
+"cannot use generic function id as a value without calling it");
+
+expectRejectBoth("conflicting-type-bindings",
+"same := fn<T>(a: T, b: T): T { a };\n" +
+"x := same(1, \"two\");\n",
+"conflicting type bindings for T");
+
+expectRejectBoth("uninferrable-type-param",
+"empty := fn<T>(): List<T> { res: List<T> = []; res };\n" +
+"x := empty();\n",
+"cannot infer type parameter T");
+
+expectRejectBoth("invalid-set-elem-type",
+"asSet := fn<T>(x: T): Set<T> { s: mut Set<T>; s };\n" +
+"s := asSet([1, 2]);\n",
+"unsupported set element type");
+
+test.done("type-operations-generics");

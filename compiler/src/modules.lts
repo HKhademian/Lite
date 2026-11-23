@@ -6,6 +6,7 @@ textLib := import "core/text";
 collections := import "util/collections";
 tb := import "util/text-builder";
 frontend := import "./frontend.lts";
+generics := import "./generics.lts";
 hostFs := import "./host-fs.lts";
 /* Initial source graph traversal for the generated TypeScript compiler. */
 
@@ -543,15 +544,49 @@ coreModuleExports := fn(graph: frontend.Items, modPath: String): frontend.Items 
     importedExports
 }
 
-/** Re-parses verified core modules incrementally until every needed callee function body is present. */
+/** Splices compiled generic monomorphization items (grouped by `ITEM_KIND_MONO_OWNER` markers) right before their owning module's `ModuleEnd`. */
+spliceGenericItems := fn(graph: frontend.Items, monoItems: frontend.Items): frontend.Items {
+    if listLib.length(monoItems) == 0 { return graph; }
+    result: mut frontend.Items = [];
+    var currentModKey := "";
+    var insideMod := false;
+    loop graph as item {
+        if item.kind == frontend.ITEM_KIND_MODULE_START {
+            currentModKey = item.runtime;
+            insideMod = true;
+            listLib.pushBack(mut result, item);
+        } else if item.kind == frontend.ITEM_KIND_MODULE_END and insideMod {
+            var ownerMatches := false;
+            loop monoItems as mi {
+                if mi.kind == frontend.ITEM_KIND_MONO_OWNER {
+                    ownerMatches = mi.runtime == currentModKey;
+                } else if ownerMatches {
+                    listLib.pushBack(mut result, mi);
+                }
+            }
+            insideMod = false;
+            listLib.pushBack(mut result, item);
+        } else {
+            listLib.pushBack(mut result, item);
+        }
+    }
+    result
+}
+
+/** Re-parses verified core modules incrementally until every needed callee function body is present, and drains generic monomorphizations. */
 resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSpecs: List<String>): frontend.Items {
+    var graph := initialGraph;
+    allMonoItems: mut frontend.Items = [];
+    initMono := frontend.drainGenericInstances(target);
+    loop initMono as mi { listLib.pushBack(mut allMonoItems, mi); }
+
     metaPaths: mut List<String> = [];
     metaKeys: mut List<String> = [];
     metaDisplays: mut List<String> = [];
     metaIdentities: mut List<String> = [];
     metaSources: mut List<String> = [];
     var metaCount := 0;
-    loop initialGraph as item {
+    loop graph as item {
         if item.kind == frontend.ITEM_KIND_CORE_MODULE_META {
             listLib.pushBack(mut metaPaths, item.name);
             listLib.pushBack(mut metaKeys, item.runtime);
@@ -562,13 +597,16 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
             listLib.pushBack(mut metaSources, item.code);
         }
     }
-    if metaCount == 0 { return initialGraph; }
+    if metaCount == 0 { return spliceGenericItems(graph, allMonoItems); }
 
-    var graph := initialGraph;
     compiledFns: mut Set<String>;
     addCompiledFnsSet(graph, mut compiledFns);
     reachableTokens: mut Set<String>;
     scanTopLevelTokens(graph, mut reachableTokens);
+    addCompiledFnsSet(allMonoItems, mut compiledFns);
+    loop allMonoItems as mi {
+        if mi.kind =!= frontend.ITEM_KIND_MONO_OWNER { scanItemTokens(mi, mut reachableTokens); }
+    }
     scannedTokens: mut Set<String>;
     closeReachableTokens(graph, mut reachableTokens, mut scannedTokens);
     var coreGraph := collectCoreGraphSlice(graph, metaPaths);
@@ -595,6 +633,15 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
             }
             index = index + 1;
         }
+        moreMono := frontend.drainGenericInstances(target);
+        if listLib.length(moreMono) > 0 {
+            addCompiledFnsSet(moreMono, mut compiledFns);
+            loop moreMono as mi {
+                listLib.pushBack(mut allMonoItems, mi);
+                if mi.kind =!= frontend.ITEM_KIND_MONO_OWNER { scanItemTokens(mi, mut reachableTokens); }
+            }
+            anyReparsed = true;
+        }
         if not anyReparsed { break; }
         closeReachableTokens(coreGraph, mut reachableTokens, mut scannedTokens);
         if hasNewlyReachableToken(unscannedNonCore, reachableTokens, scannedTokens) {
@@ -602,7 +649,7 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
             unscannedNonCore = collectUnscannedNonCoreFns(graph, metaPaths, scannedTokens);
         }
     }
-    stripCoreMeta(graph)
+    stripCoreMeta(spliceGenericItems(graph, allMonoItems))
 }
 
 /** True if `path` already has a `ModuleLoaded` trace record in `graph`. */
@@ -635,6 +682,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
     isRoot := not hasVisited;
+    if isRoot { generics.resetAll(); }
     normPath := normalizeSlashes(path);
     rootDir := if isRoot { dirnameOfPath(normPath) } else { rootDirForGraph(initialGraph) };
     logical := logicalModuleName(rootDir, path, display);

@@ -11,6 +11,7 @@ optCfg := import "./opt-config.lts";
 builtinsAbi := import "./builtins-abi.lts";
 syntax := import "./frontend-syntax.lts";
 types := import "./frontend-types.lts";
+generics := import "./generics.lts";
 trace := import "./trace-safety.lts";
 reach := import "./reachability.lts";
 infer := import "./frontend-inference.lts";
@@ -137,6 +138,7 @@ pub ITEM_KIND_CORE_MODULE_SOURCE := ir.ITEM_KIND_CORE_MODULE_SOURCE;
 pub ITEM_KIND_CORE_MODULE_IMPORT := ir.ITEM_KIND_CORE_MODULE_IMPORT;
 pub ITEM_KIND_PUBLIC_FUNCTION := ir.ITEM_KIND_PUBLIC_FUNCTION;
 pub ITEM_KIND_PUBLIC_TYPE_OP := ir.ITEM_KIND_PUBLIC_TYPE_OP;
+pub ITEM_KIND_MONO_OWNER := ir.ITEM_KIND_MONO_OWNER;
 pub ITEM_KIND_PUBLIC_VALUE := ir.ITEM_KIND_PUBLIC_VALUE;
 pub ITEM_KIND_PUBLIC_TYPE := ir.ITEM_KIND_PUBLIC_TYPE;
 pub ITEM_KIND_PURE_GLOBAL := ir.ITEM_KIND_PURE_GLOBAL;
@@ -1118,16 +1120,23 @@ functionParams: List<String>, currentName: String, aliases: List<AliasDecl>): (c
     (code = conditionCode, rawCode = condition.code, openPos = openPos)
 };
 
-/** Parses complete source with selective function-body compilation and explicit `--builtin-mode` specs. */
-pub parseProgramWithModuleSelectiveSpecs := fn(target: String, source: String, prefix: String, exports: Items, moduleKey: String,
-moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs: List<String>): Items {
+/** Internal driver parsing either a complete module (`monoInstIdx < 0`) or one monomorphized generic instance body (`monoInstIdx >= 0`). */
+parseProgramWithModuleInternal := fn(target: String, sourceIn: String, prefixIn: String, exports: Items, moduleKeyIn: String,
+moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs: List<String>, monoInstIdx: Int): Items {
     sym.resetModule();
-    size := textLib.length(source);
-    var position := skipTrivia(source, 0, prefix);
+    var source := sourceIn;
+    var prefix := prefixIn;
+    var moduleKey := moduleKeyIn;
+    var moduleIdentity := moduleIdentityIn;
+    var size := textLib.length(source);
+    var position := 0;
     var items: mut Items = [];
-    if position == size { return items; }
+    if monoInstIdx < 0 {
+        position = skipTrivia(source, 0, prefix);
+        if position == size { return items; }
+    }
     neededFnSet: mut Set<String>;
-    if neededFns =!= "*" {
+    if monoInstIdx < 0 and neededFns =!= "*" {
         nfLen := textLib.length(neededFns);
         var nfPos := 0;
         loop nfPos < nfLen {
@@ -1143,10 +1152,27 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
         }
     }
     var builtinRules: Items = [];
-    if skipSoftBuiltins and target == TARGET_TS and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
+    if monoInstIdx < 0 and skipSoftBuiltins and target == TARGET_TS and textLib.startsWithAt(moduleIdentity, 0, "lite.core.") {
         builtinRules = parseBuiltinModeSpecs(prefix, builtinSpecs);
     }
     var aliases: mut List<AliasDecl> = [];
+    publishedFunctions: mut Set<String>;
+    publishedTypeOps: mut Set<String>;
+    publishedValues: mut Set<String>;
+    publishedTypes: mut Set<String>;
+    var hasInnerAlias := monoInstIdx >= 0;
+    var hasInnerFn := monoInstIdx >= 0;
+    rootAssignedNames: mut Set<String>;
+    var locals: mut List<Local> = [];
+    var blockDecls: mut List<BlockDecl> = [];
+    var blockAssignedDecls: mut List<BlockDecl> = [];
+    blocks: mut List<String> = [];
+    functions: mut List<FunctionInfo> = [];
+    functionParams: mut List<String> = [];
+    declaredImportAliases: mut Set<String>;
+    var parameterTotal := 0;
+    var futureValues: List<FutureValue> = [];
+    if monoInstIdx < 0 {
     loop exports as exported {
         if exported.kind == ITEM_KIND_PUBLIC_TYPE {
             listLib.pushBack(mut aliases, (name = exported.name, target = exported.code, at = -1, end = 0, depth = 0));
@@ -1156,13 +1182,6 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
         }
     }
     decls := collectModuleDecls(target, source, prefix, moduleKey);
-    publishedFunctions: mut Set<String>;
-    publishedTypeOps: mut Set<String>;
-    publishedValues: mut Set<String>;
-    publishedTypes: mut Set<String>;
-    var hasInnerAlias := false;
-    var hasInnerFn := false;
-    rootAssignedNames: mut Set<String>;
     loop decls as decl {
         if decl.kind == DECL_KIND_ALIAS {
             endPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
@@ -1183,17 +1202,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             setLib.add(mut rootAssignedNames, decl.name);
         }
     }
-    var locals: mut List<Local> = [];
-    var blockDecls: mut List<BlockDecl> = [];
-    var blockAssignedDecls: mut List<BlockDecl> = [];
     loop rootAssignedNames as rootAssigned {
         listLib.pushBack(mut blockAssignedDecls, (name = rootAssigned, depth = 0));
     }
-    blocks: mut List<String> = [];
-    functions: mut List<FunctionInfo> = [];
-    functionParams: mut List<String> = [];
-    declaredImportAliases: mut Set<String>;
-    var parameterTotal := 0;
     loop exports as exported {
         if exported.kind == ITEM_KIND_MODULE_ALIAS {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
@@ -1282,8 +1293,22 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                                     parameterTotal = parameterTotal + 1;
                                 }
                             }
-                        } else if header.count >= 0 and header.genericType == "" and afterHdr < size and textLib.at(source, afterHdr) == "{" {
-                            fnRuntime := moduleFunctionRuntime(target, moduleKey, fnName);
+                        } else if header.count >= 0 and afterHdr < size and textLib.at(source, afterHdr) == "{" {
+                            var fnRuntime := moduleFunctionRuntime(target, moduleKey, fnName);
+                            if header.genericType =!= "" {
+                                tplKey := moduleKey + "#" + fnName;
+                                fnRuntime = "$gen:" + tplKey;
+                                bodyEnd := skipBraceBlock(source, afterHdr + 1, prefix);
+                                generics.registerTemplate((
+                                    key = tplKey, qualName = fnName, typeOpKey = "",
+                                    moduleKey = moduleKey, moduleIdentity = moduleIdentity,
+                                    prefix = prefix, source = source,
+                                    bodyStart = afterHdr + 1, bodyEnd = bodyEnd, declAt = fnAt,
+                                    genericParams = header.genericType, params = header.params,
+                                    paramCount = header.count, result = header.result,
+                                    selfTarget = "", isPub = setLib.has(publishedFunctions, fnName)
+                                ));
+                            }
                             listLib.pushBack(mut functions, (name = fnName, runtime = fnRuntime, result = header.result,
                             first = parameterTotal, count = header.count, declAt = fnAt));
                             loop splitPipeEntries(header.params, header.count) as hp {
@@ -1307,7 +1332,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     if findFunction(functions, typeOpKey) < 0 {
                         headerPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
                         scopedSelf := types.withSelfAlias(aliases, owner.selfTarget, 0);
-                        if canPreParseFunctionHeader(source, headerPos, prefix, scopedSelf, owner.isGenericOwner) {
+                        if canPreParseFunctionHeader(source, headerPos, prefix, scopedSelf, false) {
                             header := types.parseTypeOpHeader(source, headerPos, prefix, aliases, tName, oName, owner.selfTarget, owner.ownerKey, owner.isGenericOwner);
                             afterHdr := skipTrivia(source, header.next, prefix);
                             if afterHdr < size and textLib.at(source, afterHdr) == ";" {
@@ -1320,8 +1345,22 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                                         parameterTotal = parameterTotal + 1;
                                     }
                                 }
-                            } else if header.count >= 1 and header.genericType == "" and afterHdr < size and textLib.at(source, afterHdr) == "{" {
-                                fnRuntime := moduleFunctionRuntime(target, moduleKey, qualName);
+                            } else if header.count >= 1 and afterHdr < size and textLib.at(source, afterHdr) == "{" {
+                                var fnRuntime := moduleFunctionRuntime(target, moduleKey, qualName);
+                                if header.genericType =!= "" {
+                                    tplKey := moduleKey + "#" + qualName;
+                                    fnRuntime = "$gen:" + tplKey;
+                                    bodyEnd := skipBraceBlock(source, afterHdr + 1, prefix);
+                                    generics.registerTemplate((
+                                        key = tplKey, qualName = qualName, typeOpKey = typeOpKey,
+                                        moduleKey = moduleKey, moduleIdentity = moduleIdentity,
+                                        prefix = prefix, source = source,
+                                        bodyStart = afterHdr + 1, bodyEnd = bodyEnd, declAt = opAt,
+                                        genericParams = header.genericType, params = header.params,
+                                        paramCount = header.count, result = header.result,
+                                        selfTarget = owner.selfTarget, isPub = setLib.has(publishedTypeOps, qualName)
+                                    ));
+                                }
                                 listLib.pushBack(mut functions, (name = typeOpKey, runtime = fnRuntime, result = header.result,
                                 first = parameterTotal, count = header.count, declAt = opAt));
                                 loop splitPipeEntries(header.params, header.count) as hp {
@@ -1339,7 +1378,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     loop rootAssignedNames as rootAssigned {
         rootAssignedBag = appendPipeBag(rootAssignedBag, rootAssigned);
     }
-    futureValues := infer.resolveFutureDecls(target, source, prefix, moduleKey, true, decls, rootAssignedBag, aliases, functions, functionParams, locals);
+    futureValues = infer.resolveFutureDecls(target, source, prefix, moduleKey, true, decls, rootAssignedBag, aliases, functions, functionParams, locals);
     var placeholderNamesBag := "";
     loop futureValues as future {
         if localIndex(locals, future.name) < 0 and findFunction(functions, future.name) < 0 and
@@ -1350,13 +1389,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             intValue = 0, textValue = "", initState = future.initState));
         }
     }
+    }
     var maxFutureAt := -1;
-    loop functions as info {
-        if info.declAt > maxFutureAt { maxFutureAt = info.declAt; }
-    }
-    loop futureValues as future {
-        if future.at > maxFutureAt { maxFutureAt = future.at; }
-    }
     var blockCount := 0;
     var depth := 0;
     var currentName := "";
@@ -1385,7 +1419,120 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     var locLine := 1;
     var locLineStart := 0;
     var lastEmittedLocLine := 0;
-    rootComments := if moduleKey == "" { syntax.scanRootComments(source, prefix) } else { syntax.scanRootComments("", prefix) };
+    if monoInstIdx >= 0 {
+        inst := generics.getInstance(monoInstIdx);
+        tpl := generics.getTemplate(generics.findTemplate(inst.templateKey));
+        envIdx := generics.findModuleEnv(tpl.moduleKey);
+        source = tpl.source;
+        prefix = tpl.prefix;
+        moduleKey = tpl.moduleKey;
+        moduleIdentity = tpl.moduleIdentity;
+        size = tpl.bodyEnd;
+        position = skipTrivia(source, tpl.bodyStart, prefix);
+        if envIdx >= 0 {
+            rng := generics.getModuleEnvRange(envIdx);
+            var ei := 0;
+            loop ei < rng.localsCount {
+                listLib.pushBack(mut locals, generics.getEnvLocal(rng.localsStart + ei));
+                ei = ei + 1;
+            }
+            ei = 0;
+            loop ei < rng.fnsCount {
+                listLib.pushBack(mut functions, generics.getEnvFunction(rng.fnsStart + ei));
+                ei = ei + 1;
+            }
+            ei = 0;
+            loop ei < rng.paramsCount {
+                listLib.pushBack(mut functionParams, generics.getEnvFnParam(rng.paramsStart + ei));
+                parameterTotal = parameterTotal + 1;
+                ei = ei + 1;
+            }
+            ei = 0;
+            loop ei < rng.aliasesCount {
+                listLib.pushBack(mut aliases, generics.getEnvAlias(rng.aliasesStart + ei));
+                ei = ei + 1;
+            }
+            fvCopy: mut List<FutureValue> = [];
+            ei = 0;
+            loop ei < rng.futuresCount {
+                listLib.pushBack(mut fvCopy, generics.getEnvFuture(rng.futuresStart + ei));
+                ei = ei + 1;
+            }
+            futureValues = fvCopy;
+            ei = 0;
+            loop ei < rng.assignedCount {
+                ra := generics.getEnvAssigned(rng.assignedStart + ei);
+                setLib.add(mut rootAssignedNames, ra);
+                listLib.pushBack(mut blockAssignedDecls, (name = ra, depth = 0));
+                ei = ei + 1;
+            }
+        }
+        monoSelfName := "$mono:" + inst.runtime;
+        monoFirst := parameterTotal;
+        loop splitPipeEntries(inst.substParams, tpl.paramCount) as sp {
+            listLib.pushBack(mut functionParams, sp);
+            parameterTotal = parameterTotal + 1;
+        }
+        listLib.pushBack(mut functions, (name = monoSelfName, runtime = inst.runtime, result = inst.substResult,
+        first = monoFirst, count = tpl.paramCount, declAt = tpl.declAt));
+        listLib.pushBack(mut items, (kind = ITEM_KIND_FUNCTION_START, name = tpl.qualName, runtime = inst.runtime,
+        code = inst.substResult, intValue = tpl.paramCount, textValue = inst.substParams));
+        fnTryId := nextStmtCtxId;
+        nextStmtCtxId = nextStmtCtxId + 1;
+        if target == TARGET_TS {
+            fnTryKey = moduleKey + "#mono#" + integer.intText(fnTryId);
+            fnTransferStart = transferCount;
+            listLib.pushBack(mut items, (kind = ITEM_KIND_TRANSFER_TRY, name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
+        }
+        listLib.pushBack(mut stmtCtxs, (id = 0, tag = "", kind = CTX_KIND_FN, phase = CTX_PHASE_BODY,
+        iifeDepth = 0, valKind = inst.substResult, valVar = "", label = "",
+        iterLabel = "1", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
+        fnPreLocalsLen := localsCount(locals);
+        upgradedMonoLocals := upgradeRootUninitLocalsForFn(locals, rootAssignedNames, futureValues, functions, tpl.declAt);
+        locals = [];
+        loop upgradedMonoLocals as upg { listLib.pushBack(mut locals, upg); }
+        var fnParamSeedBag := "";
+        loop splitPipeEntries(inst.substParams, tpl.paramCount) as entry {
+            parameterName := paramNameOf(entry);
+            rawParamKind := paramKindOf(entry);
+            isMutParam := textLib.startsWithAt(rawParamKind, 0, "mut ");
+            parameterKind := if isMutParam { textLib.slice(rawParamKind, 4, textLib.length(rawParamKind)) } else { rawParamKind };
+            runtime := if isMutParam and target == TARGET_C { "(*lite_" + parameterName + ")" }
+            else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + parameterName + ".v" }
+            else { "lite_" + parameterName };
+            fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
+            listLib.pushBack(mut blockDecls, (name = parameterName, depth = 1));
+            listLib.pushBack(mut locals, (name = parameterName, runtime = runtime, kind = parameterKind,
+            mutable = false, writable = isMutParam, depth = 1, constant = false, code = runtime,
+            intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+        }
+        currentName = monoSelfName;
+        currentFnRuntime = inst.runtime;
+        currentResult = inst.substResult;
+        listLib.pushBack(mut savedStates, (returned = false, stopped = false,
+        branchesReturned = true, branchesStopped = true, hasElse = false, loopForever = false, live = true,
+        preLocalsLen = fnPreLocalsLen, liveBranchCount = 0));
+        listLib.pushBack(mut blocks, BLOCK_KIND_FUNCTION);
+        blockCount = 1;
+        depth = 1;
+        if tpl.selfTarget =!= "" {
+            aliases = types.withSelfAlias(aliases, tpl.selfTarget, 1);
+        }
+        loop generics.decodeBindings(inst.bindingsEncoded) as b {
+            listLib.pushBack(mut aliases, (name = b.name, target = "$Kind:" + b.kind, at = tpl.declAt, end = tpl.declAt, depth = 1));
+        }
+        fnOpenBrace := tpl.bodyStart - 1;
+        fnAssignedBag := scanInnerBlockAssignedBag(target, source, fnOpenBrace, prefix, fnParamSeedBag);
+        blockAssignedDecls = appendAssignedBagDecls(fnAssignedBag, blockAssignedDecls, depth);
+        locals = appendBlockFutureLocals(target, source, fnOpenBrace, prefix, depth, fnParamSeedBag, fnAssignedBag, aliases, functions, functionParams, locals);
+    }
+    loop functions as info {
+        if info.declAt > maxFutureAt { maxFutureAt = info.declAt; }
+    }
+    loop futureValues as future {
+        if future.at > maxFutureAt { maxFutureAt = future.at; }
+    }
+    rootComments := if monoInstIdx < 0 and moduleKey == "" { syntax.scanRootComments(source, prefix) } else { syntax.scanRootComments("", prefix) };
     rootCommentCount := listLib.length(rootComments);
     var rootCommentIdx := 0;
     loop position < size {
@@ -1666,6 +1813,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             currentLive = parent.live;
             droppedBlock := listLib.popBack(mut blocks);
             blockCount = blockCount - 1;
+            if monoInstIdx >= 0 and blockCount == 0 { break; }
             position = skipTrivia(source, closeBracePos + 1, prefix);
             if position < size and textLib.at(source, position) == ";" {
                 position = skipTrivia(source, position + 1, prefix);
@@ -3033,7 +3181,40 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         continue;
                     }
                     if header.genericType =!= "" {
-                        failAt(source, nameStart, prefix, "generic function bodies are not supported yet");
+                        position = expectSymbol(source, position, "{", prefix);
+                        bodyStart := position;
+                        bodyEnd := skipBraceBlock(source, bodyStart, prefix);
+                        tplKey := moduleKey + "#" + qualName;
+                        genRuntime := "$gen:" + tplKey;
+                        isPubOp := setLib.has(publishedTypeOps, qualName);
+                        generics.registerTemplate((
+                            key = tplKey, qualName = qualName, typeOpKey = typeOpKey,
+                            moduleKey = moduleKey, moduleIdentity = moduleIdentity,
+                            prefix = prefix, source = source,
+                            bodyStart = bodyStart, bodyEnd = bodyEnd, declAt = nameStart,
+                            genericParams = header.genericType, params = header.params,
+                            paramCount = header.count, result = header.result,
+                            selfTarget = owner.selfTarget, isPub = isPubOp
+                        ));
+                        if not wasPreRegisteredOp {
+                            listLib.pushBack(mut functions, (name = typeOpKey, runtime = genRuntime, result = header.result,
+                            first = parameterTotal, count = header.count, declAt = nameStart));
+                            loop splitPipeEntries(header.params, header.count) as gp {
+                                listLib.pushBack(mut functionParams, gp);
+                                parameterTotal = parameterTotal + 1;
+                            }
+                        }
+                        if isPubOp {
+                            listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_TYPE_OP, name = typeOpKey, runtime = genRuntime, code = header.result,
+                            intValue = header.count, textValue = header.params));
+                            listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_FUNCTION, name = qualName, runtime = genRuntime, code = header.result,
+                            intValue = header.count, textValue = header.params));
+                        }
+                        position = skipTrivia(source, bodyEnd, prefix);
+                        if position < size and textLib.at(source, position) == ";" {
+                            position = skipTrivia(source, position + 1, prefix);
+                        }
+                        continue;
                     }
                     position = expectSymbol(source, position, "{", prefix);
                     fnOpenBrace := position - 1;
@@ -3195,7 +3376,38 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     failAt(source, nameStart, prefix, "variadic parameters are reserved for registered core host declarations");
                 }
                 if header.genericType =!= "" {
-                    failAt(source, nameStart, prefix, "generic function bodies are not supported");
+                    position = expectSymbol(source, position, "{", prefix);
+                    bodyStart := position;
+                    bodyEnd := skipBraceBlock(source, bodyStart, prefix);
+                    tplKey := moduleKey + "#" + name;
+                    genRuntime := "$gen:" + tplKey;
+                    isPubFn := setLib.has(publishedFunctions, name);
+                    generics.registerTemplate((
+                        key = tplKey, qualName = name, typeOpKey = "",
+                        moduleKey = moduleKey, moduleIdentity = moduleIdentity,
+                        prefix = prefix, source = source,
+                        bodyStart = bodyStart, bodyEnd = bodyEnd, declAt = nameStart,
+                        genericParams = header.genericType, params = header.params,
+                        paramCount = header.count, result = header.result,
+                        selfTarget = "", isPub = isPubFn
+                    ));
+                    if not wasPreRegistered {
+                        listLib.pushBack(mut functions, (name = name, runtime = genRuntime, result = header.result,
+                        first = parameterTotal, count = header.count, declAt = nameStart));
+                        loop splitPipeEntries(header.params, header.count) as gp {
+                            listLib.pushBack(mut functionParams, gp);
+                            parameterTotal = parameterTotal + 1;
+                        }
+                    }
+                    if isPubFn {
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_FUNCTION, name = name, runtime = genRuntime, code = header.result,
+                        intValue = header.count, textValue = header.params));
+                    }
+                    position = skipTrivia(source, bodyEnd, prefix);
+                    if position < size and textLib.at(source, position) == ";" {
+                        position = skipTrivia(source, position + 1, prefix);
+                    }
+                    continue;
                 }
                 position = expectSymbol(source, position, "{", prefix);
                 fnOpenBrace := position - 1;
@@ -3748,10 +3960,43 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     if blockCount > 0 {
         failAt(source, size, prefix, "expected } before end of source");
     }
-    if currentStopped {
-        listLib.pushBack(mut items, (kind = ITEM_KIND_MAIN_STOP, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+    if monoInstIdx < 0 {
+        if currentStopped {
+            listLib.pushBack(mut items, (kind = ITEM_KIND_MAIN_STOP, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+        }
+        rootAssignedList: mut List<String> = [];
+        loop rootAssignedNames as ra { listLib.pushBack(mut rootAssignedList, ra); }
+        generics.saveModuleEnv(moduleKey, locals, functions, functionParams, aliases, futureValues, rootAssignedList);
     }
     items
+}
+
+/** Parses complete source with selective function-body compilation and explicit `--builtin-mode` specs. */
+pub parseProgramWithModuleSelectiveSpecs := fn(target: String, source: String, prefix: String, exports: Items, moduleKey: String,
+moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs: List<String>): Items {
+    parseProgramWithModuleInternal(target, source, prefix, exports, moduleKey, moduleIdentity, neededFns, skipSoftBuiltins, builtinSpecs, -1)
+}
+
+/** Compiles one queued generic monomorphization instance into ordinary function IR items. */
+pub compileGenericInstance := fn(target: String, instIdx: Int): Items {
+    emptyExports: Items = [];
+    emptySpecs: List<String> = [];
+    parseProgramWithModuleInternal(target, "", "", emptyExports, "", "", "*", false, emptySpecs, instIdx)
+}
+
+/** Drains all pending generic monomorphizations to fixed point, returning flat items grouped by `ITEM_KIND_MONO_OWNER` markers. */
+pub drainGenericInstances := fn(target: String): Items {
+    out: mut Items = [];
+    loop true {
+        nextIdx := generics.nextUncompiledInstanceIndex();
+        if nextIdx < 0 { break; }
+        generics.markInstanceCompiled(nextIdx);
+        inst := generics.getInstance(nextIdx);
+        compiledItems := compileGenericInstance(target, nextIdx);
+        listLib.pushBack(mut out, (kind = ITEM_KIND_MONO_OWNER, name = "", runtime = inst.moduleKey, code = "", intValue = 0, textValue = ""));
+        loop compiledItems as ci { listLib.pushBack(mut out, ci); }
+    }
+    out
 }
 
 /** Parses complete source with selective function-body compilation (`neededFns = "*"` compiles every function). */
@@ -3781,7 +4026,16 @@ pub parseProgramWithExports := fn(target: String, source: String, prefix: String
 
 /** Parses one source without imported public symbols. */
 pub parseProgram := fn(target: String, source: String, prefix: String): Items {
-    parseProgramWithModule(target, source, prefix, [], "", "")
+    generics.resetAll();
+    base := parseProgramWithModule(target, source, prefix, [], "", "");
+    monoItems := drainGenericInstances(target);
+    if listLib.length(monoItems) == 0 { return base; }
+    out: mut Items = [];
+    loop base as item { listLib.pushBack(mut out, item); }
+    loop monoItems as mi {
+        if mi.kind =!= ITEM_KIND_MONO_OWNER { listLib.pushBack(mut out, mi); }
+    }
+    out
 }
 
 /** Encodes all line-start character offsets once for positioned runtime arithmetic faults. */

@@ -1702,6 +1702,9 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             unsupportedAliasTarget(errSource, alias.at, prefix, "target");
             return (kind = "", next = after);
         }
+        if textLib.startsWithAt(alias.target, 0, "$Kind:") {
+            return (kind = textLib.slice(alias.target, 6, textLib.length(alias.target)), next = after);
+        }
         nextSeen: mut List<String> = seen;
         listLib.pushBack(mut nextSeen, seenKey);
         scopedAliases := aliasesUpToDepth(aliases, alias.depth);
@@ -1774,6 +1777,27 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
             cursor = syntax.expectSymbol(source, binder.next, ">", prefix);
         }
         cursor = syntax.skipTrivia(source, cursor, prefix);
+    } else if cursor < size and textLib.at(source, cursor) == "<" {
+        cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+        if cursor >= size or textLib.at(source, cursor) == ">" {
+            syntax.failAt(source, cursor, prefix, "expected at least one type parameter inside <...>");
+        }
+        loop true {
+            binderStart := cursor;
+            binder := typeNameAt(source, binderStart, prefix);
+            if isGenericParamName(genericType, binder.name) {
+                syntax.failAt(source, binderStart, prefix, "duplicate type parameter " + binder.name);
+            }
+            genericType = if genericType == "" { binder.name } else { genericType + "," + binder.name };
+            cursor = syntax.skipTrivia(source, binder.next, prefix);
+            if cursor < size and textLib.at(source, cursor) == "," {
+                cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            } else {
+                break;
+            }
+        }
+        cursor = syntax.expectSymbol(source, cursor, ">", prefix);
+        cursor = syntax.skipTrivia(source, cursor, prefix);
     }
     cursor = syntax.expectSymbol(source, cursor, "(", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
@@ -1815,7 +1839,7 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
                 cursor = syntax.skipTrivia(source, cursor + 3, prefix);
             }
             typed := parseFunctionType(source, cursor, prefix, aliases, genericType);
-            if access =!= "" and not listIntrinsic and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) and not isRecordKind(typed.kind) {
+            if access =!= "" and not listIntrinsic and not isGenericParamName(genericType, typed.kind) and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) and not isRecordKind(typed.kind) {
                 syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
             }
             cursor = syntax.skipTrivia(source, typed.next, prefix);
@@ -1935,7 +1959,7 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
                 syntax.failAt(source, typeStart, prefix, "receiver parameter of " + typeName + "." + opName + " must match " + typeName + ", got " + displayKind(typed.kind));
             }
         }
-        if access =!= "" and not isGenericOwner and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) and not isRecordKind(typed.kind) {
+        if access =!= "" and not isGenericOwner and not isGenericParamName(genericType, typed.kind) and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) and not isRecordKind(typed.kind) {
             syntax.failAt(source, typeStart, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
         }
         cursor = syntax.skipTrivia(source, typed.next, prefix);
@@ -2800,6 +2824,9 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
     if listLib.listContainsText(seen, seenKey) or alias.target == "" {
         return (ok = false, kind = "", next = afterName);
     }
+    if textLib.startsWithAt(alias.target, 0, "$Kind:") {
+        return (ok = true, kind = textLib.slice(alias.target, 6, textLib.length(alias.target)), next = afterName);
+    }
     nextSeen: mut List<String> = [];
     loop seen as entry { listLib.pushBack(mut nextSeen, entry); }
     listLib.pushBack(mut nextSeen, seenKey);
@@ -2828,26 +2855,45 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
     var cursor := syntax.skipTrivia(source, position, prefix);
     var genericType := "";
     if cursor < size and textLib.at(source, cursor) == "<" {
-        if not listIntrinsic { return false; }
-        binderStart := syntax.skipTrivia(source, cursor + 1, prefix);
-        if binderStart >= size or not textLib.isNameStart(textLib.at(source, binderStart)) { return false; }
-        binderEnd := textLib.skipName(source, binderStart);
-        binder := textLib.slice(source, binderStart, binderEnd);
-        afterBinder := syntax.skipTrivia(source, binderEnd, prefix);
-        if binder == "K" and afterBinder < size and textLib.at(source, afterBinder) == "," {
-            sStart := syntax.skipTrivia(source, afterBinder + 1, prefix);
-            if sStart >= size or not textLib.isNameStart(textLib.at(source, sStart)) { return false; }
-            sEnd := textLib.skipName(source, sStart);
-            if textLib.slice(source, sStart, sEnd) =!= "V" { return false; }
-            afterSecond := syntax.skipTrivia(source, sEnd, prefix);
-            if afterSecond >= size or textLib.at(source, afterSecond) =!= ">" { return false; }
-            genericType = "K,V";
-            cursor = syntax.skipTrivia(source, afterSecond + 1, prefix);
+        if listIntrinsic {
+            binderStart := syntax.skipTrivia(source, cursor + 1, prefix);
+            if binderStart >= size or not textLib.isNameStart(textLib.at(source, binderStart)) { return false; }
+            binderEnd := textLib.skipName(source, binderStart);
+            binder := textLib.slice(source, binderStart, binderEnd);
+            afterBinder := syntax.skipTrivia(source, binderEnd, prefix);
+            if binder == "K" and afterBinder < size and textLib.at(source, afterBinder) == "," {
+                sStart := syntax.skipTrivia(source, afterBinder + 1, prefix);
+                if sStart >= size or not textLib.isNameStart(textLib.at(source, sStart)) { return false; }
+                sEnd := textLib.skipName(source, sStart);
+                if textLib.slice(source, sStart, sEnd) =!= "V" { return false; }
+                afterSecond := syntax.skipTrivia(source, sEnd, prefix);
+                if afterSecond >= size or textLib.at(source, afterSecond) =!= ">" { return false; }
+                genericType = "K,V";
+                cursor = syntax.skipTrivia(source, afterSecond + 1, prefix);
+            } else {
+                if binder =!= "T" { return false; }
+                if afterBinder >= size or textLib.at(source, afterBinder) =!= ">" { return false; }
+                genericType = "T";
+                cursor = syntax.skipTrivia(source, afterBinder + 1, prefix);
+            }
         } else {
-            if binder =!= "T" { return false; }
-            if afterBinder >= size or textLib.at(source, afterBinder) =!= ">" { return false; }
-            genericType = "T";
-            cursor = syntax.skipTrivia(source, afterBinder + 1, prefix);
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            if cursor >= size or textLib.at(source, cursor) == ">" { return false; }
+            loop true {
+                if cursor >= size or not textLib.isNameStart(textLib.at(source, cursor)) { return false; }
+                bEnd := textLib.skipName(source, cursor);
+                bName := textLib.slice(source, cursor, bEnd);
+                if syntax.isReservedWord(bName) or isGenericParamName(genericType, bName) { return false; }
+                genericType = if genericType == "" { bName } else { genericType + "," + bName };
+                cursor = syntax.skipTrivia(source, bEnd, prefix);
+                if cursor < size and textLib.at(source, cursor) == "," {
+                    cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+                } else {
+                    break;
+                }
+            }
+            if cursor >= size or textLib.at(source, cursor) =!= ">" { return false; }
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
         }
     }
     if cursor >= size or textLib.at(source, cursor) =!= "(" { return false; }
@@ -2885,7 +2931,7 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
         }
         pType := canResolveTypeAt(source, cursor, prefix, aliases, genericType, emptySeen, 32);
         if not pType.ok { return false; }
-        if isMutP and not listIntrinsic and not isListKind(pType.kind) and not isMapKind(pType.kind) and not isSetKind(pType.kind) and not isRecordKind(pType.kind) {
+        if isMutP and not listIntrinsic and not isGenericParamName(genericType, pType.kind) and not isListKind(pType.kind) and not isMapKind(pType.kind) and not isSetKind(pType.kind) and not isRecordKind(pType.kind) {
             return false;
         }
         paramCount = paramCount + 1;
