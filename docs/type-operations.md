@@ -18,7 +18,7 @@ Type-attached operations reuse LiteLang's uniform binding syntax (`:= fn`) and s
 }
 ```
 
-**Receiver type rule (selected for now):** the first parameter is the receiver and **must explicitly have `Self` type** (`Self` or `mut Self`, parameterized as `Self<...>` for generic type families). Omitted receiver types, bare `Self` on a generic type family, and unrelated/non-`Self` receiver parameter types are rejected for now. `Self` refers directly to the attached `TypeName`, obeying the same explicit parameterization and `name: mut Type` placement rules as ordinary type names ([mut qualifier placement](lite://doc/mut-qualifier-placement)).
+**Receiver type rule (selected for now):** a receiver first parameter with the matching `Self` type is **strictly required** (`Self` or `mut Self`, parameterized as `Self<...>` for generic type families). Missing/receiverless signatures, omitted receiver types, bare `Self` on a generic type family, and unrelated/non-`Self` receiver parameter types are rejected for now. `Self` refers directly to the attached `TypeName`, obeying the same explicit parameterization and `name: mut Type` placement rules as ordinary type names ([mut qualifier placement](lite://doc/mut-qualifier-placement)).
 
 ### Non-generic nominal types
 
@@ -73,11 +73,11 @@ Because the receiver binding is an ordinary named first parameter (`v`, `a`, `it
 
 An attached operation is an ordinary function in `TypeName`'s namespace:
 
-- **Dot call:** `p.add(q)` resolves statically to `Vec2.add(p, q)`.
+- **Dot call:** `p.add(q)` resolves statically to `Vec2.add(p, q)` only when `p`'s type satisfies the receiver's `Self` / `Self<...>` contract (for example, calling `names.sum()` on `List<String>` when `List.sum` requires `Self<Int>` is a compile-time error).
 - **Type-qualified call:** `Vec2.add(p, q)` calls the same symbol explicitly.
 - **Unbound function value:** `Vec2.add` denotes an ordinary function value of type `fn(Vec2, Vec2): Vec2` with no hidden bound-method closure allocation.
 - **No field shadowing:** declaring a type-attached operation with the same name as a field of that type is a compile-time error.
-- **One symbol per `TypeName.op`:** each `TypeName.op` is a single unique binding in `TypeName`'s namespace; ad-hoc overloading by specialization on the same name is not selected. Polymorphism across multiple types belongs to future generic constraints and [interfaces](lite://doc/composition-and-interfaces).
+- **No overloading yet (one symbol per `TypeName.op`):** LiteLang has no function or operation overloading yet. Each `TypeName.op` is a single unique binding in `TypeName`'s namespace — declaring two operations with the same name on the same type family (such as `List.sum` for `Self<Int>` and `List.sum` for `Self<Float>`) is rejected. Future overloading, generic constraints, and [interfaces](lite://doc/composition-and-interfaces) remain separate later design decisions.
 
 ## Ownership and visibility
 
