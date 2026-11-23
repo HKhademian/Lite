@@ -418,6 +418,8 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
 
   const consoleState = {
     running: false,
+    showRunningControls: false,
+    runningUiTimer: 0,
     waitingStdin: false,
     history: [],
     historyIdx: -1,
@@ -459,10 +461,28 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     if (consoleEl) consoleEl.scrollTop = consoleEl.scrollHeight;
   }
 
+  function setConsoleRunning(next) {
+    if (consoleState.runningUiTimer) {
+      window.clearTimeout(consoleState.runningUiTimer);
+      consoleState.runningUiTimer = 0;
+    }
+    consoleState.running = Boolean(next);
+    consoleState.showRunningControls = false;
+    if (consoleState.running) {
+      consoleState.runningUiTimer = window.setTimeout(() => {
+        consoleState.runningUiTimer = 0;
+        if (consoleState.running) {
+          consoleState.showRunningControls = true;
+          syncConsolePromptUi();
+        }
+      }, 250);
+    }
+  }
+
   function syncConsolePromptUi() {
     if (!consoleInputRow || !consoleInputEl || !consolePromptEl || !consoleGhostEl) return;
-    const busyNoWait = consoleState.running && !consoleState.waitingStdin;
-    consoleInputRow.hidden = busyNoWait;
+    const showBusyControls = consoleState.running && consoleState.showRunningControls;
+    consoleInputRow.hidden = showBusyControls && !consoleState.waitingStdin;
     consoleInputRow.classList.toggle("is-waiting", consoleState.waitingStdin);
     consolePromptEl.textContent = consoleState.waitingStdin ? ">" : "$";
     if (consoleHintEl) {
@@ -473,10 +493,10 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         consoleHintEl.hidden = true;
       }
     }
-    const showGhost = !consoleState.waitingStdin && !consoleState.running && consoleInputEl.value === "" && Boolean(consoleState.lastCommand);
+    const showGhost = !consoleState.waitingStdin && !showBusyControls && consoleInputEl.value === "" && Boolean(consoleState.lastCommand);
     consoleGhostEl.textContent = showGhost ? consoleState.lastCommand : "";
     if (eofBtn) eofBtn.hidden = !(activeTab === "console" && consoleState.waitingStdin);
-    if (killBtn) killBtn.hidden = !(activeTab === "console" && (consoleState.running || consoleState.waitingStdin));
+    if (killBtn) killBtn.hidden = !(activeTab === "console" && (showBusyControls || consoleState.waitingStdin));
     if (clearConsoleBtn) clearConsoleBtn.hidden = activeTab !== "console";
   }
 
@@ -905,7 +925,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       } catch {}
     }
     workerClient.terminate();
-    consoleState.running = false;
+    setConsoleRunning(false);
     consoleState.waitingStdin = false;
     consoleState.sharedCtrl = null;
     consoleState.sharedData = null;
@@ -969,7 +989,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
 
   async function continueFallbackSession(sess, stdinClosed) {
     const runId = ++consoleState.activeRunId;
-    consoleState.running = true;
+    setConsoleRunning(true);
     syncConsolePromptUi();
     try {
       const res = await workerClient.call("play", {
@@ -994,7 +1014,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       sess.printedStderrLen = fullErr.length;
 
       if (res.needsStdin && !stdinClosed) {
-        consoleState.running = false;
+        setConsoleRunning(false);
         consoleState.waitingStdin = true;
         statusEl.textContent = "Waiting for input...";
         syncConsolePromptUi();
@@ -1002,13 +1022,13 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         return;
       }
 
-      consoleState.running = false;
+      setConsoleRunning(false);
       consoleState.waitingStdin = false;
       consoleState.fallbackSession = null;
       finalizePlayResult(res, sess.optLevel, sess.source, true);
     } catch (err) {
       if (runId !== consoleState.activeRunId) return;
-      consoleState.running = false;
+      setConsoleRunning(false);
       consoleState.waitingStdin = false;
       consoleState.fallbackSession = null;
       appendConsoleSpan("stderr", (err instanceof Error ? err.message : String(err)) + "\\n");
@@ -1310,7 +1330,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     appendConsoleCommand(cmdLine);
 
     const runId = ++consoleState.activeRunId;
-    consoleState.running = true;
+    setConsoleRunning(true);
     consoleState.waitingStdin = false;
     consoleState.fallbackSession = null;
     const useSab = isInteractiveRun && typeof SharedArrayBuffer === "function" && Boolean(self.crossOriginIsolated);
@@ -1363,7 +1383,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       );
       if (runId !== consoleState.activeRunId) return;
       if (res.needsStdin && isInteractiveRun) {
-        consoleState.running = false;
+        setConsoleRunning(false);
         consoleState.waitingStdin = true;
         consoleState.fallbackSession = {
           source,
@@ -1380,14 +1400,14 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         if (consoleInputEl) consoleInputEl.focus({ preventScroll: true });
         return;
       }
-      consoleState.running = false;
+      setConsoleRunning(false);
       consoleState.waitingStdin = false;
       consoleState.sharedCtrl = null;
       consoleState.sharedData = null;
       finalizePlayResult(res, optLevel, source, streamedAny);
     } catch (err) {
       if (runId !== consoleState.activeRunId) return;
-      consoleState.running = false;
+      setConsoleRunning(false);
       consoleState.waitingStdin = false;
       consoleState.sharedCtrl = null;
       consoleState.sharedData = null;
