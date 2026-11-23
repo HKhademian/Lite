@@ -442,8 +442,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   };
 
   function currentProgramLabel() {
-    const raw = (fileEl && fileEl.textContent ? fileEl.textContent.trim() : "") || "playground.lts";
-    return raw.split(" · ")[0] || "playground.lts";
+    return "playground.lts";
   }
 
   function formatCommandLine(args, stdinText) {
