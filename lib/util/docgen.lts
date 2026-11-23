@@ -6,6 +6,7 @@ text := import "core/text";
 list := import "core/list";
 path := import "core/path";
 json := import "util/json";
+tb := import "util/text-builder";
 
 /** Strips leading block-comment delimiters, trailing close markers, and per-line `*` prefixes from a block comment body. */
 cleanDocComment := fn(rawComment: String): String {
@@ -49,28 +50,29 @@ cleanDocComment := fn(rawComment: String): String {
 /** Normalizes internal line breaks and repeated whitespace in a extracted signature string. */
 normalizeSignature := fn(raw: String): String {
     size := text.length(raw);
-    var out := "";
+    out: mut tb.TextBuilder;
+    var lastCh := "";
     var i := 0;
     var pendingSpace := false;
     loop i < size {
         ch := text.at(raw, i);
         if text.isWhitespace(ch) {
-            if out =!= "" {
+            if lastCh =!= "" {
                 pendingSpace = true;
             }
         } else {
             if pendingSpace {
-                lastOut := text.at(out, text.length(out) - 1);
-                if lastOut =!= "(" and ch =!= ")" and ch =!= "," {
-                    out = out + " ";
+                if lastCh =!= "(" and ch =!= ")" and ch =!= "," {
+                    tb.append(mut out, " ");
                 }
                 pendingSpace = false;
             }
-            out = out + ch;
+            tb.append(mut out, ch);
+            lastCh = ch;
         }
         i += 1;
     }
-    text.trim(out)
+    text.trim(tb.build(out))
 };
 
 skipBlockComment := fn(source: String, start: Int, startLine: Int): (next: Int, nextLine: Int, raw: String) {

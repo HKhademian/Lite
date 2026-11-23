@@ -3,6 +3,7 @@
 integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
+tb := import "util/text-builder";
 
 findLineEnd := fn(source: String, start: Int, size: Int): Int {
     idx := text.indexOfText(source, "\n", start);
@@ -32,7 +33,7 @@ pub stripCodeBlocks := fn(source: String): String {
         return source;
     }
     size := text.length(source);
-    var out := "";
+    out: mut tb.TextBuilder;
     var runStart := 0;
     var pos := 0;
     var inFence := false;
@@ -49,7 +50,7 @@ pub stripCodeBlocks := fn(source: String): String {
                     cnt := countRepeatedAt(source, pos, lineEnd, ch);
                     if cnt >= 3 {
                         if pos > runStart {
-                            out = out + text.slice(source, runStart, pos);
+                            tb.append(mut out, text.slice(source, runStart, pos));
                         }
                         inFence = true;
                         fenceChar = ch;
@@ -74,11 +75,11 @@ pub stripCodeBlocks := fn(source: String): String {
     }
 
     if inFence {
-        out = out + text.slice(source, fenceStart, size);
+        tb.append(mut out, text.slice(source, fenceStart, size));
     } else if runStart < size {
-        out = out + text.slice(source, runStart, size);
+        tb.append(mut out, text.slice(source, runStart, size));
     }
-    out
+    tb.build(out)
 }
 
 /** True when `source` leaves a fenced code block (with up to 3 leading spaces) unclosed at EOF. */
@@ -163,7 +164,7 @@ pub extractHeadings := fn(proseText: String): List<String> {
 
 stripHtmlTags := fn(source: String): String {
     size := text.length(source);
-    var out := "";
+    out: mut tb.TextBuilder;
     var runStart := 0;
     var i := 0;
     loop i < size {
@@ -171,7 +172,7 @@ stripHtmlTags := fn(source: String): String {
         if open < 0 { break; }
         close := text.indexOfText(source, ">", open + 1);
         if close >= 0 {
-            if open > runStart { out = out + text.slice(source, runStart, open); }
+            if open > runStart { tb.append(mut out, text.slice(source, runStart, open)); }
             i = close + 1;
             runStart = i;
         } else {
@@ -179,8 +180,8 @@ stripHtmlTags := fn(source: String): String {
         }
     }
     if runStart == 0 { return source; }
-    if runStart < size { out = out + text.slice(source, runStart, size); }
-    out
+    if runStart < size { tb.append(mut out, text.slice(source, runStart, size)); }
+    tb.build(out)
 }
 
 isAsciiPrintablePunct := fn(ch: String): Bool {
@@ -195,21 +196,25 @@ isUnicodeNonWordSymbol := fn(ch: String): Bool {
 pub headingAnchor := fn(heading: String): String {
     cleaned := stripHtmlTags(text.toLowerAscii(heading));
     size := text.length(cleaned);
-    var out := "";
+    out: mut tb.TextBuilder;
+    var runStart := 0;
     var i := 0;
     loop i < size {
         ch := text.at(cleaned, i);
         if text.isWhitespace(ch) {
-            out = out + "-";
+            if i > runStart { tb.append(mut out, text.slice(cleaned, runStart, i)); }
+            tb.append(mut out, "-");
+            runStart = i + 1;
         } else if ch == "_" or ch == "-" or text.isAsciiLetter(ch) or text.isDigit(ch) {
-            out = out + ch;
         } else if isAsciiPrintablePunct(ch) or isUnicodeNonWordSymbol(ch) {
-        } else {
-            out = out + ch;
+            if i > runStart { tb.append(mut out, text.slice(cleaned, runStart, i)); }
+            runStart = i + 1;
         }
         i = i + 1;
     }
-    out
+    if runStart == 0 { return cleaned; }
+    if runStart < size { tb.append(mut out, text.slice(cleaned, runStart, size)); }
+    tb.build(out)
 }
 
 /** Collects GitHub-style heading anchors (including `-1`, `-2` duplicate suffixes) and explicit HTML `id=`/`name=` anchors. */
@@ -271,7 +276,7 @@ pub collectAnchors := fn(docText: String): List<String> {
 
 stripInlineCode := fn(proseText: String): String {
     size := text.length(proseText);
-    var out := "";
+    out: mut tb.TextBuilder;
     var runStart := 0;
     var pos := 0;
     loop pos < size {
@@ -282,7 +287,7 @@ stripInlineCode := fn(proseText: String): String {
         lineEnd := findLineEnd(proseText, tickPos + ticks, size);
         closeAt := text.indexOfText(proseText, closeNeedle, tickPos + ticks);
         if closeAt >= 0 and closeAt + ticks <= lineEnd {
-            if tickPos > runStart { out = out + text.slice(proseText, runStart, tickPos); }
+            if tickPos > runStart { tb.append(mut out, text.slice(proseText, runStart, tickPos)); }
             pos = closeAt + ticks;
             runStart = pos;
         } else {
@@ -290,8 +295,8 @@ stripInlineCode := fn(proseText: String): String {
         }
     }
     if runStart == 0 { return proseText; }
-    if runStart < size { out = out + text.slice(proseText, runStart, size); }
-    out
+    if runStart < size { tb.append(mut out, text.slice(proseText, runStart, size)); }
+    tb.build(out)
 }
 
 /** Extracts inline Markdown link and image destination targets from code-stripped prose. */
