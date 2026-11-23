@@ -6,6 +6,7 @@ integer := import "core/int";
 listLib := import "core/list";
 sourceLib := import "core/source";
 textLib := import "core/text";
+tb := import "util/text-builder";
 numeric := import "./numeric-literals.lts";
 ir := import "./frontend-ir.lts";
 
@@ -96,21 +97,27 @@ sanitizeCommentBody := fn(body: String): String {
         return body;
     }
     n := textLib.length(body);
-    var out := "";
+    out: mut tb.TextBuilder;
+    var runStart := 0;
     var i := 0;
     loop i < n {
         if i + 1 < n and textLib.at(body, i) == "/" and textLib.at(body, i + 1) == "*" {
-            out = out + "/ *";
+            if i > runStart { tb.append(mut out, textLib.slice(body, runStart, i)); }
+            tb.append(mut out, "/ *");
             i = i + 2;
+            runStart = i;
         } else if i + 1 < n and textLib.at(body, i) == "*" and textLib.at(body, i + 1) == "/" {
-            out = out + "* /";
+            if i > runStart { tb.append(mut out, textLib.slice(body, runStart, i)); }
+            tb.append(mut out, "* /");
             i = i + 2;
+            runStart = i;
         } else {
-            out = out + textLib.at(body, i);
             i = i + 1;
         }
     }
-    out
+    if runStart == 0 { return body; }
+    if runStart < n { tb.append(mut out, textLib.slice(body, runStart, n)); }
+    tb.build(out)
 };
 
 /** Pre-scans standalone leading `/* ... */` and `/** ... */` comments in `source` in O(N) time, skipping string literals. */
@@ -448,45 +455,51 @@ pub parseNumber := fn(target: String, source: String, position: Int, prefix: Str
 
 /** Joins adjacent double-quoted literal tokens across trivia in one scan and encodes the complete value once. Escapes and malformed later tokens retain their own source positions. */
 pub parseText := fn(target: String, source: String, position: Int, prefix: String): Parsed {
+    size := textLib.length(source);
     var literalStart := position;
     var cursor := position + 1;
-    var value := "";
+    var runStart := cursor;
+    out: mut tb.TextBuilder;
     loop true {
-        if cursor >= textLib.length(source) {
+        if cursor >= size {
             failAt(source, literalStart, prefix, "unterminated string literal");
         }
         ch := textLib.at(source, cursor);
         if ch == "\"" {
+            if cursor > runStart { tb.append(mut out, textLib.slice(source, runStart, cursor)); }
             cursor = cursor + 1;
             next := skipTrivia(source, cursor, prefix);
-            if next < textLib.length(source) and textLib.at(source, next) == "\"" {
+            if next < size and textLib.at(source, next) == "\"" {
                 literalStart = next;
                 cursor = next + 1;
+                runStart = cursor;
                 continue;
             }
             break;
         }
         if ch == "\\" {
+            if cursor > runStart { tb.append(mut out, textLib.slice(source, runStart, cursor)); }
             escapeStart := cursor;
             cursor = cursor + 1;
-            if cursor >= textLib.length(source) {
+            if cursor >= size {
                 failAt(source, escapeStart, prefix, "unterminated string escape");
             }
             escaped := textLib.at(source, cursor);
-            if escaped == "n" { value = value + "\n"; }
-            else if escaped == "t" { value = value + "\t"; }
-            else if escaped == "r" { value = value + "\r"; }
-            else if escaped == "\"" { value = value + "\""; }
-            else if escaped == "\\" { value = value + "\\"; }
+            if escaped == "n" { tb.append(mut out, "\n"); }
+            else if escaped == "t" { tb.append(mut out, "\t"); }
+            else if escaped == "r" { tb.append(mut out, "\r"); }
+            else if escaped == "\"" { tb.append(mut out, "\""); }
+            else if escaped == "\\" { tb.append(mut out, "\\"); }
             else {
                 failAt(source, escapeStart, prefix, "unsupported string escape \\" + escaped);
             }
             cursor = cursor + 1;
+            runStart = cursor;
         } else {
-            value = value + ch;
             cursor = cursor + 1;
         }
     }
+    value := tb.build(out);
     (kind = ir.VALUE_KIND_STRING, code = ir.targetTextLiteralCode(target, value), intValue = 0, textValue = value, constant = true, next = cursor)
 };
 
@@ -1211,11 +1224,14 @@ pub loopNeedsExprLowering := fn(source: String, position: Int, prefix: String): 
 
 /** Encodes all line-start character offsets once for positioned runtime arithmetic faults. */
 pub lineStartCodes := fn(source: String): String {
-    var code := "0";
+    parts: mut List<String> = ["0"];
+    size := textLib.length(source);
     var position := 0;
-    loop position < textLib.length(source) {
-        if textLib.at(source, position) == "\n" { code = code + ", " + integer.intText(position + 1); }
-        position = position + 1;
+    loop position < size {
+        nl := textLib.indexOfText(source, "\n", position);
+        if nl < 0 { break; }
+        listLib.pushBack(mut parts, integer.intText(nl + 1));
+        position = nl + 1;
     }
-    code
+    textLib.joinTexts(parts, ", ")
 };

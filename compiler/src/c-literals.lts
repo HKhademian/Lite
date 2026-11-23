@@ -3,6 +3,7 @@
 integer := import "core/int";
 numeric := import "./numeric-literals.lts";
 textLib := import "core/text";
+tb := import "util/text-builder";
 
 /** Formats a checked Int value as a C signed 64-bit literal (`INT64_C`, `INT64_MIN`). */
 pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
@@ -15,20 +16,30 @@ pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
 /** Escapes a String as a readable C literal, including trigraph-safe `?`. */
 pub textLiteralCode := fn(value: String): String {
     size := textLib.length(value);
-    var encoded := "\"";
+    out: mut tb.TextBuilder;
+    tb.append(mut out, "\"");
+    var runStart := 0;
     var position := 0;
     loop position < size {
         ch := textLib.at(value, position);
-        if ch == "\\" { encoded += "\\\\"; }
-        else if ch == "\"" { encoded += "\\\""; }
-        else if ch == "?" { encoded += "\\?"; }
-        else if ch == "\n" { encoded += "\\n"; }
-        else if ch == "\r" { encoded += "\\r"; }
-        else if ch == "\t" { encoded += "\\t"; }
-        else { encoded += ch; }
+        var esc := "";
+        if ch == "\\" { esc = "\\\\"; }
+        else if ch == "\"" { esc = "\\\""; }
+        else if ch == "?" { esc = "\\?"; }
+        else if ch == "\n" { esc = "\\n"; }
+        else if ch == "\r" { esc = "\\r"; }
+        else if ch == "\t" { esc = "\\t"; }
+        if esc =!= "" {
+            if position > runStart { tb.append(mut out, textLib.slice(value, runStart, position)); }
+            tb.append(mut out, esc);
+            runStart = position + 1;
+        }
         position += 1;
     }
-    encoded + "\""
+    if runStart == 0 { return "\"" + value + "\""; }
+    if runStart < size { tb.append(mut out, textLib.slice(value, runStart, size)); }
+    tb.append(mut out, "\"");
+    tb.build(out)
 }
 
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */

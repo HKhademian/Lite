@@ -7,6 +7,7 @@ format := import "core/format";
 numeric := import "./numeric-literals.lts";
 io := import "core/io";
 textLib := import "core/text";
+tb := import "util/text-builder";
 
 /** One lexical token: kind, decoded text, source offset and 1-based line/column. */
 list := import "core/list";
@@ -204,53 +205,65 @@ readSymbol := fn(source: String, position: Int): String {
 scanString := fn(source: String, position: Int, prefix: String): (text: String, next: Int) {
     size := textLib.length(source);
     var cursor := position + 1;
-    var value := "";
+    var runStart := cursor;
+    out: mut tb.TextBuilder;
     loop true {
         if cursor >= size {
             lexFail(source, position, prefix, "unterminated string literal");
         }
         ch := textLib.at(source, cursor);
         if ch == "\"" {
-            return (text = value, next = cursor + 1);
+            if cursor > runStart { tb.append(mut out, textLib.slice(source, runStart, cursor)); }
+            return (text = tb.build(out), next = cursor + 1);
         }
         if ch == "\\" {
+            if cursor > runStart { tb.append(mut out, textLib.slice(source, runStart, cursor)); }
             escapeStart := cursor;
             cursor = cursor + 1;
             if cursor >= size {
                 lexFail(source, escapeStart, prefix, "unterminated string escape");
             }
             escaped := textLib.at(source, cursor);
-            if escaped == "n" { value = value + "\n"; }
-            else if escaped == "t" { value = value + "\t"; }
-            else if escaped == "r" { value = value + "\r"; }
-            else if escaped == "\"" { value = value + "\""; }
-            else if escaped == "\\" { value = value + "\\"; }
+            if escaped == "n" { tb.append(mut out, "\n"); }
+            else if escaped == "t" { tb.append(mut out, "\t"); }
+            else if escaped == "r" { tb.append(mut out, "\r"); }
+            else if escaped == "\"" { tb.append(mut out, "\""); }
+            else if escaped == "\\" { tb.append(mut out, "\\"); }
             else {
                 lexFail(source, escapeStart, prefix, "unsupported string escape \\" + escaped);
             }
             cursor = cursor + 1;
+            runStart = cursor;
         } else {
-            value = value + ch;
             cursor = cursor + 1;
         }
     }
-    (text = value, next = size)
+    (text = tb.build(out), next = size)
 }
 
 /** Escapes one token's text for a one-line deterministic dump. */
 pub escapedTokenText := fn(text: String): String {
-    var result := "";
+    size := textLib.length(text);
+    out: mut tb.TextBuilder;
+    var runStart := 0;
     var index := 0;
-    loop index < textLib.length(text) {
+    loop index < size {
         ch := textLib.at(text, index);
-        if ch == "\\" { result = result + "\\\\"; }
-        else if ch == "\n" { result = result + "\\n"; }
-        else if ch == "\r" { result = result + "\\r"; }
-        else if ch == "\t" { result = result + "\\t"; }
-        else { result = result + ch; }
+        var esc := "";
+        if ch == "\\" { esc = "\\\\"; }
+        else if ch == "\n" { esc = "\\n"; }
+        else if ch == "\r" { esc = "\\r"; }
+        else if ch == "\t" { esc = "\\t"; }
+        if esc =!= "" {
+            if index > runStart { tb.append(mut out, textLib.slice(text, runStart, index)); }
+            tb.append(mut out, esc);
+            runStart = index + 1;
+        }
         index = index + 1;
     }
-    result
+    if runStart == 0 { return text; }
+    if runStart < size { tb.append(mut out, textLib.slice(text, runStart, size)); }
+    tb.build(out)
 }
 
 /** Formats one token as `kind@line:column:offset text`. */
