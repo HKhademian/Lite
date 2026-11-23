@@ -3902,12 +3902,14 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 ctx.zeroParsed(target, finalSeqItemKind, 0).code + "; ";
             }
             if resolvedPreThenKind =!= ir.VALUE_KIND_UNIT and resolvedPreThenKind =!= ir.VALUE_KIND_NEVER {
+                valVoid := if hasActualThen or suffixField =!= "" { " (void)" + loopValVar + ";" } else { "" };
                 decls = decls + types.cValueType(resolvedPreThenKind) + " " + loopValVar + " = " +
-                ctx.zeroParsed(target, resolvedPreThenKind, 0).code + "; (void)" + loopValVar + "; ";
+                ctx.zeroParsed(target, resolvedPreThenKind, 0).code + ";" + valVoid + " ";
             }
             if emitCollected {
                 colTag := types.cListTag(resolvedPreThenKind);
-                decls = decls + "lt_list_" + colTag + " " + loopColVar + " = lt_list_" + colTag + "_from(0, NULL); (void)" + loopColVar + "; ";
+                colVoid := if hasActualThen or suffixField =!= "collected" { " (void)" + loopColVar + ";" } else { "" };
+                decls = decls + "lt_list_" + colTag + " " + loopColVar + " = lt_list_" + colTag + "_from(0, NULL);" + colVoid + " ";
             }
         } else {
             if finalNeedsCount {
@@ -3921,11 +3923,13 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 ctx.zeroParsed(target, finalSeqItemKind, 0).code + "; ";
             }
             if resolvedPreThenKind =!= ir.VALUE_KIND_UNIT and resolvedPreThenKind =!= ir.VALUE_KIND_NEVER {
+                valVoid := if hasActualThen or suffixField =!= "" { " void " + loopValVar + ";" } else { "" };
                 decls = decls + "let " + loopValVar + ": " + types.tsFunctionType(resolvedPreThenKind) + " = " +
-                ctx.zeroParsed(target, resolvedPreThenKind, 0).code + "; void " + loopValVar + "; ";
+                ctx.zeroParsed(target, resolvedPreThenKind, 0).code + ";" + valVoid + " ";
             }
             if emitCollected {
-                decls = decls + "const " + loopColVar + ": (" + types.tsFunctionType(resolvedPreThenKind) + ")[] = []; void " + loopColVar + "; ";
+                colVoid := if hasActualThen or suffixField =!= "collected" { " void " + loopColVar + ";" } else { "" };
+                decls = decls + "const " + loopColVar + ": (" + types.tsFunctionType(resolvedPreThenKind) + ")[] = [];" + colVoid + " ";
             }
         }
     }

@@ -727,7 +727,11 @@ pub cUnwrapIntoVar := fn(varName: String, kind: String, code: String): String {
         retVar := textLib.slice(code, 8, endHdr);
         blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
         if varName == "" or kind == ir.VALUE_KIND_NEVER or kind == ir.VALUE_KIND_UNIT {
-            "{ " + blkBody + " }"
+            if retVar =!= "" and retVar =!= "0" {
+                "{ " + blkBody + " (void)" + retVar + "; }"
+            } else {
+                "{ " + blkBody + " }"
+            }
         } else {
             "{ " + blkBody + " " + varName + " = " + retVar + "; }"
         }

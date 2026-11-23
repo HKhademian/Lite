@@ -2450,6 +2450,105 @@ emitTsComment := fn(indent: String, commentText: String): Unit {
     }
 };
 
+/** Derives a collision-free temporary initializer variable name for an immutable TS binding `targetName`. */
+tsInitTempName := fn(targetName: String): String {
+    base := if textLib.startsWithAt(targetName, 0, "lite_") {
+        textLib.slice(targetName, 5, textLib.length(targetName))
+    } else {
+        targetName
+    };
+    "_init_" + base
+};
+
+/** Unwraps a binding-position loop/block IIFE into flat statements without an IIFE closure, preserving `const` for immutable bindings. */
+tryUnwrapDirectTsLoopBinding := fn(targetName: String, isVar: Bool, explicitType: String, code: String): (ok: Bool, declLine: String, loopLine: String, bindLine: String) {
+    trimmed := textLib.trim(code);
+    if not textLib.startsWithAt(trimmed, 0, "(() => { ") or not textLib.endsWith(trimmed, " })()") {
+        return (ok = false, declLine = "", loopLine = "", bindLine = "");
+    }
+    inner := textLib.trim(textLib.slice(trimmed, 9, textLib.length(trimmed) - 5));
+    innerLen := textLib.length(inner);
+    if innerLen < 12 or textLib.at(inner, innerLen - 1) =!= ";" {
+        return (ok = false, declLine = "", loopLine = "", bindLine = "");
+    }
+    var retStart := innerLen - 1;
+    loop retStart > 0 and (textLib.isNameContinue(textLib.at(inner, retStart - 1)) or textLib.at(inner, retStart - 1) == "$") {
+        retStart = retStart - 1;
+    }
+    retVar := textLib.slice(inner, retStart, innerLen - 1);
+    if retVar == "" or retStart < 8 or textLib.slice(inner, retStart - 8, retStart) =!= " return " {
+        return (ok = false, declLine = "", loopLine = "", bindLine = "");
+    }
+    beforeRet := textLib.trim(textLib.slice(inner, 0, retStart - 8));
+    if beforeRet == "" or textLib.indexOfText(beforeRet, "return ", 0) >= 0 or textLib.indexOfText(beforeRet, "return;", 0) >= 0 {
+        return (ok = false, declLine = "", loopLine = "", bindLine = "");
+    }
+    /* Case 1: single-accumulator loop (`let/const retVar: T = init; for/while (...) { ... }`). */
+    letPrefix := "let " + retVar + ": ";
+    constPrefix := "const " + retVar + ": ";
+    isConstDecl := textLib.startsWithAt(beforeRet, 0, constPrefix);
+    isLetDecl := textLib.startsWithAt(beforeRet, 0, letPrefix);
+    if isConstDecl or isLetDecl {
+        typeStart := if isConstDecl { textLib.length(constPrefix) } else { textLib.length(letPrefix) };
+        eqPos := textLib.indexOfText(beforeRet, " = ", typeStart);
+        semiPos := if eqPos >= 0 { emitFmt.findTopLevelSemi(beforeRet, eqPos + 3) } else { -1 };
+        if eqPos >= 0 and semiPos >= 0 {
+            declType := textLib.slice(beforeRet, typeStart, eqPos);
+            initExpr := textLib.slice(beforeRet, eqPos + 3, semiPos);
+            rest := textLib.trim(textLib.slice(beforeRet, semiPos + 1, textLib.length(beforeRet)));
+            if emitFmt.isSingleScopedLoopStmt(rest) and not emitFmt.codeUsesIdent(initExpr, retVar) {
+                ann := if explicitType =!= "" { explicitType } else { declType };
+                if isVar {
+                    if not emitFmt.codeUsesIdent(initExpr, targetName) and not emitFmt.codeUsesIdent(rest, targetName) {
+                        declLine := "let " + targetName + ": " + ann + " = " + initExpr + ";";
+                        loopLine := emitFmt.replaceIdentToken(rest, retVar, targetName);
+                        return (ok = true, =declLine, =loopLine, bindLine = "");
+                    }
+                } else if isConstDecl {
+                    if not emitFmt.codeUsesIdent(initExpr, targetName) and not emitFmt.codeUsesIdent(rest, targetName) {
+                        declLine := "const " + targetName + ": " + ann + " = " + initExpr + ";";
+                        loopLine := emitFmt.replaceIdentToken(rest, retVar, targetName);
+                        return (ok = true, =declLine, =loopLine, bindLine = "");
+                    }
+                } else {
+                    tmpVar := tsInitTempName(targetName);
+                    if not emitFmt.codeUsesIdent(initExpr, tmpVar) and not emitFmt.codeUsesIdent(rest, tmpVar) {
+                        declLine := "let " + tmpVar + ": " + ann + " = " + initExpr + ";";
+                        loopLine := emitFmt.replaceIdentToken(rest, retVar, tmpVar);
+                        bindLine := "const " + targetName + " = " + tmpVar + ";";
+                        return (ok = true, =declLine, =loopLine, =bindLine);
+                    }
+                }
+            }
+        }
+    }
+    /* Case 2: general multi-statement/multi-decl block without internal `return` (preserves `const` via scoped `{ ... }` block). */
+    if explicitType == "" {
+        return (ok = false, declLine = "", loopLine = "", bindLine = "");
+    }
+    if isVar {
+        if not emitFmt.codeUsesIdent(beforeRet, targetName) {
+            return (
+                ok = true,
+                declLine = "let " + targetName + ": " + explicitType + ";",
+                loopLine = "{ " + beforeRet + " " + targetName + " = " + retVar + "; }",
+                bindLine = ""
+            );
+        }
+        return (ok = false, declLine = "", loopLine = "", bindLine = "");
+    }
+    tmpVar := tsInitTempName(targetName);
+    if emitFmt.codeUsesIdent(beforeRet, tmpVar) {
+        return (ok = false, declLine = "", loopLine = "", bindLine = "");
+    }
+    (
+        ok = true,
+        declLine = "let " + tmpVar + ": " + explicitType + ";",
+        loopLine = "{ " + beforeRet + " " + tmpVar + " = " + retVar + "; }",
+        bindLine = "const " + targetName + " = " + tmpVar + ";"
+    )
+};
+
 /** Emits the TS module driven by composable `OptConfig`. */
 pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     prevCompact := tsCompactEmit;
@@ -2617,16 +2716,56 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 outLine(indent + "void (" + item.code + ");");
             }
         } else if item.kind == frontend.ITEM_KIND_LOCAL_INT or item.kind == frontend.ITEM_KIND_LOCAL_STRING or item.kind == frontend.ITEM_KIND_LOCAL_BOOL or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_LOCAL_TUPLE {
-            outLine(indent + "const " + item.runtime + " = " + item.code + ";");
+            scalarTsType := if item.kind == frontend.ITEM_KIND_LOCAL_INT { "bigint" }
+                else if item.kind == frontend.ITEM_KIND_LOCAL_STRING { "string" }
+                else if item.kind == frontend.ITEM_KIND_LOCAL_BOOL { "boolean" }
+                else if item.kind == frontend.ITEM_KIND_LOCAL_FLOAT { "number" }
+                else { "" };
+            unwrappedLoop := tryUnwrapDirectTsLoopBinding(item.runtime, false, scalarTsType, item.code);
+            if unwrappedLoop.ok {
+                outLine(indent + unwrappedLoop.declLine);
+                outLine(indent + unwrappedLoop.loopLine);
+                if unwrappedLoop.bindLine =!= "" { outLine(indent + unwrappedLoop.bindLine); }
+            } else {
+                outLine(indent + "const " + item.runtime + " = " + item.code + ";");
+            }
             outLine(indent + "void " + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_LOCAL_RECORD {
-            outLine(indent + "const " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
+            tsType := tsFunctionType(item.textValue);
+            unwrappedLoop := tryUnwrapDirectTsLoopBinding(item.runtime, false, tsType, item.code);
+            if unwrappedLoop.ok {
+                outLine(indent + unwrappedLoop.declLine);
+                outLine(indent + unwrappedLoop.loopLine);
+                if unwrappedLoop.bindLine =!= "" { outLine(indent + unwrappedLoop.bindLine); }
+            } else {
+                outLine(indent + "const " + item.runtime + ": " + tsType + " = " + item.code + ";");
+            }
             outLine(indent + "void " + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_VAR_INT or item.kind == frontend.ITEM_KIND_VAR_STRING or item.kind == frontend.ITEM_KIND_VAR_BOOL or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_VAR_TUPLE {
-            outLine(indent + "let " + item.runtime + " = " + item.code + ";");
+            scalarTsType := if item.kind == frontend.ITEM_KIND_VAR_INT { "bigint" }
+                else if item.kind == frontend.ITEM_KIND_VAR_STRING { "string" }
+                else if item.kind == frontend.ITEM_KIND_VAR_BOOL { "boolean" }
+                else if item.kind == frontend.ITEM_KIND_VAR_FLOAT { "number" }
+                else { "" };
+            unwrappedLoop := tryUnwrapDirectTsLoopBinding(item.runtime, true, scalarTsType, item.code);
+            if unwrappedLoop.ok {
+                outLine(indent + unwrappedLoop.declLine);
+                outLine(indent + unwrappedLoop.loopLine);
+                if unwrappedLoop.bindLine =!= "" { outLine(indent + unwrappedLoop.bindLine); }
+            } else {
+                outLine(indent + "let " + item.runtime + " = " + item.code + ";");
+            }
             outLine(indent + "void " + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_VAR_RECORD {
-            outLine(indent + "let " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
+            tsType := tsFunctionType(item.textValue);
+            unwrappedLoop := tryUnwrapDirectTsLoopBinding(item.runtime, true, tsType, item.code);
+            if unwrappedLoop.ok {
+                outLine(indent + unwrappedLoop.declLine);
+                outLine(indent + unwrappedLoop.loopLine);
+                if unwrappedLoop.bindLine =!= "" { outLine(indent + unwrappedLoop.bindLine); }
+            } else {
+                outLine(indent + "let " + item.runtime + ": " + tsType + " = " + item.code + ";");
+            }
             outLine(indent + "void " + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE {
             outLine(indent + item.runtime + " = " + item.code + ";");

@@ -2014,6 +2014,42 @@ outputWriteCode := fn(kind: String, code: String, indent: String, failAction: St
     indent + "if (" + cCall(kind, code) + " < 0) { " + failAction + " }\n"
 }
 
+/** Unwraps a binding-position single-accumulator CBLK loop into a flat declaration + loop when strictly equivalent with zero extra overhead. */
+tryUnwrapDirectCLoopBinding := fn(cTypePrefix: String, targetName: String, isHoistedGlobal: Bool, retVar: String, blkBody: String): (ok: Bool, declLine: String, loopLine: String) {
+    if retVar == "" or retVar == "0" {
+        return (ok = false, declLine = "", loopLine = "");
+    }
+    trimmed := textLib.trim(blkBody);
+    retEq := retVar + " = ";
+    p1 := cTypePrefix + retEq;
+    p2 := textLib.trimEnd(cTypePrefix) + " " + retEq;
+    initStart := if textLib.startsWithAt(trimmed, 0, p1) {
+        textLib.length(p1)
+    } else if textLib.startsWithAt(trimmed, 0, p2) {
+        textLib.length(p2)
+    } else {
+        -1
+    };
+    if initStart < 0 {
+        return (ok = false, declLine = "", loopLine = "");
+    }
+    semiPos := emitFmt.findTopLevelSemi(trimmed, initStart);
+    if semiPos < 0 {
+        return (ok = false, declLine = "", loopLine = "");
+    }
+    initExpr := textLib.slice(trimmed, initStart, semiPos);
+    rest := textLib.trim(textLib.slice(trimmed, semiPos + 1, textLib.length(trimmed)));
+    if not emitFmt.isSingleScopedLoopStmt(rest) {
+        return (ok = false, declLine = "", loopLine = "");
+    }
+    if emitFmt.codeUsesIdent(initExpr, targetName) or emitFmt.codeUsesIdent(rest, targetName) or emitFmt.codeUsesIdent(initExpr, retVar) {
+        return (ok = false, declLine = "", loopLine = "");
+    }
+    declLine := if isHoistedGlobal { targetName + " = " + initExpr + ";" } else { cTypePrefix + targetName + " = " + initExpr + ";" };
+    loopLine := emitFmt.replaceIdentToken(rest, retVar, targetName);
+    (ok = true, =declLine, =loopLine)
+};
+
 /** Emits statements for one C function body (`fnResult != ""`) or `main` (`fnResult == ""`). */
 emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuckets, fnResult: String, failAction: String): Unit {
     var indent := "    ";
@@ -2068,10 +2104,18 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 endHdr := textLib.indexOfText(code, "@*/", 8);
                 retVar := textLib.slice(code, 8, endHdr);
                 blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
-                if not (fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime)) {
-                    outLine(indent + cDeclTypeItem(item) + item.runtime + ";");
+                isHoisted := fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime);
+                cTypePrefix := cDeclTypeItem(item);
+                unwrappedLoop := tryUnwrapDirectCLoopBinding(cTypePrefix, item.runtime, isHoisted, retVar, blkBody);
+                if unwrappedLoop.ok {
+                    outLine(indent + unwrappedLoop.declLine);
+                    outLine(indent + unwrappedLoop.loopLine);
+                } else {
+                    if not isHoisted {
+                        outLine(indent + cTypePrefix + item.runtime + ";");
+                    }
+                    outLine(indent + "{ " + blkBody + " " + item.runtime + " = " + retVar + "; }");
                 }
-                outLine(indent + "{ " + blkBody + " " + item.runtime + " = " + retVar + "; }");
             } else if fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime) {
                 outLine(indent + item.runtime + " = " + code + ";");
             } else {
@@ -2110,8 +2154,13 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
         } else if item.kind == frontend.ITEM_KIND_CALL or item.kind == frontend.ITEM_KIND_DISCARD {
             if textLib.startsWithAt(code, 0, "/*@CBLK:") {
                 endHdr := textLib.indexOfText(code, "@*/", 8);
+                retVar := textLib.slice(code, 8, endHdr);
                 blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
-                outLine(indent + "{ " + blkBody + " }");
+                if retVar =!= "" and retVar =!= "0" {
+                    outLine(indent + "{ " + blkBody + " (void)" + retVar + "; }");
+                } else {
+                    outLine(indent + "{ " + blkBody + " }");
+                }
             } else if textLib.startsWithAt(code, 0, "{ /*c-stmt*/") {
                 trimmedCStmt := textLib.trim(code);
                 if textLib.endsWith(trimmedCStmt, "}") {

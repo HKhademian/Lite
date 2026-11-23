@@ -62,7 +62,7 @@ skipBlockComment := fn(s: String, start: Int): Int {
     if endPos < 0 { textLib.length(s) } else { endPos + 2 }
 };
 
-/** True when `code` mentions identifier `ident` as a standalone token outside quoted strings and `.prop` accesses. */
+/** True when `code` mentions identifier `ident` as a standalone token outside quoted strings and `.prop`/`->prop` accesses. */
 pub codeUsesIdent := fn(code: String, ident: String): Bool {
     if code == "" or ident == "" { return false; }
     if textLib.indexOfText(code, ident, 0) < 0 { return false; }
@@ -79,7 +79,8 @@ pub codeUsesIdent := fn(code: String, ident: String): Bool {
             beforeOk := i == 0 or (
                 not textLib.isNameContinue(textLib.at(code, i - 1)) and
                 textLib.at(code, i - 1) =!= "$" and
-                textLib.at(code, i - 1) =!= "."
+                textLib.at(code, i - 1) =!= "." and
+                not (i >= 2 and textLib.at(code, i - 2) == "-" and textLib.at(code, i - 1) == ">")
             );
             afterPos := i + m;
             afterOk := afterPos >= n or (
@@ -91,6 +92,143 @@ pub codeUsesIdent := fn(code: String, ident: String): Bool {
         i = i + 1;
     }
     false
+};
+
+/** Replaces every standalone identifier occurrence of `ident` with `replacement`, skipping quoted strings and `.prop`/`->prop` accesses. */
+pub replaceIdentToken := fn(code: String, ident: String, replacement: String): String {
+    if code == "" or ident == "" or ident == replacement { return code; }
+    if textLib.indexOfText(code, ident, 0) < 0 { return code; }
+    n := textLib.length(code);
+    m := textLib.length(ident);
+    out: mut tb.TextBuilder;
+    var flushed := 0;
+    var i := 0;
+    loop i < n {
+        ch := textLib.at(code, i);
+        if ch == "\"" or ch == "'" or ch == "`" {
+            i = skipQuoted(code, i);
+            continue;
+        }
+        if textLib.startsWithAt(code, i, ident) {
+            beforeOk := i == 0 or (
+                not textLib.isNameContinue(textLib.at(code, i - 1)) and
+                textLib.at(code, i - 1) =!= "$" and
+                textLib.at(code, i - 1) =!= "." and
+                not (i >= 2 and textLib.at(code, i - 2) == "-" and textLib.at(code, i - 1) == ">")
+            );
+            afterPos := i + m;
+            afterOk := afterPos >= n or (
+                not textLib.isNameContinue(textLib.at(code, afterPos)) and
+                textLib.at(code, afterPos) =!= "$"
+            );
+            if beforeOk and afterOk {
+                if i > flushed { tb.append(mut out, textLib.slice(code, flushed, i)); }
+                tb.append(mut out, replacement);
+                i = afterPos;
+                flushed = i;
+                continue;
+            }
+        }
+        i = i + 1;
+    }
+    if flushed == 0 { return code; }
+    if flushed < n { tb.append(mut out, textLib.slice(code, flushed, n)); }
+    tb.build(out)
+};
+
+/** Finds the first `;` at or after `start` outside quotes, comments, and balanced `()`/`[]`/`{}`, or -1 when absent. */
+pub findTopLevelSemi := fn(s: String, start: Int): Int {
+    n := textLib.length(s);
+    var pDepth := 0;
+    var bDepth := 0;
+    var kDepth := 0;
+    var i := start;
+    loop i < n {
+        ch := textLib.at(s, i);
+        if ch == "\"" or ch == "'" or ch == "`" {
+            i = skipQuoted(s, i);
+        } else if ch == "/" and i + 1 < n and textLib.at(s, i + 1) == "*" {
+            i = skipBlockComment(s, i);
+        } else if ch == "(" {
+            pDepth = pDepth + 1;
+            i = i + 1;
+        } else if ch == ")" {
+            if pDepth > 0 { pDepth = pDepth - 1; }
+            i = i + 1;
+        } else if ch == "[" {
+            kDepth = kDepth + 1;
+            i = i + 1;
+        } else if ch == "]" {
+            if kDepth > 0 { kDepth = kDepth - 1; }
+            i = i + 1;
+        } else if ch == "{" {
+            bDepth = bDepth + 1;
+            i = i + 1;
+        } else if ch == "}" {
+            if bDepth > 0 { bDepth = bDepth - 1; }
+            i = i + 1;
+        } else if ch == ";" and pDepth == 0 and bDepth == 0 and kDepth == 0 {
+            return i;
+        } else {
+            i = i + 1;
+        }
+    }
+    -1
+};
+
+/** True when `stmt` is a single self-contained `for (...) { ... }`, `while (...) { ... }`, or `{ ... }` block statement that cannot leak declarations. */
+pub isSingleScopedLoopStmt := fn(stmt: String): Bool {
+    trimmed := textLib.trim(stmt);
+    n := textLib.length(trimmed);
+    var braceStart := -1;
+    if textLib.startsWithAt(trimmed, 0, "{") {
+        braceStart = 0;
+    } else if textLib.startsWithAt(trimmed, 0, "for (") or textLib.startsWithAt(trimmed, 0, "while (") {
+        openParen := textLib.indexOfText(trimmed, "(", 0);
+        var pDepth := 1;
+        var p := openParen + 1;
+        loop p < n and pDepth > 0 {
+            ch := textLib.at(trimmed, p);
+            if ch == "\"" or ch == "'" or ch == "`" {
+                p = skipQuoted(trimmed, p);
+            } else if ch == "/" and p + 1 < n and textLib.at(trimmed, p + 1) == "*" {
+                p = skipBlockComment(trimmed, p);
+            } else if ch == "(" {
+                pDepth = pDepth + 1;
+                p = p + 1;
+            } else if ch == ")" {
+                pDepth = pDepth - 1;
+                p = p + 1;
+            } else {
+                p = p + 1;
+            }
+        }
+        if pDepth =!= 0 { return false; }
+        loop p < n and (textLib.at(trimmed, p) == " " or textLib.at(trimmed, p) == "\t") { p = p + 1; }
+        if p >= n or textLib.at(trimmed, p) =!= "{" { return false; }
+        braceStart = p;
+    } else {
+        return false;
+    }
+    var bDepth := 1;
+    var i := braceStart + 1;
+    loop i < n and bDepth > 0 {
+        ch := textLib.at(trimmed, i);
+        if ch == "\"" or ch == "'" or ch == "`" {
+            i = skipQuoted(trimmed, i);
+        } else if ch == "/" and i + 1 < n and textLib.at(trimmed, i + 1) == "*" {
+            i = skipBlockComment(trimmed, i);
+        } else if ch == "{" {
+            bDepth = bDepth + 1;
+            i = i + 1;
+        } else if ch == "}" {
+            bDepth = bDepth - 1;
+            i = i + 1;
+        } else {
+            i = i + 1;
+        }
+    }
+    bDepth == 0 and i == n
 };
 
 /** True when `s[bracePos]` (`{`) opens a statement block rather than a data/type/struct literal. */
@@ -184,10 +322,21 @@ isStatementBlockOpen := fn(s: String, bracePos: Int): Bool {
     if headerKw == "if" and not hasNestedBrace and semiCount == 1 and k == n and n <= 96 {
         return false;
     }
+    /* Keep empty arrow bodies `() => {}` inline. */
+    if prevCh == ">" and p > 0 and textLib.at(s, p - 1) == "=" {
+        return semiCount > 0 or hasNestedBrace;
+    }
     semiCount > 0 or hasNestedBrace or not hasNonSpace
 };
 
-/** Expands a single-line lowered statement containing inline statement blocks (`for (...) { ... }`, etc.) into 4-space indented lines. */
+/** True when `s[pos]` is preceded (skipping spaces/tabs) by `=>`. */
+isPrecededByArrow := fn(s: String, pos: Int): Bool {
+    var p := pos - 1;
+    loop p >= 0 and (textLib.at(s, p) == " " or textLib.at(s, p) == "\t") { p = p - 1; }
+    p > 0 and textLib.at(s, p) == ">" and textLib.at(s, p - 1) == "="
+};
+
+/** Expands a single-line lowered statement containing inline statement blocks (`for (...) { ... }`, `(() => { ... })()`, etc.) into 4-space indented lines. */
 pub formatEmittedLine := fn(rawLine: String): String {
     if textLib.indexOfText(rawLine, "{", 0) < 0 { return rawLine; }
     trimmed := textLib.trimStart(rawLine);
@@ -204,8 +353,9 @@ pub formatEmittedLine := fn(rawLine: String): String {
     out: mut tb.TextBuilder;
     var blockDepth := 0;
     var parenDepth := 0;
-    /* Stack of brace kinds: 1 = expanded statement block, 0 = inline data/object/type brace. */
+    /* Parallel stacks for open `{`: braceKind (1 = expanded statement block, 0 = inline data/type brace) and parenDepth at open. */
     braceStack: mut List<Int> = [];
+    braceParenStack: mut List<Int> = [];
     var i := 0;
     var atLineStart := true;
     var changed := false;
@@ -219,6 +369,7 @@ pub formatEmittedLine := fn(rawLine: String): String {
             }
             if ch == "}" and listLib.listCountInt(braceStack) > 0 and braceStack[listLib.listCountInt(braceStack) - 1] == 1 {
                 _pop := listLib.popBack(mut braceStack);
+                _popP := listLib.popBack(mut braceParenStack);
                 if blockDepth > 0 { blockDepth = blockDepth - 1; }
                 tb.append(mut out, baseIndent + indentSpaces(blockDepth) + "}");
                 i = i + 1;
@@ -258,7 +409,10 @@ pub formatEmittedLine := fn(rawLine: String): String {
             tb.append(mut out, ")");
             i = i + 1;
         } else if ch == "{" {
-            expand := parenDepth == 0 and isStatementBlockOpen(trimmed, i);
+            topIdx := listLib.listCountInt(braceStack) - 1;
+            inExpandedAtParen := topIdx >= 0 and braceStack[topIdx] == 1 and braceParenStack[topIdx] == parenDepth;
+            canExpandHere := parenDepth == 0 or inExpandedAtParen or isPrecededByArrow(trimmed, i);
+            expand := canExpandHere and isStatementBlockOpen(trimmed, i);
             if expand {
                 /* Check for empty block `{  }`. */
                 var nextNonWs := i + 1;
@@ -284,6 +438,7 @@ pub formatEmittedLine := fn(rawLine: String): String {
                 } else {
                     changed = true;
                     listLib.pushBack(mut braceStack, 1);
+                    listLib.pushBack(mut braceParenStack, parenDepth);
                     blockDepth = blockDepth + 1;
                     tb.append(mut out, "{\n");
                     atLineStart = true;
@@ -291,6 +446,7 @@ pub formatEmittedLine := fn(rawLine: String): String {
                 }
             } else {
                 listLib.pushBack(mut braceStack, 0);
+                listLib.pushBack(mut braceParenStack, parenDepth);
                 tb.append(mut out, "{");
                 i = i + 1;
             }
@@ -298,6 +454,7 @@ pub formatEmittedLine := fn(rawLine: String): String {
             isExpanded := listLib.listCountInt(braceStack) > 0 and braceStack[listLib.listCountInt(braceStack) - 1] == 1;
             if listLib.listCountInt(braceStack) > 0 {
                 _pop := listLib.popBack(mut braceStack);
+                _popP := listLib.popBack(mut braceParenStack);
             }
             if isExpanded {
                 changed = true;
@@ -320,7 +477,7 @@ pub formatEmittedLine := fn(rawLine: String): String {
                 tb.append(mut out, "}");
                 i = i + 1;
             }
-        } else if ch == ";" and parenDepth == 0 and blockDepth > 0 and listLib.listCountInt(braceStack) > 0 and braceStack[listLib.listCountInt(braceStack) - 1] == 1 {
+        } else if ch == ";" and blockDepth > 0 and listLib.listCountInt(braceStack) > 0 and braceStack[listLib.listCountInt(braceStack) - 1] == 1 and parenDepth == braceParenStack[listLib.listCountInt(braceParenStack) - 1] {
             tb.append(mut out, ";");
             i = i + 1;
             var peek := i;

@@ -130,3 +130,50 @@ if ccInfo.available {
     test.checkText("cc #line run stdout", "0\n1\n2\n3\n", fs.readText(outFile).text);
     _rmC := fs.remove(tmpC.path);
 }
+
+/* 6. Binding-position accumulator loop unwrapping + multi-line formatting of remaining IIFEs */
+accLoopSrc := "io := import \"core/io\";\n" +
+    "sumer := loop 1..=5 as n {\n    .value + n\n}\n" +
+    "var mutSumer := loop 1..=5 as n {\n    .value + n\n}\n" +
+    "shadowed := loop 1..=5 as shadowed {\n    .value + shadowed\n}\n" +
+    "loop 1..=5 as n {\n    .value + n\n}\n" +
+    "io.outputLine(sumer);\n" +
+    "io.outputLine(mutSumer);\n" +
+    "io.outputLine(shadowed);\n";
+tsAcc := runComp(tsComp, ["-O1"], accLoopSrc, "acc-loop.lts");
+test.checkInt("ts acc loop status", 0, tsAcc.status);
+test.check("ts immutable loop unwraps with const + _init temp", text.containsText(tsAcc.stdout, "let _init_sumer: bigint = 0n;\n") and text.containsText(tsAcc.stdout, "const lite_sumer = _init_sumer;\n"));
+test.check("ts mutable loop unwraps directly into var", text.containsText(tsAcc.stdout, "let lite_mutSumer: bigint = 0n;\n"));
+test.check("ts acc loop drops dead void _val", not text.containsText(tsAcc.stdout, "void _val;"));
+test.check("ts discarded value loop formats IIFE multi-line", text.containsText(tsAcc.stdout, "void ((() => {\n") and text.containsText(tsAcc.stdout, "\n        let _val: bigint = 0n;\n"));
+
+tsAccCompact := runComp(tsComp, ["-O1", "--emit-format=compact"], accLoopSrc, "acc-loop.lts");
+test.checkInt("ts acc loop compact status", 0, tsAccCompact.status);
+test.check("ts acc loop compact keeps IIFE inline", text.containsText(tsAccCompact.stdout, "void ((() => { let _val: bigint = 0n;"));
+
+cAcc := runComp(cComp, ["-O1"], accLoopSrc, "acc-loop.lts");
+test.checkInt("c acc loop status", 0, cAcc.status);
+test.check("c acc loop unwraps flat declaration", text.containsText(cAcc.stdout, "int64_t lite_sumer = INT64_C(0);\n"));
+test.check("c acc loop drops dead (void)_val on bound loops", text.containsText(cAcc.stdout, "lite_sumer = ("));
+
+tsAccRun := compilerTest.compileCheckRunTs(root, tsComp, accLoopSrc, "acc-loop.lts");
+test.checkInt("ts acc loop strict check+run: " + tsAccRun.stderr, 0, tsAccRun.status);
+test.checkText("ts acc loop stdout", "15\n15\n15\n", tsAccRun.stdout);
+if ccInfo.available {
+    cAccRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, accLoopSrc, "acc-loop.lts", "");
+    test.checkInt("c acc loop strict check+run: " + cAccRun.stderr, 0, cAccRun.status);
+    test.checkText("c acc loop stdout", "15\n15\n15\n", cAccRun.stdout);
+}
+
+nestedIifeSrc := "io := import \"core/io\";\nxs := loop 1..=3 as n {\n    n * 2\n}.collected;\nio.outputLine(xs[0] + xs[1] + xs[2]);\n";
+tsNestedIife := runComp(tsComp, ["-O1"], nestedIifeSrc, "nested-iife.lts");
+test.checkInt("ts nested IIFE status", 0, tsNestedIife.status);
+test.check("ts collected IIFE formatted multi-line", text.containsText(tsNestedIife.stdout, "((() => {\n") and text.containsText(tsNestedIife.stdout, "\n        return _collected;\n"));
+tsNestedIifeRun := compilerTest.compileCheckRunTs(root, tsComp, nestedIifeSrc, "nested-iife.lts");
+test.checkInt("ts nested IIFE strict check+run: " + tsNestedIifeRun.stderr, 0, tsNestedIifeRun.status);
+test.checkText("ts nested IIFE stdout", "12\n", tsNestedIifeRun.stdout);
+if ccInfo.available {
+    cNestedIifeRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, nestedIifeSrc, "nested-iife.lts", "");
+    test.checkInt("c nested IIFE strict check+run: " + cNestedIifeRun.stderr, 0, cNestedIifeRun.status);
+    test.checkText("c nested IIFE stdout", "12\n", cNestedIifeRun.stdout);
+}
