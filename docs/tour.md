@@ -1,8 +1,9 @@
 # A short LiteLang tour
 
 This tour introduces selected language ideas through existing sources. All
-linked tour examples compile and run through the generated TS compiler, while
-broader language features remain in progress—check
+linked tour examples compile and run across both the **generated TypeScript and
+native C11** backends, while broader design features remain in progress—check
+[the Shipped Handbook](lite://handbook/overview-and-setup) and
 [compiler status](lite://doc/compiler/overview); the wider reference is a design
 contract, not a claim of full executable coverage.
 

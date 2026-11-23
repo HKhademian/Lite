@@ -39,7 +39,7 @@ io.outputLine("even(6):", isEven(6), "shadowRead:", shadowRead);
 
 ## Execution-Trace Safety
 
-The TS compiler traces forward and conditional initialization across eager code and closure calls: reading an uninitialized `= ?` binding along any reachable execution trace is rejected at compile time.
+Both the TypeScript and C11 compilers trace forward and conditional initialization across eager code and function calls: reading an uninitialized `= ?` binding along any reachable execution trace is rejected at compile time.
 
 ## Functions, Named Routing, `self`, and Closures
 

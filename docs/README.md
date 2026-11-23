@@ -1,12 +1,15 @@
 # Language documentation
 
-Current entry guide: **2026-11-03**. Stage: **selected design with partial generated-TS support**.
+Current entry guide: **2026-11-23**. Stage: **selected design with dual-target TypeScript and native C11 self-hosting**.
 
-The [Lite-written compiler](lite://doc/compiler/overview) supplies the generated TS
-bootstrap used by public compile/check, default tests and routine compiler tools.
-T00 is an explicit historical reference. C output/native self-hosting are deferred.
-The broader reference is not fully implemented; use the
-[transition](lite://doc/compiler/transition-plan) for current support evidence.
+The [Lite-written compiler](lite://doc/compiler/overview) supplies both the generated TS
+bootstrap (`igniter.ts`) and standalone C11 bootstrap (`compiler.c`), reaching a
+byte-identical 3-generation self-hosting fixed point on both backends. Public
+compile/check, default tests, `./bin/lite build`, `./bin/lite play`, and
+`./bin/lite verify` enforce dual-target TS + C11 parity across all 36 `core/*`
+and `extra/*` modules. T00 is retired historical reference only. Use the
+[Shipped Handbook](lite://handbook/overview-and-setup) for what ships today and
+[transition](lite://doc/compiler/transition-plan) for remaining design work.
 
 ## Start here
 

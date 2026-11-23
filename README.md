@@ -8,8 +8,8 @@
 
 - **Low ceremony:** Clean, readable syntax that stays out of your way.
 - **Explicit behavior:** No hidden globals, implicit echoes, or surprise runtime magic.
-- **Lightweight execution:** Compiles cleanly with minimal runtime support today, with a native C path ahead.
-- **Self-hosted foundation:** Written in LiteLang, easy to inspect, learn, and extend.
+- **Lightweight execution:** Compiles cleanly to strict TypeScript **and** standalone native C11 (`-std=c11 -Wall -Wextra -Werror`) with `-O0`..`-O3`/`-Os` optimization levels and 3-generation self-hosting on both backends.
+- **Self-hosted foundation:** Written in LiteLang, easy to inspect, learn, and extend, with 36 `core/*` and `extra/*` modules (collections, math, vectors, matrices, grids, memory pools, and desktop/Play graphics).
 
 ## Quickstart
 
@@ -20,25 +20,28 @@ Explore the **Showcase & Playground** published via GitHub Pages, or build and p
 ./site/serve.ts
 ```
 
-Run a script locally (using the Node version in [igniter/.node-version](igniter/.node-version)):
+Run, build, or play a script locally (using the Node version in [igniter/.node-version](igniter/.node-version)):
 
 ```sh
 git clone https://github.com/HKhademian/Lite.git
 cd Lite
-./bin/lite run language/examples/021-type-aliases.lts
+./bin/lite run language/examples/foundations/io/double-sum.lts
+./bin/lite build -O2 language/examples/foundations/io/double-sum.lts -o /tmp/double-sum
+./bin/lite play samples/games/arcade/paddle-pong.lts
 ```
 
 Check or compile a script with `./bin/lite`:
 
 ```sh
-./bin/lite check language/examples/001-double-sum.lts
-./bin/lite compile language/examples/001-double-sum.lts
+./bin/lite check language/examples/foundations/io/double-sum.lts
+./bin/lite compile --target ts language/examples/foundations/io/double-sum.lts
+./bin/lite compile --target c language/examples/foundations/io/double-sum.lts
 ```
 
 ## Learn & Explore
 
-- [Learn curriculum](language/learn/README.md) — 20 interactive track lessons, 3 project tutorials, and the [Handbook](language/learn/handbook/getting-started/overview-and-setup.md).
-- [Gym dojo](language/gym/README.md) — 42 verified drills and belt-ranked katas (white to obsidian).
+- [Learn curriculum](language/learn/README.md) — 25 interactive track lessons, 3 project tutorials, and the 11-chapter [Handbook](language/learn/handbook/getting-started/overview-and-setup.md).
+- [Gym dojo](language/gym/README.md) — 56 verified drills and belt-ranked katas (white to obsidian).
 - [Start here](docs/start-here.md) — run your first program and set up local tools.
 - [Language tour](docs/tour.md) — example-led introduction to LiteLang.
 - [Examples](language/examples/README.md) — runnable `.lts` programs.

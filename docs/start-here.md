@@ -1,8 +1,9 @@
 # Start with LiteLang
 
-Lite is an experimental language project with a LiteLang-written compiler and a
-generated TypeScript bootstrap. The generated compiler supports a subset of the
-design. C output and native self-hosting are deferred during the TS migration.
+Lite is a small, explicit programming language with a **3-generation self-hosted
+compiler** written in LiteLang, targeting both **strict TypeScript** and
+**standalone native C11** (`-std=c11 -Wall -Wextra -Werror`) with 36 `core/*`
+and `extra/*` standard and experimental modules.
 
 ## Prepare the checkout
 
@@ -47,13 +48,16 @@ Enter `7` and `5`; the final value is `24`. Prompts are explicit program output.
 forwards script arguments after an optional `--` and exits with the program
 status without leaving the artifact behind.
 
-## Compile and check it
+## Compile, build natively, play, and check
 
-Compile the artifact yourself, or check the source without executing it:
+Compile to TypeScript or C11, build a standalone native executable, launch a
+native Play game window, or check without executing:
 
 ```sh
-./bin/lite compile language/examples/foundations/io/double-sum.lts > /tmp/lite-example.ts
-node compiler/entry.ts /tmp/lite-example.ts
+./bin/lite compile --target ts language/examples/foundations/io/double-sum.lts > /tmp/lite-example.ts
+./bin/lite compile --target c language/examples/foundations/io/double-sum.lts > /tmp/lite-example.c
+./bin/lite build -O2 language/examples/foundations/io/double-sum.lts -o /tmp/double-sum
+./bin/lite play samples/games/arcade/paddle-pong.lts
 ./bin/lite check language/examples/foundations/io/double-sum.lts
 ```
 

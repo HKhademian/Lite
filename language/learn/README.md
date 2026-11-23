@@ -5,7 +5,7 @@ The **Learn** curriculum powers the structured guide side of **Lite Academy** (`
 ## Layout
 
 - [catalog.json](lite://repo/language/learn/catalog.json) — machine-readable curriculum manifest validated against [learn.schema.json](lite://repo/config/learn.schema.json).
-- [handbook/](lite://handbook/overview-and-setup) — 7-chapter shipped Lite language handbook (`01` through `07`).
+- [handbook/](lite://handbook/overview-and-setup) — 11-chapter shipped Lite language handbook (`01` through `11`), covering core syntax, modules, `extra/*` graphics/math/data-structure libraries, and native C11 tooling.
 - `lessons/` — 25 interactive track lessons (`Track 0` – `Track 6`), each pairing a markdown guide with a runnable `.lts` program.
 - `tutorials/` — 3 standalone multi-step or multi-file project tutorials (`Track 7`), including relative helper modules bundled into the browser playground.
 

@@ -37,15 +37,16 @@ stats := import "./helpers/math-stats.lts";
 
 Note that `.lts` extension scripts and `.lt` module files contain no hidden prelude—every module declares its own imports cleanly.
 
-## Browser-Safe Core Modules vs Host OS Modules
+## Browser-Safe Core Modules, Extra Libraries & Host OS Modules
 
-All 17 modules documented in [Modules](lite://module) split into three clear environments:
+All 36 modules documented in [Modules](lite://module) (18 `core/*` + 18 `extra/*`) split into three clear environments:
 
-| Environment | Examples | Where it runs |
+| Environment | Modules | Where it runs |
 | --- | --- | --- |
-| **Browser + CLI** | `core/io`, `core/int`, `core/text`, `core/list`, `core/unicode`, `core/format`, `core/source`, `core/test`, `core/diag` | Runs everywhere: CLI & Browser Worker |
-| **Lite Play** | `extra/canvas`, `extra/board`, `extra/audio` | Browser Canvas/WebAudio stage & headless tests |
-| **CLI / Host OS** | `core/file`, `core/path`, `core/process`, `core/time` (`core/crypto` on CLI) | Requires local `./bin/lite run` host OS access |
+| **Browser + CLI (`core/*`)** | `core/io`, `core/int`, `core/math`, `core/random`, `core/text`, `core/list`, `core/map`, `core/set`, `core/unicode`, `core/format`, `core/crypto`, `core/source`, `core/test`, `core/diag` | Runs everywhere: Browser Worker, CLI TS & native C11 |
+| **Browser + CLI (`extra/*`)** | `extra/vector`, `extra/matrix`, `extra/grid`, `extra/color`, `extra/timer`, `extra/arena`, `extra/pool`, `extra/intern`, `extra/lru`, `extra/ring`, `extra/deque`, `extra/heap`, `extra/bitset`, `extra/sparse` | Pure Lite math, data structures & allocators on TS & C11 |
+| **Lite Play & Surfaces** | `extra/canvas`, `extra/surface`, `extra/board`, `extra/audio` | Browser Play Canvas, `./bin/lite play` desktop stage & headless tests |
+| **CLI / Host OS** | `core/file`, `core/path`, `core/process`, `core/time` | Requires local `./bin/lite run` or native C11 host OS access |
 
 ## Reading Input, Arguments & Exiting Explicitly
 
@@ -59,3 +60,7 @@ Inside [core/io](lite://module/core/io):
 On CLI hosts, combine [core/path](lite://module/core/path) and [core/file](lite://module/core/file) with `finally` cleanup for safe temporary-workspace automation, or [core/crypto](lite://module/core/crypto) and [core/format](lite://module/core/format) for deterministic SHA-256 / HMAC digests.
 
 See [Visibility](lite://doc/visibility) and [Tooling & Learning](lite://doc/tooling-and-learning).
+
+## Next Chapter
+
+Continue to [Graphics, Surfaces & Lite Play](lite://handbook/graphics-surfaces-and-play).
