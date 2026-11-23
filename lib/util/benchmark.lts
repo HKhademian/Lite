@@ -77,34 +77,7 @@ pub formatMicrosAsMs := fn(micros: Int): String {
 pub medianInt := fn(values: List<Int>): Int {
     n := list.listCountInt(values);
     if n == 0 { return 0; }
-    var remaining: mut List<Int> = [];
-    loop values as v {
-        list.pushBack(mut remaining, v);
-    }
-    sorted: mut List<Int> = [];
-    loop list.listCountInt(remaining) > 0 {
-        remCount := list.listCountInt(remaining);
-        var minIdx := 0;
-        var minVal := remaining[0];
-        var ri := 1;
-        loop ri < remCount {
-            if remaining[ri] < minVal {
-                minVal = remaining[ri];
-                minIdx = ri;
-            }
-            ri = ri + 1;
-        }
-        list.pushBack(mut sorted, minVal);
-        nextRem: mut List<Int> = [];
-        var ni := 0;
-        loop ni < remCount {
-            if ni =!= minIdx {
-                list.pushBack(mut nextRem, remaining[ni]);
-            }
-            ni = ni + 1;
-        }
-        remaining = nextRem;
-    }
+    sorted := list.sortInts(values);
     mid := n / 2;
     if (n % 2) == 1 { return sorted[mid]; }
     (sorted[mid - 1] + sorted[mid]) / 2

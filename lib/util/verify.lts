@@ -270,7 +270,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
         return (ok = false, text = "", error = "language/verifications/features.json: features must be an array");
     }
 
-    ids: mut List<String> = [];
+    ids: mut Set<String>;
     offsets := json.arrayElementOffsets(src, featField.valuePos);
     var idx := 0;
     loop offsets as itemPos {
@@ -288,7 +288,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
         if not idRes.found or not idRes.ok {
             return (ok = false, text = "", error = label + ".id: expected a string");
         }
-        if list.listContainsText(ids, idRes.value) {
+        if set.has(ids, idRes.value) {
             return (ok = false, text = "", error = label + ": duplicate feature " + idRes.value);
         }
         sumRes := json.readObjectString(src, itemPos, "summary");
@@ -315,7 +315,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
                 return (ok = false, text = "", error = label + ".docs: missing " + docRel);
             }
         }
-        list.pushBack(mut ids, idRes.value);
+        set.add(mut ids, idRes.value);
         idx = idx + 1;
     }
     (ok = true, text = src, error = "")
@@ -342,7 +342,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
     )
 };
 
-validateManifestText := fn(rootDir: String, file: String, expectedKind: String, featureIds: List<String>): (
+validateManifestText := fn(rootDir: String, file: String, expectedKind: String, featureIdSet: Set<String>): (
 ok: Bool, id: String, hasSourceFile: Bool, sourceFile: String, sourcePath: String,
 sourceHashField: String, hasAppend: Bool, appendText: String, text: String, error: String
 ) {
@@ -399,7 +399,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         return failManifestText(label + ".features: at least one feature is required");
     }
     loop featItems as featName {
-        if not list.listContainsText(featureIds, featName) {
+        if not set.has(featureIdSet, featName) {
             return failManifestText(label + ".features: unknown feature " + featName);
         }
     }
@@ -459,7 +459,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         return failManifestText(label + ".cases: at least one case is required");
     }
 
-    seenNames: mut List<String> = [];
+    seenNames: mut Set<String>;
     allowedScenario: List<String> = ["name", "args", "stdin", "stdout", "stderr", "exitCode"];
     var idx := 0;
     loop caseOffsets as sPos {
@@ -476,10 +476,10 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         if not sNameRes.found or not sNameRes.ok {
             return failManifestText(sLabel + ".name: expected a string");
         }
-        if list.listContainsText(seenNames, sNameRes.value) {
+        if set.has(seenNames, sNameRes.value) {
             return failManifestText(label + ": duplicate case name " + sNameRes.value);
         }
-        list.pushBack(mut seenNames, sNameRes.value);
+        set.add(mut seenNames, sNameRes.value);
 
         sArgsCheck := checkStringArrayField(src, sPos, "args", sLabel);
         if sArgsCheck.found and not sArgsCheck.ok { return failManifestText(sArgsCheck.error); }
@@ -529,28 +529,28 @@ collectKindManifests := fn(rootDir: String, kind: String): List<String> {
     path.collectFiles(dirPath, [dirPath], ".json", ignored, true)
 };
 
-validateAllManifests := fn(rootDir: String, featureIds: List<String>, verifiedIds: List<String>): (ok: Bool, error: String) {
+validateAllManifests := fn(rootDir: String, featureIdSet: Set<String>, verifiedIds: List<String>): (ok: Bool, error: String) {
     dirKinds: List<String> = [KIND_FEATURE, KIND_EXAMPLE, KIND_SAMPLE, KIND_SHOWCASE];
-    ids: mut List<String> = [];
-    featureManifestIds: mut List<String> = [];
+    ids: mut Set<String>;
+    featureManifestIds: mut Set<String>;
 
     loop dirKinds as kind {
         loop collectKindManifests(rootDir, kind) as f {
-            checked := validateManifestText(rootDir, f, kind, featureIds);
+            checked := validateManifestText(rootDir, f, kind, featureIdSet);
             if not checked.ok {
                 return (ok = false, error = checked.error);
             }
-            if list.listContainsText(ids, checked.id) {
+            if set.has(ids, checked.id) {
                 return (ok = false, error = checked.id + ": duplicate manifest id");
             }
-            list.pushBack(mut ids, checked.id);
+            set.add(mut ids, checked.id);
             if kind == KIND_FEATURE {
-                list.pushBack(mut featureManifestIds, checked.id);
+                set.add(mut featureManifestIds, checked.id);
             }
         }
     }
     loop verifiedIds as vId {
-        if not list.listContainsText(featureManifestIds, vId) {
+        if not set.has(featureManifestIds, vId) {
             return (ok = false, error = "feature " + vId + ": no verification case");
         }
     }
@@ -1165,8 +1165,10 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
         return 2;
     }
     featureIds := registryFeatureIds(reg.text, false);
+    featureIdSet: mut Set<String>;
+    loop featureIds as fid { set.add(mut featureIdSet, fid); }
     verifiedIds := registryFeatureIds(reg.text, true);
-    allCheck := validateAllManifests(rootDir, featureIds, verifiedIds);
+    allCheck := validateAllManifests(rootDir, featureIdSet, verifiedIds);
     if not allCheck.ok {
         io.errorLine("lite verify: " + allCheck.error);
         return 2;
@@ -1208,15 +1210,15 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     var cacheDirty := false;
 
     var hasGitChanges := false;
-    gitPaths: mut List<String> = [];
+    gitPaths: mut Set<String>;
     var invalidateAll := false;
-    changedFeatures: mut List<String> = [];
+    changedFeatures: mut Set<String>;
     if opts.changed {
         gitRes := readGitStatus(rootDir);
         if gitRes.ok {
             hasGitChanges = true;
             loop parseGitStatusPaths(gitRes.stdout) as gp {
-                list.pushBack(mut gitPaths, gp);
+                set.add(mut gitPaths, gp);
                 if invalidatesVerification(gp) {
                     invalidateAll = true;
                 }
@@ -1228,9 +1230,9 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                     fId := json.readObjectString(fText, 0, "id").value;
                     sf := json.findObjectField(fText, 0, "source");
                     sFileRes := json.readObjectString(fText, sf.valuePos, "file");
-                    srcHit := sFileRes.found and list.listContainsText(gitPaths, path.relative(rootDir, path.resolve(path.parentDir(fFile), sFileRes.value)));
-                    if list.listContainsText(gitPaths, relMan) or srcHit {
-                        list.pushBack(mut changedFeatures, fId);
+                    srcHit := sFileRes.found and set.has(gitPaths, path.relative(rootDir, path.resolve(path.parentDir(fFile), sFileRes.value)));
+                    if set.has(gitPaths, relMan) or srcHit {
+                        set.add(mut changedFeatures, fId);
                     }
                 }
             }
@@ -1249,7 +1251,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     dirKinds: List<String> = [KIND_FEATURE, KIND_EXAMPLE, KIND_SAMPLE, KIND_SHOWCASE];
     loop dirKinds as mKind {
         loop collectKindManifests(rootDir, mKind) as mFile {
-            meta := validateManifestText(rootDir, mFile, mKind, featureIds);
+            meta := validateManifestText(rootDir, mFile, mKind, featureIdSet);
             mId := meta.id;
             mText := meta.text;
             mDir := path.parentDir(mFile);
@@ -1257,15 +1259,15 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
             var selectedManifest := manifestMatchesFilter(rootDir, mFile, mId, mText, opts.hasFilter, opts.filter);
             if selectedManifest and hasGitChanges and not invalidateAll {
                 relMan := path.relative(rootDir, mFile);
-                srcHit := meta.hasSourceFile and list.listContainsText(gitPaths, path.relative(rootDir, meta.sourcePath));
+                srcHit := meta.hasSourceFile and set.has(gitPaths, path.relative(rootDir, meta.sourcePath));
                 var featHit := false;
                 loop readStringArrayField(mText, 0, "features") as fId {
-                    if list.listContainsText(changedFeatures, fId) {
+                    if set.has(changedFeatures, fId) {
                         featHit = true;
                         break;
                     }
                 }
-                if not list.listContainsText(gitPaths, relMan) and not srcHit and not featHit {
+                if not set.has(gitPaths, relMan) and not srcHit and not featHit {
                     selectedManifest = false;
                 }
             }

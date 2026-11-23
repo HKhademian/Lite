@@ -313,15 +313,15 @@ pub validateCaseSet := fn(rootDir: String, filter: String): (ok: Bool, matchCoun
     if list.listCountText(files) == 0 {
         return (ok = false, matchCount = 0, error = "no cases found");
     }
-    seenIds: mut List<String> = [];
+    seenIds: mut Set<String>;
     var matches := 0;
     loop files as caseFile {
         checked := validateCaseFile(rootDir, caseFile);
         if not checked.ok { return (ok = false, matchCount = 0, error = checked.error); }
-        if list.listContainsText(seenIds, checked.id) {
+        if set.has(seenIds, checked.id) {
             return (ok = false, matchCount = 0, error = "duplicate case IDs");
         }
-        list.pushBack(mut seenIds, checked.id);
+        set.add(mut seenIds, checked.id);
         if matchesCaseEntry(rootDir, checked.id, caseFile, filter) {
             matches = matches + 1;
         }
