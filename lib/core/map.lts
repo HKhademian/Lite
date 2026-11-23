@@ -1,28 +1,66 @@
-/* Provisional bootstrap map support. Not an official standard library. */
+/* Core map operations and deprecated module-level compatibility shims. */
 
-/** Registered map mutation intrinsic; inserts or updates `key` with `value` in O(1). */
+/** Inserts or updates `key` with `value` in O(1). */
+pub Map.set := fn<K, V>(entries: mut Self<K, V>, key: K, value: V): Unit;
+
+/** Returns `(found = true, value = v)` when present, or `(found = false, value = zero(V))` in O(1). */
+pub Map.get := fn<K, V>(entries: Self<K, V>, key: K): (found: Bool, value: V);
+
+/** Returns the stored value for `key` or `fallback` when absent in O(1). */
+pub Map.getOr := fn<K, V>(entries: Self<K, V>, key: K, fallback: V): V;
+
+/** True when `entries` contains `key` in O(1). */
+pub Map.has := fn<K, V>(entries: Self<K, V>, key: K): Bool;
+
+/** Removes `key` and returns true when it was present in O(1). */
+pub Map.remove := fn<K, V>(entries: mut Self<K, V>, key: K): Bool;
+
+/** Returns the number of entries in `entries` in O(1). */
+pub Map.size := fn<K, V>(entries: Self<K, V>): Int;
+
+/** Removes all entries from `entries` in O(1). */
+pub Map.clear := fn<K, V>(entries: mut Self<K, V>): Unit;
+
+/** Returns all keys in insertion order in O(n). */
+pub Map.keys := fn<K, V>(entries: Self<K, V>): List<K>;
+
+/** Returns all values in insertion order in O(n). */
+pub Map.values := fn<K, V>(entries: Self<K, V>): List<V>;
+
+/** Returns the value for `key`, faulting when absent. */
+pub Map.$getIndex := fn<K, V>(entries: Self<K, V>, key: K): V;
+
+/** Inserts or updates `key` with `value` via `entries[key] = value`. */
+pub Map.$setIndex := fn<K, V>(entries: mut Self<K, V>, key: K, value: V): Unit;
+
+/** True when `entries` contains zero entries. */
+pub Map.isEmpty := fn<K, V>(entries: Self<K, V>): Bool {
+    entries.size() == 0
+};
+
+/** #deprecated Use `entries.set(key, value)` instead. */
 pub set := fn<K, V>(entries: mut Map<K, V>, key: K, value: V): Unit;
 
-/** Registered map lookup intrinsic; returns `(found = true, value = v)` when present, or `(found = false, value = zero(V))` in O(1). */
+/** #deprecated Use `entries.get(key)` instead. */
 pub get := fn<K, V>(entries: Map<K, V>, key: K): (found: Bool, value: V);
 
-/** Registered map lookup intrinsic; returns the stored value for `key` or `fallback` when absent in O(1). */
+/** #deprecated Use `entries.getOr(key, fallback)` instead. */
 pub getOr := fn<K, V>(entries: Map<K, V>, key: K, fallback: V): V;
 
-/** Registered map membership intrinsic; true when `entries` contains `key` in O(1). */
+/** #deprecated Use `entries.has(key)` instead. */
 pub has := fn<K, V>(entries: Map<K, V>, key: K): Bool;
 
-/** Registered map mutation intrinsic; removes `key` and returns true when it was present in O(1). */
+/** #deprecated Use `entries.remove(key)` instead. */
 pub remove := fn<K, V>(entries: mut Map<K, V>, key: K): Bool;
 
-/** Registered map size intrinsic; returns the number of entries in O(1). */
+/** #deprecated Use `entries.size()` instead. */
 pub size := fn<K, V>(entries: Map<K, V>): Int;
 
-/** Registered map mutation intrinsic; removes all entries in O(1). */
+/** #deprecated Use `entries.clear()` instead. */
 pub clear := fn<K, V>(entries: mut Map<K, V>): Unit;
 
-/** Registered map keys intrinsic; returns all keys in insertion order in O(n). */
+/** #deprecated Use `entries.keys()` instead. */
 pub keys := fn<K, V>(entries: Map<K, V>): List<K>;
 
-/** Registered map values intrinsic; returns all values in insertion order in O(n). */
+/** #deprecated Use `entries.values()` instead. */
 pub values := fn<K, V>(entries: Map<K, V>): List<V>;

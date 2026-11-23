@@ -1,0 +1,99 @@
+/* Dual-target (TS + C11) parity tests for Phase 5 core built-in type operations under `--builtin-mode=builtin` and `--builtin-mode=pure`. */
+
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+runWithModes := fn(label: String, src: String, expected: String, extraArgs: List<String>): Unit {
+    tsCompRes := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", extraArgs);
+    test.checkInt(label + " ts compile: " + tsCompRes.stderr, 0, tsCompRes.status);
+    tsRun := compilerTest.checkAndRunTs(root, tsCompRes.stdout);
+    test.checkInt(label + " ts status: " + tsRun.stderr, 0, tsRun.status);
+    test.checkText(label + " ts stdout", expected, tsRun.stdout);
+    if ccInfo.available {
+        cCompRes := compilerTest.compileStdinWithOpts(root, cComp, root, src, "", "", extraArgs);
+        test.checkInt(label + " c compile: " + cCompRes.stderr, 0, cCompRes.status);
+        cRun := compilerTest.compileAndRunC(cCompRes.stdout, ccInfo.cc, "");
+        test.checkInt(label + " c status: " + cRun.stderr, 0, cRun.status);
+        test.checkText(label + " c stdout parity", tsRun.stdout, cRun.stdout);
+    }
+};
+
+/* 1. Zero-import ergonomic dot operations across List, Array, Map, Set, String, Int + $getIndex/$setIndex hooks. */
+coreOpsSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"xs: mut List<Int> = [10, 20];\n" +
+"xs.pushBack(30);\n" +
+"xs.pushFront(5);\n" +
+"xs[1] += 2;\n" +
+"xs[2] = 25;\n" +
+"popped := xs.popBack();\n" +
+"rev := xs.reverse();\n" +
+"doubled := xs.map(fn(n) { n * 2 });\n" +
+"big := doubled.filter(fn(n) { n >= 20 });\n" +
+"words: List<String> = [\"a\", \"b\", \"c\"];\n" +
+"io.outputLine(xs.length(), xs.isEmpty(), popped, rev[0], big.length(), big[0], words.join(\"-\"));\n" +
+"\n" +
+"var arr := [3, 6, 9];\n" +
+"arr[1] += 4;\n" +
+"io.outputLine(arr.length(), arr.isEmpty(), arr[0], arr[1], arr[2]);\n" +
+"\n" +
+"m: mut Map<String, Int>;\n" +
+"m.set(\"a\", 1);\n" +
+"m[\"b\"] = 2;\n" +
+"m[\"b\"] += 5;\n" +
+"g1 := m.get(\"a\");\n" +
+"io.outputLine(m.size(), m.isEmpty(), m.has(\"a\"), g1.found, g1.value, m.getOr(\"z\", 99), m[\"b\"]);\n" +
+"\n" +
+"s: mut Set<String>;\n" +
+"s.add(\"x\");\n" +
+"s.add(\"y\");\n" +
+"rm := s.remove(\"x\");\n" +
+"io.outputLine(s.size(), s.isEmpty(), rm, s.has(\"x\"), s.has(\"y\"));\n" +
+"\n" +
+"raw := \"  Hello_42  \";\n" +
+"tr := raw.trim();\n" +
+"parsed := \"-123\".toInt();\n" +
+"io.outputLine(\"abc\".length(), \"\".isEmpty(), tr.length(), tr.isEmpty(), tr.toLowerAscii(), tr.startsWith(\"Hel\"), tr.endsWith(\"42\"), tr.contains(\"lo_\"));\n" +
+"io.outputLine(\"ab\".repeat(3), parsed.ok, parsed.value, (42).toText(), (-7).toText());\n";
+
+expectedOut :=
+"3 false 30 25 2 24 a-b-c\n" +
+"3 false 3 10 9\n" +
+"2 false true true 1 99 7\n" +
+"1 false true false true\n" +
+"3 true 8 false hello_42 true true true\n" +
+"ababab true -123 42 -7\n";
+
+/* Run under default builtin mode, full pure mode, and targeted TypeName.op pure override! */
+builtinArgs: List<String> = ["--builtin-mode=builtin"];
+pureArgs: List<String> = ["--builtin-mode=pure"];
+targetedArgs: List<String> = ["--builtin-mode=core/text:String.trim=pure", "--builtin-mode=core/int:Int.toText=pure"];
+
+runWithModes("core-type-ops-builtin", coreOpsSrc, expectedOut, builtinArgs);
+runWithModes("core-type-ops-pure", coreOpsSrc, expectedOut, pureArgs);
+runWithModes("core-type-ops-targeted", coreOpsSrc, expectedOut, targetedArgs);
+
+/* 2. Zero DCE overhead check: minimal program emits no unused core type ops. */
+minSrc := "io := import \"core/io\";\nio.outputLine(42);\n";
+emptyArgs: List<String> = [];
+minTs := compilerTest.compileStdinWithOpts(root, tsComp, root, minSrc, "", "", emptyArgs);
+test.checkInt("min ts compile", 0, minTs.status);
+test.check("min ts omits unused String.trim", not text.containsText(minTs.stdout, "tp_String_op_trim"));
+test.check("min ts omits unused Int.toText", not text.containsText(minTs.stdout, "tp_Int_op_toText"));
+test.check("min ts omits unused List.map", not text.containsText(minTs.stdout, "tp_List_op_map"));
+
+test.done("core-type-operations");

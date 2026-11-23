@@ -1,4 +1,4 @@
-/* Provisional bootstrap checked-integer support. Not an official standard library. */
+/* Core checked-integer operations and deprecated module-level shims. */
 
 /** Smallest signed 64-bit value. */
 pub intMin := -9223372036854775808;
@@ -96,11 +96,11 @@ digitChar := fn(digit: Int): String {
     }
 }
 
-/** Formats one signed 64-bit Int as decimal text. */
-pub intText := fn(value: Int): String {
+/** Pure-Lite decimal formatting helper shared by `Int.toText` and deprecated `intText`. */
+intTextPure := fn(value: Int): String {
     if value == 0 { return "0"; }
     if value == intMin { return "-9223372036854775808"; }
-    if value < 0 { return "-" + intText(0 - value); }
+    if value < 0 { return "-" + self(0 - value); }
     var remaining := value;
     var digits := "";
     loop remaining > 0 {
@@ -109,4 +109,14 @@ pub intText := fn(value: Int): String {
         remaining = remaining / 10;
     }
     digits
+}
+
+/** Formats one signed 64-bit Int as decimal text (soft builtin). */
+pub Int.toText := fn(value: Self): String {
+    intTextPure(value)
+}
+
+/** #deprecated Use `value.toText()` instead. */
+pub intText := fn(value: Int): String {
+    intTextPure(value)
 }

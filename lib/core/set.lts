@@ -1,19 +1,42 @@
-/* Provisional bootstrap set support. Not an official standard library. */
+/* Core set operations and deprecated module-level compatibility shims. */
 
-/** Registered set mutation intrinsic; inserts `value` into `s` in O(1). */
+/** Inserts `value` into `s` in O(1). */
+pub Set.add := fn<T>(s: mut Self<T>, value: T): Unit;
+
+/** True when `s` contains `value` in O(1). */
+pub Set.has := fn<T>(s: Self<T>, value: T): Bool;
+
+/** Removes `value` and returns true when it was present in O(1). */
+pub Set.remove := fn<T>(s: mut Self<T>, value: T): Bool;
+
+/** Returns the number of elements in `s` in O(1). */
+pub Set.size := fn<T>(s: Self<T>): Int;
+
+/** Removes all elements from `s` in O(1). */
+pub Set.clear := fn<T>(s: mut Self<T>): Unit;
+
+/** Returns all elements in insertion order in O(n). */
+pub Set.values := fn<T>(s: Self<T>): List<T>;
+
+/** True when `s` contains zero elements. */
+pub Set.isEmpty := fn<T>(s: Self<T>): Bool {
+    s.size() == 0
+};
+
+/** #deprecated Use `s.add(value)` instead. */
 pub add := fn<T>(s: mut Set<T>, value: T): Unit;
 
-/** Registered set membership intrinsic; true when `s` contains `value` in O(1). */
+/** #deprecated Use `s.has(value)` instead. */
 pub has := fn<T>(s: Set<T>, value: T): Bool;
 
-/** Registered set mutation intrinsic; removes `value` and returns true when it was present in O(1). */
+/** #deprecated Use `s.remove(value)` instead. */
 pub remove := fn<T>(s: mut Set<T>, value: T): Bool;
 
-/** Registered set size intrinsic; returns the number of elements in O(1). */
+/** #deprecated Use `s.size()` instead. */
 pub size := fn<T>(s: Set<T>): Int;
 
-/** Registered set mutation intrinsic; removes all elements in O(1). */
+/** #deprecated Use `s.clear()` instead. */
 pub clear := fn<T>(s: mut Set<T>): Unit;
 
-/** Registered set values intrinsic; returns all elements in insertion order in O(n). */
+/** #deprecated Use `s.values()` instead. */
 pub values := fn<T>(s: Set<T>): List<T>;

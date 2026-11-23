@@ -1,0 +1,15 @@
+/* Core fixed-length array operations. */
+
+/** Returns the compile-time element count of fixed-length array `values`. */
+pub Array.length := fn<T>(values: Self<T>): Int;
+
+/** Returns the element at zero-based `index` in fixed-length array `values`, faulting on out-of-bounds access. */
+pub Array.$getIndex := fn<T>(values: Self<T>, index: Int): T;
+
+/** Replaces the element at zero-based `index` in fixed-length array `values`, faulting on out-of-bounds access. */
+pub Array.$setIndex := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
+
+/** True when fixed-length array `values` has zero elements. */
+pub Array.isEmpty := fn<T>(values: Self<T>): Bool {
+    values.length() == 0
+};
