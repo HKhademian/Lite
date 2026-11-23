@@ -1054,7 +1054,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
             "<a class=\"docs-pager-card docs-pager-next\" href=\"" + escapeHtml(relativeHref(mOut, "learn/")) + "\" data-pager-next>\n"
             + "          <span class=\"docs-pager-kicker\">Continue Learning &rarr;</span>\n"
             + "          <strong>Interactive Learn Studio</strong>\n"
-            + "          <span class=\"docs-pager-summary\">Practice all seven Handbook chapters in live browser exercises and tutorials.</span>\n"
+            + "          <span class=\"docs-pager-summary\">Practice all " + integer.intText(hbCount) + " Handbook chapters in live browser exercises and tutorials.</span>\n"
             + "        </a>"
         };
         editLink := if repoUrl =!= "" {

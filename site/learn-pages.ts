@@ -1,8 +1,9 @@
 /** Generates `/learn/` interactive ability curriculum, project tutorials, and live lesson runner pages via `tools/src/site-learn.lts`. */
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { compileBuiltCompiler, spawnTool, type CompilerBuild } from '../igniter/artifacts.ts';
 import { renderDocuments, type ModuleApiDoc, type RenderedDocument } from './docs-client.ts';
 import { captureCanvasPreview } from './canvas-preview.ts';
@@ -72,6 +73,33 @@ function compileAndRunLessonSource(
 }> {
   const fullPath = resolve(rootDir, lesson.sourceFile);
   const source = readFileSync(fullPath, 'utf8');
+  let cacheFile: string | undefined;
+  if (process.env.LITE_SITE_NO_CACHE !== '1') {
+    const hasher = createHash('sha256')
+      .update('site-learn-v1\0')
+      .update(tsCompiler.artifactSha256)
+      .update('\0')
+      .update(lesson.sourceFile)
+      .update('\0')
+      .update(lesson.title)
+      .update('\0')
+      .update(source)
+      .update('\0')
+      .update(lesson.stdin)
+      .update('\0')
+      .update(JSON.stringify(lesson.args));
+    for (const hm of lesson.helperModules) {
+      hasher.update('\0').update(hm.spec).update('\0').update(hm.file).update('\0').update(readFileSync(resolve(rootDir, hm.file), 'utf8'));
+    }
+    cacheFile = join(rootDir, 'dist', 'cache', 'site-learn', `${hasher.digest('hex')}.json`);
+    if (existsSync(cacheFile)) {
+      try {
+        return JSON.parse(readFileSync(cacheFile, 'utf8'));
+      } catch {
+        /* ignore corrupt cache entry and rebuild */
+      }
+    }
+  }
   const keepalive = appendPlayKeepalive(source);
   let compiled = compileBuiltCompiler(tsCompiler, {
     text: keepalive ?? source,
@@ -131,13 +159,18 @@ function compileAndRunLessonSource(
   }
 
   const previewSvg = captureCanvasPreview(generatedTs, lesson.title);
-  return {
+  const result = {
     source,
     generatedTs,
     output,
     ...(previewSvg !== undefined ? { previewSvg } : {}),
     extraModules,
   };
+  if (cacheFile !== undefined) {
+    mkdirSync(dirname(cacheFile), { recursive: true });
+    writeFileSync(cacheFile, JSON.stringify(result));
+  }
+  return result;
 }
 
 /** Builds `/learn/` index, 23 lesson/tutorial pages, JSON payloads, and search entries. */
