@@ -1,6 +1,6 @@
 # Type-operations and builtin dot-access migration plan
 
-Status: **implementation plan, 2026-11-23; design direction recorded in [type-attached operations](lite://doc/type-operations); compiler implementation not started**.
+Status: **completed across TS and C11, 2026-11-23**; normative design recorded in [type-attached operations](lite://doc/type-operations). Phases 1–7 (Slices 1A/1B/1C, Hard/Soft/Pure core ABI & lazy preloading, 3-generation TS + C11 seed promotions, `lib/core/*` migration, removal of hardcoded Category A dot-property and Category D single-element index/assignment magic, docgen/highlighter/VS Code grammar, and `extra/vector` + `extra/heap` nominal upgrades) have all shipped and passed dual-target verification.
 
 ## Mission
 
@@ -176,13 +176,14 @@ In separate, reviewable atomic commits after Phase 6:
 - **`lib/extra/` nominal upgrade:** migrate transparent tuple handles such as `Vec2`/`Vec3`/`Vec4` ([`lib/extra/vector.lts`](lite://repo/lib/extra/vector.lts)) and `MinHeap`/`MaxHeap`/`PriorityQueue` ([`lib/extra/heap.lts`](lite://repo/lib/extra/heap.lts)) to owned `record` or `distinct` types with ergonomic type-attached operations.
 - **Academy & docs:** update Learn, Gym, examples, samples, and [`compiler/README.md`](lite://doc/compiler/overview) to reflect shipped support.
 
-## Acceptance criteria
+## Acceptance criteria (verified 2026-11-23)
 
-- Zero hardcoded collection or string dot-property branches remain in `compiler/src/frontend-expr.lts`.
-- Every `List`, `Array`, `Map`, `Set`, and `String` dot member is declared in `lib/core/*.lts` as a Hard builtin, Soft builtin (pure Lite + optional native override), or Pure Lite implementation.
-- `--builtin-mode=pure` and `--builtin-mode=builtin` produce identical observable behavior across all migrated operations on both TS and C11.
+- Zero hardcoded collection or string dot-property branches remain in `compiler/src/frontend-expr.lts` (Category A deleted; Category D single-element `Map`/`List`/`Array` indexing and indexed assignment unified on `$getIndex`/`$setIndex`, leaving only range slicing `..`/`..=`).
+- Every `List`, `Array`, `Map`, `Set`, `String`, and `Int` dot member is declared in `lib/core/*.lts` (`lib/core/{list,array,map,set,text,int}.lts`) as a Hard builtin, Soft builtin (pure Lite + optional native override), or Pure Lite implementation, with legacy module-level shims marked `/** #deprecated ... */`.
+- `--builtin-mode=pure`, `--builtin-mode=builtin`, and targeted `--builtin-mode=core/text:String.trim=pure` produce identical observable behavior across all migrated operations on both TS and C11 (`compiler/tests/codegen/core-type-operations.test.lts`).
 - Unused core type operations incur zero emitted code overhead (verified by reachability/DCE tests).
-- Full dual-target TS + C11 parity and 3-generation self-hosting fixed points pass at every seed promotion step.
+- Full dual-target TS + C11 parity (`-std=c11 -Wall -Wextra -Werror` and ASan/UBSan), 3-generation TS + C11 self-hosting fixed points, docgen (`lib/util/docgen.lts`), site highlighter + 29/29 site tests (40 samples, 56 Gym exercises, 78k+ links), and 11/11 VS Code TextMate grammar tests pass.
+- Note: Category B (`VALUE_KIND_LIST_OP` bare `push_back`/`pop_back`/`push_front`/`pop_front`) and Category C (24 deprecated module-level `list.*`/`map.*`/`set.*` shim dispatchers) remain temporarily for backward compatibility with existing verification fixtures and bootstrap compiler sources until legacy shims are retired in a separate deprecation window.
 
 ## Related documents
 

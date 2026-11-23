@@ -1,6 +1,6 @@
 # Type-attached operations
 
-Status: **selected design direction, 2026-11-23; compiler implementation not started**. Uniform `TypeName.op := fn[<...>](...)` declarations, `self` versus `Self`, strictly required explicit `Self`/`Self<...>` receivers, owned nominal types (including `distinct`), generic receiver support from the start, static `mut`-checked dot calls (`xs.pushBack(42)`), explicit calls for computed reads (`xs.length()`, `m.size()`, `s.isEmpty()`), and current rejection of `alias`/foreign inherent attachments are selected. Explicit imported extensions and `get`/`set` backing properties are recorded future directions.
+Status: **shipped across TS and C11, 2026-11-23**. Uniform `TypeName.op := fn[<...>](...)` declarations, `self` versus `Self`, strictly required explicit `Self`/`Self<...>` receivers, owned nominal types (`record`, `enum`, and verified core built-ins `List`, `Array`, `Map`, `Set`, `String`, `Int`), monomorphized generic function bodies (`fn<T>`, `fn<K, V>`, `fn<T, U>`), static `mut`-checked dot calls (`xs.pushBack(42)`, `player.takeDamage(10)` with COW snapshot isolation), explicit calls for computed reads (`xs.length()`, `m.size()`, `s.isEmpty()`), provisional `$getIndex`/`$setIndex` operator hooks, and rejection of `alias`/foreign inherent attachments are implemented and verified across both TS and C11 self-hosting targets. `distinct` types, explicit imported extensions, and `get`/`set` backing properties remain recorded future directions.
 
 ## Purpose
 

@@ -60,9 +60,7 @@ seed or host glue.
 The staged path from this prototype to runnable TS/C bootstrap compilers is the
 [bootstrap and self-hosting plan](lite://doc/bootstrap-plan). It is an
 implementation plan; it does not change the restricted compiler's current
-contract or select new language syntax. For the planned migration of hardcoded
-built-in dot access (`List`, `Array`, `Map`, `Set`, `String`) to hard/soft/pure
-declarations in `lib/core/*.lts`, see
+contract or select new language syntax. For the shipped migration of built-in dot access (`List`, `Array`, `Map`, `Set`, `String`, `Int`) and single-element indexing (`$getIndex`/`$setIndex`) to hard/soft/pure declarations in `lib/core/*.lts`, see
 [type-operations and builtin dot-access migration](lite://doc/compiler/type-operations-migration-plan).
 For the compiler data-structure, C11 string runtime, and v2 tokenized/typed-IR
 pipeline roadmap, see

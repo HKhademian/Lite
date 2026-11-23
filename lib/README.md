@@ -4,20 +4,21 @@
 declaration carries a `/** ... */` doc comment and is published automatically to
 the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 
-## Core Modules (`lib/core/` — 18 modules)
+## Core Modules (`lib/core/` — 19 modules)
 
 | Module | Environment | Capabilities |
 | --- | --- | --- |
 | `core/io` | Browser + CLI | Host-backed console/stream I/O (`output`, `outputLine`, `errorLine`, `inputLine`, `inputInt`, `inputFloat`, `inputAll`, `inputArgs`, `exit`) |
-| `core/int` | Browser + CLI | Int64 bounds, checked arithmetic, decimal/hex formatting and parsing |
+| `core/int` | Browser + CLI | `Int.*` operations (`toText`, `toHex`), Int64 bounds, checked arithmetic, decimal/hex formatting and parsing |
 | `core/math` | Browser + CLI | `PI`, `TAU`, `E`, `absInt`/`absFloat`, `min`/`max`, `clamp`, `floor`/`ceil`/`round`, `sqrt`, `sign` |
 | `core/random` | Browser + CLI | Deterministic, seedable Lehmer PRNG (`Rng`, `create`, `nextInt`, `rangeInt`, `nextBool`, `nextFloat`) |
-| `core/text` | Browser + CLI | Code-point length/at/slice, ASCII predicates, trimming, starts-with, index-of, split/join, text-to-Int |
+| `core/text` | Browser + CLI | `String.*` hard/soft/pure operations (`length`, `isEmpty`, `at`, `slice`, `trim`, `startsWithAt`, `indexOf`, `toInt`, ASCII predicates, split/join) |
 | `core/unicode` | Browser + CLI | UTF-8 / UTF-16 scalar encoding, decoding, and validation helpers |
 | `core/format` | Browser + CLI | Decimal/hex formatting, padding, and Int-join helpers |
-| `core/list` | Browser + CLI | List intrinsics (`pushBack`, `popBack`, `pushFront`, `popFront`) and typed search/contains helpers |
-| `core/map` | Browser + CLI | `Map<K, V>` lookup, `getOr`, `has`, `set`, `remove`, `clear`, `keys`, `values`, `size` |
-| `core/set` | Browser + CLI | `Set<T>` membership (`has`), `add`, `remove`, `clear`, `size` |
+| `core/list` | Browser + CLI | `List.*` operations & index hooks (`pushBack`, `popBack`, `pushFront`, `popFront`, `length`, `isEmpty`, `map`, `filter`, `join`, `$getIndex`/`$setIndex`) |
+| `core/array` | Browser + CLI | Fixed-length `Array.*` operations & index hooks (`length`, `isEmpty`, `$getIndex`/`$setIndex`) |
+| `core/map` | Browser + CLI | `Map.*` operations & index hooks (`get`, `getOr`, `has`, `set`, `remove`, `clear`, `keys`, `values`, `size`, `isEmpty`, `$getIndex`/`$setIndex`) |
+| `core/set` | Browser + CLI | `Set.*` operations (`has`, `add`, `remove`, `clear`, `values`, `size`, `isEmpty`) |
 | `core/crypto` | Browser + CLI | Host CSPRNG plus pure-Lite SHA-256, SHA-512, HMAC, and hex digests |
 | `core/source` | Browser + CLI | Source offset clamping, line/column lookup, and line start/end/count helpers |
 | `core/diag` | Browser + CLI | Prefix-aware `fail`/`expect` diagnostics and exit status |
