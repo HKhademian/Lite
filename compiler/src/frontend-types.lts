@@ -2,6 +2,7 @@
 
 integer := import "core/int";
 listLib := import "core/list";
+mapLib := import "core/map";
 textLib := import "core/text";
 numeric := import "./numeric-literals.lts";
 tsLiteral := import "./ts-literals.lts";
@@ -283,65 +284,64 @@ pub fnStripLabels := fn(kind: String): String {
     out + "):" + (if isFnKind(res) { self(res) } else { res })
 };
 
+/* Cached parsed component lists for tuple and nominal record kinds. */
+ComponentInfo := record { label: String; kind: String; prop: String; };
+componentsCache: mut Map<String, List<ComponentInfo>>;
+
+/** Parses and caches all components of a canonical flat tuple kind `(...)`. */
+cachedTupleComponents := fn(kind: String): List<ComponentInfo> {
+    cached := mapLib.get(componentsCache, kind);
+    if cached.found { return cached.value; }
+    out: mut List<ComponentInfo> = [];
+    if isTupleKind(kind) {
+        size := textLib.length(kind);
+        var cursor := 1;
+        var index := 0;
+        loop cursor < size and textLib.at(kind, cursor) =!= ")" {
+            var label := "";
+            if textLib.at(kind, cursor) =!= ":" {
+                nameStart := cursor;
+                cursor = textLib.skipName(kind, cursor);
+                label = textLib.slice(kind, nameStart, cursor);
+            }
+            if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+            typeStart := cursor;
+            cursor = skipKindToken(kind, cursor);
+            fieldKind := textLib.slice(kind, typeStart, cursor);
+            listLib.pushBack(mut out, ComponentInfo { label = label, kind = fieldKind, prop = tupleRuntimeProp(label, index) });
+            index = index + 1;
+            if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+        }
+    }
+    mapLib.set(mut componentsCache, kind, out);
+    out
+};
+
 /** Returns the number of components in one canonical flat tuple kind. */
 pub tupleComponentCount := fn(kind: String): Int {
     if not isTupleKind(kind) { return 0; }
-    size := textLib.length(kind);
-    var cursor := 1;
-    var count := 0;
-    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
-        if textLib.at(kind, cursor) =!= ":" { cursor = textLib.skipName(kind, cursor); }
-        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        cursor = skipKindToken(kind, cursor);
-        count = count + 1;
-        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
-    }
-    count
+    listLib.length(cachedTupleComponents(kind))
 };
 
 /** Returns the label, scalar kind and runtime property name of component `targetIndex` in a canonical tuple kind. */
 pub tupleComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String, prop: String) {
-    size := textLib.length(kind);
-    var cursor := 1;
-    var index := 0;
-    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
-        var label := "";
-        if textLib.at(kind, cursor) =!= ":" {
-            nameStart := cursor;
-            cursor = textLib.skipName(kind, cursor);
-            label = textLib.slice(kind, nameStart, cursor);
-        }
-        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        typeStart := cursor;
-        cursor = skipKindToken(kind, cursor);
-        fieldKind := textLib.slice(kind, typeStart, cursor);
-        if index == targetIndex {
-            return (label = label, kind = fieldKind, prop = tupleRuntimeProp(label, index));
-        }
-        index = index + 1;
-        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    comps := cachedTupleComponents(kind);
+    if targetIndex < 0 or targetIndex >= listLib.length(comps) {
+        return (label = "", kind = "", prop = "");
     }
-    (label = "", kind = "", prop = "")
+    c := comps[targetIndex];
+    (label = c.label, kind = c.kind, prop = c.prop)
 };
 
 /** Returns the 0-based index of the component with `label` inside canonical flat tuple `kind`, or -1 when absent. */
 pub tupleComponentIndexByLabel := fn(kind: String, label: String): Int {
     if label == "" or not isTupleKind(kind) { return -1; }
-    size := textLib.length(kind);
-    var cursor := 1;
+    comps := cachedTupleComponents(kind);
+    n := listLib.length(comps);
     var index := 0;
-    loop cursor < size and textLib.at(kind, cursor) =!= ")" {
-        var fieldLabel := "";
-        if textLib.at(kind, cursor) =!= ":" {
-            nameStart := cursor;
-            cursor = textLib.skipName(kind, cursor);
-            fieldLabel = textLib.slice(kind, nameStart, cursor);
-        }
-        if cursor < size and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        cursor = skipKindToken(kind, cursor);
-        if fieldLabel == label { return index; }
+    loop index < n {
+        if comps[index].label == label { return index; }
         index = index + 1;
-        if cursor < size and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
     }
     -1
 };
@@ -616,86 +616,73 @@ pub recordDeclAt := fn(kind: String): Int {
     syntax.parseDigits(kind, firstHash + 1, secondHash)
 };
 
+/** Parses and caches all declared fields of a canonical nominal record kind `Record<...>`. */
+cachedRecordComponents := fn(kind: String): List<ComponentInfo> {
+    cached := mapLib.get(componentsCache, kind);
+    if cached.found { return cached.value; }
+    out: mut List<ComponentInfo> = [];
+    semi := recordHeaderSemi(kind);
+    if semi >= 0 {
+        end := textLib.length(kind) - 1;
+        var cursor := semi + 1;
+        var index := 0;
+        loop cursor < end {
+            nameStart := cursor;
+            cursor = textLib.skipName(kind, cursor);
+            label := textLib.slice(kind, nameStart, cursor);
+            if cursor < end and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
+            typeStart := cursor;
+            cursor = skipKindToken(kind, cursor);
+            fieldKind := textLib.slice(kind, typeStart, cursor);
+            listLib.pushBack(mut out, ComponentInfo { label = label, kind = fieldKind, prop = tupleRuntimeProp(label, index) });
+            index = index + 1;
+            if cursor < end and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+        }
+    }
+    mapLib.set(mut componentsCache, kind, out);
+    out
+};
+
 /** Returns the runtime JS property name for field `label` inside nominal record `kind`, or `""` when absent. */
 pub recordComponentProp := fn(kind: String, label: String): String {
-    semi := recordHeaderSemi(kind);
-    if semi < 0 or label == "" { return ""; }
-    end := textLib.length(kind) - 1;
-    var cursor := semi + 1;
-    var index := 0;
-    loop cursor < end {
-        nameStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        fieldLabel := textLib.slice(kind, nameStart, cursor);
-        if cursor < end and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        cursor = skipKindToken(kind, cursor);
-        if fieldLabel == label {
-            return tupleRuntimeProp(fieldLabel, index);
-        }
-        index = index + 1;
-        if cursor < end and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    if label == "" or not isRecordKind(kind) { return ""; }
+    comps := cachedRecordComponents(kind);
+    n := listLib.length(comps);
+    var i := 0;
+    loop i < n {
+        c := comps[i];
+        if c.label == label { return c.prop; }
+        i = i + 1;
     }
     ""
 };
 
 /** Returns the number of declared fields in canonical record kind `kind`. */
 pub recordComponentCount := fn(kind: String): Int {
-    semi := recordHeaderSemi(kind);
-    if semi < 0 { return 0; }
-    end := textLib.length(kind) - 1;
-    var cursor := semi + 1;
-    var count := 0;
-    loop cursor < end {
-        if textLib.at(kind, cursor) =!= ":" { cursor = textLib.skipName(kind, cursor); }
-        if cursor < end and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        cursor = skipKindToken(kind, cursor);
-        count = count + 1;
-        if cursor < end and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
-    }
-    count
+    if not isRecordKind(kind) { return 0; }
+    listLib.length(cachedRecordComponents(kind))
 };
 
 /** Returns `(label, kind, prop)` for field `targetIndex` in canonical record kind `kind`. */
 pub recordComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String, prop: String) {
-    semi := recordHeaderSemi(kind);
-    if semi < 0 { return (label = "", kind = "", prop = ""); }
-    end := textLib.length(kind) - 1;
-    var cursor := semi + 1;
-    var index := 0;
-    loop cursor < end {
-        nameStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        label := textLib.slice(kind, nameStart, cursor);
-        if cursor < end and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        typeStart := cursor;
-        cursor = skipKindToken(kind, cursor);
-        fieldKind := textLib.slice(kind, typeStart, cursor);
-        if index == targetIndex {
-            return (label = label, kind = fieldKind, prop = tupleRuntimeProp(label, index));
-        }
-        index = index + 1;
-        if cursor < end and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    comps := cachedRecordComponents(kind);
+    if targetIndex < 0 or targetIndex >= listLib.length(comps) {
+        return (label = "", kind = "", prop = "");
     }
-    (label = "", kind = "", prop = "")
+    c := comps[targetIndex];
+    (label = c.label, kind = c.kind, prop = c.prop)
 };
 
 /** Returns the canonical field kind for `label` inside nominal record `kind`, or `""` when absent. */
 pub recordFieldKind := fn(kind: String, label: String): String {
-    semi := recordHeaderSemi(kind);
-    if semi < 0 or label == "" { return ""; }
-    end := textLib.length(kind) - 1;
-    var cursor := semi + 1;
-    loop cursor < end {
-        nameStart := cursor;
-        cursor = textLib.skipName(kind, cursor);
-        fieldLabel := textLib.slice(kind, nameStart, cursor);
-        if cursor < end and textLib.at(kind, cursor) == ":" { cursor = cursor + 1; }
-        typeStart := cursor;
-        cursor = skipKindToken(kind, cursor);
-        if fieldLabel == label {
-            return textLib.slice(kind, typeStart, cursor);
-        }
-        if cursor < end and textLib.at(kind, cursor) == "," { cursor = cursor + 1; }
+    if label == "" or not isRecordKind(kind) { return ""; }
+    comps := cachedRecordComponents(kind);
+    n := listLib.length(comps);
+    var i := 0;
+    loop i < n {
+        c := comps[i];
+        if c.label == label { return c.kind; }
+        i = i + 1;
     }
     ""
 };
@@ -723,48 +710,68 @@ cStructHash := fn(kind: String): String {
     integer.intText(h1) + "_" + integer.intText(h2)
 };
 
+/* Canonical type metadata memoization caches (keyed by canonical kind string). */
+cSupportedCache: mut Map<String, Bool>;
+cFnTagCache: mut Map<String, String>;
+cStructTagCache: mut Map<String, String>;
+cHasListCache: mut Map<String, Bool>;
+cValueTypeCache: mut Map<String, String>;
+containsFnCache: mut Map<String, Bool>;
+tsTypeCache: mut Map<String, String>;
+
 /** True when `kind` is a C11-supported value kind (scalar, enum, struct, map, set, or list/array of supported elements). */
 cIsSupportedElem := fn(kind: String): Bool {
     if numeric.isIntKind(kind) or isEnumKind(kind) or numeric.isFloatKind(kind) or
     kind == ir.VALUE_KIND_BOOL or kind == ir.VALUE_KIND_STRING { return true; }
-    if isListKind(kind) { return self(listElementKind(kind)); }
-    if isArrayKind(kind) { return self(arrayElementKind(kind)); }
-    if isMapKind(kind) { return isMapKeyKind(mapKeyKind(kind)) and self(mapValueKind(kind)); }
-    if isSetKind(kind) { return isMapKeyKind(setElementKind(kind)); }
-    if isTupleKind(kind) {
+    cached := mapLib.get(cSupportedCache, kind);
+    if cached.found { return cached.value; }
+    var ok := false;
+    if isListKind(kind) { ok = self(listElementKind(kind)); }
+    else if isArrayKind(kind) { ok = self(arrayElementKind(kind)); }
+    else if isMapKind(kind) { ok = isMapKeyKind(mapKeyKind(kind)) and self(mapValueKind(kind)); }
+    else if isSetKind(kind) { ok = isMapKeyKind(setElementKind(kind)); }
+    else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
+        ok = true;
         var i := 0;
         loop i < count {
-            if not self(tupleComponent(kind, i).kind) { return false; }
+            if not self(tupleComponent(kind, i).kind) { ok = false; break; }
             i = i + 1;
         }
-        return true;
-    }
-    if isRecordKind(kind) {
+    } else if isRecordKind(kind) {
         count := recordComponentCount(kind);
+        ok = true;
         var i := 0;
         loop i < count {
-            if not self(recordComponent(kind, i).kind) { return false; }
+            if not self(recordComponent(kind, i).kind) { ok = false; break; }
             i = i + 1;
         }
-        return true;
-    }
-    if isFnKind(kind) {
+    } else if isFnKind(kind) {
         pCount := fnParamCount(kind);
+        var paramsOk := true;
         var pi := 0;
         loop pi < pCount {
-            if not self(fnParamComponent(kind, pi).kind) { return false; }
+            if not self(fnParamComponent(kind, pi).kind) { paramsOk = false; break; }
             pi = pi + 1;
         }
-        rKind := fnResultKind(kind);
-        return rKind == ir.VALUE_KIND_UNIT or rKind == ir.VALUE_KIND_NEVER or self(rKind);
+        if paramsOk {
+            rKind := fnResultKind(kind);
+            ok = rKind == ir.VALUE_KIND_UNIT or rKind == ir.VALUE_KIND_NEVER or self(rKind);
+        }
     }
-    false
+    mapLib.set(mut cSupportedCache, kind, ok);
+    ok
 };
 
 /** Maps a C-supported function value kind to its parameter-name-erased C11 typedef name `lt_fnv_...`, or `""` if unsupported. */
 pub cFnTag := fn(kind: String): String {
-    if not isFnKind(kind) or not cIsSupportedElem(kind) { return ""; }
+    if not isFnKind(kind) { return ""; }
+    cached := mapLib.get(cFnTagCache, kind);
+    if cached.found { return cached.value; }
+    if not cIsSupportedElem(kind) {
+        mapLib.set(mut cFnTagCache, kind, "");
+        return "";
+    }
     pCount := fnParamCount(kind);
     var sig := "fn(";
     var i := 0;
@@ -774,40 +781,45 @@ pub cFnTag := fn(kind: String): String {
         i = i + 1;
     }
     sig = sig + "):" + fnResultKind(kind);
-    "lt_fnv_" + cStructHash(sig)
+    tag := "lt_fnv_" + cStructHash(sig);
+    mapLib.set(mut cFnTagCache, kind, tag);
+    tag
 };
 
 /** Maps a C-supported tuple or nominal record kind to its deterministic C11 typedef name `lt_s_...`, or `""` if unsupported. */
 pub cStructTag := fn(kind: String): String {
-    if (isTupleKind(kind) or isRecordKind(kind)) and cIsSupportedElem(kind) {
-        "lt_s_" + cStructHash(kind)
-    } else {
-        ""
-    }
+    if not isTupleKind(kind) and not isRecordKind(kind) { return ""; }
+    cached := mapLib.get(cStructTagCache, kind);
+    if cached.found { return cached.value; }
+    tag := if cIsSupportedElem(kind) { "lt_s_" + cStructHash(kind) } else { "" };
+    mapLib.set(mut cStructTagCache, kind, tag);
+    tag
 };
 
 /** True when `kind` is a list/array/map/set or a tuple/record transitively containing one. */
 pub cTypeHasListField := fn(kind: String): Bool {
     if isListKind(kind) or isArrayKind(kind) or isMapKind(kind) or isSetKind(kind) { return true; }
+    if not isTupleKind(kind) and not isRecordKind(kind) { return false; }
+    cached := mapLib.get(cHasListCache, kind);
+    if cached.found { return cached.value; }
+    var res := false;
     if isTupleKind(kind) {
         count := tupleComponentCount(kind);
         var i := 0;
         loop i < count {
-            if self(tupleComponent(kind, i).kind) { return true; }
+            if self(tupleComponent(kind, i).kind) { res = true; break; }
             i = i + 1;
         }
-        return false;
-    }
-    if isRecordKind(kind) {
+    } else {
         count := recordComponentCount(kind);
         var i := 0;
         loop i < count {
-            if self(recordComponent(kind, i).kind) { return true; }
+            if self(recordComponent(kind, i).kind) { res = true; break; }
             i = i + 1;
         }
-        return false;
     }
-    false
+    mapLib.set(mut cHasListCache, kind, res);
+    res
 };
 
 /** Maps a C-supported list element kind (scalar, enum, tuple, or record) to its canonical C11 list tag, or `""` if unsupported. */
@@ -865,17 +877,22 @@ pub cSetTag := fn(kind: String): String {
 
 /** Maps any C11-supported Lite value kind to its C11 type name. */
 pub cValueType := fn(kind: String): String {
-    if isListKind(kind) { "lt_list_" + cListTag(listElementKind(kind)) }
+    if kind == ir.VALUE_KIND_INT or numeric.isIntKind(kind) or isEnumKind(kind) { return "int64_t"; }
+    if kind == ir.VALUE_KIND_STRING { return "const char *"; }
+    if kind == ir.VALUE_KIND_BOOL { return "bool"; }
+    if kind == ir.VALUE_KIND_UNIT or kind == ir.VALUE_KIND_NEVER { return "void"; }
+    if numeric.isFloatKind(kind) { return "double"; }
+    cached := mapLib.get(cValueTypeCache, kind);
+    if cached.found { return cached.value; }
+    res := if isListKind(kind) { "lt_list_" + cListTag(listElementKind(kind)) }
     else if isArrayKind(kind) { "lt_list_" + cListTag(arrayElementKind(kind)) }
     else if cMapTag(kind) =!= "" { cMapTag(kind) }
     else if cSetTag(kind) =!= "" { cSetTag(kind) }
     else if cStructTag(kind) =!= "" { cStructTag(kind) }
     else if cFnTag(kind) =!= "" { cFnTag(kind) }
-    else if kind == ir.VALUE_KIND_UNIT or kind == ir.VALUE_KIND_NEVER { "void" }
-    else if numeric.isIntKind(kind) or isEnumKind(kind) { "int64_t" }
-    else if kind == ir.VALUE_KIND_BOOL { "bool" }
-    else if numeric.isFloatKind(kind) { "double" }
-    else { "const char *" }
+    else { "const char *" };
+    mapLib.set(mut cValueTypeCache, kind, res);
+    res
 };
 
 /** Returns the C11 tuple-label conversion helper name for converting `actualKind` to `expectedKind`. */
@@ -1034,27 +1051,30 @@ pub fnShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
 pub containsFnKind := fn(kind: String): Bool {
     if textLib.indexOfText(kind, "fn(", 0) < 0 { return false; }
     if isFnKind(kind) { return true; }
-    if isListKind(kind) { return self(listElementKind(kind)); }
-    if isMapKind(kind) { return self(mapKeyKind(kind)) or self(mapValueKind(kind)); }
-    if isSetKind(kind) { return self(setElementKind(kind)); }
-    if isArrayKind(kind) { return self(arrayElementKind(kind)); }
-    if isTupleKind(kind) {
+    cached := mapLib.get(containsFnCache, kind);
+    if cached.found { return cached.value; }
+    var res := false;
+    if isListKind(kind) { res = self(listElementKind(kind)); }
+    else if isMapKind(kind) { res = self(mapKeyKind(kind)) or self(mapValueKind(kind)); }
+    else if isSetKind(kind) { res = self(setElementKind(kind)); }
+    else if isArrayKind(kind) { res = self(arrayElementKind(kind)); }
+    else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
         var idx := 0;
         loop idx < count {
-            if self(tupleComponent(kind, idx).kind) { return true; }
+            if self(tupleComponent(kind, idx).kind) { res = true; break; }
             idx = idx + 1;
         }
-    }
-    if isRecordKind(kind) {
+    } else if isRecordKind(kind) {
         count := recordComponentCount(kind);
         var idx := 0;
         loop idx < count {
-            if self(recordComponent(kind, idx).kind) { return true; }
+            if self(recordComponent(kind, idx).kind) { res = true; break; }
             idx = idx + 1;
         }
     }
-    false
+    mapLib.set(mut containsFnCache, kind, res);
+    res
 };
 
 /** True when `expectedKind` and `actualKind` are tuples with identical component counts and positional component types. */
@@ -1098,10 +1118,19 @@ pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
 
 /** Maps a restricted Lite scalar, flat named-tuple, fixed-array, List or callable kind to its TypeScript type. */
 pub tsFunctionType := fn(kind: String): String {
-    if isListKind(kind) { self(listElementKind(kind)) + "[]" }
-    else if isMapKind(kind) { "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">" }
-    else if isSetKind(kind) { "Set<" + self(setElementKind(kind)) + ">" }
-    else if isArrayKind(kind) { self(arrayElementKind(kind)) + "[]" }
+    if numeric.isIntKind(kind) { return "bigint"; }
+    if kind == ir.VALUE_KIND_STRING { return "string"; }
+    if kind == ir.VALUE_KIND_BOOL { return "boolean"; }
+    if kind == ir.VALUE_KIND_UNIT { return "void"; }
+    if kind == ir.VALUE_KIND_NEVER { return "never"; }
+    if numeric.isFloatKind(kind) or isEnumKind(kind) { return "number"; }
+    cached := mapLib.get(tsTypeCache, kind);
+    if cached.found { return cached.value; }
+    var out := "";
+    if isListKind(kind) { out = self(listElementKind(kind)) + "[]"; }
+    else if isMapKind(kind) { out = "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">"; }
+    else if isSetKind(kind) { out = "Set<" + self(setElementKind(kind)) + ">"; }
+    else if isArrayKind(kind) { out = self(arrayElementKind(kind)) + "[]"; }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
         var result := "{ ";
@@ -1112,23 +1141,24 @@ pub tsFunctionType := fn(kind: String): String {
             result = result + tupleObjectKey(comp.label, index) + ": " + self(comp.kind);
             index = index + 1;
         }
-        result + " }"
+        out = result + " }";
     }
-    else if isEnumKind(kind) { "number" }
     else if isRecordKind(kind) {
         count := recordComponentCount(kind);
-        if count == 0 { return "{}"; }
-        var result := "{ ";
-        var index := 0;
-        loop index < count {
-            comp := recordComponent(kind, index);
-            if index > 0 { result = result + "; "; }
-            result = result + tupleObjectKey(comp.label, index) + ": " + self(comp.kind);
-            index = index + 1;
+        if count == 0 {
+            out = "{}";
+        } else {
+            var result := "{ ";
+            var index := 0;
+            loop index < count {
+                comp := recordComponent(kind, index);
+                if index > 0 { result = result + "; "; }
+                result = result + tupleObjectKey(comp.label, index) + ": " + self(comp.kind);
+                index = index + 1;
+            }
+            out = result + " }";
         }
-        result + " }"
-    }
-    else if isFnKind(kind) {
+    } else if isFnKind(kind) {
         count := fnParamCount(kind);
         var paramsText := "";
         var index := 0;
@@ -1139,9 +1169,12 @@ pub tsFunctionType := fn(kind: String): String {
             paramsText = paramsText + paramLabel + ": " + self(comp.kind);
             index = index + 1;
         }
-        "((" + paramsText + ") => " + self(fnResultKind(kind)) + ")"
+        out = "((" + paramsText + ") => " + self(fnResultKind(kind)) + ")";
+    } else {
+        out = tsLiteral.tsScalarType(kind);
     }
-    else { tsLiteral.tsScalarType(kind) }
+    mapLib.set(mut tsTypeCache, kind, out);
+    out
 };
 
 /** Formats one canonical flat tuple kind as a TypeScript object type. */
