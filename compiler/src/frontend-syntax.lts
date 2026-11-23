@@ -33,9 +33,10 @@ pub expectSymbol := fn(source: String, position: Int, symbol: String, prefix: St
 /** Number of consecutive `#` characters after a comment opener; zero means an ordinary comment. */
 rawFenceLength := fn(source: String, position: Int): Int {
     if not textLib.startsWithAt(source, position, "/*") { return 0; }
+    size := textLib.length(source);
     var index := position + 2;
     var count := 0;
-    loop index < textLib.length(source) and textLib.at(source, index) == "#" {
+    loop index < size and textLib.at(source, index) == "#" {
         count = count + 1;
         index = index + 1;
     }
@@ -187,8 +188,9 @@ pub consumeStatementEnd := fn(source: String, position: Int, prefix: String): In
 
 /** Skips empty item separators without changing the final ordinary item's result. */
 pub skipItemSeparators := fn(source: String, position: Int, prefix: String): Int {
+    size := textLib.length(source);
     var next := skipTrivia(source, position, prefix);
-    loop next < textLib.length(source) and textLib.at(source, next) == ";" {
+    loop next < size and textLib.at(source, next) == ";" {
         next = skipTrivia(source, next + 1, prefix);
     }
     next

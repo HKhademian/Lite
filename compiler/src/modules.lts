@@ -1,7 +1,9 @@
 diagLib := import "core/diag";
 integer := import "core/int";
 listLib := import "core/list";
+setLib := import "core/set";
 textLib := import "core/text";
+collections := import "util/collections";
 tb := import "util/text-builder";
 frontend := import "./frontend.lts";
 hostFs := import "./host-fs.lts";
@@ -244,28 +246,10 @@ moduleLevelForPath := fn(graph: frontend.Items, path: String): Int {
 
 /** Returns direct dependency indices `[0..count)` sorted deterministically by `(logical, path)`. */
 sortedDepIndices := fn(logicals: List<String>, paths: List<String>, count: Int): List<Int> {
-    picked: mut List<Int> = [];
-    var step := 0;
-    loop step < count {
-        var best := -1;
-        var idx := 0;
-        loop idx < count {
-            if not listContainsInt(picked, idx) {
-                if best < 0 {
-                    best = idx;
-                } else {
-                    cmpLogical := compareText(logicals[idx], logicals[best]);
-                    if cmpLogical < 0 or (cmpLogical == 0 and compareText(paths[idx], paths[best]) < 0) {
-                        best = idx;
-                    }
-                }
-            }
-            idx = idx + 1;
-        }
-        listLib.pushBack(mut picked, best);
-        step = step + 1;
-    }
-    picked
+    collections.sortIndicesBy(count, fn(a: Int, b: Int): Bool {
+        cmpLogical := compareText(logicals[a], logicals[b]);
+        if cmpLogical =!= 0 { cmpLogical < 0 } else { compareText(paths[a], paths[b]) <= 0 }
+    })
 }
 
 /** Returns public declaration records for one completed source module. */
@@ -503,11 +487,13 @@ initialScanned: frontend.TokenBuckets): List<frontend.TokenBuckets> {
 
 /** Collects `ModuleStart`..`ModuleEnd` slices for modules whose path is in `metaPaths`. */
 collectCoreGraphSlice := fn(graph: frontend.Items, metaPaths: List<String>): frontend.Items {
+    metaSet: mut Set<String>;
+    loop metaPaths as mp { setLib.add(mut metaSet, mp); }
     slice: mut frontend.Items = [];
     var keep := false;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_START {
-            keep = listLib.listContainsText(metaPaths, item.name);
+            keep = setLib.has(metaSet, item.name);
         }
         if keep {
             listLib.pushBack(mut slice, item);
@@ -519,12 +505,14 @@ collectCoreGraphSlice := fn(graph: frontend.Items, metaPaths: List<String>): fro
 
 /** Collects non-core top-level `FunctionStart` tokens present in `graph` that are not yet in `scanned`. */
 collectUnscannedNonCoreFns := fn(graph: frontend.Items, metaPaths: List<String>, scanned: frontend.TokenBuckets): List<String> {
+    metaSet: mut Set<String>;
+    loop metaPaths as mp { setLib.add(mut metaSet, mp); }
     result: mut List<String> = [];
     var inCore := false;
     var fnDepth := 0;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_START {
-            inCore = listLib.listContainsText(metaPaths, item.name);
+            inCore = setLib.has(metaSet, item.name);
             fnDepth = 0;
         } else if item.kind == frontend.ITEM_KIND_MODULE_END {
             inCore = false;
@@ -713,6 +701,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     depTexts: mut List<String> = [];
     depLogicals: mut List<String> = [];
     var depCount := 0;
+    depPathSet: mut Set<String>;
     loop clauses as clause {
         loaded := hostFs.readImportedSource(importerPath = path, importerDisplay = display, spec = clause.textValue,
         =projectRoot, =cwd);
@@ -725,7 +714,8 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
             code = "", intValue = 0, textValue = ""));
         }
         listLib.pushBack(mut clausePaths, loaded.path);
-        if not listLib.listContainsText(depPaths, loaded.path) {
+        if not setLib.has(depPathSet, loaded.path) {
+            setLib.add(mut depPathSet, loaded.path);
             listLib.pushBack(mut depPaths, loaded.path);
             listLib.pushBack(mut depDisplays, loaded.display);
             listLib.pushBack(mut depIdentities, loaded.identity);
@@ -813,28 +803,16 @@ pub moduleItems := fn(graph: frontend.Items): frontend.Items {
         }
         index = index + 1;
     }
-    picked: mut List<Int> = [];
-    result: mut frontend.Items = [];
-    var step := 0;
-    loop step < moduleCount {
-        var best := -1;
-        var m := 0;
-        loop m < moduleCount {
-            if not listContainsInt(picked, m) {
-                if best < 0 {
-                    best = m;
-                } else if startLevels[m] < startLevels[best] {
-                    best = m;
-                } else if startLevels[m] == startLevels[best] {
-                    cmpLogical := compareText(startLogicals[m], startLogicals[best]);
-                    if cmpLogical < 0 or (cmpLogical == 0 and compareText(startPaths[m], startPaths[best]) < 0) {
-                        best = m;
-                    }
-                }
-            }
-            m = m + 1;
+    order := collections.sortIndicesBy(moduleCount, fn(a: Int, b: Int): Bool {
+        if startLevels[a] =!= startLevels[b] {
+            startLevels[a] < startLevels[b]
+        } else {
+            cmpLogical := compareText(startLogicals[a], startLogicals[b]);
+            if cmpLogical =!= 0 { cmpLogical < 0 } else { compareText(startPaths[a], startPaths[b]) <= 0 }
         }
-        listLib.pushBack(mut picked, best);
+    });
+    result: mut frontend.Items = [];
+    loop order as best {
         var itemIndex := startIndices[best];
         loop true {
             entry := graph[itemIndex];
@@ -842,7 +820,6 @@ pub moduleItems := fn(graph: frontend.Items): frontend.Items {
             listLib.pushBack(mut result, entry);
             itemIndex = itemIndex + 1;
         }
-        step = step + 1;
     }
     result
 }

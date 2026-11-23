@@ -16,6 +16,7 @@ infer := import "./frontend-inference.lts";
 ctx := import "./frontend-context.lts";
 expr := import "./frontend-expr.lts";
 io := import "core/io";
+setLib := import "core/set";
 textLib := import "core/text";
 
 /** Shared restricted front-end. */
@@ -953,13 +954,14 @@ pub collectImportClauses := fn(target: String, source: String, prefix: String): 
 parseOutputStatement := fn(target: String, source: String, openPosition: Int, outputName: String, prefix: String,
 locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
 live: Bool, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Items {
+    sourceLen := textLib.length(source);
     var position := openPosition;
-    if position >= textLib.length(source) or textLib.at(source, position) =!= "(" {
+    if position >= sourceLen or textLib.at(source, position) =!= "(" {
         failAt(source, position, prefix, "expected ( after " + outputName);
     }
     position = skipTrivia(source, position + 1, prefix);
     result: mut List<Item> = [];
-    loop position < textLib.length(source) and textLib.at(source, position) =!= ")" {
+    loop position < sourceLen and textLib.at(source, position) =!= ")" {
         argStart := position;
         argument := parseExpressionCtx(target, source, position, prefix, locals, functions, params, currentName, ctxs, aliases);
         if containsFnKind(argument.kind) {
@@ -968,7 +970,7 @@ live: Bool, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Items {
         listLib.pushBack(mut result, (kind = argument.kind, name = "", runtime = "", code = argument.code,
         intValue = argument.intValue, textValue = argument.textValue));
         position = skipTrivia(source, argument.next, prefix);
-        if position < textLib.length(source) and textLib.at(source, position) == "," {
+        if position < sourceLen and textLib.at(source, position) == "," {
             position = skipTrivia(source, position + 1, prefix);
         } else {
             break;
@@ -1014,7 +1016,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
 };
 
 /** Upgrades uninitialized root bindings and appends forward root `futureValues` visible inside a top-level function body. */
-upgradeRootUninitLocalsForFn := fn(locals: List<Local>, rootAssignedNames: List<String>, futureValues: List<FutureValue>, functions: List<FunctionInfo>, fnDeclAt: Int): List<Local> {
+upgradeRootUninitLocalsForFn := fn(locals: List<Local>, rootAssignedNames: Set<String>, futureValues: List<FutureValue>, functions: List<FunctionInfo>, fnDeclAt: Int): List<Local> {
     nextLocals: mut List<Local> = locals;
     preLen := localsCount(locals);
     var upgradedRootBag := "";
@@ -1023,7 +1025,7 @@ upgradeRootUninitLocalsForFn := fn(locals: List<Local>, rootAssignedNames: List<
         rootEntry := locals[rootIdx];
         if rootEntry.depth == 0 and rootEntry.initState =!= INIT_STATE_INIT and
         not tokenInPipeBag(upgradedRootBag, rootEntry.name) and localIndex(locals, rootEntry.name) == rootIdx {
-            if rootEntry.initState == INIT_STATE_UNINIT_ASSIGNED or listLib.listContainsText(rootAssignedNames, rootEntry.name) {
+            if rootEntry.initState == INIT_STATE_UNINIT_ASSIGNED or setLib.has(rootAssignedNames, rootEntry.name) {
                 upgradedRootBag = appendPipeBag(upgradedRootBag, rootEntry.name);
                 listLib.pushBack(mut nextLocals, (name = rootEntry.name, runtime = rootEntry.runtime, kind = rootEntry.kind,
                 mutable = rootEntry.mutable, writable = rootEntry.writable, depth = -1, constant = false, code = rootEntry.code,
@@ -1095,25 +1097,25 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
         }
     }
     decls := collectModuleDecls(target, source, prefix, moduleKey);
-    publishedFunctions: mut List<String> = [];
-    publishedValues: mut List<String> = [];
-    publishedTypes: mut List<String> = [];
+    publishedFunctions: mut Set<String>;
+    publishedValues: mut Set<String>;
+    publishedTypes: mut Set<String>;
     var hasInnerAlias := false;
-    rootAssignedNames: mut List<String> = [];
+    rootAssignedNames: mut Set<String>;
     loop decls as decl {
         if decl.kind == DECL_KIND_ALIAS {
             endPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
             listLib.pushBack(mut aliases, (name = decl.name, target = decl.code, at = decl.intValue, end = endPos, depth = 0));
         } else if decl.kind == DECL_KIND_PUB_FN {
-            listLib.pushBack(mut publishedFunctions, decl.name);
+            setLib.add(mut publishedFunctions, decl.name);
         } else if decl.kind == DECL_KIND_PUB_VAL {
-            listLib.pushBack(mut publishedValues, decl.name);
+            setLib.add(mut publishedValues, decl.name);
         } else if decl.kind == DECL_KIND_PUB_TYPE {
-            listLib.pushBack(mut publishedTypes, decl.name);
+            setLib.add(mut publishedTypes, decl.name);
         } else if decl.kind == DECL_KIND_HAS_INNER_ALIAS {
             hasInnerAlias = true;
-        } else if decl.kind == DECL_KIND_ROOT_ASSIGN and not listLib.listContainsText(rootAssignedNames, decl.name) {
-            listLib.pushBack(mut rootAssignedNames, decl.name);
+        } else if decl.kind == DECL_KIND_ROOT_ASSIGN {
+            setLib.add(mut rootAssignedNames, decl.name);
         }
     }
     var locals: mut List<Local> = [];
@@ -1125,7 +1127,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     blocks: mut List<String> = [];
     functions: mut List<FunctionInfo> = [];
     functionParams: mut List<String> = [];
-    declaredImportAliases: mut List<String> = [];
+    declaredImportAliases: mut Set<String>;
     var parameterTotal := 0;
     loop exports as exported {
         if exported.kind == ITEM_KIND_MODULE_ALIAS {
@@ -1197,7 +1199,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                         afterHdr := skipTrivia(source, header.next, prefix);
                         if afterHdr < size and textLib.at(source, afterHdr) == ";" {
                             hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, fnName, header.params, header.result);
-                            if listLib.listContainsText(publishedFunctions, fnName) and hostRuntime =!= "" {
+                            if setLib.has(publishedFunctions, fnName) and hostRuntime =!= "" {
                                 listLib.pushBack(mut functions, (name = fnName, runtime = hostRuntime, result = header.result,
                                 first = parameterTotal, count = header.count, declAt = fnAt));
                                 loop splitPipeEntries(header.params, header.count) as hp {
@@ -1839,11 +1841,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 if blockCount =!= 0 {
                     failAt(source, nameStart, prefix, "import is only allowed at top level");
                 }
-                if listLib.listContainsText(declaredImportAliases, name) {
+                if setLib.has(declaredImportAliases, name) {
                     failAt(source, nameStart, prefix, "duplicate module alias " + name);
                 }
                 rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
-                listLib.pushBack(mut declaredImportAliases, name);
+                setLib.add(mut declaredImportAliases, name);
                 listLib.pushBack(mut blockDecls, (name = name, depth = depth));
                 imported := parseImportClause(target, source, afterImport, name, prefix);
                 listLib.pushBack(mut items, imported);
@@ -2754,7 +2756,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             if types.isRecordKind(resolvedType) {
                 exportedDefaults = types.encodeRecordDefaultsFromAliases(aliases, resolvedType);
             }
-            if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedTypes, name) {
+            if depth == 0 and blockCount == 0 and setLib.has(publishedTypes, name) {
                 listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = resolvedType,
                 intValue = 0, textValue = exportedDefaults));
             }
@@ -2797,7 +2799,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 }
             }
             aliases = types.appendEncodedRecordDefaults(aliases, parsedRec.kind, parsedRec.encodedDefaults, depth);
-            if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedTypes, name) {
+            if depth == 0 and blockCount == 0 and setLib.has(publishedTypes, name) {
                 listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = parsedRec.kind,
                 intValue = 0, textValue = parsedRec.encodedDefaults));
             }
@@ -2824,7 +2826,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             }
             emptySeen: List<String> = [];
             resolvedEnum := resolveTypeText(source, afterDefinition, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, emptySeen);
-            if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedTypes, name) {
+            if depth == 0 and blockCount == 0 and setLib.has(publishedTypes, name) {
                 listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = resolvedEnum,
                 intValue = 0, textValue = ""));
             }
@@ -2856,7 +2858,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 listLib.pushBack(mut blockDecls, (name = name, depth = 0));
                 if position < size and textLib.at(source, position) == ";" {
                     hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, name, header.params, header.result);
-                    if not listLib.listContainsText(publishedFunctions, name) or hostRuntime == "" {
+                    if not setLib.has(publishedFunctions, name) or hostRuntime == "" {
                         failAt(source, nameStart, prefix, "bodyless function declaration has no matching core host binding");
                     }
                     position = skipTrivia(source, position + 1, prefix);
@@ -2887,11 +2889,12 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     listLib.pushBack(mut functions, (name = name, runtime = functionRuntime, result = header.result,
                     first = parameterTotal, count = header.count, declAt = nameStart));
                 }
-                if listLib.listContainsText(publishedFunctions, name) {
+                isPubFn := setLib.has(publishedFunctions, name);
+                if isPubFn {
                     listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_FUNCTION, name = name, runtime = functionRuntime, code = header.result,
                     intValue = header.count, textValue = header.params));
                 }
-                softModule := if listLib.listContainsText(publishedFunctions, name) {
+                softModule := if isPubFn {
                     builtinsAbi.coreSoftBuiltin(moduleIdentity, name, header.params, header.result)
                 } else {
                     ""
@@ -2999,7 +3002,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = false, depth = depth, constant = parsed.constant, code = valLocalCode,
             intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
-            if depth == 0 and blockCount == 0 and listLib.listContainsText(publishedValues, name) {
+            if depth == 0 and blockCount == 0 and setLib.has(publishedValues, name) {
                 listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_VALUE, name = name, runtime = runtime, code = parsed.kind,
                 intValue = 0, textValue = ""));
             }

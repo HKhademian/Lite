@@ -6,6 +6,7 @@ integer := import "core/int";
 listLib := import "core/list";
 diagLib := import "core/diag";
 io := import "core/io";
+setLib := import "core/set";
 textLib := import "core/text";
 tb := import "util/text-builder";
 
@@ -1919,22 +1920,24 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
 
 /** Declares hygienic arithmetic/comparison temporaries at unique assignment sites, skipping quoted text and hoisted closure bodies. */
 emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
-    seen: mut List<String> = [];
+    seen: mut Set<String>;
     loop items as item {
+        code := item.code;
+        codeLen := textLib.length(code);
         var cursor := 0;
-        loop cursor < textLib.length(item.code) {
-            ch := textLib.at(item.code, cursor);
+        loop cursor < codeLen {
+            ch := textLib.at(code, cursor);
             if ch == "\"" {
-                cursor = frontend.skipAliasString(item.code, cursor);
-            } else if ch == "/" and textLib.startsWithAt(item.code, cursor, "/*@CFN_START:") {
-                cursor = skipCFnBlock(item.code, cursor);
-            } else if ch == "l" and (textLib.startsWithAt(item.code, cursor, "lt_arg_") or textLib.startsWithAt(item.code, cursor, "lt_cmp_")) {
-                end := textLib.skipName(item.code, cursor);
-                if textLib.startsWithAt(item.code, end, " = ") {
-                    tName := textLib.slice(item.code, cursor, end);
-                    if not listLib.listContainsText(seen, tName) {
-                        listLib.pushBack(mut seen, tName);
-                        tag := if textLib.startsWithAt(item.code, cursor, "lt_cmp_") or textLib.startsWithAt(item.code, cursor, "lt_arg_f_") { textLib.at(item.code, cursor + 7) } else { "i" };
+                cursor = frontend.skipAliasString(code, cursor);
+            } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
+                cursor = skipCFnBlock(code, cursor);
+            } else if ch == "l" and (textLib.startsWithAt(code, cursor, "lt_arg_") or textLib.startsWithAt(code, cursor, "lt_cmp_")) {
+                end := textLib.skipName(code, cursor);
+                if textLib.startsWithAt(code, end, " = ") {
+                    tName := textLib.slice(code, cursor, end);
+                    if not setLib.has(seen, tName) {
+                        setLib.add(mut seen, tName);
+                        tag := if textLib.startsWithAt(code, cursor, "lt_cmp_") or textLib.startsWithAt(code, cursor, "lt_arg_f_") { textLib.at(code, cursor + 7) } else { "i" };
                         typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
                         else if tag == "f" { "double " } else { "int64_t " };
                         outLine("    " + typeCode + tName + ";");
@@ -1952,7 +1955,7 @@ injectCFnTemps := fn(code: String): String {
     mIdx := textLib.indexOfText(code, marker, 0);
     if mIdx < 0 { return code; }
     decls: mut tb.TextBuilder;
-    seen: mut List<String> = [];
+    seen: mut Set<String>;
     var cursor := 0;
     size := textLib.length(code);
     loop cursor < size {
@@ -1963,8 +1966,8 @@ injectCFnTemps := fn(code: String): String {
             end := textLib.skipName(code, cursor);
             if textLib.startsWithAt(code, end, " = ") {
                 tName := textLib.slice(code, cursor, end);
-                if not listLib.listContainsText(seen, tName) {
-                    listLib.pushBack(mut seen, tName);
+                if not setLib.has(seen, tName) {
+                    setLib.add(mut seen, tName);
                     tag := if textLib.startsWithAt(code, cursor, "lt_cmp_") or textLib.startsWithAt(code, cursor, "lt_arg_f_") { textLib.at(code, cursor + 7) } else { "i" };
                     typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
                     else if tag == "f" { "double " } else { "int64_t " };
@@ -4486,7 +4489,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             diagLib.fail("", aggErr);
         }
     }
-    hoistedFnKeys: mut List<String> = [];
+    hoistedFnKeys: mut Set<String>;
     hoistedFnDefs: mut List<String> = [];
     loop reachable as item {
         extracted := extractCHoistedFns(item.code);
@@ -4495,8 +4498,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             if sepIdx > 0 {
                 eKey := textLib.slice(entry, 0, sepIdx);
                 eBody := textLib.slice(entry, sepIdx + 1, textLib.length(entry));
-                if not listLib.listContainsText(hoistedFnKeys, eKey) {
-                    listLib.pushBack(mut hoistedFnKeys, eKey);
+                if not setLib.has(hoistedFnKeys, eKey) {
+                    setLib.add(mut hoistedFnKeys, eKey);
                     listLib.pushBack(mut hoistedFnDefs, eBody);
                 }
             }

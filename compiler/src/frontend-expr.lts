@@ -6593,12 +6593,13 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
     loop true {
         if left.next > 0 and textLib.at(source, left.next - 1) == "}" { break; }
         postPosition := syntax.skipTrivia(source, left.next, prefix);
-        if postPosition < textLib.length(source) and textLib.at(source, postPosition) == "." {
+        sourceLen := textLib.length(source);
+        if postPosition < sourceLen and textLib.at(source, postPosition) == "." {
             labelStart := syntax.skipTrivia(source, postPosition + 1, prefix);
-            if labelStart < textLib.length(source) and textLib.isDigit(textLib.at(source, labelStart)) {
+            if labelStart < sourceLen and textLib.isDigit(textLib.at(source, labelStart)) {
                 var end := labelStart;
                 var fieldIndex := 0;
-                loop end < textLib.length(source) and textLib.isDigit(textLib.at(source, end)) {
+                loop end < sourceLen and textLib.isDigit(textLib.at(source, end)) {
                     fieldIndex = fieldIndex * 10 + syntax.decimalDigit(textLib.at(source, end));
                     end = end + 1;
                 }
@@ -7182,14 +7183,15 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
     loop true {
         if left.next > 0 and textLib.at(source, left.next - 1) == "}" { break; }
         operatorPosition := syntax.skipTrivia(source, left.next, prefix);
-        if operatorPosition >= textLib.length(source) { break; }
+        sourceLen := textLib.length(source);
+        if operatorPosition >= sourceLen { break; }
         operator := syntax.readOperator(source, operatorPosition);
         if operator.text == "" { break; }
         level := syntax.operatorLevel(operator.text);
         if level < effectiveMinimum { break; }
         if operator.text == "**" {
             var signPosition := exprStart;
-            loop signPosition < textLib.length(source) and (textLib.at(source, signPosition) == "+" or textLib.at(source, signPosition) == "-") {
+            loop signPosition < sourceLen and (textLib.at(source, signPosition) == "+" or textLib.at(source, signPosition) == "-") {
                 if textLib.at(source, signPosition) == "-" {
                     syntax.failAt(source, operatorPosition, prefix, "group a negative power base as (-base) or negate the completed power as -(base ** exponent)");
                 }
@@ -7498,9 +7500,10 @@ pub parseExpression := fn(target: String, source: String, position: Int, prefix:
 
 /** Parses a direct or parenthesized partial if assignment into guarded Assign items; returns empty when total or not an if. */
 pub parsePartialAssignIf := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, targetAt: Int, targetKind: String, targetName: String, targetRuntime: String, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Items {
+    sourceLen := textLib.length(source);
     var inner := syntax.skipTrivia(source, position, prefix);
     var parenCount := 0;
-    loop inner < textLib.length(source) and textLib.at(source, inner) == "(" {
+    loop inner < sourceLen and textLib.at(source, inner) == "(" {
         parenCount = parenCount + 1;
         inner = syntax.skipTrivia(source, inner + 1, prefix);
     }
@@ -7567,9 +7570,10 @@ pub parsePartialAssignIf := fn(target: String, source: String, position: Int, pr
 
 /** Parses one declaration initializer, allowing a direct or parenthesized partial if to default to zero(T). */
 pub parseInitializerExpression := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Parsed {
+    sourceLen := textLib.length(source);
     var inner := syntax.skipTrivia(source, position, prefix);
     var parenCount := 0;
-    loop inner < textLib.length(source) and textLib.at(source, inner) == "(" {
+    loop inner < sourceLen and textLib.at(source, inner) == "(" {
         parenCount = parenCount + 1;
         inner = syntax.skipTrivia(source, inner + 1, prefix);
     }
