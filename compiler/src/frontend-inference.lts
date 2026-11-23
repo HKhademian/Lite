@@ -1222,7 +1222,22 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                 if declStart < size and textLib.isNameStart(textLib.at(source, declStart)) {
                     declEnd := textLib.skipName(source, declStart);
                     operator := syntax.skipTrivia(source, declEnd, prefix);
-                    if textLib.startsWithAt(source, operator, ":=") {
+                    if operator < size and textLib.at(source, operator) == "." {
+                        opStart := syntax.skipTrivia(source, operator + 1, prefix);
+                        var opScan := opStart;
+                        if opScan < size and textLib.at(source, opScan) == "$" { opScan = opScan + 1; }
+                        if opScan < size and textLib.isNameStart(textLib.at(source, opScan)) {
+                            opEnd := textLib.skipName(source, opScan);
+                            afterOp := syntax.skipTrivia(source, opEnd, prefix);
+                            if textLib.startsWithAt(source, afterOp, ":=") {
+                                valStart := syntax.skipTrivia(source, afterOp + 2, prefix);
+                                if textLib.wordAt(source, valStart, "fn") {
+                                    qualName := textLib.slice(source, declStart, declEnd) + "." + textLib.slice(source, opStart, opEnd);
+                                    listLib.pushBack(mut decls, (kind = ir.DECL_KIND_PUB_TYPE_OP, name = qualName, runtime = "", code = "", intValue = 0, textValue = ""));
+                                }
+                            }
+                        }
+                    } else if textLib.startsWithAt(source, operator, ":=") {
                         valStart := syntax.skipTrivia(source, operator + 2, prefix);
                         declName := textLib.slice(source, declStart, declEnd);
                         if textLib.wordAt(source, valStart, "fn") {
@@ -1304,6 +1319,35 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                 continue;
             }
             aliasPosition := syntax.skipTrivia(source, afterName, prefix);
+            if aliasPosition < size and textLib.at(source, aliasPosition) == "." {
+                opStart := syntax.skipTrivia(source, aliasPosition + 1, prefix);
+                var opScan := opStart;
+                if opScan < size and textLib.at(source, opScan) == "$" { opScan = opScan + 1; }
+                if opScan < size and textLib.isNameStart(textLib.at(source, opScan)) {
+                    opEnd := textLib.skipName(source, opScan);
+                    afterOp := syntax.skipTrivia(source, opEnd, prefix);
+                    if textLib.startsWithAt(source, afterOp, ":=") {
+                        valStart := syntax.skipTrivia(source, afterOp + 2, prefix);
+                        if textLib.wordAt(source, valStart, "fn") {
+                            headerPos := syntax.skipTrivia(source, valStart + 2, prefix);
+                            qualName := name + "." + textLib.slice(source, opStart, opEnd);
+                            listLib.pushBack(mut decls, (kind = ir.DECL_KIND_FUTURE_TYPE_OP, name = qualName, runtime = "", code = "",
+                            intValue = nameStart, textValue = integer.intText(headerPos)));
+                            skippedFn := skipFnExprSpan(source, headerPos, size, prefix, not hasInnerAlias or not hasInnerFn);
+                            if not hasInnerAlias and skippedFn.hasInnerAlias {
+                                hasInnerAlias = true;
+                                listLib.pushBack(mut decls, (kind = ir.DECL_KIND_HAS_INNER_ALIAS, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                            }
+                            if not hasInnerFn and skippedFn.hasInnerFn {
+                                hasInnerFn = true;
+                                listLib.pushBack(mut decls, (kind = ir.DECL_KIND_HAS_INNER_FN, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                            }
+                            position = skippedFn.next;
+                            continue;
+                        }
+                    }
+                }
+            }
             if textLib.startsWithAt(source, aliasPosition, ":=") {
                 valueStart := syntax.skipTrivia(source, aliasPosition + 2, prefix);
                 if textLib.wordAt(source, valueStart, "type") {

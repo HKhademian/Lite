@@ -127,7 +127,7 @@ loop emptyOps as op {
     test.check("mut-lists empty " + op + " panic: " + pRun.stderr, text.containsText(pRun.stderr, "BoundPanic") and text.containsText(pRun.stderr, op + " on an empty list"));
 }
 mutListRej: List<(bad: String, m1: String, m2: String)> = [
-    (bad = "mut x := 1;", m1 = "mut requires a List value, got Int", m2 = ""),
+    (bad = "mut x := 1;", m1 = "mut requires a List, Map, Set, or record value, got Int", m2 = ""),
     (bad = "var mut x: List<Int> = [];", m1 = "var mut cannot be combined with explicit type annotation", m2 = ""),
     (bad = "values: mut List<Int> = [1]; pop_front(values);", m1 = "pop_front requires mut list argument", m2 = ""),
     (bad = "values: mut List<Int> = [1]; push_front(values, 2);", m1 = "push_front requires mut list argument", m2 = "")

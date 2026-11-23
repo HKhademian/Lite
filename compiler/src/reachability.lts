@@ -2162,7 +2162,7 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
         } else if isPureDecl {
             hasPrunable = true;
             mapLib.set(mut pureDeclIdx, item.runtime, pIdx);
-        } else if item.kind =!= ir.ITEM_KIND_IMPORT and item.kind =!= ir.ITEM_KIND_PUBLIC_FUNCTION and item.kind =!= ir.ITEM_KIND_PUBLIC_VALUE and
+        } else if item.kind =!= ir.ITEM_KIND_IMPORT and item.kind =!= ir.ITEM_KIND_PUBLIC_FUNCTION and item.kind =!= ir.ITEM_KIND_PUBLIC_TYPE_OP and item.kind =!= ir.ITEM_KIND_PUBLIC_VALUE and
         item.kind =!= ir.ITEM_KIND_PUBLIC_TYPE and item.kind =!= ir.ITEM_KIND_NOOP and item.kind =!= ir.ITEM_KIND_SOURCE_LOC and item.kind =!= ir.ITEM_KIND_COMMENT {
             codeReachableTokensQueue(item.code, mut reachable, mut queue);
             if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {

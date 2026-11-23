@@ -453,9 +453,18 @@ pub setElementKind := fn(kind: String): String {
 
 /** True when `name` matches one of the active core intrinsic generic parameters (`"T"` or `"K,V"`). */
 isGenericParamName := fn(genericType: String, name: String): Bool {
-    if genericType == "" { return false; }
+    if genericType == "" or name == "" { return false; }
     if name == genericType { return true; }
-    genericType == "K,V" and (name == "K" or name == "V")
+    var start := 0;
+    size := textLib.length(genericType);
+    loop start < size {
+        comma := textLib.indexOfText(genericType, ",", start);
+        end := if comma >= 0 { comma } else { size };
+        if textLib.slice(genericType, start, end) == name { return true; }
+        if comma < 0 { break; }
+        start = comma + 1;
+    }
+    false
 };
 
 /** True when `kind` is this compiler's canonical nominal enum kind `Enum<lp(id#at#Name)lp(Backing)count;...>`. */
@@ -494,6 +503,52 @@ enumHeaderInfo := fn(kind: String): (ok: Bool, displayName: String, backing: Str
 pub enumDisplayName := fn(kind: String): String {
     info := enumHeaderInfo(kind);
     if not info.ok { kind } else { info.displayName }
+};
+
+/** Returns the full module-scoped identity header (`id#at#Name`) of canonical enum `kind`, or `""`. */
+pub enumIdentityHeader := fn(kind: String): String {
+    if not isEnumKind(kind) { return ""; }
+    hdr := decodeLengthPrefixedAt(kind, 5);
+    if hdr.next < 0 { return ""; }
+    hdr.text
+};
+
+/** Returns the canonical nominal type-operation owner key for `kind`, or `""` for non-nominal types. */
+pub typeOpOwnerKey := fn(kind: String): String {
+    if isRecordKind(kind) {
+        semi := recordHeaderSemi(kind);
+        if semi <= 7 { return ""; }
+        return "Record:" + textLib.slice(kind, 7, semi);
+    }
+    if isEnumKind(kind) {
+        hdr := enumIdentityHeader(kind);
+        if hdr == "" { return ""; }
+        return "Enum:" + hdr;
+    }
+    if isListKind(kind) { return "List"; }
+    if isMapKind(kind) { return "Map"; }
+    if isSetKind(kind) { return "Set"; }
+    if isArrayKind(kind) { return "Array"; }
+    if kind == ir.VALUE_KIND_STRING or kind == ir.VALUE_KIND_BOOL or numeric.isNumericKind(kind) {
+        return kind;
+    }
+    ""
+};
+
+/** Returns the built-in nominal type family owned by core `moduleIdentity` when it matches `typeName`, else `""`. */
+pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String {
+    if moduleIdentity == "lite.core.list.v1" and typeName == "List" { return "List"; }
+    if moduleIdentity == "lite.core.map.v1" and typeName == "Map" { return "Map"; }
+    if moduleIdentity == "lite.core.set.v1" and typeName == "Set" { return "Set"; }
+    if moduleIdentity == "lite.core.text.v1" and typeName == "String" { return "String"; }
+    if moduleIdentity == "lite.core.int.v1" and typeName == "Int" { return "Int"; }
+    if moduleIdentity == "lite.core.array.v1" and typeName == "Array" { return "Array"; }
+    ""
+};
+
+/** True when `typeName` is a generic built-in type family requiring explicit `Self<...>` arguments. */
+pub isGenericCoreOwner := fn(typeName: String): Bool {
+    typeName == "List" or typeName == "Map" or typeName == "Set" or typeName == "Array"
 };
 
 /** Returns the backing scalar kind of canonical enum kind `kind`, or `""` for a plain enum. */
@@ -1557,7 +1612,18 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     after := parsedName.next;
     name := parsedName.name;
     afterName := syntax.skipTrivia(source, after, prefix);
-    if name == "List" and afterName < size and textLib.at(source, afterName) == "<" {
+    var resolvedName := name;
+    if name == "Self" {
+        selfIdx := findAlias(aliases, "Self");
+        if selfIdx >= 0 and textLib.startsWithAt(aliases[selfIdx].target, 0, "$Family:") {
+            fam := textLib.slice(aliases[selfIdx].target, 8, textLib.length(aliases[selfIdx].target));
+            if afterName >= size or textLib.at(source, afterName) =!= "<" {
+                syntax.failAt(errSource, nameStart, prefix, "generic type " + fam + " requires explicit type arguments on Self<...>");
+            }
+            resolvedName = fam;
+        }
+    }
+    if resolvedName == "List" and afterName < size and textLib.at(source, afterName) == "<" {
         innerStart := syntax.skipTrivia(source, afterName + 1, prefix);
         if innerStart >= size or textLib.at(source, innerStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "expected a list element type");
@@ -1572,7 +1638,7 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         }
         return (kind = "List<" + inner.kind + ">", next = close + 1);
     }
-    if name == "Map" and afterName < size and textLib.at(source, afterName) == "<" {
+    if resolvedName == "Map" and afterName < size and textLib.at(source, afterName) == "<" {
         keyStart := syntax.skipTrivia(source, afterName + 1, prefix);
         if keyStart >= size or textLib.at(source, keyStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "expected a map key type");
@@ -1599,7 +1665,7 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         }
         return (kind = "Map<" + keyParsed.kind + "," + valParsed.kind + ">", next = close + 1);
     }
-    if name == "Set" and afterName < size and textLib.at(source, afterName) == "<" {
+    if resolvedName == "Set" and afterName < size and textLib.at(source, afterName) == "<" {
         elemStart := syntax.skipTrivia(source, afterName + 1, prefix);
         if elemStart >= size or textLib.at(source, elemStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected a set element type");
@@ -1749,8 +1815,8 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
                 cursor = syntax.skipTrivia(source, cursor + 3, prefix);
             }
             typed := parseFunctionType(source, cursor, prefix, aliases, genericType);
-            if access =!= "" and not listIntrinsic and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) {
-                syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for List, Map, or Set parameters or registered core declarations");
+            if access =!= "" and not listIntrinsic and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) and not isRecordKind(typed.kind) {
+                syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
             }
             cursor = syntax.skipTrivia(source, typed.next, prefix);
             if count > 0 { encoded = encoded + "|"; }
@@ -1784,10 +1850,110 @@ pub parseLocalType := fn(source: String, position: Int, prefix: String, aliases:
         name := textLib.slice(source, cursor, textLib.skipName(source, cursor));
         syntax.failAt(source, cursor, prefix, "unsupported local type " + name);
     }
-    if writable and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) {
-        syntax.failAt(source, start, prefix, "mut requires a List, Map, or Set type, got " + displayKind(typed.kind));
+    if writable and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) and not isRecordKind(typed.kind) {
+        syntax.failAt(source, start, prefix, "mut requires a List, Map, Set, or record type, got " + displayKind(typed.kind));
     }
     (kind = typed.kind, writable = writable, next = typed.next)
+};
+
+/** Returns a copy of `aliases` with `Self` bound at `depth` to `selfTarget` (`ownerKind` or `"$Family:<Name>"`). */
+pub withSelfAlias := fn(aliases: List<AliasDecl>, selfTarget: String, depth: Int): List<AliasDecl> {
+    out: mut List<AliasDecl> = [];
+    loop aliases as existing {
+        if existing.name =!= "Self" {
+            listLib.pushBack(mut out, existing);
+        }
+    }
+    listLib.pushBack(mut out, (name = "Self", target = selfTarget, at = -1, end = 0, depth = depth));
+    out
+};
+
+/** Parses a `TypeName.op := fn[<TypeParams>](recv: [mut] Self[<...>], ...): Ret` header with strict `Self`-receiver validation. */
+pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, typeName: String, opName: String, selfTarget: String, ownerKey: String, isGenericOwner: Bool): (next: Int, result: String, params: String, count: Int, genericType: String) {
+    size := textLib.length(source);
+    var cursor := syntax.skipTrivia(source, position, prefix);
+    var genericType := "";
+    if cursor < size and textLib.at(source, cursor) == "<" {
+        cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+        gpNames: mut List<String> = [];
+        loop true {
+            binderStart := cursor;
+            binder := typeNameAt(source, binderStart, prefix);
+            if listLib.listContainsText(gpNames, binder.name) {
+                syntax.failAt(source, binderStart, prefix, "duplicate type parameter " + binder.name);
+            }
+            listLib.pushBack(mut gpNames, binder.name);
+            genericType = if genericType == "" { binder.name } else { genericType + "," + binder.name };
+            cursor = syntax.skipTrivia(source, binder.next, prefix);
+            if cursor < size and textLib.at(source, cursor) == "," {
+                cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            } else {
+                break;
+            }
+        }
+        cursor = syntax.expectSymbol(source, cursor, ">", prefix);
+        cursor = syntax.skipTrivia(source, cursor, prefix);
+    }
+    scopedAliases := withSelfAlias(aliases, selfTarget, 0);
+    cursor = syntax.expectSymbol(source, cursor, "(", prefix);
+    cursor = syntax.skipTrivia(source, cursor, prefix);
+    if cursor < size and textLib.at(source, cursor) == ")" {
+        syntax.failAt(source, cursor, prefix, "type operation " + typeName + "." + opName + " requires a Self receiver first parameter");
+    }
+    names: mut List<String> = [];
+    var encoded := "";
+    var count := 0;
+    loop true {
+        if cursor >= size or not textLib.isNameStart(textLib.at(source, cursor)) {
+            syntax.failAt(source, cursor, prefix, "expected a parameter name");
+        }
+        nameStart := cursor;
+        cursor = textLib.skipName(source, cursor);
+        parameterName := textLib.slice(source, nameStart, cursor);
+        if syntax.isReservedWord(parameterName) { syntax.unsupportedFeature(source, nameStart, parameterName, prefix); }
+        if listLib.listContainsText(names, parameterName) {
+            syntax.failAt(source, nameStart, prefix, "duplicate parameter " + parameterName);
+        }
+        listLib.pushBack(mut names, parameterName);
+        cursor = syntax.skipTrivia(source, cursor, prefix);
+        cursor = syntax.expectSymbol(source, cursor, ":", prefix);
+        cursor = syntax.skipTrivia(source, cursor, prefix);
+        var access := "";
+        if textLib.wordAt(source, cursor, "mut") {
+            access = "mut ";
+            cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+        }
+        typeStart := cursor;
+        if count == 0 {
+            if not textLib.wordAt(source, typeStart, "Self") {
+                syntax.failAt(source, typeStart, prefix, "receiver parameter of " + typeName + "." + opName + " must have Self type");
+            }
+        }
+        typed := parseFunctionType(source, typeStart, prefix, scopedAliases, genericType);
+        if count == 0 {
+            if typeOpOwnerKey(typed.kind) =!= ownerKey {
+                syntax.failAt(source, typeStart, prefix, "receiver parameter of " + typeName + "." + opName + " must match " + typeName + ", got " + displayKind(typed.kind));
+            }
+        }
+        if access =!= "" and not isGenericOwner and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) and not isRecordKind(typed.kind) {
+            syntax.failAt(source, typeStart, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
+        }
+        cursor = syntax.skipTrivia(source, typed.next, prefix);
+        if count > 0 { encoded = encoded + "|"; }
+        encoded = encoded + parameterName + "=" + access + typed.kind;
+        count = count + 1;
+        if cursor < size and textLib.at(source, cursor) == "," {
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            if cursor < size and textLib.at(source, cursor) == ")" { break; }
+        } else {
+            break;
+        }
+    }
+    cursor = syntax.expectSymbol(source, cursor, ")", prefix);
+    cursor = syntax.skipTrivia(source, cursor, prefix);
+    cursor = syntax.expectSymbol(source, cursor, ":", prefix);
+    resultType := parseFunctionType(source, cursor, prefix, scopedAliases, genericType);
+    (next = resultType.next, result = resultType.kind, params = encoded, count = count, genericType = genericType)
 };
 
 /** Returns the source name from one encoded `name=kind` function parameter entry. */
@@ -2555,7 +2721,14 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
     if not textLib.isNameStart(ch) { return (ok = false, kind = "", next = start); }
     afterName := textLib.skipName(source, start);
     name := textLib.slice(source, start, afterName);
-    if name == "List" {
+    var resolvedName := name;
+    if name == "Self" {
+        selfIdx := findAlias(aliases, "Self");
+        if selfIdx >= 0 and textLib.startsWithAt(aliases[selfIdx].target, 0, "$Family:") {
+            resolvedName = textLib.slice(aliases[selfIdx].target, 8, textLib.length(aliases[selfIdx].target));
+        }
+    }
+    if resolvedName == "List" {
         afterList := syntax.skipTrivia(source, afterName, prefix);
         if afterList >= size or textLib.at(source, afterList) =!= "<" {
             return (ok = false, kind = "", next = afterList);
@@ -2570,7 +2743,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
         }
         return (ok = true, kind = "List<" + elem.kind + ">", next = close + 1);
     }
-    if name == "Map" {
+    if resolvedName == "Map" {
         afterMap := syntax.skipTrivia(source, afterName, prefix);
         if afterMap >= size or textLib.at(source, afterMap) =!= "<" {
             return (ok = false, kind = "", next = afterMap);
@@ -2593,7 +2766,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
         }
         return (ok = true, kind = "Map<" + keyRes.kind + "," + valRes.kind + ">", next = close + 1);
     }
-    if name == "Set" {
+    if resolvedName == "Set" {
         afterSet := syntax.skipTrivia(source, afterName, prefix);
         if afterSet >= size or textLib.at(source, afterSet) =!= "<" {
             return (ok = false, kind = "", next = afterSet);
@@ -2705,12 +2878,16 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
         afterPName := syntax.skipTrivia(source, nameEnd, prefix);
         if afterPName >= size or textLib.at(source, afterPName) =!= ":" { return false; }
         cursor = syntax.skipTrivia(source, afterPName + 1, prefix);
+        var isMutP := false;
         if textLib.wordAt(source, cursor, "mut") {
-            if not listIntrinsic { return false; }
+            isMutP = true;
             cursor = syntax.skipTrivia(source, cursor + 3, prefix);
         }
         pType := canResolveTypeAt(source, cursor, prefix, aliases, genericType, emptySeen, 32);
         if not pType.ok { return false; }
+        if isMutP and not listIntrinsic and not isListKind(pType.kind) and not isMapKind(pType.kind) and not isSetKind(pType.kind) and not isRecordKind(pType.kind) {
+            return false;
+        }
         paramCount = paramCount + 1;
         cursor = syntax.skipTrivia(source, pType.next, prefix);
         if cursor < size and textLib.at(source, cursor) == "," {

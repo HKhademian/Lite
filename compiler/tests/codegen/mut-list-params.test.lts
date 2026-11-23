@@ -60,10 +60,10 @@ if ccInfo.available {
 /* Negative diagnostics on both TS and C */
 compilerTest.assertCompileErrorContains(root, tsComp, "missing mut at call site (ts)",
 "f := fn(b: mut List<String>): Unit { }; xs: mut List<String>; f(xs);",
-"requires mut list argument");
+"requires mut argument");
 compilerTest.assertCompileErrorContains(root, cComp, "missing mut at call site (c)",
 "f := fn(b: mut List<String>): Unit { }; xs: mut List<String>; f(xs);",
-"requires mut list argument");
+"requires mut argument");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "immutable list passed with mut (ts)",
 "f := fn(b: mut List<String>): Unit { }; xs: List<String> = [\"a\"]; f(mut xs);",
@@ -74,9 +74,9 @@ compilerTest.assertCompileErrorContains(root, cComp, "immutable list passed with
 
 compilerTest.assertCompileErrorContains(root, tsComp, "mut Int param rejected (ts)",
 "f := fn(x: mut Int): Unit { };",
-"mut parameter signatures are reserved for List, Map, or Set parameters");
+"mut parameter signatures are reserved for List, Map, Set, or record parameters");
 compilerTest.assertCompileErrorContains(root, cComp, "mut Int param rejected (c)",
 "f := fn(x: mut Int): Unit { };",
-"mut parameter signatures are reserved for List, Map, or Set parameters");
+"mut parameter signatures are reserved for List, Map, Set, or record parameters");
 
 test.done("mut-list-params");

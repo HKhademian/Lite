@@ -85,9 +85,11 @@ BUILTIN_RULE_FN := ir.BUILTIN_RULE_FN;
 
 DECL_KIND_FUTURE_DECL := ir.DECL_KIND_FUTURE_DECL;
 DECL_KIND_FUTURE_FN := ir.DECL_KIND_FUTURE_FN;
+DECL_KIND_FUTURE_TYPE_OP := ir.DECL_KIND_FUTURE_TYPE_OP;
 DECL_KIND_FUTURE_DESTR := ir.DECL_KIND_FUTURE_DESTR;
 DECL_KIND_ALIAS := ir.DECL_KIND_ALIAS;
 DECL_KIND_PUB_FN := ir.DECL_KIND_PUB_FN;
+DECL_KIND_PUB_TYPE_OP := ir.DECL_KIND_PUB_TYPE_OP;
 DECL_KIND_PUB_TYPE := ir.DECL_KIND_PUB_TYPE;
 DECL_KIND_PUB_VAL := ir.DECL_KIND_PUB_VAL;
 DECL_KIND_HAS_INNER_ALIAS := ir.DECL_KIND_HAS_INNER_ALIAS;
@@ -134,6 +136,7 @@ pub ITEM_KIND_CORE_MODULE_META := ir.ITEM_KIND_CORE_MODULE_META;
 pub ITEM_KIND_CORE_MODULE_SOURCE := ir.ITEM_KIND_CORE_MODULE_SOURCE;
 pub ITEM_KIND_CORE_MODULE_IMPORT := ir.ITEM_KIND_CORE_MODULE_IMPORT;
 pub ITEM_KIND_PUBLIC_FUNCTION := ir.ITEM_KIND_PUBLIC_FUNCTION;
+pub ITEM_KIND_PUBLIC_TYPE_OP := ir.ITEM_KIND_PUBLIC_TYPE_OP;
 pub ITEM_KIND_PUBLIC_VALUE := ir.ITEM_KIND_PUBLIC_VALUE;
 pub ITEM_KIND_PUBLIC_TYPE := ir.ITEM_KIND_PUBLIC_TYPE;
 pub ITEM_KIND_PURE_GLOBAL := ir.ITEM_KIND_PURE_GLOBAL;
@@ -940,6 +943,41 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
 };
 
 /** Collects aliases, `pub` declarations, inner-alias hints, root functions, root values, and root assignments in a single pass over module source. */
+/** Resolves `typeName` as an owned nominal type declaration in the current module (or a verified core built-in owner). Rejects transparent aliases and foreign types. */
+resolveOwnedTypeOpTarget := fn(source: String, nameStart: Int, prefix: String, aliases: List<AliasDecl>, moduleIdentity: String, typeName: String): (ok: Bool, ownerKind: String, ownerKey: String, selfTarget: String, isGenericOwner: Bool, error: String) {
+    coreOwner := types.coreBuiltinOwnerType(moduleIdentity, typeName);
+    if coreOwner =!= "" {
+        isGen := types.isGenericCoreOwner(coreOwner);
+        selfT := if isGen { "$Family:" + coreOwner } else { coreOwner };
+        return (ok = true, ownerKind = coreOwner, ownerKey = coreOwner, selfTarget = selfT, isGenericOwner = isGen, error = "");
+    }
+    var foundIdx := -1;
+    var i := 0;
+    loop aliases as a {
+        if a.name == typeName and a.depth == 0 {
+            foundIdx = i;
+        }
+        i = i + 1;
+    }
+    if foundIdx < 0 {
+        return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
+        error = "cannot attach operation to unknown or foreign type " + typeName + "; operations may only be attached in the owning module of a record, enum, or built-in type");
+    }
+    entry := aliases[foundIdx];
+    if entry.at < 0 or (not textLib.startsWithAt(entry.target, 0, "@recraw:") and not textLib.startsWithAt(entry.target, 0, "@enumraw:")) {
+        return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
+        error = "cannot attach operation to alias or foreign type " + typeName + "; operations may only be attached to an owned record, enum, or built-in type");
+    }
+    emptySeen: List<String> = [];
+    ownerKind := resolveTypeText(source, nameStart, prefix, aliases, entry.target, emptySeen);
+    ownerKey := types.typeOpOwnerKey(ownerKind);
+    if ownerKey == "" {
+        return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
+        error = "cannot attach operation to non-nominal type " + typeName);
+    }
+    (ok = true, ownerKind = ownerKind, ownerKey = ownerKey, selfTarget = ownerKind, isGenericOwner = false, error = "")
+};
+
 collectModuleDecls := fn(target: String, source: String, prefix: String, moduleKey: String): Items { infer.collectModuleDecls(target, source, prefix, moduleKey) };
 
 /** Appends `(name, depth)` entries to `decls` for every `|name|` token in `assignedBag`. */
@@ -1119,6 +1157,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     }
     decls := collectModuleDecls(target, source, prefix, moduleKey);
     publishedFunctions: mut Set<String>;
+    publishedTypeOps: mut Set<String>;
     publishedValues: mut Set<String>;
     publishedTypes: mut Set<String>;
     var hasInnerAlias := false;
@@ -1130,6 +1169,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             listLib.pushBack(mut aliases, (name = decl.name, target = decl.code, at = decl.intValue, end = endPos, depth = 0));
         } else if decl.kind == DECL_KIND_PUB_FN {
             setLib.add(mut publishedFunctions, decl.name);
+        } else if decl.kind == DECL_KIND_PUB_TYPE_OP {
+            setLib.add(mut publishedTypeOps, decl.name);
         } else if decl.kind == DECL_KIND_PUB_VAL {
             setLib.add(mut publishedValues, decl.name);
         } else if decl.kind == DECL_KIND_PUB_TYPE {
@@ -1174,6 +1215,16 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             first = first, count = exported.intValue, declAt = -1));
             if textLib.indexOfText(exported.name, ".", 0) < 0 {
                 listLib.pushBack(mut blockDecls, (name = exported.name, depth = 0));
+            }
+        } else if exported.kind == ITEM_KIND_PUBLIC_TYPE_OP {
+            if findFunction(functions, exported.name) < 0 {
+                first := parameterTotal;
+                loop splitPipeEntries(exported.textValue, exported.intValue) as expParam {
+                    listLib.pushBack(mut functionParams, expParam);
+                    parameterTotal = parameterTotal + 1;
+                }
+                listLib.pushBack(mut functions, (name = exported.name, runtime = exported.runtime, result = exported.code,
+                first = first, count = exported.intValue, declAt = -1));
             }
         } else if exported.kind == ITEM_KIND_PUBLIC_VALUE {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
@@ -1243,6 +1294,45 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     }
                 }
             }
+        } else if decl.kind == DECL_KIND_FUTURE_TYPE_OP {
+            qualName := decl.name;
+            dotPos := textLib.indexOfText(qualName, ".", 0);
+            if dotPos > 0 {
+                tName := textLib.slice(qualName, 0, dotPos);
+                oName := textLib.slice(qualName, dotPos + 1, textLib.length(qualName));
+                opAt := decl.intValue;
+                owner := resolveOwnedTypeOpTarget(source, opAt, prefix, aliases, moduleIdentity, tName);
+                if owner.ok {
+                    typeOpKey := "$typeop:" + owner.ownerKey + "." + oName;
+                    if findFunction(functions, typeOpKey) < 0 {
+                        headerPos := parseDigits(decl.textValue, 0, textLib.length(decl.textValue));
+                        scopedSelf := types.withSelfAlias(aliases, owner.selfTarget, 0);
+                        if canPreParseFunctionHeader(source, headerPos, prefix, scopedSelf, owner.isGenericOwner) {
+                            header := types.parseTypeOpHeader(source, headerPos, prefix, aliases, tName, oName, owner.selfTarget, owner.ownerKey, owner.isGenericOwner);
+                            afterHdr := skipTrivia(source, header.next, prefix);
+                            if afterHdr < size and textLib.at(source, afterHdr) == ";" {
+                                hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, qualName, header.params, header.result);
+                                if setLib.has(publishedTypeOps, qualName) and hostRuntime =!= "" {
+                                    listLib.pushBack(mut functions, (name = typeOpKey, runtime = hostRuntime, result = header.result,
+                                    first = parameterTotal, count = header.count, declAt = opAt));
+                                    loop splitPipeEntries(header.params, header.count) as hp {
+                                        listLib.pushBack(mut functionParams, hp);
+                                        parameterTotal = parameterTotal + 1;
+                                    }
+                                }
+                            } else if header.count >= 1 and header.genericType == "" and afterHdr < size and textLib.at(source, afterHdr) == "{" {
+                                fnRuntime := moduleFunctionRuntime(target, moduleKey, qualName);
+                                listLib.pushBack(mut functions, (name = typeOpKey, runtime = fnRuntime, result = header.result,
+                                first = parameterTotal, count = header.count, declAt = opAt));
+                                loop splitPipeEntries(header.params, header.count) as hp {
+                                    listLib.pushBack(mut functionParams, hp);
+                                    parameterTotal = parameterTotal + 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     var rootAssignedBag := "|";
@@ -1270,6 +1360,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
     var blockCount := 0;
     var depth := 0;
     var currentName := "";
+    var currentFnRuntime := "";
     var currentResult := "";
     var currentReturned := false;
     var currentStopped := false;
@@ -1499,10 +1590,11 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     }
                     fnTryKey = "";
                 }
-                functionRuntime := moduleFunctionRuntime(target, moduleKey, currentName);
+                functionRuntime := if currentFnRuntime =!= "" { currentFnRuntime } else { moduleFunctionRuntime(target, moduleKey, currentName) };
                 if currentLive { listLib.pushBack(mut items, (kind = ITEM_KIND_FUNCTION_END, name = "", runtime = functionRuntime,
                     code = "", intValue = 0, textValue = "")); }
                 currentName = "";
+                currentFnRuntime = "";
                 currentResult = "";
                 currentReturned = false;
             } else if blockKind == BLOCK_KIND_LOOP {
@@ -1853,7 +1945,17 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 failAt(source, declarationStart, prefix, "expected a declaration after pub");
             }
             declarationEnd := textLib.skipName(source, declarationStart);
-            declarationOperator := skipTrivia(source, declarationEnd, prefix);
+            var declarationOperator := skipTrivia(source, declarationEnd, prefix);
+            if declarationOperator < size and textLib.at(source, declarationOperator) == "." {
+                pubOpStart := skipTrivia(source, declarationOperator + 1, prefix);
+                var pubOpScan := pubOpStart;
+                if pubOpScan < size and textLib.at(source, pubOpScan) == "$" { pubOpScan = pubOpScan + 1; }
+                if pubOpScan >= size or not textLib.isNameStart(textLib.at(source, pubOpScan)) {
+                    failAt(source, pubOpStart, prefix, "expected operation name after " + textLib.slice(source, declarationStart, declarationEnd) + ".");
+                }
+                pubOpEnd := textLib.skipName(source, pubOpScan);
+                declarationOperator = skipTrivia(source, pubOpEnd, prefix);
+            }
             if not textLib.startsWithAt(source, declarationOperator, ":=") {
                 failAt(source, declarationOperator, prefix, "expected := after published declaration name");
             }
@@ -2639,8 +2741,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             }
             parsed := parseInitializerExpression(target, source, skipTrivia(source, afterName + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
             locals = checkStatementTrace(target, source, localStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
-            if not isListKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) {
-                failAt(source, localStart, prefix, "mut requires a List, Map, or Set value, got " + displayKind(parsed.kind));
+            if not isListKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) and not types.isRecordKind(parsed.kind) {
+                failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record value, got " + displayKind(parsed.kind));
             }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
@@ -2653,7 +2755,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 itemCode := copiedValueCode(target, parsed.kind, parsed.code);
-                listLib.pushBack(mut items, (kind = ITEM_PREFIX_LOCAL + storageKind(parsed.kind), name = localName, runtime = runtime,
+                mutPrefix := if target == TARGET_TS and types.isRecordKind(parsed.kind) { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
+                listLib.pushBack(mut items, (kind = mutPrefix + storageKind(parsed.kind), name = localName, runtime = runtime,
                 code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                 if codeHasRawTransfer(itemCode) {
                     listLib.pushBack(mut transferCodes, itemCode);
@@ -2688,8 +2791,8 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                 rawVarRhsCode = parsed.code;
                 locals = checkStatementTrace(target, source, localStart, prefix, rawVarRhsCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 rejectNonValueBinding(source, localStart, prefix, parsed.kind, localName);
-                if declaredWritable and not isListKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) {
-                    failAt(source, localStart, prefix, "mut requires a List, Map, or Set value, got " + displayKind(parsed.kind));
+                if declaredWritable and not isListKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) and not types.isRecordKind(parsed.kind) {
+                    failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record value, got " + displayKind(parsed.kind));
                 }
             } else if position < size and textLib.at(source, position) == ":" {
                 if declaredWritable { failAt(source, localStart, prefix, "var mut cannot be combined with explicit type annotation"); }
@@ -2870,6 +2973,182 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             position = if afterEnumEnd >= 0 { afterEnumEnd } else { aliasEntry.end };
             continue;
         }
+        if blockCount == 0 and depth == 0 and position < size and textLib.at(source, position) == "." {
+            opStart := skipTrivia(source, position + 1, prefix);
+            var opScan := opStart;
+            if opScan < size and textLib.at(source, opScan) == "$" { opScan = opScan + 1; }
+            if opScan < size and textLib.isNameStart(textLib.at(source, opScan)) {
+                opEnd := textLib.skipName(source, opScan);
+                afterOp := skipTrivia(source, opEnd, prefix);
+                if textLib.startsWithAt(source, afterOp, ":=") {
+                    afterOpDecl := skipTrivia(source, afterOp + 2, prefix);
+                    if not textLib.wordAt(source, afterOpDecl, "fn") {
+                        failAt(source, afterOpDecl, prefix, "type-attached declaration " + name + "." + textLib.slice(source, opStart, opEnd) + " must be a fn");
+                    }
+                    opName := textLib.slice(source, opStart, opEnd);
+                    qualName := name + "." + opName;
+                    if textLib.startsWithAt(opName, 0, "$") and opName =!= "$getIndex" and opName =!= "$setIndex" {
+                        failAt(source, opStart, prefix, "unknown compiler hook " + opName + " on " + name);
+                    }
+                    owner := resolveOwnedTypeOpTarget(source, nameStart, prefix, aliases, moduleIdentity, name);
+                    if not owner.ok {
+                        failAt(source, nameStart, prefix, owner.error);
+                    }
+                    if types.isRecordKind(owner.ownerKind) and types.recordFieldKind(owner.ownerKind, opName) =!= "" {
+                        failAt(source, opStart, prefix, "cannot declare operation " + qualName + ": collides with record field " + opName);
+                    }
+                    if types.isEnumKind(owner.ownerKind) and opName == "value" and types.enumBackingKind(owner.ownerKind) =!= "" {
+                        failAt(source, opStart, prefix, "cannot declare operation " + qualName + ": collides with enum backing value");
+                    }
+                    typeOpKey := "$typeop:" + owner.ownerKey + "." + opName;
+                    existingOpIdx := findFunction(functions, typeOpKey);
+                    if existingOpIdx >= 0 and functions[existingOpIdx].declAt =!= nameStart {
+                        failAt(source, nameStart, prefix, "duplicate type operation " + qualName + " (overloading is not supported)");
+                    }
+                    wasPreRegisteredOp := existingOpIdx >= 0 and functions[existingOpIdx].declAt == nameStart;
+                    position = skipTrivia(source, afterOpDecl + 2, prefix);
+                    header := types.parseTypeOpHeader(source, position, prefix, aliases, name, opName, owner.selfTarget, owner.ownerKey, owner.isGenericOwner);
+                    position = skipTrivia(source, header.next, prefix);
+                    rejectMisplacedTag(source, position, prefix, "unexpected block tag in function header");
+                    if position < size and textLib.at(source, position) == ";" {
+                        hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, qualName, header.params, header.result);
+                        if not setLib.has(publishedTypeOps, qualName) or hostRuntime == "" {
+                            failAt(source, nameStart, prefix, "bodyless type operation " + qualName + " has no matching core host binding");
+                        }
+                        position = skipTrivia(source, position + 1, prefix);
+                        if not wasPreRegisteredOp {
+                            listLib.pushBack(mut functions, (name = typeOpKey, runtime = hostRuntime, result = header.result,
+                            first = parameterTotal, count = header.count, declAt = nameStart));
+                            loop splitPipeEntries(header.params, header.count) as hp {
+                                listLib.pushBack(mut functionParams, hp);
+                                parameterTotal = parameterTotal + 1;
+                            }
+                        }
+                        if currentLive {
+                            listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_TYPE_OP, name = typeOpKey, runtime = hostRuntime, code = header.result,
+                            intValue = header.count, textValue = header.params));
+                            listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_FUNCTION, name = qualName, runtime = hostRuntime, code = header.result,
+                            intValue = header.count, textValue = header.params));
+                        }
+                        continue;
+                    }
+                    if header.genericType =!= "" {
+                        failAt(source, nameStart, prefix, "generic function bodies are not supported yet");
+                    }
+                    position = expectSymbol(source, position, "{", prefix);
+                    fnOpenBrace := position - 1;
+                    functionRuntime := moduleFunctionRuntime(target, moduleKey, qualName);
+                    if not wasPreRegisteredOp {
+                        listLib.pushBack(mut functions, (name = typeOpKey, runtime = functionRuntime, result = header.result,
+                        first = parameterTotal, count = header.count, declAt = nameStart));
+                    }
+                    isPubOp := setLib.has(publishedTypeOps, qualName);
+                    if isPubOp {
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_TYPE_OP, name = typeOpKey, runtime = functionRuntime, code = header.result,
+                        intValue = header.count, textValue = header.params));
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_PUBLIC_FUNCTION, name = qualName, runtime = functionRuntime, code = header.result,
+                        intValue = header.count, textValue = header.params));
+                    }
+                    softModule := if isPubOp {
+                        builtinsAbi.coreSoftBuiltin(moduleIdentity, qualName, header.params, header.result)
+                    } else {
+                        ""
+                    };
+                    skipAsSoft := target == TARGET_TS and neededFns =!= "*" and softModule =!= "" and skipSoftBuiltins and
+                    resolveBuiltinMode(builtinRules, softModule, qualName) == BUILTIN_MODE_BUILTIN;
+                    skipAsUnneeded := neededFns =!= "*" and not skipAsSoft and not setLib.has(neededFnSet, functionRuntime + "(");
+                    if skipAsSoft or skipAsUnneeded {
+                        if not wasPreRegisteredOp {
+                            loop splitPipeEntries(header.params, header.count) as sp {
+                                listLib.pushBack(mut functionParams, sp);
+                                parameterTotal = parameterTotal + 1;
+                            }
+                        }
+                        position = skipBraceBlock(source, position, prefix);
+                        if skipAsSoft and currentLive and not currentStopped {
+                            listLib.pushBack(mut items, (kind = ITEM_KIND_FUNCTION_START, name = qualName, runtime = functionRuntime,
+                            code = header.result, intValue = header.count, textValue = header.params));
+                            listLib.pushBack(mut items, (kind = ITEM_KIND_SOFT_BUILTIN, name = qualName, runtime = functionRuntime,
+                            code = softModule, intValue = header.count, textValue = header.params));
+                            listLib.pushBack(mut items, (kind = ITEM_KIND_FUNCTION_END, name = "", runtime = functionRuntime,
+                            code = "", intValue = 0, textValue = ""));
+                        }
+                        position = skipTrivia(source, position, prefix);
+                        continue;
+                    }
+                    if currentLive and not currentStopped {
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_FUNCTION_START, name = qualName, runtime = functionRuntime,
+                        code = header.result, intValue = header.count, textValue = header.params));
+                        if softModule =!= "" {
+                            listLib.pushBack(mut items, (kind = ITEM_KIND_SOFT_BUILTIN, name = qualName, runtime = functionRuntime,
+                            code = softModule, intValue = header.count, textValue = header.params));
+                        }
+                    }
+                    fnTryId := nextStmtCtxId;
+                    nextStmtCtxId = nextStmtCtxId + 1;
+                    fnTryKey = "";
+                    if target == TARGET_TS and currentLive and not currentStopped {
+                        fnTryKey = moduleKey + "#fn#" + integer.intText(fnTryId);
+                        fnTransferStart = transferCount;
+                        listLib.pushBack(mut items, (kind = ITEM_KIND_TRANSFER_TRY, name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
+                    }
+                    listLib.pushBack(mut stmtCtxs, (id = 0, tag = "", kind = CTX_KIND_FN, phase = CTX_PHASE_BODY,
+                    iifeDepth = 0, valKind = header.result, valVar = "", label = "",
+                    iterLabel = "1", countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
+                    fnPreLocalsLen := localsCount(locals);
+                    upgradedFnLocals := upgradeRootUninitLocalsForFn(locals, rootAssignedNames, futureValues, functions, nameStart);
+                    locals = [];
+                    loop upgradedFnLocals as upg {
+                        listLib.pushBack(mut locals, upg);
+                    }
+                    var fnParamSeedBag := "";
+                    loop splitPipeEntries(header.params, header.count) as entry {
+                        parameterName := paramNameOf(entry);
+                        rawParamKind := paramKindOf(entry);
+                        isMutParam := textLib.startsWithAt(rawParamKind, 0, "mut ");
+                        parameterKind := if isMutParam { textLib.slice(rawParamKind, 4, textLib.length(rawParamKind)) } else { rawParamKind };
+                        runtime := if isMutParam and target == TARGET_C { "(*lite_" + parameterName + ")" }
+                        else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + parameterName + ".v" }
+                        else { "lite_" + parameterName };
+                        fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
+                        listLib.pushBack(mut blockDecls, (name = parameterName, depth = 1));
+                        listLib.pushBack(mut locals, (name = parameterName, runtime = runtime, kind = parameterKind,
+                        mutable = false, writable = isMutParam, depth = 1, constant = false, code = runtime,
+                        intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+                        if not wasPreRegisteredOp {
+                            listLib.pushBack(mut functionParams, entry);
+                            parameterTotal = parameterTotal + 1;
+                        }
+                    }
+                    currentName = typeOpKey;
+                    currentFnRuntime = functionRuntime;
+                    currentResult = header.result;
+                    listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
+                    branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
+                    preLocalsLen = fnPreLocalsLen, liveBranchCount = liveBranchCount));
+                    liveBranchCount = 0;
+                    currentLive = currentLive and not currentStopped;
+                    currentReturned = false;
+                    currentStopped = false;
+                    branchesReturned = true;
+                    branchesStopped = true;
+                    hasElse = false;
+                    loopForever = false;
+                    listLib.pushBack(mut blocks, BLOCK_KIND_FUNCTION);
+                    blockCount = blockCount + 1;
+                    depth = depth + 1;
+                    aliases = types.withSelfAlias(aliases, owner.selfTarget, depth);
+                    if hasInnerAlias {
+                        aliases = collectBlockTypeAliases(source, fnOpenBrace, prefix, depth, aliases);
+                    }
+                    fnAssignedBag := scanInnerBlockAssignedBag(target, source, fnOpenBrace, prefix, fnParamSeedBag);
+                    blockAssignedDecls = appendAssignedBagDecls(fnAssignedBag, blockAssignedDecls, depth);
+                    locals = appendBlockFutureLocals(target, source, fnOpenBrace, prefix, depth, fnParamSeedBag, fnAssignedBag, aliases, functions, functionParams, locals);
+                    position = skipTrivia(source, position, prefix);
+                    continue;
+                }
+            }
+        }
         if textLib.startsWithAt(source, position, ":=") {
             afterDeclare := skipTrivia(source, position + 2, prefix);
             if textLib.wordAt(source, afterDeclare, "fn") and blockCount == 0 and depth == 0 {
@@ -2988,7 +3267,9 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     rawParamKind := paramKindOf(entry);
                     isMutParam := textLib.startsWithAt(rawParamKind, 0, "mut ");
                     parameterKind := if isMutParam { textLib.slice(rawParamKind, 4, textLib.length(rawParamKind)) } else { rawParamKind };
-                    runtime := if isMutParam and target == TARGET_C { "(*lite_" + parameterName + ")" } else { "lite_" + parameterName };
+                    runtime := if isMutParam and target == TARGET_C { "(*lite_" + parameterName + ")" }
+                    else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + parameterName + ".v" }
+                    else { "lite_" + parameterName };
                     fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
                     listLib.pushBack(mut blockDecls, (name = parameterName, depth = 1));
                     listLib.pushBack(mut locals, (name = parameterName, runtime = runtime, kind = parameterKind,
@@ -3000,6 +3281,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     }
                 }
                 currentName = name;
+                currentFnRuntime = functionRuntime;
                 currentResult = header.result;
                 listLib.pushBack(mut savedStates, (returned = currentReturned, stopped = currentStopped,
                 branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
@@ -3097,7 +3379,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
             listLib.pushBack(mut locals, (name = name, runtime = runtime, kind = typed.kind,
             mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
             code = annLocalCode, intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
-            declItemPrefix := if declInitState == INIT_STATE_INIT { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
+            declItemPrefix := if declInitState == INIT_STATE_INIT and not (target == TARGET_TS and typed.writable and types.isRecordKind(typed.kind)) { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
             if currentLive and not currentStopped {
                 if rhsDiverged {
                     listLib.pushBack(mut items, (kind = expressionStatementKind(VALUE_KIND_NEVER, false, ITEM_KIND_CALL, currentResult), name = "", runtime = "",
@@ -3277,7 +3559,7 @@ moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs:
                     if entry.initState =!= INIT_STATE_INIT {
                         failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
                     }
-                    if not entry.mutable {
+                    if not entry.mutable and not entry.writable {
                         failAt(source, nameStart, prefix, "cannot mutate field of immutable local " + name);
                     }
                     if target =!= TARGET_TS and types.cStructTag(entry.kind) == "" {

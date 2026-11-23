@@ -300,6 +300,22 @@ appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, pr
     result
 }
 
+/** Collects all `PublicTypeOp` declarations across already-processed modules in `graph`, deduplicated by canonical key. */
+appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items): frontend.Items {
+    var result: mut frontend.Items = existing;
+    seenOps: mut Set<String>;
+    loop existing as prev {
+        if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP { setLib.add(mut seenOps, prev.name); }
+    }
+    loop graph as item {
+        if item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and not setLib.has(seenOps, item.name) {
+            setLib.add(mut seenOps, item.name);
+            listLib.pushBack(mut result, item);
+        }
+    }
+    result
+}
+
 /** Builds one aliased module namespace from its source-declared public interface. */
 moduleAliasExports := fn(graph: frontend.Items, path: String, alias: String): frontend.Items {
     result: mut frontend.Items = [(kind = frontend.ITEM_KIND_MODULE_ALIAS, name = alias, runtime = moduleKeyForPath(graph, path), code = "",
@@ -409,6 +425,7 @@ scanTopLevelTokens := fn(items: frontend.Items, seed: mut frontend.TokenBuckets)
         } else if item.kind == frontend.ITEM_KIND_END_SCOPE or item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_LOOP {
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if not isPureDecl and item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE_OP and
         item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_SOURCE_LOC and item.kind =!= frontend.ITEM_KIND_COMMENT {
             scanItemTokens(item, mut seed);
         }
@@ -564,7 +581,7 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
             modPath := metaPaths[index];
             modKey := metaKeys[index];
             if coreModuleNeedsReparse(target, modKey, reachable, compiledFns) {
-                importedExports := coreModuleExports(graph, modPath);
+                importedExports := appendTransitiveTypeOps(graph, coreModuleExports(graph, modPath));
                 beforeCount := setLib.size(compiledFns);
                 reparsed := frontend.parseProgramWithModuleSelectiveSpecs(=target, source = metaSources[index],
                 prefix = metaDisplays[index], exports = importedExports, moduleKey = modKey,
@@ -686,6 +703,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
         clauseIndex = clauseIndex + 1;
     }
+    importedExports = appendTransitiveTypeOps(graph, importedExports);
 
     isCoreMod := not isRoot and frontend.isHostModuleIdentity(identity);
     localItems := if isCoreMod {

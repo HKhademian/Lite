@@ -63,11 +63,16 @@ tsParameterList := fn(encoded: String): String {
         equals := textLib.indexOfText(entry, "=", 0);
         parameterName := textLib.slice(entry, 0, equals);
         rawParameterKind := textLib.slice(entry, equals + 1, textLib.length(entry));
-        parameterKind := if textLib.startsWithAt(rawParameterKind, 0, "mut ") {
+        isMutParam := textLib.startsWithAt(rawParameterKind, 0, "mut ");
+        parameterKind := if isMutParam {
             textLib.slice(rawParameterKind, 4, textLib.length(rawParameterKind))
         } else { rawParameterKind };
         if textLib.length(result) > 0 { result = result + ", "; }
-        result = result + "lite_" + parameterName + ": " + tsFunctionType(parameterKind);
+        if isMutParam and frontend.isRecordKind(parameterKind) {
+            result = result + "lite_" + parameterName + ": { v: " + tsFunctionType(parameterKind) + " }";
+        } else {
+            result = result + "lite_" + parameterName + ": " + tsFunctionType(parameterKind);
+        }
         if separator < 0 { break; }
         start = separator + 1;
     }
@@ -2638,6 +2643,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         }
         if tsSourceMapMode =!= optCfg.SourceMapMode.None and pendingLocLine > 0 and
         item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE_OP and
         item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and
         item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_END_IF and
         item.kind =!= frontend.ITEM_KIND_ELSE and item.kind =!= frontend.ITEM_KIND_ELSE_IF and
@@ -2839,7 +2845,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             count = 0;
         } else if item.kind == frontend.ITEM_KIND_MAIN_STOP {
             mainStopped = true;
-        } else if item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_NOOP {
+        } else if item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_NOOP {
         } else {
             if count > 0 { line = line + " + \" \" + "; }
             line = line + reportArgumentCode(item);

@@ -76,9 +76,11 @@ pub BUILTIN_RULE_FN := "fn";
 
 pub DECL_KIND_FUTURE_DECL := "FutureDecl";
 pub DECL_KIND_FUTURE_FN := "FutureFn";
+pub DECL_KIND_FUTURE_TYPE_OP := "FutureTypeOp";
 pub DECL_KIND_FUTURE_DESTR := "FutureDestr";
 pub DECL_KIND_ALIAS := "Alias";
 pub DECL_KIND_PUB_FN := "PubFn";
+pub DECL_KIND_PUB_TYPE_OP := "PubTypeOp";
 pub DECL_KIND_PUB_TYPE := "PubType";
 pub DECL_KIND_PUB_VAL := "PubVal";
 pub DECL_KIND_HAS_INNER_ALIAS := "HasInnerAlias";
@@ -125,6 +127,7 @@ pub ITEM_KIND_CORE_MODULE_META := "CoreModuleMeta";
 pub ITEM_KIND_CORE_MODULE_SOURCE := "CoreModuleSource";
 pub ITEM_KIND_CORE_MODULE_IMPORT := "CoreModuleImport";
 pub ITEM_KIND_PUBLIC_FUNCTION := "PublicFunction";
+pub ITEM_KIND_PUBLIC_TYPE_OP := "PublicTypeOp";
 pub ITEM_KIND_PUBLIC_VALUE := "PublicValue";
 pub ITEM_KIND_PUBLIC_TYPE := "PublicType";
 pub ITEM_KIND_PURE_GLOBAL := "PureGlobal";
@@ -376,14 +379,29 @@ pub moduleValueRuntime := fn(target: String, moduleKey: String, name: String): S
     "lt_m_" + moduleKey + "__" + name
 };
 
+/** Encodes a `TypeName.op` (or `$`-hook) name into a TS/C11-safe identifier suffix. */
+encodeFunctionRuntimeSuffix := fn(name: String): String {
+    dot := textLib.indexOfText(name, ".", 0);
+    if dot < 0 { return name; }
+    typePart := textLib.slice(name, 0, dot);
+    opRaw := textLib.slice(name, dot + 1, textLib.length(name));
+    opPart := if textLib.startsWithAt(opRaw, 0, "$") {
+        "S_" + textLib.slice(opRaw, 1, textLib.length(opRaw))
+    } else {
+        opRaw
+    };
+    "tp_" + typePart + "_op_" + opPart
+};
+
 /** Target runtime identifier for a user-defined top-level function. */
 pub moduleFunctionRuntime := fn(target: String, moduleKey: String, name: String): String {
+    safeName := encodeFunctionRuntimeSuffix(name);
     if moduleKey == "" {
-        if target == TARGET_TS { return "liteFn_" + name; }
-        return "lt_fn__" + name;
+        if target == TARGET_TS { return "liteFn_" + safeName; }
+        return "lt_fn__" + safeName;
     }
-    if target == TARGET_TS { return "liteFn$" + moduleKey + "$" + name; }
-    "lt_fn_" + moduleKey + "__" + name
+    if target == TARGET_TS { return "liteFn$" + moduleKey + "$" + safeName; }
+    "lt_fn_" + moduleKey + "__" + safeName
 };
 
 /** Allocates a collision-free compiler-internal temporary name scoped to `locals`. */

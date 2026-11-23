@@ -2059,6 +2059,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
         }
         if cSourceMapMode =!= optCfg.SourceMapMode.None and pendingLocLine > 0 and
         item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE_OP and
         item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and
         item.kind =!= frontend.ITEM_KIND_SOFT_BUILTIN and item.kind =!= frontend.ITEM_KIND_NOOP and
         item.kind =!= frontend.ITEM_KIND_END_IF and item.kind =!= frontend.ITEM_KIND_ELSE and
@@ -2294,7 +2295,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             count = 0;
             tb.clear(mut writes);
         } else if item.kind == frontend.ITEM_KIND_MAIN_STOP or item.kind == frontend.ITEM_KIND_IMPORT or
-        item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or
+        item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or
         item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_PURE_GLOBAL or
         item.kind == frontend.ITEM_KIND_SOFT_BUILTIN or item.kind == frontend.ITEM_KIND_NOOP or item.kind == frontend.ITEM_KIND_SOURCE_LOC or item.kind == frontend.ITEM_KIND_COMMENT {
         } else {

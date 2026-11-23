@@ -1,0 +1,297 @@
+/* Dual-target (TS + C11) tests for Slice 1A type-attached operations (`TypeName.op := fn(recv: [mut] Self, ...)`). */
+
+test := import "core/test";
+file := import "core/file";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+runBoth := fn(label: String, src: String, expected: String): Unit {
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+    test.checkInt(label + " ts status: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(label + " ts stderr", "", tsRes.stderr);
+    test.checkText(label + " ts stdout", expected, tsRes.stdout);
+    if ccInfo.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+        test.checkInt(label + " c status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " c stderr", "", cRes.stderr);
+        test.checkText(label + " c stdout parity", tsRes.stdout, cRes.stdout);
+    }
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccInfo.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+/* 1. Records, chaining, named args, Self in body, forward calls, recursion via self(...), type-qualified calls & fn values. */
+recSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Vec2 := record {\n" +
+"    x: Int;\n" +
+"    y: Int;\n" +
+"}\n" +
+"\n" +
+"Vec2.sumTwice := fn(v: Self): Int {\n" +
+"    v.sum() * 2\n" +
+"};\n" +
+"\n" +
+"Vec2.sum := fn(v: Self): Int {\n" +
+"    v.x + v.y\n" +
+"};\n" +
+"\n" +
+"Vec2.add := fn(a: Self, b: Self): Self {\n" +
+"    Self { x = a.x + b.x, y = a.y + b.y }\n" +
+"};\n" +
+"\n" +
+"Vec2.scale := fn(v: Self, factor: Int): Self {\n" +
+"    Self { x = v.x * factor, y = v.y * factor }\n" +
+"};\n" +
+"\n" +
+"Vec2.stepAdd := fn(v: Self, n: Int): Self {\n" +
+"    if n <= 0 { v } else { self(Self { x = v.x + 1, y = v.y + 2 }, n - 1) }\n" +
+"};\n" +
+"\n" +
+"a := Vec2 { x = 2, y = 3 };\n" +
+"b := Vec2 { x = 4, y = 5 };\n" +
+"c := a.add(b).scale(factor = 3);\n" +
+"d := Vec2.add(a, b);\n" +
+"adder := Vec2.add;\n" +
+"e := adder(a, d);\n" +
+"f := a.stepAdd(3);\n" +
+"io.outputLine(c.x, c.y, c.sum(), c.sumTwice());\n" +
+"io.outputLine(d.x, d.y, e.x, e.y);\n" +
+"io.outputLine(f.x, f.y);\n";
+
+runBoth("record-ops", recSrc, "18 24 42 84\n6 8 8 11\n5 9\n");
+
+/* 2. mut Self on records: COW snapshot isolation, nested mut forwarding, early return, inside functions & top level. */
+mutRecSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Player := record {\n" +
+"    hp: Int;\n" +
+"    armor: Int;\n" +
+"}\n" +
+"\n" +
+"Player.takeDamage := fn(p: mut Self, dmg: Int): Int {\n" +
+"    if dmg <= 0 { return p.hp; }\n" +
+"    p.hp -= dmg;\n" +
+"    p.hp\n" +
+"};\n" +
+"\n" +
+"Player.heal := fn(p: mut Self, amount: Int): Unit {\n" +
+"    p.hp += amount;\n" +
+"};\n" +
+"\n" +
+"Player.rest := fn(p: mut Self): Int {\n" +
+"    p.heal(15);\n" +
+"    p.armor += 2;\n" +
+"    p.hp\n" +
+"};\n" +
+"\n" +
+"Player.drain := fn(p: mut Self, steps: Int): Int {\n" +
+"    if steps <= 0 { p.hp } else { p.hp -= 1; self(mut p, steps - 1) }\n" +
+"};\n" +
+"\n" +
+"runBattle := fn(): Int {\n" +
+"    mut hero := Player { hp = 50, armor = 1 };\n" +
+"    snap := hero;\n" +
+"    _r1 := hero.takeDamage(20);\n" +
+"    _r2 := hero.rest();\n" +
+"    _r3 := hero.drain(3);\n" +
+"    io.outputLine(snap.hp, snap.armor, hero.hp, hero.armor);\n" +
+"    hero.hp\n" +
+"};\n" +
+"\n" +
+"mut player := Player { hp = 100, armor = 5 };\n" +
+"snapshot := player;\n" +
+"rem := player.takeDamage(10);\n" +
+"afterRest := player.rest();\n" +
+"Player.heal(mut player, 5);\n" +
+"io.outputLine(snapshot.hp, snapshot.armor, rem, afterRest, player.hp, player.armor);\n" +
+"io.outputLine(runBattle());\n";
+
+runBoth("mut-record-cow", mutRecSrc, "100 5 90 105 110 7\n50 1 42 3\n42\n");
+
+/* 3. Plain and value-backed enums with type-attached operations alongside .value. */
+enumSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Status := enum: Int {\n" +
+"    Ok = 200,\n" +
+"    NotFound = 404,\n" +
+"    Err = 500,\n" +
+"}\n" +
+"\n" +
+"Status.isOk := fn(s: Self): Bool {\n" +
+"    s == Self.Ok\n" +
+"};\n" +
+"\n" +
+"Status.codePlus := fn(s: Self, delta: Int): Int {\n" +
+"    s.value + delta\n" +
+"};\n" +
+"\n" +
+"s1 := Status.Ok;\n" +
+"s2 := Status.NotFound;\n" +
+"io.outputLine(s1.isOk(), s2.isOk(), s1.codePlus(1), Status.codePlus(s2, 10));\n";
+
+runBoth("enum-ops", enumSrc, "true false 201 414\n");
+
+/* 4. Rejections: mut on read-only, missing receiver, non-Self receiver, alias attachment, field collision, duplicate op, bare x.op, unknown $hook. */
+expectRejectBoth("mut-on-readonly",
+"P := record { hp: Int; }\n" +
+"P.hit := fn(p: mut Self): Unit { p.hp -= 1; };\n" +
+"p := P { hp = 10 };\n" +
+"p.hit();\n",
+"cannot call mutating operation hit on read-only value");
+
+expectRejectBoth("mut-on-rvalue",
+"P := record { hp: Int; }\n" +
+"P.hit := fn(p: mut Self): Unit { p.hp -= 1; };\n" +
+"make := fn(): P { P { hp = 10 } };\n" +
+"make().hit();\n",
+"cannot call mutating operation hit on read-only value");
+
+expectRejectBoth("missing-receiver",
+"P := record { hp: Int; }\n" +
+"P.zero := fn(): Self { Self { hp = 0 } };\n",
+"requires a Self receiver first parameter");
+
+expectRejectBoth("non-self-receiver",
+"P := record { hp: Int; }\n" +
+"P.get := fn(p: P): Int { p.hp };\n",
+"must have Self type");
+
+expectRejectBoth("alias-attachment",
+"P := record { hp: Int; }\n" +
+"AliasP := type P;\n" +
+"AliasP.get := fn(p: Self): Int { p.hp };\n",
+"cannot attach operation to alias or foreign type AliasP");
+
+expectRejectBoth("field-collision",
+"P := record { hp: Int; }\n" +
+"P.hp := fn(p: Self): Int { p.hp };\n",
+"collides with record field hp");
+
+expectRejectBoth("enum-value-collision",
+"S := enum: Int { Ok = 1 }\n" +
+"S.value := fn(s: Self): Int { 1 };\n",
+"collides with enum backing value");
+
+expectRejectBoth("duplicate-op",
+"P := record { hp: Int; }\n" +
+"P.get := fn(p: Self): Int { p.hp };\n" +
+"P.get := fn(p: Self): Int { p.hp + 1 };\n",
+"duplicate type operation P.get");
+
+expectRejectBoth("bare-dot-op-no-parens",
+"P := record { hp: Int; }\n" +
+"P.get := fn(p: Self): Int { p.hp };\n" +
+"p := P { hp = 1 };\n" +
+"f := p.get;\n",
+"must be called with (...)");
+
+expectRejectBoth("unknown-dollar-hook",
+"P := record { hp: Int; }\n" +
+"P.$bogus := fn(p: Self): Int { p.hp };\n",
+"unknown compiler hook $bogus");
+
+/* 5. Cross-module pub + transitive visibility + private op isolation. */
+tmpDir := file.makeTempDir("lite-type-ops-");
+test.check("makeTempDir: " + tmpDir.error, tmpDir.ok);
+modAPath := tmpDir.path + "/vec.lts";
+modBPath := tmpDir.path + "/factory.lts";
+modTransPath := tmpDir.path + "/app_trans.lts";
+modCPath := tmpDir.path + "/app.lts";
+modPrivPath := tmpDir.path + "/app_priv.lts";
+
+modASrc :=
+"pub Vec2 := record { x: Int; y: Int; }\n" +
+"Vec2.secret := fn(v: Self): Int { v.x * 10 + v.y };\n" +
+"pub Vec2.add := fn(a: Self, b: Self): Self { Self { x = a.x + b.x, y = a.y + b.y } };\n" +
+"pub Vec2.score := fn(v: Self): Int { v.secret() + 1 };\n";
+
+modBSrc :=
+"v := import \"./vec.lts\";\n" +
+"pub make := fn(x: Int, y: Int): v.Vec2 { v.Vec2 { x = x, y = y } };\n";
+
+modTransSrc :=
+"io := import \"core/io\";\n" +
+"f := import \"./factory.lts\";\n" +
+"p := f.make(2, 3);\n" +
+"q := f.make(4, 5);\n" +
+"r := p.add(q);\n" +
+"io.outputLine(r.x, r.y, r.score());\n";
+
+modCSrc :=
+"io := import \"core/io\";\n" +
+"v := import \"./vec.lts\";\n" +
+"f := import \"./factory.lts\";\n" +
+"p := f.make(2, 3);\n" +
+"q := f.make(4, 5);\n" +
+"r := p.add(q);\n" +
+"r2 := v.Vec2.add(p, q);\n" +
+"fnRef := v.Vec2.add;\n" +
+"r3 := fnRef(p, q);\n" +
+"io.outputLine(r.x, r.y, r.score(), r2.x, r2.y, r3.x, r3.y);\n";
+
+modPrivSrc :=
+"f := import \"./factory.lts\";\n" +
+"p := f.make(2, 3);\n" +
+"x := p.secret();\n";
+
+_wA := file.writeText(modAPath, modASrc);
+_wB := file.writeText(modBPath, modBSrc);
+_wT := file.writeText(modTransPath, modTransSrc);
+_wC := file.writeText(modCPath, modCSrc);
+_wP := file.writeText(modPrivPath, modPrivSrc);
+
+tsTransComp := compilerTest.compileFile(tsComp, tmpDir.path, [modTransPath]);
+test.checkInt("pure-transitive ts compile status: " + tsTransComp.stderr, 0, tsTransComp.status);
+tsTransRes := compilerTest.checkAndRunTs(root, tsTransComp.stdout);
+test.checkInt("pure-transitive ts status: " + tsTransRes.stderr, 0, tsTransRes.status);
+test.checkText("pure-transitive ts stdout", "6 8 69\n", tsTransRes.stdout);
+if ccInfo.available {
+    cTransComp := compilerTest.compileFile(cComp, tmpDir.path, [modTransPath]);
+    test.checkInt("pure-transitive c compile status: " + cTransComp.stderr, 0, cTransComp.status);
+    cTransRes := compilerTest.compileAndRunC(cTransComp.stdout, ccInfo.cc, "");
+    test.checkInt("pure-transitive c status: " + cTransRes.stderr, 0, cTransRes.status);
+    test.checkText("pure-transitive c stdout parity", tsTransRes.stdout, cTransRes.stdout);
+}
+
+tsModComp := compilerTest.compileFile(tsComp, tmpDir.path, [modCPath]);
+test.checkInt("transitive ts compile status: " + tsModComp.stderr, 0, tsModComp.status);
+tsModRes := compilerTest.checkAndRunTs(root, tsModComp.stdout);
+test.checkInt("transitive ts status: " + tsModRes.stderr, 0, tsModRes.status);
+test.checkText("transitive ts stdout", "6 8 69 6 8 6 8\n", tsModRes.stdout);
+if ccInfo.available {
+    cModComp := compilerTest.compileFile(cComp, tmpDir.path, [modCPath]);
+    test.checkInt("transitive c compile status: " + cModComp.stderr, 0, cModComp.status);
+    cModRes := compilerTest.compileAndRunC(cModComp.stdout, ccInfo.cc, "");
+    test.checkInt("transitive c status: " + cModRes.stderr, 0, cModRes.status);
+    test.checkText("transitive c stdout parity", tsModRes.stdout, cModRes.stdout);
+}
+
+tsPrivComp := compilerTest.compileFile(tsComp, tmpDir.path, [modPrivPath]);
+test.check("private op hidden from importer (ts)", tsPrivComp.status =!= 0);
+if ccInfo.available {
+    cPrivComp := compilerTest.compileFile(cComp, tmpDir.path, [modPrivPath]);
+    test.check("private op hidden from importer (c)", cPrivComp.status =!= 0);
+}
+
+_rm := file.remove(tmpDir.path);
+test.done("type-operations");
