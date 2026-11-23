@@ -85,31 +85,29 @@ All existing module-scoped operations on built-in types become real `pub` or non
 
 Note on `joinTexts` (`List<String>`): under the owned-type rule, `List.join` belongs in `lib/core/list.lts` (or remains a module function in `core/text` until explicit imported extensions exist in a future stage).
 
-## Design prerequisites before Phase 1
+## Design prerequisites (all locked 2026-11-23)
 
-1. **Mutating dot calls (resolved 2026-11-23):** `xs.pushBack(42)` is written directly without a call-site `mut` marker and checked statically against writable `mut` authority on `xs` and `mut Self<...>` in the signature (Rust/Swift/V/C3 style).
-2. **Remaining open prerequisite — Field-like computed reads (`.length`, `.size`, `.isEmpty`) versus explicit calls (`.length()`, `.size()`, `.isEmpty()`):**
-   - **Option A — Unify on explicit calls (recommended for Stage 1):** make `.length()`, `.size()`, and `.isEmpty()` ordinary `TypeName.op := fn(...)` declarations (deleting all hardcoded dot-properties immediately without needing a `get`/`set` backing-function spec first), and run a staged migration of existing `.length`/`.size`/`.isEmpty` callers. Defer `get`/`set` backing properties until field privacy, backing storage, and ownership rules are settled.
-   - **Option B — Read-only `get` property spec now (no `set` yet):** introduce a minimal read-only getter declaration form backed by Hard/Soft/Pure tiers so `xs.length`, `m.size`, and `s.isEmpty` stay property syntax, while deferring `set` backing functions until field privacy, compound updates, and `var`-grant conflicts are designed.
+1. **Mutating dot calls (resolved):** `xs.pushBack(42)` is written directly without a call-site `mut` marker and checked statically against writable `mut` authority on `xs` and `mut Self<...>` in the signature (Rust/Swift/V/C3 style).
+2. **Computed reads unified on explicit calls (resolved):** `.length()`, `.size()`, and `.isEmpty()` become ordinary `TypeName.op := fn(...)` declarations (keeping `value.field` for stored data and `value.op(...)` for code). Existing hardcoded `.length`/`.size`/`.isEmpty` callers migrate to explicit `()` calls during Phases 5–6; `get`/`set` backing properties are deferred for future design once field privacy and ownership exist.
 
 ## Phased implementation and migration roadmap
 
 Follow [compiler development guidelines](lite://repo/.agents/rules/compiler-development.md) strictly: every phase enforces **mandatory dual-target TS + C11 parity**, atomic commits, and seed-before-adoption discipline.
 
-### Phase 0 — Lock remaining prerequisite and contract fixtures
+### Phase 0 — Contract fixtures
 
-- Decide Prerequisite 2 (unify `.length`/`.size`/`.isEmpty` as `()` calls vs minimal read-only `get` property spec) and record the choice in [docs/type-operations.md](lite://doc/type-operations) and [docs/decisions-and-open-questions.md](lite://doc/decisions-and-open-questions).
 - Add focused positive, negative, and combined verification fixtures covering:
   - `record`, `enum`, and `distinct` owned types (public and private operations);
   - `self(...)` recursion inside a `Self`-receiver operation;
   - generic receivers (`Self<T>`, `Self<K, V>`, `Self<Int>`, `Self<Self<T>>`) and extra method type params (`Self<U>`);
   - mutating dot calls (`xs.pushBack(42)` requiring `mut xs`, rejected on read-only receivers);
+  - explicit computed calls (`xs.length()`, `m.size()`, `s.isEmpty()`);
   - rejections: missing/non-`Self` receiver, bare `Self` on generic family, `alias`/foreign target attachment, field-name shadowing, duplicate `TypeName.op` (no overloading yet), and mismatched receiver instantiation (`List<String>.sum()`).
 
 ### Phase 1 — Frontend parsing, type checking, and IR for `TypeName.op`
 
 - Extend `parser.lts`, `frontend-ir.lts`, `frontend-types.lts`, `frontend.lts`, and `frontend-expr.lts`:
-  - Parse `[pub] TypeName.op := fn[<TypeParams>](recv: [mut] Self[<...>], ...): Ret { ... }` (and bodyless hard-builtin declarations inside verified core modules, plus read-only field-getter declarations if Prerequisite 2 selects Option B).
+  - Parse `[pub] TypeName.op := fn[<TypeParams>](recv: [mut] Self[<...>], ...): Ret { ... }` (and bodyless hard-builtin declarations inside verified core modules).
   - Resolve `Self` strictly to the attached `TypeName` inside the declaration header and body; keep `self` strictly as recursive function self-reference.
   - Enforce all selected rules: owned nominal type in the defining module only, explicit `Self`/`Self<...>` first parameter required, no field collision, no duplicate `TypeName.op`, no `alias`/foreign target attachment.
   - Resolve `x.op(...)`, `TypeName.op(x, ...)`, and unbound `TypeName.op` uniformly, unifying generic type parameters from `x`'s type before checking remaining arguments and callbacks.
@@ -124,7 +122,7 @@ Follow [compiler development guidelines](lite://repo/.agents/rules/compiler-deve
 ### Phase 3 — Hard/soft builtin ABI and lazy core-owner loading
 
 - Extend [`compiler/src/builtins-abi.lts`](lite://repo/compiler/src/builtins-abi.lts):
-  - Allow `coreHostFunction` (hard builtins) and `coreSoftBuiltin` (soft builtins) to register and validate `TypeName.op` (and read-only property getters if Prerequisite 2 selects Option B) under verified `lite.core.*.v1` identities.
+  - Allow `coreHostFunction` (hard builtins) and `coreSoftBuiltin` (soft builtins) to register and validate `TypeName.op` under verified `lite.core.*.v1` identities.
   - Extend `--builtin-mode` spec parsing so users and CI can toggle pure vs native overrides for type operations as well (for example `--builtin-mode=pure`, `--builtin-mode=core/text=pure`, `--builtin-mode=core/text:String.trim=pure`).
 - Add lazy on-demand core-owner loading for built-in nominal types (`List`, `Map`, `Set`, `String`, `Array`, `Int`):
   - When a program accesses a member on a built-in type, load its owning `lib/core/*.lts` module definitions without requiring boilerplate imports for basic type operations, while keeping [`reachability.lts`](lite://repo/compiler/src/reachability.lts) DCE intact so unused operations emit **zero bytes** into TS or C11 outputs.
@@ -144,7 +142,7 @@ Follow [compiler development guidelines](lite://repo/.agents/rules/compiler-deve
 
 ### Phase 6 — Remove hardcoded dot-access and intrinsic magic from `frontend-expr.lts`
 
-- Delete Category A hardcoded `List`/`Array`/`Map`/`Set`/`String` `.length`, `.isEmpty`, and `.size` branches in `parsePostfixChain` ([`compiler/src/frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lts)) once all tests and self-builds resolve them through `lib/core/*.lts`.
+- Delete Category A hardcoded `List`/`Array`/`Map`/`Set`/`String` `.length`, `.isEmpty`, and `.size` branches in `parsePostfixChain` ([`compiler/src/frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lts)) after migrating existing callers to `.length()`, `.isEmpty()`, and `.size()`.
 - Retire Category B legacy ambient `push_back`/`pop_back`/`push_front`/`pop_front` (`VALUE_KIND_LIST_OP`) and replace Category C's 24 string-switched `lite$core$*` call dispatchers with uniform generic `TypeName.op` + ABI lowering.
 - Re-run full gates:
   - `./bin/lite test --full`

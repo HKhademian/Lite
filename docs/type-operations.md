@@ -1,6 +1,6 @@
 # Type-attached operations
 
-Status: **selected design direction, 2026-11-23; compiler implementation not started**. Uniform `TypeName.op := fn[<...>](...)` declarations, `self` versus `Self`, strictly required explicit `Self`/`Self<...>` receivers, owned nominal types (including `distinct`), generic receiver support from the start, static `mut`-checked dot calls (`xs.pushBack(42)` without a call-site `mut` marker), and current rejection of `alias`/foreign inherent attachments are selected. Explicit imported extensions remain a recorded future direction; computed `get`/`set` properties versus `()` calls remain open.
+Status: **selected design direction, 2026-11-23; compiler implementation not started**. Uniform `TypeName.op := fn[<...>](...)` declarations, `self` versus `Self`, strictly required explicit `Self`/`Self<...>` receivers, owned nominal types (including `distinct`), generic receiver support from the start, static `mut`-checked dot calls (`xs.pushBack(42)`), explicit calls for computed reads (`xs.length()`, `m.size()`, `s.isEmpty()`), and current rejection of `alias`/foreign inherent attachments are selected. Explicit imported extensions and `get`/`set` backing properties are recorded future directions.
 
 ## Purpose
 
@@ -78,6 +78,7 @@ An attached operation is an ordinary function in `TypeName`'s namespace:
 - **Type-qualified call:** `Vec2.add(p, q)` calls the same symbol explicitly.
 - **Unbound function value:** `Vec2.add` denotes an ordinary function value of type `fn(Vec2, Vec2): Vec2` with no hidden bound-method closure allocation.
 - **No field shadowing:** declaring a type-attached operation with the same name as a field of that type is a compile-time error.
+- **Explicit calls for computed reads (selected 2026-11-23):** computed operations such as `.length()`, `.size()`, and `.isEmpty()` are ordinary `fn` type operations called with `(...)`, keeping a sharp visual boundary where `value.field` denotes stored data and `value.op(...)` invokes code. Existing compiler-hardcoded `.length`, `.size`, and `.isEmpty` properties will migrate to explicit calls under [the migration plan](lite://doc/compiler/type-operations-migration-plan); `get`/`set` backing properties are deferred for future design once field privacy and ownership rules exist.
 - **No overloading yet (one symbol per `TypeName.op`):** LiteLang has no function or operation overloading yet. Each `TypeName.op` is a single unique binding in `TypeName`'s namespace — declaring two operations with the same name on the same type family (such as `List.sum` for `Self<Int>` and `List.sum` for `Self<Float>`) is rejected. Future overloading, generic constraints, and [interfaces](lite://doc/composition-and-interfaces) remain separate later design decisions.
 
 ## Ownership and visibility
@@ -143,7 +144,7 @@ Consulted selectively from the [project reference languages](lite://doc/referenc
 
 ## Open decisions
 
-- **Computed `get`/`set` properties versus explicit calls:** whether current compiler-handled dot properties (`.length`, `.size`, `.isEmpty`) unify into explicit calls (`.length()`, `.size()`, `.isEmpty()`) or receive an explicit property/getter-setter specification.
+- **Deferred `get`/`set` backing properties:** whether LiteLang later introduces computed property getters/setters after field privacy, backing storage, compound assignment, and `var`-grant rules are established.
 - **Receiverless type-associated helpers:** whether non-receiver functions such as constructors (`TypeName.from(...)`) may also live under `TypeName.*`, distinct from `Self`-receiver operations.
 - **Explicit call-site type arguments:** syntax for supplying unbound method-only type parameters at dot calls (shared with [generic notation](lite://doc/generic-notation#pending-contract-cases)).
 - **Explicit extension opt-in syntax:** exact `using`/import syntax, extension grouping, and interaction with future [interfaces](lite://doc/composition-and-interfaces).

@@ -40,14 +40,20 @@ Selected design direction (not yet implemented in the compiler):
    visibility as a deliberate ergonomics tradeoff over `(mut xs).pushBack(42)`,
    while keeping explicit `mut` grants on ordinary and type-qualified calls
    such as `List.pushBack(mut xs, 42)`).
-6. **Recorded future direction — explicit imported extensions:** Kotlin/Swift-style
+6. **Explicit calls for computed reads; `get`/`set` backing properties deferred:**
+   computed operations unify as ordinary `fn` calls (`xs.length()`, `m.size()`,
+   `s.isEmpty()`) so `value.field` denotes stored data and `value.op(...)`
+   denotes executable code. Existing hardcoded `.length`, `.size`, and
+   `.isEmpty` properties will migrate to explicit calls; `get`/`set` backing
+   properties are deferred to a future design stage.
+7. **Recorded future direction — explicit imported extensions:** Kotlin/Swift-style
    extendability for foreign or aliased types is intentionally deferred for a
    future design stage and must require **explicit** import/opt-in (never
    implicit or ambient global patching).
 
-Computed `get`/`set` backing properties versus explicit calls (`.length` vs
-`.length()`), receiverless type-associated helpers, explicit call-site type
-arguments, and future `using`/extension opt-in syntax remain open. See
+Receiverless type-associated helpers, explicit call-site type arguments,
+deferred `get`/`set` backing properties, and future `using`/extension opt-in
+syntax remain open. See
 [type-attached operations](lite://doc/type-operations) and
 [INV-030](lite://repo/research/investigations/INV-030-method-declaration-syntax.md).
 
