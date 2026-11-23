@@ -1334,7 +1334,6 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       return;
     }
 
-    showTab("console");
     const cmdLine = formatCommandLine(args, isInteractiveRun ? "" : stdin);
     appendConsoleCommand(cmdLine);
 
@@ -1378,12 +1377,15 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
           if (runId !== consoleState.activeRunId) return;
           if (ev.event === "stdout" && ev.text) {
             streamedAny = true;
+            if (activeTab !== "console") showTab("console");
             appendConsoleSpan("stdout", ev.text);
           } else if (ev.event === "stderr" && ev.text) {
             streamedAny = true;
+            if (activeTab !== "console") showTab("console");
             appendConsoleSpan("stderr", ev.text);
           } else if (ev.event === "stdin-wait") {
             consoleState.waitingStdin = true;
+            if (activeTab !== "console") showTab("console");
             statusEl.textContent = "Waiting for input...";
             syncConsolePromptUi();
             if (consoleInputEl) consoleInputEl.focus({ preventScroll: true });
@@ -1394,6 +1396,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       if (res.needsStdin && isInteractiveRun) {
         setConsoleRunning(false);
         consoleState.waitingStdin = true;
+        if (activeTab !== "console") showTab("console");
         consoleState.fallbackSession = {
           source,
           args,
