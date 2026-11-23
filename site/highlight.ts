@@ -16,11 +16,11 @@ const liteKeywords = new Set([
 ]);
 
 const liteTypes = new Set([
-  'Bool', 'Int', 'Int8', 'Int16', 'Int32', 'Int64', 'Float', 'Float32', 'Float64', 'Double', 'String', 'Unit', 'Void', 'Never', 'List', 'Map', 'Set', 'Array',
+  'Bool', 'Int', 'Int8', 'Int16', 'Int32', 'Int64', 'Float', 'Float32', 'Float64', 'Double', 'String', 'Unit', 'Void', 'Never', 'List', 'Map', 'Set', 'Array', 'Self',
 ]);
 
 const liteMetaProps = new Set([
-  'item', 'index', 'count', 'value', 'collected', 'length', 'size', 'isEmpty',
+  'item', 'index', 'count', 'value', 'collected',
 ]);
 
 const tsKeywords = new Set([

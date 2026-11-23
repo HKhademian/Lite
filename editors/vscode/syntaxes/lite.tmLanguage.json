@@ -39,11 +39,11 @@
     },
     {
       "name": "support.type.lite",
-      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int64|Int32|Int16|Int8|Int|Float64|Float32|Float|Double|String|Bool|Never|List|Map|Set)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int64|Int32|Int16|Int8|Int|Float64|Float32|Float|Double|String|Bool|Never|List|Map|Set|Array|Self)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "support.variable.property.lite",
-      "match": "(?<=\\.)(?:item|index|count|value|collected|length|size|isEmpty)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<=\\.)(?:item|index|count|value|collected)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "constant.numeric.lite",
@@ -51,7 +51,7 @@
     },
     {
       "name": "entity.name.function.lite",
-      "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(?=\\s*:=\\s*fn(?![\\p{L}\\p{M}\\p{N}_]))"
+      "match": "\\$?[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(?=\\s*:=\\s*fn(?:<|\\s*\\())"
     },
     {
       "name": "entity.name.function.call.lite",

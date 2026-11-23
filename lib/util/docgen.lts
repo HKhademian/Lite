@@ -206,8 +206,23 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
             afterPub := skipInlineTrivia(source, pos + 3, line);
             nameStart := afterPub.next;
             nameEnd := text.skipName(source, nameStart);
-            declName := text.slice(source, nameStart, nameEnd);
-            afterName := skipInlineTrivia(source, nameEnd, afterPub.nextLine);
+            var declName := text.slice(source, nameStart, nameEnd);
+            var afterName := skipInlineTrivia(source, nameEnd, afterPub.nextLine);
+            if declName =!= "" and afterName.next < size and text.at(source, afterName.next) == "." {
+                afterDot := skipInlineTrivia(source, afterName.next + 1, afterName.nextLine);
+                var opStart := afterDot.next;
+                var hasDollar := false;
+                if opStart < size and text.at(source, opStart) == "$" {
+                    hasDollar = true;
+                    opStart += 1;
+                }
+                opEnd := text.skipName(source, opStart);
+                if opEnd > opStart {
+                    opPart := (if hasDollar { "$" } else { "" }) + text.slice(source, opStart, opEnd);
+                    declName = declName + "." + opPart;
+                    afterName = skipInlineTrivia(source, opEnd, afterDot.nextLine);
+                }
+            }
             if declName =!= "" and text.startsWithAt(source, afterName.next, ":=") {
                 rhsProbe := skipInlineTrivia(source, afterName.next + 2, afterName.nextLine);
                 rhsStart := rhsProbe.next;
@@ -244,7 +259,7 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
                 rawRhs := text.slice(source, rhsStart, scanPos);
                 normRhs := normalizeSignature(rawRhs);
                 var kind := "const";
-                if text.wordAt(normRhs, 0, "type") {
+                if text.wordAt(normRhs, 0, "type") or text.wordAt(normRhs, 0, "record") or text.wordAt(normRhs, 0, "enum") {
                     kind = "type";
                 } else if text.wordAt(normRhs, 0, "fn") or text.startsWithAt(normRhs, 0, "fn<") or text.startsWithAt(normRhs, 0, "fn(") {
                     kind = "fn";

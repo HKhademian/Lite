@@ -171,7 +171,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     "Expression if/else, subjectless match, sequence loops, .index/.count/.value/.collected, then, @tag, and finally.",
     "Unnamed/named/mixed tuples, records, enums, [T; N] arrays, List<T>, Map<K, V>, Set<T>, and type aliases.",
     "Final-item block values, DCE pruning, parallel wiring, execution trace safety, self, and closures.",
-    "Namespace imports, pub boundaries, all 36 core/* and extra/* modules, and core/io streams.",
+    "Namespace imports, pub boundaries, all 37 core/* and extra/* modules, and core/io streams.",
     "extra/canvas, extra/surface desktop windows, extra/color, extra/audio, extra/board, extra/timer, and ./bin/lite play.",
     "core/math, core/random, 2D/3D/4D extra/vector, 2x2..4x4 extra/matrix transforms, and flat 2D extra/grid.",
     "extra/arena, extra/pool, extra/intern, extra/lru, extra/ring, extra/deque, extra/heap, extra/bitset, and extra/sparse.",

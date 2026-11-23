@@ -163,3 +163,12 @@ test('modules, self calls, sized numeric widths and aliases, loop as, and power 
   has(rows, 0, '**', 'keyword.operator.lite');
   has(rows, 0, 'as', 'keyword.control.lite');
 });
+test('type-attached operations, Self, Array, and index hooks highlight cleanly', async () => {
+  const rows = await tokenize('pub List.pushBack := fn<T>(values: mut Self<T>, value: T): Unit;\npub Array.$getIndex := fn<T>(values: Self<T>, index: Int): T;');
+  has(rows, 0, 'List', 'support.type.lite');
+  has(rows, 0, 'pushBack', 'entity.name.function.lite');
+  has(rows, 0, 'Self', 'support.type.lite');
+  has(rows, 1, 'Array', 'support.type.lite');
+  has(rows, 1, '$getIndex', 'entity.name.function.lite');
+  has(rows, 1, 'Self', 'support.type.lite');
+});

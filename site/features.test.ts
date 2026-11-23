@@ -76,6 +76,9 @@ test('highlightLite highlights newer built-in types and operators', () => {
     assert(flowHtml.includes(`<span class="tok-keyword">${kw}</span>`), `missing control-flow highlight: ${kw}`);
   }
   assert(highlightLite('fail := fn(): Never { exit(1); }').includes('<span class="tok-type">Never</span>'));
+  const typeOpHtml = highlightLite('pub List.pushBack := fn<T>(values: mut Self<T>, v: T): Unit; pub Array.length := fn<T>(a: Self<T>): Int;');
+  assert(typeOpHtml.includes('<span class="tok-type">Self</span>'), 'missing type highlight: Self');
+  assert(typeOpHtml.includes('<span class="tok-type">Array</span>'), 'missing type highlight: Array');
 
   const programView = formatCodeView([
     'export function main(): string {',
