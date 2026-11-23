@@ -349,29 +349,25 @@ coreModuleNeedsReparse := fn(target: String, moduleKey: String, reachable: Strin
     false
 }
 
-/** Inserts `|<fnRuntime>(|` for every `FunctionStart` present in `items` into `existing`. */
-addCompiledFnsSet := fn(items: frontend.Items, existing: frontend.TokenBuckets): frontend.TokenBuckets {
-    var compiled := existing;
+/** Inserts `<fnRuntime>(` for every `FunctionStart` present in `items` into `compiled` in place. */
+addCompiledFnsSet := fn(items: frontend.Items, compiled: mut frontend.TokenBuckets): Unit {
     loop items as item {
         if item.kind == frontend.ITEM_KIND_FUNCTION_START and item.runtime =!= "" {
-            compiled = frontend.tokenBucketAdd(compiled, item.runtime + "(");
+            frontend.tokenBucketAdd(mut compiled, item.runtime + "(");
         }
     }
-    compiled
 }
 
-/** Adds identifier/call tokens referenced by one emitted item into `tokens`. */
-scanItemTokens := fn(item: frontend.Item, existing: frontend.TokenBuckets): frontend.TokenBuckets {
-    var updated := frontend.codeReachableTokensSet(item.code, existing);
+/** Adds identifier/call tokens referenced by one emitted item into `tokens` in place. */
+scanItemTokens := fn(item: frontend.Item, tokens: mut frontend.TokenBuckets): Unit {
+    frontend.codeReachableTokensSet(item.code, mut tokens);
     if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
-        updated = frontend.tokenBucketAdd(updated, item.runtime);
+        frontend.tokenBucketAdd(mut tokens, item.runtime);
     }
-    updated
 }
 
-/** Adds top-level non-pure item tokens from `items` into `existing`. */
-scanTopLevelTokens := fn(items: frontend.Items, existing: frontend.TokenBuckets): frontend.TokenBuckets {
-    var seed := existing;
+/** Adds top-level non-pure item tokens from `items` into `seed` in place. */
+scanTopLevelTokens := fn(items: frontend.Items, seed: mut frontend.TokenBuckets): Unit {
     var fnDepth := 0;
     var blockDepth := 0;
     var nextIsPure := false;
@@ -409,24 +405,21 @@ scanTopLevelTokens := fn(items: frontend.Items, existing: frontend.TokenBuckets)
         nextIsPure = false;
         if item.kind == frontend.ITEM_KIND_SCOPE or item.kind == frontend.ITEM_KIND_IF or item.kind == frontend.ITEM_KIND_LOOP or item.kind == frontend.ITEM_KIND_LOOP_SEQ {
             blockDepth = blockDepth + 1;
-            seed = frontend.codeReachableTokensSet(item.code, seed);
+            frontend.codeReachableTokensSet(item.code, mut seed);
         } else if item.kind == frontend.ITEM_KIND_END_SCOPE or item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_LOOP {
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if not isPureDecl and item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
         item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_SOURCE_LOC and item.kind =!= frontend.ITEM_KIND_COMMENT {
-            seed = scanItemTokens(item, seed);
+            scanItemTokens(item, mut seed);
         }
     }
-    seed
 }
 
-/** Propagates reachable tokens through compiled functions and pure globals in `graph`, returning `[reachable, scanned]`. */
-closeReachableTokens := fn(graph: frontend.Items, initialReachable: frontend.TokenBuckets,
-initialScanned: frontend.TokenBuckets): List<frontend.TokenBuckets> {
-    var reachable := initialReachable;
-    var scanned := initialScanned;
+/** Propagates reachable tokens through compiled functions and pure globals in `graph` in place. */
+closeReachableTokens := fn(graph: frontend.Items, reachable: mut frontend.TokenBuckets,
+scanned: mut frontend.TokenBuckets): Unit {
     loop true {
-        beforeCount := reachable.count;
+        beforeCount := setLib.size(reachable);
         var fnDepth := 0;
         var blockDepth := 0;
         var nextIsPure := false;
@@ -455,7 +448,7 @@ initialScanned: frontend.TokenBuckets): List<frontend.TokenBuckets> {
                     activeFnToken = item.runtime + "(";
                     activeFnWanted = frontend.tokenBucketHas(reachable, activeFnToken) and
                     not frontend.tokenBucketHas(scanned, activeFnToken);
-                    if activeFnWanted { scanned = frontend.tokenBucketAdd(scanned, activeFnToken); }
+                    if activeFnWanted { frontend.tokenBucketAdd(mut scanned, activeFnToken); }
                 }
                 fnDepth = fnDepth + 1;
                 nextIsPure = false;
@@ -468,7 +461,7 @@ initialScanned: frontend.TokenBuckets): List<frontend.TokenBuckets> {
                 continue;
             }
             if fnDepth > 0 {
-                if activeFnWanted { reachable = scanItemTokens(item, reachable); }
+                if activeFnWanted { scanItemTokens(item, mut reachable); }
                 nextIsPure = false;
                 continue;
             }
@@ -480,14 +473,12 @@ initialScanned: frontend.TokenBuckets): List<frontend.TokenBuckets> {
                 if blockDepth > 0 { blockDepth = blockDepth - 1; }
             } else if isPureDecl and item.runtime =!= "" and frontend.tokenBucketHas(reachable, item.runtime) and
             not frontend.tokenBucketHas(scanned, item.runtime) {
-                scanned = frontend.tokenBucketAdd(scanned, item.runtime);
-                reachable = frontend.codeReachableTokensSet(item.code, reachable);
+                frontend.tokenBucketAdd(mut scanned, item.runtime);
+                frontend.codeReachableTokensSet(item.code, mut reachable);
             }
         }
-        if reachable.count == beforeCount { break; }
+        if setLib.size(reachable) == beforeCount { break; }
     }
-    result: mut List<frontend.TokenBuckets> = [reachable, scanned];
-    result
 }
 
 /** Collects `ModuleStart`..`ModuleEnd` slices for modules whose path is in `metaPaths`. */
@@ -617,11 +608,12 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
     if metaCount == 0 { return initialGraph; }
 
     var graph := initialGraph;
-    var compiledFns := addCompiledFnsSet(graph, frontend.emptyTokenBuckets());
-    initialSeed := scanTopLevelTokens(graph, frontend.emptyTokenBuckets());
-    var closure := closeReachableTokens(graph, initialSeed, frontend.emptyTokenBuckets());
-    var reachableTokens := closure[0];
-    var scannedTokens := closure[1];
+    compiledFns: mut Set<String>;
+    addCompiledFnsSet(graph, mut compiledFns);
+    reachableTokens: mut Set<String>;
+    scanTopLevelTokens(graph, mut reachableTokens);
+    scannedTokens: mut Set<String>;
+    closeReachableTokens(graph, mut reachableTokens, mut scannedTokens);
     var coreGraph := collectCoreGraphSlice(graph, metaPaths);
     var unscannedNonCore := collectUnscannedNonCoreFns(graph, metaPaths, scannedTokens);
     loop true {
@@ -633,27 +625,23 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
             modKey := metaKeys[index];
             if coreModuleNeedsReparse(target, modKey, reachable, compiledFns) {
                 importedExports := coreModuleExports(graph, modPath);
-                beforeCount := compiledFns.count;
+                beforeCount := setLib.size(compiledFns);
                 reparsed := frontend.parseProgramWithModuleSelectiveSpecs(=target, source = metaSources[index],
                 prefix = metaDisplays[index], exports = importedExports, moduleKey = modKey,
                 moduleIdentity = metaIdentities[index], neededFns = reachable,
                 skipSoftBuiltins = target == frontend.TARGET_TS, =builtinSpecs);
                 graph = replaceModuleItems(graph, modPath, reparsed);
                 coreGraph = replaceModuleItems(coreGraph, modPath, reparsed);
-                compiledFns = addCompiledFnsSet(reparsed, compiledFns);
-                reachableTokens = scanTopLevelTokens(reparsed, reachableTokens);
-                if compiledFns.count > beforeCount { anyReparsed = true; }
+                addCompiledFnsSet(reparsed, mut compiledFns);
+                scanTopLevelTokens(reparsed, mut reachableTokens);
+                if setLib.size(compiledFns) > beforeCount { anyReparsed = true; }
             }
             index = index + 1;
         }
         if not anyReparsed { break; }
-        closure = closeReachableTokens(coreGraph, reachableTokens, scannedTokens);
-        reachableTokens = closure[0];
-        scannedTokens = closure[1];
+        closeReachableTokens(coreGraph, mut reachableTokens, mut scannedTokens);
         if hasNewlyReachableToken(unscannedNonCore, reachableTokens, scannedTokens) {
-            closure = closeReachableTokens(graph, reachableTokens, scannedTokens);
-            reachableTokens = closure[0];
-            scannedTokens = closure[1];
+            closeReachableTokens(graph, mut reachableTokens, mut scannedTokens);
             unscannedNonCore = collectUnscannedNonCoreFns(graph, metaPaths, scannedTokens);
         }
     }

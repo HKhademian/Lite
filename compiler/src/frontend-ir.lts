@@ -43,8 +43,8 @@ pub AliasDecl := type (name: String, target: String, at: Int, end: Int, depth: I
 /** Lexical control-flow and metadata context for an enclosing function, block, conditional, match, loop or finally scope. */
 pub ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
 
-/** 32-bucket hashed string set for O(1) reachable-token membership checks across large module graphs. */
-pub TokenBuckets := type (count: Int, b0: String, b1: String, b2: String, b3: String, b4: String, b5: String, b6: String, b7: String, b8: String, b9: String, b10: String, b11: String, b12: String, b13: String, b14: String, b15: String, b16: String, b17: String, b18: String, b19: String, b20: String, b21: String, b22: String, b23: String, b24: String, b25: String, b26: String, b27: String, b28: String, b29: String, b30: String, b31: String);
+/** Hash-indexed string set for O(1) reachable-token membership checks across large module graphs. */
+pub TokenBuckets := type Set<String>;
 
 pub INIT_STATE_INIT := "init";
 pub INIT_STATE_UNINIT := "uninit";

@@ -4415,7 +4415,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     float32Literals := usesIntHelper(calls, "lt_float32_literal(");
     var float32Values := float32Literals or usesIntHelper(calls, "lt_float32_op(");
     var floatValues := floatLiterals or float32Values or usesFloatArithmetic(calls);
-    var fnRefTokens := frontend.emptyTokenBuckets();
+    fnRefTokens: mut Set<String>;
     var fnDepth := 0;
     loop reachable as item {
         if frontend.isFloatScalarKind(item.kind) { floatOutput = true; }
@@ -4435,9 +4435,9 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             if fnDepth > 0 { fnDepth = fnDepth - 1; }
         } else if fnDepth > 0 {
             if item.kind == frontend.ITEM_KIND_END or item.kind == frontend.ITEM_KIND_END_OUTPUT { hasFnOutput = true; }
-            fnRefTokens = frontend.codeReachableTokensSet(item.code, fnRefTokens);
+            frontend.codeReachableTokensSet(item.code, mut fnRefTokens);
             if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
-                fnRefTokens = frontend.tokenBucketAdd(fnRefTokens, item.runtime);
+                frontend.tokenBucketAdd(mut fnRefTokens, item.runtime);
             }
         }
         unsupported := unsupportedBuiltinCode(frontend.targetCodeCalls(item.code, "|"));
@@ -4509,16 +4509,16 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if hasHoistedFns {
         hasFunctions = true;
         loop hoistedFnDefs as hDef {
-            fnRefTokens = frontend.codeReachableTokensSet(hDef, fnRefTokens);
+            frontend.codeReachableTokensSet(hDef, mut fnRefTokens);
         }
     }
     orderedEntries: mut List<String> = [];
-    var seenTypeKeys := frontend.emptyTokenBuckets();
-    var printTypeKeys := frontend.emptyTokenBuckets();
-    var copyTypeKeys := frontend.emptyTokenBuckets();
+    seenTypeKeys: mut Set<String>;
+    printTypeKeys: mut Set<String>;
+    copyTypeKeys: mut Set<String>;
     convExpKinds: mut List<String> = [];
     convActKinds: mut List<String> = [];
-    var seenConvNames := frontend.emptyTokenBuckets();
+    seenConvNames: mut Set<String>;
     seedKinds: mut List<String> = [];
     hasInputArgs := usesIntHelper(calls, "lite$inputArgs(");
     hasMainArgs := hasInputArgs or usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processExecPath(");
@@ -4556,7 +4556,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             loop pFlags as pf {
                 if pf == "FLOAT" { floatOutput = true; floatValues = true; }
                 else if pf == "FLOAT32" { float32Values = true; }
-                else { printTypeKeys = frontend.tokenBucketAdd(printTypeKeys, pf); }
+                else { setLib.add(mut printTypeKeys, pf); }
             }
         }
         if item.kind == frontend.ITEM_KIND_DISCARD and (cListTagForKind(item.name) =!= "" or frontend.cStructTag(item.name) =!= "" or frontend.cMapTag(item.name) =!= "" or frontend.cSetTag(item.name) =!= "") {
@@ -4576,7 +4576,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             if item.intValue =!= 1 {
                 cFlags := collectTypeFlags(seqListKind);
                 loop cFlags as cf {
-                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { copyTypeKeys = frontend.tokenBucketAdd(copyTypeKeys, cf); }
+                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { setLib.add(mut copyTypeKeys, cf); }
                 }
             }
         } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ and item.intValue == 4 {
@@ -4585,7 +4585,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 mk := textLib.slice(annotsM[0], 2, textLib.length(annotsM[0]));
                 cFlags := collectTypeFlags(mk);
                 loop cFlags as cf {
-                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { copyTypeKeys = frontend.tokenBucketAdd(copyTypeKeys, cf); }
+                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { setLib.add(mut copyTypeKeys, cf); }
                 }
             }
         } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ and item.intValue == 5 {
@@ -4593,7 +4593,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             listLib.pushBack(mut seedKinds, sk);
             cFlags := collectTypeFlags(sk);
             loop cFlags as cf {
-                if cf =!= "FLOAT" and cf =!= "FLOAT32" { copyTypeKeys = frontend.tokenBucketAdd(copyTypeKeys, cf); }
+                if cf =!= "FLOAT" and cf =!= "FLOAT32" { setLib.add(mut copyTypeKeys, cf); }
             }
         }
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
@@ -4630,7 +4630,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 loop pFlagsA as pfA {
                     if pfA == "FLOAT" { floatOutput = true; floatValues = true; }
                     else if pfA == "FLOAT32" { float32Values = true; }
-                    else { printTypeKeys = frontend.tokenBucketAdd(printTypeKeys, pfA); }
+                    else { setLib.add(mut printTypeKeys, pfA); }
                 }
             } else if textLib.startsWithAt(ann, 0, "C:") {
                 body := textLib.slice(ann, 2, textLib.length(ann));
@@ -4641,13 +4641,13 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                     listLib.pushBack(mut seedKinds, eKind);
                     listLib.pushBack(mut seedKinds, aKind);
                     cName := frontend.cTupleConvertName(eKind, aKind);
-                    if not frontend.tokenBucketHas(seenConvNames, cName) {
-                        seenConvNames = frontend.tokenBucketAdd(seenConvNames, cName);
+                    if not setLib.has(seenConvNames, cName) {
+                        setLib.add(mut seenConvNames, cName);
                         listLib.pushBack(mut convExpKinds, eKind);
                         listLib.pushBack(mut convActKinds, aKind);
                         cFlags := collectTypeFlags(eKind);
                         loop cFlags as cf {
-                            if cf =!= "FLOAT" and cf =!= "FLOAT32" { copyTypeKeys = frontend.tokenBucketAdd(copyTypeKeys, cf); }
+                            if cf =!= "FLOAT" and cf =!= "FLOAT32" { setLib.add(mut copyTypeKeys, cf); }
                         }
                     }
                 }
@@ -4688,8 +4688,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             else if isE { "E:" + frontend.cSetTag(payload) }
             else if isF { "F:" + frontend.cFnTag(payload) }
             else { "S:" + frontend.cStructTag(payload) };
-            if not frontend.tokenBucketHas(seenTypeKeys, tKey) {
-                seenTypeKeys = frontend.tokenBucketAdd(seenTypeKeys, tKey);
+            if not setLib.has(seenTypeKeys, tKey) {
+                setLib.add(mut seenTypeKeys, tKey);
                 listLib.pushBack(mut orderedEntries, sub);
                 if isL or isM or isE { hasAnyList = true; }
             }
@@ -4700,15 +4700,15 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         if textLib.startsWithAt(oe, 0, "S|") {
             sKind := textLib.slice(oe, 2, textLib.length(oe));
             sTag := frontend.cStructTag(sKind);
-            if textLib.indexOfText(calls, "|lt_list_" + sTag + "_", 0) >= 0 and not frontend.tokenBucketHas(seenTypeKeys, "L:" + sTag) {
-                seenTypeKeys = frontend.tokenBucketAdd(seenTypeKeys, "L:" + sTag);
+            if textLib.indexOfText(calls, "|lt_list_" + sTag + "_", 0) >= 0 and not setLib.has(seenTypeKeys, "L:" + sTag) {
+                setLib.add(mut seenTypeKeys, "L:" + sTag);
                 listLib.pushBack(mut extraListSeeds, "L|" + sKind);
                 hasAnyList = true;
             }
             if usesIntHelper(calls, sTag + "_copy(") or usesIntHelper(calls, "lt_list_" + sTag + "_copy(") {
                 cFlags := collectTypeFlags(sKind);
                 loop cFlags as cf {
-                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { copyTypeKeys = frontend.tokenBucketAdd(copyTypeKeys, cf); }
+                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { setLib.add(mut copyTypeKeys, cf); }
                 }
             }
         }
@@ -4851,7 +4851,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     emitCHostBuiltinHelpers(calls);
     emitCSoftBuiltinHelpers(calls);
     emitCExtraCanvasHelpers(calls);
-    var hoistedGlobals := frontend.emptyTokenBuckets();
+    hoistedGlobals: mut Set<String>;
     if hasFunctions {
         if hasFnOutput { outLine("static int lt_io_status = 0;"); }
         var scanDepth := 0;
@@ -4867,8 +4867,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 } else if item.kind == frontend.ITEM_KIND_END_SCOPE or item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_LOOP {
                     if scanBlocks > 0 { scanBlocks = scanBlocks - 1; }
                 } else if scanBlocks == 0 and isCLocalDeclKind(item.kind) and frontend.tokenBucketHas(fnRefTokens, item.runtime) and
-                not frontend.tokenBucketHas(hoistedGlobals, item.runtime) {
-                    hoistedGlobals = frontend.tokenBucketAdd(hoistedGlobals, item.runtime);
+                not setLib.has(hoistedGlobals, item.runtime) {
+                    setLib.add(mut hoistedGlobals, item.runtime);
                     outLine("static " + cDeclTypeItem(item) + item.runtime + ";");
                 }
             }

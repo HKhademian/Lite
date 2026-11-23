@@ -51,8 +51,8 @@ FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutab
 AliasDecl := type (name: String, target: String, at: Int, end: Int, depth: Int);
 /** Lexical control-flow and metadata context for an enclosing construct. */
 ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
-/** 32-bucket hashed string set for O(1) reachable-token membership checks across large module graphs. */
-pub TokenBuckets := type (count: Int, b0: String, b1: String, b2: String, b3: String, b4: String, b5: String, b6: String, b7: String, b8: String, b9: String, b10: String, b11: String, b12: String, b13: String, b14: String, b15: String, b16: String, b17: String, b18: String, b19: String, b20: String, b21: String, b22: String, b23: String, b24: String, b25: String, b26: String, b27: String, b28: String, b29: String, b30: String, b31: String);
+/** Hash-indexed string set for O(1) reachable-token membership checks across large module graphs. */
+pub TokenBuckets := type Set<String>;
 
 INIT_STATE_INIT := ir.INIT_STATE_INIT;
 INIT_STATE_UNINIT := ir.INIT_STATE_UNINIT;
@@ -552,20 +552,20 @@ pub targetHelperCalls := fn(items: Items): String { reach.targetHelperCalls(item
 /** True when `calls` already contains the pipe-delimited call token `needle`. */
 pub hasHelperToken := fn(calls: String, needle: String): Bool { reach.hasHelperToken(calls, needle) };
 
-/** Creates an empty 32-bucket token set. */
+/** Creates an empty token set. */
 pub emptyTokenBuckets := fn(): TokenBuckets { reach.emptyTokenBuckets() };
 
 /** True when `s` contains `needle`. */
 pub tokenBucketHas := fn(s: TokenBuckets, needle: String): Bool { reach.tokenBucketHas(s, needle) };
 
-/** Returns `s` with `needle` inserted into its length-hashed bucket. */
-pub tokenBucketAdd := fn(s: TokenBuckets, needle: String): TokenBuckets { reach.tokenBucketAdd(s, needle) };
+/** Inserts `needle` into `s` in place. */
+pub tokenBucketAdd := fn(s: mut TokenBuckets, needle: String): Unit { reach.tokenBucketAdd(mut s, needle); };
 
-/** Serializes all 32 buckets into one `|`-delimited string. */
+/** Serializes all tokens in `s` into one `|`-delimited string. */
 pub flattenTokenBuckets := fn(s: TokenBuckets): String { reach.flattenTokenBuckets(s) };
 
-/** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code` into `existing`. */
-pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuckets { reach.codeReachableTokensSet(code, existing) };
+/** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code` into `existing` in place. */
+pub codeReachableTokensSet := fn(code: String, existing: mut TokenBuckets): Unit { reach.codeReachableTokensSet(code, mut existing); };
 
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
 pub OptClass := type optCfg.OptClass;

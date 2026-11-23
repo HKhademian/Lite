@@ -18,8 +18,8 @@ Item := type (kind: String, name: String, runtime: String, code: String, intValu
 /** Collection of items matching `frontend-ir.Items`. */
 Items := type List<Item>;
 
-/** 32-bucket hashed string set matching `frontend-ir.TokenBuckets`. */
-TokenBuckets := type (count: Int, b0: String, b1: String, b2: String, b3: String, b4: String, b5: String, b6: String, b7: String, b8: String, b9: String, b10: String, b11: String, b12: String, b13: String, b14: String, b15: String, b16: String, b17: String, b18: String, b19: String, b20: String, b21: String, b22: String, b23: String, b24: String, b25: String, b26: String, b27: String, b28: String, b29: String, b30: String, b31: String);
+/** Hash-indexed string set matching `frontend-ir.TokenBuckets`. */
+TokenBuckets := type Set<String>;
 
 /** True when emitted target code calls `needle` outside quoted String literal text. */
 pub codeUsesTextCall := fn(code: String, needle: String): Bool {
@@ -174,120 +174,40 @@ pub hasHelperToken := fn(calls: String, needle: String): Bool {
     textLib.indexOfText(calls, "|" + needle + "|", 0) >= 0
 };
 
-/** Creates an empty 32-bucket token set. */
+/** Creates an empty token set. */
 pub emptyTokenBuckets := fn(): TokenBuckets {
-    (count = 0, b0 = "|", b1 = "|", b2 = "|", b3 = "|", b4 = "|", b5 = "|", b6 = "|", b7 = "|",
-    b8 = "|", b9 = "|", b10 = "|", b11 = "|", b12 = "|", b13 = "|", b14 = "|", b15 = "|",
-    b16 = "|", b17 = "|", b18 = "|", b19 = "|", b20 = "|", b21 = "|", b22 = "|", b23 = "|",
-    b24 = "|", b25 = "|", b26 = "|", b27 = "|", b28 = "|", b29 = "|", b30 = "|", b31 = "|")
-};
-
-/** Maps a token string to its 0..31 bucket index using its code-point length. */
-tokenBucketSlot := fn(needle: String): Int {
-    n := textLib.length(needle);
-    n - (n / 32) * 32
-};
-
-/** Reads the bucket string stored at `slot` (0..31) in `s`. */
-tokenBucketGet := fn(s: TokenBuckets, slot: Int): String {
-    if slot < 16 {
-        if slot < 8 {
-            if slot == 0 { return s.b0; }
-            if slot == 1 { return s.b1; }
-            if slot == 2 { return s.b2; }
-            if slot == 3 { return s.b3; }
-            if slot == 4 { return s.b4; }
-            if slot == 5 { return s.b5; }
-            if slot == 6 { return s.b6; }
-            return s.b7;
-        }
-        if slot == 8 { return s.b8; }
-        if slot == 9 { return s.b9; }
-        if slot == 10 { return s.b10; }
-        if slot == 11 { return s.b11; }
-        if slot == 12 { return s.b12; }
-        if slot == 13 { return s.b13; }
-        if slot == 14 { return s.b14; }
-        return s.b15;
-    }
-    if slot < 24 {
-        if slot == 16 { return s.b16; }
-        if slot == 17 { return s.b17; }
-        if slot == 18 { return s.b18; }
-        if slot == 19 { return s.b19; }
-        if slot == 20 { return s.b20; }
-        if slot == 21 { return s.b21; }
-        if slot == 22 { return s.b22; }
-        return s.b23;
-    }
-    if slot == 24 { return s.b24; }
-    if slot == 25 { return s.b25; }
-    if slot == 26 { return s.b26; }
-    if slot == 27 { return s.b27; }
-    if slot == 28 { return s.b28; }
-    if slot == 29 { return s.b29; }
-    if slot == 30 { return s.b30; }
-    s.b31
-};
-
-/** Returns a copy of `s` with bucket `slot` replaced by `val` and `count` incremented. */
-withTokenBucket := fn(s: TokenBuckets, slot: Int, val: String): TokenBuckets {
-    (count = s.count + 1,
-    b0 = if slot == 0 { val } else { s.b0 }, b1 = if slot == 1 { val } else { s.b1 },
-    b2 = if slot == 2 { val } else { s.b2 }, b3 = if slot == 3 { val } else { s.b3 },
-    b4 = if slot == 4 { val } else { s.b4 }, b5 = if slot == 5 { val } else { s.b5 },
-    b6 = if slot == 6 { val } else { s.b6 }, b7 = if slot == 7 { val } else { s.b7 },
-    b8 = if slot == 8 { val } else { s.b8 }, b9 = if slot == 9 { val } else { s.b9 },
-    b10 = if slot == 10 { val } else { s.b10 }, b11 = if slot == 11 { val } else { s.b11 },
-    b12 = if slot == 12 { val } else { s.b12 }, b13 = if slot == 13 { val } else { s.b13 },
-    b14 = if slot == 14 { val } else { s.b14 }, b15 = if slot == 15 { val } else { s.b15 },
-    b16 = if slot == 16 { val } else { s.b16 }, b17 = if slot == 17 { val } else { s.b17 },
-    b18 = if slot == 18 { val } else { s.b18 }, b19 = if slot == 19 { val } else { s.b19 },
-    b20 = if slot == 20 { val } else { s.b20 }, b21 = if slot == 21 { val } else { s.b21 },
-    b22 = if slot == 22 { val } else { s.b22 }, b23 = if slot == 23 { val } else { s.b23 },
-    b24 = if slot == 24 { val } else { s.b24 }, b25 = if slot == 25 { val } else { s.b25 },
-    b26 = if slot == 26 { val } else { s.b26 }, b27 = if slot == 27 { val } else { s.b27 },
-    b28 = if slot == 28 { val } else { s.b28 }, b29 = if slot == 29 { val } else { s.b29 },
-    b30 = if slot == 30 { val } else { s.b30 }, b31 = if slot == 31 { val } else { s.b31 })
+    empty: mut Set<String>;
+    empty
 };
 
 /** True when `s` contains `needle`. */
 pub tokenBucketHas := fn(s: TokenBuckets, needle: String): Bool {
-    if needle == "" { return false; }
-    textLib.indexOfText(tokenBucketGet(s, tokenBucketSlot(needle)), "|" + needle + "|", 0) >= 0
+    needle =!= "" and setLib.has(s, needle)
 };
 
-/** Returns `s` with `needle` inserted into its length-hashed bucket. */
-pub tokenBucketAdd := fn(s: TokenBuckets, needle: String): TokenBuckets {
-    if needle == "" { return s; }
-    slot := tokenBucketSlot(needle);
-    b := tokenBucketGet(s, slot);
-    if textLib.indexOfText(b, "|" + needle + "|", 0) >= 0 { return s; }
-    withTokenBucket(s, slot, b + needle + "|")
+/** Inserts `needle` into `s` in place. */
+pub tokenBucketAdd := fn(s: mut TokenBuckets, needle: String): Unit {
+    if needle =!= "" { setLib.add(mut s, needle); }
 };
 
-/** Serializes all 32 buckets into one `|`-delimited string. */
+/** Serializes all tokens in `s` into one `|`-delimited string. */
 pub flattenTokenBuckets := fn(s: TokenBuckets): String {
     out: mut tb.TextBuilder;
     tb.append(mut out, "|");
-    var i := 0;
-    loop i < 32 {
-        b := tokenBucketGet(s, i);
-        bLen := textLib.length(b);
-        if bLen > 1 { tb.append(mut out, textLib.slice(b, 1, bLen)); }
-        i = i + 1;
+    loop s as tok {
+        tb.append(mut out, tok);
+        tb.append(mut out, "|");
     }
     tb.build(out)
 };
 
-/** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code` into `existing`. */
-pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuckets {
+/** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code` into `tokens` in place. */
+pub codeReachableTokensSet := fn(code: String, tokens: mut TokenBuckets): Unit {
     var nextLite := textLib.indexOfText(code, "lite", 0);
     var nextLt := textLib.indexOfText(code, "lt_", 0);
-    if nextLite < 0 and nextLt < 0 { return existing; }
+    if nextLite < 0 and nextLt < 0 { return; }
     var nextQuote := textLib.indexOfText(code, "\"", 0);
     size := textLib.length(code);
-    var tokens := existing;
     var cursor := 0;
     loop cursor < size {
         if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
@@ -298,7 +218,7 @@ pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuc
         } else if nextLt >= 0 {
             hit = nextLt;
         }
-        if hit < 0 { return tokens; }
+        if hit < 0 { return; }
         if nextQuote >= 0 and nextQuote < hit {
             if nextQuote < cursor {
                 nextQuote = textLib.indexOfText(code, "\"", cursor);
@@ -329,10 +249,9 @@ pub codeReachableTokensSet := fn(code: String, existing: TokenBuckets): TokenBuc
         } else {
             name
         };
-        tokens = tokenBucketAdd(tokens, token);
+        setLib.add(mut tokens, token);
         cursor = endPos;
     }
-    tokens
 };
 
 /** True when `kind` represents a top-level value or mutable variable declaration item. */
@@ -500,34 +419,33 @@ pub pruneBlockStatements := fn(stmts: List<String>, owners: List<String>, deps: 
     }
     if not hasPrunable { return stmts; }
 
-    var reachable := emptyTokenBuckets();
+    reachable: mut Set<String>;
     if hasTail {
-        reachable = codeReachableTokensSet(tailCode, reachable);
+        codeReachableTokensSet(tailCode, mut reachable);
     }
     var seedIdx := 0;
     loop seedIdx < total {
         if owners[seedIdx] == "" {
-            reachable = codeReachableTokensSet(deps[seedIdx], reachable);
+            codeReachableTokensSet(deps[seedIdx], mut reachable);
         }
         seedIdx = seedIdx + 1;
     }
 
-    var scannedBag := "";
+    scannedIdxs: mut Set<Int>;
     loop true {
-        beforeCount := reachable.count;
+        beforeCount := setLib.size(reachable);
         var scanIdx := 0;
         loop scanIdx < total {
             ow := owners[scanIdx];
-            if ow =!= "" and ow =!= "#discard" and tokenBucketHas(reachable, ow) {
-                key := integer.intText(scanIdx);
-                if not trace.tokenInPipeBag(scannedBag, key) {
-                    scannedBag = trace.appendPipeBag(scannedBag, key);
-                    reachable = codeReachableTokensSet(deps[scanIdx], reachable);
+            if ow =!= "" and ow =!= "#discard" and setLib.has(reachable, ow) {
+                if not setLib.has(scannedIdxs, scanIdx) {
+                    setLib.add(mut scannedIdxs, scanIdx);
+                    codeReachableTokensSet(deps[scanIdx], mut reachable);
                 }
             }
             scanIdx = scanIdx + 1;
         }
-        if reachable.count == beforeCount { break; }
+        if setLib.size(reachable) == beforeCount { break; }
     }
 
     kept: mut List<String> = [];
@@ -989,7 +907,7 @@ unwrapSyntheticScopes := fn(items: Items): Items {
     isSynths: mut List<Bool> = [];
     hasDecls: mut List<Bool> = [];
     var stackLen := 0;
-    var dropSet := emptyTokenBuckets();
+    dropSet: mut Set<Int>;
     var hasDrop := false;
     var hasAnySynth := false;
     var idx := 0;
@@ -1015,8 +933,8 @@ unwrapSyntheticScopes := fn(items: Items): Items {
                 hasDecl := listLib.popBack(mut hasDecls);
                 stackLen = stackLen - 1;
                 if isSynth and not hasDecl {
-                    dropSet = tokenBucketAdd(dropSet, integer.intText(openIdx));
-                    dropSet = tokenBucketAdd(dropSet, integer.intText(idx));
+                    setLib.add(mut dropSet, openIdx);
+                    setLib.add(mut dropSet, idx);
                     hasDrop = true;
                 }
             }
@@ -1039,7 +957,7 @@ unwrapSyntheticScopes := fn(items: Items): Items {
     out: mut Items = [];
     var k := 0;
     loop k < total {
-        if not tokenBucketHas(dropSet, integer.intText(k)) {
+        if not setLib.has(dropSet, k) {
             listLib.pushBack(mut out, items[k]);
         }
         k = k + 1;
@@ -1260,7 +1178,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
     }
     if total == 0 or not hasVarOrAssign { return items; }
 
-    var activeSet := emptyTokenBuckets();
+    var activeSet: mut Set<String>;
     var activeNames: List<String> = [];
     var activeDeclIdxs: List<Int> = [];
     var activeDeclMerged: List<Bool> = [];
@@ -1272,7 +1190,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
     var activeConstCodes: List<String> = [];
     var activeCount := 0;
 
-    var dropSet := emptyTokenBuckets();
+    dropSet: mut Set<Int>;
     var hasDrops := false;
     overrideIdxs: mut List<Int> = [];
     overrideCodes: mut List<String> = [];
@@ -1351,7 +1269,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
         } else if isVarScalarKind(kind) and item.runtime =!= "" {
             litCode := if isSimpleTsScalarLiteral(newCode) { newCode } else { "" };
             if activeCount < 64 {
-                activeSet = tokenBucketAdd(activeSet, item.runtime);
+                setLib.add(mut activeSet, item.runtime);
                 nextNames: mut List<String> = [];
                 nextDeclIdxs: mut List<Int> = [];
                 nextDeclMerged: mut List<Bool> = [];
@@ -1396,7 +1314,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
             }
         } else if isAssignScalarKind(kind) and item.runtime =!= "" {
             litCode := if isSimpleTsScalarLiteral(newCode) { newCode } else { "" };
-            slot := if tokenBucketHas(activeSet, item.runtime) { findActiveVarSlot(activeNames, activeCount, item.runtime) } else { -1 };
+            slot := if setLib.has(activeSet, item.runtime) { findActiveVarSlot(activeNames, activeCount, item.runtime) } else { -1 };
             if slot >= 0 {
                 canDropPrev := not activeRead[slot] and activeWritePure[slot] and not codeMentionsIdent(newCode, item.runtime);
                 if canDropPrev and activeWriteIsDecl[slot] and (idx == activeWriteIdxs[slot] + 1 or litCode =!= "") {
@@ -1405,11 +1323,11 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
                     activeWritePure = setSmallBoolAt(activeWritePure, slot, codePure);
                     activeRead = setSmallBoolAt(activeRead, slot, false);
                     activeConstCodes = setSmallTextAt(activeConstCodes, slot, litCode);
-                    dropSet = tokenBucketAdd(dropSet, integer.intText(idx));
+                    setLib.add(mut dropSet, idx);
                     hasDrops = true;
                 } else {
                     if canDropPrev and not activeWriteIsDecl[slot] {
-                        dropSet = tokenBucketAdd(dropSet, integer.intText(activeWriteIdxs[slot]));
+                        setLib.add(mut dropSet, activeWriteIdxs[slot]);
                         hasDrops = true;
                     }
                     activeWriteIdxs = setSmallIntAt(activeWriteIdxs, slot, idx);
@@ -1419,7 +1337,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
                     activeConstCodes = setSmallTextAt(activeConstCodes, slot, litCode);
                 }
             } else if activeCount < 64 {
-                activeSet = tokenBucketAdd(activeSet, item.runtime);
+                setLib.add(mut activeSet, item.runtime);
                 nextNames: mut List<String> = [];
                 nextDeclIdxs: mut List<Int> = [];
                 nextDeclMerged: mut List<Bool> = [];
@@ -1484,7 +1402,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
     var ovPos := 0;
     var k := 0;
     loop k < total {
-        if hasDrops and tokenBucketHas(dropSet, integer.intText(k)) {
+        if hasDrops and setLib.has(dropSet, k) {
             k = k + 1;
             continue;
         }
