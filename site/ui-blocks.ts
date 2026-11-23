@@ -116,14 +116,17 @@ export function renderGeneratedToolbar(options: Readonly<GeneratedToolbarOptions
 
   return [
     `<div id="${escapeHtml(options.id)}" class="code-modes pg-gen-toolbar">`,
-    `  <div class="pg-gen-group" role="group" aria-label="Target language">`,
+    `  <div class="pg-gen-group">`,
     `    <span class="pg-gen-label">Target</span>`,
-    `    ${langButtons}`,
+    `    <div class="pg-seg-group" role="group" aria-label="Target language">`,
+    `      ${langButtons}`,
+    `    </div>`,
     `  </div>`,
-    `  <span class="pg-gen-sep" aria-hidden="true"></span>`,
-    `  <div class="pg-gen-group" role="group" aria-label="${escapeHtml(options.ariaLabel ?? 'Portability view')}">`,
+    `  <div class="pg-gen-group">`,
     `    <span class="pg-gen-label">View</span>`,
-    `    ${modeButtons}`,
+    `    <div class="pg-seg-group" role="group" aria-label="${escapeHtml(options.ariaLabel ?? 'Portability view')}">`,
+    `      ${modeButtons}`,
+    `    </div>`,
     `  </div>`,
     `</div>`,
   ].join('\n');

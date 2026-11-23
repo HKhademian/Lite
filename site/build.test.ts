@@ -448,6 +448,14 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="tab-generated"'));
   assert(playground.includes('id="tab-canvas" class="pg-tab" role="tab" data-tab="canvas" aria-selected="false" type="button">Canvas</button>'));
   assert(playground.includes('id="pg-canvas-empty"'));
+  assert(!playground.includes('id="pg-fullscreen"'), 'duplicate inspector header fullscreen button must be removed');
+  assert(!playground.includes('id="pg-canvas-try-scene"'), 'empty canvas must not include destructive code-overwriting buttons');
+  assert(playground.includes('class="pg-twin-btn"'));
+  assert(playground.includes('id="pg-share-modal"'));
+  assert(playground.includes('id="pg-share-url"'));
+  assert(playground.includes('id="pg-share-copy"'));
+  assert(playground.includes('id="pg-sketches-tags"'));
+  assert(playground.includes('class="pg-seg-group"'));
   assert(playground.includes('id="pg-console"'));
   assert(playground.includes('id="pg-eof"'));
   assert(playground.includes('id="pg-kill"'));
@@ -469,10 +477,14 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="pg-copy"'));
   assert(index.includes('runtime/snips.js'));
   assert(existsSync(join(out, 'playground', 'library.json')));
-  const lib = JSON.parse(readFileSync(join(out, 'playground', 'library.json'), 'utf8')) as Array<{ id: string; slug: string; category: string }>;
+  const lib = JSON.parse(readFileSync(join(out, 'playground', 'library.json'), 'utf8')) as Array<{ id: string; slug: string; category: string; tags?: string[] }>;
   const libCats = new Set(lib.map(item => item.category));
   for (const cat of ['sample', 'example', 'case', 'piece']) {
     assert(libCats.has(cat), `missing library.json category: ${cat}`);
+  }
+  const allTags = new Set(lib.flatMap(item => item.tags ?? []));
+  for (const expectedTag of ['canvas', 'audio', 'play', 'input', 'output']) {
+    assert(allTags.has(expectedTag), `expected library.json to include tag: ${expectedTag}`);
   }
   for (const item of lib) {
     assert.match(item.slug, /^[a-z0-9._-]+$/, `invalid slug for ${item.id}: ${item.slug}`);
@@ -1361,8 +1373,11 @@ test('playground inline module initializes without TDZ or ReferenceError', async
     replacedUrls.at(-1)?.includes('?snip=019335a1-0000-7000-8000-000000000001'),
     `expected URL to switch to saved UUIDv7 snip, got ${replacedUrls.at(-1)}`,
   );
+  const urlCountBeforeShare = replacedUrls.length;
   els.get('pg-share')?.trigger('click');
-  assert(replacedUrls.at(-1)?.includes('#code='), `expected share button to encode #code= URL, got ${replacedUrls.at(-1)}`);
+  assert.equal(replacedUrls.length, urlCountBeforeShare, 'Share button must open dialog instead of mutating browser URL');
+  assert.equal(els.get('pg-share-modal')?.hidden, false, 'Share dialog should open on Share click');
+  assert(els.get('pg-share-url')?.value.includes('#code='), `expected share dialog URL to contain #code=, got ${els.get('pg-share-url')?.value}`);
 });
 
 test('shared UI blocks and editor client bind highlighting, scroll sync, Tab indentation, and mode buttons', () => {
@@ -1569,8 +1584,15 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
     return node;
   };
 
+  const sessionMap = new Map<string, string>();
+  const mockSessionStorage = {
+    getItem: (k: string) => sessionMap.get(k) ?? null,
+    setItem: (k: string, v: string) => { sessionMap.set(k, String(v)); },
+    removeItem: (k: string) => { sessionMap.delete(k); },
+  };
   const sandbox = {
     window: mockWin,
+    sessionStorage: mockSessionStorage,
     document: {
       readyState: 'complete',
       title: 'Overview & Setup — Docs — Lite',
@@ -1639,7 +1661,7 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
   const playBtn = createdBars[0]!.buttons.find(b => b.textContent.includes('Open in Play'));
   assert(runBtn, 'expected inline Run button on Lite code block');
   assert(copyBtn, 'expected Copy button on Lite code block');
-  assert(saveBtn, 'expected Save button on Lite code block');
+  assert.equal(saveBtn, undefined, 'docs code blocks must not inject random Save buttons');
   assert(playBtn, 'expected Open in Play button on fallback Lite code block');
   assert.equal(playBtn.tagName, 'BUTTON');
 
@@ -1654,13 +1676,14 @@ test('runtime/snips.js manages UUIDv7 localStorage sketches and enhances doc cod
   assert.deepEqual(nonRunnableBar.buttons.map(b => b.textContent), ['Copy']);
 
   playBtn.click();
-  assert(mockWin.location.href.startsWith('../../playground/?snip='), mockWin.location.href);
-  const loadedId = decodeURIComponent(mockWin.location.href.split('?snip=')[1]!);
-  assert.equal(api.get(loadedId)?.title, 'Your First Program');
-  assert(api.get(loadedId)?.code.includes('io.outputLine("Hi!");'));
+  assert.equal(mockWin.location.href, '../../playground/?draft=snippet');
+  assert.equal(api.list().length, 1, 'Open in Play from docs must not auto-save a localStorage sketch');
+  const draftPayload = JSON.parse(sessionMap.get('lite-playground-draft-v1') ?? '{}') as { title?: string; source?: string };
+  assert.equal(draftPayload.title, 'Your First Program');
+  assert(draftPayload.source?.includes('io.outputLine("Hi!");'));
 
   assert.equal(api.remove(saved.id), true);
-  assert.equal(api.list().length, 1);
+  assert.equal(api.list().length, 0);
   api.clear();
   assert.equal(api.list().length, 0);
 });

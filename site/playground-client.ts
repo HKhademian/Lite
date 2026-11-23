@@ -35,8 +35,6 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   const modeButtons = Array.from(document.querySelectorAll(".code-mode-btn"));
   const tabCanvas = document.getElementById("tab-canvas");
   const canvasEmptyEl = document.getElementById("pg-canvas-empty");
-  const canvasTrySceneBtn = document.getElementById("pg-canvas-try-scene");
-  const canvasTryPlayBtn = document.getElementById("pg-canvas-try-play");
   const canvasWrap = document.getElementById("pg-canvas-wrap");
   const canvas = document.getElementById("pg-canvas");
   const canvasTitleEl = document.getElementById("pg-canvas-title");
@@ -61,23 +59,41 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     output: document.getElementById("panel-output"),
     generated: document.getElementById("panel-generated"),
   };
-  const headerFullscreenBtn = document.getElementById("pg-fullscreen");
+  function isCanvasFullscreen() {
+    if (!canvasWrap) return false;
+    return document.fullscreenElement === canvasWrap || canvasWrap.classList.contains("is-fullscreen");
+  }
   function syncFullscreenUi() {
-    if (!headerFullscreenBtn) return;
-    const isFs = document.fullscreenElement === panels.canvas;
-    headerFullscreenBtn.textContent = isFs ? "Exit Fullscreen" : "Fullscreen";
-    headerFullscreenBtn.setAttribute("aria-pressed", isFs ? "true" : "false");
+    if (!fullscreenBtn) return;
+    const isFs = isCanvasFullscreen();
+    fullscreenBtn.textContent = isFs ? "Exit Fullscreen" : "Fullscreen";
+    fullscreenBtn.setAttribute("aria-pressed", isFs ? "true" : "false");
   }
   function toggleCanvasFullscreen() {
-    if (!panels.canvas) return;
-    if (document.fullscreenElement === panels.canvas) {
+    if (!canvasWrap) return;
+    if (document.fullscreenElement === canvasWrap) {
       if (typeof document.exitFullscreen === "function") void document.exitFullscreen().catch(() => {});
-    } else if (typeof panels.canvas.requestFullscreen === "function") {
-      void panels.canvas.requestFullscreen().catch(() => {});
+      canvasWrap.classList.remove("is-fullscreen");
+      syncFullscreenUi();
+      return;
+    }
+    if (canvasWrap.classList.contains("is-fullscreen")) {
+      canvasWrap.classList.remove("is-fullscreen");
+      syncFullscreenUi();
+      return;
+    }
+    if (typeof canvasWrap.requestFullscreen === "function") {
+      void canvasWrap.requestFullscreen().catch(() => {
+        canvasWrap.classList.add("is-fullscreen");
+        syncFullscreenUi();
+      });
+    } else {
+      canvasWrap.classList.add("is-fullscreen");
+      syncFullscreenUi();
     }
   }
-  if (headerFullscreenBtn) {
-    headerFullscreenBtn.addEventListener("click", toggleCanvasFullscreen);
+  if (fullscreenBtn && canvasWrap) {
+    fullscreenBtn.addEventListener("click", toggleCanvasFullscreen);
     document.addEventListener("fullscreenchange", syncFullscreenUi);
   }
   if (canvas) {
@@ -411,7 +427,6 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     hasActiveCanvas = Boolean(enabled);
     if (canvasWrap) canvasWrap.hidden = !hasActiveCanvas;
     if (canvasEmptyEl) canvasEmptyEl.hidden = hasActiveCanvas;
-    if (headerFullscreenBtn) headerFullscreenBtn.hidden = !(activeTab === "canvas" && hasActiveCanvas);
   }
   setCanvasEnabled(false);
 
@@ -591,7 +606,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     scrollConsoleToBottom();
   }
 
-  function appendConsoleExit(exitCode, runMs, labelOverride) {
+  function appendConsoleExit(exitCode, _runMs, labelOverride) {
     if (!consoleLogEl) return;
     const wrap = document.createElement("div");
     const badge = document.createElement("span");
@@ -600,8 +615,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     if (labelOverride) {
       badge.textContent = labelOverride;
     } else {
-      const timeSuffix = typeof runMs === "number" ? " · " + String(runMs) + " ms" : "";
-      badge.textContent = "[exited " + String(exitCode ?? 0) + timeSuffix + "]";
+      badge.textContent = "exit " + String(exitCode ?? 0);
     }
     wrap.appendChild(badge);
     consoleLogEl.appendChild(wrap);
@@ -842,7 +856,6 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     if (codeModesBar) codeModesBar.hidden = name !== "generated";
     copyBtn.hidden = name === "canvas";
     pauseBtn.hidden = !showPause;
-    if (headerFullscreenBtn) headerFullscreenBtn.hidden = !(name === "canvas" && hasActiveCanvas);
     statusEl.hidden = showPause && statusEl.textContent !== "Modified";
     syncConsolePromptUi();
     if (name === "canvas" && hasActiveCanvas) stage.resumeLoop();
@@ -928,7 +941,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     consoleState.fallbackSession = null;
     if (fromUser) {
       appendConsoleSpan("stderr", "^C\\n");
-      appendConsoleExit(130, null, "[killed · exit 130]");
+      appendConsoleExit(130, null, "exit 130");
       statusEl.hidden = false;
       statusEl.textContent = "Killed (exit 130)";
       consoleState.lastOutputData = {
@@ -1160,7 +1173,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       const cmd = formatCommandLine(sample.args, sample.stdin);
       appendConsoleCommand(cmd);
       if (sample.output) appendConsoleSpan("stdout", sample.output + (sample.output.endsWith("\\n") ? "" : "\\n"));
-      appendConsoleExit(0, null, "[exited 0 · verified]");
+      appendConsoleExit(0, null, "exit 0");
       statusEl.textContent = "Exited 0 (verified)";
       consoleState.lastOutputData = {
         statusText: "Verified output ready",
@@ -1594,6 +1607,12 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   compileBtn.addEventListener("click", () => { void runAction("compile"); });
   playBtn.addEventListener("click", () => { stage.unlockAudio(); void runAction("play"); });
 
+  const shareModal = document.getElementById("pg-share-modal");
+  const shareCloseBtn = document.getElementById("pg-share-close");
+  const shareUrlEl = document.getElementById("pg-share-url");
+  const shareMetaEl = document.getElementById("pg-share-meta");
+  const shareCopyBtn = document.getElementById("pg-share-copy");
+  let shareCopyTimer = 0;
   if (shareBtn) {
     shareBtn.addEventListener("click", () => {
       const encoded = encodeSharePayload({
@@ -1605,34 +1624,56 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       const shareUrl = new URL(window.location.href);
       shareUrl.search = "";
       shareUrl.hash = "#code=" + encoded;
-      window.history.replaceState({}, "", shareUrl);
-      statusEl.hidden = false;
-      statusEl.textContent = "Share link encoded in URL";
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(String(shareUrl)).then(() => {
-          statusEl.textContent = "Share link copied to clipboard";
-        }, () => {});
+      const urlText = String(shareUrl);
+      if (shareUrlEl) shareUrlEl.value = urlText;
+      if (shareMetaEl) shareMetaEl.textContent = String(urlText.length) + " chars";
+      if (shareModal) {
+        shareModal.hidden = false;
+        if (shareUrlEl) {
+          shareUrlEl.focus();
+          if (typeof shareUrlEl.select === "function") shareUrlEl.select();
+        }
       }
+      statusEl.hidden = false;
+      statusEl.textContent = "Share link ready";
     });
+  }
+  if (shareModal) {
+    if (shareCloseBtn) {
+      shareCloseBtn.addEventListener("click", () => { shareModal.hidden = true; });
+    }
+    shareModal.addEventListener("click", (ev) => {
+      if (ev.target === shareModal) shareModal.hidden = true;
+    });
+    if (shareCopyBtn && shareUrlEl) {
+      shareCopyBtn.addEventListener("click", () => {
+        const text = shareUrlEl.value || "";
+        if (!text) return;
+        const markCopied = () => {
+          shareCopyBtn.textContent = "Copied";
+          if (shareCopyTimer) window.clearTimeout(shareCopyTimer);
+          shareCopyTimer = window.setTimeout(() => { shareCopyBtn.textContent = "Copy Link"; }, 1600);
+          statusEl.hidden = false;
+          statusEl.textContent = "Share link copied to clipboard";
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(markCopied, () => {});
+        }
+      });
+    }
   }
 
-  if (fullscreenBtn && canvasWrap) {
-    function setCanvasFullscreen(next) {
-      canvasWrap.classList.toggle("is-fullscreen", next);
-      fullscreenBtn.setAttribute("aria-pressed", next ? "true" : "false");
-      fullscreenBtn.textContent = next ? "Exit Fullscreen" : "Fullscreen";
-    }
-    fullscreenBtn.addEventListener("click", () => {
-      setCanvasFullscreen(!canvasWrap.classList.contains("is-fullscreen"));
-    });
-    document.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape") {
-        if (canvasWrap.classList.contains("is-fullscreen")) setCanvasFullscreen(false);
-        if (sketchesModal && !sketchesModal.hidden) sketchesModal.hidden = true;
-        if (compilerOptsModal && !compilerOptsModal.hidden) compilerOptsModal.hidden = true;
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") {
+      if (canvasWrap && canvasWrap.classList.contains("is-fullscreen")) {
+        canvasWrap.classList.remove("is-fullscreen");
+        syncFullscreenUi();
       }
-    });
-  }
+      if (sketchesModal && !sketchesModal.hidden) sketchesModal.hidden = true;
+      if (compilerOptsModal && !compilerOptsModal.hidden) compilerOptsModal.hidden = true;
+      if (shareModal && !shareModal.hidden) shareModal.hidden = true;
+    }
+  });
 
   let copyTimer = 0;
   copyBtn.addEventListener("click", () => {
@@ -1740,10 +1781,42 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   const sketchesClear = document.getElementById("pg-sketches-clear");
   const sketchesFilter = document.getElementById("pg-sketches-filter");
   const sketchesSummary = document.getElementById("pg-sketches-summary");
+  const sketchesTagsEl = document.getElementById("pg-sketches-tags");
   const sketchesList = document.getElementById("pg-sketches-list");
   const catTabs = Array.from(document.querySelectorAll("#pg-sketches-cat-tabs .snips-cat-tab"));
+  const POPULAR_TAGS = ["canvas", "surface", "audio", "game", "play", "input", "args", "output", "file", "loops", "collections", "math", "cli"];
   let activeCat = "all";
+  let activeTag = "";
   let clearArmed = false;
+
+  function renderTagBar() {
+    if (!sketchesTagsEl) return;
+    sketchesTagsEl.innerHTML = "";
+    const availableCounts = new Map();
+    if (Array.isArray(libraryItems)) {
+      for (const item of libraryItems) {
+        if (activeCat !== "all" && activeCat !== "saved" && item.category !== activeCat) continue;
+        for (const tag of Array.isArray(item.tags) ? item.tags : []) {
+          availableCounts.set(tag, (availableCounts.get(tag) || 0) + 1);
+        }
+      }
+    }
+    const tagsToShow = POPULAR_TAGS.filter((t) => !libraryItems || (availableCounts.get(t) || 0) > 0 || t === activeTag);
+    for (const tag of tagsToShow) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "snips-tag-chip";
+      const count = availableCounts.get(tag);
+      btn.textContent = "#" + tag + (count ? " " + String(count) : "");
+      btn.setAttribute("aria-pressed", activeTag === tag ? "true" : "false");
+      btn.addEventListener("click", () => {
+        activeTag = activeTag === tag ? "" : tag;
+        renderTagBar();
+        renderSketchesList();
+      });
+      sketchesTagsEl.appendChild(btn);
+    }
+  }
 
   function renderSavedRow(item) {
     const row = document.createElement("article");
@@ -1891,6 +1964,25 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     fileCode.textContent = item.file;
     meta.appendChild(fileCode);
 
+    const itemTags = Array.isArray(item.tags) ? item.tags : [];
+    let tagsWrap = null;
+    if (itemTags.length > 0) {
+      tagsWrap = document.createElement("div");
+      tagsWrap.className = "snips-item-tags";
+      for (const tag of itemTags.slice(0, 8)) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "snips-item-tag";
+        chip.textContent = "#" + tag;
+        chip.addEventListener("click", () => {
+          activeTag = activeTag === tag ? "" : tag;
+          renderTagBar();
+          renderSketchesList();
+        });
+        tagsWrap.appendChild(chip);
+      }
+    }
+
     const preview = document.createElement("pre");
     preview.className = "snips-preview";
     preview.textContent = (String(item.source || "").split("\\n").find((l) => l.trim() !== "") || "(empty)").trim();
@@ -1909,9 +2001,30 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
 
     row.appendChild(head);
     row.appendChild(meta);
+    if (tagsWrap) row.appendChild(tagsWrap);
     row.appendChild(preview);
     row.appendChild(actions);
     return row;
+  }
+
+  function scoreLibraryMatch(item, queryTokens) {
+    const tags = Array.isArray(item.tags) ? item.tags : [];
+    const title = String(item.title || "").toLowerCase();
+    const file = String(item.file || "").toLowerCase();
+    const badge = String(item.badge || "").toLowerCase();
+    const source = String(item.source || "").toLowerCase();
+    let score = 0;
+    for (const rawTok of queryTokens) {
+      const tok = rawTok.replace(/^#/, "");
+      if (!tok) continue;
+      if (tags.includes(tok)) { score += 50; continue; }
+      if (tags.some((t) => t.startsWith(tok))) { score += 35; continue; }
+      if (title.includes(tok)) { score += 20; continue; }
+      if (file.includes(tok) || badge.includes(tok)) { score += 12; continue; }
+      if (source.includes(tok)) { score += 3; continue; }
+      return 0;
+    }
+    return score;
   }
 
   function renderSketchesList() {
@@ -1919,8 +2032,9 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     const savedAll = snipsApi ? snipsApi.list() : [];
     const libAll = Array.isArray(libraryItems) ? libraryItems : [];
     const q = sketchesFilter ? sketchesFilter.value.trim().toLowerCase() : "";
+    const queryTokens = q ? q.split(/\\s+/).filter(Boolean) : [];
 
-    const showSaved = activeCat === "all" || activeCat === "saved";
+    const showSaved = (activeCat === "all" || activeCat === "saved") && !activeTag;
     const filteredSaved = showSaved
       ? (q
           ? savedAll.filter((item) =>
@@ -1932,18 +2046,24 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
           : savedAll)
       : [];
 
-    const filteredLib = activeCat === "saved"
-      ? []
-      : libAll.filter((item) => {
-          if (activeCat !== "all" && item.category !== activeCat) return false;
-          if (!q) return true;
-          return (
-            item.title.toLowerCase().includes(q) ||
-            item.file.toLowerCase().includes(q) ||
-            item.badge.toLowerCase().includes(q) ||
-            item.source.toLowerCase().includes(q)
-          );
-        });
+    const scoredLib = [];
+    if (activeCat !== "saved") {
+      for (const item of libAll) {
+        if (activeCat !== "all" && item.category !== activeCat) continue;
+        const itemTags = Array.isArray(item.tags) ? item.tags : [];
+        if (activeTag && !itemTags.includes(activeTag)) continue;
+        if (queryTokens.length === 0) {
+          scoredLib.push({ item, score: 1 });
+        } else {
+          const s = scoreLibraryMatch(item, queryTokens);
+          if (s > 0) scoredLib.push({ item, score: s });
+        }
+      }
+    }
+    if (queryTokens.length > 0) {
+      scoredLib.sort((a, b) => b.score - a.score);
+    }
+    const filteredLib = scoredLib.map((entry) => entry.item);
 
     const totalShown = filteredSaved.length + filteredLib.length;
     if (sketchesSummary) {
@@ -2028,6 +2148,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     tab.addEventListener("click", () => {
       activeCat = tab.dataset.cat || "all";
       for (const t of catTabs) t.setAttribute("aria-pressed", t === tab ? "true" : "false");
+      renderTagBar();
       renderSketchesList();
     });
   }
@@ -2036,11 +2157,15 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     sketchesBtn.addEventListener("click", () => {
       clearArmed = false;
       if (sketchesClear) sketchesClear.textContent = "Clear Saved";
+      renderTagBar();
       renderSketchesList();
       sketchesModal.hidden = false;
       if (sketchesFilter) sketchesFilter.focus();
       if (!libraryItems) {
-        void loadLibraryCatalog().then(() => renderSketchesList());
+        void loadLibraryCatalog().then(() => {
+          renderTagBar();
+          renderSketchesList();
+        });
       }
     });
     if (sketchesClose) {
@@ -2052,19 +2177,35 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     if (sketchesFilter) {
       sketchesFilter.addEventListener("input", renderSketchesList);
     }
-    if (sketchesNew && snipsApi) {
+    if (sketchesNew) {
       sketchesNew.addEventListener("click", () => {
-        const created = snipsApi.saveNew({
-          title: "Custom Sketch",
-          code: 'io := import "core/io";\\n\\nio.outputLine("Hello from Lite!");\\n',
-          stdin: "",
-          args: "",
-          origin: "custom",
-        });
-        if (created) {
-          loadSnip(created.id);
-          sketchesModal.hidden = true;
-        }
+        killActiveRun(false);
+        stopPlay(true);
+        editorCtrl.clearErrors();
+        activeSnipId = null;
+        activeLibraryItem = null;
+        currentSample = null;
+        currentExtraModules = null;
+        currentEnvironment = "universal";
+        editorCtrl.setValue('io := import "core/io";\\n\\nio.outputLine("Hello from Lite!");\\n');
+        stdinEl.value = "";
+        argsEl.value = "";
+        if (titleEl) titleEl.textContent = "Custom Sketch";
+        fileEl.textContent = "playground.lts";
+        rawTs = "";
+        rawC = "";
+        cMessage = "/* Press Compile or select C to emit C. */";
+        lastCSource = null;
+        renderCodeViews();
+        setBaseline();
+        clearConsoleLog();
+        consoleState.lastCommand = formatCommandLine([], "");
+        appendConsoleSpan("sys", "New sketch ready — press Play to run or Save to store\\n");
+        syncConsolePromptUi();
+        renderOutputCards();
+        statusEl.textContent = "New sketch";
+        setPlaygroundQuery("", "");
+        sketchesModal.hidden = true;
       });
     }
     if (sketchesClear && snipsApi) {
@@ -2115,28 +2256,32 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   function loadTemplate(key, autoRun) {
     const tpl = key ? STARTER_TEMPLATES[key] : null;
     if (!tpl) return;
-    if (snipsApi) {
-      const created = snipsApi.saveNew({
-        title: tpl.title,
-        code: tpl.code,
-        stdin: tpl.stdin,
-        args: tpl.args,
-        origin: "template:" + key,
-      });
-      if (created) {
-        loadSnip(created.id);
-        if (sketchesModal) sketchesModal.hidden = true;
-        if (autoRun) { stage.unlockAudio(); void runAction("play"); }
-        return;
-      }
-    }
+    killActiveRun(false);
     stopPlay(true);
     editorCtrl.clearErrors();
+    activeSnipId = null;
+    activeLibraryItem = null;
+    currentSample = null;
+    currentExtraModules = null;
+    currentEnvironment = "universal";
     editorCtrl.setValue(tpl.code);
     stdinEl.value = tpl.stdin.replaceAll("\\n", "\\\\n");
     argsEl.value = tpl.args;
     if (titleEl) titleEl.textContent = tpl.title;
+    fileEl.textContent = "playground.lts";
+    rawTs = "";
+    rawC = "";
+    cMessage = "/* Press Compile or select C to emit C. */";
+    lastCSource = null;
+    renderCodeViews();
     setBaseline();
+    clearConsoleLog();
+    consoleState.lastCommand = formatCommandLine(parseArgs(), tpl.stdin);
+    appendConsoleSpan("sys", "Loaded template: " + tpl.title + " — press Play or Enter to run\\n");
+    syncConsolePromptUi();
+    renderOutputCards();
+    statusEl.textContent = "Loaded template: " + tpl.title;
+    setPlaygroundQuery("", "");
     if (sketchesModal) sketchesModal.hidden = true;
     if (autoRun) { stage.unlockAudio(); void runAction("play"); }
   }
@@ -2144,12 +2289,6 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     tplBtn.addEventListener("click", () => {
       loadTemplate(tplBtn.getAttribute("data-template"), false);
     });
-  }
-  if (canvasTrySceneBtn) {
-    canvasTrySceneBtn.addEventListener("click", () => { loadTemplate("canvas", true); });
-  }
-  if (canvasTryPlayBtn) {
-    canvasTryPlayBtn.addEventListener("click", () => { loadTemplate("play", true); });
   }
 
   if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
@@ -2208,7 +2347,8 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       else void loadSample(initial, "load");
     });
   }
-  if (!loadedDraft && urlParams.get("draft") === "gym" && typeof sessionStorage !== "undefined") {
+  const draftParam = urlParams.get("draft");
+  if (!loadedDraft && (draftParam === "gym" || draftParam === "snippet") && typeof sessionStorage !== "undefined") {
     try {
       const rawDraft = sessionStorage.getItem("lite-playground-draft-v1");
       if (rawDraft) {
@@ -2216,20 +2356,21 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         if (draft && typeof draft.source === "string") {
           editorCtrl.setValue(draft.source);
           stdinEl.value = String(draft.stdin || "").replaceAll("\\n", "\\\\n");
-          argsEl.value = "";
-          fileEl.textContent = (draft.title || "gym") + ".lts";
+          argsEl.value = String(draft.args || "");
+          if (titleEl) titleEl.textContent = draft.title || (draftParam === "gym" ? "Gym Draft" : "Snippet");
+          fileEl.textContent = "playground.lts";
           rawTs = "";
           rawC = "";
-          cMessage = "/* Press Compile or open Generated C to emit C. */";
+          cMessage = "/* Press Compile or select C to emit C. */";
           lastCSource = null;
           renderCodeViews();
           setBaseline();
           clearConsoleLog();
-          consoleState.lastCommand = formatCommandLine([], "");
-          appendConsoleSpan("sys", "Loaded from Lite Gym — press Play or Enter to run\\n");
+          consoleState.lastCommand = formatCommandLine(parseArgs(), String(draft.stdin || ""));
+          appendConsoleSpan("sys", "Loaded " + (draft.title || "draft") + " — press Play or Enter to run\\n");
           syncConsolePromptUi();
           renderOutputCards();
-          statusEl.textContent = "Loaded from Lite Gym — press Play";
+          statusEl.textContent = "Loaded " + (draft.title || "draft") + " — press Play";
           loadedDraft = true;
         }
       }

@@ -220,12 +220,25 @@ export const snipsClientJs = `(function () {
         var existing = api.get(idOrDraft);
         if (existing) targetId = existing.id;
       }
-      if (!targetId && idOrDraft && typeof idOrDraft === "object") {
-        var created = api.saveNew(idOrDraft);
-        targetId = created ? created.id : "";
+      if (targetId) {
+        window.location.href = getBasePath() + "playground/?snip=" + encodeURIComponent(targetId);
+        return;
       }
-      var href = getBasePath() + "playground/" + (targetId ? "?snip=" + encodeURIComponent(targetId) : "");
-      window.location.href = href;
+      if (idOrDraft && typeof idOrDraft === "object") {
+        try {
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.setItem("lite-playground-draft-v1", JSON.stringify({
+              title: idOrDraft.title ? String(idOrDraft.title).trim() : "Snippet",
+              source: typeof idOrDraft.code === "string" ? idOrDraft.code : "",
+              stdin: typeof idOrDraft.stdin === "string" ? idOrDraft.stdin : "",
+              args: typeof idOrDraft.args === "string" ? idOrDraft.args : ""
+            }));
+          }
+        } catch (e) {}
+        window.location.href = getBasePath() + "playground/?draft=snippet";
+        return;
+      }
+      window.location.href = getBasePath() + "playground/";
     }
   };
 
@@ -440,19 +453,7 @@ export const snipsClientJs = `(function () {
           copySnippetBtn.addEventListener("click", (function (el, b) {
             return function () { copyText((el.textContent || "").replace(/\\n$/, ""), b); };
           })(pre, copySnippetBtn));
-          var saveSnippetBtn = makeActionBtn("Save");
-          saveSnippetBtn.addEventListener("click", (function (el, b) {
-            return function () {
-              api.saveNew({
-                title: inferTitleForPre(el),
-                code: el.textContent || "",
-                origin: currentOriginLabel()
-              });
-              flashButton(b, "Saved");
-            };
-          })(pre, saveSnippetBtn));
           actionsWrap.appendChild(copySnippetBtn);
-          actionsWrap.appendChild(saveSnippetBtn);
           foot.insertBefore(actionsWrap, foot.lastElementChild);
         }
         continue;
@@ -469,19 +470,7 @@ export const snipsClientJs = `(function () {
           copyCardBtn.addEventListener("click", (function (el, b) {
             return function () { copyText((el.textContent || "").replace(/\\n$/, ""), b); };
           })(pre, copyCardBtn));
-          var saveCardBtn = makeActionBtn("Save");
-          saveCardBtn.addEventListener("click", (function (el, b) {
-            return function () {
-              api.saveNew({
-                title: inferTitleForPre(el),
-                code: el.textContent || "",
-                origin: currentOriginLabel()
-              });
-              flashButton(b, "Saved");
-            };
-          })(pre, saveCardBtn));
           cardActions.appendChild(copyCardBtn);
-          cardActions.appendChild(saveCardBtn);
           sampleFoot.insertBefore(cardActions, sampleFoot.lastElementChild);
         }
         continue;
@@ -514,19 +503,6 @@ export const snipsClientJs = `(function () {
       bar.appendChild(copyBtn);
 
       if (isLiteBlock) {
-        var saveBtn = makeActionBtn("Save");
-        saveBtn.addEventListener("click", (function (el, b) {
-          return function () {
-            api.saveNew({
-              title: inferTitleForPre(el),
-              code: (el.textContent || "").replace(/\\n$/, ""),
-              origin: currentOriginLabel()
-            });
-            flashButton(b, "Saved");
-          };
-        })(pre, saveBtn));
-        bar.appendChild(saveBtn);
-
         if (builtinPlayHref) {
           var playLink = document.createElement("a");
           playLink.className = "lite-snip-btn lite-snip-play";
