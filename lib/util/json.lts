@@ -476,11 +476,12 @@ pub objectKeys := fn(source: String, objectStart: Int): List<String> {
     keys
 }
 
-/** Formats `value` as a quoted JSON string literal. */
+/** Formats `value` as a quoted JSON string literal in O(N) time using `TextBuilder`. */
 pub quoteString := fn(value: String): String {
     cps := unicode.toCodePoints(value);
     size := list.listCountInt(cps);
-    var out := "\"";
+    out: mut tb.TextBuilder;
+    tb.append(mut out, "\"");
     var runStart := 0;
     var i := 0;
     loop i < size {
@@ -497,12 +498,13 @@ pub quoteString := fn(value: String): String {
             esc = "\\u00" + hexCharLower(cp / 16) + hexCharLower(cp % 16);
         }
         if esc =!= "" {
-            if i > runStart { out = out + text.slice(value, runStart, i); }
-            out = out + esc;
+            if i > runStart { tb.append(mut out, text.slice(value, runStart, i)); }
+            tb.append(mut out, esc);
             runStart = i + 1;
         }
         i = i + 1;
     }
-    if runStart < size { out = out + text.slice(value, runStart, size); }
-    out + "\""
+    if runStart < size { tb.append(mut out, text.slice(value, runStart, size)); }
+    tb.append(mut out, "\"");
+    tb.build(out)
 }
