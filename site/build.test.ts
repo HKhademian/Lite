@@ -446,7 +446,8 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="tab-canvas"'));
   assert(playground.includes('id="tab-output"'));
   assert(playground.includes('id="tab-generated"'));
-  assert(playground.includes('id="tab-canvas" class="pg-tab" role="tab" data-tab="canvas" aria-selected="false" type="button" disabled aria-disabled="true"'));
+  assert(playground.includes('id="tab-canvas" class="pg-tab" role="tab" data-tab="canvas" aria-selected="false" type="button">Canvas</button>'));
+  assert(playground.includes('id="pg-canvas-empty"'));
   assert(playground.includes('id="pg-console"'));
   assert(playground.includes('id="pg-eof"'));
   assert(playground.includes('id="pg-kill"'));

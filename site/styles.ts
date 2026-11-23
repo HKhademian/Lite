@@ -1677,6 +1677,56 @@ body.pg-resizing {
   overflow: hidden;
   background: #0B0C0E;
 }
+.pg-canvas-wrap[hidden] { display: none; }
+.pg-canvas-empty {
+  flex: 1 1 auto;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: #0b0c0e;
+  color: #e6e7ea;
+}
+.pg-canvas-empty[hidden] { display: none; }
+.pg-canvas-empty-frame {
+  max-width: 420px;
+  width: 100%;
+  padding: 1.4rem 1.5rem;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+.pg-canvas-empty-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f4f4f6;
+}
+.pg-canvas-empty-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #9ca3af;
+}
+.pg-canvas-empty-desc code {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 0.08rem 0.32rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+.pg-canvas-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
 .pg-canvas-bar {
   display: flex;
   align-items: center;

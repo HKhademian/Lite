@@ -34,6 +34,9 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   const langButtons = Array.from(document.querySelectorAll(".code-lang-btn"));
   const modeButtons = Array.from(document.querySelectorAll(".code-mode-btn"));
   const tabCanvas = document.getElementById("tab-canvas");
+  const canvasEmptyEl = document.getElementById("pg-canvas-empty");
+  const canvasTrySceneBtn = document.getElementById("pg-canvas-try-scene");
+  const canvasTryPlayBtn = document.getElementById("pg-canvas-try-play");
   const canvasWrap = document.getElementById("pg-canvas-wrap");
   const canvas = document.getElementById("pg-canvas");
   const canvasTitleEl = document.getElementById("pg-canvas-title");
@@ -403,16 +406,12 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   });
   stage.syncPauseUi(false, false);
 
+  let hasActiveCanvas = false;
   function setCanvasEnabled(enabled) {
-    if (!tabCanvas) return;
-    tabCanvas.disabled = !enabled;
-    tabCanvas.setAttribute("aria-disabled", enabled ? "false" : "true");
-    tabCanvas.title = enabled
-      ? "Interactive canvas stage"
-      : "No canvas rendered — run a program using extra/canvas";
-    if (!enabled && activeTab === "canvas") {
-      showTab("console");
-    }
+    hasActiveCanvas = Boolean(enabled);
+    if (canvasWrap) canvasWrap.hidden = !hasActiveCanvas;
+    if (canvasEmptyEl) canvasEmptyEl.hidden = hasActiveCanvas;
+    if (headerFullscreenBtn) headerFullscreenBtn.hidden = !(activeTab === "canvas" && hasActiveCanvas);
   }
   setCanvasEnabled(false);
 
@@ -832,7 +831,6 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   });
 
   function showTab(name) {
-    if (name === "canvas" && tabCanvas && tabCanvas.disabled) return;
     activeTab = name;
     for (const tab of tabs) {
       tab.setAttribute("aria-selected", tab.dataset.tab === name ? "true" : "false");
@@ -844,10 +842,10 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     if (codeModesBar) codeModesBar.hidden = name !== "generated";
     copyBtn.hidden = name === "canvas";
     pauseBtn.hidden = !showPause;
-    if (headerFullscreenBtn) headerFullscreenBtn.hidden = name !== "canvas";
+    if (headerFullscreenBtn) headerFullscreenBtn.hidden = !(name === "canvas" && hasActiveCanvas);
     statusEl.hidden = showPause && statusEl.textContent !== "Modified";
     syncConsolePromptUi();
-    if (name === "canvas") stage.resumeLoop();
+    if (name === "canvas" && hasActiveCanvas) stage.resumeLoop();
     else stage.pauseLoop();
     if (name === "generated") {
       renderCodeViews();
@@ -859,9 +857,8 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
 
   for (const tab of tabs) {
     tab.addEventListener("click", () => {
-      if (tab.disabled) return;
       showTab(tab.dataset.tab);
-      if (tab.dataset.tab === "canvas") canvas.focus({ preventScroll: true });
+      if (tab.dataset.tab === "canvas" && hasActiveCanvas) canvas.focus({ preventScroll: true });
       if (tab.dataset.tab === "console" && consoleInputEl) consoleInputEl.focus({ preventScroll: true });
     });
   }
@@ -2115,34 +2112,44 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       args: "",
     },
   };
+  function loadTemplate(key, autoRun) {
+    const tpl = key ? STARTER_TEMPLATES[key] : null;
+    if (!tpl) return;
+    if (snipsApi) {
+      const created = snipsApi.saveNew({
+        title: tpl.title,
+        code: tpl.code,
+        stdin: tpl.stdin,
+        args: tpl.args,
+        origin: "template:" + key,
+      });
+      if (created) {
+        loadSnip(created.id);
+        if (sketchesModal) sketchesModal.hidden = true;
+        if (autoRun) { stage.unlockAudio(); void runAction("play"); }
+        return;
+      }
+    }
+    stopPlay(true);
+    editorCtrl.clearErrors();
+    editorCtrl.setValue(tpl.code);
+    stdinEl.value = tpl.stdin.replaceAll("\\n", "\\\\n");
+    argsEl.value = tpl.args;
+    if (titleEl) titleEl.textContent = tpl.title;
+    setBaseline();
+    if (sketchesModal) sketchesModal.hidden = true;
+    if (autoRun) { stage.unlockAudio(); void runAction("play"); }
+  }
   for (const tplBtn of document.querySelectorAll("[data-template]")) {
     tplBtn.addEventListener("click", () => {
-      const key = tplBtn.getAttribute("data-template");
-      const tpl = key ? STARTER_TEMPLATES[key] : null;
-      if (!tpl) return;
-      if (snipsApi) {
-        const created = snipsApi.saveNew({
-          title: tpl.title,
-          code: tpl.code,
-          stdin: tpl.stdin,
-          args: tpl.args,
-          origin: "template:" + key,
-        });
-        if (created) {
-          loadSnip(created.id);
-          if (sketchesModal) sketchesModal.hidden = true;
-          return;
-        }
-      }
-      stopPlay(true);
-      editorCtrl.clearErrors();
-      editorCtrl.setValue(tpl.code);
-      stdinEl.value = tpl.stdin.replaceAll("\\n", "\\\\n");
-      argsEl.value = tpl.args;
-      if (titleEl) titleEl.textContent = tpl.title;
-      setBaseline();
-      if (sketchesModal) sketchesModal.hidden = true;
+      loadTemplate(tplBtn.getAttribute("data-template"), false);
     });
+  }
+  if (canvasTrySceneBtn) {
+    canvasTrySceneBtn.addEventListener("click", () => { loadTemplate("canvas", true); });
+  }
+  if (canvasTryPlayBtn) {
+    canvasTryPlayBtn.addEventListener("click", () => { loadTemplate("play", true); });
   }
 
   if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
