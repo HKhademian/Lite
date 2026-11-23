@@ -174,6 +174,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     'docs/handbook/tuples-arrays-lists-and-aliases.html',
     'docs/handbook/blocks-wiring-and-closures.html',
     'docs/handbook/imports-visibility-and-io.html',
+    'docs/handbook/graphics-surfaces-and-play.html',
+    'docs/handbook/math-vectors-and-matrices.html',
+    'docs/handbook/data-structures-and-memory.html',
+    'docs/handbook/native-c11-and-optimization.html',
     'docs/design/overview.html',
     'docs/design/start-here.html',
     'docs/proposals/LP-0001-operation-specific-panic-recovery.html',
@@ -1813,8 +1817,8 @@ test('academy-state runtime initializes window.LiteAcademy and aggregates progre
   assert.equal(lessonsStat.textContent, '1');
   assert.equal(gymStat.textContent, '2');
   assert.equal(hbStat.textContent, '1');
-  assert.equal(hbProgLabel.textContent, '1 / 7 chapters read');
-  assert.equal(hbProgFill.style.width, '14%');
+  assert.equal(hbProgLabel.textContent, '1 / 11 chapters read');
+  assert.equal(hbProgFill.style.width, '9%');
 });
 
 test('lite:// internal URI parser, resolver, broken-link rejection, and link-graph.json integrity', () => {

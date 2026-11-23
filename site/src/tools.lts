@@ -45,35 +45,44 @@ slugifyCommandName := fn(name: String): String {
 /** Builds JSON `{"body": "...", "searchEntries": [...]}` for the `/tools/` site section. */
 pub buildToolsPayloadJson := fn(repoUrl: String): String {
     cmdNames: List<String> = [
-    "run", "compile", "check", "fmt", "test", "verify", "docs", "doctor", "bench & release"
+    "run", "play", "build", "compile", "check", "fmt", "ignite", "test", "verify", "docs", "doctor", "bench & release"
     ];
     cmdSynopses: List<String> = [
-    "./bin/lite run [--builtin-mode SPEC] file.lts [-- arg ...]",
-    "./bin/lite compile [--target ts] [--builtin-mode SPEC] file.lts",
+    "./bin/lite run [--target ts|c] [-O0..-O3|-Os] [--builtin-mode SPEC] file.lts [-- arg ...]",
+    "./bin/lite play [--fullscreen] [--hide-bar] [--debug] file.lts",
+    "./bin/lite build [-O0..-O3|-Os] [--output FILE] file.lts",
+    "./bin/lite compile [--target ts|c] [-O0..-O3|-Os] [--builtin-mode SPEC] file.lts",
     "./bin/lite check [--builtin-mode SPEC] file.lts",
     "./bin/lite fmt [--check] [FILE_OR_DIR... | -]",
-    "./bin/lite test [--smoke|--fast|--full] | --cases [FILTER]",
+    "./bin/lite ignite [--target c|ts|auto] [--check|--force|--clean|--wipe] [TOOL...]",
+    "./bin/lite test [--smoke|--fast|--full|--unit FILTER] | --cases [FILTER]",
     "./bin/lite verify [--all|--update|--coverage|FILE.case.json]",
     "./bin/lite docs [QUERY|--json|--render-json|--modules-json|--check]",
     "./bin/lite doctor [--docs]",
     "./bin/lite bench OUTPUT [FILTER] | ./bin/lite release OUTPUT [TAG]"
     ];
     cmdSummaries: List<String> = [
-    "Compiles a Lite source file to a temporary TypeScript artifact and executes it immediately through the Node entry runner, forwarding arguments and stdin.",
-    "Emits generated TypeScript to stdout cleanly without running the program. Direct compiler wrappers `./bin/lite-compile-ts` and `./bin/lite-compile-c` target TS or C directly.",
-    "Parses, typechecks, and validates execution-trace safety on a Lite file without executing it.",
+    "Compiles a Lite source file to a temporary TypeScript or native C11 artifact and executes it immediately, forwarding arguments and stdin.",
+    "Launches interactive `extra/canvas` and `extra/audio` Play games in a native resizable/fullscreenable desktop window (`extra/surface` + Play Stage bar, `F` fullscreen, `T` FPS, `F12` bar).",
+    "Compiles a Lite source file through the C11 backend and links a standalone native executable with zero Node.js runtime dependency.",
+    "Emits generated TypeScript (`--target ts`) or standalone C11 (`--target c`) to stdout with `-O0..-O3/-Os` optimization levels. Direct wrappers `./bin/lite-compile-ts` and `./bin/lite-compile-c` target each backend directly.",
+    "Parses, typechecks, and validates execution-trace safety on a Lite file across both TS and C11 without executing it.",
     "Formats Lite files idempotently with canonical indentation and brace spacing. Passes malformed files unchanged; `--check` verifies formatting without writing.",
-    "Runs repository verification suites (quiet smoke suite by default, `--fast`, `--full` release-grade sweep, or `--cases` declarative fixture runner).",
-    "Verifies TS compilation, strict typechecking, and runtime outputs across declarative `.case.json` and artifact manifests; `--coverage` checks documented feature/example parity.",
+    "Materializes and verifies Lite-written CLI tools into `dist/tools/` (native C11 binaries by default, or TypeScript with `--target ts`) against `compiler/bootstrap/seed.ts`.",
+    "Runs repository verification suites (quiet smoke suite by default, `--fast`, `--full` release-grade sweep, `--unit NAME`, or `--cases` declarative fixture runner).",
+    "Verifies dual-target TS and C11 compilation, strict typechecking, and runtime outputs across declarative `.case.json` and artifact manifests; `--coverage` checks documented feature/example parity.",
     "Searches repository Markdown documentation, extracts clean HTML/TOC/module API JSON via `util/markdown-html` and `util/docgen`, or validates all local links with `--check`.",
     "Checks repository health, compiler seed integrity, layout consistency, and documentation structure.",
     "Benchmarks verified compiler workloads (`bench`) or packages a reproducible source snapshot (`release`)."
     ];
     cmdExamples: List<String> = [
     "./bin/lite run language/examples/foundations/io/double-sum.lts",
-    "./bin/lite compile language/examples/foundations/io/double-sum.lts > out.ts",
+    "./bin/lite play samples/games/arcade/paddle-pong.lts",
+    "./bin/lite build -O2 language/examples/foundations/io/double-sum.lts -o /tmp/double-sum",
+    "./bin/lite compile --target c -O2 language/examples/foundations/io/double-sum.lts > out.c",
     "./bin/lite check language/showcases/blocks/trace/execution-trace-safety.lts",
     "./bin/lite fmt --check language/examples lib/core tools/src",
+    "./bin/lite ignite --check",
     "./bin/lite test --cases tooling.quality.docs-search",
     "./bin/lite verify --coverage",
     "./bin/lite docs --check",
@@ -82,9 +91,12 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     ];
     cmdExits: List<String> = [
     "Exit 0 on success; non-zero on compile/runtime fault or explicit io.exit(code).",
+    "Exit 0 when the Play window closes cleanly; non-zero on compile or runtime failure.",
+    "Exit 0 after emitting the native executable; non-zero on compile or linker errors.",
     "Exit 0 with generated source on stdout; exit 1 or 2 on diagnostics.",
     "Exit 0 when checks pass; non-zero with line/column diagnostics.",
     "Exit 0 if formatted/clean; exit 1 under `--check` when changes are needed; exit 2 on invalid args.",
+    "Exit 0 when all selected tools are ignited and verified; non-zero on seed or build errors.",
     "Exit 0 when all selected tests and cases pass.",
     "Exit 0 when verified manifests and coverage gates match.",
     "Exit 0 when query/generation succeeds or all Markdown links and anchors resolve.",

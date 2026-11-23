@@ -136,26 +136,38 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     "language/learn/handbook/control/conditionals-match-and-loops.md",
     "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md",
     "language/learn/handbook/execution/blocks-wiring-and-closures.md",
-    "language/learn/handbook/modules/imports-visibility-and-io.md"
+    "language/learn/handbook/modules/imports-visibility-and-io.md",
+    "language/learn/handbook/extra/graphics-surfaces-and-play.md",
+    "language/learn/handbook/extra/math-vectors-and-matrices.md",
+    "language/learn/handbook/extra/data-structures-and-memory.md",
+    "language/learn/handbook/tooling/native-c11-and-optimization.md"
     ];
     hbSlugs: List<String> = [
     "overview-and-setup", "bindings-and-mutability", "numbers-operators-and-strings",
     "conditionals-match-and-loops", "tuples-arrays-lists-and-aliases",
-    "blocks-wiring-and-closures", "imports-visibility-and-io"
+    "blocks-wiring-and-closures", "imports-visibility-and-io",
+    "graphics-surfaces-and-play", "math-vectors-and-matrices",
+    "data-structures-and-memory", "native-c11-and-optimization"
     ];
     hbNavs: List<String> = [
     "1. Overview & Setup", "2. Bindings & Mutability", "3. Numbers, Operators & Strings",
     "4. Conditionals, Match & Loops", "5. Tuples, Arrays, Lists & Aliases",
-    "6. Blocks, Wiring & Closures", "7. Imports, Visibility & I/O"
+    "6. Blocks, Wiring & Closures", "7. Imports, Visibility & I/O",
+    "8. Graphics, Surfaces & Lite Play", "9. Math, Vectors, Matrices & Grids",
+    "10. Data Structures & Memory Pools", "11. Native C11, Optimization & Tooling"
     ];
     hbSums: List<String> = [
-    "Explicit imports, running CLI scripts with ./bin/lite, file kinds, and nestable comments.",
+    "Explicit imports, dual-target TS & C11 toolchain, ./bin/lite commands, file kinds, and nestable comments.",
     "Immutable := defaults, zero-value storage, reserved = ?, var updates, and mut lists.",
-    "Int8..Int64, Float/Float32, / % vs :/ :%, **, =!=, chained comparisons, and core/text.",
-    "Expression if/else, subjectless match, sequence loops, .index/.count/.value, then, @tag, and finally.",
-    "Unnamed/named/mixed tuples, =name shorthand, [T; N] arrays, List<T> snapshots, and type aliases.",
+    "Int8..Int64, Float/Float32, / % vs :/ :%, **, =!=, chained comparisons, core/text, core/math, and core/random.",
+    "Expression if/else, subjectless match, sequence loops, .index/.count/.value/.collected, then, @tag, and finally.",
+    "Unnamed/named/mixed tuples, records, enums, [T; N] arrays, List<T>, Map<K, V>, Set<T>, and type aliases.",
     "Final-item block values, DCE pruning, parallel wiring, execution trace safety, self, and closures.",
-    "Namespace imports, pub boundaries, Browser + CLI vs Host OS modules, and core/io streams."
+    "Namespace imports, pub boundaries, all 36 core/* and extra/* modules, and core/io streams.",
+    "extra/canvas, extra/surface desktop windows, extra/color, extra/audio, extra/board, extra/timer, and ./bin/lite play.",
+    "core/math, core/random, 2D/3D/4D extra/vector, 2x2..4x4 extra/matrix transforms, and flat 2D extra/grid.",
+    "extra/arena, extra/pool, extra/intern, extra/lru, extra/ring, extra/deque, extra/heap, extra/bitset, and extra/sparse.",
+    "Dual-target TS & C11 parity, 3-generation self-hosting, ./bin/lite build, -O0..-O3/-Os, and ./bin/lite ignite."
     ];
 
     metaSrcs: mut List<String> = [];
@@ -400,7 +412,9 @@ handbookPartName := fn(chIdx: Int): String {
     if chIdx == 0 { "Start" }
     else if chIdx <= 3 { "Core Language" }
     else if chIdx <= 5 { "Data & Execution" }
-    else { "Modules & I/O" }
+    else if chIdx == 6 { "Modules & I/O" }
+    else if chIdx <= 9 { "Extra Libraries" }
+    else { "Native & Tooling" }
 };
 
 estimateReadMinutes := fn(html: String): Int {
@@ -821,7 +835,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
 
     pagesJson: mut List<String> = [];
     searchEntriesJson: mut List<String> = [
-    "{\"kind\":\"handbook\",\"title\":\"Single-Page Lite Handbook\",\"subtitle\":\"All 7 Shipped Handbook chapters on one searchable page\",\"href\":\"docs/handbook/single-page.html\",\"keywords\":\"handbook single page complete shipped guide\",\"badge\":\"Handbook\"}",
+    "{\"kind\":\"handbook\",\"title\":\"Single-Page Lite Handbook\",\"subtitle\":\"All " + integer.intText(hbCount) + " Shipped Handbook chapters on one searchable page\",\"href\":\"docs/handbook/single-page.html\",\"keywords\":\"handbook single page complete shipped guide\",\"badge\":\"Handbook\"}",
     "{\"kind\":\"doc\",\"title\":\"Design Specification Index\",\"subtitle\":\"All design documents, LP proposals, and compiler architecture pages\",\"href\":\"docs/spec/\",\"keywords\":\"design spec proposals compiler index\",\"badge\":\"Spec\"}"
     ];
 

@@ -157,12 +157,12 @@ export const academyClientJs = `(function () {
 
     var hbProgLabel = document.getElementById("hb-progress-label");
     if (hbProgLabel) {
-      var readCount = Math.min(7, summary.handbookReadCount);
-      hbProgLabel.textContent = readCount + " / 7 chapters read";
+      var readCount = Math.min(11, summary.handbookReadCount);
+      hbProgLabel.textContent = readCount + " / 11 chapters read";
     }
     var hbProgFill = document.getElementById("hb-progress-fill");
     if (hbProgFill) {
-      hbProgFill.style.width = Math.round((Math.min(7, summary.handbookReadCount) / 7) * 100) + "%";
+      hbProgFill.style.width = Math.round((Math.min(11, summary.handbookReadCount) / 11) * 100) + "%";
     }
   }
 

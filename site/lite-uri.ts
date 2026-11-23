@@ -101,9 +101,12 @@ export type GraphGymSeed = Readonly<{
 
 const KNOWN_TOOL_COMMANDS: readonly Readonly<{ slug: string; title: string; summary: string }>[] = [
   { slug: 'run', title: './bin/lite run', summary: 'Compile and execute a Lite source file immediately.' },
-  { slug: 'compile', title: './bin/lite compile', summary: 'Emit generated TypeScript or C source cleanly.' },
+  { slug: 'play', title: './bin/lite play', summary: 'Launch interactive extra/canvas Play games in a native desktop window.' },
+  { slug: 'build', title: './bin/lite build', summary: 'Compile a Lite source file into a standalone native C11 executable.' },
+  { slug: 'compile', title: './bin/lite compile', summary: 'Emit generated TypeScript or C11 source cleanly.' },
   { slug: 'check', title: './bin/lite check', summary: 'Parse, typecheck, and check execution-trace safety.' },
   { slug: 'fmt', title: './bin/lite fmt', summary: 'Format Lite files with canonical style rules.' },
+  { slug: 'ignite', title: './bin/lite ignite', summary: 'Materialize and verify native C11 or TS tools into dist/tools/.' },
   { slug: 'test', title: './bin/lite test', summary: 'Run fast, full, or case-filtered verification suites.' },
   { slug: 'verify', title: './bin/lite verify', summary: 'Verify coverage, artifact contracts, and manifests.' },
   { slug: 'docs', title: './bin/lite docs', summary: 'Search documentation and verify links/snippets.' },

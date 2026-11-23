@@ -135,7 +135,9 @@ test('all site showcase and play sample sources live outside site/ and match sam
     .filter(s => s.file.startsWith('samples/'))
     .map(s => s.file);
   assert.equal(new Set(catalogFiles).size, catalogFiles.length, 'duplicate samples/ entry in catalog');
-  assert.deepEqual([...catalogFiles].sort(), listSampleFiles(join(root, 'samples')).sort());
+  const browserSampleFiles = listSampleFiles(join(root, 'samples'))
+    .filter(f => !f.startsWith('samples/programs/gui/'));
+  assert.deepEqual([...catalogFiles].sort(), browserSampleFiles.sort());
 
   for (const sample of [...showcaseSamples, ...playSamples]) {
     const expectedFolder = folderByGroup.get(sample.group);

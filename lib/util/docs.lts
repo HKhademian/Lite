@@ -239,7 +239,9 @@ handbookSourceForSlug := fn(slug: String): String {
     hbSlugs: List<String> = [
     "overview-and-setup", "bindings-and-mutability", "numbers-operators-and-strings",
     "conditionals-match-and-loops", "tuples-arrays-lists-and-aliases",
-    "blocks-wiring-and-closures", "imports-visibility-and-io"
+    "blocks-wiring-and-closures", "imports-visibility-and-io",
+    "graphics-surfaces-and-play", "math-vectors-and-matrices",
+    "data-structures-and-memory", "native-c11-and-optimization"
     ];
     hbPaths: List<String> = [
     "language/learn/handbook/getting-started/overview-and-setup.md",
@@ -248,7 +250,11 @@ handbookSourceForSlug := fn(slug: String): String {
     "language/learn/handbook/control/conditionals-match-and-loops.md",
     "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md",
     "language/learn/handbook/execution/blocks-wiring-and-closures.md",
-    "language/learn/handbook/modules/imports-visibility-and-io.md"
+    "language/learn/handbook/modules/imports-visibility-and-io.md",
+    "language/learn/handbook/extra/graphics-surfaces-and-play.md",
+    "language/learn/handbook/extra/math-vectors-and-matrices.md",
+    "language/learn/handbook/extra/data-structures-and-memory.md",
+    "language/learn/handbook/tooling/native-c11-and-optimization.md"
     ];
     hit := list.listIndexOfText(hbSlugs, slug);
     if hit >= 0 { hbPaths[hit] } else { "" }
@@ -581,8 +587,8 @@ cachePaths: List<String>, cachePacked: List<String>
     if ns == "tool" {
         knownTools: List<String> = [
         "", "overview", "cli", "vscode", "playground-host", "bootstrap",
-        "run", "compile", "check", "fmt", "test", "verify", "docs", "doctor", "bench-release",
-        "cmd-run", "cmd-compile", "cmd-check", "cmd-fmt", "cmd-test", "cmd-verify", "cmd-docs", "cmd-doctor", "cmd-bench-release"
+        "run", "play", "build", "compile", "check", "fmt", "ignite", "test", "verify", "docs", "doctor", "bench-release",
+        "cmd-run", "cmd-play", "cmd-build", "cmd-compile", "cmd-check", "cmd-fmt", "cmd-ignite", "cmd-test", "cmd-verify", "cmd-docs", "cmd-doctor", "cmd-bench-release"
         ];
         var toolKey := stripSuffix(target, ".html");
         if toolKey == "" and fragment =!= "" { toolKey = fragment; }
