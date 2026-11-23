@@ -29,7 +29,7 @@ import { playGroups, playSamples, type PlaySample } from './play-samples.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { renderPlaygroundClientScript } from './playground-client.ts';
 import { collectPlaygroundLibrary } from './playground-library.ts';
-import { playgroundWorkerJs } from './playground-worker.ts';
+import { coiServiceWorkerJs, playgroundWorkerJs } from './playground-worker.ts';
 import { renderCodeEditorBlock, renderGeneratedToolbar } from './ui-blocks.ts';
 import { searchClientJs, type SearchEntry } from './search.ts';
 import { snipsClientJs } from './snips.ts';
@@ -348,6 +348,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     writeFileSync(join(targetDir, 'worker.js'), playgroundWorkerJs);
     writeFileSync(join(targetDir, 'stdlib.json'), stdlibJson);
   }
+  writeFileSync(join(outputDir, 'playground', 'coi-serviceworker.js'), coiServiceWorkerJs);
   writeFileSync(join(outputDir, 'runtime', 'academy.js'), academyClientJs);
   writeFileSync(join(outputDir, 'runtime', 'search.js'), searchClientJs);
   writeFileSync(join(outputDir, 'runtime', 'snips.js'), snipsClientJs);

@@ -142,25 +142,128 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     });
   }
   const OPT_STORAGE_KEY = "lite.pg.optLevel";
+  const COMPILER_OPTS_STORAGE_KEY = "lite.pg.compilerOpts";
+  const DEFAULT_COMPILER_OPTS = { preset: 1, emitFormat: "auto", sourceMap: "auto", passes: {} };
+  const compilerOptsBtn = document.getElementById("pg-compiler-opts-btn");
+  const compilerOptsDot = document.getElementById("pg-opts-dot");
+  const compilerOptsModal = document.getElementById("pg-compiler-opts-modal");
+  const compilerOptsResetBtn = document.getElementById("pg-opts-reset");
+  const compilerOptsCloseBtn = document.getElementById("pg-opts-close");
+  const compilerOptsApplyBtn = document.getElementById("pg-opts-apply");
+  const compilerOptsPresetEl = document.getElementById("pg-opts-preset");
+  const compilerOptsEmitFmtEl = document.getElementById("pg-opts-emit-format");
+  const compilerOptsSourceMapEl = document.getElementById("pg-opts-source-map");
+  const compilerOptsCliEl = document.getElementById("pg-opts-cli-preview");
+  const compilerPassSelects = Array.from(document.querySelectorAll("#pg-opts-passes select[data-pass]"));
+  let compilerOpts = { preset: 1, emitFormat: "auto", sourceMap: "auto", passes: {} };
+
+  if (typeof window !== "undefined" && window.isSecureContext && !window.crossOriginIsolated && typeof navigator !== "undefined" && navigator.serviceWorker) {
+    navigator.serviceWorker.register("./coi-serviceworker.js").then((reg) => {
+      const reloadKey = "lite.pg.coiReloaded";
+      const reloadOnce = () => {
+        if (window.crossOriginIsolated) return;
+        try {
+          if (!window.sessionStorage.getItem(reloadKey)) {
+            window.sessionStorage.setItem(reloadKey, "1");
+            window.location.reload();
+          }
+        } catch {}
+      };
+      if (reg.active) reloadOnce();
+      reg.addEventListener("updatefound", () => {
+        const sw = reg.installing;
+        if (!sw) return;
+        sw.addEventListener("statechange", () => {
+          if (sw.state === "activated") reloadOnce();
+        });
+      });
+    }).catch(() => {});
+  }
+
   function readOptLevel() {
-    const raw = optLevelEl ? Number(optLevelEl.value) : 1;
-    return Number.isInteger(raw) && raw >= 0 && raw <= 4 ? raw : 1;
+    const raw = optLevelEl ? Number(optLevelEl.value) : compilerOpts.preset;
+    return Number.isInteger(raw) && raw >= 0 && raw <= 5 ? raw : 1;
   }
   function formatOptFlag(level) {
-    return level === 4 ? "-Os" : "-O" + String(level);
+    return level === 4 ? "-Os" : level === 5 ? "-Oc" : "-O" + String(level);
+  }
+  function buildCompilerFlags() {
+    const flags = [];
+    if (compilerOpts.emitFormat === "pretty" || compilerOpts.emitFormat === "compact") {
+      flags.push("--emit-format", compilerOpts.emitFormat);
+    }
+    if (compilerOpts.sourceMap === "none" || compilerOpts.sourceMap === "comments" || compilerOpts.sourceMap === "lines") {
+      flags.push("--source-map", compilerOpts.sourceMap);
+    }
+    for (const [pass, state] of Object.entries(compilerOpts.passes || {})) {
+      if (state === "on") flags.push("-f" + pass);
+      else if (state === "off") flags.push("-fno-" + pass);
+    }
+    return flags;
+  }
+  function compilerFlagsKey() {
+    return formatOptFlag(readOptLevel()) + " " + buildCompilerFlags().join(" ");
+  }
+  function isCompilerOptsModified() {
+    if (readOptLevel() !== DEFAULT_COMPILER_OPTS.preset) return true;
+    if (compilerOpts.emitFormat !== "auto") return true;
+    if (compilerOpts.sourceMap !== "auto") return true;
+    return Object.values(compilerOpts.passes || {}).some((v) => v === "on" || v === "off");
+  }
+  function saveCompilerOpts() {
+    try {
+      window.localStorage.setItem(OPT_STORAGE_KEY, String(compilerOpts.preset));
+      window.localStorage.setItem(COMPILER_OPTS_STORAGE_KEY, JSON.stringify(compilerOpts));
+    } catch {}
+  }
+  function syncCompilerOptsUi() {
+    if (optLevelEl) optLevelEl.value = String(compilerOpts.preset);
+    if (compilerOptsPresetEl) compilerOptsPresetEl.value = String(compilerOpts.preset);
+    if (compilerOptsEmitFmtEl) compilerOptsEmitFmtEl.value = compilerOpts.emitFormat;
+    if (compilerOptsSourceMapEl) compilerOptsSourceMapEl.value = compilerOpts.sourceMap;
+    for (const sel of compilerPassSelects) {
+      const p = sel.getAttribute("data-pass");
+      sel.value = (p && compilerOpts.passes && compilerOpts.passes[p]) || "default";
+    }
+    if (compilerOptsCliEl) {
+      const allFlags = [formatOptFlag(compilerOpts.preset), ...buildCompilerFlags()];
+      compilerOptsCliEl.textContent = allFlags.join(" ");
+    }
+    if (compilerOptsDot) compilerOptsDot.hidden = !isCompilerOptsModified();
+  }
+  try {
+    const savedRaw = window.localStorage.getItem(COMPILER_OPTS_STORAGE_KEY);
+    if (savedRaw) {
+      const parsed = JSON.parse(savedRaw);
+      if (parsed && typeof parsed === "object") {
+        const p = Number(parsed.preset);
+        compilerOpts = {
+          preset: Number.isInteger(p) && p >= 0 && p <= 5 ? p : 1,
+          emitFormat: parsed.emitFormat === "pretty" || parsed.emitFormat === "compact" ? parsed.emitFormat : "auto",
+          sourceMap: parsed.sourceMap === "none" || parsed.sourceMap === "comments" || parsed.sourceMap === "lines" ? parsed.sourceMap : "auto",
+          passes: parsed.passes && typeof parsed.passes === "object" ? { ...parsed.passes } : {},
+        };
+      }
+    } else {
+      const saved = window.localStorage.getItem(OPT_STORAGE_KEY);
+      if (saved === "0" || saved === "1" || saved === "2" || saved === "3" || saved === "4" || saved === "5") {
+        compilerOpts.preset = Number(saved);
+      }
+    }
+  } catch {}
+  syncCompilerOptsUi();
+
+  function invalidateCompiledCache() {
+    lastCSource = null;
+    lastCOptLevel = null;
   }
   if (optLevelEl) {
-    try {
-      const saved = window.localStorage.getItem(OPT_STORAGE_KEY);
-      if (saved === "0" || saved === "1" || saved === "2" || saved === "3" || saved === "4") {
-        optLevelEl.value = saved;
-      }
-    } catch {}
     optLevelEl.addEventListener("change", () => {
       const lv = readOptLevel();
-      try { window.localStorage.setItem(OPT_STORAGE_KEY, String(lv)); } catch {}
-      lastCSource = null;
-      lastCOptLevel = null;
+      compilerOpts.preset = lv;
+      saveCompilerOpts();
+      syncCompilerOptsUi();
+      invalidateCompiledCache();
       if (activeTab === "generated") {
         if (activeGenLang === "c") void compileCForEditor();
         else void runAction("compile");
@@ -168,9 +271,75 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         void runAction("play");
       } else {
         statusEl.hidden = false;
-        statusEl.textContent = "Optimization level: " + formatOptFlag(lv);
+        statusEl.textContent = "Compiler options: " + compilerFlagsKey().trim();
       }
     });
+  }
+  if (compilerOptsBtn && compilerOptsModal) {
+    compilerOptsBtn.addEventListener("click", () => {
+      syncCompilerOptsUi();
+      compilerOptsModal.hidden = false;
+    });
+    if (compilerOptsCloseBtn) {
+      compilerOptsCloseBtn.addEventListener("click", () => { compilerOptsModal.hidden = true; });
+    }
+    compilerOptsModal.addEventListener("click", (ev) => {
+      if (ev.target === compilerOptsModal) compilerOptsModal.hidden = true;
+    });
+    if (compilerOptsPresetEl) {
+      compilerOptsPresetEl.addEventListener("change", () => {
+        const n = Number(compilerOptsPresetEl.value);
+        compilerOpts.preset = Number.isInteger(n) && n >= 0 && n <= 5 ? n : 1;
+        saveCompilerOpts();
+        syncCompilerOptsUi();
+        invalidateCompiledCache();
+      });
+    }
+    if (compilerOptsEmitFmtEl) {
+      compilerOptsEmitFmtEl.addEventListener("change", () => {
+        compilerOpts.emitFormat = compilerOptsEmitFmtEl.value || "auto";
+        saveCompilerOpts();
+        syncCompilerOptsUi();
+        invalidateCompiledCache();
+      });
+    }
+    if (compilerOptsSourceMapEl) {
+      compilerOptsSourceMapEl.addEventListener("change", () => {
+        compilerOpts.sourceMap = compilerOptsSourceMapEl.value || "auto";
+        saveCompilerOpts();
+        syncCompilerOptsUi();
+        invalidateCompiledCache();
+      });
+    }
+    for (const sel of compilerPassSelects) {
+      sel.addEventListener("change", () => {
+        const p = sel.getAttribute("data-pass");
+        if (!p) return;
+        if (sel.value === "on" || sel.value === "off") compilerOpts.passes[p] = sel.value;
+        else delete compilerOpts.passes[p];
+        saveCompilerOpts();
+        syncCompilerOptsUi();
+        invalidateCompiledCache();
+      });
+    }
+    if (compilerOptsResetBtn) {
+      compilerOptsResetBtn.addEventListener("click", () => {
+        compilerOpts = { preset: 1, emitFormat: "auto", sourceMap: "auto", passes: {} };
+        saveCompilerOpts();
+        syncCompilerOptsUi();
+        invalidateCompiledCache();
+        statusEl.hidden = false;
+        statusEl.textContent = "Compiler options reset to defaults (-O1)";
+      });
+    }
+    if (compilerOptsApplyBtn) {
+      compilerOptsApplyBtn.addEventListener("click", () => {
+        compilerOptsModal.hidden = true;
+        invalidateCompiledCache();
+        if (activeTab === "generated" && activeGenLang === "c") void compileCForEditor();
+        else void runAction("compile");
+      });
+    }
   }
   const snipsApi = typeof window !== "undefined" && window.LiteSnips ? window.LiteSnips : null;
   const saveSnipBtn = document.getElementById("pg-save-snip");
@@ -355,10 +524,22 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     scrollConsoleToBottom();
   }
 
+  const ANSI_FG = {
+    30: "#4b5563", 31: "#f87171", 32: "#86efac", 33: "#fcd34d",
+    34: "#93c5fd", 35: "#d8b4fe", 36: "#67e8f9", 37: "#e5e7eb",
+    90: "#9ca3af", 91: "#fca5a5", 92: "#bbf7d0", 93: "#fde68a",
+    94: "#bfdbfe", 95: "#e9d5ff", 96: "#a5f3fc", 97: "#ffffff",
+  };
+  const ANSI_BG = {
+    40: "#111827", 41: "#7f1d1d", 42: "#14532d", 43: "#78350f",
+    44: "#1e3a8a", 45: "#581c87", 46: "#164e63", 47: "#374151",
+    100: "#374151", 101: "#991b1b", 102: "#166534", 103: "#92400e",
+    104: "#1d4ed8", 105: "#6b21a8", 106: "#155e75", 107: "#4b5563",
+  };
+
   function appendConsoleSpan(kind, text) {
     if (!consoleLogEl || !text) return;
-    const span = document.createElement("span");
-    span.className =
+    const baseClass =
       kind === "stderr"
         ? "pg-console-stderr"
         : kind === "sys"
@@ -366,8 +547,49 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
           : kind === "stdin"
             ? "pg-console-stdin-echo"
             : "pg-console-stdout";
-    span.textContent = text;
-    consoleLogEl.appendChild(span);
+    const str = String(text);
+    if (!str.includes("\\x1b[")) {
+      const span = document.createElement("span");
+      span.className = baseClass;
+      span.textContent = str;
+      consoleLogEl.appendChild(span);
+      scrollConsoleToBottom();
+      return;
+    }
+    const re = /\\x1b\\[([0-9;]*)m/g;
+    let last = 0;
+    let fg = "";
+    let bg = "";
+    let bold = false;
+    let dim = false;
+    let m;
+    const pushSeg = (seg) => {
+      if (!seg) return;
+      const span = document.createElement("span");
+      span.className = baseClass;
+      if (fg && span.style) span.style.color = fg;
+      if (bg && span.style) span.style.backgroundColor = bg;
+      if (bold && span.style) span.style.fontWeight = "700";
+      if (dim && span.style) span.style.opacity = "0.7";
+      span.textContent = seg;
+      consoleLogEl.appendChild(span);
+    };
+    while ((m = re.exec(str)) !== null) {
+      pushSeg(str.slice(last, m.index));
+      const codes = m[1] ? m[1].split(";").map(Number) : [0];
+      for (const c of codes) {
+        if (c === 0) { fg = ""; bg = ""; bold = false; dim = false; }
+        else if (c === 1) bold = true;
+        else if (c === 2) dim = true;
+        else if (c === 22) { bold = false; dim = false; }
+        else if (c === 39) fg = "";
+        else if (c === 49) bg = "";
+        else if (ANSI_FG[c]) fg = ANSI_FG[c];
+        else if (ANSI_BG[c]) bg = ANSI_BG[c];
+      }
+      last = m.index + m[0].length;
+    }
+    pushSeg(str.slice(last));
     scrollConsoleToBottom();
   }
 
@@ -553,9 +775,24 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         fh.appendChild(acts);
         box.appendChild(fh);
         if (f.isText && typeof f.textPreview === "string") {
+          const lowerPath = String(f.path || "").toLowerCase();
+          if (lowerPath.endsWith(".svg")) {
+            const svgWrap = document.createElement("div");
+            svgWrap.className = "pg-out-svg-wrap";
+            const img = document.createElement("img");
+            img.className = "pg-out-svg-preview";
+            img.alt = f.path;
+            img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(f.textPreview);
+            svgWrap.appendChild(img);
+            box.appendChild(svgWrap);
+          }
           const pre = document.createElement("pre");
           pre.className = "pg-out-file-pre";
-          pre.textContent = f.textPreview;
+          let displayText = f.textPreview;
+          if (lowerPath.endsWith(".json")) {
+            try { displayText = JSON.stringify(JSON.parse(f.textPreview), null, 2); } catch {}
+          }
+          pre.textContent = displayText;
           box.appendChild(pre);
         }
         fBody.appendChild(box);
@@ -760,6 +997,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         stdin: sess.stdinSoFar,
         args: sess.args,
         optLevel: sess.optLevel,
+        compilerFlags: sess.compilerFlags || buildCompilerFlags(),
         interactive: true,
         stdinClosed,
         streamOutput: false,
@@ -978,9 +1216,11 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   async function compileCForEditor() {
     const source = editorEl.value;
     const optLevel = readOptLevel();
-    if (lastCSource === source && lastCOptLevel === optLevel) return;
+    const cFlags = buildCompilerFlags();
+    const cacheKey = formatOptFlag(optLevel) + " " + cFlags.join(" ");
+    if (lastCSource === source && lastCOptLevel === cacheKey) return;
     rawC = "";
-    cMessage = "/* Compiling C in browser (" + formatOptFlag(optLevel) + ")... */";
+    cMessage = "/* Compiling C in browser (" + cacheKey.trim() + ")... */";
     renderCodeViews();
     try {
       const res = await workerClient.call("compile-c", {
@@ -988,11 +1228,12 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         stdin: "",
         args: [],
         optLevel,
+        compilerFlags: cFlags,
         ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
       });
-      if (editorEl.value !== source || readOptLevel() !== optLevel) return;
+      if (editorEl.value !== source || compilerFlagsKey() !== cacheKey) return;
       lastCSource = source;
-      lastCOptLevel = optLevel;
+      lastCOptLevel = cacheKey;
       if (res.c) {
         rawC = String(res.c);
         cMessage = "";
@@ -1026,18 +1267,21 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       : "Running in browser (" + formatOptFlag(optLevel) + ")...";
 
     if (action === "compile") {
+      const cFlags = buildCompilerFlags();
+      const cacheKey = formatOptFlag(optLevel) + " " + cFlags.join(" ");
       try {
         const res = await workerClient.call("compile", {
           source,
           stdin: "",
           args: [],
           optLevel,
+          compilerFlags: cFlags,
           ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
         });
         if (res.ts) rawTs = String(res.ts);
         if (res.c !== undefined || res.cError !== undefined) {
           lastCSource = source;
-          lastCOptLevel = optLevel;
+          lastCOptLevel = cacheKey;
           if (res.c) {
             rawC = String(res.c);
             cMessage = "";
@@ -1103,6 +1347,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     }
     syncConsolePromptUi();
 
+    const playCompilerFlags = buildCompilerFlags();
     let streamedAny = false;
     try {
       const res = await workerClient.call(
@@ -1112,6 +1357,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
           stdin: isInteractiveRun ? "" : stdin,
           args,
           optLevel,
+          compilerFlags: playCompilerFlags,
           interactive: isInteractiveRun,
           stdinClosed: !isInteractiveRun,
           streamOutput: true,
@@ -1383,6 +1629,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       if (ev.key === "Escape") {
         if (canvasWrap.classList.contains("is-fullscreen")) setCanvasFullscreen(false);
         if (sketchesModal && !sketchesModal.hidden) sketchesModal.hidden = true;
+        if (compilerOptsModal && !compilerOptsModal.hidden) compilerOptsModal.hidden = true;
       }
     });
   }

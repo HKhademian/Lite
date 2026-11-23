@@ -145,6 +145,7 @@ function runWithProcessStub(argv, stdinText, fn, vfs, opts = {}) {
   let stderr = '';
   let exitCode = 0;
   let stdinClosed = Boolean(opts.stdinClosed);
+  let neededStdin = false;
   const interactive = Boolean(opts.interactive);
   const sharedCtrl = opts.sharedCtrl ? new Int32Array(opts.sharedCtrl) : null;
   const sharedData = opts.sharedData ? new Uint8Array(opts.sharedData) : null;
@@ -156,12 +157,12 @@ function runWithProcessStub(argv, stdinText, fn, vfs, opts = {}) {
   let tempSeq = 1;
 
   const emitStdout = (chunk) => {
-    if (!chunk) return;
+    if (!chunk || neededStdin) return;
     stdout += chunk;
     if (onStdout) onStdout(chunk);
   };
   const emitStderr = (chunk) => {
-    if (!chunk) return;
+    if (!chunk || neededStdin) return;
     stderr += chunk;
     if (onStderr) onStderr(chunk);
   };
@@ -343,7 +344,8 @@ function runWithProcessStub(argv, stdinText, fn, vfs, opts = {}) {
               offset = n;
               return n;
             }
-            throw new NeedStdinSignal();
+            neededStdin = true;
+            return 0;
           }
           const st = openFds.get(fd);
           if (!st || st.pos >= st.bytes.length) return 0;
@@ -387,9 +389,12 @@ function runWithProcessStub(argv, stdinText, fn, vfs, opts = {}) {
   try {
     const ret = fn(stubProcess, (text) => { emitStdout(text); });
     if (ret) emitStdout(String(ret));
+    if (neededStdin) {
+      return { ok: true, exitCode: null, needsStdin: true, stdout, stderr, files: collectWrittenFiles(vfs) };
+    }
     return { ok: true, exitCode, needsStdin: false, stdout, stderr, files: collectWrittenFiles(vfs) };
   } catch (err) {
-    if (err instanceof NeedStdinSignal) {
+    if (neededStdin || err instanceof NeedStdinSignal) {
       return { ok: true, exitCode: null, needsStdin: true, stdout, stderr, files: collectWrittenFiles(vfs) };
     }
     if (err instanceof ExitSignal) {
@@ -405,15 +410,42 @@ function runWithProcessStub(argv, stdinText, fn, vfs, opts = {}) {
 
 function normalizeOptLevel(raw) {
   if (raw === 's' || raw === 'S') return 4;
+  if (raw === 'c' || raw === 'C') return 5;
   const n = Number(raw);
-  return Number.isInteger(n) && n >= 0 && n <= 4 ? n : 1;
+  return Number.isInteger(n) && n >= 0 && n <= 5 ? n : 1;
 }
 
-function compileWith(compilerSource, vfs, source, optLevel = 1) {
+function sanitizeCompilerFlags(rawFlags) {
+  if (!Array.isArray(rawFlags)) return [];
+  const out = [];
+  for (let i = 0; i < rawFlags.length; i += 1) {
+    const f = String(rawFlags[i] ?? '').trim();
+    if (!f) continue;
+    if (f === '--emit-format' || f === '--source-map') {
+      const next = String(rawFlags[i + 1] ?? '').trim();
+      if (next) {
+        out.push(f, next);
+        i += 1;
+      }
+      continue;
+    }
+    if (
+      f.startsWith('--emit-format=') ||
+      f.startsWith('--source-map=') ||
+      /^-f(?:no-)?[a-z0-9-]+(?:=[0-9]+)?$/.test(f)
+    ) {
+      out.push(f);
+    }
+  }
+  return out;
+}
+
+function compileWith(compilerSource, vfs, source, optLevel = 1, compilerFlags = []) {
   const level = normalizeOptLevel(optLevel);
-  const optFlag = level === 4 ? '-Os' : '-O' + String(level);
+  const optFlag = level === 4 ? '-Os' : level === 5 ? '-Oc' : '-O' + String(level);
+  const extraFlags = sanitizeCompilerFlags(compilerFlags);
   return runWithProcessStub(
-    ['node', '/project/compiler.js', '--stdin', '--name', 'playground.lts', '--root', '/project/playground.lts', optFlag],
+    ['node', '/project/compiler.js', '--stdin', '--name', 'playground.lts', '--root', '/project/playground.lts', optFlag, ...extraFlags],
     source ?? '',
     (proc, write) => {
       const compileMain = new Function('process', compilerSource)(proc);
@@ -423,11 +455,11 @@ function compileWith(compilerSource, vfs, source, optLevel = 1) {
   );
 }
 
-function compileTsForPlayground(compilerSource, stdlib, extraModules, source, optLevel = 1) {
+function compileTsForPlayground(compilerSource, stdlib, extraModules, source, optLevel = 1, compilerFlags = []) {
   const withKeepalive = appendPlayKeepalive(source ?? '');
   if (withKeepalive !== null) {
     const keepaliveVfs = buildPlaygroundVfs(stdlib, extraModules, withKeepalive);
-    const keepaliveResult = compileWith(compilerSource, keepaliveVfs, withKeepalive, optLevel);
+    const keepaliveResult = compileWith(compilerSource, keepaliveVfs, withKeepalive, optLevel, compilerFlags);
     if (keepaliveResult.ok && keepaliveResult.stdout) {
       return {
         ...keepaliveResult,
@@ -436,7 +468,7 @@ function compileTsForPlayground(compilerSource, stdlib, extraModules, source, op
     }
   }
   const baseVfs = buildPlaygroundVfs(stdlib, extraModules, source);
-  return compileWith(compilerSource, baseVfs, source, optLevel);
+  return compileWith(compilerSource, baseVfs, source, optLevel, compilerFlags);
 }
 
 function attachPlayBridge(js) {
@@ -509,8 +541,9 @@ function drainTones() {
 
 self.onmessage = async (event) => {
   const payload = event.data ?? {};
-  const { id, action, source, stdin, args, extraModules, optLevel } = payload;
+  const { id, action, source, stdin, args, extraModules, optLevel, compilerFlags } = payload;
   const level = normalizeOptLevel(optLevel);
+  const extraCompilerFlags = sanitizeCompilerFlags(compilerFlags);
   try {
     if (action === 'stop') {
       globalThis.__litePlay = null;
@@ -565,7 +598,7 @@ self.onmessage = async (event) => {
       const t0 = performance.now();
       const cSource = await loadCompilerSource('compiler-c.js');
       const vfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
-      const cResult = compileWith(cSource, vfs, source, level);
+      const cResult = compileWith(cSource, vfs, source, level, extraCompilerFlags);
       const compileMs = Math.round((performance.now() - t0) * 10) / 10;
       self.postMessage({
         id,
@@ -580,7 +613,7 @@ self.onmessage = async (event) => {
 
     const compileStart = performance.now();
     const tsCompilerSource = await loadCompilerSource('compiler.js');
-    const compileResult = compileTsForPlayground(tsCompilerSource, stdlib, extraModules ?? null, source, level);
+    const compileResult = compileTsForPlayground(tsCompilerSource, stdlib, extraModules ?? null, source, level, extraCompilerFlags);
     const compileMs = Math.round((performance.now() - compileStart) * 10) / 10;
 
     if (!compileResult.ok || !compileResult.stdout) {
@@ -606,7 +639,7 @@ self.onmessage = async (event) => {
     if (action === 'compile') {
       const cSource = await loadCompilerSource('compiler-c.js');
       const vfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
-      const cResult = compileWith(cSource, vfs, source, level);
+      const cResult = compileWith(cSource, vfs, source, level, extraCompilerFlags);
       const totalCompileMs = Math.round((performance.now() - compileStart) * 10) / 10;
       self.postMessage({
         id,
@@ -734,4 +767,33 @@ self.onmessage = async (event) => {
     self.postMessage({ id, ok: false, action, ts: '', c: '', cError: '', stdout: '', stderr: message });
   }
 };
+`;
+
+/** Service Worker injecting COOP/COEP headers on `/playground/` so `SharedArrayBuffer` blocking stdin works on static hosts. */
+export const coiServiceWorkerJs = `self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.cache === 'only-if-cached' && req.mode !== 'same-origin') return;
+  event.respondWith(
+    fetch(req).then((response) => {
+      if (response.status === 0) return response;
+      const headers = new Headers(response.headers);
+      headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+      headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+      headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }),
+  );
+});
 `;

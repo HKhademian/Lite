@@ -28,7 +28,7 @@ import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { createPlayStage, createWorkerClient, mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
-import { renderCodeEditorBlock, renderCodeModeBar, renderSplitHandle } from './ui-blocks.ts';
+import { renderCodeEditorBlock, renderCodeModeBar, renderGeneratedToolbar, renderSplitHandle } from './ui-blocks.ts';
 
 const root = dirname(import.meta.dirname);
 let cachedTsCompiler: CompilerBuild | undefined;
@@ -454,6 +454,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="pg-generated-code"'));
   assert(playground.includes('id="gen-lang-ts"'));
   assert(playground.includes('id="gen-lang-c"'));
+  assert(playground.includes('id="pg-compiler-opts-btn"'));
+  assert(playground.includes('id="pg-compiler-opts-modal"'));
+  assert(playground.includes('id="pg-opts-reset"'));
+  assert(existsSync(join(out, 'playground', 'coi-serviceworker.js')));
   assert(playground.includes('id="pg-compile"'));
   assert(playground.includes('id="pg-play"'));
   assert(playground.includes('id="pg-save-snip"'));
@@ -861,6 +865,44 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
     assert.equal(aliasRes.play?.hasUpdate, true);
     assert.equal(aliasRes.play?.ops[0], 1);
     await mockSelf.onmessage!({ data: { action: 'stop' } });
+
+    const stdinWaitRes = await send({
+      id: 60,
+      action: 'play',
+      source: 'io := import "core/io";\nname := io.inputLine("Name: ");\nio.outputLine("Hi " + name);',
+      stdin: '',
+      args: [],
+      interactive: true,
+      stdinClosed: false,
+    }) as unknown as { ok: boolean; needsStdin?: boolean; stdout: string };
+    assert.equal(stdinWaitRes.ok, true);
+    assert.equal(stdinWaitRes.needsStdin, true);
+    assert.equal(stdinWaitRes.stdout, 'Name: ');
+
+    const vfsWriteRes = await send({
+      id: 61,
+      action: 'play',
+      source: 'fs := import "core/file";\n_w := fs.writeText("out.json", "{\\"ok\\":true}");\n',
+      stdin: '',
+      args: [],
+    }) as unknown as { ok: boolean; files?: Array<{ path: string; size: number; isText: boolean; textPreview?: string }> };
+    assert.equal(vfsWriteRes.ok, true);
+    assert(Array.isArray(vfsWriteRes.files) && vfsWriteRes.files.length === 1);
+    assert.equal(vfsWriteRes.files[0]!.path, 'out.json');
+    assert.equal(vfsWriteRes.files[0]!.isText, true);
+    assert.equal(vfsWriteRes.files[0]!.textPreview, '{"ok":true}');
+
+    const smRes = await send({
+      id: 62,
+      action: 'compile',
+      source: 'io := import "core/io";\nio.outputLine(42);\n',
+      stdin: '',
+      args: [],
+      optLevel: 1,
+      compilerFlags: ['--source-map', 'comments'],
+    }) as unknown as { ok: boolean; ts: string };
+    assert.equal(smRes.ok, true);
+    assert(smRes.ts.includes('// playground.lts:'), `expected --source-map comments in emitted TS, got:\n${smRes.ts}`);
 
     const modPayload = JSON.parse(readFileSync(join(out, 'learn/payloads/modules-and-visibility.json'), 'utf8')) as {
       source: string;
@@ -1339,6 +1381,13 @@ test('shared UI blocks and editor client bind highlighting, scroll sync, Tab ind
   assert(modesHtml.includes('id="demo-program"'));
   assert(modesHtml.includes('data-mode="portable" aria-pressed="false"'));
   assert(modesHtml.includes('id="demo-full"'));
+
+  const genToolbarHtml = renderGeneratedToolbar({ id: 'demo-gen', buttonIdPrefix: 'demo-' });
+  assert(genToolbarHtml.includes('id="gen-lang-ts"'));
+  assert(genToolbarHtml.includes('id="gen-lang-c"'));
+  assert(genToolbarHtml.includes('id="demo-program"'));
+  assert(genToolbarHtml.includes('id="demo-portable"'));
+  assert(genToolbarHtml.includes('id="demo-full"'));
 
   const listeners = new Map<string, Array<(ev: unknown) => void>>();
   const preParent = { scrollTop: 0, scrollLeft: 0 };
