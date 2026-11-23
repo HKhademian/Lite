@@ -2874,7 +2874,12 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             position = skipTrivia(source, position, prefix);
             continue;
         }
-        if name == "mut" {
+        isMutDecl := if name == "mut" {
+            mutProbe := skipTrivia(source, position, prefix);
+            mutProbe < size and textLib.isNameStart(textLib.at(source, mutProbe)) and
+            textLib.startsWithAt(source, skipTrivia(source, textLib.skipName(source, mutProbe), prefix), ":=")
+        } else { false };
+        if isMutDecl {
             localStart := skipTrivia(source, position, prefix);
             if localStart >= size or not textLib.isNameStart(textLib.at(source, localStart)) {
                 failAt(source, localStart, prefix, "expected local name after mut");
@@ -3014,7 +3019,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         if name == "else" {
             failAt(source, nameStart, prefix, "unexpected else");
         }
-        if isReservedWord(name) and not (name == "fn" and position < size and textLib.at(source, position) == "(") {
+        if isReservedWord(name) and
+        not (name == "fn" and position < size and textLib.at(source, position) == "(") and
+        not (name == "mut" and position < size and textLib.isNameStart(textLib.at(source, position))) {
             unsupportedFeature(source, nameStart, name, prefix);
         }
         if textLib.startsWithAt(source, position, ":=") and textLib.wordAt(source, afterDefinition, "type") {

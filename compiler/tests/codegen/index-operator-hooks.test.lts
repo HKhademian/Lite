@@ -70,7 +70,7 @@ posIdxSrc :=
 "snap := pair;\n" +
 "pair[0] = 30;\n" +
 "pair[pickIdx(1)] += 5;\n" +
-"pair.bumpBoth(3);\n" +
+"mut pair.bumpBoth(3);\n" +
 "io.outputLine(snap[0], snap[1], pair[0], pair[1], keyEvalCount);\n";
 
 runBoth("positional-index-hooks", posIdxSrc, "10 20 33 31 2\n");

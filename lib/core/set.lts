@@ -23,19 +23,19 @@ pub Set.isEmpty := fn<T>(s: Self<T>): Bool {
     s.size() == 0
 };
 
-/** #deprecated Use `s.add(value)` instead. */
+/** #deprecated Use `mut s.add(value)` instead. */
 pub add := fn<T>(s: mut Set<T>, value: T): Unit;
 
 /** #deprecated Use `s.has(value)` instead. */
 pub has := fn<T>(s: Set<T>, value: T): Bool;
 
-/** #deprecated Use `s.remove(value)` instead. */
+/** #deprecated Use `mut s.remove(value)` instead. */
 pub remove := fn<T>(s: mut Set<T>, value: T): Bool;
 
 /** #deprecated Use `s.size()` instead. */
 pub size := fn<T>(s: Set<T>): Int;
 
-/** #deprecated Use `s.clear()` instead. */
+/** #deprecated Use `mut s.clear()` instead. */
 pub clear := fn<T>(s: mut Set<T>): Unit;
 
 /** #deprecated Use `s.values()` instead. */

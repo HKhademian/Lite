@@ -38,7 +38,7 @@ pub Map.isEmpty := fn<K, V>(entries: Self<K, V>): Bool {
     entries.size() == 0
 };
 
-/** #deprecated Use `entries.set(key, value)` instead. */
+/** #deprecated Use `mut entries.set(key, value)` instead. */
 pub set := fn<K, V>(entries: mut Map<K, V>, key: K, value: V): Unit;
 
 /** #deprecated Use `entries.get(key)` instead. */
@@ -50,13 +50,13 @@ pub getOr := fn<K, V>(entries: Map<K, V>, key: K, fallback: V): V;
 /** #deprecated Use `entries.has(key)` instead. */
 pub has := fn<K, V>(entries: Map<K, V>, key: K): Bool;
 
-/** #deprecated Use `entries.remove(key)` instead. */
+/** #deprecated Use `mut entries.remove(key)` instead. */
 pub remove := fn<K, V>(entries: mut Map<K, V>, key: K): Bool;
 
 /** #deprecated Use `entries.size()` instead. */
 pub size := fn<K, V>(entries: Map<K, V>): Int;
 
-/** #deprecated Use `entries.clear()` instead. */
+/** #deprecated Use `mut entries.clear()` instead. */
 pub clear := fn<K, V>(entries: mut Map<K, V>): Unit;
 
 /** #deprecated Use `entries.keys()` instead. */

@@ -35,12 +35,12 @@ src :=
 "mutateGlobals := fn(): Unit {\n" +
 "    var i := 0;\n" +
 "    loop i < 200 {\n" +
-"        Z.pushBack(100 + i);\n" +
+"        mut Z.pushBack(100 + i);\n" +
 "        i += 1;\n" +
 "    }\n" +
 "    ZM[\"b\"] = 20;\n" +
 "    ZM[\"a\"] = 999;\n" +
-"    ZS.add(\"y\");\n" +
+"    mut ZS.add(\"y\");\n" +
 "    ZH.xs = [99, 98, 97];\n" +
 "};\n" +
 "\n" +
@@ -72,7 +72,7 @@ src :=
 "mutateZ2 := fn(): Unit {\n" +
 "    var i := 0;\n" +
 "    loop i < 150 {\n" +
-"        Z2.pushBack(i);\n" +
+"        mut Z2.pushBack(i);\n" +
 "        i += 1;\n" +
 "    }\n" +
 "};\n" +
@@ -90,7 +90,7 @@ src :=
 "appendAll := fn(src: List<Int>, dst: mut List<Int>): Unit {\n" +
 "    var i := 0;\n" +
 "    loop i < src.length() {\n" +
-"        dst.pushBack(src[i] * 10);\n" +
+"        mut dst.pushBack(src[i] * 10);\n" +
 "        i += 1;\n" +
 "    }\n" +
 "};\n" +
@@ -117,15 +117,15 @@ src :=
 "    localC: mut List<Int> = [10, 20, 30];\n" +
 "    s1 := forwardSum(localC);\n" +
 "    snap := idList(localC);\n" +
-"    localC.pushBack(40);\n" +
+"    mut localC.pushBack(40);\n" +
 "    io.outputLine(\"localAndReturn\", s1, snap.length(), localC.length());\n" +
 "};\n" +
 "\n" +
 "runAll := fn(): Unit {\n" +
 "    checkGlobalList(Z);\n" +
-"    Z.clear(); Z.pushBack(1); Z.pushBack(2);\n" +
-"    ZM.clear(); ZM[\"a\"] = 10;\n" +
-"    ZS.clear(); ZS.add(\"x\");\n" +
+"    mut Z.clear(); mut Z.pushBack(1); mut Z.pushBack(2);\n" +
+"    mut ZM.clear(); ZM[\"a\"] = 10;\n" +
+"    mut ZS.clear(); mut ZS.add(\"x\");\n" +
 "    ZH.xs = [5, 6];\n" +
 "    checkGlobalMapSetRec(ZM, ZS, ZH);\n" +
 "    forwardMut(mut Z2);\n" +
@@ -138,7 +138,7 @@ src :=
 "        localB: mut List<Int> = [4, 5];\n" +
 "        cb := fn(): Unit {\n" +
 "            var i := 0;\n" +
-"            loop i < 120 { localB.pushBack(i); i += 1; }\n" +
+"            loop i < 120 { mut localB.pushBack(i); i += 1; }\n" +
 "        };\n" +
 "        runWithCallback(localB, cb);\n" +
 "        localB.length()\n" +

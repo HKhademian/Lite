@@ -50,7 +50,7 @@ createHeapRaw := fn(capacity: Int, isMax: Bool): (handle: Int, gen: Int) {
         if hCap[id] >= cap {
             last := hFree.length() - 1;
             if fi =!= last { hFree[fi] = hFree[last]; }
-            _drop := hFree.popBack();
+            _drop := mut hFree.popBack();
             hCap[id] = cap;
             hCount[id] = 0;
             hIsMax[id] = isMax;
@@ -63,16 +63,16 @@ createHeapRaw := fn(capacity: Int, isMax: Bool): (handle: Int, gen: Int) {
     base := hSlab.length();
     var i := 0;
     loop i < cap {
-        hSlab.pushBack(0);
+        mut hSlab.pushBack(0);
         i += 1;
     }
     id := hBase.length();
-    hBase.pushBack(base);
-    hCap.pushBack(cap);
-    hCount.pushBack(0);
-    hIsMax.pushBack(isMax);
-    hGen.pushBack(1);
-    hAlive.pushBack(true);
+    mut hBase.pushBack(base);
+    mut hCap.pushBack(cap);
+    mut hCount.pushBack(0);
+    mut hIsMax.pushBack(isMax);
+    mut hGen.pushBack(1);
+    mut hAlive.pushBack(true);
     (handle = id, gen = 1)
 };
 
@@ -176,7 +176,7 @@ pub MinHeap.destroy := fn(heap: Self): Unit {
     id := heap.handle;
     hAlive[id] = false;
     hGen[id] = hGen[id] + 1;
-    hFree.pushBack(id);
+    mut hFree.pushBack(id);
 };
 
 /** #deprecated Use `heap.push(value)` instead. */
@@ -245,7 +245,7 @@ pub MaxHeap.destroy := fn(heap: Self): Unit {
     id := heap.handle;
     hAlive[id] = false;
     hGen[id] = hGen[id] + 1;
-    hFree.pushBack(id);
+    mut hFree.pushBack(id);
 };
 
 /** #deprecated Use `heap.push(value)` instead. */
@@ -279,7 +279,7 @@ pub createPQ := fn(capacity: Int): PriorityQueue {
         if pqCap[id] >= cap {
             last := pqFree.length() - 1;
             if fi =!= last { pqFree[fi] = pqFree[last]; }
-            _drop := pqFree.popBack();
+            _drop := mut pqFree.popBack();
             pqCap[id] = cap;
             pqLen[id] = 0;
             pqAlive[id] = true;
@@ -291,16 +291,16 @@ pub createPQ := fn(capacity: Int): PriorityQueue {
     base := pqPrio.length();
     var i := 0;
     loop i < cap {
-        pqPrio.pushBack(0);
-        pqItem.pushBack(0);
+        mut pqPrio.pushBack(0);
+        mut pqItem.pushBack(0);
         i += 1;
     }
     id := pqBase.length();
-    pqBase.pushBack(base);
-    pqCap.pushBack(cap);
-    pqLen.pushBack(0);
-    pqGen.pushBack(1);
-    pqAlive.pushBack(true);
+    mut pqBase.pushBack(base);
+    mut pqCap.pushBack(cap);
+    mut pqLen.pushBack(0);
+    mut pqGen.pushBack(1);
+    mut pqAlive.pushBack(true);
     PriorityQueue { handle = id, gen = 1 }
 };
 
@@ -399,7 +399,7 @@ pub PriorityQueue.destroy := fn(pq: Self): Unit {
     id := pq.handle;
     pqAlive[id] = false;
     pqGen[id] = pqGen[id] + 1;
-    pqFree.pushBack(id);
+    mut pqFree.pushBack(id);
 };
 
 /** #deprecated Use `pq.push(priority, item)` instead. */

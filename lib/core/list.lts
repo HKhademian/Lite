@@ -44,7 +44,7 @@ pub List.isEmpty := fn<T>(values: Self<T>): Bool {
 pub List.map := fn<T, U>(values: Self<T>, transform: fn(T): U): List<U> {
     out: mut List<U> = [];
     loop values as item {
-        out.pushBack(transform(item));
+        pushBack(mut out, transform(item));
     }
     out
 };
@@ -53,7 +53,7 @@ pub List.map := fn<T, U>(values: Self<T>, transform: fn(T): U): List<U> {
 pub List.filter := fn<T>(values: Self<T>, pred: fn(T): Bool): List<T> {
     out: mut List<T> = [];
     loop values as item {
-        if pred(item) { out.pushBack(item); }
+        if pred(item) { pushBack(mut out, item); }
     }
     out
 };
@@ -63,22 +63,22 @@ pub List.join := fn(values: Self<String>, separator: String): String {
     text.joinTexts(values, separator)
 };
 
-/** #deprecated Use `values.pushBack(value)` instead. */
+/** #deprecated Use `mut values.pushBack(value)` instead. */
 pub pushBack := fn<T>(values: mut List<T>, value: T): Unit;
 
-/** #deprecated Use `values.popBack()` instead. */
+/** #deprecated Use `mut values.popBack()` instead. */
 pub popBack := fn<T>(values: mut List<T>): T;
 
-/** #deprecated Use `values.pushFront(value)` instead. */
+/** #deprecated Use `mut values.pushFront(value)` instead. */
 pub pushFront := fn<T>(values: mut List<T>, value: T): Unit;
 
-/** #deprecated Use `values.popFront()` instead. */
+/** #deprecated Use `mut values.popFront()` instead. */
 pub popFront := fn<T>(values: mut List<T>): T;
 
 /** #deprecated Use `values.length()` instead. */
 pub length := fn<T>(values: List<T>): Int;
 
-/** #deprecated Use `values.setAt(index, value)` instead. */
+/** #deprecated Use `mut values.setAt(index, value)` instead. */
 pub setAt := fn<T>(values: mut List<T>, index: Int, value: T): Unit;
 
 /** #deprecated Use `values.slice(start, end)` instead. */
@@ -87,7 +87,7 @@ pub slice := fn<T>(values: List<T>, start: Int, end: Int): List<T>;
 /** #deprecated Use `values.reverse()` instead. */
 pub reverse := fn<T>(values: List<T>): List<T>;
 
-/** #deprecated Use `values.clear()` instead. */
+/** #deprecated Use `mut values.clear()` instead. */
 pub clear := fn<T>(values: mut List<T>): Unit;
 
 /** Returns a new sorted ascending copy of `values` using stable O(n log n) merge sort. */
@@ -106,19 +106,19 @@ pub sortInts := fn(values: List<Int>): List<Int> {
             var j := mid;
             loop i < mid and j < right {
                 if src[i] <= src[j] {
-                    dst.pushBack(src[i]);
+                    pushBack(mut dst, src[i]);
                     i += 1;
                 } else {
-                    dst.pushBack(src[j]);
+                    pushBack(mut dst, src[j]);
                     j += 1;
                 }
             }
             loop i < mid {
-                dst.pushBack(src[i]);
+                pushBack(mut dst, src[i]);
                 i += 1;
             }
             loop j < right {
-                dst.pushBack(src[j]);
+                pushBack(mut dst, src[j]);
                 j += 1;
             }
             left += width * 2;
@@ -166,19 +166,19 @@ pub sortTexts := fn(values: List<String>): List<String> {
             var j := mid;
             loop i < mid and j < right {
                 if textLessOrEqual(src[i], src[j]) {
-                    dst.pushBack(src[i]);
+                    pushBack(mut dst, src[i]);
                     i += 1;
                 } else {
-                    dst.pushBack(src[j]);
+                    pushBack(mut dst, src[j]);
                     j += 1;
                 }
             }
             loop i < mid {
-                dst.pushBack(src[i]);
+                pushBack(mut dst, src[i]);
                 i += 1;
             }
             loop j < right {
-                dst.pushBack(src[j]);
+                pushBack(mut dst, src[j]);
                 j += 1;
             }
             left += width * 2;

@@ -132,6 +132,17 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
     if textLib.at(source, syntax.skipTrivia(source, start + 1, prefix)) == ")" {
         return (kind = ir.VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = syntax.skipTrivia(source, start + 1, prefix) + 1);
     }
+    parenInner := syntax.skipTrivia(source, start + 1, prefix);
+    if textLib.wordAt(source, parenInner, "mut") {
+        mNameStart := syntax.skipTrivia(source, parenInner + 3, prefix);
+        if mNameStart < sourceSize and textLib.isNameStart(textLib.at(source, mNameStart)) {
+            mNameEnd := textLib.skipName(source, mNameStart);
+            afterMName := syntax.skipTrivia(source, mNameEnd, prefix);
+            if afterMName < sourceSize and textLib.at(source, afterMName) == ")" {
+                return parseMutReceiverCallExpr(target, source, parenInner, mNameStart, mNameEnd, afterMName + 1, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
+            }
+        }
+    }
     if syntax.looksLikeTupleEntry(source, start + 1, prefix) {
         var cursor := syntax.skipTrivia(source, start + 1, prefix);
         labels: mut List<String> = [];
@@ -1253,6 +1264,14 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
     }
     if name == "fn" {
         return parseFnLiteralExpr(target, source, nameStart, next, prefix, locals, functions, params, expected, ctxs, iifeDepth, inferMode, aliases);
+    }
+    if name == "mut" {
+        mNameStart := syntax.skipTrivia(source, next, prefix);
+        if mNameStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, mNameStart)) {
+            syntax.failAt(source, mNameStart, prefix, "expected a binding name after mut");
+        }
+        mNameEnd := textLib.skipName(source, mNameStart);
+        return parseMutReceiverCallExpr(target, source, nameStart, mNameStart, mNameEnd, mNameEnd, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
     }
     if syntax.isReservedWord(name) { syntax.unsupportedFeature(source, nameStart, name, prefix); }
     afterName := syntax.skipTrivia(source, next, prefix);
@@ -2710,7 +2729,10 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 blockConstant = false;
                 cursor = statementNext;
-            } else if itemName == "mut" {
+            } else if itemName == "mut" and
+            syntax.skipTrivia(source, itemEnd, prefix) < textLib.length(source) and
+            textLib.isNameStart(textLib.at(source, syntax.skipTrivia(source, itemEnd, prefix))) and
+            textLib.startsWithAt(source, syntax.skipTrivia(source, textLib.skipName(source, syntax.skipTrivia(source, itemEnd, prefix)), prefix), ":=") {
                 isStatement = true;
                 localStart := syntax.skipTrivia(source, itemEnd, prefix);
                 if localStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, localStart)) {
@@ -7317,12 +7339,21 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
     ctx.intParsed("", 0, false, openParen)
 };
 
-/** Parses a type-attached dot call `receiver.op(args...)`, validating `mut Self` permission, unifying generic receivers, and forwarding receiver as argument 0. */
-parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openParen: Int, receiver: Parsed, recvLocalIdx: Int, opIdx: Int, opLabel: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+/** Parses a type-attached dot call `receiver.op(args...)`, validating explicit call-site `mut` lease, `mut Self` permission, unifying generic receivers, and forwarding receiver as argument 0. */
+parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openParen: Int, receiver: Parsed, recvLocalIdx: Int, opIdx: Int, opLabel: String, explicitMut: Bool, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     info := functions[opIdx];
     recvExpected := types.paramKindOf(params[info.first]);
     isMutRecv := textLib.startsWithAt(recvExpected, 0, "mut ");
     baseExpected := if isMutRecv { textLib.slice(recvExpected, 4, textLib.length(recvExpected)) } else { recvExpected };
+    if isMutRecv and not explicitMut {
+        if recvLocalIdx < 0 or not locals[recvLocalIdx].writable {
+            syntax.failAt(source, labelStart, prefix, "cannot call mutating operation " + opLabel + " on read-only value");
+        }
+        syntax.failAt(source, labelStart, prefix, "mutating operation " + types.displayKind(receiver.kind) + "." + opLabel + " requires mut at call site");
+    }
+    if not isMutRecv and explicitMut {
+        syntax.failAt(source, labelStart, prefix, "operation " + types.displayKind(receiver.kind) + "." + opLabel + " does not mutate its receiver; remove mut");
+    }
     if textLib.startsWithAt(info.runtime, 0, "lite$") {
         return parseCoreTypeOpHardCall(target, source, labelStart, openParen, receiver, recvLocalIdx, info.runtime, opLabel, isMutRecv, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     }
@@ -7399,6 +7430,51 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
         return ctx.withMarkers(callRes, ctx.collectParsedMarkers(ctx.collectParsedMarkers("", receiver), callRes));
     }
     callRes
+};
+
+/** Parses an explicit mutating dot call `mut receiver.op(args...)` or `(mut receiver).op(args...)`, enforcing receiver mutability and `mut Self` signature. */
+parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mNameStart: Int, mNameEnd: Int, afterRecv: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    size := textLib.length(source);
+    recvName := textLib.slice(source, mNameStart, mNameEnd);
+    if syntax.isReservedWord(recvName) { syntax.unsupportedFeature(source, mNameStart, recvName, prefix); }
+    recvIdx := sym.localIndex(locals, recvName);
+    if recvIdx < 0 {
+        syntax.failAt(source, mNameStart, prefix, "unknown value " + recvName);
+    }
+    entry := locals[recvIdx];
+    if entry.initState =!= ir.INIT_STATE_INIT {
+        syntax.failAt(source, mNameStart, prefix, "cannot read uninitialized local " + recvName);
+    }
+    dotPos := syntax.skipTrivia(source, afterRecv, prefix);
+    if dotPos >= size or textLib.at(source, dotPos) =!= "." {
+        syntax.failAt(source, dotPos, prefix, "expected .operation(...) after mut " + recvName);
+    }
+    labelStart := syntax.skipTrivia(source, dotPos + 1, prefix);
+    if labelStart < size and textLib.at(source, labelStart) == "$" {
+        hookEnd := if labelStart + 1 < size and textLib.isNameStart(textLib.at(source, labelStart + 1)) {
+            textLib.skipName(source, labelStart + 1)
+        } else {
+            labelStart + 1
+        };
+        syntax.failAt(source, labelStart, prefix, "compiler hook " + textLib.slice(source, labelStart, hookEnd) + " cannot be called directly; use [...] indexing");
+    }
+    if labelStart >= size or not textLib.isNameStart(textLib.at(source, labelStart)) {
+        syntax.failAt(source, labelStart, prefix, "expected operation name after mut " + recvName + ".");
+    }
+    labelEnd := textLib.skipName(source, labelStart);
+    label := textLib.slice(source, labelStart, labelEnd);
+    ownerKey := types.typeOpOwnerKey(entry.kind);
+    opIdx := if ownerKey =!= "" { sym.findFunction(functions, "$typeop:" + ownerKey + "." + label) } else { -1 };
+    if opIdx < 0 {
+        syntax.failAt(source, labelStart, prefix, "type " + types.displayKind(entry.kind) + " has no operation " + label);
+    }
+    afterOpLabel := syntax.skipTrivia(source, labelEnd, prefix);
+    if afterOpLabel >= size or textLib.at(source, afterOpLabel) =!= "(" {
+        syntax.failAt(source, labelStart, prefix, "type operation " + types.displayKind(entry.kind) + "." + label + " must be called with (...)");
+    }
+    _mutPos := mutStart;
+    recvParsed := (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = false, next = afterRecv);
+    parseTypeOpDotCall(target, source, labelStart, afterOpLabel, recvParsed, recvIdx, opIdx, label, true, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases)
 };
 
 /** Parses postfix `.field`, `[index]`, list-intrinsic operations, type-attached dot calls, and function/indirect calls on `initialLeft`. */
@@ -7640,7 +7716,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         if afterOpLabel >= sourceLen or textLib.at(source, afterOpLabel) =!= "(" {
                             syntax.failAt(source, labelStart, prefix, "type operation " + types.displayKind(left.kind) + "." + label + " must be called with (...)");
                         }
-                        left = parseTypeOpDotCall(target, source, labelStart, afterOpLabel, left, curRecvLocalIdx, opIdx, label, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                        left = parseTypeOpDotCall(target, source, labelStart, afterOpLabel, left, curRecvLocalIdx, opIdx, label, false, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                     } else if types.isEnumKind(left.kind) {
                         syntax.failAt(source, labelStart, prefix, "enum " + types.enumDisplayName(left.kind) + " has no field or operation " + label);
                     } else if types.isRecordKind(left.kind) {

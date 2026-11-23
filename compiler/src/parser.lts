@@ -186,6 +186,10 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         operand := self(tokens, index + 1, prefix, 5);
         leftText = "(not " + operand.text + ")";
         cursor = operand.next;
+    } else if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "mut" {
+        operand := self(tokens, index + 1, prefix, 35);
+        leftText = "(mut " + operand.text + ")";
+        cursor = operand.next;
     } else if token.kind == lexer.TOKEN_KIND_SYMBOL and (token.text == "-" or token.text == "+") {
         operand := self(tokens, index + 1, prefix, 30);
         leftText = "(" + token.text + operand.text + ")";

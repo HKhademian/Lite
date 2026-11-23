@@ -33,13 +33,13 @@ Selected design direction (not yet implemented in the compiler):
    substitution with no separate identity or namespace of its own (as if the
    targeted symbol were written directly), attaching operations through an
    `alias` or to foreign targets is disallowed for now.
-5. **Mutating dot calls without call-site `mut` repetition:** calling an
-   operation with a `mut Self` / `mut Self<...>` receiver is written directly
-   as `xs.pushBack(42)` (Rust/Swift/V/C3 style) and statically checked against
-   writable `mut` authority on `xs` (dropping receiver-side call-site `mut`
-   visibility as a deliberate ergonomics tradeoff over `(mut xs).pushBack(42)`,
-   while keeping explicit `mut` grants on ordinary and type-qualified calls
-   such as `List.pushBack(mut xs, 42)`).
+5. **Explicit call-site `mut` lease on mutating dot calls (`mut xs.op(...)`, selected 2026-11-24):** calling an
+   operation with a `mut Self` / `mut Self<...>` receiver requires an explicit call-site `mut` lease
+   directly before the receiver (`mut xs.pushBack(42)`, `x := mut xs.popBack()`, or optional
+   `(mut xs).popBack()`), keeping the mutation indicator consistent with `List.pushBack(mut xs, 42)`.
+   Enforced bidirectionally: omitting `mut` on a `mut Self` call or supplying `mut` on a read-only
+   `Self` call are both compile-time errors, and the `mut` lease scopes strictly to that single call
+   (`mut xs.popBack().length()` invokes `.length()` read-only on the popped element).
 6. **Explicit calls for computed reads; `get`/`set` backing properties deferred:**
    computed operations unify as ordinary `fn` calls (`xs.length()`, `m.size()`,
    `s.isEmpty()`) so `value.field` denotes stored data and `value.op(...)`

@@ -121,7 +121,7 @@ genTypeOpSrc :=
 "snap := v;\n" +
 "total := v.fold(10, fn(acc, n) { acc + n });\n" +
 "t1 := v.tagWith(\"pt\");\n" +
-"t2 := v.updateAndTag(5, true);\n" +
+"t2 := mut v.updateAndTag(5, true);\n" +
 "io.outputLine(total, t1.tag, t1.sum, t2.tag, t2.x, snap.x, v.x);\n";
 
 runBoth("generic-type-ops", genTypeOpSrc, "17 pt 7 true 8 3 8\n");

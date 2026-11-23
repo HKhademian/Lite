@@ -36,32 +36,35 @@ coreOpsSrc :=
 "io := import \"core/io\";\n" +
 "\n" +
 "xs: mut List<Int> = [10, 20];\n" +
-"xs.pushBack(30);\n" +
-"xs.pushFront(5);\n" +
+"mut xs.pushBack(30);\n" +
+"mut xs.pushFront(5);\n" +
 "xs[1] += 2;\n" +
 "xs[2] = 25;\n" +
-"popped := xs.popBack();\n" +
+"popped := mut xs.popBack();\n" +
 "rev := xs.reverse();\n" +
 "doubled := xs.map(fn(n) { n * 2 });\n" +
 "big := doubled.filter(fn(n) { n >= 20 });\n" +
 "words: List<String> = [\"a\", \"b\", \"c\"];\n" +
-"io.outputLine(xs.length(), xs.isEmpty(), popped, rev[0], big.length(), big[0], words.join(\"-\"));\n" +
+"words2: mut List<String> = [\"ok\"];\n" +
+"(mut words2).pushBack(\"hello\");\n" +
+"poppedWordLen := mut words2.popBack().length();\n" +
+"io.outputLine(xs.length(), xs.isEmpty(), popped, rev[0], big.length(), big[0], words.join(\"-\"), poppedWordLen);\n" +
 "\n" +
 "var arr := [3, 6, 9];\n" +
 "arr[1] += 4;\n" +
 "io.outputLine(arr.length(), arr.isEmpty(), arr[0], arr[1], arr[2]);\n" +
 "\n" +
 "m: mut Map<String, Int>;\n" +
-"m.set(\"a\", 1);\n" +
+"mut m.set(\"a\", 1);\n" +
 "m[\"b\"] = 2;\n" +
 "m[\"b\"] += 5;\n" +
 "g1 := m.get(\"a\");\n" +
 "io.outputLine(m.size(), m.isEmpty(), m.has(\"a\"), g1.found, g1.value, m.getOr(\"z\", 99), m[\"b\"]);\n" +
 "\n" +
 "s: mut Set<String>;\n" +
-"s.add(\"x\");\n" +
-"s.add(\"y\");\n" +
-"rm := s.remove(\"x\");\n" +
+"mut s.add(\"x\");\n" +
+"mut s.add(\"y\");\n" +
+"rm := mut s.remove(\"x\");\n" +
 "io.outputLine(s.size(), s.isEmpty(), rm, s.has(\"x\"), s.has(\"y\"));\n" +
 "\n" +
 "raw := \"  Hello_42  \";\n" +
@@ -71,7 +74,7 @@ coreOpsSrc :=
 "io.outputLine(\"ab\".repeat(3), parsed.ok, parsed.value, (42).toText(), (-7).toText());\n";
 
 expectedOut :=
-"3 false 30 25 2 24 a-b-c\n" +
+"3 false 30 25 2 24 a-b-c 5\n" +
 "3 false 3 10 9\n" +
 "2 false true true 1 99 7\n" +
 "1 false true false true\n" +
