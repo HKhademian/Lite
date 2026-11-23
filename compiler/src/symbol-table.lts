@@ -1,0 +1,395 @@
+/** Scoped O(1) symbol-table index with undo-stack lexical shadowing and trace-safety invariants. */
+
+listLib := import "core/list";
+mapLib := import "core/map";
+setLib := import "core/set";
+textLib := import "core/text";
+ir := import "./frontend-ir.lts";
+
+Local := type ir.Local;
+FunctionInfo := type ir.FunctionInfo;
+AliasDecl := type ir.AliasDecl;
+
+/** One undo entry recording the prior indexed state before `locals[i]` was pushed. */
+LocalUndo := type (
+    name: String,
+    runtime: String,
+    depth: Int,
+    initState: String,
+    prevNameIdx: Int,
+    prevRtIdx: Int,
+    wasUnready: Bool,
+    wasCallable: Bool,
+    wasFuture: Bool
+);
+
+/** One undo entry recording the prior indexed state before `aliases[i]` was pushed. */
+AliasUndo := type (
+    name: String,
+    depth: Int,
+    prevIdx: Int,
+    prevDepth: Int,
+    changed: Bool
+);
+
+/* --- Active module-scoped O(1) indexes --- */
+
+localByName: mut Map<String, Int>;
+runtimeByName: mut Map<String, Int>;
+unreadyRuntimes: mut Set<String>;
+localUndo: mut List<LocalUndo> = [];
+var indexedLocalLen := 0;
+var callableLocalCount := 0;
+var futureLocalCount := 0;
+
+aliasByName: mut Map<String, Int>;
+aliasDepthByName: mut Map<String, Int>;
+aliasUndo: mut List<AliasUndo> = [];
+var indexedAliasLen := 0;
+
+fnByName: mut Map<String, Int>;
+fnByRuntime: mut Map<String, Int>;
+fnIndexedNames: mut List<String> = [];
+var indexedFnLen := 0;
+
+sameLocalSlot := fn(a: Local, u: LocalUndo): Bool {
+    a.depth == u.depth and a.runtime == u.runtime and a.name == u.name and a.initState == u.initState
+};
+
+pushLocalSlot := fn(idx: Int, entry: Local): Unit {
+    isActive := entry.depth >= -1;
+    prevNameIdx := if isActive { mapLib.getOr(localByName, entry.name, -1) } else { -1 };
+    prevRtIdx := if isActive { mapLib.getOr(runtimeByName, entry.runtime, -1) } else { -1 };
+    wasUnready := setLib.has(unreadyRuntimes, entry.runtime);
+    wasCallable := isActive and (textLib.indexOfText(entry.kind, "fn(", 0) >= 0 or entry.name == "$tuple");
+    wasFuture := entry.depth <= -2;
+    if isActive {
+        mapLib.set(mut localByName, entry.name, idx);
+        mapLib.set(mut runtimeByName, entry.runtime, idx);
+        if entry.depth >= 0 and entry.initState =!= ir.INIT_STATE_INIT {
+            setLib.add(mut unreadyRuntimes, entry.runtime);
+        } else if wasUnready {
+            _rm := setLib.remove(mut unreadyRuntimes, entry.runtime);
+        }
+        if wasCallable { callableLocalCount = callableLocalCount + 1; }
+    } else {
+        futureLocalCount = futureLocalCount + 1;
+        if not mapLib.has(runtimeByName, entry.runtime) {
+            setLib.add(mut unreadyRuntimes, entry.runtime);
+        }
+    }
+    listLib.pushBack(mut localUndo, (
+        name = entry.name,
+        runtime = entry.runtime,
+        depth = entry.depth,
+        initState = entry.initState,
+        prevNameIdx = prevNameIdx,
+        prevRtIdx = prevRtIdx,
+        wasUnready = wasUnready,
+        wasCallable = wasCallable,
+        wasFuture = wasFuture
+    ));
+    indexedLocalLen = indexedLocalLen + 1;
+};
+
+popLocalSlot := fn(): Unit {
+    if indexedLocalLen <= 0 { return; }
+    u := listLib.popBack(mut localUndo);
+    indexedLocalLen = indexedLocalLen - 1;
+    if u.depth >= -1 {
+        if u.prevNameIdx >= 0 {
+            mapLib.set(mut localByName, u.name, u.prevNameIdx);
+        } else {
+            _rmN := mapLib.remove(mut localByName, u.name);
+        }
+        if u.prevRtIdx >= 0 {
+            mapLib.set(mut runtimeByName, u.runtime, u.prevRtIdx);
+        } else {
+            _rmR := mapLib.remove(mut runtimeByName, u.runtime);
+        }
+        if u.wasCallable { callableLocalCount = callableLocalCount - 1; }
+    } else {
+        futureLocalCount = futureLocalCount - 1;
+    }
+    if u.wasUnready {
+        setLib.add(mut unreadyRuntimes, u.runtime);
+    } else {
+        _rmU := setLib.remove(mut unreadyRuntimes, u.runtime);
+    }
+};
+
+/** Clears all local indexes (e.g., on module start or full-list rebuild). */
+pub invalidateLocals := fn(): Unit {
+    if indexedLocalLen == 0 { return; }
+    mapLib.clear(mut localByName);
+    mapLib.clear(mut runtimeByName);
+    setLib.clear(mut unreadyRuntimes);
+    listLib.clear(mut localUndo);
+    indexedLocalLen = 0;
+    callableLocalCount = 0;
+    futureLocalCount = 0;
+};
+
+/** Unwinds local undo entries down to `targetLen` in O(indexedLocalLen - targetLen). */
+pub rewindLocalsTo := fn(targetLen: Int): Unit {
+    if targetLen <= 0 {
+        invalidateLocals();
+        return;
+    }
+    loop indexedLocalLen > targetLen {
+        popLocalSlot();
+    }
+};
+
+/** Returns the currently indexed local count as a scope rewind mark. */
+pub localMark := fn(): Int { indexedLocalLen };
+
+/** Synchronizes the O(1) local index incrementally with `locals`. */
+pub syncLocals := fn(locals: List<Local>): Unit {
+    n := listLib.length(locals);
+    if n == 0 {
+        invalidateLocals();
+        return;
+    }
+    if n == indexedLocalLen and sameLocalSlot(locals[n - 1], localUndo[n - 1]) {
+        return;
+    }
+    if n > indexedLocalLen and (indexedLocalLen == 0 or sameLocalSlot(locals[indexedLocalLen - 1], localUndo[indexedLocalLen - 1])) {
+        var i := indexedLocalLen;
+        loop i < n {
+            pushLocalSlot(i, locals[i]);
+            i = i + 1;
+        }
+        return;
+    }
+    if n < indexedLocalLen and sameLocalSlot(locals[n - 1], localUndo[n - 1]) {
+        rewindLocalsTo(n);
+        return;
+    }
+    /* Interior divergence (e.g., filtered future values or boxed placeholders): find common prefix. */
+    limit := if n < indexedLocalLen { n } else { indexedLocalLen };
+    var common := 0;
+    loop common < limit and sameLocalSlot(locals[common], localUndo[common]) {
+        common = common + 1;
+    }
+    if common == 0 {
+        invalidateLocals();
+    } else {
+        rewindLocalsTo(common);
+    }
+    var j := indexedLocalLen;
+    loop j < n {
+        pushLocalSlot(j, locals[j]);
+        j = j + 1;
+    }
+};
+
+/** O(1) lookup of the newest visible (`depth >= -1`) local named `name`, or -1. */
+pub localIndex := fn(locals: List<Local>, name: String): Int {
+    syncLocals(locals);
+    mapLib.getOr(localByName, name, -1)
+};
+
+/** O(1) lookup of the newest active (`depth >= -1`) local matching `runtime`, or -1. */
+pub latestActiveLocalByRuntime := fn(locals: List<Local>, runtime: String): Int {
+    syncLocals(locals);
+    mapLib.getOr(runtimeByName, runtime, -1)
+};
+
+/** O(1) check whether any unreached future placeholder or uninitialized reached local exists in `locals`. */
+pub localsHasAnyUnready := fn(locals: List<Local>): Bool {
+    syncLocals(locals);
+    setLib.size(unreadyRuntimes) > 0
+};
+
+/** O(1) check whether any active local in `locals` has a callable `fn(...)` type or `$tuple` carrier. */
+pub hasCallableLocal := fn(locals: List<Local>): Bool {
+    syncLocals(locals);
+    callableLocalCount > 0
+};
+
+/** O(1) check whether any unreached future placeholder (`depth <= -2`) exists in `locals`. */
+pub hasFutureLocal := fn(locals: List<Local>): Bool {
+    syncLocals(locals);
+    futureLocalCount > 0
+};
+
+/* --- Alias O(1) index with block-depth shadowing undo log --- */
+
+pushAliasSlot := fn(idx: Int, entry: AliasDecl): Unit {
+    prevIdx := mapLib.getOr(aliasByName, entry.name, -1);
+    prevDepth := if prevIdx >= 0 { mapLib.getOr(aliasDepthByName, entry.name, -1) } else { -1 };
+    changed := entry.depth > prevDepth;
+    if changed {
+        mapLib.set(mut aliasByName, entry.name, idx);
+        mapLib.set(mut aliasDepthByName, entry.name, entry.depth);
+    }
+    listLib.pushBack(mut aliasUndo, (
+        name = entry.name,
+        depth = entry.depth,
+        prevIdx = prevIdx,
+        prevDepth = prevDepth,
+        changed = changed
+    ));
+    indexedAliasLen = indexedAliasLen + 1;
+};
+
+popAliasSlot := fn(): Unit {
+    if indexedAliasLen <= 0 { return; }
+    u := listLib.popBack(mut aliasUndo);
+    indexedAliasLen = indexedAliasLen - 1;
+    if u.changed {
+        if u.prevIdx >= 0 {
+            mapLib.set(mut aliasByName, u.name, u.prevIdx);
+            mapLib.set(mut aliasDepthByName, u.name, u.prevDepth);
+        } else {
+            _rmA := mapLib.remove(mut aliasByName, u.name);
+            _rmD := mapLib.remove(mut aliasDepthByName, u.name);
+        }
+    }
+};
+
+/** Clears all alias indexes. */
+pub invalidateAliases := fn(): Unit {
+    if indexedAliasLen == 0 { return; }
+    mapLib.clear(mut aliasByName);
+    mapLib.clear(mut aliasDepthByName);
+    listLib.clear(mut aliasUndo);
+    indexedAliasLen = 0;
+};
+
+/** Unwinds alias undo entries down to `targetLen`. */
+pub rewindAliasesTo := fn(targetLen: Int): Unit {
+    if targetLen <= 0 {
+        invalidateAliases();
+        return;
+    }
+    loop indexedAliasLen > targetLen {
+        popAliasSlot();
+    }
+};
+
+/** Returns the currently indexed alias count as a scope rewind mark. */
+pub aliasMark := fn(): Int { indexedAliasLen };
+
+sameAliasSlot := fn(a: AliasDecl, u: AliasUndo): Bool {
+    a.depth == u.depth and a.name == u.name
+};
+
+/** Synchronizes the O(1) alias index incrementally with `aliases`. */
+pub syncAliases := fn(aliases: List<AliasDecl>): Unit {
+    n := listLib.length(aliases);
+    if n == 0 {
+        invalidateAliases();
+        return;
+    }
+    if n == indexedAliasLen and sameAliasSlot(aliases[n - 1], aliasUndo[n - 1]) {
+        return;
+    }
+    if n > indexedAliasLen and (indexedAliasLen == 0 or sameAliasSlot(aliases[indexedAliasLen - 1], aliasUndo[indexedAliasLen - 1])) {
+        var i := indexedAliasLen;
+        loop i < n {
+            pushAliasSlot(i, aliases[i]);
+            i = i + 1;
+        }
+        return;
+    }
+    if n < indexedAliasLen and sameAliasSlot(aliases[n - 1], aliasUndo[n - 1]) {
+        rewindAliasesTo(n);
+        return;
+    }
+    limit := if n < indexedAliasLen { n } else { indexedAliasLen };
+    var common := 0;
+    loop common < limit and sameAliasSlot(aliases[common], aliasUndo[common]) {
+        common = common + 1;
+    }
+    if common == 0 {
+        invalidateAliases();
+    } else {
+        rewindAliasesTo(common);
+    }
+    var j := indexedAliasLen;
+    loop j < n {
+        pushAliasSlot(j, aliases[j]);
+        j = j + 1;
+    }
+};
+
+/** O(1) lookup of the first visible alias named `name` at the innermost active block depth, or -1. */
+pub findAlias := fn(aliases: List<AliasDecl>, name: String): Int {
+    syncAliases(aliases);
+    mapLib.getOr(aliasByName, name, -1)
+};
+
+/* --- Monotonic top-level function O(1) index --- */
+
+/** Clears all top-level function indexes. */
+pub invalidateFunctions := fn(): Unit {
+    if indexedFnLen == 0 { return; }
+    mapLib.clear(mut fnByName);
+    mapLib.clear(mut fnByRuntime);
+    listLib.clear(mut fnIndexedNames);
+    indexedFnLen = 0;
+};
+
+/** Synchronizes the O(1) function index incrementally with `functions`. */
+pub syncFunctions := fn(functions: List<FunctionInfo>): Unit {
+    n := listLib.length(functions);
+    if n == 0 {
+        invalidateFunctions();
+        return;
+    }
+    if n == indexedFnLen and functions[n - 1].name == fnIndexedNames[n - 1] {
+        return;
+    }
+    if n > indexedFnLen and (indexedFnLen == 0 or functions[indexedFnLen - 1].name == fnIndexedNames[indexedFnLen - 1]) {
+        var i := indexedFnLen;
+        loop i < n {
+            entry := functions[i];
+            if not mapLib.has(fnByName, entry.name) {
+                mapLib.set(mut fnByName, entry.name, i);
+            }
+            if entry.runtime =!= "" and not mapLib.has(fnByRuntime, entry.runtime) {
+                mapLib.set(mut fnByRuntime, entry.runtime, i);
+            }
+            listLib.pushBack(mut fnIndexedNames, entry.name);
+            i = i + 1;
+        }
+        indexedFnLen = n;
+        return;
+    }
+    invalidateFunctions();
+    var j := 0;
+    loop j < n {
+        entry := functions[j];
+        if not mapLib.has(fnByName, entry.name) {
+            mapLib.set(mut fnByName, entry.name, j);
+        }
+        if entry.runtime =!= "" and not mapLib.has(fnByRuntime, entry.runtime) {
+            mapLib.set(mut fnByRuntime, entry.runtime, j);
+        }
+        listLib.pushBack(mut fnIndexedNames, entry.name);
+        j = j + 1;
+    }
+    indexedFnLen = n;
+};
+
+/** O(1) lookup of the first declared function named `name`, or -1. */
+pub findFunction := fn(functions: List<FunctionInfo>, name: String): Int {
+    syncFunctions(functions);
+    mapLib.getOr(fnByName, name, -1)
+};
+
+/** O(1) lookup of the first declared function matching `runtime`, or -1. */
+pub findFunctionByRuntime := fn(functions: List<FunctionInfo>, runtime: String): Int {
+    if runtime == "" { return -1; }
+    syncFunctions(functions);
+    mapLib.getOr(fnByRuntime, runtime, -1)
+};
+
+/** Resets all active symbol-table indexes at the start of a module parse. */
+pub resetModule := fn(): Unit {
+    invalidateLocals();
+    invalidateAliases();
+    invalidateFunctions();
+};

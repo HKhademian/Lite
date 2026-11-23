@@ -8,6 +8,7 @@ integer := import "core/int";
 tsLiteral := import "./ts-literals.lts";
 emitFmt := import "./emit-format.lts";
 ir := import "./frontend-ir.lts";
+sym := import "./symbol-table.lts";
 builtinsAbi := import "./builtins-abi.lts";
 syntax := import "./frontend-syntax.lts";
 types := import "./frontend-types.lts";
@@ -701,8 +702,10 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     if paramIdx > 0 {
         fnBodySink = "fnBody:" + textLib.joinTexts(paramNames, ",");
     }
+    sym.invalidateLocals();
     fnBody := parseBinaryCtx(target, source, cursor, prefix, fnLocals, functions, params, "<fn>",
     retKind, 0, fnCtxs, fnBodyDepth, inferMode, fnBodySink, aliases);
+    sym.invalidateLocals();
     usesSelf := reach.codeUsesTextCall(fnBody.code, selfRuntime);
     if isCFnLit {
         if inferMode {
@@ -1233,20 +1236,20 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
     afterName := syntax.skipTrivia(source, next, prefix);
     isCallSite := afterName < textLib.length(source) and textLib.at(source, afterName) == "(";
     if name == "self" {
-        selfLocalIdx := ir.localIndex(locals, "$self");
+        selfLocalIdx := sym.localIndex(locals, "$self");
         if selfLocalIdx >= 0 {
             selfEntry := locals[selfLocalIdx];
             return (kind = selfEntry.kind, code = selfEntry.runtime, intValue = 0, textValue = "", constant = false, next = next);
         }
         if currentName == "" { syntax.failAt(source, nameStart, prefix, "self is only available inside a function"); }
-        selfIndex := ir.findFunction(functions, currentName);
+        selfIndex := sym.findFunction(functions, currentName);
         if selfIndex >= 0 {
             return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = integer.intText(nameStart), intValue = selfIndex, textValue = currentName, constant = false, next = next);
         }
         syntax.failAt(source, nameStart, prefix, "unknown value " + name);
         return ctx.intParsed("", 0, true, start);
     }
-    index := ir.localIndex(locals, name);
+    index := sym.localIndex(locals, name);
     hasLocalShadow := index >= 0 and locals[index].depth >= -1;
     if hasLocalShadow {
         entry := locals[index];
@@ -1255,7 +1258,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         }
         return (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
     }
-    callableIndex := ir.findFunction(functions, name);
+    callableIndex := sym.findFunction(functions, name);
     if callableIndex >= 0 {
         if currentName == "" and functions[callableIndex].declAt > nameStart {
             syntax.failAt(source, nameStart, prefix, "cannot access " + name + " before initialization");
@@ -1713,13 +1716,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             afterItemName := syntax.skipTrivia(source, itemEnd, prefix);
             var blockOutputName := "";
             var blockOutputOpen := afterItemName;
-            blockModIdx := ir.localIndex(blockLocals, itemName);
+            blockModIdx := sym.localIndex(blockLocals, itemName);
             if blockModIdx >= 0 and blockLocals[blockModIdx].kind == ir.VALUE_KIND_MODULE and
             afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "." {
                 memberStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
                 memberEnd := textLib.skipName(source, memberStart);
                 if memberEnd > memberStart {
-                    fnIdx := ir.findFunction(functions, itemName + "." + textLib.slice(source, memberStart, memberEnd));
+                    fnIdx := sym.findFunction(functions, itemName + "." + textLib.slice(source, memberStart, memberEnd));
                     if fnIdx >= 0 {
                         blockOutputName = builtinsAbi.coreOutputName(functions[fnIdx].runtime);
                         blockOutputOpen = syntax.skipTrivia(source, memberEnd, prefix);
@@ -2477,8 +2480,10 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     iifeDepth = bodyDepth, valKind = "", valVar = "", label = loopLabel,
                     iterLabel = stmtLoopLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
                     loopStmtSink := if loopItemName =!= "" { "stmt:" + loopItemName } else { "stmt" };
+                    lpLocMark := sym.localMark();
                     loopBody := parseBinaryCtx(target, source, loopOpen - 1, prefix, loopLocals, functions, params, currentName,
                     "", 0, ctx.appendCtx(ctxs, loopCtx), bodyDepth, inferMode, loopStmtSink, blockAliases);
+                    sym.rewindLocalsTo(lpLocMark);
                     if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, loopBody); }
                     hasCrossBreak := reach.codeUsesTextCall(loopBody.code, "lite$throwTransfer(" + integer.intText(loopId) + ",");
                     hasCrossCont := reach.codeUsesTextCall(loopBody.code, "lite$throwTransfer(" + integer.intText(0 - loopId) + ",");
@@ -2817,13 +2822,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 blockConstant = false;
                 cursor = statementNext;
-            } else if afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "[" and ir.localIndex(blockLocals, itemName) >= 0 and
-            (types.isMapKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind) or types.isListKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind) or types.isArrayKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind)) and
+            } else if afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "[" and sym.localIndex(blockLocals, itemName) >= 0 and
+            (types.isMapKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or types.isListKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or types.isArrayKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind)) and
             syntax.scanBracketEnd(source, afterItemName, prefix) >= 0 and
             (syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) or
              syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0) {
                 isStatement = true;
-                entry := blockLocals[ir.localIndex(blockLocals, itemName)];
+                entry := blockLocals[sym.localIndex(blockLocals, itemName)];
                 if entry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
                 bracketEndPos := syntax.scanBracketEnd(source, afterItemName, prefix);
                 afterBrk := syntax.skipTrivia(source, bracketEndPos, prefix);
@@ -2936,9 +2941,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     blockConstant = false;
                     cursor = statementNext;
                 }
-            } else if afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "." and ir.localIndex(blockLocals, itemName) >= 0 and
-            (types.isRecordKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind) or types.isTupleKind(blockLocals[ir.localIndex(blockLocals, itemName)].kind)) {
-                recEntry := blockLocals[ir.localIndex(blockLocals, itemName)];
+            } else if afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "." and sym.localIndex(blockLocals, itemName) >= 0 and
+            (types.isRecordKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or types.isTupleKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind)) {
+                recEntry := blockLocals[sym.localIndex(blockLocals, itemName)];
                 var scanPos := afterItemName;
                 var curKind := recEntry.kind;
                 fieldChain: mut List<String> = [];
@@ -3027,7 +3032,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
             } else if syntax.isSingleEquals(source, afterItemName) {
                 isStatement = true;
-                index := ir.localIndex(blockLocals, itemName);
+                index := sym.localIndex(blockLocals, itemName);
                 if index < 0 { syntax.failAt(source, itemStart, prefix, "unknown value " + itemName); }
                 entry := blockLocals[index];
                 if entry.initState == ir.INIT_STATE_INIT and not entry.mutable { syntax.failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
@@ -3075,7 +3080,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             } else if syntax.compoundAssignOp(source, afterItemName).width > 0 {
                 isStatement = true;
                 compound := syntax.compoundAssignOp(source, afterItemName);
-                index := ir.localIndex(blockLocals, itemName);
+                index := sym.localIndex(blockLocals, itemName);
                 if index < 0 { syntax.failAt(source, itemStart, prefix, "unknown value " + itemName); }
                 entry := blockLocals[index];
                 if entry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
@@ -3737,8 +3742,10 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         indexVar = loopIdxVar, hasIndex = isSeqLoop, colVar = passColVar);
         bodyCtxs := ctx.appendCtx(ctxs, bodyCtx);
         loopBodySink := if isSeqLoop and seqItemName =!= "" { "loopBody:" + seqItemName } else { "loopBody" };
+        lpExprMark := sym.localMark();
         bodyParsed := parseBinaryCtx(target, source, loopOpen - 1, prefix, loopLocals, functions, params, currentName,
         passBodyExpected, 0, bodyCtxs, loopDepth, passInfer, loopBodySink, aliases);
+        sym.rewindLocalsTo(lpExprMark);
         if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, bodyParsed); }
         if isPass1 {
             loopEndCursor = bodyParsed.next;
@@ -4747,7 +4754,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                 emptySeen: List<String> = [];
                 resolvedEnum = types.resolveAliasKind(source, pos, prefix, aliases, word, emptySeen);
             } else {
-                modIdx := ir.localIndex(locals, word);
+                modIdx := sym.localIndex(locals, word);
                 if modIdx >= 0 and locals[modIdx].kind == ir.VALUE_KIND_MODULE {
                     tStart := syntax.skipTrivia(source, afterWord + 1, prefix);
                     if tStart < size and textLib.isNameStart(textLib.at(source, tStart)) {
@@ -5038,6 +5045,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         var hasGuard := false;
         var guardCode := "";
         var armOpen := -1;
+        armLocMark := sym.localMark();
         if textLib.wordAt(source, afterPat, "if") {
             hasGuard = true;
             guardStart := syntax.skipTrivia(source, afterPat + 2, prefix);
@@ -5080,6 +5088,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         bodySink := if mode == "loopTail" { "loopBody" } else if mode == "stmt" { "stmt" } else { "branch" };
         armExpected := if mode == "stmt" { "" } else { expected };
         branch := parseBinaryCtx(target, source, armOpen, prefix, armLocals, functions, params, currentName, armExpected, 0, ctxs, iifeDepth, inferMode, bodySink, aliases);
+        sym.rewindLocalsTo(armLocMark);
         if inferMode { matchMarkers = ctx.collectParsedMarkers(matchMarkers, branch); }
         if branch.kind =!= ir.VALUE_KIND_NEVER { allNever = false; }
         if not isStmtLike {
@@ -6369,7 +6378,7 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
                         }
                         mNameEnd := textLib.skipName(source, mNameStart);
                         mListName := textLib.slice(source, mNameStart, mNameEnd);
-                        mIdx := ir.localIndex(locals, mListName);
+                        mIdx := sym.localIndex(locals, mListName);
                         if mIdx < 0 { syntax.failAt(source, mNameStart, prefix, "unknown value " + mListName); }
                         mEntry := locals[mIdx];
                         if not types.isListKind(mEntry.kind) and not types.isMapKind(mEntry.kind) and not types.isSetKind(mEntry.kind) {
@@ -6422,7 +6431,7 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
                         }
                         mNameEnd := textLib.skipName(source, mNameStart);
                         mListName := textLib.slice(source, mNameStart, mNameEnd);
-                        mIdx := ir.localIndex(locals, mListName);
+                        mIdx := sym.localIndex(locals, mListName);
                         if mIdx < 0 { syntax.failAt(source, mNameStart, prefix, "unknown value " + mListName); }
                         mEntry := locals[mIdx];
                         if not types.isListKind(mEntry.kind) and not types.isMapKind(mEntry.kind) and not types.isSetKind(mEntry.kind) {
@@ -6643,7 +6652,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 label := textLib.slice(source, labelStart, labelEnd);
                 if left.kind == ir.VALUE_KIND_MODULE {
                     qualified := left.textValue + "." + label;
-                    functionIndex := ir.findFunction(functions, qualified);
+                    functionIndex := sym.findFunction(functions, qualified);
                     if functionIndex >= 0 {
                         left = (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = integer.intText(exprStart), intValue = functionIndex, textValue = qualified,
                         constant = false, next = labelEnd);
@@ -6694,7 +6703,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             }
                             left = parseRecordLiteral(target, source, afterMemberLabel, prefix, locals, functions, params, currentName, modRecKind, ctxs, iifeDepth, inferMode, aliases);
                         } else {
-                            memberIndex := ir.localIndex(locals, qualified);
+                            memberIndex := sym.localIndex(locals, qualified);
                             if memberIndex < 0 {
                                 syntax.failAt(source, labelStart, prefix, "unknown module member " + qualified);
                             }
@@ -7454,7 +7463,11 @@ pub parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: 
         if bodySink == "" and types.isRecordKind(expected) {
             left = parseRecordLiteral(target, source, start, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
         } else {
+            blkLocMark := sym.localMark();
+            blkAliasMark := sym.aliasMark();
             left = parseBlockExpr(target, source, start, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, bodySink, aliases);
+            sym.rewindLocalsTo(blkLocMark);
+            sym.rewindAliasesTo(blkAliasMark);
         }
     } else if textLib.isNameStart(ch) {
         left = parseNamedPrimaryExpr(target, source, start, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, aliases);

@@ -6,6 +6,7 @@ numeric := import "./numeric-literals.lts";
 integer := import "core/int";
 tsLiteral := import "./ts-literals.lts";
 ir := import "./frontend-ir.lts";
+sym := import "./symbol-table.lts";
 optCfg := import "./opt-config.lts";
 builtinsAbi := import "./builtins-abi.lts";
 syntax := import "./frontend-syntax.lts";
@@ -239,7 +240,7 @@ isReservedWord := fn(name: String): Bool { syntax.isReservedWord(name) };
 unsupportedFeature := fn(source: String, position: Int, name: String, prefix: String): Unit { syntax.unsupportedFeature(source, position, name, prefix); };
 
 /** Returns the index of the previously declared function named `name`, or -1. */
-findFunction := fn(functions: List<FunctionInfo>, name: String): Int { ir.findFunction(functions, name) };
+findFunction := fn(functions: List<FunctionInfo>, name: String): Int { sym.findFunction(functions, name) };
 
 /** True for type-constructor names that later slices will admit, not scalar, flat named-tuple or List aliases yet. */
 isUnsupportedAliasTarget := fn(name: String): Bool { types.isUnsupportedAliasTarget(name) };
@@ -468,7 +469,7 @@ runtimeIntegerCode := fn(target: String, operator: String, left: String, right: 
 runtimeTypedIntegerCode := fn(target: String, kind: String, operator: String, left: String, right: String, position: Int): String { ctx.runtimeTypedIntegerCode(target, kind, operator, left, right, position) };
 
 /** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
-localIndex := fn(locals: List<Local>, name: String): Int { ir.localIndex(locals, name) };
+localIndex := fn(locals: List<Local>, name: String): Int { sym.localIndex(locals, name) };
 
 /** True when `locals` already binds runtime identifier `runtime` in scope or as a pre-scanned future placeholder. */
 localsUseRuntime := fn(locals: List<Local>, runtime: String): Bool { ir.localsUseRuntime(locals, runtime) };
@@ -1080,6 +1081,7 @@ functionParams: List<String>, currentName: String, aliases: List<AliasDecl>): (c
 /** Parses complete source with selective function-body compilation and explicit `--builtin-mode` specs. */
 pub parseProgramWithModuleSelectiveSpecs := fn(target: String, source: String, prefix: String, exports: Items, moduleKey: String,
 moduleIdentity: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs: List<String>): Items {
+    sym.resetModule();
     size := textLib.length(source);
     var position := skipTrivia(source, 0, prefix);
     var items: mut Items = [];

@@ -5,6 +5,7 @@ listLib := import "core/list";
 textLib := import "core/text";
 numeric := import "./numeric-literals.lts";
 ir := import "./frontend-ir.lts";
+sym := import "./symbol-table.lts";
 syntax := import "./frontend-syntax.lts";
 types := import "./frontend-types.lts";
 trace := import "./trace-safety.lts";
@@ -398,7 +399,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
         afterName := textLib.skipName(source, start);
         name := textLib.slice(source, start, afterName);
         if syntax.isReservedWord(name) { return (kind = "", next = start); }
-        locIdx := ir.localIndex(locals, name);
+        locIdx := sym.localIndex(locals, name);
         if locIdx >= 0 and locals[locIdx].kind == ir.VALUE_KIND_MODULE {
             afterDot := syntax.skipTrivia(source, afterName, prefix);
             if afterDot >= size or textLib.at(source, afterDot) =!= "." { return (kind = "", next = start); }
@@ -406,13 +407,13 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
             if memStart >= size or not textLib.isNameStart(textLib.at(source, memStart)) { return (kind = "", next = start); }
             memEnd := textLib.skipName(source, memStart);
             qualified := name + "." + textLib.slice(source, memStart, memEnd);
-            qFnIdx := ir.findFunction(functions, qualified);
+            qFnIdx := sym.findFunction(functions, qualified);
             if qFnIdx >= 0 {
                 curFnIdx = qFnIdx;
                 leftKind = "$fn";
                 leftNext = memEnd;
             } else {
-                qLocIdx := ir.localIndex(locals, qualified);
+                qLocIdx := sym.localIndex(locals, qualified);
                 if qLocIdx >= 0 {
                     leftKind = locals[qLocIdx].kind;
                     leftNext = memEnd;
@@ -450,7 +451,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                 leftKind = futureValues[futAnyIdx].kind;
                 leftNext = afterName;
             } else {
-                fnIdx := ir.findFunction(functions, name);
+                fnIdx := sym.findFunction(functions, name);
                 if fnIdx >= 0 {
                     curFnIdx = fnIdx;
                     leftKind = "$fn";
@@ -1397,11 +1398,14 @@ pub appendAssignedBagDecls := fn(assignedBag: String, decls: List<BlockDecl>, de
 
 /** Removes deferred-only entries after one function body has been checked. */
 pub withoutFutureValues := fn(locals: List<Local>): List<Local> {
-    var hasFuture := false;
+    var firstDrop := -1;
+    var idx := 0;
     loop locals as entry {
-        if entry.depth == -1 { hasFuture = true; break; }
+        if entry.depth == -1 { firstDrop = idx; break; }
+        idx = idx + 1;
     }
-    if not hasFuture { return locals; }
+    if firstDrop < 0 { return locals; }
+    sym.rewindLocalsTo(firstDrop);
     kept: mut List<Local> = [];
     loop locals as entry {
         if entry.depth >= 0 or entry.depth <= -2 { listLib.pushBack(mut kept, entry); }

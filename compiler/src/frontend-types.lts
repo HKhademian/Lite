@@ -6,6 +6,7 @@ textLib := import "core/text";
 numeric := import "./numeric-literals.lts";
 tsLiteral := import "./ts-literals.lts";
 ir := import "./frontend-ir.lts";
+sym := import "./symbol-table.lts";
 syntax := import "./frontend-syntax.lts";
 
 /** One transparent type alias matching `frontend-ir.AliasDecl`. */
@@ -25,17 +26,7 @@ pub unsupportedAliasTarget := fn(source: String, position: Int, prefix: String, 
 
 /** Returns the index of the first visible alias named `name` at the innermost active block depth, or -1 when absent. */
 pub findAlias := fn(aliases: List<AliasDecl>, name: String): Int {
-    var index := 0;
-    var found := -1;
-    var foundDepth := -1;
-    loop aliases as alias {
-        if alias.name == name and alias.depth > foundDepth {
-            found = index;
-            foundDepth = alias.depth;
-        }
-        index = index + 1;
-    }
-    found
+    sym.findAlias(aliases, name)
 };
 
 /** Reads one local or module-qualified type name. */
@@ -76,14 +67,17 @@ pub maxAliasDepth := fn(aliases: List<AliasDecl>): Int {
 
 /** Drops aliases declared at block depth `depth` or deeper when exiting a block. */
 pub popBlockAliases := fn(aliases: List<AliasDecl>, depth: Int): List<AliasDecl> {
-    var hasDeeper := false;
+    var firstDrop := -1;
+    var idx := 0;
     loop aliases as alias {
         if alias.depth >= depth {
-            hasDeeper = true;
+            firstDrop = idx;
             break;
         }
+        idx = idx + 1;
     }
-    if not hasDeeper { return aliases; }
+    if firstDrop < 0 { return aliases; }
+    sym.rewindAliasesTo(firstDrop);
     kept: mut List<AliasDecl> = [];
     loop aliases as alias {
         if alias.depth < depth { listLib.pushBack(mut kept, alias); }

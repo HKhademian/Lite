@@ -6,6 +6,7 @@ setLib := import "core/set";
 textLib := import "core/text";
 tb := import "util/text-builder";
 ir := import "./frontend-ir.lts";
+sym := import "./symbol-table.lts";
 syntax := import "./frontend-syntax.lts";
 types := import "./frontend-types.lts";
 
@@ -26,18 +27,12 @@ FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutab
 
 /** Returns the index of the latest reached or deferred local (`depth >= -1`) with runtime `runtime`, or -1 when unreached. */
 pub latestActiveLocalByRuntime := fn(locals: List<Local>, runtime: String): Int {
-    var i := 0;
-    var found := -1;
-    loop locals as local {
-        if local.depth >= -1 and local.runtime == runtime { found = i; }
-        i = i + 1;
-    }
-    found
+    sym.latestActiveLocalByRuntime(locals, runtime)
 };
 
 /** Returns the source name if `runtime` is a pre-scanned same/enclosing block placeholder not yet reached sequentially, or `""`. */
 pub unreachedFutureLocalName := fn(locals: List<Local>, runtime: String): String {
-    if runtime == "" or latestActiveLocalByRuntime(locals, runtime) >= 0 { return ""; }
+    if runtime == "" or not sym.hasFutureLocal(locals) or sym.latestActiveLocalByRuntime(locals, runtime) >= 0 { return ""; }
     loop locals as entry {
         if entry.depth <= -2 and entry.runtime == runtime { return entry.name; }
     }
@@ -46,38 +41,7 @@ pub unreachedFutureLocalName := fn(locals: List<Local>, runtime: String): String
 
 /** True when any unreached future placeholder (`depth <= -2`) or uninitialized reached binding (`depth >= 0`) exists in `locals`. */
 pub localsHasAnyUnready := fn(locals: List<Local>): Bool {
-    count := listLib.length(locals);
-    var i := count - 1;
-    loop i >= 0 {
-        entry := locals[i];
-        if entry.depth >= 0 and entry.initState =!= ir.INIT_STATE_INIT {
-            var shadowed := false;
-            var j := i + 1;
-            loop j < count {
-                later := locals[j];
-                if later.depth >= -1 and later.runtime == entry.runtime {
-                    shadowed = true;
-                    break;
-                }
-                j = j + 1;
-            }
-            if not shadowed { return true; }
-        } else if entry.depth <= -2 {
-            var hasActive := false;
-            var j := count - 1;
-            loop j >= 0 {
-                other := locals[j];
-                if other.depth >= -1 and other.runtime == entry.runtime {
-                    hasActive = true;
-                    break;
-                }
-                j = j - 1;
-            }
-            if not hasActive { return true; }
-        }
-        i = i - 1;
-    }
-    false
+    sym.localsHasAnyUnready(locals)
 };
 
 /** True for characters allowed in compiler-generated runtime identifiers. */
@@ -500,12 +464,7 @@ hasUserOrLocalCall := fn(eagerCode: String): Bool {
 
 /** Finds the index of the function matching `runtime` in `functions`, or -1. */
 findFunctionByRuntime := fn(functions: List<FunctionInfo>, runtime: String): Int {
-    var i := 0;
-    loop functions as info {
-        if info.runtime == runtime { return i; }
-        i = i + 1;
-    }
-    -1
+    sym.findFunctionByRuntime(functions, runtime)
 };
 
 /** Finds the latest `FutureValue` matching `runtime`, or -1. */
@@ -970,15 +929,7 @@ pub computeCallableRhsDeps := fn(rhsCode: String): String {
 
 /** Propagates outer `equals` and `List.push`/`unshift` updates from emitted block/branch/loop JS `code` onto active `locals`. */
 pub mergeOuterCallableUpdatesFromCode := fn(locals: List<Local>, code: String): List<Local> {
-    if code == "" { return locals; }
-    var hasCallable := false;
-    loop locals as l {
-        if l.depth >= -1 and (types.containsFnKind(l.kind) or l.name == "$tuple") {
-            hasCallable = true;
-            break;
-        }
-    }
-    if not hasCallable { return locals; }
+    if code == "" or not sym.hasCallableLocal(locals) { return locals; }
     nextLocals: mut List<Local> = locals;
     stripped := stripDeferredFnBodies(code);
     if stripped.pairsText =!= "" {
@@ -1183,13 +1134,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
         aSeedPos = aSeedPos + 1;
     }
 
-    var hasFutureLocal := false;
-    loop locals as lEntry {
-        if lEntry.depth <= -2 {
-            hasFutureLocal = true;
-            break;
-        }
-    }
+    hasFutureLocal := sym.hasFutureLocal(locals);
     var allHead := 0;
     loop allHead < allCount {
         curTok := allQueue[allHead];

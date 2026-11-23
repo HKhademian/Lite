@@ -6,6 +6,7 @@ textLib := import "core/text";
 tb := import "util/text-builder";
 numeric := import "./numeric-literals.lts";
 ir := import "./frontend-ir.lts";
+sym := import "./symbol-table.lts";
 syntax := import "./frontend-syntax.lts";
 types := import "./frontend-types.lts";
 trace := import "./trace-safety.lts";
@@ -289,7 +290,7 @@ pub parseMapGrant := fn(source: String, open: Int, prefix: String, locals: List<
     }
     nameEnd := textLib.skipName(source, nameStart);
     mapName := textLib.slice(source, nameStart, nameEnd);
-    index := ir.localIndex(locals, mapName);
+    index := sym.localIndex(locals, mapName);
     if index < 0 {
         syntax.failAt(source, cursor, prefix, "unknown value " + mapName);
     }
@@ -318,7 +319,7 @@ pub parseSetGrant := fn(source: String, open: Int, prefix: String, locals: List<
     }
     nameEnd := textLib.skipName(source, nameStart);
     setName := textLib.slice(source, nameStart, nameEnd);
-    index := ir.localIndex(locals, setName);
+    index := sym.localIndex(locals, setName);
     if index < 0 {
         syntax.failAt(source, cursor, prefix, "unknown value " + setName);
     }
@@ -347,7 +348,7 @@ pub parseListGrant := fn(source: String, open: Int, prefix: String, locals: List
     }
     nameEnd := textLib.skipName(source, cursor);
     listName := textLib.slice(source, cursor, nameEnd);
-    index := ir.localIndex(locals, listName);
+    index := sym.localIndex(locals, listName);
     if index < 0 {
         syntax.failAt(source, cursor, prefix, "unknown value " + listName);
         return (runtime = "", kind = "", next = nameEnd);
@@ -390,6 +391,7 @@ pub localsCount := fn(locals: List<Local>): Int {
 /** Returns the prefix of `locals` up to `targetLen` entries. */
 pub truncateLocals := fn(locals: List<Local>, targetLen: Int): List<Local> {
     if targetLen >= listLib.length(locals) { return locals; }
+    sym.rewindLocalsTo(targetLen);
     if targetLen <= 0 { return []; }
     listLib.slice(locals, 0, targetLen)
 };
@@ -1069,6 +1071,7 @@ pub visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> {
         idx = idx + 1;
     }
     if not dropped { return locals; }
+    sym.rewindLocalsTo(firstDrop);
     if not keptAfterDrop {
         if firstDrop <= 0 { return []; }
         return listLib.slice(locals, 0, firstDrop);
