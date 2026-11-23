@@ -691,6 +691,18 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_VISITED, name = path, runtime = rootDir, code = logical,
     intValue = if isRoot { 1 } else { 0 }, textValue = moduleKey));
 
+    if isRoot and projectRoot =!= "" {
+        coreOwnerRels: List<String> = ["lib/core/int.lts", "lib/core/text.lts", "lib/core/list.lts", "lib/core/array.lts", "lib/core/map.lts", "lib/core/set.lts"];
+        loop coreOwnerRels as ownerRel {
+            loadedOwner := hostFs.tryReadCoreOwner(projectRoot, ownerRel);
+            if loadedOwner.ok and not moduleVisited(graph, loadedOwner.path) {
+                graph = self(=target, path = loadedOwner.path, display = loadedOwner.display,
+                identity = loadedOwner.identity, source = loadedOwner.text, initialGraph = graph,
+                =projectRoot, =cwd, =builtinSpecs);
+            }
+        }
+    }
+
     clauses := frontend.collectImportClauses(target, source, path);
     clausePaths: mut List<String> = [];
     depPaths: mut List<String> = [];
@@ -738,6 +750,13 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         if moduleProcessed(graph, depPath) {
             childLevel := moduleLevelForPath(graph, depPath);
             if childLevel > maxChildLevel { maxChildLevel = childLevel; }
+        }
+    }
+    if isRoot {
+        loop graph as pItem {
+            if pItem.kind == frontend.ITEM_KIND_MODULE_PROCESSED and pItem.intValue > maxChildLevel {
+                maxChildLevel = pItem.intValue;
+            }
         }
     }
     level := maxChildLevel + 1;

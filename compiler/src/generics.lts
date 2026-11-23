@@ -435,8 +435,9 @@ pub substKind := fn(genericParams: String, pattern: String, bindings: Map<String
         self(genericParams, types.mapValueKind(pattern), bindings) + ">";
     }
     if types.isArrayKind(pattern) {
-        return "[" + self(genericParams, types.arrayElementKind(pattern), bindings) + ";" +
-        integer.intText(types.arrayExtent(pattern)) + "]";
+        ext := types.arrayExtent(pattern);
+        extStr := if ext < 0 { "*" } else { integer.intText(ext) };
+        return "[" + self(genericParams, types.arrayElementKind(pattern), bindings) + ";" + extStr + "]";
     }
     if types.isTupleKind(pattern) {
         n := types.tupleComponentCount(pattern);
@@ -529,7 +530,8 @@ pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, b
         return self(genericParams, types.mapValueKind(pattern), types.mapValueKind(actual), mut bindings);
     }
     if types.isArrayKind(pattern) {
-        if not types.isArrayKind(actual) or types.arrayExtent(pattern) =!= types.arrayExtent(actual) {
+        pExt := types.arrayExtent(pattern);
+        if not types.isArrayKind(actual) or (pExt >= 0 and pExt =!= types.arrayExtent(actual)) {
             return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
         }
         return self(genericParams, types.arrayElementKind(pattern), types.arrayElementKind(actual), mut bindings);

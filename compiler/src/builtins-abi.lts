@@ -122,39 +122,46 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, params: String,
         else if name == "closeWriter" and params == "writer=(kind:String,handle:Int)" and result == "(ok:Bool,error:String)" { "lite$ioCloseWriter" }
         else { "" }
     } else if moduleIdentity == "lite.core.text.v1" {
-        if name == "length" and params == "text=String" and result == ir.VALUE_KIND_INT { "lite$textLength" }
-        else if name == "at" and params == "text=String|position=Int" and result == ir.VALUE_KIND_STRING { "lite$textAt" }
-        else if name == "slice" and params == "text=String|start=Int|end=Int" and result == ir.VALUE_KIND_STRING { "lite$textSlice" }
+        if (name == "length" or name == "String.length") and params == "text=String" and result == ir.VALUE_KIND_INT { "lite$textLength" }
+        else if (name == "at" or name == "String.at") and params == "text=String|position=Int" and result == ir.VALUE_KIND_STRING { "lite$textAt" }
+        else if (name == "slice" or name == "String.slice") and params == "text=String|start=Int|end=Int" and result == ir.VALUE_KIND_STRING { "lite$textSlice" }
         else { "" }
     } else if moduleIdentity == "lite.core.list.v1" {
-        if name == "pushBack" and params == "values=mut List<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$pushBack:v1" }
-        else if name == "popBack" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popBack:v1" }
-        else if name == "pushFront" and params == "values=mut List<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$pushFront:v1" }
-        else if name == "popFront" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popFront:v1" }
-        else if name == "length" and params == "values=List<T>" and result == ir.VALUE_KIND_INT { "lite$core$list$length:v1" }
-        else if name == "setAt" and params == "values=mut List<T>|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$setAt:v1" }
-        else if name == "slice" and params == "values=List<T>|start=Int|end=Int" and result == "List<T>" { "lite$core$list$slice:v1" }
-        else if name == "reverse" and params == "values=List<T>" and result == "List<T>" { "lite$core$list$reverse:v1" }
-        else if name == "clear" and params == "values=mut List<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$list$clear:v1" }
+        if (name == "pushBack" or name == "List.pushBack") and params == "values=mut List<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$pushBack:v1" }
+        else if (name == "popBack" or name == "List.popBack") and params == "values=mut List<T>" and result == "T" { "lite$core$list$popBack:v1" }
+        else if (name == "pushFront" or name == "List.pushFront") and params == "values=mut List<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$pushFront:v1" }
+        else if (name == "popFront" or name == "List.popFront") and params == "values=mut List<T>" and result == "T" { "lite$core$list$popFront:v1" }
+        else if (name == "length" or name == "List.length") and params == "values=List<T>" and result == ir.VALUE_KIND_INT { "lite$core$list$length:v1" }
+        else if (name == "setAt" or name == "List.setAt" or name == "List.$setIndex") and params == "values=mut List<T>|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$setAt:v1" }
+        else if name == "List.$getIndex" and params == "values=List<T>|index=Int" and result == "T" { "lite$core$list$getIndex:v1" }
+        else if (name == "slice" or name == "List.slice") and params == "values=List<T>|start=Int|end=Int" and result == "List<T>" { "lite$core$list$slice:v1" }
+        else if (name == "reverse" or name == "List.reverse") and params == "values=List<T>" and result == "List<T>" { "lite$core$list$reverse:v1" }
+        else if (name == "clear" or name == "List.clear") and params == "values=mut List<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$list$clear:v1" }
+        else { "" }
+    } else if moduleIdentity == "lite.core.array.v1" {
+        if name == "Array.length" and params == "values=[T;*]" and result == ir.VALUE_KIND_INT { "lite$core$array$length:v1" }
+        else if name == "Array.$getIndex" and params == "values=[T;*]|index=Int" and result == "T" { "lite$core$array$getIndex:v1" }
+        else if name == "Array.$setIndex" and params == "values=mut [T;*]|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$array$setIndex:v1" }
         else { "" }
     } else if moduleIdentity == "lite.core.map.v1" {
-        if name == "set" and params == "entries=mut Map<K,V>|key=K|value=V" and result == ir.VALUE_KIND_UNIT { "lite$core$map$set:v1" }
-        else if name == "get" and params == "entries=Map<K,V>|key=K" and result == "(found:Bool,value:V)" { "lite$core$map$get:v1" }
-        else if name == "getOr" and params == "entries=Map<K,V>|key=K|fallback=V" and result == "V" { "lite$core$map$getOr:v1" }
-        else if name == "has" and params == "entries=Map<K,V>|key=K" and result == ir.VALUE_KIND_BOOL { "lite$core$map$has:v1" }
-        else if name == "remove" and params == "entries=mut Map<K,V>|key=K" and result == ir.VALUE_KIND_BOOL { "lite$core$map$remove:v1" }
-        else if name == "size" and params == "entries=Map<K,V>" and result == ir.VALUE_KIND_INT { "lite$core$map$size:v1" }
-        else if name == "clear" and params == "entries=mut Map<K,V>" and result == ir.VALUE_KIND_UNIT { "lite$core$map$clear:v1" }
-        else if name == "keys" and params == "entries=Map<K,V>" and result == "List<K>" { "lite$core$map$keys:v1" }
-        else if name == "values" and params == "entries=Map<K,V>" and result == "List<V>" { "lite$core$map$values:v1" }
+        if (name == "set" or name == "Map.set" or name == "Map.$setIndex") and params == "entries=mut Map<K,V>|key=K|value=V" and result == ir.VALUE_KIND_UNIT { "lite$core$map$set:v1" }
+        else if name == "Map.$getIndex" and params == "entries=Map<K,V>|key=K" and result == "V" { "lite$core$map$getIndex:v1" }
+        else if (name == "get" or name == "Map.get") and params == "entries=Map<K,V>|key=K" and result == "(found:Bool,value:V)" { "lite$core$map$get:v1" }
+        else if (name == "getOr" or name == "Map.getOr") and params == "entries=Map<K,V>|key=K|fallback=V" and result == "V" { "lite$core$map$getOr:v1" }
+        else if (name == "has" or name == "Map.has") and params == "entries=Map<K,V>|key=K" and result == ir.VALUE_KIND_BOOL { "lite$core$map$has:v1" }
+        else if (name == "remove" or name == "Map.remove") and params == "entries=mut Map<K,V>|key=K" and result == ir.VALUE_KIND_BOOL { "lite$core$map$remove:v1" }
+        else if (name == "size" or name == "Map.size") and params == "entries=Map<K,V>" and result == ir.VALUE_KIND_INT { "lite$core$map$size:v1" }
+        else if (name == "clear" or name == "Map.clear") and params == "entries=mut Map<K,V>" and result == ir.VALUE_KIND_UNIT { "lite$core$map$clear:v1" }
+        else if (name == "keys" or name == "Map.keys") and params == "entries=Map<K,V>" and result == "List<K>" { "lite$core$map$keys:v1" }
+        else if (name == "values" or name == "Map.values") and params == "entries=Map<K,V>" and result == "List<V>" { "lite$core$map$values:v1" }
         else { "" }
     } else if moduleIdentity == "lite.core.set.v1" {
-        if name == "add" and params == "s=mut Set<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$set$add:v1" }
-        else if name == "has" and params == "s=Set<T>|value=T" and result == ir.VALUE_KIND_BOOL { "lite$core$set$has:v1" }
-        else if name == "remove" and params == "s=mut Set<T>|value=T" and result == ir.VALUE_KIND_BOOL { "lite$core$set$remove:v1" }
-        else if name == "size" and params == "s=Set<T>" and result == ir.VALUE_KIND_INT { "lite$core$set$size:v1" }
-        else if name == "clear" and params == "s=mut Set<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$set$clear:v1" }
-        else if name == "values" and params == "s=Set<T>" and result == "List<T>" { "lite$core$set$values:v1" }
+        if (name == "add" or name == "Set.add") and params == "s=mut Set<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$set$add:v1" }
+        else if (name == "has" or name == "Set.has") and params == "s=Set<T>|value=T" and result == ir.VALUE_KIND_BOOL { "lite$core$set$has:v1" }
+        else if (name == "remove" or name == "Set.remove") and params == "s=mut Set<T>|value=T" and result == ir.VALUE_KIND_BOOL { "lite$core$set$remove:v1" }
+        else if (name == "size" or name == "Set.size") and params == "s=Set<T>" and result == ir.VALUE_KIND_INT { "lite$core$set$size:v1" }
+        else if (name == "clear" or name == "Set.clear") and params == "s=mut Set<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$set$clear:v1" }
+        else if (name == "values" or name == "Set.values") and params == "s=Set<T>" and result == "List<T>" { "lite$core$set$values:v1" }
         else { "" }
     } else if moduleIdentity == "lite.core.file.v1" {
         if name == "kind" and params == "path=String" and result == ir.VALUE_KIND_STRING { "lite$fileKind" }
@@ -258,44 +265,46 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
             return (params = "path=String|text=String", result = "(ok:Bool,error:String)");
         }
     } else if moduleName == "lib/core/int" {
-        if name == "intText" {
+        if name == "intText" or name == "Int.toText" or name == "Int.intText" {
             return (params = "value=Int", result = ir.VALUE_KIND_STRING);
         }
     } else if moduleName == "lib/core/text" {
-        if name == "skipSpaces" or name == "skipName" {
+        if name == "skipSpaces" or name == "skipName" or name == "String.skipSpaces" or name == "String.skipName" {
             return (params = "source=String|start=Int", result = ir.VALUE_KIND_INT);
         }
-        if name == "indexOf" or name == "indexOfText" {
+        if name == "indexOf" or name == "indexOfText" or name == "String.indexOf" or name == "String.indexOfText" {
             return (params = "source=String|needle=String|start=Int", result = ir.VALUE_KIND_INT);
         }
-        if name == "startsWithAt" {
+        if name == "startsWithAt" or name == "String.startsWithAt" {
             return (params = "source=String|position=Int|text=String", result = ir.VALUE_KIND_BOOL);
         }
-        if name == "wordAt" {
+        if name == "wordAt" or name == "String.wordAt" {
             return (params = "source=String|position=Int|word=String", result = ir.VALUE_KIND_BOOL);
         }
         if name == "joinTexts" {
             return (params = "values=List<String>|separator=String", result = ir.VALUE_KIND_STRING);
         }
-        if name == "textToInt" {
+        if name == "textToInt" or name == "String.toInt" or name == "String.textToInt" {
             return (params = "text=String", result = "(value:Int,ok:Bool)");
         }
-        if name == "trimStart" or name == "trimEnd" or name == "trim" or name == "toLowerAscii" {
+        if name == "trimStart" or name == "trimEnd" or name == "trim" or name == "toLowerAscii" or
+        name == "String.trimStart" or name == "String.trimEnd" or name == "String.trim" or name == "String.toLowerAscii" {
             return (params = "source=String", result = ir.VALUE_KIND_STRING);
         }
-        if name == "endsWith" {
+        if name == "endsWith" or name == "String.endsWith" {
             return (params = "source=String|suffix=String", result = ir.VALUE_KIND_BOOL);
         }
-        if name == "repeatText" {
+        if name == "repeatText" or name == "String.repeat" or name == "String.repeatText" {
             return (params = "value=String|count=Int", result = ir.VALUE_KIND_STRING);
         }
-        if name == "containsText" {
+        if name == "containsText" or name == "String.contains" or name == "String.containsText" {
             return (params = "source=String|needle=String", result = ir.VALUE_KIND_BOOL);
         }
-        if name == "isDigit" {
+        if name == "isDigit" or name == "String.isDigit" {
             return (params = "text=String", result = ir.VALUE_KIND_BOOL);
         }
-        if name == "isAsciiLetter" or name == "isNameStart" or name == "isNameContinue" or name == "isWhitespace" {
+        if name == "isAsciiLetter" or name == "isNameStart" or name == "isNameContinue" or name == "isWhitespace" or
+        name == "String.isAsciiLetter" or name == "String.isNameStart" or name == "String.isNameContinue" or name == "String.isWhitespace" {
             return (params = "ch=String", result = ir.VALUE_KIND_BOOL);
         }
     } else if moduleName == "lib/core/io" {
@@ -387,6 +396,17 @@ parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
         diagLib.fail(prefix, "invalid --builtin-mode value: " + mode);
     }
     tLen := textLib.length(target);
+    colon := textLib.indexOfText(target, ":", 0);
+    if colon > 0 and colon + 1 < tLen {
+        modPart := textLib.slice(target, 0, colon);
+        fnPart := textLib.slice(target, colon + 1, tLen);
+        normMod := normalizeBuiltinModule(modPart);
+        if normMod =!= "" and softBuiltinAbi(normMod, fnPart).result =!= "" {
+            return (kind = ir.BUILTIN_RULE_FN, name = normMod + "." + fnPart, runtime = mode,
+            code = "", intValue = 0, textValue = "");
+        }
+        diagLib.fail(prefix, "invalid --builtin-mode function target: " + target);
+    }
     isLtsFile := tLen > 4 and textLib.startsWithAt(target, tLen - 4, ".lts");
     var lastDot := -1;
     var scan := 0;

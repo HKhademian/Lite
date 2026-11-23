@@ -3476,7 +3476,13 @@ cParamRuntimeAt := fn(encoded: String, targetIndex: Int): String {
 };
 
 /** Returns a C11 native fast-path return expression for a registered soft-builtin function, or `""`. */
-cSoftBuiltinExpr := fn(moduleName: String, fnName: String, params: String): String {
+cSoftBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): String {
+    fnName := if rawFnName == "Int.toText" or rawFnName == "Int.intText" { "intText" }
+    else if rawFnName == "String.toInt" { "textToInt" }
+    else if rawFnName == "String.repeat" { "repeatText" }
+    else if rawFnName == "String.contains" { "containsText" }
+    else if textLib.startsWithAt(rawFnName, 0, "String.") { textLib.slice(rawFnName, 7, textLib.length(rawFnName)) }
+    else { rawFnName };
     arg0 := cParamRuntimeAt(params, 0);
     if moduleName == "lib/core/int" {
         if fnName == "intText" { return "lt_c_int_text(" + arg0 + ")"; }

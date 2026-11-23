@@ -400,10 +400,12 @@ pub arrayElementKind := fn(kind: String): String {
     textLib.slice(kind, 1, semi)
 };
 
-/** Returns the integer extent from `[ElementKind;Extent]`. */
+/** Returns the integer extent from `[ElementKind;Extent]`, or -1 for wildcard `[ElementKind;*]`. */
 pub arrayExtent := fn(kind: String): Int {
     semi := arraySemiIndex(kind);
     if semi <= 1 { return 0; }
+    extText := textLib.slice(kind, semi + 1, textLib.length(kind) - 1);
+    if extText == "*" { return -1; }
     syntax.parseDigits(kind, semi + 1, textLib.length(kind) - 1)
 };
 
@@ -1168,7 +1170,8 @@ pub tupleShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
 pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
     (expectedKind =!= "" and actualKind == ir.VALUE_KIND_NEVER) or expectedKind == actualKind or
     numeric.numericWidens(expectedKind, actualKind) or tupleShapeMatches(expectedKind, actualKind) or
-    exactShapeMatches(expectedKind, actualKind)
+    exactShapeMatches(expectedKind, actualKind) or
+    (isArrayKind(expectedKind) and arrayExtent(expectedKind) < 0 and isArrayKind(actualKind) and self(arrayElementKind(expectedKind), arrayElementKind(actualKind)))
 };
 
 /** Maps a restricted Lite scalar, flat named-tuple, fixed-array, List or callable kind to its TypeScript type. */
@@ -1637,6 +1640,18 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in list type" });
         }
         return (kind = "List<" + inner.kind + ">", next = close + 1);
+    }
+    if resolvedName == "Array" and afterName < size and textLib.at(source, afterName) == "<" {
+        innerStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        if innerStart >= size or textLib.at(source, innerStart) == ">" {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "expected an array element type");
+        }
+        inner := self(errSource, errPos, useLocalErr, source, innerStart, prefix, aliases, context, genericType, seen);
+        close := syntax.skipTrivia(source, inner.next, prefix);
+        if close >= size or textLib.at(source, close) =!= ">" {
+            syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in array type" });
+        }
+        return (kind = "[" + inner.kind + ";*]", next = close + 1);
     }
     if resolvedName == "Map" and afterName < size and textLib.at(source, afterName) == "<" {
         keyStart := syntax.skipTrivia(source, afterName + 1, prefix);
@@ -2791,6 +2806,21 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = close);
         }
         return (ok = true, kind = "List<" + elem.kind + ">", next = close + 1);
+    }
+    if resolvedName == "Array" {
+        afterArr := syntax.skipTrivia(source, afterName, prefix);
+        if afterArr >= size or textLib.at(source, afterArr) =!= "<" {
+            return (ok = false, kind = "", next = afterArr);
+        }
+        elem := self(source, afterArr + 1, prefix, aliases, genericType, seen, depthLeft - 1);
+        if not elem.ok or elem.kind == ir.VALUE_KIND_UNIT {
+            return (ok = false, kind = "", next = afterArr + 1);
+        }
+        close := syntax.skipTrivia(source, elem.next, prefix);
+        if close >= size or textLib.at(source, close) =!= ">" {
+            return (ok = false, kind = "", next = close);
+        }
+        return (ok = true, kind = "[" + elem.kind + ";*]", next = close + 1);
     }
     if resolvedName == "Map" {
         afterMap := syntax.skipTrivia(source, afterName, prefix);

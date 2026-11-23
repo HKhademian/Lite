@@ -3631,7 +3631,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     if not setHook.found {
                         failAt(source, nameStart, prefix, "type " + displayKind(entry.kind) + " does not define $setIndex for index assignment");
                     }
-                    if not entry.writable {
+                    canMutateHook := if isArrayKind(entry.kind) { entry.mutable or entry.writable } else { entry.writable };
+                    if not canMutateHook {
                         failAt(source, nameStart, prefix, "cannot mutate read-only value " + name + " via index assignment");
                     }
                     var getHookRuntime := "";

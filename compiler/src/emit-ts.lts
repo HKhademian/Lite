@@ -2312,8 +2312,14 @@ paramRuntimeAt := fn(encoded: String, targetIndex: Int): String {
     ""
 }
 
-/** Returns the soft-builtin return expression for an overridable module function, or `""` when none exists. */
-softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): String {
+/** Returns the soft-builtin return expression for an overridable module function or type-attached operation, or `""` when none exists. */
+softBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): String {
+    fnName := if rawFnName == "Int.toText" or rawFnName == "Int.intText" { "intText" }
+    else if rawFnName == "String.toInt" { "textToInt" }
+    else if rawFnName == "String.repeat" { "repeatText" }
+    else if rawFnName == "String.contains" { "containsText" }
+    else if textLib.startsWithAt(rawFnName, 0, "String.") { textLib.slice(rawFnName, 7, textLib.length(rawFnName)) }
+    else { rawFnName };
     arg0 := paramRuntimeAt(params, 0);
     if moduleName == "lib/core/crypto" {
         if fnName == "sha256Bytes" { return "lite$cryptoDigestBytes(\"sha256\", " + arg0 + ")"; }

@@ -2892,7 +2892,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     if not setHook.found {
                         syntax.failAt(source, itemStart, prefix, "type " + types.displayKind(entry.kind) + " does not define $setIndex for index assignment");
                     }
-                    if not entry.writable {
+                    canMutateHook := if types.isArrayKind(entry.kind) { entry.mutable or entry.writable } else { entry.writable };
+                    if not canMutateHook {
                         syntax.failAt(source, itemStart, prefix, "cannot mutate read-only value " + itemName + " via index assignment");
                     }
                     var getHookRuntime := "";
@@ -6413,6 +6414,28 @@ pub resolveIndexHookOp := fn(target: String, source: String, errPos: Int, prefix
     recvBase := if textLib.startsWithAt(rawRecv, 0, "mut ") { textLib.slice(rawRecv, 4, textLib.length(rawRecv)) } else { rawRecv };
     rawKey := types.paramKindOf(params[info.first + 1]);
     rawVal := if opName == "$setIndex" { types.paramKindOf(params[info.first + 2]) } else { info.result };
+    if info.runtime == "lite$core$list$getIndex:v1" or info.runtime == "lite$core$list$setAt:v1" {
+        if not types.isListKind(receiverKind) {
+            syntax.failAt(source, errPos, prefix, opName + " requires List, got " + types.displayKind(receiverKind));
+        }
+        elK := types.listElementKind(receiverKind);
+        return (found = true, runtime = info.runtime, keyKind = ir.VALUE_KIND_INT, valKind = elK, resultKind = if opName == "$setIndex" { ir.VALUE_KIND_UNIT } else { elK });
+    }
+    if info.runtime == "lite$core$array$getIndex:v1" or info.runtime == "lite$core$array$setIndex:v1" {
+        if not types.isArrayKind(receiverKind) {
+            syntax.failAt(source, errPos, prefix, opName + " requires Array, got " + types.displayKind(receiverKind));
+        }
+        elK := types.arrayElementKind(receiverKind);
+        return (found = true, runtime = info.runtime, keyKind = ir.VALUE_KIND_INT, valKind = elK, resultKind = if opName == "$setIndex" { ir.VALUE_KIND_UNIT } else { elK });
+    }
+    if info.runtime == "lite$core$map$getIndex:v1" or info.runtime == "lite$core$map$set:v1" {
+        if not types.isMapKind(receiverKind) {
+            syntax.failAt(source, errPos, prefix, opName + " requires Map, got " + types.displayKind(receiverKind));
+        }
+        kK := types.mapKeyKind(receiverKind);
+        vK := types.mapValueKind(receiverKind);
+        return (found = true, runtime = info.runtime, keyKind = kK, valKind = vK, resultKind = if opName == "$setIndex" { ir.VALUE_KIND_UNIT } else { vK });
+    }
     if textLib.startsWithAt(info.runtime, 0, "$gen:") {
         tplKey := textLib.slice(info.runtime, 5, textLib.length(info.runtime));
         tplIdx := generics.findTemplate(tplKey);
@@ -6454,9 +6477,69 @@ pub resolveIndexHookOp := fn(target: String, source: String, errPos: Int, prefix
     (found = true, runtime = info.runtime, keyKind = rawKey, valKind = rawVal, resultKind = info.result)
 };
 
+/** Emits TS or C11 read expression for `$getIndex` (both user hooks and hard-builtin core hooks). */
+emitHookIndexReadCode := fn(target: String, errPos: Int, recvKind: String, recvCode: String, getRuntime: String, keyCode: String): String {
+    if getRuntime == "lite$core$list$getIndex:v1" or getRuntime == "lite$core$array$getIndex:v1" {
+        elKind := if types.isListKind(recvKind) { types.listElementKind(recvKind) } else { types.arrayElementKind(recvKind) };
+        if target == ir.TARGET_C {
+            return "lt_list_" + types.cListTag(elKind) + "_at(" + recvCode + ", " + keyCode + ", " + integer.intText(errPos) + ")";
+        }
+        return "lite$listAt(" + recvCode + ", " + keyCode + ", " + integer.intText(errPos) + ")";
+    }
+    if getRuntime == "lite$core$map$getIndex:v1" {
+        if target == ir.TARGET_C {
+            return types.cMapTag(recvKind) + "_at(" + recvCode + ", " + keyCode + ", " + integer.intText(errPos) + ")";
+        }
+        return "lite$mapAt((" + recvCode + "), " + keyCode + ", " + integer.intText(errPos) + ")";
+    }
+    getRuntime + "(" + recvCode + ", " + keyCode + ")"
+};
+
 /** Emits TS or C11 statement code for `entry[key] = val` or single-evaluation compound `entry[key] op= val` via `$setIndex` (and `$getIndex`). */
 pub emitHookIndexAssignCode := fn(target: String, source: String, opPos: Int, prefix: String, entry: Local, setRuntime: String, getRuntime: String, keyKind: String, valKind: String, keyCode: String, compBaseOp: String, valParsed: Parsed): String {
     isCompound := compBaseOp =!= "";
+    if setRuntime == "lite$core$list$setAt:v1" or setRuntime == "lite$core$array$setIndex:v1" {
+        elKind := if types.isListKind(entry.kind) { types.listElementKind(entry.kind) } else { types.arrayElementKind(entry.kind) };
+        if target == ir.TARGET_C {
+            cTag := types.cListTag(elKind);
+            if isCompound {
+                cValType := types.cValueType(elKind);
+                curRead := "lt_list_" + cTag + "_at(" + entry.runtime + ", lt_ck, " + integer.intText(opPos) + ")";
+                nextVal := ctx.compoundAssignCode(target, source, opPos, prefix, elKind, "lt_cv", compBaseOp, valParsed);
+                return "{ /*c-stmt*/ int64_t lt_ck = " + keyCode + "; " + cValType + " lt_cv = " + curRead + "; lt_list_" + cTag + "_set(&" + entry.runtime + ", lt_ck, " + nextVal + ", " + integer.intText(opPos) + "); }";
+            }
+            vCode := ctx.assignValueCode(target, elKind, valParsed.kind, valParsed.code);
+            return "lt_list_" + cTag + "_set(&" + entry.runtime + ", " + keyCode + ", " + vCode + ", " + integer.intText(opPos) + ")";
+        }
+        if isCompound {
+            curRead := "lite$listAt(" + entry.runtime + ", lite$ci, " + integer.intText(opPos) + ")";
+            nextVal := ctx.compoundAssignCode(target, source, opPos, prefix, elKind, curRead, compBaseOp, valParsed);
+            return "((lite$ci: bigint) => lite$listSet(" + entry.runtime + ", lite$ci, " + nextVal + ", " + integer.intText(opPos) + "))(" + keyCode + ")";
+        }
+        vCode := ctx.assignValueCode(target, elKind, valParsed.kind, valParsed.code);
+        return "lite$listSet(" + entry.runtime + ", " + keyCode + ", " + vCode + ", " + integer.intText(opPos) + ")";
+    }
+    if setRuntime == "lite$core$map$set:v1" {
+        if target == ir.TARGET_C {
+            mTag := types.cMapTag(entry.kind);
+            if isCompound {
+                cKeyType := types.cValueType(keyKind);
+                cValType := types.cValueType(valKind);
+                curRead := mTag + "_at(" + entry.runtime + ", lt_ck, " + integer.intText(opPos) + ")";
+                nextVal := ctx.compoundAssignCode(target, source, opPos, prefix, valKind, "lt_cv", compBaseOp, valParsed);
+                return "{ /*c-stmt*/ " + cKeyType + " lt_ck = " + keyCode + "; " + cValType + " lt_cv = " + curRead + "; " + mTag + "_set(&" + entry.runtime + ", lt_ck, " + nextVal + "); }";
+            }
+            vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
+            return mTag + "_set(&" + entry.runtime + ", " + keyCode + ", " + vCode + ")";
+        }
+        if isCompound {
+            curRead := "lite$mapAt(" + entry.runtime + ", lite$ck, " + integer.intText(opPos) + ")";
+            nextVal := ctx.compoundAssignCode(target, source, opPos, prefix, valKind, curRead, compBaseOp, valParsed);
+            return "((lite$ck: " + types.tsFunctionType(keyKind) + ") => (" + entry.runtime + ").set(lite$ck, " + nextVal + "))(" + keyCode + ")";
+        }
+        vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
+        return "(" + entry.runtime + ").set(" + keyCode + ", " + vCode + ")";
+    }
     if target == ir.TARGET_C {
         if isCompound {
             cKeyType := types.cValueType(keyKind);
@@ -7026,12 +7109,292 @@ parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, er
     parseUserOrIndirectCallWithRecv(target, source, openParen, errPos, isModuleFn, calleeDisplay, callRuntime, callParams, callFirst, callCount, callResult, false, "", "", "", "", callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases)
 };
 
+/** Parses and lowers a hard-builtin type-attached dot call (`List.*`, `Array.*`, `Map.*`, `Set.*`, `String.length/at/slice`). */
+parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, openParen: Int, receiver: Parsed, recvLocalIdx: Int, runtime: String, opLabel: String, isMutRecv: Bool, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    if isMutRecv and (recvLocalIdx < 0 or not locals[recvLocalIdx].writable) {
+        syntax.failAt(source, labelStart, prefix, "cannot call mutating operation " + opLabel + " on read-only value");
+    }
+    mutRt := if isMutRecv { locals[recvLocalIdx].runtime } else { "" };
+    var cursor := syntax.skipTrivia(source, openParen + 1, prefix);
+    var markers := if inferMode { ctx.collectParsedMarkers("", receiver) } else { "" };
+    if runtime == "lite$textLength" {
+        close := syntax.expectSymbol(source, cursor, ")", prefix);
+        if receiver.constant {
+            n := textLib.length(receiver.textValue);
+            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = ir.targetIntLiteralCode(target, n, false, integer.intText(n)),
+            intValue = n, textValue = "", constant = true, next = close), markers);
+        }
+        return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "lite$textLength(" + receiver.code + ")",
+        intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    if runtime == "lite$textAt" {
+        pArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if inferMode { markers = ctx.collectParsedMarkers(markers, pArg); }
+        if not numeric.isIntKind(pArg.kind) {
+            syntax.failAt(source, cursor, prefix, "String.at position must be Int, got " + types.displayKind(pArg.kind));
+        }
+        close := ctx.expectNonemptyCallClose(source, pArg.next, prefix);
+        pCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, pArg.kind, pArg.code);
+        return ctx.withMarkers((kind = ir.VALUE_KIND_STRING, code = "lite$textAt(" + receiver.code + ", " + pCode + ", " + integer.intText(labelStart) + ")",
+        intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    if runtime == "lite$textSlice" {
+        sArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if inferMode { markers = ctx.collectParsedMarkers(markers, sArg); }
+        if not numeric.isIntKind(sArg.kind) {
+            syntax.failAt(source, cursor, prefix, "String.slice start must be Int, got " + types.displayKind(sArg.kind));
+        }
+        comma := syntax.expectSymbol(source, syntax.skipTrivia(source, sArg.next, prefix), ",", prefix);
+        eStart := syntax.skipTrivia(source, comma, prefix);
+        eArg := parseBinaryCtx(target, source, eStart, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if inferMode { markers = ctx.collectParsedMarkers(markers, eArg); }
+        if not numeric.isIntKind(eArg.kind) {
+            syntax.failAt(source, eStart, prefix, "String.slice end must be Int, got " + types.displayKind(eArg.kind));
+        }
+        close := ctx.expectNonemptyCallClose(source, eArg.next, prefix);
+        sCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, sArg.kind, sArg.code);
+        eCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, eArg.kind, eArg.code);
+        return ctx.withMarkers((kind = ir.VALUE_KIND_STRING, code = "lite$textSlice(" + receiver.code + ", " + sCode + ", " + eCode + ", " + integer.intText(labelStart) + ")",
+        intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    if runtime == "lite$core$array$length:v1" {
+        close := syntax.expectSymbol(source, cursor, ")", prefix);
+        ext := types.arrayExtent(receiver.kind);
+        if ext >= 0 {
+            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = ir.targetIntLiteralCode(target, ext, false, integer.intText(ext)),
+            intValue = ext, textValue = "", constant = true, next = close), markers);
+        }
+        lenCode := if target == ir.TARGET_C { "((" + receiver.code + ").len)" } else { "BigInt((" + receiver.code + ").length)" };
+        return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = lenCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    if textLib.startsWithAt(runtime, 0, "lite$core$list$") {
+        elKind := types.listElementKind(receiver.kind);
+        cTag := if target == ir.TARGET_C { types.cListTag(elKind) } else { "" };
+        if runtime == "lite$core$list$length:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            lenCode := if target == ir.TARGET_C { "((" + receiver.code + ").len)" } else { "BigInt((" + receiver.code + ").length)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = lenCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$list$reverse:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            revCode := if cTag =!= "" { "lt_list_" + cTag + "_reverse(" + receiver.code + ")" } else { "[...(" + receiver.code + ")].reverse()" };
+            return ctx.withMarkers((kind = receiver.kind, code = revCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$list$clear:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            clrCode := if cTag =!= "" { "lt_list_" + cTag + "_clear(&" + mutRt + ")" } else { "((" + mutRt + ").length = 0, undefined)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = clrCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$list$popBack:v1" or runtime == "lite$core$list$popFront:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            isBack := runtime == "lite$core$list$popBack:v1";
+            popCode := if cTag =!= "" {
+                "lt_list_" + cTag + "_" + (if isBack { "pop_back" } else { "pop_front" }) + "(&" + mutRt + ", " + integer.intText(labelStart) + ")"
+            } else {
+                (if isBack { "lite$listPopBack(" } else { "lite$listPopFront(" }) + mutRt + ", " + integer.intText(labelStart) + ")"
+            };
+            return ctx.withMarkers((kind = elKind, code = popCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$list$pushBack:v1" or runtime == "lite$core$list$pushFront:v1" {
+            valArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, elKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, valArg); }
+            if not types.isCompatibleKind(elKind, valArg.kind) {
+                syntax.failAt(source, cursor, prefix, opLabel + " element must be " + types.displayKind(elKind) + ", got " + types.displayKind(valArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, valArg.next, prefix);
+            vCode := ctx.assignValueCode(target, elKind, valArg.kind, valArg.code);
+            isBack := runtime == "lite$core$list$pushBack:v1";
+            pushCode := if cTag =!= "" {
+                "lt_list_" + cTag + "_" + (if isBack { "push_back" } else { "push_front" }) + "(&" + mutRt + ", " + vCode + ")"
+            } else {
+                mutRt + (if isBack { ".push(" } else { ".unshift(" }) + vCode + ")"
+            };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = pushCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$list$setAt:v1" {
+            idxArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, idxArg); }
+            if not numeric.isIntKind(idxArg.kind) {
+                syntax.failAt(source, cursor, prefix, opLabel + " index must be Int, got " + types.displayKind(idxArg.kind));
+            }
+            comma := syntax.expectSymbol(source, syntax.skipTrivia(source, idxArg.next, prefix), ",", prefix);
+            vStart := syntax.skipTrivia(source, comma, prefix);
+            valArg := parseBinaryCtx(target, source, vStart, prefix, locals, functions, params, currentName, elKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, valArg); }
+            if not types.isCompatibleKind(elKind, valArg.kind) {
+                syntax.failAt(source, vStart, prefix, opLabel + " element must be " + types.displayKind(elKind) + ", got " + types.displayKind(valArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, valArg.next, prefix);
+            iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
+            vCode := ctx.assignValueCode(target, elKind, valArg.kind, valArg.code);
+            setCode := if cTag =!= "" {
+                "lt_list_" + cTag + "_set(&" + mutRt + ", " + iCode + ", " + vCode + ", " + integer.intText(labelStart) + ")"
+            } else {
+                "lite$listSet(" + mutRt + ", " + iCode + ", " + vCode + ", " + integer.intText(labelStart) + ")"
+            };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = setCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$list$slice:v1" {
+            sArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, sArg); }
+            if not numeric.isIntKind(sArg.kind) {
+                syntax.failAt(source, cursor, prefix, opLabel + " start index must be Int, got " + types.displayKind(sArg.kind));
+            }
+            comma := syntax.expectSymbol(source, syntax.skipTrivia(source, sArg.next, prefix), ",", prefix);
+            eStart := syntax.skipTrivia(source, comma, prefix);
+            eArg := parseBinaryCtx(target, source, eStart, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, eArg); }
+            if not numeric.isIntKind(eArg.kind) {
+                syntax.failAt(source, eStart, prefix, opLabel + " end index must be Int, got " + types.displayKind(eArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, eArg.next, prefix);
+            sCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, sArg.kind, sArg.code);
+            eCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, eArg.kind, eArg.code);
+            slCode := if cTag =!= "" {
+                "lt_list_" + cTag + "_slice(" + receiver.code + ", " + sCode + ", " + eCode + ", " + integer.intText(labelStart) + ")"
+            } else {
+                "lite$listSlice(" + receiver.code + ", " + sCode + ", " + eCode + ", " + integer.intText(labelStart) + ")"
+            };
+            return ctx.withMarkers((kind = receiver.kind, code = slCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+    }
+    if textLib.startsWithAt(runtime, 0, "lite$core$map$") {
+        kKind := types.mapKeyKind(receiver.kind);
+        vKind := types.mapValueKind(receiver.kind);
+        mTag := if target == ir.TARGET_C { types.cMapTag(receiver.kind) } else { "" };
+        if runtime == "lite$core$map$size:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            szCode := if mTag =!= "" { "((" + receiver.code + ").len)" } else { "BigInt((" + receiver.code + ").size)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = szCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$map$clear:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            clrCode := if mTag =!= "" { mTag + "_clear(&" + mutRt + ")" } else { "((" + mutRt + ").clear(), undefined)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = clrCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$map$keys:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            kListCode := if mTag =!= "" { mTag + "_keys(" + receiver.code + ")" } else { "Array.from((" + receiver.code + ").keys())" };
+            return ctx.withMarkers((kind = "List<" + kKind + ">", code = kListCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$map$values:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            vListCode := if mTag =!= "" { mTag + "_values(" + receiver.code + ")" } else { "Array.from((" + receiver.code + ").values())" };
+            return ctx.withMarkers((kind = "List<" + vKind + ">", code = vListCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        keyArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, kKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if inferMode { markers = ctx.collectParsedMarkers(markers, keyArg); }
+        if not types.isCompatibleKind(kKind, keyArg.kind) {
+            syntax.failAt(source, cursor, prefix, opLabel + " key must be " + types.displayKind(kKind) + ", got " + types.displayKind(keyArg.kind));
+        }
+        keyCode := ctx.assignValueCode(target, kKind, keyArg.kind, keyArg.code);
+        if runtime == "lite$core$map$has:v1" {
+            close := ctx.expectNonemptyCallClose(source, keyArg.next, prefix);
+            hasCode := if mTag =!= "" { mTag + "_has(" + receiver.code + ", " + keyCode + ")" } else { "((" + receiver.code + ").has(" + keyCode + "))" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = hasCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$map$remove:v1" {
+            close := ctx.expectNonemptyCallClose(source, keyArg.next, prefix);
+            rmCode := if mTag =!= "" { mTag + "_remove(&" + mutRt + ", " + keyCode + ")" } else { "((" + mutRt + ").delete(" + keyCode + "))" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = rmCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        tsV := types.tsFunctionType(vKind);
+        needsCopy := ctx.copiedValueCode(target, vKind, "lite$v") =!= "lite$v";
+        if runtime == "lite$core$map$get:v1" {
+            close := ctx.expectNonemptyCallClose(source, keyArg.next, prefix);
+            zeroVal := ctx.zeroParsed(target, vKind, close).code;
+            resTupleKind := "(found:Bool,value:" + vKind + ")";
+            getCode := if mTag =!= "" {
+                "/*@T:" + resTupleKind + "@*/" + mTag + "_get(" + receiver.code + ", " + keyCode + ", " + zeroVal + ")"
+            } else if not needsCopy {
+                "lite$mapGet((" + receiver.code + "), " + keyCode + ", " + zeroVal + ")"
+            } else {
+                copied := ctx.copiedValueCode(target, vKind, "lite$v");
+                "((lite$v: " + tsV + " | undefined): { found: boolean; value: " + tsV + " } => lite$v !== undefined ? { found: true, value: " + copied + " } : { found: false, value: " + zeroVal + " })((" + receiver.code + ").get(" + keyCode + "))"
+            };
+            return ctx.withMarkers((kind = resTupleKind, code = getCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        comma := syntax.expectSymbol(source, syntax.skipTrivia(source, keyArg.next, prefix), ",", prefix);
+        vStart := syntax.skipTrivia(source, comma, prefix);
+        valArg := parseBinaryCtx(target, source, vStart, prefix, locals, functions, params, currentName, vKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if inferMode { markers = ctx.collectParsedMarkers(markers, valArg); }
+        if not types.isCompatibleKind(vKind, valArg.kind) {
+            syntax.failAt(source, vStart, prefix, opLabel + " value must be " + types.displayKind(vKind) + ", got " + types.displayKind(valArg.kind));
+        }
+        close := ctx.expectNonemptyCallClose(source, valArg.next, prefix);
+        valCode := ctx.assignValueCode(target, vKind, valArg.kind, valArg.code);
+        if runtime == "lite$core$map$set:v1" {
+            setCode := if mTag =!= "" { mTag + "_set(&" + mutRt + ", " + keyCode + ", " + valCode + ")" } else { "((" + mutRt + ").set(" + keyCode + ", " + valCode + "), undefined)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = setCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        getOrCode := if mTag =!= "" {
+            mTag + "_get_or(" + receiver.code + ", " + keyCode + ", " + valCode + ")"
+        } else if not needsCopy {
+            "lite$mapGetOr((" + receiver.code + "), " + keyCode + ", " + valCode + ")"
+        } else {
+            copied := ctx.copiedValueCode(target, vKind, "lite$v");
+            "((lite$v: " + tsV + " | undefined, lite$fb: " + tsV + "): " + tsV + " => lite$v !== undefined ? " + copied + " : lite$fb)((" + receiver.code + ").get(" + keyCode + "), " + valCode + ")"
+        };
+        return ctx.withMarkers((kind = vKind, code = getOrCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    if textLib.startsWithAt(runtime, 0, "lite$core$set$") {
+        elemKind := types.setElementKind(receiver.kind);
+        sTag := if target == ir.TARGET_C { types.cSetTag(receiver.kind) } else { "" };
+        if runtime == "lite$core$set$size:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            szCode := if sTag =!= "" { "((" + receiver.code + ").len)" } else { "BigInt((" + receiver.code + ").size)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = szCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$set$clear:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            clrCode := if sTag =!= "" { sTag + "_clear(&" + mutRt + ")" } else { "((" + mutRt + ").clear(), undefined)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = clrCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$set$values:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            valListCode := if sTag =!= "" { sTag + "_values(" + receiver.code + ")" } else { "Array.from((" + receiver.code + ").values())" };
+            return ctx.withMarkers((kind = "List<" + elemKind + ">", code = valListCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        valArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, elemKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if inferMode { markers = ctx.collectParsedMarkers(markers, valArg); }
+        if not types.isCompatibleKind(elemKind, valArg.kind) {
+            syntax.failAt(source, cursor, prefix, opLabel + " element must be " + types.displayKind(elemKind) + ", got " + types.displayKind(valArg.kind));
+        }
+        close := ctx.expectNonemptyCallClose(source, valArg.next, prefix);
+        valCode := ctx.assignValueCode(target, elemKind, valArg.kind, valArg.code);
+        if runtime == "lite$core$set$add:v1" {
+            addCode := if sTag =!= "" { sTag + "_add(&" + mutRt + ", " + valCode + ")" } else { "((" + mutRt + ").add(" + valCode + "), undefined)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = addCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$set$remove:v1" {
+            rmCode := if sTag =!= "" { sTag + "_remove(&" + mutRt + ", " + valCode + ")" } else { "((" + mutRt + ").delete(" + valCode + "))" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = rmCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        hasCode := if sTag =!= "" { sTag + "_has(" + receiver.code + ", " + valCode + ")" } else { "((" + receiver.code + ").has(" + valCode + "))" };
+        return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = hasCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    syntax.failAt(source, labelStart, prefix, "unsupported hard builtin type operation " + opLabel);
+    ctx.intParsed("", 0, false, openParen)
+};
+
 /** Parses a type-attached dot call `receiver.op(args...)`, validating `mut Self` permission, unifying generic receivers, and forwarding receiver as argument 0. */
 parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openParen: Int, receiver: Parsed, recvLocalIdx: Int, opIdx: Int, opLabel: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     info := functions[opIdx];
     recvExpected := types.paramKindOf(params[info.first]);
     isMutRecv := textLib.startsWithAt(recvExpected, 0, "mut ");
     baseExpected := if isMutRecv { textLib.slice(recvExpected, 4, textLib.length(recvExpected)) } else { recvExpected };
+    if textLib.startsWithAt(info.runtime, 0, "lite$") {
+        return parseCoreTypeOpHardCall(target, source, labelStart, openParen, receiver, recvLocalIdx, info.runtime, opLabel, isMutRecv, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+    }
+    if opLabel == "isEmpty" and ((receiver.kind == ir.VALUE_KIND_STRING and receiver.constant) or (types.isArrayKind(receiver.kind) and types.arrayExtent(receiver.kind) >= 0)) {
+        afterOpen := syntax.skipTrivia(source, openParen + 1, prefix);
+        if afterOpen < textLib.length(source) and textLib.at(source, afterOpen) == ")" {
+            emptyVal := if receiver.kind == ir.VALUE_KIND_STRING { receiver.textValue == "" } else { types.arrayExtent(receiver.kind) == 0 };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = ir.targetBoolLiteralCode(target, emptyVal),
+            intValue = if emptyVal { 1 } else { 0 }, textValue = "", constant = true, next = afterOpen + 1),
+            if inferMode { ctx.collectParsedMarkers("", receiver) } else { "" });
+        }
+    }
     isGenOp := textLib.startsWithAt(info.runtime, 0, "$gen:");
     var initGenBindings := "";
     var concreteRecvExpected := baseExpected;
@@ -7427,7 +7790,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 recvCode := ctx.assignReadOnlyArgCode(target, left.kind, left.kind, left.code);
                 kCode := ctx.assignReadOnlyArgCode(target, getHook.keyKind, key.kind, key.code);
                 left = ctx.withMarkers((kind = getHook.valKind,
-                code = getHook.runtime + "(" + recvCode + ", " + kCode + ")",
+                code = emitHookIndexReadCode(target, indexStart, left.kind, recvCode, getHook.runtime, kCode),
                 intValue = 0, textValue = "", constant = false, next = next),
                 if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), key) } else { "" });
             } else if types.isMapKind(left.kind) {
