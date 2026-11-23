@@ -504,6 +504,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const workerJs = readFileSync(join(out, 'playground', 'worker.js'), 'utf8');
   assert(workerJs.includes("'-O' + String(level)"));
   assert(playground.includes('id="pg-editor-gutter"'));
+  assert(playground.includes('id="pg-canvas-theater"'));
   assert(playground.includes('id="pg-canvas-fullscreen"'));
   assert(playground.includes('id="mode-program"'));
   assert(playground.includes('id="mode-portable"'));

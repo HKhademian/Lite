@@ -40,6 +40,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   const canvasTitleEl = document.getElementById("pg-canvas-title");
   const canvasSizeEl = document.getElementById("pg-canvas-size");
   const muteBtn = document.getElementById("pg-mute");
+  const theaterBtn = document.getElementById("pg-canvas-theater");
   const fullscreenBtn = document.getElementById("pg-canvas-fullscreen");
   const fpsEl = document.getElementById("pg-fps");
   const consoleEl = document.getElementById("pg-console");
@@ -59,38 +60,57 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     output: document.getElementById("panel-output"),
     generated: document.getElementById("panel-generated"),
   };
-  function isCanvasFullscreen() {
-    if (!canvasWrap) return false;
-    return document.fullscreenElement === canvasWrap || canvasWrap.classList.contains("is-fullscreen");
+  function isNativeFullscreen() {
+    return Boolean(canvasWrap && document.fullscreenElement === canvasWrap);
+  }
+  function isTheaterMode() {
+    return Boolean(canvasWrap && canvasWrap.classList.contains("is-theater"));
   }
   function syncFullscreenUi() {
-    if (!fullscreenBtn) return;
-    const isFs = isCanvasFullscreen();
-    fullscreenBtn.textContent = isFs ? "Exit Fullscreen" : "Fullscreen";
-    fullscreenBtn.setAttribute("aria-pressed", isFs ? "true" : "false");
+    const isFs = isNativeFullscreen();
+    const isTh = !isFs && isTheaterMode();
+    if (fullscreenBtn) {
+      fullscreenBtn.setAttribute("aria-pressed", isFs ? "true" : "false");
+      fullscreenBtn.setAttribute("aria-label", isFs ? "Exit fullscreen" : "Fullscreen");
+      fullscreenBtn.title = isFs ? "Exit fullscreen (F)" : "Fullscreen (F)";
+    }
+    if (theaterBtn) {
+      theaterBtn.setAttribute("aria-pressed", isTh ? "true" : "false");
+      theaterBtn.setAttribute("aria-label", isTh ? "Exit theater mode" : "Theater mode (fill tab)");
+      theaterBtn.title = isTh ? "Exit theater mode (T / Esc)" : "Theater mode — fill browser tab (T)";
+    }
+  }
+  function toggleCanvasTheater() {
+    if (!canvasWrap) return;
+    if (document.fullscreenElement === canvasWrap) {
+      if (typeof document.exitFullscreen === "function") void document.exitFullscreen().catch(() => {});
+      canvasWrap.classList.add("is-theater");
+      syncFullscreenUi();
+      return;
+    }
+    canvasWrap.classList.toggle("is-theater");
+    syncFullscreenUi();
   }
   function toggleCanvasFullscreen() {
     if (!canvasWrap) return;
     if (document.fullscreenElement === canvasWrap) {
       if (typeof document.exitFullscreen === "function") void document.exitFullscreen().catch(() => {});
-      canvasWrap.classList.remove("is-fullscreen");
       syncFullscreenUi();
       return;
     }
-    if (canvasWrap.classList.contains("is-fullscreen")) {
-      canvasWrap.classList.remove("is-fullscreen");
-      syncFullscreenUi();
-      return;
-    }
+    canvasWrap.classList.remove("is-theater");
     if (typeof canvasWrap.requestFullscreen === "function") {
       void canvasWrap.requestFullscreen().catch(() => {
-        canvasWrap.classList.add("is-fullscreen");
+        canvasWrap.classList.add("is-theater");
         syncFullscreenUi();
       });
     } else {
-      canvasWrap.classList.add("is-fullscreen");
+      canvasWrap.classList.add("is-theater");
       syncFullscreenUi();
     }
+  }
+  if (theaterBtn && canvasWrap) {
+    theaterBtn.addEventListener("click", toggleCanvasTheater);
   }
   if (fullscreenBtn && canvasWrap) {
     fullscreenBtn.addEventListener("click", toggleCanvasFullscreen);
@@ -98,9 +118,14 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   }
   if (canvas) {
     canvas.addEventListener("keydown", (ev) => {
-      if ((ev.key === "f" || ev.key === "F") && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {
-        ev.preventDefault();
-        toggleCanvasFullscreen();
+      if (!ev.metaKey && !ev.ctrlKey && !ev.altKey) {
+        if (ev.key === "f" || ev.key === "F") {
+          ev.preventDefault();
+          toggleCanvasFullscreen();
+        } else if (ev.key === "t" || ev.key === "T") {
+          ev.preventDefault();
+          toggleCanvasTheater();
+        }
       }
     });
   }
@@ -1668,8 +1693,8 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
 
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape") {
-      if (canvasWrap && canvasWrap.classList.contains("is-fullscreen")) {
-        canvasWrap.classList.remove("is-fullscreen");
+      if (canvasWrap && canvasWrap.classList.contains("is-theater")) {
+        canvasWrap.classList.remove("is-theater");
         syncFullscreenUi();
       }
       if (sketchesModal && !sketchesModal.hidden) sketchesModal.hidden = true;
