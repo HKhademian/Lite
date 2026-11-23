@@ -1,0 +1,145 @@
+/* Composable optimization & emission pass configuration tests: -Oc zero-default, -O0..-Os presets, -f/-fno overrides, and comment/doc preservation on TS & C11. */
+
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"/** Doubles an integer. */\n" +
+"dbl := fn(n: Int): Int { n + n };\n" +
+"/* ordinary note with /* nested */ comment */\n" +
+"unusedCalc := 1 + 2 * 3;\n" +
+"if false {\n" +
+"    io.outputLine(\"dead-branch\");\n" +
+"}\n" +
+"io.outputLine(dbl(21));\n";
+
+/* 1. -Oc has ZERO defaults enabled: no DCE, no const fold, no branch simplify, no inline, no source map, no comments/docs. */
+ocTs := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-Oc"]);
+test.checkInt("-Oc TS compiles: " + ocTs.stderr, 0, ocTs.status);
+test.check("-Oc TS preserves unused user decl", text.containsText(ocTs.stdout, "lite_unusedCalc"));
+test.check("-Oc TS skips const fold", text.containsText(ocTs.stdout, "(1n + (2n * 3n))"));
+test.check("-Oc TS keeps dead branch", text.containsText(ocTs.stdout, "dead-branch"));
+test.check("-Oc TS keeps leaf fn dbl", text.containsText(ocTs.stdout, "function liteFn_dbl"));
+test.check("-Oc TS has no source map", not text.containsText(ocTs.stdout, "// demo.lts:"));
+test.check("-Oc TS strips doc comments", not text.containsText(ocTs.stdout, "Doubles an integer"));
+test.check("-Oc TS strips ordinary comments", not text.containsText(ocTs.stdout, "ordinary note"));
+ocTsRun := compilerTest.checkAndRunTs(root, ocTs.stdout);
+test.checkInt("-Oc TS runs", 0, ocTsRun.status);
+test.checkText("-Oc TS stdout", "42\n", ocTsRun.stdout);
+
+ocC := compilerTest.compileStdinWithOpts(root, cComp, root, src, "demo.lts", "", ["-Oc"]);
+test.checkInt("-Oc C compiles: " + ocC.stderr, 0, ocC.status);
+test.check("-Oc C preserves unused user decl", text.containsText(ocC.stdout, "lite_unusedCalc"));
+test.check("-Oc C skips const fold", text.containsText(ocC.stdout, "(INT64_C(1) + (INT64_C(2) * INT64_C(3)))"));
+test.check("-Oc C keeps dead branch", text.containsText(ocC.stdout, "dead-branch"));
+test.check("-Oc C keeps leaf fn dbl", text.containsText(ocC.stdout, "lt_fn__dbl("));
+test.check("-Oc C has no #line", not text.containsText(ocC.stdout, "#line "));
+test.check("-Oc C strips doc comments", not text.containsText(ocC.stdout, "Doubles an integer"));
+test.check("-Oc C strips ordinary comments", not text.containsText(ocC.stdout, "ordinary note"));
+
+/* 2. Selective opt-in on -Oc (one pass at a time). */
+ocFoldTs := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-Oc", "-fconst-fold"]);
+test.checkInt("-Oc -fconst-fold TS compiles", 0, ocFoldTs.status);
+test.check("-Oc -fconst-fold TS folds const", text.containsText(ocFoldTs.stdout, "const lite_unusedCalc = 7n;"));
+test.check("-Oc -fconst-fold TS still keeps dead branch", text.containsText(ocFoldTs.stdout, "dead-branch"));
+
+ocFoldC := compilerTest.compileStdinWithOpts(root, cComp, root, src, "demo.lts", "", ["-Oc", "-fconst-fold"]);
+test.checkInt("-Oc -fconst-fold C compiles", 0, ocFoldC.status);
+test.check("-Oc -fconst-fold C folds const", text.containsText(ocFoldC.stdout, "int64_t lite_unusedCalc = INT64_C(7);"));
+test.check("-Oc -fconst-fold C still keeps dead branch", text.containsText(ocFoldC.stdout, "dead-branch"));
+
+ocBrTs := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-Oc", "-fbranch-simplify"]);
+test.checkInt("-Oc -fbranch-simplify TS compiles", 0, ocBrTs.status);
+test.check("-Oc -fbranch-simplify TS removes dead branch", not text.containsText(ocBrTs.stdout, "dead-branch"));
+test.check("-Oc -fbranch-simplify TS still preserves unused decl", text.containsText(ocBrTs.stdout, "lite_unusedCalc"));
+test.check("-Oc -fbranch-simplify TS still skips const fold", text.containsText(ocBrTs.stdout, "(1n + (2n * 3n))"));
+
+ocDceTs := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-Oc", "-fdce"]);
+test.checkInt("-Oc -fdce TS compiles", 0, ocDceTs.status);
+test.check("-Oc -fdce TS prunes unused decl", not text.containsText(ocDceTs.stdout, "lite_unusedCalc"));
+test.check("-Oc -fdce TS still keeps dead branch", text.containsText(ocDceTs.stdout, "dead-branch"));
+
+ocInlTs := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-Oc", "-finline", "-fdce"]);
+test.checkInt("-Oc -finline -fdce TS compiles", 0, ocInlTs.status);
+test.check("-Oc -finline -fdce TS inlines and removes dbl", not text.containsText(ocInlTs.stdout, "function liteFn_dbl"));
+
+ocInlSmall := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-Oc", "-finline-limit=2", "-fdce"]);
+test.checkInt("-Oc -finline-limit=2 TS compiles", 0, ocInlSmall.status);
+test.check("-Oc -finline-limit=2 keeps dbl when body exceeds limit", text.containsText(ocInlSmall.stdout, "function liteFn_dbl"));
+
+/* 3. Selective doc vs comment preservation on -Oc and -O0. */
+ocDocsTs := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-Oc", "-fpreserve-docs"]);
+test.checkInt("-Oc -fpreserve-docs TS compiles", 0, ocDocsTs.status);
+test.check("-Oc -fpreserve-docs TS keeps doc", text.containsText(ocDocsTs.stdout, "/** Doubles an integer. */"));
+test.check("-Oc -fpreserve-docs TS drops ordinary comment", not text.containsText(ocDocsTs.stdout, "ordinary note"));
+
+ocCommTs := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-Oc", "-fpreserve-comments"]);
+test.checkInt("-Oc -fpreserve-comments TS compiles", 0, ocCommTs.status);
+test.check("-Oc -fpreserve-comments TS drops doc", not text.containsText(ocCommTs.stdout, "Doubles an integer"));
+test.check("-Oc -fpreserve-comments TS keeps sanitized comment", text.containsText(ocCommTs.stdout, "ordinary note"));
+
+/* 4. -O0 debug preset preserves comments, docs, unused decls, and source maps — and compiles strictly on TS & C11. */
+o0Ts := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-O0"]);
+test.checkInt("-O0 TS compiles", 0, o0Ts.status);
+test.check("-O0 TS keeps doc", text.containsText(o0Ts.stdout, "/** Doubles an integer. */"));
+test.check("-O0 TS keeps ordinary comment", text.containsText(o0Ts.stdout, "ordinary note"));
+test.check("-O0 TS emits source map comments", text.containsText(o0Ts.stdout, "// demo.lts:"));
+o0TsRun := compilerTest.checkAndRunTs(root, o0Ts.stdout);
+test.checkInt("-O0 TS runs", 0, o0TsRun.status);
+test.checkText("-O0 TS stdout", "42\n", o0TsRun.stdout);
+
+o0C := compilerTest.compileStdinWithOpts(root, cComp, root, src, "demo.lts", "", ["-O0"]);
+test.checkInt("-O0 C compiles", 0, o0C.status);
+test.check("-O0 C keeps doc", text.containsText(o0C.stdout, "/** Doubles an integer. */"));
+test.check("-O0 C keeps sanitized ordinary comment", text.containsText(o0C.stdout, "ordinary note"));
+test.check("-O0 C emits #line", text.containsText(o0C.stdout, "#line "));
+if ccInfo.available {
+    o0CRun := compilerTest.compileAndRunC(o0C.stdout, ccInfo.cc, "");
+    test.checkInt("-O0 C compiles strictly (-Wall -Wextra -Werror) & runs: " + o0CRun.stderr, 0, o0CRun.status);
+    test.checkText("-O0 C stdout", "42\n", o0CRun.stdout);
+}
+
+/* 5. Overriding presets: -O0 stripped to -Oc, -O2 -fno-const-fold, -O3 -fno-inline, -Os --emit-format=pretty, left-to-right reset. */
+o0Stripped := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-O0", "--source-map=none", "-fno-preserve-comments", "-fno-preserve-docs"]);
+test.checkInt("-O0 stripped TS compiles", 0, o0Stripped.status);
+test.checkText("-O0 stripped equals -Oc", ocTs.stdout, o0Stripped.stdout);
+
+o2NoFold := compilerTest.compileStdinWithOpts(root, tsComp, root, "io := import \"core/io\"; x := 1 + 2 * 3; io.outputLine(x);\n", "demo.lts", "", ["-O2", "-fno-const-fold"]);
+test.checkInt("-O2 -fno-const-fold compiles", 0, o2NoFold.status);
+test.check("-O2 -fno-const-fold keeps unfolded expr", text.containsText(o2NoFold.stdout, "(1n + (2n * 3n))"));
+
+o3NoInl := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-O3", "-fno-inline"]);
+test.checkInt("-O3 -fno-inline compiles", 0, o3NoInl.status);
+test.check("-O3 -fno-inline keeps dbl", text.containsText(o3NoInl.stdout, "function liteFn_dbl"));
+
+resetOrder := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-fconst-fold", "-Oc"]);
+test.checkInt("left-to-right reset compiles", 0, resetOrder.status);
+test.checkText("later -Oc resets earlier -fconst-fold", ocTs.stdout, resetOrder.stdout);
+
+/* 6. Invalid pass flags fail cleanly. */
+badPass := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-funknown-pass"]);
+test.checkInt("rejects unknown -f flag", 2, badPass.status);
+test.check("unknown -f diagnostic", text.containsText(badPass.stderr, "unsupported optimization pass flag -funknown-pass"));
+
+badLim := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-finline-limit=abc"]);
+test.checkInt("rejects bad -finline-limit", 2, badLim.status);
+
+badRounds := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-fopt-rounds=99"]);
+test.checkInt("rejects bad -fopt-rounds", 2, badRounds.status);
+
+test.done("opt-config");
