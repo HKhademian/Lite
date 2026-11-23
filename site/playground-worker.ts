@@ -9,6 +9,8 @@ class ExitSignal {
   }
 }
 
+class NeedStdinSignal {}
+
 let stdlibPromise = null;
 function loadStdlib() {
   if (!stdlibPromise) {
@@ -37,17 +39,67 @@ function loadCompilerSource(file) {
 }
 
 const encoder = new TextEncoder();
+const decoder = new TextDecoder('utf-8', { fatal: false });
+
+function parseDiagnostics(stderrText) {
+  const out = [];
+  for (const rawLine of String(stderrText ?? '').split(/\\r?\\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const m = line.match(/^([^:\\s][^:]*):(\\d+):(\\d+):\\s*([^:]+):\\s*(.+)$/);
+    if (m) {
+      out.push({
+        file: m[1],
+        line: Number(m[2]),
+        column: Number(m[3]),
+        category: m[4].trim(),
+        message: m[5].trim(),
+        raw: line,
+      });
+    }
+  }
+  return out;
+}
+
+function bytesToBase64(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 1) bin += String.fromCharCode(bytes[i]);
+  return typeof btoa === 'function' ? btoa(bin) : '';
+}
+
+function looksLikeText(bytes) {
+  const limit = Math.min(bytes.length, 4096);
+  for (let i = 0; i < limit; i += 1) {
+    const b = bytes[i];
+    if (b === 0) return false;
+  }
+  return true;
+}
 
 function buildPlaygroundVfs(stdlib, extraModules, sourceText) {
   const files = new Map();
   const dirs = new Set(['/project', '/project/lib', '/project/lib/core', '/project/lib/extra']);
-  const addFile = (virtPath, text) => {
-    const norm = virtPath.startsWith('/') ? virtPath : '/project/' + virtPath;
-    files.set(norm, encoder.encode(text));
+  const writtenPaths = new Set();
+  const normVirt = (p) => {
+    const raw = String(p ?? '').startsWith('/') ? String(p) : '/project/' + String(p ?? '');
+    const out = [];
+    for (const seg of raw.split('/')) {
+      if (!seg || seg === '.') continue;
+      if (seg === '..') out.pop();
+      else out.push(seg);
+    }
+    return '/' + out.join('/');
+  };
+  const ensureParents = (norm) => {
     const parts = norm.split('/').filter(Boolean);
     for (let i = 1; i < parts.length; i += 1) {
       dirs.add('/' + parts.slice(0, i).join('/'));
     }
+  };
+  const addFile = (virtPath, text) => {
+    const norm = normVirt(virtPath);
+    files.set(norm, encoder.encode(text));
+    ensureParents(norm);
   };
   for (const entry of Object.values(stdlib ?? {})) {
     if (entry && entry.path && typeof entry.text === 'string') addFile(entry.path, entry.text);
@@ -64,27 +116,65 @@ function buildPlaygroundVfs(stdlib, extraModules, sourceText) {
     }
   }
   addFile('/project/playground.lts', sourceText ?? '');
-  const normVirt = (p) => {
-    const raw = String(p ?? '').startsWith('/') ? String(p) : '/project/' + String(p ?? '');
-    const out = [];
-    for (const seg of raw.split('/')) {
-      if (!seg || seg === '.') continue;
-      if (seg === '..') out.pop();
-      else out.push(seg);
-    }
-    return '/' + out.join('/');
-  };
-  return { files, dirs, normVirt };
+  return { files, dirs, writtenPaths, normVirt, ensureParents };
 }
 
-function runWithProcessStub(argv, stdinText, fn, vfs) {
-  const stdinBytes = encoder.encode(stdinText ?? '');
+function collectWrittenFiles(vfs) {
+  if (!vfs || !vfs.writtenPaths || vfs.writtenPaths.size === 0) return [];
+  const out = [];
+  for (const path of Array.from(vfs.writtenPaths).sort()) {
+    const bytes = vfs.files.get(path);
+    if (!bytes) continue;
+    const isText = looksLikeText(bytes);
+    const displayPath = path.startsWith('/project/') ? path.slice('/project/'.length) : path;
+    out.push({
+      path: displayPath,
+      size: bytes.length,
+      isText,
+      textPreview: isText ? decoder.decode(bytes.subarray(0, 32768)) : undefined,
+      bytesBase64: bytes.length <= 262144 ? bytesToBase64(bytes) : undefined,
+    });
+  }
+  return out;
+}
+
+function runWithProcessStub(argv, stdinText, fn, vfs, opts = {}) {
+  let stdinBytes = encoder.encode(stdinText ?? '');
   let offset = 0;
   let stdout = '';
   let stderr = '';
   let exitCode = 0;
+  let stdinClosed = Boolean(opts.stdinClosed);
+  const interactive = Boolean(opts.interactive);
+  const sharedCtrl = opts.sharedCtrl ? new Int32Array(opts.sharedCtrl) : null;
+  const sharedData = opts.sharedData ? new Uint8Array(opts.sharedData) : null;
+  const onStdout = typeof opts.onStdout === 'function' ? opts.onStdout : null;
+  const onStderr = typeof opts.onStderr === 'function' ? opts.onStderr : null;
+  const onStdinWait = typeof opts.onStdinWait === 'function' ? opts.onStdinWait : null;
   const openFds = new Map();
   let nextFd = 10;
+  let tempSeq = 1;
+
+  const emitStdout = (chunk) => {
+    if (!chunk) return;
+    stdout += chunk;
+    if (onStdout) onStdout(chunk);
+  };
+  const emitStderr = (chunk) => {
+    if (!chunk) return;
+    stderr += chunk;
+    if (onStderr) onStderr(chunk);
+  };
+
+  const toBytes = (data, bufOffset, length) => {
+    if (typeof data === 'string') return encoder.encode(data);
+    if (data instanceof Uint8Array) {
+      const start = typeof bufOffset === 'number' ? bufOffset : 0;
+      const end = typeof length === 'number' ? start + length : data.length;
+      return data.subarray(start, end);
+    }
+    return encoder.encode(String(data ?? ''));
+  };
 
   const stubProcess = {
     argv,
@@ -95,13 +185,15 @@ function runWithProcessStub(argv, stdinText, fn, vfs) {
     },
     getBuiltinModule(name) {
       if (name !== 'node:fs') throw new Error('Unsupported module: ' + name);
+      const statEntry = (p) => {
+        const k = vfs ? vfs.normVirt(p) : String(p);
+        if (vfs && vfs.files.has(k)) return { isFile: () => true, isDirectory: () => false, isSymbolicLink: () => false };
+        if (vfs && vfs.dirs.has(k)) return { isFile: () => false, isDirectory: () => true, isSymbolicLink: () => false };
+        throw Object.assign(new Error('ENOENT: no such file or directory, stat \\'' + p + '\\''), { code: 'ENOENT' });
+      };
       return {
-        statSync(p) {
-          const k = vfs ? vfs.normVirt(p) : String(p);
-          if (vfs && vfs.files.has(k)) return { isFile: () => true, isDirectory: () => false };
-          if (vfs && vfs.dirs.has(k)) return { isFile: () => false, isDirectory: () => true };
-          throw Object.assign(new Error('ENOENT: no such file or directory, stat \\'' + p + '\\''), { code: 'ENOENT' });
-        },
+        statSync: statEntry,
+        lstatSync: statEntry,
         realpathSync(p) {
           const k = vfs ? vfs.normVirt(p) : String(p);
           if (vfs && (vfs.files.has(k) || vfs.dirs.has(k))) return k;
@@ -112,11 +204,93 @@ function runWithProcessStub(argv, stdinText, fn, vfs) {
           if (vfs && vfs.files.has(k)) return vfs.files.get(k);
           throw Object.assign(new Error('ENOENT: no such file or directory, open \\'' + p + '\\''), { code: 'ENOENT' });
         },
-        openSync(p) {
+        writeFileSync(p, data) {
+          if (!vfs) throw new Error('VFS unavailable');
+          const k = vfs.normVirt(p);
+          const bytes = new Uint8Array(toBytes(data));
+          vfs.files.set(k, bytes);
+          vfs.ensureParents(k);
+          vfs.writtenPaths.add(k);
+        },
+        mkdirSync(p, mkOpts) {
+          if (!vfs) throw new Error('VFS unavailable');
+          const k = vfs.normVirt(p);
+          if (mkOpts && mkOpts.recursive) vfs.ensureParents(k + '/_');
+          vfs.dirs.add(k);
+        },
+        readdirSync(p) {
+          if (!vfs) return [];
+          const k = vfs.normVirt(p);
+          if (!vfs.dirs.has(k)) throw Object.assign(new Error('ENOENT: no such directory \\'' + p + '\\''), { code: 'ENOENT' });
+          const prefix = k === '/' ? '/' : k + '/';
+          const names = new Set();
+          for (const fk of vfs.files.keys()) {
+            if (fk.startsWith(prefix)) {
+              const rest = fk.slice(prefix.length);
+              if (rest && !rest.includes('/')) names.add(rest);
+            }
+          }
+          for (const dk of vfs.dirs) {
+            if (dk.startsWith(prefix)) {
+              const rest = dk.slice(prefix.length);
+              if (rest && !rest.includes('/')) names.add(rest);
+            }
+          }
+          return Array.from(names).sort();
+        },
+        rmSync(p) {
+          if (!vfs) return;
+          const k = vfs.normVirt(p);
+          vfs.files.delete(k);
+          vfs.writtenPaths.delete(k);
+          vfs.dirs.delete(k);
+          const prefix = k + '/';
+          for (const fk of Array.from(vfs.files.keys())) {
+            if (fk.startsWith(prefix)) { vfs.files.delete(fk); vfs.writtenPaths.delete(fk); }
+          }
+          for (const dk of Array.from(vfs.dirs)) {
+            if (dk.startsWith(prefix)) vfs.dirs.delete(dk);
+          }
+        },
+        unlinkSync(p) {
+          if (!vfs) return;
+          const k = vfs.normVirt(p);
+          vfs.files.delete(k);
+          vfs.writtenPaths.delete(k);
+        },
+        copyFileSync(src, dst) {
+          if (!vfs) throw new Error('VFS unavailable');
+          const sk = vfs.normVirt(src);
+          if (!vfs.files.has(sk)) throw Object.assign(new Error('ENOENT: ' + src), { code: 'ENOENT' });
+          const dk = vfs.normVirt(dst);
+          vfs.files.set(dk, new Uint8Array(vfs.files.get(sk)));
+          vfs.ensureParents(dk);
+          vfs.writtenPaths.add(dk);
+        },
+        mkdtempSync(prefix) {
+          if (!vfs) throw new Error('VFS unavailable');
+          const dir = vfs.normVirt(String(prefix ?? 'tmp-') + String(tempSeq++));
+          vfs.ensureParents(dir + '/_');
+          vfs.dirs.add(dir);
+          return dir;
+        },
+        openSync(p, flags) {
           const k = vfs ? vfs.normVirt(p) : String(p);
+          const mode = String(flags ?? 'r');
+          if (mode.startsWith('w') || mode.startsWith('a')) {
+            if (!vfs) throw new Error('VFS unavailable');
+            const existing = mode.startsWith('a') && vfs.files.has(k) ? vfs.files.get(k) : new Uint8Array(0);
+            vfs.ensureParents(k);
+            const buf = new Uint8Array(existing);
+            vfs.files.set(k, buf);
+            vfs.writtenPaths.add(k);
+            const fd = nextFd++;
+            openFds.set(fd, { path: k, writable: true, chunks: buf.length ? [buf] : [], bytes: buf, pos: buf.length });
+            return fd;
+          }
           if (!vfs || !vfs.files.has(k)) throw Object.assign(new Error('ENOENT: no such file or directory, open \\'' + p + '\\''), { code: 'ENOENT' });
           const fd = nextFd++;
-          openFds.set(fd, { bytes: vfs.files.get(k), pos: 0 });
+          openFds.set(fd, { path: k, writable: false, bytes: vfs.files.get(k), pos: 0 });
           return fd;
         },
         fstatSync(fd) {
@@ -124,15 +298,52 @@ function runWithProcessStub(argv, stdinText, fn, vfs) {
           return { isFile: () => true, isDirectory: () => false };
         },
         closeSync(fd) {
+          const st = openFds.get(fd);
+          if (st && st.writable && vfs) {
+            let total = 0;
+            for (const c of st.chunks) total += c.length;
+            const merged = new Uint8Array(total);
+            let off = 0;
+            for (const c of st.chunks) { merged.set(c, off); off += c.length; }
+            vfs.files.set(st.path, merged);
+            vfs.writtenPaths.add(st.path);
+          }
           openFds.delete(fd);
         },
         readSync(fd, buf, bufOffset, length) {
           if (fd === 0) {
-            if (offset >= stdinBytes.length) return 0;
-            const n = Math.min(length, stdinBytes.length - offset);
-            buf.set(stdinBytes.subarray(offset, offset + n), bufOffset);
-            offset += n;
-            return n;
+            if (offset < stdinBytes.length) {
+              const n = Math.min(length, stdinBytes.length - offset);
+              buf.set(stdinBytes.subarray(offset, offset + n), bufOffset);
+              offset += n;
+              return n;
+            }
+            if (stdinClosed || !interactive) return 0;
+            if (sharedCtrl && sharedData) {
+              if (onStdinWait) onStdinWait();
+              Atomics.store(sharedCtrl, 0, 0);
+              Atomics.wait(sharedCtrl, 0, 0);
+              const state = Atomics.load(sharedCtrl, 0);
+              if (state === 2) {
+                stdinClosed = true;
+                Atomics.store(sharedCtrl, 0, 0);
+                return 0;
+              }
+              if (state === 3) {
+                Atomics.store(sharedCtrl, 0, 0);
+                throw new ExitSignal(130);
+              }
+              const len = Math.max(0, Math.min(sharedData.length, Atomics.load(sharedCtrl, 1)));
+              stdinBytes = new Uint8Array(sharedData.subarray(0, len));
+              offset = 0;
+              Atomics.store(sharedCtrl, 0, 0);
+              if (stdinBytes.length === 0) return 0;
+              const n = Math.min(length, stdinBytes.length);
+              buf.set(stdinBytes.subarray(0, n), bufOffset);
+              offset = n;
+              return n;
+            }
+            throw new NeedStdinSignal();
           }
           const st = openFds.get(fd);
           if (!st || st.pos >= st.bytes.length) return 0;
@@ -141,10 +352,31 @@ function runWithProcessStub(argv, stdinText, fn, vfs) {
           st.pos += n;
           return n;
         },
-        writeSync(fd, text) {
-          if (fd === 1) stdout += text;
-          else stderr += text;
-          return text.length;
+        writeSync(fd, data, bufOffset, length) {
+          if (fd === 1) {
+            const text = typeof data === 'string' ? data : decoder.decode(toBytes(data, bufOffset, length));
+            emitStdout(text);
+            return typeof data === 'string' ? data.length : toBytes(data, bufOffset, length).length;
+          }
+          if (fd === 2) {
+            const text = typeof data === 'string' ? data : decoder.decode(toBytes(data, bufOffset, length));
+            emitStderr(text);
+            return typeof data === 'string' ? data.length : toBytes(data, bufOffset, length).length;
+          }
+          const st = openFds.get(fd);
+          if (st && st.writable && vfs) {
+            const chunk = new Uint8Array(toBytes(data, bufOffset, length));
+            st.chunks.push(chunk);
+            let total = 0;
+            for (const c of st.chunks) total += c.length;
+            const merged = new Uint8Array(total);
+            let off = 0;
+            for (const c of st.chunks) { merged.set(c, off); off += c.length; }
+            vfs.files.set(st.path, merged);
+            vfs.writtenPaths.add(st.path);
+            return chunk.length;
+          }
+          return 0;
         },
       };
     },
@@ -153,14 +385,19 @@ function runWithProcessStub(argv, stdinText, fn, vfs) {
   const prevProcess = globalThis.process;
   globalThis.process = stubProcess;
   try {
-    const ret = fn(stubProcess, (text) => { stdout += text; });
-    return { ok: true, exitCode, stdout: stdout + (ret ?? ''), stderr };
+    const ret = fn(stubProcess, (text) => { emitStdout(text); });
+    if (ret) emitStdout(String(ret));
+    return { ok: true, exitCode, needsStdin: false, stdout, stderr, files: collectWrittenFiles(vfs) };
   } catch (err) {
+    if (err instanceof NeedStdinSignal) {
+      return { ok: true, exitCode: null, needsStdin: true, stdout, stderr, files: collectWrittenFiles(vfs) };
+    }
     if (err instanceof ExitSignal) {
-      return { ok: err.code === 0, exitCode: err.code, stdout, stderr };
+      return { ok: err.code === 0, exitCode: err.code, needsStdin: false, stdout, stderr, files: collectWrittenFiles(vfs) };
     }
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, exitCode: 1, stdout, stderr: stderr ? stderr + '\\n' + message : message };
+    emitStderr(stderr ? '\\n' + message : message);
+    return { ok: false, exitCode: 1, needsStdin: false, stdout, stderr, files: collectWrittenFiles(vfs) };
   } finally {
     globalThis.process = prevProcess;
   }
@@ -324,22 +561,29 @@ self.onmessage = async (event) => {
     const stdlib = await loadStdlib();
 
     if (action === 'compile-c') {
+      const t0 = performance.now();
       const cSource = await loadCompilerSource('compiler-c.js');
       const vfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
       const cResult = compileWith(cSource, vfs, source, level);
+      const compileMs = Math.round((performance.now() - t0) * 10) / 10;
       self.postMessage({
         id,
         ok: cResult.ok && Boolean(cResult.stdout),
         c: cResult.ok ? cResult.stdout : '',
         stderr: cResult.stderr,
+        diagnostics: parseDiagnostics(cResult.stderr),
+        timings: { compileMs },
       });
       return;
     }
 
+    const compileStart = performance.now();
     const tsCompilerSource = await loadCompilerSource('compiler.js');
     const compileResult = compileTsForPlayground(tsCompilerSource, stdlib, extraModules ?? null, source, level);
+    const compileMs = Math.round((performance.now() - compileStart) * 10) / 10;
 
     if (!compileResult.ok || !compileResult.stdout) {
+      const stderrText = compileResult.stderr || 'Compilation failed.';
       self.postMessage({
         id,
         ok: false,
@@ -348,7 +592,10 @@ self.onmessage = async (event) => {
         c: '',
         cError: '',
         stdout: '',
-        stderr: compileResult.stderr || 'Compilation failed.',
+        stderr: stderrText,
+        exitCode: 1,
+        diagnostics: parseDiagnostics(stderrText),
+        timings: { compileMs },
         ...(action === 'grade' ? { allPassed: false, results: [] } : {}),
       });
       return;
@@ -359,6 +606,7 @@ self.onmessage = async (event) => {
       const cSource = await loadCompilerSource('compiler-c.js');
       const vfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
       const cResult = compileWith(cSource, vfs, source, level);
+      const totalCompileMs = Math.round((performance.now() - compileStart) * 10) / 10;
       self.postMessage({
         id,
         ok: true,
@@ -367,6 +615,9 @@ self.onmessage = async (event) => {
         cError: cResult.ok ? '' : (cResult.stderr || 'C compilation failed.'),
         stdout: '',
         stderr: compileResult.stderr,
+        exitCode: 0,
+        diagnostics: parseDiagnostics(compileResult.stderr),
+        timings: { compileMs: totalCompileMs },
       });
       return;
     }
@@ -429,11 +680,25 @@ self.onmessage = async (event) => {
     const js = attachPlayBridge(stripped);
     const runner = new Function('process', js + '\\nreturn main();');
     const userArgs = Array.isArray(args) ? args : [];
+    const runVfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
+    const streamEnabled = Boolean(payload.streamOutput);
+    const runStart = performance.now();
     const runResult = runWithProcessStub(
       ['node', 'playground.js', ...userArgs],
       stdin ?? '',
       (proc) => runner(proc),
+      runVfs,
+      {
+        interactive: Boolean(payload.interactive),
+        stdinClosed: Boolean(payload.stdinClosed),
+        sharedCtrl: payload.sharedCtrl ?? null,
+        sharedData: payload.sharedData ?? null,
+        onStdout: streamEnabled ? (text) => { self.postMessage({ id, ok: true, stream: true, event: 'stdout', text }); } : null,
+        onStderr: streamEnabled ? (text) => { self.postMessage({ id, ok: true, stream: true, event: 'stderr', text }); } : null,
+        onStdinWait: streamEnabled ? () => { self.postMessage({ id, ok: true, stream: true, event: 'stdin-wait' }); } : null,
+      },
     );
+    const runMs = Math.round((performance.now() - runStart) * 10) / 10;
     const session = globalThis.__litePlay;
     const frame = session ? session.frame() : null;
     const hasCanvas = Boolean(frame && frame.width > 0 && frame.height > 0);
@@ -443,12 +708,18 @@ self.onmessage = async (event) => {
       globalThis.__litePlay = null;
       globalThis.__liteAudioDrain = null;
     }
+    const combinedStderr = [compileResult.stderr, runResult.stderr].filter(Boolean).join('\\n');
     self.postMessage({
       id,
       ok: runResult.ok,
       ts,
       stdout: runResult.stdout,
       stderr: runResult.stderr,
+      exitCode: runResult.exitCode,
+      needsStdin: Boolean(runResult.needsStdin),
+      files: runResult.files ?? [],
+      diagnostics: parseDiagnostics(combinedStderr),
+      timings: { compileMs, runMs },
       tones,
       canvas: hasCanvas && !isInteractive ? frame : null,
       play: isInteractive ? {

@@ -18,15 +18,40 @@ export interface RectLike {
   height: number;
 }
 
+export interface VfsFileRecord {
+  path: string;
+  size: number;
+  isText: boolean;
+  textPreview?: string;
+  bytesBase64?: string;
+}
+
+export interface DiagnosticRecord {
+  file: string;
+  line: number;
+  column: number;
+  category: string;
+  message: string;
+  raw: string;
+}
+
 export interface WorkerReply {
   id?: number;
   ok: boolean;
   action?: string;
+  stream?: boolean;
+  event?: 'stdout' | 'stderr' | 'stdin-wait';
+  text?: string;
   ts?: string;
   c?: string;
   cError?: string;
   stdout?: string;
   stderr?: string;
+  exitCode?: number | null;
+  needsStdin?: boolean;
+  timings?: { compileMs?: number; runMs?: number };
+  files?: VfsFileRecord[];
+  diagnostics?: DiagnosticRecord[];
   tones?: number[];
   canvas?: PlayFrameLike | null;
   play?: PlayFrameLike | null;
@@ -37,7 +62,11 @@ export interface WorkerReply {
 }
 
 export interface WorkerClient {
-  call: (action: string, payload?: Record<string, unknown>) => Promise<WorkerReply>;
+  call: (
+    action: string,
+    payload?: Record<string, unknown>,
+    onEvent?: (msg: WorkerReply) => void,
+  ) => Promise<WorkerReply>;
   post: (payload: Record<string, unknown>) => void;
   terminate: () => void;
 }
@@ -174,7 +203,14 @@ export function mapPointerToCell(
 export function createWorkerClient(workerUrl: string, customCtor?: WorkerConstructorLike): WorkerClient {
   let worker: WorkerInstanceLike | null = null;
   let nextReqId = 1;
-  const pending = new Map<number, Readonly<{ resolve: (msg: WorkerReply) => void; reject: (err: Error) => void }>>();
+  const pending = new Map<
+    number,
+    Readonly<{
+      resolve: (msg: WorkerReply) => void;
+      reject: (err: Error) => void;
+      onEvent?: (msg: WorkerReply) => void;
+    }>
+  >();
 
   const ensureWorker = (): WorkerInstanceLike => {
     if (worker) return worker;
@@ -186,6 +222,10 @@ export function createWorkerClient(workerUrl: string, customCtor?: WorkerConstru
       if (msg.id === undefined) return;
       const entry = pending.get(msg.id);
       if (!entry) return;
+      if (msg.stream) {
+        entry.onEvent?.(msg);
+        return;
+      }
       pending.delete(msg.id);
       entry.resolve(msg);
     });
@@ -202,10 +242,14 @@ export function createWorkerClient(workerUrl: string, customCtor?: WorkerConstru
   };
 
   return {
-    call(action: string, payload: Record<string, unknown> = {}): Promise<WorkerReply> {
+    call(
+      action: string,
+      payload: Record<string, unknown> = {},
+      onEvent?: (msg: WorkerReply) => void,
+    ): Promise<WorkerReply> {
       return new Promise((resolve, reject) => {
         const id = nextReqId++;
-        pending.set(id, { resolve, reject });
+        pending.set(id, onEvent !== undefined ? { resolve, reject, onEvent } : { resolve, reject });
         try {
           ensureWorker().postMessage({ id, action, ...payload });
         } catch (err) {
@@ -221,6 +265,9 @@ export function createWorkerClient(workerUrl: string, customCtor?: WorkerConstru
     terminate(): void {
       if (worker?.terminate) worker.terminate();
       worker = null;
+      for (const entry of pending.values()) {
+        entry.reject(new Error('Worker terminated'));
+      }
       pending.clear();
     },
   };

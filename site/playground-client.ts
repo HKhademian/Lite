@@ -28,10 +28,11 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   const sourceEl = document.getElementById("pg-source");
   const argsEl = document.getElementById("pg-args");
   const stdinEl = document.getElementById("pg-stdin");
-  const outputEl = document.getElementById("pg-output");
-  const tsEl = document.getElementById("pg-ts");
-  const cEl = document.getElementById("pg-c");
+  const outputCardsEl = document.getElementById("pg-output-cards");
+  const outputBadgeEl = document.getElementById("pg-output-badge");
+  const generatedCodeEl = document.getElementById("pg-generated-code");
   const codeModesBar = document.getElementById("pg-code-modes");
+  const langButtons = Array.from(document.querySelectorAll(".code-lang-btn"));
   const modeButtons = Array.from(document.querySelectorAll(".code-mode-btn"));
   const tabCanvas = document.getElementById("tab-canvas");
   const canvasWrap = document.getElementById("pg-canvas-wrap");
@@ -41,12 +42,22 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   const muteBtn = document.getElementById("pg-mute");
   const fullscreenBtn = document.getElementById("pg-canvas-fullscreen");
   const fpsEl = document.getElementById("pg-fps");
+  const consoleEl = document.getElementById("pg-console");
+  const consoleLogEl = document.getElementById("pg-console-log");
+  const consoleInputRow = document.getElementById("pg-console-input-row");
+  const consolePromptEl = document.getElementById("pg-console-prompt");
+  const consoleGhostEl = document.getElementById("pg-console-ghost");
+  const consoleInputEl = document.getElementById("pg-console-input");
+  const consoleHintEl = document.getElementById("pg-console-hint");
+  const eofBtn = document.getElementById("pg-eof");
+  const killBtn = document.getElementById("pg-kill");
+  const clearConsoleBtn = document.getElementById("pg-clear-console");
   const tabs = Array.from(document.querySelectorAll(".pg-tab"));
   const panels = {
-    output: document.getElementById("panel-output"),
-    ts: document.getElementById("panel-ts"),
-    c: document.getElementById("panel-c"),
+    console: document.getElementById("panel-console"),
     canvas: document.getElementById("panel-canvas"),
+    output: document.getElementById("panel-output"),
+    generated: document.getElementById("panel-generated"),
   };
   const headerFullscreenBtn = document.getElementById("pg-fullscreen");
   function syncFullscreenUi() {
@@ -76,14 +87,60 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     });
   }
 
-  let activeTab = "output";
+  let activeTab = "console";
   let codeMode = "program";
+  let activeGenLang = "ts";
   let rawTs = "";
   let rawC = "";
-  let cMessage = "";
+  let cMessage = "/* Press Compile or select C to emit C. */";
   let currentSample = null;
   let lastCSource = null;
   let lastCOptLevel = null;
+  const GEN_LANG_STORAGE_KEY = "lite.pg.genLang";
+  const GENERATED_TARGETS = [
+    {
+      id: "ts",
+      label: "TypeScript",
+      shortLabel: "TS",
+      render(mode) {
+        return rawTs ? highlightTs(formatCodeView(rawTs, "ts", mode)) : highlightTs("// Press Compile or Play to emit TypeScript.");
+      },
+      ensure() {},
+    },
+    {
+      id: "c",
+      label: "C",
+      shortLabel: "C",
+      render(mode) {
+        return rawC ? highlightC(formatCodeView(rawC, "c", mode)) : highlightC(cMessage);
+      },
+      ensure() {
+        void compileCForEditor();
+      },
+    },
+  ];
+  const targetById = new Map(GENERATED_TARGETS.map((t) => [t.id, t]));
+  try {
+    const savedLang = window.localStorage.getItem(GEN_LANG_STORAGE_KEY);
+    if (savedLang && targetById.has(savedLang)) activeGenLang = savedLang;
+  } catch {}
+  function syncGenLangButtons() {
+    for (const btn of langButtons) {
+      btn.setAttribute("aria-pressed", btn.dataset.lang === activeGenLang ? "true" : "false");
+    }
+  }
+  syncGenLangButtons();
+  for (const btn of langButtons) {
+    btn.addEventListener("click", () => {
+      const next = btn.dataset.lang;
+      if (!next || !targetById.has(next)) return;
+      activeGenLang = next;
+      try { window.localStorage.setItem(GEN_LANG_STORAGE_KEY, next); } catch {}
+      syncGenLangButtons();
+      renderCodeViews();
+      targetById.get(next).ensure();
+    });
+  }
   const OPT_STORAGE_KEY = "lite.pg.optLevel";
   function readOptLevel() {
     const raw = optLevelEl ? Number(optLevelEl.value) : 1;
@@ -104,15 +161,14 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       try { window.localStorage.setItem(OPT_STORAGE_KEY, String(lv)); } catch {}
       lastCSource = null;
       lastCOptLevel = null;
-      if (activeTab === "ts") {
-        void runAction("compile");
-      } else if (activeTab === "c") {
-        void compileCForEditor();
-      } else if (activeTab === "canvas") {
+      if (activeTab === "generated") {
+        if (activeGenLang === "c") void compileCForEditor();
+        else void runAction("compile");
+      } else if (activeTab === "canvas" && tabCanvas && !tabCanvas.disabled) {
         void runAction("play");
       } else {
         statusEl.hidden = false;
-        statusEl.textContent = "Optimization level: -O" + String(lv);
+        statusEl.textContent = "Optimization level: " + formatOptFlag(lv);
       }
     });
   }
@@ -191,15 +247,344 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     },
     onError: (stderr) => {
       statusEl.textContent = "Play error";
-      outputEl.textContent = stderr || "Canvas update failed.";
-      showTab("output");
+      appendConsoleSpan("stderr", (stderr || "Canvas update failed.") + "\\n");
+      appendConsoleExit(1, null);
+      showTab("console");
     },
   });
   stage.syncPauseUi(false, false);
 
+  function setCanvasEnabled(enabled) {
+    if (!tabCanvas) return;
+    tabCanvas.disabled = !enabled;
+    tabCanvas.setAttribute("aria-disabled", enabled ? "false" : "true");
+    tabCanvas.title = enabled
+      ? "Interactive canvas stage"
+      : "No canvas rendered — run a program using extra/canvas";
+    if (!enabled && activeTab === "canvas") {
+      showTab("console");
+    }
+  }
+  setCanvasEnabled(false);
+
+  const consoleState = {
+    running: false,
+    waitingStdin: false,
+    history: [],
+    historyIdx: -1,
+    lastCommand: "",
+    sharedCtrl: null,
+    sharedData: null,
+    fallbackSession: null,
+    activeRunId: 0,
+    lastFiles: [],
+    lastOutputData: {
+      statusText: "Ready",
+      exitCode: null,
+      optFlag: formatOptFlag(readOptLevel()),
+      compileMs: null,
+      runMs: null,
+      diagnostics: [],
+      tones: [],
+      files: [],
+    },
+  };
+
+  function currentProgramLabel() {
+    const raw = (fileEl && fileEl.textContent ? fileEl.textContent.trim() : "") || "playground.lts";
+    return raw.split(" · ")[0] || "playground.lts";
+  }
+
+  function formatCommandLine(args, stdinText) {
+    const parts = ["lite", "run", currentProgramLabel(), ...(Array.isArray(args) ? args : [])];
+    const base = parts.join(" ");
+    if (stdinText) {
+      const preview = stdinText.replaceAll("\\n", "\\\\n");
+      const clipped = preview.length > 36 ? preview.slice(0, 33) + "..." : preview;
+      return base + ' <<< "' + clipped.replaceAll('"', '\\\\"') + '"';
+    }
+    return base;
+  }
+
+  function scrollConsoleToBottom() {
+    if (consoleEl) consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function syncConsolePromptUi() {
+    if (!consoleInputRow || !consoleInputEl || !consolePromptEl || !consoleGhostEl) return;
+    const busyNoWait = consoleState.running && !consoleState.waitingStdin;
+    consoleInputRow.hidden = busyNoWait;
+    consoleInputRow.classList.toggle("is-waiting", consoleState.waitingStdin);
+    consolePromptEl.textContent = consoleState.waitingStdin ? ">" : "$";
+    if (consoleHintEl) {
+      if (consoleState.waitingStdin) {
+        consoleHintEl.textContent = "waiting for input · Enter · ^D EOF · ^C kill";
+        consoleHintEl.hidden = false;
+      } else {
+        consoleHintEl.hidden = true;
+      }
+    }
+    const showGhost = !consoleState.waitingStdin && !consoleState.running && consoleInputEl.value === "" && Boolean(consoleState.lastCommand);
+    consoleGhostEl.textContent = showGhost ? consoleState.lastCommand : "";
+    if (eofBtn) eofBtn.hidden = !(activeTab === "console" && consoleState.waitingStdin);
+    if (killBtn) killBtn.hidden = !(activeTab === "console" && (consoleState.running || consoleState.waitingStdin));
+    if (clearConsoleBtn) clearConsoleBtn.hidden = activeTab !== "console";
+  }
+
+  function clearConsoleLog() {
+    if (consoleLogEl) consoleLogEl.innerHTML = "";
+    syncConsolePromptUi();
+  }
+
+  function appendConsoleCommand(cmd) {
+    if (!consoleLogEl) return;
+    const row = document.createElement("div");
+    row.className = "pg-console-cmd";
+    const sigil = document.createElement("span");
+    sigil.className = "pg-console-cmd-sigil";
+    sigil.textContent = "$";
+    row.appendChild(sigil);
+    row.appendChild(document.createTextNode(cmd));
+    consoleLogEl.appendChild(row);
+    consoleState.lastCommand = cmd;
+    if (cmd && consoleState.history[consoleState.history.length - 1] !== cmd) {
+      consoleState.history.push(cmd);
+      if (consoleState.history.length > 50) consoleState.history.shift();
+    }
+    consoleState.historyIdx = consoleState.history.length;
+    scrollConsoleToBottom();
+  }
+
+  function appendConsoleSpan(kind, text) {
+    if (!consoleLogEl || !text) return;
+    const span = document.createElement("span");
+    span.className =
+      kind === "stderr"
+        ? "pg-console-stderr"
+        : kind === "sys"
+          ? "pg-console-sys"
+          : kind === "stdin"
+            ? "pg-console-stdin-echo"
+            : "pg-console-stdout";
+    span.textContent = text;
+    consoleLogEl.appendChild(span);
+    scrollConsoleToBottom();
+  }
+
+  function appendConsoleExit(exitCode, runMs, labelOverride) {
+    if (!consoleLogEl) return;
+    const wrap = document.createElement("div");
+    const badge = document.createElement("span");
+    const ok = exitCode === 0;
+    badge.className = "pg-console-exit " + (ok ? "pg-console-exit-ok" : "pg-console-exit-err");
+    if (labelOverride) {
+      badge.textContent = labelOverride;
+    } else {
+      const timeSuffix = typeof runMs === "number" ? " · " + String(runMs) + " ms" : "";
+      badge.textContent = "[exited " + String(exitCode ?? 0) + timeSuffix + "]";
+    }
+    wrap.appendChild(badge);
+    consoleLogEl.appendChild(wrap);
+    scrollConsoleToBottom();
+  }
+
+  function jumpEditorToLine(lineNum) {
+    if (!editorEl || !Number.isFinite(lineNum) || lineNum < 1) return;
+    const lines = editorEl.value.split("\\n");
+    let offset = 0;
+    const target = Math.min(lines.length, Math.max(1, Math.trunc(lineNum)));
+    for (let i = 0; i < target - 1; i += 1) offset += lines[i].length + 1;
+    editorEl.focus();
+    editorEl.setSelectionRange(offset, offset + (lines[target - 1] ? lines[target - 1].length : 0));
+  }
+
+  function formatBytes(n) {
+    if (!Number.isFinite(n) || n < 0) return "0 B";
+    if (n < 1024) return String(n) + " B";
+    return (n / 1024).toFixed(1) + " KB";
+  }
+
+  function renderOutputCards() {
+    if (!outputCardsEl) return;
+    const d = consoleState.lastOutputData;
+    const extraCount = (d.diagnostics ? d.diagnostics.length : 0) + (d.tones ? d.tones.length : 0) + (d.files ? d.files.length : 0);
+    if (outputBadgeEl) {
+      outputBadgeEl.textContent = String(extraCount);
+      outputBadgeEl.hidden = extraCount === 0;
+    }
+    outputCardsEl.innerHTML = "";
+
+    const summaryCard = document.createElement("section");
+    summaryCard.className = "pg-out-card";
+    const sHead = document.createElement("div");
+    sHead.className = "pg-out-head";
+    sHead.innerHTML = '<span>Execution &amp; Compile Summary</span><span class="pg-out-meta">' + escapeHtml(d.optFlag || "-O1") + "</span>";
+    const sBody = document.createElement("div");
+    sBody.className = "pg-out-body pg-out-grid";
+    const kvItems = [
+      ["Status", d.statusText || "Ready"],
+      ["Exit Code", d.exitCode === null || d.exitCode === undefined ? "—" : String(d.exitCode)],
+      ["Compile Time", typeof d.compileMs === "number" ? String(d.compileMs) + " ms" : "—"],
+      ["Run Time", typeof d.runMs === "number" ? String(d.runMs) + " ms" : "—"],
+      ["Emitted TS", rawTs ? formatBytes(rawTs.length) + " (" + String(rawTs.split("\\n").length) + " ln)" : "—"],
+      ["Emitted C", rawC ? formatBytes(rawC.length) + " (" + String(rawC.split("\\n").length) + " ln)" : "—"],
+    ];
+    for (const [k, v] of kvItems) {
+      const kv = document.createElement("div");
+      kv.className = "pg-out-kv";
+      const kEl = document.createElement("span");
+      kEl.className = "pg-out-k";
+      kEl.textContent = k;
+      const vEl = document.createElement("span");
+      vEl.className = "pg-out-v";
+      vEl.textContent = v;
+      kv.appendChild(kEl);
+      kv.appendChild(vEl);
+      sBody.appendChild(kv);
+    }
+    summaryCard.appendChild(sHead);
+    summaryCard.appendChild(sBody);
+    outputCardsEl.appendChild(summaryCard);
+
+    if (Array.isArray(d.diagnostics) && d.diagnostics.length > 0) {
+      const diagCard = document.createElement("section");
+      diagCard.className = "pg-out-card";
+      const dHead = document.createElement("div");
+      dHead.className = "pg-out-head";
+      dHead.innerHTML = '<span>Diagnostics</span><span class="pg-out-meta">' + String(d.diagnostics.length) + "</span>";
+      const dBody = document.createElement("div");
+      dBody.className = "pg-out-body pg-out-list";
+      for (const item of d.diagnostics) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "pg-out-diag";
+        btn.innerHTML =
+          '<span class="pg-out-diag-loc">' + escapeHtml(item.file + ":" + String(item.line) + ":" + String(item.column)) + "</span>" +
+          '<span class="pg-out-diag-cat">' + escapeHtml(item.category) + "</span>" +
+          "<span>" + escapeHtml(item.message) + "</span>";
+        btn.addEventListener("click", () => jumpEditorToLine(item.line));
+        dBody.appendChild(btn);
+      }
+      diagCard.appendChild(dHead);
+      diagCard.appendChild(dBody);
+      outputCardsEl.appendChild(diagCard);
+    }
+
+    if (Array.isArray(d.tones) && d.tones.length > 0) {
+      const toneCount = Math.floor(d.tones.length / 2);
+      const toneCard = document.createElement("section");
+      toneCard.className = "pg-out-card";
+      const tHead = document.createElement("div");
+      tHead.className = "pg-out-head";
+      const tTitle = document.createElement("span");
+      tTitle.textContent = "Audio Tones (" + String(toneCount || d.tones.length) + ")";
+      const replayBtn = document.createElement("button");
+      replayBtn.type = "button";
+      replayBtn.className = "pg-copy-btn";
+      replayBtn.textContent = "Replay";
+      replayBtn.addEventListener("click", () => {
+        stage.unlockAudio();
+        stage.playTones(d.tones);
+      });
+      tHead.appendChild(tTitle);
+      tHead.appendChild(replayBtn);
+      const tBody = document.createElement("div");
+      tBody.className = "pg-out-body";
+      for (let i = 0; i + 1 < d.tones.length && i < 64; i += 2) {
+        const row = document.createElement("div");
+        row.className = "pg-out-tone-row";
+        row.innerHTML = "<span>#" + String(i / 2 + 1) + " · " + String(d.tones[i]) + " Hz</span><span>" + String(d.tones[i + 1]) + " ms</span>";
+        tBody.appendChild(row);
+      }
+      toneCard.appendChild(tHead);
+      toneCard.appendChild(tBody);
+      outputCardsEl.appendChild(toneCard);
+    }
+
+    if (Array.isArray(d.files) && d.files.length > 0) {
+      const filesCard = document.createElement("section");
+      filesCard.className = "pg-out-card";
+      const fHead = document.createElement("div");
+      fHead.className = "pg-out-head";
+      fHead.innerHTML = '<span>Virtual Files (core/file)</span><span class="pg-out-meta">' + String(d.files.length) + "</span>";
+      const fBody = document.createElement("div");
+      fBody.className = "pg-out-body pg-out-list";
+      for (const f of d.files) {
+        const box = document.createElement("div");
+        box.className = "pg-out-file";
+        const fh = document.createElement("div");
+        fh.className = "pg-out-file-head";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = f.path + " (" + formatBytes(f.size) + ")";
+        const acts = document.createElement("div");
+        acts.className = "pg-actions";
+        if (f.isText && typeof f.textPreview === "string") {
+          const cpBtn = document.createElement("button");
+          cpBtn.type = "button";
+          cpBtn.className = "pg-copy-btn";
+          cpBtn.textContent = "Copy";
+          cpBtn.addEventListener("click", () => {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              void navigator.clipboard.writeText(f.textPreview);
+            }
+          });
+          acts.appendChild(cpBtn);
+        }
+        if (f.bytesBase64) {
+          const dlBtn = document.createElement("button");
+          dlBtn.type = "button";
+          dlBtn.className = "pg-copy-btn";
+          dlBtn.textContent = "Download";
+          dlBtn.addEventListener("click", () => {
+            const bin = atob(f.bytesBase64);
+            const arr = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i);
+            const blob = new Blob([arr]);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = f.path.split("/").pop() || "output.bin";
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          });
+          acts.appendChild(dlBtn);
+        }
+        fh.appendChild(nameSpan);
+        fh.appendChild(acts);
+        box.appendChild(fh);
+        if (f.isText && typeof f.textPreview === "string") {
+          const pre = document.createElement("pre");
+          pre.className = "pg-out-file-pre";
+          pre.textContent = f.textPreview;
+          box.appendChild(pre);
+        }
+        fBody.appendChild(box);
+      }
+      filesCard.appendChild(fHead);
+      filesCard.appendChild(fBody);
+      outputCardsEl.appendChild(filesCard);
+    }
+
+    if (extraCount === 0) {
+      const note = document.createElement("div");
+      note.className = "pg-out-empty";
+      note.textContent = "No auxiliary outputs (files, audio tones, or compiler diagnostics) from the latest run. Standard output appears in Console.";
+      outputCardsEl.appendChild(note);
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+  }
+
   function renderCodeViews() {
-    tsEl.innerHTML = rawTs ? highlightTs(formatCodeView(rawTs, "ts", codeMode)) : "";
-    cEl.innerHTML = rawC ? highlightC(formatCodeView(rawC, "c", codeMode)) : highlightC(cMessage);
+    if (!generatedCodeEl) return;
+    const target = targetById.get(activeGenLang) || GENERATED_TARGETS[0];
+    generatedCodeEl.innerHTML = target.render(codeMode);
   }
 
   bindCodeModeButtons({
@@ -211,28 +596,37 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   });
 
   function showTab(name) {
+    if (name === "canvas" && tabCanvas && tabCanvas.disabled) return;
     activeTab = name;
     for (const tab of tabs) {
       tab.setAttribute("aria-selected", tab.dataset.tab === name ? "true" : "false");
     }
     for (const [key, panel] of Object.entries(panels)) {
-      panel.hidden = key !== name;
+      if (panel) panel.hidden = key !== name;
     }
     const showPause = name === "canvas" && stage.isPlayable();
-    codeModesBar.hidden = name !== "ts" && name !== "c";
+    if (codeModesBar) codeModesBar.hidden = name !== "generated";
     copyBtn.hidden = name === "canvas";
     pauseBtn.hidden = !showPause;
     if (headerFullscreenBtn) headerFullscreenBtn.hidden = name !== "canvas";
     statusEl.hidden = showPause && statusEl.textContent !== "Modified";
+    syncConsolePromptUi();
     if (name === "canvas") stage.resumeLoop();
     else stage.pauseLoop();
-    if (name === "c") void compileCForEditor();
+    if (name === "generated") {
+      renderCodeViews();
+      const target = targetById.get(activeGenLang);
+      if (target) target.ensure();
+    }
+    if (name === "output") renderOutputCards();
   }
 
   for (const tab of tabs) {
     tab.addEventListener("click", () => {
+      if (tab.disabled) return;
       showTab(tab.dataset.tab);
       if (tab.dataset.tab === "canvas") canvas.focus({ preventScroll: true });
+      if (tab.dataset.tab === "console" && consoleInputEl) consoleInputEl.focus({ preventScroll: true });
     });
   }
 
@@ -277,17 +671,224 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     window.history.replaceState({}, "", nextUrl);
   }
 
-  function stopPlay(hideTab) {
+  function stopPlay(disableCanvasTab) {
     stage.stop();
-    if (hideTab) {
-      tabCanvas.hidden = true;
-      if (activeTab === "canvas") showTab("output");
+    if (disableCanvasTab) {
+      setCanvasEnabled(false);
     }
+  }
+
+  function killActiveRun(fromUser) {
+    if (!consoleState.running && !consoleState.waitingStdin) return;
+    consoleState.activeRunId += 1;
+    if (consoleState.sharedCtrl) {
+      try {
+        Atomics.store(consoleState.sharedCtrl, 0, 3);
+        Atomics.notify(consoleState.sharedCtrl, 0);
+      } catch {}
+    }
+    workerClient.terminate();
+    consoleState.running = false;
+    consoleState.waitingStdin = false;
+    consoleState.sharedCtrl = null;
+    consoleState.sharedData = null;
+    consoleState.fallbackSession = null;
+    if (fromUser) {
+      appendConsoleSpan("stderr", "^C\\n");
+      appendConsoleExit(130, null, "[killed · exit 130]");
+      statusEl.hidden = false;
+      statusEl.textContent = "Killed (exit 130)";
+      consoleState.lastOutputData = {
+        ...consoleState.lastOutputData,
+        statusText: "Killed (SIGINT)",
+        exitCode: 130,
+      };
+      renderOutputCards();
+    }
+    syncConsolePromptUi();
+    if (activeTab === "console" && consoleInputEl) consoleInputEl.focus({ preventScroll: true });
+  }
+
+  function sendStdinLine(lineText) {
+    if (!consoleState.waitingStdin) return;
+    appendConsoleSpan("stdin", lineText + "\\n");
+    if (consoleState.sharedCtrl && consoleState.sharedData) {
+      const enc = new TextEncoder().encode(lineText + "\\n");
+      const maxLen = Math.min(enc.length, consoleState.sharedData.length);
+      consoleState.sharedData.set(enc.subarray(0, maxLen), 0);
+      Atomics.store(consoleState.sharedCtrl, 1, maxLen);
+      Atomics.store(consoleState.sharedCtrl, 0, 1);
+      Atomics.notify(consoleState.sharedCtrl, 0);
+      consoleState.waitingStdin = false;
+      syncConsolePromptUi();
+      return;
+    }
+    if (consoleState.fallbackSession) {
+      const sess = consoleState.fallbackSession;
+      sess.stdinSoFar += lineText + "\\n";
+      consoleState.waitingStdin = false;
+      syncConsolePromptUi();
+      void continueFallbackSession(sess, false);
+    }
+  }
+
+  function sendStdinEof() {
+    if (!consoleState.waitingStdin) return;
+    appendConsoleSpan("sys", "^D\\n");
+    if (consoleState.sharedCtrl) {
+      Atomics.store(consoleState.sharedCtrl, 0, 2);
+      Atomics.notify(consoleState.sharedCtrl, 0);
+      consoleState.waitingStdin = false;
+      syncConsolePromptUi();
+      return;
+    }
+    if (consoleState.fallbackSession) {
+      const sess = consoleState.fallbackSession;
+      consoleState.waitingStdin = false;
+      syncConsolePromptUi();
+      void continueFallbackSession(sess, true);
+    }
+  }
+
+  async function continueFallbackSession(sess, stdinClosed) {
+    const runId = ++consoleState.activeRunId;
+    consoleState.running = true;
+    syncConsolePromptUi();
+    try {
+      const res = await workerClient.call("play", {
+        source: sess.source,
+        stdin: sess.stdinSoFar,
+        args: sess.args,
+        optLevel: sess.optLevel,
+        interactive: true,
+        stdinClosed,
+        streamOutput: false,
+        ...(sess.extraModules ? { extraModules: sess.extraModules } : {}),
+      });
+      if (runId !== consoleState.activeRunId) return;
+      const fullOut = String(res.stdout || "");
+      const fullErr = String(res.stderr || "");
+      const deltaOut = fullOut.length >= sess.printedStdoutLen ? fullOut.slice(sess.printedStdoutLen) : fullOut;
+      const deltaErr = fullErr.length >= sess.printedStderrLen ? fullErr.slice(sess.printedStderrLen) : fullErr;
+      if (deltaOut) appendConsoleSpan("stdout", deltaOut);
+      if (deltaErr) appendConsoleSpan("stderr", deltaErr);
+      sess.printedStdoutLen = fullOut.length;
+      sess.printedStderrLen = fullErr.length;
+
+      if (res.needsStdin && !stdinClosed) {
+        consoleState.running = false;
+        consoleState.waitingStdin = true;
+        statusEl.textContent = "Waiting for input...";
+        syncConsolePromptUi();
+        if (consoleInputEl) consoleInputEl.focus({ preventScroll: true });
+        return;
+      }
+
+      consoleState.running = false;
+      consoleState.waitingStdin = false;
+      consoleState.fallbackSession = null;
+      finalizePlayResult(res, sess.optLevel, sess.source, true);
+    } catch (err) {
+      if (runId !== consoleState.activeRunId) return;
+      consoleState.running = false;
+      consoleState.waitingStdin = false;
+      consoleState.fallbackSession = null;
+      appendConsoleSpan("stderr", (err instanceof Error ? err.message : String(err)) + "\\n");
+      appendConsoleExit(1, null);
+      statusEl.textContent = "Worker error";
+      syncConsolePromptUi();
+    }
+  }
+
+  function finalizePlayResult(res, optLevel, source, alreadyStreamed) {
+    if (res.ts) rawTs = String(res.ts);
+    renderCodeViews();
+    const files = Array.isArray(res.files) ? res.files : [];
+    const diagnostics = Array.isArray(res.diagnostics) ? res.diagnostics : [];
+    const tones = Array.isArray(res.tones) ? res.tones : [];
+    consoleState.lastFiles = files;
+
+    if (!res.ok) {
+      editorCtrl.setErrorFromStderr(res.stderr || "");
+      setCanvasEnabled(false);
+      showTab("console");
+      const isCliFailure =
+        currentEnvironment === "cli" ||
+        /import\\s+"core\\/(file|path|process|time)"/.test(source);
+      const cliHint = isCliFailure
+        ? "\\n[host note] This source targets the CLI / Host OS environment; browser mode supports Compile TS/C, while local execution uses ./bin/lite run."
+        : "";
+      if (!alreadyStreamed) {
+        if (res.stdout) appendConsoleSpan("stdout", res.stdout + (res.stdout.endsWith("\\n") ? "" : "\\n"));
+        appendConsoleSpan("stderr", (res.stderr || "Execution failed.") + cliHint + "\\n");
+      } else if (cliHint) {
+        appendConsoleSpan("sys", cliHint + "\\n");
+      }
+      const exitCode = typeof res.exitCode === "number" ? res.exitCode : 1;
+      appendConsoleExit(exitCode, res.timings && res.timings.runMs);
+      statusEl.textContent = res.ts ? (isCliFailure ? "CLI / Host OS runtime required" : "Runtime error") : "Compile error";
+      consoleState.lastOutputData = {
+        statusText: statusEl.textContent,
+        exitCode,
+        optFlag: formatOptFlag(optLevel),
+        compileMs: res.timings ? res.timings.compileMs : null,
+        runMs: res.timings ? res.timings.runMs : null,
+        diagnostics,
+        tones,
+        files,
+      };
+      renderOutputCards();
+      syncConsolePromptUi();
+      if (consoleInputEl) consoleInputEl.focus({ preventScroll: true });
+      return;
+    }
+
+    if (!alreadyStreamed) {
+      if (res.stdout) appendConsoleSpan("stdout", res.stdout + (res.stdout.endsWith("\\n") ? "" : "\\n"));
+      if (res.stderr) appendConsoleSpan("stderr", res.stderr + (res.stderr.endsWith("\\n") ? "" : "\\n"));
+    } else if (res.stdout && !res.stdout.endsWith("\\n")) {
+      appendConsoleSpan("stdout", "\\n");
+    }
+    const exitCode = typeof res.exitCode === "number" ? res.exitCode : 0;
+    appendConsoleExit(exitCode, res.timings && res.timings.runMs);
+    if (tones.length > 0) stage.playTones(tones);
+
+    const frame = res.play || res.canvas;
+    if (frame && frame.width > 0 && frame.height > 0) {
+      setCanvasEnabled(true);
+      stage.startSession(frame, Boolean(res.play));
+      if (res.play) {
+        showTab("canvas");
+        stage.syncPauseUi(true, true);
+      } else {
+        statusEl.textContent = "Rendered canvas (in browser)";
+        showTab("canvas");
+      }
+    } else {
+      setCanvasEnabled(false);
+      showTab("console");
+      statusEl.textContent = "Exited " + String(exitCode) + " (in browser)";
+    }
+
+    consoleState.lastOutputData = {
+      statusText: frame ? "Rendered canvas" : "Exited " + String(exitCode),
+      exitCode,
+      optFlag: formatOptFlag(optLevel),
+      compileMs: res.timings ? res.timings.compileMs : null,
+      runMs: res.timings ? res.timings.runMs : null,
+      diagnostics,
+      tones,
+      files,
+    };
+    renderOutputCards();
+    syncConsolePromptUi();
+    if (activeTab === "console" && consoleInputEl) consoleInputEl.focus({ preventScroll: true });
   }
 
   async function loadSample(id, mode) {
     const meta = byId.get(id) ?? samples[0];
     if (!meta) return;
+    killActiveRun(false);
     activeSnipId = null;
     activeLibraryItem = null;
     currentExtraModules = null;
@@ -305,33 +906,57 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     editorCtrl.setValue(sample.source);
     rawTs = sample.ts ?? "";
     rawC = "";
-    cMessage = "/* Press Compile or open Generated C to emit C. */";
+    cMessage = "/* Press Compile or select C to emit C. */";
     lastCSource = null;
     renderCodeViews();
-    if (activeTab === "c") void compileCForEditor();
+    if (activeTab === "generated" && activeGenLang === "c") void compileCForEditor();
     argsEl.value = sample.args.join(" ");
     stdinEl.value = sample.stdin.replaceAll("\\n", "\\\\n");
     setBaseline();
+    clearConsoleLog();
+    consoleState.lastFiles = [];
 
     if (mode === "compile") {
-      showTab("ts");
+      showTab("generated");
       statusEl.textContent = "Compiled to TypeScript";
     } else if (meta.play) {
       await runAction("play");
-    } else if (mode === "play") {
-      showTab("output");
-      outputEl.textContent = "";
-      statusEl.textContent = "Running " + meta.file + "...";
-      setTimeout(() => {
-        outputEl.textContent = sample.output;
-        statusEl.textContent = "Exited 0 (verified)";
-      }, 100);
-    } else if (meta.showOutput) {
-      outputEl.textContent = sample.output;
-      statusEl.textContent = "Verified output ready";
+    } else if (mode === "play" || meta.showOutput) {
+      showTab("console");
+      const cmd = formatCommandLine(sample.args, sample.stdin);
+      appendConsoleCommand(cmd);
+      if (sample.output) appendConsoleSpan("stdout", sample.output + (sample.output.endsWith("\\n") ? "" : "\\n"));
+      appendConsoleExit(0, null, "[exited 0 · verified]");
+      statusEl.textContent = "Exited 0 (verified)";
+      consoleState.lastOutputData = {
+        statusText: "Verified output ready",
+        exitCode: 0,
+        optFlag: formatOptFlag(readOptLevel()),
+        compileMs: null,
+        runMs: null,
+        diagnostics: [],
+        tones: [],
+        files: [],
+      };
+      renderOutputCards();
+      syncConsolePromptUi();
     } else {
-      outputEl.textContent = "(Press Play to run)";
+      showTab("console");
+      consoleState.lastCommand = formatCommandLine(sample.args, "");
+      appendConsoleSpan("sys", "Ready — press Play or Enter to run " + meta.file + "\\n");
       statusEl.textContent = "Ready — press Play";
+      consoleState.lastOutputData = {
+        statusText: "Ready",
+        exitCode: null,
+        optFlag: formatOptFlag(readOptLevel()),
+        compileMs: null,
+        runMs: null,
+        diagnostics: [],
+        tones: [],
+        files: [],
+      };
+      renderOutputCards();
+      syncConsolePromptUi();
     }
   }
 
@@ -376,6 +1001,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
         cMessage = formatCOutput("", res.stderr);
       }
       renderCodeViews();
+      renderOutputCards();
     } catch (err) {
       rawC = "";
       cMessage = "/* " + (err instanceof Error ? err.message : String(err)) + " */";
@@ -383,85 +1009,335 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     }
   }
 
-  async function runAction(action) {
+  async function runAction(action, overrides) {
+    killActiveRun(false);
     stopPlay(false);
     editorCtrl.clearErrors();
     const source = editorEl.value;
-    const stdin = parseStdin();
-    const args = parseArgs();
-    const optLevel = readOptLevel();
+    const hasCustomStdin = overrides && typeof overrides.stdin === "string";
+    const stdin = hasCustomStdin ? overrides.stdin : parseStdin();
+    const args = overrides && Array.isArray(overrides.args) ? overrides.args : parseArgs();
+    const optLevel = overrides && typeof overrides.optLevel === "number" ? overrides.optLevel : readOptLevel();
+    const forceInteractive = Boolean(overrides && overrides.interactive);
+    const isInteractiveRun = forceInteractive || stdin === "";
     statusEl.hidden = false;
-    statusEl.textContent = action === "compile" ? "Compiling in browser (" + formatOptFlag(optLevel) + ")..." : "Running in browser (" + formatOptFlag(optLevel) + ")...";
-    if (action === "play") {
-      outputEl.textContent = "";
-    }
-    try {
-      const res = await workerClient.call(action, {
-        source,
-        stdin,
-        args,
-        optLevel,
-        ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
-      });
-      if (res.ts) rawTs = String(res.ts);
-      if (action === "compile" && (res.c !== undefined || res.cError !== undefined)) {
-        lastCSource = source;
-        lastCOptLevel = optLevel;
-        if (res.c) {
-          rawC = String(res.c);
-          cMessage = "";
-        } else {
-          rawC = "";
-          cMessage = formatCOutput("", res.cError);
+    statusEl.textContent = action === "compile"
+      ? "Compiling in browser (" + formatOptFlag(optLevel) + ")..."
+      : "Running in browser (" + formatOptFlag(optLevel) + ")...";
+
+    if (action === "compile") {
+      try {
+        const res = await workerClient.call("compile", {
+          source,
+          stdin: "",
+          args: [],
+          optLevel,
+          ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
+        });
+        if (res.ts) rawTs = String(res.ts);
+        if (res.c !== undefined || res.cError !== undefined) {
+          lastCSource = source;
+          lastCOptLevel = optLevel;
+          if (res.c) {
+            rawC = String(res.c);
+            cMessage = "";
+          } else {
+            rawC = "";
+            cMessage = formatCOutput("", res.cError);
+          }
         }
-      }
-      renderCodeViews();
-      if (!res.ok) {
-        editorCtrl.setErrorFromStderr(res.stderr || "");
-        tabCanvas.hidden = true;
-        showTab("output");
-        const isCliFailure =
-          currentEnvironment === "cli" ||
-          /import\\s+"core\\/(file|path|process|time)"/.test(source);
-        const cliHint = isCliFailure && action === "play"
-          ? "\\n[host note] This source targets the CLI / Host OS environment; browser mode supports Compile TS/C, while local execution uses ./bin/lite run."
-          : "";
-        outputEl.textContent = (res.stdout ? res.stdout + "\\n" : "") + (res.stderr || "Execution failed.") + cliHint;
-        statusEl.textContent = res.ts ? (isCliFailure ? "CLI / Host OS runtime required" : "Runtime error") : "Compile error";
-        return;
-      }
-      if (action === "compile") {
-        if (activeTab !== "c") showTab("ts");
+        renderCodeViews();
+        const diagnostics = Array.isArray(res.diagnostics) ? res.diagnostics : [];
+        consoleState.lastOutputData = {
+          statusText: res.ok ? "Compiled" : "Compile error",
+          exitCode: res.ok ? 0 : 1,
+          optFlag: formatOptFlag(optLevel),
+          compileMs: res.timings ? res.timings.compileMs : null,
+          runMs: null,
+          diagnostics,
+          tones: [],
+          files: consoleState.lastFiles,
+        };
+        renderOutputCards();
+        if (!res.ok) {
+          editorCtrl.setErrorFromStderr(res.stderr || "");
+          showTab("console");
+          appendConsoleCommand("lite compile " + formatOptFlag(optLevel) + " " + currentProgramLabel());
+          appendConsoleSpan("stderr", (res.stderr || "Compilation failed.") + "\\n");
+          appendConsoleExit(1, res.timings && res.timings.compileMs);
+          statusEl.textContent = "Compile error";
+          syncConsolePromptUi();
+          return;
+        }
+        showTab("generated");
         statusEl.textContent = "Compiled to TypeScript" + (res.c ? " & C" : "") + " (" + formatOptFlag(optLevel) + ")";
+      } catch (err) {
+        showTab("console");
+        appendConsoleSpan("stderr", (err instanceof Error ? err.message : String(err)) + "\\n");
+        appendConsoleExit(1, null);
+        statusEl.textContent = "Worker error";
+        syncConsolePromptUi();
+      }
+      return;
+    }
+
+    showTab("console");
+    const cmdLine = formatCommandLine(args, isInteractiveRun ? "" : stdin);
+    appendConsoleCommand(cmdLine);
+
+    const runId = ++consoleState.activeRunId;
+    consoleState.running = true;
+    consoleState.waitingStdin = false;
+    consoleState.fallbackSession = null;
+    const useSab = isInteractiveRun && typeof SharedArrayBuffer === "function" && Boolean(self.crossOriginIsolated);
+    let sharedCtrlBuf = null;
+    let sharedDataBuf = null;
+    if (useSab) {
+      sharedCtrlBuf = new SharedArrayBuffer(16);
+      sharedDataBuf = new SharedArrayBuffer(65536);
+      consoleState.sharedCtrl = new Int32Array(sharedCtrlBuf);
+      consoleState.sharedData = new Uint8Array(sharedDataBuf);
+    } else {
+      consoleState.sharedCtrl = null;
+      consoleState.sharedData = null;
+    }
+    syncConsolePromptUi();
+
+    let streamedAny = false;
+    try {
+      const res = await workerClient.call(
+        "play",
+        {
+          source,
+          stdin: isInteractiveRun ? "" : stdin,
+          args,
+          optLevel,
+          interactive: isInteractiveRun,
+          stdinClosed: !isInteractiveRun,
+          streamOutput: true,
+          sharedCtrl: sharedCtrlBuf,
+          sharedData: sharedDataBuf,
+          ...(currentExtraModules ? { extraModules: currentExtraModules } : {}),
+        },
+        (ev) => {
+          if (runId !== consoleState.activeRunId) return;
+          if (ev.event === "stdout" && ev.text) {
+            streamedAny = true;
+            appendConsoleSpan("stdout", ev.text);
+          } else if (ev.event === "stderr" && ev.text) {
+            streamedAny = true;
+            appendConsoleSpan("stderr", ev.text);
+          } else if (ev.event === "stdin-wait") {
+            consoleState.waitingStdin = true;
+            statusEl.textContent = "Waiting for input...";
+            syncConsolePromptUi();
+            if (consoleInputEl) consoleInputEl.focus({ preventScroll: true });
+          }
+        },
+      );
+      if (runId !== consoleState.activeRunId) return;
+      if (res.needsStdin && isInteractiveRun) {
+        consoleState.running = false;
+        consoleState.waitingStdin = true;
+        consoleState.fallbackSession = {
+          source,
+          args,
+          extraModules: currentExtraModules,
+          optLevel,
+          stdinSoFar: "",
+          printedStdoutLen: String(res.stdout || "").length,
+          printedStderrLen: String(res.stderr || "").length,
+        };
+        if (!streamedAny && res.stdout) appendConsoleSpan("stdout", res.stdout);
+        statusEl.textContent = "Waiting for input...";
+        syncConsolePromptUi();
+        if (consoleInputEl) consoleInputEl.focus({ preventScroll: true });
         return;
       }
-
-      outputEl.textContent = res.stdout + (res.stderr ? (res.stdout ? "\\n" : "") + res.stderr : "");
-      if (Array.isArray(res.tones) && res.tones.length > 0) stage.playTones(res.tones);
-
-      const frame = res.play || res.canvas;
-      if (frame && frame.width > 0 && frame.height > 0) {
-        tabCanvas.hidden = false;
-        stage.startSession(frame, Boolean(res.play));
-        if (res.play) {
-          showTab("canvas");
-          stage.syncPauseUi(true, true);
-        } else {
-          statusEl.textContent = "Rendered canvas (in browser)";
-          showTab("canvas");
-        }
-      } else {
-        tabCanvas.hidden = true;
-        showTab("output");
-        statusEl.textContent = "Exited 0 (in browser)";
-      }
+      consoleState.running = false;
+      consoleState.waitingStdin = false;
+      consoleState.sharedCtrl = null;
+      consoleState.sharedData = null;
+      finalizePlayResult(res, optLevel, source, streamedAny);
     } catch (err) {
-      tabCanvas.hidden = true;
-      showTab("output");
-      outputEl.textContent = err instanceof Error ? err.message : String(err);
+      if (runId !== consoleState.activeRunId) return;
+      consoleState.running = false;
+      consoleState.waitingStdin = false;
+      consoleState.sharedCtrl = null;
+      consoleState.sharedData = null;
+      setCanvasEnabled(false);
+      showTab("console");
+      appendConsoleSpan("stderr", (err instanceof Error ? err.message : String(err)) + "\\n");
+      appendConsoleExit(1, null);
       statusEl.textContent = "Worker error";
+      syncConsolePromptUi();
     }
   }
+
+  function runConsoleCommand(rawLine) {
+    const trimmed = rawLine.trim();
+    if (!trimmed) {
+      if (consoleState.lastCommand) {
+        runConsoleCommand(consoleState.lastCommand);
+      }
+      return;
+    }
+    const tokens = trimmed.split(/\\s+/);
+    const head = tokens[0];
+    if (head === "clear" || head === "cls") {
+      clearConsoleLog();
+      return;
+    }
+    if (head === "help") {
+      appendConsoleCommand("help");
+      appendConsoleSpan(
+        "sys",
+        "Commands:\\n" +
+        "  run [args...]           Run current program interactively\\n" +
+        "  lite run <file> [args]  Run current program interactively\\n" +
+        "  compile [-O0..-O3|-Os]  Compile to TS & C\\n" +
+        "  ls                      List files written to VFS\\n" +
+        "  cat <path>              Print a VFS file\\n" +
+        "  clear                   Clear console scrollback\\n" +
+        "Shortcuts: Enter (empty) re-runs last command · Up/Right/Tab recall · Ctrl+D EOF · Ctrl+C kill\\n",
+      );
+      syncConsolePromptUi();
+      return;
+    }
+    if (head === "ls") {
+      appendConsoleCommand("ls");
+      if (consoleState.lastFiles.length === 0) {
+        appendConsoleSpan("sys", "(no virtual files written yet)\\n");
+      } else {
+        appendConsoleSpan("stdout", consoleState.lastFiles.map((f) => f.path + " (" + formatBytes(f.size) + ")").join("\\n") + "\\n");
+      }
+      syncConsolePromptUi();
+      return;
+    }
+    if (head === "cat") {
+      appendConsoleCommand(trimmed);
+      const targetPath = tokens.slice(1).join(" ");
+      const found = consoleState.lastFiles.find((f) => f.path === targetPath || f.path.endsWith("/" + targetPath));
+      if (!found) {
+        appendConsoleSpan("stderr", "cat: " + (targetPath || "(missing path)") + ": No such virtual file\\n");
+      } else if (found.isText && typeof found.textPreview === "string") {
+        appendConsoleSpan("stdout", found.textPreview + (found.textPreview.endsWith("\\n") ? "" : "\\n"));
+      } else {
+        appendConsoleSpan("sys", "(" + found.path + ": binary file, " + formatBytes(found.size) + ")\\n");
+      }
+      syncConsolePromptUi();
+      return;
+    }
+    if (head === "compile" || (head === "lite" && tokens[1] === "compile")) {
+      const rest = head === "lite" ? tokens.slice(2) : tokens.slice(1);
+      let nextOpt = readOptLevel();
+      for (const tok of rest) {
+        if (tok === "-Os") nextOpt = 4;
+        else if (/^-O[0-3]$/.test(tok)) nextOpt = Number(tok.slice(2));
+      }
+      if (optLevelEl) optLevelEl.value = String(nextOpt);
+      void runAction("compile", { optLevel: nextOpt });
+      return;
+    }
+    if (head === "run" || (head === "lite" && tokens[1] === "run")) {
+      let rest = head === "lite" ? tokens.slice(2) : tokens.slice(1);
+      if (head === "lite" && rest[0] && rest[0].endsWith(".lts")) rest = rest.slice(1);
+      const pipeIdx = rest.indexOf("<<<");
+      let cmdArgs = rest;
+      let pipedStdin = "";
+      let interactive = true;
+      if (pipeIdx !== -1) {
+        cmdArgs = rest.slice(0, pipeIdx);
+        pipedStdin = rest.slice(pipeIdx + 1).join(" ").replace(/^"|"$/g, "").replaceAll("\\\\n", "\\n");
+        interactive = false;
+      }
+      argsEl.value = cmdArgs.join(" ");
+      stage.unlockAudio();
+      void runAction("play", { args: cmdArgs, stdin: pipedStdin, interactive });
+      return;
+    }
+    appendConsoleCommand(trimmed);
+    appendConsoleSpan("stderr", "Unknown command: " + head + " (type 'help' for commands)\\n");
+    syncConsolePromptUi();
+  }
+
+  if (consoleEl && consoleInputEl) {
+    consoleEl.addEventListener("click", () => {
+      const sel = typeof window.getSelection === "function" ? String(window.getSelection() || "") : "";
+      if (!sel && !consoleInputRow.hidden) consoleInputEl.focus({ preventScroll: true });
+    });
+    consoleInputEl.addEventListener("input", syncConsolePromptUi);
+    consoleInputEl.addEventListener("keydown", (ev) => {
+      if (ev.ctrlKey && !ev.metaKey && !ev.altKey && ev.key.toLowerCase() === "d") {
+        ev.preventDefault();
+        if (consoleState.waitingStdin) sendStdinEof();
+        return;
+      }
+      if (ev.ctrlKey && !ev.metaKey && !ev.altKey && ev.key.toLowerCase() === "c") {
+        const sel = typeof window.getSelection === "function" ? String(window.getSelection() || "") : "";
+        if (!sel && (consoleState.running || consoleState.waitingStdin)) {
+          ev.preventDefault();
+          killActiveRun(true);
+        }
+        return;
+      }
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        const val = consoleInputEl.value;
+        consoleInputEl.value = "";
+        if (consoleState.waitingStdin) {
+          sendStdinLine(val);
+        } else {
+          runConsoleCommand(val);
+        }
+        syncConsolePromptUi();
+        return;
+      }
+      if (!consoleState.waitingStdin) {
+        if (ev.key === "ArrowUp") {
+          ev.preventDefault();
+          if (consoleState.history.length > 0) {
+            consoleState.historyIdx = Math.max(0, consoleState.historyIdx - 1);
+            consoleInputEl.value = consoleState.history[consoleState.historyIdx] || "";
+            syncConsolePromptUi();
+          } else if (consoleState.lastCommand) {
+            consoleInputEl.value = consoleState.lastCommand;
+            syncConsolePromptUi();
+          }
+          return;
+        }
+        if (ev.key === "ArrowDown") {
+          ev.preventDefault();
+          if (consoleState.history.length > 0) {
+            consoleState.historyIdx = Math.min(consoleState.history.length, consoleState.historyIdx + 1);
+            consoleInputEl.value = consoleState.history[consoleState.historyIdx] || "";
+            syncConsolePromptUi();
+          }
+          return;
+        }
+        if ((ev.key === "ArrowRight" || ev.key === "Tab") && consoleInputEl.value === "" && consoleState.lastCommand) {
+          ev.preventDefault();
+          consoleInputEl.value = consoleState.lastCommand;
+          syncConsolePromptUi();
+        }
+      }
+    });
+    consoleEl.addEventListener("keydown", (ev) => {
+      if (ev.ctrlKey && !ev.metaKey && !ev.altKey && ev.key.toLowerCase() === "c") {
+        const sel = typeof window.getSelection === "function" ? String(window.getSelection() || "") : "";
+        if (!sel && (consoleState.running || consoleState.waitingStdin)) {
+          ev.preventDefault();
+          killActiveRun(true);
+        }
+      }
+    });
+  }
+  if (eofBtn) eofBtn.addEventListener("click", () => { sendStdinEof(); });
+  if (killBtn) killBtn.addEventListener("click", () => { killActiveRun(true); });
+  if (clearConsoleBtn) clearConsoleBtn.addEventListener("click", () => {
+    clearConsoleLog();
+    if (consoleInputEl) consoleInputEl.focus({ preventScroll: true });
+  });
 
   resetBtn.addEventListener("click", () => {
     stage.unlockAudio();
@@ -513,8 +1389,12 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
 
   let copyTimer = 0;
   copyBtn.addEventListener("click", () => {
-    const target = activeTab === "ts" ? tsEl : activeTab === "c" ? cEl : outputEl;
-    const text = target.textContent || "";
+    const target = activeTab === "generated"
+      ? generatedCodeEl
+      : activeTab === "output"
+        ? outputCardsEl
+        : consoleLogEl;
+    const text = target ? target.textContent || "" : "";
     if (!text) return;
     const markCopied = () => {
       copyBtn.textContent = "Copied";
@@ -552,13 +1432,17 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     lastCSource = null;
     renderCodeViews();
     setBaseline();
+    clearConsoleLog();
+    consoleState.lastCommand = formatCommandLine(parseArgs(), "");
     if (currentEnvironment === "cli") {
-      outputEl.textContent = "(CLI / Host OS sketch — press Compile for TS/C, or run locally with ./bin/lite run)";
+      appendConsoleSpan("sys", "(CLI / Host OS sketch — press Compile for TS/C, or run locally with ./bin/lite run)\\n");
       statusEl.textContent = "Loaded CLI sketch: " + snip.title;
     } else {
-      outputEl.textContent = "(Press Play to run)";
+      appendConsoleSpan("sys", "Loaded sketch: " + snip.title + " — press Play or Enter to run\\n");
       statusEl.textContent = "Loaded sketch: " + snip.title;
     }
+    syncConsolePromptUi();
+    renderOutputCards();
     setPlaygroundQuery("snip", snip.id);
     syncSnipsBadge();
     return true;
@@ -588,13 +1472,17 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     lastCSource = null;
     renderCodeViews();
     setBaseline();
+    clearConsoleLog();
+    consoleState.lastCommand = formatCommandLine(parseArgs(), "");
     if (currentEnvironment === "cli") {
-      outputEl.textContent = "(CLI / Host OS source — press Compile for TS/C, or run locally with ./bin/lite run " + (item.file || "file.lts") + ")";
+      appendConsoleSpan("sys", "(CLI / Host OS source — press Compile for TS/C, or run locally with ./bin/lite run " + (item.file || "file.lts") + ")\\n");
       statusEl.textContent = "Loaded CLI " + item.badge + ": " + item.title;
     } else {
-      outputEl.textContent = "(Press Play to run)";
+      appendConsoleSpan("sys", "Loaded " + item.badge + ": " + item.title + " — press Play or Enter to run\\n");
       statusEl.textContent = "Loaded " + item.badge + ": " + item.title;
     }
+    syncConsolePromptUi();
+    renderOutputCards();
     setPlaygroundQuery(item.category || "piece", item.slug || item.id);
   }
 
@@ -1040,7 +1928,11 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       lastCSource = null;
       renderCodeViews();
       setBaseline();
-      outputEl.textContent = "(Loaded shared sketch — press Play)";
+      clearConsoleLog();
+      consoleState.lastCommand = formatCommandLine(parseArgs(), "");
+      appendConsoleSpan("sys", "Loaded shared sketch — press Play or Enter to run\\n");
+      syncConsolePromptUi();
+      renderOutputCards();
       statusEl.textContent = "Loaded shared sketch from URL";
     }
   }
@@ -1075,7 +1967,11 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
           lastCSource = null;
           renderCodeViews();
           setBaseline();
-          outputEl.textContent = "(Press Play to run)";
+          clearConsoleLog();
+          consoleState.lastCommand = formatCommandLine([], "");
+          appendConsoleSpan("sys", "Loaded from Lite Gym — press Play or Enter to run\\n");
+          syncConsolePromptUi();
+          renderOutputCards();
           statusEl.textContent = "Loaded from Lite Gym — press Play";
           loadedDraft = true;
         }

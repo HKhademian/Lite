@@ -442,7 +442,18 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="pg-split"'));
   assert(playground.includes('bindLiteEditor('));
   assert(playground.includes('bindCodeModeButtons('));
-  assert(playground.includes('Generated TS'));
+  assert(playground.includes('id="tab-console"'));
+  assert(playground.includes('id="tab-canvas"'));
+  assert(playground.includes('id="tab-output"'));
+  assert(playground.includes('id="tab-generated"'));
+  assert(playground.includes('id="tab-canvas" class="pg-tab" role="tab" data-tab="canvas" aria-selected="false" type="button" disabled aria-disabled="true"'));
+  assert(playground.includes('id="pg-console"'));
+  assert(playground.includes('id="pg-eof"'));
+  assert(playground.includes('id="pg-kill"'));
+  assert(playground.includes('id="pg-output-cards"'));
+  assert(playground.includes('id="pg-generated-code"'));
+  assert(playground.includes('id="gen-lang-ts"'));
+  assert(playground.includes('id="gen-lang-c"'));
   assert(playground.includes('id="pg-compile"'));
   assert(playground.includes('id="pg-play"'));
   assert(playground.includes('id="pg-save-snip"'));
@@ -465,7 +476,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const editorClientJs = readFileSync(join(out, 'playground', 'editor-client.js'), 'utf8');
   assert(editorClientJs.includes('highlight(editor.value)'));
   assert(editorClientJs.includes("event.key === 'Tab'"));
-  assert(playground.includes('id="pg-c"'));
+  assert(playground.includes('id="pg-generated-code"'));
   assert(playground.includes('id="pg-share"'));
   assert(playground.includes('id="pg-opt-level"'));
   assert(playground.includes('<option value="1" selected>-O1</option>'));
@@ -1102,17 +1113,23 @@ test('playground inline module initializes without TDZ or ReferenceError', async
       id,
       value: '',
       hidden: false,
+      disabled: false,
+      className: '',
+      type: '',
       textContent: '',
       innerHTML: '',
       title: '',
       width: 320,
       height: 200,
       scrollTop: 0,
+      scrollHeight: 0,
       scrollLeft: 0,
       selectionStart: 0,
       selectionEnd: 0,
-      dataset: { tab: 'output', mode: 'program' } as Record<string, string>,
+      dataset: { tab: 'console', mode: 'program', lang: 'ts' } as Record<string, string>,
       style: { setProperty() {} },
+      children: [] as unknown[],
+      appendChild(child: unknown) { this.children.push(child); return child; },
       classList: {
         add(c: string) { classes.add(c); },
         remove(c: string) { classes.delete(c); },
@@ -1134,6 +1151,8 @@ test('playground inline module initializes without TDZ or ReferenceError', async
         for (const fn of listeners.get(type) ?? []) fn(ev);
       },
       focus() {},
+      click() {},
+      setSelectionRange() {},
       closest() { return makeEl('closest'); },
       querySelector() { return makeEl('qs'); },
       querySelectorAll() { return []; },
@@ -1160,16 +1179,23 @@ test('playground inline module initializes without TDZ or ReferenceError', async
       if (!el) { el = makeEl(id); els.set(id, el); }
       return el;
     },
+    createElement(tag: string) { return makeEl(tag); },
+    createTextNode(text: string) { return { textContent: String(text) }; },
     addEventListener() {},
     querySelector() { return makeEl('doc-qs'); },
     querySelectorAll(sel: string) {
-      if (sel === '.pg-tab') return ['output', 'ts', 'c', 'canvas'].map(tab => {
-        const el = makeEl(`tab-${tab}`);
+      if (sel === '.pg-tab') return ['console', 'canvas', 'output', 'generated'].map(tab => {
+        const el = this.getElementById(`tab-${tab}`);
         el.dataset = { tab };
         return el;
       });
+      if (sel === '.code-lang-btn') return ['ts', 'c'].map(lang => {
+        const el = this.getElementById(`gen-lang-${lang}`);
+        el.dataset = { lang };
+        return el;
+      });
       if (sel === '.code-mode-btn') return ['program', 'portable', 'full'].map(mode => {
-        const el = makeEl(`mode-${mode}`);
+        const el = this.getElementById(`mode-${mode}`);
         el.dataset = { mode };
         return el;
       });

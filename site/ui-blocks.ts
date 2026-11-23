@@ -67,6 +67,21 @@ export function renderSplitHandle(options: Readonly<SplitHandleOptions>): string
   return `<div id="${escapeHtml(options.id)}" class="pg-split" role="separator" aria-orientation="vertical" aria-label="${escapeHtml(options.ariaLabel)}" aria-valuemin="22" aria-valuemax="78" aria-valuenow="${String(pct)}" tabindex="0" title="${escapeHtml(title)}"></div>`;
 }
 
+export interface GeneratedTargetOption {
+  id: string;
+  label: string;
+  title?: string;
+}
+
+export interface GeneratedToolbarOptions extends CodeModeBarOptions {
+  targets?: readonly Readonly<GeneratedTargetOption>[];
+}
+
+const DEFAULT_GENERATED_TARGETS: readonly Readonly<GeneratedTargetOption>[] = [
+  { id: 'ts', label: 'TS', title: 'Generated TypeScript' },
+  { id: 'c', label: 'C', title: 'Generated C' },
+];
+
 /** Renders the Program / Portable / Full toggle bar shared by Play, Learn, and Gym. */
 export function renderCodeModeBar(options: Readonly<CodeModeBarOptions>): string {
   const roleAttrs = options.ariaLabel
@@ -81,6 +96,35 @@ export function renderCodeModeBar(options: Readonly<CodeModeBarOptions>): string
   return [
     `<div id="${escapeHtml(options.id)}" class="code-modes"${roleAttrs} hidden>`,
     `  ${buttons}`,
+    `</div>`,
+  ].join('\n');
+}
+
+/** Renders the Playground Generated toolbar: target language pills (TS | C | ...) + Program / Portable / Full pills. */
+export function renderGeneratedToolbar(options: Readonly<GeneratedToolbarOptions>): string {
+  const targets = options.targets ?? DEFAULT_GENERATED_TARGETS;
+  const langButtons = targets.map((entry, idx) => {
+    const pressed = idx === 0 ? 'true' : 'false';
+    const titleAttr = entry.title ? ` title="${escapeHtml(entry.title)}"` : '';
+    return `<button id="gen-lang-${escapeHtml(entry.id)}" class="code-lang-btn" type="button" data-lang="${escapeHtml(entry.id)}" aria-pressed="${pressed}"${titleAttr}>${escapeHtml(entry.label)}</button>`;
+  }).join('\n      ');
+  const modeButtons = CODE_MODES.map((entry, idx) => {
+    const idAttr = options.buttonIdPrefix ? ` id="${escapeHtml(options.buttonIdPrefix + entry.mode)}"` : '';
+    const pressed = idx === 0 ? 'true' : 'false';
+    return `<button${idAttr} class="code-mode-btn" type="button" data-mode="${entry.mode}" aria-pressed="${pressed}">${entry.label}</button>`;
+  }).join('\n      ');
+
+  return [
+    `<div id="${escapeHtml(options.id)}" class="code-modes pg-gen-toolbar">`,
+    `  <div class="pg-gen-group" role="group" aria-label="Target language">`,
+    `    <span class="pg-gen-label">Target</span>`,
+    `    ${langButtons}`,
+    `  </div>`,
+    `  <span class="pg-gen-sep" aria-hidden="true"></span>`,
+    `  <div class="pg-gen-group" role="group" aria-label="${escapeHtml(options.ariaLabel ?? 'Portability view')}">`,
+    `    <span class="pg-gen-label">View</span>`,
+    `    ${modeButtons}`,
+    `  </div>`,
     `</div>`,
   ].join('\n');
 }
