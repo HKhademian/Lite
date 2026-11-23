@@ -1,5 +1,4 @@
 /** Generates `/tools/` toolchain hub via the ignited Lite tool (`tools/src/site-tools.lts`). */
-import { spawnSync } from 'node:child_process';
 import { spawnTool } from '../igniter/artifacts.ts';
 import { renderPage, type SourceRevision } from './chrome.ts';
 import type { SearchEntry } from './search.ts';

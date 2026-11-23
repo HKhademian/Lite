@@ -1,5 +1,4 @@
 /** Site-build JSON bridge to the ignited Lite documentation tool (`dist/tools/docs.ts`). */
-import { spawnSync } from 'node:child_process';
 import { spawnTool, repoRoot } from '../igniter/artifacts.ts';
 
 export type Document = { path: string; title: string; headings: string[] };

@@ -30,7 +30,7 @@ import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { renderPlaygroundClientScript } from './playground-client.ts';
 import { collectPlaygroundLibrary } from './playground-library.ts';
 import { playgroundWorkerJs } from './playground-worker.ts';
-import { renderCodeEditorBlock, renderCodeModeBar } from './ui-blocks.ts';
+import { renderCodeEditorBlock, renderGeneratedToolbar } from './ui-blocks.ts';
 import { searchClientJs, type SearchEntry } from './search.ts';
 import { snipsClientJs } from './snips.ts';
 import { siteCss } from './styles.ts';
@@ -88,7 +88,7 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
   const fullPath = resolve(root, sample.file);
   const source = readFileSync(fullPath, 'utf8');
   let cacheFile: string | undefined;
-  if (cacheSalt !== undefined && process.env.LITE_SITE_NO_CACHE !== '1') {
+  if (cacheSalt !== undefined && process.env['LITE_SITE_NO_CACHE'] !== '1') {
     const key = createHash('sha256')
       .update(cacheSalt)
       .update('\0').update(sample.id)
@@ -244,10 +244,10 @@ function buildSitePages(options: Readonly<{
         preCodeId: "pg-source",
         gutterId: "pg-editor-gutter",
       }),
-      pgCodeModeBarHtml: renderCodeModeBar({
+      pgCodeModeBarHtml: renderGeneratedToolbar({
         id: "pg-code-modes",
         buttonIdPrefix: "mode-",
-        ariaLabel: "Generated code view",
+        ariaLabel: "Portability view",
       }),
       pgScriptHtml,
     }),

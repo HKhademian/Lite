@@ -74,7 +74,7 @@ function compileAndRunLessonSource(
   const fullPath = resolve(rootDir, lesson.sourceFile);
   const source = readFileSync(fullPath, 'utf8');
   let cacheFile: string | undefined;
-  if (process.env.LITE_SITE_NO_CACHE !== '1') {
+  if (process.env['LITE_SITE_NO_CACHE'] !== '1') {
     const hasher = createHash('sha256')
       .update('site-learn-v1\0')
       .update(tsCompiler.artifactSha256)

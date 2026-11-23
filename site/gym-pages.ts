@@ -1,5 +1,4 @@
 /** Generates `/gym/` interactive coding dojo index, drill/workout pages, and grading payloads via `tools/src/site-gym.lts`. */
-import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import { spawnTool, type CompilerBuild } from '../igniter/artifacts.ts';

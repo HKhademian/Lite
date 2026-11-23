@@ -121,7 +121,7 @@ export function verifyGymCorpus(tsCompiler?: CompilerBuild): Readonly<{
   const catalog = JSON.parse(catalogRaw) as GymCatalog;
 
   let gymCacheFile: string | undefined;
-  if (process.env.LITE_SITE_NO_CACHE !== '1') {
+  if (process.env['LITE_SITE_NO_CACHE'] !== '1') {
     const h = createHash('sha256').update('gym-v1\0').update(readFileSync(compiler.path)).update('\0').update(catalogRaw);
     let allExist = true;
     for (const ex of catalog.exercises) {

@@ -1,5 +1,4 @@
 /** Generates the two-layer `/docs/` portal via the ignited Lite tool (`tools/src/site-docs.lts`). */
-import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, resolve } from 'node:path';
@@ -354,7 +353,7 @@ export function buildDocsSection(options: Readonly<{
   const toolInput = JSON.stringify({ repoUrl, entries });
   let builtJson: string | undefined;
   let cacheFile: string | undefined;
-  if (process.env.LITE_SITE_NO_CACHE !== '1') {
+  if (process.env['LITE_SITE_NO_CACHE'] !== '1') {
     const toolSrc = readFileSync(join(rootDir, 'site', 'src', 'docs.lts'), 'utf8');
     const key = createHash('sha256').update('site-docs-v1\0').update(toolSrc).update('\0').update(toolInput).digest('hex');
     cacheFile = join(rootDir, 'dist', 'cache', 'site-docs', `${key}.json`);
