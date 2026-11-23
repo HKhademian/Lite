@@ -5,9 +5,12 @@ fs := import "core/file";
 path := import "core/path";
 text := import "core/text";
 list := import "core/list";
+map := import "core/map";
+set := import "core/set";
 integer := import "core/int";
 crypto := import "core/crypto";
 unicode := import "core/unicode";
+collections := import "util/collections";
 json := import "util/json";
 
 isJsonSpace := fn(ch: String): Bool {
@@ -77,46 +80,19 @@ pub splitJsonLines := fn(raw: String): List<String> {
 
 /** Formats unique values sorted descending by frequency as compact JSON object (`{"a":2,"b":1}`). */
 pub formatSortedCountsJson := fn(values: List<String>): String {
+    freq := collections.countTexts(values);
     keys: mut List<String> = [];
-    var counts: mut List<Int> = [];
-    loop values as v {
-        idx := list.listIndexOfText(keys, v);
-        if idx < 0 {
-            list.pushBack(mut keys, v);
-            list.pushBack(mut counts, 1);
-        } else {
-            nextCounts: mut List<Int> = [];
-            var ci := 0;
-            n := list.listCountInt(counts);
-            loop ci < n {
-                val := if ci == idx { counts[ci] + 1 } else { counts[ci] };
-                list.pushBack(mut nextCounts, val);
-                ci = ci + 1;
-            }
-            counts = nextCounts;
-        }
+    counts: mut List<Int> = [];
+    loop freq as entry {
+        list.pushBack(mut keys, entry.key);
+        list.pushBack(mut counts, entry.value);
     }
-
-    totalKeys := list.listCountText(keys);
-    used: mut List<String> = [];
+    order := collections.sortIndicesBy(list.listCountText(keys), fn(a: Int, b: Int): Bool {
+        counts[a] >= counts[b]
+    });
     entries: mut List<String> = [];
-    loop list.listCountText(used) < totalKeys {
-        var bestIdx := -1;
-        var bestCount := -1;
-        var i := 0;
-        loop i < totalKeys {
-            if not list.listContainsText(used, keys[i]) {
-                if counts[i] > bestCount {
-                    bestCount = counts[i];
-                    bestIdx = i;
-                }
-            }
-            i = i + 1;
-        }
-        if bestIdx < 0 { break; }
-        k := keys[bestIdx];
-        list.pushBack(mut used, k);
-        list.pushBack(mut entries, json.quoteString(k) + ":" + integer.intText(bestCount));
+    loop order as idx {
+        list.pushBack(mut entries, json.quoteString(keys[idx]) + ":" + integer.intText(counts[idx]));
     }
     "{" + text.joinTexts(entries, ",") + "}"
 };
@@ -190,6 +166,7 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
     rowCount := list.listCountText(itemLines);
 
     ids: mut List<String> = [];
+    idSet: mut Set<String>;
     sources: mut List<String> = [];
     loop itemLines as line {
         if not json.validate(line).ok or not isJsonObjectAt(line, 0) {
@@ -200,9 +177,10 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
         if not idRes.found or not idRes.ok or not srcRes.found or not srcRes.ok {
             return (ok = false, summaryText = "", error = "items.jsonl: missing id or source");
         }
-        if list.listContainsText(ids, idRes.value) {
+        if set.has(idSet, idRes.value) {
             return (ok = false, summaryText = "", error = "duplicate benchmark ids");
         }
+        set.add(mut idSet, idRes.value);
         list.pushBack(mut ids, idRes.value);
         list.pushBack(mut sources, srcRes.value);
     }
@@ -228,7 +206,7 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
     loop dirNames as dn {
         if fs.kind(path.join(itemsDir, dn)) == fs.FILE_KIND_DIR {
             dirCount = dirCount + 1;
-            if not list.listContainsText(ids, dn) {
+            if not set.has(idSet, dn) {
                 return (ok = false, summaryText = "", error = "item directories differ from items.jsonl");
             }
         }
@@ -460,39 +438,13 @@ formatFrequencyLines := fn(values: List<String>, indent: String, nameWidth: Int)
         i = i + cnt;
     }
 
-    totalKeys := list.listCountText(keys);
-    var used: mut List<Bool> = [];
-    var ui := 0;
-    loop ui < totalKeys {
-        list.pushBack(mut used, false);
-        ui = ui + 1;
-    }
-
+    order := collections.sortIndicesBy(list.listCountText(keys), fn(a: Int, b: Int): Bool {
+        counts[a] >= counts[b]
+    });
     lines: mut List<String> = [];
-    var picked := 0;
-    loop picked < totalKeys {
-        var bestIdx := -1;
-        var bestCount := -1;
-        var ki := 0;
-        loop ki < totalKeys {
-            if not used[ki] and counts[ki] > bestCount {
-                bestCount = counts[ki];
-                bestIdx = ki;
-            }
-            ki = ki + 1;
-        }
-        if bestIdx < 0 { break; }
-        nextUsed: mut List<Bool> = [];
-        var nu := 0;
-        loop nu < totalKeys {
-            list.pushBack(mut nextUsed, used[nu] or nu == bestIdx);
-            nu = nu + 1;
-        }
-        used = nextUsed;
-        picked = picked + 1;
-
-        kPad := padRight(keys[bestIdx], nameWidth);
-        cPad := padLeft(integer.intText(bestCount), 5);
+    loop order as idx {
+        kPad := padRight(keys[idx], nameWidth);
+        cPad := padLeft(integer.intText(counts[idx]), 5);
         list.pushBack(mut lines, indent + kPad + " " + cPad);
     }
     text.joinTexts(lines, "\n")
@@ -930,8 +882,9 @@ pub asciiLower := fn(s: String): String {
     out: mut List<String> = [];
     upper := "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     lower := "abcdefghijklmnopqrstuvwxyz";
+    sLen := text.length(s);
     var i := 0;
-    loop i < text.length(s) {
+    loop i < sLen {
         ch := text.at(s, i);
         pos := text.indexOfText(upper, ch, 0);
         list.pushBack(mut out, if pos >= 0 { text.at(lower, pos) } else { ch });
@@ -1058,8 +1011,9 @@ pub csvEscapeField := fn(val: String): String {
     needsQuote := text.indexOfText(val, "\"", 0) >= 0 or text.indexOfText(val, ",", 0) >= 0 or text.indexOfText(val, "\r", 0) >= 0 or text.indexOfText(val, "\n", 0) >= 0;
     if not needsQuote { return val; }
     parts: mut List<String> = ["\""];
+    valLen := text.length(val);
     var i := 0;
-    loop i < text.length(val) {
+    loop i < valLen {
         ch := text.at(val, i);
         if ch == "\"" { list.pushBack(mut parts, "\"\""); } else { list.pushBack(mut parts, ch); }
         i = i + 1;
@@ -1184,13 +1138,14 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
     listOpt := readQueryValue(args, "--list");
     var hasSelectedOrder := false;
     selectedOrderedIds: mut List<String> = [];
+    selectedIdSet: mut Set<String>;
     if listOpt.found and listOpt.value =!= "" {
         hasSelectedOrder = true;
         listLines := splitJsonLines(liRead.text);
-        seenListIds: mut List<String> = [];
+        seenListIds: mut Set<String>;
         loop splitTrimmedCsv(listOpt.value) as lid {
-            if not list.listContainsText(seenListIds, lid) {
-                list.pushBack(mut seenListIds, lid);
+            if not set.has(seenListIds, lid) {
+                set.add(mut seenListIds, lid);
                 var matchedLine := "";
                 loop listLines as ll {
                     if json.readObjectString(ll, 0, "id").value == lid {
@@ -1204,6 +1159,7 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
                 }
                 loop readStringArray(matchedLine, 0, "challenge_ids") as cid {
                     list.pushBack(mut selectedOrderedIds, cid);
+                    set.add(mut selectedIdSet, cid);
                 }
             }
         }
@@ -1277,20 +1233,24 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
             }
         }
         if keep and hasSelectedOrder {
-            if not list.listContainsText(selectedOrderedIds, allIds[idx]) { keep = false; }
+            if not set.has(selectedIdSet, allIds[idx]) { keep = false; }
         }
         if keep { list.pushBack(mut filteredIdx, idx); }
         idx = idx + 1;
     }
 
     if hasSelectedOrder {
+        filteredById: mut Map<String, Int>;
+        loop filteredIdx as fi {
+            if not map.has(filteredById, allIds[fi]) {
+                map.set(mut filteredById, allIds[fi], fi);
+            }
+        }
         orderedIdx: mut List<Int> = [];
         loop selectedOrderedIds as targetId {
-            loop filteredIdx as fi {
-                if allIds[fi] == targetId {
-                    list.pushBack(mut orderedIdx, fi);
-                    break;
-                }
+            fi := map.getOr(filteredById, targetId, -1);
+            if fi >= 0 {
+                list.pushBack(mut orderedIdx, fi);
             }
         }
         filteredIdx = orderedIdx;
@@ -1609,21 +1569,22 @@ pub unescapeHtmlWithTable := fn(sortedKeys: List<String>, sortedVals: List<Strin
 pub parseSortedStringObjectPairs := fn(jsonText: String): List<String> {
     rawKeys: mut List<String> = [];
     rawVals: mut List<String> = [];
+    jsonLen := text.length(jsonText);
     var pos := skipJsonSpace(jsonText, 0);
-    if pos < text.length(jsonText) and text.at(jsonText, pos) == "{" {
+    if pos < jsonLen and text.at(jsonText, pos) == "{" {
         pos = skipJsonSpace(jsonText, pos + 1);
-        loop pos < text.length(jsonText) and text.at(jsonText, pos) =!= "}" {
+        loop pos < jsonLen and text.at(jsonText, pos) =!= "}" {
             kR := json.readStringAt(jsonText, pos);
             if not kR.ok { break; }
             pos = skipJsonSpace(jsonText, kR.next);
-            if pos >= text.length(jsonText) or text.at(jsonText, pos) =!= ":" { break; }
+            if pos >= jsonLen or text.at(jsonText, pos) =!= ":" { break; }
             pos = skipJsonSpace(jsonText, pos + 1);
             vR := json.readStringAt(jsonText, pos);
             if not vR.ok { break; }
             list.pushBack(mut rawKeys, kR.value);
             list.pushBack(mut rawVals, vR.value);
             pos = skipJsonSpace(jsonText, vR.next);
-            if pos < text.length(jsonText) and text.at(jsonText, pos) == "," {
+            if pos < jsonLen and text.at(jsonText, pos) == "," {
                 pos = skipJsonSpace(jsonText, pos + 1);
             }
         }
@@ -1703,9 +1664,10 @@ replaceHtmlLineBreaksAndParagraphs := fn(raw: String): String {
 
 collapseMultiNewlines := fn(raw: String): String {
     out: mut List<String> = [];
+    rawLen := text.length(raw);
     var streak := 0;
     var i := 0;
-    loop i < text.length(raw) {
+    loop i < rawLen {
         ch := text.at(raw, i);
         if ch == "\n" {
             streak = streak + 1;
@@ -1789,8 +1751,9 @@ parseLeetcodeSolutionNum := fn(treePath: String): (ok: Bool, num: Int) {
     dotPos := text.indexOfText(treePath, ".", slashPos + 1);
     if dotPos <= slashPos + 1 { return (ok = false, num = 0); }
     numStr := text.slice(treePath, slashPos + 1, dotPos);
+    numLen := text.length(numStr);
     var i := 0;
-    loop i < text.length(numStr) {
+    loop i < numLen {
         if not text.isDigit(text.at(numStr, i)) { return (ok = false, num = 0); }
         i = i + 1;
     }
@@ -1900,19 +1863,21 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
         epi = epi + 2;
     }
 
-    eulerNums: mut List<Int> = [];
+    eulerByNum: mut Map<Int, Int>;
     eulerLines: mut List<String> = [];
     loop splitJsonLines(chRead.text) as ln {
         if json.readObjectString(ln, 0, "source").value == "project-euler" {
             numR := json.readObjectInt(ln, 0, "number");
             if numR.found and numR.ok {
-                list.pushBack(mut eulerNums, numR.value);
+                if not map.has(eulerByNum, numR.value) {
+                    map.set(mut eulerByNum, numR.value, list.listCountText(eulerLines));
+                }
                 list.pushBack(mut eulerLines, ln);
             }
         }
     }
 
-    ansNums: mut List<Int> = [];
+    ansByNum: mut Map<Int, Int>;
     ansVals: mut List<String> = [];
     loop splitJsonLines(ansRead.text) as aln {
         if text.startsWithAt(aln, 0, "Problem ") {
@@ -1921,15 +1886,18 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
                 pn := text.textToInt(text.slice(aln, 8, colon));
                 if pn.ok {
                     rest := text.trim(text.slice(aln, colon + 1, text.length(aln)));
+                    restLen := text.length(rest);
                     var sp := 0;
-                    loop sp < text.length(rest) {
+                    loop sp < restLen {
                         ch := text.at(rest, sp);
                         if ch == " " or ch == "\t" { break; }
                         sp = sp + 1;
                     }
                     ansToken := text.slice(rest, 0, sp);
                     if ansToken =!= "" {
-                        list.pushBack(mut ansNums, pn.value);
+                        if not map.has(ansByNum, pn.value) {
+                            map.set(mut ansByNum, pn.value, list.listCountText(ansVals));
+                        }
                         list.pushBack(mut ansVals, ansToken);
                     }
                 }
@@ -1938,47 +1906,26 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
     }
 
     treeField := json.findObjectField(treeRead.text, 0, "tree");
-    var blobNums: mut List<Int> = [];
+    blobNumsRaw: mut List<Int> = [];
+    blobNumSet: mut Set<Int>;
     loop json.arrayElementOffsets(treeRead.text, treeField.valuePos) as tPos {
         if json.readObjectString(treeRead.text, tPos, "type").value == "blob" {
             tPath := json.readObjectString(treeRead.text, tPos, "path").value;
             pn := parseThreeDigitPythonNum(tPath);
-            if pn.ok and not list.listContainsInt(blobNums, pn.num) {
-                list.pushBack(mut blobNums, pn.num);
+            if pn.ok and not set.has(blobNumSet, pn.num) {
+                set.add(mut blobNumSet, pn.num);
+                list.pushBack(mut blobNumsRaw, pn.num);
             }
         }
     }
-    bLen := list.listCountInt(blobNums);
-    var bi := 1;
-    loop bi < bLen {
-        var sortedList: mut List<Int> = [];
-        var minRemaining := blobNums;
-        loop list.listCountInt(minRemaining) > 0 {
-            var mi := 0;
-            var j := 1;
-            loop j < list.listCountInt(minRemaining) {
-                if minRemaining[j] < minRemaining[mi] { mi = j; }
-                j = j + 1;
-            }
-            list.pushBack(mut sortedList, minRemaining[mi]);
-            nextR: mut List<Int> = [];
-            var k := 0;
-            loop k < list.listCountInt(minRemaining) {
-                if k =!= mi { list.pushBack(mut nextR, minRemaining[k]); }
-                k = k + 1;
-            }
-            minRemaining = nextR;
-        }
-        blobNums = sortedList;
-        break;
-    }
+    blobNums := list.sortInts(blobNumsRaw);
 
     benchDir := path.join(challengesRootDir, "benchmark");
     writtenLines: mut List<String> = [];
 
     loop blobNums as n {
-        chIdx := list.listIndexOfInt(eulerNums, n);
-        ansIdx := list.listIndexOfInt(ansNums, n);
+        chIdx := map.getOr(eulerByNum, n, -1);
+        ansIdx := map.getOr(ansByNum, n, -1);
         padded := padLeftZero(n, 3);
         stmtHtmlPath := path.join(cacheDir, "statements/problem-" + padded + ".html");
         if chIdx >= 0 and ansIdx >= 0 and fs.kind(stmtHtmlPath) == fs.FILE_KIND_FILE {
@@ -2108,49 +2055,66 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
 
     chLines := splitJsonLines(chRead.text);
     chIds: mut List<String> = [];
+    chIdIndex: mut Map<String, Int>;
     loop chLines as cl {
-        list.pushBack(mut chIds, json.readObjectString(cl, 0, "id").value);
+        cid := json.readObjectString(cl, 0, "id").value;
+        if not map.has(chIdIndex, cid) {
+            map.set(mut chIdIndex, cid, list.listCountText(chIds));
+        }
+        list.pushBack(mut chIds, cid);
     }
 
     tsLines := splitJsonLines(tsRead.text);
-    tsIds: mut List<String> = [];
+    tsIdIndex: mut Map<String, Int>;
+    var tsi := 0;
     loop tsLines as tl {
-        list.pushBack(mut tsIds, json.readObjectString(tl, 0, "challenge_id").value);
+        tid := json.readObjectString(tl, 0, "challenge_id").value;
+        if not map.has(tsIdIndex, tid) {
+            map.set(mut tsIdIndex, tid, tsi);
+        }
+        tsi = tsi + 1;
     }
 
     qField := json.findObjectField(mRead.text, 0, "questions");
     qOffsets := json.arrayElementOffsets(mRead.text, qField.valuePos);
-    qIds: mut List<String> = [];
+    qIdIndex: mut Map<String, Int>;
+    var qi := 0;
     loop qOffsets as qp {
         fidStr := json.readObjectString(mRead.text, qp, "frontend_id");
-        if fidStr.found and fidStr.ok {
-            list.pushBack(mut qIds, fidStr.value);
+        qid := if fidStr.found and fidStr.ok {
+            fidStr.value
         } else {
             fidInt := json.readObjectInt(mRead.text, qp, "frontend_id");
-            list.pushBack(mut qIds, if fidInt.found and fidInt.ok { integer.intText(fidInt.value) } else { "" });
+            if fidInt.found and fidInt.ok { integer.intText(fidInt.value) } else { "" }
+        };
+        if not map.has(qIdIndex, qid) {
+            map.set(mut qIdIndex, qid, qi);
         }
+        qi = qi + 1;
     }
 
     treeField := json.findObjectField(trRead.text, 0, "tree");
-    pathNums: mut List<Int> = [];
+    pathNumIndex: mut Map<Int, Int>;
     pathStrs: mut List<String> = [];
     loop json.arrayElementOffsets(trRead.text, treeField.valuePos) as tPos {
         if json.readObjectString(trRead.text, tPos, "type").value == "blob" {
             tPath := json.readObjectString(trRead.text, tPos, "path").value;
             pn := parseLeetcodeSolutionNum(tPath);
-            if pn.ok and list.listIndexOfInt(pathNums, pn.num) < 0 {
-                list.pushBack(mut pathNums, pn.num);
+            if pn.ok and not map.has(pathNumIndex, pn.num) {
+                map.set(mut pathNumIndex, pn.num, list.listCountText(pathStrs));
                 list.pushBack(mut pathStrs, tPath);
             }
         }
     }
 
     curated: mut List<String> = [];
+    curatedSet: mut Set<String>;
     loop splitJsonLines(lRead.text) as ll {
         lid := json.readObjectString(ll, 0, "id").value;
         if lid == "blind-75" or lid == "neetcode-150" {
             loop readStringArray(ll, 0, "challenge_ids") as cid {
-                if not list.listContainsText(curated, cid) {
+                if not set.has(curatedSet, cid) {
+                    set.add(mut curatedSet, cid);
                     list.pushBack(mut curated, cid);
                 }
             }
@@ -2158,9 +2122,10 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     }
 
     selIds: mut List<String> = [];
+    selIdSet: mut Set<String>;
     selOrigins: mut List<String> = [];
     loop curated as cid {
-        ci := list.listIndexOfText(chIds, cid);
+        ci := map.getOr(chIdIndex, cid, -1);
         if ci >= 0 {
             cl := chLines[ci];
             isPrem := json.readObjectBool(cl, 0, "premium").value;
@@ -2168,7 +2133,7 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
             tps := readStringArray(cl, 0, "topics");
             natId := json.readObjectString(cl, 0, "native_id").value;
             natNum := text.textToInt(natId);
-            ti := list.listIndexOfText(tsIds, cid);
+            ti := map.getOr(tsIdIndex, cid, -1);
             var hasPub := false;
             if ti >= 0 {
                 pf := json.findObjectField(tsLines[ti], 0, "public");
@@ -2177,27 +2142,29 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
                 }
             }
             if not isPrem and cat == "algorithms" and not list.listContainsText(tps, "design")
-            and list.listContainsText(qIds, natId) and natNum.ok and list.listIndexOfInt(pathNums, natNum.value) >= 0 and hasPub {
+            and map.has(qIdIndex, natId) and natNum.ok and map.has(pathNumIndex, natNum.value) and hasPub {
                 list.pushBack(mut selIds, cid);
+                set.add(mut selIdSet, cid);
                 list.pushBack(mut selOrigins, "curated");
             }
         }
     }
 
-    var fillIndices: mut List<Int> = [];
-    var fillPops: mut List<Int> = [];
+    fillIndices: mut List<Int> = [];
+    fillPops: mut List<Int> = [];
     var ci := 0;
-    loop ci < list.listCountText(chIds) {
+    chCount := list.listCountText(chIds);
+    loop ci < chCount {
         cl := chLines[ci];
         cid := chIds[ci];
         if json.readObjectString(cl, 0, "source").value == "leetcode"
-        and not list.listContainsText(selIds, cid) and not list.listContainsText(curated, cid) {
+        and not set.has(selIdSet, cid) and not set.has(curatedSet, cid) {
             isPrem := json.readObjectBool(cl, 0, "premium").value;
             cat := json.readObjectString(cl, 0, "category").value;
             tps := readStringArray(cl, 0, "topics");
             natId := json.readObjectString(cl, 0, "native_id").value;
             natNum := text.textToInt(natId);
-            ti := list.listIndexOfText(tsIds, cid);
+            ti := map.getOr(tsIdIndex, cid, -1);
             var hasPub := false;
             if ti >= 0 {
                 pf := json.findObjectField(tsLines[ti], 0, "public");
@@ -2206,7 +2173,7 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
                 }
             }
             if not isPrem and cat == "algorithms" and not list.listContainsText(tps, "design")
-            and list.listContainsText(qIds, natId) and natNum.ok and list.listIndexOfInt(pathNums, natNum.value) >= 0 and hasPub {
+            and map.has(qIdIndex, natId) and natNum.ok and map.has(pathNumIndex, natNum.value) and hasPub {
                 var solved := 0;
                 popF := json.findObjectField(cl, 0, "popularity");
                 if popF.found and isJsonObjectAt(cl, popF.valuePos) {
@@ -2221,48 +2188,11 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     }
 
     fLen := list.listCountInt(fillIndices);
-    if fLen > 1 {
-        var width := 1;
-        loop width < fLen {
-            next: mut List<Int> = [];
-            var st := 0;
-            loop st < fLen {
-                mid := if st + width < fLen { st + width } else { fLen };
-                re := if st + width * 2 < fLen { st + width * 2 } else { fLen };
-                var li := st;
-                var ri := mid;
-                loop li < mid or ri < re {
-                    if li >= mid {
-                        list.pushBack(mut next, fillIndices[ri]);
-                        ri = ri + 1;
-                    } else if ri >= re {
-                        list.pushBack(mut next, fillIndices[li]);
-                        li = li + 1;
-                    } else {
-                        ia := fillIndices[li];
-                        ib := fillIndices[ri];
-                        pa := 0;
-                        popFA := json.findObjectField(chLines[ia], 0, "popularity");
-                        paVal := if popFA.found and isJsonObjectAt(chLines[ia], popFA.valuePos) { json.readObjectInt(chLines[ia], popFA.valuePos, "solved").value } else { 0 };
-                        pbVal := if json.findObjectField(chLines[ib], 0, "popularity").found and isJsonObjectAt(chLines[ib], json.findObjectField(chLines[ib], 0, "popularity").valuePos) { json.readObjectInt(chLines[ib], json.findObjectField(chLines[ib], 0, "popularity").valuePos, "solved").value } else { 0 };
-                        _unused := pa;
-                        if paVal >= pbVal {
-                            list.pushBack(mut next, ia);
-                            li = li + 1;
-                        } else {
-                            list.pushBack(mut next, ib);
-                            ri = ri + 1;
-                        }
-                    }
-                }
-                st = st + width * 2;
-            }
-            fillIndices = next;
-            width = width * 2;
-        }
-    }
-    _unusedPops := list.listCountInt(fillPops);
-    loop fillIndices as fi {
+    fillOrd := collections.sortIndicesBy(fLen, fn(a: Int, b: Int): Bool {
+        fillPops[a] >= fillPops[b]
+    });
+    loop fillOrd as oi {
+        fi := fillIndices[oi];
         list.pushBack(mut selIds, chIds[fi]);
         list.pushBack(mut selOrigins, "popular");
     }
@@ -2270,19 +2200,20 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     benchDir := path.join(challengesRootDir, "benchmark");
     writtenLines: mut List<String> = [];
     var candI := 0;
-    loop candI < list.listCountText(selIds) {
+    selCount := list.listCountText(selIds);
+    loop candI < selCount {
         if list.listCountText(writtenLines) >= 298 { break; }
         cid := selIds[candI];
         origin := selOrigins[candI];
-        cLine := chLines[list.listIndexOfText(chIds, cid)];
-        tLine := tsLines[list.listIndexOfText(tsIds, cid)];
+        cLine := chLines[map.getOr(chIdIndex, cid, 0)];
+        tLine := tsLines[map.getOr(tsIdIndex, cid, 0)];
         natId := json.readObjectString(cLine, 0, "native_id").value;
-        qPos := qOffsets[list.listIndexOfText(qIds, natId)];
+        qPos := qOffsets[map.getOr(qIdIndex, natId, 0)];
         descR := json.readObjectString(mRead.text, qPos, "description");
         descText := splitBeforeExample1(if descR.found and descR.ok { descR.value } else { "" });
         if text.length(descText) >= 40 {
             n := text.textToInt(natId).value;
-            rawRel := pathStrs[list.listIndexOfInt(pathNums, n)];
+            rawRel := pathStrs[map.getOr(pathNumIndex, n, 0)];
             refUrl := "https://github.com/doocs/leetcode/blob/main/" + encodeGithubPath(rawRel);
 
             ctitle := json.readObjectString(cLine, 0, "title").value;
@@ -2424,11 +2355,12 @@ cleanSampleHtmlBlock := fn(sortedKeys: List<String>, sortedVals: List<String>, f
 
 parseLeetcodeExampleCase := fn(rawText: String): (ok: Bool, input: String, output: String, hasExpl: Bool, expl: String) {
     normalized := text.trim(collapseCrLf(rawText));
+    normLen := text.length(normalized);
     inPos := text.indexOfText(normalized, "Input:", 0);
     if inPos < 0 { return (ok = false, input = "", output = "", hasExpl = false, expl = ""); }
     var outPos := -1;
     var scan := inPos + 6;
-    loop scan < text.length(normalized) {
+    loop scan < normLen {
         nl := text.indexOfText(normalized, "\n", scan);
         if nl < 0 { break; }
         afterWs := skipHorizontalSpace(normalized, nl + 1);
@@ -2443,7 +2375,7 @@ parseLeetcodeExampleCase := fn(rawText: String): (ok: Bool, input: String, outpu
 
     var explPos := -1;
     var scan2 := outPos + 7;
-    loop scan2 < text.length(normalized) {
+    loop scan2 < normLen {
         nl := text.indexOfText(normalized, "\n", scan2);
         if nl < 0 { break; }
         afterWs := skipHorizontalSpace(normalized, nl + 1);
@@ -2453,12 +2385,12 @@ parseLeetcodeExampleCase := fn(rawText: String): (ok: Bool, input: String, outpu
         }
         scan2 = nl + 1;
     }
-    outVal := text.trim(text.slice(normalized, outPos + 7, if explPos >= 0 { explPos } else { text.length(normalized) }));
+    outVal := text.trim(text.slice(normalized, outPos + 7, if explPos >= 0 { explPos } else { normLen }));
     if inVal == "" or outVal == "" {
         return (ok = false, input = "", output = "", hasExpl = false, expl = "");
     }
     if explPos >= 0 {
-        exVal := text.trim(text.slice(normalized, explPos + 12, text.length(normalized)));
+        exVal := text.trim(text.slice(normalized, explPos + 12, normLen));
         return (ok = true, input = inVal, output = outVal, hasExpl = exVal =!= "", expl = exVal);
     }
     (ok = true, input = inVal, output = outVal, hasExpl = false, expl = "")
@@ -2579,11 +2511,11 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
     csvLines: mut List<String> = ["challenge_id,source,status,format,public_count,hidden_count,hidden_policy"];
     statusVals: mut List<String> = [];
     srcNames: mut List<String> = [];
-    var srcPubDocs: mut List<Int> = [];
-    var srcHidDocs: mut List<Int> = [];
-    var srcAllDocs: mut List<Int> = [];
-    var srcPubCases: mut List<Int> = [];
-    var srcHidCases: mut List<Int> = [];
+    srcPubDocs: mut Map<String, Int>;
+    srcHidDocs: mut Map<String, Int>;
+    srcAllDocs: mut Map<String, Int>;
+    srcPubCases: mut Map<String, Int>;
+    srcHidCases: mut Map<String, Int>;
 
     var totalWithPub := 0;
     var totalWithHid := 0;
@@ -2719,28 +2651,22 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
                             pos = endH3 + 5;
                         }
                     }
-                    var remNums: mut List<Int> = [];
-                    loop inNums as n { list.pushBack(mut remNums, n); }
-                    sortedNums: mut List<Int> = [];
-                    loop list.listCountInt(remNums) > 0 {
-                        var mi := 0;
-                        var j := 1;
-                        loop j < list.listCountInt(remNums) {
-                            if remNums[j] < remNums[mi] { mi = j; }
-                            j = j + 1;
-                        }
-                        list.pushBack(mut sortedNums, remNums[mi]);
-                        nextN: mut List<Int> = [];
-                        var k := 0;
-                        loop k < list.listCountInt(remNums) {
-                            if k =!= mi { list.pushBack(mut nextN, remNums[k]); }
-                            k = k + 1;
-                        }
-                        remNums = nextN;
+                    inNumIdx: mut Map<Int, Int>;
+                    var ini := 0;
+                    loop inNums as n {
+                        if not map.has(inNumIdx, n) { map.set(mut inNumIdx, n, ini); }
+                        ini = ini + 1;
                     }
+                    outNumIdx: mut Map<Int, Int>;
+                    var outi := 0;
+                    loop outNums as n {
+                        if not map.has(outNumIdx, n) { map.set(mut outNumIdx, n, outi); }
+                        outi = outi + 1;
+                    }
+                    sortedNums := list.sortInts(inNums);
                     loop sortedNums as n {
-                        iIdx := list.listIndexOfInt(inNums, n);
-                        oIdx := list.listIndexOfInt(outNums, n);
+                        iIdx := map.getOr(inNumIdx, n, -1);
+                        oIdx := map.getOr(outNumIdx, n, -1);
                         if iIdx >= 0 and oIdx >= 0 {
                             ci := inVals[iIdx];
                             co := outVals[oIdx];
@@ -2809,43 +2735,14 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
         totalPubCases = totalPubCases + pubN;
         totalHidCases = totalHidCases + hidN;
 
-        sIdx := list.listIndexOfText(srcNames, source);
-        if sIdx < 0 {
+        if not map.has(srcAllDocs, source) {
             list.pushBack(mut srcNames, source);
-            list.pushBack(mut srcAllDocs, 1);
-            list.pushBack(mut srcPubDocs, if pubN > 0 { 1 } else { 0 });
-            list.pushBack(mut srcHidDocs, if hidN > 0 { 1 } else { 0 });
-            list.pushBack(mut srcPubCases, pubN);
-            list.pushBack(mut srcHidCases, hidN);
-        } else {
-            nextAll: mut List<Int> = [];
-            nextPubD: mut List<Int> = [];
-            nextHidD: mut List<Int> = [];
-            nextPubC: mut List<Int> = [];
-            nextHidC: mut List<Int> = [];
-            var si := 0;
-            loop si < list.listCountText(srcNames) {
-                if si == sIdx {
-                    list.pushBack(mut nextAll, srcAllDocs[si] + 1);
-                    list.pushBack(mut nextPubD, srcPubDocs[si] + (if pubN > 0 { 1 } else { 0 }));
-                    list.pushBack(mut nextHidD, srcHidDocs[si] + (if hidN > 0 { 1 } else { 0 }));
-                    list.pushBack(mut nextPubC, srcPubCases[si] + pubN);
-                    list.pushBack(mut nextHidC, srcHidCases[si] + hidN);
-                } else {
-                    list.pushBack(mut nextAll, srcAllDocs[si]);
-                    list.pushBack(mut nextPubD, srcPubDocs[si]);
-                    list.pushBack(mut nextHidD, srcHidDocs[si]);
-                    list.pushBack(mut nextPubC, srcPubCases[si]);
-                    list.pushBack(mut nextHidC, srcHidCases[si]);
-                }
-                si = si + 1;
-            }
-            srcAllDocs = nextAll;
-            srcPubDocs = nextPubD;
-            srcHidDocs = nextHidD;
-            srcPubCases = nextPubC;
-            srcHidCases = nextHidC;
         }
+        map.set(mut srcAllDocs, source, map.getOr(srcAllDocs, source, 0) + 1);
+        map.set(mut srcPubDocs, source, map.getOr(srcPubDocs, source, 0) + (if pubN > 0 { 1 } else { 0 }));
+        map.set(mut srcHidDocs, source, map.getOr(srcHidDocs, source, 0) + (if hidN > 0 { 1 } else { 0 }));
+        map.set(mut srcPubCases, source, map.getOr(srcPubCases, source, 0) + pubN);
+        map.set(mut srcHidCases, source, map.getOr(srcHidCases, source, 0) + hidN);
 
         recJson := "{\"challenge_id\":" + json.quoteString(cid)
         + ",\"url\":" + json.quoteString(curl)
@@ -2892,13 +2789,13 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
     ];
     loop sortedSrcOrder as sIdx {
         sName := srcNames[sIdx];
-        entry := json.quoteString(sName) + ":{\"challenges\":" + integer.intText(srcAllDocs[sIdx])
-        + ",\"with_public\":" + integer.intText(srcPubDocs[sIdx])
-        + ",\"with_hidden\":" + integer.intText(srcHidDocs[sIdx])
-        + ",\"public_cases\":" + integer.intText(srcPubCases[sIdx])
-        + ",\"hidden_cases\":" + integer.intText(srcHidCases[sIdx]) + "}";
+        entry := json.quoteString(sName) + ":{\"challenges\":" + integer.intText(map.getOr(srcAllDocs, sName, 0))
+        + ",\"with_public\":" + integer.intText(map.getOr(srcPubDocs, sName, 0))
+        + ",\"with_hidden\":" + integer.intText(map.getOr(srcHidDocs, sName, 0))
+        + ",\"public_cases\":" + integer.intText(map.getOr(srcPubCases, sName, 0))
+        + ",\"hidden_cases\":" + integer.intText(map.getOr(srcHidCases, sName, 0)) + "}";
         list.pushBack(mut bySourceEntries, entry);
-        list.pushBack(mut summaryLines, "  " + padRight(sName, 16) + " public " + padLeft(integer.intText(srcPubDocs[sIdx]), 5) + "  hidden " + padLeft(integer.intText(srcHidDocs[sIdx]), 5));
+        list.pushBack(mut summaryLines, "  " + padRight(sName, 16) + " public " + padLeft(integer.intText(map.getOr(srcPubDocs, sName, 0)), 5) + "  hidden " + padLeft(integer.intText(map.getOr(srcHidDocs, sName, 0)), 5));
     }
 
     idxPath := path.join(dataDir, "index.json");
