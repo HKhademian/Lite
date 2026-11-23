@@ -55,7 +55,7 @@ test.checkText("ts 42 ref", ref42Ts, ts42.stdout);
 test.checkText("ts 42 det", ts42.stdout, ts42b.stdout);
 test.checkText("ts +42 norm", ref42Ts, compilerTest.compileStdin(root, tsComp, "io := import \"core/io\";  io.outputLine( +00042 ) ; ", "").stdout);
 expNegZero :=
-"export function main(lite$write?: (text: string) => void): string {\n    let lite$out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    lite$emit((0n).toString() + \"\\n\");\n    return lite$out;\n}\n";
+"export function main(lite$write?: (text: string) => void): string {\n    const lite$out: string[] = [];\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out.push(text);\n        else lite$write(text);\n    }\n    lite$emit((0n).toString() + \"\\n\");\n    return lite$out.join(\"\");\n}\n";
 test.checkText("ts -000", expNegZero, compilerTest.compileStdin(root, tsComp, "io := import \"core/io\"; io.outputLine(-000);", "").stdout);
 
 /* Lite-written TS and C compilers sequence multiple report statements deterministically */
@@ -64,7 +64,7 @@ seqTs := compilerTest.compileStdin(root, tsComp, seqProg, "");
 test.checkInt("seq ts", 0, seqTs.status);
 test.checkText("seq ts err", "", seqTs.stderr);
 expSeqTs :=
-"export function main(lite$write?: (text: string) => void): string {\n    let lite$out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    lite$emit((10n).toString() + \"\\n\");\n    lite$emit((20n).toString() + \"\\n\");\n    lite$emit(((-30n)).toString() + \"\\n\");\n    return lite$out;\n}\n";
+"export function main(lite$write?: (text: string) => void): string {\n    const lite$out: string[] = [];\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out.push(text);\n        else lite$write(text);\n    }\n    lite$emit((10n).toString() + \"\\n\");\n    lite$emit((20n).toString() + \"\\n\");\n    lite$emit(((-30n)).toString() + \"\\n\");\n    return lite$out.join(\"\");\n}\n";
 test.checkText("seq ts out", expSeqTs, seqTs.stdout);
 
 seqC := compilerTest.compileStdin(root, cComp, seqProg, "");
@@ -87,12 +87,12 @@ arithTs := compilerTest.compileStdin(root, tsComp, arithProg, "");
 test.checkInt("arith ts", 0, arithTs.status);
 test.checkText("arith ts err", "", arithTs.stderr);
 expArithTs :=
-"export function main(lite$write?: (text: string) => void): string {\n    let lite$out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n" +
+"export function main(lite$write?: (text: string) => void): string {\n    const lite$out: string[] = [];\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out.push(text);\n        else lite$write(text);\n    }\n" +
 "    const lite_x = (2n * ((3n - 4n)));\n" +
 "    void lite_x;\n" +
 "    lite$emit(((lite_x + 10n)).toString() + \"\\n\");\n" +
 "    lite$emit(((-lite_x)).toString() + \"\\n\");\n" +
-"    return lite$out;\n}\n";
+"    return lite$out.join(\"\");\n}\n";
 test.checkText("arith ts out", expArithTs, arithTs.stdout);
 
 arithC := compilerTest.compileStdin(root, cComp, arithProg, "");
@@ -221,12 +221,12 @@ strValTs := compilerTest.compileStdin(root, tsComp, strValProg, "");
 test.checkInt("strVal ts", 0, strValTs.status);
 test.checkText("strVal ts err", "", strValTs.stderr);
 expStrValTs :=
-"export function main(lite$write?: (text: string) => void): string {\n    let lite$out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n" +
+"export function main(lite$write?: (text: string) => void): string {\n    const lite$out: string[] = [];\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out.push(text);\n        else lite$write(text);\n    }\n" +
 "    const lite_s = \"a\\\"b\";\n" +
 "    void lite_s;\n" +
 "    lite$emit(lite_s + \"\\n\");\n" +
 "    lite$emit((1n).toString() + \" \" + lite_s + \" \" + (2n).toString() + \"\\n\");\n" +
-"    return lite$out;\n}\n";
+"    return lite$out.join(\"\");\n}\n";
 test.checkText("strVal ts out", expStrValTs, strValTs.stdout);
 
 strValC := compilerTest.compileStdin(root, cComp, strValProg, "");
@@ -240,7 +240,7 @@ expStrValC :=
 "    if (printf(\"%s\", lite_s) < 0) { status = 1; }\n" +
 "    if (printf(\"\\n\") < 0) { status = 1; }\n" +
 "    int64_t lt_output_0 = INT64_C(1);\n" +
-"    const char *lt_output_1 = lite_s;\n" +
+"    const char * lt_output_1 = lite_s;\n" +
 "    int64_t lt_output_2 = INT64_C(2);\n" +
 "    if (printf(\"%\" PRId64, (int64_t)(lt_output_0)) < 0) { status = 1; }\n" +
 "    if (printf(\" \") < 0) { status = 1; }\n" +
@@ -253,5 +253,5 @@ test.checkText("strVal c out", expStrValC, strValC.stdout);
 
 /* restricted TS compiler emits a deterministic report sequence */
 expRepSeq :=
-"export function main(lite$write?: (text: string) => void): string {\n    let lite$out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    lite$emit((42n).toString() + \"\\n\");\n    lite$emit((9n).toString() + \"\\n\");\n    return lite$out;\n}\n";
+"export function main(lite$write?: (text: string) => void): string {\n    const lite$out: string[] = [];\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite$out.push(text);\n        else lite$write(text);\n    }\n    lite$emit((42n).toString() + \"\\n\");\n    lite$emit((9n).toString() + \"\\n\");\n    return lite$out.join(\"\");\n}\n";
 test.checkText("report seq ts", expRepSeq, compilerTest.compileStdin(root, tsComp, "io := import \"core/io\"; io.outputLine(42);\nio.outputLine(9);", "").stdout);

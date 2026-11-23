@@ -232,7 +232,7 @@ outComp := compilerTest.compileStdin(root, tsComp, outSrc, "");
 test.checkInt("out-hygiene compile", 0, outComp.status);
 test.check("out-hygiene const lite_out", text.containsText(outComp.stdout, "const lite_out = \"ok\";"));
 test.check("out-hygiene let lite_out$2", text.containsText(outComp.stdout, "let lite_out$2 = \"a\";"));
-test.check("out-hygiene return lite$out", text.containsText(outComp.stdout, "return lite$out;"));
+test.check("out-hygiene return lite$out", text.containsText(outComp.stdout, "return lite$out.join(\"\");"));
 outRun := compilerTest.checkAndRunTs(root, outComp.stdout);
 test.checkInt("out-hygiene run status", 0, outRun.status);
 test.checkText("out-hygiene run stdout", "ok\nab\n7 9\n", outRun.stdout);

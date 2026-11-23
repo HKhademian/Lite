@@ -111,7 +111,7 @@ test.checkInt("value-blocks c compiles: " + cValBlkComp.stderr, 0, cValBlkComp.s
 compilerTest.assertCompileRunTs(root, tsComp, "io-exit default", "io := import \"core/io\"; io.output(\"ready\"); io.exit();", "ready");
 topExitComp := compilerTest.compileStdin(root, tsComp, "io := import \"core/io\"; io.exit(0);", "");
 test.checkInt("io-exit top compile", 0, topExitComp.status);
-test.check("io-exit top omits return lite$out", not text.containsText(topExitComp.stdout, "return lite$out;"));
+test.check("io-exit top omits return lite$out", not text.containsText(topExitComp.stdout, "return lite$out"));
 topExitRun := compilerTest.checkAndRunTs(root, topExitComp.stdout);
 test.checkInt("io-exit top status", 0, topExitRun.status);
 

@@ -1,0 +1,132 @@
+/* Formatting directive, clean naming, -O0..-Os differentiation, and source-map tests across TS and C11. */
+
+fs := import "core/file";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+unicode := import "core/unicode";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+runComp := fn(compPath: String, extraArgs: List<String>, src: String, name: String): (status: Int, stdout: String, stderr: String) {
+    tmp := fs.makeTempDir("lite-fmt-dir-");
+    test.check("makeTempDir", tmp.ok);
+    outF := path.join(tmp.path, "out.txt");
+    errF := path.join(tmp.path, "err.txt");
+    argv: mut List<String> = [compPath, "--stdin", "--name", name];
+    loop extraArgs as a { list.pushBack(mut argv, a); }
+    emptyEnv: List<String> = [];
+    res := proc.runBytes(proc.execPath(), argv, root, emptyEnv, 30000, unicode.utf8Encode(src), outF, errF);
+    outTxt := fs.readText(outF).text;
+    errTxt := fs.readText(errF).text;
+    _rm := fs.remove(tmp.path);
+    (status = res.status, stdout = outTxt, stderr = errTxt)
+};
+
+/* 1. Direct statement-position loop emission, clean naming, zero dead metadata, and multi-line formatting */
+loopSrc := "io := import \"core/io\";\nloop 0..4 as i {\n    io.outputLine(i);\n}\n";
+tsLoop := runComp(tsComp, ["-O1"], loopSrc, "loop.lts");
+test.checkInt("ts loop status", 0, tsLoop.status);
+test.check("ts loop uses array-buffered out", text.containsText(tsLoop.stdout, "const lite$out: string[] = [];"));
+test.check("ts loop uses out.push", text.containsText(tsLoop.stdout, "lite$out.push(text);"));
+test.check("ts loop returns out.join", text.containsText(tsLoop.stdout, "return lite$out.join(\"\");"));
+test.check("ts loop has direct for with clean name i", text.containsText(tsLoop.stdout, "for (let i: bigint = 0n; i < 4n; i += 1n) {\n"));
+test.check("ts loop omits IIFE wrapper", not text.containsText(tsLoop.stdout, "(() => {"));
+test.check("ts loop omits dead count/idx/item/rend", not text.containsText(tsLoop.stdout, "_count") and not text.containsText(tsLoop.stdout, "_idx") and not text.containsText(tsLoop.stdout, "_end"));
+
+cLoop := runComp(cComp, ["-O1"], loopSrc, "loop.lts");
+test.checkInt("c loop status", 0, cLoop.status);
+test.check("c loop has direct for with clean name i", text.containsText(cLoop.stdout, "for (int64_t i = INT64_C(0); i < INT64_C(4); i += 1) {\n"));
+test.check("c loop omits dead count/idx/item/rend", not text.containsText(cLoop.stdout, "_count") and not text.containsText(cLoop.stdout, "_idx") and not text.containsText(cLoop.stdout, "_end"));
+
+/* 2. Empty loop omits main output preamble on TS and status variable on C */
+emptyLoopSrc := "loop 0..8 as i {\n}\n";
+tsEmpty := runComp(tsComp, ["-O1"], emptyLoopSrc, "empty.lts");
+test.checkInt("ts empty loop status", 0, tsEmpty.status);
+test.check("ts empty loop omits lite$out", not text.containsText(tsEmpty.stdout, "lite$out"));
+test.check("ts empty loop returns empty string", text.containsText(tsEmpty.stdout, "return \"\";"));
+
+cEmpty := runComp(cComp, ["-O1"], emptyLoopSrc, "empty.lts");
+test.checkInt("c empty loop status", 0, cEmpty.status);
+test.check("c empty loop omits status var", not text.containsText(cEmpty.stdout, "int status = 0;"));
+test.check("c empty loop returns 0", text.containsText(cEmpty.stdout, "return 0;"));
+
+/* 3. Nested shadowed loop compiles and runs identically on TS and C11 */
+ccInfo := compilerTest.probeCc();
+nestedSrc := "io := import \"core/io\";\nvar sum := 0;\nloop 0..3 as i {\n    loop 0..2 as i {\n        sum += i;\n    }\n}\nio.outputLine(sum);\n";
+tsNested := compilerTest.compileCheckRunTs(root, tsComp, nestedSrc, "nested.lts");
+test.checkInt("nested shadowed loop TS status: " + tsNested.stderr, 0, tsNested.status);
+test.checkText("nested shadowed loop TS out", "3\n", tsNested.stdout);
+if ccInfo.available {
+    cNested := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, nestedSrc, "nested.lts", "");
+    test.checkInt("nested shadowed loop C status: " + cNested.stderr, 0, cNested.status);
+    test.checkText("nested shadowed loop C out", "3\n", cNested.stdout);
+}
+
+/* 4. -O0 vs -O1 vs -O2 vs -Os differentiation */
+unusedCalcSrc := "x := 1 + 2 * 3;\n";
+tsO0Unused := runComp(tsComp, ["-O0"], unusedCalcSrc, "calc.lts");
+test.checkInt("ts -O0 unused status", 0, tsO0Unused.status);
+test.check("ts -O0 preserves unused x := 1 + 2 * 3", text.containsText(tsO0Unused.stdout, "const lite_x = (1n + (2n * 3n));"));
+test.check("ts -O0 auto-enables comment source-map", text.containsText(tsO0Unused.stdout, "// calc.lts:1:1"));
+
+tsO1Unused := runComp(tsComp, ["-O1"], unusedCalcSrc, "calc.lts");
+test.checkInt("ts -O1 unused status", 0, tsO1Unused.status);
+test.check("ts -O1 prunes unused x", not text.containsText(tsO1Unused.stdout, "lite_x"));
+test.check("ts -O1 defaults source-map to none", not text.containsText(tsO1Unused.stdout, "// calc.lts:"));
+
+usedCalcSrc := "io := import \"core/io\";\nx := 1 + 2 * 3;\nio.outputLine(x);\n";
+tsO1Used := runComp(tsComp, ["-O1"], usedCalcSrc, "calc.lts");
+tsO2Used := runComp(tsComp, ["-O2"], usedCalcSrc, "calc.lts");
+test.check("ts -O1 keeps arithmetic expression", text.containsText(tsO1Used.stdout, "(1n + (2n * 3n))"));
+test.check("ts -O2 folds constant integer arithmetic", text.containsText(tsO2Used.stdout, "const lite_x = 7n;"));
+
+cO0Unused := runComp(cComp, ["-O0"], unusedCalcSrc, "calc.lts");
+cO2Used := runComp(cComp, ["-O2"], usedCalcSrc, "calc.lts");
+test.check("c -O0 preserves unused x", text.containsText(cO0Unused.stdout, "lite_x = (INT64_C(1) + (INT64_C(2) * INT64_C(3)));"));
+test.check("c -O0 auto-enables #line directive", text.containsText(cO0Unused.stdout, "#line 1 \"calc.lts\""));
+test.check("c -O2 folds constant integer arithmetic", text.containsText(cO2Used.stdout, "lite_x = INT64_C(7);"));
+
+/* 5. Explicit --emit-format=compact and --source-map=comments|lines + native C11 #line compilation */
+tsCompact := runComp(tsComp, ["-O1", "--emit-format=compact"], loopSrc, "loop.lts");
+test.checkInt("ts compact status", 0, tsCompact.status);
+test.check("ts compact keeps loop inline", text.containsText(tsCompact.stdout, "for (let i: bigint = 0n; i < 4n; i += 1n) { lite$emit("));
+
+cComments := runComp(cComp, ["-O1", "--source-map=comments"], loopSrc, "loop.lts");
+test.checkInt("c comments status", 0, cComments.status);
+test.check("c comments emits inline file:line:col", text.containsText(cComments.stdout, "// loop.lts:2:1"));
+
+cLines := runComp(cComp, ["-O1", "--source-map=lines"], loopSrc, "loop.lts");
+test.checkInt("c lines status", 0, cLines.status);
+test.check("c lines emits #line directive", text.containsText(cLines.stdout, "#line 2 \"loop.lts\""));
+
+if ccInfo.available {
+    tmpC := fs.makeTempDir("lite-line-cc-");
+    test.check("makeTempDir cc", tmpC.ok);
+    cFile := path.join(tmpC.path, "mapped.c");
+    exeFile := path.join(tmpC.path, "mapped");
+    outFile := path.join(tmpC.path, "out.txt");
+    errFile := path.join(tmpC.path, "err.txt");
+    _w := fs.writeText(cFile, cLines.stdout);
+    emptyEnv: List<String> = [];
+    emptyIn: List<Int> = [];
+    ccRes := proc.runBytes(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", cFile, "-o", exeFile], tmpC.path, emptyEnv, 30000, emptyIn, outFile, errFile);
+    test.checkInt("cc #line strict compile: " + fs.readText(errFile).text, 0, ccRes.status);
+    runRes := proc.runBytes(exeFile, emptyEnv, tmpC.path, emptyEnv, 10000, emptyIn, outFile, errFile);
+    test.checkInt("cc #line run status", 0, runRes.status);
+    test.checkText("cc #line run stdout", "0\n1\n2\n3\n", fs.readText(outFile).text);
+    _rmC := fs.remove(tmpC.path);
+}

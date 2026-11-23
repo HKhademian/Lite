@@ -496,8 +496,9 @@ function attachPlayBridge(js) {
   }
 
   const snippet = hooks.map((line) => '    ' + line).join('\\n');
-  if (/return lite\\$out;\\s*\\}\\s*$/.test(js)) {
-    return js.replace(/return lite\\$out;\\s*\\}\\s*$/, snippet + '\\n    return lite\\$out;\\n}');
+  const tailRetRe = /(return (?:lite\\$out(?:\\.join\\(""\\))?|"");)(\\s*\\}\\s*)$/;
+  if (tailRetRe.test(js)) {
+    return js.replace(tailRetRe, snippet + '\\n    $1$2');
   }
   return js.replace(/\\}\\s*$/, snippet + '\\n}');
 }
