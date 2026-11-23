@@ -44,7 +44,7 @@ pub List.isEmpty := fn<T>(values: Self<T>): Bool {
 pub List.map := fn<T, U>(values: Self<T>, transform: fn(T): U): List<U> {
     out: mut List<U> = [];
     loop values as item {
-        pushBack(mut out, transform(item));
+        mut out.pushBack(transform(item));
     }
     out
 };
@@ -53,7 +53,7 @@ pub List.map := fn<T, U>(values: Self<T>, transform: fn(T): U): List<U> {
 pub List.filter := fn<T>(values: Self<T>, pred: fn(T): Bool): List<T> {
     out: mut List<T> = [];
     loop values as item {
-        if pred(item) { pushBack(mut out, item); }
+        if pred(item) { mut out.pushBack(item); }
     }
     out
 };
@@ -106,19 +106,19 @@ pub sortInts := fn(values: List<Int>): List<Int> {
             var j := mid;
             loop i < mid and j < right {
                 if src[i] <= src[j] {
-                    pushBack(mut dst, src[i]);
+                    mut dst.pushBack(src[i]);
                     i += 1;
                 } else {
-                    pushBack(mut dst, src[j]);
+                    mut dst.pushBack(src[j]);
                     j += 1;
                 }
             }
             loop i < mid {
-                pushBack(mut dst, src[i]);
+                mut dst.pushBack(src[i]);
                 i += 1;
             }
             loop j < right {
-                pushBack(mut dst, src[j]);
+                mut dst.pushBack(src[j]);
                 j += 1;
             }
             left += width * 2;
@@ -166,19 +166,19 @@ pub sortTexts := fn(values: List<String>): List<String> {
             var j := mid;
             loop i < mid and j < right {
                 if textLessOrEqual(src[i], src[j]) {
-                    pushBack(mut dst, src[i]);
+                    mut dst.pushBack(src[i]);
                     i += 1;
                 } else {
-                    pushBack(mut dst, src[j]);
+                    mut dst.pushBack(src[j]);
                     j += 1;
                 }
             }
             loop i < mid {
-                pushBack(mut dst, src[i]);
+                mut dst.pushBack(src[i]);
                 i += 1;
             }
             loop j < right {
-                pushBack(mut dst, src[j]);
+                mut dst.pushBack(src[j]);
                 j += 1;
             }
             left += width * 2;
