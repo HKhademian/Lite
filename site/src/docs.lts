@@ -627,6 +627,95 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
     + "    </aside>"
 };
 
+replaceFirst := fn(haystack: String, needle: String, replacement: String): String {
+    hit := text.indexOfText(haystack, needle, 0);
+    if hit < 0 { return haystack; }
+    text.slice(haystack, 0, hit) + replacement + text.slice(haystack, hit + text.length(needle), text.length(haystack))
+};
+
+buildSpecGroupTemplates := fn(
+dirOutSample: String, spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: List<String>, spVerified: List<Bool>
+): List<String> {
+    grpIds: List<String> = ["start", "design", "proposals", "compiler", "brand"];
+    grpTitles: List<String> = ["Start & Overview", "Design Reference", "Proposals (LP)", "Compiler & Contribute", "Brand & Identity"];
+    out: mut List<String> = [];
+    var gi := 0;
+    loop gi < 5 {
+        gid := grpIds[gi];
+        lis: mut List<String> = [];
+        var si := 0;
+        loop si < list.listCountText(spOuts) {
+            if spGroups[si] == gid {
+                tOut := spOuts[si];
+                href := relativeHref(dirOutSample, tOut);
+                verStr := if spVerified[si] { "true" } else { "false" };
+                dispLabel := if list.listCountText(spTitles) > si and spTitles[si] =!= "" { spTitles[si] } else { spNavs[si] };
+                list.pushBack(mut lis, "<li data-verified=\"" + verStr + "\"><a href=\"" + escapeHtml(href) + "\">" + escapeHtml(dispLabel) + "</a></li>");
+            }
+            si = si + 1;
+        }
+        cnt := list.listCountText(lis);
+        if cnt > 0 {
+            openAttr := if gid == "start" { " open" } else { "" };
+            list.pushBack(mut out,
+            "<details class=\"portal-nav-group\"" + openAttr + ">\n"
+            + "        <summary>" + escapeHtml(grpTitles[gi]) + " (" + integer.intText(cnt) + ")</summary>\n"
+            + "        <ul class=\"portal-nav-list\">\n"
+            + "          " + text.joinTexts(lis, "\n            ") + "\n"
+            + "        </ul>\n"
+            + "      </details>");
+        } else {
+            list.pushBack(mut out, "");
+        }
+        gi = gi + 1;
+    }
+    out
+};
+
+renderSpecSidebarFromTemplates := fn(
+activeOutPath: String, activeGroup: String, tmpls: List<String>, baseIdx: Int
+): String {
+    hbIndexHref := relativeHref(activeOutPath, "docs/handbook/overview-and-setup.html");
+    grpIds: List<String> = ["start", "design", "proposals", "compiler", "brand"];
+    activeHref := escapeHtml(siteLib.posixBasename(activeOutPath, ""));
+    activeNeedle := "<a href=\"" + activeHref + "\">";
+    activeRepl := "<a href=\"" + activeHref + "\" class=\"active\">";
+    grpBlocks: mut List<String> = [];
+    var gi := 0;
+    loop gi < 5 {
+        blk := tmpls[baseIdx + gi];
+        if blk =!= "" {
+            if grpIds[gi] == activeGroup {
+                var patched := blk;
+                if activeGroup =!= "start" {
+                    patched = replaceFirst(patched, "<details class=\"portal-nav-group\">", "<details class=\"portal-nav-group\" open>");
+                }
+                patched = replaceFirst(patched, activeNeedle, activeRepl);
+                list.pushBack(mut grpBlocks, patched);
+            } else {
+                list.pushBack(mut grpBlocks, blk);
+            }
+        }
+        gi = gi + 1;
+    }
+    "<aside class=\"portal-sidebar\" aria-label=\"Specification navigation\">\n"
+    + "      <div class=\"docs-layer-tabs\" role=\"tablist\" aria-label=\"Documentation layer\">\n"
+    + "        <a class=\"docs-layer-tab\" href=\"" + escapeHtml(hbIndexHref) + "\">Handbook</a>\n"
+    + "        <span class=\"docs-layer-tab active\" aria-selected=\"true\">Design Spec</span>\n"
+    + "      </div>\n"
+    + "      <input id=\"docs-sidebar-filter\" class=\"docs-sidebar-filter\" type=\"search\" placeholder=\"Filter spec docs...\" aria-label=\"Filter specification documents\">\n"
+    + "      <button class=\"docs-quick-search-btn\" type=\"button\" data-open-search><span>Search all docs</span><kbd>&#8984;K</kbd></button>\n"
+    + "      <div class=\"docs-sidebar-head\">\n"
+    + "        <label class=\"docs-verified-toggle\">\n"
+    + "          <input id=\"docs-verified-only\" type=\"checkbox\">\n"
+    + "          <span>Verified in TS only</span>\n"
+    + "        </label>\n"
+    + "        <span id=\"docs-sidebar-count\" class=\"code-card-meta\"></span>\n"
+    + "      </div>\n"
+    + "      " + text.joinTexts(grpBlocks, "\n      ") + "\n"
+    + "    </aside>"
+};
+
 rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOuts: List<String>, hbChapterIds: List<String>): String {
     withIds: mut List<String> = [];
     len := text.length(html);
@@ -1117,6 +1206,8 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         hi = hi + 1;
     }
 
+    specDirKeys: mut List<String> = [];
+    specDirTmpls: mut List<String> = [];
     si = 0;
     loop si < spCount {
         mSrc := spSrcs[si];
@@ -1125,6 +1216,18 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mNav := spNavs[si];
         mSum := spSums[si];
         dTitle := spTitles[si];
+        mDir := siteLib.posixDirname(mOut);
+        var dirIdx := list.listIndexOfText(specDirKeys, mDir);
+        if dirIdx < 0 {
+            dirIdx = list.listCountText(specDirKeys);
+            list.pushBack(mut specDirKeys, mDir);
+            builtTmpls := buildSpecGroupTemplates(mOut, spOuts, spGroups, spNavs, spTitles, spVerified);
+            var ti := 0;
+            loop ti < 5 {
+                list.pushBack(mut specDirTmpls, builtTmpls[ti]);
+                ti = ti + 1;
+            }
+        }
         lbl := statusPillLabel("spec", mGrp, spStatuses[si]);
         cls := statusPillClass("spec", mGrp, spStatuses[si]);
         vBadge := if spVerified[si] { "<span class=\"status-pill status-pill-shipped\">Verified in TS</span>" } else { "" };
@@ -1141,7 +1244,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         };
         relBlock := if spRelated[si] =!= "" { "\n    " + spRelated[si] } else { "" };
         body := "<div class=\"portal-layout\" id=\"top\">\n"
-        + "  " + renderDocsSidebar("spec", mOut, hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, spOuts, spGroups, spNavs, spTitles, spVerified) + "\n"
+        + "  " + renderSpecSidebarFromTemplates(mOut, mGrp, specDirTmpls, dirIdx * 5) + "\n"
         + "  <article class=\"md-prose\">\n"
         + "    <div class=\"portal-mobile-bar\">\n"
         + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Spec Menu</button>\n"

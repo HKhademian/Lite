@@ -2,7 +2,9 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import * as nodeFs from 'node:fs';
 import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -359,11 +361,113 @@ export function buildTsCompiler(): CompilerBuild { return buildCompiler('ts'); }
 /** Selects the current C compiler; builds and caches it from compiler sources if needed. */
 export function buildCCompiler(): CompilerBuild { return buildCompiler('c'); }
 
+class InProcessExit {
+  readonly code: number;
+  constructor(code: number) { this.code = code; }
+}
+
+type InProcessCompilerFactory = (proc: unknown) => (write: (text: string) => void) => string | undefined;
+const inProcessFactories = new Map<string, InProcessCompilerFactory>();
+
+function getInProcessCompilerFactory(artifact: string): InProcessCompilerFactory | undefined {
+  if (!artifact.endsWith('.ts') || process.env['LITE_NO_INPROC_COMPILER'] === '1') return undefined;
+  let st: nodeFs.Stats;
+  try { st = statSync(artifact); } catch { return undefined; }
+  const cacheKey = `${artifact}\0${st.mtimeMs}\0${st.size}`;
+  const hit = inProcessFactories.get(cacheKey);
+  if (hit !== undefined) return hit;
+  try {
+    const raw = readFileSync(artifact, 'utf8');
+    if (!raw.includes('export function main(')) return undefined;
+    const stripped = stripTypeScriptTypes(raw)
+      .replace(/\nif\s*\(\s*\(?\s*import\.meta\b[\s\S]*$/, '')
+      .replace(/export function main\b/, 'function main');
+    const factory = new Function('process', `${stripped}\nreturn (w) => main(w);`) as InProcessCompilerFactory;
+    inProcessFactories.set(cacheKey, factory);
+    return factory;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Compiles one whole Lite source through a generated compiler artifact path. */
 export function invokeCompilerArtifact(artifact: string, input: CompilerInput): CompilerResult {
   const cwd = input.cwd ?? process.cwd();
   const rootPath = input.rootPath ?? (input.name === undefined || input.name === '' ? resolve(cwd, '__lite_stdin__.lts') : resolve(cwd, input.name));
-  const result = spawnSync(process.execPath, [artifact, '--stdin', '--name', input.name ?? '', '--root', rootPath, ...(input.options ?? [])], {
+  const cliArgs = [process.execPath, artifact, '--stdin', '--name', input.name ?? '', '--root', rootPath, ...(input.options ?? [])];
+
+  const factory = getInProcessCompilerFactory(artifact);
+  if (factory !== undefined) {
+    const stdinBuf = Buffer.from(input.text, 'utf8');
+    let stdinPos = 0;
+    const outChunks: Buffer[] = [];
+    const errChunks: Buffer[] = [];
+    const fsProxy = new Proxy(nodeFs, {
+      get(target, prop) {
+        if (prop === 'readSync') {
+          return (fd: number, buf: Uint8Array, off: number, len: number, pos: number | null) => {
+            if (fd === 0) {
+              if (stdinPos >= stdinBuf.length) return 0;
+              const n = Math.min(len, stdinBuf.length - stdinPos);
+              stdinBuf.copy(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength), off, stdinPos, stdinPos + n);
+              stdinPos += n;
+              return n;
+            }
+            return target.readSync(fd, buf, off, len, pos);
+          };
+        }
+        if (prop === 'readFileSync') {
+          return (pathOrFd: nodeFs.PathOrFileDescriptor, opts?: unknown) => {
+            if (pathOrFd === 0) {
+              const rest = stdinBuf.subarray(stdinPos);
+              stdinPos = stdinBuf.length;
+              if (typeof opts === 'string') return rest.toString(opts as BufferEncoding);
+              if (opts && typeof opts === 'object' && 'encoding' in opts && typeof (opts as { encoding?: unknown }).encoding === 'string') {
+                return rest.toString((opts as { encoding: BufferEncoding }).encoding);
+              }
+              return Buffer.from(rest);
+            }
+            return (target.readFileSync as (p: nodeFs.PathOrFileDescriptor, o?: unknown) => unknown)(pathOrFd, opts);
+          };
+        }
+        if (prop === 'writeSync') {
+          return (fd: number, data: unknown, ...rest: unknown[]) => {
+            if (fd === 1 || fd === 2) {
+              const b = Buffer.isBuffer(data) ? data : Buffer.from(String(data), 'utf8');
+              (fd === 1 ? outChunks : errChunks).push(b);
+              return b.length;
+            }
+            return (target.writeSync as (...a: unknown[]) => number)(fd, data, ...rest);
+          };
+        }
+        const val = Reflect.get(target, prop);
+        return typeof val === 'function' ? val.bind(target) : val;
+      },
+    });
+    const procProxy = {
+      argv: cliArgs,
+      env: process.env,
+      execPath: process.execPath,
+      cwd: () => cwd,
+      exit(code?: number): never { throw new InProcessExit(code ?? 0); },
+      getBuiltinModule(id: string) {
+        if (id === 'node:fs') return fsProxy;
+        return (process as unknown as { getBuiltinModule: (m: string) => unknown }).getBuiltinModule(id);
+      },
+    };
+    let status = 0;
+    try {
+      const mainFn = factory(procProxy);
+      const tail = mainFn((t: string) => { outChunks.push(Buffer.from(t, 'utf8')); });
+      if (typeof tail === 'string' && tail.length > 0) outChunks.push(Buffer.from(tail, 'utf8'));
+    } catch (err) {
+      if (err instanceof InProcessExit) status = err.code;
+      else throw err;
+    }
+    return { status, stdout: Buffer.concat(outChunks), stderr: Buffer.concat(errChunks) };
+  }
+
+  const result = spawnSync(process.execPath, cliArgs.slice(1), {
     input: input.text, cwd, timeout: 0, maxBuffer: 128 * 1024 * 1024,
   });
   if (result.error !== undefined) throw result.error;

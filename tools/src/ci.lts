@@ -245,7 +245,7 @@ runTask := fn(root: String, task: String): Unit {
         return;
     }
     if task == "site" {
-        args: List<String> = ["--test", "site/features.test.ts", "site/build.test.ts"];
+        args: List<String> = ["--test", "--test-concurrency=1", "site/features.test.ts", "site/build.test.ts"];
         invokeNode(args, root);
         return;
     }
