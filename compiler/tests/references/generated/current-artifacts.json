@@ -1,8 +1,8 @@
 {
   "note": "Unified Block Model Slice 3 (uniform lexical closures/captures, inner-block parallel compile-time symbol wiring, uniform execution-trace initialization safety, and escaping-closure checks on TS; C continues rejecting fn values explicitly). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-23",
-  "sourceSha256": "052ae2a0451c9e80e8c7b5f9efdc08c4c22be314be8d03c32e7eead3af7a7269",
-  "compilerSha256": "abaaa347ccda69561255cdf55ee6cca50f12dc2a9222d880c6674059830e7524",
+  "sourceSha256": "e8fa3da916d70bc99a453dd482028b465d468cebf277ecf8ef937e5ca95bde81",
+  "compilerSha256": "442c1f7a129ef39c55bd5a0f8a4cf32ff9ac82bc2b01cf8d6ee85e9b69eae8f7",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
@@ -364,7 +364,7 @@
       "name": "string-equality-if",
       "source": "001-007-string-equality-if.lts",
       "ts": "sha256:de46def2f29a76d6faebb607c2766475a7df3df520e461de37461f25cf7f8f75",
-      "c": "sha256:02bbe5187c2108e5dc08386d2b461c1e91702f91661316883d33371589c63722"
+      "c": "sha256:8b9ff5461ecd1ae1018f1cb011cc8d3469c0ca75b9a337d761f5c6db0ab05156"
     },
     {
       "name": "runtime-division",
