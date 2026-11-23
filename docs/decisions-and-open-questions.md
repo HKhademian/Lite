@@ -33,14 +33,21 @@ Selected design direction (not yet implemented in the compiler):
    substitution with no separate identity or namespace of its own (as if the
    targeted symbol were written directly), attaching operations through an
    `alias` or to foreign targets is disallowed for now.
-5. **Recorded future direction — explicit imported extensions:** Kotlin/Swift-style
+5. **Mutating dot calls without call-site `mut` repetition:** calling an
+   operation with a `mut Self` / `mut Self<...>` receiver is written directly
+   as `xs.pushBack(42)` (Rust/Swift/V/C3 style) and statically checked against
+   writable `mut` authority on `xs` (dropping receiver-side call-site `mut`
+   visibility as a deliberate ergonomics tradeoff over `(mut xs).pushBack(42)`,
+   while keeping explicit `mut` grants on ordinary and type-qualified calls
+   such as `List.pushBack(mut xs, 42)`).
+6. **Recorded future direction — explicit imported extensions:** Kotlin/Swift-style
    extendability for foreign or aliased types is intentionally deferred for a
    future design stage and must require **explicit** import/opt-in (never
    implicit or ambient global patching).
 
-Call-site `mut` visibility on dot calls, zero-argument properties versus calls,
-receiverless type-associated helpers, explicit call-site type arguments,
-and future `using`/extension opt-in syntax remain open. See
+Computed `get`/`set` backing properties versus explicit calls (`.length` vs
+`.length()`), receiverless type-associated helpers, explicit call-site type
+arguments, and future `using`/extension opt-in syntax remain open. See
 [type-attached operations](lite://doc/type-operations) and
 [INV-030](lite://repo/research/investigations/INV-030-method-declaration-syntax.md).
 

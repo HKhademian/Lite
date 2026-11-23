@@ -1,6 +1,6 @@
 # Type-attached operations
 
-Status: **selected design direction, 2026-11-23; compiler implementation not started**. Uniform `TypeName.op := fn[<...>](...)` declarations, `self` versus `Self`, owned nominal types (including `distinct`), generic receiver support from the start, and current rejection of `alias`/foreign inherent attachments are selected. Explicit imported extensions remain a recorded future direction; call-site `mut` syntax on dot calls and zero-argument property boundaries remain open.
+Status: **selected design direction, 2026-11-23; compiler implementation not started**. Uniform `TypeName.op := fn[<...>](...)` declarations, `self` versus `Self`, strictly required explicit `Self`/`Self<...>` receivers, owned nominal types (including `distinct`), generic receiver support from the start, static `mut`-checked dot calls (`xs.pushBack(42)` without a call-site `mut` marker), and current rejection of `alias`/foreign inherent attachments are selected. Explicit imported extensions remain a recorded future direction; computed `get`/`set` properties versus `()` calls remain open.
 
 ## Purpose
 
@@ -74,6 +74,7 @@ Because the receiver binding is an ordinary named first parameter (`v`, `a`, `it
 An attached operation is an ordinary function in `TypeName`'s namespace:
 
 - **Dot call:** `p.add(q)` resolves statically to `Vec2.add(p, q)` only when `p`'s type satisfies the receiver's `Self` / `Self<...>` contract (for example, calling `names.sum()` on `List<String>` when `List.sum` requires `Self<Int>` is a compile-time error).
+- **Mutating dot call (selected 2026-11-23):** when the receiver parameter is `mut Self` / `mut Self<...>`, the dot call is written directly as `xs.pushBack(42)` with **no extra call-site `mut` marker** (Rust/Swift/V/C3 style). The compiler statically requires `xs` to hold writable `mut` access, rejecting calls on read-only receivers. *(Recorded tradeoff: call-site `mut` visibility is deliberately dropped on the dot receiver because forms like `(mut xs).pushBack(42)` add too much noise; mutability remains visible on `xs`'s declaration and on the operation's `mut Self` signature, while free/type-qualified calls such as `List.pushBack(mut xs, 42)` retain explicit caller `mut` grants per [caller mutation grants](lite://doc/caller-mutation-grants).)*
 - **Type-qualified call:** `Vec2.add(p, q)` calls the same symbol explicitly.
 - **Unbound function value:** `Vec2.add` denotes an ordinary function value of type `fn(Vec2, Vec2): Vec2` with no hidden bound-method closure allocation.
 - **No field shadowing:** declaring a type-attached operation with the same name as a field of that type is a compile-time error.
@@ -142,8 +143,7 @@ Consulted selectively from the [project reference languages](lite://doc/referenc
 
 ## Open decisions
 
-- **Call-site `mut` visibility on mutating dot calls:** whether `items.pushBack(42)` is checked solely against `mut items` and the parameter contract (like Rust/Swift/V/C3) or requires a visible call-site `mut` marker consistent with [caller mutation grants](lite://doc/caller-mutation-grants).
-- **Zero-argument properties versus calls:** whether current compiler properties (`.length`, `.size`, `.isEmpty`) unify into explicit calls (`.length()`, `.size()`, `.isEmpty()`) or receive an explicit read-only property contract.
+- **Computed `get`/`set` properties versus explicit calls:** whether current compiler-handled dot properties (`.length`, `.size`, `.isEmpty`) unify into explicit calls (`.length()`, `.size()`, `.isEmpty()`) or receive an explicit property/getter-setter specification.
 - **Receiverless type-associated helpers:** whether non-receiver functions such as constructors (`TypeName.from(...)`) may also live under `TypeName.*`, distinct from `Self`-receiver operations.
 - **Explicit call-site type arguments:** syntax for supplying unbound method-only type parameters at dot calls (shared with [generic notation](lite://doc/generic-notation#pending-contract-cases)).
 - **Explicit extension opt-in syntax:** exact `using`/import syntax, extension grouping, and interaction with future [interfaces](lite://doc/composition-and-interfaces).
