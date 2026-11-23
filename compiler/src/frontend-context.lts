@@ -236,7 +236,7 @@ pub assignValueCode := fn(target: String, expectedKind: String, actualKind: Stri
     }
 };
 
-/** Converts read-only call arguments; on C skips CoW rc bumps for immutable value parameters so callers avoid spurious detaches. */
+/** Converts read-only call arguments without cloning (zero-copy immutable reference on both TS and C11; performs only scalar widening and tuple layout conversion). */
 pub assignReadOnlyArgCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
     if actualKind == ir.VALUE_KIND_NEVER {
         actualCode
@@ -246,10 +246,17 @@ pub assignReadOnlyArgCode := fn(target: String, expectedKind: String, actualKind
         ir.targetFloatOperandCode(target, actualKind, actualCode)
     } else if expectedKind =!= actualKind and types.tupleShapeMatches(expectedKind, actualKind) {
         types.convertTupleValueForTarget(target, expectedKind, actualKind, actualCode)
-    } else if target == ir.TARGET_C {
-        actualCode
     } else {
-        copiedValueCode(target, expectedKind, actualCode)
+        actualCode
+    }
+};
+
+/** Converts read-only call arguments, emitting a snapshot (C11 CoW refcount bump or TS copy) only when `needsSnapshot` is true. */
+pub readOnlyArgWithSnapshot := fn(target: String, expectedKind: String, actualKind: String, actualCode: String, needsSnapshot: Bool): String {
+    if needsSnapshot {
+        assignValueCode(target, expectedKind, actualKind, actualCode)
+    } else {
+        assignReadOnlyArgCode(target, expectedKind, actualKind, actualCode)
     }
 };
 

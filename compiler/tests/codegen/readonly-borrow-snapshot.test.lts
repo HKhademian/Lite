@@ -1,0 +1,199 @@
+/* Dual-target (TS + C11 + ASan/UBSan) verification for implicit zero-copy read-only borrows
+ * and automatic CoW/copy snapshots when aliasing or mutation during a call is possible. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+text := import "core/text";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+ccInfo := compilerTest.probeCc();
+
+tmpRes := fs.makeTempDir("lite-readonly-borrow-test-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+tmpDir := tmpRes.path;
+
+src :=
+"io := import \"core/io\";\n" +
+"\n" +
+"/* 1. Module-level mut globals mutated inside B() while A(Z) holds a read-only parameter */\n" +
+"Z: mut List<Int> = [1, 2];\n" +
+"ZM: mut Map<String, Int> = [\"a\" = 10];\n" +
+"ZS: mut Set<String> = [\"x\"];\n" +
+"Holder := record { xs: List<Int>; };\n" +
+"var ZH: mut Holder = Holder { xs = [5, 6] };\n" +
+"\n" +
+"mutateGlobals := fn(): Unit {\n" +
+"    var i := 0;\n" +
+"    loop i < 200 {\n" +
+"        Z.pushBack(100 + i);\n" +
+"        i += 1;\n" +
+"    }\n" +
+"    ZM[\"b\"] = 20;\n" +
+"    ZM[\"a\"] = 999;\n" +
+"    ZS.add(\"y\");\n" +
+"    ZH.xs = [99, 98, 97];\n" +
+"};\n" +
+"\n" +
+"checkGlobalList := fn(xs: List<Int>): Unit {\n" +
+"    before := xs.length();\n" +
+"    b0 := xs[0];\n" +
+"    b1 := xs[1];\n" +
+"    mutateGlobals();\n" +
+"    after := xs.length();\n" +
+"    a0 := xs[0];\n" +
+"    a1 := xs[1];\n" +
+"    io.outputLine(\"globalList\", before, b0, b1, after, a0, a1, Z.length());\n" +
+"};\n" +
+"\n" +
+"checkGlobalMapSetRec := fn(m: Map<String, Int>, s: Set<String>, h: Holder): Unit {\n" +
+"    mb := m[\"a\"];\n" +
+"    sb := s.size();\n" +
+"    hb := h.xs.length();\n" +
+"    mutateGlobals();\n" +
+"    ma := m[\"a\"];\n" +
+"    mHasB := m.has(\"b\");\n" +
+"    sa := s.size();\n" +
+"    ha := h.xs.length();\n" +
+"    io.outputLine(\"globalMSR\", mb, ma, mHasB, sb, sa, hb, ha, ZM[\"a\"], ZS.size(), ZH.xs.length());\n" +
+"};\n" +
+"\n" +
+"/* 2. mut parameter forwarded to read-only call while caller's global is mutated */\n" +
+"Z2: mut List<Int> = [7, 8];\n" +
+"mutateZ2 := fn(): Unit {\n" +
+"    var i := 0;\n" +
+"    loop i < 150 {\n" +
+"        Z2.pushBack(i);\n" +
+"        i += 1;\n" +
+"    }\n" +
+"};\n" +
+"readZ2 := fn(xs: List<Int>): Unit {\n" +
+"    b := xs.length();\n" +
+"    mutateZ2();\n" +
+"    a := xs.length();\n" +
+"    io.outputLine(\"mutParamFwd\", b, a, xs[0], xs[1], Z2.length());\n" +
+"};\n" +
+"forwardMut := fn(xs: mut List<Int>): Unit {\n" +
+"    readZ2(xs);\n" +
+"};\n" +
+"\n" +
+"/* 3. Same-call read-only + mut aliasing: f(localZ, mut localZ) */\n" +
+"appendAll := fn(src: List<Int>, dst: mut List<Int>): Unit {\n" +
+"    var i := 0;\n" +
+"    loop i < src.length() {\n" +
+"        dst.pushBack(src[i] * 10);\n" +
+"        i += 1;\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"/* 4. Closure mutating local mut during read-only call */\n" +
+"runWithCallback := fn(xs: List<Int>, cb: fn(): Unit): Unit {\n" +
+"    b := xs.length();\n" +
+"    cb();\n" +
+"    a := xs.length();\n" +
+"    io.outputLine(\"closure\", b, a, xs[0], xs[1]);\n" +
+"};\n" +
+"\n" +
+"/* 5. Local zero-copy read-only borrow & return-escape snapshot */\n" +
+"sumList := fn(xs: List<Int>): Int {\n" +
+"    var total := 0;\n" +
+"    loop xs as v { total += v; }\n" +
+"    total\n" +
+"};\n" +
+"forwardSum := fn(xs: List<Int>): Int {\n" +
+"    sumList(xs)\n" +
+"};\n" +
+"idList := fn(xs: List<Int>): List<Int> { xs };\n" +
+"runZeroCopy := fn(): Unit {\n" +
+"    localC: mut List<Int> = [10, 20, 30];\n" +
+"    s1 := forwardSum(localC);\n" +
+"    snap := idList(localC);\n" +
+"    localC.pushBack(40);\n" +
+"    io.outputLine(\"localAndReturn\", s1, snap.length(), localC.length());\n" +
+"};\n" +
+"\n" +
+"runAll := fn(): Unit {\n" +
+"    checkGlobalList(Z);\n" +
+"    Z.clear(); Z.pushBack(1); Z.pushBack(2);\n" +
+"    ZM.clear(); ZM[\"a\"] = 10;\n" +
+"    ZS.clear(); ZS.add(\"x\");\n" +
+"    ZH.xs = [5, 6];\n" +
+"    checkGlobalMapSetRec(ZM, ZS, ZH);\n" +
+"    forwardMut(mut Z2);\n" +
+"\n" +
+"    localA: mut List<Int> = [1, 2, 3];\n" +
+"    appendAll(localA, mut localA);\n" +
+"    io.outputLine(\"sameCallAlias\", localA.length(), localA[0], localA[3], localA[5]);\n" +
+"\n" +
+"    clAfter := {\n" +
+"        localB: mut List<Int> = [4, 5];\n" +
+"        cb := fn(): Unit {\n" +
+"            var i := 0;\n" +
+"            loop i < 120 { localB.pushBack(i); i += 1; }\n" +
+"        };\n" +
+"        runWithCallback(localB, cb);\n" +
+"        localB.length()\n" +
+"    };\n" +
+"    io.outputLine(\"closureAfter\", clAfter);\n" +
+"\n" +
+"    runZeroCopy();\n" +
+"};\n" +
+"\n" +
+"runAll();\n";
+
+expectedOut :=
+"globalList 2 1 2 2 1 2 202\n" +
+"globalMSR 10 10 false 1 1 2 2 999 2 3\n" +
+"mutParamFwd 2 2 7 8 152\n" +
+"sameCallAlias 6 1 10 30\n" +
+"closure 2 2 4 5\n" +
+"closureAfter 122\n" +
+"localAndReturn 60 3 4\n";
+
+/* 1. TS target: compile, verify zero-copy codegen for unaliased local/param calls, and run */
+tsComp := compilerTest.compileStdin(root, selTs.path, src, "");
+test.checkInt("TS compile status: " + tsComp.stderr, 0, tsComp.status);
+test.check("TS zero-copy forwardSum(localC): no array clone", text.containsText(tsComp.stdout, "liteFn_forwardSum(lite_localC)"));
+test.check("TS zero-copy sumList(xs): no array clone", text.containsText(tsComp.stdout, "liteFn_sumList(lite_xs)"));
+test.check("TS global Z still snapshotted", text.containsText(tsComp.stdout, "liteFn_checkGlobalList([...(lite_Z)])"));
+test.check("TS same-call alias snapshotted", text.containsText(tsComp.stdout, "liteFn_appendAll([...(lite_localA)], lite_localA)"));
+
+tsRun := compilerTest.checkAndRunTs(root, tsComp.stdout);
+test.checkInt("TS run status: " + tsRun.stderr, 0, tsRun.status);
+test.checkText("TS stdout", expectedOut, tsRun.stdout);
+
+/* 2. C11 target + ASan/UBSan */
+if ccInfo.available {
+    cComp := compilerTest.compileStdin(root, selC.path, src, "");
+    test.checkInt("C11 compile status: " + cComp.stderr, 0, cComp.status);
+    emptyEnv: List<String> = [];
+    cFile := path.join(tmpDir, "borrow.c");
+    cBin := path.join(tmpDir, "borrow");
+    test.check("write borrow.c", fs.writeText(cFile, cComp.stdout).ok);
+    ccRes := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cFile, "-o", cBin, "-lm"], tmpDir, emptyEnv, true, "");
+    test.checkInt("C11 cc status: " + ccRes.stderr, 0, ccRes.status);
+    cRun := proc.run(cBin, [], root, emptyEnv, true, "");
+    test.checkInt("C11 run status: " + cRun.stderr, 0, cRun.status);
+    test.checkText("C11 stdout matches TS", expectedOut, cRun.stdout);
+
+    srcPath := path.join(tmpDir, "borrow.lts");
+    test.check("write borrow.lts", fs.writeText(srcPath, src).ok);
+    sanBin := path.join(tmpDir, "borrow-san");
+    buildSan := proc.run(path.join(root, "bin/lite"), ["build", "--sanitize", "--quiet", "-o", sanBin, srcPath], root, emptyEnv, true, "");
+    test.check("ASan/UBSan build ok: " + buildSan.stderr, buildSan.status == 0 and buildSan.error == "");
+    runSan := proc.run(sanBin, [], tmpDir, emptyEnv, true, "");
+    test.check("ASan/UBSan exit 0 (zero UAF): " + runSan.stderr, runSan.status == 0 and runSan.error == "");
+    test.checkText("ASan/UBSan stdout matches TS", expectedOut, runSan.stdout);
+}
+
+_rm := fs.remove(tmpDir);
+test.done("readonly-borrow-snapshot");

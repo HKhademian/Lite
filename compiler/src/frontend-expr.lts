@@ -6513,6 +6513,31 @@ findLocalIndexByRuntime := fn(locals: List<Local>, runtime: String): Int {
     -1
 };
 
+/** True when any local callable binding exists in scope (which could capture and mutate a local `mut` binding during a call). */
+localsHasLocalClosure := fn(locals: List<Local>): Bool {
+    loop locals as l {
+        if l.depth >= 1 and l.name =!= "$self" and types.containsFnKind(l.kind) {
+            return true;
+        }
+    }
+    false
+};
+
+/** True when passing `argCode` to a read-only parameter requires a snapshot (C11 CoW RC bump or TS clone) to guard against aliasing or mutation during the call. */
+readOnlyArgNeedsSnapshot := fn(argCode: String, locals: List<Local>, mutArgRuntimes: List<String>, hasClosureHazard: Bool): Bool {
+    locIdx := findLocalIndexByRuntime(locals, argCode);
+    if locIdx < 0 { return true; }
+    loc := locals[locIdx];
+    if not loc.writable { return false; }
+    if loc.depth <= 0 { return true; }
+    if loc.code == loc.runtime { return true; }
+    if listLib.listContainsText(mutArgRuntimes, loc.runtime) { return true; }
+    selfIdx := sym.localIndex(locals, "$self");
+    if selfIdx >= 0 and loc.depth < locals[selfIdx].depth { return true; }
+    if hasClosureHazard { return true; }
+    false
+};
+
 /** Parses user, type-operation, and indirect function calls with positional, named, and `=name` shorthand arguments, plus optional prepended receiver, generic unification/monomorphization, and TS `mut Record` COW writeback. */
 parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, hasRecv: Bool, recvCode: String, recvWritebackLocal: String, recvWritebackBox: String, initGenBindings: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     size := textLib.length(source);
@@ -6562,6 +6587,17 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     entryCodes: mut List<String> = [];
     mutRecBoxNames: mut List<String> = [];
     mutRecLocalRuntimes: mut List<String> = [];
+    mutArgRuntimes: mut List<String> = [];
+    if hasRecv and callFirst > 0 and textLib.startsWithAt(types.paramKindOf(callParams[callFirst - 1]), 0, "mut ") {
+        if recvWritebackLocal =!= "" {
+            listLib.pushBack(mut mutArgRuntimes, recvWritebackLocal);
+        } else if textLib.startsWithAt(recvCode, 0, "&") {
+            listLib.pushBack(mut mutArgRuntimes, textLib.slice(recvCode, 1, textLib.length(recvCode)));
+        } else {
+            listLib.pushBack(mut mutArgRuntimes, recvCode);
+            listLib.pushBack(mut mutArgRuntimes, recvCode + ".v");
+        }
+    }
     if target == ir.TARGET_TS and hasRecv and recvWritebackLocal =!= "" and recvWritebackBox =!= "" {
         listLib.pushBack(mut mutRecBoxNames, recvWritebackBox);
         listLib.pushBack(mut mutRecLocalRuntimes, recvWritebackLocal);
@@ -6671,6 +6707,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                 mCode = boxName;
                             }
                         }
+                        listLib.pushBack(mut mutArgRuntimes, mEntry.runtime);
                         listLib.pushBack(mut entryPositions, rhsStart);
                         listLib.pushBack(mut entrySlots, slot);
                         listLib.pushBack(mut entryKinds, "mut " + mEntry.kind);
@@ -6753,6 +6790,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                 mCode = boxName;
                             }
                         }
+                        listLib.pushBack(mut mutArgRuntimes, mEntry.runtime);
                         listLib.pushBack(mut entryPositions, cursor);
                         listLib.pushBack(mut entrySlots, nextSlot);
                         listLib.pushBack(mut entryKinds, "mut " + mEntry.kind);
@@ -6864,6 +6902,16 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         }
         slotIdx += 1;
     }
+    var callHasFnArg := not isModuleFn;
+    var ckIdx := 0;
+    loop ckIdx < entryCount {
+        if types.containsFnKind(entryKinds[ckIdx]) {
+            callHasFnArg = true;
+            break;
+        }
+        ckIdx += 1;
+    }
+    callClosureHazard := callHasFnArg or localsHasLocalClosure(locals);
     var emittedCode := "";
     var emittedResultKind := effResult;
     if isIdentityOrder {
@@ -6875,7 +6923,8 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             if textLib.startsWithAt(argExpected, 0, "mut ") {
                 listLib.pushBack(mut finalArgs, entryCodes[pIdx]);
             } else {
-                listLib.pushBack(mut finalArgs, ctx.assignReadOnlyArgCode(target, argExpected, entryKinds[pIdx], entryCodes[pIdx]));
+                needsSnap := readOnlyArgNeedsSnapshot(entryCodes[pIdx], locals, mutArgRuntimes, callClosureHazard);
+                listLib.pushBack(mut finalArgs, ctx.readOnlyArgWithSnapshot(target, argExpected, entryKinds[pIdx], entryCodes[pIdx], needsSnap));
             }
             pIdx = pIdx + 1;
         }
@@ -6907,7 +6956,8 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             if textLib.startsWithAt(argExpected, 0, "mut ") {
                 listLib.pushBack(mut reorderedArgs, entryCodes[k]);
             } else {
-                listLib.pushBack(mut reorderedArgs, ctx.assignReadOnlyArgCode(target, argExpected, entryKinds[k], entryCodes[k]));
+                needsSnap := readOnlyArgNeedsSnapshot(entryCodes[k], locals, mutArgRuntimes, callClosureHazard);
+                listLib.pushBack(mut reorderedArgs, ctx.readOnlyArgWithSnapshot(target, argExpected, entryKinds[k], entryCodes[k], needsSnap));
             }
             sIdx = sIdx + 1;
         }
@@ -6946,7 +6996,8 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                     argRhs := if textLib.startsWithAt(argExpected, 0, "mut ") {
                         entryCodes[kIdx]
                     } else {
-                        ctx.assignValueCode(target, argExpected, entryKinds[kIdx], entryCodes[kIdx])
+                        needsSnap := readOnlyArgNeedsSnapshot(entryCodes[kIdx], locals, mutArgRuntimes, callClosureHazard);
+                        ctx.readOnlyArgWithSnapshot(target, argExpected, entryKinds[kIdx], entryCodes[kIdx], needsSnap)
                     };
                     listLib.pushBack(mut evalStmts, "const " + temp + " = " + argRhs + ";");
                 } else {
@@ -7328,7 +7379,19 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
             recvCode = locEntry.runtime;
         }
     } else {
-        recvCode = ctx.assignReadOnlyArgCode(target, concreteRecvExpected, receiver.kind, receiver.code);
+        var recvParamHazard := localsHasLocalClosure(locals);
+        var rpIdx := 1;
+        loop rpIdx < info.count {
+            rpKind := types.paramKindOf(params[info.first + rpIdx]);
+            if textLib.startsWithAt(rpKind, 0, "mut ") or types.containsFnKind(rpKind) {
+                recvParamHazard = true;
+                break;
+            }
+            rpIdx += 1;
+        }
+        emptyMutRts: List<String> = [];
+        recvNeedsSnap := readOnlyArgNeedsSnapshot(receiver.code, locals, emptyMutRts, recvParamHazard);
+        recvCode = ctx.readOnlyArgWithSnapshot(target, concreteRecvExpected, receiver.kind, receiver.code, recvNeedsSnap);
     }
     calleeDisp := types.displayKind(receiver.kind) + "." + opLabel;
     callRes := parseUserOrIndirectCallWithRecv(target, source, openParen, labelStart, true, calleeDisp, info.runtime, params, info.first + 1, info.count - 1, info.result, true, recvCode, recvWritebackLocal, recvWritebackBox, initGenBindings, callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
@@ -7614,8 +7677,18 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 }
                 close := syntax.skipTrivia(source, key.next, prefix);
                 next := syntax.expectSymbol(source, close, "]", prefix);
-                recvCode := if textLib.startsWithAt(getHook.runtime, 0, "lite$") { left.code } else { ctx.assignReadOnlyArgCode(target, left.kind, left.kind, left.code) };
-                kCode := if textLib.startsWithAt(getHook.runtime, 0, "lite$") { ctx.assignValueCode(target, getHook.keyKind, key.kind, key.code) } else { ctx.assignReadOnlyArgCode(target, getHook.keyKind, key.kind, key.code) };
+                emptyHookMutRts: List<String> = [];
+                hookClosureHazard := localsHasLocalClosure(locals);
+                recvCode := if textLib.startsWithAt(getHook.runtime, 0, "lite$") {
+                    left.code
+                } else {
+                    ctx.readOnlyArgWithSnapshot(target, left.kind, left.kind, left.code, readOnlyArgNeedsSnapshot(left.code, locals, emptyHookMutRts, hookClosureHazard))
+                };
+                kCode := if textLib.startsWithAt(getHook.runtime, 0, "lite$") {
+                    ctx.assignValueCode(target, getHook.keyKind, key.kind, key.code)
+                } else {
+                    ctx.readOnlyArgWithSnapshot(target, getHook.keyKind, key.kind, key.code, readOnlyArgNeedsSnapshot(key.code, locals, emptyHookMutRts, hookClosureHazard))
+                };
                 left = ctx.withMarkers((kind = getHook.valKind,
                 code = emitHookIndexReadCode(target, indexStart, left.kind, recvCode, getHook.runtime, kCode),
                 intValue = 0, textValue = "", constant = false, next = next),
