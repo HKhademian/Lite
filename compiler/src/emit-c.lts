@@ -2265,8 +2265,8 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 listLib.pushBack(mut loopSeqReleases, if item.intValue == 1 { "" } else { seqVar });
             }
         } else if item.kind == frontend.ITEM_KIND_END_LOOP {
-            isSeqEnd := if loopSeqFlags.length > 0 { listLib.popBack(mut loopSeqFlags) == 1 } else { false };
-            relVar := if loopSeqReleases.length > 0 { listLib.popBack(mut loopSeqReleases) } else { "" };
+            isSeqEnd := if listLib.length(loopSeqFlags) > 0 { listLib.popBack(mut loopSeqFlags) == 1 } else { false };
+            relVar := if listLib.length(loopSeqReleases) > 0 { listLib.popBack(mut loopSeqReleases) } else { "" };
             if isSeqEnd {
                 indent = dedent(dedent(indent));
                 outLine(indent + "    }");

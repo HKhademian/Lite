@@ -6,7 +6,7 @@ Lite provides typed value sets (`Set<T>`) with O(1) membership checks and dedupl
 
 - **Literals & zero-initialization:** Initialize with `roles: mut Set<String> = ["reader", "editor"];` (or empty `empty: Set<String>;` / `= []`). Reserved storage (`= ?`) is rejected.
 - **Scalar & enum elements:** Elements must be scalar (`Int*`, `Float*`, `String`, `Bool`) or nominal `enum` types so membership uses value equality.
-- **Properties & `core/set` operations:** Read `roles.size` (`Int`) and `roles.isEmpty` (`Bool`) directly, or import [core/set](lite://module/core/set) for `add(mut s, v)`, `has(s, v)`, `remove(mut s, v)`, `size(s)`, `clear(mut s)`, and `values(s)`.
+- **Operations (`core/set`):** Call `roles.size()` (`Int`), `roles.isEmpty()` (`Bool`), `roles.add(v)`, `roles.has(v)`, `roles.remove(v)`, `roles.clear()`, and `roles.values()` directly on any `Set<T>`.
 - **Value snapshots & iteration:** Assigning a set (`frozen: Set<String> = roles;`) copies its elements independently, and `loop frozen as role` yields elements in insertion order.
 
 ## Try It

@@ -8,7 +8,7 @@ loop items as item {
     set.add(mut unique, item);
 }
 
-io.outputLine("count:", unique.size);
+io.outputLine("count:", unique.size());
 loop unique as item {
     io.outputLine(item);
 }

@@ -502,7 +502,7 @@ pub joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List
         }
         idx = idx + 1;
     }
-    if updatedRuntimes.length == 0 { return truncateLocals(locals, preLen); }
+    if listLib.length(updatedRuntimes) == 0 { return truncateLocals(locals, preLen); }
     nextLocals: mut List<Local> = truncateLocals(locals, preLen);
     loop updatedRuntimes as rt {
         var preIdx := -1;

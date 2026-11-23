@@ -71,7 +71,7 @@ onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit {
         return;
     }
     if button =!= 0 {
-        st.colorIdx = (st.colorIdx + 1) % palette.length;
+        st.colorIdx = (st.colorIdx + 1) % palette.length();
         drawPaletteBar();
     }
     st.brushDown = true;
@@ -91,7 +91,7 @@ onCanvasKeyDown := fn(key: String): Unit {
         resetCanvas();
         audio.tone(frequency = 220, durationMs = 80, volume = 15);
     } else if key == "ArrowRight" or key == "ArrowLeft" {
-        st.colorIdx = (st.colorIdx + 1) % palette.length;
+        st.colorIdx = (st.colorIdx + 1) % palette.length();
         drawPaletteBar();
         audio.tone(frequency = 440 + (st.colorIdx * 65), durationMs = 50, volume = 15);
     } else if map.has(keyToColor, key) {

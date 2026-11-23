@@ -20,7 +20,7 @@ shiftChar := fn(ch: String, shift: Int): String {
 
 caesar := fn(input: String, shift: Int): String {
     norm := ((shift % 26) + 26) % 26;
-    size := input.length;
+    size := input.length();
     var out := "";
     var i := 0;
     loop i < size {

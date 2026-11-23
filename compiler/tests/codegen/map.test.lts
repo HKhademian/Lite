@@ -124,10 +124,10 @@ badSrc: List<String> = [
 badErr: List<String> = [
 "unsupported map key type",
 "unsupported map value type",
-"cannot mutate immutable map",
+"cannot mutate read-only value m via index assignment",
 "cannot mutate immutable map",
 "requires mut",
-"map key must be String",
+"index must be String",
 "cannot compare map values",
 "reserved storage is not supported for Map"
 ];

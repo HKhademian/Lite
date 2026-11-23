@@ -87,7 +87,7 @@ src :=
 "time.sleepMs(2);\n" +
 "t1 := time.monotonicNs();\n" +
 "io.outputLine(t1 > t0 and time.epochNs() > 0);\n" +
-"io.outputLine(time.localDate().length == 10);\n" +
+"io.outputLine(time.localDate().length() == 10);\n" +
 "rnd := crypto.randomBytes(16);\n" +
 "io.outputLine(listLib.length(rnd));\n" +
 "pr := proc.run(\"sh\", [\"-c\", \"printf 'hello-%s' \\\"$LITE_TEST_ENV\\\"\"], \"\", [\"LITE_TEST_ENV=world\"], true, \"\");\n" +

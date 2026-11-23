@@ -43,7 +43,7 @@ test.checkText("list ops stdout", "4 25 45 9\n2 30 25\n-3 7 7 19 42\napple fig p
 
 /* 2. Immutable list index assignment is rejected at compile time */
 immProg := "xs: List<Int> = [1, 2];\nxs[0] = 5;\n";
-compilerTest.assertCompileError(root, tsComp, "immutable list index assign", immProg, "2:1: cannot mutate immutable list xs\n");
+compilerTest.assertCompileError(root, tsComp, "immutable list index assign", immProg, "2:1: cannot mutate read-only value xs via index assignment\n");
 
 /* 3. Out-of-bounds xs[i] = v raises BoundPanic */
 oobProg := "xs: mut List<Int> = [1, 2];\nxs[5] = 9;\n";

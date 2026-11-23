@@ -1532,7 +1532,7 @@
       "expectedStarterFailure": "wrong-output",
       "hints": [
         "Use `loop raw { if .item > 0 { .item * 2 } }.collected` so non-positive items are skipped without appending.",
-        "Read `doubled.length` and `doubled.isEmpty` directly on the collected `List<Int>`."
+        "Read `doubled.length()` and `doubled.isEmpty()` directly on the collected `List<Int>`."
       ],
       "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md", "docs/loops.md"],
       "relatedLessons": ["learn.control.loops.loops-and-completion"],
@@ -1559,8 +1559,8 @@
       "brokenStarterSyntax": false,
       "expectedStarterFailure": "wrong-output",
       "hints": [
-        "`String` and `List<T>` expose `.length` and `.isEmpty`.",
-        "`Set<T>` and `Map<K, V>` expose `.size` and `.isEmpty`."
+        "`String` and `List<T>` expose `.length()` and `.isEmpty()`.",
+        "`Set<T>` and `Map<K, V>` expose `.size()` and `.isEmpty()`."
       ],
       "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/strings.md", "docs/sets.md"],
       "relatedLessons": ["learn.types.collections.arrays-and-lists", "learn.types.collections.typed-sets"],

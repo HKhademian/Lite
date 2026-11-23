@@ -85,7 +85,7 @@ tsRun := proc.run(project.nodeExecPath(), [tsOutFile], root, ["LITE_CANVAS_HEADL
 test.checkInt("ts run status: " + tsRun.stderr, 0, tsRun.status);
 test.checkText("ts stdout", expected, tsRun.stdout);
 tsPngBytes := fs.readBytes(tsPng);
-test.check("ts png exists and has PNG signature", tsPngBytes.length > 32 and
+test.check("ts png exists and has PNG signature", tsPngBytes.length() > 32 and
 tsPngBytes[0] == 137 and tsPngBytes[1] == 80 and tsPngBytes[2] == 78 and tsPngBytes[3] == 71);
 
 /* 2. C11 target headless verification */
@@ -107,7 +107,7 @@ if ccInfo.available {
     test.checkInt("c run status: " + cRun.stderr, 0, cRun.status);
     test.checkText("c stdout parity", tsRun.stdout, cRun.stdout);
     cPngBytes := fs.readBytes(cPng);
-    test.check("c png exists and has PNG signature", cPngBytes.length > 32 and
+    test.check("c png exists and has PNG signature", cPngBytes.length() > 32 and
     cPngBytes[0] == 137 and cPngBytes[1] == 80 and cPngBytes[2] == 78 and cPngBytes[3] == 71);
 
     /* 3. C11 AddressSanitizer + UBSan + 5,000-frame RSS stability leak gate */

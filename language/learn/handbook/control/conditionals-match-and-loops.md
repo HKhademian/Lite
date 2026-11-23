@@ -79,7 +79,7 @@ io := import "core/io";
 
 xs := [-2, 3, 0, 5];
 posDoubled := loop xs { if .item > 0 { .item * 2 } }.collected;
-io.outputLine(posDoubled, posDoubled.length);
+io.outputLine(posDoubled, posDoubled.length());
 ```
 
 Attach a `then { ... }` clause to compute a result after the loop completes (either normally or via `break value`):

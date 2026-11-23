@@ -49,7 +49,7 @@ io.outputLine(inBand, notZero);
 
 ## Strings, Math, Random & Unicode Helpers
 
-Double-quoted `"..."` strings support multi-line text and standard escapes (`\n`, `\t`, `\"`, `\\`, `\r`). Concatenate strings with `+` and read `.length` or `.isEmpty` directly on any `String`.
+Double-quoted `"..."` strings support multi-line text and standard escapes (`\n`, `\t`, `\"`, `\\`, `\r`). Concatenate strings with `+` and call `.length()` or `.isEmpty()` directly on any `String`.
 
 Use [core/text](lite://module/core/text) for code-point length, indexing, slicing, trimming, searching, and joining, [core/unicode](lite://module/core/unicode) for UTF-8 byte/scalar conversion, [core/math](lite://module/core/math) for numeric constants and helpers (`PI`, `TAU`, `sqrt`, `clampInt`, `minFloat`), and [core/random](lite://module/core/random) for deterministic seedable PRNGs:
 
@@ -59,7 +59,7 @@ text := import "core/text";
 math := import "core/math";
 
 msg := text.trim("  Lite\t") + "!";
-io.outputLine(msg, msg.length, text.at(msg, 0), math.clampInt(120, 0, 100));
+io.outputLine(msg, msg.length(), msg.at(0), math.clampInt(120, 0, 100));
 ```
 
 See [Numbers](lite://doc/numbers), [Division](lite://doc/division), [Comparison Chains](lite://doc/comparison-chains), [Strings](lite://doc/strings), and [Math, Vectors & Matrices](lite://handbook/math-vectors-and-matrices).

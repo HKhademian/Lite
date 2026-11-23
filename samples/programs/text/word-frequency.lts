@@ -5,7 +5,7 @@ map := import "core/map";
 text := import "core/text";
 
 corpus := "lite is light and lite is explicit and clear";
-size := corpus.length;
+size := corpus.length();
 counts: mut Map<String, Int>;
 
 var start := 0;

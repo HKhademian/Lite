@@ -30,7 +30,7 @@ render := fn(): Unit {
     board.fillCircle(cx, cy, 22, canvas.rgba(255, 196, 86, 48));
     board.fillCircle(cx, cy, 14, canvas.rgb(255, 212, 108));
 
-    n := cosTable.length;
+    n := cosTable.length();
     i1 := (st.tick * 2) % n;
     i2 := st.tick % n;
     i3 := (st.tick + 12) % n;
@@ -57,7 +57,7 @@ onCanvasUpdate := fn(dt: Float): Int {
     st.acc += dt;
     if st.acc >= 0.06 {
         st.acc = 0.0;
-        st.tick = (st.tick + 1) % cosTable.length;
+        st.tick = (st.tick + 1) % cosTable.length();
         render();
     }
     0

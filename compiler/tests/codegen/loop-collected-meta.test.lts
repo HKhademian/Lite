@@ -110,11 +110,11 @@ partialProg :=
 "matchedCond := loop xs { match { (.item > 10) { .item * 3 } (.item > 0) { .item * 2 } } }.collected;\n" +
 "lastPos := loop [-1, 2, -3, 4, -5] { if .item > 0 { .item * 2 } };\n" +
 "nonePos := loop [-1, -2] { if .item > 0 { .item * 2 } };\n" +
-"io.outputLine(posDoubled.length, posDoubled[0], posDoubled[1], posDoubled[2]);\n" +
-"io.outputLine(tiered.length, tiered[0], tiered[1], tiered[2]);\n" +
-"io.outputLine(nested.length, nested[0], nested[1]);\n" +
-"io.outputLine(matchedSubj.length, matchedSubj[0], matchedSubj[1], matchedSubj[2]);\n" +
-"io.outputLine(matchedCond.length, matchedCond[0], matchedCond[1], matchedCond[2]);\n" +
+"io.outputLine(posDoubled.length(), posDoubled[0], posDoubled[1], posDoubled[2]);\n" +
+"io.outputLine(tiered.length(), tiered[0], tiered[1], tiered[2]);\n" +
+"io.outputLine(nested.length(), nested[0], nested[1]);\n" +
+"io.outputLine(matchedSubj.length(), matchedSubj[0], matchedSubj[1], matchedSubj[2]);\n" +
+"io.outputLine(matchedCond.length(), matchedCond[0], matchedCond[1], matchedCond[2]);\n" +
 "io.outputLine(lastPos, nonePos);\n";
 
 loop optFlags as flag {

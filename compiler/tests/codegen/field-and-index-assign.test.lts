@@ -86,8 +86,8 @@ test.checkText("block field/index assign stdout", "10 1 2 | 18 4 99 18 2 13 25\n
 
 /* 5. Compile-time rejections */
 compilerTest.assertCompileError(root, tsComp, "immutable record field assign", "Pos := record { x: Int; };\np := Pos { x = 1 };\np.x = 2;\n", "3:1: cannot mutate field of immutable local p\n");
-compilerTest.assertCompileError(root, tsComp, "immutable map compound assign", "m: Map<String, Int> = [\"a\" = 1];\nm[\"a\"] += 1;\n", "2:1: cannot mutate immutable map m\n");
-compilerTest.assertCompileError(root, tsComp, "immutable list compound assign", "xs: List<Int> = [1, 2];\nxs[0] += 1;\n", "2:1: cannot mutate immutable list xs\n");
+compilerTest.assertCompileError(root, tsComp, "immutable map compound assign", "m: Map<String, Int> = [\"a\" = 1];\nm[\"a\"] += 1;\n", "2:1: cannot mutate read-only value m via index assignment\n");
+compilerTest.assertCompileError(root, tsComp, "immutable list compound assign", "xs: List<Int> = [1, 2];\nxs[0] += 1;\n", "2:1: cannot mutate read-only value xs via index assignment\n");
 cRecField := compilerTest.compileStdin(root, cComp, "Pos := record { x: Int; };\nvar p := Pos { x = 1 };\np.x = 2;\n", "");
 test.checkInt("C compiles record field assign: " + cRecField.stderr, 0, cRecField.status);
 

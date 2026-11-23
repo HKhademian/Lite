@@ -15,4 +15,4 @@ loop i < n {
     i += 1;
 }
 
-io.outputLine(word.length, word.isEmpty, tags.length, unique.size, unique.isEmpty);
+io.outputLine(word.length(), word.isEmpty(), tags.length(), unique.size(), unique.isEmpty());

@@ -1,4 +1,4 @@
-/* Focused tests for collection and string metadata properties (.length, .size, .isEmpty). */
+/* Focused tests for collection and string metadata operations (.length(), .size(), .isEmpty()). */
 
 test := import "core/test";
 compilerBuild := import "util/compiler-build";
@@ -14,7 +14,7 @@ test.check("select C compiler: " + selC.error, selC.ok);
 tsComp := selTs.path;
 cComp := selC.path;
 
-/* 1. List, Array, Map, Set, String properties (non-empty, empty, Unicode, chained with loop .collected) */
+/* 1. List, Array, Map, Set, String operations (non-empty, empty, Unicode, chained with loop .collected) */
 propsProg :=
 "io := import \"core/io\";\n" +
 "xs: List<Int> = [10, 20, 30];\n" +
@@ -27,13 +27,13 @@ propsProg :=
 "txt := \"hello\";\n" +
 "emoji := \"a🚀b\";\n" +
 "emptyTxt := \"\";\n" +
-"chainedLen := loop xs { .item * 2 }.collected.length;\n" +
-"chainedEmpty := loop emptyXs { .item * 2 }.collected.isEmpty;\n" +
-"io.outputLine(xs.length, xs.isEmpty, emptyXs.length, emptyXs.isEmpty);\n" +
-"io.outputLine(arr.length, arr.isEmpty);\n" +
-"io.outputLine(m.size, m.isEmpty, emptyM.size, emptyM.isEmpty);\n" +
-"io.outputLine(s.size, s.isEmpty, emptyS.size, emptyS.isEmpty);\n" +
-"io.outputLine(txt.length, txt.isEmpty, emoji.length, emptyTxt.length, emptyTxt.isEmpty);\n" +
+"chainedLen := loop xs { .item * 2 }.collected.length();\n" +
+"chainedEmpty := loop emptyXs { .item * 2 }.collected.isEmpty();\n" +
+"io.outputLine(xs.length(), xs.isEmpty(), emptyXs.length(), emptyXs.isEmpty());\n" +
+"io.outputLine(arr.length(), arr.isEmpty());\n" +
+"io.outputLine(m.size(), m.isEmpty(), emptyM.size(), emptyM.isEmpty());\n" +
+"io.outputLine(s.size(), s.isEmpty(), emptyS.size(), emptyS.isEmpty());\n" +
+"io.outputLine(txt.length(), txt.isEmpty(), emoji.length(), emptyTxt.length(), emptyTxt.isEmpty());\n" +
 "io.outputLine(chainedLen, chainedEmpty);\n";
 
 optFlags := ["-O0", "-O1", "-O2", "-O3"];
@@ -47,13 +47,13 @@ loop optFlags as flag {
     rProps.stdout);
 }
 
-/* 2. Dynamic String.isEmpty & String.length (non-constant runtime string, without importing core/text) */
+/* 2. Dynamic String.isEmpty() & String.length() (non-constant runtime string, without importing core/text) */
 dynStrProg :=
 "io := import \"core/io\";\n" +
 "describe := fn(s: String): String {\n" +
-"    if s.isEmpty { \"empty\" } else { \"nonempty\" }\n" +
+"    if s.isEmpty() { \"empty\" } else { \"nonempty\" }\n" +
 "};\n" +
-"io.outputLine(describe(\"\"), describe(\"hi\"), \"abc\".length);\n";
+"io.outputLine(describe(\"\"), describe(\"hi\"), \"abc\".length());\n";
 
 cDyn := compilerTest.compileStdin(root, tsComp, dynStrProg, "");
 test.checkInt("dynamic string props compile: " + cDyn.stderr, 0, cDyn.status);
@@ -61,25 +61,28 @@ rDyn := compilerTest.checkAndRunTs(root, cDyn.stdout);
 test.checkInt("dynamic string props run: " + rDyn.stderr, 0, rDyn.status);
 test.checkText("dynamic string props stdout", "empty nonempty 3\n", rDyn.stdout);
 
-/* 3. Compile-time rejections */
-compilerTest.assertCompileError(root, tsComp, "List rejects .size",
-"xs: List<Int> = [1];\nn := xs.size;\n",
-"2:9: List has no property .size\n");
-compilerTest.assertCompileError(root, tsComp, "Array rejects .size",
-"arr := [1, 2];\nn := arr.size;\n",
-"2:10: Array has no property .size\n");
-compilerTest.assertCompileError(root, tsComp, "Map rejects .length",
-"m := [\"a\" = 1];\nn := m.length;\n",
-"2:8: Map has no property .length\n");
-compilerTest.assertCompileError(root, tsComp, "Set rejects .length",
-"s: Set<Int> = [1];\nn := s.length;\n",
-"2:8: Set has no property .length\n");
-compilerTest.assertCompileError(root, tsComp, "String rejects .size",
-"s := \"hi\";\nn := s.size;\n",
-"2:8: String has no property .size\n");
-cListProp := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; xs := [1, 2]; io.outputLine(xs.length, xs.isEmpty);\n", "");
-test.checkInt("C compiles list collection properties: " + cListProp.stderr, 0, cListProp.status);
-cMapProp := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; m := [\"a\" = 1]; io.outputLine(m.size, m.isEmpty);\n", "");
-test.checkInt("C compiles map collection properties: " + cMapProp.stderr, 0, cMapProp.status);
+/* 3. Compile-time rejections: unknown operations and bare dot-op without () */
+compilerTest.assertCompileErrorContains(root, tsComp, "List rejects .size()",
+"xs: List<Int> = [1];\nn := xs.size();\n",
+"has no operation size");
+compilerTest.assertCompileErrorContains(root, tsComp, "List rejects bare .length",
+"xs: List<Int> = [1];\nn := xs.length;\n",
+"must be called with (...)");
+compilerTest.assertCompileErrorContains(root, tsComp, "Array rejects .size()",
+"arr := [1, 2];\nn := arr.size();\n",
+"has no operation size");
+compilerTest.assertCompileErrorContains(root, tsComp, "Map rejects .length()",
+"m := [\"a\" = 1];\nn := m.length();\n",
+"has no operation length");
+compilerTest.assertCompileErrorContains(root, tsComp, "Set rejects .length()",
+"s: Set<Int> = [1];\nn := s.length();\n",
+"has no operation length");
+compilerTest.assertCompileErrorContains(root, tsComp, "String rejects .size()",
+"s := \"hi\";\nn := s.size();\n",
+"has no operation size");
+cListProp := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; xs := [1, 2]; io.outputLine(xs.length(), xs.isEmpty());\n", "");
+test.checkInt("C compiles list collection operations: " + cListProp.stderr, 0, cListProp.status);
+cMapProp := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; m := [\"a\" = 1]; io.outputLine(m.size(), m.isEmpty());\n", "");
+test.checkInt("C compiles map collection operations: " + cMapProp.stderr, 0, cMapProp.status);
 
 test.done("collection-props");

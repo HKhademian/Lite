@@ -15,5 +15,5 @@ loop i < n {
     i += 1;
 }
 
-/* TODO: replace the placeholders using word.length, word.isEmpty, tags.length, unique.size, unique.isEmpty */
+/* TODO: replace the placeholders using word.length(), word.isEmpty(), tags.length(), unique.size(), unique.isEmpty() */
 io.outputLine(0, false, 0, 0, false);

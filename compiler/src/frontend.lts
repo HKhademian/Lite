@@ -3617,8 +3617,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         if position < size and textLib.at(source, position) == "[" {
             mapLocalIdx := localIndex(locals, name);
             if mapLocalIdx >= 0 and (expr.hasIndexHook(locals[mapLocalIdx].kind, "$setIndex", functions) or
-            (not types.isMapKind(locals[mapLocalIdx].kind) and not isListKind(locals[mapLocalIdx].kind) and not isArrayKind(locals[mapLocalIdx].kind) and
-            expr.hasIndexHook(locals[mapLocalIdx].kind, "$getIndex", functions))) {
+            expr.hasIndexHook(locals[mapLocalIdx].kind, "$getIndex", functions)) {
                 bracketEnd := syntax.scanBracketEnd(source, position, prefix);
                 afterBracket := if bracketEnd >= 0 { skipTrivia(source, bracketEnd, prefix) } else { -1 };
                 hookCompOp := if afterBracket >= 0 { compoundAssignOp(source, afterBracket) } else { (op = "", baseOp = "", width = 0) };
@@ -3664,127 +3663,6 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     locals = checkStatementTrace(target, source, nameStart, prefix, stmtCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                     statementNext := consumeStatementEnd(source, valParsed.next, prefix);
                     if statementNext < 0 { failAt(source, skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after index assignment"); }
-                    position = statementNext;
-                    if currentLive and not currentStopped {
-                        listLib.pushBack(mut items, (kind = ITEM_KIND_CALL, name = "", runtime = "", code = stmtCode, intValue = 0, textValue = ""));
-                        if codeHasRawTransfer(stmtCode) {
-                            listLib.pushBack(mut transferCodes, stmtCode);
-                            transferCount = transferCount + 1;
-                        }
-                    }
-                    continue;
-                }
-            }
-            if mapLocalIdx >= 0 and types.isMapKind(locals[mapLocalIdx].kind) {
-                bracketEnd := syntax.scanBracketEnd(source, position, prefix);
-                afterBracket := if bracketEnd >= 0 { skipTrivia(source, bracketEnd, prefix) } else { -1 };
-                mapCompOp := if afterBracket >= 0 { compoundAssignOp(source, afterBracket) } else { (op = "", baseOp = "", width = 0) };
-                if afterBracket >= 0 and (isSingleEquals(source, afterBracket) or mapCompOp.width > 0) {
-                    entry := locals[mapLocalIdx];
-                    if entry.initState =!= INIT_STATE_INIT {
-                        failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
-                    }
-                    if not entry.writable {
-                        failAt(source, nameStart, prefix, "cannot mutate immutable map " + name);
-                    }
-                    kKind := types.mapKeyKind(entry.kind);
-                    vKind := types.mapValueKind(entry.kind);
-                    kStart := skipTrivia(source, position + 1, prefix);
-                    keyParsed := parseExpressionAsCtx(target, source, kStart, prefix, locals, functions, functionParams, currentName, kKind, stmtCtxs, aliases);
-                    if not types.isCompatibleKind(kKind, keyParsed.kind) {
-                        failAt(source, kStart, prefix, "map key must be " + displayKind(kKind) + ", got " + displayKind(keyParsed.kind));
-                    }
-                    closePos := expectSymbol(source, skipTrivia(source, keyParsed.next, prefix), "]", prefix);
-                    opPos := skipTrivia(source, closePos, prefix);
-                    opWidth := if mapCompOp.width > 0 { mapCompOp.width } else { 1 };
-                    vStart := skipTrivia(source, opPos + opWidth, prefix);
-                    valParsed := parseExpressionAsCtx(target, source, vStart, prefix, locals, functions, functionParams, currentName, vKind, stmtCtxs, aliases);
-                    if not types.isCompatibleKind(vKind, valParsed.kind) {
-                        failAt(source, vStart, prefix, "map value must be " + displayKind(vKind) + ", got " + displayKind(valParsed.kind));
-                    }
-                    kCode := assignValueCode(target, kKind, keyParsed.kind, keyParsed.code);
-                    stmtCode := if target == TARGET_C {
-                        mTag := types.cMapTag(entry.kind);
-                        if mapCompOp.width > 0 {
-                            curValCode := mTag + "_at(" + entry.runtime + ", " + kCode + ", " + integer.intText(nameStart) + ")";
-                            nextValCode := compoundAssignCode(target, source, opPos, prefix, vKind, curValCode, mapCompOp.baseOp, valParsed);
-                            mTag + "_set(&" + entry.runtime + ", " + kCode + ", " + nextValCode + ")"
-                        } else {
-                            mTag + "_set(&" + entry.runtime + ", " + kCode + ", " + assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")"
-                        }
-                    } else if mapCompOp.width > 0 {
-                        curValCode := "lite$mapAt(" + entry.runtime + ", lite$ck, " + integer.intText(nameStart) + ")";
-                        nextValCode := compoundAssignCode(target, source, opPos, prefix, vKind, curValCode, mapCompOp.baseOp, valParsed);
-                        "((lite$ck: " + tsFunctionType(kKind) + ") => (" + entry.runtime + ").set(lite$ck, " + nextValCode + "))(" + kCode + ")"
-                    } else {
-                        "(" + entry.runtime + ").set(" + kCode + ", " + assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")"
-                    };
-                    locals = checkStatementTrace(target, source, nameStart, prefix, stmtCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
-                    statementNext := consumeStatementEnd(source, valParsed.next, prefix);
-                    if statementNext < 0 { failAt(source, skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after map assignment"); }
-                    position = statementNext;
-                    if currentLive and not currentStopped {
-                        listLib.pushBack(mut items, (kind = ITEM_KIND_CALL, name = "", runtime = "", code = stmtCode, intValue = 0, textValue = ""));
-                        if codeHasRawTransfer(stmtCode) {
-                            listLib.pushBack(mut transferCodes, stmtCode);
-                            transferCount = transferCount + 1;
-                        }
-                    }
-                    continue;
-                }
-            } else if mapLocalIdx >= 0 and (isListKind(locals[mapLocalIdx].kind) or isArrayKind(locals[mapLocalIdx].kind)) {
-                bracketEnd := syntax.scanBracketEnd(source, position, prefix);
-                afterBracket := if bracketEnd >= 0 { skipTrivia(source, bracketEnd, prefix) } else { -1 };
-                listCompOp := if afterBracket >= 0 { compoundAssignOp(source, afterBracket) } else { (op = "", baseOp = "", width = 0) };
-                if afterBracket >= 0 and (isSingleEquals(source, afterBracket) or listCompOp.width > 0) {
-                    entry := locals[mapLocalIdx];
-                    if entry.initState =!= INIT_STATE_INIT {
-                        failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
-                    }
-                    isArr := isArrayKind(entry.kind);
-                    if not isArr and not entry.writable {
-                        failAt(source, nameStart, prefix, "cannot mutate immutable list " + name);
-                    }
-                    if isArr and not entry.mutable {
-                        failAt(source, nameStart, prefix, "cannot mutate immutable array " + name);
-                    }
-                    elKind := if isArr { arrayElementKind(entry.kind) } else { listElementKind(entry.kind) };
-                    cTag := if target == TARGET_C { types.cListTag(elKind) } else { "" };
-                    if target =!= TARGET_TS and cTag == "" {
-                        failAt(source, nameStart, prefix, "C backend does not support list index assignment yet");
-                    }
-                    idxStart := skipTrivia(source, position + 1, prefix);
-                    idxParsed := parseExpressionAsCtx(target, source, idxStart, prefix, locals, functions, functionParams, currentName, VALUE_KIND_INT, stmtCtxs, aliases);
-                    if not numeric.isIntKind(idxParsed.kind) {
-                        failAt(source, idxStart, prefix, "list index must be Int, got " + displayKind(idxParsed.kind));
-                    }
-                    closePos := expectSymbol(source, skipTrivia(source, idxParsed.next, prefix), "]", prefix);
-                    opPos := skipTrivia(source, closePos, prefix);
-                    opWidth := if listCompOp.width > 0 { listCompOp.width } else { 1 };
-                    vStart := skipTrivia(source, opPos + opWidth, prefix);
-                    valParsed := parseExpressionAsCtx(target, source, vStart, prefix, locals, functions, functionParams, currentName, elKind, stmtCtxs, aliases);
-                    if not types.isCompatibleKind(elKind, valParsed.kind) {
-                        failAt(source, vStart, prefix, "list element must be " + displayKind(elKind) + ", got " + displayKind(valParsed.kind));
-                    }
-                    idxCode := assignValueCode(target, VALUE_KIND_INT, idxParsed.kind, idxParsed.code);
-                    stmtCode := if target == TARGET_C {
-                        if listCompOp.width > 0 {
-                            curElCode := "lt_list_" + cTag + "_at(" + entry.runtime + ", " + idxCode + ", " + integer.intText(nameStart) + ")";
-                            nextElCode := compoundAssignCode(target, source, opPos, prefix, elKind, curElCode, listCompOp.baseOp, valParsed);
-                            "lt_list_" + cTag + "_set(&" + entry.runtime + ", " + idxCode + ", " + nextElCode + ", " + integer.intText(nameStart) + ")"
-                        } else {
-                            "lt_list_" + cTag + "_set(&" + entry.runtime + ", " + idxCode + ", " + assignValueCode(target, elKind, valParsed.kind, valParsed.code) + ", " + integer.intText(nameStart) + ")"
-                        }
-                    } else if listCompOp.width > 0 {
-                        curElCode := "lite$listAt(" + entry.runtime + ", lite$ci, " + integer.intText(nameStart) + ")";
-                        nextElCode := compoundAssignCode(target, source, opPos, prefix, elKind, curElCode, listCompOp.baseOp, valParsed);
-                        "((lite$ci: bigint) => lite$listSet(" + entry.runtime + ", lite$ci, " + nextElCode + ", " + integer.intText(nameStart) + "))(" + idxCode + ")"
-                    } else {
-                        "lite$listSet(" + entry.runtime + ", " + idxCode + ", " + assignValueCode(target, elKind, valParsed.kind, valParsed.code) + ", " + integer.intText(nameStart) + ")"
-                    };
-                    locals = checkStatementTrace(target, source, nameStart, prefix, stmtCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
-                    statementNext := consumeStatementEnd(source, valParsed.next, prefix);
-                    if statementNext < 0 { failAt(source, skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after list assignment"); }
                     position = statementNext;
                     if currentLive and not currentStopped {
                         listLib.pushBack(mut items, (kind = ITEM_KIND_CALL, name = "", runtime = "", code = stmtCode, intValue = 0, textValue = ""));

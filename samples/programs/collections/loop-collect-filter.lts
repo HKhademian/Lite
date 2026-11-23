@@ -18,6 +18,6 @@ labels := loop readings {
     }
 }.collected;
 
-io.outputLine("all:", doubled.length, doubled);
-io.outputLine("positives:", positives.length, positives.isEmpty, positives);
-io.outputLine("labels:", labels.length, labels);
+io.outputLine("all:", doubled.length(), doubled);
+io.outputLine("positives:", positives.length(), positives.isEmpty(), positives);
+io.outputLine("labels:", labels.length(), labels);

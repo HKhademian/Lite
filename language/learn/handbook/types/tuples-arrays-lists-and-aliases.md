@@ -63,7 +63,7 @@ Notice `saved: List<Int> = queue;` takes an independent value snapshot of `queue
 
 ## Typed Maps `Map<K, V>`
 
-Store typed key-value entries with `Map<K, V>` (scalar or nominal `enum` keys, any value type). Maps support `[k = v, ...]` / `[]` literals and zero-initialization (`Map<K, V>;`), require `mut Map<K, V>` for indexed writes (`scores["alice"] += 1;`) or mutating [core/map](lite://module/core/map) calls, expose `.size` and `.isEmpty`, copy independently on assignment, and iterate `(key, value)` pairs in insertion order:
+Store typed key-value entries with `Map<K, V>` (scalar or nominal `enum` keys, any value type). Maps support `[k = v, ...]` / `[]` literals and zero-initialization (`Map<K, V>;`), require `mut Map<K, V>` for indexed writes (`scores["alice"] += 1;`) or mutating [core/map](lite://module/core/map) operations, expose `.size()` and `.isEmpty()`, copy independently on assignment, and iterate `(key, value)` pairs in insertion order:
 
 ```lite
 io := import "core/io";
@@ -72,7 +72,7 @@ map := import "core/map";
 scores: mut Map<String, Int> = ["alice" = 10];
 scores["alice"] += 8;
 map.set(mut scores, "bob", 25);
-io.outputLine(scores["alice"], map.getOr(scores, "carol", 0), scores.size, scores.isEmpty);
+io.outputLine(scores["alice"], scores.getOr("carol", 0), scores.size(), scores.isEmpty());
 ```
 
 ## Nominal Plain & Value Enums

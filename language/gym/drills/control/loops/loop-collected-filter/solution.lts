@@ -11,8 +11,8 @@ loop i < n {
 
 doubled := loop raw { if .item > 0 { .item * 2 } }.collected;
 
-if doubled.isEmpty {
+if doubled.isEmpty() {
     io.outputLine(0, "empty");
 } else {
-    io.outputLine(doubled.length, doubled[0], doubled[doubled.length - 1]);
+    io.outputLine(doubled.length(), doubled[0], doubled[doubled.length() - 1]);
 }

@@ -2876,10 +2876,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             (syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) or
              syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0) and
             (hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$setIndex", functions) or
-             hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$getIndex", functions) or
-             types.isMapKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or
-             types.isListKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or
-             types.isArrayKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind)) {
+             hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$getIndex", functions)) {
                 isStatement = true;
                 entry := blockLocals[sym.localIndex(blockLocals, itemName)];
                 if entry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
@@ -2887,167 +2884,59 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 afterBrk := syntax.skipTrivia(source, bracketEndPos, prefix);
                 idxCompOp := syntax.compoundAssignOp(source, afterBrk);
                 opWidth := if idxCompOp.width > 0 { idxCompOp.width } else { 1 };
-                if hasIndexHook(entry.kind, "$setIndex", functions) or (not types.isMapKind(entry.kind) and not types.isListKind(entry.kind) and not types.isArrayKind(entry.kind)) {
-                    setHook := resolveIndexHookOp(target, source, itemStart, prefix, entry.kind, "$setIndex", functions, params, inferMode);
-                    if not setHook.found {
-                        syntax.failAt(source, itemStart, prefix, "type " + types.displayKind(entry.kind) + " does not define $setIndex for index assignment");
-                    }
-                    canMutateHook := if types.isArrayKind(entry.kind) { entry.mutable or entry.writable } else { entry.writable };
-                    if not canMutateHook {
-                        syntax.failAt(source, itemStart, prefix, "cannot mutate read-only value " + itemName + " via index assignment");
-                    }
-                    var getHookRuntime := "";
-                    if idxCompOp.width > 0 {
-                        getHook := resolveIndexHookOp(target, source, itemStart, prefix, entry.kind, "$getIndex", functions, params, inferMode);
-                        if not getHook.found {
-                            syntax.failAt(source, itemStart, prefix, "compound index assignment requires both $getIndex and $setIndex on " + types.displayKind(entry.kind));
-                        }
-                        if not types.isCompatibleKind(getHook.keyKind, setHook.keyKind) or not types.isCompatibleKind(setHook.valKind, getHook.valKind) {
-                            syntax.failAt(source, itemStart, prefix, "incompatible $getIndex and $setIndex types for compound index assignment on " + types.displayKind(entry.kind));
-                        }
-                        getHookRuntime = getHook.runtime;
-                    }
-                    kStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
-                    keyParsed := parseBinaryCtx(target, source, kStart, prefix, blockLocals, functions, params, currentName, setHook.keyKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
-                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, keyParsed); }
-                    if not types.isCompatibleKind(setHook.keyKind, keyParsed.kind) {
-                        syntax.failAt(source, kStart, prefix, "index must be " + types.displayKind(setHook.keyKind) + ", got " + types.displayKind(keyParsed.kind));
-                    }
-                    closePos := syntax.expectSymbol(source, syntax.skipTrivia(source, keyParsed.next, prefix), "]", prefix);
-                    opPos := syntax.skipTrivia(source, closePos, prefix);
-                    vStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
-                    valParsed := parseBinaryCtx(target, source, vStart, prefix, blockLocals, functions, params, currentName, setHook.valKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
-                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, valParsed); }
-                    if not types.isCompatibleKind(setHook.valKind, valParsed.kind) {
-                        syntax.failAt(source, vStart, prefix, "assigned value must be " + types.displayKind(setHook.valKind) + ", got " + types.displayKind(valParsed.kind));
-                    }
-                    kCode := ctx.assignValueCode(target, setHook.keyKind, keyParsed.kind, keyParsed.code);
-                    stmtCode := emitHookIndexAssignCode(target, source, opPos, prefix, entry, setHook.runtime, getHookRuntime, setHook.keyKind, setHook.valKind, kCode, idxCompOp.baseOp, valParsed);
-                    if target == ir.TARGET_TS and not inferMode and not blockExits {
-                        trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
-                    }
-                    statementNext := syntax.consumeStatementEnd(source, valParsed.next, prefix);
-                    if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after index assignment"); }
-                    if target == ir.TARGET_TS and not inferMode and not blockExits {
-                        blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
-                    }
-                    if not blockExits {
-                        emittedStmt := if target == ir.TARGET_C and textLib.startsWithAt(stmtCode, 0, "{ /*c-stmt*/") { stmtCode } else { stmtCode + ";" };
-                        listLib.pushBack(mut statements, emittedStmt);
-                        listLib.pushBack(mut stmtOwners, "");
-                        listLib.pushBack(mut stmtDeps, stmtCode);
-                        trackedStmtCount = trackedStmtCount + 1;
-                        statementCount = statementCount + 1;
-                    }
-                    blockConstant = false;
-                    cursor = statementNext;
-                } else if types.isMapKind(entry.kind) {
-                    if not entry.writable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable map " + itemName); }
-                    kKind := types.mapKeyKind(entry.kind);
-                    vKind := types.mapValueKind(entry.kind);
-                    kStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
-                    keyParsed := parseBinaryCtx(target, source, kStart, prefix, blockLocals, functions, params, currentName, kKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
-                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, keyParsed); }
-                    if not types.isCompatibleKind(kKind, keyParsed.kind) {
-                        syntax.failAt(source, kStart, prefix, "map key must be " + types.displayKind(kKind) + ", got " + types.displayKind(keyParsed.kind));
-                    }
-                    closePos := syntax.expectSymbol(source, syntax.skipTrivia(source, keyParsed.next, prefix), "]", prefix);
-                    opPos := syntax.skipTrivia(source, closePos, prefix);
-                    vStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
-                    valParsed := parseBinaryCtx(target, source, vStart, prefix, blockLocals, functions, params, currentName, vKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
-                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, valParsed); }
-                    if not types.isCompatibleKind(vKind, valParsed.kind) {
-                        syntax.failAt(source, vStart, prefix, "map value must be " + types.displayKind(vKind) + ", got " + types.displayKind(valParsed.kind));
-                    }
-                    kCode := ctx.assignValueCode(target, kKind, keyParsed.kind, keyParsed.code);
-                    stmtCode := if target == ir.TARGET_C {
-                        mTag := types.cMapTag(entry.kind);
-                        if idxCompOp.width > 0 {
-                            curValCode := mTag + "_at(" + entry.runtime + ", " + kCode + ", " + integer.intText(itemStart) + ")";
-                            nextValCode := ctx.compoundAssignCode(target, source, opPos, prefix, vKind, curValCode, idxCompOp.baseOp, valParsed);
-                            mTag + "_set(&" + entry.runtime + ", " + kCode + ", " + nextValCode + ")"
-                        } else {
-                            mTag + "_set(&" + entry.runtime + ", " + kCode + ", " + ctx.assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")"
-                        }
-                    } else if idxCompOp.width > 0 {
-                        curValCode := "lite$mapAt(" + entry.runtime + ", lite$ck, " + integer.intText(itemStart) + ")";
-                        nextValCode := ctx.compoundAssignCode(target, source, opPos, prefix, vKind, curValCode, idxCompOp.baseOp, valParsed);
-                        "((lite$ck: " + types.tsFunctionType(kKind) + ") => (" + entry.runtime + ").set(lite$ck, " + nextValCode + "))(" + kCode + ")"
-                    } else {
-                        "(" + entry.runtime + ").set(" + kCode + ", " + ctx.assignValueCode(target, vKind, valParsed.kind, valParsed.code) + ")"
-                    };
-                    if target == ir.TARGET_TS and not inferMode and not blockExits {
-                        trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
-                    }
-                    statementNext := syntax.consumeStatementEnd(source, valParsed.next, prefix);
-                    if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after map assignment"); }
-                    if target == ir.TARGET_TS and not inferMode and not blockExits {
-                        blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
-                    }
-                    if not blockExits {
-                        listLib.pushBack(mut statements, stmtCode + ";");
-                        listLib.pushBack(mut stmtOwners, "");
-                        listLib.pushBack(mut stmtDeps, stmtCode);
-                        trackedStmtCount = trackedStmtCount + 1;
-                        statementCount = statementCount + 1;
-                    }
-                    blockConstant = false;
-                    cursor = statementNext;
-                } else {
-                    isArr := types.isArrayKind(entry.kind);
-                    if not isArr and not entry.writable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable list " + itemName); }
-                    if isArr and not entry.mutable { syntax.failAt(source, itemStart, prefix, "cannot mutate immutable array " + itemName); }
-                    elKind := if isArr { types.arrayElementKind(entry.kind) } else { types.listElementKind(entry.kind) };
-                    cListAssignTag := if target == ir.TARGET_C { types.cListTag(elKind) } else { "" };
-                    if target =!= ir.TARGET_TS and cListAssignTag == "" { syntax.failAt(source, itemStart, prefix, "C backend does not support list index assignment yet"); }
-                    idxStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
-                    idxParsed := parseBinaryCtx(target, source, idxStart, prefix, blockLocals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
-                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, idxParsed); }
-                    if not numeric.isIntKind(idxParsed.kind) {
-                        syntax.failAt(source, idxStart, prefix, "list index must be Int, got " + types.displayKind(idxParsed.kind));
-                    }
-                    closePos := syntax.expectSymbol(source, syntax.skipTrivia(source, idxParsed.next, prefix), "]", prefix);
-                    opPos := syntax.skipTrivia(source, closePos, prefix);
-                    vStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
-                    valParsed := parseBinaryCtx(target, source, vStart, prefix, blockLocals, functions, params, currentName, elKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
-                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, valParsed); }
-                    if not types.isCompatibleKind(elKind, valParsed.kind) {
-                        syntax.failAt(source, vStart, prefix, "list element must be " + types.displayKind(elKind) + ", got " + types.displayKind(valParsed.kind));
-                    }
-                    idxCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxParsed.kind, idxParsed.code);
-                    stmtCode := if target == ir.TARGET_C {
-                        if idxCompOp.width > 0 {
-                            curElCode := "lt_list_" + cListAssignTag + "_at(" + entry.runtime + ", " + idxCode + ", " + integer.intText(itemStart) + ")";
-                            nextElCode := ctx.compoundAssignCode(target, source, opPos, prefix, elKind, curElCode, idxCompOp.baseOp, valParsed);
-                            "lt_list_" + cListAssignTag + "_set(&" + entry.runtime + ", " + idxCode + ", " + nextElCode + ", " + integer.intText(itemStart) + ")"
-                        } else {
-                            "lt_list_" + cListAssignTag + "_set(&" + entry.runtime + ", " + idxCode + ", " + ctx.assignValueCode(target, elKind, valParsed.kind, valParsed.code) + ", " + integer.intText(itemStart) + ")"
-                        }
-                    } else if idxCompOp.width > 0 {
-                        curElCode := "lite$listAt(" + entry.runtime + ", lite$ci, " + integer.intText(itemStart) + ")";
-                        nextElCode := ctx.compoundAssignCode(target, source, opPos, prefix, elKind, curElCode, idxCompOp.baseOp, valParsed);
-                        "((lite$ci: bigint) => lite$listSet(" + entry.runtime + ", lite$ci, " + nextElCode + ", " + integer.intText(itemStart) + "))(" + idxCode + ")"
-                    } else {
-                        "lite$listSet(" + entry.runtime + ", " + idxCode + ", " + ctx.assignValueCode(target, elKind, valParsed.kind, valParsed.code) + ", " + integer.intText(itemStart) + ")"
-                    };
-                    if target == ir.TARGET_TS and not inferMode and not blockExits {
-                        trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
-                    }
-                    statementNext := syntax.consumeStatementEnd(source, valParsed.next, prefix);
-                    if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after list assignment"); }
-                    if target == ir.TARGET_TS and not inferMode and not blockExits {
-                        blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
-                    }
-                    if not blockExits {
-                        listLib.pushBack(mut statements, stmtCode + ";");
-                        listLib.pushBack(mut stmtOwners, "");
-                        listLib.pushBack(mut stmtDeps, stmtCode);
-                        trackedStmtCount = trackedStmtCount + 1;
-                        statementCount = statementCount + 1;
-                    }
-                    blockConstant = false;
-                    cursor = statementNext;
+                setHook := resolveIndexHookOp(target, source, itemStart, prefix, entry.kind, "$setIndex", functions, params, inferMode);
+                if not setHook.found {
+                    syntax.failAt(source, itemStart, prefix, "type " + types.displayKind(entry.kind) + " does not define $setIndex for index assignment");
                 }
+                canMutateHook := if types.isArrayKind(entry.kind) { entry.mutable or entry.writable } else { entry.writable };
+                if not canMutateHook {
+                    syntax.failAt(source, itemStart, prefix, "cannot mutate read-only value " + itemName + " via index assignment");
+                }
+                var getHookRuntime := "";
+                if idxCompOp.width > 0 {
+                    getHook := resolveIndexHookOp(target, source, itemStart, prefix, entry.kind, "$getIndex", functions, params, inferMode);
+                    if not getHook.found {
+                        syntax.failAt(source, itemStart, prefix, "compound index assignment requires both $getIndex and $setIndex on " + types.displayKind(entry.kind));
+                    }
+                    if not types.isCompatibleKind(getHook.keyKind, setHook.keyKind) or not types.isCompatibleKind(setHook.valKind, getHook.valKind) {
+                        syntax.failAt(source, itemStart, prefix, "incompatible $getIndex and $setIndex types for compound index assignment on " + types.displayKind(entry.kind));
+                    }
+                    getHookRuntime = getHook.runtime;
+                }
+                kStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
+                keyParsed := parseBinaryCtx(target, source, kStart, prefix, blockLocals, functions, params, currentName, setHook.keyKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, keyParsed); }
+                if not types.isCompatibleKind(setHook.keyKind, keyParsed.kind) {
+                    syntax.failAt(source, kStart, prefix, "index must be " + types.displayKind(setHook.keyKind) + ", got " + types.displayKind(keyParsed.kind));
+                }
+                closePos := syntax.expectSymbol(source, syntax.skipTrivia(source, keyParsed.next, prefix), "]", prefix);
+                opPos := syntax.skipTrivia(source, closePos, prefix);
+                vStart := syntax.skipTrivia(source, opPos + opWidth, prefix);
+                valParsed := parseBinaryCtx(target, source, vStart, prefix, blockLocals, functions, params, currentName, setHook.valKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, valParsed); }
+                if not types.isCompatibleKind(setHook.valKind, valParsed.kind) {
+                    syntax.failAt(source, vStart, prefix, "assigned value must be " + types.displayKind(setHook.valKind) + ", got " + types.displayKind(valParsed.kind));
+                }
+                kCode := ctx.assignValueCode(target, setHook.keyKind, keyParsed.kind, keyParsed.code);
+                stmtCode := emitHookIndexAssignCode(target, source, opPos, prefix, entry, setHook.runtime, getHookRuntime, setHook.keyKind, setHook.valKind, kCode, idxCompOp.baseOp, valParsed);
+                if target == ir.TARGET_TS and not inferMode and not blockExits {
+                    trace.checkTraceSafety(source, itemStart, prefix, stmtCode, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
+                }
+                statementNext := syntax.consumeStatementEnd(source, valParsed.next, prefix);
+                if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, valParsed.next, prefix), prefix, "expected ; after index assignment"); }
+                if target == ir.TARGET_TS and not inferMode and not blockExits {
+                    blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
+                }
+                if not blockExits {
+                    emittedStmt := if target == ir.TARGET_C and textLib.startsWithAt(stmtCode, 0, "{ /*c-stmt*/") { stmtCode } else { stmtCode + ";" };
+                    listLib.pushBack(mut statements, emittedStmt);
+                    listLib.pushBack(mut stmtOwners, "");
+                    listLib.pushBack(mut stmtDeps, stmtCode);
+                    trackedStmtCount = trackedStmtCount + 1;
+                    statementCount = statementCount + 1;
+                }
+                blockConstant = false;
+                cursor = statementNext;
             } else if afterItemName < blockSourceSize and textLib.at(source, afterItemName) == "." and sym.localIndex(blockLocals, itemName) >= 0 and
             (types.isRecordKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or types.isTupleKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind)) {
                 recEntry := blockLocals[sym.localIndex(blockLocals, itemName)];
@@ -7684,9 +7573,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     ownerKey := types.typeOpOwnerKey(left.kind);
                     opIdx := if ownerKey =!= "" { sym.findFunction(functions, "$typeop:" + ownerKey + "." + label) } else { -1 };
                     afterOpLabel := syntax.skipTrivia(source, labelEnd, prefix);
-                    isLegacyProp := (label == "length" or label == "isEmpty" or label == "size") and
-                    (afterOpLabel >= sourceLen or textLib.at(source, afterOpLabel) =!= "(");
-                    if opIdx >= 0 and not isLegacyProp {
+                    if opIdx >= 0 {
                         if afterOpLabel >= sourceLen or textLib.at(source, afterOpLabel) =!= "(" {
                             syntax.failAt(source, labelStart, prefix, "type operation " + types.displayKind(left.kind) + "." + label + " must be called with (...)");
                         }
@@ -7695,68 +7582,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         syntax.failAt(source, labelStart, prefix, "enum " + types.enumDisplayName(left.kind) + " has no field or operation " + label);
                     } else if types.isRecordKind(left.kind) {
                         syntax.failAt(source, labelStart, prefix, "record " + types.recordDisplayName(left.kind) + " has no field or operation " + label);
-                    } else if types.isListKind(left.kind) or types.isArrayKind(left.kind) {
-                        elKind := if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
-                        cTag := if target == ir.TARGET_C { types.cListTag(elKind) } else { "" };
-                        if target =!= ir.TARGET_TS and cTag == "" {
-                            syntax.failAt(source, postPosition, prefix, "C backend does not support collection properties yet");
-                        }
-                        kindLabel := if types.isListKind(left.kind) { "List" } else { "Array" };
-                        if label == "length" {
-                            lenCode := if target == ir.TARGET_C { "((" + left.code + ").len)" } else { "BigInt((" + left.code + ").length)" };
-                            left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = lenCode,
-                            intValue = 0, textValue = "", constant = false, next = labelEnd),
-                            if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
-                        } else if label == "isEmpty" {
-                            empCode := if target == ir.TARGET_C { "((" + left.code + ").len == 0)" } else { "((" + left.code + ").length === 0)" };
-                            left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = empCode,
-                            intValue = 0, textValue = "", constant = false, next = labelEnd),
-                            if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
-                        } else {
-                            syntax.failAt(source, labelStart, prefix, kindLabel + " has no property ." + label);
-                        }
-                    } else if types.isMapKind(left.kind) or types.isSetKind(left.kind) {
-                        msTag := if target == ir.TARGET_C {
-                            if types.isMapKind(left.kind) { types.cMapTag(left.kind) } else { types.cSetTag(left.kind) }
-                        } else { "" };
-                        if target =!= ir.TARGET_TS and msTag == "" {
-                            syntax.failAt(source, postPosition, prefix, "C backend does not support collection properties yet");
-                        }
-                        kindLabel := if types.isMapKind(left.kind) { "Map" } else { "Set" };
-                        if label == "size" {
-                            szCode := if target == ir.TARGET_C { "((" + left.code + ").len)" } else { "BigInt((" + left.code + ").size)" };
-                            left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = szCode,
-                            intValue = 0, textValue = "", constant = false, next = labelEnd),
-                            if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
-                        } else if label == "isEmpty" {
-                            empCode := if target == ir.TARGET_C { "((" + left.code + ").len == 0)" } else { "((" + left.code + ").size === 0)" };
-                            left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = empCode,
-                            intValue = 0, textValue = "", constant = false, next = labelEnd),
-                            if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
-                        } else {
-                            syntax.failAt(source, labelStart, prefix, kindLabel + " has no property ." + label);
-                        }
-                    } else if left.kind == ir.VALUE_KIND_STRING {
-                        if label == "length" {
-                            left = ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = "lite$textLength(" + left.code + ")",
-                            intValue = 0, textValue = "", constant = false, next = labelEnd),
-                            if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
-                        } else if label == "isEmpty" {
-                            isConstEmpty := left.constant;
-                            emptyInt := if isConstEmpty and left.textValue == "" { 1 } else { 0 };
-                            emptyCode := if isConstEmpty {
-                                if emptyInt == 1 { "true" } else { "false" }
-                            } else if target == ir.TARGET_C {
-                                "((" + left.code + ")[0] == '\\0')"
-                            } else {
-                                "((" + left.code + ") === \"\")"
-                            };
-                            left = ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = emptyCode,
-                            intValue = emptyInt, textValue = "", constant = isConstEmpty, next = labelEnd),
-                            if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
-                        } else {
-                            syntax.failAt(source, labelStart, prefix, "String has no property ." + label);
-                        }
+                    } else if ownerKey =!= "" {
+                        syntax.failAt(source, labelStart, prefix, "type " + types.displayKind(left.kind) + " has no operation " + label);
                     } else {
                         if not types.isTupleKind(left.kind) {
                             syntax.failAt(source, postPosition, prefix, "field access requires a tuple or module value");
@@ -7787,36 +7614,16 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 }
                 close := syntax.skipTrivia(source, key.next, prefix);
                 next := syntax.expectSymbol(source, close, "]", prefix);
-                recvCode := ctx.assignReadOnlyArgCode(target, left.kind, left.kind, left.code);
-                kCode := ctx.assignReadOnlyArgCode(target, getHook.keyKind, key.kind, key.code);
+                recvCode := if textLib.startsWithAt(getHook.runtime, 0, "lite$") { left.code } else { ctx.assignReadOnlyArgCode(target, left.kind, left.kind, left.code) };
+                kCode := if textLib.startsWithAt(getHook.runtime, 0, "lite$") { ctx.assignValueCode(target, getHook.keyKind, key.kind, key.code) } else { ctx.assignReadOnlyArgCode(target, getHook.keyKind, key.kind, key.code) };
                 left = ctx.withMarkers((kind = getHook.valKind,
                 code = emitHookIndexReadCode(target, indexStart, left.kind, recvCode, getHook.runtime, kCode),
-                intValue = 0, textValue = "", constant = false, next = next),
-                if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), key) } else { "" });
-            } else if types.isMapKind(left.kind) {
-                kKind := types.mapKeyKind(left.kind);
-                vKind := types.mapValueKind(left.kind);
-                indexStart := syntax.skipTrivia(source, postPosition + 1, prefix);
-                key := parseBinaryCtx(target, source, indexStart, prefix, locals, functions, params, currentName, kKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
-                if not types.isCompatibleKind(kKind, key.kind) {
-                    syntax.failAt(source, indexStart, prefix, "map key must be " + types.displayKind(kKind) + ", got " + types.displayKind(key.kind));
-                }
-                close := syntax.skipTrivia(source, key.next, prefix);
-                next := syntax.expectSymbol(source, close, "]", prefix);
-                kCodeAt := ctx.assignValueCode(target, kKind, key.kind, key.code);
-                mapAtCode := if target == ir.TARGET_C and types.cMapTag(left.kind) =!= "" {
-                    types.cMapTag(left.kind) + "_at(" + left.code + ", " + kCodeAt + ", " + integer.intText(indexStart) + ")"
-                } else {
-                    "lite$mapAt((" + left.code + "), " + kCodeAt + ", " + integer.intText(indexStart) + ")"
-                };
-                left = ctx.withMarkers((kind = vKind,
-                code = mapAtCode,
                 intValue = 0, textValue = "", constant = false, next = next),
                 if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), key) } else { "" });
             } else {
                 isStrSlice := left.kind == ir.VALUE_KIND_STRING;
                 if not types.isListKind(left.kind) and not types.isArrayKind(left.kind) and not isStrSlice {
-                    syntax.failAt(source, postPosition, prefix, "indexing requires a list, array, map, or string value");
+                    syntax.failAt(source, postPosition, prefix, "type " + types.displayKind(left.kind) + " does not define $getIndex for indexing");
                 }
                 indexStart := syntax.skipTrivia(source, postPosition + 1, prefix);
                 var isRangeSlice := false;
@@ -7884,23 +7691,9 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         }
                     } else {
                         if isStrSlice {
-                            syntax.failAt(source, postPosition, prefix, "string indexing requires a range slice (use core/text.at for single code points)");
+                            syntax.failAt(source, postPosition, prefix, "string indexing requires a range slice (use String.at for single code points)");
                         }
-                        if index.kind =!= ir.VALUE_KIND_INT {
-                            syntax.failAt(source, indexStart, prefix, "list index must be Int, got " + types.displayKind(index.kind));
-                        }
-                        close := syntax.skipTrivia(source, index.next, prefix);
-                        next := syntax.expectSymbol(source, close, "]", prefix);
-                        elemKind := if types.isListKind(left.kind) { types.listElementKind(left.kind) } else { types.arrayElementKind(left.kind) };
-                        cAtTag := if target == ir.TARGET_C { types.cListTag(elemKind) } else { "" };
-                        atCode := if cAtTag =!= "" {
-                            "lt_list_" + cAtTag + "_at((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")"
-                        } else {
-                            "lite$listAt((" + left.code + "), " + index.code + ", " + integer.intText(indexStart) + ")"
-                        };
-                        left = ctx.withMarkers((kind = elemKind, code = atCode,
-                        intValue = 0, textValue = "", constant = false, next = next),
-                        sliceMarkers);
+                        syntax.failAt(source, postPosition, prefix, "type " + types.displayKind(left.kind) + " does not define $getIndex for indexing");
                     }
                 }
                 if isRangeSlice {

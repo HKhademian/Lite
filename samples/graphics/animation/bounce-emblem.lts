@@ -89,7 +89,7 @@ onCanvasUpdate := fn(dt: Float): Int {
             st.y = ny;
         }
         if bounced {
-            st.colorIdx = (st.colorIdx + 1) % palette.length;
+            st.colorIdx = (st.colorIdx + 1) % palette.length();
             audio.tone(frequency = notes[st.colorIdx], durationMs = 70, volume = 14);
         }
         render();

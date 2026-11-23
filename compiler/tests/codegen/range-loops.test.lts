@@ -32,12 +32,12 @@ rangeProg :=
 "getEnd := fn(): Int { endCalls += 1; 4 };\n" +
 "onceRes := loop 0..getEnd() { .item }.collected;\n" +
 "io.outputLine(sum);\n" +
-"io.outputLine(squares.length, squares);\n" +
-"io.outputLine(evens.length, evens);\n" +
-"io.outputLine(emptyHalf.length, emptyRev.length, singleInc.length, singleInc[0]);\n" +
-"io.outputLine(negRange.length, negRange);\n" +
+"io.outputLine(squares.length(), squares);\n" +
+"io.outputLine(evens.length(), evens);\n" +
+"io.outputLine(emptyHalf.length(), emptyRev.length(), singleInc.length(), singleInc[0]);\n" +
+"io.outputLine(negRange.length(), negRange);\n" +
 "io.outputLine(withIdx);\n" +
-"io.outputLine(endCalls, onceRes.length, onceRes[3]);\n";
+"io.outputLine(endCalls, onceRes.length(), onceRes[3]);\n";
 
 optFlags := ["-O0", "-O1", "-O2", "-O3"];
 loop optFlags as flag {

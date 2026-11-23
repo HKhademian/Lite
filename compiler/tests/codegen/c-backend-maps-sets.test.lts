@@ -27,7 +27,7 @@ src :=
 "scores[\"carol\"] = 40;\n" +
 "snapM: Map<String, Int> = scores;\n" +
 "removed := map.remove(mut scores, \"bob\");\n" +
-"io.outputLine(\"scores:\", scores, \"removed:\", removed, \"size:\", scores.size, scores.isEmpty);\n" +
+"io.outputLine(\"scores:\", scores, \"removed:\", removed, \"size:\", scores.size(), scores.isEmpty());\n" +
 "io.outputLine(\"alice:\", scores[\"alice\"], \"has bob:\", map.has(scores, \"bob\"), \"getOr:\", map.getOr(scores, \"bob\", -1));\n" +
 "g1 := map.get(scores, \"alice\");\n" +
 "g2 := map.get(scores, \"bob\");\n" +
@@ -35,17 +35,17 @@ src :=
 "io.outputLine(\"keys:\", map.keys(snapM), \"vals:\", map.values(snapM));\n" +
 "loop snapM as entry { io.outputLine(\"m:\", entry.key, entry.value); }\n" +
 "map.clear(mut scores);\n" +
-"io.outputLine(\"cleared:\", scores.size, scores.isEmpty);\n" +
+"io.outputLine(\"cleared:\", scores.size(), scores.isEmpty());\n" +
 "\n" +
 "tags: mut Set<String> = [\"lite\", \"typed\", \"lite\"];\n" +
 "set.add(mut tags, \"c11\");\n" +
 "snapS: Set<String> = tags;\n" +
 "sRem := set.remove(mut tags, \"lite\");\n" +
-"io.outputLine(\"tags:\", tags, \"sRem:\", sRem, \"has lite:\", set.has(tags, \"lite\"), \"size:\", tags.size, tags.isEmpty);\n" +
+"io.outputLine(\"tags:\", tags, \"sRem:\", sRem, \"has lite:\", set.has(tags, \"lite\"), \"size:\", tags.size(), tags.isEmpty());\n" +
 "io.outputLine(\"snapS vals:\", set.values(snapS), \"snapS size:\", set.size(snapS));\n" +
 "loop snapS as tag { io.outputLine(\"s:\", tag); }\n" +
 "set.clear(mut tags);\n" +
-"io.outputLine(\"s cleared:\", tags.size, tags.isEmpty);\n";
+"io.outputLine(\"s cleared:\", tags.size(), tags.isEmpty());\n";
 
 tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
 test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
