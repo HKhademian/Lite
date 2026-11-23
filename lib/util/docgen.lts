@@ -141,7 +141,12 @@ skipInlineTrivia := fn(source: String, start: Int, startLine: Int): (next: Int, 
 
 /** Classifies a module namespace and name into `"universal"`, `"play"`, or `"cli"`. */
 classifyEnvironment := fn(namespace: String, name: String): String {
-    if namespace == "extra" { return "play"; }
+    if namespace == "extra" {
+        if name == "canvas" or name == "audio" or name == "board" or name == "surface" {
+            return "play";
+        }
+        return "universal";
+    }
     if name == "file" or name == "path" or name == "process" or name == "time" {
         return "cli";
     }
@@ -180,8 +185,9 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
                 if not sawCode and moduleSummary == "" and not isDoc {
                     moduleSummary = cleaned;
                 } else if not sawCode and moduleSummary == "" and isDoc {
-                    afterComment := skipInlineTrivia(source, blk.next, blk.nextLine);
-                    if afterComment.next < size and not text.wordAt(source, afterComment.next, "pub") {
+                    var wsPos := blk.next;
+                    loop wsPos < size and text.isWhitespace(text.at(source, wsPos)) { wsPos += 1; }
+                    if wsPos < size and not text.wordAt(source, wsPos, "pub") {
                         moduleSummary = cleaned;
                     } else {
                         pendingDoc = cleaned;
