@@ -51,6 +51,7 @@ type RenderedSample = AnySample & Readonly<{
 export type BuildSiteOptions = Readonly<{
   lightSwitchShine?: boolean;
   tsCompiler?: CompilerBuild;
+  verbose?: boolean;
 }>;
 
 const root = dirname(import.meta.dirname);
@@ -84,7 +85,7 @@ function computeSampleCacheSalt(tsCompiler: CompilerBuild): string {
   return h.digest('hex').slice(0, 24);
 }
 
-function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge?: string, cacheSalt?: string): RenderedSample {
+function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge?: string, cacheSalt?: string): Readonly<{ sample: RenderedSample; cached: boolean }> {
   const fullPath = resolve(root, sample.file);
   const source = readFileSync(fullPath, 'utf8');
   let cacheFile: string | undefined;
@@ -102,7 +103,7 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
     cacheFile = join(cacheDir, `${key}.json`);
     if (existsSync(cacheFile)) {
       try {
-        return JSON.parse(readFileSync(cacheFile, 'utf8')) as RenderedSample;
+        return { sample: JSON.parse(readFileSync(cacheFile, 'utf8')) as RenderedSample, cached: true };
       } catch {
         /* ignore corrupt cache entry and rebuild */
       }
@@ -165,7 +166,7 @@ function compileAndRunSample(sample: AnySample, tsCompiler: CompilerBuild, badge
       mkdirSync(dirname(cacheFile), { recursive: true });
       writeFileSync(cacheFile, JSON.stringify(renderedSample));
     }
-    return renderedSample;
+    return { sample: renderedSample, cached: false };
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
@@ -263,44 +264,92 @@ function buildSitePages(options: Readonly<{
 
 export function parseBuildArgs(argv: readonly string[]): BuildSiteOptions {
   let lightSwitchShine = true;
+  let verbose: boolean | undefined;
   for (const arg of argv) {
     if (arg === '--no-light-switch-shine' || arg === '--light-switch-shine=false') {
       lightSwitchShine = false;
     } else if (arg === '--light-switch-shine' || arg === '--light-switch-shine=true') {
       lightSwitchShine = true;
+    } else if (arg === '--verbose' || arg === '-v') {
+      verbose = true;
+    } else if (arg === '--quiet' || arg === '-q') {
+      verbose = false;
     } else {
       throw new Error(`unknown site build flag: ${arg}`);
     }
   }
-  return { lightSwitchShine };
+  return verbose === undefined ? { lightSwitchShine } : { lightSwitchShine, verbose };
 }
 
 export function buildSite(options?: BuildSiteOptions): void {
   const buildStart = performance.now();
+  const verbose =
+    options?.verbose ??
+    (process.env['CI'] === 'true' ||
+      process.env['GITHUB_ACTIONS'] === 'true' ||
+      process.env['LITE_SITE_VERBOSE'] === '1');
+  const totalPhases = 13;
+  let phaseIndex = 0;
   const phaseMs: string[] = [];
-  const timePhase = <T>(label: string, fn: () => T): T => {
+  const logProgress = (message: string): void => {
+    if (!verbose) return;
+    const elapsed = ((performance.now() - buildStart) / 1000).toFixed(1);
+    const rssMb = (process.memoryUsage().rss / 1048576).toFixed(0);
+    process.stdout.write(`[site +${elapsed}s | ${rssMb}MB] ${message}\n`);
+  };
+  const timePhase = <T>(label: string, fn: () => T, describeResult?: (value: T) => string): T => {
+    phaseIndex += 1;
+    const stepTag = `[${String(phaseIndex)}/${String(totalPhases)}] ${label}`;
+    logProgress(`${stepTag}: starting...`);
     const t0 = performance.now();
     const res = fn();
-    phaseMs.push(`${label}=${String(Math.round(performance.now() - t0))}ms`);
+    const elapsedMs = Math.round(performance.now() - t0);
+    phaseMs.push(`${label}=${String(elapsedMs)}ms`);
+    const extra = describeResult ? ` (${describeResult(res)})` : '';
+    logProgress(`${stepTag}: done in ${(elapsedMs / 1000).toFixed(2)}s${extra}`);
     return res;
   };
   const lightSwitchShine = options?.lightSwitchShine ?? true;
-  const tsCompiler = timePhase('compiler', () => options?.tsCompiler ?? buildTsCompiler());
   const repoUrl = readRepositoryUrl();
   const rev = readSourceRevision();
+  logProgress(
+    `Starting Lite site build (${String(showcaseSamples.length)} showcase + ${String(playSamples.length)} play samples, rev=${rev.commit.slice(0, 12)})`,
+  );
+  const tsCompiler = timePhase('compiler', () => options?.tsCompiler ?? buildTsCompiler());
   const rendered = new Map<string, RenderedSample>();
   const renderedPlay = new Map<string, RenderedSample>();
 
   const playBadgeByGroup = new Map(playGroups.map(group => [group.id, group.badge]));
-  timePhase('samples', () => {
-    const sampleSalt = computeSampleCacheSalt(tsCompiler);
-    for (const sample of showcaseSamples) {
-      rendered.set(sample.id, compileAndRunSample(sample, tsCompiler, undefined, sampleSalt));
-    }
-    for (const sample of playSamples) {
-      renderedPlay.set(sample.id, compileAndRunSample(sample, tsCompiler, playBadgeByGroup.get(sample.group), sampleSalt));
-    }
-  });
+  timePhase(
+    'samples',
+    () => {
+      const sampleSalt = computeSampleCacheSalt(tsCompiler);
+      const totalSamples = showcaseSamples.length + playSamples.length;
+      let done = 0;
+      let cacheHits = 0;
+      const reportSample = (sampleFile: string, cached: boolean): void => {
+        done += 1;
+        if (cached) cacheHits += 1;
+        if (done % 5 === 0 || done === totalSamples) {
+          logProgress(
+            `  samples ${String(done)}/${String(totalSamples)} (${String(cacheHits)} cached, ${String(done - cacheHits)} built; last=${sampleFile})`,
+          );
+        }
+      };
+      for (const sample of showcaseSamples) {
+        const res = compileAndRunSample(sample, tsCompiler, undefined, sampleSalt);
+        rendered.set(sample.id, res.sample);
+        reportSample(sample.file, res.cached);
+      }
+      for (const sample of playSamples) {
+        const res = compileAndRunSample(sample, tsCompiler, playBadgeByGroup.get(sample.group), sampleSalt);
+        renderedPlay.set(sample.id, res.sample);
+        reportSample(sample.file, res.cached);
+      }
+      return { total: totalSamples, cached: cacheHits, built: totalSamples - cacheHits };
+    },
+    (s) => `${String(s.total)} total, ${String(s.cached)} cached, ${String(s.built)} built`,
+  );
 
   rmSync(outputDir, { recursive: true, force: true });
   mkdirSync(join(outputDir, 'runtime'), { recursive: true });
@@ -353,12 +402,12 @@ export function buildSite(options?: BuildSiteOptions): void {
   writeFileSync(join(outputDir, 'runtime', 'search.js'), searchClientJs);
   writeFileSync(join(outputDir, 'runtime', 'snips.js'), snipsClientJs);
 
-  const extractedModules = timePhase('extract-modules', () => extractModules(root));
+  const extractedModules = timePhase('extract-modules', () => extractModules(root), (m) => `${String(m.length)} modules`);
   const playgroundLibrary = timePhase('library', () => collectPlaygroundLibrary({
     rootDir: root,
     samples: [...showcaseSamples, ...playSamples],
-  }));
-  const discoveredDocs = timePhase('discover-docs', () => discoverDocsPayload());
+  }), (lib) => `${String(lib.length)} entries`);
+  const discoveredDocs = timePhase('discover-docs', () => discoverDocsPayload(), (d) => `${String(d.rendered.length)} docs`);
   const renderedDocByPath = new Map(discoveredDocs.rendered.map((d) => [d.path, d]));
   const learnCatalog = JSON.parse(readFileSync(join(root, 'language', 'learn', 'catalog.json'), 'utf8')) as LearnCatalog;
   const gymCatalog = JSON.parse(readFileSync(join(root, 'language', 'gym', 'catalog.json'), 'utf8')) as GymCatalog;
@@ -421,7 +470,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     rev,
     lightSwitchShine,
     graph,
-  }));
+  }), (out) => `${String(out.lessonCount)} lessons, ${String(out.tutorialCount)} tutorials`);
   for (const [relPath, html] of learnOut.files) {
     const dest = join(outputDir, relPath);
     mkdirSync(dirname(dest), { recursive: true });
@@ -437,7 +486,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     rev,
     lightSwitchShine,
     graph,
-  }));
+  }), (out) => `${String(out.exerciseCount)} exercises`);
   for (const [relPath, content] of gymOut.files) {
     const dest = join(outputDir, relPath);
     mkdirSync(dirname(dest), { recursive: true });
@@ -452,7 +501,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     lightSwitchShine,
     discovered: discoveredDocs,
     graph,
-  }));
+  }), (out) => `${String(out.files.size)} pages`);
   for (const [relPath, html] of docsOut.files) {
     const dest = join(outputDir, relPath);
     mkdirSync(dirname(dest), { recursive: true });
@@ -468,7 +517,7 @@ export function buildSite(options?: BuildSiteOptions): void {
     rev,
     lightSwitchShine,
     graph,
-  }));
+  }), (out) => `${String(out.files.size)} pages`);
   for (const [relPath, html] of modulesOut.files) {
     const dest = join(outputDir, relPath);
     mkdirSync(dirname(dest), { recursive: true });
@@ -593,7 +642,11 @@ export function buildSite(options?: BuildSiteOptions): void {
     ) + '\n',
   );
 
-  const refReport = timePhase('validate', () => validateBuiltSiteReferences(outputDir));
+  const refReport = timePhase(
+    'validate',
+    () => validateBuiltSiteReferences(outputDir),
+    (r) => `${String(r.htmlFiles)} HTML files, ${String(r.localLinksChecked)} links, ${String(r.fragmentsChecked)} fragments`,
+  );
   if (refReport.violations.length > 0) {
     const sample = refReport.violations
       .slice(0, 15)

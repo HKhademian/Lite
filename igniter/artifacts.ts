@@ -22,6 +22,14 @@ export function ensureTool(name: string, options: Readonly<{ force?: boolean; ta
     const cached = ensuredTools.get(key);
     if (cached !== undefined) return cached;
   }
+  const verbose =
+    process.env['CI'] === 'true' ||
+    process.env['GITHUB_ACTIONS'] === 'true' ||
+    process.env['LITE_SITE_VERBOSE'] === '1';
+  const t0 = verbose ? performance.now() : 0;
+  if (verbose) {
+    process.stdout.write(`[ignite] ensuring tool ${name} (${options.target ?? 'auto'})...\n`);
+  }
   const args: string[] = [igniterScript];
   if (options.target) args.push('--target', options.target);
   if (options.force) args.push('--force');
@@ -32,6 +40,10 @@ export function ensureTool(name: string, options: Readonly<{ force?: boolean; ta
     throw new Error(`ignite ${name} failed (${result.status ?? result.signal}):\n${result.stdout}${result.stderr}`);
   }
   const artifact = result.stdout.trim();
+  if (verbose) {
+    const sec = ((performance.now() - t0) / 1000).toFixed(2);
+    process.stdout.write(`[ignite] tool ${name} ready in ${sec}s -> ${artifact}\n`);
+  }
   ensuredTools.set(key, artifact);
   return artifact;
 }

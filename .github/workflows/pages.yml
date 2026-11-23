@@ -29,9 +29,9 @@ jobs:
       - name: Install igniter dependencies
         run: npm ci --prefix igniter
       - name: Build and verify the public showcase site
-        run: ./site/build.ts
+        run: ./site/build.ts --verbose
       - name: Run site checks
-        run: node --test --test-concurrency=1 site/features.test.ts site/build.test.ts
+        run: node --test --test-concurrency=1 --test-reporter=spec site/features.test.ts site/build.test.ts
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
