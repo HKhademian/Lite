@@ -46,7 +46,13 @@ Selected design direction (not yet implemented in the compiler):
    denotes executable code. Existing hardcoded `.length`, `.size`, and
    `.isEmpty` properties will migrate to explicit calls; `get`/`set` backing
    properties are deferred to a future design stage.
-7. **Recorded future direction — explicit imported extensions:** Kotlin/Swift-style
+7. **Provisional bracket-indexing hooks (`$getIndex`, `$setIndex`):** as a
+   temporary bridge before final operator/interface syntax, owned nominal types
+   may declare compiler-reserved `TypeName.$getIndex` and `TypeName.$setIndex`
+   (one unified pair for both positional and keyed `[]` / `[]=`, closed
+   compiler allowlist, invoked only via bracket syntax, single-evaluation
+   compound updates `x[k] += v`, and `mut Self` required for writes).
+8. **Recorded future direction — explicit imported extensions:** Kotlin/Swift-style
    extendability for foreign or aliased types is intentionally deferred for a
    future design stage and must require **explicit** import/opt-in (never
    implicit or ambient global patching).

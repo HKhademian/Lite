@@ -55,13 +55,13 @@ Audited across [`compiler/src/frontend-expr.lts`](lite://repo/compiler/src/front
 | `core/map` (`Map<K, V>`) | 9 intrinsics (`set`, `get`, `getOr`, `has`, `remove`, `size`, `clear`, `keys`, `values`) switched in `frontend-expr.lts:7042-7050` → `parseMapIntrinsicCall` | Uniform generic `TypeName.op` + `coreHostFunction` ABI lowering |
 | `core/set` (`Set<T>`) | 6 intrinsics (`add`, `has`, `remove`, `size`, `clear`, `values`) switched in `frontend-expr.lts:7051-7056` → `parseSetIntrinsicCall` | Uniform generic `TypeName.op` + `coreHostFunction` ABI lowering |
 
-### 5. Category D — Hardcoded bracket indexing, slicing, and assignment hooks (later phase: operation contracts)
+### 5. Category D — Hardcoded bracket indexing, slicing, and assignment hooks
 
-| Construct | Current compiler locations | Future contract owner |
+| Construct | Current compiler locations | Migration target |
 |---|---|---|
-| `map[k]` read & `map[k] = v` write | `frontend-expr.lts:6868-6887`, `L2821`; `frontend.lts:3121` | [Collection operation contracts](lite://doc/collection-operation-contracts) (after interfaces) |
-| `list[i]` / `arr[i]` read & write | `frontend-expr.lts:6958-6976`, `L2821`; `frontend.lts:3178` | [Collection operation contracts](lite://doc/collection-operation-contracts) (after interfaces) |
-| `list[a..b]` / `arr[a..b]` / `str[a..b]` (`..`, `..=`) range slicing | `frontend-expr.lts:6894-7011` | [Collection operation contracts](lite://doc/collection-operation-contracts) / `List.slice` / `String.slice` |
+| `map[k]` read & `map[k] = v` write | `frontend-expr.lts:6868-6887`, `L2821`; `frontend.lts:3121` | **Slice 1C** provisional `Map.$getIndex` / `Map.$setIndex` hooks (later [collection operation contracts](lite://doc/collection-operation-contracts)) |
+| `list[i]` / `arr[i]` read & write | `frontend-expr.lts:6958-6976`, `L2821`; `frontend.lts:3178` | **Slice 1C** provisional `List.$getIndex` / `List.$setIndex` & `Array.$getIndex` / `Array.$setIndex` hooks |
+| `list[a..b]` / `arr[a..b]` / `str[a..b]` (`..`, `..=`) range slicing | `frontend-expr.lts:6894-7011` | Later slice (`$getSlice` hook or `Range`-based `$getIndex` + [collection operation contracts](lite://doc/collection-operation-contracts)) |
 
 ### 6. Category E — Hardcoded variadic output & built-in loop iteration (separate contracts)
 
@@ -132,6 +132,9 @@ Follow [compiler development guidelines](lite://repo/.agents/rules/compiler-deve
 - **Slice 1B (Monomorphized generic function bodies `fn<T> { ... }`):**
   - Enable generic function bodies (`fn<T>`, `fn<K, V>`, `fn<T, U>`) via cached concrete instantiation on both `emit-ts.lts` and `emit-c.lts`, unifying receiver type parameters from `x`'s type before checking remaining arguments and callbacks.
   - Verify all Phase 0 fixtures pass on both TS (`strict tsc`) and C11 (`cc -std=c11 -Wall -Wextra -Werror`) via `./bin/lite verify --all` and `./bin/lite test --full`.
+- **Slice 1C (Provisional `$getIndex` / `$setIndex` operator hooks):**
+  - Recognize the closed compiler allowlist `$getIndex` and `$setIndex` on owned nominal types (rejecting arbitrary `$foo` names and disallowing direct `x.$getIndex(...)` dot calls).
+  - Lower `x[k]`, `x[k] = v`, and single-evaluation compound updates `x[k] += v` statically through `$getIndex` / `$setIndex` on both TS and C11, enabling both user records (`Grid`) and core `List`/`Array`/`Map` hard/soft builtins.
 
 ### Phase 3 — Hard/soft builtin ABI and lazy core-owner loading
 
@@ -157,7 +160,7 @@ Follow [compiler development guidelines](lite://repo/.agents/rules/compiler-deve
 ### Phase 6 — Remove hardcoded dot-access and intrinsic magic from `frontend-expr.lts`
 
 - Delete Category A hardcoded `List`/`Array`/`Map`/`Set`/`String` `.length`, `.isEmpty`, and `.size` branches in `parsePostfixChain` ([`compiler/src/frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lts)) after migrating existing callers to `.length()`, `.isEmpty()`, and `.size()`.
-- Retire Category B legacy ambient `push_back`/`pop_back`/`push_front`/`pop_front` (`VALUE_KIND_LIST_OP`) and replace Category C's 24 string-switched `lite$core$*` call dispatchers with uniform generic `TypeName.op` + ABI lowering.
+- Retire Category B legacy ambient `push_back`/`pop_back`/`push_front`/`pop_front` (`VALUE_KIND_LIST_OP`), replace Category C's 24 string-switched `lite$core$*` call dispatchers with uniform generic `TypeName.op` + ABI lowering, and route Category D's `list[i]`/`arr[i]`/`map[k]` indexing and indexed assignment through `$getIndex`/`$setIndex`.
 - Re-run full gates:
   - `./bin/lite test --full`
   - `./bin/lite verify --coverage` and `./bin/lite verify --all`

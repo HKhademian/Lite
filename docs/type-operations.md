@@ -81,6 +81,33 @@ An attached operation is an ordinary function in `TypeName`'s namespace:
 - **Explicit calls for computed reads (selected 2026-11-23):** computed operations such as `.length()`, `.size()`, and `.isEmpty()` are ordinary `fn` type operations called with `(...)`, keeping a sharp visual boundary where `value.field` denotes stored data and `value.op(...)` invokes code. Existing compiler-hardcoded `.length`, `.size`, and `.isEmpty` properties will migrate to explicit calls under [the migration plan](lite://doc/compiler/type-operations-migration-plan); `get`/`set` backing properties are deferred for future design once field privacy and ownership rules exist.
 - **No overloading yet (one symbol per `TypeName.op`):** LiteLang has no function or operation overloading yet. Each `TypeName.op` is a single unique binding in `TypeName`'s namespace — declaring two operations with the same name on the same type family (such as `List.sum` for `Self<Int>` and `List.sum` for `Self<Float>`) is rejected. Future overloading, generic constraints, and [interfaces](lite://doc/composition-and-interfaces) remain separate later design decisions.
 
+## Provisional operator hooks (`$getIndex`, `$setIndex`)
+
+Status: **provisional temporary bridge selected 2026-11-23; final operator/interface syntax deferred**.
+
+Until LiteLang settles its long-term operator and [interface](lite://doc/composition-and-interfaces) syntax, owned nominal types may define bracket-indexing behavior using a closed, compiler-reserved `$`-prefixed hook pair on `TypeName.$...` — one unified pair for both positional indexing (`List<T>`, `Array`) and keyed lookup (`Map<K, V>`, user types), rather than splitting `[]` into separate `At` versus `Key` operators:
+
+```text
+// Hard builtins in lib/core/list.lts and lib/core/map.lts:
+pub List.$getIndex := fn<T>(items: Self<T>, index: Int): T;
+pub List.$setIndex := fn<T>(items: mut Self<T>, index: Int, value: T): Unit;
+
+pub Map.$getIndex := fn<K, V>(entries: Self<K, V>, key: K): V;
+pub Map.$setIndex := fn<K, V>(entries: mut Self<K, V>, key: K, value: V): Unit;
+
+// Pure-Lite hook on a user nominal record:
+pub Grid.$getIndex := fn(g: Self, pos: Int): Int { ... }
+pub Grid.$setIndex := fn(g: mut Self, pos: Int, value: Int): Unit { ... }
+```
+
+Rules for provisional `$` hooks:
+
+- **Bracket lowering:** `x[k]` lowers statically to `TypeName.$getIndex(x, k)`. `x[k] = v` lowers to `TypeName.$setIndex(x, k, v)` and statically requires writable `mut` access on `x` and `mut Self` / `mut Self<...>` on `$setIndex`. Compound updates (`x[k] += v`) evaluate `k` once before invoking `$getIndex` and `$setIndex`.
+- **Read-only indexing:** a type that defines only `$getIndex` admits `x[k]` reads and rejects `x[k] = v` writes at compile time.
+- **Closed compiler allowlist:** `$` is reserved strictly for compiler-recognized hook names (`$getIndex`, `$setIndex`, and any later explicitly approved hooks such as `$getSlice`). Arbitrary user-invented `$foo` declarations are compile-time errors.
+- **Hook-only invocation:** `$getIndex` and `$setIndex` are invoked through bracket syntax (`x[k]`, `x[k] = v`), not exposed as ordinary `x.$getIndex(k)` dot calls.
+- **Migration safety:** because `$` is unused in ordinary LiteLang identifiers, migrating to final operator/interface syntax later is mechanical and unambiguous. Positional `[T]` versus keyed `Indexable<K, V>` remains a semantic contract distinction ([indexed sequence contract](lite://doc/indexed-sequence-contract)).
+
 ## Ownership and visibility
 
 ### Owned nominal types only (selected for now)
@@ -148,6 +175,7 @@ Consulted selectively from the [project reference languages](lite://doc/referenc
 - **Deferred `get`/`set` backing properties:** whether LiteLang later introduces computed property getters/setters after field privacy, backing storage, compound assignment, and `var`-grant rules are established.
 - **Receiverless type-associated helpers:** whether non-receiver functions such as constructors (`TypeName.from(...)`) may also live under `TypeName.*`, distinct from `Self`-receiver operations.
 - **Explicit call-site type arguments:** syntax for supplying unbound method-only type parameters at dot calls (shared with [generic notation](lite://doc/generic-notation#pending-contract-cases)).
+- **Deferred operator/interface syntax:** replacing the provisional `$getIndex`/`$setIndex` compiler hooks with LiteLang's final operator and [collection operation contract](lite://doc/collection-operation-contracts) syntax (including range slicing and iterators).
 - **Explicit extension opt-in syntax:** exact `using`/import syntax, extension grouping, and interaction with future [interfaces](lite://doc/composition-and-interfaces).
 
 ## Compiler status
