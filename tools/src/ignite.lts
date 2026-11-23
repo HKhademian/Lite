@@ -17,6 +17,7 @@ frontend := import "../../compiler/src/frontend.lts";
 modules := import "../../compiler/src/modules.lts";
 emitter := import "../../compiler/src/emit-ts.lts";
 hostFs := import "../../compiler/src/host-fs.lts";
+optCfg := import "../../compiler/src/opt-config.lts";
 
 /** Maps a launcher symlink or alias script path to its canonical `tools/src/<name>.lts` tool name, or `""` for direct igniter CLI mode. */
 toolForEntry := fn(rawEntry: String): String {
@@ -370,7 +371,7 @@ rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: S
     );
 
     writer := io.bufferWriter();
-    emitter.emitProgramToOpt(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = relRoot, builtinSpecs = emptySpecs, optLevel = 3);
+    emitter.emitProgramToWithConfig(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = relRoot, builtinSpecs = emptySpecs, config = optCfg.presetConfig(optCfg.OptClass.O3, frontend.TARGET_TS));
     outRes := io.writerText(writer);
     _cl := io.closeWriter(writer);
     if not outRes.ok {
@@ -552,7 +553,7 @@ ensureDistCompiler := fn(rootDir: String, expectedArtSha: String, force: Bool): 
     projectRoot = rootDir, cwd = rootDir, builtinSpecs = emptySpecs
     );
     writer := io.bufferWriter();
-    emitter.emitProgramToOpt(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = "compiler/src/ts-root.lts", builtinSpecs = emptySpecs, optLevel = 3);
+    emitter.emitProgramToWithConfig(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = "compiler/src/ts-root.lts", builtinSpecs = emptySpecs, config = optCfg.presetConfig(optCfg.OptClass.O3, frontend.TARGET_TS));
     outRes := io.writerText(writer);
     _cl := io.closeWriter(writer);
     if not outRes.ok {

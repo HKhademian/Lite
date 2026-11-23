@@ -4,15 +4,6 @@ listLib := import "core/list";
 textLib := import "core/text";
 tb := import "util/text-builder";
 
-/** Output format mode: `"pretty"` (multi-line 4-space indented) or `"compact"` (minimal whitespace for `-Os`). */
-pub FORMAT_PRETTY := "pretty";
-pub FORMAT_COMPACT := "compact";
-
-/** Source-map mode: `"none"`, `"comments"` (`// file:line:col`), or `"lines"` (C11 `#line` / TS comments). */
-pub SOURCEMAP_NONE := "none";
-pub SOURCEMAP_COMMENTS := "comments";
-pub SOURCEMAP_LINES := "lines";
-
 /** True when `name` is a clean ASCII target identifier that cannot collide with JS/TS/C keywords or standard headers. */
 pub isSafeTargetIdent := fn(name: String, isC: Bool): Bool {
     n := textLib.length(name);
@@ -34,24 +25,6 @@ pub isSafeTargetIdent := fn(name: String, isC: Bool): Bool {
         if textLib.indexOfText(cBlocked, "|" + name + "|", 0) >= 0 { return false; }
     }
     true
-};
-
-/** Resolves effective emit format from explicit flag (`""` = auto) and `optLevel` (`4` = `-Os`). */
-pub resolveEmitFormat := fn(explicit: String, optLevel: Int): String {
-    if explicit == FORMAT_PRETTY or explicit == FORMAT_COMPACT { return explicit; }
-    if optLevel == 4 { FORMAT_COMPACT } else { FORMAT_PRETTY }
-};
-
-/** Resolves effective source-map mode from explicit flag (`""` = auto), `target`, and `optLevel`. */
-pub resolveSourceMap := fn(explicit: String, target: String, optLevel: Int): String {
-    if explicit == SOURCEMAP_NONE or explicit == SOURCEMAP_COMMENTS or explicit == SOURCEMAP_LINES {
-        return explicit;
-    }
-    if optLevel == 0 {
-        if target == "c" { SOURCEMAP_LINES } else { SOURCEMAP_COMMENTS }
-    } else {
-        SOURCEMAP_NONE
-    }
 };
 
 /** Returns `n` spaces for 4-space indentation levels. */

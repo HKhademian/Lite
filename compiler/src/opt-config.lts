@@ -2,13 +2,21 @@
 
 listLib := import "core/list";
 textLib := import "core/text";
-emitFmt := import "./emit-format.lts";
 
-/** Per-pass optimization and emission configuration. Presets (`-O0`..`-O3`, `-Os`, `-Oc`) set defaults; every field is overridable. */
+/** Native optimization preset class (`-O0`, `-O1`, `-O2`, `-O3`, `-Os`, `-Oc`). */
+pub OptClass := enum { O0; O1; O2; O3; Os; Oc; };
+
+/** Emitted code formatting style (`--emit-format`). */
+pub EmitFormat := enum { Pretty; Compact; };
+
+/** Emitted source-location mapping mode (`--source-map`). */
+pub SourceMapMode := enum { None; Comments; Lines; };
+
+/** Per-pass optimization and emission configuration. Presets (`OptClass`) set defaults; every field is overridable. */
 pub OptConfig := type (
     ok: Bool,
     error: String,
-    preset: String,
+    preset: OptClass,
     constFold: Bool,
     branchSimplify: Bool,
     deadStore: Bool,
@@ -17,32 +25,36 @@ pub OptConfig := type (
     inlineLeaves: Bool,
     inlineMaxSize: Int,
     optRounds: Int,
-    emitFormat: String,
-    sourceMap: String,
+    emitFormat: EmitFormat,
+    sourceMap: SourceMapMode,
     preserveComments: Bool,
     preserveDocs: Bool
 );
 
-/** Legacy numeric optLevel (`0`..`3`, `4`=`s`, `5`=`c`) -> preset code string. */
-pub presetFromLegacyLevel := fn(optLevel: Int): String {
-    if optLevel == 0 { "0" }
-    else if optLevel == 1 { "1" }
-    else if optLevel == 2 { "2" }
-    else if optLevel == 3 { "3" }
-    else if optLevel == 4 { "s" }
-    else if optLevel == 5 { "c" }
-    else { "1" }
+/** Parses an `OptClass` suffix (`0`, `1`, `2`, `3`, `s`, `c`). */
+pub parseOptClass := fn(raw: String): (ok: Bool, value: OptClass) {
+    if raw == "0" { (ok = true, value = OptClass.O0) }
+    else if raw == "1" { (ok = true, value = OptClass.O1) }
+    else if raw == "2" { (ok = true, value = OptClass.O2) }
+    else if raw == "3" { (ok = true, value = OptClass.O3) }
+    else if raw == "s" or raw == "S" { (ok = true, value = OptClass.Os) }
+    else if raw == "c" or raw == "C" { (ok = true, value = OptClass.Oc) }
+    else { (ok = false, value = OptClass.O1) }
 };
 
-/** Preset code string (`0`, `1`, `2`, `3`, `s`, `c`) -> legacy numeric level (`-1` if invalid). */
-pub legacyLevelFromPreset := fn(raw: String): Int {
-    if raw == "0" { 0 }
-    else if raw == "1" { 1 }
-    else if raw == "2" { 2 }
-    else if raw == "3" { 3 }
-    else if raw == "s" or raw == "S" { 4 }
-    else if raw == "c" or raw == "C" { 5 }
-    else { -1 }
+/** Parses `--emit-format` value (`pretty` or `compact`). */
+parseEmitFormat := fn(raw: String): (ok: Bool, value: EmitFormat) {
+    if raw == "pretty" { (ok = true, value = EmitFormat.Pretty) }
+    else if raw == "compact" { (ok = true, value = EmitFormat.Compact) }
+    else { (ok = false, value = EmitFormat.Pretty) }
+};
+
+/** Parses `--source-map` value (`none`, `comments`, or `lines`). */
+parseSourceMapMode := fn(raw: String): (ok: Bool, value: SourceMapMode) {
+    if raw == "none" { (ok = true, value = SourceMapMode.None) }
+    else if raw == "comments" { (ok = true, value = SourceMapMode.Comments) }
+    else if raw == "lines" { (ok = true, value = SourceMapMode.Lines) }
+    else { (ok = false, value = SourceMapMode.None) }
 };
 
 /** Returns an error `OptConfig` with `ok = false`. */
@@ -66,14 +78,14 @@ failConfig := fn(base: OptConfig, message: String): OptConfig {
     )
 };
 
-/** Returns the default `OptConfig` for a native preset (`"0"`, `"1"`, `"2"`, `"3"`, `"s"`, `"c"`) on `target` (`"ts"` or `"c"`). */
-pub presetConfig := fn(preset: String, target: String): OptConfig {
-    if preset == "c" or preset == "C" {
+/** Returns the default `OptConfig` for a native `OptClass` preset on `target` (`"ts"` or `"c"`). */
+pub presetConfig := fn(preset: OptClass, target: String): OptConfig {
+    if preset == OptClass.Oc {
         /* Custom zero-default baseline: every optimization, purification, comment/doc, and source-map pass starts OFF. */
         return (
             ok = true,
             error = "",
-            preset = "c",
+            preset = OptClass.Oc,
             constFold = false,
             branchSimplify = false,
             deadStore = false,
@@ -82,19 +94,19 @@ pub presetConfig := fn(preset: String, target: String): OptConfig {
             inlineLeaves = false,
             inlineMaxSize = 0,
             optRounds = -1,
-            emitFormat = emitFmt.FORMAT_PRETTY,
-            sourceMap = emitFmt.SOURCEMAP_NONE,
+            emitFormat = EmitFormat.Pretty,
+            sourceMap = SourceMapMode.None,
             preserveComments = false,
             preserveDocs = false
         );
     }
-    if preset == "0" {
+    if preset == OptClass.O0 {
         /* Debug/inspection preset: zero optimizations, with source maps and root comments/docs preserved by default. */
-        defaultSm := if target == "c" { emitFmt.SOURCEMAP_LINES } else { emitFmt.SOURCEMAP_COMMENTS };
+        defaultSm := if target == "c" { SourceMapMode.Lines } else { SourceMapMode.Comments };
         return (
             ok = true,
             error = "",
-            preset = "0",
+            preset = OptClass.O0,
             constFold = false,
             branchSimplify = false,
             deadStore = false,
@@ -103,17 +115,17 @@ pub presetConfig := fn(preset: String, target: String): OptConfig {
             inlineLeaves = false,
             inlineMaxSize = 0,
             optRounds = 0,
-            emitFormat = emitFmt.FORMAT_PRETTY,
+            emitFormat = EmitFormat.Pretty,
             sourceMap = defaultSm,
             preserveComments = true,
             preserveDocs = true
         );
     }
-    if preset == "2" {
+    if preset == OptClass.O2 {
         return (
             ok = true,
             error = "",
-            preset = "2",
+            preset = OptClass.O2,
             constFold = true,
             branchSimplify = true,
             deadStore = true,
@@ -122,17 +134,17 @@ pub presetConfig := fn(preset: String, target: String): OptConfig {
             inlineLeaves = false,
             inlineMaxSize = 0,
             optRounds = 2,
-            emitFormat = emitFmt.FORMAT_PRETTY,
-            sourceMap = emitFmt.SOURCEMAP_NONE,
+            emitFormat = EmitFormat.Pretty,
+            sourceMap = SourceMapMode.None,
             preserveComments = false,
             preserveDocs = false
         );
     }
-    if preset == "3" {
+    if preset == OptClass.O3 {
         return (
             ok = true,
             error = "",
-            preset = "3",
+            preset = OptClass.O3,
             constFold = true,
             branchSimplify = true,
             deadStore = true,
@@ -141,17 +153,17 @@ pub presetConfig := fn(preset: String, target: String): OptConfig {
             inlineLeaves = true,
             inlineMaxSize = 256,
             optRounds = 3,
-            emitFormat = emitFmt.FORMAT_PRETTY,
-            sourceMap = emitFmt.SOURCEMAP_NONE,
+            emitFormat = EmitFormat.Pretty,
+            sourceMap = SourceMapMode.None,
             preserveComments = false,
             preserveDocs = false
         );
     }
-    if preset == "s" or preset == "S" {
+    if preset == OptClass.Os {
         return (
             ok = true,
             error = "",
-            preset = "s",
+            preset = OptClass.Os,
             constFold = true,
             branchSimplify = true,
             deadStore = true,
@@ -160,8 +172,8 @@ pub presetConfig := fn(preset: String, target: String): OptConfig {
             inlineLeaves = false,
             inlineMaxSize = 0,
             optRounds = 2,
-            emitFormat = emitFmt.FORMAT_COMPACT,
-            sourceMap = emitFmt.SOURCEMAP_NONE,
+            emitFormat = EmitFormat.Compact,
+            sourceMap = SourceMapMode.None,
             preserveComments = false,
             preserveDocs = false
         );
@@ -170,7 +182,7 @@ pub presetConfig := fn(preset: String, target: String): OptConfig {
     (
         ok = true,
         error = "",
-        preset = "1",
+        preset = OptClass.O1,
         constFold = false,
         branchSimplify = true,
         deadStore = true,
@@ -179,34 +191,10 @@ pub presetConfig := fn(preset: String, target: String): OptConfig {
         inlineLeaves = false,
         inlineMaxSize = 0,
         optRounds = 1,
-        emitFormat = emitFmt.FORMAT_PRETTY,
-        sourceMap = emitFmt.SOURCEMAP_NONE,
+        emitFormat = EmitFormat.Pretty,
+        sourceMap = SourceMapMode.None,
         preserveComments = false,
         preserveDocs = false
-    )
-};
-
-/** Builds an `OptConfig` from legacy numeric `optLevel` and optional explicit `emitFormat` / `sourceMap` overrides. */
-pub configFromLegacyOpts := fn(optLevel: Int, target: String, emitFormat: String, sourceMap: String): OptConfig {
-    base := presetConfig(presetFromLegacyLevel(optLevel), target);
-    effFmt := if emitFormat == emitFmt.FORMAT_PRETTY or emitFormat == emitFmt.FORMAT_COMPACT { emitFormat } else { base.emitFormat };
-    effSm := if sourceMap == emitFmt.SOURCEMAP_NONE or sourceMap == emitFmt.SOURCEMAP_COMMENTS or sourceMap == emitFmt.SOURCEMAP_LINES { sourceMap } else { base.sourceMap };
-    (
-        ok = true,
-        error = "",
-        preset = base.preset,
-        constFold = base.constFold,
-        branchSimplify = base.branchSimplify,
-        deadStore = base.deadStore,
-        blockPrune = base.blockPrune,
-        dce = base.dce,
-        inlineLeaves = base.inlineLeaves,
-        inlineMaxSize = base.inlineMaxSize,
-        optRounds = base.optRounds,
-        emitFormat = effFmt,
-        sourceMap = effSm,
-        preserveComments = base.preserveComments,
-        preserveDocs = base.preserveDocs
     )
 };
 
@@ -265,69 +253,67 @@ pub effectiveInlineMaxSize := fn(cfg: OptConfig): Int {
 
 /** Parses `-O0`..`-O3`, `-Os`, `-Oc`, `--opt`, `--emit-format`, `--source-map`, and `-f...` pass overrides left-to-right. */
 pub parseOptConfig := fn(rawArgs: List<String>, target: String): OptConfig {
-    var cfg := presetConfig("1", target);
+    var cfg := presetConfig(OptClass.O1, target);
     args: mut List<String> = rawArgs;
     loop listLib.listCountText(args) > 0 {
         arg := listLib.popFront(mut args);
-        if arg == "-O0" {
-            cfg = presetConfig("0", target);
-        } else if arg == "-O1" {
-            cfg = presetConfig("1", target);
-        } else if arg == "-O2" {
-            cfg = presetConfig("2", target);
-        } else if arg == "-O3" {
-            cfg = presetConfig("3", target);
-        } else if arg == "-Os" {
-            cfg = presetConfig("s", target);
-        } else if arg == "-Oc" {
-            cfg = presetConfig("c", target);
-        } else if textLib.startsWithAt(arg, 0, "-O") {
-            return failConfig(cfg, "unsupported optimization flag " + arg + " (expected -O0, -O1, -O2, -O3, -Os, or -Oc)");
+        if textLib.startsWithAt(arg, 0, "-O") {
+            parsed := parseOptClass(textLib.slice(arg, 2, textLib.length(arg)));
+            if not parsed.ok {
+                return failConfig(cfg, "unsupported optimization flag " + arg + " (expected -O0, -O1, -O2, -O3, -Os, or -Oc)");
+            }
+            cfg = presetConfig(parsed.value, target);
         } else if arg == "--opt" {
             if listLib.listCountText(args) == 0 {
                 return failConfig(cfg, "missing value for --opt");
             }
             rawOpt := listLib.popFront(mut args);
-            if legacyLevelFromPreset(rawOpt) < 0 {
+            parsed := parseOptClass(rawOpt);
+            if not parsed.ok {
                 return failConfig(cfg, "unsupported optimization level " + rawOpt + " (expected 0, 1, 2, 3, s, or c)");
             }
-            cfg = presetConfig(rawOpt, target);
+            cfg = presetConfig(parsed.value, target);
         } else if textLib.startsWithAt(arg, 0, "--opt=") {
             rawOpt := textLib.slice(arg, 6, textLib.length(arg));
-            if legacyLevelFromPreset(rawOpt) < 0 {
+            parsed := parseOptClass(rawOpt);
+            if not parsed.ok {
                 return failConfig(cfg, "unsupported optimization level " + rawOpt + " (expected 0, 1, 2, 3, s, or c)");
             }
-            cfg = presetConfig(rawOpt, target);
+            cfg = presetConfig(parsed.value, target);
         } else if arg == "--emit-format" {
             if listLib.listCountText(args) == 0 {
                 return failConfig(cfg, "missing value for --emit-format (expected pretty or compact)");
             }
-            v := listLib.popFront(mut args);
-            if v =!= emitFmt.FORMAT_PRETTY and v =!= emitFmt.FORMAT_COMPACT {
-                return failConfig(cfg, "unsupported --emit-format " + v + " (expected pretty or compact)");
+            rawFmt := listLib.popFront(mut args);
+            parsedFmt := parseEmitFormat(rawFmt);
+            if not parsedFmt.ok {
+                return failConfig(cfg, "unsupported --emit-format " + rawFmt + " (expected pretty or compact)");
             }
-            cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = v, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
+            cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = parsedFmt.value, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
         } else if textLib.startsWithAt(arg, 0, "--emit-format=") {
-            v := textLib.slice(arg, 14, textLib.length(arg));
-            if v =!= emitFmt.FORMAT_PRETTY and v =!= emitFmt.FORMAT_COMPACT {
-                return failConfig(cfg, "unsupported --emit-format " + v + " (expected pretty or compact)");
+            rawFmt := textLib.slice(arg, 14, textLib.length(arg));
+            parsedFmt := parseEmitFormat(rawFmt);
+            if not parsedFmt.ok {
+                return failConfig(cfg, "unsupported --emit-format " + rawFmt + " (expected pretty or compact)");
             }
-            cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = v, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
+            cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = parsedFmt.value, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
         } else if arg == "--source-map" {
             if listLib.listCountText(args) == 0 {
                 return failConfig(cfg, "missing value for --source-map (expected none, comments, or lines)");
             }
-            v := listLib.popFront(mut args);
-            if v =!= emitFmt.SOURCEMAP_NONE and v =!= emitFmt.SOURCEMAP_COMMENTS and v =!= emitFmt.SOURCEMAP_LINES {
-                return failConfig(cfg, "unsupported --source-map " + v + " (expected none, comments, or lines)");
+            rawSm := listLib.popFront(mut args);
+            parsedSm := parseSourceMapMode(rawSm);
+            if not parsedSm.ok {
+                return failConfig(cfg, "unsupported --source-map " + rawSm + " (expected none, comments, or lines)");
             }
-            cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = v, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
+            cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = parsedSm.value, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
         } else if textLib.startsWithAt(arg, 0, "--source-map=") {
-            v := textLib.slice(arg, 13, textLib.length(arg));
-            if v =!= emitFmt.SOURCEMAP_NONE and v =!= emitFmt.SOURCEMAP_COMMENTS and v =!= emitFmt.SOURCEMAP_LINES {
-                return failConfig(cfg, "unsupported --source-map " + v + " (expected none, comments, or lines)");
+            rawSm := textLib.slice(arg, 13, textLib.length(arg));
+            parsedSm := parseSourceMapMode(rawSm);
+            if not parsedSm.ok {
+                return failConfig(cfg, "unsupported --source-map " + rawSm + " (expected none, comments, or lines)");
             }
-            cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = v, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
+            cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = parsedSm.value, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
         } else if arg == "-fconst-fold" {
             cfg = (ok = true, error = "", preset = cfg.preset, constFold = true, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
         } else if arg == "-fno-const-fold" {

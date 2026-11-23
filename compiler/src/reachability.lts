@@ -2142,17 +2142,12 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
     filtered
 };
 
-/** Runs the preset optimization pipeline (`-O0`..`-O3`, `-Os` = `4`, `-Oc` = `5`) and whole-program reachability DCE for `target`. */
-pub filterReachableItemsWithOpt := fn(items: Items, target: String, optLevel: Int): Items {
-    filterReachableItemsWithConfig(items, target, optCfg.presetConfig(optCfg.presetFromLegacyLevel(optLevel), target))
-};
-
 /** Runs default `-O1` optimization passes and whole-program reachability DCE for `target`. */
 pub filterReachableItemsForTarget := fn(items: Items, target: String): Items {
-    filterReachableItemsWithOpt(items, target, 1)
+    filterReachableItemsWithConfig(items, target, optCfg.presetConfig(optCfg.OptClass.O1, target))
 };
 
 /** Removes unreachable top-level function bodies and side-effect-free declarations for TS emission at default `-O1`. */
 pub filterReachableItems := fn(items: Items): Items {
-    filterReachableItemsWithOpt(items, ir.TARGET_TS, 1)
+    filterReachableItemsWithConfig(items, ir.TARGET_TS, optCfg.presetConfig(optCfg.OptClass.O1, ir.TARGET_TS))
 };

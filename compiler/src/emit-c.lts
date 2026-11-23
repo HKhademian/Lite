@@ -11,7 +11,7 @@ tb := import "util/text-builder";
 
 var cOutUseWriter := false;
 var cCompactEmit := false;
-var cSourceMapMode := "none";
+var cSourceMapMode: optCfg.SourceMapMode = optCfg.SourceMapMode.None;
 cOutBuf: mut tb.TextBuilder;
 
 /** Emits one C11 line to either stdout or the buffered `TextBuilder` for `--out`. */
@@ -2043,7 +2043,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             pendingLocCol = item.code;
             continue;
         }
-        if cSourceMapMode =!= emitFmt.SOURCEMAP_NONE and pendingLocLine > 0 and
+        if cSourceMapMode =!= optCfg.SourceMapMode.None and pendingLocLine > 0 and
         item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
         item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and
         item.kind =!= frontend.ITEM_KIND_SOFT_BUILTIN and item.kind =!= frontend.ITEM_KIND_NOOP and
@@ -2052,7 +2052,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
         item.kind =!= frontend.ITEM_KIND_END_SCOPE and item.kind =!= frontend.ITEM_KIND_MAIN_STOP {
             if pendingLocFile =!= lastEmittedLocFile or pendingLocLine =!= lastEmittedLocLine {
                 dispFile := if pendingLocFile =!= "" { pendingLocFile } else { "<stdin>" };
-                if cSourceMapMode == emitFmt.SOURCEMAP_LINES {
+                if cSourceMapMode == optCfg.SourceMapMode.Lines {
                     outLine("#line " + integer.intText(pendingLocLine) + " " + cLiteral.textLiteralCode(dispFile));
                 } else {
                     outLine(indent + "// " + dispFile + ":" + integer.intText(pendingLocLine) + ":" + pendingLocCol);
@@ -4171,7 +4171,7 @@ emitCExtraCanvasHelpers := fn(calls: String): Unit {
 pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     prevCompact := cCompactEmit;
     prevSourceMap := cSourceMapMode;
-    cCompactEmit = config.emitFormat == emitFmt.FORMAT_COMPACT;
+    cCompactEmit = config.emitFormat == optCfg.EmitFormat.Compact;
     cSourceMapMode = config.sourceMap;
     softItems := applyCSoftBuiltins(items, prefix, builtinSpecs);
     reachable := frontend.filterReachableItemsWithConfig(softItems, frontend.TARGET_C, config);
@@ -4735,16 +4735,6 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     cSourceMapMode = prevSourceMap;
 }
 
-/** Emits a complete C11 program using explicit builtin specs, `optLevel`, `--emit-format`, and `--source-map`. */
-pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
-    emitProgramWithConfig(items, source, prefix, builtinSpecs, optCfg.configFromLegacyOpts(optLevel, frontend.TARGET_C, emitFormat, sourceMap));
-};
-
-/** Emits a complete C11 program using explicit builtin specs and optimization level `optLevel`. */
-pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
-    emitProgramWithOpts(items, source, prefix, builtinSpecs, optLevel, "", "");
-};
-
 /** Emits the C program to an explicit `io.Writer` driven by composable `OptConfig`. */
 pub emitProgramToWithConfig := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     cOutUseWriter = true;
@@ -4755,23 +4745,13 @@ pub emitProgramToWithConfig := fn(writer: io.Writer, items: frontend.Items, sour
     cOutUseWriter = false;
 };
 
-/** Emits the C program to an explicit `io.Writer` with `--emit-format` and `--source-map`. */
-pub emitProgramToWithOpts := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
-    emitProgramToWithConfig(writer, items, source, prefix, builtinSpecs, optCfg.configFromLegacyOpts(optLevel, frontend.TARGET_C, emitFormat, sourceMap));
-};
-
-/** Emits the C program to an explicit `io.Writer` with `--builtin-mode` specifications and optimization level (`0..4`). */
-pub emitProgramToOpt := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
-    emitProgramToWithOpts(writer, items, source, prefix, builtinSpecs, optLevel, "", "");
-};
-
 /** Emits the C program from the flat item stream with explicit `--builtin-mode` specifications at default `-O1`. */
 pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
-    emitProgramWithSpecsOpt(items, source, prefix, builtinSpecs, 1);
+    emitProgramWithConfig(items, source, prefix, builtinSpecs, optCfg.presetConfig(optCfg.OptClass.O1, frontend.TARGET_C));
 }
 
 /** Emits the C program from the flat item stream using default builtin modes. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
     emptySpecs: List<String> = [];
-    emitProgramWithSpecsOpt(items, source, prefix, emptySpecs, 1);
+    emitProgramWithConfig(items, source, prefix, emptySpecs, optCfg.presetConfig(optCfg.OptClass.O1, frontend.TARGET_C));
 }

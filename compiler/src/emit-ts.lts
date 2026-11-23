@@ -11,7 +11,7 @@ var tsOutUseWriter := false;
 var tsOutWriterKind := "";
 var tsOutWriterHandle := 0;
 var tsCompactEmit := false;
-var tsSourceMapMode := "none";
+var tsSourceMapMode: optCfg.SourceMapMode = optCfg.SourceMapMode.None;
 
 /** Emits one line to either standard output or an explicit target `io.Writer`. */
 outLine := fn(s: String): Unit {
@@ -2454,7 +2454,7 @@ emitTsComment := fn(indent: String, commentText: String): Unit {
 pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     prevCompact := tsCompactEmit;
     prevSourceMap := tsSourceMapMode;
-    tsCompactEmit = config.emitFormat == emitFmt.FORMAT_COMPACT;
+    tsCompactEmit = config.emitFormat == optCfg.EmitFormat.Compact;
     tsSourceMapMode = config.sourceMap;
     effectiveItems := frontend.filterReachableItemsWithConfig(applySoftBuiltins(items, prefix, builtinSpecs), frontend.TARGET_TS, config);
     calls := frontend.targetHelperCalls(effectiveItems);
@@ -2537,7 +2537,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             pendingLocCol = item.code;
             continue;
         }
-        if tsSourceMapMode =!= emitFmt.SOURCEMAP_NONE and pendingLocLine > 0 and
+        if tsSourceMapMode =!= optCfg.SourceMapMode.None and pendingLocLine > 0 and
         item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
         item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and
         item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_END_IF and
@@ -2742,25 +2742,15 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     tsSourceMapMode = prevSourceMap;
 }
 
-/** Emits the TS module with explicit `--builtin-mode`, `optLevel`, `--emit-format`, and `--source-map`. */
-pub emitProgramWithOpts := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
-    emitProgramWithConfig(items, source, prefix, builtinSpecs, optCfg.configFromLegacyOpts(optLevel, frontend.TARGET_TS, emitFormat, sourceMap));
-};
-
-/** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications and optimization level (`0..5`). */
-pub emitProgramWithSpecsOpt := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
-    emitProgramWithOpts(items, source, prefix, builtinSpecs, optLevel, "", "");
-};
-
 /** Emits the TS module from the flat item stream with explicit `--builtin-mode` specifications at default `-O1`. */
 pub emitProgramWithSpecs := fn(items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
-    emitProgramWithSpecsOpt(items, source, prefix, builtinSpecs, 1);
+    emitProgramWithConfig(items, source, prefix, builtinSpecs, optCfg.presetConfig(optCfg.OptClass.O1, frontend.TARGET_TS));
 }
 
 /** Emits the TS module from the flat item stream to stdout using default builtin modes. */
 pub emitProgram := fn(items: frontend.Items, source: String, prefix: String): Unit {
     emptySpecs: List<String> = [];
-    emitProgramWithSpecsOpt(items, source, prefix, emptySpecs, 1);
+    emitProgramWithConfig(items, source, prefix, emptySpecs, optCfg.presetConfig(optCfg.OptClass.O1, frontend.TARGET_TS));
 }
 
 /** Emits the TS module into `writer` driven by composable `OptConfig`. */
@@ -2772,17 +2762,7 @@ pub emitProgramToWithConfig := fn(writer: io.Writer, items: frontend.Items, sour
     tsOutUseWriter = false;
 };
 
-/** Emits the TS module into `writer` with explicit `--emit-format` and `--source-map`. */
-pub emitProgramToWithOpts := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int, emitFormat: String, sourceMap: String): Unit {
-    emitProgramToWithConfig(writer, items, source, prefix, builtinSpecs, optCfg.configFromLegacyOpts(optLevel, frontend.TARGET_TS, emitFormat, sourceMap));
-};
-
-/** Emits the TS module from the flat item stream into `writer` at optimization level `optLevel` (`0..4`). */
-pub emitProgramToOpt := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, optLevel: Int): Unit {
-    emitProgramToWithOpts(writer, items, source, prefix, builtinSpecs, optLevel, "", "");
-}
-
 /** Emits the TS module from the flat item stream into `writer` at default `-O1`. */
 pub emitProgramTo := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>): Unit {
-    emitProgramToOpt(writer, items, source, prefix, builtinSpecs, 1);
+    emitProgramToWithConfig(writer, items, source, prefix, builtinSpecs, optCfg.presetConfig(optCfg.OptClass.O1, frontend.TARGET_TS));
 }
