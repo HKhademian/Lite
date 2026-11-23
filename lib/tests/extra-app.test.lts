@@ -30,13 +30,15 @@ functionalSrc :=
 "\n" +
 "near := fn(a: Float, b: Float): Bool { math.abs(a - b) < 0.0001 };\n" +
 "\n" +
-"/* 1. extra/vector */\n" +
+"/* 1. extra/vector (legacy shims + nominal TypeName.op) */\n" +
 "v := vec.vec2(3.0, 4.0);\n" +
 "vn := vec.normalize2(v);\n" +
 "vr := vec.rotate2(vec.vec2(1.0, 0.0), math.PI * 0.5);\n" +
 "c3 := vec.cross3(vec.UNIT_X3, vec.UNIT_Y3);\n" +
 "rf := vec.reflect3(vec.vec3(1.0, -1.0, 0.0), vec.UNIT_Y3);\n" +
-"io.outputLine(\"vec\", near(vec.length2(v), 5.0), near(vn.x, 0.6), near(vr.x, 0.0), near(vr.y, 1.0), near(c3.z, 1.0), near(rf.x, 1.0), near(rf.y, 1.0));\n" +
+"vDot := v.normalize().dot(vec.vec2(1.0, 0.0));\n" +
+"c3Dot := vec.UNIT_X3.cross(vec.UNIT_Y3).length();\n" +
+"io.outputLine(\"vec\", near(vec.length2(v), 5.0), near(vn.x, 0.6), near(vr.x, 0.0), near(vr.y, 1.0), near(c3.z, 1.0), near(rf.x, 1.0), near(rf.y, 1.0), near(v.length(), 5.0), near(vDot, 0.6), near(c3Dot, 1.0));\n" +
 "\n" +
 "/* 2. extra/matrix */\n" +
 "m2 := mat.rotation2(math.PI * 0.5);\n" +
@@ -74,7 +76,7 @@ functionalSrc :=
 "io.outputLine(\"timer\", adv1.lastSteps, near(adv1.alpha, 0.5), adv1.totalSteps, t0.fired, timer.isReady(cd1), t1.fired, near(timer.progress(t1), 0.0), el >= 0.0 and sw.lastLapMs >= 0.0);\n";
 
 expectedOut :=
-"vec true true true true true true true\n" +
+"vec true true true true true true true true true true\n" +
 "mat true true true true true true true true\n" +
 "grid 8 6 7 -1 6 9\n" +
 "fgrid true true\n" +

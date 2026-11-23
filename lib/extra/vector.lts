@@ -3,31 +3,31 @@
 math := import "core/math";
 
 /** 2D floating-point vector. */
-pub Vec2 := type (x: Float, y: Float);
+pub Vec2 := record { x: Float; y: Float; };
 
 /** 3D floating-point vector. */
-pub Vec3 := type (x: Float, y: Float, z: Float);
+pub Vec3 := record { x: Float; y: Float; z: Float; };
 
 /** 4D floating-point vector (homogeneous coordinates or RGBA). */
-pub Vec4 := type (x: Float, y: Float, z: Float, w: Float);
+pub Vec4 := record { x: Float; y: Float; z: Float; w: Float; };
 
 /** Zero 2D vector `(0, 0)`. */
-pub ZERO2 := (x = 0.0, y = 0.0);
+pub ZERO2 := Vec2 { x = 0.0, y = 0.0 };
 
 /** Zero 3D vector `(0, 0, 0)`. */
-pub ZERO3 := (x = 0.0, y = 0.0, z = 0.0);
+pub ZERO3 := Vec3 { x = 0.0, y = 0.0, z = 0.0 };
 
 /** Zero 4D vector `(0, 0, 0, 0)`. */
-pub ZERO4 := (x = 0.0, y = 0.0, z = 0.0, w = 0.0);
+pub ZERO4 := Vec4 { x = 0.0, y = 0.0, z = 0.0, w = 0.0 };
 
 /** Unit X axis `(1, 0, 0)`. */
-pub UNIT_X3 := (x = 1.0, y = 0.0, z = 0.0);
+pub UNIT_X3 := Vec3 { x = 1.0, y = 0.0, z = 0.0 };
 
 /** Unit Y axis `(0, 1, 0)`. */
-pub UNIT_Y3 := (x = 0.0, y = 1.0, z = 0.0);
+pub UNIT_Y3 := Vec3 { x = 0.0, y = 1.0, z = 0.0 };
 
 /** Unit Z axis `(0, 0, 1)`. */
-pub UNIT_Z3 := (x = 0.0, y = 0.0, z = 1.0);
+pub UNIT_Z3 := Vec3 { x = 0.0, y = 0.0, z = 1.0 };
 
 /* Pure range-reduced trig helpers (exact to < 1e-11 on both TS and C11). */
 wrapAngle := fn(rad: Float): Float {
@@ -63,155 +63,260 @@ pub cosRad := fn(rad: Float): Float {
  * ============================================================================ */
 
 /** Constructs a `Vec2`. */
-pub vec2 := fn(x: Float, y: Float): Vec2 { (x = x, y = y) };
+pub vec2 := fn(x: Float, y: Float): Vec2 { Vec2 { x = x, y = y } };
 
 /** Adds `a + b`. */
-pub add2 := fn(a: Vec2, b: Vec2): Vec2 { (x = a.x + b.x, y = a.y + b.y) };
+pub Vec2.add := fn(a: Self, b: Self): Self { Vec2 { x = a.x + b.x, y = a.y + b.y } };
 
 /** Subtracts `a - b`. */
-pub sub2 := fn(a: Vec2, b: Vec2): Vec2 { (x = a.x - b.x, y = a.y - b.y) };
+pub Vec2.sub := fn(a: Self, b: Self): Self { Vec2 { x = a.x - b.x, y = a.y - b.y } };
 
 /** Multiplies `v` by scalar `s`. */
-pub scale2 := fn(v: Vec2, s: Float): Vec2 { (x = v.x * s, y = v.y * s) };
+pub Vec2.scale := fn(v: Self, s: Float): Self { Vec2 { x = v.x * s, y = v.y * s } };
 
 /** Negates `v`. */
-pub neg2 := fn(v: Vec2): Vec2 { (x = 0.0 - v.x, y = 0.0 - v.y) };
+pub Vec2.neg := fn(v: Self): Self { Vec2 { x = 0.0 - v.x, y = 0.0 - v.y } };
 
 /** Component-wise product of `a` and `b`. */
-pub mul2 := fn(a: Vec2, b: Vec2): Vec2 { (x = a.x * b.x, y = a.y * b.y) };
+pub Vec2.mul := fn(a: Self, b: Self): Self { Vec2 { x = a.x * b.x, y = a.y * b.y } };
 
 /** 2D dot product. */
-pub dot2 := fn(a: Vec2, b: Vec2): Float { (a.x * b.x) + (a.y * b.y) };
+pub Vec2.dot := fn(a: Self, b: Self): Float { (a.x * b.x) + (a.y * b.y) };
 
 /** 2D signed cross product (z-component of 3D cross). */
-pub cross2 := fn(a: Vec2, b: Vec2): Float { (a.x * b.y) - (a.y * b.x) };
+pub Vec2.cross := fn(a: Self, b: Self): Float { (a.x * b.y) - (a.y * b.x) };
 
 /** Squared Euclidean length of `v`. */
-pub lengthSq2 := fn(v: Vec2): Float { (v.x * v.x) + (v.y * v.y) };
+pub Vec2.lengthSq := fn(v: Self): Float { (v.x * v.x) + (v.y * v.y) };
 
 /** Euclidean length of `v`. */
-pub length2 := fn(v: Vec2): Float { math.sqrt(lengthSq2(v)) };
+pub Vec2.length := fn(v: Self): Float { math.sqrt(v.lengthSq()) };
 
 /** Euclidean distance between `a` and `b`. */
-pub distance2 := fn(a: Vec2, b: Vec2): Float { length2(sub2(a, b)) };
+pub Vec2.distance := fn(a: Self, b: Self): Float { a.sub(b).length() };
 
 /** Returns unit-length vector in the direction of `v`, or `ZERO2` when near zero. */
-pub normalize2 := fn(v: Vec2): Vec2 {
-    len := length2(v);
-    if len <= 0.000000000001 { ZERO2 } else { (x = v.x / len, y = v.y / len) }
+pub Vec2.normalize := fn(v: Self): Self {
+    len := v.length();
+    if len <= 0.000000000001 { ZERO2 } else { Vec2 { x = v.x / len, y = v.y / len } }
 };
 
 /** Linearly interpolates between `a` and `b` by `t`. */
-pub lerp2 := fn(a: Vec2, b: Vec2, t: Float): Vec2 {
-    (x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t))
+pub Vec2.lerp := fn(a: Self, b: Self, t: Float): Self {
+    Vec2 { x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t) }
 };
 
 /** Rotates `v` counter-clockwise by `radians`. */
-pub rotate2 := fn(v: Vec2, radians: Float): Vec2 {
+pub Vec2.rotate := fn(v: Self, radians: Float): Self {
     c := cosRad(radians);
     s := sinRad(radians);
-    (x = (v.x * c) - (v.y * s), y = (v.x * s) + (v.y * c))
+    Vec2 { x = (v.x * c) - (v.y * s), y = (v.x * s) + (v.y * c) }
 };
 
 /** Returns the 90-degree counter-clockwise perpendicular vector `(-y, x)`. */
-pub perp2 := fn(v: Vec2): Vec2 { (x = 0.0 - v.y, y = v.x) };
+pub Vec2.perp := fn(v: Self): Self { Vec2 { x = 0.0 - v.y, y = v.x } };
 
 /** Clamps the magnitude of `v` to at most `maxLen`. */
-pub clampLength2 := fn(v: Vec2, maxLen: Float): Vec2 {
+pub Vec2.clampLength := fn(v: Self, maxLen: Float): Self {
     if maxLen <= 0.0 { return ZERO2; }
-    lenSq := lengthSq2(v);
-    if lenSq <= (maxLen * maxLen) { v } else { scale2(v, maxLen / math.sqrt(lenSq)) }
+    lenSq := v.lengthSq();
+    if lenSq <= (maxLen * maxLen) { v } else { v.scale(maxLen / math.sqrt(lenSq)) }
 };
+
+/** #deprecated Use `a.add(b)` instead. */
+pub add2 := fn(a: Vec2, b: Vec2): Vec2 { a.add(b) };
+
+/** #deprecated Use `a.sub(b)` instead. */
+pub sub2 := fn(a: Vec2, b: Vec2): Vec2 { a.sub(b) };
+
+/** #deprecated Use `v.scale(s)` instead. */
+pub scale2 := fn(v: Vec2, s: Float): Vec2 { v.scale(s) };
+
+/** #deprecated Use `v.neg()` instead. */
+pub neg2 := fn(v: Vec2): Vec2 { v.neg() };
+
+/** #deprecated Use `a.mul(b)` instead. */
+pub mul2 := fn(a: Vec2, b: Vec2): Vec2 { a.mul(b) };
+
+/** #deprecated Use `a.dot(b)` instead. */
+pub dot2 := fn(a: Vec2, b: Vec2): Float { a.dot(b) };
+
+/** #deprecated Use `a.cross(b)` instead. */
+pub cross2 := fn(a: Vec2, b: Vec2): Float { a.cross(b) };
+
+/** #deprecated Use `v.lengthSq()` instead. */
+pub lengthSq2 := fn(v: Vec2): Float { v.lengthSq() };
+
+/** #deprecated Use `v.length()` instead. */
+pub length2 := fn(v: Vec2): Float { v.length() };
+
+/** #deprecated Use `a.distance(b)` instead. */
+pub distance2 := fn(a: Vec2, b: Vec2): Float { a.distance(b) };
+
+/** #deprecated Use `v.normalize()` instead. */
+pub normalize2 := fn(v: Vec2): Vec2 { v.normalize() };
+
+/** #deprecated Use `a.lerp(b, t)` instead. */
+pub lerp2 := fn(a: Vec2, b: Vec2, t: Float): Vec2 { a.lerp(b, t) };
+
+/** #deprecated Use `v.rotate(radians)` instead. */
+pub rotate2 := fn(v: Vec2, radians: Float): Vec2 { v.rotate(radians) };
+
+/** #deprecated Use `v.perp()` instead. */
+pub perp2 := fn(v: Vec2): Vec2 { v.perp() };
+
+/** #deprecated Use `v.clampLength(maxLen)` instead. */
+pub clampLength2 := fn(v: Vec2, maxLen: Float): Vec2 { v.clampLength(maxLen) };
 
 /* ============================================================================
  * Vec3
  * ============================================================================ */
 
 /** Constructs a `Vec3`. */
-pub vec3 := fn(x: Float, y: Float, z: Float): Vec3 { (x = x, y = y, z = z) };
+pub vec3 := fn(x: Float, y: Float, z: Float): Vec3 { Vec3 { x = x, y = y, z = z } };
 
 /** Adds `a + b`. */
-pub add3 := fn(a: Vec3, b: Vec3): Vec3 { (x = a.x + b.x, y = a.y + b.y, z = a.z + b.z) };
+pub Vec3.add := fn(a: Self, b: Self): Self { Vec3 { x = a.x + b.x, y = a.y + b.y, z = a.z + b.z } };
 
 /** Subtracts `a - b`. */
-pub sub3 := fn(a: Vec3, b: Vec3): Vec3 { (x = a.x - b.x, y = a.y - b.y, z = a.z - b.z) };
+pub Vec3.sub := fn(a: Self, b: Self): Self { Vec3 { x = a.x - b.x, y = a.y - b.y, z = a.z - b.z } };
 
 /** Multiplies `v` by scalar `s`. */
-pub scale3 := fn(v: Vec3, s: Float): Vec3 { (x = v.x * s, y = v.y * s, z = v.z * s) };
+pub Vec3.scale := fn(v: Self, s: Float): Self { Vec3 { x = v.x * s, y = v.y * s, z = v.z * s } };
 
 /** Negates `v`. */
-pub neg3 := fn(v: Vec3): Vec3 { (x = 0.0 - v.x, y = 0.0 - v.y, z = 0.0 - v.z) };
+pub Vec3.neg := fn(v: Self): Self { Vec3 { x = 0.0 - v.x, y = 0.0 - v.y, z = 0.0 - v.z } };
 
 /** Component-wise product of `a` and `b`. */
-pub mul3 := fn(a: Vec3, b: Vec3): Vec3 { (x = a.x * b.x, y = a.y * b.y, z = a.z * b.z) };
+pub Vec3.mul := fn(a: Self, b: Self): Self { Vec3 { x = a.x * b.x, y = a.y * b.y, z = a.z * b.z } };
 
 /** 3D dot product. */
-pub dot3 := fn(a: Vec3, b: Vec3): Float { (a.x * b.x) + (a.y * b.y) + (a.z * b.z) };
+pub Vec3.dot := fn(a: Self, b: Self): Float { (a.x * b.x) + (a.y * b.y) + (a.z * b.z) };
 
 /** 3D cross product `a x b`. */
-pub cross3 := fn(a: Vec3, b: Vec3): Vec3 {
-    (
+pub Vec3.cross := fn(a: Self, b: Self): Self {
+    Vec3 {
     x = (a.y * b.z) - (a.z * b.y),
     y = (a.z * b.x) - (a.x * b.z),
     z = (a.x * b.y) - (a.y * b.x)
-    )
+    }
 };
 
 /** Squared Euclidean length of `v`. */
-pub lengthSq3 := fn(v: Vec3): Float { (v.x * v.x) + (v.y * v.y) + (v.z * v.z) };
+pub Vec3.lengthSq := fn(v: Self): Float { (v.x * v.x) + (v.y * v.y) + (v.z * v.z) };
 
 /** Euclidean length of `v`. */
-pub length3 := fn(v: Vec3): Float { math.sqrt(lengthSq3(v)) };
+pub Vec3.length := fn(v: Self): Float { math.sqrt(v.lengthSq()) };
 
 /** Euclidean distance between `a` and `b`. */
-pub distance3 := fn(a: Vec3, b: Vec3): Float { length3(sub3(a, b)) };
+pub Vec3.distance := fn(a: Self, b: Self): Float { a.sub(b).length() };
 
 /** Returns unit-length vector in the direction of `v`, or `ZERO3` when near zero. */
-pub normalize3 := fn(v: Vec3): Vec3 {
-    len := length3(v);
-    if len <= 0.000000000001 { ZERO3 } else { (x = v.x / len, y = v.y / len, z = v.z / len) }
+pub Vec3.normalize := fn(v: Self): Self {
+    len := v.length();
+    if len <= 0.000000000001 { ZERO3 } else { Vec3 { x = v.x / len, y = v.y / len, z = v.z / len } }
 };
 
 /** Linearly interpolates between `a` and `b` by `t`. */
-pub lerp3 := fn(a: Vec3, b: Vec3, t: Float): Vec3 {
-    (x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t), z = math.lerp(a.z, b.z, t))
+pub Vec3.lerp := fn(a: Self, b: Self, t: Float): Self {
+    Vec3 { x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t), z = math.lerp(a.z, b.z, t) }
 };
 
 /** Reflects incident vector `v` across unit surface normal `normal`. */
-pub reflect3 := fn(v: Vec3, normal: Vec3): Vec3 {
-    d := 2.0 * dot3(v, normal);
-    sub3(v, scale3(normal, d))
+pub Vec3.reflect := fn(v: Self, normal: Self): Self {
+    d := 2.0 * v.dot(normal);
+    v.sub(normal.scale(d))
 };
+
+/** #deprecated Use `a.add(b)` instead. */
+pub add3 := fn(a: Vec3, b: Vec3): Vec3 { a.add(b) };
+
+/** #deprecated Use `a.sub(b)` instead. */
+pub sub3 := fn(a: Vec3, b: Vec3): Vec3 { a.sub(b) };
+
+/** #deprecated Use `v.scale(s)` instead. */
+pub scale3 := fn(v: Vec3, s: Float): Vec3 { v.scale(s) };
+
+/** #deprecated Use `v.neg()` instead. */
+pub neg3 := fn(v: Vec3): Vec3 { v.neg() };
+
+/** #deprecated Use `a.mul(b)` instead. */
+pub mul3 := fn(a: Vec3, b: Vec3): Vec3 { a.mul(b) };
+
+/** #deprecated Use `a.dot(b)` instead. */
+pub dot3 := fn(a: Vec3, b: Vec3): Float { a.dot(b) };
+
+/** #deprecated Use `a.cross(b)` instead. */
+pub cross3 := fn(a: Vec3, b: Vec3): Vec3 { a.cross(b) };
+
+/** #deprecated Use `v.lengthSq()` instead. */
+pub lengthSq3 := fn(v: Vec3): Float { v.lengthSq() };
+
+/** #deprecated Use `v.length()` instead. */
+pub length3 := fn(v: Vec3): Float { v.length() };
+
+/** #deprecated Use `a.distance(b)` instead. */
+pub distance3 := fn(a: Vec3, b: Vec3): Float { a.distance(b) };
+
+/** #deprecated Use `v.normalize()` instead. */
+pub normalize3 := fn(v: Vec3): Vec3 { v.normalize() };
+
+/** #deprecated Use `a.lerp(b, t)` instead. */
+pub lerp3 := fn(a: Vec3, b: Vec3, t: Float): Vec3 { a.lerp(b, t) };
+
+/** #deprecated Use `v.reflect(normal)` instead. */
+pub reflect3 := fn(v: Vec3, normal: Vec3): Vec3 { v.reflect(normal) };
 
 /* ============================================================================
  * Vec4
  * ============================================================================ */
 
 /** Constructs a `Vec4`. */
-pub vec4 := fn(x: Float, y: Float, z: Float, w: Float): Vec4 { (x = x, y = y, z = z, w = w) };
+pub vec4 := fn(x: Float, y: Float, z: Float, w: Float): Vec4 { Vec4 { x = x, y = y, z = z, w = w } };
 
 /** Adds `a + b`. */
-pub add4 := fn(a: Vec4, b: Vec4): Vec4 { (x = a.x + b.x, y = a.y + b.y, z = a.z + b.z, w = a.w + b.w) };
+pub Vec4.add := fn(a: Self, b: Self): Self { Vec4 { x = a.x + b.x, y = a.y + b.y, z = a.z + b.z, w = a.w + b.w } };
 
 /** Subtracts `a - b`. */
-pub sub4 := fn(a: Vec4, b: Vec4): Vec4 { (x = a.x - b.x, y = a.y - b.y, z = a.z - b.z, w = a.w - b.w) };
+pub Vec4.sub := fn(a: Self, b: Self): Self { Vec4 { x = a.x - b.x, y = a.y - b.y, z = a.z - b.z, w = a.w - b.w } };
 
 /** Multiplies `v` by scalar `s`. */
-pub scale4 := fn(v: Vec4, s: Float): Vec4 { (x = v.x * s, y = v.y * s, z = v.z * s, w = v.w * s) };
+pub Vec4.scale := fn(v: Self, s: Float): Self { Vec4 { x = v.x * s, y = v.y * s, z = v.z * s, w = v.w * s } };
 
 /** 4D dot product. */
-pub dot4 := fn(a: Vec4, b: Vec4): Float { (a.x * b.x) + (a.y * b.y) + (a.z * b.z) + (a.w * b.w) };
+pub Vec4.dot := fn(a: Self, b: Self): Float { (a.x * b.x) + (a.y * b.y) + (a.z * b.z) + (a.w * b.w) };
 
 /** Euclidean length of `v`. */
-pub length4 := fn(v: Vec4): Float { math.sqrt(dot4(v, v)) };
+pub Vec4.length := fn(v: Self): Float { math.sqrt(v.dot(v)) };
 
 /** Returns unit-length 4D vector, or `ZERO4` when near zero. */
-pub normalize4 := fn(v: Vec4): Vec4 {
-    len := length4(v);
-    if len <= 0.000000000001 { ZERO4 } else { (x = v.x / len, y = v.y / len, z = v.z / len, w = v.w / len) }
+pub Vec4.normalize := fn(v: Self): Self {
+    len := v.length();
+    if len <= 0.000000000001 { ZERO4 } else { Vec4 { x = v.x / len, y = v.y / len, z = v.z / len, w = v.w / len } }
 };
 
 /** Linearly interpolates between `a` and `b` by `t`. */
-pub lerp4 := fn(a: Vec4, b: Vec4, t: Float): Vec4 {
-    (x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t), z = math.lerp(a.z, b.z, t), w = math.lerp(a.w, b.w, t))
+pub Vec4.lerp := fn(a: Self, b: Self, t: Float): Self {
+    Vec4 { x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t), z = math.lerp(a.z, b.z, t), w = math.lerp(a.w, b.w, t) }
 };
+
+/** #deprecated Use `a.add(b)` instead. */
+pub add4 := fn(a: Vec4, b: Vec4): Vec4 { a.add(b) };
+
+/** #deprecated Use `a.sub(b)` instead. */
+pub sub4 := fn(a: Vec4, b: Vec4): Vec4 { a.sub(b) };
+
+/** #deprecated Use `v.scale(s)` instead. */
+pub scale4 := fn(v: Vec4, s: Float): Vec4 { v.scale(s) };
+
+/** #deprecated Use `a.dot(b)` instead. */
+pub dot4 := fn(a: Vec4, b: Vec4): Float { a.dot(b) };
+
+/** #deprecated Use `v.length()` instead. */
+pub length4 := fn(v: Vec4): Float { v.length() };
+
+/** #deprecated Use `v.normalize()` instead. */
+pub normalize4 := fn(v: Vec4): Vec4 { v.normalize() };
+
+/** #deprecated Use `a.lerp(b, t)` instead. */
+pub lerp4 := fn(a: Vec4, b: Vec4, t: Float): Vec4 { a.lerp(b, t) };

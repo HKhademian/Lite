@@ -69,30 +69,30 @@ functionalSrc :=
 "io.outputLine(\"dequeText\", tf.value, tb.value, deque.textCount(td));\n" +
 "deque.destroyTexts(td);\n" +
 "\n" +
-"/* 3. extra/heap */\n" +
+"/* 3. extra/heap (legacy shims + nominal TypeName.op) */\n" +
 "mn := heap.createMin(8);\n" +
-"_m1 := heap.pushMin(mn, 50);\n" +
+"_m1 := mn.push(50);\n" +
 "_m2 := heap.pushMin(mn, 10);\n" +
-"_m3 := heap.pushMin(mn, 30);\n" +
+"_m3 := mn.push(30);\n" +
 "_m4 := heap.pushMin(mn, 20);\n" +
-"io.outputLine(\"minHeap\", heap.popMin(mn).value, heap.popMin(mn).value, heap.popMin(mn).value, heap.popMin(mn).value, heap.popMin(mn).found);\n" +
-"heap.destroyMin(mn);\n" +
+"io.outputLine(\"minHeap\", mn.pop().value, heap.popMin(mn).value, mn.pop().value, heap.popMin(mn).value, mn.pop().found);\n" +
+"mn.destroy();\n" +
 "\n" +
 "mx := heap.createMax(8);\n" +
-"_x1 := heap.pushMax(mx, 10);\n" +
+"_x1 := mx.push(10);\n" +
 "_x2 := heap.pushMax(mx, 50);\n" +
-"_x3 := heap.pushMax(mx, 30);\n" +
-"io.outputLine(\"maxHeap\", heap.popMax(mx).value, heap.popMax(mx).value, heap.popMax(mx).value);\n" +
-"heap.destroyMax(mx);\n" +
+"_x3 := mx.push(30);\n" +
+"io.outputLine(\"maxHeap\", mx.pop().value, heap.popMax(mx).value, mx.pop().value);\n" +
+"mx.destroy();\n" +
 "\n" +
 "pq := heap.createPQ(8);\n" +
-"_q1 := heap.pushPQ(pq, 30, 103);\n" +
+"_q1 := pq.push(30, 103);\n" +
 "_q2 := heap.pushPQ(pq, 10, 101);\n" +
-"_q3 := heap.pushPQ(pq, 20, 102);\n" +
-"pqa := heap.popPQ(pq);\n" +
+"_q3 := pq.push(20, 102);\n" +
+"pqa := pq.pop();\n" +
 "pqb := heap.popPQ(pq);\n" +
-"io.outputLine(\"pq\", pqa.priority, pqa.item, pqb.priority, pqb.item, heap.pqCount(pq));\n" +
-"heap.destroyPQ(pq);\n" +
+"io.outputLine(\"pq\", pqa.priority, pqa.item, pqb.priority, pqb.item, pq.count());\n" +
+"pq.destroy();\n" +
 "\n" +
 "/* 4. extra/bitset */\n" +
 "b1 := bitset.create(65);\n" +

@@ -48,7 +48,7 @@ pub mul2 := fn(a: Mat2, b: Mat2): Mat2 {
 
 /** Multiplies 2x2 matrix `m` by `Vec2`. */
 pub mulVec2 := fn(m: Mat2, v: vec.Vec2): vec.Vec2 {
-    (x = (m.m00 * v.x) + (m.m01 * v.y), y = (m.m10 * v.x) + (m.m11 * v.y))
+    vec.vec2((m.m00 * v.x) + (m.m01 * v.y), (m.m10 * v.x) + (m.m11 * v.y))
 };
 
 /** Determinant of 2x2 matrix `m`. */
@@ -120,18 +120,18 @@ pub mul3 := fn(a: Mat3, b: Mat3): Mat3 {
 
 /** Multiplies 3x3 matrix `m` by `Vec3`. */
 pub mulVec3 := fn(m: Mat3, v: vec.Vec3): vec.Vec3 {
-    (
-    x = (m.m00 * v.x) + (m.m01 * v.y) + (m.m02 * v.z),
-    y = (m.m10 * v.x) + (m.m11 * v.y) + (m.m12 * v.z),
-    z = (m.m20 * v.x) + (m.m21 * v.y) + (m.m22 * v.z)
+    vec.vec3(
+    (m.m00 * v.x) + (m.m01 * v.y) + (m.m02 * v.z),
+    (m.m10 * v.x) + (m.m11 * v.y) + (m.m12 * v.z),
+    (m.m20 * v.x) + (m.m21 * v.y) + (m.m22 * v.z)
     )
 };
 
 /** Transforms 2D point `p` by homogeneous 3x3 matrix `m` (assuming `z = 1`). */
 pub transformPoint2 := fn(m: Mat3, p: vec.Vec2): vec.Vec2 {
-    (
-    x = (m.m00 * p.x) + (m.m01 * p.y) + m.m02,
-    y = (m.m10 * p.x) + (m.m11 * p.y) + m.m12
+    vec.vec2(
+    (m.m00 * p.x) + (m.m01 * p.y) + m.m02,
+    (m.m10 * p.x) + (m.m11 * p.y) + m.m12
     )
 };
 
@@ -260,11 +260,11 @@ pub mul4 := fn(a: Mat4, b: Mat4): Mat4 {
 
 /** Multiplies 4x4 matrix `m` by `Vec4`. */
 pub mulVec4 := fn(m: Mat4, v: vec.Vec4): vec.Vec4 {
-    (
-    x = (m.m00 * v.x) + (m.m01 * v.y) + (m.m02 * v.z) + (m.m03 * v.w),
-    y = (m.m10 * v.x) + (m.m11 * v.y) + (m.m12 * v.z) + (m.m13 * v.w),
-    z = (m.m20 * v.x) + (m.m21 * v.y) + (m.m22 * v.z) + (m.m23 * v.w),
-    w = (m.m30 * v.x) + (m.m31 * v.y) + (m.m32 * v.z) + (m.m33 * v.w)
+    vec.vec4(
+    (m.m00 * v.x) + (m.m01 * v.y) + (m.m02 * v.z) + (m.m03 * v.w),
+    (m.m10 * v.x) + (m.m11 * v.y) + (m.m12 * v.z) + (m.m13 * v.w),
+    (m.m20 * v.x) + (m.m21 * v.y) + (m.m22 * v.z) + (m.m23 * v.w),
+    (m.m30 * v.x) + (m.m31 * v.y) + (m.m32 * v.z) + (m.m33 * v.w)
     )
 };
 
