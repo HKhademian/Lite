@@ -214,7 +214,7 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     + "      </p>\n"
     + "      <pre class=\"code-block\"><code>$ cd editors/vscode\n"
     + "$ npm ci &amp;&amp; npm test &amp;&amp; npm run package\n"
-    + "# Install generated lite-0.1.1.vsix via VS Code: Extensions -&gt; Install from VSIX...</code></pre>\n"
+    + "# Install generated lite-0.2.0.vsix via VS Code: Extensions -&gt; Install from VSIX...</code></pre>\n"
     + "      <p><a href=\"" + escapeSiteHtml(repoVscodeHref) + "\">Browse <code>editors/vscode</code> source &rarr;</a></p>\n"
     + "    </section>\n\n"
     + "    <section class=\"section\" id=\"playground-host\">\n"

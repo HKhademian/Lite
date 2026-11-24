@@ -28,7 +28,7 @@ npm run package
 ```
 
 In VS Code, open Extensions, choose **… → Install from VSIX…**, and select
-`lite-0.1.1.vsix`. Open a `.lt`, `.lts` or `.lite` file; if it already has a manual language
+`lite-0.2.0.vsix`. Open a `.lt`, `.lts` or `.lite` file; if it already has a manual language
 association, use **Change Language Mode → Lite**. Nothing is published to the
 Marketplace. `lite-local` is only the local package publisher identifier.
 

@@ -1,10 +1,33 @@
 # Release and tag history
 
-Current entry, 2026-11-03: use [component release instructions](lite://doc/release-automation)
+Current entry, 2026-11-24: use [component release instructions](lite://doc/release-automation)
 and [the registry](lite://repo/config/versions.json). Tools, editor, docs and compiler
 milestones have independent streams. Native C packaging is deferred. The entries
 below preserve dated earlier checkpoints and their original counts; they are not
 the current test or support inventory. See [the transition](lite://doc/compiler/transition-plan).
+
+## Component release graduation, 2026-11-24
+
+Fourteen active component streams graduate to clean `MAJOR.MINOR.PATCH` releases:
+
+- **Compiler, igniter, runtime, and builtins (`0.1.0`)**: `compiler-v0.1.0`,
+  `igniter-v0.1.0`, `runtime-v0.1.0`, and `builtins-v0.1.0` cover dual-target TypeScript
+  and C11 code generation across 302/302 canonical verification scenarios (`0` migration
+  failures), 94-case corpus parity (`0` mismatches), three-generation fixed-point
+  self-hosting in TS and C11, type-attached operations (`TypeName.op`, `Self`),
+  explicit call-site `mut` leases, `Map<K, V>`, `Set<T>`, `core/array`, decoupled
+  `OptConfig` (`-Oc`, `-f`/`-fno`), multi-core tool ignition (`pool.runPoolJson`, `--jobs`),
+  `-O0` bootstrap C11 builds, C11 `lt_str` DCE, and the Node v24 ESM exit-deadlock fix.
+- **CLI & developer tools (`0.1.0`)**: `cli-v0.1.0`, `formatter-v0.1.0` (initial
+  assigned release of `bin/lite-fmt`), `check-v0.1.0`, `test-v0.1.0`, `verify-v0.1.0`,
+  `bench-v0.1.0`, `release-v0.1.0`, `docs-v0.1.0`, and `doctor-v0.1.0` ship the
+  Lite-migrated toolchain, unified flag parsing, streaming `lite bootstrap verify|promote --json`
+  NDJSON progress, and embedded annotated-tag summaries in `RELEASE-NOTES.md` (`## Summary`).
+- **VS Code extension (`0.2.0`)**: `vscode-v0.2.0` (`lite-0.2.0.vsix`) adds
+  `snippets/lite.code-snippets`, updated TextMate grammar support for `TypeName.op`,
+  `Self`, `core/array`, `Map<K, V>`, `Set<T>`, and loop metadata, and Lite-migrated build scripts.
+- **Unassigned streams**: `project`, `language`, `scripting`, `stdlib`, and `linker`
+  remain `null` in [config/versions.json](lite://repo/config/versions.json).
 
 ## Independent component baseline, 2026-11-03
 

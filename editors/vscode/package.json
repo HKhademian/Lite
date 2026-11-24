@@ -2,7 +2,7 @@
   "name": "lite",
   "displayName": "Lite",
   "description": "Syntax highlighting, diagnostics, formatting, and run support for Lite (.lt, .lts, .lite) files.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "lite-local",
   "license": "Apache-2.0",
   "engines": {
@@ -79,7 +79,7 @@
     "build": "node scripts/build.ts",
     "test": "npm run build && node --test test/grammar.test.ts test/extension.test.ts",
     "vscode:prepublish": "npm run build",
-    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --out ../../dist/vscode/lite-0.1.1.vsix"
+    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --out ../../dist/vscode/lite-0.2.0.vsix"
   },
   "devDependencies": {
     "@vscode/vsce": "4.1.0",
