@@ -3021,7 +3021,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         }
         if isReservedWord(name) and
         not (name == "fn" and position < size and textLib.at(source, position) == "(") and
-        not (name == "mut" and position < size and textLib.isNameStart(textLib.at(source, position))) {
+        not (name == "mut" and position < size and (textLib.isNameStart(textLib.at(source, position)) or textLib.at(source, position) == "(")) {
             unsupportedFeature(source, nameStart, name, prefix);
         }
         if textLib.startsWithAt(source, position, ":=") and textLib.wordAt(source, afterDefinition, "type") {

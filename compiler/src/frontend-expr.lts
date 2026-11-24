@@ -126,22 +126,54 @@ finishFinallyC := fn(tryCode: String, finParsed: Parsed, normalKind: String, lef
     intValue = 0, textValue = "", constant = false, next = finParsed.next)
 };
 
+/** Attempts to parse an optionally parenthesized `mut` binding lease (`mut x`, `(mut x)`, `(((((mut x)))))`, `mut (x)`, `(((mut ((x)))))`). */
+tryParseGroupedMutLease := fn(source: String, start: Int, prefix: String, requireOuterParen: Bool): (matched: Bool, sawMut: Bool, mutStart: Int, nameStart: Int, nameEnd: Int, next: Int) {
+    sourceSize := textLib.length(source);
+    var cur := start;
+    var openCount := 0;
+    loop cur < sourceSize and textLib.at(source, cur) == "(" {
+        openCount += 1;
+        cur = syntax.skipTrivia(source, cur + 1, prefix);
+    }
+    if requireOuterParen and openCount == 0 {
+        return (matched = false, sawMut = false, mutStart = 0, nameStart = 0, nameEnd = 0, next = start);
+    }
+    if not textLib.wordAt(source, cur, "mut") {
+        return (matched = false, sawMut = false, mutStart = 0, nameStart = 0, nameEnd = 0, next = start);
+    }
+    mutStart := cur;
+    var nameCur := syntax.skipTrivia(source, cur + 3, prefix);
+    var recvOpen := 0;
+    loop nameCur < sourceSize and textLib.at(source, nameCur) == "(" {
+        recvOpen += 1;
+        nameCur = syntax.skipTrivia(source, nameCur + 1, prefix);
+    }
+    if nameCur >= sourceSize or not textLib.isNameStart(textLib.at(source, nameCur)) {
+        return (matched = false, sawMut = true, mutStart = mutStart, nameStart = nameCur, nameEnd = nameCur, next = start);
+    }
+    mNameEnd := textLib.skipName(source, nameCur);
+    var closeCur := syntax.skipTrivia(source, mNameEnd, prefix);
+    needClose := recvOpen + openCount;
+    var closed := 0;
+    loop closed < needClose {
+        if closeCur >= sourceSize or textLib.at(source, closeCur) =!= ")" {
+            return (matched = false, sawMut = true, mutStart = mutStart, nameStart = nameCur, nameEnd = mNameEnd, next = start);
+        }
+        closed += 1;
+        closeCur = syntax.skipTrivia(source, closeCur + 1, prefix);
+    }
+    (matched = true, sawMut = true, mutStart = mutStart, nameStart = nameCur, nameEnd = mNameEnd, next = closeCur)
+};
+
 /** Parses `()`, a parenthesized expression, or a named/positional flat tuple literal starting at `start`. */
 parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     sourceSize := textLib.length(source);
     if textLib.at(source, syntax.skipTrivia(source, start + 1, prefix)) == ")" {
         return (kind = ir.VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = syntax.skipTrivia(source, start + 1, prefix) + 1);
     }
-    parenInner := syntax.skipTrivia(source, start + 1, prefix);
-    if textLib.wordAt(source, parenInner, "mut") {
-        mNameStart := syntax.skipTrivia(source, parenInner + 3, prefix);
-        if mNameStart < sourceSize and textLib.isNameStart(textLib.at(source, mNameStart)) {
-            mNameEnd := textLib.skipName(source, mNameStart);
-            afterMName := syntax.skipTrivia(source, mNameEnd, prefix);
-            if afterMName < sourceSize and textLib.at(source, afterMName) == ")" {
-                return parseMutReceiverCallExpr(target, source, parenInner, mNameStart, mNameEnd, afterMName + 1, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
-            }
-        }
+    mutLease := tryParseGroupedMutLease(source, start, prefix, true);
+    if mutLease.matched {
+        return parseMutReceiverCallExpr(target, source, mutLease.mutStart, mutLease.nameStart, mutLease.nameEnd, mutLease.next, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
     }
     if syntax.looksLikeTupleEntry(source, start + 1, prefix) {
         var cursor := syntax.skipTrivia(source, start + 1, prefix);
@@ -1266,12 +1298,14 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         return parseFnLiteralExpr(target, source, nameStart, next, prefix, locals, functions, params, expected, ctxs, iifeDepth, inferMode, aliases);
     }
     if name == "mut" {
-        mNameStart := syntax.skipTrivia(source, next, prefix);
-        if mNameStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, mNameStart)) {
-            syntax.failAt(source, mNameStart, prefix, "expected a binding name after mut");
+        mutLease := tryParseGroupedMutLease(source, nameStart, prefix, false);
+        if not mutLease.matched {
+            if mutLease.nameEnd > mutLease.nameStart {
+                syntax.failAt(source, mutLease.nameEnd, prefix, "expected ) after mut " + textLib.slice(source, mutLease.nameStart, mutLease.nameEnd));
+            }
+            syntax.failAt(source, mutLease.nameStart, prefix, "expected a binding name after mut");
         }
-        mNameEnd := textLib.skipName(source, mNameStart);
-        return parseMutReceiverCallExpr(target, source, nameStart, mNameStart, mNameEnd, mNameEnd, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
+        return parseMutReceiverCallExpr(target, source, mutLease.mutStart, mutLease.nameStart, mutLease.nameEnd, mutLease.next, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
     }
     if syntax.isReservedWord(name) { syntax.unsupportedFeature(source, nameStart, name, prefix); }
     afterName := syntax.skipTrivia(source, next, prefix);
@@ -6693,14 +6727,18 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                     slotEntry = ctx.setIntAt(slotEntry, slot, entryCount);
                     rawArgExpected := types.paramKindOf(callParams[callFirst + slot]);
                     if textLib.startsWithAt(rawArgExpected, 0, "mut ") {
-                        if not textLib.wordAt(source, rhsStart, "mut") {
+                        lease := tryParseGroupedMutLease(source, rhsStart, prefix, false);
+                        if not lease.matched {
+                            if lease.sawMut {
+                                if lease.nameEnd > lease.nameStart {
+                                    syntax.failAt(source, lease.nameEnd, prefix, "expected ) after mut " + textLib.slice(source, lease.nameStart, lease.nameEnd));
+                                }
+                                syntax.failAt(source, lease.nameStart, prefix, "expected a binding name after mut");
+                            }
                             syntax.failAt(source, rhsStart, prefix, "argument " + formatLib.decimalText(slot + 1) + " of " + calleeDisplay + " requires mut argument");
                         }
-                        mNameStart := syntax.skipTrivia(source, rhsStart + 3, prefix);
-                        if mNameStart >= size or not textLib.isNameStart(textLib.at(source, mNameStart)) {
-                            syntax.failAt(source, mNameStart, prefix, "expected a binding name after mut");
-                        }
-                        mNameEnd := textLib.skipName(source, mNameStart);
+                        mNameStart := lease.nameStart;
+                        mNameEnd := lease.nameEnd;
                         mListName := textLib.slice(source, mNameStart, mNameEnd);
                         mIdx := sym.localIndex(locals, mListName);
                         if mIdx < 0 { syntax.failAt(source, mNameStart, prefix, "unknown value " + mListName); }
@@ -6735,7 +6773,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                         listLib.pushBack(mut entryKinds, "mut " + mEntry.kind);
                         listLib.pushBack(mut entryCodes, mCode);
                         entryCount += 1;
-                        cursor = syntax.skipTrivia(source, mNameEnd, prefix);
+                        cursor = syntax.skipTrivia(source, lease.next, prefix);
                     } else {
                         argExpected := if isGenericCall {
                             generics.substKindForExpected(genParams, rawArgExpected, genBindings)
@@ -6776,14 +6814,18 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                     rawPosExpected := if isOverwrittenPos { "" } else { types.paramKindOf(callParams[callFirst + nextSlot]) };
                     slotEntry = ctx.setIntAt(slotEntry, nextSlot, entryCount);
                     if textLib.startsWithAt(rawPosExpected, 0, "mut ") {
-                        if not textLib.wordAt(source, cursor, "mut") {
+                        lease := tryParseGroupedMutLease(source, cursor, prefix, false);
+                        if not lease.matched {
+                            if lease.sawMut {
+                                if lease.nameEnd > lease.nameStart {
+                                    syntax.failAt(source, lease.nameEnd, prefix, "expected ) after mut " + textLib.slice(source, lease.nameStart, lease.nameEnd));
+                                }
+                                syntax.failAt(source, lease.nameStart, prefix, "expected a binding name after mut");
+                            }
                             syntax.failAt(source, cursor, prefix, "argument " + formatLib.decimalText(nextSlot + 1) + " of " + calleeDisplay + " requires mut argument");
                         }
-                        mNameStart := syntax.skipTrivia(source, cursor + 3, prefix);
-                        if mNameStart >= size or not textLib.isNameStart(textLib.at(source, mNameStart)) {
-                            syntax.failAt(source, mNameStart, prefix, "expected a binding name after mut");
-                        }
-                        mNameEnd := textLib.skipName(source, mNameStart);
+                        mNameStart := lease.nameStart;
+                        mNameEnd := lease.nameEnd;
                         mListName := textLib.slice(source, mNameStart, mNameEnd);
                         mIdx := sym.localIndex(locals, mListName);
                         if mIdx < 0 { syntax.failAt(source, mNameStart, prefix, "unknown value " + mListName); }
@@ -6818,7 +6860,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                         listLib.pushBack(mut entryKinds, "mut " + mEntry.kind);
                         listLib.pushBack(mut entryCodes, mCode);
                         entryCount += 1;
-                        cursor = syntax.skipTrivia(source, mNameEnd, prefix);
+                        cursor = syntax.skipTrivia(source, lease.next, prefix);
                     } else {
                         posExpected := if isGenericCall and rawPosExpected =!= "" {
                             generics.substKindForExpected(genParams, rawPosExpected, genBindings)

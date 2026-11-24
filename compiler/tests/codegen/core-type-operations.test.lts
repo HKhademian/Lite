@@ -47,8 +47,12 @@ coreOpsSrc :=
 "words: List<String> = [\"a\", \"b\", \"c\"];\n" +
 "words2: mut List<String> = [\"ok\"];\n" +
 "(mut words2).pushBack(\"hello\");\n" +
+"(((((mut words2))))).pushBack(\"world\");\n" +
+"mut (words2).pushBack(\"!\");\n" +
+"poppedBangLen := (((mut ((words2))))).popBack().length();\n" +
+"poppedWorldLen := ((mut words2).popBack()).length();\n" +
 "poppedWordLen := mut words2.popBack().length();\n" +
-"io.outputLine(xs.length(), xs.isEmpty(), popped, rev[0], big.length(), big[0], words.join(\"-\"), poppedWordLen);\n" +
+"io.outputLine(xs.length(), xs.isEmpty(), popped, rev[0], big.length(), big[0], words.join(\"-\"), poppedWordLen, poppedWorldLen, poppedBangLen, words2.length());\n" +
 "\n" +
 "var arr := [3, 6, 9];\n" +
 "arr[1] += 4;\n" +
@@ -74,7 +78,7 @@ coreOpsSrc :=
 "io.outputLine(\"ab\".repeat(3), parsed.ok, parsed.value, (42).toText(), (-7).toText());\n";
 
 expectedOut :=
-"3 false 30 25 2 24 a-b-c 5\n" +
+"3 false 30 25 2 24 a-b-c 5 5 1 1\n" +
 "3 false 3 10 9\n" +
 "2 false true true 1 99 7\n" +
 "1 false true false true\n" +

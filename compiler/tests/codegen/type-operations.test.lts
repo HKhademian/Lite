@@ -151,6 +151,21 @@ enumSrc :=
 
 runBoth("enum-ops", enumSrc, "true false 201 414\n");
 
+/* 3b. Arbitrary grouping parentheses around mut leases on dot calls and mut args. */
+groupedMutSrc :=
+"io := import \"core/io\";\n" +
+"P := record { hp: Int; }\n" +
+"P.hit := fn(p: mut Self): Unit { p.hp -= 1; };\n" +
+"P.getHp := fn(p: Self): Int { p.hp };\n" +
+"bump := fn(p: mut P): Unit { p.hp += 2; };\n" +
+"mut p := P { hp = 10 };\n" +
+"(((((mut p))))).hit();\n" +
+"mut (p).hit();\n" +
+"bump(((((mut p)))));\n" +
+"bump(p = ((mut p)));\n" +
+"io.outputLine(p.getHp());\n";
+runBoth("grouped-mut-leases", groupedMutSrc, "12\n");
+
 /* 4. Rejections: mut on read-only, missing call-site mut, stray mut on read-only op, rvalue, missing receiver, non-Self receiver, alias attachment, field collision, duplicate op, bare x.op, unknown $hook. */
 expectRejectBoth("mut-on-readonly",
 "P := record { hp: Int; }\n" +
@@ -172,6 +187,32 @@ expectRejectBoth("stray-mut-on-readonly-op",
 "mut p := P { hp = 10 };\n" +
 "_x := mut p.getHp();\n",
 "operation P.getHp does not mutate its receiver; remove mut");
+
+expectRejectBoth("grouped-stray-mut-on-readonly-op",
+"P := record { hp: Int; }\n" +
+"P.getHp := fn(p: Self): Int { p.hp };\n" +
+"mut p := P { hp = 10 };\n" +
+"_x := (((((mut p))))).getHp();\n",
+"operation P.getHp does not mutate its receiver; remove mut");
+
+expectRejectBoth("mut-arg-to-readonly-io",
+"io := import \"core/io\";\n" +
+"xs: mut List<Int> = [1];\n" +
+"io.outputLine(mut xs);\n",
+"expected .operation(...) after mut xs");
+
+expectRejectBoth("grouped-mut-arg-to-readonly-io",
+"io := import \"core/io\";\n" +
+"xs: mut List<Int> = [1];\n" +
+"io.outputLine((mut xs));\n",
+"expected .operation(...) after mut xs");
+
+expectRejectBoth("mut-parenthesized-call-rejected",
+"P := record { hp: Int; }\n" +
+"P.hit := fn(p: mut Self): Unit { p.hp -= 1; };\n" +
+"mut p := P { hp = 10 };\n" +
+"mut (p.hit());\n",
+"expected ) after mut p");
 
 expectRejectBoth("mut-on-rvalue",
 "P := record { hp: Int; }\n" +
