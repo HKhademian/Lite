@@ -5807,8 +5807,8 @@ static bool lt_fn_lib_s_core_s_text__containsText(lt_str lite_source, lt_str lit
 static int64_t lt_fn_lib_s_core_s_list__listIndexOfText(lt_list_str lite_values, lt_str lite_target) {
     (void)lite_values;
     (void)lite_target;
-    int64_t lt_arg_left_6659;
-    int64_t lt_arg_right_6659;
+    int64_t lt_arg_left_6649;
+    int64_t lt_arg_right_6649;
     int64_t lite_index = INT64_C(0);
     (void)lite_index;
     {
@@ -5819,7 +5819,7 @@ static int64_t lt_fn_lib_s_core_s_list__listIndexOfText(lt_list_str lite_values,
             if (lt_text_eq(lite_value, lite_target)) {
                 return lite_index;
             }
-            lite_index = (lt_arg_left_6659 = lite_index, lt_arg_right_6659 = INT64_C(1), lt_checked_add(lt_arg_left_6659, lt_arg_right_6659, 6659));
+            lite_index = (lt_arg_left_6649 = lite_index, lt_arg_right_6649 = INT64_C(1), lt_checked_add(lt_arg_left_6649, lt_arg_right_6649, 6649));
         }
     }
     return (-INT64_C(1));

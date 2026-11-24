@@ -1235,7 +1235,7 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_value) === (lite_target))) {
                 return lite_index;
             }
-            lite_index = lite$addInt(lite_index, 1n, 6659);
+            lite_index = lite$addInt(lite_index, 1n, 6649);
         }
         return (-1n);
     }
