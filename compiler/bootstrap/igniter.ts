@@ -37,6 +37,7 @@ declare const process: {
     };
     getBuiltinModule(name: "node:os"): {
         tmpdir(): string;
+        availableParallelism(): number;
     };
     getBuiltinModule(name: "node:child_process"): {
         spawnSync(command: string, args: readonly string[], options: { cwd?: string; env?: Record<string, string | undefined>; encoding?: "utf8"; input?: string; stdio: "inherit" | readonly ["pipe", "pipe", "pipe"]; timeout?: number; maxBuffer: number }): { status: number | null; signal: string | null; stdout: string | null; stderr: string | null; error?: Error };
@@ -441,6 +442,60 @@ function lite$unicodeFromCodePoints(points: readonly bigint[]): { ok: boolean; t
     return { ok: true, text: text + chunk, error: "" };
 }
 
+function lite$extPoolCpuCount(): bigint {
+    return BigInt(Math.max(1, process.getBuiltinModule("node:os").availableParallelism()));
+}
+function lite$extPoolRunJson(commands: readonly string[], argListsJson: readonly string[], cwd: string, maxJobs: bigint): string {
+    if (commands.length !== argListsJson.length) throw new Error("runPoolJson requires commands and argListsJson to have equal length");
+    if (commands.length === 0) return "[]";
+    const argLists = argListsJson.map((raw) => JSON.parse(raw) as unknown);
+    const limit = maxJobs > 0n ? Number(maxJobs) : Math.max(1, process.getBuiltinModule("node:os").availableParallelism());
+    const worker = [
+        "const fs = process.getBuiltinModule('node:fs');",
+        "const cp = process.getBuiltinModule('node:child_process');",
+        "const req = JSON.parse(fs.readFileSync(0, 'utf8'));",
+        "const total = req.commands.length;",
+        "const results = new Array(total);",
+        "let next = 0;",
+        "let active = 0;",
+        "let done = 0;",
+        "const pump = () => {",
+        "  while (active < req.limit && next < total) {",
+        "    const idx = next++;",
+        "    active++;",
+        "    const child = cp.spawn(req.commands[idx], req.argLists[idx], { cwd: req.cwd === '' ? undefined : req.cwd, stdio: ['ignore', 'pipe', 'pipe'] });",
+        "    const out = [];",
+        "    const err = [];",
+        "    let settled = false;",
+        "    const finish = (status, error) => {",
+        "      if (settled) return;",
+        "      settled = true;",
+        "      results[idx] = { status, stdout: Buffer.concat(out).toString('utf8'), stderr: Buffer.concat(err).toString('utf8'), error };",
+        "      active--;",
+        "      done++;",
+        "      if (done === total) { process.stdout.write(JSON.stringify(results)); }",
+        "      else { pump(); }",
+        "    };",
+        "    child.stdout.on('data', (chunk) => out.push(chunk));",
+        "    child.stderr.on('data', (chunk) => err.push(chunk));",
+        "    child.on('error', (e) => finish(-1, e instanceof Error ? e.message : String(e)));",
+        "    child.on('close', (code, signal) => finish(code ?? -1, signal !== null ? 'terminated by signal ' + signal : ''));",
+        "  }",
+        "};",
+        "pump();",
+    ].join("\n");
+    const res = process.getBuiltinModule("node:child_process").spawnSync(process.execPath, ["--input-type=module", "-e", worker], {
+        encoding: "utf8",
+        input: JSON.stringify({ commands, argLists, cwd, limit }),
+        stdio: ["pipe", "pipe", "pipe"],
+        maxBuffer: 64 * 1024 * 1024,
+    });
+    if (res.error !== undefined) throw res.error;
+    if (res.signal !== null) throw new Error("pool coordinator terminated by signal " + res.signal);
+    if (res.status !== 0) throw new Error("pool coordinator exited with status " + String(res.status) + ": " + (res.stderr ?? ""));
+    return res.stdout ?? "[]";
+}
+
 let lite$lastBmp = "";
 const lite$bmpSet = new Set<string>();
 const lite$textCache = new Map<string, readonly string[]>();
@@ -739,7 +794,7 @@ function lite$listPopFront<T>(items: T[], at: number): T {
     return items.shift() as T;
 }
 
-const lite$intLines: readonly number[] = [0, 90, 91, 123, 149, 179, 203, 231, 259, 290, 316, 344, 374, 402, 436, 491, 545, 597, 649, 700, 754, 755, 895, 942, 979, 1016, 1059, 1099, 1160, 1172, 1256, 1289, 1330, 1379, 1420, 1463, 1508, 1557, 1608, 1647, 1689, 1726, 1771, 1808, 1854, 1897, 1930, 1977, 2032, 2091, 2160, 2219, 2268, 2333, 2435, 2533, 2582, 2653, 2730, 2791, 2856, 2917, 2988, 3065, 3114, 3169, 3244, 3320, 3337, 3343, 3345, 3346, 3456, 3505, 3606, 3628, 3634, 3715, 3717, 3718, 3789, 3828, 3877, 3893, 3911, 3942, 4066, 4092, 4102, 4121, 4127, 4136, 4138, 4139, 4251, 4410, 4476, 4515, 4540, 4715, 4721, 4775, 4794, 4947, 4953, 5031, 5108, 5187, 5268, 5397, 5552, 5558, 5645, 5703, 5874, 5880, 5961, 6109, 6111, 6112, 6182, 6231, 6263, 6345, 6378, 6445, 6490, 6537, 6543, 6576, 6579, 6580, 6745, 6887, 6934, 7053, 7075, 7164, 7170, 7212, 7365, 7371, 7470, 7549, 7575, 7669, 7675, 7696, 7821, 7952, 7958, 8035, 8038, 8039, 8178, 8314, 8367, 8416, 8474, 8544, 8649, 8690, 8778, 8838, 8848, 8854, 8900, 8925, 9033, 9039, 9102, 9221, 9227, 9261, 9283, 9344, 9350, 9383, 9464, 9531, 9581, 9671, 9782, 9788, 9845, 9889, 9892, 9893, 9979, 10032, 10081, 10118, 10150, 10178, 10220, 10302, 10312, 10318, 10326, 10328, 10329, 10446, 10626, 10675, 10792, 10855, 10951, 11007, 11013, 11052, 11116, 11172, 11178, 11209, 11264, 11325, 11387, 11466, 11543, 11616, 11722, 11829, 11944, 11969, 12039, 12159, 12165, 12287, 12433, 12434, 12482, 12543, 12599, 12605, 12606, 12674, 12736, 12839, 12840, 12914, 13008, 13009, 13046, 13064, 13094, 13155, 13218, 13336, 13460, 13578, 13647, 13705, 13765, 13775, 13822, 13845, 13851, 13852, 13928, 13959, 14024, 14085, 14146, 14243, 14303, 14313, 14421, 14481, 14491, 14595, 14674, 14719, 14779, 14850, 14910, 14920, 14926, 14994, 14996, 14997, 15077, 15104, 15211, 15291, 15322, 15410, 15442, 15483, 15519, 15556, 15557, 15604, 15628, 15680, 15686, 15882, 15883, 15908, 15967, 16012, 16079, 16125, 16171, 16220, 16253, 16314, 16332, 16399, 16564, 16578, 16642, 16687, 16735, 16839, 16946, 17023, 17089, 17165, 17212, 17222, 17228, 17229, 17308, 17330, 17358, 17412, 17474, 17487, 17574, 17657, 17723, 17801, 17876, 17924, 17947, 17998, 18004, 18032, 18035, 18036, 18126, 18152, 18272, 18364, 18432, 18483, 18646, 18652, 18701, 18755, 18756, 18775, 18869, 18893, 19009, 19019, 19025, 19026, 19067, 19140, 19181, 19205, 19362, 19368, 19369, 19414, 19451, 19486, 19526, 19598, 19667, 19735, 19742, 19743, 19776, 19996, 20033, 20068, 20091, 20244, 20250, 20251, 20285, 20307, 20413, 20419, 20420, 20466, 20520, 20542, 20648, 20654, 20655, 20700, 20751, 20790, 20796, 20797, 20937, 20961, 21069, 21075, 21076, 21173, 21176, 21177, 21355, 21379, 21464, 21548, 21640, 21664, 21762, 21768, 21836, 21887, 22049, 22055, 22104, 22150, 22151, 22170, 22249, 22274, 22391, 22401, 22430, 22515, 22545, 22669, 22683, 22693, 22699, 22700, 22771, 22793, 22898, 22904, 22905, 22953, 22976, 23082, 23088, 23141, 23174, 23243, 23319, 23373, 23415, 23511, 23596, 23697, 23707, 23857, 23863, 23864, 23898, 23920, 23962, 24067, 24073, 24117, 24196, 24263, 24313, 24355, 24445, 24586, 24592, 24636, 24674, 24696, 24801, 24807, 24808, 24857, 24904, 24939, 24945, 24946, 24994, 25018, 25125, 25131, 25132, 25173, 25246, 25287, 25311, 25467, 25473, 25518, 25555, 25590, 25630, 25702, 25771, 25839, 25846, 25847, 25976, 26000, 26107, 26113, 26114, 26215, 26218, 26219, 26341, 26423, 26467, 26519, 26551, 26594, 26604, 26641, 26724, 26754, 26804, 26828, 26838, 26867, 26873, 26944, 27018, 27044, 27090, 27110, 27116, 27141, 27143, 27144, 27249, 27357, 27410, 27461, 27523, 27572, 27632, 27676, 27686, 27692, 27754, 27788, 27848, 27886, 27910, 28005, 28011, 28048, 28083, 28123, 28211, 28280, 28348, 28355, 28388, 28627, 28664, 28699, 28722, 28814, 28820, 28854, 28876, 28926, 28932, 28983, 29006, 29057, 29063, 29091, 29094, 29095, 29168, 29289, 29322, 29384, 29430, 29544, 29621, 29699, 29705, 29733, 29736, 29737, 29849, 29941, 29974, 30047, 30123, 30220, 30299, 30305, 30324, 30400, 30406, 30456, 30535, 30581, 30602, 30689, 30712, 30791, 30801, 30903, 30949, 30972, 31060, 31070, 31185, 31229, 31235, 31263, 31266, 31267, 31337, 31422, 31461, 31525, 31597, 31637, 31684, 31733, 31806, 31848, 31911, 31995, 32037, 32095, 32162, 32165, 32166, 32272, 32313, 32352, 32375, 32452, 32472, 32478, 32514, 32576, 32577, 32616, 32641, 32679, 32699, 32705, 32706, 32741, 32783, 32809, 32858, 32882, 32919, 32943, 32953, 33132, 33160, 33201, 33225, 33235, 33286, 33292, 33293, 33364, 33410, 33456, 33488, 33504, 33510, 33511, 33554, 33588, 33657, 33670, 33741, 33747, 33748, 33779, 33811, 33837, 33861, 33885, 33942, 33971, 34001, 34030, 34056, 34083, 34120, 34121, 34159, 34199, 34239, 34270, 34317, 34412, 34440, 34454, 34509, 34568, 34636, 34669, 34704, 34738, 34774, 34811, 34845, 34885, 34913, 34950, 34976, 35013, 35039, 35075, 35100, 35142, 35175, 35213, 35245, 35281, 35312, 35350, 35397, 35469, 35497, 35511, 35561, 35596, 35643, 35712, 35740, 35754, 35805, 35871, 35920, 35934, 35953, 36004, 36188, 36212, 36263, 36322, 36346, 36363, 36409, 36419, 36425, 36426, 36484, 36504, 36537, 36557, 36563, 36564, 36592, 36773, 36801, 36842, 36866, 36876, 36924, 36930, 36931, 36958, 37138, 37166, 37207, 37231, 37241, 37278, 37298, 37304, 37305, 37319, 37381, 37409, 37450, 37474, 37484, 37506, 37528, 37588, 37656, 37662, 37663, 37853, 37854, 37897, 37928, 38020, 38050, 38093, 38121, 38135, 38145, 38226, 38255, 38297, 38321, 38331, 38337, 38338, 38439, 38481, 38525, 38565, 38592, 38613, 38635, 38670, 38844, 38868, 38905, 38929, 38939, 38999, 39060, 39095, 39153, 39163, 39215, 39290, 39355, 39416, 39481, 39576, 39626, 39632, 39633, 39692, 39748, 39775, 39828, 39852, 39862, 39957, 39996, 40020, 40112, 40136, 40146, 40152, 40153, 40174, 40234, 40261, 40301, 40325, 40335, 40341, 40342, 40362, 40506, 40584, 40616, 40629, 40695, 40826, 40870, 40902, 41094, 41100, 41103, 41104, 41125];
+const lite$intLines: readonly number[] = [0, 90, 91, 123, 149, 179, 203, 231, 259, 290, 316, 344, 376, 406, 434, 468, 523, 577, 629, 681, 732, 786, 787, 927, 974, 1011, 1048, 1091, 1131, 1192, 1204, 1288, 1321, 1362, 1411, 1452, 1495, 1540, 1589, 1640, 1679, 1721, 1758, 1803, 1840, 1886, 1929, 1962, 2009, 2064, 2123, 2192, 2251, 2300, 2365, 2467, 2565, 2614, 2685, 2762, 2823, 2888, 2949, 3020, 3097, 3146, 3201, 3276, 3352, 3369, 3375, 3377, 3378, 3488, 3537, 3638, 3660, 3666, 3747, 3749, 3750, 3821, 3860, 3909, 3925, 3943, 3974, 4098, 4124, 4134, 4153, 4159, 4168, 4170, 4171, 4283, 4442, 4508, 4547, 4572, 4747, 4753, 4807, 4826, 4979, 4985, 5063, 5140, 5219, 5300, 5429, 5584, 5590, 5677, 5735, 5906, 5912, 5993, 6141, 6143, 6144, 6214, 6263, 6295, 6377, 6410, 6477, 6522, 6569, 6575, 6608, 6611, 6612, 6777, 6919, 6966, 7085, 7107, 7196, 7202, 7244, 7397, 7403, 7502, 7581, 7607, 7701, 7707, 7728, 7853, 7984, 7990, 8067, 8070, 8071, 8210, 8346, 8399, 8448, 8506, 8576, 8681, 8722, 8810, 8870, 8880, 8886, 8932, 8957, 9065, 9071, 9134, 9253, 9259, 9293, 9315, 9376, 9382, 9415, 9496, 9563, 9613, 9703, 9814, 9820, 9877, 9921, 9924, 9925, 10011, 10064, 10113, 10150, 10182, 10210, 10252, 10334, 10344, 10350, 10358, 10360, 10361, 10478, 10658, 10707, 10824, 10887, 10983, 11039, 11045, 11084, 11148, 11204, 11210, 11241, 11296, 11357, 11419, 11498, 11575, 11648, 11754, 11861, 11976, 12001, 12071, 12191, 12197, 12319, 12465, 12466, 12514, 12575, 12631, 12637, 12638, 12706, 12768, 12871, 12872, 12946, 13040, 13041, 13078, 13096, 13126, 13187, 13250, 13368, 13492, 13610, 13679, 13737, 13797, 13807, 13854, 13877, 13883, 13884, 13960, 13991, 14056, 14117, 14178, 14275, 14335, 14345, 14453, 14513, 14523, 14627, 14706, 14751, 14811, 14882, 14942, 14952, 14958, 15026, 15028, 15029, 15109, 15136, 15243, 15323, 15354, 15442, 15474, 15515, 15551, 15588, 15589, 15636, 15660, 15712, 15718, 15914, 15915, 15940, 15999, 16044, 16111, 16157, 16203, 16252, 16285, 16346, 16364, 16431, 16596, 16610, 16674, 16719, 16767, 16871, 16978, 17055, 17121, 17197, 17244, 17254, 17260, 17261, 17340, 17362, 17390, 17444, 17506, 17519, 17606, 17689, 17755, 17833, 17908, 17956, 17979, 18030, 18036, 18064, 18067, 18068, 18128, 18191, 18221, 18274, 18290, 18310, 18391, 18410, 18416, 18451, 18528, 18566, 18569, 18570, 18672, 18694, 18808, 18873, 18897, 18977, 19001, 19091, 19101, 19170, 19176, 19251, 19272, 19359, 19365, 19390, 19471, 19497, 19591, 19601, 19607, 19664, 19667, 19668, 19758, 19784, 19904, 19996, 20064, 20115, 20278, 20284, 20333, 20387, 20388, 20407, 20501, 20525, 20641, 20651, 20657, 20658, 20699, 20772, 20813, 20837, 20994, 21000, 21001, 21046, 21083, 21118, 21158, 21230, 21299, 21367, 21374, 21375, 21408, 21628, 21665, 21700, 21723, 21876, 21882, 21883, 21917, 21939, 22045, 22051, 22052, 22098, 22152, 22174, 22280, 22286, 22287, 22332, 22383, 22422, 22428, 22429, 22569, 22593, 22701, 22707, 22708, 22805, 22808, 22809, 22987, 23011, 23096, 23180, 23272, 23296, 23394, 23400, 23468, 23519, 23681, 23687, 23736, 23782, 23783, 23802, 23902, 23928, 24057, 24067, 24073, 24074, 24145, 24167, 24272, 24278, 24279, 24327, 24350, 24456, 24462, 24515, 24548, 24617, 24693, 24747, 24789, 24885, 24970, 25071, 25081, 25231, 25237, 25238, 25272, 25294, 25336, 25441, 25447, 25491, 25570, 25637, 25687, 25729, 25819, 25960, 25966, 26010, 26048, 26070, 26175, 26181, 26182, 26231, 26278, 26313, 26319, 26320, 26368, 26392, 26499, 26505, 26506, 26547, 26620, 26661, 26685, 26841, 26847, 26892, 26929, 26964, 27004, 27076, 27145, 27213, 27220, 27221, 27350, 27374, 27481, 27487, 27488, 27589, 27592, 27593, 27715, 27797, 27841, 27893, 27925, 27968, 27978, 28015, 28098, 28128, 28178, 28202, 28212, 28241, 28247, 28318, 28392, 28418, 28464, 28484, 28490, 28515, 28517, 28518, 28623, 28731, 28784, 28835, 28897, 28946, 29006, 29050, 29060, 29066, 29128, 29162, 29222, 29260, 29284, 29379, 29385, 29422, 29457, 29497, 29585, 29654, 29722, 29729, 29762, 30001, 30038, 30073, 30096, 30188, 30194, 30228, 30250, 30300, 30306, 30357, 30380, 30431, 30437, 30465, 30468, 30469, 30542, 30663, 30696, 30758, 30804, 30918, 30995, 31073, 31079, 31107, 31110, 31111, 31223, 31315, 31348, 31421, 31497, 31594, 31673, 31679, 31698, 31774, 31780, 31830, 31909, 31955, 31976, 32063, 32086, 32165, 32175, 32277, 32323, 32346, 32434, 32444, 32559, 32603, 32609, 32637, 32640, 32641, 32711, 32796, 32835, 32899, 32971, 33011, 33058, 33107, 33180, 33222, 33285, 33369, 33411, 33469, 33536, 33539, 33540, 33646, 33687, 33726, 33749, 33826, 33846, 33852, 33888, 33950, 33951, 33990, 34015, 34053, 34073, 34079, 34080, 34115, 34157, 34183, 34232, 34256, 34293, 34317, 34327, 34506, 34534, 34575, 34599, 34609, 34660, 34666, 34667, 34738, 34784, 34830, 34862, 34878, 34884, 34885, 34928, 34962, 35031, 35044, 35115, 35121, 35122, 35153, 35185, 35211, 35235, 35259, 35316, 35345, 35375, 35404, 35426, 35452, 35479, 35516, 35517, 35555, 35595, 35635, 35666, 35713, 35808, 35836, 35850, 35905, 35964, 36032, 36065, 36100, 36134, 36170, 36207, 36241, 36281, 36309, 36346, 36372, 36409, 36435, 36471, 36496, 36538, 36571, 36609, 36641, 36677, 36708, 36744, 36791, 36859, 36887, 36901, 36968, 37000, 37090, 37118, 37132, 37169, 37226, 37306, 37338, 37428, 37456, 37470, 37507, 37545, 37592, 37664, 37692, 37706, 37756, 37791, 37838, 37907, 37935, 37949, 38000, 38066, 38115, 38129, 38148, 38199, 38394, 38418, 38469, 38528, 38552, 38569, 38615, 38625, 38631, 38632, 38690, 38710, 38743, 38763, 38769, 38770, 38798, 38979, 39007, 39048, 39072, 39082, 39130, 39136, 39137, 39164, 39344, 39372, 39413, 39437, 39447, 39484, 39504, 39510, 39511, 39525, 39587, 39615, 39656, 39680, 39690, 39712, 39734, 39794, 39862, 39868, 39869, 40059, 40060, 40161, 40212, 40273, 40304, 40434, 40464, 40507, 40535, 40549, 40559, 40606, 40691, 40724, 40770, 40798, 40812, 40822, 40828, 40893, 40921, 40975, 40995, 41001, 41002, 41040, 41076, 41111, 41148, 41188, 41189, 41206, 41233, 41270, 41296, 41319, 41460, 41490, 41551, 41608, 41666, 41720, 41748, 41762, 41772, 41793, 41839, 41883, 41926, 41976, 42027, 42037, 42058, 42064, 42065, 42120, 42193, 42241, 42262, 42295, 42338, 42384, 42562, 42590, 42631, 42659, 42673, 42718, 42759, 42801, 42848, 42873, 42883, 42896, 42990, 43072, 43115, 43158, 43205, 43225, 43256, 43296, 43349, 43379, 43404, 43436, 43482, 43511, 43526, 43549, 43606, 43620, 43644, 43680, 43772, 43809, 43823, 43875, 43962, 43985, 43995, 43996, 44083, 44144, 44204, 44294, 44318, 44328, 44329, 44344, 44375, 44414, 44487, 44560, 44633, 44707, 44799, 44885, 44965, 45048, 45094, 45128, 45178, 45225, 45290, 45351, 45369, 45413, 45478, 45536, 45554, 45588, 45701, 45719, 45757, 45785, 45799, 45865, 45903, 46019, 46047, 46061, 46135, 46159, 46183, 46219, 46270, 46378, 46410, 46428, 46474, 46508, 46580, 46648, 46717, 46789, 46882, 46974, 47082, 47114, 47132, 47184, 47232, 47278, 47332, 47359, 47396, 47410, 47433, 47443, 47449, 47450, 47492, 47536, 47576, 47603, 47624, 47646, 47663, 47690, 47727, 47761, 47791, 47819, 47855, 47912, 47970, 48005, 48060, 48070, 48119, 48194, 48256, 48314, 48373, 48465, 48515, 48536, 48542, 48543, 48602, 48658, 48685, 48738, 48762, 48772, 48867, 48906, 48930, 49022, 49046, 49056, 49062, 49063, 49084, 49144, 49171, 49211, 49235, 49245, 49251, 49252, 49272, 49416, 49494, 49526, 49539, 49605, 49736, 49780, 49812, 50004, 50010, 50013, 50014, 50035];
 const lite$intSource = "tools/src/ignite.lts:";
 const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;
 function lite$fault(category: string, at: number, message: string): never {
@@ -42069,12 +42124,12 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (64n))) {
-            const lite_ch = lite$textAt(lite_hex, lite_i, 3925);
+            const lite_ch = lite$textAt(lite_hex, lite_i, 3957);
             void lite_ch;
             if ((((((((((((((!(((lite_ch.length === 1 && lite_ch >= "0" && lite_ch <= "9"))))) && (((lite_ch) !== ("a"))))) && (((lite_ch) !== ("b"))))) && (((lite_ch) !== ("c"))))) && (((lite_ch) !== ("d"))))) && (((lite_ch) !== ("e"))))) && (((lite_ch) !== ("f"))))) {
                 return false;
             }
-            lite_i = lite$addInt(lite_i, 1n, 4116);
+            lite_i = lite$addInt(lite_i, 1n, 4148);
         }
         return true;
     }
@@ -42192,7 +42247,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_emptyEnv: string[] = [...([])];
         void lite_emptyEnv;
-        const lite_ccArgs: string[] = [...(["-std=c11", "-O2", lite_seedCPath, "-o", lite_binPath, "-lm"])];
+        const lite_ccArgs: string[] = [...(["-std=c11", "-O0", lite_seedCPath, "-o", lite_binPath, "-lm"])];
         void lite_ccArgs;
         const lite_ccRes = lite$processRun(lite_ccCmd, lite_ccArgs, lite_rootDir, lite_emptyEnv, true, "");
         void lite_ccRes;
@@ -42217,7 +42272,7 @@ export function main(lite$write?: (text: string) => void): string {
         for (const lite_entry of (lite_entries)) {
             void lite_entry;
             if (liteFn$lib$core$text$endsWith(lite_entry, ".lts")) {
-                lite_out.push(lite$textSlice(lite_entry, 0n, lite$subtractInt(lite$textLength(lite_entry), 4n, 10295), 10255));
+                lite_out.push(lite$textSlice(lite_entry, 0n, lite$subtractInt(lite$textLength(lite_entry), 4n, 10327), 10287));
             }
         }
         return [...(lite_out)];
@@ -42321,7 +42376,7 @@ export function main(lite$write?: (text: string) => void): string {
                 return { valid: false, path: "", sha256: "" };
             }
             lite_depPaths.push((lite_dp).value);
-            lite_idx = lite$addInt(lite_idx, 1n, 13840);
+            lite_idx = lite$addInt(lite_idx, 1n, 13872);
         }
         const lite_edgeOffsets: bigint[] = [...(liteFn$lib$util$json$arrayElementOffsets(lite_provText, (lite_edgesField).valuePos))];
         void lite_edgeOffsets;
@@ -42424,6 +42479,59 @@ export function main(lite$write?: (text: string) => void): string {
         return { ok: true, error: "" };
     }
     void liteFn_writeToolProvenance;
+    function liteFn_parsePositiveJobs(lite_raw: string): { ok: boolean; value: bigint } {
+        void lite_raw;
+        const lite_size = lite$textLength(lite_raw);
+        void lite_size;
+        if (((lite_size) === (0n))) {
+            return { ok: false, value: 0n };
+        }
+        let lite_i = 0n;
+        void lite_i;
+        while (((lite_i) < (lite_size))) {
+            if ((!(liteFn$lib$core$text$isDigit(lite$textAt(lite_raw, lite_i, 18338))))) {
+                return { ok: false, value: 0n };
+            }
+            lite_i = lite$addInt(lite_i, 1n, 18405);
+        }
+        const lite_parsed = (lite$textToInt(lite_raw));
+        void lite_parsed;
+        if ((((!((lite_parsed).ok))) || ((((lite_parsed).value) < (1n))))) {
+            return { ok: false, value: 0n };
+        }
+        return { ok: true, value: (lite_parsed).value };
+    }
+    void liteFn_parsePositiveJobs;
+    function liteFn_findCachedTool(lite_rootDir: string, lite_name: string, lite_target: string, lite_allowTsFallback: boolean, lite_tsCompilerSha: string, lite_cCompilerSha: string): { valid: boolean; target: string; path: string; sha256: string } {
+        void lite_rootDir;
+        void lite_name;
+        void lite_target;
+        void lite_allowTsFallback;
+        void lite_tsCompilerSha;
+        void lite_cCompilerSha;
+        if (((lite_target) === ("ts"))) {
+            const lite_prev = liteFn_readValidProvenance(lite_rootDir, lite_name, "ts", lite_tsCompilerSha, false);
+            void lite_prev;
+            if ((lite_prev).valid) {
+                return { valid: true, target: "ts", path: (lite_prev).path, sha256: (lite_prev).sha256 };
+            }
+            return { valid: false, target: "", path: "", sha256: "" };
+        }
+        const lite_prevC = liteFn_readValidProvenance(lite_rootDir, lite_name, "c", lite_cCompilerSha, false);
+        void lite_prevC;
+        if ((lite_prevC).valid) {
+            return { valid: true, target: "c", path: (lite_prevC).path, sha256: (lite_prevC).sha256 };
+        }
+        if (lite_allowTsFallback) {
+            const lite_prevFb = liteFn_readValidProvenance(lite_rootDir, lite_name, "ts", lite_tsCompilerSha, true);
+            void lite_prevFb;
+            if ((lite_prevFb).valid) {
+                return { valid: true, target: "ts", path: (lite_prevFb).path, sha256: (lite_prevFb).sha256 };
+            }
+        }
+        return { valid: false, target: "", path: "", sha256: "" };
+    }
+    void liteFn_findCachedTool;
     function liteFn_igniteSingleToolTs(lite_rootDir: string, lite_name: string, lite_compilerArtifactSha: string, lite_compilerSourceSha: string, lite_force: boolean, lite_fallbackFromC: boolean): { ok: boolean; path: string; target: string; sha256: string; rebuilt: boolean; error: string } {
         void lite_rootDir;
         void lite_name;
@@ -42523,17 +42631,10 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_artifactPath = liteFn$lib$core$path$join(lite_distDir, lite_name);
         void lite_artifactPath;
         if ((!(lite_force))) {
-            const lite_prevC = liteFn_readValidProvenance(lite_rootDir, lite_name, "c", lite_cCompilerSha, false);
-            void lite_prevC;
-            if ((lite_prevC).valid) {
-                return { ok: true, path: (lite_prevC).path, target: "c", sha256: (lite_prevC).sha256, rebuilt: false, error: "" };
-            }
-            if (lite_allowTsFallback) {
-                const lite_prevFb = liteFn_readValidProvenance(lite_rootDir, lite_name, "ts", lite_tsCompilerSha, true);
-                void lite_prevFb;
-                if ((lite_prevFb).valid) {
-                    return { ok: true, path: (lite_prevFb).path, target: "ts", sha256: (lite_prevFb).sha256, rebuilt: false, error: "" };
-                }
+            const lite_cached = liteFn_findCachedTool(lite_rootDir, lite_name, "c", lite_allowTsFallback, lite_tsCompilerSha, lite_cCompilerSha);
+            void lite_cached;
+            if ((lite_cached).valid) {
+                return { ok: true, path: (lite_cached).path, target: (lite_cached).target, sha256: (lite_cached).sha256, rebuilt: false, error: "" };
             }
         }
         const lite_cBoot = liteFn_ensureDistCCompiler(lite_rootDir, lite_cCompilerSha, lite_ccCmd, false);
@@ -42849,10 +42950,10 @@ export function main(lite$write?: (text: string) => void): string {
             }
             liteFn_executeIgnitedTool((lite_ensured).path, lite_rawArgs);
         }
-        if ((((((BigInt((lite_rawArgs).length))) > (0n))) && (((lite$listAt(lite_rawArgs, 0n, 33344)) === ("--compile"))))) {
+        if ((((((BigInt((lite_rawArgs).length))) > (0n))) && (((lite$listAt(lite_rawArgs, 0n, 34718)) === ("--compile"))))) {
             const lite_compArgs: string[] = [...(lite_rawArgs)];
             void lite_compArgs;
-            const lite__flag = lite$listPopFront(lite_compArgs, 33427);
+            const lite__flag = lite$listPopFront(lite_compArgs, 34801);
             void lite__flag;
             liteFn$_p__p_$_p__p_$compiler$src$driver__ts$run(lite_compArgs);
             return;
@@ -42882,6 +42983,8 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_verifyAfter;
         let lite_jsonOutput = false;
         void lite_jsonOutput;
+        let lite_maxJobs = 0n;
+        void lite_maxJobs;
         let lite_ensureName = "";
         void lite_ensureName;
         let lite_runToolName = "";
@@ -42891,16 +42994,16 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_args: string[] = [...(lite_rawArgs)];
         void lite_args;
         while ((((BigInt((lite_args).length))) > (0n))) {
-            const lite_arg = lite$listPopFront(lite_args, 34214);
+            const lite_arg = lite$listPopFront(lite_args, 35610);
             void lite_arg;
             if (((lite_arg) === ("--target"))) {
                 if ((((BigInt((lite_args).length))) === (0n))) {
                     lite$reportError("ignite: missing target for --target (expected c, ts, or auto)");
                     lite$exit(2n);
                 }
-                lite_requestedTarget = lite$listPopFront(lite_args, 34484);
+                lite_requestedTarget = lite$listPopFront(lite_args, 35880);
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--target=")) {
-                lite_requestedTarget = lite$textSlice(lite_arg, 9n, lite$textLength(lite_arg), 34598);
+                lite_requestedTarget = lite$textSlice(lite_arg, 9n, lite$textLength(lite_arg), 35994);
             } else if (((lite_arg) === ("--c"))) {
                 lite_requestedTarget = "c";
             } else if (((lite_arg) === ("--ts"))) {
@@ -42921,25 +43024,45 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_verifyAfter = true;
             } else if (((lite_arg) === ("--json"))) {
                 lite_jsonOutput = true;
+            } else if (((lite_arg) === ("--jobs"))) {
+                if ((((BigInt((lite_args).length))) === (0n))) {
+                    lite$reportError("ignite: missing count after --jobs");
+                    lite$exit(2n);
+                }
+                const lite_jobsVal = liteFn_parsePositiveJobs(lite$listPopFront(lite_args, 36942));
+                void lite_jobsVal;
+                if ((!((lite_jobsVal).ok))) {
+                    lite$reportError("ignite: invalid --jobs value (expected positive integer)");
+                    lite$exit(2n);
+                }
+                lite_maxJobs = (lite_jobsVal).value;
+            } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "--jobs=")) {
+                const lite_jobsVal = liteFn_parsePositiveJobs(lite$textSlice(lite_arg, 7n, lite$textLength(lite_arg), 37267));
+                void lite_jobsVal;
+                if ((!((lite_jobsVal).ok))) {
+                    lite$reportError("ignite: invalid --jobs value (expected positive integer)");
+                    lite$exit(2n);
+                }
+                lite_maxJobs = (lite_jobsVal).value;
             } else if (((lite_arg) === ("--ensure"))) {
                 if ((((BigInt((lite_args).length))) === (0n))) {
                     lite$reportError("ignite: missing tool name for --ensure");
                     lite$exit(2n);
                 }
-                lite_ensureName = lite$listPopFront(lite_args, 35536);
+                lite_ensureName = lite$listPopFront(lite_args, 37731);
             } else if (((lite_arg) === ("--run"))) {
                 if ((((BigInt((lite_args).length))) === (0n))) {
                     lite$reportError("ignite: missing tool name for --run");
                     lite$exit(2n);
                 }
-                lite_runToolName = lite$listPopFront(lite_args, 35780);
-                if ((((((BigInt((lite_args).length))) > (0n))) && (((lite$listAt(lite_args, 0n, 35858)) === ("--"))))) {
-                    const lite__sep = lite$listPopFront(lite_args, 35895);
+                lite_runToolName = lite$listPopFront(lite_args, 37975);
+                if ((((((BigInt((lite_args).length))) > (0n))) && (((lite$listAt(lite_args, 0n, 38053)) === ("--"))))) {
+                    const lite__sep = lite$listPopFront(lite_args, 38090);
                     void lite__sep;
                 }
                 break;
             } else if (((((lite_arg) === ("--help"))) || (((lite_arg) === ("-h"))))) {
-                lite$emit("Usage: ./bin/lite-ignite [--target c|ts|auto] [--c|--ts] [--check] [--force] [--clean] [--wipe [--no-install] [--no-check] [--verify]] [--json] [TOOL...]" + "\n");
+                lite$emit("Usage: ./bin/lite-ignite [--target c|ts|auto] [--c|--ts] [--check] [--force] [--clean] [--wipe [--no-install] [--no-check] [--verify]] [--jobs N] [--json] [TOOL...]" + "\n");
                 lite$exit(0n);
             } else if (liteFn$lib$core$text$startsWithAt(lite_arg, 0n, "-")) {
                 lite$reportError((("ignite: unknown option ") + (lite_arg)));
@@ -42989,24 +43112,219 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_check = (Boolean(lite_noCheck) ? false : (Boolean(lite_checkExplicit) ? true : (Boolean(lite_wipe) ? ((lite$fileKind(liteFn$lib$core$path$join(lite_rootDir, "igniter/node_modules/typescript/bin/tsc"))) === (lite$m$lib$core$file$FILE_KIND_FILE)) : false)));
         void lite_check;
-        if ((((BigInt((lite_selected).length))) === (0n))) {
+        const lite_targetNames: string[] = [...((Boolean((((BigInt((lite_selected).length))) > (0n))) ? [...(lite_selected)] : [...(liteFn_listToolNames(lite_rootDir))]))];
+        void lite_targetNames;
+        const lite_totalTools = (BigInt((lite_targetNames).length));
+        void lite_totalTools;
+        if ((((((BigInt((lite_selected).length))) === (0n))) || (((lite_totalTools) > (1n))))) {
             if ((((lite_tgt).target) === ("c"))) {
-                const lite_cBoot = liteFn_ensureDistCCompiler(lite_rootDir, (lite_seedInfo).cArtifactSha256, (lite_tgt).cc, lite_force);
+                const lite_cBoot = liteFn_ensureDistCCompiler(lite_rootDir, (lite_seedInfo).cArtifactSha256, (lite_tgt).cc, ((lite_force) && ((((BigInt((lite_selected).length))) === (0n)))));
                 void lite_cBoot;
                 if ((!((lite_cBoot).ok))) {
                     lite$reportError((lite_cBoot).error);
                     lite$exit(1n);
                 }
             }
-            const lite_distComp = liteFn_ensureDistCompiler(lite_rootDir, (lite_seedInfo).artifactSha256, lite_force);
-            void lite_distComp;
-            if ((!((lite_distComp).ok))) {
-                lite$reportError((lite_distComp).error);
-                lite$exit(1n);
+            if ((((BigInt((lite_selected).length))) === (0n))) {
+                const lite_distComp = liteFn_ensureDistCompiler(lite_rootDir, (lite_seedInfo).artifactSha256, lite_force);
+                void lite_distComp;
+                if ((!((lite_distComp).ok))) {
+                    lite$reportError((lite_distComp).error);
+                    lite$exit(1n);
+                }
             }
         }
-        const lite_targetNames: string[] = [...((Boolean((((BigInt((lite_selected).length))) > (0n))) ? [...(lite_selected)] : [...(liteFn_listToolNames(lite_rootDir))]))];
-        void lite_targetNames;
+        const lite_mkDistTools = lite$fileMakeDir(liteFn$lib$core$path$join(lite_rootDir, "dist/tools"));
+        void lite_mkDistTools;
+        if ((!((lite_mkDistTools).ok))) {
+            lite$reportError((("ignite: ") + ((lite_mkDistTools).error)));
+            lite$exit(1n);
+        }
+        const lite_resTarget: string[] = [...([])];
+        void lite_resTarget;
+        const lite_resPath: string[] = [...([])];
+        void lite_resPath;
+        const lite_resSha: string[] = [...([])];
+        void lite_resSha;
+        const lite_resRebuilt: boolean[] = [...([])];
+        void lite_resRebuilt;
+        const lite_pendingIndices: bigint[] = [...([])];
+        void lite_pendingIndices;
+        let lite_si = 0n;
+        void lite_si;
+        while (((lite_si) < (lite_totalTools))) {
+            const lite_toolName = lite$listAt(lite_targetNames, lite_si, 41265);
+            void lite_toolName;
+            let lite_hit = false;
+            void lite_hit;
+            if ((!(lite_force))) {
+                const lite_cached = liteFn_findCachedTool(lite_rootDir, lite_toolName, (lite_tgt).target, (lite_tgt).allowTsFallback, (lite_seedInfo).artifactSha256, (lite_seedInfo).cArtifactSha256);
+                void lite_cached;
+                if ((lite_cached).valid) {
+                    lite_resTarget.push((lite_cached).target);
+                    lite_resPath.push((lite_cached).path);
+                    lite_resSha.push((lite_cached).sha256);
+                    lite_resRebuilt.push(false);
+                    lite_hit = true;
+                }
+            }
+            if ((!(lite_hit))) {
+                lite_resTarget.push("");
+                lite_resPath.push("");
+                lite_resSha.push("");
+                lite_resRebuilt.push(false);
+                lite_pendingIndices.push(lite_si);
+            }
+            lite_si = lite$addInt(lite_si, 1n, 42053);
+        }
+        const lite_pendingCount = (BigInt((lite_pendingIndices).length));
+        void lite_pendingCount;
+        const lite_workerBudget = (Boolean(((lite_maxJobs) > (0n))) ? lite_maxJobs : lite$extPoolCpuCount());
+        void lite_workerBudget;
+        if (((((lite_pendingCount) <= (1n))) || (((lite_workerBudget) <= (1n))))) {
+            let lite_pi = 0n;
+            void lite_pi;
+            while (((lite_pi) < (lite_pendingCount))) {
+                const lite_origIdx = lite$listAt(lite_pendingIndices, lite_pi, 42333);
+                void lite_origIdx;
+                const lite_toolName = lite$listAt(lite_targetNames, lite_origIdx, 42374);
+                void lite_toolName;
+                const lite_res = liteFn_igniteSingleTool(lite_rootDir, lite_toolName, (lite_tgt).target, (lite_tgt).cc, (lite_tgt).allowTsFallback, (lite_seedInfo).artifactSha256, (lite_seedInfo).cArtifactSha256, (lite_seedInfo).sourceSha256, lite_force);
+                void lite_res;
+                if ((!((lite_res).ok))) {
+                    lite$reportError((lite_res).error);
+                    lite$exit(1n);
+                }
+                lite$listSet(lite_resTarget, lite_origIdx, (lite_res).target, 42704);
+                lite$listSet(lite_resPath, lite_origIdx, (lite_res).path, 42747);
+                lite$listSet(lite_resSha, lite_origIdx, (lite_res).sha256, 42787);
+                lite$listSet(lite_resRebuilt, lite_origIdx, (lite_res).rebuilt, 42833);
+                lite_pi = lite$addInt(lite_pi, 1n, 42868);
+            }
+        } else {
+            const lite_workerCount = (Boolean(((lite_pendingCount) < (lite_workerBudget))) ? lite_pendingCount : lite_workerBudget);
+            void lite_workerCount;
+            const lite_igniterScriptPath = liteFn$lib$core$path$join(lite_rootDir, "compiler/bootstrap/igniter.ts");
+            void lite_igniterScriptPath;
+            const lite_nodeBin = liteFn$lib$util$project$nodeExecPath();
+            void lite_nodeBin;
+            const lite_workerCmds: string[] = [...([])];
+            void lite_workerCmds;
+            const lite_workerArgsJson: string[] = [...([])];
+            void lite_workerArgsJson;
+            let lite_w = 0n;
+            void lite_w;
+            while (((lite_w) < (lite_workerCount))) {
+                const lite_wArgs: string[] = [...([liteFn$lib$util$json$quoteString(lite_igniterScriptPath), "\"--jobs\"", "\"1\"", "\"--target\"", liteFn$lib$util$json$quoteString((lite_tgt).target), "\"--json\""])];
+                void lite_wArgs;
+                if (lite_force) {
+                    lite_wArgs.push("\"--force\"");
+                }
+                let lite_p = lite_w;
+                void lite_p;
+                while (((lite_p) < (lite_pendingCount))) {
+                    lite_wArgs.push(liteFn$lib$util$json$quoteString(lite$listAt(lite_targetNames, lite$listAt(lite_pendingIndices, lite_p, 43765), 43750)));
+                    lite_p = lite$addInt(lite_p, lite_workerCount, 43794);
+                }
+                lite_workerCmds.push(lite_nodeBin);
+                lite_workerArgsJson.push((((("[") + (liteFn$lib$core$text$joinTexts(lite_wArgs, ",")))) + ("]")));
+                lite_w = lite$addInt(lite_w, 1n, 43980);
+            }
+            const lite_poolRaw = lite$extPoolRunJson(lite_workerCmds, lite_workerArgsJson, lite_rootDir, lite_workerCount);
+            void lite_poolRaw;
+            const lite_poolOffsets: bigint[] = [...(liteFn$lib$util$json$arrayElementOffsets(lite_poolRaw, 0n))];
+            void lite_poolOffsets;
+            if ((((BigInt((lite_poolOffsets).length))) !== (lite_workerCount))) {
+                lite$reportError("ignite: parallel worker pool returned malformed result count");
+                lite$exit(1n);
+            }
+            lite_w = 0n;
+            while (((lite_w) < (lite_workerCount))) {
+                const lite_elemPos = lite$listAt(lite_poolOffsets, lite_w, 44410);
+                void lite_elemPos;
+                const lite_statusRes = liteFn$lib$util$json$readObjectInt(lite_poolRaw, lite_elemPos, "status");
+                void lite_statusRes;
+                const lite_outRes = liteFn$lib$util$json$readObjectString(lite_poolRaw, lite_elemPos, "stdout");
+                void lite_outRes;
+                const lite_errRes = liteFn$lib$util$json$readObjectString(lite_poolRaw, lite_elemPos, "stderr");
+                void lite_errRes;
+                const lite_errorRes = liteFn$lib$util$json$readObjectString(lite_poolRaw, lite_elemPos, "error");
+                void lite_errorRes;
+                const lite_wStatus = (Boolean((((lite_statusRes).found) && ((lite_statusRes).ok))) ? (lite_statusRes).value : (-1n));
+                void lite_wStatus;
+                const lite_wErr = (Boolean((((lite_errorRes).found) && ((lite_errorRes).ok))) ? (lite_errorRes).value : "");
+                void lite_wErr;
+                const lite_wOut = (Boolean((((lite_outRes).found) && ((lite_outRes).ok))) ? (lite_outRes).value : "");
+                void lite_wOut;
+                const lite_wStderr = (Boolean((((lite_errRes).found) && ((lite_errRes).ok))) ? (lite_errRes).value : "");
+                void lite_wStderr;
+                if (((((lite_wStatus) !== (0n))) || (((lite_wErr) !== (""))))) {
+                    let lite_detail = "";
+                    void lite_detail;
+                    if (((lite_wErr) !== (""))) {
+                        lite_detail = lite_wErr;
+                    }
+                    if ((((lite$textTrim(lite_wStderr, true, true))) !== (""))) {
+                        if (((lite_detail) !== (""))) {
+                            lite_detail = ((lite_detail) + ("\n"));
+                        }
+                        lite_detail = ((lite_detail) + ((lite$textTrim(lite_wStderr, false, true))));
+                    }
+                    if ((((lite$textTrim(lite_wOut, true, true))) !== (""))) {
+                        if (((lite_detail) !== (""))) {
+                            lite_detail = ((lite_detail) + ("\n"));
+                        }
+                        lite_detail = ((lite_detail) + ((lite$textTrim(lite_wOut, false, true))));
+                    }
+                    if (((lite_detail) === (""))) {
+                        lite_detail = (((((("worker ") + ((String(lite_w))))) + (" exited with status "))) + ((String(lite_wStatus))));
+                    }
+                    lite$reportError(lite_detail);
+                    lite$exit(1n);
+                }
+                const lite_toolsField = liteFn$lib$util$json$findObjectField(lite_wOut, 0n, "tools");
+                void lite_toolsField;
+                if ((!((lite_toolsField).found))) {
+                    lite$reportError((((("ignite: parallel worker ") + ((String(lite_w))))) + (" returned unexpected JSON output")));
+                    lite$exit(1n);
+                }
+                const lite_tOffs: bigint[] = [...(liteFn$lib$util$json$arrayElementOffsets(lite_wOut, (lite_toolsField).valuePos))];
+                void lite_tOffs;
+                let lite_p = lite_w;
+                void lite_p;
+                let lite_k = 0n;
+                void lite_k;
+                while (((lite_p) < (lite_pendingCount))) {
+                    if (((lite_k) >= ((BigInt((lite_tOffs).length))))) {
+                        lite$reportError((((("ignite: parallel worker ") + ((String(lite_w))))) + (" tool count mismatch")));
+                        lite$exit(1n);
+                    }
+                    const lite_origIdx = lite$listAt(lite_pendingIndices, lite_p, 46470);
+                    void lite_origIdx;
+                    const lite_tPos = lite$listAt(lite_tOffs, lite_k, 46504);
+                    void lite_tPos;
+                    const lite_tTarget = liteFn$lib$util$json$readObjectString(lite_wOut, lite_tPos, "target");
+                    void lite_tTarget;
+                    const lite_tPath = liteFn$lib$util$json$readObjectString(lite_wOut, lite_tPos, "path");
+                    void lite_tPath;
+                    const lite_tSha = liteFn$lib$util$json$readObjectString(lite_wOut, lite_tPos, "sha256");
+                    void lite_tSha;
+                    const lite_tRebuilt = liteFn$lib$util$json$readObjectBool(lite_wOut, lite_tPos, "rebuilt");
+                    void lite_tRebuilt;
+                    if ((((((((((((((((!((lite_tTarget).found))) || ((!((lite_tTarget).ok))))) || ((!((lite_tPath).found))))) || ((!((lite_tPath).ok))))) || ((!((lite_tSha).found))))) || ((!((lite_tSha).ok))))) || ((!((lite_tRebuilt).found))))) || ((!((lite_tRebuilt).ok))))) {
+                        lite$reportError((((("ignite: parallel worker ") + ((String(lite_w))))) + (" missing tool fields")));
+                        lite$exit(1n);
+                    }
+                    lite$listSet(lite_resTarget, lite_origIdx, (lite_tTarget).value, 47167);
+                    lite$listSet(lite_resPath, lite_origIdx, (lite_tPath).value, 47217);
+                    lite$listSet(lite_resSha, lite_origIdx, (lite_tSha).value, 47264);
+                    lite$listSet(lite_resRebuilt, lite_origIdx, (lite_tRebuilt).value, 47314);
+                    lite_k = lite$addInt(lite_k, 1n, 47354);
+                    lite_p = lite$addInt(lite_p, lite_workerCount, 47381);
+                }
+                lite_w = lite$addInt(lite_w, 1n, 47428);
+            }
+        }
         const lite_artifactPaths: string[] = [...([])];
         void lite_artifactPaths;
         const lite_tsArtifactPaths: string[] = [...([])];
@@ -43019,27 +43337,33 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_cCount;
         let lite_tsCount = 0n;
         void lite_tsCount;
-        for (const lite_toolName of (lite_targetNames)) {
+        let lite_ri = 0n;
+        void lite_ri;
+        while (((lite_ri) < (lite_totalTools))) {
+            const lite_toolName = lite$listAt(lite_targetNames, lite_ri, 47722);
             void lite_toolName;
-            const lite_res = liteFn_igniteSingleTool(lite_rootDir, lite_toolName, (lite_tgt).target, (lite_tgt).cc, (lite_tgt).allowTsFallback, (lite_seedInfo).artifactSha256, (lite_seedInfo).cArtifactSha256, (lite_seedInfo).sourceSha256, lite_force);
-            void lite_res;
-            if ((!((lite_res).ok))) {
-                lite$reportError((lite_res).error);
-                lite$exit(1n);
+            const lite_tTarget = lite$listAt(lite_resTarget, lite_ri, 47756);
+            void lite_tTarget;
+            const lite_tPath = lite$listAt(lite_resPath, lite_ri, 47786);
+            void lite_tPath;
+            const lite_tSha = lite$listAt(lite_resSha, lite_ri, 47814);
+            void lite_tSha;
+            const lite_tRebuilt = lite$listAt(lite_resRebuilt, lite_ri, 47850);
+            void lite_tRebuilt;
+            if (lite_tRebuilt) {
+                lite_rebuiltCount = lite$addInt(lite_rebuiltCount, 1n, 47905);
             }
-            if ((lite_res).rebuilt) {
-                lite_rebuiltCount = lite$addInt(lite_rebuiltCount, 1n, 38992);
-            }
-            if ((((lite_res).target) === ("c"))) {
-                lite_cCount = lite$addInt(lite_cCount, 1n, 39046);
+            if (((lite_tTarget) === ("c"))) {
+                lite_cCount = lite$addInt(lite_cCount, 1n, 47956);
             } else {
-                lite_tsCount = lite$addInt(lite_tsCount, 1n, 39090);
-                lite_tsArtifactPaths.push((lite_res).path);
+                lite_tsCount = lite$addInt(lite_tsCount, 1n, 48000);
+                lite_tsArtifactPaths.push(lite_tPath);
             }
-            lite_artifactPaths.push((lite_res).path);
-            const lite_entryStr = (((((((((((((((((((("    {\n      \"name\": ") + (liteFn$lib$util$json$quoteString(lite_toolName)))) + (",\n      \"target\": "))) + (liteFn$lib$util$json$quoteString((lite_res).target)))) + (",\n      \"path\": "))) + (liteFn$lib$util$json$quoteString((lite_res).path)))) + (",\n      \"sha256\": "))) + (liteFn$lib$util$json$quoteString((lite_res).sha256)))) + (",\n      \"rebuilt\": "))) + (((Boolean((lite_res).rebuilt) ? "true" : "false"))))) + ("\n    }"));
+            lite_artifactPaths.push(lite_tPath);
+            const lite_entryStr = (((((((((((((((((((("    {\n      \"name\": ") + (liteFn$lib$util$json$quoteString(lite_toolName)))) + (",\n      \"target\": "))) + (liteFn$lib$util$json$quoteString(lite_tTarget)))) + (",\n      \"path\": "))) + (liteFn$lib$util$json$quoteString(lite_tPath)))) + (",\n      \"sha256\": "))) + (liteFn$lib$util$json$quoteString(lite_tSha)))) + (",\n      \"rebuilt\": "))) + (((Boolean(lite_tRebuilt) ? "true" : "false"))))) + ("\n    }"));
             void lite_entryStr;
             lite_toolEntries.push(lite_entryStr);
+            lite_ri = lite$addInt(lite_ri, 1n, 48531);
         }
         if (((lite_check) && ((((BigInt((lite_tsArtifactPaths).length))) > (0n))))) {
             const lite_tmpChk = lite$fileMakeTempDir("lite-ignite-check-");
