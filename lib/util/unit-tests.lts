@@ -117,46 +117,39 @@ pub runUnitWorker := fn(taskJson: String): Int {
     0
 };
 
-/** Runs an explicit list of repository-relative `.test.lts` files in parallel using `external/pool`. */
-pub runUnitTestFiles := fn(rootDir: String, selectedRel: List<String>, maxJobs: Int, outputMode: String): Int {
-    count := list.listCountText(selectedRel);
+/** True when `relFile` spawns nested CLI/smoke suites and must run serially after parallel unit tests. */
+isSerialUnitTest := fn(relFile: String): Bool {
+    relFile == "tools/cli.test.lts" or relFile == "compiler/tests/cli-contracts.test.lts"
+};
+
+/** Executes one batch of `.test.lts` files through `external/pool` with concurrency `batchJobs`. */
+runUnitBatch := fn(
+rootDir: String, compilerPath: String, runnerScript: String, batchRel: List<String>, batchJobs: Int, outputMode: String
+): (ok: Bool, passed: Int, failed: Int) {
+    count := list.listCountText(batchRel);
     if count == 0 {
-        if outputMode =!= "--silence" and outputMode =!= "--mute" {
-            io.outputLine("Unit tests: 0 passed, 0 failed.");
-        }
-        return 0;
+        return (ok = true, passed = 0, failed = 0);
     }
-
-    sel := compilerBuild.selectCompilerPath(rootDir, "ts");
-    if not sel.ok {
-        if outputMode =!= "--silence" {
-            io.errorLine(sel.error);
-        }
-        return 1;
-    }
-
-    ignitedRunner := path.join(rootDir, "dist/tools/test-runner.ts");
-    runnerScript := if fs.kind(ignitedRunner) == fs.FILE_KIND_FILE { ignitedRunner } else { path.join(rootDir, "bin/lite-test") };
 
     commands: mut List<String> = [];
     argListsJson: mut List<String> = [];
-    loop selectedRel as relFile {
+    loop batchRel as relFile {
         taskJson := "{\"root\":" + json.quoteString(rootDir)
-        + ",\"compiler\":" + json.quoteString(sel.path)
+        + ",\"compiler\":" + json.quoteString(compilerPath)
         + ",\"file\":" + json.quoteString(relFile) + "}";
         argJson := "[" + json.quoteString(runnerScript) + ",\"--unit-worker\"," + json.quoteString(taskJson) + "]";
-        list.pushBack(mut commands, project.nodeExecPath());
-        list.pushBack(mut argListsJson, argJson);
+        mut commands.pushBack(project.nodeExecPath());
+        mut argListsJson.pushBack(argJson);
     }
 
-    jobs := if maxJobs > 0 { maxJobs } else { pool.cpuCount() };
+    jobs := if batchJobs > 0 { batchJobs } else { pool.cpuCount() };
     rawResults := pool.runPoolJson(commands, argListsJson, rootDir, jobs);
     offsets := json.arrayElementOffsets(rawResults, 0);
     if list.listCountInt(offsets) =!= count {
         if outputMode =!= "--silence" {
             io.errorLine("unit test pool returned malformed result count");
         }
-        return 1;
+        return (ok = false, passed = 0, failed = 0);
     }
 
     var passed := 0;
@@ -173,12 +166,12 @@ pub runUnitTestFiles := fn(rootDir: String, selectedRel: List<String>, maxJobs: 
         if status == 0 and errText == "" {
             passed = passed + 1;
             if outputMode == "--verbose" {
-                io.outputLine("PASS " + selectedRel[idx]);
+                io.outputLine("PASS " + batchRel[idx]);
             }
         } else {
             failed = failed + 1;
             if outputMode =!= "--silence" {
-                io.errorLine("FAIL " + selectedRel[idx] + " (exit " + integer.intText(status) + ")");
+                io.errorLine("FAIL " + batchRel[idx] + " (exit " + integer.intText(status) + ")");
                 if errText =!= "" { io.errorLine(text.trimEnd(errText)); }
                 if outRes.found and outRes.ok and text.trim(outRes.value) =!= "" {
                     io.errorLine(text.trimEnd(outRes.value));
@@ -189,6 +182,61 @@ pub runUnitTestFiles := fn(rootDir: String, selectedRel: List<String>, maxJobs: 
             }
         }
         idx = idx + 1;
+    }
+    (ok = true, passed = passed, failed = failed)
+};
+
+/** Runs an explicit list of repository-relative `.test.lts` files, isolating nested-CLI suites serially after parallel workers. */
+pub runUnitTestFiles := fn(rootDir: String, selectedRel: List<String>, maxJobs: Int, outputMode: String): Int {
+    count := list.listCountText(selectedRel);
+    if count == 0 {
+        if outputMode =!= "--silence" and outputMode =!= "--mute" {
+            io.outputLine("Unit tests: 0 passed, 0 failed.");
+        }
+        return 0;
+    }
+
+    sel := compilerBuild.selectCompilerPath(rootDir, "ts");
+    if not sel.ok {
+        if outputMode =!= "--silence" {
+            io.errorLine(sel.error);
+        }
+        return 1;
+    }
+    selC := compilerBuild.selectCompilerPath(rootDir, "c");
+    if not selC.ok {
+        if outputMode =!= "--silence" {
+            io.errorLine(selC.error);
+        }
+        return 1;
+    }
+
+    ignitedRunner := path.join(rootDir, "dist/tools/test-runner.ts");
+    runnerScript := if fs.kind(ignitedRunner) == fs.FILE_KIND_FILE { ignitedRunner } else { path.join(rootDir, "bin/lite-test") };
+
+    parallelRel: mut List<String> = [];
+    serialRel: mut List<String> = [];
+    loop selectedRel as relFile {
+        if isSerialUnitTest(relFile) {
+            mut serialRel.pushBack(relFile);
+        } else {
+            mut parallelRel.pushBack(relFile);
+        }
+    }
+
+    var passed := 0;
+    var failed := 0;
+    parRes := runUnitBatch(rootDir, sel.path, runnerScript, parallelRel, maxJobs, outputMode);
+    if not parRes.ok { return 1; }
+    passed = passed + parRes.passed;
+    failed = failed + parRes.failed;
+
+    loop serialRel as sRel {
+        one: List<String> = [sRel];
+        serRes := runUnitBatch(rootDir, sel.path, runnerScript, one, 1, outputMode);
+        if not serRes.ok { return 1; }
+        passed = passed + serRes.passed;
+        failed = failed + serRes.failed;
     }
 
     if failed > 0 {

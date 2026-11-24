@@ -8,11 +8,17 @@ textLib := import "core/text";
 ir := import "./frontend-ir.lts";
 types := import "./frontend-types.lts";
 
+/** Local alias for `ir.Item`. */
 Item := type ir.Item;
+/** Local alias for `ir.Items`. */
 Items := type ir.Items;
+/** Local alias for `ir.Local`. */
 Local := type ir.Local;
+/** Local alias for `ir.FunctionInfo`. */
 FunctionInfo := type ir.FunctionInfo;
+/** Local alias for `ir.AliasDecl`. */
 AliasDecl := type ir.AliasDecl;
+/** Local alias for `ir.FutureValue`. */
 FutureValue := type ir.FutureValue;
 
 /** Registered uninstantiated generic function or type-attached operation template. */

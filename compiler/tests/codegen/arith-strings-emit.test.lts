@@ -37,8 +37,25 @@ test.checkInt("c 42", 0, c42.status);
 test.checkText("c 42 out", ref42C, c42.stdout);
 cSeq := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(42);\nio.outputLine(9);", "");
 test.checkInt("c seq", 0, cSeq.status);
+cPreamble :=
+"#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\n" +
+"typedef struct { const char *data; uint32_t byte_len; int32_t cp_len; } lt_str;\n" +
+"#define LT_STR_LIT(s, cp) ((lt_str){ (s), (uint32_t)(sizeof(s) - 1u), (int32_t)(cp) })\n" +
+"#define LT_ASTR(s) ((lt_str){ (s), (uint32_t)(sizeof(s) - 1u), (int32_t)(sizeof(s) - 1u) })\n" +
+"#define LT_STR(s) ((lt_str){ (s), (uint32_t)(sizeof(s) - 1u), -1 })\n" +
+"#define LT_NULL_STR ((lt_str){ NULL, 0u, 0 })\n" +
+"#if defined(__GNUC__) || defined(__clang__)\n" +
+"#define LT_INLINE static inline __attribute__((unused))\n" +
+"#else\n" +
+"#define LT_INLINE static inline\n" +
+"#endif\n" +
+"LT_INLINE int lt_print_str(lt_str s) {\n" +
+"    if (s.byte_len == 0u) { return 0; }\n" +
+"    return fwrite(s.data, 1u, s.byte_len, stdout) == (size_t)s.byte_len ? 0 : -1;\n" +
+"}\n";
 expCSeq :=
-"#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n" +
+cPreamble +
+"int main(void) {\n    int status = 0;\n" +
 "    if (printf(\"%\" PRId64, (int64_t)(INT64_C(42))) < 0) { status = 1; }\n" +
 "    if (printf(\"\\n\") < 0) { status = 1; }\n" +
 "    if (printf(\"%\" PRId64, (int64_t)(INT64_C(9))) < 0) { status = 1; }\n" +
@@ -71,7 +88,8 @@ seqC := compilerTest.compileStdin(root, cComp, seqProg, "");
 test.checkInt("seq c", 0, seqC.status);
 test.checkText("seq c err", "", seqC.stderr);
 expSeqC :=
-"#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n" +
+cPreamble +
+"int main(void) {\n    int status = 0;\n" +
 "    if (printf(\"%\" PRId64, (int64_t)(INT64_C(10))) < 0) { status = 1; }\n" +
 "    if (printf(\"\\n\") < 0) { status = 1; }\n" +
 "    if (printf(\"%\" PRId64, (int64_t)(INT64_C(20))) < 0) { status = 1; }\n" +
@@ -99,7 +117,8 @@ arithC := compilerTest.compileStdin(root, cComp, arithProg, "");
 test.checkInt("arith c", 0, arithC.status);
 test.checkText("arith c err", "", arithC.stderr);
 expArithC :=
-"#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n" +
+cPreamble +
+"int main(void) {\n" +
 "    int status = 0;\n" +
 "    int64_t lite_x = (INT64_C(2) * ((INT64_C(3) - INT64_C(4))));\n" +
 "    (void)lite_x;\n" +
@@ -204,7 +223,7 @@ if ccInfo.available {
     strCComp := compilerTest.compileStdin(root, cComp, strCSrc, "");
     test.checkInt("str concat C", 0, strCComp.status);
     test.check("str concat C stdlib", text.containsText(strCComp.stdout, "#include <stdlib.h>"));
-    test.check("str concat C helper", text.containsText(strCComp.stdout, "static const char *lite_concat(const char *left, const char *right)"));
+    test.check("str concat C helper", text.containsText(strCComp.stdout, "static lt_str lite_concat(lt_str left, lt_str right)"));
     strCRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, strCSrc, "", "");
     test.checkInt("str concat C run", 0, strCRun.status);
     test.checkText("str concat C stdout", "liter\nliter!\nlit\nsnow🙂man\nline\nbreak\ntab\tstop\nquote\"back\\slash\n", strCRun.stdout);
@@ -233,18 +252,19 @@ strValC := compilerTest.compileStdin(root, cComp, strValProg, "");
 test.checkInt("strVal c", 0, strValC.status);
 test.checkText("strVal c err", "", strValC.stderr);
 expStrValC :=
-"#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n" +
+cPreamble +
+"int main(void) {\n" +
 "    int status = 0;\n" +
-"    const char *lite_s = \"a\\\"b\";\n" +
+"    lt_str lite_s = LT_STR_LIT(\"a\\\"b\", 3);\n" +
 "    (void)lite_s;\n" +
-"    if (printf(\"%s\", lite_s) < 0) { status = 1; }\n" +
+"    if (lt_print_str(lite_s) < 0) { status = 1; }\n" +
 "    if (printf(\"\\n\") < 0) { status = 1; }\n" +
 "    int64_t lt_output_0 = INT64_C(1);\n" +
-"    const char * lt_output_1 = lite_s;\n" +
+"    lt_str lt_output_1 = lite_s;\n" +
 "    int64_t lt_output_2 = INT64_C(2);\n" +
 "    if (printf(\"%\" PRId64, (int64_t)(lt_output_0)) < 0) { status = 1; }\n" +
 "    if (printf(\" \") < 0) { status = 1; }\n" +
-"    if (printf(\"%s\", lt_output_1) < 0) { status = 1; }\n" +
+"    if (lt_print_str(lt_output_1) < 0) { status = 1; }\n" +
 "    if (printf(\" \") < 0) { status = 1; }\n" +
 "    if (printf(\"%\" PRId64, (int64_t)(lt_output_2)) < 0) { status = 1; }\n" +
 "    if (printf(\"\\n\") < 0) { status = 1; }\n" +

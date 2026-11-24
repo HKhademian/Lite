@@ -6,8 +6,11 @@ setLib := import "core/set";
 textLib := import "core/text";
 ir := import "./frontend-ir.lts";
 
+/** Local alias for `ir.Local`. */
 Local := type ir.Local;
+/** Local alias for `ir.FunctionInfo`. */
 FunctionInfo := type ir.FunctionInfo;
+/** Local alias for `ir.AliasDecl`. */
 AliasDecl := type ir.AliasDecl;
 
 /** One undo entry recording the prior indexed state before `locals[i]` was pushed. */
@@ -52,10 +55,12 @@ fnByRuntime: mut Map<String, Int>;
 fnIndexedNames: mut List<String> = [];
 var indexedFnLen := 0;
 
+/** True when `a` matches the local state recorded in undo entry `u`. */
 sameLocalSlot := fn(a: Local, u: LocalUndo): Bool {
     a.depth == u.depth and a.runtime == u.runtime and a.name == u.name and a.initState == u.initState
 };
 
+/** Pushes `locals[idx]` into the O(1) local index and records its undo entry. */
 pushLocalSlot := fn(idx: Int, entry: Local): Unit {
     isActive := entry.depth >= -1;
     prevNameIdx := if isActive { mapLib.getOr(localByName, entry.name, -1) } else { -1 };
@@ -92,6 +97,7 @@ pushLocalSlot := fn(idx: Int, entry: Local): Unit {
     indexedLocalLen = indexedLocalLen + 1;
 };
 
+/** Reverts the most recently pushed local index entry using the undo stack. */
 popLocalSlot := fn(): Unit {
     if indexedLocalLen <= 0 { return; }
     u := listLib.popBack(mut localUndo);
@@ -216,6 +222,7 @@ pub hasFutureLocal := fn(locals: List<Local>): Bool {
 
 /* --- Alias O(1) index with block-depth shadowing undo log --- */
 
+/** Pushes `aliases[idx]` into the O(1) alias index and records its undo entry. */
 pushAliasSlot := fn(idx: Int, entry: AliasDecl): Unit {
     prevIdx := mapLib.getOr(aliasByName, entry.name, -1);
     prevDepth := if prevIdx >= 0 { mapLib.getOr(aliasDepthByName, entry.name, -1) } else { -1 };
@@ -234,6 +241,7 @@ pushAliasSlot := fn(idx: Int, entry: AliasDecl): Unit {
     indexedAliasLen = indexedAliasLen + 1;
 };
 
+/** Reverts the most recently pushed alias index entry using the undo stack. */
 popAliasSlot := fn(): Unit {
     if indexedAliasLen <= 0 { return; }
     u := listLib.popBack(mut aliasUndo);
@@ -272,6 +280,7 @@ pub rewindAliasesTo := fn(targetLen: Int): Unit {
 /** Returns the currently indexed alias count as a scope rewind mark. */
 pub aliasMark := fn(): Int { indexedAliasLen };
 
+/** True when `a` matches the alias state recorded in undo entry `u`. */
 sameAliasSlot := fn(a: AliasDecl, u: AliasUndo): Bool {
     a.depth == u.depth and a.name == u.name
 };

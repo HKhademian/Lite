@@ -380,12 +380,12 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const provenance = JSON.parse(readFileSync(join(cache, entries()[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
     assert.deepEqual(provenance.dependencies, [
       'compiler/src/fixture-root.lts',
+      'lib/core/int.lts',
+      'lib/core/text.lts',
       'compiler/src/fixture-c.lts',
       'lib/core/io.lts',
       'lib/core/list.lts',
       'lib/core/unicode.lts',
-      'lib/core/text.lts',
-      'lib/core/int.lts',
     ]);
     writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed nested C");');
     const changed = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');

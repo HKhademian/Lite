@@ -41,7 +41,7 @@ command := fn(name: String, args: List<String>): CmdResult {
 };
 
 assertSameCmd := fn(label: String, expected: CmdResult, actual: CmdResult): Unit {
-    test.checkInt(label + " status", expected.status, actual.status);
+    test.checkInt(label + " status (expected err=" + expected.stderr + ", actual err=" + actual.stderr + ")", expected.status, actual.status);
     test.checkText(label + " stdout", expected.stdout, actual.stdout);
     test.checkText(label + " stderr", expected.stderr, actual.stderr);
 };

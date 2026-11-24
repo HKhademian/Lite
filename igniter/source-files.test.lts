@@ -123,6 +123,8 @@ loop files as name {
     if inList(sourceExts, ext) or inList(dataExts, ext) { continue; }
     if ext == ".html" and text.startsWithAt(name, 0, "brand/investigation/") { continue; }
     if ext == ".c" and (text.startsWithAt(name, 0, "compiler/tests/references/generated/") or text.startsWithAt(name, 0, "compiler/bootstrap/")) { continue; }
+    if ext == ".sh" and (name == "compiler/scripts/self-host-c.sh" or name == "compiler/scripts/build-native-cli.sh") { continue; }
+    if ext == ".code-snippets" and text.startsWithAt(name, 0, "editors/vscode/snippets/") { continue; }
     content := fs.readBytes(absPath);
     hasShebang := list.listCountInt(content) >= 2 and content[0] == 35 and content[1] == 33;
     if ext == "" and not hasShebang { continue; }

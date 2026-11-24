@@ -140,8 +140,14 @@ compilerTest.assertCompileError(root, tsComp, ".collected on Unit loop suffix",
 compilerTest.assertCompileError(root, tsComp, ".collected on Unit loop then",
 "io := import \"core/io\";\nx := loop [1, 2] { io.outputLine(.item); } then { .collected };\n",
 "2:52: loop producing Unit does not expose .collected\n");
-compilerTest.assertCompileError(root, cComp, "C rejects loop .collected",
-"x := loop [1, 2] { .item }.collected;\n",
-"1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n");
+ccInfo := compilerTest.probeCc();
+if ccInfo.available {
+    cBasicRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, basicProg, "", "");
+    test.checkInt("C loop .collected basic status: " + cBasicRun.stderr, 0, cBasicRun.status);
+    test.checkText("C loop .collected basic stdout", rBasic.stdout, cBasicRun.stdout);
+}
+compilerTest.assertCompileError(root, cComp, "C rejects .collected on Unit loop suffix",
+"io := import \"core/io\";\nx := loop [1, 2] { io.outputLine(.item); }.collected;\n",
+"2:44: loop producing Unit does not expose .collected\n");
 
 test.done("loop-collected-meta");

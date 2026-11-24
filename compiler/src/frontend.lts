@@ -980,6 +980,7 @@ resolveOwnedTypeOpTarget := fn(source: String, nameStart: Int, prefix: String, a
     (ok = true, ownerKind = ownerKind, ownerKey = ownerKey, selfTarget = ownerKind, isGenericOwner = false, error = "")
 };
 
+/** Collects top-level declarations for one module before full body parsing. */
 collectModuleDecls := fn(target: String, source: String, prefix: String, moduleKey: String): Items { infer.collectModuleDecls(target, source, prefix, moduleKey) };
 
 /** Appends `(name, depth)` entries to `decls` for every `|name|` token in `assignedBag`. */

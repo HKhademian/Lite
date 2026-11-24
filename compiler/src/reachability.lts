@@ -1910,10 +1910,12 @@ extractReachableCodeTokens := fn(code: String): List<String> {
     out
 };
 
+/** True when `runtime` names an emitted imported-module value symbol. */
 isImportedModuleRuntime := fn(runtime: String): Bool {
     textLib.startsWithAt(runtime, 0, "lite$m$") or textLib.startsWithAt(runtime, 0, "lt_m_")
 };
 
+/** True when `runtime` names an emitted imported-module function symbol. */
 isImportedModuleFnRuntime := fn(runtime: String): Bool {
     textLib.startsWithAt(runtime, 0, "liteFn$") or textLib.indexOfText(runtime, "__", 0) >= 0
 };
@@ -1960,6 +1962,7 @@ evalConstIntAtom := fn(src: String, start: Int, target: String): (ok: Bool, valu
     (ok = false, value = 0, next = p)
 };
 
+/** Evaluates a multiplicative sequence of pure constant emitted integer atoms without overflow. */
 evalConstIntMul := fn(src: String, start: Int, target: String): (ok: Bool, value: Int, next: Int) {
     n := textLib.length(src);
     var cur := evalConstIntAtom(src, start, target);
@@ -1980,6 +1983,7 @@ evalConstIntMul := fn(src: String, start: Int, target: String): (ok: Bool, value
     cur
 };
 
+/** Evaluates an additive/subtractive sequence of pure constant emitted integer products without overflow. */
 evalConstIntAdd := fn(src: String, start: Int, target: String): (ok: Bool, value: Int, next: Int) {
     n := textLib.length(src);
     var cur := evalConstIntMul(src, start, target);
@@ -2001,6 +2005,7 @@ evalConstIntAdd := fn(src: String, start: Int, target: String): (ok: Bool, value
     cur
 };
 
+/** Folds a pure constant integer expression string into a single target literal when overflow-free. */
 foldPureConstIntCode := fn(code: String, target: String): String {
     trimmed := textLib.trim(code);
     if trimmed == "" { return code; }
@@ -2018,6 +2023,7 @@ foldPureConstIntCode := fn(code: String, target: String): String {
     }
 };
 
+/** Constant-folds pure integer scalar local, assignment, and return expressions across `items`. */
 foldConstantScalarItems := fn(items: Items, target: String): Items {
     out: mut Items = [];
     loop items as item {
