@@ -127,7 +127,26 @@ test.check("snapshot released component", text.indexOfText(snapshot, "Released c
 test.check("snapshot summary", text.indexOfText(snapshot, "Tool/source snapshot validated", 0) >= 0);
 test.check("snapshot archiveSha256", text.indexOfText(snapshot, "`" + dig1 + "`", 0) >= 0);
 test.check("snapshot manifestSha256", text.indexOfText(snapshot, "`" + dig2 + "`", 0) >= 0);
+test.check("snapshot no summary", text.indexOfText(snapshot, "## Summary", 0) < 0);
 test.check("snapshot no ladder", text.indexOfText(snapshot, "Self-hosting fixed-point ladder", 0) < 0);
+
+summaryJson := "{"
++ "\"label\":\"cli-v0.1.0\","
++ "\"commit\":\"" + commit + "\","
++ "\"profile\":\"tools\","
++ "\"releasedComponent\":{\"component\":\"cli\",\"version\":\"0.1.0\"},"
++ "\"archive\":\"lite-cli-v0.1.0.tar.gz\","
++ "\"archiveSha256\":\"" + dig1 + "\","
++ "\"manifestSha256\":\"" + dig2 + "\","
++ "\"vsix\":null,"
++ "\"bootstrap\":null,"
++ "\"tagMessage\":\"CLI 0.1.0\\n\\n- Add streaming bootstrap progress\\n- Unified CLI dispatch\""
++ "}";
+summaryNotes := formatReleaseNotes(summaryJson);
+test.check("summary heading", text.indexOfText(summaryNotes, "## Summary", 0) >= 0);
+test.check("summary title", text.indexOfText(summaryNotes, "CLI 0.1.0", 0) >= 0);
+test.check("summary bullet 1", text.indexOfText(summaryNotes, "- Add streaming bootstrap progress", 0) >= 0);
+test.check("summary bullet 2", text.indexOfText(summaryNotes, "- Unified CLI dispatch", 0) >= 0);
 
 vscodeJson := "{"
 + "\"label\":\"vscode-v0.1.0\","

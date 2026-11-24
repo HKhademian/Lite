@@ -281,7 +281,7 @@ profileSummary := fn(profile: String): String {
     "Tool/source snapshot validated for CLI, docs, and extracted TS compilation; does not establish full language conformance."
 };
 
-/** Renders concise Markdown release notes describing component identity, verification evidence, and SHA-256 artifacts. */
+/** Renders concise Markdown release notes describing component identity, tag summary, verification evidence, and SHA-256 artifacts. */
 pub formatReleaseNotes := fn(
 label: String, commit: String, profile: String,
 hasComponent: Bool, componentName: String, componentVersion: String,
@@ -289,7 +289,8 @@ archive: String, archiveSha256: String, manifestSha256: String,
 hasVsix: Bool, vsixFile: String, vsixSha256: String,
 hasBootstrap: Bool, bootstrapGenerations: Int, bootstrapFixedPoint: Bool,
 hasCorpusCases: Bool, corpusCases: Int, corpusPrograms: Int, corpusRejections: Int, corpusExecutions: Int, corpusMismatches: Int,
-bootstrapSupport: String
+bootstrapSupport: String,
+tagMessage: String
 ): String {
     componentText := if not hasComponent { "unpublished snapshot" } else { componentName + " v" + componentVersion };
     lines: mut List<String> = [
@@ -298,13 +299,19 @@ bootstrapSupport: String
     "- **Source commit**: `" + commit + "`",
     "- **Released component**: " + componentText,
     "- **Readiness profile**: `" + profile + "` — " + profileSummary(profile),
-    "- **Native C backend**: deferred (`nativeCompiler: false`)",
-    "",
-    "## Verification",
-    "",
-    "- Extracted archive validated with `./bin/lite doctor --docs`",
-    "- Node-only TypeScript emission & execution roundtrip verified on `001-001-report-int-42.lts` (output `42`)"
+    "- **Native C backend**: deferred (`nativeCompiler: false`)"
     ];
+    if tagMessage =!= "" {
+        list.pushBack(mut lines, "");
+        list.pushBack(mut lines, "## Summary");
+        list.pushBack(mut lines, "");
+        list.pushBack(mut lines, tagMessage);
+    }
+    list.pushBack(mut lines, "");
+    list.pushBack(mut lines, "## Verification");
+    list.pushBack(mut lines, "");
+    list.pushBack(mut lines, "- Extracted archive validated with `./bin/lite doctor --docs`");
+    list.pushBack(mut lines, "- Node-only TypeScript emission & execution roundtrip verified on `001-001-report-int-42.lts` (output `42`)");
     if hasBootstrap {
         ladderStatus := if bootstrapFixedPoint { "passed" } else { "failed" };
         corpusStats := if not hasCorpusCases {

@@ -144,6 +144,8 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
             }
         }
 
+        tagMsgOpt := readOptionalJsonString(payload, 0, "tagMessage");
+        tagMessage := if tagMsgOpt.present { text.trim(tagMsgOpt.value) } else { "" };
         rendered := rel.formatReleaseNotes(
         label, commit, profile,
         hasComp, compName, compVer,
@@ -151,7 +153,8 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
         hasVsix, vsixFile, vsixSha,
         hasBoot, bootGens, bootFixed,
         hasCases, corpusCases, corpusPrograms, corpusRejections, corpusExecutions, corpusMismatches,
-        bootSupport
+        bootSupport,
+        tagMessage
         );
         io.output(rendered);
         return true;
@@ -174,6 +177,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         failRelease("", selected.error);
     }
 
+    var tagMessage := "";
     if tag =!= "" {
         tagTypeArgs: List<String> = ["cat-file", "-t", "refs/tags/" + tag];
         tagType := text.trim(runChecked("", "git", tagTypeArgs, directory, "release tags must be annotated"));
@@ -185,6 +189,8 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         if tagCommit =!= commit {
             failRelease("", "release tag must point at HEAD");
         }
+        tagMsgArgs: List<String> = ["for-each-ref", "--format=%(contents)", "refs/tags/" + tag];
+        tagMessage = text.trim(runChecked("", "git", tagMsgArgs, directory, ""));
     }
 
     outKind := fs.kind(output);
@@ -428,7 +434,8 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     hasVsix, vsixFile, vsixSha,
     hasBoot, bootGens, bootFixed,
     hasCases, corpusCases, corpusPrograms, corpusRejections, corpusExecutions, corpusMismatches,
-    bootSupport
+    bootSupport,
+    tagMessage
     );
     wrNotes := fs.writeText(path.join(output, "RELEASE-NOTES.md"), notes);
     if not wrNotes.ok { failRelease(work, wrNotes.error); }
