@@ -121,7 +121,7 @@ run := fn(rawArgs: List<String>): Unit {
         mut nodeArgs.pushBack(suite);
     }
     igniterDir := if root == "" { "igniter" } else { path.resolve(root, "igniter") };
-    res := proc.run(proc.execPath(), nodeArgs, igniterDir, envOverrides, quiet, "");
+    res := proc.run(project.nodeExecPath(), nodeArgs, igniterDir, envOverrides, quiet, "");
     if res.error =!= "" {
         if outputMode =!= "--silence" {
             io.errorLine(res.error);

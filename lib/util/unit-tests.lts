@@ -128,15 +128,27 @@ rootDir: String, compilerPath: String, runnerScript: String, batchRel: List<Stri
         return (ok = true, passed = 0, failed = 0);
     }
 
+    rpRunner := fs.realPath(runnerScript);
+    isNodeRunner := if rpRunner.ok {
+        rpRunner.path.endsWith(".ts") or rpRunner.path.endsWith(".js")
+    } else {
+        runnerScript.endsWith(".ts") or runnerScript.endsWith(".js")
+    };
     commands: mut List<String> = [];
     argListsJson: mut List<String> = [];
     loop batchRel as relFile {
         taskJson := "{\"root\":" + json.quoteString(rootDir)
         + ",\"compiler\":" + json.quoteString(compilerPath)
         + ",\"file\":" + json.quoteString(relFile) + "}";
-        argJson := "[" + json.quoteString(runnerScript) + ",\"--unit-worker\"," + json.quoteString(taskJson) + "]";
-        mut commands.pushBack(project.nodeExecPath());
-        mut argListsJson.pushBack(argJson);
+        if isNodeRunner {
+            argJson := "[" + json.quoteString(runnerScript) + ",\"--unit-worker\"," + json.quoteString(taskJson) + "]";
+            mut commands.pushBack(project.nodeExecPath());
+            mut argListsJson.pushBack(argJson);
+        } else {
+            argJson := "[\"--unit-worker\"," + json.quoteString(taskJson) + "]";
+            mut commands.pushBack(runnerScript);
+            mut argListsJson.pushBack(argJson);
+        }
     }
 
     jobs := if batchJobs > 0 { batchJobs } else { pool.cpuCount() };
@@ -208,8 +220,15 @@ pub runUnitTestFiles := fn(rootDir: String, selectedRel: List<String>, maxJobs: 
         return 1;
     }
 
-    ignitedRunner := path.join(rootDir, "dist/tools/test-runner.ts");
-    runnerScript := if fs.kind(ignitedRunner) == fs.FILE_KIND_FILE { ignitedRunner } else { path.join(rootDir, "bin/lite-test") };
+    nativeRunner := path.join(rootDir, "dist/tools/test-runner");
+    tsRunner := path.join(rootDir, "dist/tools/test-runner.ts");
+    runnerScript := if fs.kind(nativeRunner) == fs.FILE_KIND_FILE {
+        nativeRunner
+    } else if fs.kind(tsRunner) == fs.FILE_KIND_FILE {
+        tsRunner
+    } else {
+        path.join(rootDir, "bin/lite-test")
+    };
 
     parallelRel: mut List<String> = [];
     serialRel: mut List<String> = [];
