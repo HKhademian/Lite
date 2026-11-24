@@ -3,7 +3,6 @@
 fs := import "core/file";
 path := import "core/path";
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -200,12 +199,12 @@ strTsSrc :=
 "io.outputLine(\"quote\\\"\" + \"back\\\\slash\");";
 strTsComp := compilerTest.compileStdin(root, tsComp, strTsSrc, "");
 test.checkInt("str concat TS", 0, strTsComp.status);
-test.check("str concat no lite_concat", not text.containsText(strTsComp.stdout, "lite_concat"));
+test.check("str concat no lite_concat", not strTsComp.stdout.contains("lite_concat"));
 compilerTest.assertCompileRunTs(root, tsComp, "str concat TS run", strTsSrc, "liter\nfunction\ntuple\nlist\nliter\nsnow🙂man\nline\nbreak\ntab\tstop\nquote\"back\\slash\n");
 
-ordRes := compilerTest.compileCheckRunTs(root, tsComp, "text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", 9) + text.slice(\"a\", 0, 9));", "");
+ordRes := compilerTest.compileCheckRunTs(root, tsComp, "io := import \"core/io\"; io.outputLine(\"a\".at(9) + \"a\".slice(0, 9));", "");
 test.check("str concat order nonzero", ordRes.status =!= 0);
-test.check("str concat order panic", text.containsText(ordRes.stderr, "BoundPanic: textAt index outside text"));
+test.check("str concat order panic", ordRes.stderr.contains("BoundPanic: textAt index outside text"));
 
 /* restricted compiler lowers dynamic String concatenation to runnable C */
 if ccInfo.available {
@@ -222,16 +221,16 @@ if ccInfo.available {
     "io.outputLine(\"quote\\\"\" + \"back\\\\slash\");";
     strCComp := compilerTest.compileStdin(root, cComp, strCSrc, "");
     test.checkInt("str concat C", 0, strCComp.status);
-    test.check("str concat C stdlib", text.containsText(strCComp.stdout, "#include <stdlib.h>"));
-    test.check("str concat C helper", text.containsText(strCComp.stdout, "static lt_str lite_concat(lt_str left, lt_str right)"));
+    test.check("str concat C stdlib", strCComp.stdout.contains("#include <stdlib.h>"));
+    test.check("str concat C helper", strCComp.stdout.contains("static lt_str lite_concat(lt_str left, lt_str right)"));
     strCRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, strCSrc, "", "");
     test.checkInt("str concat C run", 0, strCRun.status);
     test.checkText("str concat C stdout", "liter\nliter!\nlit\nsnow🙂man\nline\nbreak\ntab\tstop\nquote\"back\\slash\n", strCRun.stdout);
 
     plainC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; s := \"a\";\nio.outputLine(s);\n", "");
     test.checkInt("plain C", 0, plainC.status);
-    test.check("plain C no lite_concat", not text.containsText(plainC.stdout, "lite_concat"));
-    test.check("plain C no stdlib", not text.containsText(plainC.stdout, "#include <stdlib.h>"));
+    test.check("plain C no lite_concat", not plainC.stdout.contains("lite_concat"));
+    test.check("plain C no stdlib", not plainC.stdout.contains("#include <stdlib.h>"));
 }
 
 /* Lite-written TS and C compilers lower String values and multi-value reports deterministically */

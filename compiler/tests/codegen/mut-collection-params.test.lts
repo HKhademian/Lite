@@ -17,15 +17,13 @@ ccInfo := compilerTest.probeCc();
 
 src :=
 "io := import \"core/io\";\n" +
-"map := import \"core/map\";\n" +
-"set := import \"core/set\";\n" +
 "\n" +
 "Counts := type Map<String, Int>;\n" +
 "Tags := type Set<String>;\n" +
 "\n" +
 "bump := fn(c: mut Counts, key: String, delta: Int): Unit {\n" +
-"    cur := map.getOr(c, key, 0);\n" +
-"    map.set(mut c, key, cur + delta);\n" +
+"    cur := c.getOr(key, 0);\n" +
+"    mut c.set(key, cur + delta);\n" +
 "};\n" +
 "\n" +
 "bumpTwice := fn(c: mut Counts, key: String): Unit {\n" +
@@ -34,19 +32,19 @@ src :=
 "};\n" +
 "\n" +
 "addTag := fn(t: mut Tags, tag: String): Unit {\n" +
-"    set.add(mut t, tag);\n" +
+"    mut t.add(tag);\n" +
 "};\n" +
 "\n" +
 "c: mut Counts;\n" +
 "bumpTwice(mut c, \"a\");\n" +
 "bump(mut c, \"b\", 7);\n" +
-"io.outputLine(map.size(c), map.getOr(c, \"a\", 0), map.getOr(c, \"b\", 0));\n" +
+"io.outputLine(c.size(), c.getOr(\"a\", 0), c.getOr(\"b\", 0));\n" +
 "\n" +
 "t: mut Tags;\n" +
 "addTag(mut t, \"x\");\n" +
 "addTag(mut t, \"y\");\n" +
 "addTag(mut t, \"x\");\n" +
-"io.outputLine(set.size(t), set.has(t, \"x\"), set.has(t, \"z\"));\n";
+"io.outputLine(t.size(), t.has(\"x\"), t.has(\"z\"));\n";
 
 expected :=
 "2 5 7\n" +

@@ -85,7 +85,7 @@ appFnSrc := text.joinTexts([
     "io.outputLine(\"comb\", applyCombine(fn(n, s) { s + \":\" }, 3, \"k\"));",
     "arr: [Op; 2] = [fn(x) { x + 1 }, incByTen];",
     "opList: mut List<Op> = [fn(x) { x * 2 }, opsMod.double];",
-    "list.pushBack(mut opList, fn(x) { x - 1 });",
+    "mut opList.pushBack(fn(x) { x - 1 });",
     "io.outputLine(\"colls\", arr[0](4), arr[1](4), opList[0](5), opList[1](5), opList[2](5));",
     "var sink: fn(Int): Unit = fn(n: Int): Unit { io.outputLine(\"sink\", n); };",
     "sink(42);",
@@ -98,7 +98,7 @@ test.check("fn-values realPath", realAppPath.ok);
 
 appComp := compilerTest.compileStdin(root, tsComp, appFnSrc, realAppPath.path);
 test.checkInt("fn-values compile: " + appComp.stderr, 0, appComp.status);
-test.check("fn-values prunes unusedPub", not text.containsText(appComp.stdout, "unusedPub"));
+test.check("fn-values prunes unusedPub", not appComp.stdout.contains("unusedPub"));
 appRun := compilerTest.checkAndRunTs(root, appComp.stdout);
 test.checkInt("fn-values run status: " + appRun.stderr, 0, appRun.status);
 test.checkText("fn-values run stdout", text.joinTexts([
@@ -161,7 +161,7 @@ fnTsRej: List<(src: String, m1: String, m2: String)> = [
 loop fnTsRej as rj {
     res := compilerTest.compileStdin(root, tsComp, rj.src, "");
     test.checkInt("fn-rej ts status: " + rj.src, 2, res.status);
-    ok := text.containsText(res.stderr, rj.m1) or (rj.m2 =!= "" and text.containsText(res.stderr, rj.m2));
+    ok := res.stderr.contains(rj.m1) or (rj.m2 =!= "" and res.stderr.contains(rj.m2));
     test.check("fn-rej ts msg (" + rj.src + ") got: " + res.stderr, ok);
 }
 

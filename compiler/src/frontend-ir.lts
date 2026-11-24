@@ -1,8 +1,5 @@
 /** Shared frontend IR types, constants, scalar predicates, symbol-table helpers, and TS/C literal backend dispatch helpers. */
 
-integer := import "core/int";
-listLib := import "core/list";
-textLib := import "core/text";
 numeric := import "./numeric-literals.lts";
 tsLiteral := import "./ts-literals.lts";
 cLiteral := import "./c-literals.lts";
@@ -318,7 +315,7 @@ pub findFunction := fn(functions: List<FunctionInfo>, name: String): Int {
 
 /** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
 pub localIndex := fn(locals: List<Local>, name: String): Int {
-    var index := listLib.length(locals) - 1;
+    var index := locals.length() - 1;
     loop index >= 0 {
         local := locals[index];
         if local.depth >= -1 and local.name == name { return index; }
@@ -382,12 +379,12 @@ pub moduleValueRuntime := fn(target: String, moduleKey: String, name: String): S
 
 /** Encodes a `TypeName.op` (or `$`-hook) name into a TS/C11-safe identifier suffix. */
 encodeFunctionRuntimeSuffix := fn(name: String): String {
-    dot := textLib.indexOfText(name, ".", 0);
+    dot := name.indexOf(".", 0);
     if dot < 0 { return name; }
-    typePart := textLib.slice(name, 0, dot);
-    opRaw := textLib.slice(name, dot + 1, textLib.length(name));
-    opPart := if textLib.startsWithAt(opRaw, 0, "$") {
-        "S_" + textLib.slice(opRaw, 1, textLib.length(opRaw))
+    typePart := name.slice(0, dot);
+    opRaw := name.slice(dot + 1, name.length());
+    opPart := if opRaw.startsWithAt(0, "$") {
+        "S_" + opRaw.slice(1, opRaw.length())
     } else {
         opRaw
     };
@@ -410,7 +407,7 @@ pub freshScopeTemp := fn(locals: List<Local>, prefix: String): String {
     if not localsUseRuntime(locals, prefix) { return prefix; }
     var suffix := 2;
     loop true {
-        candidate := prefix + "$" + integer.intText(suffix);
+        candidate := prefix + "$" + suffix.toText();
         if not localsUseRuntime(locals, candidate) { return candidate; }
         suffix = suffix + 1;
     }
@@ -426,8 +423,8 @@ pub localRuntimeName := fn(target: String, locals: List<Local>, name: String, mo
     if not localsUseRuntime(locals, base) { return base; }
     var suffix := 2;
     loop true {
-        candidate := if target == TARGET_TS { "lite_" + name + "$" + integer.intText(suffix) }
-        else { "lt_s" + integer.intText(suffix) + "_" + name };
+        candidate := if target == TARGET_TS { "lite_" + name + "$" + suffix.toText() }
+        else { "lt_s" + suffix.toText() + "_" + name };
         if not localsUseRuntime(locals, candidate) { return candidate; }
         suffix = suffix + 1;
     }

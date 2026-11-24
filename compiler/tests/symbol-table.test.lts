@@ -1,6 +1,5 @@
 /** Dual-target tests for `compiler/src/symbol-table.lts` O(1) scoped lookups and undo-stack shadowing. */
 
-listLib := import "core/list";
 test := import "core/test";
 ir := import "../src/frontend-ir.lts";
 sym := import "../src/symbol-table.lts";
@@ -13,8 +12,8 @@ makeLocal := fn(name: String, rt: String, kind: String, depth: Int, initState: S
 /* 1. Scoped local shadowing, undo rewind, and sibling block isolation */
 sym.resetModule();
 var locals: mut List<ir.Local> = [];
-listLib.pushBack(mut locals, makeLocal("x", "lite_x", "Int", 0, ir.INIT_STATE_INIT));
-listLib.pushBack(mut locals, makeLocal("y", "lite_y", "String", 0, ir.INIT_STATE_INIT));
+mut locals.pushBack(makeLocal("x", "lite_x", "Int", 0, ir.INIT_STATE_INIT));
+mut locals.pushBack(makeLocal("y", "lite_y", "String", 0, ir.INIT_STATE_INIT));
 test.checkInt("root x", 0, sym.localIndex(locals, "x"));
 test.checkInt("root y", 1, sym.localIndex(locals, "y"));
 test.checkInt("missing z", -1, sym.localIndex(locals, "z"));
@@ -23,23 +22,23 @@ test.check("initially no callable", not sym.hasCallableLocal(locals));
 
 /* Enter inner block shadowing x with an uninit var and adding a callable */
 mark := sym.localMark();
-listLib.pushBack(mut locals, makeLocal("x", "lite_x_1", "Int", 1, ir.INIT_STATE_UNINIT));
-listLib.pushBack(mut locals, makeLocal("cb", "lite_cb", "fn(Int):Int", 1, ir.INIT_STATE_INIT));
+mut locals.pushBack(makeLocal("x", "lite_x_1", "Int", 1, ir.INIT_STATE_UNINIT));
+mut locals.pushBack(makeLocal("cb", "lite_cb", "fn(Int):Int", 1, ir.INIT_STATE_INIT));
 test.checkInt("shadowed x", 2, sym.localIndex(locals, "x"));
 test.checkInt("callable cb", 3, sym.localIndex(locals, "cb"));
 test.check("uninit x marks unready", sym.localsHasAnyUnready(locals));
 test.check("cb marks callable", sym.hasCallableLocal(locals));
 
 /* Upgrade x to init */
-listLib.pushBack(mut locals, makeLocal("x", "lite_x_1", "Int", 1, ir.INIT_STATE_INIT));
+mut locals.pushBack(makeLocal("x", "lite_x_1", "Int", 1, ir.INIT_STATE_INIT));
 test.checkInt("upgraded x", 4, sym.localIndex(locals, "x"));
 test.check("upgraded x clears unready", not sym.localsHasAnyUnready(locals));
 test.checkInt("latest runtime lite_x_1", 4, sym.latestActiveLocalByRuntime(locals, "lite_x_1"));
 
 /* Exit inner block via rewind: outer x restored, callable cleared */
-_p1 := listLib.popBack(mut locals);
-_p2 := listLib.popBack(mut locals);
-_p3 := listLib.popBack(mut locals);
+_p1 := mut locals.popBack();
+_p2 := mut locals.popBack();
+_p3 := mut locals.popBack();
 sym.rewindLocalsTo(mark);
 test.checkInt("restored outer x", 0, sym.localIndex(locals, "x"));
 test.checkInt("popped cb absent", -1, sym.localIndex(locals, "cb"));
@@ -47,30 +46,30 @@ test.check("restored no callable", not sym.hasCallableLocal(locals));
 test.check("restored ready", not sym.localsHasAnyUnready(locals));
 
 /* 2. Future placeholder (depth <= -2) becomes ready when reached */
-listLib.pushBack(mut locals, makeLocal("f", "lite_f", "Int", -3, ir.INIT_STATE_INIT));
+mut locals.pushBack(makeLocal("f", "lite_f", "Int", -3, ir.INIT_STATE_INIT));
 test.checkInt("future f invisible to localIndex", -1, sym.localIndex(locals, "f"));
 test.check("future f marks unready", sym.localsHasAnyUnready(locals));
 test.check("future f marks hasFutureLocal", sym.hasFutureLocal(locals));
-listLib.pushBack(mut locals, makeLocal("f", "lite_f", "Int", 1, ir.INIT_STATE_INIT));
+mut locals.pushBack(makeLocal("f", "lite_f", "Int", 1, ir.INIT_STATE_INIT));
 test.checkInt("reached f visible", 3, sym.localIndex(locals, "f"));
 test.check("reached f clears unready", not sym.localsHasAnyUnready(locals));
 
 /* 3. Alias shadowing: strictly deeper shadows, same-depth first wins, pop restores */
 var aliases: mut List<ir.AliasDecl> = [];
-listLib.pushBack(mut aliases, (name = "T", target = "Int", at = 0, end = 10, depth = 0));
-listLib.pushBack(mut aliases, (name = "T", target = "String", at = 12, end = 20, depth = 0));
+mut aliases.pushBack((name = "T", target = "Int", at = 0, end = 10, depth = 0));
+mut aliases.pushBack((name = "T", target = "String", at = 12, end = 20, depth = 0));
 test.checkInt("same-depth first alias wins", 0, sym.findAlias(aliases, "T"));
 aliasMark := sym.aliasMark();
-listLib.pushBack(mut aliases, (name = "T", target = "Bool", at = 30, end = 40, depth = 1));
+mut aliases.pushBack((name = "T", target = "Bool", at = 30, end = 40, depth = 1));
 test.checkInt("deeper alias shadows", 2, sym.findAlias(aliases, "T"));
-_pa := listLib.popBack(mut aliases);
+_pa := mut aliases.popBack();
 sym.rewindAliasesTo(aliasMark);
 test.checkInt("popped alias restores depth 0", 0, sym.findAlias(aliases, "T"));
 
 /* 4. Monotonic function index by name and runtime */
 var fns: mut List<ir.FunctionInfo> = [];
-listLib.pushBack(mut fns, (name = "add", runtime = "lt_fn_add", result = "Int", first = 0, count = 2, declAt = 0));
-listLib.pushBack(mut fns, (name = "sub", runtime = "lt_fn_sub", result = "Int", first = 2, count = 2, declAt = 20));
+mut fns.pushBack((name = "add", runtime = "lt_fn_add", result = "Int", first = 0, count = 2, declAt = 0));
+mut fns.pushBack((name = "sub", runtime = "lt_fn_sub", result = "Int", first = 2, count = 2, declAt = 20));
 test.checkInt("findFunction add", 0, sym.findFunction(fns, "add"));
 test.checkInt("findFunction sub", 1, sym.findFunction(fns, "sub"));
 test.checkInt("findFunctionByRuntime lt_fn_sub", 1, sym.findFunctionByRuntime(fns, "lt_fn_sub"));

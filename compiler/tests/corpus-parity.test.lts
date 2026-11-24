@@ -2,7 +2,6 @@
 
 crypto := import "core/crypto";
 fs := import "core/file";
-integer := import "core/int";
 list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
@@ -41,10 +40,10 @@ tsManifestSrc := fs.readText(path.join(root, "compiler/manifests/ts.json")).text
 cManifestSrc := fs.readText(path.join(root, "compiler/manifests/c.json")).text;
 test.checkText("ts manifest target", "ts", json.readObjectString(tsManifestSrc, 0, "target").value);
 test.checkText("c manifest target", "c", json.readObjectString(cManifestSrc, 0, "target").value);
-test.checkInt("ts manifest 1 file", 1, list.listCountText(corpus.readStringListAt(tsManifestSrc, json.findObjectField(tsManifestSrc, 0, "files").valuePos)));
-test.checkInt("c manifest 1 file", 1, list.listCountText(corpus.readStringListAt(cManifestSrc, json.findObjectField(cManifestSrc, 0, "files").valuePos)));
-test.check("ts deps > 1", list.listCountText(tsDeps) > 1);
-test.check("c deps > 1", list.listCountText(cDeps) > 1);
+test.checkInt("ts manifest 1 file", 1, corpus.readStringListAt(tsManifestSrc, json.findObjectField(tsManifestSrc, 0, "files").valuePos).length());
+test.checkInt("c manifest 1 file", 1, corpus.readStringListAt(cManifestSrc, json.findObjectField(cManifestSrc, 0, "files").valuePos).length());
+test.check("ts deps > 1", tsDeps.length() > 1);
+test.check("c deps > 1", cDeps.length() > 1);
 test.checkText("ts root dep", "compiler/src/ts-root.lts", tsDeps[0]);
 test.checkText("c root dep", "compiler/src/c-root.lts", cDeps[0]);
 test.check("ts deps include frontend", list.listContainsText(tsDeps, "compiler/src/frontend.lts"));
@@ -69,7 +68,7 @@ loop frontendModules as modPath {
 /* restricted compiler corpus keeps 69 program and 25 rejection cases */
 compDir := path.join(root, "igniter/tests/compiler");
 fixFiles := path.collectFiles(compDir, [compDir], ".json", [], false);
-fixCount := list.listCountText(fixFiles);
+fixCount := fixFiles.length();
 test.checkInt("corpus fixture count", 94, fixCount);
 
 refJson := fs.readText(path.join(root, "compiler/tests/references/generated/current-artifacts.json")).text;
@@ -104,20 +103,20 @@ loop fi < fixCount {
     srcText := unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, srcField.valuePos, compDir));
     test.check("fixture UTF-8 source: " + fileName, srcText.ok);
 
-    list.pushBack(mut fixNames, fileName);
-    list.pushBack(mut fixCats, pFn.category);
-    list.pushBack(mut fixSlugs, pFn.slug);
+    mut fixNames.pushBack(fileName);
+    mut fixCats.pushBack(pFn.category);
+    mut fixSlugs.pushBack(pFn.slug);
 
     cField := json.findObjectField(fixJson, 0, "cases");
     cOffs := json.arrayElementOffsets(fixJson, cField.valuePos);
-    test.check("cases array non-empty: " + fileName, list.listCountInt(cOffs) > 0);
+    test.check("cases array non-empty: " + fileName, cOffs.length() > 0);
     c0 := cOffs[0];
     cName := json.readObjectString(fixJson, c0, "name").value;
     caseKey := fileName + "/" + cName;
     test.check("unique case key: " + caseKey, not list.listContainsText(fixCaseKeys, caseKey));
-    list.pushBack(mut fixCaseKeys, caseKey);
+    mut fixCaseKeys.pushBack(caseKey);
 
-    srcTmp := path.join(workDir, "src-" + integer.intText(fi) + ".lts");
+    srcTmp := path.join(workDir, "src-" + fi.toText() + ".lts");
     _ws := fs.writeText(srcTmp, srcText.text);
 
     inField := json.findObjectField(fixJson, c0, "input");
@@ -126,16 +125,16 @@ loop fi < fixCount {
     expExit := json.readObjectInt(fixJson, c0, "exitCode").value;
     expOut := if outField.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, outField.valuePos, compDir)).text } else { "" };
     expErr := if errField.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, errField.valuePos, compDir)).text } else { "" };
-    inPath := path.join(workDir, "in-" + integer.intText(fi) + ".bin");
+    inPath := path.join(workDir, "in-" + fi.toText() + ".bin");
     inBytes := if inField.found { streams.readStreamBytes(fixJson, inField.valuePos, compDir) } else { emptyBytes };
     _wi := fs.writeBytes(inPath, inBytes);
 
     if pFn.category == "program" {
         progCount = progCount + 1;
-        list.pushBack(mut progStdinFiles, inPath);
-        list.pushBack(mut progExpOuts, expOut);
-        list.pushBack(mut progExpErrs, expErr);
-        list.pushBack(mut progExpExits, expExit);
+        mut progStdinFiles.pushBack(inPath);
+        mut progExpOuts.pushBack(expOut);
+        mut progExpErrs.pushBack(expErr);
+        mut progExpExits.pushBack(expExit);
     } else {
         rejCount = rejCount + 1;
     }
@@ -156,14 +155,14 @@ cCmds: mut List<String> = [];
 cArgs: mut List<String> = [];
 var ciAll := 0;
 loop ciAll < fixCount {
-    list.pushBack(mut cCmds, proc.execPath());
-    list.pushBack(mut cArgs, "[" + json.quoteString(cComp) + ",\"--name\",\"\"," + json.quoteString(path.join(workDir, "src-" + integer.intText(ciAll) + ".lts")) + "]");
+    mut cCmds.pushBack(proc.execPath());
+    mut cArgs.pushBack("[" + json.quoteString(cComp) + ",\"--name\",\"\"," + json.quoteString(path.join(workDir, "src-" + ciAll.toText() + ".lts")) + "]");
     ciAll = ciAll + 1;
 }
 jobs := pool.cpuCount();
 cRaw := pool.runPoolJson(cCmds, cArgs, root, jobs);
 cOffs := json.arrayElementOffsets(cRaw, 0);
-test.checkInt("c corpus compile count", fixCount, list.listCountInt(cOffs));
+test.checkInt("c corpus compile count", fixCount, cOffs.length());
 
 ccInfo := compilerTest.probeCc();
 ccCmds: mut List<String> = [];
@@ -201,12 +200,12 @@ loop ri < fixCount {
         }
         test.checkText("c baseline hash " + slug, expCHash, "sha256:" + crypto.sha256Text(out));
         if ccInfo.available and not skipHeavy {
-            cFile := path.join(workDir, "prog-" + integer.intText(pSeq) + ".c");
-            exeFile := path.join(workDir, "prog-" + integer.intText(pSeq));
+            cFile := path.join(workDir, "prog-" + pSeq.toText() + ".c");
+            exeFile := path.join(workDir, "prog-" + pSeq.toText());
             _wc := fs.writeText(cFile, out);
-            list.pushBack(mut exePaths, exeFile);
-            list.pushBack(mut ccCmds, ccInfo.cc);
-            list.pushBack(mut ccArgs, "[\"-std=c11\",\"-Wall\",\"-Wextra\",\"-Werror\"," + json.quoteString(cFile) + ",\"-o\"," + json.quoteString(exeFile) + ",\"-lm\"]");
+            mut exePaths.pushBack(exeFile);
+            mut ccCmds.pushBack(ccInfo.cc);
+            mut ccArgs.pushBack("[\"-std=c11\",\"-Wall\",\"-Wextra\",\"-Werror\"," + json.quoteString(cFile) + ",\"-o\"," + json.quoteString(exeFile) + ",\"-lm\"]");
         }
         pSeq = pSeq + 1;
     }
@@ -217,22 +216,22 @@ loop ri < fixCount {
 if ccInfo.available and not skipHeavy {
     ccRaw := pool.runPoolJson(ccCmds, ccArgs, workDir, jobs);
     ccOffs := json.arrayElementOffsets(ccRaw, 0);
-    test.checkInt("cc pool count", progCount, list.listCountInt(ccOffs));
+    test.checkInt("cc pool count", progCount, ccOffs.length());
     var cci := 0;
     loop cci < progCount {
         ccSt := json.readObjectInt(ccRaw, ccOffs[cci], "status").value;
         ccErr := json.readObjectString(ccRaw, ccOffs[cci], "stderr").value;
-        test.checkInt("cc compile " + integer.intText(cci) + ": " + ccErr, 0, ccSt);
+        test.checkInt("cc compile " + cci.toText() + ": " + ccErr, 0, ccSt);
 
         inBytes := fs.readBytes(progStdinFiles[cci]);
-        outFile := path.join(workDir, "native-" + integer.intText(cci) + ".out");
-        errFile := path.join(workDir, "native-" + integer.intText(cci) + ".err");
+        outFile := path.join(workDir, "native-" + cci.toText() + ".out");
+        errFile := path.join(workDir, "native-" + cci.toText() + ".err");
         emptyEnv: List<String> = [];
         nRun := proc.runBytes(exePaths[cci], emptyEnv, workDir, emptyEnv, 5000, inBytes, outFile, errFile);
         test.check("native run err: " + nRun.error, nRun.error == "");
-        test.checkInt("native status " + integer.intText(cci), progExpExits[cci], nRun.status);
-        test.checkText("native stdout " + integer.intText(cci), progExpOuts[cci], fs.readText(outFile).text);
-        test.checkText("native stderr " + integer.intText(cci), progExpErrs[cci], fs.readText(errFile).text);
+        test.checkInt("native status " + cci.toText(), progExpExits[cci], nRun.status);
+        test.checkText("native stdout " + cci.toText(), progExpOuts[cci], fs.readText(outFile).text);
+        test.checkText("native stderr " + cci.toText(), progExpErrs[cci], fs.readText(errFile).text);
         cci = cci + 1;
     }
 }

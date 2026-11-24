@@ -1,7 +1,6 @@
 /* Focused tests for loop `.collected` metadata and `.collected`/`.count`/`.value` loop suffixes. */
 
 test := import "core/test";
-textLib := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -33,13 +32,13 @@ basicProg :=
 "cnt := loop [10, 20, 30] { .item + 1 }.count;\n" +
 "lastVal := loop [10, 20, 30] { .item + 1 }.value;\n" +
 "dirs: List<Direction> = loop [0, 1] as x { if x == 0 { .Up } else { .Down } }.collected;\n" +
-"io.outputLine(list.length(doubled), doubled[0], doubled[3]);\n" +
-"io.outputLine(list.length(odds), odds[0], odds[1], odds[2]);\n" +
-"io.outputLine(list.length(mixed), mixed[0], mixed[1], mixed[2]);\n" +
-"io.outputLine(list.length(stopBare), stopBare[0], stopBare[1]);\n" +
-"io.outputLine(list.length(stopPay), stopPay[0], stopPay[1], stopPay[2]);\n" +
-"io.outputLine(list.length(emptyOut), list.length(allSkip), list.length(zeros), zeros[0], zeros[1]);\n" +
-"io.outputLine(cnt, lastVal, list.length(dirs), dirs[0], dirs[1]);\n";
+"io.outputLine(doubled.length(), doubled[0], doubled[3]);\n" +
+"io.outputLine(odds.length(), odds[0], odds[1], odds[2]);\n" +
+"io.outputLine(mixed.length(), mixed[0], mixed[1], mixed[2]);\n" +
+"io.outputLine(stopBare.length(), stopBare[0], stopBare[1]);\n" +
+"io.outputLine(stopPay.length(), stopPay[0], stopPay[1], stopPay[2]);\n" +
+"io.outputLine(emptyOut.length(), allSkip.length(), zeros.length(), zeros[0], zeros[1]);\n" +
+"io.outputLine(cnt, lastVal, dirs.length(), dirs[0], dirs[1]);\n";
 
 cBasic := compilerTest.compileStdin(root, tsComp, basicProg, "");
 test.checkInt("loop .collected basic compile: " + cBasic.stderr, 0, cBasic.status);
@@ -52,25 +51,24 @@ rBasic.stdout);
 /* 2. then { ... } combining .value, .count, .collected, and nested tagged @outer.collected */
 thenProg :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
 "Summary := record { last: Int; n: Int; items: List<Int>; };\n" +
 "summary := loop [2, 4, 6] {\n" +
 "    .item * 10\n" +
 "} then {\n" +
 "    Summary { last = .value, n = .count, items = .collected }\n" +
 "};\n" +
-"io.outputLine(summary.last, summary.n, list.length(summary.items), summary.items[1]);\n" +
+"io.outputLine(summary.last, summary.n, summary.items.length(), summary.items[1]);\n" +
 "tagged := @outer loop [1, 2, 3] {\n" +
 "    if @outer.item == 2 { continue; }\n" +
 "    .item + 10\n" +
 "} then {\n" +
 "    @outer.collected\n" +
 "};\n" +
-"io.outputLine(list.length(tagged), tagged[0], tagged[1]);\n" +
+"io.outputLine(tagged.length(), tagged[0], tagged[1]);\n" +
 "matrix := loop [[1, 2], [3, 4]] as row {\n" +
 "    loop row { .item * 10 }.collected\n" +
 "}.collected;\n" +
-"io.outputLine(list.length(matrix), matrix[0][1], matrix[1][0]);\n";
+"io.outputLine(matrix.length(), matrix[0][1], matrix[1][0]);\n";
 
 cThen := compilerTest.compileStdin(root, tsComp, thenProg, "");
 test.checkInt("loop .collected then/nested compile: " + cThen.stderr, 0, cThen.status);
@@ -85,7 +83,7 @@ noColProg :=
 "io.outputLine(last);\n";
 cNoCol := compilerTest.compileStdin(root, tsComp, noColProg, "");
 test.checkInt("no-collected compile: " + cNoCol.stderr, 0, cNoCol.status);
-test.check("no lite$col emitted when unused", textLib.indexOfText(cNoCol.stdout, "lite$col", 0) < 0);
+test.check("no lite$col emitted when unused", cNoCol.stdout.indexOf("lite$col", 0) < 0);
 
 /* 4. Verify -O0..-O3 produce identical runtime output */
 optFlags := ["-O0", "-O1", "-O2", "-O3"];

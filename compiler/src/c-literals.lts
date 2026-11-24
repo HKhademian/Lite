@@ -1,8 +1,6 @@
 /* C backend for the temporary Lite compiler. */
 
-integer := import "core/int";
 numeric := import "./numeric-literals.lts";
-textLib := import "core/text";
 tb := import "util/text-builder";
 
 /** Formats a checked Int value as a C signed 64-bit literal (`INT64_C`, `INT64_MIN`). */
@@ -15,13 +13,13 @@ pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
 
 /** Escapes a String as a readable C literal, including trigraph-safe `?`. */
 pub textLiteralCode := fn(value: String): String {
-    size := textLib.length(value);
+    size := value.length();
     out: mut tb.TextBuilder;
     tb.append(mut out, "\"");
     var runStart := 0;
     var position := 0;
     loop position < size {
-        ch := textLib.at(value, position);
+        ch := value.at(position);
         var esc := "";
         if ch == "\\" { esc = "\\\\"; }
         else if ch == "\"" { esc = "\\\""; }
@@ -30,21 +28,21 @@ pub textLiteralCode := fn(value: String): String {
         else if ch == "\r" { esc = "\\r"; }
         else if ch == "\t" { esc = "\\t"; }
         if esc =!= "" {
-            if position > runStart { tb.append(mut out, textLib.slice(value, runStart, position)); }
+            if position > runStart { tb.append(mut out, value.slice(runStart, position)); }
             tb.append(mut out, esc);
             runStart = position + 1;
         }
         position += 1;
     }
     if runStart == 0 { return "\"" + value + "\""; }
-    if runStart < size { tb.append(mut out, textLib.slice(value, runStart, size)); }
+    if runStart < size { tb.append(mut out, value.slice(runStart, size)); }
     tb.append(mut out, "\"");
     tb.build(out)
 }
 
 /** Formats a Lite String literal as a compile-time length-prefixed `lt_str` value (`byte_len` via `sizeof`, `cp_len` exact). */
 pub strLiteralCode := fn(value: String): String {
-    "LT_STR_LIT(" + textLiteralCode(value) + ", " + integer.intText(textLib.length(value)) + ")"
+    "LT_STR_LIT(" + textLiteralCode(value) + ", " + value.length().toText() + ")"
 }
 
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
@@ -135,7 +133,7 @@ floatOpTag := fn(op: String): String {
 
 /** Sequences operands into binary64 temporaries before the checked operation. */
 floatBinaryCall := fn(helper: String, op: String, left: String, right: String, position: Int): String {
-    id := integer.intText(position);
+    id := position.toText();
     "(lt_arg_f_left_" + id + " = " + left + ", lt_arg_f_right_" + id + " = " + right + ", " + helper + "(lt_arg_f_left_" + id + ", lt_arg_f_right_" + id + ", " + floatOpTag(op) + ", " + id + "))"
 }
 
@@ -151,7 +149,7 @@ pub float32BinaryCode := fn(op: String, left: String, right: String, position: I
 
 /** Sequences both operands before the selected Float-default power checkpoint. */
 pub floatPowerCode := fn(left: String, right: String, position: Int): String {
-    id := integer.intText(position);
+    id := position.toText();
     "(lt_arg_f_left_" + id + " = " + left + ", lt_arg_f_right_" + id + " = " + right + ", lt_float_power(lt_arg_f_left_" + id + ", lt_arg_f_right_" + id + ", " + id + "))"
 }
 
@@ -167,7 +165,7 @@ pub floorModCode := fn(left: String, right: String): String {
 
 /** Emits a positioned Int helper call with operands evaluated once, from left to right. */
 intBinaryCallCode := fn(name: String, left: String, right: String, position: Int): String {
-    id := integer.intText(position);
+    id := position.toText();
     "(lt_arg_left_" + id + " = " + left + ", lt_arg_right_" + id + " = " + right + ", " + name + "(lt_arg_left_" + id + ", lt_arg_right_" + id + ", " + id + "))"
 }
 
@@ -208,26 +206,27 @@ pub intMultiplyCode := fn(left: String, right: String, position: Int): String {
 
 /** Emits checked Int64 negation, evaluating the operand once. */
 pub intNegateCode := fn(value: String, position: Int): String {
-    "lt_checked_negate(" + value + ", " + integer.intText(position) + ")"
+    "lt_checked_negate(" + value + ", " + position.toText() + ")"
 }
 
 /** Emits a checked signed range check for narrow integer arithmetic results. */
 pub checkedNarrowIntCode := fn(kind: String, value: String, position: Int): String {
-    "lt_checked_narrow_int(" + value + ", " + integer.intText(numeric.narrowIntBits(kind)) + ", " + textLiteralCode(kind) + ", " + integer.intText(position) + ")"
+    bits: Int = numeric.narrowIntBits(kind);
+    "lt_checked_narrow_int(" + value + ", " + bits.toText() + ", " + textLiteralCode(kind) + ", " + position.toText() + ")"
 }
 
 /** Names a typed, source-position-hygienic C comparison operand temporary. */
 comparisonTemp := fn(kind: String, position: Int, index: Int): String {
     tag := if kind == numeric.KIND_STRING { "s" } else if kind == numeric.KIND_BOOL { "b" } else if numeric.isFloatKind(kind) { "f" } else { "i" };
-    "lt_cmp_" + tag + "_" + integer.intText(position) + "_" + integer.intText(index)
+    "lt_cmp_" + tag + "_" + position.toText() + "_" + index.toText()
 }
 
 /** Represents Unit as zero, retaining unsupported/effectful code for C validation instead of dropping it. */
 comparisonValueCode := fn(kind: String, code: String): String {
     if kind =!= numeric.KIND_UNIT { return code; }
     var inner := code;
-    loop textLib.length(inner) >= 2 and textLib.at(inner, 0) == "(" and textLib.at(inner, textLib.length(inner) - 1) == ")" {
-        inner = textLib.slice(inner, 1, textLib.length(inner) - 1);
+    loop inner.length() >= 2 and inner.at(0) == "(" and inner.at(inner.length() - 1) == ")" {
+        inner = inner.slice(1, inner.length() - 1);
     }
     if inner == "undefined" { "0" } else { "(" + code + ", 0)" }
 }

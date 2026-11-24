@@ -54,20 +54,20 @@ genStandaloneSrc :=
 "};\n" +
 "\n" +
 "pushTwice := fn<T>(dst: mut List<T>, val: T): Unit {\n" +
-"    list.pushBack(mut dst, val);\n" +
-"    list.pushBack(mut dst, val);\n" +
+"    mut dst.pushBack(val);\n" +
+"    mut dst.pushBack(val);\n" +
 "};\n" +
 "\n" +
 "repeatInto := fn<T>(dst: mut List<T>, val: T, n: Int): Unit {\n" +
 "    if n <= 0 { return; }\n" +
-"    list.pushBack(mut dst, val);\n" +
+"    mut dst.pushBack(val);\n" +
 "    self(mut dst, val, n - 1);\n" +
 "};\n" +
 "\n" +
 "mapList := fn<T, U>(items: List<T>, f: fn(T): U): List<U> {\n" +
 "    out: mut List<U> = [];\n" +
 "    loop items as item {\n" +
-"        list.pushBack(mut out, f(item));\n" +
+"        mut out.pushBack(f(item));\n" +
 "    }\n" +
 "    out\n" +
 "};\n" +
@@ -89,8 +89,8 @@ genStandaloneSrc :=
 "flags := mapList(nums, fn(n) { n > 6 });\n" +
 "emptyInts: List<Int> = emptyList();\n" +
 "io.outputLine(a, b, p.a, p.b);\n" +
-"io.outputLine(list.length(nums), nums[0], nums[2], list.length(words), words[1]);\n" +
-"io.outputLine(doubled[0], doubled[2], flags[0], flags[2], list.length(emptyInts));\n";
+"io.outputLine(nums.length(), nums[0], nums[2], words.length(), words[1]);\n" +
+"io.outputLine(doubled[0], doubled[2], flags[0], flags[2], emptyInts.length());\n";
 
 runBoth("standalone-generics", genStandaloneSrc, "42 hello 7 ok\n4 5 9 2 go\n10 18 false true 0\n");
 
@@ -134,7 +134,6 @@ midPath := tmpDir.path + "/factory.lts";
 appPath := tmpDir.path + "/app.lts";
 
 libSrc :=
-"list := import \"core/list\";\n" +
 "pub Box := record { value: Int; }\n" +
 "pub Box.transform := fn<U>(b: Self, f: fn(Int): U): U {\n" +
 "    f(b.value)\n" +
@@ -142,7 +141,7 @@ libSrc :=
 "pub filterList := fn<T>(items: List<T>, pred: fn(T): Bool): List<T> {\n" +
 "    out: mut List<T> = [];\n" +
 "    loop items as item {\n" +
-"        if pred(item) { list.pushBack(mut out, item); }\n" +
+"        if pred(item) { mut out.pushBack(item); }\n" +
 "    }\n" +
 "    out\n" +
 "};\n";
@@ -153,14 +152,13 @@ midSrc :=
 
 appSrc :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
 "g := import \"./genlib.lts\";\n" +
 "f := import \"./factory.lts\";\n" +
 "b := f.makeBox(7);\n" +
 "doubled := b.transform(fn(n) { n * 3 });\n" +
 "isPos := b.transform(fn(n) { n > 0 });\n" +
 "evens := g.filterList([1, 2, 3, 4, 5, 6], fn(n) { n % 2 == 0 });\n" +
-"io.outputLine(doubled, isPos, list.length(evens), evens[0], evens[2]);\n";
+"io.outputLine(doubled, isPos, evens.length(), evens[0], evens[2]);\n";
 
 _w1 := file.writeText(libPath, libSrc);
 _w2 := file.writeText(midPath, midSrc);

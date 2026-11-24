@@ -1,7 +1,5 @@
 /** Composable compiler optimization and code-emission configuration (`-O0`..`-O3`, `-Os`, `-Oc`, and `-f...` overrides). */
 
-listLib := import "core/list";
-textLib := import "core/text";
 
 /** Native optimization preset class (`-O0`, `-O1`, `-O2`, `-O3`, `-Os`, `-Oc`). */
 pub OptClass := enum { O0; O1; O2; O3; Os; Oc; };
@@ -200,12 +198,12 @@ pub presetConfig := fn(preset: OptClass, target: String): OptConfig {
 
 /** Parses a non-negative ASCII integer string; returns `-1` when invalid. */
 parseNonNegInt := fn(raw: String): Int {
-    n := textLib.length(raw);
+    n := raw.length();
     if n == 0 or n > 9 { return -1; }
     var acc := 0;
     var i := 0;
     loop i < n {
-        ch := textLib.at(raw, i);
+        ch := raw.at(i);
         d := if ch == "0" { 0 }
         else if ch == "1" { 1 }
         else if ch == "2" { 2 }
@@ -234,8 +232,8 @@ pub isPassFlag := fn(arg: String): Bool {
     arg == "-finline" or arg == "-fno-inline" or
     arg == "-fpreserve-comments" or arg == "-fno-preserve-comments" or
     arg == "-fpreserve-docs" or arg == "-fno-preserve-docs" or
-    textLib.startsWithAt(arg, 0, "-finline-limit=") or
-    textLib.startsWithAt(arg, 0, "-fopt-rounds=")
+    arg.startsWithAt(0, "-finline-limit=") or
+    arg.startsWithAt(0, "-fopt-rounds=")
 };
 
 /** Resolves effective simplification round count (`0..8`), auto-enabling 1 round on `-Oc` when a round pass is opted in. */
@@ -255,60 +253,60 @@ pub effectiveInlineMaxSize := fn(cfg: OptConfig): Int {
 pub parseOptConfig := fn(rawArgs: List<String>, target: String): OptConfig {
     var cfg := presetConfig(OptClass.O1, target);
     args: mut List<String> = rawArgs;
-    loop listLib.listCountText(args) > 0 {
-        arg := listLib.popFront(mut args);
-        if textLib.startsWithAt(arg, 0, "-O") {
-            parsed := parseOptClass(textLib.slice(arg, 2, textLib.length(arg)));
+    loop args.length() > 0 {
+        arg := mut args.popFront();
+        if arg.startsWithAt(0, "-O") {
+            parsed := parseOptClass(arg.slice(2, arg.length()));
             if not parsed.ok {
                 return failConfig(cfg, "unsupported optimization flag " + arg + " (expected -O0, -O1, -O2, -O3, -Os, or -Oc)");
             }
             cfg = presetConfig(parsed.value, target);
         } else if arg == "--opt" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return failConfig(cfg, "missing value for --opt");
             }
-            rawOpt := listLib.popFront(mut args);
+            rawOpt := mut args.popFront();
             parsed := parseOptClass(rawOpt);
             if not parsed.ok {
                 return failConfig(cfg, "unsupported optimization level " + rawOpt + " (expected 0, 1, 2, 3, s, or c)");
             }
             cfg = presetConfig(parsed.value, target);
-        } else if textLib.startsWithAt(arg, 0, "--opt=") {
-            rawOpt := textLib.slice(arg, 6, textLib.length(arg));
+        } else if arg.startsWithAt(0, "--opt=") {
+            rawOpt := arg.slice(6, arg.length());
             parsed := parseOptClass(rawOpt);
             if not parsed.ok {
                 return failConfig(cfg, "unsupported optimization level " + rawOpt + " (expected 0, 1, 2, 3, s, or c)");
             }
             cfg = presetConfig(parsed.value, target);
         } else if arg == "--emit-format" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return failConfig(cfg, "missing value for --emit-format (expected pretty or compact)");
             }
-            rawFmt := listLib.popFront(mut args);
+            rawFmt := mut args.popFront();
             parsedFmt := parseEmitFormat(rawFmt);
             if not parsedFmt.ok {
                 return failConfig(cfg, "unsupported --emit-format " + rawFmt + " (expected pretty or compact)");
             }
             cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = parsedFmt.value, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
-        } else if textLib.startsWithAt(arg, 0, "--emit-format=") {
-            rawFmt := textLib.slice(arg, 14, textLib.length(arg));
+        } else if arg.startsWithAt(0, "--emit-format=") {
+            rawFmt := arg.slice(14, arg.length());
             parsedFmt := parseEmitFormat(rawFmt);
             if not parsedFmt.ok {
                 return failConfig(cfg, "unsupported --emit-format " + rawFmt + " (expected pretty or compact)");
             }
             cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = parsedFmt.value, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
         } else if arg == "--source-map" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return failConfig(cfg, "missing value for --source-map (expected none, comments, or lines)");
             }
-            rawSm := listLib.popFront(mut args);
+            rawSm := mut args.popFront();
             parsedSm := parseSourceMapMode(rawSm);
             if not parsedSm.ok {
                 return failConfig(cfg, "unsupported --source-map " + rawSm + " (expected none, comments, or lines)");
             }
             cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = parsedSm.value, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
-        } else if textLib.startsWithAt(arg, 0, "--source-map=") {
-            rawSm := textLib.slice(arg, 13, textLib.length(arg));
+        } else if arg.startsWithAt(0, "--source-map=") {
+            rawSm := arg.slice(13, arg.length());
             parsedSm := parseSourceMapMode(rawSm);
             if not parsedSm.ok {
                 return failConfig(cfg, "unsupported --source-map " + rawSm + " (expected none, comments, or lines)");
@@ -339,15 +337,15 @@ pub parseOptConfig := fn(rawArgs: List<String>, target: String): OptConfig {
             cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = true, inlineMaxSize = lim, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
         } else if arg == "-fno-inline" {
             cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = false, inlineMaxSize = 0, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
-        } else if textLib.startsWithAt(arg, 0, "-finline-limit=") {
-            rawN := textLib.slice(arg, 15, textLib.length(arg));
+        } else if arg.startsWithAt(0, "-finline-limit=") {
+            rawN := arg.slice(15, arg.length());
             n := parseNonNegInt(rawN);
             if n < 0 {
                 return failConfig(cfg, "invalid -finline-limit value " + rawN + " (expected non-negative integer)");
             }
             cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = n > 0, inlineMaxSize = n, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = cfg.preserveDocs);
-        } else if textLib.startsWithAt(arg, 0, "-fopt-rounds=") {
-            rawN := textLib.slice(arg, 13, textLib.length(arg));
+        } else if arg.startsWithAt(0, "-fopt-rounds=") {
+            rawN := arg.slice(13, arg.length());
             n := parseNonNegInt(rawN);
             if n < 0 or n > 8 {
                 return failConfig(cfg, "invalid -fopt-rounds value " + rawN + " (expected 0..8)");
@@ -361,11 +359,11 @@ pub parseOptConfig := fn(rawArgs: List<String>, target: String): OptConfig {
             cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = true);
         } else if arg == "-fno-preserve-docs" {
             cfg = (ok = true, error = "", preset = cfg.preset, constFold = cfg.constFold, branchSimplify = cfg.branchSimplify, deadStore = cfg.deadStore, blockPrune = cfg.blockPrune, dce = cfg.dce, inlineLeaves = cfg.inlineLeaves, inlineMaxSize = cfg.inlineMaxSize, optRounds = cfg.optRounds, emitFormat = cfg.emitFormat, sourceMap = cfg.sourceMap, preserveComments = cfg.preserveComments, preserveDocs = false);
-        } else if textLib.startsWithAt(arg, 0, "-f") {
+        } else if arg.startsWithAt(0, "-f") {
             return failConfig(cfg, "unsupported optimization pass flag " + arg);
         } else if arg == "--builtin-mode" or arg == "--name" or arg == "--root" or arg == "--out" or arg == "--trace-json" {
-            if listLib.listCountText(args) > 0 {
-                _skip := listLib.popFront(mut args);
+            if args.length() > 0 {
+                _skip := mut args.popFront();
             }
         }
     }

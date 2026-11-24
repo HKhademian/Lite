@@ -3,14 +3,11 @@
 lexer := import "./lexer.lts";
 parser := import "./parser.lts";
 numeric := import "./numeric-literals.lts";
-integer := import "core/int";
 diag := import "core/diag";
 format := import "core/format";
 io := import "core/io";
-textLib := import "core/text";
 
 /** One top-level symbol: kind, name, detail text and source position. */
-list := import "core/list";
 pub Symbol := type (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
 
 /** Top-level symbols in source order. */
@@ -74,9 +71,9 @@ isScalarType := fn(typeText: String): Bool {
 
 /** Returns `List<T>`'s element type, or empty text when the type is not a list. */
 listElementType := fn(typeText: String): String {
-    size := textLib.length(typeText);
-    if size > 5 and textLib.startsWithAt(typeText, 0, "List<") and textLib.at(typeText, size - 1) == ">" {
-        return textLib.slice(typeText, 5, size - 1);
+    size := typeText.length();
+    if size > 5 and typeText.startsWithAt(0, "List<") and typeText.at(size - 1) == ">" {
+        return typeText.slice(5, size - 1);
     }
     ""
 }
@@ -129,7 +126,7 @@ functionParamTypes := fn(symbol: Symbol): List<String> {
         if parser.isSymbol(parser.tokenAt(tokens, cursor), ")") { break; }
         colon := parser.expectSymbol(tokens, cursor + 1, ":", "");
         parameterType := parser.parseType(tokens, colon, "");
-        list.pushBack(mut types, parameterType.text);
+        mut types.pushBack(parameterType.text);
         cursor = parameterType.next;
         if parser.isSymbol(parser.tokenAt(tokens, cursor), ",") {
             cursor = cursor + 1;
@@ -219,7 +216,7 @@ tupleComponentType := fn(typeText: String, member: String): String {
         }
         component := parser.parseType(tokens, cursor, "");
         namedMatch := label =!= "" and member == label;
-        if namedMatch or member == integer.intText(index) {
+        if namedMatch or member == index.toText() {
             return component.text;
         }
         cursor = component.next;
@@ -231,9 +228,9 @@ tupleComponentType := fn(typeText: String, member: String): String {
 
 /** Trims trailing ASCII spaces from a normalized operand slice. */
 trimTrailingSpaces := fn(text: String): String {
-    var end := textLib.length(text);
-    loop end > 0 and textLib.at(text, end - 1) == " " { end = end - 1; }
-    textLib.slice(text, 0, end)
+    var end := text.length();
+    loop end > 0 and text.at(end - 1) == " " { end = end - 1; }
+    text.slice(0, end)
 }
 
 /** Splits a normalized binary expression `(left op right)` at top-level parenthesis depth 1. */
@@ -254,10 +251,10 @@ splitBinaryOperands := fn(text: String): (left: String, op: String, right: Strin
         } else if depth == 1 and cursor > 1 and token.kind == lexer.TOKEN_KIND_SYMBOL and
             (token.text == "+" or token.text == "-" or token.text == "*" or token.text == "/" or
                 token.text == "%" or token.text == ":/" or token.text == ":%" or token.text == "**") {
-            leftText := trimTrailingSpaces(textLib.slice(text, parser.tokenOffsetAt(tokens, 1), token.offset));
+            leftText := trimTrailingSpaces(text.slice(parser.tokenOffsetAt(tokens, 1), token.offset));
             rightStart := parser.tokenOffsetAt(tokens, cursor + 1);
             rightEnd := parser.tokenOffsetAt(tokens, count - 2);
-            rightText := trimTrailingSpaces(textLib.slice(text, rightStart, rightEnd));
+            rightText := trimTrailingSpaces(text.slice(rightStart, rightEnd));
             return (left = leftText, op = token.text, right = rightText);
         }
         cursor = cursor + 1;
@@ -273,11 +270,11 @@ typesCompatible := fn(symbols: Symbols, expected: String, actual: String): Bool 
     if isScalarType(expectedType) or isScalarType(actualType) {
         return expectedType == actualType or numeric.numericWidens(expectedType, actualType);
     }
-    if textLib.startsWithAt(expectedType, 0, "List<") and textLib.startsWithAt(actualType, 0, "List<") {
+    if expectedType.startsWithAt(0, "List<") and actualType.startsWithAt(0, "List<") {
         return resolveAliasName(symbols, listElementType(expectedType), 0) ==
             resolveAliasName(symbols, listElementType(actualType), 0);
     }
-    if textLib.startsWithAt(expectedType, 0, "(") and textLib.startsWithAt(actualType, 0, "(") {
+    if expectedType.startsWithAt(0, "(") and actualType.startsWithAt(0, "(") {
         return expectedType == actualType;
     }
     true
@@ -285,24 +282,24 @@ typesCompatible := fn(symbols: Symbols, expected: String, actual: String): Bool 
 
 /** Infers a simple scalar/tuple/list/call/name type from normalized expression text. */
 simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
-    size := textLib.length(text);
+    size := text.length();
     if size == 0 { return ""; }
     if text == "true" or text == "false" { return numeric.KIND_BOOL; }
-    if textLib.startsWithAt(text, 0, "\"") { return numeric.KIND_STRING; }
-    first := textLib.at(text, 0);
-    if textLib.isDigit(first) {
+    if text.startsWithAt(0, "\"") { return numeric.KIND_STRING; }
+    first := text.at(0);
+    if first.isDigit() {
         token := parser.tokenAt(lexer.tokenize(text, ""), 0);
         if token.kind == lexer.TOKEN_KIND_FLOAT { return numeric.KIND_FLOAT; }
         return numeric.KIND_INT;
     }
-    if textLib.startsWithAt(text, 0, "(-") or textLib.startsWithAt(text, 0, "(+") {
-        operand := self(symbols, locals, textLib.slice(text, 2, size - 1));
+    if text.startsWithAt(0, "(-") or text.startsWithAt(0, "(+") {
+        operand := self(symbols, locals, text.slice(2, size - 1));
         resolvedOperand := resolveAliasName(symbols, operand, 0);
         if numeric.isNumericKind(resolvedOperand) { return resolvedOperand; }
         return numeric.KIND_INT;
     }
-    if textLib.startsWithAt(text, 0, "not ") { return numeric.KIND_BOOL; }
-    if textLib.startsWithAt(text, 0, "match {") {
+    if text.startsWithAt(0, "not ") { return numeric.KIND_BOOL; }
+    if text.startsWithAt(0, "match {") {
         tokens := lexer.tokenize(text, "");
         count := parser.tokenCount(tokens);
         var cursor := 2;
@@ -334,11 +331,11 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
                     }
                     armCursor = armCursor + 1;
                 }
-                loop endOffset > startOffset and textLib.at(text, endOffset - 1) == " " {
+                loop endOffset > startOffset and text.at(endOffset - 1) == " " {
                     endOffset = endOffset - 1;
                 }
                 if endOffset <= startOffset { return numeric.KIND_UNIT; }
-                fallbackText := textLib.slice(text, startOffset, endOffset);
+                fallbackText := text.slice(startOffset, endOffset);
                 if fallbackText == numeric.KIND_UNIT { return numeric.KIND_UNIT; }
                 return self(symbols, locals, fallbackText);
             }
@@ -360,7 +357,7 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
         }
         return "";
     }
-    if textLib.startsWithAt(text, 0, "[") {
+    if text.startsWithAt(0, "[") {
         if size == 2 { return ""; }
         tokens := lexer.tokenize(text, "");
         count := parser.tokenCount(tokens);
@@ -384,11 +381,11 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
             cursor = cursor + 1;
         }
         if endOffset == 0 { return ""; }
-        elementType := simpleType(symbols, locals, textLib.slice(text, parser.tokenOffsetAt(tokens, 1), endOffset));
+        elementType := simpleType(symbols, locals, text.slice(parser.tokenOffsetAt(tokens, 1), endOffset));
         if elementType == "" { return ""; }
         return "List<" + elementType + ">";
     }
-    if textLib.startsWithAt(text, 0, "(") {
+    if text.startsWithAt(0, "(") {
         operator := topLevelOperator(text);
         if operator == "and" or operator == "or" or operator == "not" or
             operator == "==" or operator == "=!=" or operator == "<" or operator == "<!" or
@@ -413,38 +410,38 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
             if operator == "+" and firstOperandType(symbols, locals, text) == numeric.KIND_STRING { return numeric.KIND_STRING; }
             return numeric.KIND_INT;
         }
-        if textLib.indexOfText(text, ",", 0) >= 0 or textLib.indexOfText(text, " = ", 0) >= 0 { return ""; }
-        if size >= 2 { return simpleType(symbols, locals, textLib.slice(text, 1, size - 1)); }
+        if text.indexOf(",", 0) >= 0 or text.indexOf(" = ", 0) >= 0 { return ""; }
+        if size >= 2 { return simpleType(symbols, locals, text.slice(1, size - 1)); }
         return "";
     }
-    if textLib.isNameStart(first) {
+    if first.isNameStart() {
         var field := -1;
         var fieldCursor := 0;
         loop fieldCursor < size {
-            if textLib.at(text, fieldCursor) == "." { field = fieldCursor; }
+            if text.at(fieldCursor) == "." { field = fieldCursor; }
             fieldCursor = fieldCursor + 1;
         }
         if field > 0 {
-            baseText := textLib.slice(text, 0, field);
-            member := textLib.slice(text, field + 1, size);
+            baseText := text.slice(0, field);
+            member := text.slice(field + 1, size);
             baseType := simpleType(symbols, locals, baseText);
             resolved := resolveAliasName(symbols, baseType, 0);
             return tupleComponentType(resolved, member);
         }
-        indexAt := textLib.indexOfText(text, "[", 0);
-        if indexAt > 0 and textLib.at(text, size - 1) == "]" {
-            baseText := textLib.slice(text, 0, indexAt);
-            indexText := textLib.slice(text, indexAt + 1, size - 1);
+        indexAt := text.indexOf("[", 0);
+        if indexAt > 0 and text.at(size - 1) == "]" {
+            baseText := text.slice(0, indexAt);
+            indexText := text.slice(indexAt + 1, size - 1);
             baseType := simpleType(symbols, locals, baseText);
             resolved := resolveAliasName(symbols, baseType, 0);
-            if textLib.startsWithAt(resolved, 0, "List<") { return listElementType(resolved); }
+            if resolved.startsWithAt(0, "List<") { return listElementType(resolved); }
             return tupleComponentType(resolved, indexText);
         }
         index := findLocal(locals, text);
         if index >= 0 { return locals[index].typeText; }
-        call := textLib.indexOfText(text, "(", 0);
+        call := text.indexOf("(", 0);
         if call > 0 {
-            name := textLib.slice(text, 0, call);
+            name := text.slice(0, call);
             functionIndex := findSymbol(symbols, name);
             if functionIndex >= 0 and symbols[functionIndex].kind == SYMBOL_KIND_FUNCTION {
                 return functionResultType(symbols[functionIndex]);
@@ -485,7 +482,7 @@ contextualNumericLiteralType := fn(text: String, expectedType: String): String {
     scanned := numeric.scanNumericLiteral(literal, 0);
     if kind == lexer.TOKEN_KIND_FLOAT {
         if expectedType == numeric.KIND_FLOAT32 {
-            digits := textLib.slice(literal, 0, scanned.integerEnd) + textLib.slice(literal, scanned.fractionStart, scanned.fractionEnd);
+            digits := literal.slice(0, scanned.integerEnd) + literal.slice(scanned.fractionStart, scanned.fractionEnd);
             if numeric.finiteFloat32Digits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) { return numeric.KIND_FLOAT32; }
             return "Float";
         }
@@ -503,7 +500,7 @@ contextualNumericLiteralType := fn(text: String, expectedType: String): String {
 /** Infers a scalar or contextual list literal expression with fixed-width numeric literal admission. */
 contextualSimpleType := fn(symbols: Symbols, locals: Locals, text: String, expected: String): String {
     resolvedExpected := resolveAliasName(symbols, expected, 0);
-    if textLib.startsWithAt(resolvedExpected, 0, "List<") and textLib.startsWithAt(text, 0, "[") {
+    if resolvedExpected.startsWithAt(0, "List<") and text.startsWithAt(0, "[") {
         elementExpected := listElementType(resolvedExpected);
         tokens := lexer.tokenize(text, "");
         count := parser.tokenCount(tokens);
@@ -519,14 +516,14 @@ contextualSimpleType := fn(symbols: Symbols, locals: Locals, text: String, expec
                 depth = depth + 1;
             } else if parser.isSymbol(token, ")") or parser.isSymbol(token, "]") or parser.isSymbol(token, "}") {
                 if depth == 0 and parser.isSymbol(token, "]") {
-                    itemText := textLib.slice(text, itemStart, token.offset);
+                    itemText := text.slice(itemStart, token.offset);
                     itemType := self(symbols, locals, itemText, elementExpected);
                     if not typesCompatible(symbols, elementExpected, itemType) { allFit = false; }
                     break;
                 }
                 depth = depth - 1;
             } else if parser.isSymbol(token, ",") and depth == 0 {
-                itemText := textLib.slice(text, itemStart, token.offset);
+                itemText := text.slice(itemStart, token.offset);
                 itemType := self(symbols, locals, itemText, elementExpected);
                 if not typesCompatible(symbols, elementExpected, itemType) { allFit = false; break; }
                 if cursor + 1 < count { itemStart = parser.tokenOffsetAt(tokens, cursor + 1); }
@@ -578,8 +575,8 @@ addSymbol := fn(symbols: Symbols, symbol: Symbol, prefix: String): Symbols {
             line = symbol.line, column = symbol.column), prefix, "duplicate top-level name " + symbol.name);
     }
     result: mut List<Symbol> = [];
-    loop symbols as item { list.pushBack(mut result, item); }
-    list.pushBack(mut result, symbol);
+    loop symbols as item { mut result.pushBack(item); }
+    (mut result).pushBack(symbol);
     result
 }
 
@@ -604,7 +601,7 @@ parseFunctionSymbol := fn(tokens: lexer.Tokens, index: Int, prefix: String): (ne
         if hasText(parameterNames, parameter.text) {
             checkFail(parameter, prefix, "duplicate parameter " + parameter.text);
         }
-        list.pushBack(mut parameterNames, parameter.text);
+        (mut parameterNames).pushBack(parameter.text);
         colon := parser.expectSymbol(tokens, cursor + 1, ":", prefix);
         parameterType := parser.parseType(tokens, colon, prefix);
         if parameterCount > 0 { detail = detail + ", "; }
@@ -788,10 +785,10 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 if matchFallbacks[matchCount - 1] == 0 {
                     checkFail(token, prefix, "subjectless match requires a final _ fallback arm");
                 }
-                list.popBack(mut matchDepths);
-                list.popBack(mut matchParens);
-                list.popBack(mut matchBrackets);
-                list.popBack(mut matchFallbacks);
+                (mut matchDepths).popBack();
+                mut matchParens.popBack();
+                mut matchBrackets.popBack();
+                mut matchFallbacks.popBack();
                 matchCount = matchCount - 1;
             } else {
                 if matchFallbacks[matchCount - 1] =!= 0 {
@@ -799,8 +796,8 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 }
                 if token.kind == lexer.TOKEN_KIND_NAME and token.text == "_" and
                     parser.isSymbol(parser.tokenAt(tokens, cursor + 1), "{") {
-                    list.popBack(mut matchFallbacks);
-                    list.pushBack(mut matchFallbacks, 1);
+                    mut matchFallbacks.popBack();
+                    mut matchFallbacks.pushBack(1);
                     depth = depth + 1;
                     cursor = cursor + 2;
                     continue;
@@ -827,15 +824,15 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
         }
         if parser.isSymbol(token, "{") {
             if pendingLoop {
-                list.pushBack(mut loopBodies, depth + 1);
+                mut loopBodies.pushBack(depth + 1);
                 loopDepth = loopDepth + 1;
                 pendingLoop = false;
             }
             if pendingMatch {
-                list.pushBack(mut matchDepths, depth + 1);
-                list.pushBack(mut matchParens, parens);
-                list.pushBack(mut matchBrackets, brackets);
-                list.pushBack(mut matchFallbacks, 0);
+                mut matchDepths.pushBack(depth + 1);
+                mut matchParens.pushBack(parens);
+                mut matchBrackets.pushBack(brackets);
+                mut matchFallbacks.pushBack(0);
                 matchCount = matchCount + 1;
                 pendingMatch = false;
             }
@@ -845,11 +842,11 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
         }
         if parser.isSymbol(token, "}") {
             if loopDepth > 0 and loopBodies[loopDepth - 1] == depth {
-                list.popBack(mut loopBodies);
+                mut loopBodies.popBack();
                 loopDepth = loopDepth - 1;
             }
             loop localCount > 0 and locals[localCount - 1].depth >= depth {
-                list.popBack(mut locals);
+                mut locals.popBack();
                 localCount = localCount - 1;
             }
             if functionBodyDepth == depth {
@@ -885,7 +882,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 }
                 colon := parser.expectSymbol(tokens, parameterCursor + 1, ":", prefix);
                 parameterType := parser.parseType(tokens, colon, prefix);
-                list.pushBack(mut locals, (name = parameter.text, typeText = parameterType.text,
+                mut locals.pushBack((name = parameter.text, typeText = parameterType.text,
                     mutable = false, writable = false, depth = depth + 1, kind = "parameter"));
                 localCount = localCount + 1;
                 parameterCursor = parameterType.next;
@@ -968,7 +965,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 }
                 sourceType := simpleType(symbols, locals, source.text);
                 itemType := listElementType(sourceType);
-                list.pushBack(mut locals, (name = itemToken.text, typeText = itemType, mutable = false,
+                mut locals.pushBack((name = itemToken.text, typeText = itemType, mutable = false,
                     writable = false, depth = depth + 1, kind = "loop item"));
                 localCount = localCount + 1;
                 cursor = source.next + 2;
@@ -988,24 +985,24 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":"))) {
             declaration := parser.parseDeclaration(tokens, cursor, prefix);
             nameToken := parser.tokenAt(tokens, cursor + (if token.kind == lexer.TOKEN_KIND_KEYWORD { 1 } else { 0 }));
-            mutable := textLib.startsWithAt(declaration.detail, 0, "var ");
+            mutable := declaration.detail.startsWithAt(0, "var ");
             var writable := false;
             var work := declaration.detail;
-            if mutable { work = textLib.slice(work, 4, textLib.length(work)); }
+            if mutable { work = work.slice(4, work.length()); }
             var typeText := "";
             var initText := "";
-            if textLib.startsWithAt(work, 0, ":= ") {
-                initText = textLib.slice(work, 3, textLib.length(work));
+            if work.startsWithAt(0, ":= ") {
+                initText = work.slice(3, work.length());
                 typeText = simpleType(symbols, locals, initText);
             } else {
-                if textLib.startsWithAt(work, 0, "mut ") {
+                if work.startsWithAt(0, "mut ") {
                     writable = true;
-                    work = textLib.slice(work, 4, textLib.length(work));
+                    work = work.slice(4, work.length());
                 }
-                split := textLib.indexOfText(work, " = ", 0);
+                split := work.indexOf(" = ", 0);
                 if split >= 0 {
-                    typeText = textLib.slice(work, 0, split);
-                    initText = textLib.slice(work, split + 3, textLib.length(work));
+                    typeText = work.slice(0, split);
+                    initText = work.slice(split + 3, work.length());
                 } else {
                     typeText = work;
                 }
@@ -1017,7 +1014,7 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
                 }
             }
             checkEmbeddedMatches(tokens, cursor, declaration.next, symbols, locals, prefix);
-            list.pushBack(mut locals, (name = declaration.name, typeText = typeText, mutable = mutable,
+            mut locals.pushBack((name = declaration.name, typeText = typeText, mutable = mutable,
                 writable = writable, depth = depth, kind = "local"));
             localCount = localCount + 1;
             cursor = declaration.next;
@@ -1086,11 +1083,11 @@ validateTypeText := fn(symbols: Symbols, text: String, depth: Int, symbol: Symbo
 /** Validates the annotation of one value declaration, if it has one. */
 validateValueSymbol := fn(symbols: Symbols, symbol: Symbol, prefix: String): Unit {
     var text := symbol.detail;
-    if textLib.startsWithAt(text, 0, "var ") { text = textLib.slice(text, 4, textLib.length(text)); }
-    if textLib.startsWithAt(text, 0, "mut ") { text = textLib.slice(text, 4, textLib.length(text)); }
-    if textLib.startsWithAt(text, 0, ":= ") { return; }
-    split := textLib.indexOfText(text, " = ", 0);
-    if split >= 0 { text = textLib.slice(text, 0, split); }
+    if text.startsWithAt(0, "var ") { text = text.slice(4, text.length()); }
+    if text.startsWithAt(0, "mut ") { text = text.slice(4, text.length()); }
+    if text.startsWithAt(0, ":= ") { return; }
+    split := text.indexOf(" = ", 0);
+    if split >= 0 { text = text.slice(0, split); }
     if text == "" { return; }
     validateTypeText(symbols, text, 0, symbol, prefix);
 }

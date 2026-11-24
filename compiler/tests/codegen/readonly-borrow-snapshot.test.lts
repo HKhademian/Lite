@@ -5,7 +5,6 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -162,10 +161,10 @@ expectedOut :=
 /* 1. TS target: compile, verify zero-copy codegen for unaliased local/param calls, and run */
 tsComp := compilerTest.compileStdin(root, selTs.path, src, "");
 test.checkInt("TS compile status: " + tsComp.stderr, 0, tsComp.status);
-test.check("TS zero-copy forwardSum(localC): no array clone", text.containsText(tsComp.stdout, "liteFn_forwardSum(lite_localC)"));
-test.check("TS zero-copy sumList(xs): no array clone", text.containsText(tsComp.stdout, "liteFn_sumList(lite_xs)"));
-test.check("TS global Z still snapshotted", text.containsText(tsComp.stdout, "liteFn_checkGlobalList([...(lite_Z)])"));
-test.check("TS same-call alias snapshotted", text.containsText(tsComp.stdout, "liteFn_appendAll([...(lite_localA)], lite_localA)"));
+test.check("TS zero-copy forwardSum(localC): no array clone", tsComp.stdout.contains("liteFn_forwardSum(lite_localC)"));
+test.check("TS zero-copy sumList(xs): no array clone", tsComp.stdout.contains("liteFn_sumList(lite_xs)"));
+test.check("TS global Z still snapshotted", tsComp.stdout.contains("liteFn_checkGlobalList([...(lite_Z)])"));
+test.check("TS same-call alias snapshotted", tsComp.stdout.contains("liteFn_appendAll([...(lite_localA)], lite_localA)"));
 
 tsRun := compilerTest.checkAndRunTs(root, tsComp.stdout);
 test.checkInt("TS run status: " + tsRun.stderr, 0, tsRun.status);

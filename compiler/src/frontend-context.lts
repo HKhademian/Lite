@@ -158,19 +158,19 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
 
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; `Never` and other kinds are unchanged. */
 pub copiedValueCode := fn(target: String, kind: String, code: String): String {
-    if kind == ir.VALUE_KIND_NEVER or (target == ir.TARGET_C and textLib.startsWithAt(code, 0, "/*@CBLK:")) { code }
+    if kind == ir.VALUE_KIND_NEVER or (target == ir.TARGET_C and code.startsWithAt(0, "/*@CBLK:")) { code }
     else if types.isListKind(kind) or types.isArrayKind(kind) {
         if target == ir.TARGET_C {
             elKind := if types.isListKind(kind) { types.listElementKind(kind) } else { types.arrayElementKind(kind) };
             tag := types.cListTag(elKind);
             if tag =!= "" {
-                if textLib.startsWithAt(code, 0, "lt_list_" + tag + "_from(") or
-                textLib.startsWithAt(code, 0, "lt_list_" + tag + "_copy(") or
-                textLib.startsWithAt(code, 0, "lt_list_" + tag + "_slice(") or
-                textLib.startsWithAt(code, 0, "lt_list_" + tag + "_slice_from(") or
-                textLib.startsWithAt(code, 0, "lt_list_" + tag + "_reverse(") or
-                textLib.startsWithAt(code, 0, "lite$inputArgs(") or
-                textLib.startsWithAt(code, 0, "/*@CBLK:") {
+                if code.startsWithAt(0, "lt_list_" + tag + "_from(") or
+                code.startsWithAt(0, "lt_list_" + tag + "_copy(") or
+                code.startsWithAt(0, "lt_list_" + tag + "_slice(") or
+                code.startsWithAt(0, "lt_list_" + tag + "_slice_from(") or
+                code.startsWithAt(0, "lt_list_" + tag + "_reverse(") or
+                code.startsWithAt(0, "lite$inputArgs(") or
+                code.startsWithAt(0, "/*@CBLK:") {
                     code
                 } else {
                     "lt_list_" + tag + "_copy(" + code + ")"
@@ -185,12 +185,12 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     else if types.isMapKind(kind) {
         if target == ir.TARGET_C {
             mTag := types.cMapTag(kind);
-            if mTag =!= "" and not textLib.startsWithAt(code, 0, "/*@T:") and not textLib.startsWithAt(code, 0, mTag + "_from(") and not textLib.startsWithAt(code, 0, mTag + "_copy(") {
+            if mTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, mTag + "_from(") and not code.startsWithAt(0, mTag + "_copy(") {
                 mTag + "_copy(" + code + ")"
             } else {
                 code
             }
-        } else if target == ir.TARGET_TS and not textLib.startsWithAt(code, 0, "new Map<") and not textLib.startsWithAt(code, 0, "new Map(") {
+        } else if target == ir.TARGET_TS and not code.startsWithAt(0, "new Map<") and not code.startsWithAt(0, "new Map(") {
             "new Map(" + code + ")"
         } else {
             code
@@ -199,12 +199,12 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     else if types.isSetKind(kind) {
         if target == ir.TARGET_C {
             sTag := types.cSetTag(kind);
-            if sTag =!= "" and not textLib.startsWithAt(code, 0, "/*@T:") and not textLib.startsWithAt(code, 0, sTag + "_from(") and not textLib.startsWithAt(code, 0, sTag + "_copy(") {
+            if sTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, sTag + "_from(") and not code.startsWithAt(0, sTag + "_copy(") {
                 sTag + "_copy(" + code + ")"
             } else {
                 code
             }
-        } else if target == ir.TARGET_TS and not textLib.startsWithAt(code, 0, "new Set<") and not textLib.startsWithAt(code, 0, "new Set(") {
+        } else if target == ir.TARGET_TS and not code.startsWithAt(0, "new Set<") and not code.startsWithAt(0, "new Set(") {
             "new Set(" + code + ")"
         } else {
             code
@@ -212,7 +212,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     }
     else if target == ir.TARGET_C and (types.isTupleKind(kind) or types.isRecordKind(kind)) and types.cTypeHasListField(kind) {
         tag := types.cStructTag(kind);
-        if tag =!= "" and not textLib.startsWithAt(code, 0, "/*@T:") and not textLib.startsWithAt(code, 0, tag + "_copy(") {
+        if tag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, tag + "_copy(") {
             tag + "_copy(" + code + ")"
         } else {
             code
@@ -281,22 +281,22 @@ pub expressionStatementKind := fn(valueKind: String, returned: Bool, defaultKind
 /** Closes a call after at least one parsed argument, consuming at most one trailing comma and its trivia. */
 pub expectNonemptyCallClose := fn(source: String, position: Int, prefix: String): Int {
     var cursor := syntax.skipTrivia(source, position, prefix);
-    if cursor < textLib.length(source) and textLib.at(source, cursor) == "," { cursor = syntax.skipTrivia(source, cursor + 1, prefix); }
+    if cursor < source.length() and source.at(cursor) == "," { cursor = syntax.skipTrivia(source, cursor + 1, prefix); }
     syntax.expectSymbol(source, cursor, ")", prefix)
 };
 
 /** Parses the `mut name` grant after one map mutation opener, rejecting a missing grant, a non-map target and a binding without writable held data. */
 pub parseMapGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
     var cursor := syntax.skipTrivia(source, open + 1, prefix);
-    if not textLib.wordAt(source, cursor, "mut") {
+    if not source.wordAt(cursor, "mut") {
         syntax.failAt(source, cursor, prefix, operation + " requires mut map argument");
     }
     nameStart := syntax.skipTrivia(source, cursor + 3, prefix);
-    if nameStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, nameStart)) {
+    if nameStart >= source.length() or not source.at(nameStart).isNameStart() {
         syntax.failAt(source, nameStart, prefix, "expected map name after mut");
     }
-    nameEnd := textLib.skipName(source, nameStart);
-    mapName := textLib.slice(source, nameStart, nameEnd);
+    nameEnd := source.skipName(nameStart);
+    mapName := source.slice(nameStart, nameEnd);
     index := sym.localIndex(locals, mapName);
     if index < 0 {
         syntax.failAt(source, cursor, prefix, "unknown value " + mapName);
@@ -317,15 +317,15 @@ pub parseMapGrant := fn(source: String, open: Int, prefix: String, locals: List<
 /** Parses the `mut name` grant after a `core/set` mutating call opener. */
 pub parseSetGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
     cursor := syntax.skipTrivia(source, open + 1, prefix);
-    if not textLib.wordAt(source, cursor, "mut") {
+    if not source.wordAt(cursor, "mut") {
         syntax.failAt(source, cursor, prefix, operation + " requires mut set argument");
     }
     nameStart := syntax.skipTrivia(source, cursor + 3, prefix);
-    if nameStart >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, nameStart)) {
+    if nameStart >= source.length() or not source.at(nameStart).isNameStart() {
         syntax.failAt(source, nameStart, prefix, "expected set name after mut");
     }
-    nameEnd := textLib.skipName(source, nameStart);
-    setName := textLib.slice(source, nameStart, nameEnd);
+    nameEnd := source.skipName(nameStart);
+    setName := source.slice(nameStart, nameEnd);
     index := sym.localIndex(locals, setName);
     if index < 0 {
         syntax.failAt(source, cursor, prefix, "unknown value " + setName);
@@ -346,15 +346,15 @@ pub parseSetGrant := fn(source: String, open: Int, prefix: String, locals: List<
 /** Parses the `mut name` grant after one list end-operation opener, rejecting a missing grant, a non-list target and a binding without writable held data. */
 pub parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
     var cursor := syntax.skipTrivia(source, open + 1, prefix);
-    if not textLib.wordAt(source, cursor, "mut") {
+    if not source.wordAt(cursor, "mut") {
         syntax.failAt(source, cursor, prefix, operation + " requires mut list argument");
     }
     cursor = syntax.skipTrivia(source, cursor + 3, prefix);
-    if cursor >= textLib.length(source) or not textLib.isNameStart(textLib.at(source, cursor)) {
+    if cursor >= source.length() or not source.at(cursor).isNameStart() {
         syntax.failAt(source, cursor, prefix, "expected a list name after mut");
     }
-    nameEnd := textLib.skipName(source, cursor);
-    listName := textLib.slice(source, cursor, nameEnd);
+    nameEnd := source.skipName(cursor);
+    listName := source.slice(cursor, nameEnd);
     index := sym.localIndex(locals, listName);
     if index < 0 {
         syntax.failAt(source, cursor, prefix, "unknown value " + listName);
@@ -392,15 +392,15 @@ pub compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix:
 
 /** Counts entries in `locals`. */
 pub localsCount := fn(locals: List<Local>): Int {
-    listLib.length(locals)
+    locals.length()
 };
 
 /** Returns the prefix of `locals` up to `targetLen` entries. */
 pub truncateLocals := fn(locals: List<Local>, targetLen: Int): List<Local> {
-    if targetLen >= listLib.length(locals) { return locals; }
+    if targetLen >= locals.length() { return locals; }
     sym.rewindLocalsTo(targetLen);
     if targetLen <= 0 { return []; }
-    listLib.slice(locals, 0, targetLen)
+    locals.slice(0, targetLen)
 };
 
 /** Returns outer-local initialization and callable-dependency updates from `locals[preLen..)` appended to `updates` for `branchDepth`. */
@@ -412,9 +412,9 @@ pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, b
     branchCodes: mut List<String> = [];
     loop locals as local {
         if idx >= preLen and local.depth >= 0 and local.depth <= maxDepth {
-            listLib.pushBack(mut branchRuntimes, local.runtime);
-            listLib.pushBack(mut branchStates, local.initState);
-            listLib.pushBack(mut branchCodes, local.code);
+            mut branchRuntimes.pushBack(local.runtime);
+            mut branchStates.pushBack(local.initState);
+            mut branchCodes.pushBack(local.code);
         }
         idx = idx + 1;
     }
@@ -425,8 +425,8 @@ pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, b
         rev = rev - 1;
         rt := branchRuntimes[rev];
         if not listLib.listContainsText(emitted, rt) {
-            listLib.pushBack(mut emitted, rt);
-            listLib.pushBack(mut nextUpdates, (depth = branchDepth, runtime = rt, initState = branchStates[rev], code = branchCodes[rev]));
+            mut emitted.pushBack(rt);
+            mut nextUpdates.pushBack((depth = branchDepth, runtime = rt, initState = branchStates[rev], code = branchCodes[rev]));
         }
     }
     nextUpdates
@@ -436,14 +436,14 @@ pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, b
 pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasElse: Bool, liveBranchCount: Int, updates: List<BranchUpdate>): List<Local> {
     here: mut List<BranchUpdate> = [];
     loop updates as u {
-        if u.depth == blockDepth { listLib.pushBack(mut here, u); }
+        if u.depth == blockDepth { mut here.pushBack(u); }
     }
     nextLocals: mut List<Local> = locals;
     if hasElse and liveBranchCount == 0 { return nextLocals; }
     seenRuntimes: mut List<String> = [];
     loop here as u {
         if not listLib.listContainsText(seenRuntimes, u.runtime) {
-            listLib.pushBack(mut seenRuntimes, u.runtime);
+            mut seenRuntimes.pushBack(u.runtime);
         }
     }
     loop seenRuntimes as rt {
@@ -479,7 +479,7 @@ pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, ha
                 }
             }
             if joined =!= pre.initState or (trackFn and mergedCode =!= pre.code) {
-                listLib.pushBack(mut nextLocals, (name = pre.name, runtime = pre.runtime, kind = pre.kind,
+                mut nextLocals.pushBack((name = pre.name, runtime = pre.runtime, kind = pre.kind,
                 mutable = pre.mutable, writable = pre.writable, depth = pre.depth, constant = false,
                 code = if trackFn { mergedCode } else { pre.code }, intValue = 0, textValue = "", initState = joined));
             }
@@ -492,7 +492,7 @@ pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, ha
 pub popBranchUpdates := fn(updates: List<BranchUpdate>, blockDepth: Int): List<BranchUpdate> {
     kept: mut List<BranchUpdate> = [];
     loop updates as u {
-        if u.depth =!= blockDepth { listLib.pushBack(mut kept, u); }
+        if u.depth =!= blockDepth { mut kept.pushBack(u); }
     }
     kept
 };
@@ -504,12 +504,12 @@ pub joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List
     loop locals as l {
         if idx >= preLen and l.depth >= 0 and l.depth <= maxDepth {
             if not listLib.listContainsText(updatedRuntimes, l.runtime) {
-                listLib.pushBack(mut updatedRuntimes, l.runtime);
+                mut updatedRuntimes.pushBack(l.runtime);
             }
         }
         idx = idx + 1;
     }
-    if listLib.length(updatedRuntimes) == 0 { return truncateLocals(locals, preLen); }
+    if updatedRuntimes.length() == 0 { return truncateLocals(locals, preLen); }
     nextLocals: mut List<Local> = truncateLocals(locals, preLen);
     loop updatedRuntimes as rt {
         var preIdx := -1;
@@ -540,7 +540,7 @@ pub joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List
                 pre.initState
             };
             if nextInit =!= pre.initState or (trackFn and mergedCode =!= pre.code) {
-                listLib.pushBack(mut nextLocals, (name = pre.name, runtime = pre.runtime, kind = pre.kind,
+                mut nextLocals.pushBack((name = pre.name, runtime = pre.runtime, kind = pre.kind,
                 mutable = pre.mutable, writable = pre.writable, depth = pre.depth, constant = false,
                 code = if trackFn { mergedCode } else { pre.code }, intValue = 0, textValue = "", initState = nextInit));
             }
@@ -638,7 +638,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         items: mut List<String> = [];
         var i := 0;
         loop i < extent {
-            listLib.pushBack(mut items, elemZero);
+            mut items.pushBack(elemZero);
             i = i + 1;
         }
         if target == ir.TARGET_C and types.cListTag(elemKind) =!= "" {
@@ -647,7 +647,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
                 return (kind = kind, code = "lt_list_" + cTag + "_from(0, NULL)", intValue = 0, textValue = "", constant = false, next = next);
             }
             cArrType := "const " + types.cListElemType(cTag);
-            return (kind = kind, code = "lt_list_" + cTag + "_from(" + integer.intText(extent) + ", (" + cArrType + "[]){" + textLib.joinTexts(items, ", ") + "})", intValue = 0, textValue = "", constant = false, next = next);
+            return (kind = kind, code = "lt_list_" + cTag + "_from(" + extent.toText() + ", (" + cArrType + "[]){" + textLib.joinTexts(items, ", ") + "})", intValue = 0, textValue = "", constant = false, next = next);
         }
         (kind = kind, code = "[" + textLib.joinTexts(items, ", ") + "]", intValue = 0, textValue = "", constant = false, next = next)
     }
@@ -662,7 +662,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         var idx := 0;
         loop idx < paramCount {
             comp := types.fnParamComponent(kind, idx);
-            pName := "lite_" + integer.intText(idx);
+            pName := "lite_" + idx.toText();
             if idx > 0 { paramsCode = paramsCode + ", "; }
             paramsCode = paramsCode + pName + ": " + types.tsFunctionType(comp.kind);
             voidStmts = voidStmts + "void " + pName + "; ";
@@ -689,7 +689,7 @@ pub setIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> {
     updated: mut List<Int> = [];
     var i := 0;
     loop values as item {
-        listLib.pushBack(mut updated, if i == index { value } else { item });
+        mut updated.pushBack(if i == index { value } else { item });
         i = i + 1;
     }
     updated
@@ -700,7 +700,7 @@ pub setBoolAt := fn(values: List<Bool>, index: Int, value: Bool): List<Bool> {
     updated: mut List<Bool> = [];
     var i := 0;
     loop values as item {
-        listLib.pushBack(mut updated, if i == index { value } else { item });
+        mut updated.pushBack(if i == index { value } else { item });
         i = i + 1;
     }
     updated
@@ -732,10 +732,10 @@ ternaryBranchCode := fn(target: String, resultKind: String, branchKind: String, 
 
 /** Unwraps a C11 expression (possibly `/*@CBLK:<ret>@*/<body>`) into a statement assigning `varName` (or discarding for Unit/Never). */
 pub cUnwrapIntoVar := fn(varName: String, kind: String, code: String): String {
-    if textLib.startsWithAt(code, 0, "/*@CBLK:") {
-        endHdr := textLib.indexOfText(code, "@*/", 8);
-        retVar := textLib.slice(code, 8, endHdr);
-        blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
+    if code.startsWithAt(0, "/*@CBLK:") {
+        endHdr := code.indexOf("@*/", 8);
+        retVar := code.slice(8, endHdr);
+        blkBody := code.slice(endHdr + 3, code.length());
         if varName == "" or kind == ir.VALUE_KIND_NEVER or kind == ir.VALUE_KIND_UNIT {
             if retVar =!= "" and retVar =!= "0" {
                 "{ " + blkBody + " (void)" + retVar + "; }"
@@ -760,7 +760,7 @@ pub ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: L
         var hasCBlk := false;
         var bi := 0;
         loop bi < branchCount {
-            if textLib.startsWithAt(branchCodes[bi], 0, "/*@CBLK:") {
+            if branchCodes[bi].startsWithAt(0, "/*@CBLK:") {
                 hasCBlk = true;
                 break;
             }
@@ -770,12 +770,12 @@ pub ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: L
             if branchCount == 1 {
                 return branchCodes[0];
             }
-            cVar := if resultKind == ir.VALUE_KIND_UNIT or resultKind == ir.VALUE_KIND_NEVER { "" } else { "lt_cval_" + integer.intText(textLib.length(branchCodes[0]) + branchCount) };
+            cVar := if resultKind == ir.VALUE_KIND_UNIT or resultKind == ir.VALUE_KIND_NEVER { "" } else { "lt_cval_" + (branchCodes[0].length() + branchCount).toText() };
             var declPrefix := if cVar == "" { "" } else { types.cValueType(resultKind) + " " + cVar + "; " };
             var stmt := "";
             var ci := 0;
             loop ci < branchCount {
-                bCode := if branchKinds[ci] == ir.VALUE_KIND_NEVER or resultKind == ir.VALUE_KIND_UNIT or textLib.startsWithAt(branchCodes[ci], 0, "/*@CBLK:") {
+                bCode := if branchKinds[ci] == ir.VALUE_KIND_NEVER or resultKind == ir.VALUE_KIND_UNIT or branchCodes[ci].startsWithAt(0, "/*@CBLK:") {
                     branchCodes[ci]
                 } else {
                     assignValueCode(target, resultKind, branchKinds[ci], branchCodes[ci])
@@ -830,24 +830,24 @@ next: Int
     loop index < condCount {
         state := conditionStates[index];
         if state == 1 {
-            listLib.pushBack(mut keptBranchCodes, branchCodes[index]);
-            listLib.pushBack(mut keptBranchKinds, branchKinds[index]);
+            mut keptBranchCodes.pushBack(branchCodes[index]);
+            mut keptBranchKinds.pushBack(branchKinds[index]);
             if keptCondCount == 0 { selectedIndex = index; }
             hitTrue = true;
             break;
         }
         if state =!= 0 {
-            listLib.pushBack(mut keptCondCodes, conditionCodes[index]);
-            listLib.pushBack(mut keptBranchCodes, branchCodes[index]);
-            listLib.pushBack(mut keptBranchKinds, branchKinds[index]);
+            mut keptCondCodes.pushBack(conditionCodes[index]);
+            mut keptBranchCodes.pushBack(branchCodes[index]);
+            mut keptBranchKinds.pushBack(branchKinds[index]);
             keptCondCount = keptCondCount + 1;
         }
         index = index + 1;
     }
     if not hitTrue {
         lastIdx := branchCount - 1;
-        listLib.pushBack(mut keptBranchCodes, branchCodes[lastIdx]);
-        listLib.pushBack(mut keptBranchKinds, branchKinds[lastIdx]);
+        mut keptBranchCodes.pushBack(branchCodes[lastIdx]);
+        mut keptBranchKinds.pushBack(branchKinds[lastIdx]);
         if keptCondCount == 0 { selectedIndex = lastIdx; }
     }
     code := ternaryChainCode(target, resultKind, keptCondCodes, keptBranchCodes, keptBranchKinds, keptCondCount + 1);
@@ -881,49 +881,49 @@ pub condBranchStmtCode := fn(target: String, valKind: String, valVar: String, br
 /** Rewrites `return ...;` and outer `goto <label>;` inside C11 `tryCode` so `{ finCode }` runs before every early exit. */
 pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: String, finId: Int): String {
     if finCode == "" { return tryCode; }
-    if textLib.indexOfText(tryCode, "return", 0) < 0 and textLib.indexOfText(tryCode, "goto ", 0) < 0 {
+    if tryCode.indexOf("return", 0) < 0 and tryCode.indexOf("goto ", 0) < 0 {
         return tryCode;
     }
-    size := textLib.length(tryCode);
+    size := tryCode.length();
     out: mut tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     var rSeq := 0;
     loop cursor < size {
-        ch := textLib.at(tryCode, cursor);
+        ch := tryCode.at(cursor);
         if ch == "\"" or ch == "'" {
             cursor = cursor + 1;
             loop cursor < size {
-                c2 := textLib.at(tryCode, cursor);
+                c2 := tryCode.at(cursor);
                 if c2 == "\\" { cursor = cursor + 2; }
                 else if c2 == ch { cursor = cursor + 1; break; }
                 else { cursor = cursor + 1; }
             }
-        } else if ch == "/" and textLib.startsWithAt(tryCode, cursor, "/*@CFN_START:") {
+        } else if ch == "/" and tryCode.startsWithAt(cursor, "/*@CFN_START:") {
             cursor = cursor + 13;
             var fnDepth := 1;
             loop cursor < size and fnDepth > 0 {
-                fc := textLib.at(tryCode, cursor);
+                fc := tryCode.at(cursor);
                 if fc == "\"" {
                     cursor = syntax.skipAliasString(tryCode, cursor);
-                } else if fc == "/" and textLib.startsWithAt(tryCode, cursor, "/*@CFN_START:") {
+                } else if fc == "/" and tryCode.startsWithAt(cursor, "/*@CFN_START:") {
                     fnDepth = fnDepth + 1;
                     cursor = cursor + 13;
-                } else if fc == "/" and textLib.startsWithAt(tryCode, cursor, "/*@CFN_END@*/") {
+                } else if fc == "/" and tryCode.startsWithAt(cursor, "/*@CFN_END@*/") {
                     fnDepth = fnDepth - 1;
                     cursor = cursor + 13;
                 } else {
                     cursor = cursor + 1;
                 }
             }
-        } else if ch == "g" and textLib.startsWithAt(tryCode, cursor, "goto ") and
-        (cursor == 0 or not textLib.isNameContinue(textLib.at(tryCode, cursor - 1))) {
+        } else if ch == "g" and tryCode.startsWithAt(cursor, "goto ") and
+        (cursor == 0 or not tryCode.at(cursor - 1).isNameContinue()) {
             lblStart := cursor + 5;
-            semi := textLib.indexOfText(tryCode, ";", lblStart);
+            semi := tryCode.indexOf(";", lblStart);
             if semi > lblStart {
-                lbl := textLib.trim(textLib.slice(tryCode, lblStart, semi));
-                if textLib.indexOfText(tryCode, lbl + ":", 0) < 0 {
-                    if cursor > flushed { tb.append(mut out, textLib.slice(tryCode, flushed, cursor)); }
+                lbl := tryCode.slice(lblStart, semi).trim();
+                if tryCode.indexOf(lbl + ":", 0) < 0 {
+                    if cursor > flushed { tb.append(mut out, tryCode.slice(flushed, cursor)); }
                     tb.append(mut out, "{ { " + finCode + " } goto " + lbl + "; }");
                     cursor = semi + 1;
                     flushed = cursor;
@@ -931,18 +931,18 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
                 }
             }
             cursor = cursor + 1;
-        } else if ch == "r" and textLib.startsWithAt(tryCode, cursor, "return") and
-        (cursor == 0 or not textLib.isNameContinue(textLib.at(tryCode, cursor - 1))) and
-        (cursor + 6 >= size or not textLib.isNameContinue(textLib.at(tryCode, cursor + 6))) {
+        } else if ch == "r" and tryCode.startsWithAt(cursor, "return") and
+        (cursor == 0 or not tryCode.at(cursor - 1).isNameContinue()) and
+        (cursor + 6 >= size or not tryCode.at(cursor + 6).isNameContinue()) {
             var scan := cursor + 6;
             var depth := 0;
             var semi := -1;
             loop scan < size {
-                sc := textLib.at(tryCode, scan);
+                sc := tryCode.at(scan);
                 if sc == "\"" or sc == "'" {
                     scan = scan + 1;
                     loop scan < size {
-                        s2 := textLib.at(tryCode, scan);
+                        s2 := tryCode.at(scan);
                         if s2 == "\\" { scan = scan + 2; }
                         else if s2 == sc { scan = scan + 1; break; }
                         else { scan = scan + 1; }
@@ -959,13 +959,13 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
                 }
             }
             if semi >= 0 {
-                retExpr := textLib.trim(textLib.slice(tryCode, cursor + 6, semi));
-                if cursor > flushed { tb.append(mut out, textLib.slice(tryCode, flushed, cursor)); }
+                retExpr := tryCode.slice(cursor + 6, semi).trim();
+                if cursor > flushed { tb.append(mut out, tryCode.slice(flushed, cursor)); }
                 if retExpr == "" or fnRetKind == "" or fnRetKind == ir.VALUE_KIND_UNIT or fnRetKind == ir.VALUE_KIND_NEVER {
                     tb.append(mut out, "{ { " + finCode + " } return; }");
                 } else {
                     rSeq = rSeq + 1;
-                    tmpVar := "lt_fr_" + integer.intText(finId) + "_" + integer.intText(rSeq);
+                    tmpVar := "lt_fr_" + finId.toText() + "_" + rSeq.toText();
                     tb.append(mut out, "{ " + types.cValueType(fnRetKind) + " " + tmpVar + " = (" + retExpr + "); { " + finCode + " } return " + tmpVar + "; }");
                 }
                 cursor = semi + 1;
@@ -978,33 +978,33 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
         }
     }
     if flushed == 0 { return tryCode; }
-    if flushed < size { tb.append(mut out, textLib.slice(tryCode, flushed, size)); }
+    if flushed < size { tb.append(mut out, tryCode.slice(flushed, size)); }
     tb.build(out)
 };
 
 /** Replaces whole-word occurrences of C identifier `ident` outside quoted strings with `replacement`. */
 pub cReplaceIdentToken := fn(code: String, ident: String, replacement: String): String {
-    if ident == "" or textLib.indexOfText(code, ident, 0) < 0 { return code; }
-    size := textLib.length(code);
-    idLen := textLib.length(ident);
-    firstCh := textLib.at(ident, 0);
+    if ident == "" or code.indexOf(ident, 0) < 0 { return code; }
+    size := code.length();
+    idLen := ident.length();
+    firstCh := ident.at(0);
     out: mut tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     loop cursor < size {
-        ch := textLib.at(code, cursor);
+        ch := code.at(cursor);
         if ch == "\"" or ch == "'" {
             cursor = cursor + 1;
             loop cursor < size {
-                c2 := textLib.at(code, cursor);
+                c2 := code.at(cursor);
                 if c2 == "\\" { cursor = cursor + 2; }
                 else if c2 == ch { cursor = cursor + 1; break; }
                 else { cursor = cursor + 1; }
             }
-        } else if ch == firstCh and textLib.startsWithAt(code, cursor, ident) and
-        (cursor == 0 or not textLib.isNameContinue(textLib.at(code, cursor - 1))) and
-        (cursor + idLen >= size or not textLib.isNameContinue(textLib.at(code, cursor + idLen))) {
-            if cursor > flushed { tb.append(mut out, textLib.slice(code, flushed, cursor)); }
+        } else if ch == firstCh and code.startsWithAt(cursor, ident) and
+        (cursor == 0 or not code.at(cursor - 1).isNameContinue()) and
+        (cursor + idLen >= size or not code.at(cursor + idLen).isNameContinue()) {
+            if cursor > flushed { tb.append(mut out, code.slice(flushed, cursor)); }
             tb.append(mut out, replacement);
             cursor = cursor + idLen;
             flushed = cursor;
@@ -1013,7 +1013,7 @@ pub cReplaceIdentToken := fn(code: String, ident: String, replacement: String): 
         }
     }
     if flushed == 0 { return code; }
-    if flushed < size { tb.append(mut out, textLib.slice(code, flushed, size)); }
+    if flushed < size { tb.append(mut out, code.slice(flushed, size)); }
     tb.build(out)
 };
 
@@ -1027,7 +1027,7 @@ pub ctxCount := fn(ctxs: List<ConstructCtx>): Int {
 /** Returns a copy of `ctxs` with `entry` appended at the end. */
 pub appendCtx := fn(ctxs: List<ConstructCtx>, entry: ConstructCtx): List<ConstructCtx> {
     copy: mut List<ConstructCtx> = ctxs;
-    listLib.pushBack(mut copy, entry);
+    mut copy.pushBack(entry);
     copy
 };
 
@@ -1081,13 +1081,13 @@ pub visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> {
     sym.rewindLocalsTo(firstDrop);
     if not keptAfterDrop {
         if firstDrop <= 0 { return []; }
-        return listLib.slice(locals, 0, firstDrop);
+        return locals.slice(0, firstDrop);
     }
     kept: mut List<Local> = [];
     loop locals as entry {
         if (entry.depth >= -1 and entry.depth < depth) or
         (entry.depth <= -2 and (0 - 2 - entry.depth) < depth) {
-            listLib.pushBack(mut kept, entry);
+            mut kept.pushBack(entry);
         }
     }
     kept
@@ -1111,12 +1111,12 @@ pub popBlockDecls := fn(decls: List<BlockDecl>, depth: Int): List<BlockDecl> {
     if not dropped { return decls; }
     if not keptAfterDrop {
         if firstDrop <= 0 { return []; }
-        return listLib.slice(decls, 0, firstDrop);
+        return decls.slice(0, firstDrop);
     }
     kept: mut List<BlockDecl> = [];
     loop decls as entry {
         if entry.depth < depth {
-            listLib.pushBack(mut kept, entry);
+            mut kept.pushBack(entry);
         }
     }
     kept
@@ -1142,17 +1142,17 @@ pub rejectDuplicateInBlockNames := fn(source: String, at: Int, prefix: String, n
 /** Extracts header-bound symbol names (parameters or loop items) owned by the opening `{ ... }` block. */
 pub seedBlockDeclaredNames := fn(bodySink: String): List<String> {
     seeded: mut List<String> = [];
-    colonPos := textLib.indexOfText(bodySink, ":", 0);
+    colonPos := bodySink.indexOf(":", 0);
     if colonPos < 0 { return seeded; }
-    namesLen := textLib.length(bodySink);
+    namesLen := bodySink.length();
     var cursor := colonPos + 1;
     loop cursor < namesLen {
         var endPos := cursor;
-        loop endPos < namesLen and textLib.at(bodySink, endPos) =!= "," {
+        loop endPos < namesLen and bodySink.at(endPos) =!= "," {
             endPos = endPos + 1;
         }
         if endPos > cursor {
-            listLib.pushBack(mut seeded, textLib.slice(bodySink, cursor, endPos));
+            mut seeded.pushBack(bodySink.slice(cursor, endPos));
         }
         cursor = endPos + 1;
     }
@@ -1168,18 +1168,18 @@ pub blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool,
 
 /** True when emitted target code contains a raw `lite$throwTransfer(` substring worth quote-aware inspection. */
 pub codeHasRawTransfer := fn(code: String): Bool {
-    code =!= "" and textLib.indexOfText(code, "lite$throwTransfer(", 0) >= 0
+    code =!= "" and code.indexOf("lite$throwTransfer(", 0) >= 0
 };
 
 /** True when `parsed` encodes Pass 1 exit markers in `textValue`. */
 pub hasMarkerPrefix := fn(parsed: Parsed): Bool {
-    not parsed.constant and textLib.startsWithAt(parsed.textValue, 0, "__m:")
+    not parsed.constant and parsed.textValue.startsWithAt(0, "__m:")
 };
 
 /** Appends Pass 1 exit markers encoded on `parsed` onto `current`. */
 pub collectParsedMarkers := fn(current: String, parsed: Parsed): String {
     if hasMarkerPrefix(parsed) {
-        return current + textLib.slice(parsed.textValue, 4, textLib.length(parsed.textValue));
+        return current + parsed.textValue.slice(4, parsed.textValue.length());
     }
     current
 };
@@ -1198,18 +1198,18 @@ pub withMarkers := fn(parsed: Parsed, raw: String): Parsed {
 
 /** Retains all marker lines in `raw` whose target id is not `excludeId`. */
 pub filterOtherMarkers := fn(raw: String, excludeId: Int): String {
-    excludeKey := integer.intText(excludeId);
-    size := textLib.length(raw);
+    excludeKey := excludeId.toText();
+    size := raw.length();
     var cursor := 0;
     kept: mut tb.TextBuilder;
     loop cursor < size {
-        eqPos := textLib.indexOfText(raw, "=", cursor);
+        eqPos := raw.indexOf("=", cursor);
         if eqPos < 0 { break; }
-        nlPos := textLib.indexOfText(raw, "\n", eqPos + 1);
+        nlPos := raw.indexOf("\n", eqPos + 1);
         endPos := if nlPos < 0 { size } else { nlPos };
-        entryId := textLib.slice(raw, cursor, eqPos);
+        entryId := raw.slice(cursor, eqPos);
         if entryId =!= excludeKey {
-            tb.appendLine(mut kept, textLib.slice(raw, cursor, endPos));
+            tb.appendLine(mut kept, raw.slice(cursor, endPos));
         }
         cursor = endPos + 1;
     }
@@ -1218,17 +1218,17 @@ pub filterOtherMarkers := fn(raw: String, excludeId: Int): String {
 
 /** Unifies all inferred exit kinds recorded for `targetId` in `raw` markers, failing on incompatible exit types. */
 pub inferKindFromMarkers := fn(raw: String, targetId: Int, targetTag: String, source: String, at: Int, prefix: String, blockStopped: Bool): String {
-    idKey := integer.intText(targetId);
-    size := textLib.length(raw);
+    idKey := targetId.toText();
+    size := raw.length();
     var cursor := 0;
     var result := "";
     loop cursor < size {
-        eqPos := textLib.indexOfText(raw, "=", cursor);
+        eqPos := raw.indexOf("=", cursor);
         if eqPos < 0 { break; }
-        nlPos := textLib.indexOfText(raw, "\n", eqPos + 1);
+        nlPos := raw.indexOf("\n", eqPos + 1);
         endPos := if nlPos < 0 { size } else { nlPos };
-        entryId := textLib.slice(raw, cursor, eqPos);
-        entryKind := textLib.slice(raw, eqPos + 1, endPos);
+        entryId := raw.slice(cursor, eqPos);
+        entryKind := raw.slice(eqPos + 1, endPos);
         if entryId == idKey {
             if result == "" {
                 result = entryKind;
@@ -1252,26 +1252,26 @@ pub inferKindFromMarkers := fn(raw: String, targetId: Int, targetTag: String, so
 
 /** Returns true when a call argument list reorders or mismatches slots relative to the callee's declaration order. */
 pub callReordersArgs := fn(source: String, openParen: Int, prefix: String, params: List<String>, firstParam: Int, paramCount: Int): Bool {
-    size := textLib.length(source);
+    size := source.length();
     var cursor := syntax.skipTrivia(source, openParen + 1, prefix);
-    if cursor >= size or textLib.at(source, cursor) == ")" { return false; }
+    if cursor >= size or source.at(cursor) == ")" { return false; }
     var entryIdx := 0;
     var atArgStart := true;
     var depth := 0;
     loop cursor < size {
         if atArgStart and depth == 0 {
-            if textLib.at(source, cursor) == ")" { break; }
+            if source.at(cursor) == ")" { break; }
             var label := "";
             if syntax.isSingleEquals(source, cursor) {
                 nameStart := syntax.skipTrivia(source, cursor + 1, prefix);
-                if nameStart < size and textLib.isNameStart(textLib.at(source, nameStart)) {
-                    label = textLib.slice(source, nameStart, textLib.skipName(source, nameStart));
+                if nameStart < size and source.at(nameStart).isNameStart() {
+                    label = source.slice(nameStart, source.skipName(nameStart));
                 }
-            } else if textLib.isNameStart(textLib.at(source, cursor)) {
-                nameEnd := textLib.skipName(source, cursor);
+            } else if source.at(cursor).isNameStart() {
+                nameEnd := source.skipName(cursor);
                 afterName := syntax.skipTrivia(source, nameEnd, prefix);
                 if syntax.isSingleEquals(source, afterName) {
-                    label = textLib.slice(source, cursor, nameEnd);
+                    label = source.slice(cursor, nameEnd);
                 }
             }
             if label =!= "" and findParamSlot(params, firstParam, paramCount, label) =!= entryIdx {
@@ -1279,10 +1279,10 @@ pub callReordersArgs := fn(source: String, openParen: Int, prefix: String, param
             }
             atArgStart = false;
         }
-        ch := textLib.at(source, cursor);
+        ch := source.at(cursor);
         if ch == "\"" {
             cursor = syntax.skipAliasString(source, cursor);
-        } else if ch == "/" and textLib.startsWithAt(source, cursor, "/*") {
+        } else if ch == "/" and source.startsWithAt(cursor, "/*") {
             cursor = syntax.skipComment(source, cursor, prefix);
         } else if ch == "(" or ch == "[" or ch == "{" {
             depth = depth + 1;
@@ -1297,7 +1297,7 @@ pub callReordersArgs := fn(source: String, openParen: Int, prefix: String, param
         } else if depth == 0 and ch == "," {
             entryIdx = entryIdx + 1;
             cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-            if cursor < size and textLib.at(source, cursor) == ")" { break; }
+            if cursor < size and source.at(cursor) == ")" { break; }
             atArgStart = true;
         } else {
             cursor = cursor + 1;
@@ -1350,17 +1350,17 @@ pub resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String,
     if fieldName == "value" {
         if ctx.valKind == ir.VAL_KIND_INFER {
             if expected =!= "" and expected =!= ir.VALUE_KIND_UNIT and expected =!= ir.VALUE_KIND_NEVER and
-            not textLib.startsWithAt(expected, 0, "TailList<") and not textLib.startsWithAt(expected, 0, "__loopVal:") {
+            not expected.startsWithAt(0, "TailList<") and not expected.startsWithAt(0, "__loopVal:") {
                 return withMarkers((kind = expected, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-                integer.intText(ctx.id) + "=" + expected + "\n");
+                ctx.id.toText() + "=" + expected + "\n");
             }
-            return withMarkers((kind = "__loopVal:" + integer.intText(ctx.id), code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-            if ctx.phase =!= ir.CTX_PHASE_THEN { integer.intText(ctx.id) + "=@read\n" } else { "" });
+            return withMarkers((kind = "__loopVal:" + ctx.id.toText(), code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
+            if ctx.phase =!= ir.CTX_PHASE_THEN { ctx.id.toText() + "=@read\n" } else { "" });
         }
-        if textLib.startsWithAt(ctx.valKind, 0, (ir.VAL_KIND_INFER + ":")) {
-            hint := textLib.slice(ctx.valKind, 10, textLib.length(ctx.valKind));
+        if ctx.valKind.startsWithAt(0, (ir.VAL_KIND_INFER + ":")) {
+            hint := ctx.valKind.slice(10, ctx.valKind.length());
             return withMarkers((kind = hint, code = ctx.valVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-            integer.intText(ctx.id) + "=" + hint + "\n");
+            ctx.id.toText() + "=" + hint + "\n");
         }
         if ctx.valKind == ir.VALUE_KIND_UNIT {
             return (kind = ir.VALUE_KIND_UNIT, code = ir.targetUnitLiteralCode(target), intValue = 0, textValue = "", constant = true, next = fieldEnd);
@@ -1393,17 +1393,17 @@ pub resolveLoopField := fn(target: String, ctx: ConstructCtx, fieldName: String,
             if types.isListKind(expected) {
                 elemExp := types.listElementKind(expected);
                 if elemExp =!= "" and elemExp =!= ir.VALUE_KIND_UNIT and elemExp =!= ir.VALUE_KIND_NEVER and
-                not textLib.startsWithAt(elemExp, 0, "TailList<") and not textLib.startsWithAt(elemExp, 0, "__loopVal:") {
+                not elemExp.startsWithAt(0, "TailList<") and not elemExp.startsWithAt(0, "__loopVal:") {
                     return withMarkers((kind = expected, code = ctx.colVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-                    integer.intText(ctx.id) + "=" + elemExp + "\n");
+                    ctx.id.toText() + "=" + elemExp + "\n");
                 }
             }
-            return (kind = "List<__loopVal:" + integer.intText(ctx.id) + ">", code = ctx.colVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
+            return (kind = "List<__loopVal:" + ctx.id.toText() + ">", code = ctx.colVar, intValue = 0, textValue = "", constant = false, next = fieldEnd);
         }
-        if textLib.startsWithAt(ctx.valKind, 0, (ir.VAL_KIND_INFER + ":")) {
-            hint := textLib.slice(ctx.valKind, 10, textLib.length(ctx.valKind));
+        if ctx.valKind.startsWithAt(0, (ir.VAL_KIND_INFER + ":")) {
+            hint := ctx.valKind.slice(10, ctx.valKind.length());
             return withMarkers((kind = "List<" + hint + ">", code = ctx.colVar, intValue = 0, textValue = "", constant = false, next = fieldEnd),
-            integer.intText(ctx.id) + "=" + hint + "\n");
+            ctx.id.toText() + "=" + hint + "\n");
         }
         if ctx.valKind == ir.VALUE_KIND_UNIT {
             syntax.failAt(source, fieldStart, prefix, "loop producing Unit does not expose .collected");

@@ -1,7 +1,6 @@
 /* Subject-based match tests: literals, all 10 comparison patterns, or alternatives, if guards, aggregate patterns, exhaustiveness, and C rejection. */
 
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -179,13 +178,13 @@ constMatchSrc :=
 constMatchTs := compilerTest.compileStdin(root, tsComp, constMatchSrc, "");
 test.checkInt("const subject match TS compile", 0, constMatchTs.status);
 test.check("const subject match drops dead arms",
-not text.containsText(constMatchTs.stdout, "\"A\"") and
-not text.containsText(constMatchTs.stdout, "\"C\"") and
-not text.containsText(constMatchTs.stdout, "\"low\"") and
-not text.containsText(constMatchTs.stdout, "\"miss\"") and
-not text.containsText(constMatchTs.stdout, "\"bad\"") and
-not text.containsText(constMatchTs.stdout, "\"fail\""));
-test.check("const subject match avoids IIFE for direct fold", not text.containsText(constMatchTs.stdout, "lite$done"));
+not constMatchTs.stdout.contains("\"A\"") and
+not constMatchTs.stdout.contains("\"C\"") and
+not constMatchTs.stdout.contains("\"low\"") and
+not constMatchTs.stdout.contains("\"miss\"") and
+not constMatchTs.stdout.contains("\"bad\"") and
+not constMatchTs.stdout.contains("\"fail\""));
+test.check("const subject match avoids IIFE for direct fold", not constMatchTs.stdout.contains("lite$done"));
 compilerTest.assertCompileRunTs(root, tsComp, "const subject match TS run", constMatchSrc, "B hit ok pass\n");
 
 /* runtime subject with side effects is still evaluated even when fallback arm is irrefutable */

@@ -3,7 +3,6 @@
 fs := import "core/file";
 path := import "core/path";
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -23,7 +22,7 @@ coreIntName := path.join(root, "compiler/tests/fixtures/core-int-alias.lts");
 coreIntSrc :=
 "io := import \"core/io\"; integer := import \"core/int\";\n" +
 "sum := integer.intAdd(40, 2);\n" +
-"io.outputLine(integer.intText(sum.value), sum.ok);";
+"io.outputLine(sum.value.toText(), sum.ok);";
 compilerTest.assertCompileRunTsNamed(root, tsComp, "core/int alias", coreIntSrc, coreIntName, "42 true\n");
 
 /* imported output aliases preserve the heterogeneous host-output contract */
@@ -72,7 +71,7 @@ test.checkInt("list output C compiles: " + listOutC.stderr, 0, listOutC.status);
 
 supportedC := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(1, \"x\", true);", fixtureName);
 test.checkInt("supported C io.outputLine status", 0, supportedC.status);
-test.check("supported C io.outputLine stdout", text.containsText(supportedC.stdout, "1"));
+test.check("supported C io.outputLine stdout", supportedC.stdout.contains("1"));
 
 /* qualified output preserves evaluation order and delays its write until all values evaluate */
 evalOrderSrc :=
@@ -83,8 +82,8 @@ evalOrderSrc :=
 evalOrderRun := compilerTest.compileCheckRunTs(root, tsComp, evalOrderSrc, fixtureName);
 test.checkInt("qualified output order status", 1, evalOrderRun.status);
 test.checkText("qualified output order stdout", "argument evaluated\n", evalOrderRun.stdout);
-test.check("qualified output order stderr", text.containsText(evalOrderRun.stderr, "ArithmeticPanic: division by zero"));
-test.check("qualified output order no partial line", not text.containsText(evalOrderRun.stdout, "value 9"));
+test.check("qualified output order stderr", evalOrderRun.stderr.contains("ArithmeticPanic: division by zero"));
+test.check("qualified output order no partial line", not evalOrderRun.stdout.contains("value 9"));
 
 /* namespace imports expose immutable public values but keep private values local */
 tmpValRes := fs.makeTempDir("lite-import-values-");

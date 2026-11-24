@@ -1,7 +1,6 @@
 /* Map<K, V>: typed key-value maps, indexing, core/map intrinsics, iteration, value semantics, and diagnostics. */
 
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -19,44 +18,43 @@ cComp := selC.path;
 /* 1. Core Map<String, Int>, Map<Int, String>, and Map<Enum, String> operations */
 basicMapSrc :=
 "io := import \"core/io\";\n" +
-"map := import \"core/map\";\n" +
 "State := enum { Idle; Active; Done; }\n" +
 "scores: mut Map<String, Int>;\n" +
 "scores[\"alice\"] = 10;\n" +
-"map.set(mut scores, \"bob\", 20);\n" +
+"mut scores.set(\"bob\", 20);\n" +
 "scores[\"alice\"] = 15;\n" +
 "io.outputLine(scores[\"alice\"]);\n" +
 "io.outputLine(scores[\"bob\"]);\n" +
-"io.outputLine(map.size(scores));\n" +
-"io.outputLine(map.has(scores, \"alice\"));\n" +
-"io.outputLine(map.has(scores, \"carol\"));\n" +
-"g1 := map.get(scores, \"bob\");\n" +
-"g2 := map.get(scores, \"carol\");\n" +
+"io.outputLine(scores.size());\n" +
+"io.outputLine(scores.has(\"alice\"));\n" +
+"io.outputLine(scores.has(\"carol\"));\n" +
+"g1 := scores.get(\"bob\");\n" +
+"g2 := scores.get(\"carol\");\n" +
 "io.outputLine(g1.found);\n" +
 "io.outputLine(g1.value);\n" +
 "io.outputLine(g2.found);\n" +
 "io.outputLine(g2.value);\n" +
-"io.outputLine(map.getOr(scores, \"alice\", 99));\n" +
-"io.outputLine(map.getOr(scores, \"carol\", 99));\n" +
+"io.outputLine(scores.getOr(\"alice\", 99));\n" +
+"io.outputLine(scores.getOr(\"carol\", 99));\n" +
 "io.outputLine(scores);\n" +
 "loop scores as entry {\n" +
 "    io.outputLine(entry.key, entry.value);\n" +
 "}\n" +
-"ks := map.keys(scores);\n" +
-"vs := map.values(scores);\n" +
+"ks := scores.keys();\n" +
+"vs := scores.values();\n" +
 "io.outputLine(ks);\n" +
 "io.outputLine(vs);\n" +
-"io.outputLine(map.remove(mut scores, \"alice\"));\n" +
-"io.outputLine(map.remove(mut scores, \"alice\"));\n" +
-"io.outputLine(map.size(scores));\n" +
-"map.clear(mut scores);\n" +
-"io.outputLine(map.size(scores));\n" +
+"io.outputLine(mut scores.remove(\"alice\"));\n" +
+"io.outputLine(mut scores.remove(\"alice\"));\n" +
+"io.outputLine(scores.size());\n" +
+"mut scores.clear();\n" +
+"io.outputLine(scores.size());\n" +
 "labels: mut Map<State, String>;\n" +
 "labels[.Idle] = \"waiting\";\n" +
-"map.set(mut labels, .Active, \"running\");\n" +
+"mut labels.set(.Active, \"running\");\n" +
 "io.outputLine(labels[.Idle]);\n" +
-"io.outputLine(map.getOr(labels, .Done, \"finished\"));\n" +
-"io.outputLine(map.has(labels, .Active));\n";
+"io.outputLine(labels.getOr(.Done, \"finished\"));\n" +
+"io.outputLine(labels.has(.Active));\n";
 
 basicExpected :=
 "15\n20\n2\ntrue\nfalse\ntrue\n20\nfalse\n0\n15\n99\n{alice: 15, bob: 20}\n" +
@@ -66,8 +64,6 @@ compilerTest.assertCompileRunTs(root, tsComp, "basic map operations TS", basicMa
 /* 2. Value-copy semantics, functions, block expressions, mut inference, and nested Map<String, List<Int>> */
 valueSemSrc :=
 "io := import \"core/io\";\n" +
-"map := import \"core/map\";\n" +
-"list := import \"core/list\";\n" +
 "makeCounts := fn(): Map<String, Int> {\n" +
 "    m: mut Map<String, Int>;\n" +
 "    m[\"a\"] = 1;\n" +
@@ -86,7 +82,7 @@ valueSemSrc :=
 "m1[\"a\"] = 100;\n" +
 "m1[\"c\"] = 3;\n" +
 "io.outputLine(copy[\"a\"]);\n" +
-"io.outputLine(map.size(copy));\n" +
+"io.outputLine(copy.size());\n" +
 "io.outputLine(sumValues(copy));\n" +
 "io.outputLine(sumValues(m1));\n" +
 "var mut m2 := makeCounts();\n" +
@@ -95,7 +91,7 @@ valueSemSrc :=
 "nested: mut Map<String, List<Int>>;\n" +
 "xs: mut List<Int> = [1, 2];\n" +
 "nested[\"nums\"] = xs;\n" +
-"list.pushBack(mut xs, 3);\n" +
+"mut xs.pushBack(3);\n" +
 "io.outputLine(nested[\"nums\"]);\n";
 
 compilerTest.assertCompileRunTs(root, tsComp, "value semantics and nested map TS", valueSemSrc, "1\n2\n3\n105\n20\n[1, 2]\n");
@@ -108,15 +104,15 @@ missingKeySrc :=
 "io.outputLine(m[\"missing\"]);\n";
 missingRun := compilerTest.compileCheckRunTs(root, tsComp, missingKeySrc, "");
 test.check("missing key index faults at runtime", missingRun.status =!= 0);
-test.check("missing key mentions KeyPanic: " + missingRun.stderr, text.containsText(missingRun.stderr, "KeyPanic"));
+test.check("missing key mentions KeyPanic: " + missingRun.stderr, missingRun.stderr.contains("KeyPanic"));
 
 /* 4. Compile-time rejections */
 badSrc: List<String> = [
 "m: Map<List<Int>, Int>;\n",
 "m: Map<String, Unit>;\n",
 "m: Map<String, Int>;\nm[\"a\"] = 1;\n",
-"map := import \"core/map\";\nm: Map<String, Int>;\nmap.set(mut m, \"a\", 1);\n",
-"map := import \"core/map\";\nm: mut Map<String, Int>;\nmap.set(m, \"a\", 1);\n",
+"m: Map<String, Int>;\nmut m.set(\"a\", 1);\n",
+"m: mut Map<String, Int>;\nMap.set(m, \"a\", 1);\n",
 "m: mut Map<String, Int>;\nm[42] = 1;\n",
 "io := import \"core/io\";\na: Map<String, Int>;\nb: Map<String, Int>;\nio.outputLine(a == b);\n",
 "m: Map<String, Int> = ?;\n"
@@ -125,7 +121,7 @@ badErr: List<String> = [
 "unsupported map key type",
 "unsupported map value type",
 "cannot mutate read-only value m via index assignment",
-"cannot mutate immutable map",
+"cannot call mutating operation set on read-only value",
 "requires mut",
 "index must be String",
 "cannot compare map values",

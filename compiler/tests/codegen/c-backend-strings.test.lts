@@ -1,9 +1,6 @@
 /* Tests length-prefixed fat `lt_str` C11 string semantics: ASCII, multi-byte UTF-8, default zero-init, collections, and string-backed enums. */
 
 io := import "core/io";
-list := import "core/list";
-map := import "core/map";
-set := import "core/set";
 text := import "core/text";
 unicode := import "core/unicode";
 diag := import "core/diag";
@@ -19,81 +16,81 @@ Color := enum : String { Red = "red", Green = "grün", Rocket = "🚀" };
 /* 1. Default zero-initialized record String fields and empty strings. */
 var h: Holder;
 assert(h.label == "", "default record String equals empty");
-assert(text.length(h.label) == 0, "default record String length is 0");
+assert(h.label.length() == 0, "default record String length is 0");
 assert(h.label + "ok" == "ok", "concat with default empty left");
 assert("ok" + h.tag == "ok", "concat with default empty right");
 
 /* 2. ASCII fast paths: length, at, slice, indexOfText, startsWithAt, endsWith, trim, repeat, lower, join. */
 ascii := "Hello, LiteScript!";
-assert(text.length(ascii) == 18, "ascii length");
-assert(text.at(ascii, 0) == "H", "ascii at 0");
-assert(text.at(ascii, 17) == "!", "ascii at 17");
-assert(text.slice(ascii, 7, 17) == "LiteScript", "ascii slice");
-assert(text.indexOfText(ascii, "Lite", 0) == 7, "ascii indexOfText multi");
-assert(text.indexOfText(ascii, ",", 0) == 5, "ascii indexOfText single byte");
-assert(text.indexOfText(ascii, "z", 0) == -1, "ascii indexOfText miss");
-assert(text.startsWithAt(ascii, 7, "Lite"), "ascii startsWithAt hit");
-assert(not text.startsWithAt(ascii, 8, "Lite"), "ascii startsWithAt miss");
-assert(text.endsWith(ascii, "Script!"), "ascii endsWith");
-assert(text.trim("  \t hi \n ") == "hi", "ascii trim");
-assert(text.repeatText("ab", 3) == "ababab", "ascii repeat");
-assert(text.toLowerAscii("AbC123") == "abc123", "ascii toLower");
+assert(ascii.length() == 18, "ascii length");
+assert(ascii.at(0) == "H", "ascii at 0");
+assert(ascii.at(17) == "!", "ascii at 17");
+assert(ascii.slice(7, 17) == "LiteScript", "ascii slice");
+assert(ascii.indexOf("Lite", 0) == 7, "ascii indexOfText multi");
+assert(ascii.indexOf(",", 0) == 5, "ascii indexOfText single byte");
+assert(ascii.indexOf("z", 0) == -1, "ascii indexOfText miss");
+assert(ascii.startsWithAt(7, "Lite"), "ascii startsWithAt hit");
+assert(not ascii.startsWithAt(8, "Lite"), "ascii startsWithAt miss");
+assert(ascii.endsWith("Script!"), "ascii endsWith");
+assert("  \t hi \n ".trim() == "hi", "ascii trim");
+assert("ab".repeat(3) == "ababab", "ascii repeat");
+assert("AbC123".toLowerAscii() == "abc123", "ascii toLower");
 parts: List<String> = ["a", "bb", "ccc"];
 assert(text.joinTexts(parts, "-") == "a-bb-ccc", "ascii joinTexts");
 
 /* 3. Multi-byte UTF-8 (2-byte accented, 3-byte em-dash, 4-byte emoji). */
 utf8 := "café—🚀!";
-assert(text.length(utf8) == 7, "utf8 cp length");
-assert(text.at(utf8, 3) == "é", "utf8 at 3");
-assert(text.at(utf8, 4) == "—", "utf8 at 4");
-assert(text.at(utf8, 5) == "🚀", "utf8 at 5");
-assert(text.at(utf8, 6) == "!", "utf8 at 6");
-assert(text.slice(utf8, 3, 6) == "é—🚀", "utf8 slice");
-assert(text.indexOfText(utf8, "🚀", 0) == 5, "utf8 indexOfText emoji");
-assert(text.indexOfText(utf8, "!", 4) == 6, "utf8 indexOfText after multibyte");
-assert(text.startsWithAt(utf8, 4, "—🚀"), "utf8 startsWithAt");
-assert(text.endsWith(utf8, "🚀!"), "utf8 endsWith");
-assert(text.trim("  café🚀 \n") == "café🚀", "utf8 trim");
-assert(text.length(text.trim("  café🚀 \n")) == 5, "utf8 trim cp length");
-assert(text.length("a" + "🚀" + "é") == 3, "utf8 concat cp length");
-assert(text.length(text.repeatText("🚀", 3)) == 3, "utf8 repeat cp length");
+assert(utf8.length() == 7, "utf8 cp length");
+assert(utf8.at(3) == "é", "utf8 at 3");
+assert(utf8.at(4) == "—", "utf8 at 4");
+assert(utf8.at(5) == "🚀", "utf8 at 5");
+assert(utf8.at(6) == "!", "utf8 at 6");
+assert(utf8.slice(3, 6) == "é—🚀", "utf8 slice");
+assert(utf8.indexOf("🚀", 0) == 5, "utf8 indexOfText emoji");
+assert(utf8.indexOf("!", 4) == 6, "utf8 indexOfText after multibyte");
+assert(utf8.startsWithAt(4, "—🚀"), "utf8 startsWithAt");
+assert(utf8.endsWith("🚀!"), "utf8 endsWith");
+assert("  café🚀 \n".trim() == "café🚀", "utf8 trim");
+assert("  café🚀 \n".trim().length() == 5, "utf8 trim cp length");
+assert(("a" + "🚀" + "é").length() == 3, "utf8 concat cp length");
+assert("🚀".repeat(3).length() == 3, "utf8 repeat cp length");
 
 /* 4. Unicode round-trip. */
 cps := unicode.toCodePoints(utf8);
-assert(list.length(cps) == 7, "unicode toCodePoints length");
+assert(cps.length() == 7, "unicode toCodePoints length");
 rt := unicode.fromCodePoints(cps);
-assert(rt.ok and rt.text == utf8 and text.length(rt.text) == 7, "unicode fromCodePoints roundtrip");
+assert(rt.ok and rt.text == utf8 and rt.text.length() == 7, "unicode fromCodePoints roundtrip");
 
 /* 5. Map<String, Int> and Set<String> (including long keys > 8 bytes and UTF-8 keys). */
 m: mut Map<String, Int>;
 longKeyA := "Record<123#456#CompilerState;items:List<Item>,locals:List<Local>,functions:List<FunctionInfo>>";
 longKeyB := "Record<123#456#CompilerState;items:List<Item>,locals:List<Local>,functions:List<FunctionInfo>2>";
-map.set(mut m, longKeyA, 10);
-map.set(mut m, longKeyB, 20);
-map.set(mut m, "🚀", 30);
-map.set(mut m, "", 40);
-assert(map.get(m, longKeyA).value == 10, "map long key A");
-assert(map.get(m, longKeyB).value == 20, "map long key B");
-assert(map.get(m, "🚀").value == 30, "map utf8 key");
-assert(map.get(m, "").value == 40, "map empty key");
-assert(map.get(m, h.label).value == 40, "map default-empty key lookup");
+mut m.set(longKeyA, 10);
+mut m.set(longKeyB, 20);
+mut m.set("🚀", 30);
+mut m.set("", 40);
+assert(m.get(longKeyA).value == 10, "map long key A");
+assert(m.get(longKeyB).value == 20, "map long key B");
+assert(m.get("🚀").value == 30, "map utf8 key");
+assert(m.get("").value == 40, "map empty key");
+assert(m.get(h.label).value == 40, "map default-empty key lookup");
 
 s: mut Set<String>;
-set.add(mut s, longKeyA);
-set.add(mut s, "🚀");
-set.add(mut s, "");
-assert(set.has(s, longKeyA), "set long key");
-assert(not set.has(s, longKeyB), "set miss long key");
-assert(set.has(s, "🚀"), "set utf8 key");
-assert(set.has(s, h.label), "set default-empty key");
+mut s.add(longKeyA);
+mut s.add("🚀");
+mut s.add("");
+assert(s.has(longKeyA), "set long key");
+assert(not s.has(longKeyB), "set miss long key");
+assert(s.has("🚀"), "set utf8 key");
+assert(s.has(h.label), "set default-empty key");
 
 /* 6. String-backed enums (constant and dynamic lookup). */
 assert(Color.Red.value == "red", "const enum string value");
 assert(Color.Rocket.value == "🚀", "const enum utf8 string value");
-assert(text.length(Color.Rocket.value) == 1, "const enum utf8 cp length");
+assert(Color.Rocket.value.length() == 1, "const enum utf8 cp length");
 var dynColor := Color.Green;
-if text.length(ascii) > 100 { dynColor = Color.Red; }
+if ascii.length() > 100 { dynColor = Color.Red; }
 assert(dynColor.value == "grün", "dynamic enum utf8 string value");
-assert(text.length(dynColor.value) == 4, "dynamic enum utf8 cp length");
+assert(dynColor.value.length() == 4, "dynamic enum utf8 cp length");
 
 io.outputLine("c-backend-strings: ok");

@@ -1,10 +1,8 @@
 /** Validates component release streams directly against `lib/util/release.lts`. */
 
 fs := import "core/file";
-list := import "core/list";
 path := import "core/path";
 test := import "core/test";
-text := import "core/text";
 challenges := import "util/challenges";
 json := import "util/json";
 project := import "util/project";
@@ -33,7 +31,7 @@ overrideVal: String
     ];
     var out := "{\n";
     var i := 0;
-    n := list.listCountText(keys);
+    n := keys.length();
     loop i < n {
         k := keys[i];
         v := if k == overrideKey { json.quoteString(overrideVal) } else { vals[i] };
@@ -61,27 +59,27 @@ makeReleaseCheckout := fn(versionsText: String, igniterVersion: String): String 
 
 splitLines := fn(source: String): List<String> {
     out: mut List<String> = [];
-    n := text.length(source);
+    n := source.length();
     var pos := 0;
     loop pos <= n {
-        nl := text.indexOfText(source, "\n", pos);
+        nl := source.indexOf("\n", pos);
         if nl < 0 {
-            list.pushBack(mut out, text.slice(source, pos, n));
+            mut out.pushBack(source.slice(pos, n));
             break;
         }
-        list.pushBack(mut out, text.slice(source, pos, nl));
+        (mut out).pushBack(source.slice(pos, nl));
         pos = nl + 1;
     }
     out
 };
 
 isLowerAlpha := fn(s: String): Bool {
-    n := text.length(s);
+    n := s.length();
     if n == 0 { return false; }
     var i := 0;
     loop i < n {
-        ch := text.at(s, i);
-        if text.indexOfText("abcdefghijklmnopqrstuvwxyz", ch, 0) < 0 { return false; }
+        ch := s.at(i);
+        if "abcdefghijklmnopqrstuvwxyz".indexOf(ch, 0) < 0 { return false; }
         i = i + 1;
     }
     true
@@ -103,7 +101,7 @@ expVers1: List<String> = [
 "0.3.0", "0.1.0-alpha.1", "0.4.0", "0.1.0-alpha.38"
 ];
 var idx1 := 0;
-loop idx1 < list.listCountText(tags1) {
+loop idx1 < tags1.length() {
     sel := rel.selectComponentRelease(dir1, tags1[idx1]);
     test.check("independent ok " + tags1[idx1], sel.ok);
     test.check("independent hasTag " + tags1[idx1], sel.hasTag);
@@ -116,7 +114,7 @@ test.check("versionsJson ok", vj.ok);
 langRes := json.readObjectString(vj.jsonText, 0, "language");
 test.check("versionsJson language found", langRes.found and langRes.ok);
 test.checkText("versionsJson language", "0.2.0", langRes.value);
-test.check("versionsJson stdlib null", text.indexOfText(vj.jsonText, "\"stdlib\":null", 0) >= 0 or text.indexOfText(vj.jsonText, "\"stdlib\": null", 0) >= 0);
+test.check("versionsJson stdlib null", vj.jsonText.indexOf("\"stdlib\":null", 0) >= 0 or vj.jsonText.indexOf("\"stdlib\": null", 0) >= 0);
 _rm1 := fs.remove(dir1);
 
 /* 2. component changes do not require language or other component version bumps */
@@ -134,10 +132,10 @@ badExpect2: List<String> = [
 "scripting tag/version mismatch"
 ];
 var idx2 := 0;
-loop idx2 < list.listCountText(badTags2) {
+loop idx2 < badTags2.length() {
     bad := rel.selectComponentRelease(dir2, badTags2[idx2]);
     test.check("mismatch not ok " + badTags2[idx2], not bad.ok);
-    test.check("mismatch msg " + badTags2[idx2] + ": " + bad.error, text.indexOfText(bad.error, badExpect2[idx2], 0) >= 0);
+    test.check("mismatch msg " + badTags2[idx2] + ": " + bad.error, bad.error.indexOf(badExpect2[idx2], 0) >= 0);
     idx2 = idx2 + 1;
 }
 _rm2 := fs.remove(dir2);
@@ -149,7 +147,7 @@ test.check("untagged ok", none3.ok);
 test.check("untagged hasTag false", not none3.hasTag);
 unassigned3 := rel.selectComponentRelease(dir3a, "std-v0.1.0");
 test.check("unassigned not ok", not unassigned3.ok);
-test.check("unassigned error: " + unassigned3.error, text.indexOfText(unassigned3.error, "stdlib tag/version mismatch", 0) >= 0);
+test.check("unassigned error: " + unassigned3.error, unassigned3.error.indexOf("stdlib tag/version mismatch", 0) >= 0);
 _rm3a := fs.remove(dir3a);
 
 dir3b := makeReleaseCheckout(buildVersionsJson("0.5.1", "\"0.1.0-alpha.1\"", "0.1.1", "", "", ""), "0.1.0-alpha.38");
@@ -167,7 +165,7 @@ badTags4: List<String> = [
 loop badTags4 as badTag {
     r := rel.parseComponentTag(badTag);
     test.check("bad tag rejected " + badTag, not r.ok);
-    hasExpectedErr := text.indexOfText(r.error, "unsupported release tag", 0) >= 0 or text.indexOfText(r.error, "invalid release version", 0) >= 0;
+    hasExpectedErr := r.error.indexOf("unsupported release tag", 0) >= 0 or r.error.indexOf("invalid release version", 0) >= 0;
     test.check("bad tag error " + badTag + ": " + r.error, hasExpectedErr);
 }
 good4 := rel.parseComponentTag("compiler-v1.2.3-rc.1+build.2");
@@ -178,19 +176,19 @@ test.checkText("good semver version", "1.2.3-rc.1+build.2", good4.version);
 dir4a := makeReleaseCheckout(buildVersionsJson("01.2.3", "null", "0.1.1", "", "", ""), "0.1.0");
 r4a := rel.selectComponentRelease(dir4a, "");
 test.check("malformed compiler rejected", not r4a.ok);
-test.check("malformed compiler msg: " + r4a.error, text.indexOfText(r4a.error, "invalid or missing compiler", 0) >= 0);
+test.check("malformed compiler msg: " + r4a.error, r4a.error.indexOf("invalid or missing compiler", 0) >= 0);
 _rm4a := fs.remove(dir4a);
 
 dir4b := makeReleaseCheckout(buildVersionsJson("0.5.1", "null", "0.1.1", "\"igniter\": \"0.1.0\"", "", ""), "0.1.0");
 r4b := rel.selectComponentRelease(dir4b, "");
 test.check("unknown igniter rejected", not r4b.ok);
-test.check("unknown igniter msg: " + r4b.error, text.indexOfText(r4b.error, "unknown", 0) >= 0 and text.indexOfText(r4b.error, "igniter", 0) >= 0);
+test.check("unknown igniter msg: " + r4b.error, r4b.error.indexOf("unknown", 0) >= 0 and r4b.error.indexOf("igniter", 0) >= 0);
 _rm4b := fs.remove(dir4b);
 
 dir4c := makeReleaseCheckout(buildVersionsJson("0.5.1", "null", "0.1.0-alpha.1", "", "", ""), "0.1.0");
 r4c := rel.selectComponentRelease(dir4c, "");
 test.check("prerelease vscode rejected", not r4c.ok);
-test.check("prerelease vscode msg: " + r4c.error, text.indexOfText(r4c.error, "vscode", 0) >= 0 and text.indexOfText(r4c.error, "plain", 0) >= 0);
+test.check("prerelease vscode msg: " + r4c.error, r4c.error.indexOf("vscode", 0) >= 0 and r4c.error.indexOf("plain", 0) >= 0);
 _rm4c := fs.remove(dir4c);
 
 /* 5. workflow triggers cover all distinct project and component streams and independently evolving tools */
@@ -199,11 +197,11 @@ test.check("read release.yml: " + wfRes.error, wfRes.ok);
 wfLines := splitLines(wfRes.text);
 rawTriggers: mut List<String> = [];
 loop wfLines as rawLine {
-    line := text.trimEnd(rawLine);
-    if text.startsWithAt(line, 0, "      - '") and text.endsWith(line, "-v*'") {
-        prefix := text.slice(line, 9, text.length(line) - 4);
+    line := rawLine.trimEnd();
+    if line.startsWithAt(0, "      - '") and line.endsWith("-v*'") {
+        prefix := line.slice(9, line.length() - 4);
         if isLowerAlpha(prefix) {
-            list.pushBack(mut rawTriggers, prefix);
+            mut rawTriggers.pushBack(prefix);
         }
     }
 }
@@ -216,13 +214,13 @@ allNames: List<String> = [
 ];
 rawExpectedPrefixes: mut List<String> = [];
 loop allNames as name {
-    list.pushBack(mut rawExpectedPrefixes, rel.componentTagPrefix(name));
+    mut rawExpectedPrefixes.pushBack(rel.componentTagPrefix(name));
 }
 expectedPrefixes := challenges.sortTexts(rawExpectedPrefixes);
 
-test.checkInt("workflow trigger count", list.listCountText(expectedPrefixes), list.listCountText(triggers));
+test.checkInt("workflow trigger count", expectedPrefixes.length(), triggers.length());
 var idx5 := 0;
-loop idx5 < list.listCountText(expectedPrefixes) {
+loop idx5 < expectedPrefixes.length() {
     test.checkText("workflow trigger " + expectedPrefixes[idx5], expectedPrefixes[idx5], triggers[idx5]);
     idx5 = idx5 + 1;
 }
@@ -233,7 +231,7 @@ test.check("repo current release versions ok: " + curRel.error, curRel.ok);
 toolComps: List<String> = ["checker", "tester", "verifier", "benchmark", "release", "docs", "builtins", "vscode", "linker"];
 toolPrefixes: List<String> = ["check", "test", "verify", "bench", "release", "docs", "builtins", "vscode", "linker"];
 var tpIdx := 0;
-loop tpIdx < list.listCountText(toolComps) {
+loop tpIdx < toolComps.length() {
     comp := toolComps[tpIdx];
     pfx := toolPrefixes[tpIdx];
     vJson := buildVersionsJson("0.5.1", "null", "0.1.1", "", comp, "0.2.0");
@@ -244,7 +242,7 @@ loop tpIdx < list.listCountText(toolComps) {
     test.checkText("tool comp " + comp, comp, tOk.component);
     test.checkText("tool ver " + comp, "0.2.0", tOk.version);
     test.check("tool mismatch " + comp, not tBad.ok);
-    test.check("tool mismatch msg " + comp + ": " + tBad.error, text.indexOfText(tBad.error, "tag/version mismatch", 0) >= 0);
+    test.check("tool mismatch msg " + comp + ": " + tBad.error, tBad.error.indexOf("tag/version mismatch", 0) >= 0);
     _rmT := fs.remove(tDir);
     tpIdx = tpIdx + 1;
 }

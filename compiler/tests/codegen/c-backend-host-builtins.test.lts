@@ -78,7 +78,7 @@ src :=
 "a: mut List<Int> = [1, 2, 3];\n" +
 "b := a;\n" +
 "a[0] = 99;\n" +
-"listLib.pushBack(mut a, 4);\n" +
+"mut a.pushBack(4);\n" +
 "io.outputLine(a);\n" +
 "io.outputLine(b);\n" +
 "\n" +
@@ -89,7 +89,7 @@ src :=
 "io.outputLine(t1 > t0 and time.epochNs() > 0);\n" +
 "io.outputLine(time.localDate().length() == 10);\n" +
 "rnd := crypto.randomBytes(16);\n" +
-"io.outputLine(listLib.length(rnd));\n" +
+"io.outputLine(rnd.length());\n" +
 "pr := proc.run(\"sh\", [\"-c\", \"printf 'hello-%s' \\\"$LITE_TEST_ENV\\\"\"], \"\", [\"LITE_TEST_ENV=world\"], true, \"\");\n" +
 "io.outputLine(pr.status);\n" +
 "io.outputLine(pr.stdout);\n" +

@@ -47,8 +47,8 @@ src :=
 "Tokens := type List<Token>;\n" +
 "describe := fn(tok: Token): String { tok.kind + \":\" + tok.text };\n" +
 "tokens: mut Tokens = [];\n" +
-"list.pushBack(mut tokens, (kind = \"id\", text = \"x\"));\n" +
-"list.pushBack(mut tokens, (kind = \"op\", text = \"+\"));\n" +
+"mut tokens.pushBack((kind = \"id\", text = \"x\"));\n" +
+"mut tokens.pushBack((kind = \"op\", text = \"+\"));\n" +
 "loop tokens as tok { io.outputLine(describe(tok)); }\n" +
 "fixed := [Vec2 { x = 3, y = 4 }, Vec2 { x = 5, y = 6 }];\n" +
 "io.outputLine(fixed, fixed.0.x, fixed[1].y);\n" +

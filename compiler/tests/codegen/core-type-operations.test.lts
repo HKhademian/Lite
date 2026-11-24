@@ -1,7 +1,6 @@
 /* Dual-target (TS + C11) parity tests for Phase 5 core built-in type operations under `--builtin-mode=builtin` and `--builtin-mode=pure`. */
 
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -99,8 +98,8 @@ minSrc := "io := import \"core/io\";\nio.outputLine(42);\n";
 emptyArgs: List<String> = [];
 minTs := compilerTest.compileStdinWithOpts(root, tsComp, root, minSrc, "", "", emptyArgs);
 test.checkInt("min ts compile", 0, minTs.status);
-test.check("min ts omits unused String.trim", not text.containsText(minTs.stdout, "tp_String_op_trim"));
-test.check("min ts omits unused Int.toText", not text.containsText(minTs.stdout, "tp_Int_op_toText"));
-test.check("min ts omits unused List.map", not text.containsText(minTs.stdout, "tp_List_op_map"));
+test.check("min ts omits unused String.trim", not minTs.stdout.contains("tp_String_op_trim"));
+test.check("min ts omits unused Int.toText", not minTs.stdout.contains("tp_Int_op_toText"));
+test.check("min ts omits unused List.map", not minTs.stdout.contains("tp_List_op_map"));
 
 test.done("core-type-operations");

@@ -17,14 +17,13 @@ ccInfo := compilerTest.probeCc();
 
 src :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
 "text := import \"core/text\";\n" +
 "\n" +
 "Buf := type List<String>;\n" +
 "\n" +
 "pushChunk := fn(b: mut Buf, s: String): Unit {\n" +
-"    if text.length(s) > 0 {\n" +
-"        list.pushBack(mut b, s);\n" +
+"    if s.length() > 0 {\n" +
+"        mut b.pushBack(s);\n" +
 "    }\n" +
 "};\n" +
 "\n" +
@@ -37,9 +36,9 @@ src :=
 "pushChunk(mut b, \"hello\");\n" +
 "pushChunk(mut b, \"\");\n" +
 "pushPair(mut b, \" \", \"world\");\n" +
-"io.outputLine(list.length(b), text.joinTexts(b, \"\"));\n" +
-"list.clear(mut b);\n" +
-"io.outputLine(list.length(b), text.joinTexts(b, \"\"));\n";
+"io.outputLine(b.length(), text.joinTexts(b, \"\"));\n" +
+"mut b.clear();\n" +
+"io.outputLine(b.length(), text.joinTexts(b, \"\"));\n";
 
 expected :=
 "3 hello world\n" +

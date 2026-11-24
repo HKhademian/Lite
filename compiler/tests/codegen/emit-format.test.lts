@@ -1,11 +1,9 @@
 /* Formatting directive, clean naming, -O0..-Os differentiation, and source-map tests across TS and C11. */
 
 fs := import "core/file";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
 unicode := import "core/unicode";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
@@ -27,7 +25,7 @@ runComp := fn(compPath: String, extraArgs: List<String>, src: String, name: Stri
     outF := path.join(tmp.path, "out.txt");
     errF := path.join(tmp.path, "err.txt");
     argv: mut List<String> = [compPath, "--stdin", "--name", name];
-    loop extraArgs as a { list.pushBack(mut argv, a); }
+    loop extraArgs as a { mut argv.pushBack(a); }
     emptyEnv: List<String> = [];
     res := proc.runBytes(proc.execPath(), argv, root, emptyEnv, 30000, unicode.utf8Encode(src), outF, errF);
     outTxt := fs.readText(outF).text;
@@ -40,29 +38,29 @@ runComp := fn(compPath: String, extraArgs: List<String>, src: String, name: Stri
 loopSrc := "io := import \"core/io\";\nloop 0..4 as i {\n    io.outputLine(i);\n}\n";
 tsLoop := runComp(tsComp, ["-O1"], loopSrc, "loop.lts");
 test.checkInt("ts loop status", 0, tsLoop.status);
-test.check("ts loop uses array-buffered out", text.containsText(tsLoop.stdout, "const lite$out: string[] = [];"));
-test.check("ts loop uses out.push", text.containsText(tsLoop.stdout, "lite$out.push(text);"));
-test.check("ts loop returns out.join", text.containsText(tsLoop.stdout, "return lite$out.join(\"\");"));
-test.check("ts loop has direct for with clean name i", text.containsText(tsLoop.stdout, "for (let i: bigint = 0n; i < 4n; i += 1n) {\n"));
-test.check("ts loop omits IIFE wrapper", not text.containsText(tsLoop.stdout, "(() => {"));
-test.check("ts loop omits dead count/idx/item/rend", not text.containsText(tsLoop.stdout, "_count") and not text.containsText(tsLoop.stdout, "_idx") and not text.containsText(tsLoop.stdout, "_end"));
+test.check("ts loop uses array-buffered out", tsLoop.stdout.contains("const lite$out: string[] = [];"));
+test.check("ts loop uses out.push", tsLoop.stdout.contains("lite$out.push(text);"));
+test.check("ts loop returns out.join", tsLoop.stdout.contains("return lite$out.join(\"\");"));
+test.check("ts loop has direct for with clean name i", tsLoop.stdout.contains("for (let i: bigint = 0n; i < 4n; i += 1n) {\n"));
+test.check("ts loop omits IIFE wrapper", not tsLoop.stdout.contains("(() => {"));
+test.check("ts loop omits dead count/idx/item/rend", not tsLoop.stdout.contains("_count") and not tsLoop.stdout.contains("_idx") and not tsLoop.stdout.contains("_end"));
 
 cLoop := runComp(cComp, ["-O1"], loopSrc, "loop.lts");
 test.checkInt("c loop status", 0, cLoop.status);
-test.check("c loop has direct for with clean name i", text.containsText(cLoop.stdout, "for (int64_t i = INT64_C(0); i < INT64_C(4); i += 1) {\n"));
-test.check("c loop omits dead count/idx/item/rend", not text.containsText(cLoop.stdout, "_count") and not text.containsText(cLoop.stdout, "_idx") and not text.containsText(cLoop.stdout, "_end"));
+test.check("c loop has direct for with clean name i", cLoop.stdout.contains("for (int64_t i = INT64_C(0); i < INT64_C(4); i += 1) {\n"));
+test.check("c loop omits dead count/idx/item/rend", not cLoop.stdout.contains("_count") and not cLoop.stdout.contains("_idx") and not cLoop.stdout.contains("_end"));
 
 /* 2. Empty loop omits main output preamble on TS and status variable on C */
 emptyLoopSrc := "loop 0..8 as i {\n}\n";
 tsEmpty := runComp(tsComp, ["-O1"], emptyLoopSrc, "empty.lts");
 test.checkInt("ts empty loop status", 0, tsEmpty.status);
-test.check("ts empty loop omits lite$out", not text.containsText(tsEmpty.stdout, "lite$out"));
-test.check("ts empty loop returns empty string", text.containsText(tsEmpty.stdout, "return \"\";"));
+test.check("ts empty loop omits lite$out", not tsEmpty.stdout.contains("lite$out"));
+test.check("ts empty loop returns empty string", tsEmpty.stdout.contains("return \"\";"));
 
 cEmpty := runComp(cComp, ["-O1"], emptyLoopSrc, "empty.lts");
 test.checkInt("c empty loop status", 0, cEmpty.status);
-test.check("c empty loop omits status var", not text.containsText(cEmpty.stdout, "int status = 0;"));
-test.check("c empty loop returns 0", text.containsText(cEmpty.stdout, "return 0;"));
+test.check("c empty loop omits status var", not cEmpty.stdout.contains("int status = 0;"));
+test.check("c empty loop returns 0", cEmpty.stdout.contains("return 0;"));
 
 /* 3. Nested shadowed loop compiles and runs identically on TS and C11 */
 ccInfo := compilerTest.probeCc();
@@ -80,38 +78,38 @@ if ccInfo.available {
 unusedCalcSrc := "x := 1 + 2 * 3;\n";
 tsO0Unused := runComp(tsComp, ["-O0"], unusedCalcSrc, "calc.lts");
 test.checkInt("ts -O0 unused status", 0, tsO0Unused.status);
-test.check("ts -O0 preserves unused x := 1 + 2 * 3", text.containsText(tsO0Unused.stdout, "const lite_x = (1n + (2n * 3n));"));
-test.check("ts -O0 auto-enables comment source-map", text.containsText(tsO0Unused.stdout, "// calc.lts:1:1"));
+test.check("ts -O0 preserves unused x := 1 + 2 * 3", tsO0Unused.stdout.contains("const lite_x = (1n + (2n * 3n));"));
+test.check("ts -O0 auto-enables comment source-map", tsO0Unused.stdout.contains("// calc.lts:1:1"));
 
 tsO1Unused := runComp(tsComp, ["-O1"], unusedCalcSrc, "calc.lts");
 test.checkInt("ts -O1 unused status", 0, tsO1Unused.status);
-test.check("ts -O1 prunes unused x", not text.containsText(tsO1Unused.stdout, "lite_x"));
-test.check("ts -O1 defaults source-map to none", not text.containsText(tsO1Unused.stdout, "// calc.lts:"));
+test.check("ts -O1 prunes unused x", not tsO1Unused.stdout.contains("lite_x"));
+test.check("ts -O1 defaults source-map to none", not tsO1Unused.stdout.contains("// calc.lts:"));
 
 usedCalcSrc := "io := import \"core/io\";\nx := 1 + 2 * 3;\nio.outputLine(x);\n";
 tsO1Used := runComp(tsComp, ["-O1"], usedCalcSrc, "calc.lts");
 tsO2Used := runComp(tsComp, ["-O2"], usedCalcSrc, "calc.lts");
-test.check("ts -O1 keeps arithmetic expression", text.containsText(tsO1Used.stdout, "(1n + (2n * 3n))"));
-test.check("ts -O2 folds constant integer arithmetic", text.containsText(tsO2Used.stdout, "const lite_x = 7n;"));
+test.check("ts -O1 keeps arithmetic expression", tsO1Used.stdout.contains("(1n + (2n * 3n))"));
+test.check("ts -O2 folds constant integer arithmetic", tsO2Used.stdout.contains("const lite_x = 7n;"));
 
 cO0Unused := runComp(cComp, ["-O0"], unusedCalcSrc, "calc.lts");
 cO2Used := runComp(cComp, ["-O2"], usedCalcSrc, "calc.lts");
-test.check("c -O0 preserves unused x", text.containsText(cO0Unused.stdout, "lite_x = (INT64_C(1) + (INT64_C(2) * INT64_C(3)));"));
-test.check("c -O0 auto-enables #line directive", text.containsText(cO0Unused.stdout, "#line 1 \"calc.lts\""));
-test.check("c -O2 folds constant integer arithmetic", text.containsText(cO2Used.stdout, "lite_x = INT64_C(7);"));
+test.check("c -O0 preserves unused x", cO0Unused.stdout.contains("lite_x = (INT64_C(1) + (INT64_C(2) * INT64_C(3)));"));
+test.check("c -O0 auto-enables #line directive", cO0Unused.stdout.contains("#line 1 \"calc.lts\""));
+test.check("c -O2 folds constant integer arithmetic", cO2Used.stdout.contains("lite_x = INT64_C(7);"));
 
 /* 5. Explicit --emit-format=compact and --source-map=comments|lines + native C11 #line compilation */
 tsCompact := runComp(tsComp, ["-O1", "--emit-format=compact"], loopSrc, "loop.lts");
 test.checkInt("ts compact status", 0, tsCompact.status);
-test.check("ts compact keeps loop inline", text.containsText(tsCompact.stdout, "for (let i: bigint = 0n; i < 4n; i += 1n) { lite$emit("));
+test.check("ts compact keeps loop inline", tsCompact.stdout.contains("for (let i: bigint = 0n; i < 4n; i += 1n) { lite$emit("));
 
 cComments := runComp(cComp, ["-O1", "--source-map=comments"], loopSrc, "loop.lts");
 test.checkInt("c comments status", 0, cComments.status);
-test.check("c comments emits inline file:line:col", text.containsText(cComments.stdout, "// loop.lts:2:1"));
+test.check("c comments emits inline file:line:col", cComments.stdout.contains("// loop.lts:2:1"));
 
 cLines := runComp(cComp, ["-O1", "--source-map=lines"], loopSrc, "loop.lts");
 test.checkInt("c lines status", 0, cLines.status);
-test.check("c lines emits #line directive", text.containsText(cLines.stdout, "#line 2 \"loop.lts\""));
+test.check("c lines emits #line directive", cLines.stdout.contains("#line 2 \"loop.lts\""));
 
 if ccInfo.available {
     tmpC := fs.makeTempDir("lite-line-cc-");
@@ -142,19 +140,19 @@ accLoopSrc := "io := import \"core/io\";\n" +
     "io.outputLine(shadowed);\n";
 tsAcc := runComp(tsComp, ["-O1"], accLoopSrc, "acc-loop.lts");
 test.checkInt("ts acc loop status", 0, tsAcc.status);
-test.check("ts immutable loop unwraps with const + _init temp", text.containsText(tsAcc.stdout, "let _init_sumer: bigint = 0n;\n") and text.containsText(tsAcc.stdout, "const lite_sumer = _init_sumer;\n"));
-test.check("ts mutable loop unwraps directly into var", text.containsText(tsAcc.stdout, "let lite_mutSumer: bigint = 0n;\n"));
-test.check("ts acc loop drops dead void _val", not text.containsText(tsAcc.stdout, "void _val;"));
-test.check("ts discarded value loop formats IIFE multi-line", text.containsText(tsAcc.stdout, "void ((() => {\n") and text.containsText(tsAcc.stdout, "\n        let _val: bigint = 0n;\n"));
+test.check("ts immutable loop unwraps with const + _init temp", tsAcc.stdout.contains("let _init_sumer: bigint = 0n;\n") and tsAcc.stdout.contains("const lite_sumer = _init_sumer;\n"));
+test.check("ts mutable loop unwraps directly into var", tsAcc.stdout.contains("let lite_mutSumer: bigint = 0n;\n"));
+test.check("ts acc loop drops dead void _val", not tsAcc.stdout.contains("void _val;"));
+test.check("ts discarded value loop formats IIFE multi-line", tsAcc.stdout.contains("void ((() => {\n") and tsAcc.stdout.contains("\n        let _val: bigint = 0n;\n"));
 
 tsAccCompact := runComp(tsComp, ["-O1", "--emit-format=compact"], accLoopSrc, "acc-loop.lts");
 test.checkInt("ts acc loop compact status", 0, tsAccCompact.status);
-test.check("ts acc loop compact keeps IIFE inline", text.containsText(tsAccCompact.stdout, "void ((() => { let _val: bigint = 0n;"));
+test.check("ts acc loop compact keeps IIFE inline", tsAccCompact.stdout.contains("void ((() => { let _val: bigint = 0n;"));
 
 cAcc := runComp(cComp, ["-O1"], accLoopSrc, "acc-loop.lts");
 test.checkInt("c acc loop status", 0, cAcc.status);
-test.check("c acc loop unwraps flat declaration", text.containsText(cAcc.stdout, "int64_t lite_sumer = INT64_C(0);\n"));
-test.check("c acc loop drops dead (void)_val on bound loops", text.containsText(cAcc.stdout, "lite_sumer = ("));
+test.check("c acc loop unwraps flat declaration", cAcc.stdout.contains("int64_t lite_sumer = INT64_C(0);\n"));
+test.check("c acc loop drops dead (void)_val on bound loops", cAcc.stdout.contains("lite_sumer = ("));
 
 tsAccRun := compilerTest.compileCheckRunTs(root, tsComp, accLoopSrc, "acc-loop.lts");
 test.checkInt("ts acc loop strict check+run: " + tsAccRun.stderr, 0, tsAccRun.status);
@@ -168,7 +166,7 @@ if ccInfo.available {
 nestedIifeSrc := "io := import \"core/io\";\nxs := loop 1..=3 as n {\n    n * 2\n}.collected;\nio.outputLine(xs[0] + xs[1] + xs[2]);\n";
 tsNestedIife := runComp(tsComp, ["-O1"], nestedIifeSrc, "nested-iife.lts");
 test.checkInt("ts nested IIFE status", 0, tsNestedIife.status);
-test.check("ts collected IIFE formatted multi-line", text.containsText(tsNestedIife.stdout, "((() => {\n") and text.containsText(tsNestedIife.stdout, "\n        return _collected;\n"));
+test.check("ts collected IIFE formatted multi-line", tsNestedIife.stdout.contains("((() => {\n") and tsNestedIife.stdout.contains("\n        return _collected;\n"));
 tsNestedIifeRun := compilerTest.compileCheckRunTs(root, tsComp, nestedIifeSrc, "nested-iife.lts");
 test.checkInt("ts nested IIFE strict check+run: " + tsNestedIifeRun.stderr, 0, tsNestedIifeRun.status);
 test.checkText("ts nested IIFE stdout", "12\n", tsNestedIifeRun.stdout);

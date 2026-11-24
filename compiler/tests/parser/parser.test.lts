@@ -3,7 +3,6 @@
 fs := import "core/file";
 path := import "core/path";
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -85,7 +84,7 @@ loop powerValid as src {
 loop powerInvalid as src {
     compilerTest.assertDriverMatchesContract(root, contracts, parserProgRel, progDriver, "power bad parser: " + src, src, 2);
     out := compilerTest.runDriver(progDriver, src);
-    test.check("power bad message: " + src, text.containsText(out.stderr, "group a negative power base"));
+    test.check("power bad message: " + src, out.stderr.contains("group a negative power base"));
 }
 compilerTest.disposeDriver(progDriver);
 

@@ -1,8 +1,6 @@
 /* Tuple shapes, fixed arrays, mutability/lists, storage updates, call routing, out hygiene, tuple destructuring, and scope-local counter tests migrated from compiler/tests/host.test.ts. */
 
 fs := import "core/file";
-integer := import "core/int";
-list := import "core/list";
 path := import "core/path";
 test := import "core/test";
 text := import "core/text";
@@ -26,7 +24,7 @@ assertRejectsAny := fn(label: String, cases: List<(bad: String, m1: String, m2: 
     loop cases as item {
         res := compilerTest.compileStdin(root, tsComp, item.bad, "");
         test.checkInt(label + " status (" + item.bad + ")", 2, res.status);
-        ok := text.containsText(res.stderr, item.m1) and (item.m2 == "" or text.containsText(res.stderr, item.m2));
+        ok := res.stderr.contains(item.m1) and (item.m2 == "" or res.stderr.contains(item.m2));
         test.check(label + " msg (" + item.bad + ") got: " + res.stderr, ok);
     }
 };
@@ -96,41 +94,43 @@ assertRejectsAny("fixed-arrays", arrayRej);
 /* mutability and lists support inferred mut/var mut, front/back ops, List<Unit>, tuple copies, and rejections */
 mutListSrc := text.joinTexts([
     "io := import \"core/io\";",
-    "list := import \"core/list\";",
     "values: mut List<Int> = [1, 2];",
-    "push_front(mut values, 0);",
-    "list.pushBack(mut values, 3);",
-    "front := pop_front(mut values);",
-    "back := list.popBack(mut values);",
-    "list.pushFront(mut values, 9);",
-    "front2 := list.popFront(mut values);",
+    "mut values.pushFront(0);",
+    "mut values.pushBack(3);",
+    "front := mut values.popFront();",
+    "back := mut values.popBack();",
+    "mut values.pushFront(9);",
+    "front2 := mut values.popFront();",
     "io.outputLine(front, back, front2, values);",
     "mut args := io.inputArgs();",
-    "push_back(mut args, \"z\");",
+    "mut args.pushBack(\"z\");",
     "var mut other := io.inputArgs();",
     "other = io.inputArgs();",
-    "push_front(mut other, \"a\");",
+    "mut other.pushFront(\"a\");",
     "io.outputLine(args, other);",
     "units: mut List<Unit> = [Unit];",
-    "push_back(mut units, Unit);",
-    "io.outputLine(pop_front(mut units), pop_back(mut units), units);",
+    "mut units.pushBack(Unit);",
+    "io.outputLine(mut units.popFront(), mut units.popBack(), units);",
     "tuples: mut List<(name: String, n: Int)> = [(name = \"a\", n = 1)];",
-    "item := pop_back(mut tuples);",
+    "item := mut tuples.popBack();",
     "io.outputLine(item.name, item.n, tuples);"
 ], "\n");
 compilerTest.assertCompileRunTs(root, tsComp, "mut-lists", mutListSrc, "0 3 9 [1, 2]\n[z] [a]\nUnit Unit []\na 1 []\n");
-emptyOps: List<String> = ["pop_front", "pop_back"];
+emptyOps: List<(call: String, msg: String)> = [
+    (call = "popFront", msg = "pop_front"),
+    (call = "popBack", msg = "pop_back")
+];
 loop emptyOps as op {
-    pSrc := "io := import \"core/io\";\nempty: mut List<Unit> = [];\nio.outputLine(" + op + "(mut empty));";
+    pSrc := "io := import \"core/io\";\nempty: mut List<Unit> = [];\nio.outputLine(mut empty." + op.call + "());";
     pRun := compilerTest.compileCheckRunTs(root, tsComp, pSrc, "");
-    test.checkInt("mut-lists empty " + op + " status", 1, pRun.status);
-    test.check("mut-lists empty " + op + " panic: " + pRun.stderr, text.containsText(pRun.stderr, "BoundPanic") and text.containsText(pRun.stderr, op + " on an empty list"));
+    test.checkInt("mut-lists empty " + op.call + " status", 1, pRun.status);
+    test.check("mut-lists empty " + op.call + " panic: " + pRun.stderr, pRun.stderr.contains("BoundPanic") and pRun.stderr.contains(op.msg + " on an empty list"));
 }
 mutListRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "mut x := 1;", m1 = "mut requires a List, Map, Set, or record value, got Int", m2 = ""),
     (bad = "var mut x: List<Int> = [];", m1 = "var mut cannot be combined with explicit type annotation", m2 = ""),
-    (bad = "values: mut List<Int> = [1]; pop_front(values);", m1 = "pop_front requires mut list argument", m2 = ""),
-    (bad = "values: mut List<Int> = [1]; push_front(values, 2);", m1 = "push_front requires mut list argument", m2 = "")
+    (bad = "values: mut List<Int> = [1]; List.popFront(values);", m1 = "popFront requires mut list argument", m2 = ""),
+    (bad = "values: mut List<Int> = [1]; List.pushFront(values, 2);", m1 = "pushFront requires mut list argument", m2 = "")
 ];
 assertRejectsAny("mut-lists", mutListRej);
 
@@ -210,8 +210,8 @@ callRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "f := fn(a: Int, b: Int): Int { a + b }; f(\"superseded\", a = \"bad\", 2);", m1 = "must be Int, got String", m2 = ""),
     (bad = "io := import \"core/io\"; io.inputInt(prompt = \"n: \");", m1 = "named arguments are not supported for host function io.inputInt", m2 = ""),
     (bad = "io := import \"core/io\"; text := \"hi\"; io.errorLine(=text);", m1 = "named arguments are not supported for host function io.errorLine", m2 = ""),
-    (bad = "text := import \"core/text\"; text.length(s = \"hi\");", m1 = "named arguments are not supported for host function text.length", m2 = ""),
-    (bad = "text := import \"core/text\"; text.trim(s = \"hi\");", m1 = "unknown parameter s in call to text.trim", m2 = ""),
+    (bad = "String.length(text = \"hi\");", m1 = "named arguments are not supported for host function String.length", m2 = ""),
+    (bad = "String.trim(s = \"hi\");", m1 = "unknown parameter s in call to String.trim", m2 = ""),
     (bad = "io := import \"core/io\"; var x := 0; io.outputLine(x = 1);", m1 = "expected )", m2 = "")
 ];
 assertRejectsAny("call-routing", callRej);
@@ -230,9 +230,9 @@ outSrc := text.joinTexts([
 ], "\n");
 outComp := compilerTest.compileStdin(root, tsComp, outSrc, "");
 test.checkInt("out-hygiene compile", 0, outComp.status);
-test.check("out-hygiene const lite_out", text.containsText(outComp.stdout, "const lite_out = \"ok\";"));
-test.check("out-hygiene let lite_out$2", text.containsText(outComp.stdout, "let lite_out$2 = "));
-test.check("out-hygiene return lite$out", text.containsText(outComp.stdout, "return lite$out.join(\"\");"));
+test.check("out-hygiene const lite_out", outComp.stdout.contains("const lite_out = \"ok\";"));
+test.check("out-hygiene let lite_out$2", outComp.stdout.contains("let lite_out$2 = "));
+test.check("out-hygiene return lite$out", outComp.stdout.contains("return lite$out.join(\"\");"));
 outRun := compilerTest.checkAndRunTs(root, outComp.stdout);
 test.checkInt("out-hygiene run status", 0, outRun.status);
 test.checkText("out-hygiene run stdout", "ok\nab\n7 9\n", outRun.stdout);
@@ -345,21 +345,21 @@ shiftedComp := compilerTest.compileStdin(root, tsComp, shiftedHeader + workBody,
 test.checkInt("counters base compile", 0, baseComp.status);
 test.checkInt("counters shifted compile", 0, shiftedComp.status);
 extractWork := fn(srcText: String): String {
-    sPos := text.indexOfText(srcText, "function liteFn_work(", 0);
-    ePos := text.indexOfText(srcText, "void liteFn_work;", sPos);
+    sPos := srcText.indexOf("function liteFn_work(", 0);
+    ePos := srcText.indexOf("void liteFn_work;", sPos);
     test.check("extractWork bounds", sPos >= 0 and ePos >= 0);
-    text.slice(srcText, sPos, ePos)
+    srcText.slice(sPos, ePos)
 };
 workTs := extractWork(baseComp.stdout);
 test.checkText("counters offset-invariant workTs", workTs, extractWork(shiftedComp.stdout));
-test.check("counters lite_x$2", text.containsText(workTs, "const lite_x$2 ="));
-test.check("counters lite_x$3", text.containsText(workTs, "const lite_x$3 ="));
-test.check("counters lite$tuple", text.containsText(workTs, "const lite$tuple ="));
-test.check("counters for lite$item", text.containsText(workTs, "for (const lite$item of"));
-test.check("counters lite$arg0", text.containsText(workTs, "const lite$arg0 ="));
+test.check("counters lite_x$2", workTs.contains("const lite_x$2 ="));
+test.check("counters lite_x$3", workTs.contains("const lite_x$3 ="));
+test.check("counters lite$tuple", workTs.contains("const lite$tuple ="));
+test.check("counters for lite$item", workTs.contains("for (const lite$item of"));
+test.check("counters lite$arg0", workTs.contains("const lite$arg0 ="));
 legacyTokens: List<String> = ["lt_local_", "lite$tuple_", "lite$item_", "lite$arg_", "lite$report"];
 loop legacyTokens as tok {
-    test.check("counters omits legacy " + tok, not text.containsText(baseComp.stdout, tok));
+    test.check("counters omits legacy " + tok, not baseComp.stdout.contains(tok));
 }
 workRun := compilerTest.checkAndRunTs(root, baseComp.stdout);
 test.checkInt("counters work run status", 0, workRun.status);
@@ -371,8 +371,8 @@ cShifted := compilerTest.compileStdin(root, cComp, "/* shift */\n/* shift */\n" 
 test.checkInt("counters c base compile", 0, cBase.status);
 test.checkInt("counters c shifted compile", 0, cShifted.status);
 test.checkText("counters c offset-invariant", cBase.stdout, cShifted.stdout);
-test.check("counters c lite_x", text.containsText(cBase.stdout, "lt_str lite_x ="));
-test.check("counters c lt_s2_x", text.containsText(cBase.stdout, "lt_str lt_s2_x ="));
+test.check("counters c lite_x", cBase.stdout.contains("lt_str lite_x ="));
+test.check("counters c lt_s2_x", cBase.stdout.contains("lt_str lt_s2_x ="));
 if ccProbe.available {
     cShadowRun := compilerTest.compileAndRunC(cBase.stdout, ccProbe.cc, "");
     test.checkInt("counters c shadow status", 0, cShadowRun.status);

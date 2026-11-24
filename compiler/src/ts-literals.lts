@@ -1,8 +1,6 @@
 /* TypeScript backend for the temporary Lite compiler. */
 
-integer := import "core/int";
 numeric := import "./numeric-literals.lts";
-textLib := import "core/text";
 tb := import "util/text-builder";
 
 /** Maps a restricted Lite scalar kind to its TypeScript type. */
@@ -23,13 +21,13 @@ pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
 
 /** Escapes a String as a readable TypeScript double-quoted literal. */
 pub textLiteralCode := fn(value: String): String {
-    size := textLib.length(value);
+    size := value.length();
     out: mut tb.TextBuilder;
     tb.append(mut out, "\"");
     var runStart := 0;
     var position := 0;
     loop position < size {
-        ch := textLib.at(value, position);
+        ch := value.at(position);
         var esc := "";
         if ch == "\\" { esc = "\\\\"; }
         else if ch == "\"" { esc = "\\\""; }
@@ -37,14 +35,14 @@ pub textLiteralCode := fn(value: String): String {
         else if ch == "\r" { esc = "\\r"; }
         else if ch == "\t" { esc = "\\t"; }
         if esc =!= "" {
-            if position > runStart { tb.append(mut out, textLib.slice(value, runStart, position)); }
+            if position > runStart { tb.append(mut out, value.slice(runStart, position)); }
             tb.append(mut out, esc);
             runStart = position + 1;
         }
         position += 1;
     }
     if runStart == 0 { return "\"" + value + "\""; }
-    if runStart < size { tb.append(mut out, textLib.slice(value, runStart, size)); }
+    if runStart < size { tb.append(mut out, value.slice(runStart, size)); }
     tb.append(mut out, "\"");
     tb.build(out)
 }
@@ -74,8 +72,8 @@ pub boolLiteralCode := fn(value: Bool): String {
 
 /** Emits one ordinary list value copy as a fresh TypeScript array so later mutation cannot reach the source. */
 pub listCopyCode := fn(code: String): String {
-    if textLib.startsWithAt(code, 0, "[...(") and textLib.endsWith(code, ")]") and
-    textLib.indexOfText(code, ")]", 0) == textLib.length(code) - 2 {
+    if code.startsWithAt(0, "[...(") and code.endsWith(")]") and
+    code.indexOf(")]", 0) == code.length() - 2 {
         return code;
     }
     "[...(" + code + ")]"
@@ -142,17 +140,17 @@ floatOpTag := fn(op: String): String {
 
 /** Emits checked binary64 arithmetic; target calls evaluate operands once in source order. */
 pub floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
-    "lite$floatOp(" + left + ", " + right + ", " + floatOpTag(op) + ", " + integer.intText(position) + ")"
+    "lite$floatOp(" + left + ", " + right + ", " + floatOpTag(op) + ", " + position.toText() + ")"
 }
 
 /** Emits checked binary32 arithmetic; target calls evaluate operands once in source order. */
 pub float32BinaryCode := fn(op: String, left: String, right: String, position: Int): String {
-    "lite$float32Op(" + left + ", " + right + ", " + floatOpTag(op) + ", " + integer.intText(position) + ")"
+    "lite$float32Op(" + left + ", " + right + ", " + floatOpTag(op) + ", " + position.toText() + ")"
 }
 
 /** Emits the selected Float-default, positive-exponent power checkpoint. */
 pub floatPowerCode := fn(left: String, right: String, position: Int): String {
-    "lite$floatPower(" + left + ", " + right + ", " + integer.intText(position) + ")"
+    "lite$floatPower(" + left + ", " + right + ", " + position.toText() + ")"
 }
 
 /** Emits a BigInt floor-division expression without evaluating operands more than once in source semantics. */
@@ -167,47 +165,48 @@ pub floorModCode := fn(left: String, right: String): String {
 
 /** Emits a checked truncating BigInt division call. */
 pub intDivideCode := fn(left: String, right: String, position: Int): String {
-    "lite$divideInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
+    "lite$divideInt(" + left + ", " + right + ", " + position.toText() + ")"
 }
 
 /** Emits a checked BigInt remainder call. */
 pub intRemainderCode := fn(left: String, right: String, position: Int): String {
-    "lite$remainderInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
+    "lite$remainderInt(" + left + ", " + right + ", " + position.toText() + ")"
 }
 
 /** Emits a checked BigInt floor-division call. */
 pub intFloorDivideCode := fn(left: String, right: String, position: Int): String {
-    "lite$floorDivideInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
+    "lite$floorDivideInt(" + left + ", " + right + ", " + position.toText() + ")"
 }
 
 /** Emits a checked BigInt floor-modulo call. */
 pub intFloorModuloCode := fn(left: String, right: String, position: Int): String {
-    "lite$floorModuloInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
+    "lite$floorModuloInt(" + left + ", " + right + ", " + position.toText() + ")"
 }
 
 /** Emits checked Int64 addition, evaluating both operands once in source order. */
 pub intAddCode := fn(left: String, right: String, position: Int): String {
-    "lite$addInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
+    "lite$addInt(" + left + ", " + right + ", " + position.toText() + ")"
 }
 
 /** Emits checked Int64 subtraction, evaluating both operands once in source order. */
 pub intSubtractCode := fn(left: String, right: String, position: Int): String {
-    "lite$subtractInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
+    "lite$subtractInt(" + left + ", " + right + ", " + position.toText() + ")"
 }
 
 /** Emits checked Int64 multiplication, evaluating both operands once in source order. */
 pub intMultiplyCode := fn(left: String, right: String, position: Int): String {
-    "lite$multiplyInt(" + left + ", " + right + ", " + integer.intText(position) + ")"
+    "lite$multiplyInt(" + left + ", " + right + ", " + position.toText() + ")"
 }
 
 /** Emits checked Int64 negation, evaluating the operand once. */
 pub intNegateCode := fn(value: String, position: Int): String {
-    "lite$negateInt(" + value + ", " + integer.intText(position) + ")"
+    "lite$negateInt(" + value + ", " + position.toText() + ")"
 }
 
 /** Emits a checked signed range check for narrow integer arithmetic results. */
 pub checkedNarrowIntCode := fn(kind: String, value: String, position: Int): String {
-    "lite$checkedNarrowInt(" + value + ", " + integer.intText(numeric.narrowIntBits(kind)) + "n, " + textLiteralCode(kind) + ", " + integer.intText(position) + ")"
+    bits: Int = numeric.narrowIntBits(kind);
+    "lite$checkedNarrowInt(" + value + ", " + bits.toText() + "n, " + textLiteralCode(kind) + ", " + position.toText() + ")"
 }
 
 /** Emits a chain with one evaluation per operand and lazy later operands in a private expression scope. */
@@ -215,10 +214,10 @@ pub comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operator
     var result := "((): boolean => { ";
     var index := 0;
     loop index <= count {
-        name := "lite$compare" + integer.intText(index);
+        name := "lite$compare" + index.toText();
         result += "const " + name + ": " + tsScalarType(kinds[index]) + " = " + codes[index] + "; ";
         if index > 0 {
-            pair := comparisonPairCode(operators[index - 1], kinds[index - 1], kinds[index], "lite$compare" + integer.intText(index - 1), name);
+            pair := comparisonPairCode(operators[index - 1], kinds[index - 1], kinds[index], "lite$compare" + (index - 1).toText(), name);
             if index < count { result += "if (!(" + pair + ")) return false; "; }
             else { result += "return " + pair + "; "; }
         }

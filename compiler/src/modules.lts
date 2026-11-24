@@ -1,8 +1,4 @@
 diagLib := import "core/diag";
-integer := import "core/int";
-listLib := import "core/list";
-setLib := import "core/set";
-textLib := import "core/text";
 collections := import "util/collections";
 tb := import "util/text-builder";
 frontend := import "./frontend.lts";
@@ -36,9 +32,9 @@ listContainsInt := fn(values: List<Int>, needle: Int): Bool {
 
 /** Returns ASCII code point for printable ASCII and standard whitespace, or -1 for non-ASCII. */
 asciiCode := fn(ch: String): Int {
-    if textLib.length(ch) =!= 1 { return -1; }
+    if ch.length() =!= 1 { return -1; }
     printable := " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-    found := textLib.indexOfText(printable, ch, 0);
+    found := printable.indexOf(ch, 0);
     if found >= 0 { return found + 32; }
     if ch == "\t" { return 9; }
     if ch == "\n" { return 10; }
@@ -48,13 +44,13 @@ asciiCode := fn(ch: String): Int {
 
 /** Strict weak lexicographic comparison of two strings via ASCII codes (-1, 0, or 1). */
 compareText := fn(left: String, right: String): Int {
-    leftLen := textLib.length(left);
-    rightLen := textLib.length(right);
+    leftLen := left.length();
+    rightLen := right.length();
     limit := if leftLen < rightLen { leftLen } else { rightLen };
     var index := 0;
     loop index < limit {
-        leftCh := textLib.at(left, index);
-        rightCh := textLib.at(right, index);
+        leftCh := left.at(index);
+        rightCh := right.at(index);
         if leftCh =!= rightCh {
             leftCode := asciiCode(leftCh);
             rightCode := asciiCode(rightCh);
@@ -68,12 +64,12 @@ compareText := fn(left: String, right: String): Int {
 
 /** Converts Windows backslashes to forward slashes so path slugs are platform-uniform. */
 normalizeSlashes := fn(path: String): String {
-    if textLib.indexOfText(path, "\\", 0) < 0 { return path; }
+    if path.indexOf("\\", 0) < 0 { return path; }
     result: mut tb.TextBuilder;
     var index := 0;
-    size := textLib.length(path);
+    size := path.length();
     loop index < size {
-        ch := textLib.at(path, index);
+        ch := path.at(index);
         tb.append(mut result, if ch == "\\" { "/" } else { ch });
         index = index + 1;
     }
@@ -82,20 +78,20 @@ normalizeSlashes := fn(path: String): String {
 
 /** Drops one trailing `.lts` suffix when a non-empty stem precedes it. */
 stripLtsExtension := fn(name: String): String {
-    size := textLib.length(name);
-    if size > 4 and textLib.startsWithAt(name, size - 4, ".lts") {
-        return textLib.slice(name, 0, size - 4);
+    size := name.length();
+    if size > 4 and name.startsWithAt(size - 4, ".lts") {
+        return name.slice(0, size - 4);
     }
     name
 }
 
 /** Returns the directory component of `path` without trailing slash (or `"/"`, or `""`). */
 dirnameOfPath := fn(path: String): String {
-    var index := textLib.length(path) - 1;
+    var index := path.length() - 1;
     loop index >= 0 {
-        if textLib.at(path, index) == "/" {
+        if path.at(index) == "/" {
             if index == 0 { return "/"; }
-            return textLib.slice(path, 0, index);
+            return path.slice(0, index);
         }
         index = index - 1;
     }
@@ -104,11 +100,11 @@ dirnameOfPath := fn(path: String): String {
 
 /** Returns the final path segment of `path`. */
 basenameOfPath := fn(path: String): String {
-    size := textLib.length(path);
+    size := path.length();
     var index := size - 1;
     loop index >= 0 {
-        if textLib.at(path, index) == "/" {
-            return textLib.slice(path, index + 1, size);
+        if path.at(index) == "/" {
+            return path.slice(index + 1, size);
         }
         index = index - 1;
     }
@@ -119,27 +115,27 @@ basenameOfPath := fn(path: String): String {
 relativeFromDir := fn(rootDir: String, path: String): String {
     normPath := normalizeSlashes(path);
     if rootDir == "" {
-        if normPath == "" or textLib.startsWithAt(normPath, 0, "/") { return ""; }
+        if normPath == "" or normPath.startsWithAt(0, "/") { return ""; }
         return normPath;
     }
     if rootDir == "/" {
-        if textLib.startsWithAt(normPath, 0, "/") {
-            return textLib.slice(normPath, 1, textLib.length(normPath));
+        if normPath.startsWithAt(0, "/") {
+            return normPath.slice(1, normPath.length());
         }
         return "";
     }
-    rootIsAbs := textLib.startsWithAt(rootDir, 0, "/");
-    pathIsAbs := textLib.startsWithAt(normPath, 0, "/");
+    rootIsAbs := rootDir.startsWithAt(0, "/");
+    pathIsAbs := normPath.startsWithAt(0, "/");
     if rootIsAbs =!= pathIsAbs { return ""; }
     rootSlash := rootDir + "/";
-    rootLen := textLib.length(rootSlash);
-    pathLen := textLib.length(normPath);
+    rootLen := rootSlash.length();
+    pathLen := normPath.length();
     limit := if rootLen < pathLen { rootLen } else { pathLen };
     var index := 0;
     var commonSlash := -1;
     loop index < limit {
-        ch := textLib.at(rootSlash, index);
-        if ch =!= textLib.at(normPath, index) { break; }
+        ch := rootSlash.at(index);
+        if ch =!= normPath.at(index) { break; }
         if ch == "/" { commonSlash = index; }
         index = index + 1;
     }
@@ -147,16 +143,16 @@ relativeFromDir := fn(rootDir: String, path: String): String {
     var prefix := "";
     var scan := commonSlash + 1;
     loop scan < rootLen {
-        if textLib.at(rootSlash, scan) == "/" { prefix = prefix + "../"; }
+        if rootSlash.at(scan) == "/" { prefix = prefix + "../"; }
         scan = scan + 1;
     }
-    prefix + textLib.slice(normPath, commonSlash + 1, pathLen)
+    prefix + normPath.slice(commonSlash + 1, pathLen)
 }
 
 /** Derives a repo-location-independent logical name for one module. */
 logicalModuleName := fn(rootDir: String, path: String, display: String): String {
     normDisplay := normalizeSlashes(display);
-    if textLib.startsWithAt(normDisplay, 0, "lib/") {
+    if normDisplay.startsWithAt(0, "lib/") {
         cleanedStd := stripLtsExtension(normDisplay);
         if cleanedStd =!= "" { return cleanedStd; }
     }
@@ -176,10 +172,10 @@ logicalModuleName := fn(rootDir: String, path: String, display: String): String 
 encodeModuleSlug := fn(target: String, logical: String): String {
     result: mut tb.TextBuilder;
     var index := 0;
-    size := textLib.length(logical);
+    size := logical.length();
     loop index < size {
-        ch := textLib.at(logical, index);
-        if textLib.isAsciiLetter(ch) or textLib.isDigit(ch) {
+        ch := logical.at(index);
+        if ch.isAsciiLetter() or ch.isDigit() {
             tb.append(mut result, ch);
         } else if ch == "/" {
             tb.append(mut result, if target == frontend.TARGET_TS { "$" } else { "_s_" });
@@ -191,7 +187,7 @@ encodeModuleSlug := fn(target: String, logical: String): String {
             tb.append(mut result, "_p_");
         } else {
             code := asciiCode(ch);
-            tb.append(mut result, if code >= 0 { "_a" + integer.intText(code) + "_" } else { "_z_" });
+            tb.append(mut result, if code >= 0 { "_a" + code.toText() + "_" } else { "_z_" });
         }
         index = index + 1;
     }
@@ -213,8 +209,8 @@ uniqueModuleKey := fn(graph: frontend.Items, target: String, baseSlug: String): 
     if not graphUsesModuleKey(graph, baseSlug) { return baseSlug; }
     var suffix := 2;
     loop true {
-        candidate := if target == frontend.TARGET_TS { baseSlug + "$" + integer.intText(suffix) }
-        else { baseSlug + "_k" + integer.intText(suffix) + "_" };
+        candidate := if target == frontend.TARGET_TS { baseSlug + "$" + suffix.toText() }
+        else { baseSlug + "_k" + suffix.toText() + "_" };
         if not graphUsesModuleKey(graph, candidate) { return candidate; }
         suffix = suffix + 1;
     }
@@ -261,7 +257,7 @@ modulePublicDeclarations := fn(graph: frontend.Items, path: String): frontend.It
         if item.kind == frontend.ITEM_KIND_MODULE_START { inside = item.name == path; }
         else if item.kind == frontend.ITEM_KIND_MODULE_END and inside { break; }
         else if inside and (item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE) {
-            listLib.pushBack(mut result, item);
+            mut result.pushBack(item);
         }
     }
     result
@@ -274,29 +270,29 @@ appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, pr
     loop existing as previous {
         if previous.kind == frontend.ITEM_KIND_MODULE_ALIAS or
         previous.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or previous.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
-            setLib.add(mut seenValueOrAlias, previous.name);
+            mut seenValueOrAlias.add(previous.name);
         } else if previous.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
-            setLib.add(mut seenTypes, previous.name);
+            mut seenTypes.add(previous.name);
         }
     }
     loop incoming as item {
         if item.kind == frontend.ITEM_KIND_MODULE_ALIAS {
-            if setLib.has(seenValueOrAlias, item.name) {
+            if seenValueOrAlias.has(item.name) {
                 diagLib.fail(prefix, "duplicate module alias " + item.name);
             }
-            setLib.add(mut seenValueOrAlias, item.name);
+            (mut seenValueOrAlias).add(item.name);
         } else if item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
-            if setLib.has(seenValueOrAlias, item.name) {
+            if seenValueOrAlias.has(item.name) {
                 diagLib.fail(prefix, "duplicate imported public name " + item.name);
             }
-            setLib.add(mut seenValueOrAlias, item.name);
+            (mut seenValueOrAlias).add(item.name);
         } else if item.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
-            if setLib.has(seenTypes, item.name) {
+            if seenTypes.has(item.name) {
                 diagLib.fail(prefix, "duplicate imported public type " + item.name);
             }
-            setLib.add(mut seenTypes, item.name);
+            (mut seenTypes).add(item.name);
         }
-        listLib.pushBack(mut result, item);
+        (mut result).pushBack(item);
     }
     result
 }
@@ -306,7 +302,7 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
     var result: mut frontend.Items = existing;
     seenOps: mut Set<String>;
     loop existing as prev {
-        if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP { setLib.add(mut seenOps, prev.name); }
+        if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP { mut seenOps.add(prev.name); }
     }
     var insideSkip := false;
     loop graph as item {
@@ -314,9 +310,9 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
             insideSkip = skipModPath =!= "" and item.name == skipModPath;
         } else if item.kind == frontend.ITEM_KIND_MODULE_END {
             insideSkip = false;
-        } else if not insideSkip and item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and not setLib.has(seenOps, item.name) {
-            setLib.add(mut seenOps, item.name);
-            listLib.pushBack(mut result, item);
+        } else if not insideSkip and item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and not seenOps.has(item.name) {
+            mut seenOps.add(item.name);
+            mut result.pushBack(item);
         }
     }
     result
@@ -327,7 +323,7 @@ moduleAliasExports := fn(graph: frontend.Items, path: String, alias: String): fr
     result: mut frontend.Items = [(kind = frontend.ITEM_KIND_MODULE_ALIAS, name = alias, runtime = moduleKeyForPath(graph, path), code = "",
     intValue = 0, textValue = path)];
     loop modulePublicDeclarations(graph, path) as item {
-        listLib.pushBack(mut result, (kind = item.kind, name = alias + "." + item.name, runtime = item.runtime,
+        mut result.pushBack((kind = item.kind, name = alias + "." + item.name, runtime = item.runtime,
         code = item.code, intValue = item.intValue, textValue = item.textValue));
     }
     result
@@ -341,11 +337,11 @@ coreFnPrefix := fn(target: String, moduleKey: String): String {
 
 /** True when `token` names a compiled function owned directly by `moduleKey` (not a nested submodule). */
 tokenBelongsToModuleFn := fn(target: String, moduleKey: String, prefix: String, token: String): Bool {
-    tokLen := textLib.length(token);
-    if tokLen == 0 or textLib.at(token, tokLen - 1) =!= "(" { return false; }
-    if not textLib.startsWithAt(token, 0, prefix) { return false; }
+    tokLen := token.length();
+    if tokLen == 0 or token.at(tokLen - 1) =!= "(" { return false; }
+    if not token.startsWithAt(0, prefix) { return false; }
     sep := if target == frontend.TARGET_TS { "$" } else { "__" };
-    textLib.indexOfText(token, sep, textLib.length(prefix)) < 0
+    token.indexOf(sep, prefix.length()) < 0
 }
 
 /** True when `reachable` references at least one function owned by `moduleKey` not yet in `compiledFns`. */
@@ -354,13 +350,13 @@ coreModuleNeedsReparse := fn(target: String, moduleKey: String, reachable: Strin
     needle := "|" + prefix;
     var pos := 0;
     loop true {
-        hit := textLib.indexOfText(reachable, needle, pos);
+        hit := reachable.indexOf(needle, pos);
         if hit < 0 { return false; }
         tokStart := hit + 1;
-        nextBar := textLib.indexOfText(reachable, "|", tokStart);
-        tokEnd := if nextBar >= 0 { nextBar } else { textLib.length(reachable) };
-        if tokEnd > tokStart and textLib.at(reachable, tokEnd - 1) == "(" {
-            token := textLib.slice(reachable, tokStart, tokEnd);
+        nextBar := reachable.indexOf("|", tokStart);
+        tokEnd := if nextBar >= 0 { nextBar } else { reachable.length() };
+        if tokEnd > tokStart and reachable.at(tokEnd - 1) == "(" {
+            token := reachable.slice(tokStart, tokEnd);
             if tokenBelongsToModuleFn(target, moduleKey, prefix, token) and
             not frontend.tokenBucketHas(compiledFns, token) {
                 return true;
@@ -383,7 +379,7 @@ addCompiledFnsSet := fn(items: frontend.Items, compiled: mut frontend.TokenBucke
 /** Adds identifier/call tokens referenced by one emitted item into `tokens` in place. */
 scanItemTokens := fn(item: frontend.Item, tokens: mut frontend.TokenBuckets): Unit {
     frontend.codeReachableTokensSet(item.code, mut tokens);
-    if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
+    if item.kind.startsWithAt(0, "Assign") and item.runtime =!= "" {
         frontend.tokenBucketAdd(mut tokens, item.runtime);
     }
 }
@@ -447,15 +443,15 @@ scanned: mut frontend.TokenBuckets): Unit {
 /** Collects `ModuleStart`..`ModuleEnd` slices for modules whose path is in `metaPaths`. */
 collectCoreGraphSlice := fn(graph: frontend.Items, metaPaths: List<String>): frontend.Items {
     metaSet: mut Set<String>;
-    loop metaPaths as mp { setLib.add(mut metaSet, mp); }
+    loop metaPaths as mp { mut metaSet.add(mp); }
     slice: mut frontend.Items = [];
     var keep := false;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_START {
-            keep = setLib.has(metaSet, item.name);
+            keep = metaSet.has(item.name);
         }
         if keep {
-            listLib.pushBack(mut slice, item);
+            mut slice.pushBack(item);
             if item.kind == frontend.ITEM_KIND_MODULE_END { keep = false; }
         }
     }
@@ -465,13 +461,13 @@ collectCoreGraphSlice := fn(graph: frontend.Items, metaPaths: List<String>): fro
 /** Collects non-core top-level `FunctionStart` tokens present in `graph` that are not yet in `scanned`. */
 collectUnscannedNonCoreFns := fn(graph: frontend.Items, metaPaths: List<String>, scanned: frontend.TokenBuckets): List<String> {
     metaSet: mut Set<String>;
-    loop metaPaths as mp { setLib.add(mut metaSet, mp); }
+    loop metaPaths as mp { mut metaSet.add(mp); }
     result: mut List<String> = [];
     var inCore := false;
     var fnDepth := 0;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_START {
-            inCore = setLib.has(metaSet, item.name);
+            inCore = metaSet.has(item.name);
             fnDepth = 0;
         } else if item.kind == frontend.ITEM_KIND_MODULE_END {
             inCore = false;
@@ -481,7 +477,7 @@ collectUnscannedNonCoreFns := fn(graph: frontend.Items, metaPaths: List<String>,
                 if fnDepth == 0 and item.runtime =!= "" {
                     tok := item.runtime + "(";
                     if not frontend.tokenBucketHas(scanned, tok) {
-                        listLib.pushBack(mut result, tok);
+                        mut result.pushBack(tok);
                     }
                 }
                 fnDepth = fnDepth + 1;
@@ -509,16 +505,16 @@ replaceModuleItems := fn(graph: frontend.Items, path: String, replacement: front
     var skipping := false;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_START and item.name == path {
-            listLib.pushBack(mut updated, item);
-            loop replacement as rep { listLib.pushBack(mut updated, rep); }
+            mut updated.pushBack(item);
+            loop replacement as rep { mut updated.pushBack(rep); }
             skipping = true;
         } else if skipping {
             if item.kind == frontend.ITEM_KIND_MODULE_END {
-                listLib.pushBack(mut updated, item);
+                mut updated.pushBack(item);
                 skipping = false;
             }
         } else {
-            listLib.pushBack(mut updated, item);
+            mut updated.pushBack(item);
         }
     }
     updated
@@ -529,7 +525,7 @@ stripCoreMeta := fn(graph: frontend.Items): frontend.Items {
     cleaned: mut frontend.Items = [];
     loop graph as item {
         if item.kind =!= frontend.ITEM_KIND_CORE_MODULE_META and item.kind =!= frontend.ITEM_KIND_CORE_MODULE_SOURCE and item.kind =!= frontend.ITEM_KIND_CORE_MODULE_IMPORT {
-            listLib.pushBack(mut cleaned, item);
+            mut cleaned.pushBack(item);
         }
     }
     cleaned
@@ -551,7 +547,7 @@ coreModuleExports := fn(graph: frontend.Items, modPath: String): frontend.Items 
 
 /** Splices compiled generic monomorphization items (grouped by `ITEM_KIND_MONO_OWNER` markers) right before their owning module's `ModuleEnd`. */
 spliceGenericItems := fn(graph: frontend.Items, monoItems: frontend.Items): frontend.Items {
-    if listLib.length(monoItems) == 0 { return graph; }
+    if monoItems.length() == 0 { return graph; }
     result: mut frontend.Items = [];
     var currentModKey := "";
     var insideMod := false;
@@ -559,20 +555,20 @@ spliceGenericItems := fn(graph: frontend.Items, monoItems: frontend.Items): fron
         if item.kind == frontend.ITEM_KIND_MODULE_START {
             currentModKey = item.runtime;
             insideMod = true;
-            listLib.pushBack(mut result, item);
+            mut result.pushBack(item);
         } else if item.kind == frontend.ITEM_KIND_MODULE_END and insideMod {
             var ownerMatches := false;
             loop monoItems as mi {
                 if mi.kind == frontend.ITEM_KIND_MONO_OWNER {
                     ownerMatches = mi.runtime == currentModKey;
                 } else if ownerMatches {
-                    listLib.pushBack(mut result, mi);
+                    mut result.pushBack(mi);
                 }
             }
             insideMod = false;
-            listLib.pushBack(mut result, item);
+            mut result.pushBack(item);
         } else {
-            listLib.pushBack(mut result, item);
+            mut result.pushBack(item);
         }
     }
     result
@@ -583,7 +579,7 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
     var graph := initialGraph;
     allMonoItems: mut frontend.Items = [];
     initMono := frontend.drainGenericInstances(target);
-    loop initMono as mi { listLib.pushBack(mut allMonoItems, mi); }
+    loop initMono as mi { mut allMonoItems.pushBack(mi); }
 
     metaPaths: mut List<String> = [];
     metaKeys: mut List<String> = [];
@@ -593,13 +589,13 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
     var metaCount := 0;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_CORE_MODULE_META {
-            listLib.pushBack(mut metaPaths, item.name);
-            listLib.pushBack(mut metaKeys, item.runtime);
-            listLib.pushBack(mut metaDisplays, item.code);
-            listLib.pushBack(mut metaIdentities, item.textValue);
+            mut metaPaths.pushBack(item.name);
+            mut metaKeys.pushBack(item.runtime);
+            mut metaDisplays.pushBack(item.code);
+            mut metaIdentities.pushBack(item.textValue);
             metaCount = metaCount + 1;
         } else if item.kind == frontend.ITEM_KIND_CORE_MODULE_SOURCE {
-            listLib.pushBack(mut metaSources, item.code);
+            mut metaSources.pushBack(item.code);
         }
     }
     if metaCount == 0 { return spliceGenericItems(graph, allMonoItems); }
@@ -625,7 +621,7 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
             modKey := metaKeys[index];
             if coreModuleNeedsReparse(target, modKey, reachable, compiledFns) {
                 importedExports := appendTransitiveTypeOps(graph, coreModuleExports(graph, modPath), modPath);
-                beforeCount := setLib.size(compiledFns);
+                beforeCount := compiledFns.size();
                 reparsed := frontend.parseProgramWithModuleSelectiveSpecs(=target, source = metaSources[index],
                 prefix = metaDisplays[index], exports = importedExports, moduleKey = modKey,
                 moduleIdentity = metaIdentities[index], neededFns = reachable,
@@ -634,15 +630,15 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
                 coreGraph = replaceModuleItems(coreGraph, modPath, reparsed);
                 addCompiledFnsSet(reparsed, mut compiledFns);
                 scanTopLevelTokens(reparsed, mut reachableTokens);
-                if setLib.size(compiledFns) > beforeCount { anyReparsed = true; }
+                if compiledFns.size() > beforeCount { anyReparsed = true; }
             }
             index = index + 1;
         }
         moreMono := frontend.drainGenericInstances(target);
-        if listLib.length(moreMono) > 0 {
+        if moreMono.length() > 0 {
             addCompiledFnsSet(moreMono, mut compiledFns);
             loop moreMono as mi {
-                listLib.pushBack(mut allMonoItems, mi);
+                mut allMonoItems.pushBack(mi);
                 if mi.kind =!= frontend.ITEM_KIND_MONO_OWNER { scanItemTokens(mi, mut reachableTokens); }
             }
             anyReparsed = true;
@@ -693,7 +689,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     logical := logicalModuleName(rootDir, path, display);
     moduleKey := if isRoot { "" } else { uniqueModuleKey(initialGraph, target, encodeModuleSlug(target, logical)) };
     var graph: mut frontend.Items = initialGraph;
-    listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_VISITED, name = path, runtime = rootDir, code = logical,
+    mut graph.pushBack((kind = frontend.ITEM_KIND_MODULE_VISITED, name = path, runtime = rootDir, code = logical,
     intValue = if isRoot { 1 } else { 0 }, textValue = moduleKey));
 
     if isRoot and projectRoot =!= "" {
@@ -721,21 +717,21 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         loaded := hostFs.readImportedSource(importerPath = path, importerDisplay = display, spec = clause.textValue,
         =projectRoot, =cwd);
         if not importEdgeRecorded(graph, path, clause.textValue, loaded.path) {
-            listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_IMPORT_EDGE, name = path, runtime = loaded.path,
+            mut graph.pushBack((kind = frontend.ITEM_KIND_IMPORT_EDGE, name = path, runtime = loaded.path,
             code = clause.textValue, intValue = 0, textValue = ""));
         }
         if not moduleLoadRecorded(graph, loaded.path) {
-            listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_LOADED, name = loaded.path, runtime = "",
+            mut graph.pushBack((kind = frontend.ITEM_KIND_MODULE_LOADED, name = loaded.path, runtime = "",
             code = "", intValue = 0, textValue = ""));
         }
-        listLib.pushBack(mut clausePaths, loaded.path);
-        if not setLib.has(depPathSet, loaded.path) {
-            setLib.add(mut depPathSet, loaded.path);
-            listLib.pushBack(mut depPaths, loaded.path);
-            listLib.pushBack(mut depDisplays, loaded.display);
-            listLib.pushBack(mut depIdentities, loaded.identity);
-            listLib.pushBack(mut depTexts, loaded.text);
-            listLib.pushBack(mut depLogicals, logicalModuleName(rootDir, loaded.path, loaded.display));
+        (mut clausePaths).pushBack(loaded.path);
+        if not depPathSet.has(loaded.path) {
+            mut depPathSet.add(loaded.path);
+            mut depPaths.pushBack(loaded.path);
+            mut depDisplays.pushBack(loaded.display);
+            mut depIdentities.pushBack(loaded.identity);
+            mut depTexts.pushBack(loaded.text);
+            mut depLogicals.pushBack(logicalModuleName(rootDir, loaded.path, loaded.display));
             depCount = depCount + 1;
         }
     }
@@ -785,24 +781,24 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         frontend.parseProgramWithModule(=target, =source, prefix = display, exports = importedExports,
         =moduleKey, moduleIdentity = identity)
     };
-    listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_START, name = path, runtime = moduleKey, code = logical,
+    mut graph.pushBack((kind = frontend.ITEM_KIND_MODULE_START, name = path, runtime = moduleKey, code = logical,
     intValue = level, textValue = display));
-    loop localItems as item { listLib.pushBack(mut graph, item); }
-    listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_END, name = path, runtime = moduleKey, code = logical,
+    loop localItems as item { mut graph.pushBack(item); }
+    (mut graph).pushBack((kind = frontend.ITEM_KIND_MODULE_END, name = path, runtime = moduleKey, code = logical,
     intValue = level, textValue = ""));
     if isCoreMod {
-        listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_CORE_MODULE_META, name = path, runtime = moduleKey, code = display,
+        mut graph.pushBack((kind = frontend.ITEM_KIND_CORE_MODULE_META, name = path, runtime = moduleKey, code = display,
         intValue = 0, textValue = identity));
-        listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_CORE_MODULE_SOURCE, name = path, runtime = "", code = source,
+        mut graph.pushBack((kind = frontend.ITEM_KIND_CORE_MODULE_SOURCE, name = path, runtime = "", code = source,
         intValue = 0, textValue = ""));
         var importIndex := 0;
         loop clauses as clause {
-            listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_CORE_MODULE_IMPORT, name = path, runtime = clause.name,
+            mut graph.pushBack((kind = frontend.ITEM_KIND_CORE_MODULE_IMPORT, name = path, runtime = clause.name,
             code = clausePaths[importIndex], intValue = 0, textValue = ""));
             importIndex = importIndex + 1;
         }
     }
-    listLib.pushBack(mut graph, (kind = frontend.ITEM_KIND_MODULE_PROCESSED, name = path, runtime = moduleKey, code = logical,
+    (mut graph).pushBack((kind = frontend.ITEM_KIND_MODULE_PROCESSED, name = path, runtime = moduleKey, code = logical,
     intValue = level, textValue = ""));
     if isRoot { return resolveCoreModules(target, graph, builtinSpecs); }
     graph
@@ -818,10 +814,10 @@ pub moduleItems := fn(graph: frontend.Items): frontend.Items {
     var index := 0;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_START {
-            listLib.pushBack(mut startIndices, index + 1);
-            listLib.pushBack(mut startLevels, item.intValue);
-            listLib.pushBack(mut startLogicals, item.code);
-            listLib.pushBack(mut startPaths, item.name);
+            mut startIndices.pushBack(index + 1);
+            mut startLevels.pushBack(item.intValue);
+            mut startLogicals.pushBack(item.code);
+            mut startPaths.pushBack(item.name);
             moduleCount = moduleCount + 1;
         }
         index = index + 1;
@@ -840,7 +836,7 @@ pub moduleItems := fn(graph: frontend.Items): frontend.Items {
         loop true {
             entry := graph[itemIndex];
             if entry.kind == frontend.ITEM_KIND_MODULE_END { break; }
-            listLib.pushBack(mut result, entry);
+            (mut result).pushBack(entry);
             itemIndex = itemIndex + 1;
         }
     }

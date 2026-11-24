@@ -17,17 +17,16 @@ ccInfo := compilerTest.probeCc();
 
 src :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
 "text := import \"core/text\";\n" +
 "ut := import \"util/text\";\n" +
 "\n" +
-"io.outputLine(text.startsWith(\"hello world\", \"hello\"), text.startsWith(\"hello\", \"world\"), text.startsWith(\"\", \"\"));\n" +
+"io.outputLine(\"hello world\".startsWith(\"hello\"), \"hello\".startsWith(\"world\"), \"\".startsWith(\"\"));\n" +
 "parts := ut.split(\"a,b,,c\", \",\");\n" +
-"io.outputLine(list.length(parts), text.joinTexts(parts, \"|\"));\n" +
+"io.outputLine(parts.length(), text.joinTexts(parts, \"|\"));\n" +
 "chars := ut.split(\"abc\", \"\");\n" +
-"io.outputLine(list.length(chars), text.joinTexts(chars, \"-\"));\n" +
+"io.outputLine(chars.length(), text.joinTexts(chars, \"-\"));\n" +
 "lines := ut.splitLines(\"one\\r\\ntwo\\nthree\\n\");\n" +
-"io.outputLine(list.length(lines), text.joinTexts(lines, \"/\"));\n" +
+"io.outputLine(lines.length(), text.joinTexts(lines, \"/\"));\n" +
 "io.outputLine(ut.replaceAll(\"foo bar foo baz foo\", \"foo\", \"QUX\"));\n" +
 "io.outputLine(ut.replaceAll(\"no match\", \"xyz\", \"123\"));\n";
 

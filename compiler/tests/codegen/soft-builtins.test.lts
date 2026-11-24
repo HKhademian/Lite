@@ -1,7 +1,6 @@
 /* Soft-builtin overrides, --builtin-mode flag scopes, module-identity boundaries, pure/builtin parity, and top-level DCE tests migrated from compiler/tests/host.test.ts. */
 
 fs := import "core/file";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
@@ -70,50 +69,50 @@ _wSrcFile := fs.writeText(sourceFile, bmSrc);
 bmExpectedOut := "true a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447 true 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824 true 9c196e32dc0175f86f4b1cb89289d6619de6bee699e4c378e68309ed97a1a6ab\n";
 
 bmDefaultTs := compileCheckAndAssertOut(bmSrc, sourceFile, emptyList(), "bm default", bmExpectedOut);
-test.check("bm default digestBytes", text.containsText(bmDefaultTs, "function lite$cryptoDigestBytes("));
-test.check("bm default digestText", text.containsText(bmDefaultTs, "function lite$cryptoDigestText("));
-test.check("bm default digestFile", text.containsText(bmDefaultTs, "function lite$cryptoDigestFile("));
-test.check("bm default node:crypto", text.containsText(bmDefaultTs, "node:crypto"));
+test.check("bm default digestBytes", bmDefaultTs.contains("function lite$cryptoDigestBytes("));
+test.check("bm default digestText", bmDefaultTs.contains("function lite$cryptoDigestText("));
+test.check("bm default digestFile", bmDefaultTs.contains("function lite$cryptoDigestFile("));
+test.check("bm default node:crypto", bmDefaultTs.contains("node:crypto"));
 
 bmPureTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode", "pure"], "bm project pure", bmExpectedOut);
-test.check("bm pure no digest", not text.containsText(bmPureTs, "function lite$cryptoDigest"));
-test.check("bm pure no node:crypto", not text.containsText(bmPureTs, "node:crypto"));
+test.check("bm pure no digest", not bmPureTs.contains("function lite$cryptoDigest"));
+test.check("bm pure no node:crypto", not bmPureTs.contains("node:crypto"));
 
 bmPureEqTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode=pure"], "bm project pure =", bmExpectedOut);
-test.check("bm pure= no digest", not text.containsText(bmPureEqTs, "function lite$cryptoDigest"));
+test.check("bm pure= no digest", not bmPureEqTs.contains("function lite$cryptoDigest"));
 
 bmModPureTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode", "core/crypto=pure"], "bm module pure", bmExpectedOut);
-test.check("bm mod pure no digest", not text.containsText(bmModPureTs, "function lite$cryptoDigest"));
-test.check("bm mod pure no node:crypto", not text.containsText(bmModPureTs, "node:crypto"));
+test.check("bm mod pure no digest", not bmModPureTs.contains("function lite$cryptoDigest"));
+test.check("bm mod pure no node:crypto", not bmModPureTs.contains("node:crypto"));
 
 bmLibPureTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode=lib/core/crypto.lts=pure"], "bm lib pure", bmExpectedOut);
-test.check("bm lib pure no digest", not text.containsText(bmLibPureTs, "function lite$cryptoDigest"));
+test.check("bm lib pure no digest", not bmLibPureTs.contains("function lite$cryptoDigest"));
 
 bmFnBytesTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode", "core/crypto.sha256Bytes=pure"], "bm fn sha256Bytes", bmExpectedOut);
-test.check("bm fn sha256Bytes still sha512Bytes", text.containsText(bmFnBytesTs, "function lite$cryptoDigestBytes("));
-test.check("bm fn sha256Bytes still text", text.containsText(bmFnBytesTs, "function lite$cryptoDigestText("));
-test.check("bm fn sha256Bytes still file", text.containsText(bmFnBytesTs, "function lite$cryptoDigestFile("));
+test.check("bm fn sha256Bytes still sha512Bytes", bmFnBytesTs.contains("function lite$cryptoDigestBytes("));
+test.check("bm fn sha256Bytes still text", bmFnBytesTs.contains("function lite$cryptoDigestText("));
+test.check("bm fn sha256Bytes still file", bmFnBytesTs.contains("function lite$cryptoDigestFile("));
 
 bmBothBytesTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode", "core/crypto.sha256Bytes=pure", "--builtin-mode", "core/crypto.sha512Bytes=pure"], "bm both bytes pure", bmExpectedOut);
-test.check("bm both bytes no digestBytes", not text.containsText(bmBothBytesTs, "function lite$cryptoDigestBytes("));
-test.check("bm both bytes has text", text.containsText(bmBothBytesTs, "function lite$cryptoDigestText("));
-test.check("bm both bytes has file", text.containsText(bmBothBytesTs, "function lite$cryptoDigestFile("));
+test.check("bm both bytes no digestBytes", not bmBothBytesTs.contains("function lite$cryptoDigestBytes("));
+test.check("bm both bytes has text", bmBothBytesTs.contains("function lite$cryptoDigestText("));
+test.check("bm both bytes has file", bmBothBytesTs.contains("function lite$cryptoDigestFile("));
 
 bmOverrideTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode", "pure", "--builtin-mode", "core/crypto.sha256File=builtin"], "bm fn file builtin", bmExpectedOut);
-test.check("bm override no digestBytes", not text.containsText(bmOverrideTs, "function lite$cryptoDigestBytes("));
-test.check("bm override no digestText", not text.containsText(bmOverrideTs, "function lite$cryptoDigestText("));
-test.check("bm override has digestFile", text.containsText(bmOverrideTs, "function lite$cryptoDigestFile("));
+test.check("bm override no digestBytes", not bmOverrideTs.contains("function lite$cryptoDigestBytes("));
+test.check("bm override no digestText", not bmOverrideTs.contains("function lite$cryptoDigestText("));
+test.check("bm override has digestFile", bmOverrideTs.contains("function lite$cryptoDigestFile("));
 
 bmPrecTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode", "core/crypto.sha256File=pure", "--builtin-mode", "core/crypto=builtin", "--builtin-mode", "pure"], "bm specificity", bmExpectedOut);
-test.check("bm prec has digestBytes", text.containsText(bmPrecTs, "function lite$cryptoDigestBytes("));
-test.check("bm prec has digestText", text.containsText(bmPrecTs, "function lite$cryptoDigestText("));
-test.check("bm prec no digestFile", not text.containsText(bmPrecTs, "function lite$cryptoDigestFile("));
+test.check("bm prec has digestBytes", bmPrecTs.contains("function lite$cryptoDigestBytes("));
+test.check("bm prec has digestText", bmPrecTs.contains("function lite$cryptoDigestText("));
+test.check("bm prec no digestFile", not bmPrecTs.contains("function lite$cryptoDigestFile("));
 
 fn512Src := "crypto := import \"core/crypto\";\nio := import \"core/io\";\nio.outputLine(crypto.sha256Bytes([1]), crypto.sha512Text(\"x\"));";
 fn512Comp := compilerTest.compileStdinWithOpts(root, tsComp, root, fn512Src, path.join(bmDir, "fn512.lts"), "", ["--builtin-mode", "pure", "--builtin-mode", "core/crypto.sha256Bytes=builtin"]);
 test.checkInt("bm fn512 compile", 0, fn512Comp.status);
-test.check("bm fn512 has bytes", text.containsText(fn512Comp.stdout, "function lite$cryptoDigestBytes("));
-test.check("bm fn512 no text", not text.containsText(fn512Comp.stdout, "function lite$cryptoDigestText("));
+test.check("bm fn512 has bytes", fn512Comp.stdout.contains("function lite$cryptoDigestBytes("));
+test.check("bm fn512 no text", not fn512Comp.stdout.contains("function lite$cryptoDigestText("));
 
 badFlagPairs: List<(a: String, b: String)> = [
     (a = "--builtin-mode", b = ""),
@@ -137,7 +136,7 @@ badFlagPairs: List<(a: String, b: String)> = [
 dummySrc := "io := import \"core/io\"; io.outputLine(1);";
 loop badFlagPairs as bf {
     opts: mut List<String> = [bf.a];
-    if bf.b =!= "" { list.pushBack(mut opts, bf.b); }
+    if bf.b =!= "" { mut opts.pushBack(bf.b); }
     bTs := compilerTest.compileStdinWithOpts(root, tsComp, root, dummySrc, sourceFile, "", opts);
     test.checkInt("bad-flag ts " + bf.a + " " + bf.b, 2, bTs.status);
     bC := compilerTest.compileStdinWithOpts(root, cComp, root, dummySrc, sourceFile, "", opts);
@@ -146,12 +145,12 @@ loop badFlagPairs as bf {
 
 cliPure := proc.run(path.join(root, "bin/lite-compile-ts"), ["--builtin-mode=pure", sourceFile], root, emptyList(), true, "");
 test.checkInt("cli-pure status: " + cliPure.stderr, 0, cliPure.status);
-test.check("cli-pure no digest", not text.containsText(cliPure.stdout, "function lite$cryptoDigest"));
+test.check("cli-pure no digest", not cliPure.stdout.contains("function lite$cryptoDigest"));
 
 liteCliComp := proc.run(path.join(root, "bin/lite"), ["compile", "--builtin-mode", "core/crypto.sha256File=pure", sourceFile], root, emptyList(), true, "");
 test.checkInt("lite-cli-compile status: " + liteCliComp.stderr, 0, liteCliComp.status);
-test.check("lite-cli-compile no file", not text.containsText(liteCliComp.stdout, "function lite$cryptoDigestFile("));
-test.check("lite-cli-compile has text", text.containsText(liteCliComp.stdout, "function lite$cryptoDigestText("));
+test.check("lite-cli-compile no file", not liteCliComp.stdout.contains("function lite$cryptoDigestFile("));
+test.check("lite-cli-compile has text", liteCliComp.stdout.contains("function lite$cryptoDigestText("));
 
 liteCliRun := proc.run(path.join(root, "bin/lite"), ["run", "--builtin-mode", "pure", sourceFile], root, emptyList(), true, "");
 test.checkInt("lite-cli-run status: " + liteCliRun.stderr, 0, liteCliRun.status);
@@ -168,14 +167,14 @@ boundAppPath := path.join(boundDir, "app.lts");
 boundAppSrc := "io := import \"core/io\";\nstdCrypto := import \"core/crypto\";\nlocalCrypto := import \"./lib/core/crypto.lts\";\nio.outputLine(localCrypto.sha256Text(\"hello\"), stdCrypto.sha256Text(\"hello\"));";
 _wa := fs.writeText(boundAppPath, boundAppSrc);
 boundTs := compileCheckAndAssertOut(boundAppSrc, boundAppPath, emptyList(), "soft-boundary app", "local:hello 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824\n");
-test.check("soft-boundary has local:", text.containsText(boundTs, "\"local:\""));
-test.check("soft-boundary has digestText", text.containsText(boundTs, "function lite$cryptoDigestText("));
+test.check("soft-boundary has local:", boundTs.contains("\"local:\""));
+test.check("soft-boundary has digestText", boundTs.contains("function lite$cryptoDigestText("));
 _rmBound := fs.remove(boundDir);
 
 spoofSrc := "io := import \"core/io\";\npub sha256Text := fn(text: String): String { \"spoofed:\" + text }\nio.outputLine(sha256Text(\"hello\"));";
 spoofComp := compilerTest.compileStdin(root, tsComp, spoofSrc, "lib/core/crypto.lts");
 test.checkInt("spoofed root compile", 0, spoofComp.status);
-test.check("spoofed root no digestText", not text.containsText(spoofComp.stdout, "function lite$cryptoDigestText("));
+test.check("spoofed root no digestText", not spoofComp.stdout.contains("function lite$cryptoDigestText("));
 spoofRun := compilerTest.checkAndRunTs(root, spoofComp.stdout);
 test.checkInt("spoofed root status", 0, spoofRun.status);
 test.checkText("spoofed root stdout", "spoofed:hello\n", spoofRun.stdout);
@@ -185,28 +184,26 @@ tmpTextIo := fs.makeTempDir("lite-pure-text-io-");
 test.check("text-io makeTempDir", tmpTextIo.ok);
 textIoDir := tmpTextIo.path;
 bigFile := path.join(textIoDir, "big.txt");
-_wBig := fs.writeText(bigFile, text.repeatText("A", 70000) + "€");
+_wBig := fs.writeText(bigFile, "A".repeat(70000) + "€");
 textIoSrc := text.joinTexts([
     "io := import \"core/io\";",
     "file := import \"core/file\";",
-    "list := import \"core/list\";",
-    "textLib := import \"core/text\";",
     "uni := import \"core/unicode\";",
     "u := \"a😀b€c😀d\";",
     "textSummary := [",
-    "    textLib.indexOf(\"hello world\", \"world\", 0),",
-    "    textLib.indexOf(\"banana\", \"ana\", 2),",
-    "    textLib.indexOf(\"abc\", \"z\", 0),",
-    "    textLib.indexOf(\"abc\", \"abcd\", 0),",
-    "    textLib.indexOf(\"abc\", \"\", 0),",
-    "    textLib.indexOf(\"abc\", \"\", 3),",
-    "    textLib.indexOf(\"abc\", \"\", 4),",
-    "    textLib.indexOf(\"abc\", \"a\", -1),",
-    "    textLib.indexOf(u, \"€\", 0),",
-    "    textLib.indexOf(u, \"😀\", 2),",
-    "    textLib.indexOf(u, \"d\", 6),",
-    "    textLib.indexOf(u, \"\", 7),",
-    "    textLib.indexOf(u, \"\", 8)",
+    "    \"hello world\".indexOf(\"world\", 0),",
+    "    \"banana\".indexOf(\"ana\", 2),",
+    "    \"abc\".indexOf(\"z\", 0),",
+    "    \"abc\".indexOf(\"abcd\", 0),",
+    "    \"abc\".indexOf(\"\", 0),",
+    "    \"abc\".indexOf(\"\", 3),",
+    "    \"abc\".indexOf(\"\", 4),",
+    "    \"abc\".indexOf(\"a\", -1),",
+    "    u.indexOf(\"€\", 0),",
+    "    u.indexOf(\"😀\", 2),",
+    "    u.indexOf(\"d\", 6),",
+    "    u.indexOf(\"\", 7),",
+    "    u.indexOf(\"\", 8)",
     "];",
     "tr := io.textReader(\"a€😀\");",
     "trBytes := io.readAll(tr);",
@@ -248,7 +245,7 @@ textIoSrc := text.joinTexts([
     "    badLine.ok, badLine.eof, badLine.error =!= \"\", wt.ok, wl.ok, wl2.ok,",
     "    bwBytes, bwTxt.ok, bwClosedTxt.ok, bwTxt.text == bwClosedTxt.text, not wtClosed.ok,",
     "    rtOk.ok, rtOk.text == \"hi€😀\", not rtBad.ok, not rtClosed.ok, not rlClosed.ok,",
-    "    bigRes.ok, textLib.length(bigRes.text), textLib.at(bigRes.text, 70000)",
+    "    bigRes.ok, bigRes.text.length(), bigRes.text.at(70000)",
     ");"
 ], "\n");
 textIoFile := path.join(textIoDir, "pure-text-io.lts");
@@ -257,24 +254,24 @@ textIoExpected := "[6, 3, -1, -1, 0, 3, -1, -1, 3, 5, 6, 7, -1] [97, 226, 130, 1
 
 tioDef := compileCheckAndAssertOut(textIoSrc, textIoFile, emptyList(), "text-io default", textIoExpected);
 ioHelpers: List<String> = ["function lite$textIndexOf(", "function lite$ioTextReader(", "function lite$ioReadAll(", "function lite$ioReadAllText(", "function lite$ioReadLine(", "function lite$ioWriteText(", "function lite$ioWriteLine("];
-loop ioHelpers as h { test.check("text-io default has " + h, text.containsText(tioDef, h)); }
+loop ioHelpers as h { test.check("text-io default has " + h, tioDef.contains(h)); }
 
 tioPure := compileCheckAndAssertOut(textIoSrc, textIoFile, ["--builtin-mode", "pure"], "text-io pure", textIoExpected);
-loop ioHelpers as h { test.check("text-io pure omits " + h, not text.containsText(tioPure, h)); }
+loop ioHelpers as h { test.check("text-io pure omits " + h, not tioPure.contains(h)); }
 
-tioTextOnly := compileCheckAndAssertOut(textIoSrc, textIoFile, ["--builtin-mode", "core/text.indexOf=pure"], "text-io text.indexOf=pure", textIoExpected);
-test.check("text-io text-only omits indexOf", not text.containsText(tioTextOnly, "function lite$textIndexOf("));
-test.check("text-io text-only keeps readLine", text.containsText(tioTextOnly, "function lite$ioReadLine("));
+tioTextOnly := compileCheckAndAssertOut(textIoSrc, textIoFile, ["--builtin-mode", "core/text:String.indexOf=pure"], "text-io String.indexOf=pure", textIoExpected);
+test.check("text-io text-only omits indexOf", not tioTextOnly.contains("function lite$textIndexOf("));
+test.check("text-io text-only keeps readLine", tioTextOnly.contains("function lite$ioReadLine("));
 
 tioIoPure := compileCheckAndAssertOut(textIoSrc, textIoFile, ["--builtin-mode", "core/io=pure"], "text-io core/io=pure", textIoExpected);
-test.check("text-io io=pure keeps indexOf", text.containsText(tioIoPure, "function lite$textIndexOf("));
-test.check("text-io io=pure omits readLine", not text.containsText(tioIoPure, "function lite$ioReadLine("));
-test.check("text-io io=pure omits writeLine", not text.containsText(tioIoPure, "function lite$ioWriteLine("));
+test.check("text-io io=pure keeps indexOf", tioIoPure.contains("function lite$textIndexOf("));
+test.check("text-io io=pure omits readLine", not tioIoPure.contains("function lite$ioReadLine("));
+test.check("text-io io=pure omits writeLine", not tioIoPure.contains("function lite$ioWriteLine("));
 
 tioRlPure := compileCheckAndAssertOut(textIoSrc, textIoFile, ["--builtin-mode", "core/io.readLine=pure"], "text-io readLine=pure", textIoExpected);
-test.check("text-io rl=pure omits readLine", not text.containsText(tioRlPure, "function lite$ioReadLine("));
-test.check("text-io rl=pure keeps writeLine", text.containsText(tioRlPure, "function lite$ioWriteLine("));
-test.check("text-io rl=pure keeps textReader", text.containsText(tioRlPure, "function lite$ioTextReader("));
+test.check("text-io rl=pure omits readLine", not tioRlPure.contains("function lite$ioReadLine("));
+test.check("text-io rl=pure keeps writeLine", tioRlPure.contains("function lite$ioWriteLine("));
+test.check("text-io rl=pure keeps textReader", tioRlPure.contains("function lite$ioTextReader("));
 _rmTio := fs.remove(textIoDir);
 
 /* 4. soft builtin overrides for core/unicode and core/file */
@@ -307,27 +304,27 @@ ufSrc := text.joinTexts([
 fffd := unicode.fromCodePoint(65533).text;
 ufExpected := "[65, 226, 130, 172, 240, 159, 153, 130] true A€🙂 true true A" + fffd + "B A" + fffd + "B\ntrue true true hi🙂 true true [65, 66, 67] true\n";
 ufDef := compileCheckAndAssertOut(ufSrc, "main.lts", emptyList(), "uf default", ufExpected);
-test.check("uf default unicodeUtf8Encode", text.containsText(ufDef, "function lite$unicodeUtf8Encode("));
-test.check("uf default unicodeUtf8DecodeStrict", text.containsText(ufDef, "function lite$unicodeUtf8DecodeStrict("));
-test.check("uf default unicodeUtf8DecodeLossy", text.containsText(ufDef, "function lite$unicodeUtf8DecodeLossy("));
-test.check("uf default fileReadBytes", text.containsText(ufDef, "function lite$fileReadBytes("));
-test.check("uf default fileReadText", text.containsText(ufDef, "function lite$fileReadText("));
-test.check("uf default fileWriteBytes", text.containsText(ufDef, "function lite$fileWriteBytes("));
-test.check("uf default fileWriteText", text.containsText(ufDef, "function lite$fileWriteText("));
-test.check("uf default fileAppendBytes", text.containsText(ufDef, "function lite$fileAppendBytes("));
-test.check("uf default fileAppendText", text.containsText(ufDef, "function lite$fileAppendText("));
+test.check("uf default unicodeUtf8Encode", ufDef.contains("function lite$unicodeUtf8Encode("));
+test.check("uf default unicodeUtf8DecodeStrict", ufDef.contains("function lite$unicodeUtf8DecodeStrict("));
+test.check("uf default unicodeUtf8DecodeLossy", ufDef.contains("function lite$unicodeUtf8DecodeLossy("));
+test.check("uf default fileReadBytes", ufDef.contains("function lite$fileReadBytes("));
+test.check("uf default fileReadText", ufDef.contains("function lite$fileReadText("));
+test.check("uf default fileWriteBytes", ufDef.contains("function lite$fileWriteBytes("));
+test.check("uf default fileWriteText", ufDef.contains("function lite$fileWriteText("));
+test.check("uf default fileAppendBytes", ufDef.contains("function lite$fileAppendBytes("));
+test.check("uf default fileAppendText", ufDef.contains("function lite$fileAppendText("));
 
 ufPure := compileCheckAndAssertOut(ufSrc, "main.lts", ["--builtin-mode", "pure"], "uf pure", ufExpected);
-test.check("uf pure no encode", not text.containsText(ufPure, "function lite$unicodeUtf8Encode("));
-test.check("uf pure no readBytes", not text.containsText(ufPure, "function lite$fileReadBytes("));
+test.check("uf pure no encode", not ufPure.contains("function lite$unicodeUtf8Encode("));
+test.check("uf pure no readBytes", not ufPure.contains("function lite$fileReadBytes("));
 
 ufUniPure := compileCheckAndAssertOut(ufSrc, "main.lts", ["--builtin-mode", "core/unicode=pure"], "uf unicode pure", ufExpected);
-test.check("uf unicode pure no encode", not text.containsText(ufUniPure, "function lite$unicodeUtf8Encode("));
-test.check("uf unicode pure keeps writeText", text.containsText(ufUniPure, "function lite$fileWriteText("));
+test.check("uf unicode pure no encode", not ufUniPure.contains("function lite$unicodeUtf8Encode("));
+test.check("uf unicode pure keeps writeText", ufUniPure.contains("function lite$fileWriteText("));
 
 ufRtPure := compileCheckAndAssertOut(ufSrc, "main.lts", ["--builtin-mode", "core/file.readText=pure"], "uf readText pure", ufExpected);
-test.check("uf readText pure no readText", not text.containsText(ufRtPure, "function lite$fileReadText("));
-test.check("uf readText pure keeps writeText", text.containsText(ufRtPure, "function lite$fileWriteText("));
+test.check("uf readText pure no readText", not ufRtPure.contains("function lite$fileReadText("));
+test.check("uf readText pure keeps writeText", ufRtPure.contains("function lite$fileWriteText("));
 
 modeFlagsFor := fn(pure: Bool): List<String> {
     if pure {
@@ -354,7 +351,7 @@ cryptoThinComp := compilerTest.compileStdin(root, tsComp, "crypto := import \"co
 test.checkInt("dce crypto compile", 0, cryptoThinComp.status);
 test.check("dce crypto tsc", compilerTest.checkTsCode(root, cryptoThinComp.stdout).ok);
 purgedCryptoIds: List<String> = ["buildNibbleTable", "k256", "k512Hi", "k512Lo", "b64Alphabet", "hexAlphabet", "xor4", "and4"];
-loop purgedCryptoIds as pid { test.check("dce crypto purged " + pid, not text.containsText(cryptoThinComp.stdout, pid)); }
+loop purgedCryptoIds as pid { test.check("dce crypto purged " + pid, not cryptoThinComp.stdout.contains(pid)); }
 cryptoThinRun := compilerTest.checkAndRunTs(root, cryptoThinComp.stdout);
 test.checkInt("dce crypto status", 0, cryptoThinRun.status);
 test.checkText("dce crypto stdout", "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4\n", cryptoThinRun.stdout);
@@ -370,15 +367,15 @@ mixedDceSrc := text.joinTexts([
 mixedDceComp := compilerTest.compileStdin(root, tsComp, mixedDceSrc, "main.lts");
 test.checkInt("dce mixed compile", 0, mixedDceComp.status);
 test.check("dce mixed tsc", compilerTest.checkTsCode(root, mixedDceComp.stdout).ok);
-test.check("dce mixed omits pure marker", not text.containsText(mixedDceComp.stdout, "PURGED_PURE_MARKER"));
-test.check("dce mixed omits fn marker", not text.containsText(mixedDceComp.stdout, "PURGED_FN_MARKER"));
+test.check("dce mixed omits pure marker", not mixedDceComp.stdout.contains("PURGED_PURE_MARKER"));
+test.check("dce mixed omits fn marker", not mixedDceComp.stdout.contains("PURGED_FN_MARKER"));
 mixedDceRun := compilerTest.checkAndRunTs(root, mixedDceComp.stdout);
 test.checkInt("dce mixed status", 0, mixedDceRun.status);
 test.checkText("dce mixed stdout", "kept-side-effect\n", mixedDceRun.stdout);
 
 topFaultRun := compilerTest.compileCheckRunTs(root, tsComp, "unusedFault := 1 / 0;", "main.lts");
 test.check("dce top fault status != 0", topFaultRun.status =!= 0);
-test.check("dce top fault stderr", text.containsText(topFaultRun.stderr, "division by zero"));
+test.check("dce top fault stderr", topFaultRun.stderr.contains("division by zero"));
 
 /* 6. soft builtin overrides for core/int, core/text, and core/crypto match pure implementations and respect --builtin-mode */
 intTextSrc := text.joinTexts([
@@ -388,47 +385,47 @@ intTextSrc := text.joinTexts([
     "uni := import \"core/unicode\";",
     "nbsp := uni.fromCodePoints([160]).text;",
     "vtab := uni.fromCodePoints([11]).text;",
-    "io.outputLine(integer.intText(0), integer.intText(-42), integer.intText(integer.intMax), integer.intText(integer.intMin));",
-    "io.outputLine(text.startsWithAt(\"A🙂B\", 1, \"🙂\"), text.startsWithAt(\"A🙂B\", 2, \"B\"), text.startsWithAt(\"A🙂B\", -1, \"A\"), text.startsWithAt(\"A🙂B\", 3, \"\"));",
-    "io.outputLine(text.wordAt(\"if_x\", 0, \"if\"), text.wordAt(\"if 🙂\", 0, \"if\"), text.wordAt(\"a🙂b\", 0, \"a\"), text.wordAt(\"if\", 0, \"if\"));",
+    "io.outputLine(0.toText(), (-42).toText(), integer.intMax.toText(), integer.intMin.toText());",
+    "io.outputLine(\"A🙂B\".startsWithAt(1, \"🙂\"), \"A🙂B\".startsWithAt(2, \"B\"), \"A🙂B\".startsWithAt(-1, \"A\"), \"A🙂B\".startsWithAt(3, \"\"));",
+    "io.outputLine(\"if_x\".wordAt(0, \"if\"), \"if 🙂\".wordAt(0, \"if\"), \"a🙂b\".wordAt(0, \"a\"), \"if\".wordAt(0, \"if\"));",
     "io.outputLine(text.joinTexts([], \",\"), text.joinTexts([\"x\"], \",\"), text.joinTexts([\"a\", \"b\", \"c\"], \"-\"));",
-    "n0 := text.textToInt(\"-9223372036854775808\"); n1 := text.textToInt(\"+42\"); n2 := text.textToInt(\"9223372036854775808\"); n3 := text.textToInt(\"1a\");",
+    "n0 := \"-9223372036854775808\".toInt(); n1 := \"+42\".toInt(); n2 := \"9223372036854775808\".toInt(); n3 := \"1a\".toInt();",
     "io.outputLine(n0.ok, n0.value, n1.ok, n1.value, n2.ok, n3.ok);",
     "padded := \" \\t\" + nbsp + \"hi\" + vtab + \"\\r\\n \";",
-    "io.outputLine(\"[\" + text.trimStart(padded) + \"]\", \"[\" + text.trimEnd(padded) + \"]\", \"[\" + text.trim(padded) + \"]\");",
-    "io.outputLine(text.endsWith(\"A🙂bc\", \"🙂bc\"), text.endsWith(\"A🙂bc\", \"xy\"), text.containsText(\"A🙂bc\", \"🙂b\"), text.repeatText(\"hi\", 3), \"[\" + text.repeatText(\"hi\", -2) + \"]\");",
-    "io.outputLine(text.toLowerAscii(\"ÄÉΩABC_xyz🙂\"), text.isDigit(\"5\"), text.isAsciiLetter(\"Q\"), text.isNameStart(\"_\"), text.isNameContinue(\"9\"), text.isWhitespace(nbsp));",
-    "io.outputLine(text.skipSpaces(\" \\t\\r\\n🙂x\", 0), text.skipSpaces(\"🙂  foo\", 1), text.skipSpaces(\"abc\", 10), text.skipName(\"abc_12🙂\", 0), text.skipName(\"🙂abc\", 1), text.skipName(\"abc\", 9));",
-    "io.outputLine(text.indexOfText(\"A🙂B🙂C\", \"🙂\", 0), text.indexOfText(\"A🙂B🙂C\", \"🙂\", 2), text.indexOfText(\"A🙂B\", \"\", -1), text.indexOfText(\"A🙂B\", \"\", 3), text.indexOfText(\"A🙂B\", \"\", 4));"
+    "io.outputLine(\"[\" + padded.trimStart() + \"]\", \"[\" + padded.trimEnd() + \"]\", \"[\" + padded.trim() + \"]\");",
+    "io.outputLine(\"A🙂bc\".endsWith(\"🙂bc\"), \"A🙂bc\".endsWith(\"xy\"), \"A🙂bc\".contains(\"🙂b\"), \"hi\".repeat(3), \"[\" + \"hi\".repeat(-2) + \"]\");",
+    "io.outputLine(\"ÄÉΩABC_xyz🙂\".toLowerAscii(), \"5\".isDigit(), \"Q\".isAsciiLetter(), \"_\".isNameStart(), \"9\".isNameContinue(), nbsp.isWhitespace());",
+    "io.outputLine(\" \\t\\r\\n🙂x\".skipSpaces(0), \"🙂  foo\".skipSpaces(1), \"abc\".skipSpaces(10), \"abc_12🙂\".skipName(0), \"🙂abc\".skipName(1), \"abc\".skipName(9));",
+    "io.outputLine(\"A🙂B🙂C\".indexOf(\"🙂\", 0), \"A🙂B🙂C\".indexOf(\"🙂\", 2), \"A🙂B\".indexOf(\"\", -1), \"A🙂B\".indexOf(\"\", 3), \"A🙂B\".indexOf(\"\", 4));"
 ], "\n");
 
 itDef := compileCheckVariant(intTextSrc, "main.lts", emptyList(), "int/text default");
-test.check("itDef String(lite_value)", text.containsText(itDef.code, "String(lite_value)"));
-test.check("itDef startsWithAt", text.containsText(itDef.code, "function lite$textStartsWithAt("));
-test.check("itDef wordAt", text.containsText(itDef.code, "function lite$textWordAt("));
-test.check("itDef textToInt", text.containsText(itDef.code, "function lite$textToInt("));
-test.check("itDef trim", text.containsText(itDef.code, "function lite$textTrim("));
-test.check("itDef toLowerAscii", text.containsText(itDef.code, "function lite$textToLowerAscii("));
-test.check("itDef skipWhile", text.containsText(itDef.code, "function lite$textSkipWhile("));
+test.check("itDef String(lite_value)", itDef.code.contains("String(lite_value)"));
+test.check("itDef startsWithAt", itDef.code.contains("function lite$textStartsWithAt("));
+test.check("itDef wordAt", itDef.code.contains("function lite$textWordAt("));
+test.check("itDef textToInt", itDef.code.contains("function lite$textToInt("));
+test.check("itDef trim", itDef.code.contains("function lite$textTrim("));
+test.check("itDef toLowerAscii", itDef.code.contains("function lite$textToLowerAscii("));
+test.check("itDef skipWhile", itDef.code.contains("function lite$textSkipWhile("));
 
 itPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "pure"], "int/text pure");
 test.checkText("itPure matches default", itDef.stdout, itPure.stdout);
-test.check("itPure omits startsWithAt", not text.containsText(itPure.code, "function lite$textStartsWithAt("));
-test.check("itPure omits wordAt", not text.containsText(itPure.code, "function lite$textWordAt("));
-test.check("itPure omits trim", not text.containsText(itPure.code, "function lite$textTrim("));
-test.check("itPure omits skipWhile", not text.containsText(itPure.code, "function lite$textSkipWhile("));
+test.check("itPure omits startsWithAt", not itPure.code.contains("function lite$textStartsWithAt("));
+test.check("itPure omits wordAt", not itPure.code.contains("function lite$textWordAt("));
+test.check("itPure omits trim", not itPure.code.contains("function lite$textTrim("));
+test.check("itPure omits skipWhile", not itPure.code.contains("function lite$textSkipWhile("));
 
 itIntPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/int=pure"], "core/int=pure");
 test.checkText("itIntPure matches", itPure.stdout, itIntPure.stdout);
-test.check("itIntPure omits String(lite_value)", not text.containsText(itIntPure.code, "String(lite_value)"));
-test.check("itIntPure keeps wordAt", text.containsText(itIntPure.code, "function lite$textWordAt("));
+test.check("itIntPure omits String(lite_value)", not itIntPure.code.contains("String(lite_value)"));
+test.check("itIntPure keeps wordAt", itIntPure.code.contains("function lite$textWordAt("));
 
-itWordPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/text.wordAt=pure"], "core/text.wordAt=pure");
+itWordPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/text:String.wordAt=pure"], "core/text:String.wordAt=pure");
 test.checkText("itWordPure matches", itPure.stdout, itWordPure.stdout);
-test.check("itWordPure omits wordAt", not text.containsText(itWordPure.code, "function lite$textWordAt("));
-test.check("itWordPure keeps startsWithAt", text.containsText(itWordPure.code, "function lite$textStartsWithAt("));
+test.check("itWordPure omits wordAt", not itWordPure.code.contains("function lite$textWordAt("));
+test.check("itWordPure keeps startsWithAt", itWordPure.code.contains("function lite$textStartsWithAt("));
 
-itIdxPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/text.indexOfText=pure"], "core/text.indexOfText=pure");
+itIdxPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/text:String.indexOf=pure"], "core/text:String.indexOf=pure");
 test.checkText("itIdxPure matches", itPure.stdout, itIdxPure.stdout);
 
 cryptoParitySrc := text.joinTexts([
@@ -446,18 +443,18 @@ cryptoParitySrc := text.joinTexts([
 ], "\n");
 
 crDef := compileCheckVariant(cryptoParitySrc, "main.lts", emptyList(), "crypto default");
-test.check("crDef hmac", text.containsText(crDef.code, "function lite$cryptoHmacSha256Bytes("));
-test.check("crDef encode", text.containsText(crDef.code, "function lite$cryptoEncodeBytes("));
-test.check("crDef decode", text.containsText(crDef.code, "function lite$cryptoDecodeBytes("));
+test.check("crDef hmac", crDef.code.contains("function lite$cryptoHmacSha256Bytes("));
+test.check("crDef encode", crDef.code.contains("function lite$cryptoEncodeBytes("));
+test.check("crDef decode", crDef.code.contains("function lite$cryptoDecodeBytes("));
 
 crPure := compileCheckVariant(cryptoParitySrc, "main.lts", ["--builtin-mode", "pure"], "crypto pure");
 test.checkText("crPure matches", crDef.stdout, crPure.stdout);
-test.check("crPure omits hmac", not text.containsText(crPure.code, "function lite$cryptoHmacSha256Bytes("));
-test.check("crPure omits node:buffer", not text.containsText(crPure.code, "node:buffer"));
+test.check("crPure omits hmac", not crPure.code.contains("function lite$cryptoHmacSha256Bytes("));
+test.check("crPure omits node:buffer", not crPure.code.contains("node:buffer"));
 
 crDecPure := compileCheckVariant(cryptoParitySrc, "main.lts", ["--builtin-mode", "core/crypto.base64Decode=pure"], "crypto.base64Decode=pure");
 test.checkText("crDecPure matches", crPure.stdout, crDecPure.stdout);
-test.check("crDecPure keeps encode", text.containsText(crDecPure.code, "function lite$cryptoEncodeBytes("));
+test.check("crDecPure keeps encode", crDecPure.code.contains("function lite$cryptoEncodeBytes("));
 
 cryptoFaults: List<(lbl: String, stmt: String, err: String)> = [
     (lbl = "invalid base64Decode", stmt = "crypto.base64Decode(\"Y===\")", err = "invalid base64 input"),
@@ -476,18 +473,18 @@ loop cryptoFaults as cf {
         cRunF := compilerTest.checkAndRunTs(root, cCompF.stdout);
         test.checkInt(cf.lbl + " status", 2, cRunF.status);
         test.checkText(cf.lbl + " finally", "cleaned\n", cRunF.stdout);
-        test.check(cf.lbl + " err: " + cRunF.stderr, text.containsText(cRunF.stderr, cf.err));
+        test.check(cf.lbl + " err: " + cRunF.stderr, cRunF.stderr.contains(cf.err));
     }
 }
 
 textBounds: List<(lbl: String, stmt: String)> = [
-    (lbl = "neg skipSpaces empty", stmt = "text.skipSpaces(\"\", -1)"),
-    (lbl = "neg skipSpaces non-empty", stmt = "text.skipSpaces(\"  a\", -1)"),
-    (lbl = "neg skipName empty", stmt = "text.skipName(\"\", -1)"),
-    (lbl = "neg skipName non-empty", stmt = "text.skipName(\"abc\", -1)")
+    (lbl = "neg skipSpaces empty", stmt = "\"\".skipSpaces(-1)"),
+    (lbl = "neg skipSpaces non-empty", stmt = "\"  a\".skipSpaces(-1)"),
+    (lbl = "neg skipName empty", stmt = "\"\".skipName(-1)"),
+    (lbl = "neg skipName non-empty", stmt = "\"abc\".skipName(-1)")
 ];
 loop textBounds as tb {
-    bSrc := "text := import \"core/text\";\nio := import \"core/io\";\n{ _ := " + tb.stmt + "; } finally { io.outputLine(\"cleaned\"); };";
+    bSrc := "io := import \"core/io\";\n{ _ := " + tb.stmt + "; } finally { io.outputLine(\"cleaned\"); };";
     loop [false, true] as isPure {
         tCompB := compilerTest.compileStdinWithOpts(root, tsComp, root, bSrc, "main.lts", "", modeFlagsFor(isPure));
         test.checkInt(tb.lbl + " compile", 0, tCompB.status);
@@ -495,7 +492,7 @@ loop textBounds as tb {
         tRunB := compilerTest.checkAndRunTs(root, tCompB.stdout);
         test.checkInt(tb.lbl + " status", 1, tRunB.status);
         test.checkText(tb.lbl + " finally", "cleaned\n", tRunB.stdout);
-        test.check(tb.lbl + " err: " + tRunB.stderr, text.containsText(tRunB.stderr, "BoundPanic"));
+        test.check(tb.lbl + " err: " + tRunB.stderr, tRunB.stderr.contains("BoundPanic"));
     }
 }
 

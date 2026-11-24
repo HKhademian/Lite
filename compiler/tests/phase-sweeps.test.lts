@@ -5,7 +5,6 @@ list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
 unicode := import "core/unicode";
 pool := import "external/pool";
 compilerBuild := import "util/compiler-build";
@@ -30,10 +29,10 @@ if not skipHeavy {
     tsDeps := corpus.readStringListAt(builtTs.jsonText, json.findObjectField(builtTs.jsonText, 0, "dependencies").valuePos);
     cDeps := corpus.readStringListAt(builtC.jsonText, json.findObjectField(builtC.jsonText, 0, "dependencies").valuePos);
     loop tsDeps as dep {
-        test.check("ts dep no importFlatAll: " + dep, not text.containsText(fs.readText(path.join(root, dep)).text, "importFlatAll"));
+        test.check("ts dep no importFlatAll: " + dep, not fs.readText(path.join(root, dep)).text.contains("importFlatAll"));
     }
     loop cDeps as dep {
-        test.check("c dep no importFlatAll: " + dep, not text.containsText(fs.readText(path.join(root, dep)).text, "importFlatAll"));
+        test.check("c dep no importFlatAll: " + dep, not fs.readText(path.join(root, dep)).text.contains("importFlatAll"));
     }
 
     contracts := compilerTest.readProcessContracts(root);
@@ -46,24 +45,24 @@ if not skipHeavy {
     "lib/core/int.lts", "lib/core/text.lts", "lib/core/source.lts",
     "lib/core/format.lts", "lib/core/diag.lts", "lib/core/list.lts", "lib/core/test.lts",
     ];
-    loop tsDeps as d { list.pushBack(mut compileTargets, d); }
+    loop tsDeps as d { mut compileTargets.pushBack(d); }
     loop cDeps as d {
         if not list.listContainsText(compileTargets, d) {
-            list.pushBack(mut compileTargets, d);
+            mut compileTargets.pushBack(d);
         }
     }
     compCmds: mut List<String> = [];
     compArgs: mut List<String> = [];
     loop compileTargets as target {
-        list.pushBack(mut compCmds, proc.execPath());
-        list.pushBack(mut compArgs, "[" + json.quoteString(tsComp) + "," + json.quoteString(target) + "]");
+        mut compCmds.pushBack(proc.execPath());
+        mut compArgs.pushBack("[" + json.quoteString(tsComp) + "," + json.quoteString(target) + "]");
     }
     jobs := pool.cpuCount();
     compRaw := pool.runPoolJson(compCmds, compArgs, root, jobs);
     compOffs := json.arrayElementOffsets(compRaw, 0);
-    test.checkInt("dep pool count", list.listCountText(compileTargets), list.listCountInt(compOffs));
+    test.checkInt("dep pool count", compileTargets.length(), compOffs.length());
     var di := 0;
-    loop di < list.listCountText(compileTargets) {
+    loop di < compileTargets.length() {
         st := json.readObjectInt(compRaw, compOffs[di], "status").value;
         err := json.readObjectString(compRaw, compOffs[di], "stderr").value;
         test.checkInt("compile " + compileTargets[di] + ": " + err, 0, st);
@@ -87,7 +86,7 @@ if not skipHeavy {
     loop lexSrcs as relP {
         lr := compilerTest.runDriver(lexDrv, fs.readText(path.join(root, relP)).text);
         test.checkInt("lex sweep " + relP, 0, lr.status);
-        test.check("lex EOF " + relP, text.containsText(lr.stdout, "EOF@"));
+        test.check("lex EOF " + relP, lr.stdout.contains("EOF@"));
     }
     compDir := path.join(root, "igniter/tests/compiler");
     fixFiles := path.collectFiles(compDir, [compDir], ".json", [], false);
@@ -116,10 +115,10 @@ if not skipHeavy {
         }
         if matchPat == "" {
             test.checkInt("lex fixture " + slug, 0, rLex.status);
-            test.check("lex fixture EOF " + slug, text.containsText(rLex.stdout, "EOF@"));
+            test.check("lex fixture EOF " + slug, rLex.stdout.contains("EOF@"));
         } else {
             test.checkInt("lex fail " + slug, 2, rLex.status);
-            test.check("lex fail msg " + slug, text.containsText(rLex.stderr, matchPat));
+            test.check("lex fail msg " + slug, rLex.stderr.contains(matchPat));
         }
     }
     compilerTest.disposeDriver(lexDrv);
@@ -129,7 +128,7 @@ if not skipHeavy {
     progDrv := compilerTest.prepareDriver(root, tsComp, progRel);
     parserInputsJson := fs.readText(path.join(root, "igniter/tests/parser-inputs.json")).text;
     pKeys := json.objectKeys(parserInputsJson, 0);
-    test.checkInt("parser-inputs count", 69, list.listCountText(pKeys));
+    test.checkInt("parser-inputs count", 69, pKeys.length());
     loop pKeys as pk {
         inp := json.readObjectString(parserInputsJson, 0, pk).value;
         pr := compilerTest.runDriver(progDrv, inp);

@@ -1,7 +1,6 @@
 /* Multi-level optimization flags: -O0, -O1 (default), -O2, -O3, and --opt=0..3 on TS and C compilers. */
 
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -38,22 +37,22 @@ src :=
 
 o0 := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", ["-O0"]);
 test.checkInt("-O0 compiles", 0, o0.status);
-test.check("-O0 keeps constant-false branch", text.containsText(o0.stdout, "never-printed"));
-test.check("-O0 keeps leaf function inc", text.containsText(o0.stdout, "function liteFn_inc"));
+test.check("-O0 keeps constant-false branch", o0.stdout.contains("never-printed"));
+test.check("-O0 keeps leaf function inc", o0.stdout.contains("function liteFn_inc"));
 
 o1 := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", ["-O1"]);
 test.checkInt("-O1 compiles", 0, o1.status);
-test.check("-O1 eliminates constant-false branch", not text.containsText(o1.stdout, "never-printed"));
-test.check("-O1 keeps leaf function inc", text.containsText(o1.stdout, "function liteFn_inc"));
+test.check("-O1 eliminates constant-false branch", not o1.stdout.contains("never-printed"));
+test.check("-O1 keeps leaf function inc", o1.stdout.contains("function liteFn_inc"));
 
 o2 := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", ["-O2"]);
 test.checkInt("-O2 compiles", 0, o2.status);
-test.check("-O2 eliminates constant-false branch", not text.containsText(o2.stdout, "never-printed"));
+test.check("-O2 eliminates constant-false branch", not o2.stdout.contains("never-printed"));
 
 o3 := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", ["-O3"]);
 test.checkInt("-O3 compiles", 0, o3.status);
-test.check("-O3 inlines and removes inc", not text.containsText(o3.stdout, "function liteFn_inc"));
-test.check("-O3 inlines and removes nextState", not text.containsText(o3.stdout, "function liteFn_nextState"));
+test.check("-O3 inlines and removes inc", not o3.stdout.contains("function liteFn_inc"));
+test.check("-O3 inlines and removes nextState", not o3.stdout.contains("function liteFn_nextState"));
 
 optEq3 := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "", "", ["--opt=3"]);
 test.checkInt("--opt=3 compiles", 0, optEq3.status);
@@ -74,7 +73,7 @@ test.check("all levels match stdout", r0.stdout == "21 State.Active\n" and r1.st
 cSrc := "io := import \"core/io\";\ninc := fn(x: Int): Int { x + 1 };\nio.outputLine(inc(41));\n";
 co3 := compilerTest.compileStdinWithOpts(root, cComp, root, cSrc, "", "", ["-O3"]);
 test.checkInt("C backend -O3 compiles", 0, co3.status);
-test.check("C backend -O3 inlines inc", not text.containsText(co3.stdout, "lt_fn_inc("));
+test.check("C backend -O3 inlines inc", not co3.stdout.contains("lt_fn_inc("));
 
 /* 2-argument leaf inlining at -O3 and zero-copy immutable list loop + no double [...([...(...)])] */
 twoArgSrc :=
@@ -86,9 +85,9 @@ twoArgSrc :=
 "io.outputLine(sum);\n";
 t3 := compilerTest.compileStdinWithOpts(root, tsComp, root, twoArgSrc, "", "", ["-O3"]);
 test.checkInt("2-arg -O3 compiles", 0, t3.status);
-test.check("-O3 inlines 2-arg leaf addPair", not text.containsText(t3.stdout, "function liteFn_addPair"));
-test.check("no double array spread clone", not text.containsText(t3.stdout, "[...([...("));
-test.check("immutable list loop avoids array spread copy", text.containsText(t3.stdout, "for (const lite_n of (lite_nums))"));
+test.check("-O3 inlines 2-arg leaf addPair", not t3.stdout.contains("function liteFn_addPair"));
+test.check("no double array spread clone", not t3.stdout.contains("[...([...("));
+test.check("immutable list loop avoids array spread copy", t3.stdout.contains("for (const lite_n of (lite_nums))"));
 rt3 := compilerTest.checkAndRunTs(root, t3.stdout);
 test.checkInt("2-arg -O3 runs", 0, rt3.status);
 test.checkText("2-arg -O3 stdout", "6\n", rt3.stdout);
@@ -96,10 +95,10 @@ test.checkText("2-arg -O3 stdout", "6\n", rt3.stdout);
 /* Invalid optimization level is rejected cleanly */
 badO4 := compilerTest.compileStdinWithOpts(root, tsComp, root, cSrc, "", "", ["-O4"]);
 test.check("rejects -O4", badO4.status == 2);
-test.check("-O4 diagnostic: " + badO4.stderr, text.containsText(badO4.stderr, "unsupported optimization flag -O4"));
+test.check("-O4 diagnostic: " + badO4.stderr, badO4.stderr.contains("unsupported optimization flag -O4"));
 
 badOpt := compilerTest.compileStdinWithOpts(root, tsComp, root, cSrc, "", "", ["--opt", "9"]);
 test.check("rejects --opt 9", badOpt.status == 2);
-test.check("--opt 9 diagnostic: " + badOpt.stderr, text.containsText(badOpt.stderr, "unsupported optimization level 9"));
+test.check("--opt 9 diagnostic: " + badOpt.stderr, badOpt.stderr.contains("unsupported optimization level 9"));
 
 test.done("opt-levels");

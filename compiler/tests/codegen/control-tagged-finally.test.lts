@@ -1,7 +1,6 @@
 /* Partial conditionals, value blocks, Never/io.exit, unnamed loops, Boolean match, tagged blocks/conditionals, loop metadata/then, and finally cleanup tests migrated from compiler/tests/host.test.ts. */
 
 fs := import "core/file";
-list := import "core/list";
 path := import "core/path";
 test := import "core/test";
 text := import "core/text";
@@ -30,7 +29,7 @@ assertRejectsTarget := fn(compilerPath: String, label: String, cases: List<(bad:
     loop cases as item {
         res := compilerTest.compileStdin(root, compilerPath, item.bad, "");
         test.checkInt(label + " status (" + item.bad + ")", 2, res.status);
-        ok := text.containsText(res.stderr, item.m1) and (item.m2 == "" or text.containsText(res.stderr, item.m2));
+        ok := res.stderr.contains(item.m1) and (item.m2 == "" or res.stderr.contains(item.m2));
         test.check(label + " msg (" + item.bad + ") got: " + res.stderr, ok);
     }
 };
@@ -111,7 +110,7 @@ test.checkInt("value-blocks c compiles: " + cValBlkComp.stderr, 0, cValBlkComp.s
 compilerTest.assertCompileRunTs(root, tsComp, "io-exit default", "io := import \"core/io\"; io.output(\"ready\"); io.exit();", "ready");
 topExitComp := compilerTest.compileStdin(root, tsComp, "io := import \"core/io\"; io.exit(0);", "");
 test.checkInt("io-exit top compile", 0, topExitComp.status);
-test.check("io-exit top omits return lite$out", not text.containsText(topExitComp.stdout, "return lite$out"));
+test.check("io-exit top omits return lite$out", not topExitComp.stdout.contains("return lite$out"));
 topExitRun := compilerTest.checkAndRunTs(root, topExitComp.stdout);
 test.checkInt("io-exit top status", 0, topExitRun.status);
 
@@ -193,10 +192,9 @@ assertRejectsTarget(tsComp, "io-exit", exitRej);
 /* unnamed loop sequence traversal supports lists, fixed arrays, empty lists, snapshots, and scope checks */
 unnamedLoopSrc := text.joinTexts([
     "io := import \"core/io\";",
-    "list := import \"core/list\";",
     "xs: mut List<Int> = [10, 20, 30];",
     "var listCount := 0;",
-    "loop xs { list.pushBack(mut xs, 99); listCount += 1; }",
+    "loop xs { mut xs.pushBack(99); listCount += 1; }",
     "arr: [String; 3] = [\"a\", \"b\", \"c\"];",
     "var arrCount := 0;",
     "loop arr { arrCount += 1; }",
@@ -589,7 +587,7 @@ loopMetaSrc := text.joinTexts([
     "retLoop := fn(): String {",
     "  @outer loop [1, 2, 3] as n {",
     "    @inner if n == 2 {",
-    "      return @outer \"hit-\" + integer.intText(n);",
+    "      return @outer \"hit-\" + n.toText();",
     "    } else {",
     "    } then {",
     "      io.outputLine(\"inner-then\", n);",
@@ -597,7 +595,7 @@ loopMetaSrc := text.joinTexts([
     "    io.outputLine(\"outer-meta\", @outer.item, @outer.index, @outer.count, @outer.value);",
     "    \"miss\"",
     "  } then {",
-    "    \"then(\" + .value + \",\" + integer.intText(.item) + \")\"",
+    "    \"then(\" + .value + \",\" + .item.toText() + \")\"",
     "  }",
     "};",
     "io.outputLine(retLoop());",
@@ -664,8 +662,8 @@ finFeatureRes := fs.readText(path.join(root, "language/verifications/features/co
 test.check("read finally-cleanup.lts", finFeatureRes.ok);
 finFeatComp := compilerTest.compileStdin(root, tsComp, finFeatureRes.text, "");
 test.checkInt("finally-feature compile", 0, finFeatComp.status);
-test.check("finally-feature omits declare const process", not text.containsText(finFeatComp.stdout, "declare const process"));
-test.check("finally-feature omits abruptToken", not text.containsText(finFeatComp.stdout, "lite$abruptToken"));
+test.check("finally-feature omits declare const process", not finFeatComp.stdout.contains("declare const process"));
+test.check("finally-feature omits abruptToken", not finFeatComp.stdout.contains("lite$abruptToken"));
 finFeatRun := compilerTest.checkAndRunTs(root, finFeatComp.stdout);
 test.checkInt("finally-feature run status", 0, finFeatRun.status);
 test.checkText("finally-feature run stdout", "1\n2\nthen\nfinally\ncond\n1\nreturn-cleanup\n5\n", finFeatRun.stdout);
@@ -733,14 +731,14 @@ finFaultSrc := "io := import \"core/io\";\nd := 0;\n{\n  io.outputLine(\"before-
 finFaultRun := compilerTest.compileCheckRunTs(root, tsComp, finFaultSrc, "");
 test.checkInt("finally-fault status", 1, finFaultRun.status);
 test.checkText("finally-fault stdout", "before-fault\nfault-fin\n", finFaultRun.stdout);
-test.check("finally-fault stderr", text.containsText(finFaultRun.stderr, "ArithmeticPanic: division by zero"));
+test.check("finally-fault stderr", finFaultRun.stderr.contains("ArithmeticPanic: division by zero"));
 
 finDoubleFaultSrc := "io := import \"core/io\";\nd := 0;\nxs := [1, 2];\n{\n  _q := 10 / d;\n} finally {\n  io.outputLine(\"fin-before-sec\");\n  _bad := xs[5];\n}\n";
 finDfRun := compilerTest.compileCheckRunTs(root, tsComp, finDoubleFaultSrc, "");
 test.checkInt("finally-double-fault status", 1, finDfRun.status);
 test.checkText("finally-double-fault stdout", "fin-before-sec\n", finDfRun.stdout);
-arithPos := text.indexOfText(finDfRun.stderr, "ArithmeticPanic: division by zero", 0);
-boundPos := text.indexOfText(finDfRun.stderr, "BoundPanic", 0);
+arithPos := finDfRun.stderr.indexOf("ArithmeticPanic: division by zero", 0);
+boundPos := finDfRun.stderr.indexOf("BoundPanic", 0);
 test.check("finally-double-fault arithPos >= 0: " + finDfRun.stderr, arithPos >= 0);
 test.check("finally-double-fault boundPos > arithPos: " + finDfRun.stderr, boundPos > arithPos);
 
@@ -748,7 +746,7 @@ finCancelSrc := "io := import \"core/io\";\nxs := [1, 2];\nx := { 42 } finally {
 finCancelRun := compilerTest.compileCheckRunTs(root, tsComp, finCancelSrc, "");
 test.checkInt("finally-cancel-normal status", 1, finCancelRun.status);
 test.checkText("finally-cancel-normal stdout", "cleanup-fail\n", finCancelRun.stdout);
-test.check("finally-cancel-normal stderr", text.containsText(finCancelRun.stderr, "BoundPanic"));
+test.check("finally-cancel-normal stderr", finCancelRun.stderr.contains("BoundPanic"));
 
 finRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "{ 1 } finally { 123 }", m1 = "finally block must produce Unit", m2 = ""),

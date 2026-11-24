@@ -1,6 +1,5 @@
 /* Empty/comment scripts, statement separators, adjacent string joins, trailing commas, statement scopes, shadows, expression items, and function completion tests migrated from compiler/tests/host.test.ts. */
 
-list := import "core/list";
 proc := import "core/process";
 test := import "core/test";
 text := import "core/text";
@@ -142,12 +141,12 @@ if not skipHeavy {
         "io := import \"core/io\"; f := fn(): Int { return if true { 7 } else { 9 } } io.outputLine(f())"
     ];
     sepTsOnly: List<String> = [
-        "list := import \"core/list\"; values: mut List<Int> = [1]; list.popBack(mut values)",
         "io := import \"core/io\"; io.inputLine(\"Prompt: \")",
         "io := import \"core/io\"; f := fn(): Unit { io.outputLine(7) } f()"
     ];
     loop sepBoth as src { checkTsAndC("sep-both", src, "", "line\n", 0); }
     loop sepTsOnly as src { checkTsOnly("sep-ts", src, "", "line\n", 0, false); }
+    compilerTest.assertCompileRunTs(root, tsComp, "sep-ts list popBack", "values: mut List<Int> = [1]; mut values.popBack()", "");
     sepInvalid: List<String> = [
         "io := import \"core/io\"; io.outputLine(1) io.outputLine(2);",
         "io := import \"core/io\"; io.outputLine(1)\nio.outputLine(2)",
@@ -169,7 +168,7 @@ if not skipHeavy {
     repX: mut List<String> = [];
     var rx := 0;
     loop rx < 1024 {
-        list.pushBack(mut repX, "\"x\"");
+        mut repX.pushBack("\"x\"");
         rx = rx + 1;
     }
     adjBoth: List<String> = [
@@ -193,11 +192,11 @@ if not skipHeavy {
         "io := import \"core/io\"; values: List<String> = [\"a\" \"b\", \"c\" \"d\"]; io.outputLine(values[0], values[1]);",
         "io := import \"core/io\"; pair := (label = \"a\" \"b\", value = 3); io.outputLine(pair.label);",
         "io := import \"core/io\"; io.outputLine(io.inputLine(\"Prom\" \"pt: \"));",
-        "io := import \"core/io\"; text := import \"core/text\"; io.outputLine(text.length(\"ab\" \"cd\"), text.at(\"ab\" \"cd\", 2), text.slice(\"ab\" \"cd\", 1, 3));",
         "io := import \"core/io\"; value := if true { \"a\" \"b\" } else { \"c\" \"d\" } io.outputLine(value);"
     ];
     loop adjBoth as src { checkTsAndC("adj-str-both", src, "", "line\n", 0); }
     loop adjTsOnly as src { checkTsOnly("adj-str-ts", src, "", "line\n", 0, false); }
+    compilerTest.assertCompileRunTs(root, tsComp, "adj-str-ts String dot ops", "io := import \"core/io\"; io.outputLine((\"ab\" \"cd\").length(), (\"ab\" \"cd\").at(2), (\"ab\" \"cd\").slice(1, 3));", "4 c bc\n");
     adjInvalid: List<String> = [
         "io := import \"core/io\"; io.outputLine(\"ok\");\nio.outputLine(\"a\" \"\\q\");",
         "io := import \"core/io\"; io.outputLine(\"a\" \"unterminated",
@@ -235,18 +234,18 @@ if not skipHeavy {
         "io := import \"core/io\"; io.outputLine(io.inputLine(\"Line: \",),);",
         "io := import \"core/io\"; io.outputLine(io.inputInt(\"Int: \",),);",
         "io := import \"core/io\"; io.outputLine(io.inputFloat(\"Float: \",),);",
-        "io := import \"core/io\"; text := import \"core/text\"; io.outputLine(text.length(\"ab\",), text.at(\"ab\", 1,), text.slice(\"abcd\", 1, 3,),);",
-        "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [1]; list.pushBack(mut values, 2,); io.outputLine(list.popBack(mut values,), list.popBack(mut values,),);",
         "io := import \"core/io\"; values: List<Int> = [1, 2]; pair := (label = \"x\", n = 7); io.outputLine(values, pair,);",
         "io := import \"core/io\"; io.errorLine(\"err\",); io.outputLine(\"after\",);",
         "io := import \"core/io\"; io.outputLine(\"before\",); io.exit(3,);"
     ];
     loop commaBoth as src { checkTsAndC("comma-both", src, "", "1.5\n", 0); }
     loop commaTsOnly as src {
-        inStr := if text.containsText(src, "io.inputInt(") { "7\n" } else { "1.5\n" };
-        st := if text.containsText(src, "io.exit(3,") { 3 } else { 0 };
+        inStr := if src.contains("io.inputInt(") { "7\n" } else { "1.5\n" };
+        st := if src.contains("io.exit(3,") { 3 } else { 0 };
         checkTsOnly("comma-ts", src, "", inStr, st, false);
     }
+    compilerTest.assertCompileRunTs(root, tsComp, "comma-ts String dot ops", "io := import \"core/io\"; io.outputLine(String.length(\"ab\",), \"ab\".at(1,), \"abcd\".slice(1, 3,),);", "2 b bc\n");
+    compilerTest.assertCompileRunTs(root, tsComp, "comma-ts List dot ops", "io := import \"core/io\"; values: mut List<Int> = [1]; mut values.pushBack(2,); io.outputLine(List.popBack(mut values,), List.popBack(mut values,),);", "2 1\n");
     commaInvalid: List<String> = [
         "io := import \"core/io\"; io.outputLine(,);",
         "io := import \"core/io\"; io.outputLine(1,,);",
@@ -255,26 +254,39 @@ if not skipHeavy {
         "io := import \"core/io\"; io.inputArgs(,);",
         "io := import \"core/io\"; io.inputLine(,);",
         "io := import \"core/io\"; io.inputInt(\"Prompt\", 1,);",
-        "text := import \"core/text\"; text.at(\"x\",);",
         "io := import \"core/io\"; f := fn(n: Int): Int { n } io.outputLine(f(,));",
         "io := import \"core/io\"; f := fn(n: Int): Int { n } io.outputLine(f(1,,));",
-        "io := import \"core/io\"; f := fn(a: Int, b: Int): Int { a + b } io.outputLine(f(1,));",
-        "list := import \"core/list\"; values: mut List<Int> = [1]; list.pushBack(mut values,);",
-        "list := import \"core/list\"; values: mut List<Int> = [1]; list.popBack(mut values,,);"
+        "io := import \"core/io\"; f := fn(a: Int, b: Int): Int { a + b } io.outputLine(f(1,));"
     ];
     loop commaInvalid as src { checkInvalidBoth("comma-bad", src, "", false); }
+    commaDotInvalid: List<String> = [
+        "String.at(\"x\",);",
+        "values: mut List<Int> = [1]; List.pushBack(mut values,);",
+        "values: mut List<Int> = [1]; List.popBack(mut values,,);"
+    ];
+    loop commaDotInvalid as badSrc {
+        tsBad := compilerTest.compileStdin(root, tsComp, badSrc, "");
+        test.checkInt("comma-dot-bad ts reject", 2, tsBad.status);
+        test.checkText("comma-dot-bad ts reject stdout", "", tsBad.stdout);
+        cBad := compilerTest.compileStdin(root, cComp, badSrc, "");
+        test.checkInt("comma-dot-bad c reject", 2, cBad.status);
+        test.checkText("comma-dot-bad c reject stdout", "", cBad.stdout);
+    }
     commaFaults: List<String> = [
         "io := import \"core/io\"; io.outputLine(\"before\");\nvar zero := 0; io.outputLine(\"prefix\", 1 / zero,);",
-        "io := import \"core/io\"; io.outputLine(io.inputInt(\"Int: \",),);",
-        "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = []; io.outputLine(list.popBack(mut values,),);"
+        "io := import \"core/io\"; io.outputLine(io.inputInt(\"Int: \",),);"
     ];
     loop commaFaults as src {
-        if text.containsText(src, "zero") {
+        if src.contains("zero") {
             checkTsAndC("comma-fault", src, "comma سلام.lts", "bad", 1);
         } else {
             checkTsOnly("comma-fault", src, "comma سلام.lts", "bad", 1, false);
         }
     }
+    commaDotPop := compilerTest.compileCheckRunTsWithInput(root, tsComp, "io := import \"core/io\"; values: mut List<Int> = []; io.outputLine(List.popBack(mut values,),);", "comma سلام.lts", "bad", emptyArgs());
+    test.checkInt("comma-fault dot pop status", 1, commaDotPop.status);
+    test.checkText("comma-fault dot pop stdout", "", commaDotPop.stdout);
+    test.check("comma-fault dot pop stderr: " + commaDotPop.stderr, commaDotPop.stderr.contains("comma سلام.lts:1:") and commaDotPop.stderr.contains("BoundPanic: pop_back on an empty list"));
 
     /* statement scopes isolate locals and preserve outer values while shadow initializers run */
     scopeBoth: List<String> = [
@@ -303,12 +315,12 @@ if not skipHeavy {
         "io := import \"core/io\"; f := fn(n: Int): Int { { n := n + 1; io.outputLine(n); } return n; } io.outputLine(f(3));",
         "io := import \"core/io\"; f := fn(): Int { { return 7; } } io.outputLine(f());",
         "io := import \"core/io\"; values: List<Int> = [1, 2]; loop values as values { io.outputLine(values); } io.outputLine(values);",
-        "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [1, 2]; { values := list.popBack(mut values); io.outputLine(values); } io.outputLine(values);",
         "io := import \"core/io\"; pair := (n = 1, label = \"x\"); { pair := (n = pair.n + 1, label = pair.label); io.outputLine(pair.n, pair.label); } io.outputLine(pair.n);",
         "io := import \"core/io\"; first := fn(values: List<Int>): Int { { values := values[0]; io.outputLine(values); } values[1] } items: List<Int> = [1, 2]; io.outputLine(first(items));"
     ];
     loop scopeBoth as src { checkTsAndC("scope-both", src, "", "", 0); }
     loop scopeTsOnly as src { checkTsOnly("scope-ts", src, "", "", 0, false); }
+    compilerTest.assertCompileRunTs(root, tsComp, "scope-ts list popBack shadow", "io := import \"core/io\"; values: mut List<Int> = [1, 2]; { values := mut values.popBack(); io.outputLine(values); } io.outputLine(values);", "2\n[1]\n");
     scopeInvalid: List<String> = [
         "io := import \"core/io\"; io.outputLine(\"before\"); { x := 1; } io.outputLine(x);",
         "io := import \"core/io\"; var x := 1; { y := x; { io.outputLine(y); } } io.outputLine(y);",
@@ -327,7 +339,7 @@ if not skipHeavy {
         "io := import \"core/io\"; values: List<Int> = [1]; io.outputLine(\"before\");\r\n{ values := values[2]; io.outputLine(values); }"
     ];
     loop scopeFaults as src {
-        if text.containsText(src, "values: List<Int>") {
+        if src.contains("values: List<Int>") {
             checkTsOnly("scope-fault", src, "scope سلام.lts", "", 1, false);
         } else {
             checkTsAndC("scope-fault", src, "scope سلام.lts", "", 1);
@@ -367,13 +379,18 @@ if not skipHeavy {
         "[1, 2]; (n = 1, label = \"quiet\");",
         "io := import \"core/io\"; f := fn(): List<Int> { values: List<Int> = [1, 2]; values;; } io.outputLine(f());",
         "io := import \"core/io\"; f := fn(): List<Int> { values: List<Int> = []; values;; } io.outputLine(f());",
-        "io := import \"core/io\"; f := fn(): (n: Int) { (n = 2);; } io.outputLine(f());",
-        "list := import \"core/list\"; io := import \"core/io\"; var values: mut List<Int> = [1, 2]; list.popBack(mut values); io.outputLine(values);",
-        "list := import \"core/list\"; io := import \"core/io\"; f := fn(): Int { values: mut List<Int> = [1, 2]; list.popBack(mut values);; } io.outputLine(f());",
-        "list := import \"core/list\"; f := fn(): Unit { values: mut List<Int> = [1]; list.pushBack(mut values, 2);; } f();"
+        "io := import \"core/io\"; f := fn(): (n: Int) { (n = 2);; } io.outputLine(f());"
     ];
     loop exprBoth as src { checkTsAndC("expr-both", src, "", "", 0); }
-    loop exprTsOnly as src { checkTsOnly("expr-ts", src, "", "", 0, true); }
+    loop exprTsOnly as src { checkTsOnly("expr-ts", src, "", "", 0, false); }
+    exprDotTsOnly: List<(src: String, out: String)> = [
+        (src = "io := import \"core/io\"; var values: mut List<Int> = [1, 2]; mut values.popBack(); io.outputLine(values);", out = "[1]\n"),
+        (src = "io := import \"core/io\"; f := fn(): Int { values: mut List<Int> = [1, 2]; mut values.popBack();; } io.outputLine(f());", out = "2\n"),
+        (src = "f := fn(): Unit { values: mut List<Int> = [1]; mut values.pushBack(2);; } f();", out = "")
+    ];
+    loop exprDotTsOnly as ed {
+        compilerTest.assertCompileRunTs(root, tsComp, "expr-ts dot: " + ed.src, ed.src, ed.out);
+    }
     checkTsOnly("expr-in-int", "io := import \"core/io\"; io.inputInt(\"n? \") + io.inputInt(\"m? \"); io.outputLine(io.inputInt());", "", "1 2 3", 0, false);
     checkTsOnly("expr-in-line", "io := import \"core/io\"; io.inputLine(\"line? \"); io.outputLine(io.inputLine());", "", "first\nlast\n", 0, false);
     checkTsOnly("expr-in-all", "io := import \"core/io\"; io.inputAll(\"all? \"); io.outputLine(io.inputAll());", "", "all\n🙂", 0, false);
@@ -427,7 +444,7 @@ if not skipHeavy {
         "io := import \"core/io\"; f := fn(flag: Bool): List<Int> { if flag { values: List<Int> = [1]; values; } else { values: List<Int> = [2]; return values; } } io.outputLine(f(true), f(false));"
     ];
     loop fnCompBoth as src { checkTsAndC("fn-comp-both", src, "", "", 0); }
-    loop fnCompTsOnly as src { checkTsOnly("fn-comp-ts", src, "", "", 0, true); }
+    loop fnCompTsOnly as src { checkTsOnly("fn-comp-ts", src, "", "", 0, false); }
 
     scalarControl: List<String> = [
         "io := import \"core/io\"; loop { io.outputLine(\"live\"); break; 1 / 0; } io.outputLine(\"after\");",
@@ -463,11 +480,11 @@ if not skipHeavy {
         cTs := compilerTest.compileStdin(root, tsComp, badSrc, "branch سلام.lts");
         test.checkInt("fn-comp-bad ts", 2, cTs.status);
         test.checkText("fn-comp-bad ts stdout", "", cTs.stdout);
-        test.check("fn-comp-bad ts loc: " + cTs.stderr, text.startsWithAt(cTs.stderr, 0, "branch سلام.lts:2:"));
+        test.check("fn-comp-bad ts loc: " + cTs.stderr, cTs.stderr.startsWithAt(0, "branch سلام.lts:2:"));
         cC := compilerTest.compileStdin(root, cComp, badSrc, "branch سلام.lts");
         test.checkInt("fn-comp-bad c", 2, cC.status);
         test.checkText("fn-comp-bad c stdout", "", cC.stdout);
-        test.check("fn-comp-bad c loc: " + cC.stderr, text.startsWithAt(cC.stderr, 0, "branch سلام.lts:2:"));
+        test.check("fn-comp-bad c loc: " + cC.stderr, cC.stderr.startsWithAt(0, "branch سلام.lts:2:"));
     }
     fnCompFaults: List<String> = [
         "io := import \"core/io\"; io.outputLine(\"before\"); f := fn(flag: Bool): Int { if flag { var zero := 0; return 1 / zero; } else { return 2; } } io.outputLine(f(true));",

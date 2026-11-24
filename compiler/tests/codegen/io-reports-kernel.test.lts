@@ -1,9 +1,6 @@
 /* Report evaluation order, self-hosting kernel scoping, and temporary I/O helper tests migrated from compiler/tests/host.test.ts. */
 
-integer := import "core/int";
-list := import "core/list";
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -123,9 +120,8 @@ ioCases: List<(source: String, stdin: String, status: Int)> = [
     (source = "io := import \"core/io\"; io.outputLine(io.inputLine(), io.inputLine());", stdin = "\nlast", status = 0),
     (source = "io := import \"core/io\"; n := io.inputInt(); line := io.inputLine(); rest := io.inputAll(); io.outputLine(n, line, rest);", stdin = "7\nremaining", status = 0),
     (source = "io := import \"core/io\"; io.outputLine(io.inputAll(\"All: \"));", stdin = "", status = 0),
-    (source = "io := import \"core/io\"; io.outputLine(io.inputAll(\"All: \"));", stdin = text.repeatText("a", 4095) + "🙂tail", status = 0),
+    (source = "io := import \"core/io\"; io.outputLine(io.inputAll(\"All: \"));", stdin = "a".repeat(4095) + "🙂tail", status = 0),
     (source = "io := import \"core/io\"; empty: List<Int> = []; io.outputLine(empty);", stdin = "", status = 0),
-    (source = "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = []; io.outputLine(list.pushBack(mut values, 1), values);", stdin = "", status = 0),
     (source = "io := import \"core/io\"; zero: (value: Float); io.outputLine(zero, zero.value);", stdin = "", status = 0),
     (source = "io := import \"core/io\"; io.outputLine(\"before\"); io.inputInt(\"N: \");", stdin = "bad", status = 1),
     (source = "io := import \"core/io\"; io.inputInt(\"N: \");", stdin = "9223372036854775808", status = 1),
@@ -138,13 +134,14 @@ ioCases: List<(source: String, stdin: String, status: Int)> = [
 loop ioCases as ic {
     assertTsContract("io-helper", ic.source, ic.stdin, ic.status);
 }
+compilerTest.assertCompileRunTs(root, tsComp, "io-helper list pushBack", "io := import \"core/io\"; values: mut List<Int> = []; io.outputLine(mut values.pushBack(1), values);", "Unit [1]\n");
 
 faultSource := "io := import \"core/io\"; io.outputLine(\"before fault\"); values: List<Int> = [1]; io.outputLine(values[2]);";
 recFault := compilerTest.assertContractStatus(contractsJson, "io-bound-fault", faultSource, "", "", 1);
 actualFault := compilerTest.compileCheckRunTs(root, tsComp, faultSource, "");
 test.checkInt("io-bound-fault status", recFault.status, actualFault.status);
 test.checkText("io-bound-fault stdout", recFault.stdout, actualFault.stdout);
-test.check("io-bound-fault stderr mentions BoundPanic", text.containsText(actualFault.stderr, "BoundPanic"));
+test.check("io-bound-fault stderr mentions BoundPanic", actualFault.stderr.contains("BoundPanic"));
 
 /* generated input rejects malformed UTF-8 at the first reached read */
 badUtf8Src := "io := import \"core/io\"; io.output(\"before:\"); io.outputLine(io.inputInt(\"N: \")); io.inputAll(\"Rest: \");";
@@ -156,10 +153,10 @@ checkBadUtf8 := fn(prep: compilerTest.PreparedTs, badBytes: List<Int>, expectedS
     runRes := compilerTest.runPreparedTsWithBytes(prep, badBytes, emptyArgs());
     test.checkInt("bad-utf8 status", 1, runRes.status);
     test.checkText("bad-utf8 stdout", expectedStdout, runRes.stdout);
-    expectedPrefix := "input.lts:1:" + integer.intText(column) + ": InputFault: cannot read input: ";
-    test.check("bad-utf8 stderr prefix: " + runRes.stderr, text.startsWithAt(runRes.stderr, 0, expectedPrefix));
-    test.check("bad-utf8 stderr newline", text.endsWith(runRes.stderr, "\n"));
-    test.check("bad-utf8 stderr non-empty reason", text.length(runRes.stderr) > text.length(expectedPrefix) + 1);
+    expectedPrefix := "input.lts:1:" + column.toText() + ": InputFault: cannot read input: ";
+    test.check("bad-utf8 stderr prefix: " + runRes.stderr, runRes.stderr.startsWithAt(0, expectedPrefix));
+    test.check("bad-utf8 stderr newline", runRes.stderr.endsWith("\n"));
+    test.check("bad-utf8 stderr non-empty reason", runRes.stderr.length() > expectedPrefix.length() + 1);
 };
 
 bad0: List<Int> = [255];

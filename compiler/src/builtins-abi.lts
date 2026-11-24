@@ -1,8 +1,6 @@
 /** Core and external host module ABI tables, soft-builtin signatures, and `--builtin-mode` spec resolution. */
 
 diagLib := import "core/diag";
-listLib := import "core/list";
-textLib := import "core/text";
 ir := import "./frontend-ir.lts";
 
 /** One parsed item entry matching `frontend-ir.Item`. */
@@ -13,9 +11,9 @@ Items := type List<Item>;
 
 /** True when `moduleIdentity` is a verified `lite.core.*`, `lite.external.*`, or `lite.extra.*` host module identity. */
 pub isHostModuleIdentity := fn(moduleIdentity: String): Bool {
-    textLib.startsWithAt(moduleIdentity, 0, "lite.core.") or
-    textLib.startsWithAt(moduleIdentity, 0, "lite.external.") or
-    textLib.startsWithAt(moduleIdentity, 0, "lite.extra.")
+    moduleIdentity.startsWithAt(0, "lite.core.") or
+    moduleIdentity.startsWithAt(0, "lite.external.") or
+    moduleIdentity.startsWithAt(0, "lite.extra.")
 };
 
 /** Resolves a bodyless `lib/extra/` declaration when its module identity and ABI match. */
@@ -84,10 +82,10 @@ externalHostFunction := fn(moduleIdentity: String, name: String, params: String,
 
 /** Resolves a bodyless public core or external declaration only when its module identity and complete ABI are registered. */
 pub coreHostFunction := fn(moduleIdentity: String, name: String, params: String, result: String): String {
-    if textLib.startsWithAt(moduleIdentity, 0, "lite.external.") {
+    if moduleIdentity.startsWithAt(0, "lite.external.") {
         return externalHostFunction(moduleIdentity, name, params, result);
     }
-    if textLib.startsWithAt(moduleIdentity, 0, "lite.extra.") {
+    if moduleIdentity.startsWithAt(0, "lite.extra.") {
         return extraHostFunction(moduleIdentity, name, params, result);
     }
     if moduleIdentity == "lite.core.io.v1" {
@@ -360,23 +358,23 @@ pub coreOutputName := fn(runtime: String): String {
 /** Normalizes and validates a canonical soft-builtin core module path (`core/<name>` or `lib/core/<name>[.lts]`), returning `""` outside stdlib bounds. */
 normalizeBuiltinModule := fn(raw: String): String {
     if raw == "" { return ""; }
-    if textLib.indexOfText(raw, "\\", 0) >= 0 or textLib.indexOfText(raw, ":", 0) >= 0 {
+    if raw.indexOf("\\", 0) >= 0 or raw.indexOf(":", 0) >= 0 {
         return "";
     }
-    if textLib.startsWithAt(raw, 0, "/") or textLib.indexOfText(raw, "//", 0) >= 0 {
+    if raw.startsWithAt(0, "/") or raw.indexOf("//", 0) >= 0 {
         return "";
     }
-    rawLen := textLib.length(raw);
-    if textLib.at(raw, rawLen - 1) == "/" { return ""; }
+    rawLen := raw.length();
+    if raw.at(rawLen - 1) == "/" { return ""; }
     var out := raw;
-    if rawLen > 4 and textLib.startsWithAt(raw, rawLen - 4, ".lts") {
-        out = textLib.slice(raw, 0, rawLen - 4);
+    if rawLen > 4 and raw.startsWithAt(rawLen - 4, ".lts") {
+        out = raw.slice(0, rawLen - 4);
     }
-    if textLib.indexOfText(out, ".", 0) >= 0 { return ""; }
-    if textLib.startsWithAt(out, 0, "core/") {
+    if out.indexOf(".", 0) >= 0 { return ""; }
+    if out.startsWithAt(0, "core/") {
         out = "lib/" + out;
     }
-    if not textLib.startsWithAt(out, 0, "lib/core/") { return ""; }
+    if not out.startsWithAt(0, "lib/core/") { return ""; }
     if not isSoftBuiltinModule(out) { return ""; }
     out
 };
@@ -386,20 +384,20 @@ parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
     if spec == ir.BUILTIN_MODE_BUILTIN or spec == ir.BUILTIN_MODE_PURE {
         return (kind = ir.BUILTIN_RULE_PROJECT, name = "", runtime = spec, code = "", intValue = 0, textValue = "");
     }
-    eq := textLib.indexOfText(spec, "=", 0);
+    eq := spec.indexOf("=", 0);
     if eq <= 0 {
         diagLib.fail(prefix, "invalid --builtin-mode specification: " + spec);
     }
-    target := textLib.slice(spec, 0, eq);
-    mode := textLib.slice(spec, eq + 1, textLib.length(spec));
+    target := spec.slice(0, eq);
+    mode := spec.slice(eq + 1, spec.length());
     if mode =!= ir.BUILTIN_MODE_BUILTIN and mode =!= ir.BUILTIN_MODE_PURE {
         diagLib.fail(prefix, "invalid --builtin-mode value: " + mode);
     }
-    tLen := textLib.length(target);
-    colon := textLib.indexOfText(target, ":", 0);
+    tLen := target.length();
+    colon := target.indexOf(":", 0);
     if colon > 0 and colon + 1 < tLen {
-        modPart := textLib.slice(target, 0, colon);
-        fnPart := textLib.slice(target, colon + 1, tLen);
+        modPart := target.slice(0, colon);
+        fnPart := target.slice(colon + 1, tLen);
         normMod := normalizeBuiltinModule(modPart);
         if normMod =!= "" and softBuiltinAbi(normMod, fnPart).result =!= "" {
             return (kind = ir.BUILTIN_RULE_FN, name = normMod + "." + fnPart, runtime = mode,
@@ -407,19 +405,19 @@ parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
         }
         diagLib.fail(prefix, "invalid --builtin-mode function target: " + target);
     }
-    isLtsFile := tLen > 4 and textLib.startsWithAt(target, tLen - 4, ".lts");
+    isLtsFile := tLen > 4 and target.startsWithAt(tLen - 4, ".lts");
     var lastDot := -1;
     var scan := 0;
     loop true {
-        found := textLib.indexOfText(target, ".", scan);
+        found := target.indexOf(".", scan);
         if found < 0 { break; }
         lastDot = found;
         scan = found + 1;
     }
-    if not isLtsFile and lastDot > 0 and textLib.indexOfText(target, "/", lastDot + 1) < 0 {
-        modPart := textLib.slice(target, 0, lastDot);
-        fnPart := textLib.slice(target, lastDot + 1, tLen);
-        if textLib.indexOfText(modPart, ".", 0) < 0 and fnPart =!= "" {
+    if not isLtsFile and lastDot > 0 and target.indexOf("/", lastDot + 1) < 0 {
+        modPart := target.slice(0, lastDot);
+        fnPart := target.slice(lastDot + 1, tLen);
+        if modPart.indexOf(".", 0) < 0 and fnPart =!= "" {
             normMod := normalizeBuiltinModule(modPart);
             if normMod =!= "" and softBuiltinAbi(normMod, fnPart).result =!= "" {
                 return (kind = ir.BUILTIN_RULE_FN, name = normMod + "." + fnPart, runtime = mode,
@@ -439,7 +437,7 @@ parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
 pub parseBuiltinModeSpecs := fn(prefix: String, specs: List<String>): Items {
     rules: mut Items = [];
     loop specs as spec {
-        listLib.pushBack(mut rules, parseBuiltinModeSpec(prefix, spec));
+        mut rules.pushBack(parseBuiltinModeSpec(prefix, spec));
     }
     rules
 };

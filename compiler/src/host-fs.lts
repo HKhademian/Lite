@@ -3,9 +3,7 @@
 crypto := import "core/crypto";
 diagLib := import "core/diag";
 fs := import "core/file";
-integer := import "core/int";
 io := import "core/io";
-listLib := import "core/list";
 path := import "core/path";
 textLib := import "core/text";
 unicode := import "core/unicode";
@@ -30,89 +28,89 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
     var filePath := "";
 
     args: mut List<String> = rawArgs;
-    loop listLib.listCountText(args) > 0 {
-        arg := listLib.popFront(mut args);
+    loop args.length() > 0 {
+        arg := mut args.popFront();
         if arg == "--stdin" {
             isStdin = true;
-        } else if textLib.startsWithAt(arg, 0, "-O") {
-            if not optCfg.parseOptClass(textLib.slice(arg, 2, textLib.length(arg))).ok {
+        } else if arg.startsWithAt(0, "-O") {
+            if not optCfg.parseOptClass(arg.slice(2, arg.length())).ok {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unsupported optimization flag " + arg + " (expected -O0, -O1, -O2, -O3, -Os, or -Oc)");
             }
         } else if arg == "--opt" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --opt");
             }
-            rawOpt := listLib.popFront(mut args);
+            rawOpt := mut args.popFront();
             if not optCfg.parseOptClass(rawOpt).ok {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unsupported optimization level " + rawOpt + " (expected 0, 1, 2, 3, s, or c)");
             }
-        } else if textLib.startsWithAt(arg, 0, "--opt=") {
-            rawOpt := textLib.slice(arg, 6, textLib.length(arg));
+        } else if arg.startsWithAt(0, "--opt=") {
+            rawOpt := arg.slice(6, arg.length());
             if not optCfg.parseOptClass(rawOpt).ok {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unsupported optimization level " + rawOpt + " (expected 0, 1, 2, 3, s, or c)");
             }
-        } else if textLib.startsWithAt(arg, 0, "-f") {
+        } else if arg.startsWithAt(0, "-f") {
             if not optCfg.isPassFlag(arg) {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unsupported optimization pass flag " + arg);
             }
         } else if arg == "--emit-format" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --emit-format (expected pretty or compact)");
             }
-            _ignoredFmt := listLib.popFront(mut args);
-        } else if textLib.startsWithAt(arg, 0, "--emit-format=") {
+            _ignoredFmt := mut args.popFront();
+        } else if arg.startsWithAt(0, "--emit-format=") {
             _ignoredInlineFmt := true;
         } else if arg == "--source-map" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --source-map (expected none, comments, or lines)");
             }
-            _ignoredSm := listLib.popFront(mut args);
-        } else if textLib.startsWithAt(arg, 0, "--source-map=") {
+            _ignoredSm := mut args.popFront();
+        } else if arg.startsWithAt(0, "--source-map=") {
             _ignoredInlineSm := true;
         } else if arg == "--builtin-mode" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --builtin-mode");
             }
-            _ignoredSpec := listLib.popFront(mut args);
-        } else if textLib.startsWithAt(arg, 0, "--builtin-mode=") {
+            _ignoredSpec := mut args.popFront();
+        } else if arg.startsWithAt(0, "--builtin-mode=") {
             _ignoredInlineSpec := true;
         } else if arg == "--name" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --name");
             }
             hasName = true;
-            name = listLib.popFront(mut args);
-        } else if textLib.startsWithAt(arg, 0, "--name=") {
+            name = mut args.popFront();
+        } else if arg.startsWithAt(0, "--name=") {
             hasName = true;
-            name = textLib.slice(arg, 7, textLib.length(arg));
+            name = arg.slice(7, arg.length());
         } else if arg == "--root" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --root");
             }
             hasRoot = true;
-            rootPath = listLib.popFront(mut args);
-        } else if textLib.startsWithAt(arg, 0, "--root=") {
+            rootPath = mut args.popFront();
+        } else if arg.startsWithAt(0, "--root=") {
             hasRoot = true;
-            rootPath = textLib.slice(arg, 7, textLib.length(arg));
+            rootPath = arg.slice(7, arg.length());
         } else if arg == "--out" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --out");
             }
             hasOut = true;
-            outPath = listLib.popFront(mut args);
-        } else if textLib.startsWithAt(arg, 0, "--out=") {
+            outPath = mut args.popFront();
+        } else if arg.startsWithAt(0, "--out=") {
             hasOut = true;
-            outPath = textLib.slice(arg, 6, textLib.length(arg));
+            outPath = arg.slice(6, arg.length());
         } else if arg == "--trace-json" {
-            if listLib.listCountText(args) == 0 {
+            if args.length() == 0 {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "missing value for --trace-json");
             }
             hasTrace = true;
-            tracePath = listLib.popFront(mut args);
-        } else if textLib.startsWithAt(arg, 0, "--trace-json=") {
+            tracePath = mut args.popFront();
+        } else if arg.startsWithAt(0, "--trace-json=") {
             hasTrace = true;
-            tracePath = textLib.slice(arg, 13, textLib.length(arg));
-        } else if textLib.startsWithAt(arg, 0, "-") {
+            tracePath = arg.slice(13, arg.length());
+        } else if arg.startsWithAt(0, "-") {
             return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unknown compiler option " + arg);
         } else if filePath =!= "" {
             return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unexpected argument " + arg);
@@ -134,12 +132,12 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
 pub extractBuiltinSpecs := fn(rawArgs: List<String>): List<String> {
     out: mut List<String> = [];
     args: mut List<String> = rawArgs;
-    loop listLib.listCountText(args) > 0 {
-        arg := listLib.popFront(mut args);
-        if arg == "--builtin-mode" and listLib.listCountText(args) > 0 {
-            listLib.pushBack(mut out, listLib.popFront(mut args));
-        } else if textLib.startsWithAt(arg, 0, "--builtin-mode=") {
-            listLib.pushBack(mut out, textLib.slice(arg, 15, textLib.length(arg)));
+    loop args.length() > 0 {
+        arg := mut args.popFront();
+        if arg == "--builtin-mode" and args.length() > 0 {
+            mut out.pushBack(mut args.popFront());
+        } else if arg.startsWithAt(0, "--builtin-mode=") {
+            mut out.pushBack(arg.slice(15, arg.length()));
         }
     }
     out
@@ -202,23 +200,23 @@ pub canonicalizeRootPath := fn(rawPath: String, cwd: String): String {
 
 /** True when `spec` starts with an ASCII Windows drive prefix (`C:...`). */
 hasDrivePrefix := fn(spec: String): Bool {
-    if textLib.length(spec) < 2 { return false; }
-    textLib.isAsciiLetter(textLib.at(spec, 0)) and textLib.at(spec, 1) == ":"
+    if spec.length() < 2 { return false; }
+    spec.at(0).isAsciiLetter() and spec.at(1) == ":"
 }
 
 /** Resolves Lite imports: relative `./`/`../` use importer directory, absolute paths stay absolute, bare specs resolve under `<projectRoot>/lib`. */
 pub resolveImportPath := fn(importerPath: String, spec: String, projectRoot: String, cwd: String): (ok: Bool, path: String, error: String) {
-    if spec == "" or textLib.indexOfText(spec, "\\", 0) >= 0 {
+    if spec == "" or spec.indexOf("\\", 0) >= 0 {
         return (ok = false, path = "", error = "import path must be nonempty and use \"/\" separators");
     }
-    sourceSpec := if textLib.endsWith(spec, ".lts") { spec } else { spec + ".lts" };
+    sourceSpec := if spec.endsWith(".lts") { spec } else { spec + ".lts" };
     if hasDrivePrefix(sourceSpec) {
         return (ok = false, path = "", error = "absolute drive paths are not supported on this host");
     }
-    if textLib.startsWithAt(sourceSpec, 0, "/") {
+    if sourceSpec.startsWithAt(0, "/") {
         return (ok = true, path = path.normalize(sourceSpec), error = "");
     }
-    if textLib.startsWithAt(sourceSpec, 0, "./") or textLib.startsWithAt(sourceSpec, 0, "../") {
+    if sourceSpec.startsWithAt(0, "./") or sourceSpec.startsWithAt(0, "../") {
         baseImporter := canonicalizeRootPath(importerPath, cwd);
         return (ok = true, path = path.resolve(path.parentDir(baseImporter), sourceSpec), error = "");
     }
@@ -232,7 +230,7 @@ pub resolveImportPath := fn(importerPath: String, spec: String, projectRoot: Str
 pub displaySourcePath := fn(filePath: String, projectRoot: String): String {
     if projectRoot == "" { return filePath; }
     rel := path.relative(projectRoot, filePath);
-    if rel == ".." or textLib.startsWithAt(rel, 0, "../") or path.isAbsolute(rel) {
+    if rel == ".." or rel.startsWithAt(0, "../") or path.isAbsolute(rel) {
         return filePath;
     }
     rel
@@ -262,26 +260,26 @@ pub sourceModuleIdentity := fn(projectRoot: String, sourceText: String): String 
         cachedIdentityLoaded = [];
         cachedIdentityTexts = [];
         var loadIdx := 0;
-        loop loadIdx < listLib.listCountText(paths) {
+        loop loadIdx < paths.length() {
             full := path.join(projectRoot, paths[loadIdx]);
             if fs.kind(full) == fs.FILE_KIND_FILE {
                 loaded := fs.readText(full);
                 if loaded.ok {
-                    listLib.pushBack(mut cachedIdentityLoaded, true);
-                    listLib.pushBack(mut cachedIdentityTexts, loaded.text);
+                    mut cachedIdentityLoaded.pushBack(true);
+                    mut cachedIdentityTexts.pushBack(loaded.text);
                 } else {
-                    listLib.pushBack(mut cachedIdentityLoaded, false);
-                    listLib.pushBack(mut cachedIdentityTexts, "");
+                    mut cachedIdentityLoaded.pushBack(false);
+                    mut cachedIdentityTexts.pushBack("");
                 }
             } else {
-                listLib.pushBack(mut cachedIdentityLoaded, false);
-                listLib.pushBack(mut cachedIdentityTexts, "");
+                mut cachedIdentityLoaded.pushBack(false);
+                mut cachedIdentityTexts.pushBack("");
             }
             loadIdx = loadIdx + 1;
         }
     }
     var i := 0;
-    loop i < listLib.listCountText(paths) {
+    loop i < paths.length() {
         if cachedIdentityLoaded[i] and cachedIdentityTexts[i] == sourceText {
             return identities[i];
         }
@@ -292,17 +290,17 @@ pub sourceModuleIdentity := fn(projectRoot: String, sourceText: String): String 
 
 /** True when `msg` represents an invalid-UTF-8 decode error from Node `TextDecoder`. */
 pub isUtf8DecodeError := fn(msg: String): Bool {
-    textLib.containsText(msg, "not valid for encoding utf-8") or
-    textLib.containsText(msg, "invalid utf-8") or
-    textLib.containsText(msg, "invalid UTF-8")
+    msg.contains("not valid for encoding utf-8") or
+    msg.contains("invalid utf-8") or
+    msg.contains("invalid UTF-8")
 }
 
 /** Extracts a leading POSIX/Node error code such as `"ENOENT"` from `errMsg`, falling back to `fallback`. */
 extractErrCode := fn(errMsg: String, fallback: String): String {
-    colon := textLib.indexOfText(errMsg, ":", 0);
+    colon := errMsg.indexOf(":", 0);
     if colon > 0 and colon <= 16 {
-        code := textLib.slice(errMsg, 0, colon);
-        if textLib.startsWithAt(code, 0, "E") {
+        code := errMsg.slice(0, colon);
+        if code.startsWithAt(0, "E") {
             return code;
         }
     }
@@ -391,7 +389,7 @@ cwd: String, entryPathHint: String, stdinText: String
 
 /** Converts a `0..15` integer value to its lowercase hexadecimal digit. */
 hexDigit := fn(n: Int): String {
-    if n < 10 { integer.intText(n) }
+    if n < 10 { n.toText() }
     else if n == 10 { "a" }
     else if n == 11 { "b" }
     else if n == 12 { "c" }
@@ -437,9 +435,9 @@ pub writeTraceJson := fn(tracePath: String, graph: frontend.Items): Unit {
             if not hRes.ok {
                 diagLib.fail("", "cannot hash traced source " + item.name + ": " + hRes.error);
             }
-            listLib.pushBack(mut fileEntries, "{\"path\":" + quoteJson(item.name) + ",\"sha256\":" + quoteJson(hRes.hex) + "}");
+            (mut fileEntries).pushBack("{\"path\":" + quoteJson(item.name) + ",\"sha256\":" + quoteJson(hRes.hex) + "}");
         } else if item.kind == frontend.ITEM_KIND_IMPORT_EDGE {
-            listLib.pushBack(mut edgeEntries, "{\"importer\":" + quoteJson(item.name) + ",\"spec\":" + quoteJson(item.code) + ",\"path\":" + quoteJson(item.runtime) + "}");
+            mut edgeEntries.pushBack("{\"importer\":" + quoteJson(item.name) + ",\"spec\":" + quoteJson(item.code) + ",\"path\":" + quoteJson(item.runtime) + "}");
         }
     }
     body := "{\"files\":[" + textLib.joinTexts(fileEntries, ",") + "],\"edges\":[" + textLib.joinTexts(edgeEntries, ",") + "]}\n";

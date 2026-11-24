@@ -1,9 +1,6 @@
 /** Target helper call scanning, 32-bucket token sets, block-scoped pure dead-code pruning, and program reachability filtering. */
 
 integer := import "core/int";
-listLib := import "core/list";
-mapLib := import "core/map";
-setLib := import "core/set";
 textLib := import "core/text";
 tb := import "util/text-builder";
 ir := import "./frontend-ir.lts";
@@ -23,19 +20,19 @@ TokenBuckets := type Set<String>;
 
 /** True when emitted target code calls `needle` outside quoted String literal text. */
 pub codeUsesTextCall := fn(code: String, needle: String): Bool {
-    if textLib.indexOfText(code, needle, 0) < 0 { return false; }
-    size := textLib.length(code);
+    if code.indexOf(needle, 0) < 0 { return false; }
+    size := code.length();
     if size == 0 { return false; }
-    width := textLib.length(needle);
+    width := needle.length();
     if width == 0 { return true; }
-    first := textLib.at(needle, 0);
+    first := needle.at(0);
     var cursor := 0;
     loop cursor < size {
-        ch := textLib.at(code, cursor);
+        ch := code.at(cursor);
         if ch == "\"" {
             cursor = cursor + 1;
             loop cursor < size {
-                escaped := textLib.at(code, cursor);
+                escaped := code.at(cursor);
                 if escaped == "\\" {
                     cursor = cursor + 2;
                 } else if escaped == "\"" {
@@ -45,7 +42,7 @@ pub codeUsesTextCall := fn(code: String, needle: String): Bool {
                     cursor = cursor + 1;
                 }
             }
-        } else if ch == first and textLib.startsWithAt(code, cursor, needle) {
+        } else if ch == first and code.startsWithAt(cursor, needle) {
             return true;
         } else {
             cursor = cursor + 1;
@@ -76,64 +73,64 @@ pub codeUsesValueIf := fn(code: String): Bool {
 
 /** Collects distinct target or user-function call tokens directly into `seen`, skipping quoted text and consuming whole identifiers. */
 scanCodeCallsSet := fn(code: String, seen: mut Set<String>, userFnsOnly: Bool): Unit {
-    var nextLite := textLib.indexOfText(code, "lite", 0);
-    var nextLt := textLib.indexOfText(code, "lt_", 0);
-    var nextFinally := if userFnsOnly { -1 } else { textLib.indexOfText(code, "finally", 0) };
+    var nextLite := code.indexOf("lite", 0);
+    var nextLt := code.indexOf("lt_", 0);
+    var nextFinally := if userFnsOnly { -1 } else { code.indexOf("finally", 0) };
     if nextLite < 0 and nextLt < 0 and nextFinally < 0 { return; }
-    var nextQuote := textLib.indexOfText(code, "\"", 0);
-    size := textLib.length(code);
+    var nextQuote := code.indexOf("\"", 0);
+    size := code.length();
     var cursor := 0;
     loop cursor < size {
-        if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
-        if nextLt >= 0 and nextLt < cursor { nextLt = textLib.indexOfText(code, "lt_", cursor); }
-        if nextFinally >= 0 and nextFinally < cursor { nextFinally = textLib.indexOfText(code, "finally", cursor); }
+        if nextLite >= 0 and nextLite < cursor { nextLite = code.indexOf("lite", cursor); }
+        if nextLt >= 0 and nextLt < cursor { nextLt = code.indexOf("lt_", cursor); }
+        if nextFinally >= 0 and nextFinally < cursor { nextFinally = code.indexOf("finally", cursor); }
         var hit := -1;
         if nextLite >= 0 { hit = nextLite; }
         if nextLt >= 0 and (hit < 0 or nextLt < hit) { hit = nextLt; }
         if nextFinally >= 0 and (hit < 0 or nextFinally < hit) { hit = nextFinally; }
         if hit < 0 { return; }
         if nextQuote >= 0 and nextQuote < hit {
-            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote < cursor { nextQuote = code.indexOf("\"", cursor); }
             if nextQuote >= 0 and nextQuote < hit {
                 cursor = syntax.skipAliasString(code, nextQuote);
                 continue;
             }
         }
         if hit > 0 {
-            prev := textLib.at(code, hit - 1);
-            if prev == "$" or textLib.isNameContinue(prev) {
-                cursor = textLib.skipName(code, hit + 3);
-                loop cursor < size and textLib.at(code, cursor) == "$" {
-                    cursor = textLib.skipName(code, cursor + 1);
+            prev := code.at(hit - 1);
+            if prev == "$" or prev.isNameContinue() {
+                cursor = code.skipName(hit + 3);
+                loop cursor < size and code.at(cursor) == "$" {
+                    cursor = code.skipName(cursor + 1);
                 }
                 continue;
             }
         }
-        var endPos := textLib.skipName(code, hit);
-        loop endPos < size and textLib.at(code, endPos) == "$" {
-            endPos = textLib.skipName(code, endPos + 1);
+        var endPos := code.skipName(hit);
+        loop endPos < size and code.at(endPos) == "$" {
+            endPos = code.skipName(endPos + 1);
         }
-        name := textLib.slice(code, hit, endPos);
-        if endPos < size and textLib.at(code, endPos) == "(" {
+        name := code.slice(hit, endPos);
+        if endPos < size and code.at(endPos) == "(" {
             matched := if userFnsOnly {
-                textLib.startsWithAt(name, 0, "lt_fn_") or textLib.startsWithAt(name, 0, "liteFn$") or
-                textLib.startsWithAt(name, 0, "liteFn_")
+                name.startsWithAt(0, "lt_fn_") or name.startsWithAt(0, "liteFn$") or
+                name.startsWithAt(0, "liteFn_")
             } else {
-                (textLib.startsWithAt(name, 0, "lite$") and not textLib.startsWithAt(name, 0, "lite$m$")) or
-                textLib.startsWithAt(name, 0, "lite_") or
-                (textLib.startsWithAt(name, 0, "lt_") and not textLib.startsWithAt(name, 0, "lt_fn_") and
-                not textLib.startsWithAt(name, 0, "lt_m_") and (not textLib.startsWithAt(name, 0, "lt_s") or textLib.startsWithAt(name, 0, "lt_s_") or textLib.startsWithAt(name, 0, "lt_set_")))
+                (name.startsWithAt(0, "lite$") and not name.startsWithAt(0, "lite$m$")) or
+                name.startsWithAt(0, "lite_") or
+                (name.startsWithAt(0, "lt_") and not name.startsWithAt(0, "lt_fn_") and
+                not name.startsWithAt(0, "lt_m_") and (not name.startsWithAt(0, "lt_s") or name.startsWithAt(0, "lt_s_") or name.startsWithAt(0, "lt_set_")))
             };
             if matched {
-                setLib.add(mut seen, name + "(");
+                mut seen.add(name + "(");
             }
         } else if not userFnsOnly and name == "finally" {
             var afterFin := endPos;
-            loop afterFin < size and (textLib.at(code, afterFin) == " " or textLib.at(code, afterFin) == "\t" or textLib.at(code, afterFin) == "\n") {
+            loop afterFin < size and (code.at(afterFin) == " " or code.at(afterFin) == "\t" or code.at(afterFin) == "\n") {
                 afterFin = afterFin + 1;
             }
-            if afterFin < size and textLib.at(code, afterFin) == "{" {
-                setLib.add(mut seen, "lite$finally(");
+            if afterFin < size and code.at(afterFin) == "{" {
+                mut seen.add("lite$finally(");
             }
         }
         cursor = endPos;
@@ -144,11 +141,11 @@ scanCodeCallsSet := fn(code: String, seen: mut Set<String>, userFnsOnly: Bool): 
 scanCodeCalls := fn(code: String, existing: String, userFnsOnly: Bool): String {
     found: mut Set<String>;
     scanCodeCallsSet(code, mut found, userFnsOnly);
-    if setLib.size(found) == 0 { return existing; }
+    if found.size() == 0 { return existing; }
     added: mut tb.TextBuilder;
     loop found as tok {
         entry := tok + "|";
-        if textLib.indexOfText(existing, "|" + entry, 0) < 0 {
+        if existing.indexOf("|" + entry, 0) < 0 {
             tb.append(mut added, entry);
         }
     }
@@ -179,7 +176,7 @@ pub targetHelperCalls := fn(items: Items): String {
 
 /** True when `calls` already contains the pipe-delimited call token `needle`. */
 pub hasHelperToken := fn(calls: String, needle: String): Bool {
-    textLib.indexOfText(calls, "|" + needle + "|", 0) >= 0
+    calls.indexOf("|" + needle + "|", 0) >= 0
 };
 
 /** Creates an empty token set. */
@@ -190,12 +187,12 @@ pub emptyTokenBuckets := fn(): TokenBuckets {
 
 /** True when `s` contains `needle`. */
 pub tokenBucketHas := fn(s: TokenBuckets, needle: String): Bool {
-    needle =!= "" and setLib.has(s, needle)
+    needle =!= "" and s.has(needle)
 };
 
 /** Inserts `needle` into `s` in place. */
 pub tokenBucketAdd := fn(s: mut TokenBuckets, needle: String): Unit {
-    if needle =!= "" { setLib.add(mut s, needle); }
+    if needle =!= "" { mut s.add(needle); }
 };
 
 /** Serializes all tokens in `s` into one `|`-delimited string. */
@@ -211,15 +208,15 @@ pub flattenTokenBuckets := fn(s: TokenBuckets): String {
 
 /** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code` into `tokens`, pushing newly added tokens onto `queue`. */
 codeReachableTokensQueue := fn(code: String, tokens: mut TokenBuckets, queue: mut List<String>): Unit {
-    var nextLite := textLib.indexOfText(code, "lite", 0);
-    var nextLt := textLib.indexOfText(code, "lt_", 0);
+    var nextLite := code.indexOf("lite", 0);
+    var nextLt := code.indexOf("lt_", 0);
     if nextLite < 0 and nextLt < 0 { return; }
-    var nextQuote := textLib.indexOfText(code, "\"", 0);
-    size := textLib.length(code);
+    var nextQuote := code.indexOf("\"", 0);
+    size := code.length();
     var cursor := 0;
     loop cursor < size {
-        if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
-        if nextLt >= 0 and nextLt < cursor { nextLt = textLib.indexOfText(code, "lt_", cursor); }
+        if nextLite >= 0 and nextLite < cursor { nextLite = code.indexOf("lite", cursor); }
+        if nextLt >= 0 and nextLt < cursor { nextLt = code.indexOf("lt_", cursor); }
         var hit := -1;
         if nextLite >= 0 and (nextLt < 0 or nextLite < nextLt) {
             hit = nextLite;
@@ -229,7 +226,7 @@ codeReachableTokensQueue := fn(code: String, tokens: mut TokenBuckets, queue: mu
         if hit < 0 { return; }
         if nextQuote >= 0 and nextQuote < hit {
             if nextQuote < cursor {
-                nextQuote = textLib.indexOfText(code, "\"", cursor);
+                nextQuote = code.indexOf("\"", cursor);
             }
             if nextQuote >= 0 and nextQuote < hit {
                 cursor = syntax.skipAliasString(code, nextQuote);
@@ -237,29 +234,29 @@ codeReachableTokensQueue := fn(code: String, tokens: mut TokenBuckets, queue: mu
             }
         }
         if hit > 0 {
-            prev := textLib.at(code, hit - 1);
-            if prev == "$" or textLib.isNameContinue(prev) {
-                cursor = textLib.skipName(code, hit + 3);
-                loop cursor < size and textLib.at(code, cursor) == "$" {
-                    cursor = textLib.skipName(code, cursor + 1);
+            prev := code.at(hit - 1);
+            if prev == "$" or prev.isNameContinue() {
+                cursor = code.skipName(hit + 3);
+                loop cursor < size and code.at(cursor) == "$" {
+                    cursor = code.skipName(cursor + 1);
                 }
                 continue;
             }
         }
-        var endPos := textLib.skipName(code, hit);
-        loop endPos < size and textLib.at(code, endPos) == "$" {
-            endPos = textLib.skipName(code, endPos + 1);
+        var endPos := code.skipName(hit);
+        loop endPos < size and code.at(endPos) == "$" {
+            endPos = code.skipName(endPos + 1);
         }
-        name := textLib.slice(code, hit, endPos);
-        token := if textLib.startsWithAt(name, 0, "lt_fn_") or textLib.startsWithAt(name, 0, "liteFn$") or
-        textLib.startsWithAt(name, 0, "liteFn_") {
+        name := code.slice(hit, endPos);
+        token := if name.startsWithAt(0, "lt_fn_") or name.startsWithAt(0, "liteFn$") or
+        name.startsWithAt(0, "liteFn_") {
             name + "("
         } else {
             name
         };
-        if not setLib.has(tokens, token) {
-            setLib.add(mut tokens, token);
-            listLib.pushBack(mut queue, token);
+        if not tokens.has(token) {
+            mut tokens.add(token);
+            mut queue.pushBack(token);
         }
         cursor = endPos;
     }
@@ -270,7 +267,7 @@ pub closeReachableGraph := fn(graph: Items, reachable: mut TokenBuckets, scanned
     fnStarts: mut Map<String, Int>;
     fnEnds: mut Map<String, Int>;
     pureDeclIdx: mut Map<String, Int>;
-    n := listLib.length(graph);
+    n := graph.length();
     var fnDepth := 0;
     var blockDepth := 0;
     var nextIsPure := false;
@@ -300,8 +297,8 @@ pub closeReachableGraph := fn(graph: Items, reachable: mut TokenBuckets, scanned
         } else if item.kind == ir.ITEM_KIND_FUNCTION_END {
             if fnDepth > 0 { fnDepth = fnDepth - 1; }
             if fnDepth == 0 and curFnTok =!= "" {
-                mapLib.set(mut fnStarts, curFnTok, curFnStart);
-                mapLib.set(mut fnEnds, curFnTok, i);
+                mut fnStarts.set(curFnTok, curFnStart);
+                mut fnEnds.set(curFnTok, i);
                 curFnTok = "";
                 curFnStart = -1;
             }
@@ -316,43 +313,43 @@ pub closeReachableGraph := fn(graph: Items, reachable: mut TokenBuckets, scanned
             } else if item.kind == ir.ITEM_KIND_END_SCOPE or item.kind == ir.ITEM_KIND_END_IF or item.kind == ir.ITEM_KIND_END_LOOP {
                 if blockDepth > 0 { blockDepth = blockDepth - 1; }
             } else if isPureDecl and item.runtime =!= "" {
-                mapLib.set(mut pureDeclIdx, item.runtime, i);
+                mut pureDeclIdx.set(item.runtime, i);
             }
         }
         i = i + 1;
     }
     queue: mut List<String> = [];
     loop reachable as tok {
-        if not setLib.has(scanned, tok) {
-            listLib.pushBack(mut queue, tok);
+        if not scanned.has(tok) {
+            mut queue.pushBack(tok);
         }
     }
     var qHead := 0;
-    loop qHead < listLib.length(queue) {
+    loop qHead < queue.length() {
         tok := queue[qHead];
         qHead = qHead + 1;
-        if setLib.has(scanned, tok) { continue; }
-        fHit := mapLib.get(fnStarts, tok);
+        if scanned.has(tok) { continue; }
+        fHit := fnStarts.get(tok);
         if fHit.found {
-            setLib.add(mut scanned, tok);
-            fEnd := mapLib.get(fnEnds, tok).value;
+            mut scanned.add(tok);
+            fEnd := fnEnds.get(tok).value;
             var j := fHit.value;
             loop j < fEnd {
                 bItem := graph[j];
                 codeReachableTokensQueue(bItem.code, mut reachable, mut queue);
-                if textLib.startsWithAt(bItem.kind, 0, "Assign") and bItem.runtime =!= "" {
-                    if not setLib.has(reachable, bItem.runtime) {
-                        setLib.add(mut reachable, bItem.runtime);
-                        listLib.pushBack(mut queue, bItem.runtime);
+                if bItem.kind.startsWithAt(0, "Assign") and bItem.runtime =!= "" {
+                    if not reachable.has(bItem.runtime) {
+                        mut reachable.add(bItem.runtime);
+                        mut queue.pushBack(bItem.runtime);
                     }
                 }
                 j = j + 1;
             }
             continue;
         }
-        pHit := mapLib.get(pureDeclIdx, tok);
+        pHit := pureDeclIdx.get(tok);
         if pHit.found {
-            setLib.add(mut scanned, tok);
+            mut scanned.add(tok);
             codeReachableTokensQueue(graph[pHit.value].code, mut reachable, mut queue);
         }
     }
@@ -360,15 +357,15 @@ pub closeReachableGraph := fn(graph: Items, reachable: mut TokenBuckets, scanned
 
 /** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code` into `tokens` in place. */
 pub codeReachableTokensSet := fn(code: String, tokens: mut TokenBuckets): Unit {
-    var nextLite := textLib.indexOfText(code, "lite", 0);
-    var nextLt := textLib.indexOfText(code, "lt_", 0);
+    var nextLite := code.indexOf("lite", 0);
+    var nextLt := code.indexOf("lt_", 0);
     if nextLite < 0 and nextLt < 0 { return; }
-    var nextQuote := textLib.indexOfText(code, "\"", 0);
-    size := textLib.length(code);
+    var nextQuote := code.indexOf("\"", 0);
+    size := code.length();
     var cursor := 0;
     loop cursor < size {
-        if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
-        if nextLt >= 0 and nextLt < cursor { nextLt = textLib.indexOfText(code, "lt_", cursor); }
+        if nextLite >= 0 and nextLite < cursor { nextLite = code.indexOf("lite", cursor); }
+        if nextLt >= 0 and nextLt < cursor { nextLt = code.indexOf("lt_", cursor); }
         var hit := -1;
         if nextLite >= 0 and (nextLt < 0 or nextLite < nextLt) {
             hit = nextLite;
@@ -378,7 +375,7 @@ pub codeReachableTokensSet := fn(code: String, tokens: mut TokenBuckets): Unit {
         if hit < 0 { return; }
         if nextQuote >= 0 and nextQuote < hit {
             if nextQuote < cursor {
-                nextQuote = textLib.indexOfText(code, "\"", cursor);
+                nextQuote = code.indexOf("\"", cursor);
             }
             if nextQuote >= 0 and nextQuote < hit {
                 cursor = syntax.skipAliasString(code, nextQuote);
@@ -386,27 +383,27 @@ pub codeReachableTokensSet := fn(code: String, tokens: mut TokenBuckets): Unit {
             }
         }
         if hit > 0 {
-            prev := textLib.at(code, hit - 1);
-            if prev == "$" or textLib.isNameContinue(prev) {
-                cursor = textLib.skipName(code, hit + 3);
-                loop cursor < size and textLib.at(code, cursor) == "$" {
-                    cursor = textLib.skipName(code, cursor + 1);
+            prev := code.at(hit - 1);
+            if prev == "$" or prev.isNameContinue() {
+                cursor = code.skipName(hit + 3);
+                loop cursor < size and code.at(cursor) == "$" {
+                    cursor = code.skipName(cursor + 1);
                 }
                 continue;
             }
         }
-        var endPos := textLib.skipName(code, hit);
-        loop endPos < size and textLib.at(code, endPos) == "$" {
-            endPos = textLib.skipName(code, endPos + 1);
+        var endPos := code.skipName(hit);
+        loop endPos < size and code.at(endPos) == "$" {
+            endPos = code.skipName(endPos + 1);
         }
-        name := textLib.slice(code, hit, endPos);
-        token := if textLib.startsWithAt(name, 0, "lt_fn_") or textLib.startsWithAt(name, 0, "liteFn$") or
-        textLib.startsWithAt(name, 0, "liteFn_") {
+        name := code.slice(hit, endPos);
+        token := if name.startsWithAt(0, "lt_fn_") or name.startsWithAt(0, "liteFn$") or
+        name.startsWithAt(0, "liteFn_") {
             name + "("
         } else {
             name
         };
-        setLib.add(mut tokens, token);
+        mut tokens.add(token);
         cursor = endPos;
     }
 };
@@ -438,21 +435,21 @@ isCUnsupportedItem := fn(item: Item): Bool {
 
 /** True when `=` at `eqPos` in `stripped` is a comparison/arrow or an assignment to a local declared inside `stripped` itself. */
 isInnerLocalAssignAt := fn(stripped: String, eqPos: Int): Bool {
-    len := textLib.length(stripped);
-    if eqPos < 0 or eqPos >= len or textLib.at(stripped, eqPos) =!= "=" { return false; }
+    len := stripped.length();
+    if eqPos < 0 or eqPos >= len or stripped.at(eqPos) =!= "=" { return false; }
     if eqPos + 1 < len {
-        nx := textLib.at(stripped, eqPos + 1);
+        nx := stripped.at(eqPos + 1);
         if nx == "=" or nx == ">" { return true; }
     }
     if eqPos > 0 {
-        pv := textLib.at(stripped, eqPos - 1);
+        pv := stripped.at(eqPos - 1);
         if pv == "=" or pv == "!" or pv == "<" or pv == ">" { return true; }
         if pv == "+" or pv == "-" or pv == "*" or pv == "/" or pv == "%" { return false; }
     }
     var scanBack := eqPos - 1;
     var bDepth := 0;
     loop scanBack >= 0 {
-        sc := textLib.at(stripped, scanBack);
+        sc := stripped.at(scanBack);
         if sc == ")" or sc == "]" or sc == "}" {
             bDepth = bDepth + 1;
         } else if sc == "(" or sc == "[" or sc == "{" {
@@ -469,40 +466,40 @@ isInnerLocalAssignAt := fn(stripped: String, eqPos: Int): Bool {
     }
     if scanBack < 0 { scanBack = 0; }
     stmtPos := trace.skipCodeSpaces(stripped, scanBack);
-    if textLib.wordAt(stripped, stmtPos, "const") or textLib.wordAt(stripped, stmtPos, "let") {
+    if stripped.wordAt(stmtPos, "const") or stripped.wordAt(stmtPos, "let") {
         return true;
     }
-    if stmtPos >= eqPos or not (textLib.isNameStart(textLib.at(stripped, stmtPos)) or textLib.at(stripped, stmtPos) == "$") {
+    if stmtPos >= eqPos or not (stripped.at(stmtPos).isNameStart() or stripped.at(stmtPos) == "$") {
         return false;
     }
     var lhsEnd := stmtPos;
-    loop lhsEnd < eqPos and trace.isTraceIdentChar(textLib.at(stripped, lhsEnd)) { lhsEnd = lhsEnd + 1; }
+    loop lhsEnd < eqPos and trace.isTraceIdentChar(stripped.at(lhsEnd)) { lhsEnd = lhsEnd + 1; }
     if trace.skipCodeSpaces(stripped, lhsEnd) =!= eqPos { return false; }
-    lhs := textLib.slice(stripped, stmtPos, lhsEnd);
-    textLib.indexOfText(stripped, "let " + lhs + " ", 0) >= 0 or
-    textLib.indexOfText(stripped, "let " + lhs + ":", 0) >= 0 or
-    textLib.indexOfText(stripped, "let " + lhs + ";", 0) >= 0
+    lhs := stripped.slice(stmtPos, lhsEnd);
+    stripped.indexOf("let " + lhs + " ", 0) >= 0 or
+    stripped.indexOf("let " + lhs + ":", 0) >= 0 or
+    stripped.indexOf("let " + lhs + ";", 0) >= 0
 };
 
 /** True when `code` has no function calls, runtime panic helpers, loops, throws, or outer mutations after stripping uninvoked `fn` literals. */
 pub isSideEffectFreeCode := fn(target: String, code: String): Bool {
     if code == "" { return true; }
     stripped := trace.stripDeferredFnBodies(code).code;
-    size := textLib.length(stripped);
+    size := stripped.length();
     var cursor := 0;
     loop cursor < size {
-        ch := textLib.at(stripped, cursor);
+        ch := stripped.at(cursor);
         if ch == "\"" {
             cursor = trace.skipCodeString(stripped, cursor);
             continue;
         }
         if ch == "(" {
-            if textLib.startsWithAt(stripped, cursor, "(function ") { return false; }
+            if stripped.startsWithAt(cursor, "(function ") { return false; }
             closeEnd := trace.scanBalancedParenEnd(stripped, cursor);
             if trace.isIndirectUserCallParens(stripped, cursor, closeEnd) { return false; }
             if target == ir.TARGET_TS and closeEnd >= 0 {
                 afterClose := trace.skipCodeSpaces(stripped, closeEnd);
-                if afterClose < size and textLib.at(stripped, afterClose) == "(" and
+                if afterClose < size and stripped.at(afterClose) == "(" and
                 not trace.isCompilerArrowIife(stripped, cursor, closeEnd) {
                     return false;
                 }
@@ -512,7 +509,7 @@ pub isSideEffectFreeCode := fn(target: String, code: String): Bool {
         }
         if ch == "]" {
             afterBr := trace.skipCodeSpaces(stripped, cursor + 1);
-            if afterBr < size and textLib.at(stripped, afterBr) == "(" { return false; }
+            if afterBr < size and stripped.at(afterBr) == "(" { return false; }
             cursor = cursor + 1;
             continue;
         }
@@ -521,19 +518,19 @@ pub isSideEffectFreeCode := fn(target: String, code: String): Bool {
             cursor = cursor + 1;
             continue;
         }
-        if textLib.isNameStart(ch) or ch == "$" {
+        if ch.isNameStart() or ch == "$" {
             var endPos := cursor;
-            loop endPos < size and trace.isTraceIdentChar(textLib.at(stripped, endPos)) { endPos = endPos + 1; }
-            name := textLib.slice(stripped, cursor, endPos);
-            prevIsDot := cursor > 0 and textLib.at(stripped, cursor - 1) == ".";
+            loop endPos < size and trace.isTraceIdentChar(stripped.at(endPos)) { endPos = endPos + 1; }
+            name := stripped.slice(cursor, endPos);
+            prevIsDot := cursor > 0 and stripped.at(cursor - 1) == ".";
             if not prevIsDot and (name == "throw" or name == "while" or name == "for" or name == "try") {
                 return false;
             }
             afterName := trace.skipCodeSpaces(stripped, endPos);
-            if afterName < size and textLib.at(stripped, afterName) == "(" {
+            if afterName < size and stripped.at(afterName) == "(" {
                 isKeywordParen := not prevIsDot and (name == "if" or name == "return" or name == "void");
-                isMathPrefix := cursor >= 5 and textLib.slice(stripped, cursor - 5, cursor) == "Math." and
-                (cursor == 5 or not trace.isTraceIdentChar(textLib.at(stripped, cursor - 6)));
+                isMathPrefix := cursor >= 5 and stripped.slice(cursor - 5, cursor) == "Math." and
+                (cursor == 5 or not trace.isTraceIdentChar(stripped.at(cursor - 6)));
                 isMathFround := name == "fround" and isMathPrefix;
                 isPureWrapper := not prevIsDot and (
                 name == "Boolean" or name == "Number" or name == "INT64_C" or
@@ -591,19 +588,19 @@ pub pruneBlockStatements := fn(stmts: List<String>, owners: List<String>, deps: 
 
     scannedIdxs: mut Set<Int>;
     loop true {
-        beforeCount := setLib.size(reachable);
+        beforeCount := reachable.size();
         var scanIdx := 0;
         loop scanIdx < total {
             ow := owners[scanIdx];
-            if ow =!= "" and ow =!= "#discard" and setLib.has(reachable, ow) {
-                if not setLib.has(scannedIdxs, scanIdx) {
-                    setLib.add(mut scannedIdxs, scanIdx);
+            if ow =!= "" and ow =!= "#discard" and reachable.has(ow) {
+                if not scannedIdxs.has(scanIdx) {
+                    mut scannedIdxs.add(scanIdx);
                     codeReachableTokensSet(deps[scanIdx], mut reachable);
                 }
             }
             scanIdx = scanIdx + 1;
         }
-        if setLib.size(reachable) == beforeCount { break; }
+        if reachable.size() == beforeCount { break; }
     }
 
     kept: mut List<String> = [];
@@ -611,7 +608,7 @@ pub pruneBlockStatements := fn(stmts: List<String>, owners: List<String>, deps: 
     loop outIdx < total {
         ow := owners[outIdx];
         if ow == "" or (ow =!= "#discard" and tokenBucketHas(reachable, ow)) {
-            listLib.pushBack(mut kept, stmts[outIdx]);
+            mut kept.pushBack(stmts[outIdx]);
         }
         outIdx = outIdx + 1;
     }
@@ -632,7 +629,7 @@ blockAncestorDistance := fn(targetBlockId: Int, startBlockId: Int, parentBlockId
 
 /** Finds the innermost enclosing declaration index for `runtime` visible from `startBlockId`, or `-1`. */
 findLocalDecl := fn(runtime: String, startBlockId: Int, declHead: Map<String, Int>, declBlockIds: List<Int>, parentBlockIds: List<Int>, declPrev: List<Int>): Int {
-    var d := mapLib.getOr(declHead, runtime, -1);
+    var d := declHead.getOr(runtime, -1);
     if d < 0 { return -1; }
     var bestIdx := -1;
     var bestDist := -1;
@@ -652,15 +649,15 @@ findLocalDecl := fn(runtime: String, startBlockId: Int, declHead: Map<String, In
 collectLocalDeclDeps := fn(code: String, startBlockId: Int, declCount: Int, declHead: Map<String, Int>, declBlockIds: List<Int>, parentBlockIds: List<Int>, declPrev: List<Int>, declIdxs: List<Int>): List<Int> {
     found: mut List<Int> = [];
     if declCount <= 0 or startBlockId <= 0 or code == "" { return found; }
-    var nextLite := textLib.indexOfText(code, "lite", 0);
-    var nextLt := textLib.indexOfText(code, "lt_", 0);
+    var nextLite := code.indexOf("lite", 0);
+    var nextLt := code.indexOf("lt_", 0);
     if nextLite < 0 and nextLt < 0 { return found; }
-    var nextQuote := textLib.indexOfText(code, "\"", 0);
-    size := textLib.length(code);
+    var nextQuote := code.indexOf("\"", 0);
+    size := code.length();
     var cursor := 0;
     loop cursor < size {
-        if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
-        if nextLt >= 0 and nextLt < cursor { nextLt = textLib.indexOfText(code, "lt_", cursor); }
+        if nextLite >= 0 and nextLite < cursor { nextLite = code.indexOf("lite", cursor); }
+        if nextLt >= 0 and nextLt < cursor { nextLt = code.indexOf("lt_", cursor); }
         var hit := -1;
         if nextLite >= 0 and (nextLt < 0 or nextLite < nextLt) {
             hit = nextLite;
@@ -669,30 +666,30 @@ collectLocalDeclDeps := fn(code: String, startBlockId: Int, declCount: Int, decl
         }
         if hit < 0 { return found; }
         if nextQuote >= 0 and nextQuote < hit {
-            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote < cursor { nextQuote = code.indexOf("\"", cursor); }
             if nextQuote >= 0 and nextQuote < hit {
                 cursor = syntax.skipAliasString(code, nextQuote);
                 continue;
             }
         }
         if hit > 0 {
-            prev := textLib.at(code, hit - 1);
-            if prev == "$" or textLib.isNameContinue(prev) {
-                cursor = textLib.skipName(code, hit + 3);
-                loop cursor < size and textLib.at(code, cursor) == "$" {
-                    cursor = textLib.skipName(code, cursor + 1);
+            prev := code.at(hit - 1);
+            if prev == "$" or prev.isNameContinue() {
+                cursor = code.skipName(hit + 3);
+                loop cursor < size and code.at(cursor) == "$" {
+                    cursor = code.skipName(cursor + 1);
                 }
                 continue;
             }
         }
-        var endPos := textLib.skipName(code, hit);
-        loop endPos < size and textLib.at(code, endPos) == "$" {
-            endPos = textLib.skipName(code, endPos + 1);
+        var endPos := code.skipName(hit);
+        loop endPos < size and code.at(endPos) == "$" {
+            endPos = code.skipName(endPos + 1);
         }
-        tok := textLib.slice(code, hit, endPos);
+        tok := code.slice(hit, endPos);
         matchedDecl := findLocalDecl(tok, startBlockId, declHead, declBlockIds, parentBlockIds, declPrev);
         if matchedDecl >= 0 {
-            listLib.pushBack(mut found, declIdxs[matchedDecl]);
+            mut found.pushBack(declIdxs[matchedDecl]);
         }
         cursor = endPos;
     }
@@ -725,35 +722,35 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
         var owner := -1;
         if item.kind == ir.ITEM_KIND_ELSE_IF or item.kind == ir.ITEM_KIND_ELSE {
             if stackLen > 1 {
-                _popArm := listLib.popBack(mut blockStack);
+                _popArm := mut blockStack.popBack();
                 stackLen = stackLen - 1;
             }
             parentId := blockStack[stackLen - 1];
             evalBlockId = parentId;
             newArmId := nextBlockId;
             nextBlockId = nextBlockId + 1;
-            listLib.pushBack(mut parentBlockIds, parentId);
-            listLib.pushBack(mut blockStack, newArmId);
+            mut parentBlockIds.pushBack(parentId);
+            mut blockStack.pushBack(newArmId);
             stackLen = stackLen + 1;
         } else if item.kind == ir.ITEM_KIND_END_SCOPE or item.kind == ir.ITEM_KIND_END_IF or item.kind == ir.ITEM_KIND_END_LOOP or item.kind == ir.ITEM_KIND_FUNCTION_END {
             if stackLen > 1 {
-                _popEnd := listLib.popBack(mut blockStack);
+                _popEnd := mut blockStack.popBack();
                 stackLen = stackLen - 1;
             }
         } else if item.kind == ir.ITEM_KIND_SCOPE or item.kind == ir.ITEM_KIND_FUNCTION_START or
         item.kind == ir.ITEM_KIND_IF or item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ {
             newBlockId := nextBlockId;
             nextBlockId = nextBlockId + 1;
-            listLib.pushBack(mut parentBlockIds, curBlockId);
-            listLib.pushBack(mut blockStack, newBlockId);
+            mut parentBlockIds.pushBack(curBlockId);
+            mut blockStack.pushBack(newBlockId);
             stackLen = stackLen + 1;
             if item.kind == ir.ITEM_KIND_LOOP_SEQ and item.runtime =!= "" {
-                prevD := mapLib.getOr(declHead, item.runtime, -1);
-                listLib.pushBack(mut declPrev, prevD);
+                prevD := declHead.getOr(item.runtime, -1);
+                mut declPrev.pushBack(prevD);
                 declHead[item.runtime] = declCount;
-                listLib.pushBack(mut declBlockIds, newBlockId);
-                listLib.pushBack(mut declIdxs, idx);
-                listLib.pushBack(mut declPrunables, false);
+                mut declBlockIds.pushBack(newBlockId);
+                mut declIdxs.pushBack(idx);
+                mut declPrunables.pushBack(false);
                 declCount = declCount + 1;
             }
         } else if item.kind == ir.ITEM_KIND_DISCARD {
@@ -767,16 +764,16 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
                 owner = idx;
                 hasPrunable = true;
             }
-            prevD := mapLib.getOr(declHead, item.runtime, -1);
-            listLib.pushBack(mut declPrev, prevD);
+            prevD := declHead.getOr(item.runtime, -1);
+            mut declPrev.pushBack(prevD);
             declHead[item.runtime] = declCount;
-            listLib.pushBack(mut declBlockIds, evalBlockId);
-            listLib.pushBack(mut declIdxs, idx);
-            listLib.pushBack(mut declPrunables, canPruneDecl);
+            mut declBlockIds.pushBack(evalBlockId);
+            mut declIdxs.pushBack(idx);
+            mut declPrunables.pushBack(canPruneDecl);
             declCount = declCount + 1;
         }
-        listLib.pushBack(mut itemEvalBlocks, evalBlockId);
-        listLib.pushBack(mut itemOwners, owner);
+        (mut itemEvalBlocks).pushBack(evalBlockId);
+        mut itemOwners.pushBack(owner);
         idx = idx + 1;
     }
     if not hasPrunable { return items; }
@@ -794,32 +791,32 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
         item := items[idx2];
         evalBlock := itemEvalBlocks[idx2];
         var owner2 := itemOwners[idx2];
-        listLib.pushBack(mut depStarts, depTotal);
+        mut depStarts.pushBack(depTotal);
         if owner2 == -2 {
             _skip := 0;
-        } else if evalBlock > 0 and textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
+        } else if evalBlock > 0 and item.kind.startsWithAt(0, "Assign") and item.runtime =!= "" {
             matchedDecl := findLocalDecl(item.runtime, evalBlock, declHead, declBlockIds, parentBlockIds, declPrev);
             if matchedDecl >= 0 and declPrunables[matchedDecl] and (target == ir.TARGET_TS or not isCUnsupportedItem(item)) and
             isSideEffectFreeCode(target, item.code) {
                 owner2 = declIdxs[matchedDecl];
                 depsA := collectLocalDeclDeps(item.code, evalBlock, declCount, declHead, declBlockIds, parentBlockIds, declPrev, declIdxs);
-                loop depsA as dt { listLib.pushBack(mut depTargets, dt); depTotal = depTotal + 1; }
+                loop depsA as dt { mut depTargets.pushBack(dt); depTotal = depTotal + 1; }
             } else {
                 depsB := collectLocalDeclDeps(item.runtime + " " + item.code, evalBlock, declCount, declHead, declBlockIds, parentBlockIds, declPrev, declIdxs);
-                loop depsB as dt { listLib.pushBack(mut depTargets, dt); depTotal = depTotal + 1; }
+                loop depsB as dt { mut depTargets.pushBack(dt); depTotal = depTotal + 1; }
             }
         } else {
             depsC := collectLocalDeclDeps(item.code, evalBlock, declCount, declHead, declBlockIds, parentBlockIds, declPrev, declIdxs);
-            loop depsC as dt { listLib.pushBack(mut depTargets, dt); depTotal = depTotal + 1; }
+            loop depsC as dt { mut depTargets.pushBack(dt); depTotal = depTotal + 1; }
         }
-        listLib.pushBack(mut depEnds, depTotal);
-        listLib.pushBack(mut resolvedOwners, owner2);
+        (mut depEnds).pushBack(depTotal);
+        mut resolvedOwners.pushBack(owner2);
         if owner2 >= 0 {
-            prevOwnerItem := mapLib.getOr(ownerItemsHead, owner2, -1);
-            listLib.pushBack(mut ownerItemsNext, prevOwnerItem);
+            prevOwnerItem := ownerItemsHead.getOr(owner2, -1);
+            mut ownerItemsNext.pushBack(prevOwnerItem);
             ownerItemsHead[owner2] = idx2;
         } else {
-            listLib.pushBack(mut ownerItemsNext, -1);
+            mut ownerItemsNext.pushBack(-1);
         }
         idx2 = idx2 + 1;
     }
@@ -835,9 +832,9 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
             dpEnd := depEnds[seedIdx];
             loop dp < dpEnd {
                 dep := depTargets[dp];
-                if not setLib.has(liveDecls, dep) {
-                    setLib.add(mut liveDecls, dep);
-                    listLib.pushBack(mut queue, dep);
+                if not liveDecls.has(dep) {
+                    mut liveDecls.add(dep);
+                    mut queue.pushBack(dep);
                     qTail = qTail + 1;
                 }
                 dp = dp + 1;
@@ -848,15 +845,15 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
     loop qHead < qTail {
         declItemIdx := queue[qHead];
         qHead = qHead + 1;
-        var ownedItem := mapLib.getOr(ownerItemsHead, declItemIdx, -1);
+        var ownedItem := ownerItemsHead.getOr(declItemIdx, -1);
         loop ownedItem >= 0 {
             var dp := depStarts[ownedItem];
             dpEnd := depEnds[ownedItem];
             loop dp < dpEnd {
                 dep := depTargets[dp];
-                if not setLib.has(liveDecls, dep) {
-                    setLib.add(mut liveDecls, dep);
-                    listLib.pushBack(mut queue, dep);
+                if not liveDecls.has(dep) {
+                    mut liveDecls.add(dep);
+                    mut queue.pushBack(dep);
                     qTail = qTail + 1;
                 }
                 dp = dp + 1;
@@ -870,14 +867,14 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
     var k := 0;
     loop k < total {
         ownk := resolvedOwners[k];
-        keepItem := ownk == -1 or (ownk >= 0 and setLib.has(liveDecls, ownk));
+        keepItem := ownk == -1 or (ownk >= 0 and liveDecls.has(ownk));
         if keepItem {
             cur := items[k];
             if cur.kind == ir.ITEM_KIND_END_SCOPE and peeledLen > 0 and peeled[peeledLen - 1].kind == ir.ITEM_KIND_SCOPE {
-                _dropScope := listLib.popBack(mut peeled);
+                _dropScope := mut peeled.popBack();
                 peeledLen = peeledLen - 1;
             } else {
-                listLib.pushBack(mut peeled, cur);
+                mut peeled.pushBack(cur);
                 peeledLen = peeledLen + 1;
             }
         }
@@ -914,41 +911,41 @@ pub simplifyConstantBranches := fn(items: Items, target: String): Items {
         currentlySkipping := if stackLen > 0 { frameSkips[stackLen - 1] } else { false };
         if item.kind == ir.ITEM_KIND_IF {
             if currentlySkipping {
-                listLib.pushBack(mut frameKinds, 0);
-                listLib.pushBack(mut frameModes, 0);
-                listLib.pushBack(mut frameTakens, false);
-                listLib.pushBack(mut frameSkips, true);
-                listLib.pushBack(mut frameParentSkips, true);
+                mut frameKinds.pushBack(0);
+                mut frameModes.pushBack(0);
+                mut frameTakens.pushBack(false);
+                mut frameSkips.pushBack(true);
+                mut frameParentSkips.pushBack(true);
                 stackLen = stackLen + 1;
             } else if item.code == falseLit {
-                listLib.pushBack(mut frameKinds, 1);
-                listLib.pushBack(mut frameModes, 0);
-                listLib.pushBack(mut frameTakens, false);
-                listLib.pushBack(mut frameSkips, true);
-                listLib.pushBack(mut frameParentSkips, false);
+                mut frameKinds.pushBack(1);
+                mut frameModes.pushBack(0);
+                mut frameTakens.pushBack(false);
+                mut frameSkips.pushBack(true);
+                mut frameParentSkips.pushBack(false);
                 stackLen = stackLen + 1;
             } else if item.code == trueLit {
-                listLib.pushBack(mut out, (kind = ir.ITEM_KIND_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
-                listLib.pushBack(mut frameKinds, 1);
-                listLib.pushBack(mut frameModes, 2);
-                listLib.pushBack(mut frameTakens, true);
-                listLib.pushBack(mut frameSkips, false);
-                listLib.pushBack(mut frameParentSkips, false);
+                mut out.pushBack((kind = ir.ITEM_KIND_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
+                mut frameKinds.pushBack(1);
+                mut frameModes.pushBack(2);
+                mut frameTakens.pushBack(true);
+                mut frameSkips.pushBack(false);
+                mut frameParentSkips.pushBack(false);
                 stackLen = stackLen + 1;
             } else {
-                listLib.pushBack(mut out, item);
-                listLib.pushBack(mut frameKinds, 1);
-                listLib.pushBack(mut frameModes, 1);
-                listLib.pushBack(mut frameTakens, false);
-                listLib.pushBack(mut frameSkips, false);
-                listLib.pushBack(mut frameParentSkips, false);
+                mut out.pushBack(item);
+                mut frameKinds.pushBack(1);
+                mut frameModes.pushBack(1);
+                mut frameTakens.pushBack(false);
+                mut frameSkips.pushBack(false);
+                mut frameParentSkips.pushBack(false);
                 stackLen = stackLen + 1;
             }
         } else if item.kind == ir.ITEM_KIND_ELSE_IF {
             if stackLen > 0 and not frameParentSkips[stackLen - 1] and frameKinds[stackLen - 1] == 1 {
-                mode := listLib.popBack(mut frameModes);
-                taken := listLib.popBack(mut frameTakens);
-                _prevSkip := listLib.popBack(mut frameSkips);
+                mode := mut frameModes.popBack();
+                taken := mut frameTakens.popBack();
+                _prevSkip := mut frameSkips.popBack();
                 var newMode := mode;
                 var newTaken := taken;
                 var newSkip := true;
@@ -958,99 +955,99 @@ pub simplifyConstantBranches := fn(items: Items, target: String): Items {
                     newSkip = true;
                 } else if item.code == trueLit {
                     if mode == 0 {
-                        listLib.pushBack(mut out, (kind = ir.ITEM_KIND_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
+                        mut out.pushBack((kind = ir.ITEM_KIND_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
                         newMode = 2;
                     } else {
-                        listLib.pushBack(mut out, (kind = ir.ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                        mut out.pushBack((kind = ir.ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
                         newMode = 1;
                     }
                     newTaken = true;
                     newSkip = false;
                 } else {
                     if mode == 0 {
-                        listLib.pushBack(mut out, (kind = ir.ITEM_KIND_IF, name = item.name, runtime = item.runtime, code = item.code, intValue = item.intValue, textValue = item.textValue));
+                        mut out.pushBack((kind = ir.ITEM_KIND_IF, name = item.name, runtime = item.runtime, code = item.code, intValue = item.intValue, textValue = item.textValue));
                         newMode = 1;
                     } else {
-                        listLib.pushBack(mut out, item);
+                        mut out.pushBack(item);
                         newMode = 1;
                     }
                     newTaken = false;
                     newSkip = false;
                 }
-                listLib.pushBack(mut frameModes, newMode);
-                listLib.pushBack(mut frameTakens, newTaken);
-                listLib.pushBack(mut frameSkips, newSkip);
+                (mut frameModes).pushBack(newMode);
+                mut frameTakens.pushBack(newTaken);
+                mut frameSkips.pushBack(newSkip);
             }
         } else if item.kind == ir.ITEM_KIND_ELSE {
             if stackLen > 0 and not frameParentSkips[stackLen - 1] and frameKinds[stackLen - 1] == 1 {
-                mode := listLib.popBack(mut frameModes);
-                taken := listLib.popBack(mut frameTakens);
-                _prevSkip := listLib.popBack(mut frameSkips);
+                mode := mut frameModes.popBack();
+                taken := mut frameTakens.popBack();
+                _prevSkip := mut frameSkips.popBack();
                 var newMode := mode;
                 var newTaken := true;
                 var newSkip := true;
                 if taken {
                     newSkip = true;
                 } else if mode == 0 {
-                    listLib.pushBack(mut out, (kind = ir.ITEM_KIND_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
+                    mut out.pushBack((kind = ir.ITEM_KIND_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
                     newMode = 2;
                     newSkip = false;
                 } else {
-                    listLib.pushBack(mut out, item);
+                    mut out.pushBack(item);
                     newMode = 1;
                     newSkip = false;
                 }
-                listLib.pushBack(mut frameModes, newMode);
-                listLib.pushBack(mut frameTakens, newTaken);
-                listLib.pushBack(mut frameSkips, newSkip);
+                (mut frameModes).pushBack(newMode);
+                mut frameTakens.pushBack(newTaken);
+                mut frameSkips.pushBack(newSkip);
             }
         } else if item.kind == ir.ITEM_KIND_END_IF {
             if stackLen > 0 {
-                kind := listLib.popBack(mut frameKinds);
-                mode := listLib.popBack(mut frameModes);
-                _taken := listLib.popBack(mut frameTakens);
-                _skip := listLib.popBack(mut frameSkips);
-                parentSkip := listLib.popBack(mut frameParentSkips);
+                kind := mut frameKinds.popBack();
+                mode := mut frameModes.popBack();
+                _taken := mut frameTakens.popBack();
+                _skip := mut frameSkips.popBack();
+                parentSkip := mut frameParentSkips.popBack();
                 stackLen = stackLen - 1;
                 if not parentSkip and kind == 1 {
                     if mode == 1 {
-                        listLib.pushBack(mut out, item);
+                        mut out.pushBack(item);
                     } else if mode == 2 {
-                        listLib.pushBack(mut out, (kind = ir.ITEM_KIND_END_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
+                        mut out.pushBack((kind = ir.ITEM_KIND_END_SCOPE, name = "synthetic", runtime = "", code = "", intValue = 0, textValue = ""));
                     }
                 }
             }
         } else if item.kind == ir.ITEM_KIND_LOOP and item.code == falseLit {
-            listLib.pushBack(mut frameKinds, 0);
-            listLib.pushBack(mut frameModes, 0);
-            listLib.pushBack(mut frameTakens, false);
-            listLib.pushBack(mut frameSkips, true);
-            listLib.pushBack(mut frameParentSkips, true);
+            mut frameKinds.pushBack(0);
+            mut frameModes.pushBack(0);
+            mut frameTakens.pushBack(false);
+            mut frameSkips.pushBack(true);
+            mut frameParentSkips.pushBack(true);
             stackLen = stackLen + 1;
         } else if item.kind == ir.ITEM_KIND_SCOPE or item.kind == ir.ITEM_KIND_FUNCTION_START or
         item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ {
-            if not currentlySkipping { listLib.pushBack(mut out, item); }
-            listLib.pushBack(mut frameKinds, 0);
-            listLib.pushBack(mut frameModes, 0);
-            listLib.pushBack(mut frameTakens, false);
-            listLib.pushBack(mut frameSkips, currentlySkipping);
-            listLib.pushBack(mut frameParentSkips, currentlySkipping);
+            if not currentlySkipping { mut out.pushBack(item); }
+            (mut frameKinds).pushBack(0);
+            mut frameModes.pushBack(0);
+            mut frameTakens.pushBack(false);
+            mut frameSkips.pushBack(currentlySkipping);
+            mut frameParentSkips.pushBack(currentlySkipping);
             stackLen = stackLen + 1;
         } else if item.kind == ir.ITEM_KIND_END_SCOPE or item.kind == ir.ITEM_KIND_FUNCTION_END or
         item.kind == ir.ITEM_KIND_END_LOOP {
             if stackLen > 0 {
-                _kind := listLib.popBack(mut frameKinds);
-                _mode := listLib.popBack(mut frameModes);
-                _taken := listLib.popBack(mut frameTakens);
-                _skip := listLib.popBack(mut frameSkips);
-                parentSkip := listLib.popBack(mut frameParentSkips);
+                _kind := mut frameKinds.popBack();
+                _mode := mut frameModes.popBack();
+                _taken := mut frameTakens.popBack();
+                _skip := mut frameSkips.popBack();
+                parentSkip := mut frameParentSkips.popBack();
                 stackLen = stackLen - 1;
-                if not parentSkip { listLib.pushBack(mut out, item); }
+                if not parentSkip { mut out.pushBack(item); }
             } else {
-                listLib.pushBack(mut out, item);
+                mut out.pushBack(item);
             }
         } else {
-            if not currentlySkipping { listLib.pushBack(mut out, item); }
+            if not currentlySkipping { mut out.pushBack(item); }
         }
     }
     out
@@ -1074,40 +1071,40 @@ unwrapSyntheticScopes := fn(items: Items): Items {
         if item.kind == ir.ITEM_KIND_SCOPE {
             isSynth := item.name == "synthetic";
             if isSynth { hasAnySynth = true; }
-            listLib.pushBack(mut openIdxs, idx);
-            listLib.pushBack(mut isSynths, isSynth);
-            listLib.pushBack(mut hasDecls, false);
+            (mut openIdxs).pushBack(idx);
+            mut isSynths.pushBack(isSynth);
+            mut hasDecls.pushBack(false);
             stackLen = stackLen + 1;
         } else if item.kind == ir.ITEM_KIND_IF or item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ or
         item.kind == ir.ITEM_KIND_FUNCTION_START {
-            listLib.pushBack(mut openIdxs, idx);
-            listLib.pushBack(mut isSynths, false);
-            listLib.pushBack(mut hasDecls, false);
+            mut openIdxs.pushBack(idx);
+            mut isSynths.pushBack(false);
+            mut hasDecls.pushBack(false);
             stackLen = stackLen + 1;
         } else if item.kind == ir.ITEM_KIND_END_SCOPE {
             if stackLen > 0 {
-                openIdx := listLib.popBack(mut openIdxs);
-                isSynth := listLib.popBack(mut isSynths);
-                hasDecl := listLib.popBack(mut hasDecls);
+                openIdx := mut openIdxs.popBack();
+                isSynth := mut isSynths.popBack();
+                hasDecl := mut hasDecls.popBack();
                 stackLen = stackLen - 1;
                 if isSynth and not hasDecl {
-                    setLib.add(mut dropSet, openIdx);
-                    setLib.add(mut dropSet, idx);
+                    mut dropSet.add(openIdx);
+                    mut dropSet.add(idx);
                     hasDrop = true;
                 }
             }
         } else if item.kind == ir.ITEM_KIND_END_IF or item.kind == ir.ITEM_KIND_END_LOOP or
         item.kind == ir.ITEM_KIND_FUNCTION_END {
             if stackLen > 0 {
-                _openIdx := listLib.popBack(mut openIdxs);
-                _isSynth := listLib.popBack(mut isSynths);
-                _hasDecl := listLib.popBack(mut hasDecls);
+                _openIdx := mut openIdxs.popBack();
+                _isSynth := mut isSynths.popBack();
+                _hasDecl := mut hasDecls.popBack();
                 stackLen = stackLen - 1;
             }
         } else if stackLen > 0 and isSynths[stackLen - 1] and not hasDecls[stackLen - 1] and
         (isTopDeclKind(item.kind) or item.kind == ir.ITEM_KIND_PURE_GLOBAL) {
-            _oldDecl := listLib.popBack(mut hasDecls);
-            listLib.pushBack(mut hasDecls, true);
+            _oldDecl := mut hasDecls.popBack();
+            mut hasDecls.pushBack(true);
         }
         idx = idx + 1;
     }
@@ -1115,8 +1112,8 @@ unwrapSyntheticScopes := fn(items: Items): Items {
     out: mut Items = [];
     var k := 0;
     loop k < total {
-        if not setLib.has(dropSet, k) {
-            listLib.pushBack(mut out, items[k]);
+        if not dropSet.has(k) {
+            mut out.pushBack(items[k]);
         }
         k = k + 1;
     }
@@ -1136,14 +1133,14 @@ isAssignScalarKind := fn(kind: String): Bool {
 /** True when `code` is an atomic TS scalar literal (`true`, `false`, `"..."`, `[0-9]+n`, or `(-[0-9]+n)`). */
 isSimpleTsScalarLiteral := fn(code: String): Bool {
     if code == "true" or code == "false" { return true; }
-    size := textLib.length(code);
+    size := code.length();
     if size < 2 { return false; }
-    first := textLib.at(code, 0);
+    first := code.at(0);
     if first == "\"" {
-        if textLib.at(code, size - 1) =!= "\"" { return false; }
+        if code.at(size - 1) =!= "\"" { return false; }
         var i := 1;
         loop i < size - 1 {
-            ch := textLib.at(code, i);
+            ch := code.at(i);
             if ch == "\\" {
                 i = i + 2;
                 if i > size - 1 { return false; }
@@ -1154,18 +1151,18 @@ isSimpleTsScalarLiteral := fn(code: String): Bool {
         }
         return true;
     }
-    if textLib.at(code, size - 1) == "n" {
+    if code.at(size - 1) == "n" {
         var i := 0;
         loop i < size - 1 {
-            if not textLib.isDigit(textLib.at(code, i)) { return false; }
+            if not code.at(i).isDigit() { return false; }
             i = i + 1;
         }
         return size >= 2;
     }
-    if size >= 5 and textLib.startsWithAt(code, 0, "(-") and textLib.at(code, size - 2) == "n" and textLib.at(code, size - 1) == ")" {
+    if size >= 5 and code.startsWithAt(0, "(-") and code.at(size - 2) == "n" and code.at(size - 1) == ")" {
         var i := 2;
         loop i < size - 2 {
-            if not textLib.isDigit(textLib.at(code, i)) { return false; }
+            if not code.at(i).isDigit() { return false; }
             i = i + 1;
         }
         return true;
@@ -1178,7 +1175,7 @@ setSmallTextAt := fn(values: List<String>, index: Int, value: String): List<Stri
     out: mut List<String> = [];
     var i := 0;
     loop values as item {
-        listLib.pushBack(mut out, if i == index { value } else { item });
+        mut out.pushBack(if i == index { value } else { item });
         i = i + 1;
     }
     out
@@ -1189,7 +1186,7 @@ setSmallIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> {
     out: mut List<Int> = [];
     var i := 0;
     loop values as item {
-        listLib.pushBack(mut out, if i == index { value } else { item });
+        mut out.pushBack(if i == index { value } else { item });
         i = i + 1;
     }
     out
@@ -1200,7 +1197,7 @@ setSmallBoolAt := fn(values: List<Bool>, index: Int, value: Bool): List<Bool> {
     out: mut List<Bool> = [];
     var i := 0;
     loop values as item {
-        listLib.pushBack(mut out, if i == index { value } else { item });
+        mut out.pushBack(if i == index { value } else { item });
         i = i + 1;
     }
     out
@@ -1221,21 +1218,21 @@ rewriteAndMarkActiveReads := fn(code: String, activeSet: TokenBuckets, activeNam
     if activeCount == 0 or code == "" {
         return (code = code, readPipe = "", changed = false);
     }
-    size := textLib.length(code);
-    canSub := allowSub and textLib.indexOfText(code, "=>", 0) < 0 and
-    textLib.indexOfText(code, "{", 0) < 0 and textLib.indexOfText(code, " = ", 0) < 0 and
-    textLib.indexOfText(code, "===", 0) < 0 and textLib.indexOfText(code, "!==", 0) < 0;
+    size := code.length();
+    canSub := allowSub and code.indexOf("=>", 0) < 0 and
+    code.indexOf("{", 0) < 0 and code.indexOf(" = ", 0) < 0 and
+    code.indexOf("===", 0) < 0 and code.indexOf("!==", 0) < 0;
     parts: mut List<String> = [];
     var segStart := 0;
     var changed := false;
     var readPipe := "";
     var pos := 0;
     loop pos < size {
-        ch := textLib.at(code, pos);
+        ch := code.at(pos);
         if ch == "\"" {
             pos = pos + 1;
             loop pos < size {
-                sCh := textLib.at(code, pos);
+                sCh := code.at(pos);
                 if sCh == "\\" {
                     pos = pos + 2;
                     continue;
@@ -1245,29 +1242,29 @@ rewriteAndMarkActiveReads := fn(code: String, activeSet: TokenBuckets, activeNam
             }
             continue;
         }
-        if textLib.isNameStart(ch) {
+        if ch.isNameStart() {
             var end := pos + 1;
-            loop end < size and (textLib.isNameContinue(textLib.at(code, end)) or textLib.at(code, end) == "$") {
+            loop end < size and (code.at(end).isNameContinue() or code.at(end) == "$") {
                 end = end + 1;
             }
-            isProp := pos > 0 and textLib.at(code, pos - 1) == ".";
+            isProp := pos > 0 and code.at(pos - 1) == ".";
             if not isProp {
-                tok := textLib.slice(code, pos, end);
+                tok := code.slice(pos, end);
                 if tokenBucketHas(activeSet, tok) {
                     slot := findActiveVarSlot(activeNames, activeCount, tok);
                     if slot >= 0 {
                         constVal := activeConstCodes[slot];
                         if canSub and constVal =!= "" {
                             if pos > segStart {
-                                listLib.pushBack(mut parts, textLib.slice(code, segStart, pos));
+                                mut parts.pushBack(code.slice(segStart, pos));
                             }
-                            listLib.pushBack(mut parts, constVal);
+                            (mut parts).pushBack(constVal);
                             segStart = end;
                             changed = true;
                         } else if not activeRead[slot] {
-                            slotTag := "|" + integer.intText(slot) + "|";
-                            if textLib.indexOfText(readPipe, slotTag, 0) < 0 {
-                                readPipe = if readPipe == "" { slotTag } else { readPipe + integer.intText(slot) + "|" };
+                            slotTag := "|" + slot.toText() + "|";
+                            if readPipe.indexOf(slotTag, 0) < 0 {
+                                readPipe = if readPipe == "" { slotTag } else { readPipe + slot.toText() + "|" };
                             }
                         }
                     }
@@ -1282,22 +1279,22 @@ rewriteAndMarkActiveReads := fn(code: String, activeSet: TokenBuckets, activeNam
         return (code = code, readPipe = readPipe, changed = false);
     }
     if segStart < size {
-        listLib.pushBack(mut parts, textLib.slice(code, segStart, size));
+        mut parts.pushBack(code.slice(segStart, size));
     }
     (code = textLib.joinTexts(parts, ""), readPipe = readPipe, changed = true)
 };
 
 /** True when `code` mentions identifier `targetName` outside string literals and property accesses, in O(|code|) time. */
 codeMentionsIdent := fn(code: String, targetName: String): Bool {
-    if code == "" or textLib.indexOfText(code, targetName, 0) < 0 { return false; }
-    size := textLib.length(code);
+    if code == "" or code.indexOf(targetName, 0) < 0 { return false; }
+    size := code.length();
     var pos := 0;
     loop pos < size {
-        ch := textLib.at(code, pos);
+        ch := code.at(pos);
         if ch == "\"" {
             pos = pos + 1;
             loop pos < size {
-                sCh := textLib.at(code, pos);
+                sCh := code.at(pos);
                 if sCh == "\\" {
                     pos = pos + 2;
                     continue;
@@ -1307,12 +1304,12 @@ codeMentionsIdent := fn(code: String, targetName: String): Bool {
             }
             continue;
         }
-        if textLib.isNameStart(ch) {
+        if ch.isNameStart() {
             var end := pos + 1;
-            loop end < size and (textLib.isNameContinue(textLib.at(code, end)) or textLib.at(code, end) == "$") {
+            loop end < size and (code.at(end).isNameContinue() or code.at(end) == "$") {
                 end = end + 1;
             }
-            if not (pos > 0 and textLib.at(code, pos - 1) == ".") and textLib.slice(code, pos, end) == targetName {
+            if not (pos > 0 and code.at(pos - 1) == ".") and code.slice(pos, end) == targetName {
                 return true;
             }
             pos = end;
@@ -1361,7 +1358,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
         item := items[idx];
         kind := item.kind;
         if kind == ir.ITEM_KIND_SOURCE_LOC or kind == ir.ITEM_KIND_COMMENT {
-            listLib.pushBack(mut outItems, item);
+            mut outItems.pushBack(item);
             idx = idx + 1;
             continue;
         }
@@ -1388,27 +1385,27 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
             nextReadFlags: mut List<Bool> = [];
             var rIdx := 0;
             loop rIdx < activeCount {
-                tag := "|" + integer.intText(rIdx) + "|";
-                listLib.pushBack(mut nextReadFlags, activeRead[rIdx] or textLib.indexOfText(rewritten.readPipe, tag, 0) >= 0);
+                tag := "|" + rIdx.toText() + "|";
+                mut nextReadFlags.pushBack(activeRead[rIdx] or rewritten.readPipe.indexOf(tag, 0) >= 0);
                 rIdx = rIdx + 1;
             }
             activeRead = nextReadFlags;
         }
         if rewritten.changed { anyRewrite = true; }
-        codePure := isSideEffectFreeCode(target, newCode) and textLib.indexOfText(newCode, "=>", 0) < 0;
+        codePure := isSideEffectFreeCode(target, newCode) and newCode.indexOf("=>", 0) < 0;
         updatedItem := if rewritten.changed {
             (kind = item.kind, name = item.name, runtime = item.runtime, code = newCode, intValue = item.intValue, textValue = item.textValue)
         } else {
             item
         };
-        listLib.pushBack(mut outItems, updatedItem);
+        mut outItems.pushBack(updatedItem);
 
         if isBarrier or not codePure {
             var s := 0;
             loop s < activeCount {
                 if activeDeclMerged[s] {
-                    listLib.pushBack(mut overrideIdxs, activeDeclIdxs[s]);
-                    listLib.pushBack(mut overrideCodes, activeDeclCodes[s]);
+                    mut overrideIdxs.pushBack(activeDeclIdxs[s]);
+                    mut overrideCodes.pushBack(activeDeclCodes[s]);
                     overrideCount = overrideCount + 1;
                 }
                 s = s + 1;
@@ -1427,7 +1424,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
         } else if isVarScalarKind(kind) and item.runtime =!= "" {
             litCode := if isSimpleTsScalarLiteral(newCode) { newCode } else { "" };
             if activeCount < 64 {
-                setLib.add(mut activeSet, item.runtime);
+                mut activeSet.add(item.runtime);
                 nextNames: mut List<String> = [];
                 nextDeclIdxs: mut List<Int> = [];
                 nextDeclMerged: mut List<Bool> = [];
@@ -1439,26 +1436,26 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
                 nextConstCodes: mut List<String> = [];
                 var copyI := 0;
                 loop copyI < activeCount {
-                    listLib.pushBack(mut nextNames, activeNames[copyI]);
-                    listLib.pushBack(mut nextDeclIdxs, activeDeclIdxs[copyI]);
-                    listLib.pushBack(mut nextDeclMerged, activeDeclMerged[copyI]);
-                    listLib.pushBack(mut nextDeclCodes, activeDeclCodes[copyI]);
-                    listLib.pushBack(mut nextWriteIdxs, activeWriteIdxs[copyI]);
-                    listLib.pushBack(mut nextWriteIsDecl, activeWriteIsDecl[copyI]);
-                    listLib.pushBack(mut nextWritePure, activeWritePure[copyI]);
-                    listLib.pushBack(mut nextRead, activeRead[copyI]);
-                    listLib.pushBack(mut nextConstCodes, activeConstCodes[copyI]);
+                    mut nextNames.pushBack(activeNames[copyI]);
+                    mut nextDeclIdxs.pushBack(activeDeclIdxs[copyI]);
+                    mut nextDeclMerged.pushBack(activeDeclMerged[copyI]);
+                    mut nextDeclCodes.pushBack(activeDeclCodes[copyI]);
+                    mut nextWriteIdxs.pushBack(activeWriteIdxs[copyI]);
+                    mut nextWriteIsDecl.pushBack(activeWriteIsDecl[copyI]);
+                    mut nextWritePure.pushBack(activeWritePure[copyI]);
+                    mut nextRead.pushBack(activeRead[copyI]);
+                    mut nextConstCodes.pushBack(activeConstCodes[copyI]);
                     copyI = copyI + 1;
                 }
-                listLib.pushBack(mut nextNames, item.runtime);
-                listLib.pushBack(mut nextDeclIdxs, idx);
-                listLib.pushBack(mut nextDeclMerged, false);
-                listLib.pushBack(mut nextDeclCodes, "");
-                listLib.pushBack(mut nextWriteIdxs, idx);
-                listLib.pushBack(mut nextWriteIsDecl, true);
-                listLib.pushBack(mut nextWritePure, codePure);
-                listLib.pushBack(mut nextRead, false);
-                listLib.pushBack(mut nextConstCodes, litCode);
+                (mut nextNames).pushBack(item.runtime);
+                mut nextDeclIdxs.pushBack(idx);
+                mut nextDeclMerged.pushBack(false);
+                mut nextDeclCodes.pushBack("");
+                mut nextWriteIdxs.pushBack(idx);
+                mut nextWriteIsDecl.pushBack(true);
+                mut nextWritePure.pushBack(codePure);
+                mut nextRead.pushBack(false);
+                mut nextConstCodes.pushBack(litCode);
                 activeNames = nextNames;
                 activeDeclIdxs = nextDeclIdxs;
                 activeDeclMerged = nextDeclMerged;
@@ -1472,7 +1469,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
             }
         } else if isAssignScalarKind(kind) and item.runtime =!= "" {
             litCode := if isSimpleTsScalarLiteral(newCode) { newCode } else { "" };
-            slot := if setLib.has(activeSet, item.runtime) { findActiveVarSlot(activeNames, activeCount, item.runtime) } else { -1 };
+            slot := if activeSet.has(item.runtime) { findActiveVarSlot(activeNames, activeCount, item.runtime) } else { -1 };
             if slot >= 0 {
                 canDropPrev := not activeRead[slot] and activeWritePure[slot] and not codeMentionsIdent(newCode, item.runtime);
                 if canDropPrev and activeWriteIsDecl[slot] and (idx == activeWriteIdxs[slot] + 1 or litCode =!= "") {
@@ -1481,11 +1478,11 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
                     activeWritePure = setSmallBoolAt(activeWritePure, slot, codePure);
                     activeRead = setSmallBoolAt(activeRead, slot, false);
                     activeConstCodes = setSmallTextAt(activeConstCodes, slot, litCode);
-                    setLib.add(mut dropSet, idx);
+                    mut dropSet.add(idx);
                     hasDrops = true;
                 } else {
                     if canDropPrev and not activeWriteIsDecl[slot] {
-                        setLib.add(mut dropSet, activeWriteIdxs[slot]);
+                        mut dropSet.add(activeWriteIdxs[slot]);
                         hasDrops = true;
                     }
                     activeWriteIdxs = setSmallIntAt(activeWriteIdxs, slot, idx);
@@ -1495,7 +1492,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
                     activeConstCodes = setSmallTextAt(activeConstCodes, slot, litCode);
                 }
             } else if activeCount < 64 {
-                setLib.add(mut activeSet, item.runtime);
+                mut activeSet.add(item.runtime);
                 nextNames: mut List<String> = [];
                 nextDeclIdxs: mut List<Int> = [];
                 nextDeclMerged: mut List<Bool> = [];
@@ -1507,26 +1504,26 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
                 nextConstCodes: mut List<String> = [];
                 var copyI := 0;
                 loop copyI < activeCount {
-                    listLib.pushBack(mut nextNames, activeNames[copyI]);
-                    listLib.pushBack(mut nextDeclIdxs, activeDeclIdxs[copyI]);
-                    listLib.pushBack(mut nextDeclMerged, activeDeclMerged[copyI]);
-                    listLib.pushBack(mut nextDeclCodes, activeDeclCodes[copyI]);
-                    listLib.pushBack(mut nextWriteIdxs, activeWriteIdxs[copyI]);
-                    listLib.pushBack(mut nextWriteIsDecl, activeWriteIsDecl[copyI]);
-                    listLib.pushBack(mut nextWritePure, activeWritePure[copyI]);
-                    listLib.pushBack(mut nextRead, activeRead[copyI]);
-                    listLib.pushBack(mut nextConstCodes, activeConstCodes[copyI]);
+                    mut nextNames.pushBack(activeNames[copyI]);
+                    mut nextDeclIdxs.pushBack(activeDeclIdxs[copyI]);
+                    mut nextDeclMerged.pushBack(activeDeclMerged[copyI]);
+                    mut nextDeclCodes.pushBack(activeDeclCodes[copyI]);
+                    mut nextWriteIdxs.pushBack(activeWriteIdxs[copyI]);
+                    mut nextWriteIsDecl.pushBack(activeWriteIsDecl[copyI]);
+                    mut nextWritePure.pushBack(activeWritePure[copyI]);
+                    mut nextRead.pushBack(activeRead[copyI]);
+                    mut nextConstCodes.pushBack(activeConstCodes[copyI]);
                     copyI = copyI + 1;
                 }
-                listLib.pushBack(mut nextNames, item.runtime);
-                listLib.pushBack(mut nextDeclIdxs, -1);
-                listLib.pushBack(mut nextDeclMerged, false);
-                listLib.pushBack(mut nextDeclCodes, "");
-                listLib.pushBack(mut nextWriteIdxs, idx);
-                listLib.pushBack(mut nextWriteIsDecl, false);
-                listLib.pushBack(mut nextWritePure, codePure);
-                listLib.pushBack(mut nextRead, false);
-                listLib.pushBack(mut nextConstCodes, litCode);
+                (mut nextNames).pushBack(item.runtime);
+                mut nextDeclIdxs.pushBack(-1);
+                mut nextDeclMerged.pushBack(false);
+                mut nextDeclCodes.pushBack("");
+                mut nextWriteIdxs.pushBack(idx);
+                mut nextWriteIsDecl.pushBack(false);
+                mut nextWritePure.pushBack(codePure);
+                mut nextRead.pushBack(false);
+                mut nextConstCodes.pushBack(litCode);
                 activeNames = nextNames;
                 activeDeclIdxs = nextDeclIdxs;
                 activeDeclMerged = nextDeclMerged;
@@ -1545,8 +1542,8 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
     var sEnd := 0;
     loop sEnd < activeCount {
         if activeDeclMerged[sEnd] {
-            listLib.pushBack(mut overrideIdxs, activeDeclIdxs[sEnd]);
-            listLib.pushBack(mut overrideCodes, activeDeclCodes[sEnd]);
+            mut overrideIdxs.pushBack(activeDeclIdxs[sEnd]);
+            mut overrideCodes.pushBack(activeDeclCodes[sEnd]);
             overrideCount = overrideCount + 1;
         }
         sEnd = sEnd + 1;
@@ -1560,17 +1557,17 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
     var ovPos := 0;
     var k := 0;
     loop k < total {
-        if hasDrops and setLib.has(dropSet, k) {
+        if hasDrops and dropSet.has(k) {
             k = k + 1;
             continue;
         }
         cur := outItems[k];
         if ovPos < overrideCount and overrideIdxs[ovPos] == k {
-            listLib.pushBack(mut finalItems, (kind = cur.kind, name = cur.name, runtime = cur.runtime,
+            mut finalItems.pushBack((kind = cur.kind, name = cur.name, runtime = cur.runtime,
             code = overrideCodes[ovPos], intValue = cur.intValue, textValue = cur.textValue));
             ovPos = ovPos + 1;
         } else {
-            listLib.pushBack(mut finalItems, cur);
+            mut finalItems.pushBack(cur);
         }
         k = k + 1;
     }
@@ -1580,16 +1577,16 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
 /** Removes unreachable top-level function bodies and side-effect-free code across root and inner blocks for `target`. */
 /** True when `arg` is a side-effect-free simple identifier or numeric/boolean literal safe to duplicate during `-O3` leaf inlining. */
 isSimpleInlineArg := fn(arg: String): Bool {
-    len := textLib.length(arg);
+    len := arg.length();
     if len == 0 { return false; }
     var i := 0;
-    if textLib.at(arg, 0) == "-" {
+    if arg.at(0) == "-" {
         if len == 1 { return false; }
         i = 1;
     }
     loop i < len {
-        ch := textLib.at(arg, i);
-        if not textLib.isNameContinue(ch) and ch =!= "$" and ch =!= "." { return false; }
+        ch := arg.at(i);
+        if not ch.isNameContinue() and ch =!= "$" and ch =!= "." { return false; }
         i = i + 1;
     }
     true
@@ -1598,24 +1595,24 @@ isSimpleInlineArg := fn(arg: String): Bool {
 /** Replaces whole-token occurrences of `paramRt` with `argCode` outside quoted strings. */
 replaceParamToken := fn(body: String, paramRt: String, argCode: String): String {
     if paramRt == "" { return body; }
-    if textLib.indexOfText(body, paramRt, 0) < 0 { return body; }
-    pLen := textLib.length(paramRt);
-    bLen := textLib.length(body);
+    if body.indexOf(paramRt, 0) < 0 { return body; }
+    pLen := paramRt.length();
+    bLen := body.length();
     out: mut tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     loop cursor < bLen {
-        ch := textLib.at(body, cursor);
+        ch := body.at(cursor);
         if ch == "\"" or ch == "'" {
             cursor = syntax.skipAliasString(body, cursor);
             continue;
         }
-        if textLib.startsWithAt(body, cursor, paramRt) {
-            prevOk := cursor == 0 or (not textLib.isNameContinue(textLib.at(body, cursor - 1)) and textLib.at(body, cursor - 1) =!= "$");
+        if body.startsWithAt(cursor, paramRt) {
+            prevOk := cursor == 0 or (not body.at(cursor - 1).isNameContinue() and body.at(cursor - 1) =!= "$");
             afterPos := cursor + pLen;
-            nextOk := afterPos >= bLen or (not textLib.isNameContinue(textLib.at(body, afterPos)) and textLib.at(body, afterPos) =!= "$");
+            nextOk := afterPos >= bLen or (not body.at(afterPos).isNameContinue() and body.at(afterPos) =!= "$");
             if prevOk and nextOk {
-                if cursor > flushed { tb.append(mut out, textLib.slice(body, flushed, cursor)); }
+                if cursor > flushed { tb.append(mut out, body.slice(flushed, cursor)); }
                 tb.append(mut out, argCode);
                 cursor = afterPos;
                 flushed = cursor;
@@ -1625,7 +1622,7 @@ replaceParamToken := fn(body: String, paramRt: String, argCode: String): String 
         cursor = cursor + 1;
     }
     if flushed == 0 { return body; }
-    if flushed < bLen { tb.append(mut out, textLib.slice(body, flushed, bLen)); }
+    if flushed < bLen { tb.append(mut out, body.slice(flushed, bLen)); }
     tb.build(out)
 };
 
@@ -1635,9 +1632,9 @@ widenInlineArgForTarget := fn(target: String, rawArg: String): String {
     if rawArg == "true" or rawArg == "false" {
         return "(" + rawArg + " as boolean)";
     }
-    first := textLib.at(rawArg, 0);
-    if textLib.isDigit(first) or first == "-" {
-        if textLib.endsWith(rawArg, "n") {
+    first := rawArg.at(0);
+    if first.isDigit() or first == "-" {
+        if rawArg.endsWith("n") {
             return "(" + rawArg + " as bigint)";
         }
         return "(" + rawArg + " as number)";
@@ -1647,23 +1644,23 @@ widenInlineArgForTarget := fn(target: String, rawArg: String): String {
 
 /** True when `runtime` is a host-invoked Play bridge export or callback that must retain its standalone function symbol at `-O3`. */
 isHostPlayBridgeFn := fn(runtime: String): Bool {
-    textLib.containsText(runtime, "litePlayCanvas") or
-    textLib.containsText(runtime, "litePlayAudio") or
-    textLib.containsText(runtime, "litePlayKeepalive") or
-    textLib.endsWith(runtime, "_onCanvasInit") or
-    textLib.endsWith(runtime, "_canvas_onInit") or
-    textLib.endsWith(runtime, "_onCanvasUpdate") or
-    textLib.endsWith(runtime, "_canvas_onUpdate") or
-    textLib.endsWith(runtime, "_onCanvasKeyDown") or
-    textLib.endsWith(runtime, "_canvas_onKeyDown") or
-    textLib.endsWith(runtime, "_onCanvasKeyUp") or
-    textLib.endsWith(runtime, "_canvas_onKeyUp") or
-    textLib.endsWith(runtime, "_onCanvasPointerMove") or
-    textLib.endsWith(runtime, "_canvas_onPointerMove") or
-    textLib.endsWith(runtime, "_onCanvasPointerDown") or
-    textLib.endsWith(runtime, "_canvas_onPointerDown") or
-    textLib.endsWith(runtime, "_onCanvasPointerUp") or
-    textLib.endsWith(runtime, "_canvas_onPointerUp")
+    runtime.contains("litePlayCanvas") or
+    runtime.contains("litePlayAudio") or
+    runtime.contains("litePlayKeepalive") or
+    runtime.endsWith("_onCanvasInit") or
+    runtime.endsWith("_canvas_onInit") or
+    runtime.endsWith("_onCanvasUpdate") or
+    runtime.endsWith("_canvas_onUpdate") or
+    runtime.endsWith("_onCanvasKeyDown") or
+    runtime.endsWith("_canvas_onKeyDown") or
+    runtime.endsWith("_onCanvasKeyUp") or
+    runtime.endsWith("_canvas_onKeyUp") or
+    runtime.endsWith("_onCanvasPointerMove") or
+    runtime.endsWith("_canvas_onPointerMove") or
+    runtime.endsWith("_onCanvasPointerDown") or
+    runtime.endsWith("_canvas_onPointerDown") or
+    runtime.endsWith("_onCanvasPointerUp") or
+    runtime.endsWith("_canvas_onPointerUp")
 };
 
 /** Inlines small single-`RETURN` pure leaf functions (0, 1, or 2 parameters) at simple call sites up to `maxBodySize`. */
@@ -1696,13 +1693,13 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String, maxBodySize: I
             }
             if fnDepth == 0 and not isHostPlayBridgeFn(it.runtime) and afterRetIdx < total and items[bodyIdx].kind == ir.ITEM_KIND_RETURN and items[afterRetIdx].kind == ir.ITEM_KIND_FUNCTION_END {
                 retCode := items[bodyIdx].code;
-                rLen := textLib.length(retCode);
+                rLen := retCode.length();
                 isPureLeaf := rLen > 0 and rLen <= maxBodySize and
-                textLib.indexOfText(retCode, it.runtime + "(", 0) < 0 and
-                textLib.indexOfText(retCode, ";", 0) < 0 and
-                textLib.indexOfText(retCode, "return ", 0) < 0 and
-                textLib.indexOfText(retCode, "lite$fault", 0) < 0 and
-                textLib.indexOfText(retCode, "lite$exit", 0) < 0;
+                retCode.indexOf(it.runtime + "(", 0) < 0 and
+                retCode.indexOf(";", 0) < 0 and
+                retCode.indexOf("return ", 0) < 0 and
+                retCode.indexOf("lite$fault", 0) < 0 and
+                retCode.indexOf("lite$exit", 0) < 0;
                 if isPureLeaf {
                     enc := it.textValue;
                     if enc == "" {
@@ -1710,23 +1707,23 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String, maxBodySize: I
                         leafParams1[it.runtime] = "";
                         leafParams2[it.runtime] = "";
                     } else {
-                        pipe1 := textLib.indexOfText(enc, "|", 0);
+                        pipe1 := enc.indexOf("|", 0);
                         if pipe1 < 0 {
-                            eqPos := textLib.indexOfText(enc, "=", 0);
+                            eqPos := enc.indexOf("=", 0);
                             if eqPos > 0 {
-                                pName := textLib.slice(enc, 0, eqPos);
+                                pName := enc.slice(0, eqPos);
                                 leafBodies[it.runtime] = retCode;
                                 leafParams1[it.runtime] = paramPrefix + pName;
                                 leafParams2[it.runtime] = "";
                             }
-                        } else if textLib.indexOfText(enc, "|", pipe1 + 1) < 0 {
-                            part1 := textLib.slice(enc, 0, pipe1);
-                            part2 := textLib.slice(enc, pipe1 + 1, textLib.length(enc));
-                            eq1 := textLib.indexOfText(part1, "=", 0);
-                            eq2 := textLib.indexOfText(part2, "=", 0);
+                        } else if enc.indexOf("|", pipe1 + 1) < 0 {
+                            part1 := enc.slice(0, pipe1);
+                            part2 := enc.slice(pipe1 + 1, enc.length());
+                            eq1 := part1.indexOf("=", 0);
+                            eq2 := part2.indexOf("=", 0);
                             if eq1 > 0 and eq2 > 0 {
-                                p1 := paramPrefix + textLib.slice(part1, 0, eq1);
-                                p2 := paramPrefix + textLib.slice(part2, 0, eq2);
+                                p1 := paramPrefix + part1.slice(0, eq1);
+                                p2 := paramPrefix + part2.slice(0, eq2);
                                 if p1 =!= p2 {
                                     leafBodies[it.runtime] = retCode;
                                     leafParams1[it.runtime] = p1;
@@ -1743,7 +1740,7 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String, maxBodySize: I
         }
         i = i + 1;
     }
-    if mapLib.size(leafBodies) == 0 { return items; }
+    if leafBodies.size() == 0 { return items; }
 
     fnPrefix := if target == ir.TARGET_TS { "liteFn" } else { "lt_fn_" };
     rewritten: mut Items = [];
@@ -1753,48 +1750,48 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String, maxBodySize: I
         } else {
             inlineLeafCallsInCode(it.code, target, fnPrefix, leafBodies, leafParams1, leafParams2)
         };
-        listLib.pushBack(mut rewritten, (kind = it.kind, name = it.name, runtime = it.runtime, code = newCode, intValue = it.intValue, textValue = it.textValue));
+        mut rewritten.pushBack((kind = it.kind, name = it.name, runtime = it.runtime, code = newCode, intValue = it.intValue, textValue = it.textValue));
     }
     rewritten
 };
 
 /** Rewrites eligible leaf function calls inside `code` using `leafBodies`/`leafParams1`/`leafParams2`. */
 inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leafBodies: Map<String, String>, leafParams1: Map<String, String>, leafParams2: Map<String, String>): String {
-    firstHit := textLib.indexOfText(code, fnPrefix, 0);
+    firstHit := code.indexOf(fnPrefix, 0);
     if code == "" or firstHit < 0 { return code; }
-    cLen := textLib.length(code);
+    cLen := code.length();
     out: mut tb.TextBuilder;
     var copyFrom := 0;
     var cursor := 0;
     var nextFn := firstHit;
-    var nextDQuote := textLib.indexOfText(code, "\"", 0);
-    var nextSQuote := textLib.indexOfText(code, "'", 0);
+    var nextDQuote := code.indexOf("\"", 0);
+    var nextSQuote := code.indexOf("'", 0);
     var changed := false;
     loop nextFn >= 0 {
-        if nextDQuote >= 0 and nextDQuote < cursor { nextDQuote = textLib.indexOfText(code, "\"", cursor); }
-        if nextSQuote >= 0 and nextSQuote < cursor { nextSQuote = textLib.indexOfText(code, "'", cursor); }
+        if nextDQuote >= 0 and nextDQuote < cursor { nextDQuote = code.indexOf("\"", cursor); }
+        if nextSQuote >= 0 and nextSQuote < cursor { nextSQuote = code.indexOf("'", cursor); }
         var qHit := -1;
         if nextDQuote >= 0 and nextDQuote < nextFn { qHit = nextDQuote; }
         if nextSQuote >= 0 and nextSQuote < nextFn and (qHit < 0 or nextSQuote < qHit) { qHit = nextSQuote; }
         if qHit >= 0 {
             cursor = syntax.skipAliasString(code, qHit);
-            if nextFn < cursor { nextFn = textLib.indexOfText(code, fnPrefix, cursor); }
+            if nextFn < cursor { nextFn = code.indexOf(fnPrefix, cursor); }
             continue;
         }
-        prevOk := nextFn == 0 or (not textLib.isNameContinue(textLib.at(code, nextFn - 1)) and textLib.at(code, nextFn - 1) =!= "$");
+        prevOk := nextFn == 0 or (not code.at(nextFn - 1).isNameContinue() and code.at(nextFn - 1) =!= "$");
         if prevOk {
-            var nameEnd := textLib.skipName(code, nextFn);
-            loop nameEnd < cLen and textLib.at(code, nameEnd) == "$" {
-                nameEnd = textLib.skipName(code, nameEnd + 1);
+            var nameEnd := code.skipName(nextFn);
+            loop nameEnd < cLen and code.at(nameEnd) == "$" {
+                nameEnd = code.skipName(nameEnd + 1);
             }
-            fnName := textLib.slice(code, nextFn, nameEnd);
-            if nameEnd < cLen and textLib.at(code, nameEnd) == "(" and mapLib.has(leafBodies, fnName) {
+            fnName := code.slice(nextFn, nameEnd);
+            if nameEnd < cLen and code.at(nameEnd) == "(" and leafBodies.has(fnName) {
                 var pDepth := 1;
                 var scan := nameEnd + 1;
                 var commaPos := -1;
                 var commaCount := 0;
                 loop scan < cLen and pDepth > 0 {
-                    sc := textLib.at(code, scan);
+                    sc := code.at(scan);
                     if sc == "\"" or sc == "'" {
                         scan = syntax.skipAliasString(code, scan);
                         continue;
@@ -1808,42 +1805,42 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
                     scan = scan + 1;
                 }
                 if pDepth == 0 {
-                    rawArgs := textLib.trim(textLib.slice(code, nameEnd + 1, scan - 1));
+                    rawArgs := code.slice(nameEnd + 1, scan - 1).trim();
                     p1 := leafParams1[fnName];
                     p2 := leafParams2[fnName];
                     body := leafBodies[fnName];
                     if p1 == "" and rawArgs == "" {
-                        if nextFn > copyFrom { tb.append(mut out, textLib.slice(code, copyFrom, nextFn)); }
+                        if nextFn > copyFrom { tb.append(mut out, code.slice(copyFrom, nextFn)); }
                         tb.append(mut out, "(" + body + ")");
                         copyFrom = scan;
                         cursor = scan;
                         changed = true;
-                        nextFn = textLib.indexOfText(code, fnPrefix, cursor);
+                        nextFn = code.indexOf(fnPrefix, cursor);
                         continue;
                     } else if p1 =!= "" and p2 == "" and commaCount == 0 and isSimpleInlineArg(rawArgs) {
                         subArg := widenInlineArgForTarget(target, rawArgs);
-                        if nextFn > copyFrom { tb.append(mut out, textLib.slice(code, copyFrom, nextFn)); }
+                        if nextFn > copyFrom { tb.append(mut out, code.slice(copyFrom, nextFn)); }
                         tb.append(mut out, "(" + replaceParamToken(body, p1, subArg) + ")");
                         copyFrom = scan;
                         cursor = scan;
                         changed = true;
-                        nextFn = textLib.indexOfText(code, fnPrefix, cursor);
+                        nextFn = code.indexOf(fnPrefix, cursor);
                         continue;
                     } else if p1 =!= "" and p2 =!= "" and commaCount == 1 and commaPos > nameEnd {
-                        arg1 := textLib.trim(textLib.slice(code, nameEnd + 1, commaPos));
-                        arg2 := textLib.trim(textLib.slice(code, commaPos + 1, scan - 1));
+                        arg1 := code.slice(nameEnd + 1, commaPos).trim();
+                        arg2 := code.slice(commaPos + 1, scan - 1).trim();
                         if isSimpleInlineArg(arg1) and isSimpleInlineArg(arg2) and
-                        textLib.indexOfText(arg1, p2, 0) < 0 {
+                        arg1.indexOf(p2, 0) < 0 {
                             sub1 := widenInlineArgForTarget(target, arg1);
                             sub2 := widenInlineArgForTarget(target, arg2);
                             step1 := replaceParamToken(body, p1, sub1);
                             step2 := replaceParamToken(step1, p2, sub2);
-                            if nextFn > copyFrom { tb.append(mut out, textLib.slice(code, copyFrom, nextFn)); }
+                            if nextFn > copyFrom { tb.append(mut out, code.slice(copyFrom, nextFn)); }
                             tb.append(mut out, "(" + step2 + ")");
                             copyFrom = scan;
                             cursor = scan;
                             changed = true;
-                            nextFn = textLib.indexOfText(code, fnPrefix, cursor);
+                            nextFn = code.indexOf(fnPrefix, cursor);
                             continue;
                         }
                     }
@@ -1851,25 +1848,25 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
             }
         }
         cursor = nextFn + 1;
-        nextFn = textLib.indexOfText(code, fnPrefix, cursor);
+        nextFn = code.indexOf(fnPrefix, cursor);
     }
     if not changed { return code; }
-    if copyFrom < cLen { tb.append(mut out, textLib.slice(code, copyFrom, cLen)); }
+    if copyFrom < cLen { tb.append(mut out, code.slice(copyFrom, cLen)); }
     tb.build(out)
 };
 
 /** Extracts reachable runtime tokens (`lite...` / `lt_...`) from `code` outside quoted strings. */
 extractReachableCodeTokens := fn(code: String): List<String> {
     out: mut List<String> = [];
-    var nextLite := textLib.indexOfText(code, "lite", 0);
-    var nextLt := textLib.indexOfText(code, "lt_", 0);
+    var nextLite := code.indexOf("lite", 0);
+    var nextLt := code.indexOf("lt_", 0);
     if nextLite < 0 and nextLt < 0 { return out; }
-    var nextQuote := textLib.indexOfText(code, "\"", 0);
-    size := textLib.length(code);
+    var nextQuote := code.indexOf("\"", 0);
+    size := code.length();
     var cursor := 0;
     loop cursor < size {
-        if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite", cursor); }
-        if nextLt >= 0 and nextLt < cursor { nextLt = textLib.indexOfText(code, "lt_", cursor); }
+        if nextLite >= 0 and nextLite < cursor { nextLite = code.indexOf("lite", cursor); }
+        if nextLt >= 0 and nextLt < cursor { nextLt = code.indexOf("lt_", cursor); }
         var hit := -1;
         if nextLite >= 0 and (nextLt < 0 or nextLite < nextLt) {
             hit = nextLite;
@@ -1878,34 +1875,34 @@ extractReachableCodeTokens := fn(code: String): List<String> {
         }
         if hit < 0 { return out; }
         if nextQuote >= 0 and nextQuote < hit {
-            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote < cursor { nextQuote = code.indexOf("\"", cursor); }
             if nextQuote >= 0 and nextQuote < hit {
                 cursor = syntax.skipAliasString(code, nextQuote);
                 continue;
             }
         }
         if hit > 0 {
-            prev := textLib.at(code, hit - 1);
-            if prev == "$" or textLib.isNameContinue(prev) {
-                cursor = textLib.skipName(code, hit + 3);
-                loop cursor < size and textLib.at(code, cursor) == "$" {
-                    cursor = textLib.skipName(code, cursor + 1);
+            prev := code.at(hit - 1);
+            if prev == "$" or prev.isNameContinue() {
+                cursor = code.skipName(hit + 3);
+                loop cursor < size and code.at(cursor) == "$" {
+                    cursor = code.skipName(cursor + 1);
                 }
                 continue;
             }
         }
-        var endPos := textLib.skipName(code, hit);
-        loop endPos < size and textLib.at(code, endPos) == "$" {
-            endPos = textLib.skipName(code, endPos + 1);
+        var endPos := code.skipName(hit);
+        loop endPos < size and code.at(endPos) == "$" {
+            endPos = code.skipName(endPos + 1);
         }
-        name := textLib.slice(code, hit, endPos);
-        token := if textLib.startsWithAt(name, 0, "lt_fn_") or textLib.startsWithAt(name, 0, "liteFn$") or
-        textLib.startsWithAt(name, 0, "liteFn_") {
+        name := code.slice(hit, endPos);
+        token := if name.startsWithAt(0, "lt_fn_") or name.startsWithAt(0, "liteFn$") or
+        name.startsWithAt(0, "liteFn_") {
             name + "("
         } else {
             name
         };
-        listLib.pushBack(mut out, token);
+        mut out.pushBack(token);
         cursor = endPos;
     }
     out
@@ -1913,39 +1910,39 @@ extractReachableCodeTokens := fn(code: String): List<String> {
 
 /** True when `runtime` names an emitted imported-module value symbol. */
 isImportedModuleRuntime := fn(runtime: String): Bool {
-    textLib.startsWithAt(runtime, 0, "lite$m$") or textLib.startsWithAt(runtime, 0, "lt_m_")
+    runtime.startsWithAt(0, "lite$m$") or runtime.startsWithAt(0, "lt_m_")
 };
 
 /** True when `runtime` names an emitted imported-module function symbol. */
 isImportedModuleFnRuntime := fn(runtime: String): Bool {
-    textLib.startsWithAt(runtime, 0, "liteFn$") or textLib.indexOfText(runtime, "__", 0) >= 0
+    runtime.startsWithAt(0, "liteFn$") or runtime.indexOf("__", 0) >= 0
 };
 
 /** Evaluates a pure constant emitted integer expression (`+`, `-`, `*`, parentheses) without overflow; returns `(ok = false, value = 0)` otherwise. */
 evalConstIntAtom := fn(src: String, start: Int, target: String): (ok: Bool, value: Int, next: Int) {
-    n := textLib.length(src);
+    n := src.length();
     var p := start;
-    loop p < n and textLib.at(src, p) == " " { p = p + 1; }
+    loop p < n and src.at(p) == " " { p = p + 1; }
     if p >= n { return (ok = false, value = 0, next = p); }
-    if textLib.at(src, p) == "(" {
+    if src.at(p) == "(" {
         inner := evalConstIntAdd(src, p + 1, target);
         if not inner.ok { return (ok = false, value = 0, next = p); }
         var q := inner.next;
-        loop q < n and textLib.at(src, q) == " " { q = q + 1; }
-        if q < n and textLib.at(src, q) == ")" {
+        loop q < n and src.at(q) == " " { q = q + 1; }
+        if q < n and src.at(q) == ")" {
             return (ok = true, value = inner.value, next = q + 1);
         }
         return (ok = false, value = 0, next = p);
     }
     if target == ir.TARGET_C {
-        if textLib.startsWithAt(src, p, "INT64_C(") {
+        if src.startsWithAt(p, "INT64_C(") {
             var q := p + 8;
             var neg := false;
-            if q < n and textLib.at(src, q) == "-" { neg = true; q = q + 1; }
+            if q < n and src.at(q) == "-" { neg = true; q = q + 1; }
             dStart := q;
-            loop q < n and textLib.isDigit(textLib.at(src, q)) { q = q + 1; }
-            if q > dStart and q < n and textLib.at(src, q) == ")" {
-                parsed := textLib.textToInt(textLib.slice(src, if neg { p + 8 } else { dStart }, q));
+            loop q < n and src.at(q).isDigit() { q = q + 1; }
+            if q > dStart and q < n and src.at(q) == ")" {
+                parsed := src.slice(if neg { p + 8 } else { dStart }, q).toInt();
                 if parsed.ok { return (ok = true, value = parsed.value, next = q + 1); }
             }
         }
@@ -1953,11 +1950,11 @@ evalConstIntAtom := fn(src: String, start: Int, target: String): (ok: Bool, valu
     }
     var neg := false;
     var q := p;
-    if q < n and textLib.at(src, q) == "-" { neg = true; q = q + 1; }
+    if q < n and src.at(q) == "-" { neg = true; q = q + 1; }
     dStart := q;
-    loop q < n and textLib.isDigit(textLib.at(src, q)) { q = q + 1; }
-    if q > dStart and q < n and textLib.at(src, q) == "n" {
-        parsed := textLib.textToInt(textLib.slice(src, if neg { p } else { dStart }, q));
+    loop q < n and src.at(q).isDigit() { q = q + 1; }
+    if q > dStart and q < n and src.at(q) == "n" {
+        parsed := src.slice(if neg { p } else { dStart }, q).toInt();
         if parsed.ok { return (ok = true, value = parsed.value, next = q + 1); }
     }
     (ok = false, value = 0, next = p)
@@ -1965,13 +1962,13 @@ evalConstIntAtom := fn(src: String, start: Int, target: String): (ok: Bool, valu
 
 /** Evaluates a multiplicative sequence of pure constant emitted integer atoms without overflow. */
 evalConstIntMul := fn(src: String, start: Int, target: String): (ok: Bool, value: Int, next: Int) {
-    n := textLib.length(src);
+    n := src.length();
     var cur := evalConstIntAtom(src, start, target);
     if not cur.ok { return cur; }
     loop true {
         var p := cur.next;
-        loop p < n and textLib.at(src, p) == " " { p = p + 1; }
-        if p < n and textLib.at(src, p) == "*" {
+        loop p < n and src.at(p) == " " { p = p + 1; }
+        if p < n and src.at(p) == "*" {
             rhs := evalConstIntAtom(src, p + 1, target);
             if not rhs.ok { return (ok = false, value = 0, next = p); }
             prod := integer.intMultiply(cur.value, rhs.value);
@@ -1986,14 +1983,14 @@ evalConstIntMul := fn(src: String, start: Int, target: String): (ok: Bool, value
 
 /** Evaluates an additive/subtractive sequence of pure constant emitted integer products without overflow. */
 evalConstIntAdd := fn(src: String, start: Int, target: String): (ok: Bool, value: Int, next: Int) {
-    n := textLib.length(src);
+    n := src.length();
     var cur := evalConstIntMul(src, start, target);
     if not cur.ok { return cur; }
     loop true {
         var p := cur.next;
-        loop p < n and textLib.at(src, p) == " " { p = p + 1; }
-        if p < n and (textLib.at(src, p) == "+" or textLib.at(src, p) == "-") {
-            isAdd := textLib.at(src, p) == "+";
+        loop p < n and src.at(p) == " " { p = p + 1; }
+        if p < n and (src.at(p) == "+" or src.at(p) == "-") {
+            isAdd := src.at(p) == "+";
             rhs := evalConstIntMul(src, p + 1, target);
             if not rhs.ok { return (ok = false, value = 0, next = p); }
             comb := if isAdd { integer.intAdd(cur.value, rhs.value) } else { integer.intSubtract(cur.value, rhs.value) };
@@ -2008,19 +2005,19 @@ evalConstIntAdd := fn(src: String, start: Int, target: String): (ok: Bool, value
 
 /** Folds a pure constant integer expression string into a single target literal when overflow-free. */
 foldPureConstIntCode := fn(code: String, target: String): String {
-    trimmed := textLib.trim(code);
+    trimmed := code.trim();
     if trimmed == "" { return code; }
-    hasOp := textLib.indexOfText(trimmed, " + ", 0) >= 0 or textLib.indexOfText(trimmed, " - ", 0) >= 0 or textLib.indexOfText(trimmed, " * ", 0) >= 0;
+    hasOp := trimmed.indexOf(" + ", 0) >= 0 or trimmed.indexOf(" - ", 0) >= 0 or trimmed.indexOf(" * ", 0) >= 0;
     if not hasOp { return code; }
     res := evalConstIntAdd(trimmed, 0, target);
     if not res.ok { return code; }
     var tail := res.next;
-    loop tail < textLib.length(trimmed) and textLib.at(trimmed, tail) == " " { tail = tail + 1; }
-    if tail =!= textLib.length(trimmed) { return code; }
+    loop tail < trimmed.length() and trimmed.at(tail) == " " { tail = tail + 1; }
+    if tail =!= trimmed.length() { return code; }
     if target == ir.TARGET_C {
-        if res.value == integer.intMin { "INT64_MIN" } else { "INT64_C(" + integer.intText(res.value) + ")" }
+        if res.value == integer.intMin { "INT64_MIN" } else { "INT64_C(" + res.value.toText() + ")" }
     } else {
-        integer.intText(res.value) + "n"
+        res.value.toText() + "n"
     }
 };
 
@@ -2031,11 +2028,11 @@ foldConstantScalarItems := fn(items: Items, target: String): Items {
         if item.kind == ir.ITEM_KIND_LOCAL_INT or item.kind == ir.ITEM_KIND_VAR_INT or item.kind == ir.ITEM_KIND_ASSIGN_INT or item.kind == ir.ITEM_KIND_RETURN {
             folded := foldPureConstIntCode(item.code, target);
             if folded =!= item.code {
-                listLib.pushBack(mut out, (kind = item.kind, name = item.name, runtime = item.runtime, code = folded, intValue = item.intValue, textValue = item.textValue));
+                mut out.pushBack((kind = item.kind, name = item.name, runtime = item.runtime, code = folded, intValue = item.intValue, textValue = item.textValue));
                 continue;
             }
         }
-        listLib.pushBack(mut out, item);
+        (mut out).pushBack(item);
     }
     out
 };
@@ -2056,10 +2053,10 @@ filterCommentItems := fn(items: Items, preserveComments: Bool, preserveDocs: Boo
         if it.kind == ir.ITEM_KIND_COMMENT {
             isDoc := it.intValue == 1;
             if (isDoc and preserveDocs) or (not isDoc and preserveComments) {
-                listLib.pushBack(mut out, it);
+                mut out.pushBack(it);
             }
         } else {
-            listLib.pushBack(mut out, it);
+            mut out.pushBack(it);
         }
     }
     out
@@ -2108,7 +2105,7 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
     fnStarts: mut Map<String, Int>;
     fnEnds: mut Map<String, Int>;
     pureDeclIdx: mut Map<String, Int>;
-    prunedCount := listLib.length(pruned);
+    prunedCount := pruned.length();
     var fnDepth := 0;
     var blockDepth := 0;
     var nextIsPure := false;
@@ -2127,9 +2124,9 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
                 curFnTok = item.runtime + "(";
                 curFnStart = pIdx + 1;
                 if not pruneUserDecls and not isImportedModuleFnRuntime(item.runtime) {
-                    if not setLib.has(reachable, curFnTok) {
-                        setLib.add(mut reachable, curFnTok);
-                        listLib.pushBack(mut queue, curFnTok);
+                    if not reachable.has(curFnTok) {
+                        mut reachable.add(curFnTok);
+                        mut queue.pushBack(curFnTok);
                     }
                 } else {
                     hasPrunable = true;
@@ -2143,8 +2140,8 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
         if item.kind == ir.ITEM_KIND_FUNCTION_END {
             if fnDepth > 0 { fnDepth = fnDepth - 1; }
             if fnDepth == 0 and curFnTok =!= "" {
-                mapLib.set(mut fnStarts, curFnTok, curFnStart);
-                mapLib.set(mut fnEnds, curFnTok, pIdx);
+                mut fnStarts.set(curFnTok, curFnStart);
+                mut fnEnds.set(curFnTok, pIdx);
                 curFnTok = "";
                 curFnStart = -1;
             }
@@ -2168,14 +2165,14 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if isPureDecl {
             hasPrunable = true;
-            mapLib.set(mut pureDeclIdx, item.runtime, pIdx);
+            mut pureDeclIdx.set(item.runtime, pIdx);
         } else if item.kind =!= ir.ITEM_KIND_IMPORT and item.kind =!= ir.ITEM_KIND_PUBLIC_FUNCTION and item.kind =!= ir.ITEM_KIND_PUBLIC_TYPE_OP and item.kind =!= ir.ITEM_KIND_PUBLIC_VALUE and
         item.kind =!= ir.ITEM_KIND_PUBLIC_TYPE and item.kind =!= ir.ITEM_KIND_NOOP and item.kind =!= ir.ITEM_KIND_SOURCE_LOC and item.kind =!= ir.ITEM_KIND_COMMENT {
             codeReachableTokensQueue(item.code, mut reachable, mut queue);
-            if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
-                if not setLib.has(reachable, item.runtime) {
-                    setLib.add(mut reachable, item.runtime);
-                    listLib.pushBack(mut queue, item.runtime);
+            if item.kind.startsWithAt(0, "Assign") and item.runtime =!= "" {
+                if not reachable.has(item.runtime) {
+                    mut reachable.add(item.runtime);
+                    mut queue.pushBack(item.runtime);
                 }
             }
         }
@@ -2185,31 +2182,31 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
 
     scanned: mut Set<String>;
     var qHead := 0;
-    loop qHead < listLib.length(queue) {
+    loop qHead < queue.length() {
         tok := queue[qHead];
         qHead = qHead + 1;
-        if setLib.has(scanned, tok) { continue; }
-        fHit := mapLib.get(fnStarts, tok);
+        if scanned.has(tok) { continue; }
+        fHit := fnStarts.get(tok);
         if fHit.found {
-            setLib.add(mut scanned, tok);
-            fEnd := mapLib.get(fnEnds, tok).value;
+            mut scanned.add(tok);
+            fEnd := fnEnds.get(tok).value;
             var j := fHit.value;
             loop j < fEnd {
                 bItem := pruned[j];
                 codeReachableTokensQueue(bItem.code, mut reachable, mut queue);
-                if textLib.startsWithAt(bItem.kind, 0, "Assign") and bItem.runtime =!= "" {
-                    if not setLib.has(reachable, bItem.runtime) {
-                        setLib.add(mut reachable, bItem.runtime);
-                        listLib.pushBack(mut queue, bItem.runtime);
+                if bItem.kind.startsWithAt(0, "Assign") and bItem.runtime =!= "" {
+                    if not reachable.has(bItem.runtime) {
+                        mut reachable.add(bItem.runtime);
+                        mut queue.pushBack(bItem.runtime);
                     }
                 }
                 j = j + 1;
             }
             continue;
         }
-        pHit := mapLib.get(pureDeclIdx, tok);
+        pHit := pureDeclIdx.get(tok);
         if pHit.found {
-            setLib.add(mut scanned, tok);
+            mut scanned.add(tok);
             codeReachableTokensQueue(pruned[pHit.value].code, mut reachable, mut queue);
         }
     }
@@ -2226,30 +2223,30 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
         }
         if item.kind == ir.ITEM_KIND_FUNCTION_START {
             nextDeclPure = false;
-            if keepFnDepth == 0 { keepFn = setLib.has(reachable, item.runtime + "("); }
+            if keepFnDepth == 0 { keepFn = reachable.has(item.runtime + "("); }
             keepFnDepth = keepFnDepth + 1;
-            if keepFn { listLib.pushBack(mut filtered, item); }
+            if keepFn { mut filtered.pushBack(item); }
         } else if item.kind == ir.ITEM_KIND_FUNCTION_END {
             nextDeclPure = false;
             wasKeeping := keepFn;
             if keepFnDepth > 0 { keepFnDepth = keepFnDepth - 1; }
             if keepFnDepth == 0 { keepFn = false; }
-            if wasKeeping { listLib.pushBack(mut filtered, item); }
+            if wasKeeping { mut filtered.pushBack(item); }
         } else if keepFnDepth > 0 {
             nextDeclPure = false;
-            if keepFn { listLib.pushBack(mut filtered, item); }
+            if keepFn { mut filtered.pushBack(item); }
         } else {
             dropDecl := keepBlockDepth == 0 and isTopDeclKind(item.kind) and
             (pruneUserDecls or isImportedModuleRuntime(item.runtime)) and
             (nextDeclPure or ((target == ir.TARGET_TS or not isCUnsupportedItem(item)) and isSideEffectFreeCode(target, item.code))) and
-            not setLib.has(reachable, item.runtime);
+            not reachable.has(item.runtime);
             nextDeclPure = false;
             if item.kind == ir.ITEM_KIND_SCOPE or item.kind == ir.ITEM_KIND_IF or item.kind == ir.ITEM_KIND_LOOP or item.kind == ir.ITEM_KIND_LOOP_SEQ {
                 keepBlockDepth = keepBlockDepth + 1;
             } else if item.kind == ir.ITEM_KIND_END_SCOPE or item.kind == ir.ITEM_KIND_END_IF or item.kind == ir.ITEM_KIND_END_LOOP {
                 if keepBlockDepth > 0 { keepBlockDepth = keepBlockDepth - 1; }
             }
-            if not dropDecl { listLib.pushBack(mut filtered, item); }
+            if not dropDecl { mut filtered.pushBack(item); }
         }
     }
     filtered

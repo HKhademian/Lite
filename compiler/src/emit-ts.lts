@@ -2,10 +2,7 @@ tsLiteral := import "./ts-literals.lts";
 emitFmt := import "./emit-format.lts";
 optCfg := import "./opt-config.lts";
 frontend := import "./frontend.lts";
-integer := import "core/int";
 io := import "core/io";
-listLib := import "core/list";
-textLib := import "core/text";
 
 var tsOutUseWriter := false;
 var tsOutWriterKind := "";
@@ -15,7 +12,7 @@ var tsSourceMapMode: optCfg.SourceMapMode = optCfg.SourceMapMode.None;
 
 /** Emits one line to either standard output or an explicit target `io.Writer`. */
 outLine := fn(s: String): Unit {
-    line := if tsCompactEmit { textLib.trimStart(s) } else { emitFmt.formatEmittedLine(s) };
+    line := if tsCompactEmit { s.trimStart() } else { emitFmt.formatEmittedLine(s) };
     if tsCompactEmit and line == "" { return; }
     if not tsOutUseWriter {
         io.outputLine(line);
@@ -37,7 +34,7 @@ outText := fn(s: String): Unit {
 
 /** Removes one four-space indentation level from `indent`. */
 dedent := fn(indent: String): String {
-    textLib.slice(indent, 0, textLib.length(indent) - 4)
+    indent.slice(0, indent.length() - 4)
 }
 
 /** Formats one canonical flat tuple kind as a TypeScript object type. */
@@ -56,18 +53,18 @@ tsParameterList := fn(encoded: String): String {
     var result := "";
     var start := 0;
     loop true {
-        separator := textLib.indexOfText(encoded, "|", start);
-        var end := textLib.length(encoded);
+        separator := encoded.indexOf("|", start);
+        var end := encoded.length();
         if separator >= 0 { end = separator; }
-        entry := textLib.slice(encoded, start, end);
-        equals := textLib.indexOfText(entry, "=", 0);
-        parameterName := textLib.slice(entry, 0, equals);
-        rawParameterKind := textLib.slice(entry, equals + 1, textLib.length(entry));
-        isMutParam := textLib.startsWithAt(rawParameterKind, 0, "mut ");
+        entry := encoded.slice(start, end);
+        equals := entry.indexOf("=", 0);
+        parameterName := entry.slice(0, equals);
+        rawParameterKind := entry.slice(equals + 1, entry.length());
+        isMutParam := rawParameterKind.startsWithAt(0, "mut ");
         parameterKind := if isMutParam {
-            textLib.slice(rawParameterKind, 4, textLib.length(rawParameterKind))
+            rawParameterKind.slice(4, rawParameterKind.length())
         } else { rawParameterKind };
-        if textLib.length(result) > 0 { result = result + ", "; }
+        if result.length() > 0 { result = result + ", "; }
         if isMutParam and frontend.isRecordKind(parameterKind) {
             result = result + "lite_" + parameterName + ": { v: " + tsFunctionType(parameterKind) + " }";
         } else {
@@ -84,12 +81,12 @@ reportParameterReads := fn(encoded: String, indent: String): Unit {
     if encoded == "" { return; }
     var start := 0;
     loop true {
-        separator := textLib.indexOfText(encoded, "|", start);
-        var end := textLib.length(encoded);
+        separator := encoded.indexOf("|", start);
+        var end := encoded.length();
         if separator >= 0 { end = separator; }
-        entry := textLib.slice(encoded, start, end);
-        equals := textLib.indexOfText(entry, "=", 0);
-        outLine(indent + "void lite_" + textLib.slice(entry, 0, equals) + ";");
+        entry := encoded.slice(start, end);
+        equals := entry.indexOf("=", 0);
+        outLine(indent + "void lite_" + entry.slice(0, equals) + ";");
         if separator < 0 { break; }
         start = separator + 1;
     }
@@ -108,7 +105,7 @@ reportArgumentCode := fn(item: frontend.Item): String {
 /** True when any emitted item calls the named `lite$` helper outside quoted String literal text. */
 usesBuiltin := fn(calls: String, name: String): Bool {
     if calls == "|" { return false; }
-    textLib.indexOfText(calls, "|lite$" + name + "(|", 0) >= 0
+    calls.indexOf("|lite$" + name + "(|", 0) >= 0
 }
 
 /** True when any emitted item reads a map value through the checked helper. */
@@ -2296,14 +2293,14 @@ paramRuntimeAt := fn(encoded: String, targetIndex: Int): String {
     var index := 0;
     var start := 0;
     loop true {
-        separator := textLib.indexOfText(encoded, "|", start);
-        var end := textLib.length(encoded);
+        separator := encoded.indexOf("|", start);
+        var end := encoded.length();
         if separator >= 0 { end = separator; }
         if index == targetIndex {
-            entry := textLib.slice(encoded, start, end);
-            eq := textLib.indexOfText(entry, "=", 0);
+            entry := encoded.slice(start, end);
+            eq := entry.indexOf("=", 0);
             if eq <= 0 { return ""; }
-            return "lite_" + textLib.slice(entry, 0, eq);
+            return "lite_" + entry.slice(0, eq);
         }
         if separator < 0 { return ""; }
         index += 1;
@@ -2318,7 +2315,7 @@ softBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): St
     else if rawFnName == "String.toInt" { "textToInt" }
     else if rawFnName == "String.repeat" { "repeatText" }
     else if rawFnName == "String.contains" { "containsText" }
-    else if textLib.startsWithAt(rawFnName, 0, "String.") { textLib.slice(rawFnName, 7, textLib.length(rawFnName)) }
+    else if rawFnName.startsWithAt(0, "String.") { rawFnName.slice(7, rawFnName.length()) }
     else { rawFnName };
     arg0 := paramRuntimeAt(params, 0);
     if moduleName == "lib/core/crypto" {
@@ -2410,7 +2407,7 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: 
             } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
                 skippingDepth = skippingDepth - 1;
                 if skippingDepth == 0 {
-                    listLib.pushBack(mut out, item);
+                    mut out.pushBack(item);
                 }
             }
             continue;
@@ -2419,7 +2416,7 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: 
             if pendingSoftFn =!= "" and item.name == pendingSoftFn and item.runtime == pendingSoftRuntime and item.textValue == pendingSoftParams {
                 overrideCode := softBuiltinExpr(item.code, item.name, item.textValue);
                 if overrideCode =!= "" and frontend.resolveBuiltinMode(rules, item.code, item.name) == frontend.BUILTIN_MODE_BUILTIN {
-                    listLib.pushBack(mut out, (kind = frontend.ITEM_KIND_RETURN, name = "", runtime = "", code = overrideCode,
+                    mut out.pushBack((kind = frontend.ITEM_KIND_RETURN, name = "", runtime = "", code = overrideCode,
                     intValue = 0, textValue = ""));
                     skippingDepth = 1;
                 }
@@ -2432,7 +2429,7 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: 
         pendingSoftFn = "";
         pendingSoftRuntime = "";
         pendingSoftParams = "";
-        listLib.pushBack(mut out, item);
+        mut out.pushBack(item);
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
             pendingSoftFn = item.name;
             pendingSoftRuntime = item.runtime;
@@ -2444,13 +2441,13 @@ applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: 
 
 /** Emits a preserved comment or doc block with per-line `indent`. */
 emitTsComment := fn(indent: String, commentText: String): Unit {
-    n := textLib.length(commentText);
+    n := commentText.length();
     var start := 0;
     loop start <= n {
-        nl := textLib.indexOfText(commentText, "\n", start);
+        nl := commentText.indexOf("\n", start);
         end := if nl >= 0 { nl } else { n };
-        rawLine := textLib.slice(commentText, start, end);
-        cleanLine := if start == 0 { rawLine } else { textLib.trimStart(rawLine) };
+        rawLine := commentText.slice(start, end);
+        cleanLine := if start == 0 { rawLine } else { rawLine.trimStart() };
         if start == 0 or cleanLine =!= "" {
             outLine(indent + cleanLine);
         } else {
@@ -2463,8 +2460,8 @@ emitTsComment := fn(indent: String, commentText: String): Unit {
 
 /** Derives a collision-free temporary initializer variable name for an immutable TS binding `targetName`. */
 tsInitTempName := fn(targetName: String): String {
-    base := if textLib.startsWithAt(targetName, 0, "lite_") {
-        textLib.slice(targetName, 5, textLib.length(targetName))
+    base := if targetName.startsWithAt(0, "lite_") {
+        targetName.slice(5, targetName.length())
     } else {
         targetName
     };
@@ -2473,40 +2470,40 @@ tsInitTempName := fn(targetName: String): String {
 
 /** Unwraps a binding-position loop/block IIFE into flat statements without an IIFE closure, preserving `const` for immutable bindings. */
 tryUnwrapDirectTsLoopBinding := fn(targetName: String, isVar: Bool, explicitType: String, code: String): (ok: Bool, declLine: String, loopLine: String, bindLine: String) {
-    trimmed := textLib.trim(code);
-    if not textLib.startsWithAt(trimmed, 0, "(() => { ") or not textLib.endsWith(trimmed, " })()") {
+    trimmed := code.trim();
+    if not trimmed.startsWithAt(0, "(() => { ") or not trimmed.endsWith(" })()") {
         return (ok = false, declLine = "", loopLine = "", bindLine = "");
     }
-    inner := textLib.trim(textLib.slice(trimmed, 9, textLib.length(trimmed) - 5));
-    innerLen := textLib.length(inner);
-    if innerLen < 12 or textLib.at(inner, innerLen - 1) =!= ";" {
+    inner := trimmed.slice(9, trimmed.length() - 5).trim();
+    innerLen := inner.length();
+    if innerLen < 12 or inner.at(innerLen - 1) =!= ";" {
         return (ok = false, declLine = "", loopLine = "", bindLine = "");
     }
     var retStart := innerLen - 1;
-    loop retStart > 0 and (textLib.isNameContinue(textLib.at(inner, retStart - 1)) or textLib.at(inner, retStart - 1) == "$") {
+    loop retStart > 0 and (inner.at(retStart - 1).isNameContinue() or inner.at(retStart - 1) == "$") {
         retStart = retStart - 1;
     }
-    retVar := textLib.slice(inner, retStart, innerLen - 1);
-    if retVar == "" or retStart < 8 or textLib.slice(inner, retStart - 8, retStart) =!= " return " {
+    retVar := inner.slice(retStart, innerLen - 1);
+    if retVar == "" or retStart < 8 or inner.slice(retStart - 8, retStart) =!= " return " {
         return (ok = false, declLine = "", loopLine = "", bindLine = "");
     }
-    beforeRet := textLib.trim(textLib.slice(inner, 0, retStart - 8));
-    if beforeRet == "" or textLib.indexOfText(beforeRet, "return ", 0) >= 0 or textLib.indexOfText(beforeRet, "return;", 0) >= 0 {
+    beforeRet := inner.slice(0, retStart - 8).trim();
+    if beforeRet == "" or beforeRet.indexOf("return ", 0) >= 0 or beforeRet.indexOf("return;", 0) >= 0 {
         return (ok = false, declLine = "", loopLine = "", bindLine = "");
     }
     /* Case 1: single-accumulator loop (`let/const retVar: T = init; for/while (...) { ... }`). */
     letPrefix := "let " + retVar + ": ";
     constPrefix := "const " + retVar + ": ";
-    isConstDecl := textLib.startsWithAt(beforeRet, 0, constPrefix);
-    isLetDecl := textLib.startsWithAt(beforeRet, 0, letPrefix);
+    isConstDecl := beforeRet.startsWithAt(0, constPrefix);
+    isLetDecl := beforeRet.startsWithAt(0, letPrefix);
     if isConstDecl or isLetDecl {
-        typeStart := if isConstDecl { textLib.length(constPrefix) } else { textLib.length(letPrefix) };
-        eqPos := textLib.indexOfText(beforeRet, " = ", typeStart);
+        typeStart := if isConstDecl { constPrefix.length() } else { letPrefix.length() };
+        eqPos := beforeRet.indexOf(" = ", typeStart);
         semiPos := if eqPos >= 0 { emitFmt.findTopLevelSemi(beforeRet, eqPos + 3) } else { -1 };
         if eqPos >= 0 and semiPos >= 0 {
-            declType := textLib.slice(beforeRet, typeStart, eqPos);
-            initExpr := textLib.slice(beforeRet, eqPos + 3, semiPos);
-            rest := textLib.trim(textLib.slice(beforeRet, semiPos + 1, textLib.length(beforeRet)));
+            declType := beforeRet.slice(typeStart, eqPos);
+            initExpr := beforeRet.slice(eqPos + 3, semiPos);
+            rest := beforeRet.slice(semiPos + 1, beforeRet.length()).trim();
             if emitFmt.isSingleScopedLoopStmt(rest) and not emitFmt.codeUsesIdent(initExpr, retVar) {
                 ann := if explicitType =!= "" { explicitType } else { declType };
                 if isVar {
@@ -2579,7 +2576,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             break;
         }
     }
-    usesEmit := hasEmitItem or hasExit or hasInput or abruptUnwind or textLib.indexOfText(calls, "lite$emit(", 0) >= 0;
+    usesEmit := hasEmitItem or hasExit or hasInput or abruptUnwind or calls.indexOf("lite$emit(", 0) >= 0;
     if hasExit {
         outLine("let lite$out: string[] = [];");
         outLine("");
@@ -2606,7 +2603,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("        if (lite$write === undefined) lite$out.push(text);");
         outLine("        else lite$write(text);");
         outLine("    }");
-        if not hasEmitItem and textLib.indexOfText(calls, "lite$emit(", 0) < 0 {
+        if not hasEmitItem and calls.indexOf("lite$emit(", 0) < 0 {
             outLine("    void lite$emit;");
         }
     } else {
@@ -2658,7 +2655,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         item.kind =!= frontend.ITEM_KIND_LOOP_TRANSFER_CATCH and item.kind =!= frontend.ITEM_KIND_MAIN_STOP {
             if pendingLocFile =!= lastEmittedLocFile or pendingLocLine =!= lastEmittedLocLine {
                 dispFile := if pendingLocFile =!= "" { pendingLocFile } else { "<stdin>" };
-                outLine(indent + "// " + dispFile + ":" + integer.intText(pendingLocLine) + ":" + pendingLocCol);
+                outLine(indent + "// " + dispFile + ":" + pendingLocLine.toText() + ":" + pendingLocCol);
                 lastEmittedLocFile = pendingLocFile;
                 lastEmittedLocLine = pendingLocLine;
             }
@@ -2674,7 +2671,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             outLine(indent + "}");
             outLine(indent + "void " + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_TRANSFER_TRY or item.kind == frontend.ITEM_KIND_LOOP_TRANSFER_TRY {
-            if item.runtime =!= "" and activeTries =!= "|" and textLib.indexOfText(activeTries, "|" + item.runtime + "|", 0) >= 0 {
+            if item.runtime =!= "" and activeTries =!= "|" and activeTries.indexOf("|" + item.runtime + "|", 0) >= 0 {
                 outLine(indent + "try {");
                 indent = indent + "    ";
             }
@@ -2709,11 +2706,11 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         } else if item.kind == frontend.ITEM_KIND_CALL {
             outLine(indent + item.code + ";");
         } else if item.kind == frontend.ITEM_KIND_DISCARD {
-            trimmedDiscard := textLib.trim(item.code);
-            unwrapped := if textLib.startsWithAt(trimmedDiscard, 0, "(() => { ") and textLib.endsWith(trimmedDiscard, " return undefined; })()") {
-                innerBody := textLib.trim(textLib.slice(trimmedDiscard, 9, textLib.length(trimmedDiscard) - 23));
-                if textLib.indexOfText(innerBody, "return ", 0) < 0 and textLib.indexOfText(innerBody, "return;", 0) < 0 {
-                    if textLib.startsWithAt(innerBody, 0, "for (") or textLib.startsWithAt(innerBody, 0, "while (") or textLib.startsWithAt(innerBody, 0, "if (") or textLib.startsWithAt(innerBody, 0, "try {") {
+            trimmedDiscard := item.code.trim();
+            unwrapped := if trimmedDiscard.startsWithAt(0, "(() => { ") and trimmedDiscard.endsWith(" return undefined; })()") {
+                innerBody := trimmedDiscard.slice(9, trimmedDiscard.length() - 23).trim();
+                if innerBody.indexOf("return ", 0) < 0 and innerBody.indexOf("return;", 0) < 0 {
+                    if innerBody.startsWithAt(0, "for (") or innerBody.startsWithAt(0, "while (") or innerBody.startsWithAt(0, "if (") or innerBody.startsWithAt(0, "try {") {
                         innerBody
                     } else if innerBody == "" {
                         ""
@@ -2821,7 +2818,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 outLine(indent + "const " + item.runtime + " = { key: lite$mk, value: lite$mv };");
                 outLine(indent + "void " + item.runtime + ";");
             } else {
-                seqExpr := if textLib.startsWithAt(item.code, 0, "Array.from(") { item.code } else { tsLiteral.listCopyCode(item.code) };
+                seqExpr := if item.code.startsWithAt(0, "Array.from(") { item.code } else { tsLiteral.listCopyCode(item.code) };
                 outLine(indent + "for (const " + item.runtime + " of " + seqExpr + ") {");
                 indent = indent + "    ";
                 outLine(indent + "void " + item.runtime + ";");
@@ -2840,7 +2837,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 outLine(indent + "lite$emit(" + tsLiteral.textLiteralCode(if item.kind == frontend.ITEM_KIND_END { "\n" } else { "" }) + ");");
             } else {
                 ending := if item.kind == frontend.ITEM_KIND_END { " + \"\\n\"" } else { "" };
-                emitted := if count == 1 and item.kind == frontend.ITEM_KIND_END and not textLib.startsWithAt(line, 0, "(") and textLib.indexOfText(line, "?", 0) >= 0 {
+                emitted := if count == 1 and item.kind == frontend.ITEM_KIND_END and not line.startsWithAt(0, "(") and line.indexOf("?", 0) >= 0 {
                     "(" + line + ")"
                 } else {
                     line

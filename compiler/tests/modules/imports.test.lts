@@ -3,7 +3,6 @@
 fs := import "core/file";
 path := import "core/path";
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 json := import "util/json";
@@ -68,18 +67,18 @@ test.checkText("outFile run stdout", "42\n", outFileRun.stdout);
 _wb := fs.writeBytes(dependency, [255]);
 invalidUtf8 := compilerTest.compileFile(tsComp, srcDir, [importer]);
 test.checkInt("invalid utf8 dep status", 2, invalidUtf8.status);
-test.check("invalid utf8 dep stderr", text.containsText(invalidUtf8.stderr, "imported source ./dep.lts is not valid UTF-8"));
+test.check("invalid utf8 dep stderr", invalidUtf8.stderr.contains("imported source ./dep.lts is not valid UTF-8"));
 
 _wi2 := fs.writeText(importer, "dep := import \"\";\n");
 emptyImport := compilerTest.compileFile(tsComp, srcDir, [importer]);
 test.checkInt("empty import status", 2, emptyImport.status);
-test.check("empty import stderr", text.containsText(emptyImport.stderr, "import path must be nonempty and use \"/\" separators"));
+test.check("empty import stderr", emptyImport.stderr.contains("import path must be nonempty and use \"/\" separators"));
 
 _wi3 := fs.writeText(importer, "dep := import \"./missing.lts\";\n");
 missingImport := compilerTest.compileFile(tsComp, srcDir, [importer]);
 test.checkInt("missing import status", 2, missingImport.status);
 test.checkText("missing import stdout", "", missingImport.stdout);
-test.check("missing import stderr", text.containsText(missingImport.stderr, "cannot read imported source ./missing.lts (ENOENT)"));
+test.check("missing import stderr", missingImport.stderr.contains("cannot read imported source ./missing.lts (ENOENT)"));
 _rmSrc := fs.remove(srcDir);
 
 /* Lite import paths resolve relative, absolute and through the library root */
@@ -100,7 +99,7 @@ relRun := compilerTest.checkAndRunTs(root, relComp.stdout);
 test.checkInt("relative import run", 0, relRun.status);
 test.checkText("relative import out", "42\n", relRun.stdout);
 
-baseStem := text.slice(basePath, 0, text.length(basePath) - 4);
+baseStem := basePath.slice(0, basePath.length() - 4);
 absSrc := "math := import " + json.quoteString(baseStem) + "; io := import \"core/io.lts\"; io.outputLine(math.twice(10));";
 absComp := compilerTest.compileStdinWithOpts(root, tsComp, pathDir, absSrc, appPath, appPath, emptyArgs());
 test.checkInt("absolute import compile", 0, absComp.status);
@@ -116,7 +115,7 @@ elsewhere := tmpCwdRes.path;
 outsideCwd := tmpOutCwdRes.path;
 _mkElse := fs.makeDir(path.join(elsewhere, "nested"));
 _we1 := fs.writeText(path.join(elsewhere, "base.lts"), "pub twice := fn(v: Int): Int { v * 2 };\n");
-_we2 := fs.writeText(path.join(elsewhere, "nested/math.lts"), "base := import \"../base\"; text := import \"core/text.lts\"; pub answer := fn(): Int { base.twice(text.length(\"hi\")) };\n");
+_we2 := fs.writeText(path.join(elsewhere, "nested/math.lts"), "base := import \"../base\"; text := import \"core/text.lts\"; pub answer := fn(): Int { base.twice(text.joinTexts([\"a\", \"b\"], \"\").length()) };\n");
 mainFile := path.join(elsewhere, "nested/main.lts");
 _we3 := fs.writeText(mainFile, "math := import \"./math\"; io := import \"core/io\"; io.outputLine(math.answer());\n");
 cwdComp := compilerTest.compileFile(tsComp, outsideCwd, [mainFile]);
@@ -149,21 +148,21 @@ loop unqualifiedCases as uSrc {
 }
 compilerTest.assertCompileErrorContains(root, tsComp, "unaliased host import", "import \"core/io\"; inputArgs();", "import requires a module alias");
 
-/* core list mutations use an import alias and retain element and mutability checks */
+/* core list mutations preserve element and mutability checks */
 listSrc := fs.readText(path.join(root, "lib/core/list.lts")).text;
-test.check("core/list pushBack signature", text.containsText(listSrc, "pub pushBack := fn<T>(values: mut List<T>, value: T): Unit;"));
-test.check("core/list popBack signature", text.containsText(listSrc, "pub popBack := fn<T>(values: mut List<T>): T;"));
-test.check("core/list not variadic", not text.containsText(listSrc, "pub pushBack := fn(..."));
-test.check("core/list popBack not variadic", not text.containsText(listSrc, "pub popBack := fn(..."));
+test.check("core/list pushBack signature", listSrc.contains("pub List.pushBack := fn<T>(values: mut Self<T>, value: T): Unit;"));
+test.check("core/list popBack signature", listSrc.contains("pub List.popBack := fn<T>(values: mut Self<T>): T;"));
+test.check("core/list not variadic", not listSrc.contains("pub List.pushBack := fn(..."));
+test.check("core/list popBack not variadic", not listSrc.contains("pub List.popBack := fn(..."));
 
-listProg := "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = [1]; list.pushBack(mut values, 2); io.outputLine(list.popBack(mut values), values);";
+listProg := "io := import \"core/io\"; values: mut List<Int> = [1]; mut values.pushBack(2); io.outputLine(mut values.popBack(), values);";
 compilerTest.assertCompileRunTs(root, tsComp, "core/list valid", listProg, "2 [1]\n");
 cListProgRes := compilerTest.compileStdin(root, cComp, listProg, "");
 test.checkInt("core/list C compiles: " + cListProgRes.stderr, 0, cListProgRes.status);
 invalidListCases: List<String> = [
-"list := import \"core/list\"; values: mut List<Int> = []; list.pushBack(mut values, \"x\");",
-"list := import \"core/list\"; values: List<Int> = []; list.pushBack(mut values, 1);",
-"list := import \"core/list\"; values: List<Int> = []; list.popBack(mut values);",
+"values: mut List<Int> = []; mut values.pushBack(\"x\");",
+"values: List<Int> = []; mut values.pushBack(1);",
+"values: List<Int> = []; mut values.popBack();",
 "values: mut List<Int> = []; pushBack(mut values, 1);",
 ];
 loop invalidListCases as invSrc {
@@ -178,7 +177,7 @@ lexerDumpPath := fs.realPath(path.join(root, "compiler/tests/lexer/lexer-dump.lt
 lexerDriver := compilerTest.prepareDriver(root, tsComp, lexerDumpPath);
 lexerPubRes := compilerTest.runDriver(lexerDriver, "pub twice := fn() { 2 }");
 test.checkInt("lexer pub status", 0, lexerPubRes.status);
-test.check("lexer pub token", text.startsWithAt(lexerPubRes.stdout, 0, "Keyword@1:1:0 pub\n"));
+test.check("lexer pub token", lexerPubRes.stdout.startsWithAt(0, "Keyword@1:1:0 pub\n"));
 compilerTest.disposeDriver(lexerDriver);
 compilerTest.assertCompileErrorContains(root, tsComp, "nested pub rejected", "if true { pub hidden := fn() { 1 }; }", "pub is only allowed on top-level declarations");
 
@@ -298,9 +297,9 @@ compilerTest.assertCompileErrorContainsNamed(root, tsComp, "alias immutable memb
 _wa3 := fs.writeText(alRoot, "io := import \"core/io\"; left := import \"./math.lts\"; right := import \"./math.lts\"; io.outputLine(left.twice(10), right.twice(11));\n");
 repAliasComp := compilerTest.compileStdin(root, tsComp, fs.readText(alRoot).text, alRoot);
 test.checkInt("repeated alias compile", 0, repAliasComp.status);
-firstEmitPos := text.indexOfText(repAliasComp.stdout, "function liteFn$math$twice(", 0);
+firstEmitPos := repAliasComp.stdout.indexOf("function liteFn$math$twice(", 0);
 test.check("repeated alias emitted once (first)", firstEmitPos >= 0);
-secondEmitPos := text.indexOfText(repAliasComp.stdout, "function liteFn$math$twice(", firstEmitPos + 1);
+secondEmitPos := repAliasComp.stdout.indexOf("function liteFn$math$twice(", firstEmitPos + 1);
 test.check("repeated alias emitted once (no second)", secondEmitPos < 0);
 repAliasRun := compilerTest.checkAndRunTs(root, repAliasComp.stdout);
 test.checkInt("repeated alias run status", 0, repAliasRun.status);

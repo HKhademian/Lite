@@ -19,7 +19,6 @@ test.check("cc available", ccInfo.cc =!= "");
 
 listProg :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
 "sumList := fn(xs: List<Int>): Int {\n" +
 "    var total := 0;\n" +
 "    loop xs as x { total += x; }\n" +
@@ -27,14 +26,14 @@ listProg :=
 "};\n" +
 "arr := [10, 20, 30, 40];\n" +
 "nums: mut List<Int> = [2, 3];\n" +
-"list.pushFront(mut nums, 1);\n" +
-"list.pushBack(mut nums, 4);\n" +
+"mut nums.pushFront(1);\n" +
+"mut nums.pushBack(4);\n" +
 "saved: List<Int> = nums;\n" +
 "nums[0] = 9;\n" +
 "nums[1] += 10;\n" +
-"back := list.popBack(mut nums);\n" +
-"front := list.popFront(mut nums);\n" +
-"rev := list.reverse(saved);\n" +
+"back := mut nums.popBack();\n" +
+"front := mut nums.popFront();\n" +
+"rev := saved.reverse();\n" +
 "sl := saved[1..3];\n" +
 "slOpen := saved[2..];\n" +
 "words: List<String> = [\"lite\", \"c11\"];\n" +

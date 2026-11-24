@@ -1,8 +1,6 @@
 /* Builtins, runtime helper panics, I/O, and C backend rejection tests migrated from igniter/test.ts. */
 
 fs := import "core/file";
-integer := import "core/int";
-list := import "core/list";
 path := import "core/path";
 test := import "core/test";
 text := import "core/text";
@@ -23,44 +21,42 @@ cComp := selC.path;
 /* TS runtime helpers preserve checked Int64, text and list semantics */
 rtOkSrc :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
-"text := import \"core/text\";\n" +
 "integer := import \"core/int\";\n" +
 "negSeven := -7;\n" +
 "two := 2;\n" +
 "fortyTwo := 42;\n" +
 "io.outputLine(2 + 3, 2 - 3, -6 * 7, negSeven / two, negSeven % two, -fortyTwo, integer.intMin);\n" +
-"io.outputLine(text.length(\"a🙂\"), text.at(\"a🙂\", 1), text.slice(\"a🙂b\", 1, 2));\n" +
+"io.outputLine(\"a🙂\".length(), \"a🙂\".at(1), \"a🙂b\".slice(1, 2));\n" +
 "src: mut List<Int> = [1, 2];\n" +
 "copy: mut List<Int> = src;\n" +
-"list.pushBack(mut copy, 3);\n" +
-"io.outputLine(list.listCountInt(src), list.listCountInt(copy));\n";
+"mut copy.pushBack(3);\n" +
+"io.outputLine(src.length(), copy.length());\n";
 compilerTest.assertCompileRunTs(root, tsComp, "runtime helpers ok", rtOkSrc, "5 -1 -42 -3 -1 -42 -9223372036854775808\n2 🙂 🙂\n2 3\n");
 
 rtFaultSrc: List<String> = [
 "integer := import \"core/int\"; io := import \"core/io\"; x := integer.intMax; io.outputLine(x + 1);",
 "x := 0; io := import \"core/io\"; io.outputLine(1 / x);",
 "integer := import \"core/int\"; io := import \"core/io\"; x := integer.intMin; io.outputLine(-x);",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", 9));",
+"io := import \"core/io\"; io.outputLine(\"a\".at(9));",
 ];
 rtFaultPat: List<String> = ["ArithmeticPanic:", "ArithmeticPanic:", "ArithmeticPanic:", "BoundPanic:"];
 var rfi := 0;
 loop rfi < 4 {
     rRes := compilerTest.compileCheckRunTs(root, tsComp, rtFaultSrc[rfi], "runtime-contract.lts");
     test.checkInt("runtime fault status", 1, rRes.status);
-    test.check("runtime fault msg", text.containsText(rRes.stderr, rtFaultPat[rfi]));
+    test.check("runtime fault msg", rRes.stderr.contains(rtFaultPat[rfi]));
     rfi = rfi + 1;
 }
 
 /* restricted compiler compiles text builtins with code-point semantics and bounds faults */
-tbSrc := "text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(\"a🙂é\"), text.at(\"a🙂é\", 1), text.slice(\"a🙂é\", 1, 3));\n";
+tbSrc := "io := import \"core/io\"; io.outputLine(\"a🙂é\".length(), \"a🙂é\".at(1), \"a🙂é\".slice(1, 3));\n";
 compilerTest.assertCompileRunTs(root, tsComp, "text builtins", tbSrc, "3 🙂 🙂é\n");
 
 tbBadSrc: List<String> = [
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", 9));\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", -1));\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 2, 1));\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"abc\", 0, 4));\n",
+"io := import \"core/io\"; io.outputLine(\"a\".at(9));\n",
+"io := import \"core/io\"; io.outputLine(\"a\".at(-1));\n",
+"io := import \"core/io\"; io.outputLine(\"abc\".slice(2, 1));\n",
+"io := import \"core/io\"; io.outputLine(\"abc\".slice(0, 4));\n",
 ];
 tbBadPat: List<String> = [
 "BoundPanic: textAt index outside text",
@@ -72,34 +68,34 @@ var tbi := 0;
 loop tbi < 4 {
     tRes := compilerTest.compileCheckRunTs(root, tsComp, tbBadSrc[tbi], "");
     test.check("text fault nonzero", tRes.status =!= 0);
-    test.check("text fault msg", text.containsText(tRes.stderr, tbBadPat[tbi]));
+    test.check("text fault msg", tRes.stderr.contains(tbBadPat[tbi]));
     tbi = tbi + 1;
 }
 
 /* generated text helpers preserve Unicode values after many distinct cached inputs */
 uOriginal := "A🙂éسلام";
-probeLines: mut List<String> = ["text := import \"core/text\"; io := import \"core/io\";", "original := \"" + uOriginal + "\";", "io.outputLine(text.length(original), text.at(original, 1), text.slice(original, 2, 4));"];
+probeLines: mut List<String> = ["io := import \"core/io\";", "original := \"" + uOriginal + "\";", "io.outputLine(original.length(), original.at(1), original.slice(2, 4));"];
 expLines: mut List<String> = ["8 🙂 é"];
 var ui := 0;
 loop ui < 32 {
-    idxStr := integer.intText(ui);
-    list.pushBack(mut probeLines, "io.outputLine(text.length(\"text-" + idxStr + "🙂\"));");
-    list.pushBack(mut expLines, integer.intText(6 + text.length(idxStr)));
+    idxStr := ui.toText();
+    mut probeLines.pushBack("io.outputLine(\"text-" + idxStr + "🙂\".length());");
+    mut expLines.pushBack((6 + idxStr.length()).toText());
     ui = ui + 1;
 }
-list.pushBack(mut probeLines, "io.outputLine(text.length(original), text.at(original, 1), text.slice(original, 2, 4));");
-list.pushBack(mut expLines, "8 🙂 é");
+(mut probeLines).pushBack("io.outputLine(original.length(), original.at(1), original.slice(2, 4));");
+mut expLines.pushBack("8 🙂 é");
 uSrc := text.joinTexts(probeLines, "\n");
 uExp := text.joinTexts(expLines, "\n") + "\n";
 compilerTest.assertCompileRunTs(root, tsComp, "unicode cache pressure", uSrc, uExp);
 
 /* restricted compiler compiles input, diagnostic and exit builtins in value and statement positions */
 argsSource :=
-"text := import \"core/text\"; io := import \"core/io\";\n" +
-"label := fn (n: Int): String { if n == 0 { \"zero\" } else { text.at(\"abc\", n) } }\n" +
+"io := import \"core/io\";\n" +
+"label := fn (n: Int): String { if n == 0 { \"zero\" } else { \"abc\".at(n) } }\n" +
 "names := io.inputArgs();\n" +
-"loop names as name { io.outputLine(text.length(name)); }\n" +
-"io.outputLine(if text.length(\"xy\") == 2 { \"two\" } else { \"other\" });\n" +
+"loop names as name { io.outputLine(name.length()); }\n" +
+"io.outputLine(if \"xy\".length() == 2 { \"two\" } else { \"other\" });\n" +
 "io.outputLine(label(1), label(0), names[1]);";
 argList: List<String> = ["ab", "c"];
 argsRes := compilerTest.compileCheckRunTsWithInput(root, tsComp, argsSource, "", "", argList);
@@ -135,11 +131,11 @@ ioBadSrc: List<String> = [
 "io := import \"core/io\"; io.errorLine(\"x\", \"y\");\n",
 "io := import \"core/io\"; io.exit(1, 2);\n",
 "io := import \"core/io\"; io.exit(\"x\");\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length());\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.length(1));\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\"));\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.at(\"a\", \"b\"));\n",
-"text := import \"core/text\"; io := import \"core/io\"; io.outputLine(text.slice(\"a\", 0));\n",
+"io := import \"core/io\"; io.outputLine(String.length());\n",
+"io := import \"core/io\"; io.outputLine(String.length(1));\n",
+"io := import \"core/io\"; io.outputLine(String.at(\"a\"));\n",
+"io := import \"core/io\"; io.outputLine(String.at(\"a\", \"b\"));\n",
+"io := import \"core/io\"; io.outputLine(String.slice(\"a\", 0));\n",
 "io := import \"core/io\"; io.outputLine(io.inputArgs);\n",
 ];
 ioBadErr: List<String> = [
@@ -150,11 +146,11 @@ ioBadErr: List<String> = [
 "1:25: function io.errorLine expects 1 argument, got more\n",
 "1:25: function io.exit expects 1 argument, got more\n",
 "1:33: argument 1 of io.exit must be Int, got String\n",
-"1:67: function text.length expects 1 argument, got 0\n",
-"1:79: argument 1 of text.length must be String, got Int\n",
-"1:67: function text.at expects 2 arguments, got 1\n",
-"1:80: argument 2 of text.at must be Int, got String\n",
-"1:67: function text.slice expects 3 arguments, got 2\n",
+"1:39: function String.length expects 1 argument, got 0\n",
+"1:53: argument 1 of String.length must be String, got Int\n",
+"1:39: function String.at expects 2 arguments, got 1\n",
+"1:54: argument 2 of String.at must be Int, got String\n",
+"1:39: function String.slice expects 3 arguments, got 2\n",
 "1:39: function io.inputArgs must be called\n",
 ];
 var ibi := 0;
@@ -185,14 +181,14 @@ if ccTextInfo.available {
     cTextAtPanic := compilerTest.compileCheckRunC(root, cComp, ccTextInfo.cc, atPanicSrc, "", "");
     test.checkInt("c-text-at panic status", 1, cTextAtPanic.status);
     test.checkText("c-text-at panic stderr parity", tsTextAtPanic.stderr, cTextAtPanic.stderr);
-    test.check("c-text-at panic msg: " + cTextAtPanic.stderr, text.containsText(cTextAtPanic.stderr, "BoundPanic: textAt index outside text"));
+    test.check("c-text-at panic msg: " + cTextAtPanic.stderr, cTextAtPanic.stderr.contains("BoundPanic: textAt index outside text"));
 
     slicePanicSrc := "t := import \"core/text\"; io := import \"core/io\"; io.outputLine(t.slice(\"ab\", 1, 0));\n";
     tsTextSlicePanic := compilerTest.compileCheckRunTs(root, tsComp, slicePanicSrc, "");
     cTextSlicePanic := compilerTest.compileCheckRunC(root, cComp, ccTextInfo.cc, slicePanicSrc, "", "");
     test.checkInt("c-text-slice panic status", 1, cTextSlicePanic.status);
     test.checkText("c-text-slice panic stderr parity", tsTextSlicePanic.stderr, cTextSlicePanic.stderr);
-    test.check("c-text-slice panic msg: " + cTextSlicePanic.stderr, text.containsText(cTextSlicePanic.stderr, "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)"));
+    test.check("c-text-slice panic msg: " + cTextSlicePanic.stderr, cTextSlicePanic.stderr.contains("BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)"));
 }
 
 /* C compiler executes io.errorLine, io.exit (flushing stdout), and core/diag.fail natively */

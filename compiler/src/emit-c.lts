@@ -2,12 +2,8 @@ frontend := import "./frontend.lts";
 cLiteral := import "./c-literals.lts";
 emitFmt := import "./emit-format.lts";
 optCfg := import "./opt-config.lts";
-integer := import "core/int";
-listLib := import "core/list";
-mapLib := import "core/map";
 diagLib := import "core/diag";
 io := import "core/io";
-setLib := import "core/set";
 textLib := import "core/text";
 tb := import "util/text-builder";
 
@@ -18,7 +14,7 @@ cOutBuf: mut tb.TextBuilder;
 
 /** Emits one C11 line to either stdout or the buffered `TextBuilder` for `--out`. */
 outLine := fn(s: String): Unit {
-    line := if cCompactEmit { textLib.trimStart(s) } else { emitFmt.formatEmittedLine(s) };
+    line := if cCompactEmit { s.trimStart() } else { emitFmt.formatEmittedLine(s) };
     if cCompactEmit and line == "" { return; }
     if not cOutUseWriter {
         io.outputLine(line);
@@ -38,7 +34,7 @@ outText := fn(s: String): Unit {
 
 /** Removes one four-space indentation level from `indent`. */
 dedent := fn(indent: String): String {
-    textLib.slice(indent, 0, textLib.length(indent) - 4)
+    indent.slice(0, indent.length() - 4)
 }
 
 /** Returns the C11 scalar list tag (`i64`, `f64`, `bool`, `str`) for a List/Array kind, or `""` if not a C-supported list/array. */
@@ -97,12 +93,12 @@ checkCFunctionSignature := fn(item: frontend.Item): Unit {
     if encoded == "" { return; }
     var start := 0;
     loop true {
-        sep := textLib.indexOfText(encoded, "|", start);
-        end := if sep >= 0 { sep } else { textLib.length(encoded) };
-        entry := textLib.slice(encoded, start, end);
-        eq := textLib.indexOfText(entry, "=", 0);
+        sep := encoded.indexOf("|", start);
+        end := if sep >= 0 { sep } else { encoded.length() };
+        entry := encoded.slice(start, end);
+        eq := entry.indexOf("=", 0);
         if eq >= 0 {
-            checkUnsupportedCType(textLib.slice(entry, eq + 1, textLib.length(entry)));
+            checkUnsupportedCType(entry.slice(eq + 1, entry.length()));
         }
         if sep < 0 { break; }
         start = sep + 1;
@@ -374,15 +370,15 @@ cParameterList := fn(encoded: String): String {
     var result := "";
     var start := 0;
     loop true {
-        sep := textLib.indexOfText(encoded, "|", start);
-        end := if sep >= 0 { sep } else { textLib.length(encoded) };
-        entry := textLib.slice(encoded, start, end);
-        eq := textLib.indexOfText(entry, "=", 0);
-        paramName := textLib.slice(entry, 0, eq);
-        rawParamKind := textLib.slice(entry, eq + 1, textLib.length(entry));
-        isMutParam := textLib.startsWithAt(rawParamKind, 0, "mut ");
-        paramKind := if isMutParam { textLib.slice(rawParamKind, 4, textLib.length(rawParamKind)) } else { rawParamKind };
-        if textLib.length(result) > 0 { result = result + ", "; }
+        sep := encoded.indexOf("|", start);
+        end := if sep >= 0 { sep } else { encoded.length() };
+        entry := encoded.slice(start, end);
+        eq := entry.indexOf("=", 0);
+        paramName := entry.slice(0, eq);
+        rawParamKind := entry.slice(eq + 1, entry.length());
+        isMutParam := rawParamKind.startsWithAt(0, "mut ");
+        paramKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
+        if result.length() > 0 { result = result + ", "; }
         result = result + cScalarType(paramKind) + (if isMutParam { " *lite_" } else { " lite_" }) + paramName;
         if sep < 0 { break; }
         start = sep + 1;
@@ -395,11 +391,11 @@ emitCParameterReads := fn(encoded: String): Unit {
     if encoded == "" { return; }
     var start := 0;
     loop true {
-        sep := textLib.indexOfText(encoded, "|", start);
-        end := if sep >= 0 { sep } else { textLib.length(encoded) };
-        entry := textLib.slice(encoded, start, end);
-        eq := textLib.indexOfText(entry, "=", 0);
-        outLine("    (void)lite_" + textLib.slice(entry, 0, eq) + ";");
+        sep := encoded.indexOf("|", start);
+        end := if sep >= 0 { sep } else { encoded.length() };
+        entry := encoded.slice(start, end);
+        eq := entry.indexOf("=", 0);
+        outLine("    (void)lite_" + entry.slice(0, eq) + ";");
         if sep < 0 { break; }
         start = sep + 1;
     }
@@ -419,17 +415,17 @@ isCLocalDeclKind := fn(kind: String): Bool {
 
 /** Skips a balanced CFN_START ... CFN_END hoisted-closure block starting at `start` in `code`. */
 skipCFnBlock := fn(code: String, start: Int): Int {
-    size := textLib.length(code);
+    size := code.length();
     var cursor := start + 13;
     var depth := 1;
     loop cursor < size and depth > 0 {
-        ch := textLib.at(code, cursor);
+        ch := code.at(cursor);
         if ch == "\"" {
             cursor = frontend.skipAliasString(code, cursor);
-        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
+        } else if ch == "/" and code.startsWithAt(cursor, "/*@CFN_START:") {
             depth = depth + 1;
             cursor = cursor + 13;
-        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_END@*/") {
+        } else if ch == "/" and code.startsWithAt(cursor, "/*@CFN_END@*/") {
             depth = depth - 1;
             cursor = cursor + 13;
         } else {
@@ -441,23 +437,23 @@ skipCFnBlock := fn(code: String, start: Int): Int {
 
 /** Detects leaked JS tuple or array literal syntax inside a scalar-typed expression on C, skipping quoted strings, type annotations, and C11 compound literals. */
 unsupportedAggregateCode := fn(code: String): String {
-    if textLib.indexOfText(code, "{", 0) < 0 and textLib.indexOfText(code, "[", 0) < 0 { return ""; }
-    size := textLib.length(code);
+    if code.indexOf("{", 0) < 0 and code.indexOf("[", 0) < 0 { return ""; }
+    size := code.length();
     var cursor := 0;
     loop cursor < size {
-        ch := textLib.at(code, cursor);
+        ch := code.at(cursor);
         if ch == "\"" {
             cursor = frontend.skipAliasString(code, cursor);
-        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CFN_START:") {
+        } else if ch == "/" and code.startsWithAt(cursor, "/*@CFN_START:") {
             cursor = skipCFnBlock(code, cursor);
-        } else if ch == "/" and (textLib.startsWithAt(code, cursor, "/*@T:") or textLib.startsWithAt(code, cursor, "/*@C:") or textLib.startsWithAt(code, cursor, "/*@P:")) {
-            endTag := textLib.indexOfText(code, "@*/", cursor + 5);
+        } else if ch == "/" and (code.startsWithAt(cursor, "/*@T:") or code.startsWithAt(cursor, "/*@C:") or code.startsWithAt(cursor, "/*@P:")) {
+            endTag := code.indexOf("@*/", cursor + 5);
             cursor = if endTag >= 0 { endTag + 3 } else { size };
-        } else if ch == "(" and (textLib.startsWithAt(code, cursor, "((const ") or textLib.startsWithAt(code, cursor, "(const ") or textLib.startsWithAt(code, cursor, "((lt_s_") or textLib.startsWithAt(code, cursor, "((lt_fnv_")) {
-            isDouble := textLib.startsWithAt(code, cursor, "((const ") or textLib.startsWithAt(code, cursor, "((lt_s_") or textLib.startsWithAt(code, cursor, "((lt_fnv_");
+        } else if ch == "(" and (code.startsWithAt(cursor, "((const ") or code.startsWithAt(cursor, "(const ") or code.startsWithAt(cursor, "((lt_s_") or code.startsWithAt(cursor, "((lt_fnv_")) {
+            isDouble := code.startsWithAt(cursor, "((const ") or code.startsWithAt(cursor, "((lt_s_") or code.startsWithAt(cursor, "((lt_fnv_");
             var depth := 0;
             loop cursor < size {
-                c2 := textLib.at(code, cursor);
+                c2 := code.at(cursor);
                 if c2 == "\"" {
                     cursor = frontend.skipAliasString(code, cursor);
                 } else {
@@ -466,10 +462,10 @@ unsupportedAggregateCode := fn(code: String): String {
                         depth = depth - 1;
                         if depth == 0 {
                             cursor = cursor + 1;
-                            if not isDouble and cursor < size and textLib.at(code, cursor) == "{" {
+                            if not isDouble and cursor < size and code.at(cursor) == "{" {
                                 var bDepth := 0;
                                 loop cursor < size {
-                                    c3 := textLib.at(code, cursor);
+                                    c3 := code.at(cursor);
                                     if c3 == "\"" { cursor = frontend.skipAliasString(code, cursor); }
                                     else {
                                         if c3 == "{" { bDepth = bDepth + 1; }
@@ -487,11 +483,11 @@ unsupportedAggregateCode := fn(code: String): String {
                     cursor = cursor + 1;
                 }
             }
-        } else if ch == "[" and textLib.startsWithAt(code, cursor, "[0] == '\\0'") {
-            cursor = cursor + textLib.length("[0] == '\\0'");
-        } else if ch == "/" and textLib.startsWithAt(code, cursor, "/*@CBLK:") {
+        } else if ch == "[" and code.startsWithAt(cursor, "[0] == '\\0'") {
+            cursor = cursor + "[0] == '\\0'".length();
+        } else if ch == "/" and code.startsWithAt(cursor, "/*@CBLK:") {
             return "";
-        } else if ch == "{" and textLib.startsWithAt(code, cursor, "{ /*c-stmt*/") {
+        } else if ch == "{" and code.startsWithAt(cursor, "{ /*c-stmt*/") {
             return "";
         } else if ch == "{" {
             return "C backend does not support tuple values yet";
@@ -512,125 +508,125 @@ cBuiltinMap: mut Map<String, String>;
 ensureCBuiltinMap := fn(): Unit {
     if cBuiltinMapReady { return; }
     cBuiltinMapReady = true;
-    mapLib.set(mut cBuiltinMap, "reportError", "lt_report_error");
-    mapLib.set(mut cBuiltinMap, "exit", "lt_exit");
-    mapLib.set(mut cBuiltinMap, "textLength", "lt_text_length");
-    mapLib.set(mut cBuiltinMap, "textAt", "lt_text_at");
-    mapLib.set(mut cBuiltinMap, "textSliceFrom", "lt_text_slice_from");
-    mapLib.set(mut cBuiltinMap, "textSlice", "lt_text_slice");
-    mapLib.set(mut cBuiltinMap, "inputArgs", "lt_input_args");
-    mapLib.set(mut cBuiltinMap, "inputAll", "lt_input_all");
-    mapLib.set(mut cBuiltinMap, "inputLine", "lt_input_line");
-    mapLib.set(mut cBuiltinMap, "inputInt", "lt_input_int");
-    mapLib.set(mut cBuiltinMap, "inputFloat", "lt_input_float");
-    mapLib.set(mut cBuiltinMap, "unicodeToCodePoints", "lt_unicode_to_code_points");
-    mapLib.set(mut cBuiltinMap, "unicodeFromCodePoints", "lt_unicode_from_code_points");
-    mapLib.set(mut cBuiltinMap, "ioStdinReader", "lt_io_stdin_reader");
-    mapLib.set(mut cBuiltinMap, "ioStdoutWriter", "lt_io_stdout_writer");
-    mapLib.set(mut cBuiltinMap, "ioStderrWriter", "lt_io_stderr_writer");
-    mapLib.set(mut cBuiltinMap, "ioBufferReader", "lt_io_buffer_reader");
-    mapLib.set(mut cBuiltinMap, "ioBufferWriter", "lt_io_buffer_writer");
-    mapLib.set(mut cBuiltinMap, "ioWriterBytes", "lt_io_writer_bytes");
-    mapLib.set(mut cBuiltinMap, "ioWriterText", "lt_io_writer_text");
-    mapLib.set(mut cBuiltinMap, "ioClearWriter", "lt_io_clear_writer");
-    mapLib.set(mut cBuiltinMap, "ioReaderOk", "lt_io_reader_ok");
-    mapLib.set(mut cBuiltinMap, "ioReaderAtEof", "lt_io_reader_at_eof");
-    mapLib.set(mut cBuiltinMap, "ioReaderError", "lt_io_reader_error");
-    mapLib.set(mut cBuiltinMap, "ioRead", "lt_io_read");
-    mapLib.set(mut cBuiltinMap, "ioCloseReader", "lt_io_close_reader");
-    mapLib.set(mut cBuiltinMap, "ioWriterOk", "lt_io_writer_ok");
-    mapLib.set(mut cBuiltinMap, "ioWriterError", "lt_io_writer_error");
-    mapLib.set(mut cBuiltinMap, "ioWrite", "lt_io_write");
-    mapLib.set(mut cBuiltinMap, "ioFlush", "lt_io_flush");
-    mapLib.set(mut cBuiltinMap, "ioCloseWriter", "lt_io_close_writer");
-    mapLib.set(mut cBuiltinMap, "fileKind", "lt_file_kind");
-    mapLib.set(mut cBuiltinMap, "fileOpenReader", "lt_file_open_reader");
-    mapLib.set(mut cBuiltinMap, "fileOpenWriter", "lt_file_open_writer");
-    mapLib.set(mut cBuiltinMap, "fileOpenAppender", "lt_file_open_appender");
-    mapLib.set(mut cBuiltinMap, "fileListDir", "lt_file_list_dir");
-    mapLib.set(mut cBuiltinMap, "fileMakeDir", "lt_file_make_dir");
-    mapLib.set(mut cBuiltinMap, "fileRemove", "lt_file_remove");
-    mapLib.set(mut cBuiltinMap, "fileCopy", "lt_file_copy");
-    mapLib.set(mut cBuiltinMap, "fileSymlink", "lt_file_symlink");
-    mapLib.set(mut cBuiltinMap, "fileRealPath", "lt_file_real_path");
-    mapLib.set(mut cBuiltinMap, "fileMakeTempDir", "lt_file_make_temp_dir");
-    mapLib.set(mut cBuiltinMap, "processCwd", "lt_process_cwd");
-    mapLib.set(mut cBuiltinMap, "processExecPath", "lt_process_exec_path");
-    mapLib.set(mut cBuiltinMap, "processEntryPath", "lt_process_entry_path");
-    mapLib.set(mut cBuiltinMap, "processPlatform", "lt_process_platform");
-    mapLib.set(mut cBuiltinMap, "processArch", "lt_process_arch");
-    mapLib.set(mut cBuiltinMap, "processRuntimeVersion", "lt_process_runtime_version");
-    mapLib.set(mut cBuiltinMap, "processEnvGet", "lt_process_env_get");
-    mapLib.set(mut cBuiltinMap, "processRun", "lt_process_run");
-    mapLib.set(mut cBuiltinMap, "processRunBytes", "lt_process_run_bytes");
-    mapLib.set(mut cBuiltinMap, "cryptoRandomBytes", "lt_crypto_random_bytes");
-    mapLib.set(mut cBuiltinMap, "timeMonotonicNs", "lt_time_monotonic_ns");
-    mapLib.set(mut cBuiltinMap, "timeEpochNs", "lt_time_epoch_ns");
-    mapLib.set(mut cBuiltinMap, "timeSleepMs", "lt_time_sleep_ms");
-    mapLib.set(mut cBuiltinMap, "timeLocalDate", "lt_time_local_date");
-    mapLib.set(mut cBuiltinMap, "extraCanvasOpen", "lt_canvas_open");
-    mapLib.set(mut cBuiltinMap, "extraCanvasPoll", "lt_canvas_poll");
-    mapLib.set(mut cBuiltinMap, "extraCanvasPresent", "lt_canvas_present");
-    mapLib.set(mut cBuiltinMap, "extraCanvasClose", "lt_canvas_close");
-    mapLib.set(mut cBuiltinMap, "extraCanvasClear", "lt_canvas_clear");
-    mapLib.set(mut cBuiltinMap, "extraCanvasFillRect", "lt_canvas_fill_rect");
-    mapLib.set(mut cBuiltinMap, "extraCanvasStrokeRect", "lt_canvas_stroke_rect");
-    mapLib.set(mut cBuiltinMap, "extraCanvasFillCircle", "lt_canvas_fill_circle");
-    mapLib.set(mut cBuiltinMap, "extraCanvasStrokeLine", "lt_canvas_stroke_line");
-    mapLib.set(mut cBuiltinMap, "extraCanvasDrawText", "lt_canvas_draw_text");
-    mapLib.set(mut cBuiltinMap, "extraCanvasCapture", "lt_canvas_capture");
-    mapLib.set(mut cBuiltinMap, "extraCanvasSetTargetFps", "lt_canvas_set_target_fps");
-    mapLib.set(mut cBuiltinMap, "extraCanvasVitals", "lt_canvas_vitals");
-    mapLib.set(mut cBuiltinMap, "extraCanvasPlayTone", "lt_canvas_play_tone");
-    mapLib.set(mut cBuiltinMap, "extraCanvasBounds", "lt_canvas_bounds");
-    mapLib.set(mut cBuiltinMap, "extraCanvasResize", "lt_canvas_resize");
-    mapLib.set(mut cBuiltinMap, "extraCanvasSetFullscreen", "lt_canvas_set_fullscreen");
+    mut cBuiltinMap.set("reportError", "lt_report_error");
+    mut cBuiltinMap.set("exit", "lt_exit");
+    mut cBuiltinMap.set("textLength", "lt_text_length");
+    mut cBuiltinMap.set("textAt", "lt_text_at");
+    mut cBuiltinMap.set("textSliceFrom", "lt_text_slice_from");
+    mut cBuiltinMap.set("textSlice", "lt_text_slice");
+    mut cBuiltinMap.set("inputArgs", "lt_input_args");
+    mut cBuiltinMap.set("inputAll", "lt_input_all");
+    mut cBuiltinMap.set("inputLine", "lt_input_line");
+    mut cBuiltinMap.set("inputInt", "lt_input_int");
+    mut cBuiltinMap.set("inputFloat", "lt_input_float");
+    mut cBuiltinMap.set("unicodeToCodePoints", "lt_unicode_to_code_points");
+    mut cBuiltinMap.set("unicodeFromCodePoints", "lt_unicode_from_code_points");
+    mut cBuiltinMap.set("ioStdinReader", "lt_io_stdin_reader");
+    mut cBuiltinMap.set("ioStdoutWriter", "lt_io_stdout_writer");
+    mut cBuiltinMap.set("ioStderrWriter", "lt_io_stderr_writer");
+    mut cBuiltinMap.set("ioBufferReader", "lt_io_buffer_reader");
+    mut cBuiltinMap.set("ioBufferWriter", "lt_io_buffer_writer");
+    mut cBuiltinMap.set("ioWriterBytes", "lt_io_writer_bytes");
+    mut cBuiltinMap.set("ioWriterText", "lt_io_writer_text");
+    mut cBuiltinMap.set("ioClearWriter", "lt_io_clear_writer");
+    mut cBuiltinMap.set("ioReaderOk", "lt_io_reader_ok");
+    mut cBuiltinMap.set("ioReaderAtEof", "lt_io_reader_at_eof");
+    mut cBuiltinMap.set("ioReaderError", "lt_io_reader_error");
+    mut cBuiltinMap.set("ioRead", "lt_io_read");
+    mut cBuiltinMap.set("ioCloseReader", "lt_io_close_reader");
+    mut cBuiltinMap.set("ioWriterOk", "lt_io_writer_ok");
+    mut cBuiltinMap.set("ioWriterError", "lt_io_writer_error");
+    mut cBuiltinMap.set("ioWrite", "lt_io_write");
+    mut cBuiltinMap.set("ioFlush", "lt_io_flush");
+    mut cBuiltinMap.set("ioCloseWriter", "lt_io_close_writer");
+    mut cBuiltinMap.set("fileKind", "lt_file_kind");
+    mut cBuiltinMap.set("fileOpenReader", "lt_file_open_reader");
+    mut cBuiltinMap.set("fileOpenWriter", "lt_file_open_writer");
+    mut cBuiltinMap.set("fileOpenAppender", "lt_file_open_appender");
+    mut cBuiltinMap.set("fileListDir", "lt_file_list_dir");
+    mut cBuiltinMap.set("fileMakeDir", "lt_file_make_dir");
+    mut cBuiltinMap.set("fileRemove", "lt_file_remove");
+    mut cBuiltinMap.set("fileCopy", "lt_file_copy");
+    mut cBuiltinMap.set("fileSymlink", "lt_file_symlink");
+    mut cBuiltinMap.set("fileRealPath", "lt_file_real_path");
+    mut cBuiltinMap.set("fileMakeTempDir", "lt_file_make_temp_dir");
+    mut cBuiltinMap.set("processCwd", "lt_process_cwd");
+    mut cBuiltinMap.set("processExecPath", "lt_process_exec_path");
+    mut cBuiltinMap.set("processEntryPath", "lt_process_entry_path");
+    mut cBuiltinMap.set("processPlatform", "lt_process_platform");
+    mut cBuiltinMap.set("processArch", "lt_process_arch");
+    mut cBuiltinMap.set("processRuntimeVersion", "lt_process_runtime_version");
+    mut cBuiltinMap.set("processEnvGet", "lt_process_env_get");
+    mut cBuiltinMap.set("processRun", "lt_process_run");
+    mut cBuiltinMap.set("processRunBytes", "lt_process_run_bytes");
+    mut cBuiltinMap.set("cryptoRandomBytes", "lt_crypto_random_bytes");
+    mut cBuiltinMap.set("timeMonotonicNs", "lt_time_monotonic_ns");
+    mut cBuiltinMap.set("timeEpochNs", "lt_time_epoch_ns");
+    mut cBuiltinMap.set("timeSleepMs", "lt_time_sleep_ms");
+    mut cBuiltinMap.set("timeLocalDate", "lt_time_local_date");
+    mut cBuiltinMap.set("extraCanvasOpen", "lt_canvas_open");
+    mut cBuiltinMap.set("extraCanvasPoll", "lt_canvas_poll");
+    mut cBuiltinMap.set("extraCanvasPresent", "lt_canvas_present");
+    mut cBuiltinMap.set("extraCanvasClose", "lt_canvas_close");
+    mut cBuiltinMap.set("extraCanvasClear", "lt_canvas_clear");
+    mut cBuiltinMap.set("extraCanvasFillRect", "lt_canvas_fill_rect");
+    mut cBuiltinMap.set("extraCanvasStrokeRect", "lt_canvas_stroke_rect");
+    mut cBuiltinMap.set("extraCanvasFillCircle", "lt_canvas_fill_circle");
+    mut cBuiltinMap.set("extraCanvasStrokeLine", "lt_canvas_stroke_line");
+    mut cBuiltinMap.set("extraCanvasDrawText", "lt_canvas_draw_text");
+    mut cBuiltinMap.set("extraCanvasCapture", "lt_canvas_capture");
+    mut cBuiltinMap.set("extraCanvasSetTargetFps", "lt_canvas_set_target_fps");
+    mut cBuiltinMap.set("extraCanvasVitals", "lt_canvas_vitals");
+    mut cBuiltinMap.set("extraCanvasPlayTone", "lt_canvas_play_tone");
+    mut cBuiltinMap.set("extraCanvasBounds", "lt_canvas_bounds");
+    mut cBuiltinMap.set("extraCanvasResize", "lt_canvas_resize");
+    mut cBuiltinMap.set("extraCanvasSetFullscreen", "lt_canvas_set_fullscreen");
 };
 
 /** Rewrites registered `lite$...(` builtin calls via O(1) map lookup and strips internal `/*@T:...*/`/`/*@C:...*/`/`/*@P:...*/`/`/*@CFN_START:...*/` markers outside quoted strings. */
 normalizeCBuiltinCalls := fn(code: String): String {
-    var nextLite := textLib.indexOfText(code, "lite$", 0);
-    var nextAnnot := textLib.indexOfText(code, "/*@", 0);
+    var nextLite := code.indexOf("lite$", 0);
+    var nextAnnot := code.indexOf("/*@", 0);
     if nextLite < 0 and nextAnnot < 0 { return code; }
     ensureCBuiltinMap();
-    size := textLib.length(code);
-    var nextQuote := textLib.indexOfText(code, "\"", 0);
+    size := code.length();
+    var nextQuote := code.indexOf("\"", 0);
     out: mut tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     loop cursor < size {
-        if nextLite >= 0 and nextLite < cursor { nextLite = textLib.indexOfText(code, "lite$", cursor); }
-        if nextAnnot >= 0 and nextAnnot < cursor { nextAnnot = textLib.indexOfText(code, "/*@", cursor); }
+        if nextLite >= 0 and nextLite < cursor { nextLite = code.indexOf("lite$", cursor); }
+        if nextAnnot >= 0 and nextAnnot < cursor { nextAnnot = code.indexOf("/*@", cursor); }
         var hit := -1;
         if nextLite >= 0 { hit = nextLite; }
         if nextAnnot >= 0 and (hit < 0 or nextAnnot < hit) { hit = nextAnnot; }
         if hit < 0 { break; }
         if nextQuote >= 0 and nextQuote < hit {
-            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote < cursor { nextQuote = code.indexOf("\"", cursor); }
             if nextQuote >= 0 and nextQuote < hit {
                 cursor = frontend.skipAliasString(code, nextQuote);
                 continue;
             }
         }
         if hit == nextAnnot {
-            if textLib.startsWithAt(code, hit, "/*@CFN_START:") {
-                if hit > flushed { tb.append(mut out, textLib.slice(code, flushed, hit)); }
+            if code.startsWithAt(hit, "/*@CFN_START:") {
+                if hit > flushed { tb.append(mut out, code.slice(flushed, hit)); }
                 cursor = skipCFnBlock(code, hit);
                 flushed = cursor;
-            } else if textLib.startsWithAt(code, hit, "/*@T:") or textLib.startsWithAt(code, hit, "/*@C:") or textLib.startsWithAt(code, hit, "/*@P:") {
-                endTag := textLib.indexOfText(code, "@*/", hit + 5);
-                if hit > flushed { tb.append(mut out, textLib.slice(code, flushed, hit)); }
+            } else if code.startsWithAt(hit, "/*@T:") or code.startsWithAt(hit, "/*@C:") or code.startsWithAt(hit, "/*@P:") {
+                endTag := code.indexOf("@*/", hit + 5);
+                if hit > flushed { tb.append(mut out, code.slice(flushed, hit)); }
                 cursor = if endTag >= 0 { endTag + 3 } else { size };
                 flushed = cursor;
             } else {
                 cursor = hit + 3;
             }
         } else {
-            endName := textLib.skipName(code, hit + 5);
-            if endName > hit + 5 and endName < size and textLib.at(code, endName) == "(" {
-                found := mapLib.get(cBuiltinMap, textLib.slice(code, hit + 5, endName));
+            endName := code.skipName(hit + 5);
+            if endName > hit + 5 and endName < size and code.at(endName) == "(" {
+                found := cBuiltinMap.get(code.slice(hit + 5, endName));
                 if found.found {
-                    if hit > flushed { tb.append(mut out, textLib.slice(code, flushed, hit)); }
+                    if hit > flushed { tb.append(mut out, code.slice(flushed, hit)); }
                     tb.append(mut out, found.value);
                     tb.append(mut out, "(");
                     cursor = endName + 1;
@@ -642,7 +638,7 @@ normalizeCBuiltinCalls := fn(code: String): String {
         }
     }
     if flushed == 0 { return code; }
-    if flushed < size { tb.append(mut out, textLib.slice(code, flushed, size)); }
+    if flushed < size { tb.append(mut out, code.slice(flushed, size)); }
     tb.build(out)
 };
 
@@ -659,7 +655,7 @@ cCall := fn(kind: String, code: String): String {
             labels: mut List<String> = [];
             var ci := 0;
             loop ci < cCount {
-                listLib.pushBack(mut labels, cLiteral.textLiteralCode(dName + "." + frontend.enumCaseNameAt(kind, ci)));
+                mut labels.pushBack(cLiteral.textLiteralCode(dName + "." + frontend.enumCaseNameAt(kind, ci)));
                 ci = ci + 1;
             }
             "printf(\"%s\", ((const char *const[]){" + textLib.joinTexts(labels, ", ") + "}[" + code + "]))"
@@ -677,7 +673,7 @@ cCall := fn(kind: String, code: String): String {
 
 /** True when any emitted item calls the checked Int division-family helper `name`. */
 usesIntHelper := fn(calls: Set<String>, name: String): Bool {
-    setLib.has(calls, name)
+    calls.has(name)
 }
 
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
@@ -827,14 +823,14 @@ usesTextPrimitives := fn(calls: Set<String>): Bool {
 /** True when any list or map bounds helper is called in `calls`. */
 usesAnyListBounds := fn(calls: Set<String>): Bool {
     loop calls as tok {
-        if textLib.startsWithAt(tok, 0, "lt_list_") and (
-            textLib.endsWith(tok, "_at(") or textLib.endsWith(tok, "_set(") or
-            textLib.endsWith(tok, "_pop_back(") or textLib.endsWith(tok, "_pop_front(") or
-            textLib.endsWith(tok, "_slice(") or textLib.endsWith(tok, "_slice_from(")
+        if tok.startsWithAt(0, "lt_list_") and (
+            tok.endsWith("_at(") or tok.endsWith("_set(") or
+            tok.endsWith("_pop_back(") or tok.endsWith("_pop_front(") or
+            tok.endsWith("_slice(") or tok.endsWith("_slice_from(")
         ) {
             return true;
         }
-        if textLib.startsWithAt(tok, 0, "lt_map_") and textLib.endsWith(tok, "_at(") {
+        if tok.startsWithAt(0, "lt_map_") and tok.endsWith("_at(") {
             return true;
         }
     }
@@ -1687,40 +1683,40 @@ emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
     seen: mut Set<String>;
     loop items as item {
         code := item.code;
-        var nextArg := textLib.indexOfText(code, "lt_arg_", 0);
-        var nextCmp := textLib.indexOfText(code, "lt_cmp_", 0);
+        var nextArg := code.indexOf("lt_arg_", 0);
+        var nextCmp := code.indexOf("lt_cmp_", 0);
         if nextArg < 0 and nextCmp < 0 { continue; }
-        codeLen := textLib.length(code);
-        var nextQuote := textLib.indexOfText(code, "\"", 0);
-        var nextCfn := textLib.indexOfText(code, "/*@CFN_START:", 0);
+        codeLen := code.length();
+        var nextQuote := code.indexOf("\"", 0);
+        var nextCfn := code.indexOf("/*@CFN_START:", 0);
         var cursor := 0;
         loop cursor < codeLen {
-            if nextArg >= 0 and nextArg < cursor { nextArg = textLib.indexOfText(code, "lt_arg_", cursor); }
-            if nextCmp >= 0 and nextCmp < cursor { nextCmp = textLib.indexOfText(code, "lt_cmp_", cursor); }
+            if nextArg >= 0 and nextArg < cursor { nextArg = code.indexOf("lt_arg_", cursor); }
+            if nextCmp >= 0 and nextCmp < cursor { nextCmp = code.indexOf("lt_cmp_", cursor); }
             var hit := -1;
             if nextArg >= 0 { hit = nextArg; }
             if nextCmp >= 0 and (hit < 0 or nextCmp < hit) { hit = nextCmp; }
             if hit < 0 { break; }
             if nextQuote >= 0 and nextQuote < hit {
-                if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+                if nextQuote < cursor { nextQuote = code.indexOf("\"", cursor); }
                 if nextQuote >= 0 and nextQuote < hit {
                     cursor = frontend.skipAliasString(code, nextQuote);
                     continue;
                 }
             }
             if nextCfn >= 0 and nextCfn < hit {
-                if nextCfn < cursor { nextCfn = textLib.indexOfText(code, "/*@CFN_START:", cursor); }
+                if nextCfn < cursor { nextCfn = code.indexOf("/*@CFN_START:", cursor); }
                 if nextCfn >= 0 and nextCfn < hit {
                     cursor = skipCFnBlock(code, nextCfn);
                     continue;
                 }
             }
-            end := textLib.skipName(code, hit);
-            if textLib.startsWithAt(code, end, " = ") {
-                tName := textLib.slice(code, hit, end);
-                if not setLib.has(seen, tName) {
-                    setLib.add(mut seen, tName);
-                    tag := if textLib.startsWithAt(code, hit, "lt_cmp_") or textLib.startsWithAt(code, hit, "lt_arg_f_") { textLib.at(code, hit + 7) } else { "i" };
+            end := code.skipName(hit);
+            if code.startsWithAt(end, " = ") {
+                tName := code.slice(hit, end);
+                if not seen.has(tName) {
+                    mut seen.add(tName);
+                    tag := if code.startsWithAt(hit, "lt_cmp_") or code.startsWithAt(hit, "lt_arg_f_") { code.at(hit + 7) } else { "i" };
                     typeCode := if tag == "s" { "lt_str " } else if tag == "b" { "bool " }
                     else if tag == "f" { "double " } else { "int64_t " };
                     outLine("    " + typeCode + tName + ";");
@@ -1734,38 +1730,38 @@ emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
 /** Collects hygienic arithmetic/comparison temporary declarations for a single hoisted closure definition and injects them at its placeholder. */
 injectCFnTemps := fn(code: String): String {
     marker := "/*@CFN_TEMPS@*/";
-    mIdx := textLib.indexOfText(code, marker, 0);
+    mIdx := code.indexOf(marker, 0);
     if mIdx < 0 { return code; }
-    var nextArg := textLib.indexOfText(code, "lt_arg_", 0);
-    var nextCmp := textLib.indexOfText(code, "lt_cmp_", 0);
-    size := textLib.length(code);
+    var nextArg := code.indexOf("lt_arg_", 0);
+    var nextCmp := code.indexOf("lt_cmp_", 0);
+    size := code.length();
     if nextArg < 0 and nextCmp < 0 {
-        return textLib.slice(code, 0, mIdx) + textLib.slice(code, mIdx + textLib.length(marker), size);
+        return code.slice(0, mIdx) + code.slice(mIdx + marker.length(), size);
     }
     decls: mut tb.TextBuilder;
     seen: mut Set<String>;
-    var nextQuote := textLib.indexOfText(code, "\"", 0);
+    var nextQuote := code.indexOf("\"", 0);
     var cursor := 0;
     loop cursor < size {
-        if nextArg >= 0 and nextArg < cursor { nextArg = textLib.indexOfText(code, "lt_arg_", cursor); }
-        if nextCmp >= 0 and nextCmp < cursor { nextCmp = textLib.indexOfText(code, "lt_cmp_", cursor); }
+        if nextArg >= 0 and nextArg < cursor { nextArg = code.indexOf("lt_arg_", cursor); }
+        if nextCmp >= 0 and nextCmp < cursor { nextCmp = code.indexOf("lt_cmp_", cursor); }
         var hit := -1;
         if nextArg >= 0 { hit = nextArg; }
         if nextCmp >= 0 and (hit < 0 or nextCmp < hit) { hit = nextCmp; }
         if hit < 0 { break; }
         if nextQuote >= 0 and nextQuote < hit {
-            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote < cursor { nextQuote = code.indexOf("\"", cursor); }
             if nextQuote >= 0 and nextQuote < hit {
                 cursor = frontend.skipAliasString(code, nextQuote);
                 continue;
             }
         }
-        end := textLib.skipName(code, hit);
-        if textLib.startsWithAt(code, end, " = ") {
-            tName := textLib.slice(code, hit, end);
-            if not setLib.has(seen, tName) {
-                setLib.add(mut seen, tName);
-                tag := if textLib.startsWithAt(code, hit, "lt_cmp_") or textLib.startsWithAt(code, hit, "lt_arg_f_") { textLib.at(code, hit + 7) } else { "i" };
+        end := code.skipName(hit);
+        if code.startsWithAt(end, " = ") {
+            tName := code.slice(hit, end);
+            if not seen.has(tName) {
+                mut seen.add(tName);
+                tag := if code.startsWithAt(hit, "lt_cmp_") or code.startsWithAt(hit, "lt_arg_f_") { code.at(hit + 7) } else { "i" };
                 typeCode := if tag == "s" { "lt_str " } else if tag == "b" { "bool " }
                 else if tag == "f" { "double " } else { "int64_t " };
                 tb.append(mut decls, typeCode + tName + "; ");
@@ -1773,7 +1769,7 @@ injectCFnTemps := fn(code: String): String {
         }
         cursor = end;
     }
-    textLib.slice(code, 0, mIdx) + tb.build(decls) + textLib.slice(code, mIdx + textLib.length(marker), size)
+    code.slice(0, mIdx) + tb.build(decls) + code.slice(mIdx + marker.length(), size)
 };
 
 /** Emits shortest round-trip binary64 display with decimal/exponent thresholds shared by the TS runtime; source remains statically checked and no locale is selected by generated programs. */
@@ -1944,10 +1940,10 @@ emitStringConcatHelper := fn(): Unit {
 
 /** Evaluates one multi-value output argument into a hygienic scalar temporary, preserving non-trivial Unit/Never side effects. */
 emitOutputArgument := fn(kind: String, code: String, name: String, indent: String): Unit {
-    if textLib.startsWithAt(code, 0, "/*@CBLK:") {
-        endHdr := textLib.indexOfText(code, "@*/", 8);
-        retVar := textLib.slice(code, 8, endHdr);
-        blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
+    if code.startsWithAt(0, "/*@CBLK:") {
+        endHdr := code.indexOf("@*/", 8);
+        retVar := code.slice(8, endHdr);
+        blkBody := code.slice(endHdr + 3, code.length());
         if kind == frontend.VALUE_KIND_NEVER or kind == frontend.VALUE_KIND_UNIT {
             outLine(indent + "{ " + blkBody + " }");
         } else {
@@ -1970,13 +1966,13 @@ emitOutputArgument := fn(kind: String, code: String, name: String, indent: Strin
 
 /** Emits a preserved comment or doc block with per-line `indent`. */
 emitCComment := fn(indent: String, commentText: String): Unit {
-    n := textLib.length(commentText);
+    n := commentText.length();
     var start := 0;
     loop start <= n {
-        nl := textLib.indexOfText(commentText, "\n", start);
+        nl := commentText.indexOf("\n", start);
         end := if nl >= 0 { nl } else { n };
-        rawLine := textLib.slice(commentText, start, end);
-        cleanLine := if start == 0 { rawLine } else { textLib.trimStart(rawLine) };
+        rawLine := commentText.slice(start, end);
+        cleanLine := if start == 0 { rawLine } else { rawLine.trimStart() };
         if start == 0 or cleanLine =!= "" {
             outLine(indent + cleanLine);
         } else {
@@ -1997,14 +1993,14 @@ tryUnwrapDirectCLoopBinding := fn(cTypePrefix: String, targetName: String, isHoi
     if retVar == "" or retVar == "0" {
         return (ok = false, declLine = "", loopLine = "");
     }
-    trimmed := textLib.trim(blkBody);
+    trimmed := blkBody.trim();
     retEq := retVar + " = ";
     p1 := cTypePrefix + retEq;
-    p2 := textLib.trimEnd(cTypePrefix) + " " + retEq;
-    initStart := if textLib.startsWithAt(trimmed, 0, p1) {
-        textLib.length(p1)
-    } else if textLib.startsWithAt(trimmed, 0, p2) {
-        textLib.length(p2)
+    p2 := cTypePrefix.trimEnd() + " " + retEq;
+    initStart := if trimmed.startsWithAt(0, p1) {
+        p1.length()
+    } else if trimmed.startsWithAt(0, p2) {
+        p2.length()
     } else {
         -1
     };
@@ -2015,8 +2011,8 @@ tryUnwrapDirectCLoopBinding := fn(cTypePrefix: String, targetName: String, isHoi
     if semiPos < 0 {
         return (ok = false, declLine = "", loopLine = "");
     }
-    initExpr := textLib.slice(trimmed, initStart, semiPos);
-    rest := textLib.trim(textLib.slice(trimmed, semiPos + 1, textLib.length(trimmed)));
+    initExpr := trimmed.slice(initStart, semiPos);
+    rest := trimmed.slice(semiPos + 1, trimmed.length()).trim();
     if not emitFmt.isSingleScopedLoopStmt(rest) {
         return (ok = false, declLine = "", loopLine = "");
     }
@@ -2068,9 +2064,9 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             if pendingLocFile =!= lastEmittedLocFile or pendingLocLine =!= lastEmittedLocLine {
                 dispFile := if pendingLocFile =!= "" { pendingLocFile } else { "<stdin>" };
                 if cSourceMapMode == optCfg.SourceMapMode.Lines {
-                    outLine("#line " + integer.intText(pendingLocLine) + " " + cLiteral.textLiteralCode(dispFile));
+                    outLine("#line " + pendingLocLine.toText() + " " + cLiteral.textLiteralCode(dispFile));
                 } else {
-                    outLine(indent + "// " + dispFile + ":" + integer.intText(pendingLocLine) + ":" + pendingLocCol);
+                    outLine(indent + "// " + dispFile + ":" + pendingLocLine.toText() + ":" + pendingLocCol);
                 }
                 lastEmittedLocFile = pendingLocFile;
                 lastEmittedLocLine = pendingLocLine;
@@ -2079,10 +2075,10 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
         }
         code := normalizeCBuiltinCalls(item.code);
         if isCLocalDeclKind(item.kind) {
-            if textLib.startsWithAt(code, 0, "/*@CBLK:") {
-                endHdr := textLib.indexOfText(code, "@*/", 8);
-                retVar := textLib.slice(code, 8, endHdr);
-                blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
+            if code.startsWithAt(0, "/*@CBLK:") {
+                endHdr := code.indexOf("@*/", 8);
+                retVar := code.slice(8, endHdr);
+                blkBody := code.slice(endHdr + 3, code.length());
                 isHoisted := fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime);
                 cTypePrefix := cDeclTypeItem(item);
                 unwrappedLoop := tryUnwrapDirectCLoopBinding(cTypePrefix, item.runtime, isHoisted, retVar, blkBody);
@@ -2102,21 +2098,23 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             }
             outLine(indent + "(void)" + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
-            if textLib.startsWithAt(code, 0, "/*@CBLK:") {
-                endHdr := textLib.indexOfText(code, "@*/", 8);
-                retVar := textLib.slice(code, 8, endHdr);
-                blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
+            if code.startsWithAt(0, "/*@CBLK:") {
+                endHdr := code.indexOf("@*/", 8);
+                retVar := code.slice(8, endHdr);
+                blkBody := code.slice(endHdr + 3, code.length());
                 outLine(indent + "{ " + blkBody + " " + item.runtime + " = " + retVar + "; }");
             } else {
                 outLine(indent + item.runtime + " = " + code + ";");
             }
         } else if item.kind == frontend.ITEM_KIND_RETURN {
-            if textLib.startsWithAt(code, 0, "/*@CBLK:") {
-                endHdr := textLib.indexOfText(code, "@*/", 8);
-                retVar := textLib.slice(code, 8, endHdr);
-                blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
+            if code.startsWithAt(0, "/*@CBLK:") {
+                endHdr := code.indexOf("@*/", 8);
+                retVar := code.slice(8, endHdr);
+                blkBody := code.slice(endHdr + 3, code.length());
                 if fnResult == frontend.VALUE_KIND_UNIT {
                     outLine(indent + "{ " + blkBody + " } return;");
+                } else if retVar == "0" {
+                    outLine(indent + "{ " + blkBody + " }");
                 } else {
                     outLine(indent + "{ " + cScalarType(fnResult) + " lt_ret; " + blkBody + " lt_ret = " + retVar + "; return lt_ret; }");
                 }
@@ -2125,26 +2123,26 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 outLine(indent + "return;");
             } else if code == "" {
                 outLine(indent + "return;");
-            } else if textLib.startsWithAt(code, 0, "lt_exit(") {
+            } else if code.startsWithAt(0, "lt_exit(") {
                 outLine(indent + "(void)(" + code + ");");
             } else {
                 outLine(indent + "return " + code + ";");
             }
         } else if item.kind == frontend.ITEM_KIND_CALL or item.kind == frontend.ITEM_KIND_DISCARD {
-            if textLib.startsWithAt(code, 0, "/*@CBLK:") {
-                endHdr := textLib.indexOfText(code, "@*/", 8);
-                retVar := textLib.slice(code, 8, endHdr);
-                blkBody := textLib.slice(code, endHdr + 3, textLib.length(code));
+            if code.startsWithAt(0, "/*@CBLK:") {
+                endHdr := code.indexOf("@*/", 8);
+                retVar := code.slice(8, endHdr);
+                blkBody := code.slice(endHdr + 3, code.length());
                 if retVar =!= "" and retVar =!= "0" {
                     outLine(indent + "{ " + blkBody + " (void)" + retVar + "; }");
                 } else {
                     outLine(indent + "{ " + blkBody + " }");
                 }
-            } else if textLib.startsWithAt(code, 0, "{ /*c-stmt*/") {
-                trimmedCStmt := textLib.trim(code);
-                if textLib.endsWith(trimmedCStmt, "}") {
-                    innerC := textLib.trim(textLib.slice(trimmedCStmt, 12, textLib.length(trimmedCStmt) - 1));
-                    if textLib.startsWithAt(innerC, 0, "for (") or textLib.startsWithAt(innerC, 0, "while (") or textLib.startsWithAt(innerC, 0, "if (") {
+            } else if code.startsWithAt(0, "{ /*c-stmt*/") {
+                trimmedCStmt := code.trim();
+                if trimmedCStmt.endsWith("}") {
+                    innerC := trimmedCStmt.slice(12, trimmedCStmt.length() - 1).trim();
+                    if innerC.startsWithAt(0, "for (") or innerC.startsWithAt(0, "while (") or innerC.startsWithAt(0, "if (") {
                         outLine(indent + innerC);
                     } else {
                         outLine(indent + "{ " + innerC + " }");
@@ -2187,15 +2185,15 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             outLine(indent + "while (" + condition + ") {");
             indent = indent + "    ";
             blockDepth = blockDepth + 1;
-            listLib.pushBack(mut loopSeqFlags, 0);
-            listLib.pushBack(mut loopSeqReleases, "");
+            mut loopSeqFlags.pushBack(0);
+            mut loopSeqReleases.pushBack("");
         } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ {
-            seqId := integer.intText(seqLoopId);
+            seqId := seqLoopId.toText();
             seqLoopId = seqLoopId + 1;
             if item.intValue == 2 or item.intValue == 3 {
-                nl := textLib.indexOfText(code, "\n", 0);
-                rStart := if nl >= 0 { textLib.slice(code, 0, nl) } else { "0" };
-                rEnd := if nl >= 0 { textLib.slice(code, nl + 1, textLib.length(code)) } else { "0" };
+                nl := code.indexOf("\n", 0);
+                rStart := if nl >= 0 { code.slice(0, nl) } else { "0" };
+                rEnd := if nl >= 0 { code.slice(nl + 1, code.length()) } else { "0" };
                 rOp := if item.intValue == 3 { "<=" } else { "<" };
                 endVar := "lt_rend_" + seqId;
                 idxVar := "lt_ri_" + seqId;
@@ -2208,12 +2206,12 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 }
                 indent = indent + "        ";
                 blockDepth = blockDepth + 1;
-                listLib.pushBack(mut loopSeqFlags, 1);
-                listLib.pushBack(mut loopSeqReleases, "");
+                mut loopSeqFlags.pushBack(1);
+                mut loopSeqReleases.pushBack("");
             } else if item.intValue == 4 {
                 /* Map loop: item.textValue is `(key:K,value:V)`, first `@T:` in item.code is `Map<K,V>`. */
                 annots := extractCTypeAnnotations(item.code);
-                mapKind := if listLib.length(annots) > 0 and textLib.startsWithAt(annots[0], 0, "T:") { textLib.slice(annots[0], 2, textLib.length(annots[0])) } else { "" };
+                mapKind := if annots.length() > 0 and annots[0].startsWithAt(0, "T:") { annots[0].slice(2, annots[0].length()) } else { "" };
                 mTag := frontend.cMapTag(mapKind);
                 entryTag := frontend.cStructTag(item.textValue);
                 seqVar := "lt_seq_" + seqId;
@@ -2228,8 +2226,8 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 }
                 indent = indent + "        ";
                 blockDepth = blockDepth + 1;
-                listLib.pushBack(mut loopSeqFlags, 1);
-                listLib.pushBack(mut loopSeqReleases, "");
+                mut loopSeqFlags.pushBack(1);
+                mut loopSeqReleases.pushBack("");
             } else if item.intValue == 5 {
                 /* Set loop: item.textValue is element kind `T`. */
                 sTag := frontend.cSetTag("Set<" + item.textValue + ">");
@@ -2245,8 +2243,8 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 }
                 indent = indent + "        ";
                 blockDepth = blockDepth + 1;
-                listLib.pushBack(mut loopSeqFlags, 1);
-                listLib.pushBack(mut loopSeqReleases, "");
+                mut loopSeqFlags.pushBack(1);
+                mut loopSeqReleases.pushBack("");
             } else {
                 tag := frontend.cListTag(item.textValue);
                 seqVar := "lt_seq_" + seqId;
@@ -2261,12 +2259,12 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 }
                 indent = indent + "        ";
                 blockDepth = blockDepth + 1;
-                listLib.pushBack(mut loopSeqFlags, 1);
-                listLib.pushBack(mut loopSeqReleases, if item.intValue == 1 { "" } else { seqVar });
+                mut loopSeqFlags.pushBack(1);
+                mut loopSeqReleases.pushBack(if item.intValue == 1 { "" } else { seqVar });
             }
         } else if item.kind == frontend.ITEM_KIND_END_LOOP {
-            isSeqEnd := if listLib.length(loopSeqFlags) > 0 { listLib.popBack(mut loopSeqFlags) == 1 } else { false };
-            relVar := if listLib.length(loopSeqReleases) > 0 { listLib.popBack(mut loopSeqReleases) } else { "" };
+            isSeqEnd := if loopSeqFlags.length() > 0 { mut loopSeqFlags.popBack() == 1 } else { false };
+            relVar := if loopSeqReleases.length() > 0 { mut loopSeqReleases.popBack() } else { "" };
             if isSeqEnd {
                 indent = dedent(dedent(indent));
                 outLine(indent + "    }");
@@ -2281,8 +2279,8 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if item.kind == frontend.ITEM_KIND_END or item.kind == frontend.ITEM_KIND_END_OUTPUT {
             if count == 1 {
-                if textLib.startsWithAt(firstCode, 0, "/*@CBLK:") {
-                    oneTemp := "lt_output_" + integer.intText(tempIndex);
+                if firstCode.startsWithAt(0, "/*@CBLK:") {
+                    oneTemp := "lt_output_" + tempIndex.toText();
                     tempIndex = tempIndex + 1;
                     emitOutputArgument(firstKind, firstCode, oneTemp, indent);
                     outText(outputWriteCode(firstKind, if firstKind == frontend.VALUE_KIND_UNIT or firstKind == frontend.VALUE_KIND_NEVER { "0" } else { oneTemp }, indent, failAction));
@@ -2304,13 +2302,13 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 firstCode = code;
             } else {
                 if count == 1 {
-                    firstTemp = "lt_output_" + integer.intText(tempIndex);
+                    firstTemp = "lt_output_" + tempIndex.toText();
                     tempIndex = tempIndex + 1;
                     emitOutputArgument(firstKind, firstCode, firstTemp, indent);
                     tb.clear(mut writes);
                     tb.append(mut writes, outputWriteCode(firstKind, if firstKind == frontend.VALUE_KIND_UNIT or firstKind == frontend.VALUE_KIND_NEVER { "0" } else { firstTemp }, indent, failAction));
                 }
-                temp := "lt_output_" + integer.intText(tempIndex);
+                temp := "lt_output_" + tempIndex.toText();
                 tempIndex = tempIndex + 1;
                 emitOutputArgument(item.kind, code, temp, indent);
                 tb.append(mut writes, indent + "if (printf(\" \") < 0) { " + failAction + " }\n");
@@ -2337,7 +2335,7 @@ emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, h
                 break;
             }
         }
-        listLib.pushBack(mut fnItems, item);
+        (mut fnItems).pushBack(item);
         idx = idx + 1;
     }
     outLine("static " + cScalarType(fnItem.code) + " " + fnItem.runtime + "(" + cParameterList(fnItem.textValue) + ") {");
@@ -2357,8 +2355,8 @@ collectSubKinds := fn(kind: String): List<String> {
         elKind := if frontend.isListKind(kind) { frontend.listElementKind(kind) } else { frontend.arrayElementKind(kind) };
         if frontend.cListTag(elKind) == "" { return out; }
         sub := self(elKind);
-        loop sub as s { listLib.pushBack(mut out, s); }
-        listLib.pushBack(mut out, "L|" + elKind);
+        loop sub as s { mut out.pushBack(s); }
+        (mut out).pushBack("L|" + elKind);
         return out;
     }
     if frontend.isMapKind(kind) {
@@ -2366,24 +2364,24 @@ collectSubKinds := fn(kind: String): List<String> {
         kKind := frontend.mapKeyKind(kind);
         vKind := frontend.mapValueKind(kind);
         subK := self("List<" + kKind + ">");
-        loop subK as s { listLib.pushBack(mut out, s); }
+        loop subK as s { mut out.pushBack(s); }
         subV := self(vKind);
-        loop subV as s { listLib.pushBack(mut out, s); }
+        loop subV as s { mut out.pushBack(s); }
         if frontend.cListTag(vKind) =!= "" {
             subVL := self("List<" + vKind + ">");
-            loop subVL as s { listLib.pushBack(mut out, s); }
+            loop subVL as s { mut out.pushBack(s); }
         }
         subGet := self("(found:Bool,value:" + vKind + ")");
-        loop subGet as s { listLib.pushBack(mut out, s); }
-        listLib.pushBack(mut out, "M|" + kind);
+        loop subGet as s { mut out.pushBack(s); }
+        (mut out).pushBack("M|" + kind);
         return out;
     }
     if frontend.isSetKind(kind) {
         if frontend.cSetTag(kind) == "" { return out; }
         eKind := frontend.setElementKind(kind);
         subE := self("List<" + eKind + ">");
-        loop subE as s { listLib.pushBack(mut out, s); }
-        listLib.pushBack(mut out, "E|" + kind);
+        loop subE as s { mut out.pushBack(s); }
+        (mut out).pushBack("E|" + kind);
         return out;
     }
     if frontend.isTupleKind(kind) or frontend.isRecordKind(kind) {
@@ -2394,10 +2392,10 @@ collectSubKinds := fn(kind: String): List<String> {
         loop i < cnt {
             fKind := if isRec { frontend.recordComponent(kind, i).kind } else { frontend.tupleComponent(kind, i).kind };
             sub := self(fKind);
-            loop sub as s { listLib.pushBack(mut out, s); }
+            loop sub as s { mut out.pushBack(s); }
             i = i + 1;
         }
-        listLib.pushBack(mut out, "S|" + kind);
+        (mut out).pushBack("S|" + kind);
         return out;
     }
     if frontend.isFnKind(kind) {
@@ -2406,12 +2404,12 @@ collectSubKinds := fn(kind: String): List<String> {
         var pi := 0;
         loop pi < pCount {
             subP := self(frontend.fnParamComponent(kind, pi).kind);
-            loop subP as s { listLib.pushBack(mut out, s); }
+            loop subP as s { mut out.pushBack(s); }
             pi = pi + 1;
         }
         subR := self(frontend.fnResultKind(kind));
-        loop subR as s { listLib.pushBack(mut out, s); }
-        listLib.pushBack(mut out, "F|" + kind);
+        loop subR as s { mut out.pushBack(s); }
+        (mut out).pushBack("F|" + kind);
         return out;
     }
     out
@@ -2421,52 +2419,52 @@ collectSubKinds := fn(kind: String): List<String> {
 collectTypeFlags := fn(kind: String): List<String> {
     out: mut List<String> = [];
     if kind == frontend.VALUE_KIND_STRING {
-        listLib.pushBack(mut out, "STR");
+        mut out.pushBack("STR");
         return out;
     }
     if frontend.isFloatScalarKind(kind) {
-        listLib.pushBack(mut out, "FLOAT");
-        if kind == frontend.VALUE_KIND_FLOAT32 { listLib.pushBack(mut out, "FLOAT32"); }
+        mut out.pushBack("FLOAT");
+        if kind == frontend.VALUE_KIND_FLOAT32 { mut out.pushBack("FLOAT32"); }
         return out;
     }
     if frontend.isListKind(kind) or frontend.isArrayKind(kind) {
         elKind := if frontend.isListKind(kind) { frontend.listElementKind(kind) } else { frontend.arrayElementKind(kind) };
         tag := frontend.cListTag(elKind);
         if tag == "" { return out; }
-        listLib.pushBack(mut out, "L:" + tag);
+        (mut out).pushBack("L:" + tag);
         sub := self(elKind);
-        loop sub as s { listLib.pushBack(mut out, s); }
+        loop sub as s { mut out.pushBack(s); }
         return out;
     }
     if frontend.isMapKind(kind) {
         tag := frontend.cMapTag(kind);
         if tag == "" { return out; }
-        listLib.pushBack(mut out, "M:" + tag);
+        (mut out).pushBack("M:" + tag);
         subK := self(frontend.mapKeyKind(kind));
-        loop subK as s { listLib.pushBack(mut out, s); }
+        loop subK as s { mut out.pushBack(s); }
         subV := self(frontend.mapValueKind(kind));
-        loop subV as s { listLib.pushBack(mut out, s); }
+        loop subV as s { mut out.pushBack(s); }
         return out;
     }
     if frontend.isSetKind(kind) {
         tag := frontend.cSetTag(kind);
         if tag == "" { return out; }
-        listLib.pushBack(mut out, "E:" + tag);
+        (mut out).pushBack("E:" + tag);
         subE := self(frontend.setElementKind(kind));
-        loop subE as s { listLib.pushBack(mut out, s); }
+        loop subE as s { mut out.pushBack(s); }
         return out;
     }
     if frontend.isTupleKind(kind) or frontend.isRecordKind(kind) {
         tag := frontend.cStructTag(kind);
         if tag == "" { return out; }
-        listLib.pushBack(mut out, "S:" + tag);
+        (mut out).pushBack("S:" + tag);
         isRec := frontend.isRecordKind(kind);
         cnt := if isRec { frontend.recordComponentCount(kind) } else { frontend.tupleComponentCount(kind) };
         var i := 0;
         loop i < cnt {
             fKind := if isRec { frontend.recordComponent(kind, i).kind } else { frontend.tupleComponent(kind, i).kind };
             sub := self(fKind);
-            loop sub as s { listLib.pushBack(mut out, s); }
+            loop sub as s { mut out.pushBack(s); }
             i = i + 1;
         }
         return out;
@@ -2477,25 +2475,25 @@ collectTypeFlags := fn(kind: String): List<String> {
 /** Extracts all `/*@T:<kind>@*/`, `/*@P:<kind>@*/`, and `/*@C:<exp>|<act>@*/` payloads from emitted C expression `code`, jumping via `indexOfText`. */
 extractCTypeAnnotations := fn(code: String): List<String> {
     out: mut List<String> = [];
-    var nextAnnot := textLib.indexOfText(code, "/*@", 0);
+    var nextAnnot := code.indexOf("/*@", 0);
     if nextAnnot < 0 { return out; }
-    size := textLib.length(code);
-    var nextQuote := textLib.indexOfText(code, "\"", 0);
+    size := code.length();
+    var nextQuote := code.indexOf("\"", 0);
     var cursor := 0;
     loop cursor < size {
-        if nextAnnot < cursor { nextAnnot = textLib.indexOfText(code, "/*@", cursor); }
+        if nextAnnot < cursor { nextAnnot = code.indexOf("/*@", cursor); }
         if nextAnnot < 0 { break; }
         if nextQuote >= 0 and nextQuote < nextAnnot {
-            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote < cursor { nextQuote = code.indexOf("\"", cursor); }
             if nextQuote >= 0 and nextQuote < nextAnnot {
                 cursor = frontend.skipAliasString(code, nextQuote);
                 continue;
             }
         }
-        if textLib.startsWithAt(code, nextAnnot, "/*@T:") or textLib.startsWithAt(code, nextAnnot, "/*@C:") or textLib.startsWithAt(code, nextAnnot, "/*@P:") {
-            endTag := textLib.indexOfText(code, "@*/", nextAnnot + 5);
+        if code.startsWithAt(nextAnnot, "/*@T:") or code.startsWithAt(nextAnnot, "/*@C:") or code.startsWithAt(nextAnnot, "/*@P:") {
+            endTag := code.indexOf("@*/", nextAnnot + 5);
             if endTag < 0 { break; }
-            listLib.pushBack(mut out, textLib.slice(code, nextAnnot + 3, endTag));
+            (mut out).pushBack(code.slice(nextAnnot + 3, endTag));
             cursor = endTag + 3;
         } else {
             cursor = nextAnnot + 3;
@@ -2507,31 +2505,31 @@ extractCTypeAnnotations := fn(code: String): List<String> {
 /** Recursively extracts balanced CFN_START ... CFN_END hoisted closure/trampoline definitions (innermost first), encoded as `<key>\n<body>`. */
 extractCHoistedFns := fn(code: String): List<String> {
     out: mut List<String> = [];
-    var nextCfn := textLib.indexOfText(code, "/*@CFN_START:", 0);
+    var nextCfn := code.indexOf("/*@CFN_START:", 0);
     if nextCfn < 0 { return out; }
-    size := textLib.length(code);
-    var nextQuote := textLib.indexOfText(code, "\"", 0);
+    size := code.length();
+    var nextQuote := code.indexOf("\"", 0);
     var cursor := 0;
     loop cursor < size {
-        if nextCfn < cursor { nextCfn = textLib.indexOfText(code, "/*@CFN_START:", cursor); }
+        if nextCfn < cursor { nextCfn = code.indexOf("/*@CFN_START:", cursor); }
         if nextCfn < 0 { break; }
         if nextQuote >= 0 and nextQuote < nextCfn {
-            if nextQuote < cursor { nextQuote = textLib.indexOfText(code, "\"", cursor); }
+            if nextQuote < cursor { nextQuote = code.indexOf("\"", cursor); }
             if nextQuote >= 0 and nextQuote < nextCfn {
                 cursor = frontend.skipAliasString(code, nextQuote);
                 continue;
             }
         }
-        keyEnd := textLib.indexOfText(code, "@*/", nextCfn + 13);
+        keyEnd := code.indexOf("@*/", nextCfn + 13);
         blockEnd := skipCFnBlock(code, nextCfn);
         if keyEnd > nextCfn + 13 and blockEnd >= keyEnd + 16 {
-            key := textLib.slice(code, nextCfn + 13, keyEnd);
-            body := textLib.slice(code, keyEnd + 3, blockEnd - 13);
+            key := code.slice(nextCfn + 13, keyEnd);
+            body := code.slice(keyEnd + 3, blockEnd - 13);
             nested := self(body);
             loop nested as entry {
-                listLib.pushBack(mut out, entry);
+                mut out.pushBack(entry);
             }
-            listLib.pushBack(mut out, key + "\n" + body);
+            (mut out).pushBack(key + "\n" + body);
         }
         cursor = blockEnd;
     }
@@ -2550,7 +2548,7 @@ emitCFnTypeHelper := fn(kind: String, calls: Set<String>): Unit {
     var i := 0;
     loop i < pCount {
         pC := cScalarType(frontend.fnParamComponent(kind, i).kind);
-        aName := "a" + integer.intText(i);
+        aName := "a" + i.toText();
         fpParams = fpParams + ", " + pC;
         callParams = callParams + ", " + pC + " " + aName;
         callArgs = callArgs + ", " + aName;
@@ -3460,13 +3458,13 @@ cParamRuntimeAt := fn(encoded: String, targetIndex: Int): String {
     var index := 0;
     var start := 0;
     loop true {
-        separator := textLib.indexOfText(encoded, "|", start);
-        end := if separator >= 0 { separator } else { textLib.length(encoded) };
+        separator := encoded.indexOf("|", start);
+        end := if separator >= 0 { separator } else { encoded.length() };
         if index == targetIndex {
-            entry := textLib.slice(encoded, start, end);
-            eq := textLib.indexOfText(entry, "=", 0);
+            entry := encoded.slice(start, end);
+            eq := entry.indexOf("=", 0);
             if eq <= 0 { return ""; }
-            return "lite_" + textLib.slice(entry, 0, eq);
+            return "lite_" + entry.slice(0, eq);
         }
         if separator < 0 { return ""; }
         index = index + 1;
@@ -3481,7 +3479,7 @@ cSoftBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): S
     else if rawFnName == "String.toInt" { "textToInt" }
     else if rawFnName == "String.repeat" { "repeatText" }
     else if rawFnName == "String.contains" { "containsText" }
-    else if textLib.startsWithAt(rawFnName, 0, "String.") { textLib.slice(rawFnName, 7, textLib.length(rawFnName)) }
+    else if rawFnName.startsWithAt(0, "String.") { rawFnName.slice(7, rawFnName.length()) }
     else { rawFnName };
     arg0 := cParamRuntimeAt(params, 0);
     if moduleName == "lib/core/int" {
@@ -3534,7 +3532,7 @@ applyCSoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs:
                 skippingDepth = skippingDepth + 1;
             } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
                 skippingDepth = skippingDepth - 1;
-                if skippingDepth == 0 { listLib.pushBack(mut out, item); }
+                if skippingDepth == 0 { mut out.pushBack(item); }
             }
             continue;
         }
@@ -3542,7 +3540,7 @@ applyCSoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs:
             if pendingSoftFn =!= "" and item.name == pendingSoftFn and item.runtime == pendingSoftRuntime and item.textValue == pendingSoftParams {
                 overrideCode := cSoftBuiltinExpr(item.code, item.name, item.textValue);
                 if overrideCode =!= "" and frontend.resolveBuiltinMode(rules, item.code, item.name) == frontend.BUILTIN_MODE_BUILTIN {
-                    listLib.pushBack(mut out, (kind = frontend.ITEM_KIND_RETURN, name = "", runtime = "", code = overrideCode, intValue = 0, textValue = ""));
+                    mut out.pushBack((kind = frontend.ITEM_KIND_RETURN, name = "", runtime = "", code = overrideCode, intValue = 0, textValue = ""));
                     skippingDepth = 1;
                 }
             }
@@ -3550,7 +3548,7 @@ applyCSoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs:
             continue;
         }
         pendingSoftFn = ""; pendingSoftRuntime = ""; pendingSoftParams = "";
-        listLib.pushBack(mut out, item);
+        mut out.pushBack(item);
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
             pendingSoftFn = item.name;
             pendingSoftRuntime = item.runtime;
@@ -4282,7 +4280,7 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
 /** True when any call token in `calls` starts with `prefix`. */
 hasCallPrefix := fn(calls: Set<String>, prefix: String): Bool {
     loop calls as tok {
-        if textLib.startsWithAt(tok, 0, prefix) { return true; }
+        if tok.startsWithAt(0, prefix) { return true; }
     }
     false
 };
@@ -4326,14 +4324,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             checkCFunctionSignature(item);
             if frontend.isFloatScalarKind(item.code) { floatValues = true; }
             if item.code == frontend.VALUE_KIND_FLOAT32 { float32Values = true; }
-            if textLib.indexOfText(item.textValue, "=Float", 0) >= 0 { floatValues = true; }
-            if textLib.indexOfText(item.textValue, "=Float32", 0) >= 0 { float32Values = true; }
+            if item.textValue.indexOf("=Float", 0) >= 0 { floatValues = true; }
+            if item.textValue.indexOf("=Float32", 0) >= 0 { float32Values = true; }
         } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
             if fnDepth > 0 { fnDepth = fnDepth - 1; }
         } else if fnDepth > 0 {
             if item.kind == frontend.ITEM_KIND_END or item.kind == frontend.ITEM_KIND_END_OUTPUT { hasFnOutput = true; }
             frontend.codeReachableTokensSet(item.code, mut fnRefTokens);
-            if textLib.startsWithAt(item.kind, 0, "Assign") and item.runtime =!= "" {
+            if item.kind.startsWithAt(0, "Assign") and item.runtime =!= "" {
                 frontend.tokenBucketAdd(mut fnRefTokens, item.runtime);
             }
         }
@@ -4384,18 +4382,18 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     loop reachable as item {
         extracted := extractCHoistedFns(item.code);
         loop extracted as entry {
-            sepIdx := textLib.indexOfText(entry, "\n", 0);
+            sepIdx := entry.indexOf("\n", 0);
             if sepIdx > 0 {
-                eKey := textLib.slice(entry, 0, sepIdx);
-                eBody := textLib.slice(entry, sepIdx + 1, textLib.length(entry));
-                if not setLib.has(hoistedFnKeys, eKey) {
-                    setLib.add(mut hoistedFnKeys, eKey);
-                    listLib.pushBack(mut hoistedFnDefs, eBody);
+                eKey := entry.slice(0, sepIdx);
+                eBody := entry.slice(sepIdx + 1, entry.length());
+                if not hoistedFnKeys.has(eKey) {
+                    mut hoistedFnKeys.add(eKey);
+                    mut hoistedFnDefs.pushBack(eBody);
                 }
             }
         }
     }
-    hasHoistedFns := listLib.length(hoistedFnDefs) > 0;
+    hasHoistedFns := hoistedFnDefs.length() > 0;
     if hasHoistedFns {
         hasFunctions = true;
         loop hoistedFnDefs as hDef {
@@ -4412,96 +4410,96 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     seedKinds: mut List<String> = [];
     hasInputArgs := usesIntHelper(calls, "lite$inputArgs(");
     hasMainArgs := hasInputArgs or usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processExecPath(");
-    if hasInputArgs or usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lt_c_text_join(") or usesProcessSpawnBuiltins(calls) { listLib.pushBack(mut seedKinds, "List<String>"); }
+    if hasInputArgs or usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lt_c_text_join(") or usesProcessSpawnBuiltins(calls) { mut seedKinds.pushBack("List<String>"); }
     if usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") or
     usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioWriterBytes(") or
     usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioWrite(") or
     usesIntHelper(calls, "lite$cryptoRandomBytes(") or usesIntHelper(calls, "lite$processRunBytes(") {
-        listLib.pushBack(mut seedKinds, "List<Int>");
+        mut seedKinds.pushBack("List<Int>");
     }
-    if usesIntHelper(calls, "lite$processRun(") { listLib.pushBack(mut seedKinds, "(status:Int,stdout:String,stderr:String,error:String)"); }
-    if usesIntHelper(calls, "lite$processRunBytes(") { listLib.pushBack(mut seedKinds, "(status:Int,error:String)"); }
-    if usesStreamBuiltins(calls) { listLib.pushBack(mut seedKinds, "(kind:String,handle:Int)"); }
+    if usesIntHelper(calls, "lite$processRun(") { mut seedKinds.pushBack("(status:Int,stdout:String,stderr:String,error:String)"); }
+    if usesIntHelper(calls, "lite$processRunBytes(") { mut seedKinds.pushBack("(status:Int,error:String)"); }
+    if usesStreamBuiltins(calls) { mut seedKinds.pushBack("(kind:String,handle:Int)"); }
     if usesIntHelper(calls, "lite$unicodeFromCodePoints(") or usesIntHelper(calls, "lite$ioWriterText(") or
     usesIntHelper(calls, "lt_c_file_read_text(") {
-        listLib.pushBack(mut seedKinds, "(ok:Bool,text:String,error:String)");
+        mut seedKinds.pushBack("(ok:Bool,text:String,error:String)");
     }
     if usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioFlush(") or
     usesIntHelper(calls, "lite$ioCloseWriter(") or usesIntHelper(calls, "lite$fileMakeDir(") or
     usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
     usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lt_c_file_write_text(") or
     usesIntHelper(calls, "lt_c_file_append_text(") {
-        listLib.pushBack(mut seedKinds, "(ok:Bool,error:String)");
+        mut seedKinds.pushBack("(ok:Bool,error:String)");
     }
-    if usesIntHelper(calls, "lt_c_text_to_int(") { listLib.pushBack(mut seedKinds, "(value:Int,ok:Bool)"); }
-    if usesIntHelper(calls, "lite$ioWrite(") { listLib.pushBack(mut seedKinds, "(ok:Bool,written:Int,error:String)"); }
+    if usesIntHelper(calls, "lt_c_text_to_int(") { mut seedKinds.pushBack("(value:Int,ok:Bool)"); }
+    if usesIntHelper(calls, "lite$ioWrite(") { mut seedKinds.pushBack("(ok:Bool,written:Int,error:String)"); }
     if usesIntHelper(calls, "lite$fileRealPath(") or usesIntHelper(calls, "lite$fileMakeTempDir(") {
-        listLib.pushBack(mut seedKinds, "(ok:Bool,path:String,error:String)");
+        mut seedKinds.pushBack("(ok:Bool,path:String,error:String)");
     }
-    if usesIntHelper(calls, "lite$processEnvGet(") { listLib.pushBack(mut seedKinds, "(found:Bool,value:String)"); }
+    if usesIntHelper(calls, "lite$processEnvGet(") { mut seedKinds.pushBack("(found:Bool,value:String)"); }
     loop reachable as item {
         if cListTagForKind(item.kind) =!= "" or frontend.cStructTag(item.kind) =!= "" or frontend.cMapTag(item.kind) =!= "" or frontend.cSetTag(item.kind) =!= "" {
-            listLib.pushBack(mut seedKinds, item.kind);
+            mut seedKinds.pushBack(item.kind);
             pFlags := collectTypeFlags(item.kind);
             loop pFlags as pf {
                 if pf == "FLOAT" { floatOutput = true; floatValues = true; }
                 else if pf == "FLOAT32" { float32Values = true; }
-                else { setLib.add(mut printTypeKeys, pf); }
+                else { mut printTypeKeys.add(pf); }
             }
         }
         if item.kind == frontend.ITEM_KIND_DISCARD and (cListTagForKind(item.name) =!= "" or frontend.cStructTag(item.name) =!= "" or frontend.cMapTag(item.name) =!= "" or frontend.cSetTag(item.name) =!= "") {
-            listLib.pushBack(mut seedKinds, item.name);
+            mut seedKinds.pushBack(item.name);
         }
         if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST or
         item.kind == frontend.ITEM_KIND_LOCAL_TUPLE or item.kind == frontend.ITEM_KIND_VAR_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or
         item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or
         item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
             if cListTagForKind(item.textValue) =!= "" or frontend.cStructTag(item.textValue) =!= "" or frontend.cMapTag(item.textValue) =!= "" or frontend.cSetTag(item.textValue) =!= "" or frontend.cFnTag(item.textValue) =!= "" {
-                listLib.pushBack(mut seedKinds, item.textValue);
+                mut seedKinds.pushBack(item.textValue);
             }
         }
         if item.kind == frontend.ITEM_KIND_LOOP_SEQ and item.intValue < 2 and frontend.cListTag(item.textValue) =!= "" {
             seqListKind := "List<" + item.textValue + ">";
-            listLib.pushBack(mut seedKinds, seqListKind);
+            mut seedKinds.pushBack(seqListKind);
             if item.intValue =!= 1 {
                 cFlags := collectTypeFlags(seqListKind);
                 loop cFlags as cf {
-                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { setLib.add(mut copyTypeKeys, cf); }
+                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
                 }
             }
         } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ and item.intValue == 4 {
             annotsM := extractCTypeAnnotations(item.code);
-            if listLib.length(annotsM) > 0 and textLib.startsWithAt(annotsM[0], 0, "T:") {
-                mk := textLib.slice(annotsM[0], 2, textLib.length(annotsM[0]));
+            if annotsM.length() > 0 and annotsM[0].startsWithAt(0, "T:") {
+                mk := annotsM[0].slice(2, annotsM[0].length());
                 cFlags := collectTypeFlags(mk);
                 loop cFlags as cf {
-                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { setLib.add(mut copyTypeKeys, cf); }
+                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
                 }
             }
         } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ and item.intValue == 5 {
             sk := "Set<" + item.textValue + ">";
-            listLib.pushBack(mut seedKinds, sk);
+            mut seedKinds.pushBack(sk);
             cFlags := collectTypeFlags(sk);
             loop cFlags as cf {
-                if cf =!= "FLOAT" and cf =!= "FLOAT32" { setLib.add(mut copyTypeKeys, cf); }
+                if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
             }
         }
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
             if cListTagForKind(item.code) =!= "" or frontend.cStructTag(item.code) =!= "" or frontend.cMapTag(item.code) =!= "" or frontend.cSetTag(item.code) =!= "" {
-                listLib.pushBack(mut seedKinds, item.code);
+                mut seedKinds.pushBack(item.code);
             }
             if item.textValue =!= "" {
                 var pStart := 0;
                 loop true {
-                    pSep := textLib.indexOfText(item.textValue, "|", pStart);
-                    pEnd := if pSep >= 0 { pSep } else { textLib.length(item.textValue) };
-                    pEntry := textLib.slice(item.textValue, pStart, pEnd);
-                    pEq := textLib.indexOfText(pEntry, "=", 0);
+                    pSep := item.textValue.indexOf("|", pStart);
+                    pEnd := if pSep >= 0 { pSep } else { item.textValue.length() };
+                    pEntry := item.textValue.slice(pStart, pEnd);
+                    pEq := pEntry.indexOf("=", 0);
                     if pEq >= 0 {
-                        rawPKind := textLib.slice(pEntry, pEq + 1, textLib.length(pEntry));
-                        pKind := if textLib.startsWithAt(rawPKind, 0, "mut ") { textLib.slice(rawPKind, 4, textLib.length(rawPKind)) } else { rawPKind };
+                        rawPKind := pEntry.slice(pEq + 1, pEntry.length());
+                        pKind := if rawPKind.startsWithAt(0, "mut ") { rawPKind.slice(4, rawPKind.length()) } else { rawPKind };
                         if cListTagForKind(pKind) =!= "" or frontend.cStructTag(pKind) =!= "" or frontend.cMapTag(pKind) =!= "" or frontend.cSetTag(pKind) =!= "" {
-                            listLib.pushBack(mut seedKinds, pKind);
+                            mut seedKinds.pushBack(pKind);
                         }
                     }
                     if pSep < 0 { break; }
@@ -4511,33 +4509,33 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         }
         annots := extractCTypeAnnotations(item.code);
         loop annots as ann {
-            if textLib.startsWithAt(ann, 0, "T:") {
-                listLib.pushBack(mut seedKinds, textLib.slice(ann, 2, textLib.length(ann)));
-            } else if textLib.startsWithAt(ann, 0, "P:") {
-                pk := textLib.slice(ann, 2, textLib.length(ann));
-                listLib.pushBack(mut seedKinds, pk);
+            if ann.startsWithAt(0, "T:") {
+                mut seedKinds.pushBack(ann.slice(2, ann.length()));
+            } else if ann.startsWithAt(0, "P:") {
+                pk := ann.slice(2, ann.length());
+                mut seedKinds.pushBack(pk);
                 pFlagsA := collectTypeFlags(pk);
                 loop pFlagsA as pfA {
                     if pfA == "FLOAT" { floatOutput = true; floatValues = true; }
                     else if pfA == "FLOAT32" { float32Values = true; }
-                    else { setLib.add(mut printTypeKeys, pfA); }
+                    else { mut printTypeKeys.add(pfA); }
                 }
-            } else if textLib.startsWithAt(ann, 0, "C:") {
-                body := textLib.slice(ann, 2, textLib.length(ann));
-                bar := textLib.indexOfText(body, "|", 0);
+            } else if ann.startsWithAt(0, "C:") {
+                body := ann.slice(2, ann.length());
+                bar := body.indexOf("|", 0);
                 if bar > 0 {
-                    eKind := textLib.slice(body, 0, bar);
-                    aKind := textLib.slice(body, bar + 1, textLib.length(body));
-                    listLib.pushBack(mut seedKinds, eKind);
-                    listLib.pushBack(mut seedKinds, aKind);
+                    eKind := body.slice(0, bar);
+                    aKind := body.slice(bar + 1, body.length());
+                    mut seedKinds.pushBack(eKind);
+                    mut seedKinds.pushBack(aKind);
                     cName := frontend.cTupleConvertName(eKind, aKind);
-                    if not setLib.has(seenConvNames, cName) {
-                        setLib.add(mut seenConvNames, cName);
-                        listLib.pushBack(mut convExpKinds, eKind);
-                        listLib.pushBack(mut convActKinds, aKind);
+                    if not seenConvNames.has(cName) {
+                        mut seenConvNames.add(cName);
+                        mut convExpKinds.pushBack(eKind);
+                        mut convActKinds.pushBack(aKind);
                         cFlags := collectTypeFlags(eKind);
                         loop cFlags as cf {
-                            if cf =!= "FLOAT" and cf =!= "FLOAT32" { setLib.add(mut copyTypeKeys, cf); }
+                            if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
                         }
                     }
                 }
@@ -4546,19 +4544,19 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     }
     hasExtraCanvas := usesExtraCanvasBuiltins(calls);
     if hasExtraCanvas {
-        listLib.pushBack(mut seedKinds, "(handle:Int)");
-        listLib.pushBack(mut seedKinds, "(r:Float,g:Float,b:Float,a:Float)");
-        listLib.pushBack(mut seedKinds, "(x:Float,y:Float)");
-        listLib.pushBack(mut seedKinds, "(x:Float,y:Float,width:Float,height:Float)");
-        listLib.pushBack(mut seedKinds, "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
-        listLib.pushBack(mut seedKinds, "(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)");
-        listLib.pushBack(mut seedKinds, "(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
-        listLib.pushBack(mut seedKinds, "(ok:Bool,error:String)");
+        mut seedKinds.pushBack("(handle:Int)");
+        mut seedKinds.pushBack("(r:Float,g:Float,b:Float,a:Float)");
+        mut seedKinds.pushBack("(x:Float,y:Float)");
+        mut seedKinds.pushBack("(x:Float,y:Float,width:Float,height:Float)");
+        mut seedKinds.pushBack("(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
+        mut seedKinds.pushBack("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)");
+        mut seedKinds.pushBack("(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
+        mut seedKinds.pushBack("(ok:Bool,error:String)");
     }
-    if hasCallPrefix(calls, "lt_list_i64_") { listLib.pushBack(mut seedKinds, "List<Int>"); }
-    if hasCallPrefix(calls, "lt_list_f64_") { listLib.pushBack(mut seedKinds, "List<Float>"); }
-    if hasCallPrefix(calls, "lt_list_bool_") { listLib.pushBack(mut seedKinds, "List<Bool>"); }
-    if hasCallPrefix(calls, "lt_list_str_") { listLib.pushBack(mut seedKinds, "List<String>"); }
+    if hasCallPrefix(calls, "lt_list_i64_") { mut seedKinds.pushBack("List<Int>"); }
+    if hasCallPrefix(calls, "lt_list_f64_") { mut seedKinds.pushBack("List<Float>"); }
+    if hasCallPrefix(calls, "lt_list_bool_") { mut seedKinds.pushBack("List<Bool>"); }
+    if hasCallPrefix(calls, "lt_list_str_") { mut seedKinds.pushBack("List<String>"); }
     var hasAnyList := false;
     loop seedKinds as sk {
         tFlags := collectTypeFlags(sk);
@@ -4568,42 +4566,42 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         }
         subs := collectSubKinds(sk);
         loop subs as sub {
-            isL := textLib.startsWithAt(sub, 0, "L|");
-            isM := textLib.startsWithAt(sub, 0, "M|");
-            isE := textLib.startsWithAt(sub, 0, "E|");
-            isF := textLib.startsWithAt(sub, 0, "F|");
-            payload := textLib.slice(sub, 2, textLib.length(sub));
+            isL := sub.startsWithAt(0, "L|");
+            isM := sub.startsWithAt(0, "M|");
+            isE := sub.startsWithAt(0, "E|");
+            isF := sub.startsWithAt(0, "F|");
+            payload := sub.slice(2, sub.length());
             tKey := if isL { "L:" + frontend.cListTag(payload) }
             else if isM { "M:" + frontend.cMapTag(payload) }
             else if isE { "E:" + frontend.cSetTag(payload) }
             else if isF { "F:" + frontend.cFnTag(payload) }
             else { "S:" + frontend.cStructTag(payload) };
-            if not setLib.has(seenTypeKeys, tKey) {
-                setLib.add(mut seenTypeKeys, tKey);
-                listLib.pushBack(mut orderedEntries, sub);
+            if not seenTypeKeys.has(tKey) {
+                mut seenTypeKeys.add(tKey);
+                mut orderedEntries.pushBack(sub);
                 if isL or isM or isE { hasAnyList = true; }
             }
         }
     }
     extraListSeeds: mut List<String> = [];
     loop orderedEntries as oe {
-        if textLib.startsWithAt(oe, 0, "S|") {
-            sKind := textLib.slice(oe, 2, textLib.length(oe));
+        if oe.startsWithAt(0, "S|") {
+            sKind := oe.slice(2, oe.length());
             sTag := frontend.cStructTag(sKind);
-            if hasCallPrefix(calls, "lt_list_" + sTag + "_") and not setLib.has(seenTypeKeys, "L:" + sTag) {
-                setLib.add(mut seenTypeKeys, "L:" + sTag);
-                listLib.pushBack(mut extraListSeeds, "L|" + sKind);
+            if hasCallPrefix(calls, "lt_list_" + sTag + "_") and not seenTypeKeys.has("L:" + sTag) {
+                mut seenTypeKeys.add("L:" + sTag);
+                mut extraListSeeds.pushBack("L|" + sKind);
                 hasAnyList = true;
             }
             if usesIntHelper(calls, sTag + "_copy(") or usesIntHelper(calls, "lt_list_" + sTag + "_copy(") {
                 cFlags := collectTypeFlags(sKind);
                 loop cFlags as cf {
-                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { setLib.add(mut copyTypeKeys, cf); }
+                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
                 }
             }
         }
     }
-    loop extraListSeeds as el { listLib.pushBack(mut orderedEntries, el); }
+    loop extraListSeeds as el { mut orderedEntries.pushBack(el); }
     hasReportError := usesIntHelper(calls, "lite$reportError(");
     hasExit := usesIntHelper(calls, "lite$exit(");
     hasInput := usesInputHelpers(calls);
@@ -4630,7 +4628,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     outLine("#include <string.h>");
     var hasStrMapOrSet := false;
     loop orderedEntries as oe {
-        if textLib.startsWithAt(oe, 0, "M|Map<String,") or oe == "E|Set<String>" {
+        if oe.startsWithAt(0, "M|Map<String,") or oe == "E|Set<String>" {
             hasStrMapOrSet = true;
             break;
         }
@@ -4754,11 +4752,11 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     emitTextPrimitiveHelpers(calls);
     emitInputHelpers(calls);
     loop orderedEntries as oe {
-        isL := textLib.startsWithAt(oe, 0, "L|");
-        isM := textLib.startsWithAt(oe, 0, "M|");
-        isE := textLib.startsWithAt(oe, 0, "E|");
-        isF := textLib.startsWithAt(oe, 0, "F|");
-        payload := textLib.slice(oe, 2, textLib.length(oe));
+        isL := oe.startsWithAt(0, "L|");
+        isM := oe.startsWithAt(0, "M|");
+        isE := oe.startsWithAt(0, "E|");
+        isF := oe.startsWithAt(0, "F|");
+        payload := oe.slice(2, oe.length());
         if isL {
             lTag := frontend.cListTag(payload);
             lNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "L:" + lTag);
@@ -4785,7 +4783,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         }
     }
     var convIdx := 0;
-    convCount := listLib.length(convExpKinds);
+    convCount := convExpKinds.length();
     loop convIdx < convCount {
         emitCTupleConvHelper(convExpKinds[convIdx], convActKinds[convIdx]);
         convIdx = convIdx + 1;
@@ -4826,8 +4824,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 } else if item.kind == frontend.ITEM_KIND_END_SCOPE or item.kind == frontend.ITEM_KIND_END_IF or item.kind == frontend.ITEM_KIND_END_LOOP {
                     if scanBlocks > 0 { scanBlocks = scanBlocks - 1; }
                 } else if scanBlocks == 0 and isCLocalDeclKind(item.kind) and frontend.tokenBucketHas(fnRefTokens, item.runtime) and
-                not setLib.has(hoistedGlobals, item.runtime) {
-                    setLib.add(mut hoistedGlobals, item.runtime);
+                not hoistedGlobals.has(item.runtime) {
+                    mut hoistedGlobals.add(item.runtime);
                     outLine("static " + cDeclTypeItem(item) + item.runtime + ";");
                 }
             }
@@ -4886,12 +4884,12 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                         attachedToFn = true;
                     }
                 }
-                if not attachedToFn { listLib.pushBack(mut mainItems, item); }
+                if not attachedToFn { mut mainItems.pushBack(item); }
             }
             ri = ri + 1;
         }
     } else {
-        loop reachable as item { listLib.pushBack(mut mainItems, item); }
+        loop reachable as item { mut mainItems.pushBack(item); }
     }
     var hasMainOutput := false;
     loop mainItems as mOutScan {

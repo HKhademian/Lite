@@ -45,7 +45,7 @@ src :=
 "/* 5. List of closures capturing loop variables */\n" +
 "tasks: mut List<fn(): Int> = [];\n" +
 "loop [10, 20, 30] as item {\n" +
-"    list.pushBack(mut tasks, fn(): Int { item + 5 });\n" +
+"    mut tasks.pushBack(fn(): Int { item + 5 });\n" +
 "}\n" +
 "\n" +
 "dbl := fn(x: Int): Int { x * 2 };\n" +

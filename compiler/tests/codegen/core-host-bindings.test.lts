@@ -1,8 +1,6 @@
 /* Core os/fs/process/crypto/time/unicode/external host bindings, standalone CLI execution, and C backend rejections migrated from compiler/tests/host.test.ts. */
 
 fs := import "core/file";
-integer := import "core/int";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
@@ -172,7 +170,7 @@ extCoreSrc := text.joinTexts([
     "sha512b := crypto.sha512Bytes([97, 98, 99]);",
     "hmac := crypto.hmacSha256Bytes([107, 101, 121], [97, 98, 99]);",
     "var longKey: mut List<Int> = [];",
-    "loop list.listCountInt(longKey) < 80 { list.pushBack(mut longKey, 170); }",
+    "loop longKey.length() < 80 { mut longKey.pushBack(170); }",
     "hmacLong := crypto.hmacSha256Bytes(longKey, [84, 101, 115, 116]);",
     "rand0 := crypto.randomBytes(0);",
     "rand16 := crypto.randomBytes(16);",
@@ -204,7 +202,7 @@ extCoreSrc := text.joinTexts([
     "io.outputLine(b64, b64Ok, b64Dec, not b64Bad1, not b64Bad2);",
     "io.outputLine(hex, hexOk, hexDec, not hexBadOdd, not hexBadChar);",
     "io.outputLine(sha512 == \"ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f\", sha512 == sha512b);",
-    "io.outputLine(hmac, hmacLong, list.listCountInt(rand0), list.listCountInt(rand16));",
+    "io.outputLine(hmac, hmacLong, rand0.length(), rand16.length());",
     "io.outputLine(ms0 > 1700000000000, ns0 >= ms0 * 1000000, mono1 > mono0, ldate, isoNow);",
     "io.outputLine(u8, u8Ok.ok, u8Ok.text == \"A€🙂\", not u8Bad.ok, not u8Overlong.ok, not u8Surrogate.ok, not u8BadVal.ok, u8Lossy, u8LossyEdge);",
     "io.outputLine(uni.isValidUtf8(u8), not uni.isValidUtf8([255]), uni.utf16Length(\"A🙂\"), u16, u16Ok.ok, u16Ok.text == \"A🙂\");",
@@ -217,10 +215,10 @@ test.checkInt("ext-core status", 0, extRun.status);
 extLines: mut List<String> = [];
 var lineStart := 0;
 var extPos := 0;
-extLen := text.length(extRun.stdout);
+extLen := extRun.stdout.length();
 loop extPos < extLen {
-    if text.at(extRun.stdout, extPos) == "\n" {
-        list.pushBack(mut extLines, text.slice(extRun.stdout, lineStart, extPos));
+    if extRun.stdout.at(extPos) == "\n" {
+        mut extLines.pushBack(extRun.stdout.slice(lineStart, extPos));
         lineStart = extPos + 1;
     }
     extPos = extPos + 1;
@@ -232,7 +230,7 @@ test.checkText("ext-core line 0", "AEH/ true [0, 65, 255] true true", extLines[0
 test.checkText("ext-core line 1", "0041ff true [0, 65, 255] true true", extLines[1]);
 test.checkText("ext-core line 2", "true true", extLines[2]);
 test.checkText("ext-core line 3", "9c196e32dc0175f86f4b1cb89289d6619de6bee699e4c378e68309ed97a1a6ab 1afc6ca6c0ce1afa0ffeebf214fd763101957961e5f70cfac3b5d005e8fd5625 0 16", extLines[3]);
-test.check("ext-core line 4 time markers: " + extLines[4], text.startsWithAt(extLines[4], 0, "true true true ") and text.endsWith(extLines[4], "Z") and text.containsText(extLines[4], "T"));
+test.check("ext-core line 4 time markers: " + extLines[4], extLines[4].startsWithAt(0, "true true true ") and extLines[4].endsWith("Z") and extLines[4].contains("T"));
 fffd := unicode.fromCodePoint(65533).text;
 test.checkText("ext-core line 5", "[65, 226, 130, 172, 240, 159, 153, 130] true true true true true true A" + fffd + "B A" + fffd + fffd + "B" + fffd, extLines[5]);
 test.checkText("ext-core line 6", "true true 3 [65, 55357, 56898] true true", extLines[6]);
@@ -245,9 +243,9 @@ uniOnlySrc := "uni := import \"core/unicode\"; io := import \"core/io\"; io.outp
 uniDefaultComp := compilerTest.compileStdin(root, tsComp, uniOnlySrc, fixtureName);
 test.checkInt("uni-only default compile", 0, uniDefaultComp.status);
 test.check("uni-only default check", compilerTest.checkTsCode(root, uniDefaultComp.stdout).ok);
-test.check("uni-only default utf8Encode", text.containsText(uniDefaultComp.stdout, "lite$unicodeUtf8Encode("));
-test.check("uni-only default utf8DecodeStrict", text.containsText(uniDefaultComp.stdout, "lite$unicodeUtf8DecodeStrict("));
-test.check("uni-only default no node", not text.containsText(uniDefaultComp.stdout, "node:buffer") and not text.containsText(uniDefaultComp.stdout, "node:crypto"));
+test.check("uni-only default utf8Encode", uniDefaultComp.stdout.contains("lite$unicodeUtf8Encode("));
+test.check("uni-only default utf8DecodeStrict", uniDefaultComp.stdout.contains("lite$unicodeUtf8DecodeStrict("));
+test.check("uni-only default no node", not uniDefaultComp.stdout.contains("node:buffer") and not uniDefaultComp.stdout.contains("node:crypto"));
 uniDefaultRun := compilerTest.checkAndRunTs(root, uniDefaultComp.stdout);
 test.checkInt("uni-only default run", 0, uniDefaultRun.status);
 test.checkText("uni-only default out", "hi [128578]\n", uniDefaultRun.stdout);
@@ -256,7 +254,7 @@ pureOpts: List<String> = ["--builtin-mode", "pure"];
 uniPureComp := compilerTest.compileStdinWithOpts(root, tsComp, root, uniOnlySrc, fixtureName, "", pureOpts);
 test.checkInt("uni-only pure compile", 0, uniPureComp.status);
 test.check("uni-only pure check", compilerTest.checkTsCode(root, uniPureComp.stdout).ok);
-test.check("uni-only pure no host decoder", not text.containsText(uniPureComp.stdout, "TextEncoder") and not text.containsText(uniPureComp.stdout, "TextDecoder") and not text.containsText(uniPureComp.stdout, "node:buffer") and not text.containsText(uniPureComp.stdout, "node:crypto"));
+test.check("uni-only pure no host decoder", not uniPureComp.stdout.contains("TextEncoder") and not uniPureComp.stdout.contains("TextDecoder") and not uniPureComp.stdout.contains("node:buffer") and not uniPureComp.stdout.contains("node:crypto"));
 uniPureRun := compilerTest.checkAndRunTs(root, uniPureComp.stdout);
 test.checkInt("uni-only pure run", 0, uniPureRun.status);
 test.checkText("uni-only pure out", "hi [128578]\n", uniPureRun.stdout);
@@ -264,10 +262,10 @@ test.checkText("uni-only pure out", "hi [128578]\n", uniPureRun.stdout);
 /* crypto invalid decode runtime exit status 2 */
 badDecode1 := compilerTest.compileCheckRunTs(root, tsComp, "c := import \"core/crypto\"; _ := c.base64Decode(\"abc\");", fixtureName);
 test.checkInt("bad base64 status", 2, badDecode1.status);
-test.check("bad base64 stderr", text.containsText(badDecode1.stderr, "invalid base64 input"));
+test.check("bad base64 stderr", badDecode1.stderr.contains("invalid base64 input"));
 badDecode2 := compilerTest.compileCheckRunTs(root, tsComp, "c := import \"core/crypto\"; _ := c.hexDecode(\"abc\");", fixtureName);
 test.checkInt("bad hex status", 2, badDecode2.status);
-test.check("bad hex stderr", text.containsText(badDecode2.stderr, "invalid hex input"));
+test.check("bad hex stderr", badDecode2.stderr.contains("invalid hex input"));
 
 /* standalone generated TS script execution */
 standaloneSrc := text.joinTexts([
@@ -313,7 +311,6 @@ parentSrc := text.joinTexts([
     "crypto := import \"core/crypto\";",
     "file := import \"core/file\";",
     "io := import \"core/io\";",
-    "list := import \"core/list\";",
     "proc := import \"core/process\";",
     "outW := io.bufferWriter();",
     "errW := io.bufferWriter();",
@@ -322,7 +319,7 @@ parentSrc := text.joinTexts([
     "errTxt := io.writerText(errW);",
     "bigFile := " + json.quoteString(multiBin) + ";",
     "var big: mut List<Int> = [];",
-    "loop list.listCountInt(big) < 20000 { list.pushBack(mut big, (list.listCountInt(big) * 13) % 256); }",
+    "loop big.length() < 20000 { mut big.pushBack((big.length() * 13) % 256); }",
     "_wb := file.writeBytes(bigFile, big);",
     "rBig := file.openReader(bigFile);",
     "hStreamFile := crypto.sha256Reader(rBig);",
@@ -387,11 +384,11 @@ test.checkText("external-ts stdout", "true const x         = 42;\n", extTsRun.st
 extPoolSrc := "io := import \"core/io\"; pool := import \"external/pool\"; procs := pool.cpuCount(); empty := pool.runPoolJson([], [], \"\", 2); out := pool.runPoolJson([\"node\", \"node\"], [\"[\\\"-e\\\",\\\"process.stdout.write('one')\\\"]\", \"[\\\"-e\\\",\\\"process.stdout.write('two');process.exit(3)\\\"]\"], \"\", 2); io.outputLine(procs >= 1, empty, out);";
 extPoolRun := compilerTest.compileCheckRunTs(root, tsComp, extPoolSrc, fixtureName);
 test.checkInt("ext-pool status", 0, extPoolRun.status);
-test.check("ext-pool prefix", text.startsWithAt(extPoolRun.stdout, 0, "true [] ["));
-poolJsonText := text.slice(extPoolRun.stdout, text.length("true [] "), text.length(extPoolRun.stdout) - 1);
+test.check("ext-pool prefix", extPoolRun.stdout.startsWithAt(0, "true [] ["));
+poolJsonText := extPoolRun.stdout.slice("true [] ".length(), extPoolRun.stdout.length() - 1);
 test.check("ext-pool json valid", json.validate(poolJsonText).ok);
 poolElems := json.arrayElementOffsets(poolJsonText, 0);
-test.checkInt("ext-pool len", 2, list.listCountInt(poolElems));
+test.checkInt("ext-pool len", 2, poolElems.length());
 test.checkInt("ext-pool 0 status", 0, json.readObjectInt(poolJsonText, poolElems[0], "status").value);
 test.checkText("ext-pool 0 stdout", "one", json.readObjectString(poolJsonText, poolElems[0], "stdout").value);
 test.checkText("ext-pool 0 stderr", "", json.readObjectString(poolJsonText, poolElems[0], "stderr").value);
@@ -416,7 +413,7 @@ loop extProbes as probe {
 /* C backend top-level/module functions parity and dead-fn DCE */
 reachableCComp := compilerTest.compileStdin(root, cComp, "unused := fn(): List<Int> { xs: List<Int> = [1, 2]; xs }; io := import \"core/io\"; io.outputLine(42);", fixtureName);
 test.checkInt("reachable-c status", 0, reachableCComp.status);
-test.check("reachable-c emits 42", text.containsText(reachableCComp.stdout, "42"));
+test.check("reachable-c emits 42", reachableCComp.stdout.contains("42"));
 
 ccInfo := compilerTest.probeCc();
 cFnParityCases: List<(label: String, src: String, expectedOut: String)> = [
@@ -483,7 +480,7 @@ cRejCases: List<(src: String, sub: String)> = [
 loop cRejCases as cr {
     cR := compilerTest.compileStdin(root, cComp, cr.src, fixtureName);
     test.checkInt("c-reject status: " + cr.src, 2, cR.status);
-    test.check("c-reject msg: " + cr.src + " -> " + cR.stderr, text.containsText(cR.stderr, cr.sub) or text.containsText(cR.stderr, "list values") or text.containsText(cR.stderr, "tuple values") or text.containsText(cR.stderr, "text builtins"));
+    test.check("c-reject msg: " + cr.src + " -> " + cR.stderr, cR.stderr.contains(cr.sub) or cR.stderr.contains("list values") or cR.stderr.contains("tuple values") or cR.stderr.contains("text builtins"));
 }
 
 test.done("core-host-bindings");

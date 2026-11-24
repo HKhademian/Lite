@@ -1,7 +1,6 @@
 /* Control-flow codegen and diagnostic tests migrated from igniter/test.ts. */
 
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -72,7 +71,7 @@ var li := 0;
 loop li < 4 {
     tsOut := compilerTest.compileStdin(root, tsComp, loopSources[li], "");
     test.checkInt("loop TS compile", 0, tsOut.status);
-    test.check("loop TS contains break/continue", text.containsText(tsOut.stdout, "break;") or text.containsText(tsOut.stdout, "continue;"));
+    test.check("loop TS contains break/continue", tsOut.stdout.contains("break;") or tsOut.stdout.contains("continue;"));
     compilerTest.assertCompileRunTs(root, tsComp, "loop TS " + loopOuts[li], loopSources[li], loopOuts[li]);
     li = li + 1;
 }
@@ -83,7 +82,7 @@ if ccInfo.available {
     loop ci < 3 {
         cCompRes := compilerTest.compileStdin(root, cComp, loopSources[ci], "");
         test.checkInt("loop C compile", 0, cCompRes.status);
-        test.check("loop C contains break/continue", text.containsText(cCompRes.stdout, "break;") or text.containsText(cCompRes.stdout, "continue;"));
+        test.check("loop C contains break/continue", cCompRes.stdout.contains("break;") or cCompRes.stdout.contains("continue;"));
         cRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, loopSources[ci], "", "");
         test.checkInt("loop C run status", 0, cRun.status);
         test.checkText("loop C stdout", loopOuts[ci], cRun.stdout);
@@ -141,7 +140,7 @@ leadTsSrc :=
 "io.outputLine(and true, or false);\n";
 leadTsCompiled := compilerTest.compileStdin(root, tsComp, leadTsSrc, "");
 test.checkInt("lead TS compile", 0, leadTsCompiled.status);
-test.check("lead TS contains && or ||", text.containsText(leadTsCompiled.stdout, "&&") or text.containsText(leadTsCompiled.stdout, "||"));
+test.check("lead TS contains && or ||", leadTsCompiled.stdout.contains("&&") or leadTsCompiled.stdout.contains("||"));
 compilerTest.assertCompileRunTs(root, tsComp, "lead TS", leadTsSrc, "true true true\nor-if\nand-if\ntrue true\n7\ntrue\ntrue false\n");
 
 /* restricted compiler accepts one optional leading and/or in Bool expressions for C */
@@ -161,7 +160,7 @@ leadCSrc :=
 if ccInfo.available {
     leadCComp := compilerTest.compileStdin(root, cComp, leadCSrc, "");
     test.checkInt("lead C compile", 0, leadCComp.status);
-    test.check("lead C contains && or ||", text.containsText(leadCComp.stdout, "&&") or text.containsText(leadCComp.stdout, "||"));
+    test.check("lead C contains && or ||", leadCComp.stdout.contains("&&") or leadCComp.stdout.contains("||"));
     leadCRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, leadCSrc, "", "");
     test.checkInt("lead C run", 0, leadCRun.status);
     test.checkText("lead C stdout", "true true true\nor-if\nand-if\ntrue\ntrue false\n", leadCRun.stdout);
@@ -239,7 +238,7 @@ elseIfTsSrc :=
 "io.outputLine(\"end\");";
 elseIfTsComp := compilerTest.compileStdin(root, tsComp, elseIfTsSrc, "");
 test.checkInt("else-if TS compile", 0, elseIfTsComp.status);
-test.check("else-if TS emitted", text.containsText(elseIfTsComp.stdout, "    } else if ("));
+test.check("else-if TS emitted", elseIfTsComp.stdout.contains("    } else if ("));
 elseIfTsExp :=
 "negative zero small large\nnegative zero positive\nnegative-flagged very-negative negative flagged plain\n" +
 "before\ntwo-first\ntwo-second\nafter\nloop-zero 0\nloop-one 1\nloop-two 2\nloop-many 3\n1 2\nend\n";
@@ -267,7 +266,7 @@ elseIfCSrc :=
 "io.outputLine(\"done\");";
 elseIfCComp := compilerTest.compileStdin(root, cComp, elseIfCSrc, "");
 test.checkInt("else-if C compile", 0, elseIfCComp.status);
-test.check("else-if C emitted", text.containsText(elseIfCComp.stdout, "    } else if ("));
+test.check("else-if C emitted", elseIfCComp.stdout.contains("    } else if ("));
 if ccInfo.available {
     elseIfCRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, elseIfCSrc, "", "");
     test.checkInt("else-if C run", 0, elseIfCRun.status);
@@ -316,10 +315,10 @@ constBranchSrc :=
 "io.outputLine(label, note);\n";
 constBranchTs := compilerTest.compileStdin(root, tsComp, constBranchSrc, "");
 test.checkInt("const branch TS compile", 0, constBranchTs.status);
-test.check("const branch TS drops ternary", not text.containsText(constBranchTs.stdout, "? \"honors\""));
-test.check("const branch TS drops dead honors", not text.containsText(constBranchTs.stdout, "\"honors\""));
-test.check("const branch TS drops dead retry", not text.containsText(constBranchTs.stdout, "\"retry\""));
-test.check("const branch TS drops if(true)", not text.containsText(constBranchTs.stdout, "if (Boolean(true))"));
+test.check("const branch TS drops ternary", not constBranchTs.stdout.contains("? \"honors\""));
+test.check("const branch TS drops dead honors", not constBranchTs.stdout.contains("\"honors\""));
+test.check("const branch TS drops dead retry", not constBranchTs.stdout.contains("\"retry\""));
+test.check("const branch TS drops if(true)", not constBranchTs.stdout.contains("if (Boolean(true))"));
 compilerTest.assertCompileRunTs(root, tsComp, "const branch TS run", constBranchSrc, "pass merit\n");
 
 /* constant expression if and subjectless match propagate folded constants */
@@ -336,8 +335,8 @@ constPropSrc :=
 "io.outputLine(c, m);\n";
 constPropTs := compilerTest.compileStdin(root, tsComp, constPropSrc, "");
 test.checkInt("const prop TS compile", 0, constPropTs.status);
-test.check("const prop TS propagates folded if into next branch", not text.containsText(constPropTs.stdout, "\"unfolded\""));
-test.check("const prop TS drops dead match arms", not text.containsText(constPropTs.stdout, "\"no\"") and not text.containsText(constPropTs.stdout, "\"fallback\""));
+test.check("const prop TS propagates folded if into next branch", not constPropTs.stdout.contains("\"unfolded\""));
+test.check("const prop TS drops dead match arms", not constPropTs.stdout.contains("\"no\"") and not constPropTs.stdout.contains("\"fallback\""));
 compilerTest.assertCompileRunTs(root, tsComp, "const prop TS run", constPropSrc, "folded yes\n");
 
 /* mixed runtime and constant arms keep runtime guards and prune dead arms */
@@ -359,10 +358,10 @@ mixedBranchSrc :=
 mixedBranchTs := compilerTest.compileStdin(root, tsComp, mixedBranchSrc, "");
 test.checkInt("mixed branch TS compile", 0, mixedBranchTs.status);
 test.check("mixed branch TS drops dead1..4",
-not text.containsText(mixedBranchTs.stdout, "\"dead1\"") and
-not text.containsText(mixedBranchTs.stdout, "\"dead2\"") and
-not text.containsText(mixedBranchTs.stdout, "\"dead3\"") and
-not text.containsText(mixedBranchTs.stdout, "\"dead4\""));
+not mixedBranchTs.stdout.contains("\"dead1\"") and
+not mixedBranchTs.stdout.contains("\"dead2\"") and
+not mixedBranchTs.stdout.contains("\"dead3\"") and
+not mixedBranchTs.stdout.contains("\"dead4\""));
 compilerTest.assertCompileRunTs(root, tsComp, "mixed branch TS run", mixedBranchSrc, "b picked\n");
 
 /* unwrapped constant-true branches preserve block scope when declaring locals */
@@ -394,19 +393,19 @@ loopFalseSrc :=
 "io.outputLine(n);\n";
 loopFalseTs := compilerTest.compileStdin(root, tsComp, loopFalseSrc, "");
 test.checkInt("loop false TS compile", 0, loopFalseTs.status);
-test.check("loop false TS drops dead loop", not text.containsText(loopFalseTs.stdout, "while (Boolean(false))") and not text.containsText(loopFalseTs.stdout, "dead-loop"));
+test.check("loop false TS drops dead loop", not loopFalseTs.stdout.contains("while (Boolean(false))") and not loopFalseTs.stdout.contains("dead-loop"));
 compilerTest.assertCompileRunTs(root, tsComp, "loop false TS run", loopFalseSrc, "1\n");
 if ccInfo.available {
     loopFalseC := compilerTest.compileStdin(root, cComp, loopFalseSrc, "");
     test.checkInt("loop false C compile", 0, loopFalseC.status);
-    test.check("loop false C drops dead loop", not text.containsText(loopFalseC.stdout, "dead-loop"));
+    test.check("loop false C drops dead loop", not loopFalseC.stdout.contains("dead-loop"));
     loopFalseCRun := compilerTest.compileAndRunC(loopFalseC.stdout, ccInfo.cc, "");
     test.checkInt("loop false C run status", 0, loopFalseCRun.status);
     test.checkText("loop false C stdout", "1\n", loopFalseCRun.stdout);
 }
 
 /* straight-line var dead-store elimination and scalar literal propagation */
-test.check("const branch TS eliminates dead var note", not text.containsText(constBranchTs.stdout, "\"none\"") and not text.containsText(constBranchTs.stdout, "lite_note"));
+test.check("const branch TS eliminates dead var note", not constBranchTs.stdout.contains("\"none\"") and not constBranchTs.stdout.contains("lite_note"));
 
 deadStoreSrc :=
 "io := import \"core/io\";\n" +
@@ -416,7 +415,7 @@ deadStoreSrc :=
 "io.outputLine(x);\n";
 deadStoreTs := compilerTest.compileStdin(root, tsComp, deadStoreSrc, "");
 test.checkInt("dead store TS compile", 0, deadStoreTs.status);
-test.check("dead store TS drops overwritten literals", not text.containsText(deadStoreTs.stdout, "1n") and not text.containsText(deadStoreTs.stdout, "2n"));
+test.check("dead store TS drops overwritten literals", not deadStoreTs.stdout.contains("1n") and not deadStoreTs.stdout.contains("2n"));
 compilerTest.assertCompileRunTs(root, tsComp, "dead store TS run", deadStoreSrc, "3\n");
 
 readBeforeOverwriteSrc :=

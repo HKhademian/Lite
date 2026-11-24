@@ -2,12 +2,9 @@
 
 crypto := import "core/crypto";
 fs := import "core/file";
-integer := import "core/int";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
 unicode := import "core/unicode";
 cases := import "util/cases";
 compilerBuild := import "util/compiler-build";
@@ -79,7 +76,7 @@ test.checkText("lite-compile ts err", "", rCompTs.stderr);
 
 rCompC := runCmd(path.join(root, "bin/lite-compile"), ["--target", "c", samplePath], root, emptyEnv(), "");
 test.checkInt("lite-compile c", 0, rCompC.status);
-test.check("lite-compile c out", text.containsText(rCompC.stdout, "int main(void)"));
+test.check("lite-compile c out", rCompC.stdout.contains("int main(void)"));
 test.checkText("lite-compile c err", "", rCompC.stderr);
 
 rShortC := runCmd(path.join(root, "bin/lite-compile-c"), [samplePath], root, emptyEnv(), "");
@@ -105,7 +102,7 @@ test.checkText("bad compile err", badSamplePath + ":1:42: expected an Int, Float
 rBadChk := runCmd(path.join(root, "bin/lite"), ["check", badSamplePath], root, emptyEnv(), "");
 test.checkInt("bad check status", 1, rBadChk.status);
 test.checkText("bad check out", "", rBadChk.stdout);
-test.check("bad check err", text.containsText(rBadChk.stderr, "bad.lts:1:42: expected an Int, Float, String or Bool expression"));
+test.check("bad check err", rBadChk.stderr.contains("bad.lts:1:42: expected an Int, Float, String or Bool expression"));
 
 badArgLists: List<String> = ["[]", "[\"--target\",\"x\"," + path.join(cmdDir, "sample.lts") + "]", "[\"ts\"," + path.join(cmdDir, "missing.lts") + "]", "[\"ts\"," + path.join(cmdDir, "sample.txt") + "]"];
 bArgs0: List<String> = [];
@@ -131,22 +128,22 @@ _rmCmd := fs.remove(cmdDir);
 liteBin := path.join(root, "bin/lite");
 helpRes := runCmd(liteBin, ["help"], root, emptyEnv(), "");
 test.checkInt("help status", 0, helpRes.status);
-test.check("help usage", text.containsText(helpRes.stdout, "Usage: ./bin/lite <command>"));
-test.check("help compiler entries", text.containsText(helpRes.stdout, "Compiler entry points: ./bin/lite-compile, ./bin/lite compile"));
-test.check("help test flags", text.containsText(helpRes.stdout, "test [--smoke|--fast|--full]"));
-test.check("help test verbosity", text.containsText(helpRes.stdout, "[--verbose|--mute|--silence]"));
+test.check("help usage", helpRes.stdout.contains("Usage: ./bin/lite <command>"));
+test.check("help compiler entries", helpRes.stdout.contains("Compiler entry points: ./bin/lite-compile, ./bin/lite compile"));
+test.check("help test flags", helpRes.stdout.contains("test [--smoke|--fast|--full]"));
+test.check("help test verbosity", helpRes.stdout.contains("[--verbose|--mute|--silence]"));
 test.checkText("help err", "", helpRes.stderr);
 
 docsRes := runCmd(liteBin, ["docs"], root, emptyEnv(), "");
 test.checkInt("docs status", 0, docsRes.status);
-test.check("docs compiler", text.containsText(docsRes.stdout, "compiler/README.md"));
-test.check("docs igniter tests", text.containsText(docsRes.stdout, "igniter/tests/README.md"));
+test.check("docs compiler", docsRes.stdout.contains("compiler/README.md"));
+test.check("docs igniter tests", docsRes.stdout.contains("igniter/tests/README.md"));
 test.checkText("docs err", "", docsRes.stderr);
 
 noArgsRes := runCmd(liteBin, emptyEnv(), root, emptyEnv(), "");
 test.checkInt("noArgs status", 2, noArgsRes.status);
 test.checkText("noArgs out", "", noArgsRes.stdout);
-test.check("noArgs err", text.containsText(noArgsRes.stderr, "Usage:"));
+test.check("noArgs err", noArgsRes.stderr.contains("Usage:"));
 
 /* lite verify uses generated TS, reports migration gaps and rejects the retired reference flag */
 if not skipHeavy {
@@ -154,35 +151,35 @@ if not skipHeavy {
     vEnv: List<String> = ["LITE_VERIFY_CACHE=" + path.join(vTmp, "cache.json")];
     verified := runCmd(liteBin, ["verify", "--all", "--no-cache"], root, vEnv, "");
     test.checkInt("verify --all status: " + verified.stderr, 0, verified.status);
-    test.check("verify signed-arithmetic", text.containsText(verified.stdout, "PASS feature.numeric.integers.signed-arithmetic/precedence-and-division"));
-    test.check("verify double-sum", text.containsText(verified.stdout, "PASS example.foundations.io.double-sum/seven-and-five"));
-    test.check("verify ts", text.containsText(verified.stdout, "[ts]"));
-    test.check("verify no T00", not text.containsText(verified.stdout, "T00 reference"));
-    test.check("verify c", text.containsText(verified.stdout, "[c]"));
-    test.check("verify match", text.containsText(verified.stdout, "PASS feature.control.branching.subjectless-match/first-true-and-fallback [ts]"));
-    test.check("verify widths", text.containsText(verified.stdout, "PASS feature.numeric.widths.sized-promotion/widths [ts]"));
-    test.check("verify fn values", text.containsText(verified.stdout, "PASS feature.functions.callables.function-values/double-five [ts]"));
-    test.check("verify blocks", text.containsText(verified.stdout, "PASS feature.blocks.wiring.parallel-symbol-wiring/even-four [ts]"));
-    test.check("verify showcase", text.containsText(verified.stdout, "PASS showcase.foundations.bindings.bindings-and-mutability/bindings-and-mutability [ts]"));
-    test.check("verify counts", text.containsText(verified.stdout, "verification passed:") and text.containsText(verified.stdout, "executed, 0 cached"));
+    test.check("verify signed-arithmetic", verified.stdout.contains("PASS feature.numeric.integers.signed-arithmetic/precedence-and-division"));
+    test.check("verify double-sum", verified.stdout.contains("PASS example.foundations.io.double-sum/seven-and-five"));
+    test.check("verify ts", verified.stdout.contains("[ts]"));
+    test.check("verify no T00", not verified.stdout.contains("T00 reference"));
+    test.check("verify c", verified.stdout.contains("[c]"));
+    test.check("verify match", verified.stdout.contains("PASS feature.control.branching.subjectless-match/first-true-and-fallback [ts]"));
+    test.check("verify widths", verified.stdout.contains("PASS feature.numeric.widths.sized-promotion/widths [ts]"));
+    test.check("verify fn values", verified.stdout.contains("PASS feature.functions.callables.function-values/double-five [ts]"));
+    test.check("verify blocks", verified.stdout.contains("PASS feature.blocks.wiring.parallel-symbol-wiring/even-four [ts]"));
+    test.check("verify showcase", verified.stdout.contains("PASS showcase.foundations.bindings.bindings-and-mutability/bindings-and-mutability [ts]"));
+    test.check("verify counts", verified.stdout.contains("verification passed:") and verified.stdout.contains("executed, 0 cached"));
 
     covered := runCmd(liteBin, ["verify", "--coverage"], root, vEnv, "");
     test.checkInt("verify --coverage status", 0, covered.status);
-    test.check("coverage features", text.containsText(covered.stdout, "features: 58 registered, 58 cases"));
-    test.check("coverage examples", text.containsText(covered.stdout, "examples: 32/32 manifests"));
-    test.check("coverage samples", text.containsText(covered.stdout, "samples: 28/28 manifests"));
-    test.check("coverage showcases", text.containsText(covered.stdout, "showcases: 23/23 manifests"));
+    test.check("coverage features", covered.stdout.contains("features: 58 registered, 58 cases"));
+    test.check("coverage examples", covered.stdout.contains("examples: 32/32 manifests"));
+    test.check("coverage samples", covered.stdout.contains("samples: 28/28 manifests"));
+    test.check("coverage showcases", covered.stdout.contains("showcases: 23/23 manifests"));
 
     firstV := runCmd(liteBin, ["verify", "--all", "--filter", "features/numeric/integers/signed-arithmetic.json"], root, vEnv, "");
     test.checkInt("verify cache 1", 0, firstV.status);
-    test.check("verify cache 1 count", text.containsText(firstV.stdout, "0 cached"));
+    test.check("verify cache 1 count", firstV.stdout.contains("0 cached"));
     secondV := runCmd(liteBin, ["verify", "--all", "--filter", "features/numeric/integers/signed-arithmetic.json"], root, vEnv, "");
     test.checkInt("verify cache 2", 0, secondV.status);
-    test.check("verify cache 2 count", text.containsText(secondV.stdout, "0 executed, "));
-    test.check("verify cache 2 label", text.containsText(secondV.stdout, "(cached)"));
+    test.check("verify cache 2 count", secondV.stdout.contains("0 executed, "));
+    test.check("verify cache 2 label", secondV.stdout.contains("(cached)"));
     shardedV := runCmd(liteBin, ["verify", "--all", "--filter", "features/numeric/integers/signed-arithmetic.json", "--shard", "2/2", "--no-cache"], root, vEnv, "");
     test.checkInt("verify shard", 0, shardedV.status);
-    test.check("verify shard no cache", text.containsText(shardedV.stdout, "0 cached"));
+    test.check("verify shard no cache", shardedV.stdout.contains("0 cached"));
     _rmV := fs.remove(vTmp);
 }
 
@@ -236,17 +233,17 @@ _wArt4 := fs.writeText(lArt, compFault.stdout);
 runFault := runCmd(proc.execPath(), [lRunner, lArt], lTmp, lEnv, "");
 test.checkInt("launcher fault status", 1, runFault.status);
 test.checkText("launcher fault out", "", runFault.stdout);
-test.check("launcher fault err", text.containsText(runFault.stderr, "program with spaces.lts:1:40: ArithmeticPanic:"));
+test.check("launcher fault err", runFault.stderr.contains("program with spaces.lts:1:40: ArithmeticPanic:"));
 
 u1 := runCmd(liteBin, emptyEnv(), lTmp, lEnv, "");
 u2 := runCmd(liteBin, ["unknown", lSource], lTmp, lEnv, "");
 u3 := runCmd(liteBin, ["run"], lTmp, lEnv, "");
 test.checkInt("launcher usage 1", 2, u1.status);
-test.check("launcher usage 1 msg", text.containsText(u1.stderr, "Usage: ./bin/lite <command>"));
+test.check("launcher usage 1 msg", u1.stderr.contains("Usage: ./bin/lite <command>"));
 test.checkInt("launcher usage 2", 2, u2.status);
-test.check("launcher usage 2 msg", text.containsText(u2.stderr, "Usage: ./bin/lite <command>"));
+test.check("launcher usage 2 msg", u2.stderr.contains("Usage: ./bin/lite <command>"));
 test.checkInt("launcher usage run", 2, u3.status);
-test.check("launcher usage run msg", text.containsText(u3.stderr, "Usage: ./bin/lite run ") and text.containsText(u3.stderr, "file.lts [-- argument ...]"));
+test.check("launcher usage run msg", u3.stderr.contains("Usage: ./bin/lite run ") and u3.stderr.contains("file.lts [-- argument ...]"));
 
 aliasDir := path.join(lTmp, "project with spaces");
 _sym := fs.symlink(root, aliasDir);
@@ -262,12 +259,12 @@ _rmL := fs.remove(lTmp);
 /* compiler, L0 and lexer declarations carry doc comments */
 splitLines := fn(content: String): List<String> {
     lines: mut List<String> = [];
-    size := text.length(content);
+    size := content.length();
     var start := 0;
     var i := 0;
     loop i <= size {
-        if i == size or text.at(content, i) == "\n" {
-            list.pushBack(mut lines, text.slice(content, start, i));
+        if i == size or content.at(i) == "\n" {
+            mut lines.pushBack(content.slice(start, i));
             start = i + 1;
         }
         i = i + 1;
@@ -275,45 +272,45 @@ splitLines := fn(content: String): List<String> {
     lines
 };
 isDocDeclLine := fn(line: String): Bool {
-    trimmed := text.trimStart(line);
-    if text.startsWithAt(line, 0, " ") or text.startsWithAt(line, 0, "\t") { return false; }
-    colEq := text.indexOfText(trimmed, " := fn", 0);
-    colEqT := text.indexOfText(trimmed, " := type", 0);
+    trimmed := line.trimStart();
+    if line.startsWithAt(0, " ") or line.startsWithAt(0, "\t") { return false; }
+    colEq := trimmed.indexOf(" := fn", 0);
+    colEqT := trimmed.indexOf(" := type", 0);
     if colEq < 0 and colEqT < 0 { return false; }
-    text.indexOfText(trimmed, " ", 0) == colEq or text.indexOfText(trimmed, " ", 0) == colEqT
+    trimmed.indexOf(" ", 0) == colEq or trimmed.indexOf(" ", 0) == colEqT
 };
 docDirs: List<String> = [path.join(root, "lib/core"), path.join(root, "compiler/src")];
 docFiles := path.collectFiles(root, docDirs, ".lts", [], false);
 loop docFiles as docFile {
     content := fs.readText(docFile).text;
     docLines := splitLines(content);
-    lineCnt := list.listCountText(docLines);
+    lineCnt := docLines.length();
     var dli := 0;
     loop dli < lineCnt {
         if isDocDeclLine(docLines[dli]) {
             var prev := dli - 1;
-            loop prev >= 0 and text.trim(docLines[prev]) == "" {
+            loop prev >= 0 and docLines[prev].trim() == "" {
                 prev = prev - 1;
             }
             var documented := false;
             if prev >= 0 {
-                lastTrim := text.trim(docLines[prev]);
-                if text.startsWithAt(lastTrim, 0, "/**") and text.endsWith(lastTrim, "*/") {
+                lastTrim := docLines[prev].trim();
+                if lastTrim.startsWithAt(0, "/**") and lastTrim.endsWith("*/") {
                     documented = true;
-                } else if text.endsWith(lastTrim, "*/") {
+                } else if lastTrim.endsWith("*/") {
                     var start := prev;
                     loop start >= 0 {
-                        stTrim := text.trim(docLines[start]);
-                        if text.startsWithAt(stTrim, 0, "/**") {
+                        stTrim := docLines[start].trim();
+                        if stTrim.startsWithAt(0, "/**") {
                             documented = true;
                             break;
                         }
-                        if text.startsWithAt(stTrim, 0, "/*") { break; }
+                        if stTrim.startsWithAt(0, "/*") { break; }
                         start = start - 1;
                     }
                 }
             }
-            test.check(docFile + ":" + integer.intText(dli + 1) + ": missing doc comment", documented);
+            test.check(docFile + ":" + (dli + 1).toText() + ": missing doc comment", documented);
         }
         dli = dli + 1;
     }
@@ -367,12 +364,12 @@ loop ti < 2 {
     }
 
     badUtf8: mut List<Int> = unicode.utf8Encode("io := import \"core/io\"; io.outputLine(42);\n");
-    list.pushBack(mut badUtf8, 255);
+    mut badUtf8.pushBack(255);
     _wUtf := fs.writeBytes(rejSrc, badUtf8);
     utfOut := if isTs { runCmd(path.join(root, "bin/lite-compile-ts"), [rejSrc], root, emptyEnv(), "") } else { runCmd(proc.execPath(), [cComp, rejSrc], root, emptyEnv(), "") };
     test.checkInt("whole utf8 status", 1, utfOut.status);
     test.checkText("whole utf8 out", "", utfOut.stdout);
-    test.check("whole utf8 err", text.containsText(utfOut.stderr, "InputFault: cannot read input"));
+    test.check("whole utf8 err", utfOut.stderr.contains("InputFault: cannot read input"));
     ti = ti + 1;
 }
 _rmRej := fs.remove(rejDir);
@@ -404,7 +401,7 @@ d2 := compilerTest.compileStdin(root, tsComp, detSrc, "");
 test.checkInt("det 1 status", 0, d1.status);
 test.checkText("det identical", crypto.sha256Text(d1.stdout), crypto.sha256Text(d2.stdout));
 test.checkText("det err", crypto.sha256Text(d1.stderr), crypto.sha256Text(d2.stderr));
-test.check("no root leaked", not text.containsText(d1.stdout, root));
-test.check("no cwd leaked", not text.containsText(d1.stdout, proc.cwd()));
-test.check("no tmp leaked", not text.containsText(d1.stdout, "/tmp"));
-test.check("no timestamp Z leaked", not text.containsText(d1.stdout, "T00:00:00"));
+test.check("no root leaked", not d1.stdout.contains(root));
+test.check("no cwd leaked", not d1.stdout.contains(proc.cwd()));
+test.check("no tmp leaked", not d1.stdout.contains("/tmp"));
+test.check("no timestamp Z leaked", not d1.stdout.contains("T00:00:00"));

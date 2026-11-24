@@ -1,6 +1,5 @@
 /* Float literals, mixed Float arithmetic, power precedence/exponents, numeric aliases/contexts, and narrow numeric widths tests migrated from compiler/tests/host.test.ts. */
 
-list := import "core/list";
 proc := import "core/process";
 test := import "core/test";
 text := import "core/text";
@@ -60,8 +59,8 @@ checkInvalidBoth := fn(label: String, source: String, logicalName: String, requi
     test.checkInt(label + " c reject", 2, cC.status);
     test.checkText(label + " c reject stdout", "", cC.stdout);
     if requiredLinePrefix =!= "" {
-        test.check(label + " ts prefix: " + cTs.stderr, text.startsWithAt(cTs.stderr, 0, requiredLinePrefix));
-        test.check(label + " c prefix: " + cC.stderr, text.startsWithAt(cC.stderr, 0, requiredLinePrefix));
+        test.check(label + " ts prefix: " + cTs.stderr, cTs.stderr.startsWithAt(0, requiredLinePrefix));
+        test.check(label + " c prefix: " + cC.stderr, cC.stderr.startsWithAt(0, requiredLinePrefix));
     }
 };
 
@@ -135,14 +134,14 @@ loop narrowPanics as pc {
     tsRun := compilerTest.compileCheckRunTs(root, tsComp, pSrc, "");
     test.checkInt("narrow-panic ts status: " + pc.body, 1, tsRun.status);
     test.checkText("narrow-panic ts stdout: " + pc.body, "before\n", tsRun.stdout);
-    test.check("narrow-panic ts stderr (" + pc.body + "): " + tsRun.stderr, text.containsText(tsRun.stderr, pc.msg));
+    test.check("narrow-panic ts stderr (" + pc.body + "): " + tsRun.stderr, tsRun.stderr.contains(pc.msg));
     cCompP := compilerTest.compileStdin(root, cComp, pSrc, "");
     test.checkInt("narrow-panic c compile: " + pc.body, 0, cCompP.status);
     if ccProbe.available {
         cRun := compilerTest.compileAndRunC(cCompP.stdout, ccProbe.cc, "");
         test.checkInt("narrow-panic c status: " + pc.body, 1, cRun.status);
         test.checkText("narrow-panic c stdout: " + pc.body, "before\n", cRun.stdout);
-        test.check("narrow-panic c stderr (" + pc.body + "): " + cRun.stderr, text.containsText(cRun.stderr, pc.msg));
+        test.check("narrow-panic c stderr (" + pc.body + "): " + cRun.stderr, cRun.stderr.contains(pc.msg));
     }
 }
 
@@ -181,11 +180,11 @@ narrowRejects: List<(bad: String, m1: String, m2: String, checkC: Bool)> = [
 loop narrowRejects as nr {
     rTs := compilerTest.compileStdin(root, tsComp, nr.bad, "");
     test.checkInt("narrow-reject ts status: " + nr.bad, 2, rTs.status);
-    test.check("narrow-reject ts msg: " + nr.bad + " -> " + rTs.stderr, text.containsText(rTs.stderr, nr.m1) or text.containsText(rTs.stderr, nr.m2));
+    test.check("narrow-reject ts msg: " + nr.bad + " -> " + rTs.stderr, rTs.stderr.contains(nr.m1) or rTs.stderr.contains(nr.m2));
     if nr.checkC {
         rC := compilerTest.compileStdin(root, cComp, nr.bad, "");
         test.checkInt("narrow-reject c status: " + nr.bad, 2, rC.status);
-        test.check("narrow-reject c msg: " + nr.bad + " -> " + rC.stderr, text.containsText(rC.stderr, nr.m1) or text.containsText(rC.stderr, nr.m2));
+        test.check("narrow-reject c msg: " + nr.bad + " -> " + rC.stderr, rC.stderr.contains(nr.m1) or rC.stderr.contains(nr.m2));
     }
 }
 
@@ -196,8 +195,8 @@ if not skipHeavy {
     floatLiterals: List<String> = [
         "0.0", "-0.0", "1.5", "+1.5", "0001.2500", "1e2", "2.5E-2", "1E+21",
         "0.000001", "0.0000001", "1000000000000000100.0", "1.7976931348623158e308",
-        "5e-324", "2e-324", "1e-99999", "0e" + text.repeatText("9", 120),
-        "0." + text.repeatText("0", 400) + "1e401", "999999999999999999999999999999.0",
+        "5e-324", "2e-324", "1e-99999", "0e" + "9".repeat(120),
+        "0." + "0".repeat(400) + "1e401", "999999999999999999999999999999.0",
         "- /* comment */ 1.5",
         midMinus1 + ".0"
     ];
@@ -220,7 +219,7 @@ if not skipHeavy {
         "io := import \"core/io\"; p := (n = 0.1, label = \"value\"); values: List<Float> = [0.1, 1e21]; io.outputLine(p, values);"
     ];
     loop floatBoth as src { checkTsAndCContract("float-both", src, "", "", 0); }
-    loop floatTsOnly as src { checkTsOnlyContract("float-ts", src, "", "", 0, true); }
+    loop floatTsOnly as src { checkTsOnlyContract("float-ts", src, "", "", 0, false); }
 
     vecTokens: List<String> = [
         "0.0", "-0.0", "5e-324", "1.7976931348623157e+308", "0.1", "0.2", "0.3", "0.000001", "1e-7", "100000000000000000000.0", "1e+21", "1e+23", "5e-324", "-5e-324", "0.0", "1e-323",
@@ -258,11 +257,11 @@ if not skipHeavy {
     vecProgLines: mut List<String> = ["io := import \"core/io\";"];
     vecOutLines: mut List<String> = [];
     loop vecTokens as tok {
-        list.pushBack(mut vecProgLines, "io.outputLine(" + tok + ");");
+        mut vecProgLines.pushBack("io.outputLine(" + tok + ");");
         outTok := if tok == "-0.0" or tok == "0.0" { "0" }
-            else if text.endsWith(tok, ".0") and not text.containsText(tok, "e") and not text.containsText(tok, "E") { text.slice(tok, 0, text.length(tok) - 2) }
+            else if tok.endsWith(".0") and not tok.contains("e") and not tok.contains("E") { tok.slice(0, tok.length() - 2) }
             else { tok };
-        list.pushBack(mut vecOutLines, outTok);
+        mut vecOutLines.pushBack(outTok);
     }
     vecProgram := text.joinTexts(vecProgLines, "\n");
     vecRec := compilerTest.assertContractStatus(contractsJson, "binary64-vectors", vecProgram, "", "", 0);
@@ -319,7 +318,7 @@ if not skipHeavy {
         "io := import \"core/io\"; f := fn(n: Int, x: Float): Float { n * x + 0.25 } p := (value = f(2, 0.5)); values: List<Float> = [p.value, f(3, 0.5)]; io.outputLine(p, values);"
     ];
     loop mixedBoth as src { checkTsAndCContract("mixed-both", src, "", "", 0); }
-    loop mixedTsOnly as src { checkTsOnlyContract("mixed-ts", src, "", "", 0, true); }
+    loop mixedTsOnly as src { checkTsOnlyContract("mixed-ts", src, "", "", 0, false); }
 
     mixedFaultTails: List<String> = [
         "io.outputLine(1.0 / 0);",
@@ -338,7 +337,7 @@ if not skipHeavy {
         fSrc := "io := import \"core/io\"; io.outputLine(\"before\");\r\n" + tail;
         fRec := compilerTest.assertContractStatus(contractsJson, "mixed-fault", fSrc, "mixed-float سلام.lts", "", 1);
         test.checkText("mixed-fault stdout", "before\n", fRec.stdout);
-        test.check("mixed-fault msg", text.containsText(fRec.stderr, "ArithmeticPanic: division by zero") or text.containsText(fRec.stderr, "ArithmeticPanic: non-finite floating value"));
+        test.check("mixed-fault msg", fRec.stderr.contains("ArithmeticPanic: division by zero") or fRec.stderr.contains("ArithmeticPanic: non-finite floating value"));
         checkTsAndCContract("mixed-fault", fSrc, "mixed-float سلام.lts", "", 1);
     }
     mixedInvalidTails: List<String> = [
@@ -375,7 +374,7 @@ if not skipHeavy {
         "io := import \"core/io\"; f := fn(base: Float, exponent: Int): Float { base ** exponent } p := (n = f(2.5, 2)); xs: List<Float> = [p.n, f(1.5, 2)]; io.outputLine(p, xs);"
     ];
     loop powBoth as src { checkTsAndCContract("pow-both", src, "", "", 0); }
-    loop powTsOnly as src { checkTsOnlyContract("pow-ts", src, "", "", 0, true); }
+    loop powTsOnly as src { checkTsOnlyContract("pow-ts", src, "", "", 0, false); }
     powFaultTails: List<String> = ["io.outputLine(1e308 ** 2);", "io.outputLine((-2) ** 0.5);"];
     loop powFaultTails as tail {
         checkTsAndCContract("pow-fault", "io := import \"core/io\"; io.outputLine(\"before\");\r\n" + tail, "power سلام.lts", "", 1);
@@ -427,21 +426,21 @@ if not skipHeavy {
         rTs := compilerTest.compileCheckRunTs(root, tsComp, pfSrc, "power-case.lts");
         test.checkInt("pow-neg-fault ts status", 1, rTs.status);
         test.checkText("pow-neg-fault ts stdout", "before\n", rTs.stdout);
-        test.check("pow-neg-fault ts msg", text.startsWithAt(rTs.stderr, 0, "power-case.lts:2:") and text.containsText(rTs.stderr, "ArithmeticPanic: zero cannot be raised to a negative power\n"));
+        test.check("pow-neg-fault ts msg", rTs.stderr.startsWithAt(0, "power-case.lts:2:") and rTs.stderr.contains("ArithmeticPanic: zero cannot be raised to a negative power\n"));
         cPf := compilerTest.compileStdin(root, cComp, pfSrc, "power-case.lts");
         test.checkInt("pow-neg-fault c compile", 0, cPf.status);
         if ccProbe.available {
             rC := compilerTest.compileAndRunC(cPf.stdout, ccProbe.cc, "");
             test.checkInt("pow-neg-fault c status", 1, rC.status);
             test.checkText("pow-neg-fault c stdout", "before\n", rC.stdout);
-            test.check("pow-neg-fault c msg", text.startsWithAt(rC.stderr, 0, "power-case.lts:2:") and text.containsText(rC.stderr, "ArithmeticPanic: zero cannot be raised to a negative power\n"));
+            test.check("pow-neg-fault c msg", rC.stderr.startsWithAt(0, "power-case.lts:2:") and rC.stderr.contains("ArithmeticPanic: zero cannot be raised to a negative power\n"));
         }
     }
     powEffSrc := "io := import \"core/io\"; f := fn(n: Int): Int { io.outputLine(n); n } io.outputLine(f(0) ** f(-1), f(9));";
     rPowEff := compilerTest.compileCheckRunTs(root, tsComp, powEffSrc, "power-effects.lts");
     test.checkInt("pow-effects status", 1, rPowEff.status);
     test.checkText("pow-effects stdout", "0\n-1\n", rPowEff.stdout);
-    test.check("pow-effects msg", text.endsWith(rPowEff.stderr, "ArithmeticPanic: zero cannot be raised to a negative power\n"));
+    test.check("pow-effects msg", rPowEff.stderr.endsWith("ArithmeticPanic: zero cannot be raised to a negative power\n"));
     powFnSrc := "io := import \"core/io\"; power := fn(base: Float, exponent: Int): Float { base ** exponent } value: Float = power(2, -3); io.outputLine(value, power(9, 0), power(4, -1));";
     compilerTest.assertCompileRunTs(root, tsComp, "pow-fn", powFnSrc, "0.125 1 0.25\n");
 
@@ -460,11 +459,11 @@ if not skipHeavy {
     ];
     aliasTsOnly: List<String> = [
         "io := import \"core/io\"; p: (i: Int64, f: Double) = (i = 2, f = 0.5); io.outputLine(p, p.i, p.f);",
-        "io := import \"core/io\"; Pair := type (i: Int64, f: Float64); f := fn(p: Pair): Double { p.i * p.f } p: Pair = (i = 3, f = 0.5); io.outputLine(f(p));",
-        "list := import \"core/list\"; io := import \"core/io\"; xs: mut List<Int64> = [1, 2]; ys: List<Float64> = [0.5, 1.5]; list.pushBack(mut xs, 3); io.outputLine(xs, ys, xs[1]);"
+        "io := import \"core/io\"; Pair := type (i: Int64, f: Float64); f := fn(p: Pair): Double { p.i * p.f } p: Pair = (i = 3, f = 0.5); io.outputLine(f(p));"
     ];
     loop aliasBoth as src { checkTsAndCContract("alias-both", src, "", "", 0); }
-    loop aliasTsOnly as src { checkTsOnlyContract("alias-ts", src, "", "", 0, true); }
+    loop aliasTsOnly as src { checkTsOnlyContract("alias-ts", src, "", "", 0, false); }
+    compilerTest.assertCompileRunTs(root, tsComp, "alias-ts list pushBack", "io := import \"core/io\"; xs: mut List<Int64> = [1, 2]; ys: List<Float64> = [0.5, 1.5]; mut xs.pushBack(3); io.outputLine(xs, ys, xs[1]);", "[1, 2, 3] [0.5, 1.5] 2\n");
     aliasInvalid: List<String> = [
         "var x: Int64 = \"x\";",
         "var x: Float64 = false;",
@@ -531,7 +530,7 @@ if not skipHeavy {
         "io := import \"core/io\"; xs: List<(n: Float)> = [(n = 2), (n = -3)]; io.outputLine(xs);"
     ];
     loop ctxBoth as src { checkTsAndCContract("float-ctx-both", src, "", "", 0); }
-    loop ctxTsOnly as src { checkTsOnlyContract("float-ctx-ts", src, "", "", 0, true); }
+    loop ctxTsOnly as src { checkTsOnlyContract("float-ctx-ts", src, "", "", 0, false); }
     ctxInvalid: List<String> = [
         "f: Float = 9007199254740993;",
         "f: Float = -9007199254740993;",

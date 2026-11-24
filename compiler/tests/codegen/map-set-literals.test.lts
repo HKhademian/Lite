@@ -17,7 +17,6 @@ cComp := selC.path;
 /* 1. Typed immutable Map literal with enum shorthand, inferred Map literal, mutable Map literal, empty Map literal */
 mapProg :=
 "io := import \"core/io\";\n" +
-"map := import \"core/map\";\n" +
 "Direction := enum { Up; Down; Left; Right; };\n" +
 "keys: Map<String, Direction> = [\"ArrowUp\" = .Up, \"w\" = .Up, \"s\" = .Down,];\n" +
 "scores := [\"alice\" = 10, \"bob\" = 25];\n" +
@@ -25,9 +24,9 @@ mapProg :=
 "counts[\"y\"] = 2;\n" +
 "emptyM: Map<String, Int> = [];\n" +
 "zeroM: Map<String, Int>;\n" +
-"io.outputLine(map.size(keys), keys[\"ArrowUp\"], keys[\"s\"]);\n" +
-"io.outputLine(map.size(scores), scores[\"alice\"], scores[\"bob\"]);\n" +
-"io.outputLine(map.size(counts), counts[\"x\"], counts[\"y\"], map.size(emptyM), map.size(zeroM));\n";
+"io.outputLine(keys.size(), keys[\"ArrowUp\"], keys[\"s\"]);\n" +
+"io.outputLine(scores.size(), scores[\"alice\"], scores[\"bob\"]);\n" +
+"io.outputLine(counts.size(), counts[\"x\"], counts[\"y\"], emptyM.size(), zeroM.size());\n";
 
 cMap := compilerTest.compileStdin(root, tsComp, mapProg, "");
 test.checkInt("map literals compile: " + cMap.stderr, 0, cMap.status);
@@ -38,17 +37,16 @@ test.checkText("map literals stdout", "3 Direction.Up Direction.Down\n2 10 25\n2
 /* 2. Typed immutable & mutable Set literals (deduplication, enum shorthand, empty Set literal & zero-init) */
 setProg :=
 "io := import \"core/io\";\n" +
-"set := import \"core/set\";\n" +
 "Direction := enum { Up; Down; Left; Right; };\n" +
 "tags: Set<String> = [\"lite\", \"fast\", \"lite\"];\n" +
 "dirs: Set<Direction> = [.Up, .Down, .Up];\n" +
 "bag: mut Set<Int> = [1, 2];\n" +
-"set.add(mut bag, 3);\n" +
+"mut bag.add(3);\n" +
 "emptyS: Set<Int> = [];\n" +
 "zeroS: Set<Int>;\n" +
-"io.outputLine(set.size(tags), set.has(tags, \"lite\"), set.has(tags, \"nope\"));\n" +
-"io.outputLine(set.size(dirs), set.has(dirs, .Up), set.has(dirs, .Left));\n" +
-"io.outputLine(set.size(bag), set.has(bag, 3), set.size(emptyS), set.size(zeroS));\n";
+"io.outputLine(tags.size(), tags.has(\"lite\"), tags.has(\"nope\"));\n" +
+"io.outputLine(dirs.size(), dirs.has(.Up), dirs.has(.Left));\n" +
+"io.outputLine(bag.size(), bag.has(3), emptyS.size(), zeroS.size());\n";
 
 cSet := compilerTest.compileStdin(root, tsComp, setProg, "");
 test.checkInt("set literals compile: " + cSet.stderr, 0, cSet.status);

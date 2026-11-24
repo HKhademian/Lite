@@ -3,7 +3,6 @@
 fs := import "core/file";
 path := import "core/path";
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -126,11 +125,11 @@ compilerTest.assertDriverMatchesContract(root, contracts, checkerRel, checkerDri
 /* Lite parser and checker support subjectless Boolean match */
 pv := compilerTest.runDriver(progDriver, "x := match { a == 1 { 10 } _ { 20 } };\n");
 test.checkInt("match value parse status", 0, pv.status);
-test.check("match value parse output", text.containsText(pv.stdout, "Program||x := match { (a == 1) { 10 } _ { 20 } }|"));
+test.check("match value parse output", pv.stdout.contains("Program||x := match { (a == 1) { 10 } _ { 20 } }|"));
 
 pa := compilerTest.runDriver(progDriver, "match { true { outputLine(1); } _ { outputLine(2); } }\n");
 test.checkInt("match action parse status", 0, pa.status);
-test.check("match action parse output", text.containsText(pa.stdout, "Program||match { true { outputLine(1) } _ { outputLine(2) } }|"));
+test.check("match action parse output", pa.stdout.contains("Program||match { true { outputLine(1) } _ { outputLine(2) } }|"));
 
 matchParseBadSrc: List<String> = [
 "match x { _ => 1 }\n",
@@ -148,7 +147,7 @@ var mi := 0;
 loop mi < 4 {
     mr := compilerTest.runDriver(progDriver, matchParseBadSrc[mi]);
     test.checkInt("match parse bad status", 2, mr.status);
-    test.check("match parse bad msg: " + mr.stderr, text.containsText(mr.stderr, matchParseBadPat[mi]));
+    test.check("match parse bad msg: " + mr.stderr, mr.stderr.contains(matchParseBadPat[mi]));
     mi = mi + 1;
 }
 
@@ -163,8 +162,8 @@ mcSrc :=
 "match { (if true { false } else { true }) { b := 1; } _ { b := 2; } }";
 mc := compilerTest.runDriver(checkerDriver, mcSrc);
 test.checkInt("match check status", 0, mc.status);
-test.check("match check value", text.containsText(mc.stdout, "value|label|:= match { true { \"yes\" } _ { \"no\" } }|"));
-test.check("match check classify", text.containsText(mc.stdout, "function|classify|(n: Int): Int|"));
+test.check("match check value", mc.stdout.contains("value|label|:= match { true { \"yes\" } _ { \"no\" } }|"));
+test.check("match check classify", mc.stdout.contains("function|classify|(n: Int): Int|"));
 
 matchCheckBadSrc: List<String> = [
 "match x { _ => 1 }\n",
@@ -190,7 +189,7 @@ var mci := 0;
 loop mci < 8 {
     mcr := compilerTest.runDriver(checkerDriver, matchCheckBadSrc[mci]);
     test.checkInt("match check bad status", 2, mcr.status);
-    test.check("match check bad msg: " + mcr.stderr, text.containsText(mcr.stderr, matchCheckBadPat[mci]));
+    test.check("match check bad msg: " + mcr.stderr, mcr.stderr.contains(matchCheckBadPat[mci]));
     mci = mci + 1;
 }
 
@@ -205,13 +204,13 @@ npSrc :=
 "xs: List<Int8> = [1, 2];";
 np := compilerTest.runDriver(progDriver, npSrc);
 test.checkInt("narrow parse status", 0, np.status);
-test.check("narrow Byte", text.containsText(np.stdout, "Byte := type Int8"));
-test.check("narrow a", text.containsText(np.stdout, "a Int8 = (-128)"));
-test.check("narrow b", text.containsText(np.stdout, "b Int16 = 32767"));
-test.check("narrow c", text.containsText(np.stdout, "c Int32 = 2147483647"));
-test.check("narrow f", text.containsText(np.stdout, "f Float32 = 0.5"));
-test.check("narrow widen", text.containsText(np.stdout, "widen := fn(x: Byte): Float32 { x }"));
-test.check("narrow xs", text.containsText(np.stdout, "xs List<Int8> = [1, 2]"));
+test.check("narrow Byte", np.stdout.contains("Byte := type Int8"));
+test.check("narrow a", np.stdout.contains("a Int8 = (-128)"));
+test.check("narrow b", np.stdout.contains("b Int16 = 32767"));
+test.check("narrow c", np.stdout.contains("c Int32 = 2147483647"));
+test.check("narrow f", np.stdout.contains("f Float32 = 0.5"));
+test.check("narrow widen", np.stdout.contains("widen := fn(x: Byte): Float32 { x }"));
+test.check("narrow xs", np.stdout.contains("xs List<Int8> = [1, 2]"));
 
 ncSrc :=
 "a: Int8 = -128;\n" +
@@ -227,9 +226,9 @@ ncSrc :=
 "xs: List<Int8> = [1, -2];";
 nc := compilerTest.runDriver(checkerDriver, ncSrc);
 test.checkInt("narrow check status", 0, nc.status);
-test.check("narrow check a", text.containsText(nc.stdout, "value|a|Int8 = (-128)|"));
-test.check("narrow check m", text.containsText(nc.stdout, "value|m|Float32 = (a + f)|"));
-test.check("narrow check xs", text.containsText(nc.stdout, "value|xs|List<Int8> = [1, (-2)]|"));
+test.check("narrow check a", nc.stdout.contains("value|a|Int8 = (-128)|"));
+test.check("narrow check m", nc.stdout.contains("value|m|Float32 = (a + f)|"));
+test.check("narrow check xs", nc.stdout.contains("value|xs|List<Int8> = [1, (-2)]|"));
 
 narrowBadSrc: List<String> = [
 "x: Int8 = 128;\n",
@@ -257,7 +256,7 @@ var ni := 0;
 loop ni < 9 {
     nr := compilerTest.runDriver(checkerDriver, narrowBadSrc[ni]);
     test.checkInt("narrow bad status", 2, nr.status);
-    test.check("narrow bad msg: " + nr.stderr, text.containsText(nr.stderr, narrowBadPat[ni]));
+    test.check("narrow bad msg: " + nr.stderr, nr.stderr.contains(narrowBadPat[ni]));
     ni = ni + 1;
 }
 

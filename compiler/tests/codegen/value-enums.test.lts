@@ -1,7 +1,6 @@
 /* Value enums: plain and backing-typed nominal enums, contextual .Case, .value, and exhaustive match. */
 
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -100,7 +99,7 @@ combinedSrc :=
 "io.outputLine(folded, defDir, defDir.value, steps[1].dir, innerRes);\n";
 combinedTs := compilerTest.compileStdin(root, tsComp, combinedSrc, "");
 test.checkInt("combined enum TS compile", 0, combinedTs.status);
-test.check("constant enum match folds dead arms", not text.containsText(combinedTs.stdout, "\"ew\""));
+test.check("constant enum match folds dead arms", not combinedTs.stdout.contains("\"ew\""));
 compilerTest.assertCompileRunTs(root, tsComp, "combined enum TS run", combinedSrc,
 "s Dir.North 0 Dir.West 2\n");
 
