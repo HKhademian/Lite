@@ -1,7 +1,7 @@
 /* Lite-written parser core. */
 
-lexer := import "./lexer.lts";
-numeric := import "./numeric-literals.lts";
+lexer := import "./lexer";
+numeric := import "./numeric-literals";
 diag := import "core/diag";
 format := import "core/format";
 io := import "core/io";

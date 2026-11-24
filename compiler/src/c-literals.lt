@@ -1,6 +1,6 @@
 /* C backend for the temporary Lite compiler. */
 
-numeric := import "./numeric-literals.lts";
+numeric := import "./numeric-literals";
 tb := import "util/text-builder";
 
 /** Formats a checked Int value as a C signed 64-bit literal (`INT64_C`, `INT64_MIN`). */

@@ -59,17 +59,17 @@ const outputDir = join(root, 'dist', 'site');
 
 function coreModuleIdentity(relPath: string): string {
   switch (relPath) {
-    case 'lib/core/io.lts': return 'lite.core.io.v1';
-    case 'lib/core/int.lts': return 'lite.core.int.v1';
-    case 'lib/core/list.lts': return 'lite.core.list.v1';
-    case 'lib/core/map.lts': return 'lite.core.map.v1';
-    case 'lib/core/set.lts': return 'lite.core.set.v1';
-    case 'lib/core/text.lts': return 'lite.core.text.v1';
-    case 'lib/core/file.lts': return 'lite.core.file.v1';
-    case 'lib/core/process.lts': return 'lite.core.process.v1';
-    case 'lib/core/crypto.lts': return 'lite.core.crypto.v1';
-    case 'lib/core/time.lts': return 'lite.core.time.v1';
-    case 'lib/core/unicode.lts': return 'lite.core.unicode.v1';
+    case 'lib/core/io.lt': return 'lite.core.io.v1';
+    case 'lib/core/int.lt': return 'lite.core.int.v1';
+    case 'lib/core/list.lt': return 'lite.core.list.v1';
+    case 'lib/core/map.lt': return 'lite.core.map.v1';
+    case 'lib/core/set.lt': return 'lite.core.set.v1';
+    case 'lib/core/text.lt': return 'lite.core.text.v1';
+    case 'lib/core/file.lt': return 'lite.core.file.v1';
+    case 'lib/core/process.lt': return 'lite.core.process.v1';
+    case 'lib/core/crypto.lt': return 'lite.core.crypto.v1';
+    case 'lib/core/time.lt': return 'lite.core.time.v1';
+    case 'lib/core/unicode.lt': return 'lite.core.unicode.v1';
     default: return '';
   }
 }
@@ -78,7 +78,7 @@ function computeSampleCacheSalt(tsCompiler: CompilerBuild): string {
   const h = createHash('sha256');
   h.update('v1\0');
   h.update(readFileSync(tsCompiler.path));
-  for (const rel of ['lib/extra/canvas.lts', 'lib/extra/board.lts', 'lib/extra/audio.lts', 'lib/extra/pool.lts', 'lib/extra/arena.lts', 'lib/extra/sparse.lts']) {
+  for (const rel of ['lib/extra/canvas.lt', 'lib/extra/board.lt', 'lib/extra/audio.lt', 'lib/extra/pool.lt', 'lib/extra/arena.lt', 'lib/extra/sparse.lt']) {
     const p = resolve(root, rel);
     if (existsSync(p)) { h.update('\0' + rel + '\0'); h.update(readFileSync(p)); }
   }

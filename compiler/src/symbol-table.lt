@@ -1,6 +1,6 @@
 /** Scoped O(1) symbol-table index with undo-stack lexical shadowing and trace-safety invariants. */
 
-ir := import "./frontend-ir.lts";
+ir := import "./frontend-ir";
 
 /** Local alias for `ir.Local`. */
 Local := type ir.Local;

@@ -187,12 +187,12 @@ The corpus uses every source and stream form:
 ### Regression ownership after T00 retirement
 
 The active generated compiler/phase/artifact regressions live in `.test.lts` unit
-suites (`./bin/lite test --unit`, shared helpers in [compiler-test.lts](lite://repo/lib/util/compiler-test.lts)).
+suites (`./bin/lite test --unit`, shared helpers in [compiler-test.lts](lite://repo/lib/util/compiler-test.lt)).
 T00-only interpreter assertions were retired with the handwritten implementation;
 the [test migration ledger](lite://repo/compiler/tests/test-migration.json) records
 their original names and assertion counts.
 
-Compiler/corpus fixture loading and parity live in [corpus.lts](lite://repo/lib/util/corpus.lts).
+Compiler/corpus fixture loading and parity live in [corpus.lts](lite://repo/lib/util/corpus.lt).
 Generated regressions use [recorded process contracts](lite://repo/compiler/tests/contracts/README.md)
 instead of live T00 expectation lookups. Unknown source/input/argument/name
 combinations fail explicitly.

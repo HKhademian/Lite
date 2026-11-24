@@ -630,7 +630,7 @@ compiler adopts them without changing the 50 program / 42 rejection baseline.
 
 ## Lite-written lexer checkpoint, 2026-11-01
 
-P3 adds [`compiler/src/lexer.lts`](lite://repo/compiler/src/lexer.lts) and the
+P3 adds [`compiler/src/lexer.lts`](lite://repo/compiler/src/lexer.lt) and the
 token-dump helper [`compiler/tests/lexer/lexer-dump.lts`](lite://repo/compiler/tests/lexer/lexer-dump.lts).
 It emits name, keyword, Int, String, Bool, symbol and EOF tokens with offset,
 line and column; skips nested and raw comments; decodes the selected string
@@ -662,7 +662,7 @@ single-expression blocks. Current artifacts and diagnostics are unchanged. See
 
 ## Lite checker foundation, 2026-11-01
 
-P5 completes the Lite checker in [`compiler/src/check.lts`](lite://repo/compiler/src/check.lts).
+P5 completes the Lite checker in [`compiler/src/check.lts`](lite://repo/compiler/src/check.lt).
 It collects source-order symbols and signatures; validates type names, aliases and
 cycles; and checks scopes, local/assignment/initializer types, Bool conditions,
 arity, arguments, returns, tuple/list/field/index types, mutation grants and

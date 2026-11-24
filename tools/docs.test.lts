@@ -242,7 +242,7 @@ test.check("write brand name", fs.writeText(path.join(dir5, "brand/name.md"), "#
 test.check("write brand inv", fs.writeText(path.join(dir5, "brand/investigation/README.md"), "# Investigation\n").ok);
 test.check("write svg", fs.writeText(path.join(dir5, "brand/lite-wordmark.svg"), "<svg/>").ok);
 test.check("write node-version", fs.writeText(path.join(dir5, "igniter/.node-version"), "22.0.0\n").ok);
-test.check("write io.lts", fs.writeText(path.join(dir5, "lib/core/io.lts"), "pub outputLine := fn(x: String): Unit {};\n").ok);
+test.check("write io.lt", fs.writeText(path.join(dir5, "lib/core/io.lt"), "pub outputLine := fn(x: String): Unit {};\n").ok);
 test.check(
 "write learn catalog",
 fs.writeText(path.join(dir5, "language/learn/catalog.json"), "{\"tracks\":[{\"id\":\"getting-started\",\"lessons\":[{\"id\":\"learn.gs.hello\",\"slug\":\"hello-lite\"}]}]}").ok

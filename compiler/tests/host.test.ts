@@ -202,8 +202,8 @@ test('TS host rebuilds the Lite source graph and preserves output, diagnostics a
   const built = buildTsCompiler();
   assert.equal(built.builderSha256, seed.artifactSha256);
   assert.equal(built.artifactSha256, seed.artifactSha256);
-  assert.ok(built.dependencies.includes('compiler/src/frontend.lts'));
-  assert.ok(built.dependencies.includes('lib/core/text.lts'));
+  assert.ok(built.dependencies.includes('compiler/src/frontend.lt'));
+  assert.ok(built.dependencies.includes('lib/core/text.lt'));
   const reference = readFileSync(join(root, 'compiler/tests/references/generated/report-42.ts'));
   for (const name of [undefined, '', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
     const input = name === undefined ? { text: 'io := import "core/io"; io.outputLine(42);' } : { text: 'io := import "core/io"; io.outputLine(42);', name };
@@ -283,11 +283,11 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
 test('selected compiler build exposes its imported source dependencies', () => {
   const selected = buildCompiler('ts');
   assert.deepEqual(selected.dependencies.slice(0, 4), [
-    'compiler/src/ts-root.lts', 'lib/core/int.lts', 'lib/core/text.lts', 'compiler/src/driver-ts.lts',
+    'compiler/src/ts-root.lts', 'lib/core/int.lt', 'lib/core/text.lt', 'compiler/src/driver-ts.lt',
   ]);
-  assert.ok(selected.dependencies.includes('compiler/src/frontend.lts'));
-  assert.ok(selected.dependencies.includes('compiler/src/host-fs.lts'));
-  assert.ok(selected.dependencies.includes('compiler/src/numeric-literals.lts'));
+  assert.ok(selected.dependencies.includes('compiler/src/frontend.lt'));
+  assert.ok(selected.dependencies.includes('compiler/src/host-fs.lt'));
+  assert.ok(selected.dependencies.includes('compiler/src/numeric-literals.lt'));
 });
 
 test('the unchanged selected TS source graph uses its verified seed without a local TypeScript install', () => {
@@ -322,7 +322,7 @@ test('the graph-built TS-hosted C emitter preserves source names and subset reje
   assert.notEqual(selected.artifactSha256, seed.artifactSha256);
   assert.equal(selected.builderSha256, seed.artifactSha256);
   assert.equal(selected.dependencies[0], 'compiler/src/c-root.lts');
-  assert.ok(selected.dependencies.includes('compiler/src/emit-c.lts'));
+  assert.ok(selected.dependencies.includes('compiler/src/emit-c.lt'));
   const simpleC = compileTarget('c', { text: 'io := import "core/io"; io.outputLine(42);', name: 'سلام file.lts' });
   assert.deepEqual(simpleC, {
     status: 0, stdout: readFileSync(join(root, 'compiler/tests/references/generated/report-42.c')), stderr: Buffer.alloc(0),
@@ -380,11 +380,11 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const provenance = JSON.parse(readFileSync(join(cache, entries()[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
     assert.deepEqual(provenance.dependencies, [
       'compiler/src/fixture-root.lts',
-      'lib/core/int.lts',
-      'lib/core/text.lts',
+      'lib/core/int.lt',
+      'lib/core/text.lt',
       'compiler/src/fixture-c.lts',
-      'lib/core/io.lts',
-      'lib/core/unicode.lts',
+      'lib/core/io.lt',
+      'lib/core/unicode.lt',
     ]);
     writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed nested C");');
     const changed = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
@@ -407,10 +407,10 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     assert.equal(afterRemoval.length, 4);
     const expectedRemovedDeps = [
       'compiler/src/fixture-root.lts',
-      'lib/core/int.lts',
-      'lib/core/text.lts',
-      'lib/core/io.lts',
-      'lib/core/unicode.lts',
+      'lib/core/int.lt',
+      'lib/core/text.lt',
+      'lib/core/io.lt',
+      'lib/core/unicode.lt',
     ];
     const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })
       .find(item => item.dependencies.length === expectedRemovedDeps.length && expectedRemovedDeps.every((dep, idx) => item.dependencies[idx] === dep));
@@ -442,8 +442,8 @@ test('default verifier selects consumers after compiler changes and ignores inve
     const git = join(directory, 'git');
     const changedEnv = { ...env, PATH: directory + delimiter + env.PATH };
     // Supply a changed-file listing without editing compiler source or the real Git index.
-    for (const path of ['lib/util/compiler-build.lts', 'compiler/src/c-literals.lts', 'compiler/src/frontend.lts',
-      'compiler/manifests/c.json', 'lib/core/int.lts']) {
+    for (const path of ['lib/util/compiler-build.lt', 'compiler/src/c-literals.lt', 'compiler/src/frontend.lt',
+      'compiler/manifests/c.json', 'lib/core/int.lt']) {
       writeFileSync(git, `#!/bin/sh\nprintf '%s\\n' ' M ${path}'\n`);
       chmodSync(git, 0o755);
       const result = spawnSync(join(root, 'bin/lite'), ['verify', '--no-cache', '--filter', 'features/numeric/integers/signed-arithmetic.json'], {

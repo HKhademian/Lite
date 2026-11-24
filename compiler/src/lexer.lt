@@ -3,7 +3,7 @@
 sourceLib := import "core/source";
 diag := import "core/diag";
 format := import "core/format";
-numeric := import "./numeric-literals.lts";
+numeric := import "./numeric-literals";
 io := import "core/io";
 tb := import "util/text-builder";
 

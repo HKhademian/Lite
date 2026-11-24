@@ -1,3 +1,3 @@
-driver := import "./driver-c.lts";
+driver := import "./driver-c";
 io := import "core/io";
 driver.run(io.inputArgs());

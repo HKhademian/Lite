@@ -3,7 +3,7 @@
 text := import "core/text";
 lru := import "extra/lru";
 json := import "util/json";
-siteTools := import "./tools.lts";
+siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
 learnMetaCache := lru.createText(1024);

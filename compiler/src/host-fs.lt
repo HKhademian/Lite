@@ -8,8 +8,8 @@ path := import "core/path";
 textLib := import "core/text";
 unicode := import "core/unicode";
 tb := import "util/text-builder";
-frontend := import "./frontend.lts";
-optCfg := import "./opt-config.lts";
+frontend := import "./frontend";
+optCfg := import "./opt-config";
 
 /** Parses I/O and trace CLI flags and positional file target for TS and C compiler drivers without reading `io.inputArgs()`. */
 pub parseCompilerFlags := fn(rawArgs: List<String>): (

@@ -244,7 +244,7 @@
         "In-place mutation (`mut items`) is rejected unless `items` was declared with `mut List<Int>`.",
         "Change `items: List<Int> = [a];` to `items: mut List<Int> = [a];`."
       ],
-      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "lib/core/list.lts"],
+      "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "lib/core/list.lt"],
       "relatedLessons": ["learn.types.collections.arrays-and-lists"],
       "visibleCases": [
         { "name": "pair", "stdin": "4 9\n", "args": [], "expectedStdout": "4,9\n" },
@@ -524,7 +524,7 @@
         "Leading/trailing spaces or tabs count toward `text.length(line)` unless trimmed first.",
         "Call `cleaned := text.trim(raw);` before reading `text.length(cleaned)` and `text.at(cleaned, ...)`."
       ],
-      "relatedDocs": ["lib/core/text.lts", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedDocs": ["lib/core/text.lt", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
       "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],
       "visibleCases": [
         { "name": "padded-word", "stdin": "  LiteLang\t \n", "args": [], "expectedStdout": "8 L g\n" },
@@ -552,7 +552,7 @@
         "Left-aligning text pads spaces on the right (`padRightText`); right-aligning numbers pads spaces on the left (`padLeftText`).",
         "Swap `padLeftText` and `padRightText` in `row`."
       ],
-      "relatedDocs": ["lib/core/format.lts", "language/learn/handbook/modules/imports-visibility-and-io.md"],
+      "relatedDocs": ["lib/core/format.lt", "language/learn/handbook/modules/imports-visibility-and-io.md"],
       "relatedLessons": ["learn.tutorials.cli.text-manifest-digest"],
       "visibleCases": [
         { "name": "latency", "stdin": "latency\n42\n", "args": [], "expectedStdout": "latency    :     42\n" },
@@ -580,7 +580,7 @@
         "Non-ASCII code points take 2–4 UTF-8 bytes even though they have scalar length 1.",
         "Import `core/unicode` and compute `unicode.utf8Encode(s).length()`."
       ],
-      "relatedDocs": ["lib/core/unicode.lts", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedDocs": ["lib/core/unicode.lt", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
       "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],
       "visibleCases": [
         { "name": "ascii", "stdin": "Lite\n", "args": [], "expectedStdout": "scalars:4 utf8Bytes:4\n" },
@@ -985,7 +985,7 @@
         "Convert text to scalar code points via `unicode.toCodePoints(line)`.",
         "Because `:% 26` always produces `0..25`, negative shifts like `-3` wrap cleanly: `65 + ((cp - 65 + (shift :% 26)) :% 26)`."
       ],
-      "relatedDocs": ["lib/core/unicode.lts", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedDocs": ["lib/core/unicode.lt", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
       "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],
       "visibleCases": [
         { "name": "forward-3", "stdin": "Hello, Lite-2026!\n3\n", "args": [], "expectedStdout": "Khoor, Olwh-2026!\n" },
@@ -1014,7 +1014,7 @@
         "Handle empty strings early (`n == 0`).",
         "Track `var cur := text.at(line, 0)` and `var run := 1;`, flushing `cur + integer.intText(run)` whenever the character changes and once after the loop."
       ],
-      "relatedDocs": ["lib/core/text.lts"],
+      "relatedDocs": ["lib/core/text.lt"],
       "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],
       "visibleCases": [
         { "name": "runs", "stdin": "aaabbc\n", "args": [], "expectedStdout": "a3b2c1\n" },
@@ -1044,7 +1044,7 @@
         "Counting depth alone fails on crossed pairs like `\"([)]\"`.",
         "Push opening brackets onto a `stack: mut List<String>` and verify `matchingClose(list.popBack(mut stack)) == ch` on every closing bracket."
       ],
-      "relatedDocs": ["lib/core/list.lts", "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedDocs": ["lib/core/list.lt", "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
       "relatedLessons": ["learn.types.collections.arrays-and-lists"],
       "visibleCases": [
         { "name": "nested-valid", "stdin": "{a[0](1+2)}\n", "args": [], "expectedStdout": "balanced\n" },
@@ -1073,7 +1073,7 @@
         "Notice pop order matters for `-` and `/`: the first popped item is `right`, the second is `left`!",
         "Validate stack depth `>= 2` before popping, `right =!= 0` before dividing, and final depth `== 1`."
       ],
-      "relatedDocs": ["lib/core/text.lts", "lib/core/list.lts"],
+      "relatedDocs": ["lib/core/text.lt", "lib/core/list.lt"],
       "relatedLessons": ["learn.tutorials.parsing.expression-evaluator"],
       "visibleCases": [
         { "name": "basic", "stdin": "3 4 + 2 *\n", "args": [], "expectedStdout": "14\n" },
@@ -1131,7 +1131,7 @@
         "Scan tokens made of `text.isNameContinue(ch)` and normalize each token with `text.toLowerAscii`.",
         "Track counts in parallel `words` / `counts` lists and insertion-sort by descending `count` then alphabetical tiebreak."
       ],
-      "relatedDocs": ["lib/core/text.lts", "lib/core/list.lts"],
+      "relatedDocs": ["lib/core/text.lt", "lib/core/list.lt"],
       "relatedLessons": ["learn.tutorials.cli.text-manifest-digest"],
       "visibleCases": [
         { "name": "basic", "stdin": "Lite is light, lite and clear!\n", "args": [], "expectedStdout": "lite: 2\nand: 1\nclear: 1\nis: 1\nlight: 1\n" },
@@ -1219,7 +1219,7 @@
         "Use `list.listIndexOfText(keys, fullKey)` to overwrite an existing key cleanly instead of appending duplicates.",
         "Trim around `section` in `[section]` as well as around `=` in `key = value`."
       ],
-      "relatedDocs": ["lib/core/text.lts", "lib/core/list.lts"],
+      "relatedDocs": ["lib/core/text.lt", "lib/core/list.lt"],
       "relatedLessons": ["learn.tutorials.cli.text-manifest-digest"],
       "visibleCases": [
         { "name": "sections-and-override", "stdin": "; comment\nport = 8080\n[db]\nhost = localhost\nhost = db.internal\nQUERY port\nQUERY db.host\nQUERY db.missing\n", "args": [], "expectedStdout": "8080\ndb.internal\nMISSING\n" },
@@ -1306,7 +1306,7 @@
         "Maintain parallel `keys` and `vals` lists with index `0` as most-recently-used.",
         "Both `GET` (hit) and `SET` (update) must shift the accessed entry to index `0`; inserting when full pops from the back."
       ],
-      "relatedDocs": ["lib/core/list.lts", "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
+      "relatedDocs": ["lib/core/list.lt", "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
       "relatedLessons": ["learn.types.collections.arrays-and-lists"],
       "visibleCases": [
         { "name": "evict-lru", "stdin": "2\nSET a 1\nSET b 2\nGET a\nSET c 3\nGET b\nGET c\n", "args": [], "expectedStdout": "1\nMISS\n3\nORDER:c,a\n" },
@@ -1335,7 +1335,7 @@
         "Store the last `*` position (`starP`) and string position (`matchS`) so mismatches backtrack greedily without exponential blowup.",
         "After the candidate string ends, skip any trailing `*` characters in the pattern."
       ],
-      "relatedDocs": ["lib/core/text.lts", "language/learn/handbook/control/conditionals-match-and-loops.md"],
+      "relatedDocs": ["lib/core/text.lt", "language/learn/handbook/control/conditionals-match-and-loops.md"],
       "relatedLessons": ["learn.control.loops.loops-and-completion"],
       "visibleCases": [
         { "name": "stars-and-q", "stdin": "a*b?c\nabxc\na123bZc\nabc\nab*c\n", "args": [], "expectedStdout": "MATCH\nMATCH\nNO\nMATCH\n" },

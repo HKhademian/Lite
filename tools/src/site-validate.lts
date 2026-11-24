@@ -2,7 +2,7 @@
 
 cli := import "util/cli";
 io := import "core/io";
-siteValidate := import "../../site/src/validate.lts";
+siteValidate := import "../../site/src/validate";
 
 run := fn(rawArgs: List<String>): Unit {
     args := cli.stripLeadingSeparator(rawArgs);

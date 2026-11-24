@@ -1,7 +1,7 @@
 /** CLI entrypoint generating `/learn/` section pages, payloads, and search entries JSON (`site/learn-pages.ts`). */
 
 io := import "core/io";
-siteLearn := import "../../site/src/learn.lts";
+siteLearn := import "../../site/src/learn";
 
 run := fn(): Unit {
     stdinRes := io.readAllText(io.stdinReader());

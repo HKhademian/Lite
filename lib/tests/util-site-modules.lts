@@ -1,4 +1,4 @@
-siteMods := import "../../site/src/modules.lts";
+siteMods := import "../../site/src/modules";
 fs := import "core/file";
 json := import "util/json";
 path := import "core/path";
@@ -15,7 +15,7 @@ inputJson := "{"
     + ",\"repoUrl\":\"https://github.com/example/lite\""
     + ",\"samples\":[{\"id\":\"demo\",\"title\":\"Demo\",\"file\":\"samples/demo.lts\",\"badge\":\"showcase\"}]"
     + ",\"modules\":[{"
-    + "\"id\":\"core/io\",\"namespace\":\"core\",\"name\":\"io\",\"file\":\"lib/core/io.lts\",\"environment\":\"universal\",\"summary\":\"Input `and` output.\","
+    + "\"id\":\"core/io\",\"namespace\":\"core\",\"name\":\"io\",\"file\":\"lib/core/io.lt\",\"environment\":\"universal\",\"summary\":\"Input `and` output.\","
     + "\"importHtml\":\"<span>import</span>\","
     + "\"symbols\":[{\"kind\":\"fn\",\"name\":\"outputLine\",\"signature\":\"pub outputLine := fn(x: String): Unit\",\"signatureHtml\":\"<code>outputLine</code>\",\"isHostDeclaration\":true,\"doc\":\"Print `line`.\",\"line\":42}]"
     + "}]"

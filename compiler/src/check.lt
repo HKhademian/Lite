@@ -1,8 +1,8 @@
 /* Lite-written checker foundation. */
 
-lexer := import "./lexer.lts";
-parser := import "./parser.lts";
-numeric := import "./numeric-literals.lts";
+lexer := import "./lexer";
+parser := import "./parser";
+numeric := import "./numeric-literals";
 diag := import "core/diag";
 format := import "core/format";
 io := import "core/io";

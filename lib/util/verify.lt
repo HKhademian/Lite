@@ -635,11 +635,11 @@ computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool
     "igniter/package-lock.json",
     "tools/src/ignite.lts",
     "tools/src/verify.lts",
-    "lib/util/verify.lts",
-    "lib/util/cases.lts",
-    "lib/util/streams.lts",
-    "lib/util/json.lts",
-    "lib/util/compiler-build.lts",
+    "lib/util/verify.lt",
+    "lib/util/cases.lt",
+    "lib/util/streams.lt",
+    "lib/util/json.lt",
+    "lib/util/compiler-build.lt",
     "tools/src/compiler-build.lts",
     "compiler/bootstrap/igniter.ts",
     "compiler/bootstrap/seed.ts"
@@ -768,14 +768,14 @@ invalidatesVerification := fn(relPath: String): Bool {
     "igniter/package-lock.json",
     "language/verifications/features.json",
     "language/verifications/schema/verification.schema.json",
-    "lib/util/compiler-build.lts",
+    "lib/util/compiler-build.lt",
     "tools/src/compiler-build.lts",
     "tools/src/ignite.lts",
     "tools/src/verify.lts",
-    "lib/util/verify.lts",
-    "lib/util/cases.lts",
-    "lib/util/streams.lts",
-    "lib/util/json.lts"
+    "lib/util/verify.lt",
+    "lib/util/cases.lt",
+    "lib/util/streams.lt",
+    "lib/util/json.lt"
     ];
     if list.listContainsText(exact, relPath) { return true; }
     prefixes: List<String> = [

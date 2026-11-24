@@ -25,7 +25,7 @@ validAll := json.validate(allJson);
 test.checkBool("all modules json valid", true, validAll.ok);
 test.checkBool("includes core/io", true, allJson.contains("\"id\":\"core/io\""));
 test.checkBool("includes core/text", true, allJson.contains("\"id\":\"core/text\""));
-test.checkBool("includes extra/canvas", true, allJson.contains("\"id\":\"extra/canvas\",\"namespace\":\"extra\",\"name\":\"canvas\",\"file\":\"lib/extra/canvas.lts\",\"environment\":\"play\""));
-test.checkBool("core/file is cli", true, allJson.contains("\"id\":\"core/file\",\"namespace\":\"core\",\"name\":\"file\",\"file\":\"lib/core/file.lts\",\"environment\":\"cli\""));
+test.checkBool("includes extra/canvas", true, allJson.contains("\"id\":\"extra/canvas\",\"namespace\":\"extra\",\"name\":\"canvas\",\"file\":\"lib/extra/canvas.lt\",\"environment\":\"play\""));
+test.checkBool("core/file is cli", true, allJson.contains("\"id\":\"core/file\",\"namespace\":\"core\",\"name\":\"file\",\"file\":\"lib/core/file.lt\",\"environment\":\"cli\""));
 
 test.done("util-docgen");

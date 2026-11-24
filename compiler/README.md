@@ -42,7 +42,7 @@ and sample, and source-file coverage. It includes exact-source boundary probes
 and a reproducible audit script; it is an inventory, not a priority list or a new
 language decision.
 
-[`compiler-build.lts`](lite://repo/lib/util/compiler-build.lts) checks the one seed's SHA-256 and reads only each manifest's
+[`compiler-build.lts`](lite://repo/lib/util/compiler-build.lt) checks the one seed's SHA-256 and reads only each manifest's
 root source. The generated Lite import visitor discovers and opens dependencies;
 its trace supplies source hashes and import edges for cache validation. Changed
 graphs are compiled by the selected seed and strictly typechecked before
@@ -103,7 +103,7 @@ status and the manifest schema are recorded in:
   current emitted-artifact hashes for all 69 program cases; the P0 hashes remain
   in `tests/references/generated/baseline-artifacts.json`.
 
-`lite-compile-ts` selects the generated TS compiler via [`compiler-build.lts`](lite://repo/lib/util/compiler-build.lts) and invokes it directly; Lite reads imported source units via `core/file` in [`src/host-fs.lts`](lite://repo/compiler/src/host-fs.lts). The handwritten interpreter, source bridge, and bundle CLI are retired. P2 adds the provisional
+`lite-compile-ts` selects the generated TS compiler via [`compiler-build.lts`](lite://repo/lib/util/compiler-build.lt) and invokes it directly; Lite reads imported source units via `core/file` in [`src/host-fs.lts`](lite://repo/compiler/src/host-fs.lt). The handwritten interpreter, source bridge, and bundle CLI are retired. P2 adds the provisional
 L0 helpers under [`../lib/core/`](lite://repo/lib/README.md): checked Int, text, source
 positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
 P4 the parser under `src/`; `runtime/ts/` contains the P6 runtime support.
@@ -181,21 +181,21 @@ enabled. See the [completion assessment and evidence](lite://doc/compiler/parity
 | [`baseline.md`](lite://doc/compiler/baseline) | P0 baseline counts, source hashes, reference artifacts and test evidence |
 | [`parity.md`](lite://doc/compiler/parity) | Stage-0 versus generated-compiler burndown and difference log |
 | [`manifests/`](lite://doc/compiler/manifests-readme) | Manifest schema, line-map contract and current TS/C manifests; P1 loader and driver implemented |
-| [`src/numeric-literals.lts`](lite://repo/compiler/src/numeric-literals.lts) | Shared Int/Float token scanning and finite Float literal checks |
-| [`src/frontend.lts`](lite://repo/compiler/src/frontend.lts) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
-| [`src/ts-literals.lts`](lite://repo/compiler/src/ts-literals.lts) | TypeScript literal encoding |
-| [`src/emit-ts.lts`](lite://repo/compiler/src/emit-ts.lts) | TypeScript report formatting and program emission |
-| [`src/driver-ts.lts`](lite://repo/compiler/src/driver-ts.lts) | TypeScript driver entry |
-| [`src/c-literals.lts`](lite://repo/compiler/src/c-literals.lts) | C literal encoding |
-| [`src/emit-c.lts`](lite://repo/compiler/src/emit-c.lts) | C `printf` report formatting and program emission |
-| [`src/driver-c.lts`](lite://repo/compiler/src/driver-c.lts) | C driver entry |
-| [`src/lexer.lts`](lite://repo/compiler/src/lexer.lts) | P3 Lite-written lexer |
-| [`src/parser.lts`](lite://repo/compiler/src/parser.lts) | P4 parser: types, declarations, expressions, statements and functions |
-| [`src/check.lts`](lite://repo/compiler/src/check.lts) | P5 checker: symbols, scopes, types, arity, conditions and mutation grants |
+| [`src/numeric-literals.lts`](lite://repo/compiler/src/numeric-literals.lt) | Shared Int/Float token scanning and finite Float literal checks |
+| [`src/frontend.lts`](lite://repo/compiler/src/frontend.lt) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
+| [`src/ts-literals.lts`](lite://repo/compiler/src/ts-literals.lt) | TypeScript literal encoding |
+| [`src/emit-ts.lts`](lite://repo/compiler/src/emit-ts.lt) | TypeScript report formatting and program emission |
+| [`src/driver-ts.lts`](lite://repo/compiler/src/driver-ts.lt) | TypeScript driver entry |
+| [`src/c-literals.lts`](lite://repo/compiler/src/c-literals.lt) | C literal encoding |
+| [`src/emit-c.lts`](lite://repo/compiler/src/emit-c.lt) | C `printf` report formatting and program emission |
+| [`src/driver-c.lts`](lite://repo/compiler/src/driver-c.lt) | C driver entry |
+| [`src/lexer.lts`](lite://repo/compiler/src/lexer.lt) | P3 Lite-written lexer |
+| [`src/parser.lts`](lite://repo/compiler/src/parser.lt) | P4 parser: types, declarations, expressions, statements and functions |
+| [`src/check.lts`](lite://repo/compiler/src/check.lt) | P5 checker: symbols, scopes, types, arity, conditions and mutation grants |
 | [`tests/lexer/`](lite://repo/compiler/tests/lexer) | Focused lexer fixtures, dump driver and expected tokens |
 | [`tests/parser/`](lite://repo/compiler/tests/parser) | Focused parser fixtures, dump drivers and expected nodes |
 | [`tests/checker/`](lite://repo/compiler/tests/checker) | Checker fixtures, dump driver and expected symbols |
-| [`src/emit-ts.lts`](lite://repo/compiler/src/emit-ts.lts) | Self-contained TS emitter and inline Int64/text/list/host runtime helpers |
+| [`src/emit-ts.lts`](lite://repo/compiler/src/emit-ts.lt) | Self-contained TS emitter and inline Int64/text/list/host runtime helpers |
 | [`tests/references/generated/report-42.ts`](lite://repo/compiler/tests/references/generated/report-42.ts) | Checked-in TS reference for `outputLine(42);` |
 | [`tests/references/generated/report-42.c`](lite://repo/compiler/tests/references/generated/report-42.c) | Checked-in C reference for `outputLine(42);` |
 | [`tests/references/generated/run-report.ts`](lite://repo/compiler/tests/references/generated/run-report.ts) | Visible Node adapter for the TS reference |

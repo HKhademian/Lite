@@ -1,7 +1,7 @@
-tsLiteral := import "./ts-literals.lts";
-emitFmt := import "./emit-format.lts";
-optCfg := import "./opt-config.lts";
-frontend := import "./frontend.lts";
+tsLiteral := import "./ts-literals";
+emitFmt := import "./emit-format";
+optCfg := import "./opt-config";
+frontend := import "./frontend";
 io := import "core/io";
 
 var tsOutUseWriter := false;

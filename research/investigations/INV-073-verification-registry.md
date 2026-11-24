@@ -51,7 +51,7 @@ adding `report` calls to the lesson body.
 
 ## Runner
 
-[`lib/util/verify.lts`](../../lib/util/verify.lts) (migrated from `igniter/verify.ts`) is exposed as `./bin/lite verify`:
+[`lib/util/verify.lts`](../../lib/util/verify.lt) (migrated from `igniter/verify.ts`) is exposed as `./bin/lite verify`:
 
 - default: run cases affected by the current git status through the reference
   igniter, verify source/stream hashes, compare exact streams and exit codes, and

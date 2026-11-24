@@ -11,12 +11,12 @@ pool := import "external/pool";
 cases := import "util/cases";
 json := import "util/json";
 project := import "util/project";
-driverTs := import "../../compiler/src/driver-ts.lts";
-frontend := import "../../compiler/src/frontend.lts";
-modules := import "../../compiler/src/modules.lts";
-emitter := import "../../compiler/src/emit-ts.lts";
-hostFs := import "../../compiler/src/host-fs.lts";
-optCfg := import "../../compiler/src/opt-config.lts";
+driverTs := import "../../compiler/src/driver-ts";
+frontend := import "../../compiler/src/frontend";
+modules := import "../../compiler/src/modules";
+emitter := import "../../compiler/src/emit-ts";
+hostFs := import "../../compiler/src/host-fs";
+optCfg := import "../../compiler/src/opt-config";
 
 /** Maps a launcher symlink or alias script path to its canonical `tools/src/<name>.lts` tool name, or `""` for direct igniter CLI mode. */
 toolForEntry := fn(rawEntry: String): String {

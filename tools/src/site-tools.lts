@@ -2,7 +2,7 @@
 
 cli := import "util/cli";
 io := import "core/io";
-siteTools := import "../../site/src/tools.lts";
+siteTools := import "../../site/src/tools";
 
 run := fn(rawArgs: List<String>): Unit {
     args := cli.stripLeadingSeparator(rawArgs);

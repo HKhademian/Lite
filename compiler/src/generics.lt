@@ -1,8 +1,8 @@
 /** Generic function template registry, type unification/substitution, and on-demand monomorphization queue. */
 
 textLib := import "core/text";
-ir := import "./frontend-ir.lts";
-types := import "./frontend-types.lts";
+ir := import "./frontend-ir";
+types := import "./frontend-types";
 
 /** Local alias for `ir.Item`. */
 Item := type ir.Item;

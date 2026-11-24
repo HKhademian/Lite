@@ -314,14 +314,14 @@ repaired := runIn(proc.execPath(), [path.join(probeDir, "bin/lite"), "fmt", "--c
 test.checkInt("repaired fmt: " + repaired.stderr, 0, repaired.status);
 test.check("tamper removed", fs.readText(path.join(probeDir, "dist/tools/fmt.ts")).text.indexOf("// tampered", 0) < 0);
 
-cliLibPath := path.join(probeDir, "lib/util/cli.lts");
-test.check("touch cli.lts", fs.writeText(cliLibPath, fs.readText(cliLibPath).text + "\n").ok);
+cliLibPath := path.join(probeDir, "lib/util/cli.lt");
+test.check("touch cli.lt", fs.writeText(cliLibPath, fs.readText(cliLibPath).text + "\n").ok);
 afterDep := runIn(proc.execPath(), [path.join(probeDir, "compiler/bootstrap/igniter.ts"), "--json", "cli", "fmt"], probeDir, 60000);
 test.checkInt("afterDep ignite: " + afterDep.stderr, 0, afterDep.status);
 checkToolsRebuilt("afterDep ignite", afterDep.stdout, true, false);
 
-projLibPath := path.join(probeDir, "lib/util/project.lts");
-test.check("touch project.lts", fs.writeText(projLibPath, fs.readText(projLibPath).text + "\n").ok);
+projLibPath := path.join(probeDir, "lib/util/project.lt");
+test.check("touch project.lt", fs.writeText(projLibPath, fs.readText(projLibPath).text + "\n").ok);
 afterShared := runIn(proc.execPath(), [path.join(probeDir, "compiler/bootstrap/igniter.ts"), "--json", "cli", "fmt"], probeDir, 60000);
 test.checkInt("afterShared ignite: " + afterShared.stderr, 0, afterShared.status);
 checkToolsRebuilt("afterShared ignite", afterShared.stdout, true, true);

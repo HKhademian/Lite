@@ -202,7 +202,7 @@ The manifests are [compiler/manifests/ts.json](lite://repo/compiler/manifests/ts
 the graph and build provenance records the resolved dependency paths. The
 production route enters through [`tools/src/compile-ts.lts`](lite://repo/tools/src/compile-ts.lts).
 
-P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](lite://repo/compiler/src/lexer.lts)
+P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](lite://repo/compiler/src/lexer.lt)
 with a token-dump driver at
 [`../compiler/tests/lexer/lexer-dump.lts`](lite://repo/compiler/tests/lexer/lexer-dump.lts). It tokenizes
 names, keywords, Int/String/Bool values, symbols and EOF; skips whitespace and
@@ -218,13 +218,13 @@ migration](lite://doc/compiler/parity#generated-full-source-test-consumers) and
 [artifact-validation ledger](lite://doc/compiler/parity#batched-ts-artifact-validation).
 
 P4 adds the parser core, type grammar, declarations, expressions, statements and
-functions in [`../compiler/src/parser.lts`](lite://repo/compiler/src/parser.lts). It parses
+functions in [`../compiler/src/parser.lts`](lite://repo/compiler/src/parser.lt). It parses
 expanded S, L0, the lexer source and all program cases; value `if` branches are
 currently single-expression blocks. Compiler source imports now follow Lite
 module aliases; unsupported declarations are rejected by name. Fixtures live under
 [`../compiler/tests/parser/`](lite://repo/compiler/tests/parser).
 
-P5 adds the Lite checker in [`../compiler/src/check.lts`](lite://repo/compiler/src/check.lts).
+P5 adds the Lite checker in [`../compiler/src/check.lts`](lite://repo/compiler/src/check.lt).
 It collects symbols, validates type names and aliases, checks block scopes,
 local and assignment types, Bool conditions, arity/arguments/returns,
 tuple/list/field/index types, mutation grants and break/return placement.
@@ -847,7 +847,7 @@ remain unchanged. This is not proof of the full
 20-lesson or larger-language contract.
 
 Project-level feature and artifact verification is `./bin/lite verify`, backed by
-[lib/util/verify.lts](lite://repo/lib/util/verify.lts) and [language/verifications/](lite://repo/language/verifications/README.md). The
+[lib/util/verify.lts](lite://repo/lib/util/verify.lt) and [language/verifications/](lite://repo/language/verifications/README.md). The
 first slice has 36 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `dist/` directory.
 The default smoke suite is intended for quick local feedback. `--fast` runs the broad
@@ -880,7 +880,7 @@ self-hosted build. See [INV-061 evidence](lite://repo/research/investigations/IN
 The Lite-written compiler now lives in [compiler/](lite://doc/compiler/overview), not
 in the runnable example list. It has one shared front-end and separate TS/C
 emitters connected with Lite namespace imports. Each manifest selects one root;
-the Lite import visitor traverses its graph and [compiler-build.lts](lite://repo/lib/util/compiler-build.lts)
+the Lite import visitor traverses its graph and [compiler-build.lts](lite://repo/lib/util/compiler-build.lt)
 supplies selection and records the exact dependencies. Module namespaces are
 available to compiler source; package resolution remains open.
 

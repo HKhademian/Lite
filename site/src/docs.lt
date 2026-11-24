@@ -7,8 +7,8 @@ text := import "core/text";
 challenges := import "util/challenges";
 json := import "util/json";
 mdHtml := import "util/markdown-html";
-siteLib := import "./library.lts";
-siteTools := import "./tools.lts";
+siteLib := import "./library";
+siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
 

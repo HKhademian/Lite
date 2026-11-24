@@ -1,7 +1,7 @@
 /** Core and external host module ABI tables, soft-builtin signatures, and `--builtin-mode` spec resolution. */
 
 diagLib := import "core/diag";
-ir := import "./frontend-ir.lts";
+ir := import "./frontend-ir";
 
 /** One parsed item entry matching `frontend-ir.Item`. */
 Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);

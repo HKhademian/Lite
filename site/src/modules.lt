@@ -6,7 +6,7 @@ text := import "core/text";
 challenges := import "util/challenges";
 collections := import "util/collections";
 json := import "util/json";
-siteTools := import "./tools.lts";
+siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
 

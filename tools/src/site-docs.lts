@@ -2,7 +2,7 @@
 
 io := import "core/io";
 project := import "util/project";
-siteDocs := import "../../site/src/docs.lts";
+siteDocs := import "../../site/src/docs";
 
 run := fn(rawArgs: List<String>): Unit {
     args: mut List<String> = rawArgs;

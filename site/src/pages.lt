@@ -2,7 +2,7 @@
 
 text := import "core/text";
 json := import "util/json";
-siteTools := import "./tools.lts";
+siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
 

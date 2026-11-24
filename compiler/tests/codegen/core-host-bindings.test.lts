@@ -367,9 +367,9 @@ test.check("unbound realPath", realUnbApp.ok);
 compilerTest.assertCompileErrorContainsNamed(root, tsComp, "unbound relative", appUnbSrc, realUnbApp.path, "bodyless function declaration has no matching core host binding");
 _rmUnbound := fs.remove(tmpUnbound.path);
 
-compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad file abi", "pub kind := fn(path: String): Int;", "lib/core/file.lts", "bodyless function declaration has no matching core host binding");
-compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-ts abi", "pub stripTypes := fn(source: String): String;", "lib/external/ts.lts", "bodyless function declaration has no matching core host binding");
-compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-pool abi", "pub cpuCount := fn(): String;", "lib/external/pool.lts", "bodyless function declaration has no matching core host binding");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad file abi", "pub kind := fn(path: String): Int;", "lib/core/file.lt", "bodyless function declaration has no matching core host binding");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-ts abi", "pub stripTypes := fn(source: String): String;", "lib/external/ts.lt", "bodyless function declaration has no matching core host binding");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-pool abi", "pub cpuCount := fn(): String;", "lib/external/pool.lt", "bodyless function declaration has no matching core host binding");
 
 /* external/ts, external/pool, external/http, external/bench */
 extTsRun := compilerTest.compileCheckRunTs(

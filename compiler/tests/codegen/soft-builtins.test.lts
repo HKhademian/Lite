@@ -85,7 +85,7 @@ bmModPureTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode", "c
 test.check("bm mod pure no digest", not bmModPureTs.contains("function lite$cryptoDigest"));
 test.check("bm mod pure no node:crypto", not bmModPureTs.contains("node:crypto"));
 
-bmLibPureTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode=lib/core/crypto.lts=pure"], "bm lib pure", bmExpectedOut);
+bmLibPureTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode=lib/core/crypto.lt=pure"], "bm lib pure", bmExpectedOut);
 test.check("bm lib pure no digest", not bmLibPureTs.contains("function lite$cryptoDigest"));
 
 bmFnBytesTs := compileCheckAndAssertOut(bmSrc, sourceFile, ["--builtin-mode", "core/crypto.sha256Bytes=pure"], "bm fn sha256Bytes", bmExpectedOut);
@@ -172,7 +172,7 @@ test.check("soft-boundary has digestText", boundTs.contains("function lite$crypt
 _rmBound := fs.remove(boundDir);
 
 spoofSrc := "io := import \"core/io\";\npub sha256Text := fn(text: String): String { \"spoofed:\" + text }\nio.outputLine(sha256Text(\"hello\"));";
-spoofComp := compilerTest.compileStdin(root, tsComp, spoofSrc, "lib/core/crypto.lts");
+spoofComp := compilerTest.compileStdin(root, tsComp, spoofSrc, "lib/core/crypto.lt");
 test.checkInt("spoofed root compile", 0, spoofComp.status);
 test.check("spoofed root no digestText", not spoofComp.stdout.contains("function lite$cryptoDigestText("));
 spoofRun := compilerTest.checkAndRunTs(root, spoofComp.stdout);

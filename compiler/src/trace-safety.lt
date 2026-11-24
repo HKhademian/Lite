@@ -3,10 +3,10 @@
 listLib := import "core/list";
 textLib := import "core/text";
 tb := import "util/text-builder";
-ir := import "./frontend-ir.lts";
-sym := import "./symbol-table.lts";
-syntax := import "./frontend-syntax.lts";
-types := import "./frontend-types.lts";
+ir := import "./frontend-ir";
+sym := import "./symbol-table";
+syntax := import "./frontend-syntax";
+types := import "./frontend-types";
 
 /** One local visible to later statements matching `frontend-ir.Local`. */
 Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);

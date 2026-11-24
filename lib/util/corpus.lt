@@ -190,18 +190,18 @@ selectedCompilerSha256: String, selectedBuilderSha256: String, totalDepBytes: In
 };
 
 MODULE_IDENTITIES: Map<String, String> = [
-"lib/core/io.lts" = "lite.core.io.v1",
-"lib/core/int.lts" = "lite.core.int.v1",
-"lib/core/list.lts" = "lite.core.list.v1",
-"lib/core/map.lts" = "lite.core.map.v1",
-"lib/core/set.lts" = "lite.core.set.v1",
-"lib/core/text.lts" = "lite.core.text.v1",
-"lib/core/file.lts" = "lite.core.file.v1",
-"lib/core/process.lts" = "lite.core.process.v1",
-"lib/core/crypto.lts" = "lite.core.crypto.v1",
-"lib/core/time.lts" = "lite.core.time.v1",
-"lib/core/unicode.lts" = "lite.core.unicode.v1",
-"compiler/src/modules.lts" = "lite.compiler.modules.v1",
+"lib/core/io.lt" = "lite.core.io.v1",
+"lib/core/int.lt" = "lite.core.int.v1",
+"lib/core/list.lt" = "lite.core.list.v1",
+"lib/core/map.lt" = "lite.core.map.v1",
+"lib/core/set.lt" = "lite.core.set.v1",
+"lib/core/text.lt" = "lite.core.text.v1",
+"lib/core/file.lt" = "lite.core.file.v1",
+"lib/core/process.lt" = "lite.core.process.v1",
+"lib/core/crypto.lt" = "lite.core.crypto.v1",
+"lib/core/time.lt" = "lite.core.time.v1",
+"lib/core/unicode.lt" = "lite.core.unicode.v1",
+"compiler/src/modules.lt" = "lite.compiler.modules.v1",
 ];
 
 /** Identifies source bytes matching a shipped core/compiler host module. */
@@ -402,7 +402,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
     }
 
     toolPaths: List<String> = [
-    "compiler/scripts/self-host.ts", "tools/src/self-host.lts", "lib/util/corpus.lts", "lib/util/compiler-build.lts", "igniter/artifacts.ts"
+    "compiler/scripts/self-host.ts", "tools/src/self-host.lts", "lib/util/corpus.lt", "lib/util/compiler-build.lt", "igniter/artifacts.ts"
     ];
     toolsJsonRes := toolIdentitiesJson(rootDir, toolPaths);
     if not toolsJsonRes.ok {
@@ -785,7 +785,7 @@ pub runCorpusParityCommand := fn(rootDir: String, args: List<String>): Int {
     }
 
     toolPaths: List<String> = [
-    "compiler/scripts/corpus-parity.ts", "tools/src/corpus-parity.lts", "lib/util/corpus.lts", "lib/util/compiler-build.lts", "igniter/artifacts.ts"
+    "compiler/scripts/corpus-parity.ts", "tools/src/corpus-parity.lts", "lib/util/corpus.lt", "lib/util/compiler-build.lt", "igniter/artifacts.ts"
     ];
     toolsJsonRes := toolIdentitiesJson(rootDir, toolPaths);
     if not toolsJsonRes.ok {

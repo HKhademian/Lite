@@ -149,7 +149,7 @@ loop unqualifiedCases as uSrc {
 compilerTest.assertCompileErrorContains(root, tsComp, "unaliased host import", "import \"core/io\"; inputArgs();", "import requires a module alias");
 
 /* core list mutations preserve element and mutability checks */
-listSrc := fs.readText(path.join(root, "lib/core/list.lts")).text;
+listSrc := fs.readText(path.join(root, "lib/core/list.lt")).text;
 test.check("core/list pushBack signature", listSrc.contains("pub List.pushBack := fn<T>(values: mut Self<T>, value: T): Unit;"));
 test.check("core/list popBack signature", listSrc.contains("pub List.popBack := fn<T>(values: mut Self<T>): T;"));
 test.check("core/list not variadic", not listSrc.contains("pub List.pushBack := fn(..."));

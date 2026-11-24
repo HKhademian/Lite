@@ -1,9 +1,9 @@
 diagLib := import "core/diag";
 collections := import "util/collections";
 tb := import "util/text-builder";
-frontend := import "./frontend.lts";
-generics := import "./generics.lts";
-hostFs := import "./host-fs.lts";
+frontend := import "./frontend";
+generics := import "./generics";
+hostFs := import "./host-fs";
 /* Initial source graph traversal for the generated TypeScript compiler. */
 
 /** True when the graph has entered one canonical source path. */

@@ -1,7 +1,7 @@
 /** CLI entrypoint generating `/gym/` section pages, payloads, and search entries JSON (`site/gym-pages.ts`). */
 
 io := import "core/io";
-siteGym := import "../../site/src/gym.lts";
+siteGym := import "../../site/src/gym";
 
 run := fn(): Unit {
     stdinRes := io.readAllText(io.stdinReader());

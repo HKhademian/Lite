@@ -1,8 +1,8 @@
 /** Shared frontend IR types, constants, scalar predicates, symbol-table helpers, and TS/C literal backend dispatch helpers. */
 
-numeric := import "./numeric-literals.lts";
-tsLiteral := import "./ts-literals.lts";
-cLiteral := import "./c-literals.lts";
+numeric := import "./numeric-literals";
+tsLiteral := import "./ts-literals";
+cLiteral := import "./c-literals";
 
 /** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
 pub Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);

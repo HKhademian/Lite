@@ -46,18 +46,18 @@ test.check("ts deps > 1", tsDeps.length() > 1);
 test.check("c deps > 1", cDeps.length() > 1);
 test.checkText("ts root dep", "compiler/src/ts-root.lts", tsDeps[0]);
 test.checkText("c root dep", "compiler/src/c-root.lts", cDeps[0]);
-test.check("ts deps include frontend", list.listContainsText(tsDeps, "compiler/src/frontend.lts"));
-test.check("c deps include frontend", list.listContainsText(cDeps, "compiler/src/frontend.lts"));
+test.check("ts deps include frontend", list.listContainsText(tsDeps, "compiler/src/frontend.lt"));
+test.check("c deps include frontend", list.listContainsText(cDeps, "compiler/src/frontend.lt"));
 frontendModules: List<String> = [
-    "compiler/src/frontend-ir.lts",
-    "compiler/src/builtins-abi.lts",
-    "compiler/src/frontend-syntax.lts",
-    "compiler/src/frontend-types.lts",
-    "compiler/src/trace-safety.lts",
-    "compiler/src/reachability.lts",
-    "compiler/src/frontend-inference.lts",
-    "compiler/src/frontend-context.lts",
-    "compiler/src/frontend-expr.lts",
+    "compiler/src/frontend-ir.lt",
+    "compiler/src/builtins-abi.lt",
+    "compiler/src/frontend-syntax.lt",
+    "compiler/src/frontend-types.lt",
+    "compiler/src/trace-safety.lt",
+    "compiler/src/reachability.lt",
+    "compiler/src/frontend-inference.lt",
+    "compiler/src/frontend-context.lt",
+    "compiler/src/frontend-expr.lt",
 ];
 loop frontendModules as modPath {
     test.check("ts deps include " + modPath, list.listContainsText(tsDeps, modPath));

@@ -3,11 +3,11 @@
 integer := import "core/int";
 textLib := import "core/text";
 tb := import "util/text-builder";
-ir := import "./frontend-ir.lts";
-optCfg := import "./opt-config.lts";
-syntax := import "./frontend-syntax.lts";
-types := import "./frontend-types.lts";
-trace := import "./trace-safety.lts";
+ir := import "./frontend-ir";
+optCfg := import "./opt-config";
+syntax := import "./frontend-syntax";
+types := import "./frontend-types";
+trace := import "./trace-safety";
 
 /** One parsed item entry matching `frontend-ir.Item`. */
 Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);

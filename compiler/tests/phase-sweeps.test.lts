@@ -42,8 +42,8 @@ if not skipHeavy {
 
     /* Compile all L0 core libs and compiler source deps in parallel via external/pool */
     compileTargets: mut List<String> = [
-    "lib/core/int.lts", "lib/core/text.lts", "lib/core/source.lts",
-    "lib/core/format.lts", "lib/core/diag.lts", "lib/core/list.lts", "lib/core/test.lts",
+    "lib/core/int.lt", "lib/core/text.lt", "lib/core/source.lt",
+    "lib/core/format.lt", "lib/core/diag.lt", "lib/core/list.lt", "lib/core/test.lt",
     ];
     loop tsDeps as d { mut compileTargets.pushBack(d); }
     loop cDeps as d {
@@ -77,9 +77,9 @@ if not skipHeavy {
         compilerTest.assertDriverMatchesContract(root, contracts, lexerRel, lexDrv, "lex sweep " + nm, src, 0);
     }
     lexSrcs: List<String> = [
-    "compiler/src/c-literals.lts", "compiler/src/emit-c.lts", "compiler/src/driver-c.lts",
-    "compiler/src/lexer.lts", "compiler/tests/lexer/lexer-dump.lts",
-    "compiler/src/parser.lts", "compiler/src/check.lts",
+    "compiler/src/c-literals.lt", "compiler/src/emit-c.lt", "compiler/src/driver-c.lt",
+    "compiler/src/lexer.lt", "compiler/tests/lexer/lexer-dump.lts",
+    "compiler/src/parser.lt", "compiler/src/check.lt",
     "compiler/tests/parser/parser-dump.lts", "compiler/tests/parser/parser-decl-dump.lts",
     "compiler/tests/parser/parser-program-dump.lts", "compiler/tests/checker/checker-dump.lts",
     ];

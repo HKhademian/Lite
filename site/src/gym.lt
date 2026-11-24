@@ -4,7 +4,7 @@ text := import "core/text";
 lru := import "extra/lru";
 challenges := import "util/challenges";
 json := import "util/json";
-siteTools := import "./tools.lts";
+siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
 gymMetaCache := lru.createText(1024);

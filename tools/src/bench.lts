@@ -71,7 +71,7 @@ computeToolingHash := fn(rootDir: String): String {
     dirs: List<String> = ["tools/", "tools/src/", "lib/util/", "dist/tools/"];
     loop dirs as prefix {
         dirPath := path.join(rootDir, prefix);
-        ext := if prefix == "tools/src/" or prefix == "lib/util/" { ".lts" } else { ".ts" };
+        ext := if prefix == "tools/src/" { ".lts" } else if prefix == "lib/util/" { ".lt" } else { ".ts" };
         if fs.kind(dirPath) == fs.FILE_KIND_DIR {
             entries := fs.listDir(dirPath);
             loop entries as entry {

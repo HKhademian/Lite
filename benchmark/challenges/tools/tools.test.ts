@@ -52,7 +52,7 @@ test('downloadFile retries rate limits, publishes complete files, reuses cache, 
     });
     const probe = `
       io := import "core/io";
-      cfetch := import "${join(root, 'lib/util/challenge-fetch.lts').replaceAll('\\', '/')}";
+      cfetch := import "${join(root, 'lib/util/challenge-fetch').replaceAll('\\', '/')}";
       r1 := cfetch.downloadFile("${baseUrl}/page", "${pagePath.replaceAll('\\', '/')}", false, 2, 5000, 0, false, true);
       io.outputLine("r1:", r1.ok, r1.skipped);
       r2 := cfetch.downloadFile("${baseUrl}/page", "${pagePath.replaceAll('\\', '/')}", false, 2, 5000, 0, false, true);
@@ -74,7 +74,7 @@ test('downloadFile retries rate limits, publishes complete files, reuses cache, 
     mode = 'notFound';
     const probe404 = `
       io := import "core/io";
-      cfetch := import "${join(root, 'lib/util/challenge-fetch.lts').replaceAll('\\', '/')}";
+      cfetch := import "${join(root, 'lib/util/challenge-fetch').replaceAll('\\', '/')}";
       r := cfetch.downloadFile("${baseUrl}/missing", "${missingPath.replaceAll('\\', '/')}", false, 2, 5000, 0, true, false);
       io.outputLine(r.ok, r.skipped);
     `;
@@ -89,7 +89,7 @@ test('downloadFile retries rate limits, publishes complete files, reuses cache, 
     mode = 'serverError';
     const probe503 = `
       io := import "core/io";
-      cfetch := import "${join(root, 'lib/util/challenge-fetch.lts').replaceAll('\\', '/')}";
+      cfetch := import "${join(root, 'lib/util/challenge-fetch').replaceAll('\\', '/')}";
       r := cfetch.downloadFile("${baseUrl}/failing", "${missingPath.replaceAll('\\', '/')}", false, 1, 5000, 0, false, false);
       io.outputLine(r.ok, r.error);
     `;

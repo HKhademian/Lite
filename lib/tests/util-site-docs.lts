@@ -1,4 +1,4 @@
-siteDocs := import "../../site/src/docs.lts";
+siteDocs := import "../../site/src/docs";
 json := import "util/json";
 project := import "util/project";
 test := import "core/test";
