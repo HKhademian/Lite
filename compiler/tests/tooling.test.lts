@@ -270,7 +270,13 @@ test.checkInt("bench results count", 5, json.arrayElementOffsets(bench4, results
 sbvField := json.findObjectField(bench4, 0, "selfBuildValidation");
 sbvMism := json.findObjectField(bench4, sbvField.valuePos, "mismatches");
 test.checkInt("bench selfBuildValidation mismatches", 0, json.arrayElementOffsets(bench4, sbvMism.valuePos).length());
-test.checkText("bench selfBuildArtifactSha256", seedArtifactSha256, json.readObjectString(bench4, 0, "selfBuildArtifactSha256").value);
+sbSha := json.readObjectString(bench4, 0, "selfBuildArtifactSha256").value;
+test.checkInt("bench selfBuildArtifactSha256 length", 64, sbSha.length());
+sbWorkloadPos := json.arrayElementOffsets(bench4, resultsField.valuePos)[4];
+test.checkText("bench self-build workload name", "self-build", json.readObjectString(bench4, sbWorkloadPos, "workload").value);
+sbRawField := json.findObjectField(bench4, sbWorkloadPos, "raw");
+sbRaw0 := json.arrayElementOffsets(bench4, sbRawField.valuePos)[0];
+test.checkText("bench selfBuildArtifactSha256 matches timed self-build", sbSha, json.readObjectString(bench4, sbRaw0, "stdoutSha256").value);
 test.check("bench .md exists", fs.kind(prefix4 + ".md") == fs.FILE_KIND_FILE);
 
 persistedText := fs.readText(prefix4 + ".json").text;
