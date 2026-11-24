@@ -1,4 +1,4 @@
-name: Component release
+name: Release
 
 on:
   push:
