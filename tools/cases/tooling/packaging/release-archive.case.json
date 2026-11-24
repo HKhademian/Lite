@@ -47,7 +47,7 @@
       "name": "lightweight",
       "args": [
         ".cache/case-release",
-        "igniter-v0.1.0"
+        "igniter-v0.1.1"
       ],
       "stdin": {
         "text": ""
@@ -61,7 +61,7 @@
       "exitCode": 1,
       "workspace": "clean",
       "tag": {
-        "name": "igniter-v0.1.0",
+        "name": "igniter-v0.1.1",
         "annotated": false
       },
       "timeoutMs": 90000

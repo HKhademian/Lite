@@ -6,6 +6,15 @@ milestones have independent streams. Native C packaging is deferred. The entries
 below preserve dated earlier checkpoints and their original counts; they are not
 the current test or support inventory. See [the transition](lite://doc/compiler/transition-plan).
 
+## Dot-operation completion and coordinated release (`lite-v0.1.0`), 2026-11-24
+
+Coordinated umbrella and component release completing the transition to type-attached dot operations (`TypeName.op`) and removing legacy free-function shims:
+
+- **Umbrella release (`0.1.0`)**: `lite-v0.1.0` (`"project": "0.1.0"` in [config/versions.json](lite://repo/config/versions.json)) establishes the baseline Lite umbrella milestone alongside `compiler-v0.2.0` and `builtins-v0.2.0`.
+- **Breaking compiler and builtin releases (`0.2.0`)**: `compiler-v0.2.0` and `builtins-v0.2.0` remove all `#deprecated` free-function shims from `lib/core/{int,list,map,set,text}.lts`, `lib/extra/vector.lts`, and `lib/extra/heap.lts`, remove Category B ambient list operations (`push_back`, `pop_back`, `push_front`, `pop_front` / `VALUE_KIND_LIST_OP`), fix C11 `Never`-typed loop block/return emission in `frontend-expr.lts` and `emit-c.lts`, migrate all compiler sources/tests to dot operations, promote refreshed three-generation fixed-point TypeScript and C11 bootstrap seeds, and refresh all 94 corpus parity expectations.
+- **Migrated igniter and toolchain (`0.1.1`)**: `igniter-v0.1.1`, `cli-v0.1.1`, `formatter-v0.1.1`, `runtime-v0.1.1`, `check-v0.1.1`, `test-v0.1.1`, `verify-v0.1.1`, `bench-v0.1.1`, `release-v0.1.1`, `docs-v0.1.1`, and `doctor-v0.1.1` ship updated LiteLang sources using `TypeName.op` dot operations, aligned release/packaging fixtures, and the refreshed `-O3` TypeScript bootstrap igniter (`compiler/bootstrap/igniter.ts`).
+- **Unchanged streams**: `vscode` remains at `0.2.0` (`vscode-v0.2.0`); `language`, `scripting`, `stdlib`, and `linker` remain `null` in [config/versions.json](lite://repo/config/versions.json).
+
 ## Component release graduation, 2026-11-24
 
 Fourteen active component streams graduate to clean `MAJOR.MINOR.PATCH` releases:
