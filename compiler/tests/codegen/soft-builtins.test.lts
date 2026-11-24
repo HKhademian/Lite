@@ -172,7 +172,7 @@ test.check("soft-boundary has digestText", boundTs.contains("function lite$crypt
 _rmBound := fs.remove(boundDir);
 
 spoofSrc := "io := import \"core/io\";\npub sha256Text := fn(text: String): String { \"spoofed:\" + text }\nio.outputLine(sha256Text(\"hello\"));";
-spoofComp := compilerTest.compileStdin(root, tsComp, spoofSrc, "lib/core/crypto.lt");
+spoofComp := compilerTest.compileStdin(root, tsComp, spoofSrc, "lib/core/crypto.lts");
 test.checkInt("spoofed root compile", 0, spoofComp.status);
 test.check("spoofed root no digestText", not spoofComp.stdout.contains("function lite$cryptoDigestText("));
 spoofRun := compilerTest.checkAndRunTs(root, spoofComp.stdout);

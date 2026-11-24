@@ -354,7 +354,7 @@ export function buildDocsSection(options: Readonly<{
   let builtJson: string | undefined;
   let cacheFile: string | undefined;
   if (process.env['LITE_SITE_NO_CACHE'] !== '1') {
-    const toolSrc = readFileSync(join(rootDir, 'site', 'src', 'docs.lts'), 'utf8');
+    const toolSrc = readFileSync(join(rootDir, 'site', 'src', 'docs.lt'), 'utf8');
     const key = createHash('sha256').update('site-docs-v1\0').update(toolSrc).update('\0').update(toolInput).digest('hex');
     cacheFile = join(rootDir, 'dist', 'cache', 'site-docs', `${key}.json`);
     if (existsSync(cacheFile)) {

@@ -376,10 +376,10 @@ export function buildSite(options?: BuildSiteOptions): void {
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
   for (const ns of ['core', 'extra'] as const) {
     const libDir = join(root, 'lib', ns);
-    for (const name of readdirSync(libDir).filter(f => f.endsWith('.lts')).sort()) {
+    for (const name of readdirSync(libDir).filter(f => f.endsWith('.lt')).sort()) {
       const relPath = `lib/${ns}/${name}`;
       const text = readFileSync(join(libDir, name), 'utf8');
-      const modName = `${ns}/${name.slice(0, -4)}`;
+      const modName = `${ns}/${name.slice(0, -3)}`;
       stdlib[modName] = { path: relPath, display: relPath, identity: coreModuleIdentity(relPath), text };
     }
   }

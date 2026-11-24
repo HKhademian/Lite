@@ -312,6 +312,7 @@ export class LiteAcademyGraph {
     const { ns, target, fragment } = parsed;
     const cleanHtml = stripOneSuffix(target, '.html');
     const cleanMd = stripOneSuffix(cleanHtml, '.md');
+    const cleanLt = stripOneSuffix(cleanHtml, '.lt');
     const cleanLts = stripOneSuffix(cleanHtml, '.lts');
 
     if (ns === 'tool' && cleanHtml === '' && fragment !== '') {
@@ -323,6 +324,7 @@ export class LiteAcademyGraph {
       `lite://${ns}/${target}`,
       `lite://${ns}/${cleanHtml}`,
       `lite://${ns}/${cleanMd}`,
+      `lite://${ns}/${cleanLt}`,
       `lite://${ns}/${cleanLts}`,
     ];
     if (target === '' || cleanHtml === 'index') {

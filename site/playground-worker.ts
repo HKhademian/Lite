@@ -109,9 +109,10 @@ function buildPlaygroundVfs(stdlib, extraModules, sourceText) {
       if (!entry || typeof entry.text !== 'string') continue;
       if (entry.path) addFile(entry.path, entry.text);
       if (spec.startsWith('./') || spec.startsWith('../')) {
-        addFile('/project/' + spec.replace(/^\\.+\\/+/, '').replace(/(?:\\.lts)?$/, '.lts'), entry.text);
+        const cleanRel = spec.replace(/^\\.+\\/+/, '');
+        addFile('/project/' + (cleanRel.endsWith('.lts') ? cleanRel : cleanRel.replace(/(?:\\.lt)?$/, '.lt')), entry.text);
       } else if (!spec.startsWith('/')) {
-        addFile('/project/lib/' + spec.replace(/(?:\\.lts)?$/, '.lts'), entry.text);
+        addFile('/project/lib/' + (spec.endsWith('.lts') ? spec : spec.replace(/(?:\\.lt)?$/, '.lt')), entry.text);
       }
     }
   }

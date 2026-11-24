@@ -38,8 +38,8 @@ function relativeHref(fromOutPath: string, toOutPath: string): string {
 }
 
 function extractHeadingLabel(docPath: string): string {
-  if (docPath.startsWith('lib/') && docPath.endsWith('.lts')) {
-    return `Module: ${docPath.slice(4, -4)}`;
+  if (docPath.startsWith('lib/') && docPath.endsWith('.lt')) {
+    return `Module: ${docPath.slice(4, -3)}`;
   }
   const abs = join(rootDir, docPath);
   if (existsSync(abs) && docPath.endsWith('.md')) {
