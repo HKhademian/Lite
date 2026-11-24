@@ -830,9 +830,9 @@ usesTextPrimitives := fn(calls: Set<String>): Bool {
 usesAnyListBounds := fn(calls: Set<String>): Bool {
     loop calls as tok {
         if tok.startsWithAt(0, "lt_list_") and (
-            tok.endsWith("_at(") or tok.endsWith("_set(") or
-            tok.endsWith("_pop_back(") or tok.endsWith("_pop_front(") or
-            tok.endsWith("_slice(") or tok.endsWith("_slice_from(")
+        tok.endsWith("_at(") or tok.endsWith("_set(") or
+        tok.endsWith("_pop_back(") or tok.endsWith("_pop_front(") or
+        tok.endsWith("_slice(") or tok.endsWith("_slice_from(")
         ) {
             return true;
         }
@@ -2634,14 +2634,14 @@ emitCStreamBuiltinHelpers := fn(calls: Set<String>): Unit {
     needFileOpen := usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or usesIntHelper(calls, "lite$fileOpenAppender(");
     needAlloc := needFileOpen or usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioBufferWriter(");
     needLookup := usesIntHelper(calls, "lite$ioReaderOk(") or usesIntHelper(calls, "lite$ioReaderAtEof(") or
-        usesIntHelper(calls, "lite$ioReaderError(") or usesIntHelper(calls, "lite$ioRead(") or
-        usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioWriterOk(") or
-        usesIntHelper(calls, "lite$ioWriterError(") or usesIntHelper(calls, "lite$ioWrite(") or
-        usesIntHelper(calls, "lite$ioFlush(") or usesIntHelper(calls, "lite$ioCloseWriter(") or
-        usesIntHelper(calls, "lite$ioWriterBytes(") or usesIntHelper(calls, "lite$ioWriterText(") or
-        usesIntHelper(calls, "lite$ioClearWriter(");
+    usesIntHelper(calls, "lite$ioReaderError(") or usesIntHelper(calls, "lite$ioRead(") or
+    usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioWriterOk(") or
+    usesIntHelper(calls, "lite$ioWriterError(") or usesIntHelper(calls, "lite$ioWrite(") or
+    usesIntHelper(calls, "lite$ioFlush(") or usesIntHelper(calls, "lite$ioCloseWriter(") or
+    usesIntHelper(calls, "lite$ioWriterBytes(") or usesIntHelper(calls, "lite$ioWriterText(") or
+    usesIntHelper(calls, "lite$ioClearWriter(");
     needStdinState := usesIntHelper(calls, "lite$ioReaderOk(") or usesIntHelper(calls, "lite$ioReaderAtEof(") or
-        usesIntHelper(calls, "lite$ioReaderError(") or usesIntHelper(calls, "lite$ioRead(");
+    usesIntHelper(calls, "lite$ioReaderError(") or usesIntHelper(calls, "lite$ioRead(");
     if needAlloc or needLookup {
         outLine("typedef struct { int kind; int fd; uint8_t *buf; int64_t len; int64_t cap; int64_t pos; bool eof; bool closed; const char *error; } lt_stream_entry;");
         outLine("static lt_stream_entry *lt_streams = NULL;");
@@ -3085,7 +3085,8 @@ emitCFileBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("    }");
         outLine("    int in_fd = open(from_path, O_RDONLY);");
         outLine("    if (in_fd < 0) { return (" + okErrTag + "){ false, lt_text_from_cstr(lt_dup_str(strerror(errno))) }; }");
-        outLine("    int out_fd = open(to_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);");
+        outLine("    unlink(to_path);");
+        outLine("    int out_fd = open(to_path, O_WRONLY | O_CREAT | O_TRUNC, (mode_t)(st.st_mode & 0777));");
         outLine("    if (out_fd < 0) { const char *err = lt_dup_str(strerror(errno)); close(in_fd); return (" + okErrTag + "){ false, lt_text_from_cstr(err) }; }");
         outLine("    uint8_t buf[65536];");
         outLine("    for (;;) {");
@@ -3099,6 +3100,7 @@ emitCFileBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("            off += w;");
         outLine("        }");
         outLine("    }");
+        outLine("    if (fchmod(out_fd, (mode_t)(st.st_mode & 0777)) != 0) { const char *err = lt_dup_str(strerror(errno)); close(in_fd); close(out_fd); return (" + okErrTag + "){ false, lt_text_from_cstr(err) }; }");
         outLine("    close(in_fd); close(out_fd);");
         outLine("    return (" + okErrTag + "){ true, LT_ASTR(\"\") };");
         outLine("}");
@@ -3682,13 +3684,13 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
 /** Emits all C11 host builtin helpers (`core/unicode`, `core/io` streams, `core/file`, `core/process`, `core/time`, `core/crypto`). */
 emitCHostBuiltinHelpers := fn(calls: Set<String>): Unit {
     needDupStr := usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or
-        usesIntHelper(calls, "lite$fileOpenAppender(") or usesIntHelper(calls, "lite$ioRead(") or
-        usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioWrite(") or
-        usesIntHelper(calls, "lite$ioFlush(") or usesIntHelper(calls, "lite$ioCloseWriter(") or
-        usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
-        usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
-        usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lite$fileRealPath(") or
-        usesIntHelper(calls, "lite$fileMakeTempDir(") or usesCFileSoft(calls) or usesProcessSpawnBuiltins(calls) or usesIntHelper(calls, "lite$extPoolRunJson(");
+    usesIntHelper(calls, "lite$fileOpenAppender(") or usesIntHelper(calls, "lite$ioRead(") or
+    usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioWrite(") or
+    usesIntHelper(calls, "lite$ioFlush(") or usesIntHelper(calls, "lite$ioCloseWriter(") or
+    usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
+    usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
+    usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lite$fileRealPath(") or
+    usesIntHelper(calls, "lite$fileMakeTempDir(") or usesCFileSoft(calls) or usesProcessSpawnBuiltins(calls) or usesIntHelper(calls, "lite$extPoolRunJson(");
     if needDupStr {
         outLine("static char *lt_dup_str(const char *s) {");
         outLine("    size_t n = strlen(s);");

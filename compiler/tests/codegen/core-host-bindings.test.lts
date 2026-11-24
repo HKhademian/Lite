@@ -30,185 +30,185 @@ emptyArgs := fn(): List<String> {
 
 /* core os/fs/process/crypto/time host bindings */
 coreHostSrc := text.joinTexts([
-    "fs := import \"core/file\";",
-    "pathLib := import \"core/path\";",
-    "proc := import \"core/process\";",
-    "crypto := import \"core/crypto\";",
-    "time := import \"core/time\";",
-    "uni := import \"core/unicode\";",
-    "io := import \"core/io\";",
-    "writeTwoLines := fn(w: io.Writer, a: String, b: String): Bool {",
-    "    r1 := io.writeLine(w, a);",
-    "    r2 := io.writeLine(w, b);",
-    "    r1.ok and r2.ok",
-    "};",
-    "collectAllLines := fn(r: io.Reader): String {",
-    "    var out := \"\";",
-    "    loop true {",
-    "        res := io.readLine(r);",
-    "        if not res.ok or res.eof { break; }",
-    "        if out =!= \"\" { out = out + \"|\"; }",
-    "        out = out + res.line;",
-    "    }",
-    "    out",
-    "};",
-    "bw := io.bufferWriter();",
-    "bwOk := writeTwoLines(bw, \"alpha\", \"beta\");",
-    "bwTxt := io.writerText(bw);",
-    "trLines := collectAllLines(io.textReader(\"alpha\\r\\nbeta\\ngamma\"));",
-    "tmp := fs.makeTempDir(\"lite-os-host-\");",
-    "if not tmp.ok { io.outputLine(\"mkdir-temp-fail\", tmp.error); io.exit(1); }",
-    "dir := tmp.path;",
-    "sub := dir + \"/sub\";",
-    "made := fs.makeDir(sub);",
-    "file := sub + \"/target.txt\";",
-    "wrote := fs.writeText(file, \"hello world\\n\");",
-    "readOk := fs.readText(file);",
-    "appFile := sub + \"/append.txt\";",
-    "fw := fs.openWriter(appFile);",
-    "fwOk := writeTwoLines(fw, \"first\", \"second\");",
-    "_fwFlush := io.flush(fw);",
-    "_fwClose := io.closeWriter(fw);",
-    "appRes := fs.appendText(appFile, \"third\\n\");",
-    "fr := fs.openReader(appFile);",
-    "frLines := collectAllLines(fr);",
-    "_frClose := io.closeReader(fr);",
-    "badOpen := fs.openReader(dir + \"/absent.txt\");",
-    "rawFile := sub + \"/raw.bin\";",
-    "rawBytes: List<Int> = [0, 65, 255, 13, 10];",
-    "wroteRaw := fs.writeBytes(rawFile, rawBytes);",
-    "readRaw := fs.readBytes(rawFile);",
-    "emptyFile := sub + \"/empty.bin\";",
-    "wroteEmpty := fs.writeBytes(emptyFile, []);",
-    "readEmpty := fs.readBytes(emptyFile);",
-    "badByteHigh := fs.writeBytes(dir + \"/bad-high.bin\", [256]);",
-    "badByteNeg := fs.writeBytes(dir + \"/bad-neg.bin\", [-1]);",
-    "badRead := fs.readText(dir + \"/missing.txt\");",
-    "subCopy := dir + \"/sub-copy\";",
-    "copied := fs.copy(sub, subCopy);",
-    "entries := fs.listDir(dir);",
-    "linkPath := dir + \"/link.txt\";",
-    "linked := fs.symlink(\"sub/target.txt\", linkPath);",
-    "real := fs.realPath(linkPath);",
-    "removed := fs.remove(subCopy);",
-    "removedMissing := fs.remove(subCopy);",
-    "unsetEnv := proc.envGet(\"LITE_DEFINITELY_UNSET_XYZ\");",
-    "homeEnv := proc.envGet(\"PATH\");",
-    "childOk := proc.run(proc.execPath(), [\"-e\", \"process.stdout.write(process.env.LITE_ENV_CHILD + ':' + process.getBuiltinModule('node:fs').readFileSync(0,'utf8'))\"], dir, [\"LITE_ENV_CHILD=ok\"], true, \"ping\");",
-    "childFail := proc.run(\"/no/such/binary-lite-xyz\", [], \"\", [], true, \"\");",
-    "bytesOutPath := dir + \"/child-out.bin\";",
-    "bytesErrPath := dir + \"/child-err.bin\";",
-    "childBytes := proc.runBytes(proc.execPath(), [\"-e\", \"const b = process.getBuiltinModule('node:fs').readFileSync(0); process.stdout.write(b); process.stderr.write(Buffer.from([b.length, 42])); process.exit(3);\"], dir, [], 5000, rawBytes, bytesOutPath, bytesErrPath);",
-    "childTimeout := proc.runBytes(proc.execPath(), [\"-e\", \"setTimeout(() => {}, 2000)\"], dir, [], 50, [], dir + \"/t-out.bin\", dir + \"/t-err.bin\");",
-    "utfBytes := uni.utf8Encode(\"A€\");",
-    "hashText := crypto.sha256Text(\"hello\");",
-    "hashBytes := crypto.sha256Bytes(rawBytes);",
-    "hashEmptyBytes := crypto.sha256Bytes([]);",
-    "hashRawFile := crypto.sha256File(rawFile);",
-    "hashFile := crypto.sha256File(file);",
-    "hashMissing := crypto.sha256File(dir + \"/missing.txt\");",
-    "t0 := time.monotonicNs();",
-    "t1 := time.monotonicNs();",
-    "iso := time.utcIsoNow();",
-    "io.outputLine(fs.kind(dir), fs.kind(file), fs.kind(linkPath), fs.kind(dir + \"/missing.txt\"), pathLib.isDirectory(dir), pathLib.isFile(file), not pathLib.exists(dir + \"/missing.txt\"), pathLib.stem(file), pathLib.withExt(file, \"md\") == sub + \"/target.md\");",
-    "io.outputLine(bwOk, bwTxt.ok, bwTxt.text == \"alpha\\nbeta\\n\", trLines, fwOk, appRes.ok, frLines, not io.readerOk(badOpen), io.readerError(badOpen) =!= \"\");",
-    "io.outputLine(made.ok, wrote.ok, readOk.ok, readOk.text == \"hello world\\n\", not badRead.ok, copied.ok);",
-    "io.outputLine(wroteRaw.ok, readRaw, wroteEmpty.ok, readEmpty, not badByteHigh.ok, fs.kind(dir + \"/bad-high.bin\"), not badByteNeg.ok);",
-    "io.outputLine(entries, linked.ok, real.ok, real.path == fs.realPath(file).path, removed.ok, removedMissing.ok);",
-    "io.outputLine(proc.cwd() =!= \"\", proc.execPath() =!= \"\", proc.platform() =!= \"\", proc.arch() =!= \"\", proc.runtimeVersion() =!= \"\", not unsetEnv.found, unsetEnv.value == \"\", homeEnv.found);",
-    "io.outputLine(childOk.status, childOk.stdout, childOk.stderr == \"\", childOk.error == \"\", childFail.status, childFail.error =!= \"\");",
-    "io.outputLine(childBytes.status, childBytes.error == \"\", fs.readBytes(bytesOutPath), fs.readBytes(bytesErrPath), childTimeout.status, childTimeout.error =!= \"\", utfBytes, uni.utf8Encode(\"\"));",
-    "io.outputLine(hashText == \"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824\", hashBytes == hashRawFile.hex, hashEmptyBytes == crypto.sha256Text(\"\"), hashFile.ok, hashFile.hex == crypto.sha256Text(\"hello world\\n\"), not hashMissing.ok);",
-    "io.outputLine(t1 >= t0, iso =!= \"\");",
-    "clean := fs.remove(dir);",
-    "io.outputLine(clean.ok, fs.kind(dir));"
+"fs := import \"core/file\";",
+"pathLib := import \"core/path\";",
+"proc := import \"core/process\";",
+"crypto := import \"core/crypto\";",
+"time := import \"core/time\";",
+"uni := import \"core/unicode\";",
+"io := import \"core/io\";",
+"writeTwoLines := fn(w: io.Writer, a: String, b: String): Bool {",
+"    r1 := io.writeLine(w, a);",
+"    r2 := io.writeLine(w, b);",
+"    r1.ok and r2.ok",
+"};",
+"collectAllLines := fn(r: io.Reader): String {",
+"    var out := \"\";",
+"    loop true {",
+"        res := io.readLine(r);",
+"        if not res.ok or res.eof { break; }",
+"        if out =!= \"\" { out = out + \"|\"; }",
+"        out = out + res.line;",
+"    }",
+"    out",
+"};",
+"bw := io.bufferWriter();",
+"bwOk := writeTwoLines(bw, \"alpha\", \"beta\");",
+"bwTxt := io.writerText(bw);",
+"trLines := collectAllLines(io.textReader(\"alpha\\r\\nbeta\\ngamma\"));",
+"tmp := fs.makeTempDir(\"lite-os-host-\");",
+"if not tmp.ok { io.outputLine(\"mkdir-temp-fail\", tmp.error); io.exit(1); }",
+"dir := tmp.path;",
+"sub := dir + \"/sub\";",
+"made := fs.makeDir(sub);",
+"file := sub + \"/target.txt\";",
+"wrote := fs.writeText(file, \"hello world\\n\");",
+"readOk := fs.readText(file);",
+"appFile := sub + \"/append.txt\";",
+"fw := fs.openWriter(appFile);",
+"fwOk := writeTwoLines(fw, \"first\", \"second\");",
+"_fwFlush := io.flush(fw);",
+"_fwClose := io.closeWriter(fw);",
+"appRes := fs.appendText(appFile, \"third\\n\");",
+"fr := fs.openReader(appFile);",
+"frLines := collectAllLines(fr);",
+"_frClose := io.closeReader(fr);",
+"badOpen := fs.openReader(dir + \"/absent.txt\");",
+"rawFile := sub + \"/raw.bin\";",
+"rawBytes: List<Int> = [0, 65, 255, 13, 10];",
+"wroteRaw := fs.writeBytes(rawFile, rawBytes);",
+"readRaw := fs.readBytes(rawFile);",
+"emptyFile := sub + \"/empty.bin\";",
+"wroteEmpty := fs.writeBytes(emptyFile, []);",
+"readEmpty := fs.readBytes(emptyFile);",
+"badByteHigh := fs.writeBytes(dir + \"/bad-high.bin\", [256]);",
+"badByteNeg := fs.writeBytes(dir + \"/bad-neg.bin\", [-1]);",
+"badRead := fs.readText(dir + \"/missing.txt\");",
+"subCopy := dir + \"/sub-copy\";",
+"copied := fs.copy(sub, subCopy);",
+"entries := fs.listDir(dir);",
+"linkPath := dir + \"/link.txt\";",
+"linked := fs.symlink(\"sub/target.txt\", linkPath);",
+"real := fs.realPath(linkPath);",
+"removed := fs.remove(subCopy);",
+"removedMissing := fs.remove(subCopy);",
+"unsetEnv := proc.envGet(\"LITE_DEFINITELY_UNSET_XYZ\");",
+"homeEnv := proc.envGet(\"PATH\");",
+"childOk := proc.run(proc.execPath(), [\"-e\", \"process.stdout.write(process.env.LITE_ENV_CHILD + ':' + process.getBuiltinModule('node:fs').readFileSync(0,'utf8'))\"], dir, [\"LITE_ENV_CHILD=ok\"], true, \"ping\");",
+"childFail := proc.run(\"/no/such/binary-lite-xyz\", [], \"\", [], true, \"\");",
+"bytesOutPath := dir + \"/child-out.bin\";",
+"bytesErrPath := dir + \"/child-err.bin\";",
+"childBytes := proc.runBytes(proc.execPath(), [\"-e\", \"const b = process.getBuiltinModule('node:fs').readFileSync(0); process.stdout.write(b); process.stderr.write(Buffer.from([b.length, 42])); process.exit(3);\"], dir, [], 5000, rawBytes, bytesOutPath, bytesErrPath);",
+"childTimeout := proc.runBytes(proc.execPath(), [\"-e\", \"setTimeout(() => {}, 2000)\"], dir, [], 50, [], dir + \"/t-out.bin\", dir + \"/t-err.bin\");",
+"utfBytes := uni.utf8Encode(\"A€\");",
+"hashText := crypto.sha256Text(\"hello\");",
+"hashBytes := crypto.sha256Bytes(rawBytes);",
+"hashEmptyBytes := crypto.sha256Bytes([]);",
+"hashRawFile := crypto.sha256File(rawFile);",
+"hashFile := crypto.sha256File(file);",
+"hashMissing := crypto.sha256File(dir + \"/missing.txt\");",
+"t0 := time.monotonicNs();",
+"t1 := time.monotonicNs();",
+"iso := time.utcIsoNow();",
+"io.outputLine(fs.kind(dir), fs.kind(file), fs.kind(linkPath), fs.kind(dir + \"/missing.txt\"), pathLib.isDirectory(dir), pathLib.isFile(file), not pathLib.exists(dir + \"/missing.txt\"), pathLib.stem(file), pathLib.withExt(file, \"md\") == sub + \"/target.md\");",
+"io.outputLine(bwOk, bwTxt.ok, bwTxt.text == \"alpha\\nbeta\\n\", trLines, fwOk, appRes.ok, frLines, not io.readerOk(badOpen), io.readerError(badOpen) =!= \"\");",
+"io.outputLine(made.ok, wrote.ok, readOk.ok, readOk.text == \"hello world\\n\", not badRead.ok, copied.ok);",
+"io.outputLine(wroteRaw.ok, readRaw, wroteEmpty.ok, readEmpty, not badByteHigh.ok, fs.kind(dir + \"/bad-high.bin\"), not badByteNeg.ok);",
+"io.outputLine(entries, linked.ok, real.ok, real.path == fs.realPath(file).path, removed.ok, removedMissing.ok);",
+"io.outputLine(proc.cwd() =!= \"\", proc.execPath() =!= \"\", proc.platform() =!= \"\", proc.arch() =!= \"\", proc.runtimeVersion() =!= \"\", not unsetEnv.found, unsetEnv.value == \"\", homeEnv.found);",
+"io.outputLine(childOk.status, childOk.stdout, childOk.stderr == \"\", childOk.error == \"\", childFail.status, childFail.error =!= \"\");",
+"io.outputLine(childBytes.status, childBytes.error == \"\", fs.readBytes(bytesOutPath), fs.readBytes(bytesErrPath), childTimeout.status, childTimeout.error =!= \"\", utfBytes, uni.utf8Encode(\"\"));",
+"io.outputLine(hashText == \"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824\", hashBytes == hashRawFile.hex, hashEmptyBytes == crypto.sha256Text(\"\"), hashFile.ok, hashFile.hex == crypto.sha256Text(\"hello world\\n\"), not hashMissing.ok);",
+"io.outputLine(t1 >= t0, iso =!= \"\");",
+"clean := fs.remove(dir);",
+"io.outputLine(clean.ok, fs.kind(dir));"
 ], "\n");
 coreHostExpected := text.joinTexts([
-    "dir file file missing true true true target true",
-    "true true true alpha|beta|gamma true true first|second|third true true",
-    "true true true true true true",
-    "true [0, 65, 255, 13, 10] true [] true missing true",
-    "[sub, sub-copy] true true true true true",
-    "true true true true true true true true",
-    "0 ok:ping true true -1 true",
-    "3 true [0, 65, 255, 13, 10] [5, 42] -1 true [65, 226, 130, 172] []",
-    "true true true true true true",
-    "true true",
-    "true missing"
+"dir file file missing true true true target true",
+"true true true alpha|beta|gamma true true first|second|third true true",
+"true true true true true true",
+"true [0, 65, 255, 13, 10] true [] true missing true",
+"[sub, sub-copy] true true true true true",
+"true true true true true true true true",
+"0 ok:ping true true -1 true",
+"3 true [0, 65, 255, 13, 10] [5, 42] -1 true [65, 226, 130, 172] []",
+"true true true true true true",
+"true true",
+"true missing"
 ], "\n") + "\n";
 compilerTest.assertCompileRunTsNamed(root, tsComp, "core-host-os", coreHostSrc, fixtureName, coreHostExpected);
 
 /* core/text unicode scalar length/at */
 compilerTest.assertCompileRunTsNamed(
-    root,
-    tsComp,
-    "core-text-scalar",
-    "io := import \"core/io\"; io.outputLine(\"A🙂\".length(), \"A🙂\".at(1));",
-    fixtureName,
-    "2 🙂\n"
+root,
+tsComp,
+"core-text-scalar",
+"io := import \"core/io\"; io.outputLine(\"A🙂\".length(), \"A🙂\".at(1));",
+fixtureName,
+"2 🙂\n"
 );
 
 /* extended core crypto, time, and unicode */
 extCoreSrc := text.joinTexts([
-    "crypto := import \"core/crypto\";",
-    "list := import \"core/list\";",
-    "time := import \"core/time\";",
-    "uni := import \"core/unicode\";",
-    "io := import \"core/io\";",
-    "raw: List<Int> = [0, 65, 255];",
-    "b64 := crypto.base64Encode(raw);",
-    "b64Ok := crypto.isValidBase64(b64);",
-    "b64Dec := crypto.base64Decode(b64);",
-    "b64Bad1 := crypto.isValidBase64(\"not-base64!\");",
-    "b64Bad2 := crypto.isValidBase64(\"YWJj=\");",
-    "hex := crypto.hexEncode(raw);",
-    "hexOk := crypto.isValidHex(\"0041FF\");",
-    "hexDec := crypto.hexDecode(\"0041FF\");",
-    "hexBadOdd := crypto.isValidHex(\"abc\");",
-    "hexBadChar := crypto.isValidHex(\"zz\");",
-    "sha512 := crypto.sha512Text(\"abc\");",
-    "sha512b := crypto.sha512Bytes([97, 98, 99]);",
-    "hmac := crypto.hmacSha256Bytes([107, 101, 121], [97, 98, 99]);",
-    "var longKey: mut List<Int> = [];",
-    "loop longKey.length() < 80 { mut longKey.pushBack(170); }",
-    "hmacLong := crypto.hmacSha256Bytes(longKey, [84, 101, 115, 116]);",
-    "rand0 := crypto.randomBytes(0);",
-    "rand16 := crypto.randomBytes(16);",
-    "ms0 := time.epochMs();",
-    "ns0 := time.epochNs();",
-    "isoNow := time.utcIsoNow();",
-    "mono0 := time.monotonicNs();",
-    "time.sleepMs(15);",
-    "mono1 := time.monotonicNs();",
-    "ldate := time.localDate();",
-    "u8 := uni.utf8Encode(\"A€🙂\");",
-    "u8Ok := uni.utf8DecodeStrict(u8);",
-    "u8Bad := uni.utf8DecodeStrict([255]);",
-    "u8Overlong := uni.utf8DecodeStrict([192, 175]);",
-    "u8Surrogate := uni.utf8DecodeStrict([237, 160, 128]);",
-    "u8BadVal := uni.utf8DecodeStrict([256]);",
-    "u8Lossy := uni.utf8DecodeLossy([65, 255, 66]);",
-    "u8LossyEdge := uni.utf8DecodeLossy([65, 224, 128, 66, 226, 130]);",
-    "u16 := uni.utf16Encode(\"A🙂\");",
-    "u16Ok := uni.utf16DecodeStrict(u16);",
-    "u16BadHigh := uni.utf16DecodeStrict([55357]);",
-    "u16BadLow := uni.utf16DecodeStrict([56898]);",
-    "u16BadRange := uni.utf16DecodeStrict([65536]);",
-    "cps := uni.toCodePoints(\"A€🙂\");",
-    "cpOk := uni.fromCodePoints(cps);",
-    "cpBadSur := uni.fromCodePoints([55296]);",
-    "cpBadHi := uni.fromCodePoints([1114112]);",
-    "oneCp := uni.fromCodePoint(128578);",
-    "io.outputLine(b64, b64Ok, b64Dec, not b64Bad1, not b64Bad2);",
-    "io.outputLine(hex, hexOk, hexDec, not hexBadOdd, not hexBadChar);",
-    "io.outputLine(sha512 == \"ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f\", sha512 == sha512b);",
-    "io.outputLine(hmac, hmacLong, rand0.length(), rand16.length());",
-    "io.outputLine(ms0 > 1700000000000, ns0 >= ms0 * 1000000, mono1 > mono0, ldate, isoNow);",
-    "io.outputLine(u8, u8Ok.ok, u8Ok.text == \"A€🙂\", not u8Bad.ok, not u8Overlong.ok, not u8Surrogate.ok, not u8BadVal.ok, u8Lossy, u8LossyEdge);",
-    "io.outputLine(uni.isValidUtf8(u8), not uni.isValidUtf8([255]), uni.utf16Length(\"A🙂\"), u16, u16Ok.ok, u16Ok.text == \"A🙂\");",
-    "io.outputLine(not u16BadHigh.ok, not u16BadLow.ok, not u16BadRange.ok);",
-    "io.outputLine(cps, cpOk.ok, cpOk.text == \"A€🙂\", not cpBadSur.ok, not cpBadHi.ok);",
-    "io.outputLine(oneCp.ok, oneCp.text == \"🙂\", uni.codePointAt(\"A€🙂\", 2), uni.isValidScalar(65), not uni.isValidScalar(55296), not uni.isValidScalar(1114112));"
+"crypto := import \"core/crypto\";",
+"list := import \"core/list\";",
+"time := import \"core/time\";",
+"uni := import \"core/unicode\";",
+"io := import \"core/io\";",
+"raw: List<Int> = [0, 65, 255];",
+"b64 := crypto.base64Encode(raw);",
+"b64Ok := crypto.isValidBase64(b64);",
+"b64Dec := crypto.base64Decode(b64);",
+"b64Bad1 := crypto.isValidBase64(\"not-base64!\");",
+"b64Bad2 := crypto.isValidBase64(\"YWJj=\");",
+"hex := crypto.hexEncode(raw);",
+"hexOk := crypto.isValidHex(\"0041FF\");",
+"hexDec := crypto.hexDecode(\"0041FF\");",
+"hexBadOdd := crypto.isValidHex(\"abc\");",
+"hexBadChar := crypto.isValidHex(\"zz\");",
+"sha512 := crypto.sha512Text(\"abc\");",
+"sha512b := crypto.sha512Bytes([97, 98, 99]);",
+"hmac := crypto.hmacSha256Bytes([107, 101, 121], [97, 98, 99]);",
+"var longKey: mut List<Int> = [];",
+"loop longKey.length() < 80 { mut longKey.pushBack(170); }",
+"hmacLong := crypto.hmacSha256Bytes(longKey, [84, 101, 115, 116]);",
+"rand0 := crypto.randomBytes(0);",
+"rand16 := crypto.randomBytes(16);",
+"ms0 := time.epochMs();",
+"ns0 := time.epochNs();",
+"isoNow := time.utcIsoNow();",
+"mono0 := time.monotonicNs();",
+"time.sleepMs(15);",
+"mono1 := time.monotonicNs();",
+"ldate := time.localDate();",
+"u8 := uni.utf8Encode(\"A€🙂\");",
+"u8Ok := uni.utf8DecodeStrict(u8);",
+"u8Bad := uni.utf8DecodeStrict([255]);",
+"u8Overlong := uni.utf8DecodeStrict([192, 175]);",
+"u8Surrogate := uni.utf8DecodeStrict([237, 160, 128]);",
+"u8BadVal := uni.utf8DecodeStrict([256]);",
+"u8Lossy := uni.utf8DecodeLossy([65, 255, 66]);",
+"u8LossyEdge := uni.utf8DecodeLossy([65, 224, 128, 66, 226, 130]);",
+"u16 := uni.utf16Encode(\"A🙂\");",
+"u16Ok := uni.utf16DecodeStrict(u16);",
+"u16BadHigh := uni.utf16DecodeStrict([55357]);",
+"u16BadLow := uni.utf16DecodeStrict([56898]);",
+"u16BadRange := uni.utf16DecodeStrict([65536]);",
+"cps := uni.toCodePoints(\"A€🙂\");",
+"cpOk := uni.fromCodePoints(cps);",
+"cpBadSur := uni.fromCodePoints([55296]);",
+"cpBadHi := uni.fromCodePoints([1114112]);",
+"oneCp := uni.fromCodePoint(128578);",
+"io.outputLine(b64, b64Ok, b64Dec, not b64Bad1, not b64Bad2);",
+"io.outputLine(hex, hexOk, hexDec, not hexBadOdd, not hexBadChar);",
+"io.outputLine(sha512 == \"ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f\", sha512 == sha512b);",
+"io.outputLine(hmac, hmacLong, rand0.length(), rand16.length());",
+"io.outputLine(ms0 > 1700000000000, ns0 >= ms0 * 1000000, mono1 > mono0, ldate, isoNow);",
+"io.outputLine(u8, u8Ok.ok, u8Ok.text == \"A€🙂\", not u8Bad.ok, not u8Overlong.ok, not u8Surrogate.ok, not u8BadVal.ok, u8Lossy, u8LossyEdge);",
+"io.outputLine(uni.isValidUtf8(u8), not uni.isValidUtf8([255]), uni.utf16Length(\"A🙂\"), u16, u16Ok.ok, u16Ok.text == \"A🙂\");",
+"io.outputLine(not u16BadHigh.ok, not u16BadLow.ok, not u16BadRange.ok);",
+"io.outputLine(cps, cpOk.ok, cpOk.text == \"A€🙂\", not cpBadSur.ok, not cpBadHi.ok);",
+"io.outputLine(oneCp.ok, oneCp.text == \"🙂\", uni.codePointAt(\"A€🙂\", 2), uni.isValidScalar(65), not uni.isValidScalar(55296), not uni.isValidScalar(1114112));"
 ], "\n");
 extRun := compilerTest.compileCheckRunTs(root, tsComp, extCoreSrc, fixtureName);
 test.checkInt("ext-core status", 0, extRun.status);
@@ -269,11 +269,11 @@ test.check("bad hex stderr", badDecode2.stderr.contains("invalid hex input"));
 
 /* standalone generated TS script execution */
 standaloneSrc := text.joinTexts([
-    "fs := import \"core/file\";",
-    "proc := import \"core/process\";",
-    "io := import \"core/io\";",
-    "if proc.entryPath() == \"\" { _in := io.inputAll(\"\"); _txt := fs.readText(\".\"); }",
-    "io.outputLine(proc.entryPath() =!= \"\", io.inputArgs());"
+"fs := import \"core/file\";",
+"proc := import \"core/process\";",
+"io := import \"core/io\";",
+"if proc.entryPath() == \"\" { _in := io.inputAll(\"\"); _txt := fs.readText(\".\"); }",
+"io.outputLine(proc.entryPath() =!= \"\", io.inputArgs());"
 ], "\n");
 standaloneComp := compilerTest.compileStdin(root, tsComp, standaloneSrc, fixtureName);
 test.checkInt("standalone compile", 0, standaloneComp.status);
@@ -289,15 +289,15 @@ _rmStandalone := fs.remove(tmpStandalone.path);
 
 /* proc.runStreams + crypto.sha256Reader + io.copyStream + io.writeAndClose */
 streamChildSrc := text.joinTexts([
-    "io := import \"core/io\";",
-    "bytes := io.readAll(io.stdinReader());",
-    "out := io.stdoutWriter();",
-    "err := io.stderrWriter();",
-    "_w1 := io.write(out, bytes);",
-    "_w2 := io.writeText(out, \"|done\");",
-    "_f1 := io.flush(out);",
-    "_w3 := io.writeLine(err, \"warn\");",
-    "_f2 := io.flush(err);"
+"io := import \"core/io\";",
+"bytes := io.readAll(io.stdinReader());",
+"out := io.stdoutWriter();",
+"err := io.stderrWriter();",
+"_w1 := io.write(out, bytes);",
+"_w2 := io.writeText(out, \"|done\");",
+"_f1 := io.flush(out);",
+"_w3 := io.writeLine(err, \"warn\");",
+"_f2 := io.flush(err);"
 ], "\n");
 streamChildComp := compilerTest.compileStdin(root, tsComp, streamChildSrc, fixtureName);
 test.checkInt("stream-child compile", 0, streamChildComp.status);
@@ -308,51 +308,51 @@ childScript := path.join(tmpStream.path, "echo-stream.ts");
 multiBin := path.join(tmpStream.path, "multi-chunk.bin");
 _wtChild := fs.writeText(childScript, streamChildComp.stdout);
 parentSrc := text.joinTexts([
-    "crypto := import \"core/crypto\";",
-    "file := import \"core/file\";",
-    "io := import \"core/io\";",
-    "proc := import \"core/process\";",
-    "outW := io.bufferWriter();",
-    "errW := io.bufferWriter();",
-    "res := proc.runStreams(proc.execPath(), [" + json.quoteString(childScript) + "], \"\", [], 10000, io.bufferReader([65, 0, 66]), outW, errW);",
-    "outBytes := io.writerBytes(outW);",
-    "errTxt := io.writerText(errW);",
-    "bigFile := " + json.quoteString(multiBin) + ";",
-    "var big: mut List<Int> = [];",
-    "loop big.length() < 20000 { mut big.pushBack((big.length() * 13) % 256); }",
-    "_wb := file.writeBytes(bigFile, big);",
-    "rBig := file.openReader(bigFile);",
-    "hStreamFile := crypto.sha256Reader(rBig);",
-    "_rc := io.closeReader(rBig);",
-    "hFastFile := crypto.sha256File(bigFile);",
-    "hStream := crypto.sha256Reader(io.textReader(\"hello\"));",
-    "h512 := crypto.sha512Text(\"abc\");",
-    "ioW := io.bufferWriter();",
-    "ioCopied := io.copyStream(io.textReader(\"via-io\"), ioW);",
-    "ioWTxt := io.writerText(ioW);",
-    "wcWriter := io.bufferWriter();",
-    "wcRes := io.writeAndClose(wcWriter, [120, 121]);",
-    "wcBytes := io.writerBytes(wcWriter);",
-    "wcClosed := io.writerOk(wcWriter);",
-    "io.outputLine(res.status, res.error == \"\", outBytes, errTxt.ok, errTxt.text == \"warn\\n\", hStreamFile.ok, hStreamFile.hex == hFastFile.hex, hStream.ok, hStream.hex == crypto.sha256Text(\"hello\"), h512 == crypto.sha512Text(\"abc\"), ioCopied.ok, ioCopied.copied, ioWTxt.ok, ioWTxt.text, wcRes.ok, wcBytes, wcClosed);"
+"crypto := import \"core/crypto\";",
+"file := import \"core/file\";",
+"io := import \"core/io\";",
+"proc := import \"core/process\";",
+"outW := io.bufferWriter();",
+"errW := io.bufferWriter();",
+"res := proc.runStreams(proc.execPath(), [" + json.quoteString(childScript) + "], \"\", [], 10000, io.bufferReader([65, 0, 66]), outW, errW);",
+"outBytes := io.writerBytes(outW);",
+"errTxt := io.writerText(errW);",
+"bigFile := " + json.quoteString(multiBin) + ";",
+"var big: mut List<Int> = [];",
+"loop big.length() < 20000 { mut big.pushBack((big.length() * 13) % 256); }",
+"_wb := file.writeBytes(bigFile, big);",
+"rBig := file.openReader(bigFile);",
+"hStreamFile := crypto.sha256Reader(rBig);",
+"_rc := io.closeReader(rBig);",
+"hFastFile := crypto.sha256File(bigFile);",
+"hStream := crypto.sha256Reader(io.textReader(\"hello\"));",
+"h512 := crypto.sha512Text(\"abc\");",
+"ioW := io.bufferWriter();",
+"ioCopied := io.copyStream(io.textReader(\"via-io\"), ioW);",
+"ioWTxt := io.writerText(ioW);",
+"wcWriter := io.bufferWriter();",
+"wcRes := io.writeAndClose(wcWriter, [120, 121]);",
+"wcBytes := io.writerBytes(wcWriter);",
+"wcClosed := io.writerOk(wcWriter);",
+"io.outputLine(res.status, res.error == \"\", outBytes, errTxt.ok, errTxt.text == \"warn\\n\", hStreamFile.ok, hStreamFile.hex == hFastFile.hex, hStream.ok, hStream.hex == crypto.sha256Text(\"hello\"), h512 == crypto.sha512Text(\"abc\"), ioCopied.ok, ioCopied.copied, ioWTxt.ok, ioWTxt.text, wcRes.ok, wcBytes, wcClosed);"
 ], "\n");
 compilerTest.assertCompileRunTsNamed(
-    root,
-    tsComp,
-    "proc-streams-parent",
-    parentSrc,
-    fixtureName,
-    "0 true [65, 0, 66, 124, 100, 111, 110, 101] true true true true true true true true 6 true via-io true [120, 121] false\n"
+root,
+tsComp,
+"proc-streams-parent",
+parentSrc,
+fixtureName,
+"0 true [65, 0, 66, 124, 100, 111, 110, 101] true true true true true true true true 6 true via-io true [120, 121] false\n"
 );
 _rmStream := fs.remove(tmpStream.path);
 
 compilerTest.assertCompileErrorContainsNamed(
-    root,
-    tsComp,
-    "removed file.copyStream",
-    "file := import \"core/file\"; io := import \"core/io\"; _ := file.copyStream(io.textReader(\"a\"), io.bufferWriter());",
-    fixtureName,
-    "unknown module member file.copyStream"
+root,
+tsComp,
+"removed file.copyStream",
+"file := import \"core/file\"; io := import \"core/io\"; _ := file.copyStream(io.textReader(\"a\"), io.bufferWriter());",
+fixtureName,
+"unknown module member file.copyStream"
 );
 
 /* unbound host declaration rejections */
@@ -373,10 +373,10 @@ compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-pool abi", "
 
 /* external/ts, external/pool, external/http, external/bench */
 extTsRun := compilerTest.compileCheckRunTs(
-    root,
-    tsComp,
-    "io := import \"core/io\"; extTs := import \"external/ts\"; good := extTs.stripTypes(\"const x: number = 42;\"); io.outputLine(good.ok, good.code);",
-    fixtureName
+root,
+tsComp,
+"io := import \"core/io\"; extTs := import \"external/ts\"; good := extTs.stripTypes(\"const x: number = 42;\"); io.outputLine(good.ok, good.code);",
+fixtureName
 );
 test.checkInt("external-ts status", 0, extTsRun.status);
 test.checkText("external-ts stdout", "true const x         = 42;\n", extTsRun.stdout);
@@ -399,10 +399,10 @@ test.checkText("ext-pool 1 stderr", "", json.readObjectString(poolJsonText, pool
 test.checkText("ext-pool 1 error", "", json.readObjectString(poolJsonText, poolElems[1], "error").value);
 
 extProbes: List<String> = [
-    "extHttp := import \"external/http\"; res := extHttp.fetchToFile(\"http://127.0.0.1:1/\", \"\", 50, []); if res.ok { _ := res.status; }",
-    "extHttp := import \"external/http\"; if false { _ := extHttp.serveStatic(\".\", \"\", \"127.0.0.1\", 0); }",
-    "extBench := import \"external/bench\"; if false { _ := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\"); }",
-    "pool := import \"external/pool\"; if false { _a := pool.cpuCount(); _b := pool.runPoolJson([], [], \"\", 0); }"
+"extHttp := import \"external/http\"; res := extHttp.fetchToFile(\"http://127.0.0.1:1/\", \"\", 50, []); if res.ok { _ := res.status; }",
+"extHttp := import \"external/http\"; if false { _ := extHttp.serveStatic(\".\", \"\", \"127.0.0.1\", 0); }",
+"extBench := import \"external/bench\"; if false { _ := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\"); }",
+"pool := import \"external/pool\"; if false { _a := pool.cpuCount(); _b := pool.runPoolJson([], [], \"\", 0); }"
 ];
 loop extProbes as probe {
     pComp := compilerTest.compileStdin(root, tsComp, probe, fixtureName);
@@ -417,26 +417,26 @@ test.check("reachable-c emits 42", reachableCComp.stdout.contains("42"));
 
 ccInfo := compilerTest.probeCc();
 cFnParityCases: List<(label: String, src: String, expectedOut: String)> = [
-    (
-        label = "basic scalar fn",
-        src = "unused := fn(): Int { 1 }; used := fn(a: Int, b: Int): Int { a + b * 2 }; io := import \"core/io\"; io.outputLine(used(10, 5));",
-        expectedOut = "20\n"
-    ),
-    (
-        label = "mutual recursion and forward call",
-        src = "isEven := fn(n: Int): Bool { if n == 0 { return true; } isOdd(n - 1) }; isOdd := fn(n: Int): Bool { if n == 0 { return false; } isEven(n - 1) }; fact := fn(n: Int): Int { if n <= 1 { return 1; } n * fact(n - 1) }; io := import \"core/io\"; io.outputLine(isEven(6), isOdd(6), fact(5));",
-        expectedOut = "true false 120\n"
-    ),
-    (
-        label = "unit fn output and mixed scalars",
-        src = "io := import \"core/io\"; say := fn(tag: String): Unit { io.outputLine(\"say\", tag); }; greet := fn(name: String, n: Int, f: Float, b: Bool): String { if b { return name + \":ok\"; } name + \":no\" }; io.outputLine(say(\"first\"), greet(\"x\", 1, 1.5, true), 42);",
-        expectedOut = "say first\nUnit x:ok 42\n"
-    ),
-    (
-        label = "captured globals and future init",
-        src = "base := 10; var acc := 1; addFuture := fn(x: Int): Int { x + base + later }; bump := fn(d: Int): Int { acc = acc + d; acc }; later := 5; io := import \"core/io\"; io.outputLine(addFuture(2), bump(4), acc);",
-        expectedOut = "17 5 5\n"
-    )
+(
+label = "basic scalar fn",
+src = "unused := fn(): Int { 1 }; used := fn(a: Int, b: Int): Int { a + b * 2 }; io := import \"core/io\"; io.outputLine(used(10, 5));",
+expectedOut = "20\n"
+),
+(
+label = "mutual recursion and forward call",
+src = "isEven := fn(n: Int): Bool { if n == 0 { return true; } isOdd(n - 1) }; isOdd := fn(n: Int): Bool { if n == 0 { return false; } isEven(n - 1) }; fact := fn(n: Int): Int { if n <= 1 { return 1; } n * fact(n - 1) }; io := import \"core/io\"; io.outputLine(isEven(6), isOdd(6), fact(5));",
+expectedOut = "true false 120\n"
+),
+(
+label = "unit fn output and mixed scalars",
+src = "io := import \"core/io\"; say := fn(tag: String): Unit { io.outputLine(\"say\", tag); }; greet := fn(name: String, n: Int, f: Float, b: Bool): String { if b { return name + \":ok\"; } name + \":no\" }; io.outputLine(say(\"first\"), greet(\"x\", 1, 1.5, true), 42);",
+expectedOut = "say first\nUnit x:ok 42\n"
+),
+(
+label = "captured globals and future init",
+src = "base := 10; var acc := 1; addFuture := fn(x: Int): Int { x + base + later }; bump := fn(d: Int): Int { acc = acc + d; acc }; later := 5; io := import \"core/io\"; io.outputLine(addFuture(2), bump(4), acc);",
+expectedOut = "17 5 5\n"
+)
 ];
 loop cFnParityCases as cfn {
     tsFnRun := compilerTest.compileCheckRunTs(root, tsComp, cfn.src, fixtureName);
@@ -471,9 +471,9 @@ _rmMod := fs.remove(modTmp.path);
 compilerTest.assertCompileErrorContainsNamed(root, cComp, "c trace pre-init", "f := fn(): Int { late }; early := f(); late := 1;", fixtureName, "cannot call before late is initialized");
 
 cRejCases: List<(src: String, sub: String)> = [
-    (src = "extTs := import \"external/ts\"; x := extTs.stripTypes(\"const a: number = 1;\");", sub = "external host builtins"),
-    (src = "extHttp := import \"external/http\"; x := extHttp.serveStatic(\".\", \"\", \"127.0.0.1\", 0);", sub = "external host builtins"),
-    (src = "extBench := import \"external/bench\"; x := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\");", sub = "external host builtins")
+(src = "extTs := import \"external/ts\"; x := extTs.stripTypes(\"const a: number = 1;\");", sub = "external host builtins"),
+(src = "extHttp := import \"external/http\"; x := extHttp.serveStatic(\".\", \"\", \"127.0.0.1\", 0);", sub = "external host builtins"),
+(src = "extBench := import \"external/bench\"; x := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\");", sub = "external host builtins")
 ];
 loop cRejCases as cr {
     cR := compilerTest.compileStdin(root, cComp, cr.src, fixtureName);
@@ -528,6 +528,21 @@ if ccInfo.available {
     execOut := linkRun.stdout.slice(nlIdx + 1, linkRun.stdout.length()).trimEnd();
     test.checkText("c-entry preserves symlink basename", "sym-alias", path.baseName(entryOut));
     test.checkText("c-entry execPath resolves real target", "real-bin", path.baseName(execOut));
+
+    copySrc := "fs := import \"core/file\"; io := import \"core/io\"; args := io.inputArgs(); r := fs.copy(args[0], args[1]); if not r.ok { io.errorLine(r.error); io.exit(1); }";
+    cCopyComp := compilerTest.compileStdin(root, cComp, copySrc, fixtureName);
+    test.checkInt("c-copy compile status", 0, cCopyComp.status);
+    copyC := path.join(entryTmp.path, "copier.c");
+    copyTool := path.join(entryTmp.path, "copier");
+    test.check("write c-copy", fs.writeText(copyC, cCopyComp.stdout).ok);
+    ccCopy := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", copyC, "-o", copyTool], entryTmp.path, emptyEnv, true, "");
+    test.checkInt("cc c-copy: " + ccCopy.stderr, 0, ccCopy.status);
+    copiedBin := path.join(entryTmp.path, "copied-bin");
+    copyRun := proc.run(copyTool, [entryBin, copiedBin], entryTmp.path, emptyEnv, true, "");
+    test.checkInt("run c-copy tool: " + copyRun.stderr, 0, copyRun.status);
+    copiedExec := proc.run(copiedBin, [], entryTmp.path, emptyEnv, true, "");
+    test.checkInt("execute c-copied binary: " + copiedExec.error + copiedExec.stderr, 0, copiedExec.status);
+
     _rmEntry := fs.remove(entryTmp.path);
 }
 
