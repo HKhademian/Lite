@@ -96,10 +96,9 @@ var line1 := "FPS:0.0  UPS:0.0  FT:0.0MS  CAP:60";
 var line2 := "CPU:0.0MS  MEM:0.0MB  KEYS:1/2/3/0";
 var frame := 0;
 
-loop true {
-    inp := canvas.poll(surface);
+canvas.run(surface, fn(inp: canvas.FrameInput): Bool {
     if not inp.open or inp.key == "Escape" or inp.key == "q" {
-        break;
+        return false;
     }
     if inp.key == "1" { canvas.setTargetFps(surface, 30.0); hudTimerSec = 1.0; }
     else if inp.key == "2" { canvas.setTargetFps(surface, 60.0); hudTimerSec = 1.0; }
@@ -176,10 +175,10 @@ loop true {
     canvas.drawText(surface, line1, canvas.point(26.0, 24.0), 14.0, canvas.WHITE);
     canvas.drawText(surface, line2, canvas.point(26.0, 50.0), 14.0, mint);
 
-    canvas.present(surface);
     frame = frame + 1;
 
     if capturePath =!= "" {
+        canvas.present(surface);
         cap := canvas.capture(surface, capturePath);
         if not cap.ok {
             io.errorLine("capture failed: " + cap.error);
@@ -187,9 +186,10 @@ loop true {
             io.exit(1);
         }
         io.outputLine("captured: " + capturePath);
-        break;
+        return false;
     }
     if benchFrames > 0 and frame >= benchFrames {
+        canvas.present(surface);
         fin := canvas.vitals(surface);
         finUps := if totalTimeSec > 0.0 { updateCount / totalTimeSec } else { 0.0 };
         finCap := if fin.targetFps <= 0.0 { "uncapped" } else { fmt1(fin.targetFps) };
@@ -197,8 +197,9 @@ loop true {
         " fps=" + fmt1(fin.fps) + " ups=" + fmt1(finUps) +
         " frameMs=" + fmt1(fin.avgFrameTimeMs) + " cap=" + finCap +
         " cpuMs=" + fmt1(fin.cpuTimeMs) + " rssMb=" + fmt1(fin.memoryBytes / 1048576.0));
-        break;
+        return false;
     }
-}
+    true
+});
 
 canvas.close(surface);

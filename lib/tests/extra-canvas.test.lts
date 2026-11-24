@@ -149,5 +149,50 @@ if ccInfo.available {
     test.checkText("5000-frame RSS growth <= 1MB", "true\n", asanRun.stdout);
 }
 
+/* 4. Host-driven `surface.run` callback loop parity (TS + C11) */
+runSrc :=
+"io := import \"core/io\";\n" +
+"surf := import \"extra/surface\";\n" +
+"win := surf.open(\"RunLoop\", 32, 24);\n" +
+"surf.uncapFrameRate(win);\n" +
+"var frames := 0;\n" +
+"surf.run(win, fn(inp: surf.FrameInput): Bool {\n" +
+"    if not inp.open { return false; }\n" +
+"    surf.clear(win, surf.BLACK);\n" +
+"    surf.fillRect(win, surf.rect(frames * 1.0, 2.0, 4.0, 4.0), surf.RED);\n" +
+"    frames = frames + 1;\n" +
+"    frames < 5\n" +
+"});\n" +
+"vit := surf.vitals(win);\n" +
+"io.outputLine(frames, vit.frameCount);\n" +
+"surf.close(win);\n";
+
+runExpected := "5 4\n";
+tsRunLoopComp := compilerTest.compileStdin(root, selTs.path, runSrc, "");
+test.checkInt("run loop ts compile: " + tsRunLoopComp.stderr, 0, tsRunLoopComp.status);
+tsRunLoopFile := path.join(tmpDir, "run_loop.ts");
+test.check("write run_loop.ts", fs.writeText(tsRunLoopFile, tsRunLoopComp.stdout).ok);
+tsRunLoopExec := proc.run(project.nodeExecPath(), [tsRunLoopFile], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+test.checkInt("run loop ts exec: " + tsRunLoopExec.stderr, 0, tsRunLoopExec.status);
+test.checkText("run loop ts stdout", runExpected, tsRunLoopExec.stdout);
+
+if ccInfo.available {
+    cRunLoopComp := compilerTest.compileStdin(root, selC.path, runSrc, "");
+    test.checkInt("run loop c compile: " + cRunLoopComp.stderr, 0, cRunLoopComp.status);
+    cRunLoopFile := path.join(tmpDir, "run_loop.c");
+    cRunLoopBin := path.join(tmpDir, "run_loop");
+    test.check("write run_loop.c", fs.writeText(cRunLoopFile, cRunLoopComp.stdout).ok);
+    runCcArgs: List<String> = if proc.platform() == "darwin" {
+        ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cRunLoopFile, "-o", cRunLoopBin, "-lm", "-framework", "Cocoa", "-framework", "CoreGraphics"]
+    } else {
+        ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cRunLoopFile, "-o", cRunLoopBin, "-lm"]
+    };
+    runCcRes := proc.run(ccInfo.cc, runCcArgs, tmpDir, [], true, "");
+    test.checkInt("run loop c cc: " + runCcRes.stderr, 0, runCcRes.status);
+    cRunLoopExec := proc.run(cRunLoopBin, [], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+    test.checkInt("run loop c exec: " + cRunLoopExec.stderr, 0, cRunLoopExec.status);
+    test.checkText("run loop c stdout parity", tsRunLoopExec.stdout, cRunLoopExec.stdout);
+}
+
 _rm := fs.remove(tmpDir);
 test.done("extra-canvas");

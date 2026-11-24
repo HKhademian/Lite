@@ -583,6 +583,7 @@ ensureCBuiltinMap := fn(): Unit {
     mut cBuiltinMap.set("extraCanvasBounds", "lt_canvas_bounds");
     mut cBuiltinMap.set("extraCanvasResize", "lt_canvas_resize");
     mut cBuiltinMap.set("extraCanvasSetFullscreen", "lt_canvas_set_fullscreen");
+    mut cBuiltinMap.set("extraCanvasRun", "lt_canvas_run");
 };
 
 /** Rewrites registered `lite$...(` builtin calls via O(1) map lookup and strips internal `/*@T:...*/`/`/*@C:...*/`/`/*@P:...*/`/`/*@CFN_START:...*/` markers outside quoted strings. */
@@ -4105,7 +4106,7 @@ usesExtraCanvasBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$extraCanvasCapture(") or usesIntHelper(calls, "lite$extraCanvasSetTargetFps(") or
     usesIntHelper(calls, "lite$extraCanvasVitals(") or usesIntHelper(calls, "lite$extraCanvasPlayTone(") or
     usesIntHelper(calls, "lite$extraCanvasBounds(") or usesIntHelper(calls, "lite$extraCanvasResize(") or
-    usesIntHelper(calls, "lite$extraCanvasSetFullscreen(")
+    usesIntHelper(calls, "lite$extraCanvasSetFullscreen(") or usesIntHelper(calls, "lite$extraCanvasRun(")
 };
 
 /** Emits the self-contained C11 `extra/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder + vitals). */
@@ -4360,6 +4361,17 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("#endif");
     outLine("    free(s->pixels); memset(s, 0, sizeof(*s));");
     outLine("}");
+    if usesIntHelper(calls, "lite$extraCanvasRun(") {
+        runFnTag := frontend.cFnTag("fn(:(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)):Bool");
+        outLine("static inline void lt_canvas_run(" + surfTag + " surf, " + runFnTag + " on_frame) {");
+        outLine("    for (;;) {");
+        outLine("        " + inpTag + " inp = lt_canvas_poll(surf);");
+        outLine("        if (!inp.f_open) break;");
+        outLine("        if (!on_frame.fn(on_frame.env, inp)) break;");
+        outLine("        lt_canvas_present(surf);");
+        outLine("    }");
+        outLine("}");
+    }
     outLine("static inline void lt_canvas_clear(" + surfTag + " surf, " + colTag + " fill) {");
     outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
     outLine("    uint8_t r = lt_canvas_u8(fill.f_r), g = lt_canvas_u8(fill.f_g), b = lt_canvas_u8(fill.f_b), a = lt_canvas_u8(fill.f_a);");
@@ -4807,6 +4819,9 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         mut seedKinds.pushBack("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)");
         mut seedKinds.pushBack("(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
         mut seedKinds.pushBack("(ok:Bool,error:String)");
+        if usesIntHelper(calls, "lite$extraCanvasRun(") {
+            mut seedKinds.pushBack("fn(:(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)):Bool");
+        }
     }
     if hasCallPrefix(calls, "lt_list_i64_") { mut seedKinds.pushBack("List<Int>"); }
     if hasCallPrefix(calls, "lt_list_f64_") { mut seedKinds.pushBack("List<Float>"); }

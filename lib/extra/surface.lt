@@ -83,6 +83,12 @@ pub present := fn(surface: Surface): Unit;
 /** Closes the surface and releases its host resources. */
 pub close := fn(surface: Surface): Unit;
 
+/** Frame callback invoked once per frame by `run`; return `false` to stop the loop. */
+pub FrameCallback := type fn(FrameInput): Bool;
+
+/** Runs a portable host-driven frame loop (`poll -> onFrame -> present`) across desktop, headless, and browser hosts until the surface closes or `onFrame` returns `false`. */
+pub run := fn(surface: Surface, onFrame: FrameCallback): Unit;
+
 /** Clears the entire surface to `fill`. */
 pub clear := fn(surface: Surface, fill: Color): Unit;
 

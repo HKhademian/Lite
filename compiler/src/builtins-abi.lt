@@ -28,6 +28,7 @@ extraHostFunction := fn(moduleIdentity: String, name: String, params: String, re
         else if name == "poll" and params == "surface=" + surf and result == inp { "lite$extraCanvasPoll" }
         else if name == "present" and params == "surface=" + surf and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasPresent" }
         else if name == "close" and params == "surface=" + surf and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClose" }
+        else if name == "run" and params == "surface=" + surf + "|onFrame=fn(:" + inp + "):Bool" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasRun" }
         else if name == "clear" and params == "surface=" + surf + "|fill=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClear" }
         else if name == "fillRect" and params == "surface=" + surf + "|area=" + rc + "|fill=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasFillRect" }
         else if name == "strokeRect" and params == "surface=" + surf + "|area=" + rc + "|lineWidth=Float|stroke=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasStrokeRect" }
