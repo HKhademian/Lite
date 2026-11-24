@@ -1,6 +1,6 @@
 # Identifiers
 
-Status: **Unicode names, ordinary underscore bindings, and underscore-prefixed unused-name intent accepted; XID profile and case sensitivity proposed; normalization and Unicode version open**.
+Status: **Selected design (2026-11-24): strict UAX #31 `(XID_Start | "_") { XID_Continue }` profile pinned to Unicode 16.0.0 (no format-control characters such as ZWNJ `U+200C` / ZWJ `U+200D`), ordinary underscore bindings and underscore-prefixed unused-name intent, case-sensitive names, NFC normalization for identifier identity, and distinct confusables/Persian-Arabic variants handled via diagnostics and UTS #39 lints. Current executable support: bootstrap compiler accepts ASCII identifiers only (`[A-Za-z_][A-Za-z0-9_]*`); Unicode lexing, C mangling, NFC, and confusable checks are planned implementation phases.**
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Let programmers name bindings in their own language while keeping identifier rec
 identifier := (XID_Start | "_") { XID_Continue }
 ```
 
-`XID_Start` and `XID_Continue` are Unicode identifier properties. The proposed LiteScript profile adds `_` as an initial character and uses case-sensitive names. Unicode support is accepted; the precise profile is still a proposal. See [Unicode identifier rules](https://www.unicode.org/reports/tr31/).
+`XID_Start` and `XID_Continue` are Unicode identifier properties pinned to **Unicode 16.0.0** ([Unicode identifier rules](https://www.unicode.org/reports/tr31/)). The selected LiteScript profile adds `_` as an initial character, uses case-sensitive names, and applies strict `XID_Continue` without format-control (`Cf`) characters such as ZWNJ (`U+200C`) or ZWJ (`U+200D`).
 
 ## Examples
 
@@ -20,10 +20,12 @@ identifier := (XID_Start | "_") { XID_Continue }
 student_name := "Ada";
 élève := "Ada";
 学生数 := 12;
+پیام := "سلام";
+کتاب_ها := 12;
 _temporary := 3;
 ```
 
-Digits may continue a name but do not begin one under this profile. Punctuation such as `.`, `@`, and `:` remains syntax rather than part of an identifier. Reserved words are recognized separately; their complete list and any escaping form remain open.
+Digits (ASCII or Unicode decimal digits) may continue a name (`XID_Continue`) but do not begin one (`XID_Start`). Symbols and emoji outside `XID_Start` / `XID_Continue` (such as `🚀`), punctuation such as `.`, `@`, and `:`, and join controls such as ZWNJ (`U+200C`, use `_` as in `کتاب_ها` instead) are excluded from identifiers. Reserved words are recognized separately; their complete list and any escaping form remain open.
 
 ## Names versus localized source vocabulary
 
@@ -84,21 +86,19 @@ Here _ is the one optional item name and may be read. Loop count/index/value use
 
 ## Case and normalization
 
-The proposed case-sensitive rule distinguishes `score` from `Score`.
+Selected (2026-11-24):
 
-Case is stylistic, not semantic. Documentation convention uses UpperCamelCase for types and user-defined enum cases, and snake_case for bindings, functions, modules, and fields. Prelude Option cases `.Some`/`.None` follow enum-case capitalization; prelude Result cases `.ok`/`.err` are the selected fixed exception. Capitalization never selects a binding, test, case, or type. Existing examples may use other casing until normalized; no formatter casing rule is selected.
-
-Normalization is a separate decision from case sensitivity. Before implementation, choose whether canonically equivalent Unicode spellings denote the same identifier, which normalization form applies, and how source spelling is preserved in diagnostics. NFC was suggested but has not been adopted. The relevant forms are defined by [Unicode normalization](https://www.unicode.org/reports/tr15/).
-
-Identifier normalization must not silently establish a normalization rule for string contents.
+- **Case-sensitive:** `score` and `Score` are distinct identifiers. Case is stylistic, not semantic. Documentation convention uses UpperCamelCase for types and user-defined enum cases, and snake_case for bindings, functions, modules, and fields. Prelude Option cases `.Some`/`.None` follow enum-case capitalization; prelude Result cases `.ok`/`.err` are the selected fixed exception. Capitalization never selects a binding, test, case, or type. Existing examples may use other casing until normalized; no formatter casing rule is selected.
+- **NFC identifier identity:** canonically equivalent Unicode spellings denote the same identifier after [Unicode Normalization Form C (NFC)](https://www.unicode.org/reports/tr15/). NFC normalization applies only to identifier identity (applied only when an identifier contains non-ASCII scalars); original source spelling is preserved in diagnostics, and string literal contents are never auto-normalized.
+- **Confusables and Persian/Arabic variants:** visually similar characters — such as Persian `ی` (`U+06CC`) versus Arabic `ي` (`U+064A`), Persian `ک` (`U+06A9`) versus Arabic `ك` (`U+0643`), or Latin `e` (`U+0065`) versus Cyrillic `е` (`U+0435`) — remain distinct identifiers and are never silently merged. Instead, tooling and compiler diagnostics surface them via [UTS #39](https://www.unicode.org/reports/tr39/) mixed-script and same-scope confusable lints and codepoint-aware "did you mean?" hints.
+- **ASCII fast-path design:** pure-ASCII sources and identifiers bypass Unicode range-table lookups, NFC normalization, C identifier mangling, and confusable checks so ASCII workloads pay near-zero overhead.
 
 ## Open decisions
 
 - The selected `:/`, `:%`, `:/=` and `:%=` arithmetic symbols retain the user's compact/spaced equivalence requirement. Because the spellings begin with a colon, `a:/b` has exactly one reading, `a` followed by `:/` and `b`; the retired `a_/b` could read as `a_ / b` or `a _/ b`. There is no conflict with `a_` or `_` identifiers and no mandatory-space rule. See [the lexical boundary](lite://doc/arithmetic-methods-and-division-revision#compact-and-spaced-forms-must-agree).
-- Pin the Unicode version and complete the identifier profile.
-- Confirm case sensitivity and normalization behavior.
-- Define any restrictions on format-control characters and any identifier escaping syntax.
-- Specify reserved words and remaining diagnostic severities/configuration. Underscore-prefixed unused-name permission is selected; unrelated shadowing and required-use diagnostics remain separate.
+- Specify reserved words and any identifier escaping syntax.
+- Specify remaining diagnostic severities and configuration (underscore-prefixed unused-name permission is selected; unrelated shadowing, required-use, and UTS #39 confusable lint severities/configuration remain open).
+- Implement the selected Unicode identifier design in the compiler and tooling across phases: Unicode 16.0.0 `XID_Start`/`XID_Continue` tables in lexing and `core/text`, target-safe C identifier mangling, non-ASCII-only NFC normalization, and UTS #39 confusable diagnostics.
 
 ## Related concepts and references
 
@@ -109,3 +109,4 @@ Identifier normalization must not silently establish a normalization rule for st
 - [Tags and contexts](lite://doc/tags-and-contexts)
 - [Unicode Standard Annex #31: Unicode Identifiers and Syntax](https://www.unicode.org/reports/tr31/)
 - [Unicode Standard Annex #15: Unicode Normalization Forms](https://www.unicode.org/reports/tr15/)
+- [Unicode Technical Standard #39: Unicode Security Mechanisms](https://www.unicode.org/reports/tr39/)
