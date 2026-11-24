@@ -76,11 +76,14 @@ normalizeSlashes := fn(path: String): String {
     tb.build(result)
 }
 
-/** Drops one trailing `.lts` suffix when a non-empty stem precedes it. */
+/** Drops one trailing `.lt` or `.lts` suffix when a non-empty stem precedes it. */
 stripLtsExtension := fn(name: String): String {
     size := name.length();
     if size > 4 and name.startsWithAt(size - 4, ".lts") {
         return name.slice(0, size - 4);
+    }
+    if size > 3 and name.startsWithAt(size - 3, ".lt") {
+        return name.slice(0, size - 3);
     }
     name
 }
@@ -693,9 +696,10 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     intValue = if isRoot { 1 } else { 0 }, textValue = moduleKey));
 
     if isRoot and projectRoot =!= "" {
-        coreOwnerRels: List<String> = ["lib/core/int.lts", "lib/core/text.lts", "lib/core/list.lts", "lib/core/array.lts", "lib/core/map.lts", "lib/core/set.lts"];
-        loop coreOwnerRels as ownerRel {
-            loadedOwner := hostFs.tryReadCoreOwner(projectRoot, ownerRel);
+        coreOwnerStems: List<String> = ["lib/core/int", "lib/core/text", "lib/core/list", "lib/core/array", "lib/core/map", "lib/core/set"];
+        loop coreOwnerStems as ownerStem {
+            loadedLt := hostFs.tryReadCoreOwner(projectRoot, ownerStem + ".lt");
+            loadedOwner := if loadedLt.ok { loadedLt } else { hostFs.tryReadCoreOwner(projectRoot, ownerStem + ".lts") };
             if loadedOwner.ok and not moduleVisited(graph, loadedOwner.path) {
                 graph = self(=target, path = loadedOwner.path, display = loadedOwner.display,
                 identity = loadedOwner.identity, source = loadedOwner.text, initialGraph = graph,

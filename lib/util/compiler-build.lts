@@ -49,14 +49,22 @@ isSafeRelPath := fn(relPath: String): Bool {
 };
 
 resolveEdgeImportPath := fn(rootDir: String, importerAbs: String, spec: String): String {
-    sourceSpec := if spec.endsWith(".lts") { spec } else { spec + ".lts" };
-    if sourceSpec.startsWithAt(0, "/") {
-        return path.normalize(sourceSpec);
+    var basePath := "";
+    if spec.startsWithAt(0, "/") {
+        basePath = path.normalize(spec);
+    } else if spec.startsWithAt(0, "./") or spec.startsWithAt(0, "../") {
+        basePath = path.resolve(path.parentDir(importerAbs), spec);
+    } else {
+        basePath = path.resolve(rootDir, "lib/" + spec);
     }
-    if sourceSpec.startsWithAt(0, "./") or sourceSpec.startsWithAt(0, "../") {
-        return path.resolve(path.parentDir(importerAbs), sourceSpec);
+    if spec.endsWith(".lt") or spec.endsWith(".lts") {
+        return basePath;
     }
-    path.resolve(rootDir, "lib/" + sourceSpec)
+    ltPath := basePath + ".lt";
+    if fs.kind(ltPath) == fs.FILE_KIND_FILE {
+        return ltPath;
+    }
+    basePath + ".lts"
 };
 
 sameRealPath := fn(leftPath: String, rightPath: String): Bool {

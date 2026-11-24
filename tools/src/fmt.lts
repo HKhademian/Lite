@@ -202,7 +202,13 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(0);
     }
 
-    files := path.collectFiles(proc.cwd(), targets, ".lts", path.defaultIgnoredDirs(), true);
+    allFiles := path.collectFiles(proc.cwd(), targets, "", path.defaultIgnoredDirs(), true);
+    files: mut List<String> = [];
+    loop allFiles as candidate {
+        if candidate.endsWith(".lt") or candidate.endsWith(".lts") {
+            mut files.pushBack(candidate);
+        }
+    }
 
     var dirty := 0;
     loop files as file {

@@ -162,10 +162,10 @@ function isolatedCheckout(): string {
   const directory = mkdtempSync(join(tmpdir(), 'lite-t11-checkout-'));
   const dependencies = (['ts', 'c'] as const).flatMap(target => buildCompiler(target).dependencies);
   const toolSources = readdirSync(join(root, 'tools/src')).filter(f => f.endsWith('.lts')).map(f => `tools/src/${f}`);
-  const coreLibs = readdirSync(join(root, 'lib/core')).filter(f => f.endsWith('.lts')).map(f => `lib/core/${f}`);
-  const externalLibs = readdirSync(join(root, 'lib/external')).filter(f => f.endsWith('.lts')).map(f => `lib/external/${f}`);
-  const utilLibs = readdirSync(join(root, 'lib/util')).filter(f => f.endsWith('.lts')).map(f => `lib/util/${f}`);
-  const siteLibs = readdirSync(join(root, 'site/src')).filter(f => f.endsWith('.lts')).map(f => `site/src/${f}`);
+  const coreLibs = readdirSync(join(root, 'lib/core')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/core/${f}`);
+  const externalLibs = readdirSync(join(root, 'lib/external')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/external/${f}`);
+  const utilLibs = readdirSync(join(root, 'lib/util')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/util/${f}`);
+  const siteLibs = readdirSync(join(root, 'site/src')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `site/src/${f}`);
   const paths = new Set([
     'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
     'compiler/package.json',

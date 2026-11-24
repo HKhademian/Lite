@@ -64,7 +64,7 @@ run := fn(rawArgs: List<String>): Unit {
         usageExit();
     }
     source := positional[0];
-    if not source.endsWith(".lts") {
+    if not source.endsWith(".lts") and not source.endsWith(".lt") {
         usageExit();
     }
     if fs.kind(source) =!= fs.FILE_KIND_FILE {
