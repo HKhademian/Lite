@@ -4256,7 +4256,7 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_surf;
             const lite_inp = "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)";
             void lite_inp;
-            return (Boolean(((((((lite_name) === ("open"))) && (((lite_params) === ("title=String|width=Int|height=Int"))))) && (((lite_result) === (lite_surf))))) ? "lite$extraCanvasOpen" : (Boolean(((((((lite_name) === ("poll"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite_inp))))) ? "lite$extraCanvasPoll" : (Boolean(((((((lite_name) === ("present"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasPresent" : (Boolean(((((((lite_name) === ("close"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasClose" : (Boolean(((((((lite_name) === ("clear"))) && (((lite_params) === ("surface=(handle:Int)|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasClear" : (Boolean(((((((lite_name) === ("fillRect"))) && (((lite_params) === ("surface=(handle:Int)|area=(x:Float,y:Float,width:Float,height:Float)|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasFillRect" : (Boolean(((((((lite_name) === ("strokeRect"))) && (((lite_params) === ("surface=(handle:Int)|area=(x:Float,y:Float,width:Float,height:Float)|lineWidth=Float|stroke=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasStrokeRect" : (Boolean(((((((lite_name) === ("fillCircle"))) && (((lite_params) === ("surface=(handle:Int)|center=(x:Float,y:Float)|radius=Float|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasFillCircle" : (Boolean(((((((lite_name) === ("strokeLine"))) && (((lite_params) === ("surface=(handle:Int)|start=(x:Float,y:Float)|finish=(x:Float,y:Float)|lineWidth=Float|stroke=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasStrokeLine" : (Boolean(((((((lite_name) === ("drawText"))) && (((lite_params) === ("surface=(handle:Int)|content=String|at=(x:Float,y:Float)|size=Float|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasDrawText" : (Boolean(((((((lite_name) === ("capture"))) && (((lite_params) === ("surface=(handle:Int)|outPath=String"))))) && (((lite_result) === ("(ok:Bool,error:String)"))))) ? "lite$extraCanvasCapture" : (Boolean(((((((lite_name) === ("setTargetFps"))) && (((lite_params) === ("surface=(handle:Int)|fps=Float"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasSetTargetFps" : (Boolean(((((((lite_name) === ("vitals"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === ("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)"))))) ? "lite$extraCanvasVitals" : (Boolean(((((((lite_name) === ("playTone"))) && (((lite_params) === ("surface=(handle:Int)|frequency=Int|durationMs=Int|volume=Int"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasPlayTone" : (Boolean(((((((lite_name) === ("bounds"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === ("(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)"))))) ? "lite$extraCanvasBounds" : (Boolean(((((((lite_name) === ("resize"))) && (((lite_params) === ("surface=(handle:Int)|width=Int|height=Int"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasResize" : (Boolean(((((((lite_name) === ("setFullscreen"))) && (((lite_params) === ("surface=(handle:Int)|enabled=Bool"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasSetFullscreen" : "")))))))))))))))));
+            return (Boolean(((((((lite_name) === ("open"))) && (((lite_params) === ("title=String|width=Int|height=Int"))))) && (((lite_result) === (lite_surf))))) ? "lite$extraCanvasOpen" : (Boolean(((((((lite_name) === ("poll"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite_inp))))) ? "lite$extraCanvasPoll" : (Boolean(((((((lite_name) === ("present"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasPresent" : (Boolean(((((((lite_name) === ("close"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasClose" : (Boolean(((((((lite_name) === ("run"))) && (((lite_params) === ("surface=(handle:Int)|onFrame=fn(:(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)):Bool"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasRun" : (Boolean(((((((lite_name) === ("clear"))) && (((lite_params) === ("surface=(handle:Int)|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasClear" : (Boolean(((((((lite_name) === ("fillRect"))) && (((lite_params) === ("surface=(handle:Int)|area=(x:Float,y:Float,width:Float,height:Float)|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasFillRect" : (Boolean(((((((lite_name) === ("strokeRect"))) && (((lite_params) === ("surface=(handle:Int)|area=(x:Float,y:Float,width:Float,height:Float)|lineWidth=Float|stroke=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasStrokeRect" : (Boolean(((((((lite_name) === ("fillCircle"))) && (((lite_params) === ("surface=(handle:Int)|center=(x:Float,y:Float)|radius=Float|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasFillCircle" : (Boolean(((((((lite_name) === ("strokeLine"))) && (((lite_params) === ("surface=(handle:Int)|start=(x:Float,y:Float)|finish=(x:Float,y:Float)|lineWidth=Float|stroke=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasStrokeLine" : (Boolean(((((((lite_name) === ("drawText"))) && (((lite_params) === ("surface=(handle:Int)|content=String|at=(x:Float,y:Float)|size=Float|fill=(r:Float,g:Float,b:Float,a:Float)"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasDrawText" : (Boolean(((((((lite_name) === ("capture"))) && (((lite_params) === ("surface=(handle:Int)|outPath=String"))))) && (((lite_result) === ("(ok:Bool,error:String)"))))) ? "lite$extraCanvasCapture" : (Boolean(((((((lite_name) === ("setTargetFps"))) && (((lite_params) === ("surface=(handle:Int)|fps=Float"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasSetTargetFps" : (Boolean(((((((lite_name) === ("vitals"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === ("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)"))))) ? "lite$extraCanvasVitals" : (Boolean(((((((lite_name) === ("playTone"))) && (((lite_params) === ("surface=(handle:Int)|frequency=Int|durationMs=Int|volume=Int"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasPlayTone" : (Boolean(((((((lite_name) === ("bounds"))) && (((lite_params) === ("surface=(handle:Int)"))))) && (((lite_result) === ("(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)"))))) ? "lite$extraCanvasBounds" : (Boolean(((((((lite_name) === ("resize"))) && (((lite_params) === ("surface=(handle:Int)|width=Int|height=Int"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasResize" : (Boolean(((((((lite_name) === ("setFullscreen"))) && (((lite_params) === ("surface=(handle:Int)|enabled=Bool"))))) && (((lite_result) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? "lite$extraCanvasSetFullscreen" : ""))))))))))))))))));
         } else {
             return "";
         }
@@ -4439,15 +4439,15 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_rawLen = lite$textLength(lite_raw);
         void lite_rawLen;
-        if (((lite$textAt(lite_raw, lite$subtractInt(lite_rawLen, 1n, 26045), 26035)) === ("/"))) {
+        if (((lite$textAt(lite_raw, lite$subtractInt(lite_rawLen, 1n, 26201), 26191)) === ("/"))) {
             return "";
         }
         let lite_out = lite_raw;
         void lite_out;
-        if (((((lite_rawLen) > (4n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_raw, lite$subtractInt(lite_rawLen, 4n, 26138), ".lts")))) {
-            lite_out = lite$textSlice(lite_raw, 0n, lite$subtractInt(lite_rawLen, 4n, 26187), 26171);
-        } else if (((((lite_rawLen) > (3n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_raw, lite$subtractInt(lite_rawLen, 3n, 26246), ".lt")))) {
-            lite_out = lite$textSlice(lite_raw, 0n, lite$subtractInt(lite_rawLen, 3n, 26294), 26278);
+        if (((((lite_rawLen) > (4n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_raw, lite$subtractInt(lite_rawLen, 4n, 26294), ".lts")))) {
+            lite_out = lite$textSlice(lite_raw, 0n, lite$subtractInt(lite_rawLen, 4n, 26343), 26327);
+        } else if (((((lite_rawLen) > (3n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_raw, lite$subtractInt(lite_rawLen, 3n, 26402), ".lt")))) {
+            lite_out = lite$textSlice(lite_raw, 0n, lite$subtractInt(lite_rawLen, 3n, 26450), 26434);
         }
         if (((liteFn$lib$core$text$tp_String_op_indexOf(lite_out, ".", 0n)) >= (0n))) {
             return "";
@@ -4475,9 +4475,9 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_eq) <= (0n))) {
             liteFn$lib$core$diag$fail(lite_prefix, (("invalid --builtin-mode specification: ") + (lite_spec)));
         }
-        const lite_target = lite$textSlice(lite_spec, 0n, lite_eq, 27055);
+        const lite_target = lite$textSlice(lite_spec, 0n, lite_eq, 27211);
         void lite_target;
-        const lite_mode = lite$textSlice(lite_spec, lite$addInt(lite_eq, 1n, 27095), lite$textLength(lite_spec), 27086);
+        const lite_mode = lite$textSlice(lite_spec, lite$addInt(lite_eq, 1n, 27251), lite$textLength(lite_spec), 27242);
         void lite_mode;
         if (((((lite_mode) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$BUILTIN_MODE_BUILTIN))) && (((lite_mode) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$BUILTIN_MODE_PURE))))) {
             liteFn$lib$core$diag$fail(lite_prefix, (("invalid --builtin-mode value: ") + (lite_mode)));
@@ -4486,10 +4486,10 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_tLen;
         const lite_colon = liteFn$lib$core$text$tp_String_op_indexOf(lite_target, ":", 0n);
         void lite_colon;
-        if (((((lite_colon) > (0n))) && (((lite$addInt(lite_colon, 1n, 27362)) < (lite_tLen))))) {
-            const lite_modPart = lite$textSlice(lite_target, 0n, lite_colon, 27401);
+        if (((((lite_colon) > (0n))) && (((lite$addInt(lite_colon, 1n, 27518)) < (lite_tLen))))) {
+            const lite_modPart = lite$textSlice(lite_target, 0n, lite_colon, 27557);
             void lite_modPart;
-            const lite_fnPart = lite$textSlice(lite_target, lite$addInt(lite_colon, 1n, 27455), lite_tLen, 27443);
+            const lite_fnPart = lite$textSlice(lite_target, lite$addInt(lite_colon, 1n, 27611), lite_tLen, 27599);
             void lite_fnPart;
             const lite_normMod = liteFn$_p__p_$_p__p_$compiler$src$builtins__abi$normalizeBuiltinModule(lite_modPart);
             void lite_normMod;
@@ -4498,7 +4498,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             liteFn$lib$core$diag$fail(lite_prefix, (("invalid --builtin-mode function target: ") + (lite_target)));
         }
-        const lite_isLtsFile = (((((((lite_tLen) > (4n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_target, lite$subtractInt(lite_tLen, 4n, 27900), ".lts"))))) || ((((((lite_tLen) > (3n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_target, lite$subtractInt(lite_tLen, 3n, 27956), ".lt"))))));
+        const lite_isLtsFile = (((((((lite_tLen) > (4n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_target, lite$subtractInt(lite_tLen, 4n, 28056), ".lts"))))) || ((((((lite_tLen) > (3n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_target, lite$subtractInt(lite_tLen, 3n, 28112), ".lt"))))));
         void lite_isLtsFile;
         let lite_lastDot = (-1n);
         void lite_lastDot;
@@ -4511,12 +4511,12 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             lite_lastDot = lite_found;
-            lite_scan = lite$addInt(lite_found, 1n, 28150);
+            lite_scan = lite$addInt(lite_found, 1n, 28306);
         }
-        if ((((((!(lite_isLtsFile))) && (((lite_lastDot) > (0n))))) && (((liteFn$lib$core$text$tp_String_op_indexOf(lite_target, "/", lite$addInt(lite_lastDot, 1n, 28230))) < (0n))))) {
-            const lite_modPart = lite$textSlice(lite_target, 0n, lite_lastDot, 28267);
+        if ((((((!(lite_isLtsFile))) && (((lite_lastDot) > (0n))))) && (((liteFn$lib$core$text$tp_String_op_indexOf(lite_target, "/", lite$addInt(lite_lastDot, 1n, 28386))) < (0n))))) {
+            const lite_modPart = lite$textSlice(lite_target, 0n, lite_lastDot, 28423);
             void lite_modPart;
-            const lite_fnPart = lite$textSlice(lite_target, lite$addInt(lite_lastDot, 1n, 28325), lite_tLen, 28311);
+            const lite_fnPart = lite$textSlice(lite_target, lite$addInt(lite_lastDot, 1n, 28481), lite_tLen, 28467);
             void lite_fnPart;
             if (((((liteFn$lib$core$text$tp_String_op_indexOf(lite_modPart, ".", 0n)) < (0n))) && (((lite_fnPart) !== (""))))) {
                 const lite_normMod = liteFn$_p__p_$_p__p_$compiler$src$builtins__abi$normalizeBuiltinModule(lite_modPart);
@@ -37535,7 +37535,7 @@ export function main(lite$write?: (text: string) => void): string {
     void liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesExternal;
     function liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesExtraCanvas(lite_calls: string): boolean {
         void lite_calls;
-        return ((((((((((((((((((((((((((((((((liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasOpen")) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPoll")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPresent")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasClose")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasClear")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasFillRect")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasStrokeRect")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasFillCircle")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasStrokeLine")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasDrawText")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasCapture")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasSetTargetFps")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasVitals")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPlayTone")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasBounds")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasResize")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasSetFullscreen")));
+        return ((((((((((((((((((((((((((((((((((liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasOpen")) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPoll")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPresent")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasClose")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasClear")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasFillRect")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasStrokeRect")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasFillCircle")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasStrokeLine")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasDrawText")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasCapture")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasSetTargetFps")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasVitals")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPlayTone")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasBounds")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasResize")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasSetFullscreen")))) || (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasRun")));
     }
     void liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesExtraCanvas;
     function liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesHostOs(lite_calls: string): boolean {
@@ -38917,9 +38917,24 @@ export function main(lite$write?: (text: string) => void): string {
         if (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasBounds")) {
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("type LiteCanvasBounds = { x: bigint; y: bigint; width: bigint; height: bigint; fullscreen: boolean };");
         }
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("interface LiteCanvasState { w: number; h: number; x: number; y: number; fullscreen: boolean; pixels: Uint8Array; open: boolean; pointerX: number; pointerY: number; pointerDown: boolean; key: string; lastMs: number; frameStartMs: number; frameCount: number; targetFps: number; lastFrameMs: number; avgFrameMs: number; headless: boolean; dir: string; child: any; }");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("interface LiteCanvasState { w: number; h: number; x: number; y: number; fullscreen: boolean; title: string; pixels: Uint8Array; open: boolean; pointerX: number; pointerY: number; pointerDown: boolean; key: string; lastMs: number; pendingDeltaMs: number; frameStartMs: number; frameCount: number; targetFps: number; lastFrameMs: number; avgFrameMs: number; headless: boolean; asyncRunning: boolean; dir: string; child: any; }");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("interface LiteSurfaceHostApi { poll: () => LiteCanvasInput; present: () => void; close: () => void; }");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("interface LiteSurfaceHost {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    open?: (id: number, title: string, width: number, height: number, state: LiteCanvasState) => void;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    poll?: (id: number, state: LiteCanvasState) => void;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    present?: (id: number, state: LiteCanvasState) => void;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    close?: (id: number, state: LiteCanvasState) => void;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    playTone?: (id: number, frequency: number, durationMs: number, volume: number) => void;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    resize?: (id: number, width: number, height: number, state: LiteCanvasState) => void;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    setFullscreen?: (id: number, enabled: boolean, state: LiteCanvasState) => void;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    run?: (surface: LiteCanvasSurface, state: LiteCanvasState, onFrame: (inp: LiteCanvasInput) => boolean, api: LiteSurfaceHostApi) => boolean;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$surfaceHost(): LiteSurfaceHost | null {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const h = (globalThis as { __liteSurfaceHost?: LiteSurfaceHost }).__liteSurfaceHost;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    return h && typeof h === \"object\" ? h : null;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("const lite$canvasMap = new Map<number, LiteCanvasState>();");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("const lite$canvasSleepArr = new Int32Array(new SharedArrayBuffer(4));");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("let lite$canvasSleepArr: Int32Array | null = null;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("let lite$canvasNextId = 1;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$canvasClampByte(v: number): number { if (!(v > 0)) return 0; if (v >= 1) return 255; return Math.round(v * 255); }");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$canvasBlend(s: LiteCanvasState, x: number, y: number, r: number, g: number, b: number, a: number): void {");
@@ -38969,9 +38984,10 @@ export function main(lite$write?: (text: string) => void): string {
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasOpen(title: string, width: bigint, height: bigint): LiteCanvasSurface {");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const w = Math.max(1, Number(width)); const h = Math.max(1, Number(height));");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const id = lite$canvasNextId++;");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const headless = process.env['LITE_CANVAS_HEADLESS'] === '1';");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const host = lite$surfaceHost();");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const headless = !host && typeof process !== 'undefined' && process.env['LITE_CANVAS_HEADLESS'] === '1';");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    let dir = ''; let child: any = null;");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!headless) {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!host && !headless) {");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const fs = (process as any).getBuiltinModule('node:fs');");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const os = (process as any).getBuiltinModule('node:os');");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const pathMod = (process as any).getBuiltinModule('node:path');");
@@ -38987,29 +39003,38 @@ export function main(lite$write?: (text: string) => void): string {
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        child = cp.spawn(process.execPath, ['-e', bridge, dir, title, String(w), String(h)], { stdio: 'ignore' });");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    }");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const nowMs = performance.now();");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    lite$canvasMap.set(id, { w, h, x: 120, y: 120, fullscreen: false, pixels: new Uint8Array(w * h * 4), open: true, pointerX: 0, pointerY: 0, pointerDown: false, key: '', lastMs: nowMs, frameStartMs: nowMs, frameCount: 0, targetFps: 60.0, lastFrameMs: 0, avgFrameMs: 0, headless, dir, child });");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const state: LiteCanvasState = { w, h, x: 120, y: 120, fullscreen: false, title, pixels: new Uint8Array(w * h * 4), open: true, pointerX: 0, pointerY: 0, pointerDown: false, key: '', lastMs: nowMs, pendingDeltaMs: -1, frameStartMs: nowMs, frameCount: 0, targetFps: 60.0, lastFrameMs: 0, avgFrameMs: 0, headless, asyncRunning: false, dir, child };");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    lite$canvasMap.set(id, state);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (host && host.open) host.open(id, title, w, h, state);");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    return { handle: BigInt(id) };");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasPoll(surface: LiteCanvasSurface): LiteCanvasInput {");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const id = Number(surface.handle);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(id);");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s) return { open: false, width: 0n, height: 0n, pointerX: 0, pointerY: 0, pointerDown: false, key: '', deltaMs: 0n };");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s.headless && s.dir) {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const host = lite$surfaceHost();");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (host && host.poll) {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        host.poll(id, s);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    } else if (!s.headless && s.dir) {");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const fs = (process as any).getBuiltinModule('node:fs');");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        try { const st = JSON.parse(fs.readFileSync(s.dir + '/state.json', 'utf8')); s.open = Boolean(st.open); s.pointerX = Number(st.pointerX || 0); s.pointerY = Number(st.pointerY || 0); s.pointerDown = Boolean(st.pointerDown); s.key = String(st.key || ''); } catch {}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    }");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const now = performance.now(); const dt = Math.max(0, Math.round(now - s.lastMs)); s.lastMs = now;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const now = performance.now(); const dt = s.pendingDeltaMs >= 0 ? s.pendingDeltaMs : Math.max(0, Math.round(now - s.lastMs)); s.pendingDeltaMs = -1; s.lastMs = now;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const k = s.key; s.key = '';");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    return { open: s.open, width: BigInt(s.w), height: BigInt(s.h), pointerX: s.pointerX, pointerY: s.pointerY, pointerDown: s.pointerDown, key: k, deltaMs: BigInt(dt) };");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasPresent(surface: LiteCanvasSurface): void {");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const id = Number(surface.handle);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(id);");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s) return;");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s.headless && s.dir) {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const host = lite$surfaceHost();");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!host && !s.headless && s.dir) {");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const fs = (process as any).getBuiltinModule('node:fs');");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const tmp = s.dir + '/frame.tmp'; const dst = s.dir + '/frame.png';");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        try { fs.writeFileSync(tmp, lite$canvasEncodePng(s)); fs.renameSync(tmp, dst); } catch {}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    }");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s.headless && s.targetFps > 0) {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!host && !s.headless && s.targetFps > 0 && typeof SharedArrayBuffer !== 'undefined') {");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        if (!lite$canvasSleepArr) lite$canvasSleepArr = new Int32Array(new SharedArrayBuffer(4));");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const targetMs = 1000.0 / s.targetFps;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const elapsed = performance.now() - s.frameStartMs;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const rem = Math.floor(targetMs - elapsed);");
@@ -39021,6 +39046,7 @@ export function main(lite$write?: (text: string) => void): string {
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    s.frameCount += 1;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    s.lastFrameMs = frameMs;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    s.avgFrameMs = s.avgFrameMs <= 0 ? frameMs : s.avgFrameMs * 0.85 + frameMs * 0.15;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (host && host.present) host.present(id, s);");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasSetTargetFps(surface: LiteCanvasSurface, fps: number): void {");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
@@ -39028,19 +39054,45 @@ export function main(lite$write?: (text: string) => void): string {
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasVitals(surface: LiteCanvasSurface): LiteCanvasVitals {");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const cpu = (process as any).cpuUsage(); const cpuMs = (cpu.user + cpu.system) / 1000.0;");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const rss = BigInt((process as any).memoryUsage().rss);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const hasProc = typeof process !== 'undefined' && typeof (process as any).cpuUsage === 'function' && typeof (process as any).memoryUsage === 'function';");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    let cpuMs = 0; let rss = BigInt(s ? s.pixels.byteLength : 0);");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (hasProc) { const cpu = (process as any).cpuUsage(); cpuMs = (cpu.user + cpu.system) / 1000.0; rss = BigInt((process as any).memoryUsage().rss); }");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s) return { frameCount: 0n, frameTimeMs: 0, avgFrameTimeMs: 0, fps: 0, targetFps: 0, cpuTimeMs: cpuMs, memoryBytes: rss };");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const fps = s.avgFrameMs > 0 ? 1000.0 / s.avgFrameMs : 0;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    return { frameCount: BigInt(s.frameCount), frameTimeMs: s.lastFrameMs, avgFrameTimeMs: s.avgFrameMs, fps, targetFps: s.targetFps, cpuTimeMs: cpuMs, memoryBytes: rss };");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasClose(surface: LiteCanvasSurface): void {");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const id = Number(surface.handle); const s = lite$canvasMap.get(id);");
-        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s) return; s.open = false;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s || s.asyncRunning) return; s.open = false;");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const host = lite$surfaceHost();");
+        liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (host && host.close) host.close(id, s);");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (s.child) { try { s.child.kill(); } catch {} }");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (s.dir) { const fs = (process as any).getBuiltinModule('node:fs'); try { fs.rmSync(s.dir, { recursive: true, force: true }); } catch {} }");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    lite$canvasMap.delete(id);");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
+        if (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasRun")) {
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasRun(surface: LiteCanvasSurface, onFrame: (inp: LiteCanvasInput) => boolean): void {");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const id = Number(surface.handle); const s = lite$canvasMap.get(id);");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s) return;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const host = lite$surfaceHost();");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (host && typeof host.run === 'function') {");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        s.asyncRunning = true;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const tookOwnership = host.run(surface, s, onFrame, {");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("            poll: (): LiteCanvasInput => lite$extraCanvasPoll(surface),");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("            present: (): void => { lite$extraCanvasPresent(surface); },");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("            close: (): void => { s.asyncRunning = false; lite$extraCanvasClose(surface); },");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        });");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        if (tookOwnership) return;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        s.asyncRunning = false;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    }");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    while (true) {");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        const inp = lite$extraCanvasPoll(surface);");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        if (!inp.open) break;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        if (!onFrame(inp)) break;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("        lite$extraCanvasPresent(surface);");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    }");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
+        }
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasClear(surface: LiteCanvasSurface, fill: LiteCanvasColor): void {");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
         liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const r = lite$canvasClampByte(fill.r), g = lite$canvasClampByte(fill.g), b = lite$canvasClampByte(fill.b), a = lite$canvasClampByte(fill.a);");
@@ -39107,8 +39159,11 @@ export function main(lite$write?: (text: string) => void): string {
         }
         if (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasPlayTone")) {
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasPlayTone(surface: LiteCanvasSurface, frequency: bigint, durationMs: bigint, volume: bigint): void {");
-            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle));");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const id = Number(surface.handle);");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(id);");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (!s || s.headless) return;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const host = lite$surfaceHost();");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (host && host.playTone) { host.playTone(id, Number(frequency), Number(durationMs), Number(volume)); return; }");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    void frequency; void durationMs; void volume;");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         }
@@ -39121,19 +39176,25 @@ export function main(lite$write?: (text: string) => void): string {
         }
         if (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasResize")) {
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasResize(surface: LiteCanvasSurface, width: bigint, height: bigint): void {");
-            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const id = Number(surface.handle);");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(id); if (!s) return;");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const nw = Math.max(1, Number(width)), nh = Math.max(1, Number(height));");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (nw === s.w && nh === s.h) return;");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const nb = new Uint8Array(nw * nh * 4);");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const cw = Math.min(s.w, nw), ch = Math.min(s.h, nh);");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    for (let row = 0; row < ch; row += 1) nb.set(s.pixels.subarray(row * s.w * 4, row * s.w * 4 + cw * 4), row * nw * 4);");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    s.pixels = nb; s.w = nw; s.h = nh;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const host = lite$surfaceHost();");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (host && host.resize) host.resize(id, nw, nh, s);");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         }
         if (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$usesBuiltin(lite_calls, "extraCanvasSetFullscreen")) {
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("function lite$extraCanvasSetFullscreen(surface: LiteCanvasSurface, enabled: boolean): void {");
-            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(Number(surface.handle)); if (!s) return;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const id = Number(surface.handle);");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const s = lite$canvasMap.get(id); if (!s) return;");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    s.fullscreen = enabled;");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    const host = lite$surfaceHost();");
+            liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("    if (host && host.setFullscreen) host.setFullscreen(id, enabled, s);");
             liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("}");
         }
         return (void (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine("")));
@@ -39630,20 +39691,20 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_end = lite_separator;
             }
             if (((lite_index) === (lite_targetIndex))) {
-                const lite_entry = lite$textSlice(lite_encoded, lite_start, lite_end, 151481);
+                const lite_entry = lite$textSlice(lite_encoded, lite_start, lite_end, 156016);
                 void lite_entry;
                 const lite_eq = liteFn$lib$core$text$tp_String_op_indexOf(lite_entry, "=", 0n);
                 void lite_eq;
                 if (((lite_eq) <= (0n))) {
                     return "";
                 }
-                return (("lite_") + (lite$textSlice(lite_entry, 0n, lite_eq, 151614)));
+                return (("lite_") + (lite$textSlice(lite_entry, 0n, lite_eq, 156149)));
             }
             if (((lite_separator) < (0n))) {
                 return "";
             }
-            lite_index = lite$addInt(lite_index, 1n, 151692);
-            lite_start = lite$addInt(lite_separator, 1n, 151724);
+            lite_index = lite$addInt(lite_index, 1n, 156227);
+            lite_start = lite$addInt(lite_separator, 1n, 156259);
         }
         return "";
     }
@@ -39652,7 +39713,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_moduleName;
         void lite_rawFnName;
         void lite_params;
-        const lite_fnName = (Boolean(((lite_rawFnName) === ("Int.toText"))) ? "intText" : (Boolean(((lite_rawFnName) === ("String.toInt"))) ? "textToInt" : (Boolean(((lite_rawFnName) === ("String.repeat"))) ? "repeatText" : (Boolean(((lite_rawFnName) === ("String.contains"))) ? "containsText" : (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawFnName, 0n, "String.")) ? lite$textSlice(lite_rawFnName, 7n, lite$textLength(lite_rawFnName), 152265) : lite_rawFnName)))));
+        const lite_fnName = (Boolean(((lite_rawFnName) === ("Int.toText"))) ? "intText" : (Boolean(((lite_rawFnName) === ("String.toInt"))) ? "textToInt" : (Boolean(((lite_rawFnName) === ("String.repeat"))) ? "repeatText" : (Boolean(((lite_rawFnName) === ("String.contains"))) ? "containsText" : (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawFnName, 0n, "String.")) ? lite$textSlice(lite_rawFnName, 7n, lite$textLength(lite_rawFnName), 156800) : lite_rawFnName)))));
         void lite_fnName;
         const lite_arg0 = liteFn$_p__p_$_p__p_$compiler$src$emit__ts$paramRuntimeAt(lite_params, 0n);
         void lite_arg0;
@@ -39829,9 +39890,9 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_item;
             if (((lite_skippingDepth) > (0n))) {
                 if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_FUNCTION_START))) {
-                    lite_skippingDepth = lite$addInt(lite_skippingDepth, 1n, 158649);
+                    lite_skippingDepth = lite$addInt(lite_skippingDepth, 1n, 163184);
                 } else if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_FUNCTION_END))) {
-                    lite_skippingDepth = lite$subtractInt(lite_skippingDepth, 1n, 158769);
+                    lite_skippingDepth = lite$subtractInt(lite_skippingDepth, 1n, 163304);
                     if (((lite_skippingDepth) === (0n))) {
                         void (lite_out.push(lite_item));
                     }
@@ -39877,7 +39938,7 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_nl;
             const lite_end = (Boolean(((lite_nl) >= (0n))) ? lite_nl : lite_n);
             void lite_end;
-            const lite_rawLine = lite$textSlice(lite_commentText, lite_start, lite_end, 160406);
+            const lite_rawLine = lite$textSlice(lite_commentText, lite_start, lite_end, 164941);
             void lite_rawLine;
             const lite_cleanLine = (Boolean(((lite_start) === (0n))) ? lite_rawLine : (lite$textTrim(lite_rawLine, true, false)));
             void lite_cleanLine;
@@ -39889,13 +39950,13 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_nl) < (0n))) {
                 break;
             }
-            lite_start = lite$addInt(lite_nl, 1n, 160687);
+            lite_start = lite$addInt(lite_nl, 1n, 165222);
         }
     }
     void liteFn$_p__p_$_p__p_$compiler$src$emit__ts$emitTsComment;
     function liteFn$_p__p_$_p__p_$compiler$src$emit__ts$tsInitTempName(lite_targetName: string): string {
         void lite_targetName;
-        const lite_base = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_targetName, 0n, "lite_")) ? lite$textSlice(lite_targetName, 5n, lite$textLength(lite_targetName), 160935) : lite_targetName);
+        const lite_base = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_targetName, 0n, "lite_")) ? lite$textSlice(lite_targetName, 5n, lite$textLength(lite_targetName), 165470) : lite_targetName);
         void lite_base;
         return (("_init_") + (lite_base));
     }
@@ -39910,24 +39971,24 @@ export function main(lite$write?: (text: string) => void): string {
         if ((((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_trimmed, 0n, "(() => { ")))) || ((!(liteFn$lib$core$text$tp_String_op_endsWith(lite_trimmed, " })()")))))) {
             return { ok: false, declLine: "", loopLine: "", bindLine: "" };
         }
-        const lite_inner = liteFn$lib$core$text$tp_String_op_trim(lite$textSlice(lite_trimmed, 9n, lite$subtractInt(lite$textLength(lite_trimmed), 5n, 161577), 161551));
+        const lite_inner = liteFn$lib$core$text$tp_String_op_trim(lite$textSlice(lite_trimmed, 9n, lite$subtractInt(lite$textLength(lite_trimmed), 5n, 166112), 166086));
         void lite_inner;
         const lite_innerLen = lite$textLength(lite_inner);
         void lite_innerLen;
-        if (((((lite_innerLen) < (12n))) || (((lite$textAt(lite_inner, lite$subtractInt(lite_innerLen, 1n, 161664), 161652)) !== (";"))))) {
+        if (((((lite_innerLen) < (12n))) || (((lite$textAt(lite_inner, lite$subtractInt(lite_innerLen, 1n, 166199), 166187)) !== (";"))))) {
             return { ok: false, declLine: "", loopLine: "", bindLine: "" };
         }
-        let lite_retStart = lite$subtractInt(lite_innerLen, 1n, 161788);
+        let lite_retStart = lite$subtractInt(lite_innerLen, 1n, 166323);
         void lite_retStart;
-        while (((((lite_retStart) > (0n))) && ((((liteFn$lib$core$text$tp_String_op_isNameContinue(lite$textAt(lite_inner, lite$subtractInt(lite_retStart, 1n, 161838), 161826))) || (((lite$textAt(lite_inner, lite$subtractInt(lite_retStart, 1n, 161881), 161869)) === ("$")))))))) {
-            lite_retStart = lite$subtractInt(lite_retStart, 1n, 161924);
+        while (((((lite_retStart) > (0n))) && ((((liteFn$lib$core$text$tp_String_op_isNameContinue(lite$textAt(lite_inner, lite$subtractInt(lite_retStart, 1n, 166373), 166361))) || (((lite$textAt(lite_inner, lite$subtractInt(lite_retStart, 1n, 166416), 166404)) === ("$")))))))) {
+            lite_retStart = lite$subtractInt(lite_retStart, 1n, 166459);
         }
-        const lite_retVar = lite$textSlice(lite_inner, lite_retStart, lite$subtractInt(lite_innerLen, 1n, 161980), 161955);
+        const lite_retVar = lite$textSlice(lite_inner, lite_retStart, lite$subtractInt(lite_innerLen, 1n, 166515), 166490);
         void lite_retVar;
-        if (((((((lite_retVar) === (""))) || (((lite_retStart) < (8n))))) || (((lite$textSlice(lite_inner, lite$subtractInt(lite_retStart, 8n, 162046), lite_retStart, 162031)) !== (" return "))))) {
+        if (((((((lite_retVar) === (""))) || (((lite_retStart) < (8n))))) || (((lite$textSlice(lite_inner, lite$subtractInt(lite_retStart, 8n, 166581), lite_retStart, 166566)) !== (" return "))))) {
             return { ok: false, declLine: "", loopLine: "", bindLine: "" };
         }
-        const lite_beforeRet = liteFn$lib$core$text$tp_String_op_trim(lite$textSlice(lite_inner, 0n, lite$subtractInt(lite_retStart, 8n, 162199), 162181));
+        const lite_beforeRet = liteFn$lib$core$text$tp_String_op_trim(lite$textSlice(lite_inner, 0n, lite$subtractInt(lite_retStart, 8n, 166734), 166716));
         void lite_beforeRet;
         if (((((((lite_beforeRet) === (""))) || (((liteFn$lib$core$text$tp_String_op_indexOf(lite_beforeRet, "return ", 0n)) >= (0n))))) || (((liteFn$lib$core$text$tp_String_op_indexOf(lite_beforeRet, "return;", 0n)) >= (0n))))) {
             return { ok: false, declLine: "", loopLine: "", bindLine: "" };
@@ -39945,14 +40006,14 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_typeStart;
             const lite_eqPos = liteFn$lib$core$text$tp_String_op_indexOf(lite_beforeRet, " = ", lite_typeStart);
             void lite_eqPos;
-            const lite_semiPos = (Boolean(((lite_eqPos) >= (0n))) ? liteFn$_p__p_$_p__p_$compiler$src$emit__format$findTopLevelSemi(lite_beforeRet, lite$addInt(lite_eqPos, 3n, 162951)) : (-1n));
+            const lite_semiPos = (Boolean(((lite_eqPos) >= (0n))) ? liteFn$_p__p_$_p__p_$compiler$src$emit__format$findTopLevelSemi(lite_beforeRet, lite$addInt(lite_eqPos, 3n, 167486)) : (-1n));
             void lite_semiPos;
             if (((((lite_eqPos) >= (0n))) && (((lite_semiPos) >= (0n))))) {
-                const lite_declType = lite$textSlice(lite_beforeRet, lite_typeStart, lite_eqPos, 163046);
+                const lite_declType = lite$textSlice(lite_beforeRet, lite_typeStart, lite_eqPos, 167581);
                 void lite_declType;
-                const lite_initExpr = lite$textSlice(lite_beforeRet, lite$addInt(lite_eqPos, 3n, 163117), lite_semiPos, 163105);
+                const lite_initExpr = lite$textSlice(lite_beforeRet, lite$addInt(lite_eqPos, 3n, 167652), lite_semiPos, 167640);
                 void lite_initExpr;
-                const lite_rest = liteFn$lib$core$text$tp_String_op_trim(lite$textSlice(lite_beforeRet, lite$addInt(lite_semiPos, 1n, 163176), lite$textLength(lite_beforeRet), 163162));
+                const lite_rest = liteFn$lib$core$text$tp_String_op_trim(lite$textSlice(lite_beforeRet, lite$addInt(lite_semiPos, 1n, 167711), lite$textLength(lite_beforeRet), 167697));
                 void lite_rest;
                 if (((liteFn$_p__p_$_p__p_$compiler$src$emit__format$isSingleScopedLoopStmt(lite_rest)) && ((!(liteFn$_p__p_$_p__p_$compiler$src$emit__format$codeUsesIdent(lite_initExpr, lite_retVar)))))) {
                     const lite_ann = (Boolean(((lite_explicitType) !== (""))) ? lite_explicitType : lite_declType);
@@ -40205,7 +40266,7 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_trimmedDiscard = liteFn$lib$core$text$tp_String_op_trim((lite_item).code);
                 void lite_trimmedDiscard;
                 const lite_unwrapped = (Boolean(((liteFn$lib$core$text$tp_String_op_startsWithAt(lite_trimmedDiscard, 0n, "(() => { ")) && (liteFn$lib$core$text$tp_String_op_endsWith(lite_trimmedDiscard, " return undefined; })()")))) ? (() => {
-                    const lite_innerBody = liteFn$lib$core$text$tp_String_op_trim(lite$textSlice(lite_trimmedDiscard, 9n, lite$subtractInt(lite$textLength(lite_trimmedDiscard), 23n, 174190), 174157));
+                    const lite_innerBody = liteFn$lib$core$text$tp_String_op_trim(lite$textSlice(lite_trimmedDiscard, 9n, lite$subtractInt(lite$textLength(lite_trimmedDiscard), 23n, 178725), 178692));
                     void lite_innerBody;
                     return (Boolean(((((liteFn$lib$core$text$tp_String_op_indexOf(lite_innerBody, "return ", 0n)) < (0n))) && (((liteFn$lib$core$text$tp_String_op_indexOf(lite_innerBody, "return;", 0n)) < (0n))))) ? (Boolean(((((((liteFn$lib$core$text$tp_String_op_startsWithAt(lite_innerBody, 0n, "for (")) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_innerBody, 0n, "while (")))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_innerBody, 0n, "if (")))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_innerBody, 0n, "try {")))) ? lite_innerBody : (Boolean(((lite_innerBody) === (""))) ? "" : (((("{ ") + (lite_innerBody))) + (" }")))) : "");
                 })() : "");
@@ -40345,7 +40406,7 @@ export function main(lite$write?: (text: string) => void): string {
                     lite_line = ((lite_line) + (" + \" \" + "));
                 }
                 lite_line = ((lite_line) + ((liteFn$_p__p_$_p__p_$compiler$src$emit__ts$displayValueCode((lite_item).kind, (lite_item).code))));
-                lite_count = lite$addInt(lite_count, 1n, 183178);
+                lite_count = lite$addInt(lite_count, 1n, 187713);
             }
         }
         if ((!(lite_mainStopped))) {
