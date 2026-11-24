@@ -8,5 +8,5 @@ export const seed = {
   "sourceSha256": "7d8742662bd1e256b80d3f78a6f924757dbbb4cf24528992d1dda7f6ff0a5f4a",
   "artifactSha256": "665cd92a65977b38a91d2f1981462394704178a7c9016778a7027c36c4e0a29c",
   "cArtifact": "compiler.c",
-  "cArtifactSha256": "78b5ca3c20e0a4f100311c3cea323a7a184d50bda09eb86520be8aea9b81ab3e",
+  "cArtifactSha256": "fc87c963495707c278a2a9869e789fe677fd7616eff92f59b8450ef7306932d4",
 } as const;
