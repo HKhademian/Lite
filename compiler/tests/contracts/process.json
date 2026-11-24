@@ -620,9 +620,9 @@
     "fee6001d1ce33bf0d3cb4540deb2f00106a98918ba39871c4f3cc38db00adc47": "io := import \"core/io\"; f := fn(a: Bool, b: Bool): Int { if a { if b { return 1; } else { return 2; } } else { return 3; } } io.outputLine(f(true, true), f(true, false), f(false, true));",
     "ff1d6b1efa4ad49d4841c0917dbf1a05d9e74e70fd7eb72cdd1920f647b17587": "io := import \"core/io\"; io.outputLine(\"before\",); io.exit(3,);",
     "ffe576d33d4b230e1194f488eac4fb25fe0b0b512b0d76a1460d3faf6eec1f37": "io := import \"core/io\"; inner := fn(): Unit { io.outputLine(\"inner\"); } outer := fn(): Unit { inner() } io.outputLine(outer());",
-    "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370": "/* Token-dump driver for the Lite-written lexer. Test helper, not a public command. */\n\nlexer := import \"../../src/lexer.lts\";\nio := import \"core/io\";\n\nvar prefix := \"\";\nvar argCount := 0;\nloop io.inputArgs() as argument {\n    if argCount == 0 { prefix = argument; }\n    argCount = argCount + 1;\n}\nif argCount > 1 {\n    io.errorLine(\"expected at most one logical source name argument\");\n    io.exit(2);\n}\n    lexer.dumpTokens(lexer.tokenize(io.inputAll(), prefix));\n",
-    "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458": "/* Full-program parser dump. Test helper, not a public command. */\n\nparser := import \"../../src/parser.lts\";\nio := import \"core/io\";\n\nvar prefix := \"\";\nvar argCount := 0;\nloop io.inputArgs() as argument {\n    if argCount == 0 { prefix = argument; }\n    argCount = argCount + 1;\n}\nif argCount > 1 {\n    io.errorLine(\"expected at most one logical source name argument\");\n    io.exit(2);\n}\n    parser.testDumpProgram(io.inputAll(), prefix);\n",
-    "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b": "/* Top-level checker dump. Test helper, not a public command. */\n\nchecker := import \"../../src/check.lts\";\nio := import \"core/io\";\n\nvar prefix := \"\";\nvar argCount := 0;\nloop io.inputArgs() as argument {\n    if argCount == 0 { prefix = argument; }\n    argCount = argCount + 1;\n}\nif argCount > 1 {\n    io.errorLine(\"expected at most one logical source name argument\");\n    io.exit(2);\n}\nchecker.testDumpSymbols(io.inputAll(), prefix);\n",
+    "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d": "/* Token-dump driver for the Lite-written lexer. Test helper, not a public command. */\n\nlexer := import \"../../src/lexer\";\nio := import \"core/io\";\n\nvar prefix := \"\";\nvar argCount := 0;\nloop io.inputArgs() as argument {\n    if argCount == 0 { prefix = argument; }\n    argCount = argCount + 1;\n}\nif argCount > 1 {\n    io.errorLine(\"expected at most one logical source name argument\");\n    io.exit(2);\n}\n    lexer.dumpTokens(lexer.tokenize(io.inputAll(), prefix));\n",
+    "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40": "/* Full-program parser dump. Test helper, not a public command. */\n\nparser := import \"../../src/parser\";\nio := import \"core/io\";\n\nvar prefix := \"\";\nvar argCount := 0;\nloop io.inputArgs() as argument {\n    if argCount == 0 { prefix = argument; }\n    argCount = argCount + 1;\n}\nif argCount > 1 {\n    io.errorLine(\"expected at most one logical source name argument\");\n    io.exit(2);\n}\n    parser.testDumpProgram(io.inputAll(), prefix);\n",
+    "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270": "/* Top-level checker dump. Test helper, not a public command. */\n\nchecker := import \"../../src/check\";\nio := import \"core/io\";\n\nvar prefix := \"\";\nvar argCount := 0;\nloop io.inputArgs() as argument {\n    if argCount == 0 { prefix = argument; }\n    argCount = argCount + 1;\n}\nif argCount > 1 {\n    io.errorLine(\"expected at most one logical source name argument\");\n    io.exit(2);\n}\nchecker.testDumpSymbols(io.inputAll(), prefix);\n",
     "5b998d2f4601424e9d08abfa7d08b671448c4f14436738ee1a549c5e5d069e1f": "io := import \"core/io\";\nvar a0 := -9223372036854775808; var b0 := -9223372036854775808;\nio.outputLine(a0 - b0);\nvar a1 := -9223372036854775808; var b1 := -9223372036854775807;\nio.outputLine(a1 - b1);\nvar a2 := -9223372036854775808; var b2 := -3037000500;\nio.outputLine(a2 - b2);\nvar a3 := -9223372036854775808; var b3 := -3037000499;\nio.outputLine(a3 - b3);\nvar a4 := -9223372036854775808; var b4 := -2;\nio.outputLine(a4 - b4);\nvar a5 := -9223372036854775808; var b5 := -1;\nio.outputLine(a5 - b5);\nvar a6 := -9223372036854775808; var b6 := 0;\nio.outputLine(a6 + b6);\nio.outputLine(a6 - b6);\nio.outputLine(a6 * b6);\nvar a7 := -9223372036854775808; var b7 := 1;\nio.outputLine(a7 + b7);\nio.outputLine(a7 * b7);\nvar a8 := -9223372036854775808; var b8 := 2;\nio.outputLine(a8 + b8);\nvar a9 := -9223372036854775808; var b9 := 3037000499;\nio.outputLine(a9 + b9);\nvar a10 := -9223372036854775808; var b10 := 3037000500;\nio.outputLine(a10 + b10);\nvar a11 := -9223372036854775808; var b11 := 9223372036854775806;\nio.outputLine(a11 + b11);\nvar a12 := -9223372036854775808; var b12 := 9223372036854775807;\nio.outputLine(a12 + b12);\nvar a13 := -9223372036854775807; var b13 := -9223372036854775808;\nio.outputLine(a13 - b13);\nvar a14 := -9223372036854775807; var b14 := -9223372036854775807;\nio.outputLine(a14 - b14);\nvar a15 := -9223372036854775807; var b15 := -3037000500;\nio.outputLine(a15 - b15);\nvar a16 := -9223372036854775807; var b16 := -3037000499;\nio.outputLine(a16 - b16);\nvar a17 := -9223372036854775807; var b17 := -2;\nio.outputLine(a17 - b17);\nvar a18 := -9223372036854775807; var b18 := -1;\nio.outputLine(a18 + b18);\nio.outputLine(a18 - b18);\nio.outputLine(a18 * b18);\nvar a19 := -9223372036854775807; var b19 := 0;\nio.outputLine(a19 + b19);\nio.outputLine(a19 - b19);\nio.outputLine(a19 * b19);\nvar a20 := -9223372036854775807; var b20 := 1;\nio.outputLine(a20 + b20);\nio.outputLine(a20 - b20);\nio.outputLine(a20 * b20);\nvar a21 := -9223372036854775807; var b21 := 2;\nio.outputLine(a21 + b21);\nvar a22 := -9223372036854775807; var b22 := 3037000499;\nio.outputLine(a22 + b22);\nvar a23 := -9223372036854775807; var b23 := 3037000500;\nio.outputLine(a23 + b23);\nvar a24 := -9223372036854775807; var b24 := 9223372036854775806;\nio.outputLine(a24 + b24);\nvar a25 := -9223372036854775807; var b25 := 9223372036854775807;\nio.outputLine(a25 + b25);\nvar a26 := -3037000500; var b26 := -9223372036854775808;\nio.outputLine(a26 - b26);\nvar a27 := -3037000500; var b27 := -9223372036854775807;\nio.outputLine(a27 - b27);\nvar a28 := -3037000500; var b28 := -3037000500;\nio.outputLine(a28 + b28);\nio.outputLine(a28 - b28);\nvar a29 := -3037000500; var b29 := -3037000499;\nio.outputLine(a29 + b29);\nio.outputLine(a29 - b29);\nio.outputLine(a29 * b29);\nvar a30 := -3037000500; var b30 := -2;\nio.outputLine(a30 + b30);\nio.outputLine(a30 - b30);\nio.outputLine(a30 * b30);\nvar a31 := -3037000500; var b31 := -1;\nio.outputLine(a31 + b31);\nio.outputLine(a31 - b31);\nio.outputLine(a31 * b31);\nvar a32 := -3037000500; var b32 := 0;\nio.outputLine(a32 + b32);\nio.outputLine(a32 - b32);\nio.outputLine(a32 * b32);\nvar a33 := -3037000500; var b33 := 1;\nio.outputLine(a33 + b33);\nio.outputLine(a33 - b33);\nio.outputLine(a33 * b33);\nvar a34 := -3037000500; var b34 := 2;\nio.outputLine(a34 + b34);\nio.outputLine(a34 - b34);\nio.outputLine(a34 * b34);\nvar a35 := -3037000500; var b35 := 3037000499;\nio.outputLine(a35 + b35);\nio.outputLine(a35 - b35);\nio.outputLine(a35 * b35);\nvar a36 := -3037000500; var b36 := 3037000500;\nio.outputLine(a36 + b36);\nio.outputLine(a36 - b36);\nvar a37 := -3037000500; var b37 := 9223372036854775806;\nio.outputLine(a37 + b37);\nvar a38 := -3037000500; var b38 := 9223372036854775807;\nio.outputLine(a38 + b38);\nvar a39 := -3037000499; var b39 := -9223372036854775808;\nio.outputLine(a39 - b39);\nvar a40 := -3037000499; var b40 := -9223372036854775807;\nio.outputLine(a40 - b40);\nvar a41 := -3037000499; var b41 := -3037000500;\nio.outputLine(a41 + b41);\nio.outputLine(a41 - b41);\nio.outputLine(a41 * b41);\nvar a42 := -3037000499; var b42 := -3037000499;\nio.outputLine(a42 + b42);\nio.outputLine(a42 - b42);\nio.outputLine(a42 * b42);\nvar a43 := -3037000499; var b43 := -2;\nio.outputLine(a43 + b43);\nio.outputLine(a43 - b43);\nio.outputLine(a43 * b43);\nvar a44 := -3037000499; var b44 := -1;\nio.outputLine(a44 + b44);\nio.outputLine(a44 - b44);\nio.outputLine(a44 * b44);\nvar a45 := -3037000499; var b45 := 0;\nio.outputLine(a45 + b45);\nio.outputLine(a45 - b45);\nio.outputLine(a45 * b45);\nvar a46 := -3037000499; var b46 := 1;\nio.outputLine(a46 + b46);\nio.outputLine(a46 - b46);\nio.outputLine(a46 * b46);\nvar a47 := -3037000499; var b47 := 2;\nio.outputLine(a47 + b47);\nio.outputLine(a47 - b47);\nio.outputLine(a47 * b47);\nvar a48 := -3037000499; var b48 := 3037000499;\nio.outputLine(a48 + b48);\nio.outputLine(a48 - b48);\nio.outputLine(a48 * b48);\nvar a49 := -3037000499; var b49 := 3037000500;\nio.outputLine(a49 + b49);\nio.outputLine(a49 - b49);\nio.outputLine(a49 * b49);\nvar a50 := -3037000499; var b50 := 9223372036854775806;\nio.outputLine(a50 + b50);\nvar a51 := -3037000499; var b51 := 9223372036854775807;\nio.outputLine(a51 + b51);\nvar a52 := -2; var b52 := -9223372036854775808;\nio.outputLine(a52 - b52);\nvar a53 := -2; var b53 := -9223372036854775807;\nio.outputLine(a53 - b53);\nvar a54 := -2; var b54 := -3037000500;\nio.outputLine(a54 + b54);\nio.outputLine(a54 - b54);\nio.outputLine(a54 * b54);\nvar a55 := -2; var b55 := -3037000499;\nio.outputLine(a55 + b55);\nio.outputLine(a55 - b55);\nio.outputLine(a55 * b55);\nvar a56 := -2; var b56 := -2;\nio.outputLine(a56 + b56);\nio.outputLine(a56 - b56);\nio.outputLine(a56 * b56);\nvar a57 := -2; var b57 := -1;\nio.outputLine(a57 + b57);\nio.outputLine(a57 - b57);\nio.outputLine(a57 * b57);\nvar a58 := -2; var b58 := 0;\nio.outputLine(a58 + b58);\nio.outputLine(a58 - b58);\nio.outputLine(a58 * b58);\nvar a59 := -2; var b59 := 1;\nio.outputLine(a59 + b59);\nio.outputLine(a59 - b59);\nio.outputLine(a59 * b59);\nvar a60 := -2; var b60 := 2;\nio.outputLine(a60 + b60);\nio.outputLine(a60 - b60);\nio.outputLine(a60 * b60);\nvar a61 := -2; var b61 := 3037000499;\nio.outputLine(a61 + b61);\nio.outputLine(a61 - b61);\nio.outputLine(a61 * b61);\nvar a62 := -2; var b62 := 3037000500;\nio.outputLine(a62 + b62);\nio.outputLine(a62 - b62);\nio.outputLine(a62 * b62);\nvar a63 := -2; var b63 := 9223372036854775806;\nio.outputLine(a63 + b63);\nio.outputLine(a63 - b63);\nvar a64 := -2; var b64 := 9223372036854775807;\nio.outputLine(a64 + b64);\nvar a65 := -1; var b65 := -9223372036854775808;\nio.outputLine(a65 - b65);\nvar a66 := -1; var b66 := -9223372036854775807;\nio.outputLine(a66 + b66);\nio.outputLine(a66 - b66);\nio.outputLine(a66 * b66);\nvar a67 := -1; var b67 := -3037000500;\nio.outputLine(a67 + b67);\nio.outputLine(a67 - b67);\nio.outputLine(a67 * b67);\nvar a68 := -1; var b68 := -3037000499;\nio.outputLine(a68 + b68);\nio.outputLine(a68 - b68);\nio.outputLine(a68 * b68);\nvar a69 := -1; var b69 := -2;\nio.outputLine(a69 + b69);\nio.outputLine(a69 - b69);\nio.outputLine(a69 * b69);\nvar a70 := -1; var b70 := -1;\nio.outputLine(a70 + b70);\nio.outputLine(a70 - b70);\nio.outputLine(a70 * b70);\nvar a71 := -1; var b71 := 0;\nio.outputLine(a71 + b71);\nio.outputLine(a71 - b71);\nio.outputLine(a71 * b71);\nvar a72 := -1; var b72 := 1;\nio.outputLine(a72 + b72);\nio.outputLine(a72 - b72);\nio.outputLine(a72 * b72);\nvar a73 := -1; var b73 := 2;\nio.outputLine(a73 + b73);\nio.outputLine(a73 - b73);\nio.outputLine(a73 * b73);\nvar a74 := -1; var b74 := 3037000499;\nio.outputLine(a74 + b74);\nio.outputLine(a74 - b74);\nio.outputLine(a74 * b74);\nvar a75 := -1; var b75 := 3037000500;\nio.outputLine(a75 + b75);\nio.outputLine(a75 - b75);\nio.outputLine(a75 * b75);\nvar a76 := -1; var b76 := 9223372036854775806;\nio.outputLine(a76 + b76);\nio.outputLine(a76 - b76);\nio.outputLine(a76 * b76);\nvar a77 := -1; var b77 := 9223372036854775807;\nio.outputLine(a77 + b77);\nio.outputLine(a77 - b77);\nio.outputLine(a77 * b77);\nvar a78 := 0; var b78 := -9223372036854775808;\nio.outputLine(a78 + b78);\nio.outputLine(a78 * b78);\nvar a79 := 0; var b79 := -9223372036854775807;\nio.outputLine(a79 + b79);\nio.outputLine(a79 - b79);\nio.outputLine(a79 * b79);\nvar a80 := 0; var b80 := -3037000500;\nio.outputLine(a80 + b80);\nio.outputLine(a80 - b80);\nio.outputLine(a80 * b80);\nvar a81 := 0; var b81 := -3037000499;\nio.outputLine(a81 + b81);\nio.outputLine(a81 - b81);\nio.outputLine(a81 * b81);\nvar a82 := 0; var b82 := -2;\nio.outputLine(a82 + b82);\nio.outputLine(a82 - b82);\nio.outputLine(a82 * b82);\nvar a83 := 0; var b83 := -1;\nio.outputLine(a83 + b83);\nio.outputLine(a83 - b83);\nio.outputLine(a83 * b83);\nvar a84 := 0; var b84 := 0;\nio.outputLine(a84 + b84);\nio.outputLine(a84 - b84);\nio.outputLine(a84 * b84);\nvar a85 := 0; var b85 := 1;\nio.outputLine(a85 + b85);\nio.outputLine(a85 - b85);\nio.outputLine(a85 * b85);\nvar a86 := 0; var b86 := 2;\nio.outputLine(a86 + b86);\nio.outputLine(a86 - b86);\nio.outputLine(a86 * b86);\nvar a87 := 0; var b87 := 3037000499;\nio.outputLine(a87 + b87);\nio.outputLine(a87 - b87);\nio.outputLine(a87 * b87);\nvar a88 := 0; var b88 := 3037000500;\nio.outputLine(a88 + b88);\nio.outputLine(a88 - b88);\nio.outputLine(a88 * b88);\nvar a89 := 0; var b89 := 9223372036854775806;\nio.outputLine(a89 + b89);\nio.outputLine(a89 - b89);\nio.outputLine(a89 * b89);\nvar a90 := 0; var b90 := 9223372036854775807;\nio.outputLine(a90 + b90);\nio.outputLine(a90 - b90);\nio.outputLine(a90 * b90);\nvar a91 := 1; var b91 := -9223372036854775808;\nio.outputLine(a91 + b91);\nio.outputLine(a91 * b91);\nvar a92 := 1; var b92 := -9223372036854775807;\nio.outputLine(a92 + b92);\nio.outputLine(a92 * b92);\nvar a93 := 1; var b93 := -3037000500;\nio.outputLine(a93 + b93);\nio.outputLine(a93 - b93);\nio.outputLine(a93 * b93);\nvar a94 := 1; var b94 := -3037000499;\nio.outputLine(a94 + b94);\nio.outputLine(a94 - b94);\nio.outputLine(a94 * b94);\nvar a95 := 1; var b95 := -2;\nio.outputLine(a95 + b95);\nio.outputLine(a95 - b95);\nio.outputLine(a95 * b95);\nvar a96 := 1; var b96 := -1;\nio.outputLine(a96 + b96);\nio.outputLine(a96 - b96);\nio.outputLine(a96 * b96);\nvar a97 := 1; var b97 := 0;\nio.outputLine(a97 + b97);\nio.outputLine(a97 - b97);\nio.outputLine(a97 * b97);\nvar a98 := 1; var b98 := 1;\nio.outputLine(a98 + b98);\nio.outputLine(a98 - b98);\nio.outputLine(a98 * b98);\nvar a99 := 1; var b99 := 2;\nio.outputLine(a99 + b99);\nio.outputLine(a99 - b99);\nio.outputLine(a99 * b99);\nvar a100 := 1; var b100 := 3037000499;\nio.outputLine(a100 + b100);\nio.outputLine(a100 - b100);\nio.outputLine(a100 * b100);\nvar a101 := 1; var b101 := 3037000500;\nio.outputLine(a101 + b101);\nio.outputLine(a101 - b101);\nio.outputLine(a101 * b101);\nvar a102 := 1; var b102 := 9223372036854775806;\nio.outputLine(a102 + b102);\nio.outputLine(a102 - b102);\nio.outputLine(a102 * b102);\nvar a103 := 1; var b103 := 9223372036854775807;\nio.outputLine(a103 - b103);\nio.outputLine(a103 * b103);\nvar a104 := 2; var b104 := -9223372036854775808;\nio.outputLine(a104 + b104);\nvar a105 := 2; var b105 := -9223372036854775807;\nio.outputLine(a105 + b105);\nvar a106 := 2; var b106 := -3037000500;\nio.outputLine(a106 + b106);\nio.outputLine(a106 - b106);\nio.outputLine(a106 * b106);\nvar a107 := 2; var b107 := -3037000499;\nio.outputLine(a107 + b107);\nio.outputLine(a107 - b107);\nio.outputLine(a107 * b107);\nvar a108 := 2; var b108 := -2;\nio.outputLine(a108 + b108);\nio.outputLine(a108 - b108);\nio.outputLine(a108 * b108);\nvar a109 := 2; var b109 := -1;\nio.outputLine(a109 + b109);\nio.outputLine(a109 - b109);\nio.outputLine(a109 * b109);\nvar a110 := 2; var b110 := 0;\nio.outputLine(a110 + b110);\nio.outputLine(a110 - b110);\nio.outputLine(a110 * b110);\nvar a111 := 2; var b111 := 1;\nio.outputLine(a111 + b111);\nio.outputLine(a111 - b111);\nio.outputLine(a111 * b111);\nvar a112 := 2; var b112 := 2;\nio.outputLine(a112 + b112);\nio.outputLine(a112 - b112);\nio.outputLine(a112 * b112);\nvar a113 := 2; var b113 := 3037000499;\nio.outputLine(a113 + b113);\nio.outputLine(a113 - b113);\nio.outputLine(a113 * b113);\nvar a114 := 2; var b114 := 3037000500;\nio.outputLine(a114 + b114);\nio.outputLine(a114 - b114);\nio.outputLine(a114 * b114);\nvar a115 := 2; var b115 := 9223372036854775806;\nio.outputLine(a115 - b115);\nvar a116 := 2; var b116 := 9223372036854775807;\nio.outputLine(a116 - b116);\nvar a117 := 3037000499; var b117 := -9223372036854775808;\nio.outputLine(a117 + b117);\nvar a118 := 3037000499; var b118 := -9223372036854775807;\nio.outputLine(a118 + b118);\nvar a119 := 3037000499; var b119 := -3037000500;\nio.outputLine(a119 + b119);\nio.outputLine(a119 - b119);\nio.outputLine(a119 * b119);\nvar a120 := 3037000499; var b120 := -3037000499;\nio.outputLine(a120 + b120);\nio.outputLine(a120 - b120);\nio.outputLine(a120 * b120);\nvar a121 := 3037000499; var b121 := -2;\nio.outputLine(a121 + b121);\nio.outputLine(a121 - b121);\nio.outputLine(a121 * b121);\nvar a122 := 3037000499; var b122 := -1;\nio.outputLine(a122 + b122);\nio.outputLine(a122 - b122);\nio.outputLine(a122 * b122);\nvar a123 := 3037000499; var b123 := 0;\nio.outputLine(a123 + b123);\nio.outputLine(a123 - b123);\nio.outputLine(a123 * b123);\nvar a124 := 3037000499; var b124 := 1;\nio.outputLine(a124 + b124);\nio.outputLine(a124 - b124);\nio.outputLine(a124 * b124);\nvar a125 := 3037000499; var b125 := 2;\nio.outputLine(a125 + b125);\nio.outputLine(a125 - b125);\nio.outputLine(a125 * b125);\nvar a126 := 3037000499; var b126 := 3037000499;\nio.outputLine(a126 + b126);\nio.outputLine(a126 - b126);\nio.outputLine(a126 * b126);\nvar a127 := 3037000499; var b127 := 3037000500;\nio.outputLine(a127 + b127);\nio.outputLine(a127 - b127);\nio.outputLine(a127 * b127);\nvar a128 := 3037000499; var b128 := 9223372036854775806;\nio.outputLine(a128 - b128);\nvar a129 := 3037000499; var b129 := 9223372036854775807;\nio.outputLine(a129 - b129);\nvar a130 := 3037000500; var b130 := -9223372036854775808;\nio.outputLine(a130 + b130);\nvar a131 := 3037000500; var b131 := -9223372036854775807;\nio.outputLine(a131 + b131);\nvar a132 := 3037000500; var b132 := -3037000500;\nio.outputLine(a132 + b132);\nio.outputLine(a132 - b132);\nvar a133 := 3037000500; var b133 := -3037000499;\nio.outputLine(a133 + b133);\nio.outputLine(a133 - b133);\nio.outputLine(a133 * b133);\nvar a134 := 3037000500; var b134 := -2;\nio.outputLine(a134 + b134);\nio.outputLine(a134 - b134);\nio.outputLine(a134 * b134);\nvar a135 := 3037000500; var b135 := -1;\nio.outputLine(a135 + b135);\nio.outputLine(a135 - b135);\nio.outputLine(a135 * b135);\nvar a136 := 3037000500; var b136 := 0;\nio.outputLine(a136 + b136);\nio.outputLine(a136 - b136);\nio.outputLine(a136 * b136);\nvar a137 := 3037000500; var b137 := 1;\nio.outputLine(a137 + b137);\nio.outputLine(a137 - b137);\nio.outputLine(a137 * b137);\nvar a138 := 3037000500; var b138 := 2;\nio.outputLine(a138 + b138);\nio.outputLine(a138 - b138);\nio.outputLine(a138 * b138);\nvar a139 := 3037000500; var b139 := 3037000499;\nio.outputLine(a139 + b139);\nio.outputLine(a139 - b139);\nio.outputLine(a139 * b139);\nvar a140 := 3037000500; var b140 := 3037000500;\nio.outputLine(a140 + b140);\nio.outputLine(a140 - b140);\nvar a141 := 3037000500; var b141 := 9223372036854775806;\nio.outputLine(a141 - b141);\nvar a142 := 3037000500; var b142 := 9223372036854775807;\nio.outputLine(a142 - b142);\nvar a143 := 9223372036854775806; var b143 := -9223372036854775808;\nio.outputLine(a143 + b143);\nvar a144 := 9223372036854775806; var b144 := -9223372036854775807;\nio.outputLine(a144 + b144);\nvar a145 := 9223372036854775806; var b145 := -3037000500;\nio.outputLine(a145 + b145);\nvar a146 := 9223372036854775806; var b146 := -3037000499;\nio.outputLine(a146 + b146);\nvar a147 := 9223372036854775806; var b147 := -2;\nio.outputLine(a147 + b147);\nvar a148 := 9223372036854775806; var b148 := -1;\nio.outputLine(a148 + b148);\nio.outputLine(a148 - b148);\nio.outputLine(a148 * b148);\nvar a149 := 9223372036854775806; var b149 := 0;\nio.outputLine(a149 + b149);\nio.outputLine(a149 - b149);\nio.outputLine(a149 * b149);\nvar a150 := 9223372036854775806; var b150 := 1;\nio.outputLine(a150 + b150);\nio.outputLine(a150 - b150);\nio.outputLine(a150 * b150);\nvar a151 := 9223372036854775806; var b151 := 2;\nio.outputLine(a151 - b151);\nvar a152 := 9223372036854775806; var b152 := 3037000499;\nio.outputLine(a152 - b152);\nvar a153 := 9223372036854775806; var b153 := 3037000500;\nio.outputLine(a153 - b153);\nvar a154 := 9223372036854775806; var b154 := 9223372036854775806;\nio.outputLine(a154 - b154);\nvar a155 := 9223372036854775806; var b155 := 9223372036854775807;\nio.outputLine(a155 - b155);\nvar a156 := 9223372036854775807; var b156 := -9223372036854775808;\nio.outputLine(a156 + b156);\nvar a157 := 9223372036854775807; var b157 := -9223372036854775807;\nio.outputLine(a157 + b157);\nvar a158 := 9223372036854775807; var b158 := -3037000500;\nio.outputLine(a158 + b158);\nvar a159 := 9223372036854775807; var b159 := -3037000499;\nio.outputLine(a159 + b159);\nvar a160 := 9223372036854775807; var b160 := -2;\nio.outputLine(a160 + b160);\nvar a161 := 9223372036854775807; var b161 := -1;\nio.outputLine(a161 + b161);\nio.outputLine(a161 * b161);\nvar a162 := 9223372036854775807; var b162 := 0;\nio.outputLine(a162 + b162);\nio.outputLine(a162 - b162);\nio.outputLine(a162 * b162);\nvar a163 := 9223372036854775807; var b163 := 1;\nio.outputLine(a163 - b163);\nio.outputLine(a163 * b163);\nvar a164 := 9223372036854775807; var b164 := 2;\nio.outputLine(a164 - b164);\nvar a165 := 9223372036854775807; var b165 := 3037000499;\nio.outputLine(a165 - b165);\nvar a166 := 9223372036854775807; var b166 := 3037000500;\nio.outputLine(a166 - b166);\nvar a167 := 9223372036854775807; var b167 := 9223372036854775806;\nio.outputLine(a167 - b167);\nvar a168 := 9223372036854775807; var b168 := 9223372036854775807;\nio.outputLine(a168 - b168);\nvar n1 := -9223372036854775807; io.outputLine(-n1);\nvar n2 := -3037000500; io.outputLine(-n2);\nvar n3 := -3037000499; io.outputLine(-n3);\nvar n4 := -2; io.outputLine(-n4);\nvar n5 := -1; io.outputLine(-n5);\nvar n6 := 0; io.outputLine(-n6);\nvar n7 := 1; io.outputLine(-n7);\nvar n8 := 2; io.outputLine(-n8);\nvar n9 := 3037000499; io.outputLine(-n9);\nvar n10 := 3037000500; io.outputLine(-n10);\nvar n11 := 9223372036854775806; io.outputLine(-n11);\nvar n12 := 9223372036854775807; io.outputLine(-n12);\nvar checked_add := 3; var lt_arg_left_0 := 4; io.outputLine(checked_add + lt_arg_left_0);\nvar hi := 9223372036854775807; var lo := -9223372036854775808; var flag := false;\nio.outputLine(flag and (hi + 1 > 0)); if flag { io.outputLine(lo - 1); }\nio.outputLine(not flag or (hi * 2 > 0)); if flag { io.outputLine(-lo); }",
     "1e571b3ae6428df2a3347499a49eee97a53d6d1bb9ca7cbfceb9cc1df2f7d838": "io := import \"core/io\"; if false { io.outputLine(1 / 0); }\nio := import \"core/io\"; loop false { io.outputLine(1 / 0); }\nio := import \"core/io\"; io.outputLine(false and (1 / 0 > 0), true or (1 / 0 > 0));\nio := import \"core/io\"; if false { io.outputLine(1 % 0); }\nio := import \"core/io\"; loop false { io.outputLine(1 % 0); }\nio := import \"core/io\"; io.outputLine(false and (1 % 0 > 0), true or (1 % 0 > 0));\nio := import \"core/io\"; if false { io.outputLine(1 :/ 0); }\nio := import \"core/io\"; loop false { io.outputLine(1 :/ 0); }\nio := import \"core/io\"; io.outputLine(false and (1 :/ 0 > 0), true or (1 :/ 0 > 0));\nio := import \"core/io\"; if false { io.outputLine(1 :% 0); }\nio := import \"core/io\"; loop false { io.outputLine(1 :% 0); }\nio := import \"core/io\"; io.outputLine(false and (1 :% 0 > 0), true or (1 :% 0 > 0));\nio := import \"core/io\"; if false { io.outputLine(9223372036854775807 + 1); }\nio := import \"core/io\"; loop false { io.outputLine(9223372036854775807 + 1); }\nio := import \"core/io\"; io.outputLine(false and (9223372036854775807 + 1 > 0), true or (9223372036854775807 + 1 > 0));\nio := import \"core/io\"; if false { io.outputLine(-9223372036854775808 - 1); }\nio := import \"core/io\"; loop false { io.outputLine(-9223372036854775808 - 1); }\nio := import \"core/io\"; io.outputLine(false and (-9223372036854775808 - 1 > 0), true or (-9223372036854775808 - 1 > 0));\nio := import \"core/io\"; if false { io.outputLine(9223372036854775807 * 2); }\nio := import \"core/io\"; loop false { io.outputLine(9223372036854775807 * 2); }\nio := import \"core/io\"; io.outputLine(false and (9223372036854775807 * 2 > 0), true or (9223372036854775807 * 2 > 0));\nio := import \"core/io\"; if false { io.outputLine(-(-9223372036854775808)); }\nio := import \"core/io\"; loop false { io.outputLine(-(-9223372036854775808)); }\nio := import \"core/io\"; io.outputLine(false and (-(-9223372036854775808) > 0), true or (-(-9223372036854775808) > 0));\nio := import \"core/io\"; if false { io.outputLine(-9223372036854775808 / -1); }\nio := import \"core/io\"; loop false { io.outputLine(-9223372036854775808 / -1); }\nio := import \"core/io\"; io.outputLine(false and (-9223372036854775808 / -1 > 0), true or (-9223372036854775808 / -1 > 0));\nio := import \"core/io\"; if false { io.outputLine(-9223372036854775808 :/ -1); }\nio := import \"core/io\"; loop false { io.outputLine(-9223372036854775808 :/ -1); }\nio := import \"core/io\"; io.outputLine(false and (-9223372036854775808 :/ -1 > 0), true or (-9223372036854775808 :/ -1 > 0));\nio := import \"core/io\"; if false { io.outputLine((9223372036854775807 + 1) - 1); }\nio := import \"core/io\"; loop false { io.outputLine((9223372036854775807 + 1) - 1); }\nio := import \"core/io\"; io.outputLine(false and ((9223372036854775807 + 1) - 1 > 0), true or ((9223372036854775807 + 1) - 1 > 0));\nio := import \"core/io\"; if false { io.outputLine(0 * (9223372036854775807 + 1)); }\nio := import \"core/io\"; loop false { io.outputLine(0 * (9223372036854775807 + 1)); }\nio := import \"core/io\"; io.outputLine(false and (0 * (9223372036854775807 + 1) > 0), true or (0 * (9223372036854775807 + 1) > 0));\nio := import \"core/io\"; if false { io.outputLine((9223372036854775807 + 1) / (1 / 0)); }\nio := import \"core/io\"; loop false { io.outputLine((9223372036854775807 + 1) / (1 / 0)); }\nio := import \"core/io\"; io.outputLine(false and ((9223372036854775807 + 1) / (1 / 0) > 0), true or ((9223372036854775807 + 1) / (1 / 0) > 0));\nio := import \"core/io\"; if false { io.outputLine((1 / 0) + (9223372036854775807 + 1)); }\nio := import \"core/io\"; loop false { io.outputLine((1 / 0) + (9223372036854775807 + 1)); }\nio := import \"core/io\"; io.outputLine(false and ((1 / 0) + (9223372036854775807 + 1) > 0), true or ((1 / 0) + (9223372036854775807 + 1) > 0));\noutputLine(2 * (3 - 4), -(-7), -9223372036854775808 % -1);",
     "0a620f0053c7f2cd283bc0836ad51a1bbd9997a4bcbf83c437cc980ca13c1fba": "var a := 0; var b := 0; var c := 0;\na = -1; b = 0; c = 1;\nio := import \"core/io\"; io.outputLine(a == b == c, -1 == 0 == 1);\nio := import \"core/io\"; io.outputLine(a == b =!= c, -1 == 0 =!= 1);\nio := import \"core/io\"; io.outputLine(a == b < c, -1 == 0 < 1);\nio := import \"core/io\"; io.outputLine(a == b <! c, -1 == 0 <! 1);\nio := import \"core/io\"; io.outputLine(a == b <= c, -1 == 0 <= 1);\nio := import \"core/io\"; io.outputLine(a == b <!= c, -1 == 0 <!= 1);\nio := import \"core/io\"; io.outputLine(a == b > c, -1 == 0 > 1);\nio := import \"core/io\"; io.outputLine(a == b >! c, -1 == 0 >! 1);\nio := import \"core/io\"; io.outputLine(a == b >= c, -1 == 0 >= 1);\nio := import \"core/io\"; io.outputLine(a == b >!= c, -1 == 0 >!= 1);\nio := import \"core/io\"; io.outputLine(a =!= b == c, -1 =!= 0 == 1);\nio := import \"core/io\"; io.outputLine(a =!= b =!= c, -1 =!= 0 =!= 1);\nio := import \"core/io\"; io.outputLine(a =!= b < c, -1 =!= 0 < 1);\nio := import \"core/io\"; io.outputLine(a =!= b <! c, -1 =!= 0 <! 1);\nio := import \"core/io\"; io.outputLine(a =!= b <= c, -1 =!= 0 <= 1);\nio := import \"core/io\"; io.outputLine(a =!= b <!= c, -1 =!= 0 <!= 1);\nio := import \"core/io\"; io.outputLine(a =!= b > c, -1 =!= 0 > 1);\nio := import \"core/io\"; io.outputLine(a =!= b >! c, -1 =!= 0 >! 1);\nio := import \"core/io\"; io.outputLine(a =!= b >= c, -1 =!= 0 >= 1);\nio := import \"core/io\"; io.outputLine(a =!= b >!= c, -1 =!= 0 >!= 1);\nio := import \"core/io\"; io.outputLine(a < b == c, -1 < 0 == 1);\nio := import \"core/io\"; io.outputLine(a < b =!= c, -1 < 0 =!= 1);\nio := import \"core/io\"; io.outputLine(a < b < c, -1 < 0 < 1);\nio := import \"core/io\"; io.outputLine(a < b <! c, -1 < 0 <! 1);\nio := import \"core/io\"; io.outputLine(a < b <= c, -1 < 0 <= 1);\nio := import \"core/io\"; io.outputLine(a < b <!= c, -1 < 0 <!= 1);\nio := import \"core/io\"; io.outputLine(a < b > c, -1 < 0 > 1);\nio := import \"core/io\"; io.outputLine(a < b >! c, -1 < 0 >! 1);\nio := import \"core/io\"; io.outputLine(a < b >= c, -1 < 0 >= 1);\nio := import \"core/io\"; io.outputLine(a < b >!= c, -1 < 0 >!= 1);\nio := import \"core/io\"; io.outputLine(a <! b == c, -1 <! 0 == 1);\nio := import \"core/io\"; io.outputLine(a <! b =!= c, -1 <! 0 =!= 1);\nio := import \"core/io\"; io.outputLine(a <! b < c, -1 <! 0 < 1);\nio := import \"core/io\"; io.outputLine(a <! b <! c, -1 <! 0 <! 1);\nio := import \"core/io\"; io.outputLine(a <! b <= c, -1 <! 0 <= 1);\nio := import \"core/io\"; io.outputLine(a <! b <!= c, -1 <! 0 <!= 1);\nio := import \"core/io\"; io.outputLine(a <! b > c, -1 <! 0 > 1);\nio := import \"core/io\"; io.outputLine(a <! b >! c, -1 <! 0 >! 1);\nio := import \"core/io\"; io.outputLine(a <! b >= c, -1 <! 0 >= 1);\nio := import \"core/io\"; io.outputLine(a <! b >!= c, -1 <! 0 >!= 1);\nio := import \"core/io\"; io.outputLine(a <= b == c, -1 <= 0 == 1);\nio := import \"core/io\"; io.outputLine(a <= b =!= c, -1 <= 0 =!= 1);\nio := import \"core/io\"; io.outputLine(a <= b < c, -1 <= 0 < 1);\nio := import \"core/io\"; io.outputLine(a <= b <! c, -1 <= 0 <! 1);\nio := import \"core/io\"; io.outputLine(a <= b <= c, -1 <= 0 <= 1);\nio := import \"core/io\"; io.outputLine(a <= b <!= c, -1 <= 0 <!= 1);\nio := import \"core/io\"; io.outputLine(a <= b > c, -1 <= 0 > 1);\nio := import \"core/io\"; io.outputLine(a <= b >! c, -1 <= 0 >! 1);\nio := import \"core/io\"; io.outputLine(a <= b >= c, -1 <= 0 >= 1);\nio := import \"core/io\"; io.outputLine(a <= b >!= c, -1 <= 0 >!= 1);\nio := import \"core/io\"; io.outputLine(a <!= b == c, -1 <!= 0 == 1);\nio := import \"core/io\"; io.outputLine(a <!= b =!= c, -1 <!= 0 =!= 1);\nio := import \"core/io\"; io.outputLine(a <!= b < c, -1 <!= 0 < 1);\nio := import \"core/io\"; io.outputLine(a <!= b <! c, -1 <!= 0 <! 1);\nio := import \"core/io\"; io.outputLine(a <!= b <= c, -1 <!= 0 <= 1);\nio := import \"core/io\"; io.outputLine(a <!= b <!= c, -1 <!= 0 <!= 1);\nio := import \"core/io\"; io.outputLine(a <!= b > c, -1 <!= 0 > 1);\nio := import \"core/io\"; io.outputLine(a <!= b >! c, -1 <!= 0 >! 1);\nio := import \"core/io\"; io.outputLine(a <!= b >= c, -1 <!= 0 >= 1);\nio := import \"core/io\"; io.outputLine(a <!= b >!= c, -1 <!= 0 >!= 1);\nio := import \"core/io\"; io.outputLine(a > b == c, -1 > 0 == 1);\nio := import \"core/io\"; io.outputLine(a > b =!= c, -1 > 0 =!= 1);\nio := import \"core/io\"; io.outputLine(a > b < c, -1 > 0 < 1);\nio := import \"core/io\"; io.outputLine(a > b <! c, -1 > 0 <! 1);\nio := import \"core/io\"; io.outputLine(a > b <= c, -1 > 0 <= 1);\nio := import \"core/io\"; io.outputLine(a > b <!= c, -1 > 0 <!= 1);\nio := import \"core/io\"; io.outputLine(a > b > c, -1 > 0 > 1);\nio := import \"core/io\"; io.outputLine(a > b >! c, -1 > 0 >! 1);\nio := import \"core/io\"; io.outputLine(a > b >= c, -1 > 0 >= 1);\nio := import \"core/io\"; io.outputLine(a > b >!= c, -1 > 0 >!= 1);\nio := import \"core/io\"; io.outputLine(a >! b == c, -1 >! 0 == 1);\nio := import \"core/io\"; io.outputLine(a >! b =!= c, -1 >! 0 =!= 1);\nio := import \"core/io\"; io.outputLine(a >! b < c, -1 >! 0 < 1);\nio := import \"core/io\"; io.outputLine(a >! b <! c, -1 >! 0 <! 1);\nio := import \"core/io\"; io.outputLine(a >! b <= c, -1 >! 0 <= 1);\nio := import \"core/io\"; io.outputLine(a >! b <!= c, -1 >! 0 <!= 1);\nio := import \"core/io\"; io.outputLine(a >! b > c, -1 >! 0 > 1);\nio := import \"core/io\"; io.outputLine(a >! b >! c, -1 >! 0 >! 1);\nio := import \"core/io\"; io.outputLine(a >! b >= c, -1 >! 0 >= 1);\nio := import \"core/io\"; io.outputLine(a >! b >!= c, -1 >! 0 >!= 1);\nio := import \"core/io\"; io.outputLine(a >= b == c, -1 >= 0 == 1);\nio := import \"core/io\"; io.outputLine(a >= b =!= c, -1 >= 0 =!= 1);\nio := import \"core/io\"; io.outputLine(a >= b < c, -1 >= 0 < 1);\nio := import \"core/io\"; io.outputLine(a >= b <! c, -1 >= 0 <! 1);\nio := import \"core/io\"; io.outputLine(a >= b <= c, -1 >= 0 <= 1);\nio := import \"core/io\"; io.outputLine(a >= b <!= c, -1 >= 0 <!= 1);\nio := import \"core/io\"; io.outputLine(a >= b > c, -1 >= 0 > 1);\nio := import \"core/io\"; io.outputLine(a >= b >! c, -1 >= 0 >! 1);\nio := import \"core/io\"; io.outputLine(a >= b >= c, -1 >= 0 >= 1);\nio := import \"core/io\"; io.outputLine(a >= b >!= c, -1 >= 0 >!= 1);\nio := import \"core/io\"; io.outputLine(a >!= b == c, -1 >!= 0 == 1);\nio := import \"core/io\"; io.outputLine(a >!= b =!= c, -1 >!= 0 =!= 1);\nio := import \"core/io\"; io.outputLine(a >!= b < c, -1 >!= 0 < 1);\nio := import \"core/io\"; io.outputLine(a >!= b <! c, -1 >!= 0 <! 1);\nio := import \"core/io\"; io.outputLine(a >!= b <= c, -1 >!= 0 <= 1);\nio := import \"core/io\"; io.outputLine(a >!= b <!= c, -1 >!= 0 <!= 1);\nio := import \"core/io\"; io.outputLine(a >!= b > c, -1 >!= 0 > 1);\nio := import \"core/io\"; io.outputLine(a >!= b >! c, -1 >!= 0 >! 1);\nio := import \"core/io\"; io.outputLine(a >!= b >= c, -1 >!= 0 >= 1);\nio := import \"core/io\"; io.outputLine(a >!= b >!= c, -1 >!= 0 >!= 1);\na = 1; b = 0; c = -1;\nio := import \"core/io\"; io.outputLine(a == b == c, 1 == 0 == -1);\nio := import \"core/io\"; io.outputLine(a == b =!= c, 1 == 0 =!= -1);\nio := import \"core/io\"; io.outputLine(a == b < c, 1 == 0 < -1);\nio := import \"core/io\"; io.outputLine(a == b <! c, 1 == 0 <! -1);\nio := import \"core/io\"; io.outputLine(a == b <= c, 1 == 0 <= -1);\nio := import \"core/io\"; io.outputLine(a == b <!= c, 1 == 0 <!= -1);\nio := import \"core/io\"; io.outputLine(a == b > c, 1 == 0 > -1);\nio := import \"core/io\"; io.outputLine(a == b >! c, 1 == 0 >! -1);\nio := import \"core/io\"; io.outputLine(a == b >= c, 1 == 0 >= -1);\nio := import \"core/io\"; io.outputLine(a == b >!= c, 1 == 0 >!= -1);\nio := import \"core/io\"; io.outputLine(a =!= b == c, 1 =!= 0 == -1);\nio := import \"core/io\"; io.outputLine(a =!= b =!= c, 1 =!= 0 =!= -1);\nio := import \"core/io\"; io.outputLine(a =!= b < c, 1 =!= 0 < -1);\nio := import \"core/io\"; io.outputLine(a =!= b <! c, 1 =!= 0 <! -1);\nio := import \"core/io\"; io.outputLine(a =!= b <= c, 1 =!= 0 <= -1);\nio := import \"core/io\"; io.outputLine(a =!= b <!= c, 1 =!= 0 <!= -1);\nio := import \"core/io\"; io.outputLine(a =!= b > c, 1 =!= 0 > -1);\nio := import \"core/io\"; io.outputLine(a =!= b >! c, 1 =!= 0 >! -1);\nio := import \"core/io\"; io.outputLine(a =!= b >= c, 1 =!= 0 >= -1);\nio := import \"core/io\"; io.outputLine(a =!= b >!= c, 1 =!= 0 >!= -1);\nio := import \"core/io\"; io.outputLine(a < b == c, 1 < 0 == -1);\nio := import \"core/io\"; io.outputLine(a < b =!= c, 1 < 0 =!= -1);\nio := import \"core/io\"; io.outputLine(a < b < c, 1 < 0 < -1);\nio := import \"core/io\"; io.outputLine(a < b <! c, 1 < 0 <! -1);\nio := import \"core/io\"; io.outputLine(a < b <= c, 1 < 0 <= -1);\nio := import \"core/io\"; io.outputLine(a < b <!= c, 1 < 0 <!= -1);\nio := import \"core/io\"; io.outputLine(a < b > c, 1 < 0 > -1);\nio := import \"core/io\"; io.outputLine(a < b >! c, 1 < 0 >! -1);\nio := import \"core/io\"; io.outputLine(a < b >= c, 1 < 0 >= -1);\nio := import \"core/io\"; io.outputLine(a < b >!= c, 1 < 0 >!= -1);\nio := import \"core/io\"; io.outputLine(a <! b == c, 1 <! 0 == -1);\nio := import \"core/io\"; io.outputLine(a <! b =!= c, 1 <! 0 =!= -1);\nio := import \"core/io\"; io.outputLine(a <! b < c, 1 <! 0 < -1);\nio := import \"core/io\"; io.outputLine(a <! b <! c, 1 <! 0 <! -1);\nio := import \"core/io\"; io.outputLine(a <! b <= c, 1 <! 0 <= -1);\nio := import \"core/io\"; io.outputLine(a <! b <!= c, 1 <! 0 <!= -1);\nio := import \"core/io\"; io.outputLine(a <! b > c, 1 <! 0 > -1);\nio := import \"core/io\"; io.outputLine(a <! b >! c, 1 <! 0 >! -1);\nio := import \"core/io\"; io.outputLine(a <! b >= c, 1 <! 0 >= -1);\nio := import \"core/io\"; io.outputLine(a <! b >!= c, 1 <! 0 >!= -1);\nio := import \"core/io\"; io.outputLine(a <= b == c, 1 <= 0 == -1);\nio := import \"core/io\"; io.outputLine(a <= b =!= c, 1 <= 0 =!= -1);\nio := import \"core/io\"; io.outputLine(a <= b < c, 1 <= 0 < -1);\nio := import \"core/io\"; io.outputLine(a <= b <! c, 1 <= 0 <! -1);\nio := import \"core/io\"; io.outputLine(a <= b <= c, 1 <= 0 <= -1);\nio := import \"core/io\"; io.outputLine(a <= b <!= c, 1 <= 0 <!= -1);\nio := import \"core/io\"; io.outputLine(a <= b > c, 1 <= 0 > -1);\nio := import \"core/io\"; io.outputLine(a <= b >! c, 1 <= 0 >! -1);\nio := import \"core/io\"; io.outputLine(a <= b >= c, 1 <= 0 >= -1);\nio := import \"core/io\"; io.outputLine(a <= b >!= c, 1 <= 0 >!= -1);\nio := import \"core/io\"; io.outputLine(a <!= b == c, 1 <!= 0 == -1);\nio := import \"core/io\"; io.outputLine(a <!= b =!= c, 1 <!= 0 =!= -1);\nio := import \"core/io\"; io.outputLine(a <!= b < c, 1 <!= 0 < -1);\nio := import \"core/io\"; io.outputLine(a <!= b <! c, 1 <!= 0 <! -1);\nio := import \"core/io\"; io.outputLine(a <!= b <= c, 1 <!= 0 <= -1);\nio := import \"core/io\"; io.outputLine(a <!= b <!= c, 1 <!= 0 <!= -1);\nio := import \"core/io\"; io.outputLine(a <!= b > c, 1 <!= 0 > -1);\nio := import \"core/io\"; io.outputLine(a <!= b >! c, 1 <!= 0 >! -1);\nio := import \"core/io\"; io.outputLine(a <!= b >= c, 1 <!= 0 >= -1);\nio := import \"core/io\"; io.outputLine(a <!= b >!= c, 1 <!= 0 >!= -1);\nio := import \"core/io\"; io.outputLine(a > b == c, 1 > 0 == -1);\nio := import \"core/io\"; io.outputLine(a > b =!= c, 1 > 0 =!= -1);\nio := import \"core/io\"; io.outputLine(a > b < c, 1 > 0 < -1);\nio := import \"core/io\"; io.outputLine(a > b <! c, 1 > 0 <! -1);\nio := import \"core/io\"; io.outputLine(a > b <= c, 1 > 0 <= -1);\nio := import \"core/io\"; io.outputLine(a > b <!= c, 1 > 0 <!= -1);\nio := import \"core/io\"; io.outputLine(a > b > c, 1 > 0 > -1);\nio := import \"core/io\"; io.outputLine(a > b >! c, 1 > 0 >! -1);\nio := import \"core/io\"; io.outputLine(a > b >= c, 1 > 0 >= -1);\nio := import \"core/io\"; io.outputLine(a > b >!= c, 1 > 0 >!= -1);\nio := import \"core/io\"; io.outputLine(a >! b == c, 1 >! 0 == -1);\nio := import \"core/io\"; io.outputLine(a >! b =!= c, 1 >! 0 =!= -1);\nio := import \"core/io\"; io.outputLine(a >! b < c, 1 >! 0 < -1);\nio := import \"core/io\"; io.outputLine(a >! b <! c, 1 >! 0 <! -1);\nio := import \"core/io\"; io.outputLine(a >! b <= c, 1 >! 0 <= -1);\nio := import \"core/io\"; io.outputLine(a >! b <!= c, 1 >! 0 <!= -1);\nio := import \"core/io\"; io.outputLine(a >! b > c, 1 >! 0 > -1);\nio := import \"core/io\"; io.outputLine(a >! b >! c, 1 >! 0 >! -1);\nio := import \"core/io\"; io.outputLine(a >! b >= c, 1 >! 0 >= -1);\nio := import \"core/io\"; io.outputLine(a >! b >!= c, 1 >! 0 >!= -1);\nio := import \"core/io\"; io.outputLine(a >= b == c, 1 >= 0 == -1);\nio := import \"core/io\"; io.outputLine(a >= b =!= c, 1 >= 0 =!= -1);\nio := import \"core/io\"; io.outputLine(a >= b < c, 1 >= 0 < -1);\nio := import \"core/io\"; io.outputLine(a >= b <! c, 1 >= 0 <! -1);\nio := import \"core/io\"; io.outputLine(a >= b <= c, 1 >= 0 <= -1);\nio := import \"core/io\"; io.outputLine(a >= b <!= c, 1 >= 0 <!= -1);\nio := import \"core/io\"; io.outputLine(a >= b > c, 1 >= 0 > -1);\nio := import \"core/io\"; io.outputLine(a >= b >! c, 1 >= 0 >! -1);\nio := import \"core/io\"; io.outputLine(a >= b >= c, 1 >= 0 >= -1);\nio := import \"core/io\"; io.outputLine(a >= b >!= c, 1 >= 0 >!= -1);\nio := import \"core/io\"; io.outputLine(a >!= b == c, 1 >!= 0 == -1);\nio := import \"core/io\"; io.outputLine(a >!= b =!= c, 1 >!= 0 =!= -1);\nio := import \"core/io\"; io.outputLine(a >!= b < c, 1 >!= 0 < -1);\nio := import \"core/io\"; io.outputLine(a >!= b <! c, 1 >!= 0 <! -1);\nio := import \"core/io\"; io.outputLine(a >!= b <= c, 1 >!= 0 <= -1);\nio := import \"core/io\"; io.outputLine(a >!= b <!= c, 1 >!= 0 <!= -1);\nio := import \"core/io\"; io.outputLine(a >!= b > c, 1 >!= 0 > -1);\nio := import \"core/io\"; io.outputLine(a >!= b >! c, 1 >!= 0 >! -1);\nio := import \"core/io\"; io.outputLine(a >!= b >= c, 1 >!= 0 >= -1);\nio := import \"core/io\"; io.outputLine(a >!= b >!= c, 1 >!= 0 >!= -1);\na = 0; b = 0; c = 0;\nio := import \"core/io\"; io.outputLine(a == b == c, 0 == 0 == 0);\nio := import \"core/io\"; io.outputLine(a == b =!= c, 0 == 0 =!= 0);\nio := import \"core/io\"; io.outputLine(a == b < c, 0 == 0 < 0);\nio := import \"core/io\"; io.outputLine(a == b <! c, 0 == 0 <! 0);\nio := import \"core/io\"; io.outputLine(a == b <= c, 0 == 0 <= 0);\nio := import \"core/io\"; io.outputLine(a == b <!= c, 0 == 0 <!= 0);\nio := import \"core/io\"; io.outputLine(a == b > c, 0 == 0 > 0);\nio := import \"core/io\"; io.outputLine(a == b >! c, 0 == 0 >! 0);\nio := import \"core/io\"; io.outputLine(a == b >= c, 0 == 0 >= 0);\nio := import \"core/io\"; io.outputLine(a == b >!= c, 0 == 0 >!= 0);\nio := import \"core/io\"; io.outputLine(a =!= b == c, 0 =!= 0 == 0);\nio := import \"core/io\"; io.outputLine(a =!= b =!= c, 0 =!= 0 =!= 0);\nio := import \"core/io\"; io.outputLine(a =!= b < c, 0 =!= 0 < 0);\nio := import \"core/io\"; io.outputLine(a =!= b <! c, 0 =!= 0 <! 0);\nio := import \"core/io\"; io.outputLine(a =!= b <= c, 0 =!= 0 <= 0);\nio := import \"core/io\"; io.outputLine(a =!= b <!= c, 0 =!= 0 <!= 0);\nio := import \"core/io\"; io.outputLine(a =!= b > c, 0 =!= 0 > 0);\nio := import \"core/io\"; io.outputLine(a =!= b >! c, 0 =!= 0 >! 0);\nio := import \"core/io\"; io.outputLine(a =!= b >= c, 0 =!= 0 >= 0);\nio := import \"core/io\"; io.outputLine(a =!= b >!= c, 0 =!= 0 >!= 0);\nio := import \"core/io\"; io.outputLine(a < b == c, 0 < 0 == 0);\nio := import \"core/io\"; io.outputLine(a < b =!= c, 0 < 0 =!= 0);\nio := import \"core/io\"; io.outputLine(a < b < c, 0 < 0 < 0);\nio := import \"core/io\"; io.outputLine(a < b <! c, 0 < 0 <! 0);\nio := import \"core/io\"; io.outputLine(a < b <= c, 0 < 0 <= 0);\nio := import \"core/io\"; io.outputLine(a < b <!= c, 0 < 0 <!= 0);\nio := import \"core/io\"; io.outputLine(a < b > c, 0 < 0 > 0);\nio := import \"core/io\"; io.outputLine(a < b >! c, 0 < 0 >! 0);\nio := import \"core/io\"; io.outputLine(a < b >= c, 0 < 0 >= 0);\nio := import \"core/io\"; io.outputLine(a < b >!= c, 0 < 0 >!= 0);\nio := import \"core/io\"; io.outputLine(a <! b == c, 0 <! 0 == 0);\nio := import \"core/io\"; io.outputLine(a <! b =!= c, 0 <! 0 =!= 0);\nio := import \"core/io\"; io.outputLine(a <! b < c, 0 <! 0 < 0);\nio := import \"core/io\"; io.outputLine(a <! b <! c, 0 <! 0 <! 0);\nio := import \"core/io\"; io.outputLine(a <! b <= c, 0 <! 0 <= 0);\nio := import \"core/io\"; io.outputLine(a <! b <!= c, 0 <! 0 <!= 0);\nio := import \"core/io\"; io.outputLine(a <! b > c, 0 <! 0 > 0);\nio := import \"core/io\"; io.outputLine(a <! b >! c, 0 <! 0 >! 0);\nio := import \"core/io\"; io.outputLine(a <! b >= c, 0 <! 0 >= 0);\nio := import \"core/io\"; io.outputLine(a <! b >!= c, 0 <! 0 >!= 0);\nio := import \"core/io\"; io.outputLine(a <= b == c, 0 <= 0 == 0);\nio := import \"core/io\"; io.outputLine(a <= b =!= c, 0 <= 0 =!= 0);\nio := import \"core/io\"; io.outputLine(a <= b < c, 0 <= 0 < 0);\nio := import \"core/io\"; io.outputLine(a <= b <! c, 0 <= 0 <! 0);\nio := import \"core/io\"; io.outputLine(a <= b <= c, 0 <= 0 <= 0);\nio := import \"core/io\"; io.outputLine(a <= b <!= c, 0 <= 0 <!= 0);\nio := import \"core/io\"; io.outputLine(a <= b > c, 0 <= 0 > 0);\nio := import \"core/io\"; io.outputLine(a <= b >! c, 0 <= 0 >! 0);\nio := import \"core/io\"; io.outputLine(a <= b >= c, 0 <= 0 >= 0);\nio := import \"core/io\"; io.outputLine(a <= b >!= c, 0 <= 0 >!= 0);\nio := import \"core/io\"; io.outputLine(a <!= b == c, 0 <!= 0 == 0);\nio := import \"core/io\"; io.outputLine(a <!= b =!= c, 0 <!= 0 =!= 0);\nio := import \"core/io\"; io.outputLine(a <!= b < c, 0 <!= 0 < 0);\nio := import \"core/io\"; io.outputLine(a <!= b <! c, 0 <!= 0 <! 0);\nio := import \"core/io\"; io.outputLine(a <!= b <= c, 0 <!= 0 <= 0);\nio := import \"core/io\"; io.outputLine(a <!= b <!= c, 0 <!= 0 <!= 0);\nio := import \"core/io\"; io.outputLine(a <!= b > c, 0 <!= 0 > 0);\nio := import \"core/io\"; io.outputLine(a <!= b >! c, 0 <!= 0 >! 0);\nio := import \"core/io\"; io.outputLine(a <!= b >= c, 0 <!= 0 >= 0);\nio := import \"core/io\"; io.outputLine(a <!= b >!= c, 0 <!= 0 >!= 0);\nio := import \"core/io\"; io.outputLine(a > b == c, 0 > 0 == 0);\nio := import \"core/io\"; io.outputLine(a > b =!= c, 0 > 0 =!= 0);\nio := import \"core/io\"; io.outputLine(a > b < c, 0 > 0 < 0);\nio := import \"core/io\"; io.outputLine(a > b <! c, 0 > 0 <! 0);\nio := import \"core/io\"; io.outputLine(a > b <= c, 0 > 0 <= 0);\nio := import \"core/io\"; io.outputLine(a > b <!= c, 0 > 0 <!= 0);\nio := import \"core/io\"; io.outputLine(a > b > c, 0 > 0 > 0);\nio := import \"core/io\"; io.outputLine(a > b >! c, 0 > 0 >! 0);\nio := import \"core/io\"; io.outputLine(a > b >= c, 0 > 0 >= 0);\nio := import \"core/io\"; io.outputLine(a > b >!= c, 0 > 0 >!= 0);\nio := import \"core/io\"; io.outputLine(a >! b == c, 0 >! 0 == 0);\nio := import \"core/io\"; io.outputLine(a >! b =!= c, 0 >! 0 =!= 0);\nio := import \"core/io\"; io.outputLine(a >! b < c, 0 >! 0 < 0);\nio := import \"core/io\"; io.outputLine(a >! b <! c, 0 >! 0 <! 0);\nio := import \"core/io\"; io.outputLine(a >! b <= c, 0 >! 0 <= 0);\nio := import \"core/io\"; io.outputLine(a >! b <!= c, 0 >! 0 <!= 0);\nio := import \"core/io\"; io.outputLine(a >! b > c, 0 >! 0 > 0);\nio := import \"core/io\"; io.outputLine(a >! b >! c, 0 >! 0 >! 0);\nio := import \"core/io\"; io.outputLine(a >! b >= c, 0 >! 0 >= 0);\nio := import \"core/io\"; io.outputLine(a >! b >!= c, 0 >! 0 >!= 0);\nio := import \"core/io\"; io.outputLine(a >= b == c, 0 >= 0 == 0);\nio := import \"core/io\"; io.outputLine(a >= b =!= c, 0 >= 0 =!= 0);\nio := import \"core/io\"; io.outputLine(a >= b < c, 0 >= 0 < 0);\nio := import \"core/io\"; io.outputLine(a >= b <! c, 0 >= 0 <! 0);\nio := import \"core/io\"; io.outputLine(a >= b <= c, 0 >= 0 <= 0);\nio := import \"core/io\"; io.outputLine(a >= b <!= c, 0 >= 0 <!= 0);\nio := import \"core/io\"; io.outputLine(a >= b > c, 0 >= 0 > 0);\nio := import \"core/io\"; io.outputLine(a >= b >! c, 0 >= 0 >! 0);\nio := import \"core/io\"; io.outputLine(a >= b >= c, 0 >= 0 >= 0);\nio := import \"core/io\"; io.outputLine(a >= b >!= c, 0 >= 0 >!= 0);\nio := import \"core/io\"; io.outputLine(a >!= b == c, 0 >!= 0 == 0);\nio := import \"core/io\"; io.outputLine(a >!= b =!= c, 0 >!= 0 =!= 0);\nio := import \"core/io\"; io.outputLine(a >!= b < c, 0 >!= 0 < 0);\nio := import \"core/io\"; io.outputLine(a >!= b <! c, 0 >!= 0 <! 0);\nio := import \"core/io\"; io.outputLine(a >!= b <= c, 0 >!= 0 <= 0);\nio := import \"core/io\"; io.outputLine(a >!= b <!= c, 0 >!= 0 <!= 0);\nio := import \"core/io\"; io.outputLine(a >!= b > c, 0 >!= 0 > 0);\nio := import \"core/io\"; io.outputLine(a >!= b >! c, 0 >!= 0 >! 0);\nio := import \"core/io\"; io.outputLine(a >!= b >= c, 0 >!= 0 >= 0);\nio := import \"core/io\"; io.outputLine(a >!= b >!= c, 0 >!= 0 >!= 0);\nio := import \"core/io\"; var lo := -9223372036854775808; var hi := 9223372036854775807; io.outputLine(lo < 0 < hi, hi > 0 > lo);\nio := import \"core/io\"; var text := \"a\"; var flag := true; io.outputLine(text == \"a\" =!= \"b\", flag == true =!= false);\nio := import \"core/io\"; io.outputLine(Unit == Unit == Unit, Unit =!= Unit == Unit);\nio := import \"core/io\"; io.outputLine(1 > 2 < (1 / 0), 1 > 2 < (9223372036854775807 + 1));\nio := import \"core/io\"; io.outputLine(not 1 < 2 < 3, (1 < 2) == true == true, 0 < 1 < 2 and false);\nio := import \"core/io\"; var lt_cmp_i_0_0 := 3; io.outputLine(0 < lt_cmp_i_0_0 < 4);\nio := import \"core/io\"; var n := 0; loop 0 <= n < 3 { io.outputLine(n); n = n + 1; } io.outputLine(0 <= a < 2 < 3 < 4);\nio := import \"core/io\"; var repeated := 1; io.outputLine(0 <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= repeated <= 2);",
@@ -7627,7 +7627,7 @@
       "stderr": ""
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "b3V0cHV0TGluZSgwLjEsIDFlMiwgLTAuMCwgNWUtMzI0KTs=",
       "args": [],
       "name": null,
@@ -7636,7 +7636,7 @@
       "stderr": ""
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "b3V0cHV0TGluZSgxZSk7",
       "args": [],
       "name": null,
@@ -7645,7 +7645,7 @@
       "stderr": "1:13: expected exponent digits\n"
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "b3V0cHV0TGluZSgxZTMwOSk7",
       "args": [],
       "name": null,
@@ -7654,7 +7654,7 @@
       "stderr": "1:12: floating literal is not finite\n"
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "cGxhaW4gOj0gInRleHQiOwplc2NhcGVkIDo9ICJuXG50XHRxXCJiXFwiOwptdWx0aSA6PSAibGluZTEKbGluZTIiOwo=",
       "args": [],
       "name": null,
@@ -7663,7 +7663,7 @@
       "stderr": ""
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "dmFyIG46IEZsb2F0ID0gMC4xOyBuID0gMi41Ow==",
       "args": [],
       "name": null,
@@ -7672,7 +7672,7 @@
       "stderr": ""
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "emVybyA6PSAwOwpzbWFsbCA6PSA0MjsKbWF4IDo9IDkyMjMzNzIwMzY4NTQ3NzU4MDc7Cm1pbk1hZ25pdHVkZSA6PSA5MjIzMzcyMDM2ODU0Nzc1ODA4Owo=",
       "args": [],
       "name": null,
@@ -7681,7 +7681,7 @@
       "stderr": ""
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "Lyogb3JkaW5hcnkgLyogbmVzdGVkICovIGNvbW1lbnQgKi8KLyojIyByYXcgLyogIyovIHN0aWxsICMjKi8KbmFtZSA6PSA0MjsKZmxhZyA6PSB0cnVlOwp0ZXh0IDo9ICJhXG5cImIiOwpwYWlyIDo9IChuYW1lLCBmbGFnKTsKbmFtZSA9IG5hbWUgKyAxOwpvdXRwdXRMaW5lKHBhaXIuMSk7CmlmIGZsYWcgYW5kIG5hbWUgPj0gNDAgeyBvdXRwdXRMaW5lKHRleHQpOyB9Cg==",
       "args": [],
       "name": null,
@@ -7690,7 +7690,7 @@
       "stderr": ""
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "Lyogb3V0ZXIgLyogaW5uZXIgKi8gc3RpbGwgb3V0ZXIgKi8KLyojIHJhdyAvKiBub3QgYSBjbG9zZSAqLyAjKi8KLyojIyBsb25nZXIgZmVuY2Ugd2l0aCAjKi8gaW5zaWRlICMjKi8KYWZ0ZXIgOj0gMTsK",
       "args": [],
       "name": null,
@@ -7699,7 +7699,7 @@
       "stderr": ""
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "Oj0gPT0gPSE9IDwgPCEgPD0gPCE9ID4gPiEgPj0gPiE9ICsgLSAqIC8gJSA6LyA6JSAqKiArPSAtPSAqPSAvPSAlPSA6Lz0gOiU9ICoqPSAoICkgeyB9IFsgXSAsIDsgOiAuID8gISA9IHwgJiBACg==",
       "args": [],
       "name": null,
@@ -7708,7 +7708,7 @@
       "stderr": ""
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "ZiA6PSBmbihuOiBGbG9hdCk6IEZsb2F0IHsgLW4gfSBvdXRwdXRMaW5lKGYoMS41KSk7",
       "args": [],
       "name": null,
@@ -7717,7 +7717,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "aTogSW50NjQgPSAyOyBmOiBGbG9hdDY0ID0gMC41OyBkOiBEb3VibGUgPSAxLjU7",
       "args": [],
       "name": null,
@@ -7726,7 +7726,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "b3V0cHV0TGluZSgoLTIgKiogMikpOw==",
       "args": [],
       "name": null,
@@ -7735,7 +7735,7 @@
       "stderr": "1:16: group a negative power base as (-base) or negate the completed power as -(base ** exponent)\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "b3V0cHV0TGluZSgoLTIpICoqIDIsIC0oMiAqKiAyKSk7",
       "args": [],
       "name": null,
@@ -7744,7 +7744,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "b3V0cHV0TGluZSgrKC0yKSAqKiAyKTs=",
       "args": [],
       "name": null,
@@ -7753,7 +7753,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "b3V0cHV0TGluZSgrLTIgKiogMik7",
       "args": [],
       "name": null,
@@ -7762,7 +7762,7 @@
       "stderr": "1:16: group a negative power base as (-base) or negate the completed power as -(base ** exponent)\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "b3V0cHV0TGluZSgtMiAqKiAyKTs=",
       "args": [],
       "name": null,
@@ -7771,7 +7771,7 @@
       "stderr": "1:15: group a negative power base as (-base) or negate the completed power as -(base ** exponent)\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "b3V0cHV0TGluZSgwLjEsIDFlMiwgLTAuMCwgNWUtMzI0KTs=",
       "args": [],
       "name": null,
@@ -7780,7 +7780,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "b3V0cHV0TGluZSgxZSk7",
       "args": [],
       "name": null,
@@ -7789,7 +7789,7 @@
       "stderr": "1:13: expected exponent digits\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "b3V0cHV0TGluZSgxZTMwOSk7",
       "args": [],
       "name": null,
@@ -7798,7 +7798,7 @@
       "stderr": "1:12: floating literal is not finite\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "b3V0cHV0TGluZSgyICoqIDMgKiogMik7",
       "args": [],
       "name": null,
@@ -7807,7 +7807,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "bWF0Y2ggeCB7IF8gPT4gMSB9",
       "args": [],
       "name": null,
@@ -7816,7 +7816,7 @@
       "stderr": "1:1: unsupported feature \"match\"\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "c3VtVG8gOj0gZm4objogSW50KTogSW50IHsKICAgIHZhciB0b3RhbCA6PSAwOwogICAgdmFyIGluZGV4IDo9IDE7CiAgICBsb29wIGluZGV4IDw9IG4gewogICAgICAgIHRvdGFsID0gdG90YWwgKyBpbmRleDsKICAgICAgICBpbmRleCA9IGluZGV4ICsgMTsKICAgIH0KICAgIHRvdGFsCn0KCmNob29zZSA6PSBmbihmbGFnOiBCb29sKTogSW50IHsKICAgIGlmIGZsYWcgeyByZXR1cm4gMTsgfSBlbHNlIHsgcmV0dXJuIDA7IH0KfQoKbWFpbiA6PSBmbigpOiBVbml0IHsKICAgIGlmIHN1bVRvKDMpID49IDYgeyBvdXRwdXRMaW5lKCJvayIpOyB9IGVsc2UgeyByZXBvcnRFcnJvcigiYmFkIik7IH0KfQo=",
       "args": [],
       "name": null,
@@ -7825,7 +7825,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "cDogKGk6IEludDY0LCBmOiBEb3VibGUpID0gKGkgPSAyLCBmID0gMC41KTsgeHM6IExpc3Q8SW50NjQ+ID0gWzEsIDJdOw==",
       "args": [],
       "name": null,
@@ -7834,7 +7834,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "dmFyIG46IEZsb2F0ID0gMC4xOyBuID0gMi41Ow==",
       "args": [],
       "name": null,
@@ -7843,7 +7843,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "Q291bnQgOj0gdHlwZSBJbnQ2NDsgZiA6PSBmbihuOiBDb3VudCwgeDogRG91YmxlKTogRmxvYXQ2NCB7IHJldHVybiB4OyB9IG91dHB1dExpbmUoZigyLCAwLjUpKTs=",
       "args": [],
       "name": null,
@@ -7852,7 +7852,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "YmFzZSA6PSAyOyBvdXRwdXRMaW5lKC1iYXNlICoqIDIpOw==",
       "args": [],
       "name": null,
@@ -7861,7 +7861,7 @@
       "stderr": "1:29: group a negative power base as (-base) or negate the completed power as -(base ** exponent)\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "ZiA6PSBmbihuOiBGbG9hdCk6IEZsb2F0IHsgLW4gfSBvdXRwdXRMaW5lKGYoMS41KSk7",
       "args": [],
       "name": null,
@@ -7870,7 +7870,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "aSA6PSAyOyBmOiBGbG9hdCA9IGk7",
       "args": [],
       "name": null,
@@ -7879,7 +7879,7 @@
       "stderr": "1:9: cannot initialize Float with Int\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "aTogSW50NjQgPSAyOyBmOiBGbG9hdDY0ID0gMC41OyBkOiBEb3VibGUgPSAxLjU7",
       "args": [],
       "name": null,
@@ -7888,7 +7888,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "b3V0cHV0TGluZSgwLjEsIDFlMiwgLTAuMCwgNWUtMzI0KTs=",
       "args": [],
       "name": null,
@@ -7897,7 +7897,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "b3V0cHV0TGluZSgxZSk7",
       "args": [],
       "name": null,
@@ -7906,7 +7906,7 @@
       "stderr": "1:13: expected exponent digits\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "b3V0cHV0TGluZSgxZTMwOSk7",
       "args": [],
       "name": null,
@@ -7915,7 +7915,7 @@
       "stderr": "1:12: floating literal is not finite\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "cDogKGk6IEludDY0LCBmOiBEb3VibGUpID0gKGkgPSAyLCBmID0gMC41KTsgeHM6IExpc3Q8SW50NjQ+ID0gWzEsIDJdOw==",
       "args": [],
       "name": null,
@@ -7924,7 +7924,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBMaXN0PEludD4gPSBbImJhZCJdOwo=",
       "args": [],
       "name": null,
@@ -7933,7 +7933,7 @@
       "stderr": "1:1: cannot initialize List<Int> with List<String>\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBMaXN0PEludD4gPSBbMSwgMl07CmYgOj0gZm4oKTogSW50IHsgbG9vcCB2YWx1ZXMgYXMgdmFsdWUgeyBvdXRwdXRMaW5lKHZhbHVlKTsgfSAxIH0K",
       "args": [],
       "name": null,
@@ -7942,7 +7942,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBMaXN0PEludD4gPSBbMSwgMl07IHg6IEludCA9IHZhbHVlc1swXTsK",
       "args": [],
       "name": null,
@@ -7951,7 +7951,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBMaXN0PEludD4gPSBbMSwgMl07IHg6IFN0cmluZyA9IHZhbHVlc1swXTsK",
       "args": [],
       "name": null,
@@ -7960,7 +7960,7 @@
       "stderr": "1:29: cannot initialize String with Int\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBMaXN0PEludD4gPSBbMV07IGxvb3AgdmFsdWVzIGFzIGl0ZW0geyBpdGVtOiBJbnQgPSAyOyB9",
       "args": [],
       "name": null,
@@ -7969,7 +7969,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBMaXN0PEludD4gPSBbMV07IGxvb3AgdmFsdWVzIGFzIGl0ZW0geyBpdGVtOiBJbnQgPSAyOyB9Cg==",
       "args": [],
       "name": null,
@@ -7978,7 +7978,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBMaXN0PEludD4gPSBbXTsgcHVzaF9iYWNrKG11dCB2YWx1ZXMsIDEpOwo=",
       "args": [],
       "name": null,
@@ -7987,7 +7987,7 @@
       "stderr": "1:39: cannot mutate list values without mut\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBMaXN0PEludD4gPSBbXTsK",
       "args": [],
       "name": null,
@@ -7996,7 +7996,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBMaXN0PFN0cmluZz4gPSBbIm9rIiwgInllcyJdOwo=",
       "args": [],
       "name": null,
@@ -8005,7 +8005,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBtdXQgTGlzdDxJbnQ+ID0gW107IHB1c2hfYmFjayh2YWx1ZXMsIDEpOwo=",
       "args": [],
       "name": null,
@@ -8014,7 +8014,7 @@
       "stderr": "1:29: push_back requires mut list argument\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFsdWVzOiBtdXQgTGlzdDxJbnQ+ID0gW107IHB1c2hfYmFjayhtdXQgdmFsdWVzLCAxKTsK",
       "args": [],
       "name": null,
@@ -8023,7 +8023,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFyIG46IEZsb2F0ID0gMC4xOyBuID0gMi41Ow==",
       "args": [],
       "name": null,
@@ -8032,7 +8032,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFyIGY6IEZsb2F0ID0gMjsgZiA9IC00Ow==",
       "args": [],
       "name": null,
@@ -8041,7 +8041,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFyIHggOj0gMTsgeCA6PSAyOyB4ID0gMzs=",
       "args": [],
       "name": null,
@@ -8050,7 +8050,7 @@
       "stderr": "1:21: cannot assign to immutable local x\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "dmFyIHggOj0gMTsgeCA6PSAyOyB4ID0gMzsK",
       "args": [],
       "name": null,
@@ -8059,7 +8059,7 @@
       "stderr": "1:21: cannot assign to immutable local x\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eCA6PSAxOyB4ICsgMjs7",
       "args": [],
       "name": null,
@@ -8068,7 +8068,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eCA6PSAxOyB4IDo9ICJ2YWx1ZSI7Cg==",
       "args": [],
       "name": null,
@@ -8077,7 +8077,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eCA6PSAxOyB4IDo9IDI7",
       "args": [],
       "name": null,
@@ -8086,7 +8086,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eCA6PSAxOyB4IDo9IDI7Cg==",
       "args": [],
       "name": null,
@@ -8095,7 +8095,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eDogRG91YmxlID0gZmFsc2U7",
       "args": [],
       "name": null,
@@ -8104,7 +8104,7 @@
       "stderr": "1:1: cannot initialize Float with Bool\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eDogRmxvYXQgPSAyICoqIDM7",
       "args": [],
       "name": null,
@@ -8113,7 +8113,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eDogSW50ID0gImJhZCI7Cg==",
       "args": [],
       "name": null,
@@ -8122,7 +8122,7 @@
       "stderr": "1:1: cannot initialize Int with String\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eDogSW50ID0gMiAqKiAzOw==",
       "args": [],
       "name": null,
@@ -8131,7 +8131,7 @@
       "stderr": "1:1: cannot initialize Int with Float\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eDogSW50ID0gNDI7Cg==",
       "args": [],
       "name": null,
@@ -8140,7 +8140,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eDogSW50NjQgPSAieCI7",
       "args": [],
       "name": null,
@@ -8149,7 +8149,7 @@
       "stderr": "1:1: cannot initialize Int with String\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eDogTWlzc2luZyA9IDE7Cg==",
       "args": [],
       "name": null,
@@ -8158,7 +8158,7 @@
       "stderr": "1:1: unknown type Missing\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "OyA7",
       "args": [],
       "name": null,
@@ -8167,7 +8167,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "Q291bnQgOj0gdHlwZSBJbnQ2NDsgZiA6PSBmbihuOiBDb3VudCwgeDogRG91YmxlKTogRmxvYXQ2NCB7IHJldHVybiB4OyB9IG91dHB1dExpbmUoZigyLCAwLjUpKTs=",
       "args": [],
       "name": null,
@@ -8176,7 +8176,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "QSA6PSB0eXBlIEI7CkIgOj0gdHlwZSBBOwo=",
       "args": [],
       "name": null,
@@ -8185,7 +8185,7 @@
       "stderr": "2:1: recursive type alias B\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "UGFpciA6PSB0eXBlIChhOiBJbnQsIGI6IFN0cmluZyk7IHA6IFBhaXIgPSAoYSA9IDEsIGIgPSAieCIpOyB4OiBJbnQgPSBwLmI7Cg==",
       "args": [],
       "name": null,
@@ -8194,7 +8194,7 @@
       "stderr": "1:63: cannot initialize Int with String\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "UGFpciA6PSB0eXBlIChhOiBJbnQsIGI6IFN0cmluZyk7IHA6IFBhaXIgPSAoYSA9IDEsIGIgPSAieCIpOyB4OiBTdHJpbmcgPSBwLmI7Cg==",
       "args": [],
       "name": null,
@@ -8203,7 +8203,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "UGFpciA6PSB0eXBlIChsZWZ0OiBJbnQsIHJpZ2h0OiBJbnQpOwpJdGVtcyA6PSB0eXBlIExpc3Q8UGFpcj47CmFkZCA6PSBmbihhOiBJbnQsIGI6IEludCk6IEludCB7IGEgKyBiIH0KY2hvb3NlIDo9IGZuKGZsYWc6IEJvb2wpOiBJbnQgeyBpZiBmbGFnIHsgMSB9IGVsc2UgeyAwIH0gfQpjb3VudCA6PSAxOwp2YXIgdG90YWw6IEludCA9IDA7CnZhbHVlczogbXV0IExpc3Q8SW50PiA9IFtdOwo=",
       "args": [],
       "name": null,
@@ -8212,7 +8212,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBGbG9hdCB7IHJldHVybiA5MDA3MTk5MjU0NzQwOTkzOyB9",
       "args": [],
       "name": null,
@@ -8221,7 +8221,7 @@
       "stderr": "1:20: cannot return Int from function returning Float\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBGbG9hdCB7IHJldHVybiAoLTIpOyB9IG91dHB1dExpbmUoZigpKTs=",
       "args": [],
       "name": null,
@@ -8230,7 +8230,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBGbG9hdCB7IHJldHVybiAtKDIgKiogMik7IH0gb3V0cHV0TGluZShmKCkpOw==",
       "args": [],
       "name": null,
@@ -8239,7 +8239,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBGbG9hdCB7IHJldHVybiAyICoqIDMgKiogMjsgfSBvdXRwdXRMaW5lKGYoKSk7",
       "args": [],
       "name": null,
@@ -8248,7 +8248,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQ2NCB7IHJldHVybiAwLjU7IH0=",
       "args": [],
       "name": null,
@@ -8257,7 +8257,7 @@
       "stderr": "1:20: cannot return Float from function returning Int\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyAxIH0KZyA6PSBmbigpOiBJbnQgeyBmKCkgfQo=",
       "args": [],
       "name": null,
@@ -8266,7 +8266,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyB2YXIgeCA6PSAxOyB4ID0gImJhZCI7IHggfQo=",
       "args": [],
       "name": null,
@@ -8275,7 +8275,7 @@
       "stderr": "1:30: cannot assign String to Int local x\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyB2YXIgeCA6PSAxOyB4ID0gMjsgeCB9Cg==",
       "args": [],
       "name": null,
@@ -8284,7 +8284,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyB4IDo9IDE7IHggOj0gMjsgeCB9Cg==",
       "args": [],
       "name": null,
@@ -8293,7 +8293,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyB5ID0gMjsgMSB9Cg==",
       "args": [],
       "name": null,
@@ -8302,7 +8302,7 @@
       "stderr": "1:18: unknown local y\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyBicmVhazsgMSB9Cg==",
       "args": [],
       "name": null,
@@ -8311,7 +8311,7 @@
       "stderr": "1:18: break outside loop\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyBpZiAxIHsgMiB9IGVsc2UgeyAzIH0gfQo=",
       "args": [],
       "name": null,
@@ -8320,7 +8320,7 @@
       "stderr": "1:18: if condition must be Bool\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyBpZiB0cnVlIHsgeCA6PSAxOyB9IHggPSAyOyAxIH0K",
       "args": [],
       "name": null,
@@ -8329,7 +8329,7 @@
       "stderr": "1:38: unknown local x\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyBsb29wIDEgeyByZXR1cm4gMjsgfSAzIH0K",
       "args": [],
       "name": null,
@@ -8338,7 +8338,7 @@
       "stderr": "1:18: loop condition must be Bool\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyBsb29wIHRydWUgeyBicmVhazsgfSAxIH0K",
       "args": [],
       "name": null,
@@ -8347,7 +8347,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyByZXR1cm47IH0K",
       "args": [],
       "name": null,
@@ -8356,7 +8356,7 @@
       "stderr": "1:18: return requires a value\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBJbnQgeyByZXR1cm4gMiAqKiAzOyB9",
       "args": [],
       "name": null,
@@ -8365,7 +8365,7 @@
       "stderr": "1:18: cannot return Float from function returning Int\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBTdHJpbmcgeyByZXR1cm4gMTsgfQo=",
       "args": [],
       "name": null,
@@ -8374,7 +8374,7 @@
       "stderr": "1:21: cannot return Int from function returning String\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBVbml0IHsgcmV0dXJuOyB9Cg==",
       "args": [],
       "name": null,
@@ -8383,7 +8383,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbih2YWx1ZTogSW50KTogKHZhbHVlOiBJbnQsIG9rOiBCb29sKSB7ICh2YWx1ZSA9IHZhbHVlLCBvayA9IHRydWUpIH0K",
       "args": [],
       "name": null,
@@ -8392,7 +8392,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbih4OiBJbnQpOiBJbnQgeyB2YXIgeSA6PSB4OyB5ID0geSArIDE7IHkgfQo=",
       "args": [],
       "name": null,
@@ -8401,7 +8401,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihhOiBJbnQpOiBJbnQgeyBhID0gMjsgYSB9Cg==",
       "args": [],
       "name": null,
@@ -8410,7 +8410,7 @@
       "stderr": "1:24: cannot assign to immutable local a\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihhOiBJbnQpOiBJbnQgeyBhIH0gZyA6PSBmbigpOiBJbnQgeyBmKCJiYWQiKSB9Cg==",
       "args": [],
       "name": null,
@@ -8419,7 +8419,7 @@
       "stderr": "1:45: argument 1 of f expects Int, got String\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihhOiBJbnQpOiBJbnQgeyBhIH0KZiA6PSBmbigpOiBJbnQgeyAxIH0K",
       "args": [],
       "name": null,
@@ -8428,7 +8428,7 @@
       "stderr": "2:1: duplicate top-level name f\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihhOiBJbnQpOiBJbnQgeyBhIH0KZyA6PSBmbigpOiBJbnQgeyBmKDEpIH0K",
       "args": [],
       "name": null,
@@ -8437,7 +8437,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihhOiBJbnQsIGE6IEludCk6IEludCB7IGEgfQo=",
       "args": [],
       "name": null,
@@ -8446,7 +8446,7 @@
       "stderr": "1:17: duplicate parameter a\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihhOiBJbnQsIGI6IEludCk6IEludCB7IGEgKyBiIH0KZyA6PSBmbigpOiBJbnQgeyBmKDEpIH0K",
       "args": [],
       "name": null,
@@ -8455,7 +8455,7 @@
       "stderr": "2:18: function f expects 2 arguments, got 1\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihhOiBJbnQsIGI6IEludCk6IEludCB7IGEgKyBiIH0KZyA6PSBmbigpOiBJbnQgeyBmKDEsIDIpIH0K",
       "args": [],
       "name": null,
@@ -8464,7 +8464,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihhOiBTdHJpbmcpOiBJbnQgeyAxIH0KZyA6PSBmbigpOiBJbnQgeyBmKCJvayIpIH0K",
       "args": [],
       "name": null,
@@ -8473,7 +8473,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihuOiBGbG9hdCk6IEZsb2F0IHsgcmV0dXJuIG47IH0gb3V0cHV0TGluZShmKDIpKTs=",
       "args": [],
       "name": null,
@@ -8482,7 +8482,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihuOiBGbG9hdCk6IEZsb2F0IHsgLW4gfSBvdXRwdXRMaW5lKGYoMS41KSk7",
       "args": [],
       "name": null,
@@ -8491,7 +8491,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihuOiBJbnQpOiBJbnQgeyB2YXIgbiA6PSBuOyBuID0gbiArIDE7IHJldHVybiBuOyB9",
       "args": [],
       "name": null,
@@ -8500,7 +8500,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihuOiBJbnQpOiBJbnQgeyB2YXIgbiA6PSBuOyBuID0gbiArIDE7IHJldHVybiBuOyB9Cg==",
       "args": [],
       "name": null,
@@ -8509,7 +8509,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZjogRmxvYXQgPSA5MDA3MTk5MjU0NzQwOTkzOw==",
       "args": [],
       "name": null,
@@ -8518,7 +8518,7 @@
       "stderr": "1:1: cannot initialize Float with Int\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZjogRmxvYXQgPSArMjs=",
       "args": [],
       "name": null,
@@ -8527,7 +8527,7 @@
       "stderr": "1:1: cannot initialize Float with Int\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZjogRmxvYXQgPSAtKDIpOw==",
       "args": [],
       "name": null,
@@ -8536,7 +8536,7 @@
       "stderr": "1:1: cannot initialize Float with Int\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZjogRmxvYXQgPSAtOTIyMzM3MjAzNjg1NDc3NTgwODs=",
       "args": [],
       "name": null,
@@ -8545,7 +8545,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZjogRmxvYXQgPSAyICsgMzs=",
       "args": [],
       "name": null,
@@ -8554,7 +8554,7 @@
       "stderr": "1:1: cannot initialize Float with Int\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZjogRmxvYXQgPSAyOyBkOiBEb3VibGUgPSAtMzsgZzogRmxvYXQ2NCA9ICgoNCkpOw==",
       "args": [],
       "name": null,
@@ -8860,7 +8860,7 @@
       "stderr": "12:63: BoundPanic: pop_back on an empty list\n"
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "YSA6PSAwLjE7IGIgOj0gMWUyOyBjIDo9IC0wLjA7IGQgOj0gNWUtMzI0Ow==",
       "args": [],
       "name": null,
@@ -8869,7 +8869,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "YSA6PSAwLjE7IGIgOj0gMWUyOyBjIDo9IC0wLjA7IGQgOj0gNWUtMzI0Ow==",
       "args": [],
       "name": null,
@@ -8878,7 +8878,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "YSA6PSAwLjE7IGIgOj0gMWUyOyBjIDo9IC0wLjA7IGQgOj0gNWUtMzI0Ow==",
       "args": [],
       "name": null,
@@ -8887,7 +8887,7 @@
       "stderr": ""
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "ZiA6PSBmbihuOiBGbG9hdCk6IEZsb2F0IHsgLW4gfSB4IDo9IGYoMS41KTs=",
       "args": [],
       "name": null,
@@ -8896,7 +8896,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "ZiA6PSBmbihuOiBGbG9hdCk6IEZsb2F0IHsgLW4gfSB4IDo9IGYoMS41KTs=",
       "args": [],
       "name": null,
@@ -8905,7 +8905,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihuOiBGbG9hdCk6IEZsb2F0IHsgLW4gfSB4IDo9IGYoMS41KTs=",
       "args": [],
       "name": null,
@@ -8914,7 +8914,7 @@
       "stderr": ""
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "eCA6PSAxZTs=",
       "args": [],
       "name": null,
@@ -8923,7 +8923,7 @@
       "stderr": "1:7: expected exponent digits\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "eCA6PSAxZTs=",
       "args": [],
       "name": null,
@@ -8932,7 +8932,7 @@
       "stderr": "1:7: expected exponent digits\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eCA6PSAxZTs=",
       "args": [],
       "name": null,
@@ -8941,7 +8941,7 @@
       "stderr": "1:7: expected exponent digits\n"
     },
     {
-      "source": "c77e408f342686d4fc08a8f27b084b45055870a41a8f79defe1764571b9d7370",
+      "source": "8aa4a7a5e6e2e91fa385fe485e99ff1d0f0a155c3baf7d951842e15e19fc6b6d",
       "stdin": "eCA6PSAxZTMwOTs=",
       "args": [],
       "name": null,
@@ -8950,7 +8950,7 @@
       "stderr": "1:6: floating literal is not finite\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "eCA6PSAxZTMwOTs=",
       "args": [],
       "name": null,
@@ -8959,7 +8959,7 @@
       "stderr": "1:6: floating literal is not finite\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "eCA6PSAxZTMwOTs=",
       "args": [],
       "name": null,
@@ -8968,7 +8968,7 @@
       "stderr": "1:6: floating literal is not finite\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "YSA6PSAyICoqIDMgKiogMjs=",
       "args": [],
       "name": null,
@@ -8977,7 +8977,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "YSA6PSAoLTIpICoqIDI7IGIgOj0gLSgyICoqIDIpOw==",
       "args": [],
       "name": null,
@@ -8986,7 +8986,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "YSA6PSArKC0yKSAqKiAyOw==",
       "args": [],
       "name": null,
@@ -8995,7 +8995,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "YSA6PSAtMiAqKiAyOw==",
       "args": [],
       "name": null,
@@ -9004,7 +9004,7 @@
       "stderr": "1:9: group a negative power base as (-base) or negate the completed power as -(base ** exponent)\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "YmFzZSA6PSAyOyBhIDo9IC1iYXNlICoqIDI7",
       "args": [],
       "name": null,
@@ -9013,7 +9013,7 @@
       "stderr": "1:23: group a negative power base as (-base) or negate the completed power as -(base ** exponent)\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "YSA6PSArLTIgKiogMjs=",
       "args": [],
       "name": null,
@@ -9022,7 +9022,7 @@
       "stderr": "1:10: group a negative power base as (-base) or negate the completed power as -(base ** exponent)\n"
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "YSA6PSAoLTIgKiogMik7",
       "args": [],
       "name": null,
@@ -9031,7 +9031,7 @@
       "stderr": "1:10: group a negative power base as (-base) or negate the completed power as -(base ** exponent)\n"
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBGbG9hdCB7IHJldHVybiAtKDIgKiogMik7IH0geCA6PSBmKCk7",
       "args": [],
       "name": null,
@@ -9040,7 +9040,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBGbG9hdCB7IHJldHVybiAyICoqIDMgKiogMjsgfSB4IDo9IGYoKTs=",
       "args": [],
       "name": null,
@@ -9049,7 +9049,7 @@
       "stderr": ""
     },
     {
-      "source": "6b6ca2cc88c7eec43f99258079e66b7ba3c68b5c161e0770d7c7102d29cec458",
+      "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
       "stdin": "Q291bnQgOj0gdHlwZSBJbnQ2NDsgZiA6PSBmbihuOiBDb3VudCwgeDogRG91YmxlKTogRmxvYXQ2NCB7IHJldHVybiB4OyB9IHkgOj0gZigyLCAwLjUpOw==",
       "args": [],
       "name": null,
@@ -9058,7 +9058,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "Q291bnQgOj0gdHlwZSBJbnQ2NDsgZiA6PSBmbihuOiBDb3VudCwgeDogRG91YmxlKTogRmxvYXQ2NCB7IHJldHVybiB4OyB9IHkgOj0gZigyLCAwLjUpOw==",
       "args": [],
       "name": null,
@@ -9067,7 +9067,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbigpOiBGbG9hdCB7IHJldHVybiAoLTIpOyB9IHggOj0gZigpOw==",
       "args": [],
       "name": null,
@@ -9076,7 +9076,7 @@
       "stderr": ""
     },
     {
-      "source": "c6b1f62d0df7dea1316f9d6ae24bd64f624d9473a2256c3948f61128eca3f12b",
+      "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
       "stdin": "ZiA6PSBmbihuOiBGbG9hdCk6IEZsb2F0IHsgcmV0dXJuIG47IH0geCA6PSBmKDIpOw==",
       "args": [],
       "name": null,
