@@ -189,7 +189,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         if tagCommit =!= commit {
             failRelease("", "release tag must point at HEAD");
         }
-        tagMsgArgs: List<String> = ["for-each-ref", "--format=%(contents)", "refs/tags/" + tag];
+        tagMsgArgs: List<String> = ["for-each-ref", "--format=%(contents:subject)%0a%0a%(contents:body)", "refs/tags/" + tag];
         tagMessage = text.trim(runChecked("", "git", tagMsgArgs, directory, ""));
     }
 
@@ -316,14 +316,25 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         stageDir := path.join(work, "vsix-stage");
         cpExt := fs.copy(path.join(source, "editors/vscode"), stageDir);
         if not cpExt.ok { failRelease(work, cpExt.error); }
+        rmScripts := fs.remove(path.join(stageDir, "scripts"));
+        if not rmScripts.ok { failRelease(work, rmScripts.error); }
         cpJs := fs.copy(path.join(source, "dist/vscode"), path.join(stageDir, "dist"));
         if not cpJs.ok { failRelease(work, cpJs.error); }
         pkgStage := path.join(stageDir, "package.json");
         pkgRead := fs.readText(pkgStage);
         if not pkgRead.ok { failRelease(work, pkgRead.error); }
-        stagePkg := text.slice(pkgRead.text, 0, text.indexOfText(pkgRead.text, "\"../../dist/vscode/extension.js\"", 0))
+        mainNeedle := "\"../../dist/vscode/extension.js\"";
+        mainIdx := text.indexOfText(pkgRead.text, mainNeedle, 0);
+        if mainIdx < 0 { failRelease(work, "editors/vscode/package.json missing main extension path"); }
+        var stagePkg := text.slice(pkgRead.text, 0, mainIdx)
         + "\"./dist/extension.js\""
-        + text.slice(pkgRead.text, text.indexOfText(pkgRead.text, "\"../../dist/vscode/extension.js\"", 0) + 32, text.length(pkgRead.text));
+        + text.slice(pkgRead.text, mainIdx + text.length(mainNeedle), text.length(pkgRead.text));
+        prepubNeedle := "    \"vscode:prepublish\": \"npm run build\",\n";
+        prepubIdx := text.indexOfText(stagePkg, prepubNeedle, 0);
+        if prepubIdx >= 0 {
+            stagePkg = text.slice(stagePkg, 0, prepubIdx)
+            + text.slice(stagePkg, prepubIdx + text.length(prepubNeedle), text.length(stagePkg));
+        }
         wPkg := fs.writeText(pkgStage, stagePkg);
         if not wPkg.ok { failRelease(work, wPkg.error); }
         vsixFile = "lite-" + selected.version + ".vsix";
