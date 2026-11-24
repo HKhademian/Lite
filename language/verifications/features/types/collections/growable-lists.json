@@ -3,12 +3,12 @@
   "kind": "feature",
   "source": {
     "file": "growable-lists.lts",
-    "hash": "sha256:7d72d9af0ea2eb4f8fb5cb722c57fa65e807e690a7132058aedc5b9449b8a488"
+    "hash": "sha256:aeaf6e7909b2b91e71b18ff103e8e1ed6baa17e30006e03b4eb2edc055bdedcc"
   },
   "features": [
     "feature.types.collections.growable-lists"
   ],
-  "guideline": "Checks mut list grants for push_back/push_front and positional reads after growth.",
+  "guideline": "Checks mut list grants for pushBack/pushFront and positional reads after growth.",
   "cases": [
     {
       "name": "push-front-back",

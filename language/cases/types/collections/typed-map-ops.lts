@@ -1,10 +1,9 @@
 io := import "core/io";
-map := import "core/map";
 
 scores: mut Map<String, Int>;
 scores["a"] = 5;
-map.set(mut scores, "b", 9);
+mut scores.set("b", 9);
 copy := scores;
-map.remove(mut scores, "a");
-g := map.get(copy, "a");
-io.outputLine(g.found, g.value, map.getOr(scores, "a", -1), map.size(scores), map.size(copy));
+mut scores.remove("a");
+g := copy.get("a");
+io.outputLine(g.found, g.value, scores.getOr("a", -1), scores.size(), copy.size());

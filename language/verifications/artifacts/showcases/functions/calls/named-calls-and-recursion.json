@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/functions/calls/named-calls-and-recursion.lts",
-    "hash": "sha256:3aad3cd2d6b2eba6c6a9ce1942cb5fc972a3dc9211082bd4b60beb6179938504"
+    "hash": "sha256:87cde9853c1c0db72d4a552824fc64c8c505af2abb594a33e881ce91a15d3782"
   },
   "features": [
     "feature.functions.calls.typed-recursion",

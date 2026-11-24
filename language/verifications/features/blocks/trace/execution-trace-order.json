@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "execution-trace-order.lts",
-    "hash": "sha256:8810c775df8aad1cf82f10b515fdb00a20516f2929530fec1ef39a6dc24ddc34"
+    "hash": "sha256:6c2be6dc9dc51afede522bd72301c5d6f2e9a04d857c71628bdefeae412244f6"
   },
   "features": [
     "feature.blocks.trace.execution-trace-order"

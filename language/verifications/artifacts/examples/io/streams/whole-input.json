@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../../../examples/io/streams/whole-input.lts",
-    "hash": "sha256:b243d3799e6762f8f55d4281410afbfd7a3fa7d35997d848b47914d23dd2febf"
+    "hash": "sha256:5f80b84d090fa044d03de75c8e0642323b88213234ea8b971a39ea38f03682a0"
   },
   "features": [
     "feature.io.streams.whole-stdin",

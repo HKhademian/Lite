@@ -9,7 +9,7 @@ IntPred := type fn(Int): Bool;
 mapInts := fn(items: List<Int>, mapper: IntMap): List<Int> {
     out: mut List<Int> = [];
     loop items as item {
-        push_back(mut out, mapper(item));
+        mut out.pushBack(mapper(item));
     }
     out
 };
@@ -18,7 +18,7 @@ filterInts := fn(items: List<Int>, keep: IntPred): List<Int> {
     out: mut List<Int> = [];
     loop items as item {
         if keep(item) {
-            push_back(mut out, item);
+            mut out.pushBack(item);
         }
     }
     out

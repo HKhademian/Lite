@@ -7,9 +7,9 @@ log: mut List<String> = [];
 /* Nested `@tag` blocks guarantee inner `finally` unwinds before outer `finally` on non-local exits. */
 selected := @pick {
     {
-        push_back(mut log, "open-outer");
+        mut log.pushBack("open-outer");
         {
-            push_back(mut log, "open-inner");
+            mut log.pushBack("open-inner");
             @grid loop [2, 4, 6] as row {
                 @col loop [1, 3, 5] as col {
                     if row == 2 and col == 5 { continue @grid; }
@@ -18,10 +18,10 @@ selected := @pick {
             }
             0
         } finally {
-            push_back(mut log, "close-inner");
+            mut log.pushBack("close-inner");
         }
     } finally {
-        push_back(mut log, "close-outer");
+        mut log.pushBack("close-outer");
     }
 };
 

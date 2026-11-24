@@ -1,7 +1,6 @@
 /* A small tokenizer experiment: decimal runs, spaces/tabs, and arithmetic symbols. */
 
 io := import "core/io";
-text := import "core/text";
 
 isDigit := fn(text: String): Bool {
     or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
@@ -10,10 +9,10 @@ isDigit := fn(text: String): Bool {
 
 io.outputLine("Arithmetic expression:");
 line := io.inputLine();
-size := text.length(line);
+size := line.length();
 var position := 0;
 loop position < size {
-    ch := text.at(line, position);
+    ch := line.at(position);
     if ch == " " or ch == "\t" {
         position = position + 1;
         continue;
@@ -21,10 +20,10 @@ loop position < size {
     if isDigit(ch) {
         start := position;
         position = position + 1;
-        loop position < size and isDigit(text.at(line, position)) {
+        loop position < size and isDigit(line.at(position)) {
             position = position + 1;
         }
-        io.outputLine("number:", text.slice(line, start, position));
+        io.outputLine("number:", line.slice(start, position));
         continue;
     }
     if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" {

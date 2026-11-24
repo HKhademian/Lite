@@ -2,7 +2,6 @@ io := import "core/io";
 tm := import "core/time";
 proc := import "core/process";
 path := import "core/path";
-text := import "core/text";
 
 m0 := tm.monotonicNs();
 tm.sleepMs(2);
@@ -13,8 +12,8 @@ isoText := tm.utcIsoNow();
 
 cwdOk := path.isDirectory(proc.cwd());
 execOk := path.isFile(proc.execPath());
-platOk := text.length(proc.platform()) > 0;
-archOk := text.length(proc.arch()) > 0;
+platOk := proc.platform().length() > 0;
+archOk := proc.arch().length() > 0;
 
-io.outputLine(m0 >= 0, m1 >= m0, ms > 1700000000000, text.length(dateText) == 10, text.at(dateText, 4) == "-", text.at(dateText, 7) == "-", text.endsWith(isoText, "Z"));
+io.outputLine(m0 >= 0, m1 >= m0, ms > 1700000000000, dateText.length() == 10, dateText.at(4) == "-", dateText.at(7) == "-", isoText.endsWith("Z"));
 io.outputLine(cwdOk, execOk, platOk, archOk);

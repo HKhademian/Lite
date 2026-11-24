@@ -1,15 +1,14 @@
 io := import "core/io";
-map := import "core/map";
 
 scores: mut Map<String, Int> = ["alice" = 10];
-map.set(mut scores, "bob", 25);
+mut scores.set("bob", 25);
 scores["alice"] += 8;
 
 snapshot: Map<String, Int> = scores;
-map.remove(mut scores, "bob");
+mut scores.remove("bob");
 
-io.outputLine("alice:", scores["alice"], "has bob:", map.has(scores, "bob"));
-io.outputLine("fallback:", map.getOr(scores, "bob", 0), "snapshot size:", map.size(snapshot));
+io.outputLine("alice:", scores["alice"], "has bob:", scores.has("bob"));
+io.outputLine("fallback:", scores.getOr("bob", 0), "snapshot size:", snapshot.size());
 loop snapshot as entry {
     io.outputLine(entry.key, entry.value);
 }

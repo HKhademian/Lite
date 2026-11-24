@@ -1,8 +1,7 @@
 io := import "core/io";
-set := import "core/set";
 
 x := io.inputInt();
 seen: Set<Int>;
-set.add(seen, 10);
-set.add(seen, x);
-io.outputLine(set.size(seen));
+mut seen.add(10);
+mut seen.add(x);
+io.outputLine(seen.size());

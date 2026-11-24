@@ -1,4 +1,3 @@
-integer := import "core/int";
 io := import "core/io";
 
 x := io.inputInt();
@@ -10,4 +9,4 @@ sign := match {
     clamped == 0 { "zero" }
     _ { "pos" }
 };
-io.outputLine("clamped:" + integer.intText(clamped), "sign:" + sign);
+io.outputLine("clamped:" + clamped.toText(), "sign:" + sign);

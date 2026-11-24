@@ -1,4 +1,3 @@
-integer := import "core/int";
 io := import "core/io";
 
 a := io.inputInt();
@@ -6,5 +5,5 @@ b := io.inputInt();
 if b == 0 {
     io.outputLine("ERR:div-zero");
 } else {
-    io.outputLine("trunc:" + integer.intText(a / b), "floor:" + integer.intText(a :/ b));
+    io.outputLine("trunc:" + (a / b).toText(), "floor:" + (a :/ b).toText());
 }

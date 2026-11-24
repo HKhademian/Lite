@@ -3,7 +3,7 @@
   "kind": "sample",
   "source": {
     "file": "../../../../../samples/collections/scores/score-board.lts",
-    "hash": "sha256:032e9e4407ecc9badb8507845c0b3f687940b1b4055e795d1d86845553fde4ca"
+    "hash": "sha256:dd141f5bf6e750fea65961a9eb3d42a9f60b167babbdb5e59b48ec312b6236b2"
   },
   "features": [
     "feature.types.collections.typed-maps",

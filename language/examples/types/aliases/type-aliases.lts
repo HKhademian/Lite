@@ -1,7 +1,6 @@
 /* Type aliases: transparent named contracts with zero runtime memory. */
 
 io := import "core/io";
-list := import "core/list";
 
 Token := type (kind: String, text: String);
 Tokens := type List<Token>;
@@ -11,9 +10,9 @@ describe := fn(token: Token): String {
 }
 
 tokens: mut Tokens = [];
-list.pushBack(mut tokens, (kind = "ident", text = "total"));
-list.pushBack(mut tokens, (kind = "op", text = "+="));
-list.pushBack(mut tokens, (kind = "num", text = "100"));
+mut tokens.pushBack((kind = "ident", text = "total"));
+mut tokens.pushBack((kind = "op", text = "+="));
+mut tokens.pushBack((kind = "num", text = "100"));
 
 loop tokens as token {
     io.outputLine(describe(token));

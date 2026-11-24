@@ -10,11 +10,8 @@
 
 canvas := import "extra/surface";
 color := import "extra/color";
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
 proc := import "core/process";
-text := import "core/text";
 
 roundInt := fn(v: Float): Int {
     if v <= 0.0 { return 0; }
@@ -32,7 +29,7 @@ fmt1 := fn(v: Float): String {
     tenths := roundInt(v * 10.0);
     whole := tenths / 10;
     frac := tenths - whole * 10;
-    integer.intText(whole) + "." + integer.intText(frac)
+    whole.toText() + "." + frac.toText()
 };
 
 args := io.inputArgs();
@@ -40,17 +37,17 @@ var capturePath := "";
 var benchFrames := 0;
 var initTargetFps := 60.0;
 var i := 0;
-loop i < list.length(args) {
+loop i < args.length() {
     arg := args[i];
-    if arg == "--capture" and i + 1 < list.length(args) {
+    if arg == "--capture" and i + 1 < args.length() {
         capturePath = args[i + 1];
         i = i + 2;
-    } else if arg == "--bench" and i + 1 < list.length(args) {
-        parsed := text.textToInt(args[i + 1]);
+    } else if arg == "--bench" and i + 1 < args.length() {
+        parsed := args[i + 1].toInt();
         if parsed.ok and parsed.value > 0 { benchFrames = parsed.value; }
         i = i + 2;
-    } else if arg == "--fps" and i + 1 < list.length(args) {
-        parsed := text.textToInt(args[i + 1]);
+    } else if arg == "--fps" and i + 1 < args.length() {
+        parsed := args[i + 1].toInt();
         if parsed.ok { initTargetFps = parsed.value * 1.0; }
         i = i + 2;
     } else if arg == "--uncapped" {
@@ -171,7 +168,7 @@ loop true {
     if hudTimerSec >= 0.25 {
         hudTimerSec = 0.0;
         ups := if totalTimeSec > 0.0 { updateCount / totalTimeSec } else { 0.0 };
-        capLabel := if vit.targetFps <= 0.0 { "UNCAP" } else { integer.intText(roundInt(vit.targetFps)) };
+        capLabel := if vit.targetFps <= 0.0 { "UNCAP" } else { roundInt(vit.targetFps).toText() };
         memMb := vit.memoryBytes / 1048576.0;
         line1 = "FPS:" + fmt1(vit.fps) + "  UPS:" + fmt1(ups) + "  FT:" + fmt1(vit.avgFrameTimeMs) + "MS  CAP:" + capLabel;
         line2 = "CPU:" + fmt1(vit.cpuTimeMs) + "MS  MEM:" + fmt1(memMb) + "MB  KEYS:1/2/3/0";
@@ -196,7 +193,7 @@ loop true {
         fin := canvas.vitals(surface);
         finUps := if totalTimeSec > 0.0 { updateCount / totalTimeSec } else { 0.0 };
         finCap := if fin.targetFps <= 0.0 { "uncapped" } else { fmt1(fin.targetFps) };
-        io.outputLine("frames=" + integer.intText(fin.frameCount) + " updates=" + integer.intText(updateCount) +
+        io.outputLine("frames=" + fin.frameCount.toText() + " updates=" + updateCount.toText() +
         " fps=" + fmt1(fin.fps) + " ups=" + fmt1(finUps) +
         " frameMs=" + fmt1(fin.avgFrameTimeMs) + " cap=" + finCap +
         " cpuMs=" + fmt1(fin.cpuTimeMs) + " rssMb=" + fmt1(fin.memoryBytes / 1048576.0));

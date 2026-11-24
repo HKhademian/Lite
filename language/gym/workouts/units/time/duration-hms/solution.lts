@@ -1,4 +1,3 @@
-integer := import "core/int";
 io := import "core/io";
 
 total := io.inputInt();
@@ -9,5 +8,5 @@ if total < 0 {
     remAfterHours := total % 3600;
     mins := remAfterHours / 60;
     secs := remAfterHours % 60;
-    io.outputLine(integer.intText(hours) + "h", integer.intText(mins) + "m", integer.intText(secs) + "s");
+    io.outputLine(hours.toText() + "h", mins.toText() + "m", secs.toText() + "s");
 }

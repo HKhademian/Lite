@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "time-and-process.lts",
-    "hash": "sha256:87c06d653059ac6cf84765a63df810804887d61be2b85a6bf993ca3beb33d1a6"
+    "hash": "sha256:86b4c7be9babd63cfc126de058c1d8894e954f091b942104ad8c80eed1a731c1"
   },
   "features": [
     "feature.core.system.time-and-process"

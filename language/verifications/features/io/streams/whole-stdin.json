@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "whole-stdin.lts",
-    "hash": "sha256:45578535e8d232440885db8a1feec266b8d5831b0f18a989def6fa2d4411fcbc"
+    "hash": "sha256:d904ec24bdd32805550039f6c18b31a70d399284f1a7dd50a0cf57179f0e9045"
   },
   "features": [
     "feature.io.streams.whole-stdin"

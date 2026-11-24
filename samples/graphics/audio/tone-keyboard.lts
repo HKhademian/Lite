@@ -4,7 +4,6 @@ audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
-map := import "core/map";
 
 ctx := canvas.play(width = 320, height = 180, title = "Tone Keyboard · Click Keys or 1-8");
 bg := canvas.rgb(12, 14, 24);
@@ -63,7 +62,7 @@ onCanvasPointerDown := fn(col: Int, row: Int, button: Int): Unit {
 };
 
 onCanvasKeyDown := fn(key: String): Unit {
-    hit := map.get(keyToNote, key);
+    hit := keyToNote.get(key);
     if hit.found { playNoteIdx(hit.value); }
     else if key == "ArrowRight" { playNoteIdx((activeKey + 1) % 8); }
     else if key == "ArrowLeft" { playNoteIdx((activeKey + 7) % 8); }

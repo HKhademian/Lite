@@ -1,12 +1,10 @@
-integer := import "core/int";
 io := import "core/io";
-text := import "core/text";
 
-mode := text.trim(io.inputLine());
+mode := io.inputLine().trim();
 temp := io.inputInt();
 out := match {
-    mode == "C2F" { integer.intText((temp * 9) :/ 5 - 32) + "F" }
-    mode == "F2C" { integer.intText((temp - 32) * 5 :/ 9) + "C" }
+    mode == "C2F" { ((temp * 9) :/ 5 - 32).toText() + "F" }
+    mode == "F2C" { ((temp - 32) * 5 :/ 9).toText() + "C" }
     _ { "INVALID" }
 };
 io.outputLine(out);

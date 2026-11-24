@@ -1,13 +1,11 @@
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
 
 withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
     out: mut List<Int> = [];
-    len := list.listCountInt(xs);
+    len := xs.length();
     var k := 0;
     loop k < len {
-        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        mut out.pushBack(if k == idx { val } else { xs[k] });
         k += 1;
     }
     out
@@ -26,8 +24,8 @@ if n <= 0 {
         b := io.inputInt();
         s := if a <= b { a } else { b };
         e := if a <= b { b } else { a };
-        list.pushBack(mut starts, s);
-        list.pushBack(mut ends, e);
+        mut starts.pushBack(s);
+        mut ends.pushBack(e);
         k += 1;
     }
 
@@ -55,11 +53,11 @@ if n <= 0 {
         if starts[m] <= curE {
             if ends[m] > curE { curE = ends[m]; }
         } else {
-            io.outputLine(integer.intText(curS) + ".." + integer.intText(curE));
+            io.outputLine(curS.toText() + ".." + curE.toText());
             curS = starts[m];
             curE = ends[m];
         }
         m += 1;
     }
-    io.outputLine(integer.intText(curS) + ".." + integer.intText(curE));
+    io.outputLine(curS.toText() + ".." + curE.toText());
 }

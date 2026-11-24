@@ -4,7 +4,6 @@ audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
-map := import "core/map";
 math := import "core/math";
 
 ctx := canvas.play(width = 320, height = 200, title = "RGBA Color Mixer");
@@ -95,7 +94,7 @@ onCanvasPointerUp := fn(col: Int, row: Int, button: Int): Unit {
 };
 
 onCanvasKeyDown := fn(key: String): Unit {
-    hit := map.get(channelKeys, key);
+    hit := channelKeys.get(key);
     if hit.found {
         mixer.activeChannel = hit.value;
     } else if key == "ArrowUp" {

@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "lexical-captures.lts",
-    "hash": "sha256:38d216bfe7c9a1b16915fbf20bb6423aee425fd2da7d2cc4023b72549c2fc5a1"
+    "hash": "sha256:bfc1be8ca8d2f407f294a06557818782c7683899e502fd1fb73e143bc1901f3f"
   },
   "features": [
     "feature.functions.closures.lexical-captures"

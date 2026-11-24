@@ -1,4 +1,3 @@
-integer := import "core/int";
 io := import "core/io";
 
 n := io.inputInt();
@@ -15,5 +14,5 @@ if n <= 0 {
         }
         steps += 1;
     }
-    io.outputLine("steps:" + integer.intText(steps), "peak:" + integer.intText(n));
+    io.outputLine("steps:" + steps.toText(), "peak:" + n.toText());
 }

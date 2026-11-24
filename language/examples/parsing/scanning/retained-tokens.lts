@@ -1,8 +1,6 @@
 /* Tokenize first, then traverse the retained tokens. */
 
 io := import "core/io";
-text := import "core/text";
-list := import "core/list";
 
 isDigit := fn(text: String): Bool {
     or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
@@ -11,10 +9,10 @@ isDigit := fn(text: String): Bool {
 
 tokenize := fn(line: String): List<(kind: String, text: String)> {
     tokens: mut List<(kind: String, text: String)> = [];
-    size := text.length(line);
+    size := line.length();
     var position := 0;
     loop position < size {
-        ch := text.at(line, position);
+        ch := line.at(position);
         if ch == " " or ch == "\t" {
             position += 1;
             continue;
@@ -22,14 +20,14 @@ tokenize := fn(line: String): List<(kind: String, text: String)> {
         if isDigit(ch) {
             start := position;
             position += 1;
-            loop position < size and isDigit(text.at(line, position)) {
+            loop position < size and isDigit(line.at(position)) {
                 position += 1;
             }
-            list.pushBack(mut tokens, (kind = "number", text = text.slice(line, start, position)));
+            (mut tokens).pushBack((kind = "number", text = line.slice(start, position)));
             continue;
         }
         if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" {
-            list.pushBack(mut tokens, (kind = "symbol", text = ch));
+            mut tokens.pushBack((kind = "symbol", text = ch));
             position += 1;
             continue;
         }

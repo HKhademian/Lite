@@ -19,7 +19,7 @@ innerTrace := {
     serialZ = k + 4;
 
     ops: mut List<fn(): Int> = [];
-    push_back(mut ops, fn(): Int { k + lateListVal });
+    mut ops.pushBack(fn(): Int { k + lateListVal });
     lateListVal := 100;
 
     initResult + readSerialZ() + ops[0]()

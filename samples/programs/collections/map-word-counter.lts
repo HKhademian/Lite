@@ -1,11 +1,10 @@
 /* Word frequency counter using Map<String, Int> and core/map lookups. */
 io := import "core/io";
-map := import "core/map";
 
 words := ["lite", "map", "lite", "code", "map", "lite"];
 counts: mut Map<String, Int>;
 loop words as word {
-    prev := map.getOr(counts, word, 0);
+    prev := counts.getOr(word, 0);
     counts[word] = prev + 1;
 }
 

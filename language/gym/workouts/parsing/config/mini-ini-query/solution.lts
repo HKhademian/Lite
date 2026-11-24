@@ -1,19 +1,18 @@
 io := import "core/io";
 list := import "core/list";
-text := import "core/text";
 
 splitLines := fn(raw: String): List<String> {
     out: mut List<String> = [];
-    n := text.length(raw);
+    n := raw.length();
     var pos := 0;
     loop pos <= n {
-        nl := text.indexOfText(raw, "\n", pos);
+        nl := raw.indexOf("\n", pos);
         endPos := if nl < 0 { n } else { nl };
         var cleanEnd := endPos;
-        if cleanEnd > pos and text.at(raw, cleanEnd - 1) == "\r" {
+        if cleanEnd > pos and raw.at(cleanEnd - 1) == "\r" {
             cleanEnd -= 1;
         }
-        list.pushBack(mut out, text.slice(raw, pos, cleanEnd));
+        (mut out).pushBack(raw.slice(pos, cleanEnd));
         if nl < 0 { break; }
         pos = nl + 1;
     }
@@ -22,10 +21,10 @@ splitLines := fn(raw: String): List<String> {
 
 withTextAt := fn(xs: List<String>, idx: Int, val: String): List<String> {
     out: mut List<String> = [];
-    len := list.listCountText(xs);
+    len := xs.length();
     var k := 0;
     loop k < len {
-        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        mut out.pushBack(if k == idx { val } else { xs[k] });
         k += 1;
     }
     out
@@ -39,35 +38,35 @@ var mut vals := emptyTexts;
 var section := "";
 
 loop lines as line {
-    trimmed := text.trim(line);
-    n := text.length(trimmed);
+    trimmed := line.trim();
+    n := trimmed.length();
     if n == 0 { continue; }
-    first := text.at(trimmed, 0);
+    first := trimmed.at(0);
     if first == ";" or first == "#" { continue; }
 
-    if text.startsWithAt(trimmed, 0, "QUERY ") {
-        qKey := text.trim(text.slice(trimmed, 6, n));
+    if trimmed.startsWithAt(0, "QUERY ") {
+        qKey := trimmed.slice(6, n).trim();
         idx := list.listIndexOfText(keys, qKey);
         io.outputLine(if idx >= 0 { vals[idx] } else { "MISSING" });
         continue;
     }
 
-    if first == "[" and text.endsWith(trimmed, "]") {
-        section = text.trim(text.slice(trimmed, 1, n - 1));
+    if first == "[" and trimmed.endsWith("]") {
+        section = trimmed.slice(1, n - 1).trim();
         continue;
     }
 
-    eq := text.indexOfText(trimmed, "=", 0);
+    eq := trimmed.indexOf("=", 0);
     if eq >= 0 {
-        k := text.trim(text.slice(trimmed, 0, eq));
-        v := text.trim(text.slice(trimmed, eq + 1, n));
+        k := trimmed.slice(0, eq).trim();
+        v := trimmed.slice(eq + 1, n).trim();
         fullKey := if section == "" { k } else { section + "." + k };
         existing := list.listIndexOfText(keys, fullKey);
         if existing >= 0 {
             vals = withTextAt(vals, existing, v);
         } else {
-            list.pushBack(mut keys, fullKey);
-            list.pushBack(mut vals, v);
+            mut keys.pushBack(fullKey);
+            mut vals.pushBack(v);
         }
     }
 }

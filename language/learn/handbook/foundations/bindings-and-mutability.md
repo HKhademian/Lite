@@ -65,7 +65,7 @@ score += 20;
 io.outputLine(score);
 ```
 
-For growable collections (`List<T>`), `mut` grants **in-place element/length mutation** (`push_back(mut xs, v)`), independently of `var` rebinding:
+For growable collections (`List<T>`), `mut` grants **in-place element/length mutation** (`mut xs.pushBack(v)`), independently of `var` rebinding:
 
 - `xs: List<Int> = [1, 2];` — immutable binding, read-only list.
 - `xs: mut List<Int> = [1, 2];` — fixed variable pointing to a mutable list.

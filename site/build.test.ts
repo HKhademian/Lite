@@ -142,7 +142,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(coreTextHtml.includes('Host-backed'));
   assert(coreTextHtml.includes('<span class="tok-keyword">pub</span>'));
   assert(coreTextHtml.includes('Browser + CLI'));
-  assert(coreTextHtml.includes('Used in Showcases &amp; Gallery'));
+  assert(coreTextHtml.includes('Used Across Lite Academy'));
+  const coreIoHtml = readFileSync(join(out, 'modules/core/io.html'), 'utf8');
+  assert(coreIoHtml.includes('Used in Showcases &amp; Gallery'));
   const coreFileHtml = readFileSync(join(out, 'modules/core/file.html'), 'utf8');
   assert(coreFileHtml.includes('CLI / Host OS'));
   const extraCanvasHtml = readFileSync(join(out, 'modules/extra/canvas.html'), 'utf8');
@@ -151,7 +153,6 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(extraCanvasHtml.includes('Used in Showcases &amp; Gallery'));
   const coreListHtml = readFileSync(join(out, 'modules/core/list.html'), 'utf8');
   assert(coreListHtml.includes('Used Across Lite Academy'));
-  assert(coreListHtml.includes('Used in Showcases &amp; Gallery'));
   assert(coreListHtml.includes('data-drawer-toggle="sidebar"'));
   const coreUnicodeHtml = readFileSync(join(out, 'modules/core/unicode.html'), 'utf8');
   assert(coreUnicodeHtml.includes('utf8-roundtrip-count'));
@@ -1955,18 +1956,18 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   g.registerNode({ uri: 'lite://gym/record-shorthand-destructure', kind: 'gym', title: 'Drill', outPath: 'gym/drills/record-shorthand-destructure.html' });
   g.registerNode({ uri: 'lite://play/double-sum', kind: 'play', title: 'Double', outPath: 'playground/?sample=double-sum' });
   g.registerNode({ uri: 'lite://module/core/list', kind: 'module', title: 'core/list', outPath: 'modules/core/list.html' });
-  g.setModuleSymbols('lite://module/core/list', ['pushBack']);
+  g.setModuleSymbols('lite://module/core/list', ['List.pushBack']);
   g.registerNode({ uri: 'lite://tool/fmt', kind: 'tool', title: 'lite fmt', outPath: 'tools/#cmd-fmt' });
 
   const rewritten = rewriteLiteUriHtml({
-    html: '<a href="lite://play/double-sum" data-lite-uri="lite://play/double-sum">Play</a> <a href="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand" data-lite-uri="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand">Hb</a> <a href="lite://module/core/list#pushBack" data-lite-uri="lite://module/core/list#pushBack">Mod</a> <a href="lite://spec#ls-001--source-syntax-and-evaluation" data-lite-uri="lite://spec#ls-001--source-syntax-and-evaluation">Spec</a> <a href="lite://brand/name#decision" data-lite-uri="lite://brand/name#decision">Brand</a> <a href="lite://brand/lite-wordmark.svg" data-lite-uri="lite://brand/lite-wordmark.svg">Svg</a> <a href="lite://repo/igniter/.node-version" data-lite-uri="lite://repo/igniter/.node-version">Node</a>',
+    html: '<a href="lite://play/double-sum" data-lite-uri="lite://play/double-sum">Play</a> <a href="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand" data-lite-uri="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand">Hb</a> <a href="lite://module/core/list#List.pushBack" data-lite-uri="lite://module/core/list#List.pushBack">Mod</a> <a href="lite://spec#ls-001--source-syntax-and-evaluation" data-lite-uri="lite://spec#ls-001--source-syntax-and-evaluation">Spec</a> <a href="lite://brand/name#decision" data-lite-uri="lite://brand/name#decision">Brand</a> <a href="lite://brand/lite-wordmark.svg" data-lite-uri="lite://brand/lite-wordmark.svg">Svg</a> <a href="lite://repo/igniter/.node-version" data-lite-uri="lite://repo/igniter/.node-version">Node</a>',
     outPath: 'learn/types/records-and-patterns.html',
     graph: g,
     fromUri: 'lite://learn/records-and-patterns',
   });
   assert(rewritten.includes('href="../../playground/?sample=double-sum" data-lite-kind="play"'));
   assert(rewritten.includes('href="../../docs/handbook/tuples-arrays-lists-and-aliases.html#nominal-record-types--name-shorthand" data-lite-kind="handbook"'));
-  assert(rewritten.includes('href="../../modules/core/list.html#pushBack" data-lite-kind="module"'));
+  assert(rewritten.includes('href="../../modules/core/list.html#List.pushBack" data-lite-kind="module"'));
   assert(rewritten.includes('href="../../docs/design/spec-overview.html#ls-001--source-syntax-and-evaluation" data-lite-kind="doc"'));
   assert(rewritten.includes('href="../../docs/brand/name.html#decision" data-lite-kind="brand"'));
   assert(rewritten.includes('href="../../brand/lite-wordmark.svg" data-lite-kind="brand"'));
@@ -1991,7 +1992,7 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   g.registerNode({ uri: 'lite://learn/hello-lite', kind: 'learn', title: 'Hello', outPath: 'learn/getting-started/hello-lite.html' });
   g.recordLiteUrisFromMarkdown(
     'lite://learn/hello-lite',
-    'Try [`double-sum`](lite://play/double-sum) and [`fmt`](lite://tool/fmt) then [`pushBack`](lite://module/core/list#pushBack).',
+    'Try [`double-sum`](lite://play/double-sum) and [`fmt`](lite://tool/fmt) then [`List.pushBack`](lite://module/core/list#List.pushBack).',
     'learn/getting-started/hello-lite.html',
   );
   assert.equal(g.getBacklinks('lite://tool/fmt').length, 1);
@@ -2027,12 +2028,12 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   assert(builtGraph.edges.some(e => e.from === 'lite://doc/spec-overview' && e.to === 'lite://doc/unambiguous-meaning' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://handbook/overview-and-setup' && e.to === 'lite://play/double-sum' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://handbook/overview-and-setup' && e.to === 'lite://tool/check' && e.kind === 'lite-uri'));
-  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'lite-uri' && e.fragment === 'pushBack'));
-  assert(builtGraph.edges.some(e => e.from === 'lite://learn/named-calls-and-recursion' && e.to === 'lite://module/core/text' && e.kind === 'lite-uri' && e.fragment === 'textToInt'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'lite-uri' && e.fragment === 'List.pushBack'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://learn/named-calls-and-recursion' && e.to === 'lite://module/core/text' && e.kind === 'lite-uri' && e.fragment === 'String.toInt'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/arrays-and-lists' && e.to === 'lite://learn/records-and-patterns' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/orb-catcher-game' && e.to === 'lite://play/play-paddle-pong' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://gym/utf8-roundtrip-count' && e.to === 'lite://module/core/unicode' && e.kind === 'lite-uri' && e.fragment === 'utf8Encode'));
-  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'module-import'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/format' && e.kind === 'module-import'));
   assert(builtGraph.edges.some(e => e.from === 'lite://gym/record-shorthand-destructure' && e.to === 'lite://learn/records-and-patterns' && e.kind === 'catalog-ref'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/records-and-patterns' && e.to === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.kind === 'catalog-ref'));
 });

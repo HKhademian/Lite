@@ -1,10 +1,9 @@
 io := import "core/io";
 
-list := import "core/list";
 mut args := io.inputArgs();
-list.pushBack(mut args, "z");
+mut args.pushBack("z");
 io.outputLine(args[0], args[2]);
 var mut other := io.inputArgs();
 other = io.inputArgs();
-push_front(mut other, "z");
+mut other.pushFront("z");
 io.outputLine(other[0], other[2]);

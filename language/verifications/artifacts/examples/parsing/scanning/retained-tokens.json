@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../../../examples/parsing/scanning/retained-tokens.lts",
-    "hash": "sha256:f5ff6f0fda19502f2dec20de9d7675c91cca1a77a5727d8cd99b8ca0ae45012e"
+    "hash": "sha256:0e83b74d16c5e9f8779e4a215f444f8e727470af246ef84a9f70de0c6f740cc4"
   },
   "features": [
     "feature.types.collections.growable-lists",

@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/control/unwinding/tagged-blocks-and-finally.lts",
-    "hash": "sha256:7d2d82f927ae5333a3634222e3753f19a724a0b46e20fdca7be4ee9aec6d80ca"
+    "hash": "sha256:0ad568813a968e390be07b5b3b9f90d72dbdaf689791cbbf1c6a98e82d05b124"
   },
   "features": [
     "feature.control.unwinding.tagged-transfers",

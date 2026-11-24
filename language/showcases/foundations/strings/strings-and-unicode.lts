@@ -1,15 +1,14 @@
 /* Showcase 01.03 — Escaped strings, code-point text indexing, and Unicode UTF-8 conversion. */
 
 io := import "core/io";
-text := import "core/text";
 unicode := import "core/unicode";
 fmt := import "core/format";
 
 /* String literals support escapes and concatenation; indexing operates on Unicode code points. */
 raw := "  Hello\t\"Lite\" 🚀  ";
-cleaned := text.trim(raw);
-firstCh := text.at(cleaned, 0);
-lastCh := text.at(cleaned, text.length(cleaned) - 1);
+cleaned := raw.trim();
+firstCh := cleaned.at(0);
+lastCh := cleaned.at(cleaned.length() - 1);
 tag := cleaned + "!";
 
 /* Explicit scalar code-point and UTF-8 encode/decode helpers bridge strings and byte lists. */
@@ -18,6 +17,6 @@ scalars := unicode.toCodePoints(phrase);
 utf8Bytes := unicode.utf8Encode(phrase);
 decoded := unicode.utf8DecodeStrict(utf8Bytes);
 
-io.outputLine("cleaned:", tag, "edges:", firstCh, lastCh, "len:", text.length(cleaned));
+io.outputLine("cleaned:", tag, "edges:", firstCh, lastCh, "len:", cleaned.length());
 io.outputLine("scalars:", fmt.joinIntTexts(scalars, ","));
 io.outputLine("utf8-bytes:", fmt.joinIntTexts(utf8Bytes, " "), "roundtrip:", decoded.ok, decoded.text);

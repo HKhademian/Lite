@@ -1,7 +1,6 @@
 io := import "core/io";
-textLib := import "core/text";
 
 text := "abc";
-io.outputLine(textLib.length(text));
-io.outputLine(textLib.at(text, 1));
-io.outputLine(textLib.slice(text, 1, 3));
+io.outputLine(text.length());
+io.outputLine(text.at(1));
+io.outputLine(text.slice(1, 3));

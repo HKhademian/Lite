@@ -4,10 +4,7 @@ audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
-list := import "core/list";
-map := import "core/map";
 rand := import "core/random";
-set := import "core/set";
 
 tile := 16;
 cols := 20;
@@ -80,12 +77,12 @@ var state := GameState {
 };
 
 resetGame := fn(): Unit {
-    list.clear(mut snake);
-    set.clear(mut occupied);
+    mut snake.clear();
+    mut occupied.clear();
     initial: List<Cell> = [Cell { x = 8, y = 6 }, Cell { x = 7, y = 6 }, Cell { x = 6, y = 6 }];
     loop initial as c {
-        list.pushBack(mut snake, c);
-        set.add(mut occupied, cellKey(c));
+        mut snake.pushBack(c);
+        mut occupied.add(cellKey(c));
     }
     state = GameState {
         dir = .Right,
@@ -142,14 +139,14 @@ onCanvasUpdate := fn(dt: Float): Int {
         endGame();
         return 0;
     }
-    if set.has(occupied, cellKey(next)) {
+    if occupied.has(cellKey(next)) {
         endGame();
         return 0;
     }
 
     ate := next.x == state.food.x and next.y == state.food.y;
-    list.pushFront(mut snake, next);
-    set.add(mut occupied, cellKey(next));
+    mut snake.pushFront(next);
+    mut occupied.add(cellKey(next));
     if ate {
         rx := rand.rangeInt(state.rng, 1, cols - 1);
         ry := rand.rangeInt(rx.next, 1, rows - 1);
@@ -157,8 +154,8 @@ onCanvasUpdate := fn(dt: Float): Int {
         state.rng = ry.next;
         audio.tone(frequency = 587, durationMs = 80, volume = 16);
     } else {
-        tail := list.popBack(mut snake);
-        _removed := set.remove(mut occupied, cellKey(tail));
+        tail := mut snake.popBack();
+        _removed := mut occupied.remove(cellKey(tail));
     }
     render();
     0
@@ -171,7 +168,7 @@ onCanvasKeyDown := fn(key: String): Unit {
         audio.tone(frequency = 440, durationMs = 60, volume = 14);
         return;
     }
-    hit := map.get(keyBindings, key);
+    hit := keyBindings.get(key);
     if hit.found and not isOpposite(state.dir, hit.value) {
         state.dir = hit.value;
     }

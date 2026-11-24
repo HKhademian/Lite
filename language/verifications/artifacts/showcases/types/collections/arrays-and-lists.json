@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/types/collections/arrays-and-lists.lts",
-    "hash": "sha256:e07e89218df5d7506c8ad90d598c6213c559285e3daaed93b9abf58b6b91783e"
+    "hash": "sha256:b73e5557e6d95579fe7f1541c86a0549643f737713bf57ff5a200461d1e9bbe3"
   },
   "features": [
     "feature.types.collections.fixed-arrays",

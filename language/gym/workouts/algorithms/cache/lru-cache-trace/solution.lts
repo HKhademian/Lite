@@ -4,14 +4,14 @@ text := import "core/text";
 
 splitLines := fn(raw: String): List<String> {
     out: mut List<String> = [];
-    n := text.length(raw);
+    n := raw.length();
     var pos := 0;
     loop pos <= n {
-        nl := text.indexOfText(raw, "\n", pos);
+        nl := raw.indexOf("\n", pos);
         endPos := if nl < 0 { n } else { nl };
         var cleanEnd := endPos;
-        if cleanEnd > pos and text.at(raw, cleanEnd - 1) == "\r" { cleanEnd -= 1; }
-        list.pushBack(mut out, text.slice(raw, pos, cleanEnd));
+        if cleanEnd > pos and raw.at(cleanEnd - 1) == "\r" { cleanEnd -= 1; }
+        (mut out).pushBack(raw.slice(pos, cleanEnd));
         if nl < 0 { break; }
         pos = nl + 1;
     }
@@ -20,24 +20,24 @@ splitLines := fn(raw: String): List<String> {
 
 splitSpace := fn(line: String): List<String> {
     out: mut List<String> = [];
-    n := text.length(line);
+    n := line.length();
     var p := 0;
     loop p < n {
-        loop p < n and text.isWhitespace(text.at(line, p)) { p += 1; }
+        loop p < n and line.at(p).isWhitespace() { p += 1; }
         if p >= n { break; }
         s := p;
-        loop p < n and not text.isWhitespace(text.at(line, p)) { p += 1; }
-        list.pushBack(mut out, text.slice(line, s, p));
+        loop p < n and not line.at(p).isWhitespace() { p += 1; }
+        (mut out).pushBack(line.slice(s, p));
     }
     out
 };
 
 withTextAt := fn(xs: List<String>, idx: Int, val: String): List<String> {
     out: mut List<String> = [];
-    len := list.listCountText(xs);
+    len := xs.length();
     var k := 0;
     loop k < len {
-        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        mut out.pushBack(if k == idx { val } else { xs[k] });
         k += 1;
     }
     out
@@ -53,18 +53,18 @@ var mut vals := emptyTexts;
 var size := 0;
 
 loop lines as line {
-    trimmed := text.trim(line);
+    trimmed := line.trim();
     if trimmed == "" { continue; }
     parts := splitSpace(trimmed);
     if not haveCap {
-        parsed := text.textToInt(parts[0]);
+        parsed := parts[0].toInt();
         cap = if parsed.ok and parsed.value > 0 { parsed.value } else { 1 };
         haveCap = true;
         continue;
     }
 
     op := parts[0];
-    if op == "GET" and list.listCountText(parts) >= 2 {
+    if op == "GET" and parts.length() >= 2 {
         k := parts[1];
         idx := list.listIndexOfText(keys, k);
         if idx < 0 {
@@ -81,7 +81,7 @@ loop lines as line {
             vals = withTextAt(vals, 0, v);
             io.outputLine(v);
         }
-    } else if op == "SET" and list.listCountText(parts) >= 3 {
+    } else if op == "SET" and parts.length() >= 3 {
         k := parts[1];
         v := parts[2];
         idx := list.listIndexOfText(keys, k);
@@ -96,12 +96,12 @@ loop lines as line {
             vals = withTextAt(vals, 0, v);
         } else {
             if size == cap {
-                _dk := list.popBack(mut keys);
-                _dv := list.popBack(mut vals);
+                _dk := mut keys.popBack();
+                _dv := mut vals.popBack();
                 size -= 1;
             }
-            list.pushFront(mut keys, k);
-            list.pushFront(mut vals, v);
+            (mut keys).pushFront(k);
+            mut vals.pushFront(v);
             size += 1;
         }
     }

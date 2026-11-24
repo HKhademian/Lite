@@ -7,7 +7,7 @@ trace: mut List<String> = [];
 findFirstMultiple := fn(rows: List<Int>, cols: List<Int>, target: Int): Int {
     @search {
         {
-            push_back(mut trace, "enter-rows");
+            mut trace.pushBack("enter-rows");
             @rows loop rows as r {
                 @cols loop cols as c {
                     product := r * c;
@@ -21,10 +21,10 @@ findFirstMultiple := fn(rows: List<Int>, cols: List<Int>, target: Int): Int {
             }
             0 - 1
         } finally {
-            push_back(mut trace, "clean-inner");
+            mut trace.pushBack("clean-inner");
         }
     } finally {
-        push_back(mut trace, "clean-outer");
+        mut trace.pushBack("clean-outer");
     }
 };
 

@@ -1,7 +1,4 @@
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
-text := import "core/text";
 
 matchingClose := fn(openCh: String): String {
     match {
@@ -14,21 +11,21 @@ matchingClose := fn(openCh: String): String {
 line := io.inputLine();
 stack: mut List<String> = [];
 var depth := 0;
-n := text.length(line);
+n := line.length();
 var i := 0;
 var mismatchIdx := -1;
 
 loop i < n {
-    ch := text.at(line, i);
+    ch := line.at(i);
     if ch == "(" or ch == "[" or ch == "{" {
-        list.pushBack(mut stack, ch);
+        mut stack.pushBack(ch);
         depth += 1;
     } else if ch == ")" or ch == "]" or ch == "}" {
         if depth == 0 {
             mismatchIdx = i;
             break;
         }
-        top := list.popBack(mut stack);
+        top := mut stack.popBack();
         depth -= 1;
         if matchingClose(top) =!= ch {
             mismatchIdx = i;
@@ -39,9 +36,9 @@ loop i < n {
 }
 
 if mismatchIdx >= 0 {
-    io.outputLine("mismatch:" + integer.intText(mismatchIdx));
+    io.outputLine("mismatch:" + mismatchIdx.toText());
 } else if depth > 0 {
-    io.outputLine("mismatch:" + integer.intText(n));
+    io.outputLine("mismatch:" + n.toText());
 } else {
     io.outputLine("balanced");
 }

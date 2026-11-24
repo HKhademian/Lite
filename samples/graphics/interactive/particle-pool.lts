@@ -5,7 +5,6 @@ audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
-list := import "core/list";
 pool := import "extra/pool";
 sparse := import "extra/sparse";
 
@@ -29,14 +28,14 @@ var hueIdx: mut List<Int> = [];
 
 var initIdx := 0;
 loop initIdx < MAX_PARTICLES {
-    list.pushBack(mut hGen, 0);
-    list.pushBack(mut px, 0);
-    list.pushBack(mut py, 0);
-    list.pushBack(mut vx, 0);
-    list.pushBack(mut vy, 0);
-    list.pushBack(mut life, 0);
-    list.pushBack(mut maxLife, 1);
-    list.pushBack(mut hueIdx, 0);
+    mut hGen.pushBack(0);
+    mut px.pushBack(0);
+    mut py.pushBack(0);
+    mut vx.pushBack(0);
+    mut vy.pushBack(0);
+    mut life.pushBack(0);
+    mut maxLife.pushBack(1);
+    mut hueIdx.pushBack(0);
     initIdx += 1;
 }
 
@@ -62,14 +61,14 @@ spawnOne := fn(x: Int, y: Int, dx: Int, dy: Int, ttl: Int, colorIdx: Int): Unit 
     h := pool.acquireSlot(slots);
     if not pool.isHandleValid(h) { return; }
     i := h.index;
-    list.setAt(mut hGen, i, h.generation);
-    list.setAt(mut px, i, (x * 16) + (dx * 4));
-    list.setAt(mut py, i, (y * 16) + (dy * 4));
-    list.setAt(mut vx, i, dx);
-    list.setAt(mut vy, i, dy);
-    list.setAt(mut life, i, ttl);
-    list.setAt(mut maxLife, i, if ttl < 1 { 1 } else { ttl });
-    list.setAt(mut hueIdx, i, colorIdx);
+    mut hGen.setAt(i, h.generation);
+    mut px.setAt(i, (x * 16) + (dx * 4));
+    mut py.setAt(i, (y * 16) + (dy * 4));
+    mut vx.setAt(i, dx);
+    mut vy.setAt(i, dy);
+    mut life.setAt(i, ttl);
+    mut maxLife.setAt(i, if ttl < 1 { 1 } else { ttl });
+    mut hueIdx.setAt(i, colorIdx);
     _ins := sparse.insert(active, i);
 };
 
@@ -144,10 +143,10 @@ onCanvasUpdate := fn(dt: Float): Int {
         if nl <= 0 or nx < 96 or nx > ((ctx.width - 10) * 16) or ny > ((ctx.height - 10) * 16) {
             _dead := arena.allocInt(frameScratch, i);
         } else {
-            list.setAt(mut px, i, nx);
-            list.setAt(mut py, i, ny);
-            list.setAt(mut vy, i, nvy);
-            list.setAt(mut life, i, nl);
+            mut px.setAt(i, nx);
+            mut py.setAt(i, ny);
+            mut vy.setAt(i, nvy);
+            mut life.setAt(i, nl);
         }
         di += 1;
     }

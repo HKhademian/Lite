@@ -1,11 +1,10 @@
 io := import "core/io";
-list := import "core/list";
 
 n := io.inputInt();
 raw: mut List<Int> = [];
 var i := 0;
 loop i < n {
-    list.pushBack(mut raw, io.inputInt());
+    mut raw.pushBack(io.inputInt());
     i += 1;
 }
 

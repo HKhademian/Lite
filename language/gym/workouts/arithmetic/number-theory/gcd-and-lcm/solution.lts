@@ -1,4 +1,3 @@
-integer := import "core/int";
 io := import "core/io";
 
 absVal := fn(v: Int): Int {
@@ -20,4 +19,4 @@ rawA := absVal(io.inputInt());
 rawB := absVal(io.inputInt());
 g := gcd(rawA, rawB);
 lcm := if rawA == 0 or rawB == 0 { 0 } else { (rawA / g) * rawB };
-io.outputLine("gcd:" + integer.intText(g), "lcm:" + integer.intText(lcm));
+io.outputLine("gcd:" + g.toText(), "lcm:" + lcm.toText());

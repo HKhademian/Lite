@@ -1,20 +1,18 @@
-integer := import "core/int";
 io := import "core/io";
 list := import "core/list";
-text := import "core/text";
 
 textLessThan := fn(a: String, b: String): Bool {
-    la := text.length(a);
-    lb := text.length(b);
+    la := a.length();
+    lb := b.length();
     order := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
     minLen := if la < lb { la } else { lb };
     var i := 0;
     loop i < minLen {
-        ca := text.at(a, i);
-        cb := text.at(b, i);
+        ca := a.at(i);
+        cb := b.at(i);
         if ca =!= cb {
-            pa := text.indexOfText(order, ca, 0);
-            pb := text.indexOfText(order, cb, 0);
+            pa := order.indexOf(ca, 0);
+            pb := order.indexOf(cb, 0);
             return pa < pb;
         }
         i += 1;
@@ -24,10 +22,10 @@ textLessThan := fn(a: String, b: String): Bool {
 
 withTextAt := fn(xs: List<String>, idx: Int, val: String): List<String> {
     out: mut List<String> = [];
-    len := list.listCountText(xs);
+    len := xs.length();
     var k := 0;
     loop k < len {
-        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        mut out.pushBack(if k == idx { val } else { xs[k] });
         k += 1;
     }
     out
@@ -35,17 +33,17 @@ withTextAt := fn(xs: List<String>, idx: Int, val: String): List<String> {
 
 withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
     out: mut List<Int> = [];
-    len := list.listCountInt(xs);
+    len := xs.length();
     var k := 0;
     loop k < len {
-        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        mut out.pushBack(if k == idx { val } else { xs[k] });
         k += 1;
     }
     out
 };
 
 raw := io.inputAll();
-n := text.length(raw);
+n := raw.length();
 emptyTexts: List<String> = [];
 emptyInts: List<Int> = [];
 var mut words := emptyTexts;
@@ -54,21 +52,21 @@ var uniqueCount := 0;
 var pos := 0;
 
 loop pos < n {
-    loop pos < n and not text.isNameContinue(text.at(raw, pos)) {
+    loop pos < n and not raw.at(pos).isNameContinue() {
         pos += 1;
     }
     if pos >= n { break; }
     start := pos;
-    loop pos < n and text.isNameContinue(text.at(raw, pos)) {
+    loop pos < n and raw.at(pos).isNameContinue() {
         pos += 1;
     }
-    word := text.toLowerAscii(text.slice(raw, start, pos));
+    word := raw.slice(start, pos).toLowerAscii();
     idx := list.listIndexOfText(words, word);
     if idx >= 0 {
         counts = withIntAt(counts, idx, counts[idx] + 1);
     } else {
-        list.pushBack(mut words, word);
-        list.pushBack(mut counts, 1);
+        mut words.pushBack(word);
+        mut counts.pushBack(1);
         uniqueCount += 1;
     }
 }
@@ -95,7 +93,7 @@ if uniqueCount == 0 {
 
     var outIdx := 0;
     loop outIdx < uniqueCount {
-        io.outputLine(words[outIdx] + ":", integer.intText(counts[outIdx]));
+        io.outputLine(words[outIdx] + ":", counts[outIdx].toText());
         outIdx += 1;
     }
 }

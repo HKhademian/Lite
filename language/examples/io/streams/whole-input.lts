@@ -1,6 +1,5 @@
 io := import "core/io";
-textLib := import "core/text";
 
 text := io.inputAll("Text (finish with EOF): ");
-io.outputLine("code points:", textLib.length(text));
+io.outputLine("code points:", text.length());
 io.outputLine(text);

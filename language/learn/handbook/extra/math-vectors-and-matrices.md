@@ -30,8 +30,8 @@ vec := import "extra/vector";
 
 a := vec.vec2(3.0, 4.0);
 b := vec.vec2(1.0, 0.0);
-sum := vec.add2(a, b);
-io.outputLine(vec.length2(a), vec.dot2(a, b), sum.x, sum.y);
+sum := a.add(b);
+io.outputLine(a.length(), a.dot(b), sum.x, sum.y);
 ```
 
 ## 2×2, 3×3 & 4×4 Matrix Transforms (`extra/matrix`)

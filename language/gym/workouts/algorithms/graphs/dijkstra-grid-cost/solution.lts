@@ -1,12 +1,11 @@
 io := import "core/io";
-list := import "core/list";
 
 withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
     out: mut List<Int> = [];
-    len := list.listCountInt(xs);
+    len := xs.length();
     var k := 0;
     loop k < len {
-        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        mut out.pushBack(if k == idx { val } else { xs[k] });
         k += 1;
     }
     out
@@ -14,10 +13,10 @@ withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
 
 withBoolAt := fn(xs: List<Bool>, idx: Int, val: Bool): List<Bool> {
     out: mut List<Bool> = [];
-    len := list.listCountBool(xs);
+    len := xs.length();
     var k := 0;
     loop k < len {
-        list.pushBack(mut out, if k == idx { val } else { xs[k] });
+        mut out.pushBack(if k == idx { val } else { xs[k] });
         k += 1;
     }
     out
@@ -38,9 +37,9 @@ if rows <= 0 or cols <= 0 {
 
     var i := 0;
     loop i < total {
-        list.pushBack(mut cost, io.inputInt());
-        list.pushBack(mut dist, INF);
-        list.pushBack(mut seen, false);
+        mut cost.pushBack(io.inputInt());
+        mut dist.pushBack(INF);
+        mut seen.pushBack(false);
         i += 1;
     }
 

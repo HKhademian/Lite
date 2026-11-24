@@ -1,21 +1,19 @@
 io := import "core/io";
-list := import "core/list";
-text := import "core/text";
 
 splitTokens := fn(line: String): List<String> {
     tokens: mut List<String> = [];
-    n := text.length(line);
+    n := line.length();
     var pos := 0;
     loop pos < n {
-        loop pos < n and text.isWhitespace(text.at(line, pos)) {
+        loop pos < n and line.at(pos).isWhitespace() {
             pos += 1;
         }
         if pos >= n { break; }
         start := pos;
-        loop pos < n and not text.isWhitespace(text.at(line, pos)) {
+        loop pos < n and not line.at(pos).isWhitespace() {
             pos += 1;
         }
-        list.pushBack(mut tokens, text.slice(line, start, pos));
+        (mut tokens).pushBack(line.slice(start, pos));
     }
     tokens
 };
@@ -32,8 +30,8 @@ loop tokens as tok {
             failed = true;
             break;
         }
-        right := list.popBack(mut stack);
-        left := list.popBack(mut stack);
+        right := mut stack.popBack();
+        left := mut stack.popBack();
         depth -= 2;
         if tok == "/" and right == 0 {
             failed = true;
@@ -45,15 +43,15 @@ loop tokens as tok {
             tok == "*" { left * right }
             _ { left / right }
         };
-        list.pushBack(mut stack, res);
+        mut stack.pushBack(res);
         depth += 1;
     } else {
-        parsed := text.textToInt(tok);
+        parsed := tok.toInt();
         if not parsed.ok {
             failed = true;
             break;
         }
-        list.pushBack(mut stack, parsed.value);
+        (mut stack).pushBack(parsed.value);
         depth += 1;
     }
 }

@@ -1,5 +1,4 @@
 io := import "core/io";
-map := import "core/map";
 
 scores: mut Map<String, Int>;
 scores["ada"] = 42;
@@ -14,4 +13,4 @@ loop scores as entry {
         bestScore = entry.value;
     }
 }
-io.outputLine(bestName, bestScore, map.size(scores));
+io.outputLine(bestName, bestScore, scores.size());

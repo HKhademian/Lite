@@ -1,1 +1,1 @@
-language/cases/types/collections/reject-immutable-set-add.lts:3:9: cannot mutate immutable set s
+language/cases/types/collections/reject-immutable-set-add.lts:2:7: cannot call mutating operation add on read-only value

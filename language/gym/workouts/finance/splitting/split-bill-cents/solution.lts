@@ -1,4 +1,3 @@
-integer := import "core/int";
 io := import "core/io";
 
 cents := io.inputInt();
@@ -8,5 +7,5 @@ if cents < 0 or people <= 0 {
 } else {
     each := cents / people;
     rem := cents % people;
-    io.outputLine("each:" + integer.intText(each) + " rem:" + integer.intText(rem));
+    io.outputLine("each:" + each.toText() + " rem:" + rem.toText());
 }

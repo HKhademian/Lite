@@ -1,4 +1,3 @@
-integer := import "core/int";
 io := import "core/io";
 
 n := io.inputInt();
@@ -9,7 +8,7 @@ if n <= 0 {
     loop i < n {
         s := io.inputInt();
         e := io.inputInt();
-        io.outputLine(integer.intText(s) + ".." + integer.intText(e));
+        io.outputLine(s.toText() + ".." + e.toText());
         i += 1;
     }
 }

@@ -1,8 +1,6 @@
 /* Word frequency counter scanning tokens into a Map<String, Int>. */
 
 io := import "core/io";
-map := import "core/map";
-text := import "core/text";
 
 corpus := "lite is light and lite is explicit and clear";
 size := corpus.length();
@@ -12,11 +10,11 @@ var start := 0;
 var pos := 0;
 loop pos <= size {
     atEnd := pos == size;
-    sep := if atEnd { true } else { text.at(corpus, pos) == " " };
+    sep := if atEnd { true } else { corpus.at(pos) == " " };
     if sep {
         if pos > start {
-            word := text.slice(corpus, start, pos);
-            counts[word] = map.getOr(counts, word, 0) + 1;
+            word := corpus.slice(start, pos);
+            counts[word] = counts.getOr(word, 0) + 1;
         }
         start = pos + 1;
     }

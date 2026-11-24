@@ -19,7 +19,7 @@ blockAns := {
 
     /* Deferred closures pushed into a List before `lateItem` is declared are safe once `lateItem` runs first. */
     tasks: mut List<fn(): Int> = [];
-    push_back(mut tasks, fn(): Int { lateItem + written });
+    mut tasks.pushBack(fn(): Int { lateItem + written });
     lateItem := 14;
     tasks[0]()
 };

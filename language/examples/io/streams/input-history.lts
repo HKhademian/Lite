@@ -1,11 +1,10 @@
 io := import "core/io";
-list := import "core/list";
 
 numbers: mut List<Int> = [];
 loop {
     number := io.inputInt("Integer (0 to finish): ");
     if number == 0 { break; }
-    list.pushBack(mut numbers, number);
+    (mut numbers).pushBack(number);
 }
 io.outputLine("entered:");
 var total := 0;

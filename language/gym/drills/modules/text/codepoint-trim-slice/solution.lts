@@ -1,11 +1,10 @@
 io := import "core/io";
-text := import "core/text";
 
 raw := io.inputLine();
-cleaned := text.trim(raw);
-len := text.length(cleaned);
+cleaned := raw.trim();
+len := cleaned.length();
 if len == 0 {
     io.outputLine("EMPTY");
 } else {
-    io.outputLine(len, text.at(cleaned, 0), text.at(cleaned, len - 1));
+    io.outputLine(len, cleaned.at(0), cleaned.at(len - 1));
 }

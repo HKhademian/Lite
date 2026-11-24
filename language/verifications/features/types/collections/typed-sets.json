@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "typed-sets.lts",
-    "hash": "sha256:865328a7c344a35bc2fc816d664db013fd8be80dce40ac1dec314b1fadf637a3"
+    "hash": "sha256:6e04980140511fb4753393009862f6d1b725b3ad0e07682722d1860e37b7d83f"
   },
   "features": [
     "feature.types.collections.typed-sets"

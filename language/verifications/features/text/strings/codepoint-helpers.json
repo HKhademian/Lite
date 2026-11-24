@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "codepoint-helpers.lts",
-    "hash": "sha256:fb20991de2dea91135dc02ef2ac7ca9089cc5b4104ba8cff207ad25a32215ddc"
+    "hash": "sha256:03b246ff5d84260919764d332c2b32f64b15f97bdb2241a91a6741b2fc5cce98"
   },
   "features": [
     "feature.text.strings.codepoint-helpers"

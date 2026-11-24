@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/types/collections/typed-sets-and-membership.lts",
-    "hash": "sha256:2b60b46e3b89792a46c7ef10607724e23993f76bdecbabe1390f4632f0531404"
+    "hash": "sha256:53d969d76386de1003fd9016f1cc09b731edb8ba4acc818f76e120bf319eeeb4"
   },
   "features": [
     "feature.types.collections.typed-sets",

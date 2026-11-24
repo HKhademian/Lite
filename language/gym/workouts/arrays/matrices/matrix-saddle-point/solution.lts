@@ -1,6 +1,4 @@
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
 
 rows := io.inputInt();
 cols := io.inputInt();
@@ -11,7 +9,7 @@ if rows <= 0 or cols <= 0 {
     var idx := 0;
     total := rows * cols;
     loop idx < total {
-        list.pushBack(mut grid, io.inputInt());
+        mut grid.pushBack(io.inputInt());
         idx += 1;
     }
 
@@ -25,7 +23,7 @@ if rows <= 0 or cols <= 0 {
             if v < lo { lo = v; }
             c += 1;
         }
-        list.pushBack(mut rowMin, lo);
+        (mut rowMin).pushBack(lo);
         r += 1;
     }
 
@@ -39,7 +37,7 @@ if rows <= 0 or cols <= 0 {
             if v > hi { hi = v; }
             r2 += 1;
         }
-        list.pushBack(mut colMax, hi);
+        (mut colMax).pushBack(hi);
         c2 += 1;
     }
 
@@ -50,7 +48,7 @@ if rows <= 0 or cols <= 0 {
         loop cOut < cols {
             val := grid[rOut * cols + cOut];
             if val == rowMin[rOut] and val == colMax[cOut] {
-                io.outputLine(integer.intText(rOut) + "," + integer.intText(cOut) + ":" + integer.intText(val));
+                io.outputLine(rOut.toText() + "," + cOut.toText() + ":" + val.toText());
                 found = true;
                 break;
             }

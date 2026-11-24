@@ -255,14 +255,14 @@
           "file": "language/showcases/types/collections/arrays-and-lists.lts",
           "helperFiles": [],
           "manifest": "language/verifications/artifacts/showcases/types/collections/arrays-and-lists.json",
-          "summary": "Contrasts fixed-extent arrays with growable mut and var mut lists, push_front/push_back/pop_front/pop_back, and value snapshots.",
+          "summary": "Contrasts fixed-extent arrays with growable mut and var mut lists, pushFront/pushBack/popFront/popBack, and value snapshots.",
           "teaches": [
             "[T; N]",
             "List<T>",
             "mut",
             "var mut",
-            "push_front/back",
-            "pop_front/back"
+            "pushFront/pushBack",
+            "popFront/popBack"
           ],
           "features": [
             "feature.types.collections.fixed-arrays",

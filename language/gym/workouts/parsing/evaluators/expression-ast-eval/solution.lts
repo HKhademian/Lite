@@ -1,14 +1,11 @@
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
-text := import "core/text";
 
 EvalRes := type (ok: Bool, value: Int, next: Int);
 
 skipSp := fn(src: String, start: Int): Int {
     var p := start;
-    n := text.length(src);
-    loop p < n and text.isWhitespace(text.at(src, p)) { p += 1; }
+    n := src.length();
+    loop p < n and src.at(p).isWhitespace() { p += 1; }
     p
 };
 
@@ -25,14 +22,14 @@ intPow := fn(base: Int, exp: Int): (ok: Bool, value: Int) {
 
 splitLines := fn(raw: String): List<String> {
     out: mut List<String> = [];
-    n := text.length(raw);
+    n := raw.length();
     var pos := 0;
     loop pos <= n {
-        nl := text.indexOfText(raw, "\n", pos);
+        nl := raw.indexOf("\n", pos);
         endPos := if nl < 0 { n } else { nl };
         var cleanEnd := endPos;
-        if cleanEnd > pos and text.at(raw, cleanEnd - 1) == "\r" { cleanEnd -= 1; }
-        list.pushBack(mut out, text.slice(raw, pos, cleanEnd));
+        if cleanEnd > pos and raw.at(cleanEnd - 1) == "\r" { cleanEnd -= 1; }
+        (mut out).pushBack(raw.slice(pos, cleanEnd));
         if nl < 0 { break; }
         pos = nl + 1;
     }
@@ -44,9 +41,9 @@ parseExpr := fn(src: String, pos: Int): EvalRes {
     if not left.ok { return left; }
     var acc := left.value;
     var p := skipSp(src, left.next);
-    n := text.length(src);
+    n := src.length();
     loop p < n {
-        op := text.at(src, p);
+        op := src.at(p);
         if op =!= "+" and op =!= "-" { break; }
         right := parseTerm(src, p + 1);
         if not right.ok { return right; }
@@ -61,19 +58,19 @@ parseTerm := fn(src: String, pos: Int): EvalRes {
     if not left.ok { return left; }
     var acc := left.value;
     var p := skipSp(src, left.next);
-    n := text.length(src);
+    n := src.length();
     loop p < n {
         var op := "";
         var after := p;
-        if text.startsWithAt(src, p, ":/") {
+        if src.startsWithAt(p, ":/") {
             op = ":/";
             after = p + 2;
-        } else if text.startsWithAt(src, p, ":%") {
+        } else if src.startsWithAt(p, ":%") {
             op = ":%";
             after = p + 2;
         } else {
-            ch := text.at(src, p);
-            if ch == "*" and not text.startsWithAt(src, p, "**") {
+            ch := src.at(p);
+            if ch == "*" and not src.startsWithAt(p, "**") {
                 op = "*";
                 after = p + 1;
             } else if ch == "/" or ch == "%" {
@@ -101,8 +98,8 @@ parseTerm := fn(src: String, pos: Int): EvalRes {
 
 parseUnary := fn(src: String, pos: Int): EvalRes {
     p := skipSp(src, pos);
-    n := text.length(src);
-    if p < n and text.at(src, p) == "-" {
+    n := src.length();
+    if p < n and src.at(p) == "-" {
         inner := self(src, p + 1);
         if not inner.ok { return inner; }
         return (ok = true, value = 0 - inner.value, next = inner.next);
@@ -114,7 +111,7 @@ parsePow := fn(src: String, pos: Int): EvalRes {
     left := parsePrimary(src, pos);
     if not left.ok { return left; }
     p := skipSp(src, left.next);
-    if text.startsWithAt(src, p, "**") {
+    if src.startsWithAt(p, "**") {
         right := parseUnary(src, p + 2);
         if not right.ok { return right; }
         pw := intPow(left.value, right.value);
@@ -126,22 +123,22 @@ parsePow := fn(src: String, pos: Int): EvalRes {
 
 parsePrimary := fn(src: String, pos: Int): EvalRes {
     p := skipSp(src, pos);
-    n := text.length(src);
+    n := src.length();
     if p >= n { return (ok = false, value = 0, next = p); }
-    ch := text.at(src, p);
+    ch := src.at(p);
     if ch == "(" {
         inner := parseExpr(src, p + 1);
         if not inner.ok { return inner; }
         closeP := skipSp(src, inner.next);
-        if closeP >= n or text.at(src, closeP) =!= ")" {
+        if closeP >= n or src.at(closeP) =!= ")" {
             return (ok = false, value = 0, next = closeP);
         }
         return (ok = true, value = inner.value, next = closeP + 1);
     }
-    if text.isDigit(ch) {
+    if ch.isDigit() {
         var e := p;
-        loop e < n and text.isDigit(text.at(src, e)) { e += 1; }
-        parsed := text.textToInt(text.slice(src, p, e));
+        loop e < n and src.at(e).isDigit() { e += 1; }
+        parsed := src.slice(p, e).toInt();
         if not parsed.ok { return (ok = false, value = 0, next = p); }
         return (ok = true, value = parsed.value, next = e);
     }
@@ -150,13 +147,13 @@ parsePrimary := fn(src: String, pos: Int): EvalRes {
 
 raw := io.inputAll();
 loop splitLines(raw) as line {
-    trimmed := text.trim(line);
+    trimmed := line.trim();
     if trimmed == "" { continue; }
     res := parseExpr(trimmed, 0);
     rest := skipSp(trimmed, res.next);
-    if not res.ok or rest < text.length(trimmed) {
+    if not res.ok or rest < trimmed.length() {
         io.outputLine("ERR");
     } else {
-        io.outputLine(integer.intText(res.value));
+        io.outputLine(res.value.toText());
     }
 }

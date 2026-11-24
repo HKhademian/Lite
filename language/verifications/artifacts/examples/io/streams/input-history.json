@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../../../examples/io/streams/input-history.lts",
-    "hash": "sha256:ae304d311951c3180e96a767431b801ba7e27820533798a9933e35839d0943de"
+    "hash": "sha256:be494ec21420dd048db737957d83c796ef9951cba05f8d1964cf6d3fbc3c6fab"
   },
   "features": [
     "feature.types.collections.growable-lists",

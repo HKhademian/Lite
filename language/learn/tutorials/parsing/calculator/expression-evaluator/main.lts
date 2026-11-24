@@ -1,22 +1,19 @@
 /* Project Tutorial 1: Recursive-descent integer expression evaluator reading lines from stdin. */
 
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
-text := import "core/text";
 
 splitLines := fn(raw: String): List<String> {
     out: mut List<String> = [];
-    n := text.length(raw);
+    n := raw.length();
     var pos := 0;
     loop pos <= n {
-        nl := text.indexOfText(raw, "\n", pos);
+        nl := raw.indexOf("\n", pos);
         endPos := if nl < 0 { n } else { nl };
         var cleanEnd := endPos;
-        if cleanEnd > pos and text.at(raw, cleanEnd - 1) == "\r" {
+        if cleanEnd > pos and raw.at(cleanEnd - 1) == "\r" {
             cleanEnd -= 1;
         }
-        list.pushBack(mut out, text.slice(raw, pos, cleanEnd));
+        (mut out).pushBack(raw.slice(pos, cleanEnd));
         if nl < 0 { break; }
         pos = nl + 1;
     }
@@ -25,8 +22,8 @@ splitLines := fn(raw: String): List<String> {
 
 skipSpaces := fn(src: String, start: Int): Int {
     var pos := start;
-    n := text.length(src);
-    loop pos < n and text.isWhitespace(text.at(src, pos)) {
+    n := src.length();
+    loop pos < n and src.at(pos).isWhitespace() {
         pos += 1;
     }
     pos
@@ -40,9 +37,9 @@ parseExpr := fn(src: String, pos: Int): ParseRes {
     if not leftInit.ok { return leftInit; }
     var acc := leftInit.value;
     var cursor := skipSpaces(src, leftInit.next);
-    n := text.length(src);
+    n := src.length();
     loop cursor < n {
-        op := text.at(src, cursor);
+        op := src.at(cursor);
         if op =!= "+" and op =!= "-" { break; }
         right := parseTerm(src, cursor + 1);
         if not right.ok { return right; }
@@ -57,9 +54,9 @@ parseTerm := fn(src: String, pos: Int): ParseRes {
     if not leftInit.ok { return leftInit; }
     var acc := leftInit.value;
     var cursor := skipSpaces(src, leftInit.next);
-    n := text.length(src);
+    n := src.length();
     loop cursor < n {
-        op := text.at(src, cursor);
+        op := src.at(cursor);
         if op =!= "*" and op =!= "/" and op =!= "%" { break; }
         right := parseFactor(src, cursor + 1);
         if not right.ok { return right; }
@@ -78,11 +75,11 @@ parseTerm := fn(src: String, pos: Int): ParseRes {
 
 parseFactor := fn(src: String, pos: Int): ParseRes {
     p := skipSpaces(src, pos);
-    n := text.length(src);
+    n := src.length();
     if p >= n {
         return (ok = false, value = 0, next = p, error = "unexpected end of input");
     }
-    ch := text.at(src, p);
+    ch := src.at(p);
     if ch == "-" {
         inner := self(src, p + 1);
         if not inner.ok { return inner; }
@@ -92,17 +89,17 @@ parseFactor := fn(src: String, pos: Int): ParseRes {
         inner := parseExpr(src, p + 1);
         if not inner.ok { return inner; }
         closeAt := skipSpaces(src, inner.next);
-        if closeAt >= n or text.at(src, closeAt) =!= ")" {
+        if closeAt >= n or src.at(closeAt) =!= ")" {
             return (ok = false, value = 0, next = closeAt, error = "missing ')'");
         }
         return (ok = true, value = inner.value, next = closeAt + 1, error = "");
     }
-    if text.isDigit(ch) {
+    if ch.isDigit() {
         var endAt := p;
-        loop endAt < n and text.isDigit(text.at(src, endAt)) {
+        loop endAt < n and src.at(endAt).isDigit() {
             endAt += 1;
         }
-        parsed := text.textToInt(text.slice(src, p, endAt));
+        parsed := src.slice(p, endAt).toInt();
         if not parsed.ok {
             return (ok = false, value = 0, next = p, error = "integer overflow");
         }
@@ -115,16 +112,16 @@ evalLine := fn(line: String): String {
     res := parseExpr(line, 0);
     if not res.ok { return "ERR: " + res.error; }
     rest := skipSpaces(line, res.next);
-    if rest < text.length(line) {
-        return "ERR: trailing '" + text.at(line, rest) + "'";
+    if rest < line.length() {
+        return "ERR: trailing '" + line.at(rest) + "'";
     }
-    "OK: " + line + " = " + integer.intText(res.value)
+    "OK: " + line + " = " + res.value.toText()
 };
 
 raw := io.inputAll();
 lines := splitLines(raw);
 loop lines as line {
-    trimmed := text.trim(line);
+    trimmed := line.trim();
     if trimmed =!= "" {
         io.outputLine(evalLine(trimmed));
     }

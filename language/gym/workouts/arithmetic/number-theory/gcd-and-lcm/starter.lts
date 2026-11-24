@@ -1,8 +1,7 @@
-integer := import "core/int";
 io := import "core/io";
 
 a := io.inputInt();
 b := io.inputInt();
 g := a;
 lcm := a * b;
-io.outputLine("gcd:" + integer.intText(g), "lcm:" + integer.intText(lcm));
+io.outputLine("gcd:" + g.toText(), "lcm:" + lcm.toText());

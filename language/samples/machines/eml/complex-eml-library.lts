@@ -1,8 +1,6 @@
 /* EML (exp(x) - ln(y)) complex library, stack machine, and expression converter. */
 
 io := import "core/io";
-list := import "core/list";
-text := import "core/text";
 
 pub Complex := type (re: Float, im: Float);
 
@@ -262,18 +260,18 @@ pub runStream := fn(program: String): StreamResult {
     var loose := false;
     var underflows := 0;
     var ops := 0;
-    size := text.length(program);
+    size := program.length();
     var i := 0;
     loop i < size {
-        ch := text.at(program, i);
+        ch := program.at(i);
         if ch == "-" or ch == "1" {
-            list.pushBack(mut stack, cOne());
+            mut stack.pushBack(cOne());
             depth = depth + 1;
             ops = ops + 1;
         } else if ch == "." or ch == "0" {
             var y := cOne();
             if depth > 0 {
-                y = list.popBack(mut stack);
+                y = mut stack.popBack();
                 depth = depth - 1;
             } else {
                 loose = true;
@@ -281,13 +279,13 @@ pub runStream := fn(program: String): StreamResult {
             }
             var x := cOne();
             if depth > 0 {
-                x = list.popBack(mut stack);
+                x = mut stack.popBack();
                 depth = depth - 1;
             } else {
                 loose = true;
                 underflows = underflows + 1;
             }
-            list.pushBack(mut stack, eml(x, y));
+            (mut stack).pushBack(eml(x, y));
             depth = depth + 1;
             ops = ops + 1;
         }
@@ -360,15 +358,15 @@ isDigit := fn(ch: String): Bool {
 }
 
 isAlpha := fn(ch: String): Bool {
-    text.isAsciiLetter(ch)
+    ch.isAsciiLetter()
 }
 
 tokenize := fn(src: String): List<(kind: String, text: String)> {
     tokens: mut List<(kind: String, text: String)> = [];
-    size := text.length(src);
+    size := src.length();
     var i := 0;
     loop i < size {
-        ch := text.at(src, i);
+        ch := src.at(i);
         if ch == " " or ch == "\t" or ch == "\n" or ch == "\r" {
             i = i + 1;
             continue;
@@ -376,23 +374,23 @@ tokenize := fn(src: String): List<(kind: String, text: String)> {
         if isDigit(ch) {
             start := i;
             i = i + 1;
-            loop i < size and isDigit(text.at(src, i)) {
+            loop i < size and isDigit(src.at(i)) {
                 i = i + 1;
             }
-            list.pushBack(mut tokens, (kind = "num", text = text.slice(src, start, i)));
+            (mut tokens).pushBack((kind = "num", text = src.slice(start, i)));
             continue;
         }
         if isAlpha(ch) {
             start := i;
             i = i + 1;
-            loop i < size and isAlpha(text.at(src, i)) {
+            loop i < size and isAlpha(src.at(i)) {
                 i = i + 1;
             }
-            list.pushBack(mut tokens, (kind = "id", text = text.slice(src, start, i)));
+            (mut tokens).pushBack((kind = "id", text = src.slice(start, i)));
             continue;
         }
         if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" or ch == "," {
-            list.pushBack(mut tokens, (kind = "sym", text = ch));
+            mut tokens.pushBack((kind = "sym", text = ch));
             i = i + 1;
             continue;
         }
@@ -403,11 +401,11 @@ tokenize := fn(src: String): List<(kind: String, text: String)> {
 }
 
 parseInt := fn(s: String): Int {
-    size := text.length(s);
+    size := s.length();
     var i := 0;
     var val := 0;
     loop i < size {
-        ch := text.at(s, i);
+        ch := s.at(i);
         d := match {
             ch == "0" { 0 }
             ch == "1" { 1 }

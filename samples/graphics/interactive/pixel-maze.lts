@@ -4,8 +4,6 @@ audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
-map := import "core/map";
-text := import "core/text";
 
 mazeRows: List<String> = [
 "###########",
@@ -58,7 +56,7 @@ var player := Player { col = 1, row = 1, won = false };
 
 tileAt := fn(c: Int, r: Int): String {
     if r < 0 or r >= rows or c < 0 or c >= cols { return "#"; }
-    text.at(mazeRows[r], c)
+    mazeRows[r].at(c)
 };
 
 render := fn(): Unit {
@@ -124,7 +122,7 @@ onCanvasKeyDown := fn(key: String): Unit {
         audio.tone(frequency = 262, durationMs = 60, volume = 14);
         return;
     }
-    hit := map.get(moveKeys, key);
+    hit := moveKeys.get(key);
     if hit.found { tryMove(hit.value); }
 };
 

@@ -21,7 +21,7 @@ events: mut List<Int> = [];
     threshold := 10;
     pushScaled := fn(raw: Int): Unit {
         if raw >= threshold {
-            push_back(mut events, raw * 2);
+            mut events.pushBack(raw * 2);
         }
     };
     pushScaled(7);
@@ -33,7 +33,7 @@ events: mut List<Int> = [];
 getters: mut List<fn(): Int> = [];
 scale := 10;
 loop [1, 2, 3] as item {
-    push_back(mut getters, fn(): Int { item * scale });
+    mut getters.pushBack(fn(): Int { item * scale });
 }
 
 io.outputLine("counters:", cFast(), cFast(), cOffset(), cFast());

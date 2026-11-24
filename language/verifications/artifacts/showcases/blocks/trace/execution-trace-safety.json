@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/blocks/trace/execution-trace-safety.lts",
-    "hash": "sha256:35084470ce78ede9be3b8d7d86ea197f9f6912865cf2e537e460234b7979b874"
+    "hash": "sha256:c24a93450881948f9a58d7f1a13c083de113d56b1244a0967eac7cc4e750db1e"
   },
   "features": [
     "feature.blocks.trace.execution-trace-order",

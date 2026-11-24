@@ -1,4 +1,3 @@
-integer := import "core/int";
 io := import "core/io";
 
 n := io.inputInt();
@@ -8,4 +7,4 @@ loop x > 0 {
     digitSum += x % 10;
     x = x / 10;
 }
-io.outputLine("pal:false", "sum:" + integer.intText(digitSum));
+io.outputLine("pal:false", "sum:" + digitSum.toText());

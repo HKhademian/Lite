@@ -1,3 +1,2 @@
-set := import "core/set";
 s: Set<String>;
-set.add(mut s, "a");
+mut s.add("a");

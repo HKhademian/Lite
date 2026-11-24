@@ -4,7 +4,6 @@ audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
-map := import "core/map";
 
 ctx := canvas.play(width = 240, height = 160, title = "Pointer Paint · Drag to Paint, Space Clears");
 bg := canvas.rgb(12, 18, 30);
@@ -94,7 +93,7 @@ onCanvasKeyDown := fn(key: String): Unit {
         st.colorIdx = (st.colorIdx + 1) % palette.length();
         drawPaletteBar();
         audio.tone(frequency = 440 + (st.colorIdx * 65), durationMs = 50, volume = 15);
-    } else if map.has(keyToColor, key) {
+    } else if keyToColor.has(key) {
         st.colorIdx = keyToColor[key];
         drawPaletteBar();
     }

@@ -578,7 +578,7 @@
       "expectedStarterFailure": "wrong-output",
       "hints": [
         "Non-ASCII code points take 2–4 UTF-8 bytes even though they have scalar length 1.",
-        "Import `core/unicode` and `core/list` and compute `list.listCountInt(unicode.utf8Encode(s))`."
+        "Import `core/unicode` and compute `unicode.utf8Encode(s).length()`."
       ],
       "relatedDocs": ["lib/core/unicode.lts", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
       "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],

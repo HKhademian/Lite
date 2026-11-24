@@ -17,13 +17,13 @@ addStep := fn(mult: Int): Int {
 
 hist: mut List<Int> = [base];
 appendHist := fn(v: Int): Int {
-    push_back(mut hist, v);
+    mut hist.pushBack(v);
     hist[0] + v
 };
 
 closures: mut List<fn(): Int> = [];
 loop [10, 20, 30] as item {
-    push_back(mut closures, fn(): Int { item + step });
+    mut closures.pushBack(fn(): Int { item + step });
 }
 
 helper := fn(n: Int): Int { n + 1 };

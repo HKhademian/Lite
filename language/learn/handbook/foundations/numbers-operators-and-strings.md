@@ -55,10 +55,9 @@ Use [core/text](lite://module/core/text) for code-point length, indexing, slicin
 
 ```lite
 io := import "core/io";
-text := import "core/text";
 math := import "core/math";
 
-msg := text.trim("  Lite\t") + "!";
+msg := "  Lite\t".trim() + "!";
 io.outputLine(msg, msg.length(), msg.at(0), math.clampInt(120, 0, 100));
 ```
 

@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../../../examples/control/unwinding/tagged-control-and-cleanup.lts",
-    "hash": "sha256:161eb383262e7a183e060492bc570f22882f15f7a4a31e78fc1fd87e6408edc1"
+    "hash": "sha256:50c8a83c4c6202a29234f1a276d86f64153f821fa63c00427bb788cb82ff39bd"
   },
   "features": [
     "feature.control.unwinding.tagged-transfers",

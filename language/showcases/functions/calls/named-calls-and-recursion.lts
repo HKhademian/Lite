@@ -1,8 +1,6 @@
 /* Showcase 05.01 — Named/positional arguments, =name shorthand, self recursion, and io.exit termination. */
 
 io := import "core/io";
-list := import "core/list";
-text := import "core/text";
 
 /* Positional, named, and `=name` shorthand call arguments compose freely. */
 weighted := fn(a: Int, b: Int, weight: Int): Int {
@@ -26,8 +24,8 @@ failZeroDivisor := fn(msg: String): Unit {
 
 args := io.inputArgs();
 var divisor := 4;
-if list.listCountText(args) > 0 {
-    parsed := text.textToInt(args[0]);
+if args.length() > 0 {
+    parsed := args[0].toInt();
     if parsed.ok {
         divisor = parsed.value;
     }

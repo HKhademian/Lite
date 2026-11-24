@@ -1,19 +1,18 @@
 /* ASCII Caesar cipher encoding and decoding through explicit alphabet lookup. */
 
 io := import "core/io";
-text := import "core/text";
 
 upper := "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 lower := "abcdefghijklmnopqrstuvwxyz";
 
 shiftChar := fn(ch: String, shift: Int): String {
-    ui := text.indexOfText(upper, ch, 0);
+    ui := upper.indexOf(ch, 0);
     if ui >= 0 {
-        return text.at(upper, (ui + shift) % 26);
+        return upper.at((ui + shift) % 26);
     }
-    li := text.indexOfText(lower, ch, 0);
+    li := lower.indexOf(ch, 0);
     if li >= 0 {
-        return text.at(lower, (li + shift) % 26);
+        return lower.at((li + shift) % 26);
     }
     ch
 }
@@ -24,7 +23,7 @@ caesar := fn(input: String, shift: Int): String {
     var out := "";
     var i := 0;
     loop i < size {
-        out += shiftChar(text.at(input, i), norm);
+        out += shiftChar(input.at(i), norm);
         i += 1;
     }
     out

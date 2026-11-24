@@ -1,17 +1,15 @@
 io := import "core/io";
-list := import "core/list";
-text := import "core/text";
 
 splitLines := fn(raw: String): List<String> {
     out: mut List<String> = [];
-    n := text.length(raw);
+    n := raw.length();
     var pos := 0;
     loop pos <= n {
-        nl := text.indexOfText(raw, "\n", pos);
+        nl := raw.indexOf("\n", pos);
         endPos := if nl < 0 { n } else { nl };
         var cleanEnd := endPos;
-        if cleanEnd > pos and text.at(raw, cleanEnd - 1) == "\r" { cleanEnd -= 1; }
-        list.pushBack(mut out, text.slice(raw, pos, cleanEnd));
+        if cleanEnd > pos and raw.at(cleanEnd - 1) == "\r" { cleanEnd -= 1; }
+        (mut out).pushBack(raw.slice(pos, cleanEnd));
         if nl < 0 { break; }
         pos = nl + 1;
     }
@@ -19,18 +17,18 @@ splitLines := fn(raw: String): List<String> {
 };
 
 globMatch := fn(pat: String, src: String): Bool {
-    pn := text.length(pat);
-    sn := text.length(src);
+    pn := pat.length();
+    sn := src.length();
     var pi := 0;
     var si := 0;
     var starP := -1;
     var matchS := 0;
 
     loop si < sn {
-        if pi < pn and (text.at(pat, pi) == "?" or text.at(pat, pi) == text.at(src, si)) {
+        if pi < pn and (pat.at(pi) == "?" or pat.at(pi) == src.at(si)) {
             pi += 1;
             si += 1;
-        } else if pi < pn and text.at(pat, pi) == "*" {
+        } else if pi < pn and pat.at(pi) == "*" {
             starP = pi;
             matchS = si;
             pi += 1;
@@ -43,7 +41,7 @@ globMatch := fn(pat: String, src: String): Bool {
         }
     }
 
-    loop pi < pn and text.at(pat, pi) == "*" {
+    loop pi < pn and pat.at(pi) == "*" {
         pi += 1;
     }
     pi == pn
@@ -55,7 +53,7 @@ var havePattern := false;
 var pattern := "";
 
 loop lines as line {
-    trimmed := text.trim(line);
+    trimmed := line.trim();
     if trimmed == "" { continue; }
     if not havePattern {
         pattern = trimmed;

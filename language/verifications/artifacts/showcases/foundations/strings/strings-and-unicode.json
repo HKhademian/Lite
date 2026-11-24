@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/foundations/strings/strings-and-unicode.lts",
-    "hash": "sha256:0d2884477b9468e5dc70acb524210dd0c2fe817e03064f8f4f5e648b01fc3503"
+    "hash": "sha256:6be8e91ccdfc6cf4224bbbf1bed7998c76da56fda568003fe937ba851eb31c96"
   },
   "features": [
     "feature.text.strings.concatenation",

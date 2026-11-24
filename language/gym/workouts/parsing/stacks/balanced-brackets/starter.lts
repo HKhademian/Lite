@@ -1,14 +1,12 @@
-integer := import "core/int";
 io := import "core/io";
-text := import "core/text";
 
 line := io.inputLine();
 var balance := 0;
-n := text.length(line);
+n := line.length();
 var i := 0;
 var badAt := -1;
 loop i < n {
-    ch := text.at(line, i);
+    ch := line.at(i);
     if ch == "(" or ch == "[" or ch == "{" {
         balance += 1;
     } else if ch == ")" or ch == "]" or ch == "}" {
@@ -21,9 +19,9 @@ loop i < n {
     i += 1;
 }
 if badAt >= 0 {
-    io.outputLine("mismatch:" + integer.intText(badAt));
+    io.outputLine("mismatch:" + badAt.toText());
 } else if balance > 0 {
-    io.outputLine("mismatch:" + integer.intText(n));
+    io.outputLine("mismatch:" + n.toText());
 } else {
     io.outputLine("balanced");
 }

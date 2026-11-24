@@ -46,20 +46,19 @@ Sequence literals `[a, b, c]` infer fixed-size `[T; N]` arrays unless typed as `
 
 ```lite
 io := import "core/io";
-list := import "core/list";
 fmt := import "core/format";
 
 fixed: [Int; 3] = [10, 20, 30];
 [first, _, third] := fixed;
 queue: mut List<Int> = [2, 3];
-list.pushFront(mut queue, 1);
-list.pushBack(mut queue, 4);
+mut queue.pushFront(1);
+mut queue.pushBack(4);
 saved: List<Int> = queue;
-head := list.popFront(mut queue);
+head := mut queue.popFront();
 io.outputLine("ends:", first, third, "head:", head, "queue:", fmt.joinIntTexts(queue, ","), "saved:", fmt.joinIntTexts(saved, ","));
 ```
 
-Notice `saved: List<Int> = queue;` takes an independent value snapshot of `queue`—popping from `queue` afterward does not mutate `saved`. Both `push_front`/`push_back` builtins and [core/list](lite://module/core/list) methods ([`list.pushBack`](lite://module/core/list#pushBack), [`list.popFront`](lite://module/core/list#popFront), etc.) are supported.
+Notice `saved: List<Int> = queue;` takes an independent value snapshot of `queue`—popping from `queue` afterward does not mutate `saved`. Both indexing and [core/list](lite://module/core/list) operations ([`List.pushBack`](lite://module/core/list#List.pushBack), [`List.popFront`](lite://module/core/list#List.popFront), etc.) are supported.
 
 ## Typed Maps `Map<K, V>`
 
@@ -67,11 +66,10 @@ Store typed key-value entries with `Map<K, V>` (scalar or nominal `enum` keys, a
 
 ```lite
 io := import "core/io";
-map := import "core/map";
 
 scores: mut Map<String, Int> = ["alice" = 10];
 scores["alice"] += 8;
-map.set(mut scores, "bob", 25);
+mut scores.set("bob", 25);
 io.outputLine(scores["alice"], scores.getOr("carol", 0), scores.size(), scores.isEmpty());
 ```
 

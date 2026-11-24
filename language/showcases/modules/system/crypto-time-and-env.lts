@@ -6,7 +6,6 @@ unicode := import "core/unicode";
 time := import "core/time";
 proc := import "core/process";
 path := import "core/path";
-text := import "core/text";
 
 payload := "lite-study";
 bytes := unicode.utf8Encode(payload);
@@ -19,9 +18,9 @@ roundtrip := unicode.utf8DecodeStrict(crypto.base64Decode(b64));
 t0 := time.monotonicNs();
 time.sleepMs(1);
 t1 := time.monotonicNs();
-isoOk := text.endsWith(time.utcIsoNow(), "Z");
-dateOk := text.length(time.localDate()) == 10;
-hostOk := path.isDirectory(proc.cwd()) and text.length(proc.platform()) > 0 and text.length(proc.arch()) > 0;
+isoOk := time.utcIsoNow().endsWith("Z");
+dateOk := time.localDate().length() == 10;
+hostOk := path.isDirectory(proc.cwd()) and proc.platform().length() > 0 and proc.arch().length() > 0;
 
 io.outputLine("sha256:", sha);
 io.outputLine("hmac:", mac);

@@ -1,4 +1,3 @@
-integer := import "core/int";
 io := import "core/io";
 
 n := io.inputInt();
@@ -14,4 +13,4 @@ loop cur > 0 {
 }
 isPal := n >= 0 and rev == mag;
 palText := if isPal { "true" } else { "false" };
-io.outputLine("pal:" + palText, "sum:" + integer.intText(digitSum));
+io.outputLine("pal:" + palText, "sum:" + digitSum.toText());

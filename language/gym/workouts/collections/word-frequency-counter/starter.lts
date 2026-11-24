@@ -1,5 +1,4 @@
 io := import "core/io";
-map := import "core/map";
 
 n := io.inputInt();
 _eol := io.inputLine();
@@ -12,4 +11,4 @@ loop i < n {
     i += 1;
 }
 query := io.inputLine();
-io.outputLine(map.size(counts), map.getOr(counts, query, 0));
+io.outputLine(counts.size(), counts.getOr(query, 0));

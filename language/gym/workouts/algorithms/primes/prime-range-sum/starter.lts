@@ -1,4 +1,3 @@
-integer := import "core/int";
 io := import "core/io";
 
 lo := io.inputInt();
@@ -13,4 +12,4 @@ loop k <= hi {
     }
     k += 1;
 }
-io.outputLine("count:" + integer.intText(count), "sum:" + integer.intText(sum));
+io.outputLine("count:" + count.toText(), "sum:" + sum.toText());

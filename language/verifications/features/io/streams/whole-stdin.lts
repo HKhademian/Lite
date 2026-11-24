@@ -1,4 +1,3 @@
 io := import "core/io";
-text := import "core/text";
 
-io.outputLine(text.length(io.inputAll()));
+io.outputLine(io.inputAll().length());
