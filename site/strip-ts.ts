@@ -197,6 +197,42 @@ export function stripLiteTs(source: string): string {
       continue;
     }
 
+    // Top-level `type Name[<...>] = ...;`
+    if (
+      depth === 0 &&
+      source.startsWith('type ', i) &&
+      (i === 0 || !/[a-zA-Z0-9_$.]/.test(source[i - 1]!)) &&
+      /^type\s+[a-zA-Z_$][a-zA-Z0-9_$]*(?:\s*<[^>]*>)?\s*=/.test(source.slice(i, i + 160))
+    ) {
+      let j = i + 5;
+      while (j < n && source[j] !== ';') {
+        if (source[j] === '{') j = skipBalanced(source, j, '{', '}');
+        else if (source[j] === '(') j = skipBalanced(source, j, '(', ')');
+        else if (source[j] === '[') j = skipBalanced(source, j, '[', ']');
+        else if (source[j] === '"' || source[j] === "'" || source[j] === '`') j = skipString(source, j);
+        else j += 1;
+      }
+      if (source[j] === ';') j += 1;
+      i = j;
+      continue;
+    }
+
+    // Top-level `interface Name[<...>] [extends ...] { ... }`
+    if (
+      depth === 0 &&
+      source.startsWith('interface ', i) &&
+      (i === 0 || !/[a-zA-Z0-9_$.]/.test(source[i - 1]!)) &&
+      /^interface\s+[a-zA-Z_$][a-zA-Z0-9_$]*(?:\s*<[^>]*>)?(?:\s+extends\s+[^{]+)?\s*\{/.test(source.slice(i, i + 200))
+    ) {
+      const braceAt = source.indexOf('{', i + 10);
+      if (braceAt !== -1) {
+        let j = skipBalanced(source, braceAt, '{', '}');
+        if (source[j] === ';') j += 1;
+        i = j;
+        continue;
+      }
+    }
+
     // `if ((import.meta as ...).main === true) { ... }` Node CLI entrypoint wrapper
     if (
       source.startsWith('if ', i) &&

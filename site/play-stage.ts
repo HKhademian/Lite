@@ -5,6 +5,7 @@ export interface PlayFrameLike {
   height: number;
   title?: string;
   playing?: boolean;
+  rgba?: Uint8Array | null;
   pixels?: readonly number[] | null;
   ops?: readonly number[] | null;
   hasUpdate?: boolean;
@@ -111,14 +112,17 @@ function setStagePixel(
   }
 }
 
-/** Renders Play `pixels` and `ops` (op=1 clear, op=2 fillRect with ARGB->RGBA conversion) into an ImageData byte buffer. */
+/** Renders Play `rgba`, `pixels`, and `ops` (op=1 clear, op=2 fillRect with ARGB->RGBA conversion) into an ImageData byte buffer. */
 export function renderFrameToImageData(
   frame: PlayFrameLike,
   data: Uint8ClampedArray,
   stageWidth: number,
   stageHeight: number,
 ): void {
-  if (Array.isArray(frame.pixels)) {
+  if (frame.rgba && ArrayBuffer.isView(frame.rgba)) {
+    const bytes = new Uint8Array(frame.rgba.buffer, frame.rgba.byteOffset, frame.rgba.byteLength);
+    data.set(bytes.subarray(0, data.length));
+  } else if (Array.isArray(frame.pixels)) {
     if (frame.pixels.length === 0) {
       data.fill(0);
     } else {
@@ -380,6 +384,7 @@ interface StageCanvasLike {
   } | null;
   getBoundingClientRect: () => RectLike;
   addEventListener: (type: string, handler: (event: unknown) => void) => void;
+  removeEventListener?: (type: string, handler: (event: unknown) => void) => void;
   focus?: (opts?: { preventScroll?: boolean }) => void;
 }
 
@@ -675,5 +680,250 @@ export function createPlayStage(options: CreatePlayStageOptions): PlayStageContr
     isActive: () => activePlay,
     isPlayable: () => playableCanvas,
     isPaused: () => canvasPaused,
+  };
+}
+
+export interface SurfaceStateLike {
+  w: number;
+  h: number;
+  title: string;
+  pixels: Uint8Array;
+  open: boolean;
+  pointerX: number;
+  pointerY: number;
+  pointerDown: boolean;
+  key: string;
+  pendingDeltaMs: number;
+  targetFps: number;
+}
+
+export interface SurfaceHostApiLike {
+  poll: () => unknown;
+  present: () => void;
+  close: () => void;
+}
+
+export interface CanvasSurfaceHost {
+  host: {
+    open: (_id: number, title: string, width: number, height: number, state: SurfaceStateLike) => void;
+    poll: (_id: number, state: SurfaceStateLike) => void;
+    present: (_id: number, state: SurfaceStateLike) => void;
+    close: (_id: number, state: SurfaceStateLike) => void;
+    playTone: (_id: number, frequency: number, durationMs: number, volume: number) => void;
+    resize: (_id: number, width: number, height: number, state: SurfaceStateLike) => void;
+    run: (
+      _surface: unknown,
+      state: SurfaceStateLike,
+      onFrame: (inp: unknown) => boolean,
+      api: SurfaceHostApiLike,
+    ) => boolean;
+  };
+  stop: () => void;
+}
+
+export interface CreateCanvasSurfaceHostOptions {
+  audio?: AudioPlayer;
+  onStop?: () => void;
+  requestAnimationFrame?: (cb: (t: number) => void) => number;
+  cancelAnimationFrame?: (id: number) => void;
+}
+
+/** Creates an embeddable `extra/surface` host bound directly to any HTML `<canvas>` element. */
+export function createCanvasSurfaceHost(
+  canvas: StageCanvasLike,
+  options: CreateCanvasSurfaceHostOptions = {},
+): CanvasSurfaceHost {
+  const audio = options.audio ?? createAudioPlayer();
+  const ctx = canvas.getContext('2d');
+  const g = globalThis as unknown as {
+    requestAnimationFrame?: (cb: (t: number) => void) => number;
+    cancelAnimationFrame?: (id: number) => void;
+  };
+  const raf = options.requestAnimationFrame ?? g.requestAnimationFrame;
+  const caf = options.cancelAnimationFrame ?? g.cancelAnimationFrame;
+
+  let imgWidth = 0;
+  let imgHeight = 0;
+  let imgData: { data: Uint8ClampedArray } | null = null;
+  let animId = 0;
+  let stopped = false;
+  let activeState: SurfaceStateLike | null = null;
+  let activeApi: SurfaceHostApiLike | null = null;
+  let pointerX = 0;
+  let pointerY = 0;
+  let pointerDown = false;
+  let pendingKey = '';
+  let lastFrameAt = 0;
+
+  const ensureImage = (width: number, height: number): void => {
+    if (!ctx || width < 1 || height < 1) return;
+    if (imgWidth !== width || imgHeight !== height || !imgData) {
+      imgWidth = width;
+      imgHeight = height;
+      canvas.width = width;
+      canvas.height = height;
+      imgData = ctx.createImageData(width, height);
+    }
+  };
+
+  const blitState = (state: SurfaceStateLike): void => {
+    if (!ctx) return;
+    ensureImage(state.w, state.h);
+    if (!imgData) return;
+    imgData.data.set(state.pixels.subarray(0, imgData.data.length));
+    ctx.putImageData(imgData, 0, 0);
+  };
+
+  const onKeyDown = (raw: unknown): void => {
+    const ev = raw as { key?: string; preventDefault?: () => void };
+    audio.unlock();
+    const k = String(ev.key ?? '');
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(k)) {
+      ev.preventDefault?.();
+    }
+    pendingKey = k;
+  };
+  const onKeyUp = (_raw: unknown): void => {};
+  const onPointerMove = (raw: unknown): void => {
+    const ev = raw as { clientX: number; clientY: number };
+    const cell = mapPointerToCell(ev.clientX, ev.clientY, canvas.getBoundingClientRect(), imgWidth || canvas.width, imgHeight || canvas.height);
+    pointerX = cell.x;
+    pointerY = cell.y;
+  };
+  const onPointerDown = (raw: unknown): void => {
+    audio.unlock();
+    canvas.focus?.({ preventScroll: true });
+    const ev = raw as { clientX: number; clientY: number };
+    const cell = mapPointerToCell(ev.clientX, ev.clientY, canvas.getBoundingClientRect(), imgWidth || canvas.width, imgHeight || canvas.height);
+    pointerX = cell.x;
+    pointerY = cell.y;
+    pointerDown = true;
+  };
+  const onPointerUp = (raw: unknown): void => {
+    const ev = raw as { clientX: number; clientY: number };
+    const cell = mapPointerToCell(ev.clientX, ev.clientY, canvas.getBoundingClientRect(), imgWidth || canvas.width, imgHeight || canvas.height);
+    pointerX = cell.x;
+    pointerY = cell.y;
+    pointerDown = false;
+  };
+
+  let listenersAttached = false;
+  const attachListeners = (): void => {
+    if (listenersAttached) return;
+    listenersAttached = true;
+    canvas.addEventListener('keydown', onKeyDown);
+    canvas.addEventListener('keyup', onKeyUp);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointerup', onPointerUp);
+  };
+  const detachListeners = (): void => {
+    if (!listenersAttached) return;
+    listenersAttached = false;
+    canvas.removeEventListener?.('keydown', onKeyDown);
+    canvas.removeEventListener?.('keyup', onKeyUp);
+    canvas.removeEventListener?.('pointermove', onPointerMove);
+    canvas.removeEventListener?.('pointerdown', onPointerDown);
+    canvas.removeEventListener?.('pointerup', onPointerUp);
+  };
+
+  const stop = (): void => {
+    if (stopped) return;
+    stopped = true;
+    if (animId && caf) {
+      caf(animId);
+      animId = 0;
+    }
+    if (activeState) activeState.open = false;
+    detachListeners();
+    const api = activeApi;
+    activeApi = null;
+    activeState = null;
+    api?.close();
+    options.onStop?.();
+  };
+
+  return {
+    stop,
+    host: {
+      open(_id: number, title: string, width: number, height: number, state: SurfaceStateLike): void {
+        stopped = false;
+        activeState = state;
+        canvas.title = title;
+        ensureImage(width, height);
+        attachListeners();
+      },
+      poll(_id: number, state: SurfaceStateLike): void {
+        state.pointerX = pointerX;
+        state.pointerY = pointerY;
+        state.pointerDown = pointerDown;
+        if (pendingKey) {
+          state.key = pendingKey;
+          pendingKey = '';
+        }
+      },
+      present(_id: number, state: SurfaceStateLike): void {
+        blitState(state);
+      },
+      close(_id: number, _state: SurfaceStateLike): void {
+        detachListeners();
+        if (animId && caf) {
+          caf(animId);
+          animId = 0;
+        }
+        activeApi = null;
+        activeState = null;
+      },
+      playTone(_id: number, frequency: number, durationMs: number, volume: number): void {
+        audio.playTones([frequency, durationMs, volume]);
+      },
+      resize(_id: number, width: number, height: number, state: SurfaceStateLike): void {
+        ensureImage(width, height);
+        blitState(state);
+      },
+      run(
+        _surface: unknown,
+        state: SurfaceStateLike,
+        onFrame: (inp: unknown) => boolean,
+        api: SurfaceHostApiLike,
+      ): boolean {
+        activeState = state;
+        activeApi = api;
+        lastFrameAt = 0;
+        const step = (now: number): void => {
+          animId = 0;
+          if (stopped || !state.open) {
+            stop();
+            return;
+          }
+          if (lastFrameAt > 0) {
+            state.pendingDeltaMs = Math.max(0, Math.round(now - lastFrameAt));
+          } else {
+            state.pendingDeltaMs = 16;
+          }
+          lastFrameAt = now;
+          const inp = api.poll();
+          if (!state.open || !onFrame(inp)) {
+            stop();
+            return;
+          }
+          api.present();
+          if (raf && !stopped && state.open) {
+            animId = raf(step);
+          }
+        };
+        state.pendingDeltaMs = 16;
+        const firstInp = api.poll();
+        if (!state.open || !onFrame(firstInp)) {
+          stop();
+          return true;
+        }
+        api.present();
+        if (raf && !stopped && state.open) {
+          animId = raf(step);
+        }
+        return true;
+      },
+    },
   };
 }

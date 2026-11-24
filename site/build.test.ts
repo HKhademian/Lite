@@ -25,7 +25,7 @@ import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
 import { extractLiteUrisFromMarkdown, LiteAcademyGraph, parseLiteUri, relativeWebHref, rewriteLiteUriHtml, validateBuiltSiteReferences } from './lite-uri.ts';
 import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
-import { createPlayStage, createWorkerClient, mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
+import { createCanvasSurfaceHost, createPlayStage, createWorkerClient, mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
 import { renderCodeEditorBlock, renderCodeModeBar, renderGeneratedToolbar, renderSplitHandle } from './ui-blocks.ts';
@@ -885,6 +885,88 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
     assert.equal(aliasRes.ok, true);
     assert.equal(aliasRes.play?.hasUpdate, true);
     assert.equal(aliasRes.play?.ops[0], 1);
+    await mockSelf.onmessage!({ data: { action: 'stop' } });
+
+    const surfStaticRes = await send({
+      id: 10,
+      action: 'run',
+      source: [
+        'surf := import "extra/surface";',
+        'win := surf.open("StaticSurf", 4, 4);',
+        'surf.clear(win, surf.RED);',
+        'surf.present(win);',
+        'surf.close(win);',
+      ].join('\n'),
+      stdin: '',
+      args: [],
+    }) as unknown as {
+      ok: boolean;
+      play: unknown;
+      canvas: { width: number; height: number; title: string; rgba?: Uint8Array } | null;
+    };
+    assert.equal(surfStaticRes.ok, true);
+    assert.equal(surfStaticRes.play, null);
+    assert(surfStaticRes.canvas !== null && surfStaticRes.canvas.rgba instanceof Uint8Array);
+    assert.equal(surfStaticRes.canvas.width, 4);
+    assert.equal(surfStaticRes.canvas.height, 4);
+    assert.equal(surfStaticRes.canvas.title, 'StaticSurf');
+    assert.equal(surfStaticRes.canvas.rgba[0], 255);
+    assert.equal(surfStaticRes.canvas.rgba[1], 0);
+    assert.equal(surfStaticRes.canvas.rgba[3], 255);
+
+    const surfRunRes = await send({
+      id: 11,
+      action: 'run',
+      source: [
+        'surf := import "extra/surface";',
+        'win := surf.open("LiveSurf", 8, 6);',
+        'var x := 1.0;',
+        'surf.run(win, fn(inp: surf.FrameInput): Bool {',
+        '  if not inp.open { return false; }',
+        '  if inp.key == "ArrowRight" { x = x + 2.0; surf.playTone(win, 660, 50, 30); }',
+        '  if inp.key == "q" { return false; }',
+        '  surf.clear(win, surf.BLACK);',
+        '  surf.fillRect(win, surf.rect(x, 1.0, 2.0, 2.0), surf.GREEN);',
+        '  x = x + 1.0;',
+        '  true',
+        '});',
+        'surf.close(win);',
+      ].join('\n'),
+      stdin: '',
+      args: [],
+    }) as unknown as {
+      ok: boolean;
+      play: { width: number; height: number; title: string; hasUpdate: boolean; status: number; rgba?: Uint8Array } | null;
+      tones: number[];
+    };
+    assert.equal(surfRunRes.ok, true);
+    assert(surfRunRes.play !== null && surfRunRes.play.rgba instanceof Uint8Array);
+    assert.equal(surfRunRes.play.width, 8);
+    assert.equal(surfRunRes.play.height, 6);
+    assert.equal(surfRunRes.play.hasUpdate, true);
+    assert.equal(surfRunRes.play.status, 0);
+    assert.equal(surfRunRes.play.rgba[((1 * 8) + 1) * 4 + 1], 255);
+
+    const surfStepRes = await send({ id: 12, action: 'step', dt: 0.016 }) as unknown as {
+      ok: boolean;
+      status: number;
+      frame: { rgba?: Uint8Array };
+    };
+    assert.equal(surfStepRes.ok, true);
+    assert.equal(surfStepRes.status, 0);
+    assert(surfStepRes.frame.rgba instanceof Uint8Array);
+    assert.equal(surfStepRes.frame.rgba[((1 * 8) + 2) * 4 + 1], 255);
+
+    const surfKeyRes = await send({ id: 13, action: 'keydown', key: 'ArrowRight' }) as unknown as {
+      ok: boolean;
+      frame: { rgba?: Uint8Array };
+      tones: number[];
+    };
+    assert.equal(surfKeyRes.ok, true);
+    assert(surfKeyRes.frame.rgba instanceof Uint8Array);
+    assert.equal(surfKeyRes.frame.rgba[((1 * 8) + 5) * 4 + 1], 255);
+    assert.deepEqual(surfKeyRes.tones, [660, 50, 30]);
+
     await mockSelf.onmessage!({ data: { action: 'stop' } });
 
     const stdinWaitRes = await send({
@@ -2299,5 +2381,99 @@ test('play keepalive preserves Play bridge exports and callbacks across -O0..-O3
     assert.match(stripped, /\bfunction liteFn_onCanvasInit\b/, `-O${lv} missing onCanvasInit`);
     assert(!stripped.includes('litePlayKeepalive99'), `-O${lv} leaked litePlayKeepalive99`);
     assert(!stripped.includes('if (false)'), `-O${lv} leaked if (false) keepalive block`);
+  }
+});
+
+test('renderFrameToImageData copies direct rgba buffers and createCanvasSurfaceHost mounts surface.run without Node or SharedArrayBuffer', () => {
+  const rgbaOut = new Uint8ClampedArray(2 * 2 * 4);
+  renderFrameToImageData(
+    { width: 2, height: 2, rgba: new Uint8Array([10, 20, 30, 255, 40, 50, 60, 255, 0, 0, 0, 255, 1, 2, 3, 255]) },
+    rgbaOut,
+    2,
+    2,
+  );
+  assert.deepEqual(Array.from(rgbaOut.slice(0, 8)), [10, 20, 30, 255, 40, 50, 60, 255]);
+
+  const compiler = buildTsCompiler();
+  const src = [
+    'surf := import "extra/surface";',
+    'win := surf.open("MountTest", 6, 4);',
+    'var x := 0.0;',
+    'surf.run(win, fn(inp: surf.FrameInput): Bool {',
+    '  if not inp.open { return false; }',
+    '  if inp.key == "ArrowRight" { x = x + 1.0; surf.playTone(win, 523, 60, 25); }',
+    '  surf.clear(win, surf.BLACK);',
+    '  surf.fillRect(win, surf.rect(x, 0.0, 1.0, 1.0), surf.RED);',
+    '  x < 2.0',
+    '});',
+    'surf.close(win);',
+  ].join('\n');
+  const compiled = compileBuiltCompiler(compiler, { text: src, name: 'mount-test.lts', cwd: root });
+  assert.equal(compiled.status, 0, compiled.stderr.toString('utf8'));
+  const js = stripLiteTs(compiled.stdout.toString('utf8')).replace(/\bexport function main\b/, 'function main');
+
+  const listeners = new Map<string, Array<(ev: unknown) => void>>();
+  let putData: Uint8ClampedArray | null = null;
+  let rafQueue: Array<(t: number) => void> = [];
+  const playedTones: number[][] = [];
+  const mockCanvas = {
+    width: 0,
+    height: 0,
+    title: '',
+    getContext: () => ({
+      createImageData: (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+      putImageData: (img: { data: Uint8ClampedArray }) => { putData = new Uint8ClampedArray(img.data); },
+    }),
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 6, height: 4 }),
+    addEventListener: (type: string, handler: (ev: unknown) => void) => {
+      const list = listeners.get(type) ?? [];
+      list.push(handler);
+      listeners.set(type, list);
+    },
+    removeEventListener: (type: string, handler: (ev: unknown) => void) => {
+      const list = listeners.get(type) ?? [];
+      listeners.set(type, list.filter((fn) => fn !== handler));
+    },
+  };
+  const mounted = createCanvasSurfaceHost(mockCanvas, {
+    audio: {
+      unlock: () => {},
+      playTones: (vals) => { playedTones.push(Array.from(vals)); },
+      setMuted: () => {},
+      isMuted: () => false,
+    },
+    requestAnimationFrame: (cb) => { rafQueue.push(cb); return rafQueue.length; },
+    cancelAnimationFrame: () => { rafQueue = []; },
+  });
+
+  const g = globalThis as unknown as { __liteSurfaceHost?: unknown; SharedArrayBuffer?: unknown };
+  const prevHost = g.__liteSurfaceHost;
+  const prevSab = g.SharedArrayBuffer;
+  try {
+    g.__liteSurfaceHost = mounted.host;
+    g.SharedArrayBuffer = undefined;
+    const runMounted = new Function(js + '\nreturn main();') as () => void;
+    runMounted();
+    assert.equal(mockCanvas.title, 'MountTest');
+    assert.equal(mockCanvas.width, 6);
+    assert.equal(mockCanvas.height, 4);
+    assert(putData !== null);
+    assert.equal(putData![0], 255);
+    assert.equal(putData![1], 0);
+
+    for (const fn of listeners.get('keydown') ?? []) {
+      fn({ key: 'ArrowRight', preventDefault: () => {} });
+    }
+    const step1 = rafQueue.shift();
+    assert(step1 !== undefined);
+    step1(32);
+    assert.equal(putData![4], 255);
+    assert.deepEqual(playedTones, [[523, 60, 25]]);
+    mounted.stop();
+    assert.equal((listeners.get('keydown') ?? []).length, 0);
+  } finally {
+    mounted.stop();
+    g.__liteSurfaceHost = prevHost;
+    g.SharedArrayBuffer = prevSab;
   }
 });

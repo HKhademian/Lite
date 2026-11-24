@@ -537,7 +537,159 @@ function attachPlayBridge(js) {
 }
 
 function drainTones() {
-  return globalThis.__liteAudioDrain ? globalThis.__liteAudioDrain() : [];
+  const playTones = globalThis.__liteAudioDrain ? globalThis.__liteAudioDrain() : [];
+  const surfTones = globalThis.__liteSurfaceDrain ? globalThis.__liteSurfaceDrain() : [];
+  if (playTones.length === 0) return surfTones;
+  if (surfTones.length === 0) return playTones;
+  return [...playTones, ...surfTones];
+}
+
+function createWorkerSurfaceHost() {
+  let lastSurface = null;
+  let pointerX = 0;
+  let pointerY = 0;
+  let pointerDown = false;
+  let pendingKey = '';
+  let pendingDeltaMs = -1;
+  const tones = [];
+  globalThis.__liteSurfaceDrain = () => {
+    if (tones.length === 0) return [];
+    const out = tones.slice();
+    tones.length = 0;
+    return out;
+  };
+  const host = {
+    open(_id, title, width, height, state) {
+      lastSurface = { title, width, height, state };
+    },
+    poll(_id, state) {
+      state.pointerX = pointerX;
+      state.pointerY = pointerY;
+      state.pointerDown = pointerDown;
+      if (pendingKey) {
+        state.key = pendingKey;
+        pendingKey = '';
+      }
+      if (pendingDeltaMs >= 0) {
+        state.pendingDeltaMs = pendingDeltaMs;
+        pendingDeltaMs = -1;
+      }
+    },
+    present(_id, state) {
+      if (lastSurface) {
+        lastSurface.width = state.w;
+        lastSurface.height = state.h;
+        lastSurface.title = state.title;
+      }
+    },
+    close(_id, state) {
+      state.open = false;
+    },
+    playTone(_id, frequency, durationMs, volume) {
+      if (
+        Number.isFinite(frequency) && frequency >= 20 && frequency <= 20000 &&
+        Number.isFinite(durationMs) && durationMs > 0 && durationMs <= 3000 &&
+        Number.isFinite(volume) && volume > 0 && volume <= 100
+      ) {
+        tones.push(Number(frequency), Number(durationMs), Number(volume));
+      }
+    },
+    resize(_id, width, height, state) {
+      if (lastSurface) {
+        lastSurface.width = width;
+        lastSurface.height = height;
+        lastSurface.title = state.title;
+      }
+    },
+    run(_surface, state, onFrame, api) {
+      let running = true;
+      let closed = false;
+      const closeSession = () => {
+        running = false;
+        if (!closed) {
+          closed = true;
+          state.open = false;
+          api.close();
+        }
+      };
+      pendingDeltaMs = 16;
+      const keepGoing = Boolean(onFrame(api.poll()));
+      if (keepGoing) {
+        api.present();
+      } else {
+        closeSession();
+      }
+      globalThis.__litePlay = {
+        hasUpdate: true,
+        initialStatus: keepGoing ? 0 : 1,
+        update(dt) {
+          if (!running || !state.open) return 1;
+          pendingDeltaMs = Math.max(0, Math.round(Number(dt ?? 0) * 1000));
+          const ok = Boolean(onFrame(api.poll()));
+          if (ok && state.open) {
+            api.present();
+            return 0;
+          }
+          closeSession();
+          return 1;
+        },
+        keyDown(k) {
+          if (!running || !state.open) return;
+          pendingKey = String(k ?? '');
+          pendingDeltaMs = 0;
+          const ok = Boolean(onFrame(api.poll()));
+          if (ok && state.open) {
+            api.present();
+          } else {
+            closeSession();
+          }
+        },
+        keyUp(_k) {},
+        pointerMove(x, y) {
+          pointerX = Number(x ?? 0);
+          pointerY = Number(y ?? 0);
+        },
+        pointerDown(x, y, _b) {
+          pointerX = Number(x ?? 0);
+          pointerY = Number(y ?? 0);
+          pointerDown = true;
+        },
+        pointerUp(x, y, _b) {
+          pointerX = Number(x ?? 0);
+          pointerY = Number(y ?? 0);
+          pointerDown = false;
+        },
+        stop() {
+          closeSession();
+        },
+        frame() {
+          return {
+            width: state.w,
+            height: state.h,
+            title: state.title,
+            playing: running && state.open,
+            rgba: new Uint8Array(state.pixels),
+          };
+        },
+      };
+      return true;
+    },
+  };
+  return {
+    host,
+    staticFrame() {
+      if (!lastSurface || !lastSurface.state) return null;
+      const s = lastSurface.state;
+      if (s.w < 1 || s.h < 1) return null;
+      return {
+        width: s.w,
+        height: s.h,
+        title: s.title,
+        playing: false,
+        rgba: new Uint8Array(s.pixels),
+      };
+    },
+  };
 }
 
 self.onmessage = async (event) => {
@@ -547,7 +699,12 @@ self.onmessage = async (event) => {
   const extraCompilerFlags = sanitizeCompilerFlags(compilerFlags);
   try {
     if (action === 'stop') {
+      if (globalThis.__litePlay && typeof globalThis.__litePlay.stop === 'function') {
+        globalThis.__litePlay.stop();
+      }
       globalThis.__litePlay = null;
+      globalThis.__liteSurfaceHost = null;
+      globalThis.__liteSurfaceDrain = null;
       globalThis.__liteAudioDrain = null;
       return;
     }
@@ -665,6 +822,8 @@ self.onmessage = async (event) => {
       let allPassed = true;
       for (const tc of rawCases) {
         globalThis.__litePlay = null;
+        globalThis.__liteSurfaceHost = null;
+        globalThis.__liteSurfaceDrain = null;
         globalThis.__liteAudioDrain = null;
         const caseArgs = Array.isArray(tc.args) ? tc.args : [];
         const expectedStdout = typeof tc.expectedStdout === 'string' ? tc.expectedStdout : '';
@@ -696,6 +855,8 @@ self.onmessage = async (event) => {
         }
       }
       globalThis.__litePlay = null;
+      globalThis.__liteSurfaceHost = null;
+      globalThis.__liteSurfaceDrain = null;
       globalThis.__liteAudioDrain = null;
       self.postMessage({
         id,
@@ -709,8 +870,13 @@ self.onmessage = async (event) => {
       return;
     }
 
+    if (globalThis.__litePlay && typeof globalThis.__litePlay.stop === 'function') {
+      globalThis.__litePlay.stop();
+    }
     globalThis.__litePlay = null;
     globalThis.__liteAudioDrain = null;
+    const surfaceHost = createWorkerSurfaceHost();
+    globalThis.__liteSurfaceHost = surfaceHost.host;
     const stripped = stripLiteTs(ts).replace(/export function main\\b/, 'function main');
     const js = attachPlayBridge(stripped);
     const runner = new Function('process', js + '\\nreturn main();');
@@ -735,12 +901,14 @@ self.onmessage = async (event) => {
     );
     const runMs = Math.round((performance.now() - runStart) * 10) / 10;
     const session = globalThis.__litePlay;
-    const frame = session ? session.frame() : null;
+    const frame = session ? session.frame() : surfaceHost.staticFrame();
     const hasCanvas = Boolean(frame && frame.width > 0 && frame.height > 0);
     const isInteractive = Boolean(session && (frame.playing || session.hasUpdate));
     const tones = drainTones();
     if (!isInteractive) {
       globalThis.__litePlay = null;
+      globalThis.__liteSurfaceHost = null;
+      globalThis.__liteSurfaceDrain = null;
       globalThis.__liteAudioDrain = null;
     }
     const combinedStderr = [compileResult.stderr, runResult.stderr].filter(Boolean).join('\\n');
