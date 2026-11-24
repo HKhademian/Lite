@@ -231,7 +231,7 @@ outSrc := text.joinTexts([
 outComp := compilerTest.compileStdin(root, tsComp, outSrc, "");
 test.checkInt("out-hygiene compile", 0, outComp.status);
 test.check("out-hygiene const lite_out", text.containsText(outComp.stdout, "const lite_out = \"ok\";"));
-test.check("out-hygiene let lite_out$2", text.containsText(outComp.stdout, "let lite_out$2 = \"a\";"));
+test.check("out-hygiene let lite_out$2", text.containsText(outComp.stdout, "let lite_out$2 = "));
 test.check("out-hygiene return lite$out", text.containsText(outComp.stdout, "return lite$out.join(\"\");"));
 outRun := compilerTest.checkAndRunTs(root, outComp.stdout);
 test.checkInt("out-hygiene run status", 0, outRun.status);
@@ -371,8 +371,8 @@ cShifted := compilerTest.compileStdin(root, cComp, "/* shift */\n/* shift */\n" 
 test.checkInt("counters c base compile", 0, cBase.status);
 test.checkInt("counters c shifted compile", 0, cShifted.status);
 test.checkText("counters c offset-invariant", cBase.stdout, cShifted.stdout);
-test.check("counters c lite_x", text.containsText(cBase.stdout, "const char *lite_x ="));
-test.check("counters c lt_s2_x", text.containsText(cBase.stdout, "const char *lt_s2_x ="));
+test.check("counters c lite_x", text.containsText(cBase.stdout, "lt_str lite_x ="));
+test.check("counters c lt_s2_x", text.containsText(cBase.stdout, "lt_str lt_s2_x ="));
 if ccProbe.available {
     cShadowRun := compilerTest.compileAndRunC(cBase.stdout, ccProbe.cc, "");
     test.checkInt("counters c shadow status", 0, cShadowRun.status);

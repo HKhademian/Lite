@@ -231,7 +231,7 @@ export function prepareTsArtifacts(sources: readonly string[], options: Readonly
       const artifact = join(itemDirectory, 'artifact.ts');
       const runner = join(itemDirectory, 'runner.ts');
       writeFileSync(artifact, source);
-      writeFileSync(runner, "import { main } from './artifact.ts';\nimport { writeSync } from 'node:fs';\nprocess.stdout.write(main((text: string): void => { writeSync(1, text); }));\n");
+      writeFileSync(runner, "import { main } from './artifact.ts';\nimport { writeSync } from 'node:fs';\nconst tok = {}; let code = 0; const origExit = process.exit;\n(process as unknown as { exit: (c?: number) => never }).exit = (c?: number): never => { code = c ?? 0; throw tok; };\ntry { process.stdout.write(main((text: string): void => { writeSync(1, text); })); }\ncatch (e) { if (e === tok) process.exitCode = code; else throw e; }\nfinally { process.exit = origExit; }\n");
       artifacts.push(artifact);
       return runner;
     });

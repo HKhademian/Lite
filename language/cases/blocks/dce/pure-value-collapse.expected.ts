@@ -1,12 +1,11 @@
 export function main(lite$write?: (text: string) => void): string {
-    let lite$out = "";
+    const lite$out: string[] = [];
     function lite$emit(text: string): void {
-        if (lite$write === undefined) lite$out += text;
+        if (lite$write === undefined) lite$out.push(text);
         else lite$write(text);
     }
-    void lite$emit;
     const lite_x = 5n;
     void lite_x;
     lite$emit((lite_x).toString() + "\n");
-    return lite$out;
+    return lite$out.join("");
 }

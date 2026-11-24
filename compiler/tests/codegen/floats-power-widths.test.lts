@@ -149,6 +149,16 @@ loop narrowPanics as pc {
 narrowTsOnly := "io := import \"core/io\";\nByte := type Int8;\nHalf := type Float32;\nwiden := fn(x: Int16): Int32 { one: Int16 = 1; x + one }\ntoHalf := fn(x: Byte): Half { x }\na8: Byte = 5;\nb16: Int16 = 300;\nf32: Half = 0.25;\nifJoined := if true { a8 } else { b16 };\nmatchJoined := match { false { a8 } _ { f32 } };\nbytes: List<Int8> = [1, -128, 127];\nblankPair: (a: Int8, b: Float32);\nio.outputLine(widen(a8), toHalf(a8), ifJoined, matchJoined, bytes, blankPair);\n";
 compilerTest.assertCompileRunTs(root, tsComp, "narrow-ts-only", narrowTsOnly, "6 5 5 0.25 [1, -128, 127] (a=0, b=0)\n");
 
+narrowIndexWidenSrc := "io := import \"core/io\";\nxs := [10, 20];\ni: Int8 = 1;\nio.outputLine(xs[i]);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "narrow-index-widen-ts", narrowIndexWidenSrc, "20\n");
+cNarrowIdx := compilerTest.compileStdin(root, cComp, narrowIndexWidenSrc, "");
+test.checkInt("narrow-index-widen-c compile", 0, cNarrowIdx.status);
+if ccProbe.available {
+    cNarrowIdxRun := compilerTest.compileAndRunC(cNarrowIdx.stdout, ccProbe.cc, "");
+    test.checkInt("narrow-index-widen-c status", 0, cNarrowIdxRun.status);
+    test.checkText("narrow-index-widen-c stdout", "20\n", cNarrowIdxRun.stdout);
+}
+
 narrowRejects: List<(bad: String, m1: String, m2: String, checkC: Bool)> = [
     (bad = "x: Int8 = 128;", m1 = "integer literal outside Int8 range", m2 = "cannot initialize Int8", checkC = true),
     (bad = "x: Int8 = -129;", m1 = "integer literal outside Int8 range", m2 = "cannot initialize Int8", checkC = true),
@@ -166,7 +176,7 @@ narrowRejects: List<(bad: String, m1: String, m2: String, checkC: Bool)> = [
     (bad = "a32: Int32 = 1; f32: Float32 = 2.0; x := if true { a32 } else { f32 };", m1 = "value if branches must have the same kind", m2 = "value if branches must have the same kind", checkC = false),
     (bad = "xs: List<Int8> = [1]; ys: List<Int16> = xs;", m1 = "cannot initialize List<Int16> with List<Int8>", m2 = "cannot initialize List<Int16> with List<Int8>", checkC = false),
     (bad = "a8: Int8 = 1; b16: Int16 = 2; arr := [a8, b16];", m1 = "list element 2 must be Int8, got Int16", m2 = "list element 2 must be Int8, got Int16", checkC = false),
-    (bad = "xs := [10, 20]; i: Int8 = 0; y := xs[i];", m1 = "array index must be Int", m2 = "index must be Int", checkC = false)
+    (bad = "xs := [10, 20]; f: Float32 = 0.0; y := xs[f];", m1 = "index must be Int, got Float32", m2 = "index must be Int", checkC = true)
 ];
 loop narrowRejects as nr {
     rTs := compilerTest.compileStdin(root, tsComp, nr.bad, "");

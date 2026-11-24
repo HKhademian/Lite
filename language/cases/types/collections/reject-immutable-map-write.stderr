@@ -1,1 +1,1 @@
-language/cases/types/collections/reject-immutable-map-write.lts:2:1: cannot mutate immutable map m
+language/cases/types/collections/reject-immutable-map-write.lts:2:1: cannot mutate read-only value m via index assignment

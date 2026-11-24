@@ -2884,9 +2884,24 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if usesHostOs(calls) or usesBuiltin(calls, "inputArgs") {
         outLine("");
         outLine("if ((import.meta as { readonly main?: boolean }).main === true) {");
-        outLine("    main((text: string): void => {");
-        outLine("        process.getBuiltinModule(\"node:fs\").writeSync(1, text);");
-        outLine("    });");
+        outLine("    const lite$exitTok = {};");
+        outLine("    let lite$exitCode = 0;");
+        outLine("    const lite$proc = process as { exit: (code: number) => never; exitCode?: number };");
+        outLine("    const lite$origExit = lite$proc.exit;");
+        outLine("    lite$proc.exit = (code: number): never => { lite$exitCode = code; throw lite$exitTok; };");
+        outLine("    try {");
+        outLine("        main((text: string): void => {");
+        outLine("            process.getBuiltinModule(\"node:fs\").writeSync(1, text);");
+        outLine("        });");
+        outLine("    } catch (lite$err) {");
+        outLine("        if (lite$err === lite$exitTok) {");
+        outLine("            lite$proc.exitCode = lite$exitCode;");
+        outLine("        } else {");
+        outLine("            throw lite$err;");
+        outLine("        }");
+        outLine("    } finally {");
+        outLine("        lite$proc.exit = lite$origExit;");
+        outLine("    }");
         outLine("}");
     }
     tsCompactEmit = prevCompact;

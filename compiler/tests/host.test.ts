@@ -282,8 +282,8 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
 
 test('selected compiler build exposes its imported source dependencies', () => {
   const selected = buildCompiler('ts');
-  assert.deepEqual(selected.dependencies.slice(0, 2), [
-    'compiler/src/ts-root.lts', 'compiler/src/driver-ts.lts',
+  assert.deepEqual(selected.dependencies.slice(0, 4), [
+    'compiler/src/ts-root.lts', 'lib/core/int.lts', 'lib/core/text.lts', 'compiler/src/driver-ts.lts',
   ]);
   assert.ok(selected.dependencies.includes('compiler/src/frontend.lts'));
   assert.ok(selected.dependencies.includes('compiler/src/host-fs.lts'));
@@ -408,11 +408,11 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     assert.equal(afterRemoval.length, 4);
     const expectedRemovedDeps = [
       'compiler/src/fixture-root.lts',
+      'lib/core/int.lts',
+      'lib/core/text.lts',
       'lib/core/io.lts',
       'lib/core/list.lts',
       'lib/core/unicode.lts',
-      'lib/core/text.lts',
-      'lib/core/int.lts',
     ];
     const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })
       .find(item => item.dependencies.length === expectedRemovedDeps.length && expectedRemovedDeps.every((dep, idx) => item.dependencies[idx] === dep));

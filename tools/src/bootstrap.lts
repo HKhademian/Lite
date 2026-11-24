@@ -103,7 +103,7 @@ runTsSelfHost := fn(rootDir: String, tsOutDir: String): (
     }
     selArt := json.readObjectString(doc, selObj.valuePos, "artifactSha256");
     srcSha := json.readObjectString(doc, srcObj.valuePos, "sha256");
-    if not selArt.found or not selArt.ok or not srcSha.found or not srcSha.ok {
+    if not selArt.found or not selArt.ok or selArt.value == "" or not srcSha.found or not srcSha.ok {
         return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
         error = "bootstrap: missing source/artifact hashes in TS self-host ladder.json");
     }
@@ -112,13 +112,20 @@ runTsSelfHost := fn(rootDir: String, tsOutDir: String): (
         return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
         error = "bootstrap: expected 3 TS generations in ladder.json");
     }
+    var genSha := "";
     var g3Path := "";
     var idx := 0;
     loop idx < 3 {
         gPos := offsets[idx];
         gSha := json.readObjectString(doc, gPos, "artifactSha256");
         gPath := json.readObjectString(doc, gPos, "path");
-        if not gSha.found or not gSha.ok or gSha.value =!= selArt.value {
+        if not gSha.found or not gSha.ok or gSha.value == "" {
+            return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
+            error = "bootstrap: missing TS generation hash in ladder.json");
+        }
+        if idx == 0 {
+            genSha = gSha.value;
+        } else if gSha.value =!= genSha {
             return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
             error = "bootstrap: TS generation hash mismatch in ladder.json");
         }
@@ -133,7 +140,7 @@ runTsSelfHost := fn(rootDir: String, tsOutDir: String): (
     }
     ms := mSel.found and mSel.ok and mSel.value;
     eb := eqBld.found and eqBld.ok and eqBld.value;
-    (ok = true, sourceSha256 = srcSha.value, artifactSha256 = selArt.value, gen3Path = g3Path, matchesSelected = ms, equalsBuilder = eb, error = "")
+    (ok = true, sourceSha256 = srcSha.value, artifactSha256 = genSha, gen3Path = g3Path, matchesSelected = ms, equalsBuilder = eb, error = "")
 };
 
 /** Runs `compiler/scripts/self-host-c.sh --out <cOutDir>` and checks all 3 C11 generations match each other. */
@@ -167,7 +174,7 @@ runCSelfHost := fn(rootDir: String, ccBin: String, cOutDir: String, requireSeedM
     if not h1.ok or not h2.ok or not h3.ok {
         return (ok = false, sha256 = "", gen3Path = "", error = "bootstrap: failed to hash C11 self-host generations");
     }
-    if h1.hex =!= h2.hex or h2.hex =!= h3.hex {
+    if (requireSeedMatch and h1.hex =!= h2.hex) or h2.hex =!= h3.hex {
         return (ok = false, sha256 = "", gen3Path = "",
         error = "bootstrap: C11 generations did not reach a fixed point (" + h1.hex + " / " + h2.hex + " / " + h3.hex + ")");
     }

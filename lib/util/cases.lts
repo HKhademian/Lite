@@ -512,10 +512,15 @@ pub writeTsRunner := fn(runnerPath: String): (ok: Bool, error: String) {
     "import { writeSync } from 'node:fs';\n" +
     "const mod = await import(pathToFileURL(process.argv[2]!).href);\n" +
     "process.argv = [process.execPath, process.argv[2]!, ...process.argv.slice(3)];\n" +
-    "const out = mod.main((text: string): void => { writeSync(1, text); });\n" +
-    "if (out === undefined) { process.exitCode = 2; }\n" +
-    "else if (typeof out !== 'string') { process.stderr.write('artifact main did not return text\\n'); process.exitCode = 1; }\n" +
-    "else if (out.length > 0) { writeSync(1, out); }\n";
+    "const tok = {}; let code = 0; const origExit = process.exit;\n" +
+    "(process as unknown as { exit: (c?: number) => never }).exit = (c?: number): never => { code = c ?? 0; throw tok; };\n" +
+    "try {\n" +
+    "  const out = mod.main((text: string): void => { writeSync(1, text); });\n" +
+    "  if (out === undefined) { process.exitCode = 2; }\n" +
+    "  else if (typeof out !== 'string') { process.stderr.write('artifact main did not return text\\n'); process.exitCode = 1; }\n" +
+    "  else if (out.length > 0) { writeSync(1, out); }\n" +
+    "} catch (e) { if (e === tok) process.exitCode = code; else throw e; }\n" +
+    "finally { process.exit = origExit; }\n";
     fs.writeText(runnerPath, code)
 }
 
