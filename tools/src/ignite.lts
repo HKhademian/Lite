@@ -9,6 +9,7 @@ path := import "core/path";
 proc := import "core/process";
 set := import "core/set";
 text := import "core/text";
+pool := import "external/pool";
 cases := import "util/cases";
 json := import "util/json";
 project := import "util/project";
@@ -175,7 +176,7 @@ ensureDistCCompiler := fn(rootDir: String, expectedCSha: String, ccCmd: String, 
         return (ok = false, path = "", error = mkRes.error);
     }
     emptyEnv: List<String> = [];
-    ccArgs: List<String> = ["-std=c11", "-O2", seedCPath, "-o", binPath, "-lm"];
+    ccArgs: List<String> = ["-std=c11", "-O0", seedCPath, "-o", binPath, "-lm"];
     ccRes := proc.run(ccCmd, ccArgs, rootDir, emptyEnv, true, "");
     if ccRes.error =!= "" or ccRes.status =!= 0 {
         detail := if ccRes.error =!= "" { ccRes.error } else { text.trim(ccRes.stderr) };
@@ -337,6 +338,44 @@ artSha: String, canonSource: String, graph: frontend.Items, fallbackFromC: Bool
     (ok = true, error = "")
 };
 
+/** Parses a decimal positive integer >= 1 for `--jobs`. */
+parsePositiveJobs := fn(raw: String): (ok: Bool, value: Int) {
+    size := text.length(raw);
+    if size == 0 { return (ok = false, value = 0); }
+    var i := 0;
+    loop i < size {
+        if not text.isDigit(text.at(raw, i)) { return (ok = false, value = 0); }
+        i = i + 1;
+    }
+    parsed := text.textToInt(raw);
+    if not parsed.ok or parsed.value < 1 { return (ok = false, value = 0); }
+    (ok = true, value = parsed.value)
+};
+
+/** Checks cached provenance for `name` under `target` (and TS fallback when enabled in `c` mode). */
+findCachedTool := fn(
+rootDir: String, name: String, target: String, allowTsFallback: Bool, tsCompilerSha: String, cCompilerSha: String
+): (valid: Bool, target: String, path: String, sha256: String) {
+    if target == "ts" {
+        prev := readValidProvenance(rootDir, name, "ts", tsCompilerSha, false);
+        if prev.valid {
+            return (valid = true, target = "ts", path = prev.path, sha256 = prev.sha256);
+        }
+        return (valid = false, target = "", path = "", sha256 = "");
+    }
+    prevC := readValidProvenance(rootDir, name, "c", cCompilerSha, false);
+    if prevC.valid {
+        return (valid = true, target = "c", path = prevC.path, sha256 = prevC.sha256);
+    }
+    if allowTsFallback {
+        prevFb := readValidProvenance(rootDir, name, "ts", tsCompilerSha, true);
+        if prevFb.valid {
+            return (valid = true, target = "ts", path = prevFb.path, sha256 = prevFb.sha256);
+        }
+    }
+    (valid = false, target = "", path = "", sha256 = "")
+};
+
 /** Compiles `tools/src/<name>.lts` in-process to `dist/tools/<name>.ts` + provenance. */
 igniteSingleToolTs := fn(
 rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: String, force: Bool, fallbackFromC: Bool
@@ -419,15 +458,9 @@ tsCompilerSha: String, cCompilerSha: String, compilerSourceSha: String, force: B
     artifactPath := path.join(distDir, name);
 
     if not force {
-        prevC := readValidProvenance(rootDir, name, "c", cCompilerSha, false);
-        if prevC.valid {
-            return (ok = true, path = prevC.path, target = "c", sha256 = prevC.sha256, rebuilt = false, error = "");
-        }
-        if allowTsFallback {
-            prevFb := readValidProvenance(rootDir, name, "ts", tsCompilerSha, true);
-            if prevFb.valid {
-                return (ok = true, path = prevFb.path, target = "ts", sha256 = prevFb.sha256, rebuilt = false, error = "");
-            }
+        cached := findCachedTool(rootDir, name, "c", allowTsFallback, tsCompilerSha, cCompilerSha);
+        if cached.valid {
+            return (ok = true, path = cached.path, target = cached.target, sha256 = cached.sha256, rebuilt = false, error = "");
         }
     }
 
@@ -685,6 +718,7 @@ run := fn(rawArgs: List<String>): Unit {
     var installDeps := true;
     var verifyAfter := false;
     var jsonOutput := false;
+    var maxJobs := 0;
     var ensureName := "";
     var runToolName := "";
     selected: mut List<String> = [];
@@ -720,6 +754,24 @@ run := fn(rawArgs: List<String>): Unit {
             verifyAfter = true;
         } else if arg == "--json" {
             jsonOutput = true;
+        } else if arg == "--jobs" {
+            if list.listCountText(args) == 0 {
+                io.errorLine("ignite: missing count after --jobs");
+                io.exit(2);
+            }
+            jobsVal := parsePositiveJobs(list.popFront(mut args));
+            if not jobsVal.ok {
+                io.errorLine("ignite: invalid --jobs value (expected positive integer)");
+                io.exit(2);
+            }
+            maxJobs = jobsVal.value;
+        } else if text.startsWithAt(arg, 0, "--jobs=") {
+            jobsVal := parsePositiveJobs(text.slice(arg, 7, text.length(arg)));
+            if not jobsVal.ok {
+                io.errorLine("ignite: invalid --jobs value (expected positive integer)");
+                io.exit(2);
+            }
+            maxJobs = jobsVal.value;
         } else if arg == "--ensure" {
             if list.listCountText(args) == 0 {
                 io.errorLine("ignite: missing tool name for --ensure");
@@ -737,7 +789,7 @@ run := fn(rawArgs: List<String>): Unit {
             }
             break;
         } else if arg == "--help" or arg == "-h" {
-            io.outputLine("Usage: ./bin/lite-ignite [--target c|ts|auto] [--c|--ts] [--check] [--force] [--clean] [--wipe [--no-install] [--no-check] [--verify]] [--json] [TOOL...]");
+            io.outputLine("Usage: ./bin/lite-ignite [--target c|ts|auto] [--c|--ts] [--check] [--force] [--clean] [--wipe [--no-install] [--no-check] [--verify]] [--jobs N] [--json] [TOOL...]");
             io.exit(0);
         } else if text.startsWithAt(arg, 0, "-") {
             io.errorLine("ignite: unknown option " + arg);
@@ -786,46 +838,203 @@ run := fn(rawArgs: List<String>): Unit {
 
     check := if noCheck { false } else if checkExplicit { true } else if wipe { fs.kind(path.join(rootDir, "igniter/node_modules/typescript/bin/tsc")) == fs.FILE_KIND_FILE } else { false };
 
-    if list.listCountText(selected) == 0 {
+    targetNames := if list.listCountText(selected) > 0 { selected } else { listToolNames(rootDir) };
+    totalTools := list.listCountText(targetNames);
+    if list.listCountText(selected) == 0 or totalTools > 1 {
         if tgt.target == "c" {
-            cBoot := ensureDistCCompiler(rootDir, seedInfo.cArtifactSha256, tgt.cc, force);
+            cBoot := ensureDistCCompiler(rootDir, seedInfo.cArtifactSha256, tgt.cc, force and list.listCountText(selected) == 0);
             if not cBoot.ok {
                 io.errorLine(cBoot.error);
                 io.exit(1);
             }
         }
-        distComp := ensureDistCompiler(rootDir, seedInfo.artifactSha256, force);
-        if not distComp.ok {
-            io.errorLine(distComp.error);
+        if list.listCountText(selected) == 0 {
+            distComp := ensureDistCompiler(rootDir, seedInfo.artifactSha256, force);
+            if not distComp.ok {
+                io.errorLine(distComp.error);
+                io.exit(1);
+            }
+        }
+    }
+    mkDistTools := fs.makeDir(path.join(rootDir, "dist/tools"));
+    if not mkDistTools.ok {
+        io.errorLine("ignite: " + mkDistTools.error);
+        io.exit(1);
+    }
+
+    resTarget: mut List<String> = [];
+    resPath: mut List<String> = [];
+    resSha: mut List<String> = [];
+    resRebuilt: mut List<Bool> = [];
+    pendingIndices: mut List<Int> = [];
+
+    var si := 0;
+    loop si < totalTools {
+        toolName := targetNames[si];
+        var hit := false;
+        if not force {
+            cached := findCachedTool(rootDir, toolName, tgt.target, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256);
+            if cached.valid {
+                list.pushBack(mut resTarget, cached.target);
+                list.pushBack(mut resPath, cached.path);
+                list.pushBack(mut resSha, cached.sha256);
+                list.pushBack(mut resRebuilt, false);
+                hit = true;
+            }
+        }
+        if not hit {
+            list.pushBack(mut resTarget, "");
+            list.pushBack(mut resPath, "");
+            list.pushBack(mut resSha, "");
+            list.pushBack(mut resRebuilt, false);
+            list.pushBack(mut pendingIndices, si);
+        }
+        si = si + 1;
+    }
+
+    pendingCount := list.listCountInt(pendingIndices);
+    workerBudget := if maxJobs > 0 { maxJobs } else { pool.cpuCount() };
+    if pendingCount <= 1 or workerBudget <= 1 {
+        var pi := 0;
+        loop pi < pendingCount {
+            origIdx := pendingIndices[pi];
+            toolName := targetNames[origIdx];
+            res := igniteSingleTool(rootDir, toolName, tgt.target, tgt.cc, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
+            if not res.ok {
+                io.errorLine(res.error);
+                io.exit(1);
+            }
+            resTarget[origIdx] = res.target;
+            resPath[origIdx] = res.path;
+            resSha[origIdx] = res.sha256;
+            resRebuilt[origIdx] = res.rebuilt;
+            pi = pi + 1;
+        }
+    } else {
+        workerCount := if pendingCount < workerBudget { pendingCount } else { workerBudget };
+        igniterScriptPath := path.join(rootDir, "compiler/bootstrap/igniter.ts");
+        nodeBin := project.nodeExecPath();
+        workerCmds: mut List<String> = [];
+        workerArgsJson: mut List<String> = [];
+        var w := 0;
+        loop w < workerCount {
+            wArgs: mut List<String> = [
+                json.quoteString(igniterScriptPath),
+                "\"--jobs\"",
+                "\"1\"",
+                "\"--target\"",
+                json.quoteString(tgt.target),
+                "\"--json\""
+            ];
+            if force {
+                list.pushBack(mut wArgs, "\"--force\"");
+            }
+            var p := w;
+            loop p < pendingCount {
+                list.pushBack(mut wArgs, json.quoteString(targetNames[pendingIndices[p]]));
+                p = p + workerCount;
+            }
+            list.pushBack(mut workerCmds, nodeBin);
+            list.pushBack(mut workerArgsJson, "[" + text.joinTexts(wArgs, ",") + "]");
+            w = w + 1;
+        }
+
+        poolRaw := pool.runPoolJson(workerCmds, workerArgsJson, rootDir, workerCount);
+        poolOffsets := json.arrayElementOffsets(poolRaw, 0);
+        if list.listCountInt(poolOffsets) =!= workerCount {
+            io.errorLine("ignite: parallel worker pool returned malformed result count");
             io.exit(1);
+        }
+
+        w = 0;
+        loop w < workerCount {
+            elemPos := poolOffsets[w];
+            statusRes := json.readObjectInt(poolRaw, elemPos, "status");
+            outRes := json.readObjectString(poolRaw, elemPos, "stdout");
+            errRes := json.readObjectString(poolRaw, elemPos, "stderr");
+            errorRes := json.readObjectString(poolRaw, elemPos, "error");
+            wStatus := if statusRes.found and statusRes.ok { statusRes.value } else { -1 };
+            wErr := if errorRes.found and errorRes.ok { errorRes.value } else { "" };
+            wOut := if outRes.found and outRes.ok { outRes.value } else { "" };
+            wStderr := if errRes.found and errRes.ok { errRes.value } else { "" };
+            if wStatus =!= 0 or wErr =!= "" {
+                var detail := "";
+                if wErr =!= "" { detail = wErr; }
+                if text.trim(wStderr) =!= "" {
+                    if detail =!= "" { detail = detail + "\n"; }
+                    detail = detail + text.trimEnd(wStderr);
+                }
+                if text.trim(wOut) =!= "" {
+                    if detail =!= "" { detail = detail + "\n"; }
+                    detail = detail + text.trimEnd(wOut);
+                }
+                if detail == "" {
+                    detail = "worker " + integer.intText(w) + " exited with status " + integer.intText(wStatus);
+                }
+                io.errorLine(detail);
+                io.exit(1);
+            }
+            toolsField := json.findObjectField(wOut, 0, "tools");
+            if not toolsField.found {
+                io.errorLine("ignite: parallel worker " + integer.intText(w) + " returned unexpected JSON output");
+                io.exit(1);
+            }
+            tOffs := json.arrayElementOffsets(wOut, toolsField.valuePos);
+            var p := w;
+            var k := 0;
+            loop p < pendingCount {
+                if k >= list.listCountInt(tOffs) {
+                    io.errorLine("ignite: parallel worker " + integer.intText(w) + " tool count mismatch");
+                    io.exit(1);
+                }
+                origIdx := pendingIndices[p];
+                tPos := tOffs[k];
+                tTarget := json.readObjectString(wOut, tPos, "target");
+                tPath := json.readObjectString(wOut, tPos, "path");
+                tSha := json.readObjectString(wOut, tPos, "sha256");
+                tRebuilt := json.readObjectBool(wOut, tPos, "rebuilt");
+                if not tTarget.found or not tTarget.ok or not tPath.found or not tPath.ok or
+                   not tSha.found or not tSha.ok or not tRebuilt.found or not tRebuilt.ok {
+                    io.errorLine("ignite: parallel worker " + integer.intText(w) + " missing tool fields");
+                    io.exit(1);
+                }
+                resTarget[origIdx] = tTarget.value;
+                resPath[origIdx] = tPath.value;
+                resSha[origIdx] = tSha.value;
+                resRebuilt[origIdx] = tRebuilt.value;
+                k = k + 1;
+                p = p + workerCount;
+            }
+            w = w + 1;
         }
     }
 
-    targetNames := if list.listCountText(selected) > 0 { selected } else { listToolNames(rootDir) };
     artifactPaths: mut List<String> = [];
     tsArtifactPaths: mut List<String> = [];
     toolEntries: mut List<String> = [];
     var rebuiltCount := 0;
     var cCount := 0;
     var tsCount := 0;
-    loop targetNames as toolName {
-        res := igniteSingleTool(rootDir, toolName, tgt.target, tgt.cc, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
-        if not res.ok {
-            io.errorLine(res.error);
-            io.exit(1);
-        }
-        if res.rebuilt { rebuiltCount = rebuiltCount + 1; }
-        if res.target == "c" { cCount = cCount + 1; } else {
+    var ri := 0;
+    loop ri < totalTools {
+        toolName := targetNames[ri];
+        tTarget := resTarget[ri];
+        tPath := resPath[ri];
+        tSha := resSha[ri];
+        tRebuilt := resRebuilt[ri];
+        if tRebuilt { rebuiltCount = rebuiltCount + 1; }
+        if tTarget == "c" { cCount = cCount + 1; } else {
             tsCount = tsCount + 1;
-            list.pushBack(mut tsArtifactPaths, res.path);
+            list.pushBack(mut tsArtifactPaths, tPath);
         }
-        list.pushBack(mut artifactPaths, res.path);
+        list.pushBack(mut artifactPaths, tPath);
         entryStr := "    {\n      \"name\": " + json.quoteString(toolName)
-        + ",\n      \"target\": " + json.quoteString(res.target)
-        + ",\n      \"path\": " + json.quoteString(res.path)
-        + ",\n      \"sha256\": " + json.quoteString(res.sha256)
-        + ",\n      \"rebuilt\": " + (if res.rebuilt { "true" } else { "false" }) + "\n    }";
+        + ",\n      \"target\": " + json.quoteString(tTarget)
+        + ",\n      \"path\": " + json.quoteString(tPath)
+        + ",\n      \"sha256\": " + json.quoteString(tSha)
+        + ",\n      \"rebuilt\": " + (if tRebuilt { "true" } else { "false" }) + "\n    }";
         list.pushBack(mut toolEntries, entryStr);
+        ri = ri + 1;
     }
 
     if check and list.listCountText(tsArtifactPaths) > 0 {

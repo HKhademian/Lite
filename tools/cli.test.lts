@@ -6,6 +6,7 @@ path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
 text := import "core/text";
+pool := import "external/pool";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 json := import "util/json";
@@ -163,24 +164,58 @@ toolNames: List<String> = [
 "cli", "compile", "compile-c", "compile-ts", "checker", "check", "run",
 "run-ts-artifact", "verify", "test-runner", "test", "bench", "bootstrap", "ci", "release", "ignite"
 ];
-var compiledIgniteTs := "";
+o3DirRes := fs.makeTempDir("lite-cli-o3-");
+test.check("o3Dir makeTempDir: " + o3DirRes.error, o3DirRes.ok);
+o3Dir := o3DirRes.path;
+o3Cmds: mut List<String> = [];
+o3ArgsJson: mut List<String> = [];
+o3OutFiles: mut List<String> = [];
 loop toolNames as name {
     srcRel := "tools/src/" + name + ".lts";
-    srcAbs := path.join(root, srcRel);
-    srcRead := fs.readText(srcAbs);
-    test.check("read " + srcRel, srcRead.ok);
-    compiled := compilerTest.compileStdinWithOpts(root, tsComp.path, root, srcRead.text, srcRel, srcAbs, ["-O3"]);
-    test.checkInt("compile " + srcRel + ": " + compiled.stderr, 0, compiled.status);
-    if name == "ignite" { compiledIgniteTs = compiled.stdout; }
+    outTs := path.join(o3Dir, name + ".ts");
+    list.pushBack(mut o3OutFiles, outTs);
+    list.pushBack(mut o3Cmds, proc.execPath());
+    argJson := "["
+    + json.quoteString(tsComp.path) + ","
+    + "\"-O3\","
+    + json.quoteString(srcRel) + ","
+    + "\"--out\","
+    + json.quoteString(outTs)
+    + "]";
+    list.pushBack(mut o3ArgsJson, argJson);
+}
+o3Raw := pool.runPoolJson(o3Cmds, o3ArgsJson, root, pool.cpuCount());
+o3Offsets := json.arrayElementOffsets(o3Raw, 0);
+o3Count := list.listCountText(toolNames);
+test.checkInt("o3 pool count", o3Count, list.listCountInt(o3Offsets));
+var compiledIgniteTs := "";
+var ti := 0;
+loop ti < o3Count {
+    name := toolNames[ti];
+    srcRel := "tools/src/" + name + ".lts";
+    elemPos := o3Offsets[ti];
+    stRes := json.readObjectInt(o3Raw, elemPos, "status");
+    errRes := json.readObjectString(o3Raw, elemPos, "stderr");
+    pErrRes := json.readObjectString(o3Raw, elemPos, "error");
+    pErr := if pErrRes.found and pErrRes.ok { pErrRes.value } else { "" };
+    cErr := if errRes.found and errRes.ok { errRes.value } else { "" };
+    cStatus := if stRes.found and stRes.ok { stRes.value } else { -1 };
+    test.check("o3 pool error " + srcRel + ": " + pErr, pErr == "");
+    test.checkInt("compile " + srcRel + ": " + cErr, 0, cStatus);
+    outRead := fs.readText(o3OutFiles[ti]);
+    test.check("read compiled " + srcRel, outRead.ok);
+    if name == "ignite" { compiledIgniteTs = outRead.text; }
     hasC := fs.kind(path.join(root, "dist/tools/" + name)) == fs.FILE_KIND_FILE;
     hasTs := fs.kind(path.join(root, "dist/tools/" + name + ".ts")) == fs.FILE_KIND_FILE;
     test.check("ignited artifact exists for " + name, hasC or hasTs);
     if hasTs {
         genRead := fs.readText(path.join(root, "dist/tools/" + name + ".ts"));
         test.check("read dist/tools/" + name + ".ts", genRead.ok);
-        test.checkText(name + " artifact out of date", compiled.stdout, genRead.text);
+        test.checkText(name + " artifact out of date", outRead.text, genRead.text);
     }
+    ti = ti + 1;
 }
+_rmO3 := fs.remove(o3Dir);
 trackedIgniter := stripShebang(fs.readText(path.join(root, "compiler/bootstrap/igniter.ts")).text);
 test.checkText("compiler/bootstrap/igniter.ts out of date", compiledIgniteTs, trackedIgniter);
 

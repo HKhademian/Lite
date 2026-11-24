@@ -72,7 +72,8 @@ if [ -n "$RECORDED_HASH" ] && [ "$SEED_HASH" != "$RECORDED_HASH" ]; then
     exit 1
 fi
 
-CFLAGS="-std=c11 -Wall -Wextra -Werror -O2"
+CC_OPT="${LITE_SELF_HOST_C_OPT:--O0}"
+CFLAGS="-std=c11 -Wall -Wextra -Werror $CC_OPT"
 
 echo "self-host-c: compiling tracked compiler/bootstrap/compiler.c (Gen 0)..."
 "$CC_BIN" $CFLAGS "$SEED_C" -o "$OUT_DIR/lite-gen0" -lm
