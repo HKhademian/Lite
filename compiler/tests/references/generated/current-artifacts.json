@@ -1,8 +1,8 @@
 {
   "note": "Unified Block Model Slice 3 (uniform lexical closures/captures, inner-block parallel compile-time symbol wiring, uniform execution-trace initialization safety, and escaping-closure checks on TS; C continues rejecting fn values explicitly). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-24",
-  "sourceSha256": "4f096005dd7243231127b82b2dffbeae42f34b2c74476eccaa4ee45ad3ca145e",
-  "compilerSha256": "57e3ba83cfe73b1c06f0cb4be6fd4164ea3199e316670a95635039bdc042b7e2",
+  "sourceSha256": "310331c9879944f3b3d20c8290f60de692ef42aa484b49f6fe3eafba53f36e86",
+  "compilerSha256": "ae32385595291fa4adb154a612e1c98e08d36c1a4ce5573f6ee947646cf9379c",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
@@ -286,7 +286,7 @@
       "name": "string-local-chain",
       "source": "001-005-string-local-chain.lts",
       "ts": "sha256:8c769a4f9b46f7337dfbd792ddbcb91638ebc14ba6c5e25c93e9f74ce9d735db",
-      "c": "sha256:1cbbf2d66df5f01156409be8e8e4629902cdcd99b12ed97e0421c9494aba7c22"
+      "c": "sha256:277de33515c720032c0160289d273ae4ae7a4ca07677f7b10f0c576088a0b8bf"
     },
     {
       "name": "string-percent-trigraph",
@@ -304,7 +304,7 @@
       "name": "local-hygiene-string",
       "source": "001-006-local-hygiene-string.lts",
       "ts": "sha256:4566668e62fa229bbfb0c2f25e136a250b6ab04db1b48dd49c7968407bc891c1",
-      "c": "sha256:c4bc5a7fe5122a2d7f5d3d51c3c5f112ec4ba48f9b8faacb411efa21ebcc70b4"
+      "c": "sha256:665f8dc2bc49ede01865a21f966c6318677b52a465c6b08547c0f3e303465a56"
     },
     {
       "name": "local-macro-name",
