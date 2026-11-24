@@ -36,6 +36,8 @@ checked cache artifact. There is no T00 fallback.
 ## Routine generated-only commands
 
 ```sh
+./bin/lite bootstrap verify
+./bin/lite bootstrap promote
 node igniter/node_modules/typescript/bin/tsc -p compiler/bootstrap/tsconfig.json
 node compiler/scripts/build.ts
 node compiler/scripts/self-host.ts --out /tmp/lite-selfhost
@@ -43,6 +45,8 @@ node compiler/scripts/self-host.ts --out /tmp/lite-selfhost
 node compiler/scripts/corpus-parity.ts
 node benchmark/compiler-performance.ts --samples 3 --warmups 1
 ```
+
+`./bin/lite bootstrap verify` runs strict `tsc`, 3-generation C11 and TS self-hosting fixed points, `igniter.ts --force`, `igniter.ts` `-O3` freshness, `seed.ts` provenance validation, and TS-to-C11 cross-bootstrap SHA-256 byte parity in one command. `./bin/lite bootstrap promote` rebuilds and checks both 3-generation ladders plus cross-bootstrap parity before atomically refreshing `compiler.c`, `igniter.ts`, and `seed.ts` and running full verification.
 
 The self-build command compiles the same TS root import graph three times,
 starting from the selected compiler. It records each builder and output hash,

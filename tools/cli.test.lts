@@ -143,6 +143,8 @@ assertSameCmd("doctor --version", command("lite-doctor", ["--version"]), command
 assertSameCmd("check --version", command("lite-check", ["--version"]), command("lite", ["check", "--version"]));
 assertSameCmd("docs --version", command("lite-docs", ["--version"]), command("lite", ["docs", "--version"]));
 assertSameCmd("bench --version", command("lite-bench", ["--version"]), command("lite", ["bench", "--version"]));
+assertSameCmd("bootstrap --version", command("lite-bootstrap", ["--version"]), command("lite", ["bootstrap", "--version"]));
+assertSameCmd("bootstrap --help", command("lite-bootstrap", ["--help"]), command("lite", ["bootstrap", "--help"]));
 
 /* 7. lite check routes through ./bin/lite to the standalone checker */
 checkExpected := command("lite-check", [sample]);
@@ -159,7 +161,7 @@ tsComp := compilerBuild.selectCompilerPath(root, "ts");
 test.check("select ts compiler", tsComp.ok);
 toolNames: List<String> = [
 "cli", "compile", "compile-c", "compile-ts", "checker", "check", "run",
-"run-ts-artifact", "verify", "test-runner", "test", "bench", "ci", "release", "ignite"
+"run-ts-artifact", "verify", "test-runner", "test", "bench", "bootstrap", "ci", "release", "ignite"
 ];
 var compiledIgniteTs := "";
 loop toolNames as name {

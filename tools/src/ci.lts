@@ -172,10 +172,12 @@ runSelfHost := fn(root: String): Unit {
     step2: List<String> = ["compiler/scripts/build.ts"];
     step3: List<String> = ["compiler/scripts/self-host.ts", "--out", "dist/ladder"];
     step4: List<String> = ["compiler/scripts/corpus-parity.ts", "--artifact", "dist/ladder/generation-3.ts"];
+    step5: List<String> = ["bin/lite", "bootstrap", "verify"];
     invokeIn(work, proc.execPath(), step1, work);
     invokeIn(work, proc.execPath(), step2, work);
     invokeIn(work, proc.execPath(), step3, work);
     invokeIn(work, proc.execPath(), step4, work);
+    invokeIn(work, proc.execPath(), step5, work);
     cleanup := fs.remove(work);
     if not cleanup.ok { io.errorLine(cleanup.error); }
 };

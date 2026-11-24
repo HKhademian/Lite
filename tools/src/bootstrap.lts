@@ -1,0 +1,489 @@
+/** Bootstrap seed verification and promotion tool (`./bin/lite bootstrap <verify|promote>`). */
+
+crypto := import "core/crypto";
+fs := import "core/file";
+integer := import "core/int";
+io := import "core/io";
+list := import "core/list";
+path := import "core/path";
+proc := import "core/process";
+text := import "core/text";
+time := import "core/time";
+json := import "util/json";
+project := import "util/project";
+
+/** Returns CLI usage text for `lite bootstrap`. */
+usageText := fn(): String {
+    "Usage: ./bin/lite bootstrap <verify|promote> [--cc COMPILER] [--json]\n\n" +
+    "Subcommands:\n" +
+    "  verify   Verify strict tsc, C11 & TS 3-gen fixed points, igniter freshness, and cross-bootstrap C11 parity\n" +
+    "  promote  Rebuild C11 & TS 3-gen seeds, check cross-bootstrap parity, update compiler/bootstrap/, and verify"
+};
+
+/** Returns a formatted process failure summary from `proc.run`. */
+formatProcFailure := fn(label: String, res: (status: Int, stdout: String, stderr: String, error: String)): String {
+    if res.error =!= "" {
+        return label + " failed to launch: " + res.error;
+    }
+    var detail := "";
+    if text.trim(res.stderr) =!= "" {
+        detail = text.trim(res.stderr);
+    }
+    if text.trim(res.stdout) =!= "" {
+        if detail =!= "" { detail = detail + "\n"; }
+        detail = detail + text.trim(res.stdout);
+    }
+    if detail == "" {
+        return label + " failed with exit status " + integer.intText(res.status);
+    }
+    label + " failed:\n" + detail
+};
+
+/** Reads the recorded SHA-256 provenance fields from `compiler/bootstrap/seed.ts`. */
+readSeedProvenance := fn(rootDir: String): (
+    ok: Bool, igniterSha256: String, sourceSha256: String, artifactSha256: String, cArtifactSha256: String, error: String
+) {
+    seedPath := path.join(rootDir, "compiler/bootstrap/seed.ts");
+    seedRead := fs.readText(seedPath);
+    if not seedRead.ok {
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "",
+        error = "bootstrap: cannot read compiler/bootstrap/seed.ts: " + seedRead.error);
+    }
+    brace := text.indexOfText(seedRead.text, "{", 0);
+    if brace < 0 {
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "",
+        error = "bootstrap: invalid compiler/bootstrap/seed.ts object");
+    }
+    ignField := json.readObjectString(seedRead.text, brace, "igniterSha256");
+    srcField := json.readObjectString(seedRead.text, brace, "sourceSha256");
+    artField := json.readObjectString(seedRead.text, brace, "artifactSha256");
+    cArtField := json.readObjectString(seedRead.text, brace, "cArtifactSha256");
+    if not ignField.found or not ignField.ok or
+       not srcField.found or not srcField.ok or
+       not artField.found or not artField.ok or
+       not cArtField.found or not cArtField.ok {
+        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "",
+        error = "bootstrap: missing SHA-256 fields in compiler/bootstrap/seed.ts");
+    }
+    (ok = true, igniterSha256 = ignField.value, sourceSha256 = srcField.value, artifactSha256 = artField.value, cArtifactSha256 = cArtField.value, error = "")
+};
+
+/** Runs `node compiler/scripts/self-host.ts --out <tsOutDir>` and validates all 3 generations reached a strict fixed point. */
+runTsSelfHost := fn(rootDir: String, tsOutDir: String): (
+    ok: Bool, sourceSha256: String, artifactSha256: String, gen3Path: String,
+    matchesSelected: Bool, equalsBuilder: Bool, error: String
+) {
+    emptyEnv: List<String> = [];
+    args: List<String> = [path.join(rootDir, "compiler/scripts/self-host.ts"), "--out", tsOutDir];
+    res := proc.run(project.nodeExecPath(), args, rootDir, emptyEnv, true, "");
+    if res.error =!= "" or res.status =!= 0 {
+        return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
+        error = formatProcFailure("self-host.ts", res));
+    }
+    ladderPath := path.join(tsOutDir, "ladder.json");
+    ladderRead := fs.readText(ladderPath);
+    if not ladderRead.ok {
+        return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
+        error = "bootstrap: cannot read TS self-host ladder.json: " + ladderRead.error);
+    }
+    doc := ladderRead.text;
+    fp := json.readObjectBool(doc, 0, "fixedPoint");
+    mSel := json.readObjectBool(doc, 0, "matchesSelectedCompiler");
+    eqBld := json.readObjectBool(doc, 0, "equalsSelectedBuilder");
+    if not fp.found or not fp.ok or not fp.value {
+        return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
+        error = "bootstrap: TS 3-generation self-host did not reach a fixed point");
+    }
+    selObj := json.findObjectField(doc, 0, "selected");
+    srcObj := json.findObjectField(doc, 0, "source");
+    gensArr := json.findObjectField(doc, 0, "generations");
+    if not selObj.found or not srcObj.found or not gensArr.found {
+        return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
+        error = "bootstrap: unexpected TS self-host ladder.json shape");
+    }
+    selArt := json.readObjectString(doc, selObj.valuePos, "artifactSha256");
+    srcSha := json.readObjectString(doc, srcObj.valuePos, "sha256");
+    if not selArt.found or not selArt.ok or not srcSha.found or not srcSha.ok {
+        return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
+        error = "bootstrap: missing source/artifact hashes in TS self-host ladder.json");
+    }
+    offsets := json.arrayElementOffsets(doc, gensArr.valuePos);
+    if offsets.length() =!= 3 {
+        return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
+        error = "bootstrap: expected 3 TS generations in ladder.json");
+    }
+    var g3Path := "";
+    var idx := 0;
+    loop idx < 3 {
+        gPos := offsets[idx];
+        gSha := json.readObjectString(doc, gPos, "artifactSha256");
+        gPath := json.readObjectString(doc, gPos, "path");
+        if not gSha.found or not gSha.ok or gSha.value =!= selArt.value {
+            return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
+            error = "bootstrap: TS generation hash mismatch in ladder.json");
+        }
+        if idx == 2 {
+            if not gPath.found or not gPath.ok {
+                return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
+                error = "bootstrap: missing generation-3 path in ladder.json");
+            }
+            g3Path = gPath.value;
+        }
+        idx += 1;
+    }
+    ms := mSel.found and mSel.ok and mSel.value;
+    eb := eqBld.found and eqBld.ok and eqBld.value;
+    (ok = true, sourceSha256 = srcSha.value, artifactSha256 = selArt.value, gen3Path = g3Path, matchesSelected = ms, equalsBuilder = eb, error = "")
+};
+
+/** Runs `compiler/scripts/self-host-c.sh --out <cOutDir>` and checks all 3 C11 generations match each other. */
+runCSelfHost := fn(rootDir: String, ccBin: String, cOutDir: String, requireSeedMatch: Bool): (
+    ok: Bool, sha256: String, gen3Path: String, error: String
+) {
+    emptyEnv: List<String> = [];
+    args: mut List<String> = [path.join(rootDir, "compiler/scripts/self-host-c.sh")];
+    if ccBin =!= "" {
+        mut args.pushBack("--cc");
+        mut args.pushBack(ccBin);
+    }
+    mut args.pushBack("--out");
+    mut args.pushBack(cOutDir);
+    res := proc.run("sh", args, rootDir, emptyEnv, true, "");
+    if requireSeedMatch and (res.error =!= "" or res.status =!= 0) {
+        return (ok = false, sha256 = "", gen3Path = "", error = formatProcFailure("self-host-c.sh", res));
+    }
+    if res.error =!= "" {
+        return (ok = false, sha256 = "", gen3Path = "", error = formatProcFailure("self-host-c.sh", res));
+    }
+    g1Path := path.join(cOutDir, "generation-1.c");
+    g2Path := path.join(cOutDir, "generation-2.c");
+    g3Path := path.join(cOutDir, "generation-3.c");
+    if fs.kind(g1Path) =!= fs.FILE_KIND_FILE or fs.kind(g2Path) =!= fs.FILE_KIND_FILE or fs.kind(g3Path) =!= fs.FILE_KIND_FILE {
+        return (ok = false, sha256 = "", gen3Path = "", error = formatProcFailure("self-host-c.sh", res));
+    }
+    h1 := crypto.sha256File(g1Path);
+    h2 := crypto.sha256File(g2Path);
+    h3 := crypto.sha256File(g3Path);
+    if not h1.ok or not h2.ok or not h3.ok {
+        return (ok = false, sha256 = "", gen3Path = "", error = "bootstrap: failed to hash C11 self-host generations");
+    }
+    if h1.hex =!= h2.hex or h2.hex =!= h3.hex {
+        return (ok = false, sha256 = "", gen3Path = "",
+        error = "bootstrap: C11 generations did not reach a fixed point (" + h1.hex + " / " + h2.hex + " / " + h3.hex + ")");
+    }
+    (ok = true, sha256 = h3.hex, gen3Path = g3Path, error = "")
+};
+
+/** Compiles `compiler/src/c-root.lts` through the TS 3-gen compiler and returns the SHA-256 of the emitted C11 compiler. */
+runCrossBootstrapC := fn(rootDir: String, gen3TsPath: String, workDir: String): (ok: Bool, sha256: String, error: String) {
+    emptyEnv: List<String> = [];
+    nodeBin := project.nodeExecPath();
+    cRootPath := path.join(rootDir, "compiler/src/c-root.lts");
+    tsEmitterPath := path.join(workDir, "ts-c-emitter.ts");
+    crossCPath := path.join(workDir, "cross.c");
+
+    step1: List<String> = [gen3TsPath, "-O1", cRootPath, "--out", tsEmitterPath];
+    res1 := proc.run(nodeBin, step1, rootDir, emptyEnv, true, "");
+    if res1.error =!= "" or res1.status =!= 0 {
+        return (ok = false, sha256 = "", error = formatProcFailure("TS-bootstrapped C emitter build", res1));
+    }
+    step2: List<String> = [tsEmitterPath, "-O1", cRootPath, "--out", crossCPath];
+    res2 := proc.run(nodeBin, step2, rootDir, emptyEnv, true, "");
+    if res2.error =!= "" or res2.status =!= 0 {
+        return (ok = false, sha256 = "", error = formatProcFailure("TS-bootstrapped C emission", res2));
+    }
+    hashRes := crypto.sha256File(crossCPath);
+    if not hashRes.ok {
+        return (ok = false, sha256 = "", error = "bootstrap: failed to hash cross-bootstrap C output: " + hashRes.error);
+    }
+    (ok = true, sha256 = hashRes.hex, error = "")
+};
+
+/** Builds a candidate `-O3` standalone `igniter.ts` with `#!/usr/bin/env node` shebang using `gen3TsPath`. */
+buildIgniterCandidate := fn(rootDir: String, gen3TsPath: String, workDir: String): (
+    ok: Bool, path: String, sha256: String, error: String
+) {
+    emptyEnv: List<String> = [];
+    rawPath := path.join(workDir, "igniter-raw.ts");
+    outPath := path.join(workDir, "igniter.ts");
+    args: List<String> = [gen3TsPath, "-O3", path.join(rootDir, "tools/src/ignite.lts"), "--out", rawPath];
+    res := proc.run(project.nodeExecPath(), args, rootDir, emptyEnv, true, "");
+    if res.error =!= "" or res.status =!= 0 {
+        return (ok = false, path = "", sha256 = "", error = formatProcFailure("build igniter.ts (-O3)", res));
+    }
+    rawRead := fs.readText(rawPath);
+    if not rawRead.ok {
+        return (ok = false, path = "", sha256 = "", error = "bootstrap: cannot read built igniter-raw.ts: " + rawRead.error);
+    }
+    wr := fs.writeText(outPath, "#!/usr/bin/env node\n" + rawRead.text);
+    if not wr.ok {
+        return (ok = false, path = "", sha256 = "", error = "bootstrap: cannot write candidate igniter.ts: " + wr.error);
+    }
+    hashRes := crypto.sha256File(outPath);
+    if not hashRes.ok {
+        return (ok = false, path = "", sha256 = "", error = "bootstrap: cannot hash candidate igniter.ts: " + hashRes.error);
+    }
+    (ok = true, path = outPath, sha256 = hashRes.hex, error = "")
+};
+
+/** Emits verification or promotion result in JSON or concise human text. */
+emitResult := fn(commandName: String, jsonOut: Bool, sourceSha256: String, artifactSha256: String, igniterSha256: String, cArtifactSha256: String): Unit {
+    if jsonOut {
+        body := "{\n"
+        + "  \"command\": " + json.quoteString(commandName) + ",\n"
+        + "  \"ok\": true,\n"
+        + "  \"sourceSha256\": " + json.quoteString(sourceSha256) + ",\n"
+        + "  \"artifactSha256\": " + json.quoteString(artifactSha256) + ",\n"
+        + "  \"igniterSha256\": " + json.quoteString(igniterSha256) + ",\n"
+        + "  \"cArtifactSha256\": " + json.quoteString(cArtifactSha256) + "\n"
+        + "}";
+        io.outputLine(body);
+    } else {
+        verb := if commandName == "promote" { "promoted and verified" } else { "verified" };
+        io.outputLine("bootstrap: " + verb + " (source=" + text.slice(sourceSha256, 0, 8)
+        + ", ts=" + text.slice(artifactSha256, 0, 8)
+        + ", igniter=" + text.slice(igniterSha256, 0, 8)
+        + ", c=" + text.slice(cArtifactSha256, 0, 8) + ")");
+    }
+};
+
+/** Verifies strict `tsc`, seed provenance, C11 3-gen fixed point, full ignition, TS 3-gen fixed point, `igniter.ts` freshness, and TS->C11 cross-bootstrap byte parity. */
+verifyBootstrap := fn(rootDir: String, ccBin: String, commandLabel: String, jsonOut: Bool): (ok: Bool, error: String) {
+    emptyEnv: List<String> = [];
+    nodeBin := project.nodeExecPath();
+
+    tscArgs: List<String> = [path.join(rootDir, "igniter/node_modules/typescript/bin/tsc"), "-p", path.join(rootDir, "compiler/bootstrap/tsconfig.json")];
+    tscRes := proc.run(nodeBin, tscArgs, rootDir, emptyEnv, true, "");
+    if tscRes.error =!= "" or tscRes.status =!= 0 {
+        return (ok = false, error = formatProcFailure("tsc -p compiler/bootstrap/tsconfig.json", tscRes));
+    }
+
+    seed := readSeedProvenance(rootDir);
+    if not seed.ok {
+        return (ok = false, error = seed.error);
+    }
+    trackedC := crypto.sha256File(path.join(rootDir, "compiler/bootstrap/compiler.c"));
+    if not trackedC.ok or trackedC.hex =!= seed.cArtifactSha256 {
+        return (ok = false, error = "bootstrap: tracked compiler/bootstrap/compiler.c differs from seed.ts cArtifactSha256");
+    }
+    trackedIgn := crypto.sha256File(path.join(rootDir, "compiler/bootstrap/igniter.ts"));
+    if not trackedIgn.ok or trackedIgn.hex =!= seed.igniterSha256 {
+        return (ok = false, error = "bootstrap: tracked compiler/bootstrap/igniter.ts differs from seed.ts igniterSha256");
+    }
+
+    tmpRes := fs.makeTempDir("lite-bootstrap-verify-");
+    if not tmpRes.ok {
+        return (ok = false, error = "bootstrap: " + tmpRes.error);
+    }
+    tmpDir := tmpRes.path;
+
+    cRes := runCSelfHost(rootDir, ccBin, path.join(tmpDir, "c"), true);
+    if not cRes.ok {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = cRes.error);
+    }
+    if cRes.sha256 =!= seed.cArtifactSha256 {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = "bootstrap: C11 generation-3 hash differs from seed.ts cArtifactSha256");
+    }
+
+    ignArgs: List<String> = [path.join(rootDir, "compiler/bootstrap/igniter.ts"), "--force"];
+    ignRes := proc.run(nodeBin, ignArgs, rootDir, emptyEnv, true, "");
+    if ignRes.error =!= "" or ignRes.status =!= 0 {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = formatProcFailure("igniter.ts --force", ignRes));
+    }
+
+    tsRes := runTsSelfHost(rootDir, path.join(tmpDir, "ts"));
+    if not tsRes.ok {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = tsRes.error);
+    }
+    if tsRes.sourceSha256 =!= seed.sourceSha256 {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = "bootstrap: seed.ts sourceSha256 (" + seed.sourceSha256 + ") is stale vs current compiler source (" + tsRes.sourceSha256 + ")");
+    }
+    if tsRes.artifactSha256 =!= seed.artifactSha256 or not tsRes.matchesSelected or not tsRes.equalsBuilder {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = "bootstrap: TS 3-gen fixed point (" + tsRes.artifactSha256 + ") differs from seed.ts (" + seed.artifactSha256 + ")");
+    }
+
+    ignCand := buildIgniterCandidate(rootDir, tsRes.gen3Path, tmpDir);
+    if not ignCand.ok {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = ignCand.error);
+    }
+    if ignCand.sha256 =!= seed.igniterSha256 {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = "bootstrap: tracked compiler/bootstrap/igniter.ts (" + seed.igniterSha256 + ") is stale vs built tools/src/ignite.lts (" + ignCand.sha256 + "); run ./bin/lite bootstrap promote");
+    }
+
+    crossRes := runCrossBootstrapC(rootDir, tsRes.gen3Path, tmpDir);
+    _rm := fs.remove(tmpDir);
+    if not crossRes.ok {
+        return (ok = false, error = crossRes.error);
+    }
+    if crossRes.sha256 =!= seed.cArtifactSha256 {
+        return (ok = false, error = "bootstrap: TS-bootstrapped C11 output (" + crossRes.sha256 + ") differs from C11 seed (" + seed.cArtifactSha256 + ")");
+    }
+
+    emitResult(commandLabel, jsonOut, seed.sourceSha256, seed.artifactSha256, seed.igniterSha256, seed.cArtifactSha256);
+    (ok = true, error = "")
+};
+
+/** Rebuilds C11 and TS 3-generation fixed points, verifies cross-bootstrap C11 parity before modifying tracked files, promotes seeds, and verifies cleanly. */
+promoteBootstrap := fn(rootDir: String, ccBin: String, jsonOut: Bool): (ok: Bool, error: String) {
+    emptyEnv: List<String> = [];
+    tmpRes := fs.makeTempDir("lite-bootstrap-promote-");
+    if not tmpRes.ok {
+        return (ok = false, error = "bootstrap: " + tmpRes.error);
+    }
+    tmpDir := tmpRes.path;
+
+    cRes := runCSelfHost(rootDir, ccBin, path.join(tmpDir, "c"), false);
+    if not cRes.ok {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = cRes.error);
+    }
+
+    tsRes := runTsSelfHost(rootDir, path.join(tmpDir, "ts"));
+    if not tsRes.ok {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = tsRes.error);
+    }
+
+    crossRes := runCrossBootstrapC(rootDir, tsRes.gen3Path, tmpDir);
+    if not crossRes.ok {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = crossRes.error);
+    }
+    if crossRes.sha256 =!= cRes.sha256 {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = "bootstrap: refusing to promote because TS-bootstrapped C11 output (" + crossRes.sha256 + ") differs from C11 3-gen fixed point (" + cRes.sha256 + ")");
+    }
+
+    ignCand := buildIgniterCandidate(rootDir, tsRes.gen3Path, tmpDir);
+    if not ignCand.ok {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = ignCand.error);
+    }
+
+    seedCPath := path.join(rootDir, "compiler/bootstrap/compiler.c");
+    seedIgnPath := path.join(rootDir, "compiler/bootstrap/igniter.ts");
+    seedMetaPath := path.join(rootDir, "compiler/bootstrap/seed.ts");
+
+    cpC := fs.copy(cRes.gen3Path, seedCPath);
+    if not cpC.ok {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = "bootstrap: failed to write compiler/bootstrap/compiler.c: " + cpC.error);
+    }
+    cpIgn := fs.copy(ignCand.path, seedIgnPath);
+    if not cpIgn.ok {
+        _rm := fs.remove(tmpDir);
+        return (ok = false, error = "bootstrap: failed to write compiler/bootstrap/igniter.ts: " + cpIgn.error);
+    }
+    _rm := fs.remove(tmpDir);
+
+    if proc.platform() =!= "win32" {
+        chmodArgs: List<String> = ["+x", seedIgnPath];
+        chmodRes := proc.run("chmod", chmodArgs, rootDir, emptyEnv, true, "");
+        if chmodRes.error =!= "" or chmodRes.status =!= 0 {
+            return (ok = false, error = formatProcFailure("chmod +x compiler/bootstrap/igniter.ts", chmodRes));
+        }
+    }
+
+    seedText :=
+    "/** Tracked Lite-generated TS (`igniter.ts`) and C11 (`compiler.c`) bootstrap snapshots and provenance. */\n"
+    + "export const seed = {\n"
+    + "  \"target\": \"ts\",\n"
+    + "  \"artifact\": \"igniter.ts\",\n"
+    + "  \"recorded\": " + json.quoteString(time.localDate()) + ",\n"
+    + "  \"note\": \"Checked-in -O3 TS bootstrap igniter and -O1 native C11 bootstrap compiler; both reach 3-generation byte-identical fixed points.\",\n"
+    + "  \"igniterSha256\": " + json.quoteString(ignCand.sha256) + ",\n"
+    + "  \"sourceSha256\": " + json.quoteString(tsRes.sourceSha256) + ",\n"
+    + "  \"artifactSha256\": " + json.quoteString(tsRes.artifactSha256) + ",\n"
+    + "  \"cArtifact\": \"compiler.c\",\n"
+    + "  \"cArtifactSha256\": " + json.quoteString(cRes.sha256) + ",\n"
+    + "} as const;\n";
+    wrSeed := fs.writeText(seedMetaPath, seedText);
+    if not wrSeed.ok {
+        return (ok = false, error = "bootstrap: failed to write compiler/bootstrap/seed.ts: " + wrSeed.error);
+    }
+
+    verifyBootstrap(rootDir, ccBin, "promote", jsonOut)
+};
+
+/** Parses CLI flags and runs `verify` or `promote`. */
+run := fn(rawArgs: List<String>): Unit {
+    project.handleNamedVersionFlag(rawArgs, "cli", "lite-bootstrap");
+
+    args: mut List<String> = rawArgs;
+    if list.listCountText(args) > 0 and args[0] == "--" {
+        _sep := mut args.popFront();
+    }
+    var subcommand := "";
+    var ccBin := "";
+    var jsonOut := false;
+    loop list.listCountText(args) > 0 {
+        arg := mut args.popFront();
+        if arg == "help" or arg == "--help" or arg == "-h" {
+            io.outputLine(usageText());
+            io.exit(0);
+        } else if arg == "--json" {
+            jsonOut = true;
+        } else if arg == "--cc" {
+            if list.listCountText(args) == 0 {
+                io.errorLine("bootstrap: missing compiler path after --cc");
+                io.errorLine(usageText());
+                io.exit(2);
+            }
+            ccBin = mut args.popFront();
+        } else if text.startsWithAt(arg, 0, "--cc=") {
+            ccBin = text.slice(arg, 5, text.length(arg));
+            if ccBin == "" {
+                io.errorLine("bootstrap: missing compiler path after --cc=");
+                io.errorLine(usageText());
+                io.exit(2);
+            }
+        } else if text.startsWithAt(arg, 0, "-") {
+            io.errorLine("bootstrap: unknown option " + arg);
+            io.errorLine(usageText());
+            io.exit(2);
+        } else if subcommand == "" {
+            subcommand = arg;
+        } else {
+            io.errorLine("bootstrap: unexpected argument " + arg);
+            io.errorLine(usageText());
+            io.exit(2);
+        }
+    }
+
+    if subcommand == "" {
+        io.errorLine("bootstrap: subcommand required (verify or promote)");
+        io.errorLine(usageText());
+        io.exit(2);
+    }
+    if subcommand =!= "verify" and subcommand =!= "promote" {
+        io.errorLine("bootstrap: unknown subcommand " + subcommand);
+        io.errorLine(usageText());
+        io.exit(2);
+    }
+
+    rootDir := project.findRepoRoot();
+    if rootDir == "" {
+        io.errorLine("bootstrap: cannot locate LiteScript repository root");
+        io.exit(1);
+    }
+
+    res := if subcommand == "verify" {
+        verifyBootstrap(rootDir, ccBin, "verify", jsonOut)
+    } else {
+        promoteBootstrap(rootDir, ccBin, jsonOut)
+    };
+    if not res.ok {
+        io.errorLine(res.error);
+        io.exit(1);
+    }
+};
+
+run(io.inputArgs());

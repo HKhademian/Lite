@@ -24,6 +24,7 @@ usageText := fn(): String {
     "  verify FILE.case.json                     Verify one declarative manifest\n" +
     "  bench OUTPUT [FILTER]                     Benchmark verified cases\n" +
     "  release OUTPUT [TAG]                      Package a verified source snapshot\n" +
+    "  bootstrap <verify|promote> [--cc CC] [--json]  Verify or promote 3-gen TS & C11 bootstrap seeds\n" +
     "  wipe [--no-install] [--no-check] [--verify]  Wipe untracked/ignored files and re-ignite\n" +
     "  help                                      Show this help\n\n" +
     "Compiler entry points: ./bin/lite-compile, ./bin/lite compile\n" +
@@ -44,6 +45,7 @@ ROUTE_TARGETS: Map<String, String> = [
 "doctor" = "lite-doctor",
 "bench" = "lite-bench",
 "release" = "lite-release",
+"bootstrap" = "lite-bootstrap",
 "wipe" = "lite-wipe",
 ];
 

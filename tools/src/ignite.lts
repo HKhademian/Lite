@@ -27,9 +27,10 @@ toolForEntry := fn(rawEntry: String): String {
     parent := path.baseName(parentDir);
     grandparent := path.baseName(path.parentDir(parentDir));
     match {
-        base == "igniter.ts" or base == "lite-ignite" or base == "lite-bootstrap" or base == "lite-wipe" { "" }
+        base == "igniter.ts" or base == "lite-ignite" or base == "lite-wipe" { "" }
         base == "lite" { "cli" }
         base == "lite-bench" { "bench" }
+        base == "lite-bootstrap" { "bootstrap" }
         base == "lite-build" { "build" }
         base == "lite-check" { "checker" }
         base == "lite-compile" { "compile" }
