@@ -2,7 +2,6 @@ siteDocs := import "../../site/src/docs.lts";
 json := import "util/json";
 project := import "util/project";
 test := import "core/test";
-text := import "core/text";
 
 test.checkText("rel same dir", "../spec/index.html", siteDocs.relativeHref("docs/handbook/overview-and-setup.html", "docs/spec/index.html"));
 test.checkText("rel dir trailing slash", "../../playground/", siteDocs.relativeHref("docs/handbook/overview-and-setup.html", "playground/"));
@@ -14,8 +13,8 @@ disc := siteDocs.discoverDocsPayloadJson(root, false);
 test.checkText("discover err", "", disc.error);
 test.checkBool("discover ok", true, disc.ok);
 test.checkBool("discover valid json", true, json.validate(disc.jsonText).ok);
-test.checkBool("has handbook outPath", true, text.indexOfText(disc.jsonText, "docs/handbook/overview-and-setup.html", 0) >= 0);
-test.checkBool("has spec overview", true, text.indexOfText(disc.jsonText, "docs/design/overview.html", 0) >= 0);
+test.checkBool("has handbook outPath", true, disc.jsonText.indexOf("docs/handbook/overview-and-setup.html", 0) >= 0);
+test.checkBool("has spec overview", true, disc.jsonText.indexOf("docs/design/overview.html", 0) >= 0);
 
 sampleInput := "{"
     + "\"repoUrl\":\"https://github.com/example/lite\""
@@ -30,7 +29,7 @@ test.checkBool("build valid json", true, json.validate(built.jsonText).ok);
 test.checkInt("handbookCount", 1, json.readObjectInt(built.jsonText, 0, "handbookCount").value);
 test.checkInt("specCount", 1, json.readObjectInt(built.jsonText, 0, "specCount").value);
 test.checkInt("docsPageCount", 5, json.readObjectInt(built.jsonText, 0, "docsPageCount").value);
-test.checkBool("single-page prefixes ids", true, text.indexOfText(built.jsonText, "h1-sec", 0) >= 0);
-test.checkBool("has docs/index.html", true, text.indexOfText(built.jsonText, "\"relPath\":\"docs/index.html\"", 0) >= 0);
+test.checkBool("single-page prefixes ids", true, built.jsonText.indexOf("h1-sec", 0) >= 0);
+test.checkBool("has docs/index.html", true, built.jsonText.indexOf("\"relPath\":\"docs/index.html\"", 0) >= 0);
 
 test.done("util-site-docs");

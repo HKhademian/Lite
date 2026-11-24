@@ -1,7 +1,5 @@
 /* Optional Web Audio tone queue for Lite Play programs. */
 
-list := import "core/list";
-
 /** Validated tone request in hertz (20..20000), milliseconds (1..3000), and percent volume (1..100). */
 pub Note := type (frequency: Int, durationMs: Int, volume: Int);
 
@@ -12,9 +10,9 @@ pub tone := fn(frequency: Int, durationMs: Int, volume: Int): Unit {
     if frequency < 20 or frequency > 20000 { return; }
     if durationMs <= 0 or durationMs > 3000 { return; }
     if volume <= 0 or volume > 100 { return; }
-    list.pushBack(mut toneQueue, frequency);
-    list.pushBack(mut toneQueue, durationMs);
-    list.pushBack(mut toneQueue, volume);
+    (mut toneQueue).pushBack(frequency);
+    mut toneQueue.pushBack(durationMs);
+    mut toneQueue.pushBack(volume);
 }
 
 /** Queues one structured `Note` value if all fields are within valid playback bounds. */

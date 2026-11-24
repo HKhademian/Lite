@@ -1,6 +1,4 @@
-list := import "core/list";
 test := import "core/test";
-text := import "core/text";
 json := import "util/json";
 mdHtml := import "util/markdown-html";
 
@@ -9,21 +7,21 @@ sampleDoc := "# Main <T> Title\n\nStatus: **selected 2026-11-16**.\n\nIntro with
 rendered := mdHtml.renderMarkdown(sampleDoc);
 test.checkText("title extracted", "Main <T> Title", rendered.title);
 test.checkText("status detected", "selected", rendered.status);
-test.checkBool("escaped heading generic", true, text.containsText(rendered.html, "<h1 id=\"main--title\">Main &lt;T&gt; Title</h1>"));
-test.checkBool("duplicate anchor 1", true, text.containsText(rendered.html, "id=\"repeat-name\""));
-test.checkBool("duplicate anchor 2", true, text.containsText(rendered.html, "id=\"repeat-name-1\""));
-test.checkBool("inline code escaped", true, text.containsText(rendered.html, "<code>inline &lt;a&gt;</code>"));
-test.checkBool("bold and italic", true, text.containsText(rendered.html, "<strong>bold <em>nested</em></strong>"));
-test.checkBool("relative md link marker", true, text.containsText(rendered.html, "data-md-href=\"other.md#sec\""));
-test.checkBool("alert block", true, text.containsText(rendered.html, "class=\"md-alert md-alert-note\""));
-test.checkBool("table rendered", true, text.containsText(rendered.html, "<table><thead><tr><th style=\"text-align:left\">Col A</th><th style=\"text-align:right\">Col B</th></tr></thead>"));
-test.checkBool("unordered continuation", true, text.containsText(rendered.html, "<ul><li>first item continued</li><li>second item</li></ul>"));
-test.checkBool("ordered list", true, text.containsText(rendered.html, "<ol><li>step one</li><li>step two</li></ol>"));
-test.checkBool("code fence marker", true, text.containsText(rendered.html, "<pre class=\"md-code\" data-lang=\"lts\" data-fence=\"0\"><code>outputLine(42);\n</code></pre>"));
+test.checkBool("escaped heading generic", true, rendered.html.contains("<h1 id=\"main--title\">Main &lt;T&gt; Title</h1>"));
+test.checkBool("duplicate anchor 1", true, rendered.html.contains("id=\"repeat-name\""));
+test.checkBool("duplicate anchor 2", true, rendered.html.contains("id=\"repeat-name-1\""));
+test.checkBool("inline code escaped", true, rendered.html.contains("<code>inline &lt;a&gt;</code>"));
+test.checkBool("bold and italic", true, rendered.html.contains("<strong>bold <em>nested</em></strong>"));
+test.checkBool("relative md link marker", true, rendered.html.contains("data-md-href=\"other.md#sec\""));
+test.checkBool("alert block", true, rendered.html.contains("class=\"md-alert md-alert-note\""));
+test.checkBool("table rendered", true, rendered.html.contains("<table><thead><tr><th style=\"text-align:left\">Col A</th><th style=\"text-align:right\">Col B</th></tr></thead>"));
+test.checkBool("unordered continuation", true, rendered.html.contains("<ul><li>first item continued</li><li>second item</li></ul>"));
+test.checkBool("ordered list", true, rendered.html.contains("<ol><li>step one</li><li>step two</li></ol>"));
+test.checkBool("code fence marker", true, rendered.html.contains("<pre class=\"md-code\" data-lang=\"lts\" data-fence=\"0\"><code>outputLine(42);\n</code></pre>"));
 
 tocValid := json.validate(rendered.tocJson);
 test.checkBool("toc json valid", true, tocValid.ok);
-test.checkBool("toc has second anchor", true, text.containsText(rendered.tocJson, "repeat-name-1"));
+test.checkBool("toc has second anchor", true, rendered.tocJson.contains("repeat-name-1"));
 
 jsonOut := mdHtml.renderMarkdownJson(sampleDoc, "docs/sample.md");
 jsonValid := json.validate(jsonOut);

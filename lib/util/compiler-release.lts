@@ -7,7 +7,6 @@ proc := import "core/process";
 project := import "util/project";
 text := import "core/text";
 list := import "core/list";
-integer := import "core/int";
 crypto := import "core/crypto";
 unicode := import "core/unicode";
 json := import "util/json";
@@ -21,27 +20,27 @@ usageLine := fn(): String {
 };
 
 isLowerHex := fn(s: String, expectedLen: Int): Bool {
-    if text.length(s) =!= expectedLen { return false; }
+    if s.length() =!= expectedLen { return false; }
     var i := 0;
     loop i < expectedLen {
-        ch := text.at(s, i);
-        if text.indexOfText("0123456789abcdef", ch, 0) < 0 { return false; }
+        ch := s.at(i);
+        if "0123456789abcdef".indexOf(ch, 0) < 0 { return false; }
         i = i + 1;
     }
     true
 };
 
 isSnapshotLabel := fn(label: String): Bool {
-    text.startsWithAt(label, 0, "snapshot-") and isLowerHex(text.slice(label, 9, text.length(label)), 12)
+    label.startsWithAt(0, "snapshot-") and isLowerHex(label.slice(9, label.length()), 12)
 };
 
 isValidProgramArchiveName := fn(name: String): Bool {
-    if not text.startsWithAt(name, 0, "001-") or text.length(name) <= 4 { return false; }
-    slug := text.slice(name, 4, text.length(name));
+    if not name.startsWithAt(0, "001-") or name.length() <= 4 { return false; }
+    slug := name.slice(4, name.length());
     var i := 0;
-    loop i < text.length(slug) {
-        ch := text.at(slug, i);
-        okCh := ch == "-" or text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789", ch, 0) >= 0;
+    loop i < slug.length() {
+        ch := slug.at(i);
+        okCh := ch == "-" or "abcdefghijklmnopqrstuvwxyz0123456789".indexOf(ch, 0) >= 0;
         if not okCh { return false; }
         i = i + 1;
     }
@@ -60,7 +59,7 @@ runCheckedText := fn(command: String, args: List<String>, cwd: String): (ok: Boo
         return (ok = false, stdout = "", error = res.error);
     }
     if res.status =!= 0 {
-        return (ok = false, stdout = "", error = command + " " + text.joinTexts(args, " ") + " failed (" + integer.intText(res.status) + "):\n" + res.stdout + res.stderr);
+        return (ok = false, stdout = "", error = command + " " + text.joinTexts(args, " ") + " failed (" + res.status.toText() + "):\n" + res.stdout + res.stderr);
     }
     (ok = true, stdout = res.stdout, error = "")
 };
@@ -73,7 +72,7 @@ runCheckedBytesToFile := fn(command: String, args: List<String>, cwd: String, st
     if res.status =!= 0 {
         outText := unicode.utf8DecodeLossy(fs.readBytes(outFile));
         errText := unicode.utf8DecodeLossy(fs.readBytes(errFile));
-        return (ok = false, error = command + " " + text.joinTexts(args, " ") + " failed (" + integer.intText(res.status) + "):\n" + outText + errText);
+        return (ok = false, error = command + " " + text.joinTexts(args, " ") + " failed (" + res.status.toText() + "):\n" + outText + errText);
     }
     (ok = true, error = "")
 };
@@ -82,7 +81,7 @@ ensureEmptyOutput := fn(outDir: String): (ok: Bool, error: String) {
     mkRes := fs.makeDir(outDir);
     if not mkRes.ok { return (ok = false, error = mkRes.error); }
     entries := fs.listDir(outDir);
-    if list.listCountText(entries) =!= 0 {
+    if entries.length() =!= 0 {
         return (ok = false, error = "output directory must be empty: " + outDir);
     }
     (ok = true, error = "")
@@ -119,7 +118,7 @@ pub validateReleaseJsonText := fn(filePath: String, rootDir: String): (ok: Bool,
             return (ok = false, text = "", label = "", commit = "", error = filePath + ": releasedComponent mismatch");
         }
         _unused := rootDir;
-    } else if text.at(text.trim(text.slice(src, compField.valuePos, text.length(src))), 0) =!= "n" {
+    } else if src.slice(compField.valuePos, src.length()).trim().at(0) =!= "n" {
         return (ok = false, text = "", label = "", commit = "", error = filePath + ": snapshot release must have null releasedComponent");
     }
     com := json.readObjectString(src, 0, "commit");
@@ -136,7 +135,7 @@ pub validateReleaseJsonText := fn(filePath: String, rootDir: String): (ok: Bool,
 archiveTarGz := fn(outDir: String, name: String, sourceDir: String, entries: List<String>): (ok: Bool, error: String) {
     args: mut List<String> = ["-czf", path.join(outDir, name), "-C", sourceDir];
     loop entries as e {
-        list.pushBack(mut args, e);
+        mut args.pushBack(e);
     }
     res := runCheckedText("tar", args, outDir);
     if not res.ok { return (ok = false, error = res.error); }
@@ -151,13 +150,13 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
     }
     st := runCheckedText("git", ["status", "--porcelain"], rootDir);
     if not st.ok { io.errorLine(st.error); return 1; }
-    if text.trim(st.stdout) =!= "" {
+    if st.stdout.trim() =!= "" {
         io.errorLine("release preparation requires a clean checkout");
         return 1;
     }
     headRes := runCheckedText("git", ["rev-parse", "HEAD"], rootDir);
     if not headRes.ok { io.errorLine(headRes.error); return 1; }
-    commit := text.trim(headRes.stdout);
+    commit := headRes.stdout.trim();
 
     refType := proc.envGet("GITHUB_REF_TYPE");
     refName := proc.envGet("GITHUB_REF_NAME");
@@ -169,18 +168,18 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
         tParsed := rel.parseComponentTag(tag);
         if not tParsed.ok { io.errorLine(tParsed.error); return 1; }
         tType := runCheckedText("git", ["cat-file", "-t", "refs/tags/" + tag], rootDir);
-        if not tType.ok or text.trim(tType.stdout) =!= "tag" {
+        if not tType.ok or tType.stdout.trim() =!= "tag" {
             io.errorLine("release tags must be annotated");
             return 1;
         }
         tCom := runCheckedText("git", ["rev-parse", "refs/tags/" + tag + "^{commit}"], rootDir);
-        if not tCom.ok or text.trim(tCom.stdout) =!= commit {
+        if not tCom.ok or tCom.stdout.trim() =!= commit {
             io.errorLine("release tag does not point to HEAD commit");
             return 1;
         }
     }
 
-    label := if hasTag { tag } else { "snapshot-" + text.slice(commit, 0, 12) };
+    label := if hasTag { tag } else { "snapshot-" + commit.slice(0, 12) };
     ignPkgRead := fs.readText(path.join(rootDir, "igniter/package.json"));
     if not ignPkgRead.ok { io.errorLine(ignPkgRead.error); return 1; }
     igniterVer := json.readObjectString(ignPkgRead.text, 0, "version").value;
@@ -230,7 +229,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
         manPath := path.join(rootDir, "compiler/manifests/" + t + ".json");
         manText := fs.readText(manPath).text;
         manFiles := corpus.readStringListAt(manText, json.findObjectField(manText, 0, "files").valuePos);
-        if list.listCountText(manFiles) =!= 1 {
+        if manFiles.length() =!= 1 {
             _rm := fs.remove(workDir);
             io.errorLine(t + " source graph has one root");
             return 1;
@@ -256,7 +255,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
         _wD := fs.writeText(path.join(genDir, t + "-dependencies.json"), depJsonRes.jsonText + "\n");
 
         cEntry := "{\n      \"target\": " + json.quoteString(t) + ",\n      \"sourceSha256\": " + json.quoteString(built.sourceSha256) + ",\n      \"artifactSha256\": " + json.quoteString(built.artifactSha256) + ",\n      \"builderSha256\": " + json.quoteString(built.builderSha256) + "\n    }";
-        list.pushBack(mut compJsonEntries, cEntry);
+        mut compJsonEntries.pushBack(cEntry);
     }
 
     fixturesDir := path.join(rootDir, "igniter/tests/compiler");
@@ -266,8 +265,8 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
 
     loop fixFiles as absFix {
         fName := path.baseName(absFix);
-        if text.startsWithAt(fName, 0, "001-") {
-            progName := text.slice(fName, 0, text.length(fName) - 5);
+        if fName.startsWithAt(0, "001-") {
+            progName := fName.slice(0, fName.length() - 5);
             fixJson := fs.readText(absFix).text;
             srcField := json.findObjectField(fixJson, 0, "source");
             srcChk := streams.validateStream(fixJson, srcField.valuePos, fixturesDir, fName + ".source", false, false, true);
@@ -291,15 +290,15 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
                 inB := if inF.found { streams.readStreamBytes(fixJson, inF.valuePos, fixturesDir) } else { emptyBytes };
                 outB := if outF.found { streams.readStreamBytes(fixJson, outF.valuePos, fixturesDir) } else { emptyBytes };
                 errB := if errF.found { streams.readStreamBytes(fixJson, errF.valuePos, fixturesDir) } else { emptyBytes };
-                scJson := "{\n          \"name\": " + json.quoteString(sName) + ",\n          \"stdin\": " + json.quoteString(crypto.base64Encode(inB)) + ",\n          \"stdout\": " + json.quoteString(crypto.base64Encode(outB)) + ",\n          \"stderr\": " + json.quoteString(crypto.base64Encode(errB)) + ",\n          \"exitCode\": " + integer.intText(exitCode) + "\n        }";
-                list.pushBack(mut caseEntries, scJson);
+                scJson := "{\n          \"name\": " + json.quoteString(sName) + ",\n          \"stdin\": " + json.quoteString(crypto.base64Encode(inB)) + ",\n          \"stdout\": " + json.quoteString(crypto.base64Encode(outB)) + ",\n          \"stderr\": " + json.quoteString(crypto.base64Encode(errB)) + ",\n          \"exitCode\": " + exitCode.toText() + "\n        }";
+                mut caseEntries.pushBack(scJson);
             }
             pEntry := "{\n      \"name\": " + json.quoteString(progName) + ",\n      \"cSha256\": " + json.quoteString(cSha) + ",\n      \"sourceSha256\": " + json.quoteString(srcSha) + ",\n      \"cases\": [\n        " + text.joinTexts(caseEntries, ",\n        ") + "\n      ]\n    }";
-            list.pushBack(mut progEntries, pEntry);
+            mut progEntries.pushBack(pEntry);
         }
     }
 
-    if list.listCountText(progEntries) == 0 {
+    if progEntries.length() == 0 {
         _rm := fs.remove(workDir);
         io.errorLine("no C programs packaged");
         return 1;
@@ -334,7 +333,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
     if not a3.ok { _rm := fs.remove(workDir); io.errorLine(a3.error); return 1; }
 
     _rm := fs.remove(workDir);
-    io.outputLine("Packaged " + label + " at " + commit + ": both compilers rebuilt; " + integer.intText(list.listCountText(progEntries)) + " C programs.");
+    io.outputLine("Packaged " + label + " at " + commit + ": both compilers rebuilt; " + progEntries.length().toText() + " C programs.");
     0
 };
 
@@ -407,8 +406,8 @@ runNative := fn(rootDir: String, outDir: String, inputDir: String): Int {
             expOutBytes := crypto.base64Decode(outB64);
             expErrBytes := crypto.base64Decode(errB64);
 
-            outF := path.join(workDir, pName + "-" + integer.intText(si) + ".out");
-            errF := path.join(workDir, pName + "-" + integer.intText(si) + ".err");
+            outF := path.join(workDir, pName + "-" + si.toText() + ".out");
+            errF := path.join(workDir, pName + "-" + si.toText() + ".err");
             emptyArgs: List<String> = [];
             ran := proc.runBytes(exePath, emptyArgs, workDir, emptyEnv, 10000, inBytes, outF, errF);
             okRun := ran.error == "" and ran.status == expExit
@@ -423,8 +422,8 @@ runNative := fn(rootDir: String, outDir: String, inputDir: String): Int {
         }
         binSha := crypto.sha256File(exePath);
         if not binSha.ok { _rm := fs.remove(workDir); io.errorLine(binSha.error); return 1; }
-        pRep := "{\n      \"name\": " + json.quoteString(pName) + ",\n      \"cSha256\": " + json.quoteString(pCSha) + ",\n      \"binarySha256\": " + json.quoteString(binSha.hex) + ",\n      \"scenarios\": " + integer.intText(list.listCountInt(caseOffsets)) + "\n    }";
-        list.pushBack(mut progReportEntries, pRep);
+        pRep := "{\n      \"name\": " + json.quoteString(pName) + ",\n      \"cSha256\": " + json.quoteString(pCSha) + ",\n      \"binarySha256\": " + json.quoteString(binSha.hex) + ",\n      \"scenarios\": " + caseOffsets.length().toText() + "\n    }";
+        mut progReportEntries.pushBack(pRep);
     }
 
     ccVer := runCheckedText(cc, ["--version"], workDir);
@@ -448,7 +447,7 @@ runNative := fn(rootDir: String, outDir: String, inputDir: String): Int {
     _rm := fs.remove(workDir);
     if not arc.ok { io.errorLine(arc.error); return 1; }
 
-    io.outputLine(target + ": built and verified " + integer.intText(list.listCountText(progReportEntries)) + " C programs.");
+    io.outputLine(target + ": built and verified " + progReportEntries.length().toText() + " C programs.");
     0
 };
 
@@ -457,7 +456,7 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
     if not relInfo.ok { io.errorLine(relInfo.error); return 1; }
 
     headRes := runCheckedText("git", ["rev-parse", "HEAD"], rootDir);
-    if not headRes.ok or text.trim(headRes.stdout) =!= relInfo.commit {
+    if not headRes.ok or headRes.stdout.trim() =!= relInfo.commit {
         io.errorLine("release commit does not match git HEAD");
         return 1;
     }
@@ -479,11 +478,11 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
             io.errorLine("missing native archive: " + arcPath);
             return 1;
         }
-        list.pushBack(mut natRepEntries, natRead.text);
+        (mut natRepEntries).pushBack(natRead.text);
     }
 
     archives := path.collectFiles(outDir, [outDir], ".tar.gz", [], false);
-    if list.listCountText(archives) =!= list.listCountText(targets) + 3 {
+    if archives.length() =!= targets.length() + 3 {
         io.errorLine("unexpected archive count in " + outDir);
         return 1;
     }
@@ -491,13 +490,13 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
     loop archives as aPath {
         h := crypto.sha256File(aPath);
         if not h.ok { io.errorLine(h.error); return 1; }
-        list.pushBack(mut assetEntries, "{\n      \"file\": " + json.quoteString(path.baseName(aPath)) + ",\n      \"sha256\": " + json.quoteString(h.hex) + "\n    }");
+        (mut assetEntries).pushBack("{\n      \"file\": " + json.quoteString(path.baseName(aPath)) + ",\n      \"sha256\": " + json.quoteString(h.hex) + "\n    }");
     }
 
     runEnv := proc.envGet("GITHUB_RUN_ID");
     runJson := if runEnv.found and runEnv.value =!= "" { json.quoteString(runEnv.value) } else { "null" };
-    trimmedRel := text.trim(relInfo.text);
-    manifestJson := text.slice(trimmedRel, 0, text.length(trimmedRel) - 1)
+    trimmedRel := relInfo.text.trim();
+    manifestJson := trimmedRel.slice(0, trimmedRel.length() - 1)
     + ",\n  \"nativeReports\": [\n    " + text.joinTexts(natRepEntries, ",\n    ") + "\n  ],\n"
     + "  \"assets\": [\n    " + text.joinTexts(assetEntries, ",\n    ") + "\n  ],\n"
     + "  \"workflowRun\": " + runJson + "\n}\n";
@@ -505,12 +504,12 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
 
     ignVer := json.readObjectString(relInfo.text, 0, "igniterVersion").value;
     progsField := json.findObjectField(relInfo.text, 0, "programs");
-    progCount := list.listCountInt(json.arrayElementOffsets(relInfo.text, progsField.valuePos));
+    progCount := json.arrayElementOffsets(relInfo.text, progsField.valuePos).length();
 
     notes := "Igniter snapshot " + relInfo.label + "\n\n"
     + "Source commit: " + relInfo.commit + ". Igniter package: " + ignVer + ".\n\n"
     + "The igniter archive contains the source tree, one selected TS igniter, provisional libraries and rebuild instructions. Compiler dependencies are ordinary Lite source imports and no generated C seed is required.\n\n"
-    + "Generated C and " + text.joinTexts(targets, ", ") + " executables cover " + integer.intText(progCount)
+    + "Generated C and " + text.joinTexts(targets, ", ") + " executables cover " + progCount.toText()
     + " admitted compiler test programs. These executables are conformance programs; a native self-hosting C compiler is not available yet. Libraries remain provisional, without a stable stdlib API or ABI.\n\n"
     + "See IGNITER.md in the igniter archive. manifest.json records source/builder hashes and native toolchains; SHA256SUMS covers every other release asset. Native binaries depend on their runner OS/libc and are not signed.\n";
     _wn := fs.writeText(path.join(outDir, "RELEASE-NOTES.md"), notes);
@@ -521,28 +520,28 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
         if entry =!= "SHA256SUMS" {
             h := crypto.sha256File(path.join(outDir, entry));
             if not h.ok { io.errorLine(h.error); return 1; }
-            list.pushBack(mut sumLines, h.hex + "  " + entry);
+            (mut sumLines).pushBack(h.hex + "  " + entry);
         }
     }
     _ws := fs.writeText(path.join(outDir, "SHA256SUMS"), text.joinTexts(sumLines, "\n") + "\n");
-    io.outputLine("Verified " + integer.intText(list.listCountText(targets)) + " native targets and wrote the release manifest/checksums.");
+    io.outputLine("Verified " + targets.length().toText() + " native targets and wrote the release manifest/checksums.");
     0
 };
 
 /** Parses CLI arguments for `compiler/scripts/release.ts` without executing filesystem side-effects. */
 pub parseCompilerReleaseArgs := fn(args: List<String>): (ok: Bool, command: String, outDir: String, sourcesDir: String, error: String) {
-    if list.listCountText(args) < 2 {
+    if args.length() < 2 {
         return (ok = false, command = "", outDir = "", sourcesDir = "", error = usageLine());
     }
     cmd := args[0];
     outDir := path.resolve(proc.cwd(), args[1]);
-    if cmd == "prepare" and list.listCountText(args) == 2 {
+    if cmd == "prepare" and args.length() == 2 {
         return (ok = true, command = cmd, outDir = outDir, sourcesDir = "", error = "");
     }
-    if cmd == "native" and list.listCountText(args) == 3 {
+    if cmd == "native" and args.length() == 3 {
         return (ok = true, command = cmd, outDir = outDir, sourcesDir = args[2], error = "");
     }
-    if cmd == "finalize" and list.listCountText(args) == 2 {
+    if cmd == "finalize" and args.length() == 2 {
         return (ok = true, command = cmd, outDir = outDir, sourcesDir = "", error = "");
     }
     (ok = false, command = "", outDir = "", sourcesDir = "", error = usageLine())

@@ -22,7 +22,6 @@ tmpDir := tmpRes.path;
 
 functionalSrc :=
 "io := import \"core/io\";\n" +
-"integer := import \"core/int\";\n" +
 "arena := import \"extra/arena\";\n" +
 "pool := import \"extra/pool\";\n" +
 "intern := import \"extra/intern\";\n" +
@@ -203,7 +202,6 @@ if ccInfo.available {
     /* Stress & ASan/UBSan bounded-memory verification via ./bin/lite build --sanitize */
     stressSrc :=
     "io := import \"core/io\";\n" +
-    "integer := import \"core/int\";\n" +
     "arena := import \"extra/arena\";\n" +
     "pool := import \"extra/pool\";\n" +
     "intern := import \"extra/intern\";\n" +
@@ -227,7 +225,7 @@ if ccInfo.available {
     "it := intern.create();\n" +
     "var ic := 0;\n" +
     "loop ic < 500 {\n" +
-    "    _s1 := intern.intern(it, \"sym_\" + integer.intText(ic % 16));\n" +
+    "    _s1 := intern.intern(it, \"sym_\" + (ic % 16).toText());\n" +
     "    if (ic % 50) == 49 { intern.clear(it); }\n" +
     "    ic += 1;\n" +
     "}\n" +

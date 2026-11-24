@@ -2,21 +2,20 @@
 
 list := import "core/list";
 proc := import "core/process";
-text := import "core/text";
 path := import "core/path";
 
 /** Strips a leading `--` argument separator when present using `list.popFront`. */
 pub stripLeadingSeparator := fn(rawArgs: List<String>): List<String> {
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--" {
-        _sep := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--" {
+        _sep := mut args.popFront();
     }
     args
 };
 
 stripSuffix := fn(value: String, suffix: String): String {
-    if text.endsWith(value, suffix) {
-        return text.slice(value, 0, text.length(value) - text.length(suffix));
+    if value.endsWith(suffix) {
+        return value.slice(0, value.length() - suffix.length());
     }
     value
 };
@@ -27,8 +26,8 @@ pub entryCommand := fn(entryPath: String): String {
     name = stripSuffix(name, ".ts");
     name = stripSuffix(name, ".js");
     name = stripSuffix(name, ".exe");
-    if text.startsWithAt(name, 0, "lite-") {
-        name = text.slice(name, 5, text.length(name));
+    if name.startsWithAt(0, "lite-") {
+        name = name.slice(5, name.length());
     }
     if name == "cli" or name == "lite" { return "lite"; }
     if name == "checker" { return "check"; }
@@ -47,8 +46,8 @@ pub normalizeSubcommand := fn(token: String, commands: List<String>): String {
     if list.listContainsText(commands, token) {
         return token;
     }
-    if text.startsWithAt(token, 0, "--") {
-        candidate := text.slice(token, 2, text.length(token));
+    if token.startsWithAt(0, "--") {
+        candidate := token.slice(2, token.length());
         if list.listContainsText(commands, candidate) {
             return candidate;
         }

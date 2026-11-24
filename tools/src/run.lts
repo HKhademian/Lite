@@ -3,9 +3,6 @@
 io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
-text := import "core/text";
-integer := import "core/int";
-list := import "core/list";
 path := import "core/path";
 project := import "util/project";
 compilerBuild := import "util/compiler-build";
@@ -17,12 +14,12 @@ usageExit := fn(): Unit {
 };
 
 parsePosInt := fn(raw: String): Int {
-    n := text.length(raw);
+    n := raw.length();
     if n == 0 { return 0; }
     var acc := 0;
     var i := 0;
     loop i < n {
-        ch := text.at(raw, i);
+        ch := raw.at(i);
         d := if ch == "0" { 0 } else if ch == "1" { 1 } else if ch == "2" { 2 }
         else if ch == "3" { 3 } else if ch == "4" { 4 } else if ch == "5" { 5 }
         else if ch == "6" { 6 } else if ch == "7" { 7 } else if ch == "8" { 8 }
@@ -36,34 +33,34 @@ parsePosInt := fn(raw: String): Int {
 
 escapeLiteString := fn(raw: String): String {
     out: mut tb.TextBuilder;
-    n := text.length(raw);
+    n := raw.length();
     var runStart := 0;
     var i := 0;
     loop i < n {
-        ch := text.at(raw, i);
+        ch := raw.at(i);
         if ch == "\\" or ch == "\"" {
-            if i > runStart { tb.append(mut out, text.slice(raw, runStart, i)); }
+            if i > runStart { tb.append(mut out, raw.slice(runStart, i)); }
             tb.append(mut out, if ch == "\\" { "\\\\" } else { "\\\"" });
             runStart = i + 1;
         }
         i += 1;
     }
     if runStart == 0 { return raw; }
-    if runStart < n { tb.append(mut out, text.slice(raw, runStart, n)); }
+    if runStart < n { tb.append(mut out, raw.slice(runStart, n)); }
     tb.build(out)
 };
 
 splitLines := fn(source: String): List<String> {
     out: mut List<String> = [];
-    n := text.length(source);
+    n := source.length();
     var pos := 0;
     loop pos <= n {
-        nl := text.indexOfText(source, "\n", pos);
+        nl := source.indexOf("\n", pos);
         if nl < 0 {
-            list.pushBack(mut out, text.slice(source, pos, n));
+            mut out.pushBack(source.slice(pos, n));
             break;
         }
-        list.pushBack(mut out, text.slice(source, pos, nl));
+        (mut out).pushBack(source.slice(pos, nl));
         pos = nl + 1;
     }
     out
@@ -73,16 +70,16 @@ findModuleAlias := fn(source: String, modulePath: String): String {
     needle := "\"" + modulePath + "\"";
     lines := splitLines(source);
     loop lines as rawLine {
-        line := text.trim(rawLine);
-        if text.containsText(line, needle) and text.containsText(line, "import") and text.containsText(line, ":=") {
+        line := rawLine.trim();
+        if line.contains(needle) and line.contains("import") and line.contains(":=") {
             var work := line;
-            if text.startsWithAt(work, 0, "pub ") {
-                work = text.trim(text.slice(work, 4, text.length(work)));
+            if work.startsWithAt(0, "pub ") {
+                work = work.slice(4, work.length()).trim();
             }
-            colonIdx := text.indexOfText(work, ":=", 0);
+            colonIdx := work.indexOf(":=", 0);
             if colonIdx > 0 {
-                alias := text.trim(text.slice(work, 0, colonIdx));
-                if alias =!= "" and not text.containsText(alias, " ") {
+                alias := work.slice(0, colonIdx).trim();
+                if alias =!= "" and not (alias).contains(" ") {
                     return alias;
                 }
             }
@@ -102,16 +99,16 @@ findAudioAlias := fn(source: String): String {
 hasTopLevelFn := fn(source: String, fnName: String): Bool {
     lines := splitLines(source);
     loop lines as rawLine {
-        line := text.trim(rawLine);
+        line := rawLine.trim();
         var work := line;
-        if text.startsWithAt(work, 0, "pub ") {
-            work = text.trim(text.slice(work, 4, text.length(work)));
+        if work.startsWithAt(0, "pub ") {
+            work = work.slice(4, work.length()).trim();
         }
-        if text.startsWithAt(work, 0, fnName) {
-            rest := text.trim(text.slice(work, text.length(fnName), text.length(work)));
-            if text.startsWithAt(rest, 0, ":=") {
-                after := text.trim(text.slice(rest, 2, text.length(rest)));
-                if text.startsWithAt(after, 0, "fn") {
+        if work.startsWithAt(0, fnName) {
+            rest := work.slice(fnName.length(), work.length()).trim();
+            if rest.startsWithAt(0, ":=") {
+                after := rest.slice(2, rest.length()).trim();
+                if after.startsWithAt(0, "fn") {
                     return true;
                 }
             }
@@ -133,9 +130,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     header :=
     "__lpSurf := import \"extra/surface\";\n" +
     "__lpColor := import \"extra/color\";\n" +
-    "__lpList := import \"core/list\";\n" +
     "__lpIo := import \"core/io\";\n" +
-    "__lpInt := import \"core/int\";\n" +
     "__lpTime := import \"core/time\";\n";
 
     var footer := "\n/* --- Desktop Play host driver (extra/canvas + extra/audio -> extra/surface) --- */\n";
@@ -165,7 +160,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "__lpFmt1 := fn(tenths: Int): String {\n" +
     "    whole := tenths / 10;\n" +
     "    frac := tenths % 10;\n" +
-    "    __lpInt.intText(whole) + \".\" + __lpInt.intText(if frac < 0 { 0 } else { frac })\n" +
+    "    whole.toText() + \".\" + (if frac < 0 { 0 } else { frac }).toText()\n" +
     "};\n" +
     "__lpApplyFps := fn(win: __lpSurf.Surface, mode: Int): Unit {\n" +
     "    if mode == 0 { __lpSurf.setTargetFps(win, 60.0); }\n" +
@@ -201,7 +196,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "    __lpSurf.fillRect(win, __lpSurf.rect(312.0, by + 4.0, 50.0, 20.0), if fullOn { cyanBg } else { pillBg });\n" +
     "    __lpSurf.drawText(win, if fullOn { \"WIN\" } else { \"FULL\" }, __lpSurf.point(318.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
     "    if winW >= 460 {\n" +
-    "        stat := __lpInt.intText(hudFps) + \" FPS\";\n" +
+    "        stat := hudFps.toText() + \" FPS\";\n" +
     "        __lpSurf.drawText(win, stat, __lpSurf.point((winW - 84) * 1.0, by + 10.0), 8.0, __lpSurf.rgb(0.68, 0.76, 0.86));\n" +
     "    }\n" +
     "};\n" +
@@ -210,8 +205,8 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "    __lpSurf.strokeRect(win, __lpSurf.rect(8.0, 8.0, 296.0, 42.0), 1.0, __lpSurf.rgba(0.45, 0.78, 0.90, 0.65));\n" +
     "    capTxt := if fpsMode == 0 { \"60\" } else if fpsMode == 1 { \"30\" } else if fpsMode == 2 { \"120\" } else { \"UNCAP\" };\n" +
     "    stTxt := (if paused { \" PAUSED\" } else { \"\" }) + (if muted { \" MUTED\" } else { \"\" });\n" +
-    "    l1 := \"FPS \" + __lpInt.intText(hudFps) + \"  MS \" + __lpFmt1(hudMsT) + \"  CAP \" + capTxt + stTxt;\n" +
-    "    l2 := \"RSS \" + __lpFmt1(hudRssT) + \"MB  CPU \" + __lpFmt1(hudCpuT) + \"MS  FRM \" + __lpInt.intText(hudFrames);\n" +
+    "    l1 := \"FPS \" + hudFps.toText() + \"  MS \" + __lpFmt1(hudMsT) + \"  CAP \" + capTxt + stTxt;\n" +
+    "    l2 := \"RSS \" + __lpFmt1(hudRssT) + \"MB  CPU \" + __lpFmt1(hudCpuT) + \"MS  FRM \" + hudFrames.toText();\n" +
     "    __lpSurf.drawText(win, l1, __lpSurf.point(14.0, 14.0), 8.0, __lpSurf.WHITE);\n" +
     "    __lpSurf.drawText(win, l2, __lpSurf.point(14.0, 30.0), 8.0, __lpSurf.rgb(0.55, 0.88, 0.76));\n" +
     "};\n" +
@@ -220,7 +215,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "    scaleF := scale * 1.0;\n" +
     "    var nextDraw := lastDrawCount;\n" +
     "    px := " + canvasAlias + ".litePlayCanvasPixels();\n" +
-    "    pxLen := __lpList.length(px);\n" +
+    "    pxLen := px.length();\n" +
     "    if pxLen > 0 and pxLen == snap.width * snap.height and snap.drawCount =!= lastDrawCount {\n" +
     "        nextDraw = snap.drawCount;\n" +
     "        var py := 0;\n" +
@@ -240,7 +235,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "        }\n" +
     "    }\n" +
     "    ops := " + canvasAlias + ".litePlayCanvasTakeOps();\n" +
-    "    n := __lpList.length(ops);\n" +
+    "    n := ops.length();\n" +
     "    var i := 0;\n" +
     "    loop i < n {\n" +
     "        op := ops[i];\n" +
@@ -258,7 +253,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
         footer = footer +
         "    tones := " + audioAlias + ".litePlayAudioDrain();\n" +
         "    if not muted {\n" +
-        "        tn := __lpList.length(tones);\n" +
+        "        tn := tones.length();\n" +
         "        var ti := 0;\n" +
         "        loop ti + 2 < tn {\n" +
         "            __lpSurf.playTone(win, tones[ti], tones[ti + 1], tones[ti + 2]);\n" +
@@ -272,7 +267,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "__lpRunPlay := fn(): Unit {\n" +
     "    snap := " + canvasAlias + ".litePlayCanvasSnapshot();\n" +
     "    if snap.width <= 0 or snap.height <= 0 { return; }\n" +
-    "    reqScale := " + integer.intText(scale) + ";\n" +
+    "    reqScale := " + scale.toText() + ";\n" +
     "    scale := if reqScale > 0 { reqScale } else if snap.width <= 240 { 3 } else if snap.width <= 480 { 2 } else { 1 };\n" +
     "    canvasW := snap.width * scale;\n" +
     "    canvasH := snap.height * scale;\n" +
@@ -283,7 +278,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     if uncap {
         footer = footer + "    __lpSurf.uncapFrameRate(win);\n";
     } else if fps > 0 {
-        footer = footer + "    __lpSurf.setTargetFps(win, " + integer.intText(fps) + ".0);\n";
+        footer = footer + "    __lpSurf.setTargetFps(win, " + fps.toText() + ".0);\n";
     }
 
     footer = footer + "    var lastDraw := -1;\n";
@@ -300,8 +295,8 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
         if debugHud {
             footer = footer +
             "    vtCap := __lpSurf.vitals(win);\n" +
-            "    __lpDrawStageBar(win, canvasW, canvasH, barH, barH > 0, false, false, " + integer.intText(initFpsMode) + ", true, false, 60);\n" +
-            "    __lpDrawDebugHud(win, 60, 166, 12, __lpFloorInt(((vtCap.memoryBytes / 1048576.0) * 10.0) + 0.5), vtCap.frameCount, " + integer.intText(initFpsMode) + ", false, false);\n";
+            "    __lpDrawStageBar(win, canvasW, canvasH, barH, barH > 0, false, false, " + initFpsMode.toText() + ", true, false, 60);\n" +
+            "    __lpDrawDebugHud(win, 60, 166, 12, __lpFloorInt(((vtCap.memoryBytes / 1048576.0) * 10.0) + 0.5), vtCap.frameCount, " + initFpsMode.toText() + ", false, false);\n";
         }
         footer = footer +
         "    __lpSurf.present(win);\n" +
@@ -320,7 +315,7 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "    var barVisible := " + (if showBar { "true" } else { "false" }) + ";\n" +
     "    var fullOn := " + (if startFullscreen { "true" } else { "false" }) + ";\n" +
     (if startFullscreen { "    __lpSurf.setFullscreen(win, true);\n" } else { "" }) +
-    "    var fpsMode := " + integer.intText(initFpsMode) + ";\n" +
+    "    var fpsMode := " + initFpsMode.toText() + ";\n" +
     "    var hudFps := 60;\n" +
     "    var hudMsT := 166;\n" +
     "    var hudCpuT := 0;\n" +
@@ -473,11 +468,11 @@ run := fn(rawArgs: List<String>): Unit {
     var playFullscreen := false;
     var playCapture := "";
     var scriptPath := "";
-    loop list.listCountText(args) > 0 {
-        arg := list.popFront(mut args);
+    loop args.length() > 0 {
+        arg := mut args.popFront();
         if arg == "--" {
-            if list.listCountText(args) == 0 { usageExit(); }
-            scriptPath = list.popFront(mut args);
+            if args.length() == 0 { usageExit(); }
+            scriptPath = mut args.popFront();
             break;
         } else if arg == "--play" {
             playMode = true;
@@ -490,45 +485,45 @@ run := fn(rawArgs: List<String>): Unit {
         } else if arg == "--no-bar" or arg == "--hide-bar" {
             playBar = false;
         } else if arg == "--scale" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            playScale = parsePosInt(list.popFront(mut args));
-        } else if text.startsWithAt(arg, 0, "--scale=") {
-            playScale = parsePosInt(text.slice(arg, 8, text.length(arg)));
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            playScale = parsePosInt(mut args.popFront());
+        } else if arg.startsWithAt(0, "--scale=") {
+            playScale = parsePosInt(arg.slice(8, arg.length()));
         } else if arg == "--fps" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            playFps = parsePosInt(list.popFront(mut args));
-        } else if text.startsWithAt(arg, 0, "--fps=") {
-            playFps = parsePosInt(text.slice(arg, 6, text.length(arg)));
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            playFps = parsePosInt(mut args.popFront());
+        } else if arg.startsWithAt(0, "--fps=") {
+            playFps = parsePosInt(arg.slice(6, arg.length()));
         } else if arg == "--capture" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            playCapture = list.popFront(mut args);
-        } else if text.startsWithAt(arg, 0, "--capture=") {
-            playCapture = text.slice(arg, 10, text.length(arg));
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            playCapture = mut args.popFront();
+        } else if arg.startsWithAt(0, "--capture=") {
+            playCapture = arg.slice(10, arg.length());
         } else if arg == "--target" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            target = list.popFront(mut args);
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            target = mut args.popFront();
             targetSet = true;
-        } else if text.startsWithAt(arg, 0, "--target=") {
-            target = text.slice(arg, 9, text.length(arg));
+        } else if arg.startsWithAt(0, "--target=") {
+            target = arg.slice(9, arg.length());
             targetSet = true;
         } else if arg == "--builtin-mode" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            list.pushBack(mut builtinOpts, arg);
-            list.pushBack(mut builtinOpts, list.popFront(mut args));
-        } else if text.startsWithAt(arg, 0, "--builtin-mode=") {
-            list.pushBack(mut builtinOpts, arg);
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            (mut builtinOpts).pushBack(arg);
+            mut builtinOpts.pushBack(mut args.popFront());
+        } else if arg.startsWithAt(0, "--builtin-mode=") {
+            mut builtinOpts.pushBack(arg);
         } else if arg == "--emit-format" or arg == "--source-map" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            list.pushBack(mut builtinOpts, arg);
-            list.pushBack(mut builtinOpts, list.popFront(mut args));
-        } else if text.startsWithAt(arg, 0, "--emit-format=") or text.startsWithAt(arg, 0, "--source-map=") or text.startsWithAt(arg, 0, "-f") {
-            list.pushBack(mut builtinOpts, arg);
-        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or arg == "-Oc" or text.startsWithAt(arg, 0, "--opt=") {
-            list.pushBack(mut builtinOpts, arg);
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            (mut builtinOpts).pushBack(arg);
+            mut builtinOpts.pushBack(mut args.popFront());
+        } else if arg.startsWithAt(0, "--emit-format=") or arg.startsWithAt(0, "--source-map=") or arg.startsWithAt(0, "-f") {
+            mut builtinOpts.pushBack(arg);
+        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or arg == "-Oc" or arg.startsWithAt(0, "--opt=") {
+            mut builtinOpts.pushBack(arg);
         } else if arg == "--opt" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            list.pushBack(mut builtinOpts, arg);
-            list.pushBack(mut builtinOpts, list.popFront(mut args));
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            (mut builtinOpts).pushBack(arg);
+            mut builtinOpts.pushBack(mut args.popFront());
         } else {
             scriptPath = arg;
             break;
@@ -550,17 +545,17 @@ run := fn(rawArgs: List<String>): Unit {
         io.errorLine("lite run: --check is ./bin/lite check file.lts");
         io.exit(2);
     }
-    if text.startsWithAt(scriptPath, 0, "-") {
+    if scriptPath.startsWithAt(0, "-") {
         io.errorLine("lite run: unknown option " + scriptPath);
         usageExit();
     }
-    if not text.endsWith(scriptPath, ".lts") {
+    if not scriptPath.endsWith(".lts") {
         io.errorLine("lite run: source must be a .lts file");
         io.exit(2);
     }
 
-    if list.listCountText(args) > 0 and args[0] == "--" {
-        _sep := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--" {
+        _sep := mut args.popFront();
     }
     if fs.kind(scriptPath) =!= fs.FILE_KIND_FILE {
         io.errorLine("lite run: cannot read " + scriptPath);
@@ -607,9 +602,9 @@ run := fn(rawArgs: List<String>): Unit {
 
     compileArgs: mut List<String> = [sel.path];
     loop builtinOpts as opt {
-        list.pushBack(mut compileArgs, opt);
+        mut compileArgs.pushBack(opt);
     }
-    list.pushBack(mut compileArgs, compileInput);
+    (mut compileArgs).pushBack(compileInput);
     compiled := proc.run(project.nodeExecPath(), compileArgs, "", emptyEnv, true, "");
     if compiled.error =!= "" {
         fs.remove(tempDir.path);
@@ -624,11 +619,11 @@ run := fn(rawArgs: List<String>): Unit {
 
     runEnv: mut List<String> = [];
     if playCapture =!= "" {
-        list.pushBack(mut runEnv, "LITE_CANVAS_HEADLESS=1");
+        mut runEnv.pushBack("LITE_CANVAS_HEADLESS=1");
     }
 
     base := path.baseName(scriptPath);
-    baseNoExt := text.slice(base, 0, text.length(base) - 4);
+    baseNoExt := base.slice(0, base.length() - 4);
     if target == "c" {
         cArtifact := path.join(tempDir.path, baseNoExt + ".c");
         cWrite := fs.writeText(cArtifact, compiled.stdout);
@@ -639,11 +634,11 @@ run := fn(rawArgs: List<String>): Unit {
         }
         binPath := path.join(tempDir.path, baseNoExt);
         ccArgs: mut List<String> = ["-std=c11", "-O1", cArtifact, "-o", binPath, "-lm"];
-        if proc.platform() == "darwin" and text.containsText(compiled.stdout, "LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
-            list.pushBack(mut ccArgs, "-framework");
-            list.pushBack(mut ccArgs, "Cocoa");
-            list.pushBack(mut ccArgs, "-framework");
-            list.pushBack(mut ccArgs, "CoreGraphics");
+        if proc.platform() == "darwin" and compiled.stdout.contains("LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
+            mut ccArgs.pushBack("-framework");
+            mut ccArgs.pushBack("Cocoa");
+            mut ccArgs.pushBack("-framework");
+            mut ccArgs.pushBack("CoreGraphics");
         }
         ccRes := proc.run("cc", ccArgs, tempDir.path, emptyEnv, true, "");
         if ccRes.error =!= "" {
@@ -698,7 +693,7 @@ run := fn(rawArgs: List<String>): Unit {
 
     entryArgs: mut List<String> = [runnerPath];
     loop args as arg {
-        list.pushBack(mut entryArgs, arg);
+        mut entryArgs.pushBack(arg);
     }
     var tsStatus := 0;
     var tsErr := "";

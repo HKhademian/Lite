@@ -1,32 +1,29 @@
 /** Caches Project Euler statements and published answers (`fetch_benchmark_euler.ts`). */
 
 fs := import "core/file";
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
 path := import "core/path";
-text := import "core/text";
 cfetch := import "util/challenge-fetch";
 challenges := import "util/challenges";
 json := import "util/json";
 project := import "util/project";
 
 extractEulerNumber := fn(entryPath: String): (ok: Bool, num: Int) {
-    if not text.startsWithAt(entryPath, 0, "python/p") or not text.endsWith(entryPath, ".py") or text.length(entryPath) =!= 14 {
+    if not entryPath.startsWithAt(0, "python/p") or not entryPath.endsWith(".py") or entryPath.length() =!= 14 {
         return (ok = false, num = 0);
     }
-    digits := text.slice(entryPath, 8, 11);
-    parsed := text.textToInt(digits);
+    digits := entryPath.slice(8, 11);
+    parsed := digits.toInt();
     if not parsed.ok { return (ok = false, num = 0); }
     (ok = true, num = parsed.value)
 };
 
 sortNumbersAsc := fn(nums: List<Int>): List<Int> {
-    count := list.listCountInt(nums);
+    count := nums.length();
     var used: mut List<Bool> = [];
     var k := 0;
     loop k < count {
-        list.pushBack(mut used, false);
+        mut used.pushBack(false);
         k = k + 1;
     }
     out: mut List<Int> = [];
@@ -45,11 +42,11 @@ sortNumbersAsc := fn(nums: List<Int>): List<Int> {
         nextUsed: mut List<Bool> = [];
         var u := 0;
         loop u < count {
-            list.pushBack(mut nextUsed, used[u] or u == bestIdx);
+            mut nextUsed.pushBack(used[u] or u == bestIdx);
             u = u + 1;
         }
         used = nextUsed;
-        list.pushBack(mut out, nums[bestIdx]);
+        mut out.pushBack(nums[bestIdx]);
         picked = picked + 1;
     }
     out
@@ -98,23 +95,23 @@ run := fn(rawArgs: List<String>): Int {
         if typeF.found and typeF.value == "blob" and pathF.found and pathF.ok {
             numRes := extractEulerNumber(pathF.value);
             if numRes.ok {
-                list.pushBack(mut rawNums, numRes.num);
+                mut rawNums.pushBack(numRes.num);
             }
         }
     }
     numbers := sortNumbersAsc(rawNums);
-    io.outputLine("public Python solutions: " + integer.intText(list.listCountInt(numbers)));
+    io.outputLine("public Python solutions: " + numbers.length().toText());
 
     urls: mut List<String> = [];
     paths: mut List<String> = [];
     loop numbers as n {
-        list.pushBack(mut urls, "https://projecteuler.net/problem=" + integer.intText(n));
-        list.pushBack(mut paths, path.join(cacheDir, "statements/problem-" + challenges.padLeftZero(n, 3) + ".html"));
+        mut urls.pushBack("https://projecteuler.net/problem=" + n.toText());
+        mut paths.pushBack(path.join(cacheDir, "statements/problem-" + challenges.padLeftZero(n, 3) + ".html"));
     }
     batch := cfetch.downloadBatch(urls, paths, false, 4, 45000, 150, false, false, 25);
     io.outputLine("cached " + cacheDir);
     if batch.failures > 0 {
-        io.errorLine("FAIL: " + integer.intText(batch.failures) + " statement page(s) failed");
+        io.errorLine("FAIL: " + batch.failures.toText() + " statement page(s) failed");
         return 1;
     }
     0

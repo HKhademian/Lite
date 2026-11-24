@@ -1,7 +1,5 @@
 /** Provisional strict JSON scanner, value reader, and string serializer. */
 
-text := import "core/text";
-list := import "core/list";
 unicode := import "core/unicode";
 tb := import "util/text-builder";
 
@@ -10,23 +8,23 @@ isJsonSpace := fn(ch: String): Bool {
 }
 
 skipJsonSpaces := fn(source: String, start: Int): Int {
-    size := text.length(source);
+    size := source.length();
     var pos := start;
-    loop pos < size and isJsonSpace(text.at(source, pos)) {
+    loop pos < size and isJsonSpace(source.at(pos)) {
         pos = pos + 1;
     }
     pos
 }
 
 isHexDigit := fn(ch: String): Bool {
-    text.isDigit(ch) or
+    ch.isDigit() or
     ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f" or
     ch == "A" or ch == "B" or ch == "C" or ch == "D" or ch == "E" or ch == "F"
 }
 
 hexDigitValue := fn(ch: String): Int {
-    if text.isDigit(ch) { return text.digitValue(ch); }
-    lower := text.toLowerAscii(ch);
+    if ch.isDigit() { return ch.digitValue(); }
+    lower := ch.toLowerAscii();
     if lower == "a" { return 10; }
     if lower == "b" { return 11; }
     if lower == "c" { return 12; }
@@ -36,14 +34,14 @@ hexDigitValue := fn(ch: String): Int {
 }
 
 hexCharLower := fn(nibble: Int): String {
-    text.at("0123456789abcdef", nibble)
+    "0123456789abcdef".at(nibble)
 };
 
 parseHex4 := fn(source: String, start: Int): (ok: Bool, value: Int) {
-    h0 := text.at(source, start);
-    h1 := text.at(source, start + 1);
-    h2 := text.at(source, start + 2);
-    h3 := text.at(source, start + 3);
+    h0 := source.at(start);
+    h1 := source.at(start + 1);
+    h2 := source.at(start + 2);
+    h3 := source.at(start + 3);
     if not isHexDigit(h0) or not isHexDigit(h1) or not isHexDigit(h2) or not isHexDigit(h3) {
         return (ok = false, value = 0);
     }
@@ -52,35 +50,35 @@ parseHex4 := fn(source: String, start: Int): (ok: Bool, value: Int) {
 };
 
 scanStringToken := fn(source: String, start: Int, decode: Bool): (ok: Bool, value: String, next: Int, error: String) {
-    size := text.length(source);
-    if start >= size or text.at(source, start) =!= "\"" {
+    size := source.length();
+    if start >= size or source.at(start) =!= "\"" {
         return (ok = false, value = "", next = start, error = "expected JSON string");
     }
     var pos := start + 1;
     out: mut tb.TextBuilder;
     var runStart := pos;
     loop pos < size {
-        ch := text.at(source, pos);
+        ch := source.at(pos);
         if ch == "\"" {
             if not decode {
                 return (ok = true, value = "", next = pos + 1, error = "");
             }
             if runStart == start + 1 {
-                return (ok = true, value = text.slice(source, runStart, pos), next = pos + 1, error = "");
+                return (ok = true, value = source.slice(runStart, pos), next = pos + 1, error = "");
             }
             if pos > runStart {
-                tb.append(mut out, text.slice(source, runStart, pos));
+                tb.append(mut out, source.slice(runStart, pos));
             }
             return (ok = true, value = tb.build(out), next = pos + 1, error = "");
         }
         if ch == "\\" {
             if decode and pos > runStart {
-                tb.append(mut out, text.slice(source, runStart, pos));
+                tb.append(mut out, source.slice(runStart, pos));
             }
             if pos + 1 >= size {
                 return (ok = false, value = "", next = pos, error = "unterminated string escape");
             }
-            esc := text.at(source, pos + 1);
+            esc := source.at(pos + 1);
             if esc == "\"" or esc == "\\" or esc == "/" {
                 if decode { tb.append(mut out, esc); }
                 pos = pos + 2;
@@ -116,7 +114,7 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): (ok: Bool, valu
                 code := firstHex.value;
                 var consumed := 6;
                 if decode {
-                    if code >= 55296 and code <= 56319 and pos + 11 < size and text.at(source, pos + 6) == "\\" and text.at(source, pos + 7) == "u" {
+                    if code >= 55296 and code <= 56319 and pos + 11 < size and source.at(pos + 6) == "\\" and source.at(pos + 7) == "u" {
                         secondHex := parseHex4(source, pos + 8);
                         if secondHex.ok and secondHex.value >= 56320 and secondHex.value <= 57343 {
                             pair: List<Int> = [code, secondHex.value];
@@ -125,19 +123,19 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): (ok: Bool, valu
                                 tb.append(mut out, pairRes.text);
                                 consumed = 12;
                             } else {
-                                tb.append(mut out, text.slice(source, pos, pos + 6));
+                                tb.append(mut out, source.slice(pos, pos + 6));
                             }
                         } else {
-                            tb.append(mut out, text.slice(source, pos, pos + 6));
+                            tb.append(mut out, source.slice(pos, pos + 6));
                         }
                     } else if code >= 55296 and code <= 57343 {
-                        tb.append(mut out, text.slice(source, pos, pos + 6));
+                        tb.append(mut out, source.slice(pos, pos + 6));
                     } else {
                         cpRes := unicode.fromCodePoint(code);
                         if cpRes.ok {
                             tb.append(mut out, cpRes.text);
                         } else {
-                            tb.append(mut out, text.slice(source, pos, pos + 6));
+                            tb.append(mut out, source.slice(pos, pos + 6));
                         }
                     }
                 }
@@ -157,42 +155,42 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): (ok: Bool, valu
 }
 
 scanNumberToken := fn(source: String, start: Int): (ok: Bool, next: Int, error: String) {
-    size := text.length(source);
+    size := source.length();
     var pos := start;
-    if pos < size and text.at(source, pos) == "-" {
+    if pos < size and source.at(pos) == "-" {
         pos = pos + 1;
     }
-    if pos >= size or not text.isDigit(text.at(source, pos)) {
+    if pos >= size or not source.at(pos).isDigit() {
         return (ok = false, next = pos, error = "expected JSON number digit");
     }
-    if text.at(source, pos) == "0" {
+    if source.at(pos) == "0" {
         pos = pos + 1;
-        if pos < size and text.isDigit(text.at(source, pos)) {
+        if pos < size and source.at(pos).isDigit() {
             return (ok = false, next = pos, error = "leading zero in JSON number");
         }
     } else {
-        loop pos < size and text.isDigit(text.at(source, pos)) {
+        loop pos < size and source.at(pos).isDigit() {
             pos = pos + 1;
         }
     }
-    if pos < size and text.at(source, pos) == "." {
+    if pos < size and source.at(pos) == "." {
         pos = pos + 1;
-        if pos >= size or not text.isDigit(text.at(source, pos)) {
+        if pos >= size or not source.at(pos).isDigit() {
             return (ok = false, next = pos, error = "expected fraction digit in JSON number");
         }
-        loop pos < size and text.isDigit(text.at(source, pos)) {
+        loop pos < size and source.at(pos).isDigit() {
             pos = pos + 1;
         }
     }
-    if pos < size and (text.at(source, pos) == "e" or text.at(source, pos) == "E") {
+    if pos < size and (source.at(pos) == "e" or source.at(pos) == "E") {
         pos = pos + 1;
-        if pos < size and (text.at(source, pos) == "+" or text.at(source, pos) == "-") {
+        if pos < size and (source.at(pos) == "+" or source.at(pos) == "-") {
             pos = pos + 1;
         }
-        if pos >= size or not text.isDigit(text.at(source, pos)) {
+        if pos >= size or not source.at(pos).isDigit() {
             return (ok = false, next = pos, error = "expected exponent digit in JSON number");
         }
-        loop pos < size and text.isDigit(text.at(source, pos)) {
+        loop pos < size and source.at(pos).isDigit() {
             pos = pos + 1;
         }
     }
@@ -201,7 +199,7 @@ scanNumberToken := fn(source: String, start: Int): (ok: Bool, next: Int, error: 
 
 /** Skips one valid JSON value starting at or after `start`, returning the index immediately after it. */
 pub skipValue := fn(source: String, start: Int): (ok: Bool, next: Int, error: String) {
-    size := text.length(source);
+    size := source.length();
     stack: mut List<String> = [];
     var stackCount := 0;
     var pos := start;
@@ -215,7 +213,7 @@ pub skipValue := fn(source: String, start: Int): (ok: Bool, next: Int, error: St
                 return (ok = false, next = pos, error = "expected JSON object key");
             }
             pos = skipJsonSpaces(source, keyRes.next);
-            if pos >= size or text.at(source, pos) =!= ":" {
+            if pos >= size or source.at(pos) =!= ":" {
                 return (ok = false, next = pos, error = "expected ':' after JSON object key");
             }
             pos = skipJsonSpaces(source, pos + 1);
@@ -226,26 +224,26 @@ pub skipValue := fn(source: String, start: Int): (ok: Bool, next: Int, error: St
             return (ok = false, next = pos, error = "unexpected end of JSON input");
         }
 
-        ch := text.at(source, pos);
+        ch := source.at(pos);
         var valueCompleted := false;
         if ch == "{" {
             afterOpen := skipJsonSpaces(source, pos + 1);
-            if afterOpen < size and text.at(source, afterOpen) == "}" {
+            if afterOpen < size and source.at(afterOpen) == "}" {
                 pos = afterOpen + 1;
                 valueCompleted = true;
             } else {
-                list.pushBack(mut stack, "obj");
+                mut stack.pushBack("obj");
                 stackCount = stackCount + 1;
                 pos = afterOpen;
                 expectKey = true;
             }
         } else if ch == "[" {
             afterOpen := skipJsonSpaces(source, pos + 1);
-            if afterOpen < size and text.at(source, afterOpen) == "]" {
+            if afterOpen < size and source.at(afterOpen) == "]" {
                 pos = afterOpen + 1;
                 valueCompleted = true;
             } else {
-                list.pushBack(mut stack, "arr");
+                mut stack.pushBack("arr");
                 stackCount = stackCount + 1;
                 pos = afterOpen;
             }
@@ -256,16 +254,16 @@ pub skipValue := fn(source: String, start: Int): (ok: Bool, next: Int, error: St
             }
             pos = strRes.next;
             valueCompleted = true;
-        } else if text.startsWithAt(source, pos, "true") {
+        } else if source.startsWithAt(pos, "true") {
             pos = pos + 4;
             valueCompleted = true;
-        } else if text.startsWithAt(source, pos, "false") {
+        } else if source.startsWithAt(pos, "false") {
             pos = pos + 5;
             valueCompleted = true;
-        } else if text.startsWithAt(source, pos, "null") {
+        } else if source.startsWithAt(pos, "null") {
             pos = pos + 4;
             valueCompleted = true;
-        } else if ch == "-" or text.isDigit(ch) {
+        } else if ch == "-" or ch.isDigit() {
             numRes := scanNumberToken(source, pos);
             if not numRes.ok {
                 return (ok = false, next = numRes.next, error = numRes.error);
@@ -285,11 +283,11 @@ pub skipValue := fn(source: String, start: Int): (ok: Bool, next: Int, error: St
                 if pos >= size {
                     return (ok = false, next = pos, error = "unterminated JSON container");
                 }
-                sep := text.at(source, pos);
+                sep := source.at(pos);
                 top := stack[stackCount - 1];
                 if top == "arr" {
                     if sep == "]" {
-                        list.popBack(mut stack);
+                        mut stack.popBack();
                         stackCount = stackCount - 1;
                         pos = pos + 1;
                     } else if sep == "," {
@@ -300,7 +298,7 @@ pub skipValue := fn(source: String, start: Int): (ok: Bool, next: Int, error: St
                     }
                 } else {
                     if sep == "}" {
-                        list.popBack(mut stack);
+                        mut stack.popBack();
                         stackCount = stackCount - 1;
                         pos = pos + 1;
                     } else if sep == "," {
@@ -327,7 +325,7 @@ pub validate := fn(source: String): (ok: Bool, error: String) {
         return (ok = false, error = skipped.error);
     }
     rest := skipJsonSpaces(source, skipped.next);
-    if rest < text.length(source) {
+    if rest < source.length() {
         return (ok = false, error = "unexpected trailing JSON content");
     }
     (ok = true, error = "")
@@ -348,22 +346,22 @@ pub readStringAt := fn(source: String, start: Int): (ok: Bool, value: String, ne
 
 /** Reads a JSON signed integer token at or after `start`. */
 pub readIntAt := fn(source: String, start: Int): (ok: Bool, value: Int, next: Int, error: String) {
-    size := text.length(source);
+    size := source.length();
     pos := skipJsonSpaces(source, start);
     var end := pos;
-    if end < size and (text.at(source, end) == "-" or text.at(source, end) == "+") {
+    if end < size and (source.at(end) == "-" or source.at(end) == "+") {
         end = end + 1;
     }
-    loop end < size and text.isDigit(text.at(source, end)) {
+    loop end < size and source.at(end).isDigit() {
         end = end + 1;
     }
     if end == pos {
         return (ok = false, value = 0, next = pos, error = "expected integer value");
     }
-    if end < size and (text.at(source, end) == "." or text.at(source, end) == "e" or text.at(source, end) == "E") {
+    if end < size and (source.at(end) == "." or source.at(end) == "e" or source.at(end) == "E") {
         return (ok = false, value = 0, next = pos, error = "expected integer value, got float");
     }
-    parsed := text.textToInt(text.slice(source, pos, end));
+    parsed := source.slice(pos, end).toInt();
     if not parsed.ok {
         return (ok = false, value = 0, next = pos, error = "invalid integer value");
     }
@@ -372,20 +370,20 @@ pub readIntAt := fn(source: String, start: Int): (ok: Bool, value: Int, next: In
 
 /** Finds direct property `key` inside the JSON object starting at or after `objectStart`, returning its value offset. */
 pub findObjectField := fn(source: String, objectStart: Int, key: String): (found: Bool, valuePos: Int) {
-    size := text.length(source);
+    size := source.length();
     var pos := skipJsonSpaces(source, objectStart);
-    if pos >= size or text.at(source, pos) =!= "{" {
+    if pos >= size or source.at(pos) =!= "{" {
         return (found = false, valuePos = -1);
     }
     pos = skipJsonSpaces(source, pos + 1);
-    if pos < size and text.at(source, pos) == "}" {
+    if pos < size and source.at(pos) == "}" {
         return (found = false, valuePos = -1);
     }
     loop pos < size {
         keyRes := scanStringToken(source, pos, true);
         if not keyRes.ok { return (found = false, valuePos = -1); }
         pos = skipJsonSpaces(source, keyRes.next);
-        if pos >= size or text.at(source, pos) =!= ":" { return (found = false, valuePos = -1); }
+        if pos >= size or source.at(pos) =!= ":" { return (found = false, valuePos = -1); }
         valStart := skipJsonSpaces(source, pos + 1);
         if keyRes.value == key {
             return (found = true, valuePos = valStart);
@@ -393,7 +391,7 @@ pub findObjectField := fn(source: String, objectStart: Int, key: String): (found
         valEnd := skipValue(source, valStart);
         if not valEnd.ok { return (found = false, valuePos = -1); }
         pos = skipJsonSpaces(source, valEnd.next);
-        if pos < size and text.at(source, pos) == "," {
+        if pos < size and source.at(pos) == "," {
             pos = skipJsonSpaces(source, pos + 1);
         } else {
             return (found = false, valuePos = -1);
@@ -423,25 +421,25 @@ pub readObjectBool := fn(source: String, objectStart: Int, key: String): (found:
     field := findObjectField(source, objectStart, key);
     if not field.found { return (found = false, ok = false, value = false); }
     pos := skipJsonSpaces(source, field.valuePos);
-    if text.startsWithAt(source, pos, "true") { return (found = true, ok = true, value = true); }
-    if text.startsWithAt(source, pos, "false") { return (found = true, ok = true, value = false); }
+    if source.startsWithAt(pos, "true") { return (found = true, ok = true, value = true); }
+    if source.startsWithAt(pos, "false") { return (found = true, ok = true, value = false); }
     (found = true, ok = false, value = false)
 }
 
 /** Returns starting offsets of elements inside a JSON array at or after `arrayStart`. */
 pub arrayElementOffsets := fn(source: String, arrayStart: Int): List<Int> {
     offsets: mut List<Int> = [];
-    size := text.length(source);
+    size := source.length();
     var pos := skipJsonSpaces(source, arrayStart);
-    if pos >= size or text.at(source, pos) =!= "[" { return offsets; }
+    if pos >= size or source.at(pos) =!= "[" { return offsets; }
     pos = skipJsonSpaces(source, pos + 1);
-    if pos < size and text.at(source, pos) == "]" { return offsets; }
+    if pos < size and source.at(pos) == "]" { return offsets; }
     loop pos < size {
-        list.pushBack(mut offsets, pos);
+        mut offsets.pushBack(pos);
         skipped := skipValue(source, pos);
         if not skipped.ok { return offsets; }
         pos = skipJsonSpaces(source, skipped.next);
-        if pos < size and text.at(source, pos) == "," {
+        if pos < size and source.at(pos) == "," {
             pos = skipJsonSpaces(source, pos + 1);
         } else {
             return offsets;
@@ -453,21 +451,21 @@ pub arrayElementOffsets := fn(source: String, arrayStart: Int): List<Int> {
 /** Returns decoded property names of a JSON object at or after `objectStart`. */
 pub objectKeys := fn(source: String, objectStart: Int): List<String> {
     keys: mut List<String> = [];
-    size := text.length(source);
+    size := source.length();
     var pos := skipJsonSpaces(source, objectStart);
-    if pos >= size or text.at(source, pos) =!= "{" { return keys; }
+    if pos >= size or source.at(pos) =!= "{" { return keys; }
     pos = skipJsonSpaces(source, pos + 1);
-    if pos < size and text.at(source, pos) == "}" { return keys; }
+    if pos < size and source.at(pos) == "}" { return keys; }
     loop pos < size {
         keyRes := scanStringToken(source, pos, true);
         if not keyRes.ok { return keys; }
-        list.pushBack(mut keys, keyRes.value);
+        (mut keys).pushBack(keyRes.value);
         pos = skipJsonSpaces(source, keyRes.next);
-        if pos >= size or text.at(source, pos) =!= ":" { return keys; }
+        if pos >= size or source.at(pos) =!= ":" { return keys; }
         skipped := skipValue(source, pos + 1);
         if not skipped.ok { return keys; }
         pos = skipJsonSpaces(source, skipped.next);
-        if pos < size and text.at(source, pos) == "," {
+        if pos < size and source.at(pos) == "," {
             pos = skipJsonSpaces(source, pos + 1);
         } else {
             return keys;
@@ -479,7 +477,7 @@ pub objectKeys := fn(source: String, objectStart: Int): List<String> {
 /** Formats `value` as a quoted JSON string literal in O(N) time using `TextBuilder`. */
 pub quoteString := fn(value: String): String {
     cps := unicode.toCodePoints(value);
-    size := list.listCountInt(cps);
+    size := cps.length();
     out: mut tb.TextBuilder;
     tb.append(mut out, "\"");
     var runStart := 0;
@@ -498,13 +496,13 @@ pub quoteString := fn(value: String): String {
             esc = "\\u00" + hexCharLower(cp / 16) + hexCharLower(cp % 16);
         }
         if esc =!= "" {
-            if i > runStart { tb.append(mut out, text.slice(value, runStart, i)); }
+            if i > runStart { tb.append(mut out, value.slice(runStart, i)); }
             tb.append(mut out, esc);
             runStart = i + 1;
         }
         i = i + 1;
     }
-    if runStart < size { tb.append(mut out, text.slice(value, runStart, size)); }
+    if runStart < size { tb.append(mut out, value.slice(runStart, size)); }
     tb.append(mut out, "\"");
     tb.build(out)
 }

@@ -1,11 +1,9 @@
 /** Routed aliases and direct operation commands must share behavior. */
 
 fs := import "core/file";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
 pool := import "external/pool";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
@@ -36,7 +34,7 @@ runIn := fn(exe: String, args: List<String>, cwd: String, timeoutMs: Int): CmdRe
 command := fn(name: String, args: List<String>): CmdResult {
     cmdArgs: mut List<String> = [path.join(path.join(root, "bin"), name)];
     loop args as a {
-        list.pushBack(mut cmdArgs, a);
+        mut cmdArgs.pushBack(a);
     }
     runIn(proc.execPath(), cmdArgs, root, 60000)
 };
@@ -48,27 +46,27 @@ assertSameCmd := fn(label: String, expected: CmdResult, actual: CmdResult): Unit
 };
 
 isHex12 := fn(s: String): Bool {
-    if text.length(s) =!= 12 { return false; }
+    if s.length() =!= 12 { return false; }
     var i := 0;
     loop i < 12 {
-        ch := text.at(s, i);
-        if text.indexOfText("0123456789abcdef", ch, 0) < 0 { return false; }
+        ch := s.at(i);
+        if "0123456789abcdef".indexOf(ch, 0) < 0 { return false; }
         i = i + 1;
     }
     true
 };
 
 stripShebang := fn(s: String): String {
-    if not text.startsWithAt(s, 0, "#!") { return s; }
-    nl := text.indexOfText(s, "\n", 0);
+    if not s.startsWithAt(0, "#!") { return s; }
+    nl := s.indexOf("\n", 0);
     if nl < 0 { return ""; }
-    text.slice(s, nl + 1, text.length(s))
+    s.slice(nl + 1, s.length())
 };
 
 copyRepoTree := fn(dstRoot: String, relPath: String): Unit {
     stack: mut List<String> = [relPath];
-    loop list.listCountText(stack) > 0 {
-        rel := list.popBack(mut stack);
+    loop stack.length() > 0 {
+        rel := mut stack.popBack();
         src := path.join(root, rel);
         dst := path.join(dstRoot, rel);
         rp := fs.realPath(src);
@@ -81,7 +79,7 @@ copyRepoTree := fn(dstRoot: String, relPath: String): Unit {
             test.check("mkdir dir " + rel, fs.makeDir(dst).ok);
             entries := fs.listDir(src);
             loop entries as entry {
-                list.pushBack(mut stack, rel + "/" + entry);
+                mut stack.pushBack(rel + "/" + entry);
             }
         } else {
             test.check("mkdir file parent " + rel, fs.makeDir(path.parentDir(dst)).ok);
@@ -124,8 +122,8 @@ command("lite", ["test", "--cases", "tools/cases/tooling/fixtures/proposal.fixtu
 /* 4. lite test --unit runs parallel .test.lts unit tests and validates flags */
 unitRes := command("lite", ["test", "--unit", "--jobs", "2", "--verbose", "compiler-smoke"]);
 test.checkInt("lite test --unit status: " + unitRes.stderr, 0, unitRes.status);
-test.check("lite test --unit PASS line", text.indexOfText(unitRes.stdout, "PASS compiler/tests/compiler-smoke.test.lts", 0) >= 0);
-test.check("lite test --unit summary", text.indexOfText(unitRes.stdout, "Unit tests: 1 passed, 0 failed.", 0) >= 0);
+test.check("lite test --unit PASS line", unitRes.stdout.indexOf("PASS compiler/tests/compiler-smoke.test.lts", 0) >= 0);
+test.check("lite test --unit summary", unitRes.stdout.indexOf("Unit tests: 1 passed, 0 failed.", 0) >= 0);
 assertSameCmd(
 "lite test --unit --mute",
 command("lite-test", ["--unit", "--mute", "compiler-smoke"]),
@@ -133,7 +131,7 @@ command("lite", ["test", "--unit", "--mute", "compiler-smoke"])
 );
 badJobs := command("lite", ["test", "--unit", "--jobs", "0"]);
 test.checkInt("lite test --unit --jobs 0 status", 2, badJobs.status);
-test.check("lite test --unit --jobs 0 usage", text.startsWithAt(badJobs.stderr, 0, "Usage: ./bin/lite test --unit"));
+test.check("lite test --unit --jobs 0 usage", badJobs.stderr.startsWithAt(0, "Usage: ./bin/lite test --unit"));
 
 /* 5. lite doctor routes to the standalone repository checker */
 assertSameCmd("lite doctor --docs", command("lite-doctor", ["--docs"]), command("lite", ["doctor", "--docs"]));
@@ -173,8 +171,8 @@ o3OutFiles: mut List<String> = [];
 loop toolNames as name {
     srcRel := "tools/src/" + name + ".lts";
     outTs := path.join(o3Dir, name + ".ts");
-    list.pushBack(mut o3OutFiles, outTs);
-    list.pushBack(mut o3Cmds, proc.execPath());
+    mut o3OutFiles.pushBack(outTs);
+    mut o3Cmds.pushBack(proc.execPath());
     argJson := "["
     + json.quoteString(tsComp.path) + ","
     + "\"-O3\","
@@ -182,12 +180,12 @@ loop toolNames as name {
     + "\"--out\","
     + json.quoteString(outTs)
     + "]";
-    list.pushBack(mut o3ArgsJson, argJson);
+    mut o3ArgsJson.pushBack(argJson);
 }
 o3Raw := pool.runPoolJson(o3Cmds, o3ArgsJson, root, pool.cpuCount());
 o3Offsets := json.arrayElementOffsets(o3Raw, 0);
-o3Count := list.listCountText(toolNames);
-test.checkInt("o3 pool count", o3Count, list.listCountInt(o3Offsets));
+o3Count := toolNames.length();
+test.checkInt("o3 pool count", o3Count, o3Offsets.length());
 var compiledIgniteTs := "";
 var ti := 0;
 loop ti < o3Count {
@@ -222,7 +220,7 @@ test.checkText("compiler/bootstrap/igniter.ts out of date", compiledIgniteTs, tr
 /* 9. lite router help, version, and unknown command handling match exit and output contracts */
 help := command("lite", ["help"]);
 test.checkInt("lite help status", 0, help.status);
-test.check("lite help usage", text.startsWithAt(help.stdout, 0, "Usage: ./bin/lite <command> [options]"));
+test.check("lite help usage", help.stdout.startsWithAt(0, "Usage: ./bin/lite <command> [options]"));
 assertSameCmd("lite --help", help, command("lite", ["--help"]));
 assertSameCmd("lite -h", help, command("lite", ["-h"]));
 
@@ -234,15 +232,15 @@ test.checkText("lite missing stderr", help.stdout, missing.stderr);
 cliIsC := fs.kind(path.join(root, "dist/tools/cli")) == fs.FILE_KIND_FILE;
 version := command("lite", ["--version"]);
 test.checkInt("lite --version status", 0, version.status);
-test.check("lite --version header", text.startsWithAt(version.stdout, 0, "lite cli "));
-test.check("lite --version kind", text.indexOfText(version.stdout, if cliIsC { "\nkind: ignited-c (target: c)\n" } else { "\nkind: ignited-ts (target: ts)\n" }, 0) >= 0);
+test.check("lite --version header", version.stdout.startsWithAt(0, "lite cli "));
+test.check("lite --version kind", version.stdout.indexOf(if cliIsC { "\nkind: ignited-c (target: c)\n" } else { "\nkind: ignited-ts (target: ts)\n" }, 0) >= 0);
 vArtNeedle := if cliIsC { "artifact: dist/tools/cli (sha256: " } else { "artifact: dist/tools/cli.ts (sha256: " };
-vArtIdx := text.indexOfText(version.stdout, vArtNeedle, 0);
+vArtIdx := version.stdout.indexOf(vArtNeedle, 0);
 test.check("lite --version artifact", vArtIdx >= 0);
-test.check("lite --version sha12", isHex12(text.slice(version.stdout, vArtIdx + text.length(vArtNeedle), vArtIdx + text.length(vArtNeedle) + 12)));
-test.check("lite --version source", text.indexOfText(version.stdout, "source: tools/src/cli.lts (", 0) >= 0);
-test.check("lite --version built-by", text.indexOfText(version.stdout, " modules, built-by: ", 0) >= 0);
-test.check("lite --version host", text.indexOfText(version.stdout, if cliIsC { "host: c11 (" } else { "host: node v" }, 0) >= 0);
+test.check("lite --version sha12", isHex12(version.stdout.slice(vArtIdx + vArtNeedle.length(), vArtIdx + vArtNeedle.length() + 12)));
+test.check("lite --version source", version.stdout.indexOf("source: tools/src/cli.lts (", 0) >= 0);
+test.check("lite --version built-by", version.stdout.indexOf(" modules, built-by: ", 0) >= 0);
+test.check("lite --version host", version.stdout.indexOf(if cliIsC { "host: c11 (" } else { "host: node v" }, 0) >= 0);
 
 versionJson := command("lite", ["--version", "--json"]);
 test.checkInt("lite --version --json status: " + versionJson.stderr, 0, versionJson.status);
@@ -254,12 +252,12 @@ test.checkText("version json source", "tools/src/cli.lts", json.readObjectString
 
 igniterVer := command("lite-ignite", ["--version"]);
 test.checkInt("lite-ignite --version status: " + igniterVer.stderr, 0, igniterVer.status);
-test.check("lite-ignite --version header", text.startsWithAt(igniterVer.stdout, 0, "lite-ignite "));
-test.check("lite-ignite --version kind", text.indexOfText(igniterVer.stdout, "\nkind: bootstrap-igniter-ts (target: ts)\n", 0) >= 0);
+test.check("lite-ignite --version header", igniterVer.stdout.startsWithAt(0, "lite-ignite "));
+test.check("lite-ignite --version kind", igniterVer.stdout.indexOf("\nkind: bootstrap-igniter-ts (target: ts)\n", 0) >= 0);
 iArtNeedle := "artifact: compiler/bootstrap/igniter.ts (sha256: ";
-iArtIdx := text.indexOfText(igniterVer.stdout, iArtNeedle, 0);
+iArtIdx := igniterVer.stdout.indexOf(iArtNeedle, 0);
 test.check("lite-ignite --version artifact", iArtIdx >= 0);
-test.check("lite-ignite --version sha12", isHex12(text.slice(igniterVer.stdout, iArtIdx + text.length(iArtNeedle), iArtIdx + text.length(iArtNeedle) + 12)));
+test.check("lite-ignite --version sha12", isHex12(igniterVer.stdout.slice(iArtIdx + iArtNeedle.length(), iArtIdx + iArtNeedle.length() + 12)));
 
 /* 10. munching routers, flag aliases, and direct generated entrypoints converge on identical output */
 fmtTarget := "tools/src/fmt.lts";
@@ -295,7 +293,7 @@ checkToolsRebuilt := fn(label: String, jsonText: String, expCli: Bool, expFmt: B
     toolsField := json.findObjectField(jsonText, 0, "tools");
     test.check(label + " has tools", toolsField.found);
     offs := json.arrayElementOffsets(jsonText, toolsField.valuePos);
-    test.checkInt(label + " tool count", 2, list.listCountInt(offs));
+    test.checkInt(label + " tool count", 2, offs.length());
     test.checkText(label + " [0].name", "cli", json.readObjectString(jsonText, offs[0], "name").value);
     test.check(label + " [0].rebuilt", json.readObjectBool(jsonText, offs[0], "rebuilt").value == expCli);
     test.checkText(label + " [1].name", "fmt", json.readObjectString(jsonText, offs[1], "name").value);
@@ -314,7 +312,7 @@ checkToolsRebuilt("second ignite", secondIg.stdout, false, false);
 test.check("tamper fmt.ts", fs.writeText(path.join(probeDir, "dist/tools/fmt.ts"), "// tampered\n").ok);
 repaired := runIn(proc.execPath(), [path.join(probeDir, "bin/lite"), "fmt", "--check", "tools/src/fmt.lts"], probeDir, 60000);
 test.checkInt("repaired fmt: " + repaired.stderr, 0, repaired.status);
-test.check("tamper removed", text.indexOfText(fs.readText(path.join(probeDir, "dist/tools/fmt.ts")).text, "// tampered", 0) < 0);
+test.check("tamper removed", fs.readText(path.join(probeDir, "dist/tools/fmt.ts")).text.indexOf("// tampered", 0) < 0);
 
 cliLibPath := path.join(probeDir, "lib/util/cli.lts");
 test.check("touch cli.lts", fs.writeText(cliLibPath, fs.readText(cliLibPath).text + "\n").ok);
@@ -351,7 +349,7 @@ loop wipePaths as rel {
 test.check("write stray.txt", fs.writeText(path.join(wipeDir, "stray.txt"), "keep").ok);
 nonGit := runIn(proc.execPath(), [path.join(wipeDir, "bin/lite-wipe"), "--no-install"], wipeDir, 60000);
 test.check("nonGit wipe fails", nonGit.status =!= 0);
-test.check("nonGit wipe msg: " + nonGit.stderr, text.indexOfText(nonGit.stderr, "--wipe requires a Git checkout", 0) >= 0);
+test.check("nonGit wipe msg: " + nonGit.stderr, nonGit.stderr.indexOf("--wipe requires a Git checkout", 0) >= 0);
 test.check("stray.txt kept", fs.kind(path.join(wipeDir, "stray.txt")) == fs.FILE_KIND_FILE);
 
 _rmStray := fs.remove(path.join(wipeDir, "stray.txt"));
@@ -387,7 +385,7 @@ test.check("wipe checked == false", wipeChecked.found and wipeChecked.ok and not
 wipeToolsField := json.findObjectField(wiped.stdout, 0, "tools");
 test.check("wipe has tools", wipeToolsField.found);
 wipeToolOffs := json.arrayElementOffsets(wiped.stdout, wipeToolsField.valuePos);
-test.check("wipe tools count > 0", list.listCountInt(wipeToolOffs) > 0);
+test.check("wipe tools count > 0", wipeToolOffs.length() > 0);
 loop wipeToolOffs as tOff {
     reb := json.readObjectBool(wiped.stdout, tOff, "rebuilt");
     test.check("wipe tool rebuilt", reb.found and reb.ok and reb.value);

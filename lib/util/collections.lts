@@ -1,9 +1,5 @@
 /** Reusable O(n log n) comparator-driven merge sorts and O(n) Set/Map collection helpers. */
 
-list := import "core/list";
-map := import "core/map";
-set := import "core/set";
-text := import "core/text";
 unicode := import "core/unicode";
 
 /** Comparator returning true when `a` should be ordered before or equal to `b`. */
@@ -16,16 +12,16 @@ ASCII_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWX
 
 /** Lexicographical Unicode code-point comparison (`a <= b`), with a fast ASCII path. */
 pub textLessOrEqual := fn(a: String, b: String): Bool {
-    la := text.length(a);
-    lb := text.length(b);
+    la := a.length();
+    lb := b.length();
     limit := if la < lb { la } else { lb };
     var i := 0;
     loop i < limit {
-        ca := text.at(a, i);
-        cb := text.at(b, i);
+        ca := a.at(i);
+        cb := b.at(i);
         if ca =!= cb {
-            oa := text.indexOfText(ASCII_ORDER, ca, 0);
-            ob := text.indexOfText(ASCII_ORDER, cb, 0);
+            oa := ASCII_ORDER.indexOf(ca, 0);
+            ob := ASCII_ORDER.indexOf(cb, 0);
             if oa >= 0 and ob >= 0 { return oa <= ob; }
             return unicode.codePointAt(ca, 0) <= unicode.codePointAt(cb, 0);
         }
@@ -39,7 +35,7 @@ pub sortIndicesBy := fn(count: Int, lessOrEq: IntComparator): List<Int> {
     var src: mut List<Int> = [];
     var k := 0;
     loop k < count {
-        list.pushBack(mut src, k);
+        mut src.pushBack(k);
         k += 1;
     }
     if count <= 1 { return src; }
@@ -54,19 +50,19 @@ pub sortIndicesBy := fn(count: Int, lessOrEq: IntComparator): List<Int> {
             var j := mid;
             loop i < mid and j < right {
                 if lessOrEq(src[i], src[j]) {
-                    list.pushBack(mut dst, src[i]);
+                    mut dst.pushBack(src[i]);
                     i += 1;
                 } else {
-                    list.pushBack(mut dst, src[j]);
+                    mut dst.pushBack(src[j]);
                     j += 1;
                 }
             }
             loop i < mid {
-                list.pushBack(mut dst, src[i]);
+                mut dst.pushBack(src[i]);
                 i += 1;
             }
             loop j < right {
-                list.pushBack(mut dst, src[j]);
+                mut dst.pushBack(src[j]);
                 j += 1;
             }
             left += width * 2;
@@ -79,24 +75,24 @@ pub sortIndicesBy := fn(count: Int, lessOrEq: IntComparator): List<Int> {
 
 /** Returns a stable O(n log n) copy of `values` ordered by `lessOrEq(a, b)`. */
 pub sortIntsBy := fn(values: List<Int>, lessOrEq: IntComparator): List<Int> {
-    n := list.length(values);
+    n := values.length();
     if n <= 1 { return values; }
     order := sortIndicesBy(n, fn(i: Int, j: Int): Bool { lessOrEq(values[i], values[j]) });
     out: mut List<Int> = [];
     loop order as idx {
-        list.pushBack(mut out, values[idx]);
+        mut out.pushBack(values[idx]);
     }
     out
 };
 
 /** Returns a stable O(n log n) copy of `values` ordered by `lessOrEq(a, b)`. */
 pub sortTextsBy := fn(values: List<String>, lessOrEq: TextComparator): List<String> {
-    n := list.length(values);
+    n := values.length();
     if n <= 1 { return values; }
     order := sortIndicesBy(n, fn(i: Int, j: Int): Bool { lessOrEq(values[i], values[j]) });
     out: mut List<String> = [];
     loop order as idx {
-        list.pushBack(mut out, values[idx]);
+        mut out.pushBack(values[idx]);
     }
     out
 };
@@ -106,9 +102,9 @@ pub dedupTexts := fn(values: List<String>): List<String> {
     seen: mut Set<String>;
     out: mut List<String> = [];
     loop values as v {
-        if not set.has(seen, v) {
-            set.add(mut seen, v);
-            list.pushBack(mut out, v);
+        if not seen.has(v) {
+            mut seen.add(v);
+            mut out.pushBack(v);
         }
     }
     out
@@ -119,9 +115,9 @@ pub dedupInts := fn(values: List<Int>): List<Int> {
     seen: mut Set<Int>;
     out: mut List<Int> = [];
     loop values as v {
-        if not set.has(seen, v) {
-            set.add(mut seen, v);
-            list.pushBack(mut out, v);
+        if not seen.has(v) {
+            mut seen.add(v);
+            mut out.pushBack(v);
         }
     }
     out
@@ -131,8 +127,8 @@ pub dedupInts := fn(values: List<Int>): List<Int> {
 pub countTexts := fn(values: List<String>): Map<String, Int> {
     counts: mut Map<String, Int>;
     loop values as v {
-        prev := map.getOr(counts, v, 0);
-        map.set(mut counts, v, prev + 1);
+        prev := counts.getOr(v, 0);
+        mut counts.set(v, prev + 1);
     }
     counts
 };

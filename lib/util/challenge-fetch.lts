@@ -2,20 +2,17 @@
 
 fs := import "core/file";
 http := import "external/http";
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
 path := import "core/path";
-text := import "core/text";
 time := import "core/time";
 
 USER_AGENT := "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
 /** Parses non-negative integer seconds from `Retry-After`, defaulting to `5`. */
 parseRetrySeconds := fn(raw: String): Int {
-    trimmed := text.trim(raw);
+    trimmed := raw.trim();
     if trimmed == "" { return 5; }
-    parsed := text.textToInt(trimmed);
+    parsed := trimmed.toInt();
     if not parsed.ok or parsed.value < 0 { return 5; }
     parsed.value
 };
@@ -30,7 +27,7 @@ url: String, destPath: String, force: Bool, retries: Int, timeoutMs: Int, delayM
     }
     if not force and fs.kind(destPath) == fs.FILE_KIND_FILE {
         existing := fs.readBytes(destPath);
-        if list.listCountInt(existing) > 0 {
+        if existing.length() > 0 {
             return (ok = true, skipped = false, error = "");
         }
     }
@@ -53,7 +50,7 @@ url: String, destPath: String, force: Bool, retries: Int, timeoutMs: Int, delayM
         if res.status == 429 and rateLimit {
             _rm := fs.remove(tmpPath);
             waitSec := parseRetrySeconds(res.retryAfter);
-            io.errorLine("  .. rate limited, sleeping " + integer.intText(waitSec) + "s");
+            io.errorLine("  .. rate limited, sleeping " + waitSec.toText() + "s");
             if waitSec > 0 { time.sleepMs(waitSec * 1000); }
             lastError = "HTTP 429";
             attempt = attempt + 1;
@@ -71,7 +68,7 @@ url: String, destPath: String, force: Bool, retries: Int, timeoutMs: Int, delayM
             if res.error =!= "" {
                 lastError = res.error;
             } else if not res.ok {
-                lastError = "HTTP " + integer.intText(res.status);
+                lastError = "HTTP " + res.status.toText();
             } else {
                 lastError = "empty response";
             }
@@ -89,7 +86,7 @@ pub downloadBatch := fn(
 urls: List<String>, paths: List<String>, force: Bool, retries: Int, timeoutMs: Int, delayMs: Int,
 allowMissing: Bool, rateLimit: Bool, progressEvery: Int
 ): (failures: Int, skipped: Int) {
-    total := list.listCountText(urls);
+    total := urls.length();
     var failures := 0;
     var skipped := 0;
     var done := 0;
@@ -103,7 +100,7 @@ allowMissing: Bool, rateLimit: Bool, progressEvery: Int
         }
         done = done + 1;
         if done % progressEvery == 0 or done == total {
-            io.outputLine("  " + integer.intText(done) + "/" + integer.intText(total));
+            io.outputLine("  " + done.toText() + "/" + total.toText());
         }
     }
     (failures = failures, skipped = skipped)

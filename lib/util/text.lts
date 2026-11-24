@@ -1,30 +1,28 @@
 /* Higher-level O(n) text utilities (`split`, `splitLines`, `replaceAll`) built on `core/text` and `util/text-builder`. */
 
-list := import "core/list";
-text := import "core/text";
 tb := import "util/text-builder";
 
 /** Splits `source` on every non-overlapping occurrence of `divider`. When `divider` is empty, splits into Unicode scalars. */
 pub split := fn(source: String, divider: String): List<String> {
     out: mut List<String> = [];
-    srcLen := text.length(source);
-    divLen := text.length(divider);
+    srcLen := source.length();
+    divLen := divider.length();
     if divLen == 0 {
         var i := 0;
         loop i < srcLen {
-            list.pushBack(mut out, text.at(source, i));
+            mut out.pushBack(source.at(i));
             i += 1;
         }
         return out;
     }
     var pos := 0;
     loop true {
-        hit := text.indexOf(source, divider, pos);
+        hit := source.indexOf(divider, pos);
         if hit < 0 {
-            list.pushBack(mut out, text.slice(source, pos, srcLen));
+            mut out.pushBack(source.slice(pos, srcLen));
             break;
         }
-        list.pushBack(mut out, text.slice(source, pos, hit));
+        (mut out).pushBack(source.slice(pos, hit));
         pos = hit + divLen;
     }
     out
@@ -33,14 +31,14 @@ pub split := fn(source: String, divider: String): List<String> {
 /** Splits `source` into lines on `\\n` (stripping any preceding `\\r`). */
 pub splitLines := fn(source: String): List<String> {
     out: mut List<String> = [];
-    srcLen := text.length(source);
+    srcLen := source.length();
     if srcLen == 0 { return out; }
     var pos := 0;
     loop pos <= srcLen {
-        nl := text.indexOf(source, "\n", pos);
+        nl := source.indexOf("\n", pos);
         end := if nl < 0 { srcLen } else { nl };
-        lineEnd := if end > pos and text.at(source, end - 1) == "\r" { end - 1 } else { end };
-        list.pushBack(mut out, text.slice(source, pos, lineEnd));
+        lineEnd := if end > pos and source.at(end - 1) == "\r" { end - 1 } else { end };
+        mut out.pushBack(source.slice(pos, lineEnd));
         if nl < 0 { break; }
         pos = nl + 1;
         if pos == srcLen { break; }
@@ -50,20 +48,20 @@ pub splitLines := fn(source: String): List<String> {
 
 /** Replaces every non-overlapping occurrence of non-empty `needle` in `source` with `replacement` in O(n). */
 pub replaceAll := fn(source: String, needle: String, replacement: String): String {
-    needleLen := text.length(needle);
+    needleLen := needle.length();
     if needleLen == 0 { return source; }
-    first := text.indexOf(source, needle, 0);
+    first := source.indexOf(needle, 0);
     if first < 0 { return source; }
-    srcLen := text.length(source);
+    srcLen := source.length();
     b: mut tb.TextBuilder;
     var pos := 0;
     var hit := first;
     loop hit >= 0 {
-        if hit > pos { tb.append(mut b, text.slice(source, pos, hit)); }
+        if hit > pos { tb.append(mut b, source.slice(pos, hit)); }
         tb.append(mut b, replacement);
         pos = hit + needleLen;
-        hit = text.indexOf(source, needle, pos);
+        hit = source.indexOf(needle, pos);
     }
-    if pos < srcLen { tb.append(mut b, text.slice(source, pos, srcLen)); }
+    if pos < srcLen { tb.append(mut b, source.slice(pos, srcLen)); }
     tb.build(b)
 };

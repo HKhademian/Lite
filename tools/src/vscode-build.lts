@@ -4,7 +4,6 @@ io := import "core/io";
 fs := import "core/file";
 path := import "core/path";
 text := import "core/text";
-list := import "core/list";
 extTs := import "external/ts";
 project := import "util/project";
 
@@ -15,13 +14,13 @@ replaceAll := fn(haystack: String, needle: String, replacement: String): String 
     var pos := 0;
     size := haystack.length();
     loop pos <= size {
-        found := text.indexOfText(haystack, needle, pos);
+        found := haystack.indexOf(needle, pos);
         if found < 0 {
-            list.pushBack(mut parts, text.slice(haystack, pos, size));
+            mut parts.pushBack(haystack.slice(pos, size));
             break;
         }
-        list.pushBack(mut parts, text.slice(haystack, pos, found));
-        list.pushBack(mut parts, replacement);
+        (mut parts).pushBack(haystack.slice(pos, found));
+        mut parts.pushBack(replacement);
         pos = found + nLen;
     }
     text.joinTexts(parts, "")

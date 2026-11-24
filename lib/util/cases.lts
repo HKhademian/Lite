@@ -5,10 +5,8 @@ io := import "core/io";
 proc := import "core/process";
 project := import "util/project";
 crypto := import "core/crypto";
-integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
-set := import "core/set";
 path := import "core/path";
 json := import "util/json";
 streams := import "util/streams";
@@ -24,13 +22,13 @@ WORKSPACE_CLEAN := "clean";
 WORKSPACE_DIRTY := "dirty";
 
 hasDotDotSegment := fn(relPath: String): Bool {
-    size := text.length(relPath);
+    size := relPath.length();
     var segStart := 0;
     var i := 0;
     loop i <= size {
         atEnd := i == size;
-        if atEnd or text.at(relPath, i) == "/" or text.at(relPath, i) == "\\" {
-            if text.slice(relPath, segStart, i) == ".." { return true; }
+        if atEnd or relPath.at(i) == "/" or relPath.at(i) == "\\" {
+            if relPath.slice(segStart, i) == ".." { return true; }
             segStart = i + 1;
         }
         i = i + 1;
@@ -54,7 +52,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     topKeys := json.objectKeys(textSrc, 0);
     allowedTop: Set<String> = ["id", "kind", "pending", "features", "cases", "benchmark", "tool", "source"];
     loop topKeys as k {
-        if not set.has(allowedTop, k) {
+        if not allowedTop.has(k) {
             return (ok = false, id = "", error = caseFile + ": unexpected case key " + k);
         }
     }
@@ -70,7 +68,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     CASE_KIND_TOOL, CASE_KIND_FEATURE, CASE_KIND_REJECT,
     CASE_KIND_COMPILE, CASE_KIND_SAMPLE, CASE_KIND_EXAMPLE
     ];
-    if not kindRes.found or not kindRes.ok or not set.has(validKinds, kindRes.value) {
+    if not kindRes.found or not kindRes.ok or not validKinds.has(kindRes.value) {
         return (ok = false, id = "", error = caseFile + ": invalid case kind");
     }
     kind := kindRes.value;
@@ -78,7 +76,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     pendingField := json.findObjectField(textSrc, 0, "pending");
     if pendingField.found {
         pStr := json.readStringAt(textSrc, pendingField.valuePos);
-        if kind == CASE_KIND_TOOL or not pStr.ok or text.trim(pStr.value) == "" {
+        if kind == CASE_KIND_TOOL or not pStr.ok or pStr.value.trim() == "" {
             return (ok = false, id = "", error = caseFile + ": pending needs a language case and reason");
         }
     }
@@ -89,12 +87,12 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
             return (ok = false, id = "", error = caseFile + ": tool cases name a tool, not a case executable");
         }
         toolRes := json.readObjectString(textSrc, 0, "tool");
-        if not toolRes.found or not toolRes.ok or text.containsText(toolRes.value, "/") or fs.kind(path.join(rootDir, "bin/" + toolRes.value)) == fs.FILE_KIND_MISSING {
+        if not toolRes.found or not toolRes.ok or toolRes.value.contains("/") or fs.kind(path.join(rootDir, "bin/" + toolRes.value)) == fs.FILE_KIND_MISSING {
             return (ok = false, id = "", error = caseFile + ": unknown tool");
         }
     } else {
         srcRes := json.readObjectString(textSrc, 0, "source");
-        if not srcRes.found or not srcRes.ok or not text.endsWith(srcRes.value, ".lts") {
+        if not srcRes.found or not srcRes.ok or not srcRes.value.endsWith(".lts") {
             return (ok = false, id = "", error = caseFile + ": Lite source must use .lts");
         }
         if fs.kind(path.resolve(caseDir, srcRes.value)) =!= fs.FILE_KIND_FILE {
@@ -108,16 +106,16 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     loop json.arrayElementOffsets(textSrc, featField.valuePos) as fPos {
         fStr := json.readStringAt(textSrc, fPos);
         if not fStr.ok { return (ok = false, id = "", error = caseFile + ": features must be strings"); }
-        if set.has(seenFeatures, fStr.value) {
+        if seenFeatures.has(fStr.value) {
             return (ok = false, id = "", error = caseFile + ": duplicate feature IDs");
         }
-        set.add(mut seenFeatures, fStr.value);
+        (mut seenFeatures).add(fStr.value);
     }
 
     casesField := json.findObjectField(textSrc, 0, "cases");
     if not casesField.found { return (ok = false, id = "", error = caseFile + ": case scenarios required"); }
     scenarios := json.arrayElementOffsets(textSrc, casesField.valuePos);
-    if list.length(scenarios) == 0 {
+    if scenarios.length() == 0 {
         return (ok = false, id = "", error = caseFile + ": case scenarios required");
     }
 
@@ -125,15 +123,15 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     seenScenarios: mut Set<String>;
     loop scenarios as sPos {
         loop json.objectKeys(textSrc, sPos) as sk {
-            if not set.has(allowedScenario, sk) {
+            if not allowedScenario.has(sk) {
                 return (ok = false, id = "", error = caseFile + ": unexpected scenario key " + sk);
             }
         }
         nameRes := json.readObjectString(textSrc, sPos, "name");
-        if not nameRes.found or not nameRes.ok or nameRes.value == "" or set.has(seenScenarios, nameRes.value) {
+        if not nameRes.found or not nameRes.ok or nameRes.value == "" or seenScenarios.has(nameRes.value) {
             return (ok = false, id = "", error = caseFile + ": scenario names must be unique");
         }
-        set.add(mut seenScenarios, nameRes.value);
+        (mut seenScenarios).add(nameRes.value);
 
         codeRes := json.readObjectInt(textSrc, sPos, "exitCode");
         if not codeRes.found or not codeRes.ok or codeRes.value < 0 or codeRes.value > 255 {
@@ -249,43 +247,43 @@ pub discoverAllCaseFiles := fn(rootDir: String): List<String> {
 /** Returns true when `candidate` matches `filter` (literal substring or `*` wildcard glob). */
 pub matchesCaseFilter := fn(candidate: String, filter: String): Bool {
     if filter == "" { return true; }
-    if not text.containsText(filter, "*") {
-        return text.containsText(candidate, filter);
+    if not filter.contains("*") {
+        return candidate.contains(filter);
     }
-    filterLen := text.length(filter);
-    startsWild := text.at(filter, 0) == "*";
-    endsWild := text.at(filter, filterLen - 1) == "*";
+    filterLen := filter.length();
+    startsWild := filter.at(0) == "*";
+    endsWild := filter.at(filterLen - 1) == "*";
     parts: mut List<String> = [];
     var segStart := 0;
     var i := 0;
     loop i <= filterLen {
         atEnd := i == filterLen;
-        if atEnd or text.at(filter, i) == "*" {
+        if atEnd or filter.at(i) == "*" {
             if i > segStart {
-                list.pushBack(mut parts, text.slice(filter, segStart, i));
+                mut parts.pushBack(filter.slice(segStart, i));
             }
             segStart = i + 1;
         }
         i = i + 1;
     }
-    partCount := list.listCountText(parts);
+    partCount := parts.length();
     if partCount == 0 { return true; }
-    candLen := text.length(candidate);
+    candLen := candidate.length();
     var cursor := 0;
     var idx := 0;
     loop idx < partCount {
         part := parts[idx];
-        partLen := text.length(part);
+        partLen := part.length();
         if idx == 0 and not startsWild {
-            if not text.startsWithAt(candidate, 0, part) { return false; }
+            if not candidate.startsWithAt(0, part) { return false; }
             cursor = partLen;
         } else if idx == partCount - 1 and not endsWild {
-            if candLen < partLen or cursor > candLen - partLen or not text.endsWith(candidate, part) {
+            if candLen < partLen or cursor > candLen - partLen or not candidate.endsWith(part) {
                 return false;
             }
             cursor = candLen;
         } else {
-            found := text.indexOfText(candidate, part, cursor);
+            found := candidate.indexOf(part, cursor);
             if found < 0 { return false; }
             cursor = found + partLen;
         }
@@ -297,7 +295,7 @@ pub matchesCaseFilter := fn(candidate: String, filter: String): Bool {
 /** Returns true when `candidate` matches `pattern` as a full or unanchored `*`-wildcard glob. */
 pub globMatch := fn(candidate: String, pattern: String): Bool {
     if matchesCaseFilter(candidate, pattern) { return true; }
-    text.containsText(pattern, "*") and matchesCaseFilter(candidate, "*" + pattern + "*")
+    pattern.contains("*") and matchesCaseFilter(candidate, "*" + pattern + "*")
 }
 
 matchesCaseEntry := fn(rootDir: String, caseId: String, caseFile: String, filter: String): Bool {
@@ -310,7 +308,7 @@ matchesCaseEntry := fn(rootDir: String, caseId: String, caseFile: String, filter
 /** Validates all discovered cases, ensures unique IDs, and verifies at least one case matches `filter`. */
 pub validateCaseSet := fn(rootDir: String, filter: String): (ok: Bool, matchCount: Int, error: String) {
     files := discoverAllCaseFiles(rootDir);
-    if list.listCountText(files) == 0 {
+    if files.length() == 0 {
         return (ok = false, matchCount = 0, error = "no cases found");
     }
     seenIds: mut Set<String>;
@@ -318,10 +316,10 @@ pub validateCaseSet := fn(rootDir: String, filter: String): (ok: Bool, matchCoun
     loop files as caseFile {
         checked := validateCaseFile(rootDir, caseFile);
         if not checked.ok { return (ok = false, matchCount = 0, error = checked.error); }
-        if set.has(seenIds, checked.id) {
+        if seenIds.has(checked.id) {
             return (ok = false, matchCount = 0, error = "duplicate case IDs");
         }
-        set.add(mut seenIds, checked.id);
+        (mut seenIds).add(checked.id);
         if matchesCaseEntry(rootDir, checked.id, caseFile, filter) {
             matches = matches + 1;
         }
@@ -342,7 +340,7 @@ pub selectCaseFiles := fn(rootDir: String, filter: String): List<String> {
         if readRes.ok {
             idRes := json.readObjectString(readRes.text, 0, "id");
             if idRes.found and idRes.ok and matchesCaseEntry(rootDir, idRes.value, caseFile, filter) {
-                list.pushBack(mut selected, caseFile);
+                mut selected.pushBack(caseFile);
             }
         }
     }
@@ -388,7 +386,7 @@ pub readCaseMeta := fn(rootDir: String, caseFile: String): (ok: Bool, id: String
     source = if srcRes.found { srcRes.value } else { "" },
     hasBenchmark = benchField.found,
     warmups = warmups, samples = samples,
-    scenarioCount = list.listCountInt(scenarios),
+    scenarioCount = scenarios.length(),
     error = "",
     )
 }
@@ -401,14 +399,14 @@ pub readScenarioName := fn(caseFile: String, scenarioIdx: Int): String {
     casesField := json.findObjectField(readRes.text, 0, "cases");
     if not casesField.found { return ""; }
     scenarios := json.arrayElementOffsets(readRes.text, casesField.valuePos);
-    if scenarioIdx < 0 or scenarioIdx >= list.listCountInt(scenarios) { return ""; }
+    if scenarioIdx < 0 or scenarioIdx >= scenarios.length() { return ""; }
     json.readObjectString(readRes.text, scenarios[scenarioIdx], "name").value
 }
 
 readFileDiagnostic := fn(filePath: String, byteCount: Int): String {
     res := fs.readText(filePath);
     if res.ok { return res.text; }
-    "(binary output, " + integer.intText(byteCount) + " bytes)"
+    "(binary output, " + byteCount.toText() + " bytes)"
 }
 
 buildTsConfigFilesText := fn(rootDir: String, files: List<String>): (ok: Bool, text: String, error: String) {
@@ -424,16 +422,16 @@ buildTsConfigFilesText := fn(rootDir: String, files: List<String>): (ok: Bool, t
             valField := json.findObjectField(cfgRes.text, optsField.valuePos, key);
             span := json.valueSpan(cfgRes.text, valField.valuePos);
             if not span.ok { return (ok = false, text = "", error = cfgPath + ": invalid compilerOptions." + key); }
-            list.pushBack(mut parts, json.quoteString(key) + ":" + text.slice(cfgRes.text, span.start, span.end));
+            (mut parts).pushBack(json.quoteString(key) + ":" + cfgRes.text.slice(span.start, span.end));
         }
     }
-    list.pushBack(mut parts, "\"types\":[]");
-    list.pushBack(mut parts, "\"typeRoots\":[]");
-    list.pushBack(mut parts, "\"lib\":[\"ESNext\"]");
+    (mut parts).pushBack("\"types\":[]");
+    mut parts.pushBack("\"typeRoots\":[]");
+    mut parts.pushBack("\"lib\":[\"ESNext\"]");
 
     quotedFiles: mut List<String> = [];
     loop files as f {
-        list.pushBack(mut quotedFiles, json.quoteString(f));
+        mut quotedFiles.pushBack(json.quoteString(f));
     }
     body := "{\"compilerOptions\":{" + text.joinTexts(parts, ",") + "},\"files\":[" + text.joinTexts(quotedFiles, ",") + "]}\n";
     (ok = true, text = body, error = "")
@@ -449,10 +447,10 @@ pub checkTsArtifactFilesWithStatus := fn(rootDir: String, files: List<String>, w
     localFiles: mut List<String> = [];
     var idx := 0;
     loop files as srcFile {
-        localFile := path.join(workDir, "artifact-" + integer.intText(idx) + ".ts");
+        localFile := path.join(workDir, "artifact-" + idx.toText() + ".ts");
         copyArt := fs.copy(srcFile, localFile);
         if not copyArt.ok { return (ok = false, status = -1, error = copyArt.error); }
-        list.pushBack(mut localFiles, localFile);
+        (mut localFiles).pushBack(localFile);
         idx = idx + 1;
     }
 
@@ -487,7 +485,7 @@ pub checkTsArtifactFilesWithStatus := fn(rootDir: String, files: List<String>, w
     if status =!= 0 {
         errBytes := fs.readBytes(errPath);
         outBytes := fs.readBytes(outPath);
-        msg := if list.listCountInt(errBytes) > 0 { readFileDiagnostic(errPath, list.listCountInt(errBytes)) } else { readFileDiagnostic(outPath, list.listCountInt(outBytes)) };
+        msg := if errBytes.length() > 0 { readFileDiagnostic(errPath, errBytes.length()) } else { readFileDiagnostic(outPath, outBytes.length()) };
         return (ok = false, status = status, error = msg);
     }
     (ok = true, status = 0, error = "")
@@ -531,7 +529,7 @@ runCaseGit := fn(projDir: String, gitArgs: List<String>): (ok: Bool, error: Stri
     "-c", "maintenance.auto=false", "-c", "gc.auto=0",
     ];
     loop gitArgs as gArg {
-        list.pushBack(mut args, gArg);
+        mut args.pushBack(gArg);
     }
     emptyEnv: List<String> = [];
     res := proc.run("git", args, projDir, emptyEnv, true, "");
@@ -580,7 +578,7 @@ readStringListAt := fn(caseText: String, arrPos: Int): List<String> {
     items: mut List<String> = [];
     loop json.arrayElementOffsets(caseText, arrPos) as elPos {
         s := json.readStringAt(caseText, elPos);
-        if s.ok { list.pushBack(mut items, s.value); }
+        if s.ok { mut items.pushBack(s.value); }
     }
     items
 }
@@ -598,7 +596,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
 
     casesField := json.findObjectField(caseText, 0, "cases");
     scenarios := json.arrayElementOffsets(caseText, casesField.valuePos);
-    if scenarioIdx < 0 or scenarioIdx >= list.listCountInt(scenarios) {
+    if scenarioIdx < 0 or scenarioIdx >= scenarios.length() {
         return (ok = false, artifactSha = "", error = caseId + ": invalid scenario index");
     }
     sPos := scenarios[scenarioIdx];
@@ -639,7 +637,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
 
         cmdArgs: mut List<String> = [path.join(workspace, "bin/" + toolName)];
         loop scenarioArgs as arg {
-            list.pushBack(mut cmdArgs, arg);
+            mut cmdArgs.pushBack(arg);
         }
         outPath := path.join(work, "tool.stdout");
         errPath := path.join(work, "tool.stderr");
@@ -695,9 +693,9 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
             actualStderrPath = compErrPath;
         } else {
             if compiled.status =!= 0 {
-                return (ok = false, artifactSha = "", error = readFileDiagnostic(compErrPath, list.listCountInt(compErrBytes)));
+                return (ok = false, artifactSha = "", error = readFileDiagnostic(compErrPath, compErrBytes.length()));
             }
-            if list.listCountInt(compErrBytes) > 0 {
+            if compErrBytes.length() > 0 {
                 return (ok = false, artifactSha = "", error = "unexpected compiler diagnostics");
             }
             wPkg := fs.writeText(path.join(work, "package.json"), "{\"type\":\"module\"}\n");
@@ -723,7 +721,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
             if not wRun.ok { return (ok = false, artifactSha = "", error = wRun.error); }
             runArgs: mut List<String> = [runnerPath, outputTsPath];
             loop scenarioArgs as arg {
-                list.pushBack(mut runArgs, arg);
+                mut runArgs.pushBack(arg);
             }
             runOutPath := path.join(work, "run.stdout");
             runErrPath := path.join(work, "run.stderr");
@@ -753,7 +751,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
     }
 
     if actualStatus =!= expectedExit {
-        diag := readFileDiagnostic(actualStderrPath, list.listCountInt(actualStderr));
+        diag := readFileDiagnostic(actualStderrPath, actualStderr.length());
         return (ok = false, artifactSha = "", error = label + ": exit status; " + diag);
     }
     if not streams.equalBytes(actualStdout, expectedStdout) {
@@ -763,7 +761,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
         return (ok = false, artifactSha = "", error = label + ": stderr");
     }
     if kind == CASE_KIND_REJECT {
-        if expectedExit == 0 or list.listCountInt(actualStdout) > 0 {
+        if expectedExit == 0 or actualStdout.length() > 0 {
             return (ok = false, artifactSha = "", error = label + ": unexpected reject output");
         }
     }
@@ -793,7 +791,7 @@ hashFileMapJson := fn(caseText: String, objPos: Int, caseDir: String): String {
     loop json.objectKeys(caseText, objPos) as fname {
         fv := json.findObjectField(caseText, objPos, fname);
         digest := crypto.sha256Bytes(streams.readStreamBytes(caseText, fv.valuePos, caseDir));
-        list.pushBack(mut entries, json.quoteString(fname) + ":" + json.quoteString(digest));
+        mut entries.pushBack(json.quoteString(fname) + ":" + json.quoteString(digest));
     }
     "{" + text.joinTexts(entries, ",") + "}"
 }
@@ -834,17 +832,17 @@ pub caseIdentityJson := fn(rootDir: String, caseFile: String): (ok: Bool, jsonTe
         artField := json.findObjectField(caseText, sPos, "artifact");
         if artField.found {
             artHash := crypto.sha256Bytes(streams.readStreamBytes(caseText, artField.valuePos, caseDir));
-            list.pushBack(mut fields, "\"artifact\":" + json.quoteString(artHash));
+            mut fields.pushBack("\"artifact\":" + json.quoteString(artHash));
         }
         inFilesField := json.findObjectField(caseText, sPos, "inputFiles");
         if inFilesField.found {
-            list.pushBack(mut fields, "\"inputFiles\":" + hashFileMapJson(caseText, inFilesField.valuePos, caseDir));
+            mut fields.pushBack("\"inputFiles\":" + hashFileMapJson(caseText, inFilesField.valuePos, caseDir));
         }
         outFilesField := json.findObjectField(caseText, sPos, "outputFiles");
         if outFilesField.found {
-            list.pushBack(mut fields, "\"outputFiles\":" + hashFileMapJson(caseText, outFilesField.valuePos, caseDir));
+            mut fields.pushBack("\"outputFiles\":" + hashFileMapJson(caseText, outFilesField.valuePos, caseDir));
         }
-        list.pushBack(mut scenarioJsonList, "{" + text.joinTexts(fields, ",") + "}");
+        (mut scenarioJsonList).pushBack("{" + text.joinTexts(fields, ",") + "}");
     }
 
     body := "{\"manifest\":" + json.quoteString(manifestHash.hex)
@@ -856,9 +854,9 @@ pub caseIdentityJson := fn(rootDir: String, caseFile: String): (ok: Bool, jsonTe
 writeCaseSummary := fn(count: Int, failures: Int, pending: Int): Bool {
     summaryEnv := proc.envGet("LITE_TEST_SUMMARY_FILE");
     if not summaryEnv.found or summaryEnv.value == "" { return true; }
-    body := "{\"count\":" + integer.intText(count)
-    + ",\"failures\":" + integer.intText(failures)
-    + ",\"pending\":" + integer.intText(pending) + "}\n";
+    body := "{\"count\":" + count.toText()
+    + ",\"failures\":" + failures.toText()
+    + ",\"pending\":" + pending.toText() + "}\n";
     wrote := fs.writeText(summaryEnv.value, body);
     if not wrote.ok {
         io.errorLine(wrote.error);
@@ -875,19 +873,19 @@ pub runCaseCli := fn(rootDir: String, rawArgs: List<String>): Int {
     }
 
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--cases" {
-        _flag := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--cases" {
+        _flag := mut args.popFront();
     }
-    if list.listCountText(args) > 0 and args[0] == "--" {
-        _sep := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--" {
+        _sep := mut args.popFront();
     }
-    if list.listCountText(args) > 1 {
+    if args.length() > 1 {
         io.errorLine("usage: lite test --cases [FILTER|FILE.case.json]");
         return 1;
     }
 
-    selection := if list.listCountText(args) == 1 { args[0] } else { "" };
-    fileMode := selection =!= "" and text.endsWith(selection, ".json");
+    selection := if args.length() == 1 { args[0] } else { "" };
+    fileMode := selection =!= "" and selection.endsWith(".json");
 
     var caseFiles: mut List<String> = [];
     if fileMode {
@@ -897,7 +895,7 @@ pub runCaseCli := fn(rootDir: String, rawArgs: List<String>): Int {
             io.errorLine(checked.error);
             return 1;
         }
-        list.pushBack(mut caseFiles, absFile);
+        (mut caseFiles).pushBack(absFile);
     } else {
         checkedSet := validateCaseSet(rootDir, selection);
         if not checkedSet.ok {
@@ -937,9 +935,9 @@ pub runCaseCli := fn(rootDir: String, rawArgs: List<String>): Int {
         }
     }
 
-    io.outputLine(integer.intText(count - failures) + "/" + integer.intText(count) + " scenarios passed");
+    io.outputLine((count - failures).toText() + "/" + count.toText() + " scenarios passed");
     if pending > 0 {
-        io.outputLine(integer.intText(pending) + " scenarios pending");
+        io.outputLine(pending.toText() + " scenarios pending");
     }
     if not writeCaseSummary(count, failures, pending) {
         return 1;

@@ -5,13 +5,10 @@ fs := import "core/file";
 proc := import "core/process";
 project := import "util/project";
 crypto := import "core/crypto";
-integer := import "core/int";
 text := import "core/text";
 time := import "core/time";
 unicode := import "core/unicode";
 list := import "core/list";
-map := import "core/map";
-set := import "core/set";
 path := import "core/path";
 json := import "util/json";
 streams := import "util/streams";
@@ -33,9 +30,9 @@ isJsonSpace := fn(ch: String): Bool {
 };
 
 skipJsonSpace := fn(source: String, start: Int): Int {
-    size := text.length(source);
+    size := source.length();
     var pos := start;
-    loop pos < size and isJsonSpace(text.at(source, pos)) {
+    loop pos < size and isJsonSpace(source.at(pos)) {
         pos = pos + 1;
     }
     pos
@@ -43,12 +40,12 @@ skipJsonSpace := fn(source: String, start: Int): Int {
 
 isJsonObjectAt := fn(source: String, start: Int): Bool {
     pos := skipJsonSpace(source, start);
-    pos < text.length(source) and text.at(source, pos) == "{"
+    pos < source.length() and source.at(pos) == "{"
 };
 
 isJsonArrayAt := fn(source: String, start: Int): Bool {
     pos := skipJsonSpace(source, start);
-    pos < text.length(source) and text.at(source, pos) == "["
+    pos < source.length() and source.at(pos) == "["
 };
 
 checkStringArrayField := fn(source: String, objPos: Int, key: String, label: String): (found: Bool, ok: Bool, error: String) {
@@ -77,7 +74,7 @@ readStringArrayField := fn(source: String, objPos: Int, key: String): List<Strin
     loop json.arrayElementOffsets(source, field.valuePos) as elPos {
         s := json.readStringAt(source, elPos);
         if s.ok {
-            list.pushBack(mut out, s.value);
+            mut out.pushBack(s.value);
         }
     }
     out
@@ -86,22 +83,22 @@ readStringArrayField := fn(source: String, objPos: Int, key: String): List<Strin
 parsePositiveInt := fn(raw: String): (ok: Bool, value: Int) {
     if raw == "" { return (ok = false, value = 0); }
     var i := 0;
-    size := text.length(raw);
+    size := raw.length();
     loop i < size {
-        if not text.isDigit(text.at(raw, i)) { return (ok = false, value = 0); }
+        if not raw.at(i).isDigit() { return (ok = false, value = 0); }
         i = i + 1;
     }
-    parsed := text.textToInt(raw);
+    parsed := raw.toInt();
     if not parsed.ok or parsed.value <= 0 { return (ok = false, value = 0); }
     (ok = true, value = parsed.value)
 };
 
 parseShardSpec := fn(raw: String): (ok: Bool, index: Int, count: Int) {
-    slash := text.indexOfText(raw, "/", 0);
+    slash := raw.indexOf("/", 0);
     if slash <= 0 { return (ok = false, index = 0, count = 0); }
-    if text.indexOfText(raw, "/", slash + 1) >= 0 { return (ok = false, index = 0, count = 0); }
-    left := parsePositiveInt(text.slice(raw, 0, slash));
-    right := parsePositiveInt(text.slice(raw, slash + 1, text.length(raw)));
+    if raw.indexOf("/", slash + 1) >= 0 { return (ok = false, index = 0, count = 0); }
+    left := parsePositiveInt(raw.slice(0, slash));
+    right := parsePositiveInt(raw.slice(slash + 1, raw.length()));
     if not left.ok or not right.ok { return (ok = false, index = 0, count = 0); }
     (ok = true, index = left.value, count = right.value)
 };
@@ -123,7 +120,7 @@ hasFilter: Bool, filter: String, hasShard: Bool, shardIndex: Int, shardCount: In
     var shardIndex := 0;
     var shardCount := 0;
 
-    count := list.listCountText(args);
+    count := args.length();
     var i := 0;
     loop i < count {
         flag := args[i];
@@ -215,8 +212,8 @@ pathInsideDir := fn(baseDir: String, candidate: String): Bool {
     resolvedTarget := path.normalize(candidate);
     if resolvedTarget == resolvedBase { return true; }
     s := path.sep();
-    prefix := if text.endsWith(resolvedBase, s) { resolvedBase } else { resolvedBase + s };
-    text.startsWithAt(resolvedTarget, 0, prefix)
+    prefix := if resolvedBase.endsWith(s) { resolvedBase } else { resolvedBase + s };
+    resolvedTarget.startsWithAt(0, prefix)
 };
 
 checkVerifyStream := fn(source: String, streamPos: Int, baseDir: String, label: String, checkHash: Bool, allowOutsideDir: Bool): (ok: Bool, kind: String, error: String) {
@@ -274,7 +271,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
     offsets := json.arrayElementOffsets(src, featField.valuePos);
     var idx := 0;
     loop offsets as itemPos {
-        label := "language/verifications/features.json: features[" + integer.intText(idx) + "]";
+        label := "language/verifications/features.json: features[" + idx.toText() + "]";
         if not isJsonObjectAt(src, itemPos) {
             return (ok = false, text = "", error = label + ": expected an object");
         }
@@ -288,7 +285,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
         if not idRes.found or not idRes.ok {
             return (ok = false, text = "", error = label + ".id: expected a string");
         }
-        if set.has(ids, idRes.value) {
+        if ids.has(idRes.value) {
             return (ok = false, text = "", error = label + ": duplicate feature " + idRes.value);
         }
         sumRes := json.readObjectString(src, itemPos, "summary");
@@ -315,7 +312,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
                 return (ok = false, text = "", error = label + ".docs: missing " + docRel);
             }
         }
-        set.add(mut ids, idRes.value);
+        (mut ids).add(idRes.value);
         idx = idx + 1;
     }
     (ok = true, text = src, error = "")
@@ -326,7 +323,7 @@ registryFeatureIds := fn(regSrc: String, verifiedOnly: Bool): List<String> {
     featField := json.findObjectField(regSrc, 0, "features");
     loop json.arrayElementOffsets(regSrc, featField.valuePos) as itemPos {
         if not verifiedOnly or json.readObjectString(regSrc, itemPos, "status").value == "verified" {
-            list.pushBack(mut out, json.readObjectString(regSrc, itemPos, "id").value);
+            mut out.pushBack(json.readObjectString(regSrc, itemPos, "id").value);
         }
     }
     out
@@ -395,11 +392,11 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         return failManifestText(if featCheck.error =!= "" { featCheck.error } else { label + ".features: expected an array of strings" });
     }
     featItems := readStringArrayField(src, 0, "features");
-    if list.listCountText(featItems) == 0 {
+    if featItems.length() == 0 {
         return failManifestText(label + ".features: at least one feature is required");
     }
     loop featItems as featName {
-        if not set.has(featureIdSet, featName) {
+        if not featureIdSet.has(featName) {
             return failManifestText(label + ".features: unknown feature " + featName);
         }
     }
@@ -411,7 +408,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
     if targetsCheck.found {
         if not targetsCheck.ok { return failManifestText(targetsCheck.error); }
         targetItems := readStringArrayField(src, 0, "targets");
-        if list.listCountText(targetItems) == 0 {
+        if targetItems.length() == 0 {
             return failManifestText(label + ".targets: expected unique target names");
         }
         seenTargets: mut List<String> = [];
@@ -422,7 +419,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
             if list.listContainsText(seenTargets, t) {
                 return failManifestText(label + ".targets: expected unique target names");
             }
-            list.pushBack(mut seenTargets, t);
+            (mut seenTargets).pushBack(t);
         }
     }
 
@@ -455,7 +452,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         return failManifestText(label + ".cases: at least one case is required");
     }
     caseOffsets := json.arrayElementOffsets(src, casesField.valuePos);
-    if list.listCountInt(caseOffsets) == 0 {
+    if caseOffsets.length() == 0 {
         return failManifestText(label + ".cases: at least one case is required");
     }
 
@@ -463,7 +460,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
     allowedScenario: List<String> = ["name", "args", "stdin", "stdout", "stderr", "exitCode"];
     var idx := 0;
     loop caseOffsets as sPos {
-        sLabel := label + ".cases[" + integer.intText(idx) + "]";
+        sLabel := label + ".cases[" + idx.toText() + "]";
         if not isJsonObjectAt(src, sPos) {
             return failManifestText(sLabel + ": expected an object");
         }
@@ -476,10 +473,10 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         if not sNameRes.found or not sNameRes.ok {
             return failManifestText(sLabel + ".name: expected a string");
         }
-        if set.has(seenNames, sNameRes.value) {
+        if seenNames.has(sNameRes.value) {
             return failManifestText(label + ": duplicate case name " + sNameRes.value);
         }
-        set.add(mut seenNames, sNameRes.value);
+        (mut seenNames).add(sNameRes.value);
 
         sArgsCheck := checkStringArrayField(src, sPos, "args", sLabel);
         if sArgsCheck.found and not sArgsCheck.ok { return failManifestText(sArgsCheck.error); }
@@ -540,17 +537,17 @@ validateAllManifests := fn(rootDir: String, featureIdSet: Set<String>, verifiedI
             if not checked.ok {
                 return (ok = false, error = checked.error);
             }
-            if set.has(ids, checked.id) {
+            if ids.has(checked.id) {
                 return (ok = false, error = checked.id + ": duplicate manifest id");
             }
-            set.add(mut ids, checked.id);
+            (mut ids).add(checked.id);
             if kind == KIND_FEATURE {
-                set.add(mut featureManifestIds, checked.id);
+                mut featureManifestIds.add(checked.id);
             }
         }
     }
     loop verifiedIds as vId {
-        if not set.has(featureManifestIds, vId) {
+        if not featureManifestIds.has(vId) {
             return (ok = false, error = "feature " + vId + ": no verification case");
         }
     }
@@ -561,7 +558,7 @@ countSourcesIn := fn(rootDir: String, relDir: String): Int {
     target := path.join(rootDir, relDir);
     if fs.kind(target) =!= fs.FILE_KIND_DIR { return 0; }
     ignored: List<String> = ["helpers"];
-    list.listCountText(path.collectFiles(target, [target], ".lts", ignored, false))
+    path.collectFiles(target, [target], ".lts", ignored, false).length()
 };
 
 readManifestSourceName := fn(file: String): String {
@@ -577,31 +574,31 @@ runCoverage := fn(rootDir: String, featureIds: List<String>): Int {
     sampleFiles := collectKindManifests(rootDir, KIND_SAMPLE);
     showcaseFiles := collectKindManifests(rootDir, KIND_SHOWCASE);
 
-    featureCount := list.listCountText(featureFiles);
-    exampleCount := list.listCountText(exampleFiles);
-    sampleCount := list.listCountText(sampleFiles);
-    showcaseCount := list.listCountText(showcaseFiles);
+    featureCount := featureFiles.length();
+    exampleCount := exampleFiles.length();
+    sampleCount := sampleFiles.length();
+    showcaseCount := showcaseFiles.length();
 
     coveredExamples: mut List<String> = [];
     loop exampleFiles as ef {
-        list.pushBack(mut coveredExamples, readManifestSourceName(ef));
+        mut coveredExamples.pushBack(readManifestSourceName(ef));
     }
     coveredSamples: mut List<String> = [];
     loop sampleFiles as sf {
-        list.pushBack(mut coveredSamples, readManifestSourceName(sf));
+        mut coveredSamples.pushBack(readManifestSourceName(sf));
     }
 
-    regTotal := list.listCountText(featureIds);
+    regTotal := featureIds.length();
     exTotal := countSourcesIn(rootDir, "language/examples");
     smTotal := countSourcesIn(rootDir, "language/samples");
     shTotal := countSourcesIn(rootDir, "language/showcases");
 
-    io.outputLine("features: " + integer.intText(regTotal) + " registered, " + integer.intText(featureCount) + " cases");
-    io.outputLine("examples: " + integer.intText(exampleCount) + "/" + integer.intText(exTotal) + " manifests");
-    io.outputLine("samples: " + integer.intText(sampleCount) + "/" + integer.intText(smTotal) + " manifests");
-    io.outputLine("showcases: " + integer.intText(showcaseCount) + "/" + integer.intText(shTotal) + " manifests");
-    exJoined := if list.listCountText(coveredExamples) > 0 { text.joinTexts(coveredExamples, ", ") } else { "(none)" };
-    smJoined := if list.listCountText(coveredSamples) > 0 { text.joinTexts(coveredSamples, ", ") } else { "(none)" };
+    io.outputLine("features: " + regTotal.toText() + " registered, " + featureCount.toText() + " cases");
+    io.outputLine("examples: " + exampleCount.toText() + "/" + exTotal.toText() + " manifests");
+    io.outputLine("samples: " + sampleCount.toText() + "/" + smTotal.toText() + " manifests");
+    io.outputLine("showcases: " + showcaseCount.toText() + "/" + shTotal.toText() + " manifests");
+    exJoined := if coveredExamples.length() > 0 { text.joinTexts(coveredExamples, ", ") } else { "(none)" };
+    smJoined := if coveredSamples.length() > 0 { text.joinTexts(coveredSamples, ", ") } else { "(none)" };
     io.outputLine("covered examples: " + exJoined);
     io.outputLine("covered samples: " + smJoined);
 
@@ -616,7 +613,7 @@ resolveCompilerBuild := fn(rootDir: String): (ok: Bool, compilerPath: String, se
     seedRead := fs.readText(path.join(rootDir, "compiler/bootstrap/seed.ts"));
     var seedArtifact := "compiler.ts";
     if seedRead.ok {
-        artRes := json.readObjectString(seedRead.text, text.indexOfText(seedRead.text, "{", 0), "artifact");
+        artRes := json.readObjectString(seedRead.text, seedRead.text.indexOf("{", 0), "artifact");
         if artRes.found and artRes.ok { seedArtifact = artRes.value; }
     }
     built := compilerBuild.buildCompiler(rootDir, "ts");
@@ -654,17 +651,17 @@ computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool
         }
         hStatic := crypto.sha256File(full);
         if not hStatic.ok { return (ok = false, hex = "", error = hStatic.error); }
-        list.pushBack(mut parts, "[" + json.quoteString(rel) + "," + json.quoteString(hStatic.hex) + "]");
+        (mut parts).pushBack("[" + json.quoteString(rel) + "," + json.quoteString(hStatic.hex) + "]");
     }
     depParts: mut List<String> = [];
     loop compilerDeps as dep {
         full := path.join(rootDir, dep);
         hRes := crypto.sha256File(full);
         if not hRes.ok { return (ok = false, hex = "", error = hRes.error); }
-        list.pushBack(mut depParts, "[" + json.quoteString(dep) + "," + json.quoteString(hRes.hex) + "]");
+        (mut depParts).pushBack("[" + json.quoteString(dep) + "," + json.quoteString(hRes.hex) + "]");
     }
-    list.pushBack(mut parts, "[" + text.joinTexts(depParts, ",") + "]");
-    list.pushBack(mut parts, proc.runtimeVersion());
+    (mut parts).pushBack("[" + text.joinTexts(depParts, ",") + "]");
+    mut parts.pushBack(proc.runtimeVersion());
     (ok = true, hex = crypto.sha256Bytes(unicode.utf8Encode(text.joinTexts(parts, "\n"))), error = "")
 };
 
@@ -684,7 +681,7 @@ loadVerifyCache := fn(cacheFile: String, enabled: Bool): Set<String> {
     loop json.objectKeys(readRes.text, passedField.valuePos) as key {
         val := json.readObjectBool(readRes.text, passedField.valuePos, key);
         if val.found and val.ok and val.value {
-            set.add(mut passed, key);
+            mut passed.add(key);
         }
     }
     passed
@@ -695,7 +692,7 @@ saveVerifyCache := fn(cacheFile: String, passedKeys: Set<String>): Unit {
     if not mkRes.ok { return; }
     entries: mut List<String> = [];
     loop passedKeys as k {
-        list.pushBack(mut entries, json.quoteString(k) + ":true");
+        mut entries.pushBack(json.quoteString(k) + ":true");
     }
     body := "{\"version\":1,\"passed\":{" + text.joinTexts(entries, ",") + "}}\n";
     _w := fs.writeText(cacheFile, body);
@@ -707,9 +704,9 @@ shardMatches := fn(manifestId: String, scenarioName: String, hasShard: Bool, sha
     var val := 0;
     var i := 0;
     loop i < 8 {
-        ch := text.at(digest, i);
-        d := if text.isDigit(ch) {
-            text.digitValue(ch)
+        ch := digest.at(i);
+        d := if ch.isDigit() {
+            ch.digitValue()
         } else if ch == "a" { 10 } else if ch == "b" { 11 } else if ch == "c" { 12 } else if ch == "d" { 13 } else if ch == "e" { 14 } else { 15 };
         val = val * 16 + d;
         i = i + 1;
@@ -731,7 +728,7 @@ lastIndexOfText := fn(haystack: String, needle: String): Int {
     var last := -1;
     var pos := 0;
     loop true {
-        idx := text.indexOfText(haystack, needle, pos);
+        idx := haystack.indexOf(needle, pos);
         if idx < 0 { break; }
         last = idx;
         pos = idx + 1;
@@ -741,22 +738,22 @@ lastIndexOfText := fn(haystack: String, needle: String): Int {
 
 parseGitStatusPaths := fn(stdout: String): List<String> {
     paths: mut List<String> = [];
-    size := text.length(stdout);
+    size := stdout.length();
     var pos := 0;
     loop pos < size {
-        nl := text.indexOfText(stdout, "\n", pos);
+        nl := stdout.indexOf("\n", pos);
         end := if nl < 0 { size } else { nl };
-        line := text.slice(stdout, pos, end);
-        if text.trim(line) =!= "" and text.length(line) > 3 {
-            var p := text.trim(text.slice(line, 3, text.length(line)));
+        line := stdout.slice(pos, end);
+        if line.trim() =!= "" and line.length() > 3 {
+            var p := line.slice(3, line.length()).trim();
             arrow := lastIndexOfText(p, " -> ");
             if arrow >= 0 {
-                p = text.slice(p, arrow + 4, text.length(p));
+                p = p.slice(arrow + 4, p.length());
             }
-            if text.length(p) >= 2 and text.startsWithAt(p, 0, "\"") and text.endsWith(p, "\"") {
-                p = text.slice(p, 1, text.length(p) - 1);
+            if p.length() >= 2 and p.startsWithAt(0, "\"") and p.endsWith("\"") {
+                p = p.slice(1, p.length() - 1);
             }
-            list.pushBack(mut paths, p);
+            (mut paths).pushBack(p);
         }
         if nl < 0 { break; }
         pos = nl + 1;
@@ -789,7 +786,7 @@ invalidatesVerification := fn(relPath: String): Bool {
     "lib/external/"
     ];
     loop prefixes as prefix {
-        if text.startsWithAt(relPath, 0, prefix) { return true; }
+        if relPath.startsWithAt(0, prefix) { return true; }
     }
     false
 };
@@ -813,38 +810,38 @@ caseCacheKey := fn(runtimeHash: String, manifestId: String, kind: String, source
 
     stdinPart := if stdinField.found {
         sp := json.valueSpan(srcText, stdinField.valuePos);
-        "\"stdin\":" + text.slice(srcText, sp.start, sp.end) + ","
+        "\"stdin\":" + srcText.slice(sp.start, sp.end) + ","
     } else { "" };
     argsPart := if argsField.found {
         ap := json.valueSpan(srcText, argsField.valuePos);
-        "\"args\":" + text.slice(srcText, ap.start, ap.end) + ","
+        "\"args\":" + srcText.slice(ap.start, ap.end) + ","
     } else { "" };
     stdoutPart := if stdoutField.found {
         op := json.valueSpan(srcText, stdoutField.valuePos);
-        "\"stdout\":" + text.slice(srcText, op.start, op.end) + ","
+        "\"stdout\":" + srcText.slice(op.start, op.end) + ","
     } else { "" };
     stderrPart := if stderrField.found {
         ep := json.valueSpan(srcText, stderrField.valuePos);
-        "\"stderr\":" + text.slice(srcText, ep.start, ep.end) + ","
+        "\"stderr\":" + srcText.slice(ep.start, ep.end) + ","
     } else { "" };
-    payload := "{" + stdinPart + argsPart + stdoutPart + stderrPart + "\"exitCode\":" + integer.intText(exitCode) + "}";
+    payload := "{" + stdinPart + argsPart + stdoutPart + stderrPart + "\"exitCode\":" + exitCode.toText() + "}";
     crypto.sha256Text(runtimeHash + "ts" + manifestId + kind + sourceHash + appendText + payload)
 };
 
 formatStringArrayJson := fn(items: List<String>, indent: String): String {
-    if list.listCountText(items) == 0 { return "[]"; }
+    if items.length() == 0 { return "[]"; }
     quoted: mut List<String> = [];
     loop items as item {
-        list.pushBack(mut quoted, indent + "  " + json.quoteString(item));
+        mut quoted.pushBack(indent + "  " + json.quoteString(item));
     }
     "[\n" + text.joinTexts(quoted, ",\n") + "\n" + indent + "]"
 };
 
 formatBytesArrayJson := fn(bytes: List<Int>, indent: String): String {
-    if list.listCountInt(bytes) == 0 { return "[]"; }
+    if bytes.length() == 0 { return "[]"; }
     parts: mut List<String> = [];
     loop bytes as b {
-        list.pushBack(mut parts, indent + "  " + integer.intText(b));
+        mut parts.pushBack(indent + "  " + b.toText());
     }
     "[\n" + text.joinTexts(parts, ",\n") + "\n" + indent + "]"
 };
@@ -880,7 +877,7 @@ formatStreamJson := fn(srcText: String, streamPos: Int, baseDir: String, indent:
 
 formatScenarioSpanJson := fn(srcText: String, sPos: Int): String {
     sp := json.valueSpan(srcText, sPos);
-    text.slice(srcText, sp.start, sp.end)
+    srcText.slice(sp.start, sp.end)
 };
 
 formatUpdatedScenarioJson := fn(
@@ -890,27 +887,27 @@ actualStdout: List<Int>, actualStderr: List<Int>, actualExit: Int
     emptyBytes: List<Int> = [];
     fields: mut List<String> = [];
     sName := json.readObjectString(srcText, sPos, "name").value;
-    list.pushBack(mut fields, "      \"name\": " + json.quoteString(sName));
+    mut fields.pushBack("      \"name\": " + json.quoteString(sName));
 
     argsField := json.findObjectField(srcText, sPos, "args");
     if argsField.found {
-        list.pushBack(mut fields, "      \"args\": " + formatStringArrayJson(readStringArrayField(srcText, sPos, "args"), "      "));
+        mut fields.pushBack("      \"args\": " + formatStringArrayJson(readStringArrayField(srcText, sPos, "args"), "      "));
     }
     stdinField := json.findObjectField(srcText, sPos, "stdin");
     if stdinField.found {
-        list.pushBack(mut fields, "      \"stdin\": " + formatStreamJson(srcText, stdinField.valuePos, baseDir, "      ", false, emptyBytes, true));
+        mut fields.pushBack("      \"stdin\": " + formatStreamJson(srcText, stdinField.valuePos, baseDir, "      ", false, emptyBytes, true));
     }
     stdoutField := json.findObjectField(srcText, sPos, "stdout");
-    if stdoutField.found or list.listCountInt(actualStdout) > 0 {
+    if stdoutField.found or actualStdout.length() > 0 {
         outPos := if stdoutField.found { stdoutField.valuePos } else { -1 };
-        list.pushBack(mut fields, "      \"stdout\": " + formatStreamJson(srcText, outPos, baseDir, "      ", true, actualStdout, false));
+        mut fields.pushBack("      \"stdout\": " + formatStreamJson(srcText, outPos, baseDir, "      ", true, actualStdout, false));
     }
     stderrField := json.findObjectField(srcText, sPos, "stderr");
-    if stderrField.found or list.listCountInt(actualStderr) > 0 {
+    if stderrField.found or actualStderr.length() > 0 {
         errPos := if stderrField.found { stderrField.valuePos } else { -1 };
-        list.pushBack(mut fields, "      \"stderr\": " + formatStreamJson(srcText, errPos, baseDir, "      ", true, actualStderr, false));
+        mut fields.pushBack("      \"stderr\": " + formatStreamJson(srcText, errPos, baseDir, "      ", true, actualStderr, false));
     }
-    list.pushBack(mut fields, "      \"exitCode\": " + integer.intText(actualExit));
+    (mut fields).pushBack("      \"exitCode\": " + actualExit.toText());
     "    {\n" + text.joinTexts(fields, ",\n") + "\n    }"
 };
 
@@ -918,44 +915,44 @@ formatUpdatedManifestJson := fn(srcText: String, sourceHash: String, scenariosJs
     fields: mut List<String> = [];
     idVal := json.readObjectString(srcText, 0, "id").value;
     kindVal := json.readObjectString(srcText, 0, "kind").value;
-    list.pushBack(mut fields, "  \"id\": " + json.quoteString(idVal));
-    list.pushBack(mut fields, "  \"kind\": " + json.quoteString(kindVal));
+    mut fields.pushBack("  \"id\": " + json.quoteString(idVal));
+    mut fields.pushBack("  \"kind\": " + json.quoteString(kindVal));
 
     sourceField := json.findObjectField(srcText, 0, "source");
     srcParts: mut List<String> = [];
     if json.findObjectField(srcText, sourceField.valuePos, "file").found {
-        list.pushBack(mut srcParts, "    \"file\": " + json.quoteString(json.readObjectString(srcText, sourceField.valuePos, "file").value));
+        mut srcParts.pushBack("    \"file\": " + json.quoteString(json.readObjectString(srcText, sourceField.valuePos, "file").value));
     } else if json.findObjectField(srcText, sourceField.valuePos, "text").found {
-        list.pushBack(mut srcParts, "    \"text\": " + json.quoteString(json.readObjectString(srcText, sourceField.valuePos, "text").value));
+        mut srcParts.pushBack("    \"text\": " + json.quoteString(json.readObjectString(srcText, sourceField.valuePos, "text").value));
     } else {
         bField := json.findObjectField(srcText, sourceField.valuePos, "bytes");
         emptyDir := "";
         bs := streams.readStreamBytes(srcText, sourceField.valuePos, emptyDir);
         _unused := bField.found;
-        list.pushBack(mut srcParts, "    \"bytes\": " + formatBytesArrayJson(bs, "    "));
+        mut srcParts.pushBack("    \"bytes\": " + formatBytesArrayJson(bs, "    "));
     }
-    list.pushBack(mut srcParts, "    \"hash\": " + json.quoteString(sourceHash));
-    list.pushBack(mut fields, "  \"source\": {\n" + text.joinTexts(srcParts, ",\n") + "\n  }");
+    (mut srcParts).pushBack("    \"hash\": " + json.quoteString(sourceHash));
+    mut fields.pushBack("  \"source\": {\n" + text.joinTexts(srcParts, ",\n") + "\n  }");
 
-    list.pushBack(mut fields, "  \"features\": " + formatStringArrayJson(readStringArrayField(srcText, 0, "features"), "  "));
+    mut fields.pushBack("  \"features\": " + formatStringArrayJson(readStringArrayField(srcText, 0, "features"), "  "));
 
     guideField := json.findObjectField(srcText, 0, "guideline");
     if guideField.found {
-        list.pushBack(mut fields, "  \"guideline\": " + json.quoteString(json.readStringAt(srcText, guideField.valuePos).value));
+        mut fields.pushBack("  \"guideline\": " + json.quoteString(json.readStringAt(srcText, guideField.valuePos).value));
     }
     descField := json.findObjectField(srcText, 0, "description");
     if descField.found {
-        list.pushBack(mut fields, "  \"description\": " + json.quoteString(json.readStringAt(srcText, descField.valuePos).value));
+        mut fields.pushBack("  \"description\": " + json.quoteString(json.readStringAt(srcText, descField.valuePos).value));
     }
     appField := json.findObjectField(srcText, 0, "append");
     if appField.found {
-        list.pushBack(mut fields, "  \"append\": " + json.quoteString(json.readStringAt(srcText, appField.valuePos).value));
+        mut fields.pushBack("  \"append\": " + json.quoteString(json.readStringAt(srcText, appField.valuePos).value));
     }
     targetsField := json.findObjectField(srcText, 0, "targets");
     if targetsField.found {
-        list.pushBack(mut fields, "  \"targets\": " + formatStringArrayJson(readStringArrayField(srcText, 0, "targets"), "  "));
+        mut fields.pushBack("  \"targets\": " + formatStringArrayJson(readStringArrayField(srcText, 0, "targets"), "  "));
     }
-    list.pushBack(mut fields, "  \"cases\": [\n" + text.joinTexts(scenariosJson, ",\n") + "\n  ]");
+    (mut fields).pushBack("  \"cases\": [\n" + text.joinTexts(scenariosJson, ",\n") + "\n  ]");
     "{\n" + text.joinTexts(fields, ",\n") + "\n}\n"
 };
 
@@ -969,7 +966,7 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String, optLevel: Int
 ): (ok: Bool, artifactPath: String, compileNs: Int, emittedBytes: Int, error: String) {
     displayName := if hasSourceFile { path.relative(rootDir, sourcePath) } else { "" };
     absRootPath := if hasSourceFile { sourcePath } else { path.join(rootDir, "__lite_stdin__.lts") };
-    lvText := integer.intText(optLevel);
+    lvText := optLevel.toText();
     outTsPath := path.join(workDir, "artifact-O" + lvText + ".ts");
     errPath := path.join(workDir, "compile-O" + lvText + ".stderr");
     emptyEnv: List<String> = [];
@@ -982,10 +979,10 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String, optLevel: Int
     }
     if compiled.status =!= 0 {
         errRead := fs.readText(errPath);
-        diag := if errRead.ok { text.trim(errRead.text) } else { "compilation error" };
-        return (ok = false, artifactPath = "", compileNs = elapsedNs, emittedBytes = 0, error = "compiler -O" + lvText + " exited " + integer.intText(compiled.status) + ": " + diag);
+        diag := if errRead.ok { errRead.text.trim() } else { "compilation error" };
+        return (ok = false, artifactPath = "", compileNs = elapsedNs, emittedBytes = 0, error = "compiler -O" + lvText + " exited " + compiled.status.toText() + ": " + diag);
     }
-    emittedBytes := list.listCountInt(fs.readBytes(outTsPath));
+    emittedBytes := fs.readBytes(outTsPath).length();
     (ok = true, artifactPath = outTsPath, compileNs = elapsedNs, emittedBytes = emittedBytes, error = "")
 };
 
@@ -993,12 +990,12 @@ formatTenthMs := fn(ns: Int): String {
     tenths := (ns + 50000) / 100000;
     whole := tenths / 10;
     frac := tenths % 10;
-    integer.intText(whole) + "." + integer.intText(frac)
+    whole.toText() + "." + frac.toText()
 };
 
 padRight := fn(s: String, width: Int): String {
     var out := s;
-    loop text.length(out) < width {
+    loop out.length() < width {
         out = out + " ";
     }
     out
@@ -1009,7 +1006,7 @@ manifestCount: Int, scenarioCount: Int,
 totalCompileNs: List<Int>, totalRunNs: List<Int>, totalBytes: List<Int>
 ): Unit {
     io.outputLine("");
-    io.outputLine("Pedantic optimization benchmark (" + integer.intText(manifestCount) + " manifest(s), " + integer.intText(scenarioCount) + " scenario(s) x 4 levels):");
+    io.outputLine("Pedantic optimization benchmark (" + manifestCount.toText() + " manifest(s), " + scenarioCount.toText() + " scenario(s) x 4 levels):");
     io.outputLine("  " + padRight("Level", 8) + padRight("Compile(ms)", 14) + padRight("AvgComp(ms)", 14) + padRight("Run(ms)", 12) + padRight("AvgRun(ms)", 12) + "Emitted(bytes)");
     var lv := 0;
     loop lv < 4 {
@@ -1019,12 +1016,12 @@ totalCompileNs: List<Int>, totalRunNs: List<Int>, totalBytes: List<Int>
         avgRun := if scenarioCount > 0 { rNs / scenarioCount } else { 0 };
         io.outputLine(
         "  "
-        + padRight("-O" + integer.intText(lv), 8)
+        + padRight("-O" + lv.toText(), 8)
         + padRight(formatTenthMs(cNs), 14)
         + padRight(formatTenthMs(avgComp), 14)
         + padRight(formatTenthMs(rNs), 12)
         + padRight(formatTenthMs(avgRun), 12)
-        + integer.intText(totalBytes[lv])
+        + totalBytes[lv].toText()
         );
         lv = lv + 1;
     }
@@ -1058,8 +1055,8 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String
     }
     if compiled.status =!= 0 {
         errRead := fs.readText(errCPath);
-        diag := if errRead.ok { text.trim(errRead.text) } else { "C compilation error" };
-        return (ok = false, binaryPath = "", error = "C compiler exited " + integer.intText(compiled.status) + ": " + diag);
+        diag := if errRead.ok { errRead.text.trim() } else { "C compilation error" };
+        return (ok = false, binaryPath = "", error = "C compiler exited " + compiled.status.toText() + ": " + diag);
     }
     outBinPath := path.join(workDir, "program-c");
     ccOutPath := path.join(workDir, "cc.stdout");
@@ -1072,8 +1069,8 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String
     }
     if ccRes.status =!= 0 {
         errRead := fs.readText(ccErrPath);
-        diag := if errRead.ok { text.trim(errRead.text) } else { "cc error" };
-        return (ok = false, binaryPath = "", error = "cc -std=c11 -Wall -Wextra -Werror exited " + integer.intText(ccRes.status) + ":\n" + diag);
+        diag := if errRead.ok { errRead.text.trim() } else { "cc error" };
+        return (ok = false, binaryPath = "", error = "cc -std=c11 -Wall -Wextra -Werror exited " + ccRes.status.toText() + ":\n" + diag);
     }
     (ok = true, binaryPath = outBinPath, error = "")
 };
@@ -1082,8 +1079,8 @@ runCArtifactScenario := fn(
 binaryPath: String, workDir: String,
 stdinBytes: List<Int>, scenarioArgs: List<String>, idx: Int
 ): (ok: Bool, outPath: String, errPath: String, exitCode: Int, error: String) {
-    outPath := path.join(workDir, "run-c-" + integer.intText(idx) + ".stdout");
-    errPath := path.join(workDir, "run-c-" + integer.intText(idx) + ".stderr");
+    outPath := path.join(workDir, "run-c-" + idx.toText() + ".stdout");
+    errPath := path.join(workDir, "run-c-" + idx.toText() + ".stderr");
     emptyEnv: List<String> = [];
     res := proc.runBytes(binaryPath, scenarioArgs, workDir, emptyEnv, 10000, stdinBytes, outPath, errPath);
     if res.error =!= "" {
@@ -1108,8 +1105,8 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String
     }
     if compiled.status =!= 0 {
         errRead := fs.readText(errPath);
-        diag := if errRead.ok { text.trim(errRead.text) } else { "compilation error" };
-        return (ok = false, artifactPath = "", error = "compiler exited " + integer.intText(compiled.status) + ": " + diag);
+        diag := if errRead.ok { errRead.text.trim() } else { "compilation error" };
+        return (ok = false, artifactPath = "", error = "compiler exited " + compiled.status.toText() + ": " + diag);
     }
     tsChecked := cases.checkTsArtifactFile(rootDir, outTsPath, path.join(workDir, "tsc"));
     if not tsChecked.ok {
@@ -1130,10 +1127,10 @@ stdinBytes: List<Int>, scenarioArgs: List<String>, idx: Int
     _wRun := cases.writeTsRunner(runnerPath);
     runArgs: mut List<String> = [runnerPath, artifactPath];
     loop scenarioArgs as arg {
-        list.pushBack(mut runArgs, arg);
+        mut runArgs.pushBack(arg);
     }
-    outPath := path.join(workDir, "run-" + integer.intText(idx) + ".stdout");
-    errPath := path.join(workDir, "run-" + integer.intText(idx) + ".stderr");
+    outPath := path.join(workDir, "run-" + idx.toText() + ".stdout");
+    errPath := path.join(workDir, "run-" + idx.toText() + ".stderr");
     emptyEnv: List<String> = [];
     res := proc.runBytes(project.nodeExecPath(), runArgs, workDir, emptyEnv, 10000, stdinBytes, outPath, errPath);
     if res.error =!= "" {
@@ -1166,7 +1163,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     }
     featureIds := registryFeatureIds(reg.text, false);
     featureIdSet: mut Set<String>;
-    loop featureIds as fid { set.add(mut featureIdSet, fid); }
+    loop featureIds as fid { mut featureIdSet.add(fid); }
     verifiedIds := registryFeatureIds(reg.text, true);
     allCheck := validateAllManifests(rootDir, featureIdSet, verifiedIds);
     if not allCheck.ok {
@@ -1218,7 +1215,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
         if gitRes.ok {
             hasGitChanges = true;
             loop parseGitStatusPaths(gitRes.stdout) as gp {
-                set.add(mut gitPaths, gp);
+                mut gitPaths.add(gp);
                 if invalidatesVerification(gp) {
                     invalidateAll = true;
                 }
@@ -1230,9 +1227,9 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                     fId := json.readObjectString(fText, 0, "id").value;
                     sf := json.findObjectField(fText, 0, "source");
                     sFileRes := json.readObjectString(fText, sf.valuePos, "file");
-                    srcHit := sFileRes.found and set.has(gitPaths, path.relative(rootDir, path.resolve(path.parentDir(fFile), sFileRes.value)));
-                    if set.has(gitPaths, relMan) or srcHit {
-                        set.add(mut changedFeatures, fId);
+                    srcHit := sFileRes.found and gitPaths.has(path.relative(rootDir, path.resolve(path.parentDir(fFile), sFileRes.value)));
+                    if gitPaths.has(relMan) or srcHit {
+                        mut changedFeatures.add(fId);
                     }
                 }
             }
@@ -1259,15 +1256,15 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
             var selectedManifest := manifestMatchesFilter(rootDir, mFile, mId, mText, opts.hasFilter, opts.filter);
             if selectedManifest and hasGitChanges and not invalidateAll {
                 relMan := path.relative(rootDir, mFile);
-                srcHit := meta.hasSourceFile and set.has(gitPaths, path.relative(rootDir, meta.sourcePath));
+                srcHit := meta.hasSourceFile and gitPaths.has(path.relative(rootDir, meta.sourcePath));
                 var featHit := false;
                 loop readStringArrayField(mText, 0, "features") as fId {
-                    if set.has(changedFeatures, fId) {
+                    if changedFeatures.has(fId) {
                         featHit = true;
                         break;
                     }
                 }
-                if not set.has(gitPaths, relMan) and not srcHit and not featHit {
+                if not gitPaths.has(relMan) and not srcHit and not featHit {
                     selectedManifest = false;
                 }
             }
@@ -1279,11 +1276,11 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                 loop allScenarios as sPos {
                     sName := json.readObjectString(mText, sPos, "name").value;
                     if shardMatches(mId, sName, opts.hasShard, opts.shardIndex, opts.shardCount) {
-                        list.pushBack(mut selectedOffsets, sPos);
+                        mut selectedOffsets.pushBack(sPos);
                     }
                 }
 
-                if list.listCountInt(selectedOffsets) > 0 {
+                if selectedOffsets.length() > 0 {
                     failuresBefore := failures;
                     sourceField := json.findObjectField(mText, 0, "source");
                     sourceBytes := if meta.hasSourceFile {
@@ -1302,7 +1299,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                         if not needsArtifact {
                             loop selectedOffsets as sPos {
                                 k := caseCacheKey(rtHash.hex, mId, mKind, sourceHash, meta.appendText, mText, sPos);
-                                if not opts.cache or not set.has(passedKeys, k) {
+                                if not opts.cache or not passedKeys.has(k) {
                                     needsArtifact = true;
                                     break;
                                 }
@@ -1333,7 +1330,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                             break;
                                         }
                                         pedanticBytes[lv] += cOpt.emittedBytes;
-                                        list.pushBack(mut pedanticArtifacts, cOpt.artifactPath);
+                                        mut pedanticArtifacts.pushBack(cOpt.artifactPath);
                                         lv = lv + 1;
                                     }
                                     if compileOk {
@@ -1369,7 +1366,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                             label := mId + "/" + sName + " [ts]";
                             cKey := caseCacheKey(rtHash.hex, mId, mKind, sourceHash, meta.appendText, mText, sPos);
 
-                            if not opts.update and opts.cache and set.has(passedKeys, cKey) {
+                            if not opts.update and opts.cache and passedKeys.has(cKey) {
                                 cached = cached + 1;
                                 if not opts.quiet { io.outputLine("PASS " + label + " (cached)"); }
                             } else {
@@ -1421,7 +1418,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                     executed = executed + 1;
                                     if not compileOk {
                                         if not opts.update {
-                                            _rmKey := set.remove(mut passedKeys, cKey);
+                                            _rmKey := mut passedKeys.remove(cKey);
                                             cacheDirty = true;
                                             io.outputLine("FAIL " + label + ": " + compileError);
                                         } else {
@@ -1439,7 +1436,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                         levelMsParts: mut List<String> = [];
                                         var lv := 0;
                                         loop lv < 4 {
-                                            lvLabel := mId + "/" + sName + " [ts -O" + integer.intText(lv) + "]";
+                                            lvLabel := mId + "/" + sName + " [ts -O" + lv.toText() + "]";
                                             rStart := time.monotonicNs();
                                             ran := runArtifactScenario(rootDir, pedanticArtifacts[lv], workDir, inBytes, scenarioArgs, runSeq);
                                             rElapsed := time.monotonicNs() - rStart;
@@ -1473,14 +1470,14 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                         io.outputLine("  stderr expected " + describeBytes(expStderr) + " got " + describeBytes(stderrBytes));
                                                     }
                                                     if not sameExit {
-                                                        io.outputLine("  exitCode expected " + integer.intText(expExit) + " got " + integer.intText(ran.exitCode));
+                                                        io.outputLine("  exitCode expected " + expExit.toText() + " got " + ran.exitCode.toText());
                                                     }
                                                     if not sameAsO0 {
                                                         io.outputLine("  diverged from -O0 result");
                                                     }
                                                     allLevelsOk = false;
                                                 } else {
-                                                    list.pushBack(mut levelMsParts, "O" + integer.intText(lv) + ":" + formatTenthMs(rElapsed) + "ms");
+                                                    mut levelMsParts.pushBack("O" + lv.toText() + ":" + formatTenthMs(rElapsed) + "ms");
                                                 }
                                             }
                                             lv = lv + 1;
@@ -1496,7 +1493,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                         runSeq = runSeq + 1;
                                         if not ran.ok {
                                             if not opts.update {
-                                                _rmKey := set.remove(mut passedKeys, cKey);
+                                                _rmKey := mut passedKeys.remove(cKey);
                                                 cacheDirty = true;
                                                 io.outputLine("FAIL " + label + ": " + ran.error);
                                             } else {
@@ -1514,7 +1511,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                 sameErr := streams.equalBytes(stderrBytes, expStderr);
                                                 sameExit := ran.exitCode == expExit;
                                                 if not sameOut or not sameErr or not sameExit {
-                                                    _rmKey := set.remove(mut passedKeys, cKey);
+                                                    _rmKey := mut passedKeys.remove(cKey);
                                                     cacheDirty = true;
                                                     io.outputLine("FAIL " + label);
                                                     if not sameOut {
@@ -1524,11 +1521,11 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                         io.outputLine("  stderr expected " + describeBytes(expStderr) + " got " + describeBytes(stderrBytes));
                                                     }
                                                     if not sameExit {
-                                                        io.outputLine("  exitCode expected " + integer.intText(expExit) + " got " + integer.intText(ran.exitCode));
+                                                        io.outputLine("  exitCode expected " + expExit.toText() + " got " + ran.exitCode.toText());
                                                     }
                                                     failures = failures + 1;
                                                 } else {
-                                                    set.add(mut passedKeys, cKey);
+                                                    mut passedKeys.add(cKey);
                                                     cacheDirty = true;
                                                     if not opts.quiet { io.outputLine("PASS " + label); }
                                                 }
@@ -1543,7 +1540,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                             var needsCArtifact := false;
                             loop selectedOffsets as sPos {
                                 kC := caseCacheKey(rtHash.hex + "|c", mId, mKind, sourceHash, meta.appendText, mText, sPos);
-                                if not opts.cache or not set.has(passedKeys, kC) {
+                                if not opts.cache or not passedKeys.has(kC) {
                                     needsCArtifact = true;
                                     break;
                                 }
@@ -1575,7 +1572,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                 sName := json.readObjectString(mText, sPos, "name").value;
                                 cLabel := mId + "/" + sName + " [c]";
                                 cKeyC := caseCacheKey(rtHash.hex + "|c", mId, mKind, sourceHash, meta.appendText, mText, sPos);
-                                if opts.cache and set.has(passedKeys, cKeyC) {
+                                if opts.cache and passedKeys.has(cKeyC) {
                                     cached = cached + 1;
                                     if not opts.quiet { io.outputLine("PASS " + cLabel + " (cached)"); }
                                 } else {
@@ -1599,7 +1596,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                     if cStreamsOk {
                                         executed = executed + 1;
                                         if not cCompileOk {
-                                            _rmKeyC := set.remove(mut passedKeys, cKeyC);
+                                            _rmKeyC := mut passedKeys.remove(cKeyC);
                                             cacheDirty = true;
                                             io.outputLine("FAIL " + cLabel + ": " + cCompileError);
                                             failures = failures + 1;
@@ -1608,7 +1605,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                             cRan := runCArtifactScenario(cBinaryPath, workDir, cInBytes, cScenarioArgs, runSeq);
                                             runSeq = runSeq + 1;
                                             if not cRan.ok {
-                                                _rmKeyC := set.remove(mut passedKeys, cKeyC);
+                                                _rmKeyC := mut passedKeys.remove(cKeyC);
                                                 cacheDirty = true;
                                                 io.outputLine("FAIL " + cLabel + ": " + cRan.error);
                                                 failures = failures + 1;
@@ -1620,7 +1617,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                 cSameErr := streams.equalBytes(cStderrBytes, cExpStderr);
                                                 cSameExit := cRan.exitCode == cExpExit;
                                                 if not cSameOut or not cSameErr or not cSameExit {
-                                                    _rmKeyC := set.remove(mut passedKeys, cKeyC);
+                                                    _rmKeyC := mut passedKeys.remove(cKeyC);
                                                     cacheDirty = true;
                                                     io.outputLine("FAIL " + cLabel);
                                                     if not cSameOut {
@@ -1630,11 +1627,11 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                         io.outputLine("  stderr expected " + describeBytes(cExpStderr) + " got " + describeBytes(cStderrBytes));
                                                     }
                                                     if not cSameExit {
-                                                        io.outputLine("  exitCode expected " + integer.intText(cExpExit) + " got " + integer.intText(cRan.exitCode));
+                                                        io.outputLine("  exitCode expected " + cExpExit.toText() + " got " + cRan.exitCode.toText());
                                                     }
                                                     failures = failures + 1;
                                                 } else {
-                                                    set.add(mut passedKeys, cKeyC);
+                                                    mut passedKeys.add(cKeyC);
                                                     cacheDirty = true;
                                                     if not opts.quiet { io.outputLine("PASS " + cLabel); }
                                                 }
@@ -1653,11 +1650,11 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                             finalScenarios: mut List<String> = [];
                             loop allScenarios as sPos {
                                 sName := json.readObjectString(mText, sPos, "name").value;
-                                upd := map.get(updatedScenarios, sName);
+                                upd := updatedScenarios.get(sName);
                                 if upd.found {
-                                    list.pushBack(mut finalScenarios, upd.value);
+                                    mut finalScenarios.pushBack(upd.value);
                                 } else {
-                                    list.pushBack(mut finalScenarios, "    " + formatScenarioSpanJson(mText, sPos));
+                                    mut finalScenarios.pushBack("    " + formatScenarioSpanJson(mText, sPos));
                                 }
                             }
                             newManifest := formatUpdatedManifestJson(mText, sourceHash, finalScenarios);
@@ -1684,16 +1681,16 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     elapsedTenths := (elapsedMs + 50) / 100;
     elapsedWhole := elapsedTenths / 10;
     elapsedFrac := elapsedTenths - elapsedWhole * 10;
-    elapsedTag := " (" + integer.intText(elapsedWhole) + "." + integer.intText(elapsedFrac) + "s)";
+    elapsedTag := " (" + elapsedWhole.toText() + "." + elapsedFrac.toText() + "s)";
     if failures > 0 {
-        io.outputLine("verification failed: " + integer.intText(failures) + " failing scenario(s), " + integer.intText(executed) + " executed, " + integer.intText(cached) + " cached" + elapsedTag);
+        io.outputLine("verification failed: " + failures.toText() + " failing scenario(s), " + executed.toText() + " executed, " + cached.toText() + " cached" + elapsedTag);
         return 1;
     }
     if not opts.update {
         if executed == 0 and cached == 0 {
             io.outputLine("verification passed: no selected scenarios");
         } else {
-            io.outputLine("verification passed: " + integer.intText(executed) + " executed, " + integer.intText(cached) + " cached" + elapsedTag);
+            io.outputLine("verification passed: " + executed.toText() + " executed, " + cached.toText() + " cached" + elapsedTag);
         }
     }
     0

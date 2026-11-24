@@ -4,7 +4,6 @@ io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
-list := import "core/list";
 path := import "core/path";
 json := import "util/json";
 docsUtil := import "util/docs";
@@ -50,11 +49,11 @@ run := fn(rawArgs: List<String>): Unit {
 
     args: mut List<String> = rawArgs;
     var docsOnly := false;
-    if list.listCountText(args) > 0 and args[0] == "--docs" {
-        _flag := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--docs" {
+        _flag := mut args.popFront();
         docsOnly = true;
     }
-    if list.listCountText(args) > 0 {
+    if args.length() > 0 {
         failDoctor("usage: lite doctor [--docs]");
     }
 
@@ -74,7 +73,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     docFailures := docsUtil.checkDocuments(rootDir);
-    if list.listCountText(docFailures) > 0 {
+    if docFailures.length() > 0 {
         failDoctor(text.joinTexts(docFailures, "\n"));
     }
 

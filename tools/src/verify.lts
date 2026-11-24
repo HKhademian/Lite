@@ -1,8 +1,6 @@
 /** Standalone verifier command (`lite-verify`); verifies declarative manifests or `language/verifications`. */
 
 io := import "core/io";
-list := import "core/list";
-text := import "core/text";
 cli := import "util/cli";
 project := import "util/project";
 cases := import "util/cases";
@@ -16,7 +14,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.errorLine("lite verify: could not locate repository root");
         io.exit(1);
     }
-    if list.listCountText(args) == 1 and text.endsWith(args[0], ".json") {
+    if args.length() == 1 and args[0].endsWith(".json") {
         io.exit(cases.runCaseCli(root, args));
     } else {
         io.exit(verify.runVerification(root, args));

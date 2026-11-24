@@ -1,7 +1,5 @@
 /* Provisional core host time signatures and pure-Lite calendar derivations. This module adds no host authority by itself. */
 
-integer := import "core/int";
-textLib := import "core/text";
 
 /** Returns monotonic elapsed time in nanoseconds suitable for duration measurements. */
 pub monotonicNs := fn(): Int;
@@ -22,8 +20,8 @@ pub epochMs := fn(): Int {
 
 /** Formats `value` zero-padded on the left to at least `width` characters. */
 padFixed := fn(value: Int, width: Int): String {
-    var out := integer.intText(value);
-    loop textLib.length(out) < width {
+    var out := value.toText();
+    loop out.length() < width {
         out = "0" + out;
     }
     out

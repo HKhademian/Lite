@@ -2,12 +2,11 @@
 
 cli := import "util/cli";
 io := import "core/io";
-list := import "core/list";
 siteValidate := import "../../site/src/validate.lts";
 
 run := fn(rawArgs: List<String>): Unit {
     args := cli.stripLeadingSeparator(rawArgs);
-    if list.listCountText(args) =!= 1 {
+    if args.length() =!= 1 {
         io.errorLine("Usage: site-validate <site-dir>");
         io.exit(2);
     }

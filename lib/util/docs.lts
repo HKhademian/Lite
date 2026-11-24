@@ -1,10 +1,8 @@
 /** Offline documentation discovery, search formatting, and Markdown integrity verification. */
 
 fs := import "core/file";
-integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
-map := import "core/map";
 path := import "core/path";
 json := import "util/json";
 md := import "util/markdown";
@@ -24,16 +22,16 @@ pub listDocFiles := fn(directory: String): List<String> {
 }
 
 isSchemeChar := fn(ch: String): Bool {
-    text.isAsciiLetter(ch) or text.isDigit(ch) or ch == "+" or ch == "." or ch == "-"
+    ch.isAsciiLetter() or ch.isDigit() or ch == "+" or ch == "." or ch == "-"
 }
 
 isExternalUri := fn(target: String): Bool {
-    if text.startsWithAt(target, 0, "//") { return true; }
-    size := text.length(target);
-    if size < 2 or not text.isAsciiLetter(text.at(target, 0)) { return false; }
+    if target.startsWithAt(0, "//") { return true; }
+    size := target.length();
+    if size < 2 or not target.at(0).isAsciiLetter() { return false; }
     var i := 1;
     loop i < size {
-        ch := text.at(target, i);
+        ch := target.at(i);
         if ch == ":" { return true; }
         if not isSchemeChar(ch) { return false; }
         i = i + 1;
@@ -42,14 +40,14 @@ isExternalUri := fn(target: String): Bool {
 }
 
 isHex := fn(ch: String): Bool {
-    text.isDigit(ch) or
+    ch.isDigit() or
     ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f" or
     ch == "A" or ch == "B" or ch == "C" or ch == "D" or ch == "E" or ch == "F"
 }
 
 hexVal := fn(ch: String): Int {
-    if text.isDigit(ch) { return text.digitValue(ch); }
-    lower := text.toLowerAscii(ch);
+    if ch.isDigit() { return ch.digitValue(); }
+    lower := ch.toLowerAscii();
     if lower == "a" { return 10; }
     if lower == "b" { return 11; }
     if lower == "c" { return 12; }
@@ -61,23 +59,23 @@ hexVal := fn(ch: String): Int {
 asciiChar := fn(code: Int): String {
     if code >= 32 and code <= 126 {
         table := " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-        return text.at(table, code - 32);
+        return table.at(code - 32);
     }
     ""
 }
 
 decodePercentUri := fn(target: String): (ok: Bool, value: String) {
-    size := text.length(target);
+    size := target.length();
     out: mut tb.TextBuilder;
     var runStart := 0;
     var i := 0;
     loop i < size {
-        if text.at(target, i) == "%" {
-            if i + 2 >= size or not isHex(text.at(target, i + 1)) or not isHex(text.at(target, i + 2)) {
+        if target.at(i) == "%" {
+            if i + 2 >= size or not isHex(target.at(i + 1)) or not isHex(target.at(i + 2)) {
                 return (ok = false, value = "");
             }
-            code := hexVal(text.at(target, i + 1)) * 16 + hexVal(text.at(target, i + 2));
-            if i > runStart { tb.append(mut out, text.slice(target, runStart, i)); }
+            code := hexVal(target.at(i + 1)) * 16 + hexVal(target.at(i + 2));
+            if i > runStart { tb.append(mut out, target.slice(runStart, i)); }
             decoded := asciiChar(code);
             if decoded =!= "" {
                 tb.append(mut out, decoded);
@@ -87,7 +85,7 @@ decodePercentUri := fn(target: String): (ok: Bool, value: String) {
                 else if code == 13 { tb.append(mut out, "\r"); }
                 else { return (ok = false, value = ""); }
             } else {
-                tb.append(mut out, text.slice(target, i, i + 3));
+                tb.append(mut out, target.slice(i, i + 3));
             }
             i = i + 3;
             runStart = i;
@@ -96,37 +94,37 @@ decodePercentUri := fn(target: String): (ok: Bool, value: String) {
         }
     }
     if runStart == 0 { return (ok = true, value = target); }
-    if runStart < size { tb.append(mut out, text.slice(target, runStart, size)); }
+    if runStart < size { tb.append(mut out, target.slice(runStart, size)); }
     (ok = true, value = tb.build(out))
 }
 
 dropFirstLines := fn(source: String, skipLines: Int): String {
     if skipLines <= 0 { return source; }
-    size := text.length(source);
+    size := source.length();
     var pos := 0;
     var skipped := 0;
     loop pos < size and skipped < skipLines {
-        if text.at(source, pos) == "\n" {
+        if source.at(pos) == "\n" {
             skipped = skipped + 1;
         }
         pos = pos + 1;
     }
     if skipped < skipLines { return ""; }
-    text.slice(source, pos, size)
+    source.slice(pos, size)
 }
 
 packAnchors := fn(anchors: List<String>): String {
-    if list.listCountText(anchors) == 0 { return "\n"; }
+    if anchors.length() == 0 { return "\n"; }
     "\n" + text.joinTexts(anchors, "\n") + "\n"
 }
 
 isLiteUri := fn(target: String): Bool {
-    text.startsWithAt(target, 0, "lite://") or text.startsWithAt(target, 0, "lite:/")
+    target.startsWithAt(0, "lite://") or target.startsWithAt(0, "lite:/")
 };
 
 stripSuffix := fn(value: String, suffix: String): String {
-    if text.endsWith(value, suffix) {
-        text.slice(value, 0, text.length(value) - text.length(suffix))
+    if value.endsWith(suffix) {
+        value.slice(0, value.length() - suffix.length())
     } else {
         value
     }
@@ -134,28 +132,28 @@ stripSuffix := fn(value: String, suffix: String): String {
 
 trimSlashes := fn(raw: String): String {
     var start := 0;
-    var end := text.length(raw);
-    loop start < end and text.at(raw, start) == "/" { start = start + 1; }
-    loop end > start and text.at(raw, end - 1) == "/" { end = end - 1; }
-    text.slice(raw, start, end)
+    var end := raw.length();
+    loop start < end and raw.at(start) == "/" { start = start + 1; }
+    loop end > start and raw.at(end - 1) == "/" { end = end - 1; }
+    raw.slice(start, end)
 };
 
 parseLiteUri := fn(rawTarget: String): (ok: Bool, ns: String, target: String, fragment: String, error: String) {
-    rest0 := if text.startsWithAt(rawTarget, 0, "lite://") {
-        text.slice(rawTarget, 7, text.length(rawTarget))
+    rest0 := if rawTarget.startsWithAt(0, "lite://") {
+        rawTarget.slice(7, rawTarget.length())
     } else {
-        text.slice(rawTarget, 6, text.length(rawTarget))
+        rawTarget.slice(6, rawTarget.length())
     };
-    hashPos := text.indexOfText(rest0, "#", 0);
-    bodyRaw := if hashPos < 0 { rest0 } else { text.slice(rest0, 0, hashPos) };
-    fragment := if hashPos < 0 { "" } else { text.slice(rest0, hashPos + 1, text.length(rest0)) };
+    hashPos := rest0.indexOf("#", 0);
+    bodyRaw := if hashPos < 0 { rest0 } else { rest0.slice(0, hashPos) };
+    fragment := if hashPos < 0 { "" } else { rest0.slice(hashPos + 1, rest0.length()) };
     body := trimSlashes(bodyRaw);
     if body == "" {
         return (ok = false, ns = "", target = "", fragment = fragment, error = "empty lite URI " + rawTarget);
     }
-    slashPos := text.indexOfText(body, "/", 0);
-    rawNs := text.toLowerAscii(if slashPos < 0 { body } else { text.slice(body, 0, slashPos) });
-    var target := if slashPos < 0 { "" } else { trimSlashes(text.slice(body, slashPos + 1, text.length(body))) };
+    slashPos := body.indexOf("/", 0);
+    rawNs := (if slashPos < 0 { body } else { body.slice(0, slashPos) }).toLowerAscii();
+    var target := if slashPos < 0 { "" } else { trimSlashes(body.slice(slashPos + 1, body.length())) };
     var ns := "";
     if rawNs == "handbook" {
         ns = "handbook";
@@ -165,15 +163,15 @@ parseLiteUri := fn(rawTarget: String): (ok: Bool, ns: String, target: String, fr
         if target == "handbook" {
             ns = "handbook";
             target = "";
-        } else if text.startsWithAt(target, 0, "handbook/") {
+        } else if target.startsWithAt(0, "handbook/") {
             ns = "handbook";
-            target = text.slice(target, 9, text.length(target));
+            target = target.slice(9, target.length());
         } else if target == "brand" {
             ns = "brand";
             target = "";
-        } else if text.startsWithAt(target, 0, "brand/") {
+        } else if target.startsWithAt(0, "brand/") {
             ns = "brand";
-            target = text.slice(target, 6, text.length(target));
+            target = target.slice(6, target.length());
         } else {
             ns = "doc";
         }
@@ -184,14 +182,14 @@ parseLiteUri := fn(rawTarget: String): (ok: Bool, ns: String, target: String, fr
             target = "spec-overview";
         } else if cleanSpec == "index" {
             target = "spec";
-        } else if not text.startsWithAt(target, 0, "spec/") {
+        } else if not target.startsWithAt(0, "spec/") {
             target = "spec/" + target;
         }
     } else if rawNs == "proposal" or rawNs == "proposals" {
         ns = "doc";
         if target == "" {
             target = "proposals/README";
-        } else if not text.startsWithAt(target, 0, "proposals/") {
+        } else if not target.startsWithAt(0, "proposals/") {
             target = "proposals/" + target;
         }
     } else if rawNs == "compiler" {
@@ -199,7 +197,7 @@ parseLiteUri := fn(rawTarget: String): (ok: Bool, ns: String, target: String, fr
         cleanComp := stripSuffix(stripSuffix(target, ".html"), ".md");
         if cleanComp == "" or cleanComp == "overview" or cleanComp == "README" {
             target = "compiler/overview";
-        } else if not text.startsWithAt(target, 0, "compiler/") {
+        } else if not target.startsWithAt(0, "compiler/") {
             target = "compiler/" + target;
         }
     } else if rawNs == "repo" {
@@ -227,16 +225,16 @@ destination: String, fragment: String,
 anchorCache: mut Map<String, String>
 ): Bool {
     if fragment == "" { return true; }
-    cached := map.get(anchorCache, destination);
+    cached := anchorCache.get(destination);
     packed := if cached.found {
         cached.value
     } else {
         targetRead := fs.readText(destination);
         built := if targetRead.ok { packAnchors(md.collectAnchors(targetRead.text)) } else { "\n" };
-        map.set(mut anchorCache, destination, built);
+        mut anchorCache.set(destination, built);
         built
     };
-    text.containsText(packed, "\n" + fragment + "\n")
+    packed.contains("\n" + fragment + "\n")
 };
 
 handbookSourceForSlug := fn(slug: String): String {
@@ -270,27 +268,27 @@ resolveLiteDocSource := fn(directory: String, rawTarget: String): (found: Bool, 
         return (found = true, isVirtualIndex = true, filePath = "");
     }
     candidates: mut List<String> = [];
-    if clean == "overview" { list.pushBack(mut candidates, "docs/README.md"); }
-    else if clean == "spec-overview" { list.pushBack(mut candidates, "docs/spec/README.md"); }
-    else if clean == "contributing" or clean == "CONTRIBUTING" { list.pushBack(mut candidates, "CONTRIBUTING.md"); }
-    else if clean == "compiler/overview" { list.pushBack(mut candidates, "compiler/README.md"); }
-    else if clean == "compiler/bootstrap-readme" or clean == "compiler/bootstrap/README" { list.pushBack(mut candidates, "compiler/bootstrap/README.md"); }
-    else if clean == "compiler/manifests-readme" or clean == "compiler/manifests/README" { list.pushBack(mut candidates, "compiler/manifests/README.md"); }
-    else if clean == "compiler/igniter-tests" or clean == "igniter/tests/README" or clean == "compiler/igniter/tests/README" { list.pushBack(mut candidates, "igniter/tests/README.md"); }
-    else if clean == "compiler/contributing" { list.pushBack(mut candidates, "CONTRIBUTING.md"); }
-    else if text.startsWithAt(clean, 0, "spec/") { list.pushBack(mut candidates, "docs/spec/" + text.slice(clean, 5, text.length(clean)) + ".md"); }
-    else if text.startsWithAt(clean, 0, "spec-") { list.pushBack(mut candidates, "docs/spec/" + text.slice(clean, 5, text.length(clean)) + ".md"); }
-    else if text.startsWithAt(clean, 0, "research/") { list.pushBack(mut candidates, "docs/research/" + text.slice(clean, 9, text.length(clean)) + ".md"); }
-    else if text.startsWithAt(clean, 0, "research-") { list.pushBack(mut candidates, "docs/research/" + text.slice(clean, 9, text.length(clean)) + ".md"); }
-    else if text.startsWithAt(clean, 0, "proposals/") { list.pushBack(mut candidates, "docs/proposals/" + text.slice(clean, 10, text.length(clean)) + ".md"); }
-    else if text.startsWithAt(clean, 0, "compiler/") { list.pushBack(mut candidates, clean + ".md"); }
-    else if text.startsWithAt(clean, 0, "docs/") { list.pushBack(mut candidates, clean + ".md"); }
+    if clean == "overview" { mut candidates.pushBack("docs/README.md"); }
+    else if clean == "spec-overview" { mut candidates.pushBack("docs/spec/README.md"); }
+    else if clean == "contributing" or clean == "CONTRIBUTING" { mut candidates.pushBack("CONTRIBUTING.md"); }
+    else if clean == "compiler/overview" { mut candidates.pushBack("compiler/README.md"); }
+    else if clean == "compiler/bootstrap-readme" or clean == "compiler/bootstrap/README" { mut candidates.pushBack("compiler/bootstrap/README.md"); }
+    else if clean == "compiler/manifests-readme" or clean == "compiler/manifests/README" { mut candidates.pushBack("compiler/manifests/README.md"); }
+    else if clean == "compiler/igniter-tests" or clean == "igniter/tests/README" or clean == "compiler/igniter/tests/README" { mut candidates.pushBack("igniter/tests/README.md"); }
+    else if clean == "compiler/contributing" { mut candidates.pushBack("CONTRIBUTING.md"); }
+    else if clean.startsWithAt(0, "spec/") { mut candidates.pushBack("docs/spec/" + clean.slice(5, clean.length()) + ".md"); }
+    else if clean.startsWithAt(0, "spec-") { mut candidates.pushBack("docs/spec/" + clean.slice(5, clean.length()) + ".md"); }
+    else if clean.startsWithAt(0, "research/") { mut candidates.pushBack("docs/research/" + clean.slice(9, clean.length()) + ".md"); }
+    else if clean.startsWithAt(0, "research-") { mut candidates.pushBack("docs/research/" + clean.slice(9, clean.length()) + ".md"); }
+    else if clean.startsWithAt(0, "proposals/") { mut candidates.pushBack("docs/proposals/" + clean.slice(10, clean.length()) + ".md"); }
+    else if clean.startsWithAt(0, "compiler/") { mut candidates.pushBack(clean + ".md"); }
+    else if clean.startsWithAt(0, "docs/") { mut candidates.pushBack(clean + ".md"); }
     else {
-        list.pushBack(mut candidates, "docs/" + clean + ".md");
-        list.pushBack(mut candidates, "docs/spec/" + clean + ".md");
-        list.pushBack(mut candidates, "docs/research/" + clean + ".md");
-        list.pushBack(mut candidates, "docs/proposals/" + clean + ".md");
-        list.pushBack(mut candidates, "compiler/" + clean + ".md");
+        mut candidates.pushBack("docs/" + clean + ".md");
+        mut candidates.pushBack("docs/spec/" + clean + ".md");
+        mut candidates.pushBack("docs/research/" + clean + ".md");
+        mut candidates.pushBack("docs/proposals/" + clean + ".md");
+        mut candidates.pushBack("compiler/" + clean + ".md");
     }
     loop candidates as rel {
         abs := path.resolve(directory, rel);
@@ -333,18 +331,18 @@ catalogHasGymTarget := fn(directory: String, rawTarget: String): Bool {
     var clean := stripSuffix(rawTarget, ".html");
     if clean == "" or clean == "index" { return true; }
     var expectedMode := "";
-    if text.startsWithAt(clean, 0, "drills/") {
+    if clean.startsWithAt(0, "drills/") {
         expectedMode = "drill";
-        clean = text.slice(clean, 7, text.length(clean));
-    } else if text.startsWithAt(clean, 0, "drill/") {
+        clean = clean.slice(7, clean.length());
+    } else if clean.startsWithAt(0, "drill/") {
         expectedMode = "drill";
-        clean = text.slice(clean, 6, text.length(clean));
-    } else if text.startsWithAt(clean, 0, "workouts/") {
+        clean = clean.slice(6, clean.length());
+    } else if clean.startsWithAt(0, "workouts/") {
         expectedMode = "kata";
-        clean = text.slice(clean, 9, text.length(clean));
-    } else if text.startsWithAt(clean, 0, "workout/") {
+        clean = clean.slice(9, clean.length());
+    } else if clean.startsWithAt(0, "workout/") {
         expectedMode = "kata";
-        clean = text.slice(clean, 8, text.length(clean));
+        clean = clean.slice(8, clean.length());
     }
     catPath := path.resolve(directory, "language/gym/catalog.json");
     if fs.kind(catPath) =!= fs.FILE_KIND_FILE { return false; }
@@ -375,7 +373,7 @@ siteSamplesContainId := fn(directory: String, targetId: String): Bool {
         abs := path.resolve(directory, rel);
         if fs.kind(abs) == fs.FILE_KIND_FILE {
             r := fs.readText(abs);
-            if r.ok and (text.containsText(r.text, singlePat) or text.containsText(r.text, doublePat)) {
+            if r.ok and (r.text.contains(singlePat) or r.text.contains(doublePat)) {
                 return true;
             }
         }
@@ -403,62 +401,62 @@ hasLtsSlugInDirs := fn(directory: String, dirs: List<String>, slug: String): Boo
 
 hasPathTraversal := fn(target: String): Bool {
     target == ".." or
-    text.startsWithAt(target, 0, "../") or
-    text.endsWith(target, "/..") or
-    text.containsText(target, "/../")
+    target.startsWithAt(0, "../") or
+    target.endsWith("/..") or
+    target.contains("/../")
 };
 
 isAllAsciiDigits := fn(value: String): Bool {
-    n := text.length(value);
+    n := value.length();
     if n == 0 { return false; }
     var i := 0;
     loop i < n {
-        if not text.isDigit(text.at(value, i)) { return false; }
+        if not value.at(i).isDigit() { return false; }
         i = i + 1;
     }
     true
 };
 
 hasHandbookPieceSlug := fn(directory: String, pieceSlug: String): Bool {
-    n := text.length(pieceSlug);
+    n := pieceSlug.length();
     var lastDash := -1;
     var i := 0;
     loop i < n {
-        if text.at(pieceSlug, i) == "-" { lastDash = i; }
+        if pieceSlug.at(i) == "-" { lastDash = i; }
         i = i + 1;
     }
     if lastDash <= 0 { return false; }
-    suffix := text.slice(pieceSlug, lastDash + 1, n);
+    suffix := pieceSlug.slice(lastDash + 1, n);
     if not isAllAsciiDigits(suffix) { return false; }
-    hbRel := handbookSourceForSlug(text.slice(pieceSlug, 0, lastDash));
+    hbRel := handbookSourceForSlug(pieceSlug.slice(0, lastDash));
     if hbRel == "" { return false; }
     fs.kind(path.resolve(directory, hbRel)) == fs.FILE_KIND_FILE
 };
 
 checkPlayTarget := fn(directory: String, rawTarget: String): Bool {
     if rawTarget == "" { return true; }
-    if text.startsWithAt(rawTarget, 0, "sample/") {
-        return siteSamplesContainId(directory, text.slice(rawTarget, 7, text.length(rawTarget)));
+    if rawTarget.startsWithAt(0, "sample/") {
+        return siteSamplesContainId(directory, rawTarget.slice(7, rawTarget.length()));
     }
-    if text.startsWithAt(rawTarget, 0, "example/") {
-        exSlug := text.slice(rawTarget, 8, text.length(rawTarget));
+    if rawTarget.startsWithAt(0, "example/") {
+        exSlug := rawTarget.slice(8, rawTarget.length());
         if hasLtsSlugInDirs(directory, ["language/examples", "language/showcases"], exSlug) {
             return true;
         }
-        if text.startsWithAt(exSlug, 0, "showcase-") {
-            return hasLtsSlugInDirs(directory, ["language/showcases"], text.slice(exSlug, 9, text.length(exSlug)));
+        if exSlug.startsWithAt(0, "showcase-") {
+            return hasLtsSlugInDirs(directory, ["language/showcases"], exSlug.slice(9, exSlug.length()));
         }
         return false;
     }
-    if text.startsWithAt(rawTarget, 0, "case/") {
-        return hasLtsSlugInDirs(directory, ["language/cases"], text.slice(rawTarget, 5, text.length(rawTarget)));
+    if rawTarget.startsWithAt(0, "case/") {
+        return hasLtsSlugInDirs(directory, ["language/cases"], rawTarget.slice(5, rawTarget.length()));
     }
-    if text.startsWithAt(rawTarget, 0, "piece/") {
-        pieceSlug := text.slice(rawTarget, 6, text.length(rawTarget));
+    if rawTarget.startsWithAt(0, "piece/") {
+        pieceSlug := rawTarget.slice(6, rawTarget.length());
         if hasLtsSlugInDirs(directory, ["language/showcases", "language/samples", "samples"], pieceSlug) {
             return true;
         }
-        if text.startsWithAt(pieceSlug, 0, "gym-") and catalogHasGymTarget(directory, text.slice(pieceSlug, 4, text.length(pieceSlug))) {
+        if pieceSlug.startsWithAt(0, "gym-") and catalogHasGymTarget(directory, pieceSlug.slice(4, pieceSlug.length())) {
             return true;
         }
         if catalogHasLearnTarget(directory, pieceSlug) {
@@ -475,16 +473,16 @@ resolveLiteBrandSource := fn(directory: String, rawTarget: String): String {
     clean := stripSuffix(rawTarget, ".html");
     candidates: mut List<String> = [];
     if clean == "" or clean == "index" or clean == "overview" or clean == "README" or clean == "README.md" or clean == "brand/README.md" {
-        list.pushBack(mut candidates, "brand/README.md");
+        mut candidates.pushBack("brand/README.md");
     } else if clean == "name" or clean == "name.md" or clean == "brand/name.md" {
-        list.pushBack(mut candidates, "brand/name.md");
+        mut candidates.pushBack("brand/name.md");
     } else if clean == "investigation" or clean == "investigation/README" or clean == "investigation/README.md" or clean == "brand/investigation/README.md" {
-        list.pushBack(mut candidates, "brand/investigation/README.md");
+        mut candidates.pushBack("brand/investigation/README.md");
     } else {
-        bare := if text.startsWithAt(rawTarget, 0, "brand/") { text.slice(rawTarget, 6, text.length(rawTarget)) } else { rawTarget };
-        list.pushBack(mut candidates, "brand/" + bare);
+        bare := if rawTarget.startsWithAt(0, "brand/") { rawTarget.slice(6, rawTarget.length()) } else { rawTarget };
+        mut candidates.pushBack("brand/" + bare);
         mdClean := stripSuffix(stripSuffix(bare, ".html"), ".md");
-        list.pushBack(mut candidates, "brand/" + mdClean + ".md");
+        mut candidates.pushBack("brand/" + mdClean + ".md");
     }
     loop candidates as rel {
         abs := path.resolve(directory, rel);
@@ -512,7 +510,7 @@ anchorCache: mut Map<String, String>
         if dest == "" {
             return relPath + ": missing lite://brand target " + rawTarget;
         }
-        if fragment =!= "" and text.endsWith(dest, ".md") and not checkFragmentInMd(dest, fragment, mut anchorCache) {
+        if fragment =!= "" and dest.endsWith(".md") and not checkFragmentInMd(dest, fragment, mut anchorCache) {
             return relPath + ": missing fragment in " + rawTarget;
         }
         return "";
@@ -526,7 +524,7 @@ anchorCache: mut Map<String, String>
         if destKind == fs.FILE_KIND_MISSING {
             return relPath + ": missing lite://repo target " + rawTarget;
         }
-        if fragment =!= "" and destKind == fs.FILE_KIND_FILE and text.endsWith(dest, ".md") and not checkFragmentInMd(dest, fragment, mut anchorCache) {
+        if fragment =!= "" and destKind == fs.FILE_KIND_FILE and dest.endsWith(".md") and not checkFragmentInMd(dest, fragment, mut anchorCache) {
             return relPath + ": missing fragment in " + rawTarget;
         }
         return "";
@@ -582,7 +580,7 @@ anchorCache: mut Map<String, String>
                 return relPath + ": cannot read module for " + rawTarget;
             }
             modJson := docgen.extractModuleJson(modRead.text, "", cleanMod, "");
-            if not text.containsText(modJson, "\"name\":" + json.quoteString(fragment)) {
+            if not modJson.contains("\"name\":" + json.quoteString(fragment)) {
                 return relPath + ": missing module symbol #" + fragment + " in " + rawTarget;
             }
         }
@@ -609,10 +607,10 @@ anchorCache: mut Map<String, String>
     }
     if ns == "gallery" {
         if target == "" { return ""; }
-        cleanGal := if text.startsWithAt(target, 0, "sample-") {
-            text.slice(target, 7, text.length(target))
-        } else if text.startsWithAt(target, 0, "group-") {
-            text.slice(target, 6, text.length(target))
+        cleanGal := if target.startsWithAt(0, "sample-") {
+            target.slice(7, target.length())
+        } else if target.startsWithAt(0, "group-") {
+            target.slice(6, target.length())
         } else {
             target
         };
@@ -634,35 +632,35 @@ pub checkDocuments := fn(directory: String): List<String> {
         relPath := path.relative(directory, fullFile);
         readRes := fs.readText(fullFile);
         if not readRes.ok {
-            list.pushBack(mut failures, relPath + ": " + readRes.error);
+            mut failures.pushBack(relPath + ": " + readRes.error);
         } else {
             docText := readRes.text;
             if md.hasUnclosedFence(docText) {
-                list.pushBack(mut failures, relPath + ": unclosed code fence");
+                mut failures.pushBack(relPath + ": unclosed code fence");
             }
             links := md.extractLinkTargets(md.stripCodeBlocks(docText));
             loop links as rawTarget {
                 if isLiteUri(rawTarget) {
                     uriErr := checkLiteUri(directory, relPath, rawTarget, mut anchorCache);
                     if uriErr =!= "" {
-                        list.pushBack(mut failures, uriErr);
+                        mut failures.pushBack(uriErr);
                     }
                 } else if not isExternalUri(rawTarget) {
                     decodedRes := decodePercentUri(rawTarget);
                     if not decodedRes.ok {
-                        list.pushBack(mut failures, relPath + ": invalid link " + rawTarget);
+                        mut failures.pushBack(relPath + ": invalid link " + rawTarget);
                     } else {
                         target := decodedRes.value;
-                        hashPos := text.indexOfText(target, "#", 0);
-                        namePart := if hashPos < 0 { target } else { text.slice(target, 0, hashPos) };
-                        fragment := if hashPos < 0 { "" } else { text.slice(target, hashPos + 1, text.length(target)) };
+                        hashPos := target.indexOf("#", 0);
+                        namePart := if hashPos < 0 { target } else { target.slice(0, hashPos) };
+                        fragment := if hashPos < 0 { "" } else { target.slice(hashPos + 1, target.length()) };
                         destination := if namePart == "" { fullFile } else { path.resolve(path.parentDir(fullFile), namePart) };
                         destKind := fs.kind(destination);
                         if destKind == fs.FILE_KIND_MISSING {
-                            list.pushBack(mut failures, relPath + ": missing link " + target);
+                            mut failures.pushBack(relPath + ": missing link " + target);
                         } else if fragment =!= "" and path.extName(destination) == ".md" and destKind == fs.FILE_KIND_FILE {
                             if not checkFragmentInMd(destination, fragment, mut anchorCache) {
-                                list.pushBack(mut failures, relPath + ": missing fragment " + target);
+                                mut failures.pushBack(relPath + ": missing fragment " + target);
                             }
                         }
                     }
@@ -675,13 +673,13 @@ pub checkDocuments := fn(directory: String): List<String> {
     if fs.kind(configPath) == fs.FILE_KIND_FILE {
         cfgRead := fs.readText(configPath);
         if not cfgRead.ok {
-            list.pushBack(mut failures, "config/documentation.json: " + cfgRead.error);
+            mut failures.pushBack("config/documentation.json: " + cfgRead.error);
             return failures;
         }
         cfgText := cfgRead.text;
         cfgCheck := json.validate(cfgText);
         if not cfgCheck.ok {
-            list.pushBack(mut failures, "config/documentation.json: " + cfgCheck.error);
+            mut failures.pushBack("config/documentation.json: " + cfgCheck.error);
             return failures;
         }
         navField := json.findObjectField(cfgText, 0, "navigation");
@@ -693,7 +691,7 @@ pub checkDocuments := fn(directory: String): List<String> {
                 navPath := if pathRes.found and pathRes.ok { pathRes.value } else { "" };
                 navLabel := if labelRes.found and labelRes.ok { labelRes.value } else { "" };
                 if navLabel == "" or fs.kind(path.resolve(directory, navPath)) == fs.FILE_KIND_MISSING {
-                    list.pushBack(mut failures, "config/documentation.json: missing navigation destination " + navPath);
+                    mut failures.pushBack("config/documentation.json: missing navigation destination " + navPath);
                 }
             }
         }
@@ -710,19 +708,19 @@ pub checkDocuments := fn(directory: String): List<String> {
                 srcFull := path.resolve(directory, srcRel);
                 docFull := path.resolve(directory, docRel);
                 if fs.kind(srcFull) == fs.FILE_KIND_MISSING or fs.kind(docFull) == fs.FILE_KIND_MISSING {
-                    list.pushBack(mut failures, "config/documentation.json: missing snippet source/document " + srcRel);
+                    mut failures.pushBack("config/documentation.json: missing snippet source/document " + srcRel);
                 } else {
                     docRead := fs.readText(docFull);
                     srcRead := fs.readText(srcFull);
                     if not docRead.ok or not srcRead.ok {
-                        list.pushBack(mut failures, "config/documentation.json: cannot read snippet " + srcRel);
+                        mut failures.pushBack("config/documentation.json: cannot read snippet " + srcRel);
                     } else {
                         fences := md.extractBacktickFenceBodies(docRead.text);
                         skipCount := if skipRes.found and skipRes.ok { skipRes.value } else { 0 };
                         expected := dropFirstLines(srcRead.text, skipCount);
                         fenceIdx := if fenceRes.found and fenceRes.ok { fenceRes.value } else { -1 };
-                        if fenceIdx < 0 or fenceIdx >= list.listCountText(fences) or fences[fenceIdx] =!= expected {
-                            list.pushBack(mut failures, docRel + ": code fence " + integer.intText(fenceIdx) + " differs from " + srcRel);
+                        if fenceIdx < 0 or fenceIdx >= fences.length() or fences[fenceIdx] =!= expected {
+                            mut failures.pushBack(docRel + ": code fence " + fenceIdx.toText() + " differs from " + srcRel);
                         }
                     }
                 }
@@ -753,25 +751,25 @@ pub navigationSummary := fn(directory: String): (ok: Bool, text: String, error: 
         pathRes := json.readObjectString(cfgRead.text, navPos, "path");
         label := if labelRes.found and labelRes.ok { labelRes.value } else { "" };
         navPath := if pathRes.found and pathRes.ok { pathRes.value } else { "" };
-        list.pushBack(mut lines, label + ": " + navPath);
+        mut lines.pushBack(label + ": " + navPath);
     }
-    list.pushBack(mut lines, "Search: lite docs QUERY | --json [QUERY] | --check");
+    (mut lines).pushBack("Search: lite docs QUERY | --json [QUERY] | --check");
     (ok = true, text = text.joinTexts(lines, "\n"), error = "")
 }
 
 docMatchesQuery := fn(relPath: String, title: String, headings: List<String>, queryLower: String): Bool {
     if queryLower == "" { return true; }
-    if text.containsText(text.toLowerAscii(relPath), queryLower) { return true; }
-    if text.containsText(text.toLowerAscii(title), queryLower) { return true; }
+    if relPath.toLowerAscii().contains(queryLower) { return true; }
+    if title.toLowerAscii().contains(queryLower) { return true; }
     loop headings as heading {
-        if text.containsText(text.toLowerAscii(heading), queryLower) { return true; }
+        if heading.toLowerAscii().contains(queryLower) { return true; }
     }
     false
 }
 
 /** Searches documentation paths, titles, and headings matching case-insensitive `query`. */
 pub searchDocsText := fn(directory: String, query: String): (count: Int, text: String) {
-    queryLower := text.toLowerAscii(query);
+    queryLower := query.toLowerAscii();
     lines: mut List<String> = [];
     var count := 0;
     files := listDocFiles(directory);
@@ -781,9 +779,9 @@ pub searchDocsText := fn(directory: String, query: String): (count: Int, text: S
         readRes := fs.readText(fullFile);
         docText := if readRes.ok { readRes.text } else { "" };
         headings := md.extractHeadings(md.stripCodeBlocks(docText));
-        title := if list.listCountText(headings) > 0 { headings[0] } else { path.baseName(fullFile) };
+        title := if headings.length() > 0 { headings[0] } else { path.baseName(fullFile) };
         if docMatchesQuery(relPath, title, headings, queryLower) {
-            list.pushBack(mut lines, title + "\n  " + relPath);
+            mut lines.pushBack(title + "\n  " + relPath);
             count = count + 1;
         }
     }
@@ -792,7 +790,7 @@ pub searchDocsText := fn(directory: String, query: String): (count: Int, text: S
 
 /** Formats matching documentation records as 2-space indented JSON (`JSON.stringify(..., null, 2)` parity). */
 pub docsJson := fn(directory: String, query: String): String {
-    queryLower := text.toLowerAscii(query);
+    queryLower := query.toLowerAscii();
     entries: mut List<String> = [];
     files := listDocFiles(directory);
 
@@ -801,21 +799,21 @@ pub docsJson := fn(directory: String, query: String): String {
         readRes := fs.readText(fullFile);
         docText := if readRes.ok { readRes.text } else { "" };
         headings := md.extractHeadings(md.stripCodeBlocks(docText));
-        title := if list.listCountText(headings) > 0 { headings[0] } else { path.baseName(fullFile) };
+        title := if headings.length() > 0 { headings[0] } else { path.baseName(fullFile) };
         if docMatchesQuery(relPath, title, headings, queryLower) {
-            hCount := list.listCountText(headings);
+            hCount := headings.length();
             var headingsJson := "[]";
             if hCount > 0 {
                 hLines: mut List<String> = [];
                 loop headings as h {
-                    list.pushBack(mut hLines, "      " + json.quoteString(h));
+                    mut hLines.pushBack("      " + json.quoteString(h));
                 }
                 headingsJson = "[\n" + text.joinTexts(hLines, ",\n") + "\n    ]";
             }
             entry := "  {\n    \"path\": " + json.quoteString(relPath) + ",\n    \"title\": " + json.quoteString(title) + ",\n    \"headings\": " + headingsJson + "\n  }";
-            list.pushBack(mut entries, entry);
+            mut entries.pushBack(entry);
         }
     }
-    if list.listCountText(entries) == 0 { return "[]"; }
+    if entries.length() == 0 { return "[]"; }
     "[\n" + text.joinTexts(entries, ",\n") + "\n]"
 }

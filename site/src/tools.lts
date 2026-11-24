@@ -1,40 +1,39 @@
 /** Generates `/tools/` toolchain hub body HTML and search entries (`site/tools-page.ts`). */
 
-list := import "core/list";
 text := import "core/text";
 json := import "util/json";
 
 /** Escapes HTML special characters (`&`, `<`, `>`, `"`, `'`). */
 pub escapeSiteHtml := fn(raw: String): String {
-    size := text.length(raw);
+    size := raw.length();
     out: mut List<String> = [];
     var i := 0;
     loop i < size {
-        ch := text.at(raw, i);
-        if ch == "&" { list.pushBack(mut out, "&amp;"); }
-        else if ch == "<" { list.pushBack(mut out, "&lt;"); }
-        else if ch == ">" { list.pushBack(mut out, "&gt;"); }
-        else if ch == "\"" { list.pushBack(mut out, "&quot;"); }
-        else if ch == "'" { list.pushBack(mut out, "&#39;"); }
-        else { list.pushBack(mut out, ch); }
+        ch := raw.at(i);
+        if ch == "&" { mut out.pushBack("&amp;"); }
+        else if ch == "<" { mut out.pushBack("&lt;"); }
+        else if ch == ">" { mut out.pushBack("&gt;"); }
+        else if ch == "\"" { mut out.pushBack("&quot;"); }
+        else if ch == "'" { mut out.pushBack("&#39;"); }
+        else { mut out.pushBack(ch); }
         i = i + 1;
     }
     text.joinTexts(out, "")
 };
 
 slugifyCommandName := fn(name: String): String {
-    lowered := text.toLowerAscii(name);
+    lowered := name.toLowerAscii();
     out: mut List<String> = [];
     var prevDash := false;
     var i := 0;
-    loop i < text.length(lowered) {
-        ch := text.at(lowered, i);
-        isAlnum := text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789", ch, 0) >= 0;
+    loop i < lowered.length() {
+        ch := lowered.at(i);
+        isAlnum := "abcdefghijklmnopqrstuvwxyz0123456789".indexOf(ch, 0) >= 0;
         if isAlnum {
-            list.pushBack(mut out, ch);
+            mut out.pushBack(ch);
             prevDash = false;
         } else if not prevDash {
-            list.pushBack(mut out, "-");
+            mut out.pushBack("-");
             prevDash = true;
         }
         i = i + 1;
@@ -108,7 +107,7 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     navItems: mut List<String> = [];
     searchEntries: mut List<String> = [];
     var i := 0;
-    n := list.listCountText(cmdNames);
+    n := cmdNames.length();
     loop i < n {
         cName := cmdNames[i];
         cSyn := cmdSynopses[i];
@@ -116,8 +115,7 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
         cEx := cmdExamples[i];
         cExit := cmdExits[i];
         cSlug := slugifyCommandName(cName);
-        list.pushBack(mut cards,
-        "<article class=\"portal-card tools-cmd-card\" id=\"cmd-" + escapeSiteHtml(cSlug) + "\">\n"
+        mut cards.pushBack("<article class=\"portal-card tools-cmd-card\" id=\"cmd-" + escapeSiteHtml(cSlug) + "\">\n"
         + "  <div class=\"portal-card-head\">\n"
         + "    <h3><code>./bin/lite " + escapeSiteHtml(cName) + "</code></h3>\n"
         + "    <span class=\"status-pill status-pill-universal\">CLI</span>\n"
@@ -129,10 +127,8 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
         + "    <span class=\"code-card-meta\">" + escapeSiteHtml(cExit) + "</span>\n"
         + "  </div>\n"
         + "</article>");
-        list.pushBack(mut navItems,
-        "<li><a href=\"#cmd-" + escapeSiteHtml(cSlug) + "\">" + escapeSiteHtml(cName) + "</a></li>");
-        list.pushBack(mut searchEntries,
-        "{\"kind\":\"tool\",\"title\":" + json.quoteString("lite " + cName)
+        mut navItems.pushBack("<li><a href=\"#cmd-" + escapeSiteHtml(cSlug) + "\">" + escapeSiteHtml(cName) + "</a></li>");
+        mut searchEntries.pushBack("{\"kind\":\"tool\",\"title\":" + json.quoteString("lite " + cName)
         + ",\"subtitle\":" + json.quoteString(cSum)
         + ",\"href\":" + json.quoteString("tools/#cmd-" + cSlug)
         + ",\"keywords\":" + json.quoteString("cli bin lite " + cName + " " + cSyn + " " + cEx)
@@ -140,10 +136,8 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
         i = i + 1;
     }
 
-    list.pushBack(mut searchEntries,
-    "{\"kind\":\"tool\",\"title\":\"VS Code Lite Extension\",\"subtitle\":\"TextMate syntax highlighting extension in editors/vscode/\",\"href\":\"tools/#vscode\",\"keywords\":\"vscode editor syntax highlight vsix textmate\",\"badge\":\"Editor\"}");
-    list.pushBack(mut searchEntries,
-    "{\"kind\":\"tool\",\"title\":\"Self-Hosting 3-Generation Ladder\",\"subtitle\":\"Compile compiler/src/ through three fixed-point generations\",\"href\":\"tools/#bootstrap\",\"keywords\":\"self-host bootstrap fixed-point compiler\",\"badge\":\"Compiler\"}");
+    (mut searchEntries).pushBack("{\"kind\":\"tool\",\"title\":\"VS Code Lite Extension\",\"subtitle\":\"TextMate syntax highlighting extension in editors/vscode/\",\"href\":\"tools/#vscode\",\"keywords\":\"vscode editor syntax highlight vsix textmate\",\"badge\":\"Editor\"}");
+    mut searchEntries.pushBack("{\"kind\":\"tool\",\"title\":\"Self-Hosting 3-Generation Ladder\",\"subtitle\":\"Compile compiler/src/ through three fixed-point generations\",\"href\":\"tools/#bootstrap\",\"keywords\":\"self-host bootstrap fixed-point compiler\",\"badge\":\"Compiler\"}");
 
     repoVscodeHref := if repoUrl =!= "" { repoUrl + "/tree/main/editors/vscode" } else { "../" };
     repoSelfHostHref := if repoUrl =!= "" { repoUrl + "/blob/main/compiler/scripts/self-host.ts" } else { "../" };

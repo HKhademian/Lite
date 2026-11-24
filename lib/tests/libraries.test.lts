@@ -1,8 +1,6 @@
 /* Bootstrap L0 core and lib/util test runner migrated from igniter/test.ts. */
 
 fs := import "core/file";
-integer := import "core/int";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
@@ -43,16 +41,16 @@ test.check("write runner: " + wr.error, wr.ok);
 compCmds: mut List<String> = [];
 compArgs: mut List<String> = [];
 loop libNames as name {
-    list.pushBack(mut compCmds, proc.execPath());
+    mut compCmds.pushBack(proc.execPath());
     argJson := "[" + json.quoteString(sel.path) + "," + json.quoteString("lib/tests/" + name + ".lts") + "]";
-    list.pushBack(mut compArgs, argJson);
+    mut compArgs.pushBack(argJson);
 }
 
 jobs := pool.cpuCount();
 compRaw := pool.runPoolJson(compCmds, compArgs, root, jobs);
 compOffsets := json.arrayElementOffsets(compRaw, 0);
-count := list.listCountText(libNames);
-test.checkInt("compile pool result count", count, list.listCountInt(compOffsets));
+count := libNames.length();
+test.checkInt("compile pool result count", count, compOffsets.length());
 
 tsFiles: mut List<String> = [];
 runCmds: mut List<String> = [];
@@ -70,10 +68,10 @@ loop ci < count {
     tsPath := path.join(workDir, name + ".ts");
     wTs := fs.writeText(tsPath, stdout);
     test.check("write " + name + ".ts", wTs.ok);
-    list.pushBack(mut tsFiles, tsPath);
+    mut tsFiles.pushBack(tsPath);
 
-    list.pushBack(mut runCmds, proc.execPath());
-    list.pushBack(mut runArgs, "[" + json.quoteString(runnerPath) + "," + json.quoteString(tsPath) + "]");
+    mut runCmds.pushBack(proc.execPath());
+    mut runArgs.pushBack("[" + json.quoteString(runnerPath) + "," + json.quoteString(tsPath) + "]");
     ci = ci + 1;
 }
 
@@ -82,7 +80,7 @@ test.check("strict check lib/tests TS: " + chk.error, chk.ok);
 
 runRaw := pool.runPoolJson(runCmds, runArgs, root, jobs);
 runOffsets := json.arrayElementOffsets(runRaw, 0);
-test.checkInt("run pool result count", count, list.listCountInt(runOffsets));
+test.checkInt("run pool result count", count, runOffsets.length());
 
 var ri := 0;
 loop ri < count {

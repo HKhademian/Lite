@@ -2,12 +2,10 @@
 
 crypto := import "core/crypto";
 fs := import "core/file";
-integer := import "core/int";
 io := import "core/io";
 list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
-set := import "core/set";
 text := import "core/text";
 pool := import "external/pool";
 cases := import "util/cases";
@@ -72,19 +70,19 @@ toolForEntry := fn(rawEntry: String): String {
 
 /** True when `relPath` is a valid normalized project-relative path with no leading slash or `..` segment. */
 validRelativePath := fn(relPath: String): Bool {
-    if relPath == "" or text.startsWithAt(relPath, 0, "/") or text.startsWithAt(relPath, 0, "../") {
+    if relPath == "" or relPath.startsWithAt(0, "/") or relPath.startsWithAt(0, "../") {
         return false;
     }
-    not text.containsText(relPath, "/../") and not text.endsWith(relPath, "/..")
+    not relPath.contains("/../") and not relPath.endsWith("/..")
 }
 
 /** True when `hex` is a 64-character lowercase hexadecimal digest. */
 isSha256Hex := fn(hex: String): Bool {
-    if text.length(hex) =!= 64 { return false; }
+    if hex.length() =!= 64 { return false; }
     var i := 0;
     loop i < 64 {
-        ch := text.at(hex, i);
-        if not text.isDigit(ch) and ch =!= "a" and ch =!= "b" and ch =!= "c" and ch =!= "d" and ch =!= "e" and ch =!= "f" {
+        ch := hex.at(i);
+        if not ch.isDigit() and ch =!= "a" and ch =!= "b" and ch =!= "c" and ch =!= "d" and ch =!= "e" and ch =!= "f" {
             return false;
         }
         i = i + 1;
@@ -99,7 +97,7 @@ readSeedInfo := fn(rootDir: String): (ok: Bool, igniterSha256: String, sourceSha
     if not seedRead.ok {
         return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: cannot read seed metadata: " + seedRead.error);
     }
-    brace := text.indexOfText(seedRead.text, "{", 0);
+    brace := seedRead.text.indexOf("{", 0);
     if brace < 0 {
         return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: invalid seed.ts object");
     }
@@ -160,7 +158,7 @@ ensureDistCCompiler := fn(rootDir: String, expectedCSha: String, ccCmd: String, 
     seedCPath := path.join(rootDir, "compiler/bootstrap/compiler.c");
     if not force and fs.kind(binPath) == fs.FILE_KIND_FILE and fs.kind(stampPath) == fs.FILE_KIND_FILE {
         stamp := fs.readText(stampPath);
-        if stamp.ok and text.trim(stamp.text) == expectedCSha and expectedCSha =!= "" {
+        if stamp.ok and stamp.text.trim() == expectedCSha and expectedCSha =!= "" {
             return (ok = true, path = binPath, error = "");
         }
     }
@@ -179,7 +177,7 @@ ensureDistCCompiler := fn(rootDir: String, expectedCSha: String, ccCmd: String, 
     ccArgs: List<String> = ["-std=c11", "-O0", seedCPath, "-o", binPath, "-lm"];
     ccRes := proc.run(ccCmd, ccArgs, rootDir, emptyEnv, true, "");
     if ccRes.error =!= "" or ccRes.status =!= 0 {
-        detail := if ccRes.error =!= "" { ccRes.error } else { text.trim(ccRes.stderr) };
+        detail := if ccRes.error =!= "" { ccRes.error } else { ccRes.stderr.trim() };
         return (ok = false, path = "", error = "ignite: failed to compile bootstrap C11 compiler: " + detail);
     }
     _wr := fs.writeText(stampPath, seedHash.hex + "\n");
@@ -192,8 +190,8 @@ listToolNames := fn(rootDir: String): List<String> {
     entries := fs.listDir(toolsDir);
     out: mut List<String> = [];
     loop entries as entry {
-        if text.endsWith(entry, ".lts") {
-            list.pushBack(mut out, text.slice(entry, 0, text.length(entry) - 4));
+        if entry.endsWith(".lts") {
+            mut out.pushBack(entry.slice(0, entry.length() - 4));
         }
     }
     out
@@ -238,7 +236,7 @@ readValidProvenance := fn(rootDir: String, name: String, expectedTarget: String,
     if not depsField.found or not edgesField.found { return (valid = false, path = "", sha256 = ""); }
 
     depOffsets := json.arrayElementOffsets(provText, depsField.valuePos);
-    if list.listCountInt(depOffsets) == 0 { return (valid = false, path = "", sha256 = ""); }
+    if depOffsets.length() == 0 { return (valid = false, path = "", sha256 = ""); }
 
     depPaths: mut List<String> = [];
     var idx := 0;
@@ -252,7 +250,7 @@ readValidProvenance := fn(rootDir: String, name: String, expectedTarget: String,
         if not diskHash.ok or diskHash.hex =!= dh.value {
             return (valid = false, path = "", sha256 = "");
         }
-        list.pushBack(mut depPaths, dp.value);
+        (mut depPaths).pushBack(dp.value);
         idx = idx + 1;
     }
 
@@ -285,7 +283,7 @@ artSha: String, canonSource: String, graph: frontend.Items, fallbackFromC: Bool
 ): (ok: Bool, error: String) {
     provPath := path.join(path.join(rootDir, "dist/tools"), name + ".provenance.json");
     seenPaths: mut Set<String>;
-    set.add(mut seenPaths, canonSource);
+    mut seenPaths.add(canonSource);
     depJson: mut List<String> = [];
     edgeJson: mut List<String> = [];
 
@@ -293,20 +291,20 @@ artSha: String, canonSource: String, graph: frontend.Items, fallbackFromC: Bool
     if not rootSha.ok {
         return (ok = false, error = rootSha.error);
     }
-    list.pushBack(mut depJson, "    {\n      \"path\": " + json.quoteString(hostFs.displaySourcePath(canonSource, rootDir)) + ",\n      \"sha256\": " + json.quoteString(rootSha.hex) + "\n    }");
+    (mut depJson).pushBack("    {\n      \"path\": " + json.quoteString(hostFs.displaySourcePath(canonSource, rootDir)) + ",\n      \"sha256\": " + json.quoteString(rootSha.hex) + "\n    }");
 
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_LOADED {
             rpDep := fs.realPath(item.name);
             cDep := if rpDep.ok { rpDep.path } else { item.name };
-            if not set.has(seenPaths, cDep) {
-                set.add(mut seenPaths, cDep);
+            if not seenPaths.has(cDep) {
+                mut seenPaths.add(cDep);
                 hDep := crypto.sha256File(cDep);
                 if not hDep.ok {
                     return (ok = false, error = hDep.error);
                 }
                 relDep := hostFs.displaySourcePath(cDep, rootDir);
-                list.pushBack(mut depJson, "    {\n      \"path\": " + json.quoteString(relDep) + ",\n      \"sha256\": " + json.quoteString(hDep.hex) + "\n    }");
+                mut depJson.pushBack("    {\n      \"path\": " + json.quoteString(relDep) + ",\n      \"sha256\": " + json.quoteString(hDep.hex) + "\n    }");
             }
         } else if item.kind == frontend.ITEM_KIND_IMPORT_EDGE {
             rpImp := fs.realPath(item.name);
@@ -316,7 +314,7 @@ artSha: String, canonSource: String, graph: frontend.Items, fallbackFromC: Bool
             eStr := "    {\n      \"importer\": " + json.quoteString(relImp)
             + ",\n      \"spec\": " + json.quoteString(item.code)
             + ",\n      \"path\": " + json.quoteString(relTgt) + "\n    }";
-            list.pushBack(mut edgeJson, eStr);
+            mut edgeJson.pushBack(eStr);
         }
     }
 
@@ -340,14 +338,14 @@ artSha: String, canonSource: String, graph: frontend.Items, fallbackFromC: Bool
 
 /** Parses a decimal positive integer >= 1 for `--jobs`. */
 parsePositiveJobs := fn(raw: String): (ok: Bool, value: Int) {
-    size := text.length(raw);
+    size := raw.length();
     if size == 0 { return (ok = false, value = 0); }
     var i := 0;
     loop i < size {
-        if not text.isDigit(text.at(raw, i)) { return (ok = false, value = 0); }
+        if not raw.at(i).isDigit() { return (ok = false, value = 0); }
         i = i + 1;
     }
-    parsed := text.textToInt(raw);
+    parsed := raw.toInt();
     if not parsed.ok or parsed.value < 1 { return (ok = false, value = 0); }
     (ok = true, value = parsed.value)
 };
@@ -479,8 +477,8 @@ tsCompilerSha: String, cCompilerSha: String, compilerSourceSha: String, force: B
     compRes := proc.run(cBoot.path, compArgs, rootDir, emptyEnv, true, "");
     if compRes.error =!= "" or compRes.status =!= 0 {
         _rmTmp := fs.remove(tmpDir.path);
-        detail := if compRes.error =!= "" { compRes.error } else { text.trim(compRes.stderr) };
-        if allowTsFallback and text.containsText(detail, "external host builtins") {
+        detail := if compRes.error =!= "" { compRes.error } else { compRes.stderr.trim() };
+        if allowTsFallback and detail.contains("external host builtins") {
             return igniteSingleToolTs(rootDir, name, tsCompilerSha, compilerSourceSha, force, true);
         }
         return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = "ignite: C11 compile failed for " + name + ": " + detail);
@@ -496,7 +494,7 @@ tsCompilerSha: String, cCompilerSha: String, compilerSourceSha: String, force: B
     ccRes := proc.run(ccCmd, ccArgs, rootDir, emptyEnv, true, "");
     if ccRes.error =!= "" or ccRes.status =!= 0 {
         _rmTmp := fs.remove(tmpDir.path);
-        detail := if ccRes.error =!= "" { ccRes.error } else { text.trim(ccRes.stderr) };
+        detail := if ccRes.error =!= "" { ccRes.error } else { ccRes.stderr.trim() };
         return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = "ignite: cc failed for " + name + ": " + detail);
     }
     mvRes := fs.copy(tmpBin, artifactPath);
@@ -540,10 +538,10 @@ tsCompilerSha: String, cCompilerSha: String, compilerSourceSha: String, force: B
 
 /** Runs an ignited tool artifact (native C11 binary or TS script) with forwarded arguments and exits with its status. */
 executeIgnitedTool := fn(artifactPath: String, forwardArgs: List<String>): Unit {
-    if text.endsWith(artifactPath, ".ts") {
+    if artifactPath.endsWith(".ts") {
         runArgs: mut List<String> = [artifactPath];
         loop forwardArgs as a {
-            list.pushBack(mut runArgs, a);
+            mut runArgs.pushBack(a);
         }
         emptyEnv: List<String> = [];
         res := proc.run(project.nodeExecPath(), runArgs, "", emptyEnv, false, "");
@@ -610,7 +608,7 @@ runStep := fn(label: String, command: String, args: List<String>, cwd: String, q
     res := proc.run(command, args, cwd, emptyEnv, quiet, "");
     if res.error =!= "" or res.status =!= 0 {
         detail := if res.error =!= "" { res.error } else if res.stderr =!= "" { res.stderr } else { res.stdout };
-        suffix := if detail =!= "" { ": " + text.trim(detail) } else { "" };
+        suffix := if detail =!= "" { ": " + detail.trim() } else { "" };
         return (ok = false, error = "ignite: " + label + " failed" + suffix);
     }
     (ok = true, error = "")
@@ -621,7 +619,7 @@ runWipe := fn(rootDir: String, installDeps: Bool, quiet: Bool): (ok: Bool, error
     emptyEnv: List<String> = [];
     gitCheckArgs: List<String> = ["rev-parse", "--is-inside-work-tree"];
     gitCheck := proc.run("git", gitCheckArgs, rootDir, emptyEnv, true, "");
-    if gitCheck.error =!= "" or gitCheck.status =!= 0 or text.trim(gitCheck.stdout) =!= "true" {
+    if gitCheck.error =!= "" or gitCheck.status =!= 0 or gitCheck.stdout.trim() =!= "true" {
         return (ok = false, error = "ignite: --wipe requires a Git checkout");
     }
     if not quiet {
@@ -695,9 +693,9 @@ run := fn(rawArgs: List<String>): Unit {
         executeIgnitedTool(ensured.path, rawArgs);
     }
 
-    if list.listCountText(rawArgs) > 0 and rawArgs[0] == "--compile" {
+    if rawArgs.length() > 0 and rawArgs[0] == "--compile" {
         compArgs: mut List<String> = rawArgs;
-        _flag := list.popFront(mut compArgs);
+        _flag := mut compArgs.popFront();
         driverTs.run(compArgs);
         return;
     }
@@ -724,16 +722,16 @@ run := fn(rawArgs: List<String>): Unit {
     selected: mut List<String> = [];
 
     args: mut List<String> = rawArgs;
-    loop list.listCountText(args) > 0 {
-        arg := list.popFront(mut args);
+    loop args.length() > 0 {
+        arg := mut args.popFront();
         if arg == "--target" {
-            if list.listCountText(args) == 0 {
+            if args.length() == 0 {
                 io.errorLine("ignite: missing target for --target (expected c, ts, or auto)");
                 io.exit(2);
             }
-            requestedTarget = list.popFront(mut args);
-        } else if text.startsWithAt(arg, 0, "--target=") {
-            requestedTarget = text.slice(arg, 9, text.length(arg));
+            requestedTarget = mut args.popFront();
+        } else if arg.startsWithAt(0, "--target=") {
+            requestedTarget = arg.slice(9, arg.length());
         } else if arg == "--c" {
             requestedTarget = "c";
         } else if arg == "--ts" {
@@ -755,47 +753,47 @@ run := fn(rawArgs: List<String>): Unit {
         } else if arg == "--json" {
             jsonOutput = true;
         } else if arg == "--jobs" {
-            if list.listCountText(args) == 0 {
+            if args.length() == 0 {
                 io.errorLine("ignite: missing count after --jobs");
                 io.exit(2);
             }
-            jobsVal := parsePositiveJobs(list.popFront(mut args));
+            jobsVal := parsePositiveJobs(mut args.popFront());
             if not jobsVal.ok {
                 io.errorLine("ignite: invalid --jobs value (expected positive integer)");
                 io.exit(2);
             }
             maxJobs = jobsVal.value;
-        } else if text.startsWithAt(arg, 0, "--jobs=") {
-            jobsVal := parsePositiveJobs(text.slice(arg, 7, text.length(arg)));
+        } else if arg.startsWithAt(0, "--jobs=") {
+            jobsVal := parsePositiveJobs(arg.slice(7, arg.length()));
             if not jobsVal.ok {
                 io.errorLine("ignite: invalid --jobs value (expected positive integer)");
                 io.exit(2);
             }
             maxJobs = jobsVal.value;
         } else if arg == "--ensure" {
-            if list.listCountText(args) == 0 {
+            if args.length() == 0 {
                 io.errorLine("ignite: missing tool name for --ensure");
                 io.exit(2);
             }
-            ensureName = list.popFront(mut args);
+            ensureName = mut args.popFront();
         } else if arg == "--run" {
-            if list.listCountText(args) == 0 {
+            if args.length() == 0 {
                 io.errorLine("ignite: missing tool name for --run");
                 io.exit(2);
             }
-            runToolName = list.popFront(mut args);
-            if list.listCountText(args) > 0 and args[0] == "--" {
-                _sep := list.popFront(mut args);
+            runToolName = mut args.popFront();
+            if args.length() > 0 and args[0] == "--" {
+                _sep := mut args.popFront();
             }
             break;
         } else if arg == "--help" or arg == "-h" {
             io.outputLine("Usage: ./bin/lite-ignite [--target c|ts|auto] [--c|--ts] [--check] [--force] [--clean] [--wipe [--no-install] [--no-check] [--verify]] [--jobs N] [--json] [TOOL...]");
             io.exit(0);
-        } else if text.startsWithAt(arg, 0, "-") {
+        } else if arg.startsWithAt(0, "-") {
             io.errorLine("ignite: unknown option " + arg);
             io.exit(2);
         } else {
-            list.pushBack(mut selected, arg);
+            mut selected.pushBack(arg);
         }
     }
 
@@ -838,17 +836,17 @@ run := fn(rawArgs: List<String>): Unit {
 
     check := if noCheck { false } else if checkExplicit { true } else if wipe { fs.kind(path.join(rootDir, "igniter/node_modules/typescript/bin/tsc")) == fs.FILE_KIND_FILE } else { false };
 
-    targetNames := if list.listCountText(selected) > 0 { selected } else { listToolNames(rootDir) };
-    totalTools := list.listCountText(targetNames);
-    if list.listCountText(selected) == 0 or totalTools > 1 {
+    targetNames := if selected.length() > 0 { selected } else { listToolNames(rootDir) };
+    totalTools := targetNames.length();
+    if selected.length() == 0 or totalTools > 1 {
         if tgt.target == "c" {
-            cBoot := ensureDistCCompiler(rootDir, seedInfo.cArtifactSha256, tgt.cc, force and list.listCountText(selected) == 0);
+            cBoot := ensureDistCCompiler(rootDir, seedInfo.cArtifactSha256, tgt.cc, force and selected.length() == 0);
             if not cBoot.ok {
                 io.errorLine(cBoot.error);
                 io.exit(1);
             }
         }
-        if list.listCountText(selected) == 0 {
+        if selected.length() == 0 {
             distComp := ensureDistCompiler(rootDir, seedInfo.artifactSha256, force);
             if not distComp.ok {
                 io.errorLine(distComp.error);
@@ -875,24 +873,24 @@ run := fn(rawArgs: List<String>): Unit {
         if not force {
             cached := findCachedTool(rootDir, toolName, tgt.target, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256);
             if cached.valid {
-                list.pushBack(mut resTarget, cached.target);
-                list.pushBack(mut resPath, cached.path);
-                list.pushBack(mut resSha, cached.sha256);
-                list.pushBack(mut resRebuilt, false);
+                mut resTarget.pushBack(cached.target);
+                mut resPath.pushBack(cached.path);
+                mut resSha.pushBack(cached.sha256);
+                mut resRebuilt.pushBack(false);
                 hit = true;
             }
         }
         if not hit {
-            list.pushBack(mut resTarget, "");
-            list.pushBack(mut resPath, "");
-            list.pushBack(mut resSha, "");
-            list.pushBack(mut resRebuilt, false);
-            list.pushBack(mut pendingIndices, si);
+            mut resTarget.pushBack("");
+            mut resPath.pushBack("");
+            mut resSha.pushBack("");
+            mut resRebuilt.pushBack(false);
+            mut pendingIndices.pushBack(si);
         }
         si = si + 1;
     }
 
-    pendingCount := list.listCountInt(pendingIndices);
+    pendingCount := pendingIndices.length();
     workerBudget := if maxJobs > 0 { maxJobs } else { pool.cpuCount() };
     if pendingCount <= 1 or workerBudget <= 1 {
         var pi := 0;
@@ -927,21 +925,21 @@ run := fn(rawArgs: List<String>): Unit {
                 "\"--json\""
             ];
             if force {
-                list.pushBack(mut wArgs, "\"--force\"");
+                mut wArgs.pushBack("\"--force\"");
             }
             var p := w;
             loop p < pendingCount {
-                list.pushBack(mut wArgs, json.quoteString(targetNames[pendingIndices[p]]));
+                mut wArgs.pushBack(json.quoteString(targetNames[pendingIndices[p]]));
                 p = p + workerCount;
             }
-            list.pushBack(mut workerCmds, nodeBin);
-            list.pushBack(mut workerArgsJson, "[" + text.joinTexts(wArgs, ",") + "]");
+            (mut workerCmds).pushBack(nodeBin);
+            mut workerArgsJson.pushBack("[" + text.joinTexts(wArgs, ",") + "]");
             w = w + 1;
         }
 
         poolRaw := pool.runPoolJson(workerCmds, workerArgsJson, rootDir, workerCount);
         poolOffsets := json.arrayElementOffsets(poolRaw, 0);
-        if list.listCountInt(poolOffsets) =!= workerCount {
+        if poolOffsets.length() =!= workerCount {
             io.errorLine("ignite: parallel worker pool returned malformed result count");
             io.exit(1);
         }
@@ -960,31 +958,31 @@ run := fn(rawArgs: List<String>): Unit {
             if wStatus =!= 0 or wErr =!= "" {
                 var detail := "";
                 if wErr =!= "" { detail = wErr; }
-                if text.trim(wStderr) =!= "" {
+                if wStderr.trim() =!= "" {
                     if detail =!= "" { detail = detail + "\n"; }
-                    detail = detail + text.trimEnd(wStderr);
+                    detail = detail + wStderr.trimEnd();
                 }
-                if text.trim(wOut) =!= "" {
+                if wOut.trim() =!= "" {
                     if detail =!= "" { detail = detail + "\n"; }
-                    detail = detail + text.trimEnd(wOut);
+                    detail = detail + wOut.trimEnd();
                 }
                 if detail == "" {
-                    detail = "worker " + integer.intText(w) + " exited with status " + integer.intText(wStatus);
+                    detail = "worker " + w.toText() + " exited with status " + wStatus.toText();
                 }
                 io.errorLine(detail);
                 io.exit(1);
             }
             toolsField := json.findObjectField(wOut, 0, "tools");
             if not toolsField.found {
-                io.errorLine("ignite: parallel worker " + integer.intText(w) + " returned unexpected JSON output");
+                io.errorLine("ignite: parallel worker " + w.toText() + " returned unexpected JSON output");
                 io.exit(1);
             }
             tOffs := json.arrayElementOffsets(wOut, toolsField.valuePos);
             var p := w;
             var k := 0;
             loop p < pendingCount {
-                if k >= list.listCountInt(tOffs) {
-                    io.errorLine("ignite: parallel worker " + integer.intText(w) + " tool count mismatch");
+                if k >= tOffs.length() {
+                    io.errorLine("ignite: parallel worker " + w.toText() + " tool count mismatch");
                     io.exit(1);
                 }
                 origIdx := pendingIndices[p];
@@ -995,7 +993,7 @@ run := fn(rawArgs: List<String>): Unit {
                 tRebuilt := json.readObjectBool(wOut, tPos, "rebuilt");
                 if not tTarget.found or not tTarget.ok or not tPath.found or not tPath.ok or
                    not tSha.found or not tSha.ok or not tRebuilt.found or not tRebuilt.ok {
-                    io.errorLine("ignite: parallel worker " + integer.intText(w) + " missing tool fields");
+                    io.errorLine("ignite: parallel worker " + w.toText() + " missing tool fields");
                     io.exit(1);
                 }
                 resTarget[origIdx] = tTarget.value;
@@ -1025,19 +1023,19 @@ run := fn(rawArgs: List<String>): Unit {
         if tRebuilt { rebuiltCount = rebuiltCount + 1; }
         if tTarget == "c" { cCount = cCount + 1; } else {
             tsCount = tsCount + 1;
-            list.pushBack(mut tsArtifactPaths, tPath);
+            mut tsArtifactPaths.pushBack(tPath);
         }
-        list.pushBack(mut artifactPaths, tPath);
+        (mut artifactPaths).pushBack(tPath);
         entryStr := "    {\n      \"name\": " + json.quoteString(toolName)
         + ",\n      \"target\": " + json.quoteString(tTarget)
         + ",\n      \"path\": " + json.quoteString(tPath)
         + ",\n      \"sha256\": " + json.quoteString(tSha)
         + ",\n      \"rebuilt\": " + (if tRebuilt { "true" } else { "false" }) + "\n    }";
-        list.pushBack(mut toolEntries, entryStr);
+        mut toolEntries.pushBack(entryStr);
         ri = ri + 1;
     }
 
-    if check and list.listCountText(tsArtifactPaths) > 0 {
+    if check and tsArtifactPaths.length() > 0 {
         tmpChk := fs.makeTempDir("lite-ignite-check-");
         if not tmpChk.ok {
             io.errorLine("ignite: " + tmpChk.error);
@@ -1065,10 +1063,10 @@ run := fn(rawArgs: List<String>): Unit {
         io.outputLine(outJson);
     } else {
         suffix := if check { ", strict TS checked" } else { "" };
-        breakdown := if cCount > 0 and tsCount > 0 { ", " + integer.intText(cCount) + " c / " + integer.intText(tsCount) + " ts" }
+        breakdown := if cCount > 0 and tsCount > 0 { ", " + cCount.toText() + " c / " + tsCount.toText() + " ts" }
         else if cCount > 0 { ", target c" }
         else { ", target ts" };
-        io.outputLine("Ignited " + integer.intText(list.listCountText(artifactPaths)) + " tool(s) into dist/tools (" + integer.intText(rebuiltCount) + " rebuilt" + breakdown + suffix + ").");
+        io.outputLine("Ignited " + artifactPaths.length().toText() + " tool(s) into dist/tools (" + rebuiltCount.toText() + " rebuilt" + breakdown + suffix + ").");
     }
 };
 

@@ -1,7 +1,6 @@
 cases := import "util/cases";
 project := import "util/project";
 path := import "core/path";
-list := import "core/list";
 test := import "core/test";
 json := import "util/json";
 
@@ -12,7 +11,7 @@ test.checkText("validate all cases ok", "", checked.error);
 test.checkBool("validate all cases passed", true, checked.ok);
 
 allFiles := cases.discoverAllCaseFiles(root);
-test.checkBool("discovered multiple cases", true, list.listCountText(allFiles) > 0);
+test.checkBool("discovered multiple cases", true, allFiles.length() > 0);
 
 matched := cases.validateCaseSet(root, "case.execution.workspace.silent-file-io");
 test.checkBool("validateCaseSet matches silent", true, matched.ok);
@@ -26,10 +25,10 @@ missed := cases.validateCaseSet(root, "nonexistent-case-filter-xyz");
 test.checkBool("validateCaseSet misses empty", false, missed.ok);
 
 selected := cases.selectCaseFiles(root, "case.execution.workspace.silent-file-io");
-test.checkInt("selectCaseFiles silent count", 1, list.listCountText(selected));
+test.checkInt("selectCaseFiles silent count", 1, selected.length());
 
 wildSelected := cases.selectCaseFiles(root, "case.*");
-test.checkBool("selectCaseFiles matches wildcard case.*", true, list.listCountText(wildSelected) >= 5);
+test.checkBool("selectCaseFiles matches wildcard case.*", true, wildSelected.length() >= 5);
 
 meta := cases.readCaseMeta(root, selected[0]);
 test.checkText("meta error", "", meta.error);

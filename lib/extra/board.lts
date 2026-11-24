@@ -1,7 +1,5 @@
 /* Optional 2D shape, sprite, and pixel-grid helpers built on extra/canvas. */
 
-list := import "core/list";
-text := import "core/text";
 canvas := import "./canvas";
 
 /** Draws a crisp 1-pixel outline rectangle at `(x, y, width, height)` without double-blending corners. */
@@ -111,10 +109,10 @@ pub drawSpriteScaled := fn(x: Int, y: Int, rows: List<String>, glyph: String, sc
     if scale <= 0 { return; }
     var rowIdx := 0;
     loop rows as line {
-        cols := text.length(line);
+        cols := line.length();
         var colIdx := 0;
         loop colIdx < cols {
-            if text.at(line, colIdx) == glyph {
+            if line.at(colIdx) == glyph {
                 canvas.fillRect(x + (colIdx * scale), y + (rowIdx * scale), scale, scale, color);
             }
             colIdx += 1;
@@ -134,7 +132,7 @@ pub fillGrid := fn(color: canvas.Color): List<canvas.Color> {
     total := canvas.getWidth() * canvas.getHeight();
     var index := 0;
     loop index < total {
-        list.pushBack(mut pixels, color);
+        mut pixels.pushBack(color);
         index += 1;
     }
     pixels

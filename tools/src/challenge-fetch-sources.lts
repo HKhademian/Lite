@@ -1,11 +1,9 @@
 /** Caches upstream challenge metadata into `benchmark/challenges/.cache/`. */
 
 fs := import "core/file";
-integer := import "core/int";
 io := import "core/io";
 list := import "core/list";
 path := import "core/path";
-text := import "core/text";
 cfetch := import "util/challenge-fetch";
 project := import "util/project";
 
@@ -15,7 +13,7 @@ failFetch := fn(message: String): Int {
 };
 
 padTwo := fn(n: Int): String {
-    if n < 10 { "0" + integer.intText(n) } else { integer.intText(n) }
+    if n < 10 { "0" + n.toText() } else { n.toText() }
 };
 
 fetchOne := fn(cacheDir: String, url: String, relPath: String, force: Bool): Bool {
@@ -43,24 +41,24 @@ fetchSourceGroup := fn(cacheDir: String, name: String, force: Bool): Bool {
         paths: mut List<String> = [];
         var year := 2015;
         loop year <= 2025 {
-            yearText := integer.intText(year);
-            list.pushBack(mut urls, "https://adventofcode.com/" + yearText);
-            list.pushBack(mut paths, path.join(cacheDir, "aoc/" + yearText + "/index.html"));
+            yearText := year.toText();
+            mut urls.pushBack("https://adventofcode.com/" + yearText);
+            mut paths.pushBack(path.join(cacheDir, "aoc/" + yearText + "/index.html"));
             var day := 1;
             loop day <= 25 {
-                dayText := integer.intText(day);
-                list.pushBack(mut urls, "https://adventofcode.com/" + yearText + "/day/" + dayText);
-                list.pushBack(mut paths, path.join(cacheDir, "aoc/" + yearText + "/day" + padTwo(day) + ".html"));
+                dayText := day.toText();
+                mut urls.pushBack("https://adventofcode.com/" + yearText + "/day/" + dayText);
+                mut paths.pushBack(path.join(cacheDir, "aoc/" + yearText + "/day" + padTwo(day) + ".html"));
                 day = day + 1;
             }
             year = year + 1;
         }
         batch := cfetch.downloadBatch(urls, paths, force, 4, 90000, 0, true, false, 25);
         if batch.skipped > 0 {
-            io.outputLine("  skipped " + integer.intText(batch.skipped) + " unavailable page(s)");
+            io.outputLine("  skipped " + batch.skipped.toText() + " unavailable page(s)");
         }
         if batch.failures > 0 {
-            io.errorLine("FAIL: " + integer.intText(batch.failures) + " downloads failed");
+            io.errorLine("FAIL: " + batch.failures.toText() + " downloads failed");
             return false;
         }
         return true;
@@ -69,9 +67,9 @@ fetchSourceGroup := fn(cacheDir: String, name: String, force: Bool): Bool {
         var n := 1;
         loop n <= 24 {
             relPath := "project-euler/page" + padTwo(n) + ".html";
-            if not fetchOne(cacheDir, "https://projecteuler.net/archives;page=" + integer.intText(n), relPath, force) { return false; }
+            if not fetchOne(cacheDir, "https://projecteuler.net/archives;page=" + n.toText(), relPath, force) { return false; }
             pageRead := fs.readText(path.join(cacheDir, relPath));
-            if not pageRead.ok or not text.containsText(pageRead.text, "problem=") { break; }
+            if not pageRead.ok or not pageRead.text.contains("problem=") { break; }
             n = n + 1;
         }
         return true;
@@ -82,7 +80,7 @@ fetchSourceGroup := fn(cacheDir: String, name: String, force: Bool): Bool {
     if name == "cryptopals" {
         var n := 1;
         loop n <= 8 {
-            nText := integer.intText(n);
+            nText := n.toText();
             if not fetchOne(cacheDir, "https://cryptopals.com/sets/" + nText, "cryptopals/set" + nText + ".html", force) { return false; }
             n = n + 1;
         }
@@ -91,11 +89,11 @@ fetchSourceGroup := fn(cacheDir: String, name: String, force: Bool): Bool {
     if name == "jane-street" {
         var n := 1;
         loop n <= 5 {
-            nText := integer.intText(n);
+            nText := n.toText();
             relPath := "jane-street/archive" + nText + ".html";
             if not fetchOne(cacheDir, "https://www.janestreet.com/puzzles/archive/?page=" + nText, relPath, force) { return false; }
             rawBytes := fs.readBytes(path.join(cacheDir, relPath));
-            if list.listCountInt(rawBytes) < 5000 { break; }
+            if rawBytes.length() < 5000 { break; }
             n = n + 1;
         }
         return true;
@@ -117,32 +115,32 @@ run := fn(rawArgs: List<String>): Int {
     var force := false;
     var onlyRaw := "";
     args: mut List<String> = rawArgs;
-    loop list.listCountText(args) > 0 {
-        arg := list.popFront(mut args);
+    loop args.length() > 0 {
+        arg := mut args.popFront();
         if arg == "--help" or arg == "-h" {
             io.outputLine("Usage: node tools/fetch_sources.ts [--force] [--only leetcode,codeforces,cses,aoc,pe,rosalind,cryptopals,jane-street,atcoder,roadmaps]");
             return 0;
         }
         if arg == "--force" {
             force = true;
-        } else if text.startsWithAt(arg, 0, "--force=") {
+        } else if arg.startsWithAt(0, "--force=") {
             io.errorLine("--force does not accept a value");
             return 2;
         } else if arg == "--only" {
-            if list.listCountText(args) == 0 or text.startsWithAt(args[0], 0, "--") {
+            if args.length() == 0 or args[0].startsWithAt(0, "--") {
                 io.errorLine("missing value for --only");
                 return 2;
             }
-            onlyRaw = list.popFront(mut args);
-        } else if text.startsWithAt(arg, 0, "--only=") {
-            onlyRaw = text.slice(arg, 7, text.length(arg));
-            if onlyRaw == "" or text.startsWithAt(onlyRaw, 0, "--") {
+            onlyRaw = mut args.popFront();
+        } else if arg.startsWithAt(0, "--only=") {
+            onlyRaw = arg.slice(7, arg.length());
+            if onlyRaw == "" or onlyRaw.startsWithAt(0, "--") {
                 io.errorLine("missing value for --only");
                 return 2;
             }
         } else {
-            eq := text.indexOfText(arg, "=", 0);
-            optName := if eq < 0 { arg } else { text.slice(arg, 0, eq) };
+            eq := arg.indexOf("=", 0);
+            optName := if eq < 0 { arg } else { arg.slice(0, eq) };
             io.errorLine("unknown option " + optName);
             return 2;
         }
@@ -154,19 +152,19 @@ run := fn(rawArgs: List<String>): Int {
 
     selected: mut List<String> = [];
     if onlyRaw == "" {
-        loop allNames as item { list.pushBack(mut selected, item); }
+        loop allNames as item { mut selected.pushBack(item); }
     } else {
         var pos := 0;
-        size := text.length(onlyRaw);
+        size := onlyRaw.length();
         loop pos <= size {
-            comma := text.indexOfText(onlyRaw, ",", pos);
+            comma := onlyRaw.indexOf(",", pos);
             endPos := if comma < 0 { size } else { comma };
-            part := text.trim(text.slice(onlyRaw, pos, endPos));
+            part := onlyRaw.slice(pos, endPos).trim();
             if part =!= "" {
                 if not list.listContainsText(allNames, part) {
                     return failFetch("unknown sources: " + part);
                 }
-                list.pushBack(mut selected, part);
+                (mut selected).pushBack(part);
             }
             if comma < 0 { break; }
             pos = comma + 1;

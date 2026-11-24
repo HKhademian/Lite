@@ -3,7 +3,6 @@ fs := import "core/file";
 json := import "util/json";
 path := import "core/path";
 test := import "core/test";
-text := import "core/text";
 
 tmpRes := fs.makeTempDir("lite-site-mods-test-");
 test.checkBool("temp dir ok", true, tmpRes.ok);
@@ -28,11 +27,11 @@ test.checkBool("modules build ok", true, res.ok);
 test.checkBool("valid json", true, json.validate(res.jsonText).ok);
 test.checkInt("moduleCount", 1, json.readObjectInt(res.jsonText, 0, "moduleCount").value);
 test.checkInt("symbolCount", 1, json.readObjectInt(res.jsonText, 0, "symbolCount").value);
-test.checkBool("has index page", true, text.indexOfText(res.jsonText, "\"relPath\":\"modules/index.html\"", 0) >= 0);
-test.checkBool("has detail page", true, text.indexOfText(res.jsonText, "\"relPath\":\"modules/core/io.html\"", 0) >= 0);
-test.checkBool("tracks sample usage", true, text.indexOfText(res.jsonText, "1 sample", 0) >= 0);
-test.checkBool("renders inline doc code", true, text.indexOfText(res.jsonText, "<code>and</code>", 0) >= 0);
-test.checkBool("renders host badge", true, text.indexOfText(res.jsonText, "Host-backed", 0) >= 0);
+test.checkBool("has index page", true, res.jsonText.indexOf("\"relPath\":\"modules/index.html\"", 0) >= 0);
+test.checkBool("has detail page", true, res.jsonText.indexOf("\"relPath\":\"modules/core/io.html\"", 0) >= 0);
+test.checkBool("tracks sample usage", true, res.jsonText.indexOf("1 sample", 0) >= 0);
+test.checkBool("renders inline doc code", true, res.jsonText.indexOf("<code>and</code>", 0) >= 0);
+test.checkBool("renders host badge", true, res.jsonText.indexOf("Host-backed", 0) >= 0);
 
 _rm := fs.remove(tmpRes.path);
 test.done("util-site-modules");

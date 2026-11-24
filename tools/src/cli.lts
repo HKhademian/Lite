@@ -1,8 +1,6 @@
 /** Lite CLI router (`./bin/lite`); delegates subcommands to the dedicated tool entrypoints. */
 
 io := import "core/io";
-list := import "core/list";
-map := import "core/map";
 cli := import "util/cli";
 project := import "util/project";
 
@@ -50,24 +48,24 @@ ROUTE_TARGETS: Map<String, String> = [
 ];
 
 supportedCommands := fn(): List<String> {
-    map.keys(ROUTE_TARGETS)
+    ROUTE_TARGETS.keys()
 };
 
 routeTarget := fn(command: String): String {
-    map.getOr(ROUTE_TARGETS, command, "")
+    ROUTE_TARGETS.getOr(command, "")
 };
 
 run := fn(rawArgs: List<String>): Unit {
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--" {
-        _sep := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--" {
+        _sep := mut args.popFront();
     }
     project.handleVersionFlag(args, "cli", "cli");
-    if list.listCountText(args) == 0 {
+    if args.length() == 0 {
         io.errorLine(usageText());
         io.exit(2);
     }
-    commandToken := list.popFront(mut args);
+    commandToken := mut args.popFront();
     if commandToken == "help" or commandToken == "--help" or commandToken == "-h" {
         io.outputLine(usageText());
         io.exit(0);
@@ -81,7 +79,7 @@ run := fn(rawArgs: List<String>): Unit {
     if command == "play" {
         playArgs: mut List<String> = ["--play"];
         loop args as a {
-            list.pushBack(mut playArgs, a);
+            mut playArgs.pushBack(a);
         }
         project.forwardNode("bin/" + target, playArgs);
         return;

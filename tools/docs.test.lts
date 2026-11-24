@@ -1,8 +1,6 @@
 /** Markdown integrity boundaries that ordinary command fixtures cannot isolate. */
 
 fs := import "core/file";
-integer := import "core/int";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
@@ -26,7 +24,7 @@ runDocs := fn(args: List<String>, directory: String, stdinInput: String): (statu
     errPath := path.join(tmpRes.path, "err");
     cmdArgs: mut List<String> = [docsBin];
     loop args as a {
-        list.pushBack(mut cmdArgs, a);
+        mut cmdArgs.pushBack(a);
     }
     envOver: List<String> = ["LITE_DOCS_ROOT=" + directory];
     res := proc.runBytes(proc.execPath(), cmdArgs, root, envOver, 60000, unicode.utf8Encode(stdinInput), outPath, errPath);
@@ -39,15 +37,15 @@ runDocs := fn(args: List<String>, directory: String, stdinInput: String): (statu
 
 splitLines := fn(source: String): List<String> {
     out: mut List<String> = [];
-    n := text.length(source);
+    n := source.length();
     var pos := 0;
     loop pos <= n {
-        nl := text.indexOfText(source, "\n", pos);
+        nl := source.indexOf("\n", pos);
         if nl < 0 {
-            list.pushBack(mut out, text.slice(source, pos, n));
+            mut out.pushBack(source.slice(pos, n));
             break;
         }
-        list.pushBack(mut out, text.slice(source, pos, nl));
+        (mut out).pushBack(source.slice(pos, nl));
         pos = nl + 1;
     }
     out
@@ -59,9 +57,9 @@ checkDocuments := fn(directory: String): List<String> {
         empty: List<String> = [];
         return empty;
     }
-    trimmed := text.trimEnd(res.stderr);
+    trimmed := res.stderr.trimEnd();
     if trimmed == "" {
-        fallback: List<String> = ["lite docs --check failed (" + integer.intText(res.status) + ")"];
+        fallback: List<String> = ["lite docs --check failed (" + res.status.toText() + ")"];
         return fallback;
     }
     splitLines(trimmed)
@@ -69,14 +67,14 @@ checkDocuments := fn(directory: String): List<String> {
 
 anyContains := fn(items: List<String>, needle: String): Bool {
     loop items as item {
-        if text.indexOfText(item, needle, 0) >= 0 { return true; }
+        if item.indexOf(needle, 0) >= 0 { return true; }
     }
     false
 };
 
 anyContainsBoth := fn(items: List<String>, a: String, b: String): Bool {
     loop items as item {
-        if text.indexOfText(item, a, 0) >= 0 and text.indexOfText(item, b, 0) >= 0 { return true; }
+        if item.indexOf(a, 0) >= 0 and item.indexOf(b, 0) >= 0 { return true; }
     }
     false
 };
@@ -98,14 +96,14 @@ test.checkText("clean docs check", "", text.joinTexts(chk1Ok, "\n"));
 docsJson1 := runDocs(["--json"], dir1, "");
 test.checkInt("docs --json status", 0, docsJson1.status);
 docOffsets1 := json.arrayElementOffsets(docsJson1.stdout, 0);
-test.checkInt("docs --json count", 2, list.listCountInt(docOffsets1));
+test.checkInt("docs --json count", 2, docOffsets1.length());
 
 test.check(
 "write broken README.md",
 fs.writeText(path.join(dir1, "README.md"), "# Index\n\n[bad](topic.md#missing)\n[absent](absent.md)\n```text\nunclosed\n").ok
 );
 failures1 := checkDocuments(dir1);
-test.checkInt("broken docs count", 3, list.listCountText(failures1));
+test.checkInt("broken docs count", 3, failures1.length());
 test.check("missing fragment reported", anyContains(failures1, "missing fragment"));
 test.check("missing link reported", anyContains(failures1, "missing link"));
 test.check("unclosed code fence reported", anyContains(failures1, "unclosed code fence"));
@@ -128,7 +126,7 @@ path.join(dir2, "config/documentation.json"),
 test.checkText("snippet matches", "", text.joinTexts(checkDocuments(dir2), "\n"));
 test.check("mutate source.lts", fs.writeText(path.join(dir2, "source.lts"), "outputLine(25);\n").ok);
 snippetFails := text.joinTexts(checkDocuments(dir2), "\n");
-test.check("snippet mismatch reported: " + snippetFails, text.indexOfText(snippetFails, "code fence 0 differs", 0) >= 0);
+test.check("snippet mismatch reported: " + snippetFails, snippetFails.indexOf("code fence 0 differs", 0) >= 0);
 _rm2 := fs.remove(dir2);
 
 /* 3. tools/src/docs.lts compiles cleanly with strict TS checking and has an ignited artifact in dist/tools */
@@ -161,7 +159,7 @@ _rmTsc := fs.remove(tscDirRes.path);
 renderRes := runDocs(["--render-json"], root, "docs/start-here.md\ndocs/tour.md\n");
 test.checkInt("docs --render-json status: " + renderRes.stderr, 0, renderRes.status);
 renderOffsets := json.arrayElementOffsets(renderRes.stdout, 0);
-test.checkInt("rendered count", 2, list.listCountInt(renderOffsets));
+test.checkInt("rendered count", 2, renderOffsets.length());
 r0 := renderOffsets[0];
 r1 := renderOffsets[1];
 test.checkText("rendered[0].path", "docs/start-here.md", json.readObjectString(renderRes.stdout, r0, "path").value);
@@ -169,16 +167,16 @@ test.checkText("rendered[0].title", "Start with LiteLang", json.readObjectString
 test.checkText("rendered[0].status", "guide", json.readObjectString(renderRes.stdout, r0, "status").value);
 tocPos := json.findObjectField(renderRes.stdout, r0, "toc");
 test.check("rendered[0].toc found", tocPos.found);
-test.check("rendered[0].toc >= 3", list.listCountInt(json.arrayElementOffsets(renderRes.stdout, tocPos.valuePos)) >= 3);
+test.check("rendered[0].toc >= 3", json.arrayElementOffsets(renderRes.stdout, tocPos.valuePos).length() >= 3);
 html0 := json.readObjectString(renderRes.stdout, r0, "html").value;
-test.check("rendered[0].html has h1", text.indexOfText(html0, "<h1 id=\"start-with-litelang\">Start with LiteLang</h1>", 0) >= 0);
+test.check("rendered[0].html has h1", html0.indexOf("<h1 id=\"start-with-litelang\">Start with LiteLang</h1>", 0) >= 0);
 html1 := json.readObjectString(renderRes.stdout, r1, "html").value;
-test.check("rendered[1].html has data-fence", text.indexOfText(html1, "data-fence=\"0\"", 0) >= 0);
+test.check("rendered[1].html has data-fence", html1.indexOf("data-fence=\"0\"", 0) >= 0);
 
 modRes := runDocs(["--modules-json"], root, "");
 test.checkInt("docs --modules-json status: " + modRes.stderr, 0, modRes.status);
 modOffsets := json.arrayElementOffsets(modRes.stdout, 0);
-test.checkInt("modules count", 37, list.listCountInt(modOffsets));
+test.checkInt("modules count", 37, modOffsets.length());
 
 var foundIo := false;
 var foundCanvas := false;
@@ -291,7 +289,7 @@ badHubLines: List<String> = [
 ];
 test.check("write bad README.md", fs.writeText(path.join(dir5, "README.md"), text.joinTexts(badHubLines, "\n") + "\n").ok);
 failures5 := checkDocuments(dir5);
-test.checkInt("bad lite:// URI failure count: " + text.joinTexts(failures5, "\n"), 10, list.listCountText(failures5));
+test.checkInt("bad lite:// URI failure count: " + text.joinTexts(failures5, "\n"), 10, failures5.length());
 test.check("unknown lite URI namespace", anyContains(failures5, "unknown lite URI namespace"));
 test.check("handbook missing fragment", anyContainsBoth(failures5, "missing fragment", "overview-and-setup#missing"));
 test.check("missing lite://brand", anyContains(failures5, "missing lite://brand"));

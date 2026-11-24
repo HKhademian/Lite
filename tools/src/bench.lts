@@ -4,10 +4,8 @@ io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
 crypto := import "core/crypto";
-integer := import "core/int";
 text := import "core/text";
 unicode := import "core/unicode";
-list := import "core/list";
 time := import "core/time";
 path := import "core/path";
 project := import "util/project";
@@ -19,13 +17,13 @@ formatNsAsMsJson := fn(nsRaw: Int): String {
     ns := if nsRaw < 0 { 0 } else { nsRaw };
     wholeMs := ns / 1000000;
     micros := (ns - wholeMs * 1000000) / 1000;
-    var frac := integer.intText(micros);
+    var frac := micros.toText();
     if micros < 10 {
         frac = "00" + frac;
     } else if micros < 100 {
         frac = "0" + frac;
     }
-    integer.intText(wholeMs) + "." + frac
+    wholeMs.toText() + "." + frac
 };
 
 sortInts := fn(items: List<Int>): List<Int> {
@@ -33,7 +31,7 @@ sortInts := fn(items: List<Int>): List<Int> {
     rem: mut List<Int> = [];
     var remCount := 0;
     loop items as item {
-        list.pushBack(mut rem, item);
+        mut rem.pushBack(item);
         remCount = remCount + 1;
     }
     loop remCount > 0 {
@@ -45,21 +43,21 @@ sortInts := fn(items: List<Int>): List<Int> {
             }
             i = i + 1;
         }
-        list.pushBack(mut out, rem[bestIdx]);
+        (mut out).pushBack(rem[bestIdx]);
         next: mut List<Int> = [];
         var j := 0;
         loop j < remCount {
             if j =!= bestIdx {
-                list.pushBack(mut next, rem[j]);
+                mut next.pushBack(rem[j]);
             }
             j = j + 1;
         }
         loop remCount > 0 {
-            _dropped := list.popBack(mut rem);
+            _dropped := mut rem.popBack();
             remCount = remCount - 1;
         }
         loop next as kept {
-            list.pushBack(mut rem, kept);
+            mut rem.pushBack(kept);
             remCount = remCount + 1;
         }
     }
@@ -78,17 +76,17 @@ computeToolingHash := fn(rootDir: String): String {
             entries := fs.listDir(dirPath);
             loop entries as entry {
                 full := path.join(dirPath, entry);
-                if text.endsWith(entry, ext) and fs.kind(full) == fs.FILE_KIND_FILE {
+                if entry.endsWith(ext) and fs.kind(full) == fs.FILE_KIND_FILE {
                     if not first {
-                        list.pushBack(mut digestBytes, 0);
+                        mut digestBytes.pushBack(0);
                     }
                     first = false;
                     loop unicode.utf8Encode(prefix + entry) as b {
-                        list.pushBack(mut digestBytes, b);
+                        mut digestBytes.pushBack(b);
                     }
-                    list.pushBack(mut digestBytes, 0);
+                    (mut digestBytes).pushBack(0);
                     loop fs.readBytes(full) as b {
-                        list.pushBack(mut digestBytes, b);
+                        mut digestBytes.pushBack(b);
                     }
                 }
             }
@@ -120,16 +118,16 @@ readCompilerJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: Str
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "benchmark", "bench");
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--" {
-        _sep := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--" {
+        _sep := mut args.popFront();
     }
-    if list.listCountText(args) < 1 or list.listCountText(args) > 2 {
+    if args.length() < 1 or args.length() > 2 {
         io.errorLine("usage: lite bench OUTPUT [FILTER]");
         io.exit(1);
     }
 
-    output := path.resolve(proc.cwd(), list.popFront(mut args));
-    filter := if list.listCountText(args) > 0 { list.popFront(mut args) } else { "" };
+    output := path.resolve(proc.cwd(), mut args.popFront());
+    filter := if args.length() > 0 { mut args.popFront() } else { "" };
     if fs.kind(output) =!= fs.FILE_KIND_MISSING {
         io.errorLine("benchmark output already exists; choose a new report path");
         io.exit(1);
@@ -187,15 +185,15 @@ run := fn(rawArgs: List<String>): Unit {
                         io.errorLine(sRes.error);
                         io.exit(1);
                     }
-                    list.pushBack(mut samplesNs, t1 - t0);
+                    (mut samplesNs).pushBack(t1 - t0);
                     s = s + 1;
                 }
                 sorted := sortInts(samplesNs);
-                medianNs := sorted[list.listCountInt(sorted) / 2];
+                medianNs := sorted[sorted.length() / 2];
 
                 msFields: mut List<String> = [];
                 loop samplesNs as sampleNs {
-                    list.pushBack(mut msFields, formatNsAsMsJson(sampleNs));
+                    mut msFields.pushBack(formatNsAsMsJson(sampleNs));
                 }
 
                 entry := "{"
@@ -203,17 +201,17 @@ run := fn(rawArgs: List<String>): Unit {
                 + ",\"scenario\":" + json.quoteString(sName)
                 + ",\"kind\":" + json.quoteString(meta.kind)
                 + ",\"identity\":" + ident.jsonText
-                + ",\"warmups\":" + integer.intText(meta.warmups)
+                + ",\"warmups\":" + meta.warmups.toText()
                 + ",\"milliseconds\":[" + text.joinTexts(msFields, ",") + "]"
                 + ",\"medianMilliseconds\":" + formatNsAsMsJson(medianNs)
                 + "}";
-                list.pushBack(mut resultsJson, entry);
+                mut resultsJson.pushBack(entry);
                 sIdx = sIdx + 1;
             }
         }
     }
 
-    resultCount := list.listCountText(resultsJson);
+    resultCount := resultsJson.length();
     if resultCount == 0 {
         io.errorLine("no benchmark cases selected");
         io.exit(1);
@@ -230,7 +228,7 @@ run := fn(rawArgs: List<String>): Unit {
             io.errorLine("git rev-parse HEAD failed: " + revRes.stdout + revRes.stderr + revRes.error);
             io.exit(1);
         }
-        commitJson = json.quoteString(text.trim(revRes.stdout));
+        commitJson = json.quoteString(revRes.stdout.trim());
 
         statArgs: List<String> = ["status", "--porcelain"];
         statRes := proc.run("git", statArgs, root, emptyEnv, true, "");
@@ -238,7 +236,7 @@ run := fn(rawArgs: List<String>): Unit {
             io.errorLine("git status failed: " + statRes.stdout + statRes.stderr + statRes.error);
             io.exit(1);
         }
-        dirtyJson = if text.length(statRes.stdout) > 0 { "true" } else { "false" };
+        dirtyJson = if statRes.stdout.length() > 0 { "true" } else { "false" };
     }
 
     verRes := release.versionsJson(root);
@@ -279,7 +277,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.errorLine(wrote.error);
         io.exit(1);
     }
-    io.outputLine("Wrote " + integer.intText(resultCount) + " benchmark results to " + output);
+    io.outputLine("Wrote " + resultCount.toText() + " benchmark results to " + output);
 };
 
 run(io.inputArgs());

@@ -3,8 +3,6 @@
 io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
-text := import "core/text";
-list := import "core/list";
 path := import "core/path";
 project := import "util/project";
 compilerBuild := import "util/compiler-build";
@@ -47,26 +45,26 @@ run := fn(rawArgs: List<String>): Unit {
     var hasOpt := false;
     var scriptPath := "";
 
-    loop list.listCountText(args) > 0 {
-        arg := list.popFront(mut args);
+    loop args.length() > 0 {
+        arg := mut args.popFront();
         if arg == "-h" or arg == "--help" {
             io.outputLine(usageText());
             io.exit(0);
         } else if arg == "--" {
-            if list.listCountText(args) == 0 { usageExit(); }
-            scriptPath = list.popFront(mut args);
+            if args.length() == 0 { usageExit(); }
+            scriptPath = mut args.popFront();
             break;
         } else if arg == "-o" or arg == "--out" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            outPath = list.popFront(mut args);
-        } else if text.startsWithAt(arg, 0, "--out=") {
-            outPath = text.slice(arg, 6, text.length(arg));
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            outPath = mut args.popFront();
+        } else if arg.startsWithAt(0, "--out=") {
+            outPath = arg.slice(6, arg.length());
         } else if arg == "--cc-opt" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            ccOpt = list.popFront(mut args);
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            ccOpt = mut args.popFront();
             explicitCcOpt = true;
-        } else if text.startsWithAt(arg, 0, "--cc-opt=") {
-            ccOpt = text.slice(arg, 9, text.length(arg));
+        } else if arg.startsWithAt(0, "--cc-opt=") {
+            ccOpt = arg.slice(9, arg.length());
             explicitCcOpt = true;
         } else if arg == "--sanitize" {
             sanitize = true;
@@ -75,29 +73,29 @@ run := fn(rawArgs: List<String>): Unit {
         } else if arg == "--quiet" or arg == "-q" {
             quiet = true;
         } else if arg == "--builtin-mode" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            list.pushBack(mut compileOpts, arg);
-            list.pushBack(mut compileOpts, list.popFront(mut args));
-        } else if text.startsWithAt(arg, 0, "--builtin-mode=") {
-            list.pushBack(mut compileOpts, arg);
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            (mut compileOpts).pushBack(arg);
+            mut compileOpts.pushBack(mut args.popFront());
+        } else if arg.startsWithAt(0, "--builtin-mode=") {
+            mut compileOpts.pushBack(arg);
         } else if arg == "--emit-format" or arg == "--source-map" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
-            list.pushBack(mut compileOpts, arg);
-            list.pushBack(mut compileOpts, list.popFront(mut args));
-        } else if text.startsWithAt(arg, 0, "--emit-format=") or text.startsWithAt(arg, 0, "--source-map=") or text.startsWithAt(arg, 0, "-f") {
-            list.pushBack(mut compileOpts, arg);
-        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or arg == "-Oc" or text.startsWithAt(arg, 0, "--opt=") {
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            (mut compileOpts).pushBack(arg);
+            mut compileOpts.pushBack(mut args.popFront());
+        } else if arg.startsWithAt(0, "--emit-format=") or arg.startsWithAt(0, "--source-map=") or arg.startsWithAt(0, "-f") {
+            mut compileOpts.pushBack(arg);
+        } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or arg == "-Oc" or arg.startsWithAt(0, "--opt=") {
             hasOpt = true;
             if arg == "-Os" or arg == "--opt=s" or arg == "--opt=S" { sizeOpt = true; }
-            list.pushBack(mut compileOpts, arg);
+            (mut compileOpts).pushBack(arg);
         } else if arg == "--opt" {
-            if list.listCountText(args) == 0 or args[0] == "--" { usageExit(); }
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
             hasOpt = true;
-            optVal := list.popFront(mut args);
+            optVal := mut args.popFront();
             if optVal == "s" or optVal == "S" { sizeOpt = true; }
-            list.pushBack(mut compileOpts, arg);
-            list.pushBack(mut compileOpts, optVal);
-        } else if text.startsWithAt(arg, 0, "-") {
+            (mut compileOpts).pushBack(arg);
+            mut compileOpts.pushBack(optVal);
+        } else if arg.startsWithAt(0, "-") {
             io.errorLine("lite build: unknown option " + arg);
             usageExit();
         } else {
@@ -109,7 +107,7 @@ run := fn(rawArgs: List<String>): Unit {
     if scriptPath == "" {
         usageExit();
     }
-    if not text.endsWith(scriptPath, ".lts") {
+    if not scriptPath.endsWith(".lts") {
         io.errorLine("lite build: source must be a .lts file");
         io.exit(2);
     }
@@ -119,7 +117,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     base := path.baseName(scriptPath);
-    baseNoExt := text.slice(base, 0, text.length(base) - 4);
+    baseNoExt := base.slice(0, base.length() - 4);
     finalOut := if outPath =!= "" { path.resolve(proc.cwd(), outPath) } else { path.resolve(proc.cwd(), baseNoExt) };
     outParent := path.parentDir(finalOut);
     if outParent =!= "" and not path.isDirectory(outParent) {
@@ -141,11 +139,11 @@ run := fn(rawArgs: List<String>): Unit {
     nativeCompiler := findNativeCompiler();
     if nativeCompiler =!= "" {
         nativeArgs: mut List<String> = [];
-        if not hasOpt { list.pushBack(mut nativeArgs, "-O1"); }
-        loop compileOpts as opt { list.pushBack(mut nativeArgs, opt); }
-        list.pushBack(mut nativeArgs, scriptPath);
-        list.pushBack(mut nativeArgs, "--out");
-        list.pushBack(mut nativeArgs, cArtifact);
+        if not hasOpt { mut nativeArgs.pushBack("-O1"); }
+        loop compileOpts as opt { mut nativeArgs.pushBack(opt); }
+        (mut nativeArgs).pushBack(scriptPath);
+        mut nativeArgs.pushBack("--out");
+        mut nativeArgs.pushBack(cArtifact);
         compiled := proc.run(nativeCompiler, nativeArgs, "", emptyEnv, true, "");
         if compiled.error =!= "" {
             fs.remove(tempDir.path);
@@ -166,9 +164,9 @@ run := fn(rawArgs: List<String>): Unit {
             io.exit(1);
         }
         nodeArgs: mut List<String> = [sel.path];
-        if not hasOpt { list.pushBack(mut nodeArgs, "-O1"); }
-        loop compileOpts as opt { list.pushBack(mut nodeArgs, opt); }
-        list.pushBack(mut nodeArgs, scriptPath);
+        if not hasOpt { mut nodeArgs.pushBack("-O1"); }
+        loop compileOpts as opt { mut nodeArgs.pushBack(opt); }
+        (mut nodeArgs).pushBack(scriptPath);
         compiled := proc.run(project.nodeExecPath(), nodeArgs, "", emptyEnv, true, "");
         if compiled.error =!= "" {
             fs.remove(tempDir.path);
@@ -193,19 +191,19 @@ run := fn(rawArgs: List<String>): Unit {
     effectiveCcOpt := if sizeOpt and not explicitCcOpt { "-Os" } else { ccOpt };
     ccArgs: mut List<String> = ["-std=c11", effectiveCcOpt, cArtifact, "-o", finalOut, "-lm"];
     if sizeOpt and proc.platform() == "darwin" {
-        list.pushBack(mut ccArgs, "-Wl,-dead_strip");
+        mut ccArgs.pushBack("-Wl,-dead_strip");
     }
     if sanitize {
-        list.pushBack(mut ccArgs, "-fsanitize=address,undefined");
-        list.pushBack(mut ccArgs, "-fno-omit-frame-pointer");
-        list.pushBack(mut ccArgs, "-g");
+        mut ccArgs.pushBack("-fsanitize=address,undefined");
+        mut ccArgs.pushBack("-fno-omit-frame-pointer");
+        mut ccArgs.pushBack("-g");
     }
     cText := fs.readText(cArtifact);
-    if cText.ok and proc.platform() == "darwin" and text.containsText(cText.text, "LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
-        list.pushBack(mut ccArgs, "-framework");
-        list.pushBack(mut ccArgs, "Cocoa");
-        list.pushBack(mut ccArgs, "-framework");
-        list.pushBack(mut ccArgs, "CoreGraphics");
+    if cText.ok and proc.platform() == "darwin" and cText.text.contains("LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
+        mut ccArgs.pushBack("-framework");
+        mut ccArgs.pushBack("Cocoa");
+        mut ccArgs.pushBack("-framework");
+        mut ccArgs.pushBack("CoreGraphics");
     }
     ccRes := proc.run(ccCmd, ccArgs, "", emptyEnv, true, "");
     fs.remove(tempDir.path);

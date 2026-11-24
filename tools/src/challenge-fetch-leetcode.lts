@@ -1,7 +1,6 @@
 /** Caches public reference-tree metadata needed by the LeetCode benchmark builder. */
 
 io := import "core/io";
-list := import "core/list";
 path := import "core/path";
 cfetch := import "util/challenge-fetch";
 project := import "util/project";

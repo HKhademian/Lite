@@ -1,9 +1,7 @@
 /* Core synchronous filesystem operations and stream openers. This module adds no host authority by itself. */
 
 diag := import "core/diag";
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
 unicode := import "core/unicode";
 
 /** File kind returned by `kind` when no filesystem entry exists at `path`. */
@@ -61,7 +59,7 @@ pub makeTempDir := fn(prefix: String): (ok: Bool, path: String, error: String);
 validateBytes := fn(bytes: List<Int>): (ok: Bool, error: String) {
     loop bytes as byte {
         if byte < BYTE_MIN or byte > BYTE_MAX {
-            return (ok = false, error = "byte value outside 0..255: " + integer.intText(byte));
+            return (ok = false, error = "byte value outside 0..255: " + byte.toText());
         }
     }
     (ok = true, error = "")

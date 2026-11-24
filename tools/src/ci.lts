@@ -4,8 +4,6 @@ io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
-list := import "core/list";
-integer := import "core/int";
 path := import "core/path";
 json := import "util/json";
 project := import "util/project";
@@ -38,7 +36,7 @@ invokeNode := fn(scriptArgs: List<String>, cwd: String): Unit {
 invokeLite := fn(root: String, subArgs: List<String>): Unit {
     nodeArgs: mut List<String> = [path.join(root, "bin/lite")];
     loop subArgs as arg {
-        list.pushBack(mut nodeArgs, arg);
+        mut nodeArgs.pushBack(arg);
     }
     invokeNode(nodeArgs, root);
 };
@@ -52,8 +50,8 @@ countTextOccurrences := fn(items: List<String>, target: String): Int {
 };
 
 sameTextList := fn(left: List<String>, right: List<String>): Bool {
-    count := list.listCountText(left);
-    if count =!= list.listCountText(right) { return false; }
+    count := left.length();
+    if count =!= right.length() { return false; }
     loop left as item {
         if countTextOccurrences(left, item) =!= countTextOccurrences(right, item) {
             return false;
@@ -64,26 +62,26 @@ sameTextList := fn(left: List<String>, right: List<String>): Bool {
 
 parseExecutedCount := fn(output: String): (ok: Bool, count: Int) {
     marker := " executed, ";
-    pos := text.indexOfText(output, marker, 0);
+    pos := output.indexOf(marker, 0);
     if pos <= 0 { return (ok = false, count = 0); }
     var start := pos;
-    loop start > 0 and text.isDigit(text.at(output, start - 1)) {
+    loop start > 0 and output.at(start - 1).isDigit() {
         start = start - 1;
     }
     if start == pos { return (ok = false, count = 0); }
-    parsed := text.textToInt(text.slice(output, start, pos));
+    parsed := output.slice(start, pos).toInt();
     (ok = parsed.ok, count = parsed.value)
 };
 
 collectFailureLines := fn(output: String): List<String> {
     found: mut List<String> = [];
-    size := text.length(output);
+    size := output.length();
     var pos := 0;
     loop pos < size {
-        nl := text.indexOfText(output, "\n", pos);
+        nl := output.indexOf("\n", pos);
         end := if nl < 0 { size } else { nl };
-        if text.startsWithAt(output, pos, "FAIL ") {
-            list.pushBack(mut found, text.slice(output, pos, end));
+        if output.startsWithAt(pos, "FAIL ") {
+            mut found.pushBack(output.slice(pos, end));
         }
         if nl < 0 { break; }
         pos = nl + 1;
@@ -104,7 +102,7 @@ verifyMigration := fn(root: String): Unit {
     loop offsets as off {
         item := json.readStringAt(cfgRead.text, off);
         if not item.ok { failCi("invalid failure entry in config/ts-migration.json"); }
-        list.pushBack(mut expectedFailures, item.value);
+        (mut expectedFailures).pushBack(item.value);
     }
 
     verifyArgs: List<String> = [path.join(root, "bin/lite"), "verify", "--all", "--no-cache"];
@@ -122,13 +120,13 @@ verifyMigration := fn(root: String): Unit {
     if not sameTextList(failures, expectedFailures) {
         failCi("migration failures changed; review new support or regressions");
     }
-    failCount := list.listCountText(failures);
+    failCount := failures.length();
     expectedStatus := if failCount > 0 { 1 } else { 0 };
     if res.status =!= expectedStatus {
         failCi("migration exit status mismatch");
     }
-    passCount := integer.intText(expectedCount.value - failCount);
-    failCountText := integer.intText(failCount);
+    passCount := (expectedCount.value - failCount).toText();
+    failCountText := failCount.toText();
     io.outputLine("Migration baseline unchanged: " + passCount + " pass; " + failCountText + " accepted-language failures remain. This is not full conformance.");
 };
 
@@ -197,9 +195,9 @@ runPublish := fn(root: String): Unit {
     }
     var isPrerelease := false;
     compField := json.findObjectField(manifestRead.text, 0, "releasedComponent");
-    if compField.found and text.startsWithAt(manifestRead.text, compField.valuePos, "{") {
+    if compField.found and manifestRead.text.startsWithAt(compField.valuePos, "{") {
         compVer := json.readObjectString(manifestRead.text, compField.valuePos, "version");
-        if compVer.found and compVer.ok and text.indexOfText(compVer.value, "-", 0) >= 0 {
+        if compVer.found and compVer.ok and compVer.value.indexOf("-", 0) >= 0 {
             isPrerelease = true;
         }
     }
@@ -207,16 +205,16 @@ runPublish := fn(root: String): Unit {
     ghCreate: mut List<String> = ["release", "create", tag];
     entries := fs.listDir(directory);
     loop entries as entry {
-        list.pushBack(mut ghCreate, path.join(directory, entry));
+        mut ghCreate.pushBack(path.join(directory, entry));
     }
-    list.pushBack(mut ghCreate, "--draft");
-    list.pushBack(mut ghCreate, "--verify-tag");
-    list.pushBack(mut ghCreate, "--latest=false");
-    list.pushBack(mut ghCreate, "--title");
-    list.pushBack(mut ghCreate, tag);
-    list.pushBack(mut ghCreate, "--notes-file");
-    list.pushBack(mut ghCreate, path.join(directory, "RELEASE-NOTES.md"));
-    if isPrerelease { list.pushBack(mut ghCreate, "--prerelease"); }
+    (mut ghCreate).pushBack("--draft");
+    mut ghCreate.pushBack("--verify-tag");
+    mut ghCreate.pushBack("--latest=false");
+    mut ghCreate.pushBack("--title");
+    mut ghCreate.pushBack(tag);
+    mut ghCreate.pushBack("--notes-file");
+    mut ghCreate.pushBack(path.join(directory, "RELEASE-NOTES.md"));
+    if isPrerelease { mut ghCreate.pushBack("--prerelease"); }
     invoke("gh", ghCreate, root);
     ghEdit: List<String> = ["release", "edit", tag, "--draft=false", "--latest=false"];
     invoke("gh", ghEdit, root);
@@ -305,7 +303,7 @@ runTask := fn(root: String, task: String): Unit {
     if task == "package" {
         tag := releaseTag();
         pkgArgs: mut List<String> = [path.join(root, "bin/lite-release"), path.join(root, "dist/release")];
-        if tag =!= "" { list.pushBack(mut pkgArgs, tag); }
+        if tag =!= "" { mut pkgArgs.pushBack(tag); }
         invokeNode(pkgArgs, root);
         return;
     }
@@ -318,16 +316,16 @@ runTask := fn(root: String, task: String): Unit {
 
 run := fn(rawArgs: List<String>): Unit {
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--" {
-        _sep := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--" {
+        _sep := mut args.popFront();
     }
-    if list.listCountText(args) =!= 1 {
+    if args.length() =!= 1 {
         failCi("CI task file required");
     }
-    taskFile := list.popFront(mut args);
+    taskFile := mut args.popFront();
     taskRead := fs.readText(taskFile);
     if not taskRead.ok { failCi(taskRead.error); }
-    task := text.trim(taskRead.text);
+    task := taskRead.text.trim();
     root := project.findRepoRoot();
     if root == "" { failCi("cannot locate repository root"); }
     runTask(root, task);

@@ -1,6 +1,5 @@
 /* Provisional bootstrap test assertions. Not an official standard library. */
 
-integer := import "core/int";
 io := import "core/io";
 
 /** Reports `FAIL name` and exits 2 unless `condition` is true. */
@@ -14,7 +13,7 @@ pub check := fn(name: String, condition: Bool): Unit {
 /** Checks one Int value and reports expected/actual text on failure. */
 pub checkInt := fn(name: String, expected: Int, actual: Int): Unit {
     if expected =!= actual {
-        io.errorLine("FAIL " + name + ": expected " + integer.intText(expected) + ", got " + integer.intText(actual));
+        io.errorLine("FAIL " + name + ": expected " + expected.toText() + ", got " + actual.toText());
         io.exit(2);
     } else { }
 }

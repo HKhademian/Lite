@@ -1,8 +1,5 @@
 /** Experimental bounded-capacity O(1) LRU caches (`extra/lru`) with strict memory ceilings across TS and C11. */
 
-integer := import "core/int";
-list := import "core/list";
-map := import "core/map";
 
 /** Opaque generational handle to a `String -> String` bounded LRU cache. */
 pub LruText := type (handle: Int, gen: Int);
@@ -83,26 +80,26 @@ var iiCacheAlive: mut List<Bool> = [];
 var iiFreeCaches: mut List<Int> = [];
 
 makeTextKey := fn(cid: Int, key: String): String {
-    integer.intText(cid) + ":" + key
+    cid.toText() + ":" + key
 };
 
 makeIntKey := fn(cid: Int, key: Int): String {
-    integer.intText(cid) + ":" + integer.intText(key)
+    cid.toText() + ":" + key.toText()
 };
 
 validTextCache := fn(cache: LruText): Bool {
     cid := cache.handle;
-    cid >= 0 and cid < list.length(ttCacheAlive) and ttCacheAlive[cid] and ttGen[cid] == cache.gen
+    cid >= 0 and cid < ttCacheAlive.length() and ttCacheAlive[cid] and ttGen[cid] == cache.gen
 };
 
 validIntCache := fn(cache: LruInt): Bool {
     cid := cache.handle;
-    cid >= 0 and cid < list.length(tiCacheAlive) and tiCacheAlive[cid] and tiGen[cid] == cache.gen
+    cid >= 0 and cid < tiCacheAlive.length() and tiCacheAlive[cid] and tiGen[cid] == cache.gen
 };
 
 validIntKeyCache := fn(cache: IntLru): Bool {
     cid := cache.handle;
-    cid >= 0 and cid < list.length(iiCacheAlive) and iiCacheAlive[cid] and iiGen[cid] == cache.gen
+    cid >= 0 and cid < iiCacheAlive.length() and iiCacheAlive[cid] and iiGen[cid] == cache.gen
 };
 
 /* ============================================================================
@@ -114,24 +111,24 @@ ttUnlink := fn(cid: Int, localIdx: Int): Unit {
     g := base + localIdx;
     p := ttPrev[g];
     n := ttNext[g];
-    if p >= 0 { list.setAt(mut ttNext, base + p, n); } else { list.setAt(mut ttHead, cid, n); }
-    if n >= 0 { list.setAt(mut ttPrev, base + n, p); } else { list.setAt(mut ttTail, cid, p); }
-    list.setAt(mut ttPrev, g, -1);
-    list.setAt(mut ttNext, g, -1);
+    if p >= 0 { mut ttNext.setAt(base + p, n); } else { mut ttHead.setAt(cid, n); }
+    if n >= 0 { mut ttPrev.setAt(base + n, p); } else { mut ttTail.setAt(cid, p); }
+    (mut ttPrev).setAt(g, -1);
+    mut ttNext.setAt(g, -1);
 };
 
 ttPushFront := fn(cid: Int, localIdx: Int): Unit {
     base := ttBase[cid];
     g := base + localIdx;
     oldHead := ttHead[cid];
-    list.setAt(mut ttPrev, g, -1);
-    list.setAt(mut ttNext, g, oldHead);
+    mut ttPrev.setAt(g, -1);
+    mut ttNext.setAt(g, oldHead);
     if oldHead >= 0 {
-        list.setAt(mut ttPrev, base + oldHead, localIdx);
+        mut ttPrev.setAt(base + oldHead, localIdx);
     } else {
-        list.setAt(mut ttTail, cid, localIdx);
+        mut ttTail.setAt(cid, localIdx);
     }
-    list.setAt(mut ttHead, cid, localIdx);
+    (mut ttHead).setAt(cid, localIdx);
 };
 
 ttPurgeAll := fn(cid: Int): Unit {
@@ -141,66 +138,66 @@ ttPurgeAll := fn(cid: Int): Unit {
     loop i < cap {
         g := base + i;
         if ttAlive[g] {
-            _rm := map.remove(mut ttIndex, makeTextKey(cid, ttKey[g]));
-            list.setAt(mut ttAlive, g, false);
-            list.setAt(mut ttKey, g, "");
-            list.setAt(mut ttVal, g, "");
+            _rm := mut ttIndex.remove(makeTextKey(cid, ttKey[g]));
+            mut ttAlive.setAt(g, false);
+            mut ttKey.setAt(g, "");
+            mut ttVal.setAt(g, "");
         }
-        list.setAt(mut ttPrev, g, -1);
-        list.setAt(mut ttNext, g, -1);
-        list.setAt(mut ttFreeNext, g, if i + 1 < cap { i + 1 } else { -1 });
+        (mut ttPrev).setAt(g, -1);
+        mut ttNext.setAt(g, -1);
+        mut ttFreeNext.setAt(g, if i + 1 < cap { i + 1 } else { -1 });
         i += 1;
     }
-    list.setAt(mut ttCount, cid, 0);
-    list.setAt(mut ttHead, cid, -1);
-    list.setAt(mut ttTail, cid, -1);
-    list.setAt(mut ttFreeHead, cid, if cap > 0 { 0 } else { -1 });
-    list.setAt(mut ttHits, cid, 0);
-    list.setAt(mut ttMisses, cid, 0);
-    list.setAt(mut ttEvictions, cid, 0);
+    (mut ttCount).setAt(cid, 0);
+    mut ttHead.setAt(cid, -1);
+    mut ttTail.setAt(cid, -1);
+    mut ttFreeHead.setAt(cid, if cap > 0 { 0 } else { -1 });
+    mut ttHits.setAt(cid, 0);
+    mut ttMisses.setAt(cid, 0);
+    mut ttEvictions.setAt(cid, 0);
 };
 
 /** Creates a bounded `String -> String` LRU cache with capacity `max(1, capacity)`. */
 pub createText := fn(capacity: Int): LruText {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := list.length(ttFreeCaches) - 1;
+    var fi := ttFreeCaches.length() - 1;
     loop fi >= 0 {
         cid := ttFreeCaches[fi];
         if ttCap[cid] >= cap {
-            last := list.length(ttFreeCaches) - 1;
-            if fi =!= last { list.setAt(mut ttFreeCaches, fi, ttFreeCaches[last]); }
-            _drop := list.popBack(mut ttFreeCaches);
-            list.setAt(mut ttCap, cid, cap);
+            last := ttFreeCaches.length() - 1;
+            if fi =!= last { mut ttFreeCaches.setAt(fi, ttFreeCaches[last]); }
+            _drop := mut ttFreeCaches.popBack();
+            mut ttCap.setAt(cid, cap);
             ttPurgeAll(cid);
-            list.setAt(mut ttCacheAlive, cid, true);
+            mut ttCacheAlive.setAt(cid, true);
             return (handle = cid, gen = ttGen[cid]);
         }
         fi -= 1;
     }
 
-    base := list.length(ttKey);
+    base := ttKey.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut ttKey, "");
-        list.pushBack(mut ttVal, "");
-        list.pushBack(mut ttPrev, -1);
-        list.pushBack(mut ttNext, -1);
-        list.pushBack(mut ttAlive, false);
-        list.pushBack(mut ttFreeNext, if i + 1 < cap { i + 1 } else { -1 });
+        mut ttKey.pushBack("");
+        mut ttVal.pushBack("");
+        mut ttPrev.pushBack(-1);
+        mut ttNext.pushBack(-1);
+        mut ttAlive.pushBack(false);
+        mut ttFreeNext.pushBack(if i + 1 < cap { i + 1 } else { -1 });
         i += 1;
     }
-    cid := list.length(ttBase);
-    list.pushBack(mut ttBase, base);
-    list.pushBack(mut ttCap, cap);
-    list.pushBack(mut ttCount, 0);
-    list.pushBack(mut ttHead, -1);
-    list.pushBack(mut ttTail, -1);
-    list.pushBack(mut ttFreeHead, 0);
-    list.pushBack(mut ttHits, 0);
-    list.pushBack(mut ttMisses, 0);
-    list.pushBack(mut ttEvictions, 0);
-    list.pushBack(mut ttGen, 1);
-    list.pushBack(mut ttCacheAlive, true);
+    cid := ttBase.length();
+    mut ttBase.pushBack(base);
+    mut ttCap.pushBack(cap);
+    mut ttCount.pushBack(0);
+    mut ttHead.pushBack(-1);
+    mut ttTail.pushBack(-1);
+    mut ttFreeHead.pushBack(0);
+    mut ttHits.pushBack(0);
+    mut ttMisses.pushBack(0);
+    mut ttEvictions.pushBack(0);
+    mut ttGen.pushBack(1);
+    mut ttCacheAlive.pushBack(true);
     (handle = cid, gen = 1)
 };
 
@@ -212,10 +209,10 @@ pub putText := fn(cache: LruText, key: String, value: String): (evicted: Bool, e
     cid := cache.handle;
     base := ttBase[cid];
     mk := makeTextKey(cid, key);
-    existing := map.get(ttIndex, mk);
+    existing := ttIndex.get(mk);
     if existing.found {
         localIdx := existing.value;
-        list.setAt(mut ttVal, base + localIdx, value);
+        mut ttVal.setAt(base + localIdx, value);
         if ttHead[cid] =!= localIdx {
             ttUnlink(cid, localIdx);
             ttPushFront(cid, localIdx);
@@ -228,9 +225,9 @@ pub putText := fn(cache: LruText, key: String, value: String): (evicted: Bool, e
     var evVal := "";
     var slot := ttFreeHead[cid];
     if slot >= 0 {
-        list.setAt(mut ttFreeHead, cid, ttFreeNext[base + slot]);
-        list.setAt(mut ttFreeNext, base + slot, -1);
-        list.setAt(mut ttCount, cid, ttCount[cid] + 1);
+        mut ttFreeHead.setAt(cid, ttFreeNext[base + slot]);
+        mut ttFreeNext.setAt(base + slot, -1);
+        mut ttCount.setAt(cid, ttCount[cid] + 1);
     } else {
         /* Evict LRU tail and reuse its slot in O(1). */
         slot = ttTail[cid];
@@ -238,17 +235,17 @@ pub putText := fn(cache: LruText, key: String, value: String): (evicted: Bool, e
         evicted = true;
         evKey = ttKey[gOld];
         evVal = ttVal[gOld];
-        _rm := map.remove(mut ttIndex, makeTextKey(cid, evKey));
+        _rm := mut ttIndex.remove(makeTextKey(cid, evKey));
         ttUnlink(cid, slot);
-        list.setAt(mut ttEvictions, cid, ttEvictions[cid] + 1);
+        mut ttEvictions.setAt(cid, ttEvictions[cid] + 1);
     }
 
     g := base + slot;
-    list.setAt(mut ttKey, g, key);
-    list.setAt(mut ttVal, g, value);
-    list.setAt(mut ttAlive, g, true);
+    mut ttKey.setAt(g, key);
+    mut ttVal.setAt(g, value);
+    mut ttAlive.setAt(g, true);
     ttPushFront(cid, slot);
-    map.set(mut ttIndex, mk, slot);
+    mut ttIndex.set(mk, slot);
     (evicted = evicted, evictedKey = evKey, evictedValue = evVal)
 };
 
@@ -256,13 +253,13 @@ pub putText := fn(cache: LruText, key: String, value: String): (evicted: Bool, e
 pub getText := fn(cache: LruText, key: String): (found: Bool, value: String) {
     if not validTextCache(cache) { return (found = false, value = ""); }
     cid := cache.handle;
-    res := map.get(ttIndex, makeTextKey(cid, key));
+    res := ttIndex.get(makeTextKey(cid, key));
     if not res.found {
-        list.setAt(mut ttMisses, cid, ttMisses[cid] + 1);
+        mut ttMisses.setAt(cid, ttMisses[cid] + 1);
         return (found = false, value = "");
     }
     localIdx := res.value;
-    list.setAt(mut ttHits, cid, ttHits[cid] + 1);
+    mut ttHits.setAt(cid, ttHits[cid] + 1);
     if ttHead[cid] =!= localIdx {
         ttUnlink(cid, localIdx);
         ttPushFront(cid, localIdx);
@@ -274,7 +271,7 @@ pub getText := fn(cache: LruText, key: String): (found: Bool, value: String) {
 pub peekText := fn(cache: LruText, key: String): (found: Bool, value: String) {
     if not validTextCache(cache) { return (found = false, value = ""); }
     cid := cache.handle;
-    res := map.get(ttIndex, makeTextKey(cid, key));
+    res := ttIndex.get(makeTextKey(cid, key));
     if not res.found { return (found = false, value = ""); }
     (found = true, value = ttVal[ttBase[cid] + res.value])
 };
@@ -282,7 +279,7 @@ pub peekText := fn(cache: LruText, key: String): (found: Bool, value: String) {
 /** True when `key` is currently cached in `cache`. */
 pub hasText := fn(cache: LruText, key: String): Bool {
     if not validTextCache(cache) { return false; }
-    map.has(ttIndex, makeTextKey(cache.handle, key))
+    ttIndex.has(makeTextKey(cache.handle, key))
 };
 
 /** Removes `key` from `cache` in O(1); returns `true` if it was present. */
@@ -290,18 +287,18 @@ pub removeText := fn(cache: LruText, key: String): Bool {
     if not validTextCache(cache) { return false; }
     cid := cache.handle;
     mk := makeTextKey(cid, key);
-    res := map.get(ttIndex, mk);
+    res := ttIndex.get(mk);
     if not res.found { return false; }
     localIdx := res.value;
     g := ttBase[cid] + localIdx;
-    _rm := map.remove(mut ttIndex, mk);
+    _rm := mut ttIndex.remove(mk);
     ttUnlink(cid, localIdx);
-    list.setAt(mut ttAlive, g, false);
-    list.setAt(mut ttKey, g, "");
-    list.setAt(mut ttVal, g, "");
-    list.setAt(mut ttFreeNext, g, ttFreeHead[cid]);
-    list.setAt(mut ttFreeHead, cid, localIdx);
-    list.setAt(mut ttCount, cid, ttCount[cid] - 1);
+    mut ttAlive.setAt(g, false);
+    mut ttKey.setAt(g, "");
+    mut ttVal.setAt(g, "");
+    mut ttFreeNext.setAt(g, ttFreeHead[cid]);
+    mut ttFreeHead.setAt(cid, localIdx);
+    mut ttCount.setAt(cid, ttCount[cid] - 1);
     true
 };
 
@@ -314,15 +311,15 @@ pub evictOldestText := fn(cache: LruText): (evicted: Bool, key: String, value: S
     g := ttBase[cid] + tail;
     k := ttKey[g];
     v := ttVal[g];
-    _rm := map.remove(mut ttIndex, makeTextKey(cid, k));
+    _rm := mut ttIndex.remove(makeTextKey(cid, k));
     ttUnlink(cid, tail);
-    list.setAt(mut ttAlive, g, false);
-    list.setAt(mut ttKey, g, "");
-    list.setAt(mut ttVal, g, "");
-    list.setAt(mut ttFreeNext, g, ttFreeHead[cid]);
-    list.setAt(mut ttFreeHead, cid, tail);
-    list.setAt(mut ttCount, cid, ttCount[cid] - 1);
-    list.setAt(mut ttEvictions, cid, ttEvictions[cid] + 1);
+    mut ttAlive.setAt(g, false);
+    mut ttKey.setAt(g, "");
+    mut ttVal.setAt(g, "");
+    mut ttFreeNext.setAt(g, ttFreeHead[cid]);
+    mut ttFreeHead.setAt(cid, tail);
+    mut ttCount.setAt(cid, ttCount[cid] - 1);
+    mut ttEvictions.setAt(cid, ttEvictions[cid] + 1);
     (evicted = true, key = k, value = v)
 };
 
@@ -374,9 +371,9 @@ pub destroyText := fn(cache: LruText): Unit {
     if not validTextCache(cache) { return; }
     cid := cache.handle;
     ttPurgeAll(cid);
-    list.setAt(mut ttCacheAlive, cid, false);
-    list.setAt(mut ttGen, cid, ttGen[cid] + 1);
-    list.pushBack(mut ttFreeCaches, cid);
+    mut ttCacheAlive.setAt(cid, false);
+    mut ttGen.setAt(cid, ttGen[cid] + 1);
+    mut ttFreeCaches.pushBack(cid);
 };
 
 /* ============================================================================
@@ -388,24 +385,24 @@ tiUnlink := fn(cid: Int, localIdx: Int): Unit {
     g := base + localIdx;
     p := tiPrev[g];
     n := tiNext[g];
-    if p >= 0 { list.setAt(mut tiNext, base + p, n); } else { list.setAt(mut tiHead, cid, n); }
-    if n >= 0 { list.setAt(mut tiPrev, base + n, p); } else { list.setAt(mut tiTail, cid, p); }
-    list.setAt(mut tiPrev, g, -1);
-    list.setAt(mut tiNext, g, -1);
+    if p >= 0 { mut tiNext.setAt(base + p, n); } else { mut tiHead.setAt(cid, n); }
+    if n >= 0 { mut tiPrev.setAt(base + n, p); } else { mut tiTail.setAt(cid, p); }
+    (mut tiPrev).setAt(g, -1);
+    mut tiNext.setAt(g, -1);
 };
 
 tiPushFront := fn(cid: Int, localIdx: Int): Unit {
     base := tiBase[cid];
     g := base + localIdx;
     oldHead := tiHead[cid];
-    list.setAt(mut tiPrev, g, -1);
-    list.setAt(mut tiNext, g, oldHead);
+    mut tiPrev.setAt(g, -1);
+    mut tiNext.setAt(g, oldHead);
     if oldHead >= 0 {
-        list.setAt(mut tiPrev, base + oldHead, localIdx);
+        mut tiPrev.setAt(base + oldHead, localIdx);
     } else {
-        list.setAt(mut tiTail, cid, localIdx);
+        mut tiTail.setAt(cid, localIdx);
     }
-    list.setAt(mut tiHead, cid, localIdx);
+    (mut tiHead).setAt(cid, localIdx);
 };
 
 tiPurgeAll := fn(cid: Int): Unit {
@@ -415,66 +412,66 @@ tiPurgeAll := fn(cid: Int): Unit {
     loop i < cap {
         g := base + i;
         if tiAlive[g] {
-            _rm := map.remove(mut tiIndex, makeTextKey(cid, tiKey[g]));
-            list.setAt(mut tiAlive, g, false);
-            list.setAt(mut tiKey, g, "");
-            list.setAt(mut tiVal, g, 0);
+            _rm := mut tiIndex.remove(makeTextKey(cid, tiKey[g]));
+            mut tiAlive.setAt(g, false);
+            mut tiKey.setAt(g, "");
+            mut tiVal.setAt(g, 0);
         }
-        list.setAt(mut tiPrev, g, -1);
-        list.setAt(mut tiNext, g, -1);
-        list.setAt(mut tiFreeNext, g, if i + 1 < cap { i + 1 } else { -1 });
+        (mut tiPrev).setAt(g, -1);
+        mut tiNext.setAt(g, -1);
+        mut tiFreeNext.setAt(g, if i + 1 < cap { i + 1 } else { -1 });
         i += 1;
     }
-    list.setAt(mut tiCount, cid, 0);
-    list.setAt(mut tiHead, cid, -1);
-    list.setAt(mut tiTail, cid, -1);
-    list.setAt(mut tiFreeHead, cid, if cap > 0 { 0 } else { -1 });
-    list.setAt(mut tiHits, cid, 0);
-    list.setAt(mut tiMisses, cid, 0);
-    list.setAt(mut tiEvictions, cid, 0);
+    (mut tiCount).setAt(cid, 0);
+    mut tiHead.setAt(cid, -1);
+    mut tiTail.setAt(cid, -1);
+    mut tiFreeHead.setAt(cid, if cap > 0 { 0 } else { -1 });
+    mut tiHits.setAt(cid, 0);
+    mut tiMisses.setAt(cid, 0);
+    mut tiEvictions.setAt(cid, 0);
 };
 
 /** Creates a bounded `String -> Int` LRU cache with capacity `max(1, capacity)`. */
 pub createInt := fn(capacity: Int): LruInt {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := list.length(tiFreeCaches) - 1;
+    var fi := tiFreeCaches.length() - 1;
     loop fi >= 0 {
         cid := tiFreeCaches[fi];
         if tiCap[cid] >= cap {
-            last := list.length(tiFreeCaches) - 1;
-            if fi =!= last { list.setAt(mut tiFreeCaches, fi, tiFreeCaches[last]); }
-            _drop := list.popBack(mut tiFreeCaches);
-            list.setAt(mut tiCap, cid, cap);
+            last := tiFreeCaches.length() - 1;
+            if fi =!= last { mut tiFreeCaches.setAt(fi, tiFreeCaches[last]); }
+            _drop := mut tiFreeCaches.popBack();
+            mut tiCap.setAt(cid, cap);
             tiPurgeAll(cid);
-            list.setAt(mut tiCacheAlive, cid, true);
+            mut tiCacheAlive.setAt(cid, true);
             return (handle = cid, gen = tiGen[cid]);
         }
         fi -= 1;
     }
 
-    base := list.length(tiKey);
+    base := tiKey.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut tiKey, "");
-        list.pushBack(mut tiVal, 0);
-        list.pushBack(mut tiPrev, -1);
-        list.pushBack(mut tiNext, -1);
-        list.pushBack(mut tiAlive, false);
-        list.pushBack(mut tiFreeNext, if i + 1 < cap { i + 1 } else { -1 });
+        mut tiKey.pushBack("");
+        mut tiVal.pushBack(0);
+        mut tiPrev.pushBack(-1);
+        mut tiNext.pushBack(-1);
+        mut tiAlive.pushBack(false);
+        mut tiFreeNext.pushBack(if i + 1 < cap { i + 1 } else { -1 });
         i += 1;
     }
-    cid := list.length(tiBase);
-    list.pushBack(mut tiBase, base);
-    list.pushBack(mut tiCap, cap);
-    list.pushBack(mut tiCount, 0);
-    list.pushBack(mut tiHead, -1);
-    list.pushBack(mut tiTail, -1);
-    list.pushBack(mut tiFreeHead, 0);
-    list.pushBack(mut tiHits, 0);
-    list.pushBack(mut tiMisses, 0);
-    list.pushBack(mut tiEvictions, 0);
-    list.pushBack(mut tiGen, 1);
-    list.pushBack(mut tiCacheAlive, true);
+    cid := tiBase.length();
+    mut tiBase.pushBack(base);
+    mut tiCap.pushBack(cap);
+    mut tiCount.pushBack(0);
+    mut tiHead.pushBack(-1);
+    mut tiTail.pushBack(-1);
+    mut tiFreeHead.pushBack(0);
+    mut tiHits.pushBack(0);
+    mut tiMisses.pushBack(0);
+    mut tiEvictions.pushBack(0);
+    mut tiGen.pushBack(1);
+    mut tiCacheAlive.pushBack(true);
     (handle = cid, gen = 1)
 };
 
@@ -486,10 +483,10 @@ pub putInt := fn(cache: LruInt, key: String, value: Int): (evicted: Bool, evicte
     cid := cache.handle;
     base := tiBase[cid];
     mk := makeTextKey(cid, key);
-    existing := map.get(tiIndex, mk);
+    existing := tiIndex.get(mk);
     if existing.found {
         localIdx := existing.value;
-        list.setAt(mut tiVal, base + localIdx, value);
+        mut tiVal.setAt(base + localIdx, value);
         if tiHead[cid] =!= localIdx {
             tiUnlink(cid, localIdx);
             tiPushFront(cid, localIdx);
@@ -502,26 +499,26 @@ pub putInt := fn(cache: LruInt, key: String, value: Int): (evicted: Bool, evicte
     var evVal := 0;
     var slot := tiFreeHead[cid];
     if slot >= 0 {
-        list.setAt(mut tiFreeHead, cid, tiFreeNext[base + slot]);
-        list.setAt(mut tiFreeNext, base + slot, -1);
-        list.setAt(mut tiCount, cid, tiCount[cid] + 1);
+        mut tiFreeHead.setAt(cid, tiFreeNext[base + slot]);
+        mut tiFreeNext.setAt(base + slot, -1);
+        mut tiCount.setAt(cid, tiCount[cid] + 1);
     } else {
         slot = tiTail[cid];
         gOld := base + slot;
         evicted = true;
         evKey = tiKey[gOld];
         evVal = tiVal[gOld];
-        _rm := map.remove(mut tiIndex, makeTextKey(cid, evKey));
+        _rm := mut tiIndex.remove(makeTextKey(cid, evKey));
         tiUnlink(cid, slot);
-        list.setAt(mut tiEvictions, cid, tiEvictions[cid] + 1);
+        mut tiEvictions.setAt(cid, tiEvictions[cid] + 1);
     }
 
     g := base + slot;
-    list.setAt(mut tiKey, g, key);
-    list.setAt(mut tiVal, g, value);
-    list.setAt(mut tiAlive, g, true);
+    mut tiKey.setAt(g, key);
+    mut tiVal.setAt(g, value);
+    mut tiAlive.setAt(g, true);
     tiPushFront(cid, slot);
-    map.set(mut tiIndex, mk, slot);
+    mut tiIndex.set(mk, slot);
     (evicted = evicted, evictedKey = evKey, evictedValue = evVal)
 };
 
@@ -529,13 +526,13 @@ pub putInt := fn(cache: LruInt, key: String, value: Int): (evicted: Bool, evicte
 pub getInt := fn(cache: LruInt, key: String): (found: Bool, value: Int) {
     if not validIntCache(cache) { return (found = false, value = 0); }
     cid := cache.handle;
-    res := map.get(tiIndex, makeTextKey(cid, key));
+    res := tiIndex.get(makeTextKey(cid, key));
     if not res.found {
-        list.setAt(mut tiMisses, cid, tiMisses[cid] + 1);
+        mut tiMisses.setAt(cid, tiMisses[cid] + 1);
         return (found = false, value = 0);
     }
     localIdx := res.value;
-    list.setAt(mut tiHits, cid, tiHits[cid] + 1);
+    mut tiHits.setAt(cid, tiHits[cid] + 1);
     if tiHead[cid] =!= localIdx {
         tiUnlink(cid, localIdx);
         tiPushFront(cid, localIdx);
@@ -547,7 +544,7 @@ pub getInt := fn(cache: LruInt, key: String): (found: Bool, value: Int) {
 pub peekInt := fn(cache: LruInt, key: String): (found: Bool, value: Int) {
     if not validIntCache(cache) { return (found = false, value = 0); }
     cid := cache.handle;
-    res := map.get(tiIndex, makeTextKey(cid, key));
+    res := tiIndex.get(makeTextKey(cid, key));
     if not res.found { return (found = false, value = 0); }
     (found = true, value = tiVal[tiBase[cid] + res.value])
 };
@@ -555,7 +552,7 @@ pub peekInt := fn(cache: LruInt, key: String): (found: Bool, value: Int) {
 /** True when `key` is currently cached in `cache`. */
 pub hasInt := fn(cache: LruInt, key: String): Bool {
     if not validIntCache(cache) { return false; }
-    map.has(tiIndex, makeTextKey(cache.handle, key))
+    tiIndex.has(makeTextKey(cache.handle, key))
 };
 
 /** Removes `key` from `cache` in O(1). */
@@ -563,18 +560,18 @@ pub removeInt := fn(cache: LruInt, key: String): Bool {
     if not validIntCache(cache) { return false; }
     cid := cache.handle;
     mk := makeTextKey(cid, key);
-    res := map.get(tiIndex, mk);
+    res := tiIndex.get(mk);
     if not res.found { return false; }
     localIdx := res.value;
     g := tiBase[cid] + localIdx;
-    _rm := map.remove(mut tiIndex, mk);
+    _rm := mut tiIndex.remove(mk);
     tiUnlink(cid, localIdx);
-    list.setAt(mut tiAlive, g, false);
-    list.setAt(mut tiKey, g, "");
-    list.setAt(mut tiVal, g, 0);
-    list.setAt(mut tiFreeNext, g, tiFreeHead[cid]);
-    list.setAt(mut tiFreeHead, cid, localIdx);
-    list.setAt(mut tiCount, cid, tiCount[cid] - 1);
+    mut tiAlive.setAt(g, false);
+    mut tiKey.setAt(g, "");
+    mut tiVal.setAt(g, 0);
+    mut tiFreeNext.setAt(g, tiFreeHead[cid]);
+    mut tiFreeHead.setAt(cid, localIdx);
+    mut tiCount.setAt(cid, tiCount[cid] - 1);
     true
 };
 
@@ -587,15 +584,15 @@ pub evictOldestInt := fn(cache: LruInt): (evicted: Bool, key: String, value: Int
     g := tiBase[cid] + tail;
     k := tiKey[g];
     v := tiVal[g];
-    _rm := map.remove(mut tiIndex, makeTextKey(cid, k));
+    _rm := mut tiIndex.remove(makeTextKey(cid, k));
     tiUnlink(cid, tail);
-    list.setAt(mut tiAlive, g, false);
-    list.setAt(mut tiKey, g, "");
-    list.setAt(mut tiVal, g, 0);
-    list.setAt(mut tiFreeNext, g, tiFreeHead[cid]);
-    list.setAt(mut tiFreeHead, cid, tail);
-    list.setAt(mut tiCount, cid, tiCount[cid] - 1);
-    list.setAt(mut tiEvictions, cid, tiEvictions[cid] + 1);
+    mut tiAlive.setAt(g, false);
+    mut tiKey.setAt(g, "");
+    mut tiVal.setAt(g, 0);
+    mut tiFreeNext.setAt(g, tiFreeHead[cid]);
+    mut tiFreeHead.setAt(cid, tail);
+    mut tiCount.setAt(cid, tiCount[cid] - 1);
+    mut tiEvictions.setAt(cid, tiEvictions[cid] + 1);
     (evicted = true, key = k, value = v)
 };
 
@@ -629,9 +626,9 @@ pub destroyInt := fn(cache: LruInt): Unit {
     if not validIntCache(cache) { return; }
     cid := cache.handle;
     tiPurgeAll(cid);
-    list.setAt(mut tiCacheAlive, cid, false);
-    list.setAt(mut tiGen, cid, tiGen[cid] + 1);
-    list.pushBack(mut tiFreeCaches, cid);
+    mut tiCacheAlive.setAt(cid, false);
+    mut tiGen.setAt(cid, tiGen[cid] + 1);
+    mut tiFreeCaches.pushBack(cid);
 };
 
 /* ============================================================================
@@ -643,24 +640,24 @@ iiUnlink := fn(cid: Int, localIdx: Int): Unit {
     g := base + localIdx;
     p := iiPrev[g];
     n := iiNext[g];
-    if p >= 0 { list.setAt(mut iiNext, base + p, n); } else { list.setAt(mut iiHead, cid, n); }
-    if n >= 0 { list.setAt(mut iiPrev, base + n, p); } else { list.setAt(mut iiTail, cid, p); }
-    list.setAt(mut iiPrev, g, -1);
-    list.setAt(mut iiNext, g, -1);
+    if p >= 0 { mut iiNext.setAt(base + p, n); } else { mut iiHead.setAt(cid, n); }
+    if n >= 0 { mut iiPrev.setAt(base + n, p); } else { mut iiTail.setAt(cid, p); }
+    (mut iiPrev).setAt(g, -1);
+    mut iiNext.setAt(g, -1);
 };
 
 iiPushFront := fn(cid: Int, localIdx: Int): Unit {
     base := iiBase[cid];
     g := base + localIdx;
     oldHead := iiHead[cid];
-    list.setAt(mut iiPrev, g, -1);
-    list.setAt(mut iiNext, g, oldHead);
+    mut iiPrev.setAt(g, -1);
+    mut iiNext.setAt(g, oldHead);
     if oldHead >= 0 {
-        list.setAt(mut iiPrev, base + oldHead, localIdx);
+        mut iiPrev.setAt(base + oldHead, localIdx);
     } else {
-        list.setAt(mut iiTail, cid, localIdx);
+        mut iiTail.setAt(cid, localIdx);
     }
-    list.setAt(mut iiHead, cid, localIdx);
+    (mut iiHead).setAt(cid, localIdx);
 };
 
 iiPurgeAll := fn(cid: Int): Unit {
@@ -670,66 +667,66 @@ iiPurgeAll := fn(cid: Int): Unit {
     loop i < cap {
         g := base + i;
         if iiAlive[g] {
-            _rm := map.remove(mut iiIndex, makeIntKey(cid, iiKey[g]));
-            list.setAt(mut iiAlive, g, false);
-            list.setAt(mut iiKey, g, 0);
-            list.setAt(mut iiVal, g, 0);
+            _rm := mut iiIndex.remove(makeIntKey(cid, iiKey[g]));
+            mut iiAlive.setAt(g, false);
+            mut iiKey.setAt(g, 0);
+            mut iiVal.setAt(g, 0);
         }
-        list.setAt(mut iiPrev, g, -1);
-        list.setAt(mut iiNext, g, -1);
-        list.setAt(mut iiFreeNext, g, if i + 1 < cap { i + 1 } else { -1 });
+        (mut iiPrev).setAt(g, -1);
+        mut iiNext.setAt(g, -1);
+        mut iiFreeNext.setAt(g, if i + 1 < cap { i + 1 } else { -1 });
         i += 1;
     }
-    list.setAt(mut iiCount, cid, 0);
-    list.setAt(mut iiHead, cid, -1);
-    list.setAt(mut iiTail, cid, -1);
-    list.setAt(mut iiFreeHead, cid, if cap > 0 { 0 } else { -1 });
-    list.setAt(mut iiHits, cid, 0);
-    list.setAt(mut iiMisses, cid, 0);
-    list.setAt(mut iiEvictions, cid, 0);
+    (mut iiCount).setAt(cid, 0);
+    mut iiHead.setAt(cid, -1);
+    mut iiTail.setAt(cid, -1);
+    mut iiFreeHead.setAt(cid, if cap > 0 { 0 } else { -1 });
+    mut iiHits.setAt(cid, 0);
+    mut iiMisses.setAt(cid, 0);
+    mut iiEvictions.setAt(cid, 0);
 };
 
 /** Creates a bounded `Int -> Int` LRU cache with capacity `max(1, capacity)`. */
 pub createIntKey := fn(capacity: Int): IntLru {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := list.length(iiFreeCaches) - 1;
+    var fi := iiFreeCaches.length() - 1;
     loop fi >= 0 {
         cid := iiFreeCaches[fi];
         if iiCap[cid] >= cap {
-            last := list.length(iiFreeCaches) - 1;
-            if fi =!= last { list.setAt(mut iiFreeCaches, fi, iiFreeCaches[last]); }
-            _drop := list.popBack(mut iiFreeCaches);
-            list.setAt(mut iiCap, cid, cap);
+            last := iiFreeCaches.length() - 1;
+            if fi =!= last { mut iiFreeCaches.setAt(fi, iiFreeCaches[last]); }
+            _drop := mut iiFreeCaches.popBack();
+            mut iiCap.setAt(cid, cap);
             iiPurgeAll(cid);
-            list.setAt(mut iiCacheAlive, cid, true);
+            mut iiCacheAlive.setAt(cid, true);
             return (handle = cid, gen = iiGen[cid]);
         }
         fi -= 1;
     }
 
-    base := list.length(iiKey);
+    base := iiKey.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut iiKey, 0);
-        list.pushBack(mut iiVal, 0);
-        list.pushBack(mut iiPrev, -1);
-        list.pushBack(mut iiNext, -1);
-        list.pushBack(mut iiAlive, false);
-        list.pushBack(mut iiFreeNext, if i + 1 < cap { i + 1 } else { -1 });
+        mut iiKey.pushBack(0);
+        mut iiVal.pushBack(0);
+        mut iiPrev.pushBack(-1);
+        mut iiNext.pushBack(-1);
+        mut iiAlive.pushBack(false);
+        mut iiFreeNext.pushBack(if i + 1 < cap { i + 1 } else { -1 });
         i += 1;
     }
-    cid := list.length(iiBase);
-    list.pushBack(mut iiBase, base);
-    list.pushBack(mut iiCap, cap);
-    list.pushBack(mut iiCount, 0);
-    list.pushBack(mut iiHead, -1);
-    list.pushBack(mut iiTail, -1);
-    list.pushBack(mut iiFreeHead, 0);
-    list.pushBack(mut iiHits, 0);
-    list.pushBack(mut iiMisses, 0);
-    list.pushBack(mut iiEvictions, 0);
-    list.pushBack(mut iiGen, 1);
-    list.pushBack(mut iiCacheAlive, true);
+    cid := iiBase.length();
+    mut iiBase.pushBack(base);
+    mut iiCap.pushBack(cap);
+    mut iiCount.pushBack(0);
+    mut iiHead.pushBack(-1);
+    mut iiTail.pushBack(-1);
+    mut iiFreeHead.pushBack(0);
+    mut iiHits.pushBack(0);
+    mut iiMisses.pushBack(0);
+    mut iiEvictions.pushBack(0);
+    mut iiGen.pushBack(1);
+    mut iiCacheAlive.pushBack(true);
     (handle = cid, gen = 1)
 };
 
@@ -741,10 +738,10 @@ pub putIntKey := fn(cache: IntLru, key: Int, value: Int): (evicted: Bool, evicte
     cid := cache.handle;
     base := iiBase[cid];
     mk := makeIntKey(cid, key);
-    existing := map.get(iiIndex, mk);
+    existing := iiIndex.get(mk);
     if existing.found {
         localIdx := existing.value;
-        list.setAt(mut iiVal, base + localIdx, value);
+        mut iiVal.setAt(base + localIdx, value);
         if iiHead[cid] =!= localIdx {
             iiUnlink(cid, localIdx);
             iiPushFront(cid, localIdx);
@@ -757,26 +754,26 @@ pub putIntKey := fn(cache: IntLru, key: Int, value: Int): (evicted: Bool, evicte
     var evVal := 0;
     var slot := iiFreeHead[cid];
     if slot >= 0 {
-        list.setAt(mut iiFreeHead, cid, iiFreeNext[base + slot]);
-        list.setAt(mut iiFreeNext, base + slot, -1);
-        list.setAt(mut iiCount, cid, iiCount[cid] + 1);
+        mut iiFreeHead.setAt(cid, iiFreeNext[base + slot]);
+        mut iiFreeNext.setAt(base + slot, -1);
+        mut iiCount.setAt(cid, iiCount[cid] + 1);
     } else {
         slot = iiTail[cid];
         gOld := base + slot;
         evicted = true;
         evKey = iiKey[gOld];
         evVal = iiVal[gOld];
-        _rm := map.remove(mut iiIndex, makeIntKey(cid, evKey));
+        _rm := mut iiIndex.remove(makeIntKey(cid, evKey));
         iiUnlink(cid, slot);
-        list.setAt(mut iiEvictions, cid, iiEvictions[cid] + 1);
+        mut iiEvictions.setAt(cid, iiEvictions[cid] + 1);
     }
 
     g := base + slot;
-    list.setAt(mut iiKey, g, key);
-    list.setAt(mut iiVal, g, value);
-    list.setAt(mut iiAlive, g, true);
+    mut iiKey.setAt(g, key);
+    mut iiVal.setAt(g, value);
+    mut iiAlive.setAt(g, true);
     iiPushFront(cid, slot);
-    map.set(mut iiIndex, mk, slot);
+    mut iiIndex.set(mk, slot);
     (evicted = evicted, evictedKey = evKey, evictedValue = evVal)
 };
 
@@ -784,13 +781,13 @@ pub putIntKey := fn(cache: IntLru, key: Int, value: Int): (evicted: Bool, evicte
 pub getIntKey := fn(cache: IntLru, key: Int): (found: Bool, value: Int) {
     if not validIntKeyCache(cache) { return (found = false, value = 0); }
     cid := cache.handle;
-    res := map.get(iiIndex, makeIntKey(cid, key));
+    res := iiIndex.get(makeIntKey(cid, key));
     if not res.found {
-        list.setAt(mut iiMisses, cid, iiMisses[cid] + 1);
+        mut iiMisses.setAt(cid, iiMisses[cid] + 1);
         return (found = false, value = 0);
     }
     localIdx := res.value;
-    list.setAt(mut iiHits, cid, iiHits[cid] + 1);
+    mut iiHits.setAt(cid, iiHits[cid] + 1);
     if iiHead[cid] =!= localIdx {
         iiUnlink(cid, localIdx);
         iiPushFront(cid, localIdx);
@@ -802,7 +799,7 @@ pub getIntKey := fn(cache: IntLru, key: Int): (found: Bool, value: Int) {
 pub peekIntKey := fn(cache: IntLru, key: Int): (found: Bool, value: Int) {
     if not validIntKeyCache(cache) { return (found = false, value = 0); }
     cid := cache.handle;
-    res := map.get(iiIndex, makeIntKey(cid, key));
+    res := iiIndex.get(makeIntKey(cid, key));
     if not res.found { return (found = false, value = 0); }
     (found = true, value = iiVal[iiBase[cid] + res.value])
 };
@@ -810,7 +807,7 @@ pub peekIntKey := fn(cache: IntLru, key: Int): (found: Bool, value: Int) {
 /** True when `key` is currently cached in `cache`. */
 pub hasIntKey := fn(cache: IntLru, key: Int): Bool {
     if not validIntKeyCache(cache) { return false; }
-    map.has(iiIndex, makeIntKey(cache.handle, key))
+    iiIndex.has(makeIntKey(cache.handle, key))
 };
 
 /** Removes `key` from `cache` in O(1). */
@@ -818,18 +815,18 @@ pub removeIntKey := fn(cache: IntLru, key: Int): Bool {
     if not validIntKeyCache(cache) { return false; }
     cid := cache.handle;
     mk := makeIntKey(cid, key);
-    res := map.get(iiIndex, mk);
+    res := iiIndex.get(mk);
     if not res.found { return false; }
     localIdx := res.value;
     g := iiBase[cid] + localIdx;
-    _rm := map.remove(mut iiIndex, mk);
+    _rm := mut iiIndex.remove(mk);
     iiUnlink(cid, localIdx);
-    list.setAt(mut iiAlive, g, false);
-    list.setAt(mut iiKey, g, 0);
-    list.setAt(mut iiVal, g, 0);
-    list.setAt(mut iiFreeNext, g, iiFreeHead[cid]);
-    list.setAt(mut iiFreeHead, cid, localIdx);
-    list.setAt(mut iiCount, cid, iiCount[cid] - 1);
+    mut iiAlive.setAt(g, false);
+    mut iiKey.setAt(g, 0);
+    mut iiVal.setAt(g, 0);
+    mut iiFreeNext.setAt(g, iiFreeHead[cid]);
+    mut iiFreeHead.setAt(cid, localIdx);
+    mut iiCount.setAt(cid, iiCount[cid] - 1);
     true
 };
 
@@ -842,15 +839,15 @@ pub evictOldestIntKey := fn(cache: IntLru): (evicted: Bool, key: Int, value: Int
     g := iiBase[cid] + tail;
     k := iiKey[g];
     v := iiVal[g];
-    _rm := map.remove(mut iiIndex, makeIntKey(cid, k));
+    _rm := mut iiIndex.remove(makeIntKey(cid, k));
     iiUnlink(cid, tail);
-    list.setAt(mut iiAlive, g, false);
-    list.setAt(mut iiKey, g, 0);
-    list.setAt(mut iiVal, g, 0);
-    list.setAt(mut iiFreeNext, g, iiFreeHead[cid]);
-    list.setAt(mut iiFreeHead, cid, tail);
-    list.setAt(mut iiCount, cid, iiCount[cid] - 1);
-    list.setAt(mut iiEvictions, cid, iiEvictions[cid] + 1);
+    mut iiAlive.setAt(g, false);
+    mut iiKey.setAt(g, 0);
+    mut iiVal.setAt(g, 0);
+    mut iiFreeNext.setAt(g, iiFreeHead[cid]);
+    mut iiFreeHead.setAt(cid, tail);
+    mut iiCount.setAt(cid, iiCount[cid] - 1);
+    mut iiEvictions.setAt(cid, iiEvictions[cid] + 1);
     (evicted = true, key = k, value = v)
 };
 
@@ -884,7 +881,7 @@ pub destroyIntKey := fn(cache: IntLru): Unit {
     if not validIntKeyCache(cache) { return; }
     cid := cache.handle;
     iiPurgeAll(cid);
-    list.setAt(mut iiCacheAlive, cid, false);
-    list.setAt(mut iiGen, cid, iiGen[cid] + 1);
-    list.pushBack(mut iiFreeCaches, cid);
+    mut iiCacheAlive.setAt(cid, false);
+    mut iiGen.setAt(cid, iiGen[cid] + 1);
+    mut iiFreeCaches.pushBack(cid);
 };

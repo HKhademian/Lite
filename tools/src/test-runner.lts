@@ -3,8 +3,6 @@
 io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
-text := import "core/text";
-list := import "core/list";
 path := import "core/path";
 cases := import "util/cases";
 project := import "util/project";
@@ -39,19 +37,19 @@ readGeneratedTestFiles := fn(root: String): List<String> {
         io.exit(1);
     }
     source := readRes.text;
-    openBracket := text.indexOfText(source, "[", 0);
-    closeBracket := text.indexOfText(source, "]", openBracket + 1);
+    openBracket := source.indexOf("[", 0);
+    closeBracket := source.indexOf("]", openBracket + 1);
     if openBracket < 0 or closeBracket < 0 {
         io.errorLine("igniter/test-suites.ts: missing generatedTestFiles list");
         io.exit(1);
     }
     var pos := openBracket + 1;
     loop pos < closeBracket {
-        q1 := text.indexOfText(source, "'", pos);
+        q1 := source.indexOf("'", pos);
         if q1 < 0 or q1 >= closeBracket { break; }
-        q2 := text.indexOfText(source, "'", q1 + 1);
+        q2 := source.indexOf("'", q1 + 1);
         if q2 < 0 or q2 >= closeBracket { break; }
-        list.pushBack(mut files, text.slice(source, q1 + 1, q2));
+        (mut files).pushBack(source.slice(q1 + 1, q2));
         pos = q2 + 1;
     }
     files
@@ -60,30 +58,30 @@ readGeneratedTestFiles := fn(root: String): List<String> {
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "tester", "test");
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--unit-worker" {
-        _flag := list.popFront(mut args);
-        if list.listCountText(args) =!= 1 {
+    if args.length() > 0 and args[0] == "--unit-worker" {
+        _flag := mut args.popFront();
+        if args.length() =!= 1 {
             io.errorLine("Usage: ./bin/lite test --unit-worker TASK_JSON");
             io.exit(2);
         }
         io.exit(unitTests.runUnitWorker(args[0]));
     }
-    if list.listCountText(args) > 0 and args[0] == "--cases" {
-        _flag := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--cases" {
+        _flag := mut args.popFront();
         io.exit(cases.runCaseCli(project.findRepoRoot(), args));
     }
-    if list.listCountText(args) > 0 and args[0] == "--unit" {
-        _flag := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--unit" {
+        _flag := mut args.popFront();
         io.exit(unitTests.runUnitCli(project.findRepoRoot(), args));
     }
-    if list.listCountText(args) > 0 and args[0] == "--pedantic" {
+    if args.length() > 0 and args[0] == "--pedantic" {
         io.exit(verify.runVerification(project.findRepoRoot(), args));
     }
 
     var mode := "";
     var outputMode := "";
-    loop list.listCountText(args) > 0 {
-        arg := list.popFront(mut args);
+    loop args.length() > 0 {
+        arg := mut args.popFront();
         if arg == "--smoke" or arg == "--fast" or arg == "--full" {
             if mode =!= "" {
                 io.errorLine("Usage: ./bin/lite test [--smoke|--fast|--full] [--verbose|--mute|--silence]");
@@ -109,18 +107,18 @@ run := fn(rawArgs: List<String>): Unit {
     envOverrides: mut List<String> = ["=NODE_TEST_CONTEXT"];
     nativeVar := proc.envGet("LITE_TEST_NATIVE");
     if not nativeVar.found or nativeVar.value =!= "1" {
-        list.pushBack(mut envOverrides, "LITE_SKIP_NATIVE=1");
+        mut envOverrides.pushBack("LITE_SKIP_NATIVE=1");
     }
     heavyVar := proc.envGet("LITE_TEST_HEAVY");
     if mode == "--fast" and (not heavyVar.found or heavyVar.value =!= "1") {
-        list.pushBack(mut envOverrides, "LITE_SKIP_HEAVY=1");
+        mut envOverrides.pushBack("LITE_SKIP_HEAVY=1");
     }
 
     root := project.findRepoRoot();
     suites := if mode == "--smoke" { smokeTestFiles() } else { readGeneratedTestFiles(root) };
     nodeArgs: mut List<String> = ["--test", "--test-reporter=" + reporter];
     loop suites as suite {
-        list.pushBack(mut nodeArgs, suite);
+        mut nodeArgs.pushBack(suite);
     }
     igniterDir := if root == "" { "igniter" } else { path.resolve(root, "igniter") };
     res := proc.run(proc.execPath(), nodeArgs, igniterDir, envOverrides, quiet, "");

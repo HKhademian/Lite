@@ -1,7 +1,6 @@
 /** Unit and CLI tests for lite fmt. */
 
 fs := import "core/file";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
@@ -39,11 +38,11 @@ formatLite := fn(source: String): String {
 };
 
 isHex12 := fn(s: String): Bool {
-    if text.length(s) =!= 12 { return false; }
+    if s.length() =!= 12 { return false; }
     var i := 0;
     loop i < 12 {
-        ch := text.at(s, i);
-        if text.indexOfText("0123456789abcdef", ch, 0) < 0 { return false; }
+        ch := s.at(i);
+        if "0123456789abcdef".indexOf(ch, 0) < 0 { return false; }
         i = i + 1;
     }
     true
@@ -98,22 +97,22 @@ loop corpusDirs as relDir {
         srcRes := fs.readText(full);
         test.check("read " + rel, srcRes.ok);
         test.check("write " + rel, fs.writeText(dest, srcRes.text).ok);
-        list.pushBack(mut copiedFiles, dest);
+        mut copiedFiles.pushBack(dest);
     }
 }
-test.check("copied corpus files > 0", list.listCountText(copiedFiles) > 0);
+test.check("copied corpus files > 0", copiedFiles.length() > 0);
 firstFmt := runNode([liteBin, "fmt", corpusTmp], "");
 test.checkInt("first corpus fmt: " + firstFmt.stderr, 0, firstFmt.status);
 afterFirst: mut List<String> = [];
 loop copiedFiles as file {
-    list.pushBack(mut afterFirst, fs.readText(file).text);
+    mut afterFirst.pushBack(fs.readText(file).text);
 }
 checkCorpus := runNode([liteBin, "fmt", "--check", corpusTmp], "");
 test.checkInt("corpus fmt --check: " + checkCorpus.stdout + checkCorpus.stderr, 0, checkCorpus.status);
 secondFmt := runNode([liteBin, "fmt", corpusTmp], "");
 test.checkInt("second corpus fmt: " + secondFmt.stderr, 0, secondFmt.status);
 var cfIdx := 0;
-loop cfIdx < list.listCountText(copiedFiles) {
+loop cfIdx < copiedFiles.length() {
     test.checkText("idempotent on " + copiedFiles[cfIdx], afterFirst[cfIdx], fs.readText(copiedFiles[cfIdx]).text);
     cfIdx = cfIdx + 1;
 }
@@ -148,19 +147,19 @@ _rmTsc := fs.remove(tscDirRes.path);
 /* 4. lite fmt CLI handles --version, --help, stdin -, missing args, and directory exclusions */
 versionRun := runNode([liteBin, "fmt", "--version"], "");
 test.checkInt("fmt --version status: " + versionRun.stderr, 0, versionRun.status);
-test.check("fmt --version header", text.startsWithAt(versionRun.stdout, 0, "lite fmt "));
+test.check("fmt --version header", versionRun.stdout.startsWithAt(0, "lite fmt "));
 fmtIsC := fs.kind(path.join(root, "dist/tools/fmt")) == fs.FILE_KIND_FILE;
 expectedKindLine := if fmtIsC { "\nkind: ignited-c (target: c)\n" } else { "\nkind: ignited-ts (target: ts)\n" };
-test.check("fmt --version kind", text.indexOfText(versionRun.stdout, expectedKindLine, 0) >= 0);
+test.check("fmt --version kind", versionRun.stdout.indexOf(expectedKindLine, 0) >= 0);
 artNeedle := if fmtIsC { "artifact: dist/tools/fmt (sha256: " } else { "artifact: dist/tools/fmt.ts (sha256: " };
-artIdx := text.indexOfText(versionRun.stdout, artNeedle, 0);
+artIdx := versionRun.stdout.indexOf(artNeedle, 0);
 test.check("fmt --version artifact line", artIdx >= 0);
-hashStart := artIdx + text.length(artNeedle);
-test.check("fmt --version sha256 hex12", isHex12(text.slice(versionRun.stdout, hashStart, hashStart + 12)));
+hashStart := artIdx + artNeedle.length();
+test.check("fmt --version sha256 hex12", isHex12(versionRun.stdout.slice(hashStart, hashStart + 12)));
 
 helpRun := runNode([liteBin, "fmt", "--help"], "");
 test.checkInt("fmt --help status: " + helpRun.stderr, 0, helpRun.status);
-test.check("fmt --help usage", text.indexOfText(helpRun.stdout, "Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]", 0) >= 0);
+test.check("fmt --help usage", helpRun.stdout.indexOf("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]", 0) >= 0);
 
 missingArgs := runNode([liteBin, "fmt"], "");
 test.checkInt("fmt missing args status", 2, missingArgs.status);

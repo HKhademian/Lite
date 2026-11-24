@@ -2,12 +2,11 @@
 
 cli := import "util/cli";
 io := import "core/io";
-list := import "core/list";
 siteTools := import "../../site/src/tools.lts";
 
 run := fn(rawArgs: List<String>): Unit {
     args := cli.stripLeadingSeparator(rawArgs);
-    repoUrl := if list.listCountText(args) > 0 { args[0] } else { "" };
+    repoUrl := if args.length() > 0 { args[0] } else { "" };
     io.output(siteTools.buildToolsPayloadJson(repoUrl));
 };
 

@@ -29,31 +29,31 @@ pub isSep := fn(ch: String): Bool {
 
 /** True when `target` is an absolute path on the active platform. */
 pub isAbsolute := fn(target: String): Bool {
-    size := text.length(target);
+    size := target.length();
     if size == 0 { return false; }
     win := isWin32();
-    if isSepWith(text.at(target, 0), win) { return true; }
-    win and size >= 2 and text.isAsciiLetter(text.at(target, 0)) and text.at(target, 1) == ":"
+    if isSepWith(target.at(0), win) { return true; }
+    win and size >= 2 and target.at(0).isAsciiLetter() and target.at(1) == ":"
 }
 
 /** Normalizes `.` and `..` segments and repeated separators in `raw`. */
 pub normalize := fn(raw: String): String {
-    size := text.length(raw);
+    size := raw.length();
     if size == 0 { return "."; }
     win := isWin32();
     separator := if win { "\\" } else { "/" };
     var rootPrefix := "";
     var start := 0;
-    if win and size >= 2 and text.isAsciiLetter(text.at(raw, 0)) and text.at(raw, 1) == ":" {
-        drive := text.slice(raw, 0, 2);
-        if size >= 3 and isSepWith(text.at(raw, 2), true) {
+    if win and size >= 2 and raw.at(0).isAsciiLetter() and raw.at(1) == ":" {
+        drive := raw.slice(0, 2);
+        if size >= 3 and isSepWith(raw.at(2), true) {
             rootPrefix = drive + separator;
             start = 3;
         } else {
             rootPrefix = drive;
             start = 2;
         }
-    } else if isSepWith(text.at(raw, 0), win) {
+    } else if isSepWith(raw.at(0), win) {
         rootPrefix = separator;
         start = 1;
     }
@@ -62,24 +62,24 @@ pub normalize := fn(raw: String): String {
     var partsCount := 0;
     var segStart := start;
     loop segStart <= size {
-        var sepPos := text.indexOfText(raw, "/", segStart);
+        var sepPos := raw.indexOf("/", segStart);
         if win {
-            bsPos := text.indexOfText(raw, "\\", segStart);
+            bsPos := raw.indexOf("\\", segStart);
             if bsPos >= 0 and (sepPos < 0 or bsPos < sepPos) { sepPos = bsPos; }
         }
         i := if sepPos < 0 { size } else { sepPos };
         if i > segStart {
-            seg := text.slice(raw, segStart, i);
+            seg := raw.slice(segStart, i);
             if seg == ".." {
                 if partsCount > 0 and (rootPrefix =!= "" or parts[partsCount - 1] =!= "..") {
-                    list.popBack(mut parts);
+                    mut parts.popBack();
                     partsCount = partsCount - 1;
                 } else if rootPrefix == "" {
-                    list.pushBack(mut parts, "..");
+                    mut parts.pushBack("..");
                     partsCount = partsCount + 1;
                 }
             } else if seg =!= "." {
-                list.pushBack(mut parts, seg);
+                mut parts.pushBack(seg);
                 partsCount = partsCount + 1;
             }
         }
@@ -132,27 +132,27 @@ pub parentDir := fn(target: String): String {
 
 /** Returns the final path segment of `target` without any trailing extension stripping. */
 pub baseName := fn(target: String): String {
-    var end := text.length(target);
-    loop end > 0 and isSep(text.at(target, end - 1)) {
+    var end := target.length();
+    loop end > 0 and isSep(target.at(end - 1)) {
         end = end - 1;
     }
     if end == 0 { return ""; }
     var pos := end;
-    loop pos > 0 and not isSep(text.at(target, pos - 1)) {
+    loop pos > 0 and not isSep(target.at(pos - 1)) {
         pos = pos - 1;
     }
-    text.slice(target, pos, end)
+    target.slice(pos, end)
 }
 
 /** Returns the file extension (including leading `.`) of `target`, or empty text when absent. */
 pub extName := fn(target: String): String {
     base := baseName(target);
     if base == "" or base == "." or base == ".." { return ""; }
-    size := text.length(base);
+    size := base.length();
     var i := size - 1;
     loop i > 0 {
-        if text.at(base, i) == "." {
-            return text.slice(base, i, size);
+        if base.at(i) == "." {
+            return base.slice(i, size);
         }
         i = i - 1;
     }
@@ -164,43 +164,43 @@ pub stem := fn(target: String): String {
     base := baseName(target);
     ext := extName(target);
     if ext == "" { return base; }
-    text.slice(base, 0, text.length(base) - text.length(ext))
+    base.slice(0, base.length() - ext.length())
 }
 
 /** Returns `target` with its file extension replaced by `ext` (or stripped when `ext == ""`). */
 pub withExt := fn(target: String, ext: String): String {
     base := baseName(target);
     if base == "" or base == "." or base == ".." { return target; }
-    var end := text.length(target);
-    loop end > 0 and isSep(text.at(target, end - 1)) {
+    var end := target.length();
+    loop end > 0 and isSep(target.at(end - 1)) {
         end = end - 1;
     }
     oldExt := extName(target);
-    stemEnd := end - text.length(oldExt);
-    prefix := text.slice(target, 0, stemEnd);
-    suffix := text.slice(target, end, text.length(target));
+    stemEnd := end - oldExt.length();
+    prefix := target.slice(0, stemEnd);
+    suffix := target.slice(end, target.length());
     if ext == "" { return prefix + suffix; }
-    normalizedExt := if text.startsWithAt(ext, 0, ".") { ext } else { "." + ext };
+    normalizedExt := if ext.startsWithAt(0, ".") { ext } else { "." + ext };
     prefix + normalizedExt + suffix
 }
 
 /** Splits a separator-normalized path (after its root prefix) into non-empty components. */
 splitSegments := fn(normalized: String): List<String> {
     parts: mut List<String> = [];
-    size := text.length(normalized);
+    size := normalized.length();
     var start := 0;
-    if isWin32() and size >= 2 and text.isAsciiLetter(text.at(normalized, 0)) and text.at(normalized, 1) == ":" {
-        if size >= 3 and isSep(text.at(normalized, 2)) { start = 3; } else { start = 2; }
-    } else if size > 0 and isSep(text.at(normalized, 0)) {
+    if isWin32() and size >= 2 and normalized.at(0).isAsciiLetter() and normalized.at(1) == ":" {
+        if size >= 3 and isSep(normalized.at(2)) { start = 3; } else { start = 2; }
+    } else if size > 0 and isSep(normalized.at(0)) {
         start = 1;
     }
     var segStart := start;
     var i := start;
     loop i <= size {
         atEnd := i == size;
-        if atEnd or isSep(text.at(normalized, i)) {
+        if atEnd or isSep(normalized.at(i)) {
             if i > segStart {
-                list.pushBack(mut parts, text.slice(normalized, segStart, i));
+                mut parts.pushBack(normalized.slice(segStart, i));
             }
             segStart = i + 1;
         }
@@ -217,8 +217,8 @@ pub relative := fn(fromDir: String, toPath: String): String {
     if fromAbs == toAbs { return ""; }
     fromSegs := splitSegments(fromAbs);
     toSegs := splitSegments(toAbs);
-    fromLen := list.listCountText(fromSegs);
-    toLen := list.listCountText(toSegs);
+    fromLen := fromSegs.length();
+    toLen := toSegs.length();
     var common := 0;
     loop common < fromLen and common < toLen and fromSegs[common] == toSegs[common] {
         common = common + 1;
@@ -226,15 +226,15 @@ pub relative := fn(fromDir: String, toPath: String): String {
     out: mut List<String> = [];
     var up := common;
     loop up < fromLen {
-        list.pushBack(mut out, "..");
+        mut out.pushBack("..");
         up = up + 1;
     }
     var down := common;
     loop down < toLen {
-        list.pushBack(mut out, toSegs[down]);
+        mut out.pushBack(toSegs[down]);
         down = down + 1;
     }
-    if list.listCountText(out) == 0 { return ""; }
+    if out.length() == 0 { return ""; }
     text.joinTexts(out, sep())
 }
 
@@ -264,15 +264,15 @@ pub collectFiles := fn(baseDir: String, targets: List<String>, extension: String
     files: mut List<String> = [];
     stack: mut List<String> = [];
     var stackCount := 0;
-    var targetIdx := list.listCountText(targets) - 1;
+    var targetIdx := targets.length() - 1;
     loop targetIdx >= 0 {
-        list.pushBack(mut stack, resolve(baseDir, targets[targetIdx]));
+        mut stack.pushBack(resolve(baseDir, targets[targetIdx]));
         stackCount = stackCount + 1;
         targetIdx = targetIdx - 1;
     }
 
     loop stackCount > 0 {
-        resolved := list.popBack(mut stack);
+        resolved := mut stack.popBack();
         stackCount = stackCount - 1;
         entryKind := file.kind(resolved);
         if entryKind == file.FILE_KIND_MISSING {
@@ -281,18 +281,18 @@ pub collectFiles := fn(baseDir: String, targets: List<String>, extension: String
         }
         if entryKind == file.FILE_KIND_DIR {
             entries := file.listDir(resolved);
-            var entryIdx := list.listCountText(entries) - 1;
+            var entryIdx := entries.length() - 1;
             loop entryIdx >= 0 {
                 entry := entries[entryIdx];
-                isDot := skipDotEntries and text.startsWithAt(entry, 0, ".");
+                isDot := skipDotEntries and entry.startsWithAt(0, ".");
                 if not isDot and not list.listContainsText(ignoredNames, entry) {
-                    list.pushBack(mut stack, resolve(resolved, entry));
+                    mut stack.pushBack(resolve(resolved, entry));
                     stackCount = stackCount + 1;
                 }
                 entryIdx = entryIdx - 1;
             }
-        } else if extension == "" or text.endsWith(resolved, extension) {
-            list.pushBack(mut files, resolved);
+        } else if extension == "" or resolved.endsWith(extension) {
+            mut files.pushBack(resolved);
         }
     }
     files
@@ -308,15 +308,15 @@ pub copyFiltered := fn(srcDir: String, dstDir: String, topSkipNames: List<String
     depthStack: mut List<Int> = [];
     var stackCount := 0;
 
-    list.pushBack(mut srcStack, srcDir);
-    list.pushBack(mut dstStack, dstDir);
-    list.pushBack(mut depthStack, 0);
+    mut srcStack.pushBack(srcDir);
+    mut dstStack.pushBack(dstDir);
+    mut depthStack.pushBack(0);
     stackCount = 1;
 
     loop stackCount > 0 {
-        curSrc := list.popBack(mut srcStack);
-        curDst := list.popBack(mut dstStack);
-        curDepth := list.popBack(mut depthStack);
+        curSrc := mut srcStack.popBack();
+        curDst := mut dstStack.popBack();
+        curDepth := mut depthStack.popBack();
         stackCount = stackCount - 1;
 
         entries := file.listDir(curSrc);
@@ -329,9 +329,9 @@ pub copyFiltered := fn(srcDir: String, dstDir: String, topSkipNames: List<String
                 if entryKind == file.FILE_KIND_DIR {
                     mkSub := file.makeDir(nextDst);
                     if not mkSub.ok { return (ok = false, error = mkSub.error); }
-                    list.pushBack(mut srcStack, nextSrc);
-                    list.pushBack(mut dstStack, nextDst);
-                    list.pushBack(mut depthStack, curDepth + 1);
+                    (mut srcStack).pushBack(nextSrc);
+                    mut dstStack.pushBack(nextDst);
+                    mut depthStack.pushBack(curDepth + 1);
                     stackCount = stackCount + 1;
                 } else if entryKind == file.FILE_KIND_FILE {
                     copied := file.copy(nextSrc, nextDst);

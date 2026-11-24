@@ -1,6 +1,5 @@
 /* Provisional core host signatures and target-independent synchronous streams. This module adds no host authority by itself. */
 
-list := import "core/list";
 unicode := import "core/unicode";
 
 /** Handle to a synchronous byte/text input source (`"stdin"`, `"buffer"`, `"file"`, or `"error"`). */
@@ -105,9 +104,9 @@ pub readAll := fn(reader: Reader): List<Int> {
     loop readerOk(reader) and not readerAtEof(reader) {
         chunk := read(reader, READ_CHUNK_BYTES);
         if not readerOk(reader) { return []; }
-        if list.listCountInt(chunk) == 0 { break; }
+        if chunk.length() == 0 { break; }
         loop chunk as byte {
-            list.pushBack(mut out, byte);
+            mut out.pushBack(byte);
         }
     }
     out
@@ -136,18 +135,18 @@ pub readLine := fn(reader: Reader): (ok: Bool, line: String, eof: Bool, error: S
         if not readerOk(reader) {
             return (ok = false, line = "", eof = false, error = readerError(reader));
         }
-        if list.listCountInt(chunk) == 0 { break; }
+        if chunk.length() == 0 { break; }
         nextByte := chunk[0];
         if nextByte == BYTE_LF {
-            count := list.listCountInt(lineBytes);
+            count := lineBytes.length();
             if count > 0 and lineBytes[count - 1] == BYTE_CR {
-                list.popBack(mut lineBytes);
+                mut lineBytes.popBack();
             }
             return decodeLineBytes(lineBytes);
         }
-        list.pushBack(mut lineBytes, nextByte);
+        (mut lineBytes).pushBack(nextByte);
     }
-    if list.listCountInt(lineBytes) == 0 {
+    if lineBytes.length() == 0 {
         return (ok = true, line = "", eof = true, error = "");
     }
     decodeLineBytes(lineBytes)
@@ -213,7 +212,7 @@ pub copyStream := fn(reader: Reader, writer: Writer): (ok: Bool, copied: Int, er
         if err =!= "" {
             return (ok = false, copied = total, error = err);
         }
-        if list.listCountInt(chunk) == 0 { break; }
+        if chunk.length() == 0 { break; }
         wrote := write(writer, chunk);
         if not wrote.ok {
             return (ok = false, copied = total, error = wrote.error);

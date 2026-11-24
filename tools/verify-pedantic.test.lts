@@ -1,11 +1,9 @@
 /** Focused tests for `lite verify --pedantic` and `lite test --pedantic` across `-O0..-O3`. */
 
 fs := import "core/file";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
 project := import "util/project";
 
 rawRoot := project.findRepoRoot();
@@ -21,7 +19,7 @@ runLite := fn(args: List<String>): CmdResult {
     errPath := path.join(tmpRes.path, "err");
     cmdArgs: mut List<String> = [path.join(path.join(root, "bin"), "lite")];
     loop args as a {
-        list.pushBack(mut cmdArgs, a);
+        mut cmdArgs.pushBack(a);
     }
     emptyEnv: List<String> = [];
     emptyBytes: List<Int> = [];
@@ -37,23 +35,23 @@ runLite := fn(args: List<String>): CmdResult {
 vArgs: List<String> = ["verify", "--pedantic", "--filter", "feature.types.collections.typed-maps"];
 vRes := runLite(vArgs);
 test.checkInt("verify --pedantic exit 0", 0, vRes.status);
-test.check("verify --pedantic PASS with O0..O3", text.containsText(vRes.stdout, "PASS feature.types.collections.typed-maps/map-ops-and-snapshot [O0:"));
-test.check("verify --pedantic has O3 timing", text.containsText(vRes.stdout, "O3:"));
-test.check("verify --pedantic prints benchmark header", text.containsText(vRes.stdout, "Pedantic optimization benchmark (") and text.containsText(vRes.stdout, "x 4 levels):"));
-test.check("verify --pedantic table has -O0", text.containsText(vRes.stdout, "  -O0 "));
-test.check("verify --pedantic table has -O1", text.containsText(vRes.stdout, "  -O1 "));
-test.check("verify --pedantic table has -O2", text.containsText(vRes.stdout, "  -O2 "));
-test.check("verify --pedantic table has -O3", text.containsText(vRes.stdout, "  -O3 "));
+test.check("verify --pedantic PASS with O0..O3", vRes.stdout.contains("PASS feature.types.collections.typed-maps/map-ops-and-snapshot [O0:"));
+test.check("verify --pedantic has O3 timing", vRes.stdout.contains("O3:"));
+test.check("verify --pedantic prints benchmark header", vRes.stdout.contains("Pedantic optimization benchmark (") and vRes.stdout.contains("x 4 levels):"));
+test.check("verify --pedantic table has -O0", vRes.stdout.contains("  -O0 "));
+test.check("verify --pedantic table has -O1", vRes.stdout.contains("  -O1 "));
+test.check("verify --pedantic table has -O2", vRes.stdout.contains("  -O2 "));
+test.check("verify --pedantic table has -O3", vRes.stdout.contains("  -O3 "));
 
 /* 2. `lite test --pedantic --filter ...` delegates to the pedantic runner */
 tArgs: List<String> = ["test", "--pedantic", "--filter", "feature.types.collections.typed-sets"];
 tRes := runLite(tArgs);
 test.checkInt("test --pedantic exit 0", 0, tRes.status);
-test.check("test --pedantic PASS", text.containsText(tRes.stdout, "PASS feature.types.collections.typed-sets/set-ops-and-snapshot [O0:"));
-test.check("test --pedantic prints benchmark header", text.containsText(tRes.stdout, "Pedantic optimization benchmark (") and text.containsText(tRes.stdout, "x 4 levels):"));
+test.check("test --pedantic PASS", tRes.stdout.contains("PASS feature.types.collections.typed-sets/set-ops-and-snapshot [O0:"));
+test.check("test --pedantic prints benchmark header", tRes.stdout.contains("Pedantic optimization benchmark (") and tRes.stdout.contains("x 4 levels):"));
 
 /* 3. `lite verify --pedantic --update` is rejected cleanly */
 badArgs: List<String> = ["verify", "--pedantic", "--update"];
 badRes := runLite(badArgs);
 test.checkInt("verify --pedantic --update rejected", 2, badRes.status);
-test.check("verify --pedantic --update error message", text.containsText(badRes.stderr, "--pedantic cannot be combined with --update"));
+test.check("verify --pedantic --update error message", badRes.stderr.contains("--pedantic cannot be combined with --update"));

@@ -4,8 +4,6 @@ io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
-list := import "core/list";
-integer := import "core/int";
 crypto := import "core/crypto";
 path := import "core/path";
 json := import "util/json";
@@ -39,7 +37,7 @@ runChecked := fn(workToClean: String, command: String, args: List<String>, cwd: 
 
 readOptionalJsonString := fn(source: String, objPos: Int, key: String): (present: Bool, value: String) {
     field := json.findObjectField(source, objPos, key);
-    if not field.found or text.startsWithAt(source, field.valuePos, "null") {
+    if not field.found or source.startsWithAt(field.valuePos, "null") {
         return (present = false, value = "");
     }
     str := json.readStringAt(source, field.valuePos);
@@ -49,7 +47,7 @@ readOptionalJsonString := fn(source: String, objPos: Int, key: String): (present
 
 readOptionalJsonInt := fn(source: String, objPos: Int, key: String, fallback: Int): (present: Bool, value: Int) {
     field := json.findObjectField(source, objPos, key);
-    if not field.found or text.startsWithAt(source, field.valuePos, "null") {
+    if not field.found or source.startsWithAt(field.valuePos, "null") {
         return (present = false, value = fallback);
     }
     num := json.readIntAt(source, field.valuePos);
@@ -62,20 +60,20 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
     if not internalEnv.found or internalEnv.value =!= "1" { return false; }
 
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--profile" {
-        _flag := list.popFront(mut args);
-        if list.listCountText(args) == 0 {
+    if args.length() > 0 and args[0] == "--profile" {
+        _flag := mut args.popFront();
+        if args.length() == 0 {
             io.outputLine(rel.releaseProfile(false, "", ""));
             return true;
         }
-        if list.listCountText(args) == 2 {
-            io.outputLine(rel.releaseProfile(true, list.popFront(mut args), list.popFront(mut args)));
+        if args.length() == 2 {
+            io.outputLine(rel.releaseProfile(true, mut args.popFront(), mut args.popFront()));
             return true;
         }
         failRelease("", "usage: lite release --profile [COMPONENT VERSION]");
     }
 
-    if list.listCountText(args) > 0 and args[0] == "--format-notes" {
+    if args.length() > 0 and args[0] == "--format-notes" {
         payload := io.inputAll("");
         valid := json.validate(payload);
         if not valid.ok { failRelease("", valid.error); }
@@ -91,7 +89,7 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
         var compName := "";
         var compVer := "";
         compField := json.findObjectField(payload, 0, "releasedComponent");
-        if compField.found and text.startsWithAt(payload, compField.valuePos, "{") {
+        if compField.found and payload.startsWithAt(compField.valuePos, "{") {
             hasComp = true;
             compName = json.readObjectString(payload, compField.valuePos, "component").value;
             compVer = json.readObjectString(payload, compField.valuePos, "version").value;
@@ -101,7 +99,7 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
         var vsixFile := "";
         var vsixSha := "";
         vsixField := json.findObjectField(payload, 0, "vsix");
-        if vsixField.found and text.startsWithAt(payload, vsixField.valuePos, "{") {
+        if vsixField.found and payload.startsWithAt(vsixField.valuePos, "{") {
             hasVsix = true;
             vsixFile = json.readObjectString(payload, vsixField.valuePos, "file").value;
             vsixSha = json.readObjectString(payload, vsixField.valuePos, "sha256").value;
@@ -118,7 +116,7 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
         var corpusMismatches := 0;
         var bootSupport := "";
         bootField := json.findObjectField(payload, 0, "bootstrap");
-        if bootField.found and text.startsWithAt(payload, bootField.valuePos, "{") {
+        if bootField.found and payload.startsWithAt(bootField.valuePos, "{") {
             hasBoot = true;
             bootSupport = json.readObjectString(payload, bootField.valuePos, "support").value;
             ladderField := json.findObjectField(payload, bootField.valuePos, "ladder");
@@ -126,7 +124,7 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
                 bootFixed = json.readObjectBool(payload, ladderField.valuePos, "fixedPoint").value;
                 gensField := json.findObjectField(payload, ladderField.valuePos, "generations");
                 if gensField.found {
-                    bootGens = list.listCountInt(json.arrayElementOffsets(payload, gensField.valuePos));
+                    bootGens = json.arrayElementOffsets(payload, gensField.valuePos).length();
                 }
             }
             corpusField := json.findObjectField(payload, bootField.valuePos, "corpus");
@@ -139,13 +137,13 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
                 corpusExecutions = readOptionalJsonInt(payload, corpusField.valuePos, "executions", 0).value;
                 mismatchField := json.findObjectField(payload, corpusField.valuePos, "mismatches");
                 if mismatchField.found {
-                    corpusMismatches = list.listCountInt(json.arrayElementOffsets(payload, mismatchField.valuePos));
+                    corpusMismatches = json.arrayElementOffsets(payload, mismatchField.valuePos).length();
                 }
             }
         }
 
         tagMsgOpt := readOptionalJsonString(payload, 0, "tagMessage");
-        tagMessage := if tagMsgOpt.present { text.trim(tagMsgOpt.value) } else { "" };
+        tagMessage := if tagMsgOpt.present { tagMsgOpt.value.trim() } else { "" };
         rendered := rel.formatReleaseNotes(
         label, commit, profile,
         hasComp, compName, compVer,
@@ -165,12 +163,12 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
 prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     statusArgs: List<String> = ["status", "--porcelain"];
     porcelain := runChecked("", "git", statusArgs, directory, "");
-    if text.length(porcelain) > 0 {
+    if porcelain.length() > 0 {
         failRelease("", "release needs a clean committed checkout");
     }
 
     headArgs: List<String> = ["rev-parse", "HEAD"];
-    commit := text.trim(runChecked("", "git", headArgs, directory, ""));
+    commit := runChecked("", "git", headArgs, directory, "").trim();
 
     selected := rel.selectComponentRelease(directory, tag);
     if not selected.ok {
@@ -180,22 +178,22 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     var tagMessage := "";
     if tag =!= "" {
         tagTypeArgs: List<String> = ["cat-file", "-t", "refs/tags/" + tag];
-        tagType := text.trim(runChecked("", "git", tagTypeArgs, directory, "release tags must be annotated"));
+        tagType := runChecked("", "git", tagTypeArgs, directory, "release tags must be annotated").trim();
         if tagType =!= "tag" {
             failRelease("", "release tags must be annotated");
         }
         tagCommitArgs: List<String> = ["rev-parse", "refs/tags/" + tag + "^{commit}"];
-        tagCommit := text.trim(runChecked("", "git", tagCommitArgs, directory, "release tag must point at HEAD"));
+        tagCommit := runChecked("", "git", tagCommitArgs, directory, "release tag must point at HEAD").trim();
         if tagCommit =!= commit {
             failRelease("", "release tag must point at HEAD");
         }
         tagMsgArgs: List<String> = ["for-each-ref", "--format=%(contents:subject)%0a%0a%(contents:body)", "refs/tags/" + tag];
-        tagMessage = text.trim(runChecked("", "git", tagMsgArgs, directory, ""));
+        tagMessage = runChecked("", "git", tagMsgArgs, directory, "").trim();
     }
 
     outKind := fs.kind(output);
     if outKind =!= fs.FILE_KIND_MISSING {
-        if outKind =!= fs.FILE_KIND_DIR or list.listCountText(fs.listDir(output)) > 0 {
+        if outKind =!= fs.FILE_KIND_DIR or fs.listDir(output).length() > 0 {
             failRelease("", "release output directory must be empty");
         }
     }
@@ -251,7 +249,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         bootFixed = true;
         gensField := json.findObjectField(ladderRaw, ladderSpan.start, "generations");
         if gensField.found {
-            bootGens = list.listCountInt(json.arrayElementOffsets(ladderRaw, gensField.valuePos));
+            bootGens = json.arrayElementOffsets(ladderRaw, gensField.valuePos).length();
         }
 
         gen3 := path.join(ladderDirectory, "generation-3.ts");
@@ -261,7 +259,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         if not corpusSpan.ok { failRelease(work, corpusSpan.error); }
         mismatchField := json.findObjectField(corpusRaw, corpusSpan.start, "mismatches");
         if not mismatchField.found { failRelease(work, "corpus parity output missing mismatches"); }
-        corpusMismatches = list.listCountInt(json.arrayElementOffsets(corpusRaw, mismatchField.valuePos));
+        corpusMismatches = json.arrayElementOffsets(corpusRaw, mismatchField.valuePos).length();
         if corpusMismatches =!= 0 { failRelease(work, "generated corpus parity had mismatches"); }
 
         casesOpt := readOptionalJsonInt(corpusRaw, corpusSpan.start, "cases", 0);
@@ -280,8 +278,8 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         }
 
         hasBoot = true;
-        bootJson = "{\n  \"ladder\": " + text.slice(ladderRaw, ladderSpan.start, ladderSpan.end) +
-        ",\n  \"corpus\": " + text.slice(corpusRaw, corpusSpan.start, corpusSpan.end) +
+        bootJson = "{\n  \"ladder\": " + ladderRaw.slice(ladderSpan.start, ladderSpan.end) +
+        ",\n  \"corpus\": " + corpusRaw.slice(corpusSpan.start, corpusSpan.end) +
         ",\n  \"support\": " + json.quoteString(bootSupport) + "\n}";
 
         releaseDir := path.join(source, "release");
@@ -324,16 +322,16 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         pkgRead := fs.readText(pkgStage);
         if not pkgRead.ok { failRelease(work, pkgRead.error); }
         mainNeedle := "\"../../dist/vscode/extension.js\"";
-        mainIdx := text.indexOfText(pkgRead.text, mainNeedle, 0);
+        mainIdx := pkgRead.text.indexOf(mainNeedle, 0);
         if mainIdx < 0 { failRelease(work, "editors/vscode/package.json missing main extension path"); }
-        var stagePkg := text.slice(pkgRead.text, 0, mainIdx)
+        var stagePkg := pkgRead.text.slice(0, mainIdx)
         + "\"./dist/extension.js\""
-        + text.slice(pkgRead.text, mainIdx + text.length(mainNeedle), text.length(pkgRead.text));
+        + pkgRead.text.slice(mainIdx + mainNeedle.length(), pkgRead.text.length());
         prepubNeedle := "    \"vscode:prepublish\": \"npm run build\",\n";
-        prepubIdx := text.indexOfText(stagePkg, prepubNeedle, 0);
+        prepubIdx := stagePkg.indexOf(prepubNeedle, 0);
         if prepubIdx >= 0 {
-            stagePkg = text.slice(stagePkg, 0, prepubIdx)
-            + text.slice(stagePkg, prepubIdx + text.length(prepubNeedle), text.length(stagePkg));
+            stagePkg = stagePkg.slice(0, prepubIdx)
+            + stagePkg.slice(prepubIdx + prepubNeedle.length(), stagePkg.length());
         }
         wPkg := fs.writeText(pkgStage, stagePkg);
         if not wPkg.ok { failRelease(work, wPkg.error); }
@@ -346,7 +344,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         vsixSha = vsixDigest.hex;
     }
 
-    label := if tag =!= "" { tag } else { "snapshot-" + text.slice(commit, 0, 12) };
+    label := if tag =!= "" { tag } else { "snapshot-" + commit.slice(0, 12) };
     compVersionsRes := rel.formatComponentVersionsJson(directory, "  ");
     if not compVersionsRes.ok { failRelease(work, compVersionsRes.error); }
 
@@ -467,17 +465,17 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
 
 run := fn(rawArgs: List<String>): Unit {
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--" {
-        _sep := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--" {
+        _sep := mut args.popFront();
     }
     if handleInternalMode(args) { return; }
     project.handleVersionFlag(args, "release", "release");
 
-    if list.listCountText(args) < 1 or list.listCountText(args) > 2 {
+    if args.length() < 1 or args.length() > 2 {
         failRelease("", "usage: lite release OUTPUT [TAG]");
     }
-    outputArg := list.popFront(mut args);
-    tag := if list.listCountText(args) > 0 { list.popFront(mut args) } else { "" };
+    outputArg := mut args.popFront();
+    tag := if args.length() > 0 { mut args.popFront() } else { "" };
 
     envRoot := proc.envGet("LITE_RELEASE_ROOT");
     directory := if envRoot.found and envRoot.value =!= "" { envRoot.value } else { project.findRepoRoot() };

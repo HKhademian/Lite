@@ -1,4 +1,3 @@
-integer := import "core/int";
 test := import "core/test";
 io := import "core/io";
 

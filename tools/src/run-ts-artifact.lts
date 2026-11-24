@@ -3,9 +3,6 @@
 io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
-integer := import "core/int";
-text := import "core/text";
-list := import "core/list";
 path := import "core/path";
 json := import "util/json";
 project := import "util/project";
@@ -13,15 +10,15 @@ cases := import "util/cases";
 
 splitNonEmptyCsv := fn(raw: String): List<String> {
     out: mut List<String> = [];
-    size := text.length(raw);
+    size := raw.length();
     if size == 0 { return out; }
     var start := 0;
     var i := 0;
     loop i <= size {
         atEnd := i == size;
-        if atEnd or text.at(raw, i) == "," {
+        if atEnd or raw.at(i) == "," {
             if i > start {
-                list.pushBack(mut out, text.slice(raw, start, i));
+                mut out.pushBack(raw.slice(start, i));
             }
             start = i + 1;
         }
@@ -38,8 +35,8 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--" {
-        _sep := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--" {
+        _sep := mut args.popFront();
     }
 
     var hasArt := false;
@@ -54,45 +51,45 @@ run := fn(rawArgs: List<String>): Unit {
     var argsVal := "";
     var noCheck := false;
 
-    loop list.listCountText(args) > 0 {
-        arg := list.popFront(mut args);
+    loop args.length() > 0 {
+        arg := mut args.popFront();
         if arg == "--no-check" {
             noCheck = true;
         } else if arg == "--artifact" {
-            if hasArt or list.listCountText(args) == 0 or args[0] == "--" {
+            if hasArt or args.length() == 0 or args[0] == "--" {
                 io.errorLine("invalid option value");
                 io.exit(64);
             }
             hasArt = true;
-            artVal = list.popFront(mut args);
+            artVal = mut args.popFront();
         } else if arg == "--out" {
-            if hasOut or list.listCountText(args) == 0 or args[0] == "--" {
+            if hasOut or args.length() == 0 or args[0] == "--" {
                 io.errorLine("invalid option value");
                 io.exit(64);
             }
             hasOut = true;
-            outVal = list.popFront(mut args);
+            outVal = mut args.popFront();
         } else if arg == "--source" {
-            if hasSrc or list.listCountText(args) == 0 or args[0] == "--" {
+            if hasSrc or args.length() == 0 or args[0] == "--" {
                 io.errorLine("invalid option value");
                 io.exit(64);
             }
             hasSrc = true;
-            srcVal = list.popFront(mut args);
+            srcVal = mut args.popFront();
         } else if arg == "--err" {
-            if hasErr or list.listCountText(args) == 0 or args[0] == "--" {
+            if hasErr or args.length() == 0 or args[0] == "--" {
                 io.errorLine("invalid option value");
                 io.exit(64);
             }
             hasErr = true;
-            errVal = list.popFront(mut args);
+            errVal = mut args.popFront();
         } else if arg == "--args" {
-            if hasArgs or list.listCountText(args) == 0 or args[0] == "--" {
+            if hasArgs or args.length() == 0 or args[0] == "--" {
                 io.errorLine("invalid option value");
                 io.exit(64);
             }
             hasArgs = true;
-            argsVal = list.popFront(mut args);
+            argsVal = mut args.popFront();
         } else {
             io.errorLine("unexpected argument: " + arg);
             io.exit(64);
@@ -149,7 +146,7 @@ run := fn(rawArgs: List<String>): Unit {
             _wErr := fs.writeText(errPath, checked.error);
             _rm := fs.remove(work);
             exitStatus := if checked.status > 0 { checked.status } else { 1 };
-            io.errorLine("{\"phase\":\"typecheck\",\"status\":" + integer.intText(exitStatus) + ",\"err\":" + json.quoteString(errPath) + "}");
+            io.errorLine("{\"phase\":\"typecheck\",\"status\":" + exitStatus.toText() + ",\"err\":" + json.quoteString(errPath) + "}");
             io.exit(exitStatus);
         }
     }
@@ -158,7 +155,7 @@ run := fn(rawArgs: List<String>): Unit {
     stdinBytes := if hasSrc { fs.readBytes(path.resolve(cwd, srcVal)) } else { emptyBytes };
     cmdArgs: mut List<String> = [runnerPath];
     loop extraArgs as a {
-        list.pushBack(mut cmdArgs, a);
+        mut cmdArgs.pushBack(a);
     }
     tempOutPath := path.join(work, "run.stdout");
     tempErrPath := path.join(work, "run.stderr");
@@ -171,8 +168,8 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(1);
     }
 
-    outBytesCount := list.listCountInt(fs.readBytes(tempOutPath));
-    errBytesCount := list.listCountInt(fs.readBytes(tempErrPath));
+    outBytesCount := fs.readBytes(tempOutPath).length();
+    errBytesCount := fs.readBytes(tempErrPath).length();
     cpOut := fs.copy(tempOutPath, outPath);
     if not cpOut.ok {
         _rm := fs.remove(work);
@@ -187,11 +184,11 @@ run := fn(rawArgs: List<String>): Unit {
     }
     _rm := fs.remove(work);
 
-    summary := "{\"phase\":\"run\",\"status\":" + integer.intText(runRes.status)
+    summary := "{\"phase\":\"run\",\"status\":" + runRes.status.toText()
     + ",\"signal\":null,\"out\":" + json.quoteString(outPath)
-    + ",\"outBytes\":" + integer.intText(outBytesCount)
+    + ",\"outBytes\":" + outBytesCount.toText()
     + ",\"err\":" + json.quoteString(errPath)
-    + ",\"errBytes\":" + integer.intText(errBytesCount) + "}";
+    + ",\"errBytes\":" + errBytesCount.toText() + "}";
     io.errorLine(summary);
     io.exit(runRes.status);
 };

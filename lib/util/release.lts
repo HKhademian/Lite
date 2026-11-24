@@ -1,22 +1,21 @@
 /** Shared component release stream parsing, SemVer validation, and readiness profile helpers. */
 
 fs := import "core/file";
-integer := import "core/int";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
 json := import "util/json";
 
 isIdentChar := fn(ch: String): Bool {
-    text.isDigit(ch) or text.isAsciiLetter(ch) or ch == "-"
+    ch.isDigit() or ch.isAsciiLetter() or ch == "-"
 };
 
 isAllDigits := fn(segment: String): Bool {
-    size := text.length(segment);
+    size := segment.length();
     if size == 0 { return false; }
     var i := 0;
     loop i < size {
-        if not text.isDigit(text.at(segment, i)) { return false; }
+        if not segment.at(i).isDigit() { return false; }
         i = i + 1;
     }
     true
@@ -24,27 +23,27 @@ isAllDigits := fn(segment: String): Bool {
 
 isPlainNumericSegment := fn(segment: String): Bool {
     if not isAllDigits(segment) { return false; }
-    size := text.length(segment);
-    if size > 1 and text.at(segment, 0) == "0" { return false; }
+    size := segment.length();
+    if size > 1 and segment.at(0) == "0" { return false; }
     true
 };
 
 validDotIdentifiers := fn(part: String, rejectLeadingZeroNumeric: Bool): Bool {
-    size := text.length(part);
+    size := part.length();
     if size == 0 { return false; }
     var segStart := 0;
     var i := 0;
     loop i <= size {
         atEnd := i == size;
-        isDot := not atEnd and text.at(part, i) == ".";
+        isDot := not atEnd and part.at(i) == ".";
         if atEnd or isDot {
-            seg := text.slice(part, segStart, i);
-            if text.length(seg) == 0 { return false; }
+            seg := part.slice(segStart, i);
+            if seg.length() == 0 { return false; }
             if rejectLeadingZeroNumeric and isAllDigits(seg) and not isPlainNumericSegment(seg) {
                 return false;
             }
             segStart = i + 1;
-        } else if not isIdentChar(text.at(part, i)) {
+        } else if not isIdentChar(part.at(i)) {
             return false;
         }
         i = i + 1;
@@ -54,34 +53,34 @@ validDotIdentifiers := fn(part: String, rejectLeadingZeroNumeric: Bool): Bool {
 
 /** Validates SemVer (`MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]`) without leading zeroes on numeric identifiers. */
 pub isValidSemver := fn(version: String): Bool {
-    size := text.length(version);
+    size := version.length();
     if size == 0 { return false; }
-    plusPos := text.indexOfText(version, "+", 0);
-    beforeBuild := if plusPos >= 0 { text.slice(version, 0, plusPos) } else { version };
+    plusPos := version.indexOf("+", 0);
+    beforeBuild := if plusPos >= 0 { version.slice(0, plusPos) } else { version };
     if plusPos >= 0 {
-        buildPart := text.slice(version, plusPos + 1, size);
+        buildPart := version.slice(plusPos + 1, size);
         if not validDotIdentifiers(buildPart, false) { return false; }
     }
-    dashPos := text.indexOfText(beforeBuild, "-", 0);
-    corePart := if dashPos >= 0 { text.slice(beforeBuild, 0, dashPos) } else { beforeBuild };
+    dashPos := beforeBuild.indexOf("-", 0);
+    corePart := if dashPos >= 0 { beforeBuild.slice(0, dashPos) } else { beforeBuild };
     if dashPos >= 0 {
-        prePart := text.slice(beforeBuild, dashPos + 1, text.length(beforeBuild));
+        prePart := beforeBuild.slice(dashPos + 1, beforeBuild.length());
         if not validDotIdentifiers(prePart, true) { return false; }
     }
-    dot1 := text.indexOfText(corePart, ".", 0);
+    dot1 := corePart.indexOf(".", 0);
     if dot1 < 0 { return false; }
-    dot2 := text.indexOfText(corePart, ".", dot1 + 1);
+    dot2 := corePart.indexOf(".", dot1 + 1);
     if dot2 < 0 { return false; }
-    if text.indexOfText(corePart, ".", dot2 + 1) >= 0 { return false; }
-    isPlainNumericSegment(text.slice(corePart, 0, dot1)) and
-    isPlainNumericSegment(text.slice(corePart, dot1 + 1, dot2)) and
-    isPlainNumericSegment(text.slice(corePart, dot2 + 1, text.length(corePart)))
+    if corePart.indexOf(".", dot2 + 1) >= 0 { return false; }
+    isPlainNumericSegment(corePart.slice(0, dot1)) and
+    isPlainNumericSegment(corePart.slice(dot1 + 1, dot2)) and
+    isPlainNumericSegment(corePart.slice(dot2 + 1, corePart.length()))
 };
 
 /** Returns true when `version` is a plain `MAJOR.MINOR.PATCH` string (required for VS Code extension). */
 pub isPlainMajorMinorPatch := fn(version: String): Bool {
-    text.indexOfText(version, "-", 0) < 0 and
-    text.indexOfText(version, "+", 0) < 0 and
+    version.indexOf("-", 0) < 0 and
+    version.indexOf("+", 0) < 0 and
     isValidSemver(version)
 };
 
@@ -123,8 +122,8 @@ pub parseComponentTag := fn(tag: String): (ok: Bool, component: String, version:
     components := allComponents();
     loop components as component {
         prefix := componentTagPrefix(component) + "-v";
-        if text.startsWithAt(tag, 0, prefix) {
-            version := text.slice(tag, text.length(prefix), text.length(tag));
+        if tag.startsWithAt(0, prefix) {
+            version := tag.slice(prefix.length(), tag.length());
             if not isValidSemver(version) {
                 return (ok = false, component = "", version = "", error = "invalid release version: " + tag);
             }
@@ -193,7 +192,7 @@ pub selectComponentRelease := fn(rootDir: String, tag: String): (ok: Bool, hasTa
             if not field.found {
                 return (ok = false, hasTag = false, component = "", version = "", error = "versions.json: invalid or missing " + component + " version");
             }
-            if text.startsWithAt(verRead.text, field.valuePos, "null") {
+            if verRead.text.startsWithAt(field.valuePos, "null") {
                 assigned = false;
             } else {
                 strRes := json.readStringAt(verRead.text, field.valuePos);
@@ -236,14 +235,14 @@ pub versionsJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: Str
     entries: mut List<String> = [];
     loop allComponents() as component {
         if component == "igniter" {
-            list.pushBack(mut entries, "\"igniter\":" + json.quoteString(igniterRes.version));
+            mut entries.pushBack("\"igniter\":" + json.quoteString(igniterRes.version));
         } else {
             field := json.findObjectField(verRead.text, 0, component);
-            if text.startsWithAt(verRead.text, field.valuePos, "null") {
-                list.pushBack(mut entries, json.quoteString(component) + ":null");
+            if verRead.text.startsWithAt(field.valuePos, "null") {
+                mut entries.pushBack(json.quoteString(component) + ":null");
             } else {
                 strRes := json.readStringAt(verRead.text, field.valuePos);
-                list.pushBack(mut entries, json.quoteString(component) + ":" + json.quoteString(strRes.value));
+                mut entries.pushBack(json.quoteString(component) + ":" + json.quoteString(strRes.value));
             }
         }
     }
@@ -265,7 +264,7 @@ pub releaseProfile := fn(hasTag: Bool, component: String, version: String): Stri
     if component == "project" or component == "language" or component == "scripting" {
         return PROFILE_LANGUAGE;
     }
-    if component == "compiler" and text.indexOfText(version, "-", 0) < 0 {
+    if component == "compiler" and version.indexOf("-", 0) < 0 {
         return PROFILE_LANGUAGE;
     }
     PROFILE_COMPILER
@@ -302,55 +301,55 @@ tagMessage: String
     "- **Native C backend**: deferred (`nativeCompiler: false`)"
     ];
     if tagMessage =!= "" {
-        list.pushBack(mut lines, "");
-        list.pushBack(mut lines, "## Summary");
-        list.pushBack(mut lines, "");
-        list.pushBack(mut lines, tagMessage);
+        mut lines.pushBack("");
+        mut lines.pushBack("## Summary");
+        mut lines.pushBack("");
+        mut lines.pushBack(tagMessage);
     }
-    list.pushBack(mut lines, "");
-    list.pushBack(mut lines, "## Verification");
-    list.pushBack(mut lines, "");
-    list.pushBack(mut lines, "- Extracted archive validated with `./bin/lite doctor --docs`");
-    list.pushBack(mut lines, "- Node-only TypeScript emission & execution roundtrip verified on `001-001-report-int-42.lts` (output `42`)");
+    (mut lines).pushBack("");
+    mut lines.pushBack("## Verification");
+    mut lines.pushBack("");
+    mut lines.pushBack("- Extracted archive validated with `./bin/lite doctor --docs`");
+    mut lines.pushBack("- Node-only TypeScript emission & execution roundtrip verified on `001-001-report-int-42.lts` (output `42`)");
     if hasBootstrap {
         ladderStatus := if bootstrapFixedPoint { "passed" } else { "failed" };
         corpusStats := if not hasCorpusCases {
-            "mismatches=" + integer.intText(corpusMismatches)
+            "mismatches=" + corpusMismatches.toText()
         } else {
-            integer.intText(corpusCases) + " cases (" +
-            integer.intText(corpusPrograms) + " programs, " +
-            integer.intText(corpusRejections) + " rejections, " +
-            integer.intText(corpusExecutions) + " executions), mismatches=" +
-            integer.intText(corpusMismatches)
+            corpusCases.toText() + " cases (" +
+            corpusPrograms.toText() + " programs, " +
+            corpusRejections.toText() + " rejections, " +
+            corpusExecutions.toText() + " executions), mismatches=" +
+            corpusMismatches.toText()
         };
-        list.pushBack(mut lines, "- Self-hosting fixed-point ladder: " + ladderStatus + " (" + integer.intText(bootstrapGenerations) + " generations)");
-        list.pushBack(mut lines, "- Generated corpus parity: " + corpusStats);
+        mut lines.pushBack("- Self-hosting fixed-point ladder: " + ladderStatus + " (" + bootstrapGenerations.toText() + " generations)");
+        mut lines.pushBack("- Generated corpus parity: " + corpusStats);
         if profile == PROFILE_LANGUAGE {
-            list.pushBack(mut lines, "- Full repository verification: `./bin/lite verify --all --no-cache` passed");
+            mut lines.pushBack("- Full repository verification: `./bin/lite verify --all --no-cache` passed");
         }
-        list.pushBack(mut lines, "- Embedded archive evidence: `release/compiler.ts`, `release/compiler-source.lts`, `release/verification.json` (" + bootstrapSupport + ")");
+        (mut lines).pushBack("- Embedded archive evidence: `release/compiler.ts`, `release/compiler-source.lts`, `release/verification.json` (" + bootstrapSupport + ")");
     }
-    list.pushBack(mut lines, "");
-    list.pushBack(mut lines, "## Artifacts");
-    list.pushBack(mut lines, "");
-    list.pushBack(mut lines, "- `" + archive + "` — sha256: `" + archiveSha256 + "`");
+    (mut lines).pushBack("");
+    mut lines.pushBack("## Artifacts");
+    mut lines.pushBack("");
+    mut lines.pushBack("- `" + archive + "` — sha256: `" + archiveSha256 + "`");
     if hasVsix {
-        list.pushBack(mut lines, "- `" + vsixFile + "` — sha256: `" + vsixSha256 + "`");
+        mut lines.pushBack("- `" + vsixFile + "` — sha256: `" + vsixSha256 + "`");
     }
-    list.pushBack(mut lines, "- `manifest.json` — sha256: `" + manifestSha256 + "`");
-    list.pushBack(mut lines, "- `RELEASE-NOTES.md` — these release notes");
-    list.pushBack(mut lines, "- `SHA256SUMS` — checksum manifest for all release files");
-    list.pushBack(mut lines, "");
-    list.pushBack(mut lines, "## Verify and extract");
-    list.pushBack(mut lines, "");
-    list.pushBack(mut lines, "```sh");
-    list.pushBack(mut lines, "shasum -a 256 -c SHA256SUMS");
-    list.pushBack(mut lines, "mkdir -p lite-" + label + " && tar -xzf " + archive + " -C lite-" + label);
-    list.pushBack(mut lines, "cd lite-" + label + " && ./bin/lite doctor --docs");
-    list.pushBack(mut lines, "```");
-    list.pushBack(mut lines, "");
-    list.pushBack(mut lines, "See `docs/start-here.md`, `docs/release-automation.md`, and `compiler/transition-plan.md` in the archive.");
-    list.pushBack(mut lines, "");
+    (mut lines).pushBack("- `manifest.json` — sha256: `" + manifestSha256 + "`");
+    mut lines.pushBack("- `RELEASE-NOTES.md` — these release notes");
+    mut lines.pushBack("- `SHA256SUMS` — checksum manifest for all release files");
+    mut lines.pushBack("");
+    mut lines.pushBack("## Verify and extract");
+    mut lines.pushBack("");
+    mut lines.pushBack("```sh");
+    mut lines.pushBack("shasum -a 256 -c SHA256SUMS");
+    mut lines.pushBack("mkdir -p lite-" + label + " && tar -xzf " + archive + " -C lite-" + label);
+    mut lines.pushBack("cd lite-" + label + " && ./bin/lite doctor --docs");
+    mut lines.pushBack("```");
+    mut lines.pushBack("");
+    mut lines.pushBack("See `docs/start-here.md`, `docs/release-automation.md`, and `compiler/transition-plan.md` in the archive.");
+    mut lines.pushBack("");
     text.joinTexts(lines, "\n")
 };
 
@@ -368,20 +367,20 @@ pub formatComponentVersionsJson := fn(rootDir: String, indent: String): (ok: Boo
     entries: mut List<String> = [];
     loop components as component {
         if component == "igniter" {
-            list.pushBack(mut entries, indent + "  \"igniter\": " + json.quoteString(igniterRes.version));
+            mut entries.pushBack(indent + "  \"igniter\": " + json.quoteString(igniterRes.version));
         } else {
             field := json.findObjectField(verRead.text, 0, component);
             if not field.found {
                 return (ok = false, jsonText = "", error = "missing version for " + component);
             }
-            if text.startsWithAt(verRead.text, field.valuePos, "null") {
-                list.pushBack(mut entries, indent + "  " + json.quoteString(component) + ": null");
+            if verRead.text.startsWithAt(field.valuePos, "null") {
+                mut entries.pushBack(indent + "  " + json.quoteString(component) + ": null");
             } else {
                 strRes := json.readStringAt(verRead.text, field.valuePos);
                 if not strRes.ok {
                     return (ok = false, jsonText = "", error = "invalid version for " + component);
                 }
-                list.pushBack(mut entries, indent + "  " + json.quoteString(component) + ": " + json.quoteString(strRes.value));
+                (mut entries).pushBack(indent + "  " + json.quoteString(component) + ": " + json.quoteString(strRes.value));
             }
         }
     }

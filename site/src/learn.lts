@@ -1,7 +1,5 @@
 /** Generates `/learn/` index, lesson/tutorial page bodies, payloads, and search entries (`site/learn-pages.ts`). */
 
-integer := import "core/int";
-list := import "core/list";
 text := import "core/text";
 lru := import "extra/lru";
 json := import "util/json";
@@ -19,21 +17,21 @@ envMetaPillClass := fn(env: String): String {
 };
 
 replaceAllText := fn(source: String, needle: String, replacement: String): String {
-    nLen := text.length(needle);
+    nLen := needle.length();
     if nLen == 0 { return source; }
-    sLen := text.length(source);
+    sLen := source.length();
     out: mut List<String> = [];
     var pos := 0;
     loop pos < sLen {
-        found := text.indexOfText(source, needle, pos);
+        found := source.indexOf(needle, pos);
         if found < 0 {
-            list.pushBack(mut out, text.slice(source, pos, sLen));
+            mut out.pushBack(source.slice(pos, sLen));
             break;
         }
         if found > pos {
-            list.pushBack(mut out, text.slice(source, pos, found));
+            mut out.pushBack(source.slice(pos, found));
         }
-        list.pushBack(mut out, replacement);
+        (mut out).pushBack(replacement);
         pos = found + nLen;
     }
     text.joinTexts(out, "")
@@ -46,7 +44,7 @@ safeJsonForScript := fn(rawJson: String): String {
 readOptStr := fn(src: String, objPos: Int, key: String): String {
     cacheable := key == "id" or key == "title" or key == "slug" or key == "trackId" or key == "environment";
     if cacheable {
-        ck := integer.intText(objPos) + ":" + key;
+        ck := objPos.toText() + ":" + key;
         hit := lru.getText(learnMetaCache, ck);
         if hit.found { return hit.value; }
         res := json.readObjectString(src, objPos, key);
@@ -64,7 +62,7 @@ readStringArrayAt := fn(src: String, arrPos: Int): List<String> {
     loop offs as off {
         r := json.readStringAt(src, off);
         if r.ok {
-            list.pushBack(mut out, r.value);
+            mut out.pushBack(r.value);
         }
     }
     out
@@ -84,12 +82,12 @@ readRawField := fn(src: String, objPos: Int, key: String, fallback: String): Str
     if not fld.found { return fallback; }
     sp := json.valueSpan(src, fld.valuePos);
     if not sp.ok { return fallback; }
-    text.slice(src, sp.start, sp.end)
+    src.slice(sp.start, sp.end)
 };
 
 findIdIndex := fn(ids: List<String>, targetId: String): Int {
     var i := 0;
-    n := list.listCountText(ids);
+    n := ids.length();
     loop i < n {
         if ids[i] == targetId { return i; }
         i = i + 1;
@@ -103,8 +101,8 @@ trackOffs: List<Int>,
 itemOffs: List<Int>,
 itemIds: List<String>
 ): String {
-    totalCount := list.listCountInt(itemOffs);
-    totalStr := integer.intText(totalCount);
+    totalCount := itemOffs.length();
+    totalStr := totalCount.toText();
 
     var univCount := 0;
     var playCount := 0;
@@ -127,7 +125,7 @@ itemIds: List<String>
         + ",\"trackId\":" + json.quoteString(trackId)
         + ",\"href\":" + json.quoteString(trackId + "/" + slug + ".html")
         + ",\"title\":" + json.quoteString(title) + "}";
-        list.pushBack(mut orderedHrefObjs, hrefObj);
+        mut orderedHrefObjs.pushBack(hrefObj);
     }
 
     firstHref := if totalCount > 0 {
@@ -160,14 +158,14 @@ itemIds: List<String>
             href := trId + "/" + slug + ".html";
             tagParts: mut List<String> = [];
             var ti := 0;
-            var tLim := list.listCountText(teaches);
+            var tLim := teaches.length();
             if tLim > 4 { tLim = 4; }
             loop ti < tLim {
-                list.pushBack(mut tagParts, "<code>" + escapeHtml(teaches[ti]) + "</code>");
+                mut tagParts.pushBack("<code>" + escapeHtml(teaches[ti]) + "</code>");
                 ti = ti + 1;
             }
             tags := text.joinTexts(tagParts, " ");
-            searchBlob := text.toLowerAscii(title + " " + text.joinTexts(teaches, " ") + " " + trTitle + " " + sourceFile);
+            searchBlob := (title + " " + text.joinTexts(teaches, " ") + " " + trTitle + " " + sourceFile).toLowerAscii();
             ctaLabel := if kind == "tutorial" { "Build Tutorial" } else { "Start Lesson" };
             card := "<article class=\"portal-card learn-index-card\" data-lesson-id=\"" + escapeHtml(id)
             + "\" data-env=\"" + escapeHtml(env)
@@ -183,9 +181,9 @@ itemIds: List<String>
             + "    <a href=\"" + escapeHtml(href) + "\">" + ctaLabel + " &rarr;</a>\n"
             + "  </div>\n"
             + "</article>";
-            list.pushBack(mut cards, card);
+            mut cards.pushBack(card);
         }
-        trCount := integer.intText(list.listCountText(trLessonIds));
+        trCount := trLessonIds.length().toText();
         trUnit := if trId == "tutorials" { "projects" } else { "lessons" };
         sec := "<section class=\"section\" id=\"track-" + escapeHtml(trId) + "\" data-learn-track=\"" + escapeHtml(trId) + "\">\n"
         + "  <div class=\"section-head\">\n"
@@ -197,7 +195,7 @@ itemIds: List<String>
         + "    " + text.joinTexts(cards, "\n") + "\n"
         + "  </div>\n"
         + "</section>";
-        list.pushBack(mut trackSections, sec);
+        mut trackSections.pushBack(sec);
     }
 
     lessonsJson := "[" + text.joinTexts(orderedHrefObjs, ",") + "]";
@@ -224,9 +222,9 @@ itemIds: List<String>
     "  <input id=\"learn-search\" class=\"filter-input\" type=\"search\" placeholder=\"Filter lessons, tutorials, or topics...\" aria-label=\"Filter Learn lessons\">",
     "  <div class=\"gym-filter-group\" role=\"group\" aria-label=\"Environment filter\">",
     "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"all\" aria-pressed=\"true\">All (" + totalStr + ")</button>",
-    "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"universal\" aria-pressed=\"false\">Browser + CLI (" + integer.intText(univCount) + ")</button>",
-    "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"play\" aria-pressed=\"false\">Lite Play (" + integer.intText(playCount) + ")</button>",
-    "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"cli\" aria-pressed=\"false\">CLI / Host OS (" + integer.intText(cliCount) + ")</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"universal\" aria-pressed=\"false\">Browser + CLI (" + univCount.toText() + ")</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"play\" aria-pressed=\"false\">Lite Play (" + playCount.toText() + ")</button>",
+    "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"cli\" aria-pressed=\"false\">CLI / Host OS (" + cliCount.toText() + ")</button>",
     "  </div>",
     "  <div class=\"gym-filter-group\">",
     "    <button id=\"learn-filter-incomplete\" class=\"gym-filter-btn\" type=\"button\" aria-pressed=\"false\">Incomplete Only</button>",
@@ -358,7 +356,7 @@ itemIds: List<String>,
 trackOffs: List<Int>,
 repoUrl: String
 ): String {
-    totalCount := list.listCountInt(itemOffs);
+    totalCount := itemOffs.length();
     iPos := itemOffs[idx];
     itemId := readOptStr(src, iPos, "id");
     itemSlug := readOptStr(src, iPos, "slug");
@@ -401,7 +399,7 @@ repoUrl: String
             href := "../" + trId + "/" + lsSlug + ".html";
             cls := if lsId == itemId { " class=\"active\"" } else { "" };
             li := "<li><a href=\"" + escapeHtml(href) + "\"" + cls + " data-nav-lesson=\"" + escapeHtml(lsId) + "\"><span>" + escapeHtml(lsTitle) + "</span><span class=\"learn-done-dot\" aria-hidden=\"true\"></span></a></li>";
-            list.pushBack(mut liParts, li);
+            mut liParts.pushBack(li);
         }
         grp := "<details class=\"portal-nav-group\"" + openAttr + ">\n"
         + "        <summary>" + escapeHtml(trTitle) + "</summary>\n"
@@ -409,14 +407,14 @@ repoUrl: String
         + "          " + text.joinTexts(liParts, "\n          ") + "\n"
         + "        </ul>\n"
         + "      </details>";
-        list.pushBack(mut sidebarParts, grp);
+        mut sidebarParts.pushBack(grp);
     }
 
     sourceHref := if repoUrl =!= "" { repoUrl + "/blob/main/" + itemSourceFile } else { "#" };
-    helperList := if list.listCountText(itemHelperSpecs) > 0 {
+    helperList := if itemHelperSpecs.length() > 0 {
         hParts: mut List<String> = [];
         loop itemHelperSpecs as spec {
-            list.pushBack(mut hParts, "<code>" + escapeHtml(spec) + "</code>");
+            mut hParts.pushBack("<code>" + escapeHtml(spec) + "</code>");
         }
         "<p class=\"code-card-meta\">Bundled helper modules: " + text.joinTexts(hParts, ", ") + "</p>"
     } else {
@@ -454,7 +452,7 @@ repoUrl: String
     lines: List<String> = [
     "<div id=\"ln-workbench\" class=\"learn-workbench has-split\" data-academy-visit-path=\"" + escapeHtml(itemOutPath) + "\" data-academy-visit-title=\"" + escapeHtml(itemTitle) + "\" data-academy-visit-section=\"Learn\">",
     "  <aside class=\"portal-sidebar learn-sidebar\" aria-label=\"Curriculum\">",
-    "    <p class=\"portal-sidebar-title\"><a href=\"../\">All Tracks (" + integer.intText(totalCount) + ")</a></p>",
+    "    <p class=\"portal-sidebar-title\"><a href=\"../\">All Tracks (" + totalCount.toText() + ")</a></p>",
     "    " + text.joinTexts(sidebarParts, "\n      "),
     "  </aside>",
     "",
@@ -890,7 +888,7 @@ pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String,
 
     itemIds: mut List<String> = [];
     loop itemOffs as iPos {
-        list.pushBack(mut itemIds, readOptStr(inputJson, iPos, "id"));
+        mut itemIds.pushBack(readOptStr(inputJson, iPos, "id"));
     }
 
     pagesJson: mut List<String> = [];
@@ -903,14 +901,14 @@ pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String,
     + "\"mainClass\":\"\","
     + "\"body\":" + json.quoteString(indexBody)
     + "}";
-    list.pushBack(mut pagesJson, indexPageObj);
+    mut pagesJson.pushBack(indexPageObj);
 
     payloadsJson: mut List<String> = [];
     searchEntriesJson: mut List<String> = [];
     var lessonCount := 0;
     var tutorialCount := 0;
     var idx := 0;
-    totalItems := list.listCountInt(itemOffs);
+    totalItems := itemOffs.length();
     loop idx < totalItems {
         iPos := itemOffs[idx];
         itId := readOptStr(inputJson, iPos, "id");
@@ -945,7 +943,7 @@ pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String,
         + "\"mainClass\":\"learn-main\","
         + "\"body\":" + json.quoteString(body)
         + "}";
-        list.pushBack(mut pagesJson, pageObj);
+        mut pagesJson.pushBack(pageObj);
 
         payloadContent := "{"
         + "\"id\":" + json.quoteString(itId) + ","
@@ -964,7 +962,7 @@ pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String,
         + "\"relPath\":" + json.quoteString("learn/payloads/" + itSlug + ".json") + ","
         + "\"content\":" + json.quoteString(payloadContent)
         + "}";
-        list.pushBack(mut payloadsJson, payloadObj);
+        mut payloadsJson.pushBack(payloadObj);
 
         badge := if itKind == "tutorial" { "Tutorial" } else { "Lesson" };
         seObj := "{"
@@ -975,14 +973,14 @@ pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String,
         + "\"keywords\":" + json.quoteString(itSlug + " " + itTrackId + " " + text.joinTexts(itTeaches, " ") + " " + itSourceFile) + ","
         + "\"badge\":" + json.quoteString(badge)
         + "}";
-        list.pushBack(mut searchEntriesJson, seObj);
+        mut searchEntriesJson.pushBack(seObj);
 
         idx = idx + 1;
     }
 
     outJson := "{"
-    + "\"lessonCount\":" + integer.intText(lessonCount) + ","
-    + "\"tutorialCount\":" + integer.intText(tutorialCount) + ","
+    + "\"lessonCount\":" + lessonCount.toText() + ","
+    + "\"tutorialCount\":" + tutorialCount.toText() + ","
     + "\"pages\":[" + text.joinTexts(pagesJson, ",") + "],"
     + "\"payloads\":[" + text.joinTexts(payloadsJson, ",") + "],"
     + "\"searchEntries\":[" + text.joinTexts(searchEntriesJson, ",") + "]"

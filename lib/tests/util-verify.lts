@@ -1,8 +1,7 @@
 verify := import "util/verify";
-text := import "core/text";
 test := import "core/test";
 
-test.checkBool("usage mentions --coverage", true, text.indexOfText(verify.usageText(), "--coverage", 0) >= 0);
+test.checkBool("usage mentions --coverage", true, verify.usageText().indexOf("--coverage", 0) >= 0);
 
 defOpts := verify.parseVerifyArgs([]);
 test.checkBool("default opts ok", true, defOpts.ok);

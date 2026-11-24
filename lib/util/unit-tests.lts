@@ -4,9 +4,6 @@ io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
 project := import "util/project";
-integer := import "core/int";
-text := import "core/text";
-list := import "core/list";
 path := import "core/path";
 pool := import "external/pool";
 cases := import "util/cases";
@@ -18,12 +15,12 @@ unitTestUsage := fn(): String {
 };
 
 isPositiveIntText := fn(raw: String): (ok: Bool, value: Int) {
-    size := text.length(raw);
+    size := raw.length();
     if size == 0 { return (ok = false, value = 0); }
     var i := 0;
     loop i < size {
-        ch := text.at(raw, i);
-        if text.indexOfText("0123456789", ch, 0) < 0 { return (ok = false, value = 0); }
+        ch := raw.at(i);
+        if "0123456789".indexOf(ch, 0) < 0 { return (ok = false, value = 0); }
         i = i + 1;
     }
     parsed := json.readIntAt(raw, 0);
@@ -33,9 +30,9 @@ isPositiveIntText := fn(raw: String): (ok: Bool, value: Int) {
 
 readWorkerFailureText := fn(errPath: String, outPath: String, fallback: String): String {
     errRes := fs.readText(errPath);
-    if errRes.ok and text.trim(errRes.text) =!= "" { return errRes.text; }
+    if errRes.ok and errRes.text.trim() =!= "" { return errRes.text; }
     outRes := fs.readText(outPath);
-    if outRes.ok and text.trim(outRes.text) =!= "" { return outRes.text; }
+    if outRes.ok and outRes.text.trim() =!= "" { return outRes.text; }
     fallback
 };
 
@@ -81,14 +78,14 @@ pub runUnitWorker := fn(taskJson: String): Int {
     if comp.error =!= "" or comp.status =!= 0 {
         msg := if comp.error =!= "" { comp.error } else { readWorkerFailureText(compErrPath, outTsPath, "compilation failed") };
         _rmComp := fs.remove(workDir);
-        io.errorLine(text.trimEnd(msg));
+        io.errorLine(msg.trimEnd());
         return if comp.status > 0 { comp.status } else { 1 };
     }
 
     checked := cases.checkTsArtifactFileWithStatus(rootDir, outTsPath, path.join(workDir, "tsc"), 60000);
     if not checked.ok {
         _rmChk := fs.remove(workDir);
-        io.errorLine(text.trimEnd(checked.error));
+        io.errorLine(checked.error.trimEnd());
         return 1;
     }
 
@@ -107,8 +104,8 @@ pub runUnitWorker := fn(taskJson: String): Int {
     if ran.error =!= "" or ran.status =!= 0 {
         msg := if ran.error =!= "" { ran.error } else { readWorkerFailureText(runErrPath, runOutPath, "unit test failed") };
         _rmRun := fs.remove(workDir);
-        if text.trim(msg) =!= "" {
-            io.errorLine(text.trimEnd(msg));
+        if msg.trim() =!= "" {
+            io.errorLine(msg.trimEnd());
         }
         return if ran.status > 0 { ran.status } else { 1 };
     }
@@ -126,7 +123,7 @@ isSerialUnitTest := fn(relFile: String): Bool {
 runUnitBatch := fn(
 rootDir: String, compilerPath: String, runnerScript: String, batchRel: List<String>, batchJobs: Int, outputMode: String
 ): (ok: Bool, passed: Int, failed: Int) {
-    count := list.listCountText(batchRel);
+    count := batchRel.length();
     if count == 0 {
         return (ok = true, passed = 0, failed = 0);
     }
@@ -145,7 +142,7 @@ rootDir: String, compilerPath: String, runnerScript: String, batchRel: List<Stri
     jobs := if batchJobs > 0 { batchJobs } else { pool.cpuCount() };
     rawResults := pool.runPoolJson(commands, argListsJson, rootDir, jobs);
     offsets := json.arrayElementOffsets(rawResults, 0);
-    if list.listCountInt(offsets) =!= count {
+    if offsets.length() =!= count {
         if outputMode =!= "--silence" {
             io.errorLine("unit test pool returned malformed result count");
         }
@@ -171,13 +168,13 @@ rootDir: String, compilerPath: String, runnerScript: String, batchRel: List<Stri
         } else {
             failed = failed + 1;
             if outputMode =!= "--silence" {
-                io.errorLine("FAIL " + batchRel[idx] + " (exit " + integer.intText(status) + ")");
-                if errText =!= "" { io.errorLine(text.trimEnd(errText)); }
-                if outRes.found and outRes.ok and text.trim(outRes.value) =!= "" {
-                    io.errorLine(text.trimEnd(outRes.value));
+                io.errorLine("FAIL " + batchRel[idx] + " (exit " + status.toText() + ")");
+                if errText =!= "" { io.errorLine(errText.trimEnd()); }
+                if outRes.found and outRes.ok and outRes.value.trim() =!= "" {
+                    io.errorLine(outRes.value.trimEnd());
                 }
-                if errRes.found and errRes.ok and text.trim(errRes.value) =!= "" {
-                    io.errorLine(text.trimEnd(errRes.value));
+                if errRes.found and errRes.ok and errRes.value.trim() =!= "" {
+                    io.errorLine(errRes.value.trimEnd());
                 }
             }
         }
@@ -188,7 +185,7 @@ rootDir: String, compilerPath: String, runnerScript: String, batchRel: List<Stri
 
 /** Runs an explicit list of repository-relative `.test.lts` files, isolating nested-CLI suites serially after parallel workers. */
 pub runUnitTestFiles := fn(rootDir: String, selectedRel: List<String>, maxJobs: Int, outputMode: String): Int {
-    count := list.listCountText(selectedRel);
+    count := selectedRel.length();
     if count == 0 {
         if outputMode =!= "--silence" and outputMode =!= "--mute" {
             io.outputLine("Unit tests: 0 passed, 0 failed.");
@@ -241,15 +238,15 @@ pub runUnitTestFiles := fn(rootDir: String, selectedRel: List<String>, maxJobs: 
 
     if failed > 0 {
         if outputMode =!= "--silence" {
-            io.errorLine("Unit tests: " + integer.intText(passed) + " passed, " + integer.intText(failed) + " failed.");
+            io.errorLine("Unit tests: " + passed.toText() + " passed, " + failed.toText() + " failed.");
         }
         return 1;
     }
     if outputMode =!= "--silence" {
         if outputMode == "--mute" {
-            io.outputLine("Unit tests passed (" + integer.intText(passed) + ").");
+            io.outputLine("Unit tests passed (" + passed.toText() + ").");
         } else {
-            io.outputLine("Unit tests: " + integer.intText(passed) + " passed, 0 failed.");
+            io.outputLine("Unit tests: " + passed.toText() + " passed, 0 failed.");
         }
     }
     0
@@ -265,11 +262,11 @@ pub runUnitTests := fn(rootDir: String, filter: String, maxJobs: Int, outputMode
     loop absFiles as absFile {
         rel := path.relative(rootDir, absFile);
         if cases.matchesCaseFilter(rel, filter) {
-            list.pushBack(mut selectedRel, rel);
+            mut selectedRel.pushBack(rel);
         }
     }
 
-    count := list.listCountText(selectedRel);
+    count := selectedRel.length();
     if count == 0 and filter =!= "" {
         if outputMode =!= "--silence" {
             io.errorLine("No unit test files matched \"" + filter + "\".");
@@ -291,31 +288,31 @@ pub runUnitCli := fn(rootDir: String, rawArgs: List<String>): Int {
     var filter := "";
     var hasFilter := false;
 
-    loop list.listCountText(args) > 0 {
-        arg := list.popFront(mut args);
+    loop args.length() > 0 {
+        arg := mut args.popFront();
         if arg == "--" {
-            if list.listCountText(args) > 1 or hasFilter {
+            if args.length() > 1 or hasFilter {
                 io.errorLine(unitTestUsage());
                 return 2;
             }
-            if list.listCountText(args) == 1 {
-                filter = list.popFront(mut args);
+            if args.length() == 1 {
+                filter = mut args.popFront();
                 hasFilter = true;
             }
             break;
         } else if arg == "--jobs" or arg == "-j" {
-            if list.listCountText(args) == 0 {
+            if args.length() == 0 {
                 io.errorLine(unitTestUsage());
                 return 2;
             }
-            parsed := isPositiveIntText(list.popFront(mut args));
+            parsed := isPositiveIntText(mut args.popFront());
             if not parsed.ok {
                 io.errorLine(unitTestUsage());
                 return 2;
             }
             jobs = parsed.value;
-        } else if text.startsWithAt(arg, 0, "--jobs=") {
-            parsed := isPositiveIntText(text.slice(arg, 7, text.length(arg)));
+        } else if arg.startsWithAt(0, "--jobs=") {
+            parsed := isPositiveIntText(arg.slice(7, arg.length()));
             if not parsed.ok {
                 io.errorLine(unitTestUsage());
                 return 2;
@@ -327,7 +324,7 @@ pub runUnitCli := fn(rootDir: String, rawArgs: List<String>): Int {
                 return 2;
             }
             outputMode = arg;
-        } else if text.startsWithAt(arg, 0, "-") or hasFilter {
+        } else if arg.startsWithAt(0, "-") or hasFilter {
             io.errorLine(unitTestUsage());
             return 2;
         } else {

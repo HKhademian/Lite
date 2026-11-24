@@ -1,5 +1,4 @@
 file := import "core/file";
-list := import "core/list";
 path := import "core/path";
 test := import "core/test";
 
@@ -73,12 +72,12 @@ _w6 := file.writeText(path.join(dotDir, "ignored3.lts"), "x := 5;\n");
 
 targets: List<String> = [walkRoot];
 collected := path.collectFiles(walkRoot, targets, ".lts", path.defaultIgnoredDirs(), true);
-test.checkInt("collected lts count", 2, list.listCountText(collected));
+test.checkInt("collected lts count", 2, collected.length());
 test.checkText("collected first", aFile, collected[0]);
 test.checkText("collected second", bFile, collected[1]);
 
 allFiles := path.collectFiles(walkRoot, targets, "", path.defaultIgnoredDirs(), true);
-test.checkInt("collected all count", 3, list.listCountText(allFiles));
+test.checkInt("collected all count", 3, allFiles.length());
 
 _wNestedSkip := file.makeDir(path.join(nested, "node_modules"));
 _wNestedIgnored := file.writeText(path.join(nested, "node_modules/pkg.txt"), "skip\n");

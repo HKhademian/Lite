@@ -2,9 +2,7 @@
 
 diag := import "core/diag";
 file := import "core/file";
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
 text := import "core/text";
 unicode := import "core/unicode";
 
@@ -19,7 +17,7 @@ pow32 := 4294967296;
 checkByteRange := fn(bytes: List<Int>): Unit {
     loop bytes as b {
         if b < 0 or b > 255 {
-            diag.fail("", "byte value outside 0..255: " + integer.intText(b));
+            diag.fail("", "byte value outside 0..255: " + b.toText());
             return;
         }
     }
@@ -47,7 +45,7 @@ buildNibbleTable := fn(isXor: Bool): List<Int> {
                 bit *= 2;
                 k += 1;
             }
-            list.pushBack(mut out, res);
+            (mut out).pushBack(res);
             b += 1;
         }
         a += 1;
@@ -169,7 +167,7 @@ word32Hex := fn(word: Int): String {
     var step := 0;
     loop step < 8 {
         nib := (word / div) % 16;
-        out += text.at(hexAlphabet, nib);
+        out += hexAlphabet.at(nib);
         div /= 16;
         step += 1;
     }
@@ -186,7 +184,7 @@ block: List<Int>, offset: Int
     var i := 0;
     loop i < 16 {
         p := offset + i * 4;
-        list.pushBack(mut w, block[p] * 16777216 + block[p + 1] * 65536 + block[p + 2] * 256 + block[p + 3]);
+        mut w.pushBack(block[p] * 16777216 + block[p + 1] * 65536 + block[p + 2] * 256 + block[p + 3]);
         i += 1;
     }
     loop i < 64 {
@@ -202,7 +200,7 @@ block: List<Int>, offset: Int
         (w2 / 524288) + (w2 % 524288) * 8192,
         w2 / 1024
         );
-        list.pushBack(mut w, (w[i - 16] + s0 + w[i - 7] + s1) % pow32);
+        mut w.pushBack((w[i - 16] + s0 + w[i - 7] + s1) % pow32);
         i += 1;
     }
 
@@ -268,24 +266,24 @@ tail: List<Int>, totalBytes: Int
     var h7 := h7In;
     padded: mut List<Int> = [];
     loop tail as b {
-        list.pushBack(mut padded, b);
+        mut padded.pushBack(b);
     }
-    list.pushBack(mut padded, 128);
-    loop (list.listCountInt(padded) % 64) =!= 56 {
-        list.pushBack(mut padded, 0);
+    (mut padded).pushBack(128);
+    loop (padded.length() % 64) =!= 56 {
+        mut padded.pushBack(0);
     }
     var bitLen := totalBytes * 8;
     lenBytes: mut List<Int> = [];
     var k := 0;
     loop k < 8 {
-        list.pushFront(mut lenBytes, bitLen % 256);
+        mut lenBytes.pushFront(bitLen % 256);
         bitLen /= 256;
         k += 1;
     }
     loop lenBytes as lb {
-        list.pushBack(mut padded, lb);
+        mut padded.pushBack(lb);
     }
-    totalPadded := list.listCountInt(padded);
+    totalPadded := padded.length();
     var pos := 0;
     loop pos < totalPadded {
         st := sha256Compress(h0, h1, h2, h3, h4, h5, h6, h7, padded, pos);
@@ -317,19 +315,19 @@ pub sha256Reader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String
         if not io.readerOk(reader) {
             return (ok = false, hex = "", error = io.readerError(reader));
         }
-        chunkLen := list.listCountInt(chunk);
+        chunkLen := chunk.length();
         if chunkLen == 0 {
             if io.readerAtEof(reader) { break; }
             continue;
         }
         totalBytes += chunkLen;
         var pos := 0;
-        if list.listCountInt(tail) > 0 {
-            loop list.listCountInt(tail) < 64 and pos < chunkLen {
-                list.pushBack(mut tail, chunk[pos]);
+        if tail.length() > 0 {
+            loop tail.length() < 64 and pos < chunkLen {
+                mut tail.pushBack(chunk[pos]);
                 pos += 1;
             }
-            if list.listCountInt(tail) == 64 {
+            if tail.length() == 64 {
                 st := sha256Compress(h0, h1, h2, h3, h4, h5, h6, h7, tail, 0);
                 h0 = st.h0; h1 = st.h1; h2 = st.h2; h3 = st.h3;
                 h4 = st.h4; h5 = st.h5; h6 = st.h6; h7 = st.h7;
@@ -343,7 +341,7 @@ pub sha256Reader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String
             pos += 64;
         }
         loop pos < chunkLen {
-            list.pushBack(mut tail, chunk[pos]);
+            mut tail.pushBack(chunk[pos]);
             pos += 1;
         }
     }
@@ -353,7 +351,7 @@ pub sha256Reader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String
 /** Returns the lowercase hexadecimal SHA-256 digest of raw `0..255` byte values. */
 pub sha256Bytes := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
-    total := list.listCountInt(bytes);
+    total := bytes.length();
     var h0 := 1779033703;
     var h1 := 3144134277;
     var h2 := 1013904242;
@@ -371,7 +369,7 @@ pub sha256Bytes := fn(bytes: List<Int>): String {
     }
     tail: mut List<Int> = [];
     loop pos < total {
-        list.pushBack(mut tail, bytes[pos]);
+        mut tail.pushBack(bytes[pos]);
         pos += 1;
     }
     sha256FinalizeTail(h0, h1, h2, h3, h4, h5, h6, h7, tail, total)
@@ -435,25 +433,25 @@ shr64 := fn(hi: Int, lo: Int, shift: Int): (hi: Int, lo: Int) {
 /** Returns the lowercase hexadecimal SHA-512 digest of raw `0..255` byte values. */
 pub sha512Bytes := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
-    total := list.listCountInt(bytes);
+    total := bytes.length();
     padded: mut List<Int> = [];
     loop bytes as b {
-        list.pushBack(mut padded, b);
+        mut padded.pushBack(b);
     }
-    list.pushBack(mut padded, 128);
-    loop (list.listCountInt(padded) % 128) =!= 112 {
-        list.pushBack(mut padded, 0);
+    (mut padded).pushBack(128);
+    loop (padded.length() % 128) =!= 112 {
+        mut padded.pushBack(0);
     }
     var bitLen := total * 8;
     lenBytes: mut List<Int> = [];
     var k := 0;
     loop k < 16 {
-        list.pushFront(mut lenBytes, bitLen % 256);
+        mut lenBytes.pushFront(bitLen % 256);
         bitLen /= 256;
         k += 1;
     }
     loop lenBytes as lb {
-        list.pushBack(mut padded, lb);
+        mut padded.pushBack(lb);
     }
 
     var h0Hi := 1779033703; var h0Lo := 4089235720;
@@ -465,7 +463,7 @@ pub sha512Bytes := fn(bytes: List<Int>): String {
     var h6Hi := 528734635; var h6Lo := 4215389547;
     var h7Hi := 1541459225; var h7Lo := 327033209;
 
-    totalPadded := list.listCountInt(padded);
+    totalPadded := padded.length();
     var offset := 0;
     loop offset < totalPadded {
         wHi: mut List<Int> = [];
@@ -473,8 +471,8 @@ pub sha512Bytes := fn(bytes: List<Int>): String {
         var i := 0;
         loop i < 16 {
             p := offset + i * 8;
-            list.pushBack(mut wHi, padded[p] * 16777216 + padded[p + 1] * 65536 + padded[p + 2] * 256 + padded[p + 3]);
-            list.pushBack(mut wLo, padded[p + 4] * 16777216 + padded[p + 5] * 65536 + padded[p + 6] * 256 + padded[p + 7]);
+            mut wHi.pushBack(padded[p] * 16777216 + padded[p + 1] * 65536 + padded[p + 2] * 256 + padded[p + 3]);
+            mut wLo.pushBack(padded[p + 4] * 16777216 + padded[p + 5] * 65536 + padded[p + 6] * 256 + padded[p + 7]);
             i += 1;
         }
         loop i < 80 {
@@ -490,8 +488,8 @@ pub sha512Bytes := fn(bytes: List<Int>): String {
             s1Lo := xor3_32(y0.lo, y1.lo, y2.lo);
             sumLo := wLo[i - 16] + s0Lo + wLo[i - 7] + s1Lo;
             sumHi := wHi[i - 16] + s0Hi + wHi[i - 7] + s1Hi + (sumLo / pow32);
-            list.pushBack(mut wHi, sumHi % pow32);
-            list.pushBack(mut wLo, sumLo % pow32);
+            mut wHi.pushBack(sumHi % pow32);
+            mut wLo.pushBack(sumLo % pow32);
             i += 1;
         }
 
@@ -567,12 +565,12 @@ pub sha512Text := fn(value: String): String {
 
 /** True when `ch` is one of the 64 non-padding Base64 alphabet characters. */
 isBase64DataChar := fn(ch: String): Bool {
-    text.indexOfText(b64Alphabet, ch, 0) >= 0
+    b64Alphabet.indexOf(ch, 0) >= 0
 }
 
 /** True when `ch` is an ASCII hexadecimal digit (`0-9`, `a-f`, `A-F`). */
 isHexChar := fn(ch: String): Bool {
-    text.indexOfText("0123456789abcdefABCDEF", ch, 0) >= 0
+    "0123456789abcdefABCDEF".indexOf(ch, 0) >= 0
 }
 
 /** Computes the bitwise XOR of two byte values (`0..255`). */
@@ -594,19 +592,19 @@ byteXor := fn(left: Int, right: Int): Int {
 
 /** Returns true when `encoded` is valid standard RFC 4648 padded base64 text. */
 pub isValidBase64 := fn(encoded: String): Bool {
-    size := text.length(encoded);
+    size := encoded.length();
     if size == 0 { return true; }
     if size % 4 =!= 0 { return false; }
     var padding := 0;
-    if text.at(encoded, size - 1) == "=" { padding += 1; }
-    if text.at(encoded, size - 2) == "=" {
+    if encoded.at(size - 1) == "=" { padding += 1; }
+    if encoded.at(size - 2) == "=" {
         if padding == 0 { return false; }
         padding += 1;
     }
     dataEnd := size - padding;
     var index := 0;
     loop index < dataEnd {
-        if not isBase64DataChar(text.at(encoded, index)) { return false; }
+        if not isBase64DataChar(encoded.at(index)) { return false; }
         index += 1;
     }
     true
@@ -614,11 +612,11 @@ pub isValidBase64 := fn(encoded: String): Bool {
 
 /** Returns true when `encoded` is valid even-length hexadecimal byte text. */
 pub isValidHex := fn(encoded: String): Bool {
-    size := text.length(encoded);
+    size := encoded.length();
     if size % 2 =!= 0 { return false; }
     var index := 0;
     loop index < size {
-        if not isHexChar(text.at(encoded, index)) { return false; }
+        if not isHexChar(encoded.at(index)) { return false; }
         index += 1;
     }
     true
@@ -627,26 +625,26 @@ pub isValidHex := fn(encoded: String): Bool {
 /** Encodes raw `0..255` byte values as standard RFC 4648 base64 text. */
 pub base64Encode := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
-    count := list.listCountInt(bytes);
+    count := bytes.length();
     parts: mut List<String> = [];
     var index := 0;
     loop index < count {
         b0 := bytes[index];
-        c0 := text.at(b64Alphabet, b0 / 4);
+        c0 := b64Alphabet.at(b0 / 4);
         rem0 := b0 % 4;
         if index + 1 >= count {
-            list.pushBack(mut parts, c0 + text.at(b64Alphabet, rem0 * 16) + "==");
+            mut parts.pushBack(c0 + b64Alphabet.at(rem0 * 16) + "==");
             break;
         }
         b1 := bytes[index + 1];
-        c1 := text.at(b64Alphabet, rem0 * 16 + (b1 / 16));
+        c1 := b64Alphabet.at(rem0 * 16 + (b1 / 16));
         rem1 := b1 % 16;
         if index + 2 >= count {
-            list.pushBack(mut parts, c0 + c1 + text.at(b64Alphabet, rem1 * 4) + "=");
+            mut parts.pushBack(c0 + c1 + b64Alphabet.at(rem1 * 4) + "=");
             break;
         }
         b2 := bytes[index + 2];
-        list.pushBack(mut parts, c0 + c1 + text.at(b64Alphabet, rem1 * 4 + (b2 / 64)) + text.at(b64Alphabet, b2 % 64));
+        mut parts.pushBack(c0 + c1 + b64Alphabet.at(rem1 * 4 + (b2 / 64)) + b64Alphabet.at(b2 % 64));
         index += 3;
     }
     text.joinTexts(parts, "")
@@ -658,21 +656,21 @@ pub base64Decode := fn(encoded: String): List<Int> {
         diag.fail("", "invalid base64 input");
         return [];
     }
-    size := text.length(encoded);
+    size := encoded.length();
     var out: mut List<Int> = [];
     var index := 0;
     loop index < size {
-        d0 := text.indexOfText(b64Alphabet, text.at(encoded, index), 0);
-        d1 := text.indexOfText(b64Alphabet, text.at(encoded, index + 1), 0);
-        list.pushBack(mut out, d0 * 4 + (d1 / 16));
-        c2 := text.at(encoded, index + 2);
+        d0 := b64Alphabet.indexOf(encoded.at(index), 0);
+        d1 := b64Alphabet.indexOf(encoded.at(index + 1), 0);
+        mut out.pushBack(d0 * 4 + (d1 / 16));
+        c2 := encoded.at(index + 2);
         if c2 =!= "=" {
-            d2 := text.indexOfText(b64Alphabet, c2, 0);
-            list.pushBack(mut out, (d1 % 16) * 16 + (d2 / 4));
-            c3 := text.at(encoded, index + 3);
+            d2 := b64Alphabet.indexOf(c2, 0);
+            mut out.pushBack((d1 % 16) * 16 + (d2 / 4));
+            c3 := encoded.at(index + 3);
             if c3 =!= "=" {
-                d3 := text.indexOfText(b64Alphabet, c3, 0);
-                list.pushBack(mut out, (d2 % 4) * 64 + d3);
+                d3 := b64Alphabet.indexOf(c3, 0);
+                mut out.pushBack((d2 % 4) * 64 + d3);
             }
         }
         index += 4;
@@ -685,7 +683,7 @@ pub hexEncode := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
     parts: mut List<String> = [];
     loop bytes as b {
-        list.pushBack(mut parts, text.at(hexAlphabet, b / 16) + text.at(hexAlphabet, b % 16));
+        mut parts.pushBack(hexAlphabet.at(b / 16) + hexAlphabet.at(b % 16));
     }
     text.joinTexts(parts, "")
 }
@@ -696,13 +694,13 @@ pub hexDecode := fn(encoded: String): List<Int> {
         diag.fail("", "invalid hex input");
         return [];
     }
-    size := text.length(encoded);
+    size := encoded.length();
     var out: mut List<Int> = [];
     var index := 0;
     loop index < size {
-        hi := text.indexOfText(hexAlphabet, text.toLowerAscii(text.at(encoded, index)), 0);
-        lo := text.indexOfText(hexAlphabet, text.toLowerAscii(text.at(encoded, index + 1)), 0);
-        list.pushBack(mut out, hi * 16 + lo);
+        hi := hexAlphabet.indexOf(encoded.at(index).toLowerAscii(), 0);
+        lo := hexAlphabet.indexOf(encoded.at(index + 1).toLowerAscii(), 0);
+        mut out.pushBack(hi * 16 + lo);
         index += 2;
     }
     out
@@ -711,30 +709,30 @@ pub hexDecode := fn(encoded: String): List<Int> {
 /** Returns the lowercase hexadecimal HMAC-SHA256 tag of `data` using secret `key` bytes. */
 pub hmacSha256Bytes := fn(key: List<Int>, data: List<Int>): String {
     checkByteRange(key);
-    keySize := list.listCountInt(key);
+    keySize := key.length();
     normalized := if keySize > 64 { hexDecode(sha256Bytes(key)) } else { key };
     var blockKey: mut List<Int> = [];
     loop normalized as b {
-        list.pushBack(mut blockKey, b);
+        mut blockKey.pushBack(b);
     }
-    loop list.listCountInt(blockKey) < 64 {
-        list.pushBack(mut blockKey, 0);
+    loop blockKey.length() < 64 {
+        mut blockKey.pushBack(0);
     }
     var inner: mut List<Int> = [];
     var outer: mut List<Int> = [];
     var index := 0;
     loop index < 64 {
         kb := blockKey[index];
-        list.pushBack(mut inner, byteXor(kb, 54));
-        list.pushBack(mut outer, byteXor(kb, 92));
+        mut inner.pushBack(byteXor(kb, 54));
+        mut outer.pushBack(byteXor(kb, 92));
         index += 1;
     }
     loop data as b {
-        list.pushBack(mut inner, b);
+        mut inner.pushBack(b);
     }
     innerDigest := hexDecode(sha256Bytes(inner));
     loop innerDigest as b {
-        list.pushBack(mut outer, b);
+        mut outer.pushBack(b);
     }
     sha256Bytes(outer)
 }

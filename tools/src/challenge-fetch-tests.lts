@@ -1,11 +1,8 @@
 /** Caches official sample pages for CSES, AtCoder, and Rosalind challenges. */
 
 fs := import "core/file";
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
 path := import "core/path";
-text := import "core/text";
 cfetch := import "util/challenge-fetch";
 challenges := import "util/challenges";
 json := import "util/json";
@@ -48,42 +45,42 @@ run := fn(rawArgs: List<String>): Int {
             src := srcF.value;
             outFile := path.join(cacheDir, "tests/" + src + "/" + idF.value + ".html");
             if src == "cses" {
-                list.pushBack(mut csesUrls, urlF.value);
-                list.pushBack(mut csesPaths, outFile);
+                mut csesUrls.pushBack(urlF.value);
+                mut csesPaths.pushBack(outFile);
             } else if src == "atcoder" {
-                reqUrl := if text.containsText(urlF.value, "?") { urlF.value } else { urlF.value + "?lang=en" };
-                list.pushBack(mut atcUrls, reqUrl);
-                list.pushBack(mut atcPaths, outFile);
+                reqUrl := if urlF.value.contains("?") { urlF.value } else { urlF.value + "?lang=en" };
+                mut atcUrls.pushBack(reqUrl);
+                mut atcPaths.pushBack(outFile);
             } else if src == "rosalind" {
-                list.pushBack(mut rosUrls, urlF.value);
-                list.pushBack(mut rosPaths, outFile);
+                mut rosUrls.pushBack(urlF.value);
+                mut rosPaths.pushBack(outFile);
             }
         }
     }
 
-    totalCount := list.listCountText(csesUrls) + list.listCountText(atcUrls) + list.listCountText(rosUrls);
-    io.outputLine("fetching " + integer.intText(totalCount) + " sample pages");
+    totalCount := csesUrls.length() + atcUrls.length() + rosUrls.length();
+    io.outputLine("fetching " + totalCount.toText() + " sample pages");
     var failed := 0;
 
-    if list.listCountText(csesUrls) > 0 {
-        io.outputLine("  cses: " + integer.intText(list.listCountText(csesUrls)) + " page(s), 5 worker(s)");
+    if csesUrls.length() > 0 {
+        io.outputLine("  cses: " + csesUrls.length().toText() + " page(s), 5 worker(s)");
         r1 := cfetch.downloadBatch(csesUrls, csesPaths, false, 5, 45000, 0, false, true, 50);
         failed = failed + r1.failures;
     }
-    if list.listCountText(atcUrls) > 0 {
-        io.outputLine("  atcoder: " + integer.intText(list.listCountText(atcUrls)) + " page(s), 1 worker(s)");
+    if atcUrls.length() > 0 {
+        io.outputLine("  atcoder: " + atcUrls.length().toText() + " page(s), 1 worker(s)");
         r2 := cfetch.downloadBatch(atcUrls, atcPaths, false, 5, 45000, 1200, false, true, 50);
         failed = failed + r2.failures;
     }
-    if list.listCountText(rosUrls) > 0 {
-        io.outputLine("  rosalind: " + integer.intText(list.listCountText(rosUrls)) + " page(s), 5 worker(s)");
+    if rosUrls.length() > 0 {
+        io.outputLine("  rosalind: " + rosUrls.length().toText() + " page(s), 5 worker(s)");
         r3 := cfetch.downloadBatch(rosUrls, rosPaths, false, 5, 45000, 0, false, true, 50);
         failed = failed + r3.failures;
     }
 
     io.outputLine("cached " + path.join(cacheDir, "tests"));
     if failed > 0 {
-        io.errorLine("warning: " + integer.intText(failed) + " page(s) failed; those challenges will have no tests");
+        io.errorLine("warning: " + failed.toText() + " page(s) failed; those challenges will have no tests");
     }
     0
 };

@@ -1,7 +1,5 @@
 /** Experimental flat-backed 2D grids (`extra/grid`) for tilemaps, cellular automata, and board games. */
 
-list := import "core/list";
-
 /** Opaque generational handle to a 2D `Int` grid. */
 pub IntGrid := type (handle: Int, gen: Int);
 
@@ -30,12 +28,12 @@ var fgFree: mut List<Int> = [];
 
 validIntGrid := fn(g: IntGrid): Bool {
     id := g.handle;
-    id >= 0 and id < list.length(igAlive) and igAlive[id] and igGen[id] == g.gen
+    id >= 0 and id < igAlive.length() and igAlive[id] and igGen[id] == g.gen
 };
 
 validFloatGrid := fn(g: FloatGrid): Bool {
     id := g.handle;
-    id >= 0 and id < list.length(fgAlive) and fgAlive[id] and fgGen[id] == g.gen
+    id >= 0 and id < fgAlive.length() and fgAlive[id] and fgGen[id] == g.gen
 };
 
 /* ============================================================================
@@ -47,20 +45,20 @@ pub createInts := fn(width: Int, height: Int, fillValue: Int): IntGrid {
     w := if width < 1 { 1 } else { width };
     h := if height < 1 { 1 } else { height };
     total := w * h;
-    var fi := list.length(igFree) - 1;
+    var fi := igFree.length() - 1;
     loop fi >= 0 {
         id := igFree[fi];
         if igCap[id] >= total {
-            last := list.length(igFree) - 1;
-            if fi =!= last { list.setAt(mut igFree, fi, igFree[last]); }
-            _drop := list.popBack(mut igFree);
-            list.setAt(mut igW, id, w);
-            list.setAt(mut igH, id, h);
-            list.setAt(mut igAlive, id, true);
+            last := igFree.length() - 1;
+            if fi =!= last { mut igFree.setAt(fi, igFree[last]); }
+            _drop := mut igFree.popBack();
+            mut igW.setAt(id, w);
+            mut igH.setAt(id, h);
+            mut igAlive.setAt(id, true);
             base := igBase[id];
             var i := 0;
             loop i < total {
-                list.setAt(mut igSlab, base + i, fillValue);
+                mut igSlab.setAt(base + i, fillValue);
                 i += 1;
             }
             return (handle = id, gen = igGen[id]);
@@ -68,19 +66,19 @@ pub createInts := fn(width: Int, height: Int, fillValue: Int): IntGrid {
         fi -= 1;
     }
 
-    base := list.length(igSlab);
+    base := igSlab.length();
     var i := 0;
     loop i < total {
-        list.pushBack(mut igSlab, fillValue);
+        mut igSlab.pushBack(fillValue);
         i += 1;
     }
-    id := list.length(igBase);
-    list.pushBack(mut igBase, base);
-    list.pushBack(mut igCap, total);
-    list.pushBack(mut igW, w);
-    list.pushBack(mut igH, h);
-    list.pushBack(mut igGen, 1);
-    list.pushBack(mut igAlive, true);
+    id := igBase.length();
+    mut igBase.pushBack(base);
+    mut igCap.pushBack(total);
+    mut igW.pushBack(w);
+    mut igH.pushBack(h);
+    mut igGen.pushBack(1);
+    mut igAlive.pushBack(true);
     (handle = id, gen = 1)
 };
 
@@ -114,7 +112,7 @@ pub getIntOr := fn(grid: IntGrid, x: Int, y: Int, fallback: Int): Int {
 pub setInt := fn(grid: IntGrid, x: Int, y: Int, value: Int): Bool {
     if not inIntBounds(grid, x, y) { return false; }
     id := grid.handle;
-    list.setAt(mut igSlab, igBase[id] + (y * igW[id]) + x, value);
+    mut igSlab.setAt(igBase[id] + (y * igW[id]) + x, value);
     true
 };
 
@@ -126,7 +124,7 @@ pub fillInts := fn(grid: IntGrid, value: Int): Unit {
     total := igW[id] * igH[id];
     var i := 0;
     loop i < total {
-        list.setAt(mut igSlab, base + i, value);
+        mut igSlab.setAt(base + i, value);
         i += 1;
     }
 };
@@ -147,7 +145,7 @@ pub fillIntRect := fn(grid: IntGrid, x: Int, y: Int, w: Int, h: Int, value: Int)
         rowOff := base + (cy * gw);
         var cx := x0;
         loop cx < x1 {
-            list.setAt(mut igSlab, rowOff + cx, value);
+            mut igSlab.setAt(rowOff + cx, value);
             cx += 1;
         }
         cy += 1;
@@ -184,7 +182,7 @@ pub copyInts := fn(dst: IntGrid, src: IntGrid): Unit {
     loop y < ch {
         var x := 0;
         loop x < cw {
-            list.setAt(mut igSlab, dBase + (y * dw) + x, igSlab[sBase + (y * sw) + x]);
+            mut igSlab.setAt(dBase + (y * dw) + x, igSlab[sBase + (y * sw) + x]);
             x += 1;
         }
         y += 1;
@@ -195,9 +193,9 @@ pub copyInts := fn(dst: IntGrid, src: IntGrid): Unit {
 pub destroyInts := fn(grid: IntGrid): Unit {
     if not validIntGrid(grid) { return; }
     id := grid.handle;
-    list.setAt(mut igAlive, id, false);
-    list.setAt(mut igGen, id, igGen[id] + 1);
-    list.pushBack(mut igFree, id);
+    mut igAlive.setAt(id, false);
+    mut igGen.setAt(id, igGen[id] + 1);
+    mut igFree.pushBack(id);
 };
 
 /* ============================================================================
@@ -209,20 +207,20 @@ pub createFloats := fn(width: Int, height: Int, fillValue: Float): FloatGrid {
     w := if width < 1 { 1 } else { width };
     h := if height < 1 { 1 } else { height };
     total := w * h;
-    var fi := list.length(fgFree) - 1;
+    var fi := fgFree.length() - 1;
     loop fi >= 0 {
         id := fgFree[fi];
         if fgCap[id] >= total {
-            last := list.length(fgFree) - 1;
-            if fi =!= last { list.setAt(mut fgFree, fi, fgFree[last]); }
-            _drop := list.popBack(mut fgFree);
-            list.setAt(mut fgW, id, w);
-            list.setAt(mut fgH, id, h);
-            list.setAt(mut fgAlive, id, true);
+            last := fgFree.length() - 1;
+            if fi =!= last { mut fgFree.setAt(fi, fgFree[last]); }
+            _drop := mut fgFree.popBack();
+            mut fgW.setAt(id, w);
+            mut fgH.setAt(id, h);
+            mut fgAlive.setAt(id, true);
             base := fgBase[id];
             var i := 0;
             loop i < total {
-                list.setAt(mut fgSlab, base + i, fillValue);
+                mut fgSlab.setAt(base + i, fillValue);
                 i += 1;
             }
             return (handle = id, gen = fgGen[id]);
@@ -230,19 +228,19 @@ pub createFloats := fn(width: Int, height: Int, fillValue: Float): FloatGrid {
         fi -= 1;
     }
 
-    base := list.length(fgSlab);
+    base := fgSlab.length();
     var i := 0;
     loop i < total {
-        list.pushBack(mut fgSlab, fillValue);
+        mut fgSlab.pushBack(fillValue);
         i += 1;
     }
-    id := list.length(fgBase);
-    list.pushBack(mut fgBase, base);
-    list.pushBack(mut fgCap, total);
-    list.pushBack(mut fgW, w);
-    list.pushBack(mut fgH, h);
-    list.pushBack(mut fgGen, 1);
-    list.pushBack(mut fgAlive, true);
+    id := fgBase.length();
+    mut fgBase.pushBack(base);
+    mut fgCap.pushBack(total);
+    mut fgW.pushBack(w);
+    mut fgH.pushBack(h);
+    mut fgGen.pushBack(1);
+    mut fgAlive.pushBack(true);
     (handle = id, gen = 1)
 };
 
@@ -264,7 +262,7 @@ pub getFloatOr := fn(grid: FloatGrid, x: Int, y: Int, fallback: Float): Float {
 pub setFloat := fn(grid: FloatGrid, x: Int, y: Int, value: Float): Bool {
     if not inFloatBounds(grid, x, y) { return false; }
     id := grid.handle;
-    list.setAt(mut fgSlab, fgBase[id] + (y * fgW[id]) + x, value);
+    mut fgSlab.setAt(fgBase[id] + (y * fgW[id]) + x, value);
     true
 };
 
@@ -272,7 +270,7 @@ pub setFloat := fn(grid: FloatGrid, x: Int, y: Int, value: Float): Bool {
 pub destroyFloats := fn(grid: FloatGrid): Unit {
     if not validFloatGrid(grid) { return; }
     id := grid.handle;
-    list.setAt(mut fgAlive, id, false);
-    list.setAt(mut fgGen, id, fgGen[id] + 1);
-    list.pushBack(mut fgFree, id);
+    mut fgAlive.setAt(id, false);
+    mut fgGen.setAt(id, fgGen[id] + 1);
+    mut fgFree.pushBack(id);
 };

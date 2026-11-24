@@ -1,7 +1,5 @@
 /** Generates `/gym/` index, drill/workout dojo page bodies, payloads, and search entries (`site/gym-pages.ts`). */
 
-integer := import "core/int";
-list := import "core/list";
 text := import "core/text";
 lru := import "extra/lru";
 challenges := import "util/challenges";
@@ -33,21 +31,21 @@ beltPillClass := fn(belt: String): String {
 };
 
 replaceAllText := fn(source: String, needle: String, replacement: String): String {
-    nLen := text.length(needle);
+    nLen := needle.length();
     if nLen == 0 { return source; }
-    sLen := text.length(source);
+    sLen := source.length();
     out: mut List<String> = [];
     var pos := 0;
     loop pos < sLen {
-        found := text.indexOfText(source, needle, pos);
+        found := source.indexOf(needle, pos);
         if found < 0 {
-            list.pushBack(mut out, text.slice(source, pos, sLen));
+            mut out.pushBack(source.slice(pos, sLen));
             break;
         }
         if found > pos {
-            list.pushBack(mut out, text.slice(source, pos, found));
+            mut out.pushBack(source.slice(pos, found));
         }
-        list.pushBack(mut out, replacement);
+        (mut out).pushBack(replacement);
         pos = found + nLen;
     }
     text.joinTexts(out, "")
@@ -60,7 +58,7 @@ safeJsonForScript := fn(rawJson: String): String {
 readOptStr := fn(src: String, objPos: Int, key: String): String {
     cacheable := key == "id" or key == "title" or key == "outPath" or key == "slug" or key == "mode" or key == "belt";
     if cacheable {
-        ck := integer.intText(objPos) + ":" + key;
+        ck := objPos.toText() + ":" + key;
         hit := lru.getText(gymMetaCache, ck);
         if hit.found { return hit.value; }
         res := json.readObjectString(src, objPos, key);
@@ -80,7 +78,7 @@ readStringList := fn(src: String, objPos: Int, key: String): List<String> {
     loop offs as off {
         r := json.readStringAt(src, off);
         if r.ok {
-            list.pushBack(mut out, r.value);
+            mut out.pushBack(r.value);
         }
     }
     out
@@ -91,13 +89,13 @@ readRawField := fn(src: String, objPos: Int, key: String, fallback: String): Str
     if not fld.found { return fallback; }
     sp := json.valueSpan(src, fld.valuePos);
     if not sp.ok { return fallback; }
-    text.slice(src, sp.start, sp.end)
+    src.slice(sp.start, sp.end)
 };
 
 arrayCountField := fn(src: String, objPos: Int, key: String): Int {
     fld := json.findObjectField(src, objPos, key);
     if not fld.found { return 0; }
-    list.listCountInt(json.arrayElementOffsets(src, fld.valuePos))
+    json.arrayElementOffsets(src, fld.valuePos).length()
 };
 
 inListText := fn(items: List<String>, needle: String): Bool {
@@ -109,8 +107,8 @@ inListText := fn(items: List<String>, needle: String): Bool {
 
 /* Relative href from `gym/index.html` to `gym/<folder>/<slug>.html` is `<folder>/<slug>.html`. */
 indexHrefForOutPath := fn(outPath: String): String {
-    if text.startsWithAt(outPath, 0, "gym/") {
-        return text.slice(outPath, 4, text.length(outPath));
+    if outPath.startsWithAt(0, "gym/") {
+        return outPath.slice(4, outPath.length());
     }
     outPath
 };
@@ -119,13 +117,13 @@ indexHrefForOutPath := fn(outPath: String): String {
 exerciseRelHref := fn(fromOutPath: String, toOutPath: String): String {
     fromRel := indexHrefForOutPath(fromOutPath);
     toRel := indexHrefForOutPath(toOutPath);
-    fromSlash := text.indexOfText(fromRel, "/", 0);
-    toSlash := text.indexOfText(toRel, "/", 0);
+    fromSlash := fromRel.indexOf("/", 0);
+    toSlash := toRel.indexOf("/", 0);
     if fromSlash >= 0 and toSlash >= 0 {
-        fromDir := text.slice(fromRel, 0, fromSlash);
-        toDir := text.slice(toRel, 0, toSlash);
+        fromDir := fromRel.slice(0, fromSlash);
+        toDir := toRel.slice(0, toSlash);
         if fromDir == toDir {
-            return text.slice(toRel, toSlash + 1, text.length(toRel));
+            return toRel.slice(toSlash + 1, toRel.length());
         }
         return "../" + toRel;
     }
@@ -145,7 +143,7 @@ renderCardGrid := fn(src: String, subsetOffs: List<Int>): String {
         modeLabel := if mode == "drill" { "Drill" } else { "Workout" };
         href := indexHrefForOutPath(outPath);
         totalCases := arrayCountField(src, iPos, "visibleCases") + arrayCountField(src, iPos, "hiddenCases");
-        searchBlob := text.toLowerAscii(title + " " + domain + " " + subGroup + " " + belt + " " + mode);
+        searchBlob := (title + " " + domain + " " + subGroup + " " + belt + " " + mode).toLowerAscii();
         cardLines: List<String> = [
         "<article class=\"portal-card gym-index-card\" data-exercise-id=\"" + escapeHtml(id) + "\" data-mode=\"" + mode + "\" data-belt=\"" + belt + "\" data-domain=\"" + escapeHtml(domain) + "\" data-search=\"" + escapeHtml(searchBlob) + "\">",
         "  <div class=\"portal-card-head\">",
@@ -155,7 +153,7 @@ renderCardGrid := fn(src: String, subsetOffs: List<Int>): String {
         "  <div class=\"gym-card-tags\">",
         "    <span class=\"badge\">" + escapeHtml(modeLabel) + "</span>",
         "    <code>" + escapeHtml(domain) + "/" + escapeHtml(subGroup) + "</code>",
-        "    <span class=\"code-card-meta\">" + integer.intText(totalCases) + " cases</span>",
+        "    <span class=\"code-card-meta\">" + totalCases.toText() + " cases</span>",
         "  </div>",
         "  <div class=\"portal-card-foot\">",
         "    <span class=\"gym-status-label code-card-meta\" data-status-for=\"" + escapeHtml(id) + "\">Not started</span>",
@@ -163,14 +161,14 @@ renderCardGrid := fn(src: String, subsetOffs: List<Int>): String {
         "  </div>",
         "</article>"
         ];
-        list.pushBack(mut cards, text.joinTexts(cardLines, "\n"));
+        mut cards.pushBack(text.joinTexts(cardLines, "\n"));
     }
     text.joinTexts(cards, "\n")
 };
 
 renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>): String {
-    totalCount := list.listCountInt(itemOffs);
-    totalStr := integer.intText(totalCount);
+    totalCount := itemOffs.length();
+    totalStr := totalCount.toText();
 
     drillOffs: mut List<Int> = [];
     workoutOffs: mut List<Int> = [];
@@ -190,9 +188,9 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
         outPath := readOptStr(src, iPos, "outPath");
 
         if mode == "drill" {
-            list.pushBack(mut drillOffs, iPos);
+            mut drillOffs.pushBack(iPos);
         } else if mode == "kata" {
-            list.pushBack(mut workoutOffs, iPos);
+            mut workoutOffs.pushBack(iPos);
         }
         if belt == "white" { whiteCount = whiteCount + 1; }
         else if belt == "amber" { amberCount = amberCount + 1; }
@@ -200,7 +198,7 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
         else if belt == "obsidian" { obsidianCount = obsidianCount + 1; }
 
         if not inListText(rawDomains, domain) {
-            list.pushBack(mut rawDomains, domain);
+            mut rawDomains.pushBack(domain);
         }
 
         metaObj := "{\"id\":" + json.quoteString(id)
@@ -208,7 +206,7 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
         + ",\"mode\":" + json.quoteString(mode)
         + ",\"title\":" + json.quoteString(title)
         + ",\"href\":" + json.quoteString(indexHrefForOutPath(outPath)) + "}";
-        list.pushBack(mut orderedMetaObjs, metaObj);
+        mut orderedMetaObjs.pushBack(metaObj);
     }
 
     beltNames: List<String> = ["white", "amber", "emerald", "obsidian"];
@@ -217,7 +215,7 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
     var bIdx := 0;
     loop bIdx < 4 {
         b := beltNames[bIdx];
-        bc := integer.intText(beltCounts[bIdx]);
+        bc := beltCounts[bIdx].toText();
         bLines: List<String> = [
         "<div class=\"gym-belt-stat\" data-belt=\"" + b + "\">",
         "  <span class=\"" + beltPillClass(b) + "\">" + beltBadge(b) + "</span>",
@@ -227,14 +225,14 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
         "  </div>",
         "</div>"
         ];
-        list.pushBack(mut beltCards, text.joinTexts(bLines, "\n"));
+        mut beltCards.pushBack(text.joinTexts(bLines, "\n"));
         bIdx = bIdx + 1;
     }
 
     sortedDomains := challenges.sortTexts(rawDomains);
     domBtnParts: mut List<String> = [];
     loop sortedDomains as dom {
-        list.pushBack(mut domBtnParts, "<button class=\"gym-filter-btn\" type=\"button\" data-filter-domain=\"" + escapeHtml(dom) + "\" aria-pressed=\"false\">" + escapeHtml(dom) + "</button>");
+        mut domBtnParts.pushBack("<button class=\"gym-filter-btn\" type=\"button\" data-filter-domain=\"" + escapeHtml(dom) + "\" aria-pressed=\"false\">" + escapeHtml(dom) + "</button>");
     }
 
     firstHref := if totalCount > 0 {
@@ -242,8 +240,8 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
     } else {
         "drills/immutable-vs-var.html"
     };
-    drillCountStr := integer.intText(list.listCountInt(drillOffs));
-    workoutCountStr := integer.intText(list.listCountInt(workoutOffs));
+    drillCountStr := drillOffs.length().toText();
+    workoutCountStr := workoutOffs.length().toText();
     orderedMetaJson := "[" + text.joinTexts(orderedMetaObjs, ",") + "]";
 
     lines: List<String> = [
@@ -548,12 +546,12 @@ curOutPath: String
         h := exerciseRelHref(curOutPath, oOutPath);
         cls := if oId == curId { " class=\"active\"" } else { "" };
         li := "<li><a href=\"" + escapeHtml(h) + "\"" + cls + " data-nav-gym=\"" + escapeHtml(oId) + "\"><span>" + escapeHtml(oTitle) + "</span><span class=\"learn-done-dot\" aria-hidden=\"true\"></span></a></li>";
-        list.pushBack(mut liParts, li);
+        mut liParts.pushBack(li);
     }
     openAttr := if hasCur { " open" } else { "" };
     grpLines: List<String> = [
     "<details class=\"portal-nav-group\"" + openAttr + ">",
-    "        <summary>" + escapeHtml(label) + " (" + integer.intText(list.listCountInt(subsetOffs)) + ")</summary>",
+    "        <summary>" + escapeHtml(label) + " (" + subsetOffs.length().toText() + ")</summary>",
     "        <ul class=\"portal-nav-list\">",
     "          " + text.joinTexts(liParts, "\n          "),
     "        </ul>",
@@ -569,7 +567,7 @@ itemOffs: List<Int>,
 drillOffs: List<Int>,
 workoutOffs: List<Int>
 ): String {
-    totalItems := list.listCountInt(itemOffs);
+    totalItems := itemOffs.length();
     iPos := itemOffs[idx];
     exId := readOptStr(src, iPos, "id");
     exSlug := readOptStr(src, iPos, "slug");
@@ -599,7 +597,7 @@ workoutOffs: List<Int>
         emptyV: List<Int> = [];
         emptyV
     };
-    visCount := list.listCountInt(visOffs);
+    visCount := visOffs.length();
     hidCount := arrayCountField(src, iPos, "hiddenCases");
     totalCases := visCount + hidCount;
 
@@ -609,7 +607,7 @@ workoutOffs: List<Int>
         vcStdin := readOptStr(src, vcPos, "stdin");
         vcExpOut := readOptStr(src, vcPos, "expectedStdout");
         vcArgs := readStringList(src, vcPos, "args");
-        argsNote := if list.listCountText(vcArgs) > 0 {
+        argsNote := if vcArgs.length() > 0 {
             "<div class=\"gym-case-meta\">Args: <code>" + escapeHtml(text.joinTexts(vcArgs, " ")) + "</code></div>"
         } else {
             ""
@@ -634,7 +632,7 @@ workoutOffs: List<Int>
         "  </div>",
         "</article>"
         ];
-        list.pushBack(mut visCards, text.joinTexts(cLines, "\n"));
+        mut visCards.pushBack(text.joinTexts(cLines, "\n"));
     }
 
     switcherGroups := renderSwitcherGroup(src, "Concept Drills", drillOffs, exId, outPath)
@@ -658,12 +656,12 @@ workoutOffs: List<Int>
     pagerHtml := "<nav class=\"docs-pager\" aria-label=\"Exercise navigation\">\n  " + prevHtml + "\n  " + nextHtml + "\n</nav>";
 
     hidSuffix := if hidCount == 1 { "" } else { "s" };
-    totalCasesStr := integer.intText(totalCases);
+    totalCasesStr := totalCases.toText();
 
     lines: List<String> = [
     "<div id=\"gym-shell\" class=\"gym-shell\" data-academy-visit-path=\"" + escapeHtml(outPath) + "\" data-academy-visit-title=\"" + escapeHtml(exTitle) + "\" data-academy-visit-section=\"Gym\">",
     "  <aside class=\"portal-sidebar gym-sidebar\" aria-label=\"Gym exercise switcher\">",
-    "    <p class=\"portal-sidebar-title\"><a href=\"../\">All Exercises (" + integer.intText(totalItems) + ")</a></p>",
+    "    <p class=\"portal-sidebar-title\"><a href=\"../\">All Exercises (" + totalItems.toText() + ")</a></p>",
     "    " + switcherGroups,
     "  </aside>",
     "  <div class=\"gym-workspace\">",
@@ -692,7 +690,7 @@ workoutOffs: List<Int>
     "        <section class=\"gym-cases-section\">",
     "          <div class=\"section-head\" style=\"margin-bottom: 0.65rem;\">",
     "            <h2>Visible Test Cases</h2>",
-    "            <span class=\"code-card-meta\">+ " + integer.intText(hidCount) + " hidden case" + hidSuffix + " graded on submit</span>",
+    "            <span class=\"code-card-meta\">+ " + hidCount.toText() + " hidden case" + hidSuffix + " graded on submit</span>",
     "          </div>",
     "          <div class=\"gym-cases\">",
     "            " + text.joinTexts(visCards, "\n"),
@@ -702,7 +700,7 @@ workoutOffs: List<Int>
     "        <section class=\"gym-hints\">",
     "          <div class=\"gym-hints-head\">",
     "            <h2>Hints</h2>",
-    "            <button id=\"gym-hint-btn\" class=\"btn\" type=\"button\">Reveal Hint (0 / " + integer.intText(hintsCount) + ")</button>",
+    "            <button id=\"gym-hint-btn\" class=\"btn\" type=\"button\">Reveal Hint (0 / " + hintsCount.toText() + ")</button>",
     "          </div>",
     "          <ol id=\"gym-hints-list\" class=\"gym-hints-list\" hidden></ol>",
     "        </section>",
@@ -739,7 +737,7 @@ workoutOffs: List<Int>
     "          " + editorBlockHtml,
     "          <div class=\"pg-actions\" style=\"flex-wrap: wrap; border-top: 1px solid var(--border); padding: 0.55rem 0.85rem; background: var(--surface);\">",
     "            <button id=\"gym-submit\" class=\"btn btn-primary\" type=\"button\">Submit &amp; Grade (" + totalCasesStr + ")</button>",
-    "            <button id=\"gym-run-visible\" class=\"btn\" type=\"button\">Run Visible (" + integer.intText(visCount) + ")</button>",
+    "            <button id=\"gym-run-visible\" class=\"btn\" type=\"button\">Run Visible (" + visCount.toText() + ")</button>",
     "            <span id=\"gym-cursor\" class=\"ed-cursor-meta\">Ln 1, Col 1</span>",
     "            <span id=\"gym-status\" class=\"pg-status\" role=\"status\" aria-live=\"polite\">Ready (Cmd/Ctrl+Enter run visible · Cmd/Ctrl+Shift+Enter submit)</span>",
     "          </div>",
@@ -1240,16 +1238,16 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
     }
 
     itemOffs := json.arrayElementOffsets(inputJson, itemsField.valuePos);
-    totalCount := list.listCountInt(itemOffs);
+    totalCount := itemOffs.length();
 
     drillOffs: mut List<Int> = [];
     workoutOffs: mut List<Int> = [];
     loop itemOffs as iPos {
         m := readOptStr(inputJson, iPos, "mode");
         if m == "drill" {
-            list.pushBack(mut drillOffs, iPos);
+            mut drillOffs.pushBack(iPos);
         } else if m == "kata" {
-            list.pushBack(mut workoutOffs, iPos);
+            mut workoutOffs.pushBack(iPos);
         }
     }
 
@@ -1258,12 +1256,12 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
     indexPageObj := "{"
     + "\"relPath\":\"gym/index.html\","
     + "\"title\":\"Lite Gym — Interactive Coding Dojo\","
-    + "\"description\":" + json.quoteString(integer.intText(totalCount) + " browser-graded Lite drills and algorithmic workouts from White Belt to Obsidian Belt.") + ","
+    + "\"description\":" + json.quoteString(totalCount.toText() + " browser-graded Lite drills and algorithmic workouts from White Belt to Obsidian Belt.") + ","
     + "\"basePath\":\"../\","
     + "\"mainClass\":\"\","
     + "\"body\":" + json.quoteString(indexBody)
     + "}";
-    list.pushBack(mut pagesJson, indexPageObj);
+    mut pagesJson.pushBack(indexPageObj);
 
     payloadsJson: mut List<String> = [];
     searchEntriesJson: mut List<String> = [];
@@ -1295,7 +1293,7 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
         + "\"mainClass\":\"learn-main\","
         + "\"body\":" + json.quoteString(body)
         + "}";
-        list.pushBack(mut pagesJson, pageObj);
+        mut pagesJson.pushBack(pageObj);
 
         payloadContent := "{"
         + "\"id\":" + json.quoteString(exId) + ","
@@ -1312,7 +1310,7 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
         + "\"relPath\":" + json.quoteString("gym/payloads/" + exSlug + ".json") + ","
         + "\"content\":" + json.quoteString(payloadContent)
         + "}";
-        list.pushBack(mut payloadsJson, payloadObj);
+        mut payloadsJson.pushBack(payloadObj);
 
         bBadge := beltBadge(exBelt);
         seObj := "{"
@@ -1323,7 +1321,7 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
         + "\"keywords\":" + json.quoteString(exSlug + " " + exBelt + " " + exMode + " " + exDomain + " " + exSubGroup) + ","
         + "\"badge\":" + json.quoteString(bBadge)
         + "}";
-        list.pushBack(mut searchEntriesJson, seObj);
+        mut searchEntriesJson.pushBack(seObj);
 
         idx = idx + 1;
     }

@@ -2,11 +2,9 @@
 
 crypto := import "core/crypto";
 fs := import "core/file";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
 unicode := import "core/unicode";
 challenges := import "util/challenges";
 json := import "util/json";
@@ -40,11 +38,11 @@ runCmdOk := fn(exe: String, args: List<String>, cwd: String): String {
 runReleaseTool := fn(args: List<String>, directory: String, stdinText: String): String {
     cmdArgs: mut List<String> = [releaseBin];
     loop args as a {
-        list.pushBack(mut cmdArgs, a);
+        mut cmdArgs.pushBack(a);
     }
     envOver: mut List<String> = ["LITE_RELEASE_INTERNAL=1"];
     cwd := if directory =!= "" {
-        list.pushBack(mut envOver, "LITE_RELEASE_ROOT=" + directory);
+        mut envOver.pushBack("LITE_RELEASE_ROOT=" + directory);
         directory
     } else {
         root
@@ -62,7 +60,7 @@ releaseProfile := fn(component: String, version: String): String {
         a2: List<String> = ["--profile", component, version];
         a2
     };
-    text.trim(runReleaseTool(args, "", ""))
+    runReleaseTool(args, "", "").trim()
 };
 
 formatReleaseNotes := fn(inputJson: String): String {
@@ -71,15 +69,15 @@ formatReleaseNotes := fn(inputJson: String): String {
 
 splitLines := fn(source: String): List<String> {
     out: mut List<String> = [];
-    n := text.length(source);
+    n := source.length();
     var pos := 0;
     loop pos <= n {
-        nl := text.indexOfText(source, "\n", pos);
+        nl := source.indexOf("\n", pos);
         if nl < 0 {
-            list.pushBack(mut out, text.slice(source, pos, n));
+            mut out.pushBack(source.slice(pos, n));
             break;
         }
-        list.pushBack(mut out, text.slice(source, pos, nl));
+        (mut out).pushBack(source.slice(pos, nl));
         pos = nl + 1;
     }
     out
@@ -99,17 +97,17 @@ loop langComponents as comp {
 }
 
 /* 2. formatReleaseNotes tailors profile summary, verification details, and artifact digests */
-commit := text.repeatText("a", 40);
-shortCommit := text.slice(commit, 0, 12);
-dig1 := text.repeatText("1", 64);
-dig2 := text.repeatText("2", 64);
-dig3 := text.repeatText("3", 64);
-dig4 := text.repeatText("4", 64);
-dig5 := text.repeatText("5", 64);
-dig6 := text.repeatText("6", 64);
-dig7 := text.repeatText("7", 64);
-dig8 := text.repeatText("8", 64);
-dig9 := text.repeatText("9", 64);
+commit := "a".repeat(40);
+shortCommit := commit.slice(0, 12);
+dig1 := "1".repeat(64);
+dig2 := "2".repeat(64);
+dig3 := "3".repeat(64);
+dig4 := "4".repeat(64);
+dig5 := "5".repeat(64);
+dig6 := "6".repeat(64);
+dig7 := "7".repeat(64);
+dig8 := "8".repeat(64);
+dig9 := "9".repeat(64);
 
 snapshotJson := "{"
 + "\"label\":\"snapshot-" + shortCommit + "\","
@@ -123,12 +121,12 @@ snapshotJson := "{"
 + "\"bootstrap\":null"
 + "}";
 snapshot := formatReleaseNotes(snapshotJson);
-test.check("snapshot released component", text.indexOfText(snapshot, "Released component**: unpublished snapshot", 0) >= 0);
-test.check("snapshot summary", text.indexOfText(snapshot, "Tool/source snapshot validated", 0) >= 0);
-test.check("snapshot archiveSha256", text.indexOfText(snapshot, "`" + dig1 + "`", 0) >= 0);
-test.check("snapshot manifestSha256", text.indexOfText(snapshot, "`" + dig2 + "`", 0) >= 0);
-test.check("snapshot no summary", text.indexOfText(snapshot, "## Summary", 0) < 0);
-test.check("snapshot no ladder", text.indexOfText(snapshot, "Self-hosting fixed-point ladder", 0) < 0);
+test.check("snapshot released component", snapshot.indexOf("Released component**: unpublished snapshot", 0) >= 0);
+test.check("snapshot summary", snapshot.indexOf("Tool/source snapshot validated", 0) >= 0);
+test.check("snapshot archiveSha256", snapshot.indexOf("`" + dig1 + "`", 0) >= 0);
+test.check("snapshot manifestSha256", snapshot.indexOf("`" + dig2 + "`", 0) >= 0);
+test.check("snapshot no summary", snapshot.indexOf("## Summary", 0) < 0);
+test.check("snapshot no ladder", snapshot.indexOf("Self-hosting fixed-point ladder", 0) < 0);
 
 summaryJson := "{"
 + "\"label\":\"cli-v0.1.0\","
@@ -143,10 +141,10 @@ summaryJson := "{"
 + "\"tagMessage\":\"CLI 0.1.0\\n\\n- Add streaming bootstrap progress\\n- Unified CLI dispatch\""
 + "}";
 summaryNotes := formatReleaseNotes(summaryJson);
-test.check("summary heading", text.indexOfText(summaryNotes, "## Summary", 0) >= 0);
-test.check("summary title", text.indexOfText(summaryNotes, "CLI 0.1.0", 0) >= 0);
-test.check("summary bullet 1", text.indexOfText(summaryNotes, "- Add streaming bootstrap progress", 0) >= 0);
-test.check("summary bullet 2", text.indexOfText(summaryNotes, "- Unified CLI dispatch", 0) >= 0);
+test.check("summary heading", summaryNotes.indexOf("## Summary", 0) >= 0);
+test.check("summary title", summaryNotes.indexOf("CLI 0.1.0", 0) >= 0);
+test.check("summary bullet 1", summaryNotes.indexOf("- Add streaming bootstrap progress", 0) >= 0);
+test.check("summary bullet 2", summaryNotes.indexOf("- Unified CLI dispatch", 0) >= 0);
 
 vscodeJson := "{"
 + "\"label\":\"vscode-v0.1.0\","
@@ -160,9 +158,9 @@ vscodeJson := "{"
 + "\"bootstrap\":null"
 + "}";
 vscodeNotes := formatReleaseNotes(vscodeJson);
-test.check("vscode released component", text.indexOfText(vscodeNotes, "Released component**: vscode v0.1.0", 0) >= 0);
-test.check("vscode vsix file", text.indexOfText(vscodeNotes, "lite-0.1.0.vsix", 0) >= 0);
-test.check("vscode vsix sha", text.indexOfText(vscodeNotes, "`" + dig5 + "`", 0) >= 0);
+test.check("vscode released component", vscodeNotes.indexOf("Released component**: vscode v0.1.0", 0) >= 0);
+test.check("vscode vsix file", vscodeNotes.indexOf("lite-0.1.0.vsix", 0) >= 0);
+test.check("vscode vsix sha", vscodeNotes.indexOf("`" + dig5 + "`", 0) >= 0);
 
 bootstrapJson := "{"
 + "\"ladder\":{\"fixedPoint\":true,\"generations\":[1,2,3]},"
@@ -181,11 +179,11 @@ compilerJson := "{"
 + "\"bootstrap\":" + bootstrapJson
 + "}";
 compilerNotes := formatReleaseNotes(compilerJson);
-test.check("compiler preview verified", text.indexOfText(compilerNotes, "Compiler preview verified", 0) >= 0);
-test.check("compiler no snapshot text", text.indexOfText(compilerNotes, "Tool/source snapshot validated", 0) < 0);
-test.check("compiler ladder passed", text.indexOfText(compilerNotes, "Self-hosting fixed-point ladder: passed (3 generations)", 0) >= 0);
-test.check("compiler corpus stats", text.indexOfText(compilerNotes, "94 cases (69 programs, 25 rejections, 69 executions), mismatches=0", 0) >= 0);
-test.check("compiler no verify --all", text.indexOfText(compilerNotes, "lite verify --all --no-cache", 0) < 0);
+test.check("compiler preview verified", compilerNotes.indexOf("Compiler preview verified", 0) >= 0);
+test.check("compiler no snapshot text", compilerNotes.indexOf("Tool/source snapshot validated", 0) < 0);
+test.check("compiler ladder passed", compilerNotes.indexOf("Self-hosting fixed-point ladder: passed (3 generations)", 0) >= 0);
+test.check("compiler corpus stats", compilerNotes.indexOf("94 cases (69 programs, 25 rejections, 69 executions), mismatches=0", 0) >= 0);
+test.check("compiler no verify --all", compilerNotes.indexOf("lite verify --all --no-cache", 0) < 0);
 
 langBootstrapJson := "{"
 + "\"ladder\":{\"fixedPoint\":true,\"generations\":[1,2,3]},"
@@ -204,8 +202,8 @@ languageJson := "{"
 + "\"bootstrap\":" + langBootstrapJson
 + "}";
 languageNotes := formatReleaseNotes(languageJson);
-test.check("language release verified", text.indexOfText(languageNotes, "Language release verified", 0) >= 0);
-test.check("language verify --all", text.indexOfText(languageNotes, "lite verify --all --no-cache", 0) >= 0);
+test.check("language release verified", languageNotes.indexOf("Language release verified", 0) >= 0);
+test.check("language verify --all", languageNotes.indexOf("lite verify --all --no-cache", 0) >= 0);
 
 /* 3. prepareRelease packages a clean checkout into a verified archive with matching manifest, notes, and SHA256SUMS */
 workRes := fs.makeTempDir("lite-release-test-");
@@ -238,18 +236,18 @@ _g2 := runCmdOk("git", ["config", "user.name", "Lite Release Test"], repo);
 _g3 := runCmdOk("git", ["config", "user.email", "release-test@example.invalid"], repo);
 _g4 := runCmdOk("git", ["add", "-A"], repo);
 _g5 := runCmdOk("git", ["-c", "commit.gpgsign=false", "commit", "-q", "-m", "snapshot"], repo);
-head := text.trim(runCmdOk("git", ["rev-parse", "HEAD"], repo));
+head := runCmdOk("git", ["rev-parse", "HEAD"], repo).trim();
 
 _prep := runReleaseTool([output], repo, "");
 manifestRead := fs.readText(path.join(output, "manifest.json"));
 test.check("read manifest.json", manifestRead.ok);
 manifestText := manifestRead.text;
 
-headShort := text.slice(head, 0, 12);
+headShort := head.slice(0, 12);
 archiveName := "lite-snapshot-" + headShort + ".tar.gz";
 test.checkText("manifest.commit", head, json.readObjectString(manifestText, 0, "commit").value);
 test.checkText("manifest.profile", "tools", json.readObjectString(manifestText, 0, "profile").value);
-test.check("manifest.releasedComponent null", text.indexOfText(manifestText, "\"releasedComponent\": null", 0) >= 0 or text.indexOfText(manifestText, "\"releasedComponent\":null", 0) >= 0);
+test.check("manifest.releasedComponent null", manifestText.indexOf("\"releasedComponent\": null", 0) >= 0 or manifestText.indexOf("\"releasedComponent\":null", 0) >= 0);
 test.check("archive exists", fs.kind(path.join(output, archiveName)) == fs.FILE_KIND_FILE);
 
 notesText := fs.readText(path.join(output, "RELEASE-NOTES.md")).text;
@@ -262,20 +260,20 @@ outEntries := fs.listDir(output);
 rawExpected: mut List<String> = [];
 loop outEntries as name {
     if name =!= "SHA256SUMS" {
-        list.pushBack(mut rawExpected, name);
+        mut rawExpected.pushBack(name);
     }
 }
 expectedFiles := challenges.sortTexts(rawExpected);
 
-sumLines := splitLines(text.trimEnd(sumsText));
-test.checkInt("SHA256SUMS line count", list.listCountText(expectedFiles), list.listCountText(sumLines));
+sumLines := splitLines(sumsText.trimEnd());
+test.checkInt("SHA256SUMS line count", expectedFiles.length(), sumLines.length());
 var sIdx := 0;
-loop sIdx < list.listCountText(sumLines) {
+loop sIdx < sumLines.length() {
     line := sumLines[sIdx];
-    sepIdx := text.indexOfText(line, "  ", 0);
+    sepIdx := line.indexOf("  ", 0);
     test.check("SHA256SUMS line has separator: " + line, sepIdx >= 0);
-    digest := text.slice(line, 0, sepIdx);
-    fileName := text.slice(line, sepIdx + 2, text.length(line));
+    digest := line.slice(0, sepIdx);
+    fileName := line.slice(sepIdx + 2, line.length());
     test.checkText("SHA256SUMS file order", expectedFiles[sIdx], fileName);
     actualDigest := crypto.sha256File(path.join(output, fileName));
     test.check("sha256File ok " + fileName, actualDigest.ok);
@@ -286,13 +284,13 @@ loop sIdx < list.listCountText(sumLines) {
 archDigestRes := crypto.sha256File(path.join(output, archiveName));
 test.check("archive sha256 ok", archDigestRes.ok);
 manifestDigest := crypto.sha256Text(manifestText);
-test.check("notes heading", text.indexOfText(notesText, "# snapshot-" + headShort, 0) >= 0);
-test.check("notes commit", text.indexOfText(notesText, head, 0) >= 0);
-test.check("notes archiveName", text.indexOfText(notesText, archiveName, 0) >= 0);
-test.check("notes archiveDigest", text.indexOfText(notesText, archDigestRes.hex, 0) >= 0);
-test.check("notes manifestDigest", text.indexOfText(notesText, manifestDigest, 0) >= 0);
-test.check("notes Verification", text.indexOfText(notesText, "## Verification", 0) >= 0);
-test.check("notes Artifacts", text.indexOfText(notesText, "## Artifacts", 0) >= 0);
-test.check("notes Verify and extract", text.indexOfText(notesText, "## Verify and extract", 0) >= 0);
+test.check("notes heading", notesText.indexOf("# snapshot-" + headShort, 0) >= 0);
+test.check("notes commit", notesText.indexOf(head, 0) >= 0);
+test.check("notes archiveName", notesText.indexOf(archiveName, 0) >= 0);
+test.check("notes archiveDigest", notesText.indexOf(archDigestRes.hex, 0) >= 0);
+test.check("notes manifestDigest", notesText.indexOf(manifestDigest, 0) >= 0);
+test.check("notes Verification", notesText.indexOf("## Verification", 0) >= 0);
+test.check("notes Artifacts", notesText.indexOf("## Artifacts", 0) >= 0);
+test.check("notes Verify and extract", notesText.indexOf("## Verify and extract", 0) >= 0);
 
 _rmWork := fs.remove(work);

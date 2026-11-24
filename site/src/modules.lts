@@ -1,11 +1,7 @@
 /** Generates `/modules/` index & detail page bodies and search entries (`site/modules-pages.ts`). */
 
 fs := import "core/file";
-integer := import "core/int";
-list := import "core/list";
-map := import "core/map";
 path := import "core/path";
-set := import "core/set";
 text := import "core/text";
 challenges := import "util/challenges";
 collections := import "util/collections";
@@ -28,21 +24,21 @@ isWhitespaceChar := fn(ch: String): Bool {
 
 formatInlineDoc := fn(docText: String): String {
     out: mut List<String> = [];
-    len := text.length(docText);
+    len := docText.length();
     var pos := 0;
     loop pos < len {
-        bt := text.indexOfText(docText, "`", pos);
+        bt := docText.indexOf("`", pos);
         if bt < 0 {
-            list.pushBack(mut out, escapeHtml(text.slice(docText, pos, len)));
+            mut out.pushBack(escapeHtml(docText.slice(pos, len)));
             break;
         }
-        closeBt := text.indexOfText(docText, "`", bt + 1);
+        closeBt := docText.indexOf("`", bt + 1);
         if closeBt > bt + 1 {
-            if bt > pos { list.pushBack(mut out, escapeHtml(text.slice(docText, pos, bt))); }
-            list.pushBack(mut out, "<code>" + escapeHtml(text.slice(docText, bt + 1, closeBt)) + "</code>");
+            if bt > pos { mut out.pushBack(escapeHtml(docText.slice(pos, bt))); }
+            (mut out).pushBack("<code>" + escapeHtml(docText.slice(bt + 1, closeBt)) + "</code>");
             pos = closeBt + 1;
         } else {
-            list.pushBack(mut out, escapeHtml(text.slice(docText, pos, bt + 1)));
+            mut out.pushBack(escapeHtml(docText.slice(pos, bt + 1)));
             pos = bt + 1;
         }
     }
@@ -55,9 +51,9 @@ isHost: Bool, docText: String, line: Int, repoUrl: String
 ): String {
     hostBadge := if isHost { "<span class=\"status-pill status-pill-cli\">Host-backed</span>" } else { "" };
     lineLink := if repoUrl =!= "" {
-        "<a class=\"code-card-meta\" href=\"" + escapeHtml(repoUrl + "/blob/main/" + modFile + "#L" + integer.intText(line)) + "\">L" + integer.intText(line) + "</a>"
+        "<a class=\"code-card-meta\" href=\"" + escapeHtml(repoUrl + "/blob/main/" + modFile + "#L" + line.toText()) + "\">L" + line.toText() + "</a>"
     } else {
-        "<span class=\"code-card-meta\">L" + integer.intText(line) + "</span>"
+        "<span class=\"code-card-meta\">L" + line.toText() + "</span>"
     };
     docHtml := if docText =!= "" { "<p class=\"module-sym-doc\">" + formatInlineDoc(docText) + "</p>" } else { "" };
     eName := escapeHtml(name);
@@ -88,16 +84,15 @@ modIds: List<String>, modNss: List<String>, modNames: List<String>, modSymCounts
         ns := grpNss[gi];
         items: mut List<String> = [];
         var mi := 0;
-        loop mi < list.listCountText(modIds) {
+        loop mi < modIds.length() {
             if modNss[mi] == ns {
                 href := prefix + modNss[mi] + "/" + modNames[mi] + ".html";
                 cls := if modIds[mi] == activeId { " class=\"active\"" } else { "" };
-                list.pushBack(mut items, "<li><a href=\"" + escapeHtml(href) + "\"" + cls + "><span>" + escapeHtml(modIds[mi]) + "</span><span>" + integer.intText(modSymCounts[mi]) + "</span></a></li>");
+                mut items.pushBack("<li><a href=\"" + escapeHtml(href) + "\"" + cls + "><span>" + escapeHtml(modIds[mi]) + "</span><span>" + modSymCounts[mi].toText() + "</span></a></li>");
             }
             mi = mi + 1;
         }
-        list.pushBack(mut grpBlocks,
-        "<details class=\"portal-nav-group\" open>\n"
+        (mut grpBlocks).pushBack("<details class=\"portal-nav-group\" open>\n"
         + "        <summary>" + escapeHtml(grpLabels[gi]) + "</summary>\n"
         + "        <ul class=\"portal-nav-list\">\n"
         + "          " + text.joinTexts(items, "\n          ") + "\n"
@@ -106,7 +101,7 @@ modIds: List<String>, modNss: List<String>, modNames: List<String>, modSymCounts
         gi = gi + 1;
     }
     "<aside class=\"portal-sidebar\" aria-label=\"Modules navigation\">\n"
-    + "      <p class=\"portal-sidebar-title\">Modules (" + integer.intText(list.listCountText(modIds)) + ")</p>\n"
+    + "      <p class=\"portal-sidebar-title\">Modules (" + modIds.length().toText() + ")</p>\n"
     + "      " + text.joinTexts(grpBlocks, "\n      ") + "\n"
     + "    </aside>"
 };
@@ -121,7 +116,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
 
     modsF := json.findObjectField(inputJson, 0, "modules");
     modOffs := json.arrayElementOffsets(inputJson, modsF.valuePos);
-    modCount := list.listCountInt(modOffs);
+    modCount := modOffs.length();
 
     modIds: mut List<String> = [];
     modNss: mut List<String> = [];
@@ -133,17 +128,17 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     modSymCounts: mut List<Int> = [];
 
     loop modOffs as mp {
-        list.pushBack(mut modIds, json.readObjectString(inputJson, mp, "id").value);
-        list.pushBack(mut modNss, json.readObjectString(inputJson, mp, "namespace").value);
-        list.pushBack(mut modNames, json.readObjectString(inputJson, mp, "name").value);
-        list.pushBack(mut modFiles, json.readObjectString(inputJson, mp, "file").value);
-        list.pushBack(mut modEnvs, json.readObjectString(inputJson, mp, "environment").value);
+        mut modIds.pushBack(json.readObjectString(inputJson, mp, "id").value);
+        mut modNss.pushBack(json.readObjectString(inputJson, mp, "namespace").value);
+        mut modNames.pushBack(json.readObjectString(inputJson, mp, "name").value);
+        mut modFiles.pushBack(json.readObjectString(inputJson, mp, "file").value);
+        mut modEnvs.pushBack(json.readObjectString(inputJson, mp, "environment").value);
         sumR := json.readObjectString(inputJson, mp, "summary");
-        list.pushBack(mut modSummaries, if sumR.found and sumR.ok { sumR.value } else { "" });
+        mut modSummaries.pushBack(if sumR.found and sumR.ok { sumR.value } else { "" });
         impR := json.readObjectString(inputJson, mp, "importHtml");
-        list.pushBack(mut modImportHtmls, if impR.found and impR.ok { impR.value } else { "" });
+        mut modImportHtmls.pushBack(if impR.found and impR.ok { impR.value } else { "" });
         symsF := json.findObjectField(inputJson, mp, "symbols");
-        list.pushBack(mut modSymCounts, list.listCountInt(json.arrayElementOffsets(inputJson, symsF.valuePos)));
+        mut modSymCounts.pushBack(json.arrayElementOffsets(inputJson, symsF.valuePos).length());
     }
 
     sampF := json.findObjectField(inputJson, 0, "samples");
@@ -156,11 +151,11 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     sampFiles: mut List<String> = [];
     sampBadges: mut List<String> = [];
     loop sampOffs as sp {
-        list.pushBack(mut sampIds, json.readObjectString(inputJson, sp, "id").value);
-        list.pushBack(mut sampTitles, json.readObjectString(inputJson, sp, "title").value);
-        list.pushBack(mut sampFiles, json.readObjectString(inputJson, sp, "file").value);
+        mut sampIds.pushBack(json.readObjectString(inputJson, sp, "id").value);
+        mut sampTitles.pushBack(json.readObjectString(inputJson, sp, "title").value);
+        mut sampFiles.pushBack(json.readObjectString(inputJson, sp, "file").value);
         bR := json.readObjectString(inputJson, sp, "badge");
-        list.pushBack(mut sampBadges, if bR.found and bR.ok { bR.value } else { "sample" });
+        mut sampBadges.pushBack(if bR.found and bR.ok { bR.value } else { "sample" });
     }
 
     edgeModIdx: mut List<Int> = [];
@@ -169,11 +164,11 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     modIdIndex: mut Map<String, Int>;
     var mIdx := 0;
     loop mIdx < modCount {
-        map.set(mut modIdIndex, modIds[mIdx], mIdx);
+        mut modIdIndex.set(modIds[mIdx], mIdx);
         mIdx = mIdx + 1;
     }
     modUsageCounts: mut Map<Int, Int>;
-    sCount := list.listCountText(sampIds);
+    sCount := sampIds.length();
     loop si < sCount {
         sPath := path.join(rootDir, sampFiles[si]);
         sRead := fs.readText(sPath);
@@ -181,23 +176,23 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
             src := sRead.text;
             seenModsInSample: mut Set<Int>;
             var pos := 0;
-            slen := text.length(src);
+            slen := src.length();
             loop pos < slen {
-                impPos := text.indexOfText(src, "import", pos);
+                impPos := src.indexOf("import", pos);
                 if impPos < 0 { break; }
                 var p := impPos + 6;
-                if p < slen and isWhitespaceChar(text.at(src, p)) {
-                    loop p < slen and isWhitespaceChar(text.at(src, p)) { p = p + 1; }
-                    if p < slen and text.at(src, p) == "\"" {
-                        qEnd := text.indexOfText(src, "\"", p + 1);
+                if p < slen and isWhitespaceChar(src.at(p)) {
+                    loop p < slen and isWhitespaceChar(src.at(p)) { p = p + 1; }
+                    if p < slen and src.at(p) == "\"" {
+                        qEnd := src.indexOf("\"", p + 1);
                         if qEnd > p + 1 {
-                            mId := text.slice(src, p + 1, qEnd);
-                            hit := map.getOr(modIdIndex, mId, -1);
-                            if hit >= 0 and not set.has(seenModsInSample, hit) {
-                                set.add(mut seenModsInSample, hit);
-                                list.pushBack(mut edgeModIdx, hit);
-                                list.pushBack(mut edgeSampIdx, si);
-                                map.set(mut modUsageCounts, hit, map.getOr(modUsageCounts, hit, 0) + 1);
+                            mId := src.slice(p + 1, qEnd);
+                            hit := modIdIndex.getOr(mId, -1);
+                            if hit >= 0 and not seenModsInSample.has(hit) {
+                                mut seenModsInSample.add(hit);
+                                mut edgeModIdx.pushBack(hit);
+                                mut edgeSampIdx.pushBack(si);
+                                mut modUsageCounts.set(hit, modUsageCounts.getOr(hit, 0) + 1);
                             }
                             pos = qEnd + 1;
                             continue;
@@ -210,14 +205,14 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         si = si + 1;
     }
 
-    edgeTotal := list.listCountInt(edgeModIdx);
+    edgeTotal := edgeModIdx.length();
     edgeOrder := collections.sortIndicesBy(edgeTotal, fn(a: Int, b: Int): Bool { edgeModIdx[a] <= edgeModIdx[b] });
     edgeModStart: mut Map<Int, Int>;
     var eoIdx := 0;
     loop eoIdx < edgeTotal {
         em := edgeModIdx[edgeOrder[eoIdx]];
-        if not map.has(edgeModStart, em) {
-            map.set(mut edgeModStart, em, eoIdx);
+        if not edgeModStart.has(em) {
+            mut edgeModStart.set(em, eoIdx);
         }
         eoIdx = eoIdx + 1;
     }
@@ -247,16 +242,16 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         var symIdx := 0;
         loop sOffs as sPos {
             sName := json.readObjectString(inputJson, sPos, "name").value;
-            list.pushBack(mut symNames, sName);
+            mut symNames.pushBack(sName);
             if symIdx < 5 {
-                list.pushBack(mut previewParts, "<code>" + escapeHtml(sName) + "</code>");
+                mut previewParts.pushBack("<code>" + escapeHtml(sName) + "</code>");
             }
             symIdx = symIdx + 1;
         }
-        moreCount := if symCount > 5 { " <span class=\"code-card-meta\">+" + integer.intText(symCount - 5) + " more</span>" } else { "" };
+        moreCount := if symCount > 5 { " <span class=\"code-card-meta\">+" + (symCount - 5).toText() + " more</span>" } else { "" };
 
-        usages := map.getOr(modUsageCounts, mi, 0);
-        usageText := if usages > 0 { " · " + integer.intText(usages) + " sample" + (if usages == 1 { "" } else { "s" }) } else { "" };
+        usages := modUsageCounts.getOr(mi, 0);
+        usageText := if usages > 0 { " · " + usages.toText() + " sample" + (if usages == 1 { "" } else { "s" }) } else { "" };
         searchBlob := challenges.asciiLower(mId + " " + mSum + " " + text.joinTexts(symNames, " "));
         card := "<article class=\"portal-card module-index-card\" data-env=\"" + escapeHtml(mEnv) + "\" data-search=\"" + escapeHtml(searchBlob) + "\">\n"
         + "  <div class=\"portal-card-head\">\n"
@@ -266,20 +261,20 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         + "  <p>" + formatInlineDoc(if mSum =!= "" { mSum } else { mId + " utilities." }) + "</p>\n"
         + "  <div class=\"module-sym-preview\">" + text.joinTexts(previewParts, " ") + moreCount + "</div>\n"
         + "  <div class=\"portal-card-foot\">\n"
-        + "    <span class=\"code-card-meta\">" + integer.intText(symCount) + " symbol" + (if symCount == 1 { "" } else { "s" }) + usageText + "</span>\n"
+        + "    <span class=\"code-card-meta\">" + symCount.toText() + " symbol" + (if symCount == 1 { "" } else { "s" }) + usageText + "</span>\n"
         + "    <a href=\"" + escapeHtml(mNs) + "/" + escapeHtml(mName) + ".html\">Inspect API &rarr;</a>\n"
         + "  </div>\n"
         + "</article>";
-        if mNs == "core" { list.pushBack(mut coreCards, card); }
-        else if mNs == "extra" { list.pushBack(mut extraCards, card); }
+        if mNs == "core" { mut coreCards.pushBack(card); }
+        else if mNs == "extra" { mut extraCards.pushBack(card); }
         mi = mi + 1;
     }
 
     indexBody := "<section class=\"page-hero\">\n"
     + "  <h1>Standard &amp; Play Modules</h1>\n"
     + "  <p class=\"hero-lead\">\n"
-    + "    Reference documentation extracted directly from all " + integer.intText(modCount) + " shipped Lite modules\n"
-    + "    (" + integer.intText(coreCount) + " <code>core/*</code>, " + integer.intText(extraCount) + " <code>extra/*</code>; " + integer.intText(totalSymbols) + " public symbols).\n"
+    + "    Reference documentation extracted directly from all " + modCount.toText() + " shipped Lite modules\n"
+    + "    (" + coreCount.toText() + " <code>core/*</code>, " + extraCount.toText() + " <code>extra/*</code>; " + totalSymbols.toText() + " public symbols).\n"
     + "  </p>\n"
     + "  <div class=\"md-alert\">\n"
     + "    <div class=\"md-alert-title\">Provisional Module Surface</div>\n"
@@ -289,7 +284,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "    </p>\n"
     + "  </div>\n"
     + "  <div class=\"filter-pills\" role=\"group\" aria-label=\"Filter modules by environment\">\n"
-    + "    <button class=\"filter-pill\" type=\"button\" data-filter-env=\"all\" aria-pressed=\"true\">All (" + integer.intText(modCount) + ")</button>\n"
+    + "    <button class=\"filter-pill\" type=\"button\" data-filter-env=\"all\" aria-pressed=\"true\">All (" + modCount.toText() + ")</button>\n"
     + "    <button class=\"filter-pill\" type=\"button\" data-filter-env=\"universal\" aria-pressed=\"false\">Browser + CLI</button>\n"
     + "    <button class=\"filter-pill\" type=\"button\" data-filter-env=\"play\" aria-pressed=\"false\">Lite Play</button>\n"
     + "    <button class=\"filter-pill\" type=\"button\" data-filter-env=\"cli\" aria-pressed=\"false\">CLI / Host OS</button>\n"
@@ -299,7 +294,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "<section class=\"section\" id=\"core-modules\">\n"
     + "  <div class=\"section-head\">\n"
     + "    <h2>Core Modules (<code>core/*</code>)</h2>\n"
-    + "    <span class=\"code-card-meta\">" + integer.intText(coreCount) + " modules</span>\n"
+    + "    <span class=\"code-card-meta\">" + coreCount.toText() + " modules</span>\n"
     + "  </div>\n"
     + "  <div class=\"portal-grid\">\n"
     + "    " + text.joinTexts(coreCards, "\n") + "\n"
@@ -308,7 +303,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "<section class=\"section\" id=\"extra-modules\">\n"
     + "  <div class=\"section-head\">\n"
     + "    <h2>Play &amp; Extra Modules (<code>extra/*</code>)</h2>\n"
-    + "    <span class=\"code-card-meta\">" + integer.intText(extraCount) + " modules</span>\n"
+    + "    <span class=\"code-card-meta\">" + extraCount.toText() + " modules</span>\n"
     + "  </div>\n"
     + "  <div class=\"portal-grid\">\n"
     + "    " + text.joinTexts(extraCards, "\n") + "\n"
@@ -382,18 +377,17 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
             card := renderSymbolCard(mFile, sKind, sName, sSigHtml, sIsHost, sDoc, sLine, repoUrl);
             tocLi := "<li class=\"toc-l3\"><a href=\"#" + escapeHtml(sName) + "\">" + escapeHtml(sName) + "</a></li>";
             if sKind == "type" {
-                list.pushBack(mut typeCards, card);
-                list.pushBack(mut typeToc, tocLi);
+                mut typeCards.pushBack(card);
+                mut typeToc.pushBack(tocLi);
             } else if sKind == "const" {
-                list.pushBack(mut constCards, card);
-                list.pushBack(mut constToc, tocLi);
+                mut constCards.pushBack(card);
+                mut constToc.pushBack(tocLi);
             } else {
-                list.pushBack(mut fnCards, card);
-                list.pushBack(mut fnToc, tocLi);
+                mut fnCards.pushBack(card);
+                mut fnToc.pushBack(tocLi);
             }
 
-            list.pushBack(mut searchEntriesJson,
-            "{\"kind\":\"symbol\",\"title\":" + json.quoteString(mId + "." + sName)
+            (mut searchEntriesJson).pushBack("{\"kind\":\"symbol\",\"title\":" + json.quoteString(mId + "." + sName)
             + ",\"subtitle\":" + json.quoteString(if sDoc =!= "" { sDoc } else { sSig })
             + ",\"href\":" + json.quoteString(relPath + "#" + sName)
             + ",\"keywords\":" + json.quoteString(mId + " " + sName + " " + sSig + " " + sDoc)
@@ -401,12 +395,11 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         }
 
         usageCards: mut List<String> = [];
-        var eo := map.getOr(edgeModStart, mi, edgeTotal);
+        var eo := edgeModStart.getOr(mi, edgeTotal);
         loop eo < edgeTotal and edgeModIdx[edgeOrder[eo]] == mi {
             uIdx := edgeSampIdx[edgeOrder[eo]];
             uId := escapeHtml(sampIds[uIdx]);
-            list.pushBack(mut usageCards,
-            "<article class=\"portal-card\">\n"
+            mut usageCards.pushBack("<article class=\"portal-card\">\n"
             + "          <div class=\"portal-card-head\">\n"
             + "            <strong>" + escapeHtml(sampTitles[uIdx]) + "</strong>\n"
             + "            <span class=\"status-pill\">" + escapeHtml(sampBadges[uIdx]) + "</span>\n"
@@ -422,28 +415,28 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
 
         secHtml: mut List<String> = [];
         tocItems: mut List<String> = ["<li><a href=\"#overview\">Overview</a></li>"];
-        if list.listCountText(typeCards) > 0 {
-            list.pushBack(mut secHtml, "<section class=\"section\" id=\"types\">\n      <div class=\"section-head\">\n        <h2>Types</h2>\n        <span class=\"code-card-meta\">" + integer.intText(list.listCountText(typeCards)) + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + text.joinTexts(typeCards, "\n") + "\n      </div>\n    </section>");
-            list.pushBack(mut tocItems, "<li><a href=\"#types\">Types</a></li>");
-            loop typeToc as tl { list.pushBack(mut tocItems, tl); }
+        if typeCards.length() > 0 {
+            mut secHtml.pushBack("<section class=\"section\" id=\"types\">\n      <div class=\"section-head\">\n        <h2>Types</h2>\n        <span class=\"code-card-meta\">" + typeCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + text.joinTexts(typeCards, "\n") + "\n      </div>\n    </section>");
+            mut tocItems.pushBack("<li><a href=\"#types\">Types</a></li>");
+            loop typeToc as tl { mut tocItems.pushBack(tl); }
         }
-        if list.listCountText(constCards) > 0 {
-            list.pushBack(mut secHtml, "<section class=\"section\" id=\"constants\">\n      <div class=\"section-head\">\n        <h2>Constants</h2>\n        <span class=\"code-card-meta\">" + integer.intText(list.listCountText(constCards)) + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + text.joinTexts(constCards, "\n") + "\n      </div>\n    </section>");
-            list.pushBack(mut tocItems, "<li><a href=\"#constants\">Constants</a></li>");
-            loop constToc as tl { list.pushBack(mut tocItems, tl); }
+        if constCards.length() > 0 {
+            mut secHtml.pushBack("<section class=\"section\" id=\"constants\">\n      <div class=\"section-head\">\n        <h2>Constants</h2>\n        <span class=\"code-card-meta\">" + constCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + text.joinTexts(constCards, "\n") + "\n      </div>\n    </section>");
+            mut tocItems.pushBack("<li><a href=\"#constants\">Constants</a></li>");
+            loop constToc as tl { mut tocItems.pushBack(tl); }
         }
-        if list.listCountText(fnCards) > 0 {
-            list.pushBack(mut secHtml, "<section class=\"section\" id=\"functions\">\n      <div class=\"section-head\">\n        <h2>Functions</h2>\n        <span class=\"code-card-meta\">" + integer.intText(list.listCountText(fnCards)) + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + text.joinTexts(fnCards, "\n") + "\n      </div>\n    </section>");
-            list.pushBack(mut tocItems, "<li><a href=\"#functions\">Functions</a></li>");
-            loop fnToc as tl { list.pushBack(mut tocItems, tl); }
+        if fnCards.length() > 0 {
+            mut secHtml.pushBack("<section class=\"section\" id=\"functions\">\n      <div class=\"section-head\">\n        <h2>Functions</h2>\n        <span class=\"code-card-meta\">" + fnCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + text.joinTexts(fnCards, "\n") + "\n      </div>\n    </section>");
+            mut tocItems.pushBack("<li><a href=\"#functions\">Functions</a></li>");
+            loop fnToc as tl { mut tocItems.pushBack(tl); }
         }
 
-        usagesSection := if list.listCountText(usageCards) > 0 {
-            list.pushBack(mut tocItems, "<li><a href=\"#used-in-samples\">Used in Samples</a></li>");
+        usagesSection := if usageCards.length() > 0 {
+            mut tocItems.pushBack("<li><a href=\"#used-in-samples\">Used in Samples</a></li>");
             "<section class=\"section\" id=\"used-in-samples\">\n"
             + "      <div class=\"section-head\">\n"
             + "        <h2>Used in Showcases &amp; Gallery</h2>\n"
-            + "        <span class=\"code-card-meta\">" + integer.intText(list.listCountText(usageCards)) + "</span>\n"
+            + "        <span class=\"code-card-meta\">" + usageCards.length().toText() + "</span>\n"
             + "      </div>\n"
             + "      <div class=\"portal-grid-2\">\n"
             + "        " + text.joinTexts(usageCards, "\n") + "\n"
@@ -452,7 +445,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         } else { "" };
 
         if academyUsagesHtml =!= "" {
-            list.pushBack(mut tocItems, "<li><a href=\"#used-in-academy\">Used Across Academy</a></li>");
+            mut tocItems.pushBack("<li><a href=\"#used-in-academy\">Used Across Academy</a></li>");
         }
 
         sourceLink := if repoUrl =!= "" {
@@ -492,16 +485,14 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
 
         pTitle := mId + " — Modules — Lite";
         pDesc := if mSum =!= "" { mSum } else { "API reference for Lite module " + mId + "." };
-        list.pushBack(mut pagesJson,
-        "{\"relPath\":" + json.quoteString(relPath)
+        mut pagesJson.pushBack("{\"relPath\":" + json.quoteString(relPath)
         + ",\"title\":" + json.quoteString(pTitle)
         + ",\"description\":" + json.quoteString(pDesc)
         + ",\"basePath\":\"../../\""
         + ",\"body\":" + json.quoteString(detailBody) + "}");
 
-        list.pushBack(mut searchEntriesJson,
-        "{\"kind\":\"module\",\"title\":" + json.quoteString(mId)
-        + ",\"subtitle\":" + json.quoteString((if mSum =!= "" { mSum } else { mId }) + " (" + integer.intText(modSymCounts[mi]) + " symbols)")
+        mut searchEntriesJson.pushBack("{\"kind\":\"module\",\"title\":" + json.quoteString(mId)
+        + ",\"subtitle\":" + json.quoteString((if mSum =!= "" { mSum } else { mId }) + " (" + modSymCounts[mi].toText() + " symbols)")
         + ",\"href\":" + json.quoteString(relPath)
         + ",\"keywords\":" + json.quoteString(mId + " " + mNs + " " + mName + " " + mEnv + " " + mFile)
         + ",\"badge\":" + json.quoteString(envMetaLabel(mEnv)) + "}");
@@ -509,5 +500,5 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         mi = mi + 1;
     }
 
-    (ok = true, jsonText = "{\"moduleCount\":" + integer.intText(modCount) + ",\"symbolCount\":" + integer.intText(totalSymbols) + ",\"pages\":[" + text.joinTexts(pagesJson, ",") + "],\"searchEntries\":[" + text.joinTexts(searchEntriesJson, ",") + "]}", error = "")
+    (ok = true, jsonText = "{\"moduleCount\":" + modCount.toText() + ",\"symbolCount\":" + totalSymbols.toText() + ",\"pages\":[" + text.joinTexts(pagesJson, ",") + "],\"searchEntries\":[" + text.joinTexts(searchEntriesJson, ",") + "]}", error = "")
 };

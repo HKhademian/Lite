@@ -2,13 +2,10 @@
 
 crypto := import "core/crypto";
 fs := import "core/file";
-integer := import "core/int";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 project := import "util/project";
 test := import "core/test";
-text := import "core/text";
 unicode := import "core/unicode";
 cases := import "util/cases";
 json := import "util/json";
@@ -101,14 +98,14 @@ extraCompilerArgs: List<String>
         rootTargetOverride
     } else if logicalName == "" {
         path.join(rootDir, "__lite_stdin__.lts")
-    } else if text.startsWithAt(logicalName, 0, "/") {
+    } else if logicalName.startsWithAt(0, "/") {
         logicalName
     } else {
         path.join(rootDir, logicalName)
     };
     args: mut List<String> = [compilerPath, "--stdin", "--name", logicalName, "--root", rootTarget];
     loop extraCompilerArgs as extra {
-        list.pushBack(mut args, extra);
+        mut args.pushBack(extra);
     }
     outPath := path.join(workDir, "out");
     errPath := path.join(workDir, "err");
@@ -133,7 +130,7 @@ pub compileFile := fn(compilerPath: String, cwdDir: String, args: List<String>):
 
     cmdArgs: mut List<String> = [compilerPath];
     loop args as arg {
-        list.pushBack(mut cmdArgs, arg);
+        mut cmdArgs.pushBack(arg);
     }
     outPath := path.join(workDir, "out");
     errPath := path.join(workDir, "err");
@@ -175,7 +172,7 @@ pub prepareTs := fn(rootDir: String, tsCode: String): PreparedTs {
 pub runPreparedTsWithBytes := fn(prepared: PreparedTs, stdinBytes: List<Int>, extraArgs: List<String>): RunOutput {
     runArgs: mut List<String> = [prepared.runnerPath, prepared.artifactPath];
     loop extraArgs as extra {
-        list.pushBack(mut runArgs, extra);
+        mut runArgs.pushBack(extra);
     }
     outPath := path.join(prepared.workDir, "run.stdout");
     errPath := path.join(prepared.workDir, "run.stderr");
@@ -247,30 +244,30 @@ stdinText: String
 ): (found: Bool, status: Int, stdout: String, stderr: String) {
     srcHash := crypto.sha256Text(sourceText);
     quotedHash := json.quoteString(srcHash);
-    needleLen := text.length(quotedHash);
+    needleLen := quotedHash.length();
     stdinB64 := crypto.base64Encode(unicode.utf8Encode(stdinText));
 
     casesField := json.findObjectField(contractsJson, 0, "cases");
     test.check("process.json cases field", casesField.found);
     var searchPos := casesField.valuePos;
     loop true {
-        hitPos := text.indexOfText(contractsJson, quotedHash, searchPos);
+        hitPos := contractsJson.indexOf(quotedHash, searchPos);
         if hitPos < 0 { break; }
         searchPos = hitPos + needleLen;
 
         var back := hitPos - 1;
         loop back >= casesField.valuePos {
-            if text.at(contractsJson, back) == "{" {
+            if contractsJson.at(back) == "{" {
                 sVal := json.readObjectString(contractsJson, back, "source");
                 if sVal.found {
                     if sVal.ok and sVal.value == srcHash {
                         inVal := json.readObjectString(contractsJson, back, "stdin");
                         argsField := json.findObjectField(contractsJson, back, "args");
-                        isEmptyArgs := argsField.found and list.listCountInt(json.arrayElementOffsets(contractsJson, argsField.valuePos)) == 0;
+                        isEmptyArgs := argsField.found and json.arrayElementOffsets(contractsJson, argsField.valuePos).length() == 0;
                         var nameMatched := false;
                         if logicalName == "" {
                             nameField := json.findObjectField(contractsJson, back, "name");
-                            nameMatched = nameField.found and text.at(contractsJson, nameField.valuePos) == "n";
+                            nameMatched = nameField.found and contractsJson.at(nameField.valuePos) == "n";
                         } else {
                             nameVal := json.readObjectString(contractsJson, back, "name");
                             nameMatched = nameVal.found and nameVal.ok and nameVal.value == logicalName;
@@ -348,11 +345,11 @@ pub compileAndRunC := fn(cCode: String, cc: String, stdinText: String): RunOutpu
     ccOut := path.join(workDir, "cc.stdout");
     ccErr := path.join(workDir, "cc.stderr");
     ccArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", cPath, "-o", exePath, "-lm"];
-    if proc.platform() == "darwin" and text.containsText(cCode, "LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
-        list.pushBack(mut ccArgs, "-framework");
-        list.pushBack(mut ccArgs, "Cocoa");
-        list.pushBack(mut ccArgs, "-framework");
-        list.pushBack(mut ccArgs, "CoreGraphics");
+    if proc.platform() == "darwin" and cCode.contains("LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
+        mut ccArgs.pushBack("-framework");
+        mut ccArgs.pushBack("Cocoa");
+        mut ccArgs.pushBack("-framework");
+        mut ccArgs.pushBack("CoreGraphics");
     }
     ccRes := proc.runBytes(cc, ccArgs, workDir, emptyEnv(), 30000, emptyBytes(), ccOut, ccErr);
     test.check("compileAndRunC cc error: " + ccRes.error, ccRes.error == "");
@@ -397,7 +394,7 @@ pub assertCompileErrorContainsNamed := fn(rootDir: String, compilerPath: String,
     res := compileStdin(rootDir, compilerPath, source, logicalName);
     test.checkInt(label + " status", 2, res.status);
     test.checkText(label + " stdout", "", res.stdout);
-    test.check(label + " stderr contains \"" + expectedSub + "\" (got: " + res.stderr + ")", text.containsText(res.stderr, expectedSub));
+    test.check(label + " stderr contains \"" + expectedSub + "\" (got: " + res.stderr + ")", res.stderr.contains(expectedSub));
 };
 
 /** Compiles `source` with `compilerPath` expecting exit status 2, empty stdout, and `expectedSub` inside stderr. */

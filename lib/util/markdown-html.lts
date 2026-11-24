@@ -1,61 +1,59 @@
 /** Provisional GFM-subset Markdown-to-HTML renderer, TOC extractor, and doc-status detector. */
 
-integer := import "core/int";
 text := import "core/text";
-list := import "core/list";
 json := import "util/json";
 md := import "util/markdown";
 tb := import "util/text-builder";
 
 /** Escapes HTML special characters (`&`, `<`, `>`, `"`). */
 pub escapeHtml := fn(raw: String): String {
-    size := text.length(raw);
+    size := raw.length();
     out: mut tb.TextBuilder;
     var runStart := 0;
     var i := 0;
     loop i < size {
-        ch := text.at(raw, i);
+        ch := raw.at(i);
         var esc := "";
         if ch == "&" { esc = "&amp;"; }
         else if ch == "<" { esc = "&lt;"; }
         else if ch == ">" { esc = "&gt;"; }
         else if ch == "\"" { esc = "&quot;"; }
         if esc =!= "" {
-            if i > runStart { tb.append(mut out, text.slice(raw, runStart, i)); }
+            if i > runStart { tb.append(mut out, raw.slice(runStart, i)); }
             tb.append(mut out, esc);
             runStart = i + 1;
         }
         i += 1;
     }
     if runStart == 0 { return raw; }
-    if runStart < size { tb.append(mut out, text.slice(raw, runStart, size)); }
+    if runStart < size { tb.append(mut out, raw.slice(runStart, size)); }
     tb.build(out)
 };
 
 countCharAt := fn(source: String, start: Int, limit: Int, ch: String): Int {
     var count := 0;
-    loop start + count < limit and text.at(source, start + count) == ch {
+    loop start + count < limit and source.at(start + count) == ch {
         count += 1;
     }
     count
 };
 
 findLineEnd := fn(source: String, start: Int, size: Int): Int {
-    idx := text.indexOfText(source, "\n", start);
+    idx := source.indexOf("\n", start);
     if idx < 0 { size } else { idx }
 };
 
 splitLines := fn(source: String): List<String> {
     lines: mut List<String> = [];
-    size := text.length(source);
+    size := source.length();
     var pos := 0;
     loop pos <= size {
         lineEnd := findLineEnd(source, pos, size);
         var cleanEnd := lineEnd;
-        if cleanEnd > pos and text.at(source, cleanEnd - 1) == "\r" {
+        if cleanEnd > pos and source.at(cleanEnd - 1) == "\r" {
             cleanEnd -= 1;
         }
-        list.pushBack(mut lines, text.slice(source, pos, cleanEnd));
+        (mut lines).pushBack(source.slice(pos, cleanEnd));
         if lineEnd >= size { break; }
         pos = lineEnd + 1;
     }
@@ -63,20 +61,20 @@ splitLines := fn(source: String): List<String> {
 };
 
 isSchemeChar := fn(ch: String): Bool {
-    text.isAsciiLetter(ch) or text.isDigit(ch) or ch == "+" or ch == "." or ch == "-"
+    ch.isAsciiLetter() or ch.isDigit() or ch == "+" or ch == "." or ch == "-"
 };
 
 isLiteUri := fn(target: String): Bool {
-    text.startsWithAt(target, 0, "lite://") or text.startsWithAt(target, 0, "lite:/")
+    target.startsWithAt(0, "lite://") or target.startsWithAt(0, "lite:/")
 };
 
 isExternalHref := fn(target: String): Bool {
-    if text.startsWithAt(target, 0, "//") { return true; }
-    size := text.length(target);
-    if size < 2 or not text.isAsciiLetter(text.at(target, 0)) { return false; }
+    if target.startsWithAt(0, "//") { return true; }
+    size := target.length();
+    if size < 2 or not target.at(0).isAsciiLetter() { return false; }
     var i := 1;
     loop i < size {
-        ch := text.at(target, i);
+        ch := target.at(i);
         if ch == ":" { return true; }
         if not isSchemeChar(ch) { return false; }
         i += 1;
@@ -85,14 +83,14 @@ isExternalHref := fn(target: String): Bool {
 };
 
 isEscapablePunct := fn(ch: String): Bool {
-    text.containsText("\\`*_{}[]()#+-.!|<>\"'~", ch)
+    "\\`*_{}[]()#+-.!|<>\"'~".contains(ch)
 };
 
 findClosingCodeTicks := fn(line: String, start: Int, tickCount: Int): Int {
-    size := text.length(line);
+    size := line.length();
     var pos := start;
     loop pos < size {
-        if text.at(line, pos) == "`" {
+        if line.at(pos) == "`" {
             cnt := countCharAt(line, pos, size, "`");
             if cnt == tickCount { return pos; }
             pos += cnt;
@@ -104,11 +102,11 @@ findClosingCodeTicks := fn(line: String, start: Int, tickCount: Int): Int {
 };
 
 findMatchingBracketEnd := fn(line: String, openPos: Int): Int {
-    size := text.length(line);
+    size := line.length();
     var pos := openPos + 1;
     var depth := 1;
     loop pos < size {
-        ch := text.at(line, pos);
+        ch := line.at(pos);
         if ch == "\\" and pos + 1 < size {
             pos += 2;
         } else if ch == "`" {
@@ -134,29 +132,29 @@ findMatchingBracketEnd := fn(line: String, openPos: Int): Int {
 };
 
 parseLinkDestination := fn(line: String, openParen: Int): (ok: Bool, href: String, title: String, closeParen: Int) {
-    size := text.length(line);
+    size := line.length();
     var pos := openParen + 1;
-    loop pos < size and text.isWhitespace(text.at(line, pos)) {
+    loop pos < size and line.at(pos).isWhitespace() {
         pos += 1;
     }
     if pos >= size {
         return (ok = false, href = "", title = "", closeParen = -1);
     }
     var href := "";
-    if text.at(line, pos) == "<" {
-        gtPos := text.indexOfText(line, ">", pos + 1);
+    if line.at(pos) == "<" {
+        gtPos := line.indexOf(">", pos + 1);
         if gtPos < 0 {
             return (ok = false, href = "", title = "", closeParen = -1);
         }
-        href = text.slice(line, pos + 1, gtPos);
+        href = line.slice(pos + 1, gtPos);
         pos = gtPos + 1;
     } else {
         destStart := pos;
         var parenDepth := 0;
         loop pos < size {
-            ch := text.at(line, pos);
+            ch := line.at(pos);
             if ch == ")" and parenDepth == 0 { break; }
-            if text.isWhitespace(ch) and parenDepth == 0 { break; }
+            if ch.isWhitespace() and parenDepth == 0 { break; }
             if ch == "(" { parenDepth += 1; }
             else if ch == ")" { parenDepth -= 1; }
             pos += 1;
@@ -164,35 +162,35 @@ parseLinkDestination := fn(line: String, openParen: Int): (ok: Bool, href: Strin
         if pos == destStart {
             return (ok = false, href = "", title = "", closeParen = -1);
         }
-        href = text.slice(line, destStart, pos);
+        href = line.slice(destStart, pos);
     }
-    loop pos < size and text.isWhitespace(text.at(line, pos)) {
+    loop pos < size and line.at(pos).isWhitespace() {
         pos += 1;
     }
     var title := "";
-    if pos < size and (text.at(line, pos) == "\"" or text.at(line, pos) == "'") {
-        q := text.at(line, pos);
-        qEnd := text.indexOfText(line, q, pos + 1);
+    if pos < size and (line.at(pos) == "\"" or line.at(pos) == "'") {
+        q := line.at(pos);
+        qEnd := line.indexOf(q, pos + 1);
         if qEnd < 0 {
             return (ok = false, href = "", title = "", closeParen = -1);
         }
-        title = text.slice(line, pos + 1, qEnd);
+        title = line.slice(pos + 1, qEnd);
         pos = qEnd + 1;
-        loop pos < size and text.isWhitespace(text.at(line, pos)) {
+        loop pos < size and line.at(pos).isWhitespace() {
             pos += 1;
         }
     }
-    if pos >= size or text.at(line, pos) =!= ")" {
+    if pos >= size or line.at(pos) =!= ")" {
         return (ok = false, href = "", title = "", closeParen = -1);
     }
     (ok = true, =href, =title, closeParen = pos)
 };
 
 findClosingEmph := fn(line: String, start: Int, doubleStar: Bool): Int {
-    size := text.length(line);
+    size := line.length();
     var pos := start;
     loop pos < size {
-        ch := text.at(line, pos);
+        ch := line.at(pos);
         if ch == "\\" and pos + 1 < size {
             pos += 2;
         } else if ch == "`" {
@@ -206,14 +204,14 @@ findClosingEmph := fn(line: String, start: Int, doubleStar: Bool): Int {
         } else if ch == "*" {
             if doubleStar {
                 starRun := countCharAt(line, pos, size, "*");
-                if starRun >= 2 and pos > start and not text.isWhitespace(text.at(line, pos - 1)) {
+                if starRun >= 2 and pos > start and not line.at(pos - 1).isWhitespace() {
                     return pos + starRun - 2;
                 }
                 pos += starRun;
             } else {
-                if pos + 1 < size and text.at(line, pos + 1) == "*" {
+                if pos + 1 < size and line.at(pos + 1) == "*" {
                     pos += 2;
-                } else if pos > start and not text.isWhitespace(text.at(line, pos - 1)) {
+                } else if pos > start and not line.at(pos - 1).isWhitespace() {
                     return pos;
                 } else {
                     pos += 1;
@@ -228,27 +226,27 @@ findClosingEmph := fn(line: String, start: Int, doubleStar: Bool): Int {
 
 /* mode 0 = full HTML, mode 1 = TOC HTML (no nested links), mode 2 = plain text */
 renderInlineWithMode := fn(line: String, mode: Int): String {
-    size := text.length(line);
+    size := line.length();
     out: mut tb.TextBuilder;
     var runStart := 0;
     var pos := 0;
     loop pos < size {
-        ch := text.at(line, pos);
-        if ch == "\\" and pos + 1 < size and isEscapablePunct(text.at(line, pos + 1)) {
-            if pos > runStart { tb.append(mut out, text.slice(line, runStart, pos)); }
-            nextCh := text.at(line, pos + 1);
+        ch := line.at(pos);
+        if ch == "\\" and pos + 1 < size and isEscapablePunct(line.at(pos + 1)) {
+            if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+            nextCh := line.at(pos + 1);
             tb.append(mut out, if mode == 2 { nextCh } else { escapeHtml(nextCh) });
             pos += 2;
             runStart = pos;
         } else if ch == "`" {
-            if pos > runStart { tb.append(mut out, text.slice(line, runStart, pos)); }
+            if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
             ticks := countCharAt(line, pos, size, "`");
             closeTicks := findClosingCodeTicks(line, pos + ticks, ticks);
             if closeTicks >= 0 {
-                var body := text.slice(line, pos + ticks, closeTicks);
-                bodyLen := text.length(body);
-                if bodyLen >= 2 and text.at(body, 0) == " " and text.at(body, bodyLen - 1) == " " and text.trim(body) =!= "" {
-                    body = text.slice(body, 1, bodyLen - 1);
+                var body := line.slice(pos + ticks, closeTicks);
+                bodyLen := body.length();
+                if bodyLen >= 2 and body.at(0) == " " and body.at(bodyLen - 1) == " " and body.trim() =!= "" {
+                    body = body.slice(1, bodyLen - 1);
                 }
                 if mode == 2 {
                     tb.append(mut out, body);
@@ -257,17 +255,17 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
                 }
                 pos = closeTicks + ticks;
             } else {
-                tb.append(mut out, text.repeatText("`", ticks));
+                tb.append(mut out, "`".repeat(ticks));
                 pos += ticks;
             }
             runStart = pos;
-        } else if ch == "!" and pos + 1 < size and text.at(line, pos + 1) == "[" {
+        } else if ch == "!" and pos + 1 < size and line.at(pos + 1) == "[" {
             altEnd := findMatchingBracketEnd(line, pos + 1);
-            if altEnd >= 0 and altEnd + 1 < size and text.at(line, altEnd + 1) == "(" {
+            if altEnd >= 0 and altEnd + 1 < size and line.at(altEnd + 1) == "(" {
                 dest := parseLinkDestination(line, altEnd + 1);
                 if dest.ok {
-                    if pos > runStart { tb.append(mut out, text.slice(line, runStart, pos)); }
-                    altText := text.slice(line, pos + 2, altEnd);
+                    if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+                    altText := line.slice(pos + 2, altEnd);
                     if mode == 0 {
                         srcAttr := escapeHtml(dest.href);
                         dataAttr := if isExternalHref(dest.href) { "" } else { " data-md-src=\"" + srcAttr + "\"" };
@@ -286,17 +284,17 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
             }
         } else if ch == "[" {
             labelEnd := findMatchingBracketEnd(line, pos);
-            if labelEnd >= 0 and labelEnd + 1 < size and text.at(line, labelEnd + 1) == "(" {
+            if labelEnd >= 0 and labelEnd + 1 < size and line.at(labelEnd + 1) == "(" {
                 dest := parseLinkDestination(line, labelEnd + 1);
                 if dest.ok {
-                    if pos > runStart { tb.append(mut out, text.slice(line, runStart, pos)); }
-                    labelRaw := text.slice(line, pos + 1, labelEnd);
+                    if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+                    labelRaw := line.slice(pos + 1, labelEnd);
                     if mode == 0 {
                         hrefAttr := escapeHtml(dest.href);
                         isLite := isLiteUri(dest.href);
                         isExt := isExternalHref(dest.href);
-                        isHashOnly := text.startsWithAt(dest.href, 0, "#");
-                        relAttr := if not isLite and isExt and (text.startsWithAt(dest.href, 0, "http://") or text.startsWithAt(dest.href, 0, "https://")) {
+                        isHashOnly := dest.href.startsWithAt(0, "#");
+                        relAttr := if not isLite and isExt and (dest.href.startsWithAt(0, "http://") or dest.href.startsWithAt(0, "https://")) {
                             " target=\"_blank\" rel=\"noopener\""
                         } else {
                             ""
@@ -322,12 +320,12 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
                 pos += 1;
             }
         } else if ch == "*" {
-            if pos + 1 < size and text.at(line, pos + 1) == "*" {
-                if pos + 2 < size and not text.isWhitespace(text.at(line, pos + 2)) {
+            if pos + 1 < size and line.at(pos + 1) == "*" {
+                if pos + 2 < size and not line.at(pos + 2).isWhitespace() {
                     closeStrong := findClosingEmph(line, pos + 2, true);
                     if closeStrong > pos + 2 {
-                        if pos > runStart { tb.append(mut out, text.slice(line, runStart, pos)); }
-                        innerStrong := text.slice(line, pos + 2, closeStrong);
+                        if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+                        innerStrong := line.slice(pos + 2, closeStrong);
                         if mode == 2 {
                             tb.append(mut out, self(innerStrong, 2));
                         } else {
@@ -341,11 +339,11 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
                 } else {
                     pos += 2;
                 }
-            } else if pos + 1 < size and not text.isWhitespace(text.at(line, pos + 1)) {
+            } else if pos + 1 < size and not line.at(pos + 1).isWhitespace() {
                 closeEm := findClosingEmph(line, pos + 1, false);
                 if closeEm > pos + 1 {
-                    if pos > runStart { tb.append(mut out, text.slice(line, runStart, pos)); }
-                    innerEm := text.slice(line, pos + 1, closeEm);
+                    if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+                    innerEm := line.slice(pos + 1, closeEm);
                     if mode == 2 {
                         tb.append(mut out, self(innerEm, 2));
                     } else {
@@ -360,7 +358,7 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
                 pos += 1;
             }
         } else if mode =!= 2 and (ch == "&" or ch == "<" or ch == ">" or ch == "\"") {
-            if pos > runStart { tb.append(mut out, text.slice(line, runStart, pos)); }
+            if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
             if ch == "&" { tb.append(mut out, "&amp;"); }
             else if ch == "<" { tb.append(mut out, "&lt;"); }
             else if ch == ">" { tb.append(mut out, "&gt;"); }
@@ -372,7 +370,7 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
         }
     }
     if runStart == 0 { return line; }
-    if runStart < size { tb.append(mut out, text.slice(line, runStart, size)); }
+    if runStart < size { tb.append(mut out, line.slice(runStart, size)); }
     tb.build(out)
 };
 
@@ -394,72 +392,72 @@ pub stripInlineMarkdown := fn(line: String): String {
 /** Classifies a Markdown guide's design/implementation status from its header lines. */
 pub detectDocStatus := fn(docText: String): String {
     lines := splitLines(docText);
-    total := list.listCountText(lines);
+    total := lines.length();
     var i := 0;
     var headerBlock := "";
     loop i < total and i < 20 {
-        headerBlock = headerBlock + "\n" + text.toLowerAscii(lines[i]);
+        headerBlock = headerBlock + "\n" + lines[i].toLowerAscii();
         i += 1;
     }
-    hasMarker := text.containsText(headerBlock, "status:") or text.containsText(headerBlock, "stage:");
+    hasMarker := headerBlock.contains("status:") or headerBlock.contains("stage:");
     if not hasMarker { return "guide"; }
-    if text.containsText(headerBlock, "historical") or text.containsText(headerBlock, "superseded") or text.containsText(headerBlock, "retired") {
+    if headerBlock.contains("historical") or headerBlock.contains("superseded") or headerBlock.contains("retired") {
         return "historical";
     }
-    if text.containsText(headerBlock, "working proposal") or text.containsText(headerBlock, "status: proposal") or text.containsText(headerBlock, "status: **proposal") or text.containsText(headerBlock, "draft") {
+    if headerBlock.contains("working proposal") or headerBlock.contains("status: proposal") or headerBlock.contains("status: **proposal") or headerBlock.contains("draft") {
         return "proposal";
     }
-    if text.containsText(headerBlock, "selected") or text.containsText(headerBlock, "established") {
+    if headerBlock.contains("selected") or headerBlock.contains("established") {
         return "selected";
     }
-    if text.containsText(headerBlock, "open") {
+    if headerBlock.contains("open") {
         return "open";
     }
     "guide"
 };
 
 parseHeadingLine := fn(line: String): (ok: Bool, level: Int, headingText: String) {
-    size := text.length(line);
+    size := line.length();
     var lead := 0;
-    loop lead < size and lead < 3 and text.at(line, lead) == " " {
+    loop lead < size and lead < 3 and line.at(lead) == " " {
         lead += 1;
     }
     hashes := countCharAt(line, lead, size, "#");
     if hashes < 1 or hashes > 6 or lead + hashes >= size {
         return (ok = false, level = 0, headingText = "");
     }
-    afterHash := text.at(line, lead + hashes);
+    afterHash := line.at(lead + hashes);
     if afterHash =!= " " and afterHash =!= "\t" {
         return (ok = false, level = 0, headingText = "");
     }
     var bodyStart := lead + hashes + 1;
-    loop bodyStart < size and text.isWhitespace(text.at(line, bodyStart)) {
+    loop bodyStart < size and line.at(bodyStart).isWhitespace() {
         bodyStart += 1;
     }
     var bodyEnd := size;
-    loop bodyEnd > bodyStart and text.isWhitespace(text.at(line, bodyEnd - 1)) {
+    loop bodyEnd > bodyStart and line.at(bodyEnd - 1).isWhitespace() {
         bodyEnd -= 1;
     }
-    loop bodyEnd > bodyStart and text.at(line, bodyEnd - 1) == "#" {
+    loop bodyEnd > bodyStart and line.at(bodyEnd - 1) == "#" {
         bodyEnd -= 1;
     }
-    loop bodyEnd > bodyStart and text.isWhitespace(text.at(line, bodyEnd - 1)) {
+    loop bodyEnd > bodyStart and line.at(bodyEnd - 1).isWhitespace() {
         bodyEnd -= 1;
     }
     if bodyEnd <= bodyStart {
         return (ok = false, level = 0, headingText = "");
     }
-    (ok = true, level = hashes, headingText = text.slice(line, bodyStart, bodyEnd))
+    (ok = true, level = hashes, headingText = line.slice(bodyStart, bodyEnd))
 };
 
 parseFenceOpen := fn(line: String): (ok: Bool, ch: String, count: Int, lang: String) {
-    size := text.length(line);
+    size := line.length();
     var lead := 0;
-    loop lead < size and lead < 3 and text.at(line, lead) == " " {
+    loop lead < size and lead < 3 and line.at(lead) == " " {
         lead += 1;
     }
     if lead >= size { return (ok = false, ch = "", count = 0, lang = ""); }
-    ch := text.at(line, lead);
+    ch := line.at(lead);
     if ch =!= "`" and ch =!= "~" {
         return (ok = false, ch = "", count = 0, lang = "");
     }
@@ -467,43 +465,43 @@ parseFenceOpen := fn(line: String): (ok: Bool, ch: String, count: Int, lang: Str
     if cnt < 3 {
         return (ok = false, ch = "", count = 0, lang = "");
     }
-    info := text.trim(text.slice(line, lead + cnt, size));
-    if ch == "`" and text.containsText(info, "`") {
+    info := line.slice(lead + cnt, size).trim();
+    if ch == "`" and info.contains("`") {
         return (ok = false, ch = "", count = 0, lang = "");
     }
     var langEnd := 0;
-    infoLen := text.length(info);
-    loop langEnd < infoLen and not text.isWhitespace(text.at(info, langEnd)) {
+    infoLen := info.length();
+    loop langEnd < infoLen and not info.at(langEnd).isWhitespace() {
         langEnd += 1;
     }
-    lang := text.slice(info, 0, langEnd);
+    lang := info.slice(0, langEnd);
     (ok = true, ch = ch, count = cnt, lang = lang)
 };
 
 isFenceClose := fn(line: String, fenceChar: String, fenceLen: Int): Bool {
-    size := text.length(line);
+    size := line.length();
     var lead := 0;
-    loop lead < size and lead < 3 and text.at(line, lead) == " " {
+    loop lead < size and lead < 3 and line.at(lead) == " " {
         lead += 1;
     }
     cnt := countCharAt(line, lead, size, fenceChar);
     if cnt < fenceLen { return false; }
-    text.trim(text.slice(line, lead + cnt, size)) == ""
+    line.slice(lead + cnt, size).trim() == ""
 };
 
 isHorizontalRule := fn(line: String): Bool {
-    trimmed := text.trim(line);
-    size := text.length(trimmed);
+    trimmed := line.trim();
+    size := trimmed.length();
     if size < 3 { return false; }
-    first := text.at(trimmed, 0);
+    first := trimmed.at(0);
     if first =!= "-" and first =!= "*" and first =!= "_" { return false; }
     var count := 0;
     var i := 0;
     loop i < size {
-        ch := text.at(trimmed, i);
+        ch := trimmed.at(i);
         if ch == first {
             count += 1;
-        } else if not text.isWhitespace(ch) {
+        } else if not ch.isWhitespace() {
             return false;
         }
         i += 1;
@@ -512,60 +510,60 @@ isHorizontalRule := fn(line: String): Bool {
 };
 
 parseBulletItem := fn(line: String): (ok: Bool, indent: Int, body: String) {
-    size := text.length(line);
+    size := line.length();
     var indent := 0;
-    loop indent < size and text.at(line, indent) == " " {
+    loop indent < size and line.at(indent) == " " {
         indent += 1;
     }
     if indent + 1 >= size {
         return (ok = false, indent = 0, body = "");
     }
-    marker := text.at(line, indent);
-    after := text.at(line, indent + 1);
+    marker := line.at(indent);
+    after := line.at(indent + 1);
     if (marker == "-" or marker == "*" or marker == "+") and (after == " " or after == "\t") {
-        return (ok = true, indent = indent, body = text.trimStart(text.slice(line, indent + 2, size)));
+        return (ok = true, indent = indent, body = line.slice(indent + 2, size).trimStart());
     }
     (ok = false, indent = 0, body = "")
 };
 
 parseOrderedItem := fn(line: String): (ok: Bool, indent: Int, body: String) {
-    size := text.length(line);
+    size := line.length();
     var indent := 0;
-    loop indent < size and text.at(line, indent) == " " {
+    loop indent < size and line.at(indent) == " " {
         indent += 1;
     }
     var pos := indent;
-    loop pos < size and text.isDigit(text.at(line, pos)) {
+    loop pos < size and line.at(pos).isDigit() {
         pos += 1;
     }
     if pos == indent or pos + 1 >= size {
         return (ok = false, indent = 0, body = "");
     }
-    delim := text.at(line, pos);
-    after := text.at(line, pos + 1);
+    delim := line.at(pos);
+    after := line.at(pos + 1);
     if (delim == "." or delim == ")") and (after == " " or after == "\t") {
-        return (ok = true, indent = indent, body = text.trimStart(text.slice(line, pos + 2, size)));
+        return (ok = true, indent = indent, body = line.slice(pos + 2, size).trimStart());
     }
     (ok = false, indent = 0, body = "")
 };
 
 parseTableRow := fn(line: String): List<String> {
     cells: mut List<String> = [];
-    trimmed := text.trim(line);
-    size := text.length(trimmed);
-    if size == 0 or not text.containsText(trimmed, "|") { return cells; }
+    trimmed := line.trim();
+    size := trimmed.length();
+    if size == 0 or not trimmed.contains("|") { return cells; }
     var start := 0;
     var end := size;
-    if text.at(trimmed, 0) == "|" { start = 1; }
-    if end > start and text.at(trimmed, end - 1) == "|" { end -= 1; }
+    if trimmed.at(0) == "|" { start = 1; }
+    if end > start and trimmed.at(end - 1) == "|" { end -= 1; }
     var cellStart := start;
     var i := start;
     loop i <= end {
         if i == end {
-            list.pushBack(mut cells, text.trim(text.slice(trimmed, cellStart, i)));
+            mut cells.pushBack(trimmed.slice(cellStart, i).trim());
             break;
         }
-        ch := text.at(trimmed, i);
+        ch := trimmed.at(i);
         if ch == "\\" and i + 1 < end {
             i += 2;
         } else if ch == "`" {
@@ -577,7 +575,7 @@ parseTableRow := fn(line: String): List<String> {
                 i += ticks;
             }
         } else if ch == "|" {
-            list.pushBack(mut cells, text.trim(text.slice(trimmed, cellStart, i)));
+            mut cells.pushBack(trimmed.slice(cellStart, i).trim());
             cellStart = i + 1;
             i += 1;
         } else {
@@ -588,17 +586,17 @@ parseTableRow := fn(line: String): List<String> {
 };
 
 isTableSeparatorCell := fn(cell: String): Bool {
-    trimmed := text.trim(cell);
-    size := text.length(trimmed);
+    trimmed := cell.trim();
+    size := trimmed.length();
     if size == 0 { return false; }
     var i := 0;
-    if text.at(trimmed, i) == ":" { i += 1; }
+    if trimmed.at(i) == ":" { i += 1; }
     var dashes := 0;
-    loop i < size and text.at(trimmed, i) == "-" {
+    loop i < size and trimmed.at(i) == "-" {
         dashes += 1;
         i += 1;
     }
-    if i < size and text.at(trimmed, i) == ":" { i += 1; }
+    if i < size and trimmed.at(i) == ":" { i += 1; }
     dashes >= 1 and i == size
 };
 
@@ -611,7 +609,7 @@ alignCodeStyle := fn(code: String): String {
 
 parseTableAligns := fn(line: String, expectedCols: Int): (ok: Bool, packed: String) {
     cells := parseTableRow(line);
-    if list.listCountText(cells) =!= expectedCols or expectedCols == 0 {
+    if cells.length() =!= expectedCols or expectedCols == 0 {
         return (ok = false, packed = "");
     }
     var packed := "";
@@ -619,9 +617,9 @@ parseTableAligns := fn(line: String, expectedCols: Int): (ok: Bool, packed: Stri
         if not isTableSeparatorCell(cell) {
             return (ok = false, packed = "");
         }
-        trimmed := text.trim(cell);
-        leftColon := text.startsWithAt(trimmed, 0, ":");
-        rightColon := text.endsWith(trimmed, ":");
+        trimmed := cell.trim();
+        leftColon := trimmed.startsWithAt(0, ":");
+        rightColon := trimmed.endsWith(":");
         code := if leftColon and rightColon {
             "c"
         } else if rightColon {
@@ -637,7 +635,7 @@ parseTableAligns := fn(line: String, expectedCols: Int): (ok: Bool, packed: Stri
 };
 
 renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, html: String, tocJson: String) {
-    total := list.listCountText(lines);
+    total := lines.length();
     blocks: mut List<String> = [];
     seenSlugs: mut List<String> = [];
     tocEntries: mut List<String> = [];
@@ -647,7 +645,7 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
 
     loop i < total {
         line := lines[i];
-        trimmed := text.trim(line);
+        trimmed := line.trim();
         if trimmed == "" {
             i += 1;
         } else {
@@ -660,15 +658,12 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                         i += 1;
                         break;
                     }
-                    list.pushBack(mut bodyLines, lines[i]);
+                    (mut bodyLines).pushBack(lines[i]);
                     i += 1;
                 }
-                bodyRaw := if list.listCountText(bodyLines) == 0 { "" } else { text.joinTexts(bodyLines, "\n") + "\n" };
+                bodyRaw := if bodyLines.length() == 0 { "" } else { text.joinTexts(bodyLines, "\n") + "\n" };
                 langAttr := escapeHtml(fence.lang);
-                list.pushBack(
-                mut blocks,
-                "<pre class=\"md-code\" data-lang=\"" + langAttr + "\" data-fence=\"" + integer.intText(fenceIndex) + "\"><code>" + escapeHtml(bodyRaw) + "</code></pre>",
-                );
+                mut blocks.pushBack("<pre class=\"md-code\" data-lang=\"" + langAttr + "\" data-fence=\"" + fenceIndex.toText() + "\"><code>" + escapeHtml(bodyRaw) + "</code></pre>");
                 fenceIndex += 1;
             } else {
                 heading := parseHeadingLine(line);
@@ -682,40 +677,37 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                     loop seenSlugs as prevSlug {
                         if prevSlug == baseSlug { dupCount += 1; }
                     }
-                    list.pushBack(mut seenSlugs, baseSlug);
-                    slug := if dupCount == 0 { baseSlug } else { baseSlug + "-" + integer.intText(dupCount) };
-                    lvlStr := integer.intText(heading.level);
+                    (mut seenSlugs).pushBack(baseSlug);
+                    slug := if dupCount == 0 { baseSlug } else { baseSlug + "-" + dupCount.toText() };
+                    lvlStr := heading.level.toText();
                     anchorLink := if heading.level == 2 or heading.level == 3 {
                         "<a class=\"md-heading-anchor\" href=\"#" + escapeHtml(slug) + "\" aria-label=\"Link to " + escapeHtml(plainHeading) + "\">#</a>"
                     } else {
                         ""
                     };
-                    list.pushBack(
-                    mut blocks,
-                    "<h" + lvlStr + " id=\"" + escapeHtml(slug) + "\">" + anchorLink + renderInline(heading.headingText) + "</h" + lvlStr + ">",
-                    );
+                    mut blocks.pushBack("<h" + lvlStr + " id=\"" + escapeHtml(slug) + "\">" + anchorLink + renderInline(heading.headingText) + "</h" + lvlStr + ">");
                     if collectToc and (heading.level == 2 or heading.level == 3) {
                         tocEntry := "{\"level\":" + lvlStr + ",\"id\":" + json.quoteString(slug) + ",\"text\":" + json.quoteString(plainHeading) + ",\"labelHtml\":" + json.quoteString(renderTocInline(heading.headingText)) + "}";
-                        list.pushBack(mut tocEntries, tocEntry);
+                        mut tocEntries.pushBack(tocEntry);
                     }
                     i += 1;
                 } else if isHorizontalRule(line) {
-                    list.pushBack(mut blocks, "<hr>");
+                    mut blocks.pushBack("<hr>");
                     i += 1;
-                } else if text.startsWithAt(text.trimStart(line), 0, ">") {
+                } else if line.trimStart().startsWithAt(0, ">") {
                     quoteLines: mut List<String> = [];
                     loop i < total {
-                        qlTrim := text.trimStart(lines[i]);
-                        if not text.startsWithAt(qlTrim, 0, ">") { break; }
-                        afterGt := text.slice(qlTrim, 1, text.length(qlTrim));
-                        cleaned := if text.startsWithAt(afterGt, 0, " ") { text.slice(afterGt, 1, text.length(afterGt)) } else { afterGt };
-                        list.pushBack(mut quoteLines, cleaned);
+                        qlTrim := lines[i].trimStart();
+                        if not qlTrim.startsWithAt(0, ">") { break; }
+                        afterGt := qlTrim.slice(1, qlTrim.length());
+                        cleaned := if afterGt.startsWithAt(0, " ") { afterGt.slice(1, afterGt.length()) } else { afterGt };
+                        mut quoteLines.pushBack(cleaned);
                         i += 1;
                     }
                     var alertKind := "";
                     var alertLabel := "";
-                    if list.listCountText(quoteLines) > 0 {
-                        firstQ := text.trim(quoteLines[0]);
+                    if quoteLines.length() > 0 {
+                        firstQ := quoteLines[0].trim();
                         if firstQ == "[!NOTE]" { alertKind = "note"; alertLabel = "Note"; }
                         else if firstQ == "[!TIP]" { alertKind = "tip"; alertLabel = "Tip"; }
                         else if firstQ == "[!IMPORTANT]" { alertKind = "important"; alertLabel = "Important"; }
@@ -725,60 +717,54 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                     if alertKind =!= "" {
                         innerAlertLines: mut List<String> = [];
                         var qi := 1;
-                        qTotal := list.listCountText(quoteLines);
+                        qTotal := quoteLines.length();
                         loop qi < qTotal {
-                            list.pushBack(mut innerAlertLines, quoteLines[qi]);
+                            mut innerAlertLines.pushBack(quoteLines[qi]);
                             qi += 1;
                         }
                         innerAlert := self(innerAlertLines, false);
-                        list.pushBack(
-                        mut blocks,
-                        "<div class=\"md-alert md-alert-" + alertKind + "\"><div class=\"md-alert-title\">" + alertLabel + "</div>" + innerAlert.html + "</div>",
-                        );
+                        mut blocks.pushBack("<div class=\"md-alert md-alert-" + alertKind + "\"><div class=\"md-alert-title\">" + alertLabel + "</div>" + innerAlert.html + "</div>");
                     } else {
                         innerQuote := self(quoteLines, false);
-                        list.pushBack(mut blocks, "<blockquote>" + innerQuote.html + "</blockquote>");
+                        mut blocks.pushBack("<blockquote>" + innerQuote.html + "</blockquote>");
                     }
                 } else {
-                    hasTable := i + 1 < total and text.containsText(line, "|");
+                    hasTable := i + 1 < total and line.contains("|");
                     var renderedTable := false;
                     if hasTable {
                         headCells := parseTableRow(line);
-                        colCount := list.listCountText(headCells);
+                        colCount := headCells.length();
                         sepRes := parseTableAligns(lines[i + 1], colCount);
                         if sepRes.ok {
                             renderedTable = true;
                             thParts: mut List<String> = [];
                             var ci := 0;
                             loop ci < colCount {
-                                styleAttr := alignCodeStyle(text.at(sepRes.packed, ci));
-                                list.pushBack(mut thParts, "<th" + styleAttr + ">" + renderInline(headCells[ci]) + "</th>");
+                                styleAttr := alignCodeStyle(sepRes.packed.at(ci));
+                                mut thParts.pushBack("<th" + styleAttr + ">" + renderInline(headCells[ci]) + "</th>");
                                 ci += 1;
                             }
                             rowParts: mut List<String> = [];
                             i += 2;
                             loop i < total {
-                                rowTrim := text.trim(lines[i]);
-                                if rowTrim == "" or not text.containsText(rowTrim, "|") { break; }
+                                rowTrim := lines[i].trim();
+                                if rowTrim == "" or not rowTrim.contains("|") { break; }
                                 if parseFenceOpen(lines[i]).ok or parseHeadingLine(lines[i]).ok { break; }
                                 rowCells := parseTableRow(lines[i]);
                                 tdParts: mut List<String> = [];
-                                rowLen := list.listCountText(rowCells);
+                                rowLen := rowCells.length();
                                 var rci := 0;
                                 loop rci < colCount {
-                                    styleAttr := alignCodeStyle(text.at(sepRes.packed, rci));
+                                    styleAttr := alignCodeStyle(sepRes.packed.at(rci));
                                     cellVal := if rci < rowLen { rowCells[rci] } else { "" };
-                                    list.pushBack(mut tdParts, "<td" + styleAttr + ">" + renderInline(cellVal) + "</td>");
+                                    mut tdParts.pushBack("<td" + styleAttr + ">" + renderInline(cellVal) + "</td>");
                                     rci += 1;
                                 }
-                                list.pushBack(mut rowParts, "<tr>" + text.joinTexts(tdParts, "") + "</tr>");
+                                (mut rowParts).pushBack("<tr>" + text.joinTexts(tdParts, "") + "</tr>");
                                 i += 1;
                             }
-                            tbodyHtml := if list.listCountText(rowParts) == 0 { "" } else { "<tbody>" + text.joinTexts(rowParts, "") + "</tbody>" };
-                            list.pushBack(
-                            mut blocks,
-                            "<div class=\"md-table-wrap\"><table><thead><tr>" + text.joinTexts(thParts, "") + "</tr></thead>" + tbodyHtml + "</table></div>",
-                            );
+                            tbodyHtml := if rowParts.length() == 0 { "" } else { "<tbody>" + text.joinTexts(rowParts, "") + "</tbody>" };
+                            mut blocks.pushBack("<div class=\"md-table-wrap\"><table><thead><tr>" + text.joinTexts(thParts, "") + "</tr></thead>" + tbodyHtml + "</table></div>");
                         }
                     }
                     if not renderedTable {
@@ -792,20 +778,20 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                                 i += 1;
                                 loop i < total {
                                     nextLine := lines[i];
-                                    nextTrim := text.trim(nextLine);
+                                    nextTrim := nextLine.trim();
                                     if nextTrim == "" { break; }
-                                    if parseBulletItem(nextLine).ok or parseOrderedItem(nextLine).ok or parseHeadingLine(nextLine).ok or parseFenceOpen(nextLine).ok or isHorizontalRule(nextLine) or text.startsWithAt(text.trimStart(nextLine), 0, ">") {
+                                    if parseBulletItem(nextLine).ok or parseOrderedItem(nextLine).ok or parseHeadingLine(nextLine).ok or parseFenceOpen(nextLine).ok or isHorizontalRule(nextLine) or nextLine.trimStart().startsWithAt(0, ">") {
                                         break;
                                     }
-                                    list.pushBack(mut itemLines, text.trim(nextLine));
+                                    (mut itemLines).pushBack(nextLine.trim());
                                     i += 1;
                                 }
-                                list.pushBack(mut itemsHtml, "<li>" + renderInline(text.joinTexts(itemLines, " ")) + "</li>");
-                                if i < total and text.trim(lines[i]) == "" and i + 1 < total and parseBulletItem(lines[i + 1]).ok {
+                                (mut itemsHtml).pushBack("<li>" + renderInline(text.joinTexts(itemLines, " ")) + "</li>");
+                                if i < total and lines[i].trim() == "" and i + 1 < total and parseBulletItem(lines[i + 1]).ok {
                                     i += 1;
                                 }
                             }
-                            list.pushBack(mut blocks, "<ul>" + text.joinTexts(itemsHtml, "") + "</ul>");
+                            (mut blocks).pushBack("<ul>" + text.joinTexts(itemsHtml, "") + "</ul>");
                         } else {
                             olItem := parseOrderedItem(line);
                             if olItem.ok {
@@ -817,39 +803,39 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                                     i += 1;
                                     loop i < total {
                                         nextLine := lines[i];
-                                        nextTrim := text.trim(nextLine);
+                                        nextTrim := nextLine.trim();
                                         if nextTrim == "" { break; }
-                                        if parseBulletItem(nextLine).ok or parseOrderedItem(nextLine).ok or parseHeadingLine(nextLine).ok or parseFenceOpen(nextLine).ok or isHorizontalRule(nextLine) or text.startsWithAt(text.trimStart(nextLine), 0, ">") {
+                                        if parseBulletItem(nextLine).ok or parseOrderedItem(nextLine).ok or parseHeadingLine(nextLine).ok or parseFenceOpen(nextLine).ok or isHorizontalRule(nextLine) or nextLine.trimStart().startsWithAt(0, ">") {
                                             break;
                                         }
-                                        list.pushBack(mut olItemLines, text.trim(nextLine));
+                                        (mut olItemLines).pushBack(nextLine.trim());
                                         i += 1;
                                     }
-                                    list.pushBack(mut olItemsHtml, "<li>" + renderInline(text.joinTexts(olItemLines, " ")) + "</li>");
-                                    if i < total and text.trim(lines[i]) == "" and i + 1 < total and parseOrderedItem(lines[i + 1]).ok {
+                                    (mut olItemsHtml).pushBack("<li>" + renderInline(text.joinTexts(olItemLines, " ")) + "</li>");
+                                    if i < total and lines[i].trim() == "" and i + 1 < total and parseOrderedItem(lines[i + 1]).ok {
                                         i += 1;
                                     }
                                 }
-                                list.pushBack(mut blocks, "<ol>" + text.joinTexts(olItemsHtml, "") + "</ol>");
+                                (mut blocks).pushBack("<ol>" + text.joinTexts(olItemsHtml, "") + "</ol>");
                             } else {
                                 paraLines: mut List<String> = [];
                                 loop i < total {
                                     pLine := lines[i];
-                                    pTrim := text.trim(pLine);
+                                    pTrim := pLine.trim();
                                     if pTrim == "" { break; }
-                                    if list.listCountText(paraLines) > 0 {
-                                        if parseFenceOpen(pLine).ok or parseHeadingLine(pLine).ok or isHorizontalRule(pLine) or text.startsWithAt(text.trimStart(pLine), 0, ">") or parseBulletItem(pLine).ok or parseOrderedItem(pLine).ok {
+                                    if paraLines.length() > 0 {
+                                        if parseFenceOpen(pLine).ok or parseHeadingLine(pLine).ok or isHorizontalRule(pLine) or pLine.trimStart().startsWithAt(0, ">") or parseBulletItem(pLine).ok or parseOrderedItem(pLine).ok {
                                             break;
                                         }
-                                        if i + 1 < total and text.containsText(pLine, "|") {
+                                        if i + 1 < total and pLine.contains("|") {
                                             pCells := parseTableRow(pLine);
-                                            if parseTableAligns(lines[i + 1], list.listCountText(pCells)).ok { break; }
+                                            if parseTableAligns(lines[i + 1], pCells.length()).ok { break; }
                                         }
                                     }
-                                    list.pushBack(mut paraLines, pTrim);
+                                    (mut paraLines).pushBack(pTrim);
                                     i += 1;
                                 }
-                                list.pushBack(mut blocks, "<p>" + renderInline(text.joinTexts(paraLines, " ")) + "</p>");
+                                (mut blocks).pushBack("<p>" + renderInline(text.joinTexts(paraLines, " ")) + "</p>");
                             }
                         }
                     }

@@ -1,5 +1,4 @@
 fs := import "core/file";
-list := import "core/list";
 test := import "core/test";
 docs := import "util/docs";
 path := import "core/path";
@@ -13,21 +12,21 @@ _w2 := fs.writeText(path.join(dir, "README.md"), "# Index\n\n[one](topic.md#a-na
 _mk := fs.makeDir(path.join(dir, "node_modules"));
 _w3 := fs.writeText(path.join(dir, "node_modules/ignored.md"), "[broken](absent.md)\n");
 
-test.checkInt("clean docs failures", 0, list.listCountText(docs.checkDocuments(dir)));
-test.checkInt("listed docs count", 2, list.listCountText(docs.listDocFiles(dir)));
+test.checkInt("clean docs failures", 0, docs.checkDocuments(dir).length());
+test.checkInt("listed docs count", 2, docs.listDocFiles(dir).length());
 
 _w4 := fs.writeText(path.join(dir, "README.md"), "# Index\n\n[bad](topic.md#missing)\n[absent](absent.md)\n```text\nunclosed\n");
 failures := docs.checkDocuments(dir);
-test.checkInt("broken docs failures count", 3, list.listCountText(failures));
+test.checkInt("broken docs failures count", 3, failures.length());
 
 _mkc := fs.makeDir(path.join(dir, "config"));
 _w5 := fs.writeText(path.join(dir, "source.lts"), "outputLine(24);\n");
 _w6 := fs.writeText(path.join(dir, "README.md"), "# Example\n\n```text\noutputLine(24);\n```\n");
 _w7 := fs.writeText(path.join(dir, "config/documentation.json"), "{\"navigation\":[{\"label\":\"Start\",\"path\":\"README.md\"}],\"snippets\":[{\"document\":\"README.md\",\"source\":\"source.lts\",\"fence\":0}]}");
-test.checkInt("snippet matches", 0, list.listCountText(docs.checkDocuments(dir)));
+test.checkInt("snippet matches", 0, docs.checkDocuments(dir).length());
 
 _w8 := fs.writeText(path.join(dir, "source.lts"), "outputLine(25);\n");
-test.checkInt("snippet mismatch", 1, list.listCountText(docs.checkDocuments(dir)));
+test.checkInt("snippet mismatch", 1, docs.checkDocuments(dir).length());
 
 _rm := fs.remove(dir);
 test.done("util-docs");

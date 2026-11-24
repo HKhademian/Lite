@@ -1,13 +1,11 @@
 /** Native Lite compiler selector and cache builder under `dist/compiler-cache/`. */
 
 fs := import "core/file";
-integer := import "core/int";
 proc := import "core/process";
 project := import "util/project";
 crypto := import "core/crypto";
 text := import "core/text";
 list := import "core/list";
-map := import "core/map";
 path := import "core/path";
 unicode := import "core/unicode";
 json := import "util/json";
@@ -29,10 +27,10 @@ sha256Text := fn(value: String): String {
 };
 
 isLowerHex64 := fn(value: String): Bool {
-    if text.length(value) =!= 64 { return false; }
+    if value.length() =!= 64 { return false; }
     var i := 0;
     loop i < 64 {
-        if text.indexOfText("0123456789abcdef", text.at(value, i), 0) < 0 {
+        if "0123456789abcdef".indexOf(value.at(i), 0) < 0 {
             return false;
         }
         i = i + 1;
@@ -41,21 +39,21 @@ isLowerHex64 := fn(value: String): Bool {
 };
 
 isSafeRelPath := fn(relPath: String): Bool {
-    if relPath == "" or text.startsWithAt(relPath, 0, "/") or text.startsWithAt(relPath, 0, "../") {
+    if relPath == "" or relPath.startsWithAt(0, "/") or relPath.startsWithAt(0, "../") {
         return false;
     }
-    if text.indexOfText(relPath, "\\", 0) >= 0 or text.indexOfText(relPath, "/../", 0) >= 0 {
+    if relPath.indexOf("\\", 0) >= 0 or relPath.indexOf("/../", 0) >= 0 {
         return false;
     }
-    not text.endsWith(relPath, "/..")
+    not relPath.endsWith("/..")
 };
 
 resolveEdgeImportPath := fn(rootDir: String, importerAbs: String, spec: String): String {
-    sourceSpec := if text.endsWith(spec, ".lts") { spec } else { spec + ".lts" };
-    if text.startsWithAt(sourceSpec, 0, "/") {
+    sourceSpec := if spec.endsWith(".lts") { spec } else { spec + ".lts" };
+    if sourceSpec.startsWithAt(0, "/") {
         return path.normalize(sourceSpec);
     }
-    if text.startsWithAt(sourceSpec, 0, "./") or text.startsWithAt(sourceSpec, 0, "../") {
+    if sourceSpec.startsWithAt(0, "./") or sourceSpec.startsWithAt(0, "../") {
         return path.resolve(path.parentDir(importerAbs), sourceSpec);
     }
     path.resolve(rootDir, "lib/" + sourceSpec)
@@ -106,7 +104,7 @@ error: String
     if not metaRead.ok {
         return (ok = false, artifact = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = metaRead.error);
     }
-    brace := text.indexOfText(metaRead.text, "{", 0);
+    brace := metaRead.text.indexOf("{", 0);
     if brace < 0 {
         return (ok = false, artifact = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "invalid compiler/bootstrap/seed.ts object");
     }
@@ -151,7 +149,7 @@ ensureDistSeedCompiler := fn(rootDir: String, seedPath: String, sourcePath: Stri
     errText := if errRead.ok { errRead.text } else { "" };
     if runRes.status =!= 0 or errText =!= "" {
         _rm := fs.remove(work);
-        return (ok = false, path = "", error = "bootstrap igniter cannot emit compiler source (" + text.trim(errText) + ")");
+        return (ok = false, path = "", error = "bootstrap igniter cannot emit compiler source (" + errText.trim() + ")");
     }
     outHash := crypto.sha256File(outPath);
     if not outHash.ok or outHash.hex =!= expectedSha {
@@ -181,7 +179,7 @@ error: String
         return (ok = false, sourcePath = "", sourceName = "", error = mRead.error);
     }
     mSpan := json.valueSpan(mRead.text, 0);
-    if not mSpan.ok or not text.startsWithAt(mRead.text, mSpan.start, "{") {
+    if not mSpan.ok or not mRead.text.startsWithAt(mSpan.start, "{") {
         return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": invalid manifest JSON");
     }
     mTarget := json.readObjectString(mRead.text, mSpan.start, "target");
@@ -190,11 +188,11 @@ error: String
         return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": invalid compiler manifest target");
     }
     offsets := json.arrayElementOffsets(mRead.text, filesField.valuePos);
-    if list.listCountInt(offsets) =!= 1 {
+    if offsets.length() =!= 1 {
         return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": compiler source graph requires one " + target + " root");
     }
     firstFile := json.readStringAt(mRead.text, offsets[0]);
-    if not firstFile.ok or firstFile.value == "" or text.startsWithAt(firstFile.value, 0, "/") {
+    if not firstFile.ok or firstFile.value == "" or firstFile.value.startsWithAt(0, "/") {
         return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": invalid manifest file path");
     }
     resolved := path.resolve(path.parentDir(manifestPath), firstFile.value);
@@ -206,7 +204,7 @@ error: String
 };
 
 isAsciiAlpha := fn(ch: String): Bool {
-    text.indexOfText("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", ch, 0) >= 0
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".indexOf(ch, 0) >= 0
 };
 
 /** Validates a compiler manifest JSON file strictly without assembling or reading its source files. */
@@ -222,7 +220,7 @@ pub validateManifestFile := fn(manifestPathRaw: String): (ok: Bool, target: Stri
         return (ok = false, target = "", jsonText = "", error = manifestPath + ": invalid manifest JSON: " + v.error);
     }
     span := json.valueSpan(raw, 0);
-    if not span.ok or not text.startsWithAt(raw, span.start, "{") {
+    if not span.ok or not raw.startsWithAt(span.start, "{") {
         return (ok = false, target = "", jsonText = "", error = manifestPath + ": manifest must be a JSON object");
     }
     keys := json.objectKeys(raw, span.start);
@@ -237,11 +235,11 @@ pub validateManifestFile := fn(manifestPathRaw: String): (ok: Bool, target: Stri
         return (ok = false, target = "", jsonText = "", error = manifestPath + ": target must be \"ts\" or \"c\"");
     }
     filesField := json.findObjectField(raw, span.start, "files");
-    if not filesField.found or not text.startsWithAt(raw, filesField.valuePos, "[") {
+    if not filesField.found or not raw.startsWithAt(filesField.valuePos, "[") {
         return (ok = false, target = "", jsonText = "", error = manifestPath + ": files must be a nonempty array");
     }
     offsets := json.arrayElementOffsets(raw, filesField.valuePos);
-    count := list.listCountInt(offsets);
+    count := offsets.length();
     if count == 0 {
         return (ok = false, target = "", jsonText = "", error = manifestPath + ": files must be a nonempty array");
     }
@@ -252,26 +250,26 @@ pub validateManifestFile := fn(manifestPathRaw: String): (ok: Bool, target: Stri
         pos := offsets[idx];
         sRes := json.readStringAt(raw, pos);
         if not sRes.ok {
-            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: must be a string");
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + idx.toText() + "]: must be a string");
         }
         entry := sRes.value;
-        if text.length(entry) == 0 {
-            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: empty path");
+        if entry.length() == 0 {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + idx.toText() + "]: empty path");
         }
-        if text.startsWithAt(entry, 0, "/") {
-            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: absolute path");
+        if entry.startsWithAt(0, "/") {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + idx.toText() + "]: absolute path");
         }
-        if text.length(entry) >= 2 and isAsciiAlpha(text.at(entry, 0)) and text.at(entry, 1) == ":" {
-            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: drive-letter path");
+        if entry.length() >= 2 and isAsciiAlpha(entry.at(0)) and entry.at(1) == ":" {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + idx.toText() + "]: drive-letter path");
         }
-        if text.containsText(entry, "\\") {
-            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: path must use \"/\" separators");
+        if entry.contains("\\") {
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + idx.toText() + "]: path must use \"/\" separators");
         }
         if list.listContainsText(files, entry) {
-            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + integer.intText(idx) + "]: duplicate file " + entry);
+            return (ok = false, target = "", jsonText = "", error = manifestPath + ": files[" + idx.toText() + "]: duplicate file " + entry);
         }
-        list.pushBack(mut files, entry);
-        list.pushBack(mut filesQuoted, json.quoteString(entry));
+        (mut files).pushBack(entry);
+        mut filesQuoted.pushBack(json.quoteString(entry));
         idx = idx + 1;
     }
     body := "{\"target\":" + json.quoteString(tRes.value) + ",\"files\":[" + text.joinTexts(filesQuoted, ",") + "]}";
@@ -322,7 +320,7 @@ depsQuoted: List<String>
     loop json.arrayElementOffsets(pText, pDepsField.valuePos) as pos {
         d := json.readStringAt(pText, pos);
         if not d.ok { return failBuild("compiler cache integrity mismatch: " + cacheDir); }
-        list.pushBack(mut pDepsParts, json.quoteString(d.value));
+        (mut pDepsParts).pushBack(json.quoteString(d.value));
     }
     if "[" + text.joinTexts(pDepsParts, ",") + "]" =!= expectedDepsCompact {
         return failBuild("compiler cache integrity mismatch: " + cacheDir);
@@ -337,7 +335,7 @@ depsQuoted: List<String>
         if not diskHash.ok or diskHash.hex =!= s.value {
             return failBuild("compiler dependency changed during cache selection: " + p.value);
         }
-        list.pushBack(mut pDhParts, "{\"path\":" + json.quoteString(p.value) + ",\"sha256\":" + json.quoteString(s.value) + "}");
+        (mut pDhParts).pushBack("{\"path\":" + json.quoteString(p.value) + ",\"sha256\":" + json.quoteString(s.value) + "}");
     }
     if "[" + text.joinTexts(pDhParts, ",") + "]" =!= expectedDepHashesCompact {
         return failBuild("compiler cache integrity mismatch: " + cacheDir);
@@ -354,7 +352,7 @@ depsQuoted: List<String>
         if not sameRealPath(resolveEdgeImportPath(rootDir, path.resolve(rootDir, imp.value), sp.value), path.resolve(rootDir, tp.value)) {
             return failBuild("compiler import edge changed during cache selection: " + imp.value + ": " + sp.value);
         }
-        list.pushBack(mut pEdgeParts, "{\"importer\":" + json.quoteString(imp.value) + ",\"spec\":" + json.quoteString(sp.value) + ",\"path\":" + json.quoteString(tp.value) + "}");
+        (mut pEdgeParts).pushBack("{\"importer\":" + json.quoteString(imp.value) + ",\"spec\":" + json.quoteString(sp.value) + ",\"path\":" + json.quoteString(tp.value) + "}");
     }
     if "[" + text.joinTexts(pEdgeParts, ",") + "]" =!= expectedEdgesCompact {
         return failBuild("compiler cache integrity mismatch: " + cacheDir);
@@ -404,7 +402,7 @@ seedPath: String
     if not idxRead.ok { return tryMiss(); }
     idxText := idxRead.text;
     idxSpan := json.valueSpan(idxText, 0);
-    if not idxSpan.ok or not text.startsWithAt(idxText, idxSpan.start, "{") {
+    if not idxSpan.ok or not idxText.startsWithAt(idxSpan.start, "{") {
         return tryHitFail("compiler source dependency index is invalid: " + indexPath);
     }
 
@@ -429,8 +427,8 @@ seedPath: String
     loop json.arrayElementOffsets(idxText, depsField.valuePos) as pos {
         d := json.readStringAt(idxText, pos);
         if not d.ok { return tryHitFail("compiler source dependency index is invalid: " + indexPath); }
-        list.pushBack(mut depPaths, d.value);
-        list.pushBack(mut depsQuoted, json.quoteString(d.value));
+        (mut depPaths).pushBack(d.value);
+        mut depsQuoted.pushBack(json.quoteString(d.value));
     }
 
     dhPaths: mut List<String> = [];
@@ -442,8 +440,8 @@ seedPath: String
         if not p.found or not s.found or not isLowerHex64(s.value) {
             return tryHitFail("compiler source dependency index is invalid: " + indexPath);
         }
-        list.pushBack(mut dhPaths, p.value);
-        list.pushBack(mut dhCompact, "{\"path\":" + json.quoteString(p.value) + ",\"sha256\":" + json.quoteString(s.value) + "}");
+        (mut dhPaths).pushBack(p.value);
+        mut dhCompact.pushBack("{\"path\":" + json.quoteString(p.value) + ",\"sha256\":" + json.quoteString(s.value) + "}");
         if allHashesOk {
             if not isSafeRelPath(p.value) {
                 allHashesOk = false;
@@ -463,7 +461,7 @@ seedPath: String
         if not imp.found or not sp.found or not tp.found {
             return tryHitFail("compiler source dependency index is invalid: " + indexPath);
         }
-        list.pushBack(mut edgesCompact, "{\"importer\":" + json.quoteString(imp.value) + ",\"spec\":" + json.quoteString(sp.value) + ",\"path\":" + json.quoteString(tp.value) + "}");
+        (mut edgesCompact).pushBack("{\"importer\":" + json.quoteString(imp.value) + ",\"spec\":" + json.quoteString(sp.value) + ",\"path\":" + json.quoteString(tp.value) + "}");
         if edgesValid {
             if not list.listContainsText(depPaths, imp.value) or not list.listContainsText(depPaths, tp.value) {
                 edgesValid = false;
@@ -476,18 +474,18 @@ seedPath: String
     if not allHashesOk or not edgesValid {
         return tryMiss();
     }
-    if list.listCountText(dhPaths) == 0 or dhPaths[0] =!= sourceName {
+    if dhPaths.length() == 0 or dhPaths[0] =!= sourceName {
         return tryMiss();
     }
     rootEntrySha := json.readObjectString(idxText, json.arrayElementOffsets(idxText, dhField.valuePos)[0], "sha256");
     if not rootEntrySha.found or rootEntrySha.value =!= sourceRootSha256 {
         return tryMiss();
     }
-    if list.listCountText(depPaths) =!= list.listCountText(dhPaths) {
+    if depPaths.length() =!= dhPaths.length() {
         return tryMiss();
     }
     var di := 0;
-    loop di < list.listCountText(depPaths) {
+    loop di < depPaths.length() {
         if depPaths[di] =!= dhPaths[di] {
             return tryMiss();
         }
@@ -538,13 +536,13 @@ strictCheckArtifact := fn(rootDir: String, artifactPath: String, tscWorkDir: Str
     emptyEnv: List<String> = [];
     tscArgs: mut List<String> = [];
     cmd := if fs.kind(nativeTsc) == fs.FILE_KIND_FILE {
-        list.pushBack(mut tscArgs, "-p");
-        list.pushBack(mut tscArgs, cfgPath);
+        mut tscArgs.pushBack("-p");
+        mut tscArgs.pushBack(cfgPath);
         nativeTsc
     } else {
-        list.pushBack(mut tscArgs, path.join(rootDir, "igniter/node_modules/typescript/bin/tsc"));
-        list.pushBack(mut tscArgs, "-p");
-        list.pushBack(mut tscArgs, cfgPath);
+        mut tscArgs.pushBack(path.join(rootDir, "igniter/node_modules/typescript/bin/tsc"));
+        mut tscArgs.pushBack("-p");
+        mut tscArgs.pushBack(cfgPath);
         project.nodeExecPath()
     };
     res := proc.run(cmd, tscArgs, rootDir, emptyEnv, true, "");
@@ -570,9 +568,9 @@ edgesPretty: List<String>
     + "  \"root\": " + json.quoteString(sourceName) + ",\n"
     + "  \"rootSha256\": " + json.quoteString(sourceRootSha256) + ",\n"
     + "  \"cacheKey\": " + json.quoteString(cacheKey) + ",\n"
-    + "  \"dependencies\": [" + (if list.listCountText(depsQuoted) > 0 { "\n    " + text.joinTexts(depsQuoted, ",\n    ") + "\n  " } else { "" }) + "],\n"
-    + "  \"dependencyHashes\": [" + (if list.listCountText(dhPretty) > 0 { "\n    " + text.joinTexts(dhPretty, ",\n    ") + "\n  " } else { "" }) + "],\n"
-    + "  \"edges\": [" + (if list.listCountText(edgesPretty) > 0 { "\n    " + text.joinTexts(edgesPretty, ",\n    ") + "\n  " } else { "" }) + "]\n"
+    + "  \"dependencies\": [" + (if depsQuoted.length() > 0 { "\n    " + text.joinTexts(depsQuoted, ",\n    ") + "\n  " } else { "" }) + "],\n"
+    + "  \"dependencyHashes\": [" + (if dhPretty.length() > 0 { "\n    " + text.joinTexts(dhPretty, ",\n    ") + "\n  " } else { "" }) + "],\n"
+    + "  \"edges\": [" + (if edgesPretty.length() > 0 { "\n    " + text.joinTexts(edgesPretty, ",\n    ") + "\n  " } else { "" }) + "]\n"
     + "}\n";
     fs.writeText(indexPath, body)
 };
@@ -638,7 +636,7 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
     errText := if errRead.ok { errRead.text } else { "" };
     if runRes.status =!= 0 or errText =!= "" {
         _rm := fs.remove(work);
-        return failBuild(seedInfo.artifact + " cannot rebuild current compiler source (" + text.trim(errText) + ")");
+        return failBuild(seedInfo.artifact + " cannot rebuild current compiler source (" + errText.trim() + ")");
     }
 
     traceRead := fs.readText(tracePath);
@@ -667,7 +665,7 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
             _rm := fs.remove(work);
             return failBuild("generated compiler returned invalid source dependency list");
         }
-        prev := map.get(seenShaByPath, fp.value);
+        prev := seenShaByPath.get(fp.value);
         if prev.found {
             if prev.value =!= fsHash.value {
                 _rm := fs.remove(work);
@@ -690,9 +688,9 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
             return failBuild("compiler source changed while building: " + absFile);
         }
         relFile := path.relative(rootDir, absFile);
-        list.pushBack(mut depsQuoted, json.quoteString(relFile));
-        list.pushBack(mut dhCompact, "{\"path\":" + json.quoteString(relFile) + ",\"sha256\":" + json.quoteString(expectedHash) + "}");
-        list.pushBack(mut dhPretty, "{\n      \"path\": " + json.quoteString(relFile) + ",\n      \"sha256\": " + json.quoteString(expectedHash) + "\n    }");
+        mut depsQuoted.pushBack(json.quoteString(relFile));
+        mut dhCompact.pushBack("{\"path\":" + json.quoteString(relFile) + ",\"sha256\":" + json.quoteString(expectedHash) + "}");
+        mut dhPretty.pushBack("{\n      \"path\": " + json.quoteString(relFile) + ",\n      \"sha256\": " + json.quoteString(expectedHash) + "\n    }");
     }
 
     edgesCompact: mut List<String> = [];
@@ -707,8 +705,8 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
         }
         relImp := path.relative(rootDir, eImp.value);
         relTarget := path.relative(rootDir, ePath.value);
-        list.pushBack(mut edgesCompact, "{\"importer\":" + json.quoteString(relImp) + ",\"spec\":" + json.quoteString(eSpec.value) + ",\"path\":" + json.quoteString(relTarget) + "}");
-        list.pushBack(mut edgesPretty, "{\n      \"importer\": " + json.quoteString(relImp) + ",\n      \"spec\": " + json.quoteString(eSpec.value) + ",\n      \"path\": " + json.quoteString(relTarget) + "\n    }");
+        mut edgesCompact.pushBack("{\"importer\":" + json.quoteString(relImp) + ",\"spec\":" + json.quoteString(eSpec.value) + ",\"path\":" + json.quoteString(relTarget) + "}");
+        mut edgesPretty.pushBack("{\n      \"importer\": " + json.quoteString(relImp) + ",\n      \"spec\": " + json.quoteString(eSpec.value) + ",\n      \"path\": " + json.quoteString(relTarget) + "\n    }");
     }
 
     expectedDepsCompact := "[" + text.joinTexts(depsQuoted, ",") + "]";
@@ -771,9 +769,9 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
         + "  \"sourceSha256\": " + json.quoteString(sourceSha256) + ",\n"
         + "  \"builderSha256\": " + json.quoteString(seedInfo.artifactSha256) + ",\n"
         + "  \"artifactSha256\": " + json.quoteString(artHash.hex) + ",\n"
-        + "  \"dependencies\": [" + (if list.listCountText(depsQuoted) > 0 { "\n    " + text.joinTexts(depsQuoted, ",\n    ") + "\n  " } else { "" }) + "],\n"
-        + "  \"dependencyHashes\": [" + (if list.listCountText(dhPretty) > 0 { "\n    " + text.joinTexts(dhPretty, ",\n    ") + "\n  " } else { "" }) + "],\n"
-        + "  \"edges\": [" + (if list.listCountText(edgesPretty) > 0 { "\n    " + text.joinTexts(edgesPretty, ",\n    ") + "\n  " } else { "" }) + "]\n"
+        + "  \"dependencies\": [" + (if depsQuoted.length() > 0 { "\n    " + text.joinTexts(depsQuoted, ",\n    ") + "\n  " } else { "" }) + "],\n"
+        + "  \"dependencyHashes\": [" + (if dhPretty.length() > 0 { "\n    " + text.joinTexts(dhPretty, ",\n    ") + "\n  " } else { "" }) + "],\n"
+        + "  \"edges\": [" + (if edgesPretty.length() > 0 { "\n    " + text.joinTexts(edgesPretty, ",\n    ") + "\n  " } else { "" }) + "]\n"
         + "}\n";
         wProv := fs.writeText(path.join(destDir, "provenance.json"), provBody);
         if not wProv.ok {

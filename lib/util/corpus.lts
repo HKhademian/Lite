@@ -7,8 +7,6 @@ proc := import "core/process";
 project := import "util/project";
 text := import "core/text";
 list := import "core/list";
-map := import "core/map";
-integer := import "core/int";
 crypto := import "core/crypto";
 time := import "core/time";
 unicode := import "core/unicode";
@@ -23,9 +21,9 @@ isJsonSpace := fn(ch: String): Bool {
 
 skipJsonSpace := fn(source: String, start: Int): Int {
     var pos := start;
-    size := text.length(source);
+    size := source.length();
     loop pos < size {
-        if not isJsonSpace(text.at(source, pos)) { return pos; }
+        if not isJsonSpace(source.at(pos)) { return pos; }
         pos = pos + 1;
     }
     pos
@@ -33,12 +31,12 @@ skipJsonSpace := fn(source: String, start: Int): Int {
 
 isJsonObjectAt := fn(source: String, start: Int): Bool {
     pos := skipJsonSpace(source, start);
-    pos < text.length(source) and text.at(source, pos) == "{"
+    pos < source.length() and source.at(pos) == "{"
 };
 
 isJsonArrayAt := fn(source: String, start: Int): Bool {
     pos := skipJsonSpace(source, start);
-    pos < text.length(source) and text.at(source, pos) == "["
+    pos < source.length() and source.at(pos) == "["
 };
 
 /** Reads string items from a JSON array starting at `arrPos`. */
@@ -47,7 +45,7 @@ pub readStringListAt := fn(source: String, arrPos: Int): List<String> {
     if not isJsonArrayAt(source, arrPos) { return out; }
     loop json.arrayElementOffsets(source, arrPos) as elPos {
         s := json.readStringAt(source, elPos);
-        if s.ok { list.pushBack(mut out, s.value); }
+        if s.ok { mut out.pushBack(s.value); }
     }
     out
 };
@@ -55,22 +53,22 @@ pub readStringListAt := fn(source: String, arrPos: Int): List<String> {
 /** Validates `--key value` pairs against `allowedKeys`, rejecting unknown, missing, duplicate, or flag-like values. */
 pub parseToolOptions := fn(args: List<String>, allowedKeys: List<String>): (ok: Bool, error: String) {
     seen: mut List<String> = [];
-    count := list.listCountText(args);
+    count := args.length();
     var i := 0;
     loop i < count {
         arg := args[i];
-        if not text.startsWithAt(arg, 0, "--") {
+        if not arg.startsWithAt(0, "--") {
             return (ok = false, error = "invalid or missing option: " + arg);
         }
-        key := text.slice(arg, 2, text.length(arg));
+        key := arg.slice(2, arg.length());
         if i + 1 >= count {
             return (ok = false, error = "invalid or missing option: " + arg);
         }
         val := args[i + 1];
-        if not list.listContainsText(allowedKeys, key) or list.listContainsText(seen, key) or text.startsWithAt(val, 0, "--") {
+        if not list.listContainsText(allowedKeys, key) or list.listContainsText(seen, key) or val.startsWithAt(0, "--") {
             return (ok = false, error = "invalid or missing option: " + arg);
         }
-        list.pushBack(mut seen, key);
+        (mut seen).pushBack(key);
         i = i + 2;
     }
     (ok = true, error = "")
@@ -79,7 +77,7 @@ pub parseToolOptions := fn(args: List<String>, allowedKeys: List<String>): (ok: 
 /** Reads the string value for `--<key>` from validated option arguments. */
 pub readToolOption := fn(args: List<String>, key: String): (found: Bool, value: String) {
     flag := "--" + key;
-    count := list.listCountText(args);
+    count := args.length();
     var i := 0;
     loop i + 1 < count {
         if args[i] == flag {
@@ -97,16 +95,16 @@ pub positiveOptionValue := fn(args: List<String>, key: String, fallback: Int, mi
     raw := opt.value;
     if raw == "" { return (ok = false, value = 0, error = "invalid --" + key); }
     var start := 0;
-    if text.startsWithAt(raw, 0, "-") {
-        if text.length(raw) == 1 { return (ok = false, value = 0, error = "invalid --" + key); }
+    if raw.startsWithAt(0, "-") {
+        if raw.length() == 1 { return (ok = false, value = 0, error = "invalid --" + key); }
         start = 1;
     }
     var i := start;
-    loop i < text.length(raw) {
-        if not text.isDigit(text.at(raw, i)) { return (ok = false, value = 0, error = "invalid --" + key); }
+    loop i < raw.length() {
+        if not raw.at(i).isDigit() { return (ok = false, value = 0, error = "invalid --" + key); }
         i = i + 1;
     }
-    parsed := text.textToInt(raw);
+    parsed := raw.toInt();
     if not parsed.ok or parsed.value < minimum {
         return (ok = false, value = 0, error = "invalid --" + key);
     }
@@ -121,7 +119,7 @@ pub repoRevision := fn(rootDir: String): (found: Bool, rev: String) {
     if topRes.error =!= "" or topRes.status =!= 0 {
         return (found = false, rev = "");
     }
-    if path.normalize(text.trim(topRes.stdout)) =!= path.normalize(rootDir) {
+    if path.normalize(topRes.stdout.trim()) =!= path.normalize(rootDir) {
         return (found = false, rev = "");
     }
     headArgs: List<String> = ["rev-parse", "HEAD"];
@@ -129,7 +127,7 @@ pub repoRevision := fn(rootDir: String): (found: Bool, rev: String) {
     if headRes.error =!= "" or headRes.status =!= 0 {
         return (found = false, rev = "");
     }
-    (found = true, rev = text.trim(headRes.stdout))
+    (found = true, rev = headRes.stdout.trim())
 };
 
 /** Builds or selects `target` (`"ts"` or `"c"`) compiler natively and returns its metadata. */
@@ -149,7 +147,7 @@ pub toolIdentitiesJson := fn(rootDir: String, relPaths: List<String>): (ok: Bool
     loop relPaths as rel {
         hRes := crypto.sha256File(path.join(rootDir, rel));
         if not hRes.ok { return (ok = false, jsonText = "", error = hRes.error); }
-        list.pushBack(mut entries, "{\n      \"path\": " + json.quoteString(rel) + ",\n      \"sha256\": " + json.quoteString(hRes.hex) + "\n    }");
+        (mut entries).pushBack("{\n      \"path\": " + json.quoteString(rel) + ",\n      \"sha256\": " + json.quoteString(hRes.hex) + "\n    }");
     }
     (ok = true, jsonText = "[\n    " + text.joinTexts(entries, ",\n    ") + "\n  ]", error = "")
 };
@@ -183,7 +181,7 @@ selectedCompilerSha256: String, selectedBuilderSha256: String, totalDepBytes: In
     var totalBytes := 0;
     depsField := json.findObjectField(meta.rawJson, 0, "dependencies");
     loop readStringListAt(meta.rawJson, depsField.valuePos) as depRel {
-        totalBytes = totalBytes + list.listCountInt(fs.readBytes(path.resolve(rootDir, depRel)));
+        totalBytes = totalBytes + fs.readBytes(path.resolve(rootDir, depRel)).length();
     }
     (
     ok = true, chosenPath = chosen, artifactSha256 = chosenHash.hex, sourceSha256 = meta.sourceSha256,
@@ -222,11 +220,11 @@ pub sourceModuleIdentity := fn(rootDir: String, sourceBytes: List<Int>): String 
 indentTwoSpaces := fn(raw: String): String {
     lines: mut List<String> = [];
     var pos := 0;
-    size := text.length(raw);
+    size := raw.length();
     loop pos <= size {
-        nl := text.indexOfText(raw, "\n", pos);
+        nl := raw.indexOf("\n", pos);
         end := if nl < 0 { size } else { nl };
-        list.pushBack(mut lines, text.slice(raw, pos, end));
+        mut lines.pushBack(raw.slice(pos, end));
         if nl < 0 { break; }
         pos = nl + 1;
     }
@@ -278,7 +276,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
         return 1;
     }
     manFiles := readStringListAt(manRes.text, filesField.valuePos);
-    if list.listCountText(manFiles) =!= 1 {
+    if manFiles.length() =!= 1 {
         io.errorLine("self-host ladder requires one TS source root");
         return 1;
     }
@@ -337,8 +335,8 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
 
     var gen := 1;
     loop gen <= 3 {
-        tmpOutTs := path.join(genWork, "gen-" + integer.intText(gen) + ".ts");
-        tmpErr := path.join(genWork, "gen-" + integer.intText(gen) + ".stderr");
+        tmpOutTs := path.join(genWork, "gen-" + gen.toText() + ".ts");
+        tmpErr := path.join(genWork, "gen-" + gen.toText() + ".stderr");
         compArgs: List<String> = [runnerPath, builderPath, "--stdin", "--name", sourceName, "--root", rootSourcePath, "-O3"];
         startNs := time.monotonicNs();
         compRes := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, sourceBytes, tmpOutTs, tmpErr);
@@ -349,9 +347,9 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
             return 1;
         }
         errBytes := fs.readBytes(tmpErr);
-        if compRes.status =!= 0 or list.listCountInt(errBytes) =!= 0 {
+        if compRes.status =!= 0 or errBytes.length() =!= 0 {
             _rm := fs.remove(genWork);
-            io.errorLine("generation " + integer.intText(gen) + " failed (" + integer.intText(compRes.status) + "):\n" + unicode.utf8DecodeLossy(errBytes));
+            io.errorLine("generation " + gen.toText() + " failed (" + compRes.status.toText() + "):\n" + unicode.utf8DecodeLossy(errBytes));
             return 1;
         }
         chk := checkStrictSingle(rootDir, tmpOutTs);
@@ -362,7 +360,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
         }
         outBytes := fs.readBytes(tmpOutTs);
         artSha := crypto.sha256Bytes(outBytes);
-        genPath := path.join(outDir, "generation-" + integer.intText(gen) + ".ts");
+        genPath := path.join(outDir, "generation-" + gen.toText() + ".ts");
         wGen := fs.writeBytes(genPath, outBytes);
         if not wGen.ok {
             _rm := fs.remove(genWork);
@@ -375,17 +373,17 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
             fixedPoint = false;
         }
         itemJson := "{\n"
-        + "      \"generation\": " + integer.intText(gen) + ",\n"
+        + "      \"generation\": " + gen.toText() + ",\n"
         + "      \"sourceSha256\": " + json.quoteString(sel.sourceSha256) + ",\n"
         + "      \"builderSha256\": " + json.quoteString(builderSha) + ",\n"
         + "      \"artifactSha256\": " + json.quoteString(artSha) + ",\n"
-        + "      \"bytes\": " + integer.intText(list.listCountInt(outBytes)) + ",\n"
-        + "      \"compileProcessMs\": " + integer.intText(compileMs) + ",\n"
-        + "      \"strictCheckMs\": " + integer.intText(chk.elapsedMs) + ",\n"
+        + "      \"bytes\": " + outBytes.length().toText() + ",\n"
+        + "      \"compileProcessMs\": " + compileMs.toText() + ",\n"
+        + "      \"strictCheckMs\": " + chk.elapsedMs.toText() + ",\n"
         + "      \"path\": " + json.quoteString(genPath) + "\n    }";
-        list.pushBack(mut genJsonEntries, itemJson);
-        list.pushBack(mut genPaths, genPath);
-        list.pushBack(mut genHashes, artSha);
+        mut genJsonEntries.pushBack(itemJson);
+        mut genPaths.pushBack(genPath);
+        mut genHashes.pushBack(artSha);
         builderSha = artSha;
         lastArtifactSha = artSha;
         builderPath = genPath;
@@ -394,7 +392,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
     _rmWork := fs.remove(genWork);
 
     var vi := 0;
-    loop vi < list.listCountText(genPaths) {
+    loop vi < genPaths.length() {
         persisted := crypto.sha256File(genPaths[vi]);
         if not persisted.ok or persisted.hex =!= genHashes[vi] {
             io.errorLine("persisted generation identity mismatch");
@@ -429,7 +427,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
     + "    \"supplied\": " + (if artOpt.found { "true" } else { "false" }) + "\n  },\n"
     + "  \"toolSources\": " + toolsJsonRes.jsonText + ",\n"
     + "  \"source\": {\n"
-    + "    \"bytes\": " + integer.intText(sel.totalDepBytes) + ",\n"
+    + "    \"bytes\": " + sel.totalDepBytes.toText() + ",\n"
     + "    \"sha256\": " + json.quoteString(sel.sourceSha256) + "\n  },\n"
     + "  \"generations\": [\n    " + text.joinTexts(genJsonEntries, ",\n    ") + "\n  ],\n"
     + "  \"fixedPoint\": " + (if fixedPoint { "true" } else { "false" }) + ",\n"
@@ -446,24 +444,24 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
 };
 
 hasThreeDigits := fn(part: String): Bool {
-    text.length(part) == 3
-    and text.isDigit(text.at(part, 0))
-    and text.isDigit(text.at(part, 1))
-    and text.isDigit(text.at(part, 2))
+    part.length() == 3
+    and part.at(0).isDigit()
+    and part.at(1).isDigit()
+    and part.at(2).isDigit()
 };
 
 isLowerSlug := fn(slug: String): Bool {
-    size := text.length(slug);
+    size := slug.length();
     if size == 0 { return false; }
     var prevDash := true;
     var i := 0;
     loop i < size {
-        ch := text.at(slug, i);
+        ch := slug.at(i);
         if ch == "-" {
             if prevDash { return false; }
             prevDash = true;
         } else {
-            isAlnum := text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789", ch, 0) >= 0;
+            isAlnum := "abcdefghijklmnopqrstuvwxyz0123456789".indexOf(ch, 0) >= 0;
             if not isAlnum { return false; }
             prevDash = false;
         }
@@ -474,16 +472,16 @@ isLowerSlug := fn(slug: String): Bool {
 
 /** Parses `NNN-MMM-slug.json` compiler fixture names into category and slug. */
 pub parseFixtureFilename := fn(fileName: String): (ok: Bool, category: String, slug: String) {
-    if not text.endsWith(fileName, ".json") or text.length(fileName) < 14 {
+    if not fileName.endsWith(".json") or fileName.length() < 14 {
         return (ok = false, category = "", slug = "");
     }
-    stem := text.slice(fileName, 0, text.length(fileName) - 5);
-    if text.at(stem, 3) =!= "-" or text.at(stem, 7) =!= "-" {
+    stem := fileName.slice(0, fileName.length() - 5);
+    if stem.at(3) =!= "-" or stem.at(7) =!= "-" {
         return (ok = false, category = "", slug = "");
     }
-    catCode := text.slice(stem, 0, 3);
-    subCode := text.slice(stem, 4, 7);
-    slug := text.slice(stem, 8, text.length(stem));
+    catCode := stem.slice(0, 3);
+    subCode := stem.slice(4, 7);
+    slug := stem.slice(8, stem.length());
     if not hasThreeDigits(catCode) or not hasThreeDigits(subCode) or not isLowerSlug(slug) {
         return (ok = false, category = "", slug = "");
     }
@@ -514,7 +512,7 @@ actStatus: Int, actOutBytes: List<Int>, actErrBytes: List<Int>
     if category == "rejected" {
         return actStatus == expExit and streams.equalBytes(actOutBytes, expOutBytes) and streams.equalBytes(actErrBytes, expErrBytes);
     }
-    actStatus == 0 and list.listCountInt(actErrBytes) == 0 and ("sha256:" + crypto.sha256Bytes(actOutBytes)) == expectedTsHash
+    actStatus == 0 and actErrBytes.length() == 0 and ("sha256:" + crypto.sha256Bytes(actOutBytes)) == expectedTsHash
 };
 
 /** Validates compiler artifact `artifactPath` against all recorded corpus contracts cleanly. */
@@ -543,7 +541,7 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
 
     compDir := path.join(rootDir, "igniter/tests/compiler");
     fixFiles := path.collectFiles(compDir, [compDir], ".json", [], false);
-    if list.listCountText(fixFiles) == 0 {
+    if fixFiles.length() == 0 {
         return (ok = false, cases = 0, programs = 0, rejections = 0, executions = 0, mismatchCount = 0, firstMismatch = "", jsonBody = "", error = "no compiler fixtures found");
     }
 
@@ -605,14 +603,14 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
             return (ok = false, cases = 0, programs = 0, rejections = 0, executions = 0, mismatchCount = 0, firstMismatch = "", jsonBody = "", error = srcCheck.error);
         }
         srcFileField := json.readObjectString(fixJson, srcField.valuePos, "file");
-        sourceRel := if srcFileField.found { srcFileField.value } else { text.slice(fileName, 0, text.length(fileName) - 5) + ".lts" };
+        sourceRel := if srcFileField.found { srcFileField.value } else { fileName.slice(0, fileName.length() - 5) + ".lts" };
         sourcePath := path.resolve(compDir, sourceRel);
         fixSourceBytes := streams.readStreamBytes(fixJson, srcField.valuePos, compDir);
         cacheKey := sourcePath + "\n" + crypto.sha256Bytes(fixSourceBytes);
 
         var cIdx := -1;
         var ki := 0;
-        loop ki < list.listCountText(compiledKeys) {
+        loop ki < compiledKeys.length() {
             if compiledKeys[ki] == cacheKey {
                 cIdx = ki;
                 break;
@@ -620,19 +618,19 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
             ki = ki + 1;
         }
         if cIdx < 0 {
-            outFile := path.join(workDir, "comp-" + integer.intText(compileSeq) + ".out");
-            errFile := path.join(workDir, "comp-" + integer.intText(compileSeq) + ".err");
+            outFile := path.join(workDir, "comp-" + compileSeq.toText() + ".out");
+            errFile := path.join(workDir, "comp-" + compileSeq.toText() + ".err");
             compArgs: List<String> = [runnerPath, artifactPath, "--stdin", "--name", "", "--root", sourcePath];
             cRes := proc.runBytes(project.nodeExecPath(), compArgs, workDir, emptyEnv, 0, fixSourceBytes, outFile, errFile);
             if cRes.error =!= "" {
                 _rm := fs.remove(workDir);
                 return (ok = false, cases = 0, programs = 0, rejections = 0, executions = 0, mismatchCount = 0, firstMismatch = "", jsonBody = "", error = cRes.error);
             }
-            cIdx = list.listCountText(compiledKeys);
-            list.pushBack(mut compiledKeys, cacheKey);
-            list.pushBack(mut compiledStatus, cRes.status);
-            list.pushBack(mut compiledOutFiles, outFile);
-            list.pushBack(mut compiledErrFiles, errFile);
+            cIdx = compiledKeys.length();
+            mut compiledKeys.pushBack(cacheKey);
+            mut compiledStatus.pushBack(cRes.status);
+            mut compiledOutFiles.pushBack(outFile);
+            mut compiledErrFiles.pushBack(errFile);
             compileSeq = compileSeq + 1;
         }
 
@@ -660,16 +658,16 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
                 if matched {
                     rejectionMatches = rejectionMatches + 1;
                 } else {
-                    detail := "status " + integer.intText(actStatus) + ", stderr " + json.quoteString(unicode.utf8DecodeLossy(actErrBytes));
-                    list.pushBack(mut mismatches, fileName + "/" + caseName + ": compiler contract (" + detail + ")");
+                    detail := "status " + actStatus.toText() + ", stderr " + json.quoteString(unicode.utf8DecodeLossy(actErrBytes));
+                    mut mismatches.pushBack(fileName + "/" + caseName + ": compiler contract (" + detail + ")");
                 }
             } else if not matched {
                 detail := "artifact " + actOutSha + ", expected " + expectedTs.tsHash;
-                list.pushBack(mut mismatches, fileName + "/" + caseName + ": compiler contract (" + detail + ")");
+                mut mismatches.pushBack(fileName + "/" + caseName + ": compiler contract (" + detail + ")");
             } else {
                 var pIdx := -1;
                 var pi := 0;
-                loop pi < list.listCountText(distinctProgTexts) {
+                loop pi < distinctProgTexts.length() {
                     if distinctProgTexts[pi] == actOutSha {
                         pIdx = pi;
                         break;
@@ -677,34 +675,34 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
                     pi = pi + 1;
                 }
                 if pIdx < 0 {
-                    pIdx = list.listCountText(distinctProgTexts);
-                    progTsPath := path.join(workDir, "prog-" + integer.intText(pIdx) + ".ts");
+                    pIdx = distinctProgTexts.length();
+                    progTsPath := path.join(workDir, "prog-" + pIdx.toText() + ".ts");
                     _wp := fs.writeBytes(progTsPath, actOutBytes);
-                    list.pushBack(mut distinctProgTexts, actOutSha);
-                    list.pushBack(mut distinctProgFiles, progTsPath);
+                    mut distinctProgTexts.pushBack(actOutSha);
+                    mut distinctProgFiles.pushBack(progTsPath);
                 }
-                inFile := path.join(workDir, "s-" + integer.intText(streamSeq) + ".in");
-                eOutFile := path.join(workDir, "s-" + integer.intText(streamSeq) + ".expout");
-                eErrFile := path.join(workDir, "s-" + integer.intText(streamSeq) + ".experr");
+                inFile := path.join(workDir, "s-" + streamSeq.toText() + ".in");
+                eOutFile := path.join(workDir, "s-" + streamSeq.toText() + ".expout");
+                eErrFile := path.join(workDir, "s-" + streamSeq.toText() + ".experr");
                 _w1 := fs.writeBytes(inFile, expInBytes);
                 _w2 := fs.writeBytes(eOutFile, expOutBytes);
                 _w3 := fs.writeBytes(eErrFile, expErrBytes);
                 streamSeq = streamSeq + 1;
 
-                list.pushBack(mut progFixtureFiles, fileName);
-                list.pushBack(mut progCaseNames, caseName);
-                list.pushBack(mut progStdinFiles, inFile);
-                list.pushBack(mut progExpOutFiles, eOutFile);
-                list.pushBack(mut progExpErrFiles, eErrFile);
-                list.pushBack(mut progExpExits, expExit);
-                list.pushBack(mut progSourceIndices, pIdx);
+                mut progFixtureFiles.pushBack(fileName);
+                mut progCaseNames.pushBack(caseName);
+                mut progStdinFiles.pushBack(inFile);
+                mut progExpOutFiles.pushBack(eOutFile);
+                mut progExpErrFiles.pushBack(eErrFile);
+                mut progExpExits.pushBack(expExit);
+                mut progSourceIndices.pushBack(pIdx);
             }
         }
     }
 
     var executions := 0;
-    matchedPrograms := list.listCountText(progFixtureFiles);
-    if list.listCountText(distinctProgFiles) > 0 {
+    matchedPrograms := progFixtureFiles.length();
+    if distinctProgFiles.length() > 0 {
         chkDir := path.join(workDir, "batch-tsc");
         batchCheck := cases.checkTsArtifactFilesWithStatus(rootDir, distinctProgFiles, chkDir, 60000);
         if not batchCheck.ok {
@@ -715,8 +713,8 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
         loop si < matchedPrograms {
             tsFile := distinctProgFiles[progSourceIndices[si]];
             inBytes := fs.readBytes(progStdinFiles[si]);
-            rOut := path.join(workDir, "run-" + integer.intText(si) + ".out");
-            rErr := path.join(workDir, "run-" + integer.intText(si) + ".err");
+            rOut := path.join(workDir, "run-" + si.toText() + ".out");
+            rErr := path.join(workDir, "run-" + si.toText() + ".err");
             runArgs: List<String> = [runnerPath, tsFile];
             ran := proc.runBytes(project.nodeExecPath(), runArgs, workDir, emptyEnv, 10000, inBytes, rOut, rErr);
             executions = executions + 1;
@@ -724,7 +722,7 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
             and streams.equalBytes(fs.readBytes(rOut), fs.readBytes(progExpOutFiles[si]))
             and streams.equalBytes(fs.readBytes(rErr), fs.readBytes(progExpErrFiles[si]));
             if not okRun {
-                list.pushBack(mut mismatches, progFixtureFiles[si] + "/" + progCaseNames[si] + ": runtime contract");
+                mut mismatches.pushBack(progFixtureFiles[si] + "/" + progCaseNames[si] + ": runtime contract");
             }
             si = si + 1;
         }
@@ -734,21 +732,21 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
 
     quotedMismatches: mut List<String> = [];
     loop mismatches as mm {
-        list.pushBack(mut quotedMismatches, json.quoteString(mm));
+        mut quotedMismatches.pushBack(json.quoteString(mm));
     }
-    mismatchJson := if list.listCountText(quotedMismatches) == 0 {
+    mismatchJson := if quotedMismatches.length() == 0 {
         "[]"
     } else {
         "[\n    " + text.joinTexts(quotedMismatches, ",\n    ") + "\n  ]"
     };
-    mmCount := list.listCountText(mismatches);
+    mmCount := mismatches.length();
     firstMm := if mmCount > 0 { mismatches[0] } else { "" };
 
     body := "{\n"
-    + "  \"cases\": " + integer.intText(totalCases) + ",\n"
-    + "  \"programs\": " + integer.intText(matchedPrograms) + ",\n"
-    + "  \"rejections\": " + integer.intText(rejectionMatches) + ",\n"
-    + "  \"executions\": " + integer.intText(executions) + ",\n"
+    + "  \"cases\": " + totalCases.toText() + ",\n"
+    + "  \"programs\": " + matchedPrograms.toText() + ",\n"
+    + "  \"rejections\": " + rejectionMatches.toText() + ",\n"
+    + "  \"executions\": " + executions.toText() + ",\n"
     + "  \"mismatches\": " + mismatchJson + "\n}";
 
     (ok = true, cases = totalCases, programs = matchedPrograms, rejections = rejectionMatches, executions = executions, mismatchCount = mmCount, firstMismatch = firstMm, jsonBody = body, error = "")
@@ -804,7 +802,7 @@ pub runCorpusParityCommand := fn(rootDir: String, args: List<String>): Int {
     + "  \"selectedCompilerBuilderSha256\": " + json.quoteString(sel.selectedBuilderSha256) + ",\n"
     + "  \"supplied\": " + (if artOpt.found { "true" } else { "false" }) + ",\n"
     + "  \"toolSources\": " + toolsJsonRes.jsonText + ",\n"
-    + "  " + text.slice(validated.jsonBody, 4, text.length(validated.jsonBody) - 2)
+    + "  " + validated.jsonBody.slice(4, validated.jsonBody.length() - 2)
     + "\n}\n";
 
     io.output(report);

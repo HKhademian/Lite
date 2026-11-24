@@ -1,7 +1,6 @@
 /** The run adapter executes from a real temporary artifact and removes it afterwards. */
 
 fs := import "core/file";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
@@ -37,7 +36,7 @@ run1 := runNode(
 test.checkInt("lite-run status: " + run1.stderr, 0, run1.status);
 test.checkText("lite-run stdout", "hello\n", run1.stdout);
 remaining := fs.listDir(scratch);
-test.checkInt("temporary run directory was not removed", 0, list.listCountText(remaining));
+test.checkInt("temporary run directory was not removed", 0, remaining.length());
 _rmScratch := fs.remove(scratch);
 
 /* 2. lite compile, check and run resolve top-level Lite source imports */

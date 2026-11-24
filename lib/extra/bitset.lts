@@ -1,7 +1,5 @@
 /** Experimental compact bit-arrays (`extra/bitset`) packed 30 bits per word for masks, visited flags, and collision layers. */
 
-list := import "core/list";
-
 /** Opaque generational handle to a fixed-length bitset. */
 pub Bitset := type (handle: Int, gen: Int);
 
@@ -92,7 +90,7 @@ wordXor := fn(a: Int, b: Int): Int {
 
 validBitset := fn(b: Bitset): Bool {
     id := b.handle;
-    id >= 0 and id < list.length(bsAlive) and bsAlive[id] and bsGen[id] == b.gen
+    id >= 0 and id < bsAlive.length() and bsAlive[id] and bsGen[id] == b.gen
 };
 
 wordsForBits := fn(numBits: Int): Int {
@@ -103,19 +101,19 @@ wordsForBits := fn(numBits: Int): Int {
 pub create := fn(numBits: Int): Bitset {
     bits := if numBits < 0 { 0 } else { numBits };
     needed := wordsForBits(bits);
-    var fi := list.length(bsFree) - 1;
+    var fi := bsFree.length() - 1;
     loop fi >= 0 {
         id := bsFree[fi];
         if bsWordCap[id] >= needed {
-            last := list.length(bsFree) - 1;
-            if fi =!= last { list.setAt(mut bsFree, fi, bsFree[last]); }
-            _drop := list.popBack(mut bsFree);
-            list.setAt(mut bsBitLen, id, bits);
-            list.setAt(mut bsAlive, id, true);
+            last := bsFree.length() - 1;
+            if fi =!= last { mut bsFree.setAt(fi, bsFree[last]); }
+            _drop := mut bsFree.popBack();
+            mut bsBitLen.setAt(id, bits);
+            mut bsAlive.setAt(id, true);
             base := bsBase[id];
             var zi := 0;
             loop zi < needed {
-                list.setAt(mut bsWords, base + zi, 0);
+                mut bsWords.setAt(base + zi, 0);
                 zi += 1;
             }
             return (handle = id, gen = bsGen[id]);
@@ -123,18 +121,18 @@ pub create := fn(numBits: Int): Bitset {
         fi -= 1;
     }
 
-    base := list.length(bsWords);
+    base := bsWords.length();
     var i := 0;
     loop i < needed {
-        list.pushBack(mut bsWords, 0);
+        mut bsWords.pushBack(0);
         i += 1;
     }
-    id := list.length(bsBase);
-    list.pushBack(mut bsBase, base);
-    list.pushBack(mut bsWordCap, needed);
-    list.pushBack(mut bsBitLen, bits);
-    list.pushBack(mut bsGen, 1);
-    list.pushBack(mut bsAlive, true);
+    id := bsBase.length();
+    mut bsBase.pushBack(base);
+    mut bsWordCap.pushBack(needed);
+    mut bsBitLen.pushBack(bits);
+    mut bsGen.pushBack(1);
+    mut bsAlive.pushBack(true);
     (handle = id, gen = 1)
 };
 
@@ -144,7 +142,7 @@ pub set := fn(bs: Bitset, index: Int): Bool {
     id := bs.handle;
     if index < 0 or index >= bsBitLen[id] { return false; }
     wIdx := bsBase[id] + (index / WORD_BITS);
-    list.setAt(mut bsWords, wIdx, wordSetBit(bsWords[wIdx], index % WORD_BITS));
+    mut bsWords.setAt(wIdx, wordSetBit(bsWords[wIdx], index % WORD_BITS));
     true
 };
 
@@ -154,7 +152,7 @@ pub clear := fn(bs: Bitset, index: Int): Bool {
     id := bs.handle;
     if index < 0 or index >= bsBitLen[id] { return false; }
     wIdx := bsBase[id] + (index / WORD_BITS);
-    list.setAt(mut bsWords, wIdx, wordClearBit(bsWords[wIdx], index % WORD_BITS));
+    mut bsWords.setAt(wIdx, wordClearBit(bsWords[wIdx], index % WORD_BITS));
     true
 };
 
@@ -166,7 +164,7 @@ pub toggle := fn(bs: Bitset, index: Int): Bool {
     wIdx := bsBase[id] + (index / WORD_BITS);
     b := index % WORD_BITS;
     w := bsWords[wIdx];
-    list.setAt(mut bsWords, wIdx, if wordHasBit(w, b) { wordClearBit(w, b) } else { wordSetBit(w, b) });
+    mut bsWords.setAt(wIdx, if wordHasBit(w, b) { wordClearBit(w, b) } else { wordSetBit(w, b) });
     true
 };
 
@@ -252,7 +250,7 @@ pub setAll := fn(bs: Bitset): Unit {
     loop wi < wCount {
         rem := bits - (wi * WORD_BITS);
         val := if rem >= WORD_BITS { FULL_WORD } else { pow2(rem) - 1 };
-        list.setAt(mut bsWords, base + wi, val);
+        mut bsWords.setAt(base + wi, val);
         wi += 1;
     }
 };
@@ -265,7 +263,7 @@ pub clearAll := fn(bs: Bitset): Unit {
     base := bsBase[id];
     var wi := 0;
     loop wi < wCount {
-        list.setAt(mut bsWords, base + wi, 0);
+        mut bsWords.setAt(base + wi, 0);
         wi += 1;
     }
 };
@@ -285,7 +283,7 @@ pub orInto := fn(dst: Bitset, src: Bitset): Unit {
         val := wordOr(bsWords[dBase + i], bsWords[sBase + i]);
         rem := dBits - (i * WORD_BITS);
         masked := if rem >= WORD_BITS { val } else { wordAnd(val, pow2(rem) - 1) };
-        list.setAt(mut bsWords, dBase + i, masked);
+        mut bsWords.setAt(dBase + i, masked);
         i += 1;
     }
 };
@@ -302,7 +300,7 @@ pub andInto := fn(dst: Bitset, src: Bitset): Unit {
     var i := 0;
     loop i < dWords {
         val := if i < sWords { wordAnd(bsWords[dBase + i], bsWords[sBase + i]) } else { 0 };
-        list.setAt(mut bsWords, dBase + i, val);
+        mut bsWords.setAt(dBase + i, val);
         i += 1;
     }
 };
@@ -322,7 +320,7 @@ pub xorInto := fn(dst: Bitset, src: Bitset): Unit {
         val := wordXor(bsWords[dBase + i], bsWords[sBase + i]);
         rem := dBits - (i * WORD_BITS);
         masked := if rem >= WORD_BITS { val } else { wordAnd(val, pow2(rem) - 1) };
-        list.setAt(mut bsWords, dBase + i, masked);
+        mut bsWords.setAt(dBase + i, masked);
         i += 1;
     }
 };
@@ -354,7 +352,7 @@ pub bitLength := fn(bs: Bitset): Int {
 pub destroy := fn(bs: Bitset): Unit {
     if not validBitset(bs) { return; }
     id := bs.handle;
-    list.setAt(mut bsAlive, id, false);
-    list.setAt(mut bsGen, id, bsGen[id] + 1);
-    list.pushBack(mut bsFree, id);
+    mut bsAlive.setAt(id, false);
+    mut bsGen.setAt(id, bsGen[id] + 1);
+    mut bsFree.pushBack(id);
 };

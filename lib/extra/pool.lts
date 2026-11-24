@@ -1,7 +1,5 @@
 /** Experimental generational slot pools (`extra/pool`) for O(1) object reuse with safe stale-handle detection. */
 
-list := import "core/list";
-
 /** Generational handle identifying a single slot inside a pool. */
 pub Handle := type (index: Int, generation: Int);
 
@@ -70,17 +68,17 @@ var tpFreePools: mut List<Int> = [];
 
 validSlotPool := fn(pool: SlotPool): Bool {
     idx := pool.handle;
-    idx >= 0 and idx < list.length(spAlive) and spAlive[idx] and spGen[idx] == pool.gen
+    idx >= 0 and idx < spAlive.length() and spAlive[idx] and spGen[idx] == pool.gen
 };
 
 validIntPool := fn(pool: IntPool): Bool {
     idx := pool.handle;
-    idx >= 0 and idx < list.length(ipAlive) and ipAlive[idx] and ipGen[idx] == pool.gen
+    idx >= 0 and idx < ipAlive.length() and ipAlive[idx] and ipGen[idx] == pool.gen
 };
 
 validTextPool := fn(pool: TextPool): Bool {
     idx := pool.handle;
-    idx >= 0 and idx < list.length(tpAlive) and tpAlive[idx] and tpGen[idx] == pool.gen
+    idx >= 0 and idx < tpAlive.length() and tpAlive[idx] and tpGen[idx] == pool.gen
 };
 
 /* --- Pure SlotPool API --- */
@@ -88,45 +86,45 @@ validTextPool := fn(pool: TextPool): Bool {
 /** Creates a fixed-capacity generational `SlotPool` with O(1) acquire and release. */
 pub createSlots := fn(capacity: Int): SlotPool {
     cap := if capacity < 0 { 0 } else { capacity };
-    var fi := list.length(spFreePools) - 1;
+    var fi := spFreePools.length() - 1;
     loop fi >= 0 {
         pid := spFreePools[fi];
         if spCap[pid] >= cap {
-            last := list.length(spFreePools) - 1;
-            if fi =!= last { list.setAt(mut spFreePools, fi, spFreePools[last]); }
-            _drop := list.popBack(mut spFreePools);
-            list.setAt(mut spCap, pid, cap);
+            last := spFreePools.length() - 1;
+            if fi =!= last { mut spFreePools.setAt(fi, spFreePools[last]); }
+            _drop := mut spFreePools.popBack();
+            mut spCap.setAt(pid, cap);
             base := spBase[pid];
             var i := 0;
             loop i < cap {
-                list.setAt(mut spSlotAlive, base + i, false);
-                list.setAt(mut spSlotGen, base + i, spSlotGen[base + i] + 1);
-                list.setAt(mut spSlotNextFree, base + i, if i + 1 < cap { i + 1 } else { -1 });
+                mut spSlotAlive.setAt(base + i, false);
+                mut spSlotGen.setAt(base + i, spSlotGen[base + i] + 1);
+                mut spSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
                 i += 1;
             }
-            list.setAt(mut spCount, pid, 0);
-            list.setAt(mut spFreeHead, pid, if cap > 0 { 0 } else { -1 });
-            list.setAt(mut spAlive, pid, true);
+            (mut spCount).setAt(pid, 0);
+            mut spFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
+            mut spAlive.setAt(pid, true);
             return (handle = pid, gen = spGen[pid]);
         }
         fi -= 1;
     }
 
-    base := list.length(spSlotGen);
+    base := spSlotGen.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut spSlotGen, 1);
-        list.pushBack(mut spSlotAlive, false);
-        list.pushBack(mut spSlotNextFree, if i + 1 < cap { i + 1 } else { -1 });
+        mut spSlotGen.pushBack(1);
+        mut spSlotAlive.pushBack(false);
+        mut spSlotNextFree.pushBack(if i + 1 < cap { i + 1 } else { -1 });
         i += 1;
     }
-    pid := list.length(spBase);
-    list.pushBack(mut spBase, base);
-    list.pushBack(mut spCap, cap);
-    list.pushBack(mut spCount, 0);
-    list.pushBack(mut spFreeHead, if cap > 0 { 0 } else { -1 });
-    list.pushBack(mut spGen, 1);
-    list.pushBack(mut spAlive, true);
+    pid := spBase.length();
+    mut spBase.pushBack(base);
+    mut spCap.pushBack(cap);
+    mut spCount.pushBack(0);
+    mut spFreeHead.pushBack(if cap > 0 { 0 } else { -1 });
+    mut spGen.pushBack(1);
+    mut spAlive.pushBack(true);
     (handle = pid, gen = 1)
 };
 
@@ -137,10 +135,10 @@ pub acquireSlot := fn(pool: SlotPool): Handle {
     head := spFreeHead[pid];
     if head < 0 { return INVALID_HANDLE; }
     gi := spBase[pid] + head;
-    list.setAt(mut spFreeHead, pid, spSlotNextFree[gi]);
-    list.setAt(mut spSlotNextFree, gi, -1);
-    list.setAt(mut spSlotAlive, gi, true);
-    list.setAt(mut spCount, pid, spCount[pid] + 1);
+    mut spFreeHead.setAt(pid, spSlotNextFree[gi]);
+    mut spSlotNextFree.setAt(gi, -1);
+    mut spSlotAlive.setAt(gi, true);
+    mut spCount.setAt(pid, spCount[pid] + 1);
     (index = head, generation = spSlotGen[gi])
 };
 
@@ -158,11 +156,11 @@ pub releaseSlot := fn(pool: SlotPool, h: Handle): Bool {
     if not isSlotAlive(pool, h) { return false; }
     pid := pool.handle;
     gi := spBase[pid] + h.index;
-    list.setAt(mut spSlotAlive, gi, false);
-    list.setAt(mut spSlotGen, gi, spSlotGen[gi] + 1);
-    list.setAt(mut spSlotNextFree, gi, spFreeHead[pid]);
-    list.setAt(mut spFreeHead, pid, h.index);
-    list.setAt(mut spCount, pid, spCount[pid] - 1);
+    mut spSlotAlive.setAt(gi, false);
+    mut spSlotGen.setAt(gi, spSlotGen[gi] + 1);
+    mut spSlotNextFree.setAt(gi, spFreeHead[pid]);
+    mut spFreeHead.setAt(pid, h.index);
+    mut spCount.setAt(pid, spCount[pid] - 1);
     true
 };
 
@@ -193,22 +191,22 @@ pub clearSlots := fn(pool: SlotPool): Unit {
     cap := spCap[pid];
     var i := 0;
     loop i < cap {
-        list.setAt(mut spSlotAlive, base + i, false);
-        list.setAt(mut spSlotGen, base + i, spSlotGen[base + i] + 1);
-        list.setAt(mut spSlotNextFree, base + i, if i + 1 < cap { i + 1 } else { -1 });
+        mut spSlotAlive.setAt(base + i, false);
+        mut spSlotGen.setAt(base + i, spSlotGen[base + i] + 1);
+        mut spSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
         i += 1;
     }
-    list.setAt(mut spCount, pid, 0);
-    list.setAt(mut spFreeHead, pid, if cap > 0 { 0 } else { -1 });
+    (mut spCount).setAt(pid, 0);
+    mut spFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
 };
 
 /** Destroys `pool` and recycles its handle slot. */
 pub destroySlots := fn(pool: SlotPool): Unit {
     if not validSlotPool(pool) { return; }
     pid := pool.handle;
-    list.setAt(mut spAlive, pid, false);
-    list.setAt(mut spGen, pid, spGen[pid] + 1);
-    list.pushBack(mut spFreePools, pid);
+    mut spAlive.setAt(pid, false);
+    mut spGen.setAt(pid, spGen[pid] + 1);
+    mut spFreePools.pushBack(pid);
 };
 
 /* --- IntPool API --- */
@@ -216,47 +214,47 @@ pub destroySlots := fn(pool: SlotPool): Unit {
 /** Creates a fixed-capacity generational pool storing `Int` values. */
 pub createInts := fn(capacity: Int): IntPool {
     cap := if capacity < 0 { 0 } else { capacity };
-    var fi := list.length(ipFreePools) - 1;
+    var fi := ipFreePools.length() - 1;
     loop fi >= 0 {
         pid := ipFreePools[fi];
         if ipCap[pid] >= cap {
-            last := list.length(ipFreePools) - 1;
-            if fi =!= last { list.setAt(mut ipFreePools, fi, ipFreePools[last]); }
-            _drop := list.popBack(mut ipFreePools);
-            list.setAt(mut ipCap, pid, cap);
+            last := ipFreePools.length() - 1;
+            if fi =!= last { mut ipFreePools.setAt(fi, ipFreePools[last]); }
+            _drop := mut ipFreePools.popBack();
+            mut ipCap.setAt(pid, cap);
             base := ipBase[pid];
             var i := 0;
             loop i < cap {
-                list.setAt(mut ipSlotAlive, base + i, false);
-                list.setAt(mut ipSlotGen, base + i, ipSlotGen[base + i] + 1);
-                list.setAt(mut ipSlotNextFree, base + i, if i + 1 < cap { i + 1 } else { -1 });
-                list.setAt(mut ipSlotVal, base + i, 0);
+                mut ipSlotAlive.setAt(base + i, false);
+                mut ipSlotGen.setAt(base + i, ipSlotGen[base + i] + 1);
+                mut ipSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
+                mut ipSlotVal.setAt(base + i, 0);
                 i += 1;
             }
-            list.setAt(mut ipCount, pid, 0);
-            list.setAt(mut ipFreeHead, pid, if cap > 0 { 0 } else { -1 });
-            list.setAt(mut ipAlive, pid, true);
+            (mut ipCount).setAt(pid, 0);
+            mut ipFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
+            mut ipAlive.setAt(pid, true);
             return (handle = pid, gen = ipGen[pid]);
         }
         fi -= 1;
     }
 
-    base := list.length(ipSlotGen);
+    base := ipSlotGen.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut ipSlotGen, 1);
-        list.pushBack(mut ipSlotAlive, false);
-        list.pushBack(mut ipSlotNextFree, if i + 1 < cap { i + 1 } else { -1 });
-        list.pushBack(mut ipSlotVal, 0);
+        mut ipSlotGen.pushBack(1);
+        mut ipSlotAlive.pushBack(false);
+        mut ipSlotNextFree.pushBack(if i + 1 < cap { i + 1 } else { -1 });
+        mut ipSlotVal.pushBack(0);
         i += 1;
     }
-    pid := list.length(ipBase);
-    list.pushBack(mut ipBase, base);
-    list.pushBack(mut ipCap, cap);
-    list.pushBack(mut ipCount, 0);
-    list.pushBack(mut ipFreeHead, if cap > 0 { 0 } else { -1 });
-    list.pushBack(mut ipGen, 1);
-    list.pushBack(mut ipAlive, true);
+    pid := ipBase.length();
+    mut ipBase.pushBack(base);
+    mut ipCap.pushBack(cap);
+    mut ipCount.pushBack(0);
+    mut ipFreeHead.pushBack(if cap > 0 { 0 } else { -1 });
+    mut ipGen.pushBack(1);
+    mut ipAlive.pushBack(true);
     (handle = pid, gen = 1)
 };
 
@@ -267,11 +265,11 @@ pub acquireInt := fn(pool: IntPool, value: Int): Handle {
     head := ipFreeHead[pid];
     if head < 0 { return INVALID_HANDLE; }
     gi := ipBase[pid] + head;
-    list.setAt(mut ipFreeHead, pid, ipSlotNextFree[gi]);
-    list.setAt(mut ipSlotNextFree, gi, -1);
-    list.setAt(mut ipSlotAlive, gi, true);
-    list.setAt(mut ipSlotVal, gi, value);
-    list.setAt(mut ipCount, pid, ipCount[pid] + 1);
+    mut ipFreeHead.setAt(pid, ipSlotNextFree[gi]);
+    mut ipSlotNextFree.setAt(gi, -1);
+    mut ipSlotAlive.setAt(gi, true);
+    mut ipSlotVal.setAt(gi, value);
+    mut ipCount.setAt(pid, ipCount[pid] + 1);
     (index = head, generation = ipSlotGen[gi])
 };
 
@@ -295,7 +293,7 @@ pub getInt := fn(pool: IntPool, h: Handle): (found: Bool, value: Int) {
 pub setInt := fn(pool: IntPool, h: Handle, value: Int): Bool {
     if not isIntAlive(pool, h) { return false; }
     gi := ipBase[pool.handle] + h.index;
-    list.setAt(mut ipSlotVal, gi, value);
+    mut ipSlotVal.setAt(gi, value);
     true
 };
 
@@ -304,12 +302,12 @@ pub releaseInt := fn(pool: IntPool, h: Handle): Bool {
     if not isIntAlive(pool, h) { return false; }
     pid := pool.handle;
     gi := ipBase[pid] + h.index;
-    list.setAt(mut ipSlotAlive, gi, false);
-    list.setAt(mut ipSlotVal, gi, 0);
-    list.setAt(mut ipSlotGen, gi, ipSlotGen[gi] + 1);
-    list.setAt(mut ipSlotNextFree, gi, ipFreeHead[pid]);
-    list.setAt(mut ipFreeHead, pid, h.index);
-    list.setAt(mut ipCount, pid, ipCount[pid] - 1);
+    mut ipSlotAlive.setAt(gi, false);
+    mut ipSlotVal.setAt(gi, 0);
+    mut ipSlotGen.setAt(gi, ipSlotGen[gi] + 1);
+    mut ipSlotNextFree.setAt(gi, ipFreeHead[pid]);
+    mut ipFreeHead.setAt(pid, h.index);
+    mut ipCount.setAt(pid, ipCount[pid] - 1);
     true
 };
 
@@ -340,23 +338,23 @@ pub clearInts := fn(pool: IntPool): Unit {
     cap := ipCap[pid];
     var i := 0;
     loop i < cap {
-        list.setAt(mut ipSlotAlive, base + i, false);
-        list.setAt(mut ipSlotVal, base + i, 0);
-        list.setAt(mut ipSlotGen, base + i, ipSlotGen[base + i] + 1);
-        list.setAt(mut ipSlotNextFree, base + i, if i + 1 < cap { i + 1 } else { -1 });
+        mut ipSlotAlive.setAt(base + i, false);
+        mut ipSlotVal.setAt(base + i, 0);
+        mut ipSlotGen.setAt(base + i, ipSlotGen[base + i] + 1);
+        mut ipSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
         i += 1;
     }
-    list.setAt(mut ipCount, pid, 0);
-    list.setAt(mut ipFreeHead, pid, if cap > 0 { 0 } else { -1 });
+    (mut ipCount).setAt(pid, 0);
+    mut ipFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
 };
 
 /** Destroys `pool` and recycles its handle slot. */
 pub destroyInts := fn(pool: IntPool): Unit {
     if not validIntPool(pool) { return; }
     pid := pool.handle;
-    list.setAt(mut ipAlive, pid, false);
-    list.setAt(mut ipGen, pid, ipGen[pid] + 1);
-    list.pushBack(mut ipFreePools, pid);
+    mut ipAlive.setAt(pid, false);
+    mut ipGen.setAt(pid, ipGen[pid] + 1);
+    mut ipFreePools.pushBack(pid);
 };
 
 /* --- TextPool API --- */
@@ -364,47 +362,47 @@ pub destroyInts := fn(pool: IntPool): Unit {
 /** Creates a fixed-capacity generational pool storing `String` values. */
 pub createTexts := fn(capacity: Int): TextPool {
     cap := if capacity < 0 { 0 } else { capacity };
-    var fi := list.length(tpFreePools) - 1;
+    var fi := tpFreePools.length() - 1;
     loop fi >= 0 {
         pid := tpFreePools[fi];
         if tpCap[pid] >= cap {
-            last := list.length(tpFreePools) - 1;
-            if fi =!= last { list.setAt(mut tpFreePools, fi, tpFreePools[last]); }
-            _drop := list.popBack(mut tpFreePools);
-            list.setAt(mut tpCap, pid, cap);
+            last := tpFreePools.length() - 1;
+            if fi =!= last { mut tpFreePools.setAt(fi, tpFreePools[last]); }
+            _drop := mut tpFreePools.popBack();
+            mut tpCap.setAt(pid, cap);
             base := tpBase[pid];
             var i := 0;
             loop i < cap {
-                list.setAt(mut tpSlotAlive, base + i, false);
-                list.setAt(mut tpSlotGen, base + i, tpSlotGen[base + i] + 1);
-                list.setAt(mut tpSlotNextFree, base + i, if i + 1 < cap { i + 1 } else { -1 });
-                list.setAt(mut tpSlotVal, base + i, "");
+                mut tpSlotAlive.setAt(base + i, false);
+                mut tpSlotGen.setAt(base + i, tpSlotGen[base + i] + 1);
+                mut tpSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
+                mut tpSlotVal.setAt(base + i, "");
                 i += 1;
             }
-            list.setAt(mut tpCount, pid, 0);
-            list.setAt(mut tpFreeHead, pid, if cap > 0 { 0 } else { -1 });
-            list.setAt(mut tpAlive, pid, true);
+            (mut tpCount).setAt(pid, 0);
+            mut tpFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
+            mut tpAlive.setAt(pid, true);
             return (handle = pid, gen = tpGen[pid]);
         }
         fi -= 1;
     }
 
-    base := list.length(tpSlotGen);
+    base := tpSlotGen.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut tpSlotGen, 1);
-        list.pushBack(mut tpSlotAlive, false);
-        list.pushBack(mut tpSlotNextFree, if i + 1 < cap { i + 1 } else { -1 });
-        list.pushBack(mut tpSlotVal, "");
+        mut tpSlotGen.pushBack(1);
+        mut tpSlotAlive.pushBack(false);
+        mut tpSlotNextFree.pushBack(if i + 1 < cap { i + 1 } else { -1 });
+        mut tpSlotVal.pushBack("");
         i += 1;
     }
-    pid := list.length(tpBase);
-    list.pushBack(mut tpBase, base);
-    list.pushBack(mut tpCap, cap);
-    list.pushBack(mut tpCount, 0);
-    list.pushBack(mut tpFreeHead, if cap > 0 { 0 } else { -1 });
-    list.pushBack(mut tpGen, 1);
-    list.pushBack(mut tpAlive, true);
+    pid := tpBase.length();
+    mut tpBase.pushBack(base);
+    mut tpCap.pushBack(cap);
+    mut tpCount.pushBack(0);
+    mut tpFreeHead.pushBack(if cap > 0 { 0 } else { -1 });
+    mut tpGen.pushBack(1);
+    mut tpAlive.pushBack(true);
     (handle = pid, gen = 1)
 };
 
@@ -415,11 +413,11 @@ pub acquireText := fn(pool: TextPool, value: String): Handle {
     head := tpFreeHead[pid];
     if head < 0 { return INVALID_HANDLE; }
     gi := tpBase[pid] + head;
-    list.setAt(mut tpFreeHead, pid, tpSlotNextFree[gi]);
-    list.setAt(mut tpSlotNextFree, gi, -1);
-    list.setAt(mut tpSlotAlive, gi, true);
-    list.setAt(mut tpSlotVal, gi, value);
-    list.setAt(mut tpCount, pid, tpCount[pid] + 1);
+    mut tpFreeHead.setAt(pid, tpSlotNextFree[gi]);
+    mut tpSlotNextFree.setAt(gi, -1);
+    mut tpSlotAlive.setAt(gi, true);
+    mut tpSlotVal.setAt(gi, value);
+    mut tpCount.setAt(pid, tpCount[pid] + 1);
     (index = head, generation = tpSlotGen[gi])
 };
 
@@ -443,7 +441,7 @@ pub getText := fn(pool: TextPool, h: Handle): (found: Bool, value: String) {
 pub setText := fn(pool: TextPool, h: Handle, value: String): Bool {
     if not isTextAlive(pool, h) { return false; }
     gi := tpBase[pool.handle] + h.index;
-    list.setAt(mut tpSlotVal, gi, value);
+    mut tpSlotVal.setAt(gi, value);
     true
 };
 
@@ -452,12 +450,12 @@ pub releaseText := fn(pool: TextPool, h: Handle): Bool {
     if not isTextAlive(pool, h) { return false; }
     pid := pool.handle;
     gi := tpBase[pid] + h.index;
-    list.setAt(mut tpSlotAlive, gi, false);
-    list.setAt(mut tpSlotVal, gi, "");
-    list.setAt(mut tpSlotGen, gi, tpSlotGen[gi] + 1);
-    list.setAt(mut tpSlotNextFree, gi, tpFreeHead[pid]);
-    list.setAt(mut tpFreeHead, pid, h.index);
-    list.setAt(mut tpCount, pid, tpCount[pid] - 1);
+    mut tpSlotAlive.setAt(gi, false);
+    mut tpSlotVal.setAt(gi, "");
+    mut tpSlotGen.setAt(gi, tpSlotGen[gi] + 1);
+    mut tpSlotNextFree.setAt(gi, tpFreeHead[pid]);
+    mut tpFreeHead.setAt(pid, h.index);
+    mut tpCount.setAt(pid, tpCount[pid] - 1);
     true
 };
 
@@ -488,21 +486,21 @@ pub clearTexts := fn(pool: TextPool): Unit {
     cap := tpCap[pid];
     var i := 0;
     loop i < cap {
-        list.setAt(mut tpSlotAlive, base + i, false);
-        list.setAt(mut tpSlotVal, base + i, "");
-        list.setAt(mut tpSlotGen, base + i, tpSlotGen[base + i] + 1);
-        list.setAt(mut tpSlotNextFree, base + i, if i + 1 < cap { i + 1 } else { -1 });
+        mut tpSlotAlive.setAt(base + i, false);
+        mut tpSlotVal.setAt(base + i, "");
+        mut tpSlotGen.setAt(base + i, tpSlotGen[base + i] + 1);
+        mut tpSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
         i += 1;
     }
-    list.setAt(mut tpCount, pid, 0);
-    list.setAt(mut tpFreeHead, pid, if cap > 0 { 0 } else { -1 });
+    (mut tpCount).setAt(pid, 0);
+    mut tpFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
 };
 
 /** Destroys `pool` and recycles its handle slot. */
 pub destroyTexts := fn(pool: TextPool): Unit {
     if not validTextPool(pool) { return; }
     pid := pool.handle;
-    list.setAt(mut tpAlive, pid, false);
-    list.setAt(mut tpGen, pid, tpGen[pid] + 1);
-    list.pushBack(mut tpFreePools, pid);
+    mut tpAlive.setAt(pid, false);
+    mut tpGen.setAt(pid, tpGen[pid] + 1);
+    mut tpFreePools.pushBack(pid);
 };

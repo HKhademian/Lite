@@ -4,7 +4,6 @@ json := import "util/json";
 path := import "core/path";
 project := import "util/project";
 test := import "core/test";
-text := import "core/text";
 
 test.checkText("slug title", "Two Sum Sample", siteLib.slugToTitle("language/examples/two-sum_sample.lts"));
 test.checkText("env cli", "cli", siteLib.detectSourceEnvironment("fs := import \"core/file\";\nio := import \"core/io\";\n"));
@@ -29,19 +28,19 @@ built := siteLib.collectPlaygroundLibraryJson(syn, samplesJson);
 test.checkText("synthetic err", "", built.error);
 test.checkBool("synthetic ok", true, built.ok);
 test.checkBool("valid json", true, json.validate(built.jsonText).ok);
-test.checkBool("contains sample", true, text.indexOfText(built.jsonText, "\"id\":\"sample/s-1\"", 0) >= 0);
-test.checkBool("skips helper example", false, text.indexOfText(built.jsonText, "\"file\":\"language/examples/helpers/h.lts\"", 0) >= 0);
-test.checkBool("collects extraModules", true, text.indexOfText(built.jsonText, "\"./helpers/h.lts\"", 0) >= 0);
-test.checkBool("detects cli env", true, text.indexOfText(built.jsonText, "\"environment\":\"cli\"", 0) >= 0);
-test.checkBool("marks reject case", true, text.indexOfText(built.jsonText, "\"badge\":\"Reject Case\"", 0) >= 0);
-test.checkBool("extracts handbook piece", true, text.indexOfText(built.jsonText, "\"title\":\"Hello Lite!\"", 0) >= 0);
+test.checkBool("contains sample", true, built.jsonText.indexOf("\"id\":\"sample/s-1\"", 0) >= 0);
+test.checkBool("skips helper example", false, built.jsonText.indexOf("\"file\":\"language/examples/helpers/h.lts\"", 0) >= 0);
+test.checkBool("collects extraModules", true, built.jsonText.indexOf("\"./helpers/h.lts\"", 0) >= 0);
+test.checkBool("detects cli env", true, built.jsonText.indexOf("\"environment\":\"cli\"", 0) >= 0);
+test.checkBool("marks reject case", true, built.jsonText.indexOf("\"badge\":\"Reject Case\"", 0) >= 0);
+test.checkBool("extracts handbook piece", true, built.jsonText.indexOf("\"title\":\"Hello Lite!\"", 0) >= 0);
 
 root := project.findRepoRoot();
 test.checkBool("repo root ok", true, root =!= "");
 realOut := siteLib.collectPlaygroundLibraryJson(root, "[]");
 test.checkText("real repo err", "", realOut.error);
 test.checkBool("real repo ok", true, realOut.ok);
-test.checkBool("real repo has handbook hello-lite", true, text.indexOfText(realOut.jsonText, "\"slug\":\"hello-lite\"", 0) >= 0);
+test.checkBool("real repo has handbook hello-lite", true, realOut.jsonText.indexOf("\"slug\":\"hello-lite\"", 0) >= 0);
 
 _rm := fs.remove(tmpRes.path);
 test.done("util-site-library");

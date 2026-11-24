@@ -5,7 +5,6 @@ io := import "core/io";
 path := import "core/path";
 proc := import "core/process";
 text := import "core/text";
-list := import "core/list";
 docgen := import "util/docgen";
 docsUtil := import "util/docs";
 mdHtml := import "util/markdown-html";
@@ -13,14 +12,14 @@ project := import "util/project";
 
 splitNonEmptyLines := fn(raw: String): List<String> {
     lines: mut List<String> = [];
-    size := text.length(raw);
+    size := raw.length();
     var pos := 0;
     loop pos <= size {
-        nl := text.indexOfText(raw, "\n", pos);
+        nl := raw.indexOf("\n", pos);
         end := if nl < 0 { size } else { nl };
-        trimmed := text.trim(text.slice(raw, pos, end));
+        trimmed := raw.slice(pos, end).trim();
         if trimmed =!= "" {
-            list.pushBack(mut lines, trimmed);
+            mut lines.pushBack(trimmed);
         }
         if nl < 0 { break; }
         pos = nl + 1;
@@ -38,9 +37,9 @@ renderSelectedJson := fn(rootDir: String, targets: List<String>): String {
             io.exit(1);
         }
         relPath := path.relative(rootDir, fullFile);
-        list.pushBack(mut entries, mdHtml.renderMarkdownJson(readRes.text, relPath));
+        mut entries.pushBack(mdHtml.renderMarkdownJson(readRes.text, relPath));
     }
-    if list.listCountText(entries) == 0 { return "[]"; }
+    if entries.length() == 0 { return "[]"; }
     "[\n  " + text.joinTexts(entries, ",\n  ") + "\n]"
 };
 
@@ -51,9 +50,9 @@ run := fn(rawArgs: List<String>): Unit {
     envRoot := proc.envGet("LITE_DOCS_ROOT");
     rootDir := if envRoot.found and envRoot.value =!= "" { envRoot.value } else { project.findRepoRoot() };
 
-    if list.listCountText(args) == 1 and args[0] == "--check" {
+    if args.length() == 1 and args[0] == "--check" {
         failures := docsUtil.checkDocuments(rootDir);
-        if list.listCountText(failures) > 0 {
+        if failures.length() > 0 {
             io.errorLine(text.joinTexts(failures, "\n"));
             io.exit(1);
         }
@@ -61,34 +60,34 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(0);
     }
 
-    if list.listCountText(args) == 1 and args[0] == "--modules-json" {
+    if args.length() == 1 and args[0] == "--modules-json" {
         io.outputLine(docgen.extractAllModulesJson(rootDir));
         io.exit(0);
     }
 
-    if list.listCountText(args) > 0 and args[0] == "--render-json" {
-        _flag := list.popFront(mut args);
-        if list.listCountText(args) > 0 {
+    if args.length() > 0 and args[0] == "--render-json" {
+        _flag := mut args.popFront();
+        if args.length() > 0 {
             io.outputLine(renderSelectedJson(rootDir, args));
             io.exit(0);
         }
         stdinPaths := splitNonEmptyLines(io.inputAll(""));
-        if list.listCountText(stdinPaths) > 0 {
+        if stdinPaths.length() > 0 {
             io.outputLine(renderSelectedJson(rootDir, stdinPaths));
             io.exit(0);
         }
         allDocFiles := docsUtil.listDocFiles(rootDir);
         relDocFiles: mut List<String> = [];
         loop allDocFiles as fullDoc {
-            list.pushBack(mut relDocFiles, path.relative(rootDir, fullDoc));
+            mut relDocFiles.pushBack(path.relative(rootDir, fullDoc));
         }
         io.outputLine(renderSelectedJson(rootDir, relDocFiles));
         io.exit(0);
     }
 
     var isJson := false;
-    if list.listCountText(args) > 0 and args[0] == "--json" {
-        _flag := list.popFront(mut args);
+    if args.length() > 0 and args[0] == "--json" {
+        _flag := mut args.popFront();
         isJson = true;
     }
     query := text.joinTexts(args, " ");
@@ -110,7 +109,7 @@ run := fn(rawArgs: List<String>): Unit {
 
     searched := docsUtil.searchDocsText(rootDir, query);
     if searched.count == 0 {
-        io.errorLine("no documentation matches: " + text.toLowerAscii(query));
+        io.errorLine("no documentation matches: " + query.toLowerAscii());
         io.exit(1);
     }
     io.outputLine(searched.text);

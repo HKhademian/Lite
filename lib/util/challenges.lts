@@ -5,9 +5,6 @@ fs := import "core/file";
 path := import "core/path";
 text := import "core/text";
 list := import "core/list";
-map := import "core/map";
-set := import "core/set";
-integer := import "core/int";
 crypto := import "core/crypto";
 unicode := import "core/unicode";
 collections := import "util/collections";
@@ -19,9 +16,9 @@ isJsonSpace := fn(ch: String): Bool {
 
 pub skipJsonSpace := fn(source: String, start: Int): Int {
     var pos := start;
-    size := text.length(source);
+    size := source.length();
     loop pos < size {
-        if not isJsonSpace(text.at(source, pos)) { return pos; }
+        if not isJsonSpace(source.at(pos)) { return pos; }
         pos = pos + 1;
     }
     pos
@@ -29,12 +26,12 @@ pub skipJsonSpace := fn(source: String, start: Int): Int {
 
 pub isJsonObjectAt := fn(source: String, start: Int): Bool {
     pos := skipJsonSpace(source, start);
-    pos < text.length(source) and text.at(source, pos) == "{"
+    pos < source.length() and source.at(pos) == "{"
 };
 
 pub isJsonArrayAt := fn(source: String, start: Int): Bool {
     pos := skipJsonSpace(source, start);
-    pos < text.length(source) and text.at(source, pos) == "["
+    pos < source.length() and source.at(pos) == "["
 };
 
 pub readNormalizedText := fn(filePath: String): (ok: Bool, text: String, error: String) {
@@ -44,12 +41,12 @@ pub readNormalizedText := fn(filePath: String): (ok: Bool, text: String, error: 
     parts: mut List<String> = [];
     var segStart := 0;
     var i := 0;
-    size := text.length(raw);
+    size := raw.length();
     loop i < size {
-        if text.at(raw, i) == "\r" {
-            list.pushBack(mut parts, text.slice(raw, segStart, i));
-            list.pushBack(mut parts, "\n");
-            if i + 1 < size and text.at(raw, i + 1) == "\n" {
+        if raw.at(i) == "\r" {
+            mut parts.pushBack(raw.slice(segStart, i));
+            mut parts.pushBack("\n");
+            if i + 1 < size and raw.at(i + 1) == "\n" {
                 i = i + 1;
             }
             segStart = i + 1;
@@ -57,20 +54,20 @@ pub readNormalizedText := fn(filePath: String): (ok: Bool, text: String, error: 
         i = i + 1;
     }
     if segStart == 0 { return (ok = true, text = raw, error = ""); }
-    list.pushBack(mut parts, text.slice(raw, segStart, size));
+    (mut parts).pushBack(raw.slice(segStart, size));
     (ok = true, text = text.joinTexts(parts, ""), error = "")
 };
 
 pub splitJsonLines := fn(raw: String): List<String> {
     out: mut List<String> = [];
-    size := text.length(raw);
+    size := raw.length();
     var pos := 0;
     loop pos < size {
-        nl := text.indexOfText(raw, "\n", pos);
+        nl := raw.indexOf("\n", pos);
         end := if nl < 0 { size } else { nl };
-        line := text.trim(text.slice(raw, pos, end));
+        line := raw.slice(pos, end).trim();
         if line =!= "" {
-            list.pushBack(mut out, line);
+            mut out.pushBack(line);
         }
         if nl < 0 { break; }
         pos = nl + 1;
@@ -84,15 +81,15 @@ pub formatSortedCountsJson := fn(values: List<String>): String {
     keys: mut List<String> = [];
     counts: mut List<Int> = [];
     loop freq as entry {
-        list.pushBack(mut keys, entry.key);
-        list.pushBack(mut counts, entry.value);
+        mut keys.pushBack(entry.key);
+        mut counts.pushBack(entry.value);
     }
-    order := collections.sortIndicesBy(list.listCountText(keys), fn(a: Int, b: Int): Bool {
+    order := collections.sortIndicesBy(keys.length(), fn(a: Int, b: Int): Bool {
         counts[a] >= counts[b]
     });
     entries: mut List<String> = [];
     loop order as idx {
-        list.pushBack(mut entries, json.quoteString(keys[idx]) + ":" + integer.intText(counts[idx]));
+        mut entries.pushBack(json.quoteString(keys[idx]) + ":" + counts[idx].toText());
     }
     "{" + text.joinTexts(entries, ",") + "}"
 };
@@ -102,7 +99,7 @@ formatCompactIntObject := fn(source: String, objPos: Int): String {
     loop json.objectKeys(source, objPos) as k {
         vRes := json.readObjectInt(source, objPos, k);
         if vRes.found and vRes.ok {
-            list.pushBack(mut entries, json.quoteString(k) + ":" + integer.intText(vRes.value));
+            mut entries.pushBack(json.quoteString(k) + ":" + vRes.value.toText());
         }
     }
     "{" + text.joinTexts(entries, ",") + "}"
@@ -112,10 +109,10 @@ checkScalarFieldNonEmpty := fn(source: String, objPos: Int, key: String): Bool {
     f := json.findObjectField(source, objPos, key);
     if not f.found { return false; }
     sRes := json.readStringAt(source, f.valuePos);
-    if sRes.ok { return text.trim(sRes.value) =!= ""; }
+    if sRes.ok { return sRes.value.trim() =!= ""; }
     span := json.valueSpan(source, f.valuePos);
     if not span.ok { return false; }
-    raw := text.trim(text.slice(source, span.start, span.end));
+    raw := source.slice(span.start, span.end).trim();
     raw =!= "" and raw =!= "null"
 };
 
@@ -127,7 +124,7 @@ validateBenchmarkCasesArray := fn(itemId: String, caseFilePath: String, expected
         return (ok = false, actualCount = 0, error = caseFilePath + ": expected JSON array");
     }
     offsets := json.arrayElementOffsets(src, skipJsonSpace(src, 0));
-    actual := list.listCountInt(offsets);
+    actual := offsets.length();
     if actual =!= expectedCount {
         return (ok = false, actualCount = 0, error = itemId + ": case count mismatch");
     }
@@ -163,7 +160,7 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
     itemsRead := fs.readText(path.join(benchDir, "items.jsonl"));
     if not itemsRead.ok { return (ok = false, summaryText = "", error = itemsRead.error); }
     itemLines := splitJsonLines(itemsRead.text);
-    rowCount := list.listCountText(itemLines);
+    rowCount := itemLines.length();
 
     ids: mut List<String> = [];
     idSet: mut Set<String>;
@@ -177,12 +174,12 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
         if not idRes.found or not idRes.ok or not srcRes.found or not srcRes.ok {
             return (ok = false, summaryText = "", error = "items.jsonl: missing id or source");
         }
-        if set.has(idSet, idRes.value) {
+        if idSet.has(idRes.value) {
             return (ok = false, summaryText = "", error = "duplicate benchmark ids");
         }
-        set.add(mut idSet, idRes.value);
-        list.pushBack(mut ids, idRes.value);
-        list.pushBack(mut sources, srcRes.value);
+        (mut idSet).add(idRes.value);
+        mut ids.pushBack(idRes.value);
+        mut sources.pushBack(srcRes.value);
     }
 
     if totalRes.value =!= rowCount {
@@ -206,7 +203,7 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
     loop dirNames as dn {
         if fs.kind(path.join(itemsDir, dn)) == fs.FILE_KIND_DIR {
             dirCount = dirCount + 1;
-            if not set.has(idSet, dn) {
+            if not idSet.has(dn) {
                 return (ok = false, summaryText = "", error = "item directories differ from items.jsonl");
             }
         }
@@ -245,7 +242,7 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
             return (ok = false, summaryText = "", error = rowId + ": unsupported harness " + mHar.value);
         }
         harness := mHar.value;
-        list.pushBack(mut formats, harness);
+        mut formats.pushBack(harness);
 
         mStmt := json.readObjectString(meta, 0, "statement");
         if not mStmt.found or not mStmt.ok {
@@ -256,7 +253,7 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
             return (ok = false, summaryText = "", error = rowId + ": statement missing or too short");
         }
         stmtRead := readNormalizedText(stmtPath);
-        if not stmtRead.ok or text.length(text.trim(stmtRead.text)) < 50 {
+        if not stmtRead.ok or stmtRead.text.trim().length() < 50 {
             return (ok = false, summaryText = "", error = rowId + ": statement missing or too short");
         }
 
@@ -265,17 +262,17 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
             return (ok = false, summaryText = "", error = rowId + ": missing reference solution metadata");
         }
         refOffsets := json.arrayElementOffsets(meta, refField.valuePos);
-        if list.listCountInt(refOffsets) == 0 {
+        if refOffsets.length() == 0 {
             return (ok = false, summaryText = "", error = rowId + ": missing reference solution metadata");
         }
         loop refOffsets as rPos {
             rUrl := json.readObjectString(meta, rPos, "url");
-            if not rUrl.found or not text.startsWithAt(rUrl.value, 0, "https://") {
+            if not rUrl.found or not rUrl.value.startsWithAt(0, "https://") {
                 return (ok = false, summaryText = "", error = rowId + ": bad reference url");
             }
         }
         mUrl := json.readObjectString(meta, 0, "url");
-        if not mUrl.found or not text.startsWithAt(mUrl.value, 0, "https://") {
+        if not mUrl.found or not mUrl.value.startsWithAt(0, "https://") {
             return (ok = false, summaryText = "", error = rowId + ": bad source url");
         }
 
@@ -293,7 +290,7 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
                 return (ok = false, summaryText = "", error = rowId + ": missing public answer");
             }
             ansRead := readNormalizedText(ansPath);
-            if not ansRead.ok or text.trim(ansRead.text) == "" {
+            if not ansRead.ok or ansRead.text.trim() == "" {
                 return (ok = false, summaryText = "", error = rowId + ": missing public answer");
             }
             publicTotal = publicTotal + 1;
@@ -325,9 +322,9 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
         ri = ri + 1;
     }
 
-    summary := "OK: " + integer.intText(rowCount) + " benchmark items\n"
+    summary := "OK: " + rowCount.toText() + " benchmark items\n"
     + "    formats: " + formatSortedCountsJson(formats) + "\n"
-    + "    public cases: " + integer.intText(publicTotal) + "  hidden cases: " + integer.intText(hiddenTotal) + "\n"
+    + "    public cases: " + publicTotal.toText() + "  hidden cases: " + hiddenTotal.toText() + "\n"
     + "    sources: " + formatCompactIntObject(idxJson, sourcesField.valuePos);
     (ok = true, summaryText = summary, error = "")
 };
@@ -346,13 +343,13 @@ pub runValidateBenchmarkCommand := fn(rootDir: String): Int {
 
 pub compareTextLex := fn(a: String, b: String): Int {
     if a == b { return 0; }
-    la := text.length(a);
-    lb := text.length(b);
+    la := a.length();
+    lb := b.length();
     n := if la < lb { la } else { lb };
     var i := 0;
     loop i < n {
-        ca := text.at(a, i);
-        cb := text.at(b, i);
+        ca := a.at(i);
+        cb := b.at(i);
         if ca =!= cb {
             pa := unicode.toCodePoints(ca)[0];
             pb := unicode.toCodePoints(cb)[0];
@@ -365,11 +362,11 @@ pub compareTextLex := fn(a: String, b: String): Int {
 
 /** Sorts a `List<String>` lexicographically in O(N log N) via bottom-up merge sort. */
 pub sortTexts := fn(items: List<String>): List<String> {
-    n := list.listCountText(items);
+    n := items.length();
     if n <= 1 { return items; }
     var cur: mut List<String> = [];
     loop items as it {
-        list.pushBack(mut cur, it);
+        mut cur.pushBack(it);
     }
     var width := 1;
     loop width < n {
@@ -382,16 +379,16 @@ pub sortTexts := fn(items: List<String>): List<String> {
             var ri := mid;
             loop li < mid or ri < rightEnd {
                 if li >= mid {
-                    list.pushBack(mut next, cur[ri]);
+                    mut next.pushBack(cur[ri]);
                     ri = ri + 1;
                 } else if ri >= rightEnd {
-                    list.pushBack(mut next, cur[li]);
+                    mut next.pushBack(cur[li]);
                     li = li + 1;
                 } else if compareTextLex(cur[li], cur[ri]) <= 0 {
-                    list.pushBack(mut next, cur[li]);
+                    mut next.pushBack(cur[li]);
                     li = li + 1;
                 } else {
-                    list.pushBack(mut next, cur[ri]);
+                    mut next.pushBack(cur[ri]);
                     ri = ri + 1;
                 }
             }
@@ -406,7 +403,7 @@ pub sortTexts := fn(items: List<String>): List<String> {
 /** Returns true if `target` appears in pre-sorted `sortedItems` using binary search. */
 pub sortedContainsText := fn(sortedItems: List<String>, target: String): Bool {
     var lo := 0;
-    var hi := list.listCountText(sortedItems) - 1;
+    var hi := sortedItems.length() - 1;
     loop lo <= hi {
         mid := lo + (hi - lo) / 2;
         cmp := compareTextLex(sortedItems[mid], target);
@@ -422,7 +419,7 @@ pub sortedContainsText := fn(sortedItems: List<String>, target: String): Bool {
 
 formatFrequencyLines := fn(values: List<String>, indent: String, nameWidth: Int): String {
     sortedVals := sortTexts(values);
-    n := list.listCountText(sortedVals);
+    n := sortedVals.length();
     keys: mut List<String> = [];
     counts: mut List<Int> = [];
     var i := 0;
@@ -433,44 +430,44 @@ formatFrequencyLines := fn(values: List<String>, indent: String, nameWidth: Int)
             if sortedVals[i + cnt] =!= curKey { break; }
             cnt = cnt + 1;
         }
-        list.pushBack(mut keys, curKey);
-        list.pushBack(mut counts, cnt);
+        (mut keys).pushBack(curKey);
+        mut counts.pushBack(cnt);
         i = i + cnt;
     }
 
-    order := collections.sortIndicesBy(list.listCountText(keys), fn(a: Int, b: Int): Bool {
+    order := collections.sortIndicesBy(keys.length(), fn(a: Int, b: Int): Bool {
         counts[a] >= counts[b]
     });
     lines: mut List<String> = [];
     loop order as idx {
         kPad := padRight(keys[idx], nameWidth);
-        cPad := padLeft(integer.intText(counts[idx]), 5);
-        list.pushBack(mut lines, indent + kPad + " " + cPad);
+        cPad := padLeft(counts[idx].toText(), 5);
+        mut lines.pushBack(indent + kPad + " " + cPad);
     }
     text.joinTexts(lines, "\n")
 };
 
 pub padRight := fn(s: String, width: Int): String {
-    len := text.length(s);
+    len := s.length();
     if len >= width { return s; }
-    s + text.repeatText(" ", width - len)
+    s + " ".repeat(width - len)
 };
 
 pub padLeft := fn(s: String, width: Int): String {
-    len := text.length(s);
+    len := s.length();
     if len >= width { return s; }
-    text.repeatText(" ", width - len) + s
+    " ".repeat(width - len) + s
 };
 
 pub isLowerSlugText := fn(s: String): Bool {
-    size := text.length(s);
+    size := s.length();
     if size == 0 { return false; }
-    first := text.at(s, 0);
-    if text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789", first, 0) < 0 { return false; }
+    first := s.at(0);
+    if "abcdefghijklmnopqrstuvwxyz0123456789".indexOf(first, 0) < 0 { return false; }
     var i := 1;
     loop i < size {
-        ch := text.at(s, i);
-        if text.indexOfText("abcdefghijklmnopqrstuvwxyz0123456789-", ch, 0) < 0 { return false; }
+        ch := s.at(i);
+        if "abcdefghijklmnopqrstuvwxyz0123456789-".indexOf(ch, 0) < 0 { return false; }
         i = i + 1;
     }
     true
@@ -482,18 +479,18 @@ pub parseScaledDecimal1000 := fn(source: String, objPos: Int, key: String): (ok:
     if not f.found { return (ok = false, scaled = 0, isIntLiteral = false, raw = ""); }
     span := json.valueSpan(source, f.valuePos);
     if not span.ok { return (ok = false, scaled = 0, isIntLiteral = false, raw = ""); }
-    raw := text.trim(text.slice(source, span.start, span.end));
+    raw := source.slice(span.start, span.end).trim();
     res := parseScaledNumberText(raw);
     (ok = res.ok, scaled = res.scaled, isIntLiteral = res.isIntLiteral, raw = raw)
 };
 
 /** Parses decimal text (e.g. `4`, `1.5`, `-2.5`) into thousandths (`Int`). */
 pub parseScaledNumberText := fn(raw: String): (ok: Bool, scaled: Int, isIntLiteral: Bool) {
-    size := text.length(raw);
+    size := raw.length();
     if size == 0 { return (ok = false, scaled = 0, isIntLiteral = false); }
     var neg := false;
     var start := 0;
-    if text.at(raw, 0) == "-" {
+    if raw.at(0) == "-" {
         neg = true;
         start = 1;
         if size == 1 { return (ok = false, scaled = 0, isIntLiteral = false); }
@@ -501,29 +498,29 @@ pub parseScaledNumberText := fn(raw: String): (ok: Bool, scaled: Int, isIntLiter
     var dot := -1;
     var i := start;
     loop i < size {
-        ch := text.at(raw, i);
+        ch := raw.at(i);
         if ch == "." {
             if dot >= 0 { return (ok = false, scaled = 0, isIntLiteral = false); }
             dot = i;
-        } else if not text.isDigit(ch) {
+        } else if not ch.isDigit() {
             return (ok = false, scaled = 0, isIntLiteral = false);
         }
         i = i + 1;
     }
-    wholeStr := if dot < 0 { text.slice(raw, start, size) } else { text.slice(raw, start, dot) };
+    wholeStr := if dot < 0 { raw.slice(start, size) } else { raw.slice(start, dot) };
     if wholeStr == "" { return (ok = false, scaled = 0, isIntLiteral = false); }
-    wholeParsed := text.textToInt(wholeStr);
+    wholeParsed := wholeStr.toInt();
     if not wholeParsed.ok { return (ok = false, scaled = 0, isIntLiteral = false); }
     var frac := 0;
     var isInt := dot < 0;
     if dot >= 0 {
-        fracStr := text.slice(raw, dot + 1, size);
+        fracStr := raw.slice(dot + 1, size);
         if fracStr == "" { return (ok = false, scaled = 0, isIntLiteral = false); }
         var place := 100;
         var fi := 0;
         var allZero := true;
-        loop fi < text.length(fracStr) {
-            d := text.textToInt(text.at(fracStr, fi));
+        loop fi < fracStr.length() {
+            d := fracStr.at(fi).toInt();
             if not d.ok { return (ok = false, scaled = 0, isIntLiteral = false); }
             if d.value =!= 0 { allZero = false; }
             if place >= 1 {
@@ -548,7 +545,7 @@ checkStrictStringArrayField := fn(source: String, objPos: Int, key: String): (ok
         s := json.readStringAt(source, elPos);
         if not s.ok { return (ok = false, itemsEmpty = true); }
     }
-    (ok = true, itemsEmpty = list.listCountInt(offsets) == 0)
+    (ok = true, itemsEmpty = offsets.length() == 0)
 };
 
 pub readStringArray := fn(source: String, objPos: Int, key: String): List<String> {
@@ -557,7 +554,7 @@ pub readStringArray := fn(source: String, objPos: Int, key: String): List<String
     if not f.found or not isJsonArrayAt(source, f.valuePos) { return out; }
     loop json.arrayElementOffsets(source, f.valuePos) as elPos {
         s := json.readStringAt(source, elPos);
-        if s.ok { list.pushBack(mut out, s.value); }
+        if s.ok { mut out.pushBack(s.value); }
     }
     out
 };
@@ -567,7 +564,7 @@ isNullField := fn(source: String, objPos: Int, key: String): Bool {
     if not f.found { return false; }
     span := json.valueSpan(source, f.valuePos);
     if not span.ok { return false; }
-    text.trim(text.slice(source, span.start, span.end)) == "null"
+    source.slice(span.start, span.end).trim() == "null"
 };
 
 /** Validates `benchmark/challenges/data/` and `schema/taxonomy.json` (`benchmark/challenges/tools/validate.ts`). */
@@ -596,7 +593,7 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
     rawTopicIds: mut List<String> = [];
     loop json.arrayElementOffsets(taxRead.text, taxTopicsField.valuePos) as tPos {
         tid := json.readObjectString(taxRead.text, tPos, "id");
-        if tid.found and tid.ok { list.pushBack(mut rawTopicIds, tid.value); }
+        if tid.found and tid.ok { mut rawTopicIds.pushBack(tid.value); }
     }
     sortedTopics := sortTexts(rawTopicIds);
 
@@ -608,7 +605,7 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
     strArrKeys: List<String> = ["formats", "languages", "raw_topics", "tags"];
 
     lines := splitJsonLines(chRead.text);
-    recCount := list.listCountText(lines);
+    recCount := lines.length();
     rawIds: mut List<String> = [];
     usedTopics: mut List<String> = [];
     var lineNo := 0;
@@ -616,7 +613,7 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
     loop lines as line {
         lineNo = lineNo + 1;
         if not json.validate(line).ok or not isJsonObjectAt(line, 0) {
-            return (ok = false, summaryText = "", error = "challenges.jsonl:" + integer.intText(lineNo) + ": invalid JSON");
+            return (ok = false, summaryText = "", error = "challenges.jsonl:" + lineNo.toText() + ": invalid JSON");
         }
         idRes := json.readObjectString(line, 0, "id");
         idLabel := if idRes.found and idRes.ok { idRes.value } else { "<missing id>" };
@@ -631,10 +628,10 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
             return (ok = false, summaryText = "", error = idLabel + ": bad id");
         }
         cid := idRes.value;
-        list.pushBack(mut rawIds, cid);
+        mut rawIds.pushBack(cid);
 
         titleRes := json.readObjectString(line, 0, "title");
-        if not titleRes.found or not titleRes.ok or text.trim(titleRes.value) == "" {
+        if not titleRes.found or not titleRes.ok or titleRes.value.trim() == "" {
             return (ok = false, summaryText = "", error = cid + ": empty title");
         }
         srcRes := json.readObjectString(line, 0, "source");
@@ -642,7 +639,7 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
             return (ok = false, summaryText = "", error = cid + ": unknown source " + srcRes.value);
         }
         urlRes := json.readObjectString(line, 0, "url");
-        if not urlRes.found or not text.startsWithAt(urlRes.value, 0, "https://") {
+        if not urlRes.found or not urlRes.value.startsWithAt(0, "https://") {
             return (ok = false, summaryText = "", error = cid + ": bad url " + urlRes.value);
         }
         catRes := json.readObjectString(line, 0, "category");
@@ -679,7 +676,7 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
             if not sortedContainsText(sortedTopics, tp) {
                 return (ok = false, summaryText = "", error = cid + ": topic " + tp + " not in schema/taxonomy.json");
             }
-            list.pushBack(mut usedTopics, tp);
+            (mut usedTopics).pushBack(tp);
         }
 
         diffField := json.findObjectField(line, 0, "difficulty");
@@ -694,7 +691,7 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
         if not normRes.ok or normRes.scaled < 1000 or normRes.scaled > 10000 {
             return (ok = false, summaryText = "", error = cid + ": normalized difficulty out of range");
         }
-        if list.listCountText(rTopics) == 0 {
+        if rTopics.length() == 0 {
             if not isNullField(line, 0, "primary_topic") {
                 return (ok = false, summaryText = "", error = cid + ": primary_topic must be topics[0] or null for empty topics");
             }
@@ -723,7 +720,7 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
         lId := json.readObjectString(lLine, 0, "id").value;
         lCnt := json.readObjectInt(lLine, 0, "count").value;
         cIds := readStringArray(lLine, 0, "challenge_ids");
-        if lCnt =!= list.listCountText(cIds) {
+        if lCnt =!= cIds.length() {
             return (ok = false, summaryText = "", error = "list " + lId + ": count does not match challenge_ids");
         }
         loop cIds as cid {
@@ -753,23 +750,23 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
         tRead := fs.readText(testsPath);
         if not tRead.ok { return (ok = false, summaryText = "", error = tRead.error); }
         tLines := splitJsonLines(tRead.text);
-        testsCount = list.listCountText(tLines);
+        testsCount = tLines.length();
         rawTestIds: mut List<String> = [];
         var tLineNo := 0;
         loop tLines as tLine {
             tLineNo = tLineNo + 1;
             if not json.validate(tLine).ok or not isJsonObjectAt(tLine, 0) {
-                return (ok = false, summaryText = "", error = "tests.jsonl:" + integer.intText(tLineNo) + ": invalid JSON");
+                return (ok = false, summaryText = "", error = "tests.jsonl:" + tLineNo.toText() + ": invalid JSON");
             }
             tcId := json.readObjectString(tLine, 0, "challenge_id").value;
-            list.pushBack(mut rawTestIds, tcId);
+            mut rawTestIds.pushBack(tcId);
             pubF := json.findObjectField(tLine, 0, "public");
             hidF := json.findObjectField(tLine, 0, "hidden");
             emptyInts: List<Int> = [];
             pubOff := if pubF.found and isJsonArrayAt(tLine, pubF.valuePos) { json.arrayElementOffsets(tLine, pubF.valuePos) } else { emptyInts };
             hidOff := if hidF.found and isJsonArrayAt(tLine, hidF.valuePos) { json.arrayElementOffsets(tLine, hidF.valuePos) } else { emptyInts };
-            pubN := list.listCountInt(pubOff);
-            hidN := list.listCountInt(hidOff);
+            pubN := pubOff.length();
+            hidN := hidOff.length();
             if pubN > 0 { withPub = withPub + 1; }
             if hidN > 0 { withHid = withHid + 1; }
 
@@ -832,19 +829,19 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
     sortedUsed := sortTexts(usedTopics);
     var usedUnique := 0;
     var ui := 0;
-    loop ui < list.listCountText(sortedUsed) {
+    loop ui < sortedUsed.length() {
         if ui == 0 or sortedUsed[ui] =!= sortedUsed[ui - 1] {
             usedUnique = usedUnique + 1;
         }
         ui = ui + 1;
     }
 
-    var summary := "OK: " + integer.intText(recCount) + " challenges, "
-    + integer.intText(list.listCountText(listLines)) + " lists, "
-    + integer.intText(list.listCountText(sortedTopics)) + " topics, "
-    + integer.intText(usedUnique) + " used";
+    var summary := "OK: " + recCount.toText() + " challenges, "
+    + listLines.length().toText() + " lists, "
+    + sortedTopics.length().toText() + " topics, "
+    + usedUnique.toText() + " used";
     if hasTests {
-        summary = summary + "\n    tests: " + integer.intText(withPub) + " with public cases, " + integer.intText(withHid) + " with held-out cases";
+        summary = summary + "\n    tests: " + withPub.toText() + " with public cases, " + withHid.toText() + " with held-out cases";
     }
     (ok = true, summaryText = summary, error = "")
 };
@@ -873,7 +870,7 @@ pub difficultyBand := fn(scaled1000: Int): String {
 pub formatDifficultyCsv := fn(source: String, scaled1000: Int, rawText: String, isIntLiteral: Bool): String {
     if source =!= "cryptopals" and isIntLiteral {
         whole := scaled1000 / 1000;
-        return integer.intText(whole) + ".0";
+        return whole.toText() + ".0";
     }
     rawText
 };
@@ -882,12 +879,12 @@ pub asciiLower := fn(s: String): String {
     out: mut List<String> = [];
     upper := "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     lower := "abcdefghijklmnopqrstuvwxyz";
-    sLen := text.length(s);
+    sLen := s.length();
     var i := 0;
     loop i < sLen {
-        ch := text.at(s, i);
-        pos := text.indexOfText(upper, ch, 0);
-        list.pushBack(mut out, if pos >= 0 { text.at(lower, pos) } else { ch });
+        ch := s.at(i);
+        pos := upper.indexOf(ch, 0);
+        mut out.pushBack(if pos >= 0 { lower.at(pos) } else { ch });
         i = i + 1;
     }
     text.joinTexts(out, "")
@@ -895,14 +892,14 @@ pub asciiLower := fn(s: String): String {
 
 splitTrimmedCsv := fn(raw: String): List<String> {
     out: mut List<String> = [];
-    size := text.length(raw);
+    size := raw.length();
     var start := 0;
     var i := 0;
     loop i <= size {
         atEnd := i == size;
-        if atEnd or text.at(raw, i) == "," {
-            part := text.trim(text.slice(raw, start, i));
-            if part =!= "" { list.pushBack(mut out, part); }
+        if atEnd or raw.at(i) == "," {
+            part := raw.slice(start, i).trim();
+            if part =!= "" { mut out.pushBack(part); }
             start = i + 1;
         }
         i = i + 1;
@@ -921,12 +918,12 @@ queryOptionKind := fn(name: String): String {
 
 /** Validates query tool CLI arguments matching `common.ts:options` error semantics. */
 pub checkQueryOptions := fn(args: List<String>): (ok: Bool, error: String) {
-    count := list.listCountText(args);
+    count := args.length();
     var i := 0;
     loop i < count {
         arg := args[i];
-        eq := text.indexOfText(arg, "=", 0);
-        name := if eq < 0 { arg } else { text.slice(arg, 0, eq) };
+        eq := arg.indexOf("=", 0);
+        name := if eq < 0 { arg } else { arg.slice(0, eq) };
         kind := queryOptionKind(name);
         if kind == "" {
             return (ok = false, error = "unknown option " + name);
@@ -934,8 +931,8 @@ pub checkQueryOptions := fn(args: List<String>): (ok: Bool, error: String) {
         if kind == "flag" {
             if eq >= 0 { return (ok = false, error = name + " does not accept a value"); }
         } else {
-            val := if eq >= 0 { text.slice(arg, eq + 1, text.length(arg)) } else { if i + 1 < count { args[i + 1] } else { "__MISSING__" } };
-            if val == "__MISSING__" or text.startsWithAt(val, 0, "--") {
+            val := if eq >= 0 { arg.slice(eq + 1, arg.length()) } else { if i + 1 < count { args[i + 1] } else { "__MISSING__" } };
+            if val == "__MISSING__" or val.startsWithAt(0, "--") {
                 return (ok = false, error = "missing value for " + name);
             }
             if eq < 0 { i = i + 1; }
@@ -946,12 +943,12 @@ pub checkQueryOptions := fn(args: List<String>): (ok: Bool, error: String) {
 };
 
 hasQueryFlag := fn(args: List<String>, target: String): Bool {
-    count := list.listCountText(args);
+    count := args.length();
     var i := 0;
     loop i < count {
         arg := args[i];
-        eq := text.indexOfText(arg, "=", 0);
-        name := if eq < 0 { arg } else { text.slice(arg, 0, eq) };
+        eq := arg.indexOf("=", 0);
+        name := if eq < 0 { arg } else { arg.slice(0, eq) };
         if name == target { return true; }
         if eq < 0 and queryOptionKind(name) =!= "flag" { i = i + 1; }
         i = i + 1;
@@ -962,16 +959,16 @@ hasQueryFlag := fn(args: List<String>, target: String): Bool {
 readQueryValue := fn(args: List<String>, target: String): (found: Bool, value: String) {
     var found := false;
     var out := "";
-    count := list.listCountText(args);
+    count := args.length();
     var i := 0;
     loop i < count {
         arg := args[i];
-        eq := text.indexOfText(arg, "=", 0);
-        name := if eq < 0 { arg } else { text.slice(arg, 0, eq) };
+        eq := arg.indexOf("=", 0);
+        name := if eq < 0 { arg } else { arg.slice(0, eq) };
         if eq >= 0 {
             if name == target {
                 found = true;
-                out = text.slice(arg, eq + 1, text.length(arg));
+                out = arg.slice(eq + 1, arg.length());
             }
         } else if queryOptionKind(name) =!= "flag" {
             if i + 1 < count {
@@ -989,16 +986,16 @@ readQueryValue := fn(args: List<String>, target: String): (found: Bool, value: S
 
 readQueryRepeatTopics := fn(args: List<String>): List<String> {
     out: mut List<String> = [];
-    count := list.listCountText(args);
+    count := args.length();
     var i := 0;
     loop i < count {
         arg := args[i];
-        eq := text.indexOfText(arg, "=", 0);
-        name := if eq < 0 { arg } else { text.slice(arg, 0, eq) };
+        eq := arg.indexOf("=", 0);
+        name := if eq < 0 { arg } else { arg.slice(0, eq) };
         if name == "--topic" {
-            raw := if eq >= 0 { text.slice(arg, eq + 1, text.length(arg)) } else { args[i + 1] };
+            raw := if eq >= 0 { arg.slice(eq + 1, arg.length()) } else { args[i + 1] };
             loop splitTrimmedCsv(raw) as tp {
-                list.pushBack(mut out, tp);
+                mut out.pushBack(tp);
             }
         }
         if eq < 0 and queryOptionKind(name) =!= "flag" { i = i + 1; }
@@ -1008,17 +1005,17 @@ readQueryRepeatTopics := fn(args: List<String>): List<String> {
 };
 
 pub csvEscapeField := fn(val: String): String {
-    needsQuote := text.indexOfText(val, "\"", 0) >= 0 or text.indexOfText(val, ",", 0) >= 0 or text.indexOfText(val, "\r", 0) >= 0 or text.indexOfText(val, "\n", 0) >= 0;
+    needsQuote := val.indexOf("\"", 0) >= 0 or val.indexOf(",", 0) >= 0 or val.indexOf("\r", 0) >= 0 or val.indexOf("\n", 0) >= 0;
     if not needsQuote { return val; }
     parts: mut List<String> = ["\""];
-    valLen := text.length(val);
+    valLen := val.length();
     var i := 0;
     loop i < valLen {
-        ch := text.at(val, i);
-        if ch == "\"" { list.pushBack(mut parts, "\"\""); } else { list.pushBack(mut parts, ch); }
+        ch := val.at(i);
+        if ch == "\"" { mut parts.pushBack("\"\""); } else { mut parts.pushBack(ch); }
         i = i + 1;
     }
-    list.pushBack(mut parts, "\"");
+    (mut parts).pushBack("\"");
     text.joinTexts(parts, "")
 };
 
@@ -1027,7 +1024,7 @@ formatDiffTable := fn(scaled1000: Int): String {
     tenths := (safe + 50) / 100;
     whole := tenths / 10;
     rem := tenths % 10;
-    integer.intText(whole) + "." + integer.intText(rem)
+    whole.toText() + "." + rem.toText()
 };
 
 queryCompareRecords := fn(
@@ -1075,7 +1072,7 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
     if not liRead.ok { io.errorLine("FAIL: " + liRead.error); return 1; }
 
     lines := splitJsonLines(chRead.text);
-    nAll := list.listCountText(lines);
+    nAll := lines.length();
 
     allIds: mut List<String> = [];
     allSources: mut List<String> = [];
@@ -1108,26 +1105,26 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
             if solRes.found and solRes.ok { popV = solRes.value; }
         }
 
-        list.pushBack(mut allIds, idV);
-        list.pushBack(mut allSources, srcV);
-        list.pushBack(mut allCats, catV);
-        list.pushBack(mut allTitles, ttlV);
-        list.pushBack(mut allTopSrc, tsV);
-        list.pushBack(mut allStatuses, stV);
-        list.pushBack(mut allDiffs, normD.scaled);
-        list.pushBack(mut allDiffIntFlag, normD.isIntLiteral);
-        list.pushBack(mut allDiffRaw, normD.raw);
-        list.pushBack(mut allNums, numV);
-        list.pushBack(mut allPops, popV);
+        (mut allIds).pushBack(idV);
+        mut allSources.pushBack(srcV);
+        mut allCats.pushBack(catV);
+        mut allTitles.pushBack(ttlV);
+        mut allTopSrc.pushBack(tsV);
+        mut allStatuses.pushBack(stV);
+        mut allDiffs.pushBack(normD.scaled);
+        mut allDiffIntFlag.pushBack(normD.isIntLiteral);
+        mut allDiffRaw.pushBack(normD.raw);
+        mut allNums.pushBack(numV);
+        mut allPops.pushBack(popV);
     }
 
     if hasQueryFlag(args, "--stats") {
-        io.outputLine("total: " + integer.intText(nAll));
+        io.outputLine("total: " + nAll.toText());
         io.outputLine("\nsource:\n" + formatFrequencyLines(allSources, "  ", 22));
         io.outputLine("\ncategory:\n" + formatFrequencyLines(allCats, "  ", 22));
         bands: mut List<String> = [];
         loop allDiffs as dScaled {
-            list.pushBack(mut bands, difficultyBand(dScaled));
+            mut bands.pushBack(difficultyBand(dScaled));
         }
         io.outputLine("\ndifficulty:\n" + formatFrequencyLines(bands, "  ", 22));
         io.outputLine("\ntopics_source:\n" + formatFrequencyLines(allTopSrc, "  ", 22));
@@ -1144,8 +1141,8 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
         listLines := splitJsonLines(liRead.text);
         seenListIds: mut Set<String>;
         loop splitTrimmedCsv(listOpt.value) as lid {
-            if not set.has(seenListIds, lid) {
-                set.add(mut seenListIds, lid);
+            if not seenListIds.has(lid) {
+                mut seenListIds.add(lid);
                 var matchedLine := "";
                 loop listLines as ll {
                     if json.readObjectString(ll, 0, "id").value == lid {
@@ -1158,8 +1155,8 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
                     return 1;
                 }
                 loop readStringArray(matchedLine, 0, "challenge_ids") as cid {
-                    list.pushBack(mut selectedOrderedIds, cid);
-                    set.add(mut selectedIdSet, cid);
+                    mut selectedOrderedIds.pushBack(cid);
+                    mut selectedIdSet.add(cid);
                 }
             }
         }
@@ -1178,15 +1175,15 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
     var diffHigh := 0;
     if diffFilter.found and diffFilter.value =!= "" {
         hasDiffRange = true;
-        dash := text.indexOfText(diffFilter.value, "-", 0);
+        dash := diffFilter.value.indexOf("-", 0);
         if dash < 0 {
             p := parseScaledNumberText(diffFilter.value);
             if not p.ok { io.errorLine("FAIL: invalid difficulty range"); return 1; }
             diffLow = p.scaled;
             diffHigh = p.scaled;
         } else {
-            pL := parseScaledNumberText(text.slice(diffFilter.value, 0, dash));
-            pR := parseScaledNumberText(text.slice(diffFilter.value, dash + 1, text.length(diffFilter.value)));
+            pL := parseScaledNumberText(diffFilter.value.slice(0, dash));
+            pR := parseScaledNumberText(diffFilter.value.slice(dash + 1, diffFilter.value.length()));
             if not pL.ok or not pR.ok { io.errorLine("FAIL: invalid difficulty range"); return 1; }
             diffLow = pL.scaled;
             diffHigh = pR.scaled;
@@ -1208,8 +1205,8 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
     var idx := 0;
     loop idx < nAll {
         var keep := true;
-        if list.listCountText(srcFilterList) > 0 and not list.listContainsText(srcFilterList, allSources[idx]) { keep = false; }
-        if keep and list.listCountText(catFilterList) > 0 and not list.listContainsText(catFilterList, allCats[idx]) { keep = false; }
+        if srcFilterList.length() > 0 and not list.listContainsText(srcFilterList, allSources[idx]) { keep = false; }
+        if keep and catFilterList.length() > 0 and not list.listContainsText(catFilterList, allCats[idx]) { keep = false; }
         if keep and hasDiffRange {
             dv := allDiffs[idx];
             if dv < diffLow or dv > diffHigh { keep = false; }
@@ -1221,9 +1218,9 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
             if (premium == "only" and not isPrem) or (premium == "exclude" and isPrem) { keep = false; }
         }
         if keep and searchNeedle =!= "" {
-            if text.indexOfText(asciiLower(allTitles[idx]), searchNeedle, 0) < 0 { keep = false; }
+            if asciiLower(allTitles[idx]).indexOf(searchNeedle, 0) < 0 { keep = false; }
         }
-        if keep and list.listCountText(topicsFilter) > 0 {
+        if keep and topicsFilter.length() > 0 {
             recTopics := readStringArray(lines[idx], 0, "topics");
             loop topicsFilter as tf {
                 if not list.listContainsText(recTopics, tf) {
@@ -1233,24 +1230,24 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
             }
         }
         if keep and hasSelectedOrder {
-            if not set.has(selectedIdSet, allIds[idx]) { keep = false; }
+            if not selectedIdSet.has(allIds[idx]) { keep = false; }
         }
-        if keep { list.pushBack(mut filteredIdx, idx); }
+        if keep { mut filteredIdx.pushBack(idx); }
         idx = idx + 1;
     }
 
     if hasSelectedOrder {
         filteredById: mut Map<String, Int>;
         loop filteredIdx as fi {
-            if not map.has(filteredById, allIds[fi]) {
-                map.set(mut filteredById, allIds[fi], fi);
+            if not filteredById.has(allIds[fi]) {
+                mut filteredById.set(allIds[fi], fi);
             }
         }
         orderedIdx: mut List<Int> = [];
         loop selectedOrderedIds as targetId {
-            fi := map.getOr(filteredById, targetId, -1);
+            fi := filteredById.getOr(targetId, -1);
             if fi >= 0 {
-                list.pushBack(mut orderedIdx, fi);
+                mut orderedIdx.pushBack(fi);
             }
         }
         filteredIdx = orderedIdx;
@@ -1268,24 +1265,24 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
         loop filteredIdx as fi {
             if gk == "topic" {
                 loop readStringArray(lines[fi], 0, "topics") as tp {
-                    list.pushBack(mut groupVals, tp);
+                    mut groupVals.pushBack(tp);
                 }
             } else if gk == "source" {
-                list.pushBack(mut groupVals, allSources[fi]);
+                mut groupVals.pushBack(allSources[fi]);
             } else if gk == "category" {
-                list.pushBack(mut groupVals, allCats[fi]);
+                mut groupVals.pushBack(allCats[fi]);
             } else if gk == "difficulty" {
-                list.pushBack(mut groupVals, difficultyBand(allDiffs[fi]));
+                mut groupVals.pushBack(difficultyBand(allDiffs[fi]));
             } else if gk == "topics_source" {
-                list.pushBack(mut groupVals, allTopSrc[fi]);
+                mut groupVals.pushBack(allTopSrc[fi]);
             } else {
-                list.pushBack(mut groupVals, allStatuses[fi]);
+                mut groupVals.pushBack(allStatuses[fi]);
             }
         }
-        if list.listCountText(groupVals) > 0 {
+        if groupVals.length() > 0 {
             io.outputLine(formatFrequencyLines(groupVals, "", 24));
         }
-        io.outputLine(padRight("TOTAL", 24) + " " + padLeft(integer.intText(list.listCountInt(filteredIdx)), 5));
+        io.outputLine(padRight("TOTAL", 24) + " " + padLeft(filteredIdx.length().toText(), 5));
         return 0;
     }
 
@@ -1297,8 +1294,8 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
         return 1;
     }
     desc := hasQueryFlag(args, "--desc");
-    if not hasSelectedOrder and list.listCountInt(filteredIdx) > 1 {
-        mCount := list.listCountInt(filteredIdx);
+    if not hasSelectedOrder and filteredIdx.length() > 1 {
+        mCount := filteredIdx.length();
         var cur: mut List<Int> = filteredIdx;
         var width := 1;
         loop width < mCount {
@@ -1311,10 +1308,10 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
                 var ri := mid;
                 loop li < mid or ri < rightEnd {
                     if li >= mid {
-                        list.pushBack(mut next, cur[ri]);
+                        mut next.pushBack(cur[ri]);
                         ri = ri + 1;
                     } else if ri >= rightEnd {
-                        list.pushBack(mut next, cur[li]);
+                        mut next.pushBack(cur[li]);
                         li = li + 1;
                     } else {
                         ia := cur[li];
@@ -1325,10 +1322,10 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
                         allSources[ib], allIds[ib], allTitles[ib], allDiffs[ib], allNums[ib], allPops[ib]
                         );
                         if cmp <= 0 {
-                            list.pushBack(mut next, ia);
+                            mut next.pushBack(ia);
                             li = li + 1;
                         } else {
-                            list.pushBack(mut next, ib);
+                            mut next.pushBack(ib);
                             ri = ri + 1;
                         }
                     }
@@ -1341,11 +1338,11 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
         filteredIdx = cur;
     }
 
-    totalMatches := list.listCountInt(filteredIdx);
+    totalMatches := filteredIdx.length();
     limitOpt := readQueryValue(args, "--limit");
     var limit := 25;
     if limitOpt.found {
-        lp := text.textToInt(limitOpt.value);
+        lp := limitOpt.value.toInt();
         if not lp.ok { io.errorLine("FAIL: invalid --limit"); return 1; }
         limit = lp.value;
     }
@@ -1383,22 +1380,22 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
     }
 
     io.outputLine(padRight("ID", 28) + " " + padLeft("DIFF", 4) + "  " + padRight("SOURCE", 14) + " TITLE");
-    io.outputLine(text.repeatText("-", 110));
+    io.outputLine("-".repeat(110));
     var si := 0;
     loop si < shownCount {
         fi := filteredIdx[si];
         tVal := allTitles[fi];
-        tDisp := if text.length(tVal) <= 52 { tVal } else { text.slice(tVal, 0, 49) + "..." };
+        tDisp := if tVal.length() <= 52 { tVal } else { tVal.slice(0, 49) + "..." };
         io.outputLine(padRight(allIds[fi], 28) + " " + padLeft(formatDiffTable(allDiffs[fi]), 4) + "  " + padRight(allSources[fi], 14) + " " + tDisp);
         si = si + 1;
     }
-    io.outputLine("\n" + integer.intText(shownCount) + " shown of " + integer.intText(totalMatches) + " matching challenge(s)");
+    io.outputLine("\n" + shownCount.toText() + " shown of " + totalMatches.toText() + " matching challenge(s)");
     0
 };
 
 pub findSortedEntity := fn(keys: List<String>, target: String): Int {
     var lo := 0;
-    var hi := list.listCountText(keys) - 1;
+    var hi := keys.length() - 1;
     loop lo <= hi {
         mid := lo + (hi - lo) / 2;
         cmp := compareTextLex(keys[mid], target);
@@ -1409,16 +1406,16 @@ pub findSortedEntity := fn(keys: List<String>, target: String): Int {
 };
 
 parseHexOrDecInt := fn(raw: String, isHex: Bool): (ok: Bool, value: Int) {
-    size := text.length(raw);
+    size := raw.length();
     if size == 0 { return (ok = false, value = 0); }
     var acc := 0;
     var i := 0;
     hexDigits := "0123456789abcdef";
     hexUpper := "0123456789ABCDEF";
     loop i < size {
-        ch := text.at(raw, i);
-        var d := text.indexOfText(hexDigits, ch, 0);
-        if d < 0 and isHex { d = text.indexOfText(hexUpper, ch, 0); }
+        ch := raw.at(i);
+        var d := hexDigits.indexOf(ch, 0);
+        if d < 0 and isHex { d = hexUpper.indexOf(ch, 0); }
         if d < 0 or (not isHex and d >= 10) { return (ok = false, value = 0); }
         if acc <= 1114111 {
             acc = acc * (if isHex { 16 } else { 10 }) + d;
@@ -1450,9 +1447,9 @@ decodeNumericHtmlEntity := fn(n: Int): String {
 pub sortIndexByKeys := fn(keys: List<String>): List<Int> {
     var sortedIdx: mut List<Int> = [];
     var ki := 0;
-    kCount := list.listCountText(keys);
+    kCount := keys.length();
     loop ki < kCount {
-        list.pushBack(mut sortedIdx, ki);
+        mut sortedIdx.pushBack(ki);
         ki = ki + 1;
     }
     if kCount <= 1 { return sortedIdx; }
@@ -1467,16 +1464,16 @@ pub sortIndexByKeys := fn(keys: List<String>): List<Int> {
             var ri := mid;
             loop li < mid or ri < re {
                 if li >= mid {
-                    list.pushBack(mut next, sortedIdx[ri]);
+                    mut next.pushBack(sortedIdx[ri]);
                     ri = ri + 1;
                 } else if ri >= re {
-                    list.pushBack(mut next, sortedIdx[li]);
+                    mut next.pushBack(sortedIdx[li]);
                     li = li + 1;
                 } else if compareTextLex(keys[sortedIdx[li]], keys[sortedIdx[ri]]) <= 0 {
-                    list.pushBack(mut next, sortedIdx[li]);
+                    mut next.pushBack(sortedIdx[li]);
                     li = li + 1;
                 } else {
-                    list.pushBack(mut next, sortedIdx[ri]);
+                    mut next.pushBack(sortedIdx[ri]);
                     ri = ri + 1;
                 }
             }
@@ -1489,47 +1486,47 @@ pub sortIndexByKeys := fn(keys: List<String>): List<Int> {
 };
 
 pub unescapeHtmlWithTable := fn(sortedKeys: List<String>, sortedVals: List<String>, value: String): String {
-    if text.indexOfText(value, "&", 0) < 0 { return value; }
+    if value.indexOf("&", 0) < 0 { return value; }
     out: mut List<String> = [];
-    size := text.length(value);
+    size := value.length();
     var pos := 0;
     loop pos < size {
-        amp := text.indexOfText(value, "&", pos);
+        amp := value.indexOf("&", pos);
         if amp < 0 {
-            list.pushBack(mut out, text.slice(value, pos, size));
+            mut out.pushBack(value.slice(pos, size));
             break;
         }
         if amp > pos {
-            list.pushBack(mut out, text.slice(value, pos, amp));
+            mut out.pushBack(value.slice(pos, amp));
         }
         if amp + 1 >= size {
-            list.pushBack(mut out, "&");
+            mut out.pushBack("&");
             break;
         }
-        if text.at(value, amp + 1) == "#" {
+        if value.at(amp + 1) == "#" {
             var numStart := amp + 2;
             var isHex := false;
-            if numStart < size and (text.at(value, numStart) == "x" or text.at(value, numStart) == "X") {
+            if numStart < size and (value.at(numStart) == "x" or value.at(numStart) == "X") {
                 isHex = true;
                 numStart = numStart + 1;
             }
             var j := numStart;
             loop j < size {
-                ch := text.at(value, j);
+                ch := value.at(j);
                 okCh := if isHex {
-                    text.indexOfText("0123456789abcdefABCDEF", ch, 0) >= 0
+                    "0123456789abcdefABCDEF".indexOf(ch, 0) >= 0
                 } else {
-                    text.isDigit(ch)
+                    ch.isDigit()
                 };
                 if not okCh { break; }
                 j = j + 1;
             }
-            parsed := parseHexOrDecInt(text.slice(value, numStart, j), isHex);
+            parsed := parseHexOrDecInt(value.slice(numStart, j), isHex);
             if parsed.ok {
-                list.pushBack(mut out, decodeNumericHtmlEntity(parsed.value));
-                pos = if j < size and text.at(value, j) == ";" { j + 1 } else { j };
+                mut out.pushBack(decodeNumericHtmlEntity(parsed.value));
+                pos = if j < size and value.at(j) == ";" { j + 1 } else { j };
             } else {
-                list.pushBack(mut out, "&");
+                mut out.pushBack("&");
                 pos = amp + 1;
             }
         } else {
@@ -1537,19 +1534,19 @@ pub unescapeHtmlWithTable := fn(sortedKeys: List<String>, sortedVals: List<Strin
             maxEnd := if amp + 1 + 33 < size { amp + 1 + 33 } else { size };
             entityStops := "\t\n <&#" + unicode.fromCodePoint(12).text;
             loop end < maxEnd {
-                ch := text.at(value, end);
-                if text.indexOfText(entityStops, ch, 0) >= 0 { break; }
+                ch := value.at(end);
+                if entityStops.indexOf(ch, 0) >= 0 { break; }
                 end = end + 1;
                 if ch == ";" { break; }
             }
-            candMax := text.slice(value, amp + 1, end);
+            candMax := value.slice(amp + 1, end);
             var matched := false;
-            var tryLen := text.length(candMax);
+            var tryLen := candMax.length();
             loop tryLen >= 2 {
-                cand := text.slice(candMax, 0, tryLen);
+                cand := candMax.slice(0, tryLen);
                 idx := findSortedEntity(sortedKeys, cand);
                 if idx >= 0 {
-                    list.pushBack(mut out, sortedVals[idx]);
+                    mut out.pushBack(sortedVals[idx]);
                     pos = amp + 1 + tryLen;
                     matched = true;
                     break;
@@ -1557,7 +1554,7 @@ pub unescapeHtmlWithTable := fn(sortedKeys: List<String>, sortedVals: List<Strin
                 tryLen = tryLen - 1;
             }
             if not matched {
-                list.pushBack(mut out, "&");
+                mut out.pushBack("&");
                 pos = amp + 1;
             }
         }
@@ -1569,22 +1566,22 @@ pub unescapeHtmlWithTable := fn(sortedKeys: List<String>, sortedVals: List<Strin
 pub parseSortedStringObjectPairs := fn(jsonText: String): List<String> {
     rawKeys: mut List<String> = [];
     rawVals: mut List<String> = [];
-    jsonLen := text.length(jsonText);
+    jsonLen := jsonText.length();
     var pos := skipJsonSpace(jsonText, 0);
-    if pos < jsonLen and text.at(jsonText, pos) == "{" {
+    if pos < jsonLen and jsonText.at(pos) == "{" {
         pos = skipJsonSpace(jsonText, pos + 1);
-        loop pos < jsonLen and text.at(jsonText, pos) =!= "}" {
+        loop pos < jsonLen and jsonText.at(pos) =!= "}" {
             kR := json.readStringAt(jsonText, pos);
             if not kR.ok { break; }
             pos = skipJsonSpace(jsonText, kR.next);
-            if pos >= jsonLen or text.at(jsonText, pos) =!= ":" { break; }
+            if pos >= jsonLen or jsonText.at(pos) =!= ":" { break; }
             pos = skipJsonSpace(jsonText, pos + 1);
             vR := json.readStringAt(jsonText, pos);
             if not vR.ok { break; }
-            list.pushBack(mut rawKeys, kR.value);
-            list.pushBack(mut rawVals, vR.value);
+            (mut rawKeys).pushBack(kR.value);
+            mut rawVals.pushBack(vR.value);
             pos = skipJsonSpace(jsonText, vR.next);
-            if pos < jsonLen and text.at(jsonText, pos) == "," {
+            if pos < jsonLen and jsonText.at(pos) == "," {
                 pos = skipJsonSpace(jsonText, pos + 1);
             }
         }
@@ -1592,23 +1589,23 @@ pub parseSortedStringObjectPairs := fn(jsonText: String): List<String> {
     sortedIdx := sortIndexByKeys(rawKeys);
     out: mut List<String> = [];
     loop sortedIdx as si {
-        list.pushBack(mut out, rawKeys[si]);
-        list.pushBack(mut out, rawVals[si]);
+        mut out.pushBack(rawKeys[si]);
+        mut out.pushBack(rawVals[si]);
     }
     out
 };
 
 /** Decodes HTML5 named and numeric character references using `entitiesJsonPath` (`html-entities.json`). */
 pub unescapeChallengeHtml := fn(entitiesJsonText: String, value: String): String {
-    if text.indexOfText(value, "&", 0) < 0 { return value; }
+    if value.indexOf("&", 0) < 0 { return value; }
     pairs := parseSortedStringObjectPairs(entitiesJsonText);
     sortedKeys: mut List<String> = [];
     sortedVals: mut List<String> = [];
     var pi := 0;
-    pLen := list.listCountText(pairs);
+    pLen := pairs.length();
     loop pi + 1 < pLen {
-        list.pushBack(mut sortedKeys, pairs[pi]);
-        list.pushBack(mut sortedVals, pairs[pi + 1]);
+        mut sortedKeys.pushBack(pairs[pi]);
+        mut sortedVals.pushBack(pairs[pi + 1]);
         pi = pi + 2;
     }
     unescapeHtmlWithTable(sortedKeys, sortedVals, value)
@@ -1616,20 +1613,20 @@ pub unescapeChallengeHtml := fn(entitiesJsonText: String, value: String): String
 
 pub stripHtmlTags := fn(raw: String): String {
     out: mut List<String> = [];
-    size := text.length(raw);
+    size := raw.length();
     var pos := 0;
     loop pos < size {
-        lt := text.indexOfText(raw, "<", pos);
+        lt := raw.indexOf("<", pos);
         if lt < 0 {
-            list.pushBack(mut out, text.slice(raw, pos, size));
+            mut out.pushBack(raw.slice(pos, size));
             break;
         }
-        gt := text.indexOfText(raw, ">", lt + 1);
+        gt := raw.indexOf(">", lt + 1);
         if gt < 0 {
-            list.pushBack(mut out, text.slice(raw, pos, size));
+            mut out.pushBack(raw.slice(pos, size));
             break;
         }
-        list.pushBack(mut out, text.slice(raw, pos, lt));
+        (mut out).pushBack(raw.slice(pos, lt));
         pos = gt + 1;
     }
     text.joinTexts(out, "")
@@ -1637,25 +1634,25 @@ pub stripHtmlTags := fn(raw: String): String {
 
 replaceHtmlLineBreaksAndParagraphs := fn(raw: String): String {
     out: mut List<String> = [];
-    size := text.length(raw);
+    size := raw.length();
     var pos := 0;
     loop pos < size {
-        lt := text.indexOfText(raw, "<", pos);
+        lt := raw.indexOf("<", pos);
         if lt < 0 {
-            list.pushBack(mut out, text.slice(raw, pos, size));
+            mut out.pushBack(raw.slice(pos, size));
             break;
         }
-        gt := text.indexOfText(raw, ">", lt + 1);
+        gt := raw.indexOf(">", lt + 1);
         if gt < 0 {
-            list.pushBack(mut out, text.slice(raw, pos, size));
+            mut out.pushBack(raw.slice(pos, size));
             break;
         }
-        list.pushBack(mut out, text.slice(raw, pos, lt));
-        tag := asciiLower(text.trim(text.slice(raw, lt + 1, gt)));
+        (mut out).pushBack(raw.slice(pos, lt));
+        tag := asciiLower(raw.slice(lt + 1, gt).trim());
         if tag == "br" or tag == "br/" or tag == "br /" {
-            list.pushBack(mut out, "\n");
+            mut out.pushBack("\n");
         } else if tag == "/p" {
-            list.pushBack(mut out, "\n\n");
+            mut out.pushBack("\n\n");
         }
         pos = gt + 1;
     }
@@ -1664,17 +1661,17 @@ replaceHtmlLineBreaksAndParagraphs := fn(raw: String): String {
 
 collapseMultiNewlines := fn(raw: String): String {
     out: mut List<String> = [];
-    rawLen := text.length(raw);
+    rawLen := raw.length();
     var streak := 0;
     var i := 0;
     loop i < rawLen {
-        ch := text.at(raw, i);
+        ch := raw.at(i);
         if ch == "\n" {
             streak = streak + 1;
-            if streak <= 2 { list.pushBack(mut out, ch); }
+            if streak <= 2 { mut out.pushBack(ch); }
         } else {
             streak = 0;
-            list.pushBack(mut out, ch);
+            mut out.pushBack(ch);
         }
         i = i + 1;
     }
@@ -1687,17 +1684,17 @@ encodeUriComponentStrict := fn(seg: String): String {
     out: mut List<String> = [];
     bytes := unicode.utf8Encode(seg);
     var i := 0;
-    loop i < list.listCountInt(bytes) {
+    loop i < bytes.length() {
         b := bytes[i];
         if b < 128 {
             ch := unicode.fromCodePoint(b).text;
-            if text.indexOfText(unreserved, ch, 0) >= 0 {
-                list.pushBack(mut out, ch);
+            if unreserved.indexOf(ch, 0) >= 0 {
+                mut out.pushBack(ch);
             } else {
-                list.pushBack(mut out, "%" + text.at(hex, b / 16) + text.at(hex, b % 16));
+                mut out.pushBack("%" + hex.at(b / 16) + hex.at(b % 16));
             }
         } else {
-            list.pushBack(mut out, "%" + text.at(hex, b / 16) + text.at(hex, b % 16));
+            mut out.pushBack("%" + hex.at(b / 16) + hex.at(b % 16));
         }
         i = i + 1;
     }
@@ -1706,13 +1703,13 @@ encodeUriComponentStrict := fn(seg: String): String {
 
 encodeGithubPath := fn(relPath: String): String {
     parts: mut List<String> = [];
-    size := text.length(relPath);
+    size := relPath.length();
     var start := 0;
     var i := 0;
     loop i <= size {
         atEnd := i == size;
-        if atEnd or text.at(relPath, i) == "/" {
-            list.pushBack(mut parts, encodeUriComponentStrict(text.slice(relPath, start, i)));
+        if atEnd or relPath.at(i) == "/" {
+            mut parts.pushBack(encodeUriComponentStrict(relPath.slice(start, i)));
             start = i + 1;
         }
         i = i + 1;
@@ -1721,43 +1718,43 @@ encodeGithubPath := fn(relPath: String): String {
 };
 
 pub padLeftZero := fn(n: Int, width: Int): String {
-    var out := integer.intText(n);
-    loop text.length(out) < width {
+    var out := n.toText();
+    loop out.length() < width {
         out = "0" + out;
     }
     out
 };
 
 parseThreeDigitPythonNum := fn(treePath: String): (ok: Bool, num: Int) {
-    if not text.startsWithAt(treePath, 0, "python/p") or not text.endsWith(treePath, ".py") or text.length(treePath) =!= 14 {
+    if not treePath.startsWithAt(0, "python/p") or not treePath.endsWith(".py") or treePath.length() =!= 14 {
         return (ok = false, num = 0);
     }
-    digits := text.slice(treePath, 8, 11);
-    if not text.isDigit(text.at(digits, 0)) or not text.isDigit(text.at(digits, 1)) or not text.isDigit(text.at(digits, 2)) {
+    digits := treePath.slice(8, 11);
+    if not digits.at(0).isDigit() or not digits.at(1).isDigit() or not digits.at(2).isDigit() {
         return (ok = false, num = 0);
     }
-    parsed := text.textToInt(digits);
+    parsed := digits.toInt();
     (ok = parsed.ok, num = parsed.value)
 };
 
 parseLeetcodeSolutionNum := fn(treePath: String): (ok: Bool, num: Int) {
-    if not text.startsWithAt(treePath, 0, "solution/") or not text.endsWith(treePath, "/Solution.py") {
+    if not treePath.startsWithAt(0, "solution/") or not treePath.endsWith("/Solution.py") {
         return (ok = false, num = 0);
     }
-    dashPos := text.indexOfText(treePath, "-", 9);
+    dashPos := treePath.indexOf("-", 9);
     if dashPos <= 9 { return (ok = false, num = 0); }
-    slashPos := text.indexOfText(treePath, "/", dashPos + 1);
+    slashPos := treePath.indexOf("/", dashPos + 1);
     if slashPos <= dashPos + 1 { return (ok = false, num = 0); }
-    dotPos := text.indexOfText(treePath, ".", slashPos + 1);
+    dotPos := treePath.indexOf(".", slashPos + 1);
     if dotPos <= slashPos + 1 { return (ok = false, num = 0); }
-    numStr := text.slice(treePath, slashPos + 1, dotPos);
-    numLen := text.length(numStr);
+    numStr := treePath.slice(slashPos + 1, dotPos);
+    numLen := numStr.length();
     var i := 0;
     loop i < numLen {
-        if not text.isDigit(text.at(numStr, i)) { return (ok = false, num = 0); }
+        if not numStr.at(i).isDigit() { return (ok = false, num = 0); }
         i = i + 1;
     }
-    parsed := text.textToInt(numStr);
+    parsed := numStr.toInt();
     (ok = parsed.ok, num = parsed.value)
 };
 
@@ -1769,24 +1766,24 @@ mergeAndWriteBenchmarkManifest := fn(benchDir: String, replaceSource: String, wr
         if not extRead.ok { return (ok = false, totalRows = 0, error = extRead.error); }
         loop splitJsonLines(extRead.text) as ln {
             if json.readObjectString(ln, 0, "source").value =!= replaceSource {
-                list.pushBack(mut mergedLines, ln);
+                mut mergedLines.pushBack(ln);
             }
         }
     }
     loop writtenLines as wl {
-        list.pushBack(mut mergedLines, wl);
+        mut mergedLines.pushBack(wl);
     }
 
-    n := list.listCountText(mergedLines);
+    n := mergedLines.length();
     sources: mut List<String> = [];
     ids: mut List<String> = [];
     var order: mut List<Int> = [];
     var i := 0;
     loop i < n {
         ln := mergedLines[i];
-        list.pushBack(mut sources, json.readObjectString(ln, 0, "source").value);
-        list.pushBack(mut ids, json.readObjectString(ln, 0, "id").value);
-        list.pushBack(mut order, i);
+        mut sources.pushBack(json.readObjectString(ln, 0, "source").value);
+        mut ids.pushBack(json.readObjectString(ln, 0, "id").value);
+        mut order.pushBack(i);
         i = i + 1;
     }
     if n > 1 {
@@ -1801,10 +1798,10 @@ mergeAndWriteBenchmarkManifest := fn(benchDir: String, replaceSource: String, wr
                 var ri := mid;
                 loop li < mid or ri < re {
                     if li >= mid {
-                        list.pushBack(mut next, order[ri]);
+                        mut next.pushBack(order[ri]);
                         ri = ri + 1;
                     } else if ri >= re {
-                        list.pushBack(mut next, order[li]);
+                        mut next.pushBack(order[li]);
                         li = li + 1;
                     } else {
                         ia := order[li];
@@ -1812,10 +1809,10 @@ mergeAndWriteBenchmarkManifest := fn(benchDir: String, replaceSource: String, wr
                         var cmp := compareTextLex(sources[ia], sources[ib]);
                         if cmp == 0 { cmp = compareTextLex(ids[ia], ids[ib]); }
                         if cmp <= 0 {
-                            list.pushBack(mut next, ia);
+                            mut next.pushBack(ia);
                             li = li + 1;
                         } else {
-                            list.pushBack(mut next, ib);
+                            mut next.pushBack(ib);
                             ri = ri + 1;
                         }
                     }
@@ -1830,14 +1827,14 @@ mergeAndWriteBenchmarkManifest := fn(benchDir: String, replaceSource: String, wr
     sortedLines: mut List<String> = [];
     sortedSources: mut List<String> = [];
     loop order as oi {
-        list.pushBack(mut sortedLines, mergedLines[oi]);
-        list.pushBack(mut sortedSources, sources[oi]);
+        mut sortedLines.pushBack(mergedLines[oi]);
+        mut sortedSources.pushBack(sources[oi]);
     }
     _mb := fs.makeDir(benchDir);
     wItems := fs.writeText(manifestPath, if n == 0 { "" } else { text.joinTexts(sortedLines, "\n") + "\n" });
     if not wItems.ok { return (ok = false, totalRows = 0, error = wItems.error); }
 
-    idxJson := "{\n  \"total\": " + integer.intText(n) + ",\n  \"sources\": " + formatSortedCountsJson(sortedSources) + "\n}\n";
+    idxJson := "{\n  \"total\": " + n.toText() + ",\n  \"sources\": " + formatSortedCountsJson(sortedSources) + "\n}\n";
     wIdx := fs.writeText(path.join(benchDir, "index.json"), idxJson);
     if not wIdx.ok { return (ok = false, totalRows = 0, error = wIdx.error); }
     (ok = true, totalRows = n, error = "")
@@ -1857,9 +1854,9 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
     entKeys: mut List<String> = [];
     entVals: mut List<String> = [];
     var epi := 0;
-    loop epi + 1 < list.listCountText(entPairs) {
-        list.pushBack(mut entKeys, entPairs[epi]);
-        list.pushBack(mut entVals, entPairs[epi + 1]);
+    loop epi + 1 < entPairs.length() {
+        mut entKeys.pushBack(entPairs[epi]);
+        mut entVals.pushBack(entPairs[epi + 1]);
         epi = epi + 2;
     }
 
@@ -1869,10 +1866,10 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
         if json.readObjectString(ln, 0, "source").value == "project-euler" {
             numR := json.readObjectInt(ln, 0, "number");
             if numR.found and numR.ok {
-                if not map.has(eulerByNum, numR.value) {
-                    map.set(mut eulerByNum, numR.value, list.listCountText(eulerLines));
+                if not eulerByNum.has(numR.value) {
+                    mut eulerByNum.set(numR.value, eulerLines.length());
                 }
-                list.pushBack(mut eulerLines, ln);
+                (mut eulerLines).pushBack(ln);
             }
         }
     }
@@ -1880,25 +1877,25 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
     ansByNum: mut Map<Int, Int>;
     ansVals: mut List<String> = [];
     loop splitJsonLines(ansRead.text) as aln {
-        if text.startsWithAt(aln, 0, "Problem ") {
-            colon := text.indexOfText(aln, ":", 8);
+        if aln.startsWithAt(0, "Problem ") {
+            colon := aln.indexOf(":", 8);
             if colon > 8 {
-                pn := text.textToInt(text.slice(aln, 8, colon));
+                pn := aln.slice(8, colon).toInt();
                 if pn.ok {
-                    rest := text.trim(text.slice(aln, colon + 1, text.length(aln)));
-                    restLen := text.length(rest);
+                    rest := aln.slice(colon + 1, aln.length()).trim();
+                    restLen := rest.length();
                     var sp := 0;
                     loop sp < restLen {
-                        ch := text.at(rest, sp);
+                        ch := rest.at(sp);
                         if ch == " " or ch == "\t" { break; }
                         sp = sp + 1;
                     }
-                    ansToken := text.slice(rest, 0, sp);
+                    ansToken := rest.slice(0, sp);
                     if ansToken =!= "" {
-                        if not map.has(ansByNum, pn.value) {
-                            map.set(mut ansByNum, pn.value, list.listCountText(ansVals));
+                        if not ansByNum.has(pn.value) {
+                            mut ansByNum.set(pn.value, ansVals.length());
                         }
-                        list.pushBack(mut ansVals, ansToken);
+                        (mut ansVals).pushBack(ansToken);
                     }
                 }
             }
@@ -1912,9 +1909,9 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
         if json.readObjectString(treeRead.text, tPos, "type").value == "blob" {
             tPath := json.readObjectString(treeRead.text, tPos, "path").value;
             pn := parseThreeDigitPythonNum(tPath);
-            if pn.ok and not set.has(blobNumSet, pn.num) {
-                set.add(mut blobNumSet, pn.num);
-                list.pushBack(mut blobNumsRaw, pn.num);
+            if pn.ok and not blobNumSet.has(pn.num) {
+                mut blobNumSet.add(pn.num);
+                mut blobNumsRaw.pushBack(pn.num);
             }
         }
     }
@@ -1924,8 +1921,8 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
     writtenLines: mut List<String> = [];
 
     loop blobNums as n {
-        chIdx := map.getOr(eulerByNum, n, -1);
-        ansIdx := map.getOr(ansByNum, n, -1);
+        chIdx := eulerByNum.getOr(n, -1);
+        ansIdx := ansByNum.getOr(n, -1);
         padded := padLeftZero(n, 3);
         stmtHtmlPath := path.join(cacheDir, "statements/problem-" + padded + ".html");
         if chIdx >= 0 and ansIdx >= 0 and fs.kind(stmtHtmlPath) == fs.FILE_KIND_FILE {
@@ -1933,54 +1930,54 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
             ans := ansVals[ansIdx];
             page := readNormalizedText(stmtHtmlPath).text;
             bodyStartTag := "<div class=\"problem_content\" role=\"problem\">";
-            bStart := text.indexOfText(page, bodyStartTag, 0);
+            bStart := page.indexOf(bodyStartTag, 0);
             if bStart >= 0 {
-                afterOpen := bStart + text.length(bodyStartTag);
+                afterOpen := bStart + bodyStartTag.length();
                 var bEnd := -1;
                 var searchPos := afterOpen;
                 loop true {
-                    closeDiv := text.indexOfText(page, "</div>", searchPos);
+                    closeDiv := page.indexOf("</div>", searchPos);
                     if closeDiv < 0 { break; }
                     afterClose := skipJsonSpace(page, closeDiv + 6);
-                    if text.startsWithAt(page, afterClose, "<br") {
+                    if page.startsWithAt(afterClose, "<br") {
                         bEnd = closeDiv;
                         break;
                     }
                     searchPos = closeDiv + 6;
                 }
                 if bEnd >= 0 {
-                    bodyHtml := text.slice(page, afterOpen, bEnd);
+                    bodyHtml := page.slice(afterOpen, bEnd);
                     var title := json.readObjectString(cLine, 0, "title").value;
-                    h2Start := text.indexOfText(page, "<h2>", 0);
+                    h2Start := page.indexOf("<h2>", 0);
                     if h2Start >= 0 {
-                        h2End := text.indexOfText(page, "</h2>", h2Start + 4);
+                        h2End := page.indexOf("</h2>", h2Start + 4);
                         if h2End >= 0 {
-                            extractedTitle := text.trim(unescapeHtmlWithTable(entKeys, entVals, stripHtmlTags(text.slice(page, h2Start + 4, h2End))));
+                            extractedTitle := unescapeHtmlWithTable(entKeys, entVals, stripHtmlTags(page.slice(h2Start + 4, h2End))).trim();
                             if extractedTitle =!= "" { title = extractedTitle; }
                         }
                     }
-                    statement := text.trim(collapseMultiNewlines(unescapeHtmlWithTable(entKeys, entVals, replaceHtmlLineBreaksAndParagraphs(bodyHtml))));
+                    statement := collapseMultiNewlines(unescapeHtmlWithTable(entKeys, entVals, replaceHtmlLineBreaksAndParagraphs(bodyHtml))).trim();
                     if statement =!= "" {
                         cid := json.readObjectString(cLine, 0, "id").value;
                         curl := json.readObjectString(cLine, 0, "url").value;
                         ccat := json.readObjectString(cLine, 0, "category").value;
                         topicsSpan := json.valueSpan(cLine, json.findObjectField(cLine, 0, "topics").valuePos);
-                        topicsRawJson := text.slice(cLine, topicsSpan.start, topicsSpan.end);
+                        topicsRawJson := cLine.slice(topicsSpan.start, topicsSpan.end);
                         diffField := json.findObjectField(cLine, 0, "difficulty");
                         diffSpan := json.valueSpan(cLine, diffField.valuePos);
-                        diffRawJson := text.slice(cLine, diffSpan.start, diffSpan.end);
+                        diffRawJson := cLine.slice(diffSpan.start, diffSpan.end);
                         normRes := parseScaledDecimal1000(cLine, diffField.valuePos, "normalized");
                         rawDiffField := json.findObjectField(cLine, diffField.valuePos, "raw");
                         rawDiffStr := json.readStringAt(cLine, rawDiffField.valuePos);
                         rawDiffDisp := if rawDiffStr.ok { rawDiffStr.value } else {
                             sp := json.valueSpan(cLine, rawDiffField.valuePos);
-                            text.slice(cLine, sp.start, sp.end)
+                            cLine.slice(sp.start, sp.end)
                         };
                         diffDisp := formatDifficultyCsv("project-euler", normRes.scaled, normRes.raw, normRes.isIntLiteral);
 
                         itemDir := path.join(benchDir, "items/" + cid);
                         _mp := fs.makeDir(path.join(itemDir, "tests/public"));
-                        probMd := "# " + title + "\n\n**Source:** [Project Euler #" + integer.intText(n) + "](" + curl + ")  \n"
+                        probMd := "# " + title + "\n\n**Source:** [Project Euler #" + n.toText() + "](" + curl + ")  \n"
                         + "**Answer type:** one number  \n"
                         + "**Difficulty:** " + diffDisp + "/10 (" + rawDiffDisp + ")\n\n"
                         + "## Problem\n\n" + statement + "\n\n## Output\n\nPrint the single numeric answer.\n";
@@ -2008,7 +2005,7 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
                         itemRow := "{\"id\":" + json.quoteString(cid) + ",\"source\":\"project-euler\",\"title\":" + json.quoteString(title)
                         + ",\"url\":" + json.quoteString(curl) + ",\"harness\":\"single-answer\",\"tests\":{\"public\":1,\"hidden\":0},\"reference\":"
                         + json.quoteString(refUrl) + "}";
-                        list.pushBack(mut writtenLines, itemRow);
+                        mut writtenLines.pushBack(itemRow);
                     }
                 }
             }
@@ -2017,23 +2014,23 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
 
     merged := mergeAndWriteBenchmarkManifest(benchDir, "project-euler", writtenLines);
     if not merged.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = merged.error); }
-    (ok = true, writtenCount = list.listCountText(writtenLines), totalCount = merged.totalRows, error = "")
+    (ok = true, writtenCount = writtenLines.length(), totalCount = merged.totalRows, error = "")
 };
 
 splitBeforeExample1 := fn(desc: String): String {
     lines: mut List<String> = [];
-    trimmed := text.trim(desc);
+    trimmed := desc.trim();
     rawLines := splitJsonLines(trimmed);
     loop rawLines as ln {
-        t := text.trim(ln);
-        if text.startsWithAt(t, 0, "Example 1:") or text.startsWithAt(t, 0, "Example 1 :") {
+        t := ln.trim();
+        if t.startsWithAt(0, "Example 1:") or t.startsWithAt(0, "Example 1 :") {
             break;
         }
-        list.pushBack(mut lines, ln);
+        (mut lines).pushBack(ln);
     }
-    var out := text.trim(text.joinTexts(lines, "\n"));
-    if text.endsWith(out, "Constraints:") {
-        out = text.trim(text.slice(out, 0, text.length(out) - 12));
+    var out := text.joinTexts(lines, "\n").trim();
+    if out.endsWith("Constraints:") {
+        out = out.slice(0, out.length() - 12).trim();
     }
     out
 };
@@ -2058,10 +2055,10 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     chIdIndex: mut Map<String, Int>;
     loop chLines as cl {
         cid := json.readObjectString(cl, 0, "id").value;
-        if not map.has(chIdIndex, cid) {
-            map.set(mut chIdIndex, cid, list.listCountText(chIds));
+        if not chIdIndex.has(cid) {
+            mut chIdIndex.set(cid, chIds.length());
         }
-        list.pushBack(mut chIds, cid);
+        (mut chIds).pushBack(cid);
     }
 
     tsLines := splitJsonLines(tsRead.text);
@@ -2069,8 +2066,8 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     var tsi := 0;
     loop tsLines as tl {
         tid := json.readObjectString(tl, 0, "challenge_id").value;
-        if not map.has(tsIdIndex, tid) {
-            map.set(mut tsIdIndex, tid, tsi);
+        if not tsIdIndex.has(tid) {
+            mut tsIdIndex.set(tid, tsi);
         }
         tsi = tsi + 1;
     }
@@ -2085,10 +2082,10 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
             fidStr.value
         } else {
             fidInt := json.readObjectInt(mRead.text, qp, "frontend_id");
-            if fidInt.found and fidInt.ok { integer.intText(fidInt.value) } else { "" }
+            if fidInt.found and fidInt.ok { fidInt.value.toText() } else { "" }
         };
-        if not map.has(qIdIndex, qid) {
-            map.set(mut qIdIndex, qid, qi);
+        if not qIdIndex.has(qid) {
+            mut qIdIndex.set(qid, qi);
         }
         qi = qi + 1;
     }
@@ -2100,9 +2097,9 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
         if json.readObjectString(trRead.text, tPos, "type").value == "blob" {
             tPath := json.readObjectString(trRead.text, tPos, "path").value;
             pn := parseLeetcodeSolutionNum(tPath);
-            if pn.ok and not map.has(pathNumIndex, pn.num) {
-                map.set(mut pathNumIndex, pn.num, list.listCountText(pathStrs));
-                list.pushBack(mut pathStrs, tPath);
+            if pn.ok and not pathNumIndex.has(pn.num) {
+                mut pathNumIndex.set(pn.num, pathStrs.length());
+                mut pathStrs.pushBack(tPath);
             }
         }
     }
@@ -2113,9 +2110,9 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
         lid := json.readObjectString(ll, 0, "id").value;
         if lid == "blind-75" or lid == "neetcode-150" {
             loop readStringArray(ll, 0, "challenge_ids") as cid {
-                if not set.has(curatedSet, cid) {
-                    set.add(mut curatedSet, cid);
-                    list.pushBack(mut curated, cid);
+                if not curatedSet.has(cid) {
+                    mut curatedSet.add(cid);
+                    mut curated.pushBack(cid);
                 }
             }
         }
@@ -2125,27 +2122,27 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     selIdSet: mut Set<String>;
     selOrigins: mut List<String> = [];
     loop curated as cid {
-        ci := map.getOr(chIdIndex, cid, -1);
+        ci := chIdIndex.getOr(cid, -1);
         if ci >= 0 {
             cl := chLines[ci];
             isPrem := json.readObjectBool(cl, 0, "premium").value;
             cat := json.readObjectString(cl, 0, "category").value;
             tps := readStringArray(cl, 0, "topics");
             natId := json.readObjectString(cl, 0, "native_id").value;
-            natNum := text.textToInt(natId);
-            ti := map.getOr(tsIdIndex, cid, -1);
+            natNum := natId.toInt();
+            ti := tsIdIndex.getOr(cid, -1);
             var hasPub := false;
             if ti >= 0 {
                 pf := json.findObjectField(tsLines[ti], 0, "public");
                 if pf.found and isJsonArrayAt(tsLines[ti], pf.valuePos) {
-                    hasPub = list.listCountInt(json.arrayElementOffsets(tsLines[ti], pf.valuePos)) > 0;
+                    hasPub = json.arrayElementOffsets(tsLines[ti], pf.valuePos).length() > 0;
                 }
             }
             if not isPrem and cat == "algorithms" and not list.listContainsText(tps, "design")
-            and map.has(qIdIndex, natId) and natNum.ok and map.has(pathNumIndex, natNum.value) and hasPub {
-                list.pushBack(mut selIds, cid);
-                set.add(mut selIdSet, cid);
-                list.pushBack(mut selOrigins, "curated");
+            and qIdIndex.has(natId) and natNum.ok and pathNumIndex.has(natNum.value) and hasPub {
+                mut selIds.pushBack(cid);
+                mut selIdSet.add(cid);
+                mut selOrigins.pushBack("curated");
             }
         }
     }
@@ -2153,67 +2150,67 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     fillIndices: mut List<Int> = [];
     fillPops: mut List<Int> = [];
     var ci := 0;
-    chCount := list.listCountText(chIds);
+    chCount := chIds.length();
     loop ci < chCount {
         cl := chLines[ci];
         cid := chIds[ci];
         if json.readObjectString(cl, 0, "source").value == "leetcode"
-        and not set.has(selIdSet, cid) and not set.has(curatedSet, cid) {
+        and not selIdSet.has(cid) and not curatedSet.has(cid) {
             isPrem := json.readObjectBool(cl, 0, "premium").value;
             cat := json.readObjectString(cl, 0, "category").value;
             tps := readStringArray(cl, 0, "topics");
             natId := json.readObjectString(cl, 0, "native_id").value;
-            natNum := text.textToInt(natId);
-            ti := map.getOr(tsIdIndex, cid, -1);
+            natNum := natId.toInt();
+            ti := tsIdIndex.getOr(cid, -1);
             var hasPub := false;
             if ti >= 0 {
                 pf := json.findObjectField(tsLines[ti], 0, "public");
                 if pf.found and isJsonArrayAt(tsLines[ti], pf.valuePos) {
-                    hasPub = list.listCountInt(json.arrayElementOffsets(tsLines[ti], pf.valuePos)) > 0;
+                    hasPub = json.arrayElementOffsets(tsLines[ti], pf.valuePos).length() > 0;
                 }
             }
             if not isPrem and cat == "algorithms" and not list.listContainsText(tps, "design")
-            and map.has(qIdIndex, natId) and natNum.ok and map.has(pathNumIndex, natNum.value) and hasPub {
+            and qIdIndex.has(natId) and natNum.ok and pathNumIndex.has(natNum.value) and hasPub {
                 var solved := 0;
                 popF := json.findObjectField(cl, 0, "popularity");
                 if popF.found and isJsonObjectAt(cl, popF.valuePos) {
                     sR := json.readObjectInt(cl, popF.valuePos, "solved");
                     if sR.found and sR.ok { solved = sR.value; }
                 }
-                list.pushBack(mut fillIndices, ci);
-                list.pushBack(mut fillPops, solved);
+                (mut fillIndices).pushBack(ci);
+                mut fillPops.pushBack(solved);
             }
         }
         ci = ci + 1;
     }
 
-    fLen := list.listCountInt(fillIndices);
+    fLen := fillIndices.length();
     fillOrd := collections.sortIndicesBy(fLen, fn(a: Int, b: Int): Bool {
         fillPops[a] >= fillPops[b]
     });
     loop fillOrd as oi {
         fi := fillIndices[oi];
-        list.pushBack(mut selIds, chIds[fi]);
-        list.pushBack(mut selOrigins, "popular");
+        mut selIds.pushBack(chIds[fi]);
+        mut selOrigins.pushBack("popular");
     }
 
     benchDir := path.join(challengesRootDir, "benchmark");
     writtenLines: mut List<String> = [];
     var candI := 0;
-    selCount := list.listCountText(selIds);
+    selCount := selIds.length();
     loop candI < selCount {
-        if list.listCountText(writtenLines) >= 298 { break; }
+        if writtenLines.length() >= 298 { break; }
         cid := selIds[candI];
         origin := selOrigins[candI];
-        cLine := chLines[map.getOr(chIdIndex, cid, 0)];
-        tLine := tsLines[map.getOr(tsIdIndex, cid, 0)];
+        cLine := chLines[chIdIndex.getOr(cid, 0)];
+        tLine := tsLines[tsIdIndex.getOr(cid, 0)];
         natId := json.readObjectString(cLine, 0, "native_id").value;
-        qPos := qOffsets[map.getOr(qIdIndex, natId, 0)];
+        qPos := qOffsets[qIdIndex.getOr(natId, 0)];
         descR := json.readObjectString(mRead.text, qPos, "description");
         descText := splitBeforeExample1(if descR.found and descR.ok { descR.value } else { "" });
-        if text.length(descText) >= 40 {
-            n := text.textToInt(natId).value;
-            rawRel := pathStrs[map.getOr(pathNumIndex, n, 0)];
+        if descText.length() >= 40 {
+            n := natId.toInt().value;
+            rawRel := pathStrs[pathNumIndex.getOr(n, 0)];
             refUrl := "https://github.com/doocs/leetcode/blob/main/" + encodeGithubPath(rawRel);
 
             ctitle := json.readObjectString(cLine, 0, "title").value;
@@ -2221,16 +2218,16 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
             ccat := json.readObjectString(cLine, 0, "category").value;
             topics := readStringArray(cLine, 0, "topics");
             topicsSpan := json.valueSpan(cLine, json.findObjectField(cLine, 0, "topics").valuePos);
-            topicsRawJson := text.slice(cLine, topicsSpan.start, topicsSpan.end);
+            topicsRawJson := cLine.slice(topicsSpan.start, topicsSpan.end);
             diffField := json.findObjectField(cLine, 0, "difficulty");
             diffSpan := json.valueSpan(cLine, diffField.valuePos);
-            diffRawJson := text.slice(cLine, diffSpan.start, diffSpan.end);
+            diffRawJson := cLine.slice(diffSpan.start, diffSpan.end);
             normRes := parseScaledDecimal1000(cLine, diffField.valuePos, "normalized");
             rawDiffF := json.findObjectField(cLine, diffField.valuePos, "raw");
             rawDiffStr := json.readStringAt(cLine, rawDiffF.valuePos);
             rawDiffDisp := if rawDiffStr.ok { rawDiffStr.value } else {
                 sp := json.valueSpan(cLine, rawDiffF.valuePos);
-                text.slice(cLine, sp.start, sp.end)
+                cLine.slice(sp.start, sp.end)
             };
             diffDisp := formatDifficultyCsv("leetcode", normRes.scaled, normRes.raw, normRes.isIntLiteral);
 
@@ -2238,24 +2235,24 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
             hidField := json.findObjectField(tLine, 0, "hidden");
             pubSpan := json.valueSpan(tLine, pubField.valuePos);
             hidSpan := json.valueSpan(tLine, hidField.valuePos);
-            pubArrayJson := text.slice(tLine, pubSpan.start, pubSpan.end);
-            hidArrayJson := text.slice(tLine, hidSpan.start, hidSpan.end);
+            pubArrayJson := tLine.slice(pubSpan.start, pubSpan.end);
+            hidArrayJson := tLine.slice(hidSpan.start, hidSpan.end);
             pubOffsets := json.arrayElementOffsets(tLine, pubField.valuePos);
             hidOffsets := json.arrayElementOffsets(tLine, hidField.valuePos);
-            pubCount := list.listCountInt(pubOffsets);
-            hidCount := list.listCountInt(hidOffsets);
+            pubCount := pubOffsets.length();
+            hidCount := hidOffsets.length();
 
             exBlocks: mut List<String> = [];
             loop pubOffsets as pPos {
                 en := json.readObjectString(tLine, pPos, "name").value;
                 ein := json.readObjectString(tLine, pPos, "input").value;
                 eout := json.readObjectString(tLine, pPos, "output").value;
-                list.pushBack(mut exBlocks, "### " + en + "\n\n```text\nInput: " + ein + "\nOutput: " + eout + "\n```");
+                mut exBlocks.pushBack("### " + en + "\n\n```text\nInput: " + ein + "\nOutput: " + eout + "\n```");
             }
 
-            topicsJoined := if list.listCountText(topics) > 0 { text.joinTexts(topics, ", ") } else { "—" };
+            topicsJoined := if topics.length() > 0 { text.joinTexts(topics, ", ") } else { "—" };
             probMd := "# " + ctitle + "\n\n"
-            + "**Source:** [LeetCode #" + integer.intText(n) + "](" + curl + ")  \n"
+            + "**Source:** [LeetCode #" + n.toText() + "](" + curl + ")  \n"
             + "**Difficulty:** " + diffDisp + "/10 (" + rawDiffDisp + ")  \n"
             + "**Topics:** " + topicsJoined + "  \n"
             + "**Harness:** function-style inputs (`name = value` pairs)\n\n"
@@ -2268,7 +2265,7 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
             _wpub := fs.writeText(path.join(itemDir, "tests/public.json"), pubArrayJson + "\n");
             _whid := fs.writeText(path.join(itemDir, "tests/hidden.json"), hidArrayJson + "\n");
 
-            testsMetaJson := "{\"public\":" + integer.intText(pubCount) + ",\"hidden\":" + integer.intText(hidCount)
+            testsMetaJson := "{\"public\":" + pubCount.toText() + ",\"hidden\":" + hidCount.toText()
             + ",\"public_path\":\"tests/public.json\",\"hidden_path\":\"tests/hidden.json\",\"hidden_kind\":\"held-out-official-examples\"}";
 
             metaJson := "{\n"
@@ -2291,14 +2288,14 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
             itemRow := "{\"id\":" + json.quoteString(cid) + ",\"source\":\"leetcode\",\"title\":" + json.quoteString(ctitle)
             + ",\"url\":" + json.quoteString(curl) + ",\"harness\":\"function\",\"selection\":" + json.quoteString(origin)
             + ",\"tests\":" + testsMetaJson + ",\"reference\":" + json.quoteString(refUrl) + "}";
-            list.pushBack(mut writtenLines, itemRow);
+            mut writtenLines.pushBack(itemRow);
         }
         candI = candI + 1;
     }
 
     merged := mergeAndWriteBenchmarkManifest(benchDir, "leetcode", writtenLines);
     if not merged.ok { return (ok = false, writtenCount = 0, totalCount = 0, error = merged.error); }
-    (ok = true, writtenCount = list.listCountText(writtenLines), totalCount = merged.totalRows, error = "")
+    (ok = true, writtenCount = writtenLines.length(), totalCount = merged.totalRows, error = "")
 };
 
 /** CLI runner for `benchmark/challenges/tools/build_benchmark_euler.ts`. */
@@ -2308,7 +2305,7 @@ pub runBuildBenchmarkEulerCommand := fn(rootDir: String): Int {
     if not entRead.ok { io.errorLine("FAIL: " + entRead.error); return 1; }
     res := buildBenchmarkEuler(chRoot, entRead.text);
     if not res.ok { io.errorLine("FAIL: " + res.error); return 1; }
-    io.outputLine("wrote " + integer.intText(res.writtenCount) + " Project Euler items; total " + integer.intText(res.totalCount));
+    io.outputLine("wrote " + res.writtenCount.toText() + " Project Euler items; total " + res.totalCount.toText());
     0
 };
 
@@ -2316,37 +2313,37 @@ pub runBuildBenchmarkEulerCommand := fn(rootDir: String): Int {
 pub runBuildBenchmarkLeetcodeCommand := fn(rootDir: String): Int {
     res := buildBenchmarkLeetcode(path.join(rootDir, "benchmark/challenges"));
     if not res.ok { io.errorLine("FAIL: " + res.error); return 1; }
-    io.outputLine("wrote " + integer.intText(res.writtenCount) + " LeetCode items; total " + integer.intText(res.totalCount));
+    io.outputLine("wrote " + res.writtenCount.toText() + " LeetCode items; total " + res.totalCount.toText());
     0
 };
 
 trimEdgeNewlines := fn(raw: String): String {
     var s := 0;
-    var e := text.length(raw);
-    loop s < e and text.at(raw, s) == "\n" { s = s + 1; }
-    loop e > s and text.at(raw, e - 1) == "\n" { e = e - 1; }
-    text.slice(raw, s, e)
+    var e := raw.length();
+    loop s < e and raw.at(s) == "\n" { s = s + 1; }
+    loop e > s and raw.at(e - 1) == "\n" { e = e - 1; }
+    raw.slice(s, e)
 };
 
 cleanSampleHtmlBlock := fn(sortedKeys: List<String>, sortedVals: List<String>, fragment: String): String {
     out: mut List<String> = [];
-    size := text.length(fragment);
+    size := fragment.length();
     var pos := 0;
     loop pos < size {
-        lt := text.indexOfText(fragment, "<", pos);
+        lt := fragment.indexOf("<", pos);
         if lt < 0 {
-            list.pushBack(mut out, text.slice(fragment, pos, size));
+            mut out.pushBack(fragment.slice(pos, size));
             break;
         }
-        gt := text.indexOfText(fragment, ">", lt + 1);
+        gt := fragment.indexOf(">", lt + 1);
         if gt < 0 {
-            list.pushBack(mut out, text.slice(fragment, pos, size));
+            mut out.pushBack(fragment.slice(pos, size));
             break;
         }
-        list.pushBack(mut out, text.slice(fragment, pos, lt));
-        tag := asciiLower(text.trim(text.slice(fragment, lt + 1, gt)));
+        (mut out).pushBack(fragment.slice(pos, lt));
+        tag := asciiLower(fragment.slice(lt + 1, gt).trim());
         if tag == "br" or tag == "br/" or tag == "br /" {
-            list.pushBack(mut out, "\n");
+            mut out.pushBack("\n");
         }
         pos = gt + 1;
     }
@@ -2354,43 +2351,43 @@ cleanSampleHtmlBlock := fn(sortedKeys: List<String>, sortedVals: List<String>, f
 };
 
 parseLeetcodeExampleCase := fn(rawText: String): (ok: Bool, input: String, output: String, hasExpl: Bool, expl: String) {
-    normalized := text.trim(collapseCrLf(rawText));
-    normLen := text.length(normalized);
-    inPos := text.indexOfText(normalized, "Input:", 0);
+    normalized := collapseCrLf(rawText).trim();
+    normLen := normalized.length();
+    inPos := normalized.indexOf("Input:", 0);
     if inPos < 0 { return (ok = false, input = "", output = "", hasExpl = false, expl = ""); }
     var outPos := -1;
     var scan := inPos + 6;
     loop scan < normLen {
-        nl := text.indexOfText(normalized, "\n", scan);
+        nl := normalized.indexOf("\n", scan);
         if nl < 0 { break; }
         afterWs := skipHorizontalSpace(normalized, nl + 1);
-        if text.startsWithAt(normalized, afterWs, "Output:") {
+        if normalized.startsWithAt(afterWs, "Output:") {
             outPos = afterWs;
             break;
         }
         scan = nl + 1;
     }
     if outPos < 0 { return (ok = false, input = "", output = "", hasExpl = false, expl = ""); }
-    inVal := text.trim(text.slice(normalized, inPos + 6, outPos));
+    inVal := normalized.slice(inPos + 6, outPos).trim();
 
     var explPos := -1;
     var scan2 := outPos + 7;
     loop scan2 < normLen {
-        nl := text.indexOfText(normalized, "\n", scan2);
+        nl := normalized.indexOf("\n", scan2);
         if nl < 0 { break; }
         afterWs := skipHorizontalSpace(normalized, nl + 1);
-        if text.startsWithAt(normalized, afterWs, "Explanation:") {
+        if normalized.startsWithAt(afterWs, "Explanation:") {
             explPos = afterWs;
             break;
         }
         scan2 = nl + 1;
     }
-    outVal := text.trim(text.slice(normalized, outPos + 7, if explPos >= 0 { explPos } else { normLen }));
+    outVal := normalized.slice(outPos + 7, if explPos >= 0 { explPos } else { normLen }).trim();
     if inVal == "" or outVal == "" {
         return (ok = false, input = "", output = "", hasExpl = false, expl = "");
     }
     if explPos >= 0 {
-        exVal := text.trim(text.slice(normalized, explPos + 12, normLen));
+        exVal := normalized.slice(explPos + 12, normLen).trim();
         return (ok = true, input = inVal, output = outVal, hasExpl = exVal =!= "", expl = exVal);
     }
     (ok = true, input = inVal, output = outVal, hasExpl = false, expl = "")
@@ -2400,25 +2397,25 @@ pub collapseCrLf := fn(raw: String): String {
     parts: mut List<String> = [];
     var seg := 0;
     var i := 0;
-    size := text.length(raw);
+    size := raw.length();
     loop i < size {
-        if text.at(raw, i) == "\r" {
-            list.pushBack(mut parts, text.slice(raw, seg, i));
-            list.pushBack(mut parts, "\n");
-            if i + 1 < size and text.at(raw, i + 1) == "\n" { i = i + 1; }
+        if raw.at(i) == "\r" {
+            mut parts.pushBack(raw.slice(seg, i));
+            mut parts.pushBack("\n");
+            if i + 1 < size and raw.at(i + 1) == "\n" { i = i + 1; }
             seg = i + 1;
         }
         i = i + 1;
     }
     if seg == 0 { return raw; }
-    list.pushBack(mut parts, text.slice(raw, seg, size));
+    (mut parts).pushBack(raw.slice(seg, size));
     text.joinTexts(parts, "")
 };
 
 skipHorizontalSpace := fn(raw: String, start: Int): Int {
     var p := start;
-    loop p < text.length(raw) {
-        ch := text.at(raw, p);
+    loop p < raw.length() {
+        ch := raw.at(p);
         if ch =!= " " and ch =!= "\t" { break; }
         p = p + 1;
     }
@@ -2426,11 +2423,11 @@ skipHorizontalSpace := fn(raw: String, start: Int): Int {
 };
 
 extractBetweenPre := fn(section: String, startPos: Int): (found: Bool, inner: String, nextPos: Int) {
-    openTag := text.indexOfText(section, "<pre>", startPos);
+    openTag := section.indexOf("<pre>", startPos);
     if openTag < 0 { return (found = false, inner = "", nextPos = startPos); }
-    closeTag := text.indexOfText(section, "</pre>", openTag + 5);
+    closeTag := section.indexOf("</pre>", openTag + 5);
     if closeTag < 0 { return (found = false, inner = "", nextPos = startPos); }
-    (found = true, inner = text.slice(section, openTag + 5, closeTag), nextPos = closeTag + 6)
+    (found = true, inner = section.slice(openTag + 5, closeTag), nextPos = closeTag + 6)
 };
 
 challengeFormatName := fn(source: String, formats: List<String>): String {
@@ -2472,9 +2469,9 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
     entKeys: mut List<String> = [];
     entVals: mut List<String> = [];
     var epi := 0;
-    loop epi + 1 < list.listCountText(entPairs) {
-        list.pushBack(mut entKeys, entPairs[epi]);
-        list.pushBack(mut entVals, entPairs[epi + 1]);
+    loop epi + 1 < entPairs.length() {
+        mut entKeys.pushBack(entPairs[epi]);
+        mut entVals.pushBack(entPairs[epi + 1]);
         epi = epi + 2;
     }
 
@@ -2486,24 +2483,24 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
         fidStr := json.readObjectString(mRead.text, qp, "frontend_id");
         fidKey := if fidStr.found and fidStr.ok { fidStr.value } else {
             fidInt := json.readObjectInt(mRead.text, qp, "frontend_id");
-            if fidInt.found and fidInt.ok { integer.intText(fidInt.value) } else { "" }
+            if fidInt.found and fidInt.ok { fidInt.value.toText() } else { "" }
         };
         slugKey := json.readObjectString(mRead.text, qp, "problem_slug").value;
         if fidKey =!= "" {
-            list.pushBack(mut qLookupKeys, fidKey);
-            list.pushBack(mut qLookupPos, qp);
+            mut qLookupKeys.pushBack(fidKey);
+            mut qLookupPos.pushBack(qp);
         }
         if slugKey =!= "" {
-            list.pushBack(mut qLookupKeys, slugKey);
-            list.pushBack(mut qLookupPos, qp);
+            mut qLookupKeys.pushBack(slugKey);
+            mut qLookupPos.pushBack(qp);
         }
     }
     qSortedOrder := sortIndexByKeys(qLookupKeys);
     qSortedKeys: mut List<String> = [];
     qSortedPos: mut List<Int> = [];
     loop qSortedOrder as qi {
-        list.pushBack(mut qSortedKeys, qLookupKeys[qi]);
-        list.pushBack(mut qSortedPos, qLookupPos[qi]);
+        mut qSortedKeys.pushBack(qLookupKeys[qi]);
+        mut qSortedPos.pushBack(qLookupPos[qi]);
     }
 
     chLines := splitJsonLines(chRead.text);
@@ -2550,16 +2547,16 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
                         if exTextRes.found and exTextRes.ok {
                             parsedEx := parseLeetcodeExampleCase(exTextRes.value);
                             if parsedEx.ok {
-                                list.pushBack(mut rawInputs, parsedEx.input);
-                                list.pushBack(mut rawOutputs, parsedEx.output);
-                                list.pushBack(mut rawHasExpl, parsedEx.hasExpl);
-                                list.pushBack(mut rawExpls, parsedEx.expl);
+                                mut rawInputs.pushBack(parsedEx.input);
+                                mut rawOutputs.pushBack(parsedEx.output);
+                                mut rawHasExpl.pushBack(parsedEx.hasExpl);
+                                mut rawExpls.pushBack(parsedEx.expl);
                             }
                         }
                     }
                 }
             }
-            if list.listCountText(rawInputs) == 0 {
+            if rawInputs.length() == 0 {
                 hasNote = true;
                 noteText = if isPrem { "Premium problem; examples may require a subscription." } else { "No parseable examples in the public metadata mirror." };
             }
@@ -2568,26 +2565,26 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
             if fs.kind(htmlPath) == fs.FILE_KIND_FILE {
                 page := readNormalizedText(htmlPath).text;
                 if source == "cses" {
-                    start := text.indexOfText(page, "id=\"example\"", 0);
+                    start := page.indexOf("id=\"example\"", 0);
                     if start >= 0 {
-                        sec := text.slice(page, start, text.length(page));
+                        sec := page.slice(start, page.length());
                         var pos := 0;
                         loop true {
-                            pIn := text.indexOfText(sec, "<p>Input:</p>", pos);
+                            pIn := sec.indexOf("<p>Input:</p>", pos);
                             if pIn < 0 { break; }
                             preIn := extractBetweenPre(sec, pIn + 13);
                             if not preIn.found { break; }
                             afterIn := skipJsonSpace(sec, preIn.nextPos);
-                            if text.startsWithAt(sec, afterIn, "<p>Output:</p>") {
+                            if sec.startsWithAt(afterIn, "<p>Output:</p>") {
                                 preOut := extractBetweenPre(sec, afterIn + 14);
                                 if preOut.found {
                                     ci := cleanSampleHtmlBlock(entKeys, entVals, preIn.inner);
                                     co := cleanSampleHtmlBlock(entKeys, entVals, preOut.inner);
-                                    if text.trim(ci) =!= "" and text.trim(co) =!= "" {
-                                        list.pushBack(mut rawInputs, ci);
-                                        list.pushBack(mut rawOutputs, co);
-                                        list.pushBack(mut rawHasExpl, false);
-                                        list.pushBack(mut rawExpls, "");
+                                    if ci.trim() =!= "" and co.trim() =!= "" {
+                                        mut rawInputs.pushBack(ci);
+                                        mut rawOutputs.pushBack(co);
+                                        mut rawHasExpl.pushBack(false);
+                                        mut rawExpls.pushBack("");
                                     }
                                     pos = preOut.nextPos;
                                 } else {
@@ -2597,18 +2594,18 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
                                 pos = preIn.nextPos;
                             }
                         }
-                        if list.listCountText(rawInputs) == 0 {
+                        if rawInputs.length() == 0 {
                             p1 := extractBetweenPre(sec, 0);
                             if p1.found {
                                 p2 := extractBetweenPre(sec, p1.nextPos);
                                 if p2.found {
                                     ci := cleanSampleHtmlBlock(entKeys, entVals, p1.inner);
                                     co := cleanSampleHtmlBlock(entKeys, entVals, p2.inner);
-                                    if text.trim(ci) =!= "" and text.trim(co) =!= "" {
-                                        list.pushBack(mut rawInputs, ci);
-                                        list.pushBack(mut rawOutputs, co);
-                                        list.pushBack(mut rawHasExpl, false);
-                                        list.pushBack(mut rawExpls, "");
+                                    if ci.trim() =!= "" and co.trim() =!= "" {
+                                        mut rawInputs.pushBack(ci);
+                                        mut rawOutputs.pushBack(co);
+                                        mut rawHasExpl.pushBack(false);
+                                        mut rawExpls.pushBack("");
                                     }
                                 }
                             }
@@ -2621,15 +2618,15 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
                     outVals: mut List<String> = [];
                     var pos := 0;
                     loop true {
-                        h3 := text.indexOfText(page, "<h3>Sample Input ", pos);
+                        h3 := page.indexOf("<h3>Sample Input ", pos);
                         if h3 < 0 { break; }
-                        endH3 := text.indexOfText(page, "</h3>", h3 + 17);
+                        endH3 := page.indexOf("</h3>", h3 + 17);
                         if endH3 < 0 { break; }
-                        nParsed := text.textToInt(text.slice(page, h3 + 17, endH3));
+                        nParsed := page.slice(h3 + 17, endH3).toInt();
                         preR := extractBetweenPre(page, endH3 + 5);
                         if nParsed.ok and preR.found {
-                            list.pushBack(mut inNums, nParsed.value);
-                            list.pushBack(mut inVals, cleanSampleHtmlBlock(entKeys, entVals, preR.inner));
+                            mut inNums.pushBack(nParsed.value);
+                            mut inVals.pushBack(cleanSampleHtmlBlock(entKeys, entVals, preR.inner));
                             pos = preR.nextPos;
                         } else {
                             pos = endH3 + 5;
@@ -2637,15 +2634,15 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
                     }
                     pos = 0;
                     loop true {
-                        h3 := text.indexOfText(page, "<h3>Sample Output ", pos);
+                        h3 := page.indexOf("<h3>Sample Output ", pos);
                         if h3 < 0 { break; }
-                        endH3 := text.indexOfText(page, "</h3>", h3 + 18);
+                        endH3 := page.indexOf("</h3>", h3 + 18);
                         if endH3 < 0 { break; }
-                        nParsed := text.textToInt(text.slice(page, h3 + 18, endH3));
+                        nParsed := page.slice(h3 + 18, endH3).toInt();
                         preR := extractBetweenPre(page, endH3 + 5);
                         if nParsed.ok and preR.found {
-                            list.pushBack(mut outNums, nParsed.value);
-                            list.pushBack(mut outVals, cleanSampleHtmlBlock(entKeys, entVals, preR.inner));
+                            mut outNums.pushBack(nParsed.value);
+                            mut outVals.pushBack(cleanSampleHtmlBlock(entKeys, entVals, preR.inner));
                             pos = preR.nextPos;
                         } else {
                             pos = endH3 + 5;
@@ -2654,49 +2651,49 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
                     inNumIdx: mut Map<Int, Int>;
                     var ini := 0;
                     loop inNums as n {
-                        if not map.has(inNumIdx, n) { map.set(mut inNumIdx, n, ini); }
+                        if not inNumIdx.has(n) { mut inNumIdx.set(n, ini); }
                         ini = ini + 1;
                     }
                     outNumIdx: mut Map<Int, Int>;
                     var outi := 0;
                     loop outNums as n {
-                        if not map.has(outNumIdx, n) { map.set(mut outNumIdx, n, outi); }
+                        if not outNumIdx.has(n) { mut outNumIdx.set(n, outi); }
                         outi = outi + 1;
                     }
                     sortedNums := list.sortInts(inNums);
                     loop sortedNums as n {
-                        iIdx := map.getOr(inNumIdx, n, -1);
-                        oIdx := map.getOr(outNumIdx, n, -1);
+                        iIdx := inNumIdx.getOr(n, -1);
+                        oIdx := outNumIdx.getOr(n, -1);
                         if iIdx >= 0 and oIdx >= 0 {
                             ci := inVals[iIdx];
                             co := outVals[oIdx];
-                            if text.trim(ci) =!= "" and text.trim(co) =!= "" {
-                                list.pushBack(mut rawInputs, ci);
-                                list.pushBack(mut rawOutputs, co);
-                                list.pushBack(mut rawHasExpl, false);
-                                list.pushBack(mut rawExpls, "");
+                            if ci.trim() =!= "" and co.trim() =!= "" {
+                                mut rawInputs.pushBack(ci);
+                                mut rawOutputs.pushBack(co);
+                                mut rawHasExpl.pushBack(false);
+                                mut rawExpls.pushBack("");
                             }
                         }
                     }
                 } else {
-                    sd := text.indexOfText(page, "<h2 id=\"sample-dataset\">", 0);
-                    so := text.indexOfText(page, "<h2 id=\"sample-output\">", 0);
+                    sd := page.indexOf("<h2 id=\"sample-dataset\">", 0);
+                    so := page.indexOf("<h2 id=\"sample-output\">", 0);
                     if sd >= 0 and so >= 0 {
                         preIn := extractBetweenPre(page, sd);
                         preOut := extractBetweenPre(page, so);
                         if preIn.found and preOut.found {
                             ci := cleanSampleHtmlBlock(entKeys, entVals, preIn.inner);
                             co := cleanSampleHtmlBlock(entKeys, entVals, preOut.inner);
-                            if text.trim(ci) =!= "" and text.trim(co) =!= "" {
-                                list.pushBack(mut rawInputs, ci);
-                                list.pushBack(mut rawOutputs, co);
-                                list.pushBack(mut rawHasExpl, false);
-                                list.pushBack(mut rawExpls, "");
+                            if ci.trim() =!= "" and co.trim() =!= "" {
+                                mut rawInputs.pushBack(ci);
+                                mut rawOutputs.pushBack(co);
+                                mut rawHasExpl.pushBack(false);
+                                mut rawExpls.pushBack("");
                             }
                         }
                     }
                 }
-                if list.listCountText(rawInputs) == 0 {
+                if rawInputs.length() == 0 {
                     hasNote = true;
                     noteText = challengeMissingNote(source, true);
                 }
@@ -2711,38 +2708,38 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
 
         pubJsons: mut List<String> = [];
         hidJsons: mut List<String> = [];
-        totalC := list.listCountText(rawInputs);
+        totalC := rawInputs.length();
         var i := 0;
         loop i < totalC {
-            cName := if i == 0 { (if fmt == "function" { "example-1" } else { "sample-1" }) } else { "held-out-" + integer.intText(i) };
+            cName := if i == 0 { (if fmt == "function" { "example-1" } else { "sample-1" }) } else { "held-out-" + i.toText() };
             cKind := if i == 0 { (if fmt == "function" { "example" } else { "sample" }) } else { (if fmt == "function" { "held-out-example" } else { "held-out-sample" }) };
             hE := if i == 0 { rawHasExpl[i] } else { false };
             exV := if i == 0 { rawExpls[i] } else { "" };
             obj := buildCaseJsonObject(cName, cKind, rawInputs[i], rawOutputs[i], hE, exV);
-            if i == 0 { list.pushBack(mut pubJsons, obj); } else { list.pushBack(mut hidJsons, obj); }
+            if i == 0 { mut pubJsons.pushBack(obj); } else { mut hidJsons.pushBack(obj); }
             i = i + 1;
         }
 
-        pubN := list.listCountText(pubJsons);
-        hidN := list.listCountText(hidJsons);
+        pubN := pubJsons.length();
+        hidN := hidJsons.length();
         notApp := source == "project-euler" or source == "advent-of-code" or source == "cryptopals" or source == "jane-street";
         st := if pubN > 0 { (if hidN > 0 { "public+hidden" } else { "public-only" }) } else if notApp { "not-applicable" } else { "none" };
         hidPol := if hidN > 0 { "held-out-official-samples" } else { "none" };
-        list.pushBack(mut statusVals, st);
+        mut statusVals.pushBack(st);
 
         if pubN > 0 { totalWithPub = totalWithPub + 1; }
         if hidN > 0 { totalWithHid = totalWithHid + 1; }
         totalPubCases = totalPubCases + pubN;
         totalHidCases = totalHidCases + hidN;
 
-        if not map.has(srcAllDocs, source) {
-            list.pushBack(mut srcNames, source);
+        if not srcAllDocs.has(source) {
+            mut srcNames.pushBack(source);
         }
-        map.set(mut srcAllDocs, source, map.getOr(srcAllDocs, source, 0) + 1);
-        map.set(mut srcPubDocs, source, map.getOr(srcPubDocs, source, 0) + (if pubN > 0 { 1 } else { 0 }));
-        map.set(mut srcHidDocs, source, map.getOr(srcHidDocs, source, 0) + (if hidN > 0 { 1 } else { 0 }));
-        map.set(mut srcPubCases, source, map.getOr(srcPubCases, source, 0) + pubN);
-        map.set(mut srcHidCases, source, map.getOr(srcHidCases, source, 0) + hidN);
+        (mut srcAllDocs).set(source, srcAllDocs.getOr(source, 0) + 1);
+        mut srcPubDocs.set(source, srcPubDocs.getOr(source, 0) + (if pubN > 0 { 1 } else { 0 }));
+        mut srcHidDocs.set(source, srcHidDocs.getOr(source, 0) + (if hidN > 0 { 1 } else { 0 }));
+        mut srcPubCases.set(source, srcPubCases.getOr(source, 0) + pubN);
+        mut srcHidCases.set(source, srcHidCases.getOr(source, 0) + hidN);
 
         recJson := "{\"challenge_id\":" + json.quoteString(cid)
         + ",\"url\":" + json.quoteString(curl)
@@ -2753,17 +2750,17 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
         + ",\"hidden\":[" + text.joinTexts(hidJsons, ",") + "]"
         + ",\"hidden_policy\":" + json.quoteString(hidPol)
         + ",\"note\":" + (if hasNote { json.quoteString(noteText) } else { "null" }) + "}";
-        list.pushBack(mut recLines, recJson);
-        list.pushBack(mut writtenIds, cid);
+        mut recLines.pushBack(recJson);
+        mut writtenIds.pushBack(cid);
 
         csvRow := csvEscapeField(cid) + "," + csvEscapeField(source) + "," + csvEscapeField(st) + ","
-        + csvEscapeField(fmt) + "," + integer.intText(pubN) + "," + integer.intText(hidN) + "," + csvEscapeField(hidPol);
-        list.pushBack(mut csvLines, csvRow);
+        + csvEscapeField(fmt) + "," + pubN.toText() + "," + hidN.toText() + "," + csvEscapeField(hidPol);
+        mut csvLines.pushBack(csvRow);
     }
 
     sortedRecIds := sortTexts(writtenIds);
-    nRec := list.listCountText(recLines);
-    if nRec =!= list.listCountText(chLines) {
+    nRec := recLines.length();
+    if nRec =!= chLines.length() {
         return (ok = false, summaryText = "", error = "test/challenge id mismatch");
     }
     var di := 1;
@@ -2782,31 +2779,31 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
     sortedSrcOrder := sortIndexByKeys(srcNames);
     bySourceEntries: mut List<String> = [];
     summaryLines: mut List<String> = [
-    "wrote " + integer.intText(nRec) + " test records",
-    "  with public cases: " + integer.intText(totalWithPub),
-    "  with hidden cases: " + integer.intText(totalWithHid),
-    "  public cases: " + integer.intText(totalPubCases) + "  hidden cases: " + integer.intText(totalHidCases),
+    "wrote " + nRec.toText() + " test records",
+    "  with public cases: " + totalWithPub.toText(),
+    "  with hidden cases: " + totalWithHid.toText(),
+    "  public cases: " + totalPubCases.toText() + "  hidden cases: " + totalHidCases.toText(),
     ];
     loop sortedSrcOrder as sIdx {
         sName := srcNames[sIdx];
-        entry := json.quoteString(sName) + ":{\"challenges\":" + integer.intText(map.getOr(srcAllDocs, sName, 0))
-        + ",\"with_public\":" + integer.intText(map.getOr(srcPubDocs, sName, 0))
-        + ",\"with_hidden\":" + integer.intText(map.getOr(srcHidDocs, sName, 0))
-        + ",\"public_cases\":" + integer.intText(map.getOr(srcPubCases, sName, 0))
-        + ",\"hidden_cases\":" + integer.intText(map.getOr(srcHidCases, sName, 0)) + "}";
-        list.pushBack(mut bySourceEntries, entry);
-        list.pushBack(mut summaryLines, "  " + padRight(sName, 16) + " public " + padLeft(integer.intText(map.getOr(srcPubDocs, sName, 0)), 5) + "  hidden " + padLeft(integer.intText(map.getOr(srcHidDocs, sName, 0)), 5));
+        entry := json.quoteString(sName) + ":{\"challenges\":" + srcAllDocs.getOr(sName, 0).toText()
+        + ",\"with_public\":" + srcPubDocs.getOr(sName, 0).toText()
+        + ",\"with_hidden\":" + srcHidDocs.getOr(sName, 0).toText()
+        + ",\"public_cases\":" + srcPubCases.getOr(sName, 0).toText()
+        + ",\"hidden_cases\":" + srcHidCases.getOr(sName, 0).toText() + "}";
+        mut bySourceEntries.pushBack(entry);
+        mut summaryLines.pushBack("  " + padRight(sName, 16) + " public " + padLeft(srcPubDocs.getOr(sName, 0).toText(), 5) + "  hidden " + padLeft(srcHidDocs.getOr(sName, 0).toText(), 5));
     }
 
     idxPath := path.join(dataDir, "index.json");
     if fs.kind(idxPath) == fs.FILE_KIND_FILE {
         idxRead := fs.readText(idxPath);
         if idxRead.ok and json.validate(idxRead.text).ok and isJsonObjectAt(idxRead.text, 0) {
-            testsSummaryObj := "{\n    \"total\": " + integer.intText(nRec) + ",\n"
-            + "    \"with_public\": " + integer.intText(totalWithPub) + ",\n"
-            + "    \"with_hidden\": " + integer.intText(totalWithHid) + ",\n"
-            + "    \"public_cases\": " + integer.intText(totalPubCases) + ",\n"
-            + "    \"hidden_cases\": " + integer.intText(totalHidCases) + ",\n"
+            testsSummaryObj := "{\n    \"total\": " + nRec.toText() + ",\n"
+            + "    \"with_public\": " + totalWithPub.toText() + ",\n"
+            + "    \"with_hidden\": " + totalWithHid.toText() + ",\n"
+            + "    \"public_cases\": " + totalPubCases.toText() + ",\n"
+            + "    \"hidden_cases\": " + totalHidCases.toText() + ",\n"
             + "    \"by_status\": " + formatSortedCountsJson(statusVals) + ",\n"
             + "    \"by_source\": {" + text.joinTexts(bySourceEntries, ",") + "}\n  }";
             topFields: mut List<String> = [];
@@ -2815,11 +2812,11 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
                     f := json.findObjectField(idxRead.text, 0, tk);
                     sp := json.valueSpan(idxRead.text, f.valuePos);
                     if sp.ok {
-                        list.pushBack(mut topFields, "  " + json.quoteString(tk) + ": " + text.slice(idxRead.text, sp.start, sp.end));
+                        mut topFields.pushBack("  " + json.quoteString(tk) + ": " + idxRead.text.slice(sp.start, sp.end));
                     }
                 }
             }
-            list.pushBack(mut topFields, "  \"tests\": " + testsSummaryObj);
+            (mut topFields).pushBack("  \"tests\": " + testsSummaryObj);
             _wi := fs.writeText(idxPath, "{\n" + text.joinTexts(topFields, ",\n") + "\n}\n");
         }
     }

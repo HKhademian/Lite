@@ -1,7 +1,5 @@
 /* Optional Play canvas drawing buffer and RGBA context support. */
 
-list := import "core/list";
-
 /** Packed 32-bit ARGB color (`0xAARRGGBB`) stored inside Int. */
 pub Color := type Int;
 
@@ -99,23 +97,23 @@ pub clear := fn(color: Color): Unit {
 pub setPixel := fn(x: Int, y: Int, color: Color): Unit {
     if canvasWidth <= 0 or canvasHeight <= 0 { return; }
     if x < 0 or x >= canvasWidth or y < 0 or y >= canvasHeight { return; }
-    list.pushBack(mut canvasOps, CANVAS_OP_FILL_RECT);
-    list.pushBack(mut canvasOps, x);
-    list.pushBack(mut canvasOps, y);
-    list.pushBack(mut canvasOps, 1);
-    list.pushBack(mut canvasOps, 1);
-    list.pushBack(mut canvasOps, color);
+    (mut canvasOps).pushBack(CANVAS_OP_FILL_RECT);
+    mut canvasOps.pushBack(x);
+    mut canvasOps.pushBack(y);
+    mut canvasOps.pushBack(1);
+    mut canvasOps.pushBack(1);
+    mut canvasOps.pushBack(color);
 }
 
 /** Fills an axis-aligned rectangle `(x, y, width, height)` using alpha blending. */
 pub fillRect := fn(x: Int, y: Int, width: Int, height: Int, color: Color): Unit {
     if canvasWidth <= 0 or canvasHeight <= 0 or width <= 0 or height <= 0 { return; }
-    list.pushBack(mut canvasOps, CANVAS_OP_FILL_RECT);
-    list.pushBack(mut canvasOps, x);
-    list.pushBack(mut canvasOps, y);
-    list.pushBack(mut canvasOps, width);
-    list.pushBack(mut canvasOps, height);
-    list.pushBack(mut canvasOps, color);
+    (mut canvasOps).pushBack(CANVAS_OP_FILL_RECT);
+    mut canvasOps.pushBack(x);
+    mut canvasOps.pushBack(y);
+    mut canvasOps.pushBack(width);
+    mut canvasOps.pushBack(height);
+    mut canvasOps.pushBack(color);
 }
 
 /** Submits a row-major `width * height` pixel list for the latest canvas dimensions. */

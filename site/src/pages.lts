@@ -1,7 +1,5 @@
 /** Generates `/`, `/gallery/`, and `/playground/` page bodies (`site/build.ts`). */
 
-integer := import "core/int";
-list := import "core/list";
 text := import "core/text";
 json := import "util/json";
 siteTools := import "./tools.lts";
@@ -31,7 +29,7 @@ readStringList := fn(src: String, objPos: Int, key: String): List<String> {
     loop offs as off {
         r := json.readStringAt(src, off);
         if r.ok {
-            list.pushBack(mut out, r.value);
+            mut out.pushBack(r.value);
         }
     }
     out
@@ -45,11 +43,11 @@ findById := fn(src: String, offs: List<Int>, targetId: String): Int {
 };
 
 lastSlashSegment := fn(s: String): String {
-    n := text.length(s);
+    n := s.length();
     var i := n - 1;
     loop i >= 0 {
-        if text.at(s, i) == "/" {
-            return text.slice(s, i + 1, n);
+        if s.at(i) == "/" {
+            return s.slice(i + 1, n);
         }
         i = i - 1;
     }
@@ -68,18 +66,18 @@ renderSampleCard := fn(src: String, sPos: Int, basePath: String, includeNote: Bo
     output := readOptStr(src, sPos, "output");
 
     inputParts: mut List<String> = [];
-    if list.listCountText(args) > 0 {
-        list.pushBack(mut inputParts, "args: " + text.joinTexts(args, " "));
+    if args.length() > 0 {
+        mut inputParts.pushBack("args: " + text.joinTexts(args, " "));
     }
     if stdin =!= "" {
-        list.pushBack(mut inputParts, "stdin: " + json.quoteString(stdin));
+        mut inputParts.pushBack("stdin: " + json.quoteString(stdin));
     }
-    metaText := if list.listCountText(inputParts) > 0 { text.joinTexts(inputParts, " · ") } else { file };
+    metaText := if inputParts.length() > 0 { text.joinTexts(inputParts, " · ") } else { file };
     noteBlock := if includeNote { "<p class=\"sample-note\">" + escapeHtml(note) + "</p>" } else { "" };
     outputBlock := if showOutput {
         "<div class=\"output-block\">\n"
         + "    <div class=\"output-label\">Output</div>\n"
-        + "    <pre>" + escapeHtml(text.trimEnd(output)) + "</pre>\n"
+        + "    <pre>" + escapeHtml(output.trimEnd()) + "</pre>\n"
         + "  </div>"
     } else {
         ""
@@ -111,12 +109,12 @@ renderHomeBody := fn(src: String, renderedOffs: List<Int>): String {
 
     countsField := json.findObjectField(src, 0, "counts");
     cPos := if countsField.found { countsField.valuePos } else { 0 };
-    lessons := integer.intText(readOptInt(src, cPos, "lessons"));
-    tutorials := integer.intText(readOptInt(src, cPos, "tutorials"));
-    drills := integer.intText(readOptInt(src, cPos, "drills"));
-    workouts := integer.intText(readOptInt(src, cPos, "workouts"));
-    docsPages := integer.intText(readOptInt(src, cPos, "docsPages"));
-    modules := integer.intText(readOptInt(src, cPos, "modules"));
+    lessons := readOptInt(src, cPos, "lessons").toText();
+    tutorials := readOptInt(src, cPos, "tutorials").toText();
+    drills := readOptInt(src, cPos, "drills").toText();
+    workouts := readOptInt(src, cPos, "workouts").toText();
+    docsPages := readOptInt(src, cPos, "docsPages").toText();
+    modules := readOptInt(src, cPos, "modules").toText();
 
     heroPos := findById(src, renderedOffs, heroSampleId);
     heroCard := if heroPos >= 0 { renderSampleCard(src, heroPos, "", false) } else { "" };
@@ -126,7 +124,7 @@ renderHomeBody := fn(src: String, renderedOffs: List<Int>): String {
     loop featuredIds as fid {
         fPos := findById(src, renderedOffs, fid);
         if fPos >= 0 {
-            list.pushBack(mut featuredCards, renderSampleCard(src, fPos, "", true));
+            mut featuredCards.pushBack(renderSampleCard(src, fPos, "", true));
         }
     }
 
@@ -291,7 +289,7 @@ renderHomeBody := fn(src: String, renderedOffs: List<Int>): String {
     "<section class=\"section\">",
     "  <div class=\"section-head\">",
     "    <h2>Featured Examples</h2>",
-    "    <a href=\"gallery/\">Explore Gallery (" + integer.intText(list.listCountInt(renderedOffs)) + " samples) &rarr;</a>",
+    "    <a href=\"gallery/\">Explore Gallery (" + renderedOffs.length().toText() + " samples) &rarr;</a>",
     "  </div>",
     "  <div class=\"sample-grid\">",
     "    " + text.joinTexts(featuredCards, "\n"),
@@ -354,11 +352,11 @@ renderedPlayOffs: List<Int>
         cards: mut List<String> = [];
         loop renderedOffs as sPos {
             if readOptStr(src, sPos, "group") == gId {
-                list.pushBack(mut cards, renderGalleryCard(src, sPos, "../"));
+                mut cards.pushBack(renderGalleryCard(src, sPos, "../"));
             }
         }
-        cnt := integer.intText(list.listCountText(cards));
-        list.pushBack(mut langJumps, "<a class=\"gallery-jump\" href=\"#group-" + escapeHtml(gId) + "\">" + escapeHtml(gTitle) + " <span>" + cnt + "</span></a>");
+        cnt := cards.length().toText();
+        mut langJumps.pushBack("<a class=\"gallery-jump\" href=\"#group-" + escapeHtml(gId) + "\">" + escapeHtml(gTitle) + " <span>" + cnt + "</span></a>");
         badge := if gFolder =!= "" { "<span class=\"gallery-badge\">" + escapeHtml(gFolder) + "/</span>" } else { "" };
         sLines: List<String> = [
         "<section class=\"section\" id=\"group-" + escapeHtml(gId) + "\">",
@@ -372,7 +370,7 @@ renderedPlayOffs: List<Int>
         "  </div>",
         "</section>"
         ];
-        list.pushBack(mut langSections, text.joinTexts(sLines, "\n"));
+        mut langSections.pushBack(text.joinTexts(sLines, "\n"));
     }
 
     playJumps: mut List<String> = [];
@@ -385,11 +383,11 @@ renderedPlayOffs: List<Int>
         cards: mut List<String> = [];
         loop renderedPlayOffs as sPos {
             if readOptStr(src, sPos, "group") == gId {
-                list.pushBack(mut cards, renderGalleryCard(src, sPos, "../"));
+                mut cards.pushBack(renderGalleryCard(src, sPos, "../"));
             }
         }
-        cnt := integer.intText(list.listCountText(cards));
-        list.pushBack(mut playJumps, "<a class=\"gallery-jump\" href=\"#group-" + escapeHtml(gId) + "\">" + escapeHtml(gTitle) + " <span>" + cnt + "</span></a>");
+        cnt := cards.length().toText();
+        mut playJumps.pushBack("<a class=\"gallery-jump\" href=\"#group-" + escapeHtml(gId) + "\">" + escapeHtml(gTitle) + " <span>" + cnt + "</span></a>");
         sLines: List<String> = [
         "<section class=\"section\" id=\"group-" + escapeHtml(gId) + "\">",
         "  <div class=\"section-head\">",
@@ -402,14 +400,14 @@ renderedPlayOffs: List<Int>
         "  </div>",
         "</section>"
         ];
-        list.pushBack(mut playSections, text.joinTexts(sLines, "\n"));
+        mut playSections.pushBack(text.joinTexts(sLines, "\n"));
     }
 
     lines: List<String> = [
     "<section style=\"padding: 2rem 0 1.25rem;\">",
     "  <h1 style=\"margin: 0 0 0.5rem;\">Gallery</h1>",
     "  <p class=\"hero-lead\" style=\"margin: 0 0 1rem;\">",
-    "    All " + integer.intText(list.listCountInt(renderedOffs)) + " core &amp; program examples and " + integer.intText(list.listCountInt(renderedPlayOffs)) + " folder-grouped canvas, audio, and game showcases below are compiled and executed by the " + proseLite + " compiler during the site build.",
+    "    All " + renderedOffs.length().toText() + " core &amp; program examples and " + renderedPlayOffs.length().toText() + " folder-grouped canvas, audio, and game showcases below are compiled and executed by the " + proseLite + " compiler during the site build.",
     "  </p>",
     "  <nav class=\"gallery-jumps\" aria-label=\"Gallery categories\">",
     "    <div class=\"gallery-tier-line\">",

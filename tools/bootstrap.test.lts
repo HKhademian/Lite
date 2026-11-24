@@ -1,11 +1,9 @@
 /** CLI routing, argument validation, and dual-target compilation tests for `lite bootstrap`. */
 
 fs := import "core/file";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -48,9 +46,9 @@ assertSameCmd := fn(label: String, expected: CmdResult, actual: CmdResult): Unit
 /* 1. Help variants succeed on stdout and match between lite-bootstrap and lite bootstrap */
 helpDirect := runBin("lite-bootstrap", ["--help"]);
 test.checkInt("lite-bootstrap --help status: " + helpDirect.stderr, 0, helpDirect.status);
-test.check("usage header", text.containsText(helpDirect.stdout, "Usage: ./bin/lite bootstrap <verify|promote>"));
-test.check("usage mentions verify", text.containsText(helpDirect.stdout, "verify"));
-test.check("usage mentions promote", text.containsText(helpDirect.stdout, "promote"));
+test.check("usage header", helpDirect.stdout.contains("Usage: ./bin/lite bootstrap <verify|promote>"));
+test.check("usage mentions verify", helpDirect.stdout.contains("verify"));
+test.check("usage mentions promote", helpDirect.stdout.contains("promote"));
 test.checkText("lite-bootstrap --help stderr", "", helpDirect.stderr);
 
 assertSameCmd("lite bootstrap --help", helpDirect, runBin("lite", ["bootstrap", "--help"]));
@@ -60,25 +58,25 @@ assertSameCmd("lite bootstrap help", helpDirect, runBin("lite", ["bootstrap", "h
 /* 2. Version parity between direct symlink and router */
 verDirect := runBin("lite-bootstrap", ["--version"]);
 test.checkInt("lite-bootstrap --version status: " + verDirect.stderr, 0, verDirect.status);
-test.check("version contains lite-bootstrap", text.containsText(verDirect.stdout, "lite-bootstrap"));
+test.check("version contains lite-bootstrap", verDirect.stdout.contains("lite-bootstrap"));
 assertSameCmd("lite bootstrap --version", verDirect, runBin("lite", ["bootstrap", "--version"]));
 
 /* 3. Argument validation rejections exit 2 with usage on stderr */
 missingSub := runBin("lite", ["bootstrap"]);
 test.checkInt("missing subcommand status", 2, missingSub.status);
-test.check("missing subcommand stderr", text.containsText(missingSub.stderr, "subcommand required"));
+test.check("missing subcommand stderr", missingSub.stderr.contains("subcommand required"));
 
 unknownSub := runBin("lite", ["bootstrap", "bogus"]);
 test.checkInt("unknown subcommand status", 2, unknownSub.status);
-test.check("unknown subcommand stderr", text.containsText(unknownSub.stderr, "unknown subcommand bogus"));
+test.check("unknown subcommand stderr", unknownSub.stderr.contains("unknown subcommand bogus"));
 
 unknownFlag := runBin("lite", ["bootstrap", "verify", "--nope"]);
 test.checkInt("unknown flag status", 2, unknownFlag.status);
-test.check("unknown flag stderr", text.containsText(unknownFlag.stderr, "unknown option --nope"));
+test.check("unknown flag stderr", unknownFlag.stderr.contains("unknown option --nope"));
 
 missingCc := runBin("lite", ["bootstrap", "verify", "--cc"]);
 test.checkInt("missing --cc value status", 2, missingCc.status);
-test.check("missing --cc value stderr", text.containsText(missingCc.stderr, "missing compiler path after --cc"));
+test.check("missing --cc value stderr", missingCc.stderr.contains("missing compiler path after --cc"));
 
 /* 4. tools/src/bootstrap.lts compiles cleanly on both TS and C11 compilers */
 srcFile := path.join(root, "tools/src/bootstrap.lts");

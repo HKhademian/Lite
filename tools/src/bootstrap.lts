@@ -2,12 +2,9 @@
 
 crypto := import "core/crypto";
 fs := import "core/file";
-integer := import "core/int";
 io := import "core/io";
-list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
-text := import "core/text";
 time := import "core/time";
 json := import "util/json";
 project := import "util/project";
@@ -37,15 +34,15 @@ elapsedMs := fn(startNs: Int): Int {
 emitStep := fn(jsonOut: Bool, step: String, ok: Bool, ms: Int, extraJson: String, errMsg: String): Unit {
     if jsonOut {
         if ok {
-            flushOutLine("{\"step\":" + json.quoteString(step) + ",\"ok\":true,\"ms\":" + integer.intText(ms) + extraJson + "}");
+            flushOutLine("{\"step\":" + json.quoteString(step) + ",\"ok\":true,\"ms\":" + ms.toText() + extraJson + "}");
         } else {
-            flushOutLine("{\"step\":" + json.quoteString(step) + ",\"ok\":false,\"ms\":" + integer.intText(ms) + ",\"error\":" + json.quoteString(errMsg) + "}");
+            flushOutLine("{\"step\":" + json.quoteString(step) + ",\"ok\":false,\"ms\":" + ms.toText() + ",\"error\":" + json.quoteString(errMsg) + "}");
         }
     } else {
         if ok {
-            flushOutLine("bootstrap: " + step + " ok (" + integer.intText(ms) + "ms)");
+            flushOutLine("bootstrap: " + step + " ok (" + ms.toText() + "ms)");
         } else {
-            flushOutLine("bootstrap: " + step + " failed (" + integer.intText(ms) + "ms)");
+            flushOutLine("bootstrap: " + step + " failed (" + ms.toText() + "ms)");
         }
     }
 };
@@ -56,15 +53,15 @@ formatProcFailure := fn(label: String, res: (status: Int, stdout: String, stderr
         return label + " failed to launch: " + res.error;
     }
     var detail := "";
-    if text.trim(res.stderr) =!= "" {
-        detail = text.trim(res.stderr);
+    if res.stderr.trim() =!= "" {
+        detail = res.stderr.trim();
     }
-    if text.trim(res.stdout) =!= "" {
+    if res.stdout.trim() =!= "" {
         if detail =!= "" { detail = detail + "\n"; }
-        detail = detail + text.trim(res.stdout);
+        detail = detail + res.stdout.trim();
     }
     if detail == "" {
-        return label + " failed with exit status " + integer.intText(res.status);
+        return label + " failed with exit status " + res.status.toText();
     }
     label + " failed:\n" + detail
 };
@@ -79,7 +76,7 @@ readSeedProvenance := fn(rootDir: String): (
         return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "",
         error = "bootstrap: cannot read compiler/bootstrap/seed.ts: " + seedRead.error);
     }
-    brace := text.indexOfText(seedRead.text, "{", 0);
+    brace := seedRead.text.indexOf("{", 0);
     if brace < 0 {
         return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "",
         error = "bootstrap: invalid compiler/bootstrap/seed.ts object");
@@ -273,16 +270,16 @@ emitResult := fn(commandName: String, jsonOut: Bool, sourceSha256: String, artif
         + "\"artifactSha256\":" + json.quoteString(artifactSha256) + ","
         + "\"igniterSha256\":" + json.quoteString(igniterSha256) + ","
         + "\"cArtifactSha256\":" + json.quoteString(cArtifactSha256) + ","
-        + "\"ms\":" + integer.intText(totalMs)
+        + "\"ms\":" + totalMs.toText()
         + "}";
         flushOutLine(body);
     } else {
         verb := if commandName == "promote" { "promoted and verified" } else { "verified" };
-        flushOutLine("bootstrap: " + verb + " (source=" + text.slice(sourceSha256, 0, 8)
-        + ", ts=" + text.slice(artifactSha256, 0, 8)
-        + ", igniter=" + text.slice(igniterSha256, 0, 8)
-        + ", c=" + text.slice(cArtifactSha256, 0, 8)
-        + ", " + integer.intText(totalMs) + "ms)");
+        flushOutLine("bootstrap: " + verb + " (source=" + sourceSha256.slice(0, 8)
+        + ", ts=" + artifactSha256.slice(0, 8)
+        + ", igniter=" + igniterSha256.slice(0, 8)
+        + ", c=" + cArtifactSha256.slice(0, 8)
+        + ", " + totalMs.toText() + "ms)");
     }
 };
 
@@ -520,13 +517,13 @@ run := fn(rawArgs: List<String>): Unit {
     project.handleNamedVersionFlag(rawArgs, "cli", "lite-bootstrap");
 
     args: mut List<String> = rawArgs;
-    if list.listCountText(args) > 0 and args[0] == "--" {
+    if args.length() > 0 and args[0] == "--" {
         _sep := mut args.popFront();
     }
     var subcommand := "";
     var ccBin := "";
     var jsonOut := false;
-    loop list.listCountText(args) > 0 {
+    loop args.length() > 0 {
         arg := mut args.popFront();
         if arg == "help" or arg == "--help" or arg == "-h" {
             io.outputLine(usageText());
@@ -534,20 +531,20 @@ run := fn(rawArgs: List<String>): Unit {
         } else if arg == "--json" {
             jsonOut = true;
         } else if arg == "--cc" {
-            if list.listCountText(args) == 0 {
+            if args.length() == 0 {
                 io.errorLine("bootstrap: missing compiler path after --cc");
                 io.errorLine(usageText());
                 io.exit(2);
             }
             ccBin = mut args.popFront();
-        } else if text.startsWithAt(arg, 0, "--cc=") {
-            ccBin = text.slice(arg, 5, text.length(arg));
+        } else if arg.startsWithAt(0, "--cc=") {
+            ccBin = arg.slice(5, arg.length());
             if ccBin == "" {
                 io.errorLine("bootstrap: missing compiler path after --cc=");
                 io.errorLine(usageText());
                 io.exit(2);
             }
-        } else if text.startsWithAt(arg, 0, "-") {
+        } else if arg.startsWithAt(0, "-") {
             io.errorLine("bootstrap: unknown option " + arg);
             io.errorLine(usageText());
             io.exit(2);
@@ -576,7 +573,7 @@ run := fn(rawArgs: List<String>): Unit {
     if rootDir == "" {
         err := "bootstrap: cannot locate LiteScript repository root";
         if jsonOut {
-            flushOutLine("{\"command\":" + json.quoteString(subcommand) + ",\"ok\":false,\"ms\":" + integer.intText(elapsedMs(runStart)) + ",\"error\":" + json.quoteString(err) + "}");
+            flushOutLine("{\"command\":" + json.quoteString(subcommand) + ",\"ok\":false,\"ms\":" + elapsedMs(runStart).toText() + ",\"error\":" + json.quoteString(err) + "}");
         }
         io.errorLine(err);
         io.exit(1);
@@ -589,7 +586,7 @@ run := fn(rawArgs: List<String>): Unit {
     };
     if not res.ok {
         if jsonOut {
-            flushOutLine("{\"command\":" + json.quoteString(subcommand) + ",\"ok\":false,\"ms\":" + integer.intText(elapsedMs(runStart)) + ",\"error\":" + json.quoteString(res.error) + "}");
+            flushOutLine("{\"command\":" + json.quoteString(subcommand) + ",\"ok\":false,\"ms\":" + elapsedMs(runStart).toText() + ",\"error\":" + json.quoteString(res.error) + "}");
         }
         io.errorLine(res.error);
         io.exit(1);

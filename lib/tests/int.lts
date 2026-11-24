@@ -46,10 +46,10 @@ test.checkInt("int negate", -42, negated.value);
 minimumNegation := integer.intNegate(integer.intMin);
 test.checkBool("int negate min", false, minimumNegation.ok);
 
-test.checkText("int text zero", "0", integer.intText(0));
-test.checkText("int text positive", "42", integer.intText(42));
-test.checkText("int text negative", "-42", integer.intText(-42));
-test.checkText("int text max", "9223372036854775807", integer.intText(integer.intMax));
-test.checkText("int text min", "-9223372036854775808", integer.intText(integer.intMin));
+test.checkText("int text zero", "0", (0).toText());
+test.checkText("int text positive", "42", (42).toText());
+test.checkText("int text negative", "-42", (-42).toText());
+test.checkText("int text max", "9223372036854775807", integer.intMax.toText());
+test.checkText("int text min", "-9223372036854775808", integer.intMin.toText());
 
 test.done("int");

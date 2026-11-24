@@ -1,7 +1,5 @@
 /** Experimental fixed-capacity circular ring buffers (`extra/ring`) for rolling windows, telemetry, and audio rings. */
 
-list := import "core/list";
-
 /** Opaque generational handle to a fixed-capacity `Int` ring buffer. */
 pub IntRing := type (handle: Int, gen: Int);
 
@@ -30,12 +28,12 @@ var frFree: mut List<Int> = [];
 
 validIntRing := fn(r: IntRing): Bool {
     id := r.handle;
-    id >= 0 and id < list.length(irAlive) and irAlive[id] and irGen[id] == r.gen
+    id >= 0 and id < irAlive.length() and irAlive[id] and irGen[id] == r.gen
 };
 
 validFloatRing := fn(r: FloatRing): Bool {
     id := r.handle;
-    id >= 0 and id < list.length(frAlive) and frAlive[id] and frGen[id] == r.gen
+    id >= 0 and id < frAlive.length() and frAlive[id] and frGen[id] == r.gen
 };
 
 /* ============================================================================
@@ -45,35 +43,35 @@ validFloatRing := fn(r: FloatRing): Bool {
 /** Creates a fixed-capacity `Int` ring buffer (`capacity >= 1`). */
 pub createInts := fn(capacity: Int): IntRing {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := list.length(irFree) - 1;
+    var fi := irFree.length() - 1;
     loop fi >= 0 {
         id := irFree[fi];
         if irCap[id] >= cap {
-            last := list.length(irFree) - 1;
-            if fi =!= last { list.setAt(mut irFree, fi, irFree[last]); }
-            _drop := list.popBack(mut irFree);
-            list.setAt(mut irCap, id, cap);
-            list.setAt(mut irHead, id, 0);
-            list.setAt(mut irCount, id, 0);
-            list.setAt(mut irAlive, id, true);
+            last := irFree.length() - 1;
+            if fi =!= last { mut irFree.setAt(fi, irFree[last]); }
+            _drop := mut irFree.popBack();
+            mut irCap.setAt(id, cap);
+            mut irHead.setAt(id, 0);
+            mut irCount.setAt(id, 0);
+            mut irAlive.setAt(id, true);
             return (handle = id, gen = irGen[id]);
         }
         fi -= 1;
     }
 
-    base := list.length(irSlab);
+    base := irSlab.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut irSlab, 0);
+        mut irSlab.pushBack(0);
         i += 1;
     }
-    id := list.length(irBase);
-    list.pushBack(mut irBase, base);
-    list.pushBack(mut irCap, cap);
-    list.pushBack(mut irHead, 0);
-    list.pushBack(mut irCount, 0);
-    list.pushBack(mut irGen, 1);
-    list.pushBack(mut irAlive, true);
+    id := irBase.length();
+    mut irBase.pushBack(base);
+    mut irCap.pushBack(cap);
+    mut irHead.pushBack(0);
+    mut irCount.pushBack(0);
+    mut irGen.pushBack(1);
+    mut irAlive.pushBack(true);
     (handle = id, gen = 1)
 };
 
@@ -85,12 +83,12 @@ pub pushInt := fn(ring: IntRing, value: Int): Bool {
     head := irHead[id];
     cnt := irCount[id];
     tail := (head + cnt) % cap;
-    list.setAt(mut irSlab, irBase[id] + tail, value);
+    mut irSlab.setAt(irBase[id] + tail, value);
     if cnt == cap {
-        list.setAt(mut irHead, id, (head + 1) % cap);
+        mut irHead.setAt(id, (head + 1) % cap);
         true
     } else {
-        list.setAt(mut irCount, id, cnt + 1);
+        mut irCount.setAt(id, cnt + 1);
         false
     }
 };
@@ -103,8 +101,8 @@ pub tryPushInt := fn(ring: IntRing, value: Int): Bool {
     cnt := irCount[id];
     if cnt >= cap { return false; }
     tail := (irHead[id] + cnt) % cap;
-    list.setAt(mut irSlab, irBase[id] + tail, value);
-    list.setAt(mut irCount, id, cnt + 1);
+    mut irSlab.setAt(irBase[id] + tail, value);
+    mut irCount.setAt(id, cnt + 1);
     true
 };
 
@@ -116,8 +114,8 @@ pub popInt := fn(ring: IntRing): (found: Bool, value: Int) {
     if cnt <= 0 { return (found = false, value = 0); }
     head := irHead[id];
     val := irSlab[irBase[id] + head];
-    list.setAt(mut irHead, id, (head + 1) % irCap[id]);
-    list.setAt(mut irCount, id, cnt - 1);
+    mut irHead.setAt(id, (head + 1) % irCap[id]);
+    mut irCount.setAt(id, cnt - 1);
     (found = true, value = val)
 };
 
@@ -193,17 +191,17 @@ pub isIntEmpty := fn(ring: IntRing): Bool {
 pub clearInts := fn(ring: IntRing): Unit {
     if not validIntRing(ring) { return; }
     id := ring.handle;
-    list.setAt(mut irHead, id, 0);
-    list.setAt(mut irCount, id, 0);
+    mut irHead.setAt(id, 0);
+    mut irCount.setAt(id, 0);
 };
 
 /** Destroys `ring` and recycles its handle slot. */
 pub destroyInts := fn(ring: IntRing): Unit {
     if not validIntRing(ring) { return; }
     id := ring.handle;
-    list.setAt(mut irAlive, id, false);
-    list.setAt(mut irGen, id, irGen[id] + 1);
-    list.pushBack(mut irFree, id);
+    mut irAlive.setAt(id, false);
+    mut irGen.setAt(id, irGen[id] + 1);
+    mut irFree.pushBack(id);
 };
 
 /* ============================================================================
@@ -213,35 +211,35 @@ pub destroyInts := fn(ring: IntRing): Unit {
 /** Creates a fixed-capacity `Float` ring buffer (`capacity >= 1`). */
 pub createFloats := fn(capacity: Int): FloatRing {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := list.length(frFree) - 1;
+    var fi := frFree.length() - 1;
     loop fi >= 0 {
         id := frFree[fi];
         if frCap[id] >= cap {
-            last := list.length(frFree) - 1;
-            if fi =!= last { list.setAt(mut frFree, fi, frFree[last]); }
-            _drop := list.popBack(mut frFree);
-            list.setAt(mut frCap, id, cap);
-            list.setAt(mut frHead, id, 0);
-            list.setAt(mut frCount, id, 0);
-            list.setAt(mut frAlive, id, true);
+            last := frFree.length() - 1;
+            if fi =!= last { mut frFree.setAt(fi, frFree[last]); }
+            _drop := mut frFree.popBack();
+            mut frCap.setAt(id, cap);
+            mut frHead.setAt(id, 0);
+            mut frCount.setAt(id, 0);
+            mut frAlive.setAt(id, true);
             return (handle = id, gen = frGen[id]);
         }
         fi -= 1;
     }
 
-    base := list.length(frSlab);
+    base := frSlab.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut frSlab, 0.0);
+        mut frSlab.pushBack(0.0);
         i += 1;
     }
-    id := list.length(frBase);
-    list.pushBack(mut frBase, base);
-    list.pushBack(mut frCap, cap);
-    list.pushBack(mut frHead, 0);
-    list.pushBack(mut frCount, 0);
-    list.pushBack(mut frGen, 1);
-    list.pushBack(mut frAlive, true);
+    id := frBase.length();
+    mut frBase.pushBack(base);
+    mut frCap.pushBack(cap);
+    mut frHead.pushBack(0);
+    mut frCount.pushBack(0);
+    mut frGen.pushBack(1);
+    mut frAlive.pushBack(true);
     (handle = id, gen = 1)
 };
 
@@ -253,12 +251,12 @@ pub pushFloat := fn(ring: FloatRing, value: Float): Bool {
     head := frHead[id];
     cnt := frCount[id];
     tail := (head + cnt) % cap;
-    list.setAt(mut frSlab, frBase[id] + tail, value);
+    mut frSlab.setAt(frBase[id] + tail, value);
     if cnt == cap {
-        list.setAt(mut frHead, id, (head + 1) % cap);
+        mut frHead.setAt(id, (head + 1) % cap);
         true
     } else {
-        list.setAt(mut frCount, id, cnt + 1);
+        mut frCount.setAt(id, cnt + 1);
         false
     }
 };
@@ -271,8 +269,8 @@ pub popFloat := fn(ring: FloatRing): (found: Bool, value: Float) {
     if cnt <= 0 { return (found = false, value = 0.0); }
     head := frHead[id];
     val := frSlab[frBase[id] + head];
-    list.setAt(mut frHead, id, (head + 1) % frCap[id]);
-    list.setAt(mut frCount, id, cnt - 1);
+    mut frHead.setAt(id, (head + 1) % frCap[id]);
+    mut frCount.setAt(id, cnt - 1);
     (found = true, value = val)
 };
 
@@ -332,15 +330,15 @@ pub floatCapacity := fn(ring: FloatRing): Int {
 pub clearFloats := fn(ring: FloatRing): Unit {
     if not validFloatRing(ring) { return; }
     id := ring.handle;
-    list.setAt(mut frHead, id, 0);
-    list.setAt(mut frCount, id, 0);
+    mut frHead.setAt(id, 0);
+    mut frCount.setAt(id, 0);
 };
 
 /** Destroys `ring` and recycles its handle slot. */
 pub destroyFloats := fn(ring: FloatRing): Unit {
     if not validFloatRing(ring) { return; }
     id := ring.handle;
-    list.setAt(mut frAlive, id, false);
-    list.setAt(mut frGen, id, frGen[id] + 1);
-    list.pushBack(mut frFree, id);
+    mut frAlive.setAt(id, false);
+    mut frGen.setAt(id, frGen[id] + 1);
+    mut frFree.pushBack(id);
 };

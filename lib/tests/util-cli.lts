@@ -1,5 +1,4 @@
 text := import "core/text";
-list := import "core/list";
 cli := import "util/cli";
 test := import "core/test";
 
@@ -10,7 +9,7 @@ test.checkText("stripLeadingSeparator noop", "a.lts,--flag", text.joinTexts(cli.
 
 /* Verify in-place munching with list.popFront leaves remaining args untouched on caller list. */
 munched: mut List<String> = ["--flag", "target.lts", "--extra"];
-first := list.popFront(mut munched);
+first := mut munched.popFront();
 test.checkText("popFront token", "--flag", first);
 test.checkText("popFront remaining", "target.lts,--extra", text.joinTexts(munched, ","));
 

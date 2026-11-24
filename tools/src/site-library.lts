@@ -2,13 +2,12 @@
 
 cli := import "util/cli";
 io := import "core/io";
-list := import "core/list";
 project := import "util/project";
 siteLib := import "../../site/src/library.lts";
 
 run := fn(rawArgs: List<String>): Unit {
     args := cli.stripLeadingSeparator(rawArgs);
-    root := if list.listCountText(args) > 0 { args[0] } else { project.findRepoRoot() };
+    root := if args.length() > 0 { args[0] } else { project.findRepoRoot() };
     if root == "" {
         io.errorLine("lite site-library: could not locate repository root");
         io.exit(1);

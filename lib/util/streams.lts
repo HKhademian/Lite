@@ -2,18 +2,17 @@
 
 crypto := import "core/crypto";
 fs := import "core/file";
-text := import "core/text";
 unicode := import "core/unicode";
 list := import "core/list";
 path := import "core/path";
 json := import "util/json";
 
 isHex64 := fn(value: String): Bool {
-    if text.length(value) =!= 64 { return false; }
+    if value.length() =!= 64 { return false; }
     var i := 0;
     loop i < 64 {
-        ch := text.at(value, i);
-        ok := text.isDigit(ch) or ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f";
+        ch := value.at(i);
+        ok := ch.isDigit() or ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f";
         if not ok { return false; }
         i = i + 1;
     }
@@ -21,14 +20,14 @@ isHex64 := fn(value: String): Bool {
 }
 
 isSiblingFileName := fn(name: String): Bool {
-    size := text.length(name);
+    size := name.length();
     if size == 0 { return false; }
-    first := text.at(name, 0);
-    if not (text.isAsciiLetter(first) or text.isDigit(first)) { return false; }
+    first := name.at(0);
+    if not (first.isAsciiLetter() or first.isDigit()) { return false; }
     var i := 1;
     loop i < size {
-        ch := text.at(name, i);
-        ok := text.isAsciiLetter(ch) or text.isDigit(ch) or ch == "." or ch == "_" or ch == "-";
+        ch := name.at(i);
+        ok := ch.isAsciiLetter() or ch.isDigit() or ch == "." or ch == "_" or ch == "-";
         if not ok { return false; }
         i = i + 1;
     }
@@ -36,8 +35,8 @@ isSiblingFileName := fn(name: String): Bool {
 }
 
 isJsonPrefixAt := fn(source: String, start: Int, prefix: String): Bool {
-    pos := text.skipSpaces(source, start);
-    text.startsWithAt(source, pos, prefix)
+    pos := source.skipSpaces(start);
+    source.startsWithAt(pos, prefix)
 }
 
 parseBytesArray := fn(source: String, arrayPos: Int, label: String): (ok: Bool, error: String) {
@@ -59,7 +58,7 @@ collectBytesArray := fn(source: String, arrayPos: Int): List<Int> {
     offsets := json.arrayElementOffsets(source, arrayPos);
     loop offsets as bPos {
         byteRes := json.readIntAt(source, bPos);
-        list.pushBack(mut out, byteRes.value);
+        mut out.pushBack(byteRes.value);
     }
     out
 }
@@ -127,8 +126,8 @@ checkHash: Bool
         var hashValue := "";
         if hashField.found {
             hStr := json.readStringAt(source, hashField.valuePos);
-            if hStr.ok and text.startsWithAt(hStr.value, 0, "sha256:") {
-                hexPart := text.slice(hStr.value, 7, text.length(hStr.value));
+            if hStr.ok and hStr.value.startsWithAt(0, "sha256:") {
+                hexPart := hStr.value.slice(7, hStr.value.length());
                 if isHex64(hexPart) {
                     validHash = true;
                     hashValue = hStr.value;
@@ -161,8 +160,8 @@ pub readStreamBytes := fn(source: String, streamPos: Int, directory: String): Li
 
 /** Returns true when `left` and `right` contain identical byte sequences. */
 pub equalBytes := fn(left: List<Int>, right: List<Int>): Bool {
-    n := list.listCountInt(left);
-    if n =!= list.listCountInt(right) { return false; }
+    n := left.length();
+    if n =!= right.length() { return false; }
     var i := 0;
     loop i < n {
         if left[i] =!= right[i] { return false; }

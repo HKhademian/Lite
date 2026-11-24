@@ -4,7 +4,6 @@ io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
-list := import "core/list";
 path := import "core/path";
 project := import "util/project";
 tb := import "util/text-builder";
@@ -18,14 +17,14 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
     out: mut tb.TextBuilder;
     var runStart := 0;
     var lastChar := "";
-    lineLen := text.length(line);
+    lineLen := line.length();
     var i := 0;
 
     loop i < lineLen {
-        ch := text.at(line, i);
+        ch := line.at(i);
         if inBlock {
             lastChar = ch;
-            if ch == "*" and i + 1 < lineLen and text.at(line, i + 1) == "/" {
+            if ch == "*" and i + 1 < lineLen and line.at(i + 1) == "/" {
                 lastChar = "/";
                 inBlock = false;
                 i = i + 2;
@@ -35,17 +34,17 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
         } else if inString =!= "" {
             lastChar = ch;
             if ch == "\\" and i + 1 < lineLen {
-                nextCh := text.at(line, i + 1);
+                nextCh := line.at(i + 1);
                 lastChar = nextCh;
                 i = i + 2;
             } else {
                 if ch == inString { inString = ""; }
                 i = i + 1;
             }
-        } else if ch == "/" and i + 1 < lineLen and text.at(line, i + 1) == "/" {
+        } else if ch == "/" and i + 1 < lineLen and line.at(i + 1) == "/" {
             i = lineLen;
             break;
-        } else if ch == "/" and i + 1 < lineLen and text.at(line, i + 1) == "*" {
+        } else if ch == "/" and i + 1 < lineLen and line.at(i + 1) == "*" {
             lastChar = "*";
             inBlock = true;
             sawCode = true;
@@ -59,16 +58,16 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
             if not sawCode { leadingCloses = leadingCloses + 1; } else { netChange = netChange - 1; }
             lastChar = "}";
             sawCode = true;
-            if i + 1 < lineLen and text.isAsciiLetter(text.at(line, i + 1)) {
-                tb.append(mut out, text.slice(line, runStart, i + 1));
+            if i + 1 < lineLen and line.at(i + 1).isAsciiLetter() {
+                tb.append(mut out, line.slice(runStart, i + 1));
                 tb.append(mut out, " ");
                 runStart = i + 1;
                 lastChar = " ";
             }
             i = i + 1;
         } else if ch == "{" {
-            if lastChar =!= "" and not text.isWhitespace(lastChar) and lastChar =!= "(" and lastChar =!= "[" {
-                if i > runStart { tb.append(mut out, text.slice(line, runStart, i)); }
+            if lastChar =!= "" and not lastChar.isWhitespace() and lastChar =!= "(" and lastChar =!= "[" {
+                if i > runStart { tb.append(mut out, line.slice(runStart, i)); }
                 tb.append(mut out, " ");
                 runStart = i;
             }
@@ -77,7 +76,7 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
             sawCode = true;
             i = i + 1;
         } else {
-            if not text.isWhitespace(ch) { sawCode = true; }
+            if not ch.isWhitespace() { sawCode = true; }
             lastChar = ch;
             i = i + 1;
         }
@@ -86,11 +85,11 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
     normalizedRaw := if runStart == 0 {
         line
     } else {
-        if runStart < lineLen { tb.append(mut out, text.slice(line, runStart, lineLen)); }
+        if runStart < lineLen { tb.append(mut out, line.slice(runStart, lineLen)); }
         tb.build(out)
     };
     totalNet := netChange - leadingCloses;
-    (leadingCloses = leadingCloses, netChange = totalNet, normalized = text.trimEnd(normalizedRaw), inBlockComment = inBlock)
+    (leadingCloses = leadingCloses, netChange = totalNet, normalized = normalizedRaw.trimEnd(), inBlockComment = inBlock)
 }
 
 /** Formats Lite source text cleanly and idempotently (4-space indentation, LF, single trailing newline). */
@@ -100,45 +99,45 @@ pub formatLite := fn(source: String): String {
     var depth := 0;
     var inBlockComment := false;
     var blankRun := 0;
-    size := text.length(source);
+    size := source.length();
     var pos := 0;
     var done := false;
 
     loop not done {
         var lineEnd := pos;
         loop lineEnd < size {
-            ch := text.at(source, lineEnd);
+            ch := source.at(lineEnd);
             if ch == "\n" or ch == "\r" { break; }
             lineEnd = lineEnd + 1;
         }
-        rawLine := text.slice(source, pos, lineEnd);
+        rawLine := source.slice(pos, lineEnd);
         if lineEnd >= size {
             done = true;
-        } else if text.at(source, lineEnd) == "\r" and lineEnd + 1 < size and text.at(source, lineEnd + 1) == "\n" {
+        } else if source.at(lineEnd) == "\r" and lineEnd + 1 < size and source.at(lineEnd + 1) == "\n" {
             pos = lineEnd + 2;
         } else {
             pos = lineEnd + 1;
         }
 
-        trimmed := text.trimEnd(rawLine);
-        if text.trimStart(trimmed) == "" {
+        trimmed := rawLine.trimEnd();
+        if trimmed.trimStart() == "" {
             if formattedCount > 0 and blankRun == 0 {
-                list.pushBack(mut formatted, "");
+                mut formatted.pushBack("");
                 formattedCount = formattedCount + 1;
                 blankRun = 1;
             }
         } else if inBlockComment {
-            list.pushBack(mut formatted, trimmed);
+            mut formatted.pushBack(trimmed);
             formattedCount = formattedCount + 1;
             scanned := scanLineBraces(trimmed, true);
             inBlockComment = scanned.inBlockComment;
             blankRun = 0;
         } else {
-            body := text.trimStart(trimmed);
+            body := trimmed.trimStart();
             scanned := scanLineBraces(body, false);
             var lineDepth := depth - scanned.leadingCloses;
             if lineDepth < 0 { lineDepth = 0; }
-            list.pushBack(mut formatted, text.repeatText("    ", lineDepth) + scanned.normalized);
+            (mut formatted).pushBack("    ".repeat(lineDepth) + scanned.normalized);
             formattedCount = formattedCount + 1;
             depth = depth + scanned.netChange;
             if depth < 0 { depth = 0; }
@@ -148,7 +147,7 @@ pub formatLite := fn(source: String): String {
     }
 
     loop formattedCount > 0 and formatted[formattedCount - 1] == "" {
-        list.popBack(mut formatted);
+        mut formatted.popBack();
         formattedCount = formattedCount - 1;
     }
     if formattedCount == 0 { return ""; }
@@ -161,11 +160,11 @@ run := fn(rawArgs: List<String>): Unit {
     args: mut List<String> = rawArgs;
     var checkOnly := false;
     targets: mut List<String> = [];
-    loop list.listCountText(args) > 0 {
-        arg := list.popFront(mut args);
+    loop args.length() > 0 {
+        arg := mut args.popFront();
         if arg == "--" {
-            loop list.listCountText(args) > 0 {
-                list.pushBack(mut targets, list.popFront(mut args));
+            loop args.length() > 0 {
+                mut targets.pushBack(mut args.popFront());
             }
             break;
         } else if arg == "--help" or arg == "-h" {
@@ -178,11 +177,11 @@ run := fn(rawArgs: List<String>): Unit {
         } else if arg == "--check" {
             checkOnly = true;
         } else if arg =!= "--write" {
-            list.pushBack(mut targets, arg);
+            mut targets.pushBack(arg);
         }
     }
 
-    targetCount := list.listCountText(targets);
+    targetCount := targets.length();
 
     if targetCount == 0 {
         io.errorLine("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]");

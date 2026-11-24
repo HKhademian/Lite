@@ -1,7 +1,5 @@
 /** Experimental sparse sets (`extra/sparse`) with O(1) membership/removal and cache-friendly dense iteration. */
 
-list := import "core/list";
-
 /** Opaque generational handle to a bounded-universe integer sparse set (`0..capacity-1`). */
 pub SparseSet := type (handle: Int, gen: Int);
 
@@ -16,40 +14,40 @@ var ssFree: mut List<Int> = [];
 
 validSet := fn(s: SparseSet): Bool {
     id := s.handle;
-    id >= 0 and id < list.length(ssAlive) and ssAlive[id] and ssGen[id] == s.gen
+    id >= 0 and id < ssAlive.length() and ssAlive[id] and ssGen[id] == s.gen
 };
 
 /** Creates a sparse set supporting integer IDs in `0..capacity-1`. */
 pub create := fn(capacity: Int): SparseSet {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := list.length(ssFree) - 1;
+    var fi := ssFree.length() - 1;
     loop fi >= 0 {
         id := ssFree[fi];
         if ssCap[id] >= cap {
-            last := list.length(ssFree) - 1;
-            if fi =!= last { list.setAt(mut ssFree, fi, ssFree[last]); }
-            _drop := list.popBack(mut ssFree);
-            list.setAt(mut ssCap, id, cap);
-            list.setAt(mut ssCount, id, 0);
-            list.setAt(mut ssAlive, id, true);
+            last := ssFree.length() - 1;
+            if fi =!= last { mut ssFree.setAt(fi, ssFree[last]); }
+            _drop := mut ssFree.popBack();
+            mut ssCap.setAt(id, cap);
+            mut ssCount.setAt(id, 0);
+            mut ssAlive.setAt(id, true);
             return (handle = id, gen = ssGen[id]);
         }
         fi -= 1;
     }
 
-    base := list.length(ssSparse);
+    base := ssSparse.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut ssSparse, -1);
-        list.pushBack(mut ssDense, 0);
+        mut ssSparse.pushBack(-1);
+        mut ssDense.pushBack(0);
         i += 1;
     }
-    id := list.length(ssBase);
-    list.pushBack(mut ssBase, base);
-    list.pushBack(mut ssCap, cap);
-    list.pushBack(mut ssCount, 0);
-    list.pushBack(mut ssGen, 1);
-    list.pushBack(mut ssAlive, true);
+    id := ssBase.length();
+    mut ssBase.pushBack(base);
+    mut ssCap.pushBack(cap);
+    mut ssCount.pushBack(0);
+    mut ssGen.pushBack(1);
+    mut ssAlive.pushBack(true);
     (handle = id, gen = 1)
 };
 
@@ -71,9 +69,9 @@ pub insert := fn(s: SparseSet, value: Int): Bool {
     if has(s, value) { return false; }
     base := ssBase[id];
     cnt := ssCount[id];
-    list.setAt(mut ssSparse, base + value, cnt);
-    list.setAt(mut ssDense, base + cnt, value);
-    list.setAt(mut ssCount, id, cnt + 1);
+    mut ssSparse.setAt(base + value, cnt);
+    mut ssDense.setAt(base + cnt, value);
+    mut ssCount.setAt(id, cnt + 1);
     true
 };
 
@@ -85,9 +83,9 @@ pub remove := fn(s: SparseSet, value: Int): Bool {
     denseIdx := ssSparse[base + value];
     lastIdx := ssCount[id] - 1;
     lastVal := ssDense[base + lastIdx];
-    list.setAt(mut ssDense, base + denseIdx, lastVal);
-    list.setAt(mut ssSparse, base + lastVal, denseIdx);
-    list.setAt(mut ssCount, id, lastIdx);
+    mut ssDense.setAt(base + denseIdx, lastVal);
+    mut ssSparse.setAt(base + lastVal, denseIdx);
+    mut ssCount.setAt(id, lastIdx);
     true
 };
 
@@ -121,14 +119,14 @@ pub capacity := fn(s: SparseSet): Int {
 /** Clears `s` in O(1) (no sparse array zeroing needed). */
 pub clear := fn(s: SparseSet): Unit {
     if not validSet(s) { return; }
-    list.setAt(mut ssCount, s.handle, 0);
+    (mut ssCount).setAt(s.handle, 0);
 };
 
 /** Destroys `s` and recycles its handle slot. */
 pub destroy := fn(s: SparseSet): Unit {
     if not validSet(s) { return; }
     id := s.handle;
-    list.setAt(mut ssAlive, id, false);
-    list.setAt(mut ssGen, id, ssGen[id] + 1);
-    list.pushBack(mut ssFree, id);
+    mut ssAlive.setAt(id, false);
+    mut ssGen.setAt(id, ssGen[id] + 1);
+    mut ssFree.pushBack(id);
 };

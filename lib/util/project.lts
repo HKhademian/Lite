@@ -3,10 +3,8 @@
 crypto := import "core/crypto";
 io := import "core/io";
 fs := import "core/file";
-integer := import "core/int";
 proc := import "core/process";
 text := import "core/text";
-list := import "core/list";
 path := import "core/path";
 json := import "util/json";
 
@@ -57,24 +55,24 @@ relativeToRoot := fn(root: String, targetPath: String): String {
     if root == "" { return canonTarget; }
     rpRoot := fs.realPath(root);
     canonRoot := if rpRoot.ok { rpRoot.path } else { path.normalize(root) };
-    prefix := if text.endsWith(canonRoot, "/") { canonRoot } else { canonRoot + "/" };
-    if text.startsWithAt(canonTarget, 0, prefix) {
-        return text.slice(canonTarget, text.length(prefix), text.length(canonTarget));
+    prefix := if canonRoot.endsWith("/") { canonRoot } else { canonRoot + "/" };
+    if canonTarget.startsWithAt(0, prefix) {
+        return canonTarget.slice(prefix.length(), canonTarget.length());
     }
     canonTarget
 };
 
 /** Classifies the active execution artifact kind from its repo-relative entrypoint path. */
 classifyArtifactKind := fn(relEntry: String): String {
-    if text.startsWithAt(relEntry, 0, "dist/tools/") {
-        return if text.endsWith(relEntry, ".ts") { "ignited-ts" } else { "ignited-c" };
+    if relEntry.startsWithAt(0, "dist/tools/") {
+        return if relEntry.endsWith(".ts") { "ignited-ts" } else { "ignited-c" };
     }
     if relEntry == "compiler/bootstrap/igniter.ts" { return "bootstrap-igniter-ts"; }
-    if text.startsWithAt(relEntry, 0, "dist/bootstrap/") {
-        return if text.endsWith(relEntry, ".ts") { "bootstrap-compiler-ts" } else { "bootstrap-compiler-c" };
+    if relEntry.startsWithAt(0, "dist/bootstrap/") {
+        return if relEntry.endsWith(".ts") { "bootstrap-compiler-ts" } else { "bootstrap-compiler-c" };
     }
-    if text.startsWithAt(relEntry, 0, "dist/compiler-cache/") { return "cached-compiler-ts"; }
-    if text.endsWith(relEntry, ".ts") or text.endsWith(relEntry, ".js") { return "ts-script"; }
+    if relEntry.startsWithAt(0, "dist/compiler-cache/") { return "cached-compiler-ts"; }
+    if relEntry.endsWith(".ts") or relEntry.endsWith(".js") { return "ts-script"; }
     if relEntry == "" { return "unknown"; }
     "native"
 };
@@ -82,8 +80,8 @@ classifyArtifactKind := fn(relEntry: String): String {
 /** Abbreviates a hex digest for concise terminal display. */
 shortHash := fn(hex: String): String {
     if hex == "" { return "unknown"; }
-    if text.length(hex) <= 12 { return hex; }
-    text.slice(hex, 0, 12)
+    if hex.length() <= 12 { return hex; }
+    hex.slice(0, 12)
 };
 
 /** Reads optional seed metadata from `compiler/bootstrap/seed.ts`. */
@@ -95,7 +93,7 @@ readSeedMeta := fn(root: String): (target: String, recorded: String, igniterSha2
     if not seedRead.ok {
         return (target = "", recorded = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "");
     }
-    brace := text.indexOfText(seedRead.text, "{", 0);
+    brace := seedRead.text.indexOf("{", 0);
     if brace < 0 {
         return (target = "", recorded = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "");
     }
@@ -118,11 +116,11 @@ readToolProvenance := fn(root: String, relEntry: String, kind: String): (target:
     if root == "" or (kind =!= "ignited-ts" and kind =!= "ignited-c") {
         return (target = "", artifactSha256 = "", compilerArtifactSha256 = "", compilerSourceSha256 = "", source = "", moduleCount = 0);
     }
-    prefixLen := text.length("dist/tools/");
-    toolName := if text.endsWith(relEntry, ".ts") {
-        text.slice(relEntry, prefixLen, text.length(relEntry) - 3)
+    prefixLen := "dist/tools/".length();
+    toolName := if relEntry.endsWith(".ts") {
+        relEntry.slice(prefixLen, relEntry.length() - 3)
     } else {
-        text.slice(relEntry, prefixLen, text.length(relEntry))
+        relEntry.slice(prefixLen, relEntry.length())
     };
     provRead := fs.readText(path.resolve(root, "dist/tools/" + toolName + ".provenance.json"));
     if not provRead.ok or not json.validate(provRead.text).ok {
@@ -138,7 +136,7 @@ readToolProvenance := fn(root: String, relEntry: String, kind: String): (target:
     depsField := json.findObjectField(provText, 0, "dependencies");
     if depsField.found {
         offsets := json.arrayElementOffsets(provText, depsField.valuePos);
-        depCount = list.listCountInt(offsets);
+        depCount = offsets.length();
         if depCount > 0 {
             firstPath := json.readObjectString(provText, offsets[0], "path");
             if firstPath.found and firstPath.ok { srcPath = firstPath.value; }
@@ -188,7 +186,7 @@ printVersionMeta := fn(label: String, component: String, asJson: Bool): Unit {
         + "  \"artifact\": " + json.quoteString(relEntry) + ",\n"
         + "  \"artifactSha256\": " + json.quoteString(artSha) + ",\n"
         + "  \"source\": " + json.quoteString(source) + ",\n"
-        + "  \"modules\": " + integer.intText(prov.moduleCount) + ",\n"
+        + "  \"modules\": " + prov.moduleCount.toText() + ",\n"
         + "  \"compilerArtifactSha256\": " + json.quoteString(prov.compilerArtifactSha256) + ",\n"
         + "  \"compilerSourceSha256\": " + json.quoteString(prov.compilerSourceSha256) + ",\n"
         + "  \"seedArtifactSha256\": " + json.quoteString(seed.artifactSha256) + ",\n"
@@ -221,12 +219,12 @@ printVersionMeta := fn(label: String, component: String, asJson: Bool): Unit {
     if source =!= "" {
         srcMeta: mut List<String> = [];
         if prov.moduleCount > 0 {
-            list.pushBack(mut srcMeta, integer.intText(prov.moduleCount) + " modules");
+            mut srcMeta.pushBack(prov.moduleCount.toText() + " modules");
         }
         if prov.compilerArtifactSha256 =!= "" {
-            list.pushBack(mut srcMeta, "built-by: " + shortHash(prov.compilerArtifactSha256));
+            mut srcMeta.pushBack("built-by: " + shortHash(prov.compilerArtifactSha256));
         }
-        srcSuffix := if list.listCountText(srcMeta) > 0 { " (" + text.joinTexts(srcMeta, ", ") + ")" } else { "" };
+        srcSuffix := if srcMeta.length() > 0 { " (" + text.joinTexts(srcMeta, ", ") + ")" } else { "" };
         io.outputLine("source: " + source + srcSuffix);
     }
     io.outputLine("host: " + hostRuntime + " (" + proc.platform() + "/" + proc.arch() + ")");
@@ -234,7 +232,7 @@ printVersionMeta := fn(label: String, component: String, asJson: Bool): Unit {
 
 /** Handles `<label> --version [--json]` cleanly when `--version` is the first CLI argument. */
 pub handleNamedVersionFlag := fn(args: List<String>, component: String, label: String): Unit {
-    argCount := list.listCountText(args);
+    argCount := args.length();
     if argCount > 0 and args[0] == "--version" {
         if argCount == 1 {
             printVersionMeta(label, component, false);
@@ -257,9 +255,9 @@ pub handleVersionFlag := fn(args: List<String>, component: String, command: Stri
 /** Writes captured process `stderr` chunk without adding a duplicate trailing newline. */
 pub errorText := fn(chunk: String): Unit {
     if chunk == "" { return; }
-    len := text.length(chunk);
-    if text.at(chunk, len - 1) == "\n" {
-        io.errorLine(text.slice(chunk, 0, len - 1));
+    len := chunk.length();
+    if chunk.at(len - 1) == "\n" {
+        io.errorLine(chunk.slice(0, len - 1));
     } else {
         io.errorLine(chunk);
     }
@@ -281,7 +279,7 @@ pub forwardNode := fn(scriptRelPath: String, args: List<String>): Unit {
     scriptPath := if root == "" { scriptRelPath } else { path.resolve(root, scriptRelPath) };
     nodeArgs: mut List<String> = [scriptPath];
     loop args as arg {
-        list.pushBack(mut nodeArgs, arg);
+        mut nodeArgs.pushBack(arg);
     }
     emptyEnv: List<String> = [];
     res := proc.run(nodeExecPath(), nodeArgs, "", emptyEnv, false, "");
@@ -295,10 +293,10 @@ pub forwardNode := fn(scriptRelPath: String, args: List<String>): Unit {
 /** Executes a generated TS compiler artifact directly when self-executing (`import.meta`), or via ESM `main()` when a bare module. */
 pub runCompilerArtifact := fn(artifactPath: String, compilerArgs: List<String>): Int {
     artRead := fs.readText(artifactPath);
-    hasEntry := artRead.ok and text.indexOfText(artRead.text, "import.meta", 0) >= 0;
+    hasEntry := artRead.ok and artRead.text.indexOf("import.meta", 0) >= 0;
     nodeArgs: mut List<String> = [];
     if hasEntry {
-        list.pushBack(mut nodeArgs, artifactPath);
+        mut nodeArgs.pushBack(artifactPath);
     } else {
         script :=
         "import { writeSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; " +
@@ -308,13 +306,13 @@ pub runCompilerArtifact := fn(artifactPath: String, compilerArgs: List<String>):
         "if (out === undefined) process.exitCode = 2; " +
         "else if (typeof out !== 'string') { process.stderr.write('invalid compiler main\\n'); process.exitCode = 1; } " +
         "else if (out.length > 0) writeSync(1, out);";
-        list.pushBack(mut nodeArgs, "--input-type=module");
-        list.pushBack(mut nodeArgs, "-e");
-        list.pushBack(mut nodeArgs, script);
-        list.pushBack(mut nodeArgs, artifactPath);
+        mut nodeArgs.pushBack("--input-type=module");
+        mut nodeArgs.pushBack("-e");
+        mut nodeArgs.pushBack(script);
+        mut nodeArgs.pushBack(artifactPath);
     }
     loop compilerArgs as arg {
-        list.pushBack(mut nodeArgs, arg);
+        mut nodeArgs.pushBack(arg);
     }
     emptyEnv: List<String> = [];
     res := proc.run(nodeExecPath(), nodeArgs, "", emptyEnv, false, "");

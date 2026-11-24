@@ -1,7 +1,5 @@
 /** Experimental O(1) double-ended queues and FIFO queues (`extra/deque`) backed by fixed-capacity circular slabs. */
 
-list := import "core/list";
-
 /** Opaque generational handle to an `Int` double-ended queue. */
 pub IntDeque := type (handle: Int, gen: Int);
 
@@ -30,12 +28,12 @@ var tdFree: mut List<Int> = [];
 
 validIntDeque := fn(d: IntDeque): Bool {
     id := d.handle;
-    id >= 0 and id < list.length(idAlive) and idAlive[id] and idGen[id] == d.gen
+    id >= 0 and id < idAlive.length() and idAlive[id] and idGen[id] == d.gen
 };
 
 validTextDeque := fn(d: TextDeque): Bool {
     id := d.handle;
-    id >= 0 and id < list.length(tdAlive) and tdAlive[id] and tdGen[id] == d.gen
+    id >= 0 and id < tdAlive.length() and tdAlive[id] and tdGen[id] == d.gen
 };
 
 /* ============================================================================
@@ -45,35 +43,35 @@ validTextDeque := fn(d: TextDeque): Bool {
 /** Creates a fixed-capacity `Int` deque (`capacity >= 1`). */
 pub createInts := fn(capacity: Int): IntDeque {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := list.length(idFree) - 1;
+    var fi := idFree.length() - 1;
     loop fi >= 0 {
         id := idFree[fi];
         if idCap[id] >= cap {
-            last := list.length(idFree) - 1;
-            if fi =!= last { list.setAt(mut idFree, fi, idFree[last]); }
-            _drop := list.popBack(mut idFree);
-            list.setAt(mut idCap, id, cap);
-            list.setAt(mut idHead, id, 0);
-            list.setAt(mut idCount, id, 0);
-            list.setAt(mut idAlive, id, true);
+            last := idFree.length() - 1;
+            if fi =!= last { mut idFree.setAt(fi, idFree[last]); }
+            _drop := mut idFree.popBack();
+            mut idCap.setAt(id, cap);
+            mut idHead.setAt(id, 0);
+            mut idCount.setAt(id, 0);
+            mut idAlive.setAt(id, true);
             return (handle = id, gen = idGen[id]);
         }
         fi -= 1;
     }
 
-    base := list.length(idSlab);
+    base := idSlab.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut idSlab, 0);
+        mut idSlab.pushBack(0);
         i += 1;
     }
-    id := list.length(idBase);
-    list.pushBack(mut idBase, base);
-    list.pushBack(mut idCap, cap);
-    list.pushBack(mut idHead, 0);
-    list.pushBack(mut idCount, 0);
-    list.pushBack(mut idGen, 1);
-    list.pushBack(mut idAlive, true);
+    id := idBase.length();
+    mut idBase.pushBack(base);
+    mut idCap.pushBack(cap);
+    mut idHead.pushBack(0);
+    mut idCount.pushBack(0);
+    mut idGen.pushBack(1);
+    mut idAlive.pushBack(true);
     (handle = id, gen = 1)
 };
 
@@ -85,8 +83,8 @@ pub pushBackInt := fn(deque: IntDeque, value: Int): Bool {
     cnt := idCount[id];
     if cnt >= cap { return false; }
     tail := (idHead[id] + cnt) % cap;
-    list.setAt(mut idSlab, idBase[id] + tail, value);
-    list.setAt(mut idCount, id, cnt + 1);
+    mut idSlab.setAt(idBase[id] + tail, value);
+    mut idCount.setAt(id, cnt + 1);
     true
 };
 
@@ -98,9 +96,9 @@ pub pushFrontInt := fn(deque: IntDeque, value: Int): Bool {
     cnt := idCount[id];
     if cnt >= cap { return false; }
     newHead := (idHead[id] + cap - 1) % cap;
-    list.setAt(mut idSlab, idBase[id] + newHead, value);
-    list.setAt(mut idHead, id, newHead);
-    list.setAt(mut idCount, id, cnt + 1);
+    mut idSlab.setAt(idBase[id] + newHead, value);
+    mut idHead.setAt(id, newHead);
+    mut idCount.setAt(id, cnt + 1);
     true
 };
 
@@ -112,8 +110,8 @@ pub popFrontInt := fn(deque: IntDeque): (found: Bool, value: Int) {
     if cnt <= 0 { return (found = false, value = 0); }
     head := idHead[id];
     val := idSlab[idBase[id] + head];
-    list.setAt(mut idHead, id, (head + 1) % idCap[id]);
-    list.setAt(mut idCount, id, cnt - 1);
+    mut idHead.setAt(id, (head + 1) % idCap[id]);
+    mut idCount.setAt(id, cnt - 1);
     (found = true, value = val)
 };
 
@@ -125,7 +123,7 @@ pub popBackInt := fn(deque: IntDeque): (found: Bool, value: Int) {
     if cnt <= 0 { return (found = false, value = 0); }
     idx := (idHead[id] + cnt - 1) % idCap[id];
     val := idSlab[idBase[id] + idx];
-    list.setAt(mut idCount, id, cnt - 1);
+    mut idCount.setAt(id, cnt - 1);
     (found = true, value = val)
 };
 
@@ -183,17 +181,17 @@ pub isIntFull := fn(deque: IntDeque): Bool {
 pub clearInts := fn(deque: IntDeque): Unit {
     if not validIntDeque(deque) { return; }
     id := deque.handle;
-    list.setAt(mut idHead, id, 0);
-    list.setAt(mut idCount, id, 0);
+    mut idHead.setAt(id, 0);
+    mut idCount.setAt(id, 0);
 };
 
 /** Destroys `deque` and recycles its handle slot. */
 pub destroyInts := fn(deque: IntDeque): Unit {
     if not validIntDeque(deque) { return; }
     id := deque.handle;
-    list.setAt(mut idAlive, id, false);
-    list.setAt(mut idGen, id, idGen[id] + 1);
-    list.pushBack(mut idFree, id);
+    mut idAlive.setAt(id, false);
+    mut idGen.setAt(id, idGen[id] + 1);
+    mut idFree.pushBack(id);
 };
 
 /* ============================================================================
@@ -203,35 +201,35 @@ pub destroyInts := fn(deque: IntDeque): Unit {
 /** Creates a fixed-capacity `String` deque (`capacity >= 1`). */
 pub createTexts := fn(capacity: Int): TextDeque {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := list.length(tdFree) - 1;
+    var fi := tdFree.length() - 1;
     loop fi >= 0 {
         id := tdFree[fi];
         if tdCap[id] >= cap {
-            last := list.length(tdFree) - 1;
-            if fi =!= last { list.setAt(mut tdFree, fi, tdFree[last]); }
-            _drop := list.popBack(mut tdFree);
-            list.setAt(mut tdCap, id, cap);
-            list.setAt(mut tdHead, id, 0);
-            list.setAt(mut tdCount, id, 0);
-            list.setAt(mut tdAlive, id, true);
+            last := tdFree.length() - 1;
+            if fi =!= last { mut tdFree.setAt(fi, tdFree[last]); }
+            _drop := mut tdFree.popBack();
+            mut tdCap.setAt(id, cap);
+            mut tdHead.setAt(id, 0);
+            mut tdCount.setAt(id, 0);
+            mut tdAlive.setAt(id, true);
             return (handle = id, gen = tdGen[id]);
         }
         fi -= 1;
     }
 
-    base := list.length(tdSlab);
+    base := tdSlab.length();
     var i := 0;
     loop i < cap {
-        list.pushBack(mut tdSlab, "");
+        mut tdSlab.pushBack("");
         i += 1;
     }
-    id := list.length(tdBase);
-    list.pushBack(mut tdBase, base);
-    list.pushBack(mut tdCap, cap);
-    list.pushBack(mut tdHead, 0);
-    list.pushBack(mut tdCount, 0);
-    list.pushBack(mut tdGen, 1);
-    list.pushBack(mut tdAlive, true);
+    id := tdBase.length();
+    mut tdBase.pushBack(base);
+    mut tdCap.pushBack(cap);
+    mut tdHead.pushBack(0);
+    mut tdCount.pushBack(0);
+    mut tdGen.pushBack(1);
+    mut tdAlive.pushBack(true);
     (handle = id, gen = 1)
 };
 
@@ -243,8 +241,8 @@ pub pushBackText := fn(deque: TextDeque, value: String): Bool {
     cnt := tdCount[id];
     if cnt >= cap { return false; }
     tail := (tdHead[id] + cnt) % cap;
-    list.setAt(mut tdSlab, tdBase[id] + tail, value);
-    list.setAt(mut tdCount, id, cnt + 1);
+    mut tdSlab.setAt(tdBase[id] + tail, value);
+    mut tdCount.setAt(id, cnt + 1);
     true
 };
 
@@ -256,9 +254,9 @@ pub pushFrontText := fn(deque: TextDeque, value: String): Bool {
     cnt := tdCount[id];
     if cnt >= cap { return false; }
     newHead := (tdHead[id] + cap - 1) % cap;
-    list.setAt(mut tdSlab, tdBase[id] + newHead, value);
-    list.setAt(mut tdHead, id, newHead);
-    list.setAt(mut tdCount, id, cnt + 1);
+    mut tdSlab.setAt(tdBase[id] + newHead, value);
+    mut tdHead.setAt(id, newHead);
+    mut tdCount.setAt(id, cnt + 1);
     true
 };
 
@@ -271,9 +269,9 @@ pub popFrontText := fn(deque: TextDeque): (found: Bool, value: String) {
     head := tdHead[id];
     pos := tdBase[id] + head;
     val := tdSlab[pos];
-    list.setAt(mut tdSlab, pos, "");
-    list.setAt(mut tdHead, id, (head + 1) % tdCap[id]);
-    list.setAt(mut tdCount, id, cnt - 1);
+    mut tdSlab.setAt(pos, "");
+    mut tdHead.setAt(id, (head + 1) % tdCap[id]);
+    mut tdCount.setAt(id, cnt - 1);
     (found = true, value = val)
 };
 
@@ -285,8 +283,8 @@ pub popBackText := fn(deque: TextDeque): (found: Bool, value: String) {
     if cnt <= 0 { return (found = false, value = ""); }
     pos := tdBase[id] + ((tdHead[id] + cnt - 1) % tdCap[id]);
     val := tdSlab[pos];
-    list.setAt(mut tdSlab, pos, "");
-    list.setAt(mut tdCount, id, cnt - 1);
+    mut tdSlab.setAt(pos, "");
+    mut tdCount.setAt(id, cnt - 1);
     (found = true, value = val)
 };
 
@@ -304,11 +302,11 @@ pub clearTexts := fn(deque: TextDeque): Unit {
     cap := tdCap[id];
     var i := 0;
     loop i < cap {
-        list.setAt(mut tdSlab, base + i, "");
+        mut tdSlab.setAt(base + i, "");
         i += 1;
     }
-    list.setAt(mut tdHead, id, 0);
-    list.setAt(mut tdCount, id, 0);
+    (mut tdHead).setAt(id, 0);
+    mut tdCount.setAt(id, 0);
 };
 
 /** Destroys `deque` and recycles its handle slot. */
@@ -316,7 +314,7 @@ pub destroyTexts := fn(deque: TextDeque): Unit {
     if not validTextDeque(deque) { return; }
     clearTexts(deque);
     id := deque.handle;
-    list.setAt(mut tdAlive, id, false);
-    list.setAt(mut tdGen, id, tdGen[id] + 1);
-    list.pushBack(mut tdFree, id);
+    mut tdAlive.setAt(id, false);
+    mut tdGen.setAt(id, tdGen[id] + 1);
+    mut tdFree.pushBack(id);
 };
