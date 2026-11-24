@@ -26,7 +26,7 @@ toolForEntry := fn(rawEntry: String): String {
     parent := path.baseName(parentDir);
     grandparent := path.baseName(path.parentDir(parentDir));
     match {
-        base == "igniter.ts" or base == "lite-ignite" or base == "lite-wipe" { "" }
+        base == "igniter" or base == "igniter-c" or base == "igniter.ts" or base == "lite-ignite" or base == "lite-wipe" { "" }
         base == "lite" { "cli" }
         base == "lite-bench" { "bench" }
         base == "lite-bootstrap" { "bootstrap" }
@@ -90,8 +90,8 @@ isSha256Hex := fn(hex: String): Bool {
     true
 }
 
-/** Reads `compiler/bootstrap/seed.ts` hashes and verifies the tracked single-file bootstrap igniter digest. */
-readSeedInfo := fn(rootDir: String): (ok: Bool, igniterSha256: String, sourceSha256: String, artifactSha256: String, cArtifactSha256: String, error: String) {
+/** Reads `compiler/bootstrap/seed.ts` hashes and verifies the TS igniter digest when `verifyTsSeed` is true. */
+readSeedInfo := fn(rootDir: String, verifyTsSeed: Bool): (ok: Bool, igniterSha256: String, sourceSha256: String, artifactSha256: String, cArtifactSha256: String, error: String) {
     seedFile := path.join(rootDir, "compiler/bootstrap/seed.ts");
     seedRead := fs.readText(seedFile);
     if not seedRead.ok {
@@ -108,9 +108,11 @@ readSeedInfo := fn(rootDir: String): (ok: Bool, igniterSha256: String, sourceSha
     if not ignField.found or not ignField.ok or not srcField.found or not srcField.ok or not artField.found or not artField.ok {
         return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: missing seed hash fields");
     }
-    ignHash := crypto.sha256File(path.join(rootDir, "compiler/bootstrap/igniter.ts"));
-    if not ignHash.ok or ignHash.hex =!= ignField.value {
-        return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: selected TS bootstrap seed hash mismatch");
+    if verifyTsSeed {
+        ignHash := crypto.sha256File(path.join(rootDir, "compiler/bootstrap/igniter.ts"));
+        if not ignHash.ok or ignHash.hex =!= ignField.value {
+            return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: selected TS bootstrap seed hash mismatch");
+        }
     }
     cSha := if cArtField.found and cArtField.ok { cArtField.value } else { "" };
     (ok = true, igniterSha256 = ignField.value, sourceSha256 = srcField.value, artifactSha256 = artField.value, cArtifactSha256 = cSha, error = "")
@@ -128,26 +130,35 @@ probeCc := fn(): (available: Bool, cc: String) {
     (available = false, cc = "")
 };
 
-/** Resolves the ignited tooling target: C by default when `cc` and `compiler.c` are available, unless `--target ts` / `LITE_IGNITE_TARGET=ts` or `cc` is absent. */
+/** Resolves the ignited tooling target independently for C-only, TS-only, or dual checkouts. */
 resolveIgniteTarget := fn(rootDir: String, requested: String): (ok: Bool, target: String, cc: String, allowTsFallback: Bool, error: String) {
     envT := proc.envGet("LITE_IGNITE_TARGET");
     mode := if requested =!= "" { requested } else if envT.found and envT.value =!= "" { envT.value } else { "auto" };
+    hasSeedTs := fs.kind(path.join(rootDir, "compiler/bootstrap/igniter.ts")) == fs.FILE_KIND_FILE;
+    hasSeedC := fs.kind(path.join(rootDir, "compiler/bootstrap/compiler.c")) == fs.FILE_KIND_FILE;
     if mode == "ts" {
+        if not hasSeedTs {
+            return (ok = false, target = "", cc = "", allowTsFallback = false, error = "ignite: --target ts requested, but compiler/bootstrap/igniter.ts is missing");
+        }
         return (ok = true, target = "ts", cc = "", allowTsFallback = false, error = "");
     }
     if mode =!= "c" and mode =!= "auto" {
         return (ok = false, target = "", cc = "", allowTsFallback = false, error = "ignite: unknown target \"" + mode + "\" (expected c, ts, or auto)");
     }
-    hasSeedC := fs.kind(path.join(rootDir, "compiler/bootstrap/compiler.c")) == fs.FILE_KIND_FILE;
     ccInfo := if hasSeedC { probeCc() } else { (available = false, cc = "") };
     if ccInfo.available {
-        return (ok = true, target = "c", cc = ccInfo.cc, allowTsFallback = true, error = "");
+        allowFb := mode == "auto" and hasSeedTs;
+        return (ok = true, target = "c", cc = ccInfo.cc, allowTsFallback = allowFb, error = "");
     }
     if mode == "c" {
         reason := if not hasSeedC { "compiler/bootstrap/compiler.c is missing" } else { "no C compiler (cc) is available" };
         return (ok = false, target = "", cc = "", allowTsFallback = false, error = "ignite: --target c requested, but " + reason);
     }
-    (ok = true, target = "ts", cc = "", allowTsFallback = false, error = "")
+    if hasSeedTs {
+        return (ok = true, target = "ts", cc = "", allowTsFallback = false, error = "");
+    }
+    reason := if not hasSeedC { "neither compiler/bootstrap/compiler.c nor compiler/bootstrap/igniter.ts is present" } else { "no C compiler (cc) is available and compiler/bootstrap/igniter.ts is missing" };
+    (ok = false, target = "", cc = "", allowTsFallback = false, error = "ignite: " + reason)
 };
 
 /** Ensures the native C11 bootstrap compiler binary `dist/bootstrap/compiler-c` is built from tracked `compiler/bootstrap/compiler.c`. */
@@ -181,6 +192,47 @@ ensureDistCCompiler := fn(rootDir: String, expectedCSha: String, ccCmd: String, 
         return (ok = false, path = "", error = "ignite: failed to compile bootstrap C11 compiler: " + detail);
     }
     _wr := fs.writeText(stampPath, seedHash.hex + "\n");
+    (ok = true, path = binPath, error = "")
+};
+
+/** Builds standalone native C11 igniter binary `dist/bootstrap/igniter-c` from `tools/src/ignite.lts`. */
+buildNativeIgniterC := fn(rootDir: String, expectedCSha: String, ccCmd: String): (ok: Bool, path: String, error: String) {
+    cBoot := ensureDistCCompiler(rootDir, expectedCSha, ccCmd, false);
+    if not cBoot.ok {
+        return (ok = false, path = "", error = cBoot.error);
+    }
+    bootDir := path.join(rootDir, "dist/bootstrap");
+    binPath := path.join(bootDir, "igniter-c");
+    srcPath := path.join(rootDir, "tools/src/ignite.lts");
+    tmpDir := fs.makeTempDir("lite-build-igniter-c-");
+    if not tmpDir.ok {
+        return (ok = false, path = "", error = tmpDir.error);
+    }
+    cOut := path.join(tmpDir.path, "igniter.c");
+    emptyEnv: List<String> = [];
+    compRes := proc.run(cBoot.path, ["-O1", srcPath, "--out", cOut], rootDir, emptyEnv, true, "");
+    if compRes.error =!= "" or compRes.status =!= 0 {
+        _rm := fs.remove(tmpDir.path);
+        detail := if compRes.error =!= "" { compRes.error } else { compRes.stderr.trim() };
+        return (ok = false, path = "", error = "ignite: failed to emit C11 igniter: " + detail);
+    }
+    tmpBin := path.join(tmpDir.path, "igniter-c");
+    ccRes := proc.run(ccCmd, ["-std=c11", "-O1", cOut, "-o", tmpBin, "-lm"], rootDir, emptyEnv, true, "");
+    if ccRes.error =!= "" or ccRes.status =!= 0 {
+        _rm := fs.remove(tmpDir.path);
+        detail := if ccRes.error =!= "" { ccRes.error } else { ccRes.stderr.trim() };
+        return (ok = false, path = "", error = "ignite: cc failed for igniter-c: " + detail);
+    }
+    mkRes := fs.makeDir(bootDir);
+    if not mkRes.ok {
+        _rm := fs.remove(tmpDir.path);
+        return (ok = false, path = "", error = mkRes.error);
+    }
+    cpRes := fs.copy(tmpBin, binPath);
+    _rm := fs.remove(tmpDir.path);
+    if not cpRes.ok {
+        return (ok = false, path = "", error = cpRes.error);
+    }
     (ok = true, path = binPath, error = "")
 };
 
@@ -442,7 +494,7 @@ rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: S
 
 /** Compiles `tools/src/<name>.lts` via native C11 (`dist/bootstrap/compiler-c` + `cc`) into `dist/tools/<name>`, falling back to TS when external host builtins are required. */
 igniteSingleTool := fn(
-rootDir: String, name: String, target: String, ccCmd: String, allowTsFallback: Bool,
+rootDir: String, name: String, target: String, ccCmd: String, allowTsFallback: Bool, skipExternal: Bool,
 tsCompilerSha: String, cCompilerSha: String, compilerSourceSha: String, force: Bool
 ): (ok: Bool, path: String, target: String, sha256: String, rebuilt: Bool, error: String) {
     if target == "ts" {
@@ -480,6 +532,9 @@ tsCompilerSha: String, cCompilerSha: String, compilerSourceSha: String, force: B
         detail := if compRes.error =!= "" { compRes.error } else { compRes.stderr.trim() };
         if allowTsFallback and detail.contains("external host builtins") {
             return igniteSingleToolTs(rootDir, name, tsCompilerSha, compilerSourceSha, force, true);
+        }
+        if skipExternal and detail.contains("external host builtins") {
+            return (ok = true, path = "", target = "skipped", sha256 = "", rebuilt = false, error = "");
         }
         return (ok = false, path = "", target = "c", sha256 = "", rebuilt = false, error = "ignite: C11 compile failed for " + name + ": " + detail);
     }
@@ -551,7 +606,8 @@ executeIgnitedTool := fn(artifactPath: String, forwardArgs: List<String>): Unit 
         }
         io.exit(res.status);
     }
-    nativeEnv: List<String> = ["LITE_NODE=" + project.nodeExecPath()];
+    emptyEnv: List<String> = [];
+    nativeEnv: List<String> = if proc.runtimeVersion() == "c11" { emptyEnv } else { ["LITE_NODE=" + project.nodeExecPath()] };
     res := proc.run(artifactPath, forwardArgs, "", nativeEnv, false, "");
     if res.error =!= "" {
         io.errorLine("ignite: " + res.error);
@@ -671,12 +727,6 @@ run := fn(rawArgs: List<String>): Unit {
     rpRoot := fs.realPath(rawRoot);
     rootDir := if rpRoot.ok { rpRoot.path } else { rawRoot };
 
-    seedInfo := readSeedInfo(rootDir);
-    if not seedInfo.ok {
-        io.errorLine(seedInfo.error);
-        io.exit(1);
-    }
-
     entryPath := proc.entryPath();
     entryTool := toolForEntry(entryPath);
     if entryTool =!= "" {
@@ -685,7 +735,12 @@ run := fn(rawArgs: List<String>): Unit {
             io.errorLine(tgt.error);
             io.exit(1);
         }
-        ensured := igniteSingleTool(rootDir, entryTool, tgt.target, tgt.cc, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, false);
+        seedInfo := readSeedInfo(rootDir, tgt.target == "ts" or tgt.allowTsFallback);
+        if not seedInfo.ok {
+            io.errorLine(seedInfo.error);
+            io.exit(1);
+        }
+        ensured := igniteSingleTool(rootDir, entryTool, tgt.target, tgt.cc, tgt.allowTsFallback, false, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, false);
         if not ensured.ok {
             io.errorLine(ensured.error);
             io.exit(1);
@@ -694,6 +749,11 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     if rawArgs.length() > 0 and rawArgs[0] == "--compile" {
+        seedCompile := readSeedInfo(rootDir, true);
+        if not seedCompile.ok {
+            io.errorLine(seedCompile.error);
+            io.exit(1);
+        }
         compArgs: mut List<String> = rawArgs;
         _flag := mut compArgs.popFront();
         driverTs.run(compArgs);
@@ -712,6 +772,8 @@ run := fn(rawArgs: List<String>): Unit {
     var noCheck := false;
     var force := false;
     var clean := false;
+    var buildIgniterC := false;
+    var skipTsOnly := false;
     var wipe := path.baseName(entryPath) == "lite-wipe";
     var installDeps := true;
     var verifyAfter := false;
@@ -736,6 +798,10 @@ run := fn(rawArgs: List<String>): Unit {
             requestedTarget = "c";
         } else if arg == "--ts" {
             requestedTarget = "ts";
+        } else if arg == "--build-igniter-c" {
+            buildIgniterC = true;
+        } else if arg == "--skip-ts-only" {
+            skipTsOnly = true;
         } else if arg == "--check" {
             checkExplicit = true;
         } else if arg == "--no-check" {
@@ -797,14 +863,29 @@ run := fn(rawArgs: List<String>): Unit {
         }
     }
 
-    tgt := resolveIgniteTarget(rootDir, requestedTarget);
+    tgt := resolveIgniteTarget(rootDir, if buildIgniterC { "c" } else { requestedTarget });
     if not tgt.ok {
         io.errorLine(tgt.error);
         io.exit(1);
     }
+    seedInfo := readSeedInfo(rootDir, (tgt.target == "ts" or tgt.allowTsFallback) and not buildIgniterC);
+    if not seedInfo.ok {
+        io.errorLine(seedInfo.error);
+        io.exit(1);
+    }
+
+    if buildIgniterC {
+        builtIgnC := buildNativeIgniterC(rootDir, seedInfo.cArtifactSha256, tgt.cc);
+        if not builtIgnC.ok {
+            io.errorLine(builtIgnC.error);
+            io.exit(1);
+        }
+        io.outputLine(builtIgnC.path);
+        io.exit(0);
+    }
 
     if runToolName =!= "" {
-        ensured := igniteSingleTool(rootDir, runToolName, tgt.target, tgt.cc, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
+        ensured := igniteSingleTool(rootDir, runToolName, tgt.target, tgt.cc, tgt.allowTsFallback, false, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
         if not ensured.ok {
             io.errorLine(ensured.error);
             io.exit(1);
@@ -813,7 +894,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     if ensureName =!= "" {
-        ensured := igniteSingleTool(rootDir, ensureName, tgt.target, tgt.cc, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
+        ensured := igniteSingleTool(rootDir, ensureName, tgt.target, tgt.cc, tgt.allowTsFallback, false, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
         if not ensured.ok {
             io.errorLine(ensured.error);
             io.exit(1);
@@ -846,7 +927,7 @@ run := fn(rawArgs: List<String>): Unit {
                 io.exit(1);
             }
         }
-        if selected.length() == 0 {
+        if selected.length() == 0 and (tgt.target == "ts" or tgt.allowTsFallback) {
             distComp := ensureDistCompiler(rootDir, seedInfo.artifactSha256, force);
             if not distComp.ok {
                 io.errorLine(distComp.error);
@@ -891,13 +972,14 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     pendingCount := pendingIndices.length();
+    allowSkipExternal := skipTsOnly or (selected.length() == 0 and tgt.target == "c" and not tgt.allowTsFallback);
     workerBudget := if maxJobs > 0 { maxJobs } else { pool.cpuCount() };
     if pendingCount <= 1 or workerBudget <= 1 {
         var pi := 0;
         loop pi < pendingCount {
             origIdx := pendingIndices[pi];
             toolName := targetNames[origIdx];
-            res := igniteSingleTool(rootDir, toolName, tgt.target, tgt.cc, tgt.allowTsFallback, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
+            res := igniteSingleTool(rootDir, toolName, tgt.target, tgt.cc, tgt.allowTsFallback, allowSkipExternal, seedInfo.artifactSha256, seedInfo.cArtifactSha256, seedInfo.sourceSha256, force);
             if not res.ok {
                 io.errorLine(res.error);
                 io.exit(1);
@@ -910,29 +992,35 @@ run := fn(rawArgs: List<String>): Unit {
         }
     } else {
         workerCount := if pendingCount < workerBudget { pendingCount } else { workerBudget };
-        igniterScriptPath := path.join(rootDir, "compiler/bootstrap/igniter.ts");
-        nodeBin := project.nodeExecPath();
+        igniterEntryPath := path.join(rootDir, "compiler/bootstrap/igniter");
+        isNativeRuntime := proc.runtimeVersion() == "c11";
+        workerBin := if isNativeRuntime { proc.execPath() } else { project.nodeExecPath() };
         workerCmds: mut List<String> = [];
         workerArgsJson: mut List<String> = [];
         var w := 0;
         loop w < workerCount {
-            wArgs: mut List<String> = [
-                json.quoteString(igniterScriptPath),
-                "\"--jobs\"",
-                "\"1\"",
-                "\"--target\"",
-                json.quoteString(tgt.target),
-                "\"--json\""
-            ];
+            wArgs: mut List<String> = [];
+            if not isNativeRuntime {
+                mut wArgs.pushBack(json.quoteString(igniterEntryPath));
+            }
+            mut wArgs.pushBack("\"--jobs\"");
+            mut wArgs.pushBack("\"1\"");
+            workerTargetArg := if tgt.target == "c" and tgt.allowTsFallback { "auto" } else { tgt.target };
+            mut wArgs.pushBack("\"--target\"");
+            mut wArgs.pushBack(json.quoteString(workerTargetArg));
+            mut wArgs.pushBack("\"--json\"");
             if force {
                 mut wArgs.pushBack("\"--force\"");
+            }
+            if allowSkipExternal {
+                mut wArgs.pushBack("\"--skip-ts-only\"");
             }
             var p := w;
             loop p < pendingCount {
                 mut wArgs.pushBack(json.quoteString(targetNames[pendingIndices[p]]));
                 p = p + workerCount;
             }
-            (mut workerCmds).pushBack(nodeBin);
+            (mut workerCmds).pushBack(workerBin);
             mut workerArgsJson.pushBack("[" + text.joinTexts(wArgs, ",") + "]");
             w = w + 1;
         }
@@ -992,7 +1080,7 @@ run := fn(rawArgs: List<String>): Unit {
                 tSha := json.readObjectString(wOut, tPos, "sha256");
                 tRebuilt := json.readObjectBool(wOut, tPos, "rebuilt");
                 if not tTarget.found or not tTarget.ok or not tPath.found or not tPath.ok or
-                   not tSha.found or not tSha.ok or not tRebuilt.found or not tRebuilt.ok {
+                not tSha.found or not tSha.ok or not tRebuilt.found or not tRebuilt.ok {
                     io.errorLine("ignite: parallel worker " + w.toText() + " missing tool fields");
                     io.exit(1);
                 }
@@ -1020,18 +1108,22 @@ run := fn(rawArgs: List<String>): Unit {
         tPath := resPath[ri];
         tSha := resSha[ri];
         tRebuilt := resRebuilt[ri];
-        if tRebuilt { rebuiltCount = rebuiltCount + 1; }
-        if tTarget == "c" { cCount = cCount + 1; } else {
-            tsCount = tsCount + 1;
-            mut tsArtifactPaths.pushBack(tPath);
+        if tTarget =!= "skipped" {
+            if tRebuilt { rebuiltCount = rebuiltCount + 1; }
+            if tTarget == "c" { cCount = cCount + 1; } else {
+                tsCount = tsCount + 1;
+                mut tsArtifactPaths.pushBack(tPath);
+            }
+            (mut artifactPaths).pushBack(tPath);
         }
-        (mut artifactPaths).pushBack(tPath);
-        entryStr := "    {\n      \"name\": " + json.quoteString(toolName)
-        + ",\n      \"target\": " + json.quoteString(tTarget)
-        + ",\n      \"path\": " + json.quoteString(tPath)
-        + ",\n      \"sha256\": " + json.quoteString(tSha)
-        + ",\n      \"rebuilt\": " + (if tRebuilt { "true" } else { "false" }) + "\n    }";
-        mut toolEntries.pushBack(entryStr);
+        if tTarget =!= "skipped" or skipTsOnly {
+            entryStr := "    {\n      \"name\": " + json.quoteString(toolName)
+            + ",\n      \"target\": " + json.quoteString(tTarget)
+            + ",\n      \"path\": " + json.quoteString(tPath)
+            + ",\n      \"sha256\": " + json.quoteString(tSha)
+            + ",\n      \"rebuilt\": " + (if tRebuilt { "true" } else { "false" }) + "\n    }";
+            mut toolEntries.pushBack(entryStr);
+        }
         ri = ri + 1;
     }
 

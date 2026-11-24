@@ -281,7 +281,7 @@ probeDir := probeDirRes.path;
 probePaths: List<String> = [
 "package.json", "config/versions.json", "bin/lite", "bin/lite-fmt", "bin/lite-ignite",
 "compiler/package.json", "compiler/src", "compiler/manifests",
-"compiler/bootstrap/igniter.ts", "compiler/bootstrap/seed.ts",
+"compiler/bootstrap/igniter", "compiler/bootstrap/igniter.ts", "compiler/bootstrap/seed.ts",
 "igniter/artifacts.ts", "igniter/package.json", "igniter/tsconfig.json",
 "tools/src/cli.lts", "tools/src/fmt.lts", "lib/core", "lib/util"
 ];
@@ -391,3 +391,67 @@ loop wipeToolOffs as tOff {
     test.check("wipe tool rebuilt", reb.found and reb.ok and reb.value);
 }
 _rmWipe := fs.remove(wipeDir);
+
+/* 13. zero-Node C-only ignition probe via single-igniter symlink indirection */
+ccEnv := proc.envGet("CC");
+ccBin := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
+ccProbe := runIn(ccBin, ["--version"], root, 15000);
+if ccProbe.status == 0 {
+    cProbeDirRes := fs.makeTempDir("lite-c-only-probe-");
+    test.check("cProbeDir makeTempDir", cProbeDirRes.ok);
+    cProbeDir := cProbeDirRes.path;
+    cProbePaths: List<String> = [
+    "package.json", "config/versions.json", "compiler/src", "compiler/manifests",
+    "compiler/bootstrap/compiler.c", "compiler/bootstrap/seed.ts",
+    "tools/src/ignite.lts", "tools/src/cli.lts", "tools/src/fmt.lts",
+    "lib/core", "lib/util", "lib/external"
+    ];
+    loop cProbePaths as rel {
+        copyRepoTree(cProbeDir, rel);
+    }
+    test.check("c-only probe omits igniter.ts", fs.kind(path.join(cProbeDir, "compiler/bootstrap/igniter.ts")) == fs.FILE_KIND_MISSING);
+
+    distBootDir := path.join(cProbeDir, "dist/bootstrap");
+    test.check("mkdir c-only dist/bootstrap", fs.makeDir(distBootDir).ok);
+    cBootCompiler := path.join(distBootDir, "compiler-c");
+    cBootBuild := runIn(ccBin, ["-std=c11", "-O0", path.join(cProbeDir, "compiler/bootstrap/compiler.c"), "-o", cBootCompiler, "-lm"], cProbeDir, 60000);
+    test.checkInt("compile c-only bootstrap compiler: " + cBootBuild.stderr, 0, cBootBuild.status);
+
+    cIgniteSrc := path.join(distBootDir, "igniter-c.c");
+    cEmitIgnite := runIn(cBootCompiler, ["-O1", path.join(cProbeDir, "tools/src/ignite.lts"), "--out", cIgniteSrc], cProbeDir, 60000);
+    test.checkInt("emit c-only igniter: " + cEmitIgnite.stderr, 0, cEmitIgnite.status);
+
+    cIgniterBin := path.join(distBootDir, "igniter-c");
+    cCompileIgnite := runIn(ccBin, ["-std=c11", "-O1", cIgniteSrc, "-o", cIgniterBin, "-lm"], cProbeDir, 60000);
+    test.checkInt("compile c-only igniter: " + cCompileIgnite.stderr, 0, cCompileIgnite.status);
+    _rmCIgnSrc := fs.remove(cIgniteSrc);
+
+    slBoot := fs.symlink("../../dist/bootstrap/igniter-c", path.join(cProbeDir, "compiler/bootstrap/igniter"));
+    test.check("symlink c-only igniter: " + slBoot.error, slBoot.ok);
+    test.check("mkdir c-only bin", fs.makeDir(path.join(cProbeDir, "bin")).ok);
+    slLite := fs.symlink("../compiler/bootstrap/igniter", path.join(cProbeDir, "bin/lite"));
+    test.check("symlink c-only bin/lite: " + slLite.error, slLite.ok);
+    slFmt := fs.symlink("../compiler/bootstrap/igniter", path.join(cProbeDir, "bin/lite-fmt"));
+    test.check("symlink c-only bin/lite-fmt: " + slFmt.error, slFmt.ok);
+    slIgn := fs.symlink("../compiler/bootstrap/igniter", path.join(cProbeDir, "bin/lite-ignite"));
+    test.check("symlink c-only bin/lite-ignite: " + slIgn.error, slIgn.ok);
+
+    cVer := runIn(path.join(cProbeDir, "bin/lite-ignite"), ["--version"], cProbeDir, 30000);
+    test.checkInt("c-only lite-ignite --version: " + cVer.stderr, 0, cVer.status);
+    test.check("c-only --version reports bootstrap-igniter-c: " + cVer.stdout, cVer.stdout.contains("bootstrap-igniter-c"));
+    test.check("c-only --version reports target c: " + cVer.stdout, cVer.stdout.contains("(target: c)"));
+
+    cIg := runIn(path.join(cProbeDir, "bin/lite-ignite"), ["--target", "c", "--json", "cli", "fmt"], cProbeDir, 120000);
+    test.checkInt("c-only lite-ignite cli fmt: " + cIg.stderr, 0, cIg.status);
+    checkToolsRebuilt("c-only ignite", cIg.stdout, true, true);
+    test.check("c-only dist/tools/cli exists", fs.kind(path.join(cProbeDir, "dist/tools/cli")) == fs.FILE_KIND_FILE);
+    test.check("c-only dist/tools/fmt exists", fs.kind(path.join(cProbeDir, "dist/tools/fmt")) == fs.FILE_KIND_FILE);
+    test.check("c-only dist/tools/cli.ts absent", fs.kind(path.join(cProbeDir, "dist/tools/cli.ts")) == fs.FILE_KIND_MISSING);
+    test.check("c-only dist/tools/fmt.ts absent", fs.kind(path.join(cProbeDir, "dist/tools/fmt.ts")) == fs.FILE_KIND_MISSING);
+    test.check("c-only dist/bootstrap/compiler.ts absent", fs.kind(path.join(cProbeDir, "dist/bootstrap/compiler.ts")) == fs.FILE_KIND_MISSING);
+
+    cFmt := runIn(path.join(cProbeDir, "bin/lite"), ["fmt", "--check", "tools/src/fmt.lts"], cProbeDir, 60000);
+    test.checkInt("c-only bin/lite fmt --check: " + cFmt.stderr, 0, cFmt.status);
+
+    _rmCProbe := fs.remove(cProbeDir);
+}

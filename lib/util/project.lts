@@ -68,6 +68,7 @@ classifyArtifactKind := fn(relEntry: String): String {
         return if relEntry.endsWith(".ts") { "ignited-ts" } else { "ignited-c" };
     }
     if relEntry == "compiler/bootstrap/igniter.ts" { return "bootstrap-igniter-ts"; }
+    if relEntry == "dist/bootstrap/igniter-c" or relEntry == "compiler/bootstrap/igniter-c" { return "bootstrap-igniter-c"; }
     if relEntry.startsWithAt(0, "dist/bootstrap/") {
         return if relEntry.endsWith(".ts") { "bootstrap-compiler-ts" } else { "bootstrap-compiler-c" };
     }
@@ -158,19 +159,20 @@ printVersionMeta := fn(label: String, component: String, asJson: Bool): Unit {
     version := readComponentVersionAt(root, component);
     compilerVersion := readComponentVersionAt(root, "compiler");
     runtimeVersion := readComponentVersionAt(root, "runtime");
-    entryPath := proc.entryPath();
+    rawEntryPath := proc.entryPath();
+    entryPath := if rawEntryPath =!= "" and fs.realPath(rawEntryPath).ok { rawEntryPath } else { proc.execPath() };
     relEntry := relativeToRoot(root, entryPath);
     kind := classifyArtifactKind(relEntry);
     seed := readSeedMeta(root);
     prov := readToolProvenance(root, relEntry, kind);
 
-    target := if prov.target =!= "" { prov.target } else if seed.target =!= "" { seed.target } else { "ts" };
+    target := if prov.target =!= "" { prov.target } else if kind == "bootstrap-igniter-c" { "c" } else if seed.target =!= "" { seed.target } else { "ts" };
     var artSha := prov.artifactSha256;
     if artSha == "" and entryPath =!= "" {
         hashed := crypto.sha256File(entryPath);
         if hashed.ok { artSha = hashed.hex; }
     }
-    source := if prov.source =!= "" { prov.source } else if kind == "bootstrap-igniter-ts" { "tools/src/ignite.lts" } else { "" };
+    source := if prov.source =!= "" { prov.source } else if kind == "bootstrap-igniter-ts" or kind == "bootstrap-igniter-c" { "tools/src/ignite.lts" } else { "" };
     rtVer := proc.runtimeVersion();
     hostRuntime := if rtVer == "c11" { "c11" } else { "node " + rtVer };
 
@@ -277,11 +279,21 @@ pub nodeExecPath := fn(): String {
 pub forwardNode := fn(scriptRelPath: String, args: List<String>): Unit {
     root := findRepoRoot();
     scriptPath := if root == "" { scriptRelPath } else { path.resolve(root, scriptRelPath) };
+    rp := fs.realPath(scriptPath);
+    isNodeTarget := if rp.ok { rp.path.endsWith(".ts") or rp.path.endsWith(".js") } else { scriptPath.endsWith(".ts") or scriptPath.endsWith(".js") };
+    emptyEnv: List<String> = [];
+    if not isNodeTarget {
+        res := proc.run(scriptPath, args, "", emptyEnv, false, "");
+        if res.error =!= "" {
+            io.errorLine(res.error);
+            io.exit(1);
+        }
+        io.exit(res.status);
+    }
     nodeArgs: mut List<String> = [scriptPath];
     loop args as arg {
         mut nodeArgs.pushBack(arg);
     }
-    emptyEnv: List<String> = [];
     res := proc.run(nodeExecPath(), nodeArgs, "", emptyEnv, false, "");
     if res.error =!= "" {
         io.errorLine(res.error);

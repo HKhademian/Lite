@@ -1,1 +1,1 @@
-../../../compiler/bootstrap/igniter.ts
+../../../compiler/bootstrap/igniter
