@@ -570,9 +570,7 @@ anchorCache: mut Map<String, String>
     if ns == "module" {
         cleanMod := stripSuffix(stripSuffix(stripSuffix(target, ".html"), ".lts"), ".lt");
         if cleanMod == "" or cleanMod == "index" { return ""; }
-        modFileLt := path.resolve(directory, "lib/" + cleanMod + ".lt");
-        modFileLts := path.resolve(directory, "lib/" + cleanMod + ".lts");
-        modFile := if fs.kind(modFileLt) == fs.FILE_KIND_FILE { modFileLt } else { modFileLts };
+        modFile := path.resolve(directory, "lib/" + cleanMod + ".lt");
         if fs.kind(modFile) =!= fs.FILE_KIND_FILE {
             return relPath + ": missing lite://module target " + rawTarget;
         }

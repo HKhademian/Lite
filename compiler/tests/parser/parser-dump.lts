@@ -1,6 +1,6 @@
 /* Type-declaration parser dump. Test helper, not a public command. */
 
-parser := import "../../src/parser.lts";
+parser := import "../../src/parser";
 io := import "core/io";
 
 var prefix := "";

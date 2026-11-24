@@ -1,8 +1,8 @@
 /** Dual-target tests for `compiler/src/symbol-table.lts` O(1) scoped lookups and undo-stack shadowing. */
 
 test := import "core/test";
-ir := import "../src/frontend-ir.lts";
-sym := import "../src/symbol-table.lts";
+ir := import "../src/frontend-ir";
+sym := import "../src/symbol-table";
 
 makeLocal := fn(name: String, rt: String, kind: String, depth: Int, initState: String): ir.Local {
     (name = name, runtime = rt, kind = kind, mutable = false, writable = false,

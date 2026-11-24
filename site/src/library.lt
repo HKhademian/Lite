@@ -328,18 +328,16 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
     "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1",
     "lite.core.unicode.v1", "lite.compiler.modules.v1"
     ];
-    hostSpecStems: List<String> = [
-    "lib/core/io", "lib/core/int", "lib/core/list", "lib/core/text",
-    "lib/core/file", "lib/core/process", "lib/core/crypto", "lib/core/time",
-    "lib/core/unicode", "compiler/src/modules"
+    hostSpecPaths: List<String> = [
+    "lib/core/io.lt", "lib/core/int.lt", "lib/core/list.lt", "lib/core/text.lt",
+    "lib/core/file.lt", "lib/core/process.lt", "lib/core/crypto.lt", "lib/core/time.lt",
+    "lib/core/unicode.lt", "compiler/src/modules.lt"
     ];
     hostIds: mut List<String> = [];
     hostTexts: mut List<String> = [];
     var hi := 0;
     loop hi < hostSpecIds.length() {
-        ltFull := path.join(rootDir, hostSpecStems[hi] + ".lt");
-        ltsFull := path.join(rootDir, hostSpecStems[hi] + ".lts");
-        hRead := fs.readText(if fs.kind(ltFull) == fs.FILE_KIND_FILE { ltFull } else { ltsFull });
+        hRead := fs.readText(path.join(rootDir, hostSpecPaths[hi]));
         if hRead.ok {
             mut hostIds.pushBack(hostSpecIds[hi]);
             mut hostTexts.pushBack(hRead.text);

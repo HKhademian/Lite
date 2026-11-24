@@ -320,7 +320,7 @@ pub extractAllModulesJson := fn(rootDir: String): String {
         if fs.kind(nsDir) == fs.FILE_KIND_DIR {
             entries := fs.listDir(nsDir);
             loop entries as entryName {
-                if entryName.endsWith(".lt") or entryName.endsWith(".lts") {
+                if entryName.endsWith(".lt") {
                     fullPath := path.join(nsDir, entryName);
                     if fs.kind(fullPath) == fs.FILE_KIND_FILE {
                         readRes := fs.readText(fullPath);

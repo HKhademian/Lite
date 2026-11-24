@@ -88,8 +88,8 @@ pathDir := tmpPathRes.path;
 nestedDir := path.join(pathDir, "nested");
 _mkNested := fs.makeDir(nestedDir);
 appPath := path.join(pathDir, "app.lts");
-basePath := path.join(pathDir, "base.lts");
-nestedMath := path.join(nestedDir, "math.lts");
+basePath := path.join(pathDir, "base.lt");
+nestedMath := path.join(nestedDir, "math.lt");
 _wb1 := fs.writeText(basePath, "pub twice := fn(value: Int): Int { value * 2 };\n");
 _wm1 := fs.writeText(nestedMath, "base := import \"../base\"; pub answer := fn(): Int { base.twice(21) };\n");
 
@@ -99,8 +99,8 @@ relRun := compilerTest.checkAndRunTs(root, relComp.stdout);
 test.checkInt("relative import run", 0, relRun.status);
 test.checkText("relative import out", "42\n", relRun.stdout);
 
-baseStem := basePath.slice(0, basePath.length() - 4);
-absSrc := "math := import " + json.quoteString(baseStem) + "; io := import \"core/io.lts\"; io.outputLine(math.twice(10));";
+baseStem := basePath.slice(0, basePath.length() - 3);
+absSrc := "math := import " + json.quoteString(baseStem) + "; io := import \"core/io\"; io.outputLine(math.twice(10));";
 absComp := compilerTest.compileStdinWithOpts(root, tsComp, pathDir, absSrc, appPath, appPath, emptyArgs());
 test.checkInt("absolute import compile", 0, absComp.status);
 absRun := compilerTest.checkAndRunTs(root, absComp.stdout);
@@ -114,8 +114,8 @@ test.check("makeTempDir cwd", tmpCwdRes.ok and tmpOutCwdRes.ok);
 elsewhere := tmpCwdRes.path;
 outsideCwd := tmpOutCwdRes.path;
 _mkElse := fs.makeDir(path.join(elsewhere, "nested"));
-_we1 := fs.writeText(path.join(elsewhere, "base.lts"), "pub twice := fn(v: Int): Int { v * 2 };\n");
-_we2 := fs.writeText(path.join(elsewhere, "nested/math.lts"), "base := import \"../base\"; text := import \"core/text.lts\"; pub answer := fn(): Int { base.twice(text.joinTexts([\"a\", \"b\"], \"\").length()) };\n");
+_we1 := fs.writeText(path.join(elsewhere, "base.lt"), "pub twice := fn(v: Int): Int { v * 2 };\n");
+_we2 := fs.writeText(path.join(elsewhere, "nested/math.lt"), "base := import \"../base\"; text := import \"core/text\"; pub answer := fn(): Int { base.twice(text.joinTexts([\"a\", \"b\"], \"\").length()) };\n");
 mainFile := path.join(elsewhere, "nested/main.lts");
 _we3 := fs.writeText(mainFile, "math := import \"./math\"; io := import \"core/io\"; io.outputLine(math.answer());\n");
 cwdComp := compilerTest.compileFile(tsComp, outsideCwd, [mainFile]);
@@ -185,7 +185,7 @@ compilerTest.assertCompileErrorContains(root, tsComp, "nested pub rejected", "if
 tmpAliasReqRes := fs.makeTempDir("lite-import-alias-required-");
 test.check("makeTempDir alias-required", tmpAliasReqRes.ok);
 aliasReqDir := tmpAliasReqRes.path;
-_war := fs.writeText(path.join(aliasReqDir, "math.lts"), "pub twice := fn(value: Int): Int { value * 2 };\n");
+_war := fs.writeText(path.join(aliasReqDir, "math.lt"), "pub twice := fn(value: Int): Int { value * 2 };\n");
 aliasReqApp := path.join(aliasReqDir, "app.lts");
 aliasReqComp := compilerTest.compileStdinWithOpts(root, tsComp, aliasReqDir, "math := import \"./math\"; io := import \"core/io\"; io.outputLine(math.twice(21));", aliasReqApp, aliasReqApp, emptyArgs());
 test.checkInt("alias-required compile", 0, aliasReqComp.status);
@@ -345,5 +345,24 @@ malType := compilerTest.compileStdin(root, tsComp, "types := import \"./types.lt
 test.checkInt("malformed qualified tuple status", 2, malType.status);
 test.checkText("malformed qualified tuple stdout", "", malType.stdout);
 _rmPt := fs.remove(ptDir);
+
+/* strict .lt/.lts import rules and declaration-only .lt top level */
+tmpStrictRes := fs.makeTempDir("lite-import-strict-lt-");
+test.check("makeTempDir strict-lt", tmpStrictRes.ok);
+strictDir := fs.realPath(tmpStrictRes.path).path;
+strictApp := path.join(strictDir, "app.lts");
+_ws1 := fs.writeText(path.join(strictDir, "only-script.lts"), "pub val := 7;\n");
+_ws2 := fs.writeText(path.join(strictDir, "pure-mod.lt"), "pub base := 1 + 2;\nvar cache := \"init\";\npub readBase := fn(): Int { base };\npub readCache := fn(): String { cache };\n");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "extensionless skips .lts", "s := import \"./only-script\";", strictApp, "cannot read imported source ./only-script (ENOENT)");
+compilerTest.assertCompileRunTsNamed(root, tsComp, "explicit .lts ok in .lts", "s := import \"./only-script.lts\"; io := import \"core/io\"; io.outputLine(s.val);", strictApp, "7\n");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "explicit .lt rejected", "m := import \"./pure-mod.lt\";", strictApp, "module import must omit the .lt extension");
+_ws3 := fs.writeText(path.join(strictDir, "bad-importer.lt"), "s := import \"./only-script.lts\";\npub v := fn(): Int { s.val };\n");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, ".lt cannot import .lts", "m := import \"./bad-importer\";", strictApp, "cannot import .lts script ./only-script.lts from .lt module");
+compilerTest.assertCompileRunTsNamed(root, tsComp, ".lt comptime and var decls ok", "m := import \"./pure-mod\"; io := import \"core/io\"; io.outputLine(m.base, m.readBase(), m.readCache());", strictApp, "3 3 init\n");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, ".lt rejects top-level assignment", "var cache := \"\";\ncache = \"x\";\n", path.join(strictDir, "bad-assign.lt"), "top-level assignment is not allowed in .lt module");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, ".lt rejects top-level call", "io := import \"core/io\";\nio.outputLine(1);\n", path.join(strictDir, "bad-call.lt"), "top-level runtime statement is not allowed in .lt module");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, ".lt rejects top-level if", "if true { x := 1; }\n", path.join(strictDir, "bad-if.lt"), "top-level runtime statement is not allowed in .lt module");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, ".lt rejects top-level block", "{\n  x := 1;\n}\n", path.join(strictDir, "bad-block.lt"), "top-level runtime block is not allowed in .lt module");
+_rmStrict := fs.remove(strictDir);
 
 test.done("modules/imports");

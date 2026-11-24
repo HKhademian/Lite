@@ -143,12 +143,12 @@ pub extractBuiltinSpecs := fn(rawArgs: List<String>): List<String> {
     out
 }
 
-/** Walks up parent directories from `startDir` looking for a Lite distribution containing `lib/core/io.lt` or `lib/core/io.lts`. */
+/** Walks up parent directories from `startDir` looking for a Lite distribution containing `lib/core/io.lt`. */
 walkRootUp := fn(startDir: String): String {
     if startDir == "" { return ""; }
     var dir := startDir;
     loop true {
-        if fs.kind(path.join(dir, "lib/core/io.lt")) == fs.FILE_KIND_FILE or fs.kind(path.join(dir, "lib/core/io.lts")) == fs.FILE_KIND_FILE {
+        if fs.kind(path.join(dir, "lib/core/io.lt")) == fs.FILE_KIND_FILE {
             rp := fs.realPath(dir);
             return if rp.ok { rp.path } else { dir };
         }
@@ -212,26 +212,25 @@ pub resolveImportPath := fn(importerPath: String, spec: String, projectRoot: Str
     if hasDrivePrefix(spec) {
         return (ok = false, path = "", error = "absolute drive paths are not supported on this host");
     }
-    var basePath := "";
-    if spec.startsWithAt(0, "/") {
-        basePath = path.normalize(spec);
-    } else if spec.startsWithAt(0, "./") or spec.startsWithAt(0, "../") {
+    if spec.endsWith(".lt") {
+        return (ok = false, path = "", error = "module import must omit the .lt extension (" + spec + ")");
+    }
+    isLts := spec.endsWith(".lts");
+    if isLts and importerPath.endsWith(".lt") {
+        return (ok = false, path = "", error = "cannot import .lts script " + spec + " from .lt module");
+    }
+    sourceSpec := if isLts { spec } else { spec + ".lt" };
+    if sourceSpec.startsWithAt(0, "/") {
+        return (ok = true, path = path.normalize(sourceSpec), error = "");
+    }
+    if sourceSpec.startsWithAt(0, "./") or sourceSpec.startsWithAt(0, "../") {
         baseImporter := canonicalizeRootPath(importerPath, cwd);
-        basePath = path.resolve(path.parentDir(baseImporter), spec);
-    } else {
-        if projectRoot == "" {
-            return (ok = false, path = "", error = "cannot resolve library import " + spec + " (missing distribution root)");
-        }
-        basePath = path.join(path.join(projectRoot, "lib"), spec);
+        return (ok = true, path = path.resolve(path.parentDir(baseImporter), sourceSpec), error = "");
     }
-    if spec.endsWith(".lt") or spec.endsWith(".lts") {
-        return (ok = true, path = basePath, error = "");
+    if projectRoot == "" {
+        return (ok = false, path = "", error = "cannot resolve library import " + spec + " (missing distribution root)");
     }
-    ltPath := basePath + ".lt";
-    if fs.kind(ltPath) == fs.FILE_KIND_FILE {
-        return (ok = true, path = ltPath, error = "");
-    }
-    (ok = true, path = basePath + ".lts", error = "")
+    (ok = true, path = path.join(path.join(projectRoot, "lib"), sourceSpec), error = "")
 }
 
 /** Returns a project-relative diagnostic path when `filePath` is inside `projectRoot`, or the canonical path otherwise. */
@@ -251,11 +250,11 @@ var cachedIdentityTexts: mut List<String> = [];
 /** Identifies source text matching a shipped core/compiler host module in `projectRoot`. */
 pub sourceModuleIdentity := fn(projectRoot: String, sourceText: String): String {
     if projectRoot == "" { return ""; }
-    stems: List<String> = [
-    "lib/core/io", "lib/core/int", "lib/core/list", "lib/core/array", "lib/core/map", "lib/core/set", "lib/core/text",
-    "lib/core/file", "lib/core/process", "lib/core/crypto", "lib/core/time",
-    "lib/core/unicode", "lib/external/ts", "lib/external/http", "lib/external/bench",
-    "lib/external/pool", "lib/extra/surface", "compiler/src/modules"
+    paths: List<String> = [
+    "lib/core/io.lt", "lib/core/int.lt", "lib/core/list.lt", "lib/core/array.lt", "lib/core/map.lt", "lib/core/set.lt", "lib/core/text.lt",
+    "lib/core/file.lt", "lib/core/process.lt", "lib/core/crypto.lt", "lib/core/time.lt",
+    "lib/core/unicode.lt", "lib/external/ts.lt", "lib/external/http.lt", "lib/external/bench.lt",
+    "lib/external/pool.lt", "lib/extra/surface.lt", "compiler/src/modules.lt"
     ];
     identities: List<String> = [
     "lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.array.v1", "lite.core.map.v1", "lite.core.set.v1", "lite.core.text.v1",
@@ -268,10 +267,8 @@ pub sourceModuleIdentity := fn(projectRoot: String, sourceText: String): String 
         cachedIdentityLoaded = [];
         cachedIdentityTexts = [];
         var loadIdx := 0;
-        loop loadIdx < stems.length() {
-            ltFull := path.join(projectRoot, stems[loadIdx] + ".lt");
-            ltsFull := path.join(projectRoot, stems[loadIdx] + ".lts");
-            full := if fs.kind(ltFull) == fs.FILE_KIND_FILE { ltFull } else { ltsFull };
+        loop loadIdx < paths.length() {
+            full := path.join(projectRoot, paths[loadIdx]);
             if fs.kind(full) == fs.FILE_KIND_FILE {
                 loaded := fs.readText(full);
                 if loaded.ok {
@@ -289,7 +286,7 @@ pub sourceModuleIdentity := fn(projectRoot: String, sourceText: String): String 
         }
     }
     var i := 0;
-    loop i < stems.length() {
+    loop i < paths.length() {
         if cachedIdentityLoaded[i] and cachedIdentityTexts[i] == sourceText {
             return identities[i];
         }

@@ -1128,6 +1128,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     var size := source.length();
     var position := 0;
     var items: mut Items = [];
+    isLtModule := prefix.endsWith(".lt");
     if monoInstIdx < 0 {
         position = skipTrivia(source, 0, prefix);
         if position == size { return items; }
@@ -1844,6 +1845,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if afterRawBrace >= 0 and source.startsWithAt(afterRawBrace, ":=") {
                 /* Fall through to unified record destructuring below (`recDestructureOpen`). */
             } else {
+                if isLtModule and blockCount == 0 {
+                    failAt(source, position, prefix, "top-level runtime block is not allowed in .lt module");
+                }
                 if afterRawBrace >= 0 and source.wordAt(afterRawBrace, "then") {
                     failAt(source, afterRawBrace, prefix, "then requires an if, match, or loop");
                 }
@@ -2025,6 +2029,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         (ch == "a" and source.wordAt(position, "and")) or (ch == "o" and source.wordAt(position, "or")) or
         (ch == "n" and source.wordAt(position, "not")) or (ch == "t" and source.wordAt(position, "true")) or
         (ch == "f" and source.wordAt(position, "false")) {
+            if isLtModule and blockCount == 0 {
+                failAt(source, position, prefix, "top-level runtime statement is not allowed in .lt module");
+            }
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
             locals = checkStatementTrace(target, source, position, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
@@ -2050,6 +2057,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             not source.wordAt(afterTag, "if") and not source.wordAt(afterTag, "match") and
             not source.wordAt(afterTag, "loop")) {
                 failAt(source, afterTag, prefix, "expected {, if, match, loop or . after block tag @" + tagInfo.tag);
+            }
+            if isLtModule and blockCount == 0 {
+                failAt(source, position, prefix, "top-level runtime statement is not allowed in .lt module");
             }
             expression := parseExpressionItem(target, source, position, prefix, locals, functions, functionParams, currentName,
             currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
@@ -2232,6 +2242,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         isDeclFollow := source.startsWithAt(position, ":=") or
         (position < size and source.at(position) == ":" and compoundAssignOp(source, position).width == 0);
         if moduleIndex >= 0 and locals[moduleIndex].kind == VALUE_KIND_MODULE and not isDeclFollow {
+            if isLtModule and blockCount == 0 {
+                failAt(source, nameStart, prefix, "top-level runtime statement is not allowed in .lt module");
+            }
             if position >= size or source.at(position) =!= "." {
                 failAt(source, nameStart, prefix, "module namespace " + name + " requires a public member");
             }
@@ -2311,6 +2324,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             if (isLocalFnCall or callableIndex >= 0) and
             position < size and source.at(position) == "(" {
+                if isLtModule and blockCount == 0 {
+                    failAt(source, nameStart, prefix, "top-level runtime statement is not allowed in .lt module");
+                }
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
                 locals = checkStatementTrace(target, source, nameStart, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
@@ -2331,6 +2347,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
         }
         if name == "if" {
+            if isLtModule and blockCount == 0 {
+                failAt(source, nameStart, prefix, "top-level runtime statement is not allowed in .lt module");
+            }
             rawIfEnd := scanRawIfChainEnd(source, nameStart, prefix, true);
             afterRawIf := if rawIfEnd >= 0 { skipTrivia(source, rawIfEnd, prefix) } else { -1 };
             if afterRawIf >= 0 and (source.wordAt(afterRawIf, "then") or source.wordAt(afterRawIf, "finally")) {
@@ -2438,6 +2457,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             continue;
         }
         if name == "match" {
+            if isLtModule and blockCount == 0 {
+                failAt(source, nameStart, prefix, "top-level runtime statement is not allowed in .lt module");
+            }
             rejectMisplacedTag(source, position, prefix, "block tag cannot appear before { in match");
             isSubjectRootMatch := position < size and source.at(position) =!= "{";
             rawMatchEnd := scanRawMatchEnd(source, nameStart, prefix);
@@ -2602,6 +2624,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             continue;
         }
         if name == "loop" {
+            if isLtModule and blockCount == 0 {
+                failAt(source, nameStart, prefix, "top-level runtime statement is not allowed in .lt module");
+            }
             rawStmtLoopEnd := scanRawLoopEnd(source, nameStart, prefix);
             afterRawStmtLoopTok := if rawStmtLoopEnd >= 0 { skipTrivia(source, rawStmtLoopEnd, prefix) } else { -1 };
             hasStmtLoopThen := afterRawStmtLoopTok >= 0 and source.wordAt(afterRawStmtLoopTok, "then");
@@ -3626,6 +3651,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 afterBracket := if bracketEnd >= 0 { skipTrivia(source, bracketEnd, prefix) } else { -1 };
                 hookCompOp := if afterBracket >= 0 { compoundAssignOp(source, afterBracket) } else { (op = "", baseOp = "", width = 0) };
                 if afterBracket >= 0 and (isSingleEquals(source, afterBracket) or hookCompOp.width > 0) {
+                    if isLtModule and blockCount == 0 {
+                        failAt(source, nameStart, prefix, "top-level assignment is not allowed in .lt module");
+                    }
                     entry := locals[mapLocalIdx];
                     if entry.initState =!= INIT_STATE_INIT {
                         failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
@@ -3708,6 +3736,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 recCompOp := if chainValid and scanPos < size { compoundAssignOp(source, scanPos) } else { (op = "", baseOp = "", width = 0) };
                 chainLen := fieldChain.length();
                 if chainValid and chainLen >= 1 and chainLen <= 2 and scanPos < size and (isSingleEquals(source, scanPos) or recCompOp.width > 0) {
+                    if isLtModule and blockCount == 0 {
+                        failAt(source, nameStart, prefix, "top-level assignment is not allowed in .lt module");
+                    }
                     entry := locals[recLocalIdx];
                     if entry.initState =!= INIT_STATE_INIT {
                         failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
@@ -3771,6 +3802,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
         }
         if isSingleEquals(source, position) {
+            if isLtModule and blockCount == 0 {
+                failAt(source, nameStart, prefix, "top-level assignment is not allowed in .lt module");
+            }
             index := localIndex(locals, name);
             if index < 0 {
                 failAt(source, nameStart, prefix, "unknown value " + name);
@@ -3848,6 +3882,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             continue;
         }
         if compoundAssignOp(source, position).width > 0 {
+            if isLtModule and blockCount == 0 {
+                failAt(source, nameStart, prefix, "top-level assignment is not allowed in .lt module");
+            }
             compound := compoundAssignOp(source, position);
             index := localIndex(locals, name);
             if index < 0 {
@@ -3880,6 +3917,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 }
             }
             continue;
+        }
+        if isLtModule and blockCount == 0 {
+            failAt(source, nameStart, prefix, "top-level runtime statement is not allowed in .lt module");
         }
         expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
         currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
