@@ -379,6 +379,33 @@ The former general-prelude proposal is now scoped by source kind. Module-based
 APIs. Language syntax and literal typing are distinct from namespace imports;
 the exact compiler-intrinsic versus module-definition boundary remains open.
 
+### Implicit core preloading gap
+
+**Known compiler gap (tracked for future fix, 2026-11-24):** while module
+namespace calls (`io.*`, `file.*`, `text.*`, etc.) require explicit imports
+everywhere and `.lt` files already enforce extensionless `.lt` resolution,
+prohibition of `.lt`-to-`.lts` imports, and declaration-only top-level items,
+the current compiler does **not** yet satisfy the no-implicit-imports rule for
+`.lt` files:
+
+1. [`compiler/src/modules.lt`](lite://repo/compiler/src/modules.lt)
+   unconditionally preloads six core type-owner modules (`lib/core/int.lt`,
+   `lib/core/text.lt`, `lib/core/list.lt`, `lib/core/array.lt`,
+   `lib/core/map.lt`, `lib/core/set.lt`) via `coreOwnerRels` /
+   `tryReadCoreOwner` whenever a root file is compiled with a `projectRoot`.
+2. `appendTransitiveTypeOps` in
+   [`compiler/src/modules.lt`](lite://repo/compiler/src/modules.lt) exposes every
+   `PublicTypeOp` (such as `String.length`, `String.slice`, `Int.toText`,
+   `List.pushBack`, `Map.has`, `Set.add`) from already-processed modules across
+   the compilation graph to every `.lt` and `.lts` file without requiring an
+   explicit import.
+3. Built-in type names (`Int`, `String`, `Bool`, `List`, `Array`, `Map`, `Set`,
+   `Unit`, etc.) are resolved ambiently by the frontend rather than through
+   explicit imports.
+
+See [known gap in explicit module imports](lite://doc/compiler/module-import-stages#known-gap-in-explicit-module-imports)
+for the compiler-side mechanics and fix prerequisites.
+
 For the immediate FVP, [temporary input/reporting helpers](lite://doc/tooling-and-learning#temporary-fvp-input-and-reporting)
 are selected as demonstrator scaffolding. They do not select the eventual
 script convenience set or require module/stdlib implementation first.

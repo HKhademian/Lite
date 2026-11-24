@@ -145,3 +145,61 @@ paths pass a root path and source bytes to the generated compiler. The loader's
 flattening helpers remain for legacy phase fixtures and historical reports;
 they are not used by active compiler production paths. Native C self-hosting is
 still a separate, unproven milestone.
+
+## Known gap in explicit module imports
+
+**Selected rule vs current compiler behavior (recorded 2026-11-24):** `.lt`
+modules must import all dependencies explicitly with zero implicit imports;
+only `.lts` scripts are intended to carry an implicit collector-less prelude
+(such as `base/*` spread into the root file block).
+
+### What is already enforced (2026-11-24)
+
+- **Module-namespace imports:** all module namespace calls (`core/io`,
+  `core/file`, `core/text`, etc.) require explicit `import` declarations in both
+  `.lt` and `.lts` files.
+- **Strict `.lt`/`.lts` import path rules:**
+  [`compiler/src/host-fs.lt`](lite://repo/compiler/src/host-fs.lt) resolves
+  extensionless `import` paths strictly to `.lt`, rejects explicit `.lt`
+  suffixes in `import` clauses, prohibits `.lt` modules from importing `.lts`
+  files, and requires explicit `.lts` suffixes when importing `.lts` scripts.
+- **Declaration-only `.lt` top level:**
+  [`compiler/src/frontend.lt`](lite://repo/compiler/src/frontend.lt) admits
+  declarations, imports, and compile-time definitions at `.lt` top level while
+  rejecting top-level runtime statements, blocks, and standalone assignments.
+
+### Current compiler leaks causing implicit `.lt` availability
+
+1. **`coreOwnerRels` preloading loop:**
+   [`compiler/src/modules.lt`](lite://repo/compiler/src/modules.lt) preloads
+   `lib/core/int.lt`, `lib/core/text.lt`, `lib/core/list.lt`,
+   `lib/core/array.lt`, `lib/core/map.lt`, and `lib/core/set.lt` via
+   `tryReadCoreOwner` whenever compilation enters the root file with a
+   `projectRoot`.
+2. **Global transitive `PublicTypeOp` forwarding:** `appendTransitiveTypeOps` in
+   [`compiler/src/modules.lt`](lite://repo/compiler/src/modules.lt) forwards
+   all `PublicTypeOp` entries across the entire processed module graph into
+   every module's `importedExports`, rather than scoping type-attached
+   operations to explicitly imported modules or types.
+3. **Ambient built-in type names:**
+   [`compiler/src/frontend.lt`](lite://repo/compiler/src/frontend.lt) and
+   [`compiler/src/frontend-types.lt`](lite://repo/compiler/src/frontend-types.lt)
+   resolve primitive and built-in collection type names (`Int`, `String`,
+   `Bool`, `List`, `Array`, `Map`, `Set`, `Unit`, etc.) ambiently instead of
+   requiring explicit imports in `.lt` files.
+
+### Future fix prerequisites
+
+1. Finalize the `base/*` versus `core/*` module ownership and re-export
+   (`pub import`) design so `.lt` files import `core/*` (or base primitives)
+   explicitly while `.lts` scripts receive an implicit collector-less `base/*`
+   prelude.
+2. Stop preloading `coreOwnerRels` into `.lt` module scopes and restrict
+   `appendTransitiveTypeOps` to type operations owned by types explicitly
+   imported or carried through imported signatures.
+3. Migrate existing `.lt` files (`lib/`, `compiler/src/`, `site/src/`, and
+   tests) to declare their explicit core imports and run a staged self-hosting
+   seed promotion across TypeScript and C11.
+
+See [implicit core preloading gap](lite://doc/modules-and-packages#implicit-core-preloading-gap)
+for the language specification note.

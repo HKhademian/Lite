@@ -1,8 +1,31 @@
 # Decisions and open questions
 
-Dated decision ledger, updated through **2026-11-23**. Older entries retain their
+Dated decision ledger, updated through **2026-11-24**. Older entries retain their
 original scope. Decisions do not establish compiler conformance; use
 [the transition](lite://doc/compiler/transition-plan) for current execution evidence.
+
+## Explicit module imports and implicit core preloading gap, 2026-11-24
+
+Selected design direction and tracked compiler gap:
+
+- **Enforced in compiler (2026-11-24):** library, non-entry compiler, and site
+  modules use `.lt`; extensionless imports resolve strictly to `.lt` (explicit
+  `.lt` suffixes are rejected); `.lts` imports require explicit `.lts` suffixes
+  and are rejected inside `.lt` files; and `.lt` top level rejects runtime
+  statements, blocks, and standalone assignments while permitting declarations,
+  imports, and compile-time definitions.
+- **Known compiler gap (tracked for future fix):** `.lt` files must have
+  **no** implicit imports, whereas the current compiler still preloads six core
+  type-owner modules (`lib/core/{int,text,list,array,map,set}.lt` via
+  `coreOwnerRels` in [`compiler/src/modules.lt`](lite://repo/compiler/src/modules.lt))
+  and exposes their `PublicTypeOp` operations (via `appendTransitiveTypeOps`)
+  plus built-in type names (`Int`, `String`, `Bool`, `List`, `Array`, `Map`,
+  `Set`, etc.) ambiently across both `.lt` and `.lts`. Removing this implicit
+  preloading for `.lt` modules awaits the `base/*` versus `core/*` split,
+  scoped transitive type-op visibility, explicit core imports across repo
+  `.lt` files, and staged TS/C11 seed promotion. See
+  [modules and packages](lite://doc/modules-and-packages#implicit-core-preloading-gap)
+  and [module import stages](lite://doc/compiler/module-import-stages#known-gap-in-explicit-module-imports).
 
 ## Type-attached operations, `self` versus `Self`, and owned-type visibility, 2026-11-23
 
