@@ -46,7 +46,7 @@ node compiler/scripts/corpus-parity.ts
 node benchmark/compiler-performance.ts --samples 3 --warmups 1
 ```
 
-`./bin/lite bootstrap verify` runs strict `tsc`, 3-generation C11 and TS self-hosting fixed points, `igniter.ts --force`, `igniter.ts` `-O3` freshness, `seed.ts` provenance validation, and TS-to-C11 cross-bootstrap SHA-256 byte parity in one command. `./bin/lite bootstrap promote` rebuilds and checks both 3-generation ladders plus cross-bootstrap parity before atomically refreshing `compiler.c`, `igniter.ts`, and `seed.ts` and running full verification.
+`./bin/lite bootstrap verify` runs strict `tsc`, 3-generation C11 and TS self-hosting fixed points, `igniter.ts --force`, `igniter.ts` `-O3` freshness, `seed.ts` provenance validation, and TS-to-C11 cross-bootstrap SHA-256 byte parity in one command. `./bin/lite bootstrap promote` rebuilds and checks both 3-generation ladders plus cross-bootstrap parity before atomically refreshing `compiler.c`, `igniter.ts`, and `seed.ts` and running full verification. Passing `--json` streams one JSON progress object per completed step (NDJSON) followed by a final summary JSON line so long runs report live progress.
 
 The self-build command compiles the same TS root import graph three times,
 starting from the selected compiler. It records each builder and output hash,

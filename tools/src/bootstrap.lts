@@ -17,7 +17,37 @@ usageText := fn(): String {
     "Usage: ./bin/lite bootstrap <verify|promote> [--cc COMPILER] [--json]\n\n" +
     "Subcommands:\n" +
     "  verify   Verify strict tsc, C11 & TS 3-gen fixed points, igniter freshness, and cross-bootstrap C11 parity\n" +
-    "  promote  Rebuild C11 & TS 3-gen seeds, check cross-bootstrap parity, update compiler/bootstrap/, and verify"
+    "  promote  Rebuild C11 & TS 3-gen seeds, check cross-bootstrap parity, update compiler/bootstrap/, and verify\n\n" +
+    "Options:\n" +
+    "  --json   Stream JSON Lines progress events per step followed by a final summary JSON line"
+};
+
+/** Writes `line` to stdout and flushes immediately so piped callers see progress live. */
+flushOutLine := fn(line: String): Unit {
+    io.outputLine(line);
+    _fl := io.flush(io.stdoutWriter());
+};
+
+/** Returns whole milliseconds elapsed since `startNs`. */
+elapsedMs := fn(startNs: Int): Int {
+    (time.monotonicNs() - startNs) / 1000000
+};
+
+/** Emits one live step-completion progress line as compact JSON (NDJSON) or concise human text. */
+emitStep := fn(jsonOut: Bool, step: String, ok: Bool, ms: Int, extraJson: String, errMsg: String): Unit {
+    if jsonOut {
+        if ok {
+            flushOutLine("{\"step\":" + json.quoteString(step) + ",\"ok\":true,\"ms\":" + integer.intText(ms) + extraJson + "}");
+        } else {
+            flushOutLine("{\"step\":" + json.quoteString(step) + ",\"ok\":false,\"ms\":" + integer.intText(ms) + ",\"error\":" + json.quoteString(errMsg) + "}");
+        }
+    } else {
+        if ok {
+            flushOutLine("bootstrap: " + step + " ok (" + integer.intText(ms) + "ms)");
+        } else {
+            flushOutLine("bootstrap: " + step + " failed (" + integer.intText(ms) + "ms)");
+        }
+    }
 };
 
 /** Returns a formatted process failure summary from `proc.run`. */
@@ -233,50 +263,63 @@ buildIgniterCandidate := fn(rootDir: String, gen3TsPath: String, workDir: String
     (ok = true, path = outPath, sha256 = hashRes.hex, error = "")
 };
 
-/** Emits verification or promotion result in JSON or concise human text. */
-emitResult := fn(commandName: String, jsonOut: Bool, sourceSha256: String, artifactSha256: String, igniterSha256: String, cArtifactSha256: String): Unit {
+/** Emits final verification or promotion summary report in compact JSON (NDJSON final line) or concise human text. */
+emitResult := fn(commandName: String, jsonOut: Bool, sourceSha256: String, artifactSha256: String, igniterSha256: String, cArtifactSha256: String, totalMs: Int): Unit {
     if jsonOut {
-        body := "{\n"
-        + "  \"command\": " + json.quoteString(commandName) + ",\n"
-        + "  \"ok\": true,\n"
-        + "  \"sourceSha256\": " + json.quoteString(sourceSha256) + ",\n"
-        + "  \"artifactSha256\": " + json.quoteString(artifactSha256) + ",\n"
-        + "  \"igniterSha256\": " + json.quoteString(igniterSha256) + ",\n"
-        + "  \"cArtifactSha256\": " + json.quoteString(cArtifactSha256) + "\n"
+        body := "{"
+        + "\"command\":" + json.quoteString(commandName) + ","
+        + "\"ok\":true,"
+        + "\"sourceSha256\":" + json.quoteString(sourceSha256) + ","
+        + "\"artifactSha256\":" + json.quoteString(artifactSha256) + ","
+        + "\"igniterSha256\":" + json.quoteString(igniterSha256) + ","
+        + "\"cArtifactSha256\":" + json.quoteString(cArtifactSha256) + ","
+        + "\"ms\":" + integer.intText(totalMs)
         + "}";
-        io.outputLine(body);
+        flushOutLine(body);
     } else {
         verb := if commandName == "promote" { "promoted and verified" } else { "verified" };
-        io.outputLine("bootstrap: " + verb + " (source=" + text.slice(sourceSha256, 0, 8)
+        flushOutLine("bootstrap: " + verb + " (source=" + text.slice(sourceSha256, 0, 8)
         + ", ts=" + text.slice(artifactSha256, 0, 8)
         + ", igniter=" + text.slice(igniterSha256, 0, 8)
-        + ", c=" + text.slice(cArtifactSha256, 0, 8) + ")");
+        + ", c=" + text.slice(cArtifactSha256, 0, 8)
+        + ", " + integer.intText(totalMs) + "ms)");
     }
 };
 
 /** Verifies strict `tsc`, seed provenance, C11 3-gen fixed point, full ignition, TS 3-gen fixed point, `igniter.ts` freshness, and TS->C11 cross-bootstrap byte parity. */
-verifyBootstrap := fn(rootDir: String, ccBin: String, commandLabel: String, jsonOut: Bool): (ok: Bool, error: String) {
+verifyBootstrap := fn(rootDir: String, ccBin: String, commandLabel: String, jsonOut: Bool, totalStartNs: Int): (ok: Bool, error: String) {
     emptyEnv: List<String> = [];
     nodeBin := project.nodeExecPath();
 
+    tscStart := time.monotonicNs();
     tscArgs: List<String> = [path.join(rootDir, "igniter/node_modules/typescript/bin/tsc"), "-p", path.join(rootDir, "compiler/bootstrap/tsconfig.json")];
     tscRes := proc.run(nodeBin, tscArgs, rootDir, emptyEnv, true, "");
     if tscRes.error =!= "" or tscRes.status =!= 0 {
-        return (ok = false, error = formatProcFailure("tsc -p compiler/bootstrap/tsconfig.json", tscRes));
+        err := formatProcFailure("tsc -p compiler/bootstrap/tsconfig.json", tscRes);
+        emitStep(jsonOut, "tsc", false, elapsedMs(tscStart), "", err);
+        return (ok = false, error = err);
     }
+    emitStep(jsonOut, "tsc", true, elapsedMs(tscStart), "", "");
 
+    provStart := time.monotonicNs();
     seed := readSeedProvenance(rootDir);
     if not seed.ok {
+        emitStep(jsonOut, "seed-provenance", false, elapsedMs(provStart), "", seed.error);
         return (ok = false, error = seed.error);
     }
     trackedC := crypto.sha256File(path.join(rootDir, "compiler/bootstrap/compiler.c"));
     if not trackedC.ok or trackedC.hex =!= seed.cArtifactSha256 {
-        return (ok = false, error = "bootstrap: tracked compiler/bootstrap/compiler.c differs from seed.ts cArtifactSha256");
+        err := "bootstrap: tracked compiler/bootstrap/compiler.c differs from seed.ts cArtifactSha256";
+        emitStep(jsonOut, "seed-provenance", false, elapsedMs(provStart), "", err);
+        return (ok = false, error = err);
     }
     trackedIgn := crypto.sha256File(path.join(rootDir, "compiler/bootstrap/igniter.ts"));
     if not trackedIgn.ok or trackedIgn.hex =!= seed.igniterSha256 {
-        return (ok = false, error = "bootstrap: tracked compiler/bootstrap/igniter.ts differs from seed.ts igniterSha256");
+        err := "bootstrap: tracked compiler/bootstrap/igniter.ts differs from seed.ts igniterSha256";
+        emitStep(jsonOut, "seed-provenance", false, elapsedMs(provStart), "", err);
+        return (ok = false, error = err);
     }
+    emitStep(jsonOut, "seed-provenance", true, elapsedMs(provStart), "", "");
 
     tmpRes := fs.makeTempDir("lite-bootstrap-verify-");
     if not tmpRes.ok {
@@ -284,62 +327,89 @@ verifyBootstrap := fn(rootDir: String, ccBin: String, commandLabel: String, json
     }
     tmpDir := tmpRes.path;
 
+    cStart := time.monotonicNs();
     cRes := runCSelfHost(rootDir, ccBin, path.join(tmpDir, "c"), true);
     if not cRes.ok {
         _rm := fs.remove(tmpDir);
+        emitStep(jsonOut, "c-self-host", false, elapsedMs(cStart), "", cRes.error);
         return (ok = false, error = cRes.error);
     }
     if cRes.sha256 =!= seed.cArtifactSha256 {
         _rm := fs.remove(tmpDir);
-        return (ok = false, error = "bootstrap: C11 generation-3 hash differs from seed.ts cArtifactSha256");
+        err := "bootstrap: C11 generation-3 hash differs from seed.ts cArtifactSha256";
+        emitStep(jsonOut, "c-self-host", false, elapsedMs(cStart), "", err);
+        return (ok = false, error = err);
     }
+    emitStep(jsonOut, "c-self-host", true, elapsedMs(cStart), ",\"sha256\":" + json.quoteString(cRes.sha256), "");
 
+    ignStart := time.monotonicNs();
     ignArgs: List<String> = [path.join(rootDir, "compiler/bootstrap/igniter.ts"), "--force"];
     ignRes := proc.run(nodeBin, ignArgs, rootDir, emptyEnv, true, "");
     if ignRes.error =!= "" or ignRes.status =!= 0 {
         _rm := fs.remove(tmpDir);
-        return (ok = false, error = formatProcFailure("igniter.ts --force", ignRes));
+        err := formatProcFailure("igniter.ts --force", ignRes);
+        emitStep(jsonOut, "ignite", false, elapsedMs(ignStart), "", err);
+        return (ok = false, error = err);
     }
+    emitStep(jsonOut, "ignite", true, elapsedMs(ignStart), "", "");
 
+    tsStart := time.monotonicNs();
     tsRes := runTsSelfHost(rootDir, path.join(tmpDir, "ts"));
     if not tsRes.ok {
         _rm := fs.remove(tmpDir);
+        emitStep(jsonOut, "ts-self-host", false, elapsedMs(tsStart), "", tsRes.error);
         return (ok = false, error = tsRes.error);
     }
     if tsRes.sourceSha256 =!= seed.sourceSha256 {
         _rm := fs.remove(tmpDir);
-        return (ok = false, error = "bootstrap: seed.ts sourceSha256 (" + seed.sourceSha256 + ") is stale vs current compiler source (" + tsRes.sourceSha256 + ")");
+        err := "bootstrap: seed.ts sourceSha256 (" + seed.sourceSha256 + ") is stale vs current compiler source (" + tsRes.sourceSha256 + ")";
+        emitStep(jsonOut, "ts-self-host", false, elapsedMs(tsStart), "", err);
+        return (ok = false, error = err);
     }
     if tsRes.artifactSha256 =!= seed.artifactSha256 or not tsRes.matchesSelected or not tsRes.equalsBuilder {
         _rm := fs.remove(tmpDir);
-        return (ok = false, error = "bootstrap: TS 3-gen fixed point (" + tsRes.artifactSha256 + ") differs from seed.ts (" + seed.artifactSha256 + ")");
+        err := "bootstrap: TS 3-gen fixed point (" + tsRes.artifactSha256 + ") differs from seed.ts (" + seed.artifactSha256 + ")";
+        emitStep(jsonOut, "ts-self-host", false, elapsedMs(tsStart), "", err);
+        return (ok = false, error = err);
     }
+    tsExtra := ",\"sourceSha256\":" + json.quoteString(tsRes.sourceSha256) + ",\"artifactSha256\":" + json.quoteString(tsRes.artifactSha256);
+    emitStep(jsonOut, "ts-self-host", true, elapsedMs(tsStart), tsExtra, "");
 
+    freshStart := time.monotonicNs();
     ignCand := buildIgniterCandidate(rootDir, tsRes.gen3Path, tmpDir);
     if not ignCand.ok {
         _rm := fs.remove(tmpDir);
+        emitStep(jsonOut, "igniter-freshness", false, elapsedMs(freshStart), "", ignCand.error);
         return (ok = false, error = ignCand.error);
     }
     if ignCand.sha256 =!= seed.igniterSha256 {
         _rm := fs.remove(tmpDir);
-        return (ok = false, error = "bootstrap: tracked compiler/bootstrap/igniter.ts (" + seed.igniterSha256 + ") is stale vs built tools/src/ignite.lts (" + ignCand.sha256 + "); run ./bin/lite bootstrap promote");
+        err := "bootstrap: tracked compiler/bootstrap/igniter.ts (" + seed.igniterSha256 + ") is stale vs built tools/src/ignite.lts (" + ignCand.sha256 + "); run ./bin/lite bootstrap promote";
+        emitStep(jsonOut, "igniter-freshness", false, elapsedMs(freshStart), "", err);
+        return (ok = false, error = err);
     }
+    emitStep(jsonOut, "igniter-freshness", true, elapsedMs(freshStart), ",\"sha256\":" + json.quoteString(ignCand.sha256), "");
 
+    crossStart := time.monotonicNs();
     crossRes := runCrossBootstrapC(rootDir, tsRes.gen3Path, tmpDir);
     _rm := fs.remove(tmpDir);
     if not crossRes.ok {
+        emitStep(jsonOut, "cross-bootstrap-c", false, elapsedMs(crossStart), "", crossRes.error);
         return (ok = false, error = crossRes.error);
     }
     if crossRes.sha256 =!= seed.cArtifactSha256 {
-        return (ok = false, error = "bootstrap: TS-bootstrapped C11 output (" + crossRes.sha256 + ") differs from C11 seed (" + seed.cArtifactSha256 + ")");
+        err := "bootstrap: TS-bootstrapped C11 output (" + crossRes.sha256 + ") differs from C11 seed (" + seed.cArtifactSha256 + ")";
+        emitStep(jsonOut, "cross-bootstrap-c", false, elapsedMs(crossStart), "", err);
+        return (ok = false, error = err);
     }
+    emitStep(jsonOut, "cross-bootstrap-c", true, elapsedMs(crossStart), ",\"sha256\":" + json.quoteString(crossRes.sha256), "");
 
-    emitResult(commandLabel, jsonOut, seed.sourceSha256, seed.artifactSha256, seed.igniterSha256, seed.cArtifactSha256);
+    emitResult(commandLabel, jsonOut, seed.sourceSha256, seed.artifactSha256, seed.igniterSha256, seed.cArtifactSha256, elapsedMs(totalStartNs));
     (ok = true, error = "")
 };
 
 /** Rebuilds C11 and TS 3-generation fixed points, verifies cross-bootstrap C11 parity before modifying tracked files, promotes seeds, and verifies cleanly. */
-promoteBootstrap := fn(rootDir: String, ccBin: String, jsonOut: Bool): (ok: Bool, error: String) {
+promoteBootstrap := fn(rootDir: String, ccBin: String, jsonOut: Bool, totalStartNs: Int): (ok: Bool, error: String) {
     emptyEnv: List<String> = [];
     tmpRes := fs.makeTempDir("lite-bootstrap-promote-");
     if not tmpRes.ok {
@@ -347,34 +417,50 @@ promoteBootstrap := fn(rootDir: String, ccBin: String, jsonOut: Bool): (ok: Bool
     }
     tmpDir := tmpRes.path;
 
+    cStart := time.monotonicNs();
     cRes := runCSelfHost(rootDir, ccBin, path.join(tmpDir, "c"), false);
     if not cRes.ok {
         _rm := fs.remove(tmpDir);
+        emitStep(jsonOut, "promote:c-self-host", false, elapsedMs(cStart), "", cRes.error);
         return (ok = false, error = cRes.error);
     }
+    emitStep(jsonOut, "promote:c-self-host", true, elapsedMs(cStart), ",\"sha256\":" + json.quoteString(cRes.sha256), "");
 
+    tsStart := time.monotonicNs();
     tsRes := runTsSelfHost(rootDir, path.join(tmpDir, "ts"));
     if not tsRes.ok {
         _rm := fs.remove(tmpDir);
+        emitStep(jsonOut, "promote:ts-self-host", false, elapsedMs(tsStart), "", tsRes.error);
         return (ok = false, error = tsRes.error);
     }
+    pTsExtra := ",\"sourceSha256\":" + json.quoteString(tsRes.sourceSha256) + ",\"artifactSha256\":" + json.quoteString(tsRes.artifactSha256);
+    emitStep(jsonOut, "promote:ts-self-host", true, elapsedMs(tsStart), pTsExtra, "");
 
+    crossStart := time.monotonicNs();
     crossRes := runCrossBootstrapC(rootDir, tsRes.gen3Path, tmpDir);
     if not crossRes.ok {
         _rm := fs.remove(tmpDir);
+        emitStep(jsonOut, "promote:cross-bootstrap-c", false, elapsedMs(crossStart), "", crossRes.error);
         return (ok = false, error = crossRes.error);
     }
     if crossRes.sha256 =!= cRes.sha256 {
         _rm := fs.remove(tmpDir);
-        return (ok = false, error = "bootstrap: refusing to promote because TS-bootstrapped C11 output (" + crossRes.sha256 + ") differs from C11 3-gen fixed point (" + cRes.sha256 + ")");
+        err := "bootstrap: refusing to promote because TS-bootstrapped C11 output (" + crossRes.sha256 + ") differs from C11 3-gen fixed point (" + cRes.sha256 + ")";
+        emitStep(jsonOut, "promote:cross-bootstrap-c", false, elapsedMs(crossStart), "", err);
+        return (ok = false, error = err);
     }
+    emitStep(jsonOut, "promote:cross-bootstrap-c", true, elapsedMs(crossStart), ",\"sha256\":" + json.quoteString(crossRes.sha256), "");
 
+    ignStart := time.monotonicNs();
     ignCand := buildIgniterCandidate(rootDir, tsRes.gen3Path, tmpDir);
     if not ignCand.ok {
         _rm := fs.remove(tmpDir);
+        emitStep(jsonOut, "promote:build-igniter", false, elapsedMs(ignStart), "", ignCand.error);
         return (ok = false, error = ignCand.error);
     }
+    emitStep(jsonOut, "promote:build-igniter", true, elapsedMs(ignStart), ",\"sha256\":" + json.quoteString(ignCand.sha256), "");
 
+    writeStart := time.monotonicNs();
     seedCPath := path.join(rootDir, "compiler/bootstrap/compiler.c");
     seedIgnPath := path.join(rootDir, "compiler/bootstrap/igniter.ts");
     seedMetaPath := path.join(rootDir, "compiler/bootstrap/seed.ts");
@@ -382,12 +468,16 @@ promoteBootstrap := fn(rootDir: String, ccBin: String, jsonOut: Bool): (ok: Bool
     cpC := fs.copy(cRes.gen3Path, seedCPath);
     if not cpC.ok {
         _rm := fs.remove(tmpDir);
-        return (ok = false, error = "bootstrap: failed to write compiler/bootstrap/compiler.c: " + cpC.error);
+        err := "bootstrap: failed to write compiler/bootstrap/compiler.c: " + cpC.error;
+        emitStep(jsonOut, "promote:write-seeds", false, elapsedMs(writeStart), "", err);
+        return (ok = false, error = err);
     }
     cpIgn := fs.copy(ignCand.path, seedIgnPath);
     if not cpIgn.ok {
         _rm := fs.remove(tmpDir);
-        return (ok = false, error = "bootstrap: failed to write compiler/bootstrap/igniter.ts: " + cpIgn.error);
+        err := "bootstrap: failed to write compiler/bootstrap/igniter.ts: " + cpIgn.error;
+        emitStep(jsonOut, "promote:write-seeds", false, elapsedMs(writeStart), "", err);
+        return (ok = false, error = err);
     }
     _rm := fs.remove(tmpDir);
 
@@ -395,7 +485,9 @@ promoteBootstrap := fn(rootDir: String, ccBin: String, jsonOut: Bool): (ok: Bool
         chmodArgs: List<String> = ["+x", seedIgnPath];
         chmodRes := proc.run("chmod", chmodArgs, rootDir, emptyEnv, true, "");
         if chmodRes.error =!= "" or chmodRes.status =!= 0 {
-            return (ok = false, error = formatProcFailure("chmod +x compiler/bootstrap/igniter.ts", chmodRes));
+            err := formatProcFailure("chmod +x compiler/bootstrap/igniter.ts", chmodRes);
+            emitStep(jsonOut, "promote:write-seeds", false, elapsedMs(writeStart), "", err);
+            return (ok = false, error = err);
         }
     }
 
@@ -414,10 +506,13 @@ promoteBootstrap := fn(rootDir: String, ccBin: String, jsonOut: Bool): (ok: Bool
     + "} as const;\n";
     wrSeed := fs.writeText(seedMetaPath, seedText);
     if not wrSeed.ok {
-        return (ok = false, error = "bootstrap: failed to write compiler/bootstrap/seed.ts: " + wrSeed.error);
+        err := "bootstrap: failed to write compiler/bootstrap/seed.ts: " + wrSeed.error;
+        emitStep(jsonOut, "promote:write-seeds", false, elapsedMs(writeStart), "", err);
+        return (ok = false, error = err);
     }
+    emitStep(jsonOut, "promote:write-seeds", true, elapsedMs(writeStart), "", "");
 
-    verifyBootstrap(rootDir, ccBin, "promote", jsonOut)
+    verifyBootstrap(rootDir, ccBin, "promote", jsonOut, totalStartNs)
 };
 
 /** Parses CLI flags and runs `verify` or `promote`. */
@@ -476,18 +571,26 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(2);
     }
 
+    runStart := time.monotonicNs();
     rootDir := project.findRepoRoot();
     if rootDir == "" {
-        io.errorLine("bootstrap: cannot locate LiteScript repository root");
+        err := "bootstrap: cannot locate LiteScript repository root";
+        if jsonOut {
+            flushOutLine("{\"command\":" + json.quoteString(subcommand) + ",\"ok\":false,\"ms\":" + integer.intText(elapsedMs(runStart)) + ",\"error\":" + json.quoteString(err) + "}");
+        }
+        io.errorLine(err);
         io.exit(1);
     }
 
     res := if subcommand == "verify" {
-        verifyBootstrap(rootDir, ccBin, "verify", jsonOut)
+        verifyBootstrap(rootDir, ccBin, "verify", jsonOut, runStart)
     } else {
-        promoteBootstrap(rootDir, ccBin, jsonOut)
+        promoteBootstrap(rootDir, ccBin, jsonOut, runStart)
     };
     if not res.ok {
+        if jsonOut {
+            flushOutLine("{\"command\":" + json.quoteString(subcommand) + ",\"ok\":false,\"ms\":" + integer.intText(elapsedMs(runStart)) + ",\"error\":" + json.quoteString(res.error) + "}");
+        }
         io.errorLine(res.error);
         io.exit(1);
     }
