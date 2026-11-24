@@ -1,4 +1,4 @@
-/* Core checked-integer operations and deprecated module-level shims. */
+/* Core checked-integer operations. */
 
 /** Smallest signed 64-bit value. */
 pub intMin := -9223372036854775808;
@@ -113,10 +113,5 @@ intTextPure := fn(value: Int): String {
 
 /** Formats one signed 64-bit Int as decimal text (soft builtin). */
 pub Int.toText := fn(value: Self): String {
-    intTextPure(value)
-}
-
-/** #deprecated Use `value.toText()` instead. */
-pub intText := fn(value: Int): String {
     intTextPure(value)
 }

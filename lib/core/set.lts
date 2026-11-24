@@ -1,4 +1,4 @@
-/* Core set operations and deprecated module-level compatibility shims. */
+/* Core set operations. */
 
 /** Inserts `value` into `s` in O(1). */
 pub Set.add := fn<T>(s: mut Self<T>, value: T): Unit;
@@ -23,20 +23,3 @@ pub Set.isEmpty := fn<T>(s: Self<T>): Bool {
     s.size() == 0
 };
 
-/** #deprecated Use `mut s.add(value)` instead. */
-pub add := fn<T>(s: mut Set<T>, value: T): Unit;
-
-/** #deprecated Use `s.has(value)` instead. */
-pub has := fn<T>(s: Set<T>, value: T): Bool;
-
-/** #deprecated Use `mut s.remove(value)` instead. */
-pub remove := fn<T>(s: mut Set<T>, value: T): Bool;
-
-/** #deprecated Use `s.size()` instead. */
-pub size := fn<T>(s: Set<T>): Int;
-
-/** #deprecated Use `mut s.clear()` instead. */
-pub clear := fn<T>(s: mut Set<T>): Unit;
-
-/** #deprecated Use `s.values()` instead. */
-pub values := fn<T>(s: Set<T>): List<T>;

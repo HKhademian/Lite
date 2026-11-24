@@ -69,28 +69,28 @@ functionalSrc :=
 "io.outputLine(\"dequeText\", tf.value, tb.value, deque.textCount(td));\n" +
 "deque.destroyTexts(td);\n" +
 "\n" +
-"/* 3. extra/heap (legacy shims + nominal TypeName.op) */\n" +
+"/* 3. extra/heap (nominal TypeName.op) */\n" +
 "mn := heap.createMin(8);\n" +
 "_m1 := mn.push(50);\n" +
-"_m2 := heap.pushMin(mn, 10);\n" +
+"_m2 := mn.push(10);\n" +
 "_m3 := mn.push(30);\n" +
-"_m4 := heap.pushMin(mn, 20);\n" +
-"io.outputLine(\"minHeap\", mn.pop().value, heap.popMin(mn).value, mn.pop().value, heap.popMin(mn).value, mn.pop().found);\n" +
+"_m4 := mn.push(20);\n" +
+"io.outputLine(\"minHeap\", mn.pop().value, mn.pop().value, mn.pop().value, mn.pop().value, mn.pop().found);\n" +
 "mn.destroy();\n" +
 "\n" +
 "mx := heap.createMax(8);\n" +
 "_x1 := mx.push(10);\n" +
-"_x2 := heap.pushMax(mx, 50);\n" +
+"_x2 := mx.push(50);\n" +
 "_x3 := mx.push(30);\n" +
-"io.outputLine(\"maxHeap\", mx.pop().value, heap.popMax(mx).value, mx.pop().value);\n" +
+"io.outputLine(\"maxHeap\", mx.pop().value, mx.pop().value, mx.pop().value);\n" +
 "mx.destroy();\n" +
 "\n" +
 "pq := heap.createPQ(8);\n" +
 "_q1 := pq.push(30, 103);\n" +
-"_q2 := heap.pushPQ(pq, 10, 101);\n" +
+"_q2 := pq.push(10, 101);\n" +
 "_q3 := pq.push(20, 102);\n" +
 "pqa := pq.pop();\n" +
-"pqb := heap.popPQ(pq);\n" +
+"pqb := pq.pop();\n" +
 "io.outputLine(\"pq\", pqa.priority, pqa.item, pqb.priority, pqb.item, pq.count());\n" +
 "pq.destroy();\n" +
 "\n" +
@@ -189,17 +189,17 @@ if ccInfo.available {
     "    _ro := ring.pushInt(r, i);\n" +
     "    _dp := deque.pushBackInt(dq, i);\n" +
     "    if deque.intCount(dq) > 16 { _df := deque.popFrontInt(dq); }\n" +
-    "    _hp := heap.pushMin(hp, (i * 37) % 1000);\n" +
-    "    if heap.minCount(hp) > 32 { _hm := heap.popMin(hp); }\n" +
+    "    _hp := hp.push((i * 37) % 1000);\n" +
+    "    if hp.count() > 32 { _hm := hp.pop(); }\n" +
     "    _bt := bitset.toggle(bs, i % 128);\n" +
     "    id := i % 128;\n" +
     "    if sparse.has(ss, id) { _sr := sparse.remove(ss, id); } else { _si := sparse.insert(ss, id); }\n" +
     "    i += 1;\n" +
     "}\n" +
-    "io.outputLine(\"stress\", ring.intCount(r), deque.intCount(dq), heap.minCount(hp), bitset.countOnes(bs), sparse.count(ss));\n" +
+    "io.outputLine(\"stress\", ring.intCount(r), deque.intCount(dq), hp.count(), bitset.countOnes(bs), sparse.count(ss));\n" +
     "ring.destroyInts(r);\n" +
     "deque.destroyInts(dq);\n" +
-    "heap.destroyMin(hp);\n" +
+    "hp.destroy();\n" +
     "bitset.destroy(bs);\n" +
     "sparse.destroy(ss);\n";
 

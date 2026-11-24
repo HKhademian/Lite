@@ -143,7 +143,7 @@ compilerTest.assertCompileRunTsNamed(
     root,
     tsComp,
     "core-text-scalar",
-    "textLib := import \"core/text\"; io := import \"core/io\"; io.outputLine(textLib.length(\"A🙂\"), textLib.at(\"A🙂\", 1));",
+    "io := import \"core/io\"; io.outputLine(\"A🙂\".length(), \"A🙂\".at(1));",
     fixtureName,
     "2 🙂\n"
 );

@@ -123,51 +123,6 @@ pub Vec2.clampLength := fn(v: Self, maxLen: Float): Self {
     if lenSq <= (maxLen * maxLen) { v } else { v.scale(maxLen / math.sqrt(lenSq)) }
 };
 
-/** #deprecated Use `a.add(b)` instead. */
-pub add2 := fn(a: Vec2, b: Vec2): Vec2 { a.add(b) };
-
-/** #deprecated Use `a.sub(b)` instead. */
-pub sub2 := fn(a: Vec2, b: Vec2): Vec2 { a.sub(b) };
-
-/** #deprecated Use `v.scale(s)` instead. */
-pub scale2 := fn(v: Vec2, s: Float): Vec2 { v.scale(s) };
-
-/** #deprecated Use `v.neg()` instead. */
-pub neg2 := fn(v: Vec2): Vec2 { v.neg() };
-
-/** #deprecated Use `a.mul(b)` instead. */
-pub mul2 := fn(a: Vec2, b: Vec2): Vec2 { a.mul(b) };
-
-/** #deprecated Use `a.dot(b)` instead. */
-pub dot2 := fn(a: Vec2, b: Vec2): Float { a.dot(b) };
-
-/** #deprecated Use `a.cross(b)` instead. */
-pub cross2 := fn(a: Vec2, b: Vec2): Float { a.cross(b) };
-
-/** #deprecated Use `v.lengthSq()` instead. */
-pub lengthSq2 := fn(v: Vec2): Float { v.lengthSq() };
-
-/** #deprecated Use `v.length()` instead. */
-pub length2 := fn(v: Vec2): Float { v.length() };
-
-/** #deprecated Use `a.distance(b)` instead. */
-pub distance2 := fn(a: Vec2, b: Vec2): Float { a.distance(b) };
-
-/** #deprecated Use `v.normalize()` instead. */
-pub normalize2 := fn(v: Vec2): Vec2 { v.normalize() };
-
-/** #deprecated Use `a.lerp(b, t)` instead. */
-pub lerp2 := fn(a: Vec2, b: Vec2, t: Float): Vec2 { a.lerp(b, t) };
-
-/** #deprecated Use `v.rotate(radians)` instead. */
-pub rotate2 := fn(v: Vec2, radians: Float): Vec2 { v.rotate(radians) };
-
-/** #deprecated Use `v.perp()` instead. */
-pub perp2 := fn(v: Vec2): Vec2 { v.perp() };
-
-/** #deprecated Use `v.clampLength(maxLen)` instead. */
-pub clampLength2 := fn(v: Vec2, maxLen: Float): Vec2 { v.clampLength(maxLen) };
-
 /* ============================================================================
  * Vec3
  * ============================================================================ */
@@ -228,45 +183,6 @@ pub Vec3.reflect := fn(v: Self, normal: Self): Self {
     v.sub(normal.scale(d))
 };
 
-/** #deprecated Use `a.add(b)` instead. */
-pub add3 := fn(a: Vec3, b: Vec3): Vec3 { a.add(b) };
-
-/** #deprecated Use `a.sub(b)` instead. */
-pub sub3 := fn(a: Vec3, b: Vec3): Vec3 { a.sub(b) };
-
-/** #deprecated Use `v.scale(s)` instead. */
-pub scale3 := fn(v: Vec3, s: Float): Vec3 { v.scale(s) };
-
-/** #deprecated Use `v.neg()` instead. */
-pub neg3 := fn(v: Vec3): Vec3 { v.neg() };
-
-/** #deprecated Use `a.mul(b)` instead. */
-pub mul3 := fn(a: Vec3, b: Vec3): Vec3 { a.mul(b) };
-
-/** #deprecated Use `a.dot(b)` instead. */
-pub dot3 := fn(a: Vec3, b: Vec3): Float { a.dot(b) };
-
-/** #deprecated Use `a.cross(b)` instead. */
-pub cross3 := fn(a: Vec3, b: Vec3): Vec3 { a.cross(b) };
-
-/** #deprecated Use `v.lengthSq()` instead. */
-pub lengthSq3 := fn(v: Vec3): Float { v.lengthSq() };
-
-/** #deprecated Use `v.length()` instead. */
-pub length3 := fn(v: Vec3): Float { v.length() };
-
-/** #deprecated Use `a.distance(b)` instead. */
-pub distance3 := fn(a: Vec3, b: Vec3): Float { a.distance(b) };
-
-/** #deprecated Use `v.normalize()` instead. */
-pub normalize3 := fn(v: Vec3): Vec3 { v.normalize() };
-
-/** #deprecated Use `a.lerp(b, t)` instead. */
-pub lerp3 := fn(a: Vec3, b: Vec3, t: Float): Vec3 { a.lerp(b, t) };
-
-/** #deprecated Use `v.reflect(normal)` instead. */
-pub reflect3 := fn(v: Vec3, normal: Vec3): Vec3 { v.reflect(normal) };
-
 /* ============================================================================
  * Vec4
  * ============================================================================ */
@@ -299,24 +215,3 @@ pub Vec4.normalize := fn(v: Self): Self {
 pub Vec4.lerp := fn(a: Self, b: Self, t: Float): Self {
     Vec4 { x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t), z = math.lerp(a.z, b.z, t), w = math.lerp(a.w, b.w, t) }
 };
-
-/** #deprecated Use `a.add(b)` instead. */
-pub add4 := fn(a: Vec4, b: Vec4): Vec4 { a.add(b) };
-
-/** #deprecated Use `a.sub(b)` instead. */
-pub sub4 := fn(a: Vec4, b: Vec4): Vec4 { a.sub(b) };
-
-/** #deprecated Use `v.scale(s)` instead. */
-pub scale4 := fn(v: Vec4, s: Float): Vec4 { v.scale(s) };
-
-/** #deprecated Use `a.dot(b)` instead. */
-pub dot4 := fn(a: Vec4, b: Vec4): Float { a.dot(b) };
-
-/** #deprecated Use `v.length()` instead. */
-pub length4 := fn(v: Vec4): Float { v.length() };
-
-/** #deprecated Use `v.normalize()` instead. */
-pub normalize4 := fn(v: Vec4): Vec4 { v.normalize() };
-
-/** #deprecated Use `a.lerp(b, t)` instead. */
-pub lerp4 := fn(a: Vec4, b: Vec4, t: Float): Vec4 { a.lerp(b, t) };

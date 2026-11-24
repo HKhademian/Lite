@@ -2311,7 +2311,7 @@ paramRuntimeAt := fn(encoded: String, targetIndex: Int): String {
 
 /** Returns the soft-builtin return expression for an overridable module function or type-attached operation, or `""` when none exists. */
 softBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): String {
-    fnName := if rawFnName == "Int.toText" or rawFnName == "Int.intText" { "intText" }
+    fnName := if rawFnName == "Int.toText" { "intText" }
     else if rawFnName == "String.toInt" { "textToInt" }
     else if rawFnName == "String.repeat" { "repeatText" }
     else if rawFnName == "String.contains" { "containsText" }
@@ -2336,7 +2336,7 @@ softBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): St
     } else if moduleName == "lib/core/text" {
         if fnName == "skipSpaces" { return "lite$textSkipWhile(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", true)"; }
         if fnName == "skipName" { return "lite$textSkipWhile(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", false)"; }
-        if fnName == "indexOf" or fnName == "indexOfText" {
+        if fnName == "indexOf" {
             return "lite$textIndexOf(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ")";
         }
         if fnName == "startsWithAt" {

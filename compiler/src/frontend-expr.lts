@@ -1339,9 +1339,6 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         }
         return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = nameStart.toText(), intValue = callableIndex, textValue = name, constant = false, next = next);
     }
-    if isCallSite and (name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") {
-        return (kind = ir.VALUE_KIND_LIST_OP, code = name, intValue = 0, textValue = name, constant = false, next = afterName);
-    }
     if index >= 0 {
         entry := locals[index];
         if entry.initState =!= ir.INIT_STATE_INIT {
@@ -7932,8 +7929,6 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     }
                 }
             }
-        } else if left.kind == ir.VALUE_KIND_LIST_OP {
-            left = parseListIntrinsicCall(target, source, exprStart, left.next, left.textValue, left.code, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
         } else if left.kind == ir.VALUE_KIND_MODULE_FUNCTION or (types.isFnKind(left.kind) and postPosition < source.length() and source.at(postPosition) == "(") {
             isModuleFn := left.kind == ir.VALUE_KIND_MODULE_FUNCTION;
             var handleUserCall := not isModuleFn;

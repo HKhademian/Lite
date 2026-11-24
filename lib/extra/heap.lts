@@ -179,24 +179,6 @@ pub MinHeap.destroy := fn(heap: Self): Unit {
     mut hFree.pushBack(id);
 };
 
-/** #deprecated Use `heap.push(value)` instead. */
-pub pushMin := fn(heap: MinHeap, value: Int): Bool { heap.push(value) };
-
-/** #deprecated Use `heap.pop()` instead. */
-pub popMin := fn(heap: MinHeap): (found: Bool, value: Int) { heap.pop() };
-
-/** #deprecated Use `heap.peek()` instead. */
-pub peekMin := fn(heap: MinHeap): (found: Bool, value: Int) { heap.peek() };
-
-/** #deprecated Use `heap.count()` instead. */
-pub minCount := fn(heap: MinHeap): Int { heap.count() };
-
-/** #deprecated Use `heap.clear()` instead. */
-pub clearMin := fn(heap: MinHeap): Unit { heap.clear(); };
-
-/** #deprecated Use `heap.destroy()` instead. */
-pub destroyMin := fn(heap: MinHeap): Unit { heap.destroy(); };
-
 /* ============================================================================
  * MaxHeap API
  * ============================================================================ */
@@ -247,24 +229,6 @@ pub MaxHeap.destroy := fn(heap: Self): Unit {
     hGen[id] = hGen[id] + 1;
     mut hFree.pushBack(id);
 };
-
-/** #deprecated Use `heap.push(value)` instead. */
-pub pushMax := fn(heap: MaxHeap, value: Int): Bool { heap.push(value) };
-
-/** #deprecated Use `heap.pop()` instead. */
-pub popMax := fn(heap: MaxHeap): (found: Bool, value: Int) { heap.pop() };
-
-/** #deprecated Use `heap.peek()` instead. */
-pub peekMax := fn(heap: MaxHeap): (found: Bool, value: Int) { heap.peek() };
-
-/** #deprecated Use `heap.count()` instead. */
-pub maxCount := fn(heap: MaxHeap): Int { heap.count() };
-
-/** #deprecated Use `heap.clear()` instead. */
-pub clearMax := fn(heap: MaxHeap): Unit { heap.clear(); };
-
-/** #deprecated Use `heap.destroy()` instead. */
-pub destroyMax := fn(heap: MaxHeap): Unit { heap.destroy(); };
 
 /* ============================================================================
  * Keyed PriorityQueue (lowest priority popped first)
@@ -401,21 +365,3 @@ pub PriorityQueue.destroy := fn(pq: Self): Unit {
     pqGen[id] = pqGen[id] + 1;
     mut pqFree.pushBack(id);
 };
-
-/** #deprecated Use `pq.push(priority, item)` instead. */
-pub pushPQ := fn(pq: PriorityQueue, priority: Int, item: Int): Bool { pq.push(priority, item) };
-
-/** #deprecated Use `pq.pop()` instead. */
-pub popPQ := fn(pq: PriorityQueue): (found: Bool, priority: Int, item: Int) { pq.pop() };
-
-/** #deprecated Use `pq.peek()` instead. */
-pub peekPQ := fn(pq: PriorityQueue): (found: Bool, priority: Int, item: Int) { pq.peek() };
-
-/** #deprecated Use `pq.count()` instead. */
-pub pqCount := fn(pq: PriorityQueue): Int { pq.count() };
-
-/** #deprecated Use `pq.clear()` instead. */
-pub clearPQ := fn(pq: PriorityQueue): Unit { pq.clear(); };
-
-/** #deprecated Use `pq.destroy()` instead. */
-pub destroyPQ := fn(pq: PriorityQueue): Unit { pq.destroy(); };

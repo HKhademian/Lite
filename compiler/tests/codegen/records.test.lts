@@ -74,7 +74,6 @@ compilerTest.assertCompileRunTs(root, tsComp, "records basics defaults zero-init
 
 /* Forward-declared records, transparent aliases, block-local records, functions, collections, and destructuring */
 advancedRecordsSrc := "io := import \"core/io\";\n" +
-"intLib := import \"core/int\";\n" +
 "makeDefaultUser := fn(): User { User {} }\n" +
 "User := record {\n" +
 "    name: String = \"Anon\";\n" +
@@ -87,7 +86,7 @@ advancedRecordsSrc := "io := import \"core/io\";\n" +
 "}\n" +
 "showMember := fn(m: Member): String {\n" +
 "    { memberName = name, age: Int, } := m;\n" +
-"    memberName + \":\" + intLib.intText(age)\n" +
+"    memberName + \":\" + age.toText()\n" +
 "}\n" +
 "u := makeDefaultUser();\n" +
 "m: Member = u;\n" +

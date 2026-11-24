@@ -17,7 +17,6 @@ ccInfo := compilerTest.probeCc();
 
 src :=
 "io := import \"core/io\";\n" +
-"intLib := import \"core/int\";\n" +
 "\n" +
 "readings := [-4, 3, 0, 12, -1, 7, 25];\n" +
 "doubled := loop readings { .item * 2 }.collected;\n" +
@@ -40,7 +39,7 @@ src :=
 "var joined := \"\";\n" +
 "loop squares {\n" +
 "    if .index > 0 { joined += \", \"; }\n" +
-"    joined += intLib.intText(.item);\n" +
+"    joined += .item.toText();\n" +
 "}\n" +
 "io.outputLine(joined);\n";
 

@@ -1,4 +1,4 @@
-/* Core list operations and deprecated module-level compatibility shims. */
+/* Core list operations. */
 
 text := import "core/text";
 
@@ -62,33 +62,6 @@ pub List.filter := fn<T>(values: Self<T>, pred: fn(T): Bool): List<T> {
 pub List.join := fn(values: Self<String>, separator: String): String {
     text.joinTexts(values, separator)
 };
-
-/** #deprecated Use `mut values.pushBack(value)` instead. */
-pub pushBack := fn<T>(values: mut List<T>, value: T): Unit;
-
-/** #deprecated Use `mut values.popBack()` instead. */
-pub popBack := fn<T>(values: mut List<T>): T;
-
-/** #deprecated Use `mut values.pushFront(value)` instead. */
-pub pushFront := fn<T>(values: mut List<T>, value: T): Unit;
-
-/** #deprecated Use `mut values.popFront()` instead. */
-pub popFront := fn<T>(values: mut List<T>): T;
-
-/** #deprecated Use `values.length()` instead. */
-pub length := fn<T>(values: List<T>): Int;
-
-/** #deprecated Use `mut values.setAt(index, value)` instead. */
-pub setAt := fn<T>(values: mut List<T>, index: Int, value: T): Unit;
-
-/** #deprecated Use `values.slice(start, end)` instead. */
-pub slice := fn<T>(values: List<T>, start: Int, end: Int): List<T>;
-
-/** #deprecated Use `values.reverse()` instead. */
-pub reverse := fn<T>(values: List<T>): List<T>;
-
-/** #deprecated Use `mut values.clear()` instead. */
-pub clear := fn<T>(values: mut List<T>): Unit;
 
 /** Returns a new sorted ascending copy of `values` using stable O(n log n) merge sort. */
 pub sortInts := fn(values: List<Int>): List<Int> {
@@ -232,19 +205,4 @@ pub listIndexOfBool := fn(values: List<Bool>, target: Bool): Int {
 /** True when `values` contains `target`. */
 pub listContainsBool := fn(values: List<Bool>, target: Bool): Bool {
     listIndexOfBool(=values, =target) >= 0
-}
-
-/** #deprecated Use `values.length()` instead. */
-pub listCountText := fn(values: List<String>): Int {
-    values.length()
-}
-
-/** #deprecated Use `values.length()` instead. */
-pub listCountInt := fn(values: List<Int>): Int {
-    values.length()
-}
-
-/** #deprecated Use `values.length()` instead. */
-pub listCountBool := fn(values: List<Bool>): Int {
-    values.length()
 }

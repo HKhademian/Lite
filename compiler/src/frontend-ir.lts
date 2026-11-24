@@ -105,7 +105,6 @@ pub VALUE_KIND_UNIT := numeric.KIND_UNIT;
 pub VALUE_KIND_NEVER := numeric.KIND_NEVER;
 pub VALUE_KIND_MODULE := "Module";
 pub VALUE_KIND_MODULE_FUNCTION := "ModuleFunction";
-pub VALUE_KIND_LIST_OP := "ListOp";
 
 pub ITEM_PREFIX_LOCAL := "Local";
 pub ITEM_PREFIX_VAR := "Var";

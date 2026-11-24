@@ -1,4 +1,4 @@
-/* Core String operations (hard builtins, soft builtins, pure Lite) and deprecated module-level shims. */
+/* Core String operations (hard builtins, soft builtins, pure Lite). */
 
 integer := import "core/int";
 
@@ -358,72 +358,6 @@ pub String.toLowerAscii := fn(source: Self): String {
     toLowerAsciiPure(source)
 }
 
-/* --- Deprecated module-level compatibility shims --- */
-
-/** #deprecated Use `text.length()` instead. */
-pub length := fn(text: String): Int;
-
-/** #deprecated Use `text.at(position)` instead. */
-pub at := fn(text: String, position: Int): String;
-
-/** #deprecated Use `text.slice(start, end)` instead. */
-pub slice := fn(text: String, start: Int, end: Int): String;
-
-/** #deprecated Use `source.indexOf(needle, start)` instead. */
-pub indexOf := fn(source: String, needle: String, start: Int): Int {
-    indexOfPure(source, needle, start)
-}
-
-/** #deprecated Use `text.isDigit()` instead. */
-pub isDigit := fn(text: String): Bool {
-    isDigitPure(text)
-}
-
-/** #deprecated Use `text.digitValue()` instead. */
-pub digitValue := fn(text: String): Int {
-    digitValuePure(text)
-}
-
-/** #deprecated Use `ch.isAsciiLetter()` instead. */
-pub isAsciiLetter := fn(ch: String): Bool {
-    isAsciiLetterPure(ch)
-}
-
-/** #deprecated Use `ch.isNameStart()` instead. */
-pub isNameStart := fn(ch: String): Bool {
-    isNameStartPure(ch)
-}
-
-/** #deprecated Use `ch.isNameContinue()` instead. */
-pub isNameContinue := fn(ch: String): Bool {
-    isNameContinuePure(ch)
-}
-
-/** #deprecated Use `source.skipSpaces(start)` instead. */
-pub skipSpaces := fn(source: String, start: Int): Int {
-    skipSpacesPure(source, start)
-}
-
-/** #deprecated Use `source.skipName(start)` instead. */
-pub skipName := fn(source: String, start: Int): Int {
-    skipNamePure(source, start)
-}
-
-/** #deprecated Use `source.startsWithAt(position, text)` instead. */
-pub startsWithAt := fn(source: String, position: Int, text: String): Bool {
-    startsWithAtPure(source, position, text)
-}
-
-/** #deprecated Use `source.wordAt(position, word)` instead. */
-pub wordAt := fn(source: String, position: Int, word: String): Bool {
-    wordAtPure(source, position, word)
-}
-
-/** #deprecated Use `source.indexOf(needle, start)` instead. */
-pub indexOfText := fn(source: String, needle: String, start: Int): Int {
-    indexOfPure(source, needle, start)
-}
-
 /** Joins text values in list order with `separator` between adjacent values. */
 pub joinTexts := fn(values: List<String>, separator: String): String {
     var result := "";
@@ -437,54 +371,4 @@ pub joinTexts := fn(values: List<String>, separator: String): String {
         }
     }
     result
-}
-
-/** #deprecated Use `text.toInt()` instead. */
-pub textToInt := fn(text: String): (value: Int, ok: Bool) {
-    textToIntPure(text)
-}
-
-/** #deprecated Use `ch.isWhitespace()` instead. */
-pub isWhitespace := fn(ch: String): Bool {
-    isWhitespacePure(ch)
-}
-
-/** #deprecated Use `source.trimStart()` instead. */
-pub trimStart := fn(source: String): String {
-    trimStartPure(source)
-}
-
-/** #deprecated Use `source.trimEnd()` instead. */
-pub trimEnd := fn(source: String): String {
-    trimEndPure(source)
-}
-
-/** #deprecated Use `source.trim()` instead. */
-pub trim := fn(source: String): String {
-    trimEndPure(trimStartPure(source))
-}
-
-/** #deprecated Use `source.startsWith(prefix)` instead. */
-pub startsWith := fn(source: String, prefix: String): Bool {
-    startsWithAtPure(source, 0, prefix)
-}
-
-/** #deprecated Use `source.endsWith(suffix)` instead. */
-pub endsWith := fn(source: String, suffix: String): Bool {
-    endsWithPure(source, suffix)
-}
-
-/** #deprecated Use `value.repeat(count)` instead. */
-pub repeatText := fn(value: String, count: Int): String {
-    repeatPure(value, count)
-}
-
-/** #deprecated Use `source.contains(needle)` instead. */
-pub containsText := fn(source: String, needle: String): Bool {
-    indexOfPure(source, needle, 0) >= 0
-}
-
-/** #deprecated Use `source.toLowerAscii()` instead. */
-pub toLowerAscii := fn(source: String): String {
-    toLowerAsciiPure(source)
 }

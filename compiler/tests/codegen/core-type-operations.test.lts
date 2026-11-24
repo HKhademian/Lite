@@ -102,4 +102,29 @@ test.check("min ts omits unused String.trim", not minTs.stdout.contains("tp_Stri
 test.check("min ts omits unused Int.toText", not minTs.stdout.contains("tp_Int_op_toText"));
 test.check("min ts omits unused List.map", not minTs.stdout.contains("tp_List_op_map"));
 
+/* 3. Removed free-function shims and ambient push_back/pop_back are rejected, while dot ops and TypeName.op succeed on TS and C11. */
+rejectSources: List<String> = [
+    "list := import \"core/list\"; xs: mut List<Int> = [1]; _ := list.popBack(mut xs);\n",
+    "xs: mut List<Int> = [1]; push_back(mut xs, 2);\n",
+    "xs: mut List<Int> = [1]; _ := pop_back(mut xs);\n"
+];
+loop rejectSources as rejSrc {
+    tsRej := compilerTest.compileStdin(root, tsComp, rejSrc, "");
+    test.checkInt("removed shim ts reject: " + rejSrc, 2, tsRej.status);
+    test.checkText("removed shim ts stdout", "", tsRej.stdout);
+    cRej := compilerTest.compileStdin(root, cComp, rejSrc, "");
+    test.checkInt("removed shim c reject: " + rejSrc, 2, cRej.status);
+    test.checkText("removed shim c stdout", "", cRej.stdout);
+}
+
+acceptBothSrc :=
+"io := import \"core/io\";\n" +
+"xs: mut List<Int> = [1, 2];\n" +
+"mut xs.pushBack(3);\n" +
+"a := mut xs.popBack();\n" +
+"List.pushBack(mut xs, 4);\n" +
+"b := List.popBack(mut xs);\n" +
+"io.outputLine(a, b, xs);\n";
+runWithModes("removed-shim-replacements", acceptBothSrc, "3 4 [1, 2]\n", emptyArgs);
+
 test.done("core-type-operations");

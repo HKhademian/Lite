@@ -1,4 +1,4 @@
-/* Core map operations and deprecated module-level compatibility shims. */
+/* Core map operations. */
 
 /** Inserts or updates `key` with `value` in O(1). */
 pub Map.set := fn<K, V>(entries: mut Self<K, V>, key: K, value: V): Unit;
@@ -38,29 +38,3 @@ pub Map.isEmpty := fn<K, V>(entries: Self<K, V>): Bool {
     entries.size() == 0
 };
 
-/** #deprecated Use `mut entries.set(key, value)` instead. */
-pub set := fn<K, V>(entries: mut Map<K, V>, key: K, value: V): Unit;
-
-/** #deprecated Use `entries.get(key)` instead. */
-pub get := fn<K, V>(entries: Map<K, V>, key: K): (found: Bool, value: V);
-
-/** #deprecated Use `entries.getOr(key, fallback)` instead. */
-pub getOr := fn<K, V>(entries: Map<K, V>, key: K, fallback: V): V;
-
-/** #deprecated Use `entries.has(key)` instead. */
-pub has := fn<K, V>(entries: Map<K, V>, key: K): Bool;
-
-/** #deprecated Use `mut entries.remove(key)` instead. */
-pub remove := fn<K, V>(entries: mut Map<K, V>, key: K): Bool;
-
-/** #deprecated Use `entries.size()` instead. */
-pub size := fn<K, V>(entries: Map<K, V>): Int;
-
-/** #deprecated Use `mut entries.clear()` instead. */
-pub clear := fn<K, V>(entries: mut Map<K, V>): Unit;
-
-/** #deprecated Use `entries.keys()` instead. */
-pub keys := fn<K, V>(entries: Map<K, V>): List<K>;
-
-/** #deprecated Use `entries.values()` instead. */
-pub values := fn<K, V>(entries: Map<K, V>): List<V>;

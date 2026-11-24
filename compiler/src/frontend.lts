@@ -115,7 +115,6 @@ pub VALUE_KIND_UNIT := ir.VALUE_KIND_UNIT;
 pub VALUE_KIND_NEVER := ir.VALUE_KIND_NEVER;
 VALUE_KIND_MODULE := ir.VALUE_KIND_MODULE;
 VALUE_KIND_MODULE_FUNCTION := ir.VALUE_KIND_MODULE_FUNCTION;
-VALUE_KIND_LIST_OP := ir.VALUE_KIND_LIST_OP;
 
 ITEM_PREFIX_LOCAL := ir.ITEM_PREFIX_LOCAL;
 ITEM_PREFIX_VAR := ir.ITEM_PREFIX_VAR;
@@ -2306,11 +2305,11 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     if isFnKind(locals[shadowIdx].kind) {
                         isLocalFnCall = true;
                     }
-                } else if name =!= "push_back" and name =!= "pop_back" and name =!= "push_front" and name =!= "pop_front" {
+                } else {
                     callableIndex = findFunction(functions, name);
                 }
             }
-            if (isLocalFnCall or callableIndex >= 0 or name == "push_back" or name == "pop_back" or name == "push_front" or name == "pop_front") and
+            if (isLocalFnCall or callableIndex >= 0) and
             position < size and source.at(position) == "(" {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);

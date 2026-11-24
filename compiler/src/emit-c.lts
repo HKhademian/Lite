@@ -3475,7 +3475,7 @@ cParamRuntimeAt := fn(encoded: String, targetIndex: Int): String {
 
 /** Returns a C11 native fast-path return expression for a registered soft-builtin function, or `""`. */
 cSoftBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): String {
-    fnName := if rawFnName == "Int.toText" or rawFnName == "Int.intText" { "intText" }
+    fnName := if rawFnName == "Int.toText" { "intText" }
     else if rawFnName == "String.toInt" { "textToInt" }
     else if rawFnName == "String.repeat" { "repeatText" }
     else if rawFnName == "String.contains" { "containsText" }
@@ -3487,7 +3487,7 @@ cSoftBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): S
     } else if moduleName == "lib/core/text" {
         if fnName == "skipSpaces" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", true)"; }
         if fnName == "skipName" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", false)"; }
-        if fnName == "indexOf" or fnName == "indexOfText" {
+        if fnName == "indexOf" {
             return "lt_c_text_index_of(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
         }
         if fnName == "startsWithAt" {

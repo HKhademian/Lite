@@ -454,7 +454,6 @@ test.checkInt("tagged-blocks c compiles: " + taggedBlkCRes.stderr, 0, taggedBlkC
 /* tagged conditionals and conditional then blocks */
 taggedCondSrc := text.joinTexts([
     "io := import \"core/io\";",
-    "textLib := import \"core/text\";",
     "choose := fn(useChoice: Bool, earlyExit: Bool): Int {",
     "  outcome: Int = @choose if useChoice {",
     "    if earlyExit {",
@@ -465,7 +464,7 @@ taggedCondSrc := text.joinTexts([
     "    \"none\"",
     "  } then {",
     "    io.outputLine(\"choice\", @choose.value);",
-    "    textLib.length(@choose.value)",
+    "    @choose.value.length()",
     "  };",
     "  outcome",
     "};",
