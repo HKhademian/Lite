@@ -22,6 +22,8 @@ Owner direction, 2026-11-02: always keep project changes in atomic commits.
   release preparation separate; tag its verified revision before the next feature.
   Verify remote CI/publication separately. Never amend others' commits, force-push,
   move published tags or rewrite published history. A commit/tag is not design acceptance.
+  Follow [component releases and versioning](component-releases.md) when cutting
+  component version bumps and annotated tags.
 
 For example, commit a compiler fix with its regressions and contract updates;
 commit an unrelated release workflow separately.
