@@ -7406,15 +7406,6 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
     if info.runtime.startsWithAt(0, "lite$") {
         return parseCoreTypeOpHardCall(target, source, labelStart, openParen, receiver, recvLocalIdx, info.runtime, opLabel, isMutRecv, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     }
-    if opLabel == "isEmpty" and ((receiver.kind == ir.VALUE_KIND_STRING and receiver.constant) or (types.isArrayKind(receiver.kind) and types.arrayExtent(receiver.kind) >= 0)) {
-        afterOpen := syntax.skipTrivia(source, openParen + 1, prefix);
-        if afterOpen < source.length() and source.at(afterOpen) == ")" {
-            emptyVal := if receiver.kind == ir.VALUE_KIND_STRING { receiver.textValue == "" } else { types.arrayExtent(receiver.kind) == 0 };
-            return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = ir.targetBoolLiteralCode(target, emptyVal),
-            intValue = if emptyVal { 1 } else { 0 }, textValue = "", constant = true, next = afterOpen + 1),
-            if inferMode { ctx.collectParsedMarkers("", receiver) } else { "" });
-        }
-    }
     isGenOp := info.runtime.startsWithAt(0, "$gen:");
     var initGenBindings := "";
     var concreteRecvExpected := baseExpected;

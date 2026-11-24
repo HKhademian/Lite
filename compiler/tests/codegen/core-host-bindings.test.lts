@@ -473,14 +473,62 @@ compilerTest.assertCompileErrorContainsNamed(root, cComp, "c trace pre-init", "f
 cRejCases: List<(src: String, sub: String)> = [
     (src = "extTs := import \"external/ts\"; x := extTs.stripTypes(\"const a: number = 1;\");", sub = "external host builtins"),
     (src = "extHttp := import \"external/http\"; x := extHttp.serveStatic(\".\", \"\", \"127.0.0.1\", 0);", sub = "external host builtins"),
-    (src = "extBench := import \"external/bench\"; x := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\");", sub = "external host builtins"),
-    (src = "pool := import \"external/pool\"; x := pool.cpuCount();", sub = "external host builtins"),
-    (src = "pool := import \"external/pool\"; x := pool.runPoolJson([], [], \"\", 0);", sub = "external host builtins")
+    (src = "extBench := import \"external/bench\"; x := extBench.measureCompilerArtifact(\"T11\", \"a\", \"b\", \"c\", \"d\");", sub = "external host builtins")
 ];
 loop cRejCases as cr {
     cR := compilerTest.compileStdin(root, cComp, cr.src, fixtureName);
     test.checkInt("c-reject status: " + cr.src, 2, cR.status);
     test.check("c-reject msg: " + cr.src + " -> " + cR.stderr, cR.stderr.contains(cr.sub) or cR.stderr.contains("list values") or cR.stderr.contains("tuple values") or cR.stderr.contains("text builtins"));
+}
+
+/* C11 external/pool (cpuCount & runPoolJson) and symlink-preserving proc.entryPath() */
+cPoolSrc := "io := import \"core/io\"; pool := import \"external/pool\"; procs := pool.cpuCount(); empty := pool.runPoolJson([], [], \"\", 2); out := pool.runPoolJson([\"sh\", \"sh\"], [\"[\\\"-c\\\",\\\"printf one\\\"]\", \"[\\\"-c\\\",\\\"printf two; printf err2 >&2; exit 3\\\"]\"], \"\", 2); io.outputLine(procs >= 1, empty, out);";
+if ccInfo.available {
+    cPoolRun := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, cPoolSrc, fixtureName, "");
+    test.checkInt("c-ext-pool status: " + cPoolRun.stderr, 0, cPoolRun.status);
+    test.checkText("c-ext-pool stderr", "", cPoolRun.stderr);
+    test.check("c-ext-pool prefix", cPoolRun.stdout.startsWithAt(0, "true [] ["));
+    cPoolJsonText := cPoolRun.stdout.slice("true [] ".length(), cPoolRun.stdout.length() - 1);
+    test.check("c-ext-pool json valid", json.validate(cPoolJsonText).ok);
+    cPoolElems := json.arrayElementOffsets(cPoolJsonText, 0);
+    test.checkInt("c-ext-pool len", 2, cPoolElems.length());
+    test.checkInt("c-ext-pool 0 status", 0, json.readObjectInt(cPoolJsonText, cPoolElems[0], "status").value);
+    test.checkText("c-ext-pool 0 stdout", "one", json.readObjectString(cPoolJsonText, cPoolElems[0], "stdout").value);
+    test.checkText("c-ext-pool 0 stderr", "", json.readObjectString(cPoolJsonText, cPoolElems[0], "stderr").value);
+    test.checkText("c-ext-pool 0 error", "", json.readObjectString(cPoolJsonText, cPoolElems[0], "error").value);
+    test.checkInt("c-ext-pool 1 status", 3, json.readObjectInt(cPoolJsonText, cPoolElems[1], "status").value);
+    test.checkText("c-ext-pool 1 stdout", "two", json.readObjectString(cPoolJsonText, cPoolElems[1], "stdout").value);
+    test.checkText("c-ext-pool 1 stderr", "err2", json.readObjectString(cPoolJsonText, cPoolElems[1], "stderr").value);
+    test.checkText("c-ext-pool 1 error", "", json.readObjectString(cPoolJsonText, cPoolElems[1], "error").value);
+
+    cCpuOnly := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; pool := import \"external/pool\"; io.outputLine(pool.cpuCount() >= 1);", fixtureName);
+    test.checkInt("c-ext-pool cpuOnly status", 0, cCpuOnly.status);
+    cCpuRun := compilerTest.compileAndRunC(cCpuOnly.stdout, ccInfo.cc, "");
+    test.checkInt("c-ext-pool cpuOnly run", 0, cCpuRun.status);
+    test.checkText("c-ext-pool cpuOnly stdout", "true\n", cCpuRun.stdout);
+
+    entrySrc := "io := import \"core/io\"; p := import \"core/process\"; io.outputLine(p.entryPath()); io.outputLine(p.execPath());";
+    cEntry := compilerTest.compileStdin(root, cComp, entrySrc, fixtureName);
+    test.checkInt("c-entry compile status", 0, cEntry.status);
+    entryTmp := fs.makeTempDir("lite-c-entry-symlink-");
+    test.check("makeTempDir c-entry", entryTmp.ok);
+    entryC := path.join(entryTmp.path, "entry.c");
+    entryBin := path.join(entryTmp.path, "real-bin");
+    entryLink := path.join(entryTmp.path, "sym-alias");
+    test.check("write c-entry", fs.writeText(entryC, cEntry.stdout).ok);
+    emptyEnv: List<String> = [];
+    ccEntry := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", entryC, "-o", entryBin], entryTmp.path, emptyEnv, true, "");
+    test.checkInt("cc c-entry: " + ccEntry.stderr, 0, ccEntry.status);
+    test.check("symlink c-entry", fs.symlink(entryBin, entryLink).ok);
+    linkRun := proc.run(entryLink, [], entryTmp.path, emptyEnv, true, "");
+    test.checkInt("run symlink c-entry", 0, linkRun.status);
+    nlIdx := linkRun.stdout.indexOf("\n", 0);
+    test.check("c-entry has newline", nlIdx > 0);
+    entryOut := linkRun.stdout.slice(0, nlIdx);
+    execOut := linkRun.stdout.slice(nlIdx + 1, linkRun.stdout.length()).trimEnd();
+    test.checkText("c-entry preserves symlink basename", "sym-alias", path.baseName(entryOut));
+    test.checkText("c-entry execPath resolves real target", "real-bin", path.baseName(execOut));
+    _rmEntry := fs.remove(entryTmp.path);
 }
 
 test.done("core-host-bindings");

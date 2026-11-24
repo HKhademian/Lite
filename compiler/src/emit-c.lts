@@ -564,6 +564,8 @@ ensureCBuiltinMap := fn(): Unit {
     mut cBuiltinMap.set("timeEpochNs", "lt_time_epoch_ns");
     mut cBuiltinMap.set("timeSleepMs", "lt_time_sleep_ms");
     mut cBuiltinMap.set("timeLocalDate", "lt_time_local_date");
+    mut cBuiltinMap.set("extPoolCpuCount", "lt_ext_pool_cpu_count");
+    mut cBuiltinMap.set("extPoolRunJson", "lt_ext_pool_run_json");
     mut cBuiltinMap.set("extraCanvasOpen", "lt_canvas_open");
     mut cBuiltinMap.set("extraCanvasPoll", "lt_canvas_poll");
     mut cBuiltinMap.set("extraCanvasPresent", "lt_canvas_present");
@@ -680,12 +682,16 @@ usesIntHelper := fn(calls: Set<String>, name: String): Bool {
 unsupportedBuiltinCode := fn(calls: Set<String>): String {
     match {
         usesIntHelper(calls, "lite$extTsStripTypes(") or usesIntHelper(calls, "lite$extHttpFetchToFile(") or
-        usesIntHelper(calls, "lite$extHttpServeStatic(") or usesIntHelper(calls, "lite$extBenchMeasureCompiler(") or
-        usesIntHelper(calls, "lite$extPoolCpuCount(") or usesIntHelper(calls, "lite$extPoolRunJson(") {
+        usesIntHelper(calls, "lite$extHttpServeStatic(") or usesIntHelper(calls, "lite$extBenchMeasureCompiler(") {
             "C backend does not support external host builtins yet"
         }
         _ { "" }
     }
+};
+
+/** True when any emitted item calls an `external/pool` builtin. */
+usesPoolBuiltins := fn(calls: Set<String>): Bool {
+    usesIntHelper(calls, "lite$extPoolCpuCount(") or usesIntHelper(calls, "lite$extPoolRunJson(")
 };
 
 /** True when any emitted item calls a `core/time` builtin. */
@@ -763,7 +769,7 @@ usesCSoftBuiltins := fn(calls: Set<String>): Bool {
 /** True when any emitted item needs POSIX OS headers (`unistd.h`, `fcntl.h`, `sys/stat.h`, `dirent.h`). */
 usesPosixHost := fn(calls: Set<String>): Bool {
     usesStreamBuiltins(calls) or usesFileBuiltins(calls) or usesProcessQueryBuiltins(calls) or usesCFileSoft(calls) or
-    usesProcessSpawnBuiltins(calls) or usesTimeBuiltins(calls) or usesIntHelper(calls, "lite$cryptoRandomBytes(")
+    usesProcessSpawnBuiltins(calls) or usesTimeBuiltins(calls) or usesPoolBuiltins(calls) or usesIntHelper(calls, "lite$cryptoRandomBytes(")
 };
 
 /** True when any emitted item needs one of the checked Int division helpers. */
@@ -3147,8 +3153,18 @@ emitCProcessBuiltinHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lite$processEntryPath(") {
         outLine("static lt_str lt_process_entry_path(void) {");
         outLine("    if (lt_argc <= 0 || lt_argv == NULL || lt_argv[0] == NULL) { return LT_ASTR(\"\"); }");
-        outLine("    char *r = realpath(lt_argv[0], NULL);");
-        outLine("    return lt_text_from_cstr(r != NULL ? r : lt_argv[0]);");
+        outLine("    const char *a0 = lt_argv[0];");
+        outLine("    if (a0[0] == '/') { return lt_text_from_cstr(a0); }");
+        outLine("    if (strchr(a0, '/') != NULL) {");
+        outLine("        char *cwd = getcwd(NULL, 0);");
+        outLine("        if (cwd != NULL) {");
+        outLine("            size_t clen = strlen(cwd); size_t alen = strlen(a0);");
+        outLine("            char *joined = malloc(clen + 1u + alen + 1u);");
+        outLine("            if (joined != NULL) { snprintf(joined, clen + 1u + alen + 1u, \"%s/%s\", cwd, a0); free(cwd); return lt_text_from_cstr(joined); }");
+        outLine("            free(cwd);");
+        outLine("        }");
+        outLine("    }");
+        outLine("    return lt_text_from_cstr(a0);");
         outLine("}");
     }
     if usesIntHelper(calls, "lite$processPlatform(") {
@@ -3248,8 +3264,7 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
         outLine("    return (lt_list_i64){ data, count, count, rc };");
         outLine("}");
     }
-    if usesProcessSpawnBuiltins(calls) {
-        outLine("typedef struct { int64_t status; uint8_t *out; size_t out_len; uint8_t *err; size_t err_len; const char *error; } lt_spawn_res;");
+    if usesProcessSpawnBuiltins(calls) or usesIntHelper(calls, "lite$extPoolRunJson(") {
         outLine("static void lt_buf_append(uint8_t **buf, size_t *len, size_t *cap, const uint8_t *src, size_t n) {");
         outLine("    if (n == 0u) { return; }");
         outLine("    if (*len + n + 1u > *cap) {");
@@ -3261,6 +3276,9 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
         outLine("    }");
         outLine("    memcpy(*buf + *len, src, n); *len += n;");
         outLine("}");
+    }
+    if usesProcessSpawnBuiltins(calls) {
+        outLine("typedef struct { int64_t status; uint8_t *out; size_t out_len; uint8_t *err; size_t err_len; const char *error; } lt_spawn_res;");
         outLine("static int64_t lt_mono_ms(void) {");
         outLine("    struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);");
         outLine("    return (int64_t)ts.tv_sec * 1000 + (int64_t)(ts.tv_nsec / 1000000);");
@@ -3424,6 +3442,241 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
         outLine("    return (" + rbTag + "){ r.status, lt_text_from_cstr(r.error) };");
         outLine("}");
     }
+    if usesPoolBuiltins(calls) {
+        outLine("static int64_t lt_ext_pool_cpu_count(void) {");
+        outLine("    long n = sysconf(_SC_NPROCESSORS_ONLN);");
+        outLine("    return n > 0 ? (int64_t)n : 1;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$extPoolRunJson(") {
+        outLine("static int lt_pool_hex_val(unsigned char c) {");
+        outLine("    if (c >= '0' && c <= '9') { return c - '0'; }");
+        outLine("    if (c >= 'a' && c <= 'f') { return 10 + (c - 'a'); }");
+        outLine("    if (c >= 'A' && c <= 'F') { return 10 + (c - 'A'); }");
+        outLine("    return -1;");
+        outLine("}");
+        outLine("static void lt_pool_append_utf8(uint8_t **buf, size_t *len, size_t *cap, uint32_t cp) {");
+        outLine("    uint8_t tmp[4]; size_t n = 0u;");
+        outLine("    if (cp < 0x80u) { tmp[0] = (uint8_t)cp; n = 1u; }");
+        outLine("    else if (cp < 0x800u) { tmp[0] = (uint8_t)(0xC0u | (cp >> 6)); tmp[1] = (uint8_t)(0x80u | (cp & 0x3Fu)); n = 2u; }");
+        outLine("    else if (cp < 0x10000u) { tmp[0] = (uint8_t)(0xE0u | (cp >> 12)); tmp[1] = (uint8_t)(0x80u | ((cp >> 6) & 0x3Fu)); tmp[2] = (uint8_t)(0x80u | (cp & 0x3Fu)); n = 3u; }");
+        outLine("    else { tmp[0] = (uint8_t)(0xF0u | (cp >> 18)); tmp[1] = (uint8_t)(0x80u | ((cp >> 12) & 0x3Fu)); tmp[2] = (uint8_t)(0x80u | ((cp >> 6) & 0x3Fu)); tmp[3] = (uint8_t)(0x80u | (cp & 0x3Fu)); n = 4u; }");
+        outLine("    lt_buf_append(buf, len, cap, tmp, n);");
+        outLine("}");
+        outLine("static const char *lt_pool_skip_ws(const char *p) {");
+        outLine("    while (*p == ' ' || *p == '\\t' || *p == '\\n' || *p == '\\r') { p += 1; }");
+        outLine("    return p;");
+        outLine("}");
+        outLine("static char **lt_pool_parse_argv(const char *cmd, const char *json_arr) {");
+        outLine("    const char *p = lt_pool_skip_ws(json_arr);");
+        outLine("    if (*p != '[') { fprintf(stderr, \"runPoolJson: argListsJson entry must be a JSON array\\n\"); exit(1); }");
+        outLine("    p = lt_pool_skip_ws(p + 1);");
+        outLine("    size_t argc = 1u; size_t cap = 8u;");
+        outLine("    char **argv = malloc(cap * sizeof(char *));");
+        outLine("    if (argv == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate pool argv\\n\"); exit(1); }");
+        outLine("    argv[0] = lt_dup_str(cmd);");
+        outLine("    if (*p != ']') {");
+        outLine("        for (;;) {");
+        outLine("            p = lt_pool_skip_ws(p);");
+        outLine("            if (*p != '\"') { fprintf(stderr, \"runPoolJson: expected string in argListsJson\\n\"); exit(1); }");
+        outLine("            p += 1;");
+        outLine("            uint8_t *sbuf = NULL; size_t slen = 0u; size_t scap = 0u;");
+        outLine("            while (*p != '\\0' && *p != '\"') {");
+        outLine("                if (*p == '\\\\') {");
+        outLine("                    p += 1;");
+        outLine("                    if (*p == '\\0') { fprintf(stderr, \"runPoolJson: truncated JSON escape\\n\"); exit(1); }");
+        outLine("                    unsigned char ch = (unsigned char)*p; uint8_t b = 0u;");
+        outLine("                    if (ch == '\"' || ch == '\\\\' || ch == '/') { b = ch; lt_buf_append(&sbuf, &slen, &scap, &b, 1u); p += 1; }");
+        outLine("                    else if (ch == 'b') { b = '\\b'; lt_buf_append(&sbuf, &slen, &scap, &b, 1u); p += 1; }");
+        outLine("                    else if (ch == 'f') { b = '\\f'; lt_buf_append(&sbuf, &slen, &scap, &b, 1u); p += 1; }");
+        outLine("                    else if (ch == 'n') { b = '\\n'; lt_buf_append(&sbuf, &slen, &scap, &b, 1u); p += 1; }");
+        outLine("                    else if (ch == 'r') { b = '\\r'; lt_buf_append(&sbuf, &slen, &scap, &b, 1u); p += 1; }");
+        outLine("                    else if (ch == 't') { b = '\\t'; lt_buf_append(&sbuf, &slen, &scap, &b, 1u); p += 1; }");
+        outLine("                    else if (ch == 'u') {");
+        outLine("                        int d0 = lt_pool_hex_val((unsigned char)p[1]); int d1 = p[1] ? lt_pool_hex_val((unsigned char)p[2]) : -1;");
+        outLine("                        int d2 = (p[1] && p[2]) ? lt_pool_hex_val((unsigned char)p[3]) : -1; int d3 = (p[1] && p[2] && p[3]) ? lt_pool_hex_val((unsigned char)p[4]) : -1;");
+        outLine("                        if (d0 < 0 || d1 < 0 || d2 < 0 || d3 < 0) { fprintf(stderr, \"runPoolJson: invalid \\\\u escape\\n\"); exit(1); }");
+        outLine("                        uint32_t u = (uint32_t)((d0 << 12) | (d1 << 8) | (d2 << 4) | d3); p += 5;");
+        outLine("                        if (u >= 0xD800u && u <= 0xDBFFu && p[0] == '\\\\' && p[1] == 'u') {");
+        outLine("                            int l0 = lt_pool_hex_val((unsigned char)p[2]); int l1 = p[2] ? lt_pool_hex_val((unsigned char)p[3]) : -1;");
+        outLine("                            int l2 = (p[2] && p[3]) ? lt_pool_hex_val((unsigned char)p[4]) : -1; int l3 = (p[2] && p[3] && p[4]) ? lt_pool_hex_val((unsigned char)p[5]) : -1;");
+        outLine("                            if (l0 >= 0 && l1 >= 0 && l2 >= 0 && l3 >= 0) {");
+        outLine("                                uint32_t low = (uint32_t)((l0 << 12) | (l1 << 8) | (l2 << 4) | l3);");
+        outLine("                                if (low >= 0xDC00u && low <= 0xDFFFu) { u = 0x10000u + (((u - 0xD800u) << 10) | (low - 0xDC00u)); p += 6; }");
+        outLine("                            }");
+        outLine("                        }");
+        outLine("                        lt_pool_append_utf8(&sbuf, &slen, &scap, u);");
+        outLine("                    } else { fprintf(stderr, \"runPoolJson: unknown JSON escape\\n\"); exit(1); }");
+        outLine("                } else {");
+        outLine("                    uint8_t b = (uint8_t)*p; lt_buf_append(&sbuf, &slen, &scap, &b, 1u); p += 1;");
+        outLine("                }");
+        outLine("            }");
+        outLine("            if (*p != '\"') { fprintf(stderr, \"runPoolJson: unterminated JSON string\\n\"); exit(1); }");
+        outLine("            p += 1;");
+        outLine("            uint8_t z = 0u; lt_buf_append(&sbuf, &slen, &scap, &z, 1u);");
+        outLine("            if (argc + 2u > cap) { cap *= 2u; argv = realloc(argv, cap * sizeof(char *)); if (argv == NULL) { fprintf(stderr, \"MemoryFault: cannot grow pool argv\\n\"); exit(1); } }");
+        outLine("            argv[argc++] = (char *)sbuf;");
+        outLine("            p = lt_pool_skip_ws(p);");
+        outLine("            if (*p == ',') { p += 1; continue; }");
+        outLine("            if (*p == ']') { break; }");
+        outLine("            fprintf(stderr, \"runPoolJson: expected , or ] in argListsJson\\n\"); exit(1);");
+        outLine("        }");
+        outLine("    }");
+        outLine("    argv[argc] = NULL;");
+        outLine("    return argv;");
+        outLine("}");
+        outLine("static void lt_pool_free_argv(char **argv) {");
+        outLine("    if (argv == NULL) { return; }");
+        outLine("    for (size_t i = 0u; argv[i] != NULL; i += 1u) { free(argv[i]); }");
+        outLine("    free(argv);");
+        outLine("}");
+        outLine("static void lt_pool_json_append_str(uint8_t **buf, size_t *len, size_t *cap, const uint8_t *s, size_t slen) {");
+        outLine("    lt_buf_append(buf, len, cap, (const uint8_t *)\"\\\"\", 1u);");
+        outLine("    for (size_t i = 0u; i < slen; i += 1u) {");
+        outLine("        unsigned char c = (unsigned char)s[i];");
+        outLine("        if (c == '\"') { lt_buf_append(buf, len, cap, (const uint8_t *)\"\\\\\\\"\", 2u); }");
+        outLine("        else if (c == '\\\\') { lt_buf_append(buf, len, cap, (const uint8_t *)\"\\\\\\\\\", 2u); }");
+        outLine("        else if (c == '\\b') { lt_buf_append(buf, len, cap, (const uint8_t *)\"\\\\b\", 2u); }");
+        outLine("        else if (c == '\\f') { lt_buf_append(buf, len, cap, (const uint8_t *)\"\\\\f\", 2u); }");
+        outLine("        else if (c == '\\n') { lt_buf_append(buf, len, cap, (const uint8_t *)\"\\\\n\", 2u); }");
+        outLine("        else if (c == '\\r') { lt_buf_append(buf, len, cap, (const uint8_t *)\"\\\\r\", 2u); }");
+        outLine("        else if (c == '\\t') { lt_buf_append(buf, len, cap, (const uint8_t *)\"\\\\t\", 2u); }");
+        outLine("        else if (c < 0x20u) { char esc[7]; snprintf(esc, sizeof(esc), \"\\\\u%04x\", (unsigned int)c); lt_buf_append(buf, len, cap, (const uint8_t *)esc, 6u); }");
+        outLine("        else { uint8_t b = (uint8_t)c; lt_buf_append(buf, len, cap, &b, 1u); }");
+        outLine("    }");
+        outLine("    lt_buf_append(buf, len, cap, (const uint8_t *)\"\\\"\", 1u);");
+        outLine("}");
+        outLine("typedef struct { int64_t status; uint8_t *out; size_t out_len; size_t out_cap; uint8_t *err; size_t err_len; size_t err_cap; char *error; } lt_pool_res;");
+        outLine("typedef struct { bool active; int64_t job_idx; pid_t pid; int out_fd; int err_fd; int exec_err; } lt_pool_slot;");
+        outLine("static lt_str lt_ext_pool_run_json(lt_list_str commands, lt_list_str arg_lists_json, lt_str cwd, int64_t max_jobs) {");
+        outLine("    if (commands.len != arg_lists_json.len) { fprintf(stderr, \"runPoolJson requires commands and argListsJson to have equal length\\n\"); exit(1); }");
+        outLine("    if (commands.len == 0) { return LT_ASTR(\"[]\"); }");
+        outLine("    int64_t total = commands.len;");
+        outLine("    int64_t limit = max_jobs > 0 ? max_jobs : lt_ext_pool_cpu_count();");
+        outLine("    if (limit < 1) { limit = 1; }");
+        outLine("    if (limit > total) { limit = total; }");
+        outLine("    const char *cwd_cstr = lt_text_cstr(cwd);");
+        outLine("    lt_pool_res *results = calloc((size_t)total, sizeof(lt_pool_res));");
+        outLine("    lt_pool_slot *slots = calloc((size_t)limit, sizeof(lt_pool_slot));");
+        outLine("    struct pollfd *pfds = malloc((size_t)(limit * 2) * sizeof(struct pollfd));");
+        outLine("    if (results == NULL || slots == NULL || pfds == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate worker pool\\n\"); exit(1); }");
+        outLine("    int64_t next = 0; int64_t active = 0; int64_t done = 0;");
+        outLine("    uint8_t tmp[16384];");
+        outLine("    while (done < total) {");
+        outLine("        while (active < limit && next < total) {");
+        outLine("            int64_t job = next++;");
+        outLine("            const char *cmd = lt_text_cstr(commands.data[job]);");
+        outLine("            char **argv = lt_pool_parse_argv(cmd, lt_text_cstr(arg_lists_json.data[job]));");
+        outLine("            int out_p[2] = { -1, -1 }; int err_p[2] = { -1, -1 }; int exec_p[2] = { -1, -1 };");
+        outLine("            if (pipe(out_p) != 0 || pipe(err_p) != 0 || pipe(exec_p) != 0) {");
+        outLine("                results[job].status = -1; results[job].error = lt_dup_str(strerror(errno));");
+        outLine("                if (out_p[0] >= 0) { close(out_p[0]); close(out_p[1]); }");
+        outLine("                if (err_p[0] >= 0) { close(err_p[0]); close(err_p[1]); }");
+        outLine("                if (exec_p[0] >= 0) { close(exec_p[0]); close(exec_p[1]); }");
+        outLine("                lt_pool_free_argv(argv); done += 1; continue;");
+        outLine("            }");
+        outLine("            fcntl(exec_p[1], F_SETFD, FD_CLOEXEC);");
+        outLine("            fflush(stdout); fflush(stderr);");
+        outLine("            pid_t pid = fork();");
+        outLine("            if (pid < 0) {");
+        outLine("                results[job].status = -1; results[job].error = lt_dup_str(strerror(errno));");
+        outLine("                close(out_p[0]); close(out_p[1]); close(err_p[0]); close(err_p[1]); close(exec_p[0]); close(exec_p[1]);");
+        outLine("                lt_pool_free_argv(argv); done += 1; continue;");
+        outLine("            }");
+        outLine("            if (pid == 0) {");
+        outLine("                close(exec_p[0]);");
+        outLine("                int dn = open(\"/dev/null\", O_RDONLY);");
+        outLine("                if (dn >= 0) { dup2(dn, 0); close(dn); }");
+        outLine("                dup2(out_p[1], 1); dup2(err_p[1], 2);");
+        outLine("                close(out_p[0]); close(out_p[1]); close(err_p[0]); close(err_p[1]);");
+        outLine("                if (cwd_cstr[0] != '\\0' && chdir(cwd_cstr) != 0) { int e = errno; ssize_t _w = write(exec_p[1], &e, sizeof(e)); (void)_w; _exit(127); }");
+        outLine("                execvp(cmd, argv);");
+        outLine("                int e = errno; ssize_t _w = write(exec_p[1], &e, sizeof(e)); (void)_w; _exit(127);");
+        outLine("            }");
+        outLine("            lt_pool_free_argv(argv);");
+        outLine("            close(out_p[1]); close(err_p[1]); close(exec_p[1]);");
+        outLine("            int exec_err = 0;");
+        outLine("            ssize_t en = read(exec_p[0], &exec_err, sizeof(exec_err));");
+        outLine("            close(exec_p[0]);");
+        outLine("            if (en != (ssize_t)sizeof(exec_err)) { exec_err = 0; }");
+        outLine("            fcntl(out_p[0], F_SETFL, O_NONBLOCK); fcntl(err_p[0], F_SETFL, O_NONBLOCK);");
+        outLine("            int64_t s = 0;");
+        outLine("            while (s < limit && slots[s].active) { s += 1; }");
+        outLine("            slots[s].active = true; slots[s].job_idx = job; slots[s].pid = pid;");
+        outLine("            slots[s].out_fd = out_p[0]; slots[s].err_fd = err_p[0]; slots[s].exec_err = exec_err;");
+        outLine("            active += 1;");
+        outLine("        }");
+        outLine("        int nfds = 0;");
+        outLine("        for (int64_t s = 0; s < limit; s += 1) {");
+        outLine("            if (!slots[s].active) { continue; }");
+        outLine("            if (slots[s].out_fd >= 0) { pfds[nfds].fd = slots[s].out_fd; pfds[nfds].events = POLLIN; pfds[nfds].revents = 0; nfds += 1; }");
+        outLine("            if (slots[s].err_fd >= 0) { pfds[nfds].fd = slots[s].err_fd; pfds[nfds].events = POLLIN; pfds[nfds].revents = 0; nfds += 1; }");
+        outLine("        }");
+        outLine("        if (nfds > 0) {");
+        outLine("            int pr = poll(pfds, (nfds_t)nfds, -1);");
+        outLine("            if (pr < 0 && errno != EINTR) { break; }");
+        outLine("            for (int64_t s = 0; s < limit; s += 1) {");
+        outLine("                if (!slots[s].active) { continue; }");
+        outLine("                int64_t j = slots[s].job_idx;");
+        outLine("                if (slots[s].out_fd >= 0) {");
+        outLine("                    for (;;) {");
+        outLine("                        ssize_t r = read(slots[s].out_fd, tmp, sizeof(tmp));");
+        outLine("                        if (r > 0) { lt_buf_append(&results[j].out, &results[j].out_len, &results[j].out_cap, tmp, (size_t)r); }");
+        outLine("                        else if (r == 0 || (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)) { close(slots[s].out_fd); slots[s].out_fd = -1; break; }");
+        outLine("                        else if (errno == EAGAIN || errno == EWOULDBLOCK) { break; }");
+        outLine("                    }");
+        outLine("                }");
+        outLine("                if (slots[s].err_fd >= 0) {");
+        outLine("                    for (;;) {");
+        outLine("                        ssize_t r = read(slots[s].err_fd, tmp, sizeof(tmp));");
+        outLine("                        if (r > 0) { lt_buf_append(&results[j].err, &results[j].err_len, &results[j].err_cap, tmp, (size_t)r); }");
+        outLine("                        else if (r == 0 || (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)) { close(slots[s].err_fd); slots[s].err_fd = -1; break; }");
+        outLine("                        else if (errno == EAGAIN || errno == EWOULDBLOCK) { break; }");
+        outLine("                    }");
+        outLine("                }");
+        outLine("            }");
+        outLine("        }");
+        outLine("        for (int64_t s = 0; s < limit; s += 1) {");
+        outLine("            if (slots[s].active && slots[s].out_fd < 0 && slots[s].err_fd < 0) {");
+        outLine("                int64_t j = slots[s].job_idx;");
+        outLine("                int wst = 0;");
+        outLine("                while (waitpid(slots[s].pid, &wst, 0) < 0 && errno == EINTR) {}");
+        outLine("                if (slots[s].exec_err != 0) {");
+        outLine("                    results[j].status = -1; results[j].error = lt_dup_str(strerror(slots[s].exec_err));");
+        outLine("                } else if (WIFSIGNALED(wst)) {");
+        outLine("                    char *smsg = malloc(64);");
+        outLine("                    if (smsg != NULL) { snprintf(smsg, 64, \"terminated by signal %d\", WTERMSIG(wst)); }");
+        outLine("                    results[j].status = -1; results[j].error = smsg != NULL ? smsg : lt_dup_str(\"terminated by signal\");");
+        outLine("                } else {");
+        outLine("                    results[j].status = WIFEXITED(wst) ? (int64_t)WEXITSTATUS(wst) : -1;");
+        outLine("                    results[j].error = lt_dup_str(\"\");");
+        outLine("                }");
+        outLine("                slots[s].active = false; active -= 1; done += 1;");
+        outLine("            }");
+        outLine("        }");
+        outLine("    }");
+        outLine("    uint8_t *jbuf = NULL; size_t jlen = 0u; size_t jcap = 0u;");
+        outLine("    lt_buf_append(&jbuf, &jlen, &jcap, (const uint8_t *)\"[\", 1u);");
+        outLine("    for (int64_t i = 0; i < total; i += 1) {");
+        outLine("        if (i > 0) { lt_buf_append(&jbuf, &jlen, &jcap, (const uint8_t *)\",\", 1u); }");
+        outLine("        char hdr[64];");
+        outLine("        int hn = snprintf(hdr, sizeof(hdr), \"{\\\"status\\\":%\" PRId64 \",\\\"stdout\\\":\", results[i].status);");
+        outLine("        lt_buf_append(&jbuf, &jlen, &jcap, (const uint8_t *)hdr, (size_t)hn);");
+        outLine("        lt_pool_json_append_str(&jbuf, &jlen, &jcap, results[i].out, results[i].out_len);");
+        outLine("        lt_buf_append(&jbuf, &jlen, &jcap, (const uint8_t *)\",\\\"stderr\\\":\", 10u);");
+        outLine("        lt_pool_json_append_str(&jbuf, &jlen, &jcap, results[i].err, results[i].err_len);");
+        outLine("        lt_buf_append(&jbuf, &jlen, &jcap, (const uint8_t *)\",\\\"error\\\":\", 9u);");
+        outLine("        const char *es = results[i].error != NULL ? results[i].error : \"\";");
+        outLine("        lt_pool_json_append_str(&jbuf, &jlen, &jcap, (const uint8_t *)es, strlen(es));");
+        outLine("        lt_buf_append(&jbuf, &jlen, &jcap, (const uint8_t *)\"}\", 1u);");
+        outLine("        free(results[i].out); free(results[i].err); free(results[i].error);");
+        outLine("    }");
+        outLine("    lt_buf_append(&jbuf, &jlen, &jcap, (const uint8_t *)\"]\", 1u);");
+        outLine("    uint8_t z = 0u; lt_buf_append(&jbuf, &jlen, &jcap, &z, 1u);");
+        outLine("    free(results); free(slots); free(pfds);");
+        outLine("    return lt_text_from_cstr((const char *)jbuf);");
+        outLine("}");
+    }
 };
 
 /** Emits all C11 host builtin helpers (`core/unicode`, `core/io` streams, `core/file`, `core/process`, `core/time`, `core/crypto`). */
@@ -3435,7 +3688,7 @@ emitCHostBuiltinHelpers := fn(calls: Set<String>): Unit {
         usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
         usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
         usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lite$fileRealPath(") or
-        usesIntHelper(calls, "lite$fileMakeTempDir(") or usesCFileSoft(calls) or usesProcessSpawnBuiltins(calls);
+        usesIntHelper(calls, "lite$fileMakeTempDir(") or usesCFileSoft(calls) or usesProcessSpawnBuiltins(calls) or usesIntHelper(calls, "lite$extPoolRunJson(");
     if needDupStr {
         outLine("static char *lt_dup_str(const char *s) {");
         outLine("    size_t n = strlen(s);");
@@ -4410,7 +4663,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     seedKinds: mut List<String> = [];
     hasInputArgs := usesIntHelper(calls, "lite$inputArgs(");
     hasMainArgs := hasInputArgs or usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processExecPath(");
-    if hasInputArgs or usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lt_c_text_join(") or usesProcessSpawnBuiltins(calls) { mut seedKinds.pushBack("List<String>"); }
+    if hasInputArgs or usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lt_c_text_join(") or usesProcessSpawnBuiltins(calls) or usesIntHelper(calls, "lite$extPoolRunJson(") { mut seedKinds.pushBack("List<String>"); }
     if usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") or
     usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioWriterBytes(") or
     usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioWrite(") or
@@ -4696,7 +4949,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("#include <dirent.h>");
     }
     if usesTimeBuiltins(calls) or usesProcessSpawnBuiltins(calls) or hasExtraCanvas { outLine("#include <time.h>"); }
-    if usesProcessSpawnBuiltins(calls) {
+    if usesProcessSpawnBuiltins(calls) or usesIntHelper(calls, "lite$extPoolRunJson(") {
         outLine("#include <signal.h>");
         outLine("#include <poll.h>");
         outLine("#include <sys/wait.h>");
