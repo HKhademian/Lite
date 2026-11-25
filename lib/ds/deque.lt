@@ -1,327 +1,4 @@
-/** O(1) double-ended queues and FIFO queues (`ds/deque`) backed by fixed-capacity circular slabs. */
-
-/** Opaque generational handle to an `Int` double-ended queue. */
-pub IntDeque := alias (handle: Int, gen: Int);
-
-/** Opaque generational handle to a `String` double-ended queue. */
-pub TextDeque := alias (handle: Int, gen: Int);
-
-/* --- IntDeque flat slab --- */
-var idSlab: mut List<Int> = [];
-var idBase: mut List<Int> = [];
-var idCap: mut List<Int> = [];
-var idHead: mut List<Int> = [];
-var idCount: mut List<Int> = [];
-var idGen: mut List<Int> = [];
-var idAlive: mut List<Bool> = [];
-var idFree: mut List<Int> = [];
-
-/* --- TextDeque flat slab --- */
-var tdSlab: mut List<String> = [];
-var tdBase: mut List<Int> = [];
-var tdCap: mut List<Int> = [];
-var tdHead: mut List<Int> = [];
-var tdCount: mut List<Int> = [];
-var tdGen: mut List<Int> = [];
-var tdAlive: mut List<Bool> = [];
-var tdFree: mut List<Int> = [];
-
-validIntDeque := fn(d: IntDeque): Bool {
-    id := d.handle;
-    id >= 0 and id < idAlive.length() and idAlive[id] and idGen[id] == d.gen
-};
-
-validTextDeque := fn(d: TextDeque): Bool {
-    id := d.handle;
-    id >= 0 and id < tdAlive.length() and tdAlive[id] and tdGen[id] == d.gen
-};
-
-/* ============================================================================
- * IntDeque
- * ============================================================================ */
-
-/** Creates a fixed-capacity `Int` deque (`capacity >= 1`). */
-pub createInts := fn(capacity: Int): IntDeque {
-    cap := if capacity < 1 { 1 } else { capacity };
-    var fi := idFree.length() - 1;
-    loop fi >= 0 {
-        id := idFree[fi];
-        if idCap[id] >= cap {
-            last := idFree.length() - 1;
-            if fi =!= last { mut idFree.setAt(fi, idFree[last]); }
-            _drop := mut idFree.popBack();
-            mut idCap.setAt(id, cap);
-            mut idHead.setAt(id, 0);
-            mut idCount.setAt(id, 0);
-            mut idAlive.setAt(id, true);
-            return (handle = id, gen = idGen[id]);
-        }
-        fi -= 1;
-    }
-
-    base := idSlab.length();
-    var i := 0;
-    loop i < cap {
-        mut idSlab.pushBack(0);
-        i += 1;
-    }
-    id := idBase.length();
-    mut idBase.pushBack(base);
-    mut idCap.pushBack(cap);
-    mut idHead.pushBack(0);
-    mut idCount.pushBack(0);
-    mut idGen.pushBack(1);
-    mut idAlive.pushBack(true);
-    (handle = id, gen = 1)
-};
-
-/** Pushes `value` onto the back of `deque` in O(1); returns `false` if full. */
-pub pushBackInt := fn(deque: IntDeque, value: Int): Bool {
-    if not validIntDeque(deque) { return false; }
-    id := deque.handle;
-    cap := idCap[id];
-    cnt := idCount[id];
-    if cnt >= cap { return false; }
-    tail := (idHead[id] + cnt) % cap;
-    mut idSlab.setAt(idBase[id] + tail, value);
-    mut idCount.setAt(id, cnt + 1);
-    true
-};
-
-/** Pushes `value` onto the front of `deque` in O(1); returns `false` if full. */
-pub pushFrontInt := fn(deque: IntDeque, value: Int): Bool {
-    if not validIntDeque(deque) { return false; }
-    id := deque.handle;
-    cap := idCap[id];
-    cnt := idCount[id];
-    if cnt >= cap { return false; }
-    newHead := (idHead[id] + cap - 1) % cap;
-    mut idSlab.setAt(idBase[id] + newHead, value);
-    mut idHead.setAt(id, newHead);
-    mut idCount.setAt(id, cnt + 1);
-    true
-};
-
-/** Pops and returns the front element in O(1). */
-pub popFrontInt := fn(deque: IntDeque): (found: Bool, value: Int) {
-    if not validIntDeque(deque) { return (found = false, value = 0); }
-    id := deque.handle;
-    cnt := idCount[id];
-    if cnt <= 0 { return (found = false, value = 0); }
-    head := idHead[id];
-    val := idSlab[idBase[id] + head];
-    mut idHead.setAt(id, (head + 1) % idCap[id]);
-    mut idCount.setAt(id, cnt - 1);
-    (found = true, value = val)
-};
-
-/** Pops and returns the back element in O(1). */
-pub popBackInt := fn(deque: IntDeque): (found: Bool, value: Int) {
-    if not validIntDeque(deque) { return (found = false, value = 0); }
-    id := deque.handle;
-    cnt := idCount[id];
-    if cnt <= 0 { return (found = false, value = 0); }
-    idx := (idHead[id] + cnt - 1) % idCap[id];
-    val := idSlab[idBase[id] + idx];
-    mut idCount.setAt(id, cnt - 1);
-    (found = true, value = val)
-};
-
-/** Peeks at the front element without removing it. */
-pub peekFrontInt := fn(deque: IntDeque): (found: Bool, value: Int) {
-    if not validIntDeque(deque) { return (found = false, value = 0); }
-    id := deque.handle;
-    if idCount[id] <= 0 { return (found = false, value = 0); }
-    (found = true, value = idSlab[idBase[id] + idHead[id]])
-};
-
-/** Peeks at the back element without removing it. */
-pub peekBackInt := fn(deque: IntDeque): (found: Bool, value: Int) {
-    if not validIntDeque(deque) { return (found = false, value = 0); }
-    id := deque.handle;
-    cnt := idCount[id];
-    if cnt <= 0 { return (found = false, value = 0); }
-    idx := (idHead[id] + cnt - 1) % idCap[id];
-    (found = true, value = idSlab[idBase[id] + idx])
-};
-
-/** Returns the element at logical offset `0..count-1`. */
-pub atInt := fn(deque: IntDeque, index: Int): (found: Bool, value: Int) {
-    if not validIntDeque(deque) { return (found = false, value = 0); }
-    id := deque.handle;
-    if index < 0 or index >= idCount[id] { return (found = false, value = 0); }
-    (found = true, value = idSlab[idBase[id] + ((idHead[id] + index) % idCap[id])])
-};
-
-/** Returns the number of elements in `deque`. */
-pub intCount := fn(deque: IntDeque): Int {
-    if not validIntDeque(deque) { return 0; }
-    idCount[deque.handle]
-};
-
-/** Returns the fixed capacity of `deque`. */
-pub intCapacity := fn(deque: IntDeque): Int {
-    if not validIntDeque(deque) { return 0; }
-    idCap[deque.handle]
-};
-
-/** True when `deque` is empty. */
-pub isIntEmpty := fn(deque: IntDeque): Bool {
-    intCount(deque) == 0
-};
-
-/** True when `deque` is full. */
-pub isIntFull := fn(deque: IntDeque): Bool {
-    if not validIntDeque(deque) { return false; }
-    id := deque.handle;
-    idCount[id] >= idCap[id]
-};
-
-/** Clears `deque` in O(1). */
-pub clearInts := fn(deque: IntDeque): Unit {
-    if not validIntDeque(deque) { return; }
-    id := deque.handle;
-    mut idHead.setAt(id, 0);
-    mut idCount.setAt(id, 0);
-};
-
-/** Destroys `deque` and recycles its handle slot. */
-pub destroyInts := fn(deque: IntDeque): Unit {
-    if not validIntDeque(deque) { return; }
-    id := deque.handle;
-    mut idAlive.setAt(id, false);
-    mut idGen.setAt(id, idGen[id] + 1);
-    mut idFree.pushBack(id);
-};
-
-/* ============================================================================
- * TextDeque
- * ============================================================================ */
-
-/** Creates a fixed-capacity `String` deque (`capacity >= 1`). */
-pub createTexts := fn(capacity: Int): TextDeque {
-    cap := if capacity < 1 { 1 } else { capacity };
-    var fi := tdFree.length() - 1;
-    loop fi >= 0 {
-        id := tdFree[fi];
-        if tdCap[id] >= cap {
-            last := tdFree.length() - 1;
-            if fi =!= last { mut tdFree.setAt(fi, tdFree[last]); }
-            _drop := mut tdFree.popBack();
-            mut tdCap.setAt(id, cap);
-            mut tdHead.setAt(id, 0);
-            mut tdCount.setAt(id, 0);
-            mut tdAlive.setAt(id, true);
-            return (handle = id, gen = tdGen[id]);
-        }
-        fi -= 1;
-    }
-
-    base := tdSlab.length();
-    var i := 0;
-    loop i < cap {
-        mut tdSlab.pushBack("");
-        i += 1;
-    }
-    id := tdBase.length();
-    mut tdBase.pushBack(base);
-    mut tdCap.pushBack(cap);
-    mut tdHead.pushBack(0);
-    mut tdCount.pushBack(0);
-    mut tdGen.pushBack(1);
-    mut tdAlive.pushBack(true);
-    (handle = id, gen = 1)
-};
-
-/** Pushes `value` onto the back of `deque` in O(1); returns `false` if full. */
-pub pushBackText := fn(deque: TextDeque, value: String): Bool {
-    if not validTextDeque(deque) { return false; }
-    id := deque.handle;
-    cap := tdCap[id];
-    cnt := tdCount[id];
-    if cnt >= cap { return false; }
-    tail := (tdHead[id] + cnt) % cap;
-    mut tdSlab.setAt(tdBase[id] + tail, value);
-    mut tdCount.setAt(id, cnt + 1);
-    true
-};
-
-/** Pushes `value` onto the front of `deque` in O(1); returns `false` if full. */
-pub pushFrontText := fn(deque: TextDeque, value: String): Bool {
-    if not validTextDeque(deque) { return false; }
-    id := deque.handle;
-    cap := tdCap[id];
-    cnt := tdCount[id];
-    if cnt >= cap { return false; }
-    newHead := (tdHead[id] + cap - 1) % cap;
-    mut tdSlab.setAt(tdBase[id] + newHead, value);
-    mut tdHead.setAt(id, newHead);
-    mut tdCount.setAt(id, cnt + 1);
-    true
-};
-
-/** Pops and returns the front string in O(1). */
-pub popFrontText := fn(deque: TextDeque): (found: Bool, value: String) {
-    if not validTextDeque(deque) { return (found = false, value = ""); }
-    id := deque.handle;
-    cnt := tdCount[id];
-    if cnt <= 0 { return (found = false, value = ""); }
-    head := tdHead[id];
-    pos := tdBase[id] + head;
-    val := tdSlab[pos];
-    mut tdSlab.setAt(pos, "");
-    mut tdHead.setAt(id, (head + 1) % tdCap[id]);
-    mut tdCount.setAt(id, cnt - 1);
-    (found = true, value = val)
-};
-
-/** Pops and returns the back string in O(1). */
-pub popBackText := fn(deque: TextDeque): (found: Bool, value: String) {
-    if not validTextDeque(deque) { return (found = false, value = ""); }
-    id := deque.handle;
-    cnt := tdCount[id];
-    if cnt <= 0 { return (found = false, value = ""); }
-    pos := tdBase[id] + ((tdHead[id] + cnt - 1) % tdCap[id]);
-    val := tdSlab[pos];
-    mut tdSlab.setAt(pos, "");
-    mut tdCount.setAt(id, cnt - 1);
-    (found = true, value = val)
-};
-
-/** Returns the number of strings in `deque`. */
-pub textCount := fn(deque: TextDeque): Int {
-    if not validTextDeque(deque) { return 0; }
-    tdCount[deque.handle]
-};
-
-/** Clears `deque` and releases string references. */
-pub clearTexts := fn(deque: TextDeque): Unit {
-    if not validTextDeque(deque) { return; }
-    id := deque.handle;
-    base := tdBase[id];
-    cap := tdCap[id];
-    var i := 0;
-    loop i < cap {
-        mut tdSlab.setAt(base + i, "");
-        i += 1;
-    }
-    (mut tdHead).setAt(id, 0);
-    mut tdCount.setAt(id, 0);
-};
-
-/** Destroys `deque` and recycles its handle slot. */
-pub destroyTexts := fn(deque: TextDeque): Unit {
-    if not validTextDeque(deque) { return; }
-    clearTexts(deque);
-    id := deque.handle;
-    mut tdAlive.setAt(id, false);
-    mut tdGen.setAt(id, tdGen[id] + 1);
-    mut tdFree.pushBack(id);
-};
-
-/* ============================================================================
- * Generic Value-Typed Deque<T>
- * ============================================================================ */
+/** Generic O(1) double-ended queues (`ds/deque`) backed by circular buffers. */
 
 /** Outcome of reading or popping an element from a generic `Deque<T>`. */
 pub DequeItem := enum<T: Type> {
@@ -353,15 +30,19 @@ pub Deque := record<T: Type> {
     count: Int;
 }
 
+/** Bounded-capacity `Int` double-ended queue alias. */
+pub IntDeque := alias Deque<Int>;
+
+/** Bounded-capacity `String` double-ended queue alias. */
+pub TextDeque := alias Deque<String>;
+
 /** Creates an empty generic `Deque<T>` with capacity `>= 1`. */
 pub createDeque := fn<T: Type>(capacity: Int): Deque<T> {
     cap := if capacity < 1 { 1 } else { capacity };
     buf: mut List<T> = [];
-    var z: T;
-    var i := 0;
-    loop i < cap {
+    z: T;
+    loop 0..cap {
         mut buf.pushBack(z);
-        i += 1;
     }
     Deque<T> { data = buf, cap = cap, head = 0, count = 0 }
 };
@@ -414,7 +95,7 @@ pub Deque.popBack := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
     if d.count <= 0 { return .Empty; }
     pos := (d.head + d.count - 1) % d.cap;
     val := d.data[pos];
-    var z: T;
+    z: T;
     buf: mut List<T> = d.data;
     mut buf.setAt(pos, z);
     d.data = buf;
@@ -426,7 +107,7 @@ pub Deque.popBack := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
 pub Deque.popFront := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
     if d.count <= 0 { return .Empty; }
     val := d.data[d.head];
-    var z: T;
+    z: T;
     buf: mut List<T> = d.data;
     mut buf.setAt(d.head, z);
     d.data = buf;
@@ -453,11 +134,9 @@ pub Deque.get := fn<T: Type>(d: Self<T>, index: Int): DequeItem<T> {
 /** Clears `d` and resets all slots to their zero value. */
 pub Deque.clear := fn<T: Type>(d: mut Self<T>): Unit {
     buf: mut List<T> = d.data;
-    var z: T;
-    var i := 0;
-    loop i < d.cap {
+    z: T;
+    loop 0..d.cap as i {
         mut buf.setAt(i, z);
-        i += 1;
     }
     d.data = buf;
     d.head = 0;

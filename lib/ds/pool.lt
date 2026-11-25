@@ -1,506 +1,257 @@
 /** Generational slot pools (`ds/pool`) for O(1) object reuse with safe stale-handle detection. */
 
 /** Generational handle identifying a single slot inside a pool. */
-pub Handle := alias (index: Int, generation: Int);
+pub Handle := record {
+    index: Int;
+    generation: Int;
+}
 
-/** Sentinel invalid handle returned when a pool is full or destroyed. */
-pub INVALID_HANDLE := (index = -1, generation = 0);
-
-/** Opaque generational handle to a pure slot allocator (pairs with user-owned parallel arrays). */
-pub SlotPool := alias (handle: Int, gen: Int);
-
-/** Opaque generational handle to a pool storing `Int` values. */
-pub IntPool := alias (handle: Int, gen: Int);
-
-/** Opaque generational handle to a pool storing `String` values. */
-pub TextPool := alias (handle: Int, gen: Int);
+/** Sentinel invalid handle returned when a pool is full or has no slot. */
+pub INVALID_HANDLE := Handle { index = -1, generation = 0 };
 
 /** True when `h` has a non-negative index and positive generation. */
-pub isHandleValid := fn(h: Handle): Bool {
+pub Handle.isValid := fn(h: Self): Bool {
     h.index >= 0 and h.generation > 0
 };
 
 /** True when `a` and `b` refer to the exact same slot index and generation. */
-pub handlesEqual := fn(a: Handle, b: Handle): Bool {
+pub Handle.equals := fn(a: Self, b: Self): Bool {
     a.index == b.index and a.generation == b.generation
 };
 
-/* --- Pure SlotPool flat slab --- */
-var spSlotGen: mut List<Int> = [];
-var spSlotAlive: mut List<Bool> = [];
-var spSlotNextFree: mut List<Int> = [];
+/** Outcome of reading a `Pool<T>` entry by handle. */
+pub PoolItem := enum<T: Type> {
+    Empty;
+    Some(T);
+}
 
-var spBase: mut List<Int> = [];
-var spCap: mut List<Int> = [];
-var spCount: mut List<Int> = [];
-var spFreeHead: mut List<Int> = [];
-var spGen: mut List<Int> = [];
-var spAlive: mut List<Bool> = [];
-var spFreePools: mut List<Int> = [];
-
-/* --- IntPool flat slab --- */
-var ipSlotGen: mut List<Int> = [];
-var ipSlotAlive: mut List<Bool> = [];
-var ipSlotNextFree: mut List<Int> = [];
-var ipSlotVal: mut List<Int> = [];
-
-var ipBase: mut List<Int> = [];
-var ipCap: mut List<Int> = [];
-var ipCount: mut List<Int> = [];
-var ipFreeHead: mut List<Int> = [];
-var ipGen: mut List<Int> = [];
-var ipAlive: mut List<Bool> = [];
-var ipFreePools: mut List<Int> = [];
-
-/* --- TextPool flat slab --- */
-var tpSlotGen: mut List<Int> = [];
-var tpSlotAlive: mut List<Bool> = [];
-var tpSlotNextFree: mut List<Int> = [];
-var tpSlotVal: mut List<String> = [];
-
-var tpBase: mut List<Int> = [];
-var tpCap: mut List<Int> = [];
-var tpCount: mut List<Int> = [];
-var tpFreeHead: mut List<Int> = [];
-var tpGen: mut List<Int> = [];
-var tpAlive: mut List<Bool> = [];
-var tpFreePools: mut List<Int> = [];
-
-validSlotPool := fn(pool: SlotPool): Bool {
-    idx := pool.handle;
-    idx >= 0 and idx < spAlive.length() and spAlive[idx] and spGen[idx] == pool.gen
+/** True when `item` holds a value `.Some(...)`. */
+pub PoolItem.isSome := fn<T: Type>(item: Self<T>): Bool {
+    match item {
+        .Empty { false }
+        .Some { true }
+    }
 };
 
-validIntPool := fn(pool: IntPool): Bool {
-    idx := pool.handle;
-    idx >= 0 and idx < ipAlive.length() and ipAlive[idx] and ipGen[idx] == pool.gen
+/** Returns the wrapped value when `.Some(v)`, or `fallback` when `.Empty`. */
+pub PoolItem.unwrapOr := fn<T: Type>(item: Self<T>, fallback: T): T {
+    match item {
+        .Empty { fallback }
+        .Some(v) { v }
+    }
 };
 
-validTextPool := fn(pool: TextPool): Bool {
-    idx := pool.handle;
-    idx >= 0 and idx < tpAlive.length() and tpAlive[idx] and tpGen[idx] == pool.gen
-};
+/** Fixed-capacity generational slot allocator (pairs with user-owned parallel arrays). */
+pub SlotPool := record {
+    slotGen: List<Int>;
+    slotAlive: List<Bool>;
+    freeList: List<Int>;
+    cap: Int;
+    liveCount: Int;
+}
 
-/* --- Pure SlotPool API --- */
+/** Generic fixed-capacity generational pool storing `T` values per live slot. */
+pub Pool := record<T: Type> {
+    values: List<T>;
+    slotGen: List<Int>;
+    slotAlive: List<Bool>;
+    freeList: List<Int>;
+    cap: Int;
+    liveCount: Int;
+}
+
+/** Generational pool storing `Int` values. */
+pub IntPool := alias Pool<Int>;
+
+/** Generational pool storing `String` values. */
+pub TextPool := alias Pool<String>;
+
+/* ============================================================================
+ * SlotPool
+ * ============================================================================ */
 
 /** Creates a fixed-capacity generational `SlotPool` with O(1) acquire and release. */
 pub createSlots := fn(capacity: Int): SlotPool {
     cap := if capacity < 0 { 0 } else { capacity };
-    var fi := spFreePools.length() - 1;
-    loop fi >= 0 {
-        pid := spFreePools[fi];
-        if spCap[pid] >= cap {
-            last := spFreePools.length() - 1;
-            if fi =!= last { mut spFreePools.setAt(fi, spFreePools[last]); }
-            _drop := mut spFreePools.popBack();
-            mut spCap.setAt(pid, cap);
-            base := spBase[pid];
-            var i := 0;
-            loop i < cap {
-                mut spSlotAlive.setAt(base + i, false);
-                mut spSlotGen.setAt(base + i, spSlotGen[base + i] + 1);
-                mut spSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
-                i += 1;
-            }
-            (mut spCount).setAt(pid, 0);
-            mut spFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
-            mut spAlive.setAt(pid, true);
-            return (handle = pid, gen = spGen[pid]);
-        }
-        fi -= 1;
+    gens: mut List<Int> = [];
+    alive: mut List<Bool> = [];
+    free: mut List<Int> = [];
+    loop 0..cap as i {
+        mut gens.pushBack(1);
+        mut alive.pushBack(false);
+        mut free.pushBack(cap - 1 - i);
     }
-
-    base := spSlotGen.length();
-    var i := 0;
-    loop i < cap {
-        mut spSlotGen.pushBack(1);
-        mut spSlotAlive.pushBack(false);
-        mut spSlotNextFree.pushBack(if i + 1 < cap { i + 1 } else { -1 });
-        i += 1;
-    }
-    pid := spBase.length();
-    mut spBase.pushBack(base);
-    mut spCap.pushBack(cap);
-    mut spCount.pushBack(0);
-    mut spFreeHead.pushBack(if cap > 0 { 0 } else { -1 });
-    mut spGen.pushBack(1);
-    mut spAlive.pushBack(true);
-    (handle = pid, gen = 1)
+    SlotPool { slotGen = gens, slotAlive = alive, freeList = free, cap = cap, liveCount = 0 }
 };
 
-/** Acquires a free slot from `pool` in O(1), returning `INVALID_HANDLE` if full. */
-pub acquireSlot := fn(pool: SlotPool): Handle {
-    if not validSlotPool(pool) { return INVALID_HANDLE; }
-    pid := pool.handle;
-    head := spFreeHead[pid];
-    if head < 0 { return INVALID_HANDLE; }
-    gi := spBase[pid] + head;
-    mut spFreeHead.setAt(pid, spSlotNextFree[gi]);
-    mut spSlotNextFree.setAt(gi, -1);
-    mut spSlotAlive.setAt(gi, true);
-    mut spCount.setAt(pid, spCount[pid] + 1);
-    (index = head, generation = spSlotGen[gi])
+/** Acquires a slot in O(1), returning its generational `Handle` or `INVALID_HANDLE` if full. */
+pub SlotPool.acquire := fn(p: mut Self): Handle {
+    if p.freeList.length() == 0 { return INVALID_HANDLE; }
+    fl: mut List<Int> = p.freeList;
+    idx := mut fl.popBack();
+    al: mut List<Bool> = p.slotAlive;
+    mut al.setAt(idx, true);
+    p.freeList = fl;
+    p.slotAlive = al;
+    p.liveCount = p.liveCount + 1;
+    Handle { index = idx, generation = p.slotGen[idx] }
 };
 
-/** True when `h` currently refers to a live slot in `pool`. */
-pub isSlotAlive := fn(pool: SlotPool, h: Handle): Bool {
-    if not validSlotPool(pool) or h.index < 0 { return false; }
-    pid := pool.handle;
-    if h.index >= spCap[pid] { return false; }
-    gi := spBase[pid] + h.index;
-    spSlotAlive[gi] and spSlotGen[gi] == h.generation
+/** True when `h` points to a currently allocated slot with matching generation in `p`. */
+pub SlotPool.isAlive := fn(p: Self, h: Handle): Bool {
+    if h.index < 0 or h.index >= p.cap { return false; }
+    p.slotAlive[h.index] and p.slotGen[h.index] == h.generation
 };
 
-/** Releases `h` back to `pool` in O(1), bumping its generation; returns `false` on stale or double release. */
-pub releaseSlot := fn(pool: SlotPool, h: Handle): Bool {
-    if not isSlotAlive(pool, h) { return false; }
-    pid := pool.handle;
-    gi := spBase[pid] + h.index;
-    mut spSlotAlive.setAt(gi, false);
-    mut spSlotGen.setAt(gi, spSlotGen[gi] + 1);
-    mut spSlotNextFree.setAt(gi, spFreeHead[pid]);
-    mut spFreeHead.setAt(pid, h.index);
-    mut spCount.setAt(pid, spCount[pid] - 1);
+/** Releases slot `h` in O(1) and bumps its generation; returns `false` if already released/stale. */
+pub SlotPool.release := fn(p: mut Self, h: Handle): Bool {
+    if not p.isAlive(h) { return false; }
+    idx := h.index;
+    al: mut List<Bool> = p.slotAlive;
+    gs: mut List<Int> = p.slotGen;
+    fl: mut List<Int> = p.freeList;
+    mut al.setAt(idx, false);
+    mut gs.setAt(idx, gs[idx] + 1);
+    mut fl.pushBack(idx);
+    p.slotAlive = al;
+    p.slotGen = gs;
+    p.freeList = fl;
+    p.liveCount = p.liveCount - 1;
     true
 };
 
-/** Returns the number of live slots in `pool`. */
-pub slotCount := fn(pool: SlotPool): Int {
-    if not validSlotPool(pool) { return 0; }
-    spCount[pool.handle]
-};
+/** Returns the number of currently live slots in `p`. */
+pub SlotPool.count := fn(p: Self): Int { p.liveCount };
 
-/** Returns the fixed slot capacity of `pool`. */
-pub slotCapacity := fn(pool: SlotPool): Int {
-    if not validSlotPool(pool) { return 0; }
-    spCap[pool.handle]
-};
+/** Returns the total slot capacity of `p`. */
+pub SlotPool.capacity := fn(p: Self): Int { p.cap };
 
-/** Returns the number of available free slots in `pool`. */
-pub slotFreeCount := fn(pool: SlotPool): Int {
-    if not validSlotPool(pool) { return 0; }
-    pid := pool.handle;
-    spCap[pid] - spCount[pid]
-};
+/** Returns the number of free slots remaining in `p`. */
+pub SlotPool.freeCount := fn(p: Self): Int { p.cap - p.liveCount };
 
-/** Releases all live slots in `pool` and bumps every slot's generation so all prior handles become stale. */
-pub clearSlots := fn(pool: SlotPool): Unit {
-    if not validSlotPool(pool) { return; }
-    pid := pool.handle;
-    base := spBase[pid];
-    cap := spCap[pid];
-    var i := 0;
-    loop i < cap {
-        mut spSlotAlive.setAt(base + i, false);
-        mut spSlotGen.setAt(base + i, spSlotGen[base + i] + 1);
-        mut spSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
-        i += 1;
+/** Releases all live slots and bumps their generations in O(capacity). */
+pub SlotPool.clear := fn(p: mut Self): Unit {
+    al: mut List<Bool> = p.slotAlive;
+    gs: mut List<Int> = p.slotGen;
+    fl: mut List<Int> = [];
+    loop 0..p.cap as i {
+        if al[i] {
+            mut al.setAt(i, false);
+            mut gs.setAt(i, gs[i] + 1);
+        }
+        mut fl.pushBack(p.cap - 1 - i);
     }
-    (mut spCount).setAt(pid, 0);
-    mut spFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
+    p.slotAlive = al;
+    p.slotGen = gs;
+    p.freeList = fl;
+    p.liveCount = 0;
 };
 
-/** Destroys `pool` and recycles its handle slot. */
-pub destroySlots := fn(pool: SlotPool): Unit {
-    if not validSlotPool(pool) { return; }
-    pid := pool.handle;
-    mut spAlive.setAt(pid, false);
-    mut spGen.setAt(pid, spGen[pid] + 1);
-    mut spFreePools.pushBack(pid);
-};
+/* ============================================================================
+ * Generic Pool<T>
+ * ============================================================================ */
 
-/* --- IntPool API --- */
-
-/** Creates a fixed-capacity generational pool storing `Int` values. */
-pub createInts := fn(capacity: Int): IntPool {
+/** Creates a fixed-capacity generic `Pool<T>` storing `T` payloads per slot. */
+pub create := fn<T: Type>(capacity: Int): Pool<T> {
     cap := if capacity < 0 { 0 } else { capacity };
-    var fi := ipFreePools.length() - 1;
-    loop fi >= 0 {
-        pid := ipFreePools[fi];
-        if ipCap[pid] >= cap {
-            last := ipFreePools.length() - 1;
-            if fi =!= last { mut ipFreePools.setAt(fi, ipFreePools[last]); }
-            _drop := mut ipFreePools.popBack();
-            mut ipCap.setAt(pid, cap);
-            base := ipBase[pid];
-            var i := 0;
-            loop i < cap {
-                mut ipSlotAlive.setAt(base + i, false);
-                mut ipSlotGen.setAt(base + i, ipSlotGen[base + i] + 1);
-                mut ipSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
-                mut ipSlotVal.setAt(base + i, 0);
-                i += 1;
-            }
-            (mut ipCount).setAt(pid, 0);
-            mut ipFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
-            mut ipAlive.setAt(pid, true);
-            return (handle = pid, gen = ipGen[pid]);
+    vals: mut List<T> = [];
+    gens: mut List<Int> = [];
+    alive: mut List<Bool> = [];
+    free: mut List<Int> = [];
+    z: T;
+    loop 0..cap as i {
+        mut vals.pushBack(z);
+        mut gens.pushBack(1);
+        mut alive.pushBack(false);
+        mut free.pushBack(cap - 1 - i);
+    }
+    Pool<T> { values = vals, slotGen = gens, slotAlive = alive, freeList = free, cap = cap, liveCount = 0 }
+};
+
+/** Allocates a slot in `p` initialized with `value`, returning `Handle` or `INVALID_HANDLE` if full. */
+pub Pool.acquire := fn<T: Type>(p: mut Self<T>, value: T): Handle {
+    if p.freeList.length() == 0 { return INVALID_HANDLE; }
+    fl: mut List<Int> = p.freeList;
+    idx := mut fl.popBack();
+    vs: mut List<T> = p.values;
+    al: mut List<Bool> = p.slotAlive;
+    mut vs.setAt(idx, value);
+    mut al.setAt(idx, true);
+    p.freeList = fl;
+    p.values = vs;
+    p.slotAlive = al;
+    p.liveCount = p.liveCount + 1;
+    Handle { index = idx, generation = p.slotGen[idx] }
+};
+
+/** True when `h` points to a currently live slot in `p`. */
+pub Pool.isAlive := fn<T: Type>(p: Self<T>, h: Handle): Bool {
+    if h.index < 0 or h.index >= p.cap { return false; }
+    p.slotAlive[h.index] and p.slotGen[h.index] == h.generation
+};
+
+/** Reads the `T` value at `h`, or `.Empty` when stale/invalid. */
+pub Pool.get := fn<T: Type>(p: Self<T>, h: Handle): PoolItem<T> {
+    if not p.isAlive(h) { .Empty } else { .Some(p.values[h.index]) }
+};
+
+/** Overwrites the `T` value at `h`; returns `false` when stale/invalid. */
+pub Pool.set := fn<T: Type>(p: mut Self<T>, h: Handle, value: T): Bool {
+    if not p.isAlive(h) { return false; }
+    vs: mut List<T> = p.values;
+    mut vs.setAt(h.index, value);
+    p.values = vs;
+    true
+};
+
+/** Releases slot `h` in O(1), clearing its payload to zero and bumping its generation. */
+pub Pool.release := fn<T: Type>(p: mut Self<T>, h: Handle): Bool {
+    if not p.isAlive(h) { return false; }
+    idx := h.index;
+    z: T;
+    vs: mut List<T> = p.values;
+    al: mut List<Bool> = p.slotAlive;
+    gs: mut List<Int> = p.slotGen;
+    fl: mut List<Int> = p.freeList;
+    mut vs.setAt(idx, z);
+    mut al.setAt(idx, false);
+    mut gs.setAt(idx, gs[idx] + 1);
+    mut fl.pushBack(idx);
+    p.values = vs;
+    p.slotAlive = al;
+    p.slotGen = gs;
+    p.freeList = fl;
+    p.liveCount = p.liveCount - 1;
+    true
+};
+
+/** Returns the number of live slots in `p`. */
+pub Pool.count := fn<T: Type>(p: Self<T>): Int { p.liveCount };
+
+/** Returns the total slot capacity of `p`. */
+pub Pool.capacity := fn<T: Type>(p: Self<T>): Int { p.cap };
+
+/** Returns the number of free slots remaining in `p`. */
+pub Pool.freeCount := fn<T: Type>(p: Self<T>): Int { p.cap - p.liveCount };
+
+/** Releases all live slots in `p`, resetting payloads to zero and bumping generations. */
+pub Pool.clear := fn<T: Type>(p: mut Self<T>): Unit {
+    z: T;
+    vs: mut List<T> = p.values;
+    al: mut List<Bool> = p.slotAlive;
+    gs: mut List<Int> = p.slotGen;
+    fl: mut List<Int> = [];
+    loop 0..p.cap as i {
+        if al[i] {
+            mut vs.setAt(i, z);
+            mut al.setAt(i, false);
+            mut gs.setAt(i, gs[i] + 1);
         }
-        fi -= 1;
+        mut fl.pushBack(p.cap - 1 - i);
     }
-
-    base := ipSlotGen.length();
-    var i := 0;
-    loop i < cap {
-        mut ipSlotGen.pushBack(1);
-        mut ipSlotAlive.pushBack(false);
-        mut ipSlotNextFree.pushBack(if i + 1 < cap { i + 1 } else { -1 });
-        mut ipSlotVal.pushBack(0);
-        i += 1;
-    }
-    pid := ipBase.length();
-    mut ipBase.pushBack(base);
-    mut ipCap.pushBack(cap);
-    mut ipCount.pushBack(0);
-    mut ipFreeHead.pushBack(if cap > 0 { 0 } else { -1 });
-    mut ipGen.pushBack(1);
-    mut ipAlive.pushBack(true);
-    (handle = pid, gen = 1)
-};
-
-/** Acquires a slot in `pool` initialized to `value`, returning `INVALID_HANDLE` if full. */
-pub acquireInt := fn(pool: IntPool, value: Int): Handle {
-    if not validIntPool(pool) { return INVALID_HANDLE; }
-    pid := pool.handle;
-    head := ipFreeHead[pid];
-    if head < 0 { return INVALID_HANDLE; }
-    gi := ipBase[pid] + head;
-    mut ipFreeHead.setAt(pid, ipSlotNextFree[gi]);
-    mut ipSlotNextFree.setAt(gi, -1);
-    mut ipSlotAlive.setAt(gi, true);
-    mut ipSlotVal.setAt(gi, value);
-    mut ipCount.setAt(pid, ipCount[pid] + 1);
-    (index = head, generation = ipSlotGen[gi])
-};
-
-/** True when `h` currently refers to a live integer slot in `pool`. */
-pub isIntAlive := fn(pool: IntPool, h: Handle): Bool {
-    if not validIntPool(pool) or h.index < 0 { return false; }
-    pid := pool.handle;
-    if h.index >= ipCap[pid] { return false; }
-    gi := ipBase[pid] + h.index;
-    ipSlotAlive[gi] and ipSlotGen[gi] == h.generation
-};
-
-/** Reads the `Int` stored at `h`, returning `(found = false, value = 0)` if stale or invalid. */
-pub getInt := fn(pool: IntPool, h: Handle): (found: Bool, value: Int) {
-    if not isIntAlive(pool, h) { return (found = false, value = 0); }
-    gi := ipBase[pool.handle] + h.index;
-    (found = true, value = ipSlotVal[gi])
-};
-
-/** Replaces the `Int` stored at `h`; returns `false` if stale or invalid. */
-pub setInt := fn(pool: IntPool, h: Handle, value: Int): Bool {
-    if not isIntAlive(pool, h) { return false; }
-    gi := ipBase[pool.handle] + h.index;
-    mut ipSlotVal.setAt(gi, value);
-    true
-};
-
-/** Releases `h` back to `pool` in O(1); returns `false` on stale or double release. */
-pub releaseInt := fn(pool: IntPool, h: Handle): Bool {
-    if not isIntAlive(pool, h) { return false; }
-    pid := pool.handle;
-    gi := ipBase[pid] + h.index;
-    mut ipSlotAlive.setAt(gi, false);
-    mut ipSlotVal.setAt(gi, 0);
-    mut ipSlotGen.setAt(gi, ipSlotGen[gi] + 1);
-    mut ipSlotNextFree.setAt(gi, ipFreeHead[pid]);
-    mut ipFreeHead.setAt(pid, h.index);
-    mut ipCount.setAt(pid, ipCount[pid] - 1);
-    true
-};
-
-/** Returns the number of live entries in `pool`. */
-pub intCount := fn(pool: IntPool): Int {
-    if not validIntPool(pool) { return 0; }
-    ipCount[pool.handle]
-};
-
-/** Returns the total capacity of `pool`. */
-pub intCapacity := fn(pool: IntPool): Int {
-    if not validIntPool(pool) { return 0; }
-    ipCap[pool.handle]
-};
-
-/** Returns the number of free slots in `pool`. */
-pub intFreeCount := fn(pool: IntPool): Int {
-    if not validIntPool(pool) { return 0; }
-    pid := pool.handle;
-    ipCap[pid] - ipCount[pid]
-};
-
-/** Clears all live entries in `pool` and invalidates all existing handles. */
-pub clearInts := fn(pool: IntPool): Unit {
-    if not validIntPool(pool) { return; }
-    pid := pool.handle;
-    base := ipBase[pid];
-    cap := ipCap[pid];
-    var i := 0;
-    loop i < cap {
-        mut ipSlotAlive.setAt(base + i, false);
-        mut ipSlotVal.setAt(base + i, 0);
-        mut ipSlotGen.setAt(base + i, ipSlotGen[base + i] + 1);
-        mut ipSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
-        i += 1;
-    }
-    (mut ipCount).setAt(pid, 0);
-    mut ipFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
-};
-
-/** Destroys `pool` and recycles its handle slot. */
-pub destroyInts := fn(pool: IntPool): Unit {
-    if not validIntPool(pool) { return; }
-    pid := pool.handle;
-    mut ipAlive.setAt(pid, false);
-    mut ipGen.setAt(pid, ipGen[pid] + 1);
-    mut ipFreePools.pushBack(pid);
-};
-
-/* --- TextPool API --- */
-
-/** Creates a fixed-capacity generational pool storing `String` values. */
-pub createTexts := fn(capacity: Int): TextPool {
-    cap := if capacity < 0 { 0 } else { capacity };
-    var fi := tpFreePools.length() - 1;
-    loop fi >= 0 {
-        pid := tpFreePools[fi];
-        if tpCap[pid] >= cap {
-            last := tpFreePools.length() - 1;
-            if fi =!= last { mut tpFreePools.setAt(fi, tpFreePools[last]); }
-            _drop := mut tpFreePools.popBack();
-            mut tpCap.setAt(pid, cap);
-            base := tpBase[pid];
-            var i := 0;
-            loop i < cap {
-                mut tpSlotAlive.setAt(base + i, false);
-                mut tpSlotGen.setAt(base + i, tpSlotGen[base + i] + 1);
-                mut tpSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
-                mut tpSlotVal.setAt(base + i, "");
-                i += 1;
-            }
-            (mut tpCount).setAt(pid, 0);
-            mut tpFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
-            mut tpAlive.setAt(pid, true);
-            return (handle = pid, gen = tpGen[pid]);
-        }
-        fi -= 1;
-    }
-
-    base := tpSlotGen.length();
-    var i := 0;
-    loop i < cap {
-        mut tpSlotGen.pushBack(1);
-        mut tpSlotAlive.pushBack(false);
-        mut tpSlotNextFree.pushBack(if i + 1 < cap { i + 1 } else { -1 });
-        mut tpSlotVal.pushBack("");
-        i += 1;
-    }
-    pid := tpBase.length();
-    mut tpBase.pushBack(base);
-    mut tpCap.pushBack(cap);
-    mut tpCount.pushBack(0);
-    mut tpFreeHead.pushBack(if cap > 0 { 0 } else { -1 });
-    mut tpGen.pushBack(1);
-    mut tpAlive.pushBack(true);
-    (handle = pid, gen = 1)
-};
-
-/** Acquires a slot in `pool` initialized to `value`, returning `INVALID_HANDLE` if full. */
-pub acquireText := fn(pool: TextPool, value: String): Handle {
-    if not validTextPool(pool) { return INVALID_HANDLE; }
-    pid := pool.handle;
-    head := tpFreeHead[pid];
-    if head < 0 { return INVALID_HANDLE; }
-    gi := tpBase[pid] + head;
-    mut tpFreeHead.setAt(pid, tpSlotNextFree[gi]);
-    mut tpSlotNextFree.setAt(gi, -1);
-    mut tpSlotAlive.setAt(gi, true);
-    mut tpSlotVal.setAt(gi, value);
-    mut tpCount.setAt(pid, tpCount[pid] + 1);
-    (index = head, generation = tpSlotGen[gi])
-};
-
-/** True when `h` currently refers to a live string slot in `pool`. */
-pub isTextAlive := fn(pool: TextPool, h: Handle): Bool {
-    if not validTextPool(pool) or h.index < 0 { return false; }
-    pid := pool.handle;
-    if h.index >= tpCap[pid] { return false; }
-    gi := tpBase[pid] + h.index;
-    tpSlotAlive[gi] and tpSlotGen[gi] == h.generation
-};
-
-/** Reads the `String` stored at `h`, returning `(found = false, value = "")` if stale or invalid. */
-pub getText := fn(pool: TextPool, h: Handle): (found: Bool, value: String) {
-    if not isTextAlive(pool, h) { return (found = false, value = ""); }
-    gi := tpBase[pool.handle] + h.index;
-    (found = true, value = tpSlotVal[gi])
-};
-
-/** Replaces the `String` stored at `h`; returns `false` if stale or invalid. */
-pub setText := fn(pool: TextPool, h: Handle, value: String): Bool {
-    if not isTextAlive(pool, h) { return false; }
-    gi := tpBase[pool.handle] + h.index;
-    mut tpSlotVal.setAt(gi, value);
-    true
-};
-
-/** Releases `h` back to `pool` in O(1); returns `false` on stale or double release. */
-pub releaseText := fn(pool: TextPool, h: Handle): Bool {
-    if not isTextAlive(pool, h) { return false; }
-    pid := pool.handle;
-    gi := tpBase[pid] + h.index;
-    mut tpSlotAlive.setAt(gi, false);
-    mut tpSlotVal.setAt(gi, "");
-    mut tpSlotGen.setAt(gi, tpSlotGen[gi] + 1);
-    mut tpSlotNextFree.setAt(gi, tpFreeHead[pid]);
-    mut tpFreeHead.setAt(pid, h.index);
-    mut tpCount.setAt(pid, tpCount[pid] - 1);
-    true
-};
-
-/** Returns the number of live string entries in `pool`. */
-pub textCount := fn(pool: TextPool): Int {
-    if not validTextPool(pool) { return 0; }
-    tpCount[pool.handle]
-};
-
-/** Returns the total capacity of `pool`. */
-pub textCapacity := fn(pool: TextPool): Int {
-    if not validTextPool(pool) { return 0; }
-    tpCap[pool.handle]
-};
-
-/** Returns the number of free slots in `pool`. */
-pub textFreeCount := fn(pool: TextPool): Int {
-    if not validTextPool(pool) { return 0; }
-    pid := pool.handle;
-    tpCap[pid] - tpCount[pid]
-};
-
-/** Clears all live entries in `pool` and invalidates all existing handles. */
-pub clearTexts := fn(pool: TextPool): Unit {
-    if not validTextPool(pool) { return; }
-    pid := pool.handle;
-    base := tpBase[pid];
-    cap := tpCap[pid];
-    var i := 0;
-    loop i < cap {
-        mut tpSlotAlive.setAt(base + i, false);
-        mut tpSlotVal.setAt(base + i, "");
-        mut tpSlotGen.setAt(base + i, tpSlotGen[base + i] + 1);
-        mut tpSlotNextFree.setAt(base + i, if i + 1 < cap { i + 1 } else { -1 });
-        i += 1;
-    }
-    (mut tpCount).setAt(pid, 0);
-    mut tpFreeHead.setAt(pid, if cap > 0 { 0 } else { -1 });
-};
-
-/** Destroys `pool` and recycles its handle slot. */
-pub destroyTexts := fn(pool: TextPool): Unit {
-    if not validTextPool(pool) { return; }
-    pid := pool.handle;
-    mut tpAlive.setAt(pid, false);
-    mut tpGen.setAt(pid, tpGen[pid] + 1);
-    mut tpFreePools.pushBack(pid);
+    p.values = vs;
+    p.slotAlive = al;
+    p.slotGen = gs;
+    p.freeList = fl;
+    p.liveCount = 0;
 };

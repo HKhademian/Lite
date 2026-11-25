@@ -28,105 +28,107 @@ functionalSrc :=
 "bitset := import \"ds/bitset\";\n" +
 "sparse := import \"ds/sparse\";\n" +
 "\n" +
-"/* 1. extra/ring */\n" +
-"ri := ring.createInts(3);\n" +
-"o1 := ring.pushInt(ri, 10);\n" +
-"o2 := ring.pushInt(ri, 20);\n" +
-"o3 := ring.pushInt(ri, 30);\n" +
-"tp := ring.tryPushInt(ri, 99);\n" +
-"o4 := ring.pushInt(ri, 40);\n" +
-"io.outputLine(\"ringInt\", o1, o2, o3, tp, o4, ring.peekOldestInt(ri).value, ring.peekNewestInt(ri).value, ring.atInt(ri, 1).value, ring.sumInts(ri));\n" +
-"p1 := ring.popInt(ri);\n" +
-"io.outputLine(\"ringPop\", p1.found, p1.value, ring.intCount(ri));\n" +
-"ring.destroyInts(ri);\n" +
+"/* 1. ds/ring */\n" +
+"ri: mut ring.IntRing = ring.createRing<Int>(3);\n" +
+"o1 := mut ri.push(10);\n" +
+"o2 := mut ri.push(20);\n" +
+"o3 := mut ri.push(30);\n" +
+"tp := mut ri.tryPush(99);\n" +
+"o4 := mut ri.push(40);\n" +
+"io.outputLine(\"ringInt\", o1, o2, o3, tp, o4, ri.peekFront().unwrapOr(-1), ri.peekBack().unwrapOr(-1), ri.get(1).unwrapOr(-1), ri.sum());\n" +
+"p1 := mut ri.pop();\n" +
+"io.outputLine(\"ringPop\", p1.isSome(), p1.unwrapOr(-1), ri.length());\n" +
 "\n" +
-"rf := ring.createFloats(4);\n" +
-"_f1 := ring.pushFloat(rf, 10.0);\n" +
-"_f2 := ring.pushFloat(rf, 20.0);\n" +
-"_f3 := ring.pushFloat(rf, 30.0);\n" +
-"mm := ring.minMaxFloat(rf);\n" +
-"io.outputLine(\"ringFloat\", ring.avgFloat(rf), mm.min, mm.max, ring.floatCount(rf));\n" +
-"ring.destroyFloats(rf);\n" +
+"rf: mut ring.FloatRing = ring.createRing<Float>(4);\n" +
+"_f1 := mut rf.push(10.0);\n" +
+"_f2 := mut rf.push(20.0);\n" +
+"_f3 := mut rf.push(30.0);\n" +
+"mm := rf.minMax();\n" +
+"io.outputLine(\"ringFloat\", rf.avg(), mm.min, mm.max, rf.length());\n" +
 "\n" +
-"/* 2. extra/deque */\n" +
-"dq := deque.createInts(4);\n" +
-"_d1 := deque.pushBackInt(dq, 2);\n" +
-"_d2 := deque.pushFrontInt(dq, 1);\n" +
-"_d3 := deque.pushBackInt(dq, 3);\n" +
-"_d4 := deque.pushFrontInt(dq, 0);\n" +
-"dFull := deque.pushBackInt(dq, 9);\n" +
-"df := deque.popFrontInt(dq);\n" +
-"db := deque.popBackInt(dq);\n" +
-"io.outputLine(\"dequeInt\", dFull, df.value, db.value, deque.peekFrontInt(dq).value, deque.peekBackInt(dq).value, deque.intCount(dq));\n" +
-"deque.destroyInts(dq);\n" +
+"/* 2. ds/deque */\n" +
+"dq: mut deque.IntDeque = deque.createDeque<Int>(4);\n" +
+"_d1 := mut dq.pushBack(2);\n" +
+"_d2 := mut dq.pushFront(1);\n" +
+"_d3 := mut dq.pushBack(3);\n" +
+"_d4 := mut dq.pushFront(0);\n" +
+"dFull := mut dq.pushBack(9);\n" +
+"df := mut dq.popFront();\n" +
+"db := mut dq.popBack();\n" +
+"io.outputLine(\"dequeInt\", dFull, df.unwrapOr(-1), db.unwrapOr(-1), dq.peekFront().unwrapOr(-1), dq.peekBack().unwrapOr(-1), dq.length());\n" +
 "\n" +
-"td := deque.createTexts(3);\n" +
-"_t1 := deque.pushBackText(td, \"b\");\n" +
-"_t2 := deque.pushFrontText(td, \"a\");\n" +
-"_t3 := deque.pushBackText(td, \"c\");\n" +
-"tf := deque.popFrontText(td);\n" +
-"tb := deque.popBackText(td);\n" +
-"io.outputLine(\"dequeText\", tf.value, tb.value, deque.textCount(td));\n" +
-"deque.destroyTexts(td);\n" +
+"td: mut deque.TextDeque = deque.createDeque<String>(3);\n" +
+"_t1 := mut td.pushBack(\"b\");\n" +
+"_t2 := mut td.pushFront(\"a\");\n" +
+"_t3 := mut td.pushBack(\"c\");\n" +
+"tf := mut td.popFront();\n" +
+"tb := mut td.popBack();\n" +
+"io.outputLine(\"dequeText\", tf.unwrapOr(\"\"), tb.unwrapOr(\"\"), td.length());\n" +
 "\n" +
-"/* 3. extra/heap (nominal TypeName.op) */\n" +
-"mn := heap.createMin(8);\n" +
-"_m1 := mn.push(50);\n" +
-"_m2 := mn.push(10);\n" +
-"_m3 := mn.push(30);\n" +
-"_m4 := mn.push(20);\n" +
-"io.outputLine(\"minHeap\", mn.pop().value, mn.pop().value, mn.pop().value, mn.pop().value, mn.pop().found);\n" +
-"mn.destroy();\n" +
+"/* 3. ds/heap */\n" +
+"mut mn := heap.createMin(8);\n" +
+"_m1 := mut mn.push(50);\n" +
+"_m2 := mut mn.push(10);\n" +
+"_m3 := mut mn.push(30);\n" +
+"_m4 := mut mn.push(20);\n" +
+"mp1 := mut mn.pop();\n" +
+"mp2 := mut mn.pop();\n" +
+"mp3 := mut mn.pop();\n" +
+"mp4 := mut mn.pop();\n" +
+"mp5 := mut mn.pop();\n" +
+"io.outputLine(\"minHeap\", mp1.unwrapOr(-1), mp2.unwrapOr(-1), mp3.unwrapOr(-1), mp4.unwrapOr(-1), mp5.isSome());\n" +
 "\n" +
-"mx := heap.createMax(8);\n" +
-"_x1 := mx.push(10);\n" +
-"_x2 := mx.push(50);\n" +
-"_x3 := mx.push(30);\n" +
-"io.outputLine(\"maxHeap\", mx.pop().value, mx.pop().value, mx.pop().value);\n" +
-"mx.destroy();\n" +
+"mut mx := heap.createMax(8);\n" +
+"_x1 := mut mx.push(10);\n" +
+"_x2 := mut mx.push(50);\n" +
+"_x3 := mut mx.push(30);\n" +
+"xp1 := mut mx.pop();\n" +
+"xp2 := mut mx.pop();\n" +
+"xp3 := mut mx.pop();\n" +
+"io.outputLine(\"maxHeap\", xp1.unwrapOr(-1), xp2.unwrapOr(-1), xp3.unwrapOr(-1));\n" +
 "\n" +
-"pq := heap.createPQ(8);\n" +
-"_q1 := pq.push(30, 103);\n" +
-"_q2 := pq.push(10, 101);\n" +
-"_q3 := pq.push(20, 102);\n" +
-"pqa := pq.pop();\n" +
-"pqb := pq.pop();\n" +
-"io.outputLine(\"pq\", pqa.priority, pqa.item, pqb.priority, pqb.item, pq.count());\n" +
-"pq.destroy();\n" +
+"pq: mut heap.IntPriorityQueue = heap.createPQ<Int>(8);\n" +
+"_q1 := mut pq.push(30, 103);\n" +
+"_q2 := mut pq.push(10, 101);\n" +
+"_q3 := mut pq.push(20, 102);\n" +
+"pqa := mut pq.pop();\n" +
+"pqb := mut pq.pop();\n" +
+"paPrio := match pqa { .Empty { -1 } .Some(e) { e.priority } };\n" +
+"paItem := match pqa { .Empty { -1 } .Some(e) { e.item } };\n" +
+"pbPrio := match pqb { .Empty { -1 } .Some(e) { e.priority } };\n" +
+"pbItem := match pqb { .Empty { -1 } .Some(e) { e.item } };\n" +
+"io.outputLine(\"pq\", paPrio, paItem, pbPrio, pbItem, pq.count());\n" +
 "\n" +
-"/* 4. extra/bitset */\n" +
-"b1 := bitset.create(65);\n" +
-"b2 := bitset.create(65);\n" +
-"_bs1 := bitset.set(b1, 0);\n" +
-"_bs2 := bitset.set(b1, 31);\n" +
-"_bs3 := bitset.set(b1, 64);\n" +
-"_bs4 := bitset.set(b2, 31);\n" +
-"_bs5 := bitset.set(b2, 45);\n" +
-"io.outputLine(\"bitset1\", bitset.test(b1, 0), bitset.test(b1, 31), bitset.test(b1, 64), bitset.test(b1, 65), bitset.countOnes(b1), bitset.firstSet(b1), bitset.firstClear(b1));\n" +
-"bitset.orInto(b1, b2);\n" +
-"cntOr := bitset.countOnes(b1);\n" +
-"bitset.andInto(b1, b2);\n" +
-"cntAnd := bitset.countOnes(b1);\n" +
-"eqAfterAnd := bitset.equals(b1, b2);\n" +
-"bitset.xorInto(b1, b2);\n" +
-"io.outputLine(\"bitsetOps\", cntOr, cntAnd, eqAfterAnd, bitset.countOnes(b1), bitset.firstSet(b1));\n" +
-"bitset.setAll(b1);\n" +
-"io.outputLine(\"bitsetAll\", bitset.countOnes(b1), bitset.firstClear(b1));\n" +
-"bitset.destroy(b1);\n" +
-"bitset.destroy(b2);\n" +
+"/* 4. ds/bitset */\n" +
+"mut b1 := bitset.create(65);\n" +
+"mut b2 := bitset.create(65);\n" +
+"_bs1 := mut b1.set(0);\n" +
+"_bs2 := mut b1.set(31);\n" +
+"_bs3 := mut b1.set(64);\n" +
+"_bs4 := mut b2.set(31);\n" +
+"_bs5 := mut b2.set(45);\n" +
+"io.outputLine(\"bitset1\", b1.test(0), b1.test(31), b1.test(64), b1.test(65), b1.countOnes(), b1.firstSet(), b1.firstClear());\n" +
+"mut b1.orInto(b2);\n" +
+"cntOr := b1.countOnes();\n" +
+"mut b1.andInto(b2);\n" +
+"cntAnd := b1.countOnes();\n" +
+"eqAfterAnd := b1.equals(b2);\n" +
+"mut b1.xorInto(b2);\n" +
+"io.outputLine(\"bitsetOps\", cntOr, cntAnd, eqAfterAnd, b1.countOnes(), b1.firstSet());\n" +
+"mut b1.setAll();\n" +
+"io.outputLine(\"bitsetAll\", b1.countOnes(), b1.firstClear());\n" +
 "\n" +
-"/* 5. extra/sparse */\n" +
-"ss := sparse.create(100);\n" +
-"si1 := sparse.insert(ss, 42);\n" +
-"si2 := sparse.insert(ss, 7);\n" +
-"siDup := sparse.insert(ss, 42);\n" +
-"si3 := sparse.insert(ss, 99);\n" +
-"sr1 := sparse.remove(ss, 42);\n" +
-"srDup := sparse.remove(ss, 42);\n" +
-"io.outputLine(\"sparse\", si1, si2, siDup, si3, sr1, srDup, sparse.has(ss, 42), sparse.has(ss, 7), sparse.has(ss, 99), sparse.count(ss), sparse.denseAt(ss, 0), sparse.denseAt(ss, 1));\n" +
-"sparse.clear(ss);\n" +
-"io.outputLine(\"sparseClear\", sparse.count(ss), sparse.has(ss, 99));\n" +
-"sparse.destroy(ss);\n";
+"/* 5. ds/sparse */\n" +
+"mut ss := sparse.create(100);\n" +
+"si1 := mut ss.insert(42);\n" +
+"si2 := mut ss.insert(7);\n" +
+"siDup := mut ss.insert(42);\n" +
+"si3 := mut ss.insert(99);\n" +
+"sr1 := mut ss.remove(42);\n" +
+"srDup := mut ss.remove(42);\n" +
+"io.outputLine(\"sparse\", si1, si2, siDup, si3, sr1, srDup, ss.has(42), ss.has(7), ss.has(99), ss.count(), ss.denseAt(0), ss.denseAt(1));\n" +
+"mut ss.clear();\n" +
+"io.outputLine(\"sparseClear\", ss.count(), ss.has(99));\n";
 
 expectedOut :=
 "ringInt false false false false true 20 40 30 90\n" +
@@ -179,29 +181,22 @@ if ccInfo.available {
     "bitset := import \"ds/bitset\";\n" +
     "sparse := import \"ds/sparse\";\n" +
     "\n" +
-    "r := ring.createInts(32);\n" +
-    "dq := deque.createInts(32);\n" +
-    "hp := heap.createMin(64);\n" +
-    "bs := bitset.create(128);\n" +
-    "ss := sparse.create(128);\n" +
-    "var i := 0;\n" +
-    "loop i < 5000 {\n" +
-    "    _ro := ring.pushInt(r, i);\n" +
-    "    _dp := deque.pushBackInt(dq, i);\n" +
-    "    if deque.intCount(dq) > 16 { _df := deque.popFrontInt(dq); }\n" +
-    "    _hp := hp.push((i * 37) % 1000);\n" +
-    "    if hp.count() > 32 { _hm := hp.pop(); }\n" +
-    "    _bt := bitset.toggle(bs, i % 128);\n" +
+    "mut r := ring.createRing<Int>(32);\n" +
+    "mut dq := deque.createDeque<Int>(32);\n" +
+    "mut hp := heap.createMin(64);\n" +
+    "mut bs := bitset.create(128);\n" +
+    "mut ss := sparse.create(128);\n" +
+    "loop 0..5000 as i {\n" +
+    "    _ro := mut r.push(i);\n" +
+    "    _dp := mut dq.pushBack(i);\n" +
+    "    if dq.length() > 16 { _df := mut dq.popFront(); }\n" +
+    "    _hp := mut hp.push((i * 37) % 1000);\n" +
+    "    if hp.count() > 32 { _hm := mut hp.pop(); }\n" +
+    "    _bt := mut bs.toggle(i % 128);\n" +
     "    id := i % 128;\n" +
-    "    if sparse.has(ss, id) { _sr := sparse.remove(ss, id); } else { _si := sparse.insert(ss, id); }\n" +
-    "    i += 1;\n" +
+    "    if ss.has(id) { _sr := mut ss.remove(id); } else { _si := mut ss.insert(id); }\n" +
     "}\n" +
-    "io.outputLine(\"stress\", ring.intCount(r), deque.intCount(dq), hp.count(), bitset.countOnes(bs), sparse.count(ss));\n" +
-    "ring.destroyInts(r);\n" +
-    "deque.destroyInts(dq);\n" +
-    "hp.destroy();\n" +
-    "bitset.destroy(bs);\n" +
-    "sparse.destroy(ss);\n";
+    "io.outputLine(\"stress\", r.length(), dq.length(), hp.count(), bs.countOnes(), ss.count());\n";
 
     stressPath := path.join(tmpDir, "stress.lts");
     ws := fs.writeText(stressPath, stressSrc);

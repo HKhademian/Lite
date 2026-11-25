@@ -52,16 +52,15 @@ io.outputLine(pt.x(), pt.y());
 
 ## Flat-Backed 2D Grids (`ds/grid`)
 
-[ds/grid](lite://module/ds/grid) stores dense 2D integer (`IntGrid`) and floating-point (`FloatGrid`) tilemaps, heightfields, and cellular automata in contiguous flat storage with bounds-checked reads/writes (`inIntBounds`, `getIntOr`, `setInt`), rectangle fills (`fillIntRect`), value counting (`countIntValue`), and bulk copies (`copyInts`):
+[ds/grid](lite://module/ds/grid) stores dense 2D `Grid<T>` (`IntGrid` and `FloatGrid`) tilemaps, heightfields, and cellular automata in contiguous flat storage with bounds-checked reads/writes (`inBounds`, `getOr`, `set`), rectangle fills (`fillRect`), value counting (`countValue`), and bulk copies (`copyFrom`):
 
 ```lite
 io := import "core/io";
 grid := import "ds/grid";
 
-g := grid.createInts(6, 4, 0);
-grid.fillIntRect(g, 1, 1, 3, 2, 1);
-io.outputLine(grid.getIntOr(g, 2, 2, -1), grid.countIntValue(g, 1));
-grid.destroyInts(g);
+mut g := grid.createGrid<Int>(6, 4, 0);
+mut g.fillRect(1, 1, 3, 2, 1);
+io.outputLine(g.getOr(2, 2, -1), g.countValue(1));
 ```
 
 Explore the module references: [math/scalar](lite://module/math/scalar), [math/random](lite://module/math/random), [math/vector](lite://module/math/vector), [math/matrix](lite://module/math/matrix), [math/geom](lite://module/math/geom), and [ds/grid](lite://module/ds/grid).

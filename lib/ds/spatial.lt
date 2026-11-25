@@ -72,10 +72,8 @@ pub SpatialGrid2D.insertRect := fn(g: mut Self, id: Int, bounds: geom.Rect): Uni
     ids: mut List<Int> = g.nodeIds;
     nexts: mut List<Int> = g.nodeNext;
 
-    var cy := minY;
-    loop cy <= maxY {
-        var cx := minX;
-        loop cx <= maxX {
+    loop minY..=maxY as cy {
+        loop minX..=maxX as cx {
             k := cellKey(cx, cy);
             prev := heads.get(k);
             prevHead := if prev.found { prev.value } else { -1 };
@@ -83,9 +81,7 @@ pub SpatialGrid2D.insertRect := fn(g: mut Self, id: Int, bounds: geom.Rect): Uni
             mut ids.pushBack(id);
             mut nexts.pushBack(prevHead);
             mut heads.set(k, idx);
-            cx += 1;
         }
-        cy += 1;
     }
 
     g.heads = heads;
@@ -111,10 +107,8 @@ pub SpatialGrid2D.queryRect := fn(g: Self, bounds: geom.Rect): List<Int> {
 
     out: mut List<Int> = [];
     seen: mut Set<Int>;
-    var cy := minY;
-    loop cy <= maxY {
-        var cx := minX;
-        loop cx <= maxX {
+    loop minY..=maxY as cy {
+        loop minX..=maxX as cx {
             headRes := g.heads.get(cellKey(cx, cy));
             if headRes.found {
                 var idx := headRes.value;
@@ -127,9 +121,7 @@ pub SpatialGrid2D.queryRect := fn(g: Self, bounds: geom.Rect): List<Int> {
                     idx = g.nodeNext[idx];
                 }
             }
-            cx += 1;
         }
-        cy += 1;
     }
     out
 };
@@ -138,7 +130,7 @@ pub SpatialGrid2D.queryRect := fn(g: Self, bounds: geom.Rect): List<Int> {
 pub SpatialGrid2D.queryCircle := fn(g: Self, c: geom.Circle): List<Int> {
     r := if c.radius < 0.0 { 0.0 } else { c.radius };
     d := r * 2.0;
-    g.queryRect(geom.rect(c.center.x - r, c.center.y - r, d, d))
+    g.queryRect(geom.rect(c.center.x() - r, c.center.y() - r, d, d))
 };
 
 /** Returns deduplicated entity IDs stored in the cell containing point `(x, y)`. */

@@ -1,887 +1,314 @@
-/** Bounded-capacity O(1) LRU caches (`ds/lru`) with strict memory ceilings across TS and C11. */
+/** Bounded-capacity generic O(1) LRU caches (`ds/lru`) with strict memory ceilings across TS and C11. */
 
-
-/** Opaque generational handle to a `String -> String` bounded LRU cache. */
-pub LruText := alias (handle: Int, gen: Int);
-
-/** Opaque generational handle to a `String -> Int` bounded LRU cache. */
-pub LruInt := alias (handle: Int, gen: Int);
-
-/** Opaque generational handle to an `Int -> Int` bounded LRU cache. */
-pub IntLru := alias (handle: Int, gen: Int);
+/** Supported cache key scalar types. */
+pub LruKey := alias Int | String;
 
 /** Cache occupancy and hit/miss/eviction counters. */
-pub LruStats := alias (count: Int, capacity: Int, hits: Int, misses: Int, evictions: Int);
+pub LruStats := record {
+    count: Int;
+    capacity: Int;
+    hits: Int;
+    misses: Int;
+    evictions: Int;
+}
 
-/* --- Shared doubly-linked node slab for LruText (String -> String) --- */
-var ttKey: mut List<String> = [];
-var ttVal: mut List<String> = [];
-var ttPrev: mut List<Int> = [];
-var ttNext: mut List<Int> = [];
-var ttAlive: mut List<Bool> = [];
-var ttFreeNext: mut List<Int> = [];
-var ttIndex: mut Map<String, Int>;
+/** Outcome of reading a value from an `Lru<K, V>`. */
+pub LruValue := enum<V: Type> {
+    Empty;
+    Some(V);
+}
 
-var ttBase: mut List<Int> = [];
-var ttCap: mut List<Int> = [];
-var ttCount: mut List<Int> = [];
-var ttHead: mut List<Int> = [];
-var ttTail: mut List<Int> = [];
-var ttFreeHead: mut List<Int> = [];
-var ttHits: mut List<Int> = [];
-var ttMisses: mut List<Int> = [];
-var ttEvictions: mut List<Int> = [];
-var ttGen: mut List<Int> = [];
-var ttCacheAlive: mut List<Bool> = [];
-var ttFreeCaches: mut List<Int> = [];
-
-/* --- Shared doubly-linked node slab for LruInt (String -> Int) --- */
-var tiKey: mut List<String> = [];
-var tiVal: mut List<Int> = [];
-var tiPrev: mut List<Int> = [];
-var tiNext: mut List<Int> = [];
-var tiAlive: mut List<Bool> = [];
-var tiFreeNext: mut List<Int> = [];
-var tiIndex: mut Map<String, Int>;
-
-var tiBase: mut List<Int> = [];
-var tiCap: mut List<Int> = [];
-var tiCount: mut List<Int> = [];
-var tiHead: mut List<Int> = [];
-var tiTail: mut List<Int> = [];
-var tiFreeHead: mut List<Int> = [];
-var tiHits: mut List<Int> = [];
-var tiMisses: mut List<Int> = [];
-var tiEvictions: mut List<Int> = [];
-var tiGen: mut List<Int> = [];
-var tiCacheAlive: mut List<Bool> = [];
-var tiFreeCaches: mut List<Int> = [];
-
-/* --- Shared doubly-linked node slab for IntLru (Int -> Int) --- */
-var iiKey: mut List<Int> = [];
-var iiVal: mut List<Int> = [];
-var iiPrev: mut List<Int> = [];
-var iiNext: mut List<Int> = [];
-var iiAlive: mut List<Bool> = [];
-var iiFreeNext: mut List<Int> = [];
-var iiIndex: mut Map<String, Int>;
-
-var iiBase: mut List<Int> = [];
-var iiCap: mut List<Int> = [];
-var iiCount: mut List<Int> = [];
-var iiHead: mut List<Int> = [];
-var iiTail: mut List<Int> = [];
-var iiFreeHead: mut List<Int> = [];
-var iiHits: mut List<Int> = [];
-var iiMisses: mut List<Int> = [];
-var iiEvictions: mut List<Int> = [];
-var iiGen: mut List<Int> = [];
-var iiCacheAlive: mut List<Bool> = [];
-var iiFreeCaches: mut List<Int> = [];
-
-makeTextKey := fn(cid: Int, key: String): String {
-    cid.toText() + ":" + key
-};
-
-makeIntKey := fn(cid: Int, key: Int): String {
-    cid.toText() + ":" + key.toText()
-};
-
-validTextCache := fn(cache: LruText): Bool {
-    cid := cache.handle;
-    cid >= 0 and cid < ttCacheAlive.length() and ttCacheAlive[cid] and ttGen[cid] == cache.gen
-};
-
-validIntCache := fn(cache: LruInt): Bool {
-    cid := cache.handle;
-    cid >= 0 and cid < tiCacheAlive.length() and tiCacheAlive[cid] and tiGen[cid] == cache.gen
-};
-
-validIntKeyCache := fn(cache: IntLru): Bool {
-    cid := cache.handle;
-    cid >= 0 and cid < iiCacheAlive.length() and iiCacheAlive[cid] and iiGen[cid] == cache.gen
-};
-
-/* ============================================================================
- * LruText (String -> String)
- * ============================================================================ */
-
-ttUnlink := fn(cid: Int, localIdx: Int): Unit {
-    base := ttBase[cid];
-    g := base + localIdx;
-    p := ttPrev[g];
-    n := ttNext[g];
-    if p >= 0 { mut ttNext.setAt(base + p, n); } else { mut ttHead.setAt(cid, n); }
-    if n >= 0 { mut ttPrev.setAt(base + n, p); } else { mut ttTail.setAt(cid, p); }
-    (mut ttPrev).setAt(g, -1);
-    mut ttNext.setAt(g, -1);
-};
-
-ttPushFront := fn(cid: Int, localIdx: Int): Unit {
-    base := ttBase[cid];
-    g := base + localIdx;
-    oldHead := ttHead[cid];
-    mut ttPrev.setAt(g, -1);
-    mut ttNext.setAt(g, oldHead);
-    if oldHead >= 0 {
-        mut ttPrev.setAt(base + oldHead, localIdx);
-    } else {
-        mut ttTail.setAt(cid, localIdx);
+/** True when `item` holds `.Some(...)`. */
+pub LruValue.isSome := fn<V: Type>(item: Self<V>): Bool {
+    match item {
+        .Empty { false }
+        .Some { true }
     }
-    (mut ttHead).setAt(cid, localIdx);
 };
 
-ttPurgeAll := fn(cid: Int): Unit {
-    base := ttBase[cid];
-    cap := ttCap[cid];
-    var i := 0;
-    loop i < cap {
-        g := base + i;
-        if ttAlive[g] {
-            _rm := mut ttIndex.remove(makeTextKey(cid, ttKey[g]));
-            mut ttAlive.setAt(g, false);
-            mut ttKey.setAt(g, "");
-            mut ttVal.setAt(g, "");
-        }
-        (mut ttPrev).setAt(g, -1);
-        mut ttNext.setAt(g, -1);
-        mut ttFreeNext.setAt(g, if i + 1 < cap { i + 1 } else { -1 });
-        i += 1;
+/** Returns the cached value when `.Some(v)`, or `fallback` when `.Empty`. */
+pub LruValue.unwrapOr := fn<V: Type>(item: Self<V>, fallback: V): V {
+    match item {
+        .Empty { fallback }
+        .Some(v) { v }
     }
-    (mut ttCount).setAt(cid, 0);
-    mut ttHead.setAt(cid, -1);
-    mut ttTail.setAt(cid, -1);
-    mut ttFreeHead.setAt(cid, if cap > 0 { 0 } else { -1 });
-    mut ttHits.setAt(cid, 0);
-    mut ttMisses.setAt(cid, 0);
-    mut ttEvictions.setAt(cid, 0);
 };
 
-/** Creates a bounded `String -> String` LRU cache with capacity `max(1, capacity)`. */
-pub createText := fn(capacity: Int): LruText {
+/** Outcome of querying newest or oldest key from an `Lru<K, V>`. */
+pub LruKeyOpt := enum<K: Type<LruKey>> {
+    Empty;
+    Some(K);
+}
+
+/** True when `item` holds a key `.Some(...)`. */
+pub LruKeyOpt.isSome := fn<K: Type<LruKey>>(item: Self<K>): Bool {
+    match item {
+        .Empty { false }
+        .Some { true }
+    }
+};
+
+/** Returns the key when `.Some(k)`, or `fallback` when `.Empty`. */
+pub LruKeyOpt.unwrapOr := fn<K: Type<LruKey>>(item: Self<K>, fallback: K): K {
+    match item {
+        .Empty { fallback }
+        .Some(k) { k }
+    }
+};
+
+/** Eviction report returned by `Lru.put` and `Lru.evictOldest`. */
+pub LruEviction := record<K: Type<LruKey>, V: Type> {
+    evicted: Bool;
+    key: K;
+    value: V;
+}
+
+/** Generic bounded-capacity O(1) LRU cache mapping `K` keys to `V` values. */
+pub Lru := record<K: Type<LruKey>, V: Type> {
+    keys: List<K>;
+    vals: List<V>;
+    prev: List<Int>;
+    next: List<Int>;
+    freeSlots: List<Int>;
+    index: Map<K, Int>;
+    cap: Int;
+    head: Int;
+    tail: Int;
+    hits: Int;
+    misses: Int;
+    evictions: Int;
+}
+
+/** Bounded-capacity `String -> String` LRU cache alias. */
+pub LruText := alias Lru<String, String>;
+
+/** Bounded-capacity `String -> Int` LRU cache alias. */
+pub LruInt := alias Lru<String, Int>;
+
+/** Bounded-capacity `Int -> Int` LRU cache alias. */
+pub IntLru := alias Lru<Int, Int>;
+
+lruUnlink := fn<K: Type<LruKey>, V: Type>(c: mut Lru<K, V>, idx: Int): Unit {
+    p := c.prev[idx];
+    n := c.next[idx];
+    pr: mut List<Int> = c.prev;
+    nx: mut List<Int> = c.next;
+    if p >= 0 { mut nx.setAt(p, n); } else { c.head = n; }
+    if n >= 0 { mut pr.setAt(n, p); } else { c.tail = p; }
+    mut pr.setAt(idx, -1);
+    mut nx.setAt(idx, -1);
+    c.prev = pr;
+    c.next = nx;
+};
+
+lruPushFront := fn<K: Type<LruKey>, V: Type>(c: mut Lru<K, V>, idx: Int): Unit {
+    oldHead := c.head;
+    pr: mut List<Int> = c.prev;
+    nx: mut List<Int> = c.next;
+    mut pr.setAt(idx, -1);
+    mut nx.setAt(idx, oldHead);
+    if oldHead >= 0 { mut pr.setAt(oldHead, idx); } else { c.tail = idx; }
+    c.prev = pr;
+    c.next = nx;
+    c.head = idx;
+};
+
+/** Creates a bounded O(1) `Lru<K, V>` cache holding at most `capacity` entries (`>= 1`). */
+pub create := fn<K: Type<LruKey>, V: Type>(capacity: Int): Lru<K, V> {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := ttFreeCaches.length() - 1;
-    loop fi >= 0 {
-        cid := ttFreeCaches[fi];
-        if ttCap[cid] >= cap {
-            last := ttFreeCaches.length() - 1;
-            if fi =!= last { mut ttFreeCaches.setAt(fi, ttFreeCaches[last]); }
-            _drop := mut ttFreeCaches.popBack();
-            mut ttCap.setAt(cid, cap);
-            ttPurgeAll(cid);
-            mut ttCacheAlive.setAt(cid, true);
-            return (handle = cid, gen = ttGen[cid]);
-        }
-        fi -= 1;
+    ks: mut List<K> = [];
+    vs: mut List<V> = [];
+    pr: mut List<Int> = [];
+    nx: mut List<Int> = [];
+    fl: mut List<Int> = [];
+    zk: K;
+    zv: V;
+    loop 0..cap as i {
+        mut ks.pushBack(zk);
+        mut vs.pushBack(zv);
+        mut pr.pushBack(-1);
+        mut nx.pushBack(-1);
+        mut fl.pushBack(cap - 1 - i);
     }
-
-    base := ttKey.length();
-    var i := 0;
-    loop i < cap {
-        mut ttKey.pushBack("");
-        mut ttVal.pushBack("");
-        mut ttPrev.pushBack(-1);
-        mut ttNext.pushBack(-1);
-        mut ttAlive.pushBack(false);
-        mut ttFreeNext.pushBack(if i + 1 < cap { i + 1 } else { -1 });
-        i += 1;
+    idxMap: Map<K, Int>;
+    Lru<K, V> {
+    keys = ks, vals = vs, prev = pr, next = nx, freeSlots = fl, index = idxMap,
+    cap = cap, head = -1, tail = -1, hits = 0, misses = 0, evictions = 0
     }
-    cid := ttBase.length();
-    mut ttBase.pushBack(base);
-    mut ttCap.pushBack(cap);
-    mut ttCount.pushBack(0);
-    mut ttHead.pushBack(-1);
-    mut ttTail.pushBack(-1);
-    mut ttFreeHead.pushBack(0);
-    mut ttHits.pushBack(0);
-    mut ttMisses.pushBack(0);
-    mut ttEvictions.pushBack(0);
-    mut ttGen.pushBack(1);
-    mut ttCacheAlive.pushBack(true);
-    (handle = cid, gen = 1)
 };
 
-/** Inserts or updates `key -> value` in O(1), evicting the least-recently-used entry if full. */
-pub putText := fn(cache: LruText, key: String, value: String): (evicted: Bool, evictedKey: String, evictedValue: String) {
-    if not validTextCache(cache) {
-        return (evicted = false, evictedKey = "", evictedValue = "");
-    }
-    cid := cache.handle;
-    base := ttBase[cid];
-    mk := makeTextKey(cid, key);
-    existing := ttIndex.get(mk);
+/** Inserts or updates `key -> value`, moving it to most-recently-used and returning any evicted entry. */
+pub Lru.put := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K, value: V): LruEviction<K, V> {
+    existing := c.index.get(key);
     if existing.found {
-        localIdx := existing.value;
-        mut ttVal.setAt(base + localIdx, value);
-        if ttHead[cid] =!= localIdx {
-            ttUnlink(cid, localIdx);
-            ttPushFront(cid, localIdx);
-        }
-        return (evicted = false, evictedKey = "", evictedValue = "");
+        idx := existing.value;
+        vs: mut List<V> = c.vals;
+        mut vs.setAt(idx, value);
+        c.vals = vs;
+        lruUnlink<K, V>(mut c, idx);
+        lruPushFront<K, V>(mut c, idx);
+        return LruEviction<K, V> {};
     }
 
-    var evicted := false;
-    var evKey := "";
-    var evVal := "";
-    var slot := ttFreeHead[cid];
-    if slot >= 0 {
-        mut ttFreeHead.setAt(cid, ttFreeNext[base + slot]);
-        mut ttFreeNext.setAt(base + slot, -1);
-        mut ttCount.setAt(cid, ttCount[cid] + 1);
+    var ev := LruEviction<K, V> {};
+    var slot := -1;
+    if c.freeSlots.length() > 0 {
+        fl: mut List<Int> = c.freeSlots;
+        slot = mut fl.popBack();
+        c.freeSlots = fl;
     } else {
-        /* Evict LRU tail and reuse its slot in O(1). */
-        slot = ttTail[cid];
-        gOld := base + slot;
-        evicted = true;
-        evKey = ttKey[gOld];
-        evVal = ttVal[gOld];
-        _rm := mut ttIndex.remove(makeTextKey(cid, evKey));
-        ttUnlink(cid, slot);
-        mut ttEvictions.setAt(cid, ttEvictions[cid] + 1);
+        victim := c.tail;
+        ev = LruEviction<K, V> { evicted = true, key = c.keys[victim], value = c.vals[victim] };
+        mp: mut Map<K, Int> = c.index;
+        _rm := mut mp.remove(c.keys[victim]);
+        c.index = mp;
+        lruUnlink<K, V>(mut c, victim);
+        c.evictions = c.evictions + 1;
+        slot = victim;
     }
 
-    g := base + slot;
-    mut ttKey.setAt(g, key);
-    mut ttVal.setAt(g, value);
-    mut ttAlive.setAt(g, true);
-    ttPushFront(cid, slot);
-    mut ttIndex.set(mk, slot);
-    (evicted = evicted, evictedKey = evKey, evictedValue = evVal)
+    ks: mut List<K> = c.keys;
+    vs: mut List<V> = c.vals;
+    mp: mut Map<K, Int> = c.index;
+    mut ks.setAt(slot, key);
+    mut vs.setAt(slot, value);
+    mut mp.set(key, slot);
+    c.keys = ks;
+    c.vals = vs;
+    c.index = mp;
+    lruPushFront<K, V>(mut c, slot);
+    ev
 };
 
-/** Looks up `key` in O(1), promoting it to most-recently-used on hit and updating hit/miss stats. */
-pub getText := fn(cache: LruText, key: String): (found: Bool, value: String) {
-    if not validTextCache(cache) { return (found = false, value = ""); }
-    cid := cache.handle;
-    res := ttIndex.get(makeTextKey(cid, key));
+/** Looks up `key` in O(1), updating hit/miss counters and promoting to most-recently-used on hit. */
+pub Lru.get := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K): LruValue<V> {
+    res := c.index.get(key);
     if not res.found {
-        mut ttMisses.setAt(cid, ttMisses[cid] + 1);
-        return (found = false, value = "");
+        c.misses = c.misses + 1;
+        return .Empty;
     }
-    localIdx := res.value;
-    mut ttHits.setAt(cid, ttHits[cid] + 1);
-    if ttHead[cid] =!= localIdx {
-        ttUnlink(cid, localIdx);
-        ttPushFront(cid, localIdx);
-    }
-    (found = true, value = ttVal[ttBase[cid] + localIdx])
+    c.hits = c.hits + 1;
+    idx := res.value;
+    lruUnlink<K, V>(mut c, idx);
+    lruPushFront<K, V>(mut c, idx);
+    .Some(c.vals[idx])
 };
 
-/** Looks up `key` in O(1) without changing recency order or hit/miss counters. */
-pub peekText := fn(cache: LruText, key: String): (found: Bool, value: String) {
-    if not validTextCache(cache) { return (found = false, value = ""); }
-    cid := cache.handle;
-    res := ttIndex.get(makeTextKey(cid, key));
-    if not res.found { return (found = false, value = ""); }
-    (found = true, value = ttVal[ttBase[cid] + res.value])
+/** Reads `key` in O(1) without changing recency order or hit/miss counters. */
+pub Lru.peek := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>, key: K): LruValue<V> {
+    res := c.index.get(key);
+    if not res.found { .Empty } else { .Some(c.vals[res.value]) }
 };
 
-/** True when `key` is currently cached in `cache`. */
-pub hasText := fn(cache: LruText, key: String): Bool {
-    if not validTextCache(cache) { return false; }
-    ttIndex.has(makeTextKey(cache.handle, key))
+/** True when `key` is currently cached. */
+pub Lru.has := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>, key: K): Bool {
+    c.index.has(key)
 };
 
-/** Removes `key` from `cache` in O(1); returns `true` if it was present. */
-pub removeText := fn(cache: LruText, key: String): Bool {
-    if not validTextCache(cache) { return false; }
-    cid := cache.handle;
-    mk := makeTextKey(cid, key);
-    res := ttIndex.get(mk);
+/** Removes `key` from `c` in O(1); returns `true` if it was present. */
+pub Lru.remove := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K): Bool {
+    res := c.index.get(key);
     if not res.found { return false; }
-    localIdx := res.value;
-    g := ttBase[cid] + localIdx;
-    _rm := mut ttIndex.remove(mk);
-    ttUnlink(cid, localIdx);
-    mut ttAlive.setAt(g, false);
-    mut ttKey.setAt(g, "");
-    mut ttVal.setAt(g, "");
-    mut ttFreeNext.setAt(g, ttFreeHead[cid]);
-    mut ttFreeHead.setAt(cid, localIdx);
-    mut ttCount.setAt(cid, ttCount[cid] - 1);
+    idx := res.value;
+    mp: mut Map<K, Int> = c.index;
+    _rm := mut mp.remove(key);
+    c.index = mp;
+    lruUnlink<K, V>(mut c, idx);
+    zk: K;
+    zv: V;
+    ks: mut List<K> = c.keys;
+    vs: mut List<V> = c.vals;
+    fl: mut List<Int> = c.freeSlots;
+    mut ks.setAt(idx, zk);
+    mut vs.setAt(idx, zv);
+    mut fl.pushBack(idx);
+    c.keys = ks;
+    c.vals = vs;
+    c.freeSlots = fl;
     true
 };
 
-/** Explicitly evicts the least-recently-used entry in O(1). */
-pub evictOldestText := fn(cache: LruText): (evicted: Bool, key: String, value: String) {
-    if not validTextCache(cache) { return (evicted = false, key = "", value = ""); }
-    cid := cache.handle;
-    tail := ttTail[cid];
-    if tail < 0 { return (evicted = false, key = "", value = ""); }
-    g := ttBase[cid] + tail;
-    k := ttKey[g];
-    v := ttVal[g];
-    _rm := mut ttIndex.remove(makeTextKey(cid, k));
-    ttUnlink(cid, tail);
-    mut ttAlive.setAt(g, false);
-    mut ttKey.setAt(g, "");
-    mut ttVal.setAt(g, "");
-    mut ttFreeNext.setAt(g, ttFreeHead[cid]);
-    mut ttFreeHead.setAt(cid, tail);
-    mut ttCount.setAt(cid, ttCount[cid] - 1);
-    mut ttEvictions.setAt(cid, ttEvictions[cid] + 1);
-    (evicted = true, key = k, value = v)
+/** Evicts and returns the least-recently-used entry, or `evicted = false` when empty. */
+pub Lru.evictOldest := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>): LruEviction<K, V> {
+    if c.tail < 0 { return LruEviction<K, V> {}; }
+    victim := c.tail;
+    ev := LruEviction<K, V> { evicted = true, key = c.keys[victim], value = c.vals[victim] };
+    mp: mut Map<K, Int> = c.index;
+    _rm := mut mp.remove(c.keys[victim]);
+    c.index = mp;
+    lruUnlink<K, V>(mut c, victim);
+    zk: K;
+    zv: V;
+    ks: mut List<K> = c.keys;
+    vs: mut List<V> = c.vals;
+    fl: mut List<Int> = c.freeSlots;
+    mut ks.setAt(victim, zk);
+    mut vs.setAt(victim, zv);
+    mut fl.pushBack(victim);
+    c.keys = ks;
+    c.vals = vs;
+    c.freeSlots = fl;
+    c.evictions = c.evictions + 1;
+    ev
 };
 
-/** Returns the most-recently-used key in `cache`, if non-empty. */
-pub newestTextKey := fn(cache: LruText): (found: Bool, key: String) {
-    if not validTextCache(cache) { return (found = false, key = ""); }
-    cid := cache.handle;
-    h := ttHead[cid];
-    if h < 0 { return (found = false, key = ""); }
-    (found = true, key = ttKey[ttBase[cid] + h])
+/** Returns the most-recently-used key, or `.Empty` if empty. */
+pub Lru.newestKey := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): LruKeyOpt<K> {
+    if c.head < 0 { .Empty } else { .Some(c.keys[c.head]) }
 };
 
-/** Returns the least-recently-used key in `cache`, if non-empty. */
-pub oldestTextKey := fn(cache: LruText): (found: Bool, key: String) {
-    if not validTextCache(cache) { return (found = false, key = ""); }
-    cid := cache.handle;
-    t := ttTail[cid];
-    if t < 0 { return (found = false, key = ""); }
-    (found = true, key = ttKey[ttBase[cid] + t])
+/** Returns the least-recently-used key, or `.Empty` if empty. */
+pub Lru.oldestKey := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): LruKeyOpt<K> {
+    if c.tail < 0 { .Empty } else { .Some(c.keys[c.tail]) }
 };
 
-/** Returns the current number of cached entries. */
-pub textCount := fn(cache: LruText): Int {
-    if not validTextCache(cache) { return 0; }
-    ttCount[cache.handle]
+/** Number of entries currently stored in `c`. */
+pub Lru.count := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): Int {
+    c.index.size()
 };
 
-/** Returns the maximum capacity of `cache`. */
-pub textCapacity := fn(cache: LruText): Int {
-    if not validTextCache(cache) { return 0; }
-    ttCap[cache.handle]
+/** Maximum entry capacity of `c`. */
+pub Lru.capacity := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): Int {
+    c.cap
 };
 
-/** Returns occupancy and hit/miss/eviction counters for `cache`. */
-pub textStats := fn(cache: LruText): LruStats {
-    if not validTextCache(cache) { return (count = 0, capacity = 0, hits = 0, misses = 0, evictions = 0); }
-    cid := cache.handle;
-    (count = ttCount[cid], capacity = ttCap[cid], hits = ttHits[cid], misses = ttMisses[cid], evictions = ttEvictions[cid])
-};
-
-/** Clears all entries and resets statistics in `cache`. */
-pub clearText := fn(cache: LruText): Unit {
-    if not validTextCache(cache) { return; }
-    ttPurgeAll(cache.handle);
-};
-
-/** Destroys `cache`, freeing its map keys and recycling its handle slot. */
-pub destroyText := fn(cache: LruText): Unit {
-    if not validTextCache(cache) { return; }
-    cid := cache.handle;
-    ttPurgeAll(cid);
-    mut ttCacheAlive.setAt(cid, false);
-    mut ttGen.setAt(cid, ttGen[cid] + 1);
-    mut ttFreeCaches.pushBack(cid);
-};
-
-/* ============================================================================
- * LruInt (String -> Int)
- * ============================================================================ */
-
-tiUnlink := fn(cid: Int, localIdx: Int): Unit {
-    base := tiBase[cid];
-    g := base + localIdx;
-    p := tiPrev[g];
-    n := tiNext[g];
-    if p >= 0 { mut tiNext.setAt(base + p, n); } else { mut tiHead.setAt(cid, n); }
-    if n >= 0 { mut tiPrev.setAt(base + n, p); } else { mut tiTail.setAt(cid, p); }
-    (mut tiPrev).setAt(g, -1);
-    mut tiNext.setAt(g, -1);
-};
-
-tiPushFront := fn(cid: Int, localIdx: Int): Unit {
-    base := tiBase[cid];
-    g := base + localIdx;
-    oldHead := tiHead[cid];
-    mut tiPrev.setAt(g, -1);
-    mut tiNext.setAt(g, oldHead);
-    if oldHead >= 0 {
-        mut tiPrev.setAt(base + oldHead, localIdx);
-    } else {
-        mut tiTail.setAt(cid, localIdx);
+/** Returns an `LruStats` snapshot for `c`. */
+pub Lru.stats := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): LruStats {
+    LruStats {
+    count = c.index.size(),
+    capacity = c.cap,
+    hits = c.hits,
+    misses = c.misses,
+    evictions = c.evictions
     }
-    (mut tiHead).setAt(cid, localIdx);
 };
 
-tiPurgeAll := fn(cid: Int): Unit {
-    base := tiBase[cid];
-    cap := tiCap[cid];
-    var i := 0;
-    loop i < cap {
-        g := base + i;
-        if tiAlive[g] {
-            _rm := mut tiIndex.remove(makeTextKey(cid, tiKey[g]));
-            mut tiAlive.setAt(g, false);
-            mut tiKey.setAt(g, "");
-            mut tiVal.setAt(g, 0);
-        }
-        (mut tiPrev).setAt(g, -1);
-        mut tiNext.setAt(g, -1);
-        mut tiFreeNext.setAt(g, if i + 1 < cap { i + 1 } else { -1 });
-        i += 1;
+/** Clears all entries and resets statistics counters on `c`. */
+pub Lru.clear := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>): Unit {
+    zk: K;
+    zv: V;
+    ks: mut List<K> = c.keys;
+    vs: mut List<V> = c.vals;
+    pr: mut List<Int> = c.prev;
+    nx: mut List<Int> = c.next;
+    fl: mut List<Int> = [];
+    loop 0..c.cap as i {
+        mut ks.setAt(i, zk);
+        mut vs.setAt(i, zv);
+        mut pr.setAt(i, -1);
+        mut nx.setAt(i, -1);
+        mut fl.pushBack(c.cap - 1 - i);
     }
-    (mut tiCount).setAt(cid, 0);
-    mut tiHead.setAt(cid, -1);
-    mut tiTail.setAt(cid, -1);
-    mut tiFreeHead.setAt(cid, if cap > 0 { 0 } else { -1 });
-    mut tiHits.setAt(cid, 0);
-    mut tiMisses.setAt(cid, 0);
-    mut tiEvictions.setAt(cid, 0);
-};
-
-/** Creates a bounded `String -> Int` LRU cache with capacity `max(1, capacity)`. */
-pub createInt := fn(capacity: Int): LruInt {
-    cap := if capacity < 1 { 1 } else { capacity };
-    var fi := tiFreeCaches.length() - 1;
-    loop fi >= 0 {
-        cid := tiFreeCaches[fi];
-        if tiCap[cid] >= cap {
-            last := tiFreeCaches.length() - 1;
-            if fi =!= last { mut tiFreeCaches.setAt(fi, tiFreeCaches[last]); }
-            _drop := mut tiFreeCaches.popBack();
-            mut tiCap.setAt(cid, cap);
-            tiPurgeAll(cid);
-            mut tiCacheAlive.setAt(cid, true);
-            return (handle = cid, gen = tiGen[cid]);
-        }
-        fi -= 1;
-    }
-
-    base := tiKey.length();
-    var i := 0;
-    loop i < cap {
-        mut tiKey.pushBack("");
-        mut tiVal.pushBack(0);
-        mut tiPrev.pushBack(-1);
-        mut tiNext.pushBack(-1);
-        mut tiAlive.pushBack(false);
-        mut tiFreeNext.pushBack(if i + 1 < cap { i + 1 } else { -1 });
-        i += 1;
-    }
-    cid := tiBase.length();
-    mut tiBase.pushBack(base);
-    mut tiCap.pushBack(cap);
-    mut tiCount.pushBack(0);
-    mut tiHead.pushBack(-1);
-    mut tiTail.pushBack(-1);
-    mut tiFreeHead.pushBack(0);
-    mut tiHits.pushBack(0);
-    mut tiMisses.pushBack(0);
-    mut tiEvictions.pushBack(0);
-    mut tiGen.pushBack(1);
-    mut tiCacheAlive.pushBack(true);
-    (handle = cid, gen = 1)
-};
-
-/** Inserts or updates `key -> value` in O(1), evicting the least-recently-used entry if full. */
-pub putInt := fn(cache: LruInt, key: String, value: Int): (evicted: Bool, evictedKey: String, evictedValue: Int) {
-    if not validIntCache(cache) {
-        return (evicted = false, evictedKey = "", evictedValue = 0);
-    }
-    cid := cache.handle;
-    base := tiBase[cid];
-    mk := makeTextKey(cid, key);
-    existing := tiIndex.get(mk);
-    if existing.found {
-        localIdx := existing.value;
-        mut tiVal.setAt(base + localIdx, value);
-        if tiHead[cid] =!= localIdx {
-            tiUnlink(cid, localIdx);
-            tiPushFront(cid, localIdx);
-        }
-        return (evicted = false, evictedKey = "", evictedValue = 0);
-    }
-
-    var evicted := false;
-    var evKey := "";
-    var evVal := 0;
-    var slot := tiFreeHead[cid];
-    if slot >= 0 {
-        mut tiFreeHead.setAt(cid, tiFreeNext[base + slot]);
-        mut tiFreeNext.setAt(base + slot, -1);
-        mut tiCount.setAt(cid, tiCount[cid] + 1);
-    } else {
-        slot = tiTail[cid];
-        gOld := base + slot;
-        evicted = true;
-        evKey = tiKey[gOld];
-        evVal = tiVal[gOld];
-        _rm := mut tiIndex.remove(makeTextKey(cid, evKey));
-        tiUnlink(cid, slot);
-        mut tiEvictions.setAt(cid, tiEvictions[cid] + 1);
-    }
-
-    g := base + slot;
-    mut tiKey.setAt(g, key);
-    mut tiVal.setAt(g, value);
-    mut tiAlive.setAt(g, true);
-    tiPushFront(cid, slot);
-    mut tiIndex.set(mk, slot);
-    (evicted = evicted, evictedKey = evKey, evictedValue = evVal)
-};
-
-/** Looks up `key` in O(1), promoting it to MRU on hit. */
-pub getInt := fn(cache: LruInt, key: String): (found: Bool, value: Int) {
-    if not validIntCache(cache) { return (found = false, value = 0); }
-    cid := cache.handle;
-    res := tiIndex.get(makeTextKey(cid, key));
-    if not res.found {
-        mut tiMisses.setAt(cid, tiMisses[cid] + 1);
-        return (found = false, value = 0);
-    }
-    localIdx := res.value;
-    mut tiHits.setAt(cid, tiHits[cid] + 1);
-    if tiHead[cid] =!= localIdx {
-        tiUnlink(cid, localIdx);
-        tiPushFront(cid, localIdx);
-    }
-    (found = true, value = tiVal[tiBase[cid] + localIdx])
-};
-
-/** Looks up `key` in O(1) without changing recency order or stats. */
-pub peekInt := fn(cache: LruInt, key: String): (found: Bool, value: Int) {
-    if not validIntCache(cache) { return (found = false, value = 0); }
-    cid := cache.handle;
-    res := tiIndex.get(makeTextKey(cid, key));
-    if not res.found { return (found = false, value = 0); }
-    (found = true, value = tiVal[tiBase[cid] + res.value])
-};
-
-/** True when `key` is currently cached in `cache`. */
-pub hasInt := fn(cache: LruInt, key: String): Bool {
-    if not validIntCache(cache) { return false; }
-    tiIndex.has(makeTextKey(cache.handle, key))
-};
-
-/** Removes `key` from `cache` in O(1). */
-pub removeInt := fn(cache: LruInt, key: String): Bool {
-    if not validIntCache(cache) { return false; }
-    cid := cache.handle;
-    mk := makeTextKey(cid, key);
-    res := tiIndex.get(mk);
-    if not res.found { return false; }
-    localIdx := res.value;
-    g := tiBase[cid] + localIdx;
-    _rm := mut tiIndex.remove(mk);
-    tiUnlink(cid, localIdx);
-    mut tiAlive.setAt(g, false);
-    mut tiKey.setAt(g, "");
-    mut tiVal.setAt(g, 0);
-    mut tiFreeNext.setAt(g, tiFreeHead[cid]);
-    mut tiFreeHead.setAt(cid, localIdx);
-    mut tiCount.setAt(cid, tiCount[cid] - 1);
-    true
-};
-
-/** Explicitly evicts the least-recently-used entry in O(1). */
-pub evictOldestInt := fn(cache: LruInt): (evicted: Bool, key: String, value: Int) {
-    if not validIntCache(cache) { return (evicted = false, key = "", value = 0); }
-    cid := cache.handle;
-    tail := tiTail[cid];
-    if tail < 0 { return (evicted = false, key = "", value = 0); }
-    g := tiBase[cid] + tail;
-    k := tiKey[g];
-    v := tiVal[g];
-    _rm := mut tiIndex.remove(makeTextKey(cid, k));
-    tiUnlink(cid, tail);
-    mut tiAlive.setAt(g, false);
-    mut tiKey.setAt(g, "");
-    mut tiVal.setAt(g, 0);
-    mut tiFreeNext.setAt(g, tiFreeHead[cid]);
-    mut tiFreeHead.setAt(cid, tail);
-    mut tiCount.setAt(cid, tiCount[cid] - 1);
-    mut tiEvictions.setAt(cid, tiEvictions[cid] + 1);
-    (evicted = true, key = k, value = v)
-};
-
-/** Returns the current number of cached entries. */
-pub intCount := fn(cache: LruInt): Int {
-    if not validIntCache(cache) { return 0; }
-    tiCount[cache.handle]
-};
-
-/** Returns the maximum capacity of `cache`. */
-pub intCapacity := fn(cache: LruInt): Int {
-    if not validIntCache(cache) { return 0; }
-    tiCap[cache.handle]
-};
-
-/** Returns occupancy and hit/miss/eviction counters for `cache`. */
-pub intStats := fn(cache: LruInt): LruStats {
-    if not validIntCache(cache) { return (count = 0, capacity = 0, hits = 0, misses = 0, evictions = 0); }
-    cid := cache.handle;
-    (count = tiCount[cid], capacity = tiCap[cid], hits = tiHits[cid], misses = tiMisses[cid], evictions = tiEvictions[cid])
-};
-
-/** Clears all entries and resets statistics in `cache`. */
-pub clearInt := fn(cache: LruInt): Unit {
-    if not validIntCache(cache) { return; }
-    tiPurgeAll(cache.handle);
-};
-
-/** Destroys `cache` and recycles its handle slot. */
-pub destroyInt := fn(cache: LruInt): Unit {
-    if not validIntCache(cache) { return; }
-    cid := cache.handle;
-    tiPurgeAll(cid);
-    mut tiCacheAlive.setAt(cid, false);
-    mut tiGen.setAt(cid, tiGen[cid] + 1);
-    mut tiFreeCaches.pushBack(cid);
-};
-
-/* ============================================================================
- * IntLru (Int -> Int)
- * ============================================================================ */
-
-iiUnlink := fn(cid: Int, localIdx: Int): Unit {
-    base := iiBase[cid];
-    g := base + localIdx;
-    p := iiPrev[g];
-    n := iiNext[g];
-    if p >= 0 { mut iiNext.setAt(base + p, n); } else { mut iiHead.setAt(cid, n); }
-    if n >= 0 { mut iiPrev.setAt(base + n, p); } else { mut iiTail.setAt(cid, p); }
-    (mut iiPrev).setAt(g, -1);
-    mut iiNext.setAt(g, -1);
-};
-
-iiPushFront := fn(cid: Int, localIdx: Int): Unit {
-    base := iiBase[cid];
-    g := base + localIdx;
-    oldHead := iiHead[cid];
-    mut iiPrev.setAt(g, -1);
-    mut iiNext.setAt(g, oldHead);
-    if oldHead >= 0 {
-        mut iiPrev.setAt(base + oldHead, localIdx);
-    } else {
-        mut iiTail.setAt(cid, localIdx);
-    }
-    (mut iiHead).setAt(cid, localIdx);
-};
-
-iiPurgeAll := fn(cid: Int): Unit {
-    base := iiBase[cid];
-    cap := iiCap[cid];
-    var i := 0;
-    loop i < cap {
-        g := base + i;
-        if iiAlive[g] {
-            _rm := mut iiIndex.remove(makeIntKey(cid, iiKey[g]));
-            mut iiAlive.setAt(g, false);
-            mut iiKey.setAt(g, 0);
-            mut iiVal.setAt(g, 0);
-        }
-        (mut iiPrev).setAt(g, -1);
-        mut iiNext.setAt(g, -1);
-        mut iiFreeNext.setAt(g, if i + 1 < cap { i + 1 } else { -1 });
-        i += 1;
-    }
-    (mut iiCount).setAt(cid, 0);
-    mut iiHead.setAt(cid, -1);
-    mut iiTail.setAt(cid, -1);
-    mut iiFreeHead.setAt(cid, if cap > 0 { 0 } else { -1 });
-    mut iiHits.setAt(cid, 0);
-    mut iiMisses.setAt(cid, 0);
-    mut iiEvictions.setAt(cid, 0);
-};
-
-/** Creates a bounded `Int -> Int` LRU cache with capacity `max(1, capacity)`. */
-pub createIntKey := fn(capacity: Int): IntLru {
-    cap := if capacity < 1 { 1 } else { capacity };
-    var fi := iiFreeCaches.length() - 1;
-    loop fi >= 0 {
-        cid := iiFreeCaches[fi];
-        if iiCap[cid] >= cap {
-            last := iiFreeCaches.length() - 1;
-            if fi =!= last { mut iiFreeCaches.setAt(fi, iiFreeCaches[last]); }
-            _drop := mut iiFreeCaches.popBack();
-            mut iiCap.setAt(cid, cap);
-            iiPurgeAll(cid);
-            mut iiCacheAlive.setAt(cid, true);
-            return (handle = cid, gen = iiGen[cid]);
-        }
-        fi -= 1;
-    }
-
-    base := iiKey.length();
-    var i := 0;
-    loop i < cap {
-        mut iiKey.pushBack(0);
-        mut iiVal.pushBack(0);
-        mut iiPrev.pushBack(-1);
-        mut iiNext.pushBack(-1);
-        mut iiAlive.pushBack(false);
-        mut iiFreeNext.pushBack(if i + 1 < cap { i + 1 } else { -1 });
-        i += 1;
-    }
-    cid := iiBase.length();
-    mut iiBase.pushBack(base);
-    mut iiCap.pushBack(cap);
-    mut iiCount.pushBack(0);
-    mut iiHead.pushBack(-1);
-    mut iiTail.pushBack(-1);
-    mut iiFreeHead.pushBack(0);
-    mut iiHits.pushBack(0);
-    mut iiMisses.pushBack(0);
-    mut iiEvictions.pushBack(0);
-    mut iiGen.pushBack(1);
-    mut iiCacheAlive.pushBack(true);
-    (handle = cid, gen = 1)
-};
-
-/** Inserts or updates `key -> value` in O(1), evicting the least-recently-used entry if full. */
-pub putIntKey := fn(cache: IntLru, key: Int, value: Int): (evicted: Bool, evictedKey: Int, evictedValue: Int) {
-    if not validIntKeyCache(cache) {
-        return (evicted = false, evictedKey = 0, evictedValue = 0);
-    }
-    cid := cache.handle;
-    base := iiBase[cid];
-    mk := makeIntKey(cid, key);
-    existing := iiIndex.get(mk);
-    if existing.found {
-        localIdx := existing.value;
-        mut iiVal.setAt(base + localIdx, value);
-        if iiHead[cid] =!= localIdx {
-            iiUnlink(cid, localIdx);
-            iiPushFront(cid, localIdx);
-        }
-        return (evicted = false, evictedKey = 0, evictedValue = 0);
-    }
-
-    var evicted := false;
-    var evKey := 0;
-    var evVal := 0;
-    var slot := iiFreeHead[cid];
-    if slot >= 0 {
-        mut iiFreeHead.setAt(cid, iiFreeNext[base + slot]);
-        mut iiFreeNext.setAt(base + slot, -1);
-        mut iiCount.setAt(cid, iiCount[cid] + 1);
-    } else {
-        slot = iiTail[cid];
-        gOld := base + slot;
-        evicted = true;
-        evKey = iiKey[gOld];
-        evVal = iiVal[gOld];
-        _rm := mut iiIndex.remove(makeIntKey(cid, evKey));
-        iiUnlink(cid, slot);
-        mut iiEvictions.setAt(cid, iiEvictions[cid] + 1);
-    }
-
-    g := base + slot;
-    mut iiKey.setAt(g, key);
-    mut iiVal.setAt(g, value);
-    mut iiAlive.setAt(g, true);
-    iiPushFront(cid, slot);
-    mut iiIndex.set(mk, slot);
-    (evicted = evicted, evictedKey = evKey, evictedValue = evVal)
-};
-
-/** Looks up `key` in O(1), promoting it to MRU on hit. */
-pub getIntKey := fn(cache: IntLru, key: Int): (found: Bool, value: Int) {
-    if not validIntKeyCache(cache) { return (found = false, value = 0); }
-    cid := cache.handle;
-    res := iiIndex.get(makeIntKey(cid, key));
-    if not res.found {
-        mut iiMisses.setAt(cid, iiMisses[cid] + 1);
-        return (found = false, value = 0);
-    }
-    localIdx := res.value;
-    mut iiHits.setAt(cid, iiHits[cid] + 1);
-    if iiHead[cid] =!= localIdx {
-        iiUnlink(cid, localIdx);
-        iiPushFront(cid, localIdx);
-    }
-    (found = true, value = iiVal[iiBase[cid] + localIdx])
-};
-
-/** Looks up `key` in O(1) without changing recency order or stats. */
-pub peekIntKey := fn(cache: IntLru, key: Int): (found: Bool, value: Int) {
-    if not validIntKeyCache(cache) { return (found = false, value = 0); }
-    cid := cache.handle;
-    res := iiIndex.get(makeIntKey(cid, key));
-    if not res.found { return (found = false, value = 0); }
-    (found = true, value = iiVal[iiBase[cid] + res.value])
-};
-
-/** True when `key` is currently cached in `cache`. */
-pub hasIntKey := fn(cache: IntLru, key: Int): Bool {
-    if not validIntKeyCache(cache) { return false; }
-    iiIndex.has(makeIntKey(cache.handle, key))
-};
-
-/** Removes `key` from `cache` in O(1). */
-pub removeIntKey := fn(cache: IntLru, key: Int): Bool {
-    if not validIntKeyCache(cache) { return false; }
-    cid := cache.handle;
-    mk := makeIntKey(cid, key);
-    res := iiIndex.get(mk);
-    if not res.found { return false; }
-    localIdx := res.value;
-    g := iiBase[cid] + localIdx;
-    _rm := mut iiIndex.remove(mk);
-    iiUnlink(cid, localIdx);
-    mut iiAlive.setAt(g, false);
-    mut iiKey.setAt(g, 0);
-    mut iiVal.setAt(g, 0);
-    mut iiFreeNext.setAt(g, iiFreeHead[cid]);
-    mut iiFreeHead.setAt(cid, localIdx);
-    mut iiCount.setAt(cid, iiCount[cid] - 1);
-    true
-};
-
-/** Explicitly evicts the least-recently-used entry in O(1). */
-pub evictOldestIntKey := fn(cache: IntLru): (evicted: Bool, key: Int, value: Int) {
-    if not validIntKeyCache(cache) { return (evicted = false, key = 0, value = 0); }
-    cid := cache.handle;
-    tail := iiTail[cid];
-    if tail < 0 { return (evicted = false, key = 0, value = 0); }
-    g := iiBase[cid] + tail;
-    k := iiKey[g];
-    v := iiVal[g];
-    _rm := mut iiIndex.remove(makeIntKey(cid, k));
-    iiUnlink(cid, tail);
-    mut iiAlive.setAt(g, false);
-    mut iiKey.setAt(g, 0);
-    mut iiVal.setAt(g, 0);
-    mut iiFreeNext.setAt(g, iiFreeHead[cid]);
-    mut iiFreeHead.setAt(cid, tail);
-    mut iiCount.setAt(cid, iiCount[cid] - 1);
-    mut iiEvictions.setAt(cid, iiEvictions[cid] + 1);
-    (evicted = true, key = k, value = v)
-};
-
-/** Returns the current number of cached entries. */
-pub intKeyCount := fn(cache: IntLru): Int {
-    if not validIntKeyCache(cache) { return 0; }
-    iiCount[cache.handle]
-};
-
-/** Returns the maximum capacity of `cache`. */
-pub intKeyCapacity := fn(cache: IntLru): Int {
-    if not validIntKeyCache(cache) { return 0; }
-    iiCap[cache.handle]
-};
-
-/** Returns occupancy and hit/miss/eviction counters for `cache`. */
-pub intKeyStats := fn(cache: IntLru): LruStats {
-    if not validIntKeyCache(cache) { return (count = 0, capacity = 0, hits = 0, misses = 0, evictions = 0); }
-    cid := cache.handle;
-    (count = iiCount[cid], capacity = iiCap[cid], hits = iiHits[cid], misses = iiMisses[cid], evictions = iiEvictions[cid])
-};
-
-/** Clears all entries and resets statistics in `cache`. */
-pub clearIntKey := fn(cache: IntLru): Unit {
-    if not validIntKeyCache(cache) { return; }
-    iiPurgeAll(cache.handle);
-};
-
-/** Destroys `cache` and recycles its handle slot. */
-pub destroyIntKey := fn(cache: IntLru): Unit {
-    if not validIntKeyCache(cache) { return; }
-    cid := cache.handle;
-    iiPurgeAll(cid);
-    mut iiCacheAlive.setAt(cid, false);
-    mut iiGen.setAt(cid, iiGen[cid] + 1);
-    mut iiFreeCaches.pushBack(cid);
+    emptyIdx: Map<K, Int>;
+    c.keys = ks;
+    c.vals = vs;
+    c.prev = pr;
+    c.next = nx;
+    c.freeSlots = fl;
+    c.index = emptyIdx;
+    c.head = -1;
+    c.tail = -1;
+    c.hits = 0;
+    c.misses = 0;
+    c.evictions = 0;
 };

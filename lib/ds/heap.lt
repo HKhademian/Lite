@@ -1,95 +1,85 @@
-/** Binary heaps and keyed priority queues (`ds/heap`) for timers, schedulers, and pathfinding. */
+/** Binary heaps and generic keyed priority queues (`ds/heap`) for timers, schedulers, and pathfinding. */
 
-/** Opaque generational handle to a binary min-heap of `Int` values. */
-pub MinHeap := record { handle: Int; gen: Int; };
+/** Outcome of popping or peeking a `MinHeap` or `MaxHeap`. */
+pub HeapItem := enum<T: Type> {
+    Empty;
+    Some(T);
+}
 
-/** Opaque generational handle to a binary max-heap of `Int` values. */
-pub MaxHeap := record { handle: Int; gen: Int; };
-
-/** Opaque generational handle to a min-priority queue storing `(priority, item)` pairs. */
-pub PriorityQueue := record { handle: Int; gen: Int; };
-
-/* --- Unified flat heap slab (shared by MinHeap and MaxHeap via isMax flag) --- */
-var hSlab: mut List<Int> = [];
-var hBase: mut List<Int> = [];
-var hCap: mut List<Int> = [];
-var hCount: mut List<Int> = [];
-var hIsMax: mut List<Bool> = [];
-var hGen: mut List<Int> = [];
-var hAlive: mut List<Bool> = [];
-var hFree: mut List<Int> = [];
-
-/* --- Keyed PriorityQueue flat slab --- */
-var pqPrio: mut List<Int> = [];
-var pqItem: mut List<Int> = [];
-var pqBase: mut List<Int> = [];
-var pqCap: mut List<Int> = [];
-var pqLen: mut List<Int> = [];
-var pqGen: mut List<Int> = [];
-var pqAlive: mut List<Bool> = [];
-var pqFree: mut List<Int> = [];
-
-validHeap := fn(id: Int, gen: Int, expectMax: Bool): Bool {
-    id >= 0 and id < hAlive.length() and hAlive[id] and hGen[id] == gen and hIsMax[id] == expectMax
+/** True when `item` holds a value `.Some(...)`. */
+pub HeapItem.isSome := fn<T: Type>(item: Self<T>): Bool {
+    match item {
+        .Empty { false }
+        .Some { true }
+    }
 };
 
-validPQ := fn(pq: PriorityQueue): Bool {
-    id := pq.handle;
-    id >= 0 and id < pqAlive.length() and pqAlive[id] and pqGen[id] == pq.gen
+/** Returns the wrapped value when `.Some(v)`, or `fallback` when `.Empty`. */
+pub HeapItem.unwrapOr := fn<T: Type>(item: Self<T>, fallback: T): T {
+    match item {
+        .Empty { fallback }
+        .Some(v) { v }
+    }
 };
+
+/** Entry stored in a keyed `PriorityQueue<T>`. */
+pub PQEntry := record<T: Type> {
+    priority: Int;
+    item: T;
+}
+
+/** Outcome of popping or peeking a keyed `PriorityQueue<T>`. */
+pub PQItem := enum<T: Type> {
+    Empty;
+    Some(PQEntry<T>);
+}
+
+/** True when `entry` holds `.Some(...)`. */
+pub PQItem.isSome := fn<T: Type>(entry: Self<T>): Bool {
+    match entry {
+        .Empty { false }
+        .Some { true }
+    }
+};
+
+/** Fixed-capacity binary min-heap of `Int` values. */
+pub MinHeap := record {
+    data: List<Int>;
+    cap: Int;
+}
+
+/** Fixed-capacity binary max-heap of `Int` values. */
+pub MaxHeap := record {
+    data: List<Int>;
+    cap: Int;
+}
+
+/** Fixed-capacity min-priority queue storing `(priority, item)` pairs with lowest priority popped first. */
+pub PriorityQueue := record<T: Type> {
+    prios: List<Int>;
+    items: List<T>;
+    cap: Int;
+}
+
+/** Priority queue storing `Int` item payloads. */
+pub IntPriorityQueue := alias PriorityQueue<Int>;
 
 heapBetter := fn(a: Int, b: Int, isMax: Bool): Bool {
     if isMax { a > b } else { a < b }
 };
 
-createHeapRaw := fn(capacity: Int, isMax: Bool): (handle: Int, gen: Int) {
-    cap := if capacity < 1 { 1 } else { capacity };
-    var fi := hFree.length() - 1;
-    loop fi >= 0 {
-        id := hFree[fi];
-        if hCap[id] >= cap {
-            last := hFree.length() - 1;
-            if fi =!= last { hFree[fi] = hFree[last]; }
-            _drop := mut hFree.popBack();
-            hCap[id] = cap;
-            hCount[id] = 0;
-            hIsMax[id] = isMax;
-            hAlive[id] = true;
-            return (handle = id, gen = hGen[id]);
-        }
-        fi -= 1;
-    }
-
-    base := hSlab.length();
-    var i := 0;
-    loop i < cap {
-        mut hSlab.pushBack(0);
-        i += 1;
-    }
-    id := hBase.length();
-    mut hBase.pushBack(base);
-    mut hCap.pushBack(cap);
-    mut hCount.pushBack(0);
-    mut hIsMax.pushBack(isMax);
-    mut hGen.pushBack(1);
-    mut hAlive.pushBack(true);
-    (handle = id, gen = 1)
-};
-
-pushHeapRaw := fn(id: Int, value: Int, isMax: Bool): Bool {
-    cnt := hCount[id];
-    if cnt >= hCap[id] { return false; }
-    base := hBase[id];
+pushIntHeap := fn(buf: mut List<Int>, cap: Int, value: Int, isMax: Bool): Bool {
+    cnt := buf.length();
+    if cnt >= cap { return false; }
+    mut buf.pushBack(value);
     var idx := cnt;
-    hSlab[base + idx] = value;
-    hCount[id] = cnt + 1;
     loop idx > 0 {
         parent := (idx - 1) / 2;
-        pv := hSlab[base + parent];
-        cv := hSlab[base + idx];
+        pv := buf[parent];
+        cv := buf[idx];
         if heapBetter(cv, pv, isMax) {
-            hSlab[base + parent] = cv;
-            hSlab[base + idx] = pv;
+            mut buf.setAt(parent, cv);
+            mut buf.setAt(idx, pv);
             idx = parent;
         } else {
             break;
@@ -98,270 +88,228 @@ pushHeapRaw := fn(id: Int, value: Int, isMax: Bool): Bool {
     true
 };
 
-popHeapRaw := fn(id: Int, isMax: Bool): (found: Bool, value: Int) {
-    cnt := hCount[id];
-    if cnt <= 0 { return (found = false, value = 0); }
-    base := hBase[id];
-    top := hSlab[base];
-    nextCnt := cnt - 1;
-    hCount[id] = nextCnt;
+popIntHeap := fn(buf: mut List<Int>, isMax: Bool): HeapItem<Int> {
+    cnt := buf.length();
+    if cnt <= 0 { return .Empty; }
+    top := buf[0];
+    last := mut buf.popBack();
+    nextCnt := buf.length();
     if nextCnt > 0 {
-        hSlab[base] = hSlab[base + nextCnt];
+        mut buf.setAt(0, last);
         var idx := 0;
         loop true {
             left := (idx * 2) + 1;
             right := left + 1;
             var best := idx;
-            if left < nextCnt and heapBetter(hSlab[base + left], hSlab[base + best], isMax) {
+            if left < nextCnt and heapBetter(buf[left], buf[best], isMax) {
                 best = left;
             }
-            if right < nextCnt and heapBetter(hSlab[base + right], hSlab[base + best], isMax) {
+            if right < nextCnt and heapBetter(buf[right], buf[best], isMax) {
                 best = right;
             }
             if best == idx { break; }
-            tmp := hSlab[base + idx];
-            hSlab[base + idx] = hSlab[base + best];
-            hSlab[base + best] = tmp;
+            tmp := buf[idx];
+            mut buf.setAt(idx, buf[best]);
+            mut buf.setAt(best, tmp);
             idx = best;
         }
     }
-    (found = true, value = top)
+    .Some(top)
 };
 
 /* ============================================================================
- * MinHeap API
+ * MinHeap & MaxHeap
  * ============================================================================ */
 
-/** Creates a fixed-capacity binary min-heap (`capacity >= 1`). */
+/** Creates a fixed-capacity binary min-heap of `Int` values. */
 pub createMin := fn(capacity: Int): MinHeap {
-    raw := createHeapRaw(capacity, false);
-    MinHeap { handle = raw.handle, gen = raw.gen }
+    cap := if capacity < 1 { 1 } else { capacity };
+    MinHeap { cap = cap }
 };
 
-/** Pushes `value` into `heap` in O(log n); returns `false` if full. */
-pub MinHeap.push := fn(heap: Self, value: Int): Bool {
-    if not validHeap(heap.handle, heap.gen, false) { return false; }
-    pushHeapRaw(heap.handle, value, false)
+/** Creates a fixed-capacity binary max-heap of `Int` values. */
+pub createMax := fn(capacity: Int): MaxHeap {
+    cap := if capacity < 1 { 1 } else { capacity };
+    MaxHeap { cap = cap }
+};
+
+/** Inserts `value` into min-heap `h` in O(log n); returns `false` if full. */
+pub MinHeap.push := fn(h: mut Self, value: Int): Bool {
+    buf: mut List<Int> = h.data;
+    ok := pushIntHeap(mut buf, h.cap, value, false);
+    if ok { h.data = buf; }
+    ok
 };
 
 /** Removes and returns the minimum value in O(log n). */
-pub MinHeap.pop := fn(heap: Self): (found: Bool, value: Int) {
-    if not validHeap(heap.handle, heap.gen, false) { return (found = false, value = 0); }
-    popHeapRaw(heap.handle, false)
+pub MinHeap.pop := fn(h: mut Self): HeapItem<Int> {
+    buf: mut List<Int> = h.data;
+    res := popIntHeap(mut buf, false);
+    h.data = buf;
+    res
 };
 
 /** Returns the minimum value without removing it in O(1). */
-pub MinHeap.peek := fn(heap: Self): (found: Bool, value: Int) {
-    if not validHeap(heap.handle, heap.gen, false) { return (found = false, value = 0); }
-    id := heap.handle;
-    if hCount[id] <= 0 { return (found = false, value = 0); }
-    (found = true, value = hSlab[hBase[id]])
+pub MinHeap.peek := fn(h: Self): HeapItem<Int> {
+    if h.data.length() == 0 { .Empty } else { .Some(h.data[0]) }
 };
 
-/** Returns the number of elements in `heap`. */
-pub MinHeap.count := fn(heap: Self): Int {
-    if not validHeap(heap.handle, heap.gen, false) { return 0; }
-    hCount[heap.handle]
+/** Returns the number of elements currently in `h`. */
+pub MinHeap.count := fn(h: Self): Int { h.data.length() };
+
+/** Returns the maximum capacity of `h`. */
+pub MinHeap.capacity := fn(h: Self): Int { h.cap };
+
+/** True when `h` contains zero elements. */
+pub MinHeap.isEmpty := fn(h: Self): Bool { h.data.length() == 0 };
+
+/** True when `h` has reached capacity. */
+pub MinHeap.isFull := fn(h: Self): Bool { h.data.length() >= h.cap };
+
+/** Clears `h` in O(1). */
+pub MinHeap.clear := fn(h: mut Self): Unit {
+    empty: List<Int> = [];
+    h.data = empty;
 };
 
-/** Clears `heap` in O(1). */
-pub MinHeap.clear := fn(heap: Self): Unit {
-    if not validHeap(heap.handle, heap.gen, false) { return; }
-    hCount[heap.handle] = 0;
-};
-
-/** Destroys `heap` and recycles its handle slot. */
-pub MinHeap.destroy := fn(heap: Self): Unit {
-    if not validHeap(heap.handle, heap.gen, false) { return; }
-    id := heap.handle;
-    hAlive[id] = false;
-    hGen[id] = hGen[id] + 1;
-    mut hFree.pushBack(id);
-};
-
-/* ============================================================================
- * MaxHeap API
- * ============================================================================ */
-
-/** Creates a fixed-capacity binary max-heap (`capacity >= 1`). */
-pub createMax := fn(capacity: Int): MaxHeap {
-    raw := createHeapRaw(capacity, true);
-    MaxHeap { handle = raw.handle, gen = raw.gen }
-};
-
-/** Pushes `value` into `heap` in O(log n); returns `false` if full. */
-pub MaxHeap.push := fn(heap: Self, value: Int): Bool {
-    if not validHeap(heap.handle, heap.gen, true) { return false; }
-    pushHeapRaw(heap.handle, value, true)
+/** Inserts `value` into max-heap `h` in O(log n); returns `false` if full. */
+pub MaxHeap.push := fn(h: mut Self, value: Int): Bool {
+    buf: mut List<Int> = h.data;
+    ok := pushIntHeap(mut buf, h.cap, value, true);
+    if ok { h.data = buf; }
+    ok
 };
 
 /** Removes and returns the maximum value in O(log n). */
-pub MaxHeap.pop := fn(heap: Self): (found: Bool, value: Int) {
-    if not validHeap(heap.handle, heap.gen, true) { return (found = false, value = 0); }
-    popHeapRaw(heap.handle, true)
+pub MaxHeap.pop := fn(h: mut Self): HeapItem<Int> {
+    buf: mut List<Int> = h.data;
+    res := popIntHeap(mut buf, true);
+    h.data = buf;
+    res
 };
 
 /** Returns the maximum value without removing it in O(1). */
-pub MaxHeap.peek := fn(heap: Self): (found: Bool, value: Int) {
-    if not validHeap(heap.handle, heap.gen, true) { return (found = false, value = 0); }
-    id := heap.handle;
-    if hCount[id] <= 0 { return (found = false, value = 0); }
-    (found = true, value = hSlab[hBase[id]])
+pub MaxHeap.peek := fn(h: Self): HeapItem<Int> {
+    if h.data.length() == 0 { .Empty } else { .Some(h.data[0]) }
 };
 
-/** Returns the number of elements in `heap`. */
-pub MaxHeap.count := fn(heap: Self): Int {
-    if not validHeap(heap.handle, heap.gen, true) { return 0; }
-    hCount[heap.handle]
-};
+/** Returns the number of elements currently in `h`. */
+pub MaxHeap.count := fn(h: Self): Int { h.data.length() };
 
-/** Clears `heap` in O(1). */
-pub MaxHeap.clear := fn(heap: Self): Unit {
-    if not validHeap(heap.handle, heap.gen, true) { return; }
-    hCount[heap.handle] = 0;
-};
+/** Returns the maximum capacity of `h`. */
+pub MaxHeap.capacity := fn(h: Self): Int { h.cap };
 
-/** Destroys `heap` and recycles its handle slot. */
-pub MaxHeap.destroy := fn(heap: Self): Unit {
-    if not validHeap(heap.handle, heap.gen, true) { return; }
-    id := heap.handle;
-    hAlive[id] = false;
-    hGen[id] = hGen[id] + 1;
-    mut hFree.pushBack(id);
+/** True when `h` contains zero elements. */
+pub MaxHeap.isEmpty := fn(h: Self): Bool { h.data.length() == 0 };
+
+/** True when `h` has reached capacity. */
+pub MaxHeap.isFull := fn(h: Self): Bool { h.data.length() >= h.cap };
+
+/** Clears `h` in O(1). */
+pub MaxHeap.clear := fn(h: mut Self): Unit {
+    empty: List<Int> = [];
+    h.data = empty;
 };
 
 /* ============================================================================
- * Keyed PriorityQueue (lowest priority popped first)
+ * Generic Keyed PriorityQueue<T>
  * ============================================================================ */
 
-/** Creates a fixed-capacity min-priority queue storing `(priority, item)` pairs. */
-pub createPQ := fn(capacity: Int): PriorityQueue {
+/** Creates a fixed-capacity generic min-priority queue storing `(priority, item)` pairs. */
+pub createPQ := fn<T: Type>(capacity: Int): PriorityQueue<T> {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := pqFree.length() - 1;
-    loop fi >= 0 {
-        id := pqFree[fi];
-        if pqCap[id] >= cap {
-            last := pqFree.length() - 1;
-            if fi =!= last { pqFree[fi] = pqFree[last]; }
-            _drop := mut pqFree.popBack();
-            pqCap[id] = cap;
-            pqLen[id] = 0;
-            pqAlive[id] = true;
-            return PriorityQueue { handle = id, gen = pqGen[id] };
-        }
-        fi -= 1;
-    }
-
-    base := pqPrio.length();
-    var i := 0;
-    loop i < cap {
-        mut pqPrio.pushBack(0);
-        mut pqItem.pushBack(0);
-        i += 1;
-    }
-    id := pqBase.length();
-    mut pqBase.pushBack(base);
-    mut pqCap.pushBack(cap);
-    mut pqLen.pushBack(0);
-    mut pqGen.pushBack(1);
-    mut pqAlive.pushBack(true);
-    PriorityQueue { handle = id, gen = 1 }
+    PriorityQueue<T> { cap = cap }
 };
 
-/** Enqueues `(priority, item)` in O(log n); returns `false` if full. */
-pub PriorityQueue.push := fn(pq: Self, priority: Int, item: Int): Bool {
-    if not validPQ(pq) { return false; }
-    id := pq.handle;
-    cnt := pqLen[id];
-    if cnt >= pqCap[id] { return false; }
-    base := pqBase[id];
+/** Enqueues `(priority, item)` into `pq` in O(log n); returns `false` if full. */
+pub PriorityQueue.push := fn<T: Type>(pq: mut Self<T>, priority: Int, item: T): Bool {
+    cnt := pq.prios.length();
+    if cnt >= pq.cap { return false; }
+    ps: mut List<Int> = pq.prios;
+    vs: mut List<T> = pq.items;
+    mut ps.pushBack(priority);
+    mut vs.pushBack(item);
     var idx := cnt;
-    pqPrio[base + idx] = priority;
-    pqItem[base + idx] = item;
-    pqLen[id] = cnt + 1;
     loop idx > 0 {
         parent := (idx - 1) / 2;
-        pp := pqPrio[base + parent];
-        cp := pqPrio[base + idx];
-        if cp < pp {
-            pi := pqItem[base + parent];
-            ci := pqItem[base + idx];
-            pqPrio[base + parent] = cp;
-            pqItem[base + parent] = ci;
-            pqPrio[base + idx] = pp;
-            pqItem[base + idx] = pi;
+        if ps[idx] < ps[parent] {
+            tp := ps[parent];
+            ti := vs[parent];
+            mut ps.setAt(parent, ps[idx]);
+            mut vs.setAt(parent, vs[idx]);
+            mut ps.setAt(idx, tp);
+            mut vs.setAt(idx, ti);
             idx = parent;
         } else {
             break;
         }
     }
+    pq.prios = ps;
+    pq.items = vs;
     true
 };
 
-/** Removes and returns the lowest-priority `(priority, item)` pair in O(log n). */
-pub PriorityQueue.pop := fn(pq: Self): (found: Bool, priority: Int, item: Int) {
-    if not validPQ(pq) { return (found = false, priority = 0, item = 0); }
-    id := pq.handle;
-    cnt := pqLen[id];
-    if cnt <= 0 { return (found = false, priority = 0, item = 0); }
-    base := pqBase[id];
-    topP := pqPrio[base];
-    topI := pqItem[base];
-    nextCnt := cnt - 1;
-    pqLen[id] = nextCnt;
+/** Removes and returns the lowest-priority `PQEntry<T>` in O(log n). */
+pub PriorityQueue.pop := fn<T: Type>(pq: mut Self<T>): PQItem<T> {
+    cnt := pq.prios.length();
+    if cnt <= 0 { return .Empty; }
+    topP := pq.prios[0];
+    topI := pq.items[0];
+    ps: mut List<Int> = pq.prios;
+    vs: mut List<T> = pq.items;
+    lastP := mut ps.popBack();
+    lastI := mut vs.popBack();
+    nextCnt := ps.length();
     if nextCnt > 0 {
-        pqPrio[base] = pqPrio[base + nextCnt];
-        pqItem[base] = pqItem[base + nextCnt];
+        mut ps.setAt(0, lastP);
+        mut vs.setAt(0, lastI);
         var idx := 0;
         loop true {
             left := (idx * 2) + 1;
             right := left + 1;
             var best := idx;
-            if left < nextCnt and pqPrio[base + left] < pqPrio[base + best] {
-                best = left;
-            }
-            if right < nextCnt and pqPrio[base + right] < pqPrio[base + best] {
-                best = right;
-            }
+            if left < nextCnt and ps[left] < ps[best] { best = left; }
+            if right < nextCnt and ps[right] < ps[best] { best = right; }
             if best == idx { break; }
-            tp := pqPrio[base + idx];
-            ti := pqItem[base + idx];
-            pqPrio[base + idx] = pqPrio[base + best];
-            pqItem[base + idx] = pqItem[base + best];
-            pqPrio[base + best] = tp;
-            pqItem[base + best] = ti;
+            tp := ps[idx];
+            ti := vs[idx];
+            mut ps.setAt(idx, ps[best]);
+            mut vs.setAt(idx, vs[best]);
+            mut ps.setAt(best, tp);
+            mut vs.setAt(best, ti);
             idx = best;
         }
     }
-    (found = true, priority = topP, item = topI)
+    pq.prios = ps;
+    pq.items = vs;
+    .Some(PQEntry<T> { priority = topP, item = topI })
 };
 
-/** Peeks at the lowest-priority `(priority, item)` without removing it in O(1). */
-pub PriorityQueue.peek := fn(pq: Self): (found: Bool, priority: Int, item: Int) {
-    if not validPQ(pq) { return (found = false, priority = 0, item = 0); }
-    id := pq.handle;
-    if pqLen[id] <= 0 { return (found = false, priority = 0, item = 0); }
-    base := pqBase[id];
-    (found = true, priority = pqPrio[base], item = pqItem[base])
+/** Returns the lowest-priority `PQEntry<T>` without removing it in O(1). */
+pub PriorityQueue.peek := fn<T: Type>(pq: Self<T>): PQItem<T> {
+    if pq.prios.length() == 0 {
+        .Empty
+    } else {
+        .Some(PQEntry<T> { priority = pq.prios[0], item = pq.items[0] })
+    }
 };
 
-/** Returns the number of queued entries in `pq`. */
-pub PriorityQueue.count := fn(pq: Self): Int {
-    if not validPQ(pq) { return 0; }
-    pqLen[pq.handle]
-};
+/** Returns the number of entries in `pq`. */
+pub PriorityQueue.count := fn<T: Type>(pq: Self<T>): Int { pq.prios.length() };
 
-/** Clears `pq` in O(1). */
-pub PriorityQueue.clear := fn(pq: Self): Unit {
-    if not validPQ(pq) { return; }
-    pqLen[pq.handle] = 0;
-};
+/** Returns the maximum capacity of `pq`. */
+pub PriorityQueue.capacity := fn<T: Type>(pq: Self<T>): Int { pq.cap };
 
-/** Destroys `pq` and recycles its handle slot. */
-pub PriorityQueue.destroy := fn(pq: Self): Unit {
-    if not validPQ(pq) { return; }
-    id := pq.handle;
-    pqAlive[id] = false;
-    pqGen[id] = pqGen[id] + 1;
-    mut pqFree.pushBack(id);
+/** True when `pq` contains zero entries. */
+pub PriorityQueue.isEmpty := fn<T: Type>(pq: Self<T>): Bool { pq.prios.length() == 0 };
+
+/** True when `pq` has reached capacity. */
+pub PriorityQueue.isFull := fn<T: Type>(pq: Self<T>): Bool { pq.prios.length() >= pq.cap };
+
+/** Clears all entries from `pq` in O(1). */
+pub PriorityQueue.clear := fn<T: Type>(pq: mut Self<T>): Unit {
+    ep: List<Int> = [];
+    ei: List<T> = [];
+    pq.prios = ep;
+    pq.items = ei;
 };

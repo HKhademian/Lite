@@ -1,58 +1,61 @@
 /** Scratch and frame bump allocators (`ds/arena`) for O(1) bulk reclamation across TS and C11. */
 
-/** Opaque generational handle to a byte-addressed bump arena. */
-pub Arena := alias (handle: Int, gen: Int);
-
-/** Opaque generational handle to a typed integer scratch arena. */
-pub IntArena := alias (handle: Int, gen: Int);
-
-/** Opaque generational handle to a typed float scratch arena. */
-pub FloatArena := alias (handle: Int, gen: Int);
-
-/** Byte slice allocation returned by `alloc` or `allocAligned`. */
-pub Slice := alias (offset: Int, length: Int, ok: Bool);
+/** Byte slice allocation returned by `Arena.alloc` or `Arena.allocAligned`. */
+pub Slice := record {
+    offset: Int;
+    length: Int;
+    ok: Bool;
+}
 
 /** Saved watermark returned by `mark` and passed to `rewind`. */
-pub Mark := alias (offset: Int, gen: Int);
+pub Mark := record {
+    offset: Int;
+    gen: Int;
+}
 
-/** Contiguous span inside an `IntArena` or `FloatArena`. */
-pub Span := alias (offset: Int, length: Int, ok: Bool);
+/** Contiguous span allocation inside a `TypedArena<T>`. */
+pub Span := record {
+    offset: Int;
+    length: Int;
+    ok: Bool;
+}
 
 /** Allocation statistics snapshot for a byte-addressed `Arena`. */
-pub ArenaStats := alias (usedBytes: Int, capacityBytes: Int, remainingBytes: Int, peakBytes: Int, resetCount: Int);
+pub ArenaStats := record {
+    usedBytes: Int;
+    capacityBytes: Int;
+    remainingBytes: Int;
+    peakBytes: Int;
+    resetCount: Int;
+}
 
-/* --- Byte arena flat slab & metadata --- */
-var byteSlab: mut List<Int> = [];
-var byteBase: mut List<Int> = [];
-var byteCap: mut List<Int> = [];
-var byteOff: mut List<Int> = [];
-var bytePeak: mut List<Int> = [];
-var byteResets: mut List<Int> = [];
-var byteGen: mut List<Int> = [];
-var byteAlive: mut List<Bool> = [];
-var byteFreeSlots: mut List<Int> = [];
+/** Self-contained byte-addressed bump allocator with alignment, watermarks, and bulk reset. */
+pub Arena := record {
+    data: List<Int>;
+    cap: Int;
+    offset: Int;
+    peak: Int;
+    resets: Int;
+    gen: Int;
+    alive: Bool;
+}
 
-/* --- Int arena flat slab & metadata --- */
-var intSlab: mut List<Int> = [];
-var intBase: mut List<Int> = [];
-var intCap: mut List<Int> = [];
-var intOff: mut List<Int> = [];
-var intPeak: mut List<Int> = [];
-var intResets: mut List<Int> = [];
-var intGen: mut List<Int> = [];
-var intAlive: mut List<Bool> = [];
-var intFreeSlots: mut List<Int> = [];
+/** Generic typed scratch bump allocator storing `T` values with O(1) mark/rewind and bulk reset. */
+pub TypedArena := record<T: Type> {
+    data: List<T>;
+    cap: Int;
+    offset: Int;
+    peak: Int;
+    resets: Int;
+    gen: Int;
+    alive: Bool;
+}
 
-/* --- Float arena flat slab & metadata --- */
-var floatSlab: mut List<Float> = [];
-var floatBase: mut List<Int> = [];
-var floatCap: mut List<Int> = [];
-var floatOff: mut List<Int> = [];
-var floatPeak: mut List<Int> = [];
-var floatResets: mut List<Int> = [];
-var floatGen: mut List<Int> = [];
-var floatAlive: mut List<Bool> = [];
-var floatFreeSlots: mut List<Int> = [];
+/** Typed integer scratch arena alias. */
+pub IntArena := alias TypedArena<Int>;
+
+/** Typed float scratch arena alias. */
+pub FloatArena := alias TypedArena<Float>;
 
 isPowerOfTwo := fn(n: Int): Bool {
     if n <= 0 { return false; }
@@ -75,503 +78,266 @@ normByte := fn(value: Int): Int {
     if b < 0 { b + 256 } else { b }
 };
 
-validByteSlot := fn(arena: Arena): Bool {
-    idx := arena.handle;
-    idx >= 0 and idx < byteAlive.length() and byteAlive[idx] and byteGen[idx] == arena.gen
-};
-
-validIntSlot := fn(arena: IntArena): Bool {
-    idx := arena.handle;
-    idx >= 0 and idx < intAlive.length() and intAlive[idx] and intGen[idx] == arena.gen
-};
-
-validFloatSlot := fn(arena: FloatArena): Bool {
-    idx := arena.handle;
-    idx >= 0 and idx < floatAlive.length() and floatAlive[idx] and floatGen[idx] == arena.gen
-};
+/* ============================================================================
+ * Byte-addressed Arena
+ * ============================================================================ */
 
 /** Creates a fixed-capacity byte-addressed bump arena backed by a zero-initialized slab. */
 pub create := fn(capacityBytes: Int): Arena {
     cap := if capacityBytes < 0 { 0 } else { capacityBytes };
-    /* Reuse a destroyed slot if its backing slab is large enough. */
-    var fi := byteFreeSlots.length() - 1;
-    loop fi >= 0 {
-        slot := byteFreeSlots[fi];
-        if byteCap[slot] >= cap {
-            last := byteFreeSlots.length() - 1;
-            if fi =!= last {
-                mut byteFreeSlots.setAt(fi, byteFreeSlots[last]);
-            }
-            _drop := mut byteFreeSlots.popBack();
-            mut byteCap.setAt(slot, cap);
-            mut byteOff.setAt(slot, 0);
-            mut bytePeak.setAt(slot, 0);
-            mut byteResets.setAt(slot, 0);
-            mut byteAlive.setAt(slot, true);
-            base := byteBase[slot];
-            var zi := 0;
-            loop zi < cap {
-                mut byteSlab.setAt(base + zi, 0);
-                zi += 1;
-            }
-            return (handle = slot, gen = byteGen[slot]);
-        }
-        fi -= 1;
+    buf: mut List<Int> = [];
+    loop 0..cap {
+        mut buf.pushBack(0);
     }
-
-    base := byteSlab.length();
-    var i := 0;
-    loop i < cap {
-        mut byteSlab.pushBack(0);
-        i += 1;
-    }
-    slot := byteBase.length();
-    mut byteBase.pushBack(base);
-    mut byteCap.pushBack(cap);
-    mut byteOff.pushBack(0);
-    mut bytePeak.pushBack(0);
-    mut byteResets.pushBack(0);
-    mut byteGen.pushBack(1);
-    mut byteAlive.pushBack(true);
-    (handle = slot, gen = 1)
+    Arena { data = buf, cap = cap, offset = 0, peak = 0, resets = 0, gen = 1, alive = true }
 };
 
-/** True when `arena` refers to a live byte arena. */
-pub isValid := fn(arena: Arena): Bool {
-    validByteSlot(arena)
+/** True when `a` is active and has not been destroyed. */
+pub Arena.isValid := fn(a: Self): Bool {
+    a.alive
 };
 
 /** Allocates `size` bytes aligned to `align` (must be a power of two, >= 1). */
-pub allocAligned := fn(arena: Arena, size: Int, align: Int): Slice {
-    if not validByteSlot(arena) or size < 0 or not isPowerOfTwo(align) {
-        return (offset = 0, length = 0, ok = false);
+pub Arena.allocAligned := fn(a: mut Self, size: Int, align: Int): Slice {
+    if not a.alive or size < 0 or not isPowerOfTwo(align) {
+        return Slice {};
     }
-    idx := arena.handle;
-    start := alignOffset(byteOff[idx], align);
+    start := alignOffset(a.offset, align);
     end := start + size;
-    if end > byteCap[idx] {
-        return (offset = 0, length = 0, ok = false);
+    if end > a.cap {
+        return Slice {};
     }
-    (mut byteOff).setAt(idx, end);
-    if end > bytePeak[idx] {
-        mut bytePeak.setAt(idx, end);
+    a.offset = end;
+    if end > a.peak {
+        a.peak = end;
     }
-    (offset = start, length = size, ok = true)
+    Slice { offset = start, length = size, ok = true }
 };
 
-/** Allocates `size` contiguous bytes from `arena` in O(1). */
-pub alloc := fn(arena: Arena, size: Int): Slice {
-    allocAligned(arena, size, 1)
+/** Allocates `size` contiguous bytes from `a` in O(1). */
+pub Arena.alloc := fn(a: mut Self, size: Int): Slice {
+    mut a.allocAligned(size, 1)
 };
 
-/** Writes a single unsigned byte (low 8 bits of `value`) at `offset` within `arena`. */
-pub writeByte := fn(arena: Arena, offset: Int, value: Int): Bool {
-    if not validByteSlot(arena) { return false; }
-    idx := arena.handle;
-    if offset < 0 or offset >= byteOff[idx] { return false; }
-    (mut byteSlab).setAt(byteBase[idx] + offset, normByte(value));
+/** Writes a single unsigned byte (low 8 bits of `value`) at `offset` within `a`. */
+pub Arena.writeByte := fn(a: mut Self, offset: Int, value: Int): Bool {
+    if not a.alive or offset < 0 or offset >= a.offset { return false; }
+    buf: mut List<Int> = a.data;
+    mut buf.setAt(offset, normByte(value));
+    a.data = buf;
     true
 };
 
-/** Reads a single unsigned byte (`0..255`) at `offset` within `arena`, or `-1` if out of bounds. */
-pub readByte := fn(arena: Arena, offset: Int): Int {
-    if not validByteSlot(arena) { return -1; }
-    idx := arena.handle;
-    if offset < 0 or offset >= byteOff[idx] { return -1; }
-    byteSlab[byteBase[idx] + offset]
+/** Reads a single unsigned byte (`0..255`) at `offset` within `a`, or `-1` if out of bounds. */
+pub Arena.readByte := fn(a: Self, offset: Int): Int {
+    if not a.alive or offset < 0 or offset >= a.offset { return -1; }
+    a.data[offset]
 };
 
-/** Writes a little-endian 32-bit integer at `offset..offset+4` within `arena`. */
-pub writeInt32 := fn(arena: Arena, offset: Int, value: Int): Bool {
-    if not validByteSlot(arena) { return false; }
-    idx := arena.handle;
-    if offset < 0 or offset + 4 > byteOff[idx] { return false; }
-    base := byteBase[idx] + offset;
+/** Writes a little-endian 32-bit integer at `offset..offset+4` within `a`. */
+pub Arena.writeInt32 := fn(a: mut Self, offset: Int, value: Int): Bool {
+    if not a.alive or offset < 0 or offset + 4 > a.offset { return false; }
     v := if value < 0 { value + 4294967296 } else { value };
-    mut byteSlab.setAt(base, normByte(v));
-    mut byteSlab.setAt(base + 1, normByte(v / 256));
-    mut byteSlab.setAt(base + 2, normByte(v / 65536));
-    mut byteSlab.setAt(base + 3, normByte(v / 16777216));
+    buf: mut List<Int> = a.data;
+    mut buf.setAt(offset, normByte(v));
+    mut buf.setAt(offset + 1, normByte(v / 256));
+    mut buf.setAt(offset + 2, normByte(v / 65536));
+    mut buf.setAt(offset + 3, normByte(v / 16777216));
+    a.data = buf;
     true
 };
 
 /** Reads a little-endian signed 32-bit integer from `offset..offset+4`, or `0` if out of bounds. */
-pub readInt32 := fn(arena: Arena, offset: Int): Int {
-    if not validByteSlot(arena) { return 0; }
-    idx := arena.handle;
-    if offset < 0 or offset + 4 > byteOff[idx] { return 0; }
-    base := byteBase[idx] + offset;
-    u := byteSlab[base] + (byteSlab[base + 1] * 256) + (byteSlab[base + 2] * 65536) + (byteSlab[base + 3] * 16777216);
+pub Arena.readInt32 := fn(a: Self, offset: Int): Int {
+    if not a.alive or offset < 0 or offset + 4 > a.offset { return 0; }
+    u := a.data[offset] + (a.data[offset + 1] * 256) + (a.data[offset + 2] * 65536) + (a.data[offset + 3] * 16777216);
     if u >= 2147483648 { u - 4294967296 } else { u }
 };
 
-/** Saves the current bump offset of `arena` so later allocations can be rewound in O(1). */
-pub mark := fn(arena: Arena): Mark {
-    if not validByteSlot(arena) { return (offset = 0, gen = 0); }
-    (offset = byteOff[arena.handle], gen = arena.gen)
+/** Saves the current bump offset of `a` so later allocations can be rewound in O(1). */
+pub Arena.mark := fn(a: Self): Mark {
+    if not a.alive { return Mark {}; }
+    Mark { offset = a.offset, gen = a.gen }
 };
 
-/** Rewinds `arena` back to a previously saved `Mark` in O(1). */
-pub rewind := fn(arena: Arena, m: Mark): Bool {
-    if not validByteSlot(arena) or m.gen =!= arena.gen { return false; }
-    idx := arena.handle;
-    if m.offset < 0 or m.offset > byteOff[idx] { return false; }
-    (mut byteOff).setAt(idx, m.offset);
+/** Rewinds `a` back to a previously saved `Mark` in O(1). */
+pub Arena.rewind := fn(a: mut Self, m: Mark): Bool {
+    if not a.alive or m.gen =!= a.gen or m.offset < 0 or m.offset > a.offset { return false; }
+    a.offset = m.offset;
     true
 };
 
-/** Resets `arena` to offset `0` in O(1) without releasing its backing slab. */
-pub reset := fn(arena: Arena): Unit {
-    if not validByteSlot(arena) { return; }
-    idx := arena.handle;
-    mut byteOff.setAt(idx, 0);
-    mut byteResets.setAt(idx, byteResets[idx] + 1);
+/** Resets `a` to offset `0` in O(1) without releasing its backing slab. */
+pub Arena.reset := fn(a: mut Self): Unit {
+    if not a.alive { return; }
+    a.offset = 0;
+    a.resets = a.resets + 1;
 };
 
-/** Returns the number of currently allocated bytes in `arena`. */
-pub usedBytes := fn(arena: Arena): Int {
-    if not validByteSlot(arena) { return 0; }
-    byteOff[arena.handle]
+/** Returns the number of currently allocated bytes in `a`. */
+pub Arena.usedBytes := fn(a: Self): Int {
+    if not a.alive { return 0; }
+    a.offset
 };
 
-/** Returns the total byte capacity of `arena`. */
-pub capacityBytes := fn(arena: Arena): Int {
-    if not validByteSlot(arena) { return 0; }
-    byteCap[arena.handle]
+/** Returns the total byte capacity of `a`. */
+pub Arena.capacityBytes := fn(a: Self): Int {
+    if not a.alive { return 0; }
+    a.cap
 };
 
-/** Returns the remaining free bytes in `arena`. */
-pub remainingBytes := fn(arena: Arena): Int {
-    if not validByteSlot(arena) { return 0; }
-    idx := arena.handle;
-    byteCap[idx] - byteOff[idx]
+/** Returns the remaining free bytes in `a`. */
+pub Arena.remainingBytes := fn(a: Self): Int {
+    if not a.alive { return 0; }
+    a.cap - a.offset
 };
 
-/** Returns the high-water mark of bytes allocated in `arena`. */
-pub peakBytes := fn(arena: Arena): Int {
-    if not validByteSlot(arena) { return 0; }
-    bytePeak[arena.handle]
+/** Returns the high-water mark of bytes allocated in `a`. */
+pub Arena.peakBytes := fn(a: Self): Int {
+    if not a.alive { return 0; }
+    a.peak
 };
 
-/** Returns the number of times `reset` has been called on `arena`. */
-pub resetCount := fn(arena: Arena): Int {
-    if not validByteSlot(arena) { return 0; }
-    byteResets[arena.handle]
+/** Returns how many times `reset` was called on `a`. */
+pub Arena.resetCount := fn(a: Self): Int {
+    if not a.alive { return 0; }
+    a.resets
 };
 
-/** Returns an allocation statistics snapshot for `arena`. */
-pub stats := fn(arena: Arena): ArenaStats {
-    if not validByteSlot(arena) {
-        return (usedBytes = 0, capacityBytes = 0, remainingBytes = 0, peakBytes = 0, resetCount = 0);
+/** Returns an `ArenaStats` snapshot for `a`. */
+pub Arena.stats := fn(a: Self): ArenaStats {
+    if not a.alive {
+        return ArenaStats {};
     }
-    idx := arena.handle;
-    used := byteOff[idx];
-    cap := byteCap[idx];
-    (usedBytes = used, capacityBytes = cap, remainingBytes = cap - used, peakBytes = bytePeak[idx], resetCount = byteResets[idx])
+    ArenaStats {
+    usedBytes = a.offset,
+    capacityBytes = a.cap,
+    remainingBytes = a.cap - a.offset,
+    peakBytes = a.peak,
+    resetCount = a.resets
+    }
 };
 
-/** Invalidates `arena` and recycles its handle slot for future `create` calls. */
-pub destroy := fn(arena: Arena): Unit {
-    if not validByteSlot(arena) { return; }
-    idx := arena.handle;
-    mut byteAlive.setAt(idx, false);
-    mut byteGen.setAt(idx, byteGen[idx] + 1);
-    mut byteOff.setAt(idx, 0);
-    mut byteFreeSlots.pushBack(idx);
+/** Invalidates `a` and releases its backing storage. */
+pub Arena.destroy := fn(a: mut Self): Unit {
+    if not a.alive { return; }
+    a.alive = false;
+    a.gen = a.gen + 1;
+    a.offset = 0;
+    empty: List<Int> = [];
+    a.data = empty;
 };
 
-/* --- Typed IntArena --- */
+/* ============================================================================
+ * Generic TypedArena<T>
+ * ============================================================================ */
 
-/** Creates a fixed-capacity integer scratch arena for zero-churn per-frame or per-pass work. */
-pub createInts := fn(capacity: Int): IntArena {
+/** Creates a typed scratch bump arena holding up to `capacity` `T` elements. */
+pub createTyped := fn<T: Type>(capacity: Int): TypedArena<T> {
     cap := if capacity < 0 { 0 } else { capacity };
-    var fi := intFreeSlots.length() - 1;
-    loop fi >= 0 {
-        slot := intFreeSlots[fi];
-        if intCap[slot] >= cap {
-            last := intFreeSlots.length() - 1;
-            if fi =!= last {
-                mut intFreeSlots.setAt(fi, intFreeSlots[last]);
-            }
-            _drop := mut intFreeSlots.popBack();
-            mut intCap.setAt(slot, cap);
-            mut intOff.setAt(slot, 0);
-            mut intPeak.setAt(slot, 0);
-            mut intResets.setAt(slot, 0);
-            mut intAlive.setAt(slot, true);
-            return (handle = slot, gen = intGen[slot]);
-        }
-        fi -= 1;
+    buf: mut List<T> = [];
+    z: T;
+    loop 0..cap {
+        mut buf.pushBack(z);
     }
-
-    base := intSlab.length();
-    var i := 0;
-    loop i < cap {
-        mut intSlab.pushBack(0);
-        i += 1;
-    }
-    slot := intBase.length();
-    mut intBase.pushBack(base);
-    mut intCap.pushBack(cap);
-    mut intOff.pushBack(0);
-    mut intPeak.pushBack(0);
-    mut intResets.pushBack(0);
-    mut intGen.pushBack(1);
-    mut intAlive.pushBack(true);
-    (handle = slot, gen = 1)
+    TypedArena<T> { data = buf, cap = cap, offset = 0, peak = 0, resets = 0, gen = 1, alive = true }
 };
 
-/** Appends one `Int` to `arena`, returning its slot offset or `-1` if full. */
-pub allocInt := fn(arena: IntArena, value: Int): Int {
-    if not validIntSlot(arena) { return -1; }
-    idx := arena.handle;
-    off := intOff[idx];
-    if off >= intCap[idx] { return -1; }
-    (mut intSlab).setAt(intBase[idx] + off, value);
-    nextOff := off + 1;
-    mut intOff.setAt(idx, nextOff);
-    if nextOff > intPeak[idx] {
-        mut intPeak.setAt(idx, nextOff);
-    }
-    off
+/** True when typed arena `a` is active and has not been destroyed. */
+pub TypedArena.isValid := fn<T: Type>(a: Self<T>): Bool {
+    a.alive
 };
 
-/** Allocates `count` contiguous integers initialized to `fill`. */
-pub allocIntSpan := fn(arena: IntArena, count: Int, fill: Int): Span {
-    if not validIntSlot(arena) or count < 0 {
-        return (offset = 0, length = 0, ok = false);
-    }
-    idx := arena.handle;
-    off := intOff[idx];
-    if off + count > intCap[idx] {
-        return (offset = 0, length = 0, ok = false);
-    }
-    base := intBase[idx] + off;
-    var i := 0;
-    loop i < count {
-        mut intSlab.setAt(base + i, fill);
-        i += 1;
-    }
-    nextOff := off + count;
-    mut intOff.setAt(idx, nextOff);
-    if nextOff > intPeak[idx] {
-        mut intPeak.setAt(idx, nextOff);
-    }
-    (offset = off, length = count, ok = true)
+/** Pushes one `T` value into `a` in O(1), returning its index or `-1` if full/invalid. */
+pub TypedArena.alloc := fn<T: Type>(a: mut Self<T>, value: T): Int {
+    if not a.alive or a.offset >= a.cap { return -1; }
+    idx := a.offset;
+    buf: mut List<T> = a.data;
+    mut buf.setAt(idx, value);
+    a.data = buf;
+    a.offset = idx + 1;
+    if a.offset > a.peak { a.peak = a.offset; }
+    idx
 };
 
-/** Reads the integer at `offset` in `arena`, or `0` if out of bounds. */
-pub getInt := fn(arena: IntArena, offset: Int): Int {
-    if not validIntSlot(arena) { return 0; }
-    idx := arena.handle;
-    if offset < 0 or offset >= intOff[idx] { return 0; }
-    intSlab[intBase[idx] + offset]
+/** Allocates `count` contiguous `T` slots initialized to `fill` in O(count). */
+pub TypedArena.allocSpan := fn<T: Type>(a: mut Self<T>, count: Int, fill: T): Span {
+    if not a.alive or count < 0 or a.offset + count > a.cap {
+        return Span {};
+    }
+    start := a.offset;
+    buf: mut List<T> = a.data;
+    loop 0..count as i {
+        mut buf.setAt(start + i, fill);
+    }
+    a.data = buf;
+    a.offset = start + count;
+    if a.offset > a.peak { a.peak = a.offset; }
+    Span { offset = start, length = count, ok = true }
 };
 
-/** Updates the integer at `offset` in `arena`; returns `false` if out of bounds. */
-pub setInt := fn(arena: IntArena, offset: Int, value: Int): Bool {
-    if not validIntSlot(arena) { return false; }
-    idx := arena.handle;
-    if offset < 0 or offset >= intOff[idx] { return false; }
-    (mut intSlab).setAt(intBase[idx] + offset, value);
+/** Reads element `offset` from `a`, or `zero(T)` if invalid/out of bounds. */
+pub TypedArena.get := fn<T: Type>(a: Self<T>, offset: Int): T {
+    if not a.alive or offset < 0 or offset >= a.offset {
+        z: T;
+        return z;
+    }
+    a.data[offset]
+};
+
+/** Overwrites element `offset` in `a`; returns `false` if invalid/out of bounds. */
+pub TypedArena.set := fn<T: Type>(a: mut Self<T>, offset: Int, value: T): Bool {
+    if not a.alive or offset < 0 or offset >= a.offset { return false; }
+    buf: mut List<T> = a.data;
+    mut buf.setAt(offset, value);
+    a.data = buf;
     true
 };
 
-/** Saves the current watermark of `arena`. */
-pub markInts := fn(arena: IntArena): Mark {
-    if not validIntSlot(arena) { return (offset = 0, gen = 0); }
-    (offset = intOff[arena.handle], gen = arena.gen)
+/** Saves a watermark `Mark` for `a`. */
+pub TypedArena.mark := fn<T: Type>(a: Self<T>): Mark {
+    if not a.alive { return Mark {}; }
+    Mark { offset = a.offset, gen = a.gen }
 };
 
-/** Rewinds `arena` back to `m` in O(1). */
-pub rewindInts := fn(arena: IntArena, m: Mark): Bool {
-    if not validIntSlot(arena) or m.gen =!= arena.gen { return false; }
-    idx := arena.handle;
-    if m.offset < 0 or m.offset > intOff[idx] { return false; }
-    (mut intOff).setAt(idx, m.offset);
+/** Rewinds `a` to a saved watermark `m`. */
+pub TypedArena.rewind := fn<T: Type>(a: mut Self<T>, m: Mark): Bool {
+    if not a.alive or m.gen =!= a.gen or m.offset < 0 or m.offset > a.offset { return false; }
+    a.offset = m.offset;
     true
 };
 
-/** Resets `arena` to 0 allocated ints in O(1). */
-pub resetInts := fn(arena: IntArena): Unit {
-    if not validIntSlot(arena) { return; }
-    idx := arena.handle;
-    mut intOff.setAt(idx, 0);
-    mut intResets.setAt(idx, intResets[idx] + 1);
+/** Resets `a` to `0` used slots in O(1). */
+pub TypedArena.reset := fn<T: Type>(a: mut Self<T>): Unit {
+    if not a.alive { return; }
+    a.offset = 0;
+    a.resets = a.resets + 1;
 };
 
-/** Returns the number of allocated ints in `arena`. */
-pub usedInts := fn(arena: IntArena): Int {
-    if not validIntSlot(arena) { return 0; }
-    intOff[arena.handle]
+/** Returns the number of currently allocated slots in `a`. */
+pub TypedArena.used := fn<T: Type>(a: Self<T>): Int {
+    if not a.alive { return 0; }
+    a.offset
 };
 
-/** Returns the total capacity of `arena`. */
-pub capacityInts := fn(arena: IntArena): Int {
-    if not validIntSlot(arena) { return 0; }
-    intCap[arena.handle]
+/** Returns the total element capacity of `a`. */
+pub TypedArena.capacity := fn<T: Type>(a: Self<T>): Int {
+    if not a.alive { return 0; }
+    a.cap
 };
 
-/** Returns the high-water mark of ints allocated in `arena`. */
-pub peakInts := fn(arena: IntArena): Int {
-    if not validIntSlot(arena) { return 0; }
-    intPeak[arena.handle]
+/** Returns the high-water mark of slots allocated in `a`. */
+pub TypedArena.peakUsed := fn<T: Type>(a: Self<T>): Int {
+    if not a.alive { return 0; }
+    a.peak
 };
 
-/** Destroys `arena` and recycles its handle slot. */
-pub destroyInts := fn(arena: IntArena): Unit {
-    if not validIntSlot(arena) { return; }
-    idx := arena.handle;
-    mut intAlive.setAt(idx, false);
-    mut intGen.setAt(idx, intGen[idx] + 1);
-    mut intOff.setAt(idx, 0);
-    mut intFreeSlots.pushBack(idx);
-};
-
-/* --- Typed FloatArena --- */
-
-/** Creates a fixed-capacity floating-point scratch arena. */
-pub createFloats := fn(capacity: Int): FloatArena {
-    cap := if capacity < 0 { 0 } else { capacity };
-    var fi := floatFreeSlots.length() - 1;
-    loop fi >= 0 {
-        slot := floatFreeSlots[fi];
-        if floatCap[slot] >= cap {
-            last := floatFreeSlots.length() - 1;
-            if fi =!= last {
-                mut floatFreeSlots.setAt(fi, floatFreeSlots[last]);
-            }
-            _drop := mut floatFreeSlots.popBack();
-            mut floatCap.setAt(slot, cap);
-            mut floatOff.setAt(slot, 0);
-            mut floatPeak.setAt(slot, 0);
-            mut floatResets.setAt(slot, 0);
-            mut floatAlive.setAt(slot, true);
-            return (handle = slot, gen = floatGen[slot]);
-        }
-        fi -= 1;
-    }
-
-    base := floatSlab.length();
-    var i := 0;
-    loop i < cap {
-        mut floatSlab.pushBack(0.0);
-        i += 1;
-    }
-    slot := floatBase.length();
-    mut floatBase.pushBack(base);
-    mut floatCap.pushBack(cap);
-    mut floatOff.pushBack(0);
-    mut floatPeak.pushBack(0);
-    mut floatResets.pushBack(0);
-    mut floatGen.pushBack(1);
-    mut floatAlive.pushBack(true);
-    (handle = slot, gen = 1)
-};
-
-/** Appends one `Float` to `arena`, returning its slot offset or `-1` if full. */
-pub allocFloat := fn(arena: FloatArena, value: Float): Int {
-    if not validFloatSlot(arena) { return -1; }
-    idx := arena.handle;
-    off := floatOff[idx];
-    if off >= floatCap[idx] { return -1; }
-    (mut floatSlab).setAt(floatBase[idx] + off, value);
-    nextOff := off + 1;
-    mut floatOff.setAt(idx, nextOff);
-    if nextOff > floatPeak[idx] {
-        mut floatPeak.setAt(idx, nextOff);
-    }
-    off
-};
-
-/** Allocates `count` contiguous floats initialized to `fill`. */
-pub allocFloatSpan := fn(arena: FloatArena, count: Int, fill: Float): Span {
-    if not validFloatSlot(arena) or count < 0 {
-        return (offset = 0, length = 0, ok = false);
-    }
-    idx := arena.handle;
-    off := floatOff[idx];
-    if off + count > floatCap[idx] {
-        return (offset = 0, length = 0, ok = false);
-    }
-    base := floatBase[idx] + off;
-    var i := 0;
-    loop i < count {
-        mut floatSlab.setAt(base + i, fill);
-        i += 1;
-    }
-    nextOff := off + count;
-    mut floatOff.setAt(idx, nextOff);
-    if nextOff > floatPeak[idx] {
-        mut floatPeak.setAt(idx, nextOff);
-    }
-    (offset = off, length = count, ok = true)
-};
-
-/** Reads the float at `offset` in `arena`, or `0.0` if out of bounds. */
-pub getFloat := fn(arena: FloatArena, offset: Int): Float {
-    if not validFloatSlot(arena) { return 0.0; }
-    idx := arena.handle;
-    if offset < 0 or offset >= floatOff[idx] { return 0.0; }
-    floatSlab[floatBase[idx] + offset]
-};
-
-/** Updates the float at `offset` in `arena`; returns `false` if out of bounds. */
-pub setFloat := fn(arena: FloatArena, offset: Int, value: Float): Bool {
-    if not validFloatSlot(arena) { return false; }
-    idx := arena.handle;
-    if offset < 0 or offset >= floatOff[idx] { return false; }
-    (mut floatSlab).setAt(floatBase[idx] + offset, value);
-    true
-};
-
-/** Saves the current watermark of `arena`. */
-pub markFloats := fn(arena: FloatArena): Mark {
-    if not validFloatSlot(arena) { return (offset = 0, gen = 0); }
-    (offset = floatOff[arena.handle], gen = arena.gen)
-};
-
-/** Rewinds `arena` back to `m` in O(1). */
-pub rewindFloats := fn(arena: FloatArena, m: Mark): Bool {
-    if not validFloatSlot(arena) or m.gen =!= arena.gen { return false; }
-    idx := arena.handle;
-    if m.offset < 0 or m.offset > floatOff[idx] { return false; }
-    (mut floatOff).setAt(idx, m.offset);
-    true
-};
-
-/** Resets `arena` to 0 allocated floats in O(1). */
-pub resetFloats := fn(arena: FloatArena): Unit {
-    if not validFloatSlot(arena) { return; }
-    idx := arena.handle;
-    mut floatOff.setAt(idx, 0);
-    mut floatResets.setAt(idx, floatResets[idx] + 1);
-};
-
-/** Returns the number of allocated floats in `arena`. */
-pub usedFloats := fn(arena: FloatArena): Int {
-    if not validFloatSlot(arena) { return 0; }
-    floatOff[arena.handle]
-};
-
-/** Returns the total capacity of `arena`. */
-pub capacityFloats := fn(arena: FloatArena): Int {
-    if not validFloatSlot(arena) { return 0; }
-    floatCap[arena.handle]
-};
-
-/** Returns the high-water mark of floats allocated in `arena`. */
-pub peakFloats := fn(arena: FloatArena): Int {
-    if not validFloatSlot(arena) { return 0; }
-    floatPeak[arena.handle]
-};
-
-/** Destroys `arena` and recycles its handle slot. */
-pub destroyFloats := fn(arena: FloatArena): Unit {
-    if not validFloatSlot(arena) { return; }
-    idx := arena.handle;
-    mut floatAlive.setAt(idx, false);
-    mut floatGen.setAt(idx, floatGen[idx] + 1);
-    mut floatOff.setAt(idx, 0);
-    mut floatFreeSlots.pushBack(idx);
+/** Invalidates `a` and releases its backing storage. */
+pub TypedArena.destroy := fn<T: Type>(a: mut Self<T>): Unit {
+    if not a.alive { return; }
+    a.alive = false;
+    a.gen = a.gen + 1;
+    a.offset = 0;
+    empty: List<T> = [];
+    a.data = empty;
 };

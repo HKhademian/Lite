@@ -1,25 +1,18 @@
 /** Compact bit-arrays (`ds/bitset`) packed 30 bits per word for masks, visited flags, and collision layers. */
 
-/** Opaque generational handle to a fixed-length bitset. */
-pub Bitset := alias (handle: Int, gen: Int);
-
 WORD_BITS := 30;
 FULL_WORD := 1073741823; /* (2^30) - 1 */
 
-var bsWords: mut List<Int> = [];
-var bsBase: mut List<Int> = [];
-var bsWordCap: mut List<Int> = [];
-var bsBitLen: mut List<Int> = [];
-var bsGen: mut List<Int> = [];
-var bsAlive: mut List<Bool> = [];
-var bsFree: mut List<Int> = [];
+/** Fixed-length bit-array packing 30 bits per `Int` word. */
+pub Bitset := record {
+    words: List<Int>;
+    bitLen: Int;
+}
 
 pow2 := fn(exp: Int): Int {
     var acc := 1;
-    var i := 0;
-    loop i < exp {
+    loop 0..exp {
         acc = acc * 2;
-        i += 1;
     }
     acc
 };
@@ -88,11 +81,6 @@ wordXor := fn(a: Int, b: Int): Int {
     out
 };
 
-validBitset := fn(b: Bitset): Bool {
-    id := b.handle;
-    id >= 0 and id < bsAlive.length() and bsAlive[id] and bsGen[id] == b.gen
-};
-
 wordsForBits := fn(numBits: Int): Int {
     if numBits <= 0 { 0 } else { (numBits + WORD_BITS - 1) / WORD_BITS }
 };
@@ -101,258 +89,166 @@ wordsForBits := fn(numBits: Int): Int {
 pub create := fn(numBits: Int): Bitset {
     bits := if numBits < 0 { 0 } else { numBits };
     needed := wordsForBits(bits);
-    var fi := bsFree.length() - 1;
-    loop fi >= 0 {
-        id := bsFree[fi];
-        if bsWordCap[id] >= needed {
-            last := bsFree.length() - 1;
-            if fi =!= last { mut bsFree.setAt(fi, bsFree[last]); }
-            _drop := mut bsFree.popBack();
-            mut bsBitLen.setAt(id, bits);
-            mut bsAlive.setAt(id, true);
-            base := bsBase[id];
-            var zi := 0;
-            loop zi < needed {
-                mut bsWords.setAt(base + zi, 0);
-                zi += 1;
-            }
-            return (handle = id, gen = bsGen[id]);
-        }
-        fi -= 1;
+    ws: mut List<Int> = [];
+    loop 0..needed {
+        mut ws.pushBack(0);
     }
-
-    base := bsWords.length();
-    var i := 0;
-    loop i < needed {
-        mut bsWords.pushBack(0);
-        i += 1;
-    }
-    id := bsBase.length();
-    mut bsBase.pushBack(base);
-    mut bsWordCap.pushBack(needed);
-    mut bsBitLen.pushBack(bits);
-    mut bsGen.pushBack(1);
-    mut bsAlive.pushBack(true);
-    (handle = id, gen = 1)
+    Bitset { words = ws, bitLen = bits }
 };
 
 /** Sets bit `index` to `1`; returns `false` if out of bounds. */
-pub set := fn(bs: Bitset, index: Int): Bool {
-    if not validBitset(bs) { return false; }
-    id := bs.handle;
-    if index < 0 or index >= bsBitLen[id] { return false; }
-    wIdx := bsBase[id] + (index / WORD_BITS);
-    mut bsWords.setAt(wIdx, wordSetBit(bsWords[wIdx], index % WORD_BITS));
+pub Bitset.set := fn(bs: mut Self, index: Int): Bool {
+    if index < 0 or index >= bs.bitLen { return false; }
+    wIdx := index / WORD_BITS;
+    ws: mut List<Int> = bs.words;
+    mut ws.setAt(wIdx, wordSetBit(ws[wIdx], index % WORD_BITS));
+    bs.words = ws;
     true
 };
 
 /** Clears bit `index` to `0`; returns `false` if out of bounds. */
-pub clear := fn(bs: Bitset, index: Int): Bool {
-    if not validBitset(bs) { return false; }
-    id := bs.handle;
-    if index < 0 or index >= bsBitLen[id] { return false; }
-    wIdx := bsBase[id] + (index / WORD_BITS);
-    mut bsWords.setAt(wIdx, wordClearBit(bsWords[wIdx], index % WORD_BITS));
+pub Bitset.clear := fn(bs: mut Self, index: Int): Bool {
+    if index < 0 or index >= bs.bitLen { return false; }
+    wIdx := index / WORD_BITS;
+    ws: mut List<Int> = bs.words;
+    mut ws.setAt(wIdx, wordClearBit(ws[wIdx], index % WORD_BITS));
+    bs.words = ws;
     true
 };
 
 /** Flips bit `index`; returns `false` if out of bounds. */
-pub toggle := fn(bs: Bitset, index: Int): Bool {
-    if not validBitset(bs) { return false; }
-    id := bs.handle;
-    if index < 0 or index >= bsBitLen[id] { return false; }
-    wIdx := bsBase[id] + (index / WORD_BITS);
+pub Bitset.toggle := fn(bs: mut Self, index: Int): Bool {
+    if index < 0 or index >= bs.bitLen { return false; }
+    wIdx := index / WORD_BITS;
     b := index % WORD_BITS;
-    w := bsWords[wIdx];
-    mut bsWords.setAt(wIdx, if wordHasBit(w, b) { wordClearBit(w, b) } else { wordSetBit(w, b) });
+    ws: mut List<Int> = bs.words;
+    w := ws[wIdx];
+    mut ws.setAt(wIdx, if wordHasBit(w, b) { wordClearBit(w, b) } else { wordSetBit(w, b) });
+    bs.words = ws;
     true
 };
 
 /** True when bit `index` is `1`. */
-pub test := fn(bs: Bitset, index: Int): Bool {
-    if not validBitset(bs) { return false; }
-    id := bs.handle;
-    if index < 0 or index >= bsBitLen[id] { return false; }
-    wordHasBit(bsWords[bsBase[id] + (index / WORD_BITS)], index % WORD_BITS)
+pub Bitset.test := fn(bs: Self, index: Int): Bool {
+    if index < 0 or index >= bs.bitLen { return false; }
+    wordHasBit(bs.words[index / WORD_BITS], index % WORD_BITS)
 };
 
 /** Returns the number of bits set to `1` (population count). */
-pub countOnes := fn(bs: Bitset): Int {
-    if not validBitset(bs) { return 0; }
-    id := bs.handle;
-    wCount := wordsForBits(bsBitLen[id]);
-    base := bsBase[id];
+pub Bitset.countOnes := fn(bs: Self): Int {
+    wCount := bs.words.length();
     var total := 0;
-    var i := 0;
-    loop i < wCount {
-        total += wordPopcount(bsWords[base + i]);
-        i += 1;
+    loop 0..wCount as i {
+        total += wordPopcount(bs.words[i]);
     }
     total
 };
 
 /** Returns the lowest index with bit `1`, or `-1` if all bits are `0`. */
-pub firstSet := fn(bs: Bitset): Int {
-    if not validBitset(bs) { return -1; }
-    id := bs.handle;
-    bits := bsBitLen[id];
-    wCount := wordsForBits(bits);
-    base := bsBase[id];
-    var wi := 0;
-    loop wi < wCount {
-        w := bsWords[base + wi];
+pub Bitset.firstSet := fn(bs: Self): Int {
+    wCount := bs.words.length();
+    loop 0..wCount as wi {
+        w := bs.words[wi];
         if w > 0 {
-            var bi := 0;
-            loop bi < WORD_BITS {
+            loop 0..WORD_BITS as bi {
                 idx := (wi * WORD_BITS) + bi;
-                if idx >= bits { return -1; }
+                if idx >= bs.bitLen { return -1; }
                 if wordHasBit(w, bi) { return idx; }
-                bi += 1;
             }
         }
-        wi += 1;
     }
     -1
 };
 
 /** Returns the lowest index with bit `0`, or `-1` if all bits are `1`. */
-pub firstClear := fn(bs: Bitset): Int {
-    if not validBitset(bs) { return -1; }
-    id := bs.handle;
-    bits := bsBitLen[id];
-    wCount := wordsForBits(bits);
-    base := bsBase[id];
-    var wi := 0;
-    loop wi < wCount {
-        w := bsWords[base + wi];
+pub Bitset.firstClear := fn(bs: Self): Int {
+    wCount := bs.words.length();
+    loop 0..wCount as wi {
+        w := bs.words[wi];
         if w < FULL_WORD {
-            var bi := 0;
-            loop bi < WORD_BITS {
+            loop 0..WORD_BITS as bi {
                 idx := (wi * WORD_BITS) + bi;
-                if idx >= bits { return -1; }
+                if idx >= bs.bitLen { return -1; }
                 if not wordHasBit(w, bi) { return idx; }
-                bi += 1;
             }
         }
-        wi += 1;
     }
     -1
 };
 
 /** Sets every valid bit in `bs` to `1`. */
-pub setAll := fn(bs: Bitset): Unit {
-    if not validBitset(bs) { return; }
-    id := bs.handle;
-    bits := bsBitLen[id];
-    wCount := wordsForBits(bits);
-    base := bsBase[id];
-    var wi := 0;
-    loop wi < wCount {
-        rem := bits - (wi * WORD_BITS);
+pub Bitset.setAll := fn(bs: mut Self): Unit {
+    wCount := bs.words.length();
+    ws: mut List<Int> = bs.words;
+    loop 0..wCount as wi {
+        rem := bs.bitLen - (wi * WORD_BITS);
         val := if rem >= WORD_BITS { FULL_WORD } else { pow2(rem) - 1 };
-        mut bsWords.setAt(base + wi, val);
-        wi += 1;
+        mut ws.setAt(wi, val);
     }
+    bs.words = ws;
 };
 
 /** Clears every bit in `bs` to `0`. */
-pub clearAll := fn(bs: Bitset): Unit {
-    if not validBitset(bs) { return; }
-    id := bs.handle;
-    wCount := wordsForBits(bsBitLen[id]);
-    base := bsBase[id];
-    var wi := 0;
-    loop wi < wCount {
-        mut bsWords.setAt(base + wi, 0);
-        wi += 1;
+pub Bitset.clearAll := fn(bs: mut Self): Unit {
+    wCount := bs.words.length();
+    ws: mut List<Int> = bs.words;
+    loop 0..wCount as wi {
+        mut ws.setAt(wi, 0);
     }
+    bs.words = ws;
 };
 
 /** Computes `dst |= src` across the overlapping bit length. */
-pub orInto := fn(dst: Bitset, src: Bitset): Unit {
-    if not validBitset(dst) or not validBitset(src) { return; }
-    dId := dst.handle;
-    sId := src.handle;
-    dBits := bsBitLen[dId];
-    sBits := bsBitLen[sId];
-    wCount := wordsForBits(if dBits < sBits { dBits } else { sBits });
-    dBase := bsBase[dId];
-    sBase := bsBase[sId];
-    var i := 0;
-    loop i < wCount {
-        val := wordOr(bsWords[dBase + i], bsWords[sBase + i]);
-        rem := dBits - (i * WORD_BITS);
+pub Bitset.orInto := fn(dst: mut Self, src: Self): Unit {
+    overlapBits := if dst.bitLen < src.bitLen { dst.bitLen } else { src.bitLen };
+    wCount := wordsForBits(overlapBits);
+    ws: mut List<Int> = dst.words;
+    loop 0..wCount as i {
+        val := wordOr(ws[i], src.words[i]);
+        rem := dst.bitLen - (i * WORD_BITS);
         masked := if rem >= WORD_BITS { val } else { wordAnd(val, pow2(rem) - 1) };
-        mut bsWords.setAt(dBase + i, masked);
-        i += 1;
+        mut ws.setAt(i, masked);
     }
+    dst.words = ws;
 };
 
 /** Computes `dst &= src` across the overlapping bit length (clears bits past `src`). */
-pub andInto := fn(dst: Bitset, src: Bitset): Unit {
-    if not validBitset(dst) or not validBitset(src) { return; }
-    dId := dst.handle;
-    sId := src.handle;
-    dWords := wordsForBits(bsBitLen[dId]);
-    sWords := wordsForBits(bsBitLen[sId]);
-    dBase := bsBase[dId];
-    sBase := bsBase[sId];
-    var i := 0;
-    loop i < dWords {
-        val := if i < sWords { wordAnd(bsWords[dBase + i], bsWords[sBase + i]) } else { 0 };
-        mut bsWords.setAt(dBase + i, val);
-        i += 1;
+pub Bitset.andInto := fn(dst: mut Self, src: Self): Unit {
+    dWords := dst.words.length();
+    sWords := src.words.length();
+    ws: mut List<Int> = dst.words;
+    loop 0..dWords as i {
+        val := if i < sWords { wordAnd(ws[i], src.words[i]) } else { 0 };
+        mut ws.setAt(i, val);
     }
+    dst.words = ws;
 };
 
 /** Computes `dst ^= src` across the overlapping bit length. */
-pub xorInto := fn(dst: Bitset, src: Bitset): Unit {
-    if not validBitset(dst) or not validBitset(src) { return; }
-    dId := dst.handle;
-    sId := src.handle;
-    dBits := bsBitLen[dId];
-    sBits := bsBitLen[sId];
-    wCount := wordsForBits(if dBits < sBits { dBits } else { sBits });
-    dBase := bsBase[dId];
-    sBase := bsBase[sId];
-    var i := 0;
-    loop i < wCount {
-        val := wordXor(bsWords[dBase + i], bsWords[sBase + i]);
-        rem := dBits - (i * WORD_BITS);
+pub Bitset.xorInto := fn(dst: mut Self, src: Self): Unit {
+    overlapBits := if dst.bitLen < src.bitLen { dst.bitLen } else { src.bitLen };
+    wCount := wordsForBits(overlapBits);
+    ws: mut List<Int> = dst.words;
+    loop 0..wCount as i {
+        val := wordXor(ws[i], src.words[i]);
+        rem := dst.bitLen - (i * WORD_BITS);
         masked := if rem >= WORD_BITS { val } else { wordAnd(val, pow2(rem) - 1) };
-        mut bsWords.setAt(dBase + i, masked);
-        i += 1;
+        mut ws.setAt(i, masked);
     }
+    dst.words = ws;
 };
 
 /** True when `a` and `b` have the same bit length and identical bit patterns. */
-pub equals := fn(a: Bitset, b: Bitset): Bool {
-    if not validBitset(a) or not validBitset(b) { return false; }
-    aId := a.handle;
-    bId := b.handle;
-    if bsBitLen[aId] =!= bsBitLen[bId] { return false; }
-    wCount := wordsForBits(bsBitLen[aId]);
-    aBase := bsBase[aId];
-    bBase := bsBase[bId];
-    var i := 0;
-    loop i < wCount {
-        if bsWords[aBase + i] =!= bsWords[bBase + i] { return false; }
-        i += 1;
+pub Bitset.equals := fn(a: Self, b: Self): Bool {
+    if a.bitLen =!= b.bitLen { return false; }
+    wCount := a.words.length();
+    loop 0..wCount as i {
+        if a.words[i] =!= b.words[i] { return false; }
     }
     true
 };
 
 /** Returns the total number of bits addressable in `bs`. */
-pub bitLength := fn(bs: Bitset): Int {
-    if not validBitset(bs) { return 0; }
-    bsBitLen[bs.handle]
-};
-
-/** Destroys `bs` and recycles its handle slot. */
-pub destroy := fn(bs: Bitset): Unit {
-    if not validBitset(bs) { return; }
-    id := bs.handle;
-    mut bsAlive.setAt(id, false);
-    mut bsGen.setAt(id, bsGen[id] + 1);
-    mut bsFree.pushBack(id);
+pub Bitset.length := fn(bs: Self): Int {
+    bs.bitLen
 };

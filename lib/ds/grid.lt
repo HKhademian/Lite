@@ -1,283 +1,9 @@
-/** Flat-backed 2D grids (`ds/grid`) for tilemaps, cellular automata, and board games. */
+/** Generic flat-backed 2D grids (`ds/grid`) for tilemaps, cellular automata, and board games. */
 
-/** Opaque generational handle to a 2D `Int` grid. */
-pub IntGrid := alias (handle: Int, gen: Int);
+math := import "math/scalar";
 
-/** Opaque generational handle to a 2D `Float` grid. */
-pub FloatGrid := alias (handle: Int, gen: Int);
-
-/* --- IntGrid flat slab --- */
-var igSlab: mut List<Int> = [];
-var igBase: mut List<Int> = [];
-var igCap: mut List<Int> = [];
-var igW: mut List<Int> = [];
-var igH: mut List<Int> = [];
-var igGen: mut List<Int> = [];
-var igAlive: mut List<Bool> = [];
-var igFree: mut List<Int> = [];
-
-/* --- FloatGrid flat slab --- */
-var fgSlab: mut List<Float> = [];
-var fgBase: mut List<Int> = [];
-var fgCap: mut List<Int> = [];
-var fgW: mut List<Int> = [];
-var fgH: mut List<Int> = [];
-var fgGen: mut List<Int> = [];
-var fgAlive: mut List<Bool> = [];
-var fgFree: mut List<Int> = [];
-
-validIntGrid := fn(g: IntGrid): Bool {
-    id := g.handle;
-    id >= 0 and id < igAlive.length() and igAlive[id] and igGen[id] == g.gen
-};
-
-validFloatGrid := fn(g: FloatGrid): Bool {
-    id := g.handle;
-    id >= 0 and id < fgAlive.length() and fgAlive[id] and fgGen[id] == g.gen
-};
-
-/* ============================================================================
- * IntGrid
- * ============================================================================ */
-
-/** Creates a `width x height` `Int` grid initialized to `fillValue`. */
-pub createInts := fn(width: Int, height: Int, fillValue: Int): IntGrid {
-    w := if width < 1 { 1 } else { width };
-    h := if height < 1 { 1 } else { height };
-    total := w * h;
-    var fi := igFree.length() - 1;
-    loop fi >= 0 {
-        id := igFree[fi];
-        if igCap[id] >= total {
-            last := igFree.length() - 1;
-            if fi =!= last { mut igFree.setAt(fi, igFree[last]); }
-            _drop := mut igFree.popBack();
-            mut igW.setAt(id, w);
-            mut igH.setAt(id, h);
-            mut igAlive.setAt(id, true);
-            base := igBase[id];
-            var i := 0;
-            loop i < total {
-                mut igSlab.setAt(base + i, fillValue);
-                i += 1;
-            }
-            return (handle = id, gen = igGen[id]);
-        }
-        fi -= 1;
-    }
-
-    base := igSlab.length();
-    var i := 0;
-    loop i < total {
-        mut igSlab.pushBack(fillValue);
-        i += 1;
-    }
-    id := igBase.length();
-    mut igBase.pushBack(base);
-    mut igCap.pushBack(total);
-    mut igW.pushBack(w);
-    mut igH.pushBack(h);
-    mut igGen.pushBack(1);
-    mut igAlive.pushBack(true);
-    (handle = id, gen = 1)
-};
-
-/** Returns the width of `grid`. */
-pub intWidth := fn(grid: IntGrid): Int {
-    if not validIntGrid(grid) { return 0; }
-    igW[grid.handle]
-};
-
-/** Returns the height of `grid`. */
-pub intHeight := fn(grid: IntGrid): Int {
-    if not validIntGrid(grid) { return 0; }
-    igH[grid.handle]
-};
-
-/** True when `(x, y)` lies inside `0 <= x < width` and `0 <= y < height`. */
-pub inIntBounds := fn(grid: IntGrid, x: Int, y: Int): Bool {
-    if not validIntGrid(grid) { return false; }
-    id := grid.handle;
-    x >= 0 and x < igW[id] and y >= 0 and y < igH[id]
-};
-
-/** Reads the cell at `(x, y)`, or `fallback` when out of bounds. */
-pub getIntOr := fn(grid: IntGrid, x: Int, y: Int, fallback: Int): Int {
-    if not inIntBounds(grid, x, y) { return fallback; }
-    id := grid.handle;
-    igSlab[igBase[id] + (y * igW[id]) + x]
-};
-
-/** Writes `value` to cell `(x, y)`; returns `false` when out of bounds. */
-pub setInt := fn(grid: IntGrid, x: Int, y: Int, value: Int): Bool {
-    if not inIntBounds(grid, x, y) { return false; }
-    id := grid.handle;
-    mut igSlab.setAt(igBase[id] + (y * igW[id]) + x, value);
-    true
-};
-
-/** Fills the entire `grid` with `value`. */
-pub fillInts := fn(grid: IntGrid, value: Int): Unit {
-    if not validIntGrid(grid) { return; }
-    id := grid.handle;
-    base := igBase[id];
-    total := igW[id] * igH[id];
-    var i := 0;
-    loop i < total {
-        mut igSlab.setAt(base + i, value);
-        i += 1;
-    }
-};
-
-/** Fills the axis-aligned rectangle `(x, y, w, h)` clipped to `grid` bounds. */
-pub fillIntRect := fn(grid: IntGrid, x: Int, y: Int, w: Int, h: Int, value: Int): Unit {
-    if not validIntGrid(grid) or w <= 0 or h <= 0 { return; }
-    id := grid.handle;
-    gw := igW[id];
-    gh := igH[id];
-    base := igBase[id];
-    x0 := if x < 0 { 0 } else { x };
-    y0 := if y < 0 { 0 } else { y };
-    x1 := if x + w > gw { gw } else { x + w };
-    y1 := if y + h > gh { gh } else { y + h };
-    var cy := y0;
-    loop cy < y1 {
-        rowOff := base + (cy * gw);
-        var cx := x0;
-        loop cx < x1 {
-            mut igSlab.setAt(rowOff + cx, value);
-            cx += 1;
-        }
-        cy += 1;
-    }
-};
-
-/** Counts how many cells in `grid` equal `target`. */
-pub countIntValue := fn(grid: IntGrid, target: Int): Int {
-    if not validIntGrid(grid) { return 0; }
-    id := grid.handle;
-    base := igBase[id];
-    total := igW[id] * igH[id];
-    var c := 0;
-    var i := 0;
-    loop i < total {
-        if igSlab[base + i] == target { c += 1; }
-        i += 1;
-    }
-    c
-};
-
-/** Copies overlapping cells from `src` into `dst`. */
-pub copyInts := fn(dst: IntGrid, src: IntGrid): Unit {
-    if not validIntGrid(dst) or not validIntGrid(src) { return; }
-    dId := dst.handle;
-    sId := src.handle;
-    cw := if igW[dId] < igW[sId] { igW[dId] } else { igW[sId] };
-    ch := if igH[dId] < igH[sId] { igH[dId] } else { igH[sId] };
-    dBase := igBase[dId];
-    sBase := igBase[sId];
-    dw := igW[dId];
-    sw := igW[sId];
-    var y := 0;
-    loop y < ch {
-        var x := 0;
-        loop x < cw {
-            mut igSlab.setAt(dBase + (y * dw) + x, igSlab[sBase + (y * sw) + x]);
-            x += 1;
-        }
-        y += 1;
-    }
-};
-
-/** Destroys `grid` and recycles its handle slot. */
-pub destroyInts := fn(grid: IntGrid): Unit {
-    if not validIntGrid(grid) { return; }
-    id := grid.handle;
-    mut igAlive.setAt(id, false);
-    mut igGen.setAt(id, igGen[id] + 1);
-    mut igFree.pushBack(id);
-};
-
-/* ============================================================================
- * FloatGrid
- * ============================================================================ */
-
-/** Creates a `width x height` `Float` grid initialized to `fillValue`. */
-pub createFloats := fn(width: Int, height: Int, fillValue: Float): FloatGrid {
-    w := if width < 1 { 1 } else { width };
-    h := if height < 1 { 1 } else { height };
-    total := w * h;
-    var fi := fgFree.length() - 1;
-    loop fi >= 0 {
-        id := fgFree[fi];
-        if fgCap[id] >= total {
-            last := fgFree.length() - 1;
-            if fi =!= last { mut fgFree.setAt(fi, fgFree[last]); }
-            _drop := mut fgFree.popBack();
-            mut fgW.setAt(id, w);
-            mut fgH.setAt(id, h);
-            mut fgAlive.setAt(id, true);
-            base := fgBase[id];
-            var i := 0;
-            loop i < total {
-                mut fgSlab.setAt(base + i, fillValue);
-                i += 1;
-            }
-            return (handle = id, gen = fgGen[id]);
-        }
-        fi -= 1;
-    }
-
-    base := fgSlab.length();
-    var i := 0;
-    loop i < total {
-        mut fgSlab.pushBack(fillValue);
-        i += 1;
-    }
-    id := fgBase.length();
-    mut fgBase.pushBack(base);
-    mut fgCap.pushBack(total);
-    mut fgW.pushBack(w);
-    mut fgH.pushBack(h);
-    mut fgGen.pushBack(1);
-    mut fgAlive.pushBack(true);
-    (handle = id, gen = 1)
-};
-
-/** True when `(x, y)` lies inside `grid`. */
-pub inFloatBounds := fn(grid: FloatGrid, x: Int, y: Int): Bool {
-    if not validFloatGrid(grid) { return false; }
-    id := grid.handle;
-    x >= 0 and x < fgW[id] and y >= 0 and y < fgH[id]
-};
-
-/** Reads the float cell at `(x, y)`, or `fallback` when out of bounds. */
-pub getFloatOr := fn(grid: FloatGrid, x: Int, y: Int, fallback: Float): Float {
-    if not inFloatBounds(grid, x, y) { return fallback; }
-    id := grid.handle;
-    fgSlab[fgBase[id] + (y * fgW[id]) + x]
-};
-
-/** Writes `value` to float cell `(x, y)`; returns `false` when out of bounds. */
-pub setFloat := fn(grid: FloatGrid, x: Int, y: Int, value: Float): Bool {
-    if not inFloatBounds(grid, x, y) { return false; }
-    id := grid.handle;
-    mut fgSlab.setAt(fgBase[id] + (y * fgW[id]) + x, value);
-    true
-};
-
-/** Destroys `grid` and recycles its handle slot. */
-pub destroyFloats := fn(grid: FloatGrid): Unit {
-    if not validFloatGrid(grid) { return; }
-    id := grid.handle;
-    mut fgAlive.setAt(id, false);
-    mut fgGen.setAt(id, fgGen[id] + 1);
-    mut fgFree.pushBack(id);
-};
-
-/* ============================================================================
- * Generic Value-Typed Grid<T>
- * ============================================================================ */
+/** Comparable scalar set supported by `Grid.countValue`. */
+pub GridComparable := alias math.Numeric | String | Bool;
 
 /** Outcome of reading a cell from a generic `Grid<T>`. */
 pub GridCell := enum<T: Type> {
@@ -285,7 +11,7 @@ pub GridCell := enum<T: Type> {
     Value(T);
 }
 
-/** True when `cell` holds a valid in-bounds `.Value(...)`. */
+/** True when `cell` holds a valid `.Value(...)`. */
 pub GridCell.isValue := fn<T: Type>(cell: Self<T>): Bool {
     match cell {
         .OutOfBounds { false }
@@ -308,16 +34,20 @@ pub Grid := record<T: Type> {
     data: List<T>;
 }
 
+/** 2D integer grid alias. */
+pub IntGrid := alias Grid<Int>;
+
+/** 2D floating-point grid alias. */
+pub FloatGrid := alias Grid<Float>;
+
 /** Creates a generic `width x height` grid filled with `fill`. */
 pub createGrid := fn<T: Type>(width: Int, height: Int, fill: T): Grid<T> {
     w := if width < 1 { 1 } else { width };
     h := if height < 1 { 1 } else { height };
     total := w * h;
     buf: mut List<T> = [];
-    var i := 0;
-    loop i < total {
+    loop 0..total {
         mut buf.pushBack(fill);
-        i += 1;
     }
     Grid<T> { width = w, height = h, data = buf }
 };
@@ -355,15 +85,11 @@ pub Grid.fillRect := fn<T: Type>(g: mut Self<T>, x: Int, y: Int, w: Int, h: Int,
     y1 := if y + h > g.height { g.height } else { y + h };
     if x0 >= x1 or y0 >= y1 { return; }
     buf: mut List<T> = g.data;
-    var cy := y0;
-    loop cy < y1 {
+    loop y0..y1 as cy {
         rowOff := cy * g.width;
-        var cx := x0;
-        loop cx < x1 {
+        loop x0..x1 as cx {
             mut buf.setAt(rowOff + cx, value);
-            cx += 1;
         }
-        cy += 1;
     }
     g.data = buf;
 };
@@ -372,10 +98,33 @@ pub Grid.fillRect := fn<T: Type>(g: mut Self<T>, x: Int, y: Int, w: Int, h: Int,
 pub Grid.clear := fn<T: Type>(g: mut Self<T>, fill: T): Unit {
     buf: mut List<T> = g.data;
     total := g.width * g.height;
-    var i := 0;
-    loop i < total {
+    loop 0..total as i {
         mut buf.setAt(i, fill);
-        i += 1;
     }
     g.data = buf;
+};
+
+/** Copies overlapping cells from `src` into `dst` (matching top-left coordinates). */
+pub Grid.copyFrom := fn<T: Type>(dst: mut Self<T>, src: Self<T>): Unit {
+    cw := if dst.width < src.width { dst.width } else { src.width };
+    ch := if dst.height < src.height { dst.height } else { src.height };
+    if cw <= 0 or ch <= 0 { return; }
+    buf: mut List<T> = dst.data;
+    loop 0..ch as cy {
+        dstRow := cy * dst.width;
+        srcRow := cy * src.width;
+        loop 0..cw as cx {
+            mut buf.setAt(dstRow + cx, src.data[srcRow + cx]);
+        }
+    }
+    dst.data = buf;
+};
+
+/** Counts how many cells in `g` equal `target`. */
+pub Grid.countValue := fn<T: Type<GridComparable>>(g: Self<T>, target: T): Int {
+    var total := 0;
+    loop g.data as v {
+        if v == target { total += 1; }
+    }
+    total
 };

@@ -4,52 +4,49 @@ Alongside built-in `[T; N]`, `List<T>`, `Map<K, V>`, and `Set<T>`, Lite ships ge
 
 ## Bump Arenas & Generational Slot Pools (`ds/arena`, `ds/pool`)
 
-- [ds/arena](lite://module/ds/arena) provides O(1) scratch/frame bump allocators (`Arena`, `IntArena`, `FloatArena`) with aligned byte allocation (`allocAligned`), checkpoint/rewind (`mark`, `rewind`), bulk `reset`, and peak usage telemetry (`ArenaStats`).
-- [ds/pool](lite://module/ds/pool) provides fixed-capacity generational handle pools (`SlotPool`, `IntPool`, `TextPool`) where every handle pairs `(index, generation)` so stale handles after `release` are safely detected (`isIntAlive`, `getInt`) without use-after-free bugs:
+- [ds/arena](lite://module/ds/arena) provides O(1) scratch/frame bump allocators: byte-addressed `Arena` (`allocAligned`, `mark`/`rewind`, bulk `reset`, `ArenaStats`) and generic `TypedArena<T>` (`IntArena`, `FloatArena`).
+- [ds/pool](lite://module/ds/pool) provides fixed-capacity generational handle pools (`SlotPool` and generic `Pool<T>`, with `IntPool` and `TextPool` aliases) where every `Handle` pairs `(index, generation)` so stale handles after `release` are safely detected (`isAlive`, `get`) without use-after-free bugs:
 
 ```lite
 io := import "core/io";
 pool := import "ds/pool";
 
-p := pool.createInts(8);
-h1 := pool.acquireInt(p, 100);
-h2 := pool.acquireInt(p, 200);
-pool.releaseInt(p, h1);
-io.outputLine(pool.isIntAlive(p, h1), pool.getInt(p, h2).value, pool.intCount(p));
-pool.destroyInts(p);
+mut p := pool.create<Int>(8);
+h1 := mut p.acquire(100);
+h2 := mut p.acquire(200);
+_rel := mut p.release(h1);
+io.outputLine(p.isAlive(h1), p.get(h2).unwrapOr(-1), p.count());
 ```
 
 ## String Interning & O(1) LRU Caches (`ds/intern`, `ds/lru`)
 
-- [ds/intern](lite://module/ds/intern) deduplicates repeated strings into compact integer `SymbolId`s (`intern`, `lookup`, `resolve`, `stats`)—used inside Lite's own site validator for fast symbol comparisons.
-- [ds/lru](lite://module/ds/lru) implements bounded-capacity O(1) least-recently-used caches (`LruText`, `LruInt`, `IntLru`) with strict recency tracking, eviction reporting, and hit/miss counters (`LruStats`):
+- [ds/intern](lite://module/ds/intern) deduplicates repeated strings into `distinct` `SymbolId` values inside a nominal `Interner` (`intern`, `lookupId`, `resolve`, `stats`)—used inside Lite's own site validator for fast symbol comparisons.
+- [ds/lru](lite://module/ds/lru) implements bounded-capacity generic O(1) least-recently-used caches (`Lru<K, V>`, with `LruText`, `LruInt`, and `IntLru` aliases) featuring strict recency tracking, eviction reporting (`LruEviction<K, V>`), and hit/miss counters (`LruStats`):
 
 ```lite
 io := import "core/io";
 intern := import "ds/intern";
 lru := import "ds/lru";
 
-tbl := intern.create();
-idA := intern.intern(tbl, "alpha");
-idB := intern.intern(tbl, "alpha");
+mut tbl := intern.create();
+idA := mut tbl.intern("alpha");
+idB := mut tbl.intern("alpha");
 
-cache := lru.createText(2);
-lru.putText(cache, "a", "one");
-lru.putText(cache, "b", "two");
-ev := lru.putText(cache, "c", "three");
-io.outputLine(idA == idB, ev.evicted, ev.evictedKey);
-lru.destroyText(cache);
-intern.destroy(tbl);
+mut cache := lru.create<String, String>(2);
+_e1 := mut cache.put("a", "one");
+_e2 := mut cache.put("b", "two");
+ev := mut cache.put("c", "three");
+io.outputLine(idA == idB, ev.evicted, ev.key);
 ```
 
 ## Queues, Ring Buffers & Priority Heaps (`ds/ring`, `ds/deque`, `ds/heap`)
 
 | Module | Types | Typical Use |
 | --- | --- | --- |
-| [ds/ring](lite://module/ds/ring) | `Ring<T>`, `IntRing`, `FloatRing` | Fixed-capacity circular buffers for rolling telemetry, FPS windows, and audio samples (`push`, `tryPush`, `pop`) |
+| [ds/ring](lite://module/ds/ring) | `Ring<T>`, `IntRing`, `FloatRing` | Fixed-capacity circular buffers for rolling telemetry, FPS windows, and audio samples (`push`, `tryPush`, `pop`, `sum`, `avg`) |
 | [ds/deque](lite://module/ds/deque) | `Deque<T>`, `IntDeque`, `TextDeque` | O(1) double-ended queues and FIFO worklists (`pushFront`, `pushBack`, `popFront`, `popBack`) |
-| [ds/heap](lite://module/ds/heap) | `MinHeap`, `MaxHeap`, `PriorityQueue` | Binary heaps and keyed priority queues for Dijkstra/A* pathfinding, event timers, and schedulers |
-| [ds/grid](lite://module/ds/grid) | `Grid<T>`, `IntGrid`, `FloatGrid` | Flat-backed 2D tilemaps and boards with generic value cells (`GridCell<T>`, `get`, `set`, `fillRect`) |
+| [ds/heap](lite://module/ds/heap) | `MinHeap`, `MaxHeap`, `PriorityQueue<T>` | Binary heaps and generic keyed priority queues for Dijkstra/A* pathfinding, event timers, and schedulers |
+| [ds/grid](lite://module/ds/grid) | `Grid<T>`, `IntGrid`, `FloatGrid` | Flat-backed 2D tilemaps and boards with generic value cells (`GridCell<T>`, `get`, `set`, `fillRect`, `copyFrom`, `countValue`) |
 | [ds/spatial](lite://module/ds/spatial) | `SpatialGrid2D` | Uniform 2D spatial hash grid for fast broad-phase `queryRect`, `queryCircle`, and `queryPoint` lookups |
 
 ## Structured Data Codecs (`data/json`, `data/csv`)
@@ -61,34 +58,33 @@ intern.destroy(tbl);
 io := import "core/io";
 heap := import "ds/heap";
 
-h := heap.createMin(8);
-h.push(30);
-h.push(10);
-h.push(20);
-io.outputLine(h.pop().value, h.pop().value, h.count());
-h.destroy();
+mut h := heap.createMin(8);
+_a := mut h.push(30);
+_b := mut h.push(10);
+_c := mut h.push(20);
+p1 := mut h.pop();
+p2 := mut h.pop();
+io.outputLine(p1.unwrapOr(-1), p2.unwrapOr(-1), h.count());
 ```
 
 ## Dense Bitsets & Sparse Sets (`ds/bitset`, `ds/sparse`)
 
-- [ds/bitset](lite://module/ds/bitset) packs flags 30 bits per word with O(1) `set`/`clear`/`toggle`/`test`, popcount (`countOnes`), first-set/clear scans (`firstSet`, `firstClear`), and bitwise bulk ops (`orInto`, `andInto`, `xorInto`).
-- [ds/sparse](lite://module/ds/sparse) provides O(1) membership, insertion, and swap-remove over integer IDs `0..capacity-1` alongside dense cache-friendly iteration (`denseAt`, `count`)—ideal for ECS component sets and graph visited sets:
+- [ds/bitset](lite://module/ds/bitset) packs flags 30 bits per word in a nominal `Bitset` with O(1) `set`/`clear`/`toggle`/`test`, popcount (`countOnes`), first-set/clear scans (`firstSet`, `firstClear`), and bitwise bulk ops (`orInto`, `andInto`, `xorInto`).
+- [ds/sparse](lite://module/ds/sparse) provides a nominal `SparseSet` with O(1) membership, insertion, and swap-remove over integer IDs `0..capacity-1` alongside dense cache-friendly iteration (`denseAt`, `count`)—ideal for ECS component sets and graph visited sets:
 
 ```lite
 io := import "core/io";
-bs := import "ds/bitset";
-sp := import "ds/sparse";
+bitset := import "ds/bitset";
+sparse := import "ds/sparse";
 
-flags := bs.create(64);
-bs.set(flags, 3);
-bs.set(flags, 42);
+mut flags := bitset.create(64);
+_s1 := mut flags.set(3);
+_s2 := mut flags.set(42);
 
-entities := sp.create(32);
-sp.insert(entities, 7);
-sp.insert(entities, 19);
-io.outputLine(bs.countOnes(flags), bs.firstSet(flags), sp.has(entities, 19), sp.count(entities));
-bs.destroy(flags);
-sp.destroy(entities);
+mut entities := sparse.create(32);
+_i1 := mut entities.insert(7);
+_i2 := mut entities.insert(19);
+io.outputLine(flags.countOnes(), flags.firstSet(), entities.has(19), entities.count());
 ```
 
 ## Next Chapter

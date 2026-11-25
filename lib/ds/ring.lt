@@ -1,351 +1,6 @@
-/** Fixed-capacity circular ring buffers (`ds/ring`) for rolling windows, telemetry, and audio rings. */
+/** Fixed-capacity generic circular ring buffers (`ds/ring`) for rolling windows, telemetry, and audio rings. */
 
-/** Opaque generational handle to a fixed-capacity `Int` ring buffer. */
-pub IntRing := alias (handle: Int, gen: Int);
-
-/** Opaque generational handle to a fixed-capacity `Float` ring buffer. */
-pub FloatRing := alias (handle: Int, gen: Int);
-
-/* --- IntRing flat slab --- */
-var irSlab: mut List<Int> = [];
-var irBase: mut List<Int> = [];
-var irCap: mut List<Int> = [];
-var irHead: mut List<Int> = [];
-var irCount: mut List<Int> = [];
-var irGen: mut List<Int> = [];
-var irAlive: mut List<Bool> = [];
-var irFree: mut List<Int> = [];
-
-/* --- FloatRing flat slab --- */
-var frSlab: mut List<Float> = [];
-var frBase: mut List<Int> = [];
-var frCap: mut List<Int> = [];
-var frHead: mut List<Int> = [];
-var frCount: mut List<Int> = [];
-var frGen: mut List<Int> = [];
-var frAlive: mut List<Bool> = [];
-var frFree: mut List<Int> = [];
-
-validIntRing := fn(r: IntRing): Bool {
-    id := r.handle;
-    id >= 0 and id < irAlive.length() and irAlive[id] and irGen[id] == r.gen
-};
-
-validFloatRing := fn(r: FloatRing): Bool {
-    id := r.handle;
-    id >= 0 and id < frAlive.length() and frAlive[id] and frGen[id] == r.gen
-};
-
-/* ============================================================================
- * IntRing
- * ============================================================================ */
-
-/** Creates a fixed-capacity `Int` ring buffer (`capacity >= 1`). */
-pub createInts := fn(capacity: Int): IntRing {
-    cap := if capacity < 1 { 1 } else { capacity };
-    var fi := irFree.length() - 1;
-    loop fi >= 0 {
-        id := irFree[fi];
-        if irCap[id] >= cap {
-            last := irFree.length() - 1;
-            if fi =!= last { mut irFree.setAt(fi, irFree[last]); }
-            _drop := mut irFree.popBack();
-            mut irCap.setAt(id, cap);
-            mut irHead.setAt(id, 0);
-            mut irCount.setAt(id, 0);
-            mut irAlive.setAt(id, true);
-            return (handle = id, gen = irGen[id]);
-        }
-        fi -= 1;
-    }
-
-    base := irSlab.length();
-    var i := 0;
-    loop i < cap {
-        mut irSlab.pushBack(0);
-        i += 1;
-    }
-    id := irBase.length();
-    mut irBase.pushBack(base);
-    mut irCap.pushBack(cap);
-    mut irHead.pushBack(0);
-    mut irCount.pushBack(0);
-    mut irGen.pushBack(1);
-    mut irAlive.pushBack(true);
-    (handle = id, gen = 1)
-};
-
-/** Appends `value` in O(1), overwriting the oldest element if full; returns `true` if an overwrite occurred. */
-pub pushInt := fn(ring: IntRing, value: Int): Bool {
-    if not validIntRing(ring) { return false; }
-    id := ring.handle;
-    cap := irCap[id];
-    head := irHead[id];
-    cnt := irCount[id];
-    tail := (head + cnt) % cap;
-    mut irSlab.setAt(irBase[id] + tail, value);
-    if cnt == cap {
-        mut irHead.setAt(id, (head + 1) % cap);
-        true
-    } else {
-        mut irCount.setAt(id, cnt + 1);
-        false
-    }
-};
-
-/** Appends `value` only when not full; returns `false` if full or invalid. */
-pub tryPushInt := fn(ring: IntRing, value: Int): Bool {
-    if not validIntRing(ring) { return false; }
-    id := ring.handle;
-    cap := irCap[id];
-    cnt := irCount[id];
-    if cnt >= cap { return false; }
-    tail := (irHead[id] + cnt) % cap;
-    mut irSlab.setAt(irBase[id] + tail, value);
-    mut irCount.setAt(id, cnt + 1);
-    true
-};
-
-/** Removes and returns the oldest element in O(1). */
-pub popInt := fn(ring: IntRing): (found: Bool, value: Int) {
-    if not validIntRing(ring) { return (found = false, value = 0); }
-    id := ring.handle;
-    cnt := irCount[id];
-    if cnt <= 0 { return (found = false, value = 0); }
-    head := irHead[id];
-    val := irSlab[irBase[id] + head];
-    mut irHead.setAt(id, (head + 1) % irCap[id]);
-    mut irCount.setAt(id, cnt - 1);
-    (found = true, value = val)
-};
-
-/** Returns the oldest element without removing it. */
-pub peekOldestInt := fn(ring: IntRing): (found: Bool, value: Int) {
-    if not validIntRing(ring) { return (found = false, value = 0); }
-    id := ring.handle;
-    if irCount[id] <= 0 { return (found = false, value = 0); }
-    (found = true, value = irSlab[irBase[id] + irHead[id]])
-};
-
-/** Returns the newest element without removing it. */
-pub peekNewestInt := fn(ring: IntRing): (found: Bool, value: Int) {
-    if not validIntRing(ring) { return (found = false, value = 0); }
-    id := ring.handle;
-    cnt := irCount[id];
-    if cnt <= 0 { return (found = false, value = 0); }
-    idx := (irHead[id] + cnt - 1) % irCap[id];
-    (found = true, value = irSlab[irBase[id] + idx])
-};
-
-/** Returns the element at logical index `0..count-1` (0 = oldest). */
-pub atInt := fn(ring: IntRing, index: Int): (found: Bool, value: Int) {
-    if not validIntRing(ring) { return (found = false, value = 0); }
-    id := ring.handle;
-    if index < 0 or index >= irCount[id] { return (found = false, value = 0); }
-    pos := (irHead[id] + index) % irCap[id];
-    (found = true, value = irSlab[irBase[id] + pos])
-};
-
-/** Returns the sum of all elements currently in `ring`. */
-pub sumInts := fn(ring: IntRing): Int {
-    if not validIntRing(ring) { return 0; }
-    id := ring.handle;
-    base := irBase[id];
-    cap := irCap[id];
-    head := irHead[id];
-    cnt := irCount[id];
-    var total := 0;
-    var i := 0;
-    loop i < cnt {
-        total += irSlab[base + ((head + i) % cap)];
-        i += 1;
-    }
-    total
-};
-
-/** Returns the number of stored elements in `ring`. */
-pub intCount := fn(ring: IntRing): Int {
-    if not validIntRing(ring) { return 0; }
-    irCount[ring.handle]
-};
-
-/** Returns the fixed capacity of `ring`. */
-pub intCapacity := fn(ring: IntRing): Int {
-    if not validIntRing(ring) { return 0; }
-    irCap[ring.handle]
-};
-
-/** True when `ring` has reached its fixed capacity. */
-pub isIntFull := fn(ring: IntRing): Bool {
-    if not validIntRing(ring) { return false; }
-    id := ring.handle;
-    irCount[id] >= irCap[id]
-};
-
-/** True when `ring` contains no elements. */
-pub isIntEmpty := fn(ring: IntRing): Bool {
-    intCount(ring) == 0
-};
-
-/** Clears `ring` in O(1). */
-pub clearInts := fn(ring: IntRing): Unit {
-    if not validIntRing(ring) { return; }
-    id := ring.handle;
-    mut irHead.setAt(id, 0);
-    mut irCount.setAt(id, 0);
-};
-
-/** Destroys `ring` and recycles its handle slot. */
-pub destroyInts := fn(ring: IntRing): Unit {
-    if not validIntRing(ring) { return; }
-    id := ring.handle;
-    mut irAlive.setAt(id, false);
-    mut irGen.setAt(id, irGen[id] + 1);
-    mut irFree.pushBack(id);
-};
-
-/* ============================================================================
- * FloatRing (rolling FPS / frame-time / telemetry windows)
- * ============================================================================ */
-
-/** Creates a fixed-capacity `Float` ring buffer (`capacity >= 1`). */
-pub createFloats := fn(capacity: Int): FloatRing {
-    cap := if capacity < 1 { 1 } else { capacity };
-    var fi := frFree.length() - 1;
-    loop fi >= 0 {
-        id := frFree[fi];
-        if frCap[id] >= cap {
-            last := frFree.length() - 1;
-            if fi =!= last { mut frFree.setAt(fi, frFree[last]); }
-            _drop := mut frFree.popBack();
-            mut frCap.setAt(id, cap);
-            mut frHead.setAt(id, 0);
-            mut frCount.setAt(id, 0);
-            mut frAlive.setAt(id, true);
-            return (handle = id, gen = frGen[id]);
-        }
-        fi -= 1;
-    }
-
-    base := frSlab.length();
-    var i := 0;
-    loop i < cap {
-        mut frSlab.pushBack(0.0);
-        i += 1;
-    }
-    id := frBase.length();
-    mut frBase.pushBack(base);
-    mut frCap.pushBack(cap);
-    mut frHead.pushBack(0);
-    mut frCount.pushBack(0);
-    mut frGen.pushBack(1);
-    mut frAlive.pushBack(true);
-    (handle = id, gen = 1)
-};
-
-/** Appends `value` in O(1), overwriting the oldest element if full; returns `true` if overwritten. */
-pub pushFloat := fn(ring: FloatRing, value: Float): Bool {
-    if not validFloatRing(ring) { return false; }
-    id := ring.handle;
-    cap := frCap[id];
-    head := frHead[id];
-    cnt := frCount[id];
-    tail := (head + cnt) % cap;
-    mut frSlab.setAt(frBase[id] + tail, value);
-    if cnt == cap {
-        mut frHead.setAt(id, (head + 1) % cap);
-        true
-    } else {
-        mut frCount.setAt(id, cnt + 1);
-        false
-    }
-};
-
-/** Removes and returns the oldest float in O(1). */
-pub popFloat := fn(ring: FloatRing): (found: Bool, value: Float) {
-    if not validFloatRing(ring) { return (found = false, value = 0.0); }
-    id := ring.handle;
-    cnt := frCount[id];
-    if cnt <= 0 { return (found = false, value = 0.0); }
-    head := frHead[id];
-    val := frSlab[frBase[id] + head];
-    mut frHead.setAt(id, (head + 1) % frCap[id]);
-    mut frCount.setAt(id, cnt - 1);
-    (found = true, value = val)
-};
-
-/** Returns the arithmetic mean of all samples in `ring`, or `0.0` when empty. */
-pub avgFloat := fn(ring: FloatRing): Float {
-    if not validFloatRing(ring) { return 0.0; }
-    id := ring.handle;
-    cnt := frCount[id];
-    if cnt <= 0 { return 0.0; }
-    base := frBase[id];
-    cap := frCap[id];
-    head := frHead[id];
-    var total := 0.0;
-    var i := 0;
-    loop i < cnt {
-        total += frSlab[base + ((head + i) % cap)];
-        i += 1;
-    }
-    total / (cnt * 1.0)
-};
-
-/** Returns the minimum and maximum values currently in `ring`. */
-pub minMaxFloat := fn(ring: FloatRing): (found: Bool, min: Float, max: Float) {
-    if not validFloatRing(ring) { return (found = false, min = 0.0, max = 0.0); }
-    id := ring.handle;
-    cnt := frCount[id];
-    if cnt <= 0 { return (found = false, min = 0.0, max = 0.0); }
-    base := frBase[id];
-    cap := frCap[id];
-    head := frHead[id];
-    first := frSlab[base + head];
-    var lo := first;
-    var hi := first;
-    var i := 1;
-    loop i < cnt {
-        v := frSlab[base + ((head + i) % cap)];
-        if v < lo { lo = v; }
-        if v > hi { hi = v; }
-        i += 1;
-    }
-    (found = true, min = lo, max = hi)
-};
-
-/** Returns the number of stored floats in `ring`. */
-pub floatCount := fn(ring: FloatRing): Int {
-    if not validFloatRing(ring) { return 0; }
-    frCount[ring.handle]
-};
-
-/** Returns the fixed capacity of `ring`. */
-pub floatCapacity := fn(ring: FloatRing): Int {
-    if not validFloatRing(ring) { return 0; }
-    frCap[ring.handle]
-};
-
-/** Clears `ring` in O(1). */
-pub clearFloats := fn(ring: FloatRing): Unit {
-    if not validFloatRing(ring) { return; }
-    id := ring.handle;
-    mut frHead.setAt(id, 0);
-    mut frCount.setAt(id, 0);
-};
-
-/** Destroys `ring` and recycles its handle slot. */
-pub destroyFloats := fn(ring: FloatRing): Unit {
-    if not validFloatRing(ring) { return; }
-    id := ring.handle;
-    mut frAlive.setAt(id, false);
-    mut frGen.setAt(id, frGen[id] + 1);
-    mut frFree.pushBack(id);
-};
-
-/* ============================================================================
- * Generic Value-Typed Ring<T>
- * ============================================================================ */
+math := import "math/scalar";
 
 /** Outcome of reading or popping an element from a generic `Ring<T>`. */
 pub RingItem := enum<T: Type> {
@@ -377,15 +32,19 @@ pub Ring := record<T: Type> {
     count: Int;
 }
 
+/** Circular `Int` ring buffer alias. */
+pub IntRing := alias Ring<Int>;
+
+/** Circular `Float` ring buffer alias. */
+pub FloatRing := alias Ring<Float>;
+
 /** Creates an empty generic `Ring<T>` with fixed capacity `>= 1`. */
 pub createRing := fn<T: Type>(capacity: Int): Ring<T> {
     cap := if capacity < 1 { 1 } else { capacity };
     buf: mut List<T> = [];
-    var z: T;
-    var i := 0;
-    loop i < cap {
+    z: T;
+    loop 0..cap {
         mut buf.pushBack(z);
-        i += 1;
     }
     Ring<T> { data = buf, cap = cap, head = 0, count = 0 }
 };
@@ -440,7 +99,7 @@ pub Ring.tryPush := fn<T: Type>(r: mut Self<T>, value: T): Bool {
 pub Ring.pop := fn<T: Type>(r: mut Self<T>): RingItem<T> {
     if r.count <= 0 { return .Empty; }
     val := r.data[r.head];
-    var z: T;
+    z: T;
     buf: mut List<T> = r.data;
     mut buf.setAt(r.head, z);
     r.data = buf;
@@ -467,13 +126,40 @@ pub Ring.get := fn<T: Type>(r: Self<T>, index: Int): RingItem<T> {
 /** Resets `r` to empty and clears stored elements to their zero value. */
 pub Ring.clear := fn<T: Type>(r: mut Self<T>): Unit {
     buf: mut List<T> = r.data;
-    var z: T;
-    var i := 0;
-    loop i < r.cap {
+    z: T;
+    loop 0..r.cap as i {
         mut buf.setAt(i, z);
-        i += 1;
     }
     r.data = buf;
     r.head = 0;
     r.count = 0;
+};
+
+/** Sums all currently buffered numeric elements in `r`. */
+pub Ring.sum := fn<T: Type<math.Numeric>>(r: Self<T>): T {
+    var total: T;
+    loop 0..r.count as i {
+        total = total + r.data[(r.head + i) % r.cap];
+    }
+    total
+};
+
+/** Computes the arithmetic mean of a `Float` ring buffer (`0.0` when empty). */
+pub Ring.avg := fn(r: Self<Float>): Float {
+    if r.count <= 0 { return 0.0; }
+    r.sum() / (r.count * 1.0)
+};
+
+/** Returns `(found, min, max)` over all elements currently in a `Float` ring buffer. */
+pub Ring.minMax := fn(r: Self<Float>): (found: Bool, min: Float, max: Float) {
+    if r.count <= 0 { return (found = false, min = 0.0, max = 0.0); }
+    first := r.data[r.head];
+    var lo := first;
+    var hi := first;
+    loop 1..r.count as i {
+        v := r.data[(r.head + i) % r.cap];
+        if v < lo { lo = v; }
+        if v > hi { hi = v; }
+    }
+    (found = true, min = lo, max = hi)
 };

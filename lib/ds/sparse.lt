@@ -1,132 +1,85 @@
 /** Sparse sets (`ds/sparse`) with O(1) membership/removal and cache-friendly dense iteration. */
 
-/** Opaque generational handle to a bounded-universe integer sparse set (`0..capacity-1`). */
-pub SparseSet := alias (handle: Int, gen: Int);
-
-var ssSparse: mut List<Int> = [];
-var ssDense: mut List<Int> = [];
-var ssBase: mut List<Int> = [];
-var ssCap: mut List<Int> = [];
-var ssCount: mut List<Int> = [];
-var ssGen: mut List<Int> = [];
-var ssAlive: mut List<Bool> = [];
-var ssFree: mut List<Int> = [];
-
-validSet := fn(s: SparseSet): Bool {
-    id := s.handle;
-    id >= 0 and id < ssAlive.length() and ssAlive[id] and ssGen[id] == s.gen
-};
+/** Bounded-universe integer sparse set (`0..capacity-1`) with O(1) ops and dense iteration. */
+pub SparseSet := record {
+    sparse: List<Int>;
+    dense: List<Int>;
+    cap: Int;
+    liveCount: Int;
+}
 
 /** Creates a sparse set supporting integer IDs in `0..capacity-1`. */
 pub create := fn(capacity: Int): SparseSet {
     cap := if capacity < 1 { 1 } else { capacity };
-    var fi := ssFree.length() - 1;
-    loop fi >= 0 {
-        id := ssFree[fi];
-        if ssCap[id] >= cap {
-            last := ssFree.length() - 1;
-            if fi =!= last { mut ssFree.setAt(fi, ssFree[last]); }
-            _drop := mut ssFree.popBack();
-            mut ssCap.setAt(id, cap);
-            mut ssCount.setAt(id, 0);
-            mut ssAlive.setAt(id, true);
-            return (handle = id, gen = ssGen[id]);
-        }
-        fi -= 1;
+    sp: mut List<Int> = [];
+    dn: mut List<Int> = [];
+    loop 0..cap {
+        mut sp.pushBack(-1);
+        mut dn.pushBack(0);
     }
-
-    base := ssSparse.length();
-    var i := 0;
-    loop i < cap {
-        mut ssSparse.pushBack(-1);
-        mut ssDense.pushBack(0);
-        i += 1;
-    }
-    id := ssBase.length();
-    mut ssBase.pushBack(base);
-    mut ssCap.pushBack(cap);
-    mut ssCount.pushBack(0);
-    mut ssGen.pushBack(1);
-    mut ssAlive.pushBack(true);
-    (handle = id, gen = 1)
+    SparseSet { sparse = sp, dense = dn, cap = cap, liveCount = 0 }
 };
 
 /** True when `value` is currently a member of `s` in O(1). */
-pub has := fn(s: SparseSet, value: Int): Bool {
-    if not validSet(s) or value < 0 { return false; }
-    id := s.handle;
-    if value >= ssCap[id] { return false; }
-    base := ssBase[id];
-    denseIdx := ssSparse[base + value];
-    denseIdx >= 0 and denseIdx < ssCount[id] and ssDense[base + denseIdx] == value
+pub SparseSet.has := fn(s: Self, value: Int): Bool {
+    if value < 0 or value >= s.cap { return false; }
+    denseIdx := s.sparse[value];
+    denseIdx >= 0 and denseIdx < s.liveCount and s.dense[denseIdx] == value
 };
 
 /** Inserts `value` (`0..capacity-1`) into `s` in O(1); returns `true` if newly inserted. */
-pub insert := fn(s: SparseSet, value: Int): Bool {
-    if not validSet(s) or value < 0 { return false; }
-    id := s.handle;
-    if value >= ssCap[id] { return false; }
-    if has(s, value) { return false; }
-    base := ssBase[id];
-    cnt := ssCount[id];
-    mut ssSparse.setAt(base + value, cnt);
-    mut ssDense.setAt(base + cnt, value);
-    mut ssCount.setAt(id, cnt + 1);
+pub SparseSet.insert := fn(s: mut Self, value: Int): Bool {
+    if value < 0 or value >= s.cap or s.has(value) { return false; }
+    cnt := s.liveCount;
+    sp: mut List<Int> = s.sparse;
+    dn: mut List<Int> = s.dense;
+    mut sp.setAt(value, cnt);
+    mut dn.setAt(cnt, value);
+    s.sparse = sp;
+    s.dense = dn;
+    s.liveCount = cnt + 1;
     true
 };
 
 /** Removes `value` from `s` in O(1) via swap-with-last; returns `true` if it was present. */
-pub remove := fn(s: SparseSet, value: Int): Bool {
-    if not has(s, value) { return false; }
-    id := s.handle;
-    base := ssBase[id];
-    denseIdx := ssSparse[base + value];
-    lastIdx := ssCount[id] - 1;
-    lastVal := ssDense[base + lastIdx];
-    mut ssDense.setAt(base + denseIdx, lastVal);
-    mut ssSparse.setAt(base + lastVal, denseIdx);
-    mut ssCount.setAt(id, lastIdx);
+pub SparseSet.remove := fn(s: mut Self, value: Int): Bool {
+    if not s.has(value) { return false; }
+    denseIdx := s.sparse[value];
+    lastIdx := s.liveCount - 1;
+    lastVal := s.dense[lastIdx];
+    sp: mut List<Int> = s.sparse;
+    dn: mut List<Int> = s.dense;
+    mut dn.setAt(denseIdx, lastVal);
+    mut sp.setAt(lastVal, denseIdx);
+    s.sparse = sp;
+    s.dense = dn;
+    s.liveCount = lastIdx;
     true
 };
 
 /** Returns the dense index (`0..count-1`) of `value`, or `-1` if absent. */
-pub indexOf := fn(s: SparseSet, value: Int): Int {
-    if not has(s, value) { return -1; }
-    id := s.handle;
-    ssSparse[ssBase[id] + value]
+pub SparseSet.indexOf := fn(s: Self, value: Int): Int {
+    if not s.has(value) { return -1; }
+    s.sparse[value]
 };
 
 /** Returns the member ID at dense position `index` (`0..count-1`), or `-1` if out of bounds. */
-pub denseAt := fn(s: SparseSet, index: Int): Int {
-    if not validSet(s) { return -1; }
-    id := s.handle;
-    if index < 0 or index >= ssCount[id] { return -1; }
-    ssDense[ssBase[id] + index]
+pub SparseSet.denseAt := fn(s: Self, index: Int): Int {
+    if index < 0 or index >= s.liveCount { return -1; }
+    s.dense[index]
 };
 
 /** Returns the number of live members in `s`. */
-pub count := fn(s: SparseSet): Int {
-    if not validSet(s) { return 0; }
-    ssCount[s.handle]
+pub SparseSet.count := fn(s: Self): Int {
+    s.liveCount
 };
 
 /** Returns the maximum ID universe capacity of `s`. */
-pub capacity := fn(s: SparseSet): Int {
-    if not validSet(s) { return 0; }
-    ssCap[s.handle]
+pub SparseSet.capacity := fn(s: Self): Int {
+    s.cap
 };
 
-/** Clears `s` in O(1) (no sparse array zeroing needed). */
-pub clear := fn(s: SparseSet): Unit {
-    if not validSet(s) { return; }
-    (mut ssCount).setAt(s.handle, 0);
-};
-
-/** Destroys `s` and recycles its handle slot. */
-pub destroy := fn(s: SparseSet): Unit {
-    if not validSet(s) { return; }
-    id := s.handle;
-    mut ssAlive.setAt(id, false);
-    mut ssGen.setAt(id, ssGen[id] + 1);
-    mut ssFree.pushBack(id);
+/** Clears `s` in O(1) without rewriting the sparse array. */
+pub SparseSet.clear := fn(s: mut Self): Unit {
+    s.liveCount = 0;
 };

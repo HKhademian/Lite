@@ -342,10 +342,10 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     absSiteDir := path.resolve(proc.cwd(), siteDirRaw);
 
     sortedSiteFiles := collectAllSiteFiles(absSiteDir);
-    siteFileTable := intern.create();
+    mut siteFileTable := intern.create();
     htmlFiles: mut List<String> = [];
     loop sortedSiteFiles as relFile {
-        _sfId := intern.intern(siteFileTable, relFile);
+        _sfId := mut siteFileTable.intern(relFile);
         if relFile.endsWith(".html") {
             mut htmlFiles.pushBack(relFile);
         }
@@ -363,12 +363,12 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
 
     /* Load playground library targets if present. */
     hasSampleFilesDir := fs.kind(path.join(absSiteDir, "playground/samples")) == fs.FILE_KIND_DIR;
-    hasPlayTargets := intern.has(siteFileTable, "playground/library.json");
-    playAllIds := intern.create();
-    playCatSample := intern.create();
-    playCatExample := intern.create();
-    playCatCase := intern.create();
-    playCatPiece := intern.create();
+    hasPlayTargets := siteFileTable.has("playground/library.json");
+    mut playAllIds := intern.create();
+    mut playCatSample := intern.create();
+    mut playCatExample := intern.create();
+    mut playCatCase := intern.create();
+    mut playCatPiece := intern.create();
     if hasPlayTargets {
         libRead := fs.readText(path.join(absSiteDir, "playground/library.json"));
         if libRead.ok {
@@ -377,14 +377,14 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
                 itSlug := readOptStr(libRead.text, itemPos, "slug");
                 itCat := readOptStr(libRead.text, itemPos, "category");
                 itSampleId := readOptStr(libRead.text, itemPos, "sampleId");
-                if itId =!= "" { _a := intern.intern(playAllIds, itId); }
-                if itSlug =!= "" { _b := intern.intern(playAllIds, itSlug); }
-                if itSampleId =!= "" { _c := intern.intern(playCatSample, itSampleId); }
+                if itId =!= "" { _a := mut playAllIds.intern(itId); }
+                if itSlug =!= "" { _b := mut playAllIds.intern(itSlug); }
+                if itSampleId =!= "" { _c := mut playCatSample.intern(itSampleId); }
                 if itSlug =!= "" {
-                    if itCat == "sample" { _d := intern.intern(playCatSample, itSlug); }
-                    else if itCat == "example" { _e := intern.intern(playCatExample, itSlug); }
-                    else if itCat == "case" { _f := intern.intern(playCatCase, itSlug); }
-                    else if itCat == "piece" { _g := intern.intern(playCatPiece, itSlug); }
+                    if itCat == "sample" { _d := mut playCatSample.intern(itSlug); }
+                    else if itCat == "example" { _e := mut playCatExample.intern(itSlug); }
+                    else if itCat == "case" { _f := mut playCatCase.intern(itSlug); }
+                    else if itCat == "piece" { _g := mut playCatPiece.intern(itSlug); }
                 }
             }
         }
@@ -442,7 +442,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
         relToSite := resolved.relPath;
         exists := if resolved.escaped {
             false
-        } else if intern.has(siteFileTable, relToSite) {
+        } else if siteFileTable.has(relToSite) {
             true
         } else {
             fs.kind(path.join(absSiteDir, relToSite)) =!= fs.FILE_KIND_MISSING
@@ -464,27 +464,27 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
             queryStr := pathAndQuery.slice(qIdx + 1, pathAndQuery.length());
             sampleParam := getQueryParam(queryStr, "sample");
             if sampleParam.found and sampleParam.value =!= "" {
-                sampleJsonOk := hasSampleFilesDir and intern.has(siteFileTable, "playground/samples/" + sampleParam.value + ".json");
-                libSampleOk := hasPlayTargets and intern.has(playCatSample, sampleParam.value);
+                sampleJsonOk := hasSampleFilesDir and siteFileTable.has("playground/samples/" + sampleParam.value + ".json");
+                libSampleOk := hasPlayTargets and playCatSample.has(sampleParam.value);
                 if (hasSampleFilesDir or hasPlayTargets) and not sampleJsonOk and not libSampleOk {
                     mut violations.pushBack(violationJson(source, rawTarget, "missing-play-target"));
                 }
             }
             if hasPlayTargets {
                 exParam := getQueryParam(queryStr, "example");
-                if exParam.found and exParam.value =!= "" and not intern.has(playCatExample, exParam.value) {
+                if exParam.found and exParam.value =!= "" and not playCatExample.has(exParam.value) {
                     mut violations.pushBack(violationJson(source, rawTarget, "missing-play-target"));
                 }
                 caseParam := getQueryParam(queryStr, "case");
-                if caseParam.found and caseParam.value =!= "" and not intern.has(playCatCase, caseParam.value) {
+                if caseParam.found and caseParam.value =!= "" and not playCatCase.has(caseParam.value) {
                     mut violations.pushBack(violationJson(source, rawTarget, "missing-play-target"));
                 }
                 pieceParam := getQueryParam(queryStr, "piece");
-                if pieceParam.found and pieceParam.value =!= "" and not intern.has(playCatPiece, pieceParam.value) {
+                if pieceParam.found and pieceParam.value =!= "" and not playCatPiece.has(pieceParam.value) {
                     mut violations.pushBack(violationJson(source, rawTarget, "missing-play-target"));
                 }
                 itemParam := getQueryParam(queryStr, "item");
-                if itemParam.found and itemParam.value =!= "" and not intern.has(playAllIds, itemParam.value) {
+                if itemParam.found and itemParam.value =!= "" and not playAllIds.has(itemParam.value) {
                     mut violations.pushBack(violationJson(source, rawTarget, "missing-play-target"));
                 }
             }
@@ -552,7 +552,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     }
 
     /* 2. Check search-index.json. */
-    if not intern.has(siteFileTable, "search-index.json") {
+    if not siteFileTable.has("search-index.json") {
         mut violations.pushBack(violationJson("search-index.json", "search-index.json", "missing-file"));
     } else {
         searchRead := fs.readText(path.join(absSiteDir, "search-index.json"));
@@ -567,7 +567,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     }
 
     /* 3. Check link-graph.json. */
-    if not intern.has(siteFileTable, "link-graph.json") {
+    if not siteFileTable.has("link-graph.json") {
         mut violations.pushBack(violationJson("link-graph.json", "link-graph.json", "missing-file"));
     } else {
         graphRead := fs.readText(path.join(absSiteDir, "link-graph.json"));
@@ -618,13 +618,6 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
             }
         }
     }
-
-    intern.destroy(siteFileTable);
-    intern.destroy(playAllIds);
-    intern.destroy(playCatSample);
-    intern.destroy(playCatExample);
-    intern.destroy(playCatCase);
-    intern.destroy(playCatPiece);
 
     "{"
     + "\"htmlFiles\":" + htmlCount.toText() + ","

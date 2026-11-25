@@ -12,9 +12,9 @@ ctx := canvas.play(width = 320, height = 200, title = "Particle Pool · Click/Sp
 bg := canvas.rgb(10, 14, 24);
 MAX_PARTICLES := 128;
 
-slots := pool.createSlots(MAX_PARTICLES);
-active := sparse.create(MAX_PARTICLES);
-frameScratch := arena.createInts(MAX_PARTICLES);
+mut slots := pool.createSlots(MAX_PARTICLES);
+mut active := sparse.create(MAX_PARTICLES);
+mut frameScratch := arena.createTyped<Int>(MAX_PARTICLES);
 
 /* Parallel component arrays indexed by SlotPool handle index (zero heap churn after startup). */
 var hGen: mut List<Int> = [];
@@ -58,8 +58,8 @@ paletteColor := fn(idx: Int, alpha: Int): canvas.Color {
 };
 
 spawnOne := fn(x: Int, y: Int, dx: Int, dy: Int, ttl: Int, colorIdx: Int): Unit {
-    h := pool.acquireSlot(slots);
-    if not pool.isHandleValid(h) { return; }
+    h := mut slots.acquire();
+    if not h.isValid() { return; }
     i := h.index;
     mut hGen.setAt(i, h.generation);
     mut px.setAt(i, (x * 16) + (dx * 4));
@@ -69,7 +69,7 @@ spawnOne := fn(x: Int, y: Int, dx: Int, dy: Int, ttl: Int, colorIdx: Int): Unit 
     mut life.setAt(i, ttl);
     mut maxLife.setAt(i, if ttl < 1 { 1 } else { ttl });
     mut hueIdx.setAt(i, colorIdx);
-    _ins := sparse.insert(active, i);
+    _ins := mut active.insert(i);
 };
 
 spawnBurst := fn(cx: Int, cy: Int, count: Int, chime: Bool): Unit {
@@ -92,7 +92,7 @@ render := fn(): Unit {
     board.drawRect(4, 4, ctx.width - 8, ctx.height - 8, canvas.rgba(255, 255, 255, 24));
 
     /* Pool occupancy bar at top */
-    live := sparse.count(active);
+    live := active.count();
     barW := (live * (ctx.width - 24)) / MAX_PARTICLES;
     canvas.fillRect(12, 10, ctx.width - 24, 5, canvas.rgba(255, 255, 255, 20));
     if barW > 0 {
@@ -100,20 +100,18 @@ render := fn(): Unit {
     }
 
     /* Dense cache-friendly iteration over only active particle slots */
-    var di := 0;
-    loop di < live {
-        slotIdx := sparse.denseAt(active, di);
+    loop 0..live as di {
+        slotIdx := active.denseAt(di);
         x := px[slotIdx] / 16;
         y := py[slotIdx] / 16;
         alpha := 40 + ((life[slotIdx] * 215) / maxLife[slotIdx]);
         sz := if life[slotIdx] > (maxLife[slotIdx] / 2) { 4 } else { 3 };
         canvas.fillRect(x, y, sz, sz, paletteColor(hueIdx[slotIdx], alpha));
-        di += 1;
     }
 };
 
 onCanvasInit := fn(): Unit {
-    if sparse.count(active) == 0 {
+    if active.count() == 0 {
         spawnBurst(ctx.width / 2, ctx.height - 28, 36, false);
     }
     render();
@@ -131,34 +129,30 @@ onCanvasUpdate := fn(dt: Float): Int {
     }
 
     /* Reset O(1) frame scratch arena to record expiring slots */
-    arena.resetInts(frameScratch);
-    live := sparse.count(active);
-    var di := 0;
-    loop di < live {
-        i := sparse.denseAt(active, di);
+    mut frameScratch.reset();
+    live := active.count();
+    loop 0..live as di {
+        i := active.denseAt(di);
         nx := px[i] + vx[i];
         ny := py[i] + vy[i];
         nvy := vy[i] + 2;
         nl := life[i] - 1;
         if nl <= 0 or nx < 96 or nx > ((ctx.width - 10) * 16) or ny > ((ctx.height - 10) * 16) {
-            _dead := arena.allocInt(frameScratch, i);
+            _dead := mut frameScratch.alloc(i);
         } else {
             mut px.setAt(i, nx);
             mut py.setAt(i, ny);
             mut vy.setAt(i, nvy);
             mut life.setAt(i, nl);
         }
-        di += 1;
     }
 
     /* Reclaim expired slots back into SlotPool + SparseSet */
-    deadCount := arena.usedInts(frameScratch);
-    var k := 0;
-    loop k < deadCount {
-        slotIdx := arena.getInt(frameScratch, k);
-        _rm := sparse.remove(active, slotIdx);
-        _rel := pool.releaseSlot(slots, (index = slotIdx, generation = hGen[slotIdx]));
-        k += 1;
+    deadCount := frameScratch.used();
+    loop 0..deadCount as k {
+        slotIdx := frameScratch.get(k);
+        _rm := mut active.remove(slotIdx);
+        _rel := mut slots.release(pool.Handle { index = slotIdx, generation = hGen[slotIdx] });
     }
 
     render();

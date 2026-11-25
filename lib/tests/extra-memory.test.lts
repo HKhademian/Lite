@@ -27,124 +27,120 @@ functionalSrc :=
 "intern := import \"ds/intern\";\n" +
 "lru := import \"ds/lru\";\n" +
 "\n" +
-"/* 1. extra/arena: byte arena + alignment + int32 + mark/rewind + reset + reuse */\n" +
-"a := arena.create(64);\n" +
-"s1 := arena.alloc(a, 5);\n" +
-"s2 := arena.allocAligned(a, 8, 8);\n" +
-"badAlign := arena.allocAligned(a, 4, 3);\n" +
-"ovf := arena.alloc(a, 100);\n" +
+"/* 1. ds/arena: byte arena + alignment + int32 + mark/rewind + reset + TypedArena<T> */\n" +
+"mut a := arena.create(64);\n" +
+"s1 := mut a.alloc(5);\n" +
+"s2 := mut a.allocAligned(8, 8);\n" +
+"badAlign := mut a.allocAligned(4, 3);\n" +
+"ovf := mut a.alloc(100);\n" +
 "io.outputLine(\"arena1\", s1.ok, s1.offset, s2.ok, s2.offset, badAlign.ok, ovf.ok);\n" +
-"_w1 := arena.writeByte(a, 0, 255);\n" +
-"_w2 := arena.writeInt32(a, s2.offset, -123456);\n" +
-"_w3 := arena.writeInt32(a, s2.offset + 4, 987654);\n" +
-"io.outputLine(\"arenaRW\", arena.readByte(a, 0), arena.readInt32(a, s2.offset), arena.readInt32(a, s2.offset + 4));\n" +
-"m := arena.mark(a);\n" +
-"_s3 := arena.alloc(a, 16);\n" +
-"usedBeforeRewind := arena.usedBytes(a);\n" +
-"rewOk := arena.rewind(a, m);\n" +
-"usedAfterRewind := arena.usedBytes(a);\n" +
-"arena.reset(a);\n" +
-"st := arena.stats(a);\n" +
+"_w1 := mut a.writeByte(0, 255);\n" +
+"_w2 := mut a.writeInt32(s2.offset, -123456);\n" +
+"_w3 := mut a.writeInt32(s2.offset + 4, 987654);\n" +
+"io.outputLine(\"arenaRW\", a.readByte(0), a.readInt32(s2.offset), a.readInt32(s2.offset + 4));\n" +
+"m := a.mark();\n" +
+"_s3 := mut a.alloc(16);\n" +
+"usedBeforeRewind := a.usedBytes();\n" +
+"rewOk := mut a.rewind(m);\n" +
+"usedAfterRewind := a.usedBytes();\n" +
+"mut a.reset();\n" +
+"st := a.stats();\n" +
 "io.outputLine(\"arenaStats\", usedBeforeRewind, rewOk, usedAfterRewind, st.usedBytes, st.peakBytes, st.resetCount, st.capacityBytes);\n" +
-"arena.destroy(a);\n" +
-"io.outputLine(\"arenaDead\", arena.isValid(a), arena.alloc(a, 4).ok);\n" +
-"a2 := arena.create(32);\n" +
-"io.outputLine(\"arenaReuse\", arena.isValid(a2), arena.capacityBytes(a2));\n" +
-"arena.destroy(a2);\n" +
+"mut a.destroy();\n" +
+"allocDead := mut a.alloc(4);\n" +
+"io.outputLine(\"arenaDead\", a.isValid(), allocDead.ok);\n" +
+"mut a2 := arena.create(32);\n" +
+"io.outputLine(\"arenaReuse\", a2.isValid(), a2.capacityBytes());\n" +
+"mut a2.destroy();\n" +
 "\n" +
-"/* Typed IntArena & FloatArena */\n" +
-"ia := arena.createInts(16);\n" +
-"i0 := arena.allocInt(ia, 42);\n" +
-"ispan := arena.allocIntSpan(ia, 4, 7);\n" +
-"_iset := arena.setInt(ia, ispan.offset + 2, 99);\n" +
-"im := arena.markInts(ia);\n" +
-"_iExtra := arena.allocInt(ia, 100);\n" +
-"_iRew := arena.rewindInts(ia, im);\n" +
-"io.outputLine(\"intArena\", i0, arena.getInt(ia, i0), arena.getInt(ia, ispan.offset + 2), arena.usedInts(ia), arena.peakInts(ia));\n" +
-"arena.resetInts(ia);\n" +
-"arena.destroyInts(ia);\n" +
+"/* Generic TypedArena<T> (IntArena & FloatArena) */\n" +
+"ia: mut arena.IntArena = arena.createTyped<Int>(16);\n" +
+"i0 := mut ia.alloc(42);\n" +
+"ispan := mut ia.allocSpan(4, 7);\n" +
+"_iset := mut ia.set(ispan.offset + 2, 99);\n" +
+"im := ia.mark();\n" +
+"_iExtra := mut ia.alloc(100);\n" +
+"_iRew := mut ia.rewind(im);\n" +
+"io.outputLine(\"intArena\", i0, ia.get(i0), ia.get(ispan.offset + 2), ia.used(), ia.peakUsed());\n" +
+"mut ia.reset();\n" +
+"mut ia.destroy();\n" +
 "\n" +
-"fa := arena.createFloats(8);\n" +
-"f0 := arena.allocFloat(fa, 1.5);\n" +
-"fspan := arena.allocFloatSpan(fa, 3, 2.5);\n" +
-"io.outputLine(\"floatArena\", f0, arena.getFloat(fa, f0), arena.getFloat(fa, fspan.offset + 1), arena.usedFloats(fa));\n" +
-"arena.destroyFloats(fa);\n" +
+"fa: mut arena.FloatArena = arena.createTyped<Float>(8);\n" +
+"f0 := mut fa.alloc(1.5);\n" +
+"fspan := mut fa.allocSpan(3, 2.5);\n" +
+"io.outputLine(\"floatArena\", f0, fa.get(f0), fa.get(fspan.offset + 1), fa.used());\n" +
+"mut fa.destroy();\n" +
 "\n" +
-"/* 2. extra/pool: generational ABA protection + SlotPool + IntPool + TextPool */\n" +
-"sp := pool.createSlots(2);\n" +
-"h1 := pool.acquireSlot(sp);\n" +
-"h2 := pool.acquireSlot(sp);\n" +
-"hFull := pool.acquireSlot(sp);\n" +
-"rel1 := pool.releaseSlot(sp, h1);\n" +
-"relDup := pool.releaseSlot(sp, h1);\n" +
-"h3 := pool.acquireSlot(sp);\n" +
-"io.outputLine(\"slotPool\", h1.index, h2.index, pool.isHandleValid(hFull), rel1, relDup, h3.index == h1.index, h3.generation > h1.generation, pool.isSlotAlive(sp, h1), pool.isSlotAlive(sp, h3));\n" +
-"pool.clearSlots(sp);\n" +
-"io.outputLine(\"slotClear\", pool.slotCount(sp), pool.isSlotAlive(sp, h2), pool.isSlotAlive(sp, h3));\n" +
-"pool.destroySlots(sp);\n" +
+"/* 2. ds/pool: generational ABA protection + SlotPool + generic Pool<T> */\n" +
+"mut sp := pool.createSlots(2);\n" +
+"h1 := mut sp.acquire();\n" +
+"h2 := mut sp.acquire();\n" +
+"hFull := mut sp.acquire();\n" +
+"rel1 := mut sp.release(h1);\n" +
+"relDup := mut sp.release(h1);\n" +
+"h3 := mut sp.acquire();\n" +
+"io.outputLine(\"slotPool\", h1.index, h2.index, hFull.isValid(), rel1, relDup, h3.index == h1.index, h3.generation > h1.generation, sp.isAlive(h1), sp.isAlive(h3));\n" +
+"mut sp.clear();\n" +
+"io.outputLine(\"slotClear\", sp.count(), sp.isAlive(h2), sp.isAlive(h3));\n" +
 "\n" +
-"ip := pool.createInts(4);\n" +
-"ih := pool.acquireInt(ip, 101);\n" +
-"_is := pool.setInt(ip, ih, 202);\n" +
-"ig1 := pool.getInt(ip, ih);\n" +
-"_ir := pool.releaseInt(ip, ih);\n" +
-"ig2 := pool.getInt(ip, ih);\n" +
-"io.outputLine(\"intPool\", ig1.found, ig1.value, ig2.found, pool.intCount(ip));\n" +
-"pool.destroyInts(ip);\n" +
+"ip: mut pool.IntPool = pool.create<Int>(4);\n" +
+"ih := mut ip.acquire(101);\n" +
+"_is := mut ip.set(ih, 202);\n" +
+"ig1 := ip.get(ih);\n" +
+"_ir := mut ip.release(ih);\n" +
+"ig2 := ip.get(ih);\n" +
+"io.outputLine(\"intPool\", ig1.isSome(), ig1.unwrapOr(-1), ig2.isSome(), ip.count());\n" +
 "\n" +
-"tp := pool.createTexts(4);\n" +
-"th := pool.acquireText(tp, \"alpha\");\n" +
-"_ts := pool.setText(tp, th, \"beta\");\n" +
-"tg1 := pool.getText(tp, th);\n" +
-"_tr := pool.releaseText(tp, th);\n" +
-"tg2 := pool.getText(tp, th);\n" +
-"io.outputLine(\"textPool\", tg1.found, tg1.value, tg2.found, pool.textCount(tp));\n" +
-"pool.destroyTexts(tp);\n" +
+"tp: mut pool.TextPool = pool.create<String>(4);\n" +
+"th := mut tp.acquire(\"alpha\");\n" +
+"_ts := mut tp.set(th, \"beta\");\n" +
+"tg1 := tp.get(th);\n" +
+"_tr := mut tp.release(th);\n" +
+"tg2 := tp.get(th);\n" +
+"io.outputLine(\"textPool\", tg1.isSome(), tg1.unwrapOr(\"\"), tg2.isSome(), tp.count());\n" +
 "\n" +
-"/* 3. extra/intern: deduplication + multi-table isolation + clear/destroy */\n" +
-"t1 := intern.create();\n" +
-"t2 := intern.create();\n" +
-"idA := intern.intern(t1, \"alpha\");\n" +
-"idA2 := intern.intern(t1, \"alpha\");\n" +
-"idColon := intern.intern(t1, \":alpha\");\n" +
-"idOther := intern.intern(t2, \"alpha\");\n" +
-"ist := intern.stats(t1);\n" +
-"io.outputLine(\"intern\", idA == idA2, idA =!= idColon, intern.resolveOr(t1, idA, \"\"), intern.resolveOr(t1, idColon, \"\"), intern.resolve(t1, idOther).found, ist.uniqueCount, ist.internCalls, ist.hitCalls);\n" +
-"intern.clear(t1);\n" +
-"io.outputLine(\"internClear\", intern.count(t1), intern.has(t1, \"alpha\"), intern.hasId(t1, idA), intern.has(t2, \"alpha\"));\n" +
-"intern.destroy(t1);\n" +
-"intern.destroy(t2);\n" +
+"/* 3. ds/intern: deduplication + multi-table isolation + clear */\n" +
+"mut t1 := intern.create();\n" +
+"mut t2 := intern.create();\n" +
+"idA := mut t1.intern(\"alpha\");\n" +
+"idA2 := mut t1.intern(\"alpha\");\n" +
+"idColon := mut t1.intern(\":alpha\");\n" +
+"_t2a := mut t2.intern(\"only2a\");\n" +
+"_t2b := mut t2.intern(\"only2b\");\n" +
+"idOther := mut t2.intern(\"alpha\");\n" +
+"ist := t1.stats();\n" +
+"io.outputLine(\"intern\", idA == idA2, idA =!= idColon, t1.resolveOr(idA, \"\"), t1.resolveOr(idColon, \"\"), t1.resolve(idOther).isSome(), ist.uniqueCount, ist.internCalls, ist.hitCalls);\n" +
+"mut t1.clear();\n" +
+"io.outputLine(\"internClear\", t1.count(), t1.has(\"alpha\"), t1.hasId(idA), t2.has(\"alpha\"));\n" +
 "\n" +
-"/* 4. extra/lru: O(1) bounded LRU for Text, Int, and IntKey */\n" +
-"c := lru.createText(3);\n" +
-"_p1 := lru.putText(c, \"a\", \"1\");\n" +
-"_p2 := lru.putText(c, \"b\", \"2\");\n" +
-"_p3 := lru.putText(c, \"c\", \"3\");\n" +
-"ga := lru.getText(c, \"a\");\n" +
-"pk := lru.peekText(c, \"b\");\n" +
-"ev := lru.putText(c, \"d\", \"4\");\n" +
-"lst := lru.textStats(c);\n" +
-"io.outputLine(\"lruText\", ga.found, ga.value, pk.value, ev.evicted, ev.evictedKey, ev.evictedValue, lru.hasText(c, \"b\"), lru.newestTextKey(c).key, lru.oldestTextKey(c).key, lst.count, lst.hits, lst.misses, lst.evictions);\n" +
-"rmOk := lru.removeText(c, \"c\");\n" +
-"ev2 := lru.evictOldestText(c);\n" +
-"io.outputLine(\"lruTextRm\", rmOk, ev2.evicted, ev2.key, lru.textCount(c));\n" +
-"lru.destroyText(c);\n" +
+"/* 4. ds/lru: generic O(1) bounded LRU<K, V> (LruText, LruInt, IntLru) */\n" +
+"c: mut lru.LruText = lru.create<String, String>(3);\n" +
+"_p1 := mut c.put(\"a\", \"1\");\n" +
+"_p2 := mut c.put(\"b\", \"2\");\n" +
+"_p3 := mut c.put(\"c\", \"3\");\n" +
+"ga := mut c.get(\"a\");\n" +
+"pk := c.peek(\"b\");\n" +
+"ev := mut c.put(\"d\", \"4\");\n" +
+"lst := c.stats();\n" +
+"io.outputLine(\"lruText\", ga.isSome(), ga.unwrapOr(\"\"), pk.unwrapOr(\"\"), ev.evicted, ev.key, ev.value, c.has(\"b\"), c.newestKey().unwrapOr(\"\"), c.oldestKey().unwrapOr(\"\"), lst.count, lst.hits, lst.misses, lst.evictions);\n" +
+"rmOk := mut c.remove(\"c\");\n" +
+"ev2 := mut c.evictOldest();\n" +
+"io.outputLine(\"lruTextRm\", rmOk, ev2.evicted, ev2.key, c.count());\n" +
 "\n" +
-"ci := lru.createInt(2);\n" +
-"_pi1 := lru.putInt(ci, \"x\", 10);\n" +
-"_pi2 := lru.putInt(ci, \"y\", 20);\n" +
-"_gi := lru.getInt(ci, \"x\");\n" +
-"evi := lru.putInt(ci, \"z\", 30);\n" +
-"io.outputLine(\"lruInt\", evi.evicted, evi.evictedKey, evi.evictedValue, lru.getInt(ci, \"y\").found, lru.intCount(ci));\n" +
-"lru.destroyInt(ci);\n" +
+"ci: mut lru.LruInt = lru.create<String, Int>(2);\n" +
+"_pi1 := mut ci.put(\"x\", 10);\n" +
+"_pi2 := mut ci.put(\"y\", 20);\n" +
+"_gi := mut ci.get(\"x\");\n" +
+"evi := mut ci.put(\"z\", 30);\n" +
+"giMiss := mut ci.get(\"y\");\n" +
+"io.outputLine(\"lruInt\", evi.evicted, evi.key, evi.value, giMiss.isSome(), ci.count());\n" +
 "\n" +
-"ck := lru.createIntKey(2);\n" +
-"_pk1 := lru.putIntKey(ck, 100, 1);\n" +
-"_pk2 := lru.putIntKey(ck, 200, 2);\n" +
-"_gk := lru.getIntKey(ck, 100);\n" +
-"evk := lru.putIntKey(ck, 300, 3);\n" +
-"io.outputLine(\"lruIntKey\", evk.evicted, evk.evictedKey, evk.evictedValue, lru.hasIntKey(ck, 200), lru.intKeyCount(ck));\n" +
-"lru.destroyIntKey(ck);\n";
+"ck: mut lru.IntLru = lru.create<Int, Int>(2);\n" +
+"_pk1 := mut ck.put(100, 1);\n" +
+"_pk2 := mut ck.put(200, 2);\n" +
+"_gk := mut ck.get(100);\n" +
+"evk := mut ck.put(300, 3);\n" +
+"io.outputLine(\"lruIntKey\", evk.evicted, evk.key, evk.value, ck.has(200), ck.count());\n";
 
 funcPath := path.join(tmpDir, "functional.lts");
 wr := fs.writeText(funcPath, functionalSrc);
@@ -207,39 +203,28 @@ if ccInfo.available {
     "intern := import \"ds/intern\";\n" +
     "lru := import \"ds/lru\";\n" +
     "\n" +
-    "a := arena.create(256);\n" +
-    "var f := 0;\n" +
-    "loop f < 5000 {\n" +
-    "    s := arena.allocAligned(a, 64, 8);\n" +
-    "    _w := arena.writeInt32(a, s.offset, f);\n" +
-    "    arena.reset(a);\n" +
-    "    f += 1;\n" +
+    "mut a := arena.create(256);\n" +
+    "loop 0..5000 as f {\n" +
+    "    s := mut a.allocAligned(64, 8);\n" +
+    "    _w := mut a.writeInt32(s.offset, f);\n" +
+    "    mut a.reset();\n" +
     "}\n" +
-    "sp := pool.createInts(32);\n" +
-    "var p := 0;\n" +
-    "loop p < 5000 {\n" +
-    "    h := pool.acquireInt(sp, p);\n" +
-    "    _r := pool.releaseInt(sp, h);\n" +
-    "    p += 1;\n" +
+    "mut sp := pool.create<Int>(32);\n" +
+    "loop 0..5000 as p {\n" +
+    "    h := mut sp.acquire(p);\n" +
+    "    _r := mut sp.release(h);\n" +
     "}\n" +
-    "it := intern.create();\n" +
-    "var ic := 0;\n" +
-    "loop ic < 500 {\n" +
-    "    _s1 := intern.intern(it, \"sym_\" + (ic % 16).toText());\n" +
-    "    if (ic % 50) == 49 { intern.clear(it); }\n" +
-    "    ic += 1;\n" +
+    "mut it := intern.create();\n" +
+    "loop 0..500 as ic {\n" +
+    "    _s1 := mut it.intern(\"sym_\" + (ic % 16).toText());\n" +
+    "    if (ic % 50) == 49 { mut it.clear(); }\n" +
     "}\n" +
-    "lc := lru.createIntKey(32);\n" +
-    "var lk := 0;\n" +
-    "loop lk < 5000 {\n" +
-    "    _ev := lru.putIntKey(lc, lk, lk * 2);\n" +
-    "    lk += 1;\n" +
+    "mut lc := lru.create<Int, Int>(32);\n" +
+    "loop 0..5000 as lk {\n" +
+    "    _ev := mut lc.put(lk, lk * 2);\n" +
     "}\n" +
-    "io.outputLine(\"stress\", arena.resetCount(a), pool.intCount(sp), intern.count(it), lru.intKeyCount(lc), lru.intKeyStats(lc).evictions);\n" +
-    "arena.destroy(a);\n" +
-    "pool.destroyInts(sp);\n" +
-    "intern.destroy(it);\n" +
-    "lru.destroyIntKey(lc);\n";
+    "io.outputLine(\"stress\", a.resetCount(), sp.count(), it.count(), lc.count(), lc.stats().evictions);\n" +
+    "mut a.destroy();\n";
 
     stressPath := path.join(tmpDir, "stress.lts");
     ws := fs.writeText(stressPath, stressSrc);
@@ -253,5 +238,11 @@ if ccInfo.available {
     test.check("ASan/UBSan stress exit 0: " + runSan.stderr, runSan.status == 0 and runSan.error == "");
     test.checkText("ASan/UBSan stress output", "stress 5000 0 0 32 4968\n", runSan.stdout);
 }
+
+/* Nominal type safety: unrelated ds records and distinct IDs cannot cross boundaries. */
+nomBad1 := compilerTest.compileStdin(root, selTs.path, "arena := import \"ds/arena\"; bad := fn(x: arena.TypedArena<Int>): Int { x.used() }; mut a := arena.create(16); bad(a);\n", "");
+test.check("reject Arena passed as TypedArena<Int>", nomBad1.status =!= 0);
+nomBad2 := compilerTest.compileStdin(root, selTs.path, "intern := import \"ds/intern\"; mut t := intern.create(); id := mut t.intern(\"a\"); n: Int = id;\n", "");
+test.check("reject distinct SymbolId assigned to Int", nomBad2.status =!= 0);
 
 fs.remove(tmpDir);

@@ -7,7 +7,7 @@ json := import "util/json";
 siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
-gymMetaCache := lru.createText(1024);
+mut gymMetaCache := lru.create<String, String>(1024);
 
 beltLabel := fn(belt: String): String {
     if belt == "amber" { "Amber Belt" }
@@ -59,11 +59,11 @@ readOptStr := fn(src: String, objPos: Int, key: String): String {
     cacheable := key == "id" or key == "title" or key == "outPath" or key == "slug" or key == "mode" or key == "belt";
     if cacheable {
         ck := objPos.toText() + ":" + key;
-        hit := lru.getText(gymMetaCache, ck);
-        if hit.found { return hit.value; }
+        hit := mut gymMetaCache.get(ck);
+        if hit.isSome() { return hit.unwrapOr(""); }
         res := json.readObjectString(src, objPos, key);
         val := if res.found and res.ok { res.value } else { "" };
-        _ev := lru.putText(gymMetaCache, ck, val);
+        _ev := mut gymMetaCache.put(ck, val);
         return val;
     }
     res := json.readObjectString(src, objPos, key);
@@ -1226,7 +1226,7 @@ workoutOffs: List<Int>
 
 /** Builds `/gym/` index, exercise dojo pages, payloads, and search entries from stdin JSON. */
 pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, error: String) {
-    lru.clearText(gymMetaCache);
+    mut gymMetaCache.clear();
     valid := json.validate(inputJson);
     if not valid.ok {
         return (ok = false, jsonText = "", error = "site-gym: invalid input JSON: " + valid.error);

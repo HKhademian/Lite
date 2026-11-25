@@ -53,6 +53,7 @@ functionalSrc :=
 "    not rOv1 and not rOv2 and rTp1 and not rTpFull and rOv3\n" +
 "    and rPop1.isSome() and rPop1.unwrapOr(-1) == 20\n" +
 "    and ri.length() == 2 and ri.capacity() == 3\n" +
+"    and ri.sum() == 70\n" +
 "    and rPeekF.unwrapOr(-1) == 30 and rPeekB.unwrapOr(-1) == 40\n" +
 "    and rGet1.unwrapOr(-1) == 40\n" +
 "    and sId == 7 and rs.isEmpty();\n" +
@@ -91,13 +92,16 @@ functionalSrc :=
 "cOut := gr.get(9, 1);\n" +
 "mut gr2 := grid.createGrid<Int>(3, 3, 5);\n" +
 "mut gr2.clear(9);\n" +
+"mut gr3 := grid.createGrid<Int>(3, 3, 0);\n" +
+"mut gr3.copyFrom(gr2);\n" +
 "gridOk :=\n" +
 "    gr.inBounds(4, 3) and not gr.inBounds(5, 3)\n" +
 "    and cIn.isValue() and cIn.unwrapOr(\"\") == \"#\"\n" +
 "    and not cOut.isValue() and cOut.unwrapOr(\"miss\") == \"miss\"\n" +
 "    and gr.getOr(1, 3, \"?\") == \"=\"\n" +
 "    and gr.getOr(4, 3, \"?\") == \".\"\n" +
-"    and gr2.getOr(2, 2, 0) == 9;\n" +
+"    and gr2.getOr(2, 2, 0) == 9\n" +
+"    and gr3.countValue(9) == 9;\n" +
 "io.outputLine(\"grid\", gridOk);\n" +
 "\n" +
 "/* 4. ds/spatial SpatialGrid2D */\n" +
