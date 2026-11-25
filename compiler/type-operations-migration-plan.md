@@ -173,7 +173,7 @@ In separate, reviewable atomic commits after Phase 6:
 
 - **Formatter & tooling:** update `lite fmt`, docgen, and `site/` playground highlighter for `TypeName.op` and `Self`.
 - **Editor grammar:** update `editors/vscode/` TextMate grammar (`Self`, `TypeName.op` declarations).
-- **`lib/extra/` nominal upgrade:** migrate transparent tuple handles such as `Vec2`/`Vec3`/`Vec4` ([`lib/extra/vector.lts`](lite://repo/lib/extra/vector.lt)) and `MinHeap`/`MaxHeap`/`PriorityQueue` ([`lib/extra/heap.lts`](lite://repo/lib/extra/heap.lt)) to owned `record` or `distinct` types with ergonomic type-attached operations.
+- **`lib/extra/` nominal upgrade:** migrate transparent tuple handles such as `Vec2`/`Vec3`/`Vec4` ([`lib/math/vector.lt`](lite://repo/lib/math/vector.lt)) and `MinHeap`/`MaxHeap`/`PriorityQueue` ([`lib/ds/heap.lt`](lite://repo/lib/ds/heap.lt)) to owned `record` or `distinct` types with ergonomic type-attached operations.
 - **Academy & docs:** update Learn, Gym, examples, samples, and [`compiler/README.md`](lite://doc/compiler/overview) to reflect shipped support.
 
 ## Acceptance criteria (verified 2026-11-23)

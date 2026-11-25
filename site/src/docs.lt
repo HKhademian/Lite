@@ -164,14 +164,14 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     hbSums: List<String> = [
     "Explicit imports, dual-target TS & C11 toolchain, ./bin/lite commands, file kinds, and nestable comments.",
     "Immutable := defaults, zero-value storage, reserved = ?, var updates, and mut lists.",
-    "Int8..Int64, Float/Float32, / % vs :/ :%, **, =!=, chained comparisons, core/text, core/math, and core/random.",
+    "Int8..Int64, Float/Float32, / % vs :/ :%, **, =!=, chained comparisons, core/text, math/scalar, and math/random.",
     "Expression if/else, subjectless match, sequence loops, .index/.count/.value/.collected, then, @tag, and finally.",
     "Unnamed/named/mixed tuples, records, enums, [T; N] arrays, List<T>, Map<K, V>, Set<T>, and type aliases.",
     "Final-item block values, DCE pruning, parallel wiring, execution trace safety, self, and closures.",
-    "Namespace imports, pub boundaries, all 37 core/* and extra/* modules, and core/io streams.",
+    "Namespace imports, pub boundaries, all 37 core/*, math/*, ds/*, and extra/* modules, and core/io streams.",
     "extra/canvas, extra/surface desktop windows, extra/color, extra/audio, extra/board, extra/timer, and ./bin/lite play.",
-    "core/math, core/random, 2D/3D/4D extra/vector, 2x2..4x4 extra/matrix transforms, and flat 2D extra/grid.",
-    "extra/arena, extra/pool, extra/intern, extra/lru, extra/ring, extra/deque, extra/heap, extra/bitset, and extra/sparse.",
+    "math/scalar, math/random, 2D/3D/4D math/vector, 2x2..4x4 math/matrix transforms, and flat 2D ds/grid.",
+    "ds/arena, ds/pool, ds/intern, ds/lru, ds/ring, ds/deque, ds/heap, ds/bitset, and ds/sparse.",
     "Dual-target TS & C11 parity, 3-generation self-hosting, ./bin/lite build, -O0..-O3/-Os, and ./bin/lite ignite."
     ];
 

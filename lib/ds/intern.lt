@@ -1,4 +1,4 @@
-/** Experimental string interner and symbol table (`extra/intern`) for O(1) identity checks and deduplication. */
+/** String interner and symbol table (`ds/intern`) for O(1) identity checks and deduplication. */
 
 
 /** Integer identifier representing a unique interned string inside an `Interner`. */

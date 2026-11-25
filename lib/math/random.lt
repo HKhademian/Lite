@@ -1,4 +1,4 @@
-/** Deterministic, seedable pseudorandom number generator (`core/random`). */
+/** Deterministic, seedable pseudorandom number generator (`math/random`). */
 
 /** Immutable PRNG state handle; advance with `nextInt`, `rangeInt`, `nextBool`, or `nextFloat`. */
 pub Rng := record {

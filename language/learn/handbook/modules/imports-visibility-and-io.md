@@ -37,14 +37,14 @@ stats := import "./helpers/math-stats.lts";
 
 Note that `.lts` extension scripts and `.lt` module files contain no hidden prelude—every module declares its own imports cleanly.
 
-## Browser-Safe Core Modules, Extra Libraries & Host OS Modules
+## Browser-Safe Core, Math, DS, Extra & Host OS Modules
 
-All 36 modules documented in [Modules](lite://module) (18 `core/*` + 18 `extra/*`) split into three clear environments:
+All 37 modules documented in [Modules](lite://module) (`17 core/*` + `4 math/*` + `10 ds/*` + `6 extra/*`) fall into three runtime environments:
 
 | Environment | Modules | Where it runs |
 | --- | --- | --- |
-| **Browser + CLI (`core/*`)** | `core/io`, `core/int`, `core/math`, `core/random`, `core/text`, `core/list`, `core/map`, `core/set`, `core/unicode`, `core/format`, `core/crypto`, `core/source`, `core/test`, `core/diag` | Runs everywhere: Browser Worker, CLI TS & native C11 |
-| **Browser + CLI (`extra/*`)** | `extra/vector`, `extra/matrix`, `extra/grid`, `extra/color`, `extra/timer`, `extra/arena`, `extra/pool`, `extra/intern`, `extra/lru`, `extra/ring`, `extra/deque`, `extra/heap`, `extra/bitset`, `extra/sparse` | Pure Lite math, data structures & allocators on TS & C11 |
+| **Browser + CLI (`core/*`)** | `core/io`, `core/int`, `core/text`, `core/list`, `core/array`, `core/map`, `core/set`, `core/unicode`, `core/format`, `core/crypto`, `core/source`, `core/test`, `core/diag` | Runs everywhere: Browser Worker, CLI TS & native C11 |
+| **Browser + CLI (`math/*`, `ds/*`, `extra/*`)** | `math/scalar`, `math/random`, `math/vector`, `math/matrix`, `ds/grid`, `ds/arena`, `ds/pool`, `ds/intern`, `ds/lru`, `ds/ring`, `ds/deque`, `ds/heap`, `ds/bitset`, `ds/sparse`, `extra/color`, `extra/timer` | Pure Lite math, data structures & allocators on TS & C11 |
 | **Lite Play & Surfaces** | `extra/canvas`, `extra/surface`, `extra/board`, `extra/audio` | Browser Play Canvas, `./bin/lite play` desktop stage & headless tests |
 | **CLI / Host OS** | `core/file`, `core/path`, `core/process`, `core/time` | Requires local `./bin/lite run` or native C11 host OS access |
 

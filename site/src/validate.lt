@@ -5,7 +5,7 @@ path := import "core/path";
 proc := import "core/process";
 text := import "core/text";
 unicode := import "core/unicode";
-intern := import "extra/intern";
+intern := import "ds/intern";
 challenges := import "util/challenges";
 json := import "util/json";
 

@@ -1,4 +1,4 @@
-/** Experimental fixed-capacity circular ring buffers (`extra/ring`) for rolling windows, telemetry, and audio rings. */
+/** Fixed-capacity circular ring buffers (`ds/ring`) for rolling windows, telemetry, and audio rings. */
 
 /** Opaque generational handle to a fixed-capacity `Int` ring buffer. */
 pub IntRing := alias (handle: Int, gen: Int);

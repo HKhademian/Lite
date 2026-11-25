@@ -1,4 +1,4 @@
-/** Experimental bounded-capacity O(1) LRU caches (`extra/lru`) with strict memory ceilings across TS and C11. */
+/** Bounded-capacity O(1) LRU caches (`ds/lru`) with strict memory ceilings across TS and C11. */
 
 
 /** Opaque generational handle to a `String -> String` bounded LRU cache. */

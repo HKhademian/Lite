@@ -1,4 +1,4 @@
-/** Experimental generational slot pools (`extra/pool`) for O(1) object reuse with safe stale-handle detection. */
+/** Generational slot pools (`ds/pool`) for O(1) object reuse with safe stale-handle detection. */
 
 /** Generational handle identifying a single slot inside a pool. */
 pub Handle := alias (index: Int, generation: Int);

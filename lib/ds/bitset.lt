@@ -1,4 +1,4 @@
-/** Experimental compact bit-arrays (`extra/bitset`) packed 30 bits per word for masks, visited flags, and collision layers. */
+/** Compact bit-arrays (`ds/bitset`) packed 30 bits per word for masks, visited flags, and collision layers. */
 
 /** Opaque generational handle to a fixed-length bitset. */
 pub Bitset := alias (handle: Int, gen: Int);

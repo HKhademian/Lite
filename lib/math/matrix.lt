@@ -1,6 +1,6 @@
-/** Experimental 2x2, 3x3, and 4x4 matrix math (`extra/matrix`) for 2D/3D transforms across TS and C11. */
+/** 2x2, 3x3, and 4x4 matrix math (`math/matrix`) for 2D/3D transforms across TS and C11. */
 
-vec := import "extra/vector";
+vec := import "math/vector";
 
 /** Row-major 2x2 matrix. */
 pub Mat2 := alias (m00: Float, m01: Float, m10: Float, m11: Float);

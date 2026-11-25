@@ -1,4 +1,4 @@
-/** Experimental scratch and frame bump allocators (`extra/arena`) for O(1) bulk reclamation across TS and C11. */
+/** Scratch and frame bump allocators (`ds/arena`) for O(1) bulk reclamation across TS and C11. */
 
 /** Opaque generational handle to a byte-addressed bump arena. */
 pub Arena := alias (handle: Int, gen: Int);

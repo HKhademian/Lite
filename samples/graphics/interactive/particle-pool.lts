@@ -1,12 +1,12 @@
-/* Zero-churn interactive particle fountain powered by extra/pool, extra/sparse, extra/arena, extra/canvas, and extra/audio. */
+/* Zero-churn interactive particle fountain powered by ds/pool, ds/sparse, ds/arena, extra/canvas, and extra/audio. */
 
-arena := import "extra/arena";
+arena := import "ds/arena";
 audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
-pool := import "extra/pool";
-sparse := import "extra/sparse";
+pool := import "ds/pool";
+sparse := import "ds/sparse";
 
 ctx := canvas.play(width = 320, height = 200, title = "Particle Pool · Click/Space Burst");
 bg := canvas.rgb(10, 14, 24);

@@ -1,6 +1,6 @@
-/** Experimental 2D/3D/4D vector math (`extra/vector`) for games, graphics, and physics across TS and C11. */
+/** 2D/3D/4D vector math (`math/vector`) for games, graphics, and physics across TS and C11. */
 
-math := import "core/math";
+math := import "math/scalar";
 
 /** 2D floating-point vector. */
 pub Vec2 := record { x: Float; y: Float; };

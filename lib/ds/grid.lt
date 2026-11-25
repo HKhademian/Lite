@@ -1,4 +1,4 @@
-/** Experimental flat-backed 2D grids (`extra/grid`) for tilemaps, cellular automata, and board games. */
+/** Flat-backed 2D grids (`ds/grid`) for tilemaps, cellular automata, and board games. */
 
 /** Opaque generational handle to a 2D `Int` grid. */
 pub IntGrid := alias (handle: Int, gen: Int);

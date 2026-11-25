@@ -168,7 +168,7 @@ export const playSamples: readonly PlaySample[] = [
     id: 'play-particle-pool',
     group: 'play-interactive',
     title: 'Particle Pool — Zero-Churn ECS',
-    note: 'Interactive 128-slot particle fountain backed by extra/pool, extra/sparse, and extra/arena frame scratch resets (320×200).',
+    note: 'Interactive 128-slot particle fountain backed by ds/pool, ds/sparse, and ds/arena frame scratch resets (320×200).',
     file: 'samples/graphics/interactive/particle-pool.lts',
     args: [],
     stdin: '',

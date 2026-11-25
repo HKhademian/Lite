@@ -4,7 +4,7 @@ audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
-math := import "core/math";
+math := import "math/scalar";
 
 ctx := canvas.play(width = 320, height = 200, title = "RGBA Color Mixer");
 bg := canvas.rgb(13, 15, 24);

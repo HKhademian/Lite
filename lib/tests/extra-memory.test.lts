@@ -1,4 +1,4 @@
-/* Dual-target (TS + C11) and ASan/UBSan tests for `extra/arena`, `extra/pool`, `extra/intern`, and `extra/lru`. */
+/* Dual-target (TS + C11) and ASan/UBSan tests for `ds/arena`, `ds/pool`, `ds/intern`, and `ds/lru`. */
 
 fs := import "core/file";
 path := import "core/path";
@@ -22,10 +22,10 @@ tmpDir := tmpRes.path;
 
 functionalSrc :=
 "io := import \"core/io\";\n" +
-"arena := import \"extra/arena\";\n" +
-"pool := import \"extra/pool\";\n" +
-"intern := import \"extra/intern\";\n" +
-"lru := import \"extra/lru\";\n" +
+"arena := import \"ds/arena\";\n" +
+"pool := import \"ds/pool\";\n" +
+"intern := import \"ds/intern\";\n" +
+"lru := import \"ds/lru\";\n" +
 "\n" +
 "/* 1. extra/arena: byte arena + alignment + int32 + mark/rewind + reset + reuse */\n" +
 "a := arena.create(64);\n" +
@@ -202,10 +202,10 @@ if ccInfo.available {
     /* Stress & ASan/UBSan bounded-memory verification via ./bin/lite build --sanitize */
     stressSrc :=
     "io := import \"core/io\";\n" +
-    "arena := import \"extra/arena\";\n" +
-    "pool := import \"extra/pool\";\n" +
-    "intern := import \"extra/intern\";\n" +
-    "lru := import \"extra/lru\";\n" +
+    "arena := import \"ds/arena\";\n" +
+    "pool := import \"ds/pool\";\n" +
+    "intern := import \"ds/intern\";\n" +
+    "lru := import \"ds/lru\";\n" +
     "\n" +
     "a := arena.create(256);\n" +
     "var f := 0;\n" +

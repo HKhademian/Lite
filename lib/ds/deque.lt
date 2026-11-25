@@ -1,4 +1,4 @@
-/** Experimental O(1) double-ended queues and FIFO queues (`extra/deque`) backed by fixed-capacity circular slabs. */
+/** O(1) double-ended queues and FIFO queues (`ds/deque`) backed by fixed-capacity circular slabs. */
 
 /** Opaque generational handle to an `Int` double-ended queue. */
 pub IntDeque := alias (handle: Int, gen: Int);

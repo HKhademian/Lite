@@ -1,4 +1,4 @@
-/** Experimental binary heaps and keyed priority queues (`extra/heap`) for timers, schedulers, and pathfinding. */
+/** Binary heaps and keyed priority queues (`ds/heap`) for timers, schedulers, and pathfinding. */
 
 /** Opaque generational handle to a binary min-heap of `Int` values. */
 pub MinHeap := record { handle: Int; gen: Int; };

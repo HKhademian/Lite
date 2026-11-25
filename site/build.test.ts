@@ -398,8 +398,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(existsSync(join(out, 'modules/core/array.html')));
   assert(existsSync(join(out, 'modules/core/map.html')));
   assert(existsSync(join(out, 'modules/core/set.html')));
-  assert(existsSync(join(out, 'modules/core/math.html')));
-  assert(existsSync(join(out, 'modules/core/random.html')));
+  assert(existsSync(join(out, 'modules/math/scalar.html')));
+  assert(existsSync(join(out, 'modules/math/random.html')));
+  assert(existsSync(join(out, 'modules/math/vector.html')));
+  assert(existsSync(join(out, 'modules/ds/arena.html')));
   assert(readFileSync(join(out, 'modules/core/array.html'), 'utf8').includes('Array.length'));
   assert(readFileSync(join(out, 'modules/core/list.html'), 'utf8').includes('List.pushBack'));
   assert(readFileSync(join(out, 'modules/core/text.html'), 'utf8').includes('String.trim'));
@@ -651,7 +653,7 @@ test('emitted playground compiler.js and stdlib.json compile and run Lite code',
   const sample = JSON.parse(readFileSync(join(out, 'playground', 'samples', 'double-sum.json'), 'utf8')) as { source: string; stdin: string; output: string };
   const stdinBytes = new TextEncoder().encode(sample.source);
   const vfsFiles = new Map<string, Uint8Array>();
-  const vfsDirs = new Set<string>(['/project', '/project/lib', '/project/lib/core', '/project/lib/extra']);
+  const vfsDirs = new Set<string>(['/project', '/project/lib', '/project/lib/core', '/project/lib/math', '/project/lib/ds', '/project/lib/extra']);
   for (const entry of Object.values(stdlib)) {
     const p = `/project/${entry.path}`;
     vfsFiles.set(p, new TextEncoder().encode(entry.text));

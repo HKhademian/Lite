@@ -78,7 +78,7 @@ function computeSampleCacheSalt(tsCompiler: CompilerBuild): string {
   const h = createHash('sha256');
   h.update('v1\0');
   h.update(readFileSync(tsCompiler.path));
-  for (const rel of ['lib/extra/canvas.lt', 'lib/extra/board.lt', 'lib/extra/audio.lt', 'lib/extra/pool.lt', 'lib/extra/arena.lt', 'lib/extra/sparse.lt']) {
+  for (const rel of ['lib/extra/canvas.lt', 'lib/extra/board.lt', 'lib/extra/audio.lt', 'lib/math/scalar.lt', 'lib/math/random.lt', 'lib/ds/pool.lt', 'lib/ds/arena.lt', 'lib/ds/sparse.lt']) {
     const p = resolve(root, rel);
     if (existsSync(p)) { h.update('\0' + rel + '\0'); h.update(readFileSync(p)); }
   }
@@ -374,7 +374,7 @@ export function buildSite(options?: BuildSiteOptions): void {
   const playStageJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'play-stage.ts'), 'utf8'), { mode: 'strip' });
 
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
-  for (const ns of ['core', 'extra'] as const) {
+  for (const ns of ['core', 'math', 'ds', 'extra'] as const) {
     const libDir = join(root, 'lib', ns);
     for (const name of readdirSync(libDir).filter(f => f.endsWith('.lt')).sort()) {
       const relPath = `lib/${ns}/${name}`;

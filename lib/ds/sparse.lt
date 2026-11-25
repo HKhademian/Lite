@@ -1,4 +1,4 @@
-/** Experimental sparse sets (`extra/sparse`) with O(1) membership/removal and cache-friendly dense iteration. */
+/** Sparse sets (`ds/sparse`) with O(1) membership/removal and cache-friendly dense iteration. */
 
 /** Opaque generational handle to a bounded-universe integer sparse set (`0..capacity-1`). */
 pub SparseSet := alias (handle: Int, gen: Int);

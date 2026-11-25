@@ -1,4 +1,4 @@
-/** Provisional `.lts` module API extractor for `lib/core` and `lib/extra` documentation. */
+/** Module API documentation extractor across `lib/core`, `lib/math`, `lib/ds`, and `lib/extra`. */
 
 fs := import "core/file";
 text := import "core/text";
@@ -147,7 +147,7 @@ classifyEnvironment := fn(namespace: String, name: String): String {
         }
         return "universal";
     }
-    if name == "file" or name == "path" or name == "process" or name == "time" {
+    if namespace == "core" and (name == "file" or name == "path" or name == "process" or name == "time") {
         return "cli";
     }
     "universal"
@@ -311,9 +311,9 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
     ",\"symbols\":[" + text.joinTexts(symbolsJson, ",") + "]}"
 };
 
-/** Extracts sorted module API documentation records across `lib/core` and `lib/extra` `.lts` files under `rootDir`. */
+/** Extracts sorted module API documentation records across `lib/core`, `lib/math`, `lib/ds`, and `lib/extra` `.lt` files under `rootDir`. */
 pub extractAllModulesJson := fn(rootDir: String): String {
-    namespaces: List<String> = ["core", "extra"];
+    namespaces: List<String> = ["core", "math", "ds", "extra"];
     modJsonEntries: mut List<String> = [];
     loop namespaces as ns {
         nsDir := path.join(rootDir, "lib/" + ns);

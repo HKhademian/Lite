@@ -41,7 +41,7 @@ For core language-specification examples (`001`–`024`), see [language/examples
 
 ## Interactive (`graphics/interactive/`)
 
-- [particle-pool](lite://play/play-particle-pool) — `320x200` zero-churn particle fountain powered by `extra/pool`, `extra/sparse`, and `extra/arena`.
+- [particle-pool](lite://play/play-particle-pool) — `320x200` zero-churn particle fountain powered by `ds/pool`, `ds/sparse`, and `ds/arena`.
 - [cursor-paint](lite://play/play-cursor-paint) — `240x160` pointer brush with color swatches and tones.
 - [studio-lamp](lite://play/play-studio-lamp) — `280x180` clickable lamp toggle with Space/Enter support.
 - [color-mixer](lite://play/play-color-mixer) — `320x200` draggable RGBA channel sliders.

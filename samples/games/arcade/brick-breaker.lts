@@ -4,7 +4,7 @@ audio := import "extra/audio";
 board := import "extra/board";
 canvas := import "extra/canvas";
 io := import "core/io";
-math := import "core/math";
+math := import "math/scalar";
 
 ctx := canvas.play(width = 320, height = 200, title = "Brick Breaker · Arrows or Pointer");
 bg := canvas.rgb(11, 13, 24);

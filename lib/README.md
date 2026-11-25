@@ -4,14 +4,12 @@
 declaration carries a `/** ... */` doc comment and is published automatically to
 the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 
-## Core Modules (`lib/core/` — 19 modules)
+## Core Modules (`lib/core/` — 17 modules)
 
 | Module | Environment | Capabilities |
 | --- | --- | --- |
 | `core/io` | Browser + CLI | Host-backed console/stream I/O (`output`, `outputLine`, `errorLine`, `inputLine`, `inputInt`, `inputFloat`, `inputAll`, `inputArgs`, `exit`) |
 | `core/int` | Browser + CLI | `Int.*` operations (`toText`, `toHex`), Int64 bounds, checked arithmetic, decimal/hex formatting and parsing |
-| `core/math` | Browser + CLI | `PI`, `TAU`, `E`, `absInt`/`absFloat`, `min`/`max`, `clamp`, `floor`/`ceil`/`round`, `sqrt`, `sign` |
-| `core/random` | Browser + CLI | Deterministic, seedable Lehmer PRNG (`Rng`, `create`, `nextInt`, `rangeInt`, `nextBool`, `nextFloat`) |
 | `core/text` | Browser + CLI | `String.*` hard/soft/pure operations (`length`, `isEmpty`, `at`, `slice`, `trim`, `startsWithAt`, `indexOf`, `toInt`, ASCII predicates, split/join) |
 | `core/unicode` | Browser + CLI | UTF-8 / UTF-16 scalar encoding, decoding, and validation helpers |
 | `core/format` | Browser + CLI | Decimal/hex formatting, padding, and Int-join helpers |
@@ -28,7 +26,31 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | `core/process` | CLI / Host OS | Subprocess spawning, byte/text capture, environment variables, and executable path |
 | `core/time` | CLI / Host OS | Monotonic/wall-clock timestamps and pure-Lite ISO-8601 calendar helpers |
 
-## Extra Modules (`lib/extra/` — 18 modules)
+## Math Modules (`lib/math/` — 4 modules)
+
+| Module | Environment | Capabilities |
+| --- | --- | --- |
+| `math/scalar` | Browser + CLI | `PI`, `TAU`, `E`, `absInt`/`abs`, `minInt`/`maxInt`, `clampInt`/`clamp`, `floor`/`ceil`/`round`, `sqrt`, `signInt`, `gcd`, `lcm` |
+| `math/random` | Browser + CLI | Deterministic, seedable Lehmer PRNG (`Rng`, `create`, `nextInt`, `rangeInt`, `nextBool`, `nextFloat`) |
+| `math/vector` | Browser + CLI | 2D/3D/4D vector math (`Vec2`, `Vec3`, `Vec4`, `sinRad`, `cosRad`, `dot`, `cross`, `normalize`, `lerp`, `reflect`) |
+| `math/matrix` | Browser + CLI | 2×2, 3×3, and 4×4 matrix math (`Mat2`, `Mat3`, `Mat4`, `translate`, `scale`, `rotate`, `mul`, `transpose`, `det`, `perspective`, `lookAt`) |
+
+## Data Structures (`lib/ds/` — 10 modules)
+
+| Module | Environment | Capabilities |
+| --- | --- | --- |
+| `ds/grid` | Browser + CLI | Flat-backed 2D `IntGrid` and `FloatGrid` tilemaps/heightfields (`getOr`, `set`, `fillRect`, `countValue`, `copy`) |
+| `ds/arena` | Browser + CLI | O(1) scratch/frame bump allocators (`Arena`, `IntArena`, `FloatArena`, `allocAligned`, `mark`/`rewind`, `reset`) |
+| `ds/pool` | Browser + CLI | Generational handle slot pools (`SlotPool`, `IntPool`, `TextPool`, safe stale-handle detection) |
+| `ds/intern` | Browser + CLI | String interner and symbol table (`SymbolId`, `intern`, `lookup`, `resolve`, `stats`) |
+| `ds/lru` | Browser + CLI | Bounded-capacity O(1) LRU caches (`LruText`, `LruInt`, `IntLru`, eviction reporting, `LruStats`) |
+| `ds/ring` | Browser + CLI | Fixed-capacity circular ring buffers (`IntRing`, `FloatRing`, `push`, `tryPush`, `pop`, `sumInts`) |
+| `ds/deque` | Browser + CLI | O(1) double-ended queues (`IntDeque`, `TextDeque`, `pushFront`, `pushBack`, `popFront`, `popBack`) |
+| `ds/heap` | Browser + CLI | Binary `MinHeap`, `MaxHeap`, and keyed `PriorityQueue` |
+| `ds/bitset` | Browser + CLI | Compact bit-arrays packed 30 bits per word (`set`, `clear`, `toggle`, `test`, `countOnes`, `firstSet`, `orInto`/`andInto`/`xorInto`) |
+| `ds/sparse` | Browser + CLI | O(1) `SparseSet` with dense iteration (`insert`, `remove`, `has`, `denseAt`, `count`) |
+
+## Play & Extra Modules (`lib/extra/` — 6 modules)
 
 | Module | Environment | Capabilities |
 | --- | --- | --- |
@@ -38,22 +60,10 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | `extra/audio` | Lite Play | WebAudio & native PCM tone queue (`tone`, `playNote`, `drain`) |
 | `extra/color` | Browser + CLI | Encoding-independent normalized RGBA/HSL color values (`fromRgb`, `fromRgba8`, `fromHsl`, `mix`, `withAlphaFloat`) |
 | `extra/timer` | Browser + CLI | Fixed-timestep `StepClock`, `Cooldown`, and monotonic `Stopwatch` |
-| `extra/vector` | Browser + CLI | 2D/3D/4D vector math (`Vec2`, `Vec3`, `Vec4`, `sinRad`, `cosRad`, `dot`, `cross`, `normalize`, `lerp`, `reflect`) |
-| `extra/matrix` | Browser + CLI | 2×2, 3×3, and 4×4 matrix math (`Mat2`, `Mat3`, `Mat4`, `translate`, `scale`, `rotate`, `mul`, `transpose`, `det`, `perspective`, `lookAt`) |
-| `extra/grid` | Browser + CLI | Flat-backed 2D `IntGrid` and `FloatGrid` tilemaps/heightfields (`getOr`, `set`, `fillRect`, `countValue`, `copy`) |
-| `extra/arena` | Browser + CLI | O(1) scratch/frame bump allocators (`Arena`, `IntArena`, `FloatArena`, `allocAligned`, `mark`/`rewind`, `reset`) |
-| `extra/pool` | Browser + CLI | Generational handle slot pools (`SlotPool`, `IntPool`, `TextPool`, safe stale-handle detection) |
-| `extra/intern` | Browser + CLI | String interner and symbol table (`SymbolId`, `intern`, `lookup`, `resolve`, `stats`) |
-| `extra/lru` | Browser + CLI | Bounded-capacity O(1) LRU caches (`LruText`, `LruInt`, `IntLru`, eviction reporting, `LruStats`) |
-| `extra/ring` | Browser + CLI | Fixed-capacity circular ring buffers (`IntRing`, `FloatRing`, `push`, `tryPush`, `pop`, `sumInts`) |
-| `extra/deque` | Browser + CLI | O(1) double-ended queues (`IntDeque`, `TextDeque`, `pushFront`, `pushBack`, `popFront`, `popBack`) |
-| `extra/heap` | Browser + CLI | Binary `MinHeap`, `MaxHeap`, and keyed `PriorityQueue` |
-| `extra/bitset` | Browser + CLI | Compact bit-arrays packed 30 bits per word (`set`, `clear`, `toggle`, `test`, `countOnes`, `firstSet`, `orInto`/`andInto`/`xorInto`) |
-| `extra/sparse` | Browser + CLI | O(1) `SparseSet` with dense iteration (`insert`, `remove`, `has`, `denseAt`, `count`) |
 
 ## Running Library Tests
 
-All `lib/core/*` and `lib/extra/*` suites run under dual-target TS and native C11 (with ASan/UBSan):
+All `lib/{core,math,ds,extra}/*` suites run under dual-target TS and native C11 (with ASan/UBSan):
 
 ```sh
 ./bin/lite test --unit libraries

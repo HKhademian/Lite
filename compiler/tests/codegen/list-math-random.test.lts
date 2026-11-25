@@ -1,9 +1,9 @@
-/* Focused tests for xs[i] = v index mutation, generic List<T> intrinsics, core/math, and core/random. */
+/* Focused tests for xs[i] = v index mutation, generic List<T> intrinsics, math/scalar, and math/random. */
 
 test := import "core/test";
 list := import "core/list";
-math := import "core/math";
-rand := import "core/random";
+math := import "math/scalar";
+rand := import "math/random";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
