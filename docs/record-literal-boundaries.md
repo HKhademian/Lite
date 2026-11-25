@@ -38,9 +38,10 @@ name := (User { name = "Ali", }).name;
 ## Contextual record literals and executable blocks
 
 Design draft **2026-11-26**. A standalone executable block expression uses
-`do { ... }`. In expression position, bare `{ ... }` constructs a record
-using a single known, constructible expected type. A named literal such as
-`User { ... }` supplies that type directly. Constructs with their own body
+`do { ... }`. A contextual record literal omits the type name from ordinary
+record construction. In expression position, bare `{ ... }` infers that name
+from a single known, constructible expected type. A named literal such as
+`User { ... }` supplies the type directly. Constructs with their own body
 headers, such as `fn`, `if`, and `loop`, retain their brace bodies.
 
 `do` fills the same scoping role as an always-entered `if true { ... }` in
@@ -54,6 +55,10 @@ saveUser({ name = "Ali" });
 p = { x = 1 };
 saveUser(do { loadUser() });
 ```
+
+When `moveTo` expects `Point`, `moveTo({ x = 1 })` resolves to
+`moveTo(Point { x = 1 })`. Both forms construct the same nominal type and
+use the same field checks, defaults, and construction permissions.
 
 The parameter supplies `User` and the assignment target supplies `Point`
 for `p`. The assignment constructs a fresh `Point`, fills omitted fields
