@@ -1587,6 +1587,8 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
     (types.findAlias(aliases, name) >= 0 or (source.at(afterName) == "." and (name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or name == "Int"))) {
         var resolvedType := "";
         var typeOwnerKey := "";
+        var aliasParamsCsv := "";
+        var aliasTplKind := "";
         var dotPos := afterName;
         isTypeApp := source.at(afterName) == "<";
         if isTypeApp {
@@ -1623,9 +1625,11 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or name == "Int" {
             typeOwnerKey = name;
         } else if inferMode {
-            genOwner := types.genericAliasOwnerKey(source, nameStart, prefix, aliases, name);
-            if genOwner =!= "" {
-                typeOwnerKey = genOwner;
+            genInfo := types.genericAliasTemplateInfo(source, nameStart, prefix, aliases, name);
+            if genInfo.ownerKey =!= "" {
+                typeOwnerKey = genInfo.ownerKey;
+                aliasParamsCsv = genInfo.paramsCsv;
+                aliasTplKind = genInfo.tplKind;
             } else {
                 emptySeen: List<String> = [];
                 canRes := types.canResolveTypeAt(source, nameStart, prefix, aliases, "", emptySeen, 32);
@@ -1636,9 +1640,11 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
                 typeOwnerKey = types.typeOpOwnerKey(resolvedType);
             }
         } else {
-            genOwner := types.genericAliasOwnerKey(source, nameStart, prefix, aliases, name);
-            if genOwner =!= "" {
-                typeOwnerKey = genOwner;
+            genInfo := types.genericAliasTemplateInfo(source, nameStart, prefix, aliases, name);
+            if genInfo.ownerKey =!= "" {
+                typeOwnerKey = genInfo.ownerKey;
+                aliasParamsCsv = genInfo.paramsCsv;
+                aliasTplKind = genInfo.tplKind;
             } else {
                 emptySeen: List<String> = [];
                 resolvedType = types.resolveAliasKind(source, nameStart, prefix, aliases, name, emptySeen);
@@ -1671,26 +1677,16 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         if typeOwnerKey =!= "" {
             opIdx := sym.findFunction(functions, "$typeop:" + typeOwnerKey + "." + memberName);
             if opIdx >= 0 {
-                if isTypeApp and not inferMode {
-                    opInfo := functions[opIdx];
-                    rawRecv := types.paramKindOf(params[opInfo.first]);
-                    baseRecv := if rawRecv.startsWithAt(0, "mut ") { rawRecv.slice(4, rawRecv.length()) } else { rawRecv };
-                    if opInfo.runtime.startsWithAt(0, "$gen:") {
-                        tpl := generics.getTemplate(generics.findTemplate(opInfo.runtime.slice(5, opInfo.runtime.length())));
-                        checkB: mut Map<String, String>;
-                        if generics.unifyKindMut(tpl.genericParams, baseRecv, resolvedType, mut checkB) =!= "" {
-                            syntax.failAt(source, memberStart, prefix, "operation " + memberName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(resolvedType));
-                        }
-                        cErr := findGenericConstraintError(tpl.genericParams, checkB, "");
-                        if cErr =!= "" {
-                            syntax.failAt(source, memberStart, prefix, cErr);
-                        }
-                    } else if not types.isCompatibleKind(baseRecv, resolvedType) {
-                        syntax.failAt(source, memberStart, prefix, "operation " + memberName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(resolvedType));
-                    }
+                opRes := resolveTypeQualifiedOp(
+                source, memberStart, prefix, opIdx, memberName, typeOwnerKey,
+                resolvedType, aliasParamsCsv, aliasTplKind, functions, params, inferMode
+                );
+                if not opRes.ok {
+                    return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
                 }
                 dispType := if resolvedType =!= "" { types.displayKind(resolvedType) } else { name };
-                return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = nameStart.toText(), intValue = opIdx,
+                opCode := nameStart.toText() + (if opRes.initBindings =!= "" { "|" + opRes.initBindings } else { "" });
+                return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = opCode, intValue = opIdx,
                 textValue = dispType + "." + memberName, constant = false, next = memberEnd);
             }
         }
@@ -8239,9 +8235,94 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
     ctx.intParsed("", 0, false, openParen)
 };
 
+/** True when a type-attached operation is static/type-level (no matching `Self` receiver first parameter). */
+isStaticTypeOp := fn(opInfo: FunctionInfo, params: List<String>, ownerKey: String): Bool {
+    if opInfo.count <= 0 { return true; }
+    raw0 := types.paramKindOf(params[opInfo.first]);
+    base0 := if raw0.startsWithAt(0, "mut ") { raw0.slice(4, raw0.length()) } else { raw0 };
+    types.typeOpOwnerKey(base0) =!= ownerKey
+};
+
+/** Validates a type-qualified `Type.op` or `Alias.op` reference and extracts pre-bound generic arguments. */
+resolveTypeQualifiedOp := fn(
+source: String, memberStart: Int, prefix: String,
+opIdx: Int, memberName: String, typeOwnerKey: String,
+resolvedType: String, aliasParamsCsv: String, aliasTplKind: String,
+functions: List<FunctionInfo>, params: List<String>, inferMode: Bool
+): (ok: Bool, initBindings: String) {
+    opInfo := functions[opIdx];
+    targetKind := if resolvedType =!= "" { resolvedType } else { aliasTplKind };
+    targetParamsCsv := if resolvedType =!= "" { "" } else { aliasParamsCsv };
+    if targetKind == "" { return (ok = true, initBindings = ""); }
+    isStatic := isStaticTypeOp(opInfo, params, typeOwnerKey);
+    if opInfo.runtime.startsWithAt(0, "$gen:") {
+        tpl := generics.getTemplate(generics.findTemplate(opInfo.runtime.slice(5, opInfo.runtime.length())));
+        rawB: mut Map<String, String>;
+        if not isStatic {
+            rawRecv := types.paramKindOf(params[opInfo.first]);
+            baseRecv := if rawRecv.startsWithAt(0, "mut ") { rawRecv.slice(4, rawRecv.length()) } else { rawRecv };
+            if generics.unifyKindMut(tpl.genericParams, baseRecv, targetKind, mut rawB) =!= "" {
+                if targetParamsCsv == "" {
+                    if inferMode { return (ok = false, initBindings = ""); }
+                    syntax.failAt(source, memberStart, prefix, "operation " + memberName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(targetKind));
+                }
+            }
+        } else if types.typeOpOwnerKey(opInfo.result) == typeOwnerKey {
+            if generics.unifyKindMut(tpl.genericParams, opInfo.result, targetKind, mut rawB) =!= "" {
+                if targetParamsCsv == "" {
+                    if inferMode { return (ok = false, initBindings = ""); }
+                    syntax.failAt(source, memberStart, prefix, "operation " + memberName + " requires " + types.displayKind(opInfo.result) + ", got " + types.displayKind(targetKind));
+                }
+            }
+        } else if tpl.selfTarget.startsWithAt(0, "@gentpl:") {
+            pDec := types.decodeLengthPrefixedAt(tpl.selfTarget, 8);
+            ownerParamsCsv := pDec.text;
+            ownerTplKind := tpl.selfTarget.slice(pDec.next, tpl.selfTarget.length());
+            ownerB: mut Map<String, String>;
+            _oErr := generics.unifyKindMut(ownerParamsCsv, ownerTplKind, targetKind, mut ownerB);
+            loop types.splitParamSpecs(tpl.genericParams) as sp {
+                if ownerB.has(sp.name) {
+                    mut rawB.set(sp.name, ownerB.getOr(sp.name, ""));
+                }
+            }
+        }
+        cleanB: mut Map<String, String>;
+        loop types.splitParamSpecs(tpl.genericParams) as sp {
+            if rawB.has(sp.name) {
+                boundVal := rawB.getOr(sp.name, "");
+                if targetParamsCsv == "" or not types.kindHasAnyGenericParam(targetParamsCsv, boundVal) {
+                    mut cleanB.set(sp.name, boundVal);
+                }
+            }
+        }
+        cErr := findGenericConstraintError(tpl.genericParams, cleanB, "");
+        if cErr =!= "" {
+            if inferMode { return (ok = false, initBindings = ""); }
+            syntax.failAt(source, memberStart, prefix, cErr);
+        }
+        return (ok = true, initBindings = generics.encodePartialBindings(tpl.genericParams, cleanB));
+    }
+    if resolvedType =!= "" and not inferMode {
+        if not isStatic {
+            rawRecv := types.paramKindOf(params[opInfo.first]);
+            baseRecv := if rawRecv.startsWithAt(0, "mut ") { rawRecv.slice(4, rawRecv.length()) } else { rawRecv };
+            if not types.isCompatibleKind(baseRecv, resolvedType) {
+                syntax.failAt(source, memberStart, prefix, "operation " + memberName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(resolvedType));
+            }
+        } else if types.typeOpOwnerKey(opInfo.result) == typeOwnerKey and not types.isCompatibleKind(opInfo.result, resolvedType) {
+            syntax.failAt(source, memberStart, prefix, "operation " + memberName + " requires " + types.displayKind(opInfo.result) + ", got " + types.displayKind(resolvedType));
+        }
+    }
+    (ok = true, initBindings = "")
+};
+
 /** Parses a type-attached dot call `receiver.op(args...)`, validating explicit call-site `mut` lease, `mut Self` permission, unifying generic receivers, and forwarding receiver as argument 0. */
 parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openParen: Int, receiver: Parsed, recvLocalIdx: Int, opIdx: Int, opLabel: String, explicitMut: Bool, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     info := functions[opIdx];
+    dotOwnerKey := types.typeOpOwnerKey(receiver.kind);
+    if isStaticTypeOp(info, params, dotOwnerKey) {
+        syntax.failAt(source, labelStart, prefix, "operation " + opLabel + " is a type-level operation with no Self receiver; call it on the type instead");
+    }
     recvExpected := types.paramKindOf(params[info.first]);
     isMutRecv := recvExpected.startsWithAt(0, "mut ");
     baseExpected := if isMutRecv { recvExpected.slice(4, recvExpected.length()) } else { recvExpected };
@@ -8446,6 +8527,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         if afterMemberLabel < source.length() and (source.at(afterMemberLabel) == "." or source.at(afterMemberLabel) == "{" or source.at(afterMemberLabel) == "<") and types.findAlias(aliases, qualified) >= 0 {
                             var modTypeKind := "";
                             var modTypeOwnerKey := "";
+                            var modAliasParamsCsv := "";
+                            var modAliasTplKind := "";
                             var modDotOrBracePos := afterMemberLabel;
                             isModTypeApp := source.at(afterMemberLabel) == "<";
                             if isModTypeApp {
@@ -8465,9 +8548,11 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                     modDotOrBracePos = syntax.skipTrivia(source, parsedModType.next, prefix);
                                 }
                             } else if source.at(afterMemberLabel) == "." {
-                                genOwner := types.genericAliasOwnerKey(source, labelStart, prefix, aliases, qualified);
-                                if genOwner =!= "" {
-                                    modTypeOwnerKey = genOwner;
+                                genInfo := types.genericAliasTemplateInfo(source, labelStart, prefix, aliases, qualified);
+                                if genInfo.ownerKey =!= "" {
+                                    modTypeOwnerKey = genInfo.ownerKey;
+                                    modAliasParamsCsv = genInfo.paramsCsv;
+                                    modAliasTplKind = genInfo.tplKind;
                                 } else if inferMode {
                                     emptySeen: List<String> = [];
                                     canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
@@ -8534,25 +8619,15 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                 if not handledModMember {
                                     modOpIdx := if modTypeOwnerKey =!= "" { sym.findFunction(functions, "$typeop:" + modTypeOwnerKey + "." + caseName) } else { -1 };
                                     if modOpIdx >= 0 {
-                                        if isModTypeApp and not inferMode {
-                                            opInfo := functions[modOpIdx];
-                                            rawRecv := types.paramKindOf(params[opInfo.first]);
-                                            baseRecv := if rawRecv.startsWithAt(0, "mut ") { rawRecv.slice(4, rawRecv.length()) } else { rawRecv };
-                                            if opInfo.runtime.startsWithAt(0, "$gen:") {
-                                                tpl := generics.getTemplate(generics.findTemplate(opInfo.runtime.slice(5, opInfo.runtime.length())));
-                                                checkB: mut Map<String, String>;
-                                                if generics.unifyKindMut(tpl.genericParams, baseRecv, modTypeKind, mut checkB) =!= "" {
-                                                    syntax.failAt(source, caseStart, prefix, "operation " + caseName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(modTypeKind));
-                                                }
-                                                cErr := findGenericConstraintError(tpl.genericParams, checkB, "");
-                                                if cErr =!= "" {
-                                                    syntax.failAt(source, caseStart, prefix, cErr);
-                                                }
-                                            } else if not types.isCompatibleKind(baseRecv, modTypeKind) {
-                                                syntax.failAt(source, caseStart, prefix, "operation " + caseName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(modTypeKind));
-                                            }
+                                        modOpRes := resolveTypeQualifiedOp(
+                                        source, caseStart, prefix, modOpIdx, caseName, modTypeOwnerKey,
+                                        modTypeKind, modAliasParamsCsv, modAliasTplKind, functions, params, inferMode
+                                        );
+                                        if not modOpRes.ok {
+                                            return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
                                         }
-                                        left = (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = exprStart.toText(), intValue = modOpIdx,
+                                        modOpCode := exprStart.toText() + (if modOpRes.initBindings =!= "" { "|" + modOpRes.initBindings } else { "" });
+                                        left = (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = modOpCode, intValue = modOpIdx,
                                         textValue = (if modTypeKind =!= "" { types.displayKind(modTypeKind) } else { qualified }) + "." + caseName, constant = false, next = caseEnd);
                                         handledModMember = true;
                                     }
@@ -8847,10 +8922,16 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
             var callRuntime := left.code;
             var calleeDisplay := types.displayKind(left.kind);
             var errPos := postPosition;
+            var preGenBindings := "";
             if isModuleFn {
                 info := functions[left.intValue];
                 calleeDisplay = left.textValue;
-                errPos = if left.code =!= "" { syntax.parseDigits(left.code, 0, left.code.length()) } else { exprStart };
+                codeSep := left.code.indexOf("|", 0);
+                posText := if codeSep < 0 { left.code } else { left.code.slice(0, codeSep) };
+                if codeSep >= 0 {
+                    preGenBindings = left.code.slice(codeSep + 1, left.code.length());
+                }
+                errPos = if posText =!= "" { syntax.parseDigits(posText, 0, posText.length()) } else { exprStart };
                 var listOpName := "";
                 var listOpDisplay := "";
                 var mapOpName := "";
@@ -8890,7 +8971,21 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 } else if info.runtime.startsWithAt(0, "$gen:") and postPosition < source.length() and source.at(postPosition) == "<" {
                     tplKey := info.runtime.slice(5, info.runtime.length());
                     tpl := generics.getTemplate(generics.findTemplate(tplKey));
-                    paramSpecs := types.splitParamSpecs(tpl.genericParams);
+                    allParamSpecs := types.splitParamSpecs(tpl.genericParams);
+                    expMap: mut Map<String, String>;
+                    if preGenBindings =!= "" {
+                        loop generics.decodeBindings(preGenBindings) as preB {
+                            if preB.kind =!= "" {
+                                mut expMap.set(preB.name, preB.kind);
+                            }
+                        }
+                    }
+                    remainingSpecs: mut List<(name: String, kind: String)> = [];
+                    loop allParamSpecs as sp {
+                        if not expMap.has(sp.name) {
+                            mut remainingSpecs.pushBack(sp);
+                        }
+                    }
                     var tpCursor := syntax.skipTrivia(source, postPosition + 1, prefix);
                     if tpCursor >= source.length() or source.at(tpCursor) == ">" {
                         syntax.failAt(source, tpCursor, prefix, "expected at least one type argument in call to " + calleeDisplay);
@@ -8898,13 +8993,13 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     explicitKinds: mut List<String> = [];
                     var tpIdx := 0;
                     loop true {
-                        if tpIdx >= paramSpecs.length() {
+                        if tpIdx >= remainingSpecs.length() {
                             if inferMode {
                                 return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
                             }
-                            syntax.failAt(source, tpCursor, prefix, "function " + calleeDisplay + " expects " + paramSpecs.length().toText() + " comptime argument(s)");
+                            syntax.failAt(source, tpCursor, prefix, "function " + calleeDisplay + " expects " + remainingSpecs.length().toText() + " comptime argument(s)");
                         }
-                        pSpec := paramSpecs[tpIdx];
+                        pSpec := remainingSpecs[tpIdx];
                         if types.isTypeParamKind(pSpec.kind) {
                             if inferMode {
                                 emptySeenCallT: List<String> = [];
@@ -8951,16 +9046,15 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         }
                         syntax.failAt(source, callOpenParen, prefix, "expected ( after type arguments in call to " + calleeDisplay);
                     }
-                    if explicitKinds.length() =!= paramSpecs.length() {
-                        syntax.failAt(source, postPosition, prefix, "function " + calleeDisplay + " expects " + paramSpecs.length().toText() + " comptime argument(s), got " + explicitKinds.length().toText());
+                    if explicitKinds.length() =!= remainingSpecs.length() {
+                        syntax.failAt(source, postPosition, prefix, "function " + calleeDisplay + " expects " + remainingSpecs.length().toText() + " comptime argument(s), got " + explicitKinds.length().toText());
                     }
-                    expMap: mut Map<String, String>;
                     var ei := 0;
-                    loop ei < paramSpecs.length() {
-                        mut expMap.set(paramSpecs[ei].name, explicitKinds[ei]);
+                    loop ei < remainingSpecs.length() {
+                        mut expMap.set(remainingSpecs[ei].name, explicitKinds[ei]);
                         ei = ei + 1;
                     }
-                    explicitBindingsEnc := generics.encodeBindings(tpl.genericParams, expMap);
+                    explicitBindingsEnc := generics.encodePartialBindings(tpl.genericParams, expMap);
                     left = parseUserOrIndirectCallWithRecv(target, source, callOpenParen, errPos, true, calleeDisplay, info.runtime,
                     params, info.first, info.count, info.result, false, "", "", "", explicitBindingsEnc, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else if postPosition >= source.length() or source.at(postPosition) =!= "(" {
@@ -9079,8 +9173,13 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 callResult = types.fnResultKind(left.kind);
             }
             if handleUserCall {
-                left = parseUserOrIndirectCall(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
-                callParams, callFirst, callCount, callResult, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                if preGenBindings =!= "" {
+                    left = parseUserOrIndirectCallWithRecv(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
+                    callParams, callFirst, callCount, callResult, false, "", "", "", preGenBindings, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                } else {
+                    left = parseUserOrIndirectCall(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
+                    callParams, callFirst, callCount, callResult, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                }
             }
         } else if postPosition < source.length() and source.at(postPosition) == "(" {
             syntax.failAt(source, postPosition, prefix, "cannot call non-function value of type " + types.displayKind(left.kind));

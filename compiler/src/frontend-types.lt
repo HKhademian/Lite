@@ -3695,31 +3695,33 @@ pub resolveGenericTypeText := fn(source: String, position: Int, prefix: String, 
     parsed.kind
 };
 
-/** Returns the owned nominal type-op owner key when `name` refers to a generic `record`, `distinct`, or `enum` template, else `""`. */
-pub genericAliasOwnerKey := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, name: String): String {
+/** Returns owned nominal owner metadata when `name` refers to a generic template (`record`, `distinct`, `enum`, or `alias`). */
+pub genericAliasTemplateInfo := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, name: String): (ownerKey: String, paramsCsv: String, tplKind: String) {
     idx := findAlias(aliases, name);
-    if idx < 0 { return ""; }
+    if idx < 0 { return (ownerKey = "", paramsCsv = "", tplKind = ""); }
     aliasItem := aliases[idx];
     if aliasItem.target.startsWithAt(0, "@gentpl:") {
         pDec := decodeLengthPrefixedAt(aliasItem.target, 8);
-        if pDec.next < 0 { return ""; }
+        if pDec.next < 0 { return (ownerKey = "", paramsCsv = "", tplKind = ""); }
         tplBody := aliasItem.target.slice(pDec.next, aliasItem.target.length());
-        return typeOpOwnerKey(tplBody);
+        return (ownerKey = typeOpOwnerKey(tplBody), paramsCsv = pDec.text, tplKind = tplBody);
     }
     if aliasItem.target.startsWithAt(0, "@genraw:") {
         pDec := decodeLengthPrefixedAt(aliasItem.target, 8);
-        if pDec.next < 0 { return ""; }
+        if pDec.next < 0 { return (ownerKey = "", paramsCsv = "", tplKind = ""); }
         innerRaw := aliasItem.target.slice(pDec.next, aliasItem.target.length());
-        if not innerRaw.startsWithAt(0, "@recraw:") and not innerRaw.startsWithAt(0, "@enumraw:") and not innerRaw.startsWithAt(0, "@distraw:") {
-            return "";
-        }
         emptySeen: List<String> = [];
         scopedTplAliases := aliasesUpToDepth(aliases, aliasItem.depth);
         resolvedParams := resolveComptimeParamSpecs(source, position, prefix, scopedTplAliases, pDec.text);
         tplKind := resolveGenericTypeText(source, position, prefix, scopedTplAliases, innerRaw, resolvedParams, emptySeen);
-        return typeOpOwnerKey(tplKind);
+        return (ownerKey = typeOpOwnerKey(tplKind), paramsCsv = resolvedParams, tplKind = tplKind);
     }
-    ""
+    (ownerKey = "", paramsCsv = "", tplKind = "")
+};
+
+/** Returns the owned nominal type-op owner key when `name` refers to a generic template, else `""`. */
+pub genericAliasOwnerKey := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, name: String): String {
+    genericAliasTemplateInfo(source, position, prefix, aliases, name).ownerKey
 };
 
 /** Resolves one transparent alias name to its scalar or flat named-tuple kind. */
@@ -3872,7 +3874,7 @@ pub withSelfAlias := fn(aliases: List<AliasDecl>, selfTarget: String, depth: Int
     out
 };
 
-/** Parses a `TypeName.op := fn[<TypeParams>](recv: [mut] Self[<...>], ...): Ret` header with strict `Self`-receiver validation. */
+/** Parses a `TypeName.op := fn[<TypeParams>](...): Ret` header (with `Self` receiver for instance ops or without `Self` for static type ops). */
 pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, typeName: String, opName: String, selfTarget: String, ownerKey: String, isGenericOwner: Bool): (next: Int, result: String, params: String, count: Int, genericType: String) {
     size := source.length();
     var cursor := syntax.skipTrivia(source, position, prefix);
@@ -3888,59 +3890,51 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
     scopedAliases := withSelfAlias(aliases, selfTarget, 0);
     cursor = syntax.expectSymbol(source, cursor, "(", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
-    if cursor < size and source.at(cursor) == ")" {
-        syntax.failAt(source, cursor, prefix, "type operation " + typeName + "." + opName + " requires a Self receiver first parameter");
-    }
     names: mut List<String> = [];
     encodedBuf: mut tb.TextBuilder;
     var count := 0;
-    loop true {
-        if cursor >= size or not source.at(cursor).isNameStart() {
-            syntax.failAt(source, cursor, prefix, "expected a parameter name");
-        }
-        nameStart := cursor;
-        cursor = source.skipName(cursor);
-        parameterName := source.slice(nameStart, cursor);
-        if syntax.isReservedWord(parameterName) { syntax.unsupportedFeature(source, nameStart, parameterName, prefix); }
-        if listLib.listContainsText(names, parameterName) {
-            syntax.failAt(source, nameStart, prefix, "duplicate parameter " + parameterName);
-        }
-        (mut names).pushBack(parameterName);
-        cursor = syntax.skipTrivia(source, cursor, prefix);
-        cursor = syntax.expectSymbol(source, cursor, ":", prefix);
-        cursor = syntax.skipTrivia(source, cursor, prefix);
-        var access := "";
-        if source.wordAt(cursor, "mut") {
-            access = "mut ";
-            cursor = syntax.skipTrivia(source, cursor + 3, prefix);
-        }
-        typeStart := cursor;
-        if count == 0 {
-            if not source.wordAt(typeStart, "Self") {
+    if cursor < size and source.at(cursor) =!= ")" {
+        loop true {
+            if cursor >= size or not source.at(cursor).isNameStart() {
+                syntax.failAt(source, cursor, prefix, "expected a parameter name");
+            }
+            nameStart := cursor;
+            cursor = source.skipName(cursor);
+            parameterName := source.slice(nameStart, cursor);
+            if syntax.isReservedWord(parameterName) { syntax.unsupportedFeature(source, nameStart, parameterName, prefix); }
+            if listLib.listContainsText(names, parameterName) {
+                syntax.failAt(source, nameStart, prefix, "duplicate parameter " + parameterName);
+            }
+            (mut names).pushBack(parameterName);
+            cursor = syntax.skipTrivia(source, cursor, prefix);
+            cursor = syntax.expectSymbol(source, cursor, ":", prefix);
+            cursor = syntax.skipTrivia(source, cursor, prefix);
+            var access := "";
+            if source.wordAt(cursor, "mut") {
+                access = "mut ";
+                cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+            }
+            typeStart := cursor;
+            typed := parseFunctionType(source, typeStart, prefix, scopedAliases, genericType);
+            if count == 0 and typeOpOwnerKey(typed.kind) == ownerKey and not source.wordAt(typeStart, "Self") {
                 syntax.failAt(source, typeStart, prefix, "receiver parameter of " + typeName + "." + opName + " must have Self type");
             }
-        }
-        typed := parseFunctionType(source, typeStart, prefix, scopedAliases, genericType);
-        if count == 0 {
-            if typeOpOwnerKey(typed.kind) =!= ownerKey {
-                syntax.failAt(source, typeStart, prefix, "receiver parameter of " + typeName + "." + opName + " must match " + typeName + ", got " + displayKind(typed.kind));
+            if access =!= "" and not isGenericCoreOwner(typeName) and not isGenericParamName(genericType, distinctBaseKind(typed.kind)) and not isMutContainerKind(typed.kind) {
+                syntax.failAt(source, typeStart, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
             }
-        }
-        if access =!= "" and not isGenericCoreOwner(typeName) and not isGenericParamName(genericType, distinctBaseKind(typed.kind)) and not isMutContainerKind(typed.kind) {
-            syntax.failAt(source, typeStart, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
-        }
-        cursor = syntax.skipTrivia(source, typed.next, prefix);
-        if count > 0 { tb.append(mut encodedBuf, "|"); }
-        tb.append(mut encodedBuf, parameterName);
-        tb.append(mut encodedBuf, "=");
-        tb.append(mut encodedBuf, access);
-        tb.append(mut encodedBuf, typed.kind);
-        count = count + 1;
-        if cursor < size and source.at(cursor) == "," {
-            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-            if cursor < size and source.at(cursor) == ")" { break; }
-        } else {
-            break;
+            cursor = syntax.skipTrivia(source, typed.next, prefix);
+            if count > 0 { tb.append(mut encodedBuf, "|"); }
+            tb.append(mut encodedBuf, parameterName);
+            tb.append(mut encodedBuf, "=");
+            tb.append(mut encodedBuf, access);
+            tb.append(mut encodedBuf, typed.kind);
+            count = count + 1;
+            if cursor < size and source.at(cursor) == "," {
+                cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+                if cursor < size and source.at(cursor) == ")" { break; }
+            } else {
+                break;
+            }
         }
     }
     encoded := tb.build(encodedBuf);
@@ -3954,8 +3948,12 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
         }
         firstSep := encoded.indexOf("|", 0);
         recvPart := if firstSep < 0 { encoded } else { encoded.slice(0, firstSep) };
-        if paramKindOf(recvPart).startsWithAt(0, "mut ") {
+        recvKind := paramKindOf(recvPart);
+        if recvKind.startsWithAt(0, "mut ") {
             syntax.failAt(source, position, prefix, "$getIndex receiver on " + typeName + " must be read-only Self (not mut Self)");
+        }
+        if typeOpOwnerKey(recvKind) =!= ownerKey {
+            syntax.failAt(source, position, prefix, "$getIndex receiver on " + typeName + " must have Self type");
         }
         if resultType.kind == ir.VALUE_KIND_UNIT {
             syntax.failAt(source, position, prefix, "$getIndex on " + typeName + " must return a value (not Unit)");
@@ -3966,8 +3964,12 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
         }
         firstSep := encoded.indexOf("|", 0);
         recvPart := if firstSep < 0 { encoded } else { encoded.slice(0, firstSep) };
-        if not paramKindOf(recvPart).startsWithAt(0, "mut ") {
+        recvKind := paramKindOf(recvPart);
+        if not recvKind.startsWithAt(0, "mut ") {
             syntax.failAt(source, position, prefix, "$setIndex receiver on " + typeName + " must be mut Self");
+        }
+        if typeOpOwnerKey(recvKind.slice(4, recvKind.length())) =!= ownerKey {
+            syntax.failAt(source, position, prefix, "$setIndex receiver on " + typeName + " must have Self type");
         }
         if resultType.kind =!= ir.VALUE_KIND_UNIT {
             syntax.failAt(source, position, prefix, "$setIndex on " + typeName + " must return Unit");

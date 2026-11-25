@@ -62,7 +62,23 @@ contract. Aliases of fields or indexed places remain open, including when a
 receiver or index would be evaluated and how long the resulting place remains
 valid.
 
-### Specializing generic functions with alias
+### Transparent `alias` propagation for static type operations
+
+While declaring *new* operations on an `alias` remains disallowed ([type-attached operations](lite://doc/type-operations)), any static or instance operation owned by the underlying nominal type is automatically available through transparent concrete or generic aliases with pre-bound compile-time arguments:
+
+```text
+pub Vec  := record<T: Type<math.Numeric>, N: Int> { data: [T; N]; }
+pub Vec2 := alias<T: Type<math.Numeric>> Vec<T, 2>;
+pub IVec2 := alias Vec<Int, 2>;
+
+pub Vec.zeroed := fn<T: Type<math.Numeric>, N: Int>(): Self<T, N> { res: Self<T, N>; res };
+pub Vec.splat  := fn<T: Type<math.Numeric>, N: Int>(val: T): Self<T, N> { ... };
+
+z := IVec2.zeroed();      // pre-binds T = Int, N = 2
+s := Vec2.splat(3.5);     // pre-binds N = 2, infers T = Float
+```
+
+### Specializing standalone generic functions with `alias`
 
 Planned design (not yet implemented in the compiler):
 

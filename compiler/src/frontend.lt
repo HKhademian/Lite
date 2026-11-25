@@ -1434,7 +1434,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                                         parameterTotal = parameterTotal + 1;
                                     }
                                 }
-                            } else if header.count >= 1 and afterHdr < size and source.at(afterHdr) == "{" {
+                            } else if afterHdr < size and source.at(afterHdr) == "{" {
                                 var fnRuntime := moduleFunctionRuntime(target, moduleKey, qualName);
                                 if header.genericType =!= "" {
                                     tplKey := moduleKey + "#" + qualName;

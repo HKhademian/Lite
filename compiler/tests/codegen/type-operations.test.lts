@@ -221,10 +221,40 @@ expectRejectBoth("mut-on-rvalue",
 "make().hit();\n",
 "cannot call mutating operation hit on read-only value");
 
-expectRejectBoth("missing-receiver",
+expectRejectBoth("static-called-on-value",
 "P := record { hp: Int; }\n" +
-"P.zero := fn(): Self { Self { hp = 0 } };\n",
-"requires a Self receiver first parameter");
+"P.zero := fn(): Self { Self { hp = 0 } };\n" +
+"p := P { hp = 1 };\n" +
+"z := p.zero();\n",
+"is a type-level operation with no Self receiver");
+
+expectRejectBoth("static-mut-called-on-value",
+"P := record { hp: Int; }\n" +
+"P.zero := fn(): Self { Self { hp = 0 } };\n" +
+"mut p := P { hp = 1 };\n" +
+"z := mut p.zero();\n",
+"is a type-level operation with no Self receiver");
+
+expectRejectBoth("static-alias-arg-mismatch",
+"Vec := record<T: Type, N: Int> { data: [T; N]; }\n" +
+"IVec2 := alias Vec<Int, 2>;\n" +
+"Vec.splat := fn<T: Type, N: Int>(val: T): Self<T, N> { Self<T, N> { data = [val; N] } };\n" +
+"bad := IVec2.splat(1.5);\n",
+"conflicting type bindings for T: Int vs Float");
+
+expectRejectBoth("static-specialized-dim-mismatch",
+"Mat := record<T: Type, R: Int, C: Int> { rows: [[T; C]; R]; }\n" +
+"Mat.id := fn<N: Int>(): Self<Float, N, N> {\n" +
+"    out: [[Float; N]; N];\n" +
+"    Self<Float, N, N> { rows = out }\n" +
+"};\n" +
+"bad := Mat<Float, 2, 3>.id();\n",
+"operation id requires");
+
+expectRejectBoth("static-dollar-hook-rejected",
+"P := record { hp: Int; }\n" +
+"P.$getIndex := fn(a: Int, idx: Int): Int { a + idx };\n",
+"$getIndex receiver on P must have Self type");
 
 expectRejectBoth("non-self-receiver",
 "P := record { hp: Int; }\n" +
@@ -278,7 +308,15 @@ modASrc :=
 "pub Vec2 := record { x: Int; y: Int; }\n" +
 "Vec2.secret := fn(v: Self): Int { v.x * 10 + v.y };\n" +
 "pub Vec2.add := fn(a: Self, b: Self): Self { Self { x = a.x + b.x, y = a.y + b.y } };\n" +
-"pub Vec2.score := fn(v: Self): Int { v.secret() + 1 };\n";
+"pub Vec2.score := fn(v: Self): Int { v.secret() + 1 };\n" +
+"pub Vec := record<T: Type, N: Int> { data: [T; N]; }\n" +
+"pub IVec2 := alias Vec<Int, 2>;\n" +
+"pub PairVec := alias<E: Type> Vec<E, 2>;\n" +
+"pub Vec.zeroed := fn<T: Type, N: Int>(): Self<T, N> { res: Self<T, N>; res };\n" +
+"pub Vec.splat := fn<T: Type, N: Int>(val: T): Self<T, N> { Self<T, N> { data = [val; N] } };\n" +
+"pub Vec.rank := fn<T: Type, N: Int>(): Int { N };\n" +
+"pub Vec.tag := fn<T: Type, N: Int, U: Type>(x: U): U { x };\n" +
+"pub Vec.fromZero := fn<N: Int>(v: Self<Float, N>): Self<Float, N> { _u := v; Self<Float, N>.zeroed() };\n";
 
 modBSrc :=
 "v := import \"./vec.lts\";\n" +
@@ -302,7 +340,15 @@ modCSrc :=
 "r2 := v.Vec2.add(p, q);\n" +
 "fnRef := v.Vec2.add;\n" +
 "r3 := fnRef(p, q);\n" +
-"io.outputLine(r.x, r.y, r.score(), r2.x, r2.y, r3.x, r3.y);\n";
+"zI := v.IVec2.zeroed();\n" +
+"sI := v.IVec2.splat(9);\n" +
+"sF := v.PairVec.splat(3.5);\n" +
+"zI2 := v.PairVec<Int>.zeroed();\n" +
+"zExplicit := v.PairVec.zeroed<Int>();\n" +
+"rk := v.IVec2.rank();\n" +
+"tg := v.IVec2.tag<String>(\"ok\");\n" +
+"fz := v.Vec<Float, 2>.fromZero(v.PairVec.splat(1.0));\n" +
+"io.outputLine(r.x, r.y, r.score(), r2.x, r2.y, r3.x, r3.y, zI.data[1], sI.data[0], sF.data[1], zI2.data[0], zExplicit.data[0], rk, tg, fz.data[0]);\n";
 
 modPrivSrc :=
 "f := import \"./factory.lts\";\n" +
@@ -332,7 +378,7 @@ tsModComp := compilerTest.compileFile(tsComp, tmpDir.path, [modCPath]);
 test.checkInt("transitive ts compile status: " + tsModComp.stderr, 0, tsModComp.status);
 tsModRes := compilerTest.checkAndRunTs(root, tsModComp.stdout);
 test.checkInt("transitive ts status: " + tsModRes.stderr, 0, tsModRes.status);
-test.checkText("transitive ts stdout", "6 8 69 6 8 6 8\n", tsModRes.stdout);
+test.checkText("transitive ts stdout", "6 8 69 6 8 6 8 0 9 3.5 0 0 2 ok 0\n", tsModRes.stdout);
 if ccInfo.available {
     cModComp := compilerTest.compileFile(cComp, tmpDir.path, [modCPath]);
     test.checkInt("transitive c compile status: " + cModComp.stderr, 0, cModComp.status);
@@ -349,4 +395,27 @@ if ccInfo.available {
 }
 
 _rm := file.remove(tmpDir.path);
+
+/* 6. Local non-generic and generic static type operations + alias propagation. */
+staticLocalSrc :=
+"io := import \"core/io\";\n" +
+"P := record { hp: Int; }\n" +
+"P.zero := fn(): Self { Self { hp = 0 } };\n" +
+"P.from := fn(hp: Int): Self { Self { hp = hp } };\n" +
+"Vec := record<T: Type, N: Int> { data: [T; N]; }\n" +
+"Mat := record<T: Type, R: Int, C: Int> { rows: [Vec<T, C>; R]; }\n" +
+"Mat.id := fn<N: Int>(): Self<Float, N, N> {\n" +
+"    out: [Vec<Float, N>; N];\n" +
+"    Self<Float, N, N> { rows = out }\n" +
+"};\n" +
+"FMat3 := alias Mat<Float, 3, 3>;\n" +
+"p0 := P.zero();\n" +
+"ctor := P.from;\n" +
+"p1 := ctor(42);\n" +
+"m3 := FMat3.id();\n" +
+"m2 := Mat<Float, 2, 2>.id();\n" +
+"m4 := Mat.id<4>();\n" +
+"io.outputLine(p0.hp, p1.hp, m3.rows.length(), m2.rows.length(), m4.rows.length());\n";
+runBoth("static-type-ops-local", staticLocalSrc, "0 42 3 2 4\n");
+
 test.done("type-operations");

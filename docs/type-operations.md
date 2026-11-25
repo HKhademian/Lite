@@ -1,10 +1,10 @@
 # Type-attached operations
 
-Status: **shipped across TS and C11, 2026-11-23**. Uniform `TypeName.op := fn[<...>](...)` declarations, `self` versus `Self`, strictly required explicit `Self`/`Self<...>` receivers, owned nominal types (`record`, `enum`, and verified core built-ins `List`, `Array`, `Map`, `Set`, `String`, `Int`), monomorphized generic function bodies (`fn<T>`, `fn<K, V>`, `fn<T, U>`), explicit call-site `mut` lease dot calls (`mut xs.pushBack(42)`, `x := mut xs.popBack()`, `mut player.takeDamage(10)`, or optional `(mut xs).popBack()`, with COW snapshot isolation), explicit calls for computed reads (`xs.length()`, `m.size()`, `s.isEmpty()`), provisional `$getIndex`/`$setIndex` operator hooks, and rejection of `alias`/foreign inherent attachments are implemented and verified across both TS and C11 self-hosting targets. `distinct` types, explicit imported extensions, and `get`/`set` backing properties remain recorded future directions.
+Status: **shipped across TS and C11, 2026-11-23; static receiverless operations + alias propagation added 2026-11-25**. Uniform `TypeName.op := fn[<...>](...)` declarations, `self` versus `Self`, `Self`/`Self<...>` instance operations as well as receiverless static (type-level) operations automatically inherited through transparent concrete and generic `alias`es, owned nominal types (`record`, `enum`, `distinct`, and verified core built-ins `List`, `Array`, `Map`, `Set`, `String`, `Int`), monomorphized generic function bodies (`fn<T>`, `fn<K, V>`, `fn<T, U>`), explicit call-site `mut` lease dot calls (`mut xs.pushBack(42)`, `x := mut xs.popBack()`, `mut player.takeDamage(10)`, or optional `(mut xs).popBack()`, with COW snapshot isolation), explicit calls for computed reads (`xs.length()`, `m.size()`, `s.isEmpty()`), provisional `$getIndex`/`$setIndex` operator hooks, and rejection of attaching new operations to aliases or foreign targets are implemented and verified across both TS and C11 self-hosting targets. Explicit imported extensions and `get`/`set` backing properties remain recorded future directions.
 
 ## Purpose
 
-Provide `value.operation(...)` dot-call ergonomics for records, enums, `distinct` types, and generic built-in or user type families (such as `List<T>` and `Map<K, V>`) without introducing classes, inheritance, prototypes, or hidden runtime dispatch.
+Provide `value.operation(...)` dot-call ergonomics and `TypeName.operation(...)` / `Alias.operation(...)` type-level constructor/factory ergonomics for records, enums, `distinct` types, and generic built-in or user type families (such as `List<T>`, `Map<K, V>`, and `Vec<T, N>`) without introducing classes, inheritance, prototypes, or hidden runtime dispatch.
 
 Every dot call lowers statically at compile time to an ordinary function call with identical runtime cost to `module.operation(value, ...)`.
 
@@ -13,12 +13,11 @@ Every dot call lowers statically at compile time to an ordinary function call wi
 Type-attached operations reuse LiteLang's uniform binding syntax (`:= fn`) and separate angle-bracket type parameters ([generic notation](lite://doc/generic-notation#separate-function-type-parameters)):
 
 ```text
-[pub] TypeName.op := fn[<TypeParams>](receiver: [mut] Self[<...>], ...): ResultType {
-    body
-}
+[pub] TypeName.op := fn[<TypeParams>](receiver: [mut] Self[<...>], ...): ResultType { ... } // instance
+[pub] TypeName.ctor := fn[<TypeParams>](...): ResultType { ... }                          // static (no Self receiver)
 ```
 
-**Receiver type rule (selected for now):** a receiver first parameter with the matching `Self` type is **strictly required** (`Self` or `mut Self`, parameterized as `Self<...>` for generic type families). Missing/receiverless signatures, omitted receiver types, bare `Self` on a generic type family, and unrelated/non-`Self` receiver parameter types are rejected for now. `Self` refers directly to the attached `TypeName`, obeying the same explicit parameterization and `name: mut Type` placement rules as ordinary type names ([mut qualifier placement](lite://doc/mut-qualifier-placement)).
+**Receiver differentiation rule:** if the first parameter has type `Self` / `mut Self` (or `Self<...>` / `mut Self<...>` for generic type families), the operation is an **instance operation** callable via `value.op(...)` or `TypeName.op(value, ...)`. Otherwise — either zero parameters `fn()` or a first parameter that is not `Self` (such as `fn(val: T): Self<T, N>`) — the operation is a **static (type-level) operation**: it is callable on the type (`TypeName.ctor(...)`, `TypeName<Args>.ctor(...)`, or through any transparent concrete/generic `alias` such as `IVec2.zeroed()`, `Vec2.splat(3.5)`, or `Vec2.zeroed<Int>()`), and is rejected on value dot calls (`v.zeroed()`). Naming the owning concrete type directly as parameter 0 (`P.get := fn(p: P)`) remains rejected so instance operations visibly declare `Self`. `Self` refers directly to the attached `TypeName`, obeying the same explicit parameterization and `name: mut Type` placement rules as ordinary type names ([mut qualifier placement](lite://doc/mut-qualifier-placement)).
 
 ### Non-generic nominal types
 
@@ -173,8 +172,7 @@ Consulted selectively from the [project reference languages](lite://doc/referenc
 
 - **Chained mutation targets & explicit call-site `mut`:** extending `mut` leases beyond a direct binding receiver (for example nested field receivers `mut player.inventory.pushBack(item)` if needed alongside explicit `mut` rules).
 - **Deferred `get`/`set` backing properties:** whether LiteLang later introduces computed property getters/setters after field privacy, backing storage, compound assignment, and `var`-grant rules are established.
-- **Receiverless type-associated helpers:** whether non-receiver functions such as constructors (`TypeName.from(...)`) may also live under `TypeName.*`, distinct from `Self`-receiver operations.
-- **Explicit call-site type arguments:** syntax for supplying unbound method-only type parameters at dot calls (shared with [generic notation](lite://doc/generic-notation#pending-contract-cases)).
+- **Explicit call-site type arguments:** syntax for supplying unbound method-only type parameters at instance dot calls (static calls already accept explicit remaining type arguments such as `Vec2.zeroed<Int>()`).
 - **Deferred operator/interface syntax:** replacing the provisional `$getIndex`/`$setIndex` compiler hooks with LiteLang's final operator and [collection operation contract](lite://doc/collection-operation-contracts) syntax (including range slicing and iterators).
 - **Explicit extension opt-in syntax:** exact `using`/import syntax, extension grouping, and interaction with future [interfaces](lite://doc/composition-and-interfaces).
 
