@@ -203,37 +203,14 @@ pub splitPipeEntries := fn(encoded: String, count: Int): List<String> {
     out
 };
 
-/** Splits a comma-separated generic parameter list (`"T,U"`) into individual names. */
+/** Splits a comma-separated comptime parameter list (`"T,N=Int"`) into parameter names. */
 pub splitGenericParams := fn(genericParams: String): List<String> {
-    out: mut List<String> = [];
-    size := genericParams.length();
-    if size == 0 { return out; }
-    var start := 0;
-    loop start <= size {
-        comma := genericParams.indexOf(",", start);
-        end := if comma < 0 { size } else { comma };
-        part := genericParams.slice(start, end);
-        if part =!= "" { mut out.pushBack(part); }
-        if comma < 0 { break; }
-        start = comma + 1;
-    }
-    out
+    types.splitCommaNames(genericParams)
 };
 
-/** True when `name` is one of the comma-separated generic type parameter names in `genericParams`. */
+/** True when `name` matches any comptime parameter name (`Type` or value) in `genericParams`. */
 pub isGenericParam := fn(genericParams: String, name: String): Bool {
-    if genericParams == "" or name == "" { return false; }
-    if genericParams == name { return true; }
-    size := genericParams.length();
-    var start := 0;
-    loop start <= size {
-        comma := genericParams.indexOf(",", start);
-        end := if comma < 0 { size } else { comma };
-        if genericParams.slice(start, end) == name { return true; }
-        if comma < 0 { break; }
-        start = comma + 1;
-    }
-    false
+    types.isAnyParamName(genericParams, name)
 };
 
 /** Deterministic collision-resistant hash token of `text` for TS/C11-safe identifier mangling. */
@@ -270,8 +247,23 @@ mangleOneKind := fn(kind: String): String {
     if types.isMapKind(kind) {
         return "M_" + self(types.mapKeyKind(kind)) + "_" + self(types.mapValueKind(kind)) + "_E";
     }
+    if types.isComptimeIntToken(kind) {
+        v := types.comptimeIntValue(kind);
+        return if v == -9223372036854775808 { "VI_min" } else if v < 0 { "VI_n" + (0 - v).toText() } else { "VI_" + v.toText() };
+    }
+    if types.isComptimeBoolToken(kind) {
+        return if types.comptimeBoolValue(kind) { "VB_1" } else { "VB_0" };
+    }
+    if types.isComptimeStringToken(kind) {
+        return "VS_" + hashHex32(kind);
+    }
+    if types.isComptimeEnumToken(kind) {
+        return "VE_" + hashHex32(kind);
+    }
     if types.isArrayKind(kind) {
-        return "A" + types.arrayExtent(kind).toText() + "_" + self(types.arrayElementKind(kind)) + "_E";
+        ext := types.arrayExtent(kind);
+        extPart := if ext > 0 { ext.toText() } else { "w" };
+        return "A" + extPart + "_" + self(types.arrayElementKind(kind)) + "_E";
     }
     "K_" + hashHex32(kind)
 };
@@ -399,6 +391,10 @@ pub kindHasUnboundGeneric := fn(genericParams: String, kind: String, bindings: M
         return self(genericParams, types.mapKeyKind(kind), bindings) or self(genericParams, types.mapValueKind(kind), bindings);
     }
     if types.isArrayKind(kind) {
+        pExtText := types.arrayExtentText(kind);
+        if types.valueParamKind(genericParams, pExtText) =!= "" and not bindings.has(pExtText) {
+            return true;
+        }
         return self(genericParams, types.arrayElementKind(kind), bindings);
     }
     if types.isTupleKind(kind) {
@@ -476,6 +472,20 @@ pub substKindForExpected := fn(genericParams: String, pattern: String, bindings:
 pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, bindings: mut Map<String, String>): String {
     if actual == ir.VALUE_KIND_NEVER { return ""; }
     if isGenericParam(genericParams, pattern) {
+        if types.valueParamKind(genericParams, pattern) =!= "" {
+            if not types.isComptimeValueToken(actual) and not types.isAnyParamName(genericParams, actual) {
+                return "expected comptime value for " + pattern + ", got " + types.displayKind(actual);
+            }
+            if bindings.has(pattern) {
+                existing := bindings.getOr(pattern, "");
+                if existing =!= actual {
+                    return "conflicting comptime value bindings for " + pattern + ": " + types.displayKind(existing) + " vs " + types.displayKind(actual);
+                }
+                return "";
+            }
+            (mut bindings).set(pattern, actual);
+            return "";
+        }
         if bindings.has(pattern) {
             existing := bindings.getOr(pattern, "");
             if not types.isCompatibleKind(existing, actual) {
@@ -507,8 +517,27 @@ pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, b
         return self(genericParams, types.mapValueKind(pattern), types.mapValueKind(actual), mut bindings);
     }
     if types.isArrayKind(pattern) {
-        pExt := types.arrayExtent(pattern);
-        if not types.isArrayKind(actual) or (pExt >= 0 and pExt =!= types.arrayExtent(actual)) {
+        if not types.isArrayKind(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        pExtText := types.arrayExtentText(pattern);
+        if pExtText == "*" {
+            /* wildcard extent accepts any fixed or wildcard array */
+        } else if types.valueParamKind(genericParams, pExtText) == ir.VALUE_KIND_INT {
+            aExt := types.arrayExtent(actual);
+            if aExt <= 0 {
+                return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+            }
+            extTok := types.comptimeIntToken(aExt);
+            if bindings.has(pExtText) {
+                existingExt := bindings.getOr(pExtText, "");
+                if existingExt =!= extTok {
+                    return "conflicting bindings for " + pExtText + ": " + types.displayKind(existingExt) + " vs " + types.displayKind(extTok);
+                }
+            } else {
+                (mut bindings).set(pExtText, extTok);
+            }
+        } else if types.arrayExtent(pattern) =!= types.arrayExtent(actual) {
             return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
         }
         return self(genericParams, types.arrayElementKind(pattern), types.arrayElementKind(actual), mut bindings);

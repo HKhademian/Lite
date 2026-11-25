@@ -400,13 +400,24 @@ pub arrayElementKind := fn(kind: String): String {
     kind.slice(1, semi)
 };
 
-/** Returns the integer extent from `[ElementKind;Extent]`, or -1 for wildcard `[ElementKind;*]`. */
-pub arrayExtent := fn(kind: String): Int {
+/** Returns the raw extent token from `[ElementKind;Extent]` (`"4"`, `"*"`, or symbolic `"N"`). */
+pub arrayExtentText := fn(kind: String): String {
     semi := arraySemiIndex(kind);
-    if semi <= 1 { return 0; }
-    extText := kind.slice(semi + 1, kind.length() - 1);
+    if semi <= 1 { return ""; }
+    kind.slice(semi + 1, kind.length() - 1)
+};
+
+/** Returns the integer extent from `[ElementKind;Extent]`, -1 for wildcard `[ElementKind;*]`, or -2 for symbolic comptime extent. */
+pub arrayExtent := fn(kind: String): Int {
+    extText := arrayExtentText(kind);
+    if extText == "" { return 0; }
     if extText == "*" { return -1; }
-    syntax.parseDigits(kind, semi + 1, kind.length() - 1)
+    var i := 0;
+    loop i < extText.length() {
+        if not extText.at(i).isDigit() { return -2; }
+        i = i + 1;
+    }
+    syntax.parseDigits(extText, 0, extText.length())
 };
 
 /** True when `kind` is this compiler's canonical map kind `Map<K,V>`. */
@@ -564,18 +575,75 @@ pub setElementKind := fn(kind: String): String {
     kind.slice(4, kind.length() - 1)
 };
 
-/** True when `name` matches one of the active core intrinsic generic parameters (`"T"` or `"K,V"`). */
-isGenericParamName := fn(genericType: String, name: String): Bool {
-    if genericType == "" or name == "" { return false; }
-    if name == genericType { return true; }
-    var start := 0;
-    size := genericType.length();
-    loop start < size {
-        comma := genericType.indexOf(",", start);
-        end := if comma >= 0 { comma } else { size };
-        if genericType.slice(start, end) == name { return true; }
+/** Parses `genericParams` CSV (e.g. `"T,N=Int,C=Enum<...>"`) into `(name, kind)` pairs (`kind == ""` for `Type` params). */
+pub splitParamSpecs := fn(csv: String): List<(name: String, kind: String)> {
+    out: mut List<(name: String, kind: String)> = [];
+    size := csv.length();
+    var cursor := 0;
+    loop cursor < size {
+        eq := csv.indexOf("=", cursor);
+        var comma := -1;
+        var scan := cursor;
+        var depth := 0;
+        loop scan < size {
+            ch := csv.at(scan);
+            if ch == "<" or ch == "(" or ch == "[" { depth = depth + 1; }
+            else if ch == ">" or ch == ")" or ch == "]" {
+                if depth > 0 { depth = depth - 1; }
+            } else if ch == "," and depth == 0 {
+                comma = scan;
+                break;
+            }
+            scan = scan + 1;
+        }
+        end := if comma < 0 { size } else { comma };
+        if eq > cursor and eq < end {
+            pName := csv.slice(cursor, eq);
+            pKind := csv.slice(eq + 1, end);
+            normKind := if pKind == "Type" { "" } else { pKind };
+            if pName =!= "" { mut out.pushBack((name = pName, kind = normKind)); }
+        } else {
+            pName := csv.slice(cursor, end);
+            if pName =!= "" { mut out.pushBack((name = pName, kind = "")); }
+        }
         if comma < 0 { break; }
-        start = comma + 1;
+        cursor = comma + 1;
+    }
+    out
+};
+
+/** True when `name` matches an active comptime `Type` parameter in `genericType`. */
+pub isGenericParamName := fn(genericType: String, name: String): Bool {
+    if genericType == "" or name == "" { return false; }
+    loop splitParamSpecs(genericType) as spec {
+        if spec.name == name and spec.kind == "" { return true; }
+    }
+    false
+};
+
+/** Returns the canonical value type of comptime value parameter `name` in `genericType`, or `""` when absent or a `Type` param. */
+pub valueParamKind := fn(genericType: String, name: String): String {
+    if genericType == "" or name == "" { return ""; }
+    loop splitParamSpecs(genericType) as spec {
+        if spec.name == name and spec.kind =!= "" { return spec.kind; }
+    }
+    ""
+};
+
+/** True when `name` matches any comptime parameter (`Type` or value) in `genericType`. */
+pub isAnyParamName := fn(genericType: String, name: String): Bool {
+    if genericType == "" or name == "" { return false; }
+    loop splitParamSpecs(genericType) as spec {
+        if spec.name == name { return true; }
+    }
+    false
+};
+
+/** True when `genericType` declares at least one discrete comptime value parameter. */
+pub hasComptimeValueParam := fn(genericType: String): Bool {
+    if genericType == "" { return false; }
+    loop splitParamSpecs(genericType) as spec {
+        if spec.kind =!= "" { return true; }
     }
     false
 };
@@ -1295,19 +1363,193 @@ pub containsFnKind := fn(kind: String): Bool {
     res
 };
 
-/** Splits comma-separated comptime parameter names (`"T,U"`) into a list. */
+/** Encodes characters in a comptime String value so canonical `ValS<...>` never collides with delimiters or binding separators. */
+encodeComptimeStr := fn(text: String): String {
+    size := text.length();
+    parts: mut List<String> = [];
+    var segStart := 0;
+    var i := 0;
+    loop i < size {
+        ch := text.at(i);
+        repl := match {
+            ch == "%" { "%25" }
+            ch == "<" { "%3C" }
+            ch == ">" { "%3E" }
+            ch == "(" { "%28" }
+            ch == ")" { "%29" }
+            ch == "[" { "%5B" }
+            ch == "]" { "%5D" }
+            ch == "," { "%2C" }
+            ch == ";" { "%3B" }
+            ch == ":" { "%3A" }
+            ch == "|" { "%7C" }
+            ch == "\"" { "%22" }
+            ch == "\n" { "%0A" }
+            ch == "\r" { "%0D" }
+            ch == "\t" { "%09" }
+            _ { "" }
+        };
+        if repl =!= "" {
+            if i > segStart { mut parts.pushBack(text.slice(segStart, i)); }
+            (mut parts).pushBack(repl);
+            segStart = i + 1;
+        }
+        i = i + 1;
+    }
+    if segStart == 0 { return text; }
+    if segStart < size { mut parts.pushBack(text.slice(segStart, size)); }
+    textLib.joinTexts(parts, "")
+};
+
+/** Decodes percent-escaped canonical payload from `ValS<...>`. */
+decodeComptimeStr := fn(encoded: String): String {
+    size := encoded.length();
+    parts: mut List<String> = [];
+    var segStart := 0;
+    var i := 0;
+    loop i < size {
+        if encoded.at(i) == "%" and i + 2 < size {
+            code := encoded.slice(i + 1, i + 3);
+            ch := match {
+                code == "25" { "%" }
+                code == "3C" { "<" }
+                code == "3E" { ">" }
+                code == "28" { "(" }
+                code == "29" { ")" }
+                code == "5B" { "[" }
+                code == "5D" { "]" }
+                code == "2C" { "," }
+                code == "3B" { ";" }
+                code == "3A" { ":" }
+                code == "7C" { "|" }
+                code == "22" { "\"" }
+                code == "0A" { "\n" }
+                code == "0D" { "\r" }
+                code == "09" { "\t" }
+                _ { "" }
+            };
+            if ch =!= "" {
+                if i > segStart { mut parts.pushBack(encoded.slice(segStart, i)); }
+                (mut parts).pushBack(ch);
+                i = i + 3;
+                segStart = i;
+                continue;
+            }
+        }
+        i = i + 1;
+    }
+    if segStart == 0 { return encoded; }
+    if segStart < size { mut parts.pushBack(encoded.slice(segStart, size)); }
+    textLib.joinTexts(parts, "")
+};
+
+/** Encodes a canonical comptime `Int` argument token (`ValI<n>`). */
+pub comptimeIntToken := fn(value: Int): String {
+    "ValI<" + value.toText() + ">"
+};
+
+/** True when `tok` is a canonical `ValI<...>` comptime integer token. */
+pub isComptimeIntToken := fn(tok: String): Bool {
+    size := tok.length();
+    if size < 7 or not tok.startsWithAt(0, "ValI<") or tok.at(size - 1) =!= ">" { return false; }
+    var i := 5;
+    if i < size - 1 and tok.at(i) == "-" { i = i + 1; }
+    if i >= size - 1 { return false; }
+    loop i < size - 1 {
+        if not tok.at(i).isDigit() { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+/** Extracts the signed `Int` value from `ValI<...>`. */
+pub comptimeIntValue := fn(tok: String): Int {
+    if not isComptimeIntToken(tok) { return 0; }
+    inner := tok.slice(5, tok.length() - 1);
+    if inner.startsWithAt(0, "-") {
+        if inner == "-9223372036854775808" { return -9223372036854775808; }
+        return 0 - syntax.parseDigits(inner, 1, inner.length());
+    }
+    syntax.parseDigits(inner, 0, inner.length())
+};
+
+/** Encodes a canonical comptime `Bool` argument token (`ValB<1>` / `ValB<0>`). */
+pub comptimeBoolToken := fn(value: Bool): String {
+    if value { "ValB<1>" } else { "ValB<0>" }
+};
+
+/** True when `tok` is a canonical `ValB<...>` comptime boolean token. */
+pub isComptimeBoolToken := fn(tok: String): Bool {
+    tok == "ValB<1>" or tok == "ValB<0>"
+};
+
+/** Extracts the `Bool` value from `ValB<...>`. */
+pub comptimeBoolValue := fn(tok: String): Bool {
+    tok == "ValB<1>"
+};
+
+/** Encodes a canonical comptime `String` argument token (`ValS<...>`). */
+pub comptimeStringToken := fn(value: String): String {
+    "ValS<" + encodeComptimeStr(value) + ">"
+};
+
+/** True when `tok` is a canonical `ValS<...>` comptime string token. */
+pub isComptimeStringToken := fn(tok: String): Bool {
+    size := tok.length();
+    size >= 6 and tok.startsWithAt(0, "ValS<") and tok.at(size - 1) == ">"
+};
+
+/** Extracts the decoded `String` value from `ValS<...>`. */
+pub comptimeStringValue := fn(tok: String): String {
+    if not isComptimeStringToken(tok) { return ""; }
+    decodeComptimeStr(tok.slice(5, tok.length() - 1))
+};
+
+/** Encodes a canonical comptime enum case argument token (`ValE<lp(EnumKind)caseIdx>`). */
+pub comptimeEnumToken := fn(enumKind: String, caseIdx: Int): String {
+    "ValE<" + encodeLengthPrefixedText(enumKind) + caseIdx.toText() + ">"
+};
+
+/** True when `tok` is a canonical `ValE<...>` comptime enum case token. */
+pub isComptimeEnumToken := fn(tok: String): Bool {
+    size := tok.length();
+    size > 6 and tok.startsWithAt(0, "ValE<") and tok.at(size - 1) == ">"
+};
+
+/** Returns the canonical `Enum<...>` type encoded inside `ValE<...>`. */
+pub comptimeEnumKind := fn(tok: String): String {
+    if not isComptimeEnumToken(tok) { return ""; }
+    dec := decodeLengthPrefixedAt(tok, 5);
+    dec.text
+};
+
+/** Returns the 0-based case index encoded inside `ValE<...>`. */
+pub comptimeEnumCaseIndex := fn(tok: String): Int {
+    if not isComptimeEnumToken(tok) { return -1; }
+    dec := decodeLengthPrefixedAt(tok, 5);
+    if dec.next < 0 or dec.next >= tok.length() - 1 { return -1; }
+    syntax.parseDigits(tok, dec.next, tok.length() - 1)
+};
+
+/** True when `tok` is any canonical comptime value argument token (`ValI`, `ValB`, `ValS`, or `ValE`). */
+pub isComptimeValueToken := fn(tok: String): Bool {
+    isComptimeIntToken(tok) or isComptimeBoolToken(tok) or isComptimeStringToken(tok) or isComptimeEnumToken(tok)
+};
+
+/** Returns the canonical value type (`Int`, `Bool`, `String`, or `Enum<...>`) of comptime value token `tok`. */
+pub comptimeValueTokenKind := fn(tok: String): String {
+    if isComptimeIntToken(tok) { return ir.VALUE_KIND_INT; }
+    if isComptimeBoolToken(tok) { return ir.VALUE_KIND_BOOL; }
+    if isComptimeStringToken(tok) { return ir.VALUE_KIND_STRING; }
+    if isComptimeEnumToken(tok) { return comptimeEnumKind(tok); }
+    ""
+};
+
+/** Splits comma-separated comptime parameter specs (`"T,N=Int"` or `"T,C=Enum<...>"`) into parameter names. */
 pub splitCommaNames := fn(csv: String): List<String> {
     out: mut List<String> = [];
-    size := csv.length();
-    if size == 0 { return out; }
-    var start := 0;
-    loop start <= size {
-        comma := csv.indexOf(",", start);
-        end := if comma < 0 { size } else { comma };
-        part := csv.slice(start, end);
-        if part =!= "" { mut out.pushBack(part); }
-        if comma < 0 { break; }
-        start = comma + 1;
+    loop splitParamSpecs(csv) as spec {
+        (mut out).pushBack(spec.name);
     }
     out
 };
@@ -1315,11 +1557,13 @@ pub splitCommaNames := fn(csv: String): List<String> {
 /** True when `kind` mentions any comptime parameter name listed in comma-separated `genericParams`. */
 pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
     if genericParams == "" or kind == "" { return false; }
-    if isGenericParamName(genericParams, kind) { return true; }
+    if isAnyParamName(genericParams, kind) { return true; }
     if isListKind(kind) { return self(genericParams, listElementKind(kind)); }
     if isSetKind(kind) { return self(genericParams, setElementKind(kind)); }
     if isMapKind(kind) { return self(genericParams, mapKeyKind(kind)) or self(genericParams, mapValueKind(kind)); }
-    if isArrayKind(kind) { return self(genericParams, arrayElementKind(kind)); }
+    if isArrayKind(kind) {
+        return self(genericParams, arrayElementKind(kind)) or valueParamKind(genericParams, arrayExtentText(kind)) =!= "";
+    }
     if isTupleKind(kind) {
         n := tupleComponentCount(kind);
         var i := 0;
@@ -1360,7 +1604,7 @@ pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
 
 /** Substitutes comptime parameter bindings atomically across canonical collections, tuples, fns, records, distincts, and enums. */
 pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: Map<String, String>): String {
-    if isGenericParamName(genericParams, pattern) {
+    if isAnyParamName(genericParams, pattern) {
         return bindings.getOr(pattern, pattern);
     }
     if isListKind(pattern) {
@@ -1374,8 +1618,15 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
         self(genericParams, mapValueKind(pattern), bindings) + ">";
     }
     if isArrayKind(pattern) {
-        ext := arrayExtent(pattern);
-        extStr := if ext < 0 { "*" } else { ext.toText() };
+        var extStr := arrayExtentText(pattern);
+        if valueParamKind(genericParams, extStr) =!= "" and bindings.has(extStr) {
+            bound := bindings.getOr(extStr, "");
+            if isComptimeIntToken(bound) {
+                extStr = comptimeIntValue(bound).toText();
+            } else if isAnyParamName(genericParams, bound) {
+                extStr = bound;
+            }
+        }
         return "[" + self(genericParams, arrayElementKind(pattern), bindings) + ";" + extStr + "]";
     }
     if isTupleKind(pattern) {
@@ -1487,6 +1738,12 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
     if isArrayKind(kind) {
         elem := arrayElementKind(kind);
         if elem == ir.VALUE_KIND_UNIT { return "unsupported array element type Unit"; }
+        extText := arrayExtentText(kind);
+        if extText =!= "*" and valueParamKind(allowGenericParams, extText) =!= ir.VALUE_KIND_INT {
+            if arrayExtent(kind) <= 0 {
+                return "array extent must be a positive integer";
+            }
+        }
         return self(elem, allowGenericParams);
     }
     if isTupleKind(kind) {
@@ -1539,7 +1796,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
     ""
 };
 
-/** Parses optional `<T: Type, ...>` comptime parameter list (allowing omitted `: Type` for compatibility) non-destructively. */
+/** Parses optional `<T: Type, N: Int, ...>` comptime parameter list (allowing omitted `: Type` for compatibility) non-destructively. */
 pub scanComptimeTypeParams := fn(source: String, start: Int, prefix: String): (ok: Bool, hasParams: Bool, paramsCsv: String, next: Int, errPos: Int, errMsg: String) {
     size := source.length();
     var cursor := syntax.skipTrivia(source, start, prefix);
@@ -1553,7 +1810,7 @@ pub scanComptimeTypeParams := fn(source: String, start: Int, prefix: String): (o
     var paramsCsv := "";
     loop cursor < size {
         if not source.at(cursor).isNameStart() {
-            return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = cursor, errPos = cursor, errMsg = "expected a type parameter name");
+            return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = cursor, errPos = cursor, errMsg = "expected a comptime parameter name");
         }
         nameStart := cursor;
         nameEnd := source.skipName(nameStart);
@@ -1561,23 +1818,45 @@ pub scanComptimeTypeParams := fn(source: String, start: Int, prefix: String): (o
         if syntax.isReservedWord(pName) {
             return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = nameStart, errPos = nameStart, errMsg = "unsupported feature \"" + pName + "\"");
         }
-        if isGenericParamName(paramsCsv, pName) {
-            return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = nameStart, errPos = nameStart, errMsg = "duplicate type parameter " + pName);
+        if isAnyParamName(paramsCsv, pName) {
+            return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = nameStart, errPos = nameStart, errMsg = "duplicate comptime parameter " + pName);
         }
-        paramsCsv = if paramsCsv == "" { pName } else { paramsCsv + "," + pName };
+        var entry := pName;
         cursor = syntax.skipTrivia(source, nameEnd, prefix);
         if cursor < size and source.at(cursor) == ":" {
             kindStart := syntax.skipTrivia(source, cursor + 1, prefix);
-            if kindStart >= size or not source.at(kindStart).isNameStart() {
+            if kindStart >= size or not source.at(kindStart).isNameStart() or source.wordAt(kindStart, "fn") {
                 return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = kindStart, errPos = kindStart, errMsg = "expected comptime parameter kind after :");
             }
-            kindEnd := source.skipName(kindStart);
-            kindName := source.slice(kindStart, kindEnd);
-            if kindName =!= "Type" {
-                return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = kindStart, errPos = kindStart, errMsg = "unsupported comptime parameter kind " + kindName + "; only Type is supported yet");
+            kindEnd0 := source.skipName(kindStart);
+            var kindText := source.slice(kindStart, kindEnd0);
+            var kindEnd := kindEnd0;
+            afterK0 := syntax.skipTrivia(source, kindEnd0, prefix);
+            if afterK0 < size and source.at(afterK0) == "." {
+                mStart := syntax.skipTrivia(source, afterK0 + 1, prefix);
+                if mStart >= size or not source.at(mStart).isNameStart() {
+                    return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = mStart, errPos = mStart, errMsg = "expected a type name after .");
+                }
+                kindEnd = source.skipName(mStart);
+                kindText = kindText + "." + source.slice(mStart, kindEnd);
             }
-            cursor = syntax.skipTrivia(source, kindEnd, prefix);
+            afterKind := syntax.skipTrivia(source, kindEnd, prefix);
+            if afterKind < size and source.at(afterKind) == "<" {
+                return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = kindStart, errPos = kindStart, errMsg = "unsupported comptime parameter kind " + kindText + "<...>; only Type, Int, Bool, String, and payload-free enums are supported");
+            }
+            if kindText == "Type" {
+                entry = pName;
+            } else if kindText == ir.VALUE_KIND_FLOAT or kindText == ir.VALUE_KIND_FLOAT32 or kindText == "Float64" or
+            kindText == ir.VALUE_KIND_UNIT or kindText == ir.VALUE_KIND_NEVER or kindText == "List" or
+            kindText == "Map" or kindText == "Set" or kindText == "Array" or syntax.isReservedWord(kindText) or
+            numeric.isNarrowNumericKind(kindText) or numeric.numericAliasKind(kindText) =!= "" {
+                return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = kindStart, errPos = kindStart, errMsg = "unsupported comptime parameter kind " + kindText + "; only Type, Int, Bool, String, and payload-free enums are supported");
+            } else {
+                entry = pName + "=" + kindText;
+            }
+            cursor = afterKind;
         }
+        paramsCsv = if paramsCsv == "" { entry } else { paramsCsv + "," + entry };
         if cursor < size and source.at(cursor) == "," {
             cursor = syntax.skipTrivia(source, cursor + 1, prefix);
             if cursor < size and source.at(cursor) == ">" { break; }
@@ -1628,7 +1907,7 @@ pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
     (expectedKind =!= "" and actualKind == ir.VALUE_KIND_NEVER) or expectedKind == actualKind or
     numeric.numericWidens(expectedKind, actualKind) or tupleShapeMatches(expectedKind, actualKind) or
     exactShapeMatches(expectedKind, actualKind) or
-    (isArrayKind(expectedKind) and arrayExtent(expectedKind) < 0 and isArrayKind(actualKind) and self(arrayElementKind(expectedKind), arrayElementKind(actualKind)))
+    (isArrayKind(expectedKind) and arrayExtent(expectedKind) == -1 and isArrayKind(actualKind) and self(arrayElementKind(expectedKind), arrayElementKind(actualKind)))
 };
 
 /** Maps a restricted Lite scalar, flat named-tuple, fixed-array, List or callable kind to its TypeScript type. */
@@ -1787,15 +2066,23 @@ pub tupleFieldKind := fn(kind: String, label: String): String {
     ""
 };
 
-/** Renders one canonical kind for diagnostics, adding spaces inside flat tuples, lists, and callable signatures. */
+/** Renders one canonical kind or comptime value token for diagnostics, adding spaces inside flat tuples, lists, and callable signatures. */
 pub displayKind := fn(kind: String): String {
+    if isComptimeIntToken(kind) { return comptimeIntValue(kind).toText(); }
+    if isComptimeBoolToken(kind) { return if comptimeBoolValue(kind) { "true" } else { "false" }; }
+    if isComptimeStringToken(kind) { return "\"" + comptimeStringValue(kind) + "\""; }
+    if isComptimeEnumToken(kind) {
+        ek := comptimeEnumKind(kind);
+        cName := enumCaseAt(ek, comptimeEnumCaseIndex(kind)).name;
+        return enumDisplayName(ek) + "." + cName;
+    }
     if isEnumKind(kind) { return enumDisplayName(kind); }
     if isRecordKind(kind) { return recordDisplayName(kind); }
     if isDistinctKind(kind) { return distinctDisplayName(kind); }
     if isListKind(kind) { return "List<" + self(listElementKind(kind)) + ">"; }
     if isMapKind(kind) { return "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">"; }
     if isSetKind(kind) { return "Set<" + self(setElementKind(kind)) + ">"; }
-    if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + arrayExtent(kind).toText() + "]"; }
+    if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + arrayExtentText(kind) + "]"; }
     if isFnKind(kind) {
         count := fnParamCount(kind);
         var result := "fn(";
@@ -1830,6 +2117,426 @@ pub displayKind := fn(kind: String): String {
     result + ")"
 };
 
+/** True when `kind` is an admissible scalar enum backing type. */
+isEnumBackingKind := fn(kind: String): Bool {
+    numeric.isIntKind(kind) or numeric.isFloatKind(kind) or kind == ir.VALUE_KIND_STRING or kind == ir.VALUE_KIND_BOOL
+};
+
+/** Parses one enum case backing literal from `rawText` (signed Int/Float, String, or Bool) and returns its kind, TS code, and integer value. */
+parseEnumCaseLiteral := fn(rawText: String, expectedBacking: String, prefix: String): (ok: Bool, kind: String, code: String, intValue: Int, error: String) {
+    size := rawText.length();
+    pos := syntax.skipTrivia(rawText, 0, prefix);
+    if pos >= size {
+        return (ok = false, kind = "", code = "", intValue = 0, error = "expected constant value for enum case");
+    }
+    ch := rawText.at(pos);
+    if rawText.wordAt(pos, "true") or rawText.wordAt(pos, "false") {
+        isTrue := rawText.wordAt(pos, "true");
+        endPos := pos + (if isTrue { 4 } else { 5 });
+        if syntax.skipTrivia(rawText, endPos, prefix) < size {
+            return (ok = false, kind = "", code = "", intValue = 0, error = "unexpected text after enum case value");
+        }
+        return (ok = true, kind = ir.VALUE_KIND_BOOL, code = if isTrue { "true" } else { "false" }, intValue = if isTrue { 1 } else { 0 }, error = "");
+    }
+    if ch == "\"" {
+        lit := syntax.parseText(ir.TARGET_TS, rawText, pos, prefix);
+        if syntax.skipTrivia(rawText, lit.next, prefix) < size {
+            return (ok = false, kind = "", code = "", intValue = 0, error = "unexpected text after enum case value");
+        }
+        return (ok = true, kind = ir.VALUE_KIND_STRING, code = escapeEnumStringLiteral(lit.code), intValue = 0, error = "");
+    }
+    isNeg := ch == "-";
+    isSign := ch == "-" or ch == "+";
+    numPos := if isSign { syntax.skipTrivia(rawText, pos + 1, prefix) } else { pos };
+    if numPos < size and rawText.at(numPos).isDigit() {
+        hintKind := if expectedBacking == ir.VALUE_KIND_FLOAT32 or expectedBacking == ir.VALUE_KIND_FLOAT {
+            expectedBacking
+        } else if numeric.isIntKind(expectedBacking) {
+            expectedBacking
+        } else {
+            ""
+        };
+        lit := syntax.parseNumber(ir.TARGET_TS, rawText, numPos, prefix, hintKind, 10);
+        if syntax.skipTrivia(rawText, lit.next, prefix) < size {
+            return (ok = false, kind = "", code = "", intValue = 0, error = "unexpected text after enum case value");
+        }
+        if numeric.isFloatKind(lit.kind) {
+            fCode := if isNeg { "-" + lit.code } else { lit.code };
+            return (ok = true, kind = lit.kind, code = fCode, intValue = 0, error = "");
+        }
+        if numeric.isIntKind(lit.kind) {
+            finalInt := if isNeg {
+                neg := integer.intNegate(lit.intValue);
+                if not neg.ok {
+                    return (ok = false, kind = "", code = "", intValue = 0, error = "enum case integer value out of range");
+                }
+                neg.value
+            } else {
+                lit.intValue
+            };
+            targetIntKind := if numeric.isIntKind(expectedBacking) { expectedBacking } else { lit.kind };
+            if not numeric.intKindFits(targetIntKind, finalInt) {
+                return (ok = false, kind = "", code = "", intValue = 0, error = "enum case value does not fit " + displayKind(targetIntKind));
+            }
+            if numeric.isFloatKind(expectedBacking) {
+                fLit := finalInt.toText();
+                return (ok = true, kind = expectedBacking, code = if expectedBacking == ir.VALUE_KIND_FLOAT32 { "Math.fround(" + fLit + ")" } else { fLit }, intValue = 0, error = "");
+            }
+            intCode := if finalInt < 0 { "(-" + (0 - finalInt).toText() + "n)" } else { finalInt.toText() + "n" };
+            return (ok = true, kind = targetIntKind, code = intCode, intValue = finalInt, error = "");
+        }
+    }
+    (ok = false, kind = "", code = "", intValue = 0, error = "enum case value must be a scalar constant literal")
+};
+
+/** Builds canonical `Enum<...>` from decoded `@enumraw:` header, resolved optional backing kind, and length-prefixed `(name, rawVal)` pairs. */
+buildCanonicalEnumKind := fn(hdrText: String, explicitBacking: String, rawSource: String, casesStart: Int, caseCount: Int, prefix: String): (ok: Bool, kind: String, next: Int, error: String) {
+    if caseCount <= 0 {
+        return (ok = false, kind = "", next = casesStart, error = "enum must declare at least one case");
+    }
+    if explicitBacking =!= "" and not isEnumBackingKind(explicitBacking) {
+        return (ok = false, kind = "", next = casesStart, error = "unsupported enum backing type " + displayKind(explicitBacking));
+    }
+    names: mut List<String> = [];
+    rawVals: mut List<String> = [];
+    var cur := casesStart;
+    var hasAnyVal := false;
+    var firstValText := "";
+    var idx := 0;
+    loop idx < caseCount {
+        nDec := decodeLengthPrefixedAt(rawSource, cur);
+        if nDec.next < 0 { return (ok = false, kind = "", next = casesStart, error = "malformed enum case name"); }
+        vDec := decodeLengthPrefixedAt(rawSource, nDec.next);
+        if vDec.next < 0 { return (ok = false, kind = "", next = casesStart, error = "malformed enum case value"); }
+        if listLib.listContainsText(names, nDec.text) {
+            return (ok = false, kind = "", next = casesStart, error = "duplicate enum case " + nDec.text);
+        }
+        (mut names).pushBack(nDec.text);
+        mut rawVals.pushBack(vDec.text);
+        if vDec.text =!= "" and not hasAnyVal {
+            hasAnyVal = true;
+            firstValText = vDec.text;
+        }
+        cur = vDec.next;
+        idx = idx + 1;
+    }
+    var backingKind := explicitBacking;
+    if backingKind == "" and hasAnyVal {
+        probe := parseEnumCaseLiteral(firstValText, "", prefix);
+        if not probe.ok {
+            return (ok = false, kind = "", next = casesStart, error = probe.error);
+        }
+        backingKind = probe.kind;
+    }
+    var encodedPairs := "";
+    var nextInt := 0;
+    var cIdx := 0;
+    loop cIdx < caseCount {
+        cName := names[cIdx];
+        cRaw := rawVals[cIdx];
+        var valCode := "";
+        if backingKind == "" {
+            valCode = "";
+        } else if cRaw =!= "" {
+            lit := parseEnumCaseLiteral(cRaw, backingKind, prefix);
+            if not lit.ok {
+                return (ok = false, kind = "", next = casesStart, error = lit.error);
+            }
+            if lit.kind =!= backingKind {
+                return (ok = false, kind = "", next = casesStart, error = "enum case " + cName + " value has type " + displayKind(lit.kind) + ", expected " + displayKind(backingKind));
+            }
+            valCode = lit.code;
+            if numeric.isIntKind(backingKind) {
+                nextInt = lit.intValue + 1;
+            }
+        } else if numeric.isIntKind(backingKind) {
+            if not numeric.intKindFits(backingKind, nextInt) {
+                return (ok = false, kind = "", next = casesStart, error = "enum case " + cName + " auto-assigned value does not fit " + displayKind(backingKind));
+            }
+            valCode = if nextInt < 0 { "(-" + (0 - nextInt).toText() + "n)" } else { nextInt.toText() + "n" };
+            nextInt = nextInt + 1;
+        } else {
+            return (ok = false, kind = "", next = casesStart, error = "enum case " + cName + " requires an explicit " + displayKind(backingKind) + " backing value");
+        }
+        encodedPairs = encodedPairs + encodeLengthPrefixedText(cName) + encodeLengthPrefixedText(valCode);
+        cIdx = cIdx + 1;
+    }
+    canonical := "Enum<" + encodeLengthPrefixedText(hdrText) + encodeLengthPrefixedText(backingKind) + caseCount.toText() + ";" + encodedPairs + ">";
+    (ok = true, kind = canonical, next = cur, error = "")
+};
+
+/** Resolves a scalar backing type name through non-generic aliases (`Int`, `Float`, `String`, `Bool`, etc.) without calling `failAt`. */
+resolveScalarAliasKind := fn(aliases: List<AliasDecl>, rawName: String, prefix: String): String {
+    var cur := rawName;
+    var activeAliases := aliases;
+    var hops := 0;
+    loop hops < 32 {
+        clean := syntax.skipTrivia(cur, 0, prefix);
+        var end := cur.length();
+        loop end > clean and (cur.at(end - 1) == " " or cur.at(end - 1) == "\t" or cur.at(end - 1) == "\n" or cur.at(end - 1) == "\r") {
+            end = end - 1;
+        }
+        name := cur.slice(clean, end);
+        if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or
+        name == ir.VALUE_KIND_BOOL or numeric.isNarrowNumericKind(name) {
+            return name;
+        }
+        nk := numeric.numericAliasKind(name);
+        if nk =!= "" { return nk; }
+        idx := findAlias(activeAliases, name);
+        if idx < 0 { return ""; }
+        item := activeAliases[idx];
+        if (item.target).startsWithAt(0, "$Kind:") {
+            cur = (item.target).slice(6, (item.target).length());
+        } else {
+            cur = item.target;
+        }
+        activeAliases = aliasesUpToDepth(activeAliases, item.depth);
+        hops = hops + 1;
+    }
+    ""
+};
+
+/** Resolves a raw discrete comptime parameter type (`Int`, `Bool`, `String`, or payload-free `Enum`) non-destructively. */
+resolveDiscreteType := fn(aliases: List<AliasDecl>, rawTypeName: String, prefix: String): (ok: Bool, kind: String, error: String) {
+    var cur := rawTypeName;
+    var activeAliases := aliases;
+    var hops := 0;
+    loop hops < 32 {
+        if cur == ir.VALUE_KIND_INT or cur == ir.VALUE_KIND_BOOL or cur == ir.VALUE_KIND_STRING {
+            return (ok = true, kind = cur, error = "");
+        }
+        if isEnumKind(cur) {
+            return (ok = true, kind = cur, error = "");
+        }
+        if cur.startsWithAt(0, "@enumraw:") {
+            hdr := decodeLengthPrefixedAt(cur, 9);
+            bkRaw := decodeLengthPrefixedAt(cur, hdr.next);
+            if hdr.next < 0 or bkRaw.next < 0 {
+                return (ok = false, kind = "", error = "malformed enum declaration");
+            }
+            var curPos := bkRaw.next;
+            var countEnd := curPos;
+            loop countEnd < cur.length() and cur.at(countEnd).isDigit() { countEnd = countEnd + 1; }
+            caseCount := if countEnd > curPos { syntax.parseDigits(cur, curPos, countEnd) } else { 0 };
+            curPos = if countEnd < cur.length() and cur.at(countEnd) == ";" { countEnd + 1 } else { countEnd };
+            var resolvedBacking := "";
+            if bkRaw.text =!= "" {
+                resolvedBacking = resolveScalarAliasKind(activeAliases, bkRaw.text, prefix);
+                if resolvedBacking == "" {
+                    return (ok = false, kind = "", error = "unsupported enum backing type " + bkRaw.text);
+                }
+            }
+            built := buildCanonicalEnumKind(hdr.text, resolvedBacking, cur, curPos, caseCount, prefix);
+            if not built.ok { return (ok = false, kind = "", error = built.error); }
+            return (ok = true, kind = built.kind, error = "");
+        }
+        if cur == ir.VALUE_KIND_FLOAT or cur == ir.VALUE_KIND_FLOAT32 or cur == ir.VALUE_KIND_UNIT or
+        cur == ir.VALUE_KIND_NEVER or numeric.isNarrowNumericKind(cur) or numeric.numericAliasKind(cur) =!= "" {
+            return (ok = false, kind = "", error = "unsupported comptime parameter type " + cur + "; only Int, Bool, String, and payload-free enums are supported");
+        }
+        idx := findAlias(activeAliases, cur);
+        if idx < 0 {
+            return (ok = false, kind = "", error = "unknown comptime parameter type " + cur);
+        }
+        item := activeAliases[idx];
+        tgt := item.target;
+        if tgt == "" or tgt.startsWithAt(0, "@recraw:") or tgt.startsWithAt(0, "@distraw:") or
+        tgt.startsWithAt(0, "@genraw:") or tgt.startsWithAt(0, "@gentpl:") or tgt.startsWithAt(0, "$Val:") or
+        isRecordKind(tgt) or isDistinctKind(tgt) or isTupleKind(tgt) or isListKind(tgt) or
+        isArrayKind(tgt) or isMapKind(tgt) or isSetKind(tgt) or isFnKind(tgt) or
+        tgt.startsWithAt(0, "(") or tgt.startsWithAt(0, "[") or tgt.startsWithAt(0, "fn") {
+            return (ok = false, kind = "", error = "unsupported comptime parameter type " + rawTypeName + "; only Int, Bool, String, and payload-free enums are supported");
+        }
+        cur = if tgt.startsWithAt(0, "$Kind:") { tgt.slice(6, tgt.length()) } else { tgt };
+        activeAliases = aliasesUpToDepth(activeAliases, item.depth);
+        hops = hops + 1;
+    }
+    (ok = false, kind = "", error = "recursive type alias " + rawTypeName)
+};
+
+/** Resolves all value parameter kinds in `rawParamsCsv` against `aliases`, failing on unknown or non-discrete kinds. */
+pub resolveComptimeParamSpecs := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, rawParamsCsv: String): String {
+    if rawParamsCsv == "" { return ""; }
+    out: mut List<String> = [];
+    loop splitParamSpecs(rawParamsCsv) as spec {
+        if spec.kind == "" {
+            mut out.pushBack(spec.name);
+        } else {
+            res := resolveDiscreteType(aliases, spec.kind, prefix);
+            if not res.ok {
+                syntax.failAt(source, position, prefix, res.error);
+            }
+            mut out.pushBack(spec.name + "=" + res.kind);
+        }
+    }
+    textLib.joinTexts(out, ",")
+};
+
+/** Non-failing counterpart to `resolveComptimeParamSpecs` for speculative pre-registration and expression inference. */
+pub canResolveComptimeParamSpecs := fn(prefix: String, aliases: List<AliasDecl>, rawParamsCsv: String): (ok: Bool, csv: String) {
+    if rawParamsCsv == "" { return (ok = true, csv = ""); }
+    out: mut List<String> = [];
+    loop splitParamSpecs(rawParamsCsv) as spec {
+        if spec.kind == "" {
+            mut out.pushBack(spec.name);
+        } else {
+            res := resolveDiscreteType(aliases, spec.kind, prefix);
+            if not res.ok { return (ok = false, csv = ""); }
+            mut out.pushBack(spec.name + "=" + res.kind);
+        }
+    }
+    (ok = true, csv = textLib.joinTexts(out, ","))
+};
+
+/** Validates that a double-quoted string literal at `position` closes cleanly with supported escapes so `parseText` cannot throw. */
+canScanValidStringLiteral := fn(source: String, position: Int, prefix: String): Bool {
+    size := source.length();
+    var cursor := position + 1;
+    loop cursor < size {
+        ch := source.at(cursor);
+        if ch == "\"" {
+            next := syntax.skipTrivia(source, cursor + 1, prefix);
+            if next < size and source.at(next) == "\"" {
+                cursor = next + 1;
+                continue;
+            }
+            return true;
+        }
+        if ch == "\\" {
+            if cursor + 1 >= size { return false; }
+            esc := source.at(cursor + 1);
+            if esc =!= "n" and esc =!= "t" and esc =!= "r" and esc =!= "\"" and esc =!= "\\" {
+                return false;
+            }
+            cursor = cursor + 2;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    false
+};
+
+/** Parses one comptime value argument inside `<...>` (`Int`, `Bool`, `String`, payload-free `enum`, param, or `$Val:` alias) without throwing. */
+pub parseComptimeValueArg := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, genericType: String, expectedKind: String): (ok: Bool, token: String, next: Int, errPos: Int, errMsg: String) {
+    size := source.length();
+    start := syntax.skipTrivia(source, position, prefix);
+    if start >= size {
+        return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value");
+    }
+    ch := source.at(start);
+    if ch == "\"" {
+        if not canScanValidStringLiteral(source, start, prefix) {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "invalid string literal in comptime argument");
+        }
+        lit := syntax.parseText(ir.TARGET_TS, source, start, prefix);
+        if expectedKind =!= ir.VALUE_KIND_STRING {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got String");
+        }
+        return (ok = true, token = comptimeStringToken(lit.textValue), next = lit.next, errPos = -1, errMsg = "");
+    }
+    if ch == "-" or ch == "+" or ch.isDigit() {
+        isNeg := ch == "-";
+        isSign := ch == "-" or ch == "+";
+        numPos := if isSign { syntax.skipTrivia(source, start + 1, prefix) } else { start };
+        if numPos >= size or not source.at(numPos).isDigit() {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "expected integer literal in comptime argument");
+        }
+        scanned := numeric.scanNumericLiteral(source, numPos);
+        if scanned.floating {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "floating values are not supported as comptime arguments");
+        }
+        if scanned.exponentMissingAt >= 0 or scanned.outsideInt or (not isNeg and scanned.magnitude == -9223372036854775808) {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "integer comptime argument outside signed 64-bit range");
+        }
+        if expectedKind =!= ir.VALUE_KIND_INT {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got Int");
+        }
+        val := if isNeg { scanned.magnitude } else { 0 - scanned.magnitude };
+        return (ok = true, token = comptimeIntToken(val), next = scanned.next, errPos = -1, errMsg = "");
+    }
+    if source.wordAt(start, "true") or source.wordAt(start, "false") {
+        isTrue := source.wordAt(start, "true");
+        endPos := start + (if isTrue { 4 } else { 5 });
+        if expectedKind =!= ir.VALUE_KIND_BOOL {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got Bool");
+        }
+        return (ok = true, token = comptimeBoolToken(isTrue), next = endPos, errPos = -1, errMsg = "");
+    }
+    if source.wordAt(start, "not") {
+        subStart := syntax.skipTrivia(source, start + 3, prefix);
+        sub := self(source, subStart, prefix, aliases, genericType, ir.VALUE_KIND_BOOL);
+        if not sub.ok { return sub; }
+        if expectedKind =!= ir.VALUE_KIND_BOOL {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got Bool");
+        }
+        if not isComptimeBoolToken(sub.token) {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "comptime argument negation requires a concrete Bool constant");
+        }
+        return (ok = true, token = comptimeBoolToken(not comptimeBoolValue(sub.token)), next = sub.next, errPos = -1, errMsg = "");
+    }
+    if not ch.isNameStart() {
+        return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value");
+    }
+    firstEnd := source.skipName(start);
+    first := source.slice(start, firstEnd);
+    if syntax.isReservedWord(first) {
+        return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value");
+    }
+    afterFirst := syntax.skipTrivia(source, firstEnd, prefix);
+    if afterFirst < size and source.at(afterFirst) == "." {
+        secondStart := syntax.skipTrivia(source, afterFirst + 1, prefix);
+        if secondStart >= size or not source.at(secondStart).isNameStart() {
+            return (ok = false, token = "", next = secondStart, errPos = secondStart, errMsg = "expected case name after .");
+        }
+        secondEnd := source.skipName(secondStart);
+        second := source.slice(secondStart, secondEnd);
+        afterSecond := syntax.skipTrivia(source, secondEnd, prefix);
+        var typeName := first;
+        var caseName := second;
+        var finalEnd := secondEnd;
+        if afterSecond < size and source.at(afterSecond) == "." {
+            thirdStart := syntax.skipTrivia(source, afterSecond + 1, prefix);
+            if thirdStart >= size or not source.at(thirdStart).isNameStart() {
+                return (ok = false, token = "", next = thirdStart, errPos = thirdStart, errMsg = "expected case name after .");
+            }
+            thirdEnd := source.skipName(thirdStart);
+            typeName = first + "." + second;
+            caseName = source.slice(thirdStart, thirdEnd);
+            finalEnd = thirdEnd;
+        }
+        resolved := resolveDiscreteType(aliases, typeName, prefix);
+        if not resolved.ok or not isEnumKind(resolved.kind) {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "expected an enum type before ." + caseName);
+        }
+        if resolved.kind =!= expectedKind {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got " + displayKind(resolved.kind));
+        }
+        caseIdx := enumCaseIndex(resolved.kind, caseName);
+        if caseIdx < 0 {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "enum " + enumDisplayName(resolved.kind) + " has no case " + caseName);
+        }
+        return (ok = true, token = comptimeEnumToken(resolved.kind, caseIdx), next = finalEnd, errPos = -1, errMsg = "");
+    }
+    vpKind := valueParamKind(genericType, first);
+    if vpKind =!= "" {
+        if vpKind =!= expectedKind {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got " + displayKind(vpKind));
+        }
+        return (ok = true, token = first, next = firstEnd, errPos = -1, errMsg = "");
+    }
+    aliasIdx := findAlias(aliases, first);
+    if aliasIdx >= 0 and (aliases[aliasIdx].target).startsWithAt(0, "$Val:") {
+        tok := (aliases[aliasIdx].target).slice(5, (aliases[aliasIdx].target).length());
+        actualKind := comptimeValueTokenKind(tok);
+        if actualKind =!= expectedKind {
+            return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got " + displayKind(actualKind));
+        }
+        return (ok = true, token = tok, next = firstEnd, errPos = -1, errMsg = "");
+    }
+    (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got " + first)
+};
+
 /** Parses one source or alias type with cycle tracking `seen`, shared across annotations, aliases, tuple fields, lists, arrays, and callable types. */
 pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
     size := source.length();
@@ -1852,7 +2559,7 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             }
             resolvedBacking = bkParsed.kind;
         }
-        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        effHdr := if genericType =!= "" { hdr.text + "<" + textLib.joinTexts(splitCommaNames(genericType), ",") + ">" } else { hdr.text };
         built := buildCanonicalEnumKind(effHdr, resolvedBacking, source, cur, caseCount, prefix);
         if not built.ok {
             syntax.failAt(errSource, errPos, prefix, built.error);
@@ -1890,7 +2597,7 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             (mut parts).pushBack(fName.text + ":" + resolvedField.kind);
             idx = idx + 1;
         }
-        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        effHdr := if genericType =!= "" { hdr.text + "<" + textLib.joinTexts(splitCommaNames(genericType), ",") + ">" } else { hdr.text };
         return (kind = "Record<" + effHdr + ";" + textLib.joinTexts(parts, ",") + ">", next = cur);
     }
     if not useLocalErr and start < size and source.startsWithAt(start, "Record<") {
@@ -1912,7 +2619,7 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if resolvedBase.kind == ir.VALUE_KIND_UNIT or resolvedBase.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, errPos, prefix, "unsupported distinct underlying type " + displayKind(resolvedBase.kind));
         }
-        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        effHdr := if genericType =!= "" { hdr.text + "<" + textLib.joinTexts(splitCommaNames(genericType), ",") + ">" } else { hdr.text };
         return (kind = "Distinct<" + encodeLengthPrefixedText(effHdr) + resolvedBase.kind + ">", next = rawTarget.next);
     }
     if not useLocalErr and start < size and source.startsWithAt(start, "Distinct<") {
@@ -2025,19 +2732,49 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { afterElem } else { errPos }, prefix, if useLocalErr { "expected ;" } else { "expected [Type; Extent] in array type" });
         }
         extentStart := syntax.skipTrivia(source, afterElem + 1, prefix);
+        var extText := "";
         var extentEnd := extentStart;
-        loop extentEnd < size and source.at(extentEnd).isDigit() {
-            extentEnd = extentEnd + 1;
+        if extentStart < size and source.at(extentStart).isNameStart() {
+            extentEnd = source.skipName(extentStart);
+            extName := source.slice(extentStart, extentEnd);
+            vpKind := valueParamKind(genericType, extName);
+            if vpKind == ir.VALUE_KIND_INT {
+                extText = extName;
+            } else if vpKind =!= "" {
+                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(vpKind));
+            } else if isGenericParamName(genericType, extName) {
+                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent cannot be Type parameter " + extName);
+            } else {
+                aliasIdx := findAlias(aliases, extName);
+                if aliasIdx >= 0 and (aliases[aliasIdx].target).startsWithAt(0, "$Val:") {
+                    tok := (aliases[aliasIdx].target).slice(5, (aliases[aliasIdx].target).length());
+                    if not isComptimeIntToken(tok) {
+                        syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(comptimeValueTokenKind(tok)));
+                    }
+                    nVal := comptimeIntValue(tok);
+                    if nVal <= 0 {
+                        syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be a positive integer, got " + nVal.toText());
+                    }
+                    extText = nVal.toText();
+                } else {
+                    syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer or Int comptime parameter extent in array type");
+                }
+            }
+        } else {
+            loop extentEnd < size and source.at(extentEnd).isDigit() {
+                extentEnd = extentEnd + 1;
+            }
+            if extentEnd == extentStart {
+                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer extent in array type");
+            }
+            extent := syntax.parseDigits(source, extentStart, extentEnd);
+            extText = extent.toText();
         }
-        if extentEnd == extentStart {
-            syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer extent in array type");
-        }
-        extent := syntax.parseDigits(source, extentStart, extentEnd);
         afterExtent := syntax.skipTrivia(source, extentEnd, prefix);
         if afterExtent >= size or source.at(afterExtent) =!= "]" {
             syntax.failAt(errSource, if useLocalErr { afterExtent } else { errPos }, prefix, if useLocalErr { "expected ]" } else { "expected [Type; Extent] in array type" });
         }
-        return (kind = "[" + inner.kind + ";" + extent.toText() + "]", next = afterExtent + 1);
+        return (kind = "[" + inner.kind + ";" + extText + "]", next = afterExtent + 1);
     }
     if source.wordAt(start, "fn") {
         afterFn := syntax.skipTrivia(source, start + 2, prefix);
@@ -2223,15 +2960,38 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 }
                 syntax.failAt(errSource, nameStart, prefix, "generic type " + name + " requires explicit type arguments");
             }
+            scopedTplAliases := aliasesUpToDepth(aliases, aliasItem.depth);
+            resolvedTplParamsCsv := if isGenRaw {
+                resolveComptimeParamSpecs(errSource, aliasItem.at, prefix, scopedTplAliases, tplParamsCsv)
+            } else {
+                tplParamsCsv
+            };
+            paramSpecs := splitParamSpecs(resolvedTplParamsCsv);
             var argCursor := syntax.skipTrivia(source, afterName + 1, prefix);
             if argCursor >= size or source.at(argCursor) == ">" {
                 syntax.failAt(errSource, if useLocalErr { argCursor } else { errPos }, prefix, "expected at least one type argument in " + name + "<...>");
             }
             argKinds: mut List<String> = [];
+            var argIdx := 0;
             loop true {
-                argParsed := self(errSource, errPos, useLocalErr, source, argCursor, prefix, aliases, context, genericType, seen);
-                mut argKinds.pushBack(argParsed.kind);
-                argCursor = syntax.skipTrivia(source, argParsed.next, prefix);
+                if argIdx >= paramSpecs.length() {
+                    syntax.failAt(errSource, if useLocalErr { argCursor } else { errPos }, prefix,
+                    "generic type " + name + " expects " + paramSpecs.length().toText() + " comptime argument(s)");
+                }
+                pSpec := paramSpecs[argIdx];
+                if pSpec.kind == "" {
+                    argParsed := self(errSource, errPos, useLocalErr, source, argCursor, prefix, aliases, context, genericType, seen);
+                    mut argKinds.pushBack(argParsed.kind);
+                    argCursor = syntax.skipTrivia(source, argParsed.next, prefix);
+                } else {
+                    valArg := parseComptimeValueArg(source, argCursor, prefix, aliases, genericType, pSpec.kind);
+                    if not valArg.ok {
+                        syntax.failAt(errSource, if useLocalErr { valArg.errPos } else { errPos }, prefix, valArg.errMsg);
+                    }
+                    mut argKinds.pushBack(valArg.token);
+                    argCursor = syntax.skipTrivia(source, valArg.next, prefix);
+                }
+                argIdx = argIdx + 1;
                 if argCursor < size and source.at(argCursor) == "," {
                     argCursor = syntax.skipTrivia(source, argCursor + 1, prefix);
                     if argCursor < size and source.at(argCursor) == ">" { break; }
@@ -2243,9 +3003,8 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 syntax.failAt(errSource, if useLocalErr { argCursor } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in generic type " + name });
             }
             afterClose := argCursor + 1;
-            paramNames := splitCommaNames(tplParamsCsv);
-            if argKinds.length() =!= paramNames.length() {
-                syntax.failAt(errSource, nameStart, prefix, "generic type " + name + " expects " + paramNames.length().toText() + " type argument(s), got " + argKinds.length().toText());
+            if argKinds.length() =!= paramSpecs.length() {
+                syntax.failAt(errSource, nameStart, prefix, "generic type " + name + " expects " + paramSpecs.length().toText() + " comptime argument(s), got " + argKinds.length().toText());
             }
             var templateKind := tplBody;
             if isGenRaw {
@@ -2256,8 +3015,7 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 nextSeen: mut List<String> = [];
                 loop seen as sEntry { mut nextSeen.pushBack(sEntry); }
                 (mut nextSeen).pushBack(seenKey);
-                scopedAliases := aliasesUpToDepth(aliases, aliasItem.depth);
-                resolved := self(errSource, aliasItem.at, false, tplBody, 0, prefix, scopedAliases, "alias", tplParamsCsv, nextSeen);
+                resolved := self(errSource, aliasItem.at, false, tplBody, 0, prefix, scopedTplAliases, "alias", resolvedTplParamsCsv, nextSeen);
                 trailing := syntax.skipTrivia(tplBody, resolved.next, prefix);
                 if trailing < tplBody.length() {
                     syntax.failAt(errSource, aliasItem.at, prefix, "unexpected text after type");
@@ -2266,11 +3024,11 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             }
             bindings: mut Map<String, String>;
             var bi := 0;
-            loop bi < paramNames.length() {
-                mut bindings.set(paramNames[bi], argKinds[bi]);
+            loop bi < paramSpecs.length() {
+                mut bindings.set(paramSpecs[bi].name, argKinds[bi]);
                 bi = bi + 1;
             }
-            instKind := substCanonicalKind(tplParamsCsv, templateKind, bindings);
+            instKind := substCanonicalKind(resolvedTplParamsCsv, templateKind, bindings);
             valErr := validateCanonicalKind(instKind, genericType);
             if valErr =!= "" {
                 syntax.failAt(errSource, nameStart, prefix, valErr);
@@ -2338,7 +3096,9 @@ pub genericAliasOwnerKey := fn(source: String, position: Int, prefix: String, al
             return "";
         }
         emptySeen: List<String> = [];
-        tplKind := resolveGenericTypeText(source, position, prefix, aliasesUpToDepth(aliases, aliasItem.depth), innerRaw, pDec.text, emptySeen);
+        scopedTplAliases := aliasesUpToDepth(aliases, aliasItem.depth);
+        resolvedParams := resolveComptimeParamSpecs(source, position, prefix, scopedTplAliases, pDec.text);
+        tplKind := resolveGenericTypeText(source, position, prefix, scopedTplAliases, innerRaw, resolvedParams, emptySeen);
         return typeOpOwnerKey(tplKind);
     }
     ""
@@ -2393,7 +3153,7 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
         if not gp.ok {
             syntax.failAt(source, gp.errPos, prefix, gp.errMsg);
         }
-        genericType = gp.paramsCsv;
+        genericType = resolveComptimeParamSpecs(source, cursor, prefix, aliases, gp.paramsCsv);
         cursor = syntax.skipTrivia(source, gp.next, prefix);
     }
     cursor = syntax.expectSymbol(source, cursor, "(", prefix);
@@ -2499,7 +3259,7 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
         if not gp.ok {
             syntax.failAt(source, gp.errPos, prefix, gp.errMsg);
         }
-        genericType = gp.paramsCsv;
+        genericType = resolveComptimeParamSpecs(source, cursor, prefix, aliases, gp.paramsCsv);
         cursor = syntax.skipTrivia(source, gp.next, prefix);
     }
     scopedAliases := withSelfAlias(aliases, selfTarget, 0);
@@ -2713,7 +3473,9 @@ pub collectTypeTarget := fn(source: String, position: Int, prefix: String): (tex
             var depth := 0;
             loop cursor < size {
                 ch := source.at(cursor);
-                if ch == "/" and source.startsWithAt(cursor, "/*") {
+                if ch == "\"" {
+                    cursor = syntax.skipAliasString(source, cursor);
+                } else if ch == "/" and source.startsWithAt(cursor, "/*") {
                     cursor = syntax.skipComment(source, cursor, prefix);
                 } else if ch == "<" {
                     depth = depth + 1;
@@ -2790,154 +3552,6 @@ skipRecordFieldDefault := fn(source: String, start: Int, limit: Int, prefix: Str
         }
     }
     cur
-};
-
-/** True when `kind` is an admissible scalar enum backing type. */
-isEnumBackingKind := fn(kind: String): Bool {
-    numeric.isIntKind(kind) or numeric.isFloatKind(kind) or kind == ir.VALUE_KIND_STRING or kind == ir.VALUE_KIND_BOOL
-};
-
-/** Parses one enum case backing literal from `rawText` (signed Int/Float, String, or Bool) and returns its kind, TS code, and integer value. */
-parseEnumCaseLiteral := fn(rawText: String, expectedBacking: String, prefix: String): (ok: Bool, kind: String, code: String, intValue: Int, error: String) {
-    size := rawText.length();
-    pos := syntax.skipTrivia(rawText, 0, prefix);
-    if pos >= size {
-        return (ok = false, kind = "", code = "", intValue = 0, error = "expected constant value for enum case");
-    }
-    ch := rawText.at(pos);
-    if rawText.wordAt(pos, "true") or rawText.wordAt(pos, "false") {
-        isTrue := rawText.wordAt(pos, "true");
-        endPos := pos + (if isTrue { 4 } else { 5 });
-        if syntax.skipTrivia(rawText, endPos, prefix) < size {
-            return (ok = false, kind = "", code = "", intValue = 0, error = "unexpected text after enum case value");
-        }
-        return (ok = true, kind = ir.VALUE_KIND_BOOL, code = if isTrue { "true" } else { "false" }, intValue = if isTrue { 1 } else { 0 }, error = "");
-    }
-    if ch == "\"" {
-        lit := syntax.parseText(ir.TARGET_TS, rawText, pos, prefix);
-        if syntax.skipTrivia(rawText, lit.next, prefix) < size {
-            return (ok = false, kind = "", code = "", intValue = 0, error = "unexpected text after enum case value");
-        }
-        return (ok = true, kind = ir.VALUE_KIND_STRING, code = escapeEnumStringLiteral(lit.code), intValue = 0, error = "");
-    }
-    isNeg := ch == "-";
-    isSign := ch == "-" or ch == "+";
-    numPos := if isSign { syntax.skipTrivia(rawText, pos + 1, prefix) } else { pos };
-    if numPos < size and rawText.at(numPos).isDigit() {
-        hintKind := if expectedBacking == ir.VALUE_KIND_FLOAT32 or expectedBacking == ir.VALUE_KIND_FLOAT {
-            expectedBacking
-        } else if numeric.isIntKind(expectedBacking) {
-            expectedBacking
-        } else {
-            ""
-        };
-        lit := syntax.parseNumber(ir.TARGET_TS, rawText, numPos, prefix, hintKind, 10);
-        if syntax.skipTrivia(rawText, lit.next, prefix) < size {
-            return (ok = false, kind = "", code = "", intValue = 0, error = "unexpected text after enum case value");
-        }
-        if numeric.isFloatKind(lit.kind) {
-            fCode := if isNeg { "-" + lit.code } else { lit.code };
-            return (ok = true, kind = lit.kind, code = fCode, intValue = 0, error = "");
-        }
-        if numeric.isIntKind(lit.kind) {
-            finalInt := if isNeg {
-                neg := integer.intNegate(lit.intValue);
-                if not neg.ok {
-                    return (ok = false, kind = "", code = "", intValue = 0, error = "enum case integer value out of range");
-                }
-                neg.value
-            } else {
-                lit.intValue
-            };
-            targetIntKind := if numeric.isIntKind(expectedBacking) { expectedBacking } else { lit.kind };
-            if not numeric.intKindFits(targetIntKind, finalInt) {
-                return (ok = false, kind = "", code = "", intValue = 0, error = "enum case value does not fit " + displayKind(targetIntKind));
-            }
-            if numeric.isFloatKind(expectedBacking) {
-                fLit := finalInt.toText();
-                return (ok = true, kind = expectedBacking, code = if expectedBacking == ir.VALUE_KIND_FLOAT32 { "Math.fround(" + fLit + ")" } else { fLit }, intValue = 0, error = "");
-            }
-            intCode := if finalInt < 0 { "(-" + (0 - finalInt).toText() + "n)" } else { finalInt.toText() + "n" };
-            return (ok = true, kind = targetIntKind, code = intCode, intValue = finalInt, error = "");
-        }
-    }
-    (ok = false, kind = "", code = "", intValue = 0, error = "enum case value must be a scalar constant literal")
-};
-
-/** Builds canonical `Enum<...>` from decoded `@enumraw:` header, resolved optional backing kind, and length-prefixed `(name, rawVal)` pairs. */
-buildCanonicalEnumKind := fn(hdrText: String, explicitBacking: String, rawSource: String, casesStart: Int, caseCount: Int, prefix: String): (ok: Bool, kind: String, next: Int, error: String) {
-    if caseCount <= 0 {
-        return (ok = false, kind = "", next = casesStart, error = "enum must declare at least one case");
-    }
-    if explicitBacking =!= "" and not isEnumBackingKind(explicitBacking) {
-        return (ok = false, kind = "", next = casesStart, error = "unsupported enum backing type " + displayKind(explicitBacking));
-    }
-    names: mut List<String> = [];
-    rawVals: mut List<String> = [];
-    var cur := casesStart;
-    var hasAnyVal := false;
-    var firstValText := "";
-    var idx := 0;
-    loop idx < caseCount {
-        nDec := decodeLengthPrefixedAt(rawSource, cur);
-        if nDec.next < 0 { return (ok = false, kind = "", next = casesStart, error = "malformed enum case name"); }
-        vDec := decodeLengthPrefixedAt(rawSource, nDec.next);
-        if vDec.next < 0 { return (ok = false, kind = "", next = casesStart, error = "malformed enum case value"); }
-        if listLib.listContainsText(names, nDec.text) {
-            return (ok = false, kind = "", next = casesStart, error = "duplicate enum case " + nDec.text);
-        }
-        (mut names).pushBack(nDec.text);
-        mut rawVals.pushBack(vDec.text);
-        if vDec.text =!= "" and not hasAnyVal {
-            hasAnyVal = true;
-            firstValText = vDec.text;
-        }
-        cur = vDec.next;
-        idx = idx + 1;
-    }
-    var backingKind := explicitBacking;
-    if backingKind == "" and hasAnyVal {
-        probe := parseEnumCaseLiteral(firstValText, "", prefix);
-        if not probe.ok {
-            return (ok = false, kind = "", next = casesStart, error = probe.error);
-        }
-        backingKind = probe.kind;
-    }
-    var encodedPairs := "";
-    var nextInt := 0;
-    var cIdx := 0;
-    loop cIdx < caseCount {
-        cName := names[cIdx];
-        cRaw := rawVals[cIdx];
-        var valCode := "";
-        if backingKind == "" {
-            valCode = "";
-        } else if cRaw =!= "" {
-            lit := parseEnumCaseLiteral(cRaw, backingKind, prefix);
-            if not lit.ok {
-                return (ok = false, kind = "", next = casesStart, error = lit.error);
-            }
-            if lit.kind =!= backingKind {
-                return (ok = false, kind = "", next = casesStart, error = "enum case " + cName + " value has type " + displayKind(lit.kind) + ", expected " + displayKind(backingKind));
-            }
-            valCode = lit.code;
-            if numeric.isIntKind(backingKind) {
-                nextInt = lit.intValue + 1;
-            }
-        } else if numeric.isIntKind(backingKind) {
-            if not numeric.intKindFits(backingKind, nextInt) {
-                return (ok = false, kind = "", next = casesStart, error = "enum case " + cName + " auto-assigned value does not fit " + displayKind(backingKind));
-            }
-            valCode = if nextInt < 0 { "(-" + (0 - nextInt).toText() + "n)" } else { nextInt.toText() + "n" };
-            nextInt = nextInt + 1;
-        } else {
-            return (ok = false, kind = "", next = casesStart, error = "enum case " + cName + " requires an explicit " + displayKind(backingKind) + " backing value");
-        }
-        encodedPairs = encodedPairs + encodeLengthPrefixedText(cName) + encodeLengthPrefixedText(valCode);
-        cIdx = cIdx + 1;
-    }
-    canonical := "Enum<" + encodeLengthPrefixedText(hdrText) + encodeLengthPrefixedText(backingKind) + caseCount.toText() + ";" + encodedPairs + ">";
-    (ok = true, kind = canonical, next = cur, error = "")
 };
 
 /** Pre-scans `Name := enum [: BackingType] { Case [= val]; ... }` into an encoded `@enumraw:` target and end offset. */
@@ -3221,7 +3835,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             }
             resolvedBacking = bkParsed.kind;
         }
-        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        effHdr := if genericType =!= "" { hdr.text + "<" + textLib.joinTexts(splitCommaNames(genericType), ",") + ">" } else { hdr.text };
         built := buildCanonicalEnumKind(effHdr, resolvedBacking, source, cur, caseCount, prefix);
         if not built.ok { return (ok = false, kind = "", next = start); }
         return (ok = true, kind = built.kind, next = built.next);
@@ -3257,7 +3871,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             (mut parts).pushBack(fName.text + ":" + resolvedField.kind);
             idx = idx + 1;
         }
-        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        effHdr := if genericType =!= "" { hdr.text + "<" + textLib.joinTexts(splitCommaNames(genericType), ",") + ">" } else { hdr.text };
         return (ok = true, kind = "Record<" + effHdr + ";" + textLib.joinTexts(parts, ",") + ">", next = cur);
     }
     if source.startsWithAt(start, "Record<") and recordHeaderSemi(source.slice(start, skipKindToken(source, start))) > 7 {
@@ -3276,7 +3890,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
         syntax.skipTrivia(rawTarget.text, resolvedBase.next, prefix) < rawTarget.text.length() {
             return (ok = false, kind = "", next = start);
         }
-        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        effHdr := if genericType =!= "" { hdr.text + "<" + textLib.joinTexts(splitCommaNames(genericType), ",") + ">" } else { hdr.text };
         return (ok = true, kind = "Distinct<" + encodeLengthPrefixedText(effHdr) + resolvedBase.kind + ">", next = rawTarget.next);
     }
     if source.startsWithAt(start, "Distinct<") {
@@ -3346,18 +3960,39 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = afterElem);
         }
         extentStart := syntax.skipTrivia(source, afterElem + 1, prefix);
+        var extText := "";
         var extentEnd := extentStart;
-        loop extentEnd < size and source.at(extentEnd).isDigit() {
-            extentEnd = extentEnd + 1;
+        if extentStart < size and source.at(extentStart).isNameStart() {
+            extentEnd = source.skipName(extentStart);
+            extName := source.slice(extentStart, extentEnd);
+            if valueParamKind(genericType, extName) == ir.VALUE_KIND_INT {
+                extText = extName;
+            } else {
+                aliasIdx := findAlias(aliases, extName);
+                if aliasIdx >= 0 and (aliases[aliasIdx].target).startsWithAt(0, "$Val:") {
+                    tok := (aliases[aliasIdx].target).slice(5, (aliases[aliasIdx].target).length());
+                    if not isComptimeIntToken(tok) { return (ok = false, kind = "", next = extentStart); }
+                    nVal := comptimeIntValue(tok);
+                    if nVal <= 0 { return (ok = false, kind = "", next = extentStart); }
+                    extText = nVal.toText();
+                } else {
+                    return (ok = false, kind = "", next = extentStart);
+                }
+            }
+        } else {
+            loop extentEnd < size and source.at(extentEnd).isDigit() {
+                extentEnd = extentEnd + 1;
+            }
+            if extentEnd == extentStart { return (ok = false, kind = "", next = extentStart); }
+            extent := syntax.parseDigits(source, extentStart, extentEnd);
+            if extent <= 0 { return (ok = false, kind = "", next = extentStart); }
+            extText = extent.toText();
         }
-        if extentEnd == extentStart { return (ok = false, kind = "", next = extentStart); }
-        extent := syntax.parseDigits(source, extentStart, extentEnd);
-        if extent <= 0 { return (ok = false, kind = "", next = extentStart); }
         afterExtent := syntax.skipTrivia(source, extentEnd, prefix);
         if afterExtent >= size or source.at(afterExtent) =!= "]" {
             return (ok = false, kind = "", next = afterExtent);
         }
-        return (ok = true, kind = "[" + elem.kind + ";" + extent.toText() + "]", next = afterExtent + 1);
+        return (ok = true, kind = "[" + elem.kind + ";" + extText + "]", next = afterExtent + 1);
     }
     if source.wordAt(start, "fn") {
         afterFn := syntax.skipTrivia(source, start + 2, prefix);
@@ -3527,16 +4162,38 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
         if afterArgsOpen >= size or source.at(afterArgsOpen) =!= "<" {
             return (ok = false, kind = "", next = afterName);
         }
+        scopedTplAliases := aliasesUpToDepth(aliases, aliasItem.depth);
+        resolvedParamsRes := if isGenRaw {
+            canResolveComptimeParamSpecs(prefix, scopedTplAliases, tplParamsCsv)
+        } else {
+            (ok = true, csv = tplParamsCsv)
+        };
+        if not resolvedParamsRes.ok { return (ok = false, kind = "", next = afterArgsOpen); }
+        resolvedTplParamsCsv := resolvedParamsRes.csv;
+        paramSpecs := splitParamSpecs(resolvedTplParamsCsv);
         var argCursor := syntax.skipTrivia(source, afterArgsOpen + 1, prefix);
         if argCursor >= size or source.at(argCursor) == ">" {
             return (ok = false, kind = "", next = argCursor);
         }
         argKinds: mut List<String> = [];
+        var argIdx := 0;
         loop true {
-            argParsed := self(source, argCursor, prefix, aliases, genericType, seen, depthLeft - 1);
-            if not argParsed.ok { return (ok = false, kind = "", next = argCursor); }
-            mut argKinds.pushBack(argParsed.kind);
-            argCursor = syntax.skipTrivia(source, argParsed.next, prefix);
+            if argIdx >= paramSpecs.length() {
+                return (ok = false, kind = "", next = argCursor);
+            }
+            pSpec := paramSpecs[argIdx];
+            if pSpec.kind == "" {
+                argParsed := self(source, argCursor, prefix, aliases, genericType, seen, depthLeft - 1);
+                if not argParsed.ok { return (ok = false, kind = "", next = argCursor); }
+                mut argKinds.pushBack(argParsed.kind);
+                argCursor = syntax.skipTrivia(source, argParsed.next, prefix);
+            } else {
+                valArg := parseComptimeValueArg(source, argCursor, prefix, aliases, genericType, pSpec.kind);
+                if not valArg.ok { return (ok = false, kind = "", next = argCursor); }
+                mut argKinds.pushBack(valArg.token);
+                argCursor = syntax.skipTrivia(source, valArg.next, prefix);
+            }
+            argIdx = argIdx + 1;
             if argCursor < size and source.at(argCursor) == "," {
                 argCursor = syntax.skipTrivia(source, argCursor + 1, prefix);
                 if argCursor < size and source.at(argCursor) == ">" { break; }
@@ -3548,8 +4205,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = argCursor);
         }
         afterClose := argCursor + 1;
-        paramNames := splitCommaNames(tplParamsCsv);
-        if argKinds.length() =!= paramNames.length() {
+        if argKinds.length() =!= paramSpecs.length() {
             return (ok = false, kind = "", next = afterClose);
         }
         var templateKind := tplBody;
@@ -3558,8 +4214,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             nextSeen: mut List<String> = [];
             loop seen as sEntry { mut nextSeen.pushBack(sEntry); }
             (mut nextSeen).pushBack(seenKey);
-            scopedAliases := aliasesUpToDepth(aliases, aliasItem.depth);
-            resolved := self(tplBody, 0, prefix, scopedAliases, tplParamsCsv, nextSeen, depthLeft - 1);
+            resolved := self(tplBody, 0, prefix, scopedTplAliases, resolvedTplParamsCsv, nextSeen, depthLeft - 1);
             if not resolved.ok or syntax.skipTrivia(tplBody, resolved.next, prefix) < tplBody.length() {
                 return (ok = false, kind = "", next = afterClose);
             }
@@ -3567,11 +4222,11 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
         }
         bindings: mut Map<String, String>;
         var bi := 0;
-        loop bi < paramNames.length() {
-            mut bindings.set(paramNames[bi], argKinds[bi]);
+        loop bi < paramSpecs.length() {
+            mut bindings.set(paramSpecs[bi].name, argKinds[bi]);
             bi = bi + 1;
         }
-        instKind := substCanonicalKind(tplParamsCsv, templateKind, bindings);
+        instKind := substCanonicalKind(resolvedTplParamsCsv, templateKind, bindings);
         if validateCanonicalKind(instKind, genericType) =!= "" {
             return (ok = false, kind = "", next = afterClose);
         }
@@ -3632,7 +4287,9 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
         } else {
             gp := scanComptimeTypeParams(source, cursor, prefix);
             if not gp.ok or not gp.hasParams { return false; }
-            genericType = gp.paramsCsv;
+            resGp := canResolveComptimeParamSpecs(prefix, aliases, gp.paramsCsv);
+            if not resGp.ok { return false; }
+            genericType = resGp.csv;
             cursor = syntax.skipTrivia(source, gp.next, prefix);
         }
     }

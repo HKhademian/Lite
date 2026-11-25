@@ -284,7 +284,7 @@ expectRejectBoth("missing-type-args",
 expectRejectBoth("wrong-arity",
 "Box := record<T: Type> { value: T; }\n" +
 "x: Box<Int, String> = { value = 1 };\n",
-"expects 1 type argument(s), got 2");
+"expects 1 comptime argument(s)");
 
 expectRejectBoth("empty-type-params",
 "Bad := record<> { x: Int; }\n",
@@ -292,7 +292,7 @@ expectRejectBoth("empty-type-params",
 
 expectRejectBoth("unsupported-comptime-kind",
 "Bad := record<N: Bogus> { x: Int; }\n",
-"unsupported comptime parameter kind Bogus; only Type is supported yet");
+"unknown comptime parameter type Bogus");
 
 expectRejectBoth("nominal-record-arg-mismatch",
 "Box := record<T: Type> { value: T; }\n" +

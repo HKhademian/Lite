@@ -1,0 +1,291 @@
+/* Dual-target (TS + C11) tests for discrete comptime value parameters (Int, Bool, String, payload-free enum), [T; N] array extents, explicit <Args>, and comptime dead-branch elimination. */
+
+test := import "core/test";
+file := import "core/file";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+runBoth := fn(label: String, src: String, expected: String): Unit {
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+    test.checkInt(label + " ts status: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(label + " ts stderr", "", tsRes.stderr);
+    test.checkText(label + " ts stdout", expected, tsRes.stdout);
+    if ccInfo.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+        test.checkInt(label + " c status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " c stderr", "", cRes.stderr);
+        test.checkText(label + " c stdout parity", tsRes.stdout, cRes.stdout);
+    }
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccInfo.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+/* 1. [T; N] fixed arrays, inference of T & N, generic Vec<T, N> / distinct / alias / enum, nested comptime forwarding, and all 4 discrete kinds. */
+coreSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Mode := enum { Fast; Safe; Debug; }\n" +
+"LogLevel := enum : String { Info = \"INFO\"; Warn = \"WARN\"; }\n" +
+"\n" +
+"Vec := record<T: Type, N: Int> {\n" +
+"    data: [T; N];\n" +
+"}\n" +
+"Buf := alias<T: Type, N: Int> [T; N];\n" +
+"Row := distinct<T: Type, N: Int> Vec<T, N>;\n" +
+"Axis := enum<N: Int> { First; Second; }\n" +
+"\n" +
+"Vec.sum := fn<N: Int>(v: Self<Int, N>): Int {\n" +
+"    var total := 0;\n" +
+"    var i := 0;\n" +
+"    loop i < N {\n" +
+"        total = total + v.data[i];\n" +
+"        i = i + 1;\n" +
+"    }\n" +
+"    total\n" +
+"};\n" +
+"\n" +
+"dot := fn<N: Int>(a: [Int; N], b: [Int; N]): Int {\n" +
+"    var acc := 0;\n" +
+"    var i := 0;\n" +
+"    loop i < N {\n" +
+"        acc = acc + a[i] * b[i];\n" +
+"        i = i + 1;\n" +
+"    }\n" +
+"    acc\n" +
+"};\n" +
+"\n" +
+"makePairArr := fn<T: Type, N: Int>(v: T): Vec<T, N> {\n" +
+"    var arr: [T; N];\n" +
+"    if N >= 1 {\n" +
+"        arr[0] = v;\n" +
+"    }\n" +
+"    Vec<T, N> { data = arr }\n" +
+"};\n" +
+"\n" +
+"shiftInt := fn<K: Int>(x: Int): Int { x + K };\n" +
+"chooseFlag := fn<Flag: Bool>(a: Int, b: Int): Int { if Flag { a } else { b } };\n" +
+"chooseFlipped := fn<F: Bool>(a: Int, b: Int): Int { chooseFlag<not F>(a, b) };\n" +
+"formatTag := fn<Tag: String>(n: Int): String { Tag + \":\" + n.toText() };\n" +
+"modeWeight := fn<M: Mode>(x: Int): Int {\n" +
+"    match M {\n" +
+"        Mode.Fast { x * 10 }\n" +
+"        Mode.Safe { x * 2 }\n" +
+"        Mode.Debug { x }\n" +
+"    }\n" +
+"};\n" +
+"levelName := fn<L: LogLevel>(): String { L.value };\n" +
+"\n" +
+"{ _local := fn(): Unit {\n" +
+"    LocalBuf := alias<N: Int> [Int; N];\n" +
+"    LocalTag := enum<B: Bool> { Yes; No; };\n" +
+"    lb: LocalBuf<2> = [5, 8];\n" +
+"    io.outputLine(lb[0] + lb[1], LocalTag<true>.Yes);\n" +
+"}; _local(); }\n" +
+"\n" +
+"v3 := Vec<Int, 3> { data = [10, 20, 30] };\n" +
+"r2 := cast<Row<Int, 2>>(Vec<Int, 2> { data = [4, 9] });\n" +
+"vFill := makePairArr<Int, 4>(77);\n" +
+"ax := Axis<3>.Second;\n" +
+"b1: Buf<Int, 2> = [3, 4];\n" +
+"d := dot([1, 2, 3], [4, 5, 6]);\n" +
+"io.outputLine(v3.sum(), d, cast<Vec<Int, 2>>(r2).sum(), vFill.data[0], vFill.data[3], b1[0] + b1[1], ax);\n" +
+"io.outputLine(shiftInt<5>(10), shiftInt<-3>(10), chooseFlag<true>(11, 22), chooseFlipped<true>(11, 22));\n" +
+"io.outputLine(formatTag<\"a>b,c|d\">(42), formatTag<\"\">(9), modeWeight<Mode.Fast>(3), modeWeight<Mode.Safe>(3), levelName<LogLevel.Warn>());\n";
+
+expectedCore :=
+"13 LocalTag<true>.Yes\n" +
+"60 32 13 77 0 7 Axis<3>.Second\n" +
+"15 7 11 22\n" +
+"a>b,c|d:42 :9 30 6 WARN\n";
+
+runBoth("comptime-value-params-core", coreSrc, expectedCore);
+
+/* 2. Comptime dead-branch elimination across value if, statement if/else-if/else, subject match, subjectless match, and IIFE if/match. */
+deadBranchSrc :=
+"io := import \"core/io\";\n" +
+"Mode := enum { Fast; Safe; }\n" +
+"\n" +
+"valIfTest := fn<N: Int>(a: [Int; N]): Int {\n" +
+"    if N >= 4 { missing_ident_val_if + \"bad\" }\n" +
+"    else if N == 2 { a[1] }\n" +
+"    else { missing_else_val_if }\n" +
+"};\n" +
+"\n" +
+"stmtIfTest := fn<N: Int>(a: [Int; N]): Int {\n" +
+"    var out := 0;\n" +
+"    if N == 1 {\n" +
+"        out = missing_stmt_1;\n" +
+"    } else if N == 2 {\n" +
+"        out = a[0] + a[1];\n" +
+"    } else {\n" +
+"        out = missing_stmt_else;\n" +
+"    }\n" +
+"    out\n" +
+"};\n" +
+"\n" +
+"stmtIfAfterRuntime := fn<Flag: Bool>(runtimeCond: Bool): Int {\n" +
+"    if runtimeCond {\n" +
+"        return 99;\n" +
+"    } else if Flag {\n" +
+"        return 12;\n" +
+"    } else {\n" +
+"        return missing_after_const_true_else;\n" +
+"    }\n" +
+"    0\n" +
+"};\n" +
+"\n" +
+"subjMatchTest := fn<M: Mode, Flag: Bool>(rt: Int): Int {\n" +
+"    fromEnum := match M {\n" +
+"        Mode.Fast { 100 }\n" +
+"        Mode.Safe { missing_safe_branch }\n" +
+"    };\n" +
+"    fromGuard := match rt {\n" +
+"        x if Flag { x + 5 }\n" +
+"        x { x + missing_guard_dead }\n" +
+"    };\n" +
+"    fromEnum + fromGuard\n" +
+"};\n" +
+"\n" +
+"subjlessValMatch := fn<N: Int>(): Int {\n" +
+"    match {\n" +
+"        (N < 0) { missing_neg }\n" +
+"        (N == 3) { 300 }\n" +
+"        _ { \"wrong_kind\" }\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"subjlessStmtMatch := fn<S: String>(): Int {\n" +
+"    match {\n" +
+"        (S == \"skip\") { return missing_s1; }\n" +
+"        (S == \"hit\") { return 77; }\n" +
+"        _ { return missing_s_fallback; }\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"iifeCondTest := fn<Flag: Bool>(): Int {\n" +
+"    tagged := @t if Flag { 20 } else { missing_iife_if } then { @t.value + 3 };\n" +
+"    taggedMatch := @m match { Flag { 10 } _ { missing_iife_match } } then { @m.value * 2 };\n" +
+"    tagged + taggedMatch\n" +
+"};\n" +
+"\n" +
+"arr := [10, 25];\n" +
+"io.outputLine(valIfTest(arr), stmtIfTest(arr), stmtIfAfterRuntime<true>(false));\n" +
+"io.outputLine(subjMatchTest<Mode.Fast, true>(7), subjlessValMatch<3>(), subjlessStmtMatch<\"hit\">(), iifeCondTest<true>());\n";
+
+runBoth("comptime-dead-branch-elimination", deadBranchSrc, "25 35 12\n112 300 77 43\n");
+
+/* 3. Cross-module pub generic types & functions with discrete comptime values. */
+tmpDir := file.makeTempDir("lite-comptime-val-");
+test.check("makeTempDir: " + tmpDir.error, tmpDir.ok);
+libPath := tmpDir.path + "/libcomptime.lts";
+appPath := tmpDir.path + "/app.lts";
+
+libSrc :=
+"pub Mode := enum { Fast; Safe; }\n" +
+"pub FixedVec := record<T: Type, N: Int> {\n" +
+"    items: [T; N];\n" +
+"}\n" +
+"pub FixedVec.get := fn<T: Type, N: Int>(v: Self<T, N>, idx: Int): T {\n" +
+"    v.items[idx]\n" +
+"};\n" +
+"pub scaleMode := fn<M: Mode>(v: Int): Int {\n" +
+"    match M {\n" +
+"        Mode.Fast { v * 4 }\n" +
+"        Mode.Safe { v + 4 }\n" +
+"    }\n" +
+"};\n";
+
+appSrc :=
+"io := import \"core/io\";\n" +
+"m := import \"./libcomptime.lts\";\n" +
+"fv := m.FixedVec<Int, 3> { items = [2, 4, 6] };\n" +
+"io.outputLine(fv.get(2), m.FixedVec.get(fv, 0), m.scaleMode<m.Mode.Fast>(5), m.scaleMode<m.Mode.Safe>(5));\n";
+
+_w1 := file.writeText(libPath, libSrc);
+_w2 := file.writeText(appPath, appSrc);
+
+tsModComp := compilerTest.compileFile(tsComp, tmpDir.path, [appPath]);
+test.checkInt("cross-mod comptime val ts compile: " + tsModComp.stderr, 0, tsModComp.status);
+tsModRes := compilerTest.checkAndRunTs(root, tsModComp.stdout);
+test.checkInt("cross-mod comptime val ts status: " + tsModRes.stderr, 0, tsModRes.status);
+test.checkText("cross-mod comptime val ts stdout", "6 2 20 9\n", tsModRes.stdout);
+if ccInfo.available {
+    cModComp := compilerTest.compileFile(cComp, tmpDir.path, [appPath]);
+    test.checkInt("cross-mod comptime val c compile: " + cModComp.stderr, 0, cModComp.status);
+    cModRes := compilerTest.compileAndRunC(cModComp.stdout, ccInfo.cc, "");
+    test.checkInt("cross-mod comptime val c status: " + cModRes.stderr, 0, cModRes.status);
+    test.checkText("cross-mod comptime val c stdout parity", tsModRes.stdout, cModRes.stdout);
+}
+
+/* 4. Rejections & non-comptime safety guard. */
+expectRejectBoth("non-comptime-if-false-still-typechecked",
+"f := fn(x: Int): Int { if false { missing_ident } else { x } };\n",
+"unknown value missing_ident");
+
+expectRejectBoth("reject-float-comptime-param",
+"bad := fn<X: Float>(a: Int): Int { a };\n",
+"unsupported comptime parameter kind Float");
+
+expectRejectBoth("reject-float32-comptime-param",
+"bad := fn<X: Float32>(a: Int): Int { a };\n",
+"unsupported comptime parameter kind Float32");
+
+expectRejectBoth("reject-tuple-comptime-param",
+"bad := fn<X: (a: Int)>(x: Int): Int { x };\n",
+"expected comptime parameter kind");
+
+expectRejectBoth("reject-record-comptime-param",
+"Box := record { x: Int; }\n" +
+"bad := fn<X: Box>(a: Int): Int { a };\n",
+"unsupported comptime parameter type Box");
+
+expectRejectBoth("reject-list-comptime-param",
+"bad := fn<X: List<Int>>(a: Int): Int { a };\n",
+"unsupported comptime parameter kind List<...>");
+
+expectRejectBoth("reject-unknown-comptime-kind",
+"Bad := record<N: Bogus> { x: Int; }\n",
+"unknown comptime parameter type Bogus");
+
+expectRejectBoth("reject-zero-array-extent",
+"Buf := alias<N: Int> [Int; N];\n" +
+"x: Buf<0>;\n",
+"array extent must be a positive integer");
+
+expectRejectBoth("reject-negative-array-extent",
+"Buf := alias<N: Int> [Int; N];\n" +
+"x: Buf<-2>;\n",
+"array extent must be a positive integer");
+
+expectRejectBoth("reject-wrong-comptime-arg-kind",
+"Vec := record<T: Type, N: Int> { data: [T; N]; }\n" +
+"x: Vec<Int, true>;\n",
+"expected comptime Int value, got Bool");
+
+expectRejectBoth("reject-conflicting-inferred-extent",
+"sameLen := fn<N: Int>(a: [Int; N], b: [Int; N]): Int { N };\n" +
+"x := sameLen([1, 2], [3, 4, 5]);\n",
+"conflicting bindings for N");
+
+expectRejectBoth("reject-uninferred-comptime-value-param",
+"getN := fn<N: Int>(): Int { N };\n" +
+"x := getN();\n",
+"cannot infer comptime value parameter N");
+
+test.done("comptime-value-params");

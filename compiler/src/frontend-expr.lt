@@ -5,6 +5,7 @@ listLib := import "core/list";
 sourceLib := import "core/source";
 numeric := import "./numeric-literals";
 integer := import "core/int";
+cLiteral := import "./c-literals";
 tsLiteral := import "./ts-literals";
 emitFmt := import "./emit-format";
 ir := import "./frontend-ir";
@@ -1998,25 +1999,36 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             }
                             outDiverged = true;
                         } else if target == ir.TARGET_C {
-                            cPr := if outArg.kind == ir.VALUE_KIND_UNIT {
+                            baseOutKind := types.distinctBaseKind(outArg.kind);
+                            cPr := if baseOutKind == ir.VALUE_KIND_UNIT {
                                 if outArg.code == "0" { "printf(\"Unit\");" } else { "((void)(" + outArg.code + "), printf(\"Unit\"));" }
-                            } else if outArg.kind == ir.VALUE_KIND_BOOL {
+                            } else if types.isEnumKind(baseOutKind) {
+                                dName := types.enumDisplayName(baseOutKind);
+                                cCount := types.enumCaseCount(baseOutKind);
+                                enumLabels: mut List<String> = [];
+                                var eci := 0;
+                                loop eci < cCount {
+                                    mut enumLabels.pushBack(cLiteral.textLiteralCode(dName + "." + types.enumCaseAt(baseOutKind, eci).name));
+                                    eci = eci + 1;
+                                }
+                                "printf(\"%s\", ((const char *const[]){" + textLib.joinTexts(enumLabels, ", ") + "}[" + outArg.code + "]));"
+                            } else if baseOutKind == ir.VALUE_KIND_BOOL {
                                 "printf(\"%s\", (" + outArg.code + ") ? \"true\" : \"false\");"
-                            } else if outArg.kind == ir.VALUE_KIND_STRING {
+                            } else if baseOutKind == ir.VALUE_KIND_STRING {
                                 "lt_print_str(" + outArg.code + ");"
-                            } else if numeric.isIntKind(outArg.kind) {
+                            } else if numeric.isIntKind(baseOutKind) {
                                 "printf(\"%\" PRId64, (int64_t)(" + outArg.code + "));"
-                            } else if numeric.isFloatKind(outArg.kind) {
-                                "/*@P:" + outArg.kind + "@*/lt_print_float(" + outArg.code + ");"
-                            } else if types.isListKind(outArg.kind) or types.isArrayKind(outArg.kind) {
-                                elK := if types.isListKind(outArg.kind) { types.listElementKind(outArg.kind) } else { types.arrayElementKind(outArg.kind) };
-                                "/*@P:" + outArg.kind + "@*/lt_list_" + types.cListTag(elK) + "_print(" + outArg.code + ");"
-                            } else if types.isMapKind(outArg.kind) {
-                                "/*@P:" + outArg.kind + "@*/" + types.cMapTag(outArg.kind) + "_print(" + outArg.code + ");"
-                            } else if types.isSetKind(outArg.kind) {
-                                "/*@P:" + outArg.kind + "@*/" + types.cSetTag(outArg.kind) + "_print(" + outArg.code + ");"
-                            } else if types.cStructTag(outArg.kind) =!= "" {
-                                "/*@P:" + outArg.kind + "@*/" + types.cStructTag(outArg.kind) + "_print(" + outArg.code + ");"
+                            } else if numeric.isFloatKind(baseOutKind) {
+                                "/*@P:" + baseOutKind + "@*/lt_print_float(" + outArg.code + ");"
+                            } else if types.isListKind(baseOutKind) or types.isArrayKind(baseOutKind) {
+                                elK := if types.isListKind(baseOutKind) { types.listElementKind(baseOutKind) } else { types.arrayElementKind(baseOutKind) };
+                                "/*@P:" + baseOutKind + "@*/lt_list_" + types.cListTag(elK) + "_print(" + outArg.code + ");"
+                            } else if types.isMapKind(baseOutKind) {
+                                "/*@P:" + baseOutKind + "@*/" + types.cMapTag(baseOutKind) + "_print(" + outArg.code + ");"
+                            } else if types.isSetKind(baseOutKind) {
+                                "/*@P:" + baseOutKind + "@*/" + types.cSetTag(baseOutKind) + "_print(" + outArg.code + ");"
+                            } else if types.cStructTag(baseOutKind) =!= "" {
+                                "/*@P:" + baseOutKind + "@*/" + types.cStructTag(baseOutKind) + "_print(" + outArg.code + ");"
                             } else {
                                 "printf(\"%\" PRId64, (int64_t)(" + outArg.code + "));"
                             };
@@ -2797,13 +2809,15 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 seenInner: mut List<String> = [nextAliasDepth.toText() + ":" + itemName];
                 if gp.hasParams {
+                    scopedInnerAliases := types.aliasesUpToDepth(blockAliases, nextAliasDepth);
+                    resolvedParams := types.resolveComptimeParamSpecs(source, typePos + 5, prefix, scopedInnerAliases, gp.paramsCsv);
                     rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
                         pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
                         if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
                     } else {
                         aliasEntry.target
                     };
-                    _resolvedInner := types.resolveGenericTypeText(source, targetStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), rawInner, gp.paramsCsv, seenInner);
+                    _resolvedInner := types.resolveGenericTypeText(source, targetStart, prefix, scopedInnerAliases, rawInner, resolvedParams, seenInner);
                 } else {
                     _resolvedInner := types.resolveTypeText(source, targetStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), aliasEntry.target, seenInner);
                 }
@@ -2839,13 +2853,15 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 seenInnerDist: mut List<String> = [nextAliasDepth.toText() + ":" + itemName];
                 if gp.hasParams {
+                    scopedInnerDistAliases := types.aliasesUpToDepth(blockAliases, nextAliasDepth);
+                    resolvedDistParams := types.resolveComptimeParamSpecs(source, distPos + 8, prefix, scopedInnerDistAliases, gp.paramsCsv);
                     rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
                         pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
                         if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
                     } else {
                         aliasEntry.target
                     };
-                    _resolvedInnerDist := types.resolveGenericTypeText(source, targetStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), rawInner, gp.paramsCsv, seenInnerDist);
+                    _resolvedInnerDist := types.resolveGenericTypeText(source, targetStart, prefix, scopedInnerDistAliases, rawInner, resolvedDistParams, seenInnerDist);
                 } else {
                     _resolvedInnerDist := types.resolveTypeText(source, targetStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), aliasEntry.target, seenInnerDist);
                 }
@@ -3031,12 +3047,27 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if earlierInnerAlias { syntax.failAt(source, itemStart, prefix, "duplicate type alias " + itemName); }
                 ctx.rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
                 mut declaredInBlock.pushBack(itemName);
+                enumPos := syntax.skipTrivia(source, afterItemName + 2, prefix);
+                gp := types.scanComptimeTypeParams(source, enumPos + 4, prefix);
+                if not gp.ok { syntax.failAt(source, gp.errPos, prefix, gp.errMsg); }
                 aliasIdx := types.aliasIndexAt(blockAliases, itemStart);
                 if aliasIdx < 0 { syntax.failAt(source, itemStart, prefix, "malformed enum declaration " + itemName); }
                 aliasEntry := blockAliases[aliasIdx];
                 if aliasEntry.target == "" { syntax.failAt(source, itemStart, prefix, "malformed enum declaration " + itemName); }
-                seenInner: List<String> = [];
-                _resolvedEnum := types.resolveTypeText(source, itemStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), aliasEntry.target, seenInner);
+                seenInner: List<String> = [nextAliasDepth.toText() + ":" + itemName];
+                if gp.hasParams {
+                    scopedInnerEnumAliases := types.aliasesUpToDepth(blockAliases, nextAliasDepth);
+                    resolvedEnumParams := types.resolveComptimeParamSpecs(source, enumPos + 4, prefix, scopedInnerEnumAliases, gp.paramsCsv);
+                    rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
+                        pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
+                        if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
+                    } else {
+                        aliasEntry.target
+                    };
+                    _resolvedEnum := types.resolveGenericTypeText(source, enumPos, prefix, scopedInnerEnumAliases, rawInner, resolvedEnumParams, seenInner);
+                } else {
+                    _resolvedEnum := types.resolveTypeText(source, itemStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), aliasEntry.target, seenInner);
+                }
                 afterEnumEnd := syntax.consumeStatementEnd(source, aliasEntry.end, prefix);
                 cursor = if afterEnumEnd >= 0 { afterEnumEnd } else { aliasEntry.end };
             } else if source.startsWithAt(afterItemName, ":=") and
@@ -5250,6 +5281,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
     var winDeclStmts := "";
     var winAssignStmts := "";
     var winVoidStmts := "";
+    isComptimeSubjMatch := sym.localIndex(locals, "$comptimeActive") >= 0;
     loop true {
         cursor = syntax.skipItemSeparators(source, cursor, prefix);
         if cursor >= size {
@@ -5272,6 +5304,35 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         armStart := cursor;
         pat := parseMatchPattern(target, source, armStart, prefix, subj.kind, subjVar, subj, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
         if inferMode { matchMarkers = matchMarkers + pat.markers; }
+        patCond0 := if pat.cond == "" { "true" } else { pat.cond };
+        afterPat := syntax.skipTrivia(source, pat.next, prefix);
+        if isComptimeSubjMatch and (staticallyMatched or patCond0 == "false") {
+            var deadArmOpen := -1;
+            if source.wordAt(afterPat, "if") {
+                deadGuardStart := syntax.skipTrivia(source, afterPat + 2, prefix);
+                syntax.rejectHeaderBlockTag(source, deadGuardStart, prefix, "match guard");
+                deadArmOpen = syntax.scanConditionOpen(source, deadGuardStart, prefix);
+                if deadArmOpen < 0 or deadArmOpen == deadGuardStart {
+                    syntax.failAt(source, deadGuardStart, prefix, "expected { after match guard");
+                }
+            } else {
+                syntax.rejectMisplacedTag(source, afterPat, prefix, "block tag cannot appear before { in match arm");
+                if afterPat >= size or source.at(afterPat) =!= "{" {
+                    syntax.failAt(source, afterPat, prefix, "expected { after match arm pattern");
+                }
+                deadArmOpen = afterPat;
+                if pat.irrefutable { sawIrrefutable = true; }
+                boolMask = combineBoolMask(boolMask, pat.boolMask);
+                if enumTotalCases > 0 and pat.enumCases =!= "" {
+                    mergedEnum := mergeEnumCaseBag(coveredEnumBag, pat.enumCases);
+                    coveredEnumBag = mergedEnum.bag;
+                    coveredEnumCount = coveredEnumCount + mergedEnum.added;
+                }
+            }
+            armCount = armCount + 1;
+            cursor = syntax.scanBraceEnd(source, deadArmOpen, prefix);
+            continue;
+        }
         /* Build arm-local scope with pattern bindings. */
         armLocals: mut List<Local> = locals;
         var declStmts := "";
@@ -5322,7 +5383,6 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             }
             bPos = lineEnd + 1;
         }
-        afterPat := syntax.skipTrivia(source, pat.next, prefix);
         var hasGuard := false;
         var guardCode := "";
         var armOpen := -1;
@@ -5364,6 +5424,12 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                 coveredEnumBag = mergedEnum.bag;
                 coveredEnumCount = coveredEnumCount + mergedEnum.added;
             }
+        }
+        if isComptimeSubjMatch and (hasGuard and guardCode == "false") {
+            sym.rewindLocalsTo(armLocMark);
+            armCount = armCount + 1;
+            cursor = syntax.scanBraceEnd(source, armOpen, prefix);
+            continue;
         }
         armBodyStart := syntax.skipTrivia(source, armOpen + 1, prefix);
         bodySink := if mode == "loopTail" { "loopBody" } else if mode == "stmt" { "stmt" } else { "branch" };
@@ -5496,7 +5562,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         };
         subjPrefix := if subj.constant and winDeclStmts == "" { "" }
         else if isCTarget { if subjVar == subj.code { "" } else { types.cValueType(subj.kind) + " " + subjVar + " = " + subj.code + "; (void)" + subjVar + "; " } }
-        else { "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; " };
+        else { if subjVar == subj.code { "" } else { "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; " } };
         armsCode = subjPrefix + winDeclStmts + winAssignStmts + winVoidStmts + directBody + " ";
         if mode == "value" {
             if isCTarget {
@@ -5584,6 +5650,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
     hasActualFinally := afterOptThenTrivia >= 0 and source.wordAt(afterOptThenTrivia, "finally");
     useIifeCond := condParseTag =!= "" or hasActualThen or hasActualFinally;
     if not useIifeCond {
+        isComptimeExpr := sym.localIndex(locals, "$comptimeActive") >= 0;
         condBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = condParseKind, phase = ir.CTX_PHASE_BODY,
         iifeDepth = iifeDepth, valKind = "", valVar = "", label = "", iterLabel = "",
         countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
@@ -5606,9 +5673,6 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             beforeFirstOpen := syntax.skipTrivia(source, condition.next, prefix);
             syntax.rejectMisplacedTag(source, beforeFirstOpen, prefix, "block tag cannot appear before { in if");
             cursor = syntax.expectSymbol(source, beforeFirstOpen, "{", prefix);
-            first := parseBinaryCtx(target, source, cursor - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch", aliases);
-            if inferMode { ifMarkers = ctx.collectParsedMarkers(ifMarkers, first); }
-            cursor = first.next;
             conditionCodes: mut List<String> = [];
             conditionStates: mut List<Int> = [];
             branchCodes: mut List<String> = [];
@@ -5616,18 +5680,41 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             branchConsts: mut List<Bool> = [];
             branchIntValues: mut List<Int> = [];
             branchTextValues: mut List<String> = [];
-            mut conditionCodes.pushBack(conditionCode);
-            mut conditionStates.pushBack(conditionState);
-            mut branchCodes.pushBack(first.code);
-            mut branchKinds.pushBack(first.kind);
-            mut branchConsts.pushBack(first.constant);
-            mut branchIntValues.pushBack(first.intValue);
-            mut branchTextValues.pushBack(first.textValue);
-            var resultKind := first.kind;
-            var branchCount := 1;
+            var resultKind := "";
+            var branchCount := 0;
+            var comptimeWon := false;
+            if isComptimeExpr and conditionState == 0 {
+                cursor = syntax.scanBraceEnd(source, cursor - 1, prefix);
+            } else {
+                first := parseBinaryCtx(target, source, cursor - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch", aliases);
+                if inferMode { ifMarkers = ctx.collectParsedMarkers(ifMarkers, first); }
+                cursor = first.next;
+                resultKind = first.kind;
+                mut branchCodes.pushBack(first.code);
+                mut branchKinds.pushBack(first.kind);
+                mut branchConsts.pushBack(first.constant);
+                mut branchIntValues.pushBack(first.intValue);
+                mut branchTextValues.pushBack(first.textValue);
+                branchCount = 1;
+                if isComptimeExpr and conditionState == 1 {
+                    comptimeWon = true;
+                } else {
+                    mut conditionCodes.pushBack(conditionCode);
+                    mut conditionStates.pushBack(conditionState);
+                }
+            }
             loop true {
                 afterBranch := syntax.skipTrivia(source, cursor, prefix);
                 if not source.wordAt(afterBranch, "else") {
+                    if branchCount == 0 {
+                        if minimum >= 0 {
+                            syntax.failAt(source, afterBranch, prefix, "value if requires a final else");
+                        }
+                        return ctx.withMarkers(ctx.zeroParsed(target, ir.VALUE_KIND_UNIT, cursor), ifMarkers);
+                    }
+                    if comptimeWon and conditionCodes.length() == 0 and branchCount == 1 {
+                        break;
+                    }
                     if minimum >= 0 or (minimum == -2 and resultKind =!= ir.VALUE_KIND_UNIT) {
                         syntax.failAt(source, afterBranch, prefix, "value if requires a final else");
                     }
@@ -5651,6 +5738,14 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                 if source.wordAt(afterElse, "if") {
                     elseConditionStart := syntax.skipTrivia(source, afterElse + 2, prefix);
                     syntax.rejectHeaderBlockTag(source, elseConditionStart, prefix, "else if");
+                    if isComptimeExpr and comptimeWon {
+                        elseOpen := syntax.scanConditionOpen(source, elseConditionStart, prefix);
+                        if elseOpen < 0 or elseOpen == elseConditionStart {
+                            syntax.failAt(source, elseConditionStart, prefix, "expected { after else if");
+                        }
+                        cursor = syntax.scanBraceEnd(source, elseOpen, prefix);
+                        continue;
+                    }
                     elseCondition := parseBinaryCtx(target, source, elseConditionStart, prefix, locals, functions, params, currentName, "", 0, condBarrierCtxs, iifeDepth, inferMode, "", aliases);
                     if inferMode { ifMarkers = ctx.collectParsedMarkers(ifMarkers, elseCondition); }
                     if elseCondition.kind =!= ir.VALUE_KIND_BOOL {
@@ -5665,6 +5760,10 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     beforeElseIfOpen := syntax.skipTrivia(source, elseCondition.next, prefix);
                     syntax.rejectMisplacedTag(source, beforeElseIfOpen, prefix, "block tag cannot appear before { in else if");
                     open := syntax.expectSymbol(source, beforeElseIfOpen, "{", prefix);
+                    if isComptimeExpr and elseConditionState == 0 {
+                        cursor = syntax.scanBraceEnd(source, open - 1, prefix);
+                        continue;
+                    }
                     elseBranchStart := syntax.skipTrivia(source, open, prefix);
                     branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch", aliases);
                     if inferMode { ifMarkers = ctx.collectParsedMarkers(ifMarkers, branch); }
@@ -5675,16 +5774,24 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     }
                     resultKind = joinedKind;
                     cursor = branch.next;
-                    mut conditionCodes.pushBack(elseConditionCode);
-                    mut conditionStates.pushBack(elseConditionState);
                     mut branchCodes.pushBack(branch.code);
                     mut branchKinds.pushBack(branch.kind);
                     mut branchConsts.pushBack(branch.constant);
                     mut branchIntValues.pushBack(branch.intValue);
                     mut branchTextValues.pushBack(branch.textValue);
                     branchCount = branchCount + 1;
+                    if isComptimeExpr and elseConditionState == 1 {
+                        comptimeWon = true;
+                    } else {
+                        mut conditionCodes.pushBack(elseConditionCode);
+                        mut conditionStates.pushBack(elseConditionState);
+                    }
                 } else {
                     open := syntax.expectSymbol(source, afterElse, "{", prefix);
+                    if isComptimeExpr and comptimeWon {
+                        cursor = syntax.scanBraceEnd(source, open - 1, prefix);
+                        break;
+                    }
                     elseBranchStart := syntax.skipTrivia(source, open, prefix);
                     branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch", aliases);
                     if inferMode { ifMarkers = ctx.collectParsedMarkers(ifMarkers, branch); }
@@ -5703,6 +5810,11 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     branchCount = branchCount + 1;
                     break;
                 }
+            }
+            if conditionCodes.length() == 0 and branchCount == 1 {
+                winCode := ctx.assignValueCode(target, resultKind, branchKinds[0], branchCodes[0]);
+                winConst := branchConsts[0] and (branchKinds[0] == resultKind or (numeric.isIntKind(resultKind) and numeric.isIntKind(branchKinds[0])));
+                return ctx.withMarkers((kind = resultKind, code = winCode, intValue = if winConst { branchIntValues[0] } else { 0 }, textValue = if winConst { branchTextValues[0] } else { "" }, constant = winConst, next = cursor), ifMarkers);
             }
             reduced := ctx.reduceTernaryResult(target, resultKind, conditionCodes, conditionStates, branchCodes, branchKinds, branchConsts, branchIntValues, branchTextValues, branchCount, cursor);
             return ctx.withMarkers(reduced, ifMarkers);
@@ -5730,13 +5842,14 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         var resultKind := "";
         var branchCount := 0;
         var sawFallback := false;
+        var comptimeWon := false;
         loop true {
             cursor = syntax.skipItemSeparators(source, cursor, prefix);
             if cursor >= size {
                 syntax.failAt(source, openMatchPos, prefix, "expected } to close match");
             }
             if source.at(cursor) == "}" {
-                if not sawFallback {
+                if not sawFallback and not comptimeWon {
                     syntax.failAt(source, cursor, prefix, "subjectless match requires a final _ fallback arm");
                 }
                 cursor = cursor + 1;
@@ -5752,9 +5865,15 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             isFallback := source.wordAt(cursor, "_") and afterUnderscore < size and
             source.at(afterUnderscore) == "{";
             var armOpen := -1;
+            var armCondState := -1;
+            var armCondCode := "";
             if isFallback {
                 armOpen = afterUnderscore;
                 sawFallback = true;
+                if isComptimeExpr and comptimeWon {
+                    cursor = syntax.scanBraceEnd(source, armOpen, prefix);
+                    continue;
+                }
             } else {
                 armOpen = syntax.scanConditionOpen(source, cursor, prefix);
                 if armOpen < 0 {
@@ -5765,6 +5884,10 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                 }
                 condStart := cursor;
                 syntax.rejectHeaderBlockTag(source, condStart, prefix, "match arm");
+                if isComptimeExpr and comptimeWon {
+                    cursor = syntax.scanBraceEnd(source, armOpen, prefix);
+                    continue;
+                }
                 condition := parseBinaryCtx(target, source, condStart, prefix, locals, functions, params, currentName, "", 0, condBarrierCtxs, iifeDepth, inferMode, "", aliases);
                 if inferMode { matchMarkers = ctx.collectParsedMarkers(matchMarkers, condition); }
                 afterCond := syntax.skipTrivia(source, condition.next, prefix);
@@ -5778,14 +5901,22 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                 if condition.kind =!= ir.VALUE_KIND_BOOL {
                     syntax.failAt(source, condStart, prefix, "match arm condition must be Bool");
                 }
-                conditionCode := if condition.constant {
+                armCondCode = if condition.constant {
                     ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
                 } else {
                     condition.code
                 };
-                conditionState := if condition.constant { if condition.intValue =!= 0 { 1 } else { 0 } } else { -1 };
-                mut conditionCodes.pushBack(conditionCode);
-                mut conditionStates.pushBack(conditionState);
+                armCondState = if condition.constant { if condition.intValue =!= 0 { 1 } else { 0 } } else { -1 };
+                if isComptimeExpr and armCondState == 0 {
+                    cursor = syntax.scanBraceEnd(source, armOpen, prefix);
+                    continue;
+                }
+                if isComptimeExpr and armCondState == 1 {
+                    comptimeWon = true;
+                } else {
+                    mut conditionCodes.pushBack(armCondCode);
+                    mut conditionStates.pushBack(armCondState);
+                }
             }
             armBodyStart := syntax.skipTrivia(source, armOpen + 1, prefix);
             branch := parseBinaryCtx(target, source, armOpen, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch", aliases);
@@ -5803,6 +5934,11 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             mut branchTextValues.pushBack(branch.textValue);
             branchCount = branchCount + 1;
             cursor = branch.next;
+        }
+        if conditionCodes.length() == 0 and branchCount == 1 {
+            winCode := ctx.assignValueCode(target, resultKind, branchKinds[0], branchCodes[0]);
+            winConst := branchConsts[0] and (branchKinds[0] == resultKind or (numeric.isIntKind(resultKind) and numeric.isIntKind(branchKinds[0])));
+            return ctx.withMarkers((kind = resultKind, code = winCode, intValue = if winConst { branchIntValues[0] } else { 0 }, textValue = if winConst { branchTextValues[0] } else { "" }, constant = winConst, next = cursor), matchMarkers);
         }
         reduced := ctx.reduceTernaryResult(target, resultKind, conditionCodes, conditionStates, branchCodes, branchKinds, branchConsts, branchIntValues, branchTextValues, branchCount, cursor);
         return ctx.withMarkers(reduced, matchMarkers);
@@ -5851,6 +5987,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         var passPartialNoElseAt := -1;
         var passSubjectStmt := "";
         var cursor := 0;
+        isComptimeIife := sym.localIndex(locals, "$comptimeActive") >= 0;
         if condParseKind == ir.CTX_KIND_IF {
             cursor = syntax.skipTrivia(source, condParseStart + 2, prefix);
             syntax.rejectHeaderBlockTag(source, cursor, prefix, "if");
@@ -5869,22 +6006,34 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             beforeFirstOpen := syntax.skipTrivia(source, cond0.next, prefix);
             syntax.rejectMisplacedTag(source, beforeFirstOpen, prefix, "block tag cannot appear before { in if");
             cursor = syntax.expectSymbol(source, beforeFirstOpen, "{", prefix);
-            first := parseBinaryCtx(target, source, cursor - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
-            if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, first); }
-            cursor = first.next;
-            mut passCondCodes.pushBack(cond0Code);
-            mut passCondStates.pushBack(cond0State);
-            mut passBranchCodes.pushBack(first.code);
-            mut passBranchKinds.pushBack(first.kind);
-            passResultKind = first.kind;
-            passBranchCount = 1;
+            var passComptimeWon := false;
+            if isComptimeIife and cond0State == 0 {
+                cursor = syntax.scanBraceEnd(source, cursor - 1, prefix);
+            } else {
+                first := parseBinaryCtx(target, source, cursor - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
+                if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, first); }
+                cursor = first.next;
+                mut passBranchCodes.pushBack(first.code);
+                mut passBranchKinds.pushBack(first.kind);
+                passResultKind = first.kind;
+                passBranchCount = 1;
+                if isComptimeIife and cond0State == 1 {
+                    passComptimeWon = true;
+                    passHasElse = true;
+                } else {
+                    mut passCondCodes.pushBack(cond0Code);
+                    mut passCondStates.pushBack(cond0State);
+                }
+            }
             loop true {
                 afterBranch := syntax.skipTrivia(source, cursor, prefix);
                 if not source.wordAt(afterBranch, "else") {
-                    if hasActualThen or minimum >= 0 {
+                    if not passComptimeWon and (hasActualThen or minimum >= 0) {
                         syntax.failAt(source, afterBranch, prefix, "value if requires a final else");
                     }
-                    passPartialNoElseAt = afterBranch;
+                    if not passHasElse {
+                        passPartialNoElseAt = afterBranch;
+                    }
                     break;
                 }
                 afterElse := syntax.skipTrivia(source, afterBranch + 4, prefix);
@@ -5892,6 +6041,14 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                 if source.wordAt(afterElse, "if") {
                     elseCondStart := syntax.skipTrivia(source, afterElse + 2, prefix);
                     syntax.rejectHeaderBlockTag(source, elseCondStart, prefix, "else if");
+                    if isComptimeIife and passComptimeWon {
+                        elseOpen := syntax.scanConditionOpen(source, elseCondStart, prefix);
+                        if elseOpen < 0 or elseOpen == elseCondStart {
+                            syntax.failAt(source, elseCondStart, prefix, "expected { after else if");
+                        }
+                        cursor = syntax.scanBraceEnd(source, elseOpen, prefix);
+                        continue;
+                    }
                     elseCond := parseBinaryCtx(target, source, elseCondStart, prefix, locals, functions, params, currentName, "", 0, condPassCtxs, condDepth, passInfer, "", aliases);
                     if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, elseCond); }
                     if elseCond.kind =!= ir.VALUE_KIND_BOOL {
@@ -5906,6 +6063,10 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     beforeElseIfOpen := syntax.skipTrivia(source, elseCond.next, prefix);
                     syntax.rejectMisplacedTag(source, beforeElseIfOpen, prefix, "block tag cannot appear before { in else if");
                     open := syntax.expectSymbol(source, beforeElseIfOpen, "{", prefix);
+                    if isComptimeIife and elseCondState == 0 {
+                        cursor = syntax.scanBraceEnd(source, open - 1, prefix);
+                        continue;
+                    }
                     elseBranchStart := syntax.skipTrivia(source, open, prefix);
                     branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
                     if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, branch); }
@@ -5916,14 +6077,23 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     }
                     passResultKind = joinedKind;
                     cursor = branch.next;
-                    mut passCondCodes.pushBack(elseCondCode);
-                    mut passCondStates.pushBack(elseCondState);
                     mut passBranchCodes.pushBack(branch.code);
                     mut passBranchKinds.pushBack(branch.kind);
                     passBranchCount = passBranchCount + 1;
+                    if isComptimeIife and elseCondState == 1 {
+                        passComptimeWon = true;
+                        passHasElse = true;
+                    } else {
+                        mut passCondCodes.pushBack(elseCondCode);
+                        mut passCondStates.pushBack(elseCondState);
+                    }
                 } else {
-                    passHasElse = true;
                     open := syntax.expectSymbol(source, afterElse, "{", prefix);
+                    if isComptimeIife and passComptimeWon {
+                        cursor = syntax.scanBraceEnd(source, open - 1, prefix);
+                        break;
+                    }
+                    passHasElse = true;
                     elseBranchStart := syntax.skipTrivia(source, open, prefix);
                     branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
                     if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, branch); }
@@ -5954,13 +6124,14 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             size := source.length();
             cursor = syntax.skipItemSeparators(source, openMatchPos + 1, prefix);
             var sawFallback := false;
+            var passComptimeWon := false;
             loop true {
                 cursor = syntax.skipItemSeparators(source, cursor, prefix);
                 if cursor >= size {
                     syntax.failAt(source, openMatchPos, prefix, "expected } to close match");
                 }
                 if source.at(cursor) == "}" {
-                    if not sawFallback {
+                    if not sawFallback and not passComptimeWon {
                         syntax.failAt(source, cursor, prefix, "subjectless match requires a final _ fallback arm");
                     }
                     cursor = cursor + 1;
@@ -5980,6 +6151,10 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     armOpen = afterUnderscore;
                     sawFallback = true;
                     passHasElse = true;
+                    if isComptimeIife and passComptimeWon {
+                        cursor = syntax.scanBraceEnd(source, armOpen, prefix);
+                        continue;
+                    }
                 } else {
                     armOpen = syntax.scanConditionOpen(source, cursor, prefix);
                     if armOpen < 0 {
@@ -5990,6 +6165,10 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     }
                     condStart := cursor;
                     syntax.rejectHeaderBlockTag(source, condStart, prefix, "match arm");
+                    if isComptimeIife and passComptimeWon {
+                        cursor = syntax.scanBraceEnd(source, armOpen, prefix);
+                        continue;
+                    }
                     condParsed := parseBinaryCtx(target, source, condStart, prefix, locals, functions, params, currentName, "", 0, condPassCtxs, condDepth, passInfer, "", aliases);
                     if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, condParsed); }
                     afterCond := syntax.skipTrivia(source, condParsed.next, prefix);
@@ -6009,8 +6188,17 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                         condParsed.code
                     };
                     condState := if condParsed.constant { if condParsed.intValue =!= 0 { 1 } else { 0 } } else { -1 };
-                    mut passCondCodes.pushBack(condCode);
-                    mut passCondStates.pushBack(condState);
+                    if isComptimeIife and condState == 0 {
+                        cursor = syntax.scanBraceEnd(source, armOpen, prefix);
+                        continue;
+                    }
+                    if isComptimeIife and condState == 1 {
+                        passComptimeWon = true;
+                        passHasElse = true;
+                    } else {
+                        mut passCondCodes.pushBack(condCode);
+                        mut passCondStates.pushBack(condState);
+                    }
                 }
                 armBodyStart := syntax.skipTrivia(source, armOpen + 1, prefix);
                 branch := parseBinaryCtx(target, source, armOpen, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
@@ -6029,7 +6217,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         }
         if isPass1 {
             var bIdx := 0;
-            var allBranchesNever := true;
+            var allBranchesNever := passBranchCount > 0;
             loop bIdx < passBranchCount {
                 bKind := passBranchKinds[bIdx];
                 if bKind =!= ir.VALUE_KIND_NEVER {
@@ -7142,6 +7330,9 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         }
         loop generics.splitGenericParams(genParams) as gp {
             if not genBindings.has(gp) {
+                if types.valueParamKind(genParams, gp) =!= "" {
+                    syntax.failAt(source, errPos, prefix, "cannot infer comptime value parameter " + gp + " in call to " + calleeDisplay);
+                }
                 syntax.failAt(source, errPos, prefix, "cannot infer type parameter " + gp + " in call to " + calleeDisplay);
             }
         }
@@ -8250,26 +8441,47 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 } else if info.runtime.startsWithAt(0, "$gen:") and postPosition < source.length() and source.at(postPosition) == "<" {
                     tplKey := info.runtime.slice(5, info.runtime.length());
                     tpl := generics.getTemplate(generics.findTemplate(tplKey));
-                    gpNames := generics.splitGenericParams(tpl.genericParams);
+                    paramSpecs := types.splitParamSpecs(tpl.genericParams);
                     var tpCursor := syntax.skipTrivia(source, postPosition + 1, prefix);
                     if tpCursor >= source.length() or source.at(tpCursor) == ">" {
                         syntax.failAt(source, tpCursor, prefix, "expected at least one type argument in call to " + calleeDisplay);
                     }
                     explicitKinds: mut List<String> = [];
+                    var tpIdx := 0;
                     loop true {
-                        if inferMode {
-                            emptySeenCallT: List<String> = [];
-                            canT := types.canResolveTypeAt(source, tpCursor, prefix, aliases, "", emptySeenCallT, 32);
-                            if not canT.ok {
+                        if tpIdx >= paramSpecs.length() {
+                            if inferMode {
                                 return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
                             }
-                            mut explicitKinds.pushBack(canT.kind);
-                            tpCursor = syntax.skipTrivia(source, canT.next, prefix);
-                        } else {
-                            pT := types.parseTypeAt(source, tpCursor, prefix, aliases, "type argument", "");
-                            mut explicitKinds.pushBack(pT.kind);
-                            tpCursor = syntax.skipTrivia(source, pT.next, prefix);
+                            syntax.failAt(source, tpCursor, prefix, "function " + calleeDisplay + " expects " + paramSpecs.length().toText() + " comptime argument(s)");
                         }
+                        pSpec := paramSpecs[tpIdx];
+                        if pSpec.kind == "" {
+                            if inferMode {
+                                emptySeenCallT: List<String> = [];
+                                canT := types.canResolveTypeAt(source, tpCursor, prefix, aliases, "", emptySeenCallT, 32);
+                                if not canT.ok {
+                                    return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                                }
+                                mut explicitKinds.pushBack(canT.kind);
+                                tpCursor = syntax.skipTrivia(source, canT.next, prefix);
+                            } else {
+                                pT := types.parseTypeAt(source, tpCursor, prefix, aliases, "type argument", "");
+                                mut explicitKinds.pushBack(pT.kind);
+                                tpCursor = syntax.skipTrivia(source, pT.next, prefix);
+                            }
+                        } else {
+                            valArg := types.parseComptimeValueArg(source, tpCursor, prefix, aliases, "", pSpec.kind);
+                            if not valArg.ok {
+                                if inferMode {
+                                    return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                                }
+                                syntax.failAt(source, valArg.errPos, prefix, valArg.errMsg);
+                            }
+                            mut explicitKinds.pushBack(valArg.token);
+                            tpCursor = syntax.skipTrivia(source, valArg.next, prefix);
+                        }
+                        tpIdx = tpIdx + 1;
                         if tpCursor < source.length() and source.at(tpCursor) == "," {
                             tpCursor = syntax.skipTrivia(source, tpCursor + 1, prefix);
                             if tpCursor < source.length() and source.at(tpCursor) == ">" { break; }
@@ -8290,13 +8502,13 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         }
                         syntax.failAt(source, callOpenParen, prefix, "expected ( after type arguments in call to " + calleeDisplay);
                     }
-                    if explicitKinds.length() =!= gpNames.length() {
-                        syntax.failAt(source, postPosition, prefix, "function " + calleeDisplay + " expects " + gpNames.length().toText() + " type argument(s), got " + explicitKinds.length().toText());
+                    if explicitKinds.length() =!= paramSpecs.length() {
+                        syntax.failAt(source, postPosition, prefix, "function " + calleeDisplay + " expects " + paramSpecs.length().toText() + " comptime argument(s), got " + explicitKinds.length().toText());
                     }
                     expMap: mut Map<String, String>;
                     var ei := 0;
-                    loop ei < gpNames.length() {
-                        mut expMap.set(gpNames[ei], explicitKinds[ei]);
+                    loop ei < paramSpecs.length() {
+                        mut expMap.set(paramSpecs[ei].name, explicitKinds[ei]);
                         ei = ei + 1;
                     }
                     explicitBindingsEnc := generics.encodeBindings(tpl.genericParams, expMap);
@@ -8893,6 +9105,11 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
         syntax.failAt(source, bracePos, prefix, "expected { after record");
     }
     scopedAliases := types.aliasesUpToDepth(aliases, aliasDepth);
+    resolvedRecParams := if gp.hasParams {
+        types.resolveComptimeParamSpecs(source, recPos + 6, prefix, scopedAliases, gp.paramsCsv)
+    } else {
+        ""
+    };
     seenRec: mut List<String> = [aliasDepth.toText() + ":" + recName];
     fieldNames: mut List<String> = [];
     defaultKeys: mut List<String> = [];
@@ -8926,7 +9143,7 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
             syntax.failAt(source, afterField, prefix, "expected : after record field " + fName);
         }
         typeStart := syntax.skipTrivia(source, afterField + 1, prefix);
-        fieldType := types.parseTypeWithSeen(source, fStart, true, source, typeStart, prefix, scopedAliases, "record field", gp.paramsCsv, seenRec);
+        fieldType := types.parseTypeWithSeen(source, fStart, true, source, typeStart, prefix, scopedAliases, "record field", resolvedRecParams, seenRec);
         if fieldType.kind == ir.VALUE_KIND_UNIT {
             syntax.failAt(source, fStart, prefix, "unsupported record field type Unit");
         }
@@ -8934,7 +9151,7 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
         var nextCursor := afterType;
         var lastTokenPos := fieldType.next;
         if syntax.isSingleEquals(source, afterType) {
-            if gp.hasParams and types.kindHasAnyGenericParam(gp.paramsCsv, fieldType.kind) {
+            if gp.hasParams and types.kindHasAnyGenericParam(resolvedRecParams, fieldType.kind) {
                 syntax.failAt(source, afterType, prefix, "default initializer on generic-typed field " + fName + " is not supported yet");
             }
             defStart := syntax.skipTrivia(source, afterType + 1, prefix);
@@ -8976,10 +9193,10 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
         } else {
             aliasTarget
         };
-        types.resolveGenericTypeText(source, nameStart, prefix, scopedAliases, innerRaw, gp.paramsCsv, tplSeen)
+        types.resolveGenericTypeText(source, nameStart, prefix, scopedAliases, innerRaw, resolvedRecParams, tplSeen)
     } else {
         emptySeen: List<String> = [];
         types.resolveAliasKind(source, nameStart, prefix, aliases, recName, emptySeen)
     };
-    (kind = canonicalKind, encodedDefaults = types.encodeRecordPairs(defaultKeys, defaultCodes), genericParams = gp.paramsCsv, markers = markers, next = afterDecl)
+    (kind = canonicalKind, encodedDefaults = types.encodeRecordPairs(defaultKeys, defaultCodes), genericParams = resolvedRecParams, markers = markers, next = afterDecl)
 };

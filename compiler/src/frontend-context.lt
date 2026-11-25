@@ -1197,7 +1197,7 @@ pub seedBlockDeclaredNames := fn(bodySink: String): List<String> {
 
 /** Joins a block's definite completion: scopes preserve it, loops require a true header, and conditionals require every arm plus a final else. */
 pub blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool, hasElse: Bool, loopForever: Bool): Bool {
-    if kind == ir.BLOCK_KIND_SCOPE or kind == ir.BLOCK_KIND_MATCH_SINGLE or kind == ir.BLOCK_KIND_MATCH_SINGLE_VALUE { completed }
+    if kind == ir.BLOCK_KIND_SCOPE or kind == ir.BLOCK_KIND_MATCH_SINGLE or kind == ir.BLOCK_KIND_MATCH_SINGLE_VALUE or kind == ir.BLOCK_KIND_COMPTIME_IF or kind == ir.BLOCK_KIND_COMPTIME_IF_VALUE or kind == ir.BLOCK_KIND_COMPTIME_MATCH or kind == ir.BLOCK_KIND_COMPTIME_MATCH_VALUE { completed }
     else if kind == ir.BLOCK_KIND_LOOP { loopForever and completed }
     else { hasElse and branchesComplete and completed }
 };
@@ -1480,7 +1480,7 @@ pub itemTextPayload := fn(parsed: Parsed): String {
 pub atValueTail := fn(blocks: List<String>, blockCount: Int): Bool {
     if blockCount <= 0 { return false; }
     kind := blocks[blockCount - 1];
-    kind == ir.BLOCK_KIND_FUNCTION or kind == ir.BLOCK_KIND_IF_VALUE or kind == ir.BLOCK_KIND_MATCH_VALUE or kind == ir.BLOCK_KIND_MATCH_ELSE_VALUE or kind == ir.BLOCK_KIND_MATCH_SINGLE_VALUE
+    kind == ir.BLOCK_KIND_FUNCTION or kind == ir.BLOCK_KIND_IF_VALUE or kind == ir.BLOCK_KIND_MATCH_VALUE or kind == ir.BLOCK_KIND_MATCH_ELSE_VALUE or kind == ir.BLOCK_KIND_MATCH_SINGLE_VALUE or kind == ir.BLOCK_KIND_COMPTIME_IF_VALUE or kind == ir.BLOCK_KIND_COMPTIME_MATCH_VALUE
 };
 
 /** True when `blocks` contains an enclosing loop body, so a bare break or continue has a nearest loop to target. */

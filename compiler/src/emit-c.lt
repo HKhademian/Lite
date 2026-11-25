@@ -4875,9 +4875,13 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         if item.kind == frontend.ITEM_KIND_LOOP_SEQ and frontend.cListTag(item.textValue) == "" {
             diagLib.fail("", "C backend does not support list traversal yet");
         }
-        aggErr := unsupportedAggregateCode(item.code);
-        if aggErr =!= "" {
-            diagLib.fail("", aggErr);
+        if item.kind =!= frontend.ITEM_KIND_FUNCTION_START and item.kind =!= frontend.ITEM_KIND_FUNCTION_END and
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_TRANSFER_CATCH and
+        item.kind =!= frontend.ITEM_KIND_COMMENT and item.kind =!= frontend.ITEM_KIND_SOURCE_LOC {
+            aggErr := unsupportedAggregateCode(item.code);
+            if aggErr =!= "" {
+                diagLib.fail("", aggErr);
+            }
         }
     }
     hoistedFnKeys: mut Set<String>;

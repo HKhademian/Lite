@@ -61,6 +61,10 @@ pub BLOCK_KIND_MATCH_ELSE := "matchelse";
 pub BLOCK_KIND_MATCH_ELSE_VALUE := "matchelseval";
 pub BLOCK_KIND_MATCH_SINGLE := "matchsingle";
 pub BLOCK_KIND_MATCH_SINGLE_VALUE := "matchsingleval";
+pub BLOCK_KIND_COMPTIME_IF := "comptimeif";
+pub BLOCK_KIND_COMPTIME_IF_VALUE := "comptimeifvalue";
+pub BLOCK_KIND_COMPTIME_MATCH := "comptimematch";
+pub BLOCK_KIND_COMPTIME_MATCH_VALUE := "comptimematchvalue";
 
 pub TARGET_TS := "ts";
 pub TARGET_C := "c";

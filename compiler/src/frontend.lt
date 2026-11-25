@@ -70,6 +70,10 @@ BLOCK_KIND_MATCH_ELSE := ir.BLOCK_KIND_MATCH_ELSE;
 BLOCK_KIND_MATCH_ELSE_VALUE := ir.BLOCK_KIND_MATCH_ELSE_VALUE;
 BLOCK_KIND_MATCH_SINGLE := ir.BLOCK_KIND_MATCH_SINGLE;
 BLOCK_KIND_MATCH_SINGLE_VALUE := ir.BLOCK_KIND_MATCH_SINGLE_VALUE;
+BLOCK_KIND_COMPTIME_IF := ir.BLOCK_KIND_COMPTIME_IF;
+BLOCK_KIND_COMPTIME_IF_VALUE := ir.BLOCK_KIND_COMPTIME_IF_VALUE;
+BLOCK_KIND_COMPTIME_MATCH := ir.BLOCK_KIND_COMPTIME_MATCH;
+BLOCK_KIND_COMPTIME_MATCH_VALUE := ir.BLOCK_KIND_COMPTIME_MATCH_VALUE;
 
 pub TARGET_TS := ir.TARGET_TS;
 pub TARGET_C := ir.TARGET_C;
@@ -982,13 +986,14 @@ resolveOwnedTypeOpTarget := fn(source: String, nameStart: Int, prefix: String, a
             error = "cannot attach operation to alias or foreign type " + typeName + "; operations may only be attached to an owned record, enum, distinct, or built-in type");
         }
         emptySeen: List<String> = [];
-        tplKind := types.resolveGenericTypeText(source, nameStart, prefix, aliases, innerRaw, pDec.text, emptySeen);
+        resolvedParams := types.resolveComptimeParamSpecs(source, nameStart, prefix, aliases, pDec.text);
+        tplKind := types.resolveGenericTypeText(source, nameStart, prefix, aliases, innerRaw, resolvedParams, emptySeen);
         ownerKey := types.typeOpOwnerKey(tplKind);
         if ownerKey == "" {
             return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
             error = "cannot attach operation to non-nominal type " + typeName);
         }
-        selfTarget := "@gentpl:" + types.encodeLengthPrefixedText(pDec.text) + tplKind;
+        selfTarget := "@gentpl:" + types.encodeLengthPrefixedText(resolvedParams) + tplKind;
         return (ok = true, ownerKind = tplKind, ownerKey = ownerKey, selfTarget = selfTarget, isGenericOwner = true, error = "");
     }
     if entry.at < 0 or (not entry.target.startsWithAt(0, "@recraw:") and not entry.target.startsWithAt(0, "@enumraw:") and not entry.target.startsWithAt(0, "@distraw:")) {
@@ -1130,7 +1135,7 @@ upgradeRootUninitLocalsForFn := fn(locals: List<Local>, rootAssignedNames: Set<S
 /** Parses and validates a Bool branch condition followed by `{` for `if`, `else if`, or `match` arms. */
 parseBranchCondExpr := fn(target: String, source: String, condStart: Int, prefix: String, errMsg: String,
 beforeOpenErr: String, ctxs: List<ConstructCtx>, locals: List<Local>, functions: List<FunctionInfo>,
-functionParams: List<String>, currentName: String, aliases: List<AliasDecl>): (code: String, rawCode: String, openPos: Int) {
+functionParams: List<String>, currentName: String, aliases: List<AliasDecl>): (code: String, rawCode: String, openPos: Int, constant: Bool, boolValue: Bool) {
     condition := parseExpressionCtx(target, source, condStart, prefix, locals, functions, functionParams, currentName, ctxs, aliases);
     if condition.kind =!= VALUE_KIND_BOOL {
         failAt(source, condStart, prefix, errMsg);
@@ -1143,7 +1148,50 @@ functionParams: List<String>, currentName: String, aliases: List<AliasDecl>): (c
     beforeOpen := skipTrivia(source, condition.next, prefix);
     rejectMisplacedTag(source, beforeOpen, prefix, beforeOpenErr);
     openPos := expectSymbol(source, beforeOpen, "{", prefix);
-    (code = conditionCode, rawCode = condition.code, openPos = openPos)
+    (code = conditionCode, rawCode = condition.code, openPos = openPos, constant = condition.constant, boolValue = condition.intValue =!= 0)
+};
+
+/** Skips any trailing `else if ... { ... }` and final `else { ... }` chain after a statically-true comptime branch `}`. */
+skipTrailingElseChain := fn(source: String, afterBracePos: Int, prefix: String): Int {
+    size := source.length();
+    var curEnd := afterBracePos;
+    loop true {
+        after := skipTrivia(source, curEnd, prefix);
+        if after >= size or not source.wordAt(after, "else") {
+            return curEnd;
+        }
+        afterElse := skipTrivia(source, after + 4, prefix);
+        if source.wordAt(afterElse, "if") {
+            condStart := skipTrivia(source, afterElse + 2, prefix);
+            openPos := scanConditionOpen(source, condStart, prefix);
+            if openPos < 0 { return curEnd; }
+            curEnd = scanBraceEnd(source, openPos, prefix);
+        } else {
+            openPos := skipTrivia(source, afterElse, prefix);
+            if openPos >= size or source.at(openPos) =!= "{" { return curEnd; }
+            return scanBraceEnd(source, openPos, prefix);
+        }
+    }
+    curEnd
+};
+
+/** Skips any remaining subjectless `match` arms after a statically-true arm up to and including the closing `}`. */
+skipRemainingMatchArms := fn(source: String, afterArmBrace: Int, prefix: String): Int {
+    size := source.length();
+    var cur := skipItemSeparators(source, afterArmBrace, prefix);
+    loop cur < size and source.at(cur) =!= "}" {
+        if source.wordAt(cur, "_") {
+            afterU := skipTrivia(source, cur + 1, prefix);
+            if afterU < size and source.at(afterU) == "{" {
+                cur = skipItemSeparators(source, scanBraceEnd(source, afterU, prefix), prefix);
+                continue;
+            }
+        }
+        openPos := scanConditionOpen(source, cur, prefix);
+        if openPos < 0 { break; }
+        cur = skipItemSeparators(source, scanBraceEnd(source, openPos, prefix), prefix);
+    }
+    if cur < size and source.at(cur) == "}" { cur + 1 } else { cur }
 };
 
 /** Internal driver parsing either a complete module (`monoInstIdx < 0`) or one monomorphized generic instance body (`monoInstIdx >= 0`). */
@@ -1555,7 +1603,43 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             aliases = types.withSelfAlias(aliases, tpl.selfTarget, 1);
         }
         loop generics.decodeBindings(inst.bindingsEncoded) as b {
-            mut aliases.pushBack((name = b.name, target = "$Kind:" + b.kind, at = tpl.declAt, end = tpl.declAt, depth = 1));
+            if types.isComptimeValueToken(b.kind) {
+                mut aliases.pushBack((name = b.name, target = "$Val:" + b.kind, at = tpl.declAt, end = tpl.declAt, depth = 1));
+                valKind := types.comptimeValueTokenKind(b.kind);
+                var valInt := 0;
+                var valText := "";
+                var valCode := "";
+                if valKind == VALUE_KIND_INT {
+                    nVal := types.comptimeIntValue(b.kind);
+                    valInt = nVal;
+                    absDigits := if nVal == -9223372036854775808 { "9223372036854775808" } else if nVal < 0 { (0 - nVal).toText() } else { nVal.toText() };
+                    valCode = ir.targetIntLiteralCode(target, nVal, nVal < 0, absDigits);
+                } else if valKind == VALUE_KIND_BOOL {
+                    bVal := types.comptimeBoolValue(b.kind);
+                    valInt = if bVal { 1 } else { 0 };
+                    valCode = ir.targetBoolLiteralCode(target, bVal);
+                } else if valKind == VALUE_KIND_STRING {
+                    sVal := types.comptimeStringValue(b.kind);
+                    valText = sVal;
+                    valCode = ir.targetTextLiteralCode(target, sVal);
+                } else {
+                    ci := types.comptimeEnumCaseIndex(b.kind);
+                    valInt = ci;
+                    valCode = ci.toText();
+                }
+                fnParamSeedBag = appendPipeBag(fnParamSeedBag, b.name);
+                mut blockDecls.pushBack((name = b.name, depth = 1));
+                mut locals.pushBack((name = b.name, runtime = valCode, kind = valKind,
+                mutable = false, writable = false, depth = 1, constant = true, code = valCode,
+                intValue = valInt, textValue = valText, initState = INIT_STATE_INIT));
+            } else {
+                mut aliases.pushBack((name = b.name, target = "$Kind:" + b.kind, at = tpl.declAt, end = tpl.declAt, depth = 1));
+            }
+        }
+        if types.hasComptimeValueParam(tpl.genericParams) {
+            mut locals.pushBack((name = "$comptimeActive", runtime = "", kind = VALUE_KIND_BOOL,
+            mutable = false, writable = false, depth = 1, constant = true, code = "true",
+            intValue = 1, textValue = "", initState = INIT_STATE_INIT));
         }
         fnOpenBrace := tpl.bodyStart - 1;
         fnAssignedBag := scanInnerBlockAssignedBag(target, source, fnOpenBrace, prefix, fnParamSeedBag);
@@ -1582,12 +1666,12 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 failAt(source, position, prefix, "unexpected }");
             }
             blockKind := blocks[blockCount - 1];
-            if (blockKind == BLOCK_KIND_IF_VALUE or blockKind == BLOCK_KIND_MATCH_VALUE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE) and
+            if (blockKind == BLOCK_KIND_IF_VALUE or blockKind == BLOCK_KIND_MATCH_VALUE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE or blockKind == BLOCK_KIND_COMPTIME_IF_VALUE or blockKind == BLOCK_KIND_COMPTIME_MATCH_VALUE) and
             currentResult =!= VALUE_KIND_UNIT and not currentReturned {
                 failAt(source, position, prefix, "branch of function " + currentName + " must return " + displayKind(currentResult));
             }
             after := skipTrivia(source, position + 1, prefix);
-            if (blockKind == BLOCK_KIND_IF or blockKind == BLOCK_KIND_IF_VALUE) and after < size and source.wordAt(after, "else") {
+            if not hasElse and (blockKind == BLOCK_KIND_IF or blockKind == BLOCK_KIND_IF_VALUE) and after < size and source.wordAt(after, "else") {
                 locals = visibleLocals(locals, depth);
                 blockDecls = popBlockDecls(blockDecls, depth);
                 blockAssignedDecls = popBlockDecls(blockAssignedDecls, depth);
@@ -1600,42 +1684,88 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     liveBranchCount = liveBranchCount + 1;
                 }
                 locals = truncateLocals(locals, branchPreLen);
-                afterElse := skipTrivia(source, after + 4, prefix);
-                rejectMisplacedTag(source, afterElse, prefix, "block tag cannot appear after else");
                 branchesReturned = branchesReturned and currentReturned;
                 branchesStopped = branchesStopped and currentStopped;
                 currentReturned = false;
                 currentStopped = false;
-                hasElse = not source.wordAt(afterElse, "if");
+                isComptimeElse := localIndex(locals, "$comptimeActive") >= 0;
+                var afterElse := skipTrivia(source, after + 4, prefix);
+                var endedChainPos := -1;
+                var elseArmOpen := -1;
                 droppedIf := mut blocks.popBack();
                 blockCount = blockCount - 1;
-                var elseArmOpen := -1;
-                if source.wordAt(afterElse, "if") {
-                    conditionStart := skipTrivia(source, afterElse + 2, prefix);
-                    rejectHeaderBlockTag(source, conditionStart, prefix, "else if");
-                    parsedCond := parseBranchCondExpr(target, source, conditionStart, prefix, "else if condition must be Bool",
-                    "block tag cannot appear before { in else if", stmtCtxs, locals, functions, functionParams, currentName, aliases);
-                    locals = checkStatementTrace(target, source, conditionStart, prefix, parsedCond.rawCode, false, "",
-                    currentName, maxFutureAt, locals, functions, futureValues, items, currentLive);
-                    conditionCode := parsedCond.code;
-                    position = parsedCond.openPos;
-                    elseArmOpen = position - 1;
-                    if currentLive {
-                        mut items.pushBack((kind = ITEM_KIND_ELSE_IF, name = "", runtime = "", code = conditionCode,
-                        intValue = 0, textValue = ""));
-                        if codeHasRawTransfer(conditionCode) {
-                            mut transferCodes.pushBack(conditionCode);
-                            transferCount = transferCount + 1;
+                loop true {
+                    hasElse = not source.wordAt(afterElse, "if");
+                    if not hasElse {
+                        rejectMisplacedTag(source, afterElse, prefix, "block tag cannot appear after else");
+                        conditionStart := skipTrivia(source, afterElse + 2, prefix);
+                        rejectHeaderBlockTag(source, conditionStart, prefix, "else if");
+                        parsedCond := parseBranchCondExpr(target, source, conditionStart, prefix, "else if condition must be Bool",
+                        "block tag cannot appear before { in else if", stmtCtxs, locals, functions, functionParams, currentName, aliases);
+                        locals = checkStatementTrace(target, source, conditionStart, prefix, parsedCond.rawCode, false, "",
+                        currentName, maxFutureAt, locals, functions, futureValues, items, currentLive);
+                        if isComptimeElse and parsedCond.constant and not parsedCond.boolValue {
+                            afterDead := skipTrivia(source, scanBraceEnd(source, parsedCond.openPos - 1, prefix), prefix);
+                            if afterDead < size and source.wordAt(afterDead, "else") {
+                                afterElse = skipTrivia(source, afterDead + 4, prefix);
+                                continue;
+                            }
+                            endedChainPos = afterDead;
+                            break;
                         }
+                        if isComptimeElse and parsedCond.constant and parsedCond.boolValue {
+                            hasElse = true;
+                            elseArmOpen = parsedCond.openPos - 1;
+                            position = parsedCond.openPos;
+                            if currentLive { mut items.pushBack((kind = ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                            (mut blocks).pushBack(if blockKind == BLOCK_KIND_IF_VALUE { BLOCK_KIND_IF_VALUE } else { BLOCK_KIND_ELSE });
+                            blockCount = blockCount + 1;
+                            break;
+                        }
+                        conditionCode := parsedCond.code;
+                        position = parsedCond.openPos;
+                        elseArmOpen = position - 1;
+                        if currentLive {
+                            mut items.pushBack((kind = ITEM_KIND_ELSE_IF, name = "", runtime = "", code = conditionCode,
+                            intValue = 0, textValue = ""));
+                            if codeHasRawTransfer(conditionCode) {
+                                mut transferCodes.pushBack(conditionCode);
+                                transferCount = transferCount + 1;
+                            }
+                        }
+                        (mut blocks).pushBack(blockKind);
+                        blockCount = blockCount + 1;
+                        break;
+                    } else {
+                        rejectMisplacedTag(source, afterElse, prefix, "block tag cannot appear after else");
+                        if currentLive { mut items.pushBack((kind = ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                        (mut blocks).pushBack(if blockKind == BLOCK_KIND_IF_VALUE { BLOCK_KIND_IF_VALUE } else { BLOCK_KIND_ELSE });
+                        blockCount = blockCount + 1;
+                        position = expectSymbol(source, afterElse, "{", prefix);
+                        elseArmOpen = position - 1;
+                        break;
                     }
-                    (mut blocks).pushBack(blockKind);
-                    blockCount = blockCount + 1;
-                } else {
-                    if currentLive { mut items.pushBack((kind = ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
-                    (mut blocks).pushBack(if blockKind == BLOCK_KIND_IF_VALUE { BLOCK_KIND_IF_VALUE } else { BLOCK_KIND_ELSE });
-                    blockCount = blockCount + 1;
-                    position = expectSymbol(source, afterElse, "{", prefix);
-                    elseArmOpen = position - 1;
+                }
+                if endedChainPos >= 0 {
+                    depth = depth - 1;
+                    droppedCondCtx := mut stmtCtxs.popBack();
+                    if currentLive { mut items.pushBack((kind = ITEM_KIND_END_IF, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                    parent := mut savedStates.popBack();
+                    locals = joinBranchLocals(truncateLocals(locals, parent.preLocalsLen), parent.preLocalsLen, blockCount + 1, false, liveBranchCount, branchUpdates);
+                    branchUpdates = popBranchUpdates(branchUpdates, blockCount + 1);
+                    liveBranchCount = parent.liveBranchCount;
+                    currentReturned = parent.returned;
+                    currentStopped = parent.stopped;
+                    branchesReturned = parent.branchesReturned;
+                    branchesStopped = parent.branchesStopped;
+                    hasElse = parent.hasElse;
+                    loopForever = parent.loopForever;
+                    currentLive = parent.live;
+                    position = endedChainPos;
+                    if position < size and source.at(position) == ";" {
+                        position = skipTrivia(source, position + 1, prefix);
+                    }
+                    continue;
                 }
                 if hasInnerAlias { aliases = collectBlockTypeAliases(source, elseArmOpen, prefix, depth, aliases); }
                 if hasInnerFn and blockHasInnerFn(source, elseArmOpen, prefix) >= 0 {
@@ -1647,13 +1777,6 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 continue;
             }
             if blockKind == BLOCK_KIND_MATCH or blockKind == BLOCK_KIND_MATCH_VALUE {
-                nextArmStart := skipItemSeparators(source, position + 1, prefix);
-                if nextArmStart >= size {
-                    failAt(source, position + 1, prefix, "expected } to close match");
-                }
-                if source.at(nextArmStart) == "}" {
-                    failAt(source, nextArmStart, prefix, "subjectless match requires a final _ fallback arm");
-                }
                 locals = visibleLocals(locals, depth);
                 blockDecls = popBlockDecls(blockDecls, depth);
                 blockAssignedDecls = popBlockDecls(blockAssignedDecls, depth);
@@ -1670,22 +1793,32 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 branchesStopped = branchesStopped and currentStopped;
                 currentReturned = false;
                 currentStopped = false;
+                isComptimeMatchArm := localIndex(locals, "$comptimeActive") >= 0;
                 droppedMatch := mut blocks.popBack();
                 blockCount = blockCount - 1;
-                afterUnderscore := skipTrivia(source, nextArmStart + 1, prefix);
-                if source.wordAt(nextArmStart, "_") {
-                    rejectMisplacedTag(source, afterUnderscore, prefix, "block tag cannot appear after _ in match arm");
-                }
-                isFallback := source.wordAt(nextArmStart, "_") and afterUnderscore < size and
-                source.at(afterUnderscore) == "{";
+                var nextArmStart := skipItemSeparators(source, position + 1, prefix);
                 var armOpen := -1;
-                if isFallback {
-                    armOpen = afterUnderscore;
-                    hasElse = true;
-                    if currentLive { mut items.pushBack((kind = ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
-                    (mut blocks).pushBack(if blockKind == BLOCK_KIND_MATCH_VALUE { BLOCK_KIND_MATCH_ELSE_VALUE } else { BLOCK_KIND_MATCH_ELSE });
-                    blockCount = blockCount + 1;
-                } else {
+                loop true {
+                    if nextArmStart >= size {
+                        failAt(source, position + 1, prefix, "expected } to close match");
+                    }
+                    if source.at(nextArmStart) == "}" {
+                        failAt(source, nextArmStart, prefix, "subjectless match requires a final _ fallback arm");
+                    }
+                    afterUnderscore := skipTrivia(source, nextArmStart + 1, prefix);
+                    if source.wordAt(nextArmStart, "_") {
+                        rejectMisplacedTag(source, afterUnderscore, prefix, "block tag cannot appear after _ in match arm");
+                    }
+                    isFallback := source.wordAt(nextArmStart, "_") and afterUnderscore < size and
+                    source.at(afterUnderscore) == "{";
+                    if isFallback {
+                        armOpen = afterUnderscore;
+                        hasElse = true;
+                        if currentLive { mut items.pushBack((kind = ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                        (mut blocks).pushBack(if blockKind == BLOCK_KIND_MATCH_VALUE { BLOCK_KIND_MATCH_ELSE_VALUE } else { BLOCK_KIND_MATCH_ELSE });
+                        blockCount = blockCount + 1;
+                        break;
+                    }
                     armOpen = scanConditionOpen(source, nextArmStart, prefix);
                     if armOpen < 0 {
                         failAt(source, nextArmStart, prefix, "expected { after match arm condition");
@@ -1707,6 +1840,17 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         failAt(source, nextArmStart, prefix, "match arm condition must be Bool");
                     }
                     locals = checkStatementTrace(target, source, nextArmStart, prefix, condition.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive);
+                    if isComptimeMatchArm and condition.constant and condition.intValue == 0 {
+                        nextArmStart = skipItemSeparators(source, scanBraceEnd(source, armOpen, prefix), prefix);
+                        continue;
+                    }
+                    if isComptimeMatchArm and condition.constant and condition.intValue =!= 0 {
+                        hasElse = true;
+                        if currentLive { mut items.pushBack((kind = ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+                        (mut blocks).pushBack(if blockKind == BLOCK_KIND_MATCH_VALUE { BLOCK_KIND_MATCH_ELSE_VALUE } else { BLOCK_KIND_MATCH_ELSE });
+                        blockCount = blockCount + 1;
+                        break;
+                    }
                     conditionCode := if condition.constant {
                         ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
                     } else {
@@ -1722,6 +1866,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     }
                     (mut blocks).pushBack(blockKind);
                     blockCount = blockCount + 1;
+                    break;
                 }
                 if hasInnerAlias { aliases = collectBlockTypeAliases(source, armOpen, prefix, depth, aliases); }
                 if hasInnerFn and blockHasInnerFn(source, armOpen, prefix) >= 0 {
@@ -1732,16 +1877,27 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 position = skipTrivia(source, armOpen + 1, prefix);
                 continue;
             }
-            var closeBracePos := position;
-            if blockKind == BLOCK_KIND_MATCH_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE or blockKind == BLOCK_KIND_MATCH_SINGLE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE {
-                afterFallback := skipItemSeparators(source, position + 1, prefix);
-                if afterFallback >= size {
-                    failAt(source, position + 1, prefix, "expected } to close match");
+            var nextAfterBlock := position + 1;
+            isComptimeClose := localIndex(locals, "$comptimeActive") >= 0;
+            if blockKind == BLOCK_KIND_COMPTIME_IF or blockKind == BLOCK_KIND_COMPTIME_IF_VALUE {
+                nextAfterBlock = skipTrailingElseChain(source, position + 1, prefix);
+            } else if blockKind == BLOCK_KIND_COMPTIME_MATCH or blockKind == BLOCK_KIND_COMPTIME_MATCH_VALUE {
+                nextAfterBlock = skipRemainingMatchArms(source, position + 1, prefix);
+            } else if isComptimeClose and hasElse and (blockKind == BLOCK_KIND_IF or blockKind == BLOCK_KIND_IF_VALUE or blockKind == BLOCK_KIND_ELSE) {
+                nextAfterBlock = skipTrailingElseChain(source, position + 1, prefix);
+            } else if blockKind == BLOCK_KIND_MATCH_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE or blockKind == BLOCK_KIND_MATCH_SINGLE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE {
+                if isComptimeClose and (blockKind == BLOCK_KIND_MATCH_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE) {
+                    nextAfterBlock = skipRemainingMatchArms(source, position + 1, prefix);
+                } else {
+                    afterFallback := skipItemSeparators(source, position + 1, prefix);
+                    if afterFallback >= size {
+                        failAt(source, position + 1, prefix, "expected } to close match");
+                    }
+                    if source.at(afterFallback) =!= "}" {
+                        failAt(source, afterFallback, prefix, "match fallback _ must be the final arm");
+                    }
+                    nextAfterBlock = afterFallback + 1;
                 }
-                if source.at(afterFallback) =!= "}" {
-                    failAt(source, afterFallback, prefix, "match fallback _ must be the final arm");
-                }
-                closeBracePos = afterFallback;
             }
             locals = visibleLocals(locals, depth);
             keptDecls := popBlockDecls(blockDecls, depth);
@@ -1812,7 +1968,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 if currentLive { mut items.pushBack((kind = ITEM_KIND_END_LOOP, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             } else if blockKind == BLOCK_KIND_SCOPE {
                 if currentLive { mut items.pushBack((kind = ITEM_KIND_END_SCOPE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
-            } else if blockKind == BLOCK_KIND_MATCH_SINGLE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE {
+            } else if blockKind == BLOCK_KIND_MATCH_SINGLE or blockKind == BLOCK_KIND_MATCH_SINGLE_VALUE or blockKind == BLOCK_KIND_COMPTIME_IF or blockKind == BLOCK_KIND_COMPTIME_IF_VALUE or blockKind == BLOCK_KIND_COMPTIME_MATCH or blockKind == BLOCK_KIND_COMPTIME_MATCH_VALUE {
                 droppedCondCtx := mut stmtCtxs.popBack();
                 if currentLive { mut items.pushBack((kind = ITEM_KIND_END_SCOPE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             } else {
@@ -1850,7 +2006,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             droppedBlock := mut blocks.popBack();
             blockCount = blockCount - 1;
             if monoInstIdx >= 0 and blockCount == 0 { break; }
-            position = skipTrivia(source, closeBracePos + 1, prefix);
+            position = skipTrivia(source, nextAfterBlock, prefix);
             if position < size and source.at(position) == ";" {
                 position = skipTrivia(source, position + 1, prefix);
             }
@@ -2441,32 +2597,82 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     }
                 }
             }
-            conditionStart := position;
-            rejectHeaderBlockTag(source, conditionStart, prefix, "if");
+            isComptimeIfCtx := localIndex(locals, "$comptimeActive") >= 0;
+            var curCondStart := position;
+            rejectHeaderBlockTag(source, curCondStart, prefix, "if");
             ifBarrierCtx := (id = 0, tag = "", kind = CTX_KIND_IF, phase = CTX_PHASE_BODY, iifeDepth = 0,
             valKind = "", valVar = "", label = "", iterLabel = "", countVar = "",
             itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
-            condition := parseExpressionCtx(target, source, position, prefix, locals, functions, functionParams, currentName,
-            appendCtx(stmtCtxs, ifBarrierCtx), aliases);
-            if condition.kind =!= VALUE_KIND_BOOL {
-                failAt(source, conditionStart, prefix, "if condition must be Bool");
+            var resolvedBranchOpen := -1;
+            var resolvedCondCode := "";
+            var useComptimeScope := false;
+            var skippedAllBranches := false;
+            var skippedEndPos := -1;
+            loop true {
+                condition := parseExpressionCtx(target, source, curCondStart, prefix, locals, functions, functionParams, currentName,
+                appendCtx(stmtCtxs, ifBarrierCtx), aliases);
+                if condition.kind =!= VALUE_KIND_BOOL {
+                    failAt(source, curCondStart, prefix, "if condition must be Bool");
+                }
+                locals = checkStatementTrace(target, source, curCondStart, prefix, condition.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+                beforeIfOpen := skipTrivia(source, condition.next, prefix);
+                rejectMisplacedTag(source, beforeIfOpen, prefix, "block tag cannot appear before { in if");
+                openAfter := expectSymbol(source, beforeIfOpen, "{", prefix);
+                openBrace := openAfter - 1;
+                if isComptimeIfCtx and condition.constant and condition.intValue == 0 {
+                    afterDead := skipTrivia(source, scanBraceEnd(source, openBrace, prefix), prefix);
+                    if afterDead < size and source.wordAt(afterDead, "else") {
+                        afterElse := skipTrivia(source, afterDead + 4, prefix);
+                        rejectMisplacedTag(source, afterElse, prefix, "block tag cannot appear after else");
+                        if source.wordAt(afterElse, "if") {
+                            curCondStart = skipTrivia(source, afterElse + 2, prefix);
+                            rejectHeaderBlockTag(source, curCondStart, prefix, "else if");
+                            continue;
+                        }
+                        elseAfter := expectSymbol(source, afterElse, "{", prefix);
+                        resolvedBranchOpen = elseAfter - 1;
+                        useComptimeScope = true;
+                        break;
+                    }
+                    skippedAllBranches = true;
+                    skippedEndPos = afterDead;
+                    break;
+                }
+                if isComptimeIfCtx and condition.constant and condition.intValue =!= 0 {
+                    resolvedBranchOpen = openBrace;
+                    useComptimeScope = true;
+                    break;
+                }
+                resolvedCondCode = if condition.constant {
+                    ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
+                } else {
+                    condition.code
+                };
+                resolvedBranchOpen = openBrace;
+                useComptimeScope = false;
+                break;
             }
-            locals = checkStatementTrace(target, source, conditionStart, prefix, condition.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
-            conditionCode := if condition.constant {
-                ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
-            } else {
-                condition.code
-            };
-            beforeIfOpen := skipTrivia(source, condition.next, prefix);
-            rejectMisplacedTag(source, beforeIfOpen, prefix, "block tag cannot appear before { in if");
-            position = expectSymbol(source, beforeIfOpen, "{", prefix);
-            ifOpenBrace := position - 1;
+            if skippedAllBranches {
+                if currentLive and not currentStopped and valueTailBranch and currentResult =!= VALUE_KIND_UNIT {
+                    failAt(source, skippedEndPos, prefix, "branch of function " + currentName + " must return " + displayKind(currentResult));
+                }
+                position = skippedEndPos;
+                if position < size and source.at(position) == ";" {
+                    position = skipTrivia(source, position + 1, prefix);
+                }
+                continue;
+            }
+            position = resolvedBranchOpen + 1;
             if currentLive and not currentStopped {
-                mut items.pushBack((kind = ITEM_KIND_IF, name = "", runtime = "", code = conditionCode,
-                intValue = 0, textValue = ""));
-                if codeHasRawTransfer(conditionCode) {
-                    mut transferCodes.pushBack(conditionCode);
-                    transferCount = transferCount + 1;
+                if useComptimeScope {
+                    mut items.pushBack((kind = ITEM_KIND_SCOPE, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                } else {
+                    mut items.pushBack((kind = ITEM_KIND_IF, name = "", runtime = "", code = resolvedCondCode,
+                    intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(resolvedCondCode) {
+                        mut transferCodes.pushBack(resolvedCondCode);
+                        transferCount = transferCount + 1;
+                    }
                 }
             }
             (mut savedStates).pushBack((returned = currentReturned, stopped = currentStopped,
@@ -2478,19 +2684,24 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             currentStopped = false;
             branchesReturned = true;
             branchesStopped = true;
-            hasElse = false;
+            hasElse = useComptimeScope;
             loopForever = false;
             mut stmtCtxs.pushBack(ifBarrierCtx);
-            mut blocks.pushBack(if valueTailBranch { BLOCK_KIND_IF_VALUE } else { BLOCK_KIND_IF });
+            pushedIfKind := if useComptimeScope {
+                if valueTailBranch { BLOCK_KIND_COMPTIME_IF_VALUE } else { BLOCK_KIND_COMPTIME_IF }
+            } else {
+                if valueTailBranch { BLOCK_KIND_IF_VALUE } else { BLOCK_KIND_IF }
+            };
+            mut blocks.pushBack(pushedIfKind);
             blockCount = blockCount + 1;
             depth = depth + 1;
             if hasInnerAlias {
-                aliases = collectBlockTypeAliases(source, ifOpenBrace, prefix, depth, aliases);
+                aliases = collectBlockTypeAliases(source, resolvedBranchOpen, prefix, depth, aliases);
             }
-            if hasInnerFn and blockHasInnerFn(source, ifOpenBrace, prefix) >= 0 {
-                ifAssignedBag := scanInnerBlockAssignedBag(target, source, ifOpenBrace, prefix, "");
+            if hasInnerFn and blockHasInnerFn(source, resolvedBranchOpen, prefix) >= 0 {
+                ifAssignedBag := scanInnerBlockAssignedBag(target, source, resolvedBranchOpen, prefix, "");
                 blockAssignedDecls = appendAssignedBagDecls(ifAssignedBag, blockAssignedDecls, depth);
-                locals = appendBlockFutureLocals(target, source, ifOpenBrace, prefix, depth, "", ifAssignedBag, aliases, functions, functionParams, locals);
+                locals = appendBlockFutureLocals(target, source, resolvedBranchOpen, prefix, depth, "", ifAssignedBag, aliases, functions, functionParams, locals);
             }
             position = skipTrivia(source, position, prefix);
             continue;
@@ -2573,60 +2784,77 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 position = skipItemSeparators(source, subStmt.next, prefix);
                 continue;
             }
-            firstArmStart := skipItemSeparators(source, position + 1, prefix);
-            if firstArmStart >= size {
-                failAt(source, position, prefix, "expected } to close match");
-            }
-            if source.at(firstArmStart) == "}" {
-                failAt(source, firstArmStart, prefix, "subjectless match requires a final _ fallback arm");
-            }
-            afterUnderscore := skipTrivia(source, firstArmStart + 1, prefix);
-            if source.wordAt(firstArmStart, "_") {
-                rejectMisplacedTag(source, afterUnderscore, prefix, "block tag cannot appear after _ in match arm");
-            }
-            isFirstFallback := source.wordAt(firstArmStart, "_") and afterUnderscore < size and
-            source.at(afterUnderscore) == "{";
+            isComptimeMatchCtx := localIndex(locals, "$comptimeActive") >= 0;
             matchBarrierCtx := (id = 0, tag = "", kind = CTX_KIND_MATCH, phase = CTX_PHASE_BODY, iifeDepth = 0,
             valKind = "", valVar = "", label = "", iterLabel = "", countVar = "",
             itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
+            var armScan := skipItemSeparators(source, position + 1, prefix);
             var firstArmOpen := -1;
-            if isFirstFallback {
-                firstArmOpen = afterUnderscore;
-                if currentLive and not currentStopped { mut items.pushBack((kind = ITEM_KIND_SCOPE, name = "", runtime = "", code = "",
-                    intValue = 0, textValue = "")); }
-            } else {
-                firstArmOpen = scanConditionOpen(source, firstArmStart, prefix);
-                if firstArmOpen < 0 {
-                    failAt(source, firstArmStart, prefix, "expected { after match arm condition");
+            var isFirstFallback := false;
+            var isComptimeTrueArm := false;
+            var matchCondCode := "";
+            loop true {
+                if armScan >= size {
+                    failAt(source, position, prefix, "expected } to close match");
                 }
-                if firstArmOpen == firstArmStart {
-                    failAt(source, firstArmStart, prefix, "match arm header requires grouping for { ... } expressions");
+                if source.at(armScan) == "}" {
+                    failAt(source, armScan, prefix, "subjectless match requires a final _ fallback arm");
                 }
-                rejectHeaderBlockTag(source, firstArmStart, prefix, "match arm");
-                condition := parseExpressionCtx(target, source, firstArmStart, prefix, locals, functions, functionParams, currentName,
+                afterUnderscore := skipTrivia(source, armScan + 1, prefix);
+                if source.wordAt(armScan, "_") {
+                    rejectMisplacedTag(source, afterUnderscore, prefix, "block tag cannot appear after _ in match arm");
+                }
+                if source.wordAt(armScan, "_") and afterUnderscore < size and source.at(afterUnderscore) == "{" {
+                    isFirstFallback = true;
+                    firstArmOpen = afterUnderscore;
+                    break;
+                }
+                candOpen := scanConditionOpen(source, armScan, prefix);
+                if candOpen < 0 {
+                    failAt(source, armScan, prefix, "expected { after match arm condition");
+                }
+                if candOpen == armScan {
+                    failAt(source, armScan, prefix, "match arm header requires grouping for { ... } expressions");
+                }
+                rejectHeaderBlockTag(source, armScan, prefix, "match arm");
+                condition := parseExpressionCtx(target, source, armScan, prefix, locals, functions, functionParams, currentName,
                 appendCtx(stmtCtxs, matchBarrierCtx), aliases);
                 afterCond := skipTrivia(source, condition.next, prefix);
                 rejectMisplacedTag(source, afterCond, prefix, "block tag cannot appear before { in match arm");
-                if afterCond > firstArmOpen {
-                    failAt(source, firstArmOpen, prefix, "ungrouped { in match arm header starts the arm body; parenthesize block or conditional expressions");
+                if afterCond > candOpen {
+                    failAt(source, candOpen, prefix, "ungrouped { in match arm header starts the arm body; parenthesize block or conditional expressions");
                 }
-                if afterCond =!= firstArmOpen {
+                if afterCond =!= candOpen {
                     _ := expectSymbol(source, afterCond, "{", prefix);
                 }
                 if condition.kind =!= VALUE_KIND_BOOL {
-                    failAt(source, firstArmStart, prefix, "match arm condition must be Bool");
+                    failAt(source, armScan, prefix, "match arm condition must be Bool");
                 }
-                locals = checkStatementTrace(target, source, firstArmStart, prefix, condition.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
-                conditionCode := if condition.constant {
+                locals = checkStatementTrace(target, source, armScan, prefix, condition.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+                if isComptimeMatchCtx and condition.constant and condition.intValue == 0 {
+                    armScan = skipItemSeparators(source, scanBraceEnd(source, candOpen, prefix), prefix);
+                    continue;
+                }
+                if isComptimeMatchCtx and condition.constant and condition.intValue =!= 0 {
+                    isComptimeTrueArm = true;
+                    firstArmOpen = candOpen;
+                    break;
+                }
+                matchCondCode = if condition.constant {
                     ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
                 } else {
                     condition.code
                 };
-                if currentLive and not currentStopped {
-                    mut items.pushBack((kind = ITEM_KIND_IF, name = "", runtime = "", code = conditionCode,
-                    intValue = 0, textValue = ""));
-                    if codeHasRawTransfer(conditionCode) {
-                        mut transferCodes.pushBack(conditionCode);
+                firstArmOpen = candOpen;
+                break;
+            }
+            if currentLive and not currentStopped {
+                if isFirstFallback or isComptimeTrueArm {
+                    mut items.pushBack((kind = ITEM_KIND_SCOPE, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                } else {
+                    mut items.pushBack((kind = ITEM_KIND_IF, name = "", runtime = "", code = matchCondCode, intValue = 0, textValue = ""));
+                    if codeHasRawTransfer(matchCondCode) {
+                        mut transferCodes.pushBack(matchCondCode);
                         transferCount = transferCount + 1;
                     }
                 }
@@ -2640,9 +2868,11 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             currentStopped = false;
             branchesReturned = true;
             branchesStopped = true;
-            hasElse = isFirstFallback;
+            hasElse = isFirstFallback or isComptimeTrueArm;
             loopForever = false;
-            firstBlockKind := if isFirstFallback {
+            firstBlockKind := if isComptimeTrueArm {
+                if valueTailBranch { BLOCK_KIND_COMPTIME_MATCH_VALUE } else { BLOCK_KIND_COMPTIME_MATCH }
+            } else if isFirstFallback {
                 if valueTailBranch { BLOCK_KIND_MATCH_SINGLE_VALUE } else { BLOCK_KIND_MATCH_SINGLE }
             } else {
                 if valueTailBranch { BLOCK_KIND_MATCH_VALUE } else { BLOCK_KIND_MATCH }
@@ -3114,14 +3344,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             seenAliases: mut List<String> = [depth.toText() + ":" + name];
             resolvedType := if gp.hasParams {
+                scopedAliasEnv := aliasesUpToDepth(aliases, depth);
+                resolvedParams := types.resolveComptimeParamSpecs(source, typePosition + 5, prefix, scopedAliasEnv, gp.paramsCsv);
                 rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
                     pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
                     if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
                 } else {
                     aliasEntry.target
                 };
-                tplKind := types.resolveGenericTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), rawInner, gp.paramsCsv, seenAliases);
-                "@gentpl:" + types.encodeLengthPrefixedText(gp.paramsCsv) + tplKind
+                tplKind := types.resolveGenericTypeText(source, targetStart, prefix, scopedAliasEnv, rawInner, resolvedParams, seenAliases);
+                "@gentpl:" + types.encodeLengthPrefixedText(resolvedParams) + tplKind
             } else {
                 resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenAliases)
             };
@@ -3170,14 +3402,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             seenDistinct: mut List<String> = [depth.toText() + ":" + name];
             resolvedDistinct := if gp.hasParams {
+                scopedDistEnv := aliasesUpToDepth(aliases, depth);
+                resolvedParams := types.resolveComptimeParamSpecs(source, distPosition + 8, prefix, scopedDistEnv, gp.paramsCsv);
                 rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
                     pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
                     if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
                 } else {
                     aliasEntry.target
                 };
-                tplKind := types.resolveGenericTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), rawInner, gp.paramsCsv, seenDistinct);
-                "@gentpl:" + types.encodeLengthPrefixedText(gp.paramsCsv) + tplKind
+                tplKind := types.resolveGenericTypeText(source, targetStart, prefix, scopedDistEnv, rawInner, resolvedParams, seenDistinct);
+                "@gentpl:" + types.encodeLengthPrefixedText(resolvedParams) + tplKind
             } else {
                 resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenDistinct)
             };
@@ -3266,14 +3500,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             emptySeen: List<String> = [depth.toText() + ":" + name];
             resolvedEnum := if gp.hasParams {
+                scopedEnumEnv := aliasesUpToDepth(aliases, depth);
+                resolvedParams := types.resolveComptimeParamSpecs(source, afterDefinition + 4, prefix, scopedEnumEnv, gp.paramsCsv);
                 rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
                     pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
                     if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
                 } else {
                     aliasEntry.target
                 };
-                tplKind := types.resolveGenericTypeText(source, afterDefinition, prefix, aliasesUpToDepth(aliases, depth), rawInner, gp.paramsCsv, emptySeen);
-                "@gentpl:" + types.encodeLengthPrefixedText(gp.paramsCsv) + tplKind
+                tplKind := types.resolveGenericTypeText(source, afterDefinition, prefix, scopedEnumEnv, rawInner, resolvedParams, emptySeen);
+                "@gentpl:" + types.encodeLengthPrefixedText(resolvedParams) + tplKind
             } else {
                 resolveTypeText(source, afterDefinition, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, emptySeen)
             };
