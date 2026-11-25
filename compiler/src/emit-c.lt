@@ -39,6 +39,7 @@ dedent := fn(indent: String): String {
 
 /** Returns the C11 scalar list tag (`i64`, `f64`, `bool`, `str`) for a List/Array kind, or `""` if not a C-supported list/array. */
 cListTagForKind := fn(kind: String): String {
+    if frontend.isDistinctKind(kind) { return self(frontend.distinctBaseKind(kind)); }
     if frontend.isListKind(kind) { frontend.cListTag(frontend.listElementKind(kind)) }
     else if frontend.isArrayKind(kind) { frontend.cListTag(frontend.arrayElementKind(kind)) }
     else { "" }
@@ -46,6 +47,7 @@ cListTagForKind := fn(kind: String): String {
 
 /** Maps a restricted Lite scalar, enum, struct, map, set, list/array, or Unit/Never kind to its C11 type. */
 cScalarType := fn(kind: String): String {
+    if frontend.isDistinctKind(kind) { return self(frontend.distinctBaseKind(kind)); }
     listTag := cListTagForKind(kind);
     if listTag =!= "" { "lt_list_" + listTag }
     else if frontend.cMapTag(kind) =!= "" { frontend.cMapTag(kind) }
@@ -77,6 +79,7 @@ cDeclTypeItem := fn(item: frontend.Item): String {
 
 /** Fails cleanly when a reachable scalar/function signature references an unsupported C type. */
 checkUnsupportedCType := fn(kind: String): Unit {
+    if frontend.isDistinctKind(kind) { self(frontend.distinctBaseKind(kind)); return; }
     if frontend.isTupleKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support tuple values yet"); }
     if frontend.isMapKind(kind) and frontend.cMapTag(kind) == "" { diagLib.fail("", "C backend does not support map values yet"); }
     if frontend.isSetKind(kind) and frontend.cSetTag(kind) == "" { diagLib.fail("", "C backend does not support set values yet"); }
@@ -647,6 +650,7 @@ normalizeCBuiltinCalls := fn(code: String): String {
 
 /** Builds one checked printf call for an Int*, Float*, String, Bool, Unit or Never report value without a trailing newline. */
 cCall := fn(kind: String, code: String): String {
+    if frontend.isDistinctKind(kind) { return self(frontend.distinctBaseKind(kind), code); }
     match {
         kind == frontend.VALUE_KIND_NEVER { "((void)(" + code + "), 0)" }
         kind == frontend.VALUE_KIND_UNIT {
@@ -2353,6 +2357,7 @@ emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, h
 /** Emits the C program from the flat item stream with explicit `--builtin-mode` specifications and optimization level (`0..3`). */
 /** Returns all C-supported struct (`S|<kind>`), list (`L|<elemKind>`), map (`M|<kind>`), and set (`E|<kind>`) types referenced by `kind` in post-order. */
 collectSubKinds := fn(kind: String): List<String> {
+    if frontend.isDistinctKind(kind) { return self(frontend.distinctBaseKind(kind)); }
     out: mut List<String> = [];
     if frontend.isListKind(kind) or frontend.isArrayKind(kind) {
         elKind := if frontend.isListKind(kind) { frontend.listElementKind(kind) } else { frontend.arrayElementKind(kind) };
@@ -2420,6 +2425,7 @@ collectSubKinds := fn(kind: String): List<String> {
 
 /** Returns all struct/list/map/set tags and `"FLOAT"`/`"FLOAT32"`/`"STR"` markers reachable inside `kind` for print/copy/float tracking. */
 collectTypeFlags := fn(kind: String): List<String> {
+    if frontend.isDistinctKind(kind) { return self(frontend.distinctBaseKind(kind)); }
     out: mut List<String> = [];
     if kind == frontend.VALUE_KIND_STRING {
         mut out.pushBack("STR");
@@ -4802,17 +4808,21 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     fnRefTokens: mut Set<String>;
     var fnDepth := 0;
     loop reachable as item {
-        if frontend.isFloatScalarKind(item.kind) { floatOutput = true; }
-        if frontend.isFloatScalarKind(item.kind) or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or
-        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isFloatScalarKind(item.name)) { floatValues = true; }
-        if item.kind == frontend.VALUE_KIND_FLOAT32 or (item.kind == frontend.ITEM_KIND_DISCARD and item.name == frontend.VALUE_KIND_FLOAT32) { float32Values = true; }
+        baseItemKind := frontend.distinctBaseKind(item.kind);
+        baseDiscardKind := if item.kind == frontend.ITEM_KIND_DISCARD { frontend.distinctBaseKind(item.name) } else { "" };
+        if frontend.isFloatScalarKind(baseItemKind) { floatOutput = true; }
+        if frontend.isFloatScalarKind(baseItemKind) or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or
+        (frontend.isDistinctKind(item.textValue) and frontend.isFloatScalarKind(frontend.distinctBaseKind(item.textValue))) or
+        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isFloatScalarKind(baseDiscardKind)) { floatValues = true; }
+        if baseItemKind == frontend.VALUE_KIND_FLOAT32 or (item.kind == frontend.ITEM_KIND_DISCARD and baseDiscardKind == frontend.VALUE_KIND_FLOAT32) { float32Values = true; }
         if item.kind == frontend.ITEM_KIND_UNREACHABLE { hasUnreachable = true; }
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
             hasFunctions = true;
             fnDepth = fnDepth + 1;
             checkCFunctionSignature(item);
-            if frontend.isFloatScalarKind(item.code) { floatValues = true; }
-            if item.code == frontend.VALUE_KIND_FLOAT32 { float32Values = true; }
+            baseRetKind := frontend.distinctBaseKind(item.code);
+            if frontend.isFloatScalarKind(baseRetKind) { floatValues = true; }
+            if baseRetKind == frontend.VALUE_KIND_FLOAT32 { float32Values = true; }
             if item.textValue.indexOf("=Float", 0) >= 0 { floatValues = true; }
             if item.textValue.indexOf("=Float32", 0) >= 0 { float32Values = true; }
         } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
@@ -4839,7 +4849,11 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isSetKind(item.name) and frontend.cSetTag(item.name) == "") {
             diagLib.fail("", "C backend does not support set values yet");
         }
-        isUnsupportedRecordDecl := (item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD) and not frontend.isEnumKind(item.textValue) and frontend.cStructTag(item.textValue) == "" and frontend.cMapTag(item.textValue) == "" and frontend.cSetTag(item.textValue) == "";
+        isSupportedDistDecl := if frontend.isDistinctKind(item.textValue) {
+            base := frontend.distinctBaseKind(item.textValue);
+            frontend.isIntScalarKind(base) or frontend.isFloatScalarKind(base) or base == frontend.VALUE_KIND_BOOL or base == frontend.VALUE_KIND_STRING or frontend.isEnumKind(base) or cListTagForKind(base) =!= "" or frontend.cStructTag(base) =!= "" or frontend.cMapTag(base) =!= "" or frontend.cSetTag(base) =!= "" or frontend.cFnTag(base) =!= ""
+        } else { false };
+        isUnsupportedRecordDecl := (item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD) and not frontend.isEnumKind(item.textValue) and not isSupportedDistDecl and frontend.cStructTag(item.textValue) == "" and frontend.cMapTag(item.textValue) == "" and frontend.cSetTag(item.textValue) == "";
         if (frontend.isRecordKind(item.kind) and frontend.cStructTag(item.kind) == "") or
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isRecordKind(item.name) and frontend.cStructTag(item.name) == "") or isUnsupportedRecordDecl {
             diagLib.fail("", "C backend does not support record values yet");

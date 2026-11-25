@@ -634,7 +634,8 @@ collectSymbols := fn(tokens: lexer.Tokens, prefix: String): Symbols {
         if parser.isSymbol(token, ";") { cursor = cursor + 1; continue; }
         if token.kind == lexer.TOKEN_KIND_EOF { break; }
         if token.kind == lexer.TOKEN_KIND_NAME and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") and
-            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD and parser.tokenTextAt(tokens, cursor + 2) == "type" {
+            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD and
+            (parser.tokenTextAt(tokens, cursor + 2) == "type" or parser.tokenTextAt(tokens, cursor + 2) == "alias" or parser.tokenTextAt(tokens, cursor + 2) == "distinct") {
             afterName := parser.expectSymbol(tokens, cursor + 1, ":=", prefix);
             parsedType := parser.parseType(tokens, afterName + 1, prefix);
             ended := parser.expectSymbol(tokens, parsedType.next, ";", prefix);
@@ -862,7 +863,8 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
         if parser.isSymbol(token, "[") { brackets = brackets + 1; cursor = cursor + 1; continue; }
         if parser.isSymbol(token, "]") { brackets = brackets - 1; cursor = cursor + 1; continue; }
         if token.kind == lexer.TOKEN_KIND_NAME and parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") and
-            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD and parser.tokenTextAt(tokens, cursor + 2) == "type" {
+            parser.tokenKindAt(tokens, cursor + 2) == lexer.TOKEN_KIND_KEYWORD and
+            (parser.tokenTextAt(tokens, cursor + 2) == "type" or parser.tokenTextAt(tokens, cursor + 2) == "alias" or parser.tokenTextAt(tokens, cursor + 2) == "distinct") {
             afterName := parser.expectSymbol(tokens, cursor + 1, ":=", prefix);
             aliasType := parser.parseType(tokens, afterName + 1, prefix);
             cursor = parser.expectSymbol(tokens, aliasType.next, ";", prefix);

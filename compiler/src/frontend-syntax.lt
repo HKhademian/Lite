@@ -200,6 +200,7 @@ pub isReservedWord := fn(name: String): Bool {
     name == "break" or name == "continue" or name == "return" or name == "if" or
     name == "else" or name == "then" or name == "finally" or name == "match" or
     name == "import" or name == "using" or name == "record" or name == "enum" or name == "type" or
+    name == "alias" or name == "distinct" or
     name == "and" or name == "or" or name == "not" or name == "true" or name == "false"
 };
 
@@ -214,6 +215,7 @@ featureDoc := fn(name: String): String {
         name == "match" { "docs/match.md" }
         name == "pub" or name == "import" or name == "using" { "docs/modules-and-packages.md" }
         name == "record" or name == "type" { "docs/types-and-inference.md" }
+        name == "alias" or name == "distinct" { "docs/type-aliases.md" }
         name == "enum" { "docs/enums-and-variants.md" }
         name == "break" or name == "continue" { "docs/control-flow.md" }
         name == "then" or name == "finally" { "docs/finally.md" }
@@ -795,12 +797,20 @@ pub scanBlockFastFlags := fn(source: String, open: Int, prefix: String): (hasFn:
         (cursor == 0 or not source.at(cursor - 1).isNameContinue()) {
             hasFn = true;
             cursor = cursor + 2;
-        } else if (ch == "t" or ch == "r" or ch == "e") and
+        } else if (ch == "t" or ch == "r" or ch == "e" or ch == "a" or ch == "d") and
         (cursor == 0 or not source.at(cursor - 1).isNameContinue()) {
             if ch == "t" and source.wordAt(cursor, "type") {
                 hasAnyAliasKw = true;
                 if depth == 1 { hasAliasKw = true; }
                 cursor = cursor + 4;
+            } else if ch == "a" and source.wordAt(cursor, "alias") {
+                hasAnyAliasKw = true;
+                if depth == 1 { hasAliasKw = true; }
+                cursor = cursor + 5;
+            } else if ch == "d" and source.wordAt(cursor, "distinct") {
+                hasAnyAliasKw = true;
+                if depth == 1 { hasAliasKw = true; }
+                cursor = cursor + 8;
             } else if ch == "r" and source.wordAt(cursor, "record") {
                 hasAnyAliasKw = true;
                 if depth == 1 { hasAliasKw = true; }

@@ -119,6 +119,37 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
     if left.kind =!= right.kind {
         syntax.failAt(source, at, prefix, "cannot compare " + types.displayKind(left.kind) + " and " + types.displayKind(right.kind));
     }
+    if types.isDistinctKind(left.kind) {
+        if operator =!= "==" and operator =!= "=!=" {
+            syntax.failAt(source, at, prefix, "operator " + operator + " requires Int operands");
+        }
+        baseKind := types.distinctBaseKind(left.kind);
+        if baseKind == ir.VALUE_KIND_NEVER { syntax.failAt(source, at, prefix, "cannot compare Never values"); }
+        if types.isTupleKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare tuple values"); }
+        if types.isRecordKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare record values"); }
+        if types.isListKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare list values"); }
+        if types.isMapKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare map values"); }
+        if types.isSetKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare set values"); }
+        if types.isFnKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare function values"); }
+        if numeric.isFloatKind(baseKind) {
+            fCodes: List<String> = [left.code, right.code];
+            fKinds: List<String> = [baseKind, baseKind];
+            fOps: List<String> = [operator];
+            return boolParsed(ir.targetComparisonChainCode(target, fCodes, fKinds, fOps, 1, at), false, false, right.next);
+        }
+        if left.constant and right.constant {
+            value := if baseKind == ir.VALUE_KIND_STRING {
+                compareTexts(operator, left.textValue, right.textValue)
+            } else if numeric.isIntKind(baseKind) or types.isEnumKind(baseKind) {
+                compareIntegers(operator, left.intValue, right.intValue)
+            } else {
+                compareBools(operator, left.intValue =!= 0, right.intValue =!= 0)
+            };
+            return boolParsed(ir.targetBoolLiteralCode(target, value), value, true, right.next);
+        }
+        cmpKind := if numeric.isIntKind(baseKind) or types.isEnumKind(baseKind) { ir.VALUE_KIND_INT } else { baseKind };
+        return boolParsed(ir.targetComparisonCode(target, operator, cmpKind, left.code, right.code), false, false, right.next);
+    }
     if left.kind == ir.VALUE_KIND_NEVER {
         syntax.failAt(source, at, prefix, "cannot compare Never values");
     }
@@ -158,6 +189,7 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
 
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; `Never` and other kinds are unchanged. */
 pub copiedValueCode := fn(target: String, kind: String, code: String): String {
+    if types.isDistinctKind(kind) { return self(target, types.distinctBaseKind(kind), code); }
     if kind == ir.VALUE_KIND_NEVER or (target == ir.TARGET_C and code.startsWithAt(0, "/*@CBLK:")) { code }
     else if types.isListKind(kind) or types.isArrayKind(kind) {
         if target == ir.TARGET_C {
@@ -551,6 +583,10 @@ pub joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List
 
 /** Builds the zero value for one supported local type, including a fresh flat named-tuple object, fixed array, callable stub, and an empty list. */
 pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
+    if types.isDistinctKind(kind) {
+        base := self(target, types.distinctBaseKind(kind), next);
+        return (kind = kind, code = base.code, intValue = base.intValue, textValue = base.textValue, constant = base.constant, next = base.next);
+    }
     if types.isTupleKind(kind) {
         count := types.tupleComponentCount(kind);
         if target == ir.TARGET_C and types.cStructTag(kind) =!= "" {
@@ -1422,7 +1458,7 @@ pub storageKind := fn(kind: String): String {
     match {
         types.isListKind(kind) or types.isArrayKind(kind) { "List" }
         types.isTupleKind(kind) { "Tuple" }
-        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) { "Record" }
+        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) { "Record" }
         types.isFnKind(kind) { "Fn" }
         numeric.isIntKind(kind) { ir.VALUE_KIND_INT }
         numeric.isFloatKind(kind) { ir.VALUE_KIND_FLOAT }
@@ -1432,7 +1468,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

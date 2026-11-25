@@ -1,0 +1,231 @@
+/* Dual-target (TS + C11) regression tests for Milestone 3 Stage 3A: `alias`, `distinct`, and `cast<T>` / `cast`. */
+
+test := import "core/test";
+file := import "core/file";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+runBoth := fn(label: String, src: String, expected: String): Unit {
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+    test.checkInt(label + " ts status: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(label + " ts stderr", "", tsRes.stderr);
+    test.checkText(label + " ts stdout", expected, tsRes.stdout);
+    if ccInfo.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+        test.checkInt(label + " c status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " c stderr", "", cRes.stderr);
+        test.checkText(label + " c stdout parity", tsRes.stdout, cRes.stdout);
+    }
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccInfo.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+/* 1. `:= alias` across scalars, tuples, records, enums, arrays, lists, maps, sets, fns, forward/chained/block aliases. */
+aliasSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"ForwardNum := alias CountAlias;\n" +
+"CountAlias := alias Int;\n" +
+"Pair := alias (left: Int, right: String);\n" +
+"Color := enum { Red; Green; Blue; }\n" +
+"Palette := alias Color;\n" +
+"Pet := record { name: String; age: Int = 2; }\n" +
+"Animal := alias Pet;\n" +
+"Nums := alias [Int; 3];\n" +
+"Bag := alias List<Int>;\n" +
+"Dict := alias Map<String, Int>;\n" +
+"Tags := alias Set<String>;\n" +
+"Transform := alias fn(CountAlias): ForwardNum;\n" +
+"\n" +
+"apply := fn(f: Transform, x: Int): Int { f(x) };\n" +
+"\n" +
+"a: ForwardNum = 10;\n" +
+"b: CountAlias = a;\n" +
+"p: Pair = (left = b, right = \"ok\");\n" +
+"c: Palette = Color.Green;\n" +
+"pet: Animal = Pet { name = \"Rex\" };\n" +
+"arr: Nums = [1, 2, 3];\n" +
+"bag: Bag = [4, 5];\n" +
+"dict: Dict = [\"k\" = 7];\n" +
+"tags: Tags = [\"tag\"];\n" +
+"dbl: Transform = fn(n: Int): Int { n * 2 };\n" +
+"{\n" +
+"    LocalNum := alias Int;\n" +
+"    v: LocalNum = 9;\n" +
+"    io.outputLine(v, apply(dbl, b), p.left, p.right, c == Palette.Green);\n" +
+"}\n" +
+"io.outputLine(pet.name, pet.age, arr[1], bag[0], dict[\"k\"], tags.has(\"tag\"));\n";
+
+runBoth("alias-types", aliasSrc, "9 20 10 ok true\nRex 2 2 4 7 true\n");
+
+/* 2. `:= distinct` across primitives, enums, records, tuples, arrays, collections, chained distinct, `cast<T>` & inferred `cast`. */
+distinctSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"UserId := distinct Int;\n" +
+"OrderId := distinct Int;\n" +
+"Score := distinct Float;\n" +
+"Label := distinct String;\n" +
+"Flag := distinct Bool;\n" +
+"\n" +
+"Status := enum { Ready; Busy; }\n" +
+"WorkerStatus := distinct Status;\n" +
+"\n" +
+"Cat := record { name: String; lives: Int = 9; }\n" +
+"MechaniCat := distinct Cat;\n" +
+"DoctoCat := distinct Cat;\n" +
+"SuperCat := distinct MechaniCat;\n" +
+"\n" +
+"Row := distinct [Int; 3];\n" +
+"Coord := distinct (x: Int, y: Int);\n" +
+"IdList := distinct List<UserId>;\n" +
+"\n" +
+"UserId.next := fn(me: Self): Self { cast(cast<Int>(me) + 1) };\n" +
+"MechaniCat.bump := fn(me: Self): Self {\n" +
+"    c := cast<Cat>(me);\n" +
+"    cast(Cat { name = c.name, lives = c.lives + 1 })\n" +
+"};\n" +
+"MechaniCat.describe := fn(me: Self): String {\n" +
+"    c := cast<Cat>(me);\n" +
+"    c.name + \":\" + c.lives.toText()\n" +
+"};\n" +
+"\n" +
+"takeOrder := fn(o: OrderId): Int { cast(o) };\n" +
+"makeCat := fn(n: String): MechaniCat { cast(Cat { name = n }) };\n" +
+"\n" +
+"var zeroId: UserId;\n" +
+"var zeroScore: Score;\n" +
+"var zeroLabel: Label;\n" +
+"var zeroFlag: Flag;\n" +
+"\n" +
+"u1 := cast<UserId>(42);\n" +
+"u2: UserId = cast(42);\n" +
+"u3 := u1.next();\n" +
+"rawU: Int = cast(u3);\n" +
+"o1: OrderId = cast(100);\n" +
+"\n" +
+"sc := cast<Score>(1.5);\n" +
+"lb: Label = cast(\"alpha\");\n" +
+"fl := cast<Flag>(true);\n" +
+"\n" +
+"ws: WorkerStatus = cast(Status.Busy);\n" +
+"\n" +
+"cat := Cat { name = \"Mittens\" };\n" +
+"var mcat: MechaniCat = cast(cat);\n" +
+"mcat = mcat.bump();\n" +
+"dcat: DoctoCat = cast(cat);\n" +
+"scat: SuperCat = cast(mcat);\n" +
+"backCat: Cat = cast(cast<MechaniCat>(scat));\n" +
+"\n" +
+"row := cast<Row>([10, 20, 30]);\n" +
+"rawRow: [Int; 3] = cast(row);\n" +
+"coord: Coord = cast((x = 3, y = 4));\n" +
+"rawCoord := cast<(x: Int, y: Int)>(coord);\n" +
+"\n" +
+"idList: IdList = cast([u1, u3]);\n" +
+"rawIds: List<UserId> = cast(idList);\n" +
+"\n" +
+"names: mut Map<UserId, String> = [u1 = \"Ada\"];\n" +
+"mut names.set(u3, \"Lin\");\n" +
+"seen: mut Set<UserId> = [u1];\n" +
+"mut seen.add(u2);\n" +
+"\n" +
+"io.outputLine(zeroId, zeroScore, zeroLabel == cast(\"\"), zeroFlag);\n" +
+"io.outputLine(u1 == u2, u1 =!= u3, u1 == u2 =!= u3, rawU, takeOrder(cast(100)), o1 == cast(100));\n" +
+"io.outputLine(sc == cast(1.5), lb == cast(\"alpha\"), fl == cast(true), ws == cast(Status.Busy));\n" +
+"io.outputLine(mcat.describe(), makeCat(\"Bolt\").describe(), cast<Cat>(dcat).name, backCat.lives);\n" +
+"io.outputLine(rawRow[1], rawCoord.x + rawCoord.y, rawIds.length(), names[u3], seen.has(u2));\n" +
+"{\n" +
+"    Tag := distinct Int;\n" +
+"    t: Tag = cast(7);\n" +
+"    io.outputLine(t == cast(7));\n" +
+"}\n";
+
+runBoth("distinct-and-cast", distinctSrc,
+    "0 0 true false\n" +
+    "true true true 43 100 true\n" +
+    "true true true true\n" +
+    "Mittens:10 Bolt:9 Mittens 10\n" +
+    "20 7 2 Lin true\n" +
+    "true\n"
+);
+
+/* 3. Cross-module `pub alias`, `pub distinct`, and `pub` type-attached op. */
+tmpModRes := file.makeTempDir("lite-alias-dist-mod-");
+test.check("makeTempDir: " + tmpModRes.error, tmpModRes.ok);
+tmpModDir := tmpModRes.path;
+modHelperPath := tmpModDir + "/ids.lt";
+modMainPath := tmpModDir + "/main.lts";
+
+modHelperSrc :=
+"pub Badge := distinct Int;\n" +
+"pub AliasBadge := alias Badge;\n" +
+"pub Badge.label := fn(me: Self): String {\n" +
+"    \"B#\" + cast<Int>(me).toText()\n" +
+"};\n";
+
+modMainSrc :=
+"io := import \"core/io\";\n" +
+"ids := import \"./ids\";\n" +
+"\n" +
+"b1 := cast<ids.Badge>(9);\n" +
+"b2: ids.AliasBadge = b1;\n" +
+"io.outputLine(b1.label(), cast<Int>(b2));\n";
+
+test.check("write ids.lt", file.writeText(modHelperPath, modHelperSrc).ok);
+test.check("write main.lts", file.writeText(modMainPath, modMainSrc).ok);
+
+tsModComp := compilerTest.compileFile(tsComp, tmpModDir, [modMainPath]);
+test.checkInt("module ts compile status: " + tsModComp.stderr, 0, tsModComp.status);
+tsModRes := compilerTest.checkAndRunTs(root, tsModComp.stdout);
+test.checkInt("module ts status: " + tsModRes.stderr, 0, tsModRes.status);
+test.checkText("module ts stderr", "", tsModRes.stderr);
+test.checkText("module ts stdout", "B#9 9\n", tsModRes.stdout);
+if ccInfo.available {
+    cModComp := compilerTest.compileFile(cComp, tmpModDir, [modMainPath]);
+    test.checkInt("module c compile status: " + cModComp.stderr, 0, cModComp.status);
+    cModRes := compilerTest.compileAndRunC(cModComp.stdout, ccInfo.cc, "");
+    test.checkInt("module c status: " + cModRes.stderr, 0, cModRes.status);
+    test.checkText("module c stderr", "", cModRes.stderr);
+    test.checkText("module c stdout parity", tsModRes.stdout, cModRes.stdout);
+}
+_rmMod := file.remove(tmpModDir);
+
+/* 4. Rejections across TS & C11: strict nominal boundary, invalid casts, alias op attachment, distinct Unit. */
+expectRejectBoth("implicit-int-to-distinct", "UserId := distinct Int; u: UserId = 42;", "cannot initialize UserId with Int");
+expectRejectBoth("implicit-distinct-to-int", "UserId := distinct Int; u := cast<UserId>(42); n: Int = u;", "cannot initialize Int with UserId");
+expectRejectBoth("implicit-rec-to-distinct", "Cat := record { x: Int; } MCat := distinct Cat; c := Cat { x = 1 }; m: MCat = c;", "cannot initialize MCat with Cat");
+expectRejectBoth("distinct-separate-identities", "Cat := record { x: Int; } M := distinct Cat; D := distinct Cat; c := Cat { x = 1 }; m := cast<M>(c); d: D = m;", "cannot initialize D with M");
+expectRejectBoth("cross-distinct-cast-rejected", "U := distinct Int; O := distinct Int; u := cast<U>(1); o: O = cast(u);", "cannot cast U to O");
+expectRejectBoth("cat-cross-distinct-rejected", "Cat := record { x: Int; } M := distinct Cat; D := distinct Cat; m := cast<M>(Cat { x = 1 }); d: D = cast(m);", "cannot cast M to D");
+expectRejectBoth("two-step-distinct-cast-rejected", "Cat := record { x: Int; } M := distinct Cat; S := distinct M; s: S = cast(Cat { x = 1 });", "cannot cast Cat to S");
+expectRejectBoth("lossy-float-to-int-cast-rejected", "n: Int = cast(3.2);", "cannot cast Float to Int");
+expectRejectBoth("cast-without-target-rejected", "U := distinct Int; u := cast(42);", "cast requires an explicit type argument");
+expectRejectBoth("distinct-compare-eq-mismatch", "U := distinct Int; O := distinct Int; io := import \"core/io\"; io.outputLine(cast<U>(1) == cast<O>(1));", "cannot compare U and O");
+expectRejectBoth("distinct-arithmetic-rejected", "U := distinct Int; io := import \"core/io\"; u := cast<U>(1); io.outputLine(u + u);", "cannot mix Int and String operands");
+expectRejectBoth("distinct-ordering-rejected", "U := distinct Int; io := import \"core/io\"; u := cast<U>(1); io.outputLine(u < u);", "requires Int");
+expectRejectBoth("distinct-field-hidden", "Cat := record { name: String; } M := distinct Cat; m := cast<M>(Cat { name = \"a\" }); s := m.name;", "has no operation name");
+expectRejectBoth("distinct-indexing-hidden", "Row := distinct [Int; 2]; r := cast<Row>([1, 2]); x := r[0];", "does not define $getIndex");
+expectRejectBoth("distinct-base-method-hidden", "Cat := record { name: String; } Cat.meow := fn(me: Self): String { me.name }; M := distinct Cat; m := cast<M>(Cat { name = \"a\" }); s := m.meow();", "has no operation meow");
+expectRejectBoth("distinct-mut-primitive-rejected", "U := distinct Int; u: mut U = cast(1);", "mut requires");
+expectRejectBoth("distinct-mut-inferred-primitive-rejected", "U := distinct Int; mut u := cast<U>(1);", "mut requires");
+expectRejectBoth("distinct-unit-rejected", "V := distinct Unit;", "unsupported distinct underlying type Unit");
+expectRejectBoth("op-on-alias-rejected", "Cat := record { x: Int; } A := alias Cat; A.op := fn(me: Self): Int { 1 };", "cannot attach operation to alias or foreign type A");
+
+test.done("alias-and-distinct");

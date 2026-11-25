@@ -435,8 +435,70 @@ pub mapValueKind := fn(kind: String): String {
     if comma < 0 { "" } else { kind.slice(comma + 1, kind.length() - 1) }
 };
 
+/** True when `kind` is this compiler's canonical nominal distinct kind `Distinct<lp(id#at#Name)Underlying>`. */
+pub isDistinctKind := fn(kind: String): Bool {
+    size := kind.length();
+    size > 10 and kind.startsWithAt(0, "Distinct<") and kind.at(size - 1) == ">"
+};
+
+/** Parses the header metadata and direct underlying kind of canonical `Distinct<lp(id#at#Name)Underlying>`. */
+distinctMeta := fn(kind: String): (ok: Bool, header: String, displayName: String, underlying: String) {
+    if not isDistinctKind(kind) { return (ok = false, header = "", displayName = "", underlying = ""); }
+    hdr := decodeLengthPrefixedAt(kind, 9);
+    if hdr.next < 0 or hdr.next >= kind.length() - 1 {
+        return (ok = false, header = "", displayName = "", underlying = "");
+    }
+    var hashPos := -1;
+    var scan := hdr.text.indexOf("#", 0);
+    loop scan >= 0 {
+        hashPos = scan;
+        scan = hdr.text.indexOf("#", scan + 1);
+    }
+    dName := if hashPos >= 0 { hdr.text.slice(hashPos + 1, hdr.text.length()) } else { hdr.text };
+    base := kind.slice(hdr.next, kind.length() - 1);
+    (ok = base =!= "", header = hdr.text, displayName = dName, underlying = base)
+};
+
+/** Returns the user-facing display name from canonical `Distinct<...>`. */
+pub distinctDisplayName := fn(kind: String): String {
+    distinctMeta(kind).displayName
+};
+
+/** Returns the declaration identity header (`modId#at#Name`) from canonical `Distinct<...>`. */
+distinctIdentityHeader := fn(kind: String): String {
+    distinctMeta(kind).header
+};
+
+/** Returns the direct 1-step underlying kind wrapped by canonical `Distinct<...>`, or `""`. */
+pub distinctUnderlyingKind := fn(kind: String): String {
+    distinctMeta(kind).underlying
+};
+
+/** Unwraps nested `Distinct<...>` layers to the concrete representation kind. */
+pub distinctBaseKind := fn(kind: String): String {
+    var cur := kind;
+    loop isDistinctKind(cur) {
+        nextKind := distinctUnderlyingKind(cur);
+        if nextKind == "" { break; }
+        cur = nextKind;
+    }
+    cur
+};
+
+/** True when `kind` (or its distinct base representation) is a mutable List, Map, Set, or nominal record. */
+pub isMutContainerKind := fn(kind: String): Bool {
+    base := distinctBaseKind(kind);
+    isListKind(base) or isMapKind(base) or isSetKind(base) or isRecordKind(base)
+};
+
+/** True when `kind` is a nominal record or distinct type whose base representation is a nominal record. */
+pub isRecordOrDistinctRecord := fn(kind: String): Bool {
+    isRecordKind(distinctBaseKind(kind))
+};
+
 /** True when `kind` is a value-comparable scalar or nominal enum kind admissible as a `Map<K, V>` key. */
 pub isMapKeyKind := fn(kind: String): Bool {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
     numeric.isIntKind(kind) or numeric.isFloatKind(kind) or kind == ir.VALUE_KIND_STRING or
     kind == ir.VALUE_KIND_BOOL or isEnumKind(kind)
 };
@@ -526,6 +588,11 @@ pub typeOpOwnerKey := fn(kind: String): String {
         hdr := enumIdentityHeader(kind);
         if hdr == "" { return ""; }
         return "Enum:" + hdr;
+    }
+    if isDistinctKind(kind) {
+        hdr := distinctIdentityHeader(kind);
+        if hdr == "" { return ""; }
+        return "Distinct:" + hdr;
     }
     if isListKind(kind) { return "List"; }
     if isMapKind(kind) { return "Map"; }
@@ -778,6 +845,7 @@ tsTypeCache: mut Map<String, String>;
 
 /** True when `kind` is a C11-supported value kind (scalar, enum, struct, map, set, or list/array of supported elements). */
 cIsSupportedElem := fn(kind: String): Bool {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
     if numeric.isIntKind(kind) or isEnumKind(kind) or numeric.isFloatKind(kind) or
     kind == ir.VALUE_KIND_BOOL or kind == ir.VALUE_KIND_STRING { return true; }
     cached := cSupportedCache.get(kind);
@@ -845,6 +913,7 @@ pub cFnTag := fn(kind: String): String {
 
 /** Maps a C-supported tuple or nominal record kind to its deterministic C11 typedef name `lt_s_...`, or `""` if unsupported. */
 pub cStructTag := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
     if not isTupleKind(kind) and not isRecordKind(kind) { return ""; }
     cached := cStructTagCache.get(kind);
     if cached.found { return cached.value; }
@@ -855,6 +924,7 @@ pub cStructTag := fn(kind: String): String {
 
 /** True when `kind` is a list/array/map/set or a tuple/record transitively containing one. */
 pub cTypeHasListField := fn(kind: String): Bool {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
     if isListKind(kind) or isArrayKind(kind) or isMapKind(kind) or isSetKind(kind) { return true; }
     if not isTupleKind(kind) and not isRecordKind(kind) { return false; }
     cached := cHasListCache.get(kind);
@@ -881,6 +951,7 @@ pub cTypeHasListField := fn(kind: String): Bool {
 
 /** Maps a C-supported list element kind (scalar, enum, tuple, or record) to its canonical C11 list tag, or `""` if unsupported. */
 pub cListTag := fn(elemKind: String): String {
+    if isDistinctKind(elemKind) { return self(distinctBaseKind(elemKind)); }
     if numeric.isIntKind(elemKind) or isEnumKind(elemKind) { "i64" }
     else if numeric.isFloatKind(elemKind) { "f64" }
     else if elemKind == ir.VALUE_KIND_BOOL { "bool" }
@@ -901,6 +972,7 @@ pub cListElemType := fn(tag: String): String {
 
 /** Maps a C-supported map/set key kind to its C11 tag (`i64`, `f64`, `bool`, `str`), or `""`. */
 pub cMapKeyTag := fn(kKind: String): String {
+    if isDistinctKind(kKind) { return self(distinctBaseKind(kKind)); }
     if numeric.isIntKind(kKind) or isEnumKind(kKind) { "i64" }
     else if numeric.isFloatKind(kKind) { "f64" }
     else if kKind == ir.VALUE_KIND_BOOL { "bool" }
@@ -934,6 +1006,7 @@ pub cSetTag := fn(kind: String): String {
 
 /** Maps any C11-supported Lite value kind to its C11 type name. */
 pub cValueType := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
     if kind == ir.VALUE_KIND_INT or numeric.isIntKind(kind) or isEnumKind(kind) { return "int64_t"; }
     if kind == ir.VALUE_KIND_STRING { return "lt_str"; }
     if kind == ir.VALUE_KIND_BOOL { return "bool"; }
@@ -1054,7 +1127,7 @@ pub encodeRecordDefaultsFromAliases := fn(aliases: List<AliasDecl>, recordKind: 
 
 /** True when TS local/var declarations of `kind` require an explicit type annotation (empty lists, maps, arrays, records, enums, or callables). */
 pub needsTsTypeAnnotation := fn(kind: String): Bool {
-    isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or containsFnKind(kind)
+    isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or isDistinctKind(kind) or containsFnKind(kind)
 };
 
 /** True when `expectedKind` and `actualKind` represent structurally identical kinds modulo callable/tuple parameter labels. */
@@ -1176,6 +1249,7 @@ pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
 
 /** Maps a restricted Lite scalar, flat named-tuple, fixed-array, List or callable kind to its TypeScript type. */
 pub tsFunctionType := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
     if numeric.isIntKind(kind) { return "bigint"; }
     if kind == ir.VALUE_KIND_STRING { return "string"; }
     if kind == ir.VALUE_KIND_BOOL { return "boolean"; }
@@ -1242,6 +1316,7 @@ pub tsTupleType := fn(kind: String): String {
 
 /** Formats an admitted output value using its static kind; aggregates evaluate once and retain tuple labels. */
 pub tsDisplayValueCode := fn(kind: String, code: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind), code); }
     if ir.isIntScalarKind(kind) or ir.isFloatScalarKind(kind) { return "(" + code + ").toString()"; }
     if kind == ir.VALUE_KIND_BOOL { return "((" + code + ") ? \"true\" : \"false\")"; }
     if kind == ir.VALUE_KIND_UNIT { return "((value: unknown): string => { void value; return \"Unit\"; })(" + code + ")"; }
@@ -1332,6 +1407,7 @@ pub tupleFieldKind := fn(kind: String, label: String): String {
 pub displayKind := fn(kind: String): String {
     if isEnumKind(kind) { return enumDisplayName(kind); }
     if isRecordKind(kind) { return recordDisplayName(kind); }
+    if isDistinctKind(kind) { return distinctDisplayName(kind); }
     if isListKind(kind) { return "List<" + self(listElementKind(kind)) + ">"; }
     if isMapKind(kind) { return "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">"; }
     if isSetKind(kind) { return "Set<" + self(setElementKind(kind)) + ">"; }
@@ -1434,6 +1510,27 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     if not useLocalErr and start < size and source.startsWithAt(start, "Record<") {
         end := skipKindToken(source, start);
         if end > start + 8 and source.at(end - 1) == ">" and source.indexOf(";", start) > start {
+            return (kind = source.slice(start, end), next = end);
+        }
+    }
+    if not useLocalErr and start < size and source.startsWithAt(start, "@distraw:") {
+        hdr := decodeLengthPrefixedAt(source, start + 9);
+        rawTarget := decodeLengthPrefixedAt(source, hdr.next);
+        if rawTarget.text == "" {
+            syntax.failAt(errSource, errPos, prefix, "expected a type after distinct");
+        }
+        resolvedBase := self(errSource, errPos, false, rawTarget.text, 0, prefix, aliases, "distinct", "", seen);
+        if syntax.skipTrivia(rawTarget.text, resolvedBase.next, prefix) < rawTarget.text.length() {
+            syntax.failAt(errSource, errPos, prefix, "unexpected text after type");
+        }
+        if resolvedBase.kind == ir.VALUE_KIND_UNIT or resolvedBase.kind == ir.VALUE_KIND_NEVER {
+            syntax.failAt(errSource, errPos, prefix, "unsupported distinct underlying type " + displayKind(resolvedBase.kind));
+        }
+        return (kind = "Distinct<" + encodeLengthPrefixedText(hdr.text) + resolvedBase.kind + ">", next = rawTarget.next);
+    }
+    if not useLocalErr and start < size and source.startsWithAt(start, "Distinct<") {
+        end := skipKindToken(source, start);
+        if end > start + 10 and source.at(end - 1) == ">" {
             return (kind = source.slice(start, end), next = end);
         }
     }
@@ -1854,7 +1951,7 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
                 cursor = syntax.skipTrivia(source, cursor + 3, prefix);
             }
             typed := parseFunctionType(source, cursor, prefix, aliases, genericType);
-            if access =!= "" and not listIntrinsic and not isGenericParamName(genericType, typed.kind) and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) and not isRecordKind(typed.kind) {
+            if access =!= "" and not listIntrinsic and not isGenericParamName(genericType, typed.kind) and not isMutContainerKind(typed.kind) {
                 syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
             }
             cursor = syntax.skipTrivia(source, typed.next, prefix);
@@ -1889,7 +1986,7 @@ pub parseLocalType := fn(source: String, position: Int, prefix: String, aliases:
         name := source.slice(cursor, source.skipName(cursor));
         syntax.failAt(source, cursor, prefix, "unsupported local type " + name);
     }
-    if writable and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) and not isRecordKind(typed.kind) {
+    if writable and not isMutContainerKind(typed.kind) {
         syntax.failAt(source, start, prefix, "mut requires a List, Map, Set, or record type, got " + displayKind(typed.kind));
     }
     (kind = typed.kind, writable = writable, next = typed.next)
@@ -1974,7 +2071,7 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
                 syntax.failAt(source, typeStart, prefix, "receiver parameter of " + typeName + "." + opName + " must match " + typeName + ", got " + displayKind(typed.kind));
             }
         }
-        if access =!= "" and not isGenericOwner and not isGenericParamName(genericType, typed.kind) and not isListKind(typed.kind) and not isMapKind(typed.kind) and not isSetKind(typed.kind) and not isRecordKind(typed.kind) {
+        if access =!= "" and not isGenericOwner and not isGenericParamName(genericType, typed.kind) and not isMutContainerKind(typed.kind) {
             syntax.failAt(source, typeStart, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
         }
         cursor = syntax.skipTrivia(source, typed.next, prefix);
@@ -2514,12 +2611,24 @@ pub collectRecordTarget := fn(source: String, bracePos: Int, prefix: String, mod
     (text = "@recraw:" + encodeLengthPrefixedText(recHeader) + count.toText() + ";" + pairs, next = closeEnd)
 };
 
-/** Finds the nearest `"type"`, `"record"`, or `"enum"` keyword offset at or after `cursor`, or -1 when none exists. */
+/** Pre-scans `Name := distinct TargetType` into an encoded `@distraw:` target and end offset. */
+pub collectDistinctTarget := fn(source: String, afterDistinctKw: Int, prefix: String, moduleIdentity: String, declAt: Int, distName: String): (text: String, next: Int) {
+    targetStart := syntax.skipTrivia(source, afterDistinctKw, prefix);
+    rawTarget := collectTypeTarget(source, targetStart, prefix);
+    distHeader := moduleIdentity + "#" + declAt.toText() + "#" + distName;
+    (text = "@distraw:" + encodeLengthPrefixedText(distHeader) + encodeLengthPrefixedText(rawTarget.text), next = rawTarget.next)
+};
+
+/** Finds the nearest `"type"`, `"alias"`, `"distinct"`, `"record"`, or `"enum"` keyword offset at or after `cursor`, or -1 when none exists. */
 pub nextAliasOrRecordHit := fn(source: String, cursor: Int): Int {
     tHit := source.indexOf("type", cursor);
+    aHit := source.indexOf("alias", cursor);
+    dHit := source.indexOf("distinct", cursor);
     rHit := source.indexOf("record", cursor);
     eHit := source.indexOf("enum", cursor);
     var best := tHit;
+    if aHit >= 0 and (best < 0 or aHit < best) { best = aHit; }
+    if dHit >= 0 and (best < 0 or dHit < best) { best = dHit; }
     if rHit >= 0 and (best < 0 or rHit < best) { best = rHit; }
     if eHit >= 0 and (best < 0 or eHit < best) { best = eHit; }
     best
@@ -2561,12 +2670,19 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
             opPos := syntax.skipTrivia(source, afterName, prefix);
             if name =!= "pub" and not syntax.isReservedWord(name) and source.startsWithAt(opPos, ":=") {
                 typePos := syntax.skipTrivia(source, opPos + 2, prefix);
-                if source.wordAt(typePos, "type") {
-                    targetStart := syntax.skipTrivia(source, typePos + 4, prefix);
+                if source.wordAt(typePos, "type") or source.wordAt(typePos, "alias") {
+                    kwLen := if source.wordAt(typePos, "alias") { 5 } else { 4 };
+                    targetStart := syntax.skipTrivia(source, typePos + kwLen, prefix);
                     aliasTarget := collectTypeTarget(source, targetStart, prefix);
                     mut found.pushBack((name = name, target = aliasTarget.text, at = nameStart, end = aliasTarget.next, depth = blockDepth));
                     hasFound = true;
-                    cursor = if aliasTarget.next > typePos + 4 { aliasTarget.next } else { typePos + 4 };
+                    cursor = if aliasTarget.next > typePos + kwLen { aliasTarget.next } else { typePos + kwLen };
+                    continue;
+                } else if source.wordAt(typePos, "distinct") {
+                    distTarget := collectDistinctTarget(source, typePos + 8, prefix, "b" + blockDepth.toText(), nameStart, name);
+                    mut found.pushBack((name = name, target = distTarget.text, at = nameStart, end = distTarget.next, depth = blockDepth));
+                    hasFound = true;
+                    cursor = if distTarget.next > typePos + 8 { distTarget.next } else { typePos + 8 };
                     continue;
                 } else if source.wordAt(typePos, "record") {
                     braceStart := syntax.skipTrivia(source, typePos + 6, prefix);
@@ -2660,6 +2776,24 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
     if source.startsWithAt(start, "Record<") and source.indexOf(";", start) > start {
         end := skipKindToken(source, start);
         if end > start + 8 and source.at(end - 1) == ">" {
+            return (ok = true, kind = source.slice(start, end), next = end);
+        }
+    }
+    if source.startsWithAt(start, "@distraw:") {
+        hdr := decodeLengthPrefixedAt(source, start + 9);
+        if hdr.next < 0 { return (ok = false, kind = "", next = start); }
+        rawTarget := decodeLengthPrefixedAt(source, hdr.next);
+        if rawTarget.next < 0 or rawTarget.text == "" { return (ok = false, kind = "", next = start); }
+        resolvedBase := self(rawTarget.text, 0, prefix, aliases, "", seen, depthLeft - 1);
+        if not resolvedBase.ok or resolvedBase.kind == ir.VALUE_KIND_UNIT or resolvedBase.kind == ir.VALUE_KIND_NEVER or
+        syntax.skipTrivia(rawTarget.text, resolvedBase.next, prefix) < rawTarget.text.length() {
+            return (ok = false, kind = "", next = start);
+        }
+        return (ok = true, kind = "Distinct<" + encodeLengthPrefixedText(hdr.text) + resolvedBase.kind + ">", next = rawTarget.next);
+    }
+    if source.startsWithAt(start, "Distinct<") {
+        end := skipKindToken(source, start);
+        if end > start + 10 and source.at(end - 1) == ">" {
             return (ok = true, kind = source.slice(start, end), next = end);
         }
     }
@@ -2986,7 +3120,7 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
         }
         pType := canResolveTypeAt(source, cursor, prefix, aliases, genericType, emptySeen, 32);
         if not pType.ok { return false; }
-        if isMutP and not listIntrinsic and not isGenericParamName(genericType, pType.kind) and not isListKind(pType.kind) and not isMapKind(pType.kind) and not isSetKind(pType.kind) and not isRecordKind(pType.kind) {
+        if isMutP and not listIntrinsic and not isGenericParamName(genericType, pType.kind) and not isMutContainerKind(pType.kind) {
             return false;
         }
         paramCount = paramCount + 1;

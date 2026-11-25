@@ -320,6 +320,16 @@ pub recordComponentCount := fn(kind: String): Int { types.recordComponentCount(k
 pub recordComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String, prop: String) { types.recordComponent(kind, targetIndex) };
 /** True when `kind` is a nominal `record` type kind. */
 pub isRecordKind := fn(kind: String): Bool { types.isRecordKind(kind) };
+/** True when `kind` is a nominal `distinct` type kind. */
+pub isDistinctKind := fn(kind: String): Bool { types.isDistinctKind(kind) };
+/** Returns the user-facing display name for a nominal distinct `kind`. */
+pub distinctDisplayName := fn(kind: String): String { types.distinctDisplayName(kind) };
+/** Returns the 1-step underlying kind wrapped by a nominal distinct `kind`. */
+pub distinctUnderlyingKind := fn(kind: String): String { types.distinctUnderlyingKind(kind) };
+/** Unwraps nested nominal distinct kinds to the concrete representation kind. */
+pub distinctBaseKind := fn(kind: String): String { types.distinctBaseKind(kind) };
+/** True when `kind` is a nominal record or a distinct type whose base representation is a nominal record. */
+pub isRecordOrDistinctRecord := fn(kind: String): Bool { types.isRecordOrDistinctRecord(kind) };
 
 /** Returns the runtime JS property name for a tuple field (`_0` when unnamed, otherwise the field label). */
 pub tupleRuntimeProp := fn(label: String, index: Int): String { types.tupleRuntimeProp(label, index) };
@@ -964,9 +974,9 @@ resolveOwnedTypeOpTarget := fn(source: String, nameStart: Int, prefix: String, a
         error = "cannot attach operation to unknown or foreign type " + typeName + "; operations may only be attached in the owning module of a record, enum, or built-in type");
     }
     entry := aliases[foundIdx];
-    if entry.at < 0 or (not entry.target.startsWithAt(0, "@recraw:") and not entry.target.startsWithAt(0, "@enumraw:")) {
+    if entry.at < 0 or (not entry.target.startsWithAt(0, "@recraw:") and not entry.target.startsWithAt(0, "@enumraw:") and not entry.target.startsWithAt(0, "@distraw:")) {
         return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
-        error = "cannot attach operation to alias or foreign type " + typeName + "; operations may only be attached to an owned record, enum, or built-in type");
+        error = "cannot attach operation to alias or foreign type " + typeName + "; operations may only be attached to an owned record, enum, distinct, or built-in type");
     }
     emptySeen: List<String> = [];
     ownerKind := resolveTypeText(source, nameStart, prefix, aliases, entry.target, emptySeen);
@@ -2149,6 +2159,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         }
         definition := blockCount == 0 and source.startsWithAt(position, ":=") and
         (source.wordAt(afterDefinition, "fn") or source.wordAt(afterDefinition, "type") or
+        source.wordAt(afterDefinition, "alias") or source.wordAt(afterDefinition, "distinct") or
         source.wordAt(afterDefinition, "record") or source.wordAt(afterDefinition, "enum"));
         if name == "return" {
             var targetTagPos := position;
@@ -2919,7 +2930,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             parsed := parseInitializerExpression(target, source, skipTrivia(source, afterName + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
             locals = checkStatementTrace(target, source, localStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
-            if not isListKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) and not types.isRecordKind(parsed.kind) {
+            if not types.isMutContainerKind(parsed.kind) {
                 failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record value, got " + displayKind(parsed.kind));
             }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
@@ -2933,7 +2944,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 itemCode := copiedValueCode(target, parsed.kind, parsed.code);
-                mutPrefix := if target == TARGET_TS and types.isRecordKind(parsed.kind) { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
+                mutPrefix := if target == TARGET_TS and types.isRecordOrDistinctRecord(parsed.kind) { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
                 mut items.pushBack((kind = mutPrefix + storageKind(parsed.kind), name = localName, runtime = runtime,
                 code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
                 if codeHasRawTransfer(itemCode) {
@@ -2969,7 +2980,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 rawVarRhsCode = parsed.code;
                 locals = checkStatementTrace(target, source, localStart, prefix, rawVarRhsCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 rejectNonValueBinding(source, localStart, prefix, parsed.kind, localName);
-                if declaredWritable and not isListKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) and not types.isRecordKind(parsed.kind) {
+                if declaredWritable and not types.isMutContainerKind(parsed.kind) {
                     failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record value, got " + displayKind(parsed.kind));
                 }
             } else if position < size and source.at(position) == ":" {
@@ -3049,7 +3060,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         not (name == "mut" and position < size and (source.at(position).isNameStart() or source.at(position) == "(")) {
             unsupportedFeature(source, nameStart, name, prefix);
         }
-        if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "type") {
+        if source.startsWithAt(position, ":=") and (source.wordAt(afterDefinition, "type") or source.wordAt(afterDefinition, "alias")) {
             var earlierAlias := false;
             loop aliases as aliasItem {
                 if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at < nameStart { earlierAlias = true; }
@@ -3060,7 +3071,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             mut blockDecls.pushBack((name = name, depth = depth));
             typePosition := skipTrivia(source, position + 2, prefix);
-            targetStart := skipTrivia(source, typePosition + 4, prefix);
+            kwLen := if source.wordAt(typePosition, "alias") { 5 } else { 4 };
+            targetStart := skipTrivia(source, typePosition + kwLen, prefix);
             aliasIndex := aliasIndexAt(aliases, nameStart);
             if aliasIndex < 0 {
                 unsupportedAliasTarget(source, targetStart, prefix, "target");
@@ -3081,6 +3093,37 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             afterTarget := consumeStatementEnd(source, aliasEntry.end, prefix);
             if afterTarget < 0 { unsupportedAliasTarget(source, aliasEntry.at, prefix, "target"); }
+            position = afterTarget;
+            continue;
+        }
+        if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "distinct") {
+            var earlierAlias := false;
+            loop aliases as aliasItem {
+                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at < nameStart { earlierAlias = true; }
+            }
+            if earlierAlias {
+                failAt(source, nameStart, prefix, "duplicate type alias " + name);
+            }
+            rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
+            mut blockDecls.pushBack((name = name, depth = depth));
+            distPosition := skipTrivia(source, position + 2, prefix);
+            targetStart := skipTrivia(source, distPosition + 8, prefix);
+            aliasIndex := aliasIndexAt(aliases, nameStart);
+            if aliasIndex < 0 {
+                failAt(source, targetStart, prefix, "expected a type after distinct");
+            }
+            aliasEntry := aliases[aliasIndex];
+            if aliasEntry.target == "" {
+                failAt(source, targetStart, prefix, "expected a type after distinct");
+            }
+            seenDistinct: mut List<String> = [];
+            resolvedDistinct := resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenDistinct);
+            if depth == 0 and blockCount == 0 and publishedTypes.has(name) {
+                mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = resolvedDistinct,
+                intValue = 0, textValue = ""));
+            }
+            afterTarget := consumeStatementEnd(source, aliasEntry.end, prefix);
+            if afterTarget < 0 { failAt(source, aliasEntry.at, prefix, "expected ; after distinct declaration " + name); }
             position = afterTarget;
             continue;
         }
@@ -3322,7 +3365,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
                         pRuntime := ir.safeTargetIdent(target, parameterName);
                         runtime := if isMutParam and target == TARGET_C { "(*lite_" + pRuntime + ")" }
-                        else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + pRuntime + ".v" }
+                        else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
                         else { "lite_" + pRuntime };
                         fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
                         mut blockDecls.pushBack((name = parameterName, depth = 1));
@@ -3514,7 +3557,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
                     pRuntime := ir.safeTargetIdent(target, parameterName);
                     runtime := if isMutParam and target == TARGET_C { "(*lite_" + pRuntime + ")" }
-                    else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + pRuntime + ".v" }
+                    else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
                     else { "lite_" + pRuntime };
                     fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
                     mut blockDecls.pushBack((name = parameterName, depth = 1));
@@ -3625,7 +3668,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             mut locals.pushBack((name = name, runtime = runtime, kind = typed.kind,
             mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
             code = annLocalCode, intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
-            declItemPrefix := if declInitState == INIT_STATE_INIT and not (target == TARGET_TS and typed.writable and types.isRecordKind(typed.kind)) { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
+            declItemPrefix := if declInitState == INIT_STATE_INIT and not (target == TARGET_TS and typed.writable and types.isRecordOrDistinctRecord(typed.kind)) { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
             if currentLive and not currentStopped {
                 if rhsDiverged {
                     mut items.pushBack((kind = expressionStatementKind(VALUE_KIND_NEVER, false, ITEM_KIND_CALL, currentResult), name = "", runtime = "",

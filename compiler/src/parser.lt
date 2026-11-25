@@ -679,15 +679,16 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
             cursor = functionBody.next;
             cursor = consumeStatementEnd(tokens, cursor, prefix);
         } else if token.kind == lexer.TOKEN_KIND_NAME and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
-            tokenAt(tokens, cursor + 2).kind == lexer.TOKEN_KIND_KEYWORD and tokenAt(tokens, cursor + 2).text == "type" {
+            tokenAt(tokens, cursor + 2).kind == lexer.TOKEN_KIND_KEYWORD and
+            (tokenAt(tokens, cursor + 2).text == "type" or tokenAt(tokens, cursor + 2).text == "alias" or tokenAt(tokens, cursor + 2).text == "distinct") {
             assigned := expectSymbol(tokens, cursor + 1, ":=", prefix);
             typeWord := tokenAt(tokens, assigned);
-            if typeWord.kind =!= lexer.TOKEN_KIND_KEYWORD or typeWord.text =!= "type" {
+            if typeWord.kind =!= lexer.TOKEN_KIND_KEYWORD or (typeWord.text =!= "type" and typeWord.text =!= "alias" and typeWord.text =!= "distinct") {
                 parseFail(typeWord, prefix, "expected type after :=");
             }
             aliasType := parseType(tokens, assigned + 1, prefix);
             ended := consumeStatementEnd(tokens, aliasType.next, prefix);
-            itemText = token.text + " := type " + aliasType.text;
+            itemText = token.text + " := " + typeWord.text + " " + aliasType.text;
             cursor = ended;
         } else if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "var" or
             (token.kind == lexer.TOKEN_KIND_NAME and (isSymbol(tokenAt(tokens, cursor + 1), ":=") or
@@ -729,7 +730,7 @@ pub parseTypeAlias := fn(tokens: lexer.Tokens, index: Int, prefix: String): (nex
     }
     assigned := expectSymbol(tokens, index + 1, ":=", prefix);
     typeWord := tokenAt(tokens, assigned);
-    if typeWord.kind =!= lexer.TOKEN_KIND_KEYWORD or typeWord.text =!= "type" {
+    if typeWord.kind =!= lexer.TOKEN_KIND_KEYWORD or (typeWord.text =!= "type" and typeWord.text =!= "alias" and typeWord.text =!= "distinct") {
         parseFail(typeWord, prefix, "expected type after :=");
     }
     parsed := parseType(tokens, assigned + 1, prefix);

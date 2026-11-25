@@ -65,7 +65,7 @@ tsParameterList := fn(encoded: String): String {
             rawParameterKind.slice(4, rawParameterKind.length())
         } else { rawParameterKind };
         if result.length() > 0 { result = result + ", "; }
-        if isMutParam and frontend.isRecordKind(parameterKind) {
+        if isMutParam and frontend.isRecordOrDistinctRecord(parameterKind) {
             result = result + "lite_" + parameterName + ": { v: " + tsFunctionType(parameterKind) + " }";
         } else {
             result = result + "lite_" + parameterName + ": " + tsFunctionType(parameterKind);
