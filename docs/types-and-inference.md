@@ -6,6 +6,31 @@ Status: **static typing and inference established; full type system remains a de
 
 Students can write ordinary code without annotations while the compiler still rejects incompatible operations and assignments before execution.
 
+## Fresh literals and default types
+
+Design direction reviewed **2026-11-26**. A fresh literal uses a stable
+language default when no applicable type evidence narrows it. Integer
+literals default to `Int`, fractional literals to `Float`, quoted strings
+to `String`, and Boolean literals to `Bool`. A nonempty bracket literal
+with an established element type and extent defaults to a fixed array.
+
+A uniquely determined type may receive a compatible fresh literal. Examples
+include `id: UserID = 42`, `text: alt.Text = "hello"`,
+`flag: Enabled = true`, and `xs: alt.List<Int> = [1, 2]`, provided the
+type accepts that literal form. Existing numeric whole-use inference
+direction distinguishes absent evidence, which permits defaulting, from
+conflicting or ambiguous evidence, which produces an error. Earlier
+string-like design requires a type visible at the literal's use site.
+
+Importing a type or changing a package's preload leaves the literal
+defaults fixed. Once a value's type is established, transferring it to a
+different distinct type follows the explicit conversion rules.
+
+The general opt-in mechanism for custom representations and the exact
+inheritance rules for distinct types are open. These examples state design
+direction. See [fresh literal inference and defaults](lite://repo/research/investigations/language-review/01-core-types.md#user-direction-inference-from-uses-of-a-fresh-value)
+and [package preload](lite://doc/modules-and-packages#package-preload).
+
 ## Safe widening
 
 Selected 2026-10-25: safe widening is generally accepted when established compatibility rules prove that a source value satisfies the destination contract. It preserves the represented value and active alternatives while allowing the destination to admit more possibilities. No source-level wrapper or cast is required for a supported widening, and the source keeps its own type. An inferred declaration keeps the source type unless another expected contract supplies a wider destination.
