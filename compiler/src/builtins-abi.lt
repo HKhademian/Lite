@@ -66,46 +66,41 @@ extraHostFunction := fn(moduleIdentity: String, name: String, rawParams: String,
         pt := "(x:Float,y:Float)";
         rc := "(x:Float,y:Float,width:Float,height:Float)";
         inp := "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)";
-        surf := "(handle:Int)";
-        tex := "(handle:Int,width:Int,height:Int)";
-        col := "(r:Float,g:Float,b:Float,a:Float)";
-        dSurf := "Surface@" + surf;
-        dTex := "Texture@" + tex;
-        dCol := "Color@" + col;
-        if name == "open" and params == "title=String|width=Int|height=Int" and result == surf { "lite$extraCanvasOpen" }
-        else if name == "Surface.open" and params == "title=String|width=Int|height=Int" and result == dSurf { "lite$extraCanvasOpen" }
-        else if (name == "poll" and params == "surface=" + surf or name == "Surface.poll" and params == "surface=" + dSurf) and result == inp { "lite$extraCanvasPoll" }
-        else if (name == "present" and params == "surface=" + surf or name == "Surface.present" and params == "surface=" + dSurf) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasPresent" }
-        else if (name == "close" and params == "surface=" + surf or name == "Surface.close" and params == "surface=" + dSurf) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClose" }
-        else if (name == "run" and params == "surface=" + surf + "|onFrame=fn(:" + inp + "):Bool" or name == "Surface.run" and params == "surface=" + dSurf + "|onFrame=fn(:" + inp + "):Bool") and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasRun" }
-        else if (name == "clear" and params == "surface=" + surf + "|fill=" + col or name == "Surface.clear" and params == "surface=" + dSurf + "|fill=" + dCol) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClear" }
-        else if (name == "fillRect" and params == "surface=" + surf + "|area=" + rc + "|fill=" + col or name == "Surface.fillRect" and params == "surface=" + dSurf + "|area=" + rc + "|fill=" + dCol) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasFillRect" }
-        else if (name == "strokeRect" and params == "surface=" + surf + "|area=" + rc + "|lineWidth=Float|stroke=" + col or name == "Surface.strokeRect" and params == "surface=" + dSurf + "|area=" + rc + "|lineWidth=Float|stroke=" + dCol) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasStrokeRect" }
-        else if (name == "fillCircle" and params == "surface=" + surf + "|center=" + pt + "|radius=Float|fill=" + col or name == "Surface.fillCircle" and params == "surface=" + dSurf + "|center=" + pt + "|radius=Float|fill=" + dCol) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasFillCircle" }
-        else if (name == "strokeLine" and params == "surface=" + surf + "|start=" + pt + "|finish=" + pt + "|lineWidth=Float|stroke=" + col or name == "Surface.strokeLine" and params == "surface=" + dSurf + "|start=" + pt + "|finish=" + pt + "|lineWidth=Float|stroke=" + dCol) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasStrokeLine" }
-        else if (name == "drawText" and params == "surface=" + surf + "|content=String|at=" + pt + "|size=Float|fill=" + col or name == "Surface.drawText" and params == "surface=" + dSurf + "|content=String|at=" + pt + "|size=Float|fill=" + dCol) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasDrawText" }
-        else if (name == "capture" and params == "surface=" + surf + "|outPath=String" or name == "Surface.capture" and params == "surface=" + dSurf + "|outPath=String") and result == "(ok:Bool,error:String)" { "lite$extraCanvasCapture" }
-        else if (name == "setTargetFps" and params == "surface=" + surf + "|fps=Float" or name == "Surface.setTargetFps" and params == "surface=" + dSurf + "|fps=Float") and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetTargetFps" }
-        else if (name == "vitals" and params == "surface=" + surf or name == "Surface.vitals" and params == "surface=" + dSurf) and result == "(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)" { "lite$extraCanvasVitals" }
-        else if (name == "playTone" and params == "surface=" + surf + "|frequency=Int|durationMs=Int|volume=Int" or name == "Surface.playTone" and params == "surface=" + dSurf + "|frequency=Int|durationMs=Int|volume=Int") and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasPlayTone" }
-        else if (name == "bounds" and params == "surface=" + surf or name == "Surface.bounds" and params == "surface=" + dSurf) and result == "(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)" { "lite$extraCanvasBounds" }
-        else if (name == "resize" and params == "surface=" + surf + "|width=Int|height=Int" or name == "Surface.resize" and params == "surface=" + dSurf + "|width=Int|height=Int") and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasResize" }
-        else if (name == "setFullscreen" and params == "surface=" + surf + "|enabled=Bool" or name == "Surface.setFullscreen" and params == "surface=" + dSurf + "|enabled=Bool") and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetFullscreen" }
-        else if (name == "isKeyDown" and params == "surface=" + surf + "|key=String" or name == "Surface.isKeyDown" and params == "surface=" + dSurf + "|key=String") and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsKeyDown" }
-        else if (name == "isKeyPressed" and params == "surface=" + surf + "|key=String" or name == "Surface.isKeyPressed" and params == "surface=" + dSurf + "|key=String") and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsKeyPressed" }
-        else if (name == "isKeyReleased" and params == "surface=" + surf + "|key=String" or name == "Surface.isKeyReleased" and params == "surface=" + dSurf + "|key=String") and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsKeyReleased" }
-        else if (name == "isPointerPressed" and params == "surface=" + surf or name == "Surface.isPointerPressed" and params == "surface=" + dSurf) and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsPointerPressed" }
-        else if (name == "isPointerReleased" and params == "surface=" + surf or name == "Surface.isPointerReleased" and params == "surface=" + dSurf) and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsPointerReleased" }
-        else if (name == "wheelDelta" and params == "surface=" + surf or name == "Surface.wheelDelta" and params == "surface=" + dSurf) and result == ir.VALUE_KIND_FLOAT { "lite$extraCanvasWheelDelta" }
-        else if (name == "setClipRect" and params == "surface=" + surf + "|area=" + rc or name == "Surface.setClipRect" and params == "surface=" + dSurf + "|area=" + rc) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetClipRect" }
-        else if (name == "clearClipRect" and params == "surface=" + surf or name == "Surface.clearClipRect" and params == "surface=" + dSurf) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClearClipRect" }
-        else if (name == "fillTriangle" and params == "surface=" + surf + "|a=" + pt + "|b=" + pt + "|c=" + pt + "|fill=" + col or name == "Surface.fillTriangle" and params == "surface=" + dSurf + "|a=" + pt + "|b=" + pt + "|c=" + pt + "|fill=" + dCol) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasFillTriangle" }
-        else if name == "createTexture" and params == "width=Int|height=Int" and result == tex { "lite$extraCanvasCreateTexture" }
+        dSurf := "Surface@(handle:Int)";
+        dTex := "Texture@(handle:Int,width:Int,height:Int)";
+        dCol := "Color@(r:Float,g:Float,b:Float,a:Float)";
+        if name == "Surface.open" and params == "title=String|width=Int|height=Int" and result == dSurf { "lite$extraCanvasOpen" }
+        else if name == "Surface.poll" and params == "surface=" + dSurf and result == inp { "lite$extraCanvasPoll" }
+        else if name == "Surface.present" and params == "surface=" + dSurf and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasPresent" }
+        else if name == "Surface.close" and params == "surface=" + dSurf and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClose" }
+        else if name == "Surface.run" and params == "surface=" + dSurf + "|onFrame=fn(:" + inp + "):Bool" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasRun" }
+        else if name == "Surface.clear" and params == "surface=" + dSurf + "|fill=" + dCol and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClear" }
+        else if name == "Surface.fillRect" and params == "surface=" + dSurf + "|area=" + rc + "|fill=" + dCol and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasFillRect" }
+        else if name == "Surface.strokeRect" and params == "surface=" + dSurf + "|area=" + rc + "|lineWidth=Float|stroke=" + dCol and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasStrokeRect" }
+        else if name == "Surface.fillCircle" and params == "surface=" + dSurf + "|center=" + pt + "|radius=Float|fill=" + dCol and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasFillCircle" }
+        else if name == "Surface.strokeLine" and params == "surface=" + dSurf + "|start=" + pt + "|finish=" + pt + "|lineWidth=Float|stroke=" + dCol and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasStrokeLine" }
+        else if name == "Surface.drawText" and params == "surface=" + dSurf + "|content=String|at=" + pt + "|size=Float|fill=" + dCol and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasDrawText" }
+        else if name == "Surface.capture" and params == "surface=" + dSurf + "|outPath=String" and result == "(ok:Bool,error:String)" { "lite$extraCanvasCapture" }
+        else if name == "Surface.setTargetFps" and params == "surface=" + dSurf + "|fps=Float" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetTargetFps" }
+        else if name == "Surface.vitals" and params == "surface=" + dSurf and result == "(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)" { "lite$extraCanvasVitals" }
+        else if name == "Surface.playTone" and params == "surface=" + dSurf + "|frequency=Int|durationMs=Int|volume=Int" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasPlayTone" }
+        else if name == "Surface.bounds" and params == "surface=" + dSurf and result == "(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)" { "lite$extraCanvasBounds" }
+        else if name == "Surface.resize" and params == "surface=" + dSurf + "|width=Int|height=Int" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasResize" }
+        else if name == "Surface.setFullscreen" and params == "surface=" + dSurf + "|enabled=Bool" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetFullscreen" }
+        else if name == "Surface.isKeyDown" and params == "surface=" + dSurf + "|key=String" and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsKeyDown" }
+        else if name == "Surface.isKeyPressed" and params == "surface=" + dSurf + "|key=String" and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsKeyPressed" }
+        else if name == "Surface.isKeyReleased" and params == "surface=" + dSurf + "|key=String" and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsKeyReleased" }
+        else if name == "Surface.isPointerPressed" and params == "surface=" + dSurf and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsPointerPressed" }
+        else if name == "Surface.isPointerReleased" and params == "surface=" + dSurf and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsPointerReleased" }
+        else if name == "Surface.wheelDelta" and params == "surface=" + dSurf and result == ir.VALUE_KIND_FLOAT { "lite$extraCanvasWheelDelta" }
+        else if name == "Surface.setClipRect" and params == "surface=" + dSurf + "|area=" + rc and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetClipRect" }
+        else if name == "Surface.clearClipRect" and params == "surface=" + dSurf and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClearClipRect" }
+        else if name == "Surface.fillTriangle" and params == "surface=" + dSurf + "|a=" + pt + "|b=" + pt + "|c=" + pt + "|fill=" + dCol and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasFillTriangle" }
         else if name == "Texture.create" and params == "width=Int|height=Int" and result == dTex { "lite$extraCanvasCreateTexture" }
-        else if (name == "setTexturePixel" and params == "tex=" + tex + "|x=Int|y=Int|fill=" + col or name == "Texture.setPixel" and params == "tex=" + dTex + "|x=Int|y=Int|fill=" + dCol) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetTexturePixel" }
-        else if (name == "blit" and params == "surface=" + surf + "|tex=" + tex + "|at=" + pt or name == "Surface.blit" and params == "surface=" + dSurf + "|tex=" + dTex + "|at=" + pt) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasBlit" }
-        else if (name == "blitScaled" and params == "surface=" + surf + "|tex=" + tex + "|dest=" + rc or name == "Surface.blitScaled" and params == "surface=" + dSurf + "|tex=" + dTex + "|dest=" + rc) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasBlitScaled" }
-        else if (name == "destroyTexture" and params == "tex=" + tex or name == "Texture.destroy" and params == "tex=" + dTex) and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasDestroyTexture" }
+        else if name == "Texture.setPixel" and params == "tex=" + dTex + "|x=Int|y=Int|fill=" + dCol and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetTexturePixel" }
+        else if name == "Surface.blit" and params == "surface=" + dSurf + "|tex=" + dTex + "|at=" + pt and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasBlit" }
+        else if name == "Surface.blitScaled" and params == "surface=" + dSurf + "|tex=" + dTex + "|dest=" + rc and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasBlitScaled" }
+        else if name == "Texture.destroy" and params == "tex=" + dTex and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasDestroyTexture" }
         else if name == "scratchMark" and params == "" and result == ir.VALUE_KIND_INT { "lite$extraCanvasScratchMark" }
         else if name == "scratchRewind" and params == "mark=Int" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasScratchRewind" }
         else { "" }
@@ -158,9 +153,8 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         return extraHostFunction(moduleIdentity, name, params, result);
     }
     if moduleIdentity == "lite.core.io.v1" {
-        rw := "(kind:String,handle:Int)";
-        rd := "Reader@" + rw;
-        wr := "Writer@" + rw;
+        rd := "Reader@(kind:String,handle:Int)";
+        wr := "Writer@(kind:String,handle:Int)";
         if params == "...values" and result == ir.VALUE_KIND_UNIT {
             if name == "output" { "lite$core$io$output:v1" }
             else if name == "outputLine" { "lite$core$io$outputLine:v1" }
@@ -172,24 +166,24 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
             if name == "inputAll" { "lite$inputAll" } else if name == "inputLine" { "lite$inputLine" } else { "" }
         } else if params == "prompt=String" and result == ir.VALUE_KIND_INT and name == "inputInt" { "lite$inputInt" }
         else if params == "prompt=String" and result == ir.VALUE_KIND_FLOAT and name == "inputFloat" { "lite$inputFloat" }
-        else if (name == "stdinReader" and result == rw or name == "Reader.stdin" and result == rd) and params == "" { "lite$ioStdinReader" }
-        else if (name == "stdoutWriter" and result == rw or name == "Writer.stdout" and result == wr) and params == "" { "lite$ioStdoutWriter" }
-        else if (name == "stderrWriter" and result == rw or name == "Writer.stderr" and result == wr) and params == "" { "lite$ioStderrWriter" }
-        else if (name == "bufferReader" and result == rw or name == "Reader.fromBytes" and result == rd) and params == "bytes=List<Int>" { "lite$ioBufferReader" }
-        else if (name == "bufferWriter" and result == rw or name == "Writer.buffer" and result == wr) and params == "" { "lite$ioBufferWriter" }
-        else if (name == "writerBytes" and params == "writer=" + rw or name == "Writer.bytes" and params == "writer=" + wr) and result == "List<Int>" { "lite$ioWriterBytes" }
-        else if (name == "writerText" and params == "writer=" + rw or name == "Writer.text" and params == "writer=" + wr) and result == "(ok:Bool,text:String,error:String)" { "lite$ioWriterText" }
-        else if (name == "clearWriter" and params == "writer=" + rw or name == "Writer.clear" and params == "writer=" + wr) and result == ir.VALUE_KIND_UNIT { "lite$ioClearWriter" }
-        else if (name == "readerOk" and params == "reader=" + rw or name == "Reader.ok" and params == "reader=" + rd) and result == ir.VALUE_KIND_BOOL { "lite$ioReaderOk" }
-        else if (name == "readerAtEof" and params == "reader=" + rw or name == "Reader.atEof" and params == "reader=" + rd) and result == ir.VALUE_KIND_BOOL { "lite$ioReaderAtEof" }
-        else if (name == "readerError" and params == "reader=" + rw or name == "Reader.error" and params == "reader=" + rd) and result == ir.VALUE_KIND_STRING { "lite$ioReaderError" }
-        else if (name == "read" and params == "reader=" + rw + "|maxBytes=Int" or name == "Reader.read" and params == "reader=" + rd + "|maxBytes=Int") and result == "List<Int>" { "lite$ioRead" }
-        else if (name == "closeReader" and params == "reader=" + rw or name == "Reader.close" and params == "reader=" + rd) and result == "(ok:Bool,error:String)" { "lite$ioCloseReader" }
-        else if (name == "writerOk" and params == "writer=" + rw or name == "Writer.ok" and params == "writer=" + wr) and result == ir.VALUE_KIND_BOOL { "lite$ioWriterOk" }
-        else if (name == "writerError" and params == "writer=" + rw or name == "Writer.error" and params == "writer=" + wr) and result == ir.VALUE_KIND_STRING { "lite$ioWriterError" }
-        else if (name == "write" and params == "writer=" + rw + "|bytes=List<Int>" or name == "Writer.write" and params == "writer=" + wr + "|bytes=List<Int>") and result == "(ok:Bool,written:Int,error:String)" { "lite$ioWrite" }
-        else if (name == "flush" and params == "writer=" + rw or name == "Writer.flush" and params == "writer=" + wr) and result == "(ok:Bool,error:String)" { "lite$ioFlush" }
-        else if (name == "closeWriter" and params == "writer=" + rw or name == "Writer.close" and params == "writer=" + wr) and result == "(ok:Bool,error:String)" { "lite$ioCloseWriter" }
+        else if name == "Reader.stdin" and params == "" and result == rd { "lite$ioStdinReader" }
+        else if name == "Writer.stdout" and params == "" and result == wr { "lite$ioStdoutWriter" }
+        else if name == "Writer.stderr" and params == "" and result == wr { "lite$ioStderrWriter" }
+        else if name == "Reader.fromBytes" and params == "bytes=List<Int>" and result == rd { "lite$ioBufferReader" }
+        else if name == "Writer.buffer" and params == "" and result == wr { "lite$ioBufferWriter" }
+        else if name == "Writer.bytes" and params == "writer=" + wr and result == "List<Int>" { "lite$ioWriterBytes" }
+        else if name == "Writer.text" and params == "writer=" + wr and result == "(ok:Bool,text:String,error:String)" { "lite$ioWriterText" }
+        else if name == "Writer.clear" and params == "writer=" + wr and result == ir.VALUE_KIND_UNIT { "lite$ioClearWriter" }
+        else if name == "Reader.ok" and params == "reader=" + rd and result == ir.VALUE_KIND_BOOL { "lite$ioReaderOk" }
+        else if name == "Reader.atEof" and params == "reader=" + rd and result == ir.VALUE_KIND_BOOL { "lite$ioReaderAtEof" }
+        else if name == "Reader.error" and params == "reader=" + rd and result == ir.VALUE_KIND_STRING { "lite$ioReaderError" }
+        else if name == "Reader.read" and params == "reader=" + rd + "|maxBytes=Int" and result == "List<Int>" { "lite$ioRead" }
+        else if name == "Reader.close" and params == "reader=" + rd and result == "(ok:Bool,error:String)" { "lite$ioCloseReader" }
+        else if name == "Writer.ok" and params == "writer=" + wr and result == ir.VALUE_KIND_BOOL { "lite$ioWriterOk" }
+        else if name == "Writer.error" and params == "writer=" + wr and result == ir.VALUE_KIND_STRING { "lite$ioWriterError" }
+        else if name == "Writer.write" and params == "writer=" + wr + "|bytes=List<Int>" and result == "(ok:Bool,written:Int,error:String)" { "lite$ioWrite" }
+        else if name == "Writer.flush" and params == "writer=" + wr and result == "(ok:Bool,error:String)" { "lite$ioFlush" }
+        else if name == "Writer.close" and params == "writer=" + wr and result == "(ok:Bool,error:String)" { "lite$ioCloseWriter" }
         else { "" }
     } else if moduleIdentity == "lite.core.text.v1" {
         if name == "String.length" and params == "text=String" and result == ir.VALUE_KIND_INT { "lite$textLength" }
@@ -235,9 +229,9 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else { "" }
     } else if moduleIdentity == "lite.core.file.v1" {
         if name == "kind" and params == "path=String" and result == ir.VALUE_KIND_STRING { "lite$fileKind" }
-        else if name == "openReader" and params == "path=String" and (result == "(kind:String,handle:Int)" or result == "Reader@(kind:String,handle:Int)") { "lite$fileOpenReader" }
-        else if name == "openWriter" and params == "path=String" and (result == "(kind:String,handle:Int)" or result == "Writer@(kind:String,handle:Int)") { "lite$fileOpenWriter" }
-        else if name == "openAppender" and params == "path=String" and (result == "(kind:String,handle:Int)" or result == "Writer@(kind:String,handle:Int)") { "lite$fileOpenAppender" }
+        else if name == "openReader" and params == "path=String" and result == "Reader@(kind:String,handle:Int)" { "lite$fileOpenReader" }
+        else if name == "openWriter" and params == "path=String" and result == "Writer@(kind:String,handle:Int)" { "lite$fileOpenWriter" }
+        else if name == "openAppender" and params == "path=String" and result == "Writer@(kind:String,handle:Int)" { "lite$fileOpenAppender" }
         else if name == "listDir" and params == "path=String" and result == "List<String>" { "lite$fileListDir" }
         else if name == "makeDir" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fileMakeDir" }
         else if name == "remove" and params == "path=String" and result == "(ok:Bool,error:String)" { "lite$fileRemove" }
@@ -378,32 +372,17 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
             return (params = "ch=String", result = ir.VALUE_KIND_BOOL);
         }
     } else if moduleName == "lib/core/io" {
-        if name == "textReader" {
-            return (params = "text=String", result = "(kind:String,handle:Int)");
-        }
         if name == "Reader.fromText" {
             return (params = "text=String", result = "Reader@(kind:String,handle:Int)");
-        }
-        if name == "readAll" {
-            return (params = "reader=(kind:String,handle:Int)", result = "List<Int>");
         }
         if name == "Reader.readAll" {
             return (params = "reader=Reader@(kind:String,handle:Int)", result = "List<Int>");
         }
-        if name == "readAllText" {
-            return (params = "reader=(kind:String,handle:Int)", result = "(ok:Bool,text:String,error:String)");
-        }
         if name == "Reader.readAllText" {
             return (params = "reader=Reader@(kind:String,handle:Int)", result = "(ok:Bool,text:String,error:String)");
         }
-        if name == "readLine" {
-            return (params = "reader=(kind:String,handle:Int)", result = "(ok:Bool,line:String,eof:Bool,error:String)");
-        }
         if name == "Reader.readLine" {
             return (params = "reader=Reader@(kind:String,handle:Int)", result = "(ok:Bool,line:String,eof:Bool,error:String)");
-        }
-        if name == "writeText" or name == "writeLine" {
-            return (params = "writer=(kind:String,handle:Int)|text=String", result = "(ok:Bool,error:String)");
         }
         if name == "Writer.writeText" or name == "Writer.writeLine" {
             return (params = "writer=Writer@(kind:String,handle:Int)|text=String", result = "(ok:Bool,error:String)");
