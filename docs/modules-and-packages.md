@@ -434,6 +434,19 @@ Receiving modules and scripts then use `text.UNICODE_REPLACEMENT_CHAR`.
 The alias occupies one name in each scope, and the module's public API stays
 under it.
 
+Keep `String` available as a bare type name while qualifying the text module's
+constants and helpers. Today `String` is intrinsic. If its type declaration
+moves to the module, the preload can expose that type explicitly. One possible
+spelling, once `core/text` exports its type:
+
+```text
+pub text := import "core/text";
+pub String := alias text.String;
+```
+
+Both type spellings would resolve to the same type and its attached operations.
+The Unicode constant would be available as `text.UNICODE_REPLACEMENT_CHAR`.
+
 A public operation follows its owning type where that type is visible.
 For instance, public operations of intrinsic `Int` are available through
 `Int`, and an alternative `List` brings its own operations. Resolution should
