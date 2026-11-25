@@ -288,4 +288,72 @@ expectRejectBoth("reject-uninferred-comptime-value-param",
 "x := getN();\n",
 "cannot infer comptime value parameter N");
 
+/* Nested generic record forwarding differently-named outer comptime Int extents (Mat<T, R, C> -> Vec<T, C>). */
+matForwardSrc :=
+"io := import \"core/io\";\n" +
+"math := import \"math/scalar\";\n" +
+"Vec := record<T: Type<math.Numeric>, N: Int> {\n" +
+"    data: [T; N];\n" +
+"}\n" +
+"Vec.dot := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): T {\n" +
+"    var acc: T;\n" +
+"    loop 0..N as i {\n" +
+"        acc = acc + (a.data[i] * b.data[i]);\n" +
+"    }\n" +
+"    acc\n" +
+"};\n" +
+"Mat := record<T: Type<math.Numeric>, R: Int, C: Int> {\n" +
+"    rows: [Vec<T, C>; R];\n" +
+"}\n" +
+"Mat.mul := fn<T: Type<math.Numeric>, R: Int, K: Int, C: Int>(a: Self<T, R, K>, b: Self<T, K, C>): Self<T, R, C> {\n" +
+"    var out: [Vec<T, C>; R];\n" +
+"    loop 0..R as r {\n" +
+"        var row: [T; C];\n" +
+"        loop 0..C as c {\n" +
+"            var acc: T;\n" +
+"            loop 0..K as k {\n" +
+"                acc = acc + (a.rows[r].data[k] * b.rows[k].data[c]);\n" +
+"            }\n" +
+"            row[c] = acc;\n" +
+"        }\n" +
+"        out[r] = Vec<T, C> { data = row };\n" +
+"    }\n" +
+"    Self<T, R, C> { rows = out }\n" +
+"};\n" +
+"Mat.transpose := fn<T: Type<math.Numeric>, R: Int, C: Int>(m: Self<T, R, C>): Self<T, C, R> {\n" +
+"    var out: [Vec<T, R>; C];\n" +
+"    loop 0..C as c {\n" +
+"        var row: [T; R];\n" +
+"        loop 0..R as r {\n" +
+"            row[r] = m.rows[r].data[c];\n" +
+"        }\n" +
+"        out[c] = Vec<T, R> { data = row };\n" +
+"    }\n" +
+"    Self<T, C, R> { rows = out }\n" +
+"};\n" +
+"Mat.mulVec := fn<T: Type<math.Numeric>, R: Int, C: Int>(m: Self<T, R, C>, v: Vec<T, C>): Vec<T, R> {\n" +
+"    var out: [T; R];\n" +
+"    loop 0..R as r {\n" +
+"        out[r] = m.rows[r].dot(v);\n" +
+"    }\n" +
+"    Vec<T, R> { data = out }\n" +
+"};\n" +
+"Mat.det := fn<N: Int>(m: Self<Float, N, N>): Float {\n" +
+"    if N == 2 {\n" +
+"        (m.rows[0].data[0] * m.rows[1].data[1]) - (m.rows[0].data[1] * m.rows[1].data[0])\n" +
+"    } else {\n" +
+"        0.0\n" +
+"    }\n" +
+"};\n" +
+"a := Mat<Float, 2, 2> { rows = [Vec<Float, 2> { data = [1.0, 2.0] }, Vec<Float, 2> { data = [3.0, 4.0] }] };\n" +
+"b := Mat<Float, 2, 2> { rows = [Vec<Float, 2> { data = [2.0, 0.0] }, Vec<Float, 2> { data = [1.0, 2.0] }] };\n" +
+"p := a.mul(b);\n" +
+"t := a.transpose();\n" +
+"v := a.mulVec(Vec<Float, 2> { data = [1.0, 2.0] });\n" +
+"r23 := Mat<Int, 2, 3> { rows = [Vec<Int, 3> { data = [1, 2, 3] }, Vec<Int, 3> { data = [4, 5, 6] }] };\n" +
+"r32 := Mat<Int, 3, 2> { rows = [Vec<Int, 2> { data = [7, 8] }, Vec<Int, 2> { data = [9, 10] }, Vec<Int, 2> { data = [11, 12] }] };\n" +
+"r22 := r23.mul(r32);\n" +
+"io.outputLine(p.rows[0].data[0], p.rows[1].data[1], t.rows[0].data[1], v.data[0], v.data[1], a.det(), r22.rows[0].data[0], r22.rows[1].data[1]);\n";
+runBoth("nested-comptime-matrix-forwarding", matForwardSrc, "4 8 3 5 11 -2 58 154\n");
+
 test.done("comptime-value-params");

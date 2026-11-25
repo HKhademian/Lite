@@ -1901,7 +1901,7 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
             bound := bindings.getOr(extStr, "");
             if isComptimeIntToken(bound) {
                 extStr = comptimeIntValue(bound).toText();
-            } else if isAnyParamName(genericParams, bound) {
+            } else if bound =!= "" {
                 extStr = bound;
             }
         }
