@@ -39,6 +39,10 @@ pub Vec2.scaleBy := fn(v: mut Self, factor: Float): Unit {
 
 ### Generic type families and concrete specializations
 
+The agreed [generic parameter inference direction](lite://doc/generic-notation#explicit-generic-names-and-inferred-parameter-declarations)
+keeps `fn<...>` binders explicit and allows their annotations to be inferred
+from the signature. The following examples use the currently supported forms.
+
 All type parameters stay in `fn<...>`, with no angle brackets on the left-hand side of `:=`, and the receiver uses `Self<...>`:
 
 ```text

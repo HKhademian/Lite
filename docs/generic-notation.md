@@ -1,8 +1,56 @@
 # Temporary generic notation
 
-Status: **documentation convention clarified 2026-10-19; separate angle-bracket function type-parameter direction selected 2026-11-14**. The builtin `List<T>` slice is implemented. The function direction below is selected design, not compiler support or a complete generic grammar. Other type-family notation remains explanatory except where separately selected.
+Status: **generic declarations and discrete compile-time parameters implemented on TS and C11. Inference of an omitted generic parameter annotation is pending.** The later rule below governs the prior review notes.
+
+## Explicit generic names and inferred parameter declarations
+
+Direction agreed **2026-11-26**. A function declares its generic names in
+`fn<...>`. An omitted annotation can be inferred from the name's use in
+the signature. The signature may supply evidence through a receiver, an
+ordinary parameter, a return type, or a fixed-array extent.
+
+```text
+Vec.first := fn<Element, Size>(v: Self<Element, Size>): Element {
+    v.data[0]
+};
+Vec.splat := fn<Element, Size>(value: Element): Self<Element, Size> {
+    Self<Element, Size> { data = [value; Size] }
+};
+repeat := fn<Item, Count>(value: Item): [Item; Count] { [value; Count] };
+```
+
+For an owner declared as `Vec := record<T: Type, N: Int> { ... }`, the
+positions in `Self<Element, Size>` require `Element: Type` and `Size: Int`.
+The operation can use its own binder names. A static operation obtains that
+evidence from its result type. `repeat` instead gets evidence from an
+ordinary type position and an array extent. Use an explicit annotation when
+there is insufficient evidence. Conflicting requirements are errors.
+Inference from uses solely in a function body and the complete rules for
+combining constraints remain open.
+
+Current generated TS and C11 compilers accept the explicitly annotated
+forms and reject the omitted `: Int` in these `Vec` examples. The pending
+cases include receiver and static result inference, extents outside
+`Self`, insufficient evidence, and conflicting type and value positions.
+
+Transparent type aliases already preserve the resolved type and operations:
+
+```text
+IVec := alias<N: Int> Vec<Int, N>;
+IVec2 := alias IVec<2>;
+
+a := IVec2.splat(4).first();
+b := IVec<2>.splat(4).first();
+c := Vec<Int, 2>.splat(4).first();
+```
+
+With the current explicitly annotated operation declarations, all three
+calls return `4` on TS and C11. Each resolves to the same `Vec<Int, 2>`.
+See [aliases and type operations](lite://doc/type-aliases#transparent-alias-propagation-for-static-type-operations).
 
 ## Separate function type parameters
+
+Historical review follows. The rule above describes the current direction.
 
 Selected 2026-11-14: a function's explicit type parameters belong in a
 separate angle-bracket list, distinct from its ordinary callable input tuple.
