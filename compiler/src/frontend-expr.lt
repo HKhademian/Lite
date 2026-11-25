@@ -8319,6 +8319,15 @@ functions: List<FunctionInfo>, params: List<String>, inferMode: Bool
     (ok = true, initBindings = "")
 };
 
+/** True when a `lite$*` type-operation runtime is lowered inline by `parseCoreTypeOpHardCall` rather than called as a regular host function. */
+isHardBuiltinTypeOpRuntime := fn(runtime: String): Bool {
+    runtime == "lite$textLength" or runtime == "lite$textAt" or runtime == "lite$textSlice" or
+    runtime.startsWithAt(0, "lite$core$array$") or
+    runtime.startsWithAt(0, "lite$core$list$") or
+    runtime.startsWithAt(0, "lite$core$map$") or
+    runtime.startsWithAt(0, "lite$core$set$")
+};
+
 /** Parses a type-attached dot call `receiver.op(args...)`, validating explicit call-site `mut` lease, `mut Self` permission, unifying generic receivers, and forwarding receiver as argument 0. */
 parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openParen: Int, receiver: Parsed, recvLocalIdx: Int, opIdx: Int, opLabel: String, explicitMut: Bool, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     info := functions[opIdx];
@@ -8337,7 +8346,7 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
     if not isMutRecv and explicitMut {
         syntax.failAt(source, labelStart, prefix, "operation " + types.displayKind(receiver.kind) + "." + opLabel + " does not mutate its receiver; remove mut");
     }
-    if info.runtime.startsWithAt(0, "lite$") {
+    if isHardBuiltinTypeOpRuntime(info.runtime) {
         return parseCoreTypeOpHardCall(target, source, labelStart, openParen, receiver, recvLocalIdx, info.runtime, opLabel, isMutRecv, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     }
     isGenOp := info.runtime.startsWithAt(0, "$gen:");
