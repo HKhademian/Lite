@@ -1,6 +1,7 @@
 /* Core String operations (hard builtins, soft builtins, pure Lite). */
 
 integer := import "core/int";
+unicode := import "core/unicode";
 
 /** Returns Unicode scalar count for one string value. */
 pub String.length := fn(text: Self): Int;
@@ -77,14 +78,22 @@ isAsciiLetterPure := fn(ch: String): Bool {
     or ch == "V" or ch == "W" or ch == "X" or ch == "Y" or ch == "Z"
 }
 
-/** Pure-Lite `isNameStart` implementation. */
+/** Pure-Lite `isNameStart` implementation (ASCII fast path + Unicode 16.0.0 XID_Start). */
 isNameStartPure := fn(ch: String): Bool {
-    isAsciiLetterPure(ch) or ch == "_"
+    if isAsciiLetterPure(ch) or ch == "_" { return true; }
+    if ch.length() =!= 1 { return false; }
+    cp := unicode.codePointAt(ch, 0);
+    if cp < 128 { return false; }
+    unicode.isXidStart(cp)
 }
 
-/** Pure-Lite `isNameContinue` implementation. */
+/** Pure-Lite `isNameContinue` implementation (ASCII fast path + Unicode 16.0.0 XID_Continue without Cf). */
 isNameContinuePure := fn(ch: String): Bool {
-    isNameStartPure(ch) or isDigitPure(ch)
+    if isAsciiLetterPure(ch) or isDigitPure(ch) or ch == "_" { return true; }
+    if ch.length() =!= 1 { return false; }
+    cp := unicode.codePointAt(ch, 0);
+    if cp < 128 { return false; }
+    unicode.isXidContinue(cp)
 }
 
 /** Pure-Lite `isWhitespace` implementation. */
@@ -278,12 +287,12 @@ pub String.isAsciiLetter := fn(ch: Self): Bool {
     isAsciiLetterPure(ch)
 }
 
-/** True for an ASCII identifier start or underscore (soft builtin). */
+/** True for a valid identifier start (`XID_Start` or `_`) under Unicode 16.0.0 (soft builtin). */
 pub String.isNameStart := fn(ch: Self): Bool {
     isNameStartPure(ch)
 }
 
-/** True for an identifier continuation character (soft builtin). */
+/** True for a valid identifier continuation character (`XID_Continue` without `Cf`) under Unicode 16.0.0 (soft builtin). */
 pub String.isNameContinue := fn(ch: Self): Bool {
     isNameContinuePure(ch)
 }

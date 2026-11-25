@@ -9,13 +9,22 @@ test.checkBool("ascii non-letter", false, "_".isAsciiLetter());
 test.checkBool("name start underscore", true, "_".isNameStart());
 test.checkBool("name start digit", false, "1".isNameStart());
 test.checkBool("name continue digit", true, "9".isNameContinue());
+test.checkBool("name start persian", true, "پ".isNameStart());
+test.checkBool("name start persian digit", false, "۱".isNameStart());
+test.checkBool("name continue persian digit", true, "۱".isNameContinue());
+test.checkBool("name start emoji", false, "🚀".isNameStart());
+test.checkBool("name start latin accent", true, "é".isNameStart());
+test.checkBool("name start cjk", true, "学".isNameStart());
 
 test.checkInt("skip spaces", 3, " \t\nx".skipSpaces(0));
 test.checkInt("skip name", 4, "abc9 ".skipName(0));
+test.checkInt("skip name persian", 5, "پیام۱ ".skipName(0));
 test.checkBool("starts with", true, "hello".startsWithAt(1, "ell"));
 test.checkBool("starts beyond", false, "hi".startsWithAt(1, "ello"));
 test.checkBool("word boundary", true, "foo bar".wordAt(4, "bar"));
 test.checkBool("word not boundary", false, "foobar".wordAt(0, "foo"));
+test.checkBool("word boundary persian", true, "پیام پ".wordAt(0, "پیام"));
+test.checkBool("word not boundary persian", false, "پیام۱ پ".wordAt(0, "پیام"));
 
 test.checkInt("index of", 4, "abcabc".indexOf("bc", 2));
 test.checkInt("index absent", -1, "abc".indexOf("z", 0));

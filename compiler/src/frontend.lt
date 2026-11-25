@@ -292,6 +292,8 @@ pub cStructTag := fn(kind: String): String { types.cStructTag(kind) };
 pub cFnTag := fn(kind: String): String { types.cFnTag(kind) };
 /** Returns the C11 struct field identifier for Lite property `prop`. */
 pub cFieldName := fn(prop: String): String { types.cFieldName(prop) };
+/** Encodes a Lite identifier segment into a deterministic C11-safe identifier. */
+pub cSafeIdent := fn(name: String): String { ir.cSafeIdent(name) };
 /** True when C11 representation of `kind` contains a list field. */
 pub cTypeHasListField := fn(kind: String): Bool { types.cTypeHasListField(kind) };
 /** Returns the C11 tuple conversion helper name between `actualKind` and `expectedKind`. */
@@ -1495,9 +1497,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             rawParamKind := paramKindOf(entry);
             isMutParam := rawParamKind.startsWithAt(0, "mut ");
             parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
-            runtime := if isMutParam and target == TARGET_C { "(*lite_" + parameterName + ")" }
-            else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + parameterName + ".v" }
-            else { "lite_" + parameterName };
+            pRuntime := ir.safeTargetIdent(target, parameterName);
+            runtime := if isMutParam and target == TARGET_C { "(*lite_" + pRuntime + ")" }
+            else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + pRuntime + ".v" }
+            else { "lite_" + pRuntime };
             fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
             mut blockDecls.pushBack((name = parameterName, depth = 1));
             mut locals.pushBack((name = parameterName, runtime = runtime, kind = parameterKind,
@@ -3317,9 +3320,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         rawParamKind := paramKindOf(entry);
                         isMutParam := rawParamKind.startsWithAt(0, "mut ");
                         parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
-                        runtime := if isMutParam and target == TARGET_C { "(*lite_" + parameterName + ")" }
-                        else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + parameterName + ".v" }
-                        else { "lite_" + parameterName };
+                        pRuntime := ir.safeTargetIdent(target, parameterName);
+                        runtime := if isMutParam and target == TARGET_C { "(*lite_" + pRuntime + ")" }
+                        else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + pRuntime + ".v" }
+                        else { "lite_" + pRuntime };
                         fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
                         mut blockDecls.pushBack((name = parameterName, depth = 1));
                         mut locals.pushBack((name = parameterName, runtime = runtime, kind = parameterKind,
@@ -3508,9 +3512,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     rawParamKind := paramKindOf(entry);
                     isMutParam := rawParamKind.startsWithAt(0, "mut ");
                     parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
-                    runtime := if isMutParam and target == TARGET_C { "(*lite_" + parameterName + ")" }
-                    else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + parameterName + ".v" }
-                    else { "lite_" + parameterName };
+                    pRuntime := ir.safeTargetIdent(target, parameterName);
+                    runtime := if isMutParam and target == TARGET_C { "(*lite_" + pRuntime + ")" }
+                    else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + pRuntime + ".v" }
+                    else { "lite_" + pRuntime };
                     fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
                     mut blockDecls.pushBack((name = parameterName, depth = 1));
                     mut locals.pushBack((name = parameterName, runtime = runtime, kind = parameterKind,

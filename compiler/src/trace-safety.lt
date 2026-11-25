@@ -1068,7 +1068,7 @@ pub mergeOuterCallableUpdatesFromCode := fn(locals: List<Local>, code: String): 
 };
 
 /** Extracts `"|lite_p1|lite_p2|"` parameter runtimes from a `FunctionStart` `textValue` payload. */
-parseParamRuntimesList := fn(paramsPayload: String): String {
+parseParamRuntimesList := fn(target: String, paramsPayload: String): String {
     var bag := "";
     if paramsPayload == "" { return bag; }
     len := paramsPayload.length();
@@ -1079,7 +1079,7 @@ parseParamRuntimesList := fn(paramsPayload: String): String {
         entry := paramsPayload.slice(start, end);
         eqPos := entry.indexOf("=", 0);
         if eqPos > 0 {
-            bag = appendPipeBag(bag, "lite_" + entry.slice(0, eqPos));
+            bag = appendPipeBag(bag, "lite_" + ir.safeTargetIdent(target, entry.slice(0, eqPos)));
         }
         start = end + 1;
     }
@@ -1179,7 +1179,8 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                 }
                 startItem := findFunctionStartItem(items, curTok);
                 if startItem >= 0 {
-                    paramBag := parseParamRuntimesList(items[startItem].textValue);
+                    fnTarget := if curTok.startsWithAt(0, "lt_fn_") { ir.TARGET_C } else { ir.TARGET_TS };
+                    paramBag := parseParamRuntimesList(fnTarget, items[startItem].textValue);
                     var scopeDepth := 0;
                     localShadowRuntimes: mut List<String> = [];
                     localShadowDepths: mut List<Int> = [];
@@ -1332,7 +1333,8 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
             if fnIdx >= 0 {
                 startItem := findFunctionStartItem(items, curTok);
                 if startItem >= 0 {
-                    paramBag := parseParamRuntimesList(items[startItem].textValue);
+                    fnTarget := if curTok.startsWithAt(0, "lt_fn_") { ir.TARGET_C } else { ir.TARGET_TS };
+                    paramBag := parseParamRuntimesList(fnTarget, items[startItem].textValue);
                     var bodyBranchDepth := 0;
                     var scopeDepth := 0;
                     localShadowRuntimes: mut List<String> = [];

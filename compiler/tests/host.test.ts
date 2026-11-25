@@ -283,8 +283,9 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
 test('selected compiler build exposes its imported source dependencies', () => {
   const selected = buildCompiler('ts');
   assert.deepEqual(selected.dependencies.slice(0, 4), [
-    'compiler/src/ts-root.lts', 'lib/core/int.lt', 'lib/core/text.lt', 'compiler/src/driver-ts.lt',
+    'compiler/src/ts-root.lts', 'lib/core/int.lt', 'lib/core/unicode.lt', 'lib/core/text.lt',
   ]);
+  assert.ok(selected.dependencies.includes('compiler/src/driver-ts.lt'));
   assert.ok(selected.dependencies.includes('compiler/src/frontend.lt'));
   assert.ok(selected.dependencies.includes('compiler/src/host-fs.lt'));
   assert.ok(selected.dependencies.includes('compiler/src/numeric-literals.lt'));
@@ -381,10 +382,10 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     assert.deepEqual(provenance.dependencies, [
       'compiler/src/fixture-root.lts',
       'lib/core/int.lt',
+      'lib/core/unicode.lt',
       'lib/core/text.lt',
       'compiler/src/fixture-c.lts',
       'lib/core/io.lt',
-      'lib/core/unicode.lt',
     ]);
     writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed nested C");');
     const changed = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
@@ -408,9 +409,9 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const expectedRemovedDeps = [
       'compiler/src/fixture-root.lts',
       'lib/core/int.lt',
+      'lib/core/unicode.lt',
       'lib/core/text.lt',
       'lib/core/io.lt',
-      'lib/core/unicode.lt',
     ];
     const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })
       .find(item => item.dependencies.length === expectedRemovedDeps.length && expectedRemovedDeps.every((dep, idx) => item.dependencies[idx] === dep));

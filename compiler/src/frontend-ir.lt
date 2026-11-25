@@ -3,6 +3,7 @@
 numeric := import "./numeric-literals";
 tsLiteral := import "./ts-literals";
 cLiteral := import "./c-literals";
+unicode := import "core/unicode";
 
 /** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
 pub Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
@@ -369,30 +370,86 @@ pub hasBlockDecl := fn(decls: List<BlockDecl>, depth: Int, name: String): Bool {
     false
 };
 
+hexDigitLower := fn(v: Int): String {
+    if v == 0 { "0" } else if v == 1 { "1" } else if v == 2 { "2" } else if v == 3 { "3" }
+    else if v == 4 { "4" } else if v == 5 { "5" } else if v == 6 { "6" } else if v == 7 { "7" }
+    else if v == 8 { "8" } else if v == 9 { "9" } else if v == 10 { "a" } else if v == 11 { "b" }
+    else if v == 12 { "c" } else if v == 13 { "d" } else if v == 14 { "e" } else { "f" }
+};
+
+hexLower := fn(cp: Int): String {
+    var v := cp;
+    var out := "";
+    loop true {
+        out = hexDigitLower(v % 16) + out;
+        v = v / 16;
+        if v == 0 { break; }
+    }
+    out
+};
+
+/** Encodes any non-ASCII Lite identifier into a deterministic, collision-free C11 identifier; pure ASCII (except `u__*`) is returned unchanged. */
+pub cSafeIdent := fn(name: String): String {
+    size := name.length();
+    var allAscii := not name.startsWithAt(0, "u__");
+    if allAscii {
+        var i := 0;
+        loop i < size {
+            ch := name.at(i);
+            if not (ch.isAsciiLetter() or ch.isDigit() or ch == "_") {
+                allAscii = false;
+                break;
+            }
+            i = i + 1;
+        }
+    }
+    if allAscii { return name; }
+    var out := "u__";
+    var i := 0;
+    loop i < size {
+        ch := name.at(i);
+        if ch == "_" {
+            out = out + "__";
+        } else if ch.isAsciiLetter() or ch.isDigit() {
+            out = out + ch;
+        } else {
+            out = out + "_u" + hexLower(unicode.codePointAt(ch, 0)) + "_";
+        }
+        i = i + 1;
+    }
+    out
+};
+
+/** Returns a target-safe identifier segment (`cSafeIdent` for C11, unchanged for TypeScript). */
+pub safeTargetIdent := fn(target: String, name: String): String {
+    if target == TARGET_C { cSafeIdent(name) } else { name }
+};
+
 /** Target runtime identifier for an imported module's top-level value, or a root value. */
 pub moduleValueRuntime := fn(target: String, moduleKey: String, name: String): String {
-    if moduleKey == "" { return "lite_" + name; }
-    if target == TARGET_TS { return "lite$m$" + moduleKey + "$" + name; }
-    "lt_m_" + moduleKey + "__" + name
+    safeName := safeTargetIdent(target, name);
+    if moduleKey == "" { return "lite_" + safeName; }
+    if target == TARGET_TS { return "lite$m$" + moduleKey + "$" + safeName; }
+    "lt_m_" + moduleKey + "__" + safeName
 };
 
 /** Encodes a `TypeName.op` (or `$`-hook) name into a TS/C11-safe identifier suffix. */
-encodeFunctionRuntimeSuffix := fn(name: String): String {
+encodeFunctionRuntimeSuffix := fn(target: String, name: String): String {
     dot := name.indexOf(".", 0);
-    if dot < 0 { return name; }
-    typePart := name.slice(0, dot);
+    if dot < 0 { return safeTargetIdent(target, name); }
+    typePart := safeTargetIdent(target, name.slice(0, dot));
     opRaw := name.slice(dot + 1, name.length());
     opPart := if opRaw.startsWithAt(0, "$") {
-        "S_" + opRaw.slice(1, opRaw.length())
+        "S_" + safeTargetIdent(target, opRaw.slice(1, opRaw.length()))
     } else {
-        opRaw
+        safeTargetIdent(target, opRaw)
     };
     "tp_" + typePart + "_op_" + opPart
 };
 
 /** Target runtime identifier for a user-defined top-level function. */
 pub moduleFunctionRuntime := fn(target: String, moduleKey: String, name: String): String {
-    safeName := encodeFunctionRuntimeSuffix(name);
+    safeName := encodeFunctionRuntimeSuffix(target, name);
     if moduleKey == "" {
         if target == TARGET_TS { return "liteFn_" + safeName; }
         return "lt_fn__" + safeName;
@@ -418,12 +475,13 @@ pub localRuntimeName := fn(target: String, locals: List<Local>, name: String, mo
     if depth == 0 and moduleKey =!= "" {
         return moduleValueRuntime(target, moduleKey, name);
     }
-    base := "lite_" + name;
+    safeName := safeTargetIdent(target, name);
+    base := "lite_" + safeName;
     if not localsUseRuntime(locals, base) { return base; }
     var suffix := 2;
     loop true {
-        candidate := if target == TARGET_TS { "lite_" + name + "$" + suffix.toText() }
-        else { "lt_s" + suffix.toText() + "_" + name };
+        candidate := if target == TARGET_TS { "lite_" + safeName + "$" + suffix.toText() }
+        else { "lt_s" + suffix.toText() + "_" + safeName };
         if not localsUseRuntime(locals, candidate) { return candidate; }
         suffix = suffix + 1;
     }

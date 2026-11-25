@@ -1,0 +1,160 @@
+/* Dual-target (TS and C11) + pure/host soft-builtin tests for Unicode 16.0.0 UAX #31 identifiers. */
+
+test := import "core/test";
+text := import "core/text";
+unicode := import "core/unicode";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+
+ccInfo := compilerTest.probeCc();
+test.check("cc available", ccInfo.cc =!= "");
+
+checkParity := fn(name: String, src: String, expectedStdout: String): Unit {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt(name + " C run: " + cRes.stderr, 0, cRes.status);
+    test.checkText(name + " C stdout", expectedStdout, cRes.stdout);
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+    test.checkInt(name + " TS run: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(name + " TS stdout", expectedStdout, tsRes.stdout);
+};
+
+checkRejectBoth := fn(name: String, src: String): Unit {
+    tsCompRes := compilerTest.compileStdin(root, tsComp, src, "unicode-reject.lts");
+    test.check(name + " TS reject status != 0", tsCompRes.status =!= 0);
+    cCompRes := compilerTest.compileStdin(root, cComp, src, "unicode-reject.lts");
+    test.check(name + " C reject status != 0", cCompRes.status =!= 0);
+};
+
+/* 1. User reproducer and multi-script variables, reassignments, functions, and mut params */
+persianBasics := text.joinTexts([
+    "io := import \"core/io\";",
+    "پیام := \"hello lite\\nAé🚀\\n\";",
+    "io.outputLine(پیام);",
+    "var شمارش := 1;",
+    "شمارش = شمارش + 1;",
+    "لیست: mut List<Int> = [10];",
+    "کتاب_ها := 5;",
+    "متغیر۱ := 2;",
+    "élève := 3;",
+    "学生数 := 4;",
+    "αβ := 6;",
+    "جمع := fn(الف: Int, ب: Int): Int { الف + ب };",
+    "افزودن := fn(مقصد: mut List<Int>, مقدار: Int): Unit { mut مقصد.pushBack(مقدار) };",
+    "افزودن(mut لیست, جمع(کتاب_ها, متغیر۱));",
+    "io.outputLine(شمارش + لیست[0] + لیست[1], élève + 学生数 + αβ);"
+], "\n");
+checkParity("persian-and-multiscript-basics", persianBasics, "hello lite\nAé🚀\n\n19 13\n");
+
+/* 2. Records, methods, tuples, enums, tagged loops, and generics with Unicode names */
+persianTypesAndControl := text.joinTexts([
+    "io := import \"core/io\";",
+    "وضعیت := enum { آماده; انجام_شده };",
+    "کاربر := record { نام: String; سن: Int };",
+    "کاربر.معرفی := fn(خود: Self): String { خود.نام + \":\" + خود.سن.toText() };",
+    "هویت := fn<نوع>(مقدار: نوع): نوع { مقدار };",
+    "ساخت_جفت := fn(عنوان: String, تعداد: Int): (عنوان: String, تعداد: Int) { (عنوان = عنوان, تعداد = تعداد) };",
+    "سارا := کاربر { نام = \"سارا\", سن = 12 };",
+    "جفت := ساخت_جفت(تعداد = 3, عنوان = \"کتاب\");",
+    "حالت := وضعیت.انجام_شده;",
+    "برچسب := match حالت {",
+    "    .آماده { \"wait\" }",
+    "    .انجام_شده { \"done\" }",
+    "};",
+    "var مجموع := 0;",
+    "@حلقه loop 0..4 as گام {",
+    "    if گام == 3 { break @حلقه; }",
+    "    مجموع = مجموع + گام;",
+    "}",
+    "نکته := هویت(کاربر { نام = \"علی\", سن = 7 });",
+    "io.outputLine(سارا.معرفی(), جفت.عنوان, جفت.تعداد, برچسب, مجموع, نکته.نام);"
+], "\n");
+checkParity("persian-records-enums-generics-tags", persianTypesAndControl, "سارا:12 کتاب 3 done 3 علی\n");
+
+/* 3. Persian vs Arabic lookalikes remain distinct and never silently collide */
+lookalikeDistinct := text.joinTexts([
+    "io := import \"core/io\";",
+    "پیام := 1;",
+    "پيام := 2;",
+    "ک := 3;",
+    "ك := 4;",
+    "io.outputLine(پیام, پيام, ک, ك);"
+], "\n");
+checkParity("persian-arabic-lookalikes-distinct", lookalikeDistinct, "1 2 3 4\n");
+
+checkRejectBoth("persian-arabic-mismatch-undefined", text.joinTexts([
+    "io := import \"core/io\";",
+    "پیام := 1;",
+    "io.outputLine(پيام);"
+], "\n"));
+
+/* 4. Rejections: emoji, ZWNJ (U+200C), ZWJ (U+200D), and leading digits */
+checkRejectBoth("reject-emoji-ident", "io := import \"core/io\";\n🚀 := 1;\nio.outputLine(🚀);\n");
+
+zwnj := unicode.fromCodePoints([8204]).text;
+zwj := unicode.fromCodePoints([8205]).text;
+checkRejectBoth("reject-zwnj-ident", "io := import \"core/io\";\nکتاب" + zwnj + "ها := 1;\nio.outputLine(1);\n");
+checkRejectBoth("reject-zwj-ident", "io := import \"core/io\";\nکتاب" + zwj + "ها := 1;\nio.outputLine(1);\n");
+checkRejectBoth("reject-leading-persian-digit", "۱۲۳ := 1;\n");
+checkRejectBoth("reject-leading-ascii-digit-persian", "1اب := 1;\n");
+
+/* 5. Pure-ASCII fast path: generated C keeps unmangled ASCII names without u__ prefix */
+asciiProgram := text.joinTexts([
+    "io := import \"core/io\";",
+    "Box := record { count_val: Int };",
+    "add_one := fn(input_val: Int): Int { input_val + 1 };",
+    "b := Box { count_val = 4 };",
+    "io.outputLine(add_one(b.count_val));"
+], "\n");
+asciiC := compilerTest.compileStdin(root, cComp, asciiProgram, "ascii-fastpath.lts");
+test.checkInt("ascii C compile status", 0, asciiC.status);
+test.check("ascii C unmangled var/fn/field", asciiC.stdout.contains("lite_b") and asciiC.stdout.contains("lt_fn__add_one") and asciiC.stdout.contains("f_count_val"));
+test.check("ascii C omits u__ mangling", not asciiC.stdout.contains("u__"));
+test.check("ascii C omits xid tables when unused", not asciiC.stdout.contains("lt_xid_start"));
+
+/* 6. Soft-builtin vs pure-Lite parity for Unicode XID classification in both TS and C11 */
+softCheckSrc := text.joinTexts([
+    "io := import \"core/io\";",
+    "text := import \"core/text\";",
+    "uni := import \"core/unicode\";",
+    "zwnj := uni.fromCodePoints([8204]).text;",
+    "zwj := uni.fromCodePoints([8205]).text;",
+    "supp := uni.fromCodePoints([134071]).text;",
+    "io.outputLine(\"پ\".isNameStart(), \"ی\".isNameStart(), \"۱\".isNameStart(), \"۱\".isNameContinue(), \"🚀\".isNameStart(), \"🚀\".isNameContinue());",
+    "io.outputLine(\"é\".isNameStart(), \"学\".isNameStart(), supp.isNameStart(), supp.isNameContinue(), zwnj.isNameContinue(), zwj.isNameContinue());",
+    "io.outputLine((\"پیام۱\" + zwnj + \"x\").skipName(0), (supp + \"۱ \" + \"ب\").skipName(0), \"پیام پ\".wordAt(0, \"پیام\"), \"پیام۱ پ\".wordAt(0, \"پیام\"));"
+], "\n");
+expectedSoftOut := "true true false true false false\ntrue true true true false false\n5 2 true false\n";
+
+softTsDef := compilerTest.compileCheckRunTs(root, tsComp, softCheckSrc, "soft-xid-def.lts");
+test.checkInt("soft-xid TS default status: " + softTsDef.stderr, 0, softTsDef.status);
+test.checkText("soft-xid TS default stdout", expectedSoftOut, softTsDef.stdout);
+
+softTsPureComp := compilerTest.compileStdinWithOpts(root, tsComp, root, softCheckSrc, "soft-xid-pure.lts", "", ["--builtin-mode", "pure"]);
+test.checkInt("soft-xid TS pure compile", 0, softTsPureComp.status);
+test.check("soft-xid TS pure omits lite$isNameStart", not softTsPureComp.stdout.contains("function lite$isNameStart("));
+softTsPureRun := compilerTest.checkAndRunTs(root, softTsPureComp.stdout);
+test.checkInt("soft-xid TS pure status: " + softTsPureRun.stderr, 0, softTsPureRun.status);
+test.checkText("soft-xid TS pure stdout", expectedSoftOut, softTsPureRun.stdout);
+
+softCDef := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, softCheckSrc, "soft-xid-c-def.lts", "");
+test.checkInt("soft-xid C default status: " + softCDef.stderr, 0, softCDef.status);
+test.checkText("soft-xid C default stdout", expectedSoftOut, softCDef.stdout);
+
+softCPureComp := compilerTest.compileStdinWithOpts(root, cComp, root, softCheckSrc, "soft-xid-c-pure.lts", "", ["--builtin-mode", "pure"]);
+test.checkInt("soft-xid C pure compile", 0, softCPureComp.status);
+test.check("soft-xid C pure omits lt_c_text_is_name_start", not softCPureComp.stdout.contains("lt_c_text_is_name_start("));
+softCPureRun := compilerTest.compileAndRunC(softCPureComp.stdout, ccInfo.cc, "");
+test.checkInt("soft-xid C pure status: " + softCPureRun.stderr, 0, softCPureRun.status);
+test.checkText("soft-xid C pure stdout", expectedSoftOut, softCPureRun.stdout);
+
+test.done("unicode-identifiers");

@@ -3,6 +3,7 @@
 integer := import "core/int";
 listLib := import "core/list";
 textLib := import "core/text";
+unicode := import "core/unicode";
 numeric := import "./numeric-literals";
 tsLiteral := import "./ts-literals";
 ir := import "./frontend-ir";
@@ -743,9 +744,9 @@ pub recordFieldKind := fn(kind: String, label: String): String {
     ""
 };
 
-/** Prefixes a tuple/record runtime property name with `f_` for C11 struct members so C keywords never collide. */
+/** Prefixes a tuple/record runtime property name with `f_` for C11 struct members so C keywords and non-ASCII names never collide. */
 pub cFieldName := fn(prop: String): String {
-    "f_" + prop
+    "f_" + ir.cSafeIdent(prop)
 };
 
 /** Deterministic dual-prime hash of canonical kind string `kind` for C11 struct typedef names. */
@@ -758,7 +759,7 @@ cStructHash := fn(kind: String): String {
     loop i < size {
         ch := kind.at(i);
         idx := table.indexOf(ch, 0);
-        v := if idx >= 0 { idx + 1 } else { 97 };
+        v := if idx >= 0 { idx + 1 } else { 97 + unicode.codePointAt(ch, 0) };
         h1 = (h1 * 131 + v) % 1000000007;
         h2 = (h2 * 137 + v) % 1000000009;
         i = i + 1;
