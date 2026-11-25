@@ -1,6 +1,9 @@
 # Closures
 
-Status: **Generated TS lexical closures active as of 2026-11-16 (Unified Block Model Slice 3); explicit capture-header syntax and native C closure representation remain deferred design history.** On the TS target, local `fn(...) { ... }` expressions capture surrounding immutable values, mutable `var` storage, `mut List` values, parameters, `loop` item bindings, and sibling functions across nested and escaping frames, enforced by compile-time execution-trace and escaping-closure checks (see [deferred-body lookup](lite://doc/functions#deferred-body-lookup)); the C target continues rejecting `fn` values explicitly. The `[...]` capture-list proposals, environment-context notes, and reference comparisons below are retained as deferred design history (`LiteLang` / [pinned context ideas](lite://doc/deferred-contexts)), not active syntax commitments.
+Status: **closure semantics and capture syntax are deferred language work**, as
+confirmed on 2026-11-26. Earlier compiler work exercised lexical captures and
+escaping frames. The language contract for snapshots, live writable captures,
+and lifetimes remains open. The capture headers below are design history.
 
 ## Purpose and template
 
