@@ -11,8 +11,8 @@ pub Point := alias (x: Float, y: Float);
 /** Axis-aligned rectangle in logical surface coordinates. */
 pub Rect := alias (x: Float, y: Float, width: Float, height: Float);
 
-/** Opaque handle identifying an open abstract drawing surface. */
-pub Surface := alias (handle: Int);
+/** Opaque nominal handle identifying an open abstract drawing surface. */
+pub Surface := distinct (handle: Int);
 
 /** Snapshot of surface state and user input for the current frame. */
 pub FrameInput := alias (open: Bool, width: Int, height: Int, pointerX: Float, pointerY: Float, pointerDown: Bool, key: String, deltaMs: Int);
@@ -23,29 +23,16 @@ pub Vitals := alias (frameCount: Int, frameTimeMs: Float, avgFrameTimeMs: Float,
 /** Window geometry and fullscreen state snapshot for an active surface. */
 pub Bounds := alias (x: Int, y: Int, width: Int, height: Int, fullscreen: Bool);
 
-/** Offscreen RGBA pixel texture handle created by `createTexture`. */
-pub Texture := alias (handle: Int, width: Int, height: Int);
+RawTexture := alias (handle: Int, width: Int, height: Int);
+
+/** Opaque nominal offscreen RGBA pixel texture handle created by `Texture.create`. */
+pub Texture := distinct RawTexture;
 
 /** Constructs a 2D point `(x, y)`. */
 pub point := fn(x: Float, y: Float): Point { (x = x, y = y) };
 
 /** Constructs a rectangle `(x, y, width, height)`. */
 pub rect := fn(x: Float, y: Float, width: Float, height: Float): Rect { (x = x, y = y, width = width, height = height) };
-
-/** Constructs an opaque color from normalized RGB channels (`0.0..1.0`). */
-pub rgb := fn(r: Float, g: Float, b: Float): Color { color.fromRgb(r, g, b) };
-
-/** Constructs a color from normalized RGBA channels (`0.0..1.0`). */
-pub rgba := fn(r: Float, g: Float, b: Float, a: Float): Color { color.fromRgba(r, g, b, a) };
-
-/** Constructs an opaque color from HSL (`hueDeg` in `0..360`, `s` and `l` in `0.0..1.0`). */
-pub hsl := fn(hueDeg: Float, s: Float, l: Float): Color { color.fromHsl(hueDeg, s, l) };
-
-/** Linearly blends `a` and `b` by `t` (`0.0..1.0`). */
-pub mix := fn(a: Color, b: Color, t: Float): Color { color.mix(a, b, t) };
-
-/** Returns `c` with its alpha channel replaced. */
-pub withAlpha := fn(c: Color, a: Float): Color { color.withAlphaFloat(c, a) };
 
 /** Transparent black. */
 pub TRANSPARENT := color.TRANSPARENT;
@@ -75,149 +62,159 @@ pub CYAN := color.CYAN;
 pub MAGENTA := color.MAGENTA;
 
 /** Opens an abstract drawing surface with the requested logical title and dimensions. */
-pub open := fn(title: String, width: Int, height: Int): Surface;
+pub Surface.open := fn(title: String, width: Int, height: Int): Self;
 
 /** Polls current surface state and input events for the next frame. */
-pub poll := fn(surface: Surface): FrameInput;
+pub Surface.poll := fn(surface: Self): FrameInput;
 
 /** Presents the current frame to the backing display target. */
-pub present := fn(surface: Surface): Unit;
+pub Surface.present := fn(surface: Self): Unit;
 
 /** Closes the surface and releases its host resources. */
-pub close := fn(surface: Surface): Unit;
+pub Surface.close := fn(surface: Self): Unit;
 
-/** Frame callback invoked once per frame by `run`; return `false` to stop the loop. */
+/** Frame callback invoked once per frame by `Surface.run`; return `false` to stop the loop. */
 pub FrameCallback := alias fn(FrameInput): Bool;
 
 /** Runs a portable host-driven frame loop (`poll -> onFrame -> present`) across desktop, headless, and browser hosts until the surface closes or `onFrame` returns `false`. */
-pub run := fn(surface: Surface, onFrame: FrameCallback): Unit;
+pub Surface.run := fn(surface: Self, onFrame: FrameCallback): Unit;
 
 /** Clears the entire surface to `fill`. */
-pub clear := fn(surface: Surface, fill: Color): Unit;
+pub Surface.clear := fn(surface: Self, fill: Color): Unit;
 
 /** Fills `area` with `fill`. */
-pub fillRect := fn(surface: Surface, area: Rect, fill: Color): Unit;
+pub Surface.fillRect := fn(surface: Self, area: Rect, fill: Color): Unit;
 
 /** Strokes the outline of `area` with thickness `lineWidth` and color `stroke`. */
-pub strokeRect := fn(surface: Surface, area: Rect, lineWidth: Float, stroke: Color): Unit;
+pub Surface.strokeRect := fn(surface: Self, area: Rect, lineWidth: Float, stroke: Color): Unit;
 
 /** Fills a circle centered at `center` with `radius` and color `fill`. */
-pub fillCircle := fn(surface: Surface, center: Point, radius: Float, fill: Color): Unit;
+pub Surface.fillCircle := fn(surface: Self, center: Point, radius: Float, fill: Color): Unit;
 
 /** Strokes a line segment from `start` to `finish` with thickness `lineWidth` and color `stroke`. */
-pub strokeLine := fn(surface: Surface, start: Point, finish: Point, lineWidth: Float, stroke: Color): Unit;
+pub Surface.strokeLine := fn(surface: Self, start: Point, finish: Point, lineWidth: Float, stroke: Color): Unit;
 
 /** Draws `content` at `at` using logical pixel height `size` and color `fill`. */
-pub drawText := fn(surface: Surface, content: String, at: Point, size: Float, fill: Color): Unit;
+pub Surface.drawText := fn(surface: Self, content: String, at: Point, size: Float, fill: Color): Unit;
 
 /** Captures the current surface contents to an image file at `outPath` (backend-encoded PNG). */
-pub capture := fn(surface: Surface, outPath: String): (ok: Bool, error: String);
+pub Surface.capture := fn(surface: Self, outPath: String): (ok: Bool, error: String);
 
 /** Sets the target frame rate in frames per second (`<= 0.0` releases the cap and runs uncapped; default is `60.0`). */
-pub setTargetFps := fn(surface: Surface, fps: Float): Unit;
+pub Surface.setTargetFps := fn(surface: Self, fps: Float): Unit;
 
 /** Sets the target frame time in milliseconds (`<= 0.0` releases the cap and runs uncapped). */
-pub setFrameTimeMs := fn(surface: Surface, ms: Float): Unit {
+pub Surface.setFrameTimeMs := fn(surface: Self, ms: Float): Unit {
     if ms <= 0.0 {
-        setTargetFps(surface, 0.0);
+        surface.setTargetFps(0.0);
     } else {
-        setTargetFps(surface, 1000.0 / ms);
+        surface.setTargetFps(1000.0 / ms);
     }
 };
 
 /** Releases the frame-rate cap so the surface runs as fast as the host allows. */
-pub uncapFrameRate := fn(surface: Surface): Unit {
-    setTargetFps(surface, 0.0);
+pub Surface.uncapFrameRate := fn(surface: Self): Unit {
+    surface.setTargetFps(0.0);
 };
 
 /** Reads live performance and resource vitals (frame count, frame time, FPS, CPU time, and resident memory bytes). */
-pub vitals := fn(surface: Surface): Vitals;
+pub Surface.vitals := fn(surface: Self): Vitals;
 
 /** Plays a short synthesized sine tone (`frequency` Hz, `durationMs` ms, `volume` 1..100) asynchronously on desktop hosts. */
-pub playTone := fn(surface: Surface, frequency: Int, durationMs: Int, volume: Int): Unit;
+pub Surface.playTone := fn(surface: Self, frequency: Int, durationMs: Int, volume: Int): Unit;
 
 /** Returns passive window geometry (`x`, `y`, `width`, `height`) and `fullscreen` state for `surface`. */
-pub bounds := fn(surface: Surface): Bounds;
+pub Surface.bounds := fn(surface: Self): Bounds;
 
 /** Resizes `surface` and its backing framebuffer to `width x height` logical pixels. */
-pub resize := fn(surface: Surface, width: Int, height: Int): Unit;
+pub Surface.resize := fn(surface: Self, width: Int, height: Int): Unit;
 
 /** Enters or exits native fullscreen mode on desktop hosts. */
-pub setFullscreen := fn(surface: Surface, enabled: Bool): Unit;
+pub Surface.setFullscreen := fn(surface: Self, enabled: Bool): Unit;
 
 /** Returns the current logical width of `surface` in pixels. */
-pub width := fn(surface: Surface): Int {
-    bounds(surface).width
+pub Surface.width := fn(surface: Self): Int {
+    surface.bounds().width
 };
 
 /** Returns the current logical height of `surface` in pixels. */
-pub height := fn(surface: Surface): Int {
-    bounds(surface).height
+pub Surface.height := fn(surface: Self): Int {
+    surface.bounds().height
 };
 
 /** Returns the current logical `(width, height)` size of `surface`. */
-pub size := fn(surface: Surface): (width: Int, height: Int) {
-    b := bounds(surface);
+pub Surface.size := fn(surface: Self): (width: Int, height: Int) {
+    b := surface.bounds();
     (width = b.width, height = b.height)
 };
 
 /** Returns the current window `(x, y)` position of `surface`. */
-pub position := fn(surface: Surface): (x: Int, y: Int) {
-    b := bounds(surface);
+pub Surface.position := fn(surface: Self): (x: Int, y: Int) {
+    b := surface.bounds();
     (x = b.x, y = b.y)
 };
 
 /** True when `surface` is currently in fullscreen mode. */
-pub isFullscreen := fn(surface: Surface): Bool {
-    bounds(surface).fullscreen
+pub Surface.isFullscreen := fn(surface: Self): Bool {
+    surface.bounds().fullscreen
 };
 
 /** Toggles fullscreen mode on `surface`. */
-pub toggleFullscreen := fn(surface: Surface): Unit {
-    setFullscreen(surface, not isFullscreen(surface));
+pub Surface.toggleFullscreen := fn(surface: Self): Unit {
+    surface.setFullscreen(not surface.isFullscreen());
 };
 
 /** True while key `key` is currently held down on `surface`. */
-pub isKeyDown := fn(surface: Surface, key: String): Bool;
+pub Surface.isKeyDown := fn(surface: Self, key: String): Bool;
 
 /** True only on the frame key `key` transitions from up to down on `surface`. */
-pub isKeyPressed := fn(surface: Surface, key: String): Bool;
+pub Surface.isKeyPressed := fn(surface: Self, key: String): Bool;
 
 /** True only on the frame key `key` transitions from down to up on `surface`. */
-pub isKeyReleased := fn(surface: Surface, key: String): Bool;
+pub Surface.isKeyReleased := fn(surface: Self, key: String): Bool;
 
 /** True only on the frame the primary pointer button transitions from up to down. */
-pub isPointerPressed := fn(surface: Surface): Bool;
+pub Surface.isPointerPressed := fn(surface: Self): Bool;
 
 /** True only on the frame the primary pointer button transitions from down to up. */
-pub isPointerReleased := fn(surface: Surface): Bool;
+pub Surface.isPointerReleased := fn(surface: Self): Bool;
 
 /** Vertical scroll wheel delta accumulated since the previous frame. */
-pub wheelDelta := fn(surface: Surface): Float;
+pub Surface.wheelDelta := fn(surface: Self): Float;
 
 /** Restricts subsequent drawing calls on `surface` to `area`. */
-pub setClipRect := fn(surface: Surface, area: Rect): Unit;
+pub Surface.setClipRect := fn(surface: Self, area: Rect): Unit;
 
 /** Clears the active clipping rectangle so drawing spans the full surface. */
-pub clearClipRect := fn(surface: Surface): Unit;
+pub Surface.clearClipRect := fn(surface: Self): Unit;
 
 /** Fills the solid triangle `(a, b, c)` on `surface` with color `fill`. */
-pub fillTriangle := fn(surface: Surface, a: Point, b: Point, c: Point, fill: Color): Unit;
+pub Surface.fillTriangle := fn(surface: Self, a: Point, b: Point, c: Point, fill: Color): Unit;
 
 /** Allocates a transparent `width x height` offscreen RGBA texture. */
-pub createTexture := fn(width: Int, height: Int): Texture;
+pub Texture.create := fn(width: Int, height: Int): Self;
+
+/** Returns the texture width in pixels. */
+pub Texture.width := fn(tex: Self): Int {
+    cast<RawTexture>(tex).width
+};
+
+/** Returns the texture height in pixels. */
+pub Texture.height := fn(tex: Self): Int {
+    cast<RawTexture>(tex).height
+};
 
 /** Writes color `fill` directly to pixel `(x, y)` inside offscreen texture `tex`. */
-pub setTexturePixel := fn(tex: Texture, x: Int, y: Int, fill: Color): Unit;
+pub Texture.setPixel := fn(tex: Self, x: Int, y: Int, fill: Color): Unit;
 
 /** Alpha-blends offscreen texture `tex` onto `surface` at top-left `at`. */
-pub blit := fn(surface: Surface, tex: Texture, at: Point): Unit;
+pub Surface.blit := fn(surface: Self, tex: Texture, at: Point): Unit;
 
 /** Alpha-blends offscreen texture `tex` scaled to `dest` on `surface`. */
-pub blitScaled := fn(surface: Surface, tex: Texture, dest: Rect): Unit;
+pub Surface.blitScaled := fn(surface: Self, tex: Texture, dest: Rect): Unit;
 
 /** Releases offscreen texture `tex` and recycles its handle slot. */
-pub destroyTexture := fn(tex: Texture): Unit;
+pub Texture.destroy := fn(tex: Self): Unit;
 
 /** Captures a checkpoint for per-frame scratch strings (O(1) no-op on GC targets, slab rewind on C11). */
 pub scratchMark := fn(): Int;

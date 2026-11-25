@@ -12,7 +12,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.errorLine("lite site-library: could not locate repository root");
         io.exit(1);
     }
-    stdinRes := io.readAllText(io.stdinReader());
+    stdinRes := io.Reader.stdin().readAllText();
     if not stdinRes.ok {
         io.errorLine(stdinRes.error);
         io.exit(1);

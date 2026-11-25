@@ -28,54 +28,54 @@ makeSrc := fn(outPng: String): String {
     "canvas := import \"extra/surface\";\n" +
     "\n" +
     "zero: color.Color;\n" +
-    "io.outputLine(color.red8(zero), color.green8(zero), color.blue8(zero), color.alpha8(zero));\n" +
-    "c1 := color.fromRgb8(255, 128, 0);\n" +
-    "io.outputLine(color.red8(c1), color.green8(c1), color.blue8(c1), color.alpha8(c1));\n" +
-    "mid := color.mix(color.BLACK, color.WHITE, 0.5);\n" +
-    "io.outputLine(color.red8(mid), color.alpha8(mid));\n" +
-    "h := color.fromHsl(120.0, 1.0, 0.5);\n" +
-    "io.outputLine(color.red8(h), color.green8(h), color.blue8(h));\n" +
+    "io.outputLine(zero.red8(), zero.green8(), zero.blue8(), zero.alpha8());\n" +
+    "c1 := color.Color.fromRgb8(255, 128, 0);\n" +
+    "io.outputLine(c1.red8(), c1.green8(), c1.blue8(), c1.alpha8());\n" +
+    "mid := color.BLACK.mix(color.WHITE, 0.5);\n" +
+    "io.outputLine(mid.red8(), mid.alpha8());\n" +
+    "h := color.Color.fromHsl(120.0, 1.0, 0.5);\n" +
+    "io.outputLine(h.red8(), h.green8(), h.blue8());\n" +
     "\n" +
-    "surf := canvas.open(\"Test\", 64, 48);\n" +
-    "inp := canvas.poll(surf);\n" +
+    "surf := canvas.Surface.open(\"Test\", 64, 48);\n" +
+    "inp := surf.poll();\n" +
     "io.outputLine(inp.open, inp.width, inp.height);\n" +
-    "canvas.clear(surf, canvas.rgb(0.1, 0.2, 0.3));\n" +
-    "canvas.fillRect(surf, canvas.rect(4.0, 4.0, 20.0, 12.0), canvas.RED);\n" +
-    "canvas.strokeRect(surf, canvas.rect(2.0, 2.0, 60.0, 44.0), 2.0, canvas.WHITE);\n" +
-    "canvas.fillCircle(surf, canvas.point(32.0, 24.0), 10.0, canvas.withAlpha(canvas.CYAN, 0.5));\n" +
-    "canvas.strokeLine(surf, canvas.point(0.0, 0.0), canvas.point(63.0, 47.0), 2.0, canvas.YELLOW);\n" +
-    "canvas.setClipRect(surf, canvas.rect(4.0, 4.0, 56.0, 40.0));\n" +
-    "canvas.fillTriangle(surf, canvas.point(10.0, 10.0), canvas.point(40.0, 12.0), canvas.point(22.0, 36.0), canvas.MAGENTA);\n" +
-    "canvas.clearClipRect(surf);\n" +
-    "canvas.drawText(surf, \"Score: 100% [a-z] {ok}\", canvas.point(4.0, 28.0), 7.0, canvas.WHITE);\n" +
-    "tex := canvas.createTexture(4, 4);\n" +
-    "canvas.setTexturePixel(tex, 1, 1, canvas.GREEN);\n" +
-    "canvas.setTexturePixel(tex, 2, 2, canvas.YELLOW);\n" +
-    "canvas.blit(surf, tex, canvas.point(6.0, 6.0));\n" +
-    "canvas.blitScaled(surf, tex, canvas.rect(12.0, 6.0, 8.0, 8.0));\n" +
-    "io.outputLine(tex.width, tex.height, canvas.isKeyDown(surf, \"Space\"), canvas.isKeyPressed(surf, \"a\"), canvas.isKeyReleased(surf, \"a\"), canvas.isPointerPressed(surf), canvas.isPointerReleased(surf), canvas.wheelDelta(surf));\n" +
-    "canvas.destroyTexture(tex);\n" +
+    "surf.clear(color.Color.fromRgb(0.1, 0.2, 0.3));\n" +
+    "surf.fillRect(canvas.rect(4.0, 4.0, 20.0, 12.0), canvas.RED);\n" +
+    "surf.strokeRect(canvas.rect(2.0, 2.0, 60.0, 44.0), 2.0, canvas.WHITE);\n" +
+    "surf.fillCircle(canvas.point(32.0, 24.0), 10.0, canvas.CYAN.withAlphaFloat(0.5));\n" +
+    "surf.strokeLine(canvas.point(0.0, 0.0), canvas.point(63.0, 47.0), 2.0, canvas.YELLOW);\n" +
+    "surf.setClipRect(canvas.rect(4.0, 4.0, 56.0, 40.0));\n" +
+    "surf.fillTriangle(canvas.point(10.0, 10.0), canvas.point(40.0, 12.0), canvas.point(22.0, 36.0), canvas.MAGENTA);\n" +
+    "surf.clearClipRect();\n" +
+    "surf.drawText(\"Score: 100% [a-z] {ok}\", canvas.point(4.0, 28.0), 7.0, canvas.WHITE);\n" +
+    "tex := canvas.Texture.create(4, 4);\n" +
+    "tex.setPixel(1, 1, canvas.GREEN);\n" +
+    "tex.setPixel(2, 2, canvas.YELLOW);\n" +
+    "surf.blit(tex, canvas.point(6.0, 6.0));\n" +
+    "surf.blitScaled(tex, canvas.rect(12.0, 6.0, 8.0, 8.0));\n" +
+    "io.outputLine(tex.width(), tex.height(), surf.isKeyDown(\"Space\"), surf.isKeyPressed(\"a\"), surf.isKeyReleased(\"a\"), surf.isPointerPressed(), surf.isPointerReleased(), surf.wheelDelta());\n" +
+    "tex.destroy();\n" +
     "m0 := canvas.scratchMark();\n" +
     "_tmpHud := \"HUD=\" + (42).toText();\n" +
     "canvas.scratchRewind(m0);\n" +
-    "canvas.present(surf);\n" +
-    "v0 := canvas.vitals(surf);\n" +
-    "canvas.setTargetFps(surf, 120.0);\n" +
-    "v1 := canvas.vitals(surf);\n" +
-    "canvas.uncapFrameRate(surf);\n" +
-    "v2 := canvas.vitals(surf);\n" +
+    "surf.present();\n" +
+    "v0 := surf.vitals();\n" +
+    "surf.setTargetFps(120.0);\n" +
+    "v1 := surf.vitals();\n" +
+    "surf.uncapFrameRate();\n" +
+    "v2 := surf.vitals();\n" +
     "io.outputLine(v0.frameCount, v0.targetFps == 60.0, v1.targetFps == 120.0, v2.targetFps == 0.0, v0.frameTimeMs > 0.0, v0.memoryBytes > 0);\n" +
-    "sz0 := canvas.size(surf);\n" +
-    "pos0 := canvas.position(surf);\n" +
-    "canvas.resize(surf, 96, 72);\n" +
-    "canvas.setFullscreen(surf, true);\n" +
-    "b1 := canvas.bounds(surf);\n" +
-    "canvas.toggleFullscreen(surf);\n" +
-    "io.outputLine(sz0.width, sz0.height, pos0.x >= 0, b1.width, b1.height, b1.fullscreen, canvas.isFullscreen(surf));\n" +
-    "canvas.resize(surf, 64, 48);\n" +
-    "cap := canvas.capture(surf, \"" + outPng + "\");\n" +
+    "sz0 := surf.size();\n" +
+    "pos0 := surf.position();\n" +
+    "surf.resize(96, 72);\n" +
+    "surf.setFullscreen(true);\n" +
+    "b1 := surf.bounds();\n" +
+    "surf.toggleFullscreen();\n" +
+    "io.outputLine(sz0.width, sz0.height, pos0.x >= 0, b1.width, b1.height, b1.fullscreen, surf.isFullscreen());\n" +
+    "surf.resize(64, 48);\n" +
+    "cap := surf.capture(\"" + outPng + "\");\n" +
     "io.outputLine(cap.ok, cap.error);\n" +
-    "canvas.close(surf);\n"
+    "surf.close();\n"
 };
 
 expected :=
@@ -128,34 +128,34 @@ if ccInfo.available {
     leakSrc :=
     "io := import \"core/io\";\n" +
     "canvas := import \"extra/surface\";\n" +
-    "surf := canvas.open(\"LeakCheck\", 160, 120);\n" +
-    "canvas.uncapFrameRate(surf);\n" +
-    "spr := canvas.createTexture(4, 4);\n" +
-    "canvas.setTexturePixel(spr, 1, 1, canvas.GREEN);\n" +
+    "surf := canvas.Surface.open(\"LeakCheck\", 160, 120);\n" +
+    "surf.uncapFrameRate();\n" +
+    "spr := canvas.Texture.create(4, 4);\n" +
+    "spr.setPixel(1, 1, canvas.GREEN);\n" +
     "var rssStart := 0;\n" +
     "var i := 0;\n" +
     "loop i < 5000 {\n" +
     "    mk := canvas.scratchMark();\n" +
-    "    _inp := canvas.poll(surf);\n" +
-    "    canvas.clear(surf, canvas.BLACK);\n" +
-    "    canvas.setClipRect(surf, canvas.rect(4.0, 4.0, 152.0, 112.0));\n" +
-    "    canvas.fillRect(surf, canvas.rect(10.0, 10.0, 40.0, 30.0), canvas.RED);\n" +
-    "    canvas.fillTriangle(surf, canvas.point(60.0, 15.0), canvas.point(110.0, 20.0), canvas.point(80.0, 60.0), canvas.YELLOW);\n" +
-    "    canvas.fillCircle(surf, canvas.point(80.0, 60.0), 20.0, canvas.withAlpha(canvas.CYAN, 0.5));\n" +
-    "    canvas.blitScaled(surf, spr, canvas.rect(120.0, 10.0, 16.0, 16.0));\n" +
+    "    _inp := surf.poll();\n" +
+    "    surf.clear(canvas.BLACK);\n" +
+    "    surf.setClipRect(canvas.rect(4.0, 4.0, 152.0, 112.0));\n" +
+    "    surf.fillRect(canvas.rect(10.0, 10.0, 40.0, 30.0), canvas.RED);\n" +
+    "    surf.fillTriangle(canvas.point(60.0, 15.0), canvas.point(110.0, 20.0), canvas.point(80.0, 60.0), canvas.YELLOW);\n" +
+    "    surf.fillCircle(canvas.point(80.0, 60.0), 20.0, canvas.CYAN.withAlphaFloat(0.5));\n" +
+    "    surf.blitScaled(spr, canvas.rect(120.0, 10.0, 16.0, 16.0));\n" +
     "    hud := \"FRAME \" + i.toText() + \" SCORE=\" + (i * 10).toText();\n" +
-    "    canvas.drawText(surf, hud, canvas.point(12.0, 12.0), 14.0, canvas.WHITE);\n" +
-    "    canvas.clearClipRect(surf);\n" +
-    "    canvas.present(surf);\n" +
+    "    surf.drawText(hud, canvas.point(12.0, 12.0), 14.0, canvas.WHITE);\n" +
+    "    surf.clearClipRect();\n" +
+    "    surf.present();\n" +
     "    canvas.scratchRewind(mk);\n" +
-    "    if i == 500 { rssStart = canvas.vitals(surf).memoryBytes; }\n" +
+    "    if i == 500 { rssStart = surf.vitals().memoryBytes; }\n" +
     "    i = i + 1;\n" +
     "}\n" +
-    "canvas.destroyTexture(spr);\n" +
-    "rssEnd := canvas.vitals(surf).memoryBytes;\n" +
+    "spr.destroy();\n" +
+    "rssEnd := surf.vitals().memoryBytes;\n" +
     "growth := rssEnd - rssStart;\n" +
     "io.outputLine(growth <= 1048576);\n" +
-    "canvas.close(surf);\n";
+    "surf.close();\n";
     leakComp := compilerTest.compileStdin(root, selC.path, leakSrc, "");
     test.checkInt("leak c compile: " + leakComp.stderr, 0, leakComp.status);
     leakCFile := path.join(tmpDir, "leak.c");
@@ -177,19 +177,19 @@ if ccInfo.available {
 runSrc :=
 "io := import \"core/io\";\n" +
 "surf := import \"extra/surface\";\n" +
-"win := surf.open(\"RunLoop\", 32, 24);\n" +
-"surf.uncapFrameRate(win);\n" +
+"win := surf.Surface.open(\"RunLoop\", 32, 24);\n" +
+"win.uncapFrameRate();\n" +
 "var frames := 0;\n" +
-"surf.run(win, fn(inp: surf.FrameInput): Bool {\n" +
+"win.run(fn(inp: surf.FrameInput): Bool {\n" +
 "    if not inp.open { return false; }\n" +
-"    surf.clear(win, surf.BLACK);\n" +
-"    surf.fillRect(win, surf.rect(frames * 1.0, 2.0, 4.0, 4.0), surf.RED);\n" +
+"    win.clear(surf.BLACK);\n" +
+"    win.fillRect(surf.rect(frames * 1.0, 2.0, 4.0, 4.0), surf.RED);\n" +
 "    frames = frames + 1;\n" +
 "    frames < 5\n" +
 "});\n" +
-"vit := surf.vitals(win);\n" +
+"vit := win.vitals();\n" +
 "io.outputLine(frames, vit.frameCount);\n" +
-"surf.close(win);\n";
+"win.close();\n";
 
 runExpected := "5 4\n";
 tsRunLoopComp := compilerTest.compileStdin(root, selTs.path, runSrc, "");

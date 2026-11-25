@@ -5848,7 +5848,7 @@ pub emitProgramToWithConfig := fn(writer: io.Writer, items: frontend.Items, sour
     cOutUseWriter = true;
     tb.clear(mut cOutBuf);
     emitProgramWithConfig(items, source, prefix, builtinSpecs, config);
-    _res := io.writeText(writer, tb.build(cOutBuf));
+    _res := writer.writeText(tb.build(cOutBuf));
     tb.clear(mut cOutBuf);
     cOutUseWriter = false;
 };

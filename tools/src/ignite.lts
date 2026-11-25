@@ -460,10 +460,10 @@ rootDir: String, name: String, compilerArtifactSha: String, compilerSourceSha: S
     projectRoot = rootDir, cwd = rootDir, builtinSpecs = emptySpecs
     );
 
-    writer := io.bufferWriter();
+    writer := io.Writer.buffer();
     emitter.emitProgramToWithConfig(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = relRoot, builtinSpecs = emptySpecs, config = optCfg.presetConfig(optCfg.OptClass.O3, frontend.TARGET_TS));
-    outRes := io.writerText(writer);
-    _cl := io.closeWriter(writer);
+    outRes := writer.text();
+    _cl := writer.close();
     if not outRes.ok {
         return (ok = false, path = "", target = "ts", sha256 = "", rebuilt = false, error = "ignite: emit failed for " + relRoot + ": " + outRes.error);
     }
@@ -640,10 +640,10 @@ ensureDistCompiler := fn(rootDir: String, expectedArtSha: String, force: Bool): 
     identity = "", source = srcRead.text, initialGraph = emptyGraph,
     projectRoot = rootDir, cwd = rootDir, builtinSpecs = emptySpecs
     );
-    writer := io.bufferWriter();
+    writer := io.Writer.buffer();
     emitter.emitProgramToWithConfig(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = "compiler/src/ts-root.lts", builtinSpecs = emptySpecs, config = optCfg.presetConfig(optCfg.OptClass.O3, frontend.TARGET_TS));
-    outRes := io.writerText(writer);
-    _cl := io.closeWriter(writer);
+    outRes := writer.text();
+    _cl := writer.close();
     if not outRes.ok {
         return (ok = false, error = "ignite: failed to emit compiler.ts: " + outRes.error);
     }

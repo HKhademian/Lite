@@ -297,8 +297,8 @@ tail: List<Int>, totalBytes: Int
 
 /** Streams raw bytes from `reader` and returns the lowercase hexadecimal SHA-256 digest. */
 pub sha256Reader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String) {
-    if not io.readerOk(reader) {
-        return (ok = false, hex = "", error = io.readerError(reader));
+    if not reader.ok() {
+        return (ok = false, hex = "", error = reader.error());
     }
     var h0 := 1779033703;
     var h1 := 3144134277;
@@ -311,13 +311,13 @@ pub sha256Reader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String
     var totalBytes := 0;
     var tail: mut List<Int> = [];
     loop true {
-        chunk := io.read(reader, 16384);
-        if not io.readerOk(reader) {
-            return (ok = false, hex = "", error = io.readerError(reader));
+        chunk := reader.read(16384);
+        if not reader.ok() {
+            return (ok = false, hex = "", error = reader.error());
         }
         chunkLen := chunk.length();
         if chunkLen == 0 {
-            if io.readerAtEof(reader) { break; }
+            if reader.atEof() { break; }
             continue;
         }
         totalBytes += chunkLen;
@@ -383,11 +383,11 @@ pub sha256Text := fn(value: String): String {
 /** Returns the lowercase hexadecimal SHA-256 digest of the raw bytes of the file at `path`. */
 pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String) {
     reader := file.openReader(path);
-    if not io.readerOk(reader) {
-        return (ok = false, hex = "", error = io.readerError(reader));
+    if not reader.ok() {
+        return (ok = false, hex = "", error = reader.error());
     }
     hashed := sha256Reader(reader);
-    closed := io.closeReader(reader);
+    closed := reader.close();
     if not hashed.ok {
         return hashed;
     }

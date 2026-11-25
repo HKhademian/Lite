@@ -26,7 +26,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(0);
     }
 
-    stdinRes := io.readAllText(io.stdinReader());
+    stdinRes := io.Reader.stdin().readAllText();
     if not stdinRes.ok {
         io.errorLine(stdinRes.error);
         io.exit(1);

@@ -4,7 +4,7 @@ io := import "core/io";
 siteMods := import "../../site/src/modules";
 
 run := fn(): Unit {
-    stdinRes := io.readAllText(io.stdinReader());
+    stdinRes := io.Reader.stdin().readAllText();
     if not stdinRes.ok {
         io.errorLine(stdinRes.error);
         io.exit(1);

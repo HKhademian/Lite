@@ -6,8 +6,7 @@ io := import "core/io";
 tb := import "util/text-builder";
 
 var tsOutUseWriter := false;
-var tsOutWriterKind := "";
-var tsOutWriterHandle := 0;
+var tsOutWriter: io.Writer;
 var tsCompactEmit := false;
 var tsSourceMapMode: optCfg.SourceMapMode = optCfg.SourceMapMode.None;
 
@@ -18,8 +17,7 @@ outLine := fn(s: String): Unit {
     if not tsOutUseWriter {
         io.outputLine(line);
     } else {
-        w: io.Writer = (kind = tsOutWriterKind, handle = tsOutWriterHandle);
-        _res := io.writeLine(w, line);
+        _res := tsOutWriter.writeLine(line);
     }
 };
 
@@ -28,8 +26,7 @@ outText := fn(s: String): Unit {
     if not tsOutUseWriter {
         io.output(s);
     } else {
-        w: io.Writer = (kind = tsOutWriterKind, handle = tsOutWriterHandle);
-        _res := io.writeText(w, s);
+        _res := tsOutWriter.writeText(s);
     }
 };
 
@@ -1596,19 +1593,26 @@ emitExternalHelpers := fn(calls: String): Unit {
 /** Emits the self-contained `extra/canvas` desktop + headless runtime for TS programs. */
 emitExtraCanvasHelpers := fn(calls: String): Unit {
     if not usesExtraCanvas(calls) { return; }
+    usesTexture := usesBuiltin(calls, "extraCanvasCreateTexture") or usesBuiltin(calls, "extraCanvasSetTexturePixel") or
+    usesBuiltin(calls, "extraCanvasBlit") or usesBuiltin(calls, "extraCanvasBlitScaled") or
+    usesBuiltin(calls, "extraCanvasDestroyTexture");
     outLine("declare const performance: { now(): number };");
     outLine("type LiteCanvasColor = { r: number; g: number; b: number; a: number };");
     outLine("type LiteCanvasPoint = { x: number; y: number };");
     outLine("type LiteCanvasRect = { x: number; y: number; width: number; height: number };");
     outLine("type LiteCanvasSurface = { handle: bigint };");
-    outLine("type LiteCanvasTexture = { handle: bigint; width: bigint; height: bigint };");
+    if usesTexture {
+        outLine("type LiteCanvasTexture = { handle: bigint; width: bigint; height: bigint };");
+    }
     outLine("type LiteCanvasInput = { open: boolean; width: bigint; height: bigint; pointerX: number; pointerY: number; pointerDown: boolean; key: string; deltaMs: bigint };");
     outLine("type LiteCanvasVitals = { frameCount: bigint; frameTimeMs: number; avgFrameTimeMs: number; fps: number; targetFps: number; cpuTimeMs: number; memoryBytes: bigint };");
     if usesBuiltin(calls, "extraCanvasBounds") {
         outLine("type LiteCanvasBounds = { x: bigint; y: bigint; width: bigint; height: bigint; fullscreen: boolean };");
     }
     outLine("interface LiteCanvasState { w: number; h: number; x: number; y: number; fullscreen: boolean; title: string; pixels: Uint8Array; hasClip: boolean; clipX0: number; clipY0: number; clipX1: number; clipY1: number; open: boolean; pointerX: number; pointerY: number; pointerDown: boolean; prevPointerDown: boolean; pointerPressed: boolean; pointerReleased: boolean; key: string; keysDown: Set<string>; prevKeysDown: Set<string>; keysPressed: Set<string>; keysReleased: Set<string>; wheelDelta: number; pendingWheelDelta: number; lastMs: number; pendingDeltaMs: number; frameStartMs: number; frameCount: number; targetFps: number; lastFrameMs: number; avgFrameMs: number; headless: boolean; asyncRunning: boolean; dir: string; child: any; }");
-    outLine("interface LiteTextureState { w: number; h: number; pixels: Uint8Array; }");
+    if usesTexture {
+        outLine("interface LiteTextureState { w: number; h: number; pixels: Uint8Array; }");
+    }
     outLine("interface LiteSurfaceHostApi { poll: () => LiteCanvasInput; present: () => void; close: () => void; }");
     outLine("interface LiteSurfaceHost {");
     outLine("    open?: (id: number, title: string, width: number, height: number, state: LiteCanvasState) => void;");
@@ -1625,10 +1629,14 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    return h && typeof h === \"object\" ? h : null;");
     outLine("}");
     outLine("const lite$canvasMap = new Map<number, LiteCanvasState>();");
-    outLine("const lite$textureMap = new Map<number, LiteTextureState>();");
+    if usesTexture {
+        outLine("const lite$textureMap = new Map<number, LiteTextureState>();");
+    }
     outLine("let lite$canvasSleepArr: Int32Array | null = null;");
     outLine("let lite$canvasNextId = 1;");
-    outLine("let lite$textureNextId = 1;");
+    if usesTexture {
+        outLine("let lite$textureNextId = 1;");
+    }
     outLine("function lite$canvasClampByte(v: number): number { if (!(v > 0)) return 0; if (v >= 1) return 255; return Math.round(v * 255); }");
     outLine("function lite$canvasBlend(s: LiteCanvasState, x: number, y: number, r: number, g: number, b: number, a: number): void {");
     outLine("    if (x < 0 || y < 0 || x >= s.w || y >= s.h || a <= 0) return;");
@@ -3266,8 +3274,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
 /** Emits the TS module into `writer` driven by composable `OptConfig`. */
 pub emitProgramToWithConfig := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     tsOutUseWriter = true;
-    tsOutWriterKind = writer.kind;
-    tsOutWriterHandle = writer.handle;
+    tsOutWriter = writer;
     emitProgramWithConfig(items, source, prefix, builtinSpecs, config);
     tsOutUseWriter = false;
 };

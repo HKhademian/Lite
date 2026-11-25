@@ -184,7 +184,7 @@ decodeColor := fn(argb: Color): colorLib.Color {
     r := if r0 < 0 { r0 + 256 } else { r0 };
     g := if g0 < 0 { g0 + 256 } else { g0 };
     b := if b0 < 0 { b0 + 256 } else { b0 };
-    colorLib.fromRgba8(r, g, b, a)
+    colorLib.Color.fromRgba8(r, g, b, a)
 }
 
 defaultScale := fn(width: Int): Int {
@@ -209,7 +209,7 @@ pub flushToSurface := fn(win: surfLib.Surface, scale: Int, lastDrawCount: Int, m
                 loop runEnd < canvasWidth and canvasPixels[rowOff + runEnd] == colVal {
                     runEnd += 1;
                 }
-                surfLib.fillRect(win, surfLib.rect(pxIdx * scaleF, py * scaleF, (runEnd - pxIdx) * scaleF, scaleF), decodeColor(colVal));
+                win.fillRect(surfLib.rect(pxIdx * scaleF, py * scaleF, (runEnd - pxIdx) * scaleF, scaleF), decodeColor(colVal));
                 pxIdx = runEnd;
             }
             py += 1;
@@ -221,10 +221,10 @@ pub flushToSurface := fn(win: surfLib.Surface, scale: Int, lastDrawCount: Int, m
     loop i < n {
         op := ops[i];
         if op == CANVAS_OP_CLEAR and i + 1 < n {
-            surfLib.fillRect(win, surfLib.rect(0.0, 0.0, canvasWidth * scaleF, canvasHeight * scaleF), decodeColor(ops[i + 1]));
+            win.fillRect(surfLib.rect(0.0, 0.0, canvasWidth * scaleF, canvasHeight * scaleF), decodeColor(ops[i + 1]));
             i += 2;
         } else if op == CANVAS_OP_FILL_RECT and i + 5 < n {
-            surfLib.fillRect(win, surfLib.rect(ops[i + 1] * scaleF, ops[i + 2] * scaleF, ops[i + 3] * scaleF, ops[i + 4] * scaleF), decodeColor(ops[i + 5]));
+            win.fillRect(surfLib.rect(ops[i + 1] * scaleF, ops[i + 2] * scaleF, ops[i + 3] * scaleF, ops[i + 4] * scaleF), decodeColor(ops[i + 5]));
             i += 6;
         } else {
             break;
@@ -235,7 +235,7 @@ pub flushToSurface := fn(win: surfLib.Surface, scale: Int, lastDrawCount: Int, m
         tn := tones.length();
         var ti := 0;
         loop ti + 2 < tn {
-            surfLib.playTone(win, tones[ti], tones[ti + 1], tones[ti + 2]);
+            win.playTone(tones[ti], tones[ti + 1], tones[ti + 2]);
             ti += 3;
         }
     }
@@ -246,19 +246,19 @@ pub flushToSurface := fn(win: surfLib.Surface, scale: Int, lastDrawCount: Int, m
 pub show := fn(): Unit {
     if canvasWidth <= 0 or canvasHeight <= 0 { return; }
     scale := defaultScale(canvasWidth);
-    win := surfLib.open(canvasTitle, canvasWidth * scale, canvasHeight * scale);
+    win := surfLib.Surface.open(canvasTitle, canvasWidth * scale, canvasHeight * scale);
     _d := flushToSurface(win, scale, -1, false);
-    surfLib.present(win);
-    surfLib.close(win);
+    win.present();
+    win.close();
 }
 
 /** Runs an animated `extra/canvas` update callback through `extra/surface` until closed or `onUpdate` returns non-zero. */
 pub start := fn(onUpdate: fn(Float): Int): Unit {
     if canvasWidth <= 0 or canvasHeight <= 0 { return; }
     scale := defaultScale(canvasWidth);
-    win := surfLib.open(canvasTitle, canvasWidth * scale, canvasHeight * scale);
+    win := surfLib.Surface.open(canvasTitle, canvasWidth * scale, canvasHeight * scale);
     var lastDraw := flushToSurface(win, scale, -1, false);
-    surfLib.run(win, fn(inp: surfLib.FrameInput): Bool {
+    win.run(fn(inp: surfLib.FrameInput): Bool {
         if not inp.open or inp.key == "Escape" { return false; }
         rawDt := inp.deltaMs / 1000.0;
         dt := if rawDt > 0.05 { 0.05 } else if rawDt <= 0.0 { 0.016 } else { rawDt };
@@ -266,5 +266,5 @@ pub start := fn(onUpdate: fn(Float): Int): Unit {
         lastDraw = flushToSurface(win, scale, lastDraw, false);
         st == 0
     });
-    surfLib.close(win);
+    win.close();
 }

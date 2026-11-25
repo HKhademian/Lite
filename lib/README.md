@@ -8,7 +8,7 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 
 | Module | Environment | Capabilities |
 | --- | --- | --- |
-| `core/io` | Browser + CLI | Host-backed console/stream I/O (`output`, `outputLine`, `errorLine`, `inputLine`, `inputInt`, `inputFloat`, `inputAll`, `inputArgs`, `exit`) |
+| `core/io` | Browser + CLI | Host-backed console I/O (`output`, `outputLine`, `errorLine`, `input*`, `exit`) plus nominal `Reader`/`Writer` stream types (`Reader.stdin`/`fromBytes`/`fromText`, `Writer.stdout`/`stderr`/`buffer`) |
 | `core/int` | Browser + CLI | `Int.*` operations (`toText`, `checkedAdd`/`Sub`/`Mul`/`Div`/`Rem`/`Neg`, `floorDiv`/`floorMod`) and Int64 bounds (`intMin`, `intMax`) |
 | `core/text` | Browser + CLI | `String.*` hard/soft/pure operations (`length`, `isEmpty`, `at`, `slice`, `trim`, `startsWithAt`, `indexOf`, `toInt`, `split`, `splitLines`, `replaceAll`, `padLeft`, `padRight`, `lessOrEqual`) |
 | `core/unicode` | Browser + CLI | UTF-8 / UTF-16 scalar encoding, decoding, and validation helpers |
@@ -63,10 +63,10 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | Module | Environment | Capabilities |
 | --- | --- | --- |
 | `extra/canvas` | Lite Play | Browser & desktop Play 2D pixel/rect canvas (`create`, `play`, `clear`, `fillRect`, `setPixel`, `rgb`/`rgba`) |
-| `extra/surface` | Lite Play / Desktop | Target-independent 2D surface (`open`, `run`, `fillTriangle`, `setClipRect`, `Texture`/`blit`, `isKeyDown`/`Pressed`/`Released`, `wheelDelta`, `scratchMark`/`Rewind`, `vitals`) |
+| `extra/surface` | Lite Play / Desktop | Nominal `Surface` (`Surface.open`, `run`, `fillTriangle`, `setClipRect`, `vitals`) and `Texture` (`Texture.create`, `blit`, `setPixel`, `destroy`, `width`, `height`) with `scratchMark`/`Rewind` |
 | `extra/board` | Lite Play | 2D shape, sprite, and pixel-grid helpers built on `extra/canvas` |
 | `extra/audio` | Lite Play | WebAudio & native PCM tone queue (`tone`, `playNote`, `drain`) |
-| `extra/color` | Browser + CLI | Encoding-independent normalized RGBA/HSL color values (`fromRgb`, `fromRgba8`, `fromHsl`, `mix`, `withAlphaFloat`) |
+| `extra/color` | Browser + CLI | Nominal `Color` values with static constructors (`Color.fromRgb`, `Color.fromRgba8`, `Color.fromHsl`) and operations (`mix`, `withAlphaFloat`, `red8`..`alpha8`) |
 | `extra/timer` | Browser + CLI | Nominal `StepClock` (`StepClock.create`), `Cooldown` (`Cooldown.create`), and monotonic `Stopwatch` (`Stopwatch.start`) records |
 
 ## Running Library Tests

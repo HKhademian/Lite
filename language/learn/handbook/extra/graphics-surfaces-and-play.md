@@ -23,24 +23,24 @@ For interactive games, switch to `canvas.play(width, height, title)` and export 
 
 [extra/surface](lite://module/extra/surface) is Lite's target-independent 2D desktop and headless surface API (`lite.extra.surface.v1`). On macOS it opens a native resizable, fullscreenable AppKit `NSWindow` with GPU-backed presentation, keyboard/pointer polling, native `NSSound` audio (`surface.playTone`), and live frame pacing and resource vitals.
 
-[extra/color](lite://module/extra/color) provides encoding-independent normalized RGBA/HSL colors (`fromRgb`, `fromRgba8`, `fromHsl`, `mix`, `withAlphaFloat`) shared by `extra/surface`:
+[extra/color](lite://module/extra/color) provides encoding-independent nominal `Color` values with static constructors (`Color.fromRgb`, `Color.fromRgba8`, `Color.fromHsl`) and channel/blending methods (`mix`, `withAlphaFloat`, `red8`, `green8`, `blue8`) shared by `extra/surface`:
 
 ```lite
 io := import "core/io";
 color := import "extra/color";
 
-amber := color.fromHsl(36.0, 0.85, 0.55);
-dusk := color.fromRgb(0.08, 0.10, 0.16);
-mid := color.mix(dusk, amber, 0.5);
-io.outputLine(color.red8(mid), color.green8(mid), color.blue8(mid));
+amber := color.Color.fromHsl(36.0, 0.85, 0.55);
+dusk := color.Color.fromRgb(0.08, 0.10, 0.16);
+mid := dusk.mix(amber, 0.5);
+io.outputLine(mid.red8(), mid.green8(), mid.blue8());
 ```
 
 Key `extra/surface` capabilities:
 
-- **Window & geometry control**: `surface.open`, `surface.openWithFps`, `surface.resize(s, w, h)`, `surface.setFullscreen(s, on)`, `surface.toggleFullscreen(s)`.
-- **Passive geometry queries**: `surface.bounds(s)` (returns `Bounds { x, y, width, height, fullscreen }`), `surface.size(s)`, `surface.position(s)`, `surface.isFullscreen(s)`.
-- **Drawing primitives**: `clear`, `fillRect`, `strokeRect`, `drawLine`, `fillCircle`, `strokeCircle`, `fillPixel`, `drawText`, and `present`.
-- **Frame pacing & vitals**: `surface.setTargetFps(s, fps)` (default 60 FPS, `0.0` uncapped) and `surface.vitals(s)` (`frameCount`, `frameTimeMs`, `avgFrameTimeMs`, `fps`, `cpuTimeMs`, `memoryBytes`).
+- **Window & geometry control**: `Surface.open`, `s.resize(w, h)`, `s.setFullscreen(on)`, `s.toggleFullscreen()`.
+- **Passive geometry queries**: `s.bounds()` (returns `Bounds { x, y, width, height, fullscreen }`), `s.size()`, `s.position()`, `s.isFullscreen()`.
+- **Drawing & textures**: `clear`, `fillRect`, `strokeRect`, `strokeLine`, `fillCircle`, `fillTriangle`, `drawText`, `Texture.create`, `tex.setPixel`, `s.blit`, `tex.destroy`, and `s.present()`.
+- **Frame pacing & vitals**: `s.setTargetFps(fps)` (default 60 FPS, `0.0` uncapped) and `s.vitals()` (`frameCount`, `frameTimeMs`, `avgFrameTimeMs`, `fps`, `cpuTimeMs`, `memoryBytes`).
 
 ## Fixed-Timestep Clocks & Cooldowns (`extra/timer`)
 

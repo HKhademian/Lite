@@ -64,17 +64,17 @@ if hlEnv.found and hlEnv.value == "1" and benchFrames == 0 and capturePath == ""
 
 w := 640;
 h := 400;
-surface := canvas.open("LiteScript Canvas Demo", w, h);
+surface := canvas.Surface.open("LiteScript Canvas Demo", w, h);
 if initTargetFps =!= 60.0 {
-    canvas.setTargetFps(surface, initTargetFps);
+    surface.setTargetFps(initTargetFps);
 }
 
-bg := canvas.rgb(0.07, 0.09, 0.14);
-grid := canvas.rgba(1.0, 1.0, 1.0, 0.08);
-panel := canvas.rgba(0.11, 0.14, 0.22, 0.88);
-accent := canvas.hsl(198.0, 0.85, 0.58);
-warm := canvas.hsl(342.0, 0.82, 0.62);
-mint := canvas.hsl(152.0, 0.72, 0.58);
+bg := color.Color.fromRgb(0.07, 0.09, 0.14);
+grid := color.Color.fromRgba(1.0, 1.0, 1.0, 0.08);
+panel := color.Color.fromRgba(0.11, 0.14, 0.22, 0.88);
+accent := color.Color.fromHsl(198.0, 0.85, 0.58);
+warm := color.Color.fromHsl(342.0, 0.82, 0.62);
+mint := color.Color.fromHsl(152.0, 0.72, 0.58);
 
 var x1 := 140.0;
 var y1 := 150.0;
@@ -96,16 +96,16 @@ var line1 := "FPS:0.0  UPS:0.0  FT:0.0MS  CAP:60";
 var line2 := "CPU:0.0MS  MEM:0.0MB  KEYS:1/2/3/0";
 var frame := 0;
 
-canvas.run(surface, fn(inp: canvas.FrameInput): Bool {
+surface.run(fn(inp: canvas.FrameInput): Bool {
     if not inp.open or inp.key == "Escape" or inp.key == "q" {
         return false;
     }
-    if inp.key == "1" { canvas.setTargetFps(surface, 30.0); hudTimerSec = 1.0; }
-    else if inp.key == "2" { canvas.setTargetFps(surface, 60.0); hudTimerSec = 1.0; }
-    else if inp.key == "3" { canvas.setTargetFps(surface, 120.0); hudTimerSec = 1.0; }
-    else if inp.key == "0" or inp.key == "u" { canvas.uncapFrameRate(surface); hudTimerSec = 1.0; }
+    if inp.key == "1" { surface.setTargetFps(30.0); hudTimerSec = 1.0; }
+    else if inp.key == "2" { surface.setTargetFps(60.0); hudTimerSec = 1.0; }
+    else if inp.key == "3" { surface.setTargetFps(120.0); hudTimerSec = 1.0; }
+    else if inp.key == "0" or inp.key == "u" { surface.uncapFrameRate(); hudTimerSec = 1.0; }
 
-    vit := canvas.vitals(surface);
+    vit := surface.vitals();
     frameSec := if vit.frameTimeMs > 0.0 {
         if vit.frameTimeMs > 100.0 { 0.1 } else { vit.frameTimeMs / 1000.0 }
     } else {
@@ -135,35 +135,35 @@ canvas.run(surface, fn(inp: canvas.FrameInput): Bool {
         subSteps = subSteps + 1;
     }
 
-    canvas.clear(surface, bg);
+    surface.clear(bg);
 
     var gx := 40.0;
     loop gx < 640.0 {
-        canvas.strokeLine(surface, canvas.point(gx, 0.0), canvas.point(gx, 400.0), 1.0, grid);
+        surface.strokeLine(canvas.point(gx, 0.0), canvas.point(gx, 400.0), 1.0, grid);
         gx = gx + 40.0;
     }
     var gy := 40.0;
     loop gy < 400.0 {
-        canvas.strokeLine(surface, canvas.point(0.0, gy), canvas.point(640.0, gy), 1.0, grid);
+        surface.strokeLine(canvas.point(0.0, gy), canvas.point(640.0, gy), 1.0, grid);
         gy = gy + 40.0;
     }
 
     /* Connecting beam and bouncing orbs */
-    canvas.strokeLine(surface, canvas.point(x1, y1), canvas.point(x2, y2), 3.0, canvas.mix(accent, warm, 0.5));
-    canvas.fillCircle(surface, canvas.point(x1, y1), 36.0, canvas.withAlpha(accent, 0.25));
-    canvas.fillCircle(surface, canvas.point(x1, y1), 22.0, accent);
-    canvas.fillCircle(surface, canvas.point(x2, y2), 32.0, canvas.withAlpha(warm, 0.25));
-    canvas.fillCircle(surface, canvas.point(x2, y2), 18.0, warm);
+    surface.strokeLine(canvas.point(x1, y1), canvas.point(x2, y2), 3.0, accent.mix(warm, 0.5));
+    surface.fillCircle(canvas.point(x1, y1), 36.0, accent.withAlphaFloat(0.25));
+    surface.fillCircle(canvas.point(x1, y1), 22.0, accent);
+    surface.fillCircle(canvas.point(x2, y2), 32.0, warm.withAlphaFloat(0.25));
+    surface.fillCircle(canvas.point(x2, y2), 18.0, warm);
 
     if inp.pointerX > 0.0 or inp.pointerY > 0.0 {
-        pColor := if inp.pointerDown { color.YELLOW } else { canvas.withAlpha(canvas.WHITE, 0.7) };
+        pColor := if inp.pointerDown { color.YELLOW } else { canvas.WHITE.withAlphaFloat(0.7) };
         pRadius := if inp.pointerDown { 18.0 } else { 10.0 };
-        canvas.fillCircle(surface, canvas.point(inp.pointerX, inp.pointerY), pRadius, pColor);
+        surface.fillCircle(canvas.point(inp.pointerX, inp.pointerY), pRadius, pColor);
     }
 
     /* Live Vitals HUD (refreshed at 4 Hz to avoid per-frame string churn) */
-    canvas.fillRect(surface, canvas.rect(14.0, 12.0, 612.0, 68.0), panel);
-    canvas.strokeRect(surface, canvas.rect(14.0, 12.0, 612.0, 68.0), 2.0, accent);
+    surface.fillRect(canvas.rect(14.0, 12.0, 612.0, 68.0), panel);
+    surface.strokeRect(canvas.rect(14.0, 12.0, 612.0, 68.0), 2.0, accent);
     if hudTimerSec >= 0.25 {
         hudTimerSec = 0.0;
         ups := if totalTimeSec > 0.0 { updateCount / totalTimeSec } else { 0.0 };
@@ -172,25 +172,25 @@ canvas.run(surface, fn(inp: canvas.FrameInput): Bool {
         line1 = "FPS:" + fmt1(vit.fps) + "  UPS:" + fmt1(ups) + "  FT:" + fmt1(vit.avgFrameTimeMs) + "MS  CAP:" + capLabel;
         line2 = "CPU:" + fmt1(vit.cpuTimeMs) + "MS  MEM:" + fmt1(memMb) + "MB  KEYS:1/2/3/0";
     }
-    canvas.drawText(surface, line1, canvas.point(26.0, 24.0), 14.0, canvas.WHITE);
-    canvas.drawText(surface, line2, canvas.point(26.0, 50.0), 14.0, mint);
+    surface.drawText(line1, canvas.point(26.0, 24.0), 14.0, canvas.WHITE);
+    surface.drawText(line2, canvas.point(26.0, 50.0), 14.0, mint);
 
     frame = frame + 1;
 
     if capturePath =!= "" {
-        canvas.present(surface);
-        cap := canvas.capture(surface, capturePath);
+        surface.present();
+        cap := surface.capture(capturePath);
         if not cap.ok {
             io.errorLine("capture failed: " + cap.error);
-            canvas.close(surface);
+            surface.close();
             io.exit(1);
         }
         io.outputLine("captured: " + capturePath);
         return false;
     }
     if benchFrames > 0 and frame >= benchFrames {
-        canvas.present(surface);
-        fin := canvas.vitals(surface);
+        surface.present();
+        fin := surface.vitals();
         finUps := if totalTimeSec > 0.0 { updateCount / totalTimeSec } else { 0.0 };
         finCap := if fin.targetFps <= 0.0 { "uncapped" } else { fmt1(fin.targetFps) };
         io.outputLine("frames=" + fin.frameCount.toText() + " updates=" + updateCount.toText() +
@@ -202,4 +202,4 @@ canvas.run(surface, fn(inp: canvas.FrameInput): Bool {
     true
 });
 
-canvas.close(surface);
+surface.close();

@@ -22,7 +22,7 @@ usageText := fn(): String {
 /** Writes `line` to stdout and flushes immediately so piped callers see progress live. */
 flushOutLine := fn(line: String): Unit {
     io.outputLine(line);
-    _fl := io.flush(io.stdoutWriter());
+    _fl := io.Writer.stdout().flush();
 };
 
 /** Returns whole milliseconds elapsed since `startNs`. */

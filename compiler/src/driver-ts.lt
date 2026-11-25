@@ -35,10 +35,10 @@ pub run := fn(args: List<String>): Unit {
     );
     items := modules.moduleItems(graph);
     if flags.hasOut {
-        writer := io.bufferWriter();
+        writer := io.Writer.buffer();
         emitter.emitProgramToWithConfig(=writer, =items, source = loaded.text, prefix = loaded.display, =builtinSpecs, config = optConfig);
-        outRes := io.writerText(writer);
-        _cl := io.closeWriter(writer);
+        outRes := writer.text();
+        _cl := writer.close();
         if not outRes.ok {
             diagLib.fail(loaded.display, outRes.error);
         }

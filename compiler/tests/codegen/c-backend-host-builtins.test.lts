@@ -34,17 +34,17 @@ src :=
 "io.outputLine(bad.ok);\n" +
 "\n" +
 "/* 2. core/io buffer streams */\n" +
-"bw := io.bufferWriter();\n" +
-"w1 := io.writeText(bw, \"hello \");\n" +
-"w2 := io.writeText(bw, \"streams\");\n" +
-"wt := io.writerText(bw);\n" +
+"bw := io.Writer.buffer();\n" +
+"w1 := bw.writeText(\"hello \");\n" +
+"w2 := bw.writeText(\"streams\");\n" +
+"wt := bw.text();\n" +
 "io.outputLine(w1.ok and w2.ok and wt.ok);\n" +
 "io.outputLine(wt.text);\n" +
-"io.clearWriter(bw);\n" +
-"io.outputLine(io.writerText(bw).text);\n" +
+"bw.clear();\n" +
+"io.outputLine(bw.text().text);\n" +
 "\n" +
-"br := io.bufferReader([65, 66, 67]);\n" +
-"rt := io.readAllText(br);\n" +
+"br := io.Reader.fromBytes([65, 66, 67]);\n" +
+"rt := br.readAllText();\n" +
 "io.outputLine(rt.ok);\n" +
 "io.outputLine(rt.text);\n" +
 "\n" +

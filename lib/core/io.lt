@@ -2,11 +2,11 @@
 
 unicode := import "core/unicode";
 
-/** Handle to a synchronous byte/text input source (`"stdin"`, `"buffer"`, `"file"`, or `"error"`). */
-pub Reader := alias (kind: String, handle: Int);
+/** Opaque nominal handle to a synchronous byte/text input source (`"stdin"`, `"buffer"`, `"file"`, or `"error"`). */
+pub Reader := distinct (kind: String, handle: Int);
 
-/** Handle to a synchronous byte/text output sink (`"stdout"`, `"stderr"`, `"buffer"`, `"file"`, or `"error"`). */
-pub Writer := alias (kind: String, handle: Int);
+/** Opaque nominal handle to a synchronous byte/text output sink (`"stdout"`, `"stderr"`, `"buffer"`, `"file"`, or `"error"`). */
+pub Writer := distinct (kind: String, handle: Int);
 
 /** ASCII line-feed byte (`\n`). */
 BYTE_LF := 10;
@@ -48,45 +48,45 @@ pub inputFloat := fn(prompt: String): Float;
 pub exit := fn(status: Int): Unit;
 
 /** Returns the shared synchronous standard-input `Reader`. */
-pub stdinReader := fn(): Reader;
+pub Reader.stdin := fn(): Self;
 
 /** Returns the shared synchronous standard-output `Writer`. */
-pub stdoutWriter := fn(): Writer;
+pub Writer.stdout := fn(): Self;
 
 /** Returns the shared synchronous standard-error `Writer`. */
-pub stderrWriter := fn(): Writer;
+pub Writer.stderr := fn(): Self;
 
 /** Creates an in-memory `Reader` backed by raw `0..255` byte values. */
-pub bufferReader := fn(bytes: List<Int>): Reader;
+pub Reader.fromBytes := fn(bytes: List<Int>): Self;
 
 /** Creates an in-memory `Reader` backed by UTF-8 bytes of `text`. */
-pub textReader := fn(text: String): Reader {
-    bufferReader(unicode.utf8Encode(text))
-}
+pub Reader.fromText := fn(text: String): Self {
+    Reader.fromBytes(unicode.utf8Encode(text))
+};
 
 /** Creates an in-memory `Writer` accumulating written bytes. */
-pub bufferWriter := fn(): Writer;
+pub Writer.buffer := fn(): Self;
 
 /** Returns raw `0..255` byte values currently accumulated in buffer `writer`. */
-pub writerBytes := fn(writer: Writer): List<Int>;
+pub Writer.bytes := fn(writer: Self): List<Int>;
 
 /** Decodes accumulated bytes in buffer `writer` as strict UTF-8 text. */
-pub writerText := fn(writer: Writer): (ok: Bool, text: String, error: String);
+pub Writer.text := fn(writer: Self): (ok: Bool, text: String, error: String);
 
 /** Clears accumulated bytes in buffer `writer`. */
-pub clearWriter := fn(writer: Writer): Unit;
+pub Writer.clear := fn(writer: Self): Unit;
 
 /** True when `reader` is open and has no recorded error. */
-pub readerOk := fn(reader: Reader): Bool;
+pub Reader.ok := fn(reader: Self): Bool;
 
 /** True when `reader` has reached end-of-stream. */
-pub readerAtEof := fn(reader: Reader): Bool;
+pub Reader.atEof := fn(reader: Self): Bool;
 
 /** Returns the recorded error message on `reader`, or empty text. */
-pub readerError := fn(reader: Reader): String;
+pub Reader.error := fn(reader: Self): String;
 
 /** Reads up to `maxBytes` bytes synchronously from `reader`, returning `[]` on EOF or error. */
-pub read := fn(reader: Reader, maxBytes: Int): List<Int>;
+pub Reader.read := fn(reader: Self, maxBytes: Int): List<Int>;
 
 /** Decodes accumulated line bytes as strict UTF-8 into a single `readLine` result record. */
 decodeLineBytes := fn(lineBytes: List<Int>): (ok: Bool, line: String, eof: Bool, error: String) {
@@ -95,45 +95,45 @@ decodeLineBytes := fn(lineBytes: List<Int>): (ok: Bool, line: String, eof: Bool,
         return (ok = false, line = "", eof = false, error = decoded.error);
     }
     (ok = true, line = decoded.text, eof = false, error = "")
-}
+};
 
 /** Reads all remaining bytes synchronously from `reader`. */
-pub readAll := fn(reader: Reader): List<Int> {
-    if not readerOk(reader) { return []; }
+pub Reader.readAll := fn(reader: Self): List<Int> {
+    if not reader.ok() { return []; }
     out: mut List<Int> = [];
-    loop readerOk(reader) and not readerAtEof(reader) {
-        chunk := read(reader, READ_CHUNK_BYTES);
-        if not readerOk(reader) { return []; }
+    loop reader.ok() and not reader.atEof() {
+        chunk := reader.read(READ_CHUNK_BYTES);
+        if not reader.ok() { return []; }
         if chunk.length() == 0 { break; }
         loop chunk as byte {
             mut out.pushBack(byte);
         }
     }
     out
-}
+};
 
 /** Reads all remaining bytes synchronously from `reader` and decodes strict UTF-8 text. */
-pub readAllText := fn(reader: Reader): (ok: Bool, text: String, error: String) {
-    if not readerOk(reader) {
-        return (ok = false, text = "", error = readerError(reader));
+pub Reader.readAllText := fn(reader: Self): (ok: Bool, text: String, error: String) {
+    if not reader.ok() {
+        return (ok = false, text = "", error = reader.error());
     }
-    bytes := readAll(reader);
-    if not readerOk(reader) {
-        return (ok = false, text = "", error = readerError(reader));
+    bytes := reader.readAll();
+    if not reader.ok() {
+        return (ok = false, text = "", error = reader.error());
     }
     unicode.utf8DecodeStrict(bytes)
-}
+};
 
 /** Reads one line synchronously from `reader`, stripping trailing `\n` or `\r\n`. */
-pub readLine := fn(reader: Reader): (ok: Bool, line: String, eof: Bool, error: String) {
-    if not readerOk(reader) {
-        return (ok = false, line = "", eof = false, error = readerError(reader));
+pub Reader.readLine := fn(reader: Self): (ok: Bool, line: String, eof: Bool, error: String) {
+    if not reader.ok() {
+        return (ok = false, line = "", eof = false, error = reader.error());
     }
     lineBytes: mut List<Int> = [];
-    loop not readerAtEof(reader) {
-        chunk := read(reader, READ_LINE_STEP_BYTES);
-        if not readerOk(reader) {
-            return (ok = false, line = "", eof = false, error = readerError(reader));
+    loop not reader.atEof() {
+        chunk := reader.read(READ_LINE_STEP_BYTES);
+        if not reader.ok() {
+            return (ok = false, line = "", eof = false, error = reader.error());
         }
         if chunk.length() == 0 { break; }
         nextByte := chunk[0];
@@ -150,44 +150,44 @@ pub readLine := fn(reader: Reader): (ok: Bool, line: String, eof: Bool, error: S
         return (ok = true, line = "", eof = true, error = "");
     }
     decodeLineBytes(lineBytes)
-}
+};
 
 /** Closes `reader` when backed by an owned resource. */
-pub closeReader := fn(reader: Reader): (ok: Bool, error: String);
+pub Reader.close := fn(reader: Self): (ok: Bool, error: String);
 
 /** True when `writer` is open and has no recorded error. */
-pub writerOk := fn(writer: Writer): Bool;
+pub Writer.ok := fn(writer: Self): Bool;
 
 /** Returns the recorded error message on `writer`, or empty text. */
-pub writerError := fn(writer: Writer): String;
+pub Writer.error := fn(writer: Self): String;
 
 /** Writes raw `0..255` byte values synchronously to `writer`. */
-pub write := fn(writer: Writer, bytes: List<Int>): (ok: Bool, written: Int, error: String);
+pub Writer.write := fn(writer: Self, bytes: List<Int>): (ok: Bool, written: Int, error: String);
 
 /** Writes UTF-8 `text` synchronously to `writer`. */
-pub writeText := fn(writer: Writer, text: String): (ok: Bool, error: String) {
-    res := write(writer, unicode.utf8Encode(text));
+pub Writer.writeText := fn(writer: Self, text: String): (ok: Bool, error: String) {
+    res := writer.write(unicode.utf8Encode(text));
     (ok = res.ok, error = res.error)
-}
+};
 
 /** Writes UTF-8 `text` followed by `\n` synchronously to `writer`. */
-pub writeLine := fn(writer: Writer, text: String): (ok: Bool, error: String) {
-    writeText(writer, text + "\n")
-}
+pub Writer.writeLine := fn(writer: Self, text: String): (ok: Bool, error: String) {
+    writer.writeText(text + "\n")
+};
 
 /** Flushes buffered output on `writer` if supported. */
-pub flush := fn(writer: Writer): (ok: Bool, error: String);
+pub Writer.flush := fn(writer: Self): (ok: Bool, error: String);
 
 /** Closes `writer` when backed by an owned resource. */
-pub closeWriter := fn(writer: Writer): (ok: Bool, error: String);
+pub Writer.close := fn(writer: Self): (ok: Bool, error: String);
 
 /** Writes `bytes` to `writer` and closes the stream, returning any write or close error. */
-pub writeAndClose := fn(writer: Writer, bytes: List<Int>): (ok: Bool, error: String) {
-    if not writerOk(writer) {
-        return (ok = false, error = writerError(writer));
+pub Writer.writeAndClose := fn(writer: Self, bytes: List<Int>): (ok: Bool, error: String) {
+    if not writer.ok() {
+        return (ok = false, error = writer.error());
     }
-    wrote := write(writer, bytes);
-    closed := closeWriter(writer);
+    wrote := writer.write(bytes);
+    closed := writer.close();
     if not wrote.ok {
         return (ok = false, error = wrote.error);
     }
@@ -195,29 +195,29 @@ pub writeAndClose := fn(writer: Writer, bytes: List<Int>): (ok: Bool, error: Str
         return (ok = false, error = closed.error);
     }
     (ok = true, error = "")
-}
+};
 
 /** Streams all remaining bytes synchronously from `reader` into `writer`. */
-pub copyStream := fn(reader: Reader, writer: Writer): (ok: Bool, copied: Int, error: String) {
-    if not readerOk(reader) {
-        return (ok = false, copied = 0, error = readerError(reader));
+pub Reader.copyTo := fn(reader: Self, writer: Writer): (ok: Bool, copied: Int, error: String) {
+    if not reader.ok() {
+        return (ok = false, copied = 0, error = reader.error());
     }
-    if not writerOk(writer) {
-        return (ok = false, copied = 0, error = writerError(writer));
+    if not writer.ok() {
+        return (ok = false, copied = 0, error = writer.error());
     }
     var total := 0;
-    loop readerOk(reader) and not readerAtEof(reader) {
-        chunk := read(reader, READ_CHUNK_BYTES);
-        err := readerError(reader);
+    loop reader.ok() and not reader.atEof() {
+        chunk := reader.read(READ_CHUNK_BYTES);
+        err := reader.error();
         if err =!= "" {
             return (ok = false, copied = total, error = err);
         }
         if chunk.length() == 0 { break; }
-        wrote := write(writer, chunk);
+        wrote := writer.write(chunk);
         if not wrote.ok {
             return (ok = false, copied = total, error = wrote.error);
         }
         total += wrote.written;
     }
     (ok = true, copied = total, error = "")
-}
+};

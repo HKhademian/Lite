@@ -68,13 +68,13 @@ validateBytes := fn(bytes: List<Int>): (ok: Bool, error: String) {
 /** Reads raw `0..255` byte values from `path`, faulting when `path` cannot be read. */
 pub readBytes := fn(path: String): List<Int> {
     reader := openReader(path);
-    if not io.readerOk(reader) {
-        diag.fail("", io.readerError(reader));
+    if not reader.ok() {
+        diag.fail("", reader.error());
         return [];
     }
-    bytes := io.readAll(reader);
-    readErr := io.readerError(reader);
-    closed := io.closeReader(reader);
+    bytes := reader.readAll();
+    readErr := reader.error();
+    closed := reader.close();
     if readErr =!= "" {
         diag.fail("", readErr);
         return [];
@@ -89,12 +89,12 @@ pub readBytes := fn(path: String): List<Int> {
 /** Reads strict UTF-8 text from `path`. */
 pub readText := fn(path: String): (ok: Bool, text: String, error: String) {
     reader := openReader(path);
-    if not io.readerOk(reader) {
-        return (ok = false, text = "", error = io.readerError(reader));
+    if not reader.ok() {
+        return (ok = false, text = "", error = reader.error());
     }
-    bytes := io.readAll(reader);
-    readErr := io.readerError(reader);
-    closed := io.closeReader(reader);
+    bytes := reader.readAll();
+    readErr := reader.error();
+    closed := reader.close();
     if readErr =!= "" {
         return (ok = false, text = "", error = readErr);
     }
@@ -108,7 +108,7 @@ pub readText := fn(path: String): (ok: Bool, text: String, error: String) {
 pub writeBytes := fn(path: String, bytes: List<Int>): (ok: Bool, error: String) {
     checked := validateBytes(bytes);
     if not checked.ok { return checked; }
-    io.writeAndClose(openWriter(path), bytes)
+    openWriter(path).writeAndClose(bytes)
 }
 
 /** Writes UTF-8 `text` to `path`, creating or truncating the file. */
@@ -120,7 +120,7 @@ pub writeText := fn(path: String, text: String): (ok: Bool, error: String) {
 pub appendBytes := fn(path: String, bytes: List<Int>): (ok: Bool, error: String) {
     checked := validateBytes(bytes);
     if not checked.ok { return checked; }
-    io.writeAndClose(openAppender(path), bytes)
+    openAppender(path).writeAndClose(bytes)
 }
 
 /** Appends UTF-8 `text` to `path`, creating the file when absent. */

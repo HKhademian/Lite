@@ -43,12 +43,12 @@ stdinReader: io.Reader,
 stdoutWriter: io.Writer,
 stderrWriter: io.Writer
 ): (status: Int, error: String) {
-    if not io.readerOk(stdinReader) {
-        return (status = -1, error = io.readerError(stdinReader));
+    if not stdinReader.ok() {
+        return (status = -1, error = stdinReader.error());
     }
-    stdinBytes := io.readAll(stdinReader);
-    if io.readerError(stdinReader) =!= "" {
-        return (status = -1, error = io.readerError(stdinReader));
+    stdinBytes := stdinReader.readAll();
+    if stdinReader.error() =!= "" {
+        return (status = -1, error = stdinReader.error());
     }
     tmp := file.makeTempDir("lite-proc-streams-");
     if not tmp.ok {
@@ -58,26 +58,26 @@ stderrWriter: io.Writer
     errPath := tmp.path + "/stderr.bin";
     res := runBytes(command, args, workDir, envOverrides, timeoutMs, stdinBytes, outPath, errPath);
     outReader := file.openReader(outPath);
-    if io.readerOk(outReader) {
-        outCopy := io.copyStream(outReader, stdoutWriter);
-        _closeOut := io.closeReader(outReader);
+    if outReader.ok() {
+        outCopy := outReader.copyTo(stdoutWriter);
+        _closeOut := outReader.close();
         if not outCopy.ok {
             _rm := file.remove(tmp.path);
             return (status = -1, error = outCopy.error);
         }
     } else {
-        _closeOut := io.closeReader(outReader);
+        _closeOut := outReader.close();
     }
     errReader := file.openReader(errPath);
-    if io.readerOk(errReader) {
-        errCopy := io.copyStream(errReader, stderrWriter);
-        _closeErr := io.closeReader(errReader);
+    if errReader.ok() {
+        errCopy := errReader.copyTo(stderrWriter);
+        _closeErr := errReader.close();
         if not errCopy.ok {
             _rm := file.remove(tmp.path);
             return (status = -1, error = errCopy.error);
         }
     } else {
-        _closeErr := io.closeReader(errReader);
+        _closeErr := errReader.close();
     }
     _rm := file.remove(tmp.path);
     res
