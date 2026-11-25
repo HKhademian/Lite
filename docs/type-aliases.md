@@ -4,7 +4,7 @@ The selected design uses `alias` to give a type or an existing symbol another
 name. The `distinct` declaration creates a fresh type identity from a type
 expression. Record and enum declarations create their own nominal types.
 
-**Compiler status.** Transparent aliases use `Name := alias TypeExpression` and distinct nominal types use `Name := distinct TypeExpression` (with explicit 1-step `cast<T>(expr)` and context-inferred `cast(expr)` boundary crossings) across both TS and C11 backends; legacy `:= type` declarations have been migrated to `:= alias`. Lexically scoped symbol aliases (`xalias := alias x1`, `points := alias pointLib`) remain planned.
+**Compiler status.** Transparent type aliases (`Name := alias TypeExpression`, including generic `Name := alias<...> TypeExpression`) and distinct nominal types (`Name := distinct TypeExpression`, including generic `Name := distinct<...> TypeExpression` with explicit `cast<T>(expr)` and context-inferred `cast(expr)`) are implemented across both TS and C11 backends; legacy `:= type` declarations have been migrated to `:= alias`. Lexically scoped symbol aliases (`xalias := alias x1`, `points := alias pointLib`, `f := alias g`) and specialized or partially specialized generic function aliases (`ivec2 := alias vecN<Int, 2>`, `splat2 := alias<T: Type<Numeric>> splat<T, 2>`) remain planned.
 
 ## Name a structural type or an existing type
 
@@ -61,6 +61,29 @@ Computed expressions such as `alias (a + b)` have no alias meaning in this
 contract. Aliases of fields or indexed places remain open, including when a
 receiver or index would be evaluated and how long the resulting place remains
 valid.
+
+### Specializing generic functions with alias
+
+Planned design (not yet implemented in the compiler):
+
+```text
+pub IVec2 := alias Vec<Int, 2>;
+pub ivec2 := alias vecN<Int, 2>;
+pub zeroIVec2 := alias zeroVec<Int, 2>;
+pub splat2 := alias<T: Type<math.Numeric>> splat<T, 2>;
+```
+
+- **Uniform symmetry:** Uses the exact same `alias` and `alias<...>` syntax
+  already implemented for generic type aliases (`alias Vec<Int, 2>`,
+  `alias<T> Vec<T, 2>`).
+- **Zero wrapper overhead:** Resolves directly to the specialized target
+  callable at compile time across both TS and C11, emitting no runtime
+  forwarding function.
+- **Signature preservation:** Specializing compile-time parameters preserves the
+  target function's runtime parameter list. For example, `vecN<Int, 2>` keeps
+  `(data: [Int; 2]): Vec<Int, 2>` rather than turning into a positional scalar
+  helper `(x: Int, y: Int): IVec2`; targets such as `zeroVec<Int, 2>` and
+  `splat<T, 2>` match 1-to-1.
 
 ## Declare a fresh type
 
