@@ -2732,6 +2732,9 @@ softBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): St
         if fnName == "isWhitespace" {
             return "(" + arg0 + " === \" \" || " + arg0 + " === \"\\t\" || " + arg0 + " === \"\\r\" || " + arg0 + " === \"\\n\")";
         }
+        if fnName == "utf8Encode" { return "lite$unicodeUtf8Encode(" + arg0 + ")"; }
+        if fnName == "fromUtf8Strict" { return "lite$unicodeUtf8DecodeStrict(" + arg0 + ")"; }
+        if fnName == "fromUtf8Lossy" { return "lite$unicodeUtf8DecodeLossy(" + arg0 + ")"; }
     } else if moduleName == "lib/core/io" {
         if fnName == "Reader.fromText" { return "lite$ioTextReader(" + arg0 + ")"; }
         if fnName == "Reader.readAll" { return "lite$ioReadAll(" + arg0 + ")"; }

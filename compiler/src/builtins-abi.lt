@@ -189,6 +189,8 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         if name == "String.length" and params == "text=String" and result == ir.VALUE_KIND_INT { "lite$textLength" }
         else if name == "String.at" and params == "text=String|position=Int" and result == ir.VALUE_KIND_STRING { "lite$textAt" }
         else if name == "String.slice" and params == "text=String|start=Int|end=Int" and result == ir.VALUE_KIND_STRING { "lite$textSlice" }
+        else if name == "String.toCodePoints" and params == "text=String" and result == "List<Int>" { "lite$unicodeToCodePoints" }
+        else if name == "String.fromCodePoints" and params == "points=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeFromCodePoints" }
         else { "" }
     } else if moduleIdentity == "lite.core.list.v1" {
         if name == "List.pushBack" and params == "values=mut List<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$pushBack:v1" }
@@ -370,6 +372,15 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
         }
         if name == "String.isAsciiLetter" or name == "String.isNameStart" or name == "String.isNameContinue" or name == "String.isWhitespace" {
             return (params = "ch=String", result = ir.VALUE_KIND_BOOL);
+        }
+        if name == "String.utf8Encode" {
+            return (params = "text=String", result = "List<Int>");
+        }
+        if name == "String.fromUtf8Strict" {
+            return (params = "bytes=List<Int>", result = "(ok:Bool,text:String,error:String)");
+        }
+        if name == "String.fromUtf8Lossy" {
+            return (params = "bytes=List<Int>", result = ir.VALUE_KIND_STRING);
         }
     } else if moduleName == "lib/core/io" {
         if name == "Reader.fromText" {
