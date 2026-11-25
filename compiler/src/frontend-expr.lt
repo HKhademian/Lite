@@ -19,6 +19,7 @@ reach := import "./reachability";
 infer := import "./frontend-inference";
 ctx := import "./frontend-context";
 textLib := import "core/text";
+tb := import "util/text-builder";
 
 /** One parsed expression matching `frontend-ir.Parsed`. */
 Parsed := alias (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
@@ -243,36 +244,47 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
             }
         }
         cursor = syntax.expectSymbol(source, cursor, ")", prefix);
-        var kindText := "(";
+        kindTextBuf: mut tb.TextBuilder;
+        tb.append(mut kindTextBuf, "(");
         var index := 0;
         loop index < count {
-            if index > 0 { kindText = kindText + ","; }
-            kindText = kindText + labels[index] + ":" + kinds[index];
+            if index > 0 { tb.append(mut kindTextBuf, ","); }
+            tb.append(mut kindTextBuf, labels[index]);
+            tb.append(mut kindTextBuf, ":");
+            tb.append(mut kindTextBuf, kinds[index]);
             index = index + 1;
         }
-        tupleKind := kindText + ")";
+        tb.append(mut kindTextBuf, ")");
+        tupleKind := tb.build(kindTextBuf);
         if target == ir.TARGET_C and types.cStructTag(tupleKind) =!= "" {
             tag := types.cStructTag(tupleKind);
             if count == 0 {
                 return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ ._empty = 0 })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
             }
-            var cCodeText := "";
+            cCodeBuf: mut tb.TextBuilder;
             var ci := 0;
             loop ci < count {
-                if ci > 0 { cCodeText = cCodeText + ", "; }
-                cCodeText = cCodeText + "." + types.cFieldName(types.tupleRuntimeProp(labels[ci], ci)) + " = " + codes[ci];
+                if ci > 0 { tb.append(mut cCodeBuf, ", "); }
+                tb.append(mut cCodeBuf, ".");
+                tb.append(mut cCodeBuf, types.cFieldName(types.tupleRuntimeProp(labels[ci], ci)));
+                tb.append(mut cCodeBuf, " = ");
+                tb.append(mut cCodeBuf, codes[ci]);
                 ci = ci + 1;
             }
-            return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ " + cCodeText + " })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
+            return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ " + tb.build(cCodeBuf) + " })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
         }
-        var codeText := "{ ";
+        codeBuf: mut tb.TextBuilder;
+        tb.append(mut codeBuf, "{ ");
         var ti := 0;
         loop ti < count {
-            if ti > 0 { codeText = codeText + ", "; }
-            codeText = codeText + types.tupleObjectKey(labels[ti], ti) + ": " + codes[ti];
+            if ti > 0 { tb.append(mut codeBuf, ", "); }
+            tb.append(mut codeBuf, types.tupleObjectKey(labels[ti], ti));
+            tb.append(mut codeBuf, ": ");
+            tb.append(mut codeBuf, codes[ti]);
             ti = ti + 1;
         }
-        return ctx.withMarkers((kind = tupleKind, code = codeText + " }", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
+        tb.append(mut codeBuf, " }");
+        return ctx.withMarkers((kind = tupleKind, code = tb.build(codeBuf), intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
     }
     var groupedExpected := expected;
     if numeric.isNumericKind(expected) {
@@ -637,7 +649,8 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     expectedParamCount := if hasExpectedFn { types.fnParamCount(expected) } else { 0 };
     paramNames: mut List<String> = [];
     paramKinds: mut List<String> = [];
-    var encodedKind := "fn(";
+    encodedKindBuf: mut tb.TextBuilder;
+    tb.append(mut encodedKindBuf, "fn(");
     var paramIdx := 0;
     loop cursor < size and source.at(cursor) =!= ")" {
         pStart := cursor;
@@ -666,8 +679,10 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             syntax.failAt(source, pStart, prefix, "function parameter " + pName + " cannot have type Unit");
         }
         (mut paramKinds).pushBack(pKind);
-        if paramIdx > 0 { encodedKind = encodedKind + ","; }
-        encodedKind = encodedKind + pName + ":" + pKind;
+        if paramIdx > 0 { tb.append(mut encodedKindBuf, ","); }
+        tb.append(mut encodedKindBuf, pName);
+        tb.append(mut encodedKindBuf, ":");
+        tb.append(mut encodedKindBuf, pKind);
         paramIdx = paramIdx + 1;
         if cursor < size and source.at(cursor) == "," {
             cursor = syntax.skipTrivia(source, cursor + 1, prefix);
@@ -675,6 +690,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             break;
         }
     }
+    encodedKind := tb.build(encodedKindBuf);
     cursor = syntax.expectSymbol(source, cursor, ")", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
     var retKind := "";
@@ -719,9 +735,10 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             }
         }
     }
-    var tsParamsCode := "";
-    var cParamsCode := "void *_env";
-    var paramVoidStmts := "";
+    tsParamsBuf: mut tb.TextBuilder;
+    cParamsBuf: mut tb.TextBuilder;
+    tb.append(mut cParamsBuf, "void *_env");
+    paramVoidBuf: mut tb.TextBuilder;
     paramRuntimes: mut List<String> = [];
     var pBindIdx := 0;
     loop pBindIdx < paramIdx {
@@ -732,12 +749,22 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         mut fnLocals.pushBack((name = pName, runtime = pRuntime, kind = pKind,
         mutable = false, writable = false, depth = fnLexDepth, constant = false, code = "",
         intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
-        if pBindIdx > 0 { tsParamsCode = tsParamsCode + ", "; }
-        tsParamsCode = tsParamsCode + pRuntime + ": " + types.tsFunctionType(pKind);
-        cParamsCode = cParamsCode + ", " + types.cValueType(pKind) + " " + pRuntime;
-        paramVoidStmts = paramVoidStmts + (if isCFnLit { "(void)" + pRuntime + "; " } else { "void " + pRuntime + "; " });
+        if pBindIdx > 0 { tb.append(mut tsParamsBuf, ", "); }
+        tb.append(mut tsParamsBuf, pRuntime);
+        tb.append(mut tsParamsBuf, ": ");
+        tb.append(mut tsParamsBuf, types.tsFunctionType(pKind));
+        tb.append(mut cParamsBuf, ", ");
+        tb.append(mut cParamsBuf, types.cValueType(pKind));
+        tb.append(mut cParamsBuf, " ");
+        tb.append(mut cParamsBuf, pRuntime);
+        tb.append(mut paramVoidBuf, if isCFnLit { "(void)" } else { "void " });
+        tb.append(mut paramVoidBuf, pRuntime);
+        tb.append(mut paramVoidBuf, "; ");
         pBindIdx = pBindIdx + 1;
     }
+    tsParamsCode := tb.build(tsParamsBuf);
+    cParamsCode := tb.build(cParamsBuf);
+    paramVoidStmts := tb.build(paramVoidBuf);
     fnBodyDepth := if isCFnLit { iifeDepth } else { iifeDepth + 1 };
     if retKind == "$InferRet" {
         inferFnCtx := (id = 0, tag = "", kind = ir.CTX_KIND_FN, phase = ir.CTX_PHASE_BODY, iifeDepth = fnBodyDepth,
@@ -809,11 +836,11 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             cExpr := "/*@T:" + fnKind + "@*//*@CFN_START:" + clName + "@*/" + cFnDef + "/*@CFN_END@*/((" + cFnTag + "){ " + clName + ", NULL })";
             return (kind = fnKind, code = cExpr, intValue = 0, textValue = fnKind, constant = false, next = fnBody.next);
         }
-        var envFields := "";
-        var envUnpack := "";
-        var mkParams := "";
-        var mkInits := "";
-        var mkArgs := "";
+        envFieldsBuf: mut tb.TextBuilder;
+        envUnpackBuf: mut tb.TextBuilder;
+        mkParamsBuf: mut tb.TextBuilder;
+        mkInitsBuf: mut tb.TextBuilder;
+        mkArgsBuf: mut tb.TextBuilder;
         var bodyRewritten := fnBody.code;
         var ci := 0;
         loop ci < capCount {
@@ -825,29 +852,70 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             fName := "f_" + ci.toText();
             pName := "a_" + ci.toText();
             if ci > 0 {
-                mkParams = mkParams + ", ";
-                mkArgs = mkArgs + ", ";
+                tb.append(mut mkParamsBuf, ", ");
+                tb.append(mut mkArgsBuf, ", ");
             }
             if isCell {
                 cellPtr := cRt.slice(2, cRt.length() - 1);
-                envFields = envFields + cT + " *" + fName + "; ";
-                mkParams = mkParams + cT + " *" + pName;
-                mkArgs = mkArgs + cellPtr;
-                mkInits = mkInits + "e->" + fName + " = " + pName + "; ";
-                envUnpack = envUnpack + cT + " *" + cellPtr + " = ((" + envType + " *)_env)->" + fName + "; (void)" + cellPtr + "; ";
+                tb.append(mut envFieldsBuf, cT);
+                tb.append(mut envFieldsBuf, " *");
+                tb.append(mut envFieldsBuf, fName);
+                tb.append(mut envFieldsBuf, "; ");
+                tb.append(mut mkParamsBuf, cT);
+                tb.append(mut mkParamsBuf, " *");
+                tb.append(mut mkParamsBuf, pName);
+                tb.append(mut mkArgsBuf, cellPtr);
+                tb.append(mut mkInitsBuf, "e->");
+                tb.append(mut mkInitsBuf, fName);
+                tb.append(mut mkInitsBuf, " = ");
+                tb.append(mut mkInitsBuf, pName);
+                tb.append(mut mkInitsBuf, "; ");
+                tb.append(mut envUnpackBuf, cT);
+                tb.append(mut envUnpackBuf, " *");
+                tb.append(mut envUnpackBuf, cellPtr);
+                tb.append(mut envUnpackBuf, " = ((");
+                tb.append(mut envUnpackBuf, envType);
+                tb.append(mut envUnpackBuf, " *)_env)->");
+                tb.append(mut envUnpackBuf, fName);
+                tb.append(mut envUnpackBuf, "; (void)");
+                tb.append(mut envUnpackBuf, cellPtr);
+                tb.append(mut envUnpackBuf, "; ");
             } else {
-                envFields = envFields + cT + " " + fName + "; ";
-                mkParams = mkParams + cT + " " + pName;
-                mkArgs = mkArgs + ctx.copiedValueCode(target, cK, cRt);
-                mkInits = mkInits + "e->" + fName + " = " + pName + "; ";
+                tb.append(mut envFieldsBuf, cT);
+                tb.append(mut envFieldsBuf, " ");
+                tb.append(mut envFieldsBuf, fName);
+                tb.append(mut envFieldsBuf, "; ");
+                tb.append(mut mkParamsBuf, cT);
+                tb.append(mut mkParamsBuf, " ");
+                tb.append(mut mkParamsBuf, pName);
+                tb.append(mut mkArgsBuf, ctx.copiedValueCode(target, cK, cRt));
+                tb.append(mut mkInitsBuf, "e->");
+                tb.append(mut mkInitsBuf, fName);
+                tb.append(mut mkInitsBuf, " = ");
+                tb.append(mut mkInitsBuf, pName);
+                tb.append(mut mkInitsBuf, "; ");
                 if cM {
                     bodyRewritten = ctx.cReplaceIdentToken(bodyRewritten, cRt, "(((" + envType + " *)_env)->" + fName + ")");
                 } else {
-                    envUnpack = envUnpack + cT + " " + cRt + " = ((" + envType + " *)_env)->" + fName + "; (void)" + cRt + "; ";
+                    tb.append(mut envUnpackBuf, cT);
+                    tb.append(mut envUnpackBuf, " ");
+                    tb.append(mut envUnpackBuf, cRt);
+                    tb.append(mut envUnpackBuf, " = ((");
+                    tb.append(mut envUnpackBuf, envType);
+                    tb.append(mut envUnpackBuf, " *)_env)->");
+                    tb.append(mut envUnpackBuf, fName);
+                    tb.append(mut envUnpackBuf, "; (void)");
+                    tb.append(mut envUnpackBuf, cRt);
+                    tb.append(mut envUnpackBuf, "; ");
                 }
             }
             ci = ci + 1;
         }
+        envFields := tb.build(envFieldsBuf);
+        envUnpack := tb.build(envUnpackBuf);
+        mkParams := tb.build(mkParamsBuf);
+        mkInits := tb.build(mkInitsBuf);
+        mkArgs := tb.build(mkArgsBuf);
         mkName := "lt_mk_" + cid;
         cFnDef := "typedef struct { " + envFields + "} " + envType + ";\nstatic " + cRetType + " " + clName + "(" + cParamsCode + ") { (void)_env; /*@CFN_TEMPS@*/" + selfBind + envUnpack + paramVoidStmts + bodyRewritten + " }\nstatic " + cFnTag + " " + mkName + "(" + mkParams + ") { " + envType + " *e = malloc(sizeof(" + envType + ")); if (e == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } " + mkInits + "return (" + cFnTag + "){ " + clName + ", e }; }";
         cExpr := "/*@T:" + fnKind + "@*//*@CFN_START:" + clName + "@*/" + cFnDef + "/*@CFN_END@*/" + mkName + "(" + mkArgs + ")";
@@ -1074,7 +1142,7 @@ pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, al
     closeDelim := if openDelim == "{" { "}" } else if openDelim == "(" { ")" } else { "]" };
     var cursor := syntax.skipTrivia(source, openPos + 1, prefix);
     seenRecBinds: mut List<String> = [];
-    var encoded := "";
+    encodedBuf: mut tb.TextBuilder;
     var count := 0;
     var hadComma := false;
     var lastMode := "pos";
@@ -1157,8 +1225,10 @@ pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, al
             }
         }
         if shape == "record" and bindName =!= "_" { mut seenRecBinds.pushBack(bindName); }
-        encoded = encoded + types.encodeLengthPrefixedText(bindName) + types.encodeLengthPrefixedText(sourceField) +
-        types.encodeLengthPrefixedText(expectedKind) + types.encodeLengthPrefixedText(clauseMode);
+        tb.append(mut encodedBuf, types.encodeLengthPrefixedText(bindName));
+        tb.append(mut encodedBuf, types.encodeLengthPrefixedText(sourceField));
+        tb.append(mut encodedBuf, types.encodeLengthPrefixedText(expectedKind));
+        tb.append(mut encodedBuf, types.encodeLengthPrefixedText(clauseMode));
         lastMode = clauseMode;
         lastExpected = expectedKind;
         count = count + 1;
@@ -1170,6 +1240,7 @@ pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, al
             break;
         }
     }
+    encoded := tb.build(encodedBuf);
     next := syntax.expectSymbol(source, cursor, closeDelim, prefix);
     if count == 0 and shape == "record" {
         syntax.failAt(source, openPos, prefix, "record destructuring needs at least one field clause");
@@ -1208,7 +1279,7 @@ pub resolveAggregateBindings := fn(target: String, shape: String, count: Int, en
         }
     }
     var claimedBag := "";
-    var out := "";
+    out: mut tb.TextBuilder;
     var clCursor := 0;
     var clIndex := 0;
     loop clIndex < count {
@@ -1272,11 +1343,13 @@ pub resolveAggregateBindings := fn(target: String, shape: String, count: Int, en
             }
             targetKind = expectedKind;
         }
-        out = out + types.encodeLengthPrefixedText(bindName) + types.encodeLengthPrefixedText(propExpr) +
-        types.encodeLengthPrefixedText(srcKind) + types.encodeLengthPrefixedText(targetKind);
+        tb.append(mut out, types.encodeLengthPrefixedText(bindName));
+        tb.append(mut out, types.encodeLengthPrefixedText(propExpr));
+        tb.append(mut out, types.encodeLengthPrefixedText(srcKind));
+        tb.append(mut out, types.encodeLengthPrefixedText(targetKind));
         clIndex = clIndex + 1;
     }
-    out
+    tb.build(out)
 };
 
 /** Parses name-headed primaries: `Unit`, `true`/`false`, `not`, `if`/`match`/`loop`, `fn`, `self`, locals, module functions, and list intrinsics. */
@@ -1594,23 +1667,32 @@ emitPayloadEnumValue := fn(target: String, enumKind: String, caseIdx: Int, argCo
         if argCodes.length() == 0 {
             return "/*@T:" + enumKind + "@*/((" + tag + "){ .tag = " + caseIdx.toText() + ", .u = { ._empty = 0 } })";
         }
-        var fieldsInit := "";
+        fieldsInitBuf: mut tb.TextBuilder;
         var pi := 0;
         loop pi < argCodes.length() {
-            if pi > 0 { fieldsInit = fieldsInit + ", "; }
-            fieldsInit = fieldsInit + ".f" + pi.toText() + " = " + argCodes[pi];
+            if pi > 0 { tb.append(mut fieldsInitBuf, ", "); }
+            tb.append(mut fieldsInitBuf, ".f");
+            tb.append(mut fieldsInitBuf, pi.toText());
+            tb.append(mut fieldsInitBuf, " = ");
+            tb.append(mut fieldsInitBuf, argCodes[pi]);
             pi = pi + 1;
         }
-        return "/*@T:" + enumKind + "@*/((" + tag + "){ .tag = " + caseIdx.toText() + ", .u = { .c" + caseIdx.toText() + " = { " + fieldsInit + " } } })";
+        return "/*@T:" + enumKind + "@*/((" + tag + "){ .tag = " + caseIdx.toText() + ", .u = { .c" + caseIdx.toText() + " = { " + tb.build(fieldsInitBuf) + " } } })";
     }
     tsT := types.tsFunctionType(enumKind);
-    var obj := "_t: " + caseIdx.toText() + " as const";
+    objBuf: mut tb.TextBuilder;
+    tb.append(mut objBuf, "_t: ");
+    tb.append(mut objBuf, caseIdx.toText());
+    tb.append(mut objBuf, " as const");
     var pi := 0;
     loop pi < argCodes.length() {
-        obj = obj + ", _" + pi.toText() + ": " + argCodes[pi];
+        tb.append(mut objBuf, ", _");
+        tb.append(mut objBuf, pi.toText());
+        tb.append(mut objBuf, ": ");
+        tb.append(mut objBuf, argCodes[pi]);
         pi = pi + 1;
     }
-    "({ " + obj + " } as " + tsT + ")"
+    "({ " + tb.build(objBuf) + " } as " + tsT + ")"
 };
 
 /** Parses plain or payload-bearing enum case construction (`Enum.Case` / `.Case(...)`), validating payload count and types. */
@@ -2520,7 +2602,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     isLoopTailPartialIf := isLoopBody and afterRawIfTail >= 0 and afterRawIfTail < blockSourceSize and source.at(afterRawIfTail) == "}";
                     ifBranchSink := if isLoopTailPartialIf { "loopBody" } else { "stmt" };
                     ifBranchExpected := if isLoopTailPartialIf { expected } else { "" };
-                    var ifParts := "";
+                    ifPartsBuf: mut tb.TextBuilder;
                     var allBranchesExit := true;
                     var hasElseBranch := false;
                     var ifCursor := afterItemName;
@@ -2551,7 +2633,11 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, branch); }
                         if branch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
                         prefixKw := if isFirstIf { "if (" } else { " else if (" };
-                        ifParts = ifParts + prefixKw + condCode + ") { " + branch.code + " }";
+                        tb.append(mut ifPartsBuf, prefixKw);
+                        tb.append(mut ifPartsBuf, condCode);
+                        tb.append(mut ifPartsBuf, ") { ");
+                        tb.append(mut ifPartsBuf, branch.code);
+                        tb.append(mut ifPartsBuf, " }");
                         ifCursor = branch.next;
                         isFirstIf = false;
                         afterBranch := syntax.skipTrivia(source, ifCursor, prefix);
@@ -2566,7 +2652,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                                 elseBranch := parseBinaryCtx(target, source, elseOpen - 1, prefix, blockLocals, functions, params, currentName, ifBranchExpected, 0, ifBarrierCtxs, bodyDepth, inferMode, ifBranchSink, blockAliases);
                                 if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, elseBranch); }
                                 if elseBranch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
-                                ifParts = ifParts + " else { " + elseBranch.code + " }";
+                                tb.append(mut ifPartsBuf, " else { ");
+                                tb.append(mut ifPartsBuf, elseBranch.code);
+                                tb.append(mut ifPartsBuf, " }");
                                 ifCursor = elseBranch.next;
                                 break;
                             }
@@ -2574,6 +2662,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             break;
                         }
                     }
+                    ifParts := tb.build(ifPartsBuf);
                     if not blockExits {
                         mut statements.pushBack(ifParts);
                         if hasElseBranch and allBranchesExit { blockExits = true; }
@@ -2625,7 +2714,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     matchArmSink := if isLoopTailMatch { "loopBody" } else { "stmt" };
                     matchArmExpected := if isLoopTailMatch { expected } else { "" };
                     var matchCursor := syntax.skipItemSeparators(source, afterItemName + 1, prefix);
-                    var matchParts := "";
+                    matchPartsBuf: mut tb.TextBuilder;
                     var sawFallback := false;
                     var armCount := 0;
                     var allArmsExit := true;
@@ -2659,9 +2748,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, arm); }
                             if arm.kind =!= ir.VALUE_KIND_NEVER { allArmsExit = false; }
                             if armCount == 0 {
-                                matchParts = "{ " + arm.code + " }";
+                                tb.append(mut matchPartsBuf, "{ ");
+                                tb.append(mut matchPartsBuf, arm.code);
+                                tb.append(mut matchPartsBuf, " }");
                             } else {
-                                matchParts = matchParts + " else { " + arm.code + " }";
+                                tb.append(mut matchPartsBuf, " else { ");
+                                tb.append(mut matchPartsBuf, arm.code);
+                                tb.append(mut matchPartsBuf, " }");
                             }
                             armCount = armCount + 1;
                             matchCursor = arm.next;
@@ -2699,11 +2792,16 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, arm); }
                             if arm.kind =!= ir.VALUE_KIND_NEVER { allArmsExit = false; }
                             armKw := if armCount == 0 { "if (" } else { " else if (" };
-                            matchParts = matchParts + armKw + condCode + ") { " + arm.code + " }";
+                            tb.append(mut matchPartsBuf, armKw);
+                            tb.append(mut matchPartsBuf, condCode);
+                            tb.append(mut matchPartsBuf, ") { ");
+                            tb.append(mut matchPartsBuf, arm.code);
+                            tb.append(mut matchPartsBuf, " }");
                             armCount = armCount + 1;
                             matchCursor = arm.next;
                         }
                     }
+                    matchParts := tb.build(matchPartsBuf);
                     if not blockExits {
                         mut statements.pushBack(matchParts);
                         if sawFallback and allArmsExit { blockExits = true; }
@@ -3269,9 +3367,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             } else if afterItemName < blockSourceSize and source.at(afterItemName) == "[" and sym.localIndex(blockLocals, itemName) >= 0 and
             syntax.scanBracketEnd(source, afterItemName, prefix) >= 0 and
             (syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) or
-             syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0) and
+            syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0) and
             (hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$setIndex", functions) or
-             hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$getIndex", functions)) {
+            hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$getIndex", functions)) {
                 isStatement = true;
                 entry := blockLocals[sym.localIndex(blockLocals, itemName)];
                 if entry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
@@ -4466,7 +4564,10 @@ PatResult := alias (cond: String, bindings: String, irrefutable: Bool, boolMask:
 /** Merges pipe-delimited enum case indices from `add` into `acc` (`|0|1|`), returning the updated bag and count of newly added cases. */
 mergeEnumCaseBag := fn(acc: String, add: String): (bag: String, added: Int) {
     if add == "" { return (bag = acc, added = 0); }
-    var out := if acc == "" { "|" } else { acc };
+    baseAcc := if acc == "" { "|" } else { acc };
+    outBuf: mut tb.TextBuilder;
+    tb.append(mut outBuf, baseAcc);
+    seen: mut Set<String>;
     var added := 0;
     size := add.length();
     var pos := 0;
@@ -4480,14 +4581,16 @@ mergeEnumCaseBag := fn(acc: String, add: String): (bag: String, added: Int) {
         if end > pos {
             tok := add.slice(pos, end);
             tag := "|" + tok + "|";
-            if out.indexOf(tag, 0) < 0 {
-                out = out + tok + "|";
+            if baseAcc.indexOf(tag, 0) < 0 and not seen.has(tok) {
+                mut seen.add(tok);
+                tb.append(mut outBuf, tok);
+                tb.append(mut outBuf, "|");
                 added = added + 1;
             }
         }
         pos = end + 1;
     }
-    (bag = out, added = added)
+    (bag = tb.build(outBuf), added = added)
 };
 
 /** Checks whether a pattern type annotation matches a subject or component type kind. */
@@ -4613,7 +4716,7 @@ patHasNamedBindings := fn(bindings: String): Bool {
 
 /** Emits JS assignment statements for all bindings in `bindings` using deterministic arm runtime names. */
 emitPatAssignments := fn(target: String, baseLocals: List<Local>, armDepth: Int, bindings: String): String {
-    var out := "";
+    out: mut tb.TextBuilder;
     size := bindings.length();
     var pos := 0;
     loop pos < size {
@@ -4625,11 +4728,14 @@ emitPatAssignments := fn(target: String, baseLocals: List<Local>, armDepth: Int,
             name := bindings.slice(pos, t1);
             exprCode := bindings.slice(t2 + 1, lineEnd);
             rt := ir.localRuntimeName(target, baseLocals, name, "", armDepth);
-            out = out + rt + " = " + exprCode + "; ";
+            tb.append(mut out, rt);
+            tb.append(mut out, " = ");
+            tb.append(mut out, exprCode);
+            tb.append(mut out, "; ");
         }
         pos = lineEnd + 1;
     }
-    out
+    tb.build(out)
 };
 
 /** Scans inside a record pattern clause for a top-level single `=` before `,` or `}`, returning its index or -1. */
@@ -4943,7 +5049,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                             syntax.failAt(source, cCursor, prefix, "record " + types.recordDisplayName(subjKind) + " has no field " + fieldName);
                         }
                         recProp1 := types.recordComponentProp(subjKind, fieldName);
-                propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(recProp1) } else { recProp1 });
+                        propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(recProp1) } else { recProp1 });
                         subNonConst := (kind = fieldKind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
                         sub := parseComparisonPatternRhs(target, source, afterName, fieldCmp.text, fieldCmp.width, prefix, fieldKind, propExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                         recCond = combinePatCond(recCond, sub.cond);
@@ -4960,7 +5066,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                             syntax.failAt(source, cCursor, prefix, "record field " + fieldName + " has type " + types.displayKind(fieldKind) + ", expected " + types.displayKind(ty.kind));
                         }
                         recProp1 := types.recordComponentProp(subjKind, fieldName);
-                propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(recProp1) } else { recProp1 });
+                        propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(recProp1) } else { recProp1 });
                         recBindings = mergePatBindings(recBindings, fieldName + "\t" + fieldKind + "\t" + propExpr + "\n", source, cCursor, prefix);
                         cCursor = syntax.skipTrivia(source, ty.next, prefix);
                     } else {
@@ -4996,7 +5102,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
         var tupBindings := "";
         var tupIrref := true;
         var tupMarkers := "";
-        var usedSlots := "|";
+        usedSlots: mut Set<Int>;
         var itemCount := 0;
         loop true {
             tCursor = syntax.skipTrivia(source, tCursor, prefix);
@@ -5019,11 +5125,10 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                 if slotIdx < 0 {
                     syntax.failAt(source, fStart, prefix, "tuple has no field " + fieldName);
                 }
-                slotTag := "|" + slotIdx.toText() + "|";
-                if usedSlots.indexOf(slotTag, 0) >= 0 {
+                if usedSlots.has(slotIdx) {
                     syntax.failAt(source, fStart, prefix, "duplicate selection of tuple field " + fieldName);
                 }
-                usedSlots = usedSlots + slotIdx.toText() + "|";
+                mut usedSlots.add(slotIdx);
                 comp := types.tupleComponent(subjKind, slotIdx);
                 var afterField := syntax.skipTrivia(source, fEnd, prefix);
                 if afterField < size and source.at(afterField) == ":" {
@@ -5094,11 +5199,10 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                     if slotIdx < 0 {
                         syntax.failAt(source, srcStart, prefix, "tuple has no field " + srcField);
                     }
-                    slotTag := "|" + slotIdx.toText() + "|";
-                    if usedSlots.indexOf(slotTag, 0) >= 0 {
+                    if usedSlots.has(slotIdx) {
                         syntax.failAt(source, srcStart, prefix, "duplicate selection of tuple field " + srcField);
                     }
-                    usedSlots = usedSlots + slotIdx.toText() + "|";
+                    mut usedSlots.add(slotIdx);
                     comp := types.tupleComponent(subjKind, slotIdx);
                     propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(comp.prop) } else { comp.prop });
                     subNonConst := (kind = comp.kind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
@@ -5115,8 +5219,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                 } else {
                     var findIdx := 0;
                     loop findIdx < tupleCount {
-                        tag := "|" + findIdx.toText() + "|";
-                        if usedSlots.indexOf(tag, 0) < 0 {
+                        if not usedSlots.has(findIdx) {
                             slotIdx = findIdx;
                             break;
                         }
@@ -5125,7 +5228,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                     if slotIdx < 0 {
                         syntax.failAt(source, tCursor, prefix, "tuple pattern has too many fields for " + types.displayKind(subjKind));
                     }
-                    usedSlots = usedSlots + slotIdx.toText() + "|";
+                    mut usedSlots.add(slotIdx);
                     comp := types.tupleComponent(subjKind, slotIdx);
                     propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(comp.prop) } else { comp.prop });
                     subNonConst := (kind = comp.kind, code = propExpr, intValue = 0, textValue = "", constant = false, next = 0);
@@ -5328,28 +5431,39 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
     /* Binding-producing `or` alternatives: emit a short-circuiting check assigning the shared arm bindings on first match. */
     var orCondCode := "";
     if target == ir.TARGET_C {
-        var cOr := "/*@COR@*/bool lt_or = false; ";
+        cOrBuf: mut tb.TextBuilder;
+        tb.append(mut cOrBuf, "/*@COR@*/bool lt_or = false; ");
         var i := 0;
         loop i < altCount {
             c := if altConds[i] == "" { "true" } else { altConds[i] };
             assigns := emitPatAssignments(target, locals, armDepth, altBindings[i]);
-            cOr = cOr + "if (!lt_or && (" + c + ")) { " + assigns + "lt_or = true; } ";
+            tb.append(mut cOrBuf, "if (!lt_or && (");
+            tb.append(mut cOrBuf, c);
+            tb.append(mut cOrBuf, ")) { ");
+            tb.append(mut cOrBuf, assigns);
+            tb.append(mut cOrBuf, "lt_or = true; } ");
             i = i + 1;
         }
-        orCondCode = cOr;
+        orCondCode = tb.build(cOrBuf);
     } else {
-        var iife := "(() => { ";
+        iifeBuf: mut tb.TextBuilder;
+        tb.append(mut iifeBuf, "(() => { ");
         var i := 0;
         loop i < altCount {
             c := if altConds[i] == "" { "true" } else { altConds[i] };
             assigns := emitPatAssignments(target, locals, armDepth, altBindings[i]);
-            iife = iife + "if (" + c + ") { " + assigns + "return true; } ";
+            tb.append(mut iifeBuf, "if (");
+            tb.append(mut iifeBuf, c);
+            tb.append(mut iifeBuf, ") { ");
+            tb.append(mut iifeBuf, assigns);
+            tb.append(mut iifeBuf, "return true; } ");
             i = i + 1;
         }
-        orCondCode = iife + "return false; })()";
+        tb.append(mut iifeBuf, "return false; })()");
+        orCondCode = tb.build(iifeBuf);
     }
     /* Preserve binding declarations (names + kinds) with empty per-binding expr sentinel so arm header emits `let rt!: T;` once. */
-    var declBindings := "";
+    declBindingsBuf: mut tb.TextBuilder;
     bSize := first.bindings.length();
     var bPos := 0;
     loop bPos < bSize {
@@ -5358,11 +5472,12 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
         t1 := first.bindings.indexOf("\t", bPos);
         t2 := if t1 >= 0 { first.bindings.indexOf("\t", t1 + 1) } else { -1 };
         if t1 > bPos and t2 > t1 and t2 < lineEnd {
-            declBindings = declBindings + first.bindings.slice(bPos, t2) + "\t\n";
+            tb.append(mut declBindingsBuf, first.bindings.slice(bPos, t2));
+            tb.append(mut declBindingsBuf, "\t\n");
         }
         bPos = lineEnd + 1;
     }
-    (cond = orCondCode, bindings = declBindings, irrefutable = anyIrref, boolMask = combinedMask, enumCases = combinedEnumCases, next = lastEnd, markers = combinedMarkers)
+    (cond = orCondCode, bindings = tb.build(declBindingsBuf), irrefutable = anyIrref, boolMask = combinedMask, enumCases = combinedEnumCases, next = lastEnd, markers = combinedMarkers)
 };
 
 /** Parses a subject-based `match <subject> { ... }` body for value, statement, or tagged/then/finally IIFE lowering. */
@@ -5403,17 +5518,36 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
     subjTsType := if types.needsTsTypeAnnotation(subj.kind) { ": " + types.tsFunctionType(subj.kind) } else { "" };
     armDepth := ir.maxLocalLexDepth(locals) + 1;
     var matchMarkers := if inferMode { ctx.collectParsedMarkers("", subj) } else { "" };
-    var armsCode := if isCTarget {
-        if canTernary {
-            ""
-        } else {
-            types.cValueType(subj.kind) + " " + subjVar + " = " + subj.code + "; (void)" + subjVar + "; bool " + doneVar + " = false; "
+    armsCodeBuf: mut tb.TextBuilder;
+    if isCTarget {
+        if not canTernary {
+            tb.append(mut armsCodeBuf, types.cValueType(subj.kind));
+            tb.append(mut armsCodeBuf, " ");
+            tb.append(mut armsCodeBuf, subjVar);
+            tb.append(mut armsCodeBuf, " = ");
+            tb.append(mut armsCodeBuf, subj.code);
+            tb.append(mut armsCodeBuf, "; (void)");
+            tb.append(mut armsCodeBuf, subjVar);
+            tb.append(mut armsCodeBuf, "; bool ");
+            tb.append(mut armsCodeBuf, doneVar);
+            tb.append(mut armsCodeBuf, " = false; ");
         }
     } else if canTernary {
-        "let " + doneVar + ": boolean = false; "
+        tb.append(mut armsCodeBuf, "let ");
+        tb.append(mut armsCodeBuf, doneVar);
+        tb.append(mut armsCodeBuf, ": boolean = false; ");
     } else {
-        "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; let " + doneVar + ": boolean = false; "
-    };
+        tb.append(mut armsCodeBuf, "const ");
+        tb.append(mut armsCodeBuf, subjVar);
+        tb.append(mut armsCodeBuf, subjTsType);
+        tb.append(mut armsCodeBuf, " = ");
+        tb.append(mut armsCodeBuf, subj.code);
+        tb.append(mut armsCodeBuf, "; void ");
+        tb.append(mut armsCodeBuf, subjVar);
+        tb.append(mut armsCodeBuf, "; let ");
+        tb.append(mut armsCodeBuf, doneVar);
+        tb.append(mut armsCodeBuf, ": boolean = false; ");
+    }
     ternaryConds: mut List<String> = [];
     ternaryVals: mut List<String> = [];
     ternaryKinds: mut List<String> = [];
@@ -5493,9 +5627,9 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         }
         /* Build arm-local scope with pattern bindings. */
         armLocals: mut List<Local> = locals;
-        var declStmts := "";
-        var assignStmts := "";
-        var voidStmts := "";
+        declStmtsBuf: mut tb.TextBuilder;
+        assignStmtsBuf: mut tb.TextBuilder;
+        voidStmtsBuf: mut tb.TextBuilder;
         bSize := pat.bindings.length();
         var bPos := 0;
         loop bPos < bSize {
@@ -5516,23 +5650,40 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                 } else {
                     if isCTarget {
                         bCType := types.cValueType(bKind);
+                        tb.append(mut declStmtsBuf, bCType);
+                        tb.append(mut declStmtsBuf, " ");
+                        tb.append(mut declStmtsBuf, bRt);
                         if bExpr == "" {
                             bZero := ctx.zeroParsed(ir.TARGET_C, bKind, 0).code;
-                            declStmts = declStmts + bCType + " " + bRt + " = " + bZero + "; ";
+                            tb.append(mut declStmtsBuf, " = ");
+                            tb.append(mut declStmtsBuf, bZero);
+                            tb.append(mut declStmtsBuf, "; ");
                         } else {
-                            declStmts = declStmts + bCType + " " + bRt + "; ";
-                            assignStmts = assignStmts + bRt + " = " + bExpr + "; ";
+                            tb.append(mut declStmtsBuf, "; ");
+                            tb.append(mut assignStmtsBuf, bRt);
+                            tb.append(mut assignStmtsBuf, " = ");
+                            tb.append(mut assignStmtsBuf, bExpr);
+                            tb.append(mut assignStmtsBuf, "; ");
                         }
-                        voidStmts = voidStmts + "(void)" + bRt + "; ";
+                        tb.append(mut voidStmtsBuf, "(void)");
+                        tb.append(mut voidStmtsBuf, bRt);
+                        tb.append(mut voidStmtsBuf, "; ");
                     } else {
                         bTsType := types.tsFunctionType(bKind);
-                        if bExpr == "" {
-                            declStmts = declStmts + "let " + bRt + "!: " + bTsType + "; ";
-                        } else {
-                            declStmts = declStmts + "let " + bRt + "!: " + bTsType + "; ";
-                            assignStmts = assignStmts + bRt + " = " + bExpr + "; ";
+                        tb.append(mut declStmtsBuf, "let ");
+                        tb.append(mut declStmtsBuf, bRt);
+                        tb.append(mut declStmtsBuf, "!: ");
+                        tb.append(mut declStmtsBuf, bTsType);
+                        tb.append(mut declStmtsBuf, "; ");
+                        if bExpr =!= "" {
+                            tb.append(mut assignStmtsBuf, bRt);
+                            tb.append(mut assignStmtsBuf, " = ");
+                            tb.append(mut assignStmtsBuf, bExpr);
+                            tb.append(mut assignStmtsBuf, "; ");
                         }
-                        voidStmts = voidStmts + "void " + bRt + "; ";
+                        tb.append(mut voidStmtsBuf, "void ");
+                        tb.append(mut voidStmtsBuf, bRt);
+                        tb.append(mut voidStmtsBuf, "; ");
                     }
                     bindIsConst := subj.constant and bExpr == subjVar;
                     mut armLocals.pushBack((name = bName, runtime = bRt, kind = bKind, mutable = false, writable = false,
@@ -5542,6 +5693,9 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             }
             bPos = lineEnd + 1;
         }
+        declStmts := tb.build(declStmtsBuf);
+        assignStmts := tb.build(assignStmtsBuf);
+        voidStmts := tb.build(voidStmtsBuf);
         var hasGuard := false;
         var guardCode := "";
         var armOpen := -1;
@@ -5638,7 +5792,16 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                 winAssignStmts = assignStmts;
                 winVoidStmts = voidStmts;
             } else {
-                armsCode = armsCode + "if (!" + doneVar + ") { " + declStmts + assignStmts + voidStmts + doneVar + " = true; " + bodyEmit + " } ";
+                tb.append(mut armsCodeBuf, "if (!");
+                tb.append(mut armsCodeBuf, doneVar);
+                tb.append(mut armsCodeBuf, ") { ");
+                tb.append(mut armsCodeBuf, declStmts);
+                tb.append(mut armsCodeBuf, assignStmts);
+                tb.append(mut armsCodeBuf, voidStmts);
+                tb.append(mut armsCodeBuf, doneVar);
+                tb.append(mut armsCodeBuf, " = true; ");
+                tb.append(mut armsCodeBuf, bodyEmit);
+                tb.append(mut armsCodeBuf, " } ");
                 if canTernary {
                     if declStmts =!= "" or branch.kind == ir.VALUE_KIND_NEVER {
                         canTernary = false;
@@ -5667,7 +5830,12 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                 pCheck := if isCTarget { patCond } else { "Boolean(" + patCond + ")" };
                 "if (" + pCheck + ") { " + innerMatch + " }"
             };
-            armsCode = armsCode + "if (!" + doneVar + ") { " + declStmts + armCheck + " } ";
+            tb.append(mut armsCodeBuf, "if (!");
+            tb.append(mut armsCodeBuf, doneVar);
+            tb.append(mut armsCodeBuf, ") { ");
+            tb.append(mut armsCodeBuf, declStmts);
+            tb.append(mut armsCodeBuf, armCheck);
+            tb.append(mut armsCodeBuf, " } ");
             emittedRuntimeArms = emittedRuntimeArms + 1;
             if canTernary {
                 if declStmts =!= "" or branch.kind == ir.VALUE_KIND_NEVER {
@@ -5722,19 +5890,21 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         subjPrefix := if subj.constant and winDeclStmts == "" { "" }
         else if isCTarget { if subjVar == subj.code { "" } else { types.cValueType(subj.kind) + " " + subjVar + " = " + subj.code + "; (void)" + subjVar + "; " } }
         else { if subjVar == subj.code { "" } else { "const " + subjVar + subjTsType + " = " + subj.code + "; void " + subjVar + "; " } };
-        armsCode = subjPrefix + winDeclStmts + winAssignStmts + winVoidStmts + directBody + " ";
+        winArmsCode := subjPrefix + winDeclStmts + winAssignStmts + winVoidStmts + directBody + " ";
         if mode == "value" {
             if isCTarget {
                 cDecl := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "" } else { types.cValueType(finalKind) + " " + cMatchValVar + "; " };
                 cRetTok := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "0" } else { cMatchValVar };
-                return (code = "/*@CBLK:" + cRetTok + "@*/" + cDecl + armsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
+                return (code = "/*@CBLK:" + cRetTok + "@*/" + cDecl + winArmsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
                 isDirect = true, constant = false, intValue = 0, textValue = "");
             }
             retType := types.tsFunctionType(finalKind);
-            return (code = "(((): " + retType + " => { " + armsCode + "})())", kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
+            return (code = "(((): " + retType + " => { " + winArmsCode + "})())", kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
             isDirect = true, constant = false, intValue = 0, textValue = "");
         }
+        return (code = winArmsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers, isDirect = false, constant = false, intValue = 0, textValue = "");
     }
+    armsCode := tb.build(armsCodeBuf);
     if canTernary and ternaryCount >= 1 {
         var tExpr := ctx.assignValueCode(target, finalKind, ternaryKinds[ternaryCount - 1], ternaryVals[ternaryCount - 1]);
         var ti := ternaryCount - 2;
@@ -6377,16 +6547,22 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             }
         }
         if isPass1 {
+            passMarkersBuf: mut tb.TextBuilder;
+            tb.append(mut passMarkersBuf, passMarkers);
             var bIdx := 0;
             var allBranchesNever := passBranchCount > 0;
             loop bIdx < passBranchCount {
                 bKind := passBranchKinds[bIdx];
                 if bKind =!= ir.VALUE_KIND_NEVER {
                     allBranchesNever = false;
-                    passMarkers = passMarkers + condId.toText() + "=" + bKind + "\n";
+                    tb.append(mut passMarkersBuf, condId.toText());
+                    tb.append(mut passMarkersBuf, "=");
+                    tb.append(mut passMarkersBuf, bKind);
+                    tb.append(mut passMarkersBuf, "\n");
                 }
                 bIdx = bIdx + 1;
             }
+            passMarkers = tb.build(passMarkersBuf);
             if passHasElse {
                 resolvedPreThenKind = ctx.inferKindFromMarkers(passMarkers, condId, condTagDisplay, source, condParseTagAt, prefix, allBranchesNever);
             } else {
@@ -6417,6 +6593,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             } else if condParseKind == ir.CTX_KIND_MATCH and passBranchCount == 1 and passHasElse {
                 rawIfStmt = ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[0], passBranchCodes[0]);
             } else {
+                rawIfBuf: mut tb.TextBuilder;
                 condCount := if passHasElse { passBranchCount - 1 } else { passBranchCount };
                 var cIdx := 0;
                 var emittedCondCount := 0;
@@ -6426,9 +6603,11 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     if cState == 1 {
                         stmtPart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[cIdx], passBranchCodes[cIdx]);
                         if emittedCondCount == 0 {
-                            rawIfStmt = stmtPart;
+                            tb.append(mut rawIfBuf, stmtPart);
                         } else {
-                            rawIfStmt = rawIfStmt + " else { " + stmtPart + " }";
+                            tb.append(mut rawIfBuf, " else { ");
+                            tb.append(mut rawIfBuf, stmtPart);
+                            tb.append(mut rawIfBuf, " }");
                         }
                         hitConstTrue = true;
                         break;
@@ -6437,7 +6616,11 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                         kwPrefix := if emittedCondCount == 0 { "if (" } else { " else if (" };
                         stmtPart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[cIdx], passBranchCodes[cIdx]);
                         condExprWrap := if isCCond { passCondCodes[cIdx] } else { "Boolean(" + passCondCodes[cIdx] + ")" };
-                        rawIfStmt = rawIfStmt + kwPrefix + condExprWrap + ") { " + stmtPart + " }";
+                        tb.append(mut rawIfBuf, kwPrefix);
+                        tb.append(mut rawIfBuf, condExprWrap);
+                        tb.append(mut rawIfBuf, ") { ");
+                        tb.append(mut rawIfBuf, stmtPart);
+                        tb.append(mut rawIfBuf, " }");
                         emittedCondCount = emittedCondCount + 1;
                     }
                     cIdx = cIdx + 1;
@@ -6445,11 +6628,14 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                 if not hitConstTrue and passHasElse {
                     elsePart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[passBranchCount - 1], passBranchCodes[passBranchCount - 1]);
                     if emittedCondCount == 0 {
-                        rawIfStmt = elsePart;
+                        tb.append(mut rawIfBuf, elsePart);
                     } else {
-                        rawIfStmt = rawIfStmt + " else { " + elsePart + " }";
+                        tb.append(mut rawIfBuf, " else { ");
+                        tb.append(mut rawIfBuf, elsePart);
+                        tb.append(mut rawIfBuf, " }");
                     }
                 }
+                rawIfStmt = tb.build(rawIfBuf);
             }
             needsCondTry := not isCCond and condParseTag =!= "" and reach.codeUsesTextCall(rawIfStmt, "lite$throwTransfer(" + condId.toText() + ",");
             if isCCond and condParseTag =!= "" and reach.codeUsesTextCall(rawIfStmt, "goto " + condLabel + ";") {
@@ -8709,17 +8895,23 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         wTag := types.cFnTag(fnValKind);
                         wName := "lt_wrap_" + info.runtime;
                         wRet := types.cValueType(info.result);
-                        var wParams := "void *_env";
-                        var wArgs := "";
+                        wParamsBuf: mut tb.TextBuilder;
+                        tb.append(mut wParamsBuf, "void *_env");
+                        wArgsBuf: mut tb.TextBuilder;
                         var wi := 0;
                         loop wi < info.count {
                             pK := types.paramKindOf(params[info.first + wi]);
                             aName := "lt_a_" + wi.toText();
-                            wParams = wParams + ", " + types.cValueType(pK) + " " + aName;
-                            if wi > 0 { wArgs = wArgs + ", "; }
-                            wArgs = wArgs + aName;
+                            tb.append(mut wParamsBuf, ", ");
+                            tb.append(mut wParamsBuf, types.cValueType(pK));
+                            tb.append(mut wParamsBuf, " ");
+                            tb.append(mut wParamsBuf, aName);
+                            if wi > 0 { tb.append(mut wArgsBuf, ", "); }
+                            tb.append(mut wArgsBuf, aName);
                             wi = wi + 1;
                         }
+                        wParams := tb.build(wParamsBuf);
+                        wArgs := tb.build(wArgsBuf);
                         wBody := if info.result == ir.VALUE_KIND_UNIT or info.result == ir.VALUE_KIND_NEVER {
                             info.runtime + "(" + wArgs + ");"
                         } else {

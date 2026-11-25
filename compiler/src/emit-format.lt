@@ -27,13 +27,13 @@ pub isSafeTargetIdent := fn(name: String, isC: Bool): Bool {
 
 /** Returns `n` spaces for 4-space indentation levels. */
 indentSpaces := fn(level: Int): String {
-    var out := "";
+    out: mut tb.TextBuilder;
     var i := 0;
     loop i < level {
-        out = out + "    ";
+        tb.append(mut out, "    ");
         i = i + 1;
     }
-    out
+    tb.build(out)
 };
 
 /** Skips a quoted string or char literal starting at `start`, returning index after closing quote. */
@@ -75,15 +75,15 @@ pub codeUsesIdent := fn(code: String, ident: String): Bool {
         }
         if code.startsWithAt(i, ident) {
             beforeOk := i == 0 or (
-                not code.at(i - 1).isNameContinue() and
-                code.at(i - 1) =!= "$" and
-                code.at(i - 1) =!= "." and
-                not (i >= 2 and code.at(i - 2) == "-" and code.at(i - 1) == ">")
+            not code.at(i - 1).isNameContinue() and
+            code.at(i - 1) =!= "$" and
+            code.at(i - 1) =!= "." and
+            not (i >= 2 and code.at(i - 2) == "-" and code.at(i - 1) == ">")
             );
             afterPos := i + m;
             afterOk := afterPos >= n or (
-                not code.at(afterPos).isNameContinue() and
-                code.at(afterPos) =!= "$"
+            not code.at(afterPos).isNameContinue() and
+            code.at(afterPos) =!= "$"
             );
             if beforeOk and afterOk { return true; }
         }
@@ -109,15 +109,15 @@ pub replaceIdentToken := fn(code: String, ident: String, replacement: String): S
         }
         if code.startsWithAt(i, ident) {
             beforeOk := i == 0 or (
-                not code.at(i - 1).isNameContinue() and
-                code.at(i - 1) =!= "$" and
-                code.at(i - 1) =!= "." and
-                not (i >= 2 and code.at(i - 2) == "-" and code.at(i - 1) == ">")
+            not code.at(i - 1).isNameContinue() and
+            code.at(i - 1) =!= "$" and
+            code.at(i - 1) =!= "." and
+            not (i >= 2 and code.at(i - 2) == "-" and code.at(i - 1) == ">")
             );
             afterPos := i + m;
             afterOk := afterPos >= n or (
-                not code.at(afterPos).isNameContinue() and
-                code.at(afterPos) =!= "$"
+            not code.at(afterPos).isNameContinue() and
+            code.at(afterPos) =!= "$"
             );
             if beforeOk and afterOk {
                 if i > flushed { tb.append(mut out, code.slice(flushed, i)); }
@@ -242,7 +242,7 @@ isStatementBlockOpen := fn(s: String, bracePos: Int): Bool {
     }
     /* Check if preceded by a keyword or control header (`else`, `try`, `do`, `finally`, `=>`, `)`). */
     afterWord := prevCh == ")" or prevCh == ";" or prevCh == "{" or prevCh == "" or
-        (prevCh == ">" and p > 0 and s.at(p - 1) == "=");
+    (prevCh == ">" and p > 0 and s.at(p - 1) == "=");
     var isCtrlKw := false;
     var headerKw := "";
     if p >= 0 and prevCh.isNameContinue() {

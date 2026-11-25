@@ -3,6 +3,7 @@ emitFmt := import "./emit-format";
 optCfg := import "./opt-config";
 frontend := import "./frontend";
 io := import "core/io";
+tb := import "util/text-builder";
 
 var tsOutUseWriter := false;
 var tsOutWriterKind := "";
@@ -50,7 +51,7 @@ tsFunctionType := fn(kind: String): String {
 /** Formats a `|`-separated `name=kind` parameter list as a TypeScript parameter list. */
 tsParameterList := fn(encoded: String): String {
     if encoded == "" { return ""; }
-    var result := "";
+    result: mut tb.TextBuilder;
     var start := 0;
     loop true {
         separator := encoded.indexOf("|", start);
@@ -64,16 +65,21 @@ tsParameterList := fn(encoded: String): String {
         parameterKind := if isMutParam {
             rawParameterKind.slice(4, rawParameterKind.length())
         } else { rawParameterKind };
-        if result.length() > 0 { result = result + ", "; }
+        if tb.count(result) > 0 { tb.append(mut result, ", "); }
+        tb.append(mut result, "lite_");
+        tb.append(mut result, parameterName);
         if isMutParam and frontend.isRecordOrDistinctRecord(parameterKind) {
-            result = result + "lite_" + parameterName + ": { v: " + tsFunctionType(parameterKind) + " }";
+            tb.append(mut result, ": { v: ");
+            tb.append(mut result, tsFunctionType(parameterKind));
+            tb.append(mut result, " }");
         } else {
-            result = result + "lite_" + parameterName + ": " + tsFunctionType(parameterKind);
+            tb.append(mut result, ": ");
+            tb.append(mut result, tsFunctionType(parameterKind));
         }
         if separator < 0 { break; }
         start = separator + 1;
     }
-    result
+    tb.build(result)
 }
 
 /** Emits `void` reads for parameters so strict unused-parameter checking accepts bodies that ignore inputs. */
@@ -2884,10 +2890,10 @@ tryUnwrapDirectTsLoopBinding := fn(targetName: String, isVar: Bool, explicitType
     if isVar {
         if not emitFmt.codeUsesIdent(beforeRet, targetName) {
             return (
-                ok = true,
-                declLine = "let " + targetName + ": " + explicitType + ";",
-                loopLine = "{ " + beforeRet + " " + targetName + " = " + retVar + "; }",
-                bindLine = ""
+            ok = true,
+            declLine = "let " + targetName + ": " + explicitType + ";",
+            loopLine = "{ " + beforeRet + " " + targetName + " = " + retVar + "; }",
+            bindLine = ""
             );
         }
         return (ok = false, declLine = "", loopLine = "", bindLine = "");
@@ -2897,10 +2903,10 @@ tryUnwrapDirectTsLoopBinding := fn(targetName: String, isVar: Bool, explicitType
         return (ok = false, declLine = "", loopLine = "", bindLine = "");
     }
     (
-        ok = true,
-        declLine = "let " + tmpVar + ": " + explicitType + ";",
-        loopLine = "{ " + beforeRet + " " + tmpVar + " = " + retVar + "; }",
-        bindLine = "const " + targetName + " = " + tmpVar + ";"
+    ok = true,
+    declLine = "let " + tmpVar + ": " + explicitType + ";",
+    loopLine = "{ " + beforeRet + " " + tmpVar + " = " + retVar + "; }",
+    bindLine = "const " + targetName + " = " + tmpVar + ";"
     )
 };
 
@@ -2966,15 +2972,18 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("    try {");
         indent = "        ";
     }
-    var line := "";
+    lineBuf: mut tb.TextBuilder;
     var count := 0;
     var mainStopped := false;
-    var activeTries := "|";
+    activeTriesBuf: mut tb.TextBuilder;
+    tb.append(mut activeTriesBuf, "|");
     loop effectiveItems as tryItem {
         if (tryItem.kind == frontend.ITEM_KIND_TRANSFER_CATCH or tryItem.kind == frontend.ITEM_KIND_LOOP_TRANSFER_CATCH) and tryItem.runtime =!= "" {
-            activeTries = activeTries + tryItem.runtime + "|";
+            tb.append(mut activeTriesBuf, tryItem.runtime);
+            tb.append(mut activeTriesBuf, "|");
         }
     }
+    activeTries := tb.build(activeTriesBuf);
     var pendingLocFile := "";
     var pendingLocLine := 0;
     var pendingLocCol := "";
@@ -3073,10 +3082,10 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             }
         } else if item.kind == frontend.ITEM_KIND_LOCAL_INT or item.kind == frontend.ITEM_KIND_LOCAL_STRING or item.kind == frontend.ITEM_KIND_LOCAL_BOOL or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_LOCAL_TUPLE {
             scalarTsType := if item.kind == frontend.ITEM_KIND_LOCAL_INT { "bigint" }
-                else if item.kind == frontend.ITEM_KIND_LOCAL_STRING { "string" }
-                else if item.kind == frontend.ITEM_KIND_LOCAL_BOOL { "boolean" }
-                else if item.kind == frontend.ITEM_KIND_LOCAL_FLOAT { "number" }
-                else { "" };
+            else if item.kind == frontend.ITEM_KIND_LOCAL_STRING { "string" }
+            else if item.kind == frontend.ITEM_KIND_LOCAL_BOOL { "boolean" }
+            else if item.kind == frontend.ITEM_KIND_LOCAL_FLOAT { "number" }
+            else { "" };
             unwrappedLoop := tryUnwrapDirectTsLoopBinding(item.runtime, false, scalarTsType, item.code);
             if unwrappedLoop.ok {
                 outLine(indent + unwrappedLoop.declLine);
@@ -3099,10 +3108,10 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             outLine(indent + "void " + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_VAR_INT or item.kind == frontend.ITEM_KIND_VAR_STRING or item.kind == frontend.ITEM_KIND_VAR_BOOL or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_VAR_TUPLE {
             scalarTsType := if item.kind == frontend.ITEM_KIND_VAR_INT { "bigint" }
-                else if item.kind == frontend.ITEM_KIND_VAR_STRING { "string" }
-                else if item.kind == frontend.ITEM_KIND_VAR_BOOL { "boolean" }
-                else if item.kind == frontend.ITEM_KIND_VAR_FLOAT { "number" }
-                else { "" };
+            else if item.kind == frontend.ITEM_KIND_VAR_STRING { "string" }
+            else if item.kind == frontend.ITEM_KIND_VAR_BOOL { "boolean" }
+            else if item.kind == frontend.ITEM_KIND_VAR_FLOAT { "number" }
+            else { "" };
             unwrappedLoop := tryUnwrapDirectTsLoopBinding(item.runtime, true, scalarTsType, item.code);
             if unwrappedLoop.ok {
                 outLine(indent + unwrappedLoop.declLine);
@@ -3183,6 +3192,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             if count == 0 {
                 outLine(indent + "lite$emit(" + tsLiteral.textLiteralCode(if item.kind == frontend.ITEM_KIND_END { "\n" } else { "" }) + ");");
             } else {
+                line := tb.build(lineBuf);
                 ending := if item.kind == frontend.ITEM_KIND_END { " + \"\\n\"" } else { "" };
                 emitted := if count == 1 and item.kind == frontend.ITEM_KIND_END and not line.startsWithAt(0, "(") and line.indexOf("?", 0) >= 0 {
                     "(" + line + ")"
@@ -3191,14 +3201,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 };
                 outLine(indent + "lite$emit(" + emitted + ending + ");");
             }
-            line = "";
+            tb.clear(mut lineBuf);
             count = 0;
         } else if item.kind == frontend.ITEM_KIND_MAIN_STOP {
             mainStopped = true;
         } else if item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_NOOP {
         } else {
-            if count > 0 { line = line + " + \" \" + "; }
-            line = line + reportArgumentCode(item);
+            if count > 0 { tb.append(mut lineBuf, " + \" \" + "); }
+            tb.append(mut lineBuf, reportArgumentCode(item));
             count = count + 1;
         }
     }
