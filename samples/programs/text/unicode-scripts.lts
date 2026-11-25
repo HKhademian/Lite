@@ -1,0 +1,29 @@
+/* Unicode scripts & UTF-8 — real Unicode identifiers across eight approved language scripts. */
+
+io := import "core/io";
+unicode := import "core/unicode";
+
+show := fn(lang: String, sample: String): Unit {
+    utf8Bytes := unicode.utf8Encode(sample).length();
+    io.outputLine(lang, "|", sample, "| chars:", sample.length(), "| utf8:", utf8Bytes, "| first:", sample.at(0));
+};
+
+word := "hello";
+größe := "Größe";
+élève := "élève";
+پیام := "سلام";
+问候 := "你好";
+λέξη := "γεια";
+слово := "привет";
+բառ := "բարև";
+სიტყვა := "სალამი";
+
+show("English", word);
+show("German", größe);
+show("French", élève);
+show("Persian", پیام);
+show("Chinese", 问候);
+show("Greek", λέξη);
+show("Russian", слово);
+show("Armenian", բառ);
+show("Georgian", სიტყვა);

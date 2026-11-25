@@ -1,0 +1,21 @@
+/* UTF-8 character inspector — Unicode scalar code points, UTF-8 byte lengths, and round-trips. */
+
+io := import "core/io";
+unicode := import "core/unicode";
+
+inspectChar := fn(label: String, ch: String): Unit {
+    cp := unicode.codePointAt(ch, 0);
+    bytes := unicode.utf8Encode(ch);
+    decoded := unicode.utf8DecodeStrict(bytes);
+    io.outputLine(label, "| char:", ch, "| U+dec:", cp, "| utf8Bytes:", bytes.length(), "| roundtrip:", decoded.ok);
+};
+
+inspectChar("English", "A");
+inspectChar("German", "ä");
+inspectChar("French", "é");
+inspectChar("Persian", "پ");
+inspectChar("Chinese", "书");
+inspectChar("Greek", "Ω");
+inspectChar("Russian", "я");
+inspectChar("Armenian", "բ");
+inspectChar("Georgian", "ს");

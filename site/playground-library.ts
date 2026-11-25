@@ -33,12 +33,22 @@ const FOLDER_STOPWORDS = new Set([
 ]);
 
 /** Derives concise searchable topic tags for a Playground library item from its APIs, I/O, and path. */
-export function deriveLibraryTags(item: Omit<PlaygroundLibraryItem, 'tags'>): readonly string[] {
+export function deriveLibraryTags(
+  item: Omit<PlaygroundLibraryItem, 'tags'>,
+  extraKeywords?: readonly string[],
+): readonly string[] {
   const tags = new Set<string>();
   const src = item.source ?? '';
   const fileLower = (item.file ?? '').toLowerCase();
   const titleLower = (item.title ?? '').toLowerCase();
   const badgeLower = (item.badge ?? '').toLowerCase();
+
+  if (extraKeywords) {
+    for (const kw of extraKeywords) {
+      const clean = kw.trim().toLowerCase();
+      if (clean) tags.add(clean);
+    }
+  }
 
   if (/import\s+"extra\/canvas"/.test(src) || /\bcanvas\.(create|play|clear|fillRect|setPixel)\b/.test(src)) tags.add('canvas');
   if (/import\s+"extra\/surface"/.test(src) || /\bsurface\./.test(src)) tags.add('surface');
@@ -81,6 +91,37 @@ export function deriveLibraryTags(item: Omit<PlaygroundLibraryItem, 'tags'>): re
   if (/import\s+"core\/random"/.test(src)) tags.add('random');
   if (/import\s+"core\/crypto"/.test(src)) tags.add('crypto');
   if (/import\s+"core\/(text|unicode|format)"/.test(src)) tags.add('text');
+  if (/import\s+"core\/text"/.test(src)) {
+    tags.add('char');
+    tags.add('character');
+  }
+  if (
+    /import\s+"core\/unicode"/.test(src) ||
+    /\b(unicode|utf-?8)\b/.test(titleLower + ' ' + fileLower) ||
+    /\b(utf8Encode|utf8DecodeStrict|toCodePoints|fromCodePoints|codePointAt)\b/.test(src)
+  ) {
+    tags.add('unicode');
+    tags.add('utf8');
+    tags.add('char');
+    tags.add('character');
+  }
+
+  const addScriptMeta = (scriptTags: readonly string[]): void => {
+    for (const t of scriptTags) tags.add(t);
+    tags.add('language');
+    tags.add('script');
+    tags.add('unicode');
+    tags.add('utf8');
+    tags.add('char');
+    tags.add('character');
+  };
+  if (/\p{Script=Arabic}/u.test(src) || /\bpersian\b/.test(titleLower)) addScriptMeta(['persian']);
+  if (/\p{Script=Han}/u.test(src) || /\bchinese\b/.test(titleLower)) addScriptMeta(['chinese']);
+  if (/\p{Script=Greek}/u.test(src) || /\bgreek\b/.test(titleLower)) addScriptMeta(['greek']);
+  if (/\p{Script=Cyrillic}/u.test(src) || /\b(russian|cyrillic)\b/.test(titleLower)) addScriptMeta(['russian', 'cyrillic']);
+  if (/\p{Script=Armenian}/u.test(src) || /\barmenian\b/.test(titleLower)) addScriptMeta(['armenian']);
+  if (/\p{Script=Georgian}/u.test(src) || /\bgeorgian\b/.test(titleLower)) addScriptMeta(['georgian']);
+
   if (/import\s+"(core\/(list|map|set)|extra\/(deque|heap|ring|grid|pool|arena|lru|bitset|sparse))"/.test(src)) tags.add('collections');
   if (/\bloop\b/.test(src)) tags.add('loops');
   if (item.extraModules && Object.keys(item.extraModules).length > 0) tags.add('modules');
@@ -101,6 +142,12 @@ export function collectPlaygroundLibrary(options: Readonly<{
   rootDir: string;
   samples: readonly (ShowcaseSample | PlaySample)[];
 }>): readonly PlaygroundLibraryItem[] {
+  const keywordsBySampleId = new Map<string, readonly string[]>();
+  for (const sample of options.samples) {
+    if ('keywords' in sample && sample.keywords && sample.keywords.length > 0) {
+      keywordsBySampleId.set(sample.id, sample.keywords);
+    }
+  }
   const result = spawnTool('site-library', [options.rootDir], {
     cwd: options.rootDir,
     input: JSON.stringify(options.samples),
@@ -114,6 +161,6 @@ export function collectPlaygroundLibrary(options: Readonly<{
   const rawItems = JSON.parse(result.stdout) as Omit<PlaygroundLibraryItem, 'tags'>[];
   return rawItems.map((item) => ({
     ...item,
-    tags: deriveLibraryTags(item),
+    tags: deriveLibraryTags(item, item.sampleId ? keywordsBySampleId.get(item.sampleId) : undefined),
   }));
 }

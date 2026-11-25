@@ -540,13 +540,26 @@ export function buildSite(options?: BuildSiteOptions): void {
     ...modulesOut.searchEntries,
     ...toolsOut.searchEntries,
   ];
+  const tagsBySampleId = new Map<string, readonly string[]>();
+  for (const item of playgroundLibrary) {
+    if (item.sampleId && item.tags.length > 0) {
+      tagsBySampleId.set(item.sampleId, item.tags);
+    }
+  }
   for (const sample of [...rendered.values(), ...renderedPlay.values()]) {
+    const extraKeywords = new Set<string>([
+      sample.id,
+      sample.group,
+      sample.file,
+      ...(tagsBySampleId.get(sample.id) ?? []),
+      ...('keywords' in sample && sample.keywords ? sample.keywords : []),
+    ]);
     searchEntries.push({
       kind: 'gallery',
       title: sample.title,
       subtitle: `${sample.note} (${sample.file})`,
       href: `playground/?sample=${encodeURIComponent(sample.id)}`,
-      keywords: `${sample.id} ${sample.group} ${sample.file}`,
+      keywords: Array.from(extraKeywords).join(' '),
       badge: sample.badge ?? 'sample',
     });
   }

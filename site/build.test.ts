@@ -105,11 +105,18 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   ]) {
     assert(existsSync(join(out, rel)), `missing generated site file: ${rel}`);
   }
-  const searchIndex = JSON.parse(readFileSync(join(out, 'search-index.json'), 'utf8')) as Array<{ kind: string; title: string; href: string }>;
+  const searchIndex = JSON.parse(readFileSync(join(out, 'search-index.json'), 'utf8')) as Array<{ kind: string; title: string; href: string; keywords: string }>;
   assert(searchIndex.length > showcaseSamples.length + 100);
   assert(searchIndex.some((entry) => entry.kind === 'module' && entry.href === 'modules/core/text.html'));
   assert(searchIndex.some((entry) => entry.kind === 'symbol' && entry.title === 'extra/canvas.fillRect'));
   assert(searchIndex.some((entry) => entry.kind === 'tool' && entry.title === 'lite fmt'));
+  for (const sid of ['persian-bookshelf', 'unicode-scripts', 'utf8-char-inspector']) {
+    const entry = searchIndex.find((e) => e.kind === 'gallery' && e.href === `playground/?sample=${sid}`);
+    assert(entry, `missing search-index entry for ${sid}`);
+    for (const kw of ['unicode', 'utf8', 'language', 'persian', 'char', 'character']) {
+      assert(entry.keywords.includes(kw), `expected ${sid} search-index keywords to include ${kw}`);
+    }
+  }
 
   for (const modRel of [
     'modules/core/crypto.html',
@@ -482,15 +489,27 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(playground.includes('id="pg-copy"'));
   assert(index.includes('runtime/snips.js'));
   assert(existsSync(join(out, 'playground', 'library.json')));
-  const lib = JSON.parse(readFileSync(join(out, 'playground', 'library.json'), 'utf8')) as Array<{ id: string; slug: string; category: string; tags?: string[] }>;
+  const lib = JSON.parse(readFileSync(join(out, 'playground', 'library.json'), 'utf8')) as Array<{ id: string; slug: string; category: string; sampleId?: string; tags?: string[] }>;
   const libCats = new Set(lib.map(item => item.category));
   for (const cat of ['sample', 'example', 'case', 'piece']) {
     assert(libCats.has(cat), `missing library.json category: ${cat}`);
   }
   const allTags = new Set(lib.flatMap(item => item.tags ?? []));
-  for (const expectedTag of ['canvas', 'audio', 'play', 'input', 'output']) {
+  for (const expectedTag of ['canvas', 'audio', 'play', 'input', 'output', 'unicode', 'utf8', 'persian', 'char', 'character', 'language']) {
     assert(allTags.has(expectedTag), `expected library.json to include tag: ${expectedTag}`);
   }
+  const unicodeScriptsLib = lib.find(item => item.sampleId === 'unicode-scripts');
+  assert(unicodeScriptsLib, 'missing unicode-scripts in playground/library.json');
+  for (const expectedSearchTok of [
+    'unicode', 'utf8', 'language', 'persian', 'english', 'german', 'french',
+    'chinese', 'greek', 'russian', 'cyrillic', 'armenian', 'georgian', 'char', 'character',
+  ]) {
+    assert((unicodeScriptsLib.tags ?? []).includes(expectedSearchTok), `expected unicode-scripts library tags to include: ${expectedSearchTok}`);
+  }
+  const persianLib = lib.find(item => item.sampleId === 'persian-bookshelf');
+  assert(persianLib && (persianLib.tags ?? []).includes('persian') && (persianLib.tags ?? []).includes('unicode'));
+  const charInspectorLib = lib.find(item => item.sampleId === 'utf8-char-inspector');
+  assert(charInspectorLib && (charInspectorLib.tags ?? []).includes('utf8') && (charInspectorLib.tags ?? []).includes('character'));
   for (const item of lib) {
     assert.match(item.slug, /^[a-z0-9._-]+$/, `invalid slug for ${item.id}: ${item.slug}`);
   }

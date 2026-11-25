@@ -17,6 +17,8 @@ export type ShowcaseSample = Readonly<{
   file: string;
   args: readonly string[];
   stdin: string;
+  /** Optional extra keywords indexed for Playground and site-wide search. */
+  keywords?: readonly string[];
   /** Only fast, short-output samples display output directly on cards. */
   showOutput?: boolean;
 }>;
@@ -377,6 +379,39 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
     file: 'samples/programs/text/word-frequency.lts',
     args: [],
     stdin: '',
+    showOutput: true,
+  },
+  {
+    id: 'persian-bookshelf',
+    group: 'programs',
+    title: 'Persian bookshelf',
+    note: 'Native Persian identifiers, nominal records, helper functions, and loop totals.',
+    file: 'samples/programs/text/persian-bookshelf.lts',
+    args: [],
+    stdin: '',
+    keywords: ['unicode', 'utf8', 'language', 'persian', 'char', 'character', 'script', 'identifiers'],
+    showOutput: true,
+  },
+  {
+    id: 'unicode-scripts',
+    group: 'programs',
+    title: 'Unicode scripts & UTF-8',
+    note: 'Real Unicode identifiers and UTF-8 lengths across English, German, French, Persian, Chinese, Greek, Russian, Armenian, and Georgian.',
+    file: 'samples/programs/text/unicode-scripts.lts',
+    args: [],
+    stdin: '',
+    keywords: ['unicode', 'utf8', 'language', 'char', 'character', 'script', 'identifiers', 'english', 'german', 'french', 'persian', 'chinese', 'greek', 'russian', 'cyrillic', 'armenian', 'georgian'],
+    showOutput: true,
+  },
+  {
+    id: 'utf8-char-inspector',
+    group: 'programs',
+    title: 'UTF-8 character inspector',
+    note: 'Inspect Unicode scalar code points, UTF-8 byte lengths, and strict round-trips across eight scripts.',
+    file: 'samples/programs/text/utf8-char-inspector.lts',
+    args: [],
+    stdin: '',
+    keywords: ['unicode', 'utf8', 'language', 'char', 'character', 'script', 'codepoint', 'english', 'german', 'french', 'persian', 'chinese', 'greek', 'russian', 'cyrillic', 'armenian', 'georgian'],
     showOutput: true,
   },
   {

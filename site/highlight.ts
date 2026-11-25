@@ -44,6 +44,42 @@ const cTypes = new Set([
   'uint64_t', 'void', '_Noreturn',
 ]);
 
+const IDENT_START_RE = /^[\p{XID_Start}_$]/u;
+const IDENT_CONT_RE = /^[\p{XID_Continue}$]/u;
+
+function identStartStep(source: string, index: number, allowDollar = true): number {
+  if (index >= source.length) return 0;
+  const c = source.charCodeAt(index);
+  if (c < 128) {
+    if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95 || (allowDollar && c === 36)) return 1;
+    return 0;
+  }
+  const cp = source.codePointAt(index)!;
+  const ch = String.fromCodePoint(cp);
+  return IDENT_START_RE.test(ch) ? ch.length : 0;
+}
+
+function consumeIdent(source: string, startAfterFirst: number, allowDollar = true): number {
+  let j = startAfterFirst;
+  const n = source.length;
+  while (j < n) {
+    const c = source.charCodeAt(j);
+    if (c < 128) {
+      if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c === 95 || (allowDollar && c === 36)) {
+        j += 1;
+        continue;
+      }
+      break;
+    }
+    const cp = source.codePointAt(j)!;
+    if (cp === 0x200c || cp === 0x200d) break;
+    const ch = String.fromCodePoint(cp);
+    if (!IDENT_CONT_RE.test(ch)) break;
+    j += ch.length;
+  }
+  return j;
+}
+
 function highlightCode(source: string, keywords: ReadonlySet<string>, types: ReadonlySet<string>, highlightTags = false): string {
   const out: string[] = [];
   let i = 0;
@@ -102,30 +138,34 @@ function highlightCode(source: string, keywords: ReadonlySet<string>, types: Rea
     }
 
     // Tagged control-flow labels (@tag) in LiteScript
-    if (highlightTags && ch === '@' && i + 1 < n && /[a-zA-Z_]/.test(source[i + 1]!)) {
-      let j = i + 2;
-      while (j < n && /[a-zA-Z0-9_]/.test(source[j]!)) j += 1;
-      out.push(`<span class="tok-keyword">${escapeHtml(source.slice(i, j))}</span>`);
-      i = j;
-      continue;
-    }
-
-    // Loop metadata and built-in collection/string properties (.item, .collected, .length, .size, .isEmpty)
-    if (highlightTags && ch === '.' && i + 1 < n && /[a-zA-Z_]/.test(source[i + 1]!)) {
-      let j = i + 2;
-      while (j < n && /[a-zA-Z0-9_]/.test(source[j]!)) j += 1;
-      const prop = source.slice(i + 1, j);
-      if (liteMetaProps.has(prop)) {
-        out.push(`.<span class="tok-type">${escapeHtml(prop)}</span>`);
+    if (highlightTags && ch === '@' && i + 1 < n) {
+      const tagStartStep = identStartStep(source, i + 1, false);
+      if (tagStartStep > 0) {
+        const j = consumeIdent(source, i + 1 + tagStartStep, false);
+        out.push(`<span class="tok-keyword">${escapeHtml(source.slice(i, j))}</span>`);
         i = j;
         continue;
       }
     }
 
+    // Loop metadata and built-in collection/string properties (.item, .collected, .length, .size, .isEmpty)
+    if (highlightTags && ch === '.' && i + 1 < n) {
+      const propStartStep = identStartStep(source, i + 1, false);
+      if (propStartStep > 0) {
+        const j = consumeIdent(source, i + 1 + propStartStep, false);
+        const prop = source.slice(i + 1, j);
+        if (liteMetaProps.has(prop)) {
+          out.push(`.<span class="tok-type">${escapeHtml(prop)}</span>`);
+          i = j;
+          continue;
+        }
+      }
+    }
+
     // Identifiers, keywords, built-in types
-    if (/[a-zA-Z_$]/.test(ch)) {
-      let j = i + 1;
-      while (j < n && /[a-zA-Z0-9_$]/.test(source[j]!)) j += 1;
+    const idStartStep = identStartStep(source, i, true);
+    if (idStartStep > 0) {
+      const j = consumeIdent(source, i + idStartStep, true);
       const word = source.slice(i, j);
       if (keywords.has(word)) {
         out.push(`<span class="tok-keyword">${escapeHtml(word)}</span>`);

@@ -3,7 +3,40 @@
 export type CodeViewMode = 'program' | 'portable' | 'full';
 
 const suppressedTsVoidPattern =
-  /^void\s+(?:lite\$(?:emit|tuple(?:\$\d+)?|item(?:\$\d+)?|m\$[a-zA-Z0-9_$]+|val\d+|cnt\d+|lidx\d+|litem\d+|iter\d+)|lite_[a-zA-Z0-9_$]+|liteFn(?:\$|[a-zA-Z0-9_])[a-zA-Z0-9_$]*);$/;
+  /^void\s+(?:lite\$(?:emit|tuple(?:\$\d+)?|item(?:\$\d+)?|m\$[\p{XID_Continue}$]+|val\d+|cnt\d+|lidx\d+|litem\d+|iter\d+)|lite_[\p{XID_Continue}$]+|liteFn(?:\$|[\p{XID_Continue}])[\p{XID_Continue}$]*);$/u;
+
+const UNI_IDENT_START_RE = /^[\p{XID_Start}_$]/u;
+const UNI_IDENT_CONT_RE = /^[\p{XID_Continue}$]/u;
+
+function identStartLen(source: string, index: number): number {
+  const c = source.charCodeAt(index);
+  if (c < 128) {
+    return (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95 || c === 36 ? 1 : 0;
+  }
+  const cp = source.codePointAt(index)!;
+  const ch = String.fromCodePoint(cp);
+  return UNI_IDENT_START_RE.test(ch) ? ch.length : 0;
+}
+
+function consumeIdentEnd(source: string, index: number): number {
+  let i = index;
+  while (i < source.length) {
+    const c = source.charCodeAt(i);
+    if (c < 128) {
+      if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c === 95 || c === 36) {
+        i += 1;
+        continue;
+      }
+      break;
+    }
+    const cp = source.codePointAt(i)!;
+    if (cp === 0x200c || cp === 0x200d) break;
+    const ch = String.fromCodePoint(cp);
+    if (!UNI_IDENT_CONT_RE.test(ch)) break;
+    i += ch.length;
+  }
+  return i;
+}
 
 function skipBraceBlock(lines: readonly string[], startIndex: number): number {
   let depth = 0;
@@ -267,10 +300,10 @@ function scanCodeTokens(source: string): CodeToken[] {
       lastNonWs = '0';
       continue;
     }
-    if (/[A-Za-z_$]/.test(ch)) {
+    const startLen = identStartLen(source, i);
+    if (startLen > 0) {
       const start = i;
-      i += 1;
-      while (i < source.length && /[A-Za-z0-9_$]/.test(source[i]!)) i += 1;
+      i = consumeIdentEnd(source, i + startLen);
       const text = source.slice(start, i);
       const prevNonWs = lastNonWs;
       const nextNonWs = peekNextNonWs(source, i);
@@ -365,13 +398,13 @@ function simplifyTsProgramNames(source: string): string {
     if (used.has(name) || visited.has(name)) continue;
     visited.add(name);
 
-    const fnMatch = /^liteFn_([A-Za-z0-9_]+)$/.exec(name);
+    const fnMatch = /^liteFn_([\p{XID_Continue}_]+)$/u.exec(name);
     if (fnMatch) {
       seen.push(name);
       primary.set(name, fnMatch[1]!);
       continue;
     }
-    const localMatch = /^lite_([A-Za-z0-9_]+)$/.exec(name);
+    const localMatch = /^lite_([\p{XID_Continue}_]+)$/u.exec(name);
     if (localMatch) {
       seen.push(name);
       primary.set(name, localMatch[1]!);
@@ -383,17 +416,17 @@ function simplifyTsProgramNames(source: string): string {
       primary.set(name, tempMatch[1]!);
       continue;
     }
-    const shadowMatch = /^lite_([A-Za-z0-9_]+)\$(\d+)$/.exec(name);
+    const shadowMatch = /^lite_([\p{XID_Continue}_]+)\$(\d+)$/u.exec(name);
     if (shadowMatch) {
       shadowed.push({ raw: name, base: shadowMatch[1]!, suffix: Math.max(2, Number(shadowMatch[2]!)) });
       continue;
     }
-    const modFnMatch = /^liteFn\$(.+)\$([A-Za-z0-9_]+)$/.exec(name);
+    const modFnMatch = /^liteFn\$(.+)\$([\p{XID_Continue}_]+)$/u.exec(name);
     if (modFnMatch) {
       modules.push({ raw: name, leafBase: `${decodeModuleLeaf(modFnMatch[1]!, 'ts')}$${modFnMatch[2]!}` });
       continue;
     }
-    const modValMatch = /^lite\$m\$(.+)\$([A-Za-z0-9_]+)$/.exec(name);
+    const modValMatch = /^lite\$m\$(.+)\$([\p{XID_Continue}_]+)$/u.exec(name);
     if (modValMatch) {
       modules.push({ raw: name, leafBase: `${decodeModuleLeaf(modValMatch[1]!, 'ts')}$${modValMatch[2]!}` });
       continue;
@@ -465,7 +498,7 @@ function simplifyTsDisplay(source: string): string {
     let chunk = parts[i]!;
     chunk = chunk.replace(/\bBoolean\((true|false)\)/g, '$1');
     // Unwrap `(atom)` only when NOT preceded by an identifier/call (so `fn(x)` stays `fn(x)`)
-    chunk = chunk.replace(/(^|[^a-zA-Z0-9_$.)\]])(\(([a-zA-Z_$][a-zA-Z0-9_$]*|\d+n?)\))(?=\s*(?:===|!==|<=|>=|<|>|\+|-|\*|\/|%|\)|&&|\|\||\.toString\b))/g, '$1$3');
+    chunk = chunk.replace(/(^|[^\p{XID_Continue}_$.)\]])(\(([\p{XID_Start}_$][\p{XID_Continue}$]*|\d+n?)\))(?=\s*(?:===|!==|<=|>=|<|>|\+|-|\*|\/|%|\)|&&|\|\||\.toString\b))/gu, '$1$3');
     // Collapse redundant double parens in if ((...)) / while ((...))
     let prev: string;
     do {

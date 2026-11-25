@@ -11,6 +11,9 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [binary-search](lite://play/binary-search) — Binary search returning a named tuple result.
 - [caesar-cipher](lite://play/caesar-cipher) — ASCII Caesar cipher round-trip over `core/text`.
 - [word-frequency](lite://play/word-frequency) — Word frequency counter via `core/list`.
+- [persian-bookshelf](lite://play/persian-bookshelf) — Native Persian identifiers, nominal records, helper functions, and loops.
+- [unicode-scripts](lite://play/unicode-scripts) — Real Unicode identifiers and UTF-8 lengths across eight approved scripts.
+- [utf8-char-inspector](lite://play/utf8-char-inspector) — Unicode scalar code points, UTF-8 byte lengths, and round-trips.
 - [rpn-evaluator](lite://play/rpn-evaluator) — Stack-based Reverse Polish Notation evaluator.
 - [inventory-ledger](lite://play/inventory-ledger) — Inventory summary combining nominal records, `=name` shorthand, named tuple returns, and fixed-array bounds.
 - [packet-router](lite://play/packet-router) — Network packet classifier using subject-based `match` over records, `or` alternatives, `if` guards, and fixed-array summaries.

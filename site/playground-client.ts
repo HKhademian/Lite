@@ -1812,7 +1812,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
   const sketchesTagsEl = document.getElementById("pg-sketches-tags");
   const sketchesList = document.getElementById("pg-sketches-list");
   const catTabs = Array.from(document.querySelectorAll("#pg-sketches-cat-tabs .snips-cat-tab"));
-  const POPULAR_TAGS = ["canvas", "surface", "audio", "game", "play", "input", "args", "output", "file", "loops", "collections", "math", "cli"];
+  const POPULAR_TAGS = ["canvas", "surface", "audio", "game", "play", "unicode", "input", "args", "output", "file", "loops", "collections", "math", "cli"];
   let activeCat = "all";
   let activeTag = "";
   let clearArmed = false;
@@ -2044,9 +2044,10 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     let score = 0;
     for (const rawTok of queryTokens) {
       const tok = rawTok.replace(/^#/, "");
+      const normTok = tok.replace(/-/g, "");
       if (!tok) continue;
-      if (tags.includes(tok)) { score += 50; continue; }
-      if (tags.some((t) => t.startsWith(tok))) { score += 35; continue; }
+      if (tags.includes(tok) || (normTok && tags.includes(normTok))) { score += 50; continue; }
+      if (tags.some((t) => t.startsWith(tok) || (normTok && t.startsWith(normTok)))) { score += 35; continue; }
       if (title.includes(tok)) { score += 20; continue; }
       if (file.includes(tok) || badge.includes(tok)) { score += 12; continue; }
       if (source.includes(tok)) { score += 3; continue; }

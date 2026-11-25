@@ -1,5 +1,49 @@
 /** Lightweight, string-aware TypeScript type stripper for Lite's emitted TypeScript. */
 
+const IDENT_CONT_RE = /^[\p{XID_Continue}$]/u;
+
+function isAsciiIdentStart(code: number): boolean {
+  return (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95 || code === 36;
+}
+
+function isAsciiIdentCont(code: number): boolean {
+  return isAsciiIdentStart(code) || (code >= 48 && code <= 57);
+}
+
+function isIdentContAt(source: string, index: number): boolean {
+  if (index < 0 || index >= source.length) return false;
+  const code = source.charCodeAt(index);
+  if (code < 128) return isAsciiIdentCont(code);
+  const cp = source.codePointAt(index)!;
+  return cp !== 0x200c && cp !== 0x200d && IDENT_CONT_RE.test(String.fromCodePoint(cp));
+}
+
+function identCharStep(source: string, index: number): number {
+  const code = source.charCodeAt(index);
+  if (code < 128) return 1;
+  return source.codePointAt(index)! > 0xffff ? 2 : 1;
+}
+
+function identContBackStep(source: string, endIndex: number): number {
+  if (endIndex <= 0) return 0;
+  const code = source.charCodeAt(endIndex - 1);
+  if (code < 128) return 1;
+  if (code >= 0xdc00 && code <= 0xdfff && endIndex >= 2) {
+    const hi = source.charCodeAt(endIndex - 2);
+    if (hi >= 0xd800 && hi <= 0xdbff) return 2;
+  }
+  return 1;
+}
+
+function isIdentContBefore(source: string, index: number): boolean {
+  if (index <= 0) return false;
+  return isIdentContAt(source, index - identContBackStep(source, index));
+}
+
+function isIdentOrDotBefore(source: string, index: number): boolean {
+  return index > 0 && (source[index - 1] === '.' || isIdentContBefore(source, index));
+}
+
 function skipString(source: string, start: number): number {
   const quote = source[start]!;
   let i = start + 1;
@@ -122,7 +166,11 @@ function stripParamList(params: string): string {
     // Copy parameter name (and optional ?)
     while (i < params.length && /\s/.test(params[i]!)) { out.push(params[i]!); i += 1; }
     if (i >= params.length) break;
-    while (i < params.length && /[a-zA-Z0-9_$]/.test(params[i]!)) { out.push(params[i]!); i += 1; }
+    while (i < params.length && isIdentContAt(params, i)) {
+      const step = identCharStep(params, i);
+      out.push(params.slice(i, i + step));
+      i += step;
+    }
     while (i < params.length && /\s/.test(params[i]!)) { out.push(params[i]!); i += 1; }
     if (params[i] === '?') i += 1;
     while (i < params.length && /\s/.test(params[i]!)) { out.push(params[i]!); i += 1; }
@@ -185,7 +233,7 @@ export function stripLiteTs(source: string): string {
     }
 
     // `declare ...;`
-    if (source.startsWith('declare ', i) && (i === 0 || !/[a-zA-Z0-9_$]/.test(source[i - 1]!))) {
+    if (source.startsWith('declare ', i) && !isIdentContBefore(source, i)) {
       let j = i + 8;
       while (j < n && source[j] !== ';') {
         if (source[j] === '{') j = skipBalanced(source, j, '{', '}');
@@ -201,8 +249,8 @@ export function stripLiteTs(source: string): string {
     if (
       depth === 0 &&
       source.startsWith('type ', i) &&
-      (i === 0 || !/[a-zA-Z0-9_$.]/.test(source[i - 1]!)) &&
-      /^type\s+[a-zA-Z_$][a-zA-Z0-9_$]*(?:\s*<[^>]*>)?\s*=/.test(source.slice(i, i + 160))
+      !isIdentOrDotBefore(source, i) &&
+      /^type\s+[\p{XID_Start}_$][\p{XID_Continue}$]*(?:\s*<[^>]*>)?\s*=/u.test(source.slice(i, i + 160))
     ) {
       let j = i + 5;
       while (j < n && source[j] !== ';') {
@@ -221,8 +269,8 @@ export function stripLiteTs(source: string): string {
     if (
       depth === 0 &&
       source.startsWith('interface ', i) &&
-      (i === 0 || !/[a-zA-Z0-9_$.]/.test(source[i - 1]!)) &&
-      /^interface\s+[a-zA-Z_$][a-zA-Z0-9_$]*(?:\s*<[^>]*>)?(?:\s+extends\s+[^{]+)?\s*\{/.test(source.slice(i, i + 200))
+      !isIdentOrDotBefore(source, i) &&
+      /^interface\s+[\p{XID_Start}_$][\p{XID_Continue}$]*(?:\s*<[^>]*>)?(?:\s+extends\s+[^{]+)?\s*\{/u.test(source.slice(i, i + 200))
     ) {
       const braceAt = source.indexOf('{', i + 10);
       if (braceAt !== -1) {
@@ -236,7 +284,7 @@ export function stripLiteTs(source: string): string {
     // `if ((import.meta as ...).main === true) { ... }` Node CLI entrypoint wrapper
     if (
       source.startsWith('if ', i) &&
-      (i === 0 || !/[a-zA-Z0-9_$]/.test(source[i - 1]!)) &&
+      !isIdentContBefore(source, i) &&
       /^if\s*\(\s*\(?\s*import\.meta\b/.test(source.slice(i, i + 64))
     ) {
       const parenStart = source.indexOf('(', i + 2);
@@ -253,10 +301,10 @@ export function stripLiteTs(source: string): string {
     // `function [name][<T>](...) : ReturnType {`
     if (
       source.startsWith('function', i) &&
-      (i === 0 || !/[a-zA-Z0-9_$]/.test(source[i - 1]!)) &&
+      !isIdentContBefore(source, i) &&
       (source[i + 8] === ' ' || source[i + 8] === '\t' || source[i + 8] === '\n' || source[i + 8] === '(' || source[i + 8] === '<')
     ) {
-      const fnHead = /^function(?:\s+[a-zA-Z_$][a-zA-Z0-9_$]*)?/.exec(source.slice(i));
+      const fnHead = /^function(?:\s+[\p{XID_Start}_$][\p{XID_Continue}$]*)?/u.exec(source.slice(i));
       if (fnHead !== null) {
         let afterName = i + fnHead[0]!.length;
         while (afterName < n && /\s/.test(source[afterName]!)) afterName += 1;
@@ -291,7 +339,7 @@ export function stripLiteTs(source: string): string {
     }
 
     // Generic type arguments on calls/constructors: `Map<K, V>(`
-    if (ch === '<' && i > 0 && /[a-zA-Z0-9_$]/.test(source[i - 1]!)) {
+    if (ch === '<' && isIdentContBefore(source, i)) {
       const angleEnd = skipGenericArgs(source, i);
       if (angleEnd !== -1 && source[angleEnd] === '(') {
         i = angleEnd;
@@ -326,8 +374,8 @@ export function stripLiteTs(source: string): string {
     }
 
     // `const/let/var name[: Type] = ...[, name2[: Type] = ...];` and `let name!: Type;`
-    const declMatch = /^(const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/.exec(source.slice(i));
-    if (declMatch !== null && (i === 0 || !/[a-zA-Z0-9_$.]/.test(source[i - 1]!))) {
+    const declMatch = /^(const|let|var)\s+([\p{XID_Start}_$][\p{XID_Continue}$]*)/u.exec(source.slice(i));
+    if (declMatch !== null && !isIdentOrDotBefore(source, i)) {
       declListDepths.push(depth);
       out.push(`${declMatch[1]!} ${declMatch[2]!}`);
       i += declMatch[0]!.length;
@@ -345,7 +393,7 @@ export function stripLiteTs(source: string): string {
       out.push(',');
       i += 1;
       while (i < n && /\s/.test(source[i]!)) { out.push(source[i]!); i += 1; }
-      const nextDecl = /^([a-zA-Z_$][a-zA-Z0-9_$]*)\s*!?\s*:/.exec(source.slice(i));
+      const nextDecl = /^([\p{XID_Start}_$][\p{XID_Continue}$]*)\s*!?\s*:/u.exec(source.slice(i));
       if (nextDecl !== null) {
         out.push(nextDecl[1]!);
         i += nextDecl[0]!.length;
@@ -356,7 +404,7 @@ export function stripLiteTs(source: string): string {
     }
 
     // `expr as Type` before `;`, `,`, `)`, or `]`
-    if (i > 0 && !/[a-zA-Z0-9_$]/.test(source[i - 1]!) && /^as\s+[a-zA-Z_$({[]/.test(source.slice(i))) {
+    if (i > 0 && !isIdentContBefore(source, i) && /^as\s+[\p{XID_Start}_$({[]/u.test(source.slice(i))) {
       i = skipTypeAnnotation(source, i + 2, new Set([';', ',', ')', ']']));
       continue;
     }
@@ -368,10 +416,10 @@ export function stripLiteTs(source: string): string {
         i += 1;
         continue;
       }
-      if (/[a-zA-Z0-9_$]/.test(prev)) {
-        let wordStart = i - 1;
-        while (wordStart > 0 && /[a-zA-Z0-9_$]/.test(source[wordStart - 1]!)) {
-          wordStart -= 1;
+      if (isIdentContBefore(source, i)) {
+        let wordStart = i - identContBackStep(source, i);
+        while (wordStart > 0 && isIdentContBefore(source, wordStart)) {
+          wordStart -= identContBackStep(source, wordStart);
         }
         if (!JS_EXPR_PREFIX_KEYWORDS.has(source.slice(wordStart, i))) {
           i += 1;

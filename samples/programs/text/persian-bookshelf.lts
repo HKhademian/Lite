@@ -1,0 +1,26 @@
+/* Persian bookshelf — native Persian identifiers, records, helper functions, and loops. */
+
+io := import "core/io";
+
+کتاب := record {
+    عنوان: String;
+    صفحه: Int;
+};
+
+توضیح := fn(مورد: کتاب): Unit {
+    io.outputLine("-", مورد.عنوان, مورد.صفحه, "صفحه");
+};
+
+قفسه: List<کتاب> = [
+    کتاب { عنوان = "الگوریتم", صفحه = 240 },
+    کتاب { عنوان = "ساختمان داده", صفحه = 180 },
+    کتاب { عنوان = "طراحی زبان", صفحه = 320 },
+];
+
+var مجموع := 0;
+loop قفسه as کتابچه {
+    توضیح(کتابچه);
+    مجموع += کتابچه.صفحه;
+}
+
+io.outputLine("تعداد:", قفسه.length(), "مجموع:", مجموع);

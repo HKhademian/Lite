@@ -3,11 +3,12 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { formatCodeView } from './code-view.ts';
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { verifyGymCorpus } from './gym-verify.ts';
-import { formatCodeView } from './code-view.ts';
 import { highlightLite } from './highlight.ts';
 import { playGroups, playSamples } from './play-samples.ts';
+import { deriveLibraryTags } from './playground-library.ts';
 import { stripLiteTs } from './strip-ts.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -113,6 +114,9 @@ test('showcaseSamples includes examples covering named calls, tuples, arrays, an
     'nominal-records',
     'aggregate-destructuring',
     'integer-calculator',
+    'persian-bookshelf',
+    'unicode-scripts',
+    'utf8-char-inspector',
   ]) {
     assert(ids.has(expected), `missing showcase sample: ${expected}`);
   }
@@ -435,5 +439,66 @@ test('language/learn/catalog.json and language/gym/catalog.json satisfy their sc
         assert.equal(typeof tc.expectedStdout, 'string');
       }
     }
+  }
+});
+
+test('stripLiteTs, highlightLite, formatCodeView, and deriveLibraryTags support Unicode identifiers and keywords', () => {
+  const emittedTs = [
+    'type کتاب = { readonly عنوان: string; readonly صفحه: bigint; };',
+    'function liteFn_توضیح(مورد: کتاب): string {',
+    '  return مورد.عنوان;',
+    '}',
+    'let lite_مجموع: bigint = 0n;',
+    'void lite_مجموع;',
+    'const lite_قفسه: کتاب[] = [{ عنوان: "الگوریتم", صفحه: 240n }];',
+    'const first: کتاب = lite_قفسه[0]!;',
+    'lite_مجموع = first!.صفحه;',
+    'return { مجموع: lite_مجموع, خلاصه: liteFn_توضیح(first) };',
+  ].join('\n');
+  const stripped = stripLiteTs(emittedTs);
+  assert(!stripped.includes('type کتاب'));
+  assert(!stripped.includes(': string'));
+  assert(!stripped.includes(': کتاب'));
+  assert(!stripped.includes(': bigint'));
+  assert(!stripped.includes('first!'));
+  const execRes = (new Function(stripped) as () => { مجموع: bigint; خلاصه: string })();
+  assert.deepEqual(execRes, { مجموع: 240n, خلاصه: 'الگوریتم' });
+
+  const liteHtml = highlightLite('@حلقه loop قفسه as مورد { break @حلقه; }');
+  assert(liteHtml.includes('<span class="tok-keyword">@حلقه</span>'));
+  assert(liteHtml.includes('<span class="tok-keyword">loop</span>'));
+  assert(liteHtml.includes('قفسه'));
+  assert(liteHtml.includes('مورد'));
+
+  const codeView = formatCodeView([
+    'export function main(): string {',
+    '    const lite$out: string[] = [];',
+    '    let lite_پیام: string = "سلام";',
+    '    void lite_پیام;',
+    '    lite$emit((lite_پیام) + "\\n");',
+    '    return lite$out.join("");',
+    '}',
+  ].join('\n'), 'ts', 'program');
+  assert(!codeView.includes('void lite_'));
+  assert(codeView.includes('let پیام: string = "سلام";'));
+
+  const unicodeTags = new Set(deriveLibraryTags({
+    id: 'sample/unicode-scripts',
+    slug: 'unicode-scripts',
+    category: 'sample',
+    badge: 'Sample',
+    title: 'Unicode scripts & UTF-8',
+    file: 'samples/programs/text/unicode-scripts.lts',
+    source: 'unicode := import "core/unicode";\nپیام := "سلام";\n问候 := "你好";\nλέξη := "γεια";\nслово := "привет";\nբառ := "բարև";\nსიტყვა := "სალამი";\n',
+    stdin: '',
+    args: [],
+  }, ['english', 'german', 'french']));
+
+  for (const expected of [
+    'unicode', 'utf8', 'language', 'script', 'char', 'character',
+    'english', 'german', 'french', 'persian', 'chinese', 'greek',
+    'russian', 'cyrillic', 'armenian', 'georgian',
+  ]) {
+    assert(unicodeTags.has(expected), `expected derived Unicode tag: ${expected}`);
   }
 });
