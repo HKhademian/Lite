@@ -201,6 +201,9 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             tag := types.cListTag(elKind);
             if tag =!= "" {
                 if code.startsWithAt(0, "lt_list_" + tag + "_from(") or
+                code.startsWithAt(0, "lt_list_" + tag + "_repeat(") or
+                code.startsWithAt(0, "/*@T:" + kind + "@*/lt_list_" + tag + "_repeat(") or
+                code.startsWithAt(0, "/*@T:" + kind + "@*/((void)") or
                 code.startsWithAt(0, "lt_list_" + tag + "_copy(") or
                 code.startsWithAt(0, "lt_list_" + tag + "_slice(") or
                 code.startsWithAt(0, "lt_list_" + tag + "_slice_from(") or
@@ -255,6 +258,50 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
         }
     }
     else { code }
+};
+
+/** Clones mutable TS value containers recursively so repeated slots never alias. */
+pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
+    if types.isDistinctKind(kind) { return self(types.distinctBaseKind(kind), expr); }
+    if types.isListKind(kind) or types.isArrayKind(kind) {
+        elKind := if types.isListKind(kind) { types.listElementKind(kind) } else { types.arrayElementKind(kind) };
+        elCloned := self(elKind, "lite$e");
+        if elCloned =!= "lite$e" {
+            return "((" + expr + ").map((lite$e) => " + elCloned + "))";
+        }
+        return "[...(" + expr + ")]";
+    }
+    if types.isMapKind(kind) {
+        valKind := types.mapValueKind(kind);
+        valCloned := self(valKind, "lite$mv");
+        if valCloned =!= "lite$mv" {
+            return "new Map(Array.from(" + expr + ", ([lite$mk, lite$mv]) => [lite$mk, " + valCloned + "]))";
+        }
+        return "new Map(" + expr + ")";
+    }
+    if types.isSetKind(kind) {
+        return "new Set(" + expr + ")";
+    }
+    if types.isRecordKind(kind) or types.isTupleKind(kind) {
+        isRec := types.isRecordKind(kind);
+        cnt := if isRec { types.recordComponentCount(kind) } else { types.tupleComponentCount(kind) };
+        extraBuf: mut tb.TextBuilder;
+        var idx := 0;
+        loop idx < cnt {
+            comp := if isRec { types.recordComponent(kind, idx) } else { types.tupleComponent(kind, idx) };
+            fExpr := expr + "." + comp.prop;
+            fCloned := self(comp.kind, fExpr);
+            if fCloned =!= fExpr {
+                tb.append(mut extraBuf, ", ");
+                tb.append(mut extraBuf, comp.prop);
+                tb.append(mut extraBuf, ": ");
+                tb.append(mut extraBuf, fCloned);
+            }
+            idx = idx + 1;
+        }
+        return "({ ...(" + expr + ")" + tb.build(extraBuf) + " })";
+    }
+    expr
 };
 
 /** Converts compatible tuples or widening integer-to-float values on assignment/call/return, or copies lists when needed; `Never` passes through unchanged. */

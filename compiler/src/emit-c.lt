@@ -1598,6 +1598,7 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, nee
     lType := "lt_list_" + tag;
     elemNeedsDeepCopy := elemKind =!= "" and frontend.cStructTag(elemKind) =!= "" and frontend.cTypeHasListField(elemKind);
     hasFrom := needFrom or usesIntHelper(calls, lType + "_from(");
+    hasRepeat := usesIntHelper(calls, lType + "_repeat(");
     hasCopy := needCopy or usesIntHelper(calls, lType + "_copy(");
     hasAt := usesIntHelper(calls, lType + "_at(");
     hasSet := usesIntHelper(calls, lType + "_set(");
@@ -1620,6 +1621,23 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, nee
         outLine("        if (out.data == NULL || out.rc == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
         outLine("        *(out.rc) = 1;");
         outLine("        memcpy(out.data, elems, (size_t)count * sizeof(" + cType + "));");
+        outLine("    }");
+        outLine("    return out;");
+        outLine("}");
+    }
+    if hasRepeat {
+        outLine("static " + lType + " " + lType + "_repeat(int64_t count, " + cType + " val) {");
+        outLine("    " + lType + " out = { NULL, count, count, NULL };");
+        outLine("    if (count > 0) {");
+        outLine("        out.data = malloc((size_t)count * sizeof(" + cType + "));");
+        outLine("        out.rc = malloc(sizeof(int64_t));");
+        outLine("        if (out.data == NULL || out.rc == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate list\\n\"); exit(1); }");
+        outLine("        *(out.rc) = 1;");
+        if elemNeedsDeepCopy {
+            outLine("        for (int64_t i = 0; i < count; i += 1) { out.data[i] = " + tag + "_copy(val); }");
+        } else {
+            outLine("        for (int64_t i = 0; i < count; i += 1) { out.data[i] = val; }");
+        }
         outLine("    }");
         outLine("    return out;");
         outLine("}");
@@ -5450,7 +5468,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 mut extraListSeeds.pushBack("L|" + sKind);
                 hasAnyList = true;
             }
-            if usesIntHelper(calls, sTag + "_copy(") or usesIntHelper(calls, "lt_list_" + sTag + "_copy(") {
+            if usesIntHelper(calls, sTag + "_copy(") or usesIntHelper(calls, "lt_list_" + sTag + "_copy(") or usesIntHelper(calls, "lt_list_" + sTag + "_repeat(") {
                 cFlags := collectTypeFlags(sKind);
                 loop cFlags as cf {
                     if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }

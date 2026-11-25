@@ -552,10 +552,10 @@ pub distinctBaseKind := fn(kind: String): String {
     cur
 };
 
-/** True when `kind` (or its distinct base representation) is a mutable List, Map, Set, or nominal record. */
+/** True when `kind` (or its distinct base representation) is a mutable List, Array, Map, Set, or nominal record. */
 pub isMutContainerKind := fn(kind: String): Bool {
     base := distinctBaseKind(kind);
-    isListKind(base) or isMapKind(base) or isSetKind(base) or isRecordKind(base)
+    isListKind(base) or isArrayKind(base) or isMapKind(base) or isSetKind(base) or isRecordKind(base)
 };
 
 /** True when `kind` is a nominal record or distinct type whose base representation is a nominal record. */

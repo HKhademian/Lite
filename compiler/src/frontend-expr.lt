@@ -488,6 +488,70 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
         (mut elementCodes).pushBack(ctx.assignValueCode(target, elementKind, element.kind, element.code));
         count = count + 1;
         cursor = syntax.skipTrivia(source, element.next, prefix);
+        if count == 1 and cursor < source.length() and source.at(cursor) == ";" {
+            if isSetTarget {
+                syntax.failAt(source, cursor, prefix, "repeat literal [val; N] is not valid for Set");
+            }
+            if elementKind == "" {
+                syntax.failAt(source, elementStart, prefix, "repeat array element cannot be Never");
+            }
+            countStart := syntax.skipTrivia(source, cursor + 1, prefix);
+            countExpr := parseBinaryCtx(target, source, countStart, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { listMarkers = ctx.collectParsedMarkers(listMarkers, countExpr); }
+            if not countExpr.constant or not numeric.isIntKind(countExpr.kind) {
+                syntax.failAt(source, countStart, prefix, "repeat array count must be a compile-time Int constant");
+            }
+            if countExpr.intValue < 0 {
+                syntax.failAt(source, countStart, prefix, "repeat array count cannot be negative");
+            }
+            if countExpr.intValue > 65536 {
+                syntax.failAt(source, countStart, prefix, "repeat array count exceeds maximum 65536");
+            }
+            repEnd := syntax.expectSymbol(source, syntax.skipTrivia(source, countExpr.next, prefix), "]", prefix);
+            repeatCount := countExpr.intValue;
+            repResultKind := if types.isListKind(expected) or isListAny {
+                "List<" + elementKind + ">"
+            } else {
+                "[" + elementKind + ";" + repeatCount.toText() + "]"
+            };
+            elemValCode := elementCodes[0];
+            repCode := if target == ir.TARGET_C and types.cListTag(elementKind) =!= "" {
+                cTag := types.cListTag(elementKind);
+                if repeatCount == 0 {
+                    if element.constant {
+                        "/*@T:" + repResultKind + "@*/lt_list_" + cTag + "_from(0, NULL)"
+                    } else {
+                        "/*@T:" + repResultKind + "@*/((void)(" + elemValCode + "), lt_list_" + cTag + "_from(0, NULL))"
+                    }
+                } else {
+                    "/*@T:" + repResultKind + "@*/lt_list_" + cTag + "_repeat(" + repeatCount.toText() + ", " + elemValCode + ")"
+                }
+            } else {
+                tsElem := types.tsFunctionType(elementKind);
+                tsSlot := ctx.tsDeepCloneValueCode(elementKind, "lite$v");
+                if repeatCount == 0 {
+                    if element.constant {
+                        "[]"
+                    } else {
+                        "((lite$v: " + tsElem + "): " + tsElem + "[] => { void lite$v; return []; })(" + elemValCode + ")"
+                    }
+                } else if element.constant and tsSlot == "lite$v" and repeatCount <= 32 {
+                    repBuf: mut tb.TextBuilder;
+                    tb.append(mut repBuf, "[");
+                    var ri := 0;
+                    loop ri < repeatCount {
+                        if ri > 0 { tb.append(mut repBuf, ", "); }
+                        tb.append(mut repBuf, elemValCode);
+                        ri = ri + 1;
+                    }
+                    tb.append(mut repBuf, "]");
+                    tb.build(repBuf)
+                } else {
+                    "((lite$v: " + tsElem + "): " + tsElem + "[] => { const lite$a: " + tsElem + "[] = []; for (let lite$i = 0; lite$i < " + repeatCount.toText() + "; lite$i += 1) { lite$a.push(" + tsSlot + "); } return lite$a; })(" + elemValCode + ")"
+                }
+            };
+            return ctx.withMarkers((kind = repResultKind, code = repCode, intValue = 0, textValue = "", constant = false, next = repEnd), listMarkers);
+        }
         if cursor < source.length() and source.at(cursor) == "," {
             cursor = syntax.skipTrivia(source, cursor + 1, prefix);
         } else {

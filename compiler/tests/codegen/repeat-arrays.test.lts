@@ -1,0 +1,97 @@
+/* Dual-target (TS + C11) tests for repeat-array literals `[val; N]`. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+runBoth := fn(label: String, src: String, expected: String): Unit {
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+    test.checkInt(label + " ts status: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(label + " ts stderr", "", tsRes.stderr);
+    test.checkText(label + " ts stdout", expected, tsRes.stdout);
+    if ccInfo.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+        test.checkInt(label + " c status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " c stderr", "", cRes.stderr);
+        test.checkText(label + " c stdout parity", tsRes.stdout, cRes.stdout);
+    }
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccInfo.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+repeatSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Pt := record { x: Int; items: List<Int>; }\n" +
+"Vec := record<T: Type, N: Int> { data: [T; N]; }\n" +
+"\n" +
+"var ticks := 0;\n" +
+"nextTick := fn(): Int {\n" +
+"    ticks += 1;\n" +
+"    ticks * 10\n" +
+"};\n" +
+"\n" +
+"filled := fn<T: Type, N: Int>(val: T): [T; N] { [val; N] };\n" +
+"makeVec := fn<T: Type, N: Int>(val: T): Vec<T, N> { Vec<T, N> { data = [val; N] } };\n" +
+"\n" +
+"ints := [7; 4];\n" +
+"floats := [0.5; 3];\n" +
+"texts := [\"ok\"; 2];\n" +
+"zeroLen := [true; 0];\n" +
+"zeroSide := [nextTick(); 0];\n" +
+"ticksAfterZero := ticks;\n" +
+"sideArr := [nextTick(); 4];\n" +
+"ticksAfterSide := ticks;\n" +
+"\n" +
+"var pts := [Pt { x = 1, items = [10, 20] }; 3];\n" +
+"mut p0 := pts[0];\n" +
+"p0Items: mut List<Int> = p0.items;\n" +
+"mut p0Items.pushBack(99);\n" +
+"p0.items = p0Items;\n" +
+"p0.x = 77;\n" +
+"pts[0] = p0;\n" +
+"\n" +
+"lst: List<Int> = [5; 4];\n" +
+"gArr := filled<Int, 5>(42);\n" +
+"gv := makeVec<Float, 3>(2.5);\n" +
+"\n" +
+"mut mArr := [1; 4];\n" +
+"mArr[1] = 9;\n" +
+"bumpFirst := fn(a: mut [Int; 4]): Unit { a[0] = 8; };\n" +
+"bumpFirst(mut mArr);\n" +
+"\n" +
+"io.outputLine(ints.length(), ints[0], ints[3], floats.length(), floats[2], texts.length(), texts[1]);\n" +
+"io.outputLine(zeroLen.length(), zeroSide.length(), ticksAfterZero, sideArr.length(), sideArr[0], sideArr[3], ticksAfterSide);\n" +
+"io.outputLine(pts[0].x, pts[0].items.length(), pts[1].x, pts[1].items.length(), pts[2].items[1]);\n" +
+"io.outputLine(lst.length(), lst[0], lst[3], gArr.length(), gArr[4], gv.data.length(), gv.data[1], mArr[0], mArr[1]);\n";
+
+expectedRepeat :=
+"4 7 7 3 0.5 2 ok\n" +
+"0 0 1 4 20 20 2\n" +
+"77 3 1 2 20\n" +
+"4 5 5 5 42 3 2.5 8 9\n";
+
+runBoth("repeat-arrays", repeatSrc, expectedRepeat);
+
+expectRejectBoth("repeat non-const count", "f := fn(n: Int): Int { x := [1; n]; x.length() };\n", "repeat array count must be a compile-time Int constant");
+expectRejectBoth("repeat negative count", "x := [1; -1];\n", "repeat array count cannot be negative");
+expectRejectBoth("repeat non-Int count", "x := [1; \"a\"];\n", "repeat array count must be a compile-time Int constant");
+expectRejectBoth("repeat Set target", "s: Set<Int> = [1; 3];\n", "repeat literal [val; N] is not valid for Set");
+
+test.done("repeat-arrays");
