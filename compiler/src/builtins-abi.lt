@@ -265,10 +265,6 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "sleepMs" and params == "ms=Int" and result == ir.VALUE_KIND_UNIT { "lite$timeSleepMs" }
         else if name == "localDate" and params == "" and result == ir.VALUE_KIND_STRING { "lite$timeLocalDate" }
         else { "" }
-    } else if moduleIdentity == "lite.core.unicode.v1" {
-        if name == "toCodePoints" and params == "text=String" and result == "List<Int>" { "lite$unicodeToCodePoints" }
-        else if name == "fromCodePoints" and params == "points=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeFromCodePoints" }
-        else { "" }
     } else {
         ""
     }
@@ -283,7 +279,6 @@ softBuiltinModuleForIdentity := fn(moduleIdentity: String): String {
         moduleIdentity == "lite.core.list.v1" { "lib/core/list" }
         moduleIdentity == "lite.core.text.v1" { "lib/core/text" }
         moduleIdentity == "lite.core.io.v1" { "lib/core/io" }
-        moduleIdentity == "lite.core.unicode.v1" { "lib/core/unicode" }
         _ { "" }
     }
 };
@@ -291,7 +286,7 @@ softBuiltinModuleForIdentity := fn(moduleIdentity: String): String {
 /** True when `moduleName` is a canonical core stdlib path with soft-builtin support. */
 isSoftBuiltinModule := fn(moduleName: String): Bool {
     moduleName == "lib/core/crypto" or moduleName == "lib/core/file" or moduleName == "lib/core/int" or
-    moduleName == "lib/core/list" or moduleName == "lib/core/text" or moduleName == "lib/core/io" or moduleName == "lib/core/unicode"
+    moduleName == "lib/core/list" or moduleName == "lib/core/text" or moduleName == "lib/core/io"
 };
 
 /** Returns the expected `(params, result)` ABI for a registered soft-builtin function, or empty fields when absent. */
@@ -397,16 +392,6 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
         }
         if name == "Writer.writeText" or name == "Writer.writeLine" {
             return (params = "writer=Writer@(kind:String,handle:Int)|text=String", result = "(ok:Bool,error:String)");
-        }
-    } else if moduleName == "lib/core/unicode" {
-        if name == "utf8Encode" {
-            return (params = "text=String", result = "List<Int>");
-        }
-        if name == "utf8DecodeStrict" {
-            return (params = "bytes=List<Int>", result = "(ok:Bool,text:String,error:String)");
-        }
-        if name == "utf8DecodeLossy" {
-            return (params = "bytes=List<Int>", result = ir.VALUE_KIND_STRING);
         }
     }
     (params = "", result = "")

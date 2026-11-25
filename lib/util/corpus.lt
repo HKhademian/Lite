@@ -199,7 +199,6 @@ MODULE_IDENTITIES: Map<String, String> = [
 "lib/core/process.lt" = "lite.core.process.v1",
 "lib/core/crypto.lt" = "lite.core.crypto.v1",
 "lib/core/time.lt" = "lite.core.time.v1",
-"lib/core/unicode.lt" = "lite.core.unicode.v1",
 "compiler/src/modules.lt" = "lite.compiler.modules.v1",
 ];
 

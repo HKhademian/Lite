@@ -729,7 +729,7 @@ usesProcessSpawnBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$processRun(") or usesIntHelper(calls, "lite$processRunBytes(")
 };
 
-/** True when any emitted item calls a core/unicode hard builtin. */
+/** True when any emitted item calls a core/text Unicode hard builtin. */
 usesUnicodeBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(")
 };
@@ -2776,7 +2776,7 @@ emitCFnTypeHelper := fn(kind: String, calls: Set<String>): Unit {
     outLine("");
 };
 
-/** Emits C11 `core/unicode` hard builtin helpers (`toCodePoints`, `fromCodePoints`). */
+/** Emits C11 `core/text` Unicode hard builtin helpers (`String.toCodePoints`, `String.fromCodePoints`). */
 emitCUnicodeBuiltinHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lite$unicodeToCodePoints(") {
         outLine("static lt_list_i64 lt_unicode_to_code_points(lt_str text) {");
@@ -3886,7 +3886,7 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
     }
 };
 
-/** Emits all C11 host builtin helpers (`core/unicode`, `core/io` streams, `core/file`, `core/process`, `core/time`, `core/crypto`). */
+/** Emits all C11 host builtin helpers (`core/text` Unicode, `core/io` streams, `core/file`, `core/process`, `core/time`, `core/crypto`). */
 emitCHostBuiltinHelpers := fn(calls: Set<String>): Unit {
     needDupStr := usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or
     usesIntHelper(calls, "lite$fileOpenAppender(") or usesIntHelper(calls, "lite$ioRead(") or
