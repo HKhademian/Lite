@@ -1,8 +1,8 @@
 {
   "note": "Unified Block Model Slice 3 (uniform lexical closures/captures, inner-block parallel compile-time symbol wiring, uniform execution-trace initialization safety, and escaping-closure checks on TS; C continues rejecting fn values explicitly). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-25",
-  "sourceSha256": "fa7c8cbab0530136b8420f14c59aa6e1e230820cdd890c2ab03b8ef481b36ca6",
-  "compilerSha256": "0a1c6e12faa0d4b01e366ae4a2be84df795ddd3389ec795ebdf314d57ed0d62a",
+  "sourceSha256": "453d1448c690a9cec1e7465171dcead60981148bf313ca91440774cc234de4a8",
+  "compilerSha256": "d03b7fdb35be7f680ba33926be46f0f29fa42332b41902ece152b3853211e131",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
@@ -244,7 +244,7 @@
       "name": "nested-shadow",
       "source": "001-005-nested-shadow.lts",
       "ts": "sha256:cd5a2b8b6562e897acff1f473ae6f75e9148f6335db1a4a5ab67f7380212ac7f",
-      "c": "sha256:ebf303bddb7a1af3fe00d7b2a3e4eb08198e9c8a60319377772ef2663193f8bd"
+      "c": "sha256:e84a28d79899423d0f33a661e06bfec2e217191dbd2ee2e2726bc94d0575b1dd"
     },
     {
       "name": "local-missing-semicolon",
@@ -364,7 +364,7 @@
       "name": "string-equality-if",
       "source": "001-007-string-equality-if.lts",
       "ts": "sha256:de46def2f29a76d6faebb607c2766475a7df3df520e461de37461f25cf7f8f75",
-      "c": "sha256:bc46de0df12984ef4dc38536a1853a9638048b5f16c9c2f6a7d6625d59babc08"
+      "c": "sha256:686fe634751e9b9576625acb6ad6201dd682aeaded98b931ce98ac9359ee0481"
     },
     {
       "name": "runtime-division",
