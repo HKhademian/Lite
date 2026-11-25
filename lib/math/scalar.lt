@@ -1,10 +1,22 @@
-/** Universal mathematical constants and pure Int/Float numeric helpers. */
+/** Universal mathematical constants, closed numeric constraints, and pure Int/Float numeric helpers. */
+
+/** Closed type-constraint union covering all built-in signed integer types. */
+pub IntScalar := alias Int | Int8 | Int16 | Int32;
+
+/** Closed type-constraint union covering all built-in floating-point types. */
+pub FloatScalar := alias Float | Float32;
+
+/** Closed type-constraint union covering all built-in integer and floating-point types. */
+pub Numeric := alias IntScalar | FloatScalar;
 
 /** Ratio of a circle's circumference to its diameter. */
 pub PI := 3.141592653589793;
 
 /** Full circle constant (`2 * PI`). */
 pub TAU := 6.283185307179586;
+
+/** Quarter-turn / right-angle constant (`PI / 2`). */
+pub HALF_PI := 1.5707963267948966;
 
 /** Euler's number (`exp(1)`). */
 pub E := 2.718281828459045;
@@ -101,4 +113,201 @@ pub sqrt := fn(x: Float): Float {
         i += 1;
     }
     g
+};
+
+floorNonNegInt := fn(x: Float): Int {
+    if x < 1.0 { return 0; }
+    var hi := 1;
+    loop hi <= x {
+        hi = hi * 2;
+    }
+    var lo := hi / 2;
+    loop lo < hi {
+        mid := (lo + hi + 1) / 2;
+        if mid <= x {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    lo
+};
+
+/** Largest whole-number `Int` less than or equal to `x` (accurate up to `2^52 - 1`). */
+pub floorToInt := fn(x: Float): Int {
+    if x >= 0.0 {
+        floorNonNegInt(x)
+    } else {
+        ax := 0.0 - x;
+        k := floorNonNegInt(ax);
+        if k == ax { 0 - k } else { 0 - (k + 1) }
+    }
+};
+
+/** Largest integer-valued `Float` less than or equal to `x`. */
+pub floor := fn(x: Float): Float {
+    if x =!= x or x >= 4503599627370496.0 or x <= -4503599627370496.0 {
+        return x;
+    }
+    floorToInt(x) * 1.0
+};
+
+/** Smallest integer-valued `Float` greater than or equal to `x`. */
+pub ceil := fn(x: Float): Float {
+    f := floor(x);
+    if f =!= f { return f; }
+    if f == x { f } else { f + 1.0 }
+};
+
+/** Rounds `x` to the nearest integer-valued `Float`, half away from zero. */
+pub round := fn(x: Float): Float {
+    if x >= 0.0 { floor(x + 0.5) } else { ceil(x - 0.5) }
+};
+
+/** Truncates `x` toward zero to an integer-valued `Float`. */
+pub trunc := fn(x: Float): Float {
+    if x >= 0.0 { floor(x) } else { ceil(x) }
+};
+
+/** Fractional part `x - floor(x)` in `[0.0, 1.0)`. */
+pub fract := fn(x: Float): Float {
+    x - floor(x)
+};
+
+/** Returns `-1.0`, `0.0`, or `1.0` according to the sign of `x`. */
+pub sign := fn(x: Float): Float {
+    if x < 0.0 { -1.0 } else if x > 0.0 { 1.0 } else { 0.0 }
+};
+
+/** Converts degrees to radians. */
+pub degToRad := fn(deg: Float): Float {
+    deg * (PI / 180.0)
+};
+
+/** Converts radians to degrees. */
+pub radToDeg := fn(rad: Float): Float {
+    rad * (180.0 / PI)
+};
+
+/** Smooth Hermite interpolation between `0.0` and `1.0` across `[edge0, edge1]`. */
+pub smoothstep := fn(edge0: Float, edge1: Float, x: Float): Float {
+    if edge1 == edge0 {
+        return if x < edge0 { 0.0 } else { 1.0 };
+    }
+    t := clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+};
+
+/** True when `abs(a - b) <= eps`. */
+pub approxEq := fn(a: Float, b: Float, eps: Float): Bool {
+    abs(a - b) <= eps
+};
+
+wrapAngle := fn(rad: Float): Float {
+    rad - floor((rad + PI) / TAU) * TAU
+};
+
+/** Computes sine of `rad` radians using range-reduced 11th-order Taylor series. */
+pub sin := fn(rad: Float): Float {
+    var x := wrapAngle(rad);
+    if x > HALF_PI { x = PI - x; }
+    else if x < (0.0 - HALF_PI) { x = (0.0 - PI) - x; }
+    x2 := x * x;
+    var term := x;
+    var sum := x;
+    term = (0.0 - term * x2) / 6.0; sum = sum + term;
+    term = (0.0 - term * x2) / 20.0; sum = sum + term;
+    term = (0.0 - term * x2) / 42.0; sum = sum + term;
+    term = (0.0 - term * x2) / 72.0; sum = sum + term;
+    term = (0.0 - term * x2) / 110.0; sum = sum + term;
+    sum
+};
+
+/** Computes cosine of `rad` radians. */
+pub cos := fn(rad: Float): Float {
+    sin(rad + HALF_PI)
+};
+
+/** Computes tangent of `rad` radians (`0.0` near cosine zero singularities). */
+pub tan := fn(rad: Float): Float {
+    c := cos(rad);
+    if abs(c) <= 0.000000000001 { 0.0 } else { sin(rad) / c }
+};
+
+atanSmall := fn(u: Float): Float {
+    u2 := u * u;
+    var p := u;
+    var sum := u;
+    p = 0.0 - (p * u2); sum = sum + (p / 3.0);
+    p = 0.0 - (p * u2); sum = sum + (p / 5.0);
+    p = 0.0 - (p * u2); sum = sum + (p / 7.0);
+    p = 0.0 - (p * u2); sum = sum + (p / 9.0);
+    p = 0.0 - (p * u2); sum = sum + (p / 11.0);
+    p = 0.0 - (p * u2); sum = sum + (p / 13.0);
+    p = 0.0 - (p * u2); sum = sum + (p / 15.0);
+    p = 0.0 - (p * u2); sum = sum + (p / 17.0);
+    p = 0.0 - (p * u2); sum = sum + (p / 19.0);
+    sum
+};
+
+/** Principal-value arctangent of `x` in `[-PI/2, PI/2]`. */
+pub atan := fn(x: Float): Float {
+    var neg := false;
+    var ax := x;
+    if ax < 0.0 {
+        neg = true;
+        ax = 0.0 - ax;
+    }
+    var inv := false;
+    if ax > 1.0 {
+        inv = true;
+        ax = 1.0 / ax;
+    }
+    var base := 0.0;
+    if ax > 0.2679491924311227 {
+        rt3 := 1.7320508075688772;
+        ax = ((ax * rt3) - 1.0) / (ax + rt3);
+        base = PI / 6.0;
+    }
+    var res := base + atanSmall(ax);
+    if inv { res = HALF_PI - res; }
+    if neg { 0.0 - res } else { res }
+};
+
+/** Two-argument arctangent returning the angle in `[-PI, PI]` for `(y, x)`. */
+pub atan2 := fn(y: Float, x: Float): Float {
+    if x > 0.0 {
+        atan(y / x)
+    } else if x < 0.0 and y >= 0.0 {
+        atan(y / x) + PI
+    } else if x < 0.0 and y < 0.0 {
+        atan(y / x) - PI
+    } else if y > 0.0 {
+        HALF_PI
+    } else if y < 0.0 {
+        0.0 - HALF_PI
+    } else {
+        0.0
+    }
+};
+
+/** Generic absolute value over any `Numeric` scalar type. */
+pub absNum := fn<T: Type<Numeric>>(x: T): T {
+    var z: T;
+    if x < z { z - x } else { x }
+};
+
+/** Smaller of two values of any `Numeric` scalar type. */
+pub minNum := fn<T: Type<Numeric>>(a: T, b: T): T {
+    if a <= b { a } else { b }
+};
+
+/** Larger of two values of any `Numeric` scalar type. */
+pub maxNum := fn<T: Type<Numeric>>(a: T, b: T): T {
+    if a >= b { a } else { b }
+};
+
+/** Clamps `x` to `[lo, hi]` for any `Numeric` scalar type. */
+pub clampNum := fn<T: Type<Numeric>>(x: T, lo: T, hi: T): T {
+    if x < lo { lo } else if x > hi { hi } else { x }
 };

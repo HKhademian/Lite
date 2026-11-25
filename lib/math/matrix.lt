@@ -1,5 +1,6 @@
 /** 2x2, 3x3, and 4x4 matrix math (`math/matrix`) for 2D/3D transforms across TS and C11. */
 
+math := import "math/scalar";
 vec := import "math/vector";
 
 /** Row-major 2x2 matrix. */
@@ -31,8 +32,8 @@ pub identity2 := fn(): Mat2 {
 
 /** 2x2 counter-clockwise rotation matrix by `radians`. */
 pub rotation2 := fn(radians: Float): Mat2 {
-    c := vec.cosRad(radians);
-    s := vec.sinRad(radians);
+    c := math.cos(radians);
+    s := math.sin(radians);
     (m00 = c, m01 = 0.0 - s, m10 = s, m11 = c)
 };
 
@@ -94,8 +95,8 @@ pub scale2 := fn(sx: Float, sy: Float): Mat3 {
 
 /** 2D affine rotation matrix by `radians` in homogeneous 3x3 form. */
 pub rotate2 := fn(radians: Float): Mat3 {
-    c := vec.cosRad(radians);
-    s := vec.sinRad(radians);
+    c := math.cos(radians);
+    s := math.sin(radians);
     (
     m00 = c, m01 = 0.0 - s, m02 = 0.0,
     m10 = s, m11 = c, m12 = 0.0,
@@ -187,8 +188,8 @@ pub scale3 := fn(sx: Float, sy: Float, sz: Float): Mat4 {
 
 /** 3D rotation matrix around the X axis by `radians`. */
 pub rotateX := fn(radians: Float): Mat4 {
-    c := vec.cosRad(radians);
-    s := vec.sinRad(radians);
+    c := math.cos(radians);
+    s := math.sin(radians);
     (
     m00 = 1.0, m01 = 0.0, m02 = 0.0, m03 = 0.0,
     m10 = 0.0, m11 = c, m12 = 0.0 - s, m13 = 0.0,
@@ -199,8 +200,8 @@ pub rotateX := fn(radians: Float): Mat4 {
 
 /** 3D rotation matrix around the Y axis by `radians`. */
 pub rotateY := fn(radians: Float): Mat4 {
-    c := vec.cosRad(radians);
-    s := vec.sinRad(radians);
+    c := math.cos(radians);
+    s := math.sin(radians);
     (
     m00 = c, m01 = 0.0, m02 = s, m03 = 0.0,
     m10 = 0.0, m11 = 1.0, m12 = 0.0, m13 = 0.0,
@@ -211,8 +212,8 @@ pub rotateY := fn(radians: Float): Mat4 {
 
 /** 3D rotation matrix around the Z axis by `radians`. */
 pub rotateZ := fn(radians: Float): Mat4 {
-    c := vec.cosRad(radians);
-    s := vec.sinRad(radians);
+    c := math.cos(radians);
+    s := math.sin(radians);
     (
     m00 = c, m01 = 0.0 - s, m02 = 0.0, m03 = 0.0,
     m10 = s, m11 = c, m12 = 0.0, m13 = 0.0,
@@ -224,8 +225,8 @@ pub rotateZ := fn(radians: Float): Mat4 {
 /** Right-handed perspective projection matrix (`fovYRad`, `aspect`, `near`, `far`). */
 pub perspective := fn(fovYRad: Float, aspect: Float, near: Float, far: Float): Mat4 {
     half := fovYRad * 0.5;
-    s := vec.sinRad(half);
-    c := vec.cosRad(half);
+    s := math.sin(half);
+    c := math.cos(half);
     f := if s == 0.0 { 1.0 } else { c / s };
     nf := 1.0 / (near - far);
     (

@@ -1,0 +1,285 @@
+/** General-purpose N-dimensional and 2D/3D geometry primitives (`math/geom`) across TS and C11. */
+
+math := import "math/scalar";
+vec := import "math/vector";
+
+/** Outcome of a ray intersection query carrying the hit distance `t >= 0` when present. */
+pub RayHit := enum {
+    Miss;
+    Hit(Float);
+}
+
+/** True when `h` represents a valid intersection. */
+pub RayHit.isHit := fn(h: Self): Bool {
+    match h {
+        .Miss { false }
+        .Hit { true }
+    }
+};
+
+/** Returns the hit distance `t` when `h` is `.Hit(t)`, or `fallback` on `.Miss`. */
+pub RayHit.distanceOr := fn(h: Self, fallback: Float): Float {
+    match h {
+        .Miss { fallback }
+        .Hit(t) { t }
+    }
+};
+
+/* ============================================================================
+ * Generic N-Dimensional Box, Ray & Segment
+ * ============================================================================ */
+
+/** Axis-aligned bounding box in `N` dimensions with component scalar type `T`. */
+pub Box := record<T: Type<math.Numeric>, N: Int> {
+    min: vec.Vec<T, N>;
+    max: vec.Vec<T, N>;
+}
+
+/** Constructs an axis-aligned `Box<T, N>` from `min` and `max` corners. */
+pub boxFromMinMax := fn<T: Type<math.Numeric>, N: Int>(min: vec.Vec<T, N>, max: vec.Vec<T, N>): Box<T, N> {
+    Box<T, N> { min = min, max = max }
+};
+
+/** Component-wise extent `max - min` of box `b`. */
+pub Box.size := fn<T: Type<math.Numeric>, N: Int>(b: Self<T, N>): vec.Vec<T, N> {
+    b.max.sub(b.min)
+};
+
+/** Geometric center `(min + max) * 0.5` of a `Float` box `b`. */
+pub Box.center := fn<N: Int>(b: Self<Float, N>): vec.Vec<Float, N> {
+    b.min.add(b.max).scale(0.5)
+};
+
+/** True when point `p` lies inside or on the boundary of box `b`. */
+pub Box.containsPoint := fn<T: Type<math.Numeric>, N: Int>(b: Self<T, N>, p: vec.Vec<T, N>): Bool {
+    n := b.min.dim();
+    var i := 0;
+    loop i < n {
+        v := p.get(i);
+        if v < b.min.get(i) or v > b.max.get(i) {
+            return false;
+        }
+        i += 1;
+    }
+    true
+};
+
+/** True when axis-aligned boxes `a` and `b` overlap or touch. */
+pub Box.intersects := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Bool {
+    n := a.min.dim();
+    var i := 0;
+    loop i < n {
+        if a.max.get(i) < b.min.get(i) or a.min.get(i) > b.max.get(i) {
+            return false;
+        }
+        i += 1;
+    }
+    true
+};
+
+/** Returns the minimal box containing both `b` and point `p`. */
+pub Box.expandPoint := fn<T: Type<math.Numeric>, N: Int>(b: Self<T, N>, p: vec.Vec<T, N>): Self<T, N> {
+    Box<T, N> { min = b.min.minComp(p), max = b.max.maxComp(p) }
+};
+
+/** Returns the minimal bounding box containing both `a` and `b`. */
+pub Box.unionBox := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
+    Box<T, N> { min = a.min.minComp(b.min), max = a.max.maxComp(b.max) }
+};
+
+/** Infinite ray `origin + dir * t` (`t >= 0`) in `N` dimensions. */
+pub Ray := record<T: Type<math.FloatScalar>, N: Int> {
+    origin: vec.Vec<T, N>;
+    dir: vec.Vec<T, N>;
+}
+
+/** Constructs an N-dimensional ray from `origin` and `dir`. */
+pub ray := fn<T: Type<math.FloatScalar>, N: Int>(origin: vec.Vec<T, N>, dir: vec.Vec<T, N>): Ray<T, N> {
+    Ray<T, N> { origin = origin, dir = dir }
+};
+
+/** Evaluates `r.origin + r.dir * t` along ray `r`. */
+pub Ray.at := fn<T: Type<math.FloatScalar>, N: Int>(r: Self<T, N>, t: T): vec.Vec<T, N> {
+    r.origin.add(r.dir.scale(t))
+};
+
+/** Slab intersection test between N-dimensional ray `r` and box `b` (`t >= 0`). */
+pub rayBoxHit := fn<N: Int>(r: Ray<Float, N>, b: Box<Float, N>): RayHit {
+    var tMin := 0.0;
+    var tMax := 0.0;
+    var hasMax := false;
+    n := r.origin.dim();
+    if n == 0 { return .Miss; }
+    var i := 0;
+    loop i < n {
+        o := r.origin.get(i);
+        d := r.dir.get(i);
+        bMin := b.min.get(i);
+        bMax := b.max.get(i);
+        if math.abs(d) <= 0.000000000001 {
+            if o < bMin or o > bMax { return .Miss; }
+        } else {
+            invD := 1.0 / d;
+            t1 := (bMin - o) * invD;
+            t2 := (bMax - o) * invD;
+            lo := math.min(t1, t2);
+            hi := math.max(t1, t2);
+            tMin = math.max(tMin, lo);
+            tMax = if hasMax { math.min(tMax, hi) } else { hi };
+            hasMax = true;
+            if tMax < tMin { return .Miss; }
+        }
+        i += 1;
+    }
+    if hasMax and tMax >= 0.0 {
+        .Hit(tMin)
+    } else {
+        .Miss
+    }
+};
+
+/** Line segment between endpoints `a` and `b` in `N` dimensions. */
+pub Segment := record<T: Type<math.FloatScalar>, N: Int> {
+    a: vec.Vec<T, N>;
+    b: vec.Vec<T, N>;
+}
+
+/** Constructs an N-dimensional line segment between `a` and `b`. */
+pub segment := fn<T: Type<math.FloatScalar>, N: Int>(a: vec.Vec<T, N>, b: vec.Vec<T, N>): Segment<T, N> {
+    Segment<T, N> { a = a, b = b }
+};
+
+/** Evaluates linear point `(1 - t) * a + t * b` along segment `s`. */
+pub Segment.at := fn<T: Type<math.FloatScalar>, N: Int>(s: Self<T, N>, t: T): vec.Vec<T, N> {
+    s.a.lerp(s.b, t)
+};
+
+/** Euclidean length of `Float` segment `s`. */
+pub Segment.length := fn<N: Int>(s: Self<Float, N>): Float {
+    s.a.distance(s.b)
+};
+
+/* ============================================================================
+ * Concrete 2D & 3D Shapes
+ * ============================================================================ */
+
+/** 2D axis-aligned rectangle stored as top-left `(x, y)` and `(width, height)`. */
+pub Rect := record {
+    x: Float;
+    y: Float;
+    width: Float;
+    height: Float;
+}
+
+/** Constructs a 2D `Rect`. */
+pub rect := fn(x: Float, y: Float, width: Float, height: Float): Rect {
+    Rect { x = x, y = y, width = width, height = height }
+};
+
+/** Right edge `r.x + r.width`. */
+pub Rect.right := fn(r: Self): Float { r.x + r.width };
+
+/** Bottom edge `r.y + r.height`. */
+pub Rect.bottom := fn(r: Self): Float { r.y + r.height };
+
+/** Non-negative area of `r` (`0.0` when width or height is non-positive). */
+pub Rect.area := fn(r: Self): Float {
+    if r.width <= 0.0 or r.height <= 0.0 { 0.0 } else { r.width * r.height }
+};
+
+/** Center point of `r`. */
+pub Rect.center := fn(r: Self): vec.Vec2 {
+    vec.vec2(r.x + (r.width * 0.5), r.y + (r.height * 0.5))
+};
+
+/** True when 2D point `p` lies inside or on the border of `r`. */
+pub Rect.containsPoint := fn(r: Self, p: vec.Vec2): Bool {
+    p.x >= r.x and p.x <= r.right() and p.y >= r.y and p.y <= r.bottom()
+};
+
+/** True when rectangles `a` and `b` overlap or touch. */
+pub Rect.intersects := fn(a: Self, b: Self): Bool {
+    a.x <= b.right() and a.right() >= b.x and a.y <= b.bottom() and a.bottom() >= b.y
+};
+
+/** Shrinks `r` symmetrically by `pad` along every side (clamping dimensions at `0.0`). */
+pub Rect.inset := fn(r: Self, pad: Float): Self {
+    w := math.max(0.0, r.width - (2.0 * pad));
+    h := math.max(0.0, r.height - (2.0 * pad));
+    Rect { x = r.x + pad, y = r.y + pad, width = w, height = h }
+};
+
+/** 2D circle with `center` and `radius`. */
+pub Circle := record {
+    center: vec.Vec2;
+    radius: Float;
+}
+
+/** Constructs a 2D `Circle`. */
+pub circle := fn(center: vec.Vec2, radius: Float): Circle {
+    Circle { center = center, radius = radius }
+};
+
+/** Area `PI * radius^2` of `c` (`0.0` for non-positive radius). */
+pub Circle.area := fn(c: Self): Float {
+    if c.radius <= 0.0 { 0.0 } else { math.PI * c.radius * c.radius }
+};
+
+/** True when 2D point `p` lies inside or on the circumference of `c`. */
+pub Circle.containsPoint := fn(c: Self, p: vec.Vec2): Bool {
+    c.center.sub(p).lengthSq() <= (c.radius * c.radius)
+};
+
+/** True when circles `a` and `b` overlap or touch. */
+pub Circle.intersects := fn(a: Self, b: Self): Bool {
+    rSum := a.radius + b.radius;
+    a.center.sub(b.center).lengthSq() <= (rSum * rSum)
+};
+
+/** True when circle `c` overlaps or touches rectangle `r`. */
+pub Circle.intersectsRect := fn(c: Self, r: Rect): Bool {
+    cx := math.clamp(c.center.x, r.x, r.right());
+    cy := math.clamp(c.center.y, r.y, r.bottom());
+    dx := c.center.x - cx;
+    dy := c.center.y - cy;
+    ((dx * dx) + (dy * dy)) <= (c.radius * c.radius)
+};
+
+/** 3D sphere with `center` and `radius`. */
+pub Sphere := record {
+    center: vec.Vec3;
+    radius: Float;
+}
+
+/** Constructs a 3D `Sphere`. */
+pub sphere := fn(center: vec.Vec3, radius: Float): Sphere {
+    Sphere { center = center, radius = radius }
+};
+
+/** True when 3D point `p` lies inside or on the surface of `s`. */
+pub Sphere.containsPoint := fn(s: Self, p: vec.Vec3): Bool {
+    s.center.sub(p).lengthSq() <= (s.radius * s.radius)
+};
+
+/** True when spheres `a` and `b` overlap or touch. */
+pub Sphere.intersects := fn(a: Self, b: Self): Bool {
+    rSum := a.radius + b.radius;
+    a.center.sub(b.center).lengthSq() <= (rSum * rSum)
+};
+
+/** Tests intersection of 3D ray `origin + dir * t` (`t >= 0`) against sphere `s`. */
+pub raySphereHit := fn(origin: vec.Vec3, dir: vec.Vec3, s: Sphere): RayHit {
+    a := dir.dot(dir);
+    if a <= 0.000000000001 { return .Miss; }
+    oc := origin.sub(s.center);
+    b := oc.dot(dir);
+    c := oc.dot(oc) - (s.radius * s.radius);
+    disc := (b * b) - (a * c);
+    if disc < 0.0 { return .Miss; }
+    rootDisc := math.sqrt(disc);
+    t0 := (0.0 - b - rootDisc) / a;
+    if t0 >= 0.0 { return .Hit(t0); }
+    t1 := (0.0 - b + rootDisc) / a;
+    if t1 >= 0.0 { return .Hit(t1); }
+    .Miss
+};

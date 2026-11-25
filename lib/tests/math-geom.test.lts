@@ -1,0 +1,207 @@
+/* Dual-target (TS + C11 + ASan/UBSan) tests for `math/scalar` constraints/trig, generic `math/vector` `Vec<T, N>`, and `math/geom`. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+tmpRes := fs.makeTempDir("lite-math-geom-test-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+tmpDir := tmpRes.path;
+
+functionalSrc :=
+"io := import \"core/io\";\n" +
+"math := import \"math/scalar\";\n" +
+"vec := import \"math/vector\";\n" +
+"geom := import \"math/geom\";\n" +
+"\n" +
+"near := fn(a: Float, b: Float): Bool { math.approxEq(a, b, 0.0001) };\n" +
+"\n" +
+"/* 1. math/scalar rounding, trig, smoothstep, and constrained generic helpers */\n" +
+"bigExact := 1099511627776.25;\n" +
+"mathCheck :=\n" +
+"    math.floor(3.7) == 3.0\n" +
+"    and math.floor(-3.2) == -4.0\n" +
+"    and math.floor(-3.0) == -3.0\n" +
+"    and math.floor(0.0) == 0.0\n" +
+"    and math.floor(bigExact) == 1099511627776.0\n" +
+"    and math.floorToInt(-2.9) == -3\n" +
+"    and math.ceil(3.1) == 4.0\n" +
+"    and math.ceil(-0.3) == 0.0\n" +
+"    and math.round(2.5) == 3.0\n" +
+"    and math.round(-2.5) == -3.0\n" +
+"    and math.trunc(-2.9) == -2.0\n" +
+"    and near(math.fract(3.75), 0.75)\n" +
+"    and near(math.fract(-1.25), 0.75)\n" +
+"    and math.sign(-4.5) == -1.0\n" +
+"    and math.sign(0.0) == 0.0\n" +
+"    and math.sign(9.0) == 1.0\n" +
+"    and near(math.degToRad(180.0), math.PI)\n" +
+"    and near(math.radToDeg(math.HALF_PI), 90.0)\n" +
+"    and near(math.smoothstep(0.0, 10.0, 5.0), 0.5)\n" +
+"    and math.smoothstep(2.0, 2.0, 1.0) == 0.0\n" +
+"    and near(math.sin(math.HALF_PI), 1.0)\n" +
+"    and near(math.cos(math.PI), -1.0)\n" +
+"    and near(math.sin(100.0 * math.TAU + math.PI / 6.0), 0.5)\n" +
+"    and near(math.tan(math.PI / 4.0), 1.0)\n" +
+"    and near(math.atan(1.0), math.PI / 4.0)\n" +
+"    and near(math.atan2(1.0, -1.0), 3.0 * math.PI / 4.0)\n" +
+"    and near(math.atan2(-1.0, 0.0), 0.0 - math.HALF_PI);\n" +
+"i32a: Int32 = -15;\n" +
+"i32b: Int32 = -5;\n" +
+"i32c: Int32 = 10;\n" +
+"f32a: Float32 = -2.5;\n" +
+"f32b: Float32 = 1.5;\n" +
+"f32c: Float32 = 4.0;\n" +
+"genericScalar := math.absNum(i32a) == 15\n" +
+"    and math.minNum(10, -3) == -3\n" +
+"    and math.maxNum(i32b, i32c) == 10\n" +
+"    and math.clampNum(i32c, i32a, i32b) == -5\n" +
+"    and math.absNum(f32a) > 2.0\n" +
+"    and math.clampNum(f32c, f32a, f32b) == f32b;\n" +
+"io.outputLine(\"scalar\", mathCheck, genericScalar);\n" +
+"\n" +
+"/* 2. Generic Vec<T, N> across Int, Int32, Float, Float32 and mut setters */\n" +
+"iv1 := vec.ivec2(3, 4);\n" +
+"iv2 := vec.ivec2(1, -2);\n" +
+"ivSum := iv1.add(iv2);\n" +
+"ivNeg := iv2.neg();\n" +
+"v32: mut vec.Vec<Int32, 3> = vec.splat<Int32, 3>(i32b);\n" +
+"mut v32.setX(2);\n" +
+"mut v32.setY(3);\n" +
+"mut v32.set(2, 6);\n" +
+"fvA := vec.fvec3(1.0, 2.0, 3.0);\n" +
+"fvB := vec.fvec3(4.0, 6.0, 3.0);\n" +
+"fvLerp := fvA.lerp(fvB, 0.5);\n" +
+"fvZero := vec.zeroVec<Float, 4>();\n" +
+"mut fvMut := vec.fvec4(0.1, 0.2, 0.3, 1.0);\n" +
+"mut fvMut.setZ(0.8);\n" +
+"mut fvMut.setW(0.5);\n" +
+"vf32a := vec.vecN<Float32, 2>([f32b, f32c]);\n" +
+"vf32b := vec.splat<Float32, 2>(f32b);\n" +
+"vecCheck :=\n" +
+"    iv1.dim() == 2\n" +
+"    and iv1.dot(iv2) == -5\n" +
+"    and ivSum.x() == 4 and ivSum.y() == 2\n" +
+"    and ivNeg.x() == -1 and ivNeg.y() == 2\n" +
+"    and v32.x() == 2 and v32.y() == 3 and v32.z() == 6\n" +
+"    and v32.lengthSq() == 49\n" +
+"    and near(fvA.distance(vec.fvec3(1.0, 6.0, 6.0)), 5.0)\n" +
+"    and near(fvLerp.x(), 2.5) and near(fvLerp.y(), 4.0) and near(fvLerp.z(), 3.0)\n" +
+"    and near(fvZero.w(), 0.0)\n" +
+"    and near(fvMut.r(), 0.1) and near(fvMut.g(), 0.2) and near(fvMut.b(), 0.8) and near(fvMut.a(), 0.5)\n" +
+"    and near(vec.fvec2(3.0, 4.0).normalize().x(), 0.6)\n" +
+"    and near(vf32a.dot(vf32b), 8.25);\n" +
+"io.outputLine(\"vecN\", vecCheck);\n" +
+"\n" +
+"/* 3. math/geom generic Box<T, N>, Ray<T, N>, Segment<T, N>, and concrete 2D/3D shapes */\n" +
+"iboxA := geom.boxFromMinMax(vec.ivec2(0, 0), vec.ivec2(4, 6));\n" +
+"iboxB := geom.boxFromMinMax(vec.ivec2(3, 5), vec.ivec2(8, 9));\n" +
+"iboxExp := iboxA.expandPoint(vec.ivec2(-2, 10));\n" +
+"fbox3 := geom.boxFromMinMax(vec.fvec3(2.0, -1.0, -1.0), vec.fvec3(4.0, 1.0, 1.0));\n" +
+"rayHit3 := geom.ray(vec.fvec3(0.0, 0.0, 0.0), vec.fvec3(1.0, 0.0, 0.0));\n" +
+"rayMiss3 := geom.ray(vec.fvec3(0.0, 5.0, 0.0), vec.fvec3(1.0, 0.0, 0.0));\n" +
+"hBox1 := geom.rayBoxHit(rayHit3, fbox3);\n" +
+"hBox2 := geom.rayBoxHit(rayMiss3, fbox3);\n" +
+"seg2 := geom.segment(vec.fvec2(1.0, 1.0), vec.fvec2(4.0, 5.0));\n" +
+"r1 := geom.rect(0.0, 0.0, 10.0, 6.0);\n" +
+"c1 := geom.circle(vec.vec2(12.0, 3.0), 2.5);\n" +
+"s1 := geom.sphere(vec.vec3(5.0, 0.0, 0.0), 1.0);\n" +
+"hs1 := geom.raySphereHit(vec.ZERO3, vec.UNIT_X3, s1);\n" +
+"hs2 := geom.raySphereHit(vec.vec3(5.0, 0.0, 0.0), vec.UNIT_X3, s1);\n" +
+"hs3 := geom.raySphereHit(vec.vec3(0.0, 3.0, 0.0), vec.UNIT_X3, s1);\n" +
+"boxDist := match hBox1 { .Hit(d) { d } .Miss { -1.0 } };\n" +
+"geomCheck :=\n" +
+"    iboxA.size().x() == 4 and iboxA.size().y() == 6\n" +
+"    and iboxA.containsPoint(vec.ivec2(4, 3))\n" +
+"    and not iboxA.containsPoint(vec.ivec2(5, 3))\n" +
+"    and iboxA.intersects(iboxB)\n" +
+"    and iboxExp.min.x() == -2 and iboxExp.max.y() == 10\n" +
+"    and iboxA.unionBox(iboxB).max.x() == 8\n" +
+"    and near(fbox3.center().x(), 3.0)\n" +
+"    and hBox1.isHit() and near(boxDist, 2.0) and near(hBox1.distanceOr(-1.0), 2.0)\n" +
+"    and not hBox2.isHit() and hBox2.distanceOr(-1.0) == -1.0\n" +
+"    and near(rayHit3.at(2.0).x(), 2.0)\n" +
+"    and near(seg2.length(), 5.0) and near(seg2.at(0.5).y(), 3.0)\n" +
+"    and r1.containsPoint(vec.vec2(10.0, 6.0))\n" +
+"    and r1.inset(1.0).area() == 32.0\n" +
+"    and c1.intersectsRect(r1)\n" +
+"    and not c1.containsPoint(vec.vec2(0.0, 0.0))\n" +
+"    and s1.containsPoint(vec.vec3(5.0, 0.5, 0.0))\n" +
+"    and near(hs1.distanceOr(-1.0), 4.0)\n" +
+"    and near(hs2.distanceOr(-1.0), 1.0)\n" +
+"    and not hs3.isHit();\n" +
+"io.outputLine(\"geom\", geomCheck);\n";
+
+expectedOut :=
+"scalar true true\n" +
+"vecN true\n" +
+"geom true\n";
+
+emptyEnv: List<String> = [];
+tsCompRes := compilerTest.compileStdin(root, tsComp, functionalSrc, "");
+test.checkInt("TS compile status: " + tsCompRes.stderr, 0, tsCompRes.status);
+tsOutFile := path.join(tmpDir, "functional.ts");
+test.check("write functional.ts", fs.writeText(tsOutFile, tsCompRes.stdout).ok);
+tsRunner := path.join(tmpDir, "runner.ts");
+tsRunnerCode :=
+"import { writeSync } from 'node:fs';\n" +
+"import { main } from './functional.ts';\n" +
+"const out = main((t: string): void => { writeSync(1, t); });\n" +
+"if (typeof out === 'string' && out.length > 0) writeSync(1, out);\n";
+test.check("write runner.ts", fs.writeText(tsRunner, tsRunnerCode).ok);
+tsRun := proc.run(project.nodeExecPath(), [tsRunner], root, emptyEnv, true, "");
+test.checkInt("TS run status: " + tsRun.stderr, 0, tsRun.status);
+test.checkText("TS functional output", expectedOut, tsRun.stdout);
+
+if ccInfo.available {
+    cCompRes := compilerTest.compileStdin(root, cComp, functionalSrc, "");
+    test.checkInt("C11 compile status: " + cCompRes.stderr, 0, cCompRes.status);
+    cFile := path.join(tmpDir, "functional.c");
+    cBin := path.join(tmpDir, "functional");
+    test.check("write functional.c", fs.writeText(cFile, cCompRes.stdout).ok);
+    ccRes := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cFile, "-o", cBin, "-lm"], tmpDir, emptyEnv, true, "");
+    test.checkInt("C11 cc status: " + ccRes.stderr, 0, ccRes.status);
+    cRun := proc.run(cBin, [], root, emptyEnv, true, "");
+    test.checkInt("C11 run status: " + cRun.stderr, 0, cRun.status);
+    test.checkText("C11 functional output matches TS", expectedOut, cRun.stdout);
+
+    funcPath := path.join(tmpDir, "functional.lts");
+    test.check("write functional.lts", fs.writeText(funcPath, functionalSrc).ok);
+    sanBin := path.join(tmpDir, "app-san");
+    buildSan := proc.run(path.join(root, "bin/lite"), ["build", "--sanitize", "--quiet", "-o", sanBin, funcPath], root, emptyEnv, true, "");
+    test.check("ASan/UBSan build ok: " + buildSan.stderr, buildSan.status == 0 and buildSan.error == "");
+    runSan := proc.run(sanBin, [], tmpDir, emptyEnv, true, "");
+    test.check("ASan/UBSan exit 0: " + runSan.stderr, runSan.status == 0 and runSan.error == "");
+    test.checkText("ASan/UBSan output", expectedOut, runSan.stdout);
+}
+
+/* 4. Constraint rejection diagnostics across TS and C11 */
+rejectVecString :=
+"vec := import \"math/vector\";\n" +
+"v: vec.Vec<String, 2>;\n";
+compilerTest.assertCompileErrorContains(root, tsComp, "reject Vec<String, 2> ts", rejectVecString, "does not satisfy constraint");
+if ccInfo.available {
+    compilerTest.assertCompileErrorContains(root, cComp, "reject Vec<String, 2> c", rejectVecString, "does not satisfy constraint");
+}
+
+rejectClampString :=
+"math := import \"math/scalar\";\n" +
+"_ := math.clampNum(\"a\", \"b\", \"c\");\n";
+compilerTest.assertCompileErrorContains(root, tsComp, "reject clampNum<String> ts", rejectClampString, "does not satisfy constraint");
+if ccInfo.available {
+    compilerTest.assertCompileErrorContains(root, cComp, "reject clampNum<String> c", rejectClampString, "does not satisfy constraint");
+}

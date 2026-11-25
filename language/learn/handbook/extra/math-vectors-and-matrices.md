@@ -4,7 +4,7 @@ Lite provides pure, dual-target (TypeScript + C11) math, deterministic random ge
 
 ## Core Math & Deterministic Randomness (`math/scalar`, `math/random`)
 
-[math/scalar](lite://module/math/scalar) defines `PI`, `TAU`, `E`, `absInt`/`absFloat`, `minInt`/`maxInt`, `clampInt`/`clampFloat`, `floor`/`ceil`/`round`, `sqrt`, and `signInt`/`signFloat`.
+[math/scalar](lite://module/math/scalar) defines numeric constraint unions (`IntScalar`, `FloatScalar`, `Numeric`), generic scalar helpers (`absNum`, `minNum`, `maxNum`, `clampNum`), constants (`PI`, `TAU`, `HALF_PI`, `E`), `absInt`/`abs`, `minInt`/`maxInt`, `clampInt`/`clamp`, `floor`/`ceil`/`round`/`trunc`/`fract`, trigonometry (`sin`, `cos`, `tan`, `atan`, `atan2`), `sqrt`, `signInt`/`sign`, `gcd`, and `lcm`.
 
 [math/random](lite://module/math/random) provides an immutable, seedable Lehmer PRNG (`Rng`) whose state advances explicitly without hidden global entropy:
 
@@ -20,9 +20,9 @@ b := rng.rangeInt(r, 1, 7);
 io.outputLine(a.value, b.value, math.clampInt(a.value + b.value, 2, 12));
 ```
 
-## 2D, 3D & 4D Vector Math (`math/vector`)
+## 2D, 3D & Generic N-D Vector Math (`math/vector`)
 
-[math/vector](lite://module/math/vector) provides value-typed `Vec2`, `Vec3`, and `Vec4` records with constants (`ZERO2`, `ZERO3`, `UNIT_X3`, `UNIT_Y3`, `UNIT_Z3`), range-reduced trigonometry (`sinRad`, `cosRad`), arithmetic (`add`, `sub`, `scale`, `dot`, `cross`), normalization, distance, reflection, and linear interpolation (`lerp`):
+[math/vector](lite://module/math/vector) provides both the generic constrained N-dimensional vector `Vec<T: Type<math.Numeric>, N: Int>` (`ivec2`, `ivec3`, `fvec2`, `fvec3`, `fvec4`, `splat`, `x`/`y`/`z`/`w`, `setX`/`setY`/`setZ`/`setW`, `dot`, `length`, `normalize`, `lerp`) and fixed 2D/3D/4D value records (`Vec2`, `Vec3`, `Vec4`, `ZERO2`, `ZERO3`, `UNIT_X3`, `UNIT_Y3`, `UNIT_Z3`, `cross`, `rotate`, `reflect`):
 
 ```lite
 io := import "core/io";
@@ -64,7 +64,11 @@ io.outputLine(grid.getIntOr(g, 2, 2, -1), grid.countIntValue(g, 1));
 grid.destroyInts(g);
 ```
 
-Explore the module references: [math/scalar](lite://module/math/scalar), [math/random](lite://module/math/random), [math/vector](lite://module/math/vector), [math/matrix](lite://module/math/matrix), and [ds/grid](lite://module/ds/grid).
+Explore the module references: [math/scalar](lite://module/math/scalar), [math/random](lite://module/math/random), [math/vector](lite://module/math/vector), [math/matrix](lite://module/math/matrix), [math/geom](lite://module/math/geom), and [ds/grid](lite://module/ds/grid).
+
+## Geometry Primitives (`math/geom`)
+
+[math/geom](lite://module/math/geom) builds on `math/scalar` and `math/vector` with generic N-dimensional `Box<T, N>`, `Ray<T, N>`, and `Segment<T, N>`, payload-bearing `RayHit` (`Miss` / `Hit(Float)`), concrete 2D/3D `Rect`, `Circle`, and `Sphere` shapes, and intersection queries (`rayBoxHit`, `raySphereHit`, `containsPoint`, `intersects`).
 
 ## Next Chapter
 

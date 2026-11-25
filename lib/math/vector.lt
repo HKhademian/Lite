@@ -1,6 +1,256 @@
-/** 2D/3D/4D vector math (`math/vector`) for games, graphics, and physics across TS and C11. */
+/** 2D/3D/4D vectors and generic N-dimensional `Vec<T, N>` math (`math/vector`) across TS and C11. */
 
 math := import "math/scalar";
+
+/** Generic N-dimensional numeric vector backed by a fixed-length array `[T; N]`. */
+pub Vec := record<T: Type<math.Numeric>, N: Int> {
+    data: [T; N];
+}
+
+/** Generic 2D vector alias over `Vec<T, 2>`. */
+pub Vec2T := alias<T: Type<math.Numeric>> Vec<T, 2>;
+
+/** Generic 3D vector alias over `Vec<T, 3>`. */
+pub Vec3T := alias<T: Type<math.Numeric>> Vec<T, 3>;
+
+/** Generic 4D vector alias over `Vec<T, 4>`. */
+pub Vec4T := alias<T: Type<math.Numeric>> Vec<T, 4>;
+
+/** 2D integer vector alias. */
+pub IVec2 := alias Vec<Int, 2>;
+
+/** 3D integer vector alias. */
+pub IVec3 := alias Vec<Int, 3>;
+
+/** 2D floating-point generic vector alias. */
+pub FVec2 := alias Vec<Float, 2>;
+
+/** 3D floating-point generic vector alias. */
+pub FVec3 := alias Vec<Float, 3>;
+
+/** 4D floating-point generic vector alias. */
+pub FVec4 := alias Vec<Float, 4>;
+
+/** Constructs a generic `Vec<T, N>` from a fixed array `[T; N]`. */
+pub vecN := fn<T: Type<math.Numeric>, N: Int>(data: [T; N]): Vec<T, N> {
+    Vec<T, N> { data = data }
+};
+
+/** Constructs a generic `Vec<T, N>` with all `N` components set to `val`. */
+pub splat := fn<T: Type<math.Numeric>, N: Int>(val: T): Vec<T, N> {
+    var out: [T; N];
+    var i := 0;
+    loop i < N {
+        out[i] = val;
+        i += 1;
+    }
+    Vec<T, N> { data = out }
+};
+
+/** Zero-initialized generic `Vec<T, N>`. */
+pub zeroVec := fn<T: Type<math.Numeric>, N: Int>(): Vec<T, N> {
+    var out: [T; N];
+    Vec<T, N> { data = out }
+};
+
+/** Constructs a 2D integer vector `IVec2`. */
+pub ivec2 := fn(x: Int, y: Int): IVec2 {
+    Vec<Int, 2> { data = [x, y] }
+};
+
+/** Constructs a 3D integer vector `IVec3`. */
+pub ivec3 := fn(x: Int, y: Int, z: Int): IVec3 {
+    Vec<Int, 3> { data = [x, y, z] }
+};
+
+/** Constructs a generic 2D `Float` vector `FVec2`. */
+pub fvec2 := fn(x: Float, y: Float): FVec2 {
+    Vec<Float, 2> { data = [x, y] }
+};
+
+/** Constructs a generic 3D `Float` vector `FVec3`. */
+pub fvec3 := fn(x: Float, y: Float, z: Float): FVec3 {
+    Vec<Float, 3> { data = [x, y, z] }
+};
+
+/** Constructs a generic 4D `Float` vector `FVec4`. */
+pub fvec4 := fn(x: Float, y: Float, z: Float, w: Float): FVec4 {
+    Vec<Float, 4> { data = [x, y, z, w] }
+};
+
+/** Compile-time component count `N` of `v`. */
+pub Vec.dim := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): Int {
+    v.data.length()
+};
+
+/** Returns component at zero-based `index` (runtime bounds-checked). */
+pub Vec.get := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>, index: Int): T {
+    v.data[index]
+};
+
+/** Sets component at zero-based `index` to `val` (runtime bounds-checked). */
+pub Vec.set := fn<T: Type<math.Numeric>, N: Int>(v: mut Self<T, N>, index: Int, val: T): Unit {
+    var nextData := v.data;
+    nextData[index] = val;
+    v.data = nextData;
+};
+
+/** First coordinate (`data[0]`). */
+pub Vec.x := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): T { v.data[0] };
+
+/** Second coordinate (`data[1]`). */
+pub Vec.y := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): T { v.data[1] };
+
+/** Third coordinate (`data[2]`). */
+pub Vec.z := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): T { v.data[2] };
+
+/** Fourth coordinate (`data[3]`). */
+pub Vec.w := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): T { v.data[3] };
+
+/** Red / first channel (`data[0]`). */
+pub Vec.r := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): T { v.data[0] };
+
+/** Green / second channel (`data[1]`). */
+pub Vec.g := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): T { v.data[1] };
+
+/** Blue / third channel (`data[2]`). */
+pub Vec.b := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): T { v.data[2] };
+
+/** Alpha / fourth channel (`data[3]`). */
+pub Vec.a := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): T { v.data[3] };
+
+/** Sets the first coordinate (`data[0]`) to `val`. */
+pub Vec.setX := fn<T: Type<math.Numeric>, N: Int>(v: mut Self<T, N>, val: T): Unit { mut v.set(0, val); };
+
+/** Sets the second coordinate (`data[1]`) to `val`. */
+pub Vec.setY := fn<T: Type<math.Numeric>, N: Int>(v: mut Self<T, N>, val: T): Unit { mut v.set(1, val); };
+
+/** Sets the third coordinate (`data[2]`) to `val`. */
+pub Vec.setZ := fn<T: Type<math.Numeric>, N: Int>(v: mut Self<T, N>, val: T): Unit { mut v.set(2, val); };
+
+/** Sets the fourth coordinate (`data[3]`) to `val`. */
+pub Vec.setW := fn<T: Type<math.Numeric>, N: Int>(v: mut Self<T, N>, val: T): Unit { mut v.set(3, val); };
+
+/** Component-wise addition `a + b`. */
+pub Vec.add := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
+    var out: [T; N];
+    var i := 0;
+    loop i < N {
+        out[i] = a.data[i] + b.data[i];
+        i += 1;
+    }
+    Self<T, N> { data = out }
+};
+
+/** Component-wise subtraction `a - b`. */
+pub Vec.sub := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
+    var out: [T; N];
+    var i := 0;
+    loop i < N {
+        out[i] = a.data[i] - b.data[i];
+        i += 1;
+    }
+    Self<T, N> { data = out }
+};
+
+/** Component-wise product `a * b`. */
+pub Vec.mul := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
+    var out: [T; N];
+    var i := 0;
+    loop i < N {
+        out[i] = a.data[i] * b.data[i];
+        i += 1;
+    }
+    Self<T, N> { data = out }
+};
+
+/** Multiplies every component of `v` by scalar `s`. */
+pub Vec.scale := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>, s: T): Self<T, N> {
+    var out: [T; N];
+    var i := 0;
+    loop i < N {
+        out[i] = v.data[i] * s;
+        i += 1;
+    }
+    Self<T, N> { data = out }
+};
+
+/** Negates every component of `v`. */
+pub Vec.neg := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): Self<T, N> {
+    var out: [T; N];
+    var z: T;
+    var i := 0;
+    loop i < N {
+        out[i] = z - v.data[i];
+        i += 1;
+    }
+    Self<T, N> { data = out }
+};
+
+/** Component-wise minimum of `a` and `b`. */
+pub Vec.minComp := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
+    var out: [T; N];
+    var i := 0;
+    loop i < N {
+        out[i] = if a.data[i] <= b.data[i] { a.data[i] } else { b.data[i] };
+        i += 1;
+    }
+    Self<T, N> { data = out }
+};
+
+/** Component-wise maximum of `a` and `b`. */
+pub Vec.maxComp := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
+    var out: [T; N];
+    var i := 0;
+    loop i < N {
+        out[i] = if a.data[i] >= b.data[i] { a.data[i] } else { b.data[i] };
+        i += 1;
+    }
+    Self<T, N> { data = out }
+};
+
+/** Euclidean dot product `sum_i (a[i] * b[i])`. */
+pub Vec.dot := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): T {
+    var acc: T;
+    var i := 0;
+    loop i < N {
+        acc = acc + (a.data[i] * b.data[i]);
+        i += 1;
+    }
+    acc
+};
+
+/** Squared Euclidean length of `v`. */
+pub Vec.lengthSq := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): T {
+    v.dot(v)
+};
+
+/** Component-wise linear interpolation between `a` and `b` by `t`. */
+pub Vec.lerp := fn<T: Type<math.FloatScalar>, N: Int>(a: Self<T, N>, b: Self<T, N>, t: T): Self<T, N> {
+    var out: [T; N];
+    var i := 0;
+    loop i < N {
+        out[i] = a.data[i] + (b.data[i] - a.data[i]) * t;
+        i += 1;
+    }
+    Self<T, N> { data = out }
+};
+
+/** Euclidean length of a generic `Float` vector `v`. */
+pub Vec.length := fn<N: Int>(v: Self<Float, N>): Float {
+    math.sqrt(v.lengthSq())
+};
+
+/** Euclidean distance between generic `Float` vectors `a` and `b`. */
+pub Vec.distance := fn<N: Int>(a: Self<Float, N>, b: Self<Float, N>): Float {
+    a.sub(b).length()
+};
+
+/** Unit-length vector in the direction of `v`, or `zeroVec<Float, N>()` when near zero. */
+pub Vec.normalize := fn<N: Int>(v: Self<Float, N>): Self<Float, N> {
+    len := v.length();
+    if len <= 0.000000000001 { zeroVec<Float, N>() } else { v.scale(1.0 / len) }
+};
 
 /** 2D floating-point vector. */
 pub Vec2 := record { x: Float; y: Float; };
@@ -28,35 +278,6 @@ pub UNIT_Y3 := Vec3 { x = 0.0, y = 1.0, z = 0.0 };
 
 /** Unit Z axis `(0, 0, 1)`. */
 pub UNIT_Z3 := Vec3 { x = 0.0, y = 0.0, z = 1.0 };
-
-/* Pure range-reduced trig helpers (exact to < 1e-11 on both TS and C11). */
-wrapAngle := fn(rad: Float): Float {
-    var a := rad;
-    loop a > math.PI { a = a - math.TAU; }
-    loop a < (0.0 - math.PI) { a = a + math.TAU; }
-    a
-};
-
-/** Computes sine of `rad` radians using range-reduced 11th-order Taylor series. */
-pub sinRad := fn(rad: Float): Float {
-    var x := wrapAngle(rad);
-    if x > (math.PI * 0.5) { x = math.PI - x; }
-    else if x < (0.0 - (math.PI * 0.5)) { x = (0.0 - math.PI) - x; }
-    x2 := x * x;
-    var term := x;
-    var sum := x;
-    term = (0.0 - term * x2) / 6.0; sum = sum + term;
-    term = (0.0 - term * x2) / 20.0; sum = sum + term;
-    term = (0.0 - term * x2) / 42.0; sum = sum + term;
-    term = (0.0 - term * x2) / 72.0; sum = sum + term;
-    term = (0.0 - term * x2) / 110.0; sum = sum + term;
-    sum
-};
-
-/** Computes cosine of `rad` radians. */
-pub cosRad := fn(rad: Float): Float {
-    sinRad(rad + (math.PI * 0.5))
-};
 
 /* ============================================================================
  * Vec2
@@ -108,8 +329,8 @@ pub Vec2.lerp := fn(a: Self, b: Self, t: Float): Self {
 
 /** Rotates `v` counter-clockwise by `radians`. */
 pub Vec2.rotate := fn(v: Self, radians: Float): Self {
-    c := cosRad(radians);
-    s := sinRad(radians);
+    c := math.cos(radians);
+    s := math.sin(radians);
     Vec2 { x = (v.x * c) - (v.y * s), y = (v.x * s) + (v.y * c) }
 };
 

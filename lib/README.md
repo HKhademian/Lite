@@ -26,14 +26,15 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | `core/process` | CLI / Host OS | Subprocess spawning, byte/text capture, environment variables, and executable path |
 | `core/time` | CLI / Host OS | Monotonic/wall-clock timestamps and pure-Lite ISO-8601 calendar helpers |
 
-## Math Modules (`lib/math/` — 4 modules)
+## Math Modules (`lib/math/` — 5 modules)
 
 | Module | Environment | Capabilities |
 | --- | --- | --- |
-| `math/scalar` | Browser + CLI | `PI`, `TAU`, `E`, `absInt`/`abs`, `minInt`/`maxInt`, `clampInt`/`clamp`, `floor`/`ceil`/`round`, `sqrt`, `signInt`, `gcd`, `lcm` |
+| `math/scalar` | Browser + CLI | `IntScalar`/`FloatScalar`/`Numeric` constraints, `PI`, `TAU`, `HALF_PI`, `E`, `abs*`/`min*`/`max*`/`clamp*`, `floor`/`ceil`/`round`/`trunc`/`fract`, `sin`/`cos`/`tan`/`atan`/`atan2`, `sqrt`, `gcd`, `lcm` |
 | `math/random` | Browser + CLI | Deterministic, seedable Lehmer PRNG (`Rng`, `create`, `nextInt`, `rangeInt`, `nextBool`, `nextFloat`) |
-| `math/vector` | Browser + CLI | 2D/3D/4D vector math (`Vec2`, `Vec3`, `Vec4`, `sinRad`, `cosRad`, `dot`, `cross`, `normalize`, `lerp`, `reflect`) |
+| `math/vector` | Browser + CLI | Generic `Vec<T: Type<Numeric>, N: Int>` (`x`/`y`/`z`/`w`/`r`/`g`/`b`/`a`, `dot`, `lerp`, `normalize`) and `Vec2`, `Vec3`, `Vec4` (`cross`, `rotate`, `reflect`) |
 | `math/matrix` | Browser + CLI | 2×2, 3×3, and 4×4 matrix math (`Mat2`, `Mat3`, `Mat4`, `translate`, `scale`, `rotate`, `mul`, `transpose`, `det`, `perspective`, `lookAt`) |
+| `math/geom` | Browser + CLI | Generic `Box<T, N>`, `Ray<T, N>`, `Segment<T, N>`, `RayHit`, `Rect`, `Circle`, `Sphere`, and intersection helpers (`rayBoxHit`, `raySphereHit`) |
 
 ## Data Structures (`lib/ds/` — 10 modules)
 
@@ -67,6 +68,7 @@ All `lib/{core,math,ds,extra}/*` suites run under dual-target TS and native C11 
 
 ```sh
 ./bin/lite test --unit libraries
+./bin/lite test --unit math-geom
 ./bin/lite test --unit extra-canvas
 ./bin/lite test --unit extra-memory
 ./bin/lite test --unit extra-structures
