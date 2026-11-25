@@ -194,5 +194,52 @@ if ccInfo.available {
     test.checkText("run loop c stdout parity", tsRunLoopExec.stdout, cRunLoopExec.stdout);
 }
 
+/* 5. Rebased `extra/canvas` (`unsetPixel`, `show`, `start`) dual-target parity (TS + C11) */
+rebasedSrc :=
+"io := import \"core/io\";\n" +
+"cv := import \"extra/canvas\";\n" +
+"_c0 := cv.create(width = 8, height = 6, title = \"StaticPixel\");\n" +
+"cv.clear(cv.rgb(10, 20, 30));\n" +
+"cv.setPixel(2, 2, cv.rgb(255, 0, 0));\n" +
+"cv.unsetPixel(2, 2);\n" +
+"cv.show();\n" +
+"_c1 := cv.play(width = 8, height = 6, title = \"AnimPixel\");\n" +
+"var ticks := 0;\n" +
+"cv.start(fn(dt: Float): Int {\n" +
+"    _d := dt;\n" +
+"    cv.clear(cv.rgb(0, 0, 0));\n" +
+"    cv.setPixel(ticks, 1, cv.rgb(0, 255, 0));\n" +
+"    ticks = ticks + 1;\n" +
+"    if ticks < 3 { 0 } else { 1 }\n" +
+"});\n" +
+"io.outputLine(ticks, cv.getOps().length());\n";
+
+rebasedExp := "3 0\n";
+tsRebComp := compilerTest.compileStdin(root, selTs.path, rebasedSrc, "");
+test.checkInt("rebased canvas ts compile: " + tsRebComp.stderr, 0, tsRebComp.status);
+tsRebFile := path.join(tmpDir, "rebased.ts");
+test.check("write rebased.ts", fs.writeText(tsRebFile, tsRebComp.stdout).ok);
+tsRebExec := proc.run(project.nodeExecPath(), [tsRebFile], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+test.checkInt("rebased canvas ts exec: " + tsRebExec.stderr, 0, tsRebExec.status);
+test.checkText("rebased canvas ts stdout", rebasedExp, tsRebExec.stdout);
+
+if ccInfo.available {
+    cRebComp := compilerTest.compileStdin(root, selC.path, rebasedSrc, "");
+    test.checkInt("rebased canvas c compile: " + cRebComp.stderr, 0, cRebComp.status);
+    cRebFile := path.join(tmpDir, "rebased.c");
+    cRebBin := path.join(tmpDir, "rebased");
+    test.check("write rebased.c", fs.writeText(cRebFile, cRebComp.stdout).ok);
+    rebCcArgs: List<String> = if proc.platform() == "darwin" {
+        ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cRebFile, "-o", cRebBin, "-lm", "-framework", "Cocoa", "-framework", "CoreGraphics"]
+    } else {
+        ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cRebFile, "-o", cRebBin, "-lm"]
+    };
+    rebCcRes := proc.run(ccInfo.cc, rebCcArgs, tmpDir, [], true, "");
+    test.checkInt("rebased canvas c cc: " + rebCcRes.stderr, 0, rebCcRes.status);
+    cRebExec := proc.run(cRebBin, [], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+    test.checkInt("rebased canvas c exec: " + cRebExec.stderr, 0, cRebExec.status);
+    test.checkText("rebased canvas c stdout parity", tsRebExec.stdout, cRebExec.stdout);
+}
+
 _rm := fs.remove(tmpDir);
 test.done("extra-canvas");

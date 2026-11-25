@@ -92,10 +92,6 @@ findCanvasAlias := fn(source: String): String {
     findModuleAlias(source, "extra/canvas")
 };
 
-findAudioAlias := fn(source: String): String {
-    findModuleAlias(source, "extra/audio")
-};
-
 hasTopLevelFn := fn(source: String, fnName: String): Bool {
     lines := splitLines(source);
     loop lines as rawLine {
@@ -117,7 +113,7 @@ hasTopLevelFn := fn(source: String, fnName: String): Bool {
     false
 };
 
-buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, scale: Int, fps: Int, uncap: Bool, debugHud: Bool, showBar: Bool, startFullscreen: Bool, capturePath: String): String {
+buildPlayWrapper := fn(source: String, canvasAlias: String, scale: Int, fps: Int, uncap: Bool, debugHud: Bool, showBar: Bool, startFullscreen: Bool, capturePath: String): String {
     hasInit := hasTopLevelFn(source, "onCanvasInit");
     hasUpdate := hasTopLevelFn(source, "onCanvasUpdate");
     hasKeyDown := hasTopLevelFn(source, "onCanvasKeyDown");
@@ -129,23 +125,11 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
 
     header :=
     "__lpSurf := import \"extra/surface\";\n" +
-    "__lpColor := import \"extra/color\";\n" +
     "__lpIo := import \"core/io\";\n" +
     "__lpTime := import \"core/time\";\n";
 
     var footer := "\n/* --- Desktop Play host driver (extra/canvas + extra/audio -> extra/surface) --- */\n";
     footer = footer +
-    "__lpDecodeColor := fn(argb: Int): __lpSurf.Color {\n" +
-    "    a0 := (argb / 16777216) % 256;\n" +
-    "    r0 := (argb / 65536) % 256;\n" +
-    "    g0 := (argb / 256) % 256;\n" +
-    "    b0 := argb % 256;\n" +
-    "    a := if a0 < 0 { a0 + 256 } else { a0 };\n" +
-    "    r := if r0 < 0 { r0 + 256 } else { r0 };\n" +
-    "    g := if g0 < 0 { g0 + 256 } else { g0 };\n" +
-    "    b := if b0 < 0 { b0 + 256 } else { b0 };\n" +
-    "    __lpColor.fromRgba8(r, g, b, a)\n" +
-    "};\n" +
     "__lpFloorInt := fn(v: Float): Int {\n" +
     "    if v <= 0.0 { return 0; }\n" +
     "    var hi := 1;\n" +
@@ -210,60 +194,6 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "    __lpSurf.drawText(win, l1, __lpSurf.point(14.0, 14.0), 8.0, __lpSurf.WHITE);\n" +
     "    __lpSurf.drawText(win, l2, __lpSurf.point(14.0, 30.0), 8.0, __lpSurf.rgb(0.55, 0.88, 0.76));\n" +
     "};\n" +
-    "__lpFlush := fn(win: __lpSurf.Surface, scale: Int, canvasW: Int, canvasH: Int, lastDrawCount: Int, muted: Bool): Int {\n" +
-    "    snap := " + canvasAlias + ".litePlayCanvasSnapshot();\n" +
-    "    scaleF := scale * 1.0;\n" +
-    "    var nextDraw := lastDrawCount;\n" +
-    "    px := " + canvasAlias + ".litePlayCanvasPixels();\n" +
-    "    pxLen := px.length();\n" +
-    "    if pxLen > 0 and pxLen == snap.width * snap.height and snap.drawCount =!= lastDrawCount {\n" +
-    "        nextDraw = snap.drawCount;\n" +
-    "        var py := 0;\n" +
-    "        loop py < snap.height {\n" +
-    "            rowOff := py * snap.width;\n" +
-    "            var pxIdx := 0;\n" +
-    "            loop pxIdx < snap.width {\n" +
-    "                colVal := px[rowOff + pxIdx];\n" +
-    "                var runEnd := pxIdx + 1;\n" +
-    "                loop runEnd < snap.width and px[rowOff + runEnd] == colVal {\n" +
-    "                    runEnd += 1;\n" +
-    "                }\n" +
-    "                __lpSurf.fillRect(win, __lpSurf.rect(pxIdx * scaleF, py * scaleF, (runEnd - pxIdx) * scaleF, scaleF), __lpDecodeColor(colVal));\n" +
-    "                pxIdx = runEnd;\n" +
-    "            }\n" +
-    "            py += 1;\n" +
-    "        }\n" +
-    "    }\n" +
-    "    ops := " + canvasAlias + ".litePlayCanvasTakeOps();\n" +
-    "    n := ops.length();\n" +
-    "    var i := 0;\n" +
-    "    loop i < n {\n" +
-    "        op := ops[i];\n" +
-    "        if op == 1 and i + 1 < n {\n" +
-    "            __lpSurf.fillRect(win, __lpSurf.rect(0.0, 0.0, canvasW * 1.0, canvasH * 1.0), __lpDecodeColor(ops[i + 1]));\n" +
-    "            i += 2;\n" +
-    "        } else if op == 2 and i + 5 < n {\n" +
-    "            __lpSurf.fillRect(win, __lpSurf.rect(ops[i + 1] * scaleF, ops[i + 2] * scaleF, ops[i + 3] * scaleF, ops[i + 4] * scaleF), __lpDecodeColor(ops[i + 5]));\n" +
-    "            i += 6;\n" +
-    "        } else {\n" +
-    "            break;\n" +
-    "        }\n" +
-    "    }\n";
-    if audioAlias =!= "" {
-        footer = footer +
-        "    tones := " + audioAlias + ".litePlayAudioDrain();\n" +
-        "    if not muted {\n" +
-        "        tn := tones.length();\n" +
-        "        var ti := 0;\n" +
-        "        loop ti + 2 < tn {\n" +
-        "            __lpSurf.playTone(win, tones[ti], tones[ti + 1], tones[ti + 2]);\n" +
-        "            ti += 3;\n" +
-        "        }\n" +
-        "    }\n";
-    }
-    footer = footer +
-    "    nextDraw\n" +
-    "};\n" +
     "__lpRunPlay := fn(): Unit {\n" +
     "    snap := " + canvasAlias + ".litePlayCanvasSnapshot();\n" +
     "    if snap.width <= 0 or snap.height <= 0 { return; }\n" +
@@ -285,12 +215,12 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     if hasInit {
         footer = footer + "    onCanvasInit();\n";
     }
-    footer = footer + "    lastDraw = __lpFlush(win, scale, canvasW, canvasH, lastDraw, false);\n";
+    footer = footer + "    lastDraw = " + canvasAlias + ".flushToSurface(win, scale, lastDraw, false);\n";
     if capturePath =!= "" {
         if hasUpdate {
             footer = footer +
             "    _capSt := onCanvasUpdate(0.025);\n" +
-            "    lastDraw = __lpFlush(win, scale, canvasW, canvasH, lastDraw, false);\n";
+            "    lastDraw = " + canvasAlias + ".flushToSurface(win, scale, lastDraw, false);\n";
         }
         if debugHud {
             footer = footer +
@@ -336,9 +266,8 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "    var curWinW := canvasW;\n" +
     "    var curWinH := canvasH + barH;\n" +
     "    var curScale := scale;\n" +
-    "    loop true {\n" +
-    "        inp := __lpSurf.poll(win);\n" +
-    "        if not inp.open or inp.key == \"Escape\" { break; }\n" +
+    "    __lpSurf.run(win, fn(inp: __lpSurf.FrameInput): Bool {\n" +
+    "        if not inp.open or inp.key == \"Escape\" { return false; }\n" +
     "        if inp.width > 0 and inp.height > 0 and (inp.width =!= prevWinW or inp.height =!= prevWinH) {\n" +
     "            prevWinW = inp.width;\n" +
     "            prevWinH = inp.height;\n" +
@@ -426,12 +355,12 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
         "            rawDt := inp.deltaMs / 1000.0;\n" +
         "            dt := if rawDt > 0.05 { 0.05 } else if rawDt <= 0.0 { 0.016 } else { rawDt };\n" +
         "            st := onCanvasUpdate(dt);\n" +
-        "            if st =!= 0 { break; }\n" +
+        "            if st =!= 0 { return false; }\n" +
         "        }\n";
     }
 
     footer = footer +
-    "        lastDraw = __lpFlush(win, curScale, curWinW, curCanvasH, lastDraw, muted);\n" +
+    "        lastDraw = " + canvasAlias + ".flushToSurface(win, curScale, lastDraw, muted);\n" +
     "        nowNs := __lpTime.monotonicNs();\n" +
     "        if nowNs >= nextHudNs {\n" +
     "            nextHudNs = nowNs + 250000000;\n" +
@@ -445,8 +374,8 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, audioAlias: String, 
     "        curBarH := if barH > 0 { barH } else if barVisible { 28 } else { 0 };\n" +
     "        __lpDrawStageBar(win, curWinW, activeBarY, curBarH, barVisible, paused, muted, fpsMode, debugOn, fullOn, hudFps);\n" +
     "        if debugOn { __lpDrawDebugHud(win, hudFps, hudMsT, hudCpuT, hudRssT, hudFrames, fpsMode, paused, muted); }\n" +
-    "        __lpSurf.present(win);\n" +
-    "    }\n" +
+    "        true\n" +
+    "    });\n" +
     "    __lpSurf.close(win);\n" +
     "};\n" +
     "__lpRunPlay();\n";
@@ -585,10 +514,9 @@ run := fn(rawArgs: List<String>): Unit {
             io.exit(1);
         }
         canvasAlias := findCanvasAlias(srcRead.text);
-        audioAlias := findAudioAlias(srcRead.text);
         if canvasAlias =!= "" {
             resolvedCapture := if playCapture == "" { "" } else { path.resolve(proc.cwd(), playCapture) };
-            wrapped := buildPlayWrapper(srcRead.text, canvasAlias, audioAlias, playScale, playFps, playUncap, playDebug, playBar, playFullscreen, resolvedCapture);
+            wrapped := buildPlayWrapper(srcRead.text, canvasAlias, playScale, playFps, playUncap, playDebug, playBar, playFullscreen, resolvedCapture);
             wrappedPath := path.join(tempDir.path, "play-entry.lts");
             wRes := fs.writeText(wrappedPath, wrapped);
             if not wRes.ok {

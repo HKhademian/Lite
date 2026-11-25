@@ -988,6 +988,76 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
 
     await mockSelf.onmessage!({ data: { action: 'stop' } });
 
+    const cvShowRes = await send({
+      id: 14,
+      action: 'run',
+      source: [
+        'cv := import "extra/canvas";',
+        '_c := cv.create(width = 4, height = 4, title = "ShowPixel");',
+        'cv.clear(cv.rgb(10, 20, 30));',
+        'cv.setPixel(1, 0, cv.rgb(255, 0, 0));',
+        'cv.setPixel(2, 0, cv.rgb(0, 255, 0));',
+        'cv.unsetPixel(2, 0);',
+        'cv.show();',
+      ].join('\n'),
+      stdin: '',
+      args: [],
+    }) as unknown as {
+      ok: boolean;
+      play: unknown;
+      canvas: { width: number; height: number; title: string; rgba?: Uint8Array } | null;
+    };
+    assert.equal(cvShowRes.ok, true);
+    assert.equal(cvShowRes.play, null);
+    assert(cvShowRes.canvas !== null && cvShowRes.canvas.rgba instanceof Uint8Array);
+    assert.equal(cvShowRes.canvas.width, 12);
+    assert.equal(cvShowRes.canvas.height, 12);
+    assert.equal(cvShowRes.canvas.title, 'ShowPixel');
+    // Pixel (1, 0) scaled 3x -> x=3, y=0 is red
+    assert.equal(cvShowRes.canvas.rgba[(3) * 4 + 0], 255);
+    assert.equal(cvShowRes.canvas.rgba[(3) * 4 + 1], 0);
+    // Pixel (2, 0) was unset back to bg (10, 20, 30) -> x=6, y=0
+    assert.equal(cvShowRes.canvas.rgba[(6) * 4 + 0], 10);
+    assert.equal(cvShowRes.canvas.rgba[(6) * 4 + 1], 20);
+    assert.equal(cvShowRes.canvas.rgba[(6) * 4 + 2], 30);
+
+    const cvStartRes = await send({
+      id: 15,
+      action: 'run',
+      source: [
+        'cv := import "extra/canvas";',
+        '_c := cv.play(width = 4, height = 4, title = "StartPixel");',
+        'var x := 0;',
+        'cv.start(fn(dt: Float): Int {',
+        '  _d := dt;',
+        '  cv.clear(cv.rgb(0, 0, 0));',
+        '  cv.setPixel(x, 0, cv.rgb(0, 255, 0));',
+        '  x = x + 1;',
+        '  0',
+        '});',
+      ].join('\n'),
+      stdin: '',
+      args: [],
+    }) as unknown as {
+      ok: boolean;
+      play: { width: number; height: number; hasUpdate: boolean; rgba?: Uint8Array } | null;
+    };
+    assert.equal(cvStartRes.ok, true);
+    assert(cvStartRes.play !== null && cvStartRes.play.rgba instanceof Uint8Array);
+    assert.equal(cvStartRes.play.hasUpdate, true);
+    // Pixel (0, 0) -> green
+    assert.equal(cvStartRes.play.rgba[1], 255);
+
+    const cvStepRes = await send({ id: 16, action: 'step', dt: 0.016 }) as unknown as {
+      ok: boolean;
+      frame: { rgba?: Uint8Array };
+    };
+    assert.equal(cvStepRes.ok, true);
+    assert(cvStepRes.frame.rgba instanceof Uint8Array);
+    // Pixel (1, 0) scaled 3x -> x=3 -> green
+    assert.equal(cvStepRes.frame.rgba[3 * 4 + 1], 255);
+    await mockSelf.onmessage!({ data: { action: 'stop' } });
+
     const stdinWaitRes = await send({
       id: 60,
       action: 'play',

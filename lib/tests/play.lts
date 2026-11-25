@@ -29,15 +29,17 @@ canvas.clear(opaqueRed);
 canvas.setPixel(-1, 0, semiBlue);
 canvas.setPixel(8, 0, semiBlue);
 canvas.setPixel(2, 3, semiBlue);
+canvas.unsetPixel(2, 3);
 canvas.fillRect(0, 0, 0, 2, semiBlue);
 canvas.fillRect(1, 1, 2, 2, semiBlue);
 
 ops1 := canvas.takeOps();
-test.checkInt("clear + pixel + rect op length", 2 + 6 + 6, countList(ops1));
+test.checkInt("clear + set/unset pixel + rect op length", 2 + 6 + 6 + 6, countList(ops1));
 test.checkInt("clear opcode", 1, ops1[0]);
 test.checkInt("clear color", opaqueRed, ops1[1]);
 test.checkInt("pixel opcode", 2, ops1[2]);
-test.checkInt("rect width", 2, ops1[11]);
+test.checkInt("unsetPixel restores background color", opaqueRed, ops1[13]);
+test.checkInt("rect width", 2, ops1[17]);
 test.checkInt("ops drained", 0, countList(canvas.getOps()));
 
 playCtx := canvas.play(width = 12, height = 10, title = "Bounce");

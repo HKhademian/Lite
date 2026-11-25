@@ -497,32 +497,34 @@ function attachPlayBridge(js) {
       'const __litePointerDown = __litePick(typeof liteFn_onCanvasPointerDown !== "undefined" ? liteFn_onCanvasPointerDown : undefined, typeof liteFn_canvas_onPointerDown !== "undefined" ? liteFn_canvas_onPointerDown : undefined);',
       'const __litePointerUp = __litePick(typeof liteFn_onCanvasPointerUp !== "undefined" ? liteFn_onCanvasPointerUp : undefined, typeof liteFn_canvas_onPointerUp !== "undefined" ? liteFn_canvas_onPointerUp : undefined);',
       'const __liteNormStatus = (v) => (v === undefined ? 0 : typeof v === "boolean" ? (v ? 0 : 1) : Number(v));',
-      'globalThis.__litePlay = {',
-      '  hasUpdate: Boolean(__liteUpdate),',
-      '  initialStatus: 0,',
-      '  init: __liteInit,',
-      '  update: __liteUpdate ? (dt) => __liteNormStatus(__liteUpdate(dt)) : null,',
-      '  keyDown: __liteKeyDown ? (k) => { __liteKeyDown(String(k)); } : null,',
-      '  keyUp: __liteKeyUp ? (k) => { __liteKeyUp(String(k)); } : null,',
-      '  pointerMove: __litePointerMove ? (x, y) => { __litePointerMove(BigInt(Math.trunc(x)), BigInt(Math.trunc(y))); } : null,',
-      '  pointerDown: __litePointerDown ? (x, y, b) => { __litePointerDown(BigInt(Math.trunc(x)), BigInt(Math.trunc(y)), BigInt(Math.trunc(b ?? 0))); } : null,',
-      '  pointerUp: __litePointerUp ? (x, y, b) => { __litePointerUp(BigInt(Math.trunc(x)), BigInt(Math.trunc(y)), BigInt(Math.trunc(b ?? 0))); } : null,',
-      '  frame() {',
-      '    const snap = ' + snapFn + '();',
-      '    const pixelsChanged = snap.drawCount !== __liteLastDrawCount;',
-      '    __liteLastDrawCount = snap.drawCount;',
-      '    return {',
-      '      width: Number(snap.width),',
-      '      height: Number(snap.height),',
-      '      title: snap.title,',
-      '      playing: Boolean(snap.playing),',
-      '      pixels: pixelsChanged ? ' + pixelsFn + '().map(Number) : null,',
-      '      ops: ' + opsFn + '().map(Number),',
-      '    };',
-      '  },',
-      '};',
-      'if (__liteInit) __liteInit();',
-      'if (globalThis.__litePlay.update && Boolean(' + snapFn + '().playing)) {',
+      'if (!globalThis.__litePlay && !globalThis.__liteSurfaceActive) {',
+      '  globalThis.__litePlay = {',
+      '    hasUpdate: Boolean(__liteUpdate),',
+      '    initialStatus: 0,',
+      '    init: __liteInit,',
+      '    update: __liteUpdate ? (dt) => __liteNormStatus(__liteUpdate(dt)) : null,',
+      '    keyDown: __liteKeyDown ? (k) => { __liteKeyDown(String(k)); } : null,',
+      '    keyUp: __liteKeyUp ? (k) => { __liteKeyUp(String(k)); } : null,',
+      '    pointerMove: __litePointerMove ? (x, y) => { __litePointerMove(BigInt(Math.trunc(x)), BigInt(Math.trunc(y))); } : null,',
+      '    pointerDown: __litePointerDown ? (x, y, b) => { __litePointerDown(BigInt(Math.trunc(x)), BigInt(Math.trunc(y)), BigInt(Math.trunc(b ?? 0))); } : null,',
+      '    pointerUp: __litePointerUp ? (x, y, b) => { __litePointerUp(BigInt(Math.trunc(x)), BigInt(Math.trunc(y)), BigInt(Math.trunc(b ?? 0))); } : null,',
+      '    frame() {',
+      '      const snap = ' + snapFn + '();',
+      '      const pixelsChanged = snap.drawCount !== __liteLastDrawCount;',
+      '      __liteLastDrawCount = snap.drawCount;',
+      '      return {',
+      '        width: Number(snap.width),',
+      '        height: Number(snap.height),',
+      '        title: snap.title,',
+      '        playing: Boolean(snap.playing),',
+      '        pixels: pixelsChanged ? ' + pixelsFn + '().map(Number) : null,',
+      '        ops: ' + opsFn + '().map(Number),',
+      '      };',
+      '    },',
+      '  };',
+      '}',
+      'if (__liteInit && !globalThis.__liteSurfaceActive) __liteInit();',
+      'if (!globalThis.__liteSurfaceActive && globalThis.__litePlay && globalThis.__litePlay.update && Boolean(' + snapFn + '().playing)) {',
       '  globalThis.__litePlay.initialStatus = globalThis.__litePlay.update(0);',
       '}',
     );
@@ -560,6 +562,7 @@ function createWorkerSurfaceHost() {
   };
   const host = {
     open(_id, title, width, height, state) {
+      globalThis.__liteSurfaceActive = true;
       lastSurface = { title, width, height, state };
     },
     poll(_id, state) {
@@ -705,6 +708,7 @@ self.onmessage = async (event) => {
       globalThis.__litePlay = null;
       globalThis.__liteSurfaceHost = null;
       globalThis.__liteSurfaceDrain = null;
+      globalThis.__liteSurfaceActive = false;
       globalThis.__liteAudioDrain = null;
       return;
     }
@@ -857,6 +861,7 @@ self.onmessage = async (event) => {
       globalThis.__litePlay = null;
       globalThis.__liteSurfaceHost = null;
       globalThis.__liteSurfaceDrain = null;
+      globalThis.__liteSurfaceActive = false;
       globalThis.__liteAudioDrain = null;
       self.postMessage({
         id,
@@ -874,6 +879,7 @@ self.onmessage = async (event) => {
       globalThis.__litePlay.stop();
     }
     globalThis.__litePlay = null;
+    globalThis.__liteSurfaceActive = false;
     globalThis.__liteAudioDrain = null;
     const surfaceHost = createWorkerSurfaceHost();
     globalThis.__liteSurfaceHost = surfaceHost.host;
@@ -909,6 +915,7 @@ self.onmessage = async (event) => {
       globalThis.__litePlay = null;
       globalThis.__liteSurfaceHost = null;
       globalThis.__liteSurfaceDrain = null;
+      globalThis.__liteSurfaceActive = false;
       globalThis.__liteAudioDrain = null;
     }
     const combinedStderr = [compileResult.stderr, runResult.stderr].filter(Boolean).join('\\n');

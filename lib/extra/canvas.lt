@@ -1,4 +1,8 @@
-/* Optional Play canvas drawing buffer and RGBA context support. */
+/* Beginner pixel-graphics canvas layered on top of `extra/surface` and `extra/audio`. */
+
+audioLib := import "./audio";
+colorLib := import "./color";
+surfLib := import "./surface";
 
 /** Packed 32-bit ARGB color (`0xAARRGGBB`) stored inside Int. */
 pub Color := type Int;
@@ -18,11 +22,15 @@ COLOR_CHANNEL_MAX := 255;
 /** Fully opaque 8-bit alpha channel value. */
 OPAQUE_ALPHA := 255;
 
+/** Default opaque black ARGB background (`0xFF000000`). */
+DEFAULT_BG := 4278190080;
+
 var canvasWidth := 0;
 var canvasHeight := 0;
 var canvasTitle := "";
 var canvasPlaying := false;
 var canvasDrawCount := 0;
+var canvasBg := DEFAULT_BG;
 var canvasPixels: mut List<Int> = [];
 var canvasOps: mut List<Int> = [];
 
@@ -54,6 +62,7 @@ pub create := fn(width: Int, height: Int, title: String): Context {
     canvasHeight = clampSize(height);
     canvasTitle = title;
     canvasPlaying = false;
+    canvasBg = DEFAULT_BG;
     canvasPixels = [];
     canvasOps = [];
     canvasDrawCount += 1;
@@ -66,6 +75,7 @@ pub play := fn(width: Int, height: Int, title: String): Context {
     canvasHeight = clampSize(height);
     canvasTitle = title;
     canvasPlaying = true;
+    canvasBg = DEFAULT_BG;
     canvasPixels = [];
     canvasOps = [];
     canvasDrawCount += 1;
@@ -89,6 +99,7 @@ pub context := fn(): Context {
 
 /** Clears the active canvas using its latest configured dimensions and `color`. */
 pub clear := fn(color: Color): Unit {
+    canvasBg = color;
     canvasPixels = [];
     canvasOps = [CANVAS_OP_CLEAR, color];
 }
@@ -103,6 +114,11 @@ pub setPixel := fn(x: Int, y: Int, color: Color): Unit {
     mut canvasOps.pushBack(1);
     mut canvasOps.pushBack(1);
     mut canvasOps.pushBack(color);
+}
+
+/** Erases a single pixel at `(x, y)` back to the active canvas background color. */
+pub unsetPixel := fn(x: Int, y: Int): Unit {
+    setPixel(x, y, canvasBg);
 }
 
 /** Fills an axis-aligned rectangle `(x, y, width, height)` using alpha blending. */
@@ -158,3 +174,97 @@ pub litePlayCanvasPixels := fn(): List<Int> { canvasPixels }
 
 /** Host bridge: drains queued draw ops for the browser Play stage. */
 pub litePlayCanvasTakeOps := fn(): List<Int> { takeOps() }
+
+decodeColor := fn(argb: Color): colorLib.Color {
+    a0 := (argb / 16777216) % 256;
+    r0 := (argb / 65536) % 256;
+    g0 := (argb / 256) % 256;
+    b0 := argb % 256;
+    a := if a0 < 0 { a0 + 256 } else { a0 };
+    r := if r0 < 0 { r0 + 256 } else { r0 };
+    g := if g0 < 0 { g0 + 256 } else { g0 };
+    b := if b0 < 0 { b0 + 256 } else { b0 };
+    colorLib.fromRgba8(r, g, b, a)
+}
+
+defaultScale := fn(width: Int): Int {
+    if width <= 240 { 3 } else if width <= 480 { 2 } else { 1 }
+}
+
+/** Renders any queued `extra/canvas` pixel buffer, draw ops, and `extra/audio` tones onto `win`, returning the updated draw count. */
+pub flushToSurface := fn(win: surfLib.Surface, scale: Int, lastDrawCount: Int, muted: Bool): Int {
+    effScale := if scale < 1 { 1 } else { scale };
+    scaleF := effScale * 1.0;
+    var nextDraw := lastDrawCount;
+    pxLen := canvasPixels.length();
+    if pxLen > 0 and pxLen == canvasWidth * canvasHeight and canvasDrawCount =!= lastDrawCount {
+        nextDraw = canvasDrawCount;
+        var py := 0;
+        loop py < canvasHeight {
+            rowOff := py * canvasWidth;
+            var pxIdx := 0;
+            loop pxIdx < canvasWidth {
+                colVal := canvasPixels[rowOff + pxIdx];
+                var runEnd := pxIdx + 1;
+                loop runEnd < canvasWidth and canvasPixels[rowOff + runEnd] == colVal {
+                    runEnd += 1;
+                }
+                surfLib.fillRect(win, surfLib.rect(pxIdx * scaleF, py * scaleF, (runEnd - pxIdx) * scaleF, scaleF), decodeColor(colVal));
+                pxIdx = runEnd;
+            }
+            py += 1;
+        }
+    }
+    ops := takeOps();
+    n := ops.length();
+    var i := 0;
+    loop i < n {
+        op := ops[i];
+        if op == CANVAS_OP_CLEAR and i + 1 < n {
+            surfLib.fillRect(win, surfLib.rect(0.0, 0.0, canvasWidth * scaleF, canvasHeight * scaleF), decodeColor(ops[i + 1]));
+            i += 2;
+        } else if op == CANVAS_OP_FILL_RECT and i + 5 < n {
+            surfLib.fillRect(win, surfLib.rect(ops[i + 1] * scaleF, ops[i + 2] * scaleF, ops[i + 3] * scaleF, ops[i + 4] * scaleF), decodeColor(ops[i + 5]));
+            i += 6;
+        } else {
+            break;
+        }
+    }
+    tones := audioLib.drain();
+    if not muted {
+        tn := tones.length();
+        var ti := 0;
+        loop ti + 2 < tn {
+            surfLib.playTone(win, tones[ti], tones[ti + 1], tones[ti + 2]);
+            ti += 3;
+        }
+    }
+    nextDraw
+}
+
+/** Presents a static `extra/canvas` composition through `extra/surface`. */
+pub show := fn(): Unit {
+    if canvasWidth <= 0 or canvasHeight <= 0 { return; }
+    scale := defaultScale(canvasWidth);
+    win := surfLib.open(canvasTitle, canvasWidth * scale, canvasHeight * scale);
+    _d := flushToSurface(win, scale, -1, false);
+    surfLib.present(win);
+    surfLib.close(win);
+}
+
+/** Runs an animated `extra/canvas` update callback through `extra/surface` until closed or `onUpdate` returns non-zero. */
+pub start := fn(onUpdate: fn(Float): Int): Unit {
+    if canvasWidth <= 0 or canvasHeight <= 0 { return; }
+    scale := defaultScale(canvasWidth);
+    win := surfLib.open(canvasTitle, canvasWidth * scale, canvasHeight * scale);
+    var lastDraw := flushToSurface(win, scale, -1, false);
+    surfLib.run(win, fn(inp: surfLib.FrameInput): Bool {
+        if not inp.open or inp.key == "Escape" { return false; }
+        rawDt := inp.deltaMs / 1000.0;
+        dt := if rawDt > 0.05 { 0.05 } else if rawDt <= 0.0 { 0.016 } else { rawDt };
+        st := onUpdate(dt);
+        lastDraw = flushToSurface(win, scale, lastDraw, false);
+        st == 0
+    });
+    surfLib.close(win);
+}
