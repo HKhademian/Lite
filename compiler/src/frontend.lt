@@ -280,12 +280,18 @@ pub isMapKind := fn(kind: String): Bool { types.isMapKind(kind) };
 pub isSetKind := fn(kind: String): Bool { types.isSetKind(kind) };
 /** True when `kind` is a nominal `enum` type kind. */
 pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
+/** True when `kind` is a payload-bearing nominal `enum` type kind. */
+pub isPayloadEnumKind := fn(kind: String): Bool { types.isPayloadEnumKind(kind) };
 /** Returns the user-facing display name for an enum `kind`. */
 pub enumDisplayName := fn(kind: String): String { types.enumDisplayName(kind) };
 /** Returns the number of declared cases in an enum `kind`. */
 pub enumCaseCount := fn(kind: String): Int { types.enumCaseCount(kind) };
 /** Returns the case name at `index` in an enum `kind`. */
 pub enumCaseNameAt := fn(kind: String, index: Int): String { types.enumCaseAt(kind, index).name };
+/** Returns the number of payload fields attached to `caseIndex` of enum `kind`. */
+pub enumCasePayloadCount := fn(kind: String, caseIndex: Int): Int { types.enumCasePayloadCount(kind, caseIndex) };
+/** Returns canonical payload type kind at `(caseIndex, payloadIndex)` of payload enum `kind`. */
+pub enumCasePayloadKind := fn(kind: String, caseIndex: Int, payloadIndex: Int): String { types.enumCasePayloadKind(kind, caseIndex, payloadIndex) };
 /** Returns the C11 list typedef tag for element kind `elemKind`. */
 pub cListTag := fn(elemKind: String): String { types.cListTag(elemKind) };
 /** Returns the C11 element type name for list typedef `tag`. */

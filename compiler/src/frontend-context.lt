@@ -125,6 +125,7 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
         }
         baseKind := types.distinctBaseKind(left.kind);
         if baseKind == ir.VALUE_KIND_NEVER { syntax.failAt(source, at, prefix, "cannot compare Never values"); }
+        if types.isPayloadEnumKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare payload-bearing enum values; use match"); }
         if types.isTupleKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare tuple values"); }
         if types.isRecordKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare record values"); }
         if types.isListKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare list values"); }
@@ -152,6 +153,9 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
     }
     if left.kind == ir.VALUE_KIND_NEVER {
         syntax.failAt(source, at, prefix, "cannot compare Never values");
+    }
+    if types.isPayloadEnumKind(left.kind) {
+        syntax.failAt(source, at, prefix, "cannot compare payload-bearing enum values; use match");
     }
     if types.isTupleKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare tuple values");
@@ -242,7 +246,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             code
         }
     }
-    else if target == ir.TARGET_C and (types.isTupleKind(kind) or types.isRecordKind(kind)) and types.cTypeHasListField(kind) {
+    else if target == ir.TARGET_C and (types.isTupleKind(kind) or types.isRecordKind(kind) or types.isPayloadEnumKind(kind)) and types.cTypeHasListField(kind) {
         tag := types.cStructTag(kind);
         if tag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, tag + "_copy(") {
             tag + "_copy(" + code + ")"
@@ -628,6 +632,31 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         }
         eTs := types.tsFunctionType(types.setElementKind(kind));
         (kind = kind, code = "new Set<" + eTs + ">()", intValue = 0, textValue = "", constant = false, next = next)
+    }
+    else if types.isPayloadEnumKind(kind) {
+        ps := types.enumCasePayloads(kind, 0);
+        if target == ir.TARGET_C {
+            tag := types.cStructTag(kind);
+            if ps.length() == 0 {
+                return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ .tag = 0, .u = { ._empty = 0 } })", intValue = 0, textValue = "", constant = false, next = next);
+            }
+            var fInit := "";
+            var pi := 0;
+            loop pi < ps.length() {
+                if pi > 0 { fInit = fInit + ", "; }
+                fInit = fInit + ".f" + pi.toText() + " = " + self(target, ps[pi], next).code;
+                pi = pi + 1;
+            }
+            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ .tag = 0, .u = { .c0 = { " + fInit + " } } })", intValue = 0, textValue = "", constant = false, next = next);
+        }
+        tsT := types.tsFunctionType(kind);
+        var tsInit := "_t: 0 as const";
+        var pi := 0;
+        loop pi < ps.length() {
+            tsInit = tsInit + ", _" + pi.toText() + ": " + self(target, ps[pi], next).code;
+            pi = pi + 1;
+        }
+        (kind = kind, code = "({ " + tsInit + " } as " + tsT + ")", intValue = 0, textValue = "", constant = false, next = next)
     }
     else if types.isEnumKind(kind) {
         (kind = kind, code = "0", intValue = 0, textValue = "", constant = true, next = next)

@@ -556,11 +556,11 @@ pub isRecordOrDistinctRecord := fn(kind: String): Bool {
     isRecordKind(distinctBaseKind(kind))
 };
 
-/** True when `kind` is a value-comparable scalar or nominal enum kind admissible as a `Map<K, V>` key. */
+/** True when `kind` is a value-comparable scalar or payload-free nominal enum kind admissible as a `Map<K, V>` key. */
 pub isMapKeyKind := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
     numeric.isIntKind(kind) or numeric.isFloatKind(kind) or kind == ir.VALUE_KIND_STRING or
-    kind == ir.VALUE_KIND_BOOL or isEnumKind(kind)
+    kind == ir.VALUE_KIND_BOOL or (isEnumKind(kind) and not isPayloadEnumKind(kind))
 };
 
 /** True when `kind` is canonical `Set<T>`. */
@@ -904,10 +904,15 @@ pub isGenericCoreOwner := fn(typeName: String): Bool {
     typeName == "List" or typeName == "Map" or typeName == "Set" or typeName == "Array"
 };
 
-/** Returns the backing scalar kind of canonical enum kind `kind`, or `""` for a plain enum. */
+/** Returns the backing scalar kind of canonical enum kind `kind`, or `""` for a plain or payload enum. */
 pub enumBackingKind := fn(kind: String): String {
     info := enumHeaderInfo(kind);
-    if not info.ok { "" } else { info.backing }
+    if not info.ok or info.backing == "$payload" { "" } else { info.backing }
+};
+
+/** True when `kind` is a canonical payload-bearing enum `Enum<lp(hdr)lp("$payload")count;...>`. */
+pub isPayloadEnumKind := fn(kind: String): Bool {
+    isEnumKind(kind) and enumHeaderInfo(kind).backing == "$payload"
 };
 
 /** Returns the number of cases in canonical enum kind `kind`. */
@@ -952,6 +957,83 @@ pub enumCaseAt := fn(kind: String, targetIndex: Int): (name: String, valueCode: 
         idx = idx + 1;
     }
     (name = "", valueCode = "")
+};
+
+/** Returns canonical payload type kinds for case `index` of payload enum `kind`, or `[]`. */
+pub enumCasePayloads := fn(kind: String, index: Int): List<String> {
+    if not isPayloadEnumKind(kind) {
+        empty: List<String> = [];
+        return empty;
+    }
+    csv := enumCaseAt(kind, index).valueCode;
+    if csv == "" {
+        empty: List<String> = [];
+        return empty;
+    }
+    splitTopLevelKinds(csv)
+};
+
+/** Returns the number of payload fields attached to case `index` of enum `kind` (0 for plain/payload-free cases). */
+pub enumCasePayloadCount := fn(kind: String, index: Int): Int {
+    enumCasePayloads(kind, index).length()
+};
+
+/** Returns canonical payload kind at `(caseIndex, payloadIndex)` of payload enum `kind`, or `""`. */
+pub enumCasePayloadKind := fn(kind: String, caseIndex: Int, payloadIndex: Int): String {
+    ps := enumCasePayloads(kind, caseIndex);
+    if payloadIndex < 0 or payloadIndex >= ps.length() { return ""; }
+    ps[payloadIndex]
+};
+
+/** Pre-validates raw `@enumraw:` case pairs before resolution, reporting payload-enum presence and mixed backing/value errors. */
+enumRawPreCheck := fn(rawSource: String, explicitBacking: String, casesStart: Int, caseCount: Int): (ok: Bool, hasPayload: Bool, error: String) {
+    if caseCount <= 0 {
+        return (ok = false, hasPayload = false, error = "enum must declare at least one case");
+    }
+    names: mut List<String> = [];
+    var cur := casesStart;
+    var hasPayload := false;
+    var hasNonPayVal := false;
+    var idx := 0;
+    loop idx < caseCount {
+        nDec := decodeLengthPrefixedAt(rawSource, cur);
+        if nDec.next < 0 { return (ok = false, hasPayload = hasPayload, error = "malformed enum case name"); }
+        vDec := decodeLengthPrefixedAt(rawSource, nDec.next);
+        if vDec.next < 0 { return (ok = false, hasPayload = hasPayload, error = "malformed enum case value"); }
+        if listLib.listContainsText(names, nDec.text) {
+            return (ok = false, hasPayload = hasPayload, error = "duplicate enum case " + nDec.text);
+        }
+        (mut names).pushBack(nDec.text);
+        if vDec.text.startsWithAt(0, "@pay:") or vDec.text.startsWithAt(0, "@paymix:") {
+            hasPayload = true;
+            if vDec.text.startsWithAt(0, "@paymix:") { hasNonPayVal = true; }
+        } else if vDec.text =!= "" {
+            hasNonPayVal = true;
+        }
+        cur = vDec.next;
+        idx = idx + 1;
+    }
+    if hasPayload and (explicitBacking =!= "" or hasNonPayVal) {
+        return (ok = false, hasPayload = true, error = "payload-bearing enum cannot declare a backing type or assigned case values");
+    }
+    (ok = true, hasPayload = hasPayload, error = "")
+};
+
+/** Splits comma-separated raw payload type texts into `items`, allowing one trailing comma and rejecting empty payloads. */
+splitPayloadTypeTexts := fn(rawPay: String, prefix: String, items: mut List<String>): Bool {
+    segs := splitTopLevelCommaRaw(rawPay, prefix);
+    var i := 0;
+    loop i < segs.length() {
+        seg := segs[i];
+        tStart := syntax.skipTrivia(seg, 0, prefix);
+        if tStart >= seg.length() {
+            if i == segs.length() - 1 and items.length() > 0 { break; }
+            return false;
+        }
+        mut items.pushBack(seg);
+        i = i + 1;
+    }
+    items.length() > 0
 };
 
 /** Escapes angle/paren/bracket characters inside a JS/TS string literal so `Enum<...>` never contains unbalanced delimiters. */
@@ -1141,7 +1223,7 @@ tsTypeCache: mut Map<String, String>;
 /** True when `kind` is a C11-supported value kind (scalar, enum, struct, map, set, or list/array of supported elements). */
 cIsSupportedElem := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if numeric.isIntKind(kind) or isEnumKind(kind) or numeric.isFloatKind(kind) or
+    if numeric.isIntKind(kind) or (isEnumKind(kind) and not isPayloadEnumKind(kind)) or numeric.isFloatKind(kind) or
     kind == ir.VALUE_KIND_BOOL or kind == ir.VALUE_KIND_STRING { return true; }
     cached := cSupportedCache.get(kind);
     if cached.found { return cached.value; }
@@ -1165,6 +1247,16 @@ cIsSupportedElem := fn(kind: String): Bool {
         loop i < count {
             if not self(recordComponent(kind, i).kind) { ok = false; break; }
             i = i + 1;
+        }
+    } else if isPayloadEnumKind(kind) {
+        count := enumCaseCount(kind);
+        ok = true;
+        var ci := 0;
+        loop ci < count and ok {
+            loop enumCasePayloads(kind, ci) as pk {
+                if not self(pk) { ok = false; break; }
+            }
+            ci = ci + 1;
         }
     } else if isFnKind(kind) {
         pCount := fnParamCount(kind);
@@ -1206,10 +1298,10 @@ pub cFnTag := fn(kind: String): String {
     tag
 };
 
-/** Maps a C-supported tuple or nominal record kind to its deterministic C11 typedef name `lt_s_...`, or `""` if unsupported. */
+/** Maps a C-supported tuple, nominal record, or payload enum kind to its deterministic C11 typedef name `lt_s_...`, or `""` if unsupported. */
 pub cStructTag := fn(kind: String): String {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if not isTupleKind(kind) and not isRecordKind(kind) { return ""; }
+    if not isTupleKind(kind) and not isRecordKind(kind) and not isPayloadEnumKind(kind) { return ""; }
     cached := cStructTagCache.get(kind);
     if cached.found { return cached.value; }
     tag := if cIsSupportedElem(kind) { "lt_s_" + cStructHash(kind) } else { "" };
@@ -1217,11 +1309,11 @@ pub cStructTag := fn(kind: String): String {
     tag
 };
 
-/** True when `kind` is a list/array/map/set or a tuple/record transitively containing one. */
+/** True when `kind` is a list/array/map/set or a tuple/record/payload-enum transitively containing one. */
 pub cTypeHasListField := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
     if isListKind(kind) or isArrayKind(kind) or isMapKind(kind) or isSetKind(kind) { return true; }
-    if not isTupleKind(kind) and not isRecordKind(kind) { return false; }
+    if not isTupleKind(kind) and not isRecordKind(kind) and not isPayloadEnumKind(kind) { return false; }
     cached := cHasListCache.get(kind);
     if cached.found { return cached.value; }
     var res := false;
@@ -1232,26 +1324,35 @@ pub cTypeHasListField := fn(kind: String): Bool {
             if self(tupleComponent(kind, i).kind) { res = true; break; }
             i = i + 1;
         }
-    } else {
+    } else if isRecordKind(kind) {
         count := recordComponentCount(kind);
         var i := 0;
         loop i < count {
             if self(recordComponent(kind, i).kind) { res = true; break; }
             i = i + 1;
         }
+    } else {
+        count := enumCaseCount(kind);
+        var ci := 0;
+        loop ci < count and not res {
+            loop enumCasePayloads(kind, ci) as pk {
+                if self(pk) { res = true; break; }
+            }
+            ci = ci + 1;
+        }
     }
     (mut cHasListCache).set(kind, res);
     res
 };
 
-/** Maps a C-supported list element kind (scalar, enum, tuple, or record) to its canonical C11 list tag, or `""` if unsupported. */
+/** Maps a C-supported list element kind (scalar, enum, tuple, record, or payload enum) to its canonical C11 list tag, or `""` if unsupported. */
 pub cListTag := fn(elemKind: String): String {
     if isDistinctKind(elemKind) { return self(distinctBaseKind(elemKind)); }
-    if numeric.isIntKind(elemKind) or isEnumKind(elemKind) { "i64" }
+    if numeric.isIntKind(elemKind) or (isEnumKind(elemKind) and not isPayloadEnumKind(elemKind)) { "i64" }
     else if numeric.isFloatKind(elemKind) { "f64" }
     else if elemKind == ir.VALUE_KIND_BOOL { "bool" }
     else if elemKind == ir.VALUE_KIND_STRING { "str" }
-    else if isTupleKind(elemKind) or isRecordKind(elemKind) { cStructTag(elemKind) }
+    else if isTupleKind(elemKind) or isRecordKind(elemKind) or isPayloadEnumKind(elemKind) { cStructTag(elemKind) }
     else if isFnKind(elemKind) { cFnTag(elemKind) }
     else { "" }
 };
@@ -1268,7 +1369,7 @@ pub cListElemType := fn(tag: String): String {
 /** Maps a C-supported map/set key kind to its C11 tag (`i64`, `f64`, `bool`, `str`), or `""`. */
 pub cMapKeyTag := fn(kKind: String): String {
     if isDistinctKind(kKind) { return self(distinctBaseKind(kKind)); }
-    if numeric.isIntKind(kKind) or isEnumKind(kKind) { "i64" }
+    if numeric.isIntKind(kKind) or (isEnumKind(kKind) and not isPayloadEnumKind(kKind)) { "i64" }
     else if numeric.isFloatKind(kKind) { "f64" }
     else if kKind == ir.VALUE_KIND_BOOL { "bool" }
     else if kKind == ir.VALUE_KIND_STRING { "str" }
@@ -1302,7 +1403,7 @@ pub cSetTag := fn(kind: String): String {
 /** Maps any C11-supported Lite value kind to its C11 type name. */
 pub cValueType := fn(kind: String): String {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if kind == ir.VALUE_KIND_INT or numeric.isIntKind(kind) or isEnumKind(kind) { return "int64_t"; }
+    if kind == ir.VALUE_KIND_INT or numeric.isIntKind(kind) or (isEnumKind(kind) and not isPayloadEnumKind(kind)) { return "int64_t"; }
     if kind == ir.VALUE_KIND_STRING { return "lt_str"; }
     if kind == ir.VALUE_KIND_BOOL { return "bool"; }
     if kind == ir.VALUE_KIND_UNIT or kind == ir.VALUE_KIND_NEVER { return "void"; }
@@ -1503,6 +1604,15 @@ pub containsFnKind := fn(kind: String): Bool {
         loop idx < count {
             if self(recordComponent(kind, idx).kind) { res = true; break; }
             idx = idx + 1;
+        }
+    } else if isPayloadEnumKind(kind) {
+        count := enumCaseCount(kind);
+        var ci := 0;
+        loop ci < count and not res {
+            loop enumCasePayloads(kind, ci) as pk {
+                if self(pk) { res = true; break; }
+            }
+            ci = ci + 1;
         }
     }
     (mut containsFnCache).set(kind, res);
@@ -1741,6 +1851,15 @@ pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
         }
     } else if isDistinctKind(kind) {
         return self(genericParams, distinctUnderlyingKind(kind));
+    } else if isPayloadEnumKind(kind) {
+        cc := enumCaseCount(kind);
+        var ci := 0;
+        loop ci < cc {
+            loop enumCasePayloads(kind, ci) as pk {
+                if self(genericParams, pk) { return true; }
+            }
+            ci = ci + 1;
+        }
     } else if isEnumKind(kind) {
         bk := enumBackingKind(kind);
         if bk =!= "" and self(genericParams, bk) { return true; }
@@ -1846,6 +1965,21 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
             mut newArgs.pushBack(self(genericParams, oa, bindings));
         }
         newHdr := if newArgs.length() > 0 { baseHdr + "<" + textLib.joinTexts(newArgs, ",") + ">" } else { baseHdr };
+        if bk.text == "$payload" {
+            info := enumHeaderInfo(pattern);
+            var encodedPairs := "";
+            var ci := 0;
+            loop ci < info.count {
+                cName := enumCaseAt(pattern, ci).name;
+                newPayloads: mut List<String> = [];
+                loop enumCasePayloads(pattern, ci) as pk {
+                    mut newPayloads.pushBack(self(genericParams, pk, bindings));
+                }
+                encodedPairs = encodedPairs + encodeLengthPrefixedText(cName) + encodeLengthPrefixedText(textLib.joinTexts(newPayloads, ","));
+                ci = ci + 1;
+            }
+            return "Enum<" + encodeLengthPrefixedText(newHdr) + encodeLengthPrefixedText("$payload") + info.count.toText() + ";" + encodedPairs + ">";
+        }
         newBk := if bk.text == "" { "" } else { self(genericParams, bk.text, bindings) };
         tail := pattern.slice(bk.next, pattern.length() - 1);
         return "Enum<" + encodeLengthPrefixedText(newHdr) + encodeLengthPrefixedText(newBk) + tail + ">";
@@ -1941,6 +2075,21 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
             return "unsupported distinct underlying type " + displayKind(uk);
         }
         return self(uk, allowGenericParams);
+    }
+    if isPayloadEnumKind(kind) {
+        cc := enumCaseCount(kind);
+        var ci := 0;
+        loop ci < cc {
+            loop enumCasePayloads(kind, ci) as pk {
+                if pk == ir.VALUE_KIND_UNIT or pk == ir.VALUE_KIND_NEVER {
+                    return "unsupported enum payload type " + displayKind(pk);
+                }
+                err := self(pk, allowGenericParams);
+                if err =!= "" { return err; }
+            }
+            ci = ci + 1;
+        }
+        return "";
     }
     ""
 };
@@ -2102,11 +2251,27 @@ pub tsFunctionType := fn(kind: String): String {
     if kind == ir.VALUE_KIND_BOOL { return "boolean"; }
     if kind == ir.VALUE_KIND_UNIT { return "void"; }
     if kind == ir.VALUE_KIND_NEVER { return "never"; }
-    if numeric.isFloatKind(kind) or isEnumKind(kind) { return "number"; }
+    if numeric.isFloatKind(kind) or (isEnumKind(kind) and not isPayloadEnumKind(kind)) { return "number"; }
     cached := tsTypeCache.get(kind);
     if cached.found { return cached.value; }
     var out := "";
-    if isListKind(kind) { out = self(listElementKind(kind)) + "[]"; }
+    if isPayloadEnumKind(kind) {
+        cc := enumCaseCount(kind);
+        variants: mut List<String> = [];
+        var ci := 0;
+        loop ci < cc {
+            ps := enumCasePayloads(kind, ci);
+            var vFields := "readonly _t: " + ci.toText();
+            var pi := 0;
+            loop pi < ps.length() {
+                vFields = vFields + "; readonly _" + pi.toText() + ": " + self(ps[pi]);
+                pi = pi + 1;
+            }
+            mut variants.pushBack("{ " + vFields + " }");
+            ci = ci + 1;
+        }
+        out = "(" + textLib.joinTexts(variants, " | ") + ")";
+    } else if isListKind(kind) { out = self(listElementKind(kind)) + "[]"; }
     else if isMapKind(kind) { out = "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">"; }
     else if isSetKind(kind) { out = "Set<" + self(setElementKind(kind)) + ">"; }
     else if isArrayKind(kind) { out = self(arrayElementKind(kind)) + "[]"; }
@@ -2181,6 +2346,31 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
         elemKind := setElementKind(kind);
         return "(\"{\" + Array.from((" + code + ").values()).map((v: " + tsFunctionType(elemKind) + ") => " +
         self(elemKind, "v") + ").join(\", \") + \"}\")";
+    }
+    if isPayloadEnumKind(kind) {
+        enumName := enumDisplayName(kind);
+        count := enumCaseCount(kind);
+        var casesCode := "";
+        var idx := 0;
+        loop idx < count {
+            cName := enumCaseAt(kind, idx).name;
+            ps := enumCasePayloads(kind, idx);
+            if ps.length() == 0 {
+                casesCode = casesCode + "case " + idx.toText() + ": return " + tsLiteral.textLiteralCode(enumName + "." + cName) + "; ";
+            } else {
+                var dispExpr := tsLiteral.textLiteralCode(enumName + "." + cName + "(");
+                var pi := 0;
+                loop pi < ps.length() {
+                    if pi > 0 { dispExpr = dispExpr + " + \", \""; }
+                    dispExpr = dispExpr + " + " + self(ps[pi], "value._" + pi.toText());
+                    pi = pi + 1;
+                }
+                dispExpr = dispExpr + " + \")\"";
+                casesCode = casesCode + "case " + idx.toText() + ": return " + dispExpr + "; ";
+            }
+            idx = idx + 1;
+        }
+        return "((value: " + tsFunctionType(kind) + "): string => { switch (value._t) { " + casesCode + "default: return \"\"; } })(" + code + ")";
     }
     if isEnumKind(kind) {
         enumName := enumDisplayName(kind);
@@ -2498,6 +2688,9 @@ resolveDiscreteType := fn(aliases: List<AliasDecl>, rawTypeName: String, prefix:
             return (ok = true, kind = cur, error = "");
         }
         if isEnumKind(cur) {
+            if isPayloadEnumKind(cur) {
+                return (ok = false, kind = "", error = "unsupported comptime parameter type " + enumDisplayName(cur) + "; payload-bearing enums cannot be comptime value parameters");
+            }
             return (ok = true, kind = cur, error = "");
         }
         if cur.startsWithAt(0, "@enumraw:") {
@@ -2511,6 +2704,10 @@ resolveDiscreteType := fn(aliases: List<AliasDecl>, rawTypeName: String, prefix:
             loop countEnd < cur.length() and cur.at(countEnd).isDigit() { countEnd = countEnd + 1; }
             caseCount := if countEnd > curPos { syntax.parseDigits(cur, curPos, countEnd) } else { 0 };
             curPos = if countEnd < cur.length() and cur.at(countEnd) == ";" { countEnd + 1 } else { countEnd };
+            preChk := enumRawPreCheck(cur, bkRaw.text, curPos, caseCount);
+            if preChk.hasPayload {
+                return (ok = false, kind = "", error = "unsupported comptime parameter type " + headerDisplayName(hdr.text) + "; payload-bearing enums cannot be comptime value parameters");
+            }
             var resolvedBacking := "";
             if bkRaw.text =!= "" {
                 resolvedBacking = resolveScalarAliasKind(activeAliases, bkRaw.text, prefix);
@@ -2727,6 +2924,43 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             resolvedBacking = bkParsed.kind;
         }
         effHdr := if genericType =!= "" { hdr.text + "<" + textLib.joinTexts(splitCommaNames(genericType), ",") + ">" } else { hdr.text };
+        preChk := enumRawPreCheck(source, resolvedBacking, cur, caseCount);
+        if not preChk.ok {
+            syntax.failAt(errSource, errPos, prefix, preChk.error);
+        }
+        if preChk.hasPayload {
+            var encodedPairs := "";
+            var pCur := cur;
+            var ci := 0;
+            loop ci < caseCount {
+                nDec := decodeLengthPrefixedAt(source, pCur);
+                vDec := decodeLengthPrefixedAt(source, nDec.next);
+                pCur = vDec.next;
+                var payCsv := "";
+                if vDec.text.startsWithAt(0, "@pay:") {
+                    rawPay := vDec.text.slice(5, vDec.text.length());
+                    payItems: mut List<String> = [];
+                    if not splitPayloadTypeTexts(rawPay, prefix, mut payItems) {
+                        syntax.failAt(errSource, errPos, prefix, "enum case " + nDec.text + " payload requires at least one type");
+                    }
+                    pKinds: mut List<String> = [];
+                    loop payItems as rp {
+                        pRes := self(errSource, errPos, false, rp, 0, prefix, aliases, "enum payload", genericType, seen);
+                        if syntax.skipTrivia(rp, pRes.next, prefix) < rp.length() {
+                            syntax.failAt(errSource, errPos, prefix, "unexpected text in enum case " + nDec.text + " payload");
+                        }
+                        if pRes.kind == ir.VALUE_KIND_UNIT or pRes.kind == ir.VALUE_KIND_NEVER {
+                            syntax.failAt(errSource, errPos, prefix, "unsupported enum payload type " + displayKind(pRes.kind));
+                        }
+                        mut pKinds.pushBack(pRes.kind);
+                    }
+                    payCsv = textLib.joinTexts(pKinds, ",");
+                }
+                encodedPairs = encodedPairs + encodeLengthPrefixedText(nDec.text) + encodeLengthPrefixedText(payCsv);
+                ci = ci + 1;
+            }
+            return (kind = "Enum<" + encodeLengthPrefixedText(effHdr) + encodeLengthPrefixedText("$payload") + caseCount.toText() + ";" + encodedPairs + ">", next = pCur);
+        }
         built := buildCanonicalEnumKind(effHdr, resolvedBacking, source, cur, caseCount, prefix);
         if not built.ok {
             syntax.failAt(errSource, errPos, prefix, built.error);
@@ -3089,10 +3323,6 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     }
     numericKind := numeric.numericAliasKind(name);
     if numericKind =!= "" { return (kind = numericKind, next = after); }
-    if not useLocalErr and isUnsupportedAliasTarget(name) {
-        unsupportedAliasTarget(errSource, errPos, prefix, name);
-        return (kind = "", next = after);
-    }
     index := findAlias(aliases, name);
     if index >= 0 {
         aliasItem := aliases[index];
@@ -3297,6 +3527,10 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, nameStart, prefix, "type set union " + displayKind(resolvedAliasKind) + " can only be used inside Type<...> constraints");
         }
         return (kind = resolvedAliasKind, next = after);
+    }
+    if not useLocalErr and isUnsupportedAliasTarget(name) {
+        unsupportedAliasTarget(errSource, errPos, prefix, name);
+        return (kind = "", next = after);
     }
     if name.indexOf(".", 0) >= 0 or not useLocalErr {
         syntax.failAt(errSource, nameStart, prefix, "unknown type alias " + name);
@@ -3936,7 +4170,34 @@ pub collectEnumTarget := fn(source: String, afterEnumKw: Int, prefix: String, mo
         }
         afterName := syntax.skipTrivia(source, cEnd, prefix);
         var rawVal := "";
-        if syntax.isSingleEquals(source, afterName) {
+        if afterName < bodyLimit and source.at(afterName) == "(" {
+            parenEnd := syntax.scanParenEnd(source, afterName, prefix);
+            if parenEnd < 0 or parenEnd > bodyLimit {
+                return (text = "", next = closeEnd);
+            }
+            payloadInner := source.slice(afterName + 1, parenEnd - 1);
+            afterParen := syntax.skipTrivia(source, parenEnd, prefix);
+            if syntax.isSingleEquals(source, afterParen) {
+                var vCur := syntax.skipTrivia(source, afterParen + 1, prefix);
+                loop vCur < bodyLimit {
+                    vCh := source.at(vCur);
+                    if vCh == ";" or vCh == "," or vCh == "\n" or vCh == "\r" { break; }
+                    if vCh == "\"" {
+                        sEnd := syntax.skipAliasString(source, vCur);
+                        if sEnd <= vCur { break; }
+                        vCur = sEnd;
+                        continue;
+                    }
+                    if vCh == "/" and vCur + 1 < bodyLimit and source.at(vCur + 1) == "*" { break; }
+                    vCur = vCur + 1;
+                }
+                rawVal = "@paymix:" + payloadInner;
+                cursor = vCur;
+            } else {
+                rawVal = "@pay:" + payloadInner;
+                cursor = afterParen;
+            }
+        } else if syntax.isSingleEquals(source, afterName) {
             valStart := syntax.skipTrivia(source, afterName + 1, prefix);
             var vCur := valStart;
             loop vCur < bodyLimit {
@@ -4177,6 +4438,37 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             resolvedBacking = bkParsed.kind;
         }
         effHdr := if genericType =!= "" { hdr.text + "<" + textLib.joinTexts(splitCommaNames(genericType), ",") + ">" } else { hdr.text };
+        preChk := enumRawPreCheck(source, resolvedBacking, cur, caseCount);
+        if not preChk.ok { return (ok = false, kind = "", next = start); }
+        if preChk.hasPayload {
+            var encodedPairs := "";
+            var pCur := cur;
+            var ci := 0;
+            loop ci < caseCount {
+                nDec := decodeLengthPrefixedAt(source, pCur);
+                vDec := decodeLengthPrefixedAt(source, nDec.next);
+                pCur = vDec.next;
+                var payCsv := "";
+                if vDec.text.startsWithAt(0, "@pay:") {
+                    rawPay := vDec.text.slice(5, vDec.text.length());
+                    payItems: mut List<String> = [];
+                    if not splitPayloadTypeTexts(rawPay, prefix, mut payItems) { return (ok = false, kind = "", next = start); }
+                    pKinds: mut List<String> = [];
+                    loop payItems as rp {
+                        pRes := self(rp, 0, prefix, aliases, genericType, seen, depthLeft - 1, false);
+                        if not pRes.ok or pRes.kind == ir.VALUE_KIND_UNIT or pRes.kind == ir.VALUE_KIND_NEVER or
+                        syntax.skipTrivia(rp, pRes.next, prefix) < rp.length() {
+                            return (ok = false, kind = "", next = start);
+                        }
+                        mut pKinds.pushBack(pRes.kind);
+                    }
+                    payCsv = textLib.joinTexts(pKinds, ",");
+                }
+                encodedPairs = encodedPairs + encodeLengthPrefixedText(nDec.text) + encodeLengthPrefixedText(payCsv);
+                ci = ci + 1;
+            }
+            return (ok = true, kind = "Enum<" + encodeLengthPrefixedText(effHdr) + encodeLengthPrefixedText("$payload") + caseCount.toText() + ";" + encodedPairs + ">", next = pCur);
+        }
         built := buildCanonicalEnumKind(effHdr, resolvedBacking, source, cur, caseCount, prefix);
         if not built.ok { return (ok = false, kind = "", next = start); }
         return (ok = true, kind = built.kind, next = built.next);

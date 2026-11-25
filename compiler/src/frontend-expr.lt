@@ -1528,7 +1528,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         if types.isEnumKind(resolvedType) {
             caseIdx := types.enumCaseIndex(resolvedType, memberName);
             if caseIdx >= 0 {
-                return (kind = resolvedType, code = caseIdx.toText(), intValue = caseIdx, textValue = "", constant = true, next = memberEnd);
+                return parseEnumCaseConstruct(target, source, resolvedType, memberName, caseIdx, memberEnd, memberStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
             }
         }
         if typeOwnerKey =!= "" {
@@ -1587,8 +1587,86 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
     ctx.intParsed("", 0, true, start)
 };
 
+/** Emits TS or C11 tagged-union value code for payload-bearing enum case `caseIdx`. */
+emitPayloadEnumValue := fn(target: String, enumKind: String, caseIdx: Int, argCodes: List<String>): String {
+    if target == ir.TARGET_C {
+        tag := types.cStructTag(enumKind);
+        if argCodes.length() == 0 {
+            return "/*@T:" + enumKind + "@*/((" + tag + "){ .tag = " + caseIdx.toText() + ", .u = { ._empty = 0 } })";
+        }
+        var fieldsInit := "";
+        var pi := 0;
+        loop pi < argCodes.length() {
+            if pi > 0 { fieldsInit = fieldsInit + ", "; }
+            fieldsInit = fieldsInit + ".f" + pi.toText() + " = " + argCodes[pi];
+            pi = pi + 1;
+        }
+        return "/*@T:" + enumKind + "@*/((" + tag + "){ .tag = " + caseIdx.toText() + ", .u = { .c" + caseIdx.toText() + " = { " + fieldsInit + " } } })";
+    }
+    tsT := types.tsFunctionType(enumKind);
+    var obj := "_t: " + caseIdx.toText() + " as const";
+    var pi := 0;
+    loop pi < argCodes.length() {
+        obj = obj + ", _" + pi.toText() + ": " + argCodes[pi];
+        pi = pi + 1;
+    }
+    "({ " + obj + " } as " + tsT + ")"
+};
+
+/** Parses plain or payload-bearing enum case construction (`Enum.Case` / `.Case(...)`), validating payload count and types. */
+parseEnumCaseConstruct := fn(target: String, source: String, enumKind: String, caseName: String, caseIdx: Int, caseEnd: Int, errPos: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    size := source.length();
+    afterCase := syntax.skipTrivia(source, caseEnd, prefix);
+    isPayload := types.isPayloadEnumKind(enumKind);
+    emptyPayloads: List<String> = [];
+    payloads := if isPayload { types.enumCasePayloads(enumKind, caseIdx) } else { emptyPayloads };
+    if payloads.length() == 0 {
+        if afterCase < size and source.at(afterCase) == "(" {
+            syntax.failAt(source, afterCase, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + caseName + " takes no payload arguments");
+        }
+        if isPayload {
+            emptyArgs: List<String> = [];
+            return (kind = enumKind, code = emitPayloadEnumValue(target, enumKind, caseIdx, emptyArgs), intValue = caseIdx, textValue = "", constant = false, next = caseEnd);
+        }
+        return (kind = enumKind, code = caseIdx.toText(), intValue = caseIdx, textValue = "", constant = true, next = caseEnd);
+    }
+    if afterCase >= size or source.at(afterCase) =!= "(" {
+        syntax.failAt(source, errPos, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + caseName + " requires " + payloads.length().toText() + " payload argument(s)");
+    }
+    var cursor := syntax.skipTrivia(source, afterCase + 1, prefix);
+    argCodes: mut List<String> = [];
+    var markers := "";
+    var ai := 0;
+    loop cursor < size and source.at(cursor) =!= ")" {
+        if ai >= payloads.length() {
+            syntax.failAt(source, cursor, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + caseName + " expects " + payloads.length().toText() + " payload argument(s)");
+        }
+        expKind := payloads[ai];
+        arg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, expKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if inferMode { markers = ctx.collectParsedMarkers(markers, arg); }
+        if not types.isCompatibleKind(expKind, arg.kind) {
+            syntax.failAt(source, cursor, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + caseName + " argument " + (ai + 1).toText() + " must be " + types.displayKind(expKind) + ", got " + types.displayKind(arg.kind));
+        }
+        mut argCodes.pushBack(ctx.assignValueCode(target, expKind, arg.kind, arg.code));
+        ai = ai + 1;
+        cursor = syntax.skipTrivia(source, arg.next, prefix);
+        if cursor < size and source.at(cursor) == "," {
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+        } else {
+            break;
+        }
+    }
+    if cursor >= size or source.at(cursor) =!= ")" {
+        syntax.failAt(source, cursor, prefix, "expected ) after enum payload arguments");
+    }
+    if argCodes.length() =!= payloads.length() {
+        syntax.failAt(source, cursor, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + caseName + " expects " + payloads.length().toText() + " payload argument(s), got " + argCodes.length().toText());
+    }
+    ctx.withMarkers((kind = enumKind, code = emitPayloadEnumValue(target, enumKind, caseIdx, argCodes), intValue = caseIdx, textValue = "", constant = false, next = cursor + 1), markers)
+};
+
 /** Resolves leading-dot enum case shorthand (`.Case`) or loop metadata expressions (`.count`, `.value`, `.item`, `.index`). */
-resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: String, expected: String, ctxs: List<ConstructCtx>): Parsed {
+resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: String, expected: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     fieldStart := syntax.skipTrivia(source, start + 1, prefix);
     size := source.length();
     if fieldStart >= size or not source.at(fieldStart).isNameStart() {
@@ -1609,7 +1687,7 @@ resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: 
         if caseIdx < 0 {
             syntax.failAt(source, fieldStart, prefix, "enum " + types.enumDisplayName(normExp) + " has no case " + fieldName);
         }
-        return (kind = normExp, code = caseIdx.toText(), intValue = caseIdx, textValue = "", constant = true, next = fieldEnd);
+        return parseEnumCaseConstruct(target, source, normExp, fieldName, caseIdx, fieldEnd, fieldStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     }
     if loopIdx == ir.DOT_LOOP_IN_CONDITIONAL {
         syntax.failAt(source, start, prefix, "leading-dot ." + fieldName + " is not available inside a conditional; use an explicit loop @tag");
@@ -2023,7 +2101,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             baseOutKind := types.distinctBaseKind(outArg.kind);
                             cPr := if baseOutKind == ir.VALUE_KIND_UNIT {
                                 if outArg.code == "0" { "printf(\"Unit\");" } else { "((void)(" + outArg.code + "), printf(\"Unit\"));" }
-                            } else if types.isEnumKind(baseOutKind) {
+                            } else if types.isEnumKind(baseOutKind) and not types.isPayloadEnumKind(baseOutKind) {
                                 dName := types.enumDisplayName(baseOutKind);
                                 cCount := types.enumCaseCount(baseOutKind);
                                 enumLabels: mut List<String> = [];
@@ -4667,6 +4745,71 @@ parseComparisonPatternRhs := fn(target: String, source: String, opPos: Int, opTe
     (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, enumCases = "", next = rhs.next, markers = markers)
 };
 
+/** Parses a plain or payload-bearing enum case pattern (`.Case[(p0, ...)]` or `Enum.Case[(p0, ...)]`). */
+parseEnumCasePattern := fn(target: String, source: String, patPos: Int, caseStart: Int, caseEnd: Int, cName: String, enumKind: String, caseIdx: Int, prefix: String, subjKind: String, subjCode: String, subjConst: Parsed, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>, armDepth: Int): PatResult {
+    size := source.length();
+    afterCase := syntax.skipTrivia(source, caseEnd, prefix);
+    if not types.isPayloadEnumKind(enumKind) {
+        if afterCase < size and source.at(afterCase) == "(" {
+            syntax.failAt(source, afterCase, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + cName + " has no payload");
+        }
+        lit := (kind = subjKind, code = caseIdx.toText(), intValue = caseIdx, textValue = "", constant = true, next = caseEnd);
+        leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = patPos);
+        cmp := ctx.compareParsed(target, source, patPos, "==", leftFake, lit, prefix);
+        return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, enumCases = "|" + caseIdx.toText() + "|", next = caseEnd, markers = "");
+    }
+    payloads := types.enumCasePayloads(enumKind, caseIdx);
+    tagCond := if target == ir.TARGET_C {
+        "(" + subjCode + ").tag == " + caseIdx.toText()
+    } else {
+        "(" + subjCode + ")._t === " + caseIdx.toText()
+    };
+    if afterCase >= size or source.at(afterCase) =!= "(" {
+        return (cond = tagCond, bindings = "", irrefutable = false, boolMask = 0, enumCases = "|" + caseIdx.toText() + "|", next = caseEnd, markers = "");
+    }
+    if payloads.length() == 0 {
+        syntax.failAt(source, afterCase, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + cName + " has no payload");
+    }
+    var pCursor := syntax.skipTrivia(source, afterCase + 1, prefix);
+    var payCond := tagCond;
+    var payBindings := "";
+    var allPayIrref := true;
+    var payMarkers := "";
+    var pi := 0;
+    loop pCursor < size and source.at(pCursor) =!= ")" {
+        if pi >= payloads.length() {
+            syntax.failAt(source, pCursor, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + cName + " expects " + payloads.length().toText() + " payload pattern(s)");
+        }
+        pk := payloads[pi];
+        payloadExpr := if target == ir.TARGET_C {
+            "((" + subjCode + ").u.c" + caseIdx.toText() + ".f" + pi.toText() + ")"
+        } else {
+            "(((" + subjCode + ") as { readonly _t: " + caseIdx.toText() + "; readonly _" + pi.toText() + ": " + types.tsFunctionType(pk) + " })._" + pi.toText() + ")"
+        };
+        subNonConst := (kind = pk, code = payloadExpr, intValue = 0, textValue = "", constant = false, next = 0);
+        sub := parseMatchPattern(target, source, pCursor, prefix, pk, payloadExpr, subNonConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
+        payCond = combinePatCond(payCond, sub.cond);
+        payBindings = mergePatBindings(payBindings, sub.bindings, source, pCursor, prefix);
+        if not sub.irrefutable { allPayIrref = false; }
+        if inferMode { payMarkers = payMarkers + sub.markers; }
+        pi = pi + 1;
+        pCursor = syntax.skipTrivia(source, sub.next, prefix);
+        if pCursor < size and source.at(pCursor) == "," {
+            pCursor = syntax.skipTrivia(source, pCursor + 1, prefix);
+        } else {
+            break;
+        }
+    }
+    if pCursor >= size or source.at(pCursor) =!= ")" {
+        syntax.failAt(source, pCursor, prefix, "expected ) after enum payload pattern");
+    }
+    if pi =!= payloads.length() {
+        syntax.failAt(source, pCursor, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + cName + " expects " + payloads.length().toText() + " payload pattern(s), got " + pi.toText());
+    }
+    enumBag := if allPayIrref { "|" + caseIdx.toText() + "|" } else { "" };
+    (cond = payCond, bindings = payBindings, irrefutable = false, boolMask = 0, enumCases = enumBag, next = pCursor + 1, markers = payMarkers)
+};
+
 /** Parses one atomic subject-match pattern (without top-level `or` alternatives). */
 parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: String, subjKind: String, subjCode: String, subjConst: Parsed, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>, armDepth: Int): PatResult {
     pos := syntax.skipTrivia(source, start, prefix);
@@ -4693,10 +4836,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
         if caseIdx < 0 {
             syntax.failAt(source, cStart, prefix, "enum " + types.enumDisplayName(subjKind) + " has no case " + cName);
         }
-        lit := (kind = subjKind, code = caseIdx.toText(), intValue = caseIdx, textValue = "", constant = true, next = cEnd);
-        leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
-        cmp := ctx.compareParsed(target, source, pos, "==", leftFake, lit, prefix);
-        return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, enumCases = "|" + caseIdx.toText() + "|", next = cEnd, markers = "");
+        return parseEnumCasePattern(target, source, pos, cStart, cEnd, cName, subjKind, caseIdx, prefix, subjKind, subjCode, subjConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
     }
     if ch == ":" {
         ty := types.parseTypeAt(source, pos + 1, prefix, aliases, "pattern type", "");
@@ -5115,10 +5255,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                 if caseIdx < 0 {
                     syntax.failAt(source, cStart, prefix, "enum " + types.enumDisplayName(resolvedEnum) + " has no case " + cName);
                 }
-                lit := (kind = subjKind, code = caseIdx.toText(), intValue = caseIdx, textValue = "", constant = true, next = cEnd);
-                leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
-                cmp := ctx.compareParsed(target, source, pos, "==", leftFake, lit, prefix);
-                return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, enumCases = "|" + caseIdx.toText() + "|", next = cEnd, markers = "");
+                return parseEnumCasePattern(target, source, pos, cStart, cEnd, cName, resolvedEnum, caseIdx, prefix, subjKind, subjCode, subjConst, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases, armDepth);
             }
         }
         if afterWord < size and source.at(afterWord) == ":" {
@@ -5380,7 +5517,8 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                     if isCTarget {
                         bCType := types.cValueType(bKind);
                         if bExpr == "" {
-                            declStmts = declStmts + bCType + " " + bRt + "; ";
+                            bZero := ctx.zeroParsed(ir.TARGET_C, bKind, 0).code;
+                            declStmts = declStmts + bCType + " " + bRt + " = " + bZero + "; ";
                         } else {
                             declStmts = declStmts + bCType + " " + bRt + "; ";
                             assignStmts = assignStmts + bRt + " = " + bExpr + "; ";
@@ -5609,7 +5747,9 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         isDirect = true, constant = false, intValue = 0, textValue = "");
     }
     if isCTarget and mode == "value" {
-        cDecl := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "" } else { types.cValueType(finalKind) + " " + cMatchValVar + "; " };
+        cDecl := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "" } else {
+            types.cValueType(finalKind) + " " + cMatchValVar + " = " + ctx.zeroParsed(ir.TARGET_C, finalKind, 0).code + "; "
+        };
         cRetTok := if finalKind == ir.VALUE_KIND_UNIT or finalKind == ir.VALUE_KIND_NEVER { "0" } else { cMatchValVar };
         cSubjLead := if armsCode.startsWithAt(0, types.cValueType(subj.kind) + " " + subjVar) { "" }
         else if subjVar == subj.code { "bool " + doneVar + " = false; " }
@@ -8121,7 +8261,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                 if types.isEnumKind(modTypeKind) {
                                     caseIdx := types.enumCaseIndex(modTypeKind, caseName);
                                     if caseIdx >= 0 {
-                                        left = (kind = modTypeKind, code = caseIdx.toText(), intValue = caseIdx, textValue = "", constant = true, next = caseEnd);
+                                        left = parseEnumCaseConstruct(target, source, modTypeKind, caseName, caseIdx, caseEnd, caseStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                                         handledModMember = true;
                                     }
                                 }
@@ -8961,7 +9101,7 @@ pub parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: 
     } else if ch.isNameStart() {
         left = parseNamedPrimaryExpr(target, source, start, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, aliases);
     } else if ch == "." {
-        left = resolveLeadingDotExpr(target, source, start, prefix, expected, ctxs);
+        left = resolveLeadingDotExpr(target, source, start, prefix, expected, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     } else {
         syntax.failAt(source, start, prefix, "expected an Int, Float, String or Bool expression");
     }

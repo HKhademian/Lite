@@ -55,7 +55,7 @@ cScalarType := fn(kind: String): String {
     else if frontend.cStructTag(kind) =!= "" { frontend.cStructTag(kind) }
     else if frontend.cFnTag(kind) =!= "" { frontend.cFnTag(kind) }
     else if kind == frontend.VALUE_KIND_UNIT or kind == frontend.VALUE_KIND_NEVER { "void" }
-    else if frontend.isIntScalarKind(kind) or frontend.isEnumKind(kind) { "int64_t" }
+    else if frontend.isIntScalarKind(kind) or (frontend.isEnumKind(kind) and not frontend.isPayloadEnumKind(kind)) { "int64_t" }
     else if kind == frontend.VALUE_KIND_BOOL { "bool" }
     else if frontend.isFloatScalarKind(kind) { "double" }
     else { "lt_str" }
@@ -84,6 +84,7 @@ checkUnsupportedCType := fn(kind: String): Unit {
     if frontend.isMapKind(kind) and frontend.cMapTag(kind) == "" { diagLib.fail("", "C backend does not support map values yet"); }
     if frontend.isSetKind(kind) and frontend.cSetTag(kind) == "" { diagLib.fail("", "C backend does not support set values yet"); }
     if frontend.isRecordKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support record values yet"); }
+    if frontend.isPayloadEnumKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support payload enum values yet"); }
     if frontend.isListKind(kind) and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support list values yet"); }
     if frontend.isArrayKind(kind) and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support array values yet"); }
     if frontend.isFnKind(kind) and frontend.cFnTag(kind) == "" { diagLib.fail("", "C backend does not support function values yet"); }
@@ -656,7 +657,7 @@ cCall := fn(kind: String, code: String): String {
         kind == frontend.VALUE_KIND_UNIT {
             if code == "0" { "printf(\"Unit\")" } else { "((void)(" + code + "), printf(\"Unit\"))" }
         }
-        frontend.isEnumKind(kind) {
+        frontend.isEnumKind(kind) and not frontend.isPayloadEnumKind(kind) {
             dName := frontend.enumDisplayName(kind);
             cCount := frontend.enumCaseCount(kind);
             labels: mut List<String> = [];
@@ -848,9 +849,107 @@ usesAnyListBounds := fn(calls: Set<String>): Bool {
     false
 };
 
-/** Emits portable ISO C11 typedef, optional deep copy, and optional print helper for one tuple or nominal record `kind`. */
+/** Emits portable ISO C11 typedef, optional deep copy, and optional print helper for one tuple, nominal record, or payload enum `kind`. */
 emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
     tag := frontend.cStructTag(kind);
+    if frontend.isPayloadEnumKind(kind) {
+        cc := frontend.enumCaseCount(kind);
+        var unionFields := "int _empty; ";
+        var ci := 0;
+        loop ci < cc {
+            pc := frontend.enumCasePayloadCount(kind, ci);
+            if pc > 0 {
+                var sf := "";
+                var pi := 0;
+                loop pi < pc {
+                    sf = sf + cScalarType(frontend.enumCasePayloadKind(kind, ci, pi)) + " f" + pi.toText() + "; ";
+                    pi = pi + 1;
+                }
+                unionFields = unionFields + "struct { " + sf + "} c" + ci.toText() + "; ";
+            }
+            ci = ci + 1;
+        }
+        outLine("typedef struct { int64_t tag; union { " + unionFields + "} u; } " + tag + ";");
+        if needCopy and frontend.cTypeHasListField(kind) {
+            outLine("static " + tag + " " + tag + "_copy(" + tag + " src) {");
+            outLine("    switch (src.tag) {");
+            var cci := 0;
+            loop cci < cc {
+                pc := frontend.enumCasePayloadCount(kind, cci);
+                var caseHasHeap := false;
+                var pi := 0;
+                loop pi < pc {
+                    pk := frontend.enumCasePayloadKind(kind, cci, pi);
+                    if cListTagForKind(pk) =!= "" or frontend.cMapTag(pk) =!= "" or frontend.cSetTag(pk) =!= "" or
+                    (frontend.cStructTag(pk) =!= "" and frontend.cTypeHasListField(pk)) {
+                        caseHasHeap = true;
+                        break;
+                    }
+                    pi = pi + 1;
+                }
+                if caseHasHeap {
+                    var inits := "";
+                    var ppi := 0;
+                    loop ppi < pc {
+                        if ppi > 0 { inits = inits + ", "; }
+                        pk := frontend.enumCasePayloadKind(kind, cci, ppi);
+                        fnm := "src.u.c" + cci.toText() + ".f" + ppi.toText();
+                        fVal := if cListTagForKind(pk) =!= "" {
+                            "lt_list_" + cListTagForKind(pk) + "_copy(" + fnm + ")"
+                        } else if frontend.cMapTag(pk) =!= "" {
+                            frontend.cMapTag(pk) + "_copy(" + fnm + ")"
+                        } else if frontend.cSetTag(pk) =!= "" {
+                            frontend.cSetTag(pk) + "_copy(" + fnm + ")"
+                        } else if frontend.cStructTag(pk) =!= "" and frontend.cTypeHasListField(pk) {
+                            frontend.cStructTag(pk) + "_copy(" + fnm + ")"
+                        } else {
+                            fnm
+                        };
+                        inits = inits + ".f" + ppi.toText() + " = " + fVal;
+                        ppi = ppi + 1;
+                    }
+                    outLine("        case " + cci.toText() + ": return (" + tag + "){ .tag = " + cci.toText() + ", .u = { .c" + cci.toText() + " = { " + inits + " } } };");
+                }
+                cci = cci + 1;
+            }
+            outLine("        default: return src;");
+            outLine("    }");
+            outLine("}");
+        }
+        if needPrint {
+            dName := frontend.enumDisplayName(kind);
+            outLine("static int " + tag + "_print(" + tag + " v) {");
+            outLine("    switch (v.tag) {");
+            var pci := 0;
+            loop pci < cc {
+                cName := frontend.enumCaseNameAt(kind, pci);
+                pc := frontend.enumCasePayloadCount(kind, pci);
+                if pc == 0 {
+                    outLine("        case " + pci.toText() + ": (void)v; return printf(\"%s\", " + cLiteral.textLiteralCode(dName + "." + cName) + ");");
+                } else {
+                    outLine("        case " + pci.toText() + ": {");
+                    outLine("            if (printf(\"%s\", " + cLiteral.textLiteralCode(dName + "." + cName + "(") + ") < 0) { return -1; }");
+                    var ppi := 0;
+                    loop ppi < pc {
+                        if ppi > 0 {
+                            outLine("            if (printf(\", \") < 0) { return -1; }");
+                        }
+                        pk := frontend.enumCasePayloadKind(kind, pci, ppi);
+                        outLine("            if (" + cCall(pk, "v.u.c" + pci.toText() + ".f" + ppi.toText()) + " < 0) { return -1; }");
+                        ppi = ppi + 1;
+                    }
+                    outLine("            return printf(\")\");");
+                    outLine("        }");
+                }
+                pci = pci + 1;
+            }
+            outLine("        default: (void)v; return 0;");
+            outLine("    }");
+            outLine("}");
+        }
+        outLine("");
+        return;
+    }
     isRec := frontend.isRecordKind(kind);
     count := if isRec { frontend.recordComponentCount(kind) } else { frontend.tupleComponentCount(kind) };
     if count == 0 {
@@ -2392,6 +2491,23 @@ collectSubKinds := fn(kind: String): List<String> {
         (mut out).pushBack("E|" + kind);
         return out;
     }
+    if frontend.isPayloadEnumKind(kind) {
+        if frontend.cStructTag(kind) == "" { return out; }
+        cc := frontend.enumCaseCount(kind);
+        var ci := 0;
+        loop ci < cc {
+            pc := frontend.enumCasePayloadCount(kind, ci);
+            var pi := 0;
+            loop pi < pc {
+                sub := self(frontend.enumCasePayloadKind(kind, ci, pi));
+                loop sub as s { mut out.pushBack(s); }
+                pi = pi + 1;
+            }
+            ci = ci + 1;
+        }
+        (mut out).pushBack("S|" + kind);
+        return out;
+    }
     if frontend.isTupleKind(kind) or frontend.isRecordKind(kind) {
         if frontend.cStructTag(kind) == "" { return out; }
         isRec := frontend.isRecordKind(kind);
@@ -2461,6 +2577,24 @@ collectTypeFlags := fn(kind: String): List<String> {
         (mut out).pushBack("E:" + tag);
         subE := self(frontend.setElementKind(kind));
         loop subE as s { mut out.pushBack(s); }
+        return out;
+    }
+    if frontend.isPayloadEnumKind(kind) {
+        tag := frontend.cStructTag(kind);
+        if tag == "" { return out; }
+        (mut out).pushBack("S:" + tag);
+        cc := frontend.enumCaseCount(kind);
+        var ci := 0;
+        loop ci < cc {
+            pc := frontend.enumCasePayloadCount(kind, ci);
+            var pi := 0;
+            loop pi < pc {
+                sub := self(frontend.enumCasePayloadKind(kind, ci, pi));
+                loop sub as s { mut out.pushBack(s); }
+                pi = pi + 1;
+            }
+            ci = ci + 1;
+        }
         return out;
     }
     if frontend.isTupleKind(kind) or frontend.isRecordKind(kind) {

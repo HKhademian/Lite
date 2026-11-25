@@ -1,0 +1,333 @@
+/* Dual-target (TS + C11) tests for payload-bearing enum variants (`Option<T>`, `Result<T, E>`, multi-payload variants), construction, contextual `.Case(...)`, `match` destructuring, heap/CoW payloads, cross-module exports, and diagnostics. */
+
+test := import "core/test";
+file := import "core/file";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+runBoth := fn(label: String, src: String, expected: String): Unit {
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+    test.checkInt(label + " ts status: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(label + " ts stderr", "", tsRes.stderr);
+    test.checkText(label + " ts stdout", expected, tsRes.stdout);
+    if ccInfo.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+        test.checkInt(label + " c status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " c stderr", "", cRes.stderr);
+        test.checkText(label + " c stdout parity", tsRes.stdout, cRes.stdout);
+    }
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccInfo.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+/* 1. Core Option<T>, Result<T, E>, multi-payload Event, type-ops, contextual shorthand, match patterns, zero-init, and printing parity. */
+coreSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Option := enum<T: Type> {\n" +
+"    None;\n" +
+"    Some(T);\n" +
+"}\n" +
+"\n" +
+"Result := enum<T: Type, E: Type> {\n" +
+"    Ok(T);\n" +
+"    Err(E);\n" +
+"}\n" +
+"\n" +
+"Event := enum {\n" +
+"    Quit;\n" +
+"    Key(Int);\n" +
+"    Click(Int, Int);\n" +
+"}\n" +
+"\n" +
+"Pt := record {\n" +
+"    x: Int;\n" +
+"    y: Int;\n" +
+"}\n" +
+"\n" +
+"Option.unwrapOr := fn<T: Type>(opt: Self<T>, fallback: T): T {\n" +
+"    match opt {\n" +
+"        .None { fallback }\n" +
+"        .Some(v) { v }\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"Option.isSome := fn<T: Type>(opt: Self<T>): Bool {\n" +
+"    match opt {\n" +
+"        .Some { true }\n" +
+"        .None { false }\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"Result.unwrapOr := fn<T: Type, E: Type>(r: Self<T, E>, fallback: T): T {\n" +
+"    match r {\n" +
+"        .Ok(v) { v }\n" +
+"        .Err { fallback }\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"makeContextual := fn(flag: Bool): Option<Int> {\n" +
+"    if flag { .Some(99) } else { .None }\n" +
+"};\n" +
+"\n" +
+"takeEvent := fn(ev: Event): Int {\n" +
+"    match ev {\n" +
+"        .Quit { 0 }\n" +
+"        .Key(k) { k }\n" +
+"        .Click(x, y) { x * 100 + y }\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"o1 := Option<Int>.Some(42);\n" +
+"var o2: Option<Int> = .None;\n" +
+"o2 = .Some(7);\n" +
+"var oZero: Option<Int>;\n" +
+"var rZero: Result<Int, String>;\n" +
+"nested: Option<Option<Int>> = .Some(.Some(15));\n" +
+"\n" +
+"qualSum := match o1 {\n" +
+"    Option<Int>.None { -1 }\n" +
+"    Option<Int>.Some(n) if n > 10 { n + 1 }\n" +
+"    .Some(n) { n }\n" +
+"};\n" +
+"\n" +
+"refutSum := match o2 {\n" +
+"    .Some(0) { 1000 }\n" +
+"    .Some(n) { n * 2 }\n" +
+"    .None { -1 }\n" +
+"};\n" +
+"\n" +
+"nestedVal := match nested {\n" +
+"    .Some(.Some(x)) { x }\n" +
+"    _ { 0 }\n" +
+"};\n" +
+"\n" +
+"optTup: Option<(Int, Int)> = .Some((3, 4));\n" +
+"tupVal := match optTup {\n" +
+"    .Some((a, b)) { a + b }\n" +
+"    .None { 0 }\n" +
+"};\n" +
+"\n" +
+"optRec: Option<Pt> = .Some(Pt { x = 8, y = 9 });\n" +
+"recVal := match optRec {\n" +
+"    .Some({ =x }) { x }\n" +
+"    .None { 0 }\n" +
+"};\n" +
+"\n" +
+"arrOpts: [Option<Int>; 2] = [.Some(5), .None];\n" +
+"arrVal := match arrOpts {\n" +
+"    [.Some(v), .None] { v }\n" +
+"    _ { 0 }\n" +
+"};\n" +
+"\n" +
+"rInt: Result<Int, Int> = .Err(21);\n" +
+"eitherVal := match rInt {\n" +
+"    .Ok(x) or .Err(x) { x * 2 }\n" +
+"};\n" +
+"\n" +
+"rOk: Result<Int, String> = .Ok(12);\n" +
+"rErr: Result<Int, String> = .Err(\"boom\");\n" +
+"e1 := Event.Quit;\n" +
+"e2 := Event.Key(65);\n" +
+"e3 := Event.Click(10, 20);\n" +
+"\n" +
+"io.outputLine(o1.unwrapOr(0), oZero.isSome(), makeContextual(true).unwrapOr(0), makeContextual(false).unwrapOr(5));\n" +
+"io.outputLine(qualSum, refutSum, nestedVal, tupVal, recVal, arrVal, eitherVal);\n" +
+"io.outputLine(rZero.unwrapOr(99), rOk.unwrapOr(0), rErr.unwrapOr(77), takeEvent(e1), takeEvent(e2), takeEvent(.Click(3, 4)));\n" +
+"io.outputLine(oZero, o1, rErr, e1, e3);\n";
+
+runBoth("core-payload-enums", coreSrc,
+"42 false 99 5\n" +
+"43 14 15 7 8 5 42\n" +
+"0 12 77 0 65 304\n" +
+"Option<Int>.None Option<Int>.Some(42) Result<Int, String>.Err(boom) Event.Quit Event.Click(10, 20)\n");
+
+/* 2. Heap/CoW container payloads (List, Map, record holding payload enums). */
+cowSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Option := enum<T: Type> {\n" +
+"    None;\n" +
+"    Some(T);\n" +
+"}\n" +
+"\n" +
+"Holder := record {\n" +
+"    label: String;\n" +
+"    val: Option<String>;\n" +
+"}\n" +
+"\n" +
+"var srcList: mut List<Int> = [1, 2];\n" +
+"oList: Option<List<Int>> = .Some(srcList);\n" +
+"(mut srcList).pushBack(99);\n" +
+"oListLen := match oList {\n" +
+"    .Some(xs) { xs.length() }\n" +
+"    .None { -1 }\n" +
+"};\n" +
+"\n" +
+"var listOpts: mut List<Option<Int>> = [.None, .Some(10)];\n" +
+"(mut listOpts).pushBack(.Some(20));\n" +
+"var mOpts: mut Map<String, Option<Int>>;\n" +
+"(mut mOpts).set(\"a\", .Some(33));\n" +
+"h := Holder { label = \"h1\", val = .Some(\"hello\") };\n" +
+"mLookup := mOpts.get(\"a\");\n" +
+"mFound := if mLookup.found {\n" +
+"    match mLookup.value { .Some(n) { n } .None { -1 } }\n" +
+"} else {\n" +
+"    -2\n" +
+"};\n" +
+"io.outputLine(srcList.length(), oListLen, listOpts.length(), mFound, h);\n";
+
+runBoth("payload-enums-cow-containers", cowSrc,
+"3 2 3 33 Holder { label = h1, val = Option<String>.Some(hello) }\n");
+
+/* 3. Cross-module pub generic payload enum & method export. */
+tmpDir := file.makeTempDir("lite-payload-enums-");
+test.check("makeTempDir: " + tmpDir.error, tmpDir.ok);
+libPath := tmpDir.path + "/optlib.lts";
+appPath := tmpDir.path + "/app.lts";
+
+libSrc :=
+"pub Option := enum<T: Type> {\n" +
+"    None;\n" +
+"    Some(T);\n" +
+"}\n" +
+"pub Option.unwrapOr := fn<T: Type>(opt: Self<T>, def: T): T {\n" +
+"    match opt {\n" +
+"        .None { def }\n" +
+"        .Some(v) { v }\n" +
+"    }\n" +
+"};\n";
+
+appSrc :=
+"io := import \"core/io\";\n" +
+"o := import \"./optlib.lts\";\n" +
+"x := o.Option<Int>.Some(88);\n" +
+"y: o.Option<Int> = .None;\n" +
+"v := match x {\n" +
+"    o.Option<Int>.Some(n) { n + 1 }\n" +
+"    .None { 0 }\n" +
+"};\n" +
+"io.outputLine(x.unwrapOr(0), o.Option.unwrapOr(y, 12), v, x, y);\n";
+
+_w1 := file.writeText(libPath, libSrc);
+_w2 := file.writeText(appPath, appSrc);
+
+tsModComp := compilerTest.compileFile(tsComp, tmpDir.path, [appPath]);
+test.checkInt("cross-mod payload enum ts compile: " + tsModComp.stderr, 0, tsModComp.status);
+tsModRes := compilerTest.checkAndRunTs(root, tsModComp.stdout);
+test.checkInt("cross-mod payload enum ts status: " + tsModRes.stderr, 0, tsModRes.status);
+test.checkText("cross-mod payload enum ts stdout", "88 12 89 Option<Int>.Some(88) Option<Int>.None\n", tsModRes.stdout);
+if ccInfo.available {
+    cModComp := compilerTest.compileFile(cComp, tmpDir.path, [appPath]);
+    test.checkInt("cross-mod payload enum c compile: " + cModComp.stderr, 0, cModComp.status);
+    cModRes := compilerTest.compileAndRunC(cModComp.stdout, ccInfo.cc, "");
+    test.checkInt("cross-mod payload enum c status: " + cModRes.stderr, 0, cModRes.status);
+    test.checkText("cross-mod payload enum c stdout parity", tsModRes.stdout, cModRes.stdout);
+}
+
+/* 4. Negative diagnostics. */
+expectRejectBoth("reject-missing-payload-args",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"x := Option<Int>.Some;\n",
+"requires 1 payload argument");
+
+expectRejectBoth("reject-extra-payload-args",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"x := Option<Int>.Some(1, 2);\n",
+"expects 1 payload argument");
+
+expectRejectBoth("reject-wrong-payload-type",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"x := Option<Int>.Some(\"nope\");\n",
+"argument 1 must be Int");
+
+expectRejectBoth("reject-payload-on-unit-case",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"x := Option<Int>.None(1);\n",
+"takes no payload arguments");
+
+expectRejectBoth("reject-empty-case-parens",
+"Bad := enum { Empty(); }\n" +
+"x := Bad.Empty;\n",
+"payload requires at least one type");
+
+expectRejectBoth("reject-mixed-backing-and-payload",
+"Bad := enum : Int { Some(Int); }\n" +
+"x := Bad.Some(1);\n",
+"payload-bearing enum cannot declare a backing type");
+
+expectRejectBoth("reject-mixed-assigned-value-and-payload",
+"Bad := enum { None = 0; Some(Int); }\n" +
+"x := Bad.None;\n",
+"payload-bearing enum cannot declare a backing type or assigned case values");
+
+expectRejectBoth("reject-assigned-value-on-payload-case",
+"Bad := enum { Some(Int) = 1; }\n" +
+"x := Bad.Some(1);\n",
+"payload-bearing enum cannot declare a backing type or assigned case values");
+
+expectRejectBoth("reject-equality-on-payload-enum",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"a := Option<Int>.Some(1);\n" +
+"b := Option<Int>.Some(1);\n" +
+"_ := a == b;\n",
+"cannot compare payload-bearing enum values");
+
+expectRejectBoth("reject-non-exhaustive-match-missing-case",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"o := Option<Int>.Some(1);\n" +
+"_ := match o { .Some(v) { v } };\n",
+"match requires an exhaustive fallback arm");
+
+expectRejectBoth("reject-non-exhaustive-match-refutable-payload",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"o := Option<Int>.Some(1);\n" +
+"_ := match o { .Some(42) { 1 } .None { 0 } };\n",
+"match requires an exhaustive fallback arm");
+
+expectRejectBoth("reject-payload-enum-as-map-key",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"m: Map<Option<Int>, Int>;\n",
+"unsupported map key type");
+
+expectRejectBoth("reject-payload-enum-as-set-elem",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"s: Set<Option<Int>>;\n",
+"unsupported set element type");
+
+expectRejectBoth("reject-payload-enum-as-comptime-param",
+"Event := enum { Quit; Key(Int); }\n" +
+"bad := fn<E: Event>(x: Int): Int { x };\n",
+"payload-bearing enums cannot be comptime value parameters");
+
+expectRejectBoth("reject-generic-payload-enum-as-comptime-param",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"bad := fn<O: Option>(x: Int): Int { x };\n",
+"unsupported comptime parameter type Option");
+
+expectRejectBoth("reject-direct-recursive-payload-enum",
+"Bad := enum { Loop(Bad); }\n" +
+"x: Bad;\n",
+"recursive type alias Bad");
+
+expectRejectBoth("reject-value-prop-on-payload-enum",
+"Option := enum<T: Type> { None; Some(T); }\n" +
+"o := Option<Int>.None;\n" +
+"_ := o.value;\n",
+"has no backing value type");

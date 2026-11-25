@@ -436,6 +436,13 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                                     if types.enumCaseIndex(modRes.kind, source.slice(cStart, cEnd)) >= 0 {
                                         leftKind = modRes.kind;
                                         leftNext = cEnd;
+                                        if types.isPayloadEnumKind(modRes.kind) {
+                                            afterCase := syntax.skipTrivia(source, cEnd, prefix);
+                                            if afterCase < size and source.at(afterCase) == "(" {
+                                                pEnd := syntax.scanParenEnd(source, afterCase, prefix);
+                                                if pEnd >= 0 { leftNext = pEnd; }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -489,6 +496,13 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                                     if types.enumCaseIndex(recRes.kind, source.slice(cStart, cEnd)) >= 0 {
                                         leftKind = recRes.kind;
                                         leftNext = cEnd;
+                                        if types.isPayloadEnumKind(recRes.kind) {
+                                            afterCase := syntax.skipTrivia(source, cEnd, prefix);
+                                            if afterCase < size and source.at(afterCase) == "(" {
+                                                pEnd := syntax.scanParenEnd(source, afterCase, prefix);
+                                                if pEnd >= 0 { leftNext = pEnd; }
+                                            }
+                                        }
                                     }
                                 }
                             }
