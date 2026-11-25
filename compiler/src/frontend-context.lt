@@ -218,7 +218,14 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
                 code
             }
         } else {
-            ir.targetListCopyCode(target, code)
+            elKind := if types.isListKind(kind) { types.listElementKind(kind) } else { types.arrayElementKind(kind) };
+            if code == "[]" {
+                "[]"
+            } else if types.cTypeHasListField(elKind) {
+                tsDeepCloneValueCode(kind, code)
+            } else {
+                ir.targetListCopyCode(target, code)
+            }
         }
     }
     else if types.isMapKind(kind) {
@@ -230,7 +237,11 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
                 code
             }
         } else if target == ir.TARGET_TS and not code.startsWithAt(0, "new Map<") and not code.startsWithAt(0, "new Map(") {
-            "new Map(" + code + ")"
+            if types.cTypeHasListField(types.mapValueKind(kind)) {
+                tsDeepCloneValueCode(kind, code)
+            } else {
+                "new Map(" + code + ")"
+            }
         } else {
             code
         }
@@ -257,6 +268,13 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             code
         }
     }
+    else if target == ir.TARGET_TS and (types.isTupleKind(kind) or types.isRecordKind(kind)) and types.cTypeHasListField(kind) {
+        if not code.startsWithAt(0, "(((lite$rc:") {
+            tsDeepCloneValueCode(kind, code)
+        } else {
+            code
+        }
+    }
     else { code }
 };
 
@@ -267,15 +285,16 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
         elKind := if types.isListKind(kind) { types.listElementKind(kind) } else { types.arrayElementKind(kind) };
         elCloned := self(elKind, "lite$e");
         if elCloned =!= "lite$e" {
-            return "((" + expr + ").map((lite$e) => " + elCloned + "))";
+            return "((" + expr + ").map((lite$e: " + types.tsFunctionType(elKind) + ") => " + elCloned + "))";
         }
         return "[...(" + expr + ")]";
     }
     if types.isMapKind(kind) {
+        keyKind := types.mapKeyKind(kind);
         valKind := types.mapValueKind(kind);
         valCloned := self(valKind, "lite$mv");
         if valCloned =!= "lite$mv" {
-            return "new Map(Array.from(" + expr + ", ([lite$mk, lite$mv]) => [lite$mk, " + valCloned + "]))";
+            return "new Map(Array.from(" + expr + ", ([lite$mk, lite$mv]: [" + types.tsFunctionType(keyKind) + ", " + types.tsFunctionType(valKind) + "]) => [lite$mk, " + valCloned + "]))";
         }
         return "new Map(" + expr + ")";
     }
@@ -289,7 +308,7 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
         var idx := 0;
         loop idx < cnt {
             comp := if isRec { types.recordComponent(kind, idx) } else { types.tupleComponent(kind, idx) };
-            fExpr := expr + "." + comp.prop;
+            fExpr := "lite$rc." + comp.prop;
             fCloned := self(comp.kind, fExpr);
             if fCloned =!= fExpr {
                 tb.append(mut extraBuf, ", ");
@@ -299,7 +318,10 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
             }
             idx = idx + 1;
         }
-        return "({ ...(" + expr + ")" + tb.build(extraBuf) + " })";
+        if extraBuf.length() == 0 {
+            return "({ ...(" + expr + ") })";
+        }
+        return "(((lite$rc: " + types.tsFunctionType(kind) + ") => ({ ...lite$rc" + tb.build(extraBuf) + " }))(" + expr + "))";
     }
     expr
 };

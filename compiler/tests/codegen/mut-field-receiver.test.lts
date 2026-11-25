@@ -1,0 +1,124 @@
+/* Dual-target (TS + C11) tests for nested `mut` field receiver dot calls and COW isolation. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+src :=
+"io := import \"core/io\";\n" +
+"\n" +
+"Counter := record { value: Int; };\n" +
+"Counter.bump := fn(c: mut Self, step: Int): Int {\n" +
+"    c.value += step;\n" +
+"    c.value\n" +
+"};\n" +
+"\n" +
+"Inner := record {\n" +
+"    items: List<String>;\n" +
+"    counter: Counter;\n" +
+"};\n" +
+"\n" +
+"Box := record {\n" +
+"    chunks: List<String>;\n" +
+"    counts: Map<String, Int>;\n" +
+"    tags: Set<String>;\n" +
+"    inner: Inner;\n" +
+"};\n" +
+"\n" +
+"Box.appendChunk := fn(b: mut Self, s: String): Unit {\n" +
+"    mut b.chunks.pushBack(s);\n" +
+"};\n" +
+"\n" +
+"Box.bumpInner := fn(b: mut Self, step: Int): Int {\n" +
+"    mut b.inner.items.pushBack(step.toText());\n" +
+"    mut b.inner.counter.bump(step)\n" +
+"};\n" +
+"\n" +
+"var b: mut Box;\n" +
+"mut b.chunks.pushBack(\"a\");\n" +
+"mut b.chunks.pushBack(\"b\");\n" +
+"mut b.chunks.setAt(1, \"B\");\n" +
+"mut b.counts.set(\"x\", 10);\n" +
+"mut b.tags.add(\"t1\");\n" +
+"v1 := mut b.inner.counter.bump(3);\n" +
+"mut b.inner.items.pushBack(\"init\");\n" +
+"snap := b;\n" +
+"mut b.appendChunk(\"c\");\n" +
+"popped := mut b.chunks.popBack();\n" +
+"mut b.counts.set(\"y\", 20);\n" +
+"removed := mut b.counts.remove(\"x\");\n" +
+"mut b.tags.add(\"t2\");\n" +
+"tagRm := mut b.tags.remove(\"t1\");\n" +
+"v2 := mut b.bumpInner(4);\n" +
+"\n" +
+"io.outputLine(snap.chunks.join(\",\"), snap.counts.size(), snap.counts.getOr(\"x\", -1), snap.tags.has(\"t1\"), snap.tags.has(\"t2\"), snap.inner.counter.value, snap.inner.items.join(\",\"));\n" +
+"io.outputLine(b.chunks.join(\",\"), popped, b.counts.size(), b.counts.has(\"x\"), b.counts.getOr(\"y\", -1), removed, b.tags.has(\"t1\"), b.tags.has(\"t2\"), tagRm, v1, v2, b.inner.items.join(\",\"));\n" +
+"\n" +
+"mut b.chunks.clear();\n" +
+"io.outputLine(b.chunks.length(), snap.chunks.length());\n";
+
+expected :=
+"a,B 1 10 true false 3 init\n" +
+"a,B c 1 false 20 true false true true 3 7 init,4\n" +
+"0 2\n";
+
+tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
+test.checkText("ts stderr", "", tsRes.stderr);
+test.checkText("ts stdout", expected, tsRes.stdout);
+
+if ccInfo.available {
+    cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+    test.checkInt("c status: " + cRes.stderr, 0, cRes.status);
+    test.checkText("c stderr", "", cRes.stderr);
+    test.checkText("c stdout parity", tsRes.stdout, cRes.stdout);
+}
+
+/* Compile-time rejections on both TS and C */
+roSrc :=
+"Box := record { chunks: List<String>; };\n" +
+"b := Box { chunks = [\"a\"] };\n" +
+"mut b.chunks.pushBack(\"x\");\n";
+compilerTest.assertCompileErrorContains(root, tsComp, "read-only root record rejected (ts)", roSrc, "cannot call mutating operation pushBack on read-only value");
+compilerTest.assertCompileErrorContains(root, cComp, "read-only root record rejected (c)", roSrc, "cannot call mutating operation pushBack on read-only value");
+
+varSrc :=
+"Box := record { chunks: List<String>; };\n" +
+"var b := Box { chunks = [\"a\"] };\n" +
+"mut b.chunks.pushBack(\"x\");\n";
+compilerTest.assertCompileErrorContains(root, tsComp, "var non-mut root record rejected (ts)", varSrc, "cannot call mutating operation pushBack on read-only value");
+compilerTest.assertCompileErrorContains(root, cComp, "var non-mut root record rejected (c)", varSrc, "cannot call mutating operation pushBack on read-only value");
+
+missingMutSrc :=
+"Box := record { chunks: List<String>; };\n" +
+"b: mut Box;\n" +
+"b.chunks.pushBack(\"x\");\n";
+compilerTest.assertCompileErrorContains(root, tsComp, "missing mut on field dot call (ts)", missingMutSrc, "cannot call mutating operation pushBack on read-only value");
+compilerTest.assertCompileErrorContains(root, cComp, "missing mut on field dot call (c)", missingMutSrc, "cannot call mutating operation pushBack on read-only value");
+
+nonMutOpSrc :=
+"Box := record { chunks: List<String>; };\n" +
+"b: mut Box;\n" +
+"_n := mut b.chunks.length();\n";
+compilerTest.assertCompileErrorContains(root, tsComp, "mut on non-mutating field op (ts)", nonMutOpSrc, "does not mutate its receiver; remove mut");
+compilerTest.assertCompileErrorContains(root, cComp, "mut on non-mutating field op (c)", nonMutOpSrc, "does not mutate its receiver; remove mut");
+
+badFieldSrc :=
+"Box := record { chunks: List<String>; };\n" +
+"b: mut Box;\n" +
+"mut b.nope.pushBack(\"x\");\n";
+compilerTest.assertCompileErrorContains(root, tsComp, "missing field on mut path (ts)", badFieldSrc, "type Box has no field nope");
+compilerTest.assertCompileErrorContains(root, cComp, "missing field on mut path (c)", badFieldSrc, "type Box has no field nope");
+
+test.done("mut-field-receiver");

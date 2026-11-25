@@ -7437,8 +7437,26 @@ readOnlyArgNeedsSnapshot := fn(argCode: String, locals: List<Local>, mutArgRunti
     false
 };
 
+/** Builds a structural TS writeback assignment statement updating nested field `fieldPathCsv` inside `rootRt`. */
+tsFieldWritebackStmt := fn(rootRt: String, fieldPathCsv: String, valueExpr: String): String {
+    fields := fieldPathCsv.split(".");
+    var prefixes: mut List<String> = [rootRt];
+    var i := 0;
+    loop i + 1 < fields.length() {
+        mut prefixes.pushBack("(" + prefixes[i] + ")." + fields[i]);
+        i += 1;
+    }
+    var acc := valueExpr;
+    var j := fields.length() - 1;
+    loop j >= 0 {
+        acc = "{ ...(" + prefixes[j] + "), " + fields[j] + ": " + acc + " }";
+        j -= 1;
+    }
+    rootRt + " = " + acc + ";"
+};
+
 /** Parses user, type-operation, and indirect function calls with positional, named, and `=name` shorthand arguments, plus optional prepended receiver, generic unification/monomorphization, and TS `mut Record` COW writeback. */
-parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, hasRecv: Bool, recvCode: String, recvWritebackLocal: String, recvWritebackBox: String, initGenBindings: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, hasRecv: Bool, recvCode: String, recvWritebackLocal: String, recvWritebackBox: String, recvWritebackStmt: String, recvRootRuntime: String, initGenBindings: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     size := source.length();
     isGenericCall := isModuleFn and callRuntime.startsWithAt(0, "$gen:");
     genTplKey := if isGenericCall { callRuntime.slice(5, callRuntime.length()) } else { "" };
@@ -7486,8 +7504,15 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     entryCodes: mut List<String> = [];
     mutRecBoxNames: mut List<String> = [];
     mutRecLocalRuntimes: mut List<String> = [];
+    mutRecWritebackStmts: mut List<String> = [];
     mutArgRuntimes: mut List<String> = [];
     if hasRecv and callFirst > 0 and types.paramKindOf(callParams[callFirst - 1]).startsWithAt(0, "mut ") {
+        if recvRootRuntime =!= "" {
+            mut mutArgRuntimes.pushBack(recvRootRuntime);
+            if not recvRootRuntime.endsWith(".v") {
+                mut mutArgRuntimes.pushBack(recvRootRuntime + ".v");
+            }
+        }
         if recvWritebackLocal =!= "" {
             mut mutArgRuntimes.pushBack(recvWritebackLocal);
         } else if recvCode.startsWithAt(0, "&") {
@@ -7500,6 +7525,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     if target == ir.TARGET_TS and hasRecv and recvWritebackLocal =!= "" and recvWritebackBox =!= "" {
         mut mutRecBoxNames.pushBack(recvWritebackBox);
         mut mutRecLocalRuntimes.pushBack(recvWritebackLocal);
+        mut mutRecWritebackStmts.pushBack(recvWritebackStmt);
     }
     var entryCount := 0;
     var cursor := syntax.skipTrivia(source, openParen + 1, prefix);
@@ -7607,6 +7633,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                 boxName := "lite$mb" + mutRecBoxNames.length().toText();
                                 mut mutRecBoxNames.pushBack(boxName);
                                 mut mutRecLocalRuntimes.pushBack(mEntry.runtime);
+                                mut mutRecWritebackStmts.pushBack("");
                                 mCode = boxName;
                             }
                         }
@@ -7694,6 +7721,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                 boxName := "lite$mb" + mutRecBoxNames.length().toText();
                                 mut mutRecBoxNames.pushBack(boxName);
                                 mut mutRecLocalRuntimes.pushBack(mEntry.runtime);
+                                mut mutRecWritebackStmts.pushBack("");
                                 mCode = boxName;
                             }
                         }
@@ -7948,8 +7976,9 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         loop bi < bCount {
             bName := mutRecBoxNames[bi];
             bLoc := mutRecLocalRuntimes[bi];
+            wbStmt := mutRecWritebackStmts[bi];
             mut wbSetup.pushBack("const " + bName + " = { v: " + bLoc + " };");
-            mut wbAssign.pushBack(bLoc + " = " + bName + ".v;");
+            mut wbAssign.pushBack(if wbStmt =!= "" { wbStmt } else { bLoc + " = " + bName + ".v;" });
             bi = bi + 1;
         }
         if emittedResultKind == ir.VALUE_KIND_UNIT {
@@ -7963,7 +7992,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
 
 /** Parses user and indirect function calls with positional, named, and `=name` shorthand arguments. */
 parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
-    parseUserOrIndirectCallWithRecv(target, source, openParen, errPos, isModuleFn, calleeDisplay, callRuntime, callParams, callFirst, callCount, callResult, false, "", "", "", "", callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases)
+    parseUserOrIndirectCallWithRecv(target, source, openParen, errPos, isModuleFn, calleeDisplay, callRuntime, callParams, callFirst, callCount, callResult, false, "", "", "", "", "", "", callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases)
 };
 
 /** Parses and lowers a hard-builtin type-attached dot call (`List.*`, `Array.*`, `Map.*`, `Set.*`, `String.length/at/slice`). */
@@ -7971,7 +8000,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
     if isMutRecv and (recvLocalIdx < 0 or not locals[recvLocalIdx].writable) {
         syntax.failAt(source, labelStart, prefix, "cannot call mutating operation " + opLabel + " on read-only value");
     }
-    mutRt := if isMutRecv { locals[recvLocalIdx].runtime } else { "" };
+    mutRt := if isMutRecv { receiver.code } else { "" };
     var cursor := syntax.skipTrivia(source, openParen + 1, prefix);
     var markers := if inferMode { ctx.collectParsedMarkers("", receiver) } else { "" };
     if runtime == "lite$textLength" {
@@ -8329,7 +8358,7 @@ isHardBuiltinTypeOpRuntime := fn(runtime: String): Bool {
 };
 
 /** Parses a type-attached dot call `receiver.op(args...)`, validating explicit call-site `mut` lease, `mut Self` permission, unifying generic receivers, and forwarding receiver as argument 0. */
-parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openParen: Int, receiver: Parsed, recvLocalIdx: Int, opIdx: Int, opLabel: String, explicitMut: Bool, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openParen: Int, receiver: Parsed, recvLocalIdx: Int, opIdx: Int, opLabel: String, explicitMut: Bool, recvFieldPath: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     info := functions[opIdx];
     if isStaticTypeOp(info) {
         syntax.failAt(source, labelStart, prefix, "operation " + opLabel + " is a type-level operation with no Self receiver; call it on the type instead");
@@ -8381,15 +8410,23 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
     var recvCode := "";
     var recvWritebackLocal := "";
     var recvWritebackBox := "";
+    var recvWritebackStmt := "";
+    var recvRootRt := "";
     if isMutRecv {
         if recvLocalIdx < 0 or not locals[recvLocalIdx].writable {
             syntax.failAt(source, labelStart, prefix, "cannot call mutating operation " + opLabel + " on read-only value");
         }
         locEntry := locals[recvLocalIdx];
+        recvRootRt = locEntry.runtime;
         if target == ir.TARGET_C {
-            recvCode = "&" + locEntry.runtime;
-        } else if types.isRecordOrDistinctRecord(locEntry.kind) {
-            if locEntry.runtime.endsWith(".v") {
+            recvCode = if recvFieldPath == "" { "&" + locEntry.runtime } else { "&(" + receiver.code + ")" };
+        } else if types.isRecordOrDistinctRecord(receiver.kind) {
+            if recvFieldPath =!= "" {
+                recvWritebackBox = "lite$mb_recv";
+                recvWritebackLocal = receiver.code;
+                recvWritebackStmt = tsFieldWritebackStmt(locEntry.runtime, recvFieldPath, recvWritebackBox + ".v");
+                recvCode = recvWritebackBox;
+            } else if locEntry.runtime.endsWith(".v") {
                 recvCode = locEntry.runtime.slice(0, locEntry.runtime.length() - 2);
             } else {
                 recvWritebackBox = "lite$mb_recv";
@@ -8397,7 +8434,7 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
                 recvCode = recvWritebackBox;
             }
         } else {
-            recvCode = locEntry.runtime;
+            recvCode = receiver.code;
         }
     } else {
         var recvParamHazard := localsHasLocalClosure(locals);
@@ -8415,14 +8452,14 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
         recvCode = ctx.readOnlyArgWithSnapshot(target, concreteRecvExpected, receiver.kind, receiver.code, recvNeedsSnap);
     }
     calleeDisp := types.displayKind(receiver.kind) + "." + opLabel;
-    callRes := parseUserOrIndirectCallWithRecv(target, source, openParen, labelStart, true, calleeDisp, info.runtime, params, info.first + 1, info.count - 1, info.result, true, recvCode, recvWritebackLocal, recvWritebackBox, initGenBindings, callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+    callRes := parseUserOrIndirectCallWithRecv(target, source, openParen, labelStart, true, calleeDisp, info.runtime, params, info.first + 1, info.count - 1, info.result, true, recvCode, recvWritebackLocal, recvWritebackBox, recvWritebackStmt, recvRootRt, initGenBindings, callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     if inferMode {
         return ctx.withMarkers(callRes, ctx.collectParsedMarkers(ctx.collectParsedMarkers("", receiver), callRes));
     }
     callRes
 };
 
-/** Parses an explicit mutating dot call `mut receiver.op(args...)` or `(mut receiver).op(args...)`, enforcing receiver mutability and `mut Self` signature. */
+/** Parses an explicit mutating dot call `mut receiver(.field)*.op(args...)` or `(mut receiver).op(args...)`, enforcing root receiver mutability and `mut Self` signature. */
 parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mNameStart: Int, mNameEnd: Int, afterRecv: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     size := source.length();
     recvName := source.slice(mNameStart, mNameEnd);
@@ -8435,36 +8472,67 @@ parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mN
     if entry.initState =!= ir.INIT_STATE_INIT {
         syntax.failAt(source, mNameStart, prefix, "cannot read uninitialized local " + recvName);
     }
-    dotPos := syntax.skipTrivia(source, afterRecv, prefix);
-    if dotPos >= size or source.at(dotPos) =!= "." {
-        syntax.failAt(source, dotPos, prefix, "expected .operation(...) after mut " + recvName);
-    }
-    labelStart := syntax.skipTrivia(source, dotPos + 1, prefix);
-    if labelStart < size and source.at(labelStart) == "$" {
-        hookEnd := if labelStart + 1 < size and source.at(labelStart + 1).isNameStart() {
-            source.skipName(labelStart + 1)
-        } else {
-            labelStart + 1
-        };
-        syntax.failAt(source, labelStart, prefix, "compiler hook " + source.slice(labelStart, hookEnd) + " cannot be called directly; use [...] indexing");
-    }
-    if labelStart >= size or not source.at(labelStart).isNameStart() {
-        syntax.failAt(source, labelStart, prefix, "expected operation name after mut " + recvName + ".");
-    }
-    labelEnd := source.skipName(labelStart);
-    label := source.slice(labelStart, labelEnd);
-    ownerKey := types.typeOpOwnerKey(entry.kind);
-    opIdx := if ownerKey =!= "" { findTypeOp(functions, ownerKey, label) } else { -1 };
-    if opIdx < 0 {
-        syntax.failAt(source, labelStart, prefix, "type " + types.displayKind(entry.kind) + " has no operation " + label);
-    }
-    afterOpLabel := syntax.skipTrivia(source, labelEnd, prefix);
-    if afterOpLabel >= size or source.at(afterOpLabel) =!= "(" {
-        syntax.failAt(source, labelStart, prefix, "type operation " + types.displayKind(entry.kind) + "." + label + " must be called with (...)");
-    }
     _mutPos := mutStart;
-    recvParsed := (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = false, next = afterRecv);
-    parseTypeOpDotCall(target, source, labelStart, afterOpLabel, recvParsed, recvIdx, opIdx, label, true, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases)
+    var curKind := entry.kind;
+    var curCode := entry.runtime;
+    fieldPath: mut List<String> = [];
+    var pos := afterRecv;
+    loop true {
+        dotPos := syntax.skipTrivia(source, pos, prefix);
+        if dotPos >= size or source.at(dotPos) =!= "." {
+            if fieldPath.length() == 0 {
+                syntax.failAt(source, dotPos, prefix, "expected .operation(...) after mut " + recvName);
+            }
+            syntax.failAt(source, dotPos, prefix, "expected .operation(...) after mut " + recvName + "." + fieldPath.join("."));
+        }
+        labelStart := syntax.skipTrivia(source, dotPos + 1, prefix);
+        if labelStart < size and source.at(labelStart) == "$" {
+            hookEnd := if labelStart + 1 < size and source.at(labelStart + 1).isNameStart() {
+                source.skipName(labelStart + 1)
+            } else {
+                labelStart + 1
+            };
+            syntax.failAt(source, labelStart, prefix, "compiler hook " + source.slice(labelStart, hookEnd) + " cannot be called directly; use [...] indexing");
+        }
+        if labelStart >= size or not source.at(labelStart).isNameStart() {
+            if fieldPath.length() == 0 {
+                syntax.failAt(source, labelStart, prefix, "expected operation name after mut " + recvName + ".");
+            }
+            syntax.failAt(source, labelStart, prefix, "expected operation name after mut " + recvName + "." + fieldPath.join(".") + ".");
+        }
+        labelEnd := source.skipName(labelStart);
+        label := source.slice(labelStart, labelEnd);
+        afterLabel := syntax.skipTrivia(source, labelEnd, prefix);
+        if afterLabel < size and source.at(afterLabel) == "." {
+            if not types.isRecordKind(curKind) and not types.isTupleKind(curKind) {
+                syntax.failAt(source, labelStart, prefix, "cannot access field " + label + " on " + types.displayKind(curKind));
+            }
+            nextKind := if types.isRecordKind(curKind) { types.recordFieldKind(curKind, label) } else { types.tupleFieldKind(curKind, label) };
+            if nextKind == "" {
+                syntax.failAt(source, labelStart, prefix, "type " + types.displayKind(curKind) + " has no field " + label);
+            }
+            if target == ir.TARGET_C and types.cStructTag(curKind) == "" {
+                syntax.failAt(source, labelStart, prefix, "C backend does not support record field mutation on " + types.displayKind(curKind));
+            }
+            fProp := if target == ir.TARGET_C { types.cFieldName(label) } else { label };
+            curCode = "(" + curCode + ")." + fProp;
+            curKind = nextKind;
+            mut fieldPath.pushBack(label);
+            pos = afterLabel;
+            continue;
+        }
+        ownerKey := types.typeOpOwnerKey(curKind);
+        opIdx := if ownerKey =!= "" { findTypeOp(functions, ownerKey, label) } else { -1 };
+        if opIdx < 0 {
+            syntax.failAt(source, labelStart, prefix, "type " + types.displayKind(curKind) + " has no operation " + label);
+        }
+        if afterLabel >= size or source.at(afterLabel) =!= "(" {
+            syntax.failAt(source, labelStart, prefix, "type operation " + types.displayKind(curKind) + "." + label + " must be called with (...)");
+        }
+        recvParsed := (kind = curKind, code = curCode, intValue = entry.intValue, textValue = entry.textValue, constant = false, next = pos);
+        return parseTypeOpDotCall(target, source, labelStart, afterLabel, recvParsed, recvIdx, opIdx, label, true, fieldPath.join("."), expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+    }
+    ctx.intParsed("", 0, false, afterRecv)
 };
 
 /** Parses postfix `.field`, `[index]`, list-intrinsic operations, type-attached dot calls, and function/indirect calls on `initialLeft`. */
@@ -8759,7 +8827,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         if afterOpLabel >= sourceLen or source.at(afterOpLabel) =!= "(" {
                             syntax.failAt(source, labelStart, prefix, "type operation " + types.displayKind(left.kind) + "." + label + " must be called with (...)");
                         }
-                        left = parseTypeOpDotCall(target, source, labelStart, afterOpLabel, left, curRecvLocalIdx, opIdx, label, false, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                        left = parseTypeOpDotCall(target, source, labelStart, afterOpLabel, left, curRecvLocalIdx, opIdx, label, false, "", expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                     } else if types.isEnumKind(left.kind) {
                         syntax.failAt(source, labelStart, prefix, "enum " + types.enumDisplayName(left.kind) + " has no field or operation " + label);
                     } else if types.isRecordKind(left.kind) {
@@ -9067,7 +9135,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     }
                     explicitBindingsEnc := generics.encodePartialBindings(tpl.genericParams, expMap);
                     left = parseUserOrIndirectCallWithRecv(target, source, callOpenParen, errPos, true, calleeDisplay, info.runtime,
-                    params, info.first, info.count, info.result, false, "", "", "", explicitBindingsEnc, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                    params, info.first, info.count, info.result, false, "", "", "", "", "", explicitBindingsEnc, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else if postPosition >= source.length() or source.at(postPosition) =!= "(" {
                     if info.runtime.startsWithAt(0, "$gen:") {
                         syntax.failAt(source, errPos, prefix, "cannot use generic function " + calleeDisplay + " as a value without calling it");
@@ -9186,7 +9254,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
             if handleUserCall {
                 if preGenBindings =!= "" {
                     left = parseUserOrIndirectCallWithRecv(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
-                    callParams, callFirst, callCount, callResult, false, "", "", "", preGenBindings, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                    callParams, callFirst, callCount, callResult, false, "", "", "", "", "", preGenBindings, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else {
                     left = parseUserOrIndirectCall(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
                     callParams, callFirst, callCount, callResult, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
