@@ -49,6 +49,18 @@ Uniform bindings could support `Name := class { ... }` if classes are introduced
 
 An ordinary interface does not define a closed set of implementers. A union of listed types, an enum's named cases, and a sealed subtype family have different closure and identity contracts. Likewise, generated data operations do not establish value copying, deep immutability, or reference identity. See [type categories](lite://doc/type-categories) and the [enum design proposal](lite://doc/enums-and-variants#design-direction-after-the-category-review).
 
+## Next-stage planning note: generic protocol/trait constraints vs. closed union constraints
+
+Status: **recorded for a future planning session (not yet designed or implemented)**.
+
+Current generic functions can constrain type parameters only via closed type-union aliases (such as `Numeric := alias Int | Int8 | Int16 | Int32 | Float | Float32` or `Equatable := alias OrderedScalar | String | Bool` checked via `T: Type<Constraint>`). Closed unions intentionally enumerate fixed built-in sets and cannot express open abstractions over arbitrary user-defined types:
+
+- **Limitation of closed unions:** library operations like `List.sort`, `List.indexOf`, `List.dedup`, `Grid`, `Lru`, or `PriorityQueue` cannot yet accept user-defined records with custom equality, hashing, or ordering (`Point`, `Uuid`, etc.), nor express shared open contracts such as `Ordered`, `Equatable`, `Hashable`, `Collection`, `Numeric`, `Readable`, `Writable`, or `Drawable` across unrelated containers like `Array<T, N>` and `List<T>`.
+- **Planned future exploration (interfaces / traits vs. structural protocol constraints):**
+  - Compare **explicit nominal interfaces / traits** (explicit opt-in conformance / coherence across separate compilation, avoiding accidental structural matches) against **structural protocol constraints** (matching required static/instance operations by signature), and clarify how both interact with LiteLang's zero-inheritance record model.
+  - Keep **static monomorphization as the default** for bounded generic parameters, while treating any future dynamic trait-object dispatch as an explicit capability/type form.
+  - Specify how `Self` receiver capabilities (`Self` vs. `mut Self`), associated types (`Element`), and operator/collection hooks (`$getIndex`, `$setIndex`, iteration) participate in interface requirements and generic constraints.
+
 ## Open decisions
 
 Nominal identity, structural conformance, interface coherence, orphan-style implementation rules, associated types, delegation syntax, default method conflicts, field privacy, construction, and reference identity remain open.
