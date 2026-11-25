@@ -40,18 +40,19 @@ functionalSrc :=
 "c3Dot := vec.UNIT_X3.cross(vec.UNIT_Y3).length();\n" +
 "io.outputLine(\"vec\", near(v.length(), 5.0), near(vn.x(), 0.6), near(vr.x(), 0.0), near(vr.y(), 1.0), near(c3.z(), 1.0), near(rf.x(), 1.0), near(rf.y(), 1.0), near(v.length(), 5.0), near(vDot, 0.6), near(c3Dot, 1.0));\n" +
 "\n" +
-"/* 2. math/matrix (unified generic Mat<T, R, C>) */\n" +
-"id4 := mat.identity<4>();\n" +
-"m2 := mat.rotation2(math.PI * 0.5);\n" +
+"/* 2. math/matrix (unified generic Mat<T, R, C> with static type ops) */\n" +
+"id4 := mat.FMat4.identity();\n" +
+"m2 := mat.FMat2.rotation2(math.PI * 0.5);\n" +
 "p2 := m2.mulVec(vec.vec2(1.0, 0.0));\n" +
-"aff := mat.translate2(10.0, 20.0).mul(mat.scale2(2.0, 3.0));\n" +
+"aff := mat.FMat3.translate2(10.0, 20.0).mul(mat.FMat3.scale2(2.0, 3.0));\n" +
 "tp2 := aff.transformPoint2(vec.vec2(4.0, 5.0));\n" +
-"m4 := mat.translate3(1.0, 2.0, 3.0).mul(mat.rotateZ(math.PI * 0.5));\n" +
+"m4 := mat.FMat4.translate3(1.0, 2.0, 3.0).mul(mat.FMat4.rotateZ(math.PI * 0.5));\n" +
 "tp3 := m4.transformPoint3(vec.vec3(1.0, 0.0, 0.0));\n" +
-"r23 := mat.mat([vec.vec3(1, 2, 3), vec.vec3(4, 5, 6)]);\n" +
-"r32 := mat.mat([vec.vec2(7, 8), vec.vec2(9, 10), vec.vec2(11, 12)]);\n" +
+"r23 := mat.Mat.from([vec.vec3(1, 2, 3), vec.vec3(4, 5, 6)]);\n" +
+"r32 := mat.Mat.from([vec.vec2(7, 8), vec.vec2(9, 10), vec.vec2(11, 12)]);\n" +
 "r22 := r23.mul(r32);\n" +
-"io.outputLine(\"mat\", near(m2.det(), 1.0), near(p2.y(), 1.0), near(tp2.x(), 18.0), near(tp2.y(), 35.0), near(aff.det(), 6.0), near(tp3.x(), 1.0), near(tp3.y(), 3.0), near(tp3.z(), 3.0), near(id4.det(), 1.0), near(m2.transpose().at(0, 1), 1.0), r22.at(0, 0) == 58 and r22.at(1, 1) == 154);\n" +
+"z23 := mat.Mat<Int, 2, 3>.zeroed();\n" +
+"io.outputLine(\"mat\", near(m2.det(), 1.0), near(p2.y(), 1.0), near(tp2.x(), 18.0), near(tp2.y(), 35.0), near(aff.det(), 6.0), near(tp3.x(), 1.0), near(tp3.y(), 3.0), near(tp3.z(), 3.0), near(id4.det(), 1.0), near(m2.transpose().at(0, 1), 1.0), r22.at(0, 0) == 58 and r22.at(1, 1) == 154 and z23.at(1, 2) == 0);\n" +
 "\n" +
 "/* 3. ds/grid */\n" +
 "mut g := grid.createGrid<Int>(8, 6, 0);\n" +
@@ -123,8 +124,10 @@ if ccInfo.available {
     test.checkText("ASan/UBSan output", expectedOut, runSan.stdout);
 }
 
-/* Nominal / generic dimension safety: Mat2x2 and Mat3x3 cannot mix. */
-badMat := compilerTest.compileStdin(root, selTs.path, "mat := import \"math/matrix\"; f := fn(m: mat.FMat2): Float { m.det() }; x := f(mat.identity<3>());\n", "");
-test.check("reject Mat<Float, 3, 3> passed as FMat2", badMat.status =!= 0);
+/* Nominal / generic dimension safety: Mat2x2 and Mat3x3 cannot mix, and alias specialization enforces bounds. */
+badMat := compilerTest.compileStdin(root, selTs.path, "mat := import \"math/matrix\"; f := fn(m: mat.FMat2): Float { m.det() }; x := f(mat.FMat3.identity());\n", "");
+test.check("reject FMat3 passed as FMat2", badMat.status =!= 0);
+badMatAlias := compilerTest.compileStdin(root, selTs.path, "mat := import \"math/matrix\"; bad := mat.FMat3.rotation2(0.5);\n", "");
+test.check("reject FMat3.rotation2 static mismatch", badMatAlias.status =!= 0);
 
 fs.remove(tmpDir);

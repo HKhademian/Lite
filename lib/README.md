@@ -32,8 +32,8 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | --- | --- | --- |
 | `math/scalar` | Browser + CLI | `IntScalar`/`FloatScalar`/`Numeric` constraints, `PI`, `TAU`, `HALF_PI`, `E`, `abs*`/`min*`/`max*`/`clamp*`, `floor`/`ceil`/`round`/`trunc`/`fract`, `sin`/`cos`/`tan`/`atan`/`atan2`, `sqrt`, `gcd`, `lcm` |
 | `math/random` | Browser + CLI | Deterministic, seedable Lehmer PRNG (`Rng`, `create`, `nextInt`, `rangeInt`, `nextBool`, `nextFloat`) |
-| `math/vector` | Browser + CLI | Unified generic `Vec<T: Type<Numeric>, N: Int>` (`Vec2`/`Vec3`/`Vec4`, `FVec2..4`, `IVec2..3`, `vec2..4`, `x`/`y`/`z`/`w`/`r`/`g`/`b`/`a`, `dot`, `lerp`, `normalize`, `cross`, `cross2`, `rotate`, `reflect`) |
-| `math/matrix` | Browser + CLI | Unified generic `Mat<T: Type<Numeric>, R: Int, C: Int>` backed by `[Vec<T, C>; R]` (`Mat2..4`, `FMat2..4`, `identity<N>`, `mul`, `mulVec`, `transpose`, `det`, `translate2/3`, `scale2/3`, `rotate2/X/Y/Z`, `perspective`, `transformPoint2/3`) |
+| `math/vector` | Browser + CLI | Unified generic `Vec<T: Type<Numeric>, N: Int>` (`Vec2..4`, `FVec2..4`, `IVec2..3`, static `Vec.from`/`splat`/`zeroed` inherited by aliases, `vec2..4`, `dot`, `lerp`, `normalize`, `cross`, `cross2`, `rotate`, `reflect`) |
+| `math/matrix` | Browser + CLI | Unified generic `Mat<T: Type<Numeric>, R: Int, C: Int>` backed by `[Vec<T, C>; R]` (`Mat2..4`, `FMat2..4`, static `Mat.from`/`zeroed`/`identity` + 2D/3D transform constructors, `mul`, `mulVec`, `transpose`, `det`, `transformPoint2/3`) |
 | `math/geom` | Browser + CLI | Generic `Box<T, N>`, `Ray<T, N>`, `Segment<T, N>`, `Ball<T, N>` (`Circle`, `Sphere`), `Rect`, `RayHit`, and intersection helpers (`rayBoxHit`, `raySphereHit`) |
 
 ## Data Structures (`lib/ds/` — 11 modules)

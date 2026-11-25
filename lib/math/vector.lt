@@ -33,18 +33,18 @@ pub FVec3 := alias Vec<Float, 3>;
 pub FVec4 := alias Vec<Float, 4>;
 
 /** Constructs a generic `Vec<T, N>` from a fixed array `[T; N]`. */
-pub vecN := fn<T: Type<math.Numeric>, N: Int>(data: [T; N]): Vec<T, N> {
-    Vec<T, N> { data = data }
+pub Vec.from := fn<T: Type<math.Numeric>, N: Int>(data: [T; N]): Self<T, N> {
+    Self<T, N> { data = data }
 };
 
 /** Constructs a generic `Vec<T, N>` with all `N` components set to `val`. */
-pub splat := fn<T: Type<math.Numeric>, N: Int>(val: T): Vec<T, N> {
-    Vec<T, N> { data = array.filled<T, N>(val) }
+pub Vec.splat := fn<T: Type<math.Numeric>, N: Int>(val: T): Self<T, N> {
+    Self<T, N> { data = array.filled<T, N>(val) }
 };
 
 /** Zero-initialized generic `Vec<T, N>`. */
-pub zeroVec := fn<T: Type<math.Numeric>, N: Int>(): Vec<T, N> {
-    res: Vec<T, N>;
+pub Vec.zeroed := fn<T: Type<math.Numeric>, N: Int>(): Self<T, N> {
+    res: Self<T, N>;
     res
 };
 
@@ -64,13 +64,13 @@ pub vec4 := fn<T: Type<math.Numeric>>(x: T, y: T, z: T, w: T): Vec4<T> {
 };
 
 /** Zero 2D `Float` vector `(0, 0)`. */
-pub ZERO2 := zeroVec<Float, 2>();
+pub ZERO2 := FVec2.zeroed();
 
 /** Zero 3D `Float` vector `(0, 0, 0)`. */
-pub ZERO3 := zeroVec<Float, 3>();
+pub ZERO3 := FVec3.zeroed();
 
 /** Zero 4D `Float` vector `(0, 0, 0, 0)`. */
-pub ZERO4 := zeroVec<Float, 4>();
+pub ZERO4 := FVec4.zeroed();
 
 /** Unit X axis `(1, 0, 0)`. */
 pub UNIT_X3 := vec3(1.0, 0.0, 0.0);
@@ -231,10 +231,10 @@ pub Vec.distance := fn<N: Int>(a: Self<Float, N>, b: Self<Float, N>): Float {
     a.sub(b).length()
 };
 
-/** Unit-length vector in the direction of `v`, or `zeroVec<Float, N>()` when near zero. */
+/** Unit-length vector in the direction of `v`, or `Self<Float, N>.zeroed()` when near zero. */
 pub Vec.normalize := fn<N: Int>(v: Self<Float, N>): Self<Float, N> {
     len := v.length();
-    if len <= 0.000000000001 { zeroVec<Float, N>() } else { v.scale(1.0 / len) }
+    if len <= 0.000000000001 { Self<Float, N>.zeroed() } else { v.scale(1.0 / len) }
 };
 
 /** 2D signed cross product `(a.x * b.y) - (a.y * b.x)`. */

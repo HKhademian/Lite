@@ -22,29 +22,29 @@ io.outputLine(a.value, b.value, math.clampInt(a.value + b.value, 2, 12));
 
 ## 2D, 3D & Generic N-D Vector Math (`math/vector`)
 
-[math/vector](lite://module/math/vector) provides one unified generic constrained vector `Vec<T: Type<math.Numeric>, N: Int>` (`Vec2<T>`, `Vec3<T>`, `Vec4<T>`, `FVec2`, `FVec3`, `FVec4`, `IVec2`, `IVec3`, `vec2`, `vec3`, `vec4`, `splat`, `zeroVec`, `ZERO2`, `ZERO3`, `UNIT_X3`, `UNIT_Y3`, `UNIT_Z3`, `x()`/`y()`/`z()`/`w()`, `setX`/`setY`/`setZ`/`setW`, `dot`, `length`, `normalize`, `lerp`, `cross`, `cross2`, `rotate`, `reflect`):
+[math/vector](lite://module/math/vector) provides one unified generic constrained vector `Vec<T: Type<math.Numeric>, N: Int>` (`Vec2<T>`, `Vec3<T>`, `Vec4<T>`, `FVec2`, `FVec3`, `FVec4`, `IVec2`, `IVec3`) with static constructors inherited by all aliases (`Vec.from`, `Vec.splat`, `Vec.zeroed`, e.g. `IVec2.zeroed()`, `Vec2.splat(1.0)`), positional `vec2`/`vec3`/`vec4`, `ZERO2`–`ZERO4`, `UNIT_X3`–`UNIT_Z3`, `x()`/`y()`/`z()`/`w()`, `setX`/`setY`/`setZ`/`setW`, `dot`, `length`, `normalize`, `lerp`, `cross`, `cross2`, `rotate`, `reflect`:
 
 ```lite
 io := import "core/io";
 vec := import "math/vector";
 
 a := vec.vec2(3.0, 4.0);
-b := vec.vec2(1.0, 0.0);
+b := vec.FVec2.splat(1.0);
 sum := a.add(b);
 io.outputLine(a.length(), a.dot(b), sum.x(), sum.y());
 ```
 
 ## N×M, 2×2, 3×3 & 4×4 Matrix Transforms (`math/matrix`)
 
-[math/matrix](lite://module/math/matrix) defines one unified generic row-major matrix record `Mat<T: Type<math.Numeric>, R: Int, C: Int>` backed by `[Vec<T, C>; R]` (`Mat2<T>`, `Mat3<T>`, `Mat4<T>`, `FMat2`, `FMat3`, `FMat4`), with generic `identity<N>()`, `.mul()`, `.mulVec()`, `.transpose()`, `.det()`, 2D affine transforms (`translate2`, `scale2`, `rotate2`, `.transformPoint2`), and 3D transforms (`translate3`, `scale3`, `rotateX`, `rotateY`, `rotateZ`, `perspective`, `.transformPoint3`):
+[math/matrix](lite://module/math/matrix) defines one unified generic row-major matrix record `Mat<T: Type<math.Numeric>, R: Int, C: Int>` backed by `[Vec<T, C>; R]` (`Mat2<T>`, `Mat3<T>`, `Mat4<T>`, `FMat2`, `FMat3`, `FMat4`), with static type constructors (`Mat.from`, `Mat.zeroed`, `Mat.identity`, `FMat2.rotation2`, `FMat3.translate2`/`scale2`/`rotate2`, `FMat4.translate3`/`scale3`/`rotateX`/`rotateY`/`rotateZ`/`perspective`) and `.mul()`, `.mulVec()`, `.transpose()`, `.det()`, `.transformPoint2()`, `.transformPoint3()`:
 
 ```lite
 io := import "core/io";
 vec := import "math/vector";
 mat := import "math/matrix";
 
-move := mat.translate2(10.0, 20.0);
-scale := mat.scale2(2.0, 3.0);
+move := mat.FMat3.translate2(10.0, 20.0);
+scale := mat.FMat3.scale2(2.0, 3.0);
 xform := move.mul(scale);
 pt := xform.transformPoint2(vec.vec2(4.0, 5.0));
 io.outputLine(pt.x(), pt.y(), xform.det());

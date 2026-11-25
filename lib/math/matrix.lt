@@ -27,25 +27,25 @@ pub FMat3 := alias Mat<Float, 3, 3>;
 pub FMat4 := alias Mat<Float, 4, 4>;
 
 /** Constructs a generic `Mat<T, R, C>` from row vectors `[Vec<T, C>; R]`. */
-pub mat := fn<T: Type<math.Numeric>, R: Int, C: Int>(rows: [vec.Vec<T, C>; R]): Mat<T, R, C> {
-    Mat<T, R, C> { rows = rows }
+pub Mat.from := fn<T: Type<math.Numeric>, R: Int, C: Int>(rows: [vec.Vec<T, C>; R]): Self<T, R, C> {
+    Self<T, R, C> { rows = rows }
 };
 
 /** Zero-initialized generic `Mat<T, R, C>`. */
-pub zeroMat := fn<T: Type<math.Numeric>, R: Int, C: Int>(): Mat<T, R, C> {
-    res: Mat<T, R, C>;
+pub Mat.zeroed := fn<T: Type<math.Numeric>, R: Int, C: Int>(): Self<T, R, C> {
+    res: Self<T, R, C>;
     res
 };
 
 /** Generic N×N `Float` identity matrix. */
-pub identity := fn<N: Int>(): Mat<Float, N, N> {
+pub Mat.identity := fn<N: Int>(): Self<Float, N, N> {
     var out: [vec.Vec<Float, N>; N];
     loop 0..N as i {
         var row: [Float; N];
         row[i] = 1.0;
         out[i] = vec.Vec<Float, N> { data = row };
     }
-    Mat<Float, N, N> { rows = out }
+    Self<Float, N, N> { rows = out }
 };
 
 /** Compile-time row count `R` of `m`. */
@@ -203,19 +203,19 @@ pub Mat.transformPoint3 := fn(m: Self<Float, 4, 4>, p: vec.FVec3): vec.FVec3 {
 };
 
 /* ============================================================================
- * 2D & 3D Transform Constructors
+ * 2D & 3D Transform Constructors (Static Type Operations)
  * ============================================================================ */
 
 /** 2x2 counter-clockwise rotation matrix by `radians`. */
-pub rotation2 := fn(radians: Float): FMat2 {
+pub Mat.rotation2 := fn(radians: Float): Self<Float, 2, 2> {
     c := math.cos(radians);
     s := math.sin(radians);
-    Mat<Float, 2, 2> { rows = [vec.vec2(c, 0.0 - s), vec.vec2(s, c)] }
+    Self<Float, 2, 2> { rows = [vec.vec2(c, 0.0 - s), vec.vec2(s, c)] }
 };
 
 /** 2D affine translation matrix in homogeneous 3x3 form. */
-pub translate2 := fn(tx: Float, ty: Float): FMat3 {
-    Mat<Float, 3, 3> {
+pub Mat.translate2 := fn(tx: Float, ty: Float): Self<Float, 3, 3> {
+    Self<Float, 3, 3> {
     rows = [
     vec.vec3(1.0, 0.0, tx),
     vec.vec3(0.0, 1.0, ty),
@@ -225,8 +225,8 @@ pub translate2 := fn(tx: Float, ty: Float): FMat3 {
 };
 
 /** 2D affine scale matrix in homogeneous 3x3 form. */
-pub scale2 := fn(sx: Float, sy: Float): FMat3 {
-    Mat<Float, 3, 3> {
+pub Mat.scale2 := fn(sx: Float, sy: Float): Self<Float, 3, 3> {
+    Self<Float, 3, 3> {
     rows = [
     vec.vec3(sx, 0.0, 0.0),
     vec.vec3(0.0, sy, 0.0),
@@ -236,10 +236,10 @@ pub scale2 := fn(sx: Float, sy: Float): FMat3 {
 };
 
 /** 2D affine rotation matrix by `radians` in homogeneous 3x3 form. */
-pub rotate2 := fn(radians: Float): FMat3 {
+pub Mat.rotate2 := fn(radians: Float): Self<Float, 3, 3> {
     c := math.cos(radians);
     s := math.sin(radians);
-    Mat<Float, 3, 3> {
+    Self<Float, 3, 3> {
     rows = [
     vec.vec3(c, 0.0 - s, 0.0),
     vec.vec3(s, c, 0.0),
@@ -249,8 +249,8 @@ pub rotate2 := fn(radians: Float): FMat3 {
 };
 
 /** 3D translation matrix in homogeneous 4x4 form. */
-pub translate3 := fn(tx: Float, ty: Float, tz: Float): FMat4 {
-    Mat<Float, 4, 4> {
+pub Mat.translate3 := fn(tx: Float, ty: Float, tz: Float): Self<Float, 4, 4> {
+    Self<Float, 4, 4> {
     rows = [
     vec.vec4(1.0, 0.0, 0.0, tx),
     vec.vec4(0.0, 1.0, 0.0, ty),
@@ -261,8 +261,8 @@ pub translate3 := fn(tx: Float, ty: Float, tz: Float): FMat4 {
 };
 
 /** 3D scale matrix in homogeneous 4x4 form. */
-pub scale3 := fn(sx: Float, sy: Float, sz: Float): FMat4 {
-    Mat<Float, 4, 4> {
+pub Mat.scale3 := fn(sx: Float, sy: Float, sz: Float): Self<Float, 4, 4> {
+    Self<Float, 4, 4> {
     rows = [
     vec.vec4(sx, 0.0, 0.0, 0.0),
     vec.vec4(0.0, sy, 0.0, 0.0),
@@ -273,10 +273,10 @@ pub scale3 := fn(sx: Float, sy: Float, sz: Float): FMat4 {
 };
 
 /** 3D rotation matrix around the X axis by `radians`. */
-pub rotateX := fn(radians: Float): FMat4 {
+pub Mat.rotateX := fn(radians: Float): Self<Float, 4, 4> {
     c := math.cos(radians);
     s := math.sin(radians);
-    Mat<Float, 4, 4> {
+    Self<Float, 4, 4> {
     rows = [
     vec.vec4(1.0, 0.0, 0.0, 0.0),
     vec.vec4(0.0, c, 0.0 - s, 0.0),
@@ -287,10 +287,10 @@ pub rotateX := fn(radians: Float): FMat4 {
 };
 
 /** 3D rotation matrix around the Y axis by `radians`. */
-pub rotateY := fn(radians: Float): FMat4 {
+pub Mat.rotateY := fn(radians: Float): Self<Float, 4, 4> {
     c := math.cos(radians);
     s := math.sin(radians);
-    Mat<Float, 4, 4> {
+    Self<Float, 4, 4> {
     rows = [
     vec.vec4(c, 0.0, s, 0.0),
     vec.vec4(0.0, 1.0, 0.0, 0.0),
@@ -301,10 +301,10 @@ pub rotateY := fn(radians: Float): FMat4 {
 };
 
 /** 3D rotation matrix around the Z axis by `radians`. */
-pub rotateZ := fn(radians: Float): FMat4 {
+pub Mat.rotateZ := fn(radians: Float): Self<Float, 4, 4> {
     c := math.cos(radians);
     s := math.sin(radians);
-    Mat<Float, 4, 4> {
+    Self<Float, 4, 4> {
     rows = [
     vec.vec4(c, 0.0 - s, 0.0, 0.0),
     vec.vec4(s, c, 0.0, 0.0),
@@ -315,13 +315,13 @@ pub rotateZ := fn(radians: Float): FMat4 {
 };
 
 /** Right-handed perspective projection matrix (`fovYRad`, `aspect`, `near`, `far`). */
-pub perspective := fn(fovYRad: Float, aspect: Float, near: Float, far: Float): FMat4 {
+pub Mat.perspective := fn(fovYRad: Float, aspect: Float, near: Float, far: Float): Self<Float, 4, 4> {
     half := fovYRad * 0.5;
     s := math.sin(half);
     c := math.cos(half);
     f := if s == 0.0 { 1.0 } else { c / s };
     nf := 1.0 / (near - far);
-    Mat<Float, 4, 4> {
+    Self<Float, 4, 4> {
     rows = [
     vec.vec4(if aspect == 0.0 { f } else { f / aspect }, 0.0, 0.0, 0.0),
     vec.vec4(0.0, f, 0.0, 0.0),
