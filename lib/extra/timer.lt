@@ -31,10 +31,10 @@ pub Stopwatch := record {
  * ============================================================================ */
 
 /** Creates a fixed-timestep accumulator for `ups` updates per second (clamping frame deltas to `maxDeltaSec`). */
-pub createClock := fn(ups: Float, maxDeltaSec: Float): StepClock {
+pub StepClock.create := fn(ups: Float, maxDeltaSec: Float): Self {
     rate := if ups <= 0.0 { 60.0 } else { ups };
     cap := if maxDeltaSec <= 0.0 { 0.1 } else { maxDeltaSec };
-    StepClock {
+    Self {
     stepSec = 1.0 / rate,
     maxDeltaSec = cap,
     accumulatorSec = 0.0,
@@ -72,9 +72,9 @@ pub StepClock.reset := fn(clock: mut Self): Unit {
  * ============================================================================ */
 
 /** Creates a cooldown timer with `durationSec` (ready immediately when `startReady` is true). */
-pub createCooldown := fn(durationSec: Float, startReady: Bool): Cooldown {
+pub Cooldown.create := fn(durationSec: Float, startReady: Bool): Self {
     dur := if durationSec < 0.0 { 0.0 } else { durationSec };
-    Cooldown { durationSec = dur, remainingSec = if startReady { 0.0 } else { dur }, fired = false }
+    Self { durationSec = dur, remainingSec = if startReady { 0.0 } else { dur }, fired = false }
 };
 
 /** True when `cd` has cooled down and is ready to fire. */
@@ -113,9 +113,9 @@ pub Cooldown.progress := fn(cd: Self): Float {
  * ============================================================================ */
 
 /** Starts a new monotonic wall-clock stopwatch. */
-pub startStopwatch := fn(): Stopwatch {
+pub Stopwatch.start := fn(): Self {
     now := time.monotonicNs();
-    Stopwatch { startNs = now, lastLapNs = now, lastLapMs = 0.0 }
+    Self { startNs = now, lastLapNs = now, lastLapMs = 0.0 }
 };
 
 /** Returns elapsed milliseconds since `sw` was started. */

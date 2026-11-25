@@ -14,7 +14,7 @@ effectiveDelim := fn(delimiter: String): String {
 };
 
 /** Parses RFC-4180 CSV text using `delimiter` (`","` when empty) into a `CsvTable`. */
-pub parse := fn(source: String, delimiter: String): CsvTable {
+pub CsvTable.parse := fn(source: String, delimiter: String): Self {
     delim := effectiveDelim(delimiter);
     fields: mut List<String> = [];
     rowStarts: mut List<Int> = [];
@@ -91,16 +91,16 @@ pub parse := fn(source: String, delimiter: String): CsvTable {
         mut rowLens.pushBack(rowLen);
     }
 
-    CsvTable { fields = fields, rowStarts = rowStarts, rowLens = rowLens }
+    Self { fields = fields, rowStarts = rowStarts, rowLens = rowLens }
 };
 
 /** Parses the first CSV record from `line` into a `List<String>`. */
-pub parseRow := fn(line: String, delimiter: String): List<String> {
+pub CsvTable.parseRow := fn(line: String, delimiter: String): List<String> {
     if line == "" {
         empty: List<String> = [];
         return empty;
     }
-    tbl := parse(line, delimiter);
+    tbl := Self.parse(line, delimiter);
     tbl.row(0)
 };
 
@@ -136,7 +136,7 @@ pub CsvTable.row := fn(t: Self, row: Int): List<String> {
 };
 
 /** Formats one CSV field with RFC-4180 quoting when containing `delimiter`, quotes, or newlines. */
-pub encodeField := fn(value: String, delimiter: String): String {
+pub CsvTable.encodeField := fn(value: String, delimiter: String): String {
     delim := effectiveDelim(delimiter);
     needsQuote := value.contains(delim) or value.contains("\"") or value.contains("\n") or value.contains("\r");
     if not needsQuote { return value; }
@@ -158,23 +158,23 @@ pub encodeField := fn(value: String, delimiter: String): String {
 };
 
 /** Formats one row of fields separated by `delimiter` (`","` when empty). */
-pub encodeRow := fn(fields: List<String>, delimiter: String): String {
+pub CsvTable.encodeRow := fn(fields: List<String>, delimiter: String): String {
     delim := effectiveDelim(delimiter);
     encoded: mut List<String> = [];
     loop fields as field {
-        mut encoded.pushBack(encodeField(field, delim));
+        mut encoded.pushBack(Self.encodeField(field, delim));
     }
     text.joinTexts(encoded, delim)
 };
 
 /** Serializes all rows in `table` separated by `\n`. */
-pub encodeTable := fn(table: CsvTable, delimiter: String): String {
+pub CsvTable.encode := fn(table: Self, delimiter: String): String {
     delim := effectiveDelim(delimiter);
     rows: mut List<String> = [];
     rCount := table.rowCount();
     var r := 0;
     loop r < rCount {
-        mut rows.pushBack(encodeRow(table.row(r), delim));
+        mut rows.pushBack(Self.encodeRow(table.row(r), delim));
         r += 1;
     }
     text.joinTexts(rows, "\n")

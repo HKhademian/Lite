@@ -57,7 +57,7 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | Module | Environment | Capabilities |
 | --- | --- | --- |
 | `data/json` | Browser + CLI | Pure RFC-8259 JSON scanner, typed reader, and O(N) string serializer (`validate`, `kindAt`, `readField*`, `quoteString`, `encode*`) |
-| `data/csv` | Browser + CLI | RFC-4180 CSV parser and flat `CsvTable` serializer (`parse`, `parseRow`, `cell`, `row`, `encodeField`, `encodeRow`, `encodeTable`) |
+| `data/csv` | Browser + CLI | RFC-4180 CSV parser and flat `CsvTable` serializer (`CsvTable.parse`, `CsvTable.parseRow`, `cell`, `row`, `CsvTable.encodeField`, `CsvTable.encodeRow`, `encode`) |
 
 ## Play & Extra Modules (`lib/extra/` — 6 modules)
 
@@ -68,7 +68,7 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | `extra/board` | Lite Play | 2D shape, sprite, and pixel-grid helpers built on `extra/canvas` |
 | `extra/audio` | Lite Play | WebAudio & native PCM tone queue (`tone`, `playNote`, `drain`) |
 | `extra/color` | Browser + CLI | Encoding-independent normalized RGBA/HSL color values (`fromRgb`, `fromRgba8`, `fromHsl`, `mix`, `withAlphaFloat`) |
-| `extra/timer` | Browser + CLI | Nominal `StepClock`, `Cooldown`, and monotonic `Stopwatch` records |
+| `extra/timer` | Browser + CLI | Nominal `StepClock` (`StepClock.create`), `Cooldown` (`Cooldown.create`), and monotonic `Stopwatch` (`Stopwatch.start`) records |
 
 ## Running Library Tests
 

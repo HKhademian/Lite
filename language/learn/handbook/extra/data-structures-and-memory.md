@@ -52,7 +52,7 @@ io.outputLine(idA == idB, ev.evicted, ev.key);
 ## Structured Data Codecs (`data/json`, `data/csv`)
 
 - [data/json](lite://module/data/json) provides a pure RFC-8259 JSON validator, offset scanner, typed reader, and O(N) serializer (`validate`, `kindAt`, `readFieldString`/`Int`/`Bool`, `quoteString`, `encodeObject`).
-- [data/csv](lite://module/data/csv) provides a pure RFC-4180 CSV parser and flat `CsvTable` encoder (`parse`, `parseRow`, `cell`, `row`, `encodeField`, `encodeRow`, `encodeTable`).
+- [data/csv](lite://module/data/csv) provides a pure RFC-4180 CSV parser and flat `CsvTable` encoder (`CsvTable.parse`, `CsvTable.parseRow`, `cell`, `row`, `CsvTable.encodeField`, `CsvTable.encodeRow`, `t.encode`).
 
 ```lite
 io := import "core/io";

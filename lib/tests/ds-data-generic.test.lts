@@ -156,10 +156,10 @@ functionalSrc :=
 "\n" +
 "/* 6. data/csv RFC-4180 parsing & round-trip encoding */\n" +
 "csvSrc := \"name,note\\r\\n\\\"Doe, John\\\",\\\"line1\\nline2\\\"\\r\\nAda,\\\"a\\\"\\\"b\\\"\\\"\\\"\\n\";\n" +
-"tbl := csv.parse(csvSrc, \",\");\n" +
-"rt := csv.encodeTable(tbl, \",\");\n" +
-"tbl2 := csv.parse(rt, \",\");\n" +
-"row1 := csv.parseRow(\"10;20;\\\"a;b\\\"\", \";\");\n" +
+"tbl := csv.CsvTable.parse(csvSrc, \",\");\n" +
+"rt := tbl.encode(\",\");\n" +
+"tbl2 := csv.CsvTable.parse(rt, \",\");\n" +
+"row1 := csv.CsvTable.parseRow(\"10;20;\\\"a;b\\\"\", \";\");\n" +
 "csvOk :=\n" +
 "    tbl.rowCount() == 3\n" +
 "    and tbl.colCount(1) == 2\n" +

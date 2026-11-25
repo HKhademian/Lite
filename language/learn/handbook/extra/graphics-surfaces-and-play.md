@@ -44,15 +44,15 @@ Key `extra/surface` capabilities:
 
 ## Fixed-Timestep Clocks & Cooldowns (`extra/timer`)
 
-[extra/timer](lite://module/extra/timer) supplies nominal `record` game-loop timing primitives: fixed-timestep accumulators (`StepClock` with `createClock`, `advance`, `reset`), cooldowns (`Cooldown` with `createCooldown`, `tick`, `trigger`, `isReady`, `progress`), and monotonic stopwatches (`Stopwatch` with `startStopwatch`, `elapsedMs`, `lap`):
+[extra/timer](lite://module/extra/timer) supplies nominal `record` game-loop timing primitives: fixed-timestep accumulators (`StepClock.create`, `advance`, `reset`), cooldowns (`Cooldown.create`, `tick`, `trigger`, `isReady`, `progress`), and monotonic stopwatches (`Stopwatch.start`, `elapsedMs`, `lap`):
 
 ```lite
 io := import "core/io";
 timer := import "extra/timer";
 
-mut clock := timer.createClock(60.0, 0.25);
+mut clock := timer.StepClock.create(60.0, 0.25);
 mut clock.advance(0.05);
-mut cd := timer.createCooldown(1.0, false);
+mut cd := timer.Cooldown.create(1.0, false);
 mut cd.tick(0.4);
 io.outputLine(clock.lastSteps, clock.totalSteps, cd.isReady());
 ```

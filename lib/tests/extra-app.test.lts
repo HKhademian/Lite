@@ -67,14 +67,14 @@ functionalSrc :=
 "io.outputLine(\"fgrid\", near(fg.getOr(2, 1, 0.0), 3.25), near(fg.getOr(0, 0, 0.0), 1.5));\n" +
 "\n" +
 "/* 4. extra/timer (nominal records) */\n" +
-"mut clk := timer.createClock(50.0, 0.1);\n" +
+"mut clk := timer.StepClock.create(50.0, 0.1);\n" +
 "mut clk.advance(0.05);\n" +
-"mut cd := timer.createCooldown(1.0, false);\n" +
+"mut cd := timer.Cooldown.create(1.0, false);\n" +
 "t0 := mut cd.trigger();\n" +
 "mut cd.tick(1.0);\n" +
 "readyNow := cd.isReady();\n" +
 "t1 := mut cd.trigger();\n" +
-"mut sw := timer.startStopwatch();\n" +
+"mut sw := timer.Stopwatch.start();\n" +
 "_lapMs := mut sw.lap();\n" +
 "el := sw.elapsedMs();\n" +
 "io.outputLine(\"timer\", clk.lastSteps, near(clk.alpha, 0.5), clk.totalSteps, t0, readyNow, t1, near(cd.progress(), 0.0), el >= 0.0 and sw.lastLapMs >= 0.0);\n";
