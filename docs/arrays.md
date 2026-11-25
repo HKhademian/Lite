@@ -104,6 +104,30 @@ This gives fixed arrays the same literal positional access as homogeneous fixed 
 
 The source is evaluated once per access expression. This spelling grants no new writes or caller-location authority; initialization, visibility, ownership, and existing access rules still apply. A permitted var grant through arr.0 refers to the same location as one through arr[0], so the two spellings cannot disguise duplicate access to that element. See [tuple positional access](lite://doc/tuple-entries-and-access#fixed-array-dot-positions).
 
+## Bounds checking after generic specialization
+
+Design agreed on **2026-11-25**. Compiler implementation is pending. If the
+fixed-array extent `N` and the bracket index `i` are both known during
+compilation, a read or write requires `0 <= i < N`. An index known only at
+runtime keeps its runtime bounds check.
+
+Apply the same rule after substituting compile-time arguments in a generic
+operation. For example, `Vec.z()` reads `v.data[2]`, where `data` has type
+`[T; N]`. Calling `.z()` on `Vec<Int, 1>` or `Vec<Int, 2>` is a compile-time
+error. Calling it on `Vec<Int, 3>` is valid. A diagnostic at the concrete
+call should identify the out-of-bounds access in the operation body.
+
+Pending contract cases for TS and C11:
+
+- On a two-element fixed array, index `1` is valid. Index `2` and index
+  `-1` are rejected for both reads and writes.
+- Through the alias `IVec2 := alias Vec<Int, 2>`, `.z()` is rejected for
+  the same reason as the direct bracket read.
+- If a compile-time guard `if N >= 3` encloses the access, a specialization
+  with `N = 2` removes that branch before checking its bounds.
+- With a runtime index, a valid position succeeds and an out-of-bounds
+  position faults at runtime.
+
 ## Constant-position write grants selected
 
 Selected on **2026-10-25**: an initialized fixed array with writable mut access may supply separate var grants for known-valid distinct constant element positions. For mut values := [10, 20], swap(var values[0], var values[1]) is valid when swap requires two var Int parameters: positions 0 and 1 are distinct locations in [Int; 2]. The binding stays fixed while each element receives one replacement grant. Repeating position 0 is rejected. Preserve location validity, initialization, bounds, and ordinary compatibility; additional supported proof forms remain open. Multiple element grants into the same fixed array without a supported disjointness proof are statically rejected; see [unproven overlap](lite://doc/call-replacement-flow#unproven-fixed-array-element-overlap-rejected). An explicit built-in Int i =!= j guard also permits two element grants in its successful branch when the index locals and same fixed array stay stable; ordinary bounds checks remain. The same supported distinctness fact may remain after if i == j { return; } when every equal-index path exits before the call; a continuing equality branch supplies no such proof. See [early-exit distinctness](lite://doc/call-replacement-flow#element-distinctness-after-an-early-exit-selected), [guarded runtime indices](lite://doc/call-replacement-flow#guarded-runtime-index-grants-selected), and [fixed-array element grants](lite://doc/call-replacement-flow#distinct-constant-fixed-array-element-grants-selected).
