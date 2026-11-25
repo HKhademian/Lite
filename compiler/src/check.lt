@@ -1069,11 +1069,11 @@ validateTypeText := fn(symbols: Symbols, text: String, depth: Int, symbol: Symbo
                 if index < 0 {
                     checkFail(symbolToken(symbol), prefix, "unknown type " + token.text);
                 }
-                alias := symbols[index];
-                if alias.kind =!= SYMBOL_KIND_TYPE {
+                aliasEntry := symbols[index];
+                if aliasEntry.kind =!= SYMBOL_KIND_TYPE {
                     checkFail(symbolToken(symbol), prefix, "name " + token.text + " is not a type");
                 }
-                validateTypeText(symbols, alias.detail, depth + 1, alias, prefix);
+                validateTypeText(symbols, aliasEntry.detail, depth + 1, aliasEntry, prefix);
             }
         }
         cursor = cursor + 1;

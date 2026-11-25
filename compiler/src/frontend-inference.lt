@@ -1457,8 +1457,8 @@ pub withoutFutureValues := fn(locals: List<Local>): List<Local> {
 };
 
 /** Parses one top-level aliased import and returns its next source position. */
-pub parseImportClause := fn(target: String, source: String, position: Int, alias: String, prefix: String): Item {
-    if alias == "" { syntax.failAt(source, position, prefix, "import requires a module alias"); }
+pub parseImportClause := fn(target: String, source: String, position: Int, modAlias: String, prefix: String): Item {
+    if modAlias == "" { syntax.failAt(source, position, prefix, "import requires a module alias"); }
     pathStart := syntax.skipTrivia(source, position + 6, prefix);
     if pathStart >= source.length() or source.at(pathStart) =!= "\"" {
         syntax.failAt(source, pathStart, prefix, "import requires a quoted source path");
@@ -1478,7 +1478,7 @@ pub parseImportClause := fn(target: String, source: String, position: Int, alias
     if statementNext < 0 {
         syntax.failAt(source, syntax.skipTrivia(source, path.next, prefix), prefix, "expected ; after import");
     }
-    (kind = ir.ITEM_KIND_IMPORT, name = alias, runtime = "", code = "", intValue = statementNext, textValue = path.textValue)
+    (kind = ir.ITEM_KIND_IMPORT, name = modAlias, runtime = "", code = "", intValue = statementNext, textValue = path.textValue)
 };
 
 /** Collects top-level import clauses before parsing so imported declarations can seed the importing file's symbol table. */

@@ -50,8 +50,8 @@ pub typeNameAt := fn(source: String, position: Int, prefix: String): (name: Stri
 /** Returns the index of the alias declared at `position`, or -1 when absent. */
 pub aliasIndexAt := fn(aliases: List<AliasDecl>, position: Int): Int {
     var index := 0;
-    loop aliases as alias {
-        if alias.at == position { return index; }
+    loop aliases as aliasItem {
+        if aliasItem.at == position { return index; }
         index = index + 1;
     }
     -1
@@ -60,8 +60,8 @@ pub aliasIndexAt := fn(aliases: List<AliasDecl>, position: Int): Int {
 /** Returns the highest block depth present in `aliases`, or 0 when `aliases` is empty. */
 pub maxAliasDepth := fn(aliases: List<AliasDecl>): Int {
     var highest := 0;
-    loop aliases as alias {
-        if alias.depth > highest { highest = alias.depth; }
+    loop aliases as aliasItem {
+        if aliasItem.depth > highest { highest = aliasItem.depth; }
     }
     highest
 };
@@ -70,8 +70,8 @@ pub maxAliasDepth := fn(aliases: List<AliasDecl>): Int {
 pub popBlockAliases := fn(aliases: List<AliasDecl>, depth: Int): List<AliasDecl> {
     var firstDrop := -1;
     var idx := 0;
-    loop aliases as alias {
-        if alias.depth >= depth {
+    loop aliases as aliasItem {
+        if aliasItem.depth >= depth {
             firstDrop = idx;
             break;
         }
@@ -80,8 +80,8 @@ pub popBlockAliases := fn(aliases: List<AliasDecl>, depth: Int): List<AliasDecl>
     if firstDrop < 0 { return aliases; }
     sym.rewindAliasesTo(firstDrop);
     kept: mut List<AliasDecl> = [];
-    loop aliases as alias {
-        if alias.depth < depth { mut kept.pushBack(alias); }
+    loop aliases as aliasItem {
+        if aliasItem.depth < depth { mut kept.pushBack(aliasItem); }
     }
     kept
 };
@@ -89,16 +89,16 @@ pub popBlockAliases := fn(aliases: List<AliasDecl>, depth: Int): List<AliasDecl>
 /** Filters `aliases` to declarations at or above `maxDepth` for lexical outer-alias expansion. */
 pub aliasesUpToDepth := fn(aliases: List<AliasDecl>, maxDepth: Int): List<AliasDecl> {
     var hasDeeper := false;
-    loop aliases as alias {
-        if alias.depth > maxDepth {
+    loop aliases as aliasItem {
+        if aliasItem.depth > maxDepth {
             hasDeeper = true;
             break;
         }
     }
     if not hasDeeper { return aliases; }
     kept: mut List<AliasDecl> = [];
-    loop aliases as alias {
-        if alias.depth <= maxDepth { mut kept.pushBack(alias); }
+    loop aliases as aliasItem {
+        if aliasItem.depth <= maxDepth { mut kept.pushBack(aliasItem); }
     }
     kept
 };
@@ -1707,26 +1707,26 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     }
     index := findAlias(aliases, name);
     if index >= 0 {
-        alias := aliases[index];
-        seenKey := (alias.depth).toText() + ":" + name;
+        aliasItem := aliases[index];
+        seenKey := (aliasItem.depth).toText() + ":" + name;
         if listLib.listContainsText(seen, seenKey) {
-            syntax.failAt(errSource, alias.at, prefix, "recursive type alias " + name);
+            syntax.failAt(errSource, aliasItem.at, prefix, "recursive type alias " + name);
             return (kind = "", next = after);
         }
-        if alias.target == "" {
-            unsupportedAliasTarget(errSource, alias.at, prefix, "target");
+        if aliasItem.target == "" {
+            unsupportedAliasTarget(errSource, aliasItem.at, prefix, "target");
             return (kind = "", next = after);
         }
-        if (alias.target).startsWithAt(0, "$Kind:") {
-            return (kind = (alias.target).slice(6, (alias.target).length()), next = after);
+        if (aliasItem.target).startsWithAt(0, "$Kind:") {
+            return (kind = (aliasItem.target).slice(6, (aliasItem.target).length()), next = after);
         }
         nextSeen: mut List<String> = seen;
         mut nextSeen.pushBack(seenKey);
-        scopedAliases := aliasesUpToDepth(aliases, alias.depth);
-        resolved := self(errSource, alias.at, false, alias.target, 0, prefix, scopedAliases, "alias", "", nextSeen);
-        trailing := syntax.skipTrivia(alias.target, resolved.next, prefix);
-        if trailing < (alias.target).length() {
-            syntax.failAt(errSource, alias.at, prefix, "unexpected text after type");
+        scopedAliases := aliasesUpToDepth(aliases, aliasItem.depth);
+        resolved := self(errSource, aliasItem.at, false, aliasItem.target, 0, prefix, scopedAliases, "alias", "", nextSeen);
+        trailing := syntax.skipTrivia(aliasItem.target, resolved.next, prefix);
+        if trailing < (aliasItem.target).length() {
+            syntax.failAt(errSource, aliasItem.at, prefix, "unexpected text after type");
         }
         return (kind = resolved.kind, next = after);
     }
@@ -2874,21 +2874,21 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
     }
     aliasIdx := findAlias(aliases, name);
     if aliasIdx < 0 { return (ok = false, kind = "", next = afterName); }
-    alias := aliases[aliasIdx];
-    seenKey := (alias.depth).toText() + ":" + name;
-    if listLib.listContainsText(seen, seenKey) or alias.target == "" {
+    aliasItem := aliases[aliasIdx];
+    seenKey := (aliasItem.depth).toText() + ":" + name;
+    if listLib.listContainsText(seen, seenKey) or aliasItem.target == "" {
         return (ok = false, kind = "", next = afterName);
     }
-    if (alias.target).startsWithAt(0, "$Kind:") {
-        return (ok = true, kind = (alias.target).slice(6, (alias.target).length()), next = afterName);
+    if (aliasItem.target).startsWithAt(0, "$Kind:") {
+        return (ok = true, kind = (aliasItem.target).slice(6, (aliasItem.target).length()), next = afterName);
     }
     nextSeen: mut List<String> = [];
     loop seen as entry { mut nextSeen.pushBack(entry); }
     (mut nextSeen).pushBack(seenKey);
-    scopedAliases := aliasesUpToDepth(aliases, alias.depth);
-    resolved := self(alias.target, 0, prefix, scopedAliases, "", nextSeen, depthLeft - 1);
+    scopedAliases := aliasesUpToDepth(aliases, aliasItem.depth);
+    resolved := self(aliasItem.target, 0, prefix, scopedAliases, "", nextSeen, depthLeft - 1);
     if not resolved.ok { return (ok = false, kind = "", next = afterName); }
-    if syntax.skipTrivia(alias.target, resolved.next, prefix) < (alias.target).length() {
+    if syntax.skipTrivia(aliasItem.target, resolved.next, prefix) < (aliasItem.target).length() {
         return (ok = false, kind = "", next = afterName);
     }
     (ok = true, kind = resolved.kind, next = afterName)

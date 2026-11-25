@@ -988,7 +988,7 @@ appendAssignedBagDecls := fn(assignedBag: String, decls: List<BlockDecl>, depth:
 withoutFutureValues := fn(locals: List<Local>): List<Local> { infer.withoutFutureValues(locals) };
 
 /** Parses one top-level aliased import and returns its next source position. */
-parseImportClause := fn(target: String, source: String, position: Int, alias: String, prefix: String): Item { infer.parseImportClause(target, source, position, alias, prefix) };
+parseImportClause := fn(target: String, source: String, position: Int, modAlias: String, prefix: String): Item { infer.parseImportClause(target, source, position, modAlias, prefix) };
 
 /** Collects top-level import clauses before parsing so imported declarations can seed the importing file's symbol table. */
 pub collectImportClauses := fn(target: String, source: String, prefix: String): Items { infer.collectImportClauses(target, source, prefix) };
@@ -3051,8 +3051,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         }
         if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "type") {
             var earlierAlias := false;
-            loop aliases as alias {
-                if alias.name == name and alias.depth == depth and alias.at < nameStart { earlierAlias = true; }
+            loop aliases as aliasItem {
+                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at < nameStart { earlierAlias = true; }
             }
             if earlierAlias {
                 failAt(source, nameStart, prefix, "duplicate type alias " + name);
@@ -3086,8 +3086,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         }
         if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "record") {
             var earlierAlias := false;
-            loop aliases as alias {
-                if alias.name == name and alias.depth == depth and alias.at < nameStart { earlierAlias = true; }
+            loop aliases as aliasItem {
+                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at < nameStart { earlierAlias = true; }
             }
             if earlierAlias {
                 failAt(source, nameStart, prefix, "duplicate type alias " + name);
@@ -3127,8 +3127,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         }
         if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "enum") {
             var earlierAlias := false;
-            loop aliases as alias {
-                if alias.name == name and alias.depth == depth and alias.at < nameStart { earlierAlias = true; }
+            loop aliases as aliasItem {
+                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at < nameStart { earlierAlias = true; }
             }
             if earlierAlias {
                 failAt(source, nameStart, prefix, "duplicate type alias " + name);

@@ -322,11 +322,11 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
 }
 
 /** Builds one aliased module namespace from its source-declared public interface. */
-moduleAliasExports := fn(graph: frontend.Items, path: String, alias: String): frontend.Items {
-    result: mut frontend.Items = [(kind = frontend.ITEM_KIND_MODULE_ALIAS, name = alias, runtime = moduleKeyForPath(graph, path), code = "",
+moduleAliasExports := fn(graph: frontend.Items, path: String, modAlias: String): frontend.Items {
+    result: mut frontend.Items = [(kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = moduleKeyForPath(graph, path), code = "",
     intValue = 0, textValue = path)];
     loop modulePublicDeclarations(graph, path) as item {
-        mut result.pushBack((kind = item.kind, name = alias + "." + item.name, runtime = item.runtime,
+        mut result.pushBack((kind = item.kind, name = modAlias + "." + item.name, runtime = item.runtime,
         code = item.code, intValue = item.intValue, textValue = item.textValue));
     }
     result

@@ -19,11 +19,11 @@ second: User = { name = "Lin", address = { postal = 10115 } };
 implicit: User;
 zeroed: User = 0;
 
-{ alias = name, = role, = score: Int, _ = note } := first;
+{ displayName = name, = role, = score: Int, _ = note } := first;
 var { mutRole = role, mutScore = score } := second;
 mutRole = "admin";
 mutScore += 5;
 
-io.outputLine(alias, role, score, first.address.city, first.address.postal);
+io.outputLine(displayName, role, score, first.address.city, first.address.postal);
 io.outputLine(second.name, mutRole, mutScore, second.address.city, second.address.postal);
 io.outputLine("|" + implicit.role + "|", implicit.score, "|" + zeroed.role + "|", zeroed.score);

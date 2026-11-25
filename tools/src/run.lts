@@ -78,9 +78,9 @@ findModuleAlias := fn(source: String, modulePath: String): String {
             }
             colonIdx := work.indexOf(":=", 0);
             if colonIdx > 0 {
-                alias := work.slice(0, colonIdx).trim();
-                if alias =!= "" and not (alias).contains(" ") {
-                    return alias;
+                modAlias := work.slice(0, colonIdx).trim();
+                if modAlias =!= "" and not (modAlias).contains(" ") {
+                    return modAlias;
                 }
             }
         }

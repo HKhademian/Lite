@@ -2626,8 +2626,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 isStatement = true;
                 if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
                 var earlierInnerAlias := false;
-                loop blockAliases as alias {
-                    if alias.name == itemName and alias.depth == nextAliasDepth and alias.at < itemStart {
+                loop blockAliases as aliasItem {
+                    if aliasItem.name == itemName and aliasItem.depth == nextAliasDepth and aliasItem.at < itemStart {
                         earlierInnerAlias = true;
                     }
                 }
@@ -2656,8 +2656,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 isStatement = true;
                 if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
                 var earlierInnerAlias := false;
-                loop blockAliases as alias {
-                    if alias.name == itemName and alias.depth == nextAliasDepth and alias.at < itemStart {
+                loop blockAliases as aliasItem {
+                    if aliasItem.name == itemName and aliasItem.depth == nextAliasDepth and aliasItem.at < itemStart {
                         earlierInnerAlias = true;
                     }
                 }
@@ -2816,8 +2816,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 isStatement = true;
                 if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
                 var earlierInnerAlias := false;
-                loop blockAliases as alias {
-                    if alias.name == itemName and alias.depth == nextAliasDepth and alias.at < itemStart {
+                loop blockAliases as aliasItem {
+                    if aliasItem.name == itemName and aliasItem.depth == nextAliasDepth and aliasItem.at < itemStart {
                         earlierInnerAlias = true;
                     }
                 }
