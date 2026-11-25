@@ -1,6 +1,6 @@
 # Serious usage, generics, and libraries roadmap
 
-Status: **owner-selected architecture and roadmap direction, 2026-11-25** (Slice 1 of `extra/surface` is implemented; the remaining language, library, memory, runtime, and target tracks are planned increments).
+Status: **owner-selected architecture and roadmap direction, 2026-11-25** (language/generics ladder, sibling `lib/` namespaces, `extra/surface` Slices 1–3 + C11 frame scratch, and platform-target / standalone web export are implemented; multi-file `apps/<name>/` dogfooding and procedural audio mixer remain queued).
 
 This document records the settled architecture for scaling LiteLang and its toolchain from small scripts and playground sketches into serious native and web applications, including multi-file games.
 
@@ -51,5 +51,5 @@ See [modules and packages](lite://doc/modules-and-packages) and [the library ind
    - **Slice 2 (completed):** Rebased [extra/canvas](lite://module/extra/canvas) as a simple, zero-jargon pixel-graphics entry layer (`setPixel`, `unsetPixel`, `clear`, `fillRect`, `draw`, `show`, `start`) implemented purely on top of [extra/surface](lite://module/extra/surface), retiring duplicated Play rendering glue.
    - **Slice 3 (completed for 2D surface/input/textures/ASCII + frame scratch):** Expanded `extra/surface` with immediate-mode edge-triggered queries (`isKeyDown`, `isKeyPressed`, `isKeyReleased`, `isPointerPressed`, `isPointerReleased`, `wheelDelta`), offscreen `Texture` (`createTexture`, `setTexturePixel`, `blit`, `blitScaled`, `destroyTexture`), `fillTriangle`, `setClipRect`/`clearClipRect`, full 95-glyph printable ASCII bitmap font, and `scratchMark`/`scratchRewind`. Multi-voice procedural audio mixer remains queued.
 2. **C11 memory & leak hygiene:** Audited 5,000-frame 60 FPS native loops with `--sanitize` (ASan/LSan) and live `vitals.memoryBytes`, and implemented checkpointed `lt_str_slab` frame-scratch string reclamation (`scratchMark`/`scratchRewind`); automatic scope-exit collection (`List`/`Map`/`Set`) release remains an increment; see [memory and performance](lite://doc/memory-and-performance).
-3. **Platform targets & export tooling:** Decouple codegen backend (`c` / `ts`) from platform target (`macos`, `linux`, `windows`, `web`, `wasm`, `headless`) and provide clean native and standalone web export commands.
-4. **Dogfood validation:** Build multi-file applications and games under `apps/<name>/` to stress-test compiler ergonomics, libraries, rendering, audio, and memory end-to-end.
+3. **Platform targets & export tooling (completed):** Decoupled codegen backend (`c` / `ts`) from platform target (`native`, `macos`, `linux`, `windows`, `headless`, `web`) in `./bin/lite build` (`--platform ...`, `--web`, `--headless`), including standalone single-file HTML5 web export embedding a browser `extra/surface` canvas/input/audio host.
+4. **Dogfood validation (queued next):** Build multi-file applications and games under `apps/<name>/` to stress-test compiler ergonomics, libraries, rendering, audio, and memory end-to-end.

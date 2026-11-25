@@ -1,0 +1,166 @@
+/** Platform-target flags and standalone single-file HTML5 web export tests for `lite build`. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+project := import "util/project";
+
+rawRoot := project.findRepoRoot();
+test.check("repo root found", rawRoot =!= "");
+root := fs.realPath(rawRoot).path;
+liteBin := path.join(root, "bin/lite");
+emptyEnv: List<String> = [];
+
+tmpRes := fs.makeTempDir("lite-build-plat-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+tmpDir := tmpRes.path;
+
+appPath := path.join(tmpDir, "demo_stage.lts");
+appSrc :=
+"io := import \"core/io\";\n" +
+"surf := import \"extra/surface\";\n" +
+"win := surf.open(\"PlatformDemo\", 24, 16);\n" +
+"surf.uncapFrameRate(win);\n" +
+"var moved := 0;\n" +
+"var frames := 0;\n" +
+"surf.run(win, fn(inp: surf.FrameInput): Bool {\n" +
+"    if not inp.open { return false; }\n" +
+"    if surf.isKeyDown(win, \"ArrowRight\") or inp.key == \"ArrowRight\" {\n" +
+"        moved = moved + 1;\n" +
+"    }\n" +
+"    surf.clear(win, surf.BLACK);\n" +
+"    surf.fillRect(win, surf.rect(2.0 + moved * 2.0, 2.0, 4.0, 4.0), surf.RED);\n" +
+"    surf.drawText(win, \"OK\", surf.point(1.0, 8.0), 7.0, surf.WHITE);\n" +
+"    frames = frames + 1;\n" +
+"    if frames == 3 {\n" +
+"        io.outputLine(\"frames=\" + frames.toText() + \",moved=\" + moved.toText());\n" +
+"    }\n" +
+"    frames < 4\n" +
+"});\n" +
+"surf.close(win);\n";
+test.check("write demo_stage.lts", fs.writeText(appPath, appSrc).ok);
+
+/* 1. Flag validation and help output */
+helpRes := proc.run(liteBin, ["build", "--help"], root, emptyEnv, true, "");
+test.checkInt("build --help status: " + helpRes.stderr, 0, helpRes.status);
+test.check("build --help documents --platform", helpRes.stdout.contains("--platform"));
+test.check("build --help documents --web", helpRes.stdout.contains("--web"));
+
+badPlatRes := proc.run(liteBin, ["build", "--platform", "bogus", appPath], root, emptyEnv, true, "");
+test.checkInt("unsupported platform exit 2", 2, badPlatRes.status);
+test.check("unsupported platform msg: " + badPlatRes.stderr, badPlatRes.stderr.contains("unsupported platform bogus"));
+
+crossPlat := if proc.platform() == "win32" { "linux" } else { "windows" };
+crossRes := proc.run(liteBin, ["build", "--platform=" + crossPlat, appPath], root, emptyEnv, true, "");
+test.checkInt("cross-compile native rejection exit 2", 2, crossRes.status);
+test.check("cross-compile native rejection msg: " + crossRes.stderr, crossRes.stderr.contains("cross-compiling native binary"));
+
+/* 2. Native & headless builds produce working binaries */
+nativeBin := path.join(tmpDir, "demo_native");
+nativeBuild := proc.run(liteBin, ["build", "--platform", "native", "-o", nativeBin, appPath], root, emptyEnv, true, "");
+test.checkInt("build --platform native: " + nativeBuild.stderr, 0, nativeBuild.status);
+nativeRun := proc.run(nativeBin, [], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+test.checkInt("native run: " + nativeRun.stderr, 0, nativeRun.status);
+test.checkText("native stdout", "frames=3,moved=0\n", nativeRun.stdout);
+
+headlessBin := path.join(tmpDir, "demo_headless");
+headlessBuild := proc.run(liteBin, ["build", "--headless", "-o", headlessBin, appPath], root, emptyEnv, true, "");
+test.checkInt("build --headless: " + headlessBuild.stderr, 0, headlessBuild.status);
+headlessRun := proc.run(headlessBin, [], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+test.checkInt("headless run: " + headlessRun.stderr, 0, headlessRun.status);
+test.checkText("headless stdout", "frames=3,moved=0\n", headlessRun.stdout);
+
+/* 3. Standalone web export (`--platform web` and `--web` default filename) */
+webHtmlOut := path.join(tmpDir, "demo_stage_explicit.html");
+webBuild := proc.run(liteBin, ["build", "--platform", "web", "--keep-ts", "-o", webHtmlOut, appPath], root, emptyEnv, true, "");
+test.checkInt("build --platform web: " + webBuild.stderr, 0, webBuild.status);
+test.check("web html created", fs.kind(webHtmlOut) == fs.FILE_KIND_FILE);
+test.check("web keep-ts created", fs.kind(webHtmlOut + ".ts") == fs.FILE_KIND_FILE);
+
+defaultWebBuild := proc.run(liteBin, ["build", "--web", "--quiet", appPath], tmpDir, emptyEnv, true, "");
+test.checkInt("build --web default out: " + defaultWebBuild.stderr, 0, defaultWebBuild.status);
+test.checkText("build --web --quiet stdout", "", defaultWebBuild.stdout);
+defaultWebHtml := path.join(tmpDir, "demo_stage.html");
+test.check("default demo_stage.html created", fs.kind(defaultWebHtml) == fs.FILE_KIND_FILE);
+
+htmlRead := fs.readText(webHtmlOut);
+test.check("read exported html", htmlRead.ok);
+html := htmlRead.text;
+test.check("html doctype", html.startsWithAt(0, "<!doctype html>"));
+test.check("html canvas tag", html.contains("<canvas id=\"lite-stage\""));
+test.check("html host installer", html.contains("globalThis.__liteSurfaceHost"));
+
+openScriptTag := "<script type=\"module\">\n";
+sStart := html.indexOf(openScriptTag, 0);
+test.check("html has module script start", sStart >= 0);
+sEnd := html.indexOf("\n</script>", sStart + openScriptTag.length());
+test.check("html has module script end", sEnd > sStart);
+scriptBody := html.slice(sStart + openScriptTag.length(), sEnd);
+test.check("no unescaped </script in js payload", not scriptBody.toLowerAscii().contains("</script"));
+
+/* 4. Execute the exported browser JS payload against a mock DOM + canvas in Node */
+verifyScriptPath := path.join(tmpDir, "verify_web.mjs");
+verifyScript :=
+"import assert from 'node:assert/strict';\n" +
+"import { readFileSync } from 'node:fs';\n" +
+"const html = readFileSync(process.argv[2], 'utf8');\n" +
+"const openTag = '<script type=\"module\">\\n';\n" +
+"const i0 = html.indexOf(openTag) + openTag.length;\n" +
+"const i1 = html.indexOf('\\n</script>', i0);\n" +
+"const js = html.slice(i0, i1);\n" +
+"const listeners = new Map();\n" +
+"const rafQueue = [];\n" +
+"let putCalls = 0;\n" +
+"let lastPixels = null;\n" +
+"const mockCanvas = {\n" +
+"  width: 0, height: 0, title: '', style: {},\n" +
+"  focus() {},\n" +
+"  getBoundingClientRect: () => ({ left: 0, top: 0, width: 24, height: 16 }),\n" +
+"  getContext: () => ({\n" +
+"    createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),\n" +
+"    putImageData: (img) => { putCalls += 1; lastPixels = new Uint8ClampedArray(img.data); }\n" +
+"  }),\n" +
+"  addEventListener: (t, fn) => { const a = listeners.get(t) ?? []; a.push(fn); listeners.set(t, a); }\n" +
+"};\n" +
+"const errEl = { textContent: '' };\n" +
+"const fpsEl = { textContent: '' };\n" +
+"const logs = [];\n" +
+"const prevDesc = Object.getOwnPropertyDescriptor(globalThis, 'process');\n" +
+"delete globalThis.process;\n" +
+"globalThis.document = {\n" +
+"  title: '',\n" +
+"  getElementById: (id) => id === 'lite-stage' ? mockCanvas : (id === 'lite-err' ? errEl : (id === 'lite-fps' ? fpsEl : null))\n" +
+"};\n" +
+"globalThis.requestAnimationFrame = (cb) => { rafQueue.push(cb); return rafQueue.length; };\n" +
+"globalThis.cancelAnimationFrame = () => { rafQueue.length = 0; };\n" +
+"const origLog = console.log;\n" +
+"console.log = (...args) => { logs.push(args.join(' ')); };\n" +
+"try {\n" +
+"  new Function(js)();\n" +
+"  assert.equal(errEl.textContent, '', 'unexpected web runtime error: ' + errEl.textContent);\n" +
+"  assert.equal(mockCanvas.width, 24);\n" +
+"  assert.equal(mockCanvas.height, 16);\n" +
+"  for (const fn of listeners.get('keydown') ?? []) fn({ key: 'ArrowRight', preventDefault() {} });\n" +
+"  for (let step = 0; step < 3 && rafQueue.length > 0; step += 1) {\n" +
+"    const cb = rafQueue.shift();\n" +
+"    cb(16 * (step + 2));\n" +
+"  }\n" +
+"  assert.equal(errEl.textContent, '', 'step error: ' + errEl.textContent);\n" +
+"  assert(putCalls >= 3, 'expected at least 3 canvas presents, got ' + putCalls);\n" +
+"  assert(lastPixels !== null && lastPixels.some((v) => v !== 0), 'expected non-zero RGBA pixels');\n" +
+"  const movedRedOffset = (2 * 24 + 6) * 4;\n" +
+"  assert.equal(lastPixels[movedRedOffset], 255, 'expected red rect shifted right on keydown');\n" +
+"  assert.equal(lastPixels[movedRedOffset + 1], 0);\n" +
+"  assert(rafQueue.length === 0, 'expected loop to stop after frame 4, remaining raf=' + rafQueue.length);\n" +
+"  assert(logs.includes('frames=3,moved=2'), 'expected frame=3 log, got ' + JSON.stringify(logs));\n" +
+"} finally {\n" +
+"  console.log = origLog;\n" +
+"  if (prevDesc) Object.defineProperty(globalThis, 'process', prevDesc);\n" +
+"}\n";
+test.check("write verify_web.mjs", fs.writeText(verifyScriptPath, verifyScript).ok);
+
+webExec := proc.run(project.nodeExecPath(), [verifyScriptPath, webHtmlOut], root, emptyEnv, true, "");
+test.checkInt("web html mock DOM execution: " + webExec.stderr, 0, webExec.status);
+
+_rmTmp := fs.remove(tmpDir);

@@ -1,4 +1,4 @@
-/** Compile one Lite script via the C11 backend and host C compiler into a standalone native executable. */
+/** Compile one Lite script into a standalone native executable (`--platform native|headless`) or single-file HTML5 app (`--platform web`). */
 
 io := import "core/io";
 fs := import "core/file";
@@ -6,14 +6,166 @@ proc := import "core/process";
 path := import "core/path";
 project := import "util/project";
 compilerBuild := import "util/compiler-build";
+tb := import "util/text-builder";
 
 usageText := fn(): String {
-    "Usage: ./bin/lite build [-O0|-O1|-O2|-O3|-Os] [--cc-opt -O0|-O1|-O2|-O3|-Os] [--sanitize] [--builtin-mode SPEC]... [-o OUTPUT] [--keep-c] [--quiet] file.lts"
+    "Usage: ./bin/lite build [--platform native|macos|linux|windows|headless|web] [--web] [--headless] [-O0|-O1|-O2|-O3|-Os] [--cc-opt -O0|-O1|-O2|-O3|-Os] [--sanitize] [--builtin-mode SPEC]... [-o OUTPUT] [--keep-c] [--keep-ts] [--quiet] file.lts"
 };
 
 usageExit := fn(): Unit {
     io.errorLine(usageText());
     io.exit(2);
+};
+
+escapeHtml := fn(raw: String): String {
+    out: mut tb.TextBuilder;
+    n := raw.length();
+    var runStart := 0;
+    var i := 0;
+    loop i < n {
+        ch := raw.at(i);
+        var rep := "";
+        if ch == "&" { rep = "&amp;"; }
+        else if ch == "<" { rep = "&lt;"; }
+        else if ch == ">" { rep = "&gt;"; }
+        else if ch == "\"" { rep = "&quot;"; }
+        if rep =!= "" {
+            if i > runStart { tb.append(mut out, raw.slice(runStart, i)); }
+            tb.append(mut out, rep);
+            runStart = i + 1;
+        }
+        i += 1;
+    }
+    if runStart == 0 { return raw; }
+    if runStart < n { tb.append(mut out, raw.slice(runStart, n)); }
+    tb.build(out)
+};
+
+hostOsName := fn(): String {
+    p := proc.platform();
+    if p == "darwin" { "macos" } else if p == "win32" { "windows" } else { p }
+};
+
+isSupportedPlatform := fn(p: String): Bool {
+    p == "native" or p == "macos" or p == "linux" or p == "windows" or p == "headless" or p == "web"
+};
+
+buildWebHtml := fn(titleText: String, jsBody: String): String {
+    safeTitle := escapeHtml(titleText);
+    out: mut tb.TextBuilder;
+    tb.append(mut out, "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n");
+    tb.append(mut out, "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");
+    tb.append(mut out, "<title>" + safeTitle + "</title>\n");
+    tb.append(mut out, "<style>\n");
+    tb.append(mut out, "*{box-sizing:border-box}html,body{margin:0;padding:0;height:100%;background:#0b0f17;color:#e2e8f0;font:13px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif}\n");
+    tb.append(mut out, "body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px}\n");
+    tb.append(mut out, "#lite-stage{display:block;max-width:100%;max-height:86vh;width:min(92vw,960px);height:auto;aspect-ratio:16/10;background:#000;border:1px solid #243047;border-radius:8px;box-shadow:0 16px 48px rgba(0,0,0,.55);image-rendering:pixelated;object-fit:contain;outline:none}\n");
+    tb.append(mut out, "#lite-stage:focus{border-color:#38bdf8}\n");
+    tb.append(mut out, ".lite-bar{display:flex;gap:16px;align-items:center;color:#94a3b8;font-size:12px}.lite-err{color:#f87171;white-space:pre-wrap;max-width:92vw;margin:0}\n");
+    tb.append(mut out, "</style>\n</head>\n<body>\n");
+    tb.append(mut out, "<canvas id=\"lite-stage\" tabindex=\"0\" width=\"320\" height=\"200\"></canvas>\n");
+    tb.append(mut out, "<div class=\"lite-bar\"><strong>" + safeTitle + "</strong><span>Click stage for keyboard &amp; audio</span><span id=\"lite-fps\"></span></div>\n");
+    tb.append(mut out, "<pre id=\"lite-err\" class=\"lite-err\"></pre>\n");
+    tb.append(mut out, "<script type=\"module\">\n");
+    tb.append(mut out, "if (typeof globalThis.process === 'undefined') {\n");
+    tb.append(mut out, "  globalThis.process = {\n");
+    tb.append(mut out, "    argv: ['lite', 'web'],\n");
+    tb.append(mut out, "    env: {},\n");
+    tb.append(mut out, "    exitCode: 0,\n");
+    tb.append(mut out, "    stdout: { write(s) { console.log(String(s).replace(/\\n$/, '')); } },\n");
+    tb.append(mut out, "    stderr: { write(s) { console.error(String(s).replace(/\\n$/, '')); } },\n");
+    tb.append(mut out, "    exit(code) { throw new Error('Lite exited with code ' + String(code ?? 0)); }\n");
+    tb.append(mut out, "  };\n");
+    tb.append(mut out, "}\n");
+    tb.append(mut out, "(function installLiteSurfaceHost() {\n");
+    tb.append(mut out, "  const canvas = document.getElementById('lite-stage');\n");
+    tb.append(mut out, "  const fpsEl = document.getElementById('lite-fps');\n");
+    tb.append(mut out, "  const ctx = canvas ? canvas.getContext('2d') : null;\n");
+    tb.append(mut out, "  let audioCtx = null;\n");
+    tb.append(mut out, "  const unlockAudio = () => {\n");
+    tb.append(mut out, "    const AC = globalThis.AudioContext || globalThis.webkitAudioContext;\n");
+    tb.append(mut out, "    if (!AC) return;\n");
+    tb.append(mut out, "    if (!audioCtx) audioCtx = new AC();\n");
+    tb.append(mut out, "    if (audioCtx.state === 'suspended' && audioCtx.resume) audioCtx.resume().catch(() => {});\n");
+    tb.append(mut out, "  };\n");
+    tb.append(mut out, "  const playTone = (freq, ms, vol) => {\n");
+    tb.append(mut out, "    unlockAudio();\n");
+    tb.append(mut out, "    if (!audioCtx || audioCtx.state !== 'running') return;\n");
+    tb.append(mut out, "    if (!(freq >= 20 && freq <= 20000 && ms > 0 && vol > 0)) return;\n");
+    tb.append(mut out, "    const dur = Math.min(ms, 3000) / 1000;\n");
+    tb.append(mut out, "    const amp = Math.min(1, vol / 100) * 0.45;\n");
+    tb.append(mut out, "    const osc = audioCtx.createOscillator();\n");
+    tb.append(mut out, "    const gain = audioCtx.createGain();\n");
+    tb.append(mut out, "    const t0 = audioCtx.currentTime;\n");
+    tb.append(mut out, "    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, t0);\n");
+    tb.append(mut out, "    gain.gain.setValueAtTime(0, t0); gain.gain.linearRampToValueAtTime(amp, t0 + Math.min(dur / 4, 0.01));\n");
+    tb.append(mut out, "    gain.gain.linearRampToValueAtTime(0, t0 + dur);\n");
+    tb.append(mut out, "    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(t0); osc.stop(t0 + dur);\n");
+    tb.append(mut out, "  };\n");
+    tb.append(mut out, "  let imgW = 0, imgH = 0, imgData = null, animId = 0, stopped = false, activeState = null, activeApi = null;\n");
+    tb.append(mut out, "  let ptrX = 0, ptrY = 0, ptrDown = false, pendingKey = '', pendingWheel = 0, lastAt = 0;\n");
+    tb.append(mut out, "  const heldKeys = new Set();\n");
+    tb.append(mut out, "  const mapCell = (cx, cy) => {\n");
+    tb.append(mut out, "    if (!canvas) return { x: 0, y: 0 };\n");
+    tb.append(mut out, "    const r = canvas.getBoundingClientRect();\n");
+    tb.append(mut out, "    const w = imgW || canvas.width || 1, h = imgH || canvas.height || 1;\n");
+    tb.append(mut out, "    if (!r.width || !r.height) return { x: 0, y: 0 };\n");
+    tb.append(mut out, "    const s = Math.min(r.width / w, r.height / h);\n");
+    tb.append(mut out, "    const ox = r.left + (r.width - w * s) / 2, oy = r.top + (r.height - h * s) / 2;\n");
+    tb.append(mut out, "    return { x: Math.max(0, Math.min(w - 1, Math.floor((cx - ox) / s))), y: Math.max(0, Math.min(h - 1, Math.floor((cy - oy) / s))) };\n");
+    tb.append(mut out, "  };\n");
+    tb.append(mut out, "  const ensureImg = (w, h) => {\n");
+    tb.append(mut out, "    if (!ctx || w < 1 || h < 1) return;\n");
+    tb.append(mut out, "    if (imgW !== w || imgH !== h || !imgData) {\n");
+    tb.append(mut out, "      imgW = w; imgH = h; canvas.width = w; canvas.height = h;\n");
+    tb.append(mut out, "      canvas.style.aspectRatio = String(w) + '/' + String(h);\n");
+    tb.append(mut out, "      imgData = ctx.createImageData(w, h);\n");
+    tb.append(mut out, "    }\n");
+    tb.append(mut out, "  };\n");
+    tb.append(mut out, "  if (canvas) {\n");
+    tb.append(mut out, "    canvas.addEventListener('keydown', (e) => { unlockAudio(); if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault?.(); heldKeys.add(e.key); pendingKey = e.key; });\n");
+    tb.append(mut out, "    canvas.addEventListener('keyup', (e) => { heldKeys.delete(e.key); });\n");
+    tb.append(mut out, "    canvas.addEventListener('pointermove', (e) => { const c = mapCell(e.clientX, e.clientY); ptrX = c.x; ptrY = c.y; });\n");
+    tb.append(mut out, "    canvas.addEventListener('pointerdown', (e) => { unlockAudio(); canvas.focus?.({ preventScroll: true }); const c = mapCell(e.clientX, e.clientY); ptrX = c.x; ptrY = c.y; ptrDown = true; });\n");
+    tb.append(mut out, "    canvas.addEventListener('pointerup', (e) => { const c = mapCell(e.clientX, e.clientY); ptrX = c.x; ptrY = c.y; ptrDown = false; });\n");
+    tb.append(mut out, "    canvas.addEventListener('wheel', (e) => { if (typeof e.deltaY === 'number' && Number.isFinite(e.deltaY)) pendingWheel += e.deltaY; });\n");
+    tb.append(mut out, "  }\n");
+    tb.append(mut out, "  globalThis.__liteSurfaceHost = {\n");
+    tb.append(mut out, "    open(_id, title, w, h, st) { stopped = false; activeState = st; if (canvas) { canvas.title = title; canvas.focus?.({ preventScroll: true }); } document.title = title || document.title; ensureImg(w, h); },\n");
+    tb.append(mut out, "    poll(_id, st) {\n");
+    tb.append(mut out, "      st.pointerX = ptrX; st.pointerY = ptrY; st.pointerDown = ptrDown;\n");
+    tb.append(mut out, "      if (st.keysDown) { st.keysDown.clear(); for (const k of heldKeys) st.keysDown.add(k); }\n");
+    tb.append(mut out, "      if (pendingWheel !== 0) { st.pendingWheelDelta = (st.pendingWheelDelta ?? 0) + pendingWheel; pendingWheel = 0; }\n");
+    tb.append(mut out, "      if (pendingKey) { st.key = pendingKey; pendingKey = ''; }\n");
+    tb.append(mut out, "    },\n");
+    tb.append(mut out, "    present(_id, st) { if (!ctx) return; ensureImg(st.w, st.h); if (!imgData) return; imgData.data.set(st.pixels.subarray(0, imgData.data.length)); ctx.putImageData(imgData, 0, 0); },\n");
+    tb.append(mut out, "    close() { if (animId && globalThis.cancelAnimationFrame) { cancelAnimationFrame(animId); animId = 0; } activeApi = null; activeState = null; },\n");
+    tb.append(mut out, "    playTone(_id, f, ms, vol) { playTone(f, ms, vol); },\n");
+    tb.append(mut out, "    resize(_id, w, h, st) { ensureImg(w, h); this.present(_id, st); },\n");
+    tb.append(mut out, "    run(_surf, st, onFrame, api) {\n");
+    tb.append(mut out, "      activeState = st; activeApi = api; lastAt = 0;\n");
+    tb.append(mut out, "      const raf = globalThis.requestAnimationFrame;\n");
+    tb.append(mut out, "      const stop = () => { if (stopped) return; stopped = true; if (animId && globalThis.cancelAnimationFrame) { cancelAnimationFrame(animId); animId = 0; } st.open = false; activeApi = null; activeState = null; api.close(); };\n");
+    tb.append(mut out, "      const step = (now) => {\n");
+    tb.append(mut out, "        animId = 0; if (stopped || !st.open) { stop(); return; }\n");
+    tb.append(mut out, "        const dt = lastAt > 0 ? Math.max(0, Math.round(now - lastAt)) : 16;\n");
+    tb.append(mut out, "        st.pendingDeltaMs = dt; lastAt = now;\n");
+    tb.append(mut out, "        if (fpsEl && dt > 0) fpsEl.textContent = (1000 / dt).toFixed(0) + ' fps';\n");
+    tb.append(mut out, "        const inp = api.poll();\n");
+    tb.append(mut out, "        if (!st.open || !onFrame(inp)) { stop(); return; }\n");
+    tb.append(mut out, "        api.present();\n");
+    tb.append(mut out, "        if (raf && !stopped && st.open) animId = raf(step);\n");
+    tb.append(mut out, "      };\n");
+    tb.append(mut out, "      st.pendingDeltaMs = 16; const inp0 = api.poll();\n");
+    tb.append(mut out, "      if (!st.open || !onFrame(inp0)) { stop(); return true; }\n");
+    tb.append(mut out, "      api.present(); if (raf && !stopped && st.open) animId = raf(step); return true;\n");
+    tb.append(mut out, "    }\n");
+    tb.append(mut out, "  };\n");
+    tb.append(mut out, "})();\n");
+    tb.append(mut out, jsBody);
+    tb.append(mut out, "\ntry {\n  if (typeof main === 'function') main((t) => console.log(String(t).replace(/\\n$/, '')));\n} catch (err) {\n  const el = document.getElementById('lite-err');\n  if (el) el.textContent = String(err && err.stack ? err.stack : err);\n  console.error(err);\n}\n");
+    tb.append(mut out, "</script>\n</body>\n</html>\n");
+    tb.build(out)
 };
 
 findNativeCompiler := fn(): String {
@@ -32,6 +184,15 @@ findNativeCompiler := fn(): String {
     ""
 };
 
+findTsCompiler := fn(root: String): (ok: Bool, path: String, error: String) {
+    envTs := proc.envGet("LITE_COMPILER_TS");
+    if envTs.found and envTs.value =!= "" and fs.kind(envTs.value) == fs.FILE_KIND_FILE {
+        return (ok = true, path = envTs.value, error = "");
+    }
+    sel := compilerBuild.selectCompilerPath(root, "ts");
+    (ok = sel.ok, path = sel.path, error = sel.error)
+};
+
 run := fn(rawArgs: List<String>): Unit {
     args: mut List<String> = rawArgs;
     compileOpts: mut List<String> = [];
@@ -41,8 +202,10 @@ run := fn(rawArgs: List<String>): Unit {
     var sizeOpt := false;
     var sanitize := false;
     var keepC := false;
+    var keepTs := false;
     var quiet := false;
     var hasOpt := false;
+    var platformTarget := "native";
     var scriptPath := "";
 
     loop args.length() > 0 {
@@ -59,6 +222,15 @@ run := fn(rawArgs: List<String>): Unit {
             outPath = mut args.popFront();
         } else if arg.startsWithAt(0, "--out=") {
             outPath = arg.slice(6, arg.length());
+        } else if arg == "--platform" {
+            if args.length() == 0 or args[0] == "--" { usageExit(); }
+            platformTarget = mut args.popFront();
+        } else if arg.startsWithAt(0, "--platform=") {
+            platformTarget = arg.slice(11, arg.length());
+        } else if arg == "--web" {
+            platformTarget = "web";
+        } else if arg == "--headless" {
+            platformTarget = "headless";
         } else if arg == "--cc-opt" {
             if args.length() == 0 or args[0] == "--" { usageExit(); }
             ccOpt = mut args.popFront();
@@ -70,6 +242,8 @@ run := fn(rawArgs: List<String>): Unit {
             sanitize = true;
         } else if arg == "--keep-c" {
             keepC = true;
+        } else if arg == "--keep-ts" {
+            keepTs = true;
         } else if arg == "--quiet" or arg == "-q" {
             quiet = true;
         } else if arg == "--builtin-mode" {
@@ -104,6 +278,17 @@ run := fn(rawArgs: List<String>): Unit {
         }
     }
 
+    if not isSupportedPlatform(platformTarget) {
+        io.errorLine("lite build: unsupported platform " + platformTarget + " (expected native, macos, linux, windows, headless, or web)");
+        io.exit(2);
+    }
+
+    hostOs := hostOsName();
+    if (platformTarget == "macos" or platformTarget == "linux" or platformTarget == "windows") and platformTarget =!= hostOs {
+        io.errorLine("lite build: cross-compiling native binary for " + platformTarget + " on " + hostOs + " is not supported yet");
+        io.exit(2);
+    }
+
     if scriptPath == "" {
         usageExit();
     }
@@ -118,7 +303,8 @@ run := fn(rawArgs: List<String>): Unit {
 
     base := path.baseName(scriptPath);
     baseNoExt := base.slice(0, base.length() - 4);
-    finalOut := if outPath =!= "" { path.resolve(proc.cwd(), outPath) } else { path.resolve(proc.cwd(), baseNoExt) };
+    defaultName := if platformTarget == "web" { baseNoExt + ".html" } else { baseNoExt };
+    finalOut := if outPath =!= "" { path.resolve(proc.cwd(), outPath) } else { path.resolve(proc.cwd(), defaultName) };
     outParent := path.parentDir(finalOut);
     if outParent =!= "" and not path.isDirectory(outParent) {
         mk := fs.makeDir(outParent);
@@ -133,9 +319,70 @@ run := fn(rawArgs: List<String>): Unit {
         io.errorLine("lite build: " + tempDir.error);
         io.exit(1);
     }
-    cArtifact := if keepC { finalOut + ".c" } else { path.join(tempDir.path, baseNoExt + ".c") };
     emptyEnv: List<String> = [];
 
+    if platformTarget == "web" {
+        root := project.findRepoRoot();
+        tsSel := findTsCompiler(root);
+        if not tsSel.ok {
+            fs.remove(tempDir.path);
+            io.errorLine("lite build: " + tsSel.error);
+            io.exit(1);
+        }
+        tsArtifact := if keepTs { finalOut + ".ts" } else { path.join(tempDir.path, baseNoExt + ".ts") };
+        tsArgs: mut List<String> = [];
+        if not hasOpt { mut tsArgs.pushBack("-O1"); }
+        loop compileOpts as opt { mut tsArgs.pushBack(opt); }
+        (mut tsArgs).pushBack(scriptPath);
+        mut tsArgs.pushBack("--out");
+        mut tsArgs.pushBack(tsArtifact);
+        tsStatus := project.runCompilerArtifact(tsSel.path, tsArgs);
+        if tsStatus =!= 0 {
+            fs.remove(tempDir.path);
+            io.exit(tsStatus);
+        }
+
+        stripTsPath := path.resolve(root, "site/strip-ts.ts");
+        if fs.kind(stripTsPath) =!= fs.FILE_KIND_FILE {
+            fs.remove(tempDir.path);
+            io.errorLine("lite build: missing site/strip-ts.ts helper for web export");
+            io.exit(1);
+        }
+        jsArtifact := path.join(tempDir.path, baseNoExt + ".js");
+        stripScript :=
+        "import { readFileSync, writeFileSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; " +
+        "const { stripLiteTs } = await import(pathToFileURL(process.argv[1]).href); " +
+        "const raw = readFileSync(process.argv[2], 'utf8'); " +
+        "let js = stripLiteTs(raw).replace(/\\bexport function main\\b/, 'function main'); " +
+        "js = js.replace(/<\\/script/gi, '<\\\\/script'); " +
+        "writeFileSync(process.argv[3], js, 'utf8');";
+        stripRes := proc.run(project.nodeExecPath(), ["--input-type=module", "-e", stripScript, stripTsPath, tsArtifact, jsArtifact], "", emptyEnv, true, "");
+        if stripRes.error =!= "" or stripRes.status =!= 0 {
+            fs.remove(tempDir.path);
+            if stripRes.error =!= "" { io.errorLine("lite build: " + stripRes.error); }
+            project.errorText(stripRes.stderr);
+            io.exit(if stripRes.status =!= 0 { stripRes.status } else { 1 });
+        }
+        jsRead := fs.readText(jsArtifact);
+        if not jsRead.ok {
+            fs.remove(tempDir.path);
+            io.errorLine("lite build: " + jsRead.error);
+            io.exit(1);
+        }
+        htmlText := buildWebHtml(baseNoExt, jsRead.text);
+        htmlWrite := fs.writeText(finalOut, htmlText);
+        fs.remove(tempDir.path);
+        if not htmlWrite.ok {
+            io.errorLine("lite build: " + htmlWrite.error);
+            io.exit(1);
+        }
+        if not quiet {
+            io.outputLine(finalOut);
+        }
+        return;
+    }
+
+    cArtifact := if keepC { finalOut + ".c" } else { path.join(tempDir.path, baseNoExt + ".c") };
     nativeCompiler := findNativeCompiler();
     if nativeCompiler =!= "" {
         nativeArgs: mut List<String> = [];
