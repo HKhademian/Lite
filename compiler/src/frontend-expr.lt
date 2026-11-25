@@ -2699,8 +2699,11 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             source.wordAt(syntax.skipTrivia(source, afterItemName + 2, prefix), "import") {
                 syntax.failAt(source, itemStart, prefix, "import is only allowed at top level");
             } else if source.startsWithAt(afterItemName, ":=") and
-            (source.wordAt(syntax.skipTrivia(source, afterItemName + 2, prefix), "type") or
-             source.wordAt(syntax.skipTrivia(source, afterItemName + 2, prefix), "alias")) {
+            source.wordAt(syntax.skipTrivia(source, afterItemName + 2, prefix), "type") {
+                typePos := syntax.skipTrivia(source, afterItemName + 2, prefix);
+                syntax.failAt(source, typePos, prefix, "legacy ':= type' was replaced; use ':= alias' for transparent aliases or ':= distinct' for distinct nominal types");
+            } else if source.startsWithAt(afterItemName, ":=") and
+            source.wordAt(syntax.skipTrivia(source, afterItemName + 2, prefix), "alias") {
                 isStatement = true;
                 if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
                 var earlierInnerAlias := false;
@@ -2715,8 +2718,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 ctx.rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
                 mut declaredInBlock.pushBack(itemName);
                 typePos := syntax.skipTrivia(source, afterItemName + 2, prefix);
-                kwLen := if source.wordAt(typePos, "alias") { 5 } else { 4 };
-                targetStart := syntax.skipTrivia(source, typePos + kwLen, prefix);
+                targetStart := syntax.skipTrivia(source, typePos + 5, prefix);
                 aliasIdx := types.aliasIndexAt(blockAliases, itemStart);
                 if aliasIdx < 0 {
                     types.unsupportedAliasTarget(source, targetStart, prefix, "target");

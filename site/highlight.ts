@@ -12,7 +12,7 @@ export function escapeHtml(text: string): string {
 const liteKeywords = new Set([
   'alias', 'as', 'and', 'break', 'cast', 'continue', 'distinct', 'else', 'enum', 'false', 'finally', 'fn', 'if',
   'import', 'loop', 'match', 'mut', 'not', 'or', 'pub', 'record', 'return',
-  'self', 'then', 'true', 'type', 'var', 'while',
+  'self', 'then', 'true', 'var', 'while',
 ]);
 
 const liteTypes = new Set([

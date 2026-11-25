@@ -1065,11 +1065,10 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
             aliasPos := syntax.skipTrivia(source, afterName, prefix);
             if aliasPos < limit and source.startsWithAt(aliasPos, ":=") {
                 valueStart := syntax.skipTrivia(source, aliasPos + 2, prefix);
-                if source.wordAt(valueStart, "type") or source.wordAt(valueStart, "alias") {
-                    kwLen := if source.wordAt(valueStart, "alias") { 5 } else { 4 };
-                    targetStart := syntax.skipTrivia(source, valueStart + kwLen, prefix);
+                if source.wordAt(valueStart, "alias") {
+                    targetStart := syntax.skipTrivia(source, valueStart + 5, prefix);
                     aliasTarget := types.collectTypeTarget(source, targetStart, prefix);
-                    position = if aliasTarget.next > valueStart { aliasTarget.next } else { valueStart + kwLen };
+                    position = if aliasTarget.next > valueStart { aliasTarget.next } else { valueStart + 5 };
                     continue;
                 }
                 if source.wordAt(valueStart, "distinct") {
@@ -1247,7 +1246,7 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                         declName := source.slice(declStart, declEnd);
                         if source.wordAt(valStart, "fn") {
                             mut decls.pushBack((kind = ir.DECL_KIND_PUB_FN, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
-                        } else if source.wordAt(valStart, "type") or source.wordAt(valStart, "alias") or source.wordAt(valStart, "distinct") or source.wordAt(valStart, "record") or source.wordAt(valStart, "enum") {
+                        } else if source.wordAt(valStart, "alias") or source.wordAt(valStart, "distinct") or source.wordAt(valStart, "record") or source.wordAt(valStart, "enum") {
                             mut decls.pushBack((kind = ir.DECL_KIND_PUB_TYPE, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
                         } else {
                             mut decls.pushBack((kind = ir.DECL_KIND_PUB_VAL, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
@@ -1355,9 +1354,8 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
             }
             if source.startsWithAt(aliasPosition, ":=") {
                 valueStart := syntax.skipTrivia(source, aliasPosition + 2, prefix);
-                if source.wordAt(valueStart, "type") or source.wordAt(valueStart, "alias") {
-                    kwLen := if source.wordAt(valueStart, "alias") { 5 } else { 4 };
-                    targetStart := syntax.skipTrivia(source, valueStart + kwLen, prefix);
+                if source.wordAt(valueStart, "alias") {
+                    targetStart := syntax.skipTrivia(source, valueStart + 5, prefix);
                     aliasTarget := types.collectTypeTarget(source, targetStart, prefix);
                     mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = aliasTarget.text,
                     intValue = nameStart, textValue = aliasTarget.next.toText()));

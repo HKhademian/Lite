@@ -2158,9 +2158,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             afterDefinition = skipTrivia(source, position + 2, prefix);
         }
         definition := blockCount == 0 and source.startsWithAt(position, ":=") and
-        (source.wordAt(afterDefinition, "fn") or source.wordAt(afterDefinition, "type") or
-        source.wordAt(afterDefinition, "alias") or source.wordAt(afterDefinition, "distinct") or
-        source.wordAt(afterDefinition, "record") or source.wordAt(afterDefinition, "enum"));
+        (source.wordAt(afterDefinition, "fn") or source.wordAt(afterDefinition, "alias") or
+        source.wordAt(afterDefinition, "distinct") or source.wordAt(afterDefinition, "record") or
+        source.wordAt(afterDefinition, "enum"));
         if name == "return" {
             var targetTagPos := position;
             var targetTagName := "";
@@ -3060,7 +3060,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         not (name == "mut" and position < size and (source.at(position).isNameStart() or source.at(position) == "(")) {
             unsupportedFeature(source, nameStart, name, prefix);
         }
-        if source.startsWithAt(position, ":=") and (source.wordAt(afterDefinition, "type") or source.wordAt(afterDefinition, "alias")) {
+        if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "type") {
+            failAt(source, afterDefinition, prefix, "legacy ':= type' was replaced; use ':= alias' for transparent aliases or ':= distinct' for distinct nominal types");
+        }
+        if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "alias") {
             var earlierAlias := false;
             loop aliases as aliasItem {
                 if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at < nameStart { earlierAlias = true; }
@@ -3071,8 +3074,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             mut blockDecls.pushBack((name = name, depth = depth));
             typePosition := skipTrivia(source, position + 2, prefix);
-            kwLen := if source.wordAt(typePosition, "alias") { 5 } else { 4 };
-            targetStart := skipTrivia(source, typePosition + kwLen, prefix);
+            targetStart := skipTrivia(source, typePosition + 5, prefix);
             aliasIndex := aliasIndexAt(aliases, nameStart);
             if aliasIndex < 0 {
                 unsupportedAliasTarget(source, targetStart, prefix, "target");

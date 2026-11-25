@@ -63,7 +63,7 @@ badTypesSrc: List<String> = [
 "Bad := alias (a: );",
 ];
 badTypesErr: List<String> = [
-"1:6: expected type after :=\n",
+"1:6: expected alias or distinct after :=\n",
 "1:19: expected a type\n",
 "1:14: unsupported generic type Maybe\n",
 "1:18: expected a type\n",

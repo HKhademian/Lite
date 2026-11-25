@@ -227,5 +227,7 @@ expectRejectBoth("distinct-mut-primitive-rejected", "U := distinct Int; u: mut U
 expectRejectBoth("distinct-mut-inferred-primitive-rejected", "U := distinct Int; mut u := cast<U>(1);", "mut requires");
 expectRejectBoth("distinct-unit-rejected", "V := distinct Unit;", "unsupported distinct underlying type Unit");
 expectRejectBoth("op-on-alias-rejected", "Cat := record { x: Int; } A := alias Cat; A.op := fn(me: Self): Int { 1 };", "cannot attach operation to alias or foreign type A");
+expectRejectBoth("legacy-type-top-level-rejected", "N := type Int;", "legacy ':= type' was replaced");
+expectRejectBoth("legacy-type-block-rejected", "{ N := type Int; }", "legacy ':= type' was replaced");
 
 test.done("alias-and-distinct");

@@ -2619,15 +2619,13 @@ pub collectDistinctTarget := fn(source: String, afterDistinctKw: Int, prefix: St
     (text = "@distraw:" + encodeLengthPrefixedText(distHeader) + encodeLengthPrefixedText(rawTarget.text), next = rawTarget.next)
 };
 
-/** Finds the nearest `"type"`, `"alias"`, `"distinct"`, `"record"`, or `"enum"` keyword offset at or after `cursor`, or -1 when none exists. */
+/** Finds the nearest `"alias"`, `"distinct"`, `"record"`, or `"enum"` keyword offset at or after `cursor`, or -1 when none exists. */
 pub nextAliasOrRecordHit := fn(source: String, cursor: Int): Int {
-    tHit := source.indexOf("type", cursor);
     aHit := source.indexOf("alias", cursor);
     dHit := source.indexOf("distinct", cursor);
     rHit := source.indexOf("record", cursor);
     eHit := source.indexOf("enum", cursor);
-    var best := tHit;
-    if aHit >= 0 and (best < 0 or aHit < best) { best = aHit; }
+    var best := aHit;
     if dHit >= 0 and (best < 0 or dHit < best) { best = dHit; }
     if rHit >= 0 and (best < 0 or rHit < best) { best = rHit; }
     if eHit >= 0 and (best < 0 or eHit < best) { best = eHit; }
@@ -2670,13 +2668,12 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
             opPos := syntax.skipTrivia(source, afterName, prefix);
             if name =!= "pub" and not syntax.isReservedWord(name) and source.startsWithAt(opPos, ":=") {
                 typePos := syntax.skipTrivia(source, opPos + 2, prefix);
-                if source.wordAt(typePos, "type") or source.wordAt(typePos, "alias") {
-                    kwLen := if source.wordAt(typePos, "alias") { 5 } else { 4 };
-                    targetStart := syntax.skipTrivia(source, typePos + kwLen, prefix);
+                if source.wordAt(typePos, "alias") {
+                    targetStart := syntax.skipTrivia(source, typePos + 5, prefix);
                     aliasTarget := collectTypeTarget(source, targetStart, prefix);
                     mut found.pushBack((name = name, target = aliasTarget.text, at = nameStart, end = aliasTarget.next, depth = blockDepth));
                     hasFound = true;
-                    cursor = if aliasTarget.next > typePos + kwLen { aliasTarget.next } else { typePos + kwLen };
+                    cursor = if aliasTarget.next > typePos + 5 { aliasTarget.next } else { typePos + 5 };
                     continue;
                 } else if source.wordAt(typePos, "distinct") {
                     distTarget := collectDistinctTarget(source, typePos + 8, prefix, "b" + blockDepth.toText(), nameStart, name);
