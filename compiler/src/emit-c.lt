@@ -1704,19 +1704,15 @@ emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
             if nextArg >= 0 { hit = nextArg; }
             if nextCmp >= 0 and (hit < 0 or nextCmp < hit) { hit = nextCmp; }
             if hit < 0 { break; }
-            if nextQuote >= 0 and nextQuote < hit {
-                if nextQuote < cursor { nextQuote = code.indexOf("\"", cursor); }
-                if nextQuote >= 0 and nextQuote < hit {
-                    cursor = frontend.skipAliasString(code, nextQuote);
-                    continue;
-                }
+            if nextQuote >= 0 and nextQuote < cursor { nextQuote = code.indexOf("\"", cursor); }
+            if nextCfn >= 0 and nextCfn < cursor { nextCfn = code.indexOf("/*@CFN_START:", cursor); }
+            if nextQuote >= 0 and nextQuote < hit and (nextCfn < 0 or nextQuote < nextCfn) {
+                cursor = frontend.skipAliasString(code, nextQuote);
+                continue;
             }
             if nextCfn >= 0 and nextCfn < hit {
-                if nextCfn < cursor { nextCfn = code.indexOf("/*@CFN_START:", cursor); }
-                if nextCfn >= 0 and nextCfn < hit {
-                    cursor = skipCFnBlock(code, nextCfn);
-                    continue;
-                }
+                cursor = skipCFnBlock(code, nextCfn);
+                continue;
             }
             end := code.skipName(hit);
             if code.startsWithAt(end, " = ") {

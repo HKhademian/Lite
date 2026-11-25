@@ -48,6 +48,21 @@ src :=
 "    mut tasks.pushBack(fn(): Int { item + 5 });\n" +
 "}\n" +
 "\n" +
+"/* 6. Closure with string literal before float arithmetic/comparison inside another fn */\n" +
+"applyStrFloat := fn(cb: fn(String, Int): Float): Float {\n" +
+"    cb(\"Escape\", 5)\n" +
+"};\n" +
+"outerStrFloat := fn(tag: String): Float {\n" +
+"    applyStrFloat(fn(k: String, ms: Int): Float {\n" +
+"        var bonus := 0.0;\n" +
+"        if k == \"Escape\" and tag == \"Escape\" {\n" +
+"            bonus = 0.5;\n" +
+"        }\n" +
+"        raw := ms / 2.0;\n" +
+"        if raw > 1.0 { raw + bonus } else { 1.0 }\n" +
+"    })\n" +
+"};\n" +
+"\n" +
 "dbl := fn(x: Int): Int { x * 2 };\n" +
 "io.outputLine(apply(triple, 4), apply(dbl, 7), fact(5));\n" +
 "add10 := makeAdder(10);\n" +
@@ -56,13 +71,15 @@ src :=
 "c1 := makeCounter(0, 5);\n" +
 "c2 := makeCounter(100, 1);\n" +
 "io.outputLine(c1(), c1(), c2(), c1(), c2());\n" +
-"io.outputLine(tasks[0](), tasks[1](), tasks[2]());\n";
+"io.outputLine(tasks[0](), tasks[1](), tasks[2]());\n" +
+"io.outputLine(outerStrFloat(\"Escape\"), outerStrFloat(\"Other\"));\n";
 
 expected :=
 "12 14 120\n" +
 "13 28\n" +
 "5 10 101 15 102\n" +
-"15 25 35\n";
+"15 25 35\n" +
+"3 2.5\n";
 
 tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
 test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);
