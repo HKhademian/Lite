@@ -73,12 +73,37 @@ Because the receiver binding is an ordinary named first parameter (`v`, `a`, `it
 An attached operation is an ordinary function in `TypeName`'s namespace:
 
 - **Dot call:** `p.add(q)` resolves statically to `Vec2.add(p, q)` only when `p`'s type satisfies the receiver's `Self` / `Self<...>` contract (for example, calling `names.sum()` on `List<String>` when `List.sum` requires `Self<Int>` is a compile-time error).
-- **Mutating dot call (explicit call-site `mut` lease, selected 2026-11-24):** when the receiver parameter is `mut Self` / `mut Self<...>`, the dot call **must** explicitly lease `mut` at the call site: `mut xs.pushBack(42)`, `x := mut xs.popBack()`, `mut b.chunks.pushBack(chunk)`, or `mut player.takeDamage(10)`. Because parentheses are pure grouping, `(mut xs).popBack()`, `(((((mut xs))))).popBack()`, and `mut (xs).popBack()` are equivalent to `mut xs.popBack()`. `mut` sits immediately to the left of the mutated root binding (including nested record/tuple field paths such as `mut state.rng.nextInt()`) — identical to ordinary/type-qualified calls such as `List.pushBack(mut xs, 42)` ([caller mutation grants](lite://doc/caller-mutation-grants)) — and is enforced in both directions: omitting `mut` on a `mut Self` operation is a compile-time error, and writing `mut` on a read-only `Self` operation is also a compile-time error. Call-site `mut` scopes strictly to that single mutating call (for example `mut xs.popBack().length()` mutates `xs` in `popBack()` and invokes `length()` read-only on the returned value). The compiler statically requires the receiver root binding to hold writable `mut` access and preserves record value/copy-on-write semantics identically to local field updates (`snapshot := player; mut player.takeDamage(10);` leaves `snapshot` unchanged).
+- **Mutating dot call:** `mut Self` and `mut Self<...>` require an explicit call-site grant. See [mutation grants for field receivers](lite://doc/type-operations#mutation-grants-for-field-receivers).
 - **Type-qualified call:** `Vec2.add(p, q)` calls the same symbol explicitly.
 - **Unbound function value:** `Vec2.add` denotes an ordinary function value of type `fn(Vec2, Vec2): Vec2` with no hidden bound-method closure allocation.
 - **No field shadowing:** declaring a type-attached operation with the same name as a field of that type is a compile-time error.
 - **Explicit calls for computed reads (selected 2026-11-23):** computed operations such as `.length()`, `.size()`, and `.isEmpty()` are ordinary `fn` type operations called with `(...)`, keeping a sharp visual boundary where `value.field` denotes stored data and `value.op(...)` invokes code. Existing compiler-hardcoded `.length`, `.size`, and `.isEmpty` properties will migrate to explicit calls under [the migration plan](lite://doc/compiler/type-operations-migration-plan); `get`/`set` backing properties are deferred for future design once field privacy and ownership rules exist.
 - **No overloading yet (one symbol per `TypeName.op`):** LiteLang has no function or operation overloading yet. Each `TypeName.op` is a single unique binding in `TypeName`'s namespace — declaring two operations with the same name on the same type family (such as `List.sum` for `Self<Int>` and `List.sum` for `Self<Float>`, or coexisting `T.createFrom(v: T, ...)` and `T.createFrom(v: Self, ...)`) is rejected. Once function/operation overloading is introduced in a future milestone, same-name overloads across distinct arities, parameter types, or static-versus-`Self` signatures can be supported. Future overloading, generic constraints, and [interfaces](lite://doc/composition-and-interfaces) remain separate later design decisions.
+
+### Mutation grants for field receivers
+
+The call-site `mut` grant covers the **first method call**. In
+`mut a.b.c.d.e.op()`, the receiver is the field path `a.b.c.d.e`. The root
+binding must have writable `mut` access, and the fields along the path must
+permit that access. The operation can update the original field. An earlier
+value copy of the record retains its own values.
+
+```text
+mut state.inner.counter.bump();             /* grant to bump */
+mut state.inner.counter.bump().toText();    /* grant ends when bump returns */
+mut state.inner.counter.view().bump();      /* rejected at read-only view */
+state.inner.counter.bump();                 /* rejected because bump requires mut */
+```
+
+A read-only first call rejects the grant even if a later call mutates.
+Later calls use their own receiver and grant rules. See [explicit caller
+grants](lite://doc/caller-mutation-grants).
+
+For simple bindings, `mut counter.bump()`, `(mut counter).bump()`, and
+`mut (counter).bump()` are equivalent. The agreed grouped field form
+`(mut state.inner.counter).bump()` designates the same receiver as the bare
+field form. The bare field form is implemented. Support for the grouped
+field form is pending on TS and C11.
 
 ## Provisional operator hooks (`$getIndex`, `$setIndex`)
 

@@ -24,6 +24,11 @@ rename(mut user); /* rejected: source lacks writable data access */
 
 The call marker grants existing authority; it cannot upgrade read-only access or copy an immutable source to pretend the mutation was granted. A separately declared mutable copy is a different source and can be passed explicitly.
 
+A dot-call receiver can also be a writable field path. In
+`mut state.inner.counter.bump().toText()`, `bump()` receives the grant for
+`state.inner.counter`. The grant ends when `bump()` returns. See
+[mutation grants for field receivers](lite://doc/type-operations#mutation-grants-for-field-receivers).
+
 ## Replace a supplied location's content
 
 ```text
