@@ -1,0 +1,374 @@
+/* Dual-target (TS + C11) tests for generic record<T: Type>, distinct<T: Type>, enum<T: Type>, alias<T: Type>, and uniform <T: Type> syntax. */
+
+test := import "core/test";
+file := import "core/file";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+runBoth := fn(label: String, src: String, expected: String): Unit {
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+    test.checkInt(label + " ts status: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(label + " ts stderr", "", tsRes.stderr);
+    test.checkText(label + " ts stdout", expected, tsRes.stdout);
+    if ccInfo.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+        test.checkInt(label + " c status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " c stderr", "", cRes.stderr);
+        test.checkText(label + " c stdout parity", tsRes.stdout, cRes.stdout);
+    }
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccInfo.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+/* 1. Generic record, distinct, alias, enum, COW, destructuring, Map/Set, match, and forward references. */
+coreSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"makeBox := fn<T: Type>(v: T): Box<T> {\n" +
+"    Box<T> { value = v }\n" +
+"};\n" +
+"\n" +
+"emptyBox := fn<T: Type>(): Box<T> {\n" +
+"    b: Box<T> = {};\n" +
+"    b\n" +
+"};\n" +
+"\n" +
+"Box := record<T: Type> {\n" +
+"    value: T;\n" +
+"}\n" +
+"\n" +
+"Pair := record<A: Type, B: Type> {\n" +
+"    first: A;\n" +
+"    second: B;\n" +
+"}\n" +
+"\n" +
+"Slot := record<T: Type> {\n" +
+"    value: T;\n" +
+"    gen: Int = 1;\n" +
+"}\n" +
+"\n" +
+"User := record { name: String; }\n" +
+"Post := record { title: String; }\n" +
+"Id := distinct<T: Type> Int;\n" +
+"Wrap := distinct<T: Type> Box<T>;\n" +
+"\n" +
+"PairSame := alias<T: Type> Pair<T, T>;\n" +
+"Swap := alias<A: Type, B: Type> Pair<B, A>;\n" +
+"StrMap := alias<V: Type> Map<String, V>;\n" +
+"Tagged := alias<T: Type> (tag: String, value: T);\n" +
+"\n" +
+"Tag := enum<T: Type> { A; B; }\n" +
+"Code := enum<T: Type> : Int { Ok = 200; Err = 500; }\n" +
+"\n" +
+"Wrap.get := fn<T: Type>(w: Self<T>): T {\n" +
+"    cast<Box<T>>(w).value\n" +
+"};\n" +
+"Wrap.set := fn<T: Type>(w: mut Self<T>, v: T): Unit {\n" +
+"    w.value = v;\n" +
+"};\n";
+
+expectRejectBoth("distinct-record-no-field-inheritance",
+coreSrc + "w: mut Wrap<Int> = cast(Box<Int> { value = 1 }); mut w.set(2);\n",
+"has no operation value");
+
+/* Rebuild coreSrc cleanly without invalid field access inside distinct Wrap. */
+cleanCoreSrc :=
+"io := import \"core/io\";\n" +
+"map := import \"core/map\";\n" +
+"set := import \"core/set\";\n" +
+"\n" +
+"makeBox := fn<T: Type>(v: T): Box<T> {\n" +
+"    Box<T> { value = v }\n" +
+"};\n" +
+"\n" +
+"emptyBox := fn<T: Type>(): Box<T> {\n" +
+"    b: Box<T> = {};\n" +
+"    b\n" +
+"};\n" +
+"\n" +
+"identity := fn<T: Type>(x: T): T { x };\n" +
+"\n" +
+"Box := record<T: Type> {\n" +
+"    value: T;\n" +
+"}\n" +
+"\n" +
+"Pair := record<A: Type, B: Type> {\n" +
+"    first: A;\n" +
+"    second: B;\n" +
+"}\n" +
+"\n" +
+"Slot := record<T: Type> {\n" +
+"    value: T;\n" +
+"    gen: Int = 1;\n" +
+"}\n" +
+"\n" +
+"User := record { name: String; }\n" +
+"Post := record { title: String; }\n" +
+"Id := distinct<T: Type> Int;\n" +
+"Bucket := distinct<T: Type> List<T>;\n" +
+"\n" +
+"PairSame := alias<T: Type> Pair<T, T>;\n" +
+"Swap := alias<A: Type, B: Type> Pair<B, A>;\n" +
+"StrMap := alias<V: Type> Map<String, V>;\n" +
+"Tagged := alias<T: Type> (tag: String, value: T);\n" +
+"\n" +
+"Tag := enum<T: Type> { A; B; }\n" +
+"Code := enum<T: Type> : Int { Ok = 200; Err = 500; }\n" +
+"\n" +
+"Box.get := fn<T: Type>(b: Self<T>): T { b.value };\n" +
+"Box.set := fn<T: Type>(b: mut Self<T>, v: T): Unit { b.value = v; };\n" +
+"Box.map := fn<T: Type, U: Type>(b: Self<T>, f: fn(T): U): Self<U> {\n" +
+"    Self<U> { value = f(b.value) }\n" +
+"};\n" +
+"Box.flatten := fn<T: Type>(b: Self<Self<T>>): Self<T> { b.value };\n" +
+"Box.doubled := fn(b: Self<Int>): Int { b.value * 2 };\n" +
+"Box.$getIndex := fn<T: Type>(b: Self<T>, idx: Int): T { _idx := idx; b.value };\n" +
+"Box.$setIndex := fn<T: Type>(b: mut Self<T>, idx: Int, v: T): Unit { _idx := idx; b.value = v; };\n" +
+"\n" +
+"Id.raw := fn<T: Type>(id: Self<T>): Int { cast<Int>(id) };\n" +
+"\n" +
+"bInt := makeBox(42);\n" +
+"bStr: Box<String> = { value = \"hi\" };\n" +
+"bZero := emptyBox<Int>();\n" +
+"slot := Slot<String> { value = \"ok\" };\n" +
+"nested := Box<Box<Int>> { value = Box<Int> { value = 77 } };\n" +
+"flat := nested.flatten();\n" +
+"pairList := Pair<Box<Int>, List<String>> { first = bInt, second = [\"a\", \"b\"] };\n" +
+"\n" +
+"mut cowBox := Box<Int> { value = 10 };\n" +
+"snap := cowBox;\n" +
+"cowBox.value += 5;\n" +
+"mut cowBox.set(19);\n" +
+"{ = value } := cowBox;\n" +
+"\n" +
+"uid := cast<Id<User>>(7);\n" +
+"uid2: Id<User> = cast(7);\n" +
+"pid := cast<Id<Post>>(7);\n" +
+"users: mut StrMap<String>;\n" +
+"idMap: mut Map<Id<User>, String>;\n" +
+"idSet: mut Set<Id<User>>;\n" +
+"mut users.set(\"u1\", \"Ada\");\n" +
+"mut idMap.set(uid, \"first\");\n" +
+"mut idSet.add(uid);\n" +
+"bk: Bucket<Int> = cast([4, 5]);\n" +
+"\n" +
+"ps := PairSame<Int> { first = 1, second = 2 };\n" +
+"sw := Swap<String, Int> { first = 9, second = \"nine\" };\n" +
+"tg: Tagged<Bool> = (tag = \"flag\", value = true);\n" +
+"\n" +
+"t1 := Tag<Int>.A;\n" +
+"t2: Tag<String> = .B;\n" +
+"codeVal := Code<User>.Ok.value;\n" +
+"mRes := match t1 {\n" +
+"    Tag<Int>.A { 11 }\n" +
+"    .B { 22 }\n" +
+"};\n" +
+"\n" +
+"mapped := bInt.map(fn(n) { n + 1 });\n" +
+"mut idxBox := Box<Int> { value = 3 };\n" +
+"idxBox[0] = 88;\n" +
+"idRaw := Id.raw(uid);\n" +
+"explicitId := identity<String>(\"ok\");\n" +
+"\n" +
+"{ _blk := fn(): Unit {\n" +
+"    LocalBox := record<X: Type> { item: X; };\n" +
+"    LocalAlias := alias<X: Type> LocalBox<X>;\n" +
+"    LocalId := distinct<X: Type> Int;\n" +
+"    lb := LocalAlias<Int> { item = 123 };\n" +
+"    lid: LocalId<String> = cast(99);\n" +
+"    io.outputLine(lb.item, cast<Int>(lid));\n" +
+"}; _blk(); }\n" +
+"\n" +
+"io.outputLine(bInt.value, bStr.value, bZero.value, slot.value, slot.gen, flat.get());\n" +
+"io.outputLine(pairList.first.get(), pairList.second[1], snap.value, value, Box<Int>.doubled(bInt));\n" +
+"io.outputLine(uid == uid2, cast<Int>(pid), users.getOr(\"u1\", \"\"), idMap.getOr(uid2, \"\"), idSet.has(uid2), idRaw, explicitId, cast<List<Int>>(bk).length());\n" +
+"io.outputLine(ps.first + ps.second, sw.first, sw.second, tg.tag, tg.value);\n" +
+"io.outputLine(t1, t2, codeVal, mRes, mapped.get(), idxBox[0], Box.get(bInt));\n";
+
+expectedCore :=
+"123 99\n" +
+"42 hi 0 ok 1 77\n" +
+"42 b 10 19 84\n" +
+"true 7 Ada first true 7 ok 2\n" +
+"3 9 nine flag true\n" +
+"Tag<Int>.A Tag<String>.B 200 11 43 88 42\n";
+
+runBoth("generic-types-core", cleanCoreSrc, expectedCore);
+
+/* 2. Generic distinct wrapping a record with mut Self<T> field mutation via cast unwrap/rewrap is distinct-safe; test distinct COW wrapper on Box<T> in mut variable. */
+mutDistRecSrc :=
+"io := import \"core/io\";\n" +
+"Box := record<T: Type> { value: T; }\n" +
+"Box.bump := fn(b: mut Self<Int>): Unit { b.value += 1; };\n" +
+"TagBox := distinct<T: Type> Box<T>;\n" +
+"var tb := cast<TagBox<Int>>(Box<Int> { value = 5 });\n" +
+"snapTb := tb;\n" +
+"mut rawB := cast<Box<Int>>(tb);\n" +
+"mut rawB.bump();\n" +
+"tb = cast<TagBox<Int>>(rawB);\n" +
+"io.outputLine(cast<Box<Int>>(snapTb).value, cast<Box<Int>>(tb).value);\n";
+
+runBoth("generic-distinct-record-cow", mutDistRecSrc, "5 6\n");
+
+/* 3. Cross-module pub generic record/distinct/enum/alias referencing private module types and transitive pub type-ops. */
+tmpDir := file.makeTempDir("lite-gen-types-");
+test.check("makeTempDir: " + tmpDir.error, tmpDir.ok);
+libPath := tmpDir.path + "/libmod.lts";
+appPath := tmpDir.path + "/app.lts";
+
+libSrc :=
+"Secret := record { code: Int; }\n" +
+"pub Envelope := record<T: Type> {\n" +
+"    secret: Secret;\n" +
+"    payload: T;\n" +
+"    version: Int = 3;\n" +
+"}\n" +
+"pub Envelope.read := fn<T: Type>(e: Self<T>): T { e.payload };\n" +
+"pub Envelope.secretCode := fn<T: Type>(e: Self<T>): Int { e.secret.code };\n" +
+"pub Handle := distinct<T: Type> Int;\n" +
+"pub Handle.id := fn<T: Type>(h: Self<T>): Int { cast<Int>(h) };\n" +
+"pub Mode := enum<T: Type> { Fast; Safe; }\n" +
+"pub Wrapped := alias<T: Type> Envelope<T>;\n";
+
+appSrc :=
+"io := import \"core/io\";\n" +
+"m := import \"./libmod.lts\";\n" +
+"env := m.Wrapped<String> { payload = \"data\" };\n" +
+"h: m.Handle<Int> = cast(17);\n" +
+"md := m.Mode<String>.Safe;\n" +
+"mScore := match md {\n" +
+"    m.Mode<String>.Fast { 1 }\n" +
+"    m.Mode<String>.Safe { 2 }\n" +
+"};\n" +
+"io.outputLine(m.Envelope.read(env), env.secretCode(), env.version, m.Handle.id(h), md, mScore);\n";
+
+_w1 := file.writeText(libPath, libSrc);
+_w2 := file.writeText(appPath, appSrc);
+
+tsModComp := compilerTest.compileFile(tsComp, tmpDir.path, [appPath]);
+test.checkInt("cross-mod generic types ts compile: " + tsModComp.stderr, 0, tsModComp.status);
+tsModRes := compilerTest.checkAndRunTs(root, tsModComp.stdout);
+test.checkInt("cross-mod generic types ts status: " + tsModRes.stderr, 0, tsModRes.status);
+test.checkText("cross-mod generic types ts stdout", "data 0 3 17 Mode<String>.Safe 2\n", tsModRes.stdout);
+if ccInfo.available {
+    cModComp := compilerTest.compileFile(cComp, tmpDir.path, [appPath]);
+    test.checkInt("cross-mod generic types c compile: " + cModComp.stderr, 0, cModComp.status);
+    cModRes := compilerTest.compileAndRunC(cModComp.stdout, ccInfo.cc, "");
+    test.checkInt("cross-mod generic types c status: " + cModRes.stderr, 0, cModRes.status);
+    test.checkText("cross-mod generic types c stdout parity", tsModRes.stdout, cModRes.stdout);
+}
+_rm := file.remove(tmpDir.path);
+
+/* 4. Rejections across TS and C11. */
+expectRejectBoth("missing-type-args",
+"Box := record<T: Type> { value: T; }\n" +
+"x: Box = { value = 1 };\n",
+"requires explicit type arguments");
+
+expectRejectBoth("wrong-arity",
+"Box := record<T: Type> { value: T; }\n" +
+"x: Box<Int, String> = { value = 1 };\n",
+"expects 1 type argument(s), got 2");
+
+expectRejectBoth("empty-type-params",
+"Bad := record<> { x: Int; }\n",
+"expected at least one type parameter inside <...>");
+
+expectRejectBoth("unsupported-comptime-kind",
+"Bad := record<N: Bogus> { x: Int; }\n",
+"unsupported comptime parameter kind Bogus; only Type is supported yet");
+
+expectRejectBoth("nominal-record-arg-mismatch",
+"Box := record<T: Type> { value: T; }\n" +
+"a: Box<Int> = { value = 1 };\n" +
+"b: Box<String> = a;\n",
+"cannot initialize");
+
+expectRejectBoth("nominal-distinct-arg-mismatch",
+"User := record { name: String; }\n" +
+"Post := record { title: String; }\n" +
+"Id := distinct<T: Type> Int;\n" +
+"u := cast<Id<User>>(1);\n" +
+"p: Id<Post> = u;\n",
+"cannot initialize");
+
+expectRejectBoth("nominal-enum-arg-mismatch",
+"Tag := enum<T: Type> { A; B; }\n" +
+"t: Tag<Int> = Tag<String>.A;\n",
+"cannot initialize");
+
+expectRejectBoth("concrete-specialization-receiver-mismatch",
+"Box := record<T: Type> { value: T; }\n" +
+"Box.doubled := fn(b: Self<Int>): Int { b.value * 2 };\n" +
+"s := Box<String> { value = \"hi\" };\n" +
+"n := s.doubled();\n",
+"operation doubled requires Box<Int>, got Box<String>");
+
+expectRejectBoth("explicit-type-app-receiver-mismatch",
+"Box := record<T: Type> { value: T; }\n" +
+"Box.doubled := fn(b: Self<Int>): Int { b.value * 2 };\n" +
+"b := Box<Int> { value = 3 };\n" +
+"n := Box<String>.doubled(b);\n",
+"operation doubled requires Box<Int>, got Box<String>");
+
+expectRejectBoth("invalid-substituted-map-key",
+"Box := record<T: Type> { value: T; }\n" +
+"Dict := alias<K: Type> Map<K, Int>;\n" +
+"d: Dict<Box<Int>>;\n",
+"unsupported map key type Box<Int>");
+
+expectRejectBoth("invalid-substituted-nested-list",
+"Bag := record<T: Type> { items: List<T>; }\n" +
+"b: Bag<List<Int>>;\n",
+"nested list types are not supported");
+
+expectRejectBoth("invalid-substituted-unit-field",
+"Box := record<T: Type> { value: T; }\n" +
+"b: Box<Unit>;\n",
+"unsupported record field type Unit");
+
+expectRejectBoth("recursive-generic-alias",
+"Bad := alias<T: Type> Bad<T>;\n",
+"recursive type alias Bad");
+
+expectRejectBoth("recursive-generic-record",
+"Node := record<T: Type> { val: T; next: Node<T>; }\n",
+"recursive type alias Node");
+
+expectRejectBoth("attach-op-to-generic-alias",
+"Box := record<T: Type> { value: T; }\n" +
+"AliasBox := alias<T: Type> Box<T>;\n" +
+"AliasBox.get := fn<T: Type>(b: Self<T>): T { b.value };\n",
+"cannot attach operation to alias or foreign type AliasBox");
+
+expectRejectBoth("bare-self-on-generic-owner",
+"Box := record<T: Type> { value: T; }\n" +
+"Box.bad := fn<T: Type>(b: Self): Int { 0 };\n",
+"requires explicit type arguments on Self<...>");
+
+expectRejectBoth("default-on-generic-field",
+"Bad := record<T: Type> { value: T = 0; }\n",
+"default initializer on generic-typed field value is not supported yet");
+
+expectRejectBoth("fn-bare-generic-rejected-with-explicit-args",
+"id := fn<T: Type>(x: T): T { x };\n" +
+"f := id<Int>;\n",
+"expected ( after type arguments in call to id");
+
+test.done("generic-types");

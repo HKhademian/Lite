@@ -974,6 +974,23 @@ resolveOwnedTypeOpTarget := fn(source: String, nameStart: Int, prefix: String, a
         error = "cannot attach operation to unknown or foreign type " + typeName + "; operations may only be attached in the owning module of a record, enum, or built-in type");
     }
     entry := aliases[foundIdx];
+    if entry.at >= 0 and entry.target.startsWithAt(0, "@genraw:") {
+        pDec := types.decodeLengthPrefixedAt(entry.target, 8);
+        innerRaw := if pDec.next >= 0 { entry.target.slice(pDec.next, entry.target.length()) } else { "" };
+        if not innerRaw.startsWithAt(0, "@recraw:") and not innerRaw.startsWithAt(0, "@enumraw:") and not innerRaw.startsWithAt(0, "@distraw:") {
+            return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
+            error = "cannot attach operation to alias or foreign type " + typeName + "; operations may only be attached to an owned record, enum, distinct, or built-in type");
+        }
+        emptySeen: List<String> = [];
+        tplKind := types.resolveGenericTypeText(source, nameStart, prefix, aliases, innerRaw, pDec.text, emptySeen);
+        ownerKey := types.typeOpOwnerKey(tplKind);
+        if ownerKey == "" {
+            return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
+            error = "cannot attach operation to non-nominal type " + typeName);
+        }
+        selfTarget := "@gentpl:" + types.encodeLengthPrefixedText(pDec.text) + tplKind;
+        return (ok = true, ownerKind = tplKind, ownerKey = ownerKey, selfTarget = selfTarget, isGenericOwner = true, error = "");
+    }
     if entry.at < 0 or (not entry.target.startsWithAt(0, "@recraw:") and not entry.target.startsWithAt(0, "@enumraw:") and not entry.target.startsWithAt(0, "@distraw:")) {
         return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
         error = "cannot attach operation to alias or foreign type " + typeName + "; operations may only be attached to an owned record, enum, distinct, or built-in type");
@@ -1187,7 +1204,15 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         if exported.kind == ITEM_KIND_PUBLIC_TYPE {
             mut aliases.pushBack((name = exported.name, target = exported.code, at = -1, end = 0, depth = 0));
             if exported.textValue =!= "" {
-                aliases = types.appendEncodedRecordDefaults(aliases, exported.code, exported.textValue, 0);
+                defTarget := if exported.code.startsWithAt(0, "@gentpl:") {
+                    pDec := types.decodeLengthPrefixedAt(exported.code, 8);
+                    tplBody := if pDec.next >= 0 { exported.code.slice(pDec.next, exported.code.length()) } else { "" };
+                    ownerK := types.typeOpOwnerKey(tplBody);
+                    if ownerK =!= "" { ownerK } else { exported.code }
+                } else {
+                    exported.code
+                };
+                aliases = types.appendEncodedRecordDefaults(aliases, defTarget, exported.textValue, 0);
             }
         }
     }
@@ -1509,7 +1534,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
             pRuntime := ir.safeTargetIdent(target, parameterName);
             runtime := if isMutParam and target == TARGET_C { "(*lite_" + pRuntime + ")" }
-            else if isMutParam and types.isRecordKind(parameterKind) { "lite_" + pRuntime + ".v" }
+            else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
             else { "lite_" + pRuntime };
             fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
             mut blockDecls.pushBack((name = parameterName, depth = 1));
@@ -3074,7 +3099,11 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             mut blockDecls.pushBack((name = name, depth = depth));
             typePosition := skipTrivia(source, position + 2, prefix);
-            targetStart := skipTrivia(source, typePosition + 5, prefix);
+            gp := types.scanComptimeTypeParams(source, typePosition + 5, prefix);
+            if not gp.ok {
+                failAt(source, gp.errPos, prefix, gp.errMsg);
+            }
+            targetStart := skipTrivia(source, gp.next, prefix);
             aliasIndex := aliasIndexAt(aliases, nameStart);
             if aliasIndex < 0 {
                 unsupportedAliasTarget(source, targetStart, prefix, "target");
@@ -3083,11 +3112,28 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if aliasEntry.target == "" {
                 unsupportedAliasTarget(source, targetStart, prefix, "target");
             }
-            seenAliases: mut List<String> = [];
-            resolvedType := resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenAliases);
+            seenAliases: mut List<String> = [depth.toText() + ":" + name];
+            resolvedType := if gp.hasParams {
+                rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
+                    pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
+                    if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
+                } else {
+                    aliasEntry.target
+                };
+                tplKind := types.resolveGenericTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), rawInner, gp.paramsCsv, seenAliases);
+                "@gentpl:" + types.encodeLengthPrefixedText(gp.paramsCsv) + tplKind
+            } else {
+                resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenAliases)
+            };
             var exportedDefaults := "";
-            if types.isRecordKind(resolvedType) {
-                exportedDefaults = types.encodeRecordDefaultsFromAliases(aliases, resolvedType);
+            defRecKind := if resolvedType.startsWithAt(0, "@gentpl:") {
+                pDec := types.decodeLengthPrefixedAt(resolvedType, 8);
+                if pDec.next >= 0 { resolvedType.slice(pDec.next, resolvedType.length()) } else { "" }
+            } else {
+                resolvedType
+            };
+            if types.isRecordKind(defRecKind) {
+                exportedDefaults = types.encodeRecordDefaultsFromAliases(aliases, defRecKind);
             }
             if depth == 0 and blockCount == 0 and publishedTypes.has(name) {
                 mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = resolvedType,
@@ -3109,7 +3155,11 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             mut blockDecls.pushBack((name = name, depth = depth));
             distPosition := skipTrivia(source, position + 2, prefix);
-            targetStart := skipTrivia(source, distPosition + 8, prefix);
+            gp := types.scanComptimeTypeParams(source, distPosition + 8, prefix);
+            if not gp.ok {
+                failAt(source, gp.errPos, prefix, gp.errMsg);
+            }
+            targetStart := skipTrivia(source, gp.next, prefix);
             aliasIndex := aliasIndexAt(aliases, nameStart);
             if aliasIndex < 0 {
                 failAt(source, targetStart, prefix, "expected a type after distinct");
@@ -3118,8 +3168,19 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if aliasEntry.target == "" {
                 failAt(source, targetStart, prefix, "expected a type after distinct");
             }
-            seenDistinct: mut List<String> = [];
-            resolvedDistinct := resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenDistinct);
+            seenDistinct: mut List<String> = [depth.toText() + ":" + name];
+            resolvedDistinct := if gp.hasParams {
+                rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
+                    pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
+                    if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
+                } else {
+                    aliasEntry.target
+                };
+                tplKind := types.resolveGenericTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), rawInner, gp.paramsCsv, seenDistinct);
+                "@gentpl:" + types.encodeLengthPrefixedText(gp.paramsCsv) + tplKind
+            } else {
+                resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenDistinct)
+            };
             if depth == 0 and blockCount == 0 and publishedTypes.has(name) {
                 mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = resolvedDistinct,
                 intValue = 0, textValue = ""));
@@ -3162,9 +3223,20 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     }
                 }
             }
-            aliases = types.appendEncodedRecordDefaults(aliases, parsedRec.kind, parsedRec.encodedDefaults, depth);
+            defKey := if parsedRec.genericParams =!= "" {
+                ownerK := types.typeOpOwnerKey(parsedRec.kind);
+                if ownerK =!= "" { ownerK } else { parsedRec.kind }
+            } else {
+                parsedRec.kind
+            };
+            aliases = types.appendEncodedRecordDefaults(aliases, defKey, parsedRec.encodedDefaults, depth);
+            exportRecCode := if parsedRec.genericParams =!= "" {
+                "@gentpl:" + types.encodeLengthPrefixedText(parsedRec.genericParams) + parsedRec.kind
+            } else {
+                parsedRec.kind
+            };
             if depth == 0 and blockCount == 0 and publishedTypes.has(name) {
-                mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = parsedRec.kind,
+                mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = exportRecCode,
                 intValue = 0, textValue = parsedRec.encodedDefaults));
             }
             position = parsedRec.next;
@@ -3180,6 +3252,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             mut blockDecls.pushBack((name = name, depth = depth));
+            gp := types.scanComptimeTypeParams(source, afterDefinition + 4, prefix);
+            if not gp.ok {
+                failAt(source, gp.errPos, prefix, gp.errMsg);
+            }
             aliasIdx := aliasIndexAt(aliases, nameStart);
             if aliasIdx < 0 {
                 failAt(source, nameStart, prefix, "malformed enum declaration " + name);
@@ -3188,8 +3264,19 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if aliasEntry.target == "" {
                 failAt(source, afterDefinition, prefix, "malformed enum declaration " + name);
             }
-            emptySeen: List<String> = [];
-            resolvedEnum := resolveTypeText(source, afterDefinition, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, emptySeen);
+            emptySeen: List<String> = [depth.toText() + ":" + name];
+            resolvedEnum := if gp.hasParams {
+                rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
+                    pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
+                    if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
+                } else {
+                    aliasEntry.target
+                };
+                tplKind := types.resolveGenericTypeText(source, afterDefinition, prefix, aliasesUpToDepth(aliases, depth), rawInner, gp.paramsCsv, emptySeen);
+                "@gentpl:" + types.encodeLengthPrefixedText(gp.paramsCsv) + tplKind
+            } else {
+                resolveTypeText(source, afterDefinition, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, emptySeen)
+            };
             if depth == 0 and blockCount == 0 and publishedTypes.has(name) {
                 mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = name, runtime = "", code = resolvedEnum,
                 intValue = 0, textValue = ""));

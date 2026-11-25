@@ -419,52 +419,26 @@ pub kindHasUnboundGeneric := fn(genericParams: String, kind: String, bindings: M
         }
         return self(genericParams, types.fnResultKind(kind), bindings);
     }
+    nomArgs := types.nominalTypeArgs(kind);
+    loop nomArgs as na {
+        if self(genericParams, na, bindings) { return true; }
+    }
+    if types.isRecordKind(kind) {
+        fc := types.recordComponentCount(kind);
+        var fi := 0;
+        loop fi < fc {
+            if self(genericParams, types.recordComponent(kind, fi).kind, bindings) { return true; }
+            fi = fi + 1;
+        }
+    } else if types.isDistinctKind(kind) {
+        return self(genericParams, types.distinctUnderlyingKind(kind), bindings);
+    }
     false
 };
 
 /** Substitutes bound generic parameters from `bindings` into canonical `pattern`. */
 pub substKind := fn(genericParams: String, pattern: String, bindings: Map<String, String>): String {
-    if isGenericParam(genericParams, pattern) {
-        return bindings.getOr(pattern, pattern);
-    }
-    if types.isListKind(pattern) {
-        return "List<" + self(genericParams, types.listElementKind(pattern), bindings) + ">";
-    }
-    if types.isSetKind(pattern) {
-        return "Set<" + self(genericParams, types.setElementKind(pattern), bindings) + ">";
-    }
-    if types.isMapKind(pattern) {
-        return "Map<" + self(genericParams, types.mapKeyKind(pattern), bindings) + "," +
-        self(genericParams, types.mapValueKind(pattern), bindings) + ">";
-    }
-    if types.isArrayKind(pattern) {
-        ext := types.arrayExtent(pattern);
-        extStr := if ext < 0 { "*" } else { ext.toText() };
-        return "[" + self(genericParams, types.arrayElementKind(pattern), bindings) + ";" + extStr + "]";
-    }
-    if types.isTupleKind(pattern) {
-        n := types.tupleComponentCount(pattern);
-        parts: mut List<String> = [];
-        var i := 0;
-        loop i < n {
-            comp := types.tupleComponent(pattern, i);
-            mut parts.pushBack(comp.label + ":" + self(genericParams, comp.kind, bindings));
-            i = i + 1;
-        }
-        return "(" + textLib.joinTexts(parts, ",") + ")";
-    }
-    if types.isFnKind(pattern) {
-        n := types.fnParamCount(pattern);
-        parts: mut List<String> = [];
-        var i := 0;
-        loop i < n {
-            comp := types.fnParamComponent(pattern, i);
-            mut parts.pushBack(comp.label + ":" + self(genericParams, comp.kind, bindings));
-            i = i + 1;
-        }
-        return "fn(" + textLib.joinTexts(parts, ",") + "):" + self(genericParams, types.fnResultKind(pattern), bindings);
-    }
-    pattern
+    types.substCanonicalKind(genericParams, pattern, bindings)
 };
 
 /** Substitutes `bindings` into `pattern` to produce an expected-type hint for parsing an argument (returns `""` if still partially generic, or `fn(...):$InferRet` when only a callback's return type is unbound). */
@@ -570,53 +544,29 @@ pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, b
         }
         return self(genericParams, types.fnResultKind(pattern), types.fnResultKind(actual), mut bindings);
     }
+    pArgs := types.nominalTypeArgs(pattern);
+    if pArgs.length() > 0 {
+        pOwner := types.typeOpOwnerKey(pattern);
+        aOwner := types.typeOpOwnerKey(actual);
+        aArgs := types.nominalTypeArgs(actual);
+        if pOwner =!= aOwner or pArgs.length() =!= aArgs.length() {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        var ai := 0;
+        loop ai < pArgs.length() {
+            aErr := self(genericParams, pArgs[ai], aArgs[ai], mut bindings);
+            if aErr =!= "" { return aErr; }
+            ai = ai + 1;
+        }
+        return "";
+    }
     if not types.isCompatibleKind(pattern, actual) {
         return "expected " + types.displayKind(pattern) + ", got " + types.displayKind(actual);
     }
     ""
 };
 
-/** Validates map key / set element constraints across a substituted concrete type, returning `""` if valid. */
+/** Validates map key / set element / nested collection constraints across a substituted concrete type, returning `""` if valid. */
 pub validateSubstitutedKind := fn(kind: String): String {
-    if types.isListKind(kind) {
-        return self(types.listElementKind(kind));
-    }
-    if types.isSetKind(kind) {
-        elem := types.setElementKind(kind);
-        if not types.isMapKeyKind(elem) {
-            return "unsupported set element type " + types.displayKind(elem);
-        }
-        return self(elem);
-    }
-    if types.isMapKind(kind) {
-        k := types.mapKeyKind(kind);
-        if not types.isMapKeyKind(k) {
-            return "unsupported map key type " + types.displayKind(k);
-        }
-        return self(types.mapValueKind(kind));
-    }
-    if types.isArrayKind(kind) {
-        return self(types.arrayElementKind(kind));
-    }
-    if types.isTupleKind(kind) {
-        n := types.tupleComponentCount(kind);
-        var i := 0;
-        loop i < n {
-            err := self(types.tupleComponent(kind, i).kind);
-            if err =!= "" { return err; }
-            i = i + 1;
-        }
-        return "";
-    }
-    if types.isFnKind(kind) {
-        n := types.fnParamCount(kind);
-        var i := 0;
-        loop i < n {
-            err := self(types.fnParamComponent(kind, i).kind);
-            if err =!= "" { return err; }
-            i = i + 1;
-        }
-        return self(types.fnResultKind(kind));
-    }
-    ""
+    types.validateCanonicalKind(kind, "")
 };

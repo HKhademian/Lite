@@ -861,20 +861,25 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
 /** Ensures `$recpop:<recordKind>` and `$recdef:...` entries exist in `aliases`, lazily resolving forward-declared local records when needed. */
 ensureRecordDefaults := fn(target: String, source: String, recordKind: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): List<AliasDecl> {
     if types.findAlias(aliases, "$recpop:" + recordKind) >= 0 { return aliases; }
+    ownerKey := types.typeOpOwnerKey(recordKind);
+    if ownerKey =!= "" and types.findAlias(aliases, "$recpop:" + ownerKey) >= 0 { return aliases; }
     declAt := types.recordDeclAt(recordKind);
     if declAt < 0 { return aliases; }
     aliasIdx := types.aliasIndexAt(aliases, declAt);
     if aliasIdx < 0 { return aliases; }
     aliasEntry := aliases[aliasIdx];
-    if aliasEntry.at < 0 or not aliasEntry.target.startsWithAt(0, "@recraw:") { return aliases; }
+    isRawRec := aliasEntry.target.startsWithAt(0, "@recraw:");
+    isGenRawRec := aliasEntry.target.startsWithAt(0, "@genraw:") and aliasEntry.target.indexOf("@recraw:", 8) >= 0;
+    if aliasEntry.at < 0 or (not isRawRec and not isGenRawRec) { return aliases; }
     afterName := source.skipName(aliasEntry.at);
     opPos := syntax.skipTrivia(source, afterName, prefix);
     if not source.startsWithAt(opPos, ":=") { return aliases; }
     recPos := syntax.skipTrivia(source, opPos + 2, prefix);
     if not source.wordAt(recPos, "record") { return aliases; }
-    seeded := types.appendEncodedRecordDefaults(aliases, recordKind, "", aliasEntry.depth);
+    seedKey := if isGenRawRec and ownerKey =!= "" { ownerKey } else { recordKind };
+    seeded := types.appendEncodedRecordDefaults(aliases, seedKey, "", aliasEntry.depth);
     parsedRec := parseRecordDecl(target, source, recPos, aliasEntry.at, aliasEntry.name, aliasEntry.depth, prefix, locals, functions, params, currentName, ctxs, iifeDepth, false, seeded);
-    types.appendEncodedRecordDefaults(aliases, parsedRec.kind, parsedRec.encodedDefaults, aliasEntry.depth)
+    types.appendEncodedRecordDefaults(aliases, seedKey, parsedRec.encodedDefaults, aliasEntry.depth)
 };
 
 /** Parses `{ field = expr, ... }` or `{}` for an explicit or contextual nominal `recordKind`, resolving omitted fields from defaults then zero. */
@@ -1423,29 +1428,72 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         };
         return ctx.withMarkers((kind = targetKind, code = castCode, intValue = arg.intValue, textValue = arg.textValue, constant = arg.constant, next = closeParen), argMarkers);
     }
-    if afterName < source.length() and source.at(afterName) == "." and
-    (types.findAlias(aliases, name) >= 0 or name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or name == "Int") {
+    if afterName < source.length() and (source.at(afterName) == "." or source.at(afterName) == "<") and
+    (types.findAlias(aliases, name) >= 0 or (source.at(afterName) == "." and (name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or name == "Int"))) {
         var resolvedType := "";
         var typeOwnerKey := "";
-        if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or name == "Int" {
+        var dotPos := afterName;
+        isTypeApp := source.at(afterName) == "<";
+        if isTypeApp {
+            if inferMode {
+                emptySeen: List<String> = [];
+                canRes := types.canResolveTypeAt(source, nameStart, prefix, aliases, "", emptySeen, 32);
+                if not canRes.ok {
+                    return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
+                }
+                resolvedType = canRes.kind;
+                typeOwnerKey = types.typeOpOwnerKey(resolvedType);
+                dotPos = syntax.skipTrivia(source, canRes.next, prefix);
+            } else {
+                parsedType := types.parseTypeAt(source, nameStart, prefix, aliases, "type expression", "");
+                resolvedType = parsedType.kind;
+                typeOwnerKey = types.typeOpOwnerKey(resolvedType);
+                dotPos = syntax.skipTrivia(source, parsedType.next, prefix);
+            }
+            if dotPos < source.length() and source.at(dotPos) == "{" {
+                if not types.isRecordKind(resolvedType) {
+                    if inferMode {
+                        return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
+                    }
+                    syntax.failAt(source, nameStart, prefix, "record construction requires a record type, got " + types.displayKind(resolvedType));
+                }
+                return parseRecordLiteral(target, source, dotPos, prefix, locals, functions, params, currentName, resolvedType, ctxs, iifeDepth, inferMode, aliases);
+            }
+            if dotPos >= source.length() or source.at(dotPos) =!= "." {
+                if inferMode {
+                    return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
+                }
+                syntax.failAt(source, dotPos, prefix, "expected { or . after type " + types.displayKind(resolvedType));
+            }
+        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or name == "Int" {
             typeOwnerKey = name;
         } else if inferMode {
-            emptySeen: List<String> = [];
-            canRes := types.canResolveTypeAt(source, nameStart, prefix, aliases, "", emptySeen, 32);
-            if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind)) {
-                return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
+            genOwner := types.genericAliasOwnerKey(source, nameStart, prefix, aliases, name);
+            if genOwner =!= "" {
+                typeOwnerKey = genOwner;
+            } else {
+                emptySeen: List<String> = [];
+                canRes := types.canResolveTypeAt(source, nameStart, prefix, aliases, "", emptySeen, 32);
+                if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind)) {
+                    return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
+                }
+                resolvedType = canRes.kind;
+                typeOwnerKey = types.typeOpOwnerKey(resolvedType);
             }
-            resolvedType = canRes.kind;
-            typeOwnerKey = types.typeOpOwnerKey(resolvedType);
         } else {
-            emptySeen: List<String> = [];
-            resolvedType = types.resolveAliasKind(source, nameStart, prefix, aliases, name, emptySeen);
-            typeOwnerKey = types.typeOpOwnerKey(resolvedType);
-            if not types.isEnumKind(resolvedType) and not types.isRecordKind(resolvedType) and not types.isDistinctKind(resolvedType) and typeOwnerKey == "" {
-                syntax.failAt(source, nameStart, prefix, "enum case access requires an enum type, got " + types.displayKind(resolvedType));
+            genOwner := types.genericAliasOwnerKey(source, nameStart, prefix, aliases, name);
+            if genOwner =!= "" {
+                typeOwnerKey = genOwner;
+            } else {
+                emptySeen: List<String> = [];
+                resolvedType = types.resolveAliasKind(source, nameStart, prefix, aliases, name, emptySeen);
+                typeOwnerKey = types.typeOpOwnerKey(resolvedType);
+                if not types.isEnumKind(resolvedType) and not types.isRecordKind(resolvedType) and not types.isDistinctKind(resolvedType) and typeOwnerKey == "" {
+                    syntax.failAt(source, nameStart, prefix, "enum case access requires an enum type, got " + types.displayKind(resolvedType));
+                }
             }
         }
-        memberStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        memberStart := syntax.skipTrivia(source, dotPos + 1, prefix);
         if memberStart < source.length() and source.at(memberStart) == "$" {
             hookEnd := if memberStart + 1 < source.length() and source.at(memberStart + 1).isNameStart() {
                 source.skipName(memberStart + 1)
@@ -1468,12 +1516,30 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         if typeOwnerKey =!= "" {
             opIdx := sym.findFunction(functions, "$typeop:" + typeOwnerKey + "." + memberName);
             if opIdx >= 0 {
+                if isTypeApp and not inferMode {
+                    opInfo := functions[opIdx];
+                    rawRecv := types.paramKindOf(params[opInfo.first]);
+                    baseRecv := if rawRecv.startsWithAt(0, "mut ") { rawRecv.slice(4, rawRecv.length()) } else { rawRecv };
+                    if opInfo.runtime.startsWithAt(0, "$gen:") {
+                        tpl := generics.getTemplate(generics.findTemplate(opInfo.runtime.slice(5, opInfo.runtime.length())));
+                        checkB: mut Map<String, String>;
+                        if generics.unifyKindMut(tpl.genericParams, baseRecv, resolvedType, mut checkB) =!= "" {
+                            syntax.failAt(source, memberStart, prefix, "operation " + memberName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(resolvedType));
+                        }
+                    } else if not types.isCompatibleKind(baseRecv, resolvedType) {
+                        syntax.failAt(source, memberStart, prefix, "operation " + memberName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(resolvedType));
+                    }
+                }
+                dispType := if resolvedType =!= "" { types.displayKind(resolvedType) } else { name };
                 return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = nameStart.toText(), intValue = opIdx,
-                textValue = name + "." + memberName, constant = false, next = memberEnd);
+                textValue = dispType + "." + memberName, constant = false, next = memberEnd);
             }
         }
         if types.isEnumKind(resolvedType) {
             syntax.failAt(source, memberStart, prefix, "enum " + types.enumDisplayName(resolvedType) + " has no case " + memberName);
+        }
+        if not isTypeApp and typeOwnerKey.startsWithAt(0, "Enum:") {
+            syntax.failAt(source, nameStart, prefix, "generic type " + name + " requires explicit type arguments");
         }
         syntax.failAt(source, memberStart, prefix, "type " + name + " has no operation " + memberName);
     }
@@ -2718,7 +2784,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 ctx.rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
                 mut declaredInBlock.pushBack(itemName);
                 typePos := syntax.skipTrivia(source, afterItemName + 2, prefix);
-                targetStart := syntax.skipTrivia(source, typePos + 5, prefix);
+                gp := types.scanComptimeTypeParams(source, typePos + 5, prefix);
+                if not gp.ok { syntax.failAt(source, gp.errPos, prefix, gp.errMsg); }
+                targetStart := syntax.skipTrivia(source, gp.next, prefix);
                 aliasIdx := types.aliasIndexAt(blockAliases, itemStart);
                 if aliasIdx < 0 {
                     types.unsupportedAliasTarget(source, targetStart, prefix, "target");
@@ -2727,8 +2795,18 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if aliasEntry.target == "" {
                     types.unsupportedAliasTarget(source, targetStart, prefix, "target");
                 }
-                seenInner: mut List<String> = [];
-                _resolvedInner := types.resolveTypeText(source, targetStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), aliasEntry.target, seenInner);
+                seenInner: mut List<String> = [nextAliasDepth.toText() + ":" + itemName];
+                if gp.hasParams {
+                    rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
+                        pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
+                        if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
+                    } else {
+                        aliasEntry.target
+                    };
+                    _resolvedInner := types.resolveGenericTypeText(source, targetStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), rawInner, gp.paramsCsv, seenInner);
+                } else {
+                    _resolvedInner := types.resolveTypeText(source, targetStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), aliasEntry.target, seenInner);
+                }
                 afterAliasTarget := syntax.consumeStatementEnd(source, aliasEntry.end, prefix);
                 if afterAliasTarget < 0 { types.unsupportedAliasTarget(source, aliasEntry.at, prefix, "target"); }
                 cursor = afterAliasTarget;
@@ -2748,7 +2826,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 ctx.rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
                 mut declaredInBlock.pushBack(itemName);
                 distPos := syntax.skipTrivia(source, afterItemName + 2, prefix);
-                targetStart := syntax.skipTrivia(source, distPos + 8, prefix);
+                gp := types.scanComptimeTypeParams(source, distPos + 8, prefix);
+                if not gp.ok { syntax.failAt(source, gp.errPos, prefix, gp.errMsg); }
+                targetStart := syntax.skipTrivia(source, gp.next, prefix);
                 aliasIdx := types.aliasIndexAt(blockAliases, itemStart);
                 if aliasIdx < 0 {
                     syntax.failAt(source, targetStart, prefix, "expected a type after distinct");
@@ -2757,8 +2837,18 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if aliasEntry.target == "" {
                     syntax.failAt(source, targetStart, prefix, "expected a type after distinct");
                 }
-                seenInnerDist: mut List<String> = [];
-                _resolvedInnerDist := types.resolveTypeText(source, targetStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), aliasEntry.target, seenInnerDist);
+                seenInnerDist: mut List<String> = [nextAliasDepth.toText() + ":" + itemName];
+                if gp.hasParams {
+                    rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
+                        pDec := types.decodeLengthPrefixedAt(aliasEntry.target, 8);
+                        if pDec.next >= 0 { aliasEntry.target.slice(pDec.next, aliasEntry.target.length()) } else { "" }
+                    } else {
+                        aliasEntry.target
+                    };
+                    _resolvedInnerDist := types.resolveGenericTypeText(source, targetStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), rawInner, gp.paramsCsv, seenInnerDist);
+                } else {
+                    _resolvedInnerDist := types.resolveTypeText(source, targetStart, prefix, types.aliasesUpToDepth(blockAliases, nextAliasDepth), aliasEntry.target, seenInnerDist);
+                }
                 afterDistTarget := syntax.consumeStatementEnd(source, aliasEntry.end, prefix);
                 if afterDistTarget < 0 { syntax.failAt(source, aliasEntry.at, prefix, "expected ; after distinct declaration " + itemName); }
                 cursor = afterDistTarget;
@@ -2780,7 +2870,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 recPos := syntax.skipTrivia(source, afterItemName + 2, prefix);
                 parsedRec := parseRecordDecl(target, source, recPos, itemStart, itemName, nextAliasDepth, prefix, blockLocals, functions, params, currentName, ctxs, bodyDepth, inferMode, blockAliases);
                 if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, (kind = parsedRec.kind, code = "", intValue = 0, textValue = parsedRec.markers, constant = false, next = parsedRec.next)); }
-                blockAliases = types.appendEncodedRecordDefaults(blockAliases, parsedRec.kind, parsedRec.encodedDefaults, nextAliasDepth);
+                defKey := if parsedRec.genericParams =!= "" {
+                    ownerK := types.typeOpOwnerKey(parsedRec.kind);
+                    if ownerK =!= "" { ownerK } else { parsedRec.kind }
+                } else {
+                    parsedRec.kind
+                };
+                blockAliases = types.appendEncodedRecordDefaults(blockAliases, defKey, parsedRec.encodedDefaults, nextAliasDepth);
                 cursor = parsedRec.next;
             } else if itemName == "var" {
                 isStatement = true;
@@ -4919,13 +5015,19 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
         }
         var endPos := nameEnd;
         afterWord := syntax.skipTrivia(source, nameEnd, prefix);
-        if afterWord < size and source.at(afterWord) == "." {
+        if afterWord < size and (source.at(afterWord) == "." or source.at(afterWord) == "<") {
             var resolvedEnum := "";
             var caseDotPos := afterWord;
             if types.findAlias(aliases, word) >= 0 {
-                emptySeen: List<String> = [];
-                resolvedEnum = types.resolveAliasKind(source, pos, prefix, aliases, word, emptySeen);
-            } else {
+                if source.at(afterWord) == "<" {
+                    parsedPatType := types.parseTypeAt(source, pos, prefix, aliases, "enum pattern", "");
+                    resolvedEnum = parsedPatType.kind;
+                    caseDotPos = syntax.skipTrivia(source, parsedPatType.next, prefix);
+                } else {
+                    emptySeen: List<String> = [];
+                    resolvedEnum = types.resolveAliasKind(source, pos, prefix, aliases, word, emptySeen);
+                }
+            } else if source.at(afterWord) == "." {
                 modIdx := sym.localIndex(locals, word);
                 if modIdx >= 0 and locals[modIdx].kind == ir.VALUE_KIND_MODULE {
                     tStart := syntax.skipTrivia(source, afterWord + 1, prefix);
@@ -4933,9 +5035,16 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                         tEnd := source.skipName(tStart);
                         qual := locals[modIdx].textValue + "." + source.slice(tStart, tEnd);
                         if types.findAlias(aliases, qual) >= 0 {
-                            emptySeen: List<String> = [];
-                            resolvedEnum = types.resolveAliasKind(source, tStart, prefix, aliases, qual, emptySeen);
-                            caseDotPos = syntax.skipTrivia(source, tEnd, prefix);
+                            afterQual := syntax.skipTrivia(source, tEnd, prefix);
+                            if afterQual < size and source.at(afterQual) == "<" {
+                                parsedPatType := types.parseTypeAt(source, pos, prefix, aliases, "enum pattern", "");
+                                resolvedEnum = parsedPatType.kind;
+                                caseDotPos = syntax.skipTrivia(source, parsedPatType.next, prefix);
+                            } else {
+                                emptySeen: List<String> = [];
+                                resolvedEnum = types.resolveAliasKind(source, tStart, prefix, aliases, qual, emptySeen);
+                                caseDotPos = afterQual;
+                            }
                         }
                     }
                 }
@@ -7551,7 +7660,7 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
         locEntry := locals[recvLocalIdx];
         if target == ir.TARGET_C {
             recvCode = "&" + locEntry.runtime;
-        } else if types.isRecordKind(locEntry.kind) {
+        } else if types.isRecordOrDistinctRecord(locEntry.kind) {
             if locEntry.runtime.endsWith(".v") {
                 recvCode = locEntry.runtime.slice(0, locEntry.runtime.length() - 2);
             } else {
@@ -7698,76 +7807,131 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         constant = false, next = labelEnd);
                     } else {
                         afterMemberLabel := syntax.skipTrivia(source, labelEnd, prefix);
-                        if afterMemberLabel < source.length() and source.at(afterMemberLabel) == "." and types.findAlias(aliases, qualified) >= 0 {
+                        if afterMemberLabel < source.length() and (source.at(afterMemberLabel) == "." or source.at(afterMemberLabel) == "{" or source.at(afterMemberLabel) == "<") and types.findAlias(aliases, qualified) >= 0 {
                             var modTypeKind := "";
-                            if inferMode {
-                                emptySeen: List<String> = [];
-                                canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
-                                if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind)) {
-                                    return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
-                                }
-                                modTypeKind = canRes.kind;
-                            } else {
-                                emptySeen: List<String> = [];
-                                modTypeKind = types.resolveAliasKind(source, labelStart, prefix, aliases, qualified, emptySeen);
-                                if not types.isEnumKind(modTypeKind) and not types.isRecordKind(modTypeKind) and not types.isDistinctKind(modTypeKind) {
-                                    syntax.failAt(source, labelStart, prefix, "enum case access requires an enum type, got " + types.displayKind(modTypeKind));
-                                }
-                            }
-                            caseStart := syntax.skipTrivia(source, afterMemberLabel + 1, prefix);
-                            if caseStart < source.length() and source.at(caseStart) == "$" {
-                                hookEnd := if caseStart + 1 < source.length() and source.at(caseStart + 1).isNameStart() {
-                                    source.skipName(caseStart + 1)
+                            var modTypeOwnerKey := "";
+                            var modDotOrBracePos := afterMemberLabel;
+                            isModTypeApp := source.at(afterMemberLabel) == "<";
+                            if isModTypeApp {
+                                if inferMode {
+                                    emptySeen: List<String> = [];
+                                    canRes := types.canResolveTypeAt(source, exprStart, prefix, aliases, "", emptySeen, 32);
+                                    if not canRes.ok {
+                                        return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                                    }
+                                    modTypeKind = canRes.kind;
+                                    modTypeOwnerKey = types.typeOpOwnerKey(modTypeKind);
+                                    modDotOrBracePos = syntax.skipTrivia(source, canRes.next, prefix);
                                 } else {
-                                    caseStart + 1
-                                };
-                                syntax.failAt(source, caseStart, prefix, "compiler hook " + source.slice(caseStart, hookEnd) + " cannot be referenced directly; use [...] indexing");
-                            }
-                            if caseStart >= source.length() or not source.at(caseStart).isNameStart() {
-                                syntax.failAt(source, caseStart, prefix, "expected member name after " + qualified + ".");
-                            }
-                            caseEnd := source.skipName(caseStart);
-                            caseName := source.slice(caseStart, caseEnd);
-                            var handledModMember := false;
-                            if types.isEnumKind(modTypeKind) {
-                                caseIdx := types.enumCaseIndex(modTypeKind, caseName);
-                                if caseIdx >= 0 {
-                                    left = (kind = modTypeKind, code = caseIdx.toText(), intValue = caseIdx, textValue = "", constant = true, next = caseEnd);
-                                    handledModMember = true;
+                                    parsedModType := types.parseTypeAt(source, exprStart, prefix, aliases, "type expression", "");
+                                    modTypeKind = parsedModType.kind;
+                                    modTypeOwnerKey = types.typeOpOwnerKey(modTypeKind);
+                                    modDotOrBracePos = syntax.skipTrivia(source, parsedModType.next, prefix);
+                                }
+                            } else if source.at(afterMemberLabel) == "." {
+                                genOwner := types.genericAliasOwnerKey(source, labelStart, prefix, aliases, qualified);
+                                if genOwner =!= "" {
+                                    modTypeOwnerKey = genOwner;
+                                } else if inferMode {
+                                    emptySeen: List<String> = [];
+                                    canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
+                                    if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind)) {
+                                        return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                                    }
+                                    modTypeKind = canRes.kind;
+                                    modTypeOwnerKey = types.typeOpOwnerKey(modTypeKind);
+                                } else {
+                                    emptySeen: List<String> = [];
+                                    modTypeKind = types.resolveAliasKind(source, labelStart, prefix, aliases, qualified, emptySeen);
+                                    modTypeOwnerKey = types.typeOpOwnerKey(modTypeKind);
+                                    if not types.isEnumKind(modTypeKind) and not types.isRecordKind(modTypeKind) and not types.isDistinctKind(modTypeKind) {
+                                        syntax.failAt(source, labelStart, prefix, "enum case access requires an enum type, got " + types.displayKind(modTypeKind));
+                                    }
+                                }
+                            } else {
+                                if inferMode {
+                                    emptySeen: List<String> = [];
+                                    canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
+                                    if not canRes.ok or not types.isRecordKind(canRes.kind) {
+                                        return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                                    }
+                                    modTypeKind = canRes.kind;
+                                } else {
+                                    emptySeen: List<String> = [];
+                                    modTypeKind = types.resolveAliasKind(source, labelStart, prefix, aliases, qualified, emptySeen);
+                                    if not types.isRecordKind(modTypeKind) {
+                                        syntax.failAt(source, labelStart, prefix, "record construction requires a record type, got " + types.displayKind(modTypeKind));
+                                    }
                                 }
                             }
-                            if not handledModMember {
-                                modOwnerKey := types.typeOpOwnerKey(modTypeKind);
-                                modOpIdx := if modOwnerKey =!= "" { sym.findFunction(functions, "$typeop:" + modOwnerKey + "." + caseName) } else { -1 };
-                                if modOpIdx >= 0 {
-                                    left = (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = exprStart.toText(), intValue = modOpIdx,
-                                    textValue = qualified + "." + caseName, constant = false, next = caseEnd);
-                                    handledModMember = true;
+                            if modDotOrBracePos < source.length() and source.at(modDotOrBracePos) == "{" {
+                                if not types.isRecordKind(modTypeKind) {
+                                    if inferMode {
+                                        return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                                    }
+                                    syntax.failAt(source, labelStart, prefix, "record construction requires a record type, got " + types.displayKind(modTypeKind));
                                 }
-                            }
-                            if not handledModMember {
+                                left = parseRecordLiteral(target, source, modDotOrBracePos, prefix, locals, functions, params, currentName, modTypeKind, ctxs, iifeDepth, inferMode, aliases);
+                            } else if modDotOrBracePos < source.length() and source.at(modDotOrBracePos) == "." {
+                                caseStart := syntax.skipTrivia(source, modDotOrBracePos + 1, prefix);
+                                if caseStart < source.length() and source.at(caseStart) == "$" {
+                                    hookEnd := if caseStart + 1 < source.length() and source.at(caseStart + 1).isNameStart() {
+                                        source.skipName(caseStart + 1)
+                                    } else {
+                                        caseStart + 1
+                                    };
+                                    syntax.failAt(source, caseStart, prefix, "compiler hook " + source.slice(caseStart, hookEnd) + " cannot be referenced directly; use [...] indexing");
+                                }
+                                if caseStart >= source.length() or not source.at(caseStart).isNameStart() {
+                                    syntax.failAt(source, caseStart, prefix, "expected member name after " + qualified + ".");
+                                }
+                                caseEnd := source.skipName(caseStart);
+                                caseName := source.slice(caseStart, caseEnd);
+                                var handledModMember := false;
                                 if types.isEnumKind(modTypeKind) {
-                                    syntax.failAt(source, caseStart, prefix, "enum " + types.enumDisplayName(modTypeKind) + " has no case " + caseName);
+                                    caseIdx := types.enumCaseIndex(modTypeKind, caseName);
+                                    if caseIdx >= 0 {
+                                        left = (kind = modTypeKind, code = caseIdx.toText(), intValue = caseIdx, textValue = "", constant = true, next = caseEnd);
+                                        handledModMember = true;
+                                    }
                                 }
-                                syntax.failAt(source, caseStart, prefix, "type " + qualified + " has no operation " + caseName);
-                            }
-                        } else if afterMemberLabel < source.length() and source.at(afterMemberLabel) == "{" and types.findAlias(aliases, qualified) >= 0 {
-                            var modRecKind := "";
-                            if inferMode {
-                                emptySeen: List<String> = [];
-                                canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
-                                if not canRes.ok or not types.isRecordKind(canRes.kind) {
+                                if not handledModMember {
+                                    modOpIdx := if modTypeOwnerKey =!= "" { sym.findFunction(functions, "$typeop:" + modTypeOwnerKey + "." + caseName) } else { -1 };
+                                    if modOpIdx >= 0 {
+                                        if isModTypeApp and not inferMode {
+                                            opInfo := functions[modOpIdx];
+                                            rawRecv := types.paramKindOf(params[opInfo.first]);
+                                            baseRecv := if rawRecv.startsWithAt(0, "mut ") { rawRecv.slice(4, rawRecv.length()) } else { rawRecv };
+                                            if opInfo.runtime.startsWithAt(0, "$gen:") {
+                                                tpl := generics.getTemplate(generics.findTemplate(opInfo.runtime.slice(5, opInfo.runtime.length())));
+                                                checkB: mut Map<String, String>;
+                                                if generics.unifyKindMut(tpl.genericParams, baseRecv, modTypeKind, mut checkB) =!= "" {
+                                                    syntax.failAt(source, caseStart, prefix, "operation " + caseName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(modTypeKind));
+                                                }
+                                            } else if not types.isCompatibleKind(baseRecv, modTypeKind) {
+                                                syntax.failAt(source, caseStart, prefix, "operation " + caseName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(modTypeKind));
+                                            }
+                                        }
+                                        left = (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = exprStart.toText(), intValue = modOpIdx,
+                                        textValue = (if modTypeKind =!= "" { types.displayKind(modTypeKind) } else { qualified }) + "." + caseName, constant = false, next = caseEnd);
+                                        handledModMember = true;
+                                    }
+                                }
+                                if not handledModMember {
+                                    if types.isEnumKind(modTypeKind) {
+                                        syntax.failAt(source, caseStart, prefix, "enum " + types.enumDisplayName(modTypeKind) + " has no case " + caseName);
+                                    }
+                                    if not isModTypeApp and modTypeOwnerKey.startsWithAt(0, "Enum:") {
+                                        syntax.failAt(source, labelStart, prefix, "generic type " + qualified + " requires explicit type arguments");
+                                    }
+                                    syntax.failAt(source, caseStart, prefix, "type " + qualified + " has no operation " + caseName);
+                                }
+                            } else {
+                                if inferMode {
                                     return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
                                 }
-                                modRecKind = canRes.kind;
-                            } else {
-                                emptySeen: List<String> = [];
-                                modRecKind = types.resolveAliasKind(source, labelStart, prefix, aliases, qualified, emptySeen);
-                                if not types.isRecordKind(modRecKind) {
-                                    syntax.failAt(source, labelStart, prefix, "record construction requires a record type, got " + types.displayKind(modRecKind));
-                                }
+                                syntax.failAt(source, modDotOrBracePos, prefix, "expected { or . after type " + types.displayKind(modTypeKind));
                             }
-                            left = parseRecordLiteral(target, source, afterMemberLabel, prefix, locals, functions, params, currentName, modRecKind, ctxs, iifeDepth, inferMode, aliases);
                         } else {
                             memberIndex := sym.localIndex(locals, qualified);
                             if memberIndex < 0 {
@@ -8083,6 +8247,61 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     left = parseSetIntrinsicCall(target, source, postPosition, setOpName, setOpName, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else if info.count < 0 {
                     syntax.failAt(source, errPos, prefix, "host output functions are standalone statements");
+                } else if info.runtime.startsWithAt(0, "$gen:") and postPosition < source.length() and source.at(postPosition) == "<" {
+                    tplKey := info.runtime.slice(5, info.runtime.length());
+                    tpl := generics.getTemplate(generics.findTemplate(tplKey));
+                    gpNames := generics.splitGenericParams(tpl.genericParams);
+                    var tpCursor := syntax.skipTrivia(source, postPosition + 1, prefix);
+                    if tpCursor >= source.length() or source.at(tpCursor) == ">" {
+                        syntax.failAt(source, tpCursor, prefix, "expected at least one type argument in call to " + calleeDisplay);
+                    }
+                    explicitKinds: mut List<String> = [];
+                    loop true {
+                        if inferMode {
+                            emptySeenCallT: List<String> = [];
+                            canT := types.canResolveTypeAt(source, tpCursor, prefix, aliases, "", emptySeenCallT, 32);
+                            if not canT.ok {
+                                return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                            }
+                            mut explicitKinds.pushBack(canT.kind);
+                            tpCursor = syntax.skipTrivia(source, canT.next, prefix);
+                        } else {
+                            pT := types.parseTypeAt(source, tpCursor, prefix, aliases, "type argument", "");
+                            mut explicitKinds.pushBack(pT.kind);
+                            tpCursor = syntax.skipTrivia(source, pT.next, prefix);
+                        }
+                        if tpCursor < source.length() and source.at(tpCursor) == "," {
+                            tpCursor = syntax.skipTrivia(source, tpCursor + 1, prefix);
+                            if tpCursor < source.length() and source.at(tpCursor) == ">" { break; }
+                        } else {
+                            break;
+                        }
+                    }
+                    if tpCursor >= source.length() or source.at(tpCursor) =!= ">" {
+                        if inferMode {
+                            return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                        }
+                        syntax.failAt(source, tpCursor, prefix, "expected > after type arguments in call to " + calleeDisplay);
+                    }
+                    callOpenParen := syntax.skipTrivia(source, tpCursor + 1, prefix);
+                    if callOpenParen >= source.length() or source.at(callOpenParen) =!= "(" {
+                        if inferMode {
+                            return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                        }
+                        syntax.failAt(source, callOpenParen, prefix, "expected ( after type arguments in call to " + calleeDisplay);
+                    }
+                    if explicitKinds.length() =!= gpNames.length() {
+                        syntax.failAt(source, postPosition, prefix, "function " + calleeDisplay + " expects " + gpNames.length().toText() + " type argument(s), got " + explicitKinds.length().toText());
+                    }
+                    expMap: mut Map<String, String>;
+                    var ei := 0;
+                    loop ei < gpNames.length() {
+                        mut expMap.set(gpNames[ei], explicitKinds[ei]);
+                        ei = ei + 1;
+                    }
+                    explicitBindingsEnc := generics.encodeBindings(tpl.genericParams, expMap);
+                    left = parseUserOrIndirectCallWithRecv(target, source, callOpenParen, errPos, true, calleeDisplay, info.runtime,
+                    params, info.first, info.count, info.result, false, "", "", "", explicitBindingsEnc, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else if postPosition >= source.length() or source.at(postPosition) =!= "(" {
                     if info.runtime.startsWithAt(0, "$gen:") {
                         syntax.failAt(source, errPos, prefix, "cannot use generic function " + calleeDisplay + " as a value without calling it");
@@ -8662,10 +8881,14 @@ pub parseExpressionItem := fn(target: String, source: String, position: Int, pre
     (next = next, returned = returned, code = if returned { if parsed.kind == ir.VALUE_KIND_UNIT { ir.targetUnitEvaluationCode(target, parsed.code) } else { ctx.assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
 };
 
-/** Parses `Name := record { field: Type [= default]; ... }`, validating field names, types, defaults, and returning the canonical kind and encoded defaults. */
-pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart: Int, recName: String, aliasDepth: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): (kind: String, encodedDefaults: String, markers: String, next: Int) {
+/** Parses `Name := record[<T: Type>] { field: Type [= default]; ... }`, validating field names, types, defaults, and returning the canonical kind, encoded defaults, and generic parameter CSV. */
+pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart: Int, recName: String, aliasDepth: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): (kind: String, encodedDefaults: String, genericParams: String, markers: String, next: Int) {
     size := source.length();
-    bracePos := syntax.skipTrivia(source, recPos + 6, prefix);
+    gp := types.scanComptimeTypeParams(source, recPos + 6, prefix);
+    if not gp.ok {
+        syntax.failAt(source, gp.errPos, prefix, gp.errMsg);
+    }
+    bracePos := syntax.skipTrivia(source, gp.next, prefix);
     if bracePos >= size or source.at(bracePos) =!= "{" {
         syntax.failAt(source, bracePos, prefix, "expected { after record");
     }
@@ -8703,7 +8926,7 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
             syntax.failAt(source, afterField, prefix, "expected : after record field " + fName);
         }
         typeStart := syntax.skipTrivia(source, afterField + 1, prefix);
-        fieldType := types.parseTypeWithSeen(source, fStart, true, source, typeStart, prefix, scopedAliases, "record field", "", seenRec);
+        fieldType := types.parseTypeWithSeen(source, fStart, true, source, typeStart, prefix, scopedAliases, "record field", gp.paramsCsv, seenRec);
         if fieldType.kind == ir.VALUE_KIND_UNIT {
             syntax.failAt(source, fStart, prefix, "unsupported record field type Unit");
         }
@@ -8711,6 +8934,9 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
         var nextCursor := afterType;
         var lastTokenPos := fieldType.next;
         if syntax.isSingleEquals(source, afterType) {
+            if gp.hasParams and types.kindHasAnyGenericParam(gp.paramsCsv, fieldType.kind) {
+                syntax.failAt(source, afterType, prefix, "default initializer on generic-typed field " + fName + " is not supported yet");
+            }
             defStart := syntax.skipTrivia(source, afterType + 1, prefix);
             defParsed := parseBinaryCtx(target, source, defStart, prefix, locals, functions, params, currentName, fieldType.kind, 0, ctxs, iifeDepth, inferMode, "", aliases);
             if inferMode { markers = ctx.collectParsedMarkers(markers, defParsed); }
@@ -8740,7 +8966,20 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
     if afterDecl < 0 {
         syntax.failAt(source, syntax.skipTrivia(source, cursor, prefix), prefix, "expected ; after record declaration " + recName);
     }
-    emptySeen: List<String> = [];
-    canonicalKind := types.resolveAliasKind(source, nameStart, prefix, aliases, recName, emptySeen);
-    (kind = canonicalKind, encodedDefaults = types.encodeRecordPairs(defaultKeys, defaultCodes), markers = markers, next = afterDecl)
+    canonicalKind := if gp.hasParams {
+        tplSeen: List<String> = [aliasDepth.toText() + ":" + recName];
+        aliasIdx := types.aliasIndexAt(aliases, nameStart);
+        aliasTarget := if aliasIdx >= 0 { aliases[aliasIdx].target } else { "" };
+        innerRaw := if aliasTarget.startsWithAt(0, "@genraw:") {
+            pDec := types.decodeLengthPrefixedAt(aliasTarget, 8);
+            if pDec.next >= 0 { aliasTarget.slice(pDec.next, aliasTarget.length()) } else { "" }
+        } else {
+            aliasTarget
+        };
+        types.resolveGenericTypeText(source, nameStart, prefix, scopedAliases, innerRaw, gp.paramsCsv, tplSeen)
+    } else {
+        emptySeen: List<String> = [];
+        types.resolveAliasKind(source, nameStart, prefix, aliases, recName, emptySeen)
+    };
+    (kind = canonicalKind, encodedDefaults = types.encodeRecordPairs(defaultKeys, defaultCodes), genericParams = gp.paramsCsv, markers = markers, next = afterDecl)
 };

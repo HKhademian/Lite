@@ -435,28 +435,77 @@ pub mapValueKind := fn(kind: String): String {
     if comma < 0 { "" } else { kind.slice(comma + 1, kind.length() - 1) }
 };
 
-/** True when `kind` is this compiler's canonical nominal distinct kind `Distinct<lp(id#at#Name)Underlying>`. */
+/** Index of the first `<` separating base identity from generic type arguments in a nominal header, or `hdr.length()`. */
+headerBaseEnd := fn(hdr: String): Int {
+    lt := hdr.indexOf("<", 0);
+    if lt >= 0 { lt } else { hdr.length() }
+};
+
+/** Splits comma-separated canonical type kinds at top level using `skipKindToken`. */
+splitTopLevelKinds := fn(csv: String): List<String> {
+    out: mut List<String> = [];
+    size := csv.length();
+    var cursor := 0;
+    loop cursor < size {
+        end := skipKindToken(csv, cursor);
+        if end <= cursor { break; }
+        mut out.pushBack(csv.slice(cursor, end));
+        cursor = end;
+        if cursor < size and csv.at(cursor) == "," {
+            cursor = cursor + 1;
+        } else {
+            break;
+        }
+    }
+    out
+};
+
+/** Extracts canonical type arguments from a nominal identity header `mod#at#Name<A,B>`, or `[]`. */
+headerTypeArgs := fn(hdr: String): List<String> {
+    size := hdr.length();
+    lt := headerBaseEnd(hdr);
+    if lt >= size - 1 or hdr.at(size - 1) =!= ">" {
+        empty: List<String> = [];
+        return empty;
+    }
+    splitTopLevelKinds(hdr.slice(lt + 1, size - 1))
+};
+
+/** Formats a nominal identity header `mod#at#Name[<A,B>]` into `Name[<A, B>]`. */
+headerDisplayName := fn(hdr: String): String {
+    baseEnd := headerBaseEnd(hdr);
+    base := hdr.slice(0, baseEnd);
+    var hashPos := baseEnd - 1;
+    loop hashPos >= 0 and base.at(hashPos) =!= "#" {
+        hashPos = hashPos - 1;
+    }
+    shortName := if hashPos >= 0 { base.slice(hashPos + 1, baseEnd) } else { base };
+    args := headerTypeArgs(hdr);
+    if args.length() == 0 { return shortName; }
+    dispArgs: mut List<String> = [];
+    loop args as a {
+        mut dispArgs.pushBack(displayKind(a));
+    }
+    shortName + "<" + textLib.joinTexts(dispArgs, ", ") + ">"
+};
+
+/** True when `kind` is this compiler's canonical nominal distinct kind `Distinct<lp(id#at#Name[<...>])Underlying>`. */
 pub isDistinctKind := fn(kind: String): Bool {
     size := kind.length();
     size > 10 and kind.startsWithAt(0, "Distinct<") and kind.at(size - 1) == ">"
 };
 
-/** Parses the header metadata and direct underlying kind of canonical `Distinct<lp(id#at#Name)Underlying>`. */
-distinctMeta := fn(kind: String): (ok: Bool, header: String, displayName: String, underlying: String) {
-    if not isDistinctKind(kind) { return (ok = false, header = "", displayName = "", underlying = ""); }
+/** Parses the header metadata and direct underlying kind of canonical `Distinct<lp(id#at#Name[<...>])Underlying>`. */
+distinctMeta := fn(kind: String): (ok: Bool, header: String, rawHeader: String, displayName: String, underlying: String) {
+    if not isDistinctKind(kind) { return (ok = false, header = "", rawHeader = "", displayName = "", underlying = ""); }
     hdr := decodeLengthPrefixedAt(kind, 9);
     if hdr.next < 0 or hdr.next >= kind.length() - 1 {
-        return (ok = false, header = "", displayName = "", underlying = "");
+        return (ok = false, header = "", rawHeader = "", displayName = "", underlying = "");
     }
-    var hashPos := -1;
-    var scan := hdr.text.indexOf("#", 0);
-    loop scan >= 0 {
-        hashPos = scan;
-        scan = hdr.text.indexOf("#", scan + 1);
-    }
-    dName := if hashPos >= 0 { hdr.text.slice(hashPos + 1, hdr.text.length()) } else { hdr.text };
+    baseHdr := hdr.text.slice(0, headerBaseEnd(hdr.text));
+    dName := headerDisplayName(hdr.text);
     base := kind.slice(hdr.next, kind.length() - 1);
-    (ok = base =!= "", header = hdr.text, displayName = dName, underlying = base)
+    (ok = base =!= "", header = baseHdr, rawHeader = hdr.text, displayName = dName, underlying = base)
 };
 
 /** Returns the user-facing display name from canonical `Distinct<...>`. */
@@ -464,7 +513,7 @@ pub distinctDisplayName := fn(kind: String): String {
     distinctMeta(kind).displayName
 };
 
-/** Returns the declaration identity header (`modId#at#Name`) from canonical `Distinct<...>`. */
+/** Returns the declaration family identity header (`modId#at#Name`) from canonical `Distinct<...>`. */
 distinctIdentityHeader := fn(kind: String): String {
     distinctMeta(kind).header
 };
@@ -554,12 +603,7 @@ enumHeaderInfo := fn(kind: String): (ok: Bool, displayName: String, backing: Str
         return (ok = false, displayName = "", backing = "", count = 0, casesStart = -1);
     }
     count := syntax.parseDigits(kind, cur, countEnd);
-    hdrLen := hdr.text.length();
-    var hashPos := hdrLen - 1;
-    loop hashPos >= 0 and hdr.text.at(hashPos) =!= "#" {
-        hashPos = hashPos - 1;
-    }
-    disp := if hashPos >= 0 { hdr.text.slice(hashPos + 1, hdrLen) } else { hdr.text };
+    disp := headerDisplayName(hdr.text);
     (ok = true, displayName = disp, backing = bk.text, count = count, casesStart = countEnd + 1)
 };
 
@@ -569,12 +613,12 @@ pub enumDisplayName := fn(kind: String): String {
     if not info.ok { kind } else { info.displayName }
 };
 
-/** Returns the full module-scoped identity header (`id#at#Name`) of canonical enum `kind`, or `""`. */
+/** Returns the full module-scoped family identity header (`id#at#Name`) of canonical enum `kind`, or `""`. */
 pub enumIdentityHeader := fn(kind: String): String {
     if not isEnumKind(kind) { return ""; }
     hdr := decodeLengthPrefixedAt(kind, 5);
     if hdr.next < 0 { return ""; }
-    hdr.text
+    hdr.text.slice(0, headerBaseEnd(hdr.text))
 };
 
 /** Returns the canonical nominal type-operation owner key for `kind`, or `""` for non-nominal types. */
@@ -582,7 +626,8 @@ pub typeOpOwnerKey := fn(kind: String): String {
     if isRecordKind(kind) {
         semi := recordHeaderSemi(kind);
         if semi <= 7 { return ""; }
-        return "Record:" + kind.slice(7, semi);
+        hdr := kind.slice(7, semi);
+        return "Record:" + hdr.slice(0, headerBaseEnd(hdr));
     }
     if isEnumKind(kind) {
         hdr := enumIdentityHeader(kind);
@@ -602,6 +647,31 @@ pub typeOpOwnerKey := fn(kind: String): String {
         return kind;
     }
     ""
+};
+
+/** Returns canonical type arguments attached to a generic `Record`, `Distinct`, or `Enum`, or `[]`. */
+pub nominalTypeArgs := fn(kind: String): List<String> {
+    if isRecordKind(kind) {
+        semi := recordHeaderSemi(kind);
+        if semi <= 7 {
+            empty: List<String> = [];
+            return empty;
+        }
+        return headerTypeArgs(kind.slice(7, semi));
+    }
+    if isDistinctKind(kind) {
+        return headerTypeArgs(distinctMeta(kind).rawHeader);
+    }
+    if isEnumKind(kind) {
+        hdr := decodeLengthPrefixedAt(kind, 5);
+        if hdr.next < 0 {
+            empty: List<String> = [];
+            return empty;
+        }
+        return headerTypeArgs(hdr.text);
+    }
+    empty: List<String> = [];
+    empty
 };
 
 /** Returns the built-in nominal type family owned by core `moduleIdentity` when it matches `typeName`, else `""`. */
@@ -705,39 +775,50 @@ pub isRecordKind := fn(kind: String): Bool {
     size > 8 and kind.startsWithAt(0, "Record<") and kind.at(size - 1) == ">"
 };
 
-/** Finds the top-level `;` separating header metadata from fields in `Record<id#at#Name;...>`, or -1 when malformed. */
+/** Finds the top-level `;` separating header metadata from fields in `Record<id#at#Name[<...>];...>`, or -1 when malformed. */
 recordHeaderSemi := fn(kind: String): Int {
     if not isRecordKind(kind) { return -1; }
-    kind.indexOf(";", 7)
+    size := kind.length();
+    var cursor := 7;
+    var depth := 0;
+    loop cursor < size - 1 {
+        ch := kind.at(cursor);
+        if ch == "<" or ch == "(" or ch == "[" {
+            depth = depth + 1;
+        } else if ch == ">" or ch == ")" or ch == "]" {
+            if depth > 0 { depth = depth - 1; }
+        } else if ch == ";" and depth == 0 {
+            return cursor;
+        }
+        cursor = cursor + 1;
+    }
+    -1
 };
 
-/** Returns the source declaration display name from canonical `Record<id#at#DisplayName;...>`. */
+/** Returns the source declaration display name from canonical `Record<id#at#DisplayName[<...>];...>`. */
 pub recordDisplayName := fn(kind: String): String {
     semi := recordHeaderSemi(kind);
     if semi <= 7 { return kind; }
-    var pos := semi - 1;
-    loop pos >= 7 and kind.at(pos) =!= "#" {
-        pos = pos - 1;
-    }
-    if pos < 7 { return kind.slice(7, semi); }
-    kind.slice(pos + 1, semi)
+    headerDisplayName(kind.slice(7, semi))
 };
 
-/** Returns the source declaration character offset encoded inside `Record<id#at#DisplayName;...>`, or -1 when absent. */
+/** Returns the source declaration character offset encoded inside `Record<id#at#DisplayName[<...>];...>`, or -1 when absent. */
 pub recordDeclAt := fn(kind: String): Int {
     semi := recordHeaderSemi(kind);
     if semi <= 7 { return -1; }
-    var secondHash := semi - 1;
-    loop secondHash >= 7 and kind.at(secondHash) =!= "#" {
+    hdr := kind.slice(7, semi);
+    baseEnd := headerBaseEnd(hdr);
+    var secondHash := baseEnd - 1;
+    loop secondHash >= 0 and hdr.at(secondHash) =!= "#" {
         secondHash = secondHash - 1;
     }
-    if secondHash <= 7 { return -1; }
+    if secondHash <= 0 { return -1; }
     var firstHash := secondHash - 1;
-    loop firstHash >= 7 and kind.at(firstHash) =!= "#" {
+    loop firstHash >= 0 and hdr.at(firstHash) =!= "#" {
         firstHash = firstHash - 1;
     }
-    if firstHash < 7 or firstHash + 1 >= secondHash { return -1; }
-    syntax.parseDigits(kind, firstHash + 1, secondHash)
+    if firstHash < 0 or firstHash + 1 >= secondHash { return -1; }
+    syntax.parseDigits(hdr, firstHash + 1, secondHash)
 };
 
 /** Parses and caches all declared fields of a canonical nominal record kind `Record<...>`. */
@@ -1078,7 +1159,13 @@ pub encodeRecordPairs := fn(keys: List<String>, values: List<String>): String {
 /** Looks up resolved declared default code for `field` of canonical `recordKind` inside `aliases`, or `""` when absent. */
 pub findRecordDefaultCode := fn(aliases: List<AliasDecl>, recordKind: String, field: String): String {
     idx := findAlias(aliases, "$recdef:" + recordKind + "#" + field);
-    if idx < 0 { "" } else { aliases[idx].target }
+    if idx >= 0 { return aliases[idx].target; }
+    ownerKey := typeOpOwnerKey(recordKind);
+    if ownerKey =!= "" {
+        ownerIdx := findAlias(aliases, "$recdef:" + ownerKey + "#" + field);
+        if ownerIdx >= 0 { return aliases[ownerIdx].target; }
+    }
+    ""
 };
 
 /** Appends `$recpop:<recordKind>` and decoded `$recdef:<recordKind>#<field>` entries from serialized `encoded` defaults onto `aliases`. */
@@ -1181,6 +1268,7 @@ pub fnShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
 pub containsFnKind := fn(kind: String): Bool {
     if kind.indexOf("fn(", 0) < 0 { return false; }
     if isFnKind(kind) { return true; }
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
     cached := containsFnCache.get(kind);
     if cached.found { return cached.value; }
     var res := false;
@@ -1205,6 +1293,302 @@ pub containsFnKind := fn(kind: String): Bool {
     }
     (mut containsFnCache).set(kind, res);
     res
+};
+
+/** Splits comma-separated comptime parameter names (`"T,U"`) into a list. */
+pub splitCommaNames := fn(csv: String): List<String> {
+    out: mut List<String> = [];
+    size := csv.length();
+    if size == 0 { return out; }
+    var start := 0;
+    loop start <= size {
+        comma := csv.indexOf(",", start);
+        end := if comma < 0 { size } else { comma };
+        part := csv.slice(start, end);
+        if part =!= "" { mut out.pushBack(part); }
+        if comma < 0 { break; }
+        start = comma + 1;
+    }
+    out
+};
+
+/** True when `kind` mentions any comptime parameter name listed in comma-separated `genericParams`. */
+pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
+    if genericParams == "" or kind == "" { return false; }
+    if isGenericParamName(genericParams, kind) { return true; }
+    if isListKind(kind) { return self(genericParams, listElementKind(kind)); }
+    if isSetKind(kind) { return self(genericParams, setElementKind(kind)); }
+    if isMapKind(kind) { return self(genericParams, mapKeyKind(kind)) or self(genericParams, mapValueKind(kind)); }
+    if isArrayKind(kind) { return self(genericParams, arrayElementKind(kind)); }
+    if isTupleKind(kind) {
+        n := tupleComponentCount(kind);
+        var i := 0;
+        loop i < n {
+            if self(genericParams, tupleComponent(kind, i).kind) { return true; }
+            i = i + 1;
+        }
+        return false;
+    }
+    if isFnKind(kind) {
+        n := fnParamCount(kind);
+        var i := 0;
+        loop i < n {
+            if self(genericParams, fnParamComponent(kind, i).kind) { return true; }
+            i = i + 1;
+        }
+        return self(genericParams, fnResultKind(kind));
+    }
+    args := nominalTypeArgs(kind);
+    loop args as a {
+        if self(genericParams, a) { return true; }
+    }
+    if isRecordKind(kind) {
+        fc := recordComponentCount(kind);
+        var fi := 0;
+        loop fi < fc {
+            if self(genericParams, recordComponent(kind, fi).kind) { return true; }
+            fi = fi + 1;
+        }
+    } else if isDistinctKind(kind) {
+        return self(genericParams, distinctUnderlyingKind(kind));
+    } else if isEnumKind(kind) {
+        bk := enumBackingKind(kind);
+        if bk =!= "" and self(genericParams, bk) { return true; }
+    }
+    false
+};
+
+/** Substitutes comptime parameter bindings atomically across canonical collections, tuples, fns, records, distincts, and enums. */
+pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: Map<String, String>): String {
+    if isGenericParamName(genericParams, pattern) {
+        return bindings.getOr(pattern, pattern);
+    }
+    if isListKind(pattern) {
+        return "List<" + self(genericParams, listElementKind(pattern), bindings) + ">";
+    }
+    if isSetKind(pattern) {
+        return "Set<" + self(genericParams, setElementKind(pattern), bindings) + ">";
+    }
+    if isMapKind(pattern) {
+        return "Map<" + self(genericParams, mapKeyKind(pattern), bindings) + "," +
+        self(genericParams, mapValueKind(pattern), bindings) + ">";
+    }
+    if isArrayKind(pattern) {
+        ext := arrayExtent(pattern);
+        extStr := if ext < 0 { "*" } else { ext.toText() };
+        return "[" + self(genericParams, arrayElementKind(pattern), bindings) + ";" + extStr + "]";
+    }
+    if isTupleKind(pattern) {
+        n := tupleComponentCount(pattern);
+        parts: mut List<String> = [];
+        var i := 0;
+        loop i < n {
+            comp := tupleComponent(pattern, i);
+            mut parts.pushBack(comp.label + ":" + self(genericParams, comp.kind, bindings));
+            i = i + 1;
+        }
+        return "(" + textLib.joinTexts(parts, ",") + ")";
+    }
+    if isFnKind(pattern) {
+        n := fnParamCount(pattern);
+        parts: mut List<String> = [];
+        var i := 0;
+        loop i < n {
+            comp := fnParamComponent(pattern, i);
+            mut parts.pushBack(comp.label + ":" + self(genericParams, comp.kind, bindings));
+            i = i + 1;
+        }
+        return "fn(" + textLib.joinTexts(parts, ",") + "):" + self(genericParams, fnResultKind(pattern), bindings);
+    }
+    if isRecordKind(pattern) {
+        if not kindHasAnyGenericParam(genericParams, pattern) { return pattern; }
+        semi := recordHeaderSemi(pattern);
+        if semi <= 7 { return pattern; }
+        hdr := pattern.slice(7, semi);
+        baseHdr := hdr.slice(0, headerBaseEnd(hdr));
+        oldArgs := headerTypeArgs(hdr);
+        newArgs: mut List<String> = [];
+        loop oldArgs as oa {
+            mut newArgs.pushBack(self(genericParams, oa, bindings));
+        }
+        newHdr := if newArgs.length() > 0 { baseHdr + "<" + textLib.joinTexts(newArgs, ",") + ">" } else { baseHdr };
+        fc := recordComponentCount(pattern);
+        fieldParts: mut List<String> = [];
+        var fi := 0;
+        loop fi < fc {
+            comp := recordComponent(pattern, fi);
+            mut fieldParts.pushBack(comp.label + ":" + self(genericParams, comp.kind, bindings));
+            fi = fi + 1;
+        }
+        return "Record<" + newHdr + ";" + textLib.joinTexts(fieldParts, ",") + ">";
+    }
+    if isDistinctKind(pattern) {
+        if not kindHasAnyGenericParam(genericParams, pattern) { return pattern; }
+        meta := distinctMeta(pattern);
+        if not meta.ok { return pattern; }
+        baseHdr := meta.header;
+        oldArgs := headerTypeArgs(meta.rawHeader);
+        newArgs: mut List<String> = [];
+        loop oldArgs as oa {
+            mut newArgs.pushBack(self(genericParams, oa, bindings));
+        }
+        newHdr := if newArgs.length() > 0 { baseHdr + "<" + textLib.joinTexts(newArgs, ",") + ">" } else { baseHdr };
+        newUnder := self(genericParams, meta.underlying, bindings);
+        return "Distinct<" + encodeLengthPrefixedText(newHdr) + newUnder + ">";
+    }
+    if isEnumKind(pattern) {
+        if not kindHasAnyGenericParam(genericParams, pattern) { return pattern; }
+        hdr := decodeLengthPrefixedAt(pattern, 5);
+        if hdr.next < 0 { return pattern; }
+        bk := decodeLengthPrefixedAt(pattern, hdr.next);
+        if bk.next < 0 { return pattern; }
+        baseHdr := hdr.text.slice(0, headerBaseEnd(hdr.text));
+        oldArgs := headerTypeArgs(hdr.text);
+        newArgs: mut List<String> = [];
+        loop oldArgs as oa {
+            mut newArgs.pushBack(self(genericParams, oa, bindings));
+        }
+        newHdr := if newArgs.length() > 0 { baseHdr + "<" + textLib.joinTexts(newArgs, ",") + ">" } else { baseHdr };
+        newBk := if bk.text == "" { "" } else { self(genericParams, bk.text, bindings) };
+        tail := pattern.slice(bk.next, pattern.length() - 1);
+        return "Enum<" + encodeLengthPrefixedText(newHdr) + encodeLengthPrefixedText(newBk) + tail + ">";
+    }
+    pattern
+};
+
+/** Validates map-key, set-element, nested-list, tuple, record-field, and distinct constraints on a canonical kind, returning `""` if valid. */
+pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): String {
+    if isListKind(kind) {
+        elem := listElementKind(kind);
+        if isListKind(elem) { return "nested list types are not supported"; }
+        if elem == ir.VALUE_KIND_UNIT { return "unsupported list element type Unit"; }
+        return self(elem, allowGenericParams);
+    }
+    if isSetKind(kind) {
+        elem := setElementKind(kind);
+        if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isMapKeyKind(elem) {
+            return "unsupported set element type " + displayKind(elem);
+        }
+        return self(elem, allowGenericParams);
+    }
+    if isMapKind(kind) {
+        k := mapKeyKind(kind);
+        if not isGenericParamName(allowGenericParams, distinctBaseKind(k)) and not isMapKeyKind(k) {
+            return "unsupported map key type " + displayKind(k);
+        }
+        v := mapValueKind(kind);
+        if v == ir.VALUE_KIND_UNIT or v == ir.VALUE_KIND_NEVER {
+            return "unsupported map value type " + displayKind(v);
+        }
+        kErr := self(k, allowGenericParams);
+        if kErr =!= "" { return kErr; }
+        return self(v, allowGenericParams);
+    }
+    if isArrayKind(kind) {
+        elem := arrayElementKind(kind);
+        if elem == ir.VALUE_KIND_UNIT { return "unsupported array element type Unit"; }
+        return self(elem, allowGenericParams);
+    }
+    if isTupleKind(kind) {
+        n := tupleComponentCount(kind);
+        var i := 0;
+        loop i < n {
+            ck := tupleComponent(kind, i).kind;
+            if isTupleKind(ck) { return "nested tuple types are not supported"; }
+            if isListKind(ck) { return "list types inside tuples are not supported"; }
+            if ck == ir.VALUE_KIND_UNIT { return "unsupported tuple component type Unit"; }
+            err := self(ck, allowGenericParams);
+            if err =!= "" { return err; }
+            i = i + 1;
+        }
+        return "";
+    }
+    if isFnKind(kind) {
+        n := fnParamCount(kind);
+        var i := 0;
+        loop i < n {
+            err := self(fnParamComponent(kind, i).kind, allowGenericParams);
+            if err =!= "" { return err; }
+            i = i + 1;
+        }
+        rk := fnResultKind(kind);
+        if rk =!= ir.VALUE_KIND_UNIT and rk =!= ir.VALUE_KIND_NEVER {
+            return self(rk, allowGenericParams);
+        }
+        return "";
+    }
+    if isRecordKind(kind) {
+        fc := recordComponentCount(kind);
+        var fi := 0;
+        loop fi < fc {
+            fk := recordComponent(kind, fi).kind;
+            if fk == ir.VALUE_KIND_UNIT { return "unsupported record field type Unit"; }
+            err := self(fk, allowGenericParams);
+            if err =!= "" { return err; }
+            fi = fi + 1;
+        }
+        return "";
+    }
+    if isDistinctKind(kind) {
+        uk := distinctUnderlyingKind(kind);
+        if uk == ir.VALUE_KIND_UNIT or uk == ir.VALUE_KIND_NEVER {
+            return "unsupported distinct underlying type " + displayKind(uk);
+        }
+        return self(uk, allowGenericParams);
+    }
+    ""
+};
+
+/** Parses optional `<T: Type, ...>` comptime parameter list (allowing omitted `: Type` for compatibility) non-destructively. */
+pub scanComptimeTypeParams := fn(source: String, start: Int, prefix: String): (ok: Bool, hasParams: Bool, paramsCsv: String, next: Int, errPos: Int, errMsg: String) {
+    size := source.length();
+    var cursor := syntax.skipTrivia(source, start, prefix);
+    if cursor >= size or source.at(cursor) =!= "<" {
+        return (ok = true, hasParams = false, paramsCsv = "", next = cursor, errPos = -1, errMsg = "");
+    }
+    cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+    if cursor >= size or source.at(cursor) == ">" {
+        return (ok = false, hasParams = true, paramsCsv = "", next = cursor, errPos = cursor, errMsg = "expected at least one type parameter inside <...>");
+    }
+    var paramsCsv := "";
+    loop cursor < size {
+        if not source.at(cursor).isNameStart() {
+            return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = cursor, errPos = cursor, errMsg = "expected a type parameter name");
+        }
+        nameStart := cursor;
+        nameEnd := source.skipName(nameStart);
+        pName := source.slice(nameStart, nameEnd);
+        if syntax.isReservedWord(pName) {
+            return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = nameStart, errPos = nameStart, errMsg = "unsupported feature \"" + pName + "\"");
+        }
+        if isGenericParamName(paramsCsv, pName) {
+            return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = nameStart, errPos = nameStart, errMsg = "duplicate type parameter " + pName);
+        }
+        paramsCsv = if paramsCsv == "" { pName } else { paramsCsv + "," + pName };
+        cursor = syntax.skipTrivia(source, nameEnd, prefix);
+        if cursor < size and source.at(cursor) == ":" {
+            kindStart := syntax.skipTrivia(source, cursor + 1, prefix);
+            if kindStart >= size or not source.at(kindStart).isNameStart() {
+                return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = kindStart, errPos = kindStart, errMsg = "expected comptime parameter kind after :");
+            }
+            kindEnd := source.skipName(kindStart);
+            kindName := source.slice(kindStart, kindEnd);
+            if kindName =!= "Type" {
+                return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = kindStart, errPos = kindStart, errMsg = "unsupported comptime parameter kind " + kindName + "; only Type is supported yet");
+            }
+            cursor = syntax.skipTrivia(source, kindEnd, prefix);
+        }
+        if cursor < size and source.at(cursor) == "," {
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            if cursor < size and source.at(cursor) == ">" { break; }
+        } else {
+            break;
+        }
+    }
+    if cursor >= size or source.at(cursor) =!= ">" {
+        return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = cursor, errPos = cursor, errMsg = "expected >");
+    }
+    (ok = true, hasParams = true, paramsCsv = paramsCsv, next = cursor + 1, errPos = -1, errMsg = "")
 };
 
 /** True when `expectedKind` and `actualKind` are tuples with identical component counts and positional component types. */
@@ -1468,7 +1852,8 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             }
             resolvedBacking = bkParsed.kind;
         }
-        built := buildCanonicalEnumKind(hdr.text, resolvedBacking, source, cur, caseCount, prefix);
+        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        built := buildCanonicalEnumKind(effHdr, resolvedBacking, source, cur, caseCount, prefix);
         if not built.ok {
             syntax.failAt(errSource, errPos, prefix, built.error);
         }
@@ -1495,7 +1880,7 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             fName := decodeLengthPrefixedAt(source, cur);
             fType := decodeLengthPrefixedAt(source, fName.next);
             cur = fType.next;
-            resolvedField := self(errSource, errPos, false, fType.text, 0, prefix, aliases, "record field", "", seen);
+            resolvedField := self(errSource, errPos, false, fType.text, 0, prefix, aliases, "record field", genericType, seen);
             if syntax.skipTrivia(fType.text, resolvedField.next, prefix) < fType.text.length() {
                 syntax.failAt(errSource, errPos, prefix, "unexpected text after type");
             }
@@ -1505,11 +1890,12 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             (mut parts).pushBack(fName.text + ":" + resolvedField.kind);
             idx = idx + 1;
         }
-        return (kind = "Record<" + hdr.text + ";" + textLib.joinTexts(parts, ",") + ">", next = cur);
+        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        return (kind = "Record<" + effHdr + ";" + textLib.joinTexts(parts, ",") + ">", next = cur);
     }
     if not useLocalErr and start < size and source.startsWithAt(start, "Record<") {
         end := skipKindToken(source, start);
-        if end > start + 8 and source.at(end - 1) == ">" and source.indexOf(";", start) > start {
+        if end > start + 8 and source.at(end - 1) == ">" and recordHeaderSemi(source.slice(start, end)) > 7 {
             return (kind = source.slice(start, end), next = end);
         }
     }
@@ -1519,14 +1905,15 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if rawTarget.text == "" {
             syntax.failAt(errSource, errPos, prefix, "expected a type after distinct");
         }
-        resolvedBase := self(errSource, errPos, false, rawTarget.text, 0, prefix, aliases, "distinct", "", seen);
+        resolvedBase := self(errSource, errPos, false, rawTarget.text, 0, prefix, aliases, "distinct", genericType, seen);
         if syntax.skipTrivia(rawTarget.text, resolvedBase.next, prefix) < rawTarget.text.length() {
             syntax.failAt(errSource, errPos, prefix, "unexpected text after type");
         }
         if resolvedBase.kind == ir.VALUE_KIND_UNIT or resolvedBase.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, errPos, prefix, "unsupported distinct underlying type " + displayKind(resolvedBase.kind));
         }
-        return (kind = "Distinct<" + encodeLengthPrefixedText(hdr.text) + resolvedBase.kind + ">", next = rawTarget.next);
+        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        return (kind = "Distinct<" + encodeLengthPrefixedText(effHdr) + resolvedBase.kind + ">", next = rawTarget.next);
     }
     if not useLocalErr and start < size and source.startsWithAt(start, "Distinct<") {
         end := skipKindToken(source, start);
@@ -1756,7 +2143,7 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "expected a map key type");
         }
         keyParsed := self(errSource, errPos, useLocalErr, source, keyStart, prefix, aliases, context, genericType, seen);
-        if not isGenericParamName(genericType, keyParsed.kind) and not isMapKeyKind(keyParsed.kind) {
+        if not isGenericParamName(genericType, distinctBaseKind(keyParsed.kind)) and not isMapKeyKind(keyParsed.kind) {
             syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "unsupported map key type " + displayKind(keyParsed.kind));
         }
         comma := syntax.skipTrivia(source, keyParsed.next, prefix);
@@ -1783,7 +2170,7 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected a set element type");
         }
         elemParsed := self(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, context, genericType, seen);
-        if not isGenericParamName(genericType, elemParsed.kind) and not isMapKeyKind(elemParsed.kind) {
+        if not isGenericParamName(genericType, distinctBaseKind(elemParsed.kind)) and not isMapKeyKind(elemParsed.kind) {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported set element type " + displayKind(elemParsed.kind));
         }
         close := syntax.skipTrivia(source, elemParsed.next, prefix);
@@ -1806,16 +2193,93 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     if index >= 0 {
         aliasItem := aliases[index];
         seenKey := (aliasItem.depth).toText() + ":" + name;
-        if listLib.listContainsText(seen, seenKey) {
-            syntax.failAt(errSource, aliasItem.at, prefix, "recursive type alias " + name);
-            return (kind = "", next = after);
-        }
         if aliasItem.target == "" {
             unsupportedAliasTarget(errSource, aliasItem.at, prefix, "target");
             return (kind = "", next = after);
         }
         if (aliasItem.target).startsWithAt(0, "$Kind:") {
             return (kind = (aliasItem.target).slice(6, (aliasItem.target).length()), next = after);
+        }
+        isGenRaw := (aliasItem.target).startsWithAt(0, "@genraw:");
+        isGenTpl := (aliasItem.target).startsWithAt(0, "@gentpl:");
+        if isGenRaw or isGenTpl {
+            pDec := decodeLengthPrefixedAt(aliasItem.target, 8);
+            tplParamsCsv := pDec.text;
+            tplBody := (aliasItem.target).slice(pDec.next, (aliasItem.target).length());
+            if afterName >= size or source.at(afterName) =!= "<" {
+                if name == "Self" {
+                    famDisplay := if isRecordKind(tplBody) {
+                        semi := recordHeaderSemi(tplBody);
+                        hdr := if semi > 7 { tplBody.slice(7, semi) } else { "" };
+                        headerDisplayName(hdr.slice(0, headerBaseEnd(hdr)))
+                    } else if isDistinctKind(tplBody) {
+                        headerDisplayName(distinctMeta(tplBody).header)
+                    } else if isEnumKind(tplBody) {
+                        headerDisplayName(enumIdentityHeader(tplBody))
+                    } else {
+                        "Self"
+                    };
+                    syntax.failAt(errSource, nameStart, prefix, "generic type " + famDisplay + " requires explicit type arguments on Self<...>");
+                }
+                syntax.failAt(errSource, nameStart, prefix, "generic type " + name + " requires explicit type arguments");
+            }
+            var argCursor := syntax.skipTrivia(source, afterName + 1, prefix);
+            if argCursor >= size or source.at(argCursor) == ">" {
+                syntax.failAt(errSource, if useLocalErr { argCursor } else { errPos }, prefix, "expected at least one type argument in " + name + "<...>");
+            }
+            argKinds: mut List<String> = [];
+            loop true {
+                argParsed := self(errSource, errPos, useLocalErr, source, argCursor, prefix, aliases, context, genericType, seen);
+                mut argKinds.pushBack(argParsed.kind);
+                argCursor = syntax.skipTrivia(source, argParsed.next, prefix);
+                if argCursor < size and source.at(argCursor) == "," {
+                    argCursor = syntax.skipTrivia(source, argCursor + 1, prefix);
+                    if argCursor < size and source.at(argCursor) == ">" { break; }
+                } else {
+                    break;
+                }
+            }
+            if argCursor >= size or source.at(argCursor) =!= ">" {
+                syntax.failAt(errSource, if useLocalErr { argCursor } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in generic type " + name });
+            }
+            afterClose := argCursor + 1;
+            paramNames := splitCommaNames(tplParamsCsv);
+            if argKinds.length() =!= paramNames.length() {
+                syntax.failAt(errSource, nameStart, prefix, "generic type " + name + " expects " + paramNames.length().toText() + " type argument(s), got " + argKinds.length().toText());
+            }
+            var templateKind := tplBody;
+            if isGenRaw {
+                if listLib.listContainsText(seen, seenKey) {
+                    syntax.failAt(errSource, aliasItem.at, prefix, "recursive type alias " + name);
+                    return (kind = "", next = afterClose);
+                }
+                nextSeen: mut List<String> = [];
+                loop seen as sEntry { mut nextSeen.pushBack(sEntry); }
+                (mut nextSeen).pushBack(seenKey);
+                scopedAliases := aliasesUpToDepth(aliases, aliasItem.depth);
+                resolved := self(errSource, aliasItem.at, false, tplBody, 0, prefix, scopedAliases, "alias", tplParamsCsv, nextSeen);
+                trailing := syntax.skipTrivia(tplBody, resolved.next, prefix);
+                if trailing < tplBody.length() {
+                    syntax.failAt(errSource, aliasItem.at, prefix, "unexpected text after type");
+                }
+                templateKind = resolved.kind;
+            }
+            bindings: mut Map<String, String>;
+            var bi := 0;
+            loop bi < paramNames.length() {
+                mut bindings.set(paramNames[bi], argKinds[bi]);
+                bi = bi + 1;
+            }
+            instKind := substCanonicalKind(tplParamsCsv, templateKind, bindings);
+            valErr := validateCanonicalKind(instKind, genericType);
+            if valErr =!= "" {
+                syntax.failAt(errSource, nameStart, prefix, valErr);
+            }
+            return (kind = instKind, next = afterClose);
+        }
+        if listLib.listContainsText(seen, seenKey) {
+            syntax.failAt(errSource, aliasItem.at, prefix, "recursive type alias " + name);
+            return (kind = "", next = after);
         }
         nextSeen: mut List<String> = seen;
         mut nextSeen.pushBack(seenKey);
@@ -1843,6 +2307,41 @@ pub resolveTypeText := fn(source: String, position: Int, prefix: String, aliases
         syntax.failAt(source, position, prefix, "unexpected text after type");
     }
     parsed.kind
+};
+
+/** Resolves one generic type or template body under `genericParams` (`"T"` or `"A,B"`), validating there is no trailing text. */
+pub resolveGenericTypeText := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, text: String, genericParams: String, seen: List<String>): String {
+    parsed := parseTypeWithSeen(source, position, false, text, 0, prefix, aliases, "alias", genericParams, seen);
+    after := syntax.skipTrivia(text, parsed.next, prefix);
+    if after < text.length() {
+        syntax.failAt(source, position, prefix, "unexpected text after type");
+    }
+    parsed.kind
+};
+
+/** Returns the owned nominal type-op owner key when `name` refers to a generic `record`, `distinct`, or `enum` template, else `""`. */
+pub genericAliasOwnerKey := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, name: String): String {
+    idx := findAlias(aliases, name);
+    if idx < 0 { return ""; }
+    aliasItem := aliases[idx];
+    if aliasItem.target.startsWithAt(0, "@gentpl:") {
+        pDec := decodeLengthPrefixedAt(aliasItem.target, 8);
+        if pDec.next < 0 { return ""; }
+        tplBody := aliasItem.target.slice(pDec.next, aliasItem.target.length());
+        return typeOpOwnerKey(tplBody);
+    }
+    if aliasItem.target.startsWithAt(0, "@genraw:") {
+        pDec := decodeLengthPrefixedAt(aliasItem.target, 8);
+        if pDec.next < 0 { return ""; }
+        innerRaw := aliasItem.target.slice(pDec.next, aliasItem.target.length());
+        if not innerRaw.startsWithAt(0, "@recraw:") and not innerRaw.startsWithAt(0, "@enumraw:") and not innerRaw.startsWithAt(0, "@distraw:") {
+            return "";
+        }
+        emptySeen: List<String> = [];
+        tplKind := resolveGenericTypeText(source, position, prefix, aliasesUpToDepth(aliases, aliasItem.depth), innerRaw, pDec.text, emptySeen);
+        return typeOpOwnerKey(tplKind);
+    }
+    ""
 };
 
 /** Resolves one transparent alias name to its scalar or flat named-tuple kind. */
@@ -1890,26 +2389,12 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
         }
         cursor = syntax.skipTrivia(source, cursor, prefix);
     } else if cursor < size and source.at(cursor) == "<" {
-        cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-        if cursor >= size or source.at(cursor) == ">" {
-            syntax.failAt(source, cursor, prefix, "expected at least one type parameter inside <...>");
+        gp := scanComptimeTypeParams(source, cursor, prefix);
+        if not gp.ok {
+            syntax.failAt(source, gp.errPos, prefix, gp.errMsg);
         }
-        loop true {
-            binderStart := cursor;
-            binder := typeNameAt(source, binderStart, prefix);
-            if isGenericParamName(genericType, binder.name) {
-                syntax.failAt(source, binderStart, prefix, "duplicate type parameter " + binder.name);
-            }
-            genericType = if genericType == "" { binder.name } else { genericType + "," + binder.name };
-            cursor = syntax.skipTrivia(source, binder.next, prefix);
-            if cursor < size and source.at(cursor) == "," {
-                cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-            } else {
-                break;
-            }
-        }
-        cursor = syntax.expectSymbol(source, cursor, ">", prefix);
-        cursor = syntax.skipTrivia(source, cursor, prefix);
+        genericType = gp.paramsCsv;
+        cursor = syntax.skipTrivia(source, gp.next, prefix);
     }
     cursor = syntax.expectSymbol(source, cursor, "(", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
@@ -2010,25 +2495,12 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
     var cursor := syntax.skipTrivia(source, position, prefix);
     var genericType := "";
     if cursor < size and source.at(cursor) == "<" {
-        cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-        gpNames: mut List<String> = [];
-        loop true {
-            binderStart := cursor;
-            binder := typeNameAt(source, binderStart, prefix);
-            if listLib.listContainsText(gpNames, binder.name) {
-                syntax.failAt(source, binderStart, prefix, "duplicate type parameter " + binder.name);
-            }
-            (mut gpNames).pushBack(binder.name);
-            genericType = if genericType == "" { binder.name } else { genericType + "," + binder.name };
-            cursor = syntax.skipTrivia(source, binder.next, prefix);
-            if cursor < size and source.at(cursor) == "," {
-                cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-            } else {
-                break;
-            }
+        gp := scanComptimeTypeParams(source, cursor, prefix);
+        if not gp.ok {
+            syntax.failAt(source, gp.errPos, prefix, gp.errMsg);
         }
-        cursor = syntax.expectSymbol(source, cursor, ">", prefix);
-        cursor = syntax.skipTrivia(source, cursor, prefix);
+        genericType = gp.paramsCsv;
+        cursor = syntax.skipTrivia(source, gp.next, prefix);
     }
     scopedAliases := withSelfAlias(aliases, selfTarget, 0);
     cursor = syntax.expectSymbol(source, cursor, "(", prefix);
@@ -2071,7 +2543,7 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
                 syntax.failAt(source, typeStart, prefix, "receiver parameter of " + typeName + "." + opName + " must match " + typeName + ", got " + displayKind(typed.kind));
             }
         }
-        if access =!= "" and not isGenericOwner and not isGenericParamName(genericType, typed.kind) and not isMutContainerKind(typed.kind) {
+        if access =!= "" and not isGenericCoreOwner(typeName) and not isGenericParamName(genericType, distinctBaseKind(typed.kind)) and not isMutContainerKind(typed.kind) {
             syntax.failAt(source, typeStart, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
         }
         cursor = syntax.skipTrivia(source, typed.next, prefix);
@@ -2669,29 +3141,45 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
             if name =!= "pub" and not syntax.isReservedWord(name) and source.startsWithAt(opPos, ":=") {
                 typePos := syntax.skipTrivia(source, opPos + 2, prefix);
                 if source.wordAt(typePos, "alias") {
-                    targetStart := syntax.skipTrivia(source, typePos + 5, prefix);
+                    gp := scanComptimeTypeParams(source, typePos + 5, prefix);
+                    targetStart := syntax.skipTrivia(source, gp.next, prefix);
                     aliasTarget := collectTypeTarget(source, targetStart, prefix);
-                    mut found.pushBack((name = name, target = aliasTarget.text, at = nameStart, end = aliasTarget.next, depth = blockDepth));
-                    hasFound = true;
+                    if gp.ok {
+                        rawTxt := if gp.hasParams { "@genraw:" + encodeLengthPrefixedText(gp.paramsCsv) + aliasTarget.text } else { aliasTarget.text };
+                        mut found.pushBack((name = name, target = rawTxt, at = nameStart, end = aliasTarget.next, depth = blockDepth));
+                        hasFound = true;
+                    }
                     cursor = if aliasTarget.next > typePos + 5 { aliasTarget.next } else { typePos + 5 };
                     continue;
                 } else if source.wordAt(typePos, "distinct") {
-                    distTarget := collectDistinctTarget(source, typePos + 8, prefix, "b" + blockDepth.toText(), nameStart, name);
-                    mut found.pushBack((name = name, target = distTarget.text, at = nameStart, end = distTarget.next, depth = blockDepth));
-                    hasFound = true;
+                    gp := scanComptimeTypeParams(source, typePos + 8, prefix);
+                    distTarget := collectDistinctTarget(source, gp.next, prefix, "b" + blockDepth.toText(), nameStart, name);
+                    if gp.ok {
+                        rawTxt := if gp.hasParams { "@genraw:" + encodeLengthPrefixedText(gp.paramsCsv) + distTarget.text } else { distTarget.text };
+                        mut found.pushBack((name = name, target = rawTxt, at = nameStart, end = distTarget.next, depth = blockDepth));
+                        hasFound = true;
+                    }
                     cursor = if distTarget.next > typePos + 8 { distTarget.next } else { typePos + 8 };
                     continue;
                 } else if source.wordAt(typePos, "record") {
-                    braceStart := syntax.skipTrivia(source, typePos + 6, prefix);
+                    gp := scanComptimeTypeParams(source, typePos + 6, prefix);
+                    braceStart := syntax.skipTrivia(source, gp.next, prefix);
                     recTarget := collectRecordTarget(source, braceStart, prefix, "b" + blockDepth.toText(), nameStart, name);
-                    mut found.pushBack((name = name, target = recTarget.text, at = nameStart, end = recTarget.next, depth = blockDepth));
-                    hasFound = true;
+                    if gp.ok {
+                        rawTxt := if gp.hasParams { "@genraw:" + encodeLengthPrefixedText(gp.paramsCsv) + recTarget.text } else { recTarget.text };
+                        mut found.pushBack((name = name, target = rawTxt, at = nameStart, end = recTarget.next, depth = blockDepth));
+                        hasFound = true;
+                    }
                     cursor = if recTarget.next > typePos + 6 { recTarget.next } else { typePos + 6 };
                     continue;
                 } else if source.wordAt(typePos, "enum") {
-                    enumTarget := collectEnumTarget(source, typePos + 4, prefix, "b" + blockDepth.toText(), nameStart, name);
-                    mut found.pushBack((name = name, target = enumTarget.text, at = nameStart, end = enumTarget.next, depth = blockDepth));
-                    hasFound = true;
+                    gp := scanComptimeTypeParams(source, typePos + 4, prefix);
+                    enumTarget := collectEnumTarget(source, gp.next, prefix, "b" + blockDepth.toText(), nameStart, name);
+                    if gp.ok {
+                        rawTxt := if gp.hasParams { "@genraw:" + encodeLengthPrefixedText(gp.paramsCsv) + enumTarget.text } else { enumTarget.text };
+                        mut found.pushBack((name = name, target = rawTxt, at = nameStart, end = enumTarget.next, depth = blockDepth));
+                        hasFound = true;
+                    }
                     cursor = if enumTarget.next > typePos + 4 { enumTarget.next } else { typePos + 4 };
                     continue;
                 }
@@ -2733,7 +3221,8 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             }
             resolvedBacking = bkParsed.kind;
         }
-        built := buildCanonicalEnumKind(hdr.text, resolvedBacking, source, cur, caseCount, prefix);
+        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        built := buildCanonicalEnumKind(effHdr, resolvedBacking, source, cur, caseCount, prefix);
         if not built.ok { return (ok = false, kind = "", next = start); }
         return (ok = true, kind = built.kind, next = built.next);
     }
@@ -2760,7 +3249,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             fType := decodeLengthPrefixedAt(source, fName.next);
             if fName.next < 0 or fType.next < 0 { return (ok = false, kind = "", next = start); }
             cur = fType.next;
-            resolvedField := self(fType.text, 0, prefix, aliases, "", seen, depthLeft - 1);
+            resolvedField := self(fType.text, 0, prefix, aliases, genericType, seen, depthLeft - 1);
             if not resolvedField.ok or resolvedField.kind == ir.VALUE_KIND_UNIT or
             syntax.skipTrivia(fType.text, resolvedField.next, prefix) < fType.text.length() {
                 return (ok = false, kind = "", next = start);
@@ -2768,9 +3257,10 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             (mut parts).pushBack(fName.text + ":" + resolvedField.kind);
             idx = idx + 1;
         }
-        return (ok = true, kind = "Record<" + hdr.text + ";" + textLib.joinTexts(parts, ",") + ">", next = cur);
+        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        return (ok = true, kind = "Record<" + effHdr + ";" + textLib.joinTexts(parts, ",") + ">", next = cur);
     }
-    if source.startsWithAt(start, "Record<") and source.indexOf(";", start) > start {
+    if source.startsWithAt(start, "Record<") and recordHeaderSemi(source.slice(start, skipKindToken(source, start))) > 7 {
         end := skipKindToken(source, start);
         if end > start + 8 and source.at(end - 1) == ">" {
             return (ok = true, kind = source.slice(start, end), next = end);
@@ -2781,12 +3271,13 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
         if hdr.next < 0 { return (ok = false, kind = "", next = start); }
         rawTarget := decodeLengthPrefixedAt(source, hdr.next);
         if rawTarget.next < 0 or rawTarget.text == "" { return (ok = false, kind = "", next = start); }
-        resolvedBase := self(rawTarget.text, 0, prefix, aliases, "", seen, depthLeft - 1);
+        resolvedBase := self(rawTarget.text, 0, prefix, aliases, genericType, seen, depthLeft - 1);
         if not resolvedBase.ok or resolvedBase.kind == ir.VALUE_KIND_UNIT or resolvedBase.kind == ir.VALUE_KIND_NEVER or
         syntax.skipTrivia(rawTarget.text, resolvedBase.next, prefix) < rawTarget.text.length() {
             return (ok = false, kind = "", next = start);
         }
-        return (ok = true, kind = "Distinct<" + encodeLengthPrefixedText(hdr.text) + resolvedBase.kind + ">", next = rawTarget.next);
+        effHdr := if genericType =!= "" { hdr.text + "<" + genericType + ">" } else { hdr.text };
+        return (ok = true, kind = "Distinct<" + encodeLengthPrefixedText(effHdr) + resolvedBase.kind + ">", next = rawTarget.next);
     }
     if source.startsWithAt(start, "Distinct<") {
         end := skipKindToken(source, start);
@@ -2914,8 +3405,20 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
         return (ok = true, kind = "fn(" + textLib.joinTexts(paramParts, ",") + "):" + retType.kind, next = retType.next);
     }
     if not ch.isNameStart() { return (ok = false, kind = "", next = start); }
-    afterName := source.skipName(start);
-    name := source.slice(start, afterName);
+    var afterName := source.skipName(start);
+    var name := source.slice(start, afterName);
+    dotCheck := syntax.skipTrivia(source, afterName, prefix);
+    if dotCheck < size and source.at(dotCheck) == "." {
+        memCheckStart := syntax.skipTrivia(source, dotCheck + 1, prefix);
+        if memCheckStart < size and source.at(memCheckStart).isNameStart() {
+            memCheckEnd := source.skipName(memCheckStart);
+            qualCandidate := name + "." + source.slice(memCheckStart, memCheckEnd);
+            if findAlias(aliases, qualCandidate) >= 0 {
+                name = qualCandidate;
+                afterName = memCheckEnd;
+            }
+        }
+    }
     var resolvedName := name;
     if name == "Self" {
         selfIdx := findAlias(aliases, "Self");
@@ -2959,7 +3462,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = afterMap);
         }
         keyRes := self(source, afterMap + 1, prefix, aliases, genericType, seen, depthLeft - 1);
-        if not keyRes.ok or (not isGenericParamName(genericType, keyRes.kind) and not isMapKeyKind(keyRes.kind)) {
+        if not keyRes.ok or (not isGenericParamName(genericType, distinctBaseKind(keyRes.kind)) and not isMapKeyKind(keyRes.kind)) {
             return (ok = false, kind = "", next = afterMap + 1);
         }
         comma := syntax.skipTrivia(source, keyRes.next, prefix);
@@ -2982,7 +3485,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = afterSet);
         }
         elemRes := self(source, afterSet + 1, prefix, aliases, genericType, seen, depthLeft - 1);
-        if not elemRes.ok or (not isGenericParamName(genericType, elemRes.kind) and not isMapKeyKind(elemRes.kind)) {
+        if not elemRes.ok or (not isGenericParamName(genericType, distinctBaseKind(elemRes.kind)) and not isMapKeyKind(elemRes.kind)) {
             return (ok = false, kind = "", next = afterSet + 1);
         }
         close := syntax.skipTrivia(source, elemRes.next, prefix);
@@ -3007,11 +3510,75 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
     if aliasIdx < 0 { return (ok = false, kind = "", next = afterName); }
     aliasItem := aliases[aliasIdx];
     seenKey := (aliasItem.depth).toText() + ":" + name;
-    if listLib.listContainsText(seen, seenKey) or aliasItem.target == "" {
+    if aliasItem.target == "" {
         return (ok = false, kind = "", next = afterName);
     }
     if (aliasItem.target).startsWithAt(0, "$Kind:") {
         return (ok = true, kind = (aliasItem.target).slice(6, (aliasItem.target).length()), next = afterName);
+    }
+    isGenRaw := (aliasItem.target).startsWithAt(0, "@genraw:");
+    isGenTpl := (aliasItem.target).startsWithAt(0, "@gentpl:");
+    if isGenRaw or isGenTpl {
+        pDec := decodeLengthPrefixedAt(aliasItem.target, 8);
+        if pDec.next < 0 { return (ok = false, kind = "", next = afterName); }
+        tplParamsCsv := pDec.text;
+        tplBody := (aliasItem.target).slice(pDec.next, (aliasItem.target).length());
+        afterArgsOpen := syntax.skipTrivia(source, afterName, prefix);
+        if afterArgsOpen >= size or source.at(afterArgsOpen) =!= "<" {
+            return (ok = false, kind = "", next = afterName);
+        }
+        var argCursor := syntax.skipTrivia(source, afterArgsOpen + 1, prefix);
+        if argCursor >= size or source.at(argCursor) == ">" {
+            return (ok = false, kind = "", next = argCursor);
+        }
+        argKinds: mut List<String> = [];
+        loop true {
+            argParsed := self(source, argCursor, prefix, aliases, genericType, seen, depthLeft - 1);
+            if not argParsed.ok { return (ok = false, kind = "", next = argCursor); }
+            mut argKinds.pushBack(argParsed.kind);
+            argCursor = syntax.skipTrivia(source, argParsed.next, prefix);
+            if argCursor < size and source.at(argCursor) == "," {
+                argCursor = syntax.skipTrivia(source, argCursor + 1, prefix);
+                if argCursor < size and source.at(argCursor) == ">" { break; }
+            } else {
+                break;
+            }
+        }
+        if argCursor >= size or source.at(argCursor) =!= ">" {
+            return (ok = false, kind = "", next = argCursor);
+        }
+        afterClose := argCursor + 1;
+        paramNames := splitCommaNames(tplParamsCsv);
+        if argKinds.length() =!= paramNames.length() {
+            return (ok = false, kind = "", next = afterClose);
+        }
+        var templateKind := tplBody;
+        if isGenRaw {
+            if listLib.listContainsText(seen, seenKey) { return (ok = false, kind = "", next = afterClose); }
+            nextSeen: mut List<String> = [];
+            loop seen as sEntry { mut nextSeen.pushBack(sEntry); }
+            (mut nextSeen).pushBack(seenKey);
+            scopedAliases := aliasesUpToDepth(aliases, aliasItem.depth);
+            resolved := self(tplBody, 0, prefix, scopedAliases, tplParamsCsv, nextSeen, depthLeft - 1);
+            if not resolved.ok or syntax.skipTrivia(tplBody, resolved.next, prefix) < tplBody.length() {
+                return (ok = false, kind = "", next = afterClose);
+            }
+            templateKind = resolved.kind;
+        }
+        bindings: mut Map<String, String>;
+        var bi := 0;
+        loop bi < paramNames.length() {
+            mut bindings.set(paramNames[bi], argKinds[bi]);
+            bi = bi + 1;
+        }
+        instKind := substCanonicalKind(tplParamsCsv, templateKind, bindings);
+        if validateCanonicalKind(instKind, genericType) =!= "" {
+            return (ok = false, kind = "", next = afterClose);
+        }
+        return (ok = true, kind = instKind, next = afterClose);
+    }
+    if listLib.listContainsText(seen, seenKey) {
+        return (ok = false, kind = "", next = afterName);
     }
     nextSeen: mut List<String> = [];
     loop seen as entry { mut nextSeen.pushBack(entry); }
@@ -3063,23 +3630,10 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
                 cursor = syntax.skipTrivia(source, afterBinder + 1, prefix);
             }
         } else {
-            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-            if cursor >= size or source.at(cursor) == ">" { return false; }
-            loop true {
-                if cursor >= size or not source.at(cursor).isNameStart() { return false; }
-                bEnd := source.skipName(cursor);
-                bName := source.slice(cursor, bEnd);
-                if syntax.isReservedWord(bName) or isGenericParamName(genericType, bName) { return false; }
-                genericType = if genericType == "" { bName } else { genericType + "," + bName };
-                cursor = syntax.skipTrivia(source, bEnd, prefix);
-                if cursor < size and source.at(cursor) == "," {
-                    cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-                } else {
-                    break;
-                }
-            }
-            if cursor >= size or source.at(cursor) =!= ">" { return false; }
-            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            gp := scanComptimeTypeParams(source, cursor, prefix);
+            if not gp.ok or not gp.hasParams { return false; }
+            genericType = gp.paramsCsv;
+            cursor = syntax.skipTrivia(source, gp.next, prefix);
         }
     }
     if cursor >= size or source.at(cursor) =!= "(" { return false; }

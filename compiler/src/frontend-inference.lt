@@ -418,13 +418,27 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                     leftNext = memEnd;
                 } else {
                     afterMem := syntax.skipTrivia(source, memEnd, prefix);
-                    if afterMem < size and source.at(afterMem) == "{" and types.findAlias(aliases, qualified) >= 0 {
+                    if afterMem < size and (source.at(afterMem) == "{" or source.at(afterMem) == "<" or source.at(afterMem) == ".") and types.findAlias(aliases, qualified) >= 0 {
                         emptySeenMod: List<String> = [];
-                        modRec := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeenMod, 32);
-                        braceEnd := syntax.scanBraceEnd(source, afterMem, prefix);
-                        if modRec.ok and types.isRecordKind(modRec.kind) and braceEnd >= 0 {
-                            leftKind = modRec.kind;
-                            leftNext = braceEnd;
+                        modRes := types.canResolveTypeAt(source, start, prefix, aliases, "", emptySeenMod, 32);
+                        if modRes.ok {
+                            afterModType := syntax.skipTrivia(source, modRes.next, prefix);
+                            if afterModType < size and source.at(afterModType) == "{" and types.isRecordKind(modRes.kind) {
+                                braceEnd := syntax.scanBraceEnd(source, afterModType, prefix);
+                                if braceEnd >= 0 {
+                                    leftKind = modRes.kind;
+                                    leftNext = braceEnd;
+                                }
+                            } else if afterModType < size and source.at(afterModType) == "." and types.isEnumKind(modRes.kind) {
+                                cStart := syntax.skipTrivia(source, afterModType + 1, prefix);
+                                if cStart < size and source.at(cStart).isNameStart() {
+                                    cEnd := source.skipName(cStart);
+                                    if types.enumCaseIndex(modRes.kind, source.slice(cStart, cEnd)) >= 0 {
+                                        leftKind = modRes.kind;
+                                        leftNext = cEnd;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -457,13 +471,27 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                     leftNext = afterName;
                 } else {
                     afterRecName := syntax.skipTrivia(source, afterName, prefix);
-                    if afterRecName < size and source.at(afterRecName) == "{" and types.findAlias(aliases, name) >= 0 {
+                    if afterRecName < size and (source.at(afterRecName) == "{" or source.at(afterRecName) == "<" or source.at(afterRecName) == ".") and types.findAlias(aliases, name) >= 0 {
                         emptySeenRec: List<String> = [];
                         recRes := types.canResolveTypeAt(source, start, prefix, aliases, "", emptySeenRec, 32);
-                        braceEnd := syntax.scanBraceEnd(source, afterRecName, prefix);
-                        if recRes.ok and types.isRecordKind(recRes.kind) and braceEnd >= 0 {
-                            leftKind = recRes.kind;
-                            leftNext = braceEnd;
+                        if recRes.ok {
+                            afterRecType := syntax.skipTrivia(source, recRes.next, prefix);
+                            if afterRecType < size and source.at(afterRecType) == "{" and types.isRecordKind(recRes.kind) {
+                                braceEnd := syntax.scanBraceEnd(source, afterRecType, prefix);
+                                if braceEnd >= 0 {
+                                    leftKind = recRes.kind;
+                                    leftNext = braceEnd;
+                                }
+                            } else if afterRecType < size and source.at(afterRecType) == "." and types.isEnumKind(recRes.kind) {
+                                cStart := syntax.skipTrivia(source, afterRecType + 1, prefix);
+                                if cStart < size and source.at(cStart).isNameStart() {
+                                    cEnd := source.skipName(cStart);
+                                    if types.enumCaseIndex(recRes.kind, source.slice(cStart, cEnd)) >= 0 {
+                                        leftKind = recRes.kind;
+                                        leftNext = cEnd;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1066,24 +1094,28 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
             if aliasPos < limit and source.startsWithAt(aliasPos, ":=") {
                 valueStart := syntax.skipTrivia(source, aliasPos + 2, prefix);
                 if source.wordAt(valueStart, "alias") {
-                    targetStart := syntax.skipTrivia(source, valueStart + 5, prefix);
+                    gp := types.scanComptimeTypeParams(source, valueStart + 5, prefix);
+                    targetStart := syntax.skipTrivia(source, gp.next, prefix);
                     aliasTarget := types.collectTypeTarget(source, targetStart, prefix);
                     position = if aliasTarget.next > valueStart { aliasTarget.next } else { valueStart + 5 };
                     continue;
                 }
                 if source.wordAt(valueStart, "distinct") {
-                    distTarget := types.collectDistinctTarget(source, valueStart + 8, prefix, "", nameStart, name);
+                    gp := types.scanComptimeTypeParams(source, valueStart + 8, prefix);
+                    distTarget := types.collectDistinctTarget(source, gp.next, prefix, "", nameStart, name);
                     position = if distTarget.next > valueStart { distTarget.next } else { valueStart + 8 };
                     continue;
                 }
                 if source.wordAt(valueStart, "record") {
-                    bracePos := syntax.skipTrivia(source, valueStart + 6, prefix);
+                    gp := types.scanComptimeTypeParams(source, valueStart + 6, prefix);
+                    bracePos := syntax.skipTrivia(source, gp.next, prefix);
                     recTarget := types.collectRecordTarget(source, bracePos, prefix, "", nameStart, name);
                     position = if recTarget.next > valueStart { recTarget.next } else { valueStart + 6 };
                     continue;
                 }
                 if source.wordAt(valueStart, "enum") {
-                    enumTarget := types.collectEnumTarget(source, valueStart + 4, prefix, "", nameStart, name);
+                    gp := types.scanComptimeTypeParams(source, valueStart + 4, prefix);
+                    enumTarget := types.collectEnumTarget(source, gp.next, prefix, "", nameStart, name);
                     position = if enumTarget.next > valueStart { enumTarget.next } else { valueStart + 4 };
                     continue;
                 }
@@ -1355,31 +1387,55 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
             if source.startsWithAt(aliasPosition, ":=") {
                 valueStart := syntax.skipTrivia(source, aliasPosition + 2, prefix);
                 if source.wordAt(valueStart, "alias") {
-                    targetStart := syntax.skipTrivia(source, valueStart + 5, prefix);
+                    gp := types.scanComptimeTypeParams(source, valueStart + 5, prefix);
+                    if not gp.ok {
+                        position = if gp.next > valueStart + 5 { gp.next } else { valueStart + 5 };
+                        continue;
+                    }
+                    targetStart := syntax.skipTrivia(source, gp.next, prefix);
                     aliasTarget := types.collectTypeTarget(source, targetStart, prefix);
-                    mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = aliasTarget.text,
+                    rawTxt := if gp.hasParams { "@genraw:" + types.encodeLengthPrefixedText(gp.paramsCsv) + aliasTarget.text } else { aliasTarget.text };
+                    mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = rawTxt,
                     intValue = nameStart, textValue = aliasTarget.next.toText()));
                     position = aliasTarget.next;
                     continue;
                 }
                 if source.wordAt(valueStart, "distinct") {
-                    distTarget := types.collectDistinctTarget(source, valueStart + 8, prefix, moduleKey, nameStart, name);
-                    mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = distTarget.text,
+                    gp := types.scanComptimeTypeParams(source, valueStart + 8, prefix);
+                    if not gp.ok {
+                        position = if gp.next > valueStart + 8 { gp.next } else { valueStart + 8 };
+                        continue;
+                    }
+                    distTarget := types.collectDistinctTarget(source, gp.next, prefix, moduleKey, nameStart, name);
+                    rawTxt := if gp.hasParams { "@genraw:" + types.encodeLengthPrefixedText(gp.paramsCsv) + distTarget.text } else { distTarget.text };
+                    mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = rawTxt,
                     intValue = nameStart, textValue = distTarget.next.toText()));
                     position = distTarget.next;
                     continue;
                 }
                 if source.wordAt(valueStart, "record") {
-                    bracePos := syntax.skipTrivia(source, valueStart + 6, prefix);
+                    gp := types.scanComptimeTypeParams(source, valueStart + 6, prefix);
+                    if not gp.ok {
+                        position = if gp.next > valueStart + 6 { gp.next } else { valueStart + 6 };
+                        continue;
+                    }
+                    bracePos := syntax.skipTrivia(source, gp.next, prefix);
                     recTarget := types.collectRecordTarget(source, bracePos, prefix, moduleKey, nameStart, name);
-                    mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = recTarget.text,
+                    rawTxt := if gp.hasParams { "@genraw:" + types.encodeLengthPrefixedText(gp.paramsCsv) + recTarget.text } else { recTarget.text };
+                    mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = rawTxt,
                     intValue = nameStart, textValue = recTarget.next.toText()));
                     position = recTarget.next;
                     continue;
                 }
                 if source.wordAt(valueStart, "enum") {
-                    enumTarget := types.collectEnumTarget(source, valueStart + 4, prefix, moduleKey, nameStart, name);
-                    mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = enumTarget.text,
+                    gp := types.scanComptimeTypeParams(source, valueStart + 4, prefix);
+                    if not gp.ok {
+                        position = if gp.next > valueStart + 4 { gp.next } else { valueStart + 4 };
+                        continue;
+                    }
+                    enumTarget := types.collectEnumTarget(source, gp.next, prefix, moduleKey, nameStart, name);
+                    rawTxt := if gp.hasParams { "@genraw:" + types.encodeLengthPrefixedText(gp.paramsCsv) + enumTarget.text } else { enumTarget.text };
+                    mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = name, runtime = "", code = rawTxt,
                     intValue = nameStart, textValue = enumTarget.next.toText()));
                     position = enumTarget.next;
                     continue;
