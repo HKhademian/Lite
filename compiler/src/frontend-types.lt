@@ -3343,9 +3343,6 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         }
         afterElem := syntax.skipTrivia(source, inner.next, prefix);
         if afterElem < size and source.at(afterElem) == ">" {
-            if name == "Self" {
-                return (kind = "[" + inner.kind + ";*]", next = afterElem + 1);
-            }
             syntax.failAt(errSource, nameStart, prefix, "Array requires two arguments: Array<T, N> (runtime-sized Array<T> is not supported yet; use List<T>)");
         }
         if afterElem >= size or source.at(afterElem) =!= "," {
@@ -4837,9 +4834,6 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         }
         afterElem := syntax.skipTrivia(source, elem.next, prefix);
         if afterElem < size and source.at(afterElem) == ">" {
-            if name == "Self" {
-                return (ok = true, kind = "[" + elem.kind + ";*]", next = afterElem + 1);
-            }
             return (ok = false, kind = "", next = afterElem);
         }
         if afterElem >= size or source.at(afterElem) =!= "," {
