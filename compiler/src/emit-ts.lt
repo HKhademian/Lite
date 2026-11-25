@@ -2725,12 +2725,12 @@ softBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): St
             return "(" + arg0 + " === \" \" || " + arg0 + " === \"\\t\" || " + arg0 + " === \"\\r\" || " + arg0 + " === \"\\n\")";
         }
     } else if moduleName == "lib/core/io" {
-        if fnName == "textReader" { return "lite$ioTextReader(" + arg0 + ")"; }
-        if fnName == "readAll" { return "lite$ioReadAll(" + arg0 + ")"; }
-        if fnName == "readAllText" { return "lite$ioReadAllText(" + arg0 + ")"; }
-        if fnName == "readLine" { return "lite$ioReadLine(" + arg0 + ")"; }
-        if fnName == "writeText" { return "lite$ioWriteText(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
-        if fnName == "writeLine" { return "lite$ioWriteLine(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
+        if fnName == "textReader" or fnName == "Reader.fromText" { return "lite$ioTextReader(" + arg0 + ")"; }
+        if fnName == "readAll" or fnName == "Reader.readAll" { return "lite$ioReadAll(" + arg0 + ")"; }
+        if fnName == "readAllText" or fnName == "Reader.readAllText" { return "lite$ioReadAllText(" + arg0 + ")"; }
+        if fnName == "readLine" or fnName == "Reader.readLine" { return "lite$ioReadLine(" + arg0 + ")"; }
+        if fnName == "writeText" or fnName == "Writer.writeText" { return "lite$ioWriteText(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
+        if fnName == "writeLine" or fnName == "Writer.writeLine" { return "lite$ioWriteLine(" + arg0 + ", " + paramRuntimeAt(params, 1) + ")"; }
     } else if moduleName == "lib/core/unicode" {
         if fnName == "utf8Encode" { return "lite$unicodeUtf8Encode(" + arg0 + ")"; }
         if fnName == "utf8DecodeStrict" { return "lite$unicodeUtf8DecodeStrict(" + arg0 + ")"; }
