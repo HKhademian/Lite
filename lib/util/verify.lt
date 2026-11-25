@@ -14,6 +14,7 @@ json := import "util/json";
 streams := import "util/streams";
 cases := import "util/cases";
 compilerBuild := import "util/compiler-build";
+pool := import "external/pool";
 
 KIND_FEATURE := "feature";
 KIND_EXAMPLE := "example";
@@ -22,7 +23,7 @@ KIND_SHOWCASE := "showcase";
 
 /** Returns the CLI usage text for `lite verify`. */
 pub usageText := fn(): String {
-    "Usage: ./bin/lite verify [--all] [--update] [--coverage] [--pedantic] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]"
+    "Usage: ./bin/lite verify [--all] [--update] [--coverage] [--pedantic] [--jobs n] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]"
 };
 
 isJsonSpace := fn(ch: String): Bool {
@@ -106,7 +107,7 @@ parseShardSpec := fn(raw: String): (ok: Bool, index: Int, count: Int) {
 /** Parses `lite verify` CLI options without consulting or executing manifests. */
 pub parseVerifyArgs := fn(args: List<String>): (
 ok: Bool, help: Bool, update: Bool, coverage: Bool, pedantic: Bool, changed: Bool, cache: Bool, quiet: Bool,
-hasFilter: Bool, filter: String, hasShard: Bool, shardIndex: Int, shardCount: Int, error: String
+jobs: Int, hasFilter: Bool, filter: String, hasShard: Bool, shardIndex: Int, shardCount: Int, shardResult: String, error: String
 ) {
     var update := false;
     var coverage := false;
@@ -114,11 +115,13 @@ hasFilter: Bool, filter: String, hasShard: Bool, shardIndex: Int, shardCount: In
     var changed := true;
     var cache := true;
     var quiet := false;
+    var jobs := 0;
     var hasFilter := false;
     var filter := "";
     var hasShard := false;
     var shardIndex := 0;
     var shardCount := 0;
+    var shardResult := "";
 
     count := args.length();
     var i := 0;
@@ -143,13 +146,31 @@ hasFilter: Bool, filter: String, hasShard: Bool, shardIndex: Int, shardCount: In
         } else if flag == "--help" or flag == "-h" {
             return (
             ok = true, help = true, update = false, coverage = false, pedantic = false, changed = true, cache = true, quiet = false,
-            hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, error = ""
+            jobs = 0, hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, shardResult = "", error = ""
             );
+        } else if flag == "--jobs" {
+            if i + 1 >= count {
+                return (
+                ok = false, help = false, update = false, coverage = false, pedantic = false, changed = true, cache = true, quiet = false,
+                jobs = 0, hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, shardResult = "",
+                error = "--jobs requires a positive integer"
+                );
+            }
+            parsedJobs := parsePositiveInt(args[i + 1]);
+            if not parsedJobs.ok {
+                return (
+                ok = false, help = false, update = false, coverage = false, pedantic = false, changed = true, cache = true, quiet = false,
+                jobs = 0, hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, shardResult = "",
+                error = "--jobs requires a positive integer"
+                );
+            }
+            jobs = parsedJobs.value;
+            i = i + 1;
         } else if flag == "--filter" {
             if i + 1 >= count {
                 return (
                 ok = false, help = false, update = false, coverage = false, pedantic = false, changed = true, cache = true, quiet = false,
-                hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0,
+                jobs = 0, hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, shardResult = "",
                 error = "--filter requires a value"
                 );
             }
@@ -160,7 +181,7 @@ hasFilter: Bool, filter: String, hasShard: Bool, shardIndex: Int, shardCount: In
             if i + 1 >= count {
                 return (
                 ok = false, help = false, update = false, coverage = false, pedantic = false, changed = true, cache = true, quiet = false,
-                hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0,
+                jobs = 0, hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, shardResult = "",
                 error = "--shard requires i/n"
                 );
             }
@@ -168,14 +189,14 @@ hasFilter: Bool, filter: String, hasShard: Bool, shardIndex: Int, shardCount: In
             if not parsed.ok {
                 return (
                 ok = false, help = false, update = false, coverage = false, pedantic = false, changed = true, cache = true, quiet = false,
-                hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0,
+                jobs = 0, hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, shardResult = "",
                 error = "--shard requires i/n"
                 );
             }
             if parsed.index < 1 or parsed.count < 1 or parsed.index > parsed.count {
                 return (
                 ok = false, help = false, update = false, coverage = false, pedantic = false, changed = true, cache = true, quiet = false,
-                hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0,
+                jobs = 0, hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, shardResult = "",
                 error = "--shard requires 1 <= i <= n"
                 );
             }
@@ -183,10 +204,20 @@ hasFilter: Bool, filter: String, hasShard: Bool, shardIndex: Int, shardCount: In
             shardIndex = parsed.index;
             shardCount = parsed.count;
             i = i + 1;
+        } else if flag == "--shard-result" {
+            if i + 1 >= count {
+                return (
+                ok = false, help = false, update = false, coverage = false, pedantic = false, changed = true, cache = true, quiet = false,
+                jobs = 0, hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, shardResult = "",
+                error = "--shard-result requires a path"
+                );
+            }
+            shardResult = args[i + 1];
+            i = i + 1;
         } else {
             return (
             ok = false, help = false, update = false, coverage = false, pedantic = false, changed = true, cache = true, quiet = false,
-            hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0,
+            jobs = 0, hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, shardResult = "",
             error = "unknown argument " + flag
             );
         }
@@ -196,14 +227,14 @@ hasFilter: Bool, filter: String, hasShard: Bool, shardIndex: Int, shardCount: In
     if pedantic and update {
         return (
         ok = false, help = false, update = false, coverage = false, pedantic = false, changed = true, cache = true, quiet = false,
-        hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0,
+        jobs = 0, hasFilter = false, filter = "", hasShard = false, shardIndex = 0, shardCount = 0, shardResult = "",
         error = "--pedantic cannot be combined with --update"
         );
     }
 
     (
     ok = true, help = false, update = update, coverage = coverage, pedantic = pedantic, changed = changed, cache = cache, quiet = quiet,
-    hasFilter = hasFilter, filter = filter, hasShard = hasShard, shardIndex = shardIndex, shardCount = shardCount, error = ""
+    jobs = jobs, hasFilter = hasFilter, filter = filter, hasShard = hasShard, shardIndex = shardIndex, shardCount = shardCount, shardResult = shardResult, error = ""
     )
 };
 
@@ -698,6 +729,192 @@ saveVerifyCache := fn(cacheFile: String, passedKeys: Set<String>): Unit {
     _w := fs.writeText(cacheFile, body);
 };
 
+quotedListJson := fn(items: List<String>): String {
+    if items.length() == 0 { return "[]"; }
+    parts: mut List<String> = [];
+    loop items as item {
+        mut parts.pushBack(json.quoteString(item));
+    }
+    "[" + text.joinTexts(parts, ",") + "]"
+};
+
+writeShardResult := fn(resultPath: String, executed: Int, cached: Int, failures: Int, added: List<String>, removed: List<String>): Unit {
+    body := "{\"executed\":" + executed.toText() + ",\"cached\":" + cached.toText() + ",\"failures\":" + failures.toText() + ",\"added\":" + quotedListJson(added) + ",\"removed\":" + quotedListJson(removed) + "}\n";
+    _w := fs.writeText(resultPath, body);
+};
+
+isManifestSelected := fn(
+rootDir: String, mFile: String, mId: String, mText: String,
+hasSourceFile: Bool, sourcePath: String,
+hasFilter: Bool, filter: String,
+hasGitChanges: Bool, invalidateAll: Bool,
+gitPaths: Set<String>, changedFeatures: Set<String>
+): Bool {
+    if not manifestMatchesFilter(rootDir, mFile, mId, mText, hasFilter, filter) {
+        return false;
+    }
+    if not hasGitChanges or invalidateAll {
+        return true;
+    }
+    relMan := path.relative(rootDir, mFile);
+    if gitPaths.has(relMan) { return true; }
+    if hasSourceFile and gitPaths.has(path.relative(rootDir, sourcePath)) { return true; }
+    loop readStringArrayField(mText, 0, "features") as fId {
+        if changedFeatures.has(fId) { return true; }
+    }
+    false
+};
+
+finishVerificationSummary := fn(verifyStartNs: Int, failures: Int, executed: Int, cached: Int, updateMode: Bool): Int {
+    elapsedMs := (time.monotonicNs() - verifyStartNs) / 1000000;
+    elapsedTenths := (elapsedMs + 50) / 100;
+    elapsedWhole := elapsedTenths / 10;
+    elapsedFrac := elapsedTenths - elapsedWhole * 10;
+    elapsedTag := " (" + elapsedWhole.toText() + "." + elapsedFrac.toText() + "s)";
+    if failures > 0 {
+        io.outputLine("verification failed: " + failures.toText() + " failing scenario(s), " + executed.toText() + " executed, " + cached.toText() + " cached" + elapsedTag);
+        return 1;
+    }
+    if not updateMode {
+        if executed == 0 and cached == 0 {
+            io.outputLine("verification passed: no selected scenarios");
+        } else {
+            io.outputLine("verification passed: " + executed.toText() + " executed, " + cached.toText() + " cached" + elapsedTag);
+        }
+    }
+    0
+};
+
+runParallelShards := fn(
+rootDir: String,
+changed: Bool,
+cache: Bool,
+quiet: Bool,
+hasFilter: Bool,
+filter: String,
+uncachedManifests: Int,
+workerBudget: Int,
+verifyStartNs: Int,
+cacheFile: String,
+passedKeysIn: Set<String>
+): Int {
+    passedKeys: mut Set<String> = passedKeysIn;
+    workerCount := if uncachedManifests < workerBudget { uncachedManifests } else { workerBudget };
+    shardTmp := fs.makeTempDir("lite-verify-shards-");
+    if not shardTmp.ok {
+        io.errorLine("lite verify: " + shardTmp.error);
+        return 1;
+    }
+
+    isNative := proc.runtimeVersion() == "c11";
+    workerBin := if isNative { proc.execPath() } else { project.nodeExecPath() };
+    binLitePath := path.join(rootDir, "bin/lite");
+    workerCmds: mut List<String> = [];
+    workerArgsJson: mut List<String> = [];
+    shardResultFiles: mut List<String> = [];
+
+    var w := 1;
+    loop w <= workerCount {
+        wArgs: mut List<String> = [];
+        if not isNative {
+            mut wArgs.pushBack(json.quoteString(binLitePath));
+            mut wArgs.pushBack(json.quoteString("verify"));
+        }
+        mut wArgs.pushBack(if changed { "\"--changed\"" } else { "\"--all\"" });
+        if not cache { mut wArgs.pushBack("\"--no-cache\""); }
+        if quiet { mut wArgs.pushBack("\"--quiet\""); }
+        if hasFilter {
+            mut wArgs.pushBack("\"--filter\"");
+            mut wArgs.pushBack(json.quoteString(filter));
+        }
+        mut wArgs.pushBack("\"--jobs\"");
+        mut wArgs.pushBack("\"1\"");
+        mut wArgs.pushBack("\"--shard\"");
+        mut wArgs.pushBack(json.quoteString(w.toText() + "/" + workerCount.toText()));
+        resFile := path.join(shardTmp.path, "shard-" + w.toText() + ".json");
+        mut wArgs.pushBack("\"--shard-result\"");
+        mut wArgs.pushBack(json.quoteString(resFile));
+
+        (mut workerCmds).pushBack(workerBin);
+        mut workerArgsJson.pushBack("[" + text.joinTexts(wArgs, ",") + "]");
+        mut shardResultFiles.pushBack(resFile);
+        w = w + 1;
+    }
+
+    poolRaw := pool.runPoolJson(workerCmds, workerArgsJson, rootDir, workerCount);
+    poolOffsets := json.arrayElementOffsets(poolRaw, 0);
+    if poolOffsets.length() =!= workerCount {
+        _rmErr := fs.remove(shardTmp.path);
+        io.errorLine("lite verify: parallel worker pool returned malformed result count");
+        return 1;
+    }
+
+    var failures := 0;
+    var executed := 0;
+    var cached := 0;
+    var cacheDirty := false;
+
+    var idx := 0;
+    loop idx < workerCount {
+        elemPos := poolOffsets[idx];
+        statusRes := json.readObjectInt(poolRaw, elemPos, "status");
+        outRes := json.readObjectString(poolRaw, elemPos, "stdout");
+        errRes := json.readObjectString(poolRaw, elemPos, "stderr");
+        errorRes := json.readObjectString(poolRaw, elemPos, "error");
+        wStatus := if statusRes.found and statusRes.ok { statusRes.value } else { -1 };
+        wErr := if errorRes.found and errorRes.ok { errorRes.value } else { "" };
+        wOut := if outRes.found and outRes.ok { outRes.value } else { "" };
+        wStderr := if errRes.found and errRes.ok { errRes.value } else { "" };
+
+        trimmedOut := wOut.trimEnd();
+        if trimmedOut =!= "" {
+            io.outputLine(trimmedOut);
+        }
+        trimmedErr := wStderr.trimEnd();
+        if trimmedErr =!= "" {
+            io.errorLine(trimmedErr);
+        }
+
+        var shardFailures := 0;
+        var hasShardReport := false;
+        shardRead := fs.readText(shardResultFiles[idx]);
+        if shardRead.ok and json.validate(shardRead.text).ok and isJsonObjectAt(shardRead.text, 0) {
+            hasShardReport = true;
+            execRes := json.readObjectInt(shardRead.text, 0, "executed");
+            if execRes.found and execRes.ok { executed = executed + execRes.value; }
+            cachRes := json.readObjectInt(shardRead.text, 0, "cached");
+            if cachRes.found and cachRes.ok { cached = cached + cachRes.value; }
+            failRes := json.readObjectInt(shardRead.text, 0, "failures");
+            if failRes.found and failRes.ok { shardFailures = failRes.value; }
+            failures = failures + shardFailures;
+            loop readStringArrayField(shardRead.text, 0, "added") as ak {
+                mut passedKeys.add(ak);
+                cacheDirty = true;
+            }
+            loop readStringArrayField(shardRead.text, 0, "removed") as rk {
+                _rmk := mut passedKeys.remove(rk);
+                cacheDirty = true;
+            }
+        }
+
+        if (wStatus =!= 0 or wErr =!= "") and (not hasShardReport or shardFailures == 0) {
+            if wErr =!= "" {
+                io.errorLine("lite verify: shard " + (idx + 1).toText() + " failed: " + wErr);
+            } else if trimmedErr == "" {
+                io.errorLine("lite verify: shard " + (idx + 1).toText() + " exited with status " + wStatus.toText());
+            }
+            failures = failures + 1;
+        }
+        idx = idx + 1;
+    }
+
+    _rmTmp := fs.remove(shardTmp.path);
+    if cacheDirty and cache {
+        saveVerifyCache(cacheFile, passedKeys);
+    }
+    finishVerificationSummary(verifyStartNs, failures, executed, cached, false)
+};
+
 shardMatches := fn(manifestId: String, scenarioName: String, hasShard: Bool, shardIndex: Int, shardCount: Int): Bool {
     if not hasShard { return true; }
     digest := crypto.sha256Text(manifestId + "/" + scenarioName);
@@ -1156,6 +1373,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
         return 0;
     }
 
+    isWorker := opts.shardResult =!= "";
     reg := validateRegistry(rootDir);
     if not reg.ok {
         io.errorLine("lite verify: " + reg.error);
@@ -1165,10 +1383,12 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     featureIdSet: mut Set<String>;
     loop featureIds as fid { mut featureIdSet.add(fid); }
     verifiedIds := registryFeatureIds(reg.text, true);
-    allCheck := validateAllManifests(rootDir, featureIdSet, verifiedIds);
-    if not allCheck.ok {
-        io.errorLine("lite verify: " + allCheck.error);
-        return 2;
+    if not isWorker {
+        allCheck := validateAllManifests(rootDir, featureIdSet, verifiedIds);
+        if not allCheck.ok {
+            io.errorLine("lite verify: " + allCheck.error);
+            return 2;
+        }
     }
 
     if opts.coverage {
@@ -1246,6 +1466,68 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     pedanticBytes: mut List<Int> = [0, 0, 0, 0];
 
     dirKinds: List<String> = [KIND_FEATURE, KIND_EXAMPLE, KIND_SAMPLE, KIND_SHOWCASE];
+    workerBudget := if opts.jobs > 0 { opts.jobs } else { pool.cpuCount() };
+    if not isWorker and not opts.hasShard and not opts.update and not opts.pedantic and workerBudget > 1 {
+        var uncachedManifests := 0;
+        loop dirKinds as mKind {
+            if uncachedManifests >= workerBudget { break; }
+            loop collectKindManifests(rootDir, mKind) as mFile {
+                meta := validateManifestText(rootDir, mFile, mKind, featureIdSet);
+                mId := meta.id;
+                mText := meta.text;
+                mDir := path.parentDir(mFile);
+                if not isManifestSelected(rootDir, mFile, mId, mText, meta.hasSourceFile, meta.sourcePath, opts.hasFilter, opts.filter, hasGitChanges, invalidateAll, gitPaths, changedFeatures) {
+                    continue;
+                }
+                casesField := json.findObjectField(mText, 0, "cases");
+                allScenarios := json.arrayElementOffsets(mText, casesField.valuePos);
+                if allScenarios.length() == 0 { continue; }
+                if not opts.cache {
+                    uncachedManifests = uncachedManifests + 1;
+                } else {
+                    sourceField := json.findObjectField(mText, 0, "source");
+                    sourceBytes := if meta.hasSourceFile {
+                        fs.readBytes(meta.sourcePath)
+                    } else {
+                        streams.readStreamBytes(mText, sourceField.valuePos, mDir)
+                    };
+                    sourceHash := "sha256:" + crypto.sha256Bytes(sourceBytes);
+                    if meta.sourceHashField =!= sourceHash {
+                        uncachedManifests = uncachedManifests + 1;
+                    } else {
+                        hasC := manifestIncludesC(mText) and cCompPath =!= "" and ccBin =!= "";
+                        var manUncached := false;
+                        loop allScenarios as sPos {
+                            kTs := caseCacheKey(rtHash.hex, mId, mKind, sourceHash, meta.appendText, mText, sPos);
+                            if not passedKeys.has(kTs) {
+                                manUncached = true;
+                                break;
+                            }
+                            if hasC {
+                                kC := caseCacheKey(rtHash.hex + "|c", mId, mKind, sourceHash, meta.appendText, mText, sPos);
+                                if not passedKeys.has(kC) {
+                                    manUncached = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if manUncached { uncachedManifests = uncachedManifests + 1; }
+                    }
+                }
+                if uncachedManifests >= workerBudget { break; }
+            }
+        }
+        if uncachedManifests >= 4 {
+            return runParallelShards(
+            rootDir, opts.changed, opts.cache, opts.quiet, opts.hasFilter, opts.filter,
+            uncachedManifests, workerBudget, verifyStartNs, cacheFile, passedKeys
+            );
+        }
+    }
+
+    passedAdded: mut List<String> = [];
+    passedRemoved: mut List<String> = [];
+
     loop dirKinds as mKind {
         loop collectKindManifests(rootDir, mKind) as mFile {
             meta := validateManifestText(rootDir, mFile, mKind, featureIdSet);
@@ -1253,21 +1535,10 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
             mText := meta.text;
             mDir := path.parentDir(mFile);
 
-            var selectedManifest := manifestMatchesFilter(rootDir, mFile, mId, mText, opts.hasFilter, opts.filter);
-            if selectedManifest and hasGitChanges and not invalidateAll {
-                relMan := path.relative(rootDir, mFile);
-                srcHit := meta.hasSourceFile and gitPaths.has(path.relative(rootDir, meta.sourcePath));
-                var featHit := false;
-                loop readStringArrayField(mText, 0, "features") as fId {
-                    if changedFeatures.has(fId) {
-                        featHit = true;
-                        break;
-                    }
-                }
-                if not gitPaths.has(relMan) and not srcHit and not featHit {
-                    selectedManifest = false;
-                }
-            }
+            selectedManifest := isManifestSelected(
+            rootDir, mFile, mId, mText, meta.hasSourceFile, meta.sourcePath,
+            opts.hasFilter, opts.filter, hasGitChanges, invalidateAll, gitPaths, changedFeatures
+            );
 
             if selectedManifest {
                 casesField := json.findObjectField(mText, 0, "cases");
@@ -1419,6 +1690,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                     if not compileOk {
                                         if not opts.update {
                                             _rmKey := mut passedKeys.remove(cKey);
+                                            mut passedRemoved.pushBack(cKey);
                                             cacheDirty = true;
                                             io.outputLine("FAIL " + label + ": " + compileError);
                                         } else {
@@ -1494,6 +1766,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                         if not ran.ok {
                                             if not opts.update {
                                                 _rmKey := mut passedKeys.remove(cKey);
+                                                mut passedRemoved.pushBack(cKey);
                                                 cacheDirty = true;
                                                 io.outputLine("FAIL " + label + ": " + ran.error);
                                             } else {
@@ -1512,6 +1785,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                 sameExit := ran.exitCode == expExit;
                                                 if not sameOut or not sameErr or not sameExit {
                                                     _rmKey := mut passedKeys.remove(cKey);
+                                                    mut passedRemoved.pushBack(cKey);
                                                     cacheDirty = true;
                                                     io.outputLine("FAIL " + label);
                                                     if not sameOut {
@@ -1526,6 +1800,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                     failures = failures + 1;
                                                 } else {
                                                     mut passedKeys.add(cKey);
+                                                    mut passedAdded.pushBack(cKey);
                                                     cacheDirty = true;
                                                     if not opts.quiet { io.outputLine("PASS " + label); }
                                                 }
@@ -1597,6 +1872,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                         executed = executed + 1;
                                         if not cCompileOk {
                                             _rmKeyC := mut passedKeys.remove(cKeyC);
+                                            mut passedRemoved.pushBack(cKeyC);
                                             cacheDirty = true;
                                             io.outputLine("FAIL " + cLabel + ": " + cCompileError);
                                             failures = failures + 1;
@@ -1606,6 +1882,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                             runSeq = runSeq + 1;
                                             if not cRan.ok {
                                                 _rmKeyC := mut passedKeys.remove(cKeyC);
+                                                mut passedRemoved.pushBack(cKeyC);
                                                 cacheDirty = true;
                                                 io.outputLine("FAIL " + cLabel + ": " + cRan.error);
                                                 failures = failures + 1;
@@ -1618,6 +1895,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                 cSameExit := cRan.exitCode == cExpExit;
                                                 if not cSameOut or not cSameErr or not cSameExit {
                                                     _rmKeyC := mut passedKeys.remove(cKeyC);
+                                                    mut passedRemoved.pushBack(cKeyC);
                                                     cacheDirty = true;
                                                     io.outputLine("FAIL " + cLabel);
                                                     if not cSameOut {
@@ -1632,6 +1910,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                                     failures = failures + 1;
                                                 } else {
                                                     mut passedKeys.add(cKeyC);
+                                                    mut passedAdded.pushBack(cKeyC);
                                                     cacheDirty = true;
                                                     if not opts.quiet { io.outputLine("PASS " + cLabel); }
                                                 }
@@ -1671,27 +1950,15 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
         }
     }
 
+    if isWorker {
+        writeShardResult(opts.shardResult, executed, cached, failures, passedAdded, passedRemoved);
+        return if failures > 0 { 1 } else { 0 };
+    }
     if cacheDirty and not opts.update and opts.cache {
         saveVerifyCache(cacheFile, passedKeys);
     }
     if opts.pedantic {
         printPedanticBenchmark(pedanticManifests, pedanticScenarios, pedanticCompileNs, pedanticRunNs, pedanticBytes);
     }
-    elapsedMs := (time.monotonicNs() - verifyStartNs) / 1000000;
-    elapsedTenths := (elapsedMs + 50) / 100;
-    elapsedWhole := elapsedTenths / 10;
-    elapsedFrac := elapsedTenths - elapsedWhole * 10;
-    elapsedTag := " (" + elapsedWhole.toText() + "." + elapsedFrac.toText() + "s)";
-    if failures > 0 {
-        io.outputLine("verification failed: " + failures.toText() + " failing scenario(s), " + executed.toText() + " executed, " + cached.toText() + " cached" + elapsedTag);
-        return 1;
-    }
-    if not opts.update {
-        if executed == 0 and cached == 0 {
-            io.outputLine("verification passed: no selected scenarios");
-        } else {
-            io.outputLine("verification passed: " + executed.toText() + " executed, " + cached.toText() + " cached" + elapsedTag);
-        }
-    }
-    0
+    finishVerificationSummary(verifyStartNs, failures, executed, cached, opts.update)
 };

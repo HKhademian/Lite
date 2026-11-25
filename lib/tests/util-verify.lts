@@ -2,6 +2,7 @@ verify := import "util/verify";
 test := import "core/test";
 
 test.checkBool("usage mentions --coverage", true, verify.usageText().indexOf("--coverage", 0) >= 0);
+test.checkBool("usage mentions --jobs", true, verify.usageText().indexOf("--jobs", 0) >= 0);
 
 defOpts := verify.parseVerifyArgs([]);
 test.checkBool("default opts ok", true, defOpts.ok);
@@ -10,6 +11,7 @@ test.checkBool("default cache true", true, defOpts.cache);
 test.checkBool("default update false", false, defOpts.update);
 test.checkBool("default coverage false", false, defOpts.coverage);
 test.checkBool("default help false", false, defOpts.help);
+test.checkInt("default jobs 0", 0, defOpts.jobs);
 
 helpOpts := verify.parseVerifyArgs(["--help"]);
 test.checkBool("help opts ok", true, helpOpts.ok);
@@ -26,16 +28,26 @@ test.checkBool("flag hasShard", true, flagOpts.hasShard);
 test.checkInt("flag shardIndex", 1, flagOpts.shardIndex);
 test.checkInt("flag shardCount", 2, flagOpts.shardCount);
 
-eqOpts := verify.parseVerifyArgs(["--filter", "types/*", "--shard", "2/3", "--coverage", "--update"]);
+eqOpts := verify.parseVerifyArgs(["--filter", "types/*", "--shard", "2/3", "--jobs", "4", "--coverage", "--update"]);
 test.checkBool("eq opts ok", true, eqOpts.ok);
 test.checkBool("eq coverage", true, eqOpts.coverage);
 test.checkBool("eq update", true, eqOpts.update);
 test.checkText("eq filter", "types/*", eqOpts.filter);
 test.checkInt("eq shardIndex", 2, eqOpts.shardIndex);
 test.checkInt("eq shardCount", 3, eqOpts.shardCount);
+test.checkInt("eq jobs", 4, eqOpts.jobs);
 
 badEqForm := verify.parseVerifyArgs(["--filter=types/*"]);
 test.checkBool("equals form rejected", false, badEqForm.ok);
+
+badJobsZero := verify.parseVerifyArgs(["--jobs", "0"]);
+test.checkBool("jobs 0 rejected", false, badJobsZero.ok);
+
+badJobsText := verify.parseVerifyArgs(["--jobs", "abc"]);
+test.checkBool("jobs non-int rejected", false, badJobsText.ok);
+
+badJobsMissing := verify.parseVerifyArgs(["--jobs"]);
+test.checkBool("missing --jobs value rejected", false, badJobsMissing.ok);
 
 badShardZero := verify.parseVerifyArgs(["--shard", "0/2"]);
 test.checkBool("shard 0/2 rejected", false, badShardZero.ok);
