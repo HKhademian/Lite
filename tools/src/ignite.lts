@@ -9,7 +9,7 @@ proc := import "core/process";
 text := import "core/text";
 pool := import "external/pool";
 cases := import "util/cases";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 driverTs := import "../../compiler/src/driver-ts";
 frontend := import "../../compiler/src/frontend";
@@ -101,10 +101,10 @@ readSeedInfo := fn(rootDir: String, verifyTsSeed: Bool): (ok: Bool, igniterSha25
     if brace < 0 {
         return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: invalid seed.ts object");
     }
-    ignField := json.readObjectString(seedRead.text, brace, "igniterSha256");
-    srcField := json.readObjectString(seedRead.text, brace, "sourceSha256");
-    artField := json.readObjectString(seedRead.text, brace, "artifactSha256");
-    cArtField := json.readObjectString(seedRead.text, brace, "cArtifactSha256");
+    ignField := json.readFieldString(seedRead.text, brace, "igniterSha256");
+    srcField := json.readFieldString(seedRead.text, brace, "sourceSha256");
+    artField := json.readFieldString(seedRead.text, brace, "artifactSha256");
+    cArtField := json.readFieldString(seedRead.text, brace, "cArtifactSha256");
     if not ignField.found or not ignField.ok or not srcField.found or not srcField.ok or not artField.found or not artField.ok {
         return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "", error = "ignite: missing seed hash fields");
     }
@@ -262,17 +262,17 @@ readValidProvenance := fn(rootDir: String, name: String, expectedTarget: String,
         return (valid = false, path = "", sha256 = "");
     }
     provText := provRead.text;
-    ver := json.readObjectInt(provText, 0, "version");
-    toolField := json.readObjectString(provText, 0, "tool");
-    tgtField := json.readObjectString(provText, 0, "target");
-    cArtField := json.readObjectString(provText, 0, "compilerArtifactSha256");
-    cSrcField := json.readObjectString(provText, 0, "compilerSourceSha256");
-    artShaField := json.readObjectString(provText, 0, "artifactSha256");
+    ver := json.readFieldInt(provText, 0, "version");
+    toolField := json.readFieldString(provText, 0, "tool");
+    tgtField := json.readFieldString(provText, 0, "target");
+    cArtField := json.readFieldString(provText, 0, "compilerArtifactSha256");
+    cSrcField := json.readFieldString(provText, 0, "compilerSourceSha256");
+    artShaField := json.readFieldString(provText, 0, "artifactSha256");
     if not ver.found or not ver.ok or ver.value =!= 1 { return (valid = false, path = "", sha256 = ""); }
     if not toolField.found or toolField.value =!= name { return (valid = false, path = "", sha256 = ""); }
     if not tgtField.found or tgtField.value =!= expectedTarget { return (valid = false, path = "", sha256 = ""); }
     if requireFallback {
-        fbField := json.readObjectBool(provText, 0, "fallbackFromC");
+        fbField := json.readFieldBool(provText, 0, "fallbackFromC");
         if not fbField.found or not fbField.ok or not fbField.value { return (valid = false, path = "", sha256 = ""); }
     }
     if not cArtField.found or cArtField.value =!= compilerArtifactSha { return (valid = false, path = "", sha256 = ""); }
@@ -283,18 +283,18 @@ readValidProvenance := fn(rootDir: String, name: String, expectedTarget: String,
         return (valid = false, path = "", sha256 = "");
     }
 
-    depsField := json.findObjectField(provText, 0, "dependencies");
-    edgesField := json.findObjectField(provText, 0, "edges");
+    depsField := json.findField(provText, 0, "dependencies");
+    edgesField := json.findField(provText, 0, "edges");
     if not depsField.found or not edgesField.found { return (valid = false, path = "", sha256 = ""); }
 
-    depOffsets := json.arrayElementOffsets(provText, depsField.valuePos);
+    depOffsets := json.arrayOffsets(provText, depsField.valuePos);
     if depOffsets.length() == 0 { return (valid = false, path = "", sha256 = ""); }
 
     depPaths: mut List<String> = [];
     var idx := 0;
     loop depOffsets as dPos {
-        dp := json.readObjectString(provText, dPos, "path");
-        dh := json.readObjectString(provText, dPos, "sha256");
+        dp := json.readFieldString(provText, dPos, "path");
+        dh := json.readFieldString(provText, dPos, "sha256");
         if not dp.found or not dp.ok or not dh.found or not dh.ok { return (valid = false, path = "", sha256 = ""); }
         if not validRelativePath(dp.value) or not isSha256Hex(dh.value) { return (valid = false, path = "", sha256 = ""); }
         if idx == 0 and dp.value =!= "tools/src/" + name + ".lts" { return (valid = false, path = "", sha256 = ""); }
@@ -306,11 +306,11 @@ readValidProvenance := fn(rootDir: String, name: String, expectedTarget: String,
         idx = idx + 1;
     }
 
-    edgeOffsets := json.arrayElementOffsets(provText, edgesField.valuePos);
+    edgeOffsets := json.arrayOffsets(provText, edgesField.valuePos);
     loop edgeOffsets as ePos {
-        ei := json.readObjectString(provText, ePos, "importer");
-        es := json.readObjectString(provText, ePos, "spec");
-        ep := json.readObjectString(provText, ePos, "path");
+        ei := json.readFieldString(provText, ePos, "importer");
+        es := json.readFieldString(provText, ePos, "spec");
+        ep := json.readFieldString(provText, ePos, "path");
         if not ei.found or not ei.ok or not es.found or not es.ok or not ep.found or not ep.ok {
             return (valid = false, path = "", sha256 = "");
         }
@@ -1026,7 +1026,7 @@ run := fn(rawArgs: List<String>): Unit {
         }
 
         poolRaw := pool.runPoolJson(workerCmds, workerArgsJson, rootDir, workerCount);
-        poolOffsets := json.arrayElementOffsets(poolRaw, 0);
+        poolOffsets := json.arrayOffsets(poolRaw, 0);
         if poolOffsets.length() =!= workerCount {
             io.errorLine("ignite: parallel worker pool returned malformed result count");
             io.exit(1);
@@ -1035,10 +1035,10 @@ run := fn(rawArgs: List<String>): Unit {
         w = 0;
         loop w < workerCount {
             elemPos := poolOffsets[w];
-            statusRes := json.readObjectInt(poolRaw, elemPos, "status");
-            outRes := json.readObjectString(poolRaw, elemPos, "stdout");
-            errRes := json.readObjectString(poolRaw, elemPos, "stderr");
-            errorRes := json.readObjectString(poolRaw, elemPos, "error");
+            statusRes := json.readFieldInt(poolRaw, elemPos, "status");
+            outRes := json.readFieldString(poolRaw, elemPos, "stdout");
+            errRes := json.readFieldString(poolRaw, elemPos, "stderr");
+            errorRes := json.readFieldString(poolRaw, elemPos, "error");
             wStatus := if statusRes.found and statusRes.ok { statusRes.value } else { -1 };
             wErr := if errorRes.found and errorRes.ok { errorRes.value } else { "" };
             wOut := if outRes.found and outRes.ok { outRes.value } else { "" };
@@ -1060,12 +1060,12 @@ run := fn(rawArgs: List<String>): Unit {
                 io.errorLine(detail);
                 io.exit(1);
             }
-            toolsField := json.findObjectField(wOut, 0, "tools");
+            toolsField := json.findField(wOut, 0, "tools");
             if not toolsField.found {
                 io.errorLine("ignite: parallel worker " + w.toText() + " returned unexpected JSON output");
                 io.exit(1);
             }
-            tOffs := json.arrayElementOffsets(wOut, toolsField.valuePos);
+            tOffs := json.arrayOffsets(wOut, toolsField.valuePos);
             var p := w;
             var k := 0;
             loop p < pendingCount {
@@ -1075,10 +1075,10 @@ run := fn(rawArgs: List<String>): Unit {
                 }
                 origIdx := pendingIndices[p];
                 tPos := tOffs[k];
-                tTarget := json.readObjectString(wOut, tPos, "target");
-                tPath := json.readObjectString(wOut, tPos, "path");
-                tSha := json.readObjectString(wOut, tPos, "sha256");
-                tRebuilt := json.readObjectBool(wOut, tPos, "rebuilt");
+                tTarget := json.readFieldString(wOut, tPos, "target");
+                tPath := json.readFieldString(wOut, tPos, "path");
+                tSha := json.readFieldString(wOut, tPos, "sha256");
+                tRebuilt := json.readFieldBool(wOut, tPos, "rebuilt");
                 if not tTarget.found or not tTarget.ok or not tPath.found or not tPath.ok or
                 not tSha.found or not tSha.ok or not tRebuilt.found or not tRebuilt.ok {
                     io.errorLine("ignite: parallel worker " + w.toText() + " missing tool fields");

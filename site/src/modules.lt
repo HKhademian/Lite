@@ -5,7 +5,7 @@ path := import "core/path";
 text := import "core/text";
 challenges := import "util/challenges";
 collections := import "util/collections";
-json := import "util/json";
+json := import "data/json";
 siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
@@ -108,14 +108,14 @@ modIds: List<String>, modNss: List<String>, modNames: List<String>, modSymCounts
 
 /** Builds `/modules/` pages payload JSON `{ moduleCount, symbolCount, pages: [...], searchEntries: [...] }` from stdin input JSON. */
 pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, error: String) {
-    rootF := json.findObjectField(inputJson, 0, "rootDir");
+    rootF := json.findField(inputJson, 0, "rootDir");
     if not rootF.found { return (ok = false, jsonText = "", error = "missing rootDir in modules payload input"); }
     rootDir := json.readStringAt(inputJson, rootF.valuePos).value;
-    repoUrlR := json.readObjectString(inputJson, 0, "repoUrl");
+    repoUrlR := json.readFieldString(inputJson, 0, "repoUrl");
     repoUrl := if repoUrlR.found and repoUrlR.ok { repoUrlR.value } else { "" };
 
-    modsF := json.findObjectField(inputJson, 0, "modules");
-    modOffs := json.arrayElementOffsets(inputJson, modsF.valuePos);
+    modsF := json.findField(inputJson, 0, "modules");
+    modOffs := json.arrayOffsets(inputJson, modsF.valuePos);
     modCount := modOffs.length();
 
     modIds: mut List<String> = [];
@@ -128,21 +128,21 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     modSymCounts: mut List<Int> = [];
 
     loop modOffs as mp {
-        mut modIds.pushBack(json.readObjectString(inputJson, mp, "id").value);
-        mut modNss.pushBack(json.readObjectString(inputJson, mp, "namespace").value);
-        mut modNames.pushBack(json.readObjectString(inputJson, mp, "name").value);
-        mut modFiles.pushBack(json.readObjectString(inputJson, mp, "file").value);
-        mut modEnvs.pushBack(json.readObjectString(inputJson, mp, "environment").value);
-        sumR := json.readObjectString(inputJson, mp, "summary");
+        mut modIds.pushBack(json.readFieldString(inputJson, mp, "id").value);
+        mut modNss.pushBack(json.readFieldString(inputJson, mp, "namespace").value);
+        mut modNames.pushBack(json.readFieldString(inputJson, mp, "name").value);
+        mut modFiles.pushBack(json.readFieldString(inputJson, mp, "file").value);
+        mut modEnvs.pushBack(json.readFieldString(inputJson, mp, "environment").value);
+        sumR := json.readFieldString(inputJson, mp, "summary");
         mut modSummaries.pushBack(if sumR.found and sumR.ok { sumR.value } else { "" });
-        impR := json.readObjectString(inputJson, mp, "importHtml");
+        impR := json.readFieldString(inputJson, mp, "importHtml");
         mut modImportHtmls.pushBack(if impR.found and impR.ok { impR.value } else { "" });
-        symsF := json.findObjectField(inputJson, mp, "symbols");
-        mut modSymCounts.pushBack(json.arrayElementOffsets(inputJson, symsF.valuePos).length());
+        symsF := json.findField(inputJson, mp, "symbols");
+        mut modSymCounts.pushBack(json.arrayOffsets(inputJson, symsF.valuePos).length());
     }
 
-    sampF := json.findObjectField(inputJson, 0, "samples");
-    sampOffs := if sampF.found { json.arrayElementOffsets(inputJson, sampF.valuePos) } else {
+    sampF := json.findField(inputJson, 0, "samples");
+    sampOffs := if sampF.found { json.arrayOffsets(inputJson, sampF.valuePos) } else {
         emptyInts: List<Int> = [];
         emptyInts
     };
@@ -151,10 +151,10 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     sampFiles: mut List<String> = [];
     sampBadges: mut List<String> = [];
     loop sampOffs as sp {
-        mut sampIds.pushBack(json.readObjectString(inputJson, sp, "id").value);
-        mut sampTitles.pushBack(json.readObjectString(inputJson, sp, "title").value);
-        mut sampFiles.pushBack(json.readObjectString(inputJson, sp, "file").value);
-        bR := json.readObjectString(inputJson, sp, "badge");
+        mut sampIds.pushBack(json.readFieldString(inputJson, sp, "id").value);
+        mut sampTitles.pushBack(json.readFieldString(inputJson, sp, "title").value);
+        mut sampFiles.pushBack(json.readFieldString(inputJson, sp, "file").value);
+        bR := json.readFieldString(inputJson, sp, "badge");
         mut sampBadges.pushBack(if bR.found and bR.ok { bR.value } else { "sample" });
     }
 
@@ -245,13 +245,13 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         else if mNs == "data" { dataCount = dataCount + 1; }
         else if mNs == "extra" { extraCount = extraCount + 1; }
 
-        symsF := json.findObjectField(inputJson, mp, "symbols");
-        sOffs := json.arrayElementOffsets(inputJson, symsF.valuePos);
+        symsF := json.findField(inputJson, mp, "symbols");
+        sOffs := json.arrayOffsets(inputJson, symsF.valuePos);
         previewParts: mut List<String> = [];
         symNames: mut List<String> = [];
         var symIdx := 0;
         loop sOffs as sPos {
-            sName := json.readObjectString(inputJson, sPos, "name").value;
+            sName := json.readFieldString(inputJson, sPos, "name").value;
             mut symNames.pushBack(sName);
             if symIdx < 5 {
                 mut previewParts.pushBack("<code>" + escapeHtml(sName) + "</code>");
@@ -392,7 +392,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         mEnv := modEnvs[mi];
         mSum := modSummaries[mi];
         relPath := "modules/" + mNs + "/" + mName + ".html";
-        academyUsagesR := json.readObjectString(inputJson, mp, "academyUsagesHtml");
+        academyUsagesR := json.readFieldString(inputJson, mp, "academyUsagesHtml");
         academyUsagesHtml := if academyUsagesR.found and academyUsagesR.ok { academyUsagesR.value } else { "" };
 
         typeCards: mut List<String> = [];
@@ -402,17 +402,17 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         constToc: mut List<String> = [];
         fnToc: mut List<String> = [];
 
-        symsF := json.findObjectField(inputJson, mp, "symbols");
-        loop json.arrayElementOffsets(inputJson, symsF.valuePos) as sPos {
-            sKind := json.readObjectString(inputJson, sPos, "kind").value;
-            sName := json.readObjectString(inputJson, sPos, "name").value;
-            sSig := json.readObjectString(inputJson, sPos, "signature").value;
-            sSigHtmlR := json.readObjectString(inputJson, sPos, "signatureHtml");
+        symsF := json.findField(inputJson, mp, "symbols");
+        loop json.arrayOffsets(inputJson, symsF.valuePos) as sPos {
+            sKind := json.readFieldString(inputJson, sPos, "kind").value;
+            sName := json.readFieldString(inputJson, sPos, "name").value;
+            sSig := json.readFieldString(inputJson, sPos, "signature").value;
+            sSigHtmlR := json.readFieldString(inputJson, sPos, "signatureHtml");
             sSigHtml := if sSigHtmlR.found and sSigHtmlR.ok { sSigHtmlR.value } else { escapeHtml(sSig) };
-            sIsHost := json.readObjectBool(inputJson, sPos, "isHostDeclaration").value;
-            sDocR := json.readObjectString(inputJson, sPos, "doc");
+            sIsHost := json.readFieldBool(inputJson, sPos, "isHostDeclaration").value;
+            sDocR := json.readFieldString(inputJson, sPos, "doc");
             sDoc := if sDocR.found and sDocR.ok { sDocR.value } else { "" };
-            sLine := json.readObjectInt(inputJson, sPos, "line").value;
+            sLine := json.readFieldInt(inputJson, sPos, "line").value;
 
             card := renderSymbolCard(mFile, sKind, sName, sSigHtml, sIsHost, sDoc, sLine, repoUrl);
             tocLi := "<li class=\"toc-l3\"><a href=\"#" + escapeHtml(sName) + "\">" + escapeHtml(sName) + "</a></li>";

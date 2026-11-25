@@ -8,7 +8,7 @@ text := import "core/text";
 list := import "core/list";
 path := import "core/path";
 unicode := import "core/unicode";
-json := import "util/json";
+json := import "data/json";
 
 /** Result returned by `buildCompiler`. */
 pub CompilerBuildResult := alias (
@@ -108,10 +108,10 @@ error: String
     if brace < 0 {
         return (ok = false, artifact = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "invalid compiler/bootstrap/seed.ts object");
     }
-    artField := json.readObjectString(metaRead.text, brace, "artifact");
-    ignField := json.readObjectString(metaRead.text, brace, "igniterSha256");
-    srcField := json.readObjectString(metaRead.text, brace, "sourceSha256");
-    shaField := json.readObjectString(metaRead.text, brace, "artifactSha256");
+    artField := json.readFieldString(metaRead.text, brace, "artifact");
+    ignField := json.readFieldString(metaRead.text, brace, "igniterSha256");
+    srcField := json.readFieldString(metaRead.text, brace, "sourceSha256");
+    shaField := json.readFieldString(metaRead.text, brace, "artifactSha256");
     if not artField.found or not artField.ok or not ignField.found or not ignField.ok or not srcField.found or not srcField.ok or not shaField.found or not shaField.ok {
         return (ok = false, artifact = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", seedPath = "", error = "incomplete compiler/bootstrap/seed.ts metadata");
     }
@@ -182,12 +182,12 @@ error: String
     if not mSpan.ok or not mRead.text.startsWithAt(mSpan.start, "{") {
         return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": invalid manifest JSON");
     }
-    mTarget := json.readObjectString(mRead.text, mSpan.start, "target");
-    filesField := json.findObjectField(mRead.text, mSpan.start, "files");
+    mTarget := json.readFieldString(mRead.text, mSpan.start, "target");
+    filesField := json.findField(mRead.text, mSpan.start, "files");
     if not mTarget.found or not mTarget.ok or mTarget.value =!= target or not filesField.found {
         return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": invalid compiler manifest target");
     }
-    offsets := json.arrayElementOffsets(mRead.text, filesField.valuePos);
+    offsets := json.arrayOffsets(mRead.text, filesField.valuePos);
     if offsets.length() =!= 1 {
         return (ok = false, sourcePath = "", sourceName = "", error = manifestPath + ": compiler source graph requires one " + target + " root");
     }
@@ -229,16 +229,16 @@ pub validateManifestFile := fn(manifestPathRaw: String): (ok: Bool, target: Stri
             return (ok = false, target = "", jsonText = "", error = manifestPath + ": unexpected manifest key " + k);
         }
     }
-    tField := json.findObjectField(raw, span.start, "target");
-    tRes := if tField.found { json.readStringAt(raw, tField.valuePos) } else { (ok = false, value = "", next = 0, error = "") };
+    tField := json.findField(raw, span.start, "target");
+    tRes := if tField.found { json.readStringAt(raw, tField.valuePos) } else { json.JsonString { ok = false, value = "", next = 0, error = "" } };
     if not tRes.ok or (tRes.value =!= "ts" and tRes.value =!= "c") {
         return (ok = false, target = "", jsonText = "", error = manifestPath + ": target must be \"ts\" or \"c\"");
     }
-    filesField := json.findObjectField(raw, span.start, "files");
+    filesField := json.findField(raw, span.start, "files");
     if not filesField.found or not raw.startsWithAt(filesField.valuePos, "[") {
         return (ok = false, target = "", jsonText = "", error = manifestPath + ": files must be a nonempty array");
     }
-    offsets := json.arrayElementOffsets(raw, filesField.valuePos);
+    offsets := json.arrayOffsets(raw, filesField.valuePos);
     count := offsets.length();
     if count == 0 {
         return (ok = false, target = "", jsonText = "", error = manifestPath + ": files must be a nonempty array");
@@ -298,10 +298,10 @@ depsQuoted: List<String>
         return failBuild("compiler cache integrity mismatch: " + cacheDir);
     }
     pText := provRead.text;
-    pTarget := json.readObjectString(pText, 0, "target");
-    pSourceSha := json.readObjectString(pText, 0, "sourceSha256");
-    pBuilderSha := json.readObjectString(pText, 0, "builderSha256");
-    pArtSha := json.readObjectString(pText, 0, "artifactSha256");
+    pTarget := json.readFieldString(pText, 0, "target");
+    pSourceSha := json.readFieldString(pText, 0, "sourceSha256");
+    pBuilderSha := json.readFieldString(pText, 0, "builderSha256");
+    pArtSha := json.readFieldString(pText, 0, "artifactSha256");
     if not pTarget.found or pTarget.value =!= target
     or not pSourceSha.found or pSourceSha.value =!= sourceSha256
     or not pBuilderSha.found or pBuilderSha.value =!= builderSha256
@@ -309,15 +309,15 @@ depsQuoted: List<String>
         return failBuild("compiler cache integrity mismatch: " + cacheDir);
     }
 
-    pDepsField := json.findObjectField(pText, 0, "dependencies");
-    pDepHashesField := json.findObjectField(pText, 0, "dependencyHashes");
-    pEdgesField := json.findObjectField(pText, 0, "edges");
+    pDepsField := json.findField(pText, 0, "dependencies");
+    pDepHashesField := json.findField(pText, 0, "dependencyHashes");
+    pEdgesField := json.findField(pText, 0, "edges");
     if not pDepsField.found or not pDepHashesField.found or not pEdgesField.found {
         return failBuild("compiler cache integrity mismatch: " + cacheDir);
     }
 
     pDepsParts: mut List<String> = [];
-    loop json.arrayElementOffsets(pText, pDepsField.valuePos) as pos {
+    loop json.arrayOffsets(pText, pDepsField.valuePos) as pos {
         d := json.readStringAt(pText, pos);
         if not d.ok { return failBuild("compiler cache integrity mismatch: " + cacheDir); }
         (mut pDepsParts).pushBack(json.quoteString(d.value));
@@ -327,9 +327,9 @@ depsQuoted: List<String>
     }
 
     pDhParts: mut List<String> = [];
-    loop json.arrayElementOffsets(pText, pDepHashesField.valuePos) as pos {
-        p := json.readObjectString(pText, pos, "path");
-        s := json.readObjectString(pText, pos, "sha256");
+    loop json.arrayOffsets(pText, pDepHashesField.valuePos) as pos {
+        p := json.readFieldString(pText, pos, "path");
+        s := json.readFieldString(pText, pos, "sha256");
         if not p.found or not s.found { return failBuild("compiler cache integrity mismatch: " + cacheDir); }
         diskHash := crypto.sha256File(path.resolve(rootDir, p.value));
         if not diskHash.ok or diskHash.hex =!= s.value {
@@ -342,10 +342,10 @@ depsQuoted: List<String>
     }
 
     pEdgeParts: mut List<String> = [];
-    loop json.arrayElementOffsets(pText, pEdgesField.valuePos) as pos {
-        imp := json.readObjectString(pText, pos, "importer");
-        sp := json.readObjectString(pText, pos, "spec");
-        tp := json.readObjectString(pText, pos, "path");
+    loop json.arrayOffsets(pText, pEdgesField.valuePos) as pos {
+        imp := json.readFieldString(pText, pos, "importer");
+        sp := json.readFieldString(pText, pos, "spec");
+        tp := json.readFieldString(pText, pos, "path");
         if not imp.found or not sp.found or not tp.found {
             return failBuild("compiler cache integrity mismatch: " + cacheDir);
         }
@@ -406,13 +406,13 @@ seedPath: String
         return tryHitFail("compiler source dependency index is invalid: " + indexPath);
     }
 
-    iTarget := json.readObjectString(idxText, 0, "target");
-    iRoot := json.readObjectString(idxText, 0, "root");
-    iRootSha := json.readObjectString(idxText, 0, "rootSha256");
-    iCacheKey := json.readObjectString(idxText, 0, "cacheKey");
-    depsField := json.findObjectField(idxText, 0, "dependencies");
-    dhField := json.findObjectField(idxText, 0, "dependencyHashes");
-    edgesField := json.findObjectField(idxText, 0, "edges");
+    iTarget := json.readFieldString(idxText, 0, "target");
+    iRoot := json.readFieldString(idxText, 0, "root");
+    iRootSha := json.readFieldString(idxText, 0, "rootSha256");
+    iCacheKey := json.readFieldString(idxText, 0, "cacheKey");
+    depsField := json.findField(idxText, 0, "dependencies");
+    dhField := json.findField(idxText, 0, "dependencyHashes");
+    edgesField := json.findField(idxText, 0, "edges");
 
     if not iTarget.found or iTarget.value =!= target
     or not iRoot.found or iRoot.value =!= sourceName
@@ -424,7 +424,7 @@ seedPath: String
 
     depPaths: mut List<String> = [];
     depsQuoted: mut List<String> = [];
-    loop json.arrayElementOffsets(idxText, depsField.valuePos) as pos {
+    loop json.arrayOffsets(idxText, depsField.valuePos) as pos {
         d := json.readStringAt(idxText, pos);
         if not d.ok { return tryHitFail("compiler source dependency index is invalid: " + indexPath); }
         (mut depPaths).pushBack(d.value);
@@ -434,9 +434,9 @@ seedPath: String
     dhPaths: mut List<String> = [];
     dhCompact: mut List<String> = [];
     var allHashesOk := true;
-    loop json.arrayElementOffsets(idxText, dhField.valuePos) as pos {
-        p := json.readObjectString(idxText, pos, "path");
-        s := json.readObjectString(idxText, pos, "sha256");
+    loop json.arrayOffsets(idxText, dhField.valuePos) as pos {
+        p := json.readFieldString(idxText, pos, "path");
+        s := json.readFieldString(idxText, pos, "sha256");
         if not p.found or not s.found or not isLowerHex64(s.value) {
             return tryHitFail("compiler source dependency index is invalid: " + indexPath);
         }
@@ -454,10 +454,10 @@ seedPath: String
 
     edgesCompact: mut List<String> = [];
     var edgesValid := true;
-    loop json.arrayElementOffsets(idxText, edgesField.valuePos) as pos {
-        imp := json.readObjectString(idxText, pos, "importer");
-        sp := json.readObjectString(idxText, pos, "spec");
-        tp := json.readObjectString(idxText, pos, "path");
+    loop json.arrayOffsets(idxText, edgesField.valuePos) as pos {
+        imp := json.readFieldString(idxText, pos, "importer");
+        sp := json.readFieldString(idxText, pos, "spec");
+        tp := json.readFieldString(idxText, pos, "path");
         if not imp.found or not sp.found or not tp.found {
             return tryHitFail("compiler source dependency index is invalid: " + indexPath);
         }
@@ -477,7 +477,7 @@ seedPath: String
     if dhPaths.length() == 0 or dhPaths[0] =!= sourceName {
         return tryMiss();
     }
-    rootEntrySha := json.readObjectString(idxText, json.arrayElementOffsets(idxText, dhField.valuePos)[0], "sha256");
+    rootEntrySha := json.readFieldString(idxText, json.arrayOffsets(idxText, dhField.valuePos)[0], "sha256");
     if not rootEntrySha.found or rootEntrySha.value =!= sourceRootSha256 {
         return tryMiss();
     }
@@ -649,8 +649,8 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
         _rm := fs.remove(work);
         return failBuild("generated compiler returned invalid source dependency trace");
     }
-    filesField := json.findObjectField(traceRead.text, 0, "files");
-    edgesField := json.findObjectField(traceRead.text, 0, "edges");
+    filesField := json.findField(traceRead.text, 0, "files");
+    edgesField := json.findField(traceRead.text, 0, "edges");
     if not filesField.found or not edgesField.found {
         _rm := fs.remove(work);
         return failBuild("generated compiler returned invalid source dependency list");
@@ -658,9 +658,9 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
 
     seenShaByPath: mut Map<String, String>;
     seenShaByPath[sourcePath] = sourceRootSha256;
-    loop json.arrayElementOffsets(traceRead.text, filesField.valuePos) as fPos {
-        fp := json.readObjectString(traceRead.text, fPos, "path");
-        fsHash := json.readObjectString(traceRead.text, fPos, "sha256");
+    loop json.arrayOffsets(traceRead.text, filesField.valuePos) as fPos {
+        fp := json.readFieldString(traceRead.text, fPos, "path");
+        fsHash := json.readFieldString(traceRead.text, fPos, "sha256");
         if not fp.found or not fp.ok or not fsHash.found or not fsHash.ok {
             _rm := fs.remove(work);
             return failBuild("generated compiler returned invalid source dependency list");
@@ -695,10 +695,10 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
 
     edgesCompact: mut List<String> = [];
     edgesPretty: mut List<String> = [];
-    loop json.arrayElementOffsets(traceRead.text, edgesField.valuePos) as ePos {
-        eImp := json.readObjectString(traceRead.text, ePos, "importer");
-        eSpec := json.readObjectString(traceRead.text, ePos, "spec");
-        ePath := json.readObjectString(traceRead.text, ePos, "path");
+    loop json.arrayOffsets(traceRead.text, edgesField.valuePos) as ePos {
+        eImp := json.readFieldString(traceRead.text, ePos, "importer");
+        eSpec := json.readFieldString(traceRead.text, ePos, "spec");
+        ePath := json.readFieldString(traceRead.text, ePos, "path");
         if not eImp.found or not eSpec.found or not ePath.found {
             _rm := fs.remove(work);
             return failBuild("generated compiler returned invalid source dependency list");

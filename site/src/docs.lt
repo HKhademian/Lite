@@ -5,7 +5,7 @@ list := import "core/list";
 path := import "core/path";
 text := import "core/text";
 challenges := import "util/challenges";
-json := import "util/json";
+json := import "data/json";
 mdHtml := import "util/markdown-html";
 siteLib := import "./library";
 siteTools := import "./tools";
@@ -97,12 +97,12 @@ loadVerifiedDocsSet := fn(rootDir: String): Set<String> {
     catRead := fs.readText(catalogPath);
     if not catRead.ok { return out; }
     catJson := catRead.text;
-    chF := json.findObjectField(catJson, 0, "chapters");
+    chF := json.findField(catJson, 0, "chapters");
     if not chF.found { return out; }
-    loop json.arrayElementOffsets(catJson, chF.valuePos) as cp {
-        topF := json.findObjectField(catJson, cp, "topics");
+    loop json.arrayOffsets(catJson, chF.valuePos) as cp {
+        topF := json.findField(catJson, cp, "topics");
         if not topF.found { continue; }
-        loop json.arrayElementOffsets(catJson, topF.valuePos) as tp {
+        loop json.arrayOffsets(catJson, topF.valuePos) as tp {
             loop challenges.readStringArray(catJson, tp, "docs") as dPath {
                 mut out.add(dPath);
             }
@@ -117,13 +117,13 @@ loadSnippetsJson := fn(rootDir: String): String {
     cfgRead := fs.readText(cfgPath);
     if not cfgRead.ok { return "[]"; }
     cfgJson := cfgRead.text;
-    snF := json.findObjectField(cfgJson, 0, "snippets");
+    snF := json.findField(cfgJson, 0, "snippets");
     if not snF.found { return "[]"; }
     entries: mut List<String> = [];
-    loop json.arrayElementOffsets(cfgJson, snF.valuePos) as sp {
-        docR := json.readObjectString(cfgJson, sp, "document");
-        srcR := json.readObjectString(cfgJson, sp, "source");
-        fenR := json.readObjectInt(cfgJson, sp, "fence");
+    loop json.arrayOffsets(cfgJson, snF.valuePos) as sp {
+        docR := json.readFieldString(cfgJson, sp, "document");
+        srcR := json.readFieldString(cfgJson, sp, "source");
+        fenR := json.readFieldInt(cfgJson, sp, "fence");
         if docR.found and docR.ok and srcR.found and srcR.ok and fenR.found and fenR.ok {
             key := docR.value + "#" + fenR.value.toText();
             mut entries.pushBack("{\"key\":" + json.quoteString(key) + ",\"sourcePath\":" + json.quoteString(srcR.value) + "}");
@@ -787,12 +787,12 @@ isBoundaryBeforeId := fn(ch: String): Bool {
 
 /** Builds `/docs/` landing, spec index, single-page handbook, per-doc bodies & search entries JSON. */
 pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, error: String) {
-    repoUrlR := json.readObjectString(inputJson, 0, "repoUrl");
+    repoUrlR := json.readFieldString(inputJson, 0, "repoUrl");
     repoUrl := if repoUrlR.found and repoUrlR.ok { repoUrlR.value } else { "" };
 
-    entriesF := json.findObjectField(inputJson, 0, "entries");
+    entriesF := json.findField(inputJson, 0, "entries");
     if not entriesF.found { return (ok = false, jsonText = "", error = "missing entries field"); }
-    entryOffs := json.arrayElementOffsets(inputJson, entriesF.valuePos);
+    entryOffs := json.arrayOffsets(inputJson, entriesF.valuePos);
 
     hbSrcs: mut List<String> = [];
     hbOuts: mut List<String> = [];
@@ -826,37 +826,37 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     emptyStrs: List<String> = [];
 
     loop entryOffs as ep {
-        mF := json.findObjectField(inputJson, ep, "meta");
+        mF := json.findField(inputJson, ep, "meta");
         mp := mF.valuePos;
-        mSrc := json.readObjectString(inputJson, mp, "sourcePath").value;
-        mOut := json.readObjectString(inputJson, mp, "outPath").value;
-        mLayer := json.readObjectString(inputJson, mp, "layer").value;
-        mGroup := json.readObjectString(inputJson, mp, "group").value;
-        mNav := json.readObjectString(inputJson, mp, "navLabel").value;
-        sumR := json.readObjectString(inputJson, mp, "summary");
+        mSrc := json.readFieldString(inputJson, mp, "sourcePath").value;
+        mOut := json.readFieldString(inputJson, mp, "outPath").value;
+        mLayer := json.readFieldString(inputJson, mp, "layer").value;
+        mGroup := json.readFieldString(inputJson, mp, "group").value;
+        mNav := json.readFieldString(inputJson, mp, "navLabel").value;
+        sumR := json.readFieldString(inputJson, mp, "summary");
         mSum := if sumR.found and sumR.ok { sumR.value } else { "" };
-        slugR := json.readObjectString(inputJson, mp, "chapterSlug");
+        slugR := json.readFieldString(inputJson, mp, "chapterSlug");
         mSlug := if slugR.found and slugR.ok { slugR.value } else { "" };
-        mVer := json.readObjectBool(inputJson, mp, "verifiedInTs").value;
+        mVer := json.readFieldBool(inputJson, mp, "verifiedInTs").value;
 
-        dTitleR := json.readObjectString(inputJson, ep, "title");
+        dTitleR := json.readFieldString(inputJson, ep, "title");
         dTitle := if dTitleR.found and dTitleR.ok { dTitleR.value } else { "" };
-        dStatR := json.readObjectString(inputJson, ep, "status");
+        dStatR := json.readFieldString(inputJson, ep, "status");
         dStatus := if dStatR.found and dStatR.ok { dStatR.value } else { "draft" };
-        pHtml := json.readObjectString(inputJson, ep, "processedHtml").value;
-        relHtmlR := json.readObjectString(inputJson, ep, "relatedHtml");
+        pHtml := json.readFieldString(inputJson, ep, "processedHtml").value;
+        relHtmlR := json.readFieldString(inputJson, ep, "relatedHtml");
         mRel := if relHtmlR.found and relHtmlR.ok { relHtmlR.value } else { "" };
 
         curHbIdx := hbOuts.length();
         tocItemsHtml: mut List<String> = [];
         tocL2Parts: mut List<String> = [];
-        tocF := json.findObjectField(inputJson, ep, "toc");
+        tocF := json.findField(inputJson, ep, "toc");
         if tocF.found {
-            loop json.arrayElementOffsets(inputJson, tocF.valuePos) as tp {
-                lvl := json.readObjectInt(inputJson, tp, "level").value;
-                tid := json.readObjectString(inputJson, tp, "id").value;
-                ttxt := json.readObjectString(inputJson, tp, "text").value;
-                labelHtmlR := json.readObjectString(inputJson, tp, "labelHtml");
+            loop json.arrayOffsets(inputJson, tocF.valuePos) as tp {
+                lvl := json.readFieldInt(inputJson, tp, "level").value;
+                tid := json.readFieldString(inputJson, tp, "id").value;
+                ttxt := json.readFieldString(inputJson, tp, "text").value;
+                labelHtmlR := json.readFieldString(inputJson, tp, "labelHtml");
                 tocLabel := if labelHtmlR.found and labelHtmlR.ok and labelHtmlR.value =!= "" { labelHtmlR.value } else { escapeHtml(ttxt) };
                 skipNextChapter := mLayer == "handbook" and ttxt == "Next Chapter";
                 if (lvl == 2 or lvl == 3) and not skipNextChapter {

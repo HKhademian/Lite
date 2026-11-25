@@ -6,7 +6,7 @@ proc := import "core/process";
 text := import "core/text";
 crypto := import "core/crypto";
 path := import "core/path";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 rel := import "util/release";
 tb := import "util/text-builder";
@@ -36,7 +36,7 @@ runChecked := fn(workToClean: String, command: String, args: List<String>, cwd: 
 };
 
 readOptionalJsonString := fn(source: String, objPos: Int, key: String): (present: Bool, value: String) {
-    field := json.findObjectField(source, objPos, key);
+    field := json.findField(source, objPos, key);
     if not field.found or source.startsWithAt(field.valuePos, "null") {
         return (present = false, value = "");
     }
@@ -46,7 +46,7 @@ readOptionalJsonString := fn(source: String, objPos: Int, key: String): (present
 };
 
 readOptionalJsonInt := fn(source: String, objPos: Int, key: String, fallback: Int): (present: Bool, value: Int) {
-    field := json.findObjectField(source, objPos, key);
+    field := json.findField(source, objPos, key);
     if not field.found or source.startsWithAt(field.valuePos, "null") {
         return (present = false, value = fallback);
     }
@@ -78,31 +78,31 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
         valid := json.validate(payload);
         if not valid.ok { failRelease("", valid.error); }
 
-        label := json.readObjectString(payload, 0, "label").value;
-        commit := json.readObjectString(payload, 0, "commit").value;
-        profile := json.readObjectString(payload, 0, "profile").value;
-        archive := json.readObjectString(payload, 0, "archive").value;
-        archiveSha := json.readObjectString(payload, 0, "archiveSha256").value;
-        manifestSha := json.readObjectString(payload, 0, "manifestSha256").value;
+        label := json.readFieldString(payload, 0, "label").value;
+        commit := json.readFieldString(payload, 0, "commit").value;
+        profile := json.readFieldString(payload, 0, "profile").value;
+        archive := json.readFieldString(payload, 0, "archive").value;
+        archiveSha := json.readFieldString(payload, 0, "archiveSha256").value;
+        manifestSha := json.readFieldString(payload, 0, "manifestSha256").value;
 
         var hasComp := false;
         var compName := "";
         var compVer := "";
-        compField := json.findObjectField(payload, 0, "releasedComponent");
+        compField := json.findField(payload, 0, "releasedComponent");
         if compField.found and payload.startsWithAt(compField.valuePos, "{") {
             hasComp = true;
-            compName = json.readObjectString(payload, compField.valuePos, "component").value;
-            compVer = json.readObjectString(payload, compField.valuePos, "version").value;
+            compName = json.readFieldString(payload, compField.valuePos, "component").value;
+            compVer = json.readFieldString(payload, compField.valuePos, "version").value;
         }
 
         var hasVsix := false;
         var vsixFile := "";
         var vsixSha := "";
-        vsixField := json.findObjectField(payload, 0, "vsix");
+        vsixField := json.findField(payload, 0, "vsix");
         if vsixField.found and payload.startsWithAt(vsixField.valuePos, "{") {
             hasVsix = true;
-            vsixFile = json.readObjectString(payload, vsixField.valuePos, "file").value;
-            vsixSha = json.readObjectString(payload, vsixField.valuePos, "sha256").value;
+            vsixFile = json.readFieldString(payload, vsixField.valuePos, "file").value;
+            vsixSha = json.readFieldString(payload, vsixField.valuePos, "sha256").value;
         }
 
         var hasBoot := false;
@@ -115,19 +115,19 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
         var corpusExecutions := 0;
         var corpusMismatches := 0;
         var bootSupport := "";
-        bootField := json.findObjectField(payload, 0, "bootstrap");
+        bootField := json.findField(payload, 0, "bootstrap");
         if bootField.found and payload.startsWithAt(bootField.valuePos, "{") {
             hasBoot = true;
-            bootSupport = json.readObjectString(payload, bootField.valuePos, "support").value;
-            ladderField := json.findObjectField(payload, bootField.valuePos, "ladder");
+            bootSupport = json.readFieldString(payload, bootField.valuePos, "support").value;
+            ladderField := json.findField(payload, bootField.valuePos, "ladder");
             if ladderField.found {
-                bootFixed = json.readObjectBool(payload, ladderField.valuePos, "fixedPoint").value;
-                gensField := json.findObjectField(payload, ladderField.valuePos, "generations");
+                bootFixed = json.readFieldBool(payload, ladderField.valuePos, "fixedPoint").value;
+                gensField := json.findField(payload, ladderField.valuePos, "generations");
                 if gensField.found {
-                    bootGens = json.arrayElementOffsets(payload, gensField.valuePos).length();
+                    bootGens = json.arrayOffsets(payload, gensField.valuePos).length();
                 }
             }
-            corpusField := json.findObjectField(payload, bootField.valuePos, "corpus");
+            corpusField := json.findField(payload, bootField.valuePos, "corpus");
             if corpusField.found {
                 casesOpt := readOptionalJsonInt(payload, corpusField.valuePos, "cases", 0);
                 hasCases = casesOpt.present;
@@ -135,9 +135,9 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
                 corpusPrograms = readOptionalJsonInt(payload, corpusField.valuePos, "programs", 0).value;
                 corpusRejections = readOptionalJsonInt(payload, corpusField.valuePos, "rejections", 0).value;
                 corpusExecutions = readOptionalJsonInt(payload, corpusField.valuePos, "executions", 0).value;
-                mismatchField := json.findObjectField(payload, corpusField.valuePos, "mismatches");
+                mismatchField := json.findField(payload, corpusField.valuePos, "mismatches");
                 if mismatchField.found {
-                    corpusMismatches = json.arrayElementOffsets(payload, mismatchField.valuePos).length();
+                    corpusMismatches = json.arrayOffsets(payload, mismatchField.valuePos).length();
                 }
             }
         }
@@ -242,14 +242,14 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         ladderRaw := runChecked(work, project.nodeExecPath(), selfHostArgs, source, "");
         ladderSpan := json.valueSpan(ladderRaw, 0);
         if not ladderSpan.ok { failRelease(work, ladderSpan.error); }
-        fixedField := json.readObjectBool(ladderRaw, ladderSpan.start, "fixedPoint");
+        fixedField := json.readFieldBool(ladderRaw, ladderSpan.start, "fixedPoint");
         if not fixedField.found or not fixedField.ok or not fixedField.value {
             failRelease(work, "compiler release requires a generated fixed point");
         }
         bootFixed = true;
-        gensField := json.findObjectField(ladderRaw, ladderSpan.start, "generations");
+        gensField := json.findField(ladderRaw, ladderSpan.start, "generations");
         if gensField.found {
-            bootGens = json.arrayElementOffsets(ladderRaw, gensField.valuePos).length();
+            bootGens = json.arrayOffsets(ladderRaw, gensField.valuePos).length();
         }
 
         gen3 := path.join(ladderDirectory, "generation-3.ts");
@@ -257,9 +257,9 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
         corpusRaw := runChecked(work, project.nodeExecPath(), parityArgs, source, "");
         corpusSpan := json.valueSpan(corpusRaw, 0);
         if not corpusSpan.ok { failRelease(work, corpusSpan.error); }
-        mismatchField := json.findObjectField(corpusRaw, corpusSpan.start, "mismatches");
+        mismatchField := json.findField(corpusRaw, corpusSpan.start, "mismatches");
         if not mismatchField.found { failRelease(work, "corpus parity output missing mismatches"); }
-        corpusMismatches = json.arrayElementOffsets(corpusRaw, mismatchField.valuePos).length();
+        corpusMismatches = json.arrayOffsets(corpusRaw, mismatchField.valuePos).length();
         if corpusMismatches =!= 0 { failRelease(work, "generated corpus parity had mismatches"); }
 
         casesOpt := readOptionalJsonInt(corpusRaw, corpusSpan.start, "cases", 0);

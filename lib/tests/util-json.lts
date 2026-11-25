@@ -1,4 +1,4 @@
-json := import "util/json";
+json := import "data/json";
 unicode := import "core/unicode";
 test := import "core/test";
 
@@ -10,20 +10,20 @@ test.checkBool("valid json", true, valCheck.ok);
 badCheck := json.validate("{\"a\": [1,]}");
 test.checkBool("reject trailing comma", false, badCheck.ok);
 
-topName := json.readObjectString(sample, 0, "name");
+topName := json.readFieldString(sample, 0, "name");
 test.checkBool("top name found", true, topName.found);
 test.checkText("top name does not shadow nested", "lite", topName.value);
 
-nestedField := json.findObjectField(sample, 0, "nested");
+nestedField := json.findField(sample, 0, "nested");
 test.checkBool("nested found", true, nestedField.found);
-innerCount := json.readObjectInt(sample, nestedField.valuePos, "count");
+innerCount := json.readFieldInt(sample, nestedField.valuePos, "count");
 test.checkInt("nested count", 2, innerCount.value);
 
-flagField := json.readObjectBool(sample, 0, "flag");
+flagField := json.readFieldBool(sample, 0, "flag");
 test.checkBool("flag bool", true, flagField.value);
 
-itemsField := json.findObjectField(sample, 0, "items");
-offsets := json.arrayElementOffsets(sample, itemsField.valuePos);
+itemsField := json.findField(sample, 0, "items");
+offsets := json.arrayOffsets(sample, itemsField.valuePos);
 test.checkInt("array len", 3, offsets.length());
 second := json.readStringAt(sample, offsets[1]);
 test.checkText("escaped string", "b\n\"c\"", second.value);
@@ -37,10 +37,15 @@ test.checkText("last key", "flag", keys[3]);
 test.checkText("quote string", "\"a\\n\\\"b\\\"\\\\c\"", json.quoteString("a\n\"b\"\\c"));
 
 uSample := "{\"u\":\"A\\u00e9\\ud83d\\ude42\\b\\f\"}";
-uRead := json.readObjectString(uSample, 0, "u");
+uRead := json.readFieldString(uSample, 0, "u");
 test.checkBool("unicode surrogate escape ok", true, uRead.ok);
 expectedU := "Aé🙂" + unicode.fromCodePoint(8).text + unicode.fromCodePoint(12).text;
 test.checkText("unicode surrogate escape val", expectedU, uRead.value);
-test.checkText("quote control chars", "\"a\\u0000\\b\\f\\n\"", json.quoteString(json.readObjectString("{\"s\":\"a\\u0000\\b\\f\\n\"}", 0, "s").value));
+test.checkText("quote control chars", "\"a\\u0000\\b\\f\\n\"", json.quoteString(json.readFieldString("{\"s\":\"a\\u0000\\b\\f\\n\"}", 0, "s").value));
+
+span := json.valueSpan("  {\"x\": [1, 2]} , tail", 0);
+test.checkBool("valueSpan ok", true, span.ok);
+test.checkInt("valueSpan start", 2, span.start);
+test.checkInt("valueSpan end", 15, span.end);
 
 test.done("util-json");

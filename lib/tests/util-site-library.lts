@@ -1,6 +1,6 @@
 siteLib := import "../../site/src/library";
 fs := import "core/file";
-json := import "util/json";
+json := import "data/json";
 path := import "core/path";
 project := import "util/project";
 test := import "core/test";

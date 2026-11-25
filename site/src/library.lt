@@ -4,7 +4,7 @@ fs := import "core/file";
 path := import "core/path";
 text := import "core/text";
 challenges := import "util/challenges";
-json := import "util/json";
+json := import "data/json";
 
 hostModuleIdentity := fn(identities: List<String>, texts: List<String>, candidate: String): String {
     var i := 0;
@@ -353,11 +353,11 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
 
     trimmedSamples := samplesJson.trim();
     if trimmedSamples =!= "" and challenges.isJsonArrayAt(trimmedSamples, 0) {
-        loop json.arrayElementOffsets(trimmedSamples, 0) as sp {
-            sid := json.readObjectString(trimmedSamples, sp, "id").value;
-            ttl := json.readObjectString(trimmedSamples, sp, "title").value;
-            relFile := json.readObjectString(trimmedSamples, sp, "file").value;
-            stdinR := json.readObjectString(trimmedSamples, sp, "stdin");
+        loop json.arrayOffsets(trimmedSamples, 0) as sp {
+            sid := json.readFieldString(trimmedSamples, sp, "id").value;
+            ttl := json.readFieldString(trimmedSamples, sp, "title").value;
+            relFile := json.readFieldString(trimmedSamples, sp, "file").value;
+            stdinR := json.readFieldString(trimmedSamples, sp, "stdin");
             stdinVal := if stdinR.found and stdinR.ok { stdinR.value } else { "" };
             argsList := challenges.readStringArray(trimmedSamples, sp, "args");
             srcRead := fs.readText(path.join(rootDir, relFile));
@@ -409,13 +409,13 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
     learnPath := path.join(rootDir, "language/learn/catalog.json");
     if fs.kind(learnPath) == fs.FILE_KIND_FILE {
         lText := fs.readText(learnPath).text;
-        tracksF := json.findObjectField(lText, 0, "tracks");
-        tOffsets := json.arrayElementOffsets(lText, tracksF.valuePos);
+        tracksF := json.findField(lText, 0, "tracks");
+        tOffsets := json.arrayOffsets(lText, tracksF.valuePos);
         tCount := tOffsets.length();
         tSortKeys: mut List<String> = [];
         var ti := 0;
         loop ti < tCount {
-            ordR := json.readObjectInt(lText, tOffsets[ti], "order");
+            ordR := json.readFieldInt(lText, tOffsets[ti], "order");
             ordVal := if ordR.found and ordR.ok { ordR.value } else { 0 };
             mut tSortKeys.pushBack(challenges.padLeftZero(ordVal + 1000000, 9) + ":" + challenges.padLeftZero(ti, 6));
             ti = ti + 1;
@@ -423,15 +423,15 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
         sortedIdx := challenges.sortIndexByKeys(tSortKeys);
         loop sortedIdx as sIdx {
             tp := tOffsets[sIdx];
-            lessonsF := json.findObjectField(lText, tp, "lessons");
-            loop json.arrayElementOffsets(lText, lessonsF.valuePos) as lp {
-                lSlug := json.readObjectString(lText, lp, "slug").value;
-                kindV := json.readObjectString(lText, lp, "kind").value;
-                ttl := json.readObjectString(lText, lp, "title").value;
-                srcFile := json.readObjectString(lText, lp, "sourceFile").value;
-                stdinR := json.readObjectString(lText, lp, "stdin");
+            lessonsF := json.findField(lText, tp, "lessons");
+            loop json.arrayOffsets(lText, lessonsF.valuePos) as lp {
+                lSlug := json.readFieldString(lText, lp, "slug").value;
+                kindV := json.readFieldString(lText, lp, "kind").value;
+                ttl := json.readFieldString(lText, lp, "title").value;
+                srcFile := json.readFieldString(lText, lp, "sourceFile").value;
+                stdinR := json.readFieldString(lText, lp, "stdin");
                 stdinVal := if stdinR.found and stdinR.ok { stdinR.value } else { "" };
-                envR := json.readObjectString(lText, lp, "environment");
+                envR := json.readFieldString(lText, lp, "environment");
                 envVal := if envR.found and envR.ok { envR.value } else { "universal" };
                 argsList := challenges.readStringArray(lText, lp, "args");
                 slug := nextAvailableSlug(mut usedPieces, lSlug);
@@ -448,14 +448,14 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
     gymPath := path.join(rootDir, "language/gym/catalog.json");
     if fs.kind(gymPath) == fs.FILE_KIND_FILE {
         gText := fs.readText(gymPath).text;
-        exF := json.findObjectField(gText, 0, "exercises");
-        loop json.arrayElementOffsets(gText, exF.valuePos) as ep {
-            gSlug := json.readObjectString(gText, ep, "slug").value;
-            gMode := json.readObjectString(gText, ep, "mode").value;
-            gTitle := json.readObjectString(gText, ep, "title").value;
-            starterFile := json.readObjectString(gText, ep, "starterFile").value;
-            vcF := json.findObjectField(gText, ep, "visibleCases");
-            vcOffs := if vcF.found { json.arrayElementOffsets(gText, vcF.valuePos) } else {
+        exF := json.findField(gText, 0, "exercises");
+        loop json.arrayOffsets(gText, exF.valuePos) as ep {
+            gSlug := json.readFieldString(gText, ep, "slug").value;
+            gMode := json.readFieldString(gText, ep, "mode").value;
+            gTitle := json.readFieldString(gText, ep, "title").value;
+            starterFile := json.readFieldString(gText, ep, "starterFile").value;
+            vcF := json.findField(gText, ep, "visibleCases");
+            vcOffs := if vcF.found { json.arrayOffsets(gText, vcF.valuePos) } else {
                 emptyInts: List<Int> = [];
                 emptyInts
             };
@@ -463,7 +463,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
             var firstArgs: List<String> = emptyArgs;
             if vcOffs.length() > 0 {
                 fcPos := vcOffs[0];
-                fsR := json.readObjectString(gText, fcPos, "stdin");
+                fsR := json.readFieldString(gText, fcPos, "stdin");
                 if fsR.found and fsR.ok { firstStdin = fsR.value; }
                 firstArgs = challenges.readStringArray(gText, fcPos, "args");
             }

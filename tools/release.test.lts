@@ -7,7 +7,7 @@ proc := import "core/process";
 test := import "core/test";
 unicode := import "core/unicode";
 challenges := import "util/challenges";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 root := project.findRepoRoot();
@@ -245,8 +245,8 @@ manifestText := manifestRead.text;
 
 headShort := head.slice(0, 12);
 archiveName := "lite-snapshot-" + headShort + ".tar.gz";
-test.checkText("manifest.commit", head, json.readObjectString(manifestText, 0, "commit").value);
-test.checkText("manifest.profile", "tools", json.readObjectString(manifestText, 0, "profile").value);
+test.checkText("manifest.commit", head, json.readFieldString(manifestText, 0, "commit").value);
+test.checkText("manifest.profile", "tools", json.readFieldString(manifestText, 0, "profile").value);
 test.check("manifest.releasedComponent null", manifestText.indexOf("\"releasedComponent\": null", 0) >= 0 or manifestText.indexOf("\"releasedComponent\":null", 0) >= 0);
 test.check("archive exists", fs.kind(path.join(output, archiveName)) == fs.FILE_KIND_FILE);
 

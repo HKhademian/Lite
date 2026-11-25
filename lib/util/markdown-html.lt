@@ -1,7 +1,7 @@
 /** Provisional GFM-subset Markdown-to-HTML renderer, TOC extractor, and doc-status detector. */
 
 text := import "core/text";
-json := import "util/json";
+json := import "data/json";
 md := import "util/markdown";
 tb := import "util/text-builder";
 

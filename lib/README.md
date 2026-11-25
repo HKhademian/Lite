@@ -55,7 +55,7 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 
 | Module | Environment | Capabilities |
 | --- | --- | --- |
-| `data/json` | Browser + CLI | Pure RFC-8259 JSON scanner, typed reader, and O(N) string serializer (`validate`, `kindAt`, `readField*`, `quoteString`, `encode*`) |
+| `data/json` | Browser + CLI | Pure RFC-8259 JSON scanner, typed reader, and O(N) string serializer (`validate`, `valueSpan`, `kindAt`, `readField*`, `quoteString`, `encode*`) |
 | `data/csv` | Browser + CLI | RFC-4180 CSV parser and flat `CsvTable` serializer (`CsvTable.parse`, `CsvTable.parseRow`, `cell`, `row`, `CsvTable.encodeField`, `CsvTable.encodeRow`, `encode`) |
 
 ## Play & Extra Modules (`lib/extra/` — 6 modules)

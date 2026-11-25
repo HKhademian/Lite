@@ -5,7 +5,7 @@ io := import "core/io";
 path := import "core/path";
 cfetch := import "util/challenge-fetch";
 challenges := import "util/challenges";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 run := fn(rawArgs: List<String>): Int {
@@ -38,9 +38,9 @@ run := fn(rawArgs: List<String>): Int {
 
     lines := challenges.splitJsonLines(rawRead.text);
     loop lines as line {
-        srcF := json.readObjectString(line, 0, "source");
-        urlF := json.readObjectString(line, 0, "url");
-        idF := json.readObjectString(line, 0, "id");
+        srcF := json.readFieldString(line, 0, "source");
+        urlF := json.readFieldString(line, 0, "url");
+        idF := json.readFieldString(line, 0, "id");
         if srcF.found and srcF.ok and urlF.found and urlF.ok and idF.found and idF.ok {
             src := srcF.value;
             outFile := path.join(cacheDir, "tests/" + src + "/" + idF.value + ".html");

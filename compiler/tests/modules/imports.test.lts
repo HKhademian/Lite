@@ -5,7 +5,7 @@ path := import "core/path";
 test := import "core/test";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 root := project.findRepoRoot();
@@ -41,20 +41,20 @@ test.checkText("cli trace compile stdout", "", compiled1.stdout);
 
 traceText := fs.readText(traceFile).text;
 realDep := fs.realPath(dependency).path;
-filesField := json.findObjectField(traceText, 0, "files");
+filesField := json.findField(traceText, 0, "files");
 test.check("trace files field", filesField.found);
 var foundDepFile := false;
-loop json.arrayElementOffsets(traceText, filesField.valuePos) as fPos {
-    pVal := json.readObjectString(traceText, fPos, "path");
+loop json.arrayOffsets(traceText, filesField.valuePos) as fPos {
+    pVal := json.readFieldString(traceText, fPos, "path");
     if pVal.found and pVal.ok and pVal.value == realDep { foundDepFile = true; }
 }
 test.check("trace includes dependency realpath", foundDepFile);
-edgesField := json.findObjectField(traceText, 0, "edges");
+edgesField := json.findField(traceText, 0, "edges");
 test.check("trace edges field", edgesField.found);
 var foundDepEdge := false;
-loop json.arrayElementOffsets(traceText, edgesField.valuePos) as ePos {
-    sVal := json.readObjectString(traceText, ePos, "spec");
-    pVal := json.readObjectString(traceText, ePos, "path");
+loop json.arrayOffsets(traceText, edgesField.valuePos) as ePos {
+    sVal := json.readFieldString(traceText, ePos, "spec");
+    pVal := json.readFieldString(traceText, ePos, "path");
     if sVal.found and sVal.ok and pVal.found and pVal.ok and sVal.value == "./dep.lts" and pVal.value == realDep {
         foundDepEdge = true;
     }

@@ -1,7 +1,7 @@
 fs := import "core/file";
 test := import "core/test";
 path := import "core/path";
-json := import "util/json";
+json := import "data/json";
 docgen := import "util/docgen";
 project := import "util/project";
 
@@ -10,9 +10,9 @@ sampleModule := "/* Example universal module. */\n\n/** Hidden private constant 
 modJson := docgen.extractModuleJson(sampleModule, "core", "sample", "lib/core/sample.lts");
 validMod := json.validate(modJson);
 test.checkBool("sample module json valid", true, validMod.ok);
-test.checkText("module id", "core/sample", json.readObjectString(modJson, 0, "id").value);
-test.checkText("module env", "universal", json.readObjectString(modJson, 0, "environment").value);
-test.checkText("module summary", "Example universal module.", json.readObjectString(modJson, 0, "summary").value);
+test.checkText("module id", "core/sample", json.readFieldString(modJson, 0, "id").value);
+test.checkText("module env", "universal", json.readFieldString(modJson, 0, "environment").value);
+test.checkText("module summary", "Example universal module.", json.readFieldString(modJson, 0, "summary").value);
 test.checkBool("type symbol present", true, modJson.contains("\"kind\":\"type\",\"name\":\"Pair\""));
 test.checkBool("host decl normalized", true, modJson.contains("\"signature\":\"pub probe := fn(first: String, second: Int): Bool;\",\"isHostDeclaration\":true"));
 test.checkBool("impl fn not host", true, modJson.contains("\"signature\":\"pub add := fn(x: Int, y: Int): Int\",\"isHostDeclaration\":false"));

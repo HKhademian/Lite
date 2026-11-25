@@ -8,7 +8,7 @@ list := import "core/list";
 time := import "core/time";
 unicode := import "core/unicode";
 collections := import "util/collections";
-json := import "util/json";
+json := import "data/json";
 challenges := import "util/challenges";
 
 /** Converts display text to a lowercase URL slug (`"A & B"` -> `"a-and-b"`). */
@@ -107,7 +107,7 @@ formatFourDecimalsJson := fn(tenThousandths: Int): String {
 
 lookupStringFieldOrNull := fn(objJson: String, objPos: Int, key: String, fallback: String): String {
     if objPos < 0 { return fallback; }
-    res := json.readObjectString(objJson, objPos, key);
+    res := json.readFieldString(objJson, objPos, key);
     if res.found and res.ok { res.value } else { fallback }
 };
 
@@ -367,16 +367,16 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         epi = epi + 2;
     }
 
-    catField := json.findObjectField(catalogJsonText, 0, "CATEGORIES");
-    lcField := json.findObjectField(catalogJsonText, 0, "LC_TOPICS");
-    cfField := json.findObjectField(catalogJsonText, 0, "CF_TAGS");
-    csesField := json.findObjectField(catalogJsonText, 0, "CSES_SECTIONS");
-    cpField := json.findObjectField(catalogJsonText, 0, "CRYPTOPALS_SETS");
-    tgField := json.findObjectField(catalogJsonText, 0, "TOPIC_GROUPS");
-    tlField := json.findObjectField(catalogJsonText, 0, "TOPIC_LABELS");
-    dbField := json.findObjectField(catalogJsonText, 0, "DIFFICULTY_BANDS");
-    siField := json.findObjectField(catalogJsonText, 0, "SOURCE_INFO");
-    soField := json.findObjectField(catalogJsonText, 0, "SOURCE_ORDER");
+    catField := json.findField(catalogJsonText, 0, "CATEGORIES");
+    lcField := json.findField(catalogJsonText, 0, "LC_TOPICS");
+    cfField := json.findField(catalogJsonText, 0, "CF_TAGS");
+    csesField := json.findField(catalogJsonText, 0, "CSES_SECTIONS");
+    cpField := json.findField(catalogJsonText, 0, "CRYPTOPALS_SETS");
+    tgField := json.findField(catalogJsonText, 0, "TOPIC_GROUPS");
+    tlField := json.findField(catalogJsonText, 0, "TOPIC_LABELS");
+    dbField := json.findField(catalogJsonText, 0, "DIFFICULTY_BANDS");
+    siField := json.findField(catalogJsonText, 0, "SOURCE_INFO");
+    soField := json.findField(catalogJsonText, 0, "SOURCE_ORDER");
     sourceOrder := challenges.readStringArray(catalogJsonText, 0, "SOURCE_ORDER");
     allowedCats := json.objectKeys(catalogJsonText, catField.valuePos);
     _unusedSo := soField.found;
@@ -512,16 +512,16 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     if fs.kind(lcApiPath) == fs.FILE_KIND_FILE and fs.kind(lcMergedPath) == fs.FILE_KIND_FILE {
         apiText := fs.readText(lcApiPath).text;
         mText := fs.readText(lcMergedPath).text;
-        qField := json.findObjectField(mText, 0, "questions");
+        qField := json.findField(mText, 0, "questions");
         qKeys: mut List<String> = [];
         qPositions: mut List<Int> = [];
-        loop json.arrayElementOffsets(mText, qField.valuePos) as qp {
-            fidS := json.readObjectString(mText, qp, "frontend_id");
+        loop json.arrayOffsets(mText, qField.valuePos) as qp {
+            fidS := json.readFieldString(mText, qp, "frontend_id");
             fidVal := if fidS.found and fidS.ok { fidS.value } else {
-                fidI := json.readObjectInt(mText, qp, "frontend_id");
+                fidI := json.readFieldInt(mText, qp, "frontend_id");
                 if fidI.found and fidI.ok { fidI.value.toText() } else { "" }
             };
-            slugV := json.readObjectString(mText, qp, "problem_slug").value;
+            slugV := json.readFieldString(mText, qp, "problem_slug").value;
             if fidVal =!= "" { mut qKeys.pushBack(fidVal); mut qPositions.pushBack(qp); }
             if slugV =!= "" { mut qKeys.pushBack(slugV); mut qPositions.pushBack(qp); }
         }
@@ -530,22 +530,22 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         qSortedP: mut List<Int> = [];
         loop qOrd as qi { mut qSortedK.pushBack(qKeys[qi]); mut qSortedP.pushBack(qPositions[qi]); }
 
-        pairsField := json.findObjectField(apiText, 0, "stat_status_pairs");
-        loop json.arrayElementOffsets(apiText, pairsField.valuePos) as pPos {
-            statF := json.findObjectField(apiText, pPos, "stat");
-            diffF := json.findObjectField(apiText, pPos, "difficulty");
-            fqidR := json.readObjectInt(apiText, statF.valuePos, "frontend_question_id");
-            qidNum := if fqidR.found and fqidR.ok and fqidR.value > 0 { fqidR.value } else { json.readObjectInt(apiText, statF.valuePos, "question_id").value };
+        pairsField := json.findField(apiText, 0, "stat_status_pairs");
+        loop json.arrayOffsets(apiText, pairsField.valuePos) as pPos {
+            statF := json.findField(apiText, pPos, "stat");
+            diffF := json.findField(apiText, pPos, "difficulty");
+            fqidR := json.readFieldInt(apiText, statF.valuePos, "frontend_question_id");
+            qidNum := if fqidR.found and fqidR.ok and fqidR.value > 0 { fqidR.value } else { json.readFieldInt(apiText, statF.valuePos, "question_id").value };
             qidStr := qidNum.toText();
-            slug := json.readObjectString(apiText, statF.valuePos, "question__title_slug").value;
-            ttlRaw := json.readObjectString(apiText, statF.valuePos, "question__title").value;
+            slug := json.readFieldString(apiText, statF.valuePos, "question__title_slug").value;
+            ttlRaw := json.readFieldString(apiText, statF.valuePos, "question__title").value;
             ttl := cleanHtmlTitle(entKeys, entVals, ttlRaw);
-            attemptsR := json.readObjectInt(apiText, statF.valuePos, "total_submitted");
-            solvedR := json.readObjectInt(apiText, statF.valuePos, "total_acs");
+            attemptsR := json.readFieldInt(apiText, statF.valuePos, "total_submitted");
+            solvedR := json.readFieldInt(apiText, statF.valuePos, "total_acs");
             attempts := if attemptsR.found and attemptsR.ok { attemptsR.value } else { 0 };
             solved := if solvedR.found and solvedR.ok { solvedR.value } else { 0 };
-            lvl := json.readObjectInt(apiText, diffF.valuePos, "level").value;
-            paid := json.readObjectBool(apiText, pPos, "paid_only").value;
+            lvl := json.readFieldInt(apiText, diffF.valuePos, "level").value;
+            paid := json.readFieldBool(apiText, pPos, "paid_only").value;
 
             diffLabel := if lvl == 1 { "Easy" } else if lvl == 3 { "Hard" } else { "Medium" };
             normTenths := if lvl == 1 { 20 } else if lvl == 3 { 80 } else { 50 };
@@ -562,7 +562,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             rawTopics := if qHitPos >= 0 { challenges.readStringArray(mText, qHitPos, "topics") } else { emptyRawTopics };
             mappedTopics: mut List<String> = [];
             loop rawTopics as rt {
-                lk := json.readObjectString(catalogJsonText, lcField.valuePos, rt);
+                lk := json.readFieldString(catalogJsonText, lcField.valuePos, rt);
                 slugTp := if lk.found and lk.ok { lk.value } else { slugifyText(rt) };
                 if not mappedTopics.contains(slugTp) {
                     mut mappedTopics.pushBack(slugTp);
@@ -614,14 +614,14 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     cfPath := path.join(cacheDir, "codeforces/problemset.json");
     if fs.kind(cfPath) == fs.FILE_KIND_FILE {
         cfText := fs.readText(cfPath).text;
-        resField := json.findObjectField(cfText, 0, "result");
-        stArrField := json.findObjectField(cfText, resField.valuePos, "problemStatistics");
+        resField := json.findField(cfText, 0, "result");
+        stArrField := json.findField(cfText, resField.valuePos, "problemStatistics");
         stKeys: mut List<String> = [];
         stVals: mut List<Int> = [];
-        loop json.arrayElementOffsets(cfText, stArrField.valuePos) as sp {
-            cId := json.readObjectInt(cfText, sp, "contestId").value;
-            cIdx := json.readObjectString(cfText, sp, "index").value;
-            sc := json.readObjectInt(cfText, sp, "solvedCount").value;
+        loop json.arrayOffsets(cfText, stArrField.valuePos) as sp {
+            cId := json.readFieldInt(cfText, sp, "contestId").value;
+            cIdx := json.readFieldString(cfText, sp, "index").value;
+            sc := json.readFieldInt(cfText, sp, "solvedCount").value;
             mut stKeys.pushBack(cId.toText() + "/" + cIdx);
             mut stVals.pushBack(sc);
         }
@@ -630,19 +630,19 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         stSV: mut List<Int> = [];
         loop stOrd as si { mut stSK.pushBack(stKeys[si]); mut stSV.pushBack(stVals[si]); }
 
-        prArrField := json.findObjectField(cfText, resField.valuePos, "problems");
+        prArrField := json.findField(cfText, resField.valuePos, "problems");
         cContestIds: mut List<Int> = [];
         cIndexes: mut List<String> = [];
         cSolved: mut List<Int> = [];
         cRatings: mut List<Int> = [];
         cPosList: mut List<Int> = [];
-        loop json.arrayElementOffsets(cfText, prArrField.valuePos) as pp {
-            ratR := json.readObjectInt(cfText, pp, "rating");
-            tpR := json.readObjectString(cfText, pp, "type");
+        loop json.arrayOffsets(cfText, prArrField.valuePos) as pp {
+            ratR := json.readFieldInt(cfText, pp, "rating");
+            tpR := json.readFieldString(cfText, pp, "type");
             tpVal := if tpR.found and tpR.ok { tpR.value } else { "PROGRAMMING" };
             if ratR.found and ratR.ok and ratR.value >= 800 and ratR.value <= 3000 and tpVal == "PROGRAMMING" {
-                cId := json.readObjectInt(cfText, pp, "contestId").value;
-                cIdx := json.readObjectString(cfText, pp, "index").value;
+                cId := json.readFieldInt(cfText, pp, "contestId").value;
+                cIdx := json.readFieldString(cfText, pp, "index").value;
                 hit := challenges.findSortedEntity(stSK, cId.toText() + "/" + cIdx);
                 sv := if hit >= 0 { stSV[hit] } else { 0 };
                 if sv > 0 {
@@ -722,11 +722,11 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             cIdx := cIndexes[ci];
             rating := cRatings[ci];
             solved := cSolved[ci];
-            ttl := cleanHtmlTitle(entKeys, entVals, json.readObjectString(cfText, pp, "name").value);
+            ttl := cleanHtmlTitle(entKeys, entVals, json.readFieldString(cfText, pp, "name").value);
             rawTags := challenges.readStringArray(cfText, pp, "tags");
             mappedTags: mut List<String> = [];
             loop rawTags as rt {
-                lk := json.readObjectString(catalogJsonText, cfField.valuePos, rt);
+                lk := json.readFieldString(catalogJsonText, cfField.valuePos, rt);
                 slugTp := if lk.found and lk.ok { lk.value } else { slugifyText(rt) };
                 if not mappedTags.contains(slugTp) { mut mappedTags.pushBack(slugTp); }
             }
@@ -783,14 +783,14 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
                 if qEnd >= 0 and aEnd >= 0 and curSec =!= "" {
                     taskId := html.slice(idStart, qEnd);
                     ttl := cleanHtmlTitle(entKeys, entVals, html.slice(qEnd + 2, aEnd));
-                    secF := json.findObjectField(catalogJsonText, csesField.valuePos, curSec);
+                    secF := json.findField(catalogJsonText, csesField.valuePos, curSec);
                     var tpList: List<String> = ["mixed"];
                     var baseVal := 50;
                     if secF.found {
-                        offs := json.arrayElementOffsets(catalogJsonText, secF.valuePos);
+                        offs := json.arrayOffsets(catalogJsonText, secF.valuePos);
                         if offs.length() >= 2 {
                             tps: mut List<String> = [];
-                            loop json.arrayElementOffsets(catalogJsonText, offs[0]) as tpPos {
+                            loop json.arrayOffsets(catalogJsonText, offs[0]) as tpPos {
                                 s := json.readStringAt(catalogJsonText, tpPos);
                                 if s.ok { mut tps.pushBack(s.value); }
                             }
@@ -843,16 +843,16 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         cDiffRaw: mut List<String> = [];
         cDiffTenths: mut List<Int> = [];
         cPrefixes: mut List<String> = [];
-        loop json.arrayElementOffsets(mText, 0) as _unused { break; }
+        loop json.arrayOffsets(mText, 0) as _unused { break; }
         mKeys := json.objectKeys(mText, 0);
         mOrd := challenges.sortIndexByKeys(mKeys);
         sortedMKeys: mut List<String> = [];
         loop mOrd as mi { mut sortedMKeys.pushBack(mKeys[mi]); }
         _unusedMk := sortedMKeys.length();
 
-        loop json.arrayElementOffsets(pText, 0) as pp {
-            pid := json.readObjectString(pText, pp, "id").value;
-            cId := json.readObjectString(pText, pp, "contest_id").value;
+        loop json.arrayOffsets(pText, 0) as pp {
+            pid := json.readFieldString(pText, pp, "id").value;
+            cId := json.readFieldString(pText, pp, "contest_id").value;
             var pfx := "";
             var pi := 0;
             loop pi < cId.length() {
@@ -863,13 +863,13 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
                 } else { break; }
             }
             if pfx == "abc" or pfx == "arc" or pfx == "agc" {
-                mf := json.findObjectField(mText, 0, pid);
+                mf := json.findField(mText, 0, pid);
                 if mf.found and challenges.isJsonObjectAt(mText, mf.valuePos) {
-                    expR := json.readObjectBool(mText, mf.valuePos, "is_experimental");
+                    expR := json.readFieldBool(mText, mf.valuePos, "is_experimental");
                     isExp := expR.found and expR.ok and expR.value;
                     dParsed := challenges.parseScaledDecimal1000(mText, mf.valuePos, "difficulty");
                     if not isExp and dParsed.ok {
-                        uR := json.readObjectInt(mText, mf.valuePos, "irt_users");
+                        uR := json.readFieldInt(mText, mf.valuePos, "irt_users");
                         users := if uR.found and uR.ok { uR.value } else { 0 };
                         val1000 := if dParsed.scaled > 400000 { dParsed.scaled } else { 400000 };
                         tenths := 10 + roundDivTiesEven((val1000 - 400000) * 10, 320000);
@@ -913,9 +913,9 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             if taken >= 350 { break; }
             taken = taken + 1;
             pp := cPPos[idx];
-            pid := json.readObjectString(pText, pp, "id").value;
-            cId := json.readObjectString(pText, pp, "contest_id").value;
-            ttl := cleanHtmlTitle(entKeys, entVals, json.readObjectString(pText, pp, "name").value);
+            pid := json.readFieldString(pText, pp, "id").value;
+            cId := json.readFieldString(pText, pp, "contest_id").value;
+            ttl := cleanHtmlTitle(entKeys, entVals, json.readFieldString(pText, pp, "name").value);
             normStr := formatTenthsJson(cDiffTenths[idx]);
             var dashed := "";
             var di := 0;
@@ -953,13 +953,13 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         setHtmlPath := path.join(cacheDir, "cryptopals/set" + setNo + ".html");
         if fs.kind(setHtmlPath) == fs.FILE_KIND_FILE {
             html := challenges.readNormalizedText(setHtmlPath).text;
-            arrPos := json.findObjectField(catalogJsonText, cpField.valuePos, setNo).valuePos;
-            offs := json.arrayElementOffsets(catalogJsonText, arrPos);
+            arrPos := json.findField(catalogJsonText, cpField.valuePos, setNo).valuePos;
+            offs := json.arrayOffsets(catalogJsonText, arrPos);
             setName := json.readStringAt(catalogJsonText, offs[0]).value;
             setTopics := challenges.readStringArray(catalogJsonText, arrPos, "dummy");
             _unusedStp := setTopics.length();
             var tpList: mut List<String> = [];
-            loop json.arrayElementOffsets(catalogJsonText, offs[1]) as tpPos {
+            loop json.arrayOffsets(catalogJsonText, offs[1]) as tpPos {
                 s := json.readStringAt(catalogJsonText, tpPos);
                 if s.ok { mut tpList.pushBack(s.value); mut recTopicsAll.pushBack(s.value); }
             }
@@ -1311,8 +1311,8 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     }
 
     loop json.objectKeys(catalogJsonText, cpField.valuePos) as setNo {
-        arrPos := json.findObjectField(catalogJsonText, cpField.valuePos, setNo).valuePos;
-        offs := json.arrayElementOffsets(catalogJsonText, arrPos);
+        arrPos := json.findField(catalogJsonText, cpField.valuePos, setNo).valuePos;
+        offs := json.arrayOffsets(catalogJsonText, arrPos);
         setName := json.readStringAt(catalogJsonText, offs[0]).value;
         cpPrefix := "Set " + setNo + ":";
         cpIds: mut List<String> = [];
@@ -1376,8 +1376,8 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
 
     siEntries: mut List<String> = [];
     taxSrcEntries: mut List<String> = [];
-    loop json.arrayElementOffsets(catalogJsonText, siField.valuePos) as sp {
-        offs := json.arrayElementOffsets(catalogJsonText, sp);
+    loop json.arrayOffsets(catalogJsonText, siField.valuePos) as sp {
+        offs := json.arrayOffsets(catalogJsonText, sp);
         sid := json.readStringAt(catalogJsonText, offs[0]).value;
         sname := json.readStringAt(catalogJsonText, offs[1]).value;
         shome := json.readStringAt(catalogJsonText, offs[2]).value;
@@ -1391,8 +1391,8 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     uniqueSortedTopics := dedupTextsPreserveOrder(recTopicsAll.sortTexts());
     taxTopicEntries: mut List<String> = [];
     loop uniqueSortedTopics as tid {
-        lblR := json.readObjectString(catalogJsonText, tlField.valuePos, tid);
-        grpR := json.readObjectString(catalogJsonText, tgField.valuePos, tid);
+        lblR := json.readFieldString(catalogJsonText, tlField.valuePos, tid);
+        grpR := json.readFieldString(catalogJsonText, tgField.valuePos, tid);
         lbl := if lblR.found and lblR.ok { lblR.value } else { titleCaseTopic(tid) };
         grp := if grpR.found and grpR.ok { grpR.value } else { "other" };
         mut taxTopicEntries.pushBack("{\"id\":" + json.quoteString(tid) + ",\"label\":" + json.quoteString(lbl) + ",\"group\":" + json.quoteString(grp) + "}");
@@ -1400,7 +1400,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
 
     taxCatEntries: mut List<String> = [];
     loop json.objectKeys(catalogJsonText, catField.valuePos) as cid {
-        cdesc := json.readObjectString(catalogJsonText, catField.valuePos, cid).value;
+        cdesc := json.readFieldString(catalogJsonText, catField.valuePos, cid).value;
         mut taxCatEntries.pushBack("{\"id\":" + json.quoteString(cid) + ",\"description\":" + json.quoteString(cdesc) + "}");
     }
 

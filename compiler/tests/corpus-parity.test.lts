@@ -11,7 +11,7 @@ pool := import "external/pool";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 corpus := import "util/corpus";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 streams := import "util/streams";
 
@@ -28,20 +28,20 @@ test.check("build C compiler: " + builtC.error, builtC.ok);
 tsComp := builtTs.path;
 cComp := builtC.path;
 
-tsDepsField := json.findObjectField(builtTs.jsonText, 0, "dependencies");
+tsDepsField := json.findField(builtTs.jsonText, 0, "dependencies");
 test.check("ts deps present", tsDepsField.found);
 tsDeps := corpus.readStringListAt(builtTs.jsonText, tsDepsField.valuePos);
-cDepsField := json.findObjectField(builtC.jsonText, 0, "dependencies");
+cDepsField := json.findField(builtC.jsonText, 0, "dependencies");
 test.check("c deps present", cDepsField.found);
 cDeps := corpus.readStringListAt(builtC.jsonText, cDepsField.valuePos);
 
 /* compiler manifests name graph roots and no flattened source bundle */
 tsManifestSrc := fs.readText(path.join(root, "compiler/manifests/ts.json")).text;
 cManifestSrc := fs.readText(path.join(root, "compiler/manifests/c.json")).text;
-test.checkText("ts manifest target", "ts", json.readObjectString(tsManifestSrc, 0, "target").value);
-test.checkText("c manifest target", "c", json.readObjectString(cManifestSrc, 0, "target").value);
-test.checkInt("ts manifest 1 file", 1, corpus.readStringListAt(tsManifestSrc, json.findObjectField(tsManifestSrc, 0, "files").valuePos).length());
-test.checkInt("c manifest 1 file", 1, corpus.readStringListAt(cManifestSrc, json.findObjectField(cManifestSrc, 0, "files").valuePos).length());
+test.checkText("ts manifest target", "ts", json.readFieldString(tsManifestSrc, 0, "target").value);
+test.checkText("c manifest target", "c", json.readFieldString(cManifestSrc, 0, "target").value);
+test.checkInt("ts manifest 1 file", 1, corpus.readStringListAt(tsManifestSrc, json.findField(tsManifestSrc, 0, "files").valuePos).length());
+test.checkInt("c manifest 1 file", 1, corpus.readStringListAt(cManifestSrc, json.findField(cManifestSrc, 0, "files").valuePos).length());
 test.check("ts deps > 1", tsDeps.length() > 1);
 test.check("c deps > 1", cDeps.length() > 1);
 test.checkText("ts root dep", "compiler/src/ts-root.lts", tsDeps[0]);
@@ -72,8 +72,8 @@ fixCount := fixFiles.length();
 test.checkInt("corpus fixture count", 94, fixCount);
 
 refJson := fs.readText(path.join(root, "compiler/tests/references/generated/current-artifacts.json")).text;
-refArtField := json.findObjectField(refJson, 0, "artifacts");
-refArtOffsets := json.arrayElementOffsets(refJson, refArtField.valuePos);
+refArtField := json.findField(refJson, 0, "artifacts");
+refArtOffsets := json.arrayOffsets(refJson, refArtField.valuePos);
 
 fixNames: mut List<String> = [];
 fixCats: mut List<String> = [];
@@ -99,7 +99,7 @@ loop fi < fixCount {
     pFn := corpus.parseFixtureFilename(fileName);
     test.check("valid fixture filename: " + fileName, pFn.ok);
     fixJson := fs.readText(absFix).text;
-    srcField := json.findObjectField(fixJson, 0, "source");
+    srcField := json.findField(fixJson, 0, "source");
     srcText := unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, srcField.valuePos, compDir));
     test.check("fixture UTF-8 source: " + fileName, srcText.ok);
 
@@ -107,11 +107,11 @@ loop fi < fixCount {
     mut fixCats.pushBack(pFn.category);
     mut fixSlugs.pushBack(pFn.slug);
 
-    cField := json.findObjectField(fixJson, 0, "cases");
-    cOffs := json.arrayElementOffsets(fixJson, cField.valuePos);
+    cField := json.findField(fixJson, 0, "cases");
+    cOffs := json.arrayOffsets(fixJson, cField.valuePos);
     test.check("cases array non-empty: " + fileName, cOffs.length() > 0);
     c0 := cOffs[0];
-    cName := json.readObjectString(fixJson, c0, "name").value;
+    cName := json.readFieldString(fixJson, c0, "name").value;
     caseKey := fileName + "/" + cName;
     test.check("unique case key: " + caseKey, not fixCaseKeys.contains(caseKey));
     mut fixCaseKeys.pushBack(caseKey);
@@ -119,10 +119,10 @@ loop fi < fixCount {
     srcTmp := path.join(workDir, "src-" + fi.toText() + ".lts");
     _ws := fs.writeText(srcTmp, srcText.text);
 
-    inField := json.findObjectField(fixJson, c0, "input");
-    outField := json.findObjectField(fixJson, c0, "stdout");
-    errField := json.findObjectField(fixJson, c0, "stderr");
-    expExit := json.readObjectInt(fixJson, c0, "exitCode").value;
+    inField := json.findField(fixJson, c0, "input");
+    outField := json.findField(fixJson, c0, "stdout");
+    errField := json.findField(fixJson, c0, "stderr");
+    expExit := json.readFieldInt(fixJson, c0, "exitCode").value;
     expOut := if outField.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, outField.valuePos, compDir)).text } else { "" };
     expErr := if errField.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, errField.valuePos, compDir)).text } else { "" };
     inPath := path.join(workDir, "in-" + fi.toText() + ".bin");
@@ -161,7 +161,7 @@ loop ciAll < fixCount {
 }
 jobs := pool.cpuCount();
 cRaw := pool.runPoolJson(cCmds, cArgs, root, jobs);
-cOffs := json.arrayElementOffsets(cRaw, 0);
+cOffs := json.arrayOffsets(cRaw, 0);
 test.checkInt("c corpus compile count", fixCount, cOffs.length());
 
 ccInfo := compilerTest.probeCc();
@@ -173,15 +173,15 @@ var ri := 0;
 var pSeq := 0;
 loop ri < fixCount {
     pos := cOffs[ri];
-    st := json.readObjectInt(cRaw, pos, "status").value;
-    out := json.readObjectString(cRaw, pos, "stdout").value;
-    err := json.readObjectString(cRaw, pos, "stderr").value;
+    st := json.readFieldInt(cRaw, pos, "status").value;
+    out := json.readFieldString(cRaw, pos, "stdout").value;
+    err := json.readFieldString(cRaw, pos, "stderr").value;
     if fixCats[ri] == "rejected" {
         fixJson := fs.readText(fixFiles[ri]).text;
-        cOff0 := json.arrayElementOffsets(fixJson, json.findObjectField(fixJson, 0, "cases").valuePos)[0];
-        outF := json.findObjectField(fixJson, cOff0, "stdout");
-        errF := json.findObjectField(fixJson, cOff0, "stderr");
-        expEx := json.readObjectInt(fixJson, cOff0, "exitCode").value;
+        cOff0 := json.arrayOffsets(fixJson, json.findField(fixJson, 0, "cases").valuePos)[0];
+        outF := json.findField(fixJson, cOff0, "stdout");
+        errF := json.findField(fixJson, cOff0, "stderr");
+        expEx := json.readFieldInt(fixJson, cOff0, "exitCode").value;
         expOut := if outF.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, outF.valuePos, compDir)).text } else { "" };
         expErr := if errF.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, errF.valuePos, compDir)).text } else { "" };
         test.checkInt("c reject exit " + fixNames[ri], expEx, st);
@@ -193,8 +193,8 @@ loop ri < fixCount {
         slug := fixSlugs[ri];
         var expCHash := "";
         loop refArtOffsets as aPos {
-            if json.readObjectString(refJson, aPos, "name").value == slug {
-                expCHash = json.readObjectString(refJson, aPos, "c").value;
+            if json.readFieldString(refJson, aPos, "name").value == slug {
+                expCHash = json.readFieldString(refJson, aPos, "c").value;
                 break;
             }
         }
@@ -215,12 +215,12 @@ loop ri < fixCount {
 /* Lite-generated native C, TS and igniter programs have identical output bytes and status */
 if ccInfo.available and not skipHeavy {
     ccRaw := pool.runPoolJson(ccCmds, ccArgs, workDir, jobs);
-    ccOffs := json.arrayElementOffsets(ccRaw, 0);
+    ccOffs := json.arrayOffsets(ccRaw, 0);
     test.checkInt("cc pool count", progCount, ccOffs.length());
     var cci := 0;
     loop cci < progCount {
-        ccSt := json.readObjectInt(ccRaw, ccOffs[cci], "status").value;
-        ccErr := json.readObjectString(ccRaw, ccOffs[cci], "stderr").value;
+        ccSt := json.readFieldInt(ccRaw, ccOffs[cci], "status").value;
+        ccErr := json.readFieldString(ccRaw, ccOffs[cci], "stderr").value;
         test.checkInt("cc compile " + cci.toText() + ": " + ccErr, 0, ccSt);
 
         inBytes := fs.readBytes(progStdinFiles[cci]);

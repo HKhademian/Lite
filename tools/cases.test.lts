@@ -4,7 +4,7 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 root := project.findRepoRoot();
@@ -27,8 +27,8 @@ test.check("lite-test --cases process error: " + res.error, res.error == "");
 sumRead := fs.readText(summaryPath);
 test.check("summary.json created (exit status " + json.quoteString(fs.readText(errPath).text) + ")", sumRead.ok);
 
-failuresRes := json.readObjectInt(sumRead.text, 0, "failures");
-countRes := json.readObjectInt(sumRead.text, 0, "count");
+failuresRes := json.readFieldInt(sumRead.text, 0, "failures");
+countRes := json.readFieldInt(sumRead.text, 0, "count");
 test.check("summary has failures", failuresRes.found and failuresRes.ok);
 test.check("summary has count", countRes.found and countRes.ok);
 test.checkInt("declarative case failures", 0, failuresRes.value);

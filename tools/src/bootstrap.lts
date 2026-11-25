@@ -6,7 +6,7 @@ io := import "core/io";
 path := import "core/path";
 proc := import "core/process";
 time := import "core/time";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 /** Returns CLI usage text for `lite bootstrap`. */
@@ -81,10 +81,10 @@ readSeedProvenance := fn(rootDir: String): (
         return (ok = false, igniterSha256 = "", sourceSha256 = "", artifactSha256 = "", cArtifactSha256 = "",
         error = "bootstrap: invalid compiler/bootstrap/seed.ts object");
     }
-    ignField := json.readObjectString(seedRead.text, brace, "igniterSha256");
-    srcField := json.readObjectString(seedRead.text, brace, "sourceSha256");
-    artField := json.readObjectString(seedRead.text, brace, "artifactSha256");
-    cArtField := json.readObjectString(seedRead.text, brace, "cArtifactSha256");
+    ignField := json.readFieldString(seedRead.text, brace, "igniterSha256");
+    srcField := json.readFieldString(seedRead.text, brace, "sourceSha256");
+    artField := json.readFieldString(seedRead.text, brace, "artifactSha256");
+    cArtField := json.readFieldString(seedRead.text, brace, "cArtifactSha256");
     if not ignField.found or not ignField.ok or
        not srcField.found or not srcField.ok or
        not artField.found or not artField.ok or
@@ -114,27 +114,27 @@ runTsSelfHost := fn(rootDir: String, tsOutDir: String): (
         error = "bootstrap: cannot read TS self-host ladder.json: " + ladderRead.error);
     }
     doc := ladderRead.text;
-    fp := json.readObjectBool(doc, 0, "fixedPoint");
-    mSel := json.readObjectBool(doc, 0, "matchesSelectedCompiler");
-    eqBld := json.readObjectBool(doc, 0, "equalsSelectedBuilder");
+    fp := json.readFieldBool(doc, 0, "fixedPoint");
+    mSel := json.readFieldBool(doc, 0, "matchesSelectedCompiler");
+    eqBld := json.readFieldBool(doc, 0, "equalsSelectedBuilder");
     if not fp.found or not fp.ok or not fp.value {
         return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
         error = "bootstrap: TS 3-generation self-host did not reach a fixed point");
     }
-    selObj := json.findObjectField(doc, 0, "selected");
-    srcObj := json.findObjectField(doc, 0, "source");
-    gensArr := json.findObjectField(doc, 0, "generations");
+    selObj := json.findField(doc, 0, "selected");
+    srcObj := json.findField(doc, 0, "source");
+    gensArr := json.findField(doc, 0, "generations");
     if not selObj.found or not srcObj.found or not gensArr.found {
         return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
         error = "bootstrap: unexpected TS self-host ladder.json shape");
     }
-    selArt := json.readObjectString(doc, selObj.valuePos, "artifactSha256");
-    srcSha := json.readObjectString(doc, srcObj.valuePos, "sha256");
+    selArt := json.readFieldString(doc, selObj.valuePos, "artifactSha256");
+    srcSha := json.readFieldString(doc, srcObj.valuePos, "sha256");
     if not selArt.found or not selArt.ok or selArt.value == "" or not srcSha.found or not srcSha.ok {
         return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
         error = "bootstrap: missing source/artifact hashes in TS self-host ladder.json");
     }
-    offsets := json.arrayElementOffsets(doc, gensArr.valuePos);
+    offsets := json.arrayOffsets(doc, gensArr.valuePos);
     if offsets.length() =!= 3 {
         return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
         error = "bootstrap: expected 3 TS generations in ladder.json");
@@ -144,8 +144,8 @@ runTsSelfHost := fn(rootDir: String, tsOutDir: String): (
     var idx := 0;
     loop idx < 3 {
         gPos := offsets[idx];
-        gSha := json.readObjectString(doc, gPos, "artifactSha256");
-        gPath := json.readObjectString(doc, gPos, "path");
+        gSha := json.readFieldString(doc, gPos, "artifactSha256");
+        gPath := json.readFieldString(doc, gPos, "path");
         if not gSha.found or not gSha.ok or gSha.value == "" {
             return (ok = false, sourceSha256 = "", artifactSha256 = "", gen3Path = "", matchesSelected = false, equalsBuilder = false,
             error = "bootstrap: missing TS generation hash in ladder.json");

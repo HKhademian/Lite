@@ -1,31 +1,31 @@
 /** Generates `/`, `/gallery/`, and `/playground/` page bodies (`site/build.ts`). */
 
 text := import "core/text";
-json := import "util/json";
+json := import "data/json";
 siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
 
 readOptStr := fn(src: String, objPos: Int, key: String): String {
-    res := json.readObjectString(src, objPos, key);
+    res := json.readFieldString(src, objPos, key);
     if res.found and res.ok { res.value } else { "" }
 };
 
 readOptInt := fn(src: String, objPos: Int, key: String): Int {
-    res := json.readObjectInt(src, objPos, key);
+    res := json.readFieldInt(src, objPos, key);
     if res.found and res.ok { res.value } else { 0 }
 };
 
 readOptBool := fn(src: String, objPos: Int, key: String): Bool {
-    res := json.readObjectBool(src, objPos, key);
+    res := json.readFieldBool(src, objPos, key);
     if res.found and res.ok { res.value } else { false }
 };
 
 readStringList := fn(src: String, objPos: Int, key: String): List<String> {
     out: mut List<String> = [];
-    fld := json.findObjectField(src, objPos, key);
+    fld := json.findField(src, objPos, key);
     if not fld.found { return out; }
-    offs := json.arrayElementOffsets(src, fld.valuePos);
+    offs := json.arrayOffsets(src, fld.valuePos);
     loop offs as off {
         r := json.readStringAt(src, off);
         if r.ok {
@@ -107,7 +107,7 @@ renderHomeBody := fn(src: String, renderedOffs: List<Int>): String {
     heroSampleId := readOptStr(src, 0, "heroSampleId");
     heroSampleFile := readOptStr(src, 0, "heroSampleFile");
 
-    countsField := json.findObjectField(src, 0, "counts");
+    countsField := json.findField(src, 0, "counts");
     cPos := if countsField.found { countsField.valuePos } else { 0 };
     lessons := readOptInt(src, cPos, "lessons").toText();
     tutorials := readOptInt(src, cPos, "tutorials").toText();
@@ -696,18 +696,18 @@ pub buildSitePagesJson := fn(inputJson: String): (ok: Bool, jsonText: String, er
     if not valid.ok {
         return (ok = false, jsonText = "", error = "site-pages: invalid input JSON: " + valid.error);
     }
-    sgField := json.findObjectField(inputJson, 0, "sampleGroups");
-    pgField := json.findObjectField(inputJson, 0, "playGroups");
-    rsField := json.findObjectField(inputJson, 0, "renderedSamples");
-    rpField := json.findObjectField(inputJson, 0, "renderedPlaySamples");
+    sgField := json.findField(inputJson, 0, "sampleGroups");
+    pgField := json.findField(inputJson, 0, "playGroups");
+    rsField := json.findField(inputJson, 0, "renderedSamples");
+    rpField := json.findField(inputJson, 0, "renderedPlaySamples");
     if not sgField.found or not pgField.found or not rsField.found or not rpField.found {
         return (ok = false, jsonText = "", error = "site-pages: input JSON requires sampleGroups, playGroups, renderedSamples, and renderedPlaySamples");
     }
 
-    sampleGroupOffs := json.arrayElementOffsets(inputJson, sgField.valuePos);
-    playGroupOffs := json.arrayElementOffsets(inputJson, pgField.valuePos);
-    renderedOffs := json.arrayElementOffsets(inputJson, rsField.valuePos);
-    renderedPlayOffs := json.arrayElementOffsets(inputJson, rpField.valuePos);
+    sampleGroupOffs := json.arrayOffsets(inputJson, sgField.valuePos);
+    playGroupOffs := json.arrayOffsets(inputJson, pgField.valuePos);
+    renderedOffs := json.arrayOffsets(inputJson, rsField.valuePos);
+    renderedPlayOffs := json.arrayOffsets(inputJson, rpField.valuePos);
 
     homeBody := renderHomeBody(inputJson, renderedOffs);
     galleryBody := renderGalleryBody(inputJson, sampleGroupOffs, playGroupOffs, renderedOffs, renderedPlayOffs);

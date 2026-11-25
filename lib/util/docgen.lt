@@ -3,7 +3,7 @@
 fs := import "core/file";
 text := import "core/text";
 path := import "core/path";
-json := import "util/json";
+json := import "data/json";
 tb := import "util/text-builder";
 
 /** Strips leading block-comment delimiters, trailing close markers, and per-line `*` prefixes from a block comment body. */

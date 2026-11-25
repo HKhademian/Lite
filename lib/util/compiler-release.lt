@@ -9,7 +9,7 @@ text := import "core/text";
 list := import "core/list";
 crypto := import "core/crypto";
 unicode := import "core/unicode";
-json := import "util/json";
+json := import "data/json";
 streams := import "util/streams";
 cases := import "util/cases";
 rel := import "util/release";
@@ -95,15 +95,15 @@ pub validateReleaseJsonText := fn(filePath: String, rootDir: String): (ok: Bool,
     if not json.validate(src).ok {
         return (ok = false, text = "", label = "", commit = "", error = filePath + ": invalid JSON");
     }
-    sv := json.readObjectInt(src, 0, "schemaVersion");
+    sv := json.readFieldInt(src, 0, "schemaVersion");
     if not sv.found or not sv.ok or sv.value =!= 2 {
         return (ok = false, text = "", label = "", commit = "", error = filePath + ": expected schemaVersion 2");
     }
-    lbl := json.readObjectString(src, 0, "label");
+    lbl := json.readFieldString(src, 0, "label");
     if not lbl.found or not lbl.ok {
         return (ok = false, text = "", label = "", commit = "", error = filePath + ": missing label");
     }
-    compField := json.findObjectField(src, 0, "releasedComponent");
+    compField := json.findField(src, 0, "releasedComponent");
     if not compField.found {
         return (ok = false, text = "", label = "", commit = "", error = filePath + ": missing releasedComponent");
     }
@@ -112,8 +112,8 @@ pub validateReleaseJsonText := fn(filePath: String, rootDir: String): (ok: Bool,
         if not parsed.ok {
             return (ok = false, text = "", label = "", commit = "", error = parsed.error);
         }
-        rcComp := json.readObjectString(src, compField.valuePos, "component");
-        rcVer := json.readObjectString(src, compField.valuePos, "version");
+        rcComp := json.readFieldString(src, compField.valuePos, "component");
+        rcVer := json.readFieldString(src, compField.valuePos, "version");
         if not rcComp.found or rcComp.value =!= parsed.component or not rcVer.found or rcVer.value =!= parsed.version {
             return (ok = false, text = "", label = "", commit = "", error = filePath + ": releasedComponent mismatch");
         }
@@ -121,11 +121,11 @@ pub validateReleaseJsonText := fn(filePath: String, rootDir: String): (ok: Bool,
     } else if src.slice(compField.valuePos, src.length()).trim().at(0) =!= "n" {
         return (ok = false, text = "", label = "", commit = "", error = filePath + ": snapshot release must have null releasedComponent");
     }
-    com := json.readObjectString(src, 0, "commit");
+    com := json.readFieldString(src, 0, "commit");
     if not com.found or not com.ok or not isLowerHex(com.value, 40) {
         return (ok = false, text = "", label = "", commit = "", error = filePath + ": invalid commit hash");
     }
-    progs := json.findObjectField(src, 0, "programs");
+    progs := json.findField(src, 0, "programs");
     if not progs.found {
         return (ok = false, text = "", label = "", commit = "", error = filePath + ": missing programs array");
     }
@@ -182,7 +182,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
     label := if hasTag { tag } else { "snapshot-" + commit.slice(0, 12) };
     ignPkgRead := fs.readText(path.join(rootDir, "igniter/package.json"));
     if not ignPkgRead.ok { io.errorLine(ignPkgRead.error); return 1; }
-    igniterVer := json.readObjectString(ignPkgRead.text, 0, "version").value;
+    igniterVer := json.readFieldString(ignPkgRead.text, 0, "version").value;
 
     var relCompJson := "null";
     if hasTag {
@@ -228,7 +228,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
         if not built.ok { _rm := fs.remove(workDir); io.errorLine(built.error); return 1; }
         manPath := path.join(rootDir, "compiler/manifests/" + t + ".json");
         manText := fs.readText(manPath).text;
-        manFiles := corpus.readStringListAt(manText, json.findObjectField(manText, 0, "files").valuePos);
+        manFiles := corpus.readStringListAt(manText, json.findField(manText, 0, "files").valuePos);
         if manFiles.length() =!= 1 {
             _rm := fs.remove(workDir);
             io.errorLine(t + " source graph has one root");
@@ -248,7 +248,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
         _cpB := fs.copy(built.artifactPath, path.join(genDir, t + "-compiler.ts"));
         _wS := fs.writeBytes(path.join(genDir, t + "-source.lts"), srcBytes);
 
-        depField := json.findObjectField(built.rawJson, 0, "dependencies");
+        depField := json.findField(built.rawJson, 0, "dependencies");
         depList := corpus.readStringListAt(built.rawJson, depField.valuePos);
         depJsonRes := corpus.toolIdentitiesJson(rootDir, depList);
         if not depJsonRes.ok { _rm := fs.remove(workDir); io.errorLine(depJsonRes.error); return 1; }
@@ -268,7 +268,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
         if fName.startsWithAt(0, "001-") {
             progName := fName.slice(0, fName.length() - 5);
             fixJson := fs.readText(absFix).text;
-            srcField := json.findObjectField(fixJson, 0, "source");
+            srcField := json.findField(fixJson, 0, "source");
             srcChk := streams.validateStream(fixJson, srcField.valuePos, fixturesDir, fName + ".source", false, false, true);
             if not srcChk.ok { _rm := fs.remove(workDir); io.errorLine(srcChk.error); return 1; }
             srcBytes := streams.readStreamBytes(fixJson, srcField.valuePos, fixturesDir);
@@ -280,13 +280,13 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
             srcSha := crypto.sha256Bytes(srcBytes);
 
             caseEntries: mut List<String> = [];
-            casesField := json.findObjectField(fixJson, 0, "cases");
-            loop json.arrayElementOffsets(fixJson, casesField.valuePos) as sPos {
-                sName := json.readObjectString(fixJson, sPos, "name").value;
-                exitCode := json.readObjectInt(fixJson, sPos, "exitCode").value;
-                inF := json.findObjectField(fixJson, sPos, "stdin");
-                outF := json.findObjectField(fixJson, sPos, "stdout");
-                errF := json.findObjectField(fixJson, sPos, "stderr");
+            casesField := json.findField(fixJson, 0, "cases");
+            loop json.arrayOffsets(fixJson, casesField.valuePos) as sPos {
+                sName := json.readFieldString(fixJson, sPos, "name").value;
+                exitCode := json.readFieldInt(fixJson, sPos, "exitCode").value;
+                inF := json.findField(fixJson, sPos, "stdin");
+                outF := json.findField(fixJson, sPos, "stdout");
+                errF := json.findField(fixJson, sPos, "stderr");
                 inB := if inF.found { streams.readStreamBytes(fixJson, inF.valuePos, fixturesDir) } else { emptyBytes };
                 outB := if outF.found { streams.readStreamBytes(fixJson, outF.valuePos, fixturesDir) } else { emptyBytes };
                 errB := if errF.found { streams.readStreamBytes(fixJson, errF.valuePos, fixturesDir) } else { emptyBytes };
@@ -304,7 +304,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
         return 1;
     }
 
-    tsPkgVer := json.readObjectString(fs.readText(path.join(rootDir, "igniter/node_modules/typescript/package.json")).text, 0, "version").value;
+    tsPkgVer := json.readFieldString(fs.readText(path.join(rootDir, "igniter/node_modules/typescript/package.json")).text, 0, "version").value;
     releaseJson := "{\n"
     + "  \"schemaVersion\": 2,\n"
     + "  \"label\": " + json.quoteString(label) + ",\n"
@@ -368,13 +368,13 @@ runNative := fn(rootDir: String, outDir: String, inputDir: String): Int {
     ccEnv := proc.envGet("CC");
     cc := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
 
-    progsField := json.findObjectField(relInfo.text, 0, "programs");
+    progsField := json.findField(relInfo.text, 0, "programs");
     progReportEntries: mut List<String> = [];
     emptyEnv: List<String> = [];
 
-    loop json.arrayElementOffsets(relInfo.text, progsField.valuePos) as pPos {
-        pName := json.readObjectString(relInfo.text, pPos, "name").value;
-        pCSha := json.readObjectString(relInfo.text, pPos, "cSha256").value;
+    loop json.arrayOffsets(relInfo.text, progsField.valuePos) as pPos {
+        pName := json.readFieldString(relInfo.text, pPos, "name").value;
+        pCSha := json.readFieldString(relInfo.text, pPos, "cSha256").value;
         if not isValidProgramArchiveName(pName) {
             _rm := fs.remove(workDir);
             io.errorLine("invalid program name: " + pName);
@@ -392,15 +392,15 @@ runNative := fn(rootDir: String, outDir: String, inputDir: String): Int {
         compRes := runCheckedText(cc, ccArgs, workDir);
         if not compRes.ok { _rm := fs.remove(workDir); io.errorLine(compRes.error); return 1; }
 
-        cField := json.findObjectField(relInfo.text, pPos, "cases");
-        caseOffsets := json.arrayElementOffsets(relInfo.text, cField.valuePos);
+        cField := json.findField(relInfo.text, pPos, "cases");
+        caseOffsets := json.arrayOffsets(relInfo.text, cField.valuePos);
         var si := 0;
         loop caseOffsets as sPos {
-            sName := json.readObjectString(relInfo.text, sPos, "name").value;
-            inB64 := json.readObjectString(relInfo.text, sPos, "stdin").value;
-            outB64 := json.readObjectString(relInfo.text, sPos, "stdout").value;
-            errB64 := json.readObjectString(relInfo.text, sPos, "stderr").value;
-            expExit := json.readObjectInt(relInfo.text, sPos, "exitCode").value;
+            sName := json.readFieldString(relInfo.text, sPos, "name").value;
+            inB64 := json.readFieldString(relInfo.text, sPos, "stdin").value;
+            outB64 := json.readFieldString(relInfo.text, sPos, "stdout").value;
+            errB64 := json.readFieldString(relInfo.text, sPos, "stderr").value;
+            expExit := json.readFieldInt(relInfo.text, sPos, "exitCode").value;
 
             inBytes := crypto.base64Decode(inB64);
             expOutBytes := crypto.base64Decode(outB64);
@@ -467,9 +467,9 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
         natPath := path.join(outDir, "native-" + t + ".json");
         natRead := fs.readText(natPath);
         if not natRead.ok { io.errorLine(natRead.error); return 1; }
-        if json.readObjectString(natRead.text, 0, "target").value =!= t
-        or json.readObjectString(natRead.text, 0, "commit").value =!= relInfo.commit
-        or json.readObjectString(natRead.text, 0, "label").value =!= relInfo.label {
+        if json.readFieldString(natRead.text, 0, "target").value =!= t
+        or json.readFieldString(natRead.text, 0, "commit").value =!= relInfo.commit
+        or json.readFieldString(natRead.text, 0, "label").value =!= relInfo.label {
             io.errorLine("native report metadata mismatch for " + t);
             return 1;
         }
@@ -502,9 +502,9 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
     + "  \"workflowRun\": " + runJson + "\n}\n";
     _wm := fs.writeText(path.join(outDir, "manifest.json"), manifestJson);
 
-    ignVer := json.readObjectString(relInfo.text, 0, "igniterVersion").value;
-    progsField := json.findObjectField(relInfo.text, 0, "programs");
-    progCount := json.arrayElementOffsets(relInfo.text, progsField.valuePos).length();
+    ignVer := json.readFieldString(relInfo.text, 0, "igniterVersion").value;
+    progsField := json.findField(relInfo.text, 0, "programs");
+    progCount := json.arrayOffsets(relInfo.text, progsField.valuePos).length();
 
     notes := "Igniter snapshot " + relInfo.label + "\n\n"
     + "Source commit: " + relInfo.commit + ". Igniter package: " + ignVer + ".\n\n"

@@ -10,7 +10,7 @@ time := import "core/time";
 unicode := import "core/unicode";
 list := import "core/list";
 path := import "core/path";
-json := import "util/json";
+json := import "data/json";
 streams := import "util/streams";
 cases := import "util/cases";
 compilerBuild := import "util/compiler-build";
@@ -50,14 +50,14 @@ isJsonArrayAt := fn(source: String, start: Int): Bool {
 };
 
 checkStringArrayField := fn(source: String, objPos: Int, key: String, label: String): (found: Bool, ok: Bool, error: String) {
-    field := json.findObjectField(source, objPos, key);
+    field := json.findField(source, objPos, key);
     if not field.found {
         return (found = false, ok = true, error = "");
     }
     if not isJsonArrayAt(source, field.valuePos) {
         return (found = true, ok = false, error = label + "." + key + ": expected an array of strings");
     }
-    loop json.arrayElementOffsets(source, field.valuePos) as elPos {
+    loop json.arrayOffsets(source, field.valuePos) as elPos {
         s := json.readStringAt(source, elPos);
         if not s.ok {
             return (found = true, ok = false, error = label + "." + key + ": expected an array of strings");
@@ -68,11 +68,11 @@ checkStringArrayField := fn(source: String, objPos: Int, key: String, label: Str
 
 readStringArrayField := fn(source: String, objPos: Int, key: String): List<String> {
     out: mut List<String> = [];
-    field := json.findObjectField(source, objPos, key);
+    field := json.findField(source, objPos, key);
     if not field.found or not isJsonArrayAt(source, field.valuePos) {
         return out;
     }
-    loop json.arrayElementOffsets(source, field.valuePos) as elPos {
+    loop json.arrayOffsets(source, field.valuePos) as elPos {
         s := json.readStringAt(source, elPos);
         if s.ok {
             mut out.pushBack(s.value);
@@ -251,7 +251,7 @@ checkVerifyStream := fn(source: String, streamPos: Int, baseDir: String, label: 
     if not isJsonObjectAt(source, streamPos) {
         return (ok = false, kind = "", error = label + ": expected an object");
     }
-    fileField := json.findObjectField(source, streamPos, "file");
+    fileField := json.findField(source, streamPos, "file");
     if fileField.found {
         fStr := json.readStringAt(source, fileField.valuePos);
         if not fStr.ok {
@@ -293,13 +293,13 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
             return (ok = false, text = "", error = "language/verifications/features.json: unexpected key " + k);
         }
     }
-    featField := json.findObjectField(src, 0, "features");
+    featField := json.findField(src, 0, "features");
     if not featField.found or not isJsonArrayAt(src, featField.valuePos) {
         return (ok = false, text = "", error = "language/verifications/features.json: features must be an array");
     }
 
     ids: mut Set<String>;
-    offsets := json.arrayElementOffsets(src, featField.valuePos);
+    offsets := json.arrayOffsets(src, featField.valuePos);
     var idx := 0;
     loop offsets as itemPos {
         label := "language/verifications/features.json: features[" + idx.toText() + "]";
@@ -312,22 +312,22 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
                 return (ok = false, text = "", error = label + ": unexpected key " + ik);
             }
         }
-        idRes := json.readObjectString(src, itemPos, "id");
+        idRes := json.readFieldString(src, itemPos, "id");
         if not idRes.found or not idRes.ok {
             return (ok = false, text = "", error = label + ".id: expected a string");
         }
         if ids.has(idRes.value) {
             return (ok = false, text = "", error = label + ": duplicate feature " + idRes.value);
         }
-        sumRes := json.readObjectString(src, itemPos, "summary");
+        sumRes := json.readFieldString(src, itemPos, "summary");
         if not sumRes.found or not sumRes.ok {
             return (ok = false, text = "", error = label + ".summary: expected a string");
         }
-        stRes := json.readObjectString(src, itemPos, "status");
+        stRes := json.readFieldString(src, itemPos, "status");
         if not stRes.found or not stRes.ok or (stRes.value =!= "verified" and stRes.value =!= "pending") {
             return (ok = false, text = "", error = label + ".status: expected verified or pending");
         }
-        caseRes := json.readObjectString(src, itemPos, "case");
+        caseRes := json.readFieldString(src, itemPos, "case");
         if not caseRes.found or not caseRes.ok {
             return (ok = false, text = "", error = label + ".case: expected a string");
         }
@@ -351,10 +351,10 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
 
 registryFeatureIds := fn(regSrc: String, verifiedOnly: Bool): List<String> {
     out: mut List<String> = [];
-    featField := json.findObjectField(regSrc, 0, "features");
-    loop json.arrayElementOffsets(regSrc, featField.valuePos) as itemPos {
-        if not verifiedOnly or json.readObjectString(regSrc, itemPos, "status").value == "verified" {
-            mut out.pushBack(json.readObjectString(regSrc, itemPos, "id").value);
+    featField := json.findField(regSrc, 0, "features");
+    loop json.arrayOffsets(regSrc, featField.valuePos) as itemPos {
+        if not verifiedOnly or json.readFieldString(regSrc, itemPos, "status").value == "verified" {
+            mut out.pushBack(json.readFieldString(regSrc, itemPos, "id").value);
         }
     }
     out
@@ -389,17 +389,17 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
             return failManifestText(label + ": unexpected key " + k);
         }
     }
-    kindRes := json.readObjectString(src, 0, "kind");
+    kindRes := json.readFieldString(src, 0, "kind");
     if not kindRes.found or not kindRes.ok or kindRes.value =!= expectedKind {
         return failManifestText(label + ": kind must be " + expectedKind);
     }
-    idRes := json.readObjectString(src, 0, "id");
+    idRes := json.readFieldString(src, 0, "id");
     if not idRes.found or not idRes.ok {
         return failManifestText(label + ".id: expected a string");
     }
     manifestId := idRes.value;
 
-    sourceField := json.findObjectField(src, 0, "source");
+    sourceField := json.findField(src, 0, "source");
     if not sourceField.found or not isJsonObjectAt(src, sourceField.valuePos) {
         return failManifestText(label + ".source: expected an object");
     }
@@ -412,10 +412,10 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
     var sourcePath := "";
     if srcStream.kind == "file" {
         hasSourceFile = true;
-        sourceFile = json.readObjectString(src, sourceField.valuePos, "file").value;
+        sourceFile = json.readFieldString(src, sourceField.valuePos, "file").value;
         sourcePath = path.resolve(fileDir, sourceFile);
     }
-    srcHashRes := json.readObjectString(src, sourceField.valuePos, "hash");
+    srcHashRes := json.readFieldString(src, sourceField.valuePos, "hash");
     sourceHashField := if srcHashRes.found { srcHashRes.value } else { "" };
 
     featCheck := checkStringArrayField(src, 0, "features", label);
@@ -454,7 +454,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         }
     }
 
-    guideField := json.findObjectField(src, 0, "guideline");
+    guideField := json.findField(src, 0, "guideline");
     if guideField.found {
         gStr := json.readStringAt(src, guideField.valuePos);
         if not gStr.ok { return failManifestText(label + ".guideline: expected a string"); }
@@ -462,7 +462,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         return failManifestText(label + ".guideline: feature cases require a guideline");
     }
 
-    descField := json.findObjectField(src, 0, "description");
+    descField := json.findField(src, 0, "description");
     if descField.found {
         dStr := json.readStringAt(src, descField.valuePos);
         if not dStr.ok { return failManifestText(label + ".description: expected a string"); }
@@ -470,7 +470,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
 
     var hasAppend := false;
     var appendText := "";
-    appField := json.findObjectField(src, 0, "append");
+    appField := json.findField(src, 0, "append");
     if appField.found {
         aStr := json.readStringAt(src, appField.valuePos);
         if not aStr.ok { return failManifestText(label + ".append: expected a string"); }
@@ -478,11 +478,11 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         appendText = aStr.value;
     }
 
-    casesField := json.findObjectField(src, 0, "cases");
+    casesField := json.findField(src, 0, "cases");
     if not casesField.found or not isJsonArrayAt(src, casesField.valuePos) {
         return failManifestText(label + ".cases: at least one case is required");
     }
-    caseOffsets := json.arrayElementOffsets(src, casesField.valuePos);
+    caseOffsets := json.arrayOffsets(src, casesField.valuePos);
     if caseOffsets.length() == 0 {
         return failManifestText(label + ".cases: at least one case is required");
     }
@@ -500,7 +500,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
                 return failManifestText(sLabel + ": unexpected key " + sk);
             }
         }
-        sNameRes := json.readObjectString(src, sPos, "name");
+        sNameRes := json.readFieldString(src, sPos, "name");
         if not sNameRes.found or not sNameRes.ok {
             return failManifestText(sLabel + ".name: expected a string");
         }
@@ -512,21 +512,21 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         sArgsCheck := checkStringArrayField(src, sPos, "args", sLabel);
         if sArgsCheck.found and not sArgsCheck.ok { return failManifestText(sArgsCheck.error); }
 
-        exitRes := json.readObjectInt(src, sPos, "exitCode");
+        exitRes := json.readFieldInt(src, sPos, "exitCode");
         if not exitRes.found or not exitRes.ok or exitRes.value < 0 or exitRes.value > 255 {
             return failManifestText(sLabel + ".exitCode: expected a byte");
         }
-        stdinField := json.findObjectField(src, sPos, "stdin");
+        stdinField := json.findField(src, sPos, "stdin");
         if stdinField.found {
             st1 := checkVerifyStream(src, stdinField.valuePos, fileDir, sLabel + ".stdin", false, false);
             if not st1.ok { return failManifestText(st1.error); }
         }
-        stdoutField := json.findObjectField(src, sPos, "stdout");
+        stdoutField := json.findField(src, sPos, "stdout");
         if stdoutField.found {
             st2 := checkVerifyStream(src, stdoutField.valuePos, fileDir, sLabel + ".stdout", false, false);
             if not st2.ok { return failManifestText(st2.error); }
         }
-        stderrField := json.findObjectField(src, sPos, "stderr");
+        stderrField := json.findField(src, sPos, "stderr");
         if stderrField.found {
             st3 := checkVerifyStream(src, stderrField.valuePos, fileDir, sLabel + ".stderr", false, false);
             if not st3.ok { return failManifestText(st3.error); }
@@ -594,8 +594,8 @@ countSourcesIn := fn(rootDir: String, relDir: String): Int {
 
 readManifestSourceName := fn(file: String): String {
     srcText := fs.readText(file).text;
-    sf := json.findObjectField(srcText, 0, "source");
-    fRes := json.readObjectString(srcText, sf.valuePos, "file");
+    sf := json.findField(srcText, 0, "source");
+    fRes := json.readFieldString(srcText, sf.valuePos, "file");
     if fRes.found { fRes.value } else { "(inline text)" }
 };
 
@@ -644,7 +644,7 @@ resolveCompilerBuild := fn(rootDir: String): (ok: Bool, compilerPath: String, se
     seedRead := fs.readText(path.join(rootDir, "compiler/bootstrap/seed.ts"));
     var seedArtifact := "compiler.ts";
     if seedRead.ok {
-        artRes := json.readObjectString(seedRead.text, seedRead.text.indexOf("{", 0), "artifact");
+        artRes := json.readFieldString(seedRead.text, seedRead.text.indexOf("{", 0), "artifact");
         if artRes.found and artRes.ok { seedArtifact = artRes.value; }
     }
     built := compilerBuild.buildCompiler(rootDir, "ts");
@@ -669,7 +669,7 @@ computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool
     "lib/util/verify.lt",
     "lib/util/cases.lt",
     "lib/util/streams.lt",
-    "lib/util/json.lt",
+    "lib/data/json.lt",
     "lib/util/compiler-build.lt",
     "tools/src/compiler-build.lts",
     "compiler/bootstrap/igniter.ts",
@@ -703,14 +703,14 @@ loadVerifyCache := fn(cacheFile: String, enabled: Bool): Set<String> {
     if not readRes.ok or not json.validate(readRes.text).ok or not isJsonObjectAt(readRes.text, 0) {
         return passed;
     }
-    verRes := json.readObjectInt(readRes.text, 0, "version");
+    verRes := json.readFieldInt(readRes.text, 0, "version");
     if not verRes.found or not verRes.ok or verRes.value =!= 1 { return passed; }
-    passedField := json.findObjectField(readRes.text, 0, "passed");
+    passedField := json.findField(readRes.text, 0, "passed");
     if not passedField.found or not isJsonObjectAt(readRes.text, passedField.valuePos) {
         return passed;
     }
     loop json.objectKeys(readRes.text, passedField.valuePos) as key {
-        val := json.readObjectBool(readRes.text, passedField.valuePos, key);
+        val := json.readFieldBool(readRes.text, passedField.valuePos, key);
         if val.found and val.ok and val.value {
             mut passed.add(key);
         }
@@ -842,7 +842,7 @@ passedKeysIn: Set<String>
     }
 
     poolRaw := pool.runPoolJson(workerCmds, workerArgsJson, rootDir, workerCount);
-    poolOffsets := json.arrayElementOffsets(poolRaw, 0);
+    poolOffsets := json.arrayOffsets(poolRaw, 0);
     if poolOffsets.length() =!= workerCount {
         _rmErr := fs.remove(shardTmp.path);
         io.errorLine("lite verify: parallel worker pool returned malformed result count");
@@ -857,10 +857,10 @@ passedKeysIn: Set<String>
     var idx := 0;
     loop idx < workerCount {
         elemPos := poolOffsets[idx];
-        statusRes := json.readObjectInt(poolRaw, elemPos, "status");
-        outRes := json.readObjectString(poolRaw, elemPos, "stdout");
-        errRes := json.readObjectString(poolRaw, elemPos, "stderr");
-        errorRes := json.readObjectString(poolRaw, elemPos, "error");
+        statusRes := json.readFieldInt(poolRaw, elemPos, "status");
+        outRes := json.readFieldString(poolRaw, elemPos, "stdout");
+        errRes := json.readFieldString(poolRaw, elemPos, "stderr");
+        errorRes := json.readFieldString(poolRaw, elemPos, "error");
         wStatus := if statusRes.found and statusRes.ok { statusRes.value } else { -1 };
         wErr := if errorRes.found and errorRes.ok { errorRes.value } else { "" };
         wOut := if outRes.found and outRes.ok { outRes.value } else { "" };
@@ -880,11 +880,11 @@ passedKeysIn: Set<String>
         shardRead := fs.readText(shardResultFiles[idx]);
         if shardRead.ok and json.validate(shardRead.text).ok and isJsonObjectAt(shardRead.text, 0) {
             hasShardReport = true;
-            execRes := json.readObjectInt(shardRead.text, 0, "executed");
+            execRes := json.readFieldInt(shardRead.text, 0, "executed");
             if execRes.found and execRes.ok { executed = executed + execRes.value; }
-            cachRes := json.readObjectInt(shardRead.text, 0, "cached");
+            cachRes := json.readFieldInt(shardRead.text, 0, "cached");
             if cachRes.found and cachRes.ok { cached = cached + cachRes.value; }
-            failRes := json.readObjectInt(shardRead.text, 0, "failures");
+            failRes := json.readFieldInt(shardRead.text, 0, "failures");
             if failRes.found and failRes.ok { shardFailures = failRes.value; }
             failures = failures + shardFailures;
             loop readStringArrayField(shardRead.text, 0, "added") as ak {
@@ -992,7 +992,7 @@ invalidatesVerification := fn(relPath: String): Bool {
     "lib/util/verify.lt",
     "lib/util/cases.lt",
     "lib/util/streams.lt",
-    "lib/util/json.lt"
+    "lib/data/json.lt"
     ];
     if exact.contains(relPath) { return true; }
     prefixes: List<String> = [
@@ -1019,11 +1019,11 @@ manifestMatchesFilter := fn(rootDir: String, file: String, manifestId: String, s
 };
 
 caseCacheKey := fn(runtimeHash: String, manifestId: String, kind: String, sourceHash: String, appendText: String, srcText: String, sPos: Int): String {
-    stdinField := json.findObjectField(srcText, sPos, "stdin");
-    stdoutField := json.findObjectField(srcText, sPos, "stdout");
-    stderrField := json.findObjectField(srcText, sPos, "stderr");
-    argsField := json.findObjectField(srcText, sPos, "args");
-    exitCode := json.readObjectInt(srcText, sPos, "exitCode").value;
+    stdinField := json.findField(srcText, sPos, "stdin");
+    stdoutField := json.findField(srcText, sPos, "stdout");
+    stderrField := json.findField(srcText, sPos, "stderr");
+    argsField := json.findField(srcText, sPos, "args");
+    exitCode := json.readFieldInt(srcText, sPos, "exitCode").value;
 
     stdinPart := if stdinField.found {
         sp := json.valueSpan(srcText, stdinField.valuePos);
@@ -1065,27 +1065,27 @@ formatBytesArrayJson := fn(bytes: List<Int>, indent: String): String {
 
 formatStreamJson := fn(srcText: String, streamPos: Int, baseDir: String, indent: String, hasActual: Bool, actualBytes: List<Int>, isInput: Bool): String {
     if not hasActual and isInput {
-        if json.findObjectField(srcText, streamPos, "file").found {
-            f := json.readObjectString(srcText, streamPos, "file").value;
+        if json.findField(srcText, streamPos, "file").found {
+            f := json.readFieldString(srcText, streamPos, "file").value;
             h := "sha256:" + crypto.sha256Bytes(streams.readStreamBytes(srcText, streamPos, baseDir));
             return "{\n" + indent + "  \"file\": " + json.quoteString(f) + ",\n" + indent + "  \"hash\": " + json.quoteString(h) + "\n" + indent + "}";
         }
-        if json.findObjectField(srcText, streamPos, "bytes").found {
+        if json.findField(srcText, streamPos, "bytes").found {
             bs := streams.readStreamBytes(srcText, streamPos, baseDir);
             h := "sha256:" + crypto.sha256Bytes(bs);
             return "{\n" + indent + "  \"bytes\": " + formatBytesArrayJson(bs, indent + "  ") + ",\n" + indent + "  \"hash\": " + json.quoteString(h) + "\n" + indent + "}";
         }
-        t := json.readObjectString(srcText, streamPos, "text").value;
+        t := json.readFieldString(srcText, streamPos, "text").value;
         h := "sha256:" + crypto.sha256Text(t);
         return "{\n" + indent + "  \"text\": " + json.quoteString(t) + ",\n" + indent + "  \"hash\": " + json.quoteString(h) + "\n" + indent + "}";
     }
     h := "sha256:" + crypto.sha256Bytes(actualBytes);
-    if streamPos >= 0 and json.findObjectField(srcText, streamPos, "file").found {
-        f := json.readObjectString(srcText, streamPos, "file").value;
+    if streamPos >= 0 and json.findField(srcText, streamPos, "file").found {
+        f := json.readFieldString(srcText, streamPos, "file").value;
         _w := fs.writeBytes(path.resolve(baseDir, f), actualBytes);
         return "{\n" + indent + "  \"file\": " + json.quoteString(f) + ",\n" + indent + "  \"hash\": " + json.quoteString(h) + "\n" + indent + "}";
     }
-    if streamPos >= 0 and json.findObjectField(srcText, streamPos, "bytes").found {
+    if streamPos >= 0 and json.findField(srcText, streamPos, "bytes").found {
         return "{\n" + indent + "  \"bytes\": " + formatBytesArrayJson(actualBytes, indent + "  ") + ",\n" + indent + "  \"hash\": " + json.quoteString(h) + "\n" + indent + "}";
     }
     decoded := unicode.utf8DecodeLossy(actualBytes);
@@ -1103,23 +1103,23 @@ actualStdout: List<Int>, actualStderr: List<Int>, actualExit: Int
 ): String {
     emptyBytes: List<Int> = [];
     fields: mut List<String> = [];
-    sName := json.readObjectString(srcText, sPos, "name").value;
+    sName := json.readFieldString(srcText, sPos, "name").value;
     mut fields.pushBack("      \"name\": " + json.quoteString(sName));
 
-    argsField := json.findObjectField(srcText, sPos, "args");
+    argsField := json.findField(srcText, sPos, "args");
     if argsField.found {
         mut fields.pushBack("      \"args\": " + formatStringArrayJson(readStringArrayField(srcText, sPos, "args"), "      "));
     }
-    stdinField := json.findObjectField(srcText, sPos, "stdin");
+    stdinField := json.findField(srcText, sPos, "stdin");
     if stdinField.found {
         mut fields.pushBack("      \"stdin\": " + formatStreamJson(srcText, stdinField.valuePos, baseDir, "      ", false, emptyBytes, true));
     }
-    stdoutField := json.findObjectField(srcText, sPos, "stdout");
+    stdoutField := json.findField(srcText, sPos, "stdout");
     if stdoutField.found or actualStdout.length() > 0 {
         outPos := if stdoutField.found { stdoutField.valuePos } else { -1 };
         mut fields.pushBack("      \"stdout\": " + formatStreamJson(srcText, outPos, baseDir, "      ", true, actualStdout, false));
     }
-    stderrField := json.findObjectField(srcText, sPos, "stderr");
+    stderrField := json.findField(srcText, sPos, "stderr");
     if stderrField.found or actualStderr.length() > 0 {
         errPos := if stderrField.found { stderrField.valuePos } else { -1 };
         mut fields.pushBack("      \"stderr\": " + formatStreamJson(srcText, errPos, baseDir, "      ", true, actualStderr, false));
@@ -1130,19 +1130,19 @@ actualStdout: List<Int>, actualStderr: List<Int>, actualExit: Int
 
 formatUpdatedManifestJson := fn(srcText: String, sourceHash: String, scenariosJson: List<String>): String {
     fields: mut List<String> = [];
-    idVal := json.readObjectString(srcText, 0, "id").value;
-    kindVal := json.readObjectString(srcText, 0, "kind").value;
+    idVal := json.readFieldString(srcText, 0, "id").value;
+    kindVal := json.readFieldString(srcText, 0, "kind").value;
     mut fields.pushBack("  \"id\": " + json.quoteString(idVal));
     mut fields.pushBack("  \"kind\": " + json.quoteString(kindVal));
 
-    sourceField := json.findObjectField(srcText, 0, "source");
+    sourceField := json.findField(srcText, 0, "source");
     srcParts: mut List<String> = [];
-    if json.findObjectField(srcText, sourceField.valuePos, "file").found {
-        mut srcParts.pushBack("    \"file\": " + json.quoteString(json.readObjectString(srcText, sourceField.valuePos, "file").value));
-    } else if json.findObjectField(srcText, sourceField.valuePos, "text").found {
-        mut srcParts.pushBack("    \"text\": " + json.quoteString(json.readObjectString(srcText, sourceField.valuePos, "text").value));
+    if json.findField(srcText, sourceField.valuePos, "file").found {
+        mut srcParts.pushBack("    \"file\": " + json.quoteString(json.readFieldString(srcText, sourceField.valuePos, "file").value));
+    } else if json.findField(srcText, sourceField.valuePos, "text").found {
+        mut srcParts.pushBack("    \"text\": " + json.quoteString(json.readFieldString(srcText, sourceField.valuePos, "text").value));
     } else {
-        bField := json.findObjectField(srcText, sourceField.valuePos, "bytes");
+        bField := json.findField(srcText, sourceField.valuePos, "bytes");
         emptyDir := "";
         bs := streams.readStreamBytes(srcText, sourceField.valuePos, emptyDir);
         _unused := bField.found;
@@ -1153,19 +1153,19 @@ formatUpdatedManifestJson := fn(srcText: String, sourceHash: String, scenariosJs
 
     mut fields.pushBack("  \"features\": " + formatStringArrayJson(readStringArrayField(srcText, 0, "features"), "  "));
 
-    guideField := json.findObjectField(srcText, 0, "guideline");
+    guideField := json.findField(srcText, 0, "guideline");
     if guideField.found {
         mut fields.pushBack("  \"guideline\": " + json.quoteString(json.readStringAt(srcText, guideField.valuePos).value));
     }
-    descField := json.findObjectField(srcText, 0, "description");
+    descField := json.findField(srcText, 0, "description");
     if descField.found {
         mut fields.pushBack("  \"description\": " + json.quoteString(json.readStringAt(srcText, descField.valuePos).value));
     }
-    appField := json.findObjectField(srcText, 0, "append");
+    appField := json.findField(srcText, 0, "append");
     if appField.found {
         mut fields.pushBack("  \"append\": " + json.quoteString(json.readStringAt(srcText, appField.valuePos).value));
     }
-    targetsField := json.findObjectField(srcText, 0, "targets");
+    targetsField := json.findField(srcText, 0, "targets");
     if targetsField.found {
         mut fields.pushBack("  \"targets\": " + formatStringArrayJson(readStringArrayField(srcText, 0, "targets"), "  "));
     }
@@ -1251,7 +1251,7 @@ probeCcBin := fn(): String {
 };
 
 manifestIncludesC := fn(mText: String): Bool {
-    targetsField := json.findObjectField(mText, 0, "targets");
+    targetsField := json.findField(mText, 0, "targets");
     if not targetsField.found { return true; }
     readStringArrayField(mText, 0, "targets").contains("c")
 };
@@ -1444,9 +1444,9 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                 loop collectKindManifests(rootDir, KIND_FEATURE) as fFile {
                     relMan := path.relative(rootDir, fFile);
                     fText := fs.readText(fFile).text;
-                    fId := json.readObjectString(fText, 0, "id").value;
-                    sf := json.findObjectField(fText, 0, "source");
-                    sFileRes := json.readObjectString(fText, sf.valuePos, "file");
+                    fId := json.readFieldString(fText, 0, "id").value;
+                    sf := json.findField(fText, 0, "source");
+                    sFileRes := json.readFieldString(fText, sf.valuePos, "file");
                     srcHit := sFileRes.found and gitPaths.has(path.relative(rootDir, path.resolve(path.parentDir(fFile), sFileRes.value)));
                     if gitPaths.has(relMan) or srcHit {
                         mut changedFeatures.add(fId);
@@ -1479,13 +1479,13 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                 if not isManifestSelected(rootDir, mFile, mId, mText, meta.hasSourceFile, meta.sourcePath, opts.hasFilter, opts.filter, hasGitChanges, invalidateAll, gitPaths, changedFeatures) {
                     continue;
                 }
-                casesField := json.findObjectField(mText, 0, "cases");
-                allScenarios := json.arrayElementOffsets(mText, casesField.valuePos);
+                casesField := json.findField(mText, 0, "cases");
+                allScenarios := json.arrayOffsets(mText, casesField.valuePos);
                 if allScenarios.length() == 0 { continue; }
                 if not opts.cache {
                     uncachedManifests = uncachedManifests + 1;
                 } else {
-                    sourceField := json.findObjectField(mText, 0, "source");
+                    sourceField := json.findField(mText, 0, "source");
                     sourceBytes := if meta.hasSourceFile {
                         fs.readBytes(meta.sourcePath)
                     } else {
@@ -1541,11 +1541,11 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
             );
 
             if selectedManifest {
-                casesField := json.findObjectField(mText, 0, "cases");
-                allScenarios := json.arrayElementOffsets(mText, casesField.valuePos);
+                casesField := json.findField(mText, 0, "cases");
+                allScenarios := json.arrayOffsets(mText, casesField.valuePos);
                 selectedOffsets: mut List<Int> = [];
                 loop allScenarios as sPos {
-                    sName := json.readObjectString(mText, sPos, "name").value;
+                    sName := json.readFieldString(mText, sPos, "name").value;
                     if shardMatches(mId, sName, opts.hasShard, opts.shardIndex, opts.shardCount) {
                         mut selectedOffsets.pushBack(sPos);
                     }
@@ -1553,7 +1553,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
 
                 if selectedOffsets.length() > 0 {
                     failuresBefore := failures;
-                    sourceField := json.findObjectField(mText, 0, "source");
+                    sourceField := json.findField(mText, 0, "source");
                     sourceBytes := if meta.hasSourceFile {
                         fs.readBytes(meta.sourcePath)
                     } else {
@@ -1633,7 +1633,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                         var runSeq := 0;
 
                         loop selectedOffsets as sPos {
-                            sName := json.readObjectString(mText, sPos, "name").value;
+                            sName := json.readFieldString(mText, sPos, "name").value;
                             label := mId + "/" + sName + " [ts]";
                             cKey := caseCacheKey(rtHash.hex, mId, mKind, sourceHash, meta.appendText, mText, sPos);
 
@@ -1647,7 +1647,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                 var expStderr := emptyBytes;
                                 var inBytes := emptyBytes;
 
-                                stdinField := json.findObjectField(mText, sPos, "stdin");
+                                stdinField := json.findField(mText, sPos, "stdin");
                                 if stdinField.found {
                                     stIn := checkVerifyStream(mText, stdinField.valuePos, mDir, "stdin", not opts.update, false);
                                     if not stIn.ok {
@@ -1659,7 +1659,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                     }
                                 }
                                 if streamsOk and not opts.update {
-                                    stdoutField := json.findObjectField(mText, sPos, "stdout");
+                                    stdoutField := json.findField(mText, sPos, "stdout");
                                     if stdoutField.found {
                                         stOut := checkVerifyStream(mText, stdoutField.valuePos, mDir, mId + "/" + sName + "/stdout", true, false);
                                         if not stOut.ok {
@@ -1672,7 +1672,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                     }
                                 }
                                 if streamsOk and not opts.update {
-                                    stderrField := json.findObjectField(mText, sPos, "stderr");
+                                    stderrField := json.findField(mText, sPos, "stderr");
                                     if stderrField.found {
                                         stErr := checkVerifyStream(mText, stderrField.valuePos, mDir, mId + "/" + sName + "/stderr", true, false);
                                         if not stErr.ok {
@@ -1700,7 +1700,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                     } else if opts.pedantic {
                                         pedanticScenarios = pedanticScenarios + 1;
                                         scenarioArgs := readStringArrayField(mText, sPos, "args");
-                                        expExit := json.readObjectInt(mText, sPos, "exitCode").value;
+                                        expExit := json.readFieldInt(mText, sPos, "exitCode").value;
                                         var allLevelsOk := true;
                                         var baseOutBytes := emptyBytes;
                                         var baseErrBytes := emptyBytes;
@@ -1779,7 +1779,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                             if opts.update {
                                                 updatedScenarios[sName] = formatUpdatedScenarioJson(mText, sPos, mDir, stdoutBytes, stderrBytes, ran.exitCode);
                                             } else {
-                                                expExit := json.readObjectInt(mText, sPos, "exitCode").value;
+                                                expExit := json.readFieldInt(mText, sPos, "exitCode").value;
                                                 sameOut := streams.equalBytes(stdoutBytes, expStdout);
                                                 sameErr := streams.equalBytes(stderrBytes, expStderr);
                                                 sameExit := ran.exitCode == expExit;
@@ -1844,7 +1844,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                 }
                             }
                             loop selectedOffsets as sPos {
-                                sName := json.readObjectString(mText, sPos, "name").value;
+                                sName := json.readFieldString(mText, sPos, "name").value;
                                 cLabel := mId + "/" + sName + " [c]";
                                 cKeyC := caseCacheKey(rtHash.hex + "|c", mId, mKind, sourceHash, meta.appendText, mText, sPos);
                                 if opts.cache and passedKeys.has(cKeyC) {
@@ -1856,15 +1856,15 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                     var cExpStdout := emptyBytesC;
                                     var cExpStderr := emptyBytesC;
                                     var cInBytes := emptyBytesC;
-                                    cStdinF := json.findObjectField(mText, sPos, "stdin");
+                                    cStdinF := json.findField(mText, sPos, "stdin");
                                     if cStdinF.found {
                                         cInBytes = streams.readStreamBytes(mText, cStdinF.valuePos, mDir);
                                     }
-                                    cStdoutF := json.findObjectField(mText, sPos, "stdout");
+                                    cStdoutF := json.findField(mText, sPos, "stdout");
                                     if cStdoutF.found {
                                         cExpStdout = streams.readStreamBytes(mText, cStdoutF.valuePos, mDir);
                                     }
-                                    cStderrF := json.findObjectField(mText, sPos, "stderr");
+                                    cStderrF := json.findField(mText, sPos, "stderr");
                                     if cStderrF.found {
                                         cExpStderr = streams.readStreamBytes(mText, cStderrF.valuePos, mDir);
                                     }
@@ -1889,7 +1889,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                             } else {
                                                 cStdoutBytes := fs.readBytes(cRan.outPath);
                                                 cStderrBytes := fs.readBytes(cRan.errPath);
-                                                cExpExit := json.readObjectInt(mText, sPos, "exitCode").value;
+                                                cExpExit := json.readFieldInt(mText, sPos, "exitCode").value;
                                                 cSameOut := streams.equalBytes(cStdoutBytes, cExpStdout);
                                                 cSameErr := streams.equalBytes(cStderrBytes, cExpStderr);
                                                 cSameExit := cRan.exitCode == cExpExit;
@@ -1928,7 +1928,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                         if opts.update and failures == failuresBefore {
                             finalScenarios: mut List<String> = [];
                             loop allScenarios as sPos {
-                                sName := json.readObjectString(mText, sPos, "name").value;
+                                sName := json.readFieldString(mText, sPos, "name").value;
                                 upd := updatedScenarios.get(sName);
                                 if upd.found {
                                     mut finalScenarios.pushBack(upd.value);

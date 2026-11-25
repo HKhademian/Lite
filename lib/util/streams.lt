@@ -5,7 +5,7 @@ fs := import "core/file";
 unicode := import "core/unicode";
 list := import "core/list";
 path := import "core/path";
-json := import "util/json";
+json := import "data/json";
 
 isHex64 := fn(value: String): Bool {
     if value.length() =!= 64 { return false; }
@@ -43,7 +43,7 @@ parseBytesArray := fn(source: String, arrayPos: Int, label: String): (ok: Bool, 
     if not isJsonPrefixAt(source, arrayPos, "[") {
         return (ok = false, error = label + ".bytes must contain integers 0-255");
     }
-    offsets := json.arrayElementOffsets(source, arrayPos);
+    offsets := json.arrayOffsets(source, arrayPos);
     loop offsets as bPos {
         byteRes := json.readIntAt(source, bPos);
         if not byteRes.ok or byteRes.value < 0 or byteRes.value > 255 {
@@ -55,7 +55,7 @@ parseBytesArray := fn(source: String, arrayPos: Int, label: String): (ok: Bool, 
 
 collectBytesArray := fn(source: String, arrayPos: Int): List<Int> {
     out: mut List<Int> = [];
-    offsets := json.arrayElementOffsets(source, arrayPos);
+    offsets := json.arrayOffsets(source, arrayPos);
     loop offsets as bPos {
         byteRes := json.readIntAt(source, bPos);
         mut out.pushBack(byteRes.value);
@@ -95,16 +95,16 @@ checkHash: Bool
 
     var digest := "";
     if form == "text" {
-        tRes := json.readObjectString(source, streamPos, "text");
+        tRes := json.readFieldString(source, streamPos, "text");
         if not tRes.ok { return (ok = false, sha256 = "", kind = "", error = label + ".text must be a string"); }
         digest = "sha256:" + crypto.sha256Text(tRes.value);
     } else if form == "bytes" {
-        bField := json.findObjectField(source, streamPos, "bytes");
+        bField := json.findField(source, streamPos, "bytes");
         parsed := parseBytesArray(source, bField.valuePos, label);
         if not parsed.ok { return (ok = false, sha256 = "", kind = "", error = parsed.error); }
         digest = "sha256:" + crypto.sha256Bytes(collectBytesArray(source, bField.valuePos));
     } else {
-        fRes := json.readObjectString(source, streamPos, "file");
+        fRes := json.readFieldString(source, streamPos, "file");
         if not fRes.ok or fRes.value == "" or (siblingOnly and not isSiblingFileName(fRes.value)) {
             kindMsg := if siblingOnly { "a sibling file name" } else { "a nonempty file path" };
             return (ok = false, sha256 = "", kind = "", error = label + ".file must be " + kindMsg);
@@ -120,7 +120,7 @@ checkHash: Bool
         digest = "sha256:" + fHash.hex;
     }
 
-    hashField := json.findObjectField(source, streamPos, "hash");
+    hashField := json.findField(source, streamPos, "hash");
     if requiredHash or hashField.found {
         var validHash := false;
         var hashValue := "";
@@ -146,15 +146,15 @@ checkHash: Bool
 
 /** Reads the raw `0..255` byte list of a validated stream descriptor at `streamPos`. */
 pub readStreamBytes := fn(source: String, streamPos: Int, directory: String): List<Int> {
-    if json.findObjectField(source, streamPos, "text").found {
-        tRes := json.readObjectString(source, streamPos, "text");
+    if json.findField(source, streamPos, "text").found {
+        tRes := json.readFieldString(source, streamPos, "text");
         return unicode.utf8Encode(tRes.value);
     }
-    bField := json.findObjectField(source, streamPos, "bytes");
+    bField := json.findField(source, streamPos, "bytes");
     if bField.found {
         return collectBytesArray(source, bField.valuePos);
     }
-    fRes := json.readObjectString(source, streamPos, "file");
+    fRes := json.readFieldString(source, streamPos, "file");
     fs.readBytes(path.resolve(directory, fRes.value))
 }
 

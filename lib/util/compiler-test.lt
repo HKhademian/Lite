@@ -8,7 +8,7 @@ project := import "util/project";
 test := import "core/test";
 unicode := import "core/unicode";
 cases := import "util/cases";
-json := import "util/json";
+json := import "data/json";
 
 /** Result of compiling or executing a Lite program or compiler phase driver. */
 pub RunOutput := alias (status: Int, stdout: String, stderr: String);
@@ -247,7 +247,7 @@ stdinText: String
     needleLen := quotedHash.length();
     stdinB64 := crypto.base64Encode(unicode.utf8Encode(stdinText));
 
-    casesField := json.findObjectField(contractsJson, 0, "cases");
+    casesField := json.findField(contractsJson, 0, "cases");
     test.check("process.json cases field", casesField.found);
     var searchPos := casesField.valuePos;
     loop true {
@@ -258,24 +258,24 @@ stdinText: String
         var back := hitPos - 1;
         loop back >= casesField.valuePos {
             if contractsJson.at(back) == "{" {
-                sVal := json.readObjectString(contractsJson, back, "source");
+                sVal := json.readFieldString(contractsJson, back, "source");
                 if sVal.found {
                     if sVal.ok and sVal.value == srcHash {
-                        inVal := json.readObjectString(contractsJson, back, "stdin");
-                        argsField := json.findObjectField(contractsJson, back, "args");
-                        isEmptyArgs := argsField.found and json.arrayElementOffsets(contractsJson, argsField.valuePos).length() == 0;
+                        inVal := json.readFieldString(contractsJson, back, "stdin");
+                        argsField := json.findField(contractsJson, back, "args");
+                        isEmptyArgs := argsField.found and json.arrayOffsets(contractsJson, argsField.valuePos).length() == 0;
                         var nameMatched := false;
                         if logicalName == "" {
-                            nameField := json.findObjectField(contractsJson, back, "name");
+                            nameField := json.findField(contractsJson, back, "name");
                             nameMatched = nameField.found and contractsJson.at(nameField.valuePos) == "n";
                         } else {
-                            nameVal := json.readObjectString(contractsJson, back, "name");
+                            nameVal := json.readFieldString(contractsJson, back, "name");
                             nameMatched = nameVal.found and nameVal.ok and nameVal.value == logicalName;
                         }
                         if inVal.found and inVal.ok and inVal.value == stdinB64 and nameMatched and isEmptyArgs {
-                            stVal := json.readObjectInt(contractsJson, back, "status");
-                            outVal := json.readObjectString(contractsJson, back, "stdout");
-                            errVal := json.readObjectString(contractsJson, back, "stderr");
+                            stVal := json.readFieldInt(contractsJson, back, "status");
+                            outVal := json.readFieldString(contractsJson, back, "stdout");
+                            errVal := json.readFieldString(contractsJson, back, "stderr");
                             return (found = true, status = stVal.value, stdout = outVal.value, stderr = errVal.value);
                         }
                     }

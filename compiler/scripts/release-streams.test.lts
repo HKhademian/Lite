@@ -4,7 +4,7 @@ fs := import "core/file";
 path := import "core/path";
 test := import "core/test";
 challenges := import "util/challenges";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 rel := import "util/release";
 
@@ -111,7 +111,7 @@ loop idx1 < tags1.length() {
 }
 vj := rel.versionsJson(dir1);
 test.check("versionsJson ok", vj.ok);
-langRes := json.readObjectString(vj.jsonText, 0, "language");
+langRes := json.readFieldString(vj.jsonText, 0, "language");
 test.check("versionsJson language found", langRes.found and langRes.ok);
 test.checkText("versionsJson language", "0.2.0", langRes.value);
 test.check("versionsJson stdlib null", vj.jsonText.indexOf("\"stdlib\":null", 0) >= 0 or vj.jsonText.indexOf("\"stdlib\": null", 0) >= 0);

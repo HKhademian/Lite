@@ -8,7 +8,7 @@ path := import "core/path";
 pool := import "external/pool";
 cases := import "util/cases";
 compilerBuild := import "util/compiler-build";
-json := import "util/json";
+json := import "data/json";
 
 unitTestUsage := fn(): String {
     "Usage: ./bin/lite test --unit [--jobs N] [--verbose|--mute|--silence] [FILTER]"
@@ -43,9 +43,9 @@ pub runUnitWorker := fn(taskJson: String): Int {
         io.errorLine("unit worker: invalid task JSON: " + valid.error);
         return 1;
     }
-    rootRes := json.readObjectString(taskJson, 0, "root");
-    compRes := json.readObjectString(taskJson, 0, "compiler");
-    fileRes := json.readObjectString(taskJson, 0, "file");
+    rootRes := json.readFieldString(taskJson, 0, "root");
+    compRes := json.readFieldString(taskJson, 0, "compiler");
+    fileRes := json.readFieldString(taskJson, 0, "file");
     if not rootRes.found or not rootRes.ok or not compRes.found or not compRes.ok or not fileRes.found or not fileRes.ok {
         io.errorLine("unit worker: task JSON requires root, compiler, and file");
         return 1;
@@ -153,7 +153,7 @@ rootDir: String, compilerPath: String, runnerScript: String, batchRel: List<Stri
 
     jobs := if batchJobs > 0 { batchJobs } else { pool.cpuCount() };
     rawResults := pool.runPoolJson(commands, argListsJson, rootDir, jobs);
-    offsets := json.arrayElementOffsets(rawResults, 0);
+    offsets := json.arrayOffsets(rawResults, 0);
     if offsets.length() =!= count {
         if outputMode =!= "--silence" {
             io.errorLine("unit test pool returned malformed result count");
@@ -166,10 +166,10 @@ rootDir: String, compilerPath: String, runnerScript: String, batchRel: List<Stri
     var idx := 0;
     loop idx < count {
         elemPos := offsets[idx];
-        statusRes := json.readObjectInt(rawResults, elemPos, "status");
-        outRes := json.readObjectString(rawResults, elemPos, "stdout");
-        errRes := json.readObjectString(rawResults, elemPos, "stderr");
-        errorRes := json.readObjectString(rawResults, elemPos, "error");
+        statusRes := json.readFieldInt(rawResults, elemPos, "status");
+        outRes := json.readFieldString(rawResults, elemPos, "stdout");
+        errRes := json.readFieldString(rawResults, elemPos, "stderr");
+        errorRes := json.readFieldString(rawResults, elemPos, "error");
         status := if statusRes.found and statusRes.ok { statusRes.value } else { -1 };
         errText := if errorRes.found and errorRes.ok { errorRes.value } else { "" };
         if status == 0 and errText == "" {

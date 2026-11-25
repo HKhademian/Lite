@@ -10,7 +10,7 @@ list := import "core/list";
 crypto := import "core/crypto";
 time := import "core/time";
 unicode := import "core/unicode";
-json := import "util/json";
+json := import "data/json";
 streams := import "util/streams";
 cases := import "util/cases";
 compilerBuild := import "util/compiler-build";
@@ -43,7 +43,7 @@ isJsonArrayAt := fn(source: String, start: Int): Bool {
 pub readStringListAt := fn(source: String, arrPos: Int): List<String> {
     out: mut List<String> = [];
     if not isJsonArrayAt(source, arrPos) { return out; }
-    loop json.arrayElementOffsets(source, arrPos) as elPos {
+    loop json.arrayOffsets(source, arrPos) as elPos {
         s := json.readStringAt(source, elPos);
         if s.ok { mut out.pushBack(s.value); }
     }
@@ -179,7 +179,7 @@ selectedCompilerSha256: String, selectedBuilderSha256: String, totalDepBytes: In
         return (ok = false, chosenPath = "", artifactSha256 = "", sourceSha256 = "", selectedCompilerSha256 = "", selectedBuilderSha256 = "", totalDepBytes = 0, error = chosenHash.error);
     }
     var totalBytes := 0;
-    depsField := json.findObjectField(meta.rawJson, 0, "dependencies");
+    depsField := json.findField(meta.rawJson, 0, "dependencies");
     loop readStringListAt(meta.rawJson, depsField.valuePos) as depRel {
         totalBytes = totalBytes + fs.readBytes(path.resolve(rootDir, depRel)).length();
     }
@@ -270,7 +270,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
         io.errorLine(manRes.error);
         return 1;
     }
-    filesField := json.findObjectField(manRes.text, 0, "files");
+    filesField := json.findField(manRes.text, 0, "files");
     if not filesField.found {
         io.errorLine("self-host ladder requires one TS source root");
         return 1;
@@ -495,9 +495,9 @@ pub parseFixtureFilename := fn(fileName: String): (ok: Bool, category: String, s
 /** Looks up the recorded TS artifact digest for `slug` inside `current-artifacts.json`. */
 pub findRecordedTsHash := fn(refJson: String, artOffsets: List<Int>, slug: String): (found: Bool, tsHash: String) {
     loop artOffsets as pos {
-        nameRes := json.readObjectString(refJson, pos, "name");
+        nameRes := json.readFieldString(refJson, pos, "name");
         if nameRes.found and nameRes.value == slug {
-            tsRes := json.readObjectString(refJson, pos, "ts");
+            tsRes := json.readFieldString(refJson, pos, "ts");
             if tsRes.found { return (found = true, tsHash = tsRes.value); }
         }
     }
@@ -527,12 +527,12 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
     if not refRead.ok {
         return (ok = false, cases = 0, programs = 0, rejections = 0, executions = 0, mismatchCount = 0, firstMismatch = "", jsonBody = "", error = refRead.error);
     }
-    refSrcHash := json.readObjectString(refRead.text, 0, "sourceSha256");
+    refSrcHash := json.readFieldString(refRead.text, 0, "sourceSha256");
     if not refSrcHash.found or refSrcHash.value =!= expectedSourceSha {
         return (ok = false, cases = 0, programs = 0, rejections = 0, executions = 0, mismatchCount = 0, firstMismatch = "", jsonBody = "", error = "recorded corpus artifacts do not match current Lite compiler source; review their contracts first");
     }
-    artField := json.findObjectField(refRead.text, 0, "artifacts");
-    artOffsets := json.arrayElementOffsets(refRead.text, artField.valuePos);
+    artField := json.findField(refRead.text, 0, "artifacts");
+    artOffsets := json.arrayOffsets(refRead.text, artField.valuePos);
 
     chkComp := checkStrictSingle(rootDir, artifactPath);
     if not chkComp.ok {
@@ -596,13 +596,13 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
             return (ok = false, cases = 0, programs = 0, rejections = 0, executions = 0, mismatchCount = 0, firstMismatch = "", jsonBody = "", error = "missing artifact contract: " + parsedFn.slug);
         }
 
-        srcField := json.findObjectField(fixJson, 0, "source");
+        srcField := json.findField(fixJson, 0, "source");
         srcCheck := streams.validateStream(fixJson, srcField.valuePos, compDir, fileName + ".source", false, false, true);
         if not srcCheck.ok {
             _rm := fs.remove(workDir);
             return (ok = false, cases = 0, programs = 0, rejections = 0, executions = 0, mismatchCount = 0, firstMismatch = "", jsonBody = "", error = srcCheck.error);
         }
-        srcFileField := json.readObjectString(fixJson, srcField.valuePos, "file");
+        srcFileField := json.readFieldString(fixJson, srcField.valuePos, "file");
         sourceRel := if srcFileField.found { srcFileField.value } else { fileName.slice(0, fileName.length() - 5) + ".lts" };
         sourcePath := path.resolve(compDir, sourceRel);
         fixSourceBytes := streams.readStreamBytes(fixJson, srcField.valuePos, compDir);
@@ -639,15 +639,15 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
         actErrBytes := fs.readBytes(compiledErrFiles[cIdx]);
         actOutSha := crypto.sha256Bytes(actOutBytes);
 
-        casesField := json.findObjectField(fixJson, 0, "cases");
-        loop json.arrayElementOffsets(fixJson, casesField.valuePos) as sPos {
+        casesField := json.findField(fixJson, 0, "cases");
+        loop json.arrayOffsets(fixJson, casesField.valuePos) as sPos {
             totalCases = totalCases + 1;
-            caseName := json.readObjectString(fixJson, sPos, "name").value;
-            expExit := json.readObjectInt(fixJson, sPos, "exitCode").value;
+            caseName := json.readFieldString(fixJson, sPos, "name").value;
+            expExit := json.readFieldInt(fixJson, sPos, "exitCode").value;
 
-            inField := json.findObjectField(fixJson, sPos, "stdin");
-            outField := json.findObjectField(fixJson, sPos, "stdout");
-            errField := json.findObjectField(fixJson, sPos, "stderr");
+            inField := json.findField(fixJson, sPos, "stdin");
+            outField := json.findField(fixJson, sPos, "stdout");
+            errField := json.findField(fixJson, sPos, "stderr");
             emptyBytes: List<Int> = [];
             expInBytes := if inField.found { streams.readStreamBytes(fixJson, inField.valuePos, compDir) } else { emptyBytes };
             expOutBytes := if outField.found { streams.readStreamBytes(fixJson, outField.valuePos, compDir) } else { emptyBytes };

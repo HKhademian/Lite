@@ -393,6 +393,13 @@ pub validate := fn(source: String): (ok: Bool, error: String) {
     (ok = true, error = "")
 };
 
+/** Returns the trimmed slice bounds `(start, end)` of one JSON value at or after `start`. */
+pub valueSpan := fn(source: String, start: Int): (ok: Bool, start: Int, end: Int, error: String) {
+    valStart := skipSpaces(source, start);
+    skipped := skipValue(source, valStart);
+    (ok = skipped.ok, start = valStart, end = skipped.next, error = skipped.error)
+};
+
 /** Decodes a JSON string literal at or after `start`. */
 pub readStringAt := fn(source: String, start: Int): JsonString {
     pos := skipSpaces(source, start);

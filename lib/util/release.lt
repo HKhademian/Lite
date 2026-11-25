@@ -4,7 +4,7 @@ fs := import "core/file";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
-json := import "util/json";
+json := import "data/json";
 
 isIdentChar := fn(ch: String): Bool {
     ch.isDigit() or ch.isAsciiLetter() or ch == "-"
@@ -138,7 +138,7 @@ readIgniterVersion := fn(rootDir: String): (ok: Bool, version: String, error: St
     if not pkgRead.ok {
         return (ok = false, version = "", error = pkgRead.error);
     }
-    ver := json.readObjectString(pkgRead.text, 0, "version");
+    ver := json.readFieldString(pkgRead.text, 0, "version");
     if not ver.found or not ver.ok or not isValidSemver(ver.value) {
         return (ok = false, version = "", error = "invalid igniter package version");
     }
@@ -188,7 +188,7 @@ pub selectComponentRelease := fn(rootDir: String, tag: String): (ok: Bool, hasTa
             assigned = true;
             val = igniterRes.version;
         } else {
-            field := json.findObjectField(verRead.text, 0, component);
+            field := json.findField(verRead.text, 0, component);
             if not field.found {
                 return (ok = false, hasTag = false, component = "", version = "", error = "versions.json: invalid or missing " + component + " version");
             }
@@ -237,7 +237,7 @@ pub versionsJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: Str
         if component == "igniter" {
             mut entries.pushBack("\"igniter\":" + json.quoteString(igniterRes.version));
         } else {
-            field := json.findObjectField(verRead.text, 0, component);
+            field := json.findField(verRead.text, 0, component);
             if verRead.text.startsWithAt(field.valuePos, "null") {
                 mut entries.pushBack(json.quoteString(component) + ":null");
             } else {
@@ -369,7 +369,7 @@ pub formatComponentVersionsJson := fn(rootDir: String, indent: String): (ok: Boo
         if component == "igniter" {
             mut entries.pushBack(indent + "  \"igniter\": " + json.quoteString(igniterRes.version));
         } else {
-            field := json.findObjectField(verRead.text, 0, component);
+            field := json.findField(verRead.text, 0, component);
             if not field.found {
                 return (ok = false, jsonText = "", error = "missing version for " + component);
             }

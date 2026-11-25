@@ -4,7 +4,7 @@ fs := import "core/file";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
-json := import "util/json";
+json := import "data/json";
 md := import "util/markdown";
 docgen := import "util/docgen";
 tb := import "util/text-builder";
@@ -307,16 +307,16 @@ catalogHasLearnTarget := fn(directory: String, rawTarget: String): Bool {
     catRead := fs.readText(catPath);
     if not catRead.ok { return false; }
     catJson := catRead.text;
-    tracksF := json.findObjectField(catJson, 0, "tracks");
+    tracksF := json.findField(catJson, 0, "tracks");
     if not tracksF.found { return false; }
-    loop json.arrayElementOffsets(catJson, tracksF.valuePos) as tp {
-        trackIdR := json.readObjectString(catJson, tp, "id");
+    loop json.arrayOffsets(catJson, tracksF.valuePos) as tp {
+        trackIdR := json.readFieldString(catJson, tp, "id");
         trackId := if trackIdR.found and trackIdR.ok { trackIdR.value } else { "" };
-        lessonsF := json.findObjectField(catJson, tp, "lessons");
+        lessonsF := json.findField(catJson, tp, "lessons");
         if not lessonsF.found { continue; }
-        loop json.arrayElementOffsets(catJson, lessonsF.valuePos) as lp {
-            idR := json.readObjectString(catJson, lp, "id");
-            slugR := json.readObjectString(catJson, lp, "slug");
+        loop json.arrayOffsets(catJson, lessonsF.valuePos) as lp {
+            idR := json.readFieldString(catJson, lp, "id");
+            slugR := json.readFieldString(catJson, lp, "slug");
             lId := if idR.found and idR.ok { idR.value } else { "" };
             lSlug := if slugR.found and slugR.ok { slugR.value } else { "" };
             if clean == lSlug or clean == lId or (trackId =!= "" and clean == trackId + "/" + lSlug) {
@@ -349,12 +349,12 @@ catalogHasGymTarget := fn(directory: String, rawTarget: String): Bool {
     catRead := fs.readText(catPath);
     if not catRead.ok { return false; }
     catJson := catRead.text;
-    exF := json.findObjectField(catJson, 0, "exercises");
+    exF := json.findField(catJson, 0, "exercises");
     if not exF.found { return false; }
-    loop json.arrayElementOffsets(catJson, exF.valuePos) as ep {
-        modeR := json.readObjectString(catJson, ep, "mode");
-        idR := json.readObjectString(catJson, ep, "id");
-        slugR := json.readObjectString(catJson, ep, "slug");
+    loop json.arrayOffsets(catJson, exF.valuePos) as ep {
+        modeR := json.readFieldString(catJson, ep, "mode");
+        idR := json.readFieldString(catJson, ep, "id");
+        slugR := json.readFieldString(catJson, ep, "slug");
         eMode := if modeR.found and modeR.ok { modeR.value } else { "" };
         eId := if idR.found and idR.ok { idR.value } else { "" };
         eSlug := if slugR.found and slugR.ok { slugR.value } else { "" };
@@ -682,12 +682,12 @@ pub checkDocuments := fn(directory: String): List<String> {
             mut failures.pushBack("config/documentation.json: " + cfgCheck.error);
             return failures;
         }
-        navField := json.findObjectField(cfgText, 0, "navigation");
+        navField := json.findField(cfgText, 0, "navigation");
         if navField.found {
-            navItems := json.arrayElementOffsets(cfgText, navField.valuePos);
+            navItems := json.arrayOffsets(cfgText, navField.valuePos);
             loop navItems as navPos {
-                labelRes := json.readObjectString(cfgText, navPos, "label");
-                pathRes := json.readObjectString(cfgText, navPos, "path");
+                labelRes := json.readFieldString(cfgText, navPos, "label");
+                pathRes := json.readFieldString(cfgText, navPos, "path");
                 navPath := if pathRes.found and pathRes.ok { pathRes.value } else { "" };
                 navLabel := if labelRes.found and labelRes.ok { labelRes.value } else { "" };
                 if navLabel == "" or fs.kind(path.resolve(directory, navPath)) == fs.FILE_KIND_MISSING {
@@ -695,14 +695,14 @@ pub checkDocuments := fn(directory: String): List<String> {
                 }
             }
         }
-        snipField := json.findObjectField(cfgText, 0, "snippets");
+        snipField := json.findField(cfgText, 0, "snippets");
         if snipField.found {
-            snipItems := json.arrayElementOffsets(cfgText, snipField.valuePos);
+            snipItems := json.arrayOffsets(cfgText, snipField.valuePos);
             loop snipItems as snipPos {
-                srcRes := json.readObjectString(cfgText, snipPos, "source");
-                docRes := json.readObjectString(cfgText, snipPos, "document");
-                fenceRes := json.readObjectInt(cfgText, snipPos, "fence");
-                skipRes := json.readObjectInt(cfgText, snipPos, "skipLines");
+                srcRes := json.readFieldString(cfgText, snipPos, "source");
+                docRes := json.readFieldString(cfgText, snipPos, "document");
+                fenceRes := json.readFieldInt(cfgText, snipPos, "fence");
+                skipRes := json.readFieldInt(cfgText, snipPos, "skipLines");
                 srcRel := if srcRes.found and srcRes.ok { srcRes.value } else { "" };
                 docRel := if docRes.found and docRes.ok { docRes.value } else { "" };
                 srcFull := path.resolve(directory, srcRel);
@@ -740,15 +740,15 @@ pub navigationSummary := fn(directory: String): (ok: Bool, text: String, error: 
     if not cfgRead.ok {
         return (ok = false, text = "", error = cfgRead.error);
     }
-    navField := json.findObjectField(cfgRead.text, 0, "navigation");
+    navField := json.findField(cfgRead.text, 0, "navigation");
     if not navField.found {
         return (ok = false, text = "", error = "documentation navigation configuration is missing");
     }
     lines: mut List<String> = [];
-    navItems := json.arrayElementOffsets(cfgRead.text, navField.valuePos);
+    navItems := json.arrayOffsets(cfgRead.text, navField.valuePos);
     loop navItems as navPos {
-        labelRes := json.readObjectString(cfgRead.text, navPos, "label");
-        pathRes := json.readObjectString(cfgRead.text, navPos, "path");
+        labelRes := json.readFieldString(cfgRead.text, navPos, "label");
+        pathRes := json.readFieldString(cfgRead.text, navPos, "path");
         label := if labelRes.found and labelRes.ok { labelRes.value } else { "" };
         navPath := if pathRes.found and pathRes.ok { pathRes.value } else { "" };
         mut lines.pushBack(label + ": " + navPath);

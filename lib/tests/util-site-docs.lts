@@ -1,5 +1,5 @@
 siteDocs := import "../../site/src/docs";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 test := import "core/test";
 
@@ -26,9 +26,9 @@ built := siteDocs.buildDocsPayloadJson(sampleInput);
 test.checkText("build err", "", built.error);
 test.checkBool("build ok", true, built.ok);
 test.checkBool("build valid json", true, json.validate(built.jsonText).ok);
-test.checkInt("handbookCount", 1, json.readObjectInt(built.jsonText, 0, "handbookCount").value);
-test.checkInt("specCount", 1, json.readObjectInt(built.jsonText, 0, "specCount").value);
-test.checkInt("docsPageCount", 5, json.readObjectInt(built.jsonText, 0, "docsPageCount").value);
+test.checkInt("handbookCount", 1, json.readFieldInt(built.jsonText, 0, "handbookCount").value);
+test.checkInt("specCount", 1, json.readFieldInt(built.jsonText, 0, "specCount").value);
+test.checkInt("docsPageCount", 5, json.readFieldInt(built.jsonText, 0, "docsPageCount").value);
 test.checkBool("single-page prefixes ids", true, built.jsonText.indexOf("h1-sec", 0) >= 0);
 test.checkBool("has docs/index.html", true, built.jsonText.indexOf("\"relPath\":\"docs/index.html\"", 0) >= 0);
 

@@ -8,7 +8,7 @@ text := import "core/text";
 unicode := import "core/unicode";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 root := project.findRepoRoot();
@@ -387,16 +387,16 @@ test.checkInt("ext-pool status", 0, extPoolRun.status);
 test.check("ext-pool prefix", extPoolRun.stdout.startsWithAt(0, "true [] ["));
 poolJsonText := extPoolRun.stdout.slice("true [] ".length(), extPoolRun.stdout.length() - 1);
 test.check("ext-pool json valid", json.validate(poolJsonText).ok);
-poolElems := json.arrayElementOffsets(poolJsonText, 0);
+poolElems := json.arrayOffsets(poolJsonText, 0);
 test.checkInt("ext-pool len", 2, poolElems.length());
-test.checkInt("ext-pool 0 status", 0, json.readObjectInt(poolJsonText, poolElems[0], "status").value);
-test.checkText("ext-pool 0 stdout", "one", json.readObjectString(poolJsonText, poolElems[0], "stdout").value);
-test.checkText("ext-pool 0 stderr", "", json.readObjectString(poolJsonText, poolElems[0], "stderr").value);
-test.checkText("ext-pool 0 error", "", json.readObjectString(poolJsonText, poolElems[0], "error").value);
-test.checkInt("ext-pool 1 status", 3, json.readObjectInt(poolJsonText, poolElems[1], "status").value);
-test.checkText("ext-pool 1 stdout", "two", json.readObjectString(poolJsonText, poolElems[1], "stdout").value);
-test.checkText("ext-pool 1 stderr", "", json.readObjectString(poolJsonText, poolElems[1], "stderr").value);
-test.checkText("ext-pool 1 error", "", json.readObjectString(poolJsonText, poolElems[1], "error").value);
+test.checkInt("ext-pool 0 status", 0, json.readFieldInt(poolJsonText, poolElems[0], "status").value);
+test.checkText("ext-pool 0 stdout", "one", json.readFieldString(poolJsonText, poolElems[0], "stdout").value);
+test.checkText("ext-pool 0 stderr", "", json.readFieldString(poolJsonText, poolElems[0], "stderr").value);
+test.checkText("ext-pool 0 error", "", json.readFieldString(poolJsonText, poolElems[0], "error").value);
+test.checkInt("ext-pool 1 status", 3, json.readFieldInt(poolJsonText, poolElems[1], "status").value);
+test.checkText("ext-pool 1 stdout", "two", json.readFieldString(poolJsonText, poolElems[1], "stdout").value);
+test.checkText("ext-pool 1 stderr", "", json.readFieldString(poolJsonText, poolElems[1], "stderr").value);
+test.checkText("ext-pool 1 error", "", json.readFieldString(poolJsonText, poolElems[1], "error").value);
 
 extProbes: List<String> = [
 "extHttp := import \"external/http\"; res := extHttp.fetchToFile(\"http://127.0.0.1:1/\", \"\", 50, []); if res.ok { _ := res.status; }",
@@ -490,16 +490,16 @@ if ccInfo.available {
     test.check("c-ext-pool prefix", cPoolRun.stdout.startsWithAt(0, "true [] ["));
     cPoolJsonText := cPoolRun.stdout.slice("true [] ".length(), cPoolRun.stdout.length() - 1);
     test.check("c-ext-pool json valid", json.validate(cPoolJsonText).ok);
-    cPoolElems := json.arrayElementOffsets(cPoolJsonText, 0);
+    cPoolElems := json.arrayOffsets(cPoolJsonText, 0);
     test.checkInt("c-ext-pool len", 2, cPoolElems.length());
-    test.checkInt("c-ext-pool 0 status", 0, json.readObjectInt(cPoolJsonText, cPoolElems[0], "status").value);
-    test.checkText("c-ext-pool 0 stdout", "one", json.readObjectString(cPoolJsonText, cPoolElems[0], "stdout").value);
-    test.checkText("c-ext-pool 0 stderr", "", json.readObjectString(cPoolJsonText, cPoolElems[0], "stderr").value);
-    test.checkText("c-ext-pool 0 error", "", json.readObjectString(cPoolJsonText, cPoolElems[0], "error").value);
-    test.checkInt("c-ext-pool 1 status", 3, json.readObjectInt(cPoolJsonText, cPoolElems[1], "status").value);
-    test.checkText("c-ext-pool 1 stdout", "two", json.readObjectString(cPoolJsonText, cPoolElems[1], "stdout").value);
-    test.checkText("c-ext-pool 1 stderr", "err2", json.readObjectString(cPoolJsonText, cPoolElems[1], "stderr").value);
-    test.checkText("c-ext-pool 1 error", "", json.readObjectString(cPoolJsonText, cPoolElems[1], "error").value);
+    test.checkInt("c-ext-pool 0 status", 0, json.readFieldInt(cPoolJsonText, cPoolElems[0], "status").value);
+    test.checkText("c-ext-pool 0 stdout", "one", json.readFieldString(cPoolJsonText, cPoolElems[0], "stdout").value);
+    test.checkText("c-ext-pool 0 stderr", "", json.readFieldString(cPoolJsonText, cPoolElems[0], "stderr").value);
+    test.checkText("c-ext-pool 0 error", "", json.readFieldString(cPoolJsonText, cPoolElems[0], "error").value);
+    test.checkInt("c-ext-pool 1 status", 3, json.readFieldInt(cPoolJsonText, cPoolElems[1], "status").value);
+    test.checkText("c-ext-pool 1 stdout", "two", json.readFieldString(cPoolJsonText, cPoolElems[1], "stdout").value);
+    test.checkText("c-ext-pool 1 stderr", "err2", json.readFieldString(cPoolJsonText, cPoolElems[1], "stderr").value);
+    test.checkText("c-ext-pool 1 error", "", json.readFieldString(cPoolJsonText, cPoolElems[1], "error").value);
 
     cCpuOnly := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; pool := import \"external/pool\"; io.outputLine(pool.cpuCount() >= 1);", fixtureName);
     test.checkInt("c-ext-pool cpuOnly status", 0, cCpuOnly.status);

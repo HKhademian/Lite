@@ -8,7 +8,7 @@ text := import "core/text";
 unicode := import "core/unicode";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 root := project.findRepoRoot();

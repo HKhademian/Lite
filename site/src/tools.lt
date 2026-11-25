@@ -1,7 +1,7 @@
 /** Generates `/tools/` toolchain hub body HTML and search entries (`site/tools-page.ts`). */
 
 text := import "core/text";
-json := import "util/json";
+json := import "data/json";
 
 /** Escapes HTML special characters (`&`, `<`, `>`, `"`, `'`). */
 pub escapeSiteHtml := fn(raw: String): String {

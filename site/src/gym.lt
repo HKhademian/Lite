@@ -3,7 +3,7 @@
 text := import "core/text";
 lru := import "ds/lru";
 challenges := import "util/challenges";
-json := import "util/json";
+json := import "data/json";
 siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
@@ -61,20 +61,20 @@ readOptStr := fn(src: String, objPos: Int, key: String): String {
         ck := objPos.toText() + ":" + key;
         hit := mut gymMetaCache.get(ck);
         if hit.isSome() { return hit.unwrapOr(""); }
-        res := json.readObjectString(src, objPos, key);
+        res := json.readFieldString(src, objPos, key);
         val := if res.found and res.ok { res.value } else { "" };
         _ev := mut gymMetaCache.put(ck, val);
         return val;
     }
-    res := json.readObjectString(src, objPos, key);
+    res := json.readFieldString(src, objPos, key);
     if res.found and res.ok { res.value } else { "" }
 };
 
 readStringList := fn(src: String, objPos: Int, key: String): List<String> {
     out: mut List<String> = [];
-    fld := json.findObjectField(src, objPos, key);
+    fld := json.findField(src, objPos, key);
     if not fld.found { return out; }
-    offs := json.arrayElementOffsets(src, fld.valuePos);
+    offs := json.arrayOffsets(src, fld.valuePos);
     loop offs as off {
         r := json.readStringAt(src, off);
         if r.ok {
@@ -85,7 +85,7 @@ readStringList := fn(src: String, objPos: Int, key: String): List<String> {
 };
 
 readRawField := fn(src: String, objPos: Int, key: String, fallback: String): String {
-    fld := json.findObjectField(src, objPos, key);
+    fld := json.findField(src, objPos, key);
     if not fld.found { return fallback; }
     sp := json.valueSpan(src, fld.valuePos);
     if not sp.ok { return fallback; }
@@ -93,9 +93,9 @@ readRawField := fn(src: String, objPos: Int, key: String, fallback: String): Str
 };
 
 arrayCountField := fn(src: String, objPos: Int, key: String): Int {
-    fld := json.findObjectField(src, objPos, key);
+    fld := json.findField(src, objPos, key);
     if not fld.found { return 0; }
-    json.arrayElementOffsets(src, fld.valuePos).length()
+    json.arrayOffsets(src, fld.valuePos).length()
 };
 
 inListText := fn(items: List<String>, needle: String): Bool {
@@ -590,9 +590,9 @@ workoutOffs: List<Int>
 
     modeLabel := if exMode == "drill" { "Concept Drill" } else { "Problem Workout" };
 
-    visField := json.findObjectField(src, iPos, "visibleCases");
+    visField := json.findField(src, iPos, "visibleCases");
     visOffs := if visField.found {
-        json.arrayElementOffsets(src, visField.valuePos)
+        json.arrayOffsets(src, visField.valuePos)
     } else {
         emptyV: List<Int> = [];
         emptyV
@@ -1232,12 +1232,12 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
         return (ok = false, jsonText = "", error = "site-gym: invalid input JSON: " + valid.error);
     }
     description := readOptStr(inputJson, 0, "description");
-    itemsField := json.findObjectField(inputJson, 0, "items");
+    itemsField := json.findField(inputJson, 0, "items");
     if not itemsField.found {
         return (ok = false, jsonText = "", error = "site-gym: input JSON requires items");
     }
 
-    itemOffs := json.arrayElementOffsets(inputJson, itemsField.valuePos);
+    itemOffs := json.arrayOffsets(inputJson, itemsField.valuePos);
     totalCount := itemOffs.length();
 
     drillOffs: mut List<Int> = [];

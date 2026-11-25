@@ -1,5 +1,5 @@
 test := import "core/test";
-json := import "util/json";
+json := import "data/json";
 mdHtml := import "util/markdown-html";
 
 sampleDoc := "# Main <T> Title\n\nStatus: **selected 2026-11-16**.\n\nIntro with `inline <a>` and **bold *nested*** plus [guide](other.md#sec).\n\n## Repeat `Name`\n\n## Repeat `Name`\n\n> [!NOTE]\n> Helpful note.\n\n| Col A | Col B |\n| :--- | ---: |\n| `x` | 42 |\n\n- first item\n  continued\n- second item\n\n1. step one\n2. step two\n\n```lts\noutputLine(42);\n```\n";
@@ -26,7 +26,7 @@ test.checkBool("toc has second anchor", true, rendered.tocJson.contains("repeat-
 jsonOut := mdHtml.renderMarkdownJson(sampleDoc, "docs/sample.md");
 jsonValid := json.validate(jsonOut);
 test.checkBool("renderMarkdownJson valid", true, jsonValid.ok);
-test.checkText("json path", "docs/sample.md", json.readObjectString(jsonOut, 0, "path").value);
+test.checkText("json path", "docs/sample.md", json.readFieldString(jsonOut, 0, "path").value);
 
 test.checkText("proposal status", "proposal", mdHtml.detectDocStatus("# Prop\n\nStatus: **working proposal**.\n"));
 test.checkText("historical status", "historical", mdHtml.detectDocStatus("# Old\n\nStatus: **superseded historical**.\n"));

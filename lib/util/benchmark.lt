@@ -10,14 +10,14 @@ list := import "core/list";
 crypto := import "core/crypto";
 time := import "core/time";
 unicode := import "core/unicode";
-json := import "util/json";
+json := import "data/json";
 streams := import "util/streams";
 cases := import "util/cases";
 corpus := import "util/corpus";
 
 /** Parses non-negative JSON decimal ms text (e.g. `12.345`) into rounded integer microseconds. */
 pub parseMsToMicros := fn(source: String, objPos: Int, key: String): (ok: Bool, micros: Int) {
-    field := json.findObjectField(source, objPos, key);
+    field := json.findField(source, objPos, key);
     if not field.found { return (ok = false, micros = 0); }
     span := json.valueSpan(source, field.valuePos);
     if not span.ok { return (ok = false, micros = 0); }
@@ -147,7 +147,7 @@ maxRssKiB: Int, outPath: String, errPath: String, error: String
     lRes := parseMsToMicros(metRead.text, 0, "loadMs");
     cRes := parseMsToMicros(metRead.text, 0, "compileMs");
     cpuRes := parseMsToMicros(metRead.text, 0, "cpuMs");
-    rssRes := json.readObjectInt(metRead.text, 0, "maxRssKiB");
+    rssRes := json.readFieldInt(metRead.text, 0, "maxRssKiB");
     if not lRes.ok or not cRes.ok or not cpuRes.ok or not rssRes.found or not rssRes.ok or rssRes.value < 0 {
         return (ok = false, status = -1, processMicros = 0, loadMicros = 0, compileMicros = 0, cpuMicros = 0, maxRssKiB = 0, outPath = outPath, errPath = errPath, error = "invalid worker metric");
     }
@@ -199,7 +199,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
         return 1;
     }
     emptyStrs: List<String> = [];
-    filesField := json.findObjectField(manRead.text, 0, "files");
+    filesField := json.findField(manRead.text, 0, "files");
     manFiles := if filesField.found { corpus.readStringListAt(manRead.text, filesField.valuePos) } else { emptyStrs };
     if manFiles.length() =!= 1 {
         io.errorLine("compiler benchmark requires one TS source root");
@@ -276,8 +276,8 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     }
 
     refRead := fs.readText(path.join(rootDir, "compiler/tests/references/generated/current-artifacts.json"));
-    artField := json.findObjectField(refRead.text, 0, "artifacts");
-    artOffsets := json.arrayElementOffsets(refRead.text, artField.valuePos);
+    artField := json.findField(refRead.text, 0, "artifacts");
+    artOffsets := json.arrayOffsets(refRead.text, artField.valuePos);
     compDir := path.join(rootDir, "igniter/tests/compiler");
     fixFiles := path.collectFiles(compDir, [compDir], ".json", [], false);
 
@@ -295,18 +295,18 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
         parsedFn := corpus.parseFixtureFilename(fileName);
         fixJson := fs.readText(absFix).text;
         expectedTs := corpus.findRecordedTsHash(refRead.text, artOffsets, parsedFn.slug);
-        srcField := json.findObjectField(fixJson, 0, "source");
+        srcField := json.findField(fixJson, 0, "source");
         fixSrcBytes := streams.readStreamBytes(fixJson, srcField.valuePos, compDir);
         fixSrcFile := path.join(workDir, "csrc-" + corpusInSeq.toText() + ".lts");
         _ws := fs.writeBytes(fixSrcFile, fixSrcBytes);
 
-        casesField := json.findObjectField(fixJson, 0, "cases");
-        loop json.arrayElementOffsets(fixJson, casesField.valuePos) as sPos {
-            caseName := json.readObjectString(fixJson, sPos, "name").value;
-            expExit := json.readObjectInt(fixJson, sPos, "exitCode").value;
+        casesField := json.findField(fixJson, 0, "cases");
+        loop json.arrayOffsets(fixJson, casesField.valuePos) as sPos {
+            caseName := json.readFieldString(fixJson, sPos, "name").value;
+            expExit := json.readFieldInt(fixJson, sPos, "exitCode").value;
             emptyBytes: List<Int> = [];
-            outField := json.findObjectField(fixJson, sPos, "stdout");
-            errField := json.findObjectField(fixJson, sPos, "stderr");
+            outField := json.findField(fixJson, sPos, "stdout");
+            errField := json.findField(fixJson, sPos, "stderr");
             expOutBytes := if outField.found { streams.readStreamBytes(fixJson, outField.valuePos, compDir) } else { emptyBytes };
             expErrBytes := if errField.found { streams.readStreamBytes(fixJson, errField.valuePos, compDir) } else { emptyBytes };
             eoFile := path.join(workDir, "ceo-" + corpusInSeq.toText() + ".bin");
@@ -711,7 +711,7 @@ pub runTextCacheCommand := fn(rootDir: String, args: List<String>): Int {
     }
 
     manifestPath := path.join(rootDir, "compiler/manifests/ts.json");
-    manFiles := corpus.readStringListAt(fs.readText(manifestPath).text, json.findObjectField(fs.readText(manifestPath).text, 0, "files").valuePos);
+    manFiles := corpus.readStringListAt(fs.readText(manifestPath).text, json.findField(fs.readText(manifestPath).text, 0, "files").valuePos);
     if manFiles.length() =!= 1 {
         io.errorLine("text-cache benchmark requires one TS source root");
         return 1;

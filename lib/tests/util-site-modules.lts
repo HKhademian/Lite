@@ -1,6 +1,6 @@
 siteMods := import "../../site/src/modules";
 fs := import "core/file";
-json := import "util/json";
+json := import "data/json";
 path := import "core/path";
 test := import "core/test";
 
@@ -25,8 +25,8 @@ res := siteMods.buildModulesPayloadJson(inputJson);
 test.checkText("modules build err", "", res.error);
 test.checkBool("modules build ok", true, res.ok);
 test.checkBool("valid json", true, json.validate(res.jsonText).ok);
-test.checkInt("moduleCount", 1, json.readObjectInt(res.jsonText, 0, "moduleCount").value);
-test.checkInt("symbolCount", 1, json.readObjectInt(res.jsonText, 0, "symbolCount").value);
+test.checkInt("moduleCount", 1, json.readFieldInt(res.jsonText, 0, "moduleCount").value);
+test.checkInt("symbolCount", 1, json.readFieldInt(res.jsonText, 0, "symbolCount").value);
 test.checkBool("has index page", true, res.jsonText.indexOf("\"relPath\":\"modules/index.html\"", 0) >= 0);
 test.checkBool("has detail page", true, res.jsonText.indexOf("\"relPath\":\"modules/core/io.html\"", 0) >= 0);
 test.checkBool("tracks sample usage", true, res.jsonText.indexOf("1 sample", 0) >= 0);

@@ -8,7 +8,7 @@ list := import "core/list";
 crypto := import "core/crypto";
 unicode := import "core/unicode";
 collections := import "util/collections";
-json := import "util/json";
+json := import "data/json";
 
 isJsonSpace := fn(ch: String): Bool {
     ch == " " or ch == "\n" or ch == "\r" or ch == "\t"
@@ -97,7 +97,7 @@ pub formatSortedCountsJson := fn(values: List<String>): String {
 formatCompactIntObject := fn(source: String, objPos: Int): String {
     entries: mut List<String> = [];
     loop json.objectKeys(source, objPos) as k {
-        vRes := json.readObjectInt(source, objPos, k);
+        vRes := json.readFieldInt(source, objPos, k);
         if vRes.found and vRes.ok {
             mut entries.pushBack(json.quoteString(k) + ":" + vRes.value.toText());
         }
@@ -106,7 +106,7 @@ formatCompactIntObject := fn(source: String, objPos: Int): String {
 };
 
 checkScalarFieldNonEmpty := fn(source: String, objPos: Int, key: String): Bool {
-    f := json.findObjectField(source, objPos, key);
+    f := json.findField(source, objPos, key);
     if not f.found { return false; }
     sRes := json.readStringAt(source, f.valuePos);
     if sRes.ok { return sRes.value.trim() =!= ""; }
@@ -123,7 +123,7 @@ validateBenchmarkCasesArray := fn(itemId: String, caseFilePath: String, expected
     if not json.validate(src).ok or not isJsonArrayAt(src, 0) {
         return (ok = false, actualCount = 0, error = caseFilePath + ": expected JSON array");
     }
-    offsets := json.arrayElementOffsets(src, skipJsonSpace(src, 0));
+    offsets := json.arrayOffsets(src, skipJsonSpace(src, 0));
     actual := offsets.length();
     if actual =!= expectedCount {
         return (ok = false, actualCount = 0, error = itemId + ": case count mismatch");
@@ -151,8 +151,8 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
     if not json.validate(idxJson).ok or not isJsonObjectAt(idxJson, 0) {
         return (ok = false, summaryText = "", error = "benchmark/index.json: expected object");
     }
-    totalRes := json.readObjectInt(idxJson, 0, "total");
-    sourcesField := json.findObjectField(idxJson, 0, "sources");
+    totalRes := json.readFieldInt(idxJson, 0, "total");
+    sourcesField := json.findField(idxJson, 0, "sources");
     if not totalRes.found or not totalRes.ok or not sourcesField.found or not isJsonObjectAt(idxJson, sourcesField.valuePos) {
         return (ok = false, summaryText = "", error = "benchmark/index.json: missing total or sources");
     }
@@ -169,8 +169,8 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
         if not json.validate(line).ok or not isJsonObjectAt(line, 0) {
             return (ok = false, summaryText = "", error = "items.jsonl: expected object line");
         }
-        idRes := json.readObjectString(line, 0, "id");
-        srcRes := json.readObjectString(line, 0, "source");
+        idRes := json.readFieldString(line, 0, "id");
+        srcRes := json.readFieldString(line, 0, "source");
         if not idRes.found or not idRes.ok or not srcRes.found or not srcRes.ok {
             return (ok = false, summaryText = "", error = "items.jsonl: missing id or source");
         }
@@ -187,7 +187,7 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
     }
     var srcSum := 0;
     loop json.objectKeys(idxJson, sourcesField.valuePos) as sk {
-        sv := json.readObjectInt(idxJson, sourcesField.valuePos, sk);
+        sv := json.readFieldInt(idxJson, sourcesField.valuePos, sk);
         if not sv.found or not sv.ok {
             return (ok = false, summaryText = "", error = "benchmark/index.json invalid source count");
         }
@@ -232,19 +232,19 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
         }
         meta := metaRead.text;
 
-        mId := json.readObjectString(meta, 0, "id");
-        mSrc := json.readObjectString(meta, 0, "source");
+        mId := json.readFieldString(meta, 0, "id");
+        mSrc := json.readFieldString(meta, 0, "source");
         if not mId.found or mId.value =!= rowId or not mSrc.found or mSrc.value =!= rowSrc {
             return (ok = false, summaryText = "", error = rowId + ": metadata identity mismatch");
         }
-        mHar := json.readObjectString(meta, 0, "harness");
+        mHar := json.readFieldString(meta, 0, "harness");
         if not mHar.found or not allowedHarness.contains(mHar.value) {
             return (ok = false, summaryText = "", error = rowId + ": unsupported harness " + mHar.value);
         }
         harness := mHar.value;
         mut formats.pushBack(harness);
 
-        mStmt := json.readObjectString(meta, 0, "statement");
+        mStmt := json.readFieldString(meta, 0, "statement");
         if not mStmt.found or not mStmt.ok {
             return (ok = false, summaryText = "", error = rowId + ": statement missing or too short");
         }
@@ -257,30 +257,30 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
             return (ok = false, summaryText = "", error = rowId + ": statement missing or too short");
         }
 
-        refField := json.findObjectField(meta, 0, "reference_solutions");
+        refField := json.findField(meta, 0, "reference_solutions");
         if not refField.found or not isJsonArrayAt(meta, refField.valuePos) {
             return (ok = false, summaryText = "", error = rowId + ": missing reference solution metadata");
         }
-        refOffsets := json.arrayElementOffsets(meta, refField.valuePos);
+        refOffsets := json.arrayOffsets(meta, refField.valuePos);
         if refOffsets.length() == 0 {
             return (ok = false, summaryText = "", error = rowId + ": missing reference solution metadata");
         }
         loop refOffsets as rPos {
-            rUrl := json.readObjectString(meta, rPos, "url");
+            rUrl := json.readFieldString(meta, rPos, "url");
             if not rUrl.found or not rUrl.value.startsWithAt(0, "https://") {
                 return (ok = false, summaryText = "", error = rowId + ": bad reference url");
             }
         }
-        mUrl := json.readObjectString(meta, 0, "url");
+        mUrl := json.readFieldString(meta, 0, "url");
         if not mUrl.found or not mUrl.value.startsWithAt(0, "https://") {
             return (ok = false, summaryText = "", error = rowId + ": bad source url");
         }
 
-        testsField := json.findObjectField(meta, 0, "tests");
+        testsField := json.findField(meta, 0, "tests");
         if not testsField.found or not isJsonObjectAt(meta, testsField.valuePos) {
             return (ok = false, summaryText = "", error = rowId + ": missing tests object");
         }
-        pubPathRes := json.readObjectString(meta, testsField.valuePos, "public_path");
+        pubPathRes := json.readFieldString(meta, testsField.valuePos, "public_path");
         if not pubPathRes.found or not pubPathRes.ok {
             return (ok = false, summaryText = "", error = rowId + ": missing public_path");
         }
@@ -295,12 +295,12 @@ pub validateChallengeBenchmark := fn(benchDir: String): (ok: Bool, summaryText: 
             }
             publicTotal = publicTotal + 1;
         } else {
-            hidPathRes := json.readObjectString(meta, testsField.valuePos, "hidden_path");
+            hidPathRes := json.readFieldString(meta, testsField.valuePos, "hidden_path");
             if not hidPathRes.found or not hidPathRes.ok {
                 return (ok = false, summaryText = "", error = rowId + ": missing hidden_path");
             }
-            expPub := json.readObjectInt(meta, testsField.valuePos, "public");
-            expHid := json.readObjectInt(meta, testsField.valuePos, "hidden");
+            expPub := json.readFieldInt(meta, testsField.valuePos, "public");
+            expHid := json.readFieldInt(meta, testsField.valuePos, "hidden");
             pubChk := validateBenchmarkCasesArray(rowId, path.join(itemDir, pubPathRes.value), expPub.value);
             if not pubChk.ok {
                 return (ok = false, summaryText = "", error = pubChk.error);
@@ -423,7 +423,7 @@ pub isLowerSlugText := fn(s: String): Bool {
 
 /** Parses decimal text or number field in JSON object into fixed-point thousandths (`1.5 -> 1500`). */
 pub parseScaledDecimal1000 := fn(source: String, objPos: Int, key: String): (ok: Bool, scaled: Int, isIntLiteral: Bool, raw: String) {
-    f := json.findObjectField(source, objPos, key);
+    f := json.findField(source, objPos, key);
     if not f.found { return (ok = false, scaled = 0, isIntLiteral = false, raw = ""); }
     span := json.valueSpan(source, f.valuePos);
     if not span.ok { return (ok = false, scaled = 0, isIntLiteral = false, raw = ""); }
@@ -484,11 +484,11 @@ pub parseScaledNumberText := fn(raw: String): (ok: Bool, scaled: Int, isIntLiter
 };
 
 checkStrictStringArrayField := fn(source: String, objPos: Int, key: String): (ok: Bool, itemsEmpty: Bool) {
-    f := json.findObjectField(source, objPos, key);
+    f := json.findField(source, objPos, key);
     if not f.found or not isJsonArrayAt(source, f.valuePos) {
         return (ok = false, itemsEmpty = true);
     }
-    offsets := json.arrayElementOffsets(source, f.valuePos);
+    offsets := json.arrayOffsets(source, f.valuePos);
     loop offsets as elPos {
         s := json.readStringAt(source, elPos);
         if not s.ok { return (ok = false, itemsEmpty = true); }
@@ -498,9 +498,9 @@ checkStrictStringArrayField := fn(source: String, objPos: Int, key: String): (ok
 
 pub readStringArray := fn(source: String, objPos: Int, key: String): List<String> {
     out: mut List<String> = [];
-    f := json.findObjectField(source, objPos, key);
+    f := json.findField(source, objPos, key);
     if not f.found or not isJsonArrayAt(source, f.valuePos) { return out; }
-    loop json.arrayElementOffsets(source, f.valuePos) as elPos {
+    loop json.arrayOffsets(source, f.valuePos) as elPos {
         s := json.readStringAt(source, elPos);
         if s.ok { mut out.pushBack(s.value); }
     }
@@ -508,7 +508,7 @@ pub readStringArray := fn(source: String, objPos: Int, key: String): List<String
 };
 
 isNullField := fn(source: String, objPos: Int, key: String): Bool {
-    f := json.findObjectField(source, objPos, key);
+    f := json.findField(source, objPos, key);
     if not f.found { return false; }
     span := json.valueSpan(source, f.valuePos);
     if not span.ok { return false; }
@@ -534,13 +534,13 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
         return (ok = false, summaryText = "", error = "schema/taxonomy.json: expected object");
     }
 
-    taxTopicsField := json.findObjectField(taxRead.text, 0, "topics");
+    taxTopicsField := json.findField(taxRead.text, 0, "topics");
     if not taxTopicsField.found or not isJsonArrayAt(taxRead.text, taxTopicsField.valuePos) {
         return (ok = false, summaryText = "", error = "schema/taxonomy.json: missing topics array");
     }
     rawTopicIds: mut List<String> = [];
-    loop json.arrayElementOffsets(taxRead.text, taxTopicsField.valuePos) as tPos {
-        tid := json.readObjectString(taxRead.text, tPos, "id");
+    loop json.arrayOffsets(taxRead.text, taxTopicsField.valuePos) as tPos {
+        tid := json.readFieldString(taxRead.text, tPos, "id");
         if tid.found and tid.ok { mut rawTopicIds.pushBack(tid.value); }
     }
     sortedTopics := rawTopicIds.sortTexts();
@@ -563,11 +563,11 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
         if not json.validate(line).ok or not isJsonObjectAt(line, 0) {
             return (ok = false, summaryText = "", error = "challenges.jsonl:" + lineNo.toText() + ": invalid JSON");
         }
-        idRes := json.readObjectString(line, 0, "id");
+        idRes := json.readFieldString(line, 0, "id");
         idLabel := if idRes.found and idRes.ok { idRes.value } else { "<missing id>" };
 
         loop requiredKeys as rk {
-            rf := json.findObjectField(line, 0, rk);
+            rf := json.findField(line, 0, rk);
             if not rf.found {
                 return (ok = false, summaryText = "", error = idLabel + ": missing field " + rk);
             }
@@ -578,31 +578,31 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
         cid := idRes.value;
         mut rawIds.pushBack(cid);
 
-        titleRes := json.readObjectString(line, 0, "title");
+        titleRes := json.readFieldString(line, 0, "title");
         if not titleRes.found or not titleRes.ok or titleRes.value.trim() == "" {
             return (ok = false, summaryText = "", error = cid + ": empty title");
         }
-        srcRes := json.readObjectString(line, 0, "source");
+        srcRes := json.readFieldString(line, 0, "source");
         if not srcRes.found or not allowedSources.contains(srcRes.value) {
             return (ok = false, summaryText = "", error = cid + ": unknown source " + srcRes.value);
         }
-        urlRes := json.readObjectString(line, 0, "url");
+        urlRes := json.readFieldString(line, 0, "url");
         if not urlRes.found or not urlRes.value.startsWithAt(0, "https://") {
             return (ok = false, summaryText = "", error = cid + ": bad url " + urlRes.value);
         }
-        catRes := json.readObjectString(line, 0, "category");
+        catRes := json.readFieldString(line, 0, "category");
         if not catRes.found or not allowedCats.contains(catRes.value) {
             return (ok = false, summaryText = "", error = cid + ": unknown category " + catRes.value);
         }
-        tsRes := json.readObjectString(line, 0, "topics_source");
+        tsRes := json.readFieldString(line, 0, "topics_source");
         if not tsRes.found or not allowedTopicSrc.contains(tsRes.value) {
             return (ok = false, summaryText = "", error = cid + ": invalid topics_source");
         }
-        stRes := json.readObjectString(line, 0, "status");
+        stRes := json.readFieldString(line, 0, "status");
         if not stRes.found or not allowedStatus.contains(stRes.value) {
             return (ok = false, summaryText = "", error = cid + ": invalid status");
         }
-        premRes := json.readObjectBool(line, 0, "premium");
+        premRes := json.readFieldBool(line, 0, "premium");
         if not premRes.found or not premRes.ok {
             return (ok = false, summaryText = "", error = cid + ": premium must be bool");
         }
@@ -627,12 +627,12 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
             (mut usedTopics).pushBack(tp);
         }
 
-        diffField := json.findObjectField(line, 0, "difficulty");
+        diffField := json.findField(line, 0, "difficulty");
         if not diffField.found or not isJsonObjectAt(line, diffField.valuePos) {
             return (ok = false, summaryText = "", error = cid + ": difficulty must be an object");
         }
-        rawField := json.findObjectField(line, diffField.valuePos, "raw");
-        if isNullField(line, diffField.valuePos, "scale") or not json.findObjectField(line, diffField.valuePos, "scale").found or not rawField.found {
+        rawField := json.findField(line, diffField.valuePos, "raw");
+        if isNullField(line, diffField.valuePos, "scale") or not json.findField(line, diffField.valuePos, "scale").found or not rawField.found {
             return (ok = false, summaryText = "", error = cid + ": difficulty needs scale and raw");
         }
         normRes := parseScaledDecimal1000(line, diffField.valuePos, "normalized");
@@ -644,7 +644,7 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
                 return (ok = false, summaryText = "", error = cid + ": primary_topic must be topics[0] or null for empty topics");
             }
         } else {
-            ptRes := json.readObjectString(line, 0, "primary_topic");
+            ptRes := json.readFieldString(line, 0, "primary_topic");
             if not ptRes.found or not ptRes.ok or ptRes.value =!= rTopics[0] {
                 return (ok = false, summaryText = "", error = cid + ": primary_topic must be topics[0] or null for empty topics");
             }
@@ -665,8 +665,8 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
         if not json.validate(lLine).ok or not isJsonObjectAt(lLine, 0) {
             return (ok = false, summaryText = "", error = "lists.jsonl: expected object");
         }
-        lId := json.readObjectString(lLine, 0, "id").value;
-        lCnt := json.readObjectInt(lLine, 0, "count").value;
+        lId := json.readFieldString(lLine, 0, "id").value;
+        lCnt := json.readFieldInt(lLine, 0, "count").value;
         cIds := readStringArray(lLine, 0, "challenge_ids");
         if lCnt =!= cIds.length() {
             return (ok = false, summaryText = "", error = "list " + lId + ": count does not match challenge_ids");
@@ -676,9 +676,9 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
                 return (ok = false, summaryText = "", error = "list " + lId + ": unknown challenge " + cid);
             }
         }
-        gField := json.findObjectField(lLine, 0, "groups");
+        gField := json.findField(lLine, 0, "groups");
         if gField.found and isJsonArrayAt(lLine, gField.valuePos) {
-            loop json.arrayElementOffsets(lLine, gField.valuePos) as gPos {
+            loop json.arrayOffsets(lLine, gField.valuePos) as gPos {
                 loop readStringArray(lLine, gPos, "challenge_ids") as gcid {
                     if not sortedContainsText(sortedIds, gcid) {
                         return (ok = false, summaryText = "", error = "list " + lId + ": unknown challenge " + gcid);
@@ -706,13 +706,13 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
             if not json.validate(tLine).ok or not isJsonObjectAt(tLine, 0) {
                 return (ok = false, summaryText = "", error = "tests.jsonl:" + tLineNo.toText() + ": invalid JSON");
             }
-            tcId := json.readObjectString(tLine, 0, "challenge_id").value;
+            tcId := json.readFieldString(tLine, 0, "challenge_id").value;
             mut rawTestIds.pushBack(tcId);
-            pubF := json.findObjectField(tLine, 0, "public");
-            hidF := json.findObjectField(tLine, 0, "hidden");
+            pubF := json.findField(tLine, 0, "public");
+            hidF := json.findField(tLine, 0, "hidden");
             emptyInts: List<Int> = [];
-            pubOff := if pubF.found and isJsonArrayAt(tLine, pubF.valuePos) { json.arrayElementOffsets(tLine, pubF.valuePos) } else { emptyInts };
-            hidOff := if hidF.found and isJsonArrayAt(tLine, hidF.valuePos) { json.arrayElementOffsets(tLine, hidF.valuePos) } else { emptyInts };
+            pubOff := if pubF.found and isJsonArrayAt(tLine, pubF.valuePos) { json.arrayOffsets(tLine, pubF.valuePos) } else { emptyInts };
+            hidOff := if hidF.found and isJsonArrayAt(tLine, hidF.valuePos) { json.arrayOffsets(tLine, hidF.valuePos) } else { emptyInts };
             pubN := pubOff.length();
             hidN := hidOff.length();
             if pubN > 0 { withPub = withPub + 1; }
@@ -728,7 +728,7 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
                     return (ok = false, summaryText = "", error = tcId + ": empty or unnamed test case");
                 }
             }
-            st := json.readObjectString(tLine, 0, "status").value;
+            st := json.readFieldString(tLine, 0, "status").value;
             if st == "public+hidden" and (pubN == 0 or hidN == 0) {
                 return (ok = false, summaryText = "", error = tcId + ": status says public+hidden but cases are missing");
             }
@@ -739,7 +739,7 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
                 return (ok = false, summaryText = "", error = tcId + ": status " + st + " but cases exist");
             }
             if hidN > 0 {
-                pol := json.readObjectString(tLine, 0, "hidden_policy").value;
+                pol := json.readFieldString(tLine, 0, "hidden_policy").value;
                 if pol =!= "held-out-official-samples" {
                     return (ok = false, summaryText = "", error = tcId + ": hidden cases without held-out policy");
                 }
@@ -761,14 +761,14 @@ pub validateChallengeCorpus := fn(benchRootDir: String): (ok: Bool, summaryText:
         }
     }
 
-    idxTotal := json.readObjectInt(idxRead.text, 0, "total").value;
+    idxTotal := json.readFieldInt(idxRead.text, 0, "total").value;
     if idxTotal =!= recCount {
         return (ok = false, summaryText = "", error = "index.total does not match challenges.jsonl");
     }
-    srcArrField := json.findObjectField(idxRead.text, 0, "sources");
+    srcArrField := json.findField(idxRead.text, 0, "sources");
     var idxSum := 0;
-    loop json.arrayElementOffsets(idxRead.text, srcArrField.valuePos) as sPos {
-        idxSum = idxSum + json.readObjectInt(idxRead.text, sPos, "count").value;
+    loop json.arrayOffsets(idxRead.text, srcArrField.valuePos) as sPos {
+        idxSum = idxSum + json.readFieldInt(idxRead.text, sPos, "count").value;
     }
     if idxSum =!= recCount {
         return (ok = false, summaryText = "", error = "index source counts do not sum to total");
@@ -1035,21 +1035,21 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
     allPops: mut List<Int> = [];
 
     loop lines as ln {
-        idV := json.readObjectString(ln, 0, "id").value;
-        srcV := json.readObjectString(ln, 0, "source").value;
-        catV := json.readObjectString(ln, 0, "category").value;
-        ttlV := json.readObjectString(ln, 0, "title").value;
-        tsV := json.readObjectString(ln, 0, "topics_source").value;
-        stV := json.readObjectString(ln, 0, "status").value;
+        idV := json.readFieldString(ln, 0, "id").value;
+        srcV := json.readFieldString(ln, 0, "source").value;
+        catV := json.readFieldString(ln, 0, "category").value;
+        ttlV := json.readFieldString(ln, 0, "title").value;
+        tsV := json.readFieldString(ln, 0, "topics_source").value;
+        stV := json.readFieldString(ln, 0, "status").value;
 
-        dField := json.findObjectField(ln, 0, "difficulty");
+        dField := json.findField(ln, 0, "difficulty");
         normD := parseScaledDecimal1000(ln, dField.valuePos, "normalized");
-        numF := json.readObjectInt(ln, 0, "number");
+        numF := json.readFieldInt(ln, 0, "number");
         numV := if numF.found and numF.ok { numF.value } else { 0 };
         var popV := 0;
-        popF := json.findObjectField(ln, 0, "popularity");
+        popF := json.findField(ln, 0, "popularity");
         if popF.found and isJsonObjectAt(ln, popF.valuePos) {
-            solRes := json.readObjectInt(ln, popF.valuePos, "solved");
+            solRes := json.readFieldInt(ln, popF.valuePos, "solved");
             if solRes.found and solRes.ok { popV = solRes.value; }
         }
 
@@ -1093,7 +1093,7 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
                 mut seenListIds.add(lid);
                 var matchedLine := "";
                 loop listLines as ll {
-                    if json.readObjectString(ll, 0, "id").value == lid {
+                    if json.readFieldString(ll, 0, "id").value == lid {
                         matchedLine = ll;
                         break;
                     }
@@ -1162,7 +1162,7 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
         if keep and tsFilter.found and tsFilter.value =!= "" and allTopSrc[idx] =!= tsFilter.value { keep = false; }
         if keep and stFilter.found and stFilter.value =!= "" and allStatuses[idx] =!= stFilter.value { keep = false; }
         if keep and premium =!= "include" {
-            isPrem := json.readObjectBool(lines[idx], 0, "premium").value;
+            isPrem := json.readFieldBool(lines[idx], 0, "premium").value;
             if (premium == "only" and not isPrem) or (premium == "exclude" and isPrem) { keep = false; }
         }
         if keep and searchNeedle =!= "" {
@@ -1313,7 +1313,7 @@ pub runQueryCommand := fn(rootDir: String, args: List<String>): Int {
             ln := lines[fi];
             diffStr := formatDifficultyCsv(allSources[fi], allDiffs[fi], allDiffRaw[fi], allDiffIntFlag[fi]);
             topicsJoined := readStringArray(ln, 0, "topics").join(";");
-            urlV := json.readObjectString(ln, 0, "url").value;
+            urlV := json.readFieldString(ln, 0, "url").value;
             row := csvEscapeField(allIds[fi]) + ","
             + csvEscapeField(allTitles[fi]) + ","
             + csvEscapeField(allSources[fi]) + ","
@@ -1713,7 +1713,7 @@ mergeAndWriteBenchmarkManifest := fn(benchDir: String, replaceSource: String, wr
         extRead := fs.readText(manifestPath);
         if not extRead.ok { return (ok = false, totalRows = 0, error = extRead.error); }
         loop splitJsonLines(extRead.text) as ln {
-            if json.readObjectString(ln, 0, "source").value =!= replaceSource {
+            if json.readFieldString(ln, 0, "source").value =!= replaceSource {
                 mut mergedLines.pushBack(ln);
             }
         }
@@ -1729,8 +1729,8 @@ mergeAndWriteBenchmarkManifest := fn(benchDir: String, replaceSource: String, wr
     var i := 0;
     loop i < n {
         ln := mergedLines[i];
-        mut sources.pushBack(json.readObjectString(ln, 0, "source").value);
-        mut ids.pushBack(json.readObjectString(ln, 0, "id").value);
+        mut sources.pushBack(json.readFieldString(ln, 0, "source").value);
+        mut ids.pushBack(json.readFieldString(ln, 0, "id").value);
         mut order.pushBack(i);
         i = i + 1;
     }
@@ -1811,8 +1811,8 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
     eulerByNum: mut Map<Int, Int>;
     eulerLines: mut List<String> = [];
     loop splitJsonLines(chRead.text) as ln {
-        if json.readObjectString(ln, 0, "source").value == "project-euler" {
-            numR := json.readObjectInt(ln, 0, "number");
+        if json.readFieldString(ln, 0, "source").value == "project-euler" {
+            numR := json.readFieldInt(ln, 0, "number");
             if numR.found and numR.ok {
                 if not eulerByNum.has(numR.value) {
                     mut eulerByNum.set(numR.value, eulerLines.length());
@@ -1850,12 +1850,12 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
         }
     }
 
-    treeField := json.findObjectField(treeRead.text, 0, "tree");
+    treeField := json.findField(treeRead.text, 0, "tree");
     blobNumsRaw: mut List<Int> = [];
     blobNumSet: mut Set<Int>;
-    loop json.arrayElementOffsets(treeRead.text, treeField.valuePos) as tPos {
-        if json.readObjectString(treeRead.text, tPos, "type").value == "blob" {
-            tPath := json.readObjectString(treeRead.text, tPos, "path").value;
+    loop json.arrayOffsets(treeRead.text, treeField.valuePos) as tPos {
+        if json.readFieldString(treeRead.text, tPos, "type").value == "blob" {
+            tPath := json.readFieldString(treeRead.text, tPos, "path").value;
             pn := parseThreeDigitPythonNum(tPath);
             if pn.ok and not blobNumSet.has(pn.num) {
                 mut blobNumSet.add(pn.num);
@@ -1895,7 +1895,7 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
                 }
                 if bEnd >= 0 {
                     bodyHtml := page.slice(afterOpen, bEnd);
-                    var title := json.readObjectString(cLine, 0, "title").value;
+                    var title := json.readFieldString(cLine, 0, "title").value;
                     h2Start := page.indexOf("<h2>", 0);
                     if h2Start >= 0 {
                         h2End := page.indexOf("</h2>", h2Start + 4);
@@ -1906,16 +1906,16 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
                     }
                     statement := collapseMultiNewlines(unescapeHtmlWithTable(entKeys, entVals, replaceHtmlLineBreaksAndParagraphs(bodyHtml))).trim();
                     if statement =!= "" {
-                        cid := json.readObjectString(cLine, 0, "id").value;
-                        curl := json.readObjectString(cLine, 0, "url").value;
-                        ccat := json.readObjectString(cLine, 0, "category").value;
-                        topicsSpan := json.valueSpan(cLine, json.findObjectField(cLine, 0, "topics").valuePos);
+                        cid := json.readFieldString(cLine, 0, "id").value;
+                        curl := json.readFieldString(cLine, 0, "url").value;
+                        ccat := json.readFieldString(cLine, 0, "category").value;
+                        topicsSpan := json.valueSpan(cLine, json.findField(cLine, 0, "topics").valuePos);
                         topicsRawJson := cLine.slice(topicsSpan.start, topicsSpan.end);
-                        diffField := json.findObjectField(cLine, 0, "difficulty");
+                        diffField := json.findField(cLine, 0, "difficulty");
                         diffSpan := json.valueSpan(cLine, diffField.valuePos);
                         diffRawJson := cLine.slice(diffSpan.start, diffSpan.end);
                         normRes := parseScaledDecimal1000(cLine, diffField.valuePos, "normalized");
-                        rawDiffField := json.findObjectField(cLine, diffField.valuePos, "raw");
+                        rawDiffField := json.findField(cLine, diffField.valuePos, "raw");
                         rawDiffStr := json.readStringAt(cLine, rawDiffField.valuePos);
                         rawDiffDisp := if rawDiffStr.ok { rawDiffStr.value } else {
                             sp := json.valueSpan(cLine, rawDiffField.valuePos);
@@ -2002,7 +2002,7 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     chIds: mut List<String> = [];
     chIdIndex: mut Map<String, Int>;
     loop chLines as cl {
-        cid := json.readObjectString(cl, 0, "id").value;
+        cid := json.readFieldString(cl, 0, "id").value;
         if not chIdIndex.has(cid) {
             mut chIdIndex.set(cid, chIds.length());
         }
@@ -2013,23 +2013,23 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     tsIdIndex: mut Map<String, Int>;
     var tsi := 0;
     loop tsLines as tl {
-        tid := json.readObjectString(tl, 0, "challenge_id").value;
+        tid := json.readFieldString(tl, 0, "challenge_id").value;
         if not tsIdIndex.has(tid) {
             mut tsIdIndex.set(tid, tsi);
         }
         tsi = tsi + 1;
     }
 
-    qField := json.findObjectField(mRead.text, 0, "questions");
-    qOffsets := json.arrayElementOffsets(mRead.text, qField.valuePos);
+    qField := json.findField(mRead.text, 0, "questions");
+    qOffsets := json.arrayOffsets(mRead.text, qField.valuePos);
     qIdIndex: mut Map<String, Int>;
     var qi := 0;
     loop qOffsets as qp {
-        fidStr := json.readObjectString(mRead.text, qp, "frontend_id");
+        fidStr := json.readFieldString(mRead.text, qp, "frontend_id");
         qid := if fidStr.found and fidStr.ok {
             fidStr.value
         } else {
-            fidInt := json.readObjectInt(mRead.text, qp, "frontend_id");
+            fidInt := json.readFieldInt(mRead.text, qp, "frontend_id");
             if fidInt.found and fidInt.ok { fidInt.value.toText() } else { "" }
         };
         if not qIdIndex.has(qid) {
@@ -2038,12 +2038,12 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
         qi = qi + 1;
     }
 
-    treeField := json.findObjectField(trRead.text, 0, "tree");
+    treeField := json.findField(trRead.text, 0, "tree");
     pathNumIndex: mut Map<Int, Int>;
     pathStrs: mut List<String> = [];
-    loop json.arrayElementOffsets(trRead.text, treeField.valuePos) as tPos {
-        if json.readObjectString(trRead.text, tPos, "type").value == "blob" {
-            tPath := json.readObjectString(trRead.text, tPos, "path").value;
+    loop json.arrayOffsets(trRead.text, treeField.valuePos) as tPos {
+        if json.readFieldString(trRead.text, tPos, "type").value == "blob" {
+            tPath := json.readFieldString(trRead.text, tPos, "path").value;
             pn := parseLeetcodeSolutionNum(tPath);
             if pn.ok and not pathNumIndex.has(pn.num) {
                 mut pathNumIndex.set(pn.num, pathStrs.length());
@@ -2055,7 +2055,7 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     curated: mut List<String> = [];
     curatedSet: mut Set<String>;
     loop splitJsonLines(lRead.text) as ll {
-        lid := json.readObjectString(ll, 0, "id").value;
+        lid := json.readFieldString(ll, 0, "id").value;
         if lid == "blind-75" or lid == "neetcode-150" {
             loop readStringArray(ll, 0, "challenge_ids") as cid {
                 if not curatedSet.has(cid) {
@@ -2073,17 +2073,17 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
         ci := chIdIndex.getOr(cid, -1);
         if ci >= 0 {
             cl := chLines[ci];
-            isPrem := json.readObjectBool(cl, 0, "premium").value;
-            cat := json.readObjectString(cl, 0, "category").value;
+            isPrem := json.readFieldBool(cl, 0, "premium").value;
+            cat := json.readFieldString(cl, 0, "category").value;
             tps := readStringArray(cl, 0, "topics");
-            natId := json.readObjectString(cl, 0, "native_id").value;
+            natId := json.readFieldString(cl, 0, "native_id").value;
             natNum := natId.toInt();
             ti := tsIdIndex.getOr(cid, -1);
             var hasPub := false;
             if ti >= 0 {
-                pf := json.findObjectField(tsLines[ti], 0, "public");
+                pf := json.findField(tsLines[ti], 0, "public");
                 if pf.found and isJsonArrayAt(tsLines[ti], pf.valuePos) {
-                    hasPub = json.arrayElementOffsets(tsLines[ti], pf.valuePos).length() > 0;
+                    hasPub = json.arrayOffsets(tsLines[ti], pf.valuePos).length() > 0;
                 }
             }
             if not isPrem and cat == "algorithms" and not tps.contains("design")
@@ -2102,27 +2102,27 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
     loop ci < chCount {
         cl := chLines[ci];
         cid := chIds[ci];
-        if json.readObjectString(cl, 0, "source").value == "leetcode"
+        if json.readFieldString(cl, 0, "source").value == "leetcode"
         and not selIdSet.has(cid) and not curatedSet.has(cid) {
-            isPrem := json.readObjectBool(cl, 0, "premium").value;
-            cat := json.readObjectString(cl, 0, "category").value;
+            isPrem := json.readFieldBool(cl, 0, "premium").value;
+            cat := json.readFieldString(cl, 0, "category").value;
             tps := readStringArray(cl, 0, "topics");
-            natId := json.readObjectString(cl, 0, "native_id").value;
+            natId := json.readFieldString(cl, 0, "native_id").value;
             natNum := natId.toInt();
             ti := tsIdIndex.getOr(cid, -1);
             var hasPub := false;
             if ti >= 0 {
-                pf := json.findObjectField(tsLines[ti], 0, "public");
+                pf := json.findField(tsLines[ti], 0, "public");
                 if pf.found and isJsonArrayAt(tsLines[ti], pf.valuePos) {
-                    hasPub = json.arrayElementOffsets(tsLines[ti], pf.valuePos).length() > 0;
+                    hasPub = json.arrayOffsets(tsLines[ti], pf.valuePos).length() > 0;
                 }
             }
             if not isPrem and cat == "algorithms" and not tps.contains("design")
             and qIdIndex.has(natId) and natNum.ok and pathNumIndex.has(natNum.value) and hasPub {
                 var solved := 0;
-                popF := json.findObjectField(cl, 0, "popularity");
+                popF := json.findField(cl, 0, "popularity");
                 if popF.found and isJsonObjectAt(cl, popF.valuePos) {
-                    sR := json.readObjectInt(cl, popF.valuePos, "solved");
+                    sR := json.readFieldInt(cl, popF.valuePos, "solved");
                     if sR.found and sR.ok { solved = sR.value; }
                 }
                 (mut fillIndices).pushBack(ci);
@@ -2152,26 +2152,26 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
         origin := selOrigins[candI];
         cLine := chLines[chIdIndex.getOr(cid, 0)];
         tLine := tsLines[tsIdIndex.getOr(cid, 0)];
-        natId := json.readObjectString(cLine, 0, "native_id").value;
+        natId := json.readFieldString(cLine, 0, "native_id").value;
         qPos := qOffsets[qIdIndex.getOr(natId, 0)];
-        descR := json.readObjectString(mRead.text, qPos, "description");
+        descR := json.readFieldString(mRead.text, qPos, "description");
         descText := splitBeforeExample1(if descR.found and descR.ok { descR.value } else { "" });
         if descText.length() >= 40 {
             n := natId.toInt().value;
             rawRel := pathStrs[pathNumIndex.getOr(n, 0)];
             refUrl := "https://github.com/doocs/leetcode/blob/main/" + encodeGithubPath(rawRel);
 
-            ctitle := json.readObjectString(cLine, 0, "title").value;
-            curl := json.readObjectString(cLine, 0, "url").value;
-            ccat := json.readObjectString(cLine, 0, "category").value;
+            ctitle := json.readFieldString(cLine, 0, "title").value;
+            curl := json.readFieldString(cLine, 0, "url").value;
+            ccat := json.readFieldString(cLine, 0, "category").value;
             topics := readStringArray(cLine, 0, "topics");
-            topicsSpan := json.valueSpan(cLine, json.findObjectField(cLine, 0, "topics").valuePos);
+            topicsSpan := json.valueSpan(cLine, json.findField(cLine, 0, "topics").valuePos);
             topicsRawJson := cLine.slice(topicsSpan.start, topicsSpan.end);
-            diffField := json.findObjectField(cLine, 0, "difficulty");
+            diffField := json.findField(cLine, 0, "difficulty");
             diffSpan := json.valueSpan(cLine, diffField.valuePos);
             diffRawJson := cLine.slice(diffSpan.start, diffSpan.end);
             normRes := parseScaledDecimal1000(cLine, diffField.valuePos, "normalized");
-            rawDiffF := json.findObjectField(cLine, diffField.valuePos, "raw");
+            rawDiffF := json.findField(cLine, diffField.valuePos, "raw");
             rawDiffStr := json.readStringAt(cLine, rawDiffF.valuePos);
             rawDiffDisp := if rawDiffStr.ok { rawDiffStr.value } else {
                 sp := json.valueSpan(cLine, rawDiffF.valuePos);
@@ -2179,22 +2179,22 @@ pub buildBenchmarkLeetcode := fn(challengesRootDir: String): (ok: Bool, writtenC
             };
             diffDisp := formatDifficultyCsv("leetcode", normRes.scaled, normRes.raw, normRes.isIntLiteral);
 
-            pubField := json.findObjectField(tLine, 0, "public");
-            hidField := json.findObjectField(tLine, 0, "hidden");
+            pubField := json.findField(tLine, 0, "public");
+            hidField := json.findField(tLine, 0, "hidden");
             pubSpan := json.valueSpan(tLine, pubField.valuePos);
             hidSpan := json.valueSpan(tLine, hidField.valuePos);
             pubArrayJson := tLine.slice(pubSpan.start, pubSpan.end);
             hidArrayJson := tLine.slice(hidSpan.start, hidSpan.end);
-            pubOffsets := json.arrayElementOffsets(tLine, pubField.valuePos);
-            hidOffsets := json.arrayElementOffsets(tLine, hidField.valuePos);
+            pubOffsets := json.arrayOffsets(tLine, pubField.valuePos);
+            hidOffsets := json.arrayOffsets(tLine, hidField.valuePos);
             pubCount := pubOffsets.length();
             hidCount := hidOffsets.length();
 
             exBlocks: mut List<String> = [];
             loop pubOffsets as pPos {
-                en := json.readObjectString(tLine, pPos, "name").value;
-                ein := json.readObjectString(tLine, pPos, "input").value;
-                eout := json.readObjectString(tLine, pPos, "output").value;
+                en := json.readFieldString(tLine, pPos, "name").value;
+                ein := json.readFieldString(tLine, pPos, "input").value;
+                eout := json.readFieldString(tLine, pPos, "output").value;
                 mut exBlocks.pushBack("### " + en + "\n\n```text\nInput: " + ein + "\nOutput: " + eout + "\n```");
             }
 
@@ -2423,17 +2423,17 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
         epi = epi + 2;
     }
 
-    qField := json.findObjectField(mRead.text, 0, "questions");
-    qOffsets := json.arrayElementOffsets(mRead.text, qField.valuePos);
+    qField := json.findField(mRead.text, 0, "questions");
+    qOffsets := json.arrayOffsets(mRead.text, qField.valuePos);
     qLookupKeys: mut List<String> = [];
     qLookupPos: mut List<Int> = [];
     loop qOffsets as qp {
-        fidStr := json.readObjectString(mRead.text, qp, "frontend_id");
+        fidStr := json.readFieldString(mRead.text, qp, "frontend_id");
         fidKey := if fidStr.found and fidStr.ok { fidStr.value } else {
-            fidInt := json.readObjectInt(mRead.text, qp, "frontend_id");
+            fidInt := json.readFieldInt(mRead.text, qp, "frontend_id");
             if fidInt.found and fidInt.ok { fidInt.value.toText() } else { "" }
         };
-        slugKey := json.readObjectString(mRead.text, qp, "problem_slug").value;
+        slugKey := json.readFieldString(mRead.text, qp, "problem_slug").value;
         if fidKey =!= "" {
             mut qLookupKeys.pushBack(fidKey);
             mut qLookupPos.pushBack(qp);
@@ -2469,11 +2469,11 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
     writtenIds: mut List<String> = [];
 
     loop chLines as cl {
-        cid := json.readObjectString(cl, 0, "id").value;
-        curl := json.readObjectString(cl, 0, "url").value;
-        source := json.readObjectString(cl, 0, "source").value;
-        natId := json.readObjectString(cl, 0, "native_id").value;
-        isPrem := json.readObjectBool(cl, 0, "premium").value;
+        cid := json.readFieldString(cl, 0, "id").value;
+        curl := json.readFieldString(cl, 0, "url").value;
+        source := json.readFieldString(cl, 0, "source").value;
+        natId := json.readFieldString(cl, 0, "native_id").value;
+        isPrem := json.readFieldBool(cl, 0, "premium").value;
         fmts := readStringArray(cl, 0, "formats");
         fmt := challengeFormatName(source, fmts);
 
@@ -2488,10 +2488,10 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
             qHit := findSortedEntity(qSortedKeys, natId);
             if qHit >= 0 {
                 qp := qSortedPos[qHit];
-                exField := json.findObjectField(mRead.text, qp, "examples");
+                exField := json.findField(mRead.text, qp, "examples");
                 if exField.found and isJsonArrayAt(mRead.text, exField.valuePos) {
-                    loop json.arrayElementOffsets(mRead.text, exField.valuePos) as ep {
-                        exTextRes := json.readObjectString(mRead.text, ep, "example_text");
+                    loop json.arrayOffsets(mRead.text, exField.valuePos) as ep {
+                        exTextRes := json.readFieldString(mRead.text, ep, "example_text");
                         if exTextRes.found and exTextRes.ok {
                             parsedEx := parseLeetcodeExampleCase(exTextRes.value);
                             if parsedEx.ok {
@@ -2757,7 +2757,7 @@ pub buildChallengeTests := fn(challengesRootDir: String, entitiesJsonText: Strin
             topFields: mut List<String> = [];
             loop json.objectKeys(idxRead.text, 0) as tk {
                 if tk =!= "tests" {
-                    f := json.findObjectField(idxRead.text, 0, tk);
+                    f := json.findField(idxRead.text, 0, tk);
                     sp := json.valueSpan(idxRead.text, f.valuePos);
                     if sp.ok {
                         mut topFields.pushBack("  " + json.quoteString(tk) + ": " + idxRead.text.slice(sp.start, sp.end));

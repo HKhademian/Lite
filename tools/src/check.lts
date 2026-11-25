@@ -5,7 +5,7 @@ fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
 path := import "core/path";
-json := import "util/json";
+json := import "data/json";
 docsUtil := import "util/docs";
 casesUtil := import "util/cases";
 project := import "util/project";
@@ -82,7 +82,7 @@ run := fn(rawArgs: List<String>): Unit {
     if not editorPkgRead.ok {
         failDoctor("editors/vscode/package.json: " + editorPkgRead.error);
     }
-    editorVer := json.readObjectString(editorPkgRead.text, 0, "version");
+    editorVer := json.readFieldString(editorPkgRead.text, 0, "version");
     if not editorVer.found or not editorVer.ok {
         failDoctor("editors/vscode/package.json: missing version");
     }
@@ -94,19 +94,19 @@ run := fn(rawArgs: List<String>): Unit {
     if not lockRead.ok {
         failDoctor("editors/vscode/package-lock.json: " + lockRead.error);
     }
-    lockVer := json.readObjectString(lockRead.text, 0, "version");
+    lockVer := json.readFieldString(lockRead.text, 0, "version");
     if not lockVer.found or not lockVer.ok or lockVer.value =!= editorVer.value {
         failDoctor("editor lockfile version differs");
     }
-    pkgsField := json.findObjectField(lockRead.text, 0, "packages");
+    pkgsField := json.findField(lockRead.text, 0, "packages");
     if not pkgsField.found {
         failDoctor("editor lockfile package version differs");
     }
-    rootPkgField := json.findObjectField(lockRead.text, pkgsField.valuePos, "");
+    rootPkgField := json.findField(lockRead.text, pkgsField.valuePos, "");
     if not rootPkgField.found {
         failDoctor("editor lockfile package version differs");
     }
-    rootPkgVer := json.readObjectString(lockRead.text, rootPkgField.valuePos, "version");
+    rootPkgVer := json.readFieldString(lockRead.text, rootPkgField.valuePos, "version");
     if not rootPkgVer.found or not rootPkgVer.ok or rootPkgVer.value =!= editorVer.value {
         failDoctor("editor lockfile package version differs");
     }

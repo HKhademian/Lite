@@ -7,7 +7,7 @@ test := import "core/test";
 pool := import "external/pool";
 cases := import "util/cases";
 compilerBuild := import "util/compiler-build";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 root := project.findRepoRoot();
@@ -48,7 +48,7 @@ loop libNames as name {
 
 jobs := pool.cpuCount();
 compRaw := pool.runPoolJson(compCmds, compArgs, root, jobs);
-compOffsets := json.arrayElementOffsets(compRaw, 0);
+compOffsets := json.arrayOffsets(compRaw, 0);
 count := libNames.length();
 test.checkInt("compile pool result count", count, compOffsets.length());
 
@@ -59,10 +59,10 @@ var ci := 0;
 loop ci < count {
     name := libNames[ci];
     elemPos := compOffsets[ci];
-    status := json.readObjectInt(compRaw, elemPos, "status").value;
-    stdout := json.readObjectString(compRaw, elemPos, "stdout").value;
-    stderr := json.readObjectString(compRaw, elemPos, "stderr").value;
-    err := json.readObjectString(compRaw, elemPos, "error").value;
+    status := json.readFieldInt(compRaw, elemPos, "status").value;
+    stdout := json.readFieldString(compRaw, elemPos, "stdout").value;
+    stderr := json.readFieldString(compRaw, elemPos, "stderr").value;
+    err := json.readFieldString(compRaw, elemPos, "error").value;
     test.check(name + " compile failed: " + err + stderr, status == 0 and err == "" and stderr == "");
 
     tsPath := path.join(workDir, name + ".ts");
@@ -79,17 +79,17 @@ chk := cases.checkTsArtifactFilesWithStatus(root, tsFiles, path.join(workDir, "t
 test.check("strict check lib/tests TS: " + chk.error, chk.ok);
 
 runRaw := pool.runPoolJson(runCmds, runArgs, root, jobs);
-runOffsets := json.arrayElementOffsets(runRaw, 0);
+runOffsets := json.arrayOffsets(runRaw, 0);
 test.checkInt("run pool result count", count, runOffsets.length());
 
 var ri := 0;
 loop ri < count {
     name := libNames[ri];
     elemPos := runOffsets[ri];
-    status := json.readObjectInt(runRaw, elemPos, "status").value;
-    stdout := json.readObjectString(runRaw, elemPos, "stdout").value;
-    stderr := json.readObjectString(runRaw, elemPos, "stderr").value;
-    err := json.readObjectString(runRaw, elemPos, "error").value;
+    status := json.readFieldInt(runRaw, elemPos, "status").value;
+    stdout := json.readFieldString(runRaw, elemPos, "stdout").value;
+    stderr := json.readFieldString(runRaw, elemPos, "stderr").value;
+    err := json.readFieldString(runRaw, elemPos, "error").value;
     test.check(name + " process error: " + err, err == "");
     if name == "diag-fail" {
         test.checkInt(name + " status", 2, status);

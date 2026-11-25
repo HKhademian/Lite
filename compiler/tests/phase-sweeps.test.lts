@@ -10,7 +10,7 @@ pool := import "external/pool";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 corpus := import "util/corpus";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 streams := import "util/streams";
 
@@ -26,8 +26,8 @@ if not skipHeavy {
     test.check("build C compiler: " + builtC.error, builtC.ok);
     tsComp := builtTs.path;
 
-    tsDeps := corpus.readStringListAt(builtTs.jsonText, json.findObjectField(builtTs.jsonText, 0, "dependencies").valuePos);
-    cDeps := corpus.readStringListAt(builtC.jsonText, json.findObjectField(builtC.jsonText, 0, "dependencies").valuePos);
+    tsDeps := corpus.readStringListAt(builtTs.jsonText, json.findField(builtTs.jsonText, 0, "dependencies").valuePos);
+    cDeps := corpus.readStringListAt(builtC.jsonText, json.findField(builtC.jsonText, 0, "dependencies").valuePos);
     loop tsDeps as dep {
         test.check("ts dep no importFlatAll: " + dep, not fs.readText(path.join(root, dep)).text.contains("importFlatAll"));
     }
@@ -59,12 +59,12 @@ if not skipHeavy {
     }
     jobs := pool.cpuCount();
     compRaw := pool.runPoolJson(compCmds, compArgs, root, jobs);
-    compOffs := json.arrayElementOffsets(compRaw, 0);
+    compOffs := json.arrayOffsets(compRaw, 0);
     test.checkInt("dep pool count", compileTargets.length(), compOffs.length());
     var di := 0;
     loop di < compileTargets.length() {
-        st := json.readObjectInt(compRaw, compOffs[di], "status").value;
-        err := json.readObjectString(compRaw, compOffs[di], "stderr").value;
+        st := json.readFieldInt(compRaw, compOffs[di], "status").value;
+        err := json.readFieldString(compRaw, compOffs[di], "stderr").value;
         test.checkInt("compile " + compileTargets[di] + ": " + err, 0, st);
         di = di + 1;
     }
@@ -102,7 +102,7 @@ if not skipHeavy {
         fileName := path.baseName(absFix);
         slug := corpus.parseFixtureFilename(fileName).slug;
         fixJson := fs.readText(absFix).text;
-        srcText := unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, json.findObjectField(fixJson, 0, "source").valuePos, compDir)).text;
+        srcText := unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, json.findField(fixJson, 0, "source").valuePos, compDir)).text;
         rLex := compilerTest.runDriver(lexDrv, srcText);
         var matchPat := "";
         var pi := 0;
@@ -130,7 +130,7 @@ if not skipHeavy {
     pKeys := json.objectKeys(parserInputsJson, 0);
     test.checkInt("parser-inputs count", 69, pKeys.length());
     loop pKeys as pk {
-        inp := json.readObjectString(parserInputsJson, 0, pk).value;
+        inp := json.readFieldString(parserInputsJson, 0, pk).value;
         pr := compilerTest.runDriver(progDrv, inp);
         test.checkInt("parser-input " + pk, 0, pr.status);
         test.checkText("parser-input err " + pk, "", pr.stderr);

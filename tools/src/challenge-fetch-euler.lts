@@ -5,7 +5,7 @@ io := import "core/io";
 path := import "core/path";
 cfetch := import "util/challenge-fetch";
 challenges := import "util/challenges";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 extractEulerNumber := fn(entryPath: String): (ok: Bool, num: Int) {
@@ -82,16 +82,16 @@ run := fn(rawArgs: List<String>): Int {
         io.errorLine("FAIL: invalid tree.json");
         return 1;
     }
-    treeField := json.findObjectField(treeRead.text, 0, "tree");
+    treeField := json.findField(treeRead.text, 0, "tree");
     if not treeField.found {
         io.errorLine("FAIL: missing tree array");
         return 1;
     }
-    offsets := json.arrayElementOffsets(treeRead.text, treeField.valuePos);
+    offsets := json.arrayOffsets(treeRead.text, treeField.valuePos);
     rawNums: mut List<Int> = [];
     loop offsets as off {
-        typeF := json.readObjectString(treeRead.text, off, "type");
-        pathF := json.readObjectString(treeRead.text, off, "path");
+        typeF := json.readFieldString(treeRead.text, off, "type");
+        pathF := json.readFieldString(treeRead.text, off, "path");
         if typeF.found and typeF.value == "blob" and pathF.found and pathF.ok {
             numRes := extractEulerNumber(pathF.value);
             if numRes.ok {

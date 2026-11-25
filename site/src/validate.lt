@@ -7,7 +7,7 @@ text := import "core/text";
 unicode := import "core/unicode";
 intern := import "ds/intern";
 challenges := import "util/challenges";
-json := import "util/json";
+json := import "data/json";
 
 replaceAllText := fn(source: String, needle: String, replacement: String): String {
     if source.indexOf(needle, 0) < 0 { return source; }
@@ -290,7 +290,7 @@ collectAllSiteFiles := fn(absSiteDir: String): List<String> {
 };
 
 readOptStr := fn(src: String, objPos: Int, key: String): String {
-    res := json.readObjectString(src, objPos, key);
+    res := json.readFieldString(src, objPos, key);
     if res.found and res.ok { res.value } else { "" }
 };
 
@@ -372,7 +372,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     if hasPlayTargets {
         libRead := fs.readText(path.join(absSiteDir, "playground/library.json"));
         if libRead.ok {
-            loop json.arrayElementOffsets(libRead.text, 0) as itemPos {
+            loop json.arrayOffsets(libRead.text, 0) as itemPos {
                 itId := readOptStr(libRead.text, itemPos, "id");
                 itSlug := readOptStr(libRead.text, itemPos, "slug");
                 itCat := readOptStr(libRead.text, itemPos, "category");
@@ -557,7 +557,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     } else {
         searchRead := fs.readText(path.join(absSiteDir, "search-index.json"));
         if searchRead.ok {
-            loop json.arrayElementOffsets(searchRead.text, 0) as ePos {
+            loop json.arrayOffsets(searchRead.text, 0) as ePos {
                 href := readOptStr(searchRead.text, ePos, "href");
                 if href == "" { continue; }
                 searchEntriesChecked = searchEntriesChecked + 1;
@@ -575,9 +575,9 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
             gText := graphRead.text;
             nodeUris: mut List<String> = [];
             nodeOutPaths: mut List<String> = [];
-            nodesField := json.findObjectField(gText, 0, "nodes");
+            nodesField := json.findField(gText, 0, "nodes");
             if nodesField.found {
-                loop json.arrayElementOffsets(gText, nodesField.valuePos) as nPos {
+                loop json.arrayOffsets(gText, nodesField.valuePos) as nPos {
                     uri := readOptStr(gText, nPos, "uri");
                     outPath := readOptStr(gText, nPos, "outPath");
                     graphNodesChecked = graphNodesChecked + 1;
@@ -593,9 +593,9 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
             }
             nodeOrder := challenges.sortIndexByKeys(nodeUris);
 
-            edgesField := json.findObjectField(gText, 0, "edges");
+            edgesField := json.findField(gText, 0, "edges");
             if edgesField.found {
-                loop json.arrayElementOffsets(gText, edgesField.valuePos) as ePos {
+                loop json.arrayOffsets(gText, edgesField.valuePos) as ePos {
                     graphEdgesChecked = graphEdgesChecked + 1;
                     fromUri := readOptStr(gText, ePos, "from");
                     toUri := readOptStr(gText, ePos, "to");

@@ -1,5 +1,5 @@
 siteTools := import "../../site/src/tools";
-json := import "util/json";
+json := import "data/json";
 test := import "core/test";
 
 withRepo := siteTools.buildToolsPayloadJson("https://github.com/example/lite");

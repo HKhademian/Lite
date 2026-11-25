@@ -9,7 +9,7 @@ unicode := import "core/unicode";
 time := import "core/time";
 path := import "core/path";
 project := import "util/project";
-json := import "util/json";
+json := import "data/json";
 cases := import "util/cases";
 release := import "util/release";
 
@@ -101,11 +101,11 @@ readCompilerJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: Str
     built := proc.run(project.nodeExecPath(), args, rootDir, emptyEnv, true, "");
     if built.error =!= "" { return (ok = false, jsonText = "", error = built.error); }
     if built.status =!= 0 { return (ok = false, jsonText = "", error = built.stdout + built.stderr); }
-    tsField := json.findObjectField(built.stdout, 0, "ts");
+    tsField := json.findField(built.stdout, 0, "ts");
     if not tsField.found { return (ok = false, jsonText = "", error = "missing ts compiler metadata"); }
-    srcHash := json.readObjectString(built.stdout, tsField.valuePos, "sourceSha256");
-    artHash := json.readObjectString(built.stdout, tsField.valuePos, "artifactSha256");
-    bldHash := json.readObjectString(built.stdout, tsField.valuePos, "builderSha256");
+    srcHash := json.readFieldString(built.stdout, tsField.valuePos, "sourceSha256");
+    artHash := json.readFieldString(built.stdout, tsField.valuePos, "artifactSha256");
+    bldHash := json.readFieldString(built.stdout, tsField.valuePos, "builderSha256");
     if not srcHash.found or not artHash.found or not bldHash.found {
         return (ok = false, jsonText = "", error = "incomplete ts compiler digest metadata");
     }

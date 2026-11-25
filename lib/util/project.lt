@@ -6,7 +6,7 @@ fs := import "core/file";
 proc := import "core/process";
 text := import "core/text";
 path := import "core/path";
-json := import "util/json";
+json := import "data/json";
 
 findRepoRootFrom := fn(startPath: String): String {
     if startPath == "" { return ""; }
@@ -37,7 +37,7 @@ readComponentVersionAt := fn(root: String, component: String): String {
     versionsPath := path.resolve(root, "config/versions.json");
     readRes := fs.readText(versionsPath);
     if not readRes.ok { return "unassigned"; }
-    found := json.readObjectString(readRes.text, 0, component);
+    found := json.readFieldString(readRes.text, 0, component);
     if not found.found or not found.ok { return "unassigned"; }
     found.value
 };
@@ -98,11 +98,11 @@ readSeedMeta := fn(root: String): (target: String, recorded: String, igniterSha2
     if brace < 0 {
         return (target = "", recorded = "", igniterSha256 = "", sourceSha256 = "", artifactSha256 = "");
     }
-    tgt := json.readObjectString(seedRead.text, brace, "target");
-    rec := json.readObjectString(seedRead.text, brace, "recorded");
-    ign := json.readObjectString(seedRead.text, brace, "igniterSha256");
-    src := json.readObjectString(seedRead.text, brace, "sourceSha256");
-    art := json.readObjectString(seedRead.text, brace, "artifactSha256");
+    tgt := json.readFieldString(seedRead.text, brace, "target");
+    rec := json.readFieldString(seedRead.text, brace, "recorded");
+    ign := json.readFieldString(seedRead.text, brace, "igniterSha256");
+    src := json.readFieldString(seedRead.text, brace, "sourceSha256");
+    art := json.readFieldString(seedRead.text, brace, "artifactSha256");
     (
     target = if tgt.found and tgt.ok { tgt.value } else { "" },
     recorded = if rec.found and rec.ok { rec.value } else { "" },
@@ -128,18 +128,18 @@ readToolProvenance := fn(root: String, relEntry: String, kind: String): (target:
         return (target = "", artifactSha256 = "", compilerArtifactSha256 = "", compilerSourceSha256 = "", source = "", moduleCount = 0);
     }
     provText := provRead.text;
-    tgt := json.readObjectString(provText, 0, "target");
-    art := json.readObjectString(provText, 0, "artifactSha256");
-    cArt := json.readObjectString(provText, 0, "compilerArtifactSha256");
-    cSrc := json.readObjectString(provText, 0, "compilerSourceSha256");
+    tgt := json.readFieldString(provText, 0, "target");
+    art := json.readFieldString(provText, 0, "artifactSha256");
+    cArt := json.readFieldString(provText, 0, "compilerArtifactSha256");
+    cSrc := json.readFieldString(provText, 0, "compilerSourceSha256");
     var srcPath := "";
     var depCount := 0;
-    depsField := json.findObjectField(provText, 0, "dependencies");
+    depsField := json.findField(provText, 0, "dependencies");
     if depsField.found {
-        offsets := json.arrayElementOffsets(provText, depsField.valuePos);
+        offsets := json.arrayOffsets(provText, depsField.valuePos);
         depCount = offsets.length();
         if depCount > 0 {
-            firstPath := json.readObjectString(provText, offsets[0], "path");
+            firstPath := json.readFieldString(provText, offsets[0], "path");
             if firstPath.found and firstPath.ok { srcPath = firstPath.value; }
         }
     }

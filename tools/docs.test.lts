@@ -9,7 +9,7 @@ unicode := import "core/unicode";
 cases := import "util/cases";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 root := project.findRepoRoot();
@@ -95,7 +95,7 @@ chk1Ok := checkDocuments(dir1);
 test.checkText("clean docs check", "", chk1Ok.join("\n"));
 docsJson1 := runDocs(["--json"], dir1, "");
 test.checkInt("docs --json status", 0, docsJson1.status);
-docOffsets1 := json.arrayElementOffsets(docsJson1.stdout, 0);
+docOffsets1 := json.arrayOffsets(docsJson1.stdout, 0);
 test.checkInt("docs --json count", 2, docOffsets1.length());
 
 test.check(
@@ -158,42 +158,42 @@ _rmTsc := fs.remove(tscDirRes.path);
 /* 4. renderDocuments and extractModules return valid structured metadata via generated Lite docs tool */
 renderRes := runDocs(["--render-json"], root, "docs/start-here.md\ndocs/tour.md\n");
 test.checkInt("docs --render-json status: " + renderRes.stderr, 0, renderRes.status);
-renderOffsets := json.arrayElementOffsets(renderRes.stdout, 0);
+renderOffsets := json.arrayOffsets(renderRes.stdout, 0);
 test.checkInt("rendered count", 2, renderOffsets.length());
 r0 := renderOffsets[0];
 r1 := renderOffsets[1];
-test.checkText("rendered[0].path", "docs/start-here.md", json.readObjectString(renderRes.stdout, r0, "path").value);
-test.checkText("rendered[0].title", "Start with LiteLang", json.readObjectString(renderRes.stdout, r0, "title").value);
-test.checkText("rendered[0].status", "guide", json.readObjectString(renderRes.stdout, r0, "status").value);
-tocPos := json.findObjectField(renderRes.stdout, r0, "toc");
+test.checkText("rendered[0].path", "docs/start-here.md", json.readFieldString(renderRes.stdout, r0, "path").value);
+test.checkText("rendered[0].title", "Start with LiteLang", json.readFieldString(renderRes.stdout, r0, "title").value);
+test.checkText("rendered[0].status", "guide", json.readFieldString(renderRes.stdout, r0, "status").value);
+tocPos := json.findField(renderRes.stdout, r0, "toc");
 test.check("rendered[0].toc found", tocPos.found);
-test.check("rendered[0].toc >= 3", json.arrayElementOffsets(renderRes.stdout, tocPos.valuePos).length() >= 3);
-html0 := json.readObjectString(renderRes.stdout, r0, "html").value;
+test.check("rendered[0].toc >= 3", json.arrayOffsets(renderRes.stdout, tocPos.valuePos).length() >= 3);
+html0 := json.readFieldString(renderRes.stdout, r0, "html").value;
 test.check("rendered[0].html has h1", html0.indexOf("<h1 id=\"start-with-litelang\">Start with LiteLang</h1>", 0) >= 0);
-html1 := json.readObjectString(renderRes.stdout, r1, "html").value;
+html1 := json.readFieldString(renderRes.stdout, r1, "html").value;
 test.check("rendered[1].html has data-fence", html1.indexOf("data-fence=\"0\"", 0) >= 0);
 
 modRes := runDocs(["--modules-json"], root, "");
 test.checkInt("docs --modules-json status: " + modRes.stderr, 0, modRes.status);
-modOffsets := json.arrayElementOffsets(modRes.stdout, 0);
+modOffsets := json.arrayOffsets(modRes.stdout, 0);
 test.checkInt("modules count", 41, modOffsets.length());
 
 var foundIo := false;
 var foundCanvas := false;
 var foundFile := false;
 loop modOffsets as mPos {
-    id := json.readObjectString(modRes.stdout, mPos, "id").value;
-    env := json.readObjectString(modRes.stdout, mPos, "environment").value;
-    symsMem := json.findObjectField(modRes.stdout, mPos, "symbols");
+    id := json.readFieldString(modRes.stdout, mPos, "id").value;
+    env := json.readFieldString(modRes.stdout, mPos, "environment").value;
+    symsMem := json.findField(modRes.stdout, mPos, "symbols");
     test.check("module has symbols " + id, symsMem.found);
-    symOffsets := json.arrayElementOffsets(modRes.stdout, symsMem.valuePos);
+    symOffsets := json.arrayOffsets(modRes.stdout, symsMem.valuePos);
     if id == "core/io" {
         foundIo = true;
         test.checkText("core/io env", "universal", env);
         var hasOutLine := false;
         loop symOffsets as sPos {
-            sName := json.readObjectString(modRes.stdout, sPos, "name").value;
-            sHost := json.readObjectBool(modRes.stdout, sPos, "isHostDeclaration");
+            sName := json.readFieldString(modRes.stdout, sPos, "name").value;
+            sHost := json.readFieldBool(modRes.stdout, sPos, "isHostDeclaration");
             if sName == "outputLine" and sHost.found and sHost.ok and sHost.value {
                 hasOutLine = true;
             }
@@ -204,8 +204,8 @@ loop modOffsets as mPos {
         test.checkText("extra/canvas env", "play", env);
         var hasColor := false;
         loop symOffsets as sPos {
-            sKind := json.readObjectString(modRes.stdout, sPos, "kind").value;
-            sName := json.readObjectString(modRes.stdout, sPos, "name").value;
+            sKind := json.readFieldString(modRes.stdout, sPos, "kind").value;
+            sName := json.readFieldString(modRes.stdout, sPos, "name").value;
             if sKind == "type" and sName == "Color" {
                 hasColor = true;
             }

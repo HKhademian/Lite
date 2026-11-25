@@ -2,7 +2,7 @@ cases := import "util/cases";
 project := import "util/project";
 path := import "core/path";
 test := import "core/test";
-json := import "util/json";
+json := import "data/json";
 
 root := project.findRepoRoot();
 test.checkBool("repo root found", true, root =!= "");

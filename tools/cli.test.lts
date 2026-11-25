@@ -7,7 +7,7 @@ test := import "core/test";
 pool := import "external/pool";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
-json := import "util/json";
+json := import "data/json";
 project := import "util/project";
 
 rawRoot := project.findRepoRoot();
@@ -153,7 +153,7 @@ test.checkInt("lite-check status", 0, checkExpected.status);
 /* 8. ignited tool artifacts match their Lite sources and pass strict TS checking */
 ignitedAllRes := runIn(proc.execPath(), [path.join(root, "bin/lite-ignite"), "--check", "--json"], root, 180000);
 test.checkInt("lite-ignite --check --json status: " + ignitedAllRes.stderr, 0, ignitedAllRes.status);
-chkField := json.readObjectBool(ignitedAllRes.stdout, 0, "checked");
+chkField := json.readFieldBool(ignitedAllRes.stdout, 0, "checked");
 test.check("igniteAllTools checked == true", chkField.found and chkField.ok and chkField.value);
 
 tsComp := compilerBuild.selectCompilerPath(root, "ts");
@@ -183,7 +183,7 @@ loop toolNames as name {
     mut o3ArgsJson.pushBack(argJson);
 }
 o3Raw := pool.runPoolJson(o3Cmds, o3ArgsJson, root, pool.cpuCount());
-o3Offsets := json.arrayElementOffsets(o3Raw, 0);
+o3Offsets := json.arrayOffsets(o3Raw, 0);
 o3Count := toolNames.length();
 test.checkInt("o3 pool count", o3Count, o3Offsets.length());
 var compiledIgniteTs := "";
@@ -192,9 +192,9 @@ loop ti < o3Count {
     name := toolNames[ti];
     srcRel := "tools/src/" + name + ".lts";
     elemPos := o3Offsets[ti];
-    stRes := json.readObjectInt(o3Raw, elemPos, "status");
-    errRes := json.readObjectString(o3Raw, elemPos, "stderr");
-    pErrRes := json.readObjectString(o3Raw, elemPos, "error");
+    stRes := json.readFieldInt(o3Raw, elemPos, "status");
+    errRes := json.readFieldString(o3Raw, elemPos, "stderr");
+    pErrRes := json.readFieldString(o3Raw, elemPos, "error");
     pErr := if pErrRes.found and pErrRes.ok { pErrRes.value } else { "" };
     cErr := if errRes.found and errRes.ok { errRes.value } else { "" };
     cStatus := if stRes.found and stRes.ok { stRes.value } else { -1 };
@@ -244,11 +244,11 @@ test.check("lite --version host", version.stdout.indexOf(if cliIsC { "host: c11 
 
 versionJson := command("lite", ["--version", "--json"]);
 test.checkInt("lite --version --json status: " + versionJson.stderr, 0, versionJson.status);
-test.checkText("version json command", "lite cli", json.readObjectString(versionJson.stdout, 0, "command").value);
-test.checkText("version json component", "cli", json.readObjectString(versionJson.stdout, 0, "component").value);
-test.checkText("version json kind", if cliIsC { "ignited-c" } else { "ignited-ts" }, json.readObjectString(versionJson.stdout, 0, "kind").value);
-test.checkText("version json artifact", if cliIsC { "dist/tools/cli" } else { "dist/tools/cli.ts" }, json.readObjectString(versionJson.stdout, 0, "artifact").value);
-test.checkText("version json source", "tools/src/cli.lts", json.readObjectString(versionJson.stdout, 0, "source").value);
+test.checkText("version json command", "lite cli", json.readFieldString(versionJson.stdout, 0, "command").value);
+test.checkText("version json component", "cli", json.readFieldString(versionJson.stdout, 0, "component").value);
+test.checkText("version json kind", if cliIsC { "ignited-c" } else { "ignited-ts" }, json.readFieldString(versionJson.stdout, 0, "kind").value);
+test.checkText("version json artifact", if cliIsC { "dist/tools/cli" } else { "dist/tools/cli.ts" }, json.readFieldString(versionJson.stdout, 0, "artifact").value);
+test.checkText("version json source", "tools/src/cli.lts", json.readFieldString(versionJson.stdout, 0, "source").value);
 
 igniterVer := command("lite-ignite", ["--version"]);
 test.checkInt("lite-ignite --version status: " + igniterVer.stderr, 0, igniterVer.status);
@@ -290,14 +290,14 @@ loop probePaths as rel {
 }
 
 checkToolsRebuilt := fn(label: String, jsonText: String, expCli: Bool, expFmt: Bool): Unit {
-    toolsField := json.findObjectField(jsonText, 0, "tools");
+    toolsField := json.findField(jsonText, 0, "tools");
     test.check(label + " has tools", toolsField.found);
-    offs := json.arrayElementOffsets(jsonText, toolsField.valuePos);
+    offs := json.arrayOffsets(jsonText, toolsField.valuePos);
     test.checkInt(label + " tool count", 2, offs.length());
-    test.checkText(label + " [0].name", "cli", json.readObjectString(jsonText, offs[0], "name").value);
-    test.check(label + " [0].rebuilt", json.readObjectBool(jsonText, offs[0], "rebuilt").value == expCli);
-    test.checkText(label + " [1].name", "fmt", json.readObjectString(jsonText, offs[1], "name").value);
-    test.check(label + " [1].rebuilt", json.readObjectBool(jsonText, offs[1], "rebuilt").value == expFmt);
+    test.checkText(label + " [0].name", "cli", json.readFieldString(jsonText, offs[0], "name").value);
+    test.check(label + " [0].rebuilt", json.readFieldBool(jsonText, offs[0], "rebuilt").value == expCli);
+    test.checkText(label + " [1].name", "fmt", json.readFieldString(jsonText, offs[1], "name").value);
+    test.check(label + " [1].rebuilt", json.readFieldBool(jsonText, offs[1], "rebuilt").value == expFmt);
 };
 
 firstIg := runIn(proc.execPath(), [path.join(probeDir, "compiler/bootstrap/igniter.ts"), "--json", "cli", "fmt"], probeDir, 60000);
@@ -380,14 +380,14 @@ test.check("wipe compiler.ts", fs.kind(path.join(wipeDir, "dist/bootstrap/compil
 test.check("wipe cli artifact", fs.kind(path.join(wipeDir, "dist/tools/cli")) == fs.FILE_KIND_FILE or fs.kind(path.join(wipeDir, "dist/tools/cli.ts")) == fs.FILE_KIND_FILE);
 test.check("wipe ignite artifact", fs.kind(path.join(wipeDir, "dist/tools/ignite")) == fs.FILE_KIND_FILE or fs.kind(path.join(wipeDir, "dist/tools/ignite.ts")) == fs.FILE_KIND_FILE);
 
-wipeChecked := json.readObjectBool(wiped.stdout, 0, "checked");
+wipeChecked := json.readFieldBool(wiped.stdout, 0, "checked");
 test.check("wipe checked == false", wipeChecked.found and wipeChecked.ok and not wipeChecked.value);
-wipeToolsField := json.findObjectField(wiped.stdout, 0, "tools");
+wipeToolsField := json.findField(wiped.stdout, 0, "tools");
 test.check("wipe has tools", wipeToolsField.found);
-wipeToolOffs := json.arrayElementOffsets(wiped.stdout, wipeToolsField.valuePos);
+wipeToolOffs := json.arrayOffsets(wiped.stdout, wipeToolsField.valuePos);
 test.check("wipe tools count > 0", wipeToolOffs.length() > 0);
 loop wipeToolOffs as tOff {
-    reb := json.readObjectBool(wiped.stdout, tOff, "rebuilt");
+    reb := json.readFieldBool(wiped.stdout, tOff, "rebuilt");
     test.check("wipe tool rebuilt", reb.found and reb.ok and reb.value);
 }
 _rmWipe := fs.remove(wipeDir);

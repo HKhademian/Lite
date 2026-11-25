@@ -1,7 +1,7 @@
 project := import "util/project";
 rel := import "util/release";
 test := import "core/test";
-json := import "util/json";
+json := import "data/json";
 
 test.checkBool("semver valid plain", true, rel.isValidSemver("1.2.3"));
 test.checkBool("semver valid pre", true, rel.isValidSemver("0.2.0-rc.1+build.01"));
@@ -30,6 +30,6 @@ test.checkText("profile language", "language", rel.releaseProfile(true, "languag
 vJson := rel.versionsJson(root);
 test.checkText("versionsJson error", "", vJson.error);
 test.checkBool("versionsJson ok", true, vJson.ok);
-test.checkBool("versionsJson has igniter", true, json.readObjectString(vJson.jsonText, 0, "igniter").ok);
+test.checkBool("versionsJson has igniter", true, json.readFieldString(vJson.jsonText, 0, "igniter").ok);
 
 test.done("util-release");

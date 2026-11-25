@@ -2,7 +2,7 @@
 
 text := import "core/text";
 lru := import "ds/lru";
-json := import "util/json";
+json := import "data/json";
 siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
@@ -47,18 +47,18 @@ readOptStr := fn(src: String, objPos: Int, key: String): String {
         ck := objPos.toText() + ":" + key;
         hit := mut learnMetaCache.get(ck);
         if hit.isSome() { return hit.unwrapOr(""); }
-        res := json.readObjectString(src, objPos, key);
+        res := json.readFieldString(src, objPos, key);
         val := if res.found and res.ok { res.value } else { "" };
         _ev := mut learnMetaCache.put(ck, val);
         return val;
     }
-    res := json.readObjectString(src, objPos, key);
+    res := json.readFieldString(src, objPos, key);
     if res.found and res.ok { res.value } else { "" }
 };
 
 readStringArrayAt := fn(src: String, arrPos: Int): List<String> {
     out: mut List<String> = [];
-    offs := json.arrayElementOffsets(src, arrPos);
+    offs := json.arrayOffsets(src, arrPos);
     loop offs as off {
         r := json.readStringAt(src, off);
         if r.ok {
@@ -69,7 +69,7 @@ readStringArrayAt := fn(src: String, arrPos: Int): List<String> {
 };
 
 readStringList := fn(src: String, objPos: Int, key: String): List<String> {
-    fld := json.findObjectField(src, objPos, key);
+    fld := json.findField(src, objPos, key);
     if not fld.found {
         empty: List<String> = [];
         return empty;
@@ -78,7 +78,7 @@ readStringList := fn(src: String, objPos: Int, key: String): List<String> {
 };
 
 readRawField := fn(src: String, objPos: Int, key: String, fallback: String): String {
-    fld := json.findObjectField(src, objPos, key);
+    fld := json.findField(src, objPos, key);
     if not fld.found { return fallback; }
     sp := json.valueSpan(src, fld.valuePos);
     if not sp.ok { return fallback; }
@@ -877,14 +877,14 @@ pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String,
     }
     repoUrl := readOptStr(inputJson, 0, "repoUrl");
 
-    tracksField := json.findObjectField(inputJson, 0, "tracks");
-    itemsField := json.findObjectField(inputJson, 0, "items");
+    tracksField := json.findField(inputJson, 0, "tracks");
+    itemsField := json.findField(inputJson, 0, "items");
     if not tracksField.found or not itemsField.found {
         return (ok = false, jsonText = "", error = "site-learn: input JSON requires tracks and items");
     }
 
-    trackOffs := json.arrayElementOffsets(inputJson, tracksField.valuePos);
-    itemOffs := json.arrayElementOffsets(inputJson, itemsField.valuePos);
+    trackOffs := json.arrayOffsets(inputJson, tracksField.valuePos);
+    itemOffs := json.arrayOffsets(inputJson, itemsField.valuePos);
 
     itemIds: mut List<String> = [];
     loop itemOffs as iPos {
