@@ -82,7 +82,8 @@ if ccInfo.available {
     cTomb := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, tombSrc, "", "");
     test.checkInt("c tombstone parity status: " + cTomb.stderr, 0, cTomb.status);
     test.checkText("tombstone TS/C stdout parity", tsTomb.stdout, cTomb.stdout);
-    test.checkText("tombstone expected stdout", "b,d,a 4 16\ny,z,x\n5 5 9998 true false\n", cTomb.stdout);) else {
+    test.checkText("tombstone expected stdout", "b,d,a 4 16\ny,z,x\n5 5 9998 true false\n", cTomb.stdout);
+} else {
     cOnly := compilerTest.compileStdin(root, cComp, src, "");
     test.checkInt("c compile status: " + cOnly.stderr, 0, cOnly.status);
 }

@@ -20,25 +20,25 @@ appPath := path.join(tmpDir, "demo_stage.lts");
 appSrc :=
 "io := import \"core/io\";\n" +
 "surf := import \"extra/surface\";\n" +
-"win := surf.open(\"PlatformDemo\", 24, 16);\n" +
-"surf.uncapFrameRate(win);\n" +
+"win := surf.Surface.open(\"PlatformDemo\", 24, 16);\n" +
+"win.uncapFrameRate();\n" +
 "var moved := 0;\n" +
 "var frames := 0;\n" +
-"surf.run(win, fn(inp: surf.FrameInput): Bool {\n" +
+"win.run(fn(inp: surf.FrameInput): Bool {\n" +
 "    if not inp.open { return false; }\n" +
-"    if surf.isKeyDown(win, \"ArrowRight\") or inp.key == \"ArrowRight\" {\n" +
+"    if win.isKeyDown(\"ArrowRight\") or inp.key == \"ArrowRight\" {\n" +
 "        moved = moved + 1;\n" +
 "    }\n" +
-"    surf.clear(win, surf.BLACK);\n" +
-"    surf.fillRect(win, surf.rect(2.0 + moved * 2.0, 2.0, 4.0, 4.0), surf.RED);\n" +
-"    surf.drawText(win, \"OK\", surf.point(1.0, 8.0), 7.0, surf.WHITE);\n" +
+"    win.clear(surf.BLACK);\n" +
+"    win.fillRect(surf.rect(2.0 + moved * 2.0, 2.0, 4.0, 4.0), surf.RED);\n" +
+"    win.drawText(\"OK\", surf.point(1.0, 8.0), 7.0, surf.WHITE);\n" +
 "    frames = frames + 1;\n" +
 "    if frames == 3 {\n" +
 "        io.outputLine(\"frames=\" + frames.toText() + \",moved=\" + moved.toText());\n" +
 "    }\n" +
 "    frames < 4\n" +
 "});\n" +
-"surf.close(win);\n";
+"win.close();\n";
 test.check("write demo_stage.lts", fs.writeText(appPath, appSrc).ok);
 
 /* 1. Flag validation and help output */
