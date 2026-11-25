@@ -24,6 +24,11 @@ An executable block groups items, introduces lexical scope, and produces its fin
 
 Bodies always use braces. Optional single-statement bodies and earlier `do/end` or `then/endif` block systems are superseded.
 
+The current [contextual record and block draft](lite://doc/record-literal-boundaries#contextual-record-literals-and-executable-blocks)
+uses `do { ... }` for a standalone executable block expression. This
+draft retains brace bodies for constructs such as `if`, `loop`, and `fn`.
+
+
 ## Item boundaries
 
 A complete block construct ends its item without requiring `;`. Write it without a trailing semicolon, at top level and inside other blocks. This includes declarations initialized directly by blocks, functions/lambdas, conditionals, matches, loops, or record constructions. The grammar still allows an optional trailing semicolon. The entire construct includes its attached else/then/finally clauses; punctuation must not split those clauses from their owner. See the [semicolon style and required exceptions](lite://doc/lexical-structure#semicolon-style-after-closing-braces).

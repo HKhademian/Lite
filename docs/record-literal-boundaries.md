@@ -1,6 +1,6 @@
 # Record construction and item boundaries
 
-Status: **record construction ends an item without a semicolon, 2026-10-19**. Standalone inferred record literals are requested; their disambiguation and inferred type identity still need a decision.
+Status: **record construction ends an item without a semicolon, 2026-10-19**. Contextual literals and `do` are the current design draft. Anonymous record identity remains open.
 
 ## Established construction forms
 
@@ -35,7 +35,50 @@ The inner braces do not remove the comma separating student from contact. Simila
 name := (User { name = "Ali", }).name;
 ```
 
-## Requested inferred inline form
+## Contextual record literals and executable blocks
+
+Design draft **2026-11-26**. A standalone executable block expression uses
+`do { ... }`. In expression position, bare `{ ... }` constructs a record
+using a single known, constructible expected type. A named literal such as
+`User { ... }` supplies that type directly. Constructs with their own body
+headers, such as `fn`, `if`, and `loop`, retain their brace bodies.
+
+```text
+user: User = { name = "Ali" };
+saveUser({ name = "Ali" });
+p = { x = 1 };
+saveUser(do { loadUser() });
+```
+
+The parameter supplies `User` and the assignment target supplies `Point`
+for `p`. The assignment constructs a fresh `Point`, fills omitted fields
+from the type's defaults, and replaces `p`. Within `do { x = 1 }`, the
+assignment updates the existing `x` and the block's result is `Unit`.
+
+**Nested construction is required in the first version.** For example:
+
+```text
+saveUser({
+    name = "Ali",
+    address = {
+        city = "Berlin",
+        country = { code = "DE" },
+    },
+});
+```
+
+The parameter supplies `User`, the `address` field supplies `Address`,
+and `country` supplies `Country`. Each level validates fields and applies
+defaults for its own type. If a literal has no unique constructible record
+type, point to those braces and require an explicit type there. Until
+anonymous record identity is settled, `p := { x = 1 }` requires a type.
+
+Pending TS and C11 cases include typed initializers, call arguments,
+replacement of a previously nondefault field, nested defaults, ambiguous
+or missing expected types, and an executable `do` argument with observable
+effects. Recovery and cleanup attachment will be reviewed separately.
+
+## Earlier anonymous record sketch
 
 ```text
 x := { a = 1, b = 2 }
@@ -53,7 +96,7 @@ This already admits an executable-block reading: assign an existing writable a, 
 
 One possible syntactic rule is to require a comma to identify a standalone inferred record: { a = 1, } is a one-field literal, while { a = 1 } remains an executable block. The requested multi-field example already contains that distinguishing comma. This is a proposal, not a selected requirement; record-value markers or another explicit literal context are alternatives. Do not silently introduce mandatory trailing commas through the formatter.
 
-## Empty braces keep their established roles
+## Empty braces in the existing grammar
 
 - user: User = {} constructs declared defaults in a record-initializer position.
 - fn() {} and an empty match-arm body remain executable and produce Unit.
