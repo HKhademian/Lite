@@ -109,8 +109,7 @@ textLessOrEqual := fn(a: String, b: String): Bool {
     la := a.length();
     lb := b.length();
     limit := if la < lb { la } else { lb };
-    var i := 0;
-    loop i < limit {
+    loop 0..limit as i {
         ca := a.at(i);
         cb := b.at(i);
         if ca =!= cb {
@@ -118,7 +117,6 @@ textLessOrEqual := fn(a: String, b: String): Bool {
             ob := ASCII_ORDER.indexOf(cb, 0);
             return oa <= ob;
         }
-        i += 1;
     }
     la <= lb
 };

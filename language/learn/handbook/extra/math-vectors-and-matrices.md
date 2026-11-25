@@ -22,7 +22,7 @@ io.outputLine(a.value, b.value, math.clampInt(a.value + b.value, 2, 12));
 
 ## 2D, 3D & Generic N-D Vector Math (`math/vector`)
 
-[math/vector](lite://module/math/vector) provides both the generic constrained N-dimensional vector `Vec<T: Type<math.Numeric>, N: Int>` (`ivec2`, `ivec3`, `fvec2`, `fvec3`, `fvec4`, `splat`, `x`/`y`/`z`/`w`, `setX`/`setY`/`setZ`/`setW`, `dot`, `length`, `normalize`, `lerp`) and fixed 2D/3D/4D value records (`Vec2`, `Vec3`, `Vec4`, `ZERO2`, `ZERO3`, `UNIT_X3`, `UNIT_Y3`, `UNIT_Z3`, `cross`, `rotate`, `reflect`):
+[math/vector](lite://module/math/vector) provides one unified generic constrained vector `Vec<T: Type<math.Numeric>, N: Int>` (`Vec2<T>`, `Vec3<T>`, `Vec4<T>`, `FVec2`, `FVec3`, `FVec4`, `IVec2`, `IVec3`, `vec2`, `vec3`, `vec4`, `splat`, `zeroVec`, `ZERO2`, `ZERO3`, `UNIT_X3`, `UNIT_Y3`, `UNIT_Z3`, `x()`/`y()`/`z()`/`w()`, `setX`/`setY`/`setZ`/`setW`, `dot`, `length`, `normalize`, `lerp`, `cross`, `cross2`, `rotate`, `reflect`):
 
 ```lite
 io := import "core/io";
@@ -31,7 +31,7 @@ vec := import "math/vector";
 a := vec.vec2(3.0, 4.0);
 b := vec.vec2(1.0, 0.0);
 sum := a.add(b);
-io.outputLine(a.length(), a.dot(b), sum.x, sum.y);
+io.outputLine(a.length(), a.dot(b), sum.x(), sum.y());
 ```
 
 ## 2×2, 3×3 & 4×4 Matrix Transforms (`math/matrix`)
@@ -47,7 +47,7 @@ move := mat.translate2(10.0, 20.0);
 scale := mat.scale2(2.0, 3.0);
 xform := mat.mul3(move, scale);
 pt := mat.transformPoint2(xform, vec.vec2(4.0, 5.0));
-io.outputLine(pt.x, pt.y);
+io.outputLine(pt.x(), pt.y());
 ```
 
 ## Flat-Backed 2D Grids (`ds/grid`)

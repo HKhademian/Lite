@@ -52,27 +52,21 @@ pub Box.center := fn<N: Int>(b: Self<Float, N>): vec.Vec<Float, N> {
 
 /** True when point `p` lies inside or on the boundary of box `b`. */
 pub Box.containsPoint := fn<T: Type<math.Numeric>, N: Int>(b: Self<T, N>, p: vec.Vec<T, N>): Bool {
-    n := b.min.dim();
-    var i := 0;
-    loop i < n {
+    loop 0..N as i {
         v := p.get(i);
         if v < b.min.get(i) or v > b.max.get(i) {
             return false;
         }
-        i += 1;
     }
     true
 };
 
 /** True when axis-aligned boxes `a` and `b` overlap or touch. */
 pub Box.intersects := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Bool {
-    n := a.min.dim();
-    var i := 0;
-    loop i < n {
+    loop 0..N as i {
         if a.max.get(i) < b.min.get(i) or a.min.get(i) > b.max.get(i) {
             return false;
         }
-        i += 1;
     }
     true
 };
@@ -108,10 +102,8 @@ pub rayBoxHit := fn<N: Int>(r: Ray<Float, N>, b: Box<Float, N>): RayHit {
     var tMin := 0.0;
     var tMax := 0.0;
     var hasMax := false;
-    n := r.origin.dim();
-    if n == 0 { return .Miss; }
-    var i := 0;
-    loop i < n {
+    if N == 0 { return .Miss; }
+    loop 0..N as i {
         o := r.origin.get(i);
         d := r.dir.get(i);
         bMin := b.min.get(i);
@@ -129,7 +121,6 @@ pub rayBoxHit := fn<N: Int>(r: Ray<Float, N>, b: Box<Float, N>): RayHit {
             hasMax = true;
             if tMax < tMin { return .Miss; }
         }
-        i += 1;
     }
     if hasMax and tMax >= 0.0 {
         .Hit(tMin)
@@ -188,13 +179,13 @@ pub Rect.area := fn(r: Self): Float {
 };
 
 /** Center point of `r`. */
-pub Rect.center := fn(r: Self): vec.Vec2 {
+pub Rect.center := fn(r: Self): vec.FVec2 {
     vec.vec2(r.x + (r.width * 0.5), r.y + (r.height * 0.5))
 };
 
 /** True when 2D point `p` lies inside or on the border of `r`. */
-pub Rect.containsPoint := fn(r: Self, p: vec.Vec2): Bool {
-    p.x >= r.x and p.x <= r.right() and p.y >= r.y and p.y <= r.bottom()
+pub Rect.containsPoint := fn(r: Self, p: vec.FVec2): Bool {
+    p.x() >= r.x and p.x() <= r.right() and p.y() >= r.y and p.y() <= r.bottom()
 };
 
 /** True when rectangles `a` and `b` overlap or touch. */
@@ -211,12 +202,12 @@ pub Rect.inset := fn(r: Self, pad: Float): Self {
 
 /** 2D circle with `center` and `radius`. */
 pub Circle := record {
-    center: vec.Vec2;
+    center: vec.FVec2;
     radius: Float;
 }
 
 /** Constructs a 2D `Circle`. */
-pub circle := fn(center: vec.Vec2, radius: Float): Circle {
+pub circle := fn(center: vec.FVec2, radius: Float): Circle {
     Circle { center = center, radius = radius }
 };
 
@@ -226,7 +217,7 @@ pub Circle.area := fn(c: Self): Float {
 };
 
 /** True when 2D point `p` lies inside or on the circumference of `c`. */
-pub Circle.containsPoint := fn(c: Self, p: vec.Vec2): Bool {
+pub Circle.containsPoint := fn(c: Self, p: vec.FVec2): Bool {
     c.center.sub(p).lengthSq() <= (c.radius * c.radius)
 };
 
@@ -238,26 +229,26 @@ pub Circle.intersects := fn(a: Self, b: Self): Bool {
 
 /** True when circle `c` overlaps or touches rectangle `r`. */
 pub Circle.intersectsRect := fn(c: Self, r: Rect): Bool {
-    cx := math.clamp(c.center.x, r.x, r.right());
-    cy := math.clamp(c.center.y, r.y, r.bottom());
-    dx := c.center.x - cx;
-    dy := c.center.y - cy;
+    cx := math.clamp(c.center.x(), r.x, r.right());
+    cy := math.clamp(c.center.y(), r.y, r.bottom());
+    dx := c.center.x() - cx;
+    dy := c.center.y() - cy;
     ((dx * dx) + (dy * dy)) <= (c.radius * c.radius)
 };
 
 /** 3D sphere with `center` and `radius`. */
 pub Sphere := record {
-    center: vec.Vec3;
+    center: vec.FVec3;
     radius: Float;
 }
 
 /** Constructs a 3D `Sphere`. */
-pub sphere := fn(center: vec.Vec3, radius: Float): Sphere {
+pub sphere := fn(center: vec.FVec3, radius: Float): Sphere {
     Sphere { center = center, radius = radius }
 };
 
 /** True when 3D point `p` lies inside or on the surface of `s`. */
-pub Sphere.containsPoint := fn(s: Self, p: vec.Vec3): Bool {
+pub Sphere.containsPoint := fn(s: Self, p: vec.FVec3): Bool {
     s.center.sub(p).lengthSq() <= (s.radius * s.radius)
 };
 
@@ -268,7 +259,7 @@ pub Sphere.intersects := fn(a: Self, b: Self): Bool {
 };
 
 /** Tests intersection of 3D ray `origin + dir * t` (`t >= 0`) against sphere `s`. */
-pub raySphereHit := fn(origin: vec.Vec3, dir: vec.Vec3, s: Sphere): RayHit {
+pub raySphereHit := fn(origin: vec.FVec3, dir: vec.FVec3, s: Sphere): RayHit {
     a := dir.dot(dir);
     if a <= 0.000000000001 { return .Miss; }
     oc := origin.sub(s.center);

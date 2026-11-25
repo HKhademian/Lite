@@ -13,3 +13,15 @@ pub Array.$setIndex := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
 pub Array.isEmpty := fn<T>(values: Self<T>): Bool {
     values.length() == 0
 };
+
+/** Constructs a fixed-length array `[T; N]` with every element initialized to `val`. */
+pub filled := fn<T: Type, N: Int>(val: T): [T; N] {
+    [val; N]
+};
+
+/** Overwrites every element of fixed-length array `values` with `val` in-place. */
+pub Array.fill := fn<T: Type>(values: mut Self<T>, val: T): Unit {
+    loop 0..values.length() as i {
+        values[i] = val;
+    }
+};

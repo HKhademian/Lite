@@ -38,7 +38,7 @@ functionalSrc :=
 "rf := vec.vec3(1.0, -1.0, 0.0).reflect(vec.UNIT_Y3);\n" +
 "vDot := v.normalize().dot(vec.vec2(1.0, 0.0));\n" +
 "c3Dot := vec.UNIT_X3.cross(vec.UNIT_Y3).length();\n" +
-"io.outputLine(\"vec\", near(v.length(), 5.0), near(vn.x, 0.6), near(vr.x, 0.0), near(vr.y, 1.0), near(c3.z, 1.0), near(rf.x, 1.0), near(rf.y, 1.0), near(v.length(), 5.0), near(vDot, 0.6), near(c3Dot, 1.0));\n" +
+"io.outputLine(\"vec\", near(v.length(), 5.0), near(vn.x(), 0.6), near(vr.x(), 0.0), near(vr.y(), 1.0), near(c3.z(), 1.0), near(rf.x(), 1.0), near(rf.y(), 1.0), near(v.length(), 5.0), near(vDot, 0.6), near(c3Dot, 1.0));\n" +
 "\n" +
 "/* 2. math/matrix */\n" +
 "m2 := mat.rotation2(math.PI * 0.5);\n" +
@@ -47,7 +47,7 @@ functionalSrc :=
 "tp2 := mat.transformPoint2(aff, vec.vec2(4.0, 5.0));\n" +
 "m4 := mat.mul4(mat.translate3(1.0, 2.0, 3.0), mat.rotateZ(math.PI * 0.5));\n" +
 "tp3 := mat.transformPoint3(m4, vec.vec3(1.0, 0.0, 0.0));\n" +
-"io.outputLine(\"mat\", near(mat.det2(m2), 1.0), near(p2.y, 1.0), near(tp2.x, 18.0), near(tp2.y, 35.0), near(mat.det3(aff), 6.0), near(tp3.x, 1.0), near(tp3.y, 3.0), near(tp3.z, 3.0));\n" +
+"io.outputLine(\"mat\", near(mat.det2(m2), 1.0), near(p2.y(), 1.0), near(tp2.x(), 18.0), near(tp2.y(), 35.0), near(mat.det3(aff), 6.0), near(tp3.x(), 1.0), near(tp3.y(), 3.0), near(tp3.z(), 3.0));\n" +
 "\n" +
 "/* 3. ds/grid */\n" +
 "g := grid.createInts(8, 6, 0);\n" +

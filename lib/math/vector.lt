@@ -1,6 +1,7 @@
 /** 2D/3D/4D vectors and generic N-dimensional `Vec<T, N>` math (`math/vector`) across TS and C11. */
 
 math := import "math/scalar";
+array := import "core/array";
 
 /** Generic N-dimensional numeric vector backed by a fixed-length array `[T; N]`. */
 pub Vec := record<T: Type<math.Numeric>, N: Int> {
@@ -8,13 +9,13 @@ pub Vec := record<T: Type<math.Numeric>, N: Int> {
 }
 
 /** Generic 2D vector alias over `Vec<T, 2>`. */
-pub Vec2T := alias<T: Type<math.Numeric>> Vec<T, 2>;
+pub Vec2 := alias<T: Type<math.Numeric>> Vec<T, 2>;
 
 /** Generic 3D vector alias over `Vec<T, 3>`. */
-pub Vec3T := alias<T: Type<math.Numeric>> Vec<T, 3>;
+pub Vec3 := alias<T: Type<math.Numeric>> Vec<T, 3>;
 
 /** Generic 4D vector alias over `Vec<T, 4>`. */
-pub Vec4T := alias<T: Type<math.Numeric>> Vec<T, 4>;
+pub Vec4 := alias<T: Type<math.Numeric>> Vec<T, 4>;
 
 /** 2D integer vector alias. */
 pub IVec2 := alias Vec<Int, 2>;
@@ -22,13 +23,13 @@ pub IVec2 := alias Vec<Int, 2>;
 /** 3D integer vector alias. */
 pub IVec3 := alias Vec<Int, 3>;
 
-/** 2D floating-point generic vector alias. */
+/** 2D floating-point vector alias. */
 pub FVec2 := alias Vec<Float, 2>;
 
-/** 3D floating-point generic vector alias. */
+/** 3D floating-point vector alias. */
 pub FVec3 := alias Vec<Float, 3>;
 
-/** 4D floating-point generic vector alias. */
+/** 4D floating-point vector alias. */
 pub FVec4 := alias Vec<Float, 4>;
 
 /** Constructs a generic `Vec<T, N>` from a fixed array `[T; N]`. */
@@ -38,19 +39,28 @@ pub vecN := fn<T: Type<math.Numeric>, N: Int>(data: [T; N]): Vec<T, N> {
 
 /** Constructs a generic `Vec<T, N>` with all `N` components set to `val`. */
 pub splat := fn<T: Type<math.Numeric>, N: Int>(val: T): Vec<T, N> {
-    var out: [T; N];
-    var i := 0;
-    loop i < N {
-        out[i] = val;
-        i += 1;
-    }
-    Vec<T, N> { data = out }
+    Vec<T, N> { data = array.filled<T, N>(val) }
 };
 
 /** Zero-initialized generic `Vec<T, N>`. */
 pub zeroVec := fn<T: Type<math.Numeric>, N: Int>(): Vec<T, N> {
-    var out: [T; N];
-    Vec<T, N> { data = out }
+    res: Vec<T, N>;
+    res
+};
+
+/** Constructs a 2D generic vector `Vec2<T>`. */
+pub vec2 := fn<T: Type<math.Numeric>>(x: T, y: T): Vec2<T> {
+    Vec<T, 2> { data = [x, y] }
+};
+
+/** Constructs a 3D generic vector `Vec3<T>`. */
+pub vec3 := fn<T: Type<math.Numeric>>(x: T, y: T, z: T): Vec3<T> {
+    Vec<T, 3> { data = [x, y, z] }
+};
+
+/** Constructs a 4D generic vector `Vec4<T>`. */
+pub vec4 := fn<T: Type<math.Numeric>>(x: T, y: T, z: T, w: T): Vec4<T> {
+    Vec<T, 4> { data = [x, y, z, w] }
 };
 
 /** Constructs a 2D integer vector `IVec2`. */
@@ -63,20 +73,38 @@ pub ivec3 := fn(x: Int, y: Int, z: Int): IVec3 {
     Vec<Int, 3> { data = [x, y, z] }
 };
 
-/** Constructs a generic 2D `Float` vector `FVec2`. */
+/** Constructs a 2D `Float` vector `FVec2`. */
 pub fvec2 := fn(x: Float, y: Float): FVec2 {
     Vec<Float, 2> { data = [x, y] }
 };
 
-/** Constructs a generic 3D `Float` vector `FVec3`. */
+/** Constructs a 3D `Float` vector `FVec3`. */
 pub fvec3 := fn(x: Float, y: Float, z: Float): FVec3 {
     Vec<Float, 3> { data = [x, y, z] }
 };
 
-/** Constructs a generic 4D `Float` vector `FVec4`. */
+/** Constructs a 4D `Float` vector `FVec4`. */
 pub fvec4 := fn(x: Float, y: Float, z: Float, w: Float): FVec4 {
     Vec<Float, 4> { data = [x, y, z, w] }
 };
+
+/** Zero 2D `Float` vector `(0, 0)`. */
+pub ZERO2 := zeroVec<Float, 2>();
+
+/** Zero 3D `Float` vector `(0, 0, 0)`. */
+pub ZERO3 := zeroVec<Float, 3>();
+
+/** Zero 4D `Float` vector `(0, 0, 0, 0)`. */
+pub ZERO4 := zeroVec<Float, 4>();
+
+/** Unit X axis `(1, 0, 0)`. */
+pub UNIT_X3 := vec3(1.0, 0.0, 0.0);
+
+/** Unit Y axis `(0, 1, 0)`. */
+pub UNIT_Y3 := vec3(0.0, 1.0, 0.0);
+
+/** Unit Z axis `(0, 0, 1)`. */
+pub UNIT_Z3 := vec3(0.0, 0.0, 1.0);
 
 /** Compile-time component count `N` of `v`. */
 pub Vec.dim := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): Int {
@@ -134,10 +162,8 @@ pub Vec.setW := fn<T: Type<math.Numeric>, N: Int>(v: mut Self<T, N>, val: T): Un
 /** Component-wise addition `a + b`. */
 pub Vec.add := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
     var out: [T; N];
-    var i := 0;
-    loop i < N {
+    loop 0..N as i {
         out[i] = a.data[i] + b.data[i];
-        i += 1;
     }
     Self<T, N> { data = out }
 };
@@ -145,10 +171,8 @@ pub Vec.add := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): 
 /** Component-wise subtraction `a - b`. */
 pub Vec.sub := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
     var out: [T; N];
-    var i := 0;
-    loop i < N {
+    loop 0..N as i {
         out[i] = a.data[i] - b.data[i];
-        i += 1;
     }
     Self<T, N> { data = out }
 };
@@ -156,10 +180,8 @@ pub Vec.sub := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): 
 /** Component-wise product `a * b`. */
 pub Vec.mul := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
     var out: [T; N];
-    var i := 0;
-    loop i < N {
+    loop 0..N as i {
         out[i] = a.data[i] * b.data[i];
-        i += 1;
     }
     Self<T, N> { data = out }
 };
@@ -167,10 +189,8 @@ pub Vec.mul := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): 
 /** Multiplies every component of `v` by scalar `s`. */
 pub Vec.scale := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>, s: T): Self<T, N> {
     var out: [T; N];
-    var i := 0;
-    loop i < N {
+    loop 0..N as i {
         out[i] = v.data[i] * s;
-        i += 1;
     }
     Self<T, N> { data = out }
 };
@@ -178,11 +198,9 @@ pub Vec.scale := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>, s: T): Self<T,
 /** Negates every component of `v`. */
 pub Vec.neg := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): Self<T, N> {
     var out: [T; N];
-    var z: T;
-    var i := 0;
-    loop i < N {
+    z: T;
+    loop 0..N as i {
         out[i] = z - v.data[i];
-        i += 1;
     }
     Self<T, N> { data = out }
 };
@@ -190,10 +208,8 @@ pub Vec.neg := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): Self<T, N> {
 /** Component-wise minimum of `a` and `b`. */
 pub Vec.minComp := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
     var out: [T; N];
-    var i := 0;
-    loop i < N {
+    loop 0..N as i {
         out[i] = if a.data[i] <= b.data[i] { a.data[i] } else { b.data[i] };
-        i += 1;
     }
     Self<T, N> { data = out }
 };
@@ -201,10 +217,8 @@ pub Vec.minComp := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N
 /** Component-wise maximum of `a` and `b`. */
 pub Vec.maxComp := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> {
     var out: [T; N];
-    var i := 0;
-    loop i < N {
+    loop 0..N as i {
         out[i] = if a.data[i] >= b.data[i] { a.data[i] } else { b.data[i] };
-        i += 1;
     }
     Self<T, N> { data = out }
 };
@@ -212,10 +226,8 @@ pub Vec.maxComp := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N
 /** Euclidean dot product `sum_i (a[i] * b[i])`. */
 pub Vec.dot := fn<T: Type<math.Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): T {
     var acc: T;
-    var i := 0;
-    loop i < N {
+    loop 0..N as i {
         acc = acc + (a.data[i] * b.data[i]);
-        i += 1;
     }
     acc
 };
@@ -228,20 +240,18 @@ pub Vec.lengthSq := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): T {
 /** Component-wise linear interpolation between `a` and `b` by `t`. */
 pub Vec.lerp := fn<T: Type<math.FloatScalar>, N: Int>(a: Self<T, N>, b: Self<T, N>, t: T): Self<T, N> {
     var out: [T; N];
-    var i := 0;
-    loop i < N {
+    loop 0..N as i {
         out[i] = a.data[i] + (b.data[i] - a.data[i]) * t;
-        i += 1;
     }
     Self<T, N> { data = out }
 };
 
-/** Euclidean length of a generic `Float` vector `v`. */
+/** Euclidean length of a `Float` vector `v`. */
 pub Vec.length := fn<N: Int>(v: Self<Float, N>): Float {
     math.sqrt(v.lengthSq())
 };
 
-/** Euclidean distance between generic `Float` vectors `a` and `b`. */
+/** Euclidean distance between `Float` vectors `a` and `b`. */
 pub Vec.distance := fn<N: Int>(a: Self<Float, N>, b: Self<Float, N>): Float {
     a.sub(b).length()
 };
@@ -252,187 +262,41 @@ pub Vec.normalize := fn<N: Int>(v: Self<Float, N>): Self<Float, N> {
     if len <= 0.000000000001 { zeroVec<Float, N>() } else { v.scale(1.0 / len) }
 };
 
-/** 2D floating-point vector. */
-pub Vec2 := record { x: Float; y: Float; };
-
-/** 3D floating-point vector. */
-pub Vec3 := record { x: Float; y: Float; z: Float; };
-
-/** 4D floating-point vector (homogeneous coordinates or RGBA). */
-pub Vec4 := record { x: Float; y: Float; z: Float; w: Float; };
-
-/** Zero 2D vector `(0, 0)`. */
-pub ZERO2 := Vec2 { x = 0.0, y = 0.0 };
-
-/** Zero 3D vector `(0, 0, 0)`. */
-pub ZERO3 := Vec3 { x = 0.0, y = 0.0, z = 0.0 };
-
-/** Zero 4D vector `(0, 0, 0, 0)`. */
-pub ZERO4 := Vec4 { x = 0.0, y = 0.0, z = 0.0, w = 0.0 };
-
-/** Unit X axis `(1, 0, 0)`. */
-pub UNIT_X3 := Vec3 { x = 1.0, y = 0.0, z = 0.0 };
-
-/** Unit Y axis `(0, 1, 0)`. */
-pub UNIT_Y3 := Vec3 { x = 0.0, y = 1.0, z = 0.0 };
-
-/** Unit Z axis `(0, 0, 1)`. */
-pub UNIT_Z3 := Vec3 { x = 0.0, y = 0.0, z = 1.0 };
-
-/* ============================================================================
- * Vec2
- * ============================================================================ */
-
-/** Constructs a `Vec2`. */
-pub vec2 := fn(x: Float, y: Float): Vec2 { Vec2 { x = x, y = y } };
-
-/** Adds `a + b`. */
-pub Vec2.add := fn(a: Self, b: Self): Self { Vec2 { x = a.x + b.x, y = a.y + b.y } };
-
-/** Subtracts `a - b`. */
-pub Vec2.sub := fn(a: Self, b: Self): Self { Vec2 { x = a.x - b.x, y = a.y - b.y } };
-
-/** Multiplies `v` by scalar `s`. */
-pub Vec2.scale := fn(v: Self, s: Float): Self { Vec2 { x = v.x * s, y = v.y * s } };
-
-/** Negates `v`. */
-pub Vec2.neg := fn(v: Self): Self { Vec2 { x = 0.0 - v.x, y = 0.0 - v.y } };
-
-/** Component-wise product of `a` and `b`. */
-pub Vec2.mul := fn(a: Self, b: Self): Self { Vec2 { x = a.x * b.x, y = a.y * b.y } };
-
-/** 2D dot product. */
-pub Vec2.dot := fn(a: Self, b: Self): Float { (a.x * b.x) + (a.y * b.y) };
-
-/** 2D signed cross product (z-component of 3D cross). */
-pub Vec2.cross := fn(a: Self, b: Self): Float { (a.x * b.y) - (a.y * b.x) };
-
-/** Squared Euclidean length of `v`. */
-pub Vec2.lengthSq := fn(v: Self): Float { (v.x * v.x) + (v.y * v.y) };
-
-/** Euclidean length of `v`. */
-pub Vec2.length := fn(v: Self): Float { math.sqrt(v.lengthSq()) };
-
-/** Euclidean distance between `a` and `b`. */
-pub Vec2.distance := fn(a: Self, b: Self): Float { a.sub(b).length() };
-
-/** Returns unit-length vector in the direction of `v`, or `ZERO2` when near zero. */
-pub Vec2.normalize := fn(v: Self): Self {
-    len := v.length();
-    if len <= 0.000000000001 { ZERO2 } else { Vec2 { x = v.x / len, y = v.y / len } }
+/** 2D signed cross product `(a.x * b.y) - (a.y * b.x)`. */
+pub Vec.cross2 := fn(a: Self<Float, 2>, b: Self<Float, 2>): Float {
+    (a.x() * b.y()) - (a.y() * b.x())
 };
 
-/** Linearly interpolates between `a` and `b` by `t`. */
-pub Vec2.lerp := fn(a: Self, b: Self, t: Float): Self {
-    Vec2 { x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t) }
-};
-
-/** Rotates `v` counter-clockwise by `radians`. */
-pub Vec2.rotate := fn(v: Self, radians: Float): Self {
+/** Rotates 2D `Float` vector `v` counter-clockwise by `radians`. */
+pub Vec.rotate := fn(v: Self<Float, 2>, radians: Float): Self<Float, 2> {
     c := math.cos(radians);
     s := math.sin(radians);
-    Vec2 { x = (v.x * c) - (v.y * s), y = (v.x * s) + (v.y * c) }
+    vec2((v.x() * c) - (v.y() * s), (v.x() * s) + (v.y() * c))
 };
 
-/** Returns the 90-degree counter-clockwise perpendicular vector `(-y, x)`. */
-pub Vec2.perp := fn(v: Self): Self { Vec2 { x = 0.0 - v.y, y = v.x } };
+/** Returns the 90-degree counter-clockwise perpendicular 2D vector `(-y, x)`. */
+pub Vec.perp := fn(v: Self<Float, 2>): Self<Float, 2> {
+    vec2(0.0 - v.y(), v.x())
+};
 
-/** Clamps the magnitude of `v` to at most `maxLen`. */
-pub Vec2.clampLength := fn(v: Self, maxLen: Float): Self {
+/** Clamps the magnitude of 2D `Float` vector `v` to at most `maxLen`. */
+pub Vec.clampLength := fn(v: Self<Float, 2>, maxLen: Float): Self<Float, 2> {
     if maxLen <= 0.0 { return ZERO2; }
     lenSq := v.lengthSq();
     if lenSq <= (maxLen * maxLen) { v } else { v.scale(maxLen / math.sqrt(lenSq)) }
 };
 
-/* ============================================================================
- * Vec3
- * ============================================================================ */
-
-/** Constructs a `Vec3`. */
-pub vec3 := fn(x: Float, y: Float, z: Float): Vec3 { Vec3 { x = x, y = y, z = z } };
-
-/** Adds `a + b`. */
-pub Vec3.add := fn(a: Self, b: Self): Self { Vec3 { x = a.x + b.x, y = a.y + b.y, z = a.z + b.z } };
-
-/** Subtracts `a - b`. */
-pub Vec3.sub := fn(a: Self, b: Self): Self { Vec3 { x = a.x - b.x, y = a.y - b.y, z = a.z - b.z } };
-
-/** Multiplies `v` by scalar `s`. */
-pub Vec3.scale := fn(v: Self, s: Float): Self { Vec3 { x = v.x * s, y = v.y * s, z = v.z * s } };
-
-/** Negates `v`. */
-pub Vec3.neg := fn(v: Self): Self { Vec3 { x = 0.0 - v.x, y = 0.0 - v.y, z = 0.0 - v.z } };
-
-/** Component-wise product of `a` and `b`. */
-pub Vec3.mul := fn(a: Self, b: Self): Self { Vec3 { x = a.x * b.x, y = a.y * b.y, z = a.z * b.z } };
-
-/** 3D dot product. */
-pub Vec3.dot := fn(a: Self, b: Self): Float { (a.x * b.x) + (a.y * b.y) + (a.z * b.z) };
-
 /** 3D cross product `a x b`. */
-pub Vec3.cross := fn(a: Self, b: Self): Self {
-    Vec3 {
-    x = (a.y * b.z) - (a.z * b.y),
-    y = (a.z * b.x) - (a.x * b.z),
-    z = (a.x * b.y) - (a.y * b.x)
-    }
+pub Vec.cross := fn(a: Self<Float, 3>, b: Self<Float, 3>): Self<Float, 3> {
+    vec3(
+    (a.y() * b.z()) - (a.z() * b.y()),
+    (a.z() * b.x()) - (a.x() * b.z()),
+    (a.x() * b.y()) - (a.y() * b.x())
+    )
 };
 
-/** Squared Euclidean length of `v`. */
-pub Vec3.lengthSq := fn(v: Self): Float { (v.x * v.x) + (v.y * v.y) + (v.z * v.z) };
-
-/** Euclidean length of `v`. */
-pub Vec3.length := fn(v: Self): Float { math.sqrt(v.lengthSq()) };
-
-/** Euclidean distance between `a` and `b`. */
-pub Vec3.distance := fn(a: Self, b: Self): Float { a.sub(b).length() };
-
-/** Returns unit-length vector in the direction of `v`, or `ZERO3` when near zero. */
-pub Vec3.normalize := fn(v: Self): Self {
-    len := v.length();
-    if len <= 0.000000000001 { ZERO3 } else { Vec3 { x = v.x / len, y = v.y / len, z = v.z / len } }
-};
-
-/** Linearly interpolates between `a` and `b` by `t`. */
-pub Vec3.lerp := fn(a: Self, b: Self, t: Float): Self {
-    Vec3 { x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t), z = math.lerp(a.z, b.z, t) }
-};
-
-/** Reflects incident vector `v` across unit surface normal `normal`. */
-pub Vec3.reflect := fn(v: Self, normal: Self): Self {
+/** Reflects 3D incident vector `v` across unit surface normal `normal`. */
+pub Vec.reflect := fn(v: Self<Float, 3>, normal: Self<Float, 3>): Self<Float, 3> {
     d := 2.0 * v.dot(normal);
     v.sub(normal.scale(d))
-};
-
-/* ============================================================================
- * Vec4
- * ============================================================================ */
-
-/** Constructs a `Vec4`. */
-pub vec4 := fn(x: Float, y: Float, z: Float, w: Float): Vec4 { Vec4 { x = x, y = y, z = z, w = w } };
-
-/** Adds `a + b`. */
-pub Vec4.add := fn(a: Self, b: Self): Self { Vec4 { x = a.x + b.x, y = a.y + b.y, z = a.z + b.z, w = a.w + b.w } };
-
-/** Subtracts `a - b`. */
-pub Vec4.sub := fn(a: Self, b: Self): Self { Vec4 { x = a.x - b.x, y = a.y - b.y, z = a.z - b.z, w = a.w - b.w } };
-
-/** Multiplies `v` by scalar `s`. */
-pub Vec4.scale := fn(v: Self, s: Float): Self { Vec4 { x = v.x * s, y = v.y * s, z = v.z * s, w = v.w * s } };
-
-/** 4D dot product. */
-pub Vec4.dot := fn(a: Self, b: Self): Float { (a.x * b.x) + (a.y * b.y) + (a.z * b.z) + (a.w * b.w) };
-
-/** Euclidean length of `v`. */
-pub Vec4.length := fn(v: Self): Float { math.sqrt(v.dot(v)) };
-
-/** Returns unit-length 4D vector, or `ZERO4` when near zero. */
-pub Vec4.normalize := fn(v: Self): Self {
-    len := v.length();
-    if len <= 0.000000000001 { ZERO4 } else { Vec4 { x = v.x / len, y = v.y / len, z = v.z / len, w = v.w / len } }
-};
-
-/** Linearly interpolates between `a` and `b` by `t`. */
-pub Vec4.lerp := fn(a: Self, b: Self, t: Float): Self {
-    Vec4 { x = math.lerp(a.x, b.x, t), y = math.lerp(a.y, b.y, t), z = math.lerp(a.z, b.z, t), w = math.lerp(a.w, b.w, t) }
 };

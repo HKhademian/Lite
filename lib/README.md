@@ -14,7 +14,7 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | `core/unicode` | Browser + CLI | UTF-8 / UTF-16 scalar encoding, decoding, and validation helpers |
 | `core/format` | Browser + CLI | Decimal/hex formatting, padding, and Int-join helpers |
 | `core/list` | Browser + CLI | `List.*` operations & index hooks (`pushBack`, `popBack`, `pushFront`, `popFront`, `length`, `isEmpty`, `map`, `filter`, `join`, `$getIndex`/`$setIndex`) |
-| `core/array` | Browser + CLI | Fixed-length `Array.*` operations & index hooks (`length`, `isEmpty`, `$getIndex`/`$setIndex`) |
+| `core/array` | Browser + CLI | Fixed-length `Array.*` operations & index hooks (`length`, `isEmpty`, `filled`, `fill`, `$getIndex`/`$setIndex`) |
 | `core/map` | Browser + CLI | `Map.*` operations & index hooks (`get`, `getOr`, `has`, `set`, `remove`, `clear`, `keys`, `values`, `size`, `isEmpty`, `$getIndex`/`$setIndex`) |
 | `core/set` | Browser + CLI | `Set.*` operations (`has`, `add`, `remove`, `clear`, `values`, `size`, `isEmpty`) |
 | `core/crypto` | Browser + CLI | Host CSPRNG plus pure-Lite SHA-256, SHA-512, HMAC, and hex digests |
@@ -32,7 +32,7 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | --- | --- | --- |
 | `math/scalar` | Browser + CLI | `IntScalar`/`FloatScalar`/`Numeric` constraints, `PI`, `TAU`, `HALF_PI`, `E`, `abs*`/`min*`/`max*`/`clamp*`, `floor`/`ceil`/`round`/`trunc`/`fract`, `sin`/`cos`/`tan`/`atan`/`atan2`, `sqrt`, `gcd`, `lcm` |
 | `math/random` | Browser + CLI | Deterministic, seedable Lehmer PRNG (`Rng`, `create`, `nextInt`, `rangeInt`, `nextBool`, `nextFloat`) |
-| `math/vector` | Browser + CLI | Generic `Vec<T: Type<Numeric>, N: Int>` (`x`/`y`/`z`/`w`/`r`/`g`/`b`/`a`, `dot`, `lerp`, `normalize`) and `Vec2`, `Vec3`, `Vec4` (`cross`, `rotate`, `reflect`) |
+| `math/vector` | Browser + CLI | Unified generic `Vec<T: Type<Numeric>, N: Int>` (`Vec2`/`Vec3`/`Vec4`, `FVec2..4`, `IVec2..3`, `x`/`y`/`z`/`w`/`r`/`g`/`b`/`a`, `dot`, `lerp`, `normalize`, `cross`, `cross2`, `rotate`, `reflect`) |
 | `math/matrix` | Browser + CLI | 2×2, 3×3, and 4×4 matrix math (`Mat2`, `Mat3`, `Mat4`, `translate`, `scale`, `rotate`, `mul`, `transpose`, `det`, `perspective`, `lookAt`) |
 | `math/geom` | Browser + CLI | Generic `Box<T, N>`, `Ray<T, N>`, `Segment<T, N>`, `RayHit`, `Rect`, `Circle`, `Sphere`, and intersection helpers (`rayBoxHit`, `raySphereHit`) |
 

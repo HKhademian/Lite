@@ -107,10 +107,8 @@ pub lerp := fn(a: Float, b: Float, t: Float): Float {
 pub sqrt := fn(x: Float): Float {
     if x <= 0.0 { return 0.0; }
     var g := if x >= 1.0 { x * 0.5 } else { 1.0 };
-    var i := 0;
-    loop i < 24 {
+    loop 0..24 {
         g = 0.5 * (g + x / g);
-        i += 1;
     }
     g
 };
